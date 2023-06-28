@@ -760,13 +760,6 @@ func (v *pinotVisibilityStore) getListWorkflowExecutionsByQueryQuery(tableName s
 		query.concatSorter(orderBy)
 	}
 
-	// when customized query is not empty
-	//if common.IsJustOrderByClause(requestQuery) {
-	//	query.concatSorter(requestQuery)
-	//} else { // check if it has a complete customized query
-	//	query = v.constructQueryWithCustomizedQuery(requestQuery, validMap, query)
-	//}
-
 	// MUST HAVE! because pagination wouldn't work without order by clause!
 	if query.sorters == "" {
 		query.addPinotSorter(StartTime, "DESC")
@@ -783,124 +776,6 @@ func filterPrefix(query string) string {
 	query = strings.ReplaceAll(query, prefix, "")
 	return strings.ReplaceAll(query, postfix, "")
 }
-
-//func (v *pinotVisibilityStore) constructQueryWithCustomizedQuery(requestQuery string, validMap map[string]interface{}, query PinotQuery) PinotQuery {
-//	// checks every case of 'and'
-//	reg := regexp.MustCompile("(?i)( and )")
-//	queryList := reg.Split(requestQuery, -1)
-//	var orderBy string
-//
-//	for index, element := range queryList {
-//		element := strings.TrimSpace(element)
-//		// special case: when element is the last one
-//		if index == len(queryList)-1 {
-//			element, orderBy = parseLastElement(element)
-//		}
-//		if len(element) == 0 {
-//			continue
-//		}
-//
-//		if strings.Contains(strings.ToLower(element), " or ") {
-//			query = v.dealWithOrClause(element, query, validMap)
-//		} else {
-//			query = v.dealWithoutOrClause(element, query, validMap)
-//		}
-//	}
-//
-//	if orderBy != "" {
-//		query.concatSorter(orderBy)
-//	}
-//
-//	return query
-//}
-
-//func convertMissingFields(key string, op string, val string, element string) string {
-//	if val == "missing" {
-//		if strings.ToLower(key) == "historylength" {
-//			return fmt.Sprintf("%s %s %s", key, op, "0")
-//		}
-//		return fmt.Sprintf("%s %s %s", key, op, "-1")
-//	}
-//	return element
-//}
-
-//func (v *pinotVisibilityStore) convertRawToPinotQuery(element string, validMap map[string]interface{}) string {
-//	key, val, op := splitElement(element)
-//
-//	// case 1: when key is a system key
-//	if ok, _ := isSystemKey(key); ok {
-//		return convertMissingFields(key, op, val, element)
-//	}
-//
-//	// case 2: when key is valid within validMap
-//	if valType, ok := validMap[key]; ok {
-//		indexValType := common.ConvertIndexedValueTypeToInternalType(valType, log.NewNoop())
-//
-//		if indexValType == types.IndexedValueTypeString {
-//			val = removeQuote(val)
-//			return getPartialFormatString(key, val)
-//		}
-//		return fmt.Sprintf("%s %s %s", key, op, val)
-//	}
-//	return ""
-//}
-
-//func trimElement(element string) string {
-//	if len(element) < 2 {
-//		return ""
-//	}
-//
-//	if element[0] == '(' && element[len(element)-1] == ')' {
-//		element = element[1 : len(element)-1]
-//	}
-//
-//	return element
-//}
-
-//func (v *pinotVisibilityStore) dealWithOrClause(element string, query PinotQuery, validMap map[string]interface{}) PinotQuery {
-//	element = trimElement(element)
-//
-//	elementArray := strings.Split(element, " or ")
-//
-//	orQuery := "("
-//	for index, value := range elementArray {
-//		orQuery += v.convertRawToPinotQuery(value, validMap)
-//		if index != len(elementArray)-1 {
-//			orQuery += " or "
-//		}
-//	}
-//	orQuery += ")"
-//
-//	query.filters.addQuery(orQuery)
-//	return query
-//}
-//
-//func (v *pinotVisibilityStore) dealWithoutOrClause(element string, query PinotQuery, validMap map[string]interface{}) PinotQuery {
-//	key, val, op := splitElement(element)
-//
-//	// case 1: when key is a system key
-//	if ok, _ := isSystemKey(key); ok {
-//		element = convertMissingFields(key, op, val, element)
-//		query.filters.addQuery(element)
-//		return query
-//	}
-//
-//	// case 2: when key is valid within validMap
-//	if valType, ok := validMap[key]; ok {
-//		indexValType := common.ConvertIndexedValueTypeToInternalType(valType, v.logger)
-//
-//		if indexValType == types.IndexedValueTypeString {
-//			val = removeQuote(val)
-//			query.filters.addPartialMatch(key, val)
-//		} else {
-//			query.filters.addQuery(fmt.Sprintf("%s %s %s", key, op, val))
-//		}
-//	} else {
-//		v.logger.Error("Unregistered field!!")
-//	}
-//
-//	return query
-//}
 
 /*
 Can have cases:

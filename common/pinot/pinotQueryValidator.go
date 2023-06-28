@@ -81,11 +81,7 @@ func (qv *VisibilityQueryValidator) ValidateQuery(whereClause string) (string, e
 			}
 			sel.Where.Expr.Format(buf)
 		}
-		//// validate order by
-		//err = qv.validateOrderByExpr(sel.OrderBy)
-		//if err != nil {
-		//	return "", &types.BadRequestError{Message: err.Error()}
-		//}
+
 		sel.OrderBy.Format(buf)
 
 		return buf.String(), nil
@@ -201,48 +197,3 @@ func (qv *VisibilityQueryValidator) isValidSearchAttributes(key string) bool {
 	_, isValidKey := validAttr[key]
 	return isValidKey
 }
-
-//func (qv *VisibilityQueryValidator) validateRangeExpr(expr sqlparser.Expr) error {
-//	rangeCond := expr.(*sqlparser.RangeCond)
-//	colName, ok := rangeCond.Left.(*sqlparser.ColName)
-//	if !ok {
-//		return errors.New("invalid range expression")
-//	}
-//	colNameStr := colName.Name.String()
-//
-//	if !qv.isValidSearchAttributes(colNameStr) {
-//		return fmt.Errorf("invalid search attribute %q", colNameStr)
-//	}
-//
-//	if !definition.IsSystemIndexedKey(colNameStr) { // add search attribute prefix
-//		rangeCond.Left = &sqlparser.ColName{
-//			Metadata:  colName.Metadata,
-//			Name:      sqlparser.NewColIdent(definition.Attr + "." + colNameStr),
-//			Qualifier: colName.Qualifier,
-//		}
-//	}
-//
-//	return nil
-//}
-
-//func (qv *VisibilityQueryValidator) validateOrderByExpr(orderBy sqlparser.OrderBy) error {
-//	for _, orderByExpr := range orderBy {
-//		colName, ok := orderByExpr.Expr.(*sqlparser.ColName)
-//		if !ok {
-//			return errors.New("invalid order by expression")
-//		}
-//		colNameStr := colName.Name.String()
-//		if qv.isValidSearchAttributes(colNameStr) {
-//			if !definition.IsSystemIndexedKey(colNameStr) { // add search attribute prefix
-//				orderByExpr.Expr = &sqlparser.ColName{
-//					Metadata:  colName.Metadata,
-//					Name:      sqlparser.NewColIdent(definition.Attr + "." + colNameStr),
-//					Qualifier: colName.Qualifier,
-//				}
-//			}
-//		} else {
-//			return errors.New("invalid order by attribute")
-//		}
-//	}
-//	return nil
-//}
