@@ -59,13 +59,16 @@ var (
 )
 
 func TestGetCountWorkflowExecutionsQuery(t *testing.T) {
+	testValidMap := make(map[string]interface{})
+	testValidMap["WorkflowID"] = types.IndexedValueTypeKeyword
+
 	request := &p.CountWorkflowExecutionsRequest{
 		DomainUUID: testDomainID,
 		Domain:     testDomain,
 		Query:      "WorkflowID = 'wfid'",
 	}
 
-	result := visibilityStore.getCountWorkflowExecutionsQuery(testTableName, request, nil)
+	result := visibilityStore.getCountWorkflowExecutionsQuery(testTableName, request, testValidMap)
 	expectResult := fmt.Sprintf(`SELECT COUNT(*)
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
@@ -81,11 +84,15 @@ AND WorkflowID = 'wfid'
 func TestGetListWorkflowExecutionQuery(t *testing.T) {
 	testValidMap := make(map[string]interface{})
 	testValidMap["CustomizedKeyword"] = types.IndexedValueTypeKeyword
+	testValidMap["WorkflowID"] = types.IndexedValueTypeKeyword
 	testValidMap["CustomStringField"] = types.IndexedValueTypeString
 	testValidMap["CustomIntField"] = types.IndexedValueTypeInt
 	testValidMap["CustomKeywordField"] = types.IndexedValueTypeDouble
 	testValidMap["IndexedValueTypeBool"] = types.IndexedValueTypeBool
 	testValidMap["IndexedValueTypeDatetime"] = types.IndexedValueTypeDatetime
+	testValidMap["CloseStatus"] = types.IndexedValueTypeInt
+	testValidMap["CloseTime"] = types.IndexedValueTypeInt
+	testValidMap["WorkflowType"] = types.IndexedValueTypeKeyword
 
 	token := pnt.PinotVisibilityPageToken{
 		From: 11,
@@ -113,7 +120,7 @@ func TestGetListWorkflowExecutionQuery(t *testing.T) {
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND CustomizedKeyword = 'keywordCustomized'
-Order BY CloseTime DESC
+Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName),
 		},
@@ -130,8 +137,7 @@ LIMIT 0, 10
 				`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND CustomIntField = 2
-AND CustomKeywordField = 'Update2'
+AND CustomIntField = 2 and CustomKeywordField = 'Update2'
 order by CustomDatetimeField DESC
 LIMIT 0, 10
 `, testTableName),
@@ -143,14 +149,13 @@ LIMIT 0, 10
 				Domain:        testDomain,
 				PageSize:      testPageSize,
 				NextPageToken: nil,
-				Query:         "CustomizedKeyword = 'keywordCustomized' and CustomStringField = 'String field is for text' Order by CloseTime DESC, RunID DESC",
+				Query:         "CustomizedKeyword = 'keywordCustomized' and CustomStringField = 'String and or order by'",
 			},
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND CustomizedKeyword = 'keywordCustomized'
-AND CustomStringField LIKE '%%String field is for text%%'
-Order by CloseTime DESC, RunID DESC
+AND CustomizedKeyword = 'keywordCustomized' and CustomStringField like '%%String and or order by%%'
+Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName),
 		},
@@ -161,31 +166,30 @@ LIMIT 0, 10
 				Domain:        testDomain,
 				PageSize:      testPageSize,
 				NextPageToken: nil,
-				Query:         "CustomStringField = 'String' or CustomStringField = 'field' Order by CloseTime DESC, RunID DESC",
+				Query:         "CustomStringField = 'Or' or CustomStringField = 'and' Order by CloseTime DESC, RunID DESC",
 			},
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND (CustomStringField LIKE '%%String%%' or CustomStringField LIKE '%%field%%')
+AND CustomStringField like '%%Or%%' or CustomStringField like '%%and%%'
 Order by CloseTime DESC, RunID DESC
 LIMIT 0, 10
 `, testTableName),
 		},
 
-		"complete request with or query & all attributes": {
+		"complex query": {
 			input: &p.ListWorkflowExecutionsByQueryRequest{
 				DomainUUID:    testDomainID,
 				Domain:        testDomain,
 				PageSize:      testPageSize,
 				NextPageToken: nil,
-				Query:         "(DocID = 'String' or CustomStringField = 'field' or CustomIntField = 10) and RunID='test-runid' Order by CloseTime DESC, RunID DESC",
+				Query:         "WorkflowID = 'wid' and ((CustomStringField = 'custom and custom2 or custom3 order by') or CustomIntField between 1 and 10)",
 			},
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND (DocID = 'String' or CustomStringField LIKE '%%field%%' or CustomIntField = 10)
-AND RunID='test-runid'
-Order by CloseTime DESC, RunID DESC
+AND WorkflowID = 'wid' and ((CustomStringField like '%%custom and custom2 or custom3 order by%%') or CustomIntField between 1 and 10)
+Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName),
 		},
@@ -196,34 +200,47 @@ LIMIT 0, 10
 				Domain:        testDomain,
 				PageSize:      testPageSize,
 				NextPageToken: nil,
-				Query:         "CustomizedKeyword = 'keywordCustomized' and CustomStringField = 'String field is for text' and unregistered <= 100",
+				Query:         "CustomizedKeyword = 'keywordCustomized' and CustomStringField = 'String field is for text'",
 			},
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND CustomizedKeyword = 'keywordCustomized'
-AND CustomStringField LIKE '%%String field is for text%%'
-Order BY CloseTime DESC
+AND CustomizedKeyword = 'keywordCustomized' and CustomStringField like '%%String field is for text%%'
+Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName),
 		},
 
-		"complete request with customized query with all customized attributes with all cases AND & a invalid string input": {
+		"or clause with custom attributes": {
 			input: &p.ListWorkflowExecutionsByQueryRequest{
 				DomainUUID:    testDomainID,
 				Domain:        testDomain,
 				PageSize:      testPageSize,
 				NextPageToken: nil,
-				Query:         "CloseTime = missing anD WorkflowType = some-test-workflow and CustomizedKeyword = 'keywordCustomized' AND CustomStringField = 'String field is for text' And unregistered <= 100 aNd Order by DomainId Desc",
+				Query:         "CustomIntField = 1 or CustomIntField = 2",
 			},
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND CloseTime = -1
-AND WorkflowType = some-test-workflow
-AND CustomizedKeyword = 'keywordCustomized'
-AND CustomStringField LIKE '%%String field is for text%%'
-Order by DomainId Desc
+AND CustomIntField = 1 or CustomIntField = 2
+Order BY StartTime DESC
+LIMIT 0, 10
+`, testTableName),
+		},
+
+		"complete request with customized query with missing": {
+			input: &p.ListWorkflowExecutionsByQueryRequest{
+				DomainUUID:    testDomainID,
+				Domain:        testDomain,
+				PageSize:      testPageSize,
+				NextPageToken: nil,
+				Query:         "CloseTime = missing anD WorkflowType = 'some-test-workflow'",
+			},
+			expectedOutput: fmt.Sprintf(`SELECT *
+FROM %s
+WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
+AND CloseTime = -1 and WorkflowType = 'some-test-workflow'
+Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName),
 		},
@@ -234,16 +251,13 @@ LIMIT 0, 10
 				Domain:        testDomain,
 				PageSize:      testPageSize,
 				NextPageToken: serializedToken,
-				Query:         "CloseStatus < 0 and CustomizedKeyword = 'keywordCustomized' AND CustomIntField<=10 and CustomStringField = 'String field is for text' And unregistered <= 100 aNd Order by DomainId Desc",
+				Query:         "CloseStatus < 0 and CustomizedKeyword = 'keywordCustomized' AND CustomIntField<=10 and CustomStringField = 'String field is for text' Order by DomainID Desc",
 			},
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND CloseStatus < 0
-AND CustomizedKeyword = 'keywordCustomized'
-AND CustomIntField <= 10
-AND CustomStringField LIKE '%%String field is for text%%'
-Order by DomainId Desc
+AND CloseStatus < 0 and CustomizedKeyword = 'keywordCustomized' and CustomIntField <= 10 and CustomStringField like '%%String field is for text%%'
+Order by DomainID Desc
 LIMIT 11, 10
 `, testTableName),
 		},
@@ -276,7 +290,7 @@ LIMIT 0, 10
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND CloseStatus < 0
-Order BY CloseTime DESC
+Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName),
 		},
@@ -580,7 +594,7 @@ func TestParseLastElement(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			assert.NotPanics(t, func() {
-				element, orderBy := parseLastElement(test.input)
+				element, orderBy := parseOrderBy(test.input)
 				assert.Equal(t, test.expectedElement, element)
 				assert.Equal(t, test.expectedOrderBy, orderBy)
 			})
