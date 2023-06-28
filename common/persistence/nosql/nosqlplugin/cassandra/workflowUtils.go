@@ -1206,7 +1206,7 @@ func (db *cdb) updateWorkflowExecution(
 	//default TTL Value. 0 TTL means no ttl is set, hence your records will persist forever unless explicitly deleted.
 	ttlInSeconds := 0
 	//Only fires when the workflow is closing.
-	if execution.CloseStatus == 1 {
+	if execution.State == persistence.WorkflowStateCompleted || execution.State == persistence.WorkflowStateCorrupted {
 		if db.dc.EnableExecutionTTL(domainID) {
 			ttlInSeconds = int(execution.TTLInSeconds)
 		}
