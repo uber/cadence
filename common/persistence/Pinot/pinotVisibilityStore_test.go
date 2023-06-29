@@ -25,6 +25,7 @@ package pinotVisibility
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/uber/cadence/common/definition"
 	"testing"
 	"time"
 
@@ -50,25 +51,25 @@ var (
 	testCloseStatus  = int32(1)
 	testTableName    = "test-table-name"
 
+	validSearchAttr = definition.GetDefaultIndexedKeys()
+
 	visibilityStore = pinotVisibilityStore{
-		pinotClient: nil,
-		producer:    nil,
-		logger:      log.NewNoop(),
-		config:      nil,
+		pinotClient:         nil,
+		producer:            nil,
+		logger:              log.NewNoop(),
+		config:              nil,
+		pinotQueryValidator: pnt.NewPinotQueryValidator(validSearchAttr),
 	}
 )
 
 func TestGetCountWorkflowExecutionsQuery(t *testing.T) {
-	testValidMap := make(map[string]interface{})
-	testValidMap["WorkflowID"] = types.IndexedValueTypeKeyword
-
 	request := &p.CountWorkflowExecutionsRequest{
 		DomainUUID: testDomainID,
 		Domain:     testDomain,
 		Query:      "WorkflowID = 'wfid'",
 	}
 
-	result := visibilityStore.getCountWorkflowExecutionsQuery(testTableName, request, testValidMap)
+	result := visibilityStore.getCountWorkflowExecutionsQuery(testTableName, request)
 	expectResult := fmt.Sprintf(`SELECT COUNT(*)
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
@@ -77,22 +78,11 @@ AND WorkflowID = 'wfid'
 
 	assert.Equal(t, result, expectResult)
 
-	nilResult := visibilityStore.getCountWorkflowExecutionsQuery(testTableName, nil, nil)
+	nilResult := visibilityStore.getCountWorkflowExecutionsQuery(testTableName, nil)
 	assert.Equal(t, nilResult, "")
 }
 
 func TestGetListWorkflowExecutionQuery(t *testing.T) {
-	testValidMap := make(map[string]interface{})
-	testValidMap["CustomizedKeyword"] = types.IndexedValueTypeKeyword
-	testValidMap["WorkflowID"] = types.IndexedValueTypeKeyword
-	testValidMap["CustomStringField"] = types.IndexedValueTypeString
-	testValidMap["CustomIntField"] = types.IndexedValueTypeInt
-	testValidMap["CustomKeywordField"] = types.IndexedValueTypeDouble
-	testValidMap["IndexedValueTypeBool"] = types.IndexedValueTypeBool
-	testValidMap["IndexedValueTypeDatetime"] = types.IndexedValueTypeDatetime
-	testValidMap["CloseStatus"] = types.IndexedValueTypeInt
-	testValidMap["CloseTime"] = types.IndexedValueTypeInt
-	testValidMap["WorkflowType"] = types.IndexedValueTypeKeyword
 
 	token := pnt.PinotVisibilityPageToken{
 		From: 11,
@@ -113,13 +103,13 @@ func TestGetListWorkflowExecutionQuery(t *testing.T) {
 				Domain:        testDomain,
 				PageSize:      testPageSize,
 				NextPageToken: nil,
-				Query:         "`Attr.CustomizedKeyword` = 'keywordCustomized'",
+				Query:         "`Attr.CustomKeywordField` = 'keywordCustomized'",
 			},
 			expectedOutput: fmt.Sprintf(
 				`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND CustomizedKeyword = 'keywordCustomized'
+AND CustomKeywordField = 'keywordCustomized'
 Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName),
@@ -149,12 +139,12 @@ LIMIT 0, 10
 				Domain:        testDomain,
 				PageSize:      testPageSize,
 				NextPageToken: nil,
-				Query:         "CustomizedKeyword = 'keywordCustomized' and CustomStringField = 'String and or order by'",
+				Query:         "CustomKeywordField = 'keywordCustomized' and CustomStringField = 'String and or order by'",
 			},
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND CustomizedKeyword = 'keywordCustomized' and CustomStringField like '%%String and or order by%%'
+AND CustomKeywordField = 'keywordCustomized' and CustomStringField like '%%String and or order by%%'
 Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName),
@@ -200,12 +190,12 @@ LIMIT 0, 10
 				Domain:        testDomain,
 				PageSize:      testPageSize,
 				NextPageToken: nil,
-				Query:         "CustomizedKeyword = 'keywordCustomized' and CustomStringField = 'String field is for text'",
+				Query:         "CustomKeywordField = 'keywordCustomized' and CustomStringField = 'String field is for text'",
 			},
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND CustomizedKeyword = 'keywordCustomized' and CustomStringField like '%%String field is for text%%'
+AND CustomKeywordField = 'keywordCustomized' and CustomStringField like '%%String field is for text%%'
 Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName),
@@ -251,12 +241,12 @@ LIMIT 0, 10
 				Domain:        testDomain,
 				PageSize:      testPageSize,
 				NextPageToken: serializedToken,
-				Query:         "CloseStatus < 0 and CustomizedKeyword = 'keywordCustomized' AND CustomIntField<=10 and CustomStringField = 'String field is for text' Order by DomainID Desc",
+				Query:         "CloseStatus < 0 and CustomKeywordField = 'keywordCustomized' AND CustomIntField<=10 and CustomStringField = 'String field is for text' Order by DomainID Desc",
 			},
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND CloseStatus < 0 and CustomizedKeyword = 'keywordCustomized' and CustomIntField <= 10 and CustomStringField like '%%String field is for text%%'
+AND CloseStatus < 0 and CustomKeywordField = 'keywordCustomized' and CustomIntField <= 10 and CustomStringField like '%%String field is for text%%'
 Order by DomainID Desc
 LIMIT 11, 10
 `, testTableName),
@@ -328,7 +318,7 @@ LIMIT 0, 0
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			assert.NotPanics(t, func() {
-				output := visibilityStore.getListWorkflowExecutionsByQueryQuery(testTableName, test.input, testValidMap)
+				output := visibilityStore.getListWorkflowExecutionsByQueryQuery(testTableName, test.input)
 				assert.Equal(t, test.expectedOutput, output)
 			})
 		})

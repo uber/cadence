@@ -71,10 +71,11 @@ const (
 
 type (
 	pinotVisibilityStore struct {
-		pinotClient pnt.GenericClient
-		producer    messaging.Producer
-		logger      log.Logger
-		config      *service.Config
+		pinotClient         pnt.GenericClient
+		producer            messaging.Producer
+		logger              log.Logger
+		config              *service.Config
+		pinotQueryValidator *pnt.VisibilityQueryValidator
 	}
 
 	visibilityMessage struct {
@@ -107,10 +108,11 @@ func NewPinotVisibilityStore(
 	logger log.Logger,
 ) p.VisibilityStore {
 	return &pinotVisibilityStore{
-		pinotClient: pinotClient,
-		producer:    producer,
-		logger:      logger.WithTags(tag.ComponentPinotVisibilityManager),
-		config:      config,
+		pinotClient:         pinotClient,
+		producer:            producer,
+		logger:              logger.WithTags(tag.ComponentPinotVisibilityManager),
+		config:              config,
+		pinotQueryValidator: pnt.NewPinotQueryValidator(config.ValidSearchAttributes()),
 	}
 }
 
@@ -411,7 +413,7 @@ func (v *pinotVisibilityStore) GetClosedWorkflowExecution(ctx context.Context, r
 func (v *pinotVisibilityStore) ListWorkflowExecutions(ctx context.Context, request *p.ListWorkflowExecutionsByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	checkPageSize(request)
 
-	query := v.getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request, v.config.ValidSearchAttributes())
+	query := v.getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request)
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -434,7 +436,7 @@ func (v *pinotVisibilityStore) ListWorkflowExecutions(ctx context.Context, reque
 func (v *pinotVisibilityStore) ScanWorkflowExecutions(ctx context.Context, request *p.ListWorkflowExecutionsByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	checkPageSize(request)
 
-	query := v.getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request, v.config.ValidSearchAttributes())
+	query := v.getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request)
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -455,7 +457,7 @@ func (v *pinotVisibilityStore) ScanWorkflowExecutions(ctx context.Context, reque
 }
 
 func (v *pinotVisibilityStore) CountWorkflowExecutions(ctx context.Context, request *p.CountWorkflowExecutionsRequest) (*p.CountWorkflowExecutionsResponse, error) {
-	query := v.getCountWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request, v.config.ValidSearchAttributes())
+	query := v.getCountWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request)
 
 	resp, err := v.pinotClient.CountByQuery(query)
 	if err != nil {
@@ -492,7 +494,7 @@ func (v *pinotVisibilityStore) checkProducer() {
 }
 
 func createVisibilityMessage(
-	// common parameters
+// common parameters
 	domainID string,
 	wid,
 	rid string,
@@ -505,11 +507,11 @@ func createVisibilityMessage(
 	encoding common.EncodingType,
 	isCron bool,
 	numClusters int16,
-	// specific to certain status
-	closeTimeUnixNano int64, // close execution
+// specific to certain status
+	closeTimeUnixNano int64,                           // close execution
 	closeStatus workflow.WorkflowExecutionCloseStatus, // close execution
-	historyLength int64, // close execution
-	updateTimeUnixNano int64, // update execution,
+	historyLength int64,                               // close execution
+	updateTimeUnixNano int64,                          // update execution,
 	shardID int64,
 	rawSearchAttributes map[string][]byte,
 ) (*indexer.PinotMessage, error) {
@@ -682,7 +684,7 @@ func getPartialFormatString(key string, val string) string {
 	return fmt.Sprintf(LikeStatement, key, val)
 }
 
-func (v *pinotVisibilityStore) getCountWorkflowExecutionsQuery(tableName string, request *p.CountWorkflowExecutionsRequest, validMap map[string]interface{}) string {
+func (v *pinotVisibilityStore) getCountWorkflowExecutionsQuery(tableName string, request *p.CountWorkflowExecutionsRequest) string {
 	if request == nil {
 		return ""
 	}
@@ -701,8 +703,7 @@ func (v *pinotVisibilityStore) getCountWorkflowExecutionsQuery(tableName string,
 
 	requestQuery = filterPrefix(requestQuery)
 	comparExpr, _ := parseOrderBy(requestQuery)
-	pinotQueryValidator := pnt.NewPinotQueryValidator(validMap)
-	comparExpr, err := pinotQueryValidator.ValidateQuery(comparExpr)
+	comparExpr, err := v.pinotQueryValidator.ValidateQuery(comparExpr)
 	if err != nil {
 		v.logger.Error(fmt.Sprintf("pinot query validator error: %s", err))
 	}
@@ -715,7 +716,7 @@ func (v *pinotVisibilityStore) getCountWorkflowExecutionsQuery(tableName string,
 	return query.String()
 }
 
-func (v *pinotVisibilityStore) getListWorkflowExecutionsByQueryQuery(tableName string, request *p.ListWorkflowExecutionsByQueryRequest, validMap map[string]interface{}) string {
+func (v *pinotVisibilityStore) getListWorkflowExecutionsByQueryQuery(tableName string, request *p.ListWorkflowExecutionsByQueryRequest) string {
 	if request == nil {
 		return ""
 	}
@@ -746,8 +747,7 @@ func (v *pinotVisibilityStore) getListWorkflowExecutionsByQueryQuery(tableName s
 	}
 
 	comparExpr, orderBy := parseOrderBy(requestQuery)
-	pinotQueryValidator := pnt.NewPinotQueryValidator(validMap)
-	comparExpr, err = pinotQueryValidator.ValidateQuery(comparExpr)
+	comparExpr, err = v.pinotQueryValidator.ValidateQuery(comparExpr)
 	if err != nil {
 		v.logger.Error(fmt.Sprintf("pinot query validator error: %s", err))
 	}
