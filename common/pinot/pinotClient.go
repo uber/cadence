@@ -25,6 +25,7 @@ package pinot
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/definition"
 

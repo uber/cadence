@@ -25,9 +25,10 @@ package pinotVisibility
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/uber/cadence/common/definition"
 	"testing"
 	"time"
+
+	"github.com/uber/cadence/common/definition"
 
 	pnt "github.com/uber/cadence/common/pinot"
 
