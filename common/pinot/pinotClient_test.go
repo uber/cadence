@@ -52,8 +52,8 @@ var (
 )
 
 func TestBuildMap(t *testing.T) {
-	columnName := []string{"WorkflowID", "RunID", "WorkflowType", "DomainID", "StartTime", "ExecutionTime", "CloseTime", "CloseStatus", "HistoryLength", "Encoding", "TaskList", "IsCron", "NumClusters", "UpdateTime", "CustomIntField", "CustomStringField"}
-	hit := []interface{}{"wfid", "rid", "wftype", "domainid", testEarliestTime, testEarliestTime, testLatestTime, 1, 1, "encode", "tsklst", true, 1, testEarliestTime, 1, "some string"}
+	columnName := []string{"WorkflowID", "RunID", "WorkflowType", "DomainID", "StartTime", "ExecutionTime", "CloseTime", "CloseStatus", "HistoryLength", "TaskList", "IsCron", "NumClusters", "UpdateTime", "CustomIntField", "CustomStringField"}
+	hit := []interface{}{"wfid", "rid", "wftype", "domainid", testEarliestTime, testEarliestTime, testLatestTime, 1, 1, "tsklst", true, 1, testEarliestTime, 1, "some string"}
 
 	tests := map[string]struct {
 		inputColumnNames  []string
@@ -64,7 +64,7 @@ func TestBuildMap(t *testing.T) {
 		"Case1: with everything": {
 			inputColumnNames:  columnName,
 			inputHit:          hit,
-			expectedSystemMap: map[string]interface{}{"CloseStatus": 1, "CloseTime": int64(2547596872371000000), "DomainID": "domainid", "Encoding": "encode", "ExecutionTime": int64(1547596872371000000), "HistoryLength": 1, "IsCron": true, "NumClusters": 1, "RunID": "rid", "StartTime": int64(1547596872371000000), "TaskList": "tsklst", "UpdateTime": int64(1547596872371000000), "WorkflowID": "wfid", "WorkflowType": "wftype"},
+			expectedSystemMap: map[string]interface{}{"CloseStatus": 1, "CloseTime": int64(2547596872371000000), "DomainID": "domainid", "ExecutionTime": int64(1547596872371000000), "HistoryLength": 1, "IsCron": true, "NumClusters": 1, "RunID": "rid", "StartTime": int64(1547596872371000000), "TaskList": "tsklst", "UpdateTime": int64(1547596872371000000), "WorkflowID": "wfid", "WorkflowType": "wftype"},
 			expectedCustomMap: map[string]interface{}{"CustomIntField": 1, "CustomStringField": "some string"},
 		},
 		"Case2: nil result": {
@@ -87,8 +87,8 @@ func TestBuildMap(t *testing.T) {
 }
 
 func TestConvertSearchResultToVisibilityRecord(t *testing.T) {
-	columnName := []string{"WorkflowID", "RunID", "WorkflowType", "DomainID", "StartTime", "ExecutionTime", "CloseTime", "CloseStatus", "HistoryLength", "Encoding", "TaskList", "IsCron", "NumClusters", "UpdateTime", "CustomIntField", "CustomStringField"}
-	hit := []interface{}{"wfid", "rid", "wftype", "domainid", testEarliestTime, testEarliestTime, testLatestTime, 1, 1, "encode", "tsklst", true, 1, testEarliestTime, 1, "some string"}
+	columnName := []string{"WorkflowID", "RunID", "WorkflowType", "DomainID", "StartTime", "ExecutionTime", "CloseTime", "CloseStatus", "HistoryLength", "TaskList", "IsCron", "NumClusters", "UpdateTime", "CustomIntField", "CustomStringField"}
+	hit := []interface{}{"wfid", "rid", "wftype", "domainid", testEarliestTime, testEarliestTime, testLatestTime, 1, 1, "tsklst", true, 1, testEarliestTime, 1, "some string"}
 	closeStatus := types.WorkflowExecutionCloseStatusFailed
 
 	tests := map[string]struct {

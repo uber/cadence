@@ -24,7 +24,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"strings"
 	"time"
 
@@ -494,7 +493,7 @@ func (v *pinotVisibilityStore) checkProducer() {
 }
 
 func createVisibilityMessage(
-// common parameters
+	// common parameters
 	domainID string,
 	wid,
 	rid string,
@@ -507,11 +506,11 @@ func createVisibilityMessage(
 	encoding common.EncodingType,
 	isCron bool,
 	numClusters int16,
-// specific to certain status
-	closeTimeUnixNano int64,                           // close execution
+	// specific to certain status
+	closeTimeUnixNano int64, // close execution
 	closeStatus workflow.WorkflowExecutionCloseStatus, // close execution
-	historyLength int64,                               // close execution
-	updateTimeUnixNano int64,                          // update execution,
+	historyLength int64, // close execution
+	updateTimeUnixNano int64, // update execution,
 	shardID int64,
 	rawSearchAttributes map[string][]byte,
 ) (*indexer.PinotMessage, error) {
@@ -871,29 +870,6 @@ func findLastOrderBy(list []string) int {
 		}
 	}
 	return 0
-}
-
-func removeQuote(val string) string {
-	if val[0] == '"' && val[len(val)-1] == '"' {
-		val = fmt.Sprintf("%s", val[1:len(val)-1])
-	} else if val[0] == '\'' && val[len(val)-1] == '\'' {
-		val = fmt.Sprintf("%s", val[1:len(val)-1])
-	}
-	return fmt.Sprintf("%s", val)
-}
-
-// checks if a string is system key
-func isSystemKey(key string) (bool, string) {
-	msg := visibilityMessage{}
-	values := reflect.ValueOf(msg)
-	typesOf := values.Type()
-	for i := 0; i < values.NumField(); i++ {
-		fieldName := typesOf.Field(i).Name
-		if fieldName == key {
-			return true, typesOf.Field(i).Type.String()
-		}
-	}
-	return false, "nil"
 }
 
 func getListWorkflowExecutionsQuery(tableName string, request *p.InternalListWorkflowExecutionsRequest, isClosed bool) string {
