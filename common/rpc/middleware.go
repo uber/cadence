@@ -224,12 +224,12 @@ func (m *ForwardPartitionConfigMiddleware) Call(ctx context.Context, request *tr
 	return out.Call(ctx, request)
 }
 
-// ZonalPartitionConfigMiddleware stores the partition config and isolation group of the request into the context
-// It reads a header from client request which indicates the zone which the request is from and uses it as the isolation group
-type ZonalPartitionConfigMiddleware struct{}
+// ClientPartitionConfigMiddleware stores the partition config and isolation group of the request into the context
+// It reads a header from client request and uses it as the isolation group
+type ClientPartitionConfigMiddleware struct{}
 
-func (m *ZonalPartitionConfigMiddleware) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
-	zone, _ := req.Headers.Get(common.ClientZoneHeaderName)
+func (m *ClientPartitionConfigMiddleware) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
+	zone, _ := req.Headers.Get(common.ClientIsolationGroupHeaderName)
 	if zone != "" {
 		ctx = partition.ContextWithConfig(ctx, map[string]string{
 			partition.IsolationGroupKey: zone,
