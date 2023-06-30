@@ -132,12 +132,13 @@ func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Coll
 		InboundTLS:  inboundTLS,
 		OutboundTLS: outboundTLS,
 		InboundMiddleware: yarpc.InboundMiddleware{
-			Unary: &InboundMetricsMiddleware{},
+			// order matters: ForwardPartitionConfigMiddleware must be applied after ClientPartitionConfigMiddleware
+			Unary: yarpc.UnaryInboundMiddleware(&InboundMetricsMiddleware{}, &ClientPartitionConfigMiddleware{}, &ForwardPartitionConfigMiddleware{}),
 		},
 		OutboundMiddleware: yarpc.OutboundMiddleware{
-			Unary: &HeaderForwardingMiddleware{
+			Unary: yarpc.UnaryOutboundMiddleware(&HeaderForwardingMiddleware{
 				Rules: forwardingRules,
-			},
+			}, &ForwardPartitionConfigMiddleware{}),
 		},
 	}, nil
 }
