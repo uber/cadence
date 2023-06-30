@@ -103,9 +103,9 @@ func New(
 			WriteDBVisibilityOpenMaxQPS:                 config.VisibilityOpenMaxQPS,
 			WriteDBVisibilityClosedMaxQPS:               config.VisibilityClosedMaxQPS,
 
-			ESVisibilityListMaxQPS: nil, // history service never read,
-			ESIndexMaxResultWindow: nil, // history service never read,
-			ValidSearchAttributes:  nil, // history service never read,
+			ESVisibilityListMaxQPS: nil,                          // history service never read,
+			ESIndexMaxResultWindow: nil,                          // history service never read,
+			ValidSearchAttributes:  config.ValidSearchAttributes, // history service never read, (Pinot need this to initialize pinotQueryValidator)
 		},
 	)
 	if err != nil {

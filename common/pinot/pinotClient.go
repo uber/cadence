@@ -25,9 +25,9 @@ package pinot
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
 
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/definition"
 
 	"github.com/startreedata/pinot-client-go/pinot"
 
@@ -164,15 +164,6 @@ func (c *PinotClient) getInternalGetClosedWorkflowExecutionResponse(resp *pinot.
 }
 
 // checks if a string is system key
-func isSystemKey(key string) (bool, string) {
-	msg := VisibilityRecord{}
-	values := reflect.ValueOf(msg)
-	typesOf := values.Type()
-	for i := 0; i < values.NumField(); i++ {
-		fieldName := typesOf.Field(i).Name
-		if fieldName == key {
-			return true, typesOf.Field(i).Type.String()
-		}
-	}
-	return false, "nil"
+func isSystemKey(key string) bool {
+	return definition.IsSystemIndexedKey(key)
 }

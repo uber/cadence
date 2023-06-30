@@ -32,15 +32,14 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-func buildMap(hit []interface{}, columnNames []string, isSystemKey func(key string) (bool, string)) (map[string]interface{}, map[string]interface{}) {
+func buildMap(hit []interface{}, columnNames []string, isSystemKey func(key string) bool) (map[string]interface{}, map[string]interface{}) {
 	systemKeyMap := make(map[string]interface{})
 	customKeyMap := make(map[string]interface{})
 
 	for i := 0; i < len(columnNames); i++ {
 		key := columnNames[i]
 		// checks if it is system key, if yes, put it into the system map; otherwise put it into custom map
-		ok, _ := isSystemKey(key)
-		if ok {
+		if isSystemKey(key) {
 			systemKeyMap[key] = hit[i]
 		} else {
 			customKeyMap[key] = hit[i]
@@ -69,7 +68,7 @@ type VisibilityRecord struct {
 	Attr          string
 }
 
-func ConvertSearchResultToVisibilityRecord(hit []interface{}, columnNames []string, logger log.Logger, isSystemKey func(key string) (bool, string)) *p.InternalVisibilityWorkflowExecutionInfo {
+func ConvertSearchResultToVisibilityRecord(hit []interface{}, columnNames []string, logger log.Logger, isSystemKey func(key string) bool) *p.InternalVisibilityWorkflowExecutionInfo {
 	if len(hit) != len(columnNames) {
 		return nil
 	}
