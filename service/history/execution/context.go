@@ -45,6 +45,8 @@ import (
 
 const (
 	defaultRemoteCallTimeout = 30 * time.Second
+	ttlBufferDays            = 15
+	dayToSecondMultiplier    = 86400
 )
 
 type conflictError struct {
@@ -1214,7 +1216,6 @@ func (c *contextImpl) updateWorkflowExecutionWithRetry(
 		resp, err = c.shard.UpdateWorkflowExecution(ctx, request)
 		return err
 	}
-
 	isRetryable := func(err error) bool {
 		if _, ok := err.(*persistence.TimeoutError); ok {
 			// timeout error is not retryable for update workflow execution
