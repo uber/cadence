@@ -304,12 +304,12 @@ func TestForwardPartitionConfigMiddleware(t *testing.T) {
 	})
 }
 
-func TestZonalPartitionConfigMiddleware(t *testing.T) {
+func TestClientPartitionConfigMiddleware(t *testing.T) {
 	t.Run("it sets the partition config", func(t *testing.T) {
-		m := &ZonalPartitionConfigMiddleware{}
+		m := &ClientPartitionConfigMiddleware{}
 		h := &fakeHandler{}
 		headers := transport.NewHeaders().
-			With(common.ClientZoneHeaderName, "dca1")
+			With(common.ClientIsolationGroupHeaderName, "dca1")
 		err := m.Handle(context.Background(), &transport.Request{Headers: headers}, nil, h)
 		assert.NoError(t, err)
 		assert.Equal(t, map[string]string{partition.IsolationGroupKey: "dca1"}, partition.ConfigFromContext(h.ctx))
@@ -317,7 +317,7 @@ func TestZonalPartitionConfigMiddleware(t *testing.T) {
 	})
 
 	t.Run("noop when header is empty", func(t *testing.T) {
-		m := &ZonalPartitionConfigMiddleware{}
+		m := &ClientPartitionConfigMiddleware{}
 		h := &fakeHandler{}
 		headers := transport.NewHeaders()
 		ctx := context.Background()

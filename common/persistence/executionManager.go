@@ -329,7 +329,6 @@ func (m *executionManagerImpl) UpdateWorkflowExecution(
 			return nil, err
 		}
 	}
-
 	newRequest := &InternalUpdateWorkflowExecutionRequest{
 		RangeID: request.RangeID,
 
@@ -661,9 +660,9 @@ func (m *executionManagerImpl) SerializeWorkflowMutation(
 		CrossClusterTasks: input.CrossClusterTasks,
 		ReplicationTasks:  input.ReplicationTasks,
 		TimerTasks:        input.TimerTasks,
-
-		Condition: input.Condition,
-		Checksum:  input.Checksum,
+		TTLInSeconds:      input.TTLInSeconds,
+		Condition:         input.Condition,
+		Checksum:          input.Checksum,
 	}, nil
 }
 
