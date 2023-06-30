@@ -492,7 +492,9 @@ func (s *PinotIntegrationSuite) TestListWorkflow_OrQuery() {
 		}
 		time.Sleep(waitTimeInMs * time.Millisecond)
 	}
+	// TODO: need to clean up or every time we run, we have to delete the table.
 	s.Equal(2, len(openExecutions))
+
 	e1 := openExecutions[0]
 	e2 := openExecutions[1]
 	if e1.GetExecution().GetRunID() != we1.GetRunID() {
