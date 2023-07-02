@@ -1078,7 +1078,6 @@ func (db *cdb) resetWorkflowExecutionAndMapsAndEventBuffer(
 	if execution.MapsWriteMode != nosqlplugin.WorkflowExecutionMapsWriteModeReset {
 		return fmt.Errorf("should only support WorkflowExecutionMapsWriteModeReset")
 	}
-
 	err = db.resetActivityInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ActivityInfos)
 	if err != nil {
 		return err
@@ -1168,7 +1167,6 @@ func (db *cdb) updateWorkflowExecutionAndEventBufferWithMergeAndDeleteMaps(
 			return err
 		}
 	}
-
 	if execution.MapsWriteMode != nosqlplugin.WorkflowExecutionMapsWriteModeUpdate {
 		return fmt.Errorf("should only support WorkflowExecutionMapsWriteModeUpdate")
 	}
@@ -1205,8 +1203,26 @@ func (db *cdb) updateWorkflowExecution(
 ) error {
 	execution.StartTimestamp = db.convertToCassandraTimestamp(execution.StartTimestamp)
 	execution.LastUpdatedTimestamp = db.convertToCassandraTimestamp(execution.LastUpdatedTimestamp)
-
-	batch.Query(templateUpdateWorkflowExecutionWithVersionHistoriesQuery,
+	//default TTL Value. 0 TTL means no ttl is set, hence your records will persist forever unless explicitly deleted.
+	ttlInSeconds := 0
+	//Only fires when the workflow is closing.
+	if execution.State == persistence.WorkflowStateCompleted || execution.State == persistence.WorkflowStateCorrupted {
+		if db.dc.EnableExecutionTTL(domainID) {
+			ttlInSeconds = int(execution.TTLInSeconds)
+		}
+		batch.Query(templateUpdateWorkflowExecutionWithVersionHistoriesQueryPart1,
+			domainID,
+			execution.RunID,
+			shardID,
+			rowTypeExecutionTaskID,
+			rowTypeExecution,
+			defaultVisibilityTimestamp,
+			workflowID,
+			ttlInSeconds,
+		)
+	}
+	batch.Query(templateUpdateWorkflowExecutionWithVersionHistoriesQueryPart2,
+		ttlInSeconds,
 		domainID,
 		workflowID,
 		execution.RunID,

@@ -609,6 +609,92 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionStateCloseStatus() {
 	}
 }
 
+// TestUpdateWorkflowExecutionTTL test
+func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
+	//TODO: Update the test when the TTLbuffer becomes configurable.
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+	if s.ExecutionManager.GetName() != "cassandra" {
+		// TTL API is only supported in cassandra"
+		return
+	}
+
+	domainID := uuid.New()
+	workflowID := "update-workflow-test-with-ttl"
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: workflowID,
+		RunID:      uuid.New(),
+	}
+	tasklist := "some random tasklist"
+	workflowType := "some random workflow type"
+	workflowTimeout := int32(10)
+	decisionTimeout := int32(14)
+	lastProcessedEventID := int64(0)
+	nextEventID := int64(3)
+	csum := s.newRandomChecksum()
+	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
+		{
+			EventID: nextEventID,
+			Version: common.EmptyVersion,
+		},
+	})
+	versionHistories := p.NewVersionHistories(versionHistory)
+
+	// create and update a workflow to make it completed
+	req := &p.CreateWorkflowExecutionRequest{
+		NewWorkflowSnapshot: p.WorkflowSnapshot{
+			ExecutionInfo: &p.WorkflowExecutionInfo{
+				CreateRequestID:             uuid.New(),
+				DomainID:                    domainID,
+				WorkflowID:                  workflowExecution.GetWorkflowID(),
+				RunID:                       workflowExecution.GetRunID(),
+				FirstExecutionRunID:         workflowExecution.GetRunID(),
+				TaskList:                    tasklist,
+				WorkflowTypeName:            workflowType,
+				WorkflowTimeout:             workflowTimeout,
+				DecisionStartToCloseTimeout: decisionTimeout,
+				NextEventID:                 nextEventID,
+				LastProcessedEvent:          lastProcessedEventID,
+				State:                       p.WorkflowStateRunning,
+				CloseStatus:                 p.WorkflowCloseStatusNone,
+			},
+			ExecutionStats:   &p.ExecutionStats{},
+			Checksum:         csum,
+			VersionHistories: versionHistories,
+		},
+		RangeID: s.ShardInfo.RangeID,
+		Mode:    p.CreateWorkflowModeBrandNew,
+	}
+	_, err := s.ExecutionManager.CreateWorkflowExecution(ctx, req)
+	s.Nil(err)
+	currentRunID, err := s.GetCurrentWorkflowRunID(ctx, domainID, workflowID)
+	s.Nil(err)
+	s.Equal(workflowExecution.GetRunID(), currentRunID)
+
+	info, err := s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
+	s.Nil(err)
+
+	updatedInfo := copyWorkflowExecutionInfo(info.ExecutionInfo)
+	updateStats := copyExecutionStats(info.ExecutionStats)
+	updatedInfo.State = p.WorkflowStateCompleted
+	updatedInfo.CloseStatus = p.WorkflowCloseStatusCompleted
+	_, err = s.ExecutionManager.UpdateWorkflowExecution(ctx, &p.UpdateWorkflowExecutionRequest{
+		UpdateWorkflowMutation: p.WorkflowMutation{
+			ExecutionInfo:    updatedInfo,
+			ExecutionStats:   updateStats,
+			Condition:        nextEventID,
+			TTLInSeconds:     1,
+			VersionHistories: versionHistories,
+		},
+		RangeID: s.ShardInfo.RangeID,
+		Mode:    p.UpdateWorkflowModeUpdateCurrent,
+	})
+	s.NoError(err)
+	time.Sleep(2 * time.Second)
+	info, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
+	s.IsType(&types.EntityNotExistsError{}, err)
+}
+
 // TestUpdateWorkflowExecutionWithZombieState test
 func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionWithZombieState() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)

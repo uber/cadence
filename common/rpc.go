@@ -56,8 +56,8 @@ const (
 	// IsolationGroupHeaderName refers to the name of the header that contains the isolation group of the client
 	IsolationGroupHeaderName = "cadence-worker-isolation-group"
 
-	// ClientZoneHeaderName refers to the name of the header that contaains the zone which the client request is from
-	ClientZoneHeaderName = "cadence-client-zone"
+	// ClientIsolationGroupHeaderName refers to the name of the header that contains the isolation group which the client request is from
+	ClientIsolationGroupHeaderName = "cadence-client-isolation-group"
 )
 
 type (
