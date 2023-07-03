@@ -3,84 +3,46 @@
     "test-visibility*"
   ],
   "template": {
-    "settings": {
-      "index": {
-        "number_of_shards": "5",
-        "number_of_replicas": "0"
-      }
-    },
+    "aliases": {},
     "mappings": {
       "dynamic": "false",
       "properties": {
-        "DomainID": {
-          "type": "keyword"
-        },
-        "WorkflowID": {
-          "type": "keyword"
-        },
-        "RunID": {
-          "type": "keyword"
-        },
-        "WorkflowType": {
-          "type": "keyword"
-        },
-        "StartTime": {
-          "type": "long"
-        },
-        "ExecutionTime": {
-          "type": "long"
-        },
-        "CloseTime": {
-          "type": "long"
-        },
-        "CloseStatus": {
-          "type": "integer"
-        },
-        "HistoryLength": {
-          "type": "integer"
-        },
-        "IsCron": {
-          "type": "boolean"
-        },
-        "NumClusters": {
-          "type": "long"
-        },
-        "KafkaKey": {
-          "type": "keyword"
-        },
-        "ShardID": {
-          "type": "long"
-        },
         "Attr": {
           "properties": {
+            "BinaryChecksums": {
+              "type": "keyword"
+            },
             "CadenceChangeVersion": {
+              "type": "keyword"
+            },
+            "CustomBoolField": {
+              "type": "boolean"
+            },
+            "CustomDatetimeField": {
+              "type": "date"
+            },
+            "CustomDomain": {
+              "type": "keyword"
+            },
+            "CustomDoubleField": {
+              "type": "double"
+            },
+            "CustomIntField": {
+              "type": "long"
+            },
+            "CustomKeywordField": {
               "type": "keyword"
             },
             "CustomStringField": {
               "type": "text"
             },
-            "CustomKeywordField": {
+            "Operator": {
               "type": "keyword"
             },
-            "CustomIntField": {
-              "type": "long"
-            },
-            "CustomBoolField": {
+            "Passed": {
               "type": "boolean"
             },
-            "CustomDoubleField": {
-              "type": "double"
-            },
-            "CustomDatetimeField": {
-              "type": "date"
-            },
-            "project": {
-              "type": "keyword"
-            },
-            "service": {
-              "type": "keyword"
-            },
-            "environment": {
+            "RolloutID": {
               "type": "keyword"
             },
             "addon": {
@@ -89,28 +51,66 @@
             "addon-type": {
               "type": "keyword"
             },
+            "environment": {
+              "type": "keyword"
+            },
+            "project": {
+              "type": "keyword"
+            },
+            "service": {
+              "type": "keyword"
+            },
             "user": {
               "type": "keyword"
-            },
-            "CustomDomain": {
-              "type": "keyword"
-            },
-            "Operator": {
-              "type": "keyword"
-            },
-            "RolloutID": {
-              "type": "keyword"
-            },
-            "BinaryChecksums": {
-              "type": "keyword"
-            },
-            "Passed": {
-              "type": "boolean"
             }
           }
+        },
+        "CloseStatus": {
+          "type": "integer"
+        },
+        "CloseTime": {
+          "type": "long"
+        },
+        "DomainID": {
+          "type": "keyword"
+        },
+        "ExecutionTime": {
+          "type": "long"
+        },
+        "HistoryLength": {
+          "type": "integer"
+        },
+        "IsCron": {
+          "type": "boolean"
+        },
+        "KafkaKey": {
+          "type": "keyword"
+        },
+        "NumClusters": {
+          "type": "long"
+        },
+        "RunID": {
+          "type": "keyword"
+        },
+        "ShardID": {
+          "type": "long"
+        },
+        "StartTime": {
+          "type": "long"
+        },
+        "WorkflowID": {
+          "type": "keyword"
+        },
+        "WorkflowType": {
+          "type": "keyword"
         }
       }
     },
-    "aliases": {}
+    "settings": {
+      "index": {
+        "number_of_replicas": "0",
+        "number_of_shards": "5"
+      }
+    }
   }
 }
