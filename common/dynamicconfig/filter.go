@@ -20,6 +20,11 @@
 
 package dynamicconfig
 
+import (
+	"encoding/json"
+	"github.com/uber/cadence/common/types"
+)
+
 // Filter represents a filter on the dynamic config key
 type Filter int
 
@@ -145,4 +150,48 @@ func WorkflowTypeFilter(name string) FilterOption {
 	return func(filterMap map[Filter]interface{}) {
 		filterMap[WorkflowType] = name
 	}
+}
+
+func ToGetDynamicConfigFilterRequest(configName string, filters []FilterOption) *types.GetDynamicConfigRequest {
+	filterMap := make(map[Filter]interface{}, len(filters))
+	for _, opt := range filters {
+		opt(filterMap)
+	}
+	var dcFilters []*types.DynamicConfigFilter
+
+	//for f, entity  := range filterMap{
+	//	dcFilters = append(dcFilters, &types.DynamicConfigFilter{
+	//		Name: f.String(),
+	//		Value: &types.DataBlob{
+	//			EncodingType: ,
+	//			Data: json.Marshal(??),
+	//		},
+	//	})
+	//}
+	for f, entity := range filterMap {
+		filter := &types.DynamicConfigFilter{
+			Name: f.String(),
+		}
+
+		// Marshal the entity value to JSON
+		data, err := json.Marshal(entity)
+		if err != nil {
+			// Handle error
+		}
+
+		encodingType := types.EncodingTypeJSON
+		filter.Value = &types.DataBlob{
+			EncodingType: &encodingType,
+			Data:         data,
+		}
+
+		dcFilters = append(dcFilters, filter)
+	}
+
+	request := &types.GetDynamicConfigRequest{
+		ConfigName: configName,
+		Filters:    dcFilters,
+	}
+
+	return request
 }

@@ -25,6 +25,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/client/admin"
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 	"reflect"
 	"strconv"
 	"strings"
@@ -38,7 +41,7 @@ import (
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/domain"
-	"github.com/uber/cadence/common/types"
+	dc "github.com/uber/cadence/common/dynamicconfig"
 )
 
 var (
@@ -51,6 +54,9 @@ type (
 		frontendClient frontend.Client
 		// used by migration command to make RPC call to frontend service of the destination domain
 		destinationClient frontend.Client
+
+		frontendAdminClient    admin.Client
+		destinationAdminClient admin.Client
 
 		// act as admin to modify domain in DB directly
 		domainHandler domain.Handler
@@ -404,6 +410,27 @@ VisibilityArchivalURI: {{.}}{{end}}
 {{with .FailoverInfo}}Graceful failover info:
 {{table .}}{{end}}`
 
+//var newtemplateDomain = `Validation Check:
+//{{- range .}}
+//- {{.ValidationCheck}}: {{.ValidationResult}}
+//  {{- with .ValidationDetails}}
+//    {{- with .CurrentDomainRow}}
+//      Current Domain:
+//        Name: {{if .DomainInfo}}{{.DomainInfo.Name}}{{else}}N/A{{end}}
+//        UUID: {{if .DomainInfo}}{{.DomainInfo.UUID}}{{else}}N/A{{end}}
+//    {{- end}}
+//    {{- with .NewDomainRow}}
+//      New Domain:
+//        Name: {{if .DomainInfo}}{{.DomainInfo.Name}}{{else}}N/A{{end}}
+//        UUID: {{if .DomainInfo}}{{.DomainInfo.UUID}}{{else}}N/A{{end}}
+//    {{- end}}
+//    {{- if .LongRunningWorkFlowNum}}
+//      Long Running Workflow Num: {{.LongRunningWorkFlowNum}}
+//    {{- end}}
+//  {{- end}}
+//{{- end}}
+//`
+
 var newtemplateDomain = `Validation Check: 
 {{- range .}}
 - {{.ValidationCheck}}: {{.ValidationResult}}
@@ -420,6 +447,13 @@ var newtemplateDomain = `Validation Check:
     {{- end}}
     {{- if .LongRunningWorkFlowNum}}
       Long Running Workflow Num: {{.LongRunningWorkFlowNum}}
+    {{- end}}
+    {{- if .MismatchedDynamicConfig}}
+      Mismatched Dynamic Config:
+        Current Response: 
+          Value: {{if .MismatchedDynamicConfig.CurrResp}}{{.MismatchedDynamicConfig.CurrResp.Value}}{{else}}N/A{{end}}
+        New Response: 
+          Value: {{if .MismatchedDynamicConfig.NewResp}}{{.MismatchedDynamicConfig.NewResp.Value}}{{else}}N/A{{end}}
     {{- end}}
   {{- end}}
 {{- end}}
@@ -516,9 +550,15 @@ type DomainMigrationRow struct {
 }
 
 type ValidationDetails struct {
-	CurrentDomainRow       *types.DescribeDomainResponse
-	NewDomainRow           *types.DescribeDomainResponse
-	LongRunningWorkFlowNum *int
+	CurrentDomainRow        *types.DescribeDomainResponse
+	NewDomainRow            *types.DescribeDomainResponse
+	LongRunningWorkFlowNum  *int
+	MismatchedDynamicConfig MismatchedDynamicConfig
+}
+
+type MismatchedDynamicConfig struct {
+	CurrResp *types.GetDynamicConfigResponse
+	NewResp  *types.GetDynamicConfigResponse
 }
 
 func newDomainRow(domain *types.DescribeDomainResponse) DomainRow {
@@ -805,6 +845,57 @@ func (d *domainCLIImpl) migrationDomainWorkFlowCheck(c *cli.Context) DomainMigra
 			LongRunningWorkFlowNum: &countWorkFlows,
 		},
 	}
+}
+
+func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrationRow {
+	check := true
+
+	resp := dynamicconfig.ListAllProductionKeys()
+
+	var currResps *types.GetDynamicConfigResponse
+	var newResps *types.GetDynamicConfigResponse
+
+	for _, configName := range resp {
+		// Check if the key only has a domain filter
+		if len(configName.Filters()) == 1 && (configName.Filters()[0] == dc.DomainName || configName.Filters()[0] == dc.DomainID) {
+			// Use the helper method to get the GetDynamicConfigRequest
+			currRequest := dynamicconfig.ToGetDynamicConfigFilterRequest("", []dynamicconfig.FilterOption{
+				dynamicconfig.DomainFilter(FlagDomain),
+			})
+
+			newRequest := dynamicconfig.ToGetDynamicConfigFilterRequest("", []dynamicconfig.FilterOption{
+				dynamicconfig.DomainFilter(FlagDestinationDomain),
+			})
+
+			currResp, err := d.destinationAdminClient.GetDynamicConfig(context.Background(), currRequest)
+			if err != nil {
+				ErrorAndExit("Failed to fetch dynamic config for current domain.", err)
+			}
+			newResp, err := d.destinationAdminClient.GetDynamicConfig(context.Background(), newRequest)
+			if err != nil {
+				ErrorAndExit("Failed to fetch dynamic config for destination domain.", err)
+			}
+
+			if currResp.Value != newResp.Value {
+				check = false
+			}
+			currResps = currResp
+			newResps = newResp
+		}
+	}
+
+	validationRow := DomainMigrationRow{
+		ValidationCheck:  "Dynamic Config Check",
+		ValidationResult: check,
+		ValidationDetails: ValidationDetails{
+			MismatchedDynamicConfig: MismatchedDynamicConfig{
+				CurrResp: currResps,
+				NewResp:  newResps,
+			},
+		},
+	}
+
+	return validationRow
 }
 
 func archivalStatus(c *cli.Context, statusFlagName string) *types.ArchivalStatus {
