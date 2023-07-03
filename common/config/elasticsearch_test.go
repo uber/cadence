@@ -23,6 +23,7 @@
 package config
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -33,7 +34,7 @@ func TestAWSSigning_ValidateEmpty(t *testing.T) {
 	tests := []struct {
 		msg    string
 		config AWSSigning
-		err    bool
+		err    error
 	}{
 		{
 			msg: "Empty config should error",
@@ -41,7 +42,7 @@ func TestAWSSigning_ValidateEmpty(t *testing.T) {
 				StaticCredential:      nil,
 				EnvironmentCredential: nil,
 			},
-			err: true,
+			err: errAWSSigningCredential,
 		},
 		{
 			msg: "error when both config sections are provided",
@@ -50,7 +51,7 @@ func TestAWSSigning_ValidateEmpty(t *testing.T) {
 				StaticCredential:      &AWSStaticCredential{},
 				EnvironmentCredential: &AWSEnvironmentCredential{},
 			},
-			err: true,
+			err: errAWSSigningCredential,
 		},
 		{
 			msg: "StaticCredential must have region set",
@@ -59,7 +60,7 @@ func TestAWSSigning_ValidateEmpty(t *testing.T) {
 				StaticCredential:      &AWSStaticCredential{},
 				EnvironmentCredential: nil,
 			},
-			err: true,
+			err: errors.New("missing region in staticCredential"),
 		},
 		{
 			msg: "EnvironmentCredential must have region set",
@@ -68,7 +69,7 @@ func TestAWSSigning_ValidateEmpty(t *testing.T) {
 				StaticCredential:      nil,
 				EnvironmentCredential: &AWSEnvironmentCredential{},
 			},
-			err: true,
+			err: errors.New("missing region in environmentCredential"),
 		},
 		{
 			msg: "Valid StaticCredential config should have no error ",
@@ -77,7 +78,7 @@ func TestAWSSigning_ValidateEmpty(t *testing.T) {
 				StaticCredential:      &AWSStaticCredential{Region: "region1"},
 				EnvironmentCredential: nil,
 			},
-			err: false,
+			err: nil,
 		},
 		{
 			msg: "Valid EnvironmentCredential config should have no error",
@@ -86,16 +87,12 @@ func TestAWSSigning_ValidateEmpty(t *testing.T) {
 				StaticCredential:      nil,
 				EnvironmentCredential: &AWSEnvironmentCredential{Region: "region1"},
 			},
-			err: false,
+			err: nil,
 		},
 	}
 
 	for _, tc := range tests {
-		if tc.err {
-			assert.Error(t, tc.config.Validate(), tc.msg)
-		} else {
-			assert.NoError(t, tc.config.Validate(), tc.msg)
-		}
+		assert.Equal(t, tc.err, tc.config.Validate(), tc.msg)
 	}
 
 }

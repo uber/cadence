@@ -94,8 +94,7 @@ func (r *BulkIndexRequest) OpType(opType string) *BulkIndexRequest {
 // Version indicates the version of the document as part of an optimistic
 // concurrency model.
 func (r *BulkIndexRequest) Version(version int64) *BulkIndexRequest {
-	v := version
-	r.version = &v
+	r.version = &version
 	r.source = nil
 	return r
 }

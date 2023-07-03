@@ -36,8 +36,8 @@ type (
 		PutIndexTemplate(t *testing.T, templateConfigFile, templateName string)
 		CreateIndex(t *testing.T, indexName string)
 		DeleteIndex(t *testing.T, indexName string)
-		PutMaxResultWindow(indexName string, maxResultWindow int) error
-		GetMaxResultWindow(indexName string) (string, error)
+		PutMaxResultWindow(t *testing.T, indexName string, maxResultWindow int) error
+		GetMaxResultWindow(t *testing.T, indexName string) (string, error)
 	}
 )
 

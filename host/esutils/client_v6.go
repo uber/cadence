@@ -76,17 +76,16 @@ func (es *v6Client) DeleteIndex(t *testing.T, indexName string) {
 	require.True(t, deleteTestIndex.Acknowledged)
 }
 
-func (es *v6Client) PutMaxResultWindow(indexName string, maxResultWindow int) error {
+func (es *v6Client) PutMaxResultWindow(t *testing.T, indexName string, maxResultWindow int) error {
 	_, err := es.client.IndexPutSettings(indexName).
 		BodyString(fmt.Sprintf(`{"max_result_window" : %d}`, maxResultWindow)).
 		Do(createContext())
+	require.NoError(t, err)
 	return err
 }
 
-func (es *v6Client) GetMaxResultWindow(indexName string) (string, error) {
+func (es *v6Client) GetMaxResultWindow(t *testing.T, indexName string) (string, error) {
 	settings, err := es.client.IndexGetSettings(indexName).Do(createContext())
-	if err != nil {
-		return "", err
-	}
+	require.NoError(t, err)
 	return settings[indexName].Settings["index"].(map[string]interface{})["max_result_window"].(string), nil
 }

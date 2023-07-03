@@ -86,7 +86,7 @@ func (s *ElasticSearchIntegrationSuite) SetupSuite() {
 	s.esClient.PutIndexTemplate(s.Suite.T(), "testdata/es_"+environment.GetESVersion()+"_index_template.json", "test-visibility-template")
 	indexName := s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName]
 	s.esClient.CreateIndex(s.Suite.T(), indexName)
-	s.putIndexSettings(indexName, defaultTestValueOfESIndexMaxResultWindow)
+	s.putIndexSettings(s.Suite.T(), indexName, defaultTestValueOfESIndexMaxResultWindow)
 }
 
 func (s *ElasticSearchIntegrationSuite) TearDownSuite() {
@@ -1145,15 +1145,15 @@ func (s *ElasticSearchIntegrationSuite) TestUpsertWorkflowExecution_InvalidKey()
 	s.True(len(failedDecisionAttr.GetDetails()) > 0)
 }
 
-func (s *ElasticSearchIntegrationSuite) putIndexSettings(indexName string, maxResultWindowSize int) {
-	err := s.esClient.PutMaxResultWindow(indexName, maxResultWindowSize)
+func (s *ElasticSearchIntegrationSuite) putIndexSettings(t *testing.T, indexName string, maxResultWindowSize int) {
+	err := s.esClient.PutMaxResultWindow(t, indexName, maxResultWindowSize)
 	s.Require().NoError(err)
-	s.verifyMaxResultWindowSize(indexName, maxResultWindowSize)
+	s.verifyMaxResultWindowSize(t, indexName, maxResultWindowSize)
 }
 
-func (s *ElasticSearchIntegrationSuite) verifyMaxResultWindowSize(indexName string, targetSize int) {
+func (s *ElasticSearchIntegrationSuite) verifyMaxResultWindowSize(t *testing.T, indexName string, targetSize int) {
 	for i := 0; i < numOfRetry; i++ {
-		currentWindow, err := s.esClient.GetMaxResultWindow(indexName)
+		currentWindow, err := s.esClient.GetMaxResultWindow(t, indexName)
 		s.Require().NoError(err)
 		if currentWindow == strconv.Itoa(targetSize) {
 			return

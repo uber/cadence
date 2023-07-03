@@ -113,7 +113,7 @@ func (os2 *os2Client) DeleteIndex(t *testing.T, indexName string) {
 
 }
 
-func (os2 *os2Client) PutMaxResultWindow(indexName string, maxResultWindow int) error {
+func (os2 *os2Client) PutMaxResultWindow(t *testing.T, indexName string, maxResultWindow int) error {
 
 	req := opensearchapi.IndicesPutSettingsRequest{
 		Body:  strings.NewReader(fmt.Sprintf(`{"max_result_window" : %d}`, maxResultWindow)),
@@ -121,26 +121,21 @@ func (os2 *os2Client) PutMaxResultWindow(indexName string, maxResultWindow int) 
 	}
 
 	res, err := req.Do(createContext(), os2.client)
-	if err != nil {
-		return err
-	}
+	require.NoError(t, err)
 
 	res.Body.Close()
 
 	return nil
 }
 
-func (os2 *os2Client) GetMaxResultWindow(indexName string) (string, error) {
+func (os2 *os2Client) GetMaxResultWindow(t *testing.T, indexName string) (string, error) {
 
 	req := opensearchapi.IndicesGetSettingsRequest{
 		Index: []string{indexName},
 	}
 
 	res, err := req.Do(createContext(), os2.client)
-	if err != nil {
-		return "", fmt.Errorf("OpenSearch error %w", err)
-	}
-
+	require.NoError(t, err)
 	defer res.Body.Close()
 
 	if res.IsError() {
@@ -149,9 +144,7 @@ func (os2 *os2Client) GetMaxResultWindow(indexName string) (string, error) {
 
 	var data map[string]map[string]interface{}
 	err = json.NewDecoder(res.Body).Decode(&data)
-	if err != nil {
-		return "", err
-	}
+	require.NoError(t, err)
 
 	if info, ok := data[indexName]["settings"].(map[string]interface{}); ok {
 		return info["index"].(map[string]interface{})["max_result_window"].(string), nil
