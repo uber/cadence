@@ -22,7 +22,6 @@ package cli
 
 import (
 	"fmt"
-
 	"github.com/urfave/cli"
 )
 
@@ -81,6 +80,16 @@ func newDomainCommands() []cli.Command {
 			Flags:   describeDomainFlags,
 			Action: func(c *cli.Context) {
 				newDomainCLI(c, false).DescribeDomain(c)
+			},
+		},
+
+		{
+			Name:    "migration",
+			Aliases: []string{"mi"},
+			Usage:   "Migrate existing workflow domain",
+			Flags:   migrateDomainFlags,
+			Action: func(c *cli.Context) {
+				newDomainCLI(c, false).MigrateDomain(c)
 			},
 		},
 	}

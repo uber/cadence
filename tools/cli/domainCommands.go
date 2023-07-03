@@ -46,7 +46,8 @@ var (
 type (
 	domainCLIImpl struct {
 		// used when making RPC call to frontend service
-		frontendClient frontend.Client
+		frontendClient    frontend.Client
+		destinationClient frontend.Client
 
 		// act as admin to modify domain in DB directly
 		domainHandler domain.Handler
@@ -58,18 +59,16 @@ func newDomainCLI(
 	c *cli.Context,
 	isAdminMode bool,
 ) *domainCLIImpl {
-
-	var frontendClient frontend.Client
-	var domainHandler domain.Handler
+	d := &domainCLIImpl{}
 	if !isAdminMode {
-		frontendClient = initializeFrontendClient(c)
+		d.frontendClient = initializeFrontendClient(c)
+		d.destinationClient = newClientFactory(func(c *cli.Context) string {
+			return c.String(FlagDestinationAddress)
+		}).ServerFrontendClient(c)
 	} else {
-		domainHandler = initializeAdminDomainHandler(c)
+		d.domainHandler = initializeAdminDomainHandler(c)
 	}
-	return &domainCLIImpl{
-		frontendClient: frontendClient,
-		domainHandler:  domainHandler,
-	}
+	return d
 }
 
 // RegisterDomain register a domain
@@ -446,6 +445,10 @@ func (d *domainCLIImpl) DescribeDomain(c *cli.Context) {
 	})
 }
 
+func (d *domainCLIImpl) MigrateDomain(c *cli.Context) {
+	d.migrateDomain(c)
+}
+
 type BadBinaryRow struct {
 	Checksum  string    `header:"Binary Checksum"`
 	Operator  string    `header:"Operator"`
@@ -479,6 +482,19 @@ type DomainRow struct {
 	VisibilityArchivalURI    string               `header:"Visibility Archival URI"`
 	BadBinaries              []BadBinaryRow
 	FailoverInfo             *FailoverInfoRow
+	LongRunningWorkFlowNum   *int
+}
+
+type DomainMigrationRow struct {
+	ValidationCheck   string `header: "Validation Checker"`
+	ValidationResult  bool   `header: "Validation Result"`
+	ValidationDetails ValidationDetails
+}
+
+type ValidationDetails struct {
+	CurrentDomainRow       DomainRow
+	NewDomainRow           DomainRow
+	LongRunningWorkFlowNum *int
 }
 
 func newDomainRow(domain *types.DescribeDomainResponse) DomainRow {
@@ -681,6 +697,73 @@ func (d *domainCLIImpl) describeDomain(
 	return d.domainHandler.DescribeDomain(ctx, request)
 }
 
+func (d *domainCLIImpl) migrateDomain(c *cli.Context) {
+	row := d.migrationDomainMetaDataCheck(c)
+	countWorkFlows := d.migrationDomainWorkFlowCheck(c)
+	domainRows := []DomainRow{
+		row.ValidationDetails.CurrentDomainRow,
+		row.ValidationDetails.NewDomainRow,
+		{
+			LongRunningWorkFlowNum: countWorkFlows.ValidationDetails.LongRunningWorkFlowNum,
+		},
+	}
+	renderOpts := RenderOptions{
+		DefaultTemplate: templateDomain,
+		Color:           true,
+		Border:          true,
+		PrintDateTime:   true,
+	}
+	err := Render(c, domainRows, renderOpts)
+	if err != nil {
+		ErrorAndExit("Failed to render", err)
+	}
+}
+
+func (d *domainCLIImpl) migrationDomainMetaDataCheck(c *cli.Context) DomainMigrationRow {
+	request := &types.DescribeDomainRequest{}
+	ctx, cancel := newContext(c)
+	defer cancel()
+	currResp, err := d.frontendClient.DescribeDomain(ctx, request)
+	if err != nil {
+		ErrorAndExit(fmt.Sprintf("Could not describe old domain, Please check to see if old domain exists before migrating."), err)
+	}
+	newResp, err := d.destinationClient.DescribeDomain(ctx, request)
+	if err != nil {
+		ErrorAndExit(fmt.Sprintf("Could not describe new domain, Please check to see if new domain exists before migrating."), err)
+	}
+	validationResult := performValidation(currResp, newResp)
+	validationRow := DomainMigrationRow{
+		ValidationCheck:  "Data Meta Check",
+		ValidationResult: validationResult,
+		ValidationDetails: ValidationDetails{
+			CurrentDomainRow: newDomainRow(currResp),
+			NewDomainRow:     newDomainRow(newResp),
+		},
+	}
+	return validationRow
+}
+
+func performValidation(currResp *types.DescribeDomainResponse, newResp *types.DescribeDomainResponse) bool {
+	if currResp.DomainInfo.Name != newResp.DomainInfo.Name {
+		return false
+	}
+	if currResp.DomainInfo.OwnerEmail != newResp.DomainInfo.OwnerEmail {
+		return false
+	}
+	return true
+}
+
+func (d *domainCLIImpl) migrationDomainWorkFlowCheck(c *cli.Context) DomainMigrationRow {
+	countWorkFlows := d.CountLongRunningWorkflowinDest(c) // Call the method using the receiver d
+	return DomainMigrationRow{
+		ValidationCheck:  "Workflow Check",
+		ValidationResult: true,
+		ValidationDetails: ValidationDetails{
+			LongRunningWorkFlowNum: &countWorkFlows,
+		},
+	}
+}
+
 func archivalStatus(c *cli.Context, statusFlagName string) *types.ArchivalStatus {
 	if c.IsSet(statusFlagName) {
 		switch c.String(statusFlagName) {
@@ -693,6 +776,23 @@ func archivalStatus(c *cli.Context, statusFlagName string) *types.ArchivalStatus
 		}
 	}
 	return nil
+}
+
+func (d *domainCLIImpl) CountLongRunningWorkflowinDest(c *cli.Context) int {
+	domain := getRequiredOption(c, FlagDestinationDomain)
+	now := time.Now()
+	past14Days := now.Add(-14 * 24 * time.Hour) // change to sub??
+	request := &types.CountWorkflowExecutionsRequest{
+		Domain: domain,
+		Query:  "CloseTime=missing AND StartTime < " + strconv.FormatInt(past14Days.UnixNano(), 10),
+	}
+	ctx, cancel := newContextForLongPoll(c)
+	defer cancel()
+	response, err := d.destinationClient.CountWorkflowExecutions(ctx, request)
+	if err != nil {
+		ErrorAndExit("Failed to count workflow.", err)
+	}
+	return int(response.GetCount())
 }
 
 func clustersToStrings(clusters []*types.ClusterReplicationConfiguration) []string {
