@@ -28,8 +28,9 @@ import (
 	"strings"
 )
 
+var _ GenericBulkableRequest = (*BulkIndexRequest)(nil)
+
 type BulkIndexRequest struct {
-	GenericBulkableRequest
 	index       string
 	typ         string
 	id          string
@@ -141,7 +142,6 @@ func (r *BulkIndexRequest) Source() ([]string, error) {
 
 	lines := make([]string, 2)
 
-	// "index" ...
 	indexCommand := bulkIndexRequestCommandOp{
 		Index:       r.index,
 		ID:          r.id,
@@ -165,12 +165,6 @@ func (r *BulkIndexRequest) Source() ([]string, error) {
 	// "field1" ...
 	if r.doc != nil {
 		switch t := r.doc.(type) {
-		default:
-			body, err := json.Marshal(r.doc)
-			if err != nil {
-				return nil, err
-			}
-			lines[1] = string(body)
 		case json.RawMessage:
 			lines[1] = string(t)
 		case *json.RawMessage:
@@ -179,6 +173,12 @@ func (r *BulkIndexRequest) Source() ([]string, error) {
 			lines[1] = t
 		case *string:
 			lines[1] = *t
+		default:
+			body, err := json.Marshal(r.doc)
+			if err != nil {
+				return nil, err
+			}
+			lines[1] = string(body)
 		}
 	} else {
 		lines[1] = "{}"

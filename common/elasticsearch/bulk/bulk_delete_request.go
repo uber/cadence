@@ -28,14 +28,13 @@ import (
 	"strings"
 )
 
-// -- Bulk delete request --
+var _ GenericBulkableRequest = (*BulkDeleteRequest)(nil)
 
 // BulkDeleteRequest is a request to remove a document from Elasticsearch.
 //
 // See https://www.elastic.co/guide/en/elasticsearch/reference/7.0/docs-bulk.html
 // for details.
 type BulkDeleteRequest struct {
-	GenericBulkableRequest
 	index       string
 	typ         string
 	id          string

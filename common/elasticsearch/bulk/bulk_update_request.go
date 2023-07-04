@@ -28,12 +28,13 @@ import (
 	"strings"
 )
 
+var _ GenericBulkableRequest = (*BulkUpdateRequest)(nil)
+
 // BulkUpdateRequest is a request to update a document in Elasticsearch.
 //
 // See https://www.elastic.co/guide/en/elasticsearch/reference/7.0/docs-bulk.html
 // for details.
 type BulkUpdateRequest struct {
-	GenericBulkableRequest
 	index string
 	id    string
 

@@ -24,7 +24,6 @@ package bulk
 
 import (
 	"context"
-	"fmt"
 	"time"
 )
 
@@ -76,7 +75,7 @@ type (
 
 	// GenericBulkableRequest is a generic interface to bulkable requests.
 	GenericBulkableRequest interface {
-		fmt.Stringer
+		String() string
 		Source() ([]string, error)
 	}
 
