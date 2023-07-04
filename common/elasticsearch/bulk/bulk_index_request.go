@@ -164,22 +164,11 @@ func (r *BulkIndexRequest) Source() ([]string, error) {
 
 	// "field1" ...
 	if r.doc != nil {
-		switch t := r.doc.(type) {
-		case json.RawMessage:
-			lines[1] = string(t)
-		case *json.RawMessage:
-			lines[1] = string(*t)
-		case string:
-			lines[1] = t
-		case *string:
-			lines[1] = *t
-		default:
-			body, err := json.Marshal(r.doc)
-			if err != nil {
-				return nil, err
-			}
-			lines[1] = string(body)
+		body, err := json.Marshal(r.doc)
+		if err != nil {
+			return nil, err
 		}
+		lines[1] = string(body)
 	} else {
 		lines[1] = "{}"
 	}
