@@ -50,39 +50,39 @@ type (
 		decoder *NumberDecoder
 	}
 
-	Error struct {
+	osError struct {
 		Status  int           `json:"status"`
-		Details *ErrorDetails `json:"error,omitempty"`
+		Details *errorDetails `json:"error,omitempty"`
 	}
 
-	ErrorDetails struct {
+	errorDetails struct {
 		Type   string `json:"type"`
 		Reason string `json:"reason"`
 		Index  string `json:"index,omitempty"`
 	}
 
-	// Response holds data retrieved from OpenSearch
-	Response struct {
+	// response holds data retrieved from OpenSearch
+	response struct {
 		TookInMillis int64 `json:"took,omitempty"`
-		Hits         *SearchHits
+		Hits         *searchHits
 		Aggregations map[string]json.RawMessage `json:"aggregations,omitempty"`
 		Sort         []interface{}              `json:"sort,omitempty"` // sort information
 		ScrollID     string                     `json:"_scroll_id,omitempty"`
 	}
 
-	// SearchHits specifies the list of search hits.
-	SearchHits struct {
-		TotalHits *TotalHits   `json:"total,omitempty"` // total number of hits found
-		Hits      []*SearchHit `json:"hits,omitempty"`  // the actual hits returned
+	// searchHits specifies the list of search hits.
+	searchHits struct {
+		TotalHits *totalHits   `json:"total,omitempty"` // total number of hits found
+		Hits      []*searchHit `json:"hits,omitempty"`  // the actual hits returned
 	}
 
-	// TotalHits specifies total number of hits and its relation
-	TotalHits struct {
+	// totalHits specifies total number of hits and its relation
+	totalHits struct {
 		Value int64 `json:"value"` // value of the total hit count
 	}
 
-	// SearchHit is a single hit.
-	SearchHit struct {
+	// searchHit is a single hit.
+	searchHit struct {
 		Index  string          `json:"_index,omitempty"`  // index name
 		ID     string          `json:"_id,omitempty"`     // external or internal
 		Sort   []interface{}   `json:"sort,omitempty"`    // sort information
@@ -159,7 +159,7 @@ func NewClient(
 }
 
 func (c *OS2) IsNotFoundError(err error) bool {
-	var clientErr *Error
+	var clientErr *osError
 	if errors.As(err, &clientErr) {
 		return clientErr.Status == http.StatusNotFound
 	}
@@ -280,7 +280,7 @@ func (c *OS2) Scroll(ctx context.Context, index, body, scrollID string) (*client
 		return nil, c.parseError(resp)
 	}
 
-	var osResponse Response
+	var osResponse response
 	var totalHits int64
 
 	if err := c.decoder.Decode(resp.Body, &osResponse); err != nil {
@@ -328,11 +328,11 @@ func (c *OS2) Search(ctx context.Context, index, body string) (*client.Response,
 	defer closeBody(resp)
 	if resp.IsError() {
 		return nil, types.InternalServiceError{
-			Message: fmt.Sprintf("OpenSearch Search Error: %v", c.parseError(resp)),
+			Message: fmt.Sprintf("OpenSearch SearchsError: %v", c.parseError(resp)),
 		}
 	}
 
-	var osResponse Response
+	var osResponse response
 	if err := c.decoder.Decode(resp.Body, &osResponse); err != nil {
 		return nil, fmt.Errorf("decoding Opensearch result to Response: %w", err)
 	}
@@ -358,12 +358,12 @@ func (c *OS2) Search(ctx context.Context, index, body string) (*client.Response,
 	}, nil
 }
 
-func (e *Error) Error() string {
+func (e *osError) Error() string {
 	return fmt.Sprintf("Status code: %d, Type: %s, Reason: %s", e.Status, e.Details.Type, e.Details.Reason)
 }
 
 func (c *OS2) parseError(response *osapi.Response) error {
-	var e Error
+	var e osError
 	if err := c.decoder.Decode(response.Body, &e); err != nil {
 		return err
 	}
