@@ -932,6 +932,16 @@ func getListWorkflowExecutionsByTypeQuery(tableName string, request *p.InternalL
 
 	//query.addPinotSorter(CloseTime, DescendingOrder)
 	//query.addPinotSorter(RunID, DescendingOrder)
+
+	token, err := pnt.GetNextPageToken(request.NextPageToken)
+	if err != nil {
+		panic(fmt.Sprintf("deserialize next page token error: %s", err))
+	}
+
+	from := token.From
+	pageSize := request.PageSize
+	query.addOffsetAndLimits(from, pageSize)
+
 	return query.String()
 }
 
@@ -958,6 +968,16 @@ func getListWorkflowExecutionsByWorkflowIDQuery(tableName string, request *p.Int
 
 	query.addPinotSorter(CloseTime, DescendingOrder)
 	//query.addPinotSorter(RunID, DescendingOrder)
+
+	token, err := pnt.GetNextPageToken(request.NextPageToken)
+	if err != nil {
+		panic(fmt.Sprintf("deserialize next page token error: %s", err))
+	}
+
+	from := token.From
+	pageSize := request.PageSize
+	query.addOffsetAndLimits(from, pageSize)
+
 	return query.String()
 }
 
@@ -991,6 +1011,16 @@ func getListWorkflowExecutionsByStatusQuery(tableName string, request *p.Interna
 
 	query.addPinotSorter(CloseTime, DescendingOrder)
 	//query.addPinotSorter(RunID, DescendingOrder)
+
+	token, err := pnt.GetNextPageToken(request.NextPageToken)
+	if err != nil {
+		panic(fmt.Sprintf("deserialize next page token error: %s", err))
+	}
+
+	from := token.From
+	pageSize := request.PageSize
+	query.addOffsetAndLimits(from, pageSize)
+
 	return query.String()
 }
 
