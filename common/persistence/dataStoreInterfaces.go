@@ -460,8 +460,8 @@ type (
 		CrossClusterTasks []Task
 		TimerTasks        []Task
 		ReplicationTasks  []Task
-
-		Condition int64
+		TTLInSeconds      int64
+		Condition         int64
 
 		Checksum checksum.Checksum
 	}

@@ -1254,6 +1254,21 @@ func listWorkflows(c *cli.Context) getWorkflowPageFn {
 		ErrorAndExit(optionErr, errors.New("you can filter on workflow_id or workflow_type, but not on both"))
 	}
 
+	ctx, cancel := newContextForLongPoll(c)
+	defer cancel()
+	resp, err := wfClient.CountWorkflowExecutions(
+		ctx,
+		&types.CountWorkflowExecutionsRequest{
+			Domain: domain,
+			Query:  c.String(FlagListQuery),
+		},
+	)
+	if err != nil {
+		printError("Unable to count workflows. Proceeding with fetching list of workflows...", err)
+	} else {
+		fmt.Printf("Fetching %v workflows...\n", resp.GetCount())
+	}
+
 	if c.IsSet(FlagListQuery) {
 		listQuery := c.String(FlagListQuery)
 		return listWorkflowExecutions(wfClient, pageSize, domain, listQuery, c)
