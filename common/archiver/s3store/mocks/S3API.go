@@ -685,6 +685,84 @@ func (_m *S3API) DeleteBucketEncryptionWithContext(_a0 context.Context, _a1 *s3.
 	return r0, r1
 }
 
+// DeleteBucketIntelligentTieringConfiguration provides a mock function with given fields: _a0
+func (_m *S3API) DeleteBucketIntelligentTieringConfiguration(_a0 *s3.DeleteBucketIntelligentTieringConfigurationInput) (*s3.DeleteBucketIntelligentTieringConfigurationOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *s3.DeleteBucketIntelligentTieringConfigurationOutput
+	if rf, ok := ret.Get(0).(func(*s3.DeleteBucketIntelligentTieringConfigurationInput) *s3.DeleteBucketIntelligentTieringConfigurationOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*s3.DeleteBucketIntelligentTieringConfigurationOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*s3.DeleteBucketIntelligentTieringConfigurationInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteBucketIntelligentTieringConfigurationRequest provides a mock function with given fields: _a0
+func (_m *S3API) DeleteBucketIntelligentTieringConfigurationRequest(_a0 *s3.DeleteBucketIntelligentTieringConfigurationInput) (*request.Request, *s3.DeleteBucketIntelligentTieringConfigurationOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*s3.DeleteBucketIntelligentTieringConfigurationInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *s3.DeleteBucketIntelligentTieringConfigurationOutput
+	if rf, ok := ret.Get(1).(func(*s3.DeleteBucketIntelligentTieringConfigurationInput) *s3.DeleteBucketIntelligentTieringConfigurationOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*s3.DeleteBucketIntelligentTieringConfigurationOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DeleteBucketIntelligentTieringConfigurationWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *S3API) DeleteBucketIntelligentTieringConfigurationWithContext(_a0 context.Context, _a1 *s3.DeleteBucketIntelligentTieringConfigurationInput, _a2 ...request.Option) (*s3.DeleteBucketIntelligentTieringConfigurationOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *s3.DeleteBucketIntelligentTieringConfigurationOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *s3.DeleteBucketIntelligentTieringConfigurationInput, ...request.Option) *s3.DeleteBucketIntelligentTieringConfigurationOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*s3.DeleteBucketIntelligentTieringConfigurationOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *s3.DeleteBucketIntelligentTieringConfigurationInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // DeleteBucketInventoryConfiguration provides a mock function with given fields: _a0
 func (_m *S3API) DeleteBucketInventoryConfiguration(_a0 *s3.DeleteBucketInventoryConfigurationInput) (*s3.DeleteBucketInventoryConfigurationOutput, error) {
 	ret := _m.Called(_a0)
@@ -911,6 +989,84 @@ func (_m *S3API) DeleteBucketMetricsConfigurationWithContext(_a0 context.Context
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *s3.DeleteBucketMetricsConfigurationInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteBucketOwnershipControls provides a mock function with given fields: _a0
+func (_m *S3API) DeleteBucketOwnershipControls(_a0 *s3.DeleteBucketOwnershipControlsInput) (*s3.DeleteBucketOwnershipControlsOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *s3.DeleteBucketOwnershipControlsOutput
+	if rf, ok := ret.Get(0).(func(*s3.DeleteBucketOwnershipControlsInput) *s3.DeleteBucketOwnershipControlsOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*s3.DeleteBucketOwnershipControlsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*s3.DeleteBucketOwnershipControlsInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteBucketOwnershipControlsRequest provides a mock function with given fields: _a0
+func (_m *S3API) DeleteBucketOwnershipControlsRequest(_a0 *s3.DeleteBucketOwnershipControlsInput) (*request.Request, *s3.DeleteBucketOwnershipControlsOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*s3.DeleteBucketOwnershipControlsInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *s3.DeleteBucketOwnershipControlsOutput
+	if rf, ok := ret.Get(1).(func(*s3.DeleteBucketOwnershipControlsInput) *s3.DeleteBucketOwnershipControlsOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*s3.DeleteBucketOwnershipControlsOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DeleteBucketOwnershipControlsWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *S3API) DeleteBucketOwnershipControlsWithContext(_a0 context.Context, _a1 *s3.DeleteBucketOwnershipControlsInput, _a2 ...request.Option) (*s3.DeleteBucketOwnershipControlsOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *s3.DeleteBucketOwnershipControlsOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *s3.DeleteBucketOwnershipControlsInput, ...request.Option) *s3.DeleteBucketOwnershipControlsOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*s3.DeleteBucketOwnershipControlsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *s3.DeleteBucketOwnershipControlsInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -1988,6 +2144,84 @@ func (_m *S3API) GetBucketEncryptionWithContext(_a0 context.Context, _a1 *s3.Get
 	return r0, r1
 }
 
+// GetBucketIntelligentTieringConfiguration provides a mock function with given fields: _a0
+func (_m *S3API) GetBucketIntelligentTieringConfiguration(_a0 *s3.GetBucketIntelligentTieringConfigurationInput) (*s3.GetBucketIntelligentTieringConfigurationOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *s3.GetBucketIntelligentTieringConfigurationOutput
+	if rf, ok := ret.Get(0).(func(*s3.GetBucketIntelligentTieringConfigurationInput) *s3.GetBucketIntelligentTieringConfigurationOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*s3.GetBucketIntelligentTieringConfigurationOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*s3.GetBucketIntelligentTieringConfigurationInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetBucketIntelligentTieringConfigurationRequest provides a mock function with given fields: _a0
+func (_m *S3API) GetBucketIntelligentTieringConfigurationRequest(_a0 *s3.GetBucketIntelligentTieringConfigurationInput) (*request.Request, *s3.GetBucketIntelligentTieringConfigurationOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*s3.GetBucketIntelligentTieringConfigurationInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *s3.GetBucketIntelligentTieringConfigurationOutput
+	if rf, ok := ret.Get(1).(func(*s3.GetBucketIntelligentTieringConfigurationInput) *s3.GetBucketIntelligentTieringConfigurationOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*s3.GetBucketIntelligentTieringConfigurationOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// GetBucketIntelligentTieringConfigurationWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *S3API) GetBucketIntelligentTieringConfigurationWithContext(_a0 context.Context, _a1 *s3.GetBucketIntelligentTieringConfigurationInput, _a2 ...request.Option) (*s3.GetBucketIntelligentTieringConfigurationOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *s3.GetBucketIntelligentTieringConfigurationOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *s3.GetBucketIntelligentTieringConfigurationInput, ...request.Option) *s3.GetBucketIntelligentTieringConfigurationOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*s3.GetBucketIntelligentTieringConfigurationOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *s3.GetBucketIntelligentTieringConfigurationInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetBucketInventoryConfiguration provides a mock function with given fields: _a0
 func (_m *S3API) GetBucketInventoryConfiguration(_a0 *s3.GetBucketInventoryConfigurationInput) (*s3.GetBucketInventoryConfigurationOutput, error) {
 	ret := _m.Called(_a0)
@@ -2604,6 +2838,84 @@ func (_m *S3API) GetBucketNotificationWithContext(_a0 context.Context, _a1 *s3.G
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *s3.GetBucketNotificationConfigurationRequest, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetBucketOwnershipControls provides a mock function with given fields: _a0
+func (_m *S3API) GetBucketOwnershipControls(_a0 *s3.GetBucketOwnershipControlsInput) (*s3.GetBucketOwnershipControlsOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *s3.GetBucketOwnershipControlsOutput
+	if rf, ok := ret.Get(0).(func(*s3.GetBucketOwnershipControlsInput) *s3.GetBucketOwnershipControlsOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*s3.GetBucketOwnershipControlsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*s3.GetBucketOwnershipControlsInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetBucketOwnershipControlsRequest provides a mock function with given fields: _a0
+func (_m *S3API) GetBucketOwnershipControlsRequest(_a0 *s3.GetBucketOwnershipControlsInput) (*request.Request, *s3.GetBucketOwnershipControlsOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*s3.GetBucketOwnershipControlsInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *s3.GetBucketOwnershipControlsOutput
+	if rf, ok := ret.Get(1).(func(*s3.GetBucketOwnershipControlsInput) *s3.GetBucketOwnershipControlsOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*s3.GetBucketOwnershipControlsOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// GetBucketOwnershipControlsWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *S3API) GetBucketOwnershipControlsWithContext(_a0 context.Context, _a1 *s3.GetBucketOwnershipControlsInput, _a2 ...request.Option) (*s3.GetBucketOwnershipControlsOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *s3.GetBucketOwnershipControlsOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *s3.GetBucketOwnershipControlsInput, ...request.Option) *s3.GetBucketOwnershipControlsOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*s3.GetBucketOwnershipControlsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *s3.GetBucketOwnershipControlsInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -3251,6 +3563,84 @@ func (_m *S3API) GetObjectAclWithContext(_a0 context.Context, _a1 *s3.GetObjectA
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *s3.GetObjectAclInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetObjectAttributes provides a mock function with given fields: _a0
+func (_m *S3API) GetObjectAttributes(_a0 *s3.GetObjectAttributesInput) (*s3.GetObjectAttributesOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *s3.GetObjectAttributesOutput
+	if rf, ok := ret.Get(0).(func(*s3.GetObjectAttributesInput) *s3.GetObjectAttributesOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*s3.GetObjectAttributesOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*s3.GetObjectAttributesInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetObjectAttributesRequest provides a mock function with given fields: _a0
+func (_m *S3API) GetObjectAttributesRequest(_a0 *s3.GetObjectAttributesInput) (*request.Request, *s3.GetObjectAttributesOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*s3.GetObjectAttributesInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *s3.GetObjectAttributesOutput
+	if rf, ok := ret.Get(1).(func(*s3.GetObjectAttributesInput) *s3.GetObjectAttributesOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*s3.GetObjectAttributesOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// GetObjectAttributesWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *S3API) GetObjectAttributesWithContext(_a0 context.Context, _a1 *s3.GetObjectAttributesInput, _a2 ...request.Option) (*s3.GetObjectAttributesOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *s3.GetObjectAttributesOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *s3.GetObjectAttributesInput, ...request.Option) *s3.GetObjectAttributesOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*s3.GetObjectAttributesOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *s3.GetObjectAttributesInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -4008,6 +4398,84 @@ func (_m *S3API) ListBucketAnalyticsConfigurationsWithContext(_a0 context.Contex
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *s3.ListBucketAnalyticsConfigurationsInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListBucketIntelligentTieringConfigurations provides a mock function with given fields: _a0
+func (_m *S3API) ListBucketIntelligentTieringConfigurations(_a0 *s3.ListBucketIntelligentTieringConfigurationsInput) (*s3.ListBucketIntelligentTieringConfigurationsOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *s3.ListBucketIntelligentTieringConfigurationsOutput
+	if rf, ok := ret.Get(0).(func(*s3.ListBucketIntelligentTieringConfigurationsInput) *s3.ListBucketIntelligentTieringConfigurationsOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*s3.ListBucketIntelligentTieringConfigurationsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*s3.ListBucketIntelligentTieringConfigurationsInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListBucketIntelligentTieringConfigurationsRequest provides a mock function with given fields: _a0
+func (_m *S3API) ListBucketIntelligentTieringConfigurationsRequest(_a0 *s3.ListBucketIntelligentTieringConfigurationsInput) (*request.Request, *s3.ListBucketIntelligentTieringConfigurationsOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*s3.ListBucketIntelligentTieringConfigurationsInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *s3.ListBucketIntelligentTieringConfigurationsOutput
+	if rf, ok := ret.Get(1).(func(*s3.ListBucketIntelligentTieringConfigurationsInput) *s3.ListBucketIntelligentTieringConfigurationsOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*s3.ListBucketIntelligentTieringConfigurationsOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// ListBucketIntelligentTieringConfigurationsWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *S3API) ListBucketIntelligentTieringConfigurationsWithContext(_a0 context.Context, _a1 *s3.ListBucketIntelligentTieringConfigurationsInput, _a2 ...request.Option) (*s3.ListBucketIntelligentTieringConfigurationsOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *s3.ListBucketIntelligentTieringConfigurationsOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *s3.ListBucketIntelligentTieringConfigurationsInput, ...request.Option) *s3.ListBucketIntelligentTieringConfigurationsOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*s3.ListBucketIntelligentTieringConfigurationsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *s3.ListBucketIntelligentTieringConfigurationsInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -5205,6 +5673,84 @@ func (_m *S3API) PutBucketEncryptionWithContext(_a0 context.Context, _a1 *s3.Put
 	return r0, r1
 }
 
+// PutBucketIntelligentTieringConfiguration provides a mock function with given fields: _a0
+func (_m *S3API) PutBucketIntelligentTieringConfiguration(_a0 *s3.PutBucketIntelligentTieringConfigurationInput) (*s3.PutBucketIntelligentTieringConfigurationOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *s3.PutBucketIntelligentTieringConfigurationOutput
+	if rf, ok := ret.Get(0).(func(*s3.PutBucketIntelligentTieringConfigurationInput) *s3.PutBucketIntelligentTieringConfigurationOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*s3.PutBucketIntelligentTieringConfigurationOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*s3.PutBucketIntelligentTieringConfigurationInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// PutBucketIntelligentTieringConfigurationRequest provides a mock function with given fields: _a0
+func (_m *S3API) PutBucketIntelligentTieringConfigurationRequest(_a0 *s3.PutBucketIntelligentTieringConfigurationInput) (*request.Request, *s3.PutBucketIntelligentTieringConfigurationOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*s3.PutBucketIntelligentTieringConfigurationInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *s3.PutBucketIntelligentTieringConfigurationOutput
+	if rf, ok := ret.Get(1).(func(*s3.PutBucketIntelligentTieringConfigurationInput) *s3.PutBucketIntelligentTieringConfigurationOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*s3.PutBucketIntelligentTieringConfigurationOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// PutBucketIntelligentTieringConfigurationWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *S3API) PutBucketIntelligentTieringConfigurationWithContext(_a0 context.Context, _a1 *s3.PutBucketIntelligentTieringConfigurationInput, _a2 ...request.Option) (*s3.PutBucketIntelligentTieringConfigurationOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *s3.PutBucketIntelligentTieringConfigurationOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *s3.PutBucketIntelligentTieringConfigurationInput, ...request.Option) *s3.PutBucketIntelligentTieringConfigurationOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*s3.PutBucketIntelligentTieringConfigurationOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *s3.PutBucketIntelligentTieringConfigurationInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // PutBucketInventoryConfiguration provides a mock function with given fields: _a0
 func (_m *S3API) PutBucketInventoryConfiguration(_a0 *s3.PutBucketInventoryConfigurationInput) (*s3.PutBucketInventoryConfigurationOutput, error) {
 	ret := _m.Called(_a0)
@@ -5743,6 +6289,84 @@ func (_m *S3API) PutBucketNotificationWithContext(_a0 context.Context, _a1 *s3.P
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *s3.PutBucketNotificationInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// PutBucketOwnershipControls provides a mock function with given fields: _a0
+func (_m *S3API) PutBucketOwnershipControls(_a0 *s3.PutBucketOwnershipControlsInput) (*s3.PutBucketOwnershipControlsOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *s3.PutBucketOwnershipControlsOutput
+	if rf, ok := ret.Get(0).(func(*s3.PutBucketOwnershipControlsInput) *s3.PutBucketOwnershipControlsOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*s3.PutBucketOwnershipControlsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*s3.PutBucketOwnershipControlsInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// PutBucketOwnershipControlsRequest provides a mock function with given fields: _a0
+func (_m *S3API) PutBucketOwnershipControlsRequest(_a0 *s3.PutBucketOwnershipControlsInput) (*request.Request, *s3.PutBucketOwnershipControlsOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*s3.PutBucketOwnershipControlsInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *s3.PutBucketOwnershipControlsOutput
+	if rf, ok := ret.Get(1).(func(*s3.PutBucketOwnershipControlsInput) *s3.PutBucketOwnershipControlsOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*s3.PutBucketOwnershipControlsOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// PutBucketOwnershipControlsWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *S3API) PutBucketOwnershipControlsWithContext(_a0 context.Context, _a1 *s3.PutBucketOwnershipControlsInput, _a2 ...request.Option) (*s3.PutBucketOwnershipControlsOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *s3.PutBucketOwnershipControlsOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *s3.PutBucketOwnershipControlsInput, ...request.Option) *s3.PutBucketOwnershipControlsOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*s3.PutBucketOwnershipControlsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *s3.PutBucketOwnershipControlsInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -7215,4 +7839,82 @@ func (_m *S3API) WaitUntilObjectNotExistsWithContext(_a0 context.Context, _a1 *s
 	}
 
 	return r0
+}
+
+// WriteGetObjectResponse provides a mock function with given fields: _a0
+func (_m *S3API) WriteGetObjectResponse(_a0 *s3.WriteGetObjectResponseInput) (*s3.WriteGetObjectResponseOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *s3.WriteGetObjectResponseOutput
+	if rf, ok := ret.Get(0).(func(*s3.WriteGetObjectResponseInput) *s3.WriteGetObjectResponseOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*s3.WriteGetObjectResponseOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*s3.WriteGetObjectResponseInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// WriteGetObjectResponseRequest provides a mock function with given fields: _a0
+func (_m *S3API) WriteGetObjectResponseRequest(_a0 *s3.WriteGetObjectResponseInput) (*request.Request, *s3.WriteGetObjectResponseOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*s3.WriteGetObjectResponseInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *s3.WriteGetObjectResponseOutput
+	if rf, ok := ret.Get(1).(func(*s3.WriteGetObjectResponseInput) *s3.WriteGetObjectResponseOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*s3.WriteGetObjectResponseOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// WriteGetObjectResponseWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *S3API) WriteGetObjectResponseWithContext(_a0 context.Context, _a1 *s3.WriteGetObjectResponseInput, _a2 ...request.Option) (*s3.WriteGetObjectResponseOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *s3.WriteGetObjectResponseOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *s3.WriteGetObjectResponseInput, ...request.Option) *s3.WriteGetObjectResponseOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*s3.WriteGetObjectResponseOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *s3.WriteGetObjectResponseInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }

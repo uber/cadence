@@ -4,7 +4,7 @@ persistence:
     es-visibility:
       elasticsearch:
         disableSniff: true
-        version: "v7"
+        version: "os2"
         username: "admin"
         password: "admin"
         tls:
@@ -36,5 +36,3 @@ dynamicconfig:
   client: filebased
   filebased:
     filepath: "config/dynamicconfig/development_es.yaml"
-
-
