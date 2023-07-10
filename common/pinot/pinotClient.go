@@ -62,7 +62,7 @@ func (c *PinotClient) Search(request *SearchRequest) (*SearchResponse, error) {
 	resp, err := c.client.ExecuteSQL(c.tableName, request.Query)
 	c.responseSize += size.Of(resp)
 	c.requestNum++
-	c.logger.Info(fmt.Sprintf("For Pinot, the total request = %v, total response size = %v", c.requestNum, c.responseSize))
+	c.logger.Info(fmt.Sprintf("For Pinot, the total request = %v, total response size = %v bytes      ", c.requestNum, c.responseSize))
 
 	if err != nil {
 		return nil, &types.InternalServiceError{
@@ -85,7 +85,7 @@ func (c *PinotClient) CountByQuery(query string) (int64, error) {
 	resp, err := c.client.ExecuteSQL(c.tableName, query)
 	c.responseSize += size.Of(resp)
 	c.requestNum++
-	c.logger.Info(fmt.Sprintf("For Pinot, the total request = %v, total response size = %v", c.requestNum, c.responseSize))
+	c.logger.Info(fmt.Sprintf("For Pinot, the total request = %v, total response size = %v bytes", c.requestNum, c.responseSize))
 
 	if err != nil {
 		return 0, &types.InternalServiceError{

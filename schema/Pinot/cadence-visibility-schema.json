@@ -3,6 +3,160 @@
   "primaryKeyColumns": ["DocID"],
   "dimensionFieldSpecs": [
     {
+      "name": "Custom1",
+      "dataType": "BOOLEAN",
+      "singleValueField": false
+    },
+    {
+      "name": "Custom2",
+      "dataType": "BOOLEAN",
+      "singleValueField": false
+    },
+    {
+      "name": "Custom3",
+      "dataType": "STRING",
+      "singleValueField": false
+    },
+    {
+      "name": "Custom4",
+      "dataType": "STRING",
+      "singleValueField": false
+    },
+    {
+      "name": "Custom5",
+      "dataType": "STRING",
+      "singleValueField": false
+    },
+    {
+      "name": "Custom6",
+      "dataType": "STRING",
+      "singleValueField": false
+    },    {
+      "name": "Custom7",
+      "dataType": "BOOLEAN",
+      "singleValueField": false
+    },    {
+      "name": "Custom8",
+      "dataType": "STRING",
+      "singleValueField": false
+    },    {
+      "name": "Custom9",
+      "dataType": "INT",
+      "singleValueField": false
+    },    {
+      "name": "Custom10",
+      "dataType": "STRING",
+      "singleValueField": false
+    },    {
+      "name": "Custom11",
+      "dataType": "STRING",
+      "singleValueField": false
+    },    {
+      "name": "Custom12",
+      "dataType": "STRING",
+      "singleValueField": false
+    },
+    {
+      "name": "Custom13",
+      "dataType": "STRING",
+      "singleValueField": false
+    },    {
+      "name": "Custom14",
+      "dataType": "STRING",
+      "singleValueField": false
+    },
+    {
+      "name": "Custom15",
+      "dataType": "INT",
+      "singleValueField": false
+    },
+    {
+      "name": "Custom16",
+      "dataType": "INT",
+      "singleValueField": false
+    },
+    {
+      "name": "Custom17",
+      "dataType": "STRING",
+      "singleValueField": false
+    },
+    {
+      "name": "Custom18",
+      "dataType": "LONG",
+      "singleValueField": false
+    },
+    {
+      "name": "Custom19",
+      "dataType": "INT",
+      "singleValueField": false
+    },
+    {
+      "name": "Custom20",
+      "dataType": "LONG",
+      "singleValueField": false
+    },
+    {
+      "name": "Custom21",
+      "dataType": "STRING",
+      "singleValueField": false
+    },
+    {
+      "name": "Custom22",
+      "dataType": "BOOLEAN",
+      "singleValueField": false
+    },
+    {
+      "name": "Custom23",
+      "dataType": "BOOLEAN",
+      "singleValueField": false
+    },
+    {
+      "name": "Custom24",
+      "dataType": "INT",
+      "singleValueField": false
+    },
+    {
+      "name": "Custom25",
+      "dataType": "LONG",
+      "singleValueField": false
+    },
+    {
+      "name": "Custom26",
+      "dataType": "BOOLEAN",
+      "singleValueField": false
+    },
+    {
+      "name": "Custom27",
+      "dataType": "BOOLEAN",
+      "singleValueField": false
+    },
+    {
+      "name": "Custom28",
+      "dataType": "LONG",
+      "singleValueField": false
+    },
+    {
+      "name": "Custom29",
+      "dataType": "STRING",
+      "singleValueField": false
+    },
+    {
+      "name": "Custom30",
+      "dataType": "INT",
+      "singleValueField": false
+    },
+    {
+      "name": "Custom31",
+      "dataType": "LONG",
+      "singleValueField": false
+    },
+
+
+
+
+
+
+    {
       "name": "DocID",
       "dataType": "STRING"
     },
