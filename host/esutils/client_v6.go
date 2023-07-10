@@ -22,11 +22,12 @@ package esutils
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
+	"testing"
 	"time"
 
 	"github.com/olivere/elastic"
-	"github.com/stretchr/testify/suite"
+	"github.com/stretchr/testify/require"
 )
 
 type (
@@ -45,47 +46,46 @@ func newV6Client(url string) (*v6Client, error) {
 	}, err
 }
 
-func (es *v6Client) PutIndexTemplate(s suite.Suite, templateConfigFile, templateName string) {
+func (es *v6Client) PutIndexTemplate(t *testing.T, templateConfigFile, templateName string) {
 	// This function is used exclusively in tests. Excluding it from security checks.
 	// #nosec
-	template, err := ioutil.ReadFile(templateConfigFile)
-	s.Require().NoError(err)
+	template, err := os.ReadFile(templateConfigFile)
+	require.NoError(t, err)
 	putTemplate, err := es.client.IndexPutTemplate(templateName).BodyString(string(template)).Do(createContext())
-	s.Require().NoError(err)
-	s.Require().True(putTemplate.Acknowledged)
+	require.NoError(t, err)
+	require.True(t, putTemplate.Acknowledged)
 }
 
-func (es *v6Client) CreateIndex(s suite.Suite, indexName string) {
+func (es *v6Client) CreateIndex(t *testing.T, indexName string) {
 	exists, err := es.client.IndexExists(indexName).Do(createContext())
-	s.Require().NoError(err)
+	require.NoError(t, err)
 	if exists {
 		deleteTestIndex, err := es.client.DeleteIndex(indexName).Do(createContext())
-		s.Require().Nil(err)
-		s.Require().True(deleteTestIndex.Acknowledged)
+		require.Nil(t, err)
+		require.True(t, deleteTestIndex.Acknowledged)
 	}
 
 	createTestIndex, err := es.client.CreateIndex(indexName).Do(createContext())
-	s.Require().NoError(err)
-	s.Require().True(createTestIndex.Acknowledged)
+	require.Nil(t, err)
+	require.True(t, createTestIndex.Acknowledged)
 }
 
-func (es *v6Client) DeleteIndex(s suite.Suite, indexName string) {
+func (es *v6Client) DeleteIndex(t *testing.T, indexName string) {
 	deleteTestIndex, err := es.client.DeleteIndex(indexName).Do(createContext())
-	s.Nil(err)
-	s.True(deleteTestIndex.Acknowledged)
+	require.Nil(t, err)
+	require.True(t, deleteTestIndex.Acknowledged)
 }
 
-func (es *v6Client) PutMaxResultWindow(indexName string, maxResultWindow int) error {
+func (es *v6Client) PutMaxResultWindow(t *testing.T, indexName string, maxResultWindow int) error {
 	_, err := es.client.IndexPutSettings(indexName).
 		BodyString(fmt.Sprintf(`{"max_result_window" : %d}`, maxResultWindow)).
 		Do(createContext())
+	require.NoError(t, err)
 	return err
 }
 
-func (es *v6Client) GetMaxResultWindow(indexName string) (string, error) {
+func (es *v6Client) GetMaxResultWindow(t *testing.T, indexName string) (string, error) {
 	settings, err := es.client.IndexGetSettings(indexName).Do(createContext())
-	if err != nil {
-		return "", err
-	}
+	require.NoError(t, err)
 	return settings[indexName].Settings["index"].(map[string]interface{})["max_result_window"].(string), nil
 }
