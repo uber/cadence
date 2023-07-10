@@ -41,6 +41,8 @@ const (
 	VisibilityOperation = "VisibilityOperation"
 	UpdateTime          = "UpdateTime"
 	ShardID             = "ShardID"
+	ParentWorkflowID = "ParentWorkflowID"
+	ParentRunID = "ParentRunID"
 )
 
 // Supported field types
