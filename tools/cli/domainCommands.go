@@ -45,7 +45,7 @@ var (
 
 type (
 	domainCLIImpl struct {
-		// used when making RPC call to frontend service
+		// used by migration command to make RPC call to frontend service of the destination domain
 		frontendClient    frontend.Client
 		destinationClient frontend.Client
 
@@ -494,7 +494,7 @@ type DomainMigrationRow struct {
 type ValidationDetails struct {
 	CurrentDomainRow       DomainRow
 	NewDomainRow           DomainRow
-	LongRunningWorkFlowNum *int
+	LongRunningWorkFlowNum DomainRow
 }
 
 func newDomainRow(domain *types.DescribeDomainResponse) DomainRow {
@@ -698,14 +698,12 @@ func (d *domainCLIImpl) describeDomain(
 }
 
 func (d *domainCLIImpl) migrateDomain(c *cli.Context) {
-	row := d.migrationDomainMetaDataCheck(c)
-	countWorkFlows := d.migrationDomainWorkFlowCheck(c)
+	domainMetaDataCheckRow := d.migrationDomainMetaDataCheck(c)
+	workflowCheckRow := d.migrationDomainWorkFlowCheck(c)
 	domainRows := []DomainRow{
-		row.ValidationDetails.CurrentDomainRow,
-		row.ValidationDetails.NewDomainRow,
-		{
-			LongRunningWorkFlowNum: countWorkFlows.ValidationDetails.LongRunningWorkFlowNum,
-		},
+		domainMetaDataCheckRow.ValidationDetails.CurrentDomainRow,
+		domainMetaDataCheckRow.ValidationDetails.NewDomainRow,
+		workflowCheckRow.ValidationDetails.LongRunningWorkFlowNum,
 	}
 	renderOpts := RenderOptions{
 		DefaultTemplate: templateDomain,
@@ -733,7 +731,7 @@ func (d *domainCLIImpl) migrationDomainMetaDataCheck(c *cli.Context) DomainMigra
 	}
 	validationResult := performValidation(currResp, newResp)
 	validationRow := DomainMigrationRow{
-		ValidationCheck:  "Data Meta Check",
+		ValidationCheck:  "Domain Meta Data",
 		ValidationResult: validationResult,
 		ValidationDetails: ValidationDetails{
 			CurrentDomainRow: newDomainRow(currResp),
@@ -754,12 +752,15 @@ func performValidation(currResp *types.DescribeDomainResponse, newResp *types.De
 }
 
 func (d *domainCLIImpl) migrationDomainWorkFlowCheck(c *cli.Context) DomainMigrationRow {
-	countWorkFlows := d.CountLongRunningWorkflowinDest(c) // Call the method using the receiver d
+	countWorkFlows := d.countLongRunningWorkflowinDest(c) // Call the method using the receiver d
+	if countWorkFlows > 0 {
+		ErrorAndExit(fmt.Sprintf("Number of workflows is > 0"), nil)
+	}
 	return DomainMigrationRow{
 		ValidationCheck:  "Workflow Check",
 		ValidationResult: true,
 		ValidationDetails: ValidationDetails{
-			LongRunningWorkFlowNum: &countWorkFlows,
+			LongRunningWorkFlowNum: newDomainRow(nil),
 		},
 	}
 }
@@ -778,7 +779,7 @@ func archivalStatus(c *cli.Context, statusFlagName string) *types.ArchivalStatus
 	return nil
 }
 
-func (d *domainCLIImpl) CountLongRunningWorkflowinDest(c *cli.Context) int {
+func (d *domainCLIImpl) countLongRunningWorkflowinDest(c *cli.Context) int {
 	domain := getRequiredOption(c, FlagDestinationDomain)
 	now := time.Now()
 	past14Days := now.Add(-14 * 24 * time.Hour) // change to sub??

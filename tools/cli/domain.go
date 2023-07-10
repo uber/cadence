@@ -86,7 +86,7 @@ func newDomainCommands() []cli.Command {
 		{
 			Name:    "migration",
 			Aliases: []string{"mi"},
-			Usage:   "Migrate existing workflow domain",
+			Usage:   "Migrate existing domain to new domain. This command only validates the settings. It does not perform actual data migration",
 			Flags:   migrateDomainFlags,
 			Action: func(c *cli.Context) {
 				newDomainCLI(c, false).MigrateDomain(c)
