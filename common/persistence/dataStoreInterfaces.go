@@ -650,6 +650,8 @@ type (
 		UpdateTime       time.Time
 		SearchAttributes map[string]interface{}
 		ShardID          int16
+		ParentWorkflowID string
+		ParentRunID string
 	}
 
 	// InternalListWorkflowExecutionsResponse is response from ListWorkflowExecutions

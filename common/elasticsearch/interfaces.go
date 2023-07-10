@@ -176,6 +176,8 @@ type (
 		NumClusters   int16
 		UpdateTime    int64
 		Attr          map[string]interface{}
+		ParentWorkflowID string
+		ParentRunID  string
 	}
 
 	SearchHits struct {

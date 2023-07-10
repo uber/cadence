@@ -42,6 +42,8 @@ const (
 	UpdateTime      = "UpdateTime"
 	CustomDomain    = "CustomDomain" // to support batch workflow
 	Operator        = "Operator"     // to support batch workflow
+	ParentWorkflowID = "ParentWorkflowID"
+	ParentRunID = "ParentRunID"
 
 	CustomStringField    = "CustomStringField"
 	CustomKeywordField   = "CustomKeywordField"
@@ -102,6 +104,8 @@ var systemIndexedKeys = map[string]interface{}{
 	IsCron:        types.IndexedValueTypeBool,
 	NumClusters:   types.IndexedValueTypeInt,
 	UpdateTime:    types.IndexedValueTypeInt,
+	ParentWorkflowID: types.IndexedValueTypeKeyword,
+	ParentRunID: types.IndexedValueTypeKeyword,
 }
 
 // IsSystemIndexedKey return true is key is system added
