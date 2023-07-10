@@ -645,7 +645,7 @@ install-schema-es-v6:
 	curl -X PUT "http://127.0.0.1:9200/cadence-visibility-dev"
 
 install-schema-es-opensearch:
-	curl -X PUT "https://127.0.0.1:9200/_template/cadence-visibility-template" -H 'Content-Type: application/json' -d @./schema/elasticsearch/v7/visibility/index_template.json -u admin:admin --insecure
+	curl -X PUT "https://127.0.0.1:9200/_template/cadence-visibility-template" -H 'Content-Type: application/json' -d @./schema/elasticsearch/os2/visibility/index_template.json -u admin:admin --insecure
 	curl -X PUT "https://127.0.0.1:9200/cadence-visibility-dev" -u admin:admin --insecure
 
 start: bins

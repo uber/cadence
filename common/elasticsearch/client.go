@@ -66,7 +66,6 @@ func (c *ESClient) Search(ctx context.Context, request *SearchRequest) (*SearchR
 	if err != nil {
 		return nil, err
 	}
-
 	searchResult, err := c.getSearchResult(
 		ctx,
 		request.Index,
@@ -147,12 +146,15 @@ func (c *ESClient) ScanByQuery(ctx context.Context, request *ScanByQueryRequest)
 			Message: fmt.Sprintf("ScanByQuery failed. Error: %v", err),
 		}
 	}
+
 	response := &p.InternalListWorkflowExecutionsResponse{}
-	actualHits := searchResult.Hits.Hits
-	numOfActualHits := len(actualHits)
+	if searchResult == nil {
+		return response, nil
+	}
+
 	response.Executions = c.esHitsToExecutions(searchResult.Hits, nil /* no filter */)
 
-	if numOfActualHits == request.PageSize && !isLastPage {
+	if len(searchResult.Hits.Hits) == request.PageSize && !isLastPage {
 		nextPageToken, err := SerializePageToken(&ElasticVisibilityPageToken{ScrollID: searchResult.ScrollID})
 		if err != nil {
 			return nil, err
