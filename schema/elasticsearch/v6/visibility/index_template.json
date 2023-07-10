@@ -58,6 +58,12 @@
         "ShardID": {
           "type": "long"
         },
+        "ParentWorkflowID": {
+          "type": "keyword"
+        },
+        "ParentRunID": {
+          "type": "keyword"
+        },
         "Attr": {
           "properties": {
             "CadenceChangeVersion":  { "type": "keyword" },
