@@ -31,29 +31,38 @@ import (
 
 	"github.com/startreedata/pinot-client-go/pinot"
 
+	"github.com/DmitriyVTitov/size"
+
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
 
 type PinotClient struct {
-	client      *pinot.Connection
-	logger      log.Logger
-	tableName   string
-	serviceName string
+	client       *pinot.Connection
+	logger       log.Logger
+	tableName    string
+	serviceName  string
+	requestNum   int
+	responseSize int
 }
 
 func NewPinotClient(client *pinot.Connection, logger log.Logger, pinotConfig *config.PinotVisibilityConfig) GenericClient {
 	return &PinotClient{
-		client:      client,
-		logger:      logger,
-		tableName:   pinotConfig.Table,
-		serviceName: pinotConfig.ServiceName,
+		client:       client,
+		logger:       logger,
+		tableName:    pinotConfig.Table,
+		serviceName:  pinotConfig.ServiceName,
+		requestNum:   0,
+		responseSize: 0,
 	}
 }
 
 func (c *PinotClient) Search(request *SearchRequest) (*SearchResponse, error) {
 	resp, err := c.client.ExecuteSQL(c.tableName, request.Query)
+	c.responseSize += size.Of(resp)
+	c.requestNum++
+	c.logger.Info(fmt.Sprintf("For Pinot, the total request = %v, total response size = %v", c.requestNum, c.responseSize))
 
 	if err != nil {
 		return nil, &types.InternalServiceError{
@@ -74,6 +83,10 @@ func (c *PinotClient) Search(request *SearchRequest) (*SearchResponse, error) {
 
 func (c *PinotClient) CountByQuery(query string) (int64, error) {
 	resp, err := c.client.ExecuteSQL(c.tableName, query)
+	c.responseSize += size.Of(resp)
+	c.requestNum++
+	c.logger.Info(fmt.Sprintf("For Pinot, the total request = %v, total response size = %v", c.requestNum, c.responseSize))
+
 	if err != nil {
 		return 0, &types.InternalServiceError{
 			Message: fmt.Sprintf("CountWorkflowExecutions ExecuteSQL failed, %v", err),
