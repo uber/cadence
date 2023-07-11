@@ -157,13 +157,13 @@ LIMIT 0, 10
 				Domain:        testDomain,
 				PageSize:      testPageSize,
 				NextPageToken: nil,
-				Query:         "CustomStringField = 'Or' or CustomStringField = 'and' Order by CloseTime DESC, RunID DESC",
+				Query:         "CustomStringField = 'Or' or CustomStringField = 'and' Order by StartTime DESC",
 			},
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND CustomStringField like '%%Or%%' or CustomStringField like '%%and%%'
-Order by CloseTime DESC, RunID DESC
+Order by StartTime DESC
 LIMIT 0, 10
 `, testTableName),
 		},
@@ -344,7 +344,7 @@ FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND CloseTime BETWEEN 1547596871371 AND 2547596873371
 AND CloseStatus >= 0
-Order BY CloseTime DESC
+Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName)
 	expectOpenResult := fmt.Sprintf(`SELECT *
@@ -353,7 +353,7 @@ WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND StartTime BETWEEN 1547596871371 AND 2547596873371
 AND CloseStatus < 0
 AND CloseTime = -1
-Order BY RunID DESC
+Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName)
 	expectNilResult := ""
@@ -385,7 +385,7 @@ WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND WorkflowType = 'test-wf-type'
 AND CloseTime BETWEEN 1547596871371 AND 2547596873371
 AND CloseStatus >= 0
-Order BY CloseTime DESC
+Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName)
 	expectOpenResult := fmt.Sprintf(`SELECT *
@@ -395,7 +395,7 @@ AND WorkflowType = 'test-wf-type'
 AND StartTime BETWEEN 1547596871371 AND 2547596873371
 AND CloseStatus < 0
 AND CloseTime = -1
-Order BY RunID DESC
+Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName)
 	expectNilResult := ""
@@ -427,7 +427,7 @@ WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND WorkflowID = 'test-wid'
 AND CloseTime BETWEEN 1547596871371 AND 2547596873371
 AND CloseStatus >= 0
-Order BY CloseTime DESC
+Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName)
 	expectOpenResult := fmt.Sprintf(`SELECT *
@@ -437,7 +437,7 @@ AND WorkflowID = 'test-wid'
 AND StartTime BETWEEN 1547596871371 AND 2547596873371
 AND CloseStatus < 0
 AND CloseTime = -1
-Order BY CloseTime DESC
+Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName)
 	expectNilResult := ""
@@ -467,7 +467,7 @@ FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND CloseStatus = '0'
 AND CloseTime BETWEEN 1547596872371 AND 2547596872371
-Order BY CloseTime DESC
+Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName)
 	expectNilResult := ""
