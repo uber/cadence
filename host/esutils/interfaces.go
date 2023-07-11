@@ -22,25 +22,27 @@ package esutils
 
 import (
 	"context"
+	"fmt"
+	"testing"
 	"time"
 
-	"github.com/stretchr/testify/suite"
+	"github.com/stretchr/testify/assert"
 )
 
 type (
 	// ESClient is ElasicSearch client for running test suite to be implemented in different versions of ES.
 	// Those interfaces are only being used by tests so we don't implement in common/elasticsearch pkg.
 	ESClient interface {
-		PutIndexTemplate(s suite.Suite, templateConfigFile, templateName string)
-		CreateIndex(s suite.Suite, indexName string)
-		DeleteIndex(s suite.Suite, indexName string)
-		PutMaxResultWindow(indexName string, maxResultWindow int) error
-		GetMaxResultWindow(indexName string) (string, error)
+		PutIndexTemplate(t *testing.T, templateConfigFile, templateName string)
+		CreateIndex(t *testing.T, indexName string)
+		DeleteIndex(t *testing.T, indexName string)
+		PutMaxResultWindow(t *testing.T, indexName string, maxResultWindow int) error
+		GetMaxResultWindow(t *testing.T, indexName string) (string, error)
 	}
 )
 
 // CreateESClient create ElasticSearch client for test
-func CreateESClient(s suite.Suite, url string, version string) ESClient {
+func CreateESClient(t *testing.T, url string, version string) ESClient {
 	var client ESClient
 	var err error
 	switch version {
@@ -48,10 +50,12 @@ func CreateESClient(s suite.Suite, url string, version string) ESClient {
 		client, err = newV6Client(url)
 	case "v7":
 		client, err = newV7Client(url)
+	case "os2":
+		client, err = newOS2Client(url)
 	default:
-		s.Fail("not supported ES version")
+		assert.FailNow(t, fmt.Sprintf("not supported ES version: %s", version))
 	}
-	s.Require().NoError(err)
+	assert.NoError(t, err)
 	return client
 }
 
