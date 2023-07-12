@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -402,6 +403,27 @@ VisibilityArchivalURI: {{.}}{{end}}
 {{with .FailoverInfo}}Graceful failover info:
 {{table .}}{{end}}`
 
+var newtemplateDomain = `Validation Check: 
+{{- range .}}
+- {{.ValidationCheck}}: {{.ValidationResult}}
+  {{- with .ValidationDetails}}
+    {{- with .CurrentDomainRow}}
+      Current Domain:
+        Name: {{if .DomainInfo}}{{.DomainInfo.Name}}{{else}}N/A{{end}}
+        UUID: {{if .DomainInfo}}{{.DomainInfo.UUID}}{{else}}N/A{{end}}
+    {{- end}}
+    {{- with .NewDomainRow}}
+      New Domain:
+        Name: {{if .DomainInfo}}{{.DomainInfo.Name}}{{else}}N/A{{end}}
+        UUID: {{if .DomainInfo}}{{.DomainInfo.UUID}}{{else}}N/A{{end}}
+    {{- end}}
+    {{- if .LongRunningWorkFlowNum}}
+      Long Running Workflow Num: {{.LongRunningWorkFlowNum}}
+    {{- end}}
+  {{- end}}
+{{- end}}
+`
+
 // DescribeDomain updates a domain
 func (d *domainCLIImpl) DescribeDomain(c *cli.Context) {
 	domainName := c.GlobalString(FlagDomain)
@@ -703,13 +725,14 @@ func (d *domainCLIImpl) migrateDomain(c *cli.Context) {
 	workflowCheckRow := d.migrationDomainWorkFlowCheck(c)
 	results := []DomainMigrationRow{
 		domainMetaDataCheckRow,
-		domainMetaDataCheckRow,
 		workflowCheckRow,
 	}
+
 	renderOpts := RenderOptions{
-		Color:         true,
-		Border:        true,
-		PrintDateTime: true,
+		DefaultTemplate: newtemplateDomain,
+		Color:           true,
+		Border:          true,
+		PrintDateTime:   true,
 	}
 	err := Render(c, results, renderOpts)
 	if err != nil {
@@ -718,14 +741,22 @@ func (d *domainCLIImpl) migrateDomain(c *cli.Context) {
 }
 
 func (d *domainCLIImpl) migrationDomainMetaDataCheck(c *cli.Context) DomainMigrationRow {
-	request := &types.DescribeDomainRequest{}
+
+	domain := c.GlobalString(FlagDomain)
+	newDomain := c.String(FlagDestinationDomain)
+	request := &types.DescribeDomainRequest{
+		Name: &domain,
+	}
+	request2 := &types.DescribeDomainRequest{
+		Name: &newDomain,
+	}
 	ctx, cancel := newContext(c)
 	defer cancel()
 	currResp, err := d.frontendClient.DescribeDomain(ctx, request)
 	if err != nil {
 		ErrorAndExit(fmt.Sprintf("Could not describe old domain, Please check to see if old domain exists before migrating."), err)
 	}
-	newResp, err := d.destinationClient.DescribeDomain(ctx, request)
+	newResp, err := d.destinationClient.DescribeDomain(ctx, request2)
 	if err != nil {
 		ErrorAndExit(fmt.Sprintf("Could not describe new domain, Please check to see if new domain exists before migrating."), err)
 	}
@@ -742,9 +773,10 @@ func (d *domainCLIImpl) migrationDomainMetaDataCheck(c *cli.Context) DomainMigra
 }
 
 func metaDataValidation(currResp *types.DescribeDomainResponse, newResp *types.DescribeDomainResponse) bool {
-	if currResp.DomainInfo.Name != newResp.DomainInfo.Name {
+	if !reflect.DeepEqual(currResp.Configuration, newResp.Configuration) {
 		return false
 	}
+
 	if currResp.DomainInfo.OwnerEmail != newResp.DomainInfo.OwnerEmail {
 		return false
 	}
