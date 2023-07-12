@@ -28,6 +28,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/uber/cadence/tools/common/flag"
@@ -721,8 +722,27 @@ func (d *domainCLIImpl) describeDomain(
 }
 
 func (d *domainCLIImpl) migrateDomain(c *cli.Context) {
-	domainMetaDataCheckRow := d.migrationDomainMetaDataCheck(c)
-	workflowCheckRow := d.migrationDomainWorkFlowCheck(c)
+	var (
+		domainMetaDataCheckRow DomainMigrationRow
+		workflowCheckRow       DomainMigrationRow
+		err                    error
+	)
+
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		domainMetaDataCheckRow = d.migrationDomainMetaDataCheck(c)
+	}()
+
+	go func() {
+		defer wg.Done()
+		workflowCheckRow = d.migrationDomainWorkFlowCheck(c)
+	}()
+
+	wg.Wait()
+
 	results := []DomainMigrationRow{
 		domainMetaDataCheckRow,
 		workflowCheckRow,
@@ -734,7 +754,8 @@ func (d *domainCLIImpl) migrateDomain(c *cli.Context) {
 		Border:          true,
 		PrintDateTime:   true,
 	}
-	err := Render(c, results, renderOpts)
+
+	err = Render(c, results, renderOpts)
 	if err != nil {
 		ErrorAndExit("Failed to render", err)
 	}
