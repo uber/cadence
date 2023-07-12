@@ -545,6 +545,14 @@ const (
 	AdminClientRestoreDynamicConfigScope
 	// AdminClientListDynamicConfigScope tracks RPC calls to admin service
 	AdminClientListDynamicConfigScope
+	// AdminClientGetGlobalIsolationGroupsScope is a request to get all the global isolation-groups
+	AdminClientGetGlobalIsolationGroupsScope
+	// AdminClientUpdateGlobalIsolationGroupsScope is a request to update the global isolation-groups
+	AdminClientUpdateGlobalIsolationGroupsScope
+	// AdminClientGetDomainIsolationGroupsScope is a request to get the domains' isolation groups
+	AdminClientGetDomainIsolationGroupsScope
+	// AdminClientUpdateDomainIsolationGroupsScope is a request to update the domains isolation-groups
+	AdminClientUpdateDomainIsolationGroupsScope
 	// DCRedirectionDeprecateDomainScope tracks RPC calls for dc redirection
 	DCRedirectionDeprecateDomainScope
 	// DCRedirectionDescribeDomainScope tracks RPC calls for dc redirection
@@ -735,6 +743,8 @@ const (
 	DomainReplicationQueueScope
 	// ClusterMetadataScope is used for the cluster metadata
 	ClusterMetadataScope
+	// GetAvailableIsolationGroupsScope is the metric for the default partitioner's getIsolationGroups operation
+	GetAvailableIsolationGroupsScope
 
 	NumCommonScopes
 )
@@ -799,6 +809,14 @@ const (
 	AdminDeleteWorkflowScope
 	// MaintainCorruptWorkflowScope is the metric scope for admin.MaintainCorruptWorkflow
 	MaintainCorruptWorkflowScope
+	// GetGlobalIsolationGroups is the scope for getting global isolation groups
+	GetGlobalIsolationGroups
+	// UpdateGlobalIsolationGroups is the scope for getting global isolation groups
+	UpdateGlobalIsolationGroups
+	// GetDomainIsolationGroups is the scope for getting domain isolation groups
+	GetDomainIsolationGroups
+	// UpdateDomainIsolationGroups is the scope for getting domain isolation groups
+	UpdateDomainIsolationGroups
 
 	NumAdminScopes
 )
@@ -1157,6 +1175,12 @@ const (
 	HistoryReplicationV2TaskScope
 	// SyncActivityTaskScope is the scope used by sync activity information processing
 	SyncActivityTaskScope
+	// LargeExecutionSizeShardScope is the scope to track large history size for hotshard detection
+	LargeExecutionSizeShardScope
+	// LargeExecutionCountShardScope is the scope to track large history count for hotshard detection
+	LargeExecutionCountShardScope
+	// LargeExecutionBlobShardScope is the scope to track large blobs for hotshard detection
+	LargeExecutionBlobShardScope
 
 	NumHistoryScopes
 )
@@ -1171,6 +1195,8 @@ const (
 	MatchingAddActivityTaskScope
 	// MatchingAddDecisionTaskScope tracks AddDecisionTask API calls received by service
 	MatchingAddDecisionTaskScope
+	// MatchingAddTaskScope tracks both AddActivityTask and AddDevisionTask API calls received by service
+	MatchingAddTaskScope
 	// MatchingTaskListMgrScope is the metrics scope for matching.TaskListManager component
 	MatchingTaskListMgrScope
 	// MatchingQueryWorkflowScope tracks AddDecisionTask API calls received by service
@@ -1451,6 +1477,10 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminClientUpdateDynamicConfigScope:                   {operation: "AdminClientUpdateDynamicConfigScope", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientRestoreDynamicConfigScope:                  {operation: "AdminClientRestoreDynamicConfigScope", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientListDynamicConfigScope:                     {operation: "AdminClientListDynamicConfigScope", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientGetGlobalIsolationGroupsScope:              {operation: "AdminClientGetGlobalIsolationGroups", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientUpdateGlobalIsolationGroupsScope:           {operation: "AdminClientUpdateGlobalIsolationGroups", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientGetDomainIsolationGroupsScope:              {operation: "AdminClientGetDomainIsolationGroups", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientUpdateDomainIsolationGroupsScope:           {operation: "AdminClientUpdateDomainIsolationGroups", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		DCRedirectionDeprecateDomainScope:                     {operation: "DCRedirectionDeprecateDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionDescribeDomainScope:                      {operation: "DCRedirectionDescribeDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionDescribeTaskListScope:                    {operation: "DCRedirectionDescribeTaskList", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
@@ -1535,6 +1565,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		BlobstoreClientDeleteScope:          {operation: "BlobstoreClientDelete", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
 		BlobstoreClientDirectoryExistsScope: {operation: "BlobstoreClientDirectoryExists", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
 
+		GetAvailableIsolationGroupsScope: {operation: "GetAvailableIsolationGroups"},
+
 		DomainFailoverScope:         {operation: "DomainFailover"},
 		DomainReplicationQueueScope: {operation: "DomainReplicationQueue"},
 		ClusterMetadataScope:        {operation: "ClusterMetadata"},
@@ -1571,6 +1603,10 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminListDynamicConfigScope:                 {operation: "AdminListDynamicConfig"},
 		AdminDeleteWorkflowScope:                    {operation: "AdminDeleteWorkflow"},
 		MaintainCorruptWorkflowScope:                {operation: "MaintainCorruptWorkflow"},
+		GetGlobalIsolationGroups:                    {operation: "GetGlobalIsolationGroups"},
+		UpdateGlobalIsolationGroups:                 {operation: "UpdateGlobalIsolationGroups"},
+		GetDomainIsolationGroups:                    {operation: "GetDomainIsolationGroups"},
+		UpdateDomainIsolationGroups:                 {operation: "UpdateDomainIsolationGroups"},
 
 		FrontendRestartWorkflowExecutionScope:           {operation: "RestartWorkflowExecution"},
 		FrontendStartWorkflowExecutionScope:             {operation: "StartWorkflowExecution"},
@@ -1748,6 +1784,9 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FailoverMarkerScope:                                             {operation: "FailoverMarker"},
 		HistoryReplicationV2TaskScope:                                   {operation: "HistoryReplicationV2Task"},
 		SyncActivityTaskScope:                                           {operation: "SyncActivityTask"},
+		LargeExecutionSizeShardScope:                                    {operation: "LargeExecutionSizeShard"},
+		LargeExecutionCountShardScope:                                   {operation: "LargeExecutionCountShard"},
+		LargeExecutionBlobShardScope:                                    {operation: "LargeExecutionBlobShard"},
 	},
 	// Matching Scope Names
 	Matching: {
@@ -1755,6 +1794,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		MatchingPollForActivityTaskScope:       {operation: "PollForActivityTask"},
 		MatchingAddActivityTaskScope:           {operation: "AddActivityTask"},
 		MatchingAddDecisionTaskScope:           {operation: "AddDecisionTask"},
+		MatchingAddTaskScope:                   {operation: "AddTask"},
 		MatchingTaskListMgrScope:               {operation: "TaskListMgr"},
 		MatchingQueryWorkflowScope:             {operation: "QueryWorkflow"},
 		MatchingRespondQueryTaskCompletedScope: {operation: "RespondQueryTaskCompleted"},
@@ -1791,7 +1831,6 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 const (
 	CadenceRequests = iota
 	CadenceFailures
-	CadenceCriticalFailures
 	CadenceLatency
 	CadenceErrBadRequestCounter
 	CadenceErrDomainNotActiveCounter
@@ -1863,6 +1902,8 @@ const (
 	CadenceClientRequests
 	CadenceClientFailures
 	CadenceClientLatency
+
+	CadenceTasklistRequests
 
 	CadenceDcRedirectionClientRequests
 	CadenceDcRedirectionClientFailures
@@ -1974,6 +2015,10 @@ const (
 
 	ParentClosePolicyProcessorSuccess
 	ParentClosePolicyProcessorFailures
+
+	IsolationGroupStatePollerUnavailable
+	IsolationGroupStateDrained
+	IsolationGroupStateHealthy
 
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
@@ -2244,6 +2289,10 @@ const (
 	HistoryFailoverCallbackCount
 	WorkflowVersionCount
 	WorkflowTypeCount
+	WorkflowStartedCount
+	LargeHistoryBlobCount
+	LargeHistoryEventCount
+	LargeHistorySizeCount
 
 	NumHistoryMetrics
 )
@@ -2261,6 +2310,8 @@ const (
 	BufferThrottlePerTaskListCounter
 	SyncMatchLatencyPerTaskList
 	AsyncMatchLatencyPerTaskList
+	AsyncMatchDispatchLatencyPerTaskList
+	AsyncMatchDispatchTimeoutCounterPerTaskList
 	ExpiredTasksPerTaskListCounter
 	ForwardedPerTaskListCounter
 	ForwardTaskCallsPerTaskList
@@ -2276,6 +2327,7 @@ const (
 	LocalToRemoteMatchPerTaskListCounter
 	RemoteToLocalMatchPerTaskListCounter
 	RemoteToRemoteMatchPerTaskListCounter
+	IsolationTaskMatchPerTaskListCounter
 	PollerPerTaskListCounter
 	TaskListManagersGauge
 	TaskLagPerTaskListGauge
@@ -2371,7 +2423,6 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 	Common: {
 		CadenceRequests:                                              {metricName: "cadence_requests", metricType: Counter},
 		CadenceFailures:                                              {metricName: "cadence_errors", metricType: Counter},
-		CadenceCriticalFailures:                                      {metricName: "cadence_errors_critical", metricType: Counter},
 		CadenceLatency:                                               {metricName: "cadence_latency", metricType: Timer},
 		CadenceErrBadRequestCounter:                                  {metricName: "cadence_errors_bad_request", metricType: Counter},
 		CadenceErrDomainNotActiveCounter:                             {metricName: "cadence_errors_domain_not_active", metricType: Counter},
@@ -2441,6 +2492,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CadenceClientRequests:                                        {metricName: "cadence_client_requests", metricType: Counter},
 		CadenceClientFailures:                                        {metricName: "cadence_client_errors", metricType: Counter},
 		CadenceClientLatency:                                         {metricName: "cadence_client_latency", metricType: Timer},
+		CadenceTasklistRequests:                                      {metricName: "cadence_tasklist_request", metricType: Counter},
 		CadenceDcRedirectionClientRequests:                           {metricName: "cadence_client_requests_redirection", metricType: Counter},
 		CadenceDcRedirectionClientFailures:                           {metricName: "cadence_client_errors_redirection", metricType: Counter},
 		CadenceDcRedirectionClientLatency:                            {metricName: "cadence_client_latency_redirection", metricType: Timer},
@@ -2577,6 +2629,10 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		DomainReplicationQueueSizeErrorCount: {metricName: "domain_replication_queue_failed", metricType: Counter},
 		ParentClosePolicyProcessorSuccess:    {metricName: "parent_close_policy_processor_requests", metricType: Counter},
 		ParentClosePolicyProcessorFailures:   {metricName: "parent_close_policy_processor_errors", metricType: Counter},
+
+		IsolationGroupStatePollerUnavailable: {metricName: "isolation_group_poller_unavailable", metricType: Counter},
+		IsolationGroupStateDrained:           {metricName: "isolation_group_drained", metricType: Counter},
+		IsolationGroupStateHealthy:           {metricName: "isolation_group_healthy", metricType: Counter},
 	},
 	History: {
 		TaskRequests:             {metricName: "task_requests", metricType: Counter},
@@ -2838,38 +2894,45 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ReplicationTasksCount:                                        {metricName: "replication_tasks_count", metricType: Timer},
 		WorkflowVersionCount:                                         {metricName: "workflow_version_count", metricType: Gauge},
 		WorkflowTypeCount:                                            {metricName: "workflow_type_count", metricType: Gauge},
+		WorkflowStartedCount:                                         {metricName: "workflow_started_count", metricType: Counter},
+		LargeHistoryBlobCount:                                        {metricName: "large_history_blob_count", metricType: Counter},
+		LargeHistoryEventCount:                                       {metricName: "large_history_event_count", metricType: Counter},
+		LargeHistorySizeCount:                                        {metricName: "large_history_size_count", metricType: Counter},
 	},
 	Matching: {
-		PollSuccessPerTaskListCounter:            {metricName: "poll_success_per_tl", metricRollupName: "poll_success"},
-		PollTimeoutPerTaskListCounter:            {metricName: "poll_timeouts_per_tl", metricRollupName: "poll_timeouts"},
-		PollSuccessWithSyncPerTaskListCounter:    {metricName: "poll_success_sync_per_tl", metricRollupName: "poll_success_sync"},
-		LeaseRequestPerTaskListCounter:           {metricName: "lease_requests_per_tl", metricRollupName: "lease_requests"},
-		LeaseFailurePerTaskListCounter:           {metricName: "lease_failures_per_tl", metricRollupName: "lease_failures"},
-		ConditionFailedErrorPerTaskListCounter:   {metricName: "condition_failed_errors_per_tl", metricRollupName: "condition_failed_errors"},
-		RespondQueryTaskFailedPerTaskListCounter: {metricName: "respond_query_failed_per_tl", metricRollupName: "respond_query_failed"},
-		SyncThrottlePerTaskListCounter:           {metricName: "sync_throttle_count_per_tl", metricRollupName: "sync_throttle_count"},
-		BufferThrottlePerTaskListCounter:         {metricName: "buffer_throttle_count_per_tl", metricRollupName: "buffer_throttle_count"},
-		ExpiredTasksPerTaskListCounter:           {metricName: "tasks_expired_per_tl", metricRollupName: "tasks_expired"},
-		ForwardedPerTaskListCounter:              {metricName: "forwarded_per_tl", metricRollupName: "forwarded"},
-		ForwardTaskCallsPerTaskList:              {metricName: "forward_task_calls_per_tl", metricRollupName: "forward_task_calls"},
-		ForwardTaskErrorsPerTaskList:             {metricName: "forward_task_errors_per_tl", metricRollupName: "forward_task_errors"},
-		ForwardQueryCallsPerTaskList:             {metricName: "forward_query_calls_per_tl", metricRollupName: "forward_query_calls"},
-		ForwardQueryErrorsPerTaskList:            {metricName: "forward_query_errors_per_tl", metricRollupName: "forward_query_errors"},
-		ForwardPollCallsPerTaskList:              {metricName: "forward_poll_calls_per_tl", metricRollupName: "forward_poll_calls"},
-		ForwardPollErrorsPerTaskList:             {metricName: "forward_poll_errors_per_tl", metricRollupName: "forward_poll_errors"},
-		SyncMatchLatencyPerTaskList:              {metricName: "syncmatch_latency_per_tl", metricRollupName: "syncmatch_latency", metricType: Timer},
-		AsyncMatchLatencyPerTaskList:             {metricName: "asyncmatch_latency_per_tl", metricRollupName: "asyncmatch_latency", metricType: Timer},
-		ForwardTaskLatencyPerTaskList:            {metricName: "forward_task_latency_per_tl", metricRollupName: "forward_task_latency"},
-		ForwardQueryLatencyPerTaskList:           {metricName: "forward_query_latency_per_tl", metricRollupName: "forward_query_latency"},
-		ForwardPollLatencyPerTaskList:            {metricName: "forward_poll_latency_per_tl", metricRollupName: "forward_poll_latency"},
-		LocalToLocalMatchPerTaskListCounter:      {metricName: "local_to_local_matches_per_tl", metricRollupName: "local_to_local_matches"},
-		LocalToRemoteMatchPerTaskListCounter:     {metricName: "local_to_remote_matches_per_tl", metricRollupName: "local_to_remote_matches"},
-		RemoteToLocalMatchPerTaskListCounter:     {metricName: "remote_to_local_matches_per_tl", metricRollupName: "remote_to_local_matches"},
-		RemoteToRemoteMatchPerTaskListCounter:    {metricName: "remote_to_remote_matches_per_tl", metricRollupName: "remote_to_remote_matches"},
-		PollerPerTaskListCounter:                 {metricName: "poller_count_per_tl", metricRollupName: "poller_count"},
-		TaskListManagersGauge:                    {metricName: "tasklist_managers", metricType: Gauge},
-		TaskLagPerTaskListGauge:                  {metricName: "task_lag_per_tl", metricType: Gauge},
-		TaskBacklogPerTaskListGauge:              {metricName: "task_backlog_per_tl", metricType: Gauge},
+		PollSuccessPerTaskListCounter:               {metricName: "poll_success_per_tl", metricRollupName: "poll_success"},
+		PollTimeoutPerTaskListCounter:               {metricName: "poll_timeouts_per_tl", metricRollupName: "poll_timeouts"},
+		PollSuccessWithSyncPerTaskListCounter:       {metricName: "poll_success_sync_per_tl", metricRollupName: "poll_success_sync"},
+		LeaseRequestPerTaskListCounter:              {metricName: "lease_requests_per_tl", metricRollupName: "lease_requests"},
+		LeaseFailurePerTaskListCounter:              {metricName: "lease_failures_per_tl", metricRollupName: "lease_failures"},
+		ConditionFailedErrorPerTaskListCounter:      {metricName: "condition_failed_errors_per_tl", metricRollupName: "condition_failed_errors"},
+		RespondQueryTaskFailedPerTaskListCounter:    {metricName: "respond_query_failed_per_tl", metricRollupName: "respond_query_failed"},
+		SyncThrottlePerTaskListCounter:              {metricName: "sync_throttle_count_per_tl", metricRollupName: "sync_throttle_count"},
+		BufferThrottlePerTaskListCounter:            {metricName: "buffer_throttle_count_per_tl", metricRollupName: "buffer_throttle_count"},
+		ExpiredTasksPerTaskListCounter:              {metricName: "tasks_expired_per_tl", metricRollupName: "tasks_expired"},
+		ForwardedPerTaskListCounter:                 {metricName: "forwarded_per_tl", metricRollupName: "forwarded"},
+		ForwardTaskCallsPerTaskList:                 {metricName: "forward_task_calls_per_tl", metricRollupName: "forward_task_calls"},
+		ForwardTaskErrorsPerTaskList:                {metricName: "forward_task_errors_per_tl", metricRollupName: "forward_task_errors"},
+		ForwardQueryCallsPerTaskList:                {metricName: "forward_query_calls_per_tl", metricRollupName: "forward_query_calls"},
+		ForwardQueryErrorsPerTaskList:               {metricName: "forward_query_errors_per_tl", metricRollupName: "forward_query_errors"},
+		ForwardPollCallsPerTaskList:                 {metricName: "forward_poll_calls_per_tl", metricRollupName: "forward_poll_calls"},
+		ForwardPollErrorsPerTaskList:                {metricName: "forward_poll_errors_per_tl", metricRollupName: "forward_poll_errors"},
+		SyncMatchLatencyPerTaskList:                 {metricName: "syncmatch_latency_per_tl", metricRollupName: "syncmatch_latency", metricType: Timer},
+		AsyncMatchLatencyPerTaskList:                {metricName: "asyncmatch_latency_per_tl", metricRollupName: "asyncmatch_latency", metricType: Timer},
+		AsyncMatchDispatchLatencyPerTaskList:        {metricName: "asyncmatch_dispatch_latency_per_tl", metricRollupName: "asyncmatch_dispatch_latency", metricType: Timer},
+		AsyncMatchDispatchTimeoutCounterPerTaskList: {metricName: "asyncmatch_dispatch_timeouts_per_tl", metricRollupName: "asyncmatch_dispatch_timeouts"},
+		ForwardTaskLatencyPerTaskList:               {metricName: "forward_task_latency_per_tl", metricRollupName: "forward_task_latency"},
+		ForwardQueryLatencyPerTaskList:              {metricName: "forward_query_latency_per_tl", metricRollupName: "forward_query_latency"},
+		ForwardPollLatencyPerTaskList:               {metricName: "forward_poll_latency_per_tl", metricRollupName: "forward_poll_latency"},
+		LocalToLocalMatchPerTaskListCounter:         {metricName: "local_to_local_matches_per_tl", metricRollupName: "local_to_local_matches"},
+		LocalToRemoteMatchPerTaskListCounter:        {metricName: "local_to_remote_matches_per_tl", metricRollupName: "local_to_remote_matches"},
+		RemoteToLocalMatchPerTaskListCounter:        {metricName: "remote_to_local_matches_per_tl", metricRollupName: "remote_to_local_matches"},
+		RemoteToRemoteMatchPerTaskListCounter:       {metricName: "remote_to_remote_matches_per_tl", metricRollupName: "remote_to_remote_matches"},
+		IsolationTaskMatchPerTaskListCounter:        {metricName: "isolation_task_matches_per_tl", metricType: Counter},
+		PollerPerTaskListCounter:                    {metricName: "poller_count_per_tl", metricRollupName: "poller_count"},
+		TaskListManagersGauge:                       {metricName: "tasklist_managers", metricType: Gauge},
+		TaskLagPerTaskListGauge:                     {metricName: "task_lag_per_tl", metricType: Gauge},
+		TaskBacklogPerTaskListGauge:                 {metricName: "task_backlog_per_tl", metricType: Gauge},
 	},
 	Worker: {
 		ReplicatorMessages:                            {metricName: "replicator_messages"},

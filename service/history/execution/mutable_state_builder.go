@@ -1678,6 +1678,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 		ContinuedFailureDetails:         attributes.FailureDetails,
 		ContinueAsNewInitiator:          attributes.Initiator,
 		FirstDecisionTaskBackoffSeconds: attributes.BackoffStartIntervalInSeconds,
+		PartitionConfig:                 previousExecutionInfo.PartitionConfig,
 	}
 
 	// if ContinueAsNew as Cron or decider, recalculate the expiration timestamp and set attempts to 0
@@ -1845,6 +1846,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(
 	if event.SearchAttributes != nil {
 		e.executionInfo.SearchAttributes = event.SearchAttributes.GetIndexedFields()
 	}
+	e.executionInfo.PartitionConfig = event.PartitionConfig
 
 	e.writeEventToCache(startEvent)
 
@@ -2233,6 +2235,7 @@ func (e *mutableStateBuilder) tryDispatchActivityTask(
 			WorkflowDomain:                  e.GetDomainEntry().GetInfo().Name,
 			ScheduledTimestampOfThisAttempt: common.Int64Ptr(ai.ScheduledTime.UnixNano()),
 		},
+		PartitionConfig: e.executionInfo.PartitionConfig,
 	})
 	if err == nil {
 		taggedScope.IncCounter(metrics.DecisionTypeScheduleActivityDispatchSucceedCounter)
@@ -4063,6 +4066,11 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 	// impact the checksum calculation
 	checksum := e.generateChecksum()
 
+	TTLInSeconds, err := e.calculateTTL()
+	if err != nil {
+		e.logError("TTL calculation failed")
+	}
+
 	workflowMutation := &persistence.WorkflowMutation{
 		ExecutionInfo:    e.executionInfo,
 		VersionHistories: e.versionHistories,
@@ -4087,8 +4095,9 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 		ReplicationTasks:  e.insertReplicationTasks,
 		TimerTasks:        e.insertTimerTasks,
 
-		Condition: e.nextEventIDInDB,
-		Checksum:  checksum,
+		Condition:    e.nextEventIDInDB,
+		Checksum:     checksum,
+		TTLInSeconds: int64(TTLInSeconds),
 	}
 
 	e.checksum = checksum
@@ -4344,7 +4353,10 @@ func (e *mutableStateBuilder) eventsToReplicationTask(
 	lastEvent := events[len(events)-1]
 	version := firstEvent.Version
 
-	sourceCluster := e.clusterMetadata.ClusterNameForFailoverVersion(version)
+	sourceCluster, err := e.clusterMetadata.ClusterNameForFailoverVersion(version)
+	if err != nil {
+		return nil, err
+	}
 	currentCluster := e.clusterMetadata.GetCurrentClusterName()
 
 	if currentCluster != sourceCluster {
@@ -4505,8 +4517,14 @@ func (e *mutableStateBuilder) startTransactionHandleDecisionFailover(
 		)}
 	}
 
-	lastWriteSourceCluster := e.clusterMetadata.ClusterNameForFailoverVersion(lastWriteVersion)
-	currentVersionCluster := e.clusterMetadata.ClusterNameForFailoverVersion(currentVersion)
+	lastWriteSourceCluster, err := e.clusterMetadata.ClusterNameForFailoverVersion(lastWriteVersion)
+	if err != nil {
+		return false, err
+	}
+	currentVersionCluster, err := e.clusterMetadata.ClusterNameForFailoverVersion(currentVersion)
+	if err != nil {
+		return false, err
+	}
 	currentCluster := e.clusterMetadata.GetCurrentClusterName()
 
 	// there are 4 cases for version changes (based on version from domain cache)
@@ -4521,7 +4539,10 @@ func (e *mutableStateBuilder) startTransactionHandleDecisionFailover(
 	// is missing and the missing history replicate back from remote cluster via resending approach => nothing to do
 
 	// handle case 5
-	incomingTaskSourceCluster := e.clusterMetadata.ClusterNameForFailoverVersion(incomingTaskVersion)
+	incomingTaskSourceCluster, err := e.clusterMetadata.ClusterNameForFailoverVersion(incomingTaskVersion)
+	if err != nil {
+		return false, err
+	}
 	if incomingTaskVersion != common.EmptyVersion &&
 		currentVersionCluster != currentCluster &&
 		incomingTaskSourceCluster == currentCluster {
@@ -4585,7 +4606,10 @@ func (e *mutableStateBuilder) closeTransactionWithPolicyCheck(
 		return nil
 	}
 
-	activeCluster := e.clusterMetadata.ClusterNameForFailoverVersion(e.GetCurrentVersion())
+	activeCluster, err := e.clusterMetadata.ClusterNameForFailoverVersion(e.GetCurrentVersion())
+	if err != nil {
+		return err
+	}
 	currentCluster := e.clusterMetadata.GetCurrentClusterName()
 
 	if activeCluster != currentCluster {
@@ -4788,4 +4812,28 @@ func (e *mutableStateBuilder) logDataInconsistency() {
 		tag.WorkflowID(workflowID),
 		tag.WorkflowRunID(runID),
 	)
+}
+func (e *mutableStateBuilder) calculateTTL() (int, error) {
+	domainID := e.executionInfo.DomainID
+	//Calculating the TTL for workflow Execution.
+
+	domainObj, err := e.shard.GetDomainCache().GetDomainByID(domainID)
+	if err != nil {
+		return 0, err
+	}
+	config := domainObj.GetConfig()
+	retention := time.Duration(config.Retention)
+	daysInSeconds := int((retention + ttlBufferDays) * dayToSecondMultiplier)
+	//Default state of TTL, means there is no TTL attached.
+	TTLInSeconds := 0
+	startTime := e.executionInfo.StartTimestamp
+	//Handles Cron and Delaystart. For Cron workflows the StartTimestamp does not show up until the wf has started.
+	//default value os TTL ie. 0 will be passed down in this case. The TTL is calculated only if the startTime is non zero.
+	if !time.Time.IsZero(startTime) {
+		CalculateTTLInSeconds := int(e.executionInfo.WorkflowTimeout) - int(time.Now().Sub(startTime).Seconds()) + daysInSeconds
+		if CalculateTTLInSeconds >= 0 {
+			return CalculateTTLInSeconds, nil
+		}
+	}
+	return TTLInSeconds, nil
 }

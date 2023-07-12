@@ -42,21 +42,17 @@ type (
 
 // newNoSQLDomainStore is used to create an instance of DomainStore implementation
 func newNoSQLDomainStore(
-	cfg config.NoSQL,
+	cfg config.ShardedNoSQL,
 	currentClusterName string,
 	logger log.Logger,
 	dc *p.DynamicConfiguration,
 ) (p.DomainStore, error) {
-	db, err := NewNoSQLDB(&cfg, logger, dc)
+	shardedStore, err := newShardedNosqlStore(cfg, logger, dc)
 	if err != nil {
 		return nil, err
 	}
-
 	return &nosqlDomainStore{
-		nosqlStore: nosqlStore{
-			db:     db,
-			logger: logger,
-		},
+		nosqlStore:         shardedStore.GetDefaultShard(),
 		currentClusterName: currentClusterName,
 	}, nil
 }
@@ -286,6 +282,7 @@ func (m *nosqlDomainStore) toNoSQLInternalDomainConfig(
 		VisibilityArchivalStatus: domainConfig.VisibilityArchivalStatus,
 		VisibilityArchivalURI:    domainConfig.VisibilityArchivalURI,
 		BadBinaries:              domainConfig.BadBinaries,
+		IsolationGroups:          domainConfig.IsolationGroups,
 	}, nil
 }
 
@@ -302,5 +299,6 @@ func (m *nosqlDomainStore) fromNoSQLInternalDomainConfig(
 		VisibilityArchivalStatus: domainConfig.VisibilityArchivalStatus,
 		VisibilityArchivalURI:    domainConfig.VisibilityArchivalURI,
 		BadBinaries:              domainConfig.BadBinaries,
+		IsolationGroups:          domainConfig.IsolationGroups,
 	}, nil
 }

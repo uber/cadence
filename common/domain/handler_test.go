@@ -27,10 +27,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/testflags"
+
+	"github.com/golang/mock/gomock"
+
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/uber/cadence/common/messaging"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
@@ -45,7 +51,6 @@ import (
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/testflags"
 )
 
 type (
@@ -338,6 +343,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 		}
 	}
 	delete(domains, common.SystemLocalDomainName)
+
 	s.Equal(map[string]*types.DescribeDomainResponse{
 		domainName1: {
 			DomainInfo: &types.DomainInfo{
@@ -356,6 +362,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 				VisibilityArchivalStatus:               types.ArchivalStatusDisabled.Ptr(),
 				VisibilityArchivalURI:                  "",
 				BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
+				IsolationGroups:                        &types.IsolationGroupConfiguration{},
 			},
 			ReplicationConfiguration: &types.DomainReplicationConfiguration{
 				ActiveClusterName: activeClusterName1,
@@ -381,6 +388,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 				VisibilityArchivalStatus:               types.ArchivalStatusDisabled.Ptr(),
 				VisibilityArchivalURI:                  "",
 				BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
+				IsolationGroups:                        &types.IsolationGroupConfiguration{},
 			},
 			ReplicationConfiguration: &types.DomainReplicationConfiguration{
 				ActiveClusterName: activeClusterName2,
@@ -394,7 +402,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 
 func (s *domainHandlerCommonSuite) TestRegisterDomain_InvalidRetentionPeriod() {
 	registerRequest := &types.RegisterDomainRequest{
-		Name:                                   "random domain name",
+		Name:                                   "random-domain-name",
 		Description:                            "random domain name",
 		WorkflowExecutionRetentionPeriodInDays: int32(0),
 		IsGlobalDomain:                         false,
@@ -403,8 +411,18 @@ func (s *domainHandlerCommonSuite) TestRegisterDomain_InvalidRetentionPeriod() {
 	s.Equal(errInvalidRetentionPeriod, err)
 }
 
+func (s *domainHandlerCommonSuite) TestRegisterDomain_InvalidDomainName() {
+	registerRequest := &types.RegisterDomainRequest{
+		Name:                                   "random-domain name!^",
+		Description:                            "a domain with bad naming",
+		WorkflowExecutionRetentionPeriodInDays: int32(3),
+	}
+	err := s.handler.RegisterDomain(context.Background(), registerRequest)
+	s.Equal(errInvalidDomainName, err)
+}
+
 func (s *domainHandlerCommonSuite) TestUpdateDomain_InvalidRetentionPeriod() {
-	domain := "random domain name"
+	domain := "random-domain-name"
 	registerRequest := &types.RegisterDomainRequest{
 		Name:                                   domain,
 		Description:                            domain,
@@ -608,4 +626,112 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_ForceFailover_SameActiveClus
 
 func (s *domainHandlerCommonSuite) getRandomDomainName() string {
 	return "domain" + uuid.New()
+}
+
+func TestHandlerImpl_UpdateIsolationGroups(t *testing.T) {
+
+	t0 := int64(1565914445 * time.Second)
+	t1 := int64(1685914445 * time.Second)
+	clock := clock.NewEventTimeSource().Update(time.Unix(0, t1))
+
+	info := persistence.DomainInfo{
+		ID:   "10CF5859-C5CC-4CCC-888E-631F84D53F57",
+		Name: "test",
+	}
+
+	config := persistence.DomainConfig{
+		Retention:       10,
+		IsolationGroups: nil,
+	}
+	replicationConfig := persistence.DomainReplicationConfig{
+		ActiveClusterName: "cluster-1",
+		Clusters: []*persistence.ClusterReplicationConfig{
+			{ClusterName: "cluster-1"},
+		},
+	}
+
+	ig := types.IsolationGroupConfiguration{
+		"zone-1": {Name: "zone-1", State: types.IsolationGroupStateDrained},
+	}
+
+	tests := map[string]struct {
+		in                types.UpdateDomainIsolationGroupsRequest
+		managerAffordance func(m *persistence.MockDomainManager)
+		expectedErr       error
+	}{
+		"successful update": {
+			in: types.UpdateDomainIsolationGroupsRequest{
+				Domain:          "test",
+				IsolationGroups: ig,
+			},
+			managerAffordance: func(m *persistence.MockDomainManager) {
+
+				m.EXPECT().GetMetadata(gomock.Any()).Return(&persistence.GetMetadataResponse{
+					NotificationVersion: 3,
+				}, nil)
+
+				m.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: "test"}).Return(&persistence.GetDomainResponse{
+					Info:                        &info,
+					Config:                      &config,
+					ReplicationConfig:           &replicationConfig,
+					IsGlobalDomain:              false,
+					ConfigVersion:               1,
+					FailoverVersion:             1,
+					FailoverNotificationVersion: 1,
+					PreviousFailoverVersion:     1,
+					FailoverEndTime:             &t0,
+					LastUpdatedTime:             t0,
+					NotificationVersion:         1,
+				}, nil)
+
+				m.EXPECT().UpdateDomain(gomock.Any(), &persistence.UpdateDomainRequest{
+					Info: &info,
+					Config: &persistence.DomainConfig{
+						Retention:       10,
+						IsolationGroups: ig,
+					},
+					ReplicationConfig:           &replicationConfig,
+					ConfigVersion:               2,
+					FailoverVersion:             1,
+					FailoverNotificationVersion: 1,
+					PreviousFailoverVersion:     1,
+					FailoverEndTime:             &t0,
+					LastUpdatedTime:             t1,
+					NotificationVersion:         3,
+				})
+			},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+
+			ctrl := gomock.NewController(t)
+
+			domainMgrMock := persistence.NewMockDomainManager(ctrl)
+			td.managerAffordance(domainMgrMock)
+
+			producer := messaging.NewNoopProducer()
+			replicator := NewDomainReplicator(producer, loggerimpl.NewNopLogger())
+
+			handler := handlerImpl{
+				domainManager:       domainMgrMock,
+				clusterMetadata:     cluster.Metadata{},
+				domainReplicator:    replicator,
+				domainAttrValidator: nil,
+				archivalMetadata:    nil,
+				archiverProvider:    nil,
+				timeSource:          clock,
+				config: Config{
+					MinRetentionDays:  func(opts ...dc.FilterOption) int { return 0 },
+					MaxBadBinaryCount: func(string) int { return 3 },
+					FailoverCoolDown:  func(string) time.Duration { return time.Second },
+				},
+				logger: loggerimpl.NewNopLogger(),
+			}
+
+			err := handler.UpdateIsolationGroups(context.TODO(), td.in)
+			assert.Equal(t, td.expectedErr, err)
+		})
+	}
 }

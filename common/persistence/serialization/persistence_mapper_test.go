@@ -88,6 +88,7 @@ func TestInternalWorkflowExecutionInfo(t *testing.T) {
 		Memo:                               map[string][]byte{"key_1": []byte("Memo")},
 		SearchAttributes:                   map[string][]byte{"key_1": []byte("SearchAttributes")},
 		HistorySize:                        int64(rand.Intn(1000)),
+		PartitionConfig:                    map[string]string{"zone": "dca1"},
 	}
 	actual := ToInternalWorkflowExecutionInfo(FromInternalWorkflowExecutionInfo(expected))
 	assert.Equal(t, expected.ParentDomainID, actual.ParentDomainID)
@@ -142,4 +143,5 @@ func TestInternalWorkflowExecutionInfo(t *testing.T) {
 	assert.Equal(t, expected.Memo, actual.Memo)
 	assert.Equal(t, expected.SearchAttributes, actual.SearchAttributes)
 	assert.Equal(t, expected.HistorySize, actual.HistorySize)
+	assert.Equal(t, expected.PartitionConfig, actual.PartitionConfig)
 }

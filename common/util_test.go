@@ -99,7 +99,7 @@ func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithCron(t *testing.T) 
 		CronSchedule: "@every 300s",
 	}
 	now := time.Now()
-	startRequest, err := CreateHistoryStartWorkflowRequest(domainID, request, now)
+	startRequest, err := CreateHistoryStartWorkflowRequest(domainID, request, now, nil)
 	require.NoError(t, err)
 	require.NotNil(t, startRequest)
 
@@ -146,7 +146,7 @@ func TestFirstDecisionTaskBackoffDuringStartWorkflow(t *testing.T) {
 			for i := 0; i < caseCount; i++ {
 				// Start at the minute boundary so we know what the backoff should be
 				startTime, _ := time.Parse(time.RFC3339, "2018-12-17T08:00:00+00:00")
-				startRequest, err := CreateHistoryStartWorkflowRequest(domainID, request, startTime)
+				startRequest, err := CreateHistoryStartWorkflowRequest(domainID, request, startTime, nil)
 				require.NoError(t, err)
 				require.NotNil(t, startRequest)
 
@@ -228,7 +228,7 @@ func testExpirationTime(t *testing.T, delayStartSeconds int, cronSeconds int, ji
 	minDelay := delayStartSeconds + cronSeconds
 	maxDelay := delayStartSeconds + 2*cronSeconds + jitterSeconds
 	now := time.Now()
-	startRequest, err := CreateHistoryStartWorkflowRequest(domainID, request, now)
+	startRequest, err := CreateHistoryStartWorkflowRequest(domainID, request, now, nil)
 	require.NoError(t, err)
 	require.NotNil(t, startRequest)
 
@@ -264,7 +264,7 @@ func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithoutCron(t *testing.
 		},
 	}
 	now := time.Now()
-	startRequest, err := CreateHistoryStartWorkflowRequest(domainID, request, now)
+	startRequest, err := CreateHistoryStartWorkflowRequest(domainID, request, now, nil)
 	require.NoError(t, err)
 	require.NotNil(t, startRequest)
 
@@ -365,5 +365,28 @@ func TestToServiceTransientError(t *testing.T) {
 	t.Run("it converts errors to transient errors", func(t *testing.T) {
 		err := fmt.Errorf("error")
 		assert.True(t, IsServiceTransientError(ToServiceTransientError(err)))
+	})
+}
+
+func TestIntersectionStringSlice(t *testing.T) {
+	t.Run("it returns all items", func(t *testing.T) {
+		a := []string{"a", "b", "c"}
+		b := []string{"a", "b", "c"}
+		c := IntersectionStringSlice(a, b)
+		assert.ElementsMatch(t, []string{"a", "b", "c"}, c)
+	})
+
+	t.Run("it returns no item", func(t *testing.T) {
+		a := []string{"a", "b", "c"}
+		b := []string{"d", "e", "f"}
+		c := IntersectionStringSlice(a, b)
+		assert.ElementsMatch(t, []string{}, c)
+	})
+
+	t.Run("it returns intersection", func(t *testing.T) {
+		a := []string{"a", "b", "c"}
+		b := []string{"c", "b", "f"}
+		c := IntersectionStringSlice(a, b)
+		assert.ElementsMatch(t, []string{"c", "b"}, c)
 	})
 }

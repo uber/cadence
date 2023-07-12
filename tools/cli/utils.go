@@ -39,18 +39,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/uber/cadence/common/pagination"
-
-	"github.com/uber/cadence/client/frontend"
-	"github.com/uber/cadence/common/types"
-
 	"github.com/cristalhq/jwt/v3"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 	"github.com/valyala/fastjson"
 
+	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/authorization"
+	"github.com/uber/cadence/common/pagination"
+	"github.com/uber/cadence/common/types"
 )
 
 // JSONHistorySerializer is used to encode history event in JSON
@@ -157,6 +155,13 @@ func HistoryEventToString(e *types.HistoryEvent, printFully bool, maxFieldLength
 }
 
 func anyToString(d interface{}, printFully bool, maxFieldLength int) string {
+	// fields related to schedule are of time.Time type, and we shouldn't dive
+	// into it with reflection - it's fields are private.
+	tm, ok := d.(time.Time)
+	if ok {
+		return trimText(tm.String(), maxFieldLength)
+	}
+
 	v := reflect.ValueOf(d)
 	switch v.Kind() {
 	case reflect.Ptr:
@@ -283,135 +288,49 @@ func breakLongWords(input string, maxWordLength int) string {
 //	Started - blue
 //	Others - default (white/black)
 func ColorEvent(e *types.HistoryEvent) string {
-	var data string
-	switch e.GetEventType() {
-	case types.EventTypeWorkflowExecutionStarted:
-		data = color.BlueString(e.EventType.String())
+	f := EventColorFunction(*e.EventType)
+	return f(e.EventType.String())
+}
 
-	case types.EventTypeWorkflowExecutionCompleted:
-		data = color.GreenString(e.EventType.String())
+func EventColorFunction(eventType types.EventType) func(format string, a ...interface{}) string {
+	var colorFunc func(format string, a ...interface{}) string
+	noColorFunc := func(format string, a ...interface{}) string {
+		return format
+	}
+	switch eventType {
+	case types.EventTypeWorkflowExecutionStarted,
+		types.EventTypeChildWorkflowExecutionStarted:
+		colorFunc = color.BlueString
 
-	case types.EventTypeWorkflowExecutionFailed:
-		data = color.RedString(e.EventType.String())
+	case types.EventTypeWorkflowExecutionCompleted,
+		types.EventTypeChildWorkflowExecutionCompleted:
+		colorFunc = color.GreenString
 
-	case types.EventTypeWorkflowExecutionTimedOut:
-		data = color.YellowString(e.EventType.String())
+	case types.EventTypeWorkflowExecutionFailed,
+		types.EventTypeRequestCancelActivityTaskFailed,
+		types.EventTypeCancelTimerFailed,
+		types.EventTypeStartChildWorkflowExecutionFailed,
+		types.EventTypeChildWorkflowExecutionFailed,
+		types.EventTypeRequestCancelExternalWorkflowExecutionFailed,
+		types.EventTypeSignalExternalWorkflowExecutionFailed,
+		types.EventTypeActivityTaskFailed:
+		colorFunc = color.RedString
 
-	case types.EventTypeDecisionTaskScheduled:
-		data = e.EventType.String()
-
-	case types.EventTypeDecisionTaskStarted:
-		data = e.EventType.String()
-
-	case types.EventTypeDecisionTaskCompleted:
-		data = e.EventType.String()
-
-	case types.EventTypeDecisionTaskTimedOut:
-		data = color.YellowString(e.EventType.String())
-
-	case types.EventTypeActivityTaskScheduled:
-		data = e.EventType.String()
-
-	case types.EventTypeActivityTaskStarted:
-		data = e.EventType.String()
-
-	case types.EventTypeActivityTaskCompleted:
-		data = e.EventType.String()
-
-	case types.EventTypeActivityTaskFailed:
-		data = color.RedString(e.EventType.String())
-
-	case types.EventTypeActivityTaskTimedOut:
-		data = color.YellowString(e.EventType.String())
-
-	case types.EventTypeActivityTaskCancelRequested:
-		data = e.EventType.String()
-
-	case types.EventTypeRequestCancelActivityTaskFailed:
-		data = color.RedString(e.EventType.String())
-
-	case types.EventTypeActivityTaskCanceled:
-		data = e.EventType.String()
-
-	case types.EventTypeTimerStarted:
-		data = e.EventType.String()
-
-	case types.EventTypeTimerFired:
-		data = e.EventType.String()
-
-	case types.EventTypeCancelTimerFailed:
-		data = color.RedString(e.EventType.String())
-
-	case types.EventTypeTimerCanceled:
-		data = color.MagentaString(e.EventType.String())
-
-	case types.EventTypeWorkflowExecutionCancelRequested:
-		data = e.EventType.String()
-
-	case types.EventTypeWorkflowExecutionCanceled:
-		data = color.MagentaString(e.EventType.String())
-
-	case types.EventTypeRequestCancelExternalWorkflowExecutionInitiated:
-		data = e.EventType.String()
-
-	case types.EventTypeRequestCancelExternalWorkflowExecutionFailed:
-		data = color.RedString(e.EventType.String())
-
-	case types.EventTypeExternalWorkflowExecutionCancelRequested:
-		data = e.EventType.String()
-
-	case types.EventTypeMarkerRecorded:
-		data = e.EventType.String()
-
-	case types.EventTypeWorkflowExecutionSignaled:
-		data = e.EventType.String()
-
-	case types.EventTypeWorkflowExecutionTerminated:
-		data = e.EventType.String()
-
-	case types.EventTypeWorkflowExecutionContinuedAsNew:
-		data = e.EventType.String()
-
-	case types.EventTypeStartChildWorkflowExecutionInitiated:
-		data = e.EventType.String()
-
-	case types.EventTypeStartChildWorkflowExecutionFailed:
-		data = color.RedString(e.EventType.String())
-
-	case types.EventTypeChildWorkflowExecutionStarted:
-		data = color.BlueString(e.EventType.String())
-
-	case types.EventTypeChildWorkflowExecutionCompleted:
-		data = color.GreenString(e.EventType.String())
-
-	case types.EventTypeChildWorkflowExecutionFailed:
-		data = color.RedString(e.EventType.String())
+	case types.EventTypeWorkflowExecutionTimedOut,
+		types.EventTypeActivityTaskTimedOut,
+		types.EventTypeWorkflowExecutionCanceled,
+		types.EventTypeChildWorkflowExecutionTimedOut,
+		types.EventTypeDecisionTaskTimedOut:
+		colorFunc = color.YellowString
 
 	case types.EventTypeChildWorkflowExecutionCanceled:
-		data = color.MagentaString(e.EventType.String())
-
-	case types.EventTypeChildWorkflowExecutionTimedOut:
-		data = color.YellowString(e.EventType.String())
-
-	case types.EventTypeChildWorkflowExecutionTerminated:
-		data = e.EventType.String()
-
-	case types.EventTypeSignalExternalWorkflowExecutionInitiated:
-		data = e.EventType.String()
-
-	case types.EventTypeSignalExternalWorkflowExecutionFailed:
-		data = color.RedString(e.EventType.String())
-
-	case types.EventTypeExternalWorkflowExecutionSignaled:
-		data = e.EventType.String()
-
-	case types.EventTypeUpsertWorkflowSearchAttributes:
-		data = e.EventType.String()
+		colorFunc = color.MagentaString
 
 	default:
-		data = e.EventType.String()
+		colorFunc = noColorFunc
 	}
-	return data
+
+	return colorFunc
 }
 
 func getEventAttributes(e *types.HistoryEvent) interface{} {
@@ -585,6 +504,10 @@ func intSliceToSet(s []int) map[int]struct{} {
 		ret[v] = struct{}{}
 	}
 	return ret
+}
+
+func printMessage(msg string) {
+	fmt.Printf("%s %s\n", "cadence:", msg)
 }
 
 func printError(msg string, err error) {
@@ -829,29 +752,27 @@ func populateContextFromCLIContext(ctx context.Context, cliCtx *cli.Context) con
 }
 
 func newContext(c *cli.Context) (context.Context, context.CancelFunc) {
-	contextTimeout := defaultContextTimeout
-	if c.GlobalInt(FlagContextTimeout) > 0 {
-		contextTimeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
-	}
-	ctx := populateContextFromCLIContext(context.Background(), c)
-	return context.WithTimeout(ctx, contextTimeout)
+	return newTimedContext(c, defaultContextTimeout)
 }
 
 func newContextForLongPoll(c *cli.Context) (context.Context, context.CancelFunc) {
-	contextTimeout := defaultContextTimeoutForLongPoll
-	if c.GlobalIsSet(FlagContextTimeout) {
-		contextTimeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
-	}
-	return context.WithTimeout(context.Background(), contextTimeout)
+	return newTimedContext(c, defaultContextTimeoutForLongPoll)
 }
 
 func newIndefiniteContext(c *cli.Context) (context.Context, context.CancelFunc) {
 	if c.GlobalIsSet(FlagContextTimeout) {
-		contextTimeout := time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
-		return context.WithTimeout(context.Background(), contextTimeout)
+		return newTimedContext(c, time.Duration(c.GlobalInt(FlagContextTimeout))*time.Second)
 	}
 
-	return context.WithCancel(context.Background())
+	return context.WithCancel(populateContextFromCLIContext(context.Background(), c))
+}
+
+func newTimedContext(c *cli.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
+	if c.GlobalIsSet(FlagContextTimeout) {
+		timeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
+	}
+	ctx := populateContextFromCLIContext(context.Background(), c)
+	return context.WithTimeout(ctx, timeout)
 }
 
 // process and validate input provided through cmd or file

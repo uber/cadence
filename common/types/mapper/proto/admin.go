@@ -21,7 +21,10 @@
 package proto
 
 import (
+	"sort"
+
 	adminv1 "github.com/uber/cadence-idl/go/proto/admin/v1"
+	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -1161,4 +1164,196 @@ func ToDynamicConfigFilter(t *adminv1.DynamicConfigFilter) *types.DynamicConfigF
 		Name:  t.Name,
 		Value: ToDataBlob(t.Value),
 	}
+}
+
+func FromGetGlobalIsolationGroupsResponse(t *types.GetGlobalIsolationGroupsResponse) *adminv1.GetGlobalIsolationGroupsResponse {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.GetGlobalIsolationGroupsResponse{
+		IsolationGroups: FromIsolationGroupConfig(&t.IsolationGroups),
+	}
+}
+
+func FromUpdateGlobalIsolationGroupsRequest(t *types.UpdateGlobalIsolationGroupsRequest) *adminv1.UpdateGlobalIsolationGroupsRequest {
+	if t == nil {
+		return nil
+	}
+	if t.IsolationGroups == nil {
+		return &adminv1.UpdateGlobalIsolationGroupsRequest{}
+	}
+	return &adminv1.UpdateGlobalIsolationGroupsRequest{
+		IsolationGroups: FromIsolationGroupConfig(&t.IsolationGroups),
+	}
+}
+
+func FromUpdateDomainIsolationGroupsRequest(t *types.UpdateDomainIsolationGroupsRequest) *adminv1.UpdateDomainIsolationGroupsRequest {
+	if t == nil {
+		return nil
+	}
+	if t.IsolationGroups == nil {
+		return &adminv1.UpdateDomainIsolationGroupsRequest{}
+	}
+	return &adminv1.UpdateDomainIsolationGroupsRequest{
+		IsolationGroups: FromIsolationGroupConfig(&t.IsolationGroups),
+	}
+}
+
+func FromGetGlobalIsolationGroupsRequest(t *types.GetGlobalIsolationGroupsRequest) *adminv1.GetGlobalIsolationGroupsRequest {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.GetGlobalIsolationGroupsRequest{}
+}
+
+func FromGetDomainIsolationGroupsRequest(t *types.GetDomainIsolationGroupsRequest) *adminv1.GetDomainIsolationGroupsRequest {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.GetDomainIsolationGroupsRequest{
+		Domain: t.Domain,
+	}
+}
+
+func ToGetGlobalIsolationGroupsRequest(t *adminv1.GetGlobalIsolationGroupsRequest) *types.GetGlobalIsolationGroupsRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.GetGlobalIsolationGroupsRequest{}
+}
+
+func ToGetGlobalIsolationGroupsResponse(t *adminv1.GetGlobalIsolationGroupsResponse) *types.GetGlobalIsolationGroupsResponse {
+	if t == nil {
+		return nil
+	}
+	ig := ToIsolationGroupConfig(t.IsolationGroups)
+	if ig == nil {
+		return &types.GetGlobalIsolationGroupsResponse{}
+	}
+	return &types.GetGlobalIsolationGroupsResponse{
+		IsolationGroups: *ig,
+	}
+}
+
+func ToGetDomainIsolationGroupsResponse(t *adminv1.GetDomainIsolationGroupsResponse) *types.GetDomainIsolationGroupsResponse {
+	if t == nil {
+		return nil
+	}
+	ig := ToIsolationGroupConfig(t.IsolationGroups)
+	if ig == nil {
+		return &types.GetDomainIsolationGroupsResponse{}
+	}
+	return &types.GetDomainIsolationGroupsResponse{
+		IsolationGroups: *ig,
+	}
+}
+
+func FromGetDomainIsolationGroupsResponse(t *types.GetDomainIsolationGroupsResponse) *adminv1.GetDomainIsolationGroupsResponse {
+	if t == nil {
+		return nil
+	}
+	cfg := FromIsolationGroupConfig(&t.IsolationGroups)
+	return &adminv1.GetDomainIsolationGroupsResponse{
+		IsolationGroups: cfg,
+	}
+}
+
+func ToGetDomainIsolationGroupsRequest(t *adminv1.GetDomainIsolationGroupsRequest) *types.GetDomainIsolationGroupsRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.GetDomainIsolationGroupsRequest{Domain: t.Domain}
+}
+
+func FromUpdateGlobalIsolationGroupsResponse(t *types.UpdateGlobalIsolationGroupsResponse) *adminv1.UpdateGlobalIsolationGroupsResponse {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.UpdateGlobalIsolationGroupsResponse{}
+}
+
+func ToUpdateGlobalIsolationGroupsRequest(t *adminv1.UpdateGlobalIsolationGroupsRequest) *types.UpdateGlobalIsolationGroupsRequest {
+	if t == nil {
+		return nil
+	}
+	cfg := ToIsolationGroupConfig(t.IsolationGroups)
+	if cfg == nil {
+		return &types.UpdateGlobalIsolationGroupsRequest{}
+	}
+	return &types.UpdateGlobalIsolationGroupsRequest{
+		IsolationGroups: *cfg,
+	}
+}
+
+func ToUpdateGlobalIsolationGroupsResponse(t *adminv1.UpdateGlobalIsolationGroupsResponse) *types.UpdateGlobalIsolationGroupsResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.UpdateGlobalIsolationGroupsResponse{}
+}
+
+func ToUpdateDomainIsolationGroupsResponse(t *adminv1.UpdateDomainIsolationGroupsResponse) *types.UpdateDomainIsolationGroupsResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.UpdateDomainIsolationGroupsResponse{}
+}
+
+func FromUpdateDomainIsolationGroupsResponse(t *types.UpdateDomainIsolationGroupsResponse) *adminv1.UpdateDomainIsolationGroupsResponse {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.UpdateDomainIsolationGroupsResponse{}
+}
+
+func ToUpdateDomainIsolationGroupsRequest(t *adminv1.UpdateDomainIsolationGroupsRequest) *types.UpdateDomainIsolationGroupsRequest {
+	if t == nil {
+		return nil
+	}
+	cfg := ToIsolationGroupConfig(t.IsolationGroups)
+	if cfg == nil {
+		return &types.UpdateDomainIsolationGroupsRequest{
+			Domain: t.Domain,
+		}
+	}
+	return &types.UpdateDomainIsolationGroupsRequest{
+		Domain:          t.Domain,
+		IsolationGroups: *cfg,
+	}
+}
+
+func FromIsolationGroupConfig(in *types.IsolationGroupConfiguration) *apiv1.IsolationGroupConfiguration {
+	if in == nil {
+		return nil
+	}
+	var out []*apiv1.IsolationGroupPartition
+	for _, v := range *in {
+		out = append(out, &apiv1.IsolationGroupPartition{
+			Name:  v.Name,
+			State: apiv1.IsolationGroupState(v.State),
+		})
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i] == nil || out[j] == nil {
+			return false
+		}
+		return out[i].Name < out[j].Name
+	})
+	return &apiv1.IsolationGroupConfiguration{
+		IsolationGroups: out,
+	}
+}
+
+func ToIsolationGroupConfig(in *apiv1.IsolationGroupConfiguration) *types.IsolationGroupConfiguration {
+	if in == nil {
+		return nil
+	}
+	out := make(types.IsolationGroupConfiguration)
+	for v := range in.IsolationGroups {
+		out[in.IsolationGroups[v].Name] = types.IsolationGroupPartition{
+			Name:  in.IsolationGroups[v].Name,
+			State: types.IsolationGroupState(in.IsolationGroups[v].State),
+		}
+	}
+	return &out
 }

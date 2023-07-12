@@ -327,6 +327,7 @@ type (
 		ExpirationInterval time.Duration
 		Memo               map[string][]byte
 		SearchAttributes   map[string][]byte
+		PartitionConfig    map[string]string
 
 		// attributes which are not related to mutable state at all
 		HistorySize int64
@@ -459,8 +460,8 @@ type (
 		CrossClusterTasks []Task
 		TimerTasks        []Task
 		ReplicationTasks  []Task
-
-		Condition int64
+		TTLInSeconds      int64
+		Condition         int64
 
 		Checksum checksum.Checksum
 	}
@@ -785,6 +786,7 @@ type (
 		VisibilityArchivalStatus types.ArchivalStatus
 		VisibilityArchivalURI    string
 		BadBinaries              *DataBlob
+		IsolationGroups          *DataBlob
 	}
 
 	// InternalCreateDomainRequest is used to create the domain
@@ -885,6 +887,7 @@ type (
 		ScheduleToStartTimeout time.Duration
 		Expiry                 time.Time
 		CreatedTime            time.Time
+		PartitionConfig        map[string]string
 	}
 
 	// InternalCreateTasksInfo describes a task to be created in InternalCreateTasksRequest
@@ -938,6 +941,14 @@ func (d *DataBlob) ToNilSafeDataBlob() *DataBlob {
 
 func (d *DataBlob) GetEncodingString() string {
 	return string(d.Encoding)
+}
+
+// GetData is a safe way to get the byte array or nil
+func (d *DataBlob) GetData() []byte {
+	if d == nil || d.Data == nil {
+		return []byte{}
+	}
+	return d.Data
 }
 
 // GetEncoding returns encoding type

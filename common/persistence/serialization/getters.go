@@ -876,6 +876,14 @@ func (w *WorkflowExecutionInfo) GetFirstExecutionRunID() (o []byte) {
 	return
 }
 
+// GetPartitionConfig internal sql blob getter
+func (w *WorkflowExecutionInfo) GetPartitionConfig() (o map[string]string) {
+	if w != nil {
+		return w.PartitionConfig
+	}
+	return
+}
+
 // GetVersion internal sql blob getter
 func (a *ActivityInfo) GetVersion() (o int64) {
 	if a != nil {
@@ -1378,6 +1386,14 @@ func (t *TaskInfo) GetCreatedTimestamp() time.Time {
 		return t.CreatedTimestamp
 	}
 	return time.Unix(0, 0)
+}
+
+// GetPartitionConfig internal sql blob getter
+func (t *TaskInfo) GetPartitionConfig() (o map[string]string) {
+	if t != nil {
+		return t.PartitionConfig
+	}
+	return
 }
 
 // GetKind internal sql blob getter

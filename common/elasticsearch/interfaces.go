@@ -24,10 +24,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
+	"net/http"
+
+	esaws "github.com/olivere/elastic/aws/v4"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/elasticsearch/bulk"
+	esc "github.com/uber/cadence/common/elasticsearch/client"
+	"github.com/uber/cadence/common/elasticsearch/client/os2"
+	v6 "github.com/uber/cadence/common/elasticsearch/client/v6"
+	v7 "github.com/uber/cadence/common/elasticsearch/client/v7"
+	"github.com/uber/cadence/common/elasticsearch/query"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 )
@@ -36,27 +44,53 @@ import (
 func NewGenericClient(
 	connectConfig *config.ElasticSearchConfig,
 	logger log.Logger,
-) (GenericClient, error) {
+) (*ESClient, error) {
 	if connectConfig.Version == "" {
 		connectConfig.Version = "v6"
 	}
+	var tlsClient *http.Client
+	var signingAWSClient *http.Client
+
+	if connectConfig.AWSSigning.Enable {
+		creds, region, err := connectConfig.AWSSigning.GetCredentials()
+		if err != nil {
+			return nil, fmt.Errorf("getting AWS credentials: %w", err)
+		}
+
+		signingAWSClient = esaws.NewV4SigningClient(creds, *region)
+	}
+
+	if connectConfig.TLS.Enabled {
+		var err error
+		tlsClient, err = buildTLSHTTPClient(connectConfig.TLS)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var esClient esc.Client
+	var err error
+
 	switch connectConfig.Version {
 	case "v6":
-		return NewV6Client(connectConfig, logger)
+		esClient, err = v6.NewV6Client(connectConfig, logger, tlsClient, signingAWSClient)
 	case "v7":
-		return NewV7Client(connectConfig, logger)
+		esClient, err = v7.NewV7Client(connectConfig, logger, tlsClient, signingAWSClient)
+	case "os2":
+		esClient, err = os2.NewClient(connectConfig, logger, tlsClient)
 	default:
 		return nil, fmt.Errorf("not supported ElasticSearch version: %v", connectConfig.Version)
 	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &ESClient{
+		Client: esClient,
+		Logger: logger,
+	}, nil
 }
-
-type GenericBulkableRequestType int
-
-const (
-	BulkableIndexRequest GenericBulkableRequestType = iota
-	BulkableDeleteRequest
-	BulkableCreateRequest
-)
 
 type (
 	// GenericClient is a generic interface for all versions of ElasticSearch clients
@@ -77,7 +111,7 @@ type (
 		CountByQuery(ctx context.Context, index, query string) (int64, error)
 
 		// RunBulkProcessor returns a processor for adding/removing docs into ElasticSearch index
-		RunBulkProcessor(ctx context.Context, p *BulkProcessorParameters) (GenericBulkProcessor, error)
+		RunBulkProcessor(ctx context.Context, p *bulk.BulkProcessorParameters) (bulk.GenericBulkProcessor, error)
 
 		// PutMapping adds new field type to the index
 		PutMapping(ctx context.Context, index, root, key, valueType string) error
@@ -93,14 +127,8 @@ type (
 		ListRequest     *p.InternalListWorkflowExecutionsRequest
 		IsOpen          bool
 		Filter          IsRecordValidFilter
-		MatchQuery      *GenericMatch
+		MatchQuery      *query.MatchQuery
 		MaxResultWindow int
-	}
-
-	// GenericMatch is a match struct
-	GenericMatch struct {
-		Name string
-		Text interface{}
 	}
 
 	// SearchByQueryRequest is request for SearchByQuery
@@ -129,91 +157,6 @@ type (
 
 	// SearchForOneClosedExecutionResponse is response for SearchForOneClosedExecution
 	SearchForOneClosedExecutionResponse = p.InternalGetClosedWorkflowExecutionResponse
-
-	// GenericBulkProcessor is a bulk processor
-	GenericBulkProcessor interface {
-		Start(ctx context.Context) error
-		Stop() error
-		Close() error
-		Add(request *GenericBulkableAddRequest)
-		Flush() error
-	}
-
-	// BulkProcessorParameters holds all required and optional parameters for executing bulk service
-	BulkProcessorParameters struct {
-		Name          string
-		NumOfWorkers  int
-		BulkActions   int
-		BulkSize      int
-		FlushInterval time.Duration
-		Backoff       GenericBackoff
-		BeforeFunc    GenericBulkBeforeFunc
-		AfterFunc     GenericBulkAfterFunc
-	}
-
-	// GenericBackoff allows callers to implement their own Backoff strategy.
-	GenericBackoff interface {
-		// Next implements a BackoffFunc.
-		Next(retry int) (time.Duration, bool)
-	}
-
-	// GenericBulkBeforeFunc defines the signature of callbacks that are executed
-	// before a commit to Elasticsearch.
-	GenericBulkBeforeFunc func(executionId int64, requests []GenericBulkableRequest)
-
-	// GenericBulkAfterFunc defines the signature of callbacks that are executed
-	// after a commit to Elasticsearch. The err parameter signals an error.
-	GenericBulkAfterFunc func(executionId int64, requests []GenericBulkableRequest, response *GenericBulkResponse, err *GenericError)
-
-	// IsRecordValidFilter is a function to filter visibility records
-	IsRecordValidFilter func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool
-
-	// GenericBulkableRequest is a generic interface to bulkable requests.
-	GenericBulkableRequest interface {
-		fmt.Stringer
-		Source() ([]string, error)
-	}
-
-	// GenericBulkableAddRequest a struct to hold a bulk request
-	GenericBulkableAddRequest struct {
-		Index       string
-		Type        string
-		ID          string
-		VersionType string
-		Version     int64
-		// request types can be index, delete or create
-		RequestType GenericBulkableRequestType
-		// should be nil if IsDelete is true
-		Doc interface{}
-	}
-
-	// GenericBulkResponse is generic struct of bulk response
-	GenericBulkResponse struct {
-		Took   int                                   `json:"took,omitempty"`
-		Errors bool                                  `json:"errors,omitempty"`
-		Items  []map[string]*GenericBulkResponseItem `json:"items,omitempty"`
-	}
-
-	// GenericError encapsulates error status and details returned from Elasticsearch.
-	GenericError struct {
-		Status  int   `json:"status"`
-		Details error `json:"error,omitempty"`
-	}
-
-	// GenericBulkResponseItem is the result of a single bulk request.
-	GenericBulkResponseItem struct {
-		Index         string `json:"_index,omitempty"`
-		Type          string `json:"_type,omitempty"`
-		ID            string `json:"_id,omitempty"`
-		Version       int64  `json:"_version,omitempty"`
-		Result        string `json:"result,omitempty"`
-		SeqNo         int64  `json:"_seq_no,omitempty"`
-		PrimaryTerm   int64  `json:"_primary_term,omitempty"`
-		Status        int    `json:"status,omitempty"`
-		ForcedRefresh bool   `json:"forced_refresh,omitempty"`
-		// the error details
-		Error interface{}
-	}
 
 	// VisibilityRecord is a struct of doc for deserialization
 	VisibilityRecord struct {
@@ -245,4 +188,7 @@ type (
 		Hits         SearchHits
 		Aggregations map[string]json.RawMessage
 	}
+
+	// IsRecordValidFilter is a function to filter visibility records
+	IsRecordValidFilter func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool
 )

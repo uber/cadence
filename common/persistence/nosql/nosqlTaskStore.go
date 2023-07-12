@@ -37,7 +37,7 @@ import (
 
 type (
 	nosqlTaskStore struct {
-		nosqlStore
+		shardedNosqlStore
 	}
 )
 
@@ -51,20 +51,16 @@ var _ p.TaskStore = (*nosqlTaskStore)(nil)
 
 // newNoSQLTaskStore is used to create an instance of TaskStore implementation
 func newNoSQLTaskStore(
-	cfg config.NoSQL,
+	cfg config.ShardedNoSQL,
 	logger log.Logger,
 	dc *p.DynamicConfiguration,
 ) (p.TaskStore, error) {
-	db, err := NewNoSQLDB(&cfg, logger, dc)
+	s, err := newShardedNosqlStore(cfg, logger, dc)
 	if err != nil {
 		return nil, err
 	}
-
 	return &nosqlTaskStore{
-		nosqlStore: nosqlStore{
-			db:     db,
-			logger: logger,
-		},
+		shardedNosqlStore: *s,
 	}, nil
 }
 
@@ -87,14 +83,19 @@ func (t *nosqlTaskStore) LeaseTaskList(
 	now := time.Now()
 	var err, selectErr error
 	var currTL *nosqlplugin.TaskListRow
-	currTL, selectErr = t.db.SelectTaskList(ctx, &nosqlplugin.TaskListFilter{
+	storeShard, err := t.GetStoreShardByTaskList(request.DomainID, request.TaskList, request.TaskType)
+	if err != nil {
+		return nil, err
+	}
+
+	currTL, selectErr = storeShard.db.SelectTaskList(ctx, &nosqlplugin.TaskListFilter{
 		DomainID:     request.DomainID,
 		TaskListName: request.TaskList,
 		TaskListType: request.TaskType,
 	})
 
 	if selectErr != nil {
-		if t.db.IsNotFoundError(selectErr) { // First time task list is used
+		if storeShard.db.IsNotFoundError(selectErr) { // First time task list is used
 			currTL = &nosqlplugin.TaskListRow{
 				DomainID:        request.DomainID,
 				TaskListName:    request.TaskList,
@@ -104,9 +105,9 @@ func (t *nosqlTaskStore) LeaseTaskList(
 				AckLevel:        initialAckLevel,
 				LastUpdatedTime: now,
 			}
-			err = t.db.InsertTaskList(ctx, currTL)
+			err = storeShard.db.InsertTaskList(ctx, currTL)
 		} else {
-			return nil, convertCommonErrors(t.db, "LeaseTaskList", err)
+			return nil, convertCommonErrors(storeShard.db, "LeaseTaskList", err)
 		}
 	} else {
 		// if request.RangeID is > 0, we are trying to renew an already existing
@@ -122,7 +123,7 @@ func (t *nosqlTaskStore) LeaseTaskList(
 		// Update the rangeID as this is an ownership change
 		currTL.RangeID++
 
-		err = t.db.UpdateTaskList(ctx, &nosqlplugin.TaskListRow{
+		err = storeShard.db.UpdateTaskList(ctx, &nosqlplugin.TaskListRow{
 			DomainID:        request.DomainID,
 			TaskListName:    request.TaskList,
 			TaskListType:    request.TaskType,
@@ -140,7 +141,7 @@ func (t *nosqlTaskStore) LeaseTaskList(
 					request.TaskList, request.TaskType, currTL.RangeID, conditionFailure.RangeID),
 			}
 		}
-		return nil, convertCommonErrors(t.db, "LeaseTaskList", err)
+		return nil, convertCommonErrors(storeShard.db, "LeaseTaskList", err)
 	}
 	tli := &p.TaskListInfo{
 		DomainID:    request.DomainID,
@@ -169,11 +170,15 @@ func (t *nosqlTaskStore) UpdateTaskList(
 		AckLevel:        tli.AckLevel,
 		LastUpdatedTime: time.Now(),
 	}
+	storeShard, err := t.GetStoreShardByTaskList(tli.DomainID, tli.Name, tli.TaskType)
+	if err != nil {
+		return nil, err
+	}
 
 	if tli.Kind == p.TaskListKindSticky { // if task_list is sticky, then update with TTL
-		err = t.db.UpdateTaskListWithTTL(ctx, stickyTaskListTTL, taskListToUpdate, tli.RangeID)
+		err = storeShard.db.UpdateTaskListWithTTL(ctx, stickyTaskListTTL, taskListToUpdate, tli.RangeID)
 	} else {
-		err = t.db.UpdateTaskList(ctx, taskListToUpdate, tli.RangeID)
+		err = storeShard.db.UpdateTaskList(ctx, taskListToUpdate, tli.RangeID)
 	}
 
 	if err != nil {
@@ -184,7 +189,7 @@ func (t *nosqlTaskStore) UpdateTaskList(
 					tli.Name, tli.TaskType, tli.RangeID, conditionFailure.Details),
 			}
 		}
-		return nil, convertCommonErrors(t.db, "UpdateTaskList", err)
+		return nil, convertCommonErrors(storeShard.db, "UpdateTaskList", err)
 	}
 
 	return &p.UpdateTaskListResponse{}, nil
@@ -203,7 +208,12 @@ func (t *nosqlTaskStore) DeleteTaskList(
 	ctx context.Context,
 	request *p.DeleteTaskListRequest,
 ) error {
-	err := t.db.DeleteTaskList(ctx, &nosqlplugin.TaskListFilter{
+	storeShard, err := t.GetStoreShardByTaskList(request.DomainID, request.TaskListName, request.TaskListType)
+	if err != nil {
+		return err
+	}
+
+	err = storeShard.db.DeleteTaskList(ctx, &nosqlplugin.TaskListFilter{
 		DomainID:     request.DomainID,
 		TaskListName: request.TaskListName,
 		TaskListType: request.TaskListType,
@@ -217,7 +227,7 @@ func (t *nosqlTaskStore) DeleteTaskList(
 					request.TaskListName, request.TaskListType, request.RangeID, conditionFailure.Details),
 			}
 		}
-		return convertCommonErrors(t.db, "DeleteTaskList", err)
+		return convertCommonErrors(storeShard.db, "DeleteTaskList", err)
 	}
 
 	return nil
@@ -231,14 +241,15 @@ func (t *nosqlTaskStore) CreateTasks(
 	var tasks []*nosqlplugin.TaskRowForInsert
 	for _, t := range request.Tasks {
 		task := &nosqlplugin.TaskRow{
-			DomainID:     request.TaskListInfo.DomainID,
-			TaskListName: request.TaskListInfo.Name,
-			TaskListType: request.TaskListInfo.TaskType,
-			TaskID:       t.TaskID,
-			WorkflowID:   t.Execution.GetWorkflowID(),
-			RunID:        t.Execution.GetRunID(),
-			ScheduledID:  t.Data.ScheduleID,
-			CreatedTime:  now,
+			DomainID:        request.TaskListInfo.DomainID,
+			TaskListName:    request.TaskListInfo.Name,
+			TaskListType:    request.TaskListInfo.TaskType,
+			TaskID:          t.TaskID,
+			WorkflowID:      t.Execution.GetWorkflowID(),
+			RunID:           t.Execution.GetRunID(),
+			ScheduledID:     t.Data.ScheduleID,
+			CreatedTime:     now,
+			PartitionConfig: t.Data.PartitionConfig,
 		}
 		ttl := int(t.Data.ScheduleToStartTimeout.Seconds())
 		tasks = append(tasks, &nosqlplugin.TaskRowForInsert{
@@ -253,7 +264,14 @@ func (t *nosqlTaskStore) CreateTasks(
 		TaskListType: request.TaskListInfo.TaskType,
 		RangeID:      request.TaskListInfo.RangeID,
 	}
-	err := t.db.InsertTasks(ctx, tasks, tasklistCondition)
+
+	tli := request.TaskListInfo
+	storeShard, err := t.GetStoreShardByTaskList(tli.DomainID, tli.Name, tli.TaskType)
+	if err != nil {
+		return nil, err
+	}
+
+	err = storeShard.db.InsertTasks(ctx, tasks, tasklistCondition)
 
 	if err != nil {
 		conditionFailure, ok := err.(*nosqlplugin.TaskOperationConditionFailure)
@@ -263,7 +281,7 @@ func (t *nosqlTaskStore) CreateTasks(
 					request.TaskListInfo.Name, request.TaskListInfo.TaskType, request.TaskListInfo.RangeID, conditionFailure.Details),
 			}
 		}
-		return nil, convertCommonErrors(t.db, "CreateTasks", err)
+		return nil, convertCommonErrors(storeShard.db, "CreateTasks", err)
 	}
 
 	return &p.CreateTasksResponse{}, nil
@@ -281,7 +299,12 @@ func (t *nosqlTaskStore) GetTasks(
 		return &p.InternalGetTasksResponse{}, nil
 	}
 
-	resp, err := t.db.SelectTasks(ctx, &nosqlplugin.TasksFilter{
+	storeShard, err := t.GetStoreShardByTaskList(request.DomainID, request.TaskList, request.TaskType)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := storeShard.db.SelectTasks(ctx, &nosqlplugin.TasksFilter{
 		TaskListFilter: nosqlplugin.TaskListFilter{
 			DomainID:     request.DomainID,
 			TaskListName: request.TaskList,
@@ -294,7 +317,7 @@ func (t *nosqlTaskStore) GetTasks(
 	})
 
 	if err != nil {
-		return nil, convertCommonErrors(t.db, "GetTasks", err)
+		return nil, convertCommonErrors(storeShard.db, "GetTasks", err)
 	}
 
 	response := &p.InternalGetTasksResponse{}
@@ -307,12 +330,13 @@ func (t *nosqlTaskStore) GetTasks(
 
 func toTaskInfo(t *nosqlplugin.TaskRow) *p.InternalTaskInfo {
 	return &p.InternalTaskInfo{
-		DomainID:    t.DomainID,
-		WorkflowID:  t.WorkflowID,
-		RunID:       t.RunID,
-		TaskID:      t.TaskID,
-		ScheduleID:  t.ScheduledID,
-		CreatedTime: t.CreatedTime,
+		DomainID:        t.DomainID,
+		WorkflowID:      t.WorkflowID,
+		RunID:           t.RunID,
+		TaskID:          t.TaskID,
+		ScheduleID:      t.ScheduledID,
+		CreatedTime:     t.CreatedTime,
+		PartitionConfig: t.PartitionConfig,
 	}
 }
 
@@ -321,7 +345,12 @@ func (t *nosqlTaskStore) CompleteTask(
 	request *p.CompleteTaskRequest,
 ) error {
 	tli := request.TaskList
-	_, err := t.db.RangeDeleteTasks(ctx, &nosqlplugin.TasksFilter{
+	storeShard, err := t.GetStoreShardByTaskList(tli.DomainID, tli.Name, tli.TaskType)
+	if err != nil {
+		return err
+	}
+
+	_, err = storeShard.db.RangeDeleteTasks(ctx, &nosqlplugin.TasksFilter{
 		TaskListFilter: nosqlplugin.TaskListFilter{
 			DomainID:     tli.DomainID,
 			TaskListName: tli.Name,
@@ -334,7 +363,7 @@ func (t *nosqlTaskStore) CompleteTask(
 		BatchSize: 1,
 	})
 	if err != nil {
-		return convertCommonErrors(t.db, "CompleteTask", err)
+		return convertCommonErrors(storeShard.db, "CompleteTask", err)
 	}
 
 	return nil
@@ -347,7 +376,12 @@ func (t *nosqlTaskStore) CompleteTasksLessThan(
 	ctx context.Context,
 	request *p.CompleteTasksLessThanRequest,
 ) (*p.CompleteTasksLessThanResponse, error) {
-	num, err := t.db.RangeDeleteTasks(ctx, &nosqlplugin.TasksFilter{
+	storeShard, err := t.GetStoreShardByTaskList(request.DomainID, request.TaskListName, request.TaskType)
+	if err != nil {
+		return nil, err
+	}
+
+	num, err := storeShard.db.RangeDeleteTasks(ctx, &nosqlplugin.TasksFilter{
 		TaskListFilter: nosqlplugin.TaskListFilter{
 			DomainID:     request.DomainID,
 			TaskListName: request.TaskListName,
@@ -365,7 +399,7 @@ func (t *nosqlTaskStore) CompleteTasksLessThan(
 		BatchSize: request.Limit,
 	})
 	if err != nil {
-		return nil, convertCommonErrors(t.db, "CompleteTasksLessThan", err)
+		return nil, convertCommonErrors(storeShard.db, "CompleteTasksLessThan", err)
 	}
 	return &p.CompleteTasksLessThanResponse{TasksCompleted: num}, nil
 }

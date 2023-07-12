@@ -2332,14 +2332,14 @@ func (p *queueErrorInjectionPersistenceClient) Close() {
 	p.persistence.Close()
 }
 
-func (p *configStoreErrorInjectionPersistenceClient) FetchDynamicConfig(ctx context.Context) (*FetchDynamicConfigResponse, error) {
+func (p *configStoreErrorInjectionPersistenceClient) FetchDynamicConfig(ctx context.Context, cfgType ConfigType) (*FetchDynamicConfigResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
 	var response *FetchDynamicConfigResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		response, persistenceErr = p.persistence.FetchDynamicConfig(ctx)
+		response, persistenceErr = p.persistence.FetchDynamicConfig(ctx, cfgType)
 	}
 
 	if fakeErr != nil {
@@ -2354,13 +2354,13 @@ func (p *configStoreErrorInjectionPersistenceClient) FetchDynamicConfig(ctx cont
 	return response, persistenceErr
 }
 
-func (p *configStoreErrorInjectionPersistenceClient) UpdateDynamicConfig(ctx context.Context, request *UpdateDynamicConfigRequest) error {
+func (p *configStoreErrorInjectionPersistenceClient) UpdateDynamicConfig(ctx context.Context, request *UpdateDynamicConfigRequest, cfgType ConfigType) error {
 	fakeErr := generateFakeError(p.errorRate)
 
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		persistenceErr = p.persistence.UpdateDynamicConfig(ctx, request)
+		persistenceErr = p.persistence.UpdateDynamicConfig(ctx, request, cfgType)
 	}
 
 	if fakeErr != nil {

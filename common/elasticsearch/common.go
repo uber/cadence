@@ -28,8 +28,6 @@ import (
 )
 
 const (
-	unknownStatusCode = -1
-
 	// TODO https://github.com/uber/cadence/issues/3686
 	oneMicroSecondInNano = int64(time.Microsecond / time.Nanosecond)
 

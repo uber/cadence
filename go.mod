@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/storage v1.24.0
 	github.com/Shopify/sarama v1.33.0
 	github.com/VividCortex/mysqlerr v1.0.0
-	github.com/aws/aws-sdk-go v1.34.13
+	github.com/aws/aws-sdk-go v1.44.180
 	github.com/cactus/go-statsd-client/statsd v0.0.0-20191106001114-12b4e2b38748
 	github.com/cch123/elasticsql v0.0.0-20190321073543-a1a440758eb9
 	github.com/cristalhq/jwt/v3 v3.1.0
@@ -29,14 +29,15 @@ require (
 	github.com/olekukonko/tablewriter v0.0.4
 	github.com/olivere/elastic v6.2.37+incompatible
 	github.com/olivere/elastic/v7 v7.0.21
+	github.com/opensearch-project/opensearch-go/v2 v2.2.0
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/otiai10/copy v1.1.1
 	github.com/pborman/uuid v0.0.0-20180906182336-adf5a7427709
 	github.com/robfig/cron v1.2.0
 	github.com/sirupsen/logrus v1.8.1
-	github.com/stretchr/testify v1.7.1
+	github.com/stretchr/testify v1.8.1
 	github.com/uber-go/tally v3.3.15+incompatible
-	github.com/uber/cadence-idl v0.0.0-20221119005017-6c250ae41984
+	github.com/uber/cadence-idl v0.0.0-20230525234945-b6f203573446
 	github.com/uber/ringpop-go v0.8.5
 	github.com/uber/tchannel-go v1.22.0
 	github.com/urfave/cli v1.22.4
@@ -52,11 +53,11 @@ require (
 	go.uber.org/thriftrw v1.29.2
 	go.uber.org/yarpc v1.58.0
 	go.uber.org/zap v1.13.0
-	golang.org/x/net v0.0.0-20220617184016-355a448f1bc9
+	golang.org/x/net v0.1.0
 	golang.org/x/oauth2 v0.0.0-20220622183110-fd043fe589d2
-	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f
+	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
-	golang.org/x/tools v0.1.11
+	golang.org/x/tools v0.1.12
 	gonum.org/v1/gonum v0.7.0
 	google.golang.org/api v0.85.0
 	google.golang.org/grpc v1.47.0
@@ -99,7 +100,7 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.4.2 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/jessevdk/go-flags v1.4.0 // indirect
-	github.com/jmespath/go-jmespath v0.3.0 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/kisielk/errcheck v1.5.0 // indirect
 	github.com/klauspost/compress v1.15.0 // indirect
@@ -122,7 +123,7 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/russross/blackfriday/v2 v2.0.1 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
-	github.com/stretchr/objx v0.2.0 // indirect
+	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/uber-common/bark v1.2.1 // indirect
 	github.com/uber-go/mapdecode v1.0.0 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
@@ -137,8 +138,8 @@ require (
 	golang.org/x/exp v0.0.0-20200224162631-6cc2880d07d6 // indirect
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
-	golang.org/x/sys v0.0.0-20220615213510-4f61da869c0c // indirect
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/sys v0.1.0 // indirect
+	golang.org/x/text v0.4.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220609144429-65e65417b02f // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20220617124728-180714bec0ad // indirect

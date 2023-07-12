@@ -23,18 +23,21 @@ package rpc
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/yarpctest"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/partition"
 )
 
 func TestAuthOubboundMiddleware(t *testing.T) {
@@ -169,6 +172,160 @@ func TestHeaderForwardingMiddleware(t *testing.T) {
 			assert.Equal(t, combinedHeadersWithoutX, r.Headers.Items())
 		}})
 		assert.NoError(t, err)
+	})
+}
+
+func TestForwardPartitionConfigMiddleware(t *testing.T) {
+	t.Run("inbound middleware", func(t *testing.T) {
+		partitionConfig := map[string]string{"isolation-group": "xyz"}
+		blob, err := json.Marshal(partitionConfig)
+		require.NoError(t, err)
+		testCases := []struct {
+			message                 string
+			headers                 transport.Headers
+			ctx                     context.Context
+			expectedPartitionConfig map[string]string
+			expectedIsolationGroup  string
+		}{
+			{
+				message: "it injects partition config into context",
+				headers: transport.NewHeaders().
+					With(common.PartitionConfigHeaderName, string(blob)).
+					With(common.IsolationGroupHeaderName, "abc").
+					With(common.AutoforwardingClusterHeaderName, "cluster0"),
+				ctx:                     context.Background(),
+				expectedPartitionConfig: partitionConfig,
+				expectedIsolationGroup:  "abc",
+			},
+			{
+				message: "it overwrites the existing partition config in the context",
+				headers: transport.NewHeaders().
+					With(common.PartitionConfigHeaderName, string(blob)).
+					With(common.IsolationGroupHeaderName, "abc").
+					With(common.AutoforwardingClusterHeaderName, "cluster0"),
+				ctx:                     partition.ContextWithIsolationGroup(partition.ContextWithConfig(context.Background(), map[string]string{"z": "x"}), "fff"),
+				expectedPartitionConfig: partitionConfig,
+				expectedIsolationGroup:  "abc",
+			},
+			{
+				message: "it overwrites the existing partition config in the context with nil config",
+				headers: transport.NewHeaders().
+					With(common.AutoforwardingClusterHeaderName, "cluster0"),
+				ctx:                     partition.ContextWithIsolationGroup(partition.ContextWithConfig(context.Background(), map[string]string{"z": "x"}), "fff"),
+				expectedPartitionConfig: nil,
+				expectedIsolationGroup:  "",
+			},
+			{
+				message: "it injects partition config into context only if the request is an auto-fowarding request",
+				headers: transport.NewHeaders().
+					With(common.PartitionConfigHeaderName, string(blob)).
+					With(common.IsolationGroupHeaderName, "abc"),
+				ctx:                     context.Background(),
+				expectedPartitionConfig: nil,
+				expectedIsolationGroup:  "",
+			},
+		}
+
+		for _, tt := range testCases {
+			t.Run(tt.message, func(t *testing.T) {
+				m := &ForwardPartitionConfigMiddleware{}
+				h := &fakeHandler{}
+				err := m.Handle(tt.ctx, &transport.Request{Headers: tt.headers}, nil, h)
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedPartitionConfig, partition.ConfigFromContext(h.ctx))
+				assert.Equal(t, tt.expectedIsolationGroup, partition.IsolationGroupFromContext(h.ctx))
+			})
+		}
+	})
+
+	t.Run("outbound middleware", func(t *testing.T) {
+		partitionConfig := map[string]string{"isolation-group": "xyz"}
+		blob, err := json.Marshal(partitionConfig)
+		require.NoError(t, err)
+		testCases := []struct {
+			message                           string
+			headers                           transport.Headers
+			ctx                               context.Context
+			expectedSerializedPartitionConfig string
+			expectedIsolationGroup            string
+		}{
+			{
+				message: "it retrieves partition config from the context and sets it in the request header",
+				headers: transport.NewHeaders().
+					With(common.AutoforwardingClusterHeaderName, "cluster0"),
+				ctx:                               partition.ContextWithIsolationGroup(partition.ContextWithConfig(context.Background(), partitionConfig), "abc"),
+				expectedSerializedPartitionConfig: string(blob),
+				expectedIsolationGroup:            "abc",
+			},
+			{
+				message: "it retrieves partition config from the context and overwrites the existing request header",
+				headers: transport.NewHeaders().
+					With(common.IsolationGroupHeaderName, "lll").
+					With(common.PartitionConfigHeaderName, "asdfasf").
+					With(common.AutoforwardingClusterHeaderName, "cluster0"),
+				ctx:                               partition.ContextWithIsolationGroup(partition.ContextWithConfig(context.Background(), partitionConfig), "abc"),
+				expectedSerializedPartitionConfig: string(blob),
+				expectedIsolationGroup:            "abc",
+			},
+			{
+				message: "it deletes the existing request header if we cannot retrieve partition config from the context",
+				headers: transport.NewHeaders().
+					With(common.IsolationGroupHeaderName, "lll").
+					With(common.PartitionConfigHeaderName, "asdfasf").
+					With(common.AutoforwardingClusterHeaderName, "cluster0"),
+				ctx:                               context.Background(),
+				expectedSerializedPartitionConfig: "",
+				expectedIsolationGroup:            "",
+			},
+			{
+				message: "it retrieves partition config from the context and sets it in the request header only if the request is an auto-forwarding request",
+				headers: transport.NewHeaders().
+					With(common.IsolationGroupHeaderName, "lll").
+					With(common.PartitionConfigHeaderName, "asdfasf"),
+				ctx:                               partition.ContextWithIsolationGroup(partition.ContextWithConfig(context.Background(), partitionConfig), "abc"),
+				expectedSerializedPartitionConfig: "asdfasf",
+				expectedIsolationGroup:            "lll",
+			},
+		}
+
+		for _, tt := range testCases {
+			t.Run(tt.message, func(t *testing.T) {
+				m := &ForwardPartitionConfigMiddleware{}
+				o := &fakeOutbound{
+					verify: func(r *transport.Request) {
+						assert.Equal(t, tt.expectedIsolationGroup, r.Headers.Items()[common.IsolationGroupHeaderName])
+						assert.Equal(t, tt.expectedSerializedPartitionConfig, r.Headers.Items()[common.PartitionConfigHeaderName])
+					},
+				}
+				_, err := m.Call(tt.ctx, &transport.Request{Headers: tt.headers}, o)
+				assert.NoError(t, err)
+			})
+		}
+	})
+}
+
+func TestClientPartitionConfigMiddleware(t *testing.T) {
+	t.Run("it sets the partition config", func(t *testing.T) {
+		m := &ClientPartitionConfigMiddleware{}
+		h := &fakeHandler{}
+		headers := transport.NewHeaders().
+			With(common.ClientIsolationGroupHeaderName, "dca1")
+		err := m.Handle(context.Background(), &transport.Request{Headers: headers}, nil, h)
+		assert.NoError(t, err)
+		assert.Equal(t, map[string]string{partition.IsolationGroupKey: "dca1"}, partition.ConfigFromContext(h.ctx))
+		assert.Equal(t, "dca1", partition.IsolationGroupFromContext(h.ctx))
+	})
+
+	t.Run("noop when header is empty", func(t *testing.T) {
+		m := &ClientPartitionConfigMiddleware{}
+		h := &fakeHandler{}
+		headers := transport.NewHeaders()
+		ctx := context.Background()
+		err := m.Handle(ctx, &transport.Request{Headers: headers}, nil, h)
+		assert.NoError(t, err)
+		assert.Nil(t, partition.ConfigFromContext(h.ctx))
+		assert.Equal(t, "", partition.IsolationGroupFromContext(h.ctx))
+		assert.Equal(t, ctx, h.ctx)
 	})
 }
 

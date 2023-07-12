@@ -23,6 +23,7 @@ package matching
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"golang.org/x/time/rate"
@@ -36,8 +37,13 @@ import (
 // Producers are usually rpc calls from history or taskReader
 // that drains backlog from db. Consumers are the task list pollers
 type TaskMatcher struct {
-	// synchronous task channel to match producer/consumer
+	// synchronous task channel to match producer/consumer for any isolation group
+	// tasks having no isolation requirement are added to this channel
+	// and pollers from all isolation groups read from this channel
 	taskC chan *InternalTask
+	// synchronos task channels to match producer/consumer for a certain isolation group
+	// the key is the name of the isolation group
+	isolatedTaskC map[string]chan *InternalTask
 	// synchronous task channel to match query task - the reason to have
 	// separate channel for this is because there are cases when consumers
 	// are interested in queryTasks but not others. Example is when domain is
@@ -61,14 +67,19 @@ var errTasklistThrottled = errors.New("cannot add to tasklist, limit exceeded")
 // newTaskMatcher returns an task matcher instance. The returned instance can be
 // used by task producers and consumers to find a match. Both sync matches and non-sync
 // matches should use this implementation
-func newTaskMatcher(config *taskListConfig, fwdr *Forwarder, scope metrics.Scope) *TaskMatcher {
+func newTaskMatcher(config *taskListConfig, fwdr *Forwarder, scope metrics.Scope, isolationGroups []string) *TaskMatcher {
 	dPtr := _defaultTaskDispatchRPS
 	limiter := quotas.NewRateLimiter(&dPtr, _defaultTaskDispatchRPSTTL, config.MinTaskThrottlingBurstSize())
+	isolatedTaskC := make(map[string]chan *InternalTask)
+	for _, g := range isolationGroups {
+		isolatedTaskC[g] = make(chan *InternalTask)
+	}
 	return &TaskMatcher{
 		limiter:       limiter,
 		scope:         scope,
 		fwdr:          fwdr,
 		taskC:         make(chan *InternalTask),
+		isolatedTaskC: isolatedTaskC,
 		queryTaskC:    make(chan *InternalTask),
 		numPartitions: config.NumReadPartitions,
 	}
@@ -115,7 +126,7 @@ func (tm *TaskMatcher) Offer(ctx context.Context, task *InternalTask) (bool, err
 	}
 
 	select {
-	case tm.taskC <- task: // poller picked up the task
+	case tm.getTaskC(task) <- task: // poller picked up the task
 		if task.responseC != nil {
 			// if there is a response channel, block until resp is received
 			// and return error if the response contains error
@@ -130,10 +141,10 @@ func (tm *TaskMatcher) Offer(ctx context.Context, task *InternalTask) (bool, err
 		case token := <-tm.fwdrAddReqTokenC():
 			if err := tm.fwdr.ForwardTask(ctx, task); err == nil {
 				// task was remotely sync matched on the parent partition
-				token.release()
+				token.release("")
 				return true, nil
 			}
-			token.release()
+			token.release("")
 		default:
 			if !tm.isForwardingAllowed() && // we are the root partition and forwarding is not possible
 				task.source == types.TaskSourceDbBacklog && // task was from backlog (stored in db)
@@ -155,7 +166,7 @@ func (tm *TaskMatcher) Offer(ctx context.Context, task *InternalTask) (bool, err
 
 func (tm *TaskMatcher) offerOrTimeout(ctx context.Context, task *InternalTask) (bool, error) {
 	select {
-	case tm.taskC <- task: // poller picked up the task
+	case tm.getTaskC(task) <- task: // poller picked up the task
 		if task.responseC != nil {
 			select {
 			case err := <-task.responseC:
@@ -190,7 +201,7 @@ func (tm *TaskMatcher) OfferQuery(ctx context.Context, task *InternalTask) (*typ
 			return nil, nil
 		case token := <-fwdrTokenC:
 			resp, err := tm.fwdr.ForwardQueryTask(ctx, task)
-			token.release()
+			token.release("")
 			if err == nil {
 				return resp, nil
 			}
@@ -217,8 +228,9 @@ func (tm *TaskMatcher) MustOffer(ctx context.Context, task *InternalTask) error 
 
 	// attempt a match with local poller first. When that
 	// doesn't succeed, try both local match and remote match
+	taskC := tm.getTaskC(task)
 	select {
-	case tm.taskC <- task:
+	case taskC <- task: // poller picked up the task
 		return nil
 	case <-ctx.Done():
 		return ctx.Err()
@@ -228,19 +240,19 @@ func (tm *TaskMatcher) MustOffer(ctx context.Context, task *InternalTask) error 
 forLoop:
 	for {
 		select {
-		case tm.taskC <- task:
+		case taskC <- task: // poller picked up the task
 			return nil
 		case token := <-tm.fwdrAddReqTokenC():
 			childCtx, cancel := context.WithDeadline(ctx, time.Now().Add(time.Second*2))
 			err := tm.fwdr.ForwardTask(childCtx, task)
-			token.release()
+			token.release("")
 			if err != nil {
 				// forwarder returns error only when the call is rate limited. To
 				// avoid a busy loop on such rate limiting events, we only attempt to make
 				// the next forwarded call after this childCtx expires. Till then, we block
 				// hoping for a local poller match
 				select {
-				case tm.taskC <- task:
+				case taskC <- task: // poller picked up the task
 					cancel()
 					return nil
 				case <-childCtx.Done():
@@ -266,28 +278,32 @@ forLoop:
 // Poll blocks until a task is found or context deadline is exceeded
 // On success, the returned task could be a query task or a regular task
 // Returns ErrNoTasks when context deadline is exceeded
-func (tm *TaskMatcher) Poll(ctx context.Context) (*InternalTask, error) {
+func (tm *TaskMatcher) Poll(ctx context.Context, isolationGroup string) (*InternalTask, error) {
+	isolatedTaskC, ok := tm.isolatedTaskC[isolationGroup]
+	if !ok && isolationGroup != "" {
+		return nil, &types.BadRequestError{Message: fmt.Sprintf("invalid isolation group: %s", isolationGroup)}
+	}
 	// try local match first without blocking until context timeout
-	if task, err := tm.pollNonBlocking(ctx, tm.taskC, tm.queryTaskC); err == nil {
+	if task, err := tm.pollNonBlocking(ctx, isolatedTaskC, tm.taskC, tm.queryTaskC); err == nil {
 		return task, nil
 	}
 	// there is no local poller available to pickup this task. Now block waiting
 	// either for a local poller or a forwarding token to be available. When a
 	// forwarding token becomes available, send this poll to a parent partition
-	return tm.pollOrForward(ctx, tm.taskC, tm.queryTaskC)
+	return tm.pollOrForward(ctx, isolationGroup, isolatedTaskC, tm.taskC, tm.queryTaskC)
 }
 
 // PollForQuery blocks until a *query* task is found or context deadline is exceeded
 // Returns ErrNoTasks when context deadline is exceeded
 func (tm *TaskMatcher) PollForQuery(ctx context.Context) (*InternalTask, error) {
 	// try local match first without blocking until context timeout
-	if task, err := tm.pollNonBlocking(ctx, nil, tm.queryTaskC); err == nil {
+	if task, err := tm.pollNonBlocking(ctx, nil, nil, tm.queryTaskC); err == nil {
 		return task, nil
 	}
 	// there is no local poller available to pickup this task. Now block waiting
 	// either for a local poller or a forwarding token to be available. When a
 	// forwarding token becomes available, send this poll to a parent partition
-	return tm.pollOrForward(ctx, nil, tm.queryTaskC)
+	return tm.pollOrForward(ctx, "", nil, nil, tm.queryTaskC)
 }
 
 // UpdateRatelimit updates the task dispatch rate
@@ -311,10 +327,18 @@ func (tm *TaskMatcher) Rate() float64 {
 
 func (tm *TaskMatcher) pollOrForward(
 	ctx context.Context,
+	isolationGroup string,
+	isolatedTaskC <-chan *InternalTask,
 	taskC <-chan *InternalTask,
 	queryTaskC <-chan *InternalTask,
 ) (*InternalTask, error) {
 	select {
+	case task := <-isolatedTaskC:
+		if task.responseC != nil {
+			tm.scope.IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
+		}
+		tm.scope.IncCounter(metrics.PollSuccessPerTaskListCounter)
+		return task, nil
 	case task := <-taskC:
 		if task.responseC != nil {
 			tm.scope.IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
@@ -328,22 +352,29 @@ func (tm *TaskMatcher) pollOrForward(
 	case <-ctx.Done():
 		tm.scope.IncCounter(metrics.PollTimeoutPerTaskListCounter)
 		return nil, ErrNoTasks
-	case token := <-tm.fwdrPollReqTokenC():
+	case token := <-tm.fwdrPollReqTokenC(isolationGroup):
 		if task, err := tm.fwdr.ForwardPoll(ctx); err == nil {
-			token.release()
+			token.release(isolationGroup)
 			return task, nil
 		}
-		token.release()
-		return tm.poll(ctx, taskC, queryTaskC)
+		token.release(isolationGroup)
+		return tm.poll(ctx, isolatedTaskC, taskC, queryTaskC)
 	}
 }
 
 func (tm *TaskMatcher) poll(
 	ctx context.Context,
+	isolatedTaskC <-chan *InternalTask,
 	taskC <-chan *InternalTask,
 	queryTaskC <-chan *InternalTask,
 ) (*InternalTask, error) {
 	select {
+	case task := <-isolatedTaskC:
+		if task.responseC != nil {
+			tm.scope.IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
+		}
+		tm.scope.IncCounter(metrics.PollSuccessPerTaskListCounter)
+		return task, nil
 	case task := <-taskC:
 		if task.responseC != nil {
 			tm.scope.IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
@@ -362,10 +393,17 @@ func (tm *TaskMatcher) poll(
 
 func (tm *TaskMatcher) pollNonBlocking(
 	ctx context.Context,
+	isolatedTaskC <-chan *InternalTask,
 	taskC <-chan *InternalTask,
 	queryTaskC <-chan *InternalTask,
 ) (*InternalTask, error) {
 	select {
+	case task := <-isolatedTaskC:
+		if task.responseC != nil {
+			tm.scope.IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
+		}
+		tm.scope.IncCounter(metrics.PollSuccessPerTaskListCounter)
+		return task, nil
 	case task := <-taskC:
 		if task.responseC != nil {
 			tm.scope.IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
@@ -381,11 +419,11 @@ func (tm *TaskMatcher) pollNonBlocking(
 	}
 }
 
-func (tm *TaskMatcher) fwdrPollReqTokenC() <-chan *ForwarderReqToken {
+func (tm *TaskMatcher) fwdrPollReqTokenC(isolationGroup string) <-chan *ForwarderReqToken {
 	if tm.fwdr == nil {
 		return noopForwarderTokenC
 	}
-	return tm.fwdr.PollReqTokenC()
+	return tm.fwdr.PollReqTokenC(isolationGroup)
 }
 
 func (tm *TaskMatcher) fwdrAddReqTokenC() <-chan *ForwarderReqToken {
@@ -425,4 +463,12 @@ func (tm *TaskMatcher) ratelimit(ctx context.Context) (*rate.Reservation, error)
 
 func (tm *TaskMatcher) isForwardingAllowed() bool {
 	return tm.fwdr != nil
+}
+
+func (tm *TaskMatcher) getTaskC(task *InternalTask) chan<- *InternalTask {
+	taskC := tm.taskC
+	if isolatedTaskC, ok := tm.isolatedTaskC[task.isolationGroup]; ok && task.isolationGroup != "" {
+		taskC = isolatedTaskC
+	}
+	return taskC
 }

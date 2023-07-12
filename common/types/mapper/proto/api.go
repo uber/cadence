@@ -1070,6 +1070,7 @@ func FromDescribeDomainResponseDomain(t *types.DescribeDomainResponse) *apiv1.Do
 		domain.Data = info.Data
 	}
 	if config := t.Configuration; config != nil {
+		domain.IsolationGroups = FromIsolationGroupConfig(config.IsolationGroups)
 		domain.WorkflowExecutionRetentionPeriod = daysToDuration(&config.WorkflowExecutionRetentionPeriodInDays)
 		domain.BadBinaries = FromBadBinaries(config.BadBinaries)
 		domain.HistoryArchivalStatus = FromArchivalStatus(config.HistoryArchivalStatus)
@@ -1117,6 +1118,7 @@ func ToDescribeDomainResponseDomain(t *apiv1.Domain) *types.DescribeDomainRespon
 			HistoryArchivalURI:                     t.HistoryArchivalUri,
 			VisibilityArchivalStatus:               ToArchivalStatus(t.VisibilityArchivalStatus),
 			VisibilityArchivalURI:                  t.VisibilityArchivalUri,
+			IsolationGroups:                        ToIsolationGroupConfig(t.IsolationGroups),
 		},
 		ReplicationConfiguration: &types.DomainReplicationConfiguration{
 			ActiveClusterName: t.ActiveClusterName,
@@ -1928,18 +1930,19 @@ func FromPendingActivityInfo(t *types.PendingActivityInfo) *apiv1.PendingActivit
 		return nil
 	}
 	return &apiv1.PendingActivityInfo{
-		ActivityId:         t.ActivityID,
-		ActivityType:       FromActivityType(t.ActivityType),
-		State:              FromPendingActivityState(t.State),
-		HeartbeatDetails:   FromPayload(t.HeartbeatDetails),
-		LastHeartbeatTime:  unixNanoToTime(t.LastHeartbeatTimestamp),
-		LastStartedTime:    unixNanoToTime(t.LastStartedTimestamp),
-		Attempt:            t.Attempt,
-		MaximumAttempts:    t.MaximumAttempts,
-		ScheduledTime:      unixNanoToTime(t.ScheduledTimestamp),
-		ExpirationTime:     unixNanoToTime(t.ExpirationTimestamp),
-		LastFailure:        FromFailure(t.LastFailureReason, t.LastFailureDetails),
-		LastWorkerIdentity: t.LastWorkerIdentity,
+		ActivityId:            t.ActivityID,
+		ActivityType:          FromActivityType(t.ActivityType),
+		State:                 FromPendingActivityState(t.State),
+		HeartbeatDetails:      FromPayload(t.HeartbeatDetails),
+		LastHeartbeatTime:     unixNanoToTime(t.LastHeartbeatTimestamp),
+		LastStartedTime:       unixNanoToTime(t.LastStartedTimestamp),
+		Attempt:               t.Attempt,
+		MaximumAttempts:       t.MaximumAttempts,
+		ScheduledTime:         unixNanoToTime(t.ScheduledTimestamp),
+		ExpirationTime:        unixNanoToTime(t.ExpirationTimestamp),
+		LastFailure:           FromFailure(t.LastFailureReason, t.LastFailureDetails),
+		LastWorkerIdentity:    t.LastWorkerIdentity,
+		StartedWorkerIdentity: t.StartedWorkerIdentity,
 	}
 }
 
@@ -1961,6 +1964,7 @@ func ToPendingActivityInfo(t *apiv1.PendingActivityInfo) *types.PendingActivityI
 		LastFailureReason:      ToFailureReason(t.LastFailure),
 		LastFailureDetails:     ToFailureDetails(t.LastFailure),
 		LastWorkerIdentity:     t.LastWorkerIdentity,
+		StartedWorkerIdentity:  t.StartedWorkerIdentity,
 	}
 }
 
@@ -4221,6 +4225,7 @@ func FromUpdateDomainResponse(t *types.UpdateDomainResponse) *apiv1.UpdateDomain
 		domain.Data = info.Data
 	}
 	if config := t.Configuration; config != nil {
+		domain.IsolationGroups = FromIsolationGroupConfig(config.IsolationGroups)
 		domain.WorkflowExecutionRetentionPeriod = daysToDuration(&config.WorkflowExecutionRetentionPeriodInDays)
 		domain.BadBinaries = FromBadBinaries(config.BadBinaries)
 		domain.HistoryArchivalStatus = FromArchivalStatus(config.HistoryArchivalStatus)
@@ -4258,6 +4263,7 @@ func ToUpdateDomainResponse(t *apiv1.UpdateDomainResponse) *types.UpdateDomainRe
 			HistoryArchivalURI:                     t.Domain.HistoryArchivalUri,
 			VisibilityArchivalStatus:               ToArchivalStatus(t.Domain.VisibilityArchivalStatus),
 			VisibilityArchivalURI:                  t.Domain.VisibilityArchivalUri,
+			IsolationGroups:                        ToIsolationGroupConfig(t.GetDomain().GetIsolationGroups()),
 		},
 		ReplicationConfiguration: &types.DomainReplicationConfiguration{
 			ActiveClusterName: t.Domain.ActiveClusterName,
@@ -4690,6 +4696,7 @@ func FromWorkflowExecutionInfo(t *types.WorkflowExecutionInfo) *apiv1.WorkflowEx
 		SearchAttributes:    FromSearchAttributes(t.SearchAttributes),
 		AutoResetPoints:     FromResetPoints(t.AutoResetPoints),
 		TaskList:            t.TaskList,
+		PartitionConfig:     t.PartitionConfig,
 	}
 }
 
@@ -4713,6 +4720,7 @@ func ToWorkflowExecutionInfo(t *apiv1.WorkflowExecutionInfo) *types.WorkflowExec
 		SearchAttributes:  ToSearchAttributes(t.SearchAttributes),
 		AutoResetPoints:   ToResetPoints(t.AutoResetPoints),
 		TaskList:          t.TaskList,
+		PartitionConfig:   t.PartitionConfig,
 	}
 }
 
@@ -4767,6 +4775,7 @@ func FromWorkflowExecutionStartedEventAttributes(t *types.WorkflowExecutionStart
 		SearchAttributes:             FromSearchAttributes(t.SearchAttributes),
 		PrevAutoResetPoints:          FromResetPoints(t.PrevAutoResetPoints),
 		Header:                       FromHeader(t.Header),
+		PartitionConfig:              t.PartitionConfig,
 	}
 }
 
@@ -4802,6 +4811,7 @@ func ToWorkflowExecutionStartedEventAttributes(t *apiv1.WorkflowExecutionStarted
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
 		PrevAutoResetPoints:                 ToResetPoints(t.PrevAutoResetPoints),
 		Header:                              ToHeader(t.Header),
+		PartitionConfig:                     t.PartitionConfig,
 	}
 }
 

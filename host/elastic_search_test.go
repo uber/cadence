@@ -18,9 +18,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:build esintegration
-// +build esintegration
-
 // to run locally, make sure kafka and es is running,
 // then run cmd `go test -v ./host -run TestElasticsearchIntegrationSuite -tags esintegration`
 package host
@@ -85,16 +82,16 @@ func TestElasticsearchIntegrationSuite(t *testing.T) {
 // This cluster use customized threshold for history config
 func (s *ElasticSearchIntegrationSuite) SetupSuite() {
 	s.setupSuite()
-	s.esClient = esutils.CreateESClient(s.Suite, s.testClusterConfig.ESConfig.URL.String(), environment.GetESVersion())
-	s.esClient.PutIndexTemplate(s.Suite, "testdata/es_"+environment.GetESVersion()+"_index_template.json", "test-visibility-template")
+	s.esClient = esutils.CreateESClient(s.Suite.T(), s.testClusterConfig.ESConfig.URL.String(), environment.GetESVersion())
+	s.esClient.PutIndexTemplate(s.Suite.T(), "testdata/es_"+environment.GetESVersion()+"_index_template.json", "test-visibility-template")
 	indexName := s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName]
-	s.esClient.CreateIndex(s.Suite, indexName)
-	s.putIndexSettings(indexName, defaultTestValueOfESIndexMaxResultWindow)
+	s.esClient.CreateIndex(s.Suite.T(), indexName)
+	s.putIndexSettings(s.Suite.T(), indexName, defaultTestValueOfESIndexMaxResultWindow)
 }
 
 func (s *ElasticSearchIntegrationSuite) TearDownSuite() {
 	s.tearDownSuite()
-	s.esClient.DeleteIndex(s.Suite, s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName])
+	s.esClient.DeleteIndex(s.Suite.T(), s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName])
 }
 
 func (s *ElasticSearchIntegrationSuite) SetupTest() {
@@ -162,13 +159,13 @@ func (s *ElasticSearchIntegrationSuite) TestListWorkflow() {
 
 func (s *ElasticSearchIntegrationSuite) startWorkflow(
 	prefix string,
-	is_cron bool,
+	isCron bool,
 ) *types.StartWorkflowExecutionResponse {
 	id := "es-integration-list-workflow-" + prefix + "-test"
 	wt := "es-integration-list-workflow-" + prefix + "test-type"
 	tl := "es-integration-list-workflow-" + prefix + "test-tasklist"
 	request := s.createStartWorkflowExecutionRequest(id, wt, tl)
-	if is_cron {
+	if isCron {
 		request.CronSchedule = "*/5 * * * *" // every 5 minutes
 	}
 
@@ -1148,15 +1145,15 @@ func (s *ElasticSearchIntegrationSuite) TestUpsertWorkflowExecution_InvalidKey()
 	s.True(len(failedDecisionAttr.GetDetails()) > 0)
 }
 
-func (s *ElasticSearchIntegrationSuite) putIndexSettings(indexName string, maxResultWindowSize int) {
-	err := s.esClient.PutMaxResultWindow(indexName, maxResultWindowSize)
+func (s *ElasticSearchIntegrationSuite) putIndexSettings(t *testing.T, indexName string, maxResultWindowSize int) {
+	err := s.esClient.PutMaxResultWindow(t, indexName, maxResultWindowSize)
 	s.Require().NoError(err)
-	s.verifyMaxResultWindowSize(indexName, maxResultWindowSize)
+	s.verifyMaxResultWindowSize(t, indexName, maxResultWindowSize)
 }
 
-func (s *ElasticSearchIntegrationSuite) verifyMaxResultWindowSize(indexName string, targetSize int) {
+func (s *ElasticSearchIntegrationSuite) verifyMaxResultWindowSize(t *testing.T, indexName string, targetSize int) {
 	for i := 0; i < numOfRetry; i++ {
-		currentWindow, err := s.esClient.GetMaxResultWindow(indexName)
+		currentWindow, err := s.esClient.GetMaxResultWindow(t, indexName)
 		s.Require().NoError(err)
 		if currentWindow == strconv.Itoa(targetSize) {
 			return

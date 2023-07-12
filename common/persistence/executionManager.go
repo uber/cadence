@@ -187,6 +187,7 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(
 		AutoResetPoints:                    autoResetPoints,
 		SearchAttributes:                   info.SearchAttributes,
 		Memo:                               info.Memo,
+		PartitionConfig:                    info.PartitionConfig,
 	}
 	newStats := &ExecutionStats{
 		HistorySize: info.HistorySize,
@@ -328,7 +329,6 @@ func (m *executionManagerImpl) UpdateWorkflowExecution(
 			return nil, err
 		}
 	}
-
 	newRequest := &InternalUpdateWorkflowExecutionRequest{
 		RangeID: request.RangeID,
 
@@ -512,6 +512,7 @@ func (m *executionManagerImpl) SerializeExecutionInfo(
 		ExpirationInterval:                 common.SecondsToDuration(int64(info.ExpirationSeconds)),
 		Memo:                               info.Memo,
 		SearchAttributes:                   info.SearchAttributes,
+		PartitionConfig:                    info.PartitionConfig,
 
 		// attributes which are not related to mutable state
 		HistorySize: stats.HistorySize,
@@ -659,9 +660,9 @@ func (m *executionManagerImpl) SerializeWorkflowMutation(
 		CrossClusterTasks: input.CrossClusterTasks,
 		ReplicationTasks:  input.ReplicationTasks,
 		TimerTasks:        input.TimerTasks,
-
-		Condition: input.Condition,
-		Checksum:  input.Checksum,
+		TTLInSeconds:      input.TTLInSeconds,
+		Condition:         input.Condition,
+		Checksum:          input.Checksum,
 	}, nil
 }
 

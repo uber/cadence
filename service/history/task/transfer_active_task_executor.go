@@ -192,7 +192,7 @@ func (t *transferActiveTaskExecutor) processActivityTask(
 	// release the context lock since we no longer need mutable state builder and
 	// the rest of logic is making RPC call, which takes time.
 	release(nil)
-	return t.pushActivity(ctx, task, timeout)
+	return t.pushActivity(ctx, task, timeout, mutableState.GetExecutionInfo().PartitionConfig)
 }
 
 func (t *transferActiveTaskExecutor) processDecisionTask(
@@ -261,7 +261,7 @@ func (t *transferActiveTaskExecutor) processDecisionTask(
 	// release the context lock since we no longer need mutable state builder and
 	// the rest of logic is making RPC call, which takes time.
 	release(nil)
-	err = t.pushDecision(ctx, task, taskList, decisionTimeout)
+	err = t.pushDecision(ctx, task, taskList, decisionTimeout, mutableState.GetExecutionInfo().PartitionConfig)
 	if _, ok := err.(*types.StickyWorkerUnavailableError); ok {
 		// sticky worker is unavailable, switch to non-sticky task list
 		taskList = &types.TaskList{
@@ -273,7 +273,7 @@ func (t *transferActiveTaskExecutor) processDecisionTask(
 		// There is no need to reset sticky, because if this task is picked by new worker, the new worker will reset
 		// the sticky queue to a new one. However, if worker is completely down, that schedule_to_start timeout task
 		// will re-create a new non-sticky task and reset sticky.
-		err = t.pushDecision(ctx, task, taskList, decisionTimeout)
+		err = t.pushDecision(ctx, task, taskList, decisionTimeout, mutableState.GetExecutionInfo().PartitionConfig)
 	}
 	return err
 }
@@ -877,6 +877,7 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 		targetDomainName,
 		childInfo.CreateRequestID,
 		attributes,
+		mutableState.GetExecutionInfo().PartitionConfig,
 	)
 	if err != nil {
 		t.logger.Error("Failed to start child workflow execution",
@@ -951,6 +952,9 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 	recordStart bool,
 ) (retError error) {
 
+	workflowStartedScope := t.metricsClient.Scope(metrics.TransferActiveTaskRecordWorkflowStartedScope,
+		metrics.DomainTag(task.DomainID))
+
 	wfContext, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
 		task.DomainID,
 		getWorkflowExecution(task),
@@ -1010,6 +1014,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 	release(nil)
 
 	if recordStart {
+		workflowStartedScope.IncCounter(metrics.WorkflowStartedCount)
 		return t.recordWorkflowStarted(
 			ctx,
 			task.DomainID,
@@ -1706,6 +1711,7 @@ func startWorkflowWithRetry(
 	targetDomain string,
 	requestID string,
 	attributes *types.StartChildWorkflowExecutionInitiatedEventAttributes,
+	partitionConfig map[string]string,
 ) (string, error) {
 
 	// Get parent domain name
@@ -1738,7 +1744,7 @@ func startWorkflowWithRetry(
 		JitterStartSeconds:    attributes.JitterStartSeconds,
 	}
 
-	historyStartReq, err := common.CreateHistoryStartWorkflowRequest(task.TargetDomainID, frontendStartReq, timeSource.Now())
+	historyStartReq, err := common.CreateHistoryStartWorkflowRequest(task.TargetDomainID, frontendStartReq, timeSource.Now(), partitionConfig)
 	if err != nil {
 		return "", err
 	}

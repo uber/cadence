@@ -28,6 +28,17 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
+type (
+	// ShardingError represents invalid shard
+	ShardingError struct {
+		Message string
+	}
+)
+
+func (e *ShardingError) Error() string {
+	return e.Message
+}
+
 func convertCommonErrors(
 	errChecker nosqlplugin.ClientErrorChecker,
 	operation string,

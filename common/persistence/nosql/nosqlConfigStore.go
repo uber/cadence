@@ -37,25 +37,24 @@ type (
 )
 
 func NewNoSQLConfigStore(
-	cfg config.NoSQL,
+	cfg config.ShardedNoSQL,
 	logger log.Logger,
 	dc *persistence.DynamicConfiguration,
 ) (persistence.ConfigStore, error) {
-	db, err := NewNoSQLDB(&cfg, logger, dc)
+	shardedStore, err := newShardedNosqlStore(cfg, logger, dc)
 	if err != nil {
 		return nil, err
 	}
-
 	return &nosqlConfigStore{
-		nosqlStore: nosqlStore{
-			db:     db,
-			logger: logger,
-		},
+		nosqlStore: shardedStore.GetDefaultShard(),
 	}, nil
 }
 
 func (m *nosqlConfigStore) FetchConfig(ctx context.Context, configType persistence.ConfigType) (*persistence.InternalConfigStoreEntry, error) {
 	entry, err := m.db.SelectLatestConfig(ctx, int(configType))
+	if m.db.IsNotFoundError(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, convertCommonErrors(m.db, "FetchConfig", err)
 	}

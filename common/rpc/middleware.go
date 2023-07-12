@@ -22,11 +22,13 @@ package rpc
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/partition"
 
 	"go.uber.org/cadence/worker"
 	"go.uber.org/yarpc"
@@ -176,4 +178,63 @@ func (m *HeaderForwardingMiddleware) Call(ctx context.Context, request *transpor
 	}
 
 	return out.Call(ctx, request)
+}
+
+// ForwardPartitionConfigMiddleware forwards the partition config to remote cluster
+// The middleware should always be applied after any other middleware that inject partition config into the context
+// so that it can overwrites the partition config into the context
+// The purpose of this middleware is to make sure the partition config doesn't change when a request is forwarded from
+// passive cluster to the active cluster
+type ForwardPartitionConfigMiddleware struct{}
+
+func (m *ForwardPartitionConfigMiddleware) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
+	if _, ok := req.Headers.Get(common.AutoforwardingClusterHeaderName); ok {
+		var partitionConfig map[string]string
+		if blob, ok := req.Headers.Get(common.PartitionConfigHeaderName); ok && len(blob) > 0 {
+			if err := json.Unmarshal([]byte(blob), &partitionConfig); err != nil {
+				return err
+			}
+		}
+		ctx = partition.ContextWithConfig(ctx, partitionConfig)
+		isolationGroup, _ := req.Headers.Get(common.IsolationGroupHeaderName)
+		ctx = partition.ContextWithIsolationGroup(ctx, isolationGroup)
+	}
+	return h.Handle(ctx, req, resw)
+}
+
+func (m *ForwardPartitionConfigMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
+	if _, ok := request.Headers.Get(common.AutoforwardingClusterHeaderName); ok {
+		partitionConfig := partition.ConfigFromContext(ctx)
+		if len(partitionConfig) > 0 {
+			blob, err := json.Marshal(partitionConfig)
+			if err != nil {
+				return nil, err
+			}
+			request.Headers = request.Headers.With(common.PartitionConfigHeaderName, string(blob))
+		} else {
+			request.Headers.Del(common.PartitionConfigHeaderName)
+		}
+		isolationGroup := partition.IsolationGroupFromContext(ctx)
+		if isolationGroup != "" {
+			request.Headers = request.Headers.With(common.IsolationGroupHeaderName, isolationGroup)
+		} else {
+			request.Headers.Del(common.IsolationGroupHeaderName)
+		}
+	}
+	return out.Call(ctx, request)
+}
+
+// ClientPartitionConfigMiddleware stores the partition config and isolation group of the request into the context
+// It reads a header from client request and uses it as the isolation group
+type ClientPartitionConfigMiddleware struct{}
+
+func (m *ClientPartitionConfigMiddleware) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
+	zone, _ := req.Headers.Get(common.ClientIsolationGroupHeaderName)
+	if zone != "" {
+		ctx = partition.ContextWithConfig(ctx, map[string]string{
+			partition.IsolationGroupKey: zone,
+		})
+		ctx = partition.ContextWithIsolationGroup(ctx, zone)
+	}
+	return h.Handle(ctx, req, resw)
 }

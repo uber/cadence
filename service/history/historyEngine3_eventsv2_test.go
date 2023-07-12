@@ -22,6 +22,7 @@ package history
 
 import (
 	"context"
+	reflect "reflect"
 	"testing"
 	"time"
 
@@ -233,10 +234,13 @@ func (s *engine3Suite) TestStartWorkflowExecution_BrandNew() {
 	workflowType := "workflowType"
 	taskList := "testTaskList"
 	identity := "testIdentity"
+	partitionConfig := map[string]string{
+		"zone": "phx",
+	}
 
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{}, nil).Once()
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *p.CreateWorkflowExecutionRequest) bool {
-		return !request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero()
+		return !request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero() && reflect.DeepEqual(request.NewWorkflowSnapshot.ExecutionInfo.PartitionConfig, partitionConfig)
 	})).Return(&p.CreateWorkflowExecutionResponse{}, nil).Once()
 
 	requestID := uuid.New()
@@ -252,6 +256,7 @@ func (s *engine3Suite) TestStartWorkflowExecution_BrandNew() {
 			Identity:                            identity,
 			RequestID:                           requestID,
 		},
+		PartitionConfig: partitionConfig,
 	})
 	s.Nil(err)
 	s.NotNil(resp.RunID)
@@ -356,6 +361,9 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 	signalName := "my signal name"
 	input := []byte("test input")
 	requestID := uuid.New()
+	partitionConfig := map[string]string{
+		"zone": "phx",
+	}
 	sRequest = &types.HistorySignalWithStartWorkflowExecutionRequest{
 		DomainUUID: domainID,
 		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
@@ -370,6 +378,7 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 			Input:                               input,
 			RequestID:                           requestID,
 		},
+		PartitionConfig: partitionConfig,
 	}
 
 	notExistErr := &types.EntityNotExistsError{Message: "Workflow not exist"}
@@ -377,7 +386,7 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(nil, notExistErr).Once()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{}, nil).Once()
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *p.CreateWorkflowExecutionRequest) bool {
-		return !request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero()
+		return !request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero() && reflect.DeepEqual(partitionConfig, request.NewWorkflowSnapshot.ExecutionInfo.PartitionConfig)
 	})).Return(&p.CreateWorkflowExecutionResponse{}, nil).Once()
 
 	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)

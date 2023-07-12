@@ -24,6 +24,11 @@ import (
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 
+	"github.com/uber/cadence/common/dynamicconfig/configstore"
+
+	"github.com/uber/cadence/common/isolationgroup"
+	"github.com/uber/cadence/common/partition"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
@@ -46,6 +51,7 @@ type (
 		InstanceID      string
 		Logger          log.Logger
 		ThrottledLogger log.Logger
+		HostName        string
 
 		MetricScope              tally.Scope
 		MembershipResolver       membership.Resolver
@@ -66,5 +72,8 @@ type (
 		ArchiverProvider         provider.ArchiverProvider
 		Authorizer               authorization.Authorizer // NOTE: this can be nil. If nil, AccessControlledHandlerImpl will initiate one with config.Authorization
 		AuthorizationConfig      config.Authorization     // NOTE: empty(default) struct will get a authorization.NoopAuthorizer
+		IsolationGroupStore      configstore.Client       // This can be nil, the default config store will be created if so
+		IsolationGroupState      isolationgroup.State     // This can be nil, the default state store will be chosen if so
+		Partitioner              partition.Partitioner
 	}
 )

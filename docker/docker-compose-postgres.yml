@@ -1,7 +1,7 @@
 version: '3'
 services:
   postgres:
-    image: postgres:12
+    image: postgres:12.4
     environment:
       POSTGRES_USER: cadence
       POSTGRES_PASSWORD: cadence
@@ -51,6 +51,8 @@ services:
       - cadence
   grafana:
     image: grafana/grafana
+    volumes:
+      - ./grafana:/etc/grafana
     user: "1000"
     depends_on:
       - prometheus

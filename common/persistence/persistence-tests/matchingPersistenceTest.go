@@ -75,12 +75,13 @@ func (s *MatchingPersistenceSuite) TestCreateTask() {
 	domainID := "11adbd1b-f164-4ea7-b2f3-2e857a5048f1"
 	workflowExecution := types.WorkflowExecution{WorkflowID: "create-task-test",
 		RunID: "c949447a-691a-4132-8b2a-a5b38106793c"}
-	task0, err0 := s.CreateDecisionTask(ctx, domainID, workflowExecution, "a5b38106793c", 5)
+	partitionConfig := map[string]string{"userid": uuid.New()}
+	task0, err0 := s.CreateDecisionTask(ctx, domainID, workflowExecution, "a5b38106793c", 5, partitionConfig)
 	s.NoError(err0)
 	s.NotNil(task0, "Expected non empty task identifier.")
 
 	tasks1, err1 := s.CreateActivityTasks(ctx, domainID, workflowExecution, map[int64]string{
-		10: "a5b38106793c"})
+		10: "a5b38106793c"}, partitionConfig)
 	s.NoError(err1)
 	s.NotNil(tasks1, "Expected valid task identifiers.")
 	s.Equal(1, len(tasks1), "expected single valid task identifier.")
@@ -95,7 +96,7 @@ func (s *MatchingPersistenceSuite) TestCreateTask() {
 		50: uuid.New(),
 		60: uuid.New(),
 	}
-	tasks2, err2 := s.CreateActivityTasks(ctx, domainID, workflowExecution, tasks)
+	tasks2, err2 := s.CreateActivityTasks(ctx, domainID, workflowExecution, tasks, partitionConfig)
 	s.NoError(err2)
 	s.Equal(5, len(tasks2), "expected single valid task identifier.")
 
@@ -108,11 +109,12 @@ func (s *MatchingPersistenceSuite) TestCreateTask() {
 		s.Equal(workflowExecution.RunID, resp.Tasks[0].RunID)
 		s.Equal(sid, resp.Tasks[0].ScheduleID)
 		s.True(resp.Tasks[0].CreatedTime.UnixNano() > 0)
-		if s.TaskMgr.GetName() != "cassandra" {
+		if s.TaskMgr.GetName() != "cassandra" && s.TaskMgr.GetName() != "shardedNosql" {
 			// cassandra uses TTL and expiry isn't stored as part of task state
 			s.True(time.Now().Before(resp.Tasks[0].Expiry))
 			s.True(resp.Tasks[0].Expiry.Before(time.Now().Add((defaultScheduleToStartTimeout + 1) * time.Second)))
 		}
+		s.Equal(partitionConfig, resp.Tasks[0].PartitionConfig)
 	}
 }
 
@@ -125,7 +127,8 @@ func (s *MatchingPersistenceSuite) TestGetDecisionTasks() {
 	workflowExecution := types.WorkflowExecution{WorkflowID: "get-decision-task-test",
 		RunID: "db20f7e2-1a1e-40d9-9278-d8b886738e05"}
 	taskList := "d8b886738e05"
-	task0, err0 := s.CreateDecisionTask(ctx, domainID, workflowExecution, taskList, 5)
+	partitionConfig := map[string]string{"userid": uuid.New()}
+	task0, err0 := s.CreateDecisionTask(ctx, domainID, workflowExecution, taskList, 5, partitionConfig)
 	s.NoError(err0)
 	s.NotNil(task0, "Expected non empty task identifier.")
 
@@ -134,6 +137,7 @@ func (s *MatchingPersistenceSuite) TestGetDecisionTasks() {
 	s.NotNil(tasks1Response.Tasks, "expected valid list of tasks.")
 	s.Equal(1, len(tasks1Response.Tasks), "Expected 1 decision task.")
 	s.Equal(int64(5), tasks1Response.Tasks[0].ScheduleID)
+	s.Equal(partitionConfig, tasks1Response.Tasks[0].PartitionConfig)
 }
 
 // TestGetTasksWithNoMaxReadLevel test
@@ -151,7 +155,7 @@ func (s *MatchingPersistenceSuite) TestGetTasksWithNoMaxReadLevel() {
 		30: taskList,
 		40: taskList,
 		50: taskList,
-	})
+	}, nil)
 	s.NoError(err0)
 
 	nTasks := 5
@@ -200,7 +204,7 @@ func (s *MatchingPersistenceSuite) TestCompleteDecisionTask() {
 		30: taskList,
 		40: taskList,
 		50: taskList,
-	})
+	}, nil)
 	s.NoError(err0)
 	s.NotNil(tasks0, "Expected non empty task identifier.")
 	s.Equal(5, len(tasks0), "expected 5 valid task identifier.")
@@ -244,7 +248,7 @@ func (s *MatchingPersistenceSuite) TestCompleteTasksLessThan() {
 		40: taskList,
 		50: taskList,
 		60: taskList,
-	})
+	}, nil)
 	s.NoError(err)
 
 	resp, err := s.GetTasks(ctx, domainID, taskList, p.TaskListTypeActivity, 10)
@@ -421,7 +425,7 @@ func (s *MatchingPersistenceSuite) deleteAllTaskList() {
 
 // TestListWithOneTaskList test
 func (s *MatchingPersistenceSuite) TestListWithOneTaskList() {
-	if s.TaskMgr.GetName() == "cassandra" {
+	if s.TaskMgr.GetName() == "cassandra" || s.TaskMgr.GetName() == "shardedNosql" {
 		// ListTaskList API is currently not supported in cassandra
 		return
 	}
@@ -485,7 +489,7 @@ func (s *MatchingPersistenceSuite) TestListWithOneTaskList() {
 
 // TestListWithMultipleTaskList test
 func (s *MatchingPersistenceSuite) TestListWithMultipleTaskList() {
-	if s.TaskMgr.GetName() == "cassandra" {
+	if s.TaskMgr.GetName() == "cassandra" || s.TaskMgr.GetName() == "shardedNosql" {
 		// ListTaskList API is currently not supported in cassandra"
 		return
 	}
@@ -555,7 +559,7 @@ func (s *MatchingPersistenceSuite) TestGetOrphanTasks() {
 	if os.Getenv("SKIP_GET_ORPHAN_TASKS") != "" {
 		s.T().Skipf("GetOrphanTasks not supported in %v", s.TaskMgr.GetName())
 	}
-	if s.TaskMgr.GetName() == "cassandra" {
+	if s.TaskMgr.GetName() == "cassandra" || s.TaskMgr.GetName() == "shardedNosql" {
 		// GetOrphanTasks API is currently not supported in cassandra"
 		return
 	}

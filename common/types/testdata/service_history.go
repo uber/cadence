@@ -240,6 +240,7 @@ var (
 	HistorySignalWithStartWorkflowExecutionRequest = types.HistorySignalWithStartWorkflowExecutionRequest{
 		DomainUUID:             DomainID,
 		SignalWithStartRequest: &SignalWithStartWorkflowExecutionRequest,
+		PartitionConfig:        PartitionConfig,
 	}
 	HistorySignalWithStartWorkflowExecutionResponse = types.StartWorkflowExecutionResponse{
 		RunID: RunID,
@@ -261,6 +262,7 @@ var (
 		ContinuedFailureDetails:         FailureDetails,
 		LastCompletionResult:            Payload1,
 		FirstDecisionTaskBackoffSeconds: &Duration1,
+		PartitionConfig:                 PartitionConfig,
 	}
 	HistoryStartWorkflowExecutionResponse = types.StartWorkflowExecutionResponse{
 		RunID: RunID,

@@ -78,6 +78,8 @@ const (
 	Version1 = int64(11)
 	Version2 = int64(22)
 	Version3 = int64(33)
+
+	IsolationGroup = "dca1"
 )
 
 var (
@@ -120,6 +122,12 @@ var (
 var (
 	FailureReason  = "FailureReason"
 	FailureDetails = []byte{190, 0}
+)
+
+var (
+	PartitionConfig = map[string]string{
+		"zone": IsolationGroup,
+	}
 )
 
 var (
@@ -334,6 +342,7 @@ var (
 		SearchAttributes:  &SearchAttributes,
 		AutoResetPoints:   &ResetPoints,
 		TaskList:          TaskListName,
+		PartitionConfig:   PartitionConfig,
 	}
 	WorkflowExecutionInfoArray = []*types.WorkflowExecutionInfo{&WorkflowExecutionInfo}
 
@@ -374,6 +383,7 @@ var (
 		LastFailureReason:      &FailureReason,
 		LastWorkerIdentity:     Identity,
 		LastFailureDetails:     FailureDetails,
+		StartedWorkerIdentity:  Identity,
 	}
 	PendingActivityInfoArray = []*types.PendingActivityInfo{
 		&PendingActivityInfo,

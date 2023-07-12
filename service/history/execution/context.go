@@ -45,6 +45,8 @@ import (
 
 const (
 	defaultRemoteCallTimeout = 30 * time.Second
+	ttlBufferDays            = 15
+	dayToSecondMultiplier    = 86400
 )
 
 type conflictError struct {
@@ -706,7 +708,6 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 	currentWorkflowTransactionPolicy TransactionPolicy,
 	newWorkflowTransactionPolicy *TransactionPolicy,
 ) (retError error) {
-
 	defer func() {
 		if retError != nil {
 			c.Clear()
@@ -720,11 +721,14 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 	if err != nil {
 		return err
 	}
-
 	var persistedBlobs events.PersistedBlobs
 	currentWorkflowSize := c.GetHistorySize()
+	oldWorkflowSize := currentWorkflowSize
+	currentWorkflowHistoryCount := c.mutableState.GetNextEventID() - 1
+	oldWorkflowHistoryCount := currentWorkflowHistoryCount
 	for _, workflowEvents := range currentWorkflowEventsSeq {
 		blob, err := c.PersistNonStartWorkflowBatchEvents(ctx, workflowEvents)
+		currentWorkflowHistoryCount += int64(len(workflowEvents.Events))
 		if err != nil {
 			return err
 		}
@@ -852,6 +856,7 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 		domainName,
 		resp.MutableStateUpdateSessionStats,
 	)
+	c.emitLargeWorkflowShardIDStats(currentWorkflowSize-oldWorkflowSize, oldWorkflowHistoryCount, oldWorkflowSize, currentWorkflowHistoryCount)
 	// emit workflow completion stats if any
 	if currentWorkflow.ExecutionInfo.State == persistence.WorkflowStateCompleted {
 		if event, err := c.mutableState.GetCompletionEvent(ctx); err == nil {
@@ -1211,7 +1216,6 @@ func (c *contextImpl) updateWorkflowExecutionWithRetry(
 		resp, err = c.shard.UpdateWorkflowExecution(ctx, request)
 		return err
 	}
-
 	isRetryable := func(err error) bool {
 		if _, ok := err.(*persistence.TimeoutError); ok {
 			// timeout error is not retryable for update workflow execution

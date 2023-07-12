@@ -66,6 +66,9 @@ type Config struct {
 	ShutdownDrainDuration             dynamicconfig.DurationPropertyFn
 	Lockdown                          dynamicconfig.BoolPropertyFnWithDomainFilter
 
+	// isolation configuration
+	EnableTasklistIsolation dynamicconfig.BoolPropertyFnWithDomainFilter
+
 	// id length limits
 	MaxIDLengthWarnLimit  dynamicconfig.IntPropertyFn
 	DomainNameMaxLength   dynamicconfig.IntPropertyFnWithDomainFilter
@@ -114,10 +117,13 @@ type Config struct {
 
 	// Emit signal related metrics with signal name tag. Be aware of cardinality.
 	EmitSignalNameMetricsTag dynamicconfig.BoolPropertyFnWithDomainFilter
+
+	// HostName for machine running the service
+	HostName string
 }
 
 // NewConfig returns new service config with default values
-func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, isAdvancedVisConfigExist bool) *Config {
+func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, isAdvancedVisConfigExist bool, hostName string) *Config {
 	return &Config{
 		NumHistoryShards:                            numHistoryShards,
 		IsAdvancedVisConfigExist:                    isAdvancedVisConfigExist,
@@ -172,6 +178,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, isAdvancedVis
 		DecisionResultCountLimit:                    dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendDecisionResultCountLimit),
 		EmitSignalNameMetricsTag:                    dc.GetBoolPropertyFilteredByDomain(dynamicconfig.FrontendEmitSignalNameMetricsTag),
 		Lockdown:                                    dc.GetBoolPropertyFilteredByDomain(dynamicconfig.Lockdown),
+		EnableTasklistIsolation:                     dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableTasklistIsolation),
 		domainConfig: domain.Config{
 			MaxBadBinaryCount:      dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxBadBinaries),
 			MinRetentionDays:       dc.GetIntProperty(dynamicconfig.MinRetentionDays),
@@ -179,6 +186,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, isAdvancedVis
 			FailoverCoolDown:       dc.GetDurationPropertyFilteredByDomain(dynamicconfig.FrontendFailoverCoolDown),
 			RequiredDomainDataKeys: dc.GetMapProperty(dynamicconfig.RequiredDomainDataKeys),
 		},
+		HostName: hostName,
 	}
 }
 
@@ -219,6 +227,7 @@ func NewService(
 		),
 		params.PersistenceConfig.NumHistoryShards,
 		isAdvancedVisExistInConfig,
+		params.HostName,
 	)
 	params.PersistenceConfig.HistoryMaxConns = serviceConfig.HistoryMgrNumConns()
 
@@ -266,8 +275,20 @@ func (s *Service) Start() {
 	logger := s.GetLogger()
 	logger.Info("frontend starting")
 
+	// domain handler's shared between admin and workflow handler, so instantiate it centrally and share it
+	dh := domain.NewHandler(
+		s.config.domainConfig,
+		s.GetLogger(),
+		s.GetDomainManager(),
+		s.GetClusterMetadata(),
+		domain.NewDomainReplicator(s.GetDomainReplicationQueue(), s.GetLogger()),
+		s.GetArchivalMetadata(),
+		s.GetArchiverProvider(),
+		s.GetTimeSource(),
+	)
+
 	// Base handler
-	s.handler = NewWorkflowHandler(s, s.config, s.GetDomainReplicationQueue(), client.NewVersionChecker())
+	s.handler = NewWorkflowHandler(s, s.config, client.NewVersionChecker(), dh)
 
 	// Additional decorations
 	var handler Handler = s.handler
@@ -284,7 +305,7 @@ func (s *Service) Start() {
 	grpcHandler := newGrpcHandler(handler)
 	grpcHandler.register(s.GetDispatcher())
 
-	s.adminHandler = NewAdminHandler(s, s.params, s.config)
+	s.adminHandler = NewAdminHandler(s, s.params, s.config, dh)
 	s.adminHandler = NewAccessControlledAdminHandlerImpl(s.adminHandler, s, s.params.Authorizer, s.params.AuthorizationConfig)
 
 	adminThriftHandler := NewAdminThriftHandler(s.adminHandler)

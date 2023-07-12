@@ -498,12 +498,17 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 				domainFailoverNotificationVersion := nextDomain.GetFailoverNotificationVersion()
 				domainActiveCluster := nextDomain.GetReplicationConfig().ActiveClusterName
 				previousFailoverVersion := nextDomain.GetPreviousFailoverVersion()
+				previousClusterName, err := e.clusterMetadata.ClusterNameForFailoverVersion(previousFailoverVersion)
+				if err != nil {
+					e.logger.Error("Failed to handle graceful failover", tag.WorkflowDomainID(nextDomain.GetInfo().ID))
+					continue
+				}
 
 				if nextDomain.IsGlobalDomain() &&
 					domainFailoverNotificationVersion >= shardNotificationVersion &&
 					domainActiveCluster != e.currentClusterName &&
 					previousFailoverVersion != common.InitialPreviousFailoverVersion &&
-					e.clusterMetadata.ClusterNameForFailoverVersion(previousFailoverVersion) == e.currentClusterName {
+					previousClusterName == e.currentClusterName {
 					// the visibility timestamp will be set in shard context
 					failoverMarkerTasks = append(failoverMarkerTasks, &persistence.FailoverMarkerTask{
 						Version:  nextDomain.GetFailoverVersion(),
@@ -599,10 +604,14 @@ func (e *historyEngineImpl) newDomainNotActiveError(
 	failoverVersion int64,
 ) error {
 	clusterMetadata := e.shard.GetService().GetClusterMetadata()
+	clusterName, err := clusterMetadata.ClusterNameForFailoverVersion(failoverVersion)
+	if err != nil {
+		clusterName = "_unknown_"
+	}
 	return ce.NewDomainNotActiveError(
 		domainName,
 		clusterMetadata.GetCurrentClusterName(),
-		clusterMetadata.ClusterNameForFailoverVersion(failoverVersion),
+		clusterName,
 	)
 }
 
@@ -894,7 +903,7 @@ UpdateWorkflowLoop:
 		}
 
 		if signalWithStartRequest != nil {
-			startRequest, err = getStartRequest(domainID, signalWithStartRequest.SignalWithStartRequest)
+			startRequest, err = getStartRequest(domainID, signalWithStartRequest.SignalWithStartRequest, signalWithStartRequest.PartitionConfig)
 			if err != nil {
 				return nil, err
 			}
@@ -1158,16 +1167,15 @@ func (e *historyEngineImpl) QueryWorkflow(
 ) (retResp *types.HistoryQueryWorkflowResponse, retErr error) {
 
 	scope := e.metricsClient.Scope(metrics.HistoryQueryWorkflowScope).Tagged(metrics.DomainTag(request.GetRequest().GetDomain()))
-	shardMetricScope := e.metricsClient.Scope(metrics.HistoryQueryWorkflowScope).Tagged(metrics.ShardIDTag(strconv.Itoa(e.shard.GetShardID())))
+	shardMetricScope := e.metricsClient.Scope(metrics.HistoryQueryWorkflowScope, metrics.ShardIDTag(strconv.Itoa(e.shard.GetShardID())))
 
 	consistentQueryEnabled := e.config.EnableConsistentQuery() && e.config.EnableConsistentQueryByDomain(request.GetRequest().GetDomain())
 	if request.GetRequest().GetQueryConsistencyLevel() == types.QueryConsistencyLevelStrong {
 		if !consistentQueryEnabled {
 			return nil, workflow.ErrConsistentQueryNotEnabled
 		}
-		scope.IncCounter(metrics.ConsistentQueryPerShard)
 		shardMetricScope.IncCounter(metrics.ConsistentQueryPerShard)
-		e.logger.SampleInfo("History QueryWorkflow called with QueryConsistencyLevelStrong", e.config.SampleLoggingRate(), tag.WorkflowID(request.GetRequest().Execution.WorkflowID), tag.WorkflowDomainName(request.GetRequest().Domain))
+		e.logger.SampleInfo("History QueryWorkflow called with QueryConsistencyLevelStrong", e.config.SampleLoggingRate(), tag.ShardID(e.shard.GetShardID()), tag.WorkflowID(request.GetRequest().Execution.WorkflowID), tag.WorkflowDomainName(request.GetRequest().Domain))
 	}
 
 	execution := *request.GetRequest().GetExecution()
@@ -1636,6 +1644,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 			IsCron:           len(executionInfo.CronSchedule) > 0,
 			UpdateTime:       common.Int64Ptr(executionInfo.LastUpdatedTimestamp.UnixNano()),
 			SearchAttributes: &types.SearchAttributes{IndexedFields: executionInfo.SearchAttributes},
+			PartitionConfig:  executionInfo.PartitionConfig,
 		},
 	}
 
@@ -1712,6 +1721,9 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 				}
 				if ai.LastWorkerIdentity != "" {
 					p.LastWorkerIdentity = ai.LastWorkerIdentity
+				}
+				if ai.StartedIdentity != "" {
+					p.StartedWorkerIdentity = ai.StartedIdentity
 				}
 			}
 			result.PendingActivities = append(result.PendingActivities, p)
@@ -2599,7 +2611,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 	}
 
 	// Start workflow and signal
-	startRequest, err := getStartRequest(domainID, sRequest)
+	startRequest, err := getStartRequest(domainID, sRequest, signalWithStartRequest.PartitionConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -2995,8 +3007,10 @@ func (e *historyEngineImpl) NotifyNewTransferTasks(
 
 	if len(info.Tasks) > 0 {
 		task := info.Tasks[0]
-		clusterName := e.clusterMetadata.ClusterNameForFailoverVersion(task.GetVersion())
-		e.txProcessor.NotifyNewTask(clusterName, info)
+		clusterName, err := e.clusterMetadata.ClusterNameForFailoverVersion(task.GetVersion())
+		if err == nil {
+			e.txProcessor.NotifyNewTask(clusterName, info)
+		}
 	}
 }
 
@@ -3006,8 +3020,10 @@ func (e *historyEngineImpl) NotifyNewTimerTasks(
 
 	if len(info.Tasks) > 0 {
 		task := info.Tasks[0]
-		clusterName := e.clusterMetadata.ClusterNameForFailoverVersion(task.GetVersion())
-		e.timerProcessor.NotifyNewTask(clusterName, info)
+		clusterName, err := e.clusterMetadata.ClusterNameForFailoverVersion(task.GetVersion())
+		if err == nil {
+			e.timerProcessor.NotifyNewTask(clusterName, info)
+		}
 	}
 }
 
@@ -3274,6 +3290,7 @@ func getScheduleID(
 func getStartRequest(
 	domainID string,
 	request *types.SignalWithStartWorkflowExecutionRequest,
+	partitionConfig map[string]string,
 ) (*types.HistoryStartWorkflowExecutionRequest, error) {
 
 	req := &types.StartWorkflowExecutionRequest{
@@ -3296,7 +3313,7 @@ func getStartRequest(
 		JitterStartSeconds:                  request.JitterStartSeconds,
 	}
 
-	return common.CreateHistoryStartWorkflowRequest(domainID, req, time.Now())
+	return common.CreateHistoryStartWorkflowRequest(domainID, req, time.Now(), partitionConfig)
 }
 
 func (e *historyEngineImpl) applyWorkflowIDReusePolicyForSigWithStart(

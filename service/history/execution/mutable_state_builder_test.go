@@ -97,6 +97,7 @@ func (s *mutableStateSuite) SetupTest() {
 	s.logger = s.mockShard.GetLogger()
 
 	s.mockShard.Resource.DomainCache.EXPECT().GetDomainID(constants.TestDomainName).Return(constants.TestDomainID, nil).AnyTimes()
+	s.mockShard.Resource.DomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(constants.TestLocalDomainEntry, nil).AnyTimes()
 
 	s.msBuilder = newMutableStateBuilder(s.mockShard, s.logger, constants.TestLocalDomainEntry)
 }
@@ -657,6 +658,9 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 	workflowTimeoutSecond := int32(222)
 	decisionTimeoutSecond := int32(11)
 	decisionAttempt := int64(0)
+	partitionConfig := map[string]string{
+		"zone": "dca",
+	}
 
 	eventID := int64(1)
 	workflowStartEvent := &types.HistoryEvent{
@@ -670,6 +674,7 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 			Input:                               nil,
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(workflowTimeoutSecond),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(decisionTimeoutSecond),
+			PartitionConfig:                     partitionConfig,
 		},
 	}
 	eventID++
@@ -860,6 +865,9 @@ func (s *mutableStateSuite) buildWorkflowMutableState() *persistence.WorkflowMut
 	}
 	tl := "testTaskList"
 	failoverVersion := int64(300)
+	partitionConfig := map[string]string{
+		"zone": "phx",
+	}
 
 	info := &persistence.WorkflowExecutionInfo{
 		DomainID:                    domainID,
@@ -878,6 +886,7 @@ func (s *mutableStateSuite) buildWorkflowMutableState() *persistence.WorkflowMut
 		DecisionScheduleID:          common.EmptyEventID,
 		DecisionStartedID:           common.EmptyEventID,
 		DecisionTimeout:             100,
+		PartitionConfig:             partitionConfig,
 	}
 
 	activityInfos := map[int64]*persistence.ActivityInfo{
