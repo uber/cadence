@@ -39,7 +39,7 @@ require (
 	github.com/uber-go/tally v3.3.15+incompatible
 	github.com/uber/cadence-idl v0.0.0-20230525234945-b6f203573446
 	github.com/uber/ringpop-go v0.8.5
-	github.com/uber/tchannel-go v1.22.0
+	github.com/uber/tchannel-go v1.22.2
 	github.com/urfave/cli v1.22.4
 	github.com/valyala/fastjson v1.4.1
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c
@@ -51,7 +51,7 @@ require (
 	go.uber.org/fx v1.13.1
 	go.uber.org/multierr v1.6.0
 	go.uber.org/thriftrw v1.29.2
-	go.uber.org/yarpc v1.58.0
+	go.uber.org/yarpc v1.70.3
 	go.uber.org/zap v1.13.0
 	golang.org/x/net v0.1.0
 	golang.org/x/oauth2 v0.0.0-20220622183110-fd043fe589d2
@@ -69,7 +69,7 @@ require (
 	cloud.google.com/go v0.102.1 // indirect
 	cloud.google.com/go/compute v1.7.0 // indirect
 	cloud.google.com/go/iam v0.3.0 // indirect
-	github.com/BurntSushi/toml v0.3.1 // indirect
+	github.com/BurntSushi/toml v0.4.1 // indirect
 	github.com/anmitsu/go-shlex v0.0.0-20161002113705-648efa622239 // indirect
 	github.com/apache/thrift v0.13.0 // indirect
 	github.com/benbjohnson/clock v0.0.0-20161215174838-7dc76406b6d3 // indirect
@@ -136,6 +136,7 @@ require (
 	go.uber.org/net/metrics v1.3.0 // indirect
 	golang.org/x/crypto v0.0.0-20220214200702-86341886e292 // indirect
 	golang.org/x/exp v0.0.0-20200224162631-6cc2880d07d6 // indirect
+	golang.org/x/exp/typeparams v0.0.0-20220218215828-6cf2b201936e // indirect
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
 	golang.org/x/sys v0.1.0 // indirect
@@ -146,7 +147,7 @@ require (
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
+	honnef.co/go/tools v0.3.2 // indirect
 )
 
 // ringpop-go and tchannel-go depends on older version of thrift, yarpc brings up newer version
