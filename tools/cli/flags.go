@@ -32,6 +32,7 @@ const (
 	FlagDecodingTypes                     = "decoding_types"
 	FlagAddress                           = "address"
 	FlagAddressWithAlias                  = FlagAddress + ", ad"
+	FlagDestinationAddress                = "destination_address"
 	FlagHistoryAddress                    = "history_address"
 	FlagDBType                            = "db_type"
 	FlagDBAddress                         = "db_address"
@@ -42,6 +43,7 @@ const (
 	FlagProtoVersion                      = "protocol_version"
 	FlagDomainID                          = "domain_id"
 	FlagDomain                            = "domain"
+	FlagDestinationDomain                 = "destination_domain" // added  this
 	FlagDomainWithAlias                   = FlagDomain + ", do"
 	FlagShardID                           = "shard_id"
 	FlagShardIDWithAlias                  = FlagShardID + ", sid"
