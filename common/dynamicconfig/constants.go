@@ -1707,12 +1707,7 @@ const (
 	// Default value: false
 	// Allowed filters: N/A
 	EnableESAnalyzer
-	// EnableWatchDog decides whether to enable watchdog system worker
-	// KeyName: system.enableWatchdog
-	// Value type: Bool
-	// Default value: false
-	// Allowed filters: N/A
-	EnableWatchDog
+
 	// EnableStickyQuery is indicates if sticky query should be enabled per domain
 	// KeyName: system.enableStickyQuery
 	// Value type: Bool
@@ -1804,12 +1799,6 @@ const (
 	// Value type: Bool
 	// Default value: false
 	ESAnalyzerEnableAvgDurationBasedChecks
-
-	// CorruptWorkflowWatchdogPause defines if we want to dynamically pause the watchdog workflow
-	// KeyName: worker.CorruptWorkflowWatchdogPause
-	// Value type: bool
-	// Default value: false
-	CorruptWorkflowWatchdogPause
 
 	// Lockdown defines if we want to allow failovers of domains to this cluster
 	// KeyName: system.Lockdown
@@ -3822,11 +3811,6 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		Description:  "EnableESAnalyzer decides whether to enable system workers for processing ElasticSearch Analyzer",
 		DefaultValue: false,
 	},
-	EnableWatchDog: DynamicBool{
-		KeyName:      "system.EnableWatchDog",
-		Description:  "EnableWatchDog decides whether to enable watchdog system worker",
-		DefaultValue: false,
-	},
 	EnableStickyQuery: DynamicBool{
 		KeyName:      "system.enableStickyQuery",
 		Description:  "EnableStickyQuery is indicates if sticky query should be enabled per domain",
@@ -3910,11 +3894,6 @@ var BoolKeys = map[BoolKey]DynamicBool{
 	ESAnalyzerEnableAvgDurationBasedChecks: DynamicBool{
 		KeyName:      "worker.ESAnalyzerEnableAvgDurationBasedChecks",
 		Description:  "ESAnalyzerEnableAvgDurationBasedChecks controls if we want to enable avg duration based task refreshes",
-		DefaultValue: false,
-	},
-	CorruptWorkflowWatchdogPause: DynamicBool{
-		KeyName:      "worker.CorruptWorkflowWatchdogPause",
-		Description:  "CorruptWorkflowWatchdogPause defines if we want to dynamically pause the watchdog workflow",
 		DefaultValue: false,
 	},
 	Lockdown: DynamicBool{
