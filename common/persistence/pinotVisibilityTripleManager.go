@@ -23,8 +23,6 @@ package persistence
 import (
 	"context"
 	"fmt"
-	"reflect"
-	"strings"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -273,90 +271,13 @@ func (v *pinotVisibilityTripleManager) chooseVisibilityManagerForWrite(ctx conte
 	}
 }
 
-func interfaceToMap(in interface{}) map[string]interface{} {
-	v, ok := in.(map[string]interface{})
-	if !ok {
-		panic("interface to map error in ES/Pinot comparator! ")
-	}
-	return v
-}
-
-func compareSearchAttributes(esSearchAttribute interface{}, pinotSearchAttribute interface{}) error {
-	esSearchAttributeList := interfaceToMap(esSearchAttribute)
-	pinotSearchAttributeList := interfaceToMap(pinotSearchAttribute)
-	for key, esValue := range esSearchAttributeList {
-		pinotValue := pinotSearchAttributeList[key]
-		if pinotSearchAttributeList[key] != esValue {
-			return fmt.Errorf(fmt.Sprintf("Comparison Failed: response.%s are not equal. ES value = %s, Pinot value = %s", key, esValue, pinotValue))
-		}
-	}
-
-	return nil
-}
-
-func compareListWorkflowExecutionsResponse(
-	pinotResponse *ListWorkflowExecutionsResponse,
-	esResponse *ListWorkflowExecutionsResponse,
-) (*ListWorkflowExecutionsResponse, error) {
-	esExecutionInfo := esResponse.Executions
-	pinotExecutionInfo := pinotResponse.Executions
-
-	vOfES := reflect.ValueOf(esExecutionInfo)
-	typeOfesExecutionInfo := vOfES.Type()
-	vOfPinot := reflect.ValueOf(pinotExecutionInfo)
-
-	for i := 0; i < vOfES.NumField(); i++ {
-		esFieldName := typeOfesExecutionInfo.Field(i).Name
-		esValue := vOfES.Field(i).Interface()
-
-		// if the value in ES is nil, then we don't need to compare
-		if esValue == nil {
-			continue
-		}
-
-		pinotValue := vOfPinot.Field(i).Interface()
-		if strings.ToLower(esFieldName) == "searchattributes" {
-			err := compareSearchAttributes(esValue, pinotValue)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		if esValue != pinotValue {
-			return nil,
-				fmt.Errorf(fmt.Sprintf("Comparison Failed: response.%s are not equal. ES value = %s, Pinot value = %s", esFieldName, esValue, pinotValue))
-		}
-	}
-
-	return esResponse, nil
-}
-
-func (v *pinotVisibilityTripleManager) comparePinotESListResponse(
-	ESManager VisibilityManager,
-	PinotManager VisibilityManager,
-	ctx context.Context,
-	request *ListWorkflowExecutionsRequest,
-) (*ListWorkflowExecutionsResponse, error) {
-	esResponse, err := ESManager.ListOpenWorkflowExecutions(ctx, request)
-	if err != nil {
-		v.logger.Error(fmt.Sprintf("ListOpenWorkflowExecutions in comparator, ES: %s", err))
-	}
-
-	pinotResponse, err := PinotManager.ListOpenWorkflowExecutions(ctx, request)
-	if err != nil {
-		v.logger.Error(fmt.Sprintf("ListOpenWorkflowExecutions in comparator, Pinot: %s", err))
-	}
-
-	return compareListWorkflowExecutionsResponse(esResponse, pinotResponse)
-}
-
 func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutions(
 	ctx context.Context,
 	request *ListWorkflowExecutionsRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
 	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
 	if manager2 != nil {
-		return v.comparePinotESListResponse(manager, manager2, ctx, request)
+		return comparePinotESListResponse(manager, manager2, ctx, request, v.logger)
 	}
 	return manager.ListOpenWorkflowExecutions(ctx, request)
 }
@@ -367,7 +288,7 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutions(
 ) (*ListWorkflowExecutionsResponse, error) {
 	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
 	if manager2 != nil {
-		return v.comparePinotESListResponse(manager, manager2, ctx, request)
+		return comparePinotESListResponse(manager, manager2, ctx, request, v.logger)
 	}
 	return manager.ListClosedWorkflowExecutions(ctx, request)
 }
@@ -378,7 +299,7 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutionsByType(
 ) (*ListWorkflowExecutionsResponse, error) {
 	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
 	if manager2 != nil {
-		return v.comparePinotESListResponse(manager, manager2, ctx, &request.ListWorkflowExecutionsRequest)
+		return comparePinotESListResponse(manager, manager2, ctx, &request.ListWorkflowExecutionsRequest, v.logger)
 	}
 	return manager.ListOpenWorkflowExecutionsByType(ctx, request)
 }
@@ -389,7 +310,7 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByType(
 ) (*ListWorkflowExecutionsResponse, error) {
 	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
 	if manager2 != nil {
-		return v.comparePinotESListResponse(manager, manager2, ctx, &request.ListWorkflowExecutionsRequest)
+		return comparePinotESListResponse(manager, manager2, ctx, &request.ListWorkflowExecutionsRequest, v.logger)
 	}
 	return manager.ListClosedWorkflowExecutionsByType(ctx, request)
 }
@@ -400,7 +321,7 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutionsByWorkflowID(
 ) (*ListWorkflowExecutionsResponse, error) {
 	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
 	if manager2 != nil {
-		return v.comparePinotESListResponse(manager, manager2, ctx, &request.ListWorkflowExecutionsRequest)
+		return comparePinotESListResponse(manager, manager2, ctx, &request.ListWorkflowExecutionsRequest, v.logger)
 	}
 	return manager.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
 }
@@ -411,7 +332,7 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByWorkflowID(
 ) (*ListWorkflowExecutionsResponse, error) {
 	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
 	if manager2 != nil {
-		return v.comparePinotESListResponse(manager, manager2, ctx, &request.ListWorkflowExecutionsRequest)
+		return comparePinotESListResponse(manager, manager2, ctx, &request.ListWorkflowExecutionsRequest, v.logger)
 	}
 	return manager.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
 }
@@ -422,7 +343,7 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByStatus(
 ) (*ListWorkflowExecutionsResponse, error) {
 	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
 	if manager2 != nil {
-		return v.comparePinotESListResponse(manager, manager2, ctx, &request.ListWorkflowExecutionsRequest)
+		return comparePinotESListResponse(manager, manager2, ctx, &request.ListWorkflowExecutionsRequest, v.logger)
 	}
 	return manager.ListClosedWorkflowExecutionsByStatus(ctx, request)
 }
