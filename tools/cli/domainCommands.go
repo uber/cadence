@@ -755,7 +755,7 @@ func (d *domainCLIImpl) migrateDomain(c *cli.Context) {
 		PrintDateTime:   true,
 	}
 
-	err = Render(c, results, renderOpts)
+	err := Render(c, results, renderOpts)
 	if err != nil {
 		ErrorAndExit("Failed to render", err)
 	}
