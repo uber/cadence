@@ -134,6 +134,7 @@ FRESH_ALL_SRC = $(shell \
 #
 # if you require a fully up-to-date list, e.g. for shell commands, use FRESH_ALL_SRC instead.
 ALL_SRC := $(FRESH_ALL_SRC)
+ALL_BUT_GEN_SRC := $(filter-out ./.gen/%, $(ALL_SRC))
 # as lint ignores generated code, it can use the cached copy in all cases
 LINT_SRC := $(filter-out %_test.go ./.gen/%, $(ALL_SRC))
 
@@ -255,6 +256,7 @@ endef
 
 # codegen is done when thrift and protoc are done
 $(BUILD)/codegen: $(BUILD)/thrift $(BUILD)/protoc | $(BUILD)
+	$Q find .gen -name '*.go' -type f -exec $(BIN)/goimports -local "github.com/uber/cadence" -w {} \;
 	$Q touch $@
 
 THRIFT_FILES := $(shell find idls -name '*.thrift')
@@ -352,10 +354,10 @@ $(BUILD)/lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
 # if either changes, this will need to change.
 MAYBE_TOUCH_COPYRIGHT=
 
-$(BUILD)/fmt: $(ALL_SRC) $(BIN)/goimports | $(BUILD)
+$(BUILD)/fmt: $(ALL_BUT_GEN_SRC) $(BIN)/goimports | $(BUILD)
 	$Q echo "goimports..."
 	$Q # use FRESH_ALL_SRC so it won't miss any generated files produced earlier
-	$Q $(BIN)/goimports -local "github.com/uber/cadence" -w $(FRESH_ALL_SRC)
+	$Q $(BIN)/goimports -local "github.com/uber/cadence" -w $(ALL_BUT_GEN_SRC)
 	$Q touch $@
 	$Q $(MAYBE_TOUCH_COPYRIGHT)
 
