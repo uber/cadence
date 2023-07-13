@@ -388,8 +388,6 @@ func (adh *adminHandlerImpl) MaintainCorruptWorkflow(
 		tag.WorkflowRunID(request.GetExecution().GetRunID()),
 	)
 
-	scope := adh.GetMetricsClient().Scope(metrics.WatchDogScope)
-	tagged := scope.Tagged(metrics.DomainTag(request.Domain))
 	resp := &types.AdminMaintainWorkflowResponse{
 		HistoryDeleted:    false,
 		ExecutionsDeleted: false,
@@ -416,11 +414,6 @@ func (adh *adminHandlerImpl) MaintainCorruptWorkflow(
 				logger.Info(fmt.Sprintf("Will delete workflow because (%v) returned corrupted error (%#v)",
 					functionName, err))
 				resp, err = adh.DeleteWorkflow(ctx, request)
-				if err == nil {
-					tagged.AddCounter(metrics.WatchDogNumDeletedCorruptWorkflows, 1)
-				} else {
-					tagged.AddCounter(metrics.WatchDogNumFailedToDeleteCorruptWorkflows, 1)
-				}
 				return resp, nil
 			}
 		}
