@@ -54,6 +54,8 @@ type (
 		UpdateTimestamp    int64 // unit is unix nano, consistent with start/execution timestamp, same in other requests
 		SearchAttributes   map[string][]byte
 		ShardID            int16
+		ParentWorkflowID string
+		ParentRunID string
 	}
 
 	// RecordWorkflowExecutionClosedRequest is used to add a record of a newly
@@ -77,6 +79,8 @@ type (
 		UpdateTimestamp    int64
 		SearchAttributes   map[string][]byte
 		ShardID            int16
+		ParentWorkflowID string
+		ParentRunID string
 	}
 
 	// RecordWorkflowExecutionUninitializedRequest is used to add a record of a newly uninitialized execution
@@ -106,6 +110,8 @@ type (
 		UpdateTimestamp    int64
 		SearchAttributes   map[string][]byte
 		ShardID            int64
+		ParentWorkflowID string
+		ParentRunID string
 	}
 
 	// ListWorkflowExecutionsRequest is used to list executions in a domain

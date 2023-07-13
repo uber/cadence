@@ -114,6 +114,8 @@ func (v *esVisibilityStore) RecordWorkflowExecutionStarted(
 		0,                                  // will not be used
 		request.UpdateTimestamp.UnixNano(), // will be updated when workflow execution updates
 		int64(request.ShardID),
+		request.ParentWorkflowID,
+		request.ParentRunID,
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -143,6 +145,8 @@ func (v *esVisibilityStore) RecordWorkflowExecutionClosed(
 		request.HistoryLength,
 		request.UpdateTimestamp.UnixNano(),
 		int64(request.ShardID),
+		request.ParentWorkflowID,
+		request.ParentRunID,
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -188,6 +192,8 @@ func (v *esVisibilityStore) UpsertWorkflowExecution(
 		0, // will not be used
 		request.UpdateTimestamp.UnixNano(),
 		request.ShardID,
+		request.ParentWorkflowID,
+		request.ParentRunID,
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -784,6 +790,8 @@ func createVisibilityMessage(
 	historyLength int64, // close execution
 	updateTimeUnixNano int64, // update execution,
 	shardID int64,
+	ParentWorkflowID string,
+	ParentRunID string,
 ) *indexer.Message {
 	msgType := indexer.MessageTypeIndex
 
@@ -796,6 +804,14 @@ func createVisibilityMessage(
 		es.NumClusters:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(int64(NumClusters))},
 		es.UpdateTime:    {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(updateTimeUnixNano)},
 		es.ShardID:       {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(shardID)},
+	}
+
+	if len(ParentWorkflowID) != 0 {
+		fields[es.ParentWorkflowID] = &indexer.Field{Type: &es.FieldTypeString, StringData: common.StringPtr(ParentWorkflowID)}
+	}
+
+	if len(ParentRunID) != 0 {
+		fields[es.ParentRunID] = &indexer.Field{Type: &es.FieldTypeString, StringData: common.StringPtr(ParentRunID)}
 	}
 
 	if len(memo) != 0 {
