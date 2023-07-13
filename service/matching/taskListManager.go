@@ -187,12 +187,12 @@ func newTaskListManager(
 			float64(len(tlMgr.pollerHistory.getPollerInfo(time.Time{}))))
 	})
 	tlMgr.liveness = newLiveness(clock.NewRealTimeSource(), taskListConfig.IdleTasklistCheckInterval(), tlMgr.Stop)
-	tlMgr.taskWriter = newTaskWriter(tlMgr)
-	tlMgr.taskReader = newTaskReader(tlMgr)
 	var isolationGroups []string
 	if tlMgr.isIsolationMatcherEnabled() {
 		isolationGroups = config.AllIsolationGroups
 	}
+	tlMgr.taskWriter = newTaskWriter(tlMgr)
+	tlMgr.taskReader = newTaskReader(tlMgr, isolationGroups)
 	var fwdr *Forwarder
 	if tlMgr.isFowardingAllowed(taskList, *taskListKind) {
 		fwdr = newForwarder(&taskListConfig.forwarderConfig, taskList, *taskListKind, e.matchingClient, isolationGroups)
