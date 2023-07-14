@@ -722,31 +722,21 @@ func (d *domainCLIImpl) describeDomain(
 }
 
 func (d *domainCLIImpl) migrateDomain(c *cli.Context) {
-	var (
-		domainMetaDataCheckRow DomainMigrationRow
-		workflowCheckRow       DomainMigrationRow
-		err                    error
-	)
-
-	wg := sync.WaitGroup{}
-	wg.Add(2)
-
-	go func() {
-		defer wg.Done()
-		domainMetaDataCheckRow = d.migrationDomainMetaDataCheck(c)
-	}()
-
-	go func() {
-		defer wg.Done()
-		workflowCheckRow = d.migrationDomainWorkFlowCheck(c)
-	}()
-
-	wg.Wait()
-
-	results := []DomainMigrationRow{
-		domainMetaDataCheckRow,
-		workflowCheckRow,
+	var results []DomainMigrationRow
+	checkers := []func(*cli.Context) DomainMigrationRow{
+		d.migrationDomainMetaDataCheck,
+		d.migrationDomainWorkFlowCheck,
 	}
+	wg := &sync.WaitGroup{}
+	for i := range checkers {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			result := checkers[i](c)
+			results = append(results, result)
+		}(i)
+	}
+	wg.Wait()
 
 	renderOpts := RenderOptions{
 		DefaultTemplate: newtemplateDomain,
@@ -755,8 +745,7 @@ func (d *domainCLIImpl) migrateDomain(c *cli.Context) {
 		PrintDateTime:   true,
 	}
 
-	err = Render(c, results, renderOpts)
-	if err != nil {
+	if err := Render(c, results, renderOpts); err != nil {
 		ErrorAndExit("Failed to render", err)
 	}
 }
