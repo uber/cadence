@@ -29,6 +29,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 
 	"go.uber.org/yarpc"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
 	"go.uber.org/yarpc/transport/grpc"
 	yarpchttp "go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
@@ -47,18 +48,25 @@ type Factory struct {
 // NewFactory builds a new rpc.Factory
 func NewFactory(logger log.Logger, p Params) *Factory {
 	inbounds := yarpc.Inbounds{}
+
+	transportOptions := []tchannel.TransportOption{
+		tchannel.ServiceName(p.ServiceName),
+		tchannel.ListenAddr(p.TChannelAddress),
+	}
+
+	if p.InboundTLS != nil {
+		transportOptions = append(transportOptions,
+			tchannel.InboundTLSConfiguration(p.InboundTLS),
+			tchannel.InboundTLSMode(yarpctls.Enforced),
+		)
+	}
+
 	// Create TChannel transport
 	// This is here only because ringpop expects tchannel.ChannelTransport,
 	// everywhere else we use regular tchannel.Transport.
-	ch, err := tchannel.NewChannelTransport(
-		tchannel.ServiceName(p.ServiceName),
-		tchannel.ListenAddr(p.TChannelAddress))
+	ch, err := tchannel.NewChannelTransport(transportOptions...)
 	if err != nil {
 		logger.Fatal("Failed to create transport channel", tag.Error(err))
-	}
-	tchannel, err := tchannel.NewTransport(tchannel.ServiceName(p.ServiceName))
-	if err != nil {
-		logger.Fatal("Failed to create tchannel transport", tag.Error(err))
 	}
 
 	inbounds = append(inbounds, ch.NewInbound())
@@ -78,8 +86,13 @@ func NewFactory(logger log.Logger, p Params) *Factory {
 		}
 
 		var inboundOptions []grpc.InboundOption
+
 		if p.InboundTLS != nil {
-			inboundOptions = append(inboundOptions, grpc.InboundCredentials(credentials.NewTLS(p.InboundTLS)))
+			inboundOptions = append(inboundOptions,
+				grpc.InboundCredentials(credentials.NewTLS(p.InboundTLS)),
+				grpc.InboundTLSMode(yarpctls.Enforced),
+			)
+
 		}
 
 		inbounds = append(inbounds, grpcTransport.NewInbound(listener, inboundOptions...))
@@ -99,14 +112,27 @@ func NewFactory(logger log.Logger, p Params) *Factory {
 			})
 		}
 
-		httpinbound := yarpchttp.NewTransport().
-			NewInbound(p.HTTP.Address, yarpchttp.Interceptor(interceptor))
+		inboundOptions := []yarpchttp.InboundOption{
+			yarpchttp.Interceptor(interceptor),
+		}
 
-		inbounds = append(inbounds, httpinbound)
+		if p.InboundTLS != nil {
+			inboundOptions = append(inboundOptions,
+				yarpchttp.InboundTLSConfiguration(p.InboundTLS),
+				yarpchttp.InboundTLSMode(yarpctls.Enforced),
+			)
+		}
+
+		inbounds = append(inbounds, yarpchttp.NewTransport().NewInbound(p.HTTP.Address, inboundOptions...))
 		logger.Info("Listening for HTTP requests", tag.Address(p.HTTP.Address))
 	}
 	// Create outbounds
 	outbounds := yarpc.Outbounds{}
+	tchannel, err := tchannel.NewTransport(tchannel.ServiceName(p.ServiceName))
+	if err != nil {
+		logger.Fatal("Failed to create tchannel transport", tag.Error(err))
+	}
+
 	if p.OutboundsBuilder != nil {
 		outbounds, err = p.OutboundsBuilder.Build(grpcTransport, tchannel)
 		if err != nil {

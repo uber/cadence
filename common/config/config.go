@@ -146,7 +146,7 @@ type (
 		LogLevel string `yaml:"logLevel"`
 		// GRPCMaxMsgSize allows overriding default (4MB) message size for gRPC
 		GRPCMaxMsgSize int `yaml:"grpcMaxMsgSize"`
-		// TLS allows configuring optional TLS/SSL authentication on the server (only on gRPC port)
+		// TLS allows configuring optional TLS/SSL authentication on the server (for all supported transports: gRPC, TChannel, HTTP)
 		TLS TLS `yaml:"tls"`
 		// HTTP keeps configuration for exposed HTTP API
 		HTTP *HTTP `yaml:"http"`
