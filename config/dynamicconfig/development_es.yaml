@@ -39,7 +39,7 @@ frontend.validSearchAttributes:
       Passed: 4
       ShardID: 2
       ParentWorkflowID: 1
-		  ParentRunID: 1
+      ParentRunID: 1
 system.minRetentionDays:
     - value: 0
 history.EnableConsistentQueryByDomain:
