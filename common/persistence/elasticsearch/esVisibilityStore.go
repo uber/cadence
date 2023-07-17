@@ -806,11 +806,8 @@ func createVisibilityMessage(
 		es.ShardID:       {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(shardID)},
 	}
 
-	if len(ParentWorkflowID) != 0 {
-		fields[es.ParentWorkflowID] = &indexer.Field{Type: &es.FieldTypeString, StringData: common.StringPtr(ParentWorkflowID)}
-	}
-
 	if len(ParentRunID) != 0 {
+		fields[es.ParentWorkflowID] = &indexer.Field{Type: &es.FieldTypeString, StringData: common.StringPtr(ParentWorkflowID)}
 		fields[es.ParentRunID] = &indexer.Field{Type: &es.FieldTypeString, StringData: common.StringPtr(ParentRunID)}
 	}
 
