@@ -129,6 +129,8 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionStarted() {
 	memoBytes := []byte(`test bytes`)
 	request.Memo = p.NewDataBlob(memoBytes, common.EncodingTypeThriftRW)
 	request.ShardID = 1234
+	request.ParentWorkflowID = "pwid"
+	request.ParentRunID = "prid"
 
 	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.Message) bool {
 		fields := input.Fields
@@ -145,6 +147,8 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionStarted() {
 		s.Equal((int64)(request.NumClusters), fields[es.NumClusters].GetIntData())
 		s.Equal(indexer.VisibilityOperationRecordStarted, *input.VisibilityOperation)
 		s.Equal((int64)(request.ShardID), fields[es.ShardID].GetIntData())
+		s.Equal(request.ParentWorkflowID, fields[es.ParentWorkflowID].GetStringData())
+		s.Equal(request.ParentRunID, fields[es.ParentRunID].GetStringData())
 		return true
 	})).Return(nil).Once()
 
@@ -195,6 +199,9 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed() {
 	request.NumClusters = 2
 	request.UpdateTimestamp = time.Unix(0, int64(213))
 	request.ShardID = 1234
+	request.ParentWorkflowID = "pwid"
+	request.ParentRunID = "prid"
+	
 	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.Message) bool {
 		fields := input.Fields
 		s.Equal(request.DomainUUID, input.GetDomainID())
@@ -214,6 +221,8 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed() {
 		s.Equal(indexer.VisibilityOperationRecordClosed, *input.VisibilityOperation)
 		s.Equal(request.UpdateTimestamp.UnixNano(), fields[es.UpdateTime].GetIntData())
 		s.Equal((int64)(request.ShardID), fields[es.ShardID].GetIntData())
+		s.Equal(request.ParentWorkflowID, fields[es.ParentWorkflowID].GetStringData())
+		s.Equal(request.ParentRunID, fields[es.ParentRunID].GetStringData())
 		return true
 	})).Return(nil).Once()
 

@@ -287,6 +287,8 @@ func (t *transferStandbyTaskExecutor) processCloseExecution(
 			numClusters,
 			updateTimestamp.UnixNano(),
 			searchAttr,
+			executionInfo.ParentWorkflowID,
+			executionInfo.ParentRunID,
 		)
 	}
 
@@ -509,6 +511,8 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 			visibilityMemo,
 			updateTimestamp.UnixNano(),
 			searchAttr,
+			executionInfo.ParentWorkflowID,
+			executionInfo.ParentRunID,
 		)
 	}
 	return t.upsertWorkflowExecution(
@@ -527,6 +531,8 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 		numClusters,
 		updateTimestamp.UnixNano(),
 		searchAttr,
+		executionInfo.ParentWorkflowID,
+		executionInfo.ParentRunID,
 	)
 
 }
