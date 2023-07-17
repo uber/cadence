@@ -75,6 +75,8 @@ func BenchmarkJSONDecodeToType(b *testing.B) {
 			TaskList:      source.TaskList,
 			IsCron:        source.IsCron,
 			NumClusters:   source.NumClusters,
+			ParentWorkflowID: source.ParentWorkflowID,
+			ParentRunID: source.ParentRunID,
 		}
 		record.CloseTime = time.Unix(0, source.CloseTime)
 		record.Status = thrift.ToWorkflowExecutionCloseStatus(&source.CloseStatus)
@@ -108,6 +110,8 @@ func BenchmarkJSONDecodeToMap(b *testing.B) {
 			IsCron:        source[definition.IsCron].(bool),
 			NumClusters:   source[definition.NumClusters].(int16),
 			Memo:          p.NewDataBlob([]byte(source[definition.Memo].(string)), common.EncodingType(source[definition.Encoding].(string))),
+			ParentWorkflowID: source[definition.ParentWorkflowID].(string),
+			ParentRunID: source[definition.ParentRunID].(string),
 		}
 		record.CloseTime = time.Unix(0, closeTime)
 		status := (shared.WorkflowExecutionCloseStatus)(int32(closeStatus))
