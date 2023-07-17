@@ -143,15 +143,12 @@ func fromV7ToGenericBulkResponseItemMap(m map[string]*elastic.BulkResponseItem) 
 
 func fromV7ToGenericBulkResponseItem(v *elastic.BulkResponseItem) *bulk.GenericBulkResponseItem {
 	return &bulk.GenericBulkResponseItem{
-		Index:         v.Index,
-		Type:          v.Type,
-		ID:            v.Id,
-		Version:       v.Version,
-		Result:        v.Result,
-		SeqNo:         v.SeqNo,
-		PrimaryTerm:   v.PrimaryTerm,
-		Status:        v.Status,
-		ForcedRefresh: v.ForcedRefresh,
+		Index:   v.Index,
+		Type:    v.Type,
+		ID:      v.Id,
+		Version: v.Version,
+		Result:  v.Result,
+		Status:  v.Status,
 	}
 }
 
