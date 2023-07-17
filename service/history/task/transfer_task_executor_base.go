@@ -195,8 +195,8 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 		UpdateTimestamp:    updateTimeUnixNano,
 		SearchAttributes:   searchAttributes,
 		ShardID:            int16(t.shard.GetShardID()),
-		ParentWorkflowID: parentWorkflowID,
-		ParentRunID: parentRunID,
+		ParentWorkflowID:   parentWorkflowID,
+		ParentRunID:        parentRunID,
 	}
 
 	if t.config.EnableRecordWorkflowExecutionUninitialized(domain) {
@@ -266,8 +266,8 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 		SearchAttributes:   searchAttributes,
 		UpdateTimestamp:    updateTimeUnixNano,
 		ShardID:            int64(t.shard.GetShardID()),
-		ParentWorkflowID: parentWorkflowID,
-		ParentRunID: parentRunID,
+		ParentWorkflowID:   parentWorkflowID,
+		ParentRunID:        parentRunID,
 	}
 
 	return t.visibilityMgr.UpsertWorkflowExecution(ctx, request)
@@ -344,8 +344,8 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 			UpdateTimestamp:    updateTimeUnixNano,
 			NumClusters:        numClusters,
 			ShardID:            int16(t.shard.GetShardID()),
-			ParentWorkflowID: parentWorkflowID,
-			ParentRunID: parentRunID,
+			ParentWorkflowID:   parentWorkflowID,
+			ParentRunID:        parentRunID,
 		}); err != nil {
 			return err
 		}
