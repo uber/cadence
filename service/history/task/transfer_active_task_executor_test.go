@@ -1698,8 +1698,8 @@ func createRecordWorkflowExecutionStartedRequest(
 		IsCron:             len(executionInfo.CronSchedule) > 0,
 		NumClusters:        numClusters,
 		UpdateTimestamp:    updateTime.UnixNano(),
-		ParentWorkflowID: parentWorkflowID,
-		ParentRunID: parentRunID,
+		ParentWorkflowID:   parentWorkflowID,
+		ParentRunID:        parentRunID,
 	}
 }
 
@@ -1843,8 +1843,8 @@ func createUpsertWorkflowSearchAttributesRequest(
 		IsCron:             len(executionInfo.CronSchedule) > 0,
 		NumClusters:        numClusters,
 		UpdateTimestamp:    updateTime.UnixNano(),
-		ParentWorkflowID: executionInfo.ParentWorkflowID,
-		ParentRunID: executionInfo.ParentRunID,
+		ParentWorkflowID:   executionInfo.ParentWorkflowID,
+		ParentRunID:        executionInfo.ParentRunID,
 	}
 }
 

@@ -201,7 +201,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed() {
 	request.ShardID = 1234
 	request.ParentWorkflowID = "pwid"
 	request.ParentRunID = "prid"
-	
+
 	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.Message) bool {
 		fields := input.Fields
 		s.Equal(request.DomainUUID, input.GetDomainID())

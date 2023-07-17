@@ -281,7 +281,7 @@ func (c *ESClient) convertSearchResultToVisibilityRecord(hit *client.SearchHit) 
 		NumClusters:      source.NumClusters,
 		SearchAttributes: source.Attr,
 		ParentWorkflowID: source.ParentWorkflowID,
-		ParentRunID: source.ParentRunID,
+		ParentRunID:      source.ParentRunID,
 	}
 	if source.UpdateTime != 0 {
 		record.UpdateTime = time.Unix(0, source.UpdateTime)
