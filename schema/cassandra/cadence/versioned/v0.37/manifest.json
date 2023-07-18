@@ -1,0 +1,6 @@
+{
+  "CurrVersion": "0.37",
+  "MinCompatibleVersion": "0.37",
+  "Description": "Noop schema change",
+  "SchemaUpdateCqlFiles": [],
+}
