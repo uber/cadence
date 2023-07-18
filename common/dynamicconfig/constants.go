@@ -92,8 +92,6 @@ type (
 		String() string
 		Description() string
 		DefaultValue() interface{}
-		// Filters is used to identify what filters a DynamicConfig key may have.
-		// For example, CLI tool uses this to figure out all domain specific configurations for migration validation.
 		Filters() []Filter
 	}
 )
