@@ -21,6 +21,7 @@
 package cli
 
 import (
+	"github.com/uber/cadence/client/admin"
 	"strings"
 
 	"github.com/uber/cadence/tools/common/flag"
@@ -242,6 +243,12 @@ func initializeFrontendClient(
 	context *cli.Context,
 ) frontend.Client {
 	return cFactory.ServerFrontendClient(context)
+}
+
+func initializeFrontendAdminClient(
+	context *cli.Context,
+) admin.Client {
+	return cFactory.ServerAdminClient(context)
 }
 
 func initializeAdminDomainHandler(

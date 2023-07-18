@@ -75,6 +75,10 @@ func newDomainCLI(
 			return c.String(FlagDestinationAddress)
 		}).ServerFrontendClient(c)
 	} else {
+		d.frontendAdminClient = initializeFrontendAdminClient(c)
+		d.destinationAdminClient = newClientFactory(func(c *cli.Context) string {
+			return c.String(FlagDestinationAddress)
+		}).ServerAdminClient(c)
 		d.domainHandler = initializeAdminDomainHandler(c)
 	}
 	return d
@@ -410,27 +414,6 @@ VisibilityArchivalURI: {{.}}{{end}}
 {{with .FailoverInfo}}Graceful failover info:
 {{table .}}{{end}}`
 
-//var newtemplateDomain = `Validation Check:
-//{{- range .}}
-//- {{.ValidationCheck}}: {{.ValidationResult}}
-//  {{- with .ValidationDetails}}
-//    {{- with .CurrentDomainRow}}
-//      Current Domain:
-//        Name: {{if .DomainInfo}}{{.DomainInfo.Name}}{{else}}N/A{{end}}
-//        UUID: {{if .DomainInfo}}{{.DomainInfo.UUID}}{{else}}N/A{{end}}
-//    {{- end}}
-//    {{- with .NewDomainRow}}
-//      New Domain:
-//        Name: {{if .DomainInfo}}{{.DomainInfo.Name}}{{else}}N/A{{end}}
-//        UUID: {{if .DomainInfo}}{{.DomainInfo.UUID}}{{else}}N/A{{end}}
-//    {{- end}}
-//    {{- if .LongRunningWorkFlowNum}}
-//      Long Running Workflow Num: {{.LongRunningWorkFlowNum}}
-//    {{- end}}
-//  {{- end}}
-//{{- end}}
-//`
-
 var newtemplateDomain = `Validation Check: 
 {{- range .}}
 - {{.ValidationCheck}}: {{.ValidationResult}}
@@ -449,11 +432,13 @@ var newtemplateDomain = `Validation Check:
       Long Running Workflow Num: {{.LongRunningWorkFlowNum}}
     {{- end}}
     {{- if .MismatchedDynamicConfig}}
+      {{- range .MismatchedDynamicConfig}}
       Mismatched Dynamic Config:
         Current Response: 
-          Value: {{if .MismatchedDynamicConfig.CurrResp}}{{.MismatchedDynamicConfig.CurrResp.Value}}{{else}}N/A{{end}}
+          Value: {{if .CurrResp}}{{.CurrResp.Value}}{{else}}N/A{{end}}
         New Response: 
-          Value: {{if .MismatchedDynamicConfig.NewResp}}{{.MismatchedDynamicConfig.NewResp.Value}}{{else}}N/A{{end}}
+          Value: {{if .NewResp}}{{.NewResp.Value}}{{else}}N/A{{end}}
+      {{- end}}
     {{- end}}
   {{- end}}
 {{- end}}
@@ -553,7 +538,7 @@ type ValidationDetails struct {
 	CurrentDomainRow        *types.DescribeDomainResponse
 	NewDomainRow            *types.DescribeDomainResponse
 	LongRunningWorkFlowNum  *int
-	MismatchedDynamicConfig MismatchedDynamicConfig
+	MismatchedDynamicConfig *[]MismatchedDynamicConfig
 }
 
 type MismatchedDynamicConfig struct {
@@ -867,7 +852,7 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 				dynamicconfig.DomainFilter(FlagDestinationDomain),
 			})
 
-			currResp, err := d.destinationAdminClient.GetDynamicConfig(context.Background(), currRequest)
+			currResp, err := d.frontendAdminClient.GetDynamicConfig(context.Background(), currRequest)
 			if err != nil {
 				ErrorAndExit("Failed to fetch dynamic config for current domain.", err)
 			}
@@ -888,9 +873,11 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 		ValidationCheck:  "Dynamic Config Check",
 		ValidationResult: check,
 		ValidationDetails: ValidationDetails{
-			MismatchedDynamicConfig: MismatchedDynamicConfig{
-				CurrResp: currResps,
-				NewResp:  newResps,
+			MismatchedDynamicConfig: &[]MismatchedDynamicConfig{
+				{
+					CurrResp: currResps,
+					NewResp:  newResps,
+				},
 			},
 		},
 	}
