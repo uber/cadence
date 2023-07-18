@@ -277,7 +277,7 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutions(
 ) (*ListWorkflowExecutionsResponse, error) {
 	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
 	if manager2 != nil {
-		return comparePinotESListResponse(manager, manager2, ctx, request, v.logger)
+		return comparePinotESListOpenResponse(manager, manager2, ctx, request, v.logger)
 	}
 	return manager.ListOpenWorkflowExecutions(ctx, request)
 }
@@ -288,7 +288,7 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutions(
 ) (*ListWorkflowExecutionsResponse, error) {
 	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
 	if manager2 != nil {
-		return comparePinotESListResponse(manager, manager2, ctx, request, v.logger)
+		return comparePinotESListClosedResponse(manager, manager2, ctx, request, v.logger)
 	}
 	return manager.ListClosedWorkflowExecutions(ctx, request)
 }
@@ -299,7 +299,7 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutionsByType(
 ) (*ListWorkflowExecutionsResponse, error) {
 	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
 	if manager2 != nil {
-		return comparePinotESListResponse(manager, manager2, ctx, &request.ListWorkflowExecutionsRequest, v.logger)
+		return comparePinotESListOpenByTypeResponse(manager, manager2, ctx, request, v.logger)
 	}
 	return manager.ListOpenWorkflowExecutionsByType(ctx, request)
 }
@@ -310,7 +310,7 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByType(
 ) (*ListWorkflowExecutionsResponse, error) {
 	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
 	if manager2 != nil {
-		return comparePinotESListResponse(manager, manager2, ctx, &request.ListWorkflowExecutionsRequest, v.logger)
+		return comparePinotESListClosedByTypeResponse(manager, manager2, ctx, request, v.logger)
 	}
 	return manager.ListClosedWorkflowExecutionsByType(ctx, request)
 }
@@ -321,7 +321,7 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutionsByWorkflowID(
 ) (*ListWorkflowExecutionsResponse, error) {
 	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
 	if manager2 != nil {
-		return comparePinotESListResponse(manager, manager2, ctx, &request.ListWorkflowExecutionsRequest, v.logger)
+		return comparePinotESListOpenByWorkflowIDResponse(manager, manager2, ctx, request, v.logger)
 	}
 	return manager.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
 }
@@ -332,7 +332,7 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByWorkflowID(
 ) (*ListWorkflowExecutionsResponse, error) {
 	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
 	if manager2 != nil {
-		return comparePinotESListResponse(manager, manager2, ctx, &request.ListWorkflowExecutionsRequest, v.logger)
+		return comparePinotESListClosedByWorkflowIDResponse(manager, manager2, ctx, request, v.logger)
 	}
 	return manager.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
 }
@@ -343,7 +343,7 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByStatus(
 ) (*ListWorkflowExecutionsResponse, error) {
 	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
 	if manager2 != nil {
-		return comparePinotESListResponse(manager, manager2, ctx, &request.ListWorkflowExecutionsRequest, v.logger)
+		return comparePinotESListClosedByStatusResponse(manager, manager2, ctx, request, v.logger)
 	}
 	return manager.ListClosedWorkflowExecutionsByStatus(ctx, request)
 }
@@ -352,7 +352,10 @@ func (v *pinotVisibilityTripleManager) GetClosedWorkflowExecution(
 	ctx context.Context,
 	request *GetClosedWorkflowExecutionRequest,
 ) (*GetClosedWorkflowExecutionResponse, error) {
-	manager, _ := v.chooseVisibilityManagerForRead(request.Domain)
+	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
+	if manager2 != nil {
+		return comparePinotESGetClosedByStatusResponse(manager, manager2, ctx, request, v.logger)
+	}
 	return manager.GetClosedWorkflowExecution(ctx, request)
 }
 
@@ -360,7 +363,10 @@ func (v *pinotVisibilityTripleManager) ListWorkflowExecutions(
 	ctx context.Context,
 	request *ListWorkflowExecutionsByQueryRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
-	manager, _ := v.chooseVisibilityManagerForRead(request.Domain)
+	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
+	if manager2 != nil {
+		return comparePinotESListByQueryResponse(manager, manager2, ctx, request, v.logger)
+	}
 	return manager.ListWorkflowExecutions(ctx, request)
 }
 
@@ -368,7 +374,10 @@ func (v *pinotVisibilityTripleManager) ScanWorkflowExecutions(
 	ctx context.Context,
 	request *ListWorkflowExecutionsByQueryRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
-	manager, _ := v.chooseVisibilityManagerForRead(request.Domain)
+	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
+	if manager2 != nil {
+		return comparePinotESScanResponse(manager, manager2, ctx, request, v.logger)
+	}
 	return manager.ScanWorkflowExecutions(ctx, request)
 }
 
@@ -376,7 +385,10 @@ func (v *pinotVisibilityTripleManager) CountWorkflowExecutions(
 	ctx context.Context,
 	request *CountWorkflowExecutionsRequest,
 ) (*CountWorkflowExecutionsResponse, error) {
-	manager, _ := v.chooseVisibilityManagerForRead(request.Domain)
+	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
+	if manager2 != nil {
+		return comparePinotESCountResponse(manager, manager2, ctx, request, v.logger)
+	}
 	return manager.CountWorkflowExecutions(ctx, request)
 }
 
