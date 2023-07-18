@@ -277,7 +277,7 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutions(
 ) (*ListWorkflowExecutionsResponse, error) {
 	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
 	if manager2 != nil {
-		return comparePinotESListOpenResponse(manager, manager2, ctx, request, v.logger)
+		return comparePinotESListOpenResponse(ctx, manager, manager2, request, v.logger)
 	}
 	return manager.ListOpenWorkflowExecutions(ctx, request)
 }
@@ -288,7 +288,7 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutions(
 ) (*ListWorkflowExecutionsResponse, error) {
 	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
 	if manager2 != nil {
-		return comparePinotESListClosedResponse(manager, manager2, ctx, request, v.logger)
+		return comparePinotESListClosedResponse(ctx, manager, manager2, request, v.logger)
 	}
 	return manager.ListClosedWorkflowExecutions(ctx, request)
 }
@@ -299,7 +299,7 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutionsByType(
 ) (*ListWorkflowExecutionsResponse, error) {
 	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
 	if manager2 != nil {
-		return comparePinotESListOpenByTypeResponse(manager, manager2, ctx, request, v.logger)
+		return comparePinotESListOpenByTypeResponse(ctx, manager, manager2, request, v.logger)
 	}
 	return manager.ListOpenWorkflowExecutionsByType(ctx, request)
 }
@@ -310,7 +310,7 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByType(
 ) (*ListWorkflowExecutionsResponse, error) {
 	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
 	if manager2 != nil {
-		return comparePinotESListClosedByTypeResponse(manager, manager2, ctx, request, v.logger)
+		return comparePinotESListClosedByTypeResponse(ctx, manager, manager2, request, v.logger)
 	}
 	return manager.ListClosedWorkflowExecutionsByType(ctx, request)
 }
@@ -321,7 +321,7 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutionsByWorkflowID(
 ) (*ListWorkflowExecutionsResponse, error) {
 	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
 	if manager2 != nil {
-		return comparePinotESListOpenByWorkflowIDResponse(manager, manager2, ctx, request, v.logger)
+		return comparePinotESListOpenByWorkflowIDResponse(ctx, manager, manager2, request, v.logger)
 	}
 	return manager.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
 }
@@ -332,7 +332,7 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByWorkflowID(
 ) (*ListWorkflowExecutionsResponse, error) {
 	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
 	if manager2 != nil {
-		return comparePinotESListClosedByWorkflowIDResponse(manager, manager2, ctx, request, v.logger)
+		return comparePinotESListClosedByWorkflowIDResponse(ctx, manager, manager2, request, v.logger)
 	}
 	return manager.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
 }
@@ -343,7 +343,7 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByStatus(
 ) (*ListWorkflowExecutionsResponse, error) {
 	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
 	if manager2 != nil {
-		return comparePinotESListClosedByStatusResponse(manager, manager2, ctx, request, v.logger)
+		return comparePinotESListClosedByStatusResponse(ctx, manager, manager2, request, v.logger)
 	}
 	return manager.ListClosedWorkflowExecutionsByStatus(ctx, request)
 }
@@ -354,7 +354,7 @@ func (v *pinotVisibilityTripleManager) GetClosedWorkflowExecution(
 ) (*GetClosedWorkflowExecutionResponse, error) {
 	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
 	if manager2 != nil {
-		return comparePinotESGetClosedByStatusResponse(manager, manager2, ctx, request, v.logger)
+		return comparePinotESGetClosedByStatusResponse(ctx, manager, manager2, request, v.logger)
 	}
 	return manager.GetClosedWorkflowExecution(ctx, request)
 }
@@ -365,7 +365,7 @@ func (v *pinotVisibilityTripleManager) ListWorkflowExecutions(
 ) (*ListWorkflowExecutionsResponse, error) {
 	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
 	if manager2 != nil {
-		return comparePinotESListByQueryResponse(manager, manager2, ctx, request, v.logger)
+		return comparePinotESListByQueryResponse(ctx, manager, manager2, request, v.logger)
 	}
 	return manager.ListWorkflowExecutions(ctx, request)
 }
@@ -376,7 +376,7 @@ func (v *pinotVisibilityTripleManager) ScanWorkflowExecutions(
 ) (*ListWorkflowExecutionsResponse, error) {
 	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
 	if manager2 != nil {
-		return comparePinotESScanResponse(manager, manager2, ctx, request, v.logger)
+		return comparePinotESScanResponse(ctx, manager, manager2, request, v.logger)
 	}
 	return manager.ScanWorkflowExecutions(ctx, request)
 }
@@ -387,7 +387,7 @@ func (v *pinotVisibilityTripleManager) CountWorkflowExecutions(
 ) (*CountWorkflowExecutionsResponse, error) {
 	manager, manager2 := v.chooseVisibilityManagerForRead(request.Domain)
 	if manager2 != nil {
-		return comparePinotESCountResponse(manager, manager2, ctx, request, v.logger)
+		return comparePinotESCountResponse(ctx, manager, manager2, request, v.logger)
 	}
 	return manager.CountWorkflowExecutions(ctx, request)
 }
@@ -396,22 +396,22 @@ func (v *pinotVisibilityTripleManager) chooseVisibilityManagerForRead(domain str
 	var visibilityMgr VisibilityManager
 	var visibilityMgr2 VisibilityManager
 	if v.readModeIsBoth(domain) {
-		if v.pinotVisibilityManager != nil {
-			visibilityMgr = v.pinotVisibilityManager
+		if v.esVisibilityManager != nil {
+			visibilityMgr = v.esVisibilityManager
 		} else {
 			visibilityMgr = v.dbVisibilityManager
 			v.logger.Warn("domain is configured to read from advanced visibility(Pinot based) but it's not available, fall back to basic visibility",
 				tag.WorkflowDomainName(domain))
 		}
 
-		if v.esVisibilityManager != nil {
-			visibilityMgr2 = v.esVisibilityManager
+		if v.pinotVisibilityManager != nil {
+			visibilityMgr2 = v.pinotVisibilityManager
 		} else {
 			visibilityMgr2 = v.dbVisibilityManager
 			v.logger.Warn("domain is configured to read from advanced visibility(ElasticSearch based) but it's not available, fall back to basic visibility",
 				tag.WorkflowDomainName(domain))
 		}
-
+		// mgr1 = esManager, mgr2 = pinotManager
 		return visibilityMgr, visibilityMgr2
 	}
 
