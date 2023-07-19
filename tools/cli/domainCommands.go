@@ -25,14 +25,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/client/admin"
-	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/types"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/uber/cadence/client/admin"
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 
 	"github.com/uber/cadence/tools/common/flag"
 

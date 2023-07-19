@@ -23,6 +23,7 @@ package dynamicconfig
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/uber/cadence/common/types"
 )
 

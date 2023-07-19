@@ -21,8 +21,9 @@
 package cli
 
 import (
-	"github.com/uber/cadence/client/admin"
 	"strings"
+
+	"github.com/uber/cadence/client/admin"
 
 	"github.com/uber/cadence/tools/common/flag"
 
