@@ -169,7 +169,7 @@ func ToGetDynamicConfigFilterRequest(configName string, filters []FilterOption) 
 
 		data, err := json.Marshal(entity)
 		if err != nil {
-			fmt.Errorf("could not marshall entity", err)
+			fmt.Errorf("could not marshall entity: %s", err)
 		}
 
 		encodingType := types.EncodingTypeJSON

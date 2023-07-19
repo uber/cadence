@@ -867,6 +867,41 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 			newResps = newResp
 		} else if len(configName.Filters()) == 1 && configName.Filters()[0] == dc.DomainID {
 
+			currentDomainID := d.getDomainID(FlagDomain)
+			if currentDomainID == "" {
+				ErrorAndExit("Failed to get domainID for the current domain.", nil)
+			}
+
+			destinationDomainID := d.getDomainID(FlagDestinationDomain)
+			if destinationDomainID == "" {
+				ErrorAndExit("Failed to get domainID for the destination domain.", nil)
+			}
+
+			currRequest := dynamicconfig.ToGetDynamicConfigFilterRequest("", []dynamicconfig.FilterOption{
+				dynamicconfig.DomainIDFilter(currentDomainID),
+			})
+
+			newRequest := dynamicconfig.ToGetDynamicConfigFilterRequest("", []dynamicconfig.FilterOption{
+				dynamicconfig.DomainIDFilter(destinationDomainID),
+			})
+
+			currResp, err := d.frontendAdminClient.GetDynamicConfig(context.Background(), currRequest)
+			if err != nil {
+				ErrorAndExit("Failed to fetch dynamic config for the current domain.", err)
+			}
+			newResp, err := d.destinationAdminClient.GetDynamicConfig(context.Background(), newRequest)
+			if err != nil {
+				ErrorAndExit("Failed to fetch dynamic config for the destination domain.", err)
+			}
+
+			if currResp.Value != newResp.Value {
+				check = false
+			}
+			currResps = currResp
+			newResps = newResp
+
+		} else {
+			// TODO: Implement for domainName + taskList + taskType filters case
 		}
 	}
 
@@ -884,6 +919,19 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 	}
 
 	return validationRow
+}
+
+func (d *domainCLIImpl) getDomainID(domain string) string {
+	request := &types.DescribeDomainRequest{
+		Name: common.StringPtr(domain),
+	}
+
+	resp, err := d.describeDomain(context.Background(), request)
+	if err != nil {
+		ErrorAndExit("Failed to describe domain.", err)
+	}
+
+	return resp.DomainInfo.GetUUID()
 }
 
 func archivalStatus(c *cli.Context, statusFlagName string) *types.ArchivalStatus {
