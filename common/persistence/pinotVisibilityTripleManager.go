@@ -399,17 +399,16 @@ func (v *pinotVisibilityTripleManager) chooseVisibilityManagerForRead(domain str
 		if v.esVisibilityManager != nil {
 			visibilityMgr = v.esVisibilityManager
 		} else {
-			visibilityMgr = v.dbVisibilityManager
-			v.logger.Warn("domain is configured to read from advanced visibility(Pinot based) but it's not available, fall back to basic visibility",
-				tag.WorkflowDomainName(domain))
+			visibilityMgr = v.pinotVisibilityManager
+			v.logger.Warn("Enable dual read mode failed! Will use Pinot visibility manager. ")
+			return visibilityMgr, nil
 		}
 
 		if v.pinotVisibilityManager != nil {
 			visibilityMgr2 = v.pinotVisibilityManager
 		} else {
-			visibilityMgr2 = v.dbVisibilityManager
-			v.logger.Warn("domain is configured to read from advanced visibility(ElasticSearch based) but it's not available, fall back to basic visibility",
-				tag.WorkflowDomainName(domain))
+			v.logger.Warn("Enable dual read mode failed! Will use ES visibility manager. ")
+			return visibilityMgr, nil
 		}
 		// mgr1 = esManager, mgr2 = pinotManager
 		return visibilityMgr, visibilityMgr2
