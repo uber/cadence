@@ -326,6 +326,9 @@ type Config struct {
 
 	// HostName for machine running the service
 	HostName string
+
+	//TTLBufferdays values for the TTL on workflows.
+	TTLBufferDays dynamicconfig.IntPropertyFn
 }
 
 // New returns new service config with default values
@@ -569,7 +572,8 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, s
 		LargeShardHistoryEventMetricThreshold: dc.GetIntProperty(dynamicconfig.LargeShardHistoryEventMetricThreshold),
 		LargeShardHistoryBlobMetricThreshold:  dc.GetIntProperty(dynamicconfig.LargeShardHistoryBlobMetricThreshold),
 
-		HostName: hostname,
+		HostName:      hostname,
+		TTLBufferDays: dc.GetIntProperty(dynamicconfig.TTLBufferDays),
 	}
 
 	return cfg
