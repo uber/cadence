@@ -420,25 +420,23 @@ var newtemplateDomain = `Validation Check:
   {{- with .ValidationDetails}}
     {{- with .CurrentDomainRow}}
       Current Domain:
-        Name: {{if .DomainInfo}}{{.DomainInfo.Name}}{{else}}N/A{{end}}
-        UUID: {{if .DomainInfo}}{{.DomainInfo.UUID}}{{else}}N/A{{end}}
+        Name: {{.DomainInfo.Name}}
+        UUID: {{.DomainInfo.UUID}}
     {{- end}}
     {{- with .NewDomainRow}}
       New Domain:
-        Name: {{if .DomainInfo}}{{.DomainInfo.Name}}{{else}}N/A{{end}}
-        UUID: {{if .DomainInfo}}{{.DomainInfo.UUID}}{{else}}N/A{{end}}
+        Name: {{.DomainInfo.Name}}
+        UUID: {{.DomainInfo.UUID}}
     {{- end}}
     {{- if .LongRunningWorkFlowNum}}
       Long Running Workflow Num: {{.LongRunningWorkFlowNum}}
     {{- end}}
-    {{- if .MismatchedDynamicConfig}}
-      {{- range .MismatchedDynamicConfig}}
+    {{- range .MismatchedDynamicConfig}}
       Mismatched Dynamic Config:
         Current Response: 
-          Value: {{if .CurrResp}}{{.CurrResp.Value}}{{else}}N/A{{end}}
+          Value: {{.CurrResp.Value}}
         New Response: 
-          Value: {{if .NewResp}}{{.NewResp.Value}}{{else}}N/A{{end}}
-      {{- end}}
+          Value: {{.NewResp.Value}}
     {{- end}}
   {{- end}}
 {{- end}}
@@ -538,7 +536,7 @@ type ValidationDetails struct {
 	CurrentDomainRow        *types.DescribeDomainResponse
 	NewDomainRow            *types.DescribeDomainResponse
 	LongRunningWorkFlowNum  *int
-	MismatchedDynamicConfig *[]MismatchedDynamicConfig
+	MismatchedDynamicConfig []MismatchedDynamicConfig
 }
 
 type MismatchedDynamicConfig struct {
@@ -842,7 +840,7 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 
 	for _, configName := range resp {
 		// Check if the key only has a domain filter
-		if len(configName.Filters()) == 1 && (configName.Filters()[0] == dc.DomainName || configName.Filters()[0] == dc.DomainID) {
+		if len(configName.Filters()) == 1 && configName.Filters()[0] == dc.DomainName {
 			// Use the helper method to get the GetDynamicConfigRequest
 			currRequest := dynamicconfig.ToGetDynamicConfigFilterRequest("", []dynamicconfig.FilterOption{
 				dynamicconfig.DomainFilter(FlagDomain),
@@ -866,6 +864,8 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 			}
 			currResps = currResp
 			newResps = newResp
+		} else if len(configName.Filters()) == 1 && configName.Filters()[0] == dc.DomainID {
+
 		}
 	}
 
@@ -873,7 +873,7 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 		ValidationCheck:  "Dynamic Config Check",
 		ValidationResult: check,
 		ValidationDetails: ValidationDetails{
-			MismatchedDynamicConfig: &[]MismatchedDynamicConfig{
+			MismatchedDynamicConfig: []MismatchedDynamicConfig{
 				{
 					CurrResp: currResps,
 					NewResp:  newResps,
