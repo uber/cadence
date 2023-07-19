@@ -297,12 +297,18 @@ func NewFxMatchingAPIYARPCProcedures() interface{} {
 				Server:      params.Server,
 				AnyResolver: params.AnyResolver,
 			}),
-			ReflectionMeta: reflection.ServerMeta{
-				ServiceName:     "uber.cadence.matching.v1.MatchingAPI",
-				FileDescriptors: yarpcFileDescriptorClosure826e827d3aabf7fc,
-			},
+			ReflectionMeta: MatchingAPIReflectionMeta,
 		}
 	}
+}
+
+// MatchingAPIReflectionMeta is the reflection server metadata
+// required for using the gRPC reflection protocol with YARPC.
+//
+// See https://github.com/grpc/grpc/blob/master/doc/server-reflection.md.
+var MatchingAPIReflectionMeta = reflection.ServerMeta{
+	ServiceName:     "uber.cadence.matching.v1.MatchingAPI",
+	FileDescriptors: yarpcFileDescriptorClosure826e827d3aabf7fc,
 }
 
 type _MatchingAPIYARPCCaller struct {

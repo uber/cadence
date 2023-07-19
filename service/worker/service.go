@@ -49,7 +49,6 @@ import (
 	"github.com/uber/cadence/service/worker/scanner/tasklist"
 	"github.com/uber/cadence/service/worker/scanner/timers"
 	"github.com/uber/cadence/service/worker/shadower"
-	"github.com/uber/cadence/service/worker/watchdog"
 )
 
 type (
@@ -73,7 +72,6 @@ type (
 		ScannerCfg                          *scanner.Config
 		BatcherCfg                          *batcher.Config
 		ESAnalyzerCfg                       *esanalyzer.Config
-		WatchdogConfig                      *watchdog.Config
 		failoverManagerCfg                  *failovermanager.Config
 		ThrottledLogRPS                     dynamicconfig.IntPropertyFn
 		PersistenceGlobalMaxQPS             dynamicconfig.IntPropertyFn
@@ -176,14 +174,10 @@ func NewConfig(params *resource.Params) *Config {
 			ESAnalyzerWorkflowVersionDomains:         dc.GetStringProperty(dynamicconfig.ESAnalyzerWorkflowVersionMetricDomains),
 			ESAnalyzerWorkflowTypeDomains:            dc.GetStringProperty(dynamicconfig.ESAnalyzerWorkflowTypeMetricDomains),
 		},
-		WatchdogConfig: &watchdog.Config{
-			CorruptWorkflowWatchdogPause: dc.GetBoolProperty(dynamicconfig.CorruptWorkflowWatchdogPause),
-		},
 		EnableBatcher:                       dc.GetBoolProperty(dynamicconfig.EnableBatcher),
 		EnableParentClosePolicyWorker:       dc.GetBoolProperty(dynamicconfig.EnableParentClosePolicyWorker),
 		NumParentClosePolicySystemWorkflows: dc.GetIntProperty(dynamicconfig.NumParentClosePolicySystemWorkflows),
 		EnableESAnalyzer:                    dc.GetBoolProperty(dynamicconfig.EnableESAnalyzer),
-		EnableWatchDog:                      dc.GetBoolProperty(dynamicconfig.EnableWatchDog),
 		EnableFailoverManager:               dc.GetBoolProperty(dynamicconfig.EnableFailoverManager),
 		EnableWorkflowShadower:              dc.GetBoolProperty(dynamicconfig.EnableWorkflowShadower),
 		ThrottledLogRPS:                     dc.GetIntProperty(dynamicconfig.WorkerThrottledLogRPS),
@@ -241,9 +235,6 @@ func (s *Service) Start() {
 	}
 	if s.config.EnableESAnalyzer() {
 		s.startESAnalyzer()
-	}
-	if s.config.EnableWatchDog() {
-		s.startWatchDog()
 	}
 	if s.config.EnableFailoverManager() {
 		s.startFailoverManager()
@@ -303,24 +294,6 @@ func (s *Service) startESAnalyzer() {
 
 	if err := analyzer.Start(); err != nil {
 		s.GetLogger().Fatal("error starting esanalyzer", tag.Error(err))
-	}
-}
-
-func (s *Service) startWatchDog() {
-	watchdog := watchdog.New(
-		s.params.PublicClient,
-		s.GetFrontendClient(),
-		s.GetClientBean(),
-		s.GetLogger(),
-		s.GetMetricsClient(),
-		s.params.MetricScope,
-		s.Resource,
-		s.GetDomainCache(),
-		s.config.WatchdogConfig,
-	)
-
-	if err := watchdog.Start(); err != nil {
-		s.GetLogger().Fatal("error starting watchdog", tag.Error(err))
 	}
 }
 
