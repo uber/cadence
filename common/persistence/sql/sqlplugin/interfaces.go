@@ -540,6 +540,8 @@ type (
 		NumClusters      int16
 		UpdateTime       time.Time
 		ShardID          int16
+		ParentWorkflowID string
+		ParentRunID string
 	}
 
 	// VisibilityFilter contains the column names within executions_visibility table that

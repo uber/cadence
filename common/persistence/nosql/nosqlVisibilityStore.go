@@ -82,6 +82,8 @@ func (v *nosqlVisibilityStore) RecordWorkflowExecutionStarted(
 			NumClusters:   request.NumClusters,
 			UpdateTime:    request.UpdateTimestamp,
 			ShardID:       request.ShardID,
+			ParentWorkflowID: request.ParentWorkflowID,
+			ParentRunID: request.ParentRunID,
 		},
 	})
 	if err != nil {
@@ -119,6 +121,9 @@ func (v *nosqlVisibilityStore) RecordWorkflowExecutionClosed(
 			CloseTime:     request.CloseTimestamp,
 			HistoryLength: request.HistoryLength,
 			UpdateTime:    request.UpdateTimestamp,
+
+			ParentWorkflowID: request.ParentWorkflowID,
+			ParentRunID: request.ParentRunID,
 		},
 	})
 
