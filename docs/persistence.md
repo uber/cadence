@@ -209,7 +209,7 @@ This interface is tied to a specific schema i.e. the way data is laid out across
 names themselves are fixed. However, you get the flexibility wrt how you store the data within a table (i.e. column names and
 types are not fixed). The API interface can be found [here](https://github.com/uber/cadence/blob/master/common/persistence/sql/plugins/interfaces.go).
 It's basically a CRUD API for every table in the schema. A sample schema definition for mysql that uses this interface
-can be found [here](https://github.com/uber/cadence/blob/master/schema/mysql/v57/cadence/schema.sql)
+can be found [here](https://github.com/uber/cadence/blob/master/schema/mysql/v8/cadence/schema.sql)
 
 Any database that supports this interface can be plugged in with cadence server. 
 We have implemented Postgres within the repo, and also here is [**an example**](https://github.com/longquanzheng/cadence-extensions/tree/master/cadence-sqlite) to implement any database externally. 
