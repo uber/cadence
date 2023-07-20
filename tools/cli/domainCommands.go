@@ -843,8 +843,15 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	currentDomainID := d.getDomainID(domain, ctx)
-	destinationDomainID := d.getDomainID(newDomain, ctx)
+	currentDomainID := d.getDomainID(ctx, domain)
+	destinationDomainID := d.getDomainID(ctx, newDomain)
+	if currentDomainID == "" {
+		ErrorAndExit("Failed to get domainID for the current domain.", nil)
+	}
+
+	if destinationDomainID == "" {
+		ErrorAndExit("Failed to get domainID for the destination domain.", nil)
+	}
 
 	for _, configKey := range resp {
 		if len(configKey.Filters()) == 1 && configKey.Filters()[0] == dc.DomainName {
@@ -859,11 +866,11 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 
 			currResp, err := d.frontendAdminClient.GetDynamicConfig(ctx, currRequest)
 			if err != nil {
-				fmt.Println("Failed to fetch dynamic config for current domain:", err)
+				currResp = &types.GetDynamicConfigResponse{}
 			}
 			newResp, err := d.destinationAdminClient.GetDynamicConfig(ctx, newRequest)
 			if err != nil {
-				fmt.Println("Failed to fetch dynamic config for current domain:", err)
+				newResp = &types.GetDynamicConfigResponse{}
 			}
 
 			if currResp.Value != newResp.Value {
@@ -875,14 +882,6 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 			}
 
 		} else if len(configKey.Filters()) == 1 && configKey.Filters()[0] == dc.DomainID {
-			if currentDomainID == "" {
-				ErrorAndExit("Failed to get domainID for the current domain.", nil)
-			}
-
-			if destinationDomainID == "" {
-				ErrorAndExit("Failed to get domainID for the destination domain.", nil)
-			}
-
 			currRequest := dynamicconfig.ToGetDynamicConfigFilterRequest(configKey.String(), []dynamicconfig.FilterOption{
 				dynamicconfig.DomainIDFilter(currentDomainID),
 			})
@@ -924,7 +923,7 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 	return validationRow
 }
 
-func (d *domainCLIImpl) getDomainID(domain string, c context.Context) string {
+func (d *domainCLIImpl) getDomainID(c context.Context, domain string) string {
 	request := &types.DescribeDomainRequest{
 		Name: &domain,
 	}
