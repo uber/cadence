@@ -743,6 +743,7 @@ func (d *domainCLIImpl) describeDomain(
 	}
 
 	return d.domainHandler.DescribeDomain(ctx, request)
+
 }
 
 func (d *domainCLIImpl) migrateDomain(c *cli.Context) {
@@ -832,73 +833,83 @@ func (d *domainCLIImpl) migrationDomainWorkFlowCheck(c *cli.Context) DomainMigra
 }
 
 func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrationRow {
+	var mismatchedConfigs []MismatchedDynamicConfig
 	check := true
 
 	resp := dynamicconfig.ListAllProductionKeys()
 
-	var currResps *types.GetDynamicConfigResponse
-	var newResps *types.GetDynamicConfigResponse
+	domain := c.GlobalString(FlagDomain)
+	newDomain := c.String(FlagDestinationDomain)
+	ctx, cancel := newContext(c)
+	defer cancel()
 
 	for _, configName := range resp {
-		// Check if the key only has a domain filter
 		if len(configName.Filters()) == 1 && configName.Filters()[0] == dc.DomainName {
 			// Use the helper method to get the GetDynamicConfigRequest
-			currRequest := dynamicconfig.ToGetDynamicConfigFilterRequest("", []dynamicconfig.FilterOption{
-				dynamicconfig.DomainFilter(FlagDomain),
+			currRequest := dynamicconfig.ToGetDynamicConfigFilterRequest(configName.String(), []dynamicconfig.FilterOption{
+				dynamicconfig.DomainFilter(domain),
 			})
 
-			newRequest := dynamicconfig.ToGetDynamicConfigFilterRequest("", []dynamicconfig.FilterOption{
-				dynamicconfig.DomainFilter(FlagDestinationDomain),
+			newRequest := dynamicconfig.ToGetDynamicConfigFilterRequest(configName.String(), []dynamicconfig.FilterOption{
+				dynamicconfig.DomainFilter(newDomain),
 			})
 
-			currResp, err := d.frontendAdminClient.GetDynamicConfig(context.Background(), currRequest)
+			currResp, err := d.frontendAdminClient.GetDynamicConfig(ctx, currRequest)
 			if err != nil {
-				ErrorAndExit("Failed to fetch dynamic config for current domain.", err)
+				fmt.Println("Failed to fetch dynamic config for current domain:", err)
 			}
-			newResp, err := d.destinationAdminClient.GetDynamicConfig(context.Background(), newRequest)
+			newResp, err := d.destinationAdminClient.GetDynamicConfig(ctx, newRequest)
 			if err != nil {
-				ErrorAndExit("Failed to fetch dynamic config for destination domain.", err)
+				fmt.Println("Failed to fetch dynamic config for current domain:", err)
 			}
 
 			if currResp.Value != newResp.Value {
 				check = false
+				mismatchedConfig := MismatchedDynamicConfig{
+					CurrResp: currResp,
+					NewResp:  newResp,
+				}
+				mismatchedConfigs = append(mismatchedConfigs, mismatchedConfig)
 			}
-			currResps = currResp
-			newResps = newResp
+
 		} else if len(configName.Filters()) == 1 && configName.Filters()[0] == dc.DomainID {
 
-			currentDomainID := d.getDomainID(FlagDomain)
+			currentDomainID := d.getDomainID(domain, ctx)
 			if currentDomainID == "" {
-				ErrorAndExit("Failed to get domainID for the current domain.", nil)
+				fmt.Println("Failed to get domainID for the current domain.")
+
 			}
 
-			destinationDomainID := d.getDomainID(FlagDestinationDomain)
+			destinationDomainID := d.getDomainID(newDomain, ctx)
 			if destinationDomainID == "" {
-				ErrorAndExit("Failed to get domainID for the destination domain.", nil)
+				fmt.Println("Failed to get domainID for the destination domain.")
 			}
 
-			currRequest := dynamicconfig.ToGetDynamicConfigFilterRequest("", []dynamicconfig.FilterOption{
+			currRequest := dynamicconfig.ToGetDynamicConfigFilterRequest(configName.String(), []dynamicconfig.FilterOption{
 				dynamicconfig.DomainIDFilter(currentDomainID),
 			})
 
-			newRequest := dynamicconfig.ToGetDynamicConfigFilterRequest("", []dynamicconfig.FilterOption{
+			newRequest := dynamicconfig.ToGetDynamicConfigFilterRequest(configName.String(), []dynamicconfig.FilterOption{
 				dynamicconfig.DomainIDFilter(destinationDomainID),
 			})
 
-			currResp, err := d.frontendAdminClient.GetDynamicConfig(context.Background(), currRequest)
+			currResp, err := d.frontendAdminClient.GetDynamicConfig(ctx, currRequest)
 			if err != nil {
-				ErrorAndExit("Failed to fetch dynamic config for the current domain.", err)
+				fmt.Println("Failed to fetch dynamic config for the current domain.")
 			}
-			newResp, err := d.destinationAdminClient.GetDynamicConfig(context.Background(), newRequest)
+			newResp, err := d.destinationAdminClient.GetDynamicConfig(ctx, newRequest)
 			if err != nil {
-				ErrorAndExit("Failed to fetch dynamic config for the destination domain.", err)
+				fmt.Println("Failed to fetch dynamic config for the destination domain.")
 			}
 
 			if currResp.Value != newResp.Value {
 				check = false
+				mismatchedConfig := MismatchedDynamicConfig{
+					CurrResp: currResp,
+					NewResp:  newResp,
+				}
+				mismatchedConfigs = append(mismatchedConfigs, mismatchedConfig)
 			}
-			currResps = currResp
-			newResps = newResp
 
 		} else {
 			// TODO: Implement for domainName + taskList + taskType filters case
@@ -909,24 +920,19 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 		ValidationCheck:  "Dynamic Config Check",
 		ValidationResult: check,
 		ValidationDetails: ValidationDetails{
-			MismatchedDynamicConfig: []MismatchedDynamicConfig{
-				{
-					CurrResp: currResps,
-					NewResp:  newResps,
-				},
-			},
+			MismatchedDynamicConfig: mismatchedConfigs,
 		},
 	}
 
 	return validationRow
 }
 
-func (d *domainCLIImpl) getDomainID(domain string) string {
+func (d *domainCLIImpl) getDomainID(domain string, c context.Context) string {
 	request := &types.DescribeDomainRequest{
-		Name: common.StringPtr(domain),
+		Name: &domain,
 	}
 
-	resp, err := d.describeDomain(context.Background(), request)
+	resp, err := d.describeDomain(c, request)
 	if err != nil {
 		ErrorAndExit("Failed to describe domain.", err)
 	}
