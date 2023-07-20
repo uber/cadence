@@ -399,14 +399,20 @@ func (v *pinotVisibilityTripleManager) chooseVisibilityManagerForRead(domain str
 		if v.esVisibilityManager != nil {
 			visibilityMgr = v.esVisibilityManager
 		} else {
-			visibilityMgr = v.pinotVisibilityManager
-			v.logger.Warn("Enable dual read mode failed! Will use Pinot visibility manager. ")
+			if v.pinotVisibilityManager != nil {
+				visibilityMgr = v.pinotVisibilityManager
+				v.logger.Warn("Enable dual read mode failed! Will use Pinot visibility manager. ")
+			} else {
+				visibilityMgr = v.dbVisibilityManager
+				v.logger.Warn("Enable dual read mode failed! Will use db visibility manager. ")
+			}
 			return visibilityMgr, nil
 		}
 
 		if v.pinotVisibilityManager != nil {
 			visibilityMgr2 = v.pinotVisibilityManager
 		} else {
+			// es visibility manager must be not nil here
 			v.logger.Warn("Enable dual read mode failed! Will use ES visibility manager. ")
 			return visibilityMgr, nil
 		}
