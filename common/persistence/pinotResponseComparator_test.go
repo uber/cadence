@@ -53,40 +53,39 @@ func TestInterfaceToMap(t *testing.T) {
 	tests := map[string]struct {
 		input          interface{}
 		expectedResult map[string][]byte
+		expectedError  error
 	}{
 		"Case1: nil input case": {
 			input:          nil,
 			expectedResult: map[string][]byte{},
+			expectedError:  nil,
 		},
 		"Case2: empty input case": {
 			input:          "",
 			expectedResult: map[string][]byte{},
+			expectedError:  nil,
 		},
 		"Case3: normal input case": {
 			input:          transferMap(testSearchAttributes1),
 			expectedResult: transferMap(testSearchAttributes1),
+			expectedError:  nil,
+		},
+		"Case4: error input case": {
+			input:          0,
+			expectedResult: map[string][]byte{},
+			expectedError:  fmt.Errorf("interface to map error in ES/Pinot comparator: 0"),
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			assert.NotPanics(t, func() {
-				actualResult := interfaceToMap(test.input)
+				actualResult, actualError := interfaceToMap(test.input)
 				assert.Equal(t, test.expectedResult, actualResult)
+				assert.Equal(t, test.expectedError, actualError)
 			})
 		})
 	}
-
-	// Case4: panic case
-	assert.Panics(t, func() {
-		interfaceToMap(0)
-	})
-	assert.Panics(t, func() {
-		interfaceToMap("0")
-	})
-	assert.Panics(t, func() {
-		interfaceToMap(true)
-	})
 }
 
 func TestCompareSearchAttributes(t *testing.T) {
@@ -114,6 +113,16 @@ func TestCompareSearchAttributes(t *testing.T) {
 			pinotInput:     &types.SearchAttributes{IndexedFields: transferMap(testSearchAttributes3)},
 			esInput:        &types.SearchAttributes{IndexedFields: transferMap(testSearchAttributes2)},
 			expectedResult: fmt.Errorf(fmt.Sprintf("Comparison Failed: response.%s are not equal. ES value = \"%s\", Pinot value = %s", "TestAttr1", "val2", "")),
+		},
+		"Case5: error input case1": {
+			pinotInput:     0,
+			esInput:        &types.SearchAttributes{IndexedFields: transferMap(testSearchAttributes2)},
+			expectedResult: fmt.Errorf(fmt.Sprintf("interface is not a pinot SearchAttributes! ")),
+		},
+		"Case6: error input case2": {
+			pinotInput:     &types.SearchAttributes{IndexedFields: transferMap(testSearchAttributes2)},
+			esInput:        0,
+			expectedResult: fmt.Errorf(fmt.Sprintf("interface is not an ES SearchAttributes! ")),
 		},
 	}
 
@@ -153,6 +162,22 @@ func TestCompareExecutions(t *testing.T) {
 				RunID:      testRunID,
 			}, expectedResult: fmt.Errorf(fmt.Sprintf("Comparison Failed: Execution.RunID are not equal. ES value = test-run-id, Pinot value = testRunID")),
 		},
+		"Case3: error input case1": {
+			pinotInput: 0,
+			esInput: &types.WorkflowExecution{
+				WorkflowID: testWorkflowID,
+				RunID:      "testRunID",
+			},
+			expectedResult: fmt.Errorf(fmt.Sprintf("interface is not a pinot WorkflowExecution! ")),
+		},
+		"Case4: error input case2": {
+			pinotInput: &types.WorkflowExecution{
+				WorkflowID: testWorkflowID,
+				RunID:      "testRunID",
+			},
+			esInput:        0,
+			expectedResult: fmt.Errorf(fmt.Sprintf("interface is not an ES WorkflowExecution! ")),
+		},
 	}
 
 	for name, test := range tests {
@@ -180,6 +205,16 @@ func TestCompareType(t *testing.T) {
 			pinotInput:     &types.WorkflowType{Name: "testWorkflowType"},
 			esInput:        &types.WorkflowType{Name: testWorkflowType},
 			expectedResult: fmt.Errorf("Comparison Failed: WorkflowTypes are not equal. ES value = test-wf-type, Pinot value = testWorkflowType"),
+		},
+		"Case3: error input case1": {
+			pinotInput:     0,
+			esInput:        &types.WorkflowType{Name: testWorkflowType},
+			expectedResult: fmt.Errorf(fmt.Sprintf("interface is not a pinot WorkflowType! ")),
+		},
+		"Case4: error input case2": {
+			pinotInput:     &types.WorkflowType{Name: testWorkflowType},
+			esInput:        0,
+			expectedResult: fmt.Errorf(fmt.Sprintf("interface is not an ES WorkflowType! ")),
 		},
 	}
 

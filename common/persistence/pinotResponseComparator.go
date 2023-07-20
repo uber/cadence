@@ -35,32 +35,39 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-func interfaceToMap(in interface{}) map[string][]byte {
+func interfaceToMap(in interface{}) (map[string][]byte, error) {
 	if in == nil || in == "" {
-		return map[string][]byte{}
+		return map[string][]byte{}, nil
 	}
 
 	v, ok := in.(map[string][]byte)
 	if !ok {
-		panic(fmt.Sprintf("interface to map error in ES/Pinot comparator: %#v", in))
+		return map[string][]byte{}, fmt.Errorf(fmt.Sprintf("interface to map error in ES/Pinot comparator: %#v", in))
 	}
 
-	return v
+	return v, nil
 }
 
 func compareSearchAttributes(esSearchAttribute interface{}, pinotSearchAttribute interface{}) error {
 	esAttr, ok := esSearchAttribute.(*types.SearchAttributes)
 	if !ok {
-		panic("interface is not a SearchAttributes! ")
+		return fmt.Errorf("interface is not an ES SearchAttributes! ")
 	}
 
 	pinotAttr, ok := pinotSearchAttribute.(*types.SearchAttributes)
 	if !ok {
-		panic("interface is not a SearchAttributes! ")
+		return fmt.Errorf("interface is not a pinot SearchAttributes! ")
 	}
 
-	esSearchAttributeList := interfaceToMap(esAttr.GetIndexedFields())
-	pinotSearchAttributeList := interfaceToMap(pinotAttr.GetIndexedFields())
+	esSearchAttributeList, err := interfaceToMap(esAttr.GetIndexedFields())
+	if err != nil {
+		return err
+	}
+	pinotSearchAttributeList, err := interfaceToMap(pinotAttr.GetIndexedFields())
+	if err != nil {
+		return err
+	}
+
 	for key, esValue := range esSearchAttributeList { // length(esAttribute) <= length(pinotAttribute)
 		pinotValue := pinotSearchAttributeList[key]
 		if !bytes.Equal(esValue, pinotValue) {
@@ -74,12 +81,12 @@ func compareSearchAttributes(esSearchAttribute interface{}, pinotSearchAttribute
 func compareExecutions(esInput interface{}, pinotInput interface{}) error {
 	esExecution, ok := esInput.(*types.WorkflowExecution)
 	if !ok {
-		panic("interface is not a WorkflowExecution! ")
+		return fmt.Errorf("interface is not an ES WorkflowExecution! ")
 	}
 
 	pinotExecution, ok := pinotInput.(*types.WorkflowExecution)
 	if !ok {
-		panic("interface is not a WorkflowExecution! ")
+		return fmt.Errorf("interface is not a pinot WorkflowExecution! ")
 	}
 
 	if esExecution.GetWorkflowID() != pinotExecution.GetWorkflowID() {
@@ -96,12 +103,12 @@ func compareExecutions(esInput interface{}, pinotInput interface{}) error {
 func compareType(esInput interface{}, pinotInput interface{}) error {
 	esType, ok := esInput.(*types.WorkflowType)
 	if !ok {
-		panic("interface is not a WorkflowType! ")
+		return fmt.Errorf("interface is not an ES WorkflowType! ")
 	}
 
 	pinotType, ok := pinotInput.(*types.WorkflowType)
 	if !ok {
-		panic("interface is not a WorkflowType! ")
+		return fmt.Errorf("interface is not a pinot WorkflowType! ")
 	}
 
 	if esType.GetName() != pinotType.GetName() {
@@ -114,12 +121,12 @@ func compareType(esInput interface{}, pinotInput interface{}) error {
 func compareCloseStatus(esInput interface{}, pinotInput interface{}) error {
 	esStatus, ok := esInput.(*types.WorkflowExecutionCloseStatus)
 	if !ok {
-		panic("interface is not a WorkflowExecutionCloseStatus! ")
+		return fmt.Errorf("interface is not an ES WorkflowExecutionCloseStatus! ")
 	}
 
 	pinotStatus, ok := pinotInput.(*types.WorkflowExecutionCloseStatus)
 	if !ok {
-		panic("interface is not a WorkflowExecutionCloseStatus! ")
+		return fmt.Errorf("interface is not a pinot WorkflowExecutionCloseStatus! ")
 	}
 
 	if esStatus != pinotStatus {
