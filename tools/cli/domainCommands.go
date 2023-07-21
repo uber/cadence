@@ -31,6 +31,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/uber/cadence/client/admin"
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/types"
+
 	"github.com/uber/cadence/tools/common/flag"
 
 	"github.com/urfave/cli"
@@ -38,7 +42,7 @@ import (
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/domain"
-	"github.com/uber/cadence/common/types"
+	dc "github.com/uber/cadence/common/dynamicconfig"
 )
 
 var (
@@ -51,6 +55,9 @@ type (
 		frontendClient frontend.Client
 		// used by migration command to make RPC call to frontend service of the destination domain
 		destinationClient frontend.Client
+
+		frontendAdminClient    admin.Client
+		destinationAdminClient admin.Client
 
 		// act as admin to modify domain in DB directly
 		domainHandler domain.Handler
@@ -69,6 +76,10 @@ func newDomainCLI(
 			return c.String(FlagDestinationAddress)
 		}).ServerFrontendClient(c)
 	} else {
+		d.frontendAdminClient = initializeFrontendAdminClient(c)
+		d.destinationAdminClient = newClientFactory(func(c *cli.Context) string {
+			return c.String(FlagDestinationAddress)
+		}).ServerAdminClient(c)
 		d.domainHandler = initializeAdminDomainHandler(c)
 	}
 	return d
@@ -410,16 +421,23 @@ var newtemplateDomain = `Validation Check:
   {{- with .ValidationDetails}}
     {{- with .CurrentDomainRow}}
       Current Domain:
-        Name: {{if .DomainInfo}}{{.DomainInfo.Name}}{{else}}N/A{{end}}
-        UUID: {{if .DomainInfo}}{{.DomainInfo.UUID}}{{else}}N/A{{end}}
+        Name: {{.DomainInfo.Name}}
+        UUID: {{.DomainInfo.UUID}}
     {{- end}}
     {{- with .NewDomainRow}}
       New Domain:
-        Name: {{if .DomainInfo}}{{.DomainInfo.Name}}{{else}}N/A{{end}}
-        UUID: {{if .DomainInfo}}{{.DomainInfo.UUID}}{{else}}N/A{{end}}
+        Name: {{.DomainInfo.Name}}
+        UUID: {{.DomainInfo.UUID}}
     {{- end}}
     {{- if .LongRunningWorkFlowNum}}
       Long Running Workflow Num: {{.LongRunningWorkFlowNum}}
+    {{- end}}
+    {{- range .MismatchedDynamicConfig}}
+      Mismatched Dynamic Config:
+        Current Response: 
+          Value: {{.CurrResp.Value}}
+        New Response: 
+          Value: {{.NewResp.Value}}
     {{- end}}
   {{- end}}
 {{- end}}
@@ -516,9 +534,15 @@ type DomainMigrationRow struct {
 }
 
 type ValidationDetails struct {
-	CurrentDomainRow       *types.DescribeDomainResponse
-	NewDomainRow           *types.DescribeDomainResponse
-	LongRunningWorkFlowNum *int
+	CurrentDomainRow        *types.DescribeDomainResponse
+	NewDomainRow            *types.DescribeDomainResponse
+	LongRunningWorkFlowNum  *int
+	MismatchedDynamicConfig []MismatchedDynamicConfig
+}
+
+type MismatchedDynamicConfig struct {
+	CurrResp *types.GetDynamicConfigResponse
+	NewResp  *types.GetDynamicConfigResponse
 }
 
 func newDomainRow(domain *types.DescribeDomainResponse) DomainRow {
@@ -805,6 +829,111 @@ func (d *domainCLIImpl) migrationDomainWorkFlowCheck(c *cli.Context) DomainMigra
 			LongRunningWorkFlowNum: &countWorkFlows,
 		},
 	}
+}
+
+func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrationRow {
+	var mismatchedConfigs []MismatchedDynamicConfig
+	check := true
+
+	resp := dynamicconfig.ListAllProductionKeys()
+
+	domain := c.GlobalString(FlagDomain)
+	newDomain := c.String(FlagDestinationDomain)
+
+	ctx, cancel := newContext(c)
+	defer cancel()
+
+	currentDomainID := d.getDomainID(ctx, domain)
+	destinationDomainID := d.getDomainID(ctx, newDomain)
+	if currentDomainID == "" {
+		ErrorAndExit("Failed to get domainID for the current domain.", nil)
+	}
+
+	if destinationDomainID == "" {
+		ErrorAndExit("Failed to get domainID for the destination domain.", nil)
+	}
+
+	for _, configKey := range resp {
+		if len(configKey.Filters()) == 1 && configKey.Filters()[0] == dc.DomainName {
+			// Use the helper method to get the GetDynamicConfigRequest
+			currRequest := dynamicconfig.ToGetDynamicConfigFilterRequest(configKey.String(), []dynamicconfig.FilterOption{
+				dynamicconfig.DomainFilter(domain),
+			})
+
+			newRequest := dynamicconfig.ToGetDynamicConfigFilterRequest(configKey.String(), []dynamicconfig.FilterOption{
+				dynamicconfig.DomainFilter(newDomain),
+			})
+
+			currResp, err := d.frontendAdminClient.GetDynamicConfig(ctx, currRequest)
+			if err != nil {
+				currResp = &types.GetDynamicConfigResponse{}
+			}
+			newResp, err := d.destinationAdminClient.GetDynamicConfig(ctx, newRequest)
+			if err != nil {
+				newResp = &types.GetDynamicConfigResponse{}
+			}
+
+			if currResp.Value != newResp.Value {
+				check = false
+				mismatchedConfigs = append(mismatchedConfigs, MismatchedDynamicConfig{
+					CurrResp: currResp,
+					NewResp:  newResp,
+				})
+			}
+
+		} else if len(configKey.Filters()) == 1 && configKey.Filters()[0] == dc.DomainID {
+			currRequest := dynamicconfig.ToGetDynamicConfigFilterRequest(configKey.String(), []dynamicconfig.FilterOption{
+				dynamicconfig.DomainIDFilter(currentDomainID),
+			})
+
+			newRequest := dynamicconfig.ToGetDynamicConfigFilterRequest(configKey.String(), []dynamicconfig.FilterOption{
+				dynamicconfig.DomainIDFilter(destinationDomainID),
+			})
+
+			currResp, err := d.frontendAdminClient.GetDynamicConfig(ctx, currRequest)
+			if err != nil {
+				currResp = &types.GetDynamicConfigResponse{}
+			}
+			newResp, err := d.destinationAdminClient.GetDynamicConfig(ctx, newRequest)
+			if err != nil {
+				newResp = &types.GetDynamicConfigResponse{}
+			}
+
+			if currResp.Value != newResp.Value {
+				check = false
+				mismatchedConfigs = append(mismatchedConfigs, MismatchedDynamicConfig{
+					CurrResp: currResp,
+					NewResp:  newResp,
+				})
+			}
+
+		} else {
+			// TODO: Implement for domainName + taskList + taskType filters case
+		}
+	}
+
+	validationRow := DomainMigrationRow{
+		ValidationCheck:  "Dynamic Config Check",
+		ValidationResult: check,
+		ValidationDetails: ValidationDetails{
+			MismatchedDynamicConfig: mismatchedConfigs,
+		},
+	}
+
+	return validationRow
+}
+
+func (d *domainCLIImpl) getDomainID(c context.Context, domain string) string {
+	request := &types.DescribeDomainRequest{
+		Name: &domain,
+	}
+
+	resp, err := d.describeDomain(c, request)
+	if err != nil {
+		ErrorAndExit("Failed to describe domain.", err)
+	}
+
+	return resp.DomainInfo.GetUUID()
 }
 
 func archivalStatus(c *cli.Context, statusFlagName string) *types.ArchivalStatus {
