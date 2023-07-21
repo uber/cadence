@@ -1,0 +1,9 @@
+{
+    "CurrVersion": "0.9",
+    "MinCompatibleVersion": "0.9",
+    "Description": "add parent_workflow_id field to visibility; add parent_run_id field to visibility",
+    "SchemaUpdateCqlFiles": [
+      "parent_workflow_id.cql",
+      "parent_run_id.cql"
+    ]
+  }

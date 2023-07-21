@@ -13,6 +13,8 @@ CREATE TABLE open_executions (
   num_clusters         int,
   update_time          timestamp,
   shard_id             int,
+  parent_workflow_id   text,
+  parent_run_id        text,
   PRIMARY KEY  ((domain_id, domain_partition), start_time, run_id)
 ) WITH CLUSTERING ORDER BY (start_time DESC)
   AND COMPACTION = {
@@ -43,6 +45,8 @@ CREATE TABLE closed_executions (
   num_clusters         int,
   update_time          timestamp,
   shard_id             int,
+  parent_workflow_id   text,
+  parent_run_id        text,
   PRIMARY KEY  ((domain_id, domain_partition), start_time, run_id)
 ) WITH CLUSTERING ORDER BY (start_time DESC)
   AND COMPACTION = {
@@ -74,6 +78,8 @@ CREATE TABLE closed_executions_v2 (
   num_clusters         int,
   update_time          timestamp,
   shard_id             int,
+  parent_workflow_id   text,
+  parent_run_id        text,
   PRIMARY KEY  ((domain_id, domain_partition), close_time, run_id)
 ) WITH CLUSTERING ORDER BY (close_time DESC)
   AND COMPACTION = {
