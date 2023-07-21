@@ -855,6 +855,8 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 	}
 
 	for _, configKey := range resp {
+		var mismatchedConfig MismatchedDynamicConfig
+
 		if len(configKey.Filters()) == 1 && configKey.Filters()[0] == dc.DomainName {
 			// Use the helper method to get the GetDynamicConfigRequest
 			currRequest := dynamicconfig.ToGetDynamicConfigFilterRequest(configKey.String(), []dynamicconfig.FilterOption{
@@ -876,11 +878,9 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 
 			if currResp.Value != newResp.Value {
 				check = false
-				mismatchedConfigs = append(mismatchedConfigs, MismatchedDynamicConfig{
-					Key:        configKey,
-					CurrValues: []*types.DynamicConfigValue{},
-					NewValues:  []*types.DynamicConfigValue{},
-				})
+				mismatchedConfig = MismatchedDynamicConfig{
+					Key: configKey,
+				}
 			}
 
 		} else if len(configKey.Filters()) == 1 && configKey.Filters()[0] == dc.DomainID {
@@ -903,11 +903,9 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 
 			if currResp.Value != newResp.Value {
 				check = false
-				mismatchedConfigs = append(mismatchedConfigs, MismatchedDynamicConfig{
-					Key:        configKey,
-					CurrValues: []*types.DynamicConfigValue{},
-					NewValues:  []*types.DynamicConfigValue{},
-				})
+				mismatchedConfig = MismatchedDynamicConfig{
+					Key: configKey,
+				}
 			}
 
 		} else if containsFilter(configKey, dc.DomainName.String()) && containsFilter(configKey, dc.TaskListName.String()) {
@@ -932,39 +930,30 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 				if err != nil {
 					newResp = &types.GetDynamicConfigResponse{}
 				}
-
 				if currResp.Value != newResp.Value {
 					check = false
 
-					mismatchedConfigs = append(mismatchedConfigs, MismatchedDynamicConfig{
+					// create a new MismatchedDynamicConfig entity for each mismatch
+					mismatchedConfig := MismatchedDynamicConfig{
 						Key: configKey,
 						CurrValues: []*types.DynamicConfigValue{
-							&types.DynamicConfigValue{
-								Filters: []*types.DynamicConfigFilter{
-									&types.DynamicConfigFilter{
-										Name: dc.TaskListName.String(), // Store the task list name in the filter
-									},
-								},
-								Value: currResp.Value, // Store the current response value
-							},
+							toDynamicConfigValue(configKey.Filters(), currResp.Value, domain, taskList), // Pass domain and tasklist values
 						},
 						NewValues: []*types.DynamicConfigValue{
-							&types.DynamicConfigValue{
-								Filters: []*types.DynamicConfigFilter{
-									&types.DynamicConfigFilter{
-										Name: dc.TaskListName.String(), // Store the task list name in the filter
-									},
-								},
-								Value: newResp.Value, // Store the new response value
-							},
+							toDynamicConfigValue(configKey.Filters(), newResp.Value, newDomain, taskList), // Pass newDomain and tasklist values
 						},
-					})
+					}
+					mismatchedConfigs = append(mismatchedConfigs, mismatchedConfig)
 				}
-
 			}
 		}
 
+		// append to mismatchedConfigs after the tasklist for loop
+		if mismatchedConfig.Key != nil {
+			mismatchedConfigs = append(mismatchedConfigs, mismatchedConfig)
+		}
 	}
+
 	validationRow := DomainMigrationRow{
 		ValidationCheck:  "Dynamic Config Check",
 		ValidationResult: check,
@@ -974,6 +963,44 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 	}
 
 	return validationRow
+}
+
+// was struggling to import this method from configstore
+func jsonMarshalHelper(v interface{}) []byte {
+	data, _ := json.Marshal(v)
+	return data
+}
+
+func toDynamicConfigValue(filters []dynamicconfig.Filter, value *types.DataBlob, domainNameValue string, taskListNameValue string) *types.DynamicConfigValue {
+	var configFilters []*types.DynamicConfigFilter
+	for _, filter := range filters {
+		var filterValue *types.DataBlob
+
+		// Check if the filter is domainName or taskListName and set the corresponding value
+		switch filter {
+		case dc.DomainName:
+			filterValue = &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         jsonMarshalHelper(domainNameValue),
+			}
+		case dc.TaskListName:
+			filterValue = &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         jsonMarshalHelper(taskListNameValue),
+			}
+		}
+
+		// Append the filter with its value to the configFilters list
+		configFilters = append(configFilters, &types.DynamicConfigFilter{
+			Name:  filter.String(),
+			Value: filterValue,
+		})
+	}
+
+	return &types.DynamicConfigValue{
+		Value:   value,
+		Filters: configFilters,
+	}
 }
 
 func containsFilter(key dynamicconfig.Key, value string) bool {
