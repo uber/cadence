@@ -541,15 +541,9 @@ type ValidationDetails struct {
 }
 
 type MismatchedDynamicConfig struct {
-	CurrResp *types.GetDynamicConfigResponse
-	NewResp  *types.GetDynamicConfigResponse
-	Filters  []FilterValue
-	TaskList *string
-}
-
-type FilterValue struct {
-	Filter dynamicconfig.Filter
-	Value  interface{}
+	Key        dynamicconfig.Key
+	CurrValues []*types.DynamicConfigValue
+	NewValues  []*types.DynamicConfigValue
 }
 
 func newDomainRow(domain *types.DescribeDomainResponse) DomainRow {
@@ -883,8 +877,9 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 			if currResp.Value != newResp.Value {
 				check = false
 				mismatchedConfigs = append(mismatchedConfigs, MismatchedDynamicConfig{
-					CurrResp: currResp,
-					NewResp:  newResp,
+					Key:        configKey,
+					CurrValues: []*types.DynamicConfigValue{},
+					NewValues:  []*types.DynamicConfigValue{},
 				})
 			}
 
@@ -909,8 +904,9 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 			if currResp.Value != newResp.Value {
 				check = false
 				mismatchedConfigs = append(mismatchedConfigs, MismatchedDynamicConfig{
-					CurrResp: currResp,
-					NewResp:  newResp,
+					Key:        configKey,
+					CurrValues: []*types.DynamicConfigValue{},
+					NewValues:  []*types.DynamicConfigValue{},
 				})
 			}
 
@@ -939,19 +935,29 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 
 				if currResp.Value != newResp.Value {
 					check = false
-					var filterValues []FilterValue
-					for _, filter := range configKey.Filters() {
-						filterValues = append(filterValues, FilterValue{
-							Filter: filter,
-							Value:  currResp.Value,
-						})
-					}
 
 					mismatchedConfigs = append(mismatchedConfigs, MismatchedDynamicConfig{
-						CurrResp: currResp,
-						NewResp:  newResp,
-						Filters:  filterValues, // Store the filter and value pairs
-						TaskList: &taskList,
+						Key: configKey,
+						CurrValues: []*types.DynamicConfigValue{
+							&types.DynamicConfigValue{
+								Filters: []*types.DynamicConfigFilter{
+									&types.DynamicConfigFilter{
+										Name: dc.TaskListName.String(), // Store the task list name in the filter
+									},
+								},
+								Value: currResp.Value, // Store the current response value
+							},
+						},
+						NewValues: []*types.DynamicConfigValue{
+							&types.DynamicConfigValue{
+								Filters: []*types.DynamicConfigFilter{
+									&types.DynamicConfigFilter{
+										Name: dc.TaskListName.String(), // Store the task list name in the filter
+									},
+								},
+								Value: newResp.Value, // Store the new response value
+							},
+						},
 					})
 				}
 
