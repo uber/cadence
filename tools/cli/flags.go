@@ -43,7 +43,7 @@ const (
 	FlagProtoVersion                      = "protocol_version"
 	FlagDomainID                          = "domain_id"
 	FlagDomain                            = "domain"
-	FlagDestinationDomain                 = "destination_domain" // added  this
+	FlagDestinationDomain                 = "destination_domain"
 	FlagDomainWithAlias                   = FlagDomain + ", do"
 	FlagShardID                           = "shard_id"
 	FlagShardIDWithAlias                  = FlagShardID + ", sid"

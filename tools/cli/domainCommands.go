@@ -543,6 +543,13 @@ type ValidationDetails struct {
 type MismatchedDynamicConfig struct {
 	CurrResp *types.GetDynamicConfigResponse
 	NewResp  *types.GetDynamicConfigResponse
+	Filters  []FilterValue
+	TaskList *string
+}
+
+type FilterValue struct {
+	Filter dynamicconfig.Filter
+	Value  interface{}
 }
 
 func newDomainRow(domain *types.DescribeDomainResponse) DomainRow {
@@ -907,11 +914,51 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 				})
 			}
 
-		} else {
-			// TODO: Implement for domainName + taskList + taskType filters case
-		}
-	}
+		} else if containsFilter(configKey, dc.DomainName.String()) && containsFilter(configKey, dc.TaskListName.String()) {
+			taskLists := c.StringSlice(FlagTaskList)
+			for _, taskList := range taskLists {
 
+				currRequest := dynamicconfig.ToGetDynamicConfigFilterRequest(configKey.String(), []dynamicconfig.FilterOption{
+					dynamicconfig.DomainFilter(domain),
+					dynamicconfig.TaskListFilter(taskList),
+				})
+
+				newRequest := dynamicconfig.ToGetDynamicConfigFilterRequest(configKey.String(), []dynamicconfig.FilterOption{
+					dynamicconfig.DomainFilter(newDomain),
+					dynamicconfig.TaskListFilter(taskList),
+				})
+
+				currResp, err := d.frontendAdminClient.GetDynamicConfig(ctx, currRequest)
+				if err != nil {
+					currResp = &types.GetDynamicConfigResponse{}
+				}
+				newResp, err := d.destinationAdminClient.GetDynamicConfig(ctx, newRequest)
+				if err != nil {
+					newResp = &types.GetDynamicConfigResponse{}
+				}
+
+				if currResp.Value != newResp.Value {
+					check = false
+					var filterValues []FilterValue
+					for _, filter := range configKey.Filters() {
+						filterValues = append(filterValues, FilterValue{
+							Filter: filter,
+							Value:  currResp.Value,
+						})
+					}
+
+					mismatchedConfigs = append(mismatchedConfigs, MismatchedDynamicConfig{
+						CurrResp: currResp,
+						NewResp:  newResp,
+						Filters:  filterValues, // Store the filter and value pairs
+						TaskList: &taskList,
+					})
+				}
+
+			}
+		}
+
+	}
 	validationRow := DomainMigrationRow{
 		ValidationCheck:  "Dynamic Config Check",
 		ValidationResult: check,
@@ -921,6 +968,16 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 	}
 
 	return validationRow
+}
+
+func containsFilter(key dynamicconfig.Key, value string) bool {
+	filters := key.Filters()
+	for _, filter := range filters {
+		if filter.String() == value {
+			return true
+		}
+	}
+	return false
 }
 
 func (d *domainCLIImpl) getDomainID(c context.Context, domain string) string {
