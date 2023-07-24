@@ -39,7 +39,6 @@ type (
 		esVisibilityManager    VisibilityManager
 		readModeIsFromPinot    dynamicconfig.BoolPropertyFnWithDomainFilter
 		readModeIsFromES       dynamicconfig.BoolPropertyFnWithDomainFilter
-		readModeIsBoth         dynamicconfig.BoolPropertyFnWithDomainFilter
 		writeMode              dynamicconfig.StringPropertyFn
 	}
 )
@@ -52,6 +51,7 @@ func NewPinotVisibilityTripleManager(
 	pinotVisibilityManager VisibilityManager, // one of the VisibilityManager can be nil
 	esVisibilityManager VisibilityManager,
 	readModeIsFromPinot dynamicconfig.BoolPropertyFnWithDomainFilter,
+	readModeIsFromES dynamicconfig.BoolPropertyFnWithDomainFilter,
 	visWritingMode dynamicconfig.StringPropertyFn,
 	logger log.Logger,
 ) VisibilityManager {
@@ -64,6 +64,7 @@ func NewPinotVisibilityTripleManager(
 		pinotVisibilityManager: pinotVisibilityManager,
 		esVisibilityManager:    esVisibilityManager,
 		readModeIsFromPinot:    readModeIsFromPinot,
+		readModeIsFromES:       readModeIsFromES,
 		writeMode:              visWritingMode,
 		logger:                 logger,
 	}
@@ -395,32 +396,23 @@ func (v *pinotVisibilityTripleManager) CountWorkflowExecutions(
 func (v *pinotVisibilityTripleManager) chooseVisibilityManagerForRead(domain string) (VisibilityManager, VisibilityManager) {
 	var visibilityMgr VisibilityManager
 	var visibilityMgr2 VisibilityManager
-	if v.readModeIsBoth(domain) {
-		if v.esVisibilityManager != nil {
+	if v.readModeIsFromPinot(domain) && v.readModeIsFromES(domain) {
+		if v.esVisibilityManager != nil && v.pinotVisibilityManager != nil {
 			visibilityMgr = v.esVisibilityManager
-		} else {
-			if v.pinotVisibilityManager != nil {
-				visibilityMgr = v.pinotVisibilityManager
-				v.logger.Warn("Enable dual read mode failed! Will use Pinot visibility manager. ")
-			} else {
-				visibilityMgr = v.dbVisibilityManager
-				v.logger.Warn("Enable dual read mode failed! Will use db visibility manager. ")
-			}
-			return visibilityMgr, nil
-		}
-
-		if v.pinotVisibilityManager != nil {
 			visibilityMgr2 = v.pinotVisibilityManager
-		} else {
-			// es visibility manager must be not nil here
+			// mgr1 = esManager, mgr2 = pinotManager
+			return visibilityMgr, visibilityMgr2
+		} else if v.esVisibilityManager != nil {
 			v.logger.Warn("Enable dual read mode failed! Will use ES visibility manager. ")
-			return visibilityMgr, nil
+			visibilityMgr = v.esVisibilityManager
+		} else if v.pinotVisibilityManager != nil {
+			v.logger.Warn("Enable dual read mode failed! Will use Pinot visibility manager. ")
+			visibilityMgr = v.pinotVisibilityManager
+		} else {
+			v.logger.Warn("Enable dual read mode failed! Will use db visibility manager. ")
+			visibilityMgr = v.dbVisibilityManager
 		}
-		// mgr1 = esManager, mgr2 = pinotManager
-		return visibilityMgr, visibilityMgr2
-	}
-
-	if v.readModeIsFromPinot(domain) {
+	} else if v.readModeIsFromPinot(domain) {
 		if v.pinotVisibilityManager != nil {
 			visibilityMgr = v.pinotVisibilityManager
 		} else {
