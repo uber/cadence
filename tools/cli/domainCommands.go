@@ -838,13 +838,13 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 
 	resp := dynamicconfig.ListAllProductionKeys()
 
-	domain := c.GlobalString(FlagDomain)
+	currDomain := c.GlobalString(FlagDomain)
 	newDomain := c.String(FlagDestinationDomain)
 
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	currentDomainID := d.getDomainID(ctx, domain)
+	currentDomainID := d.getDomainID(ctx, currDomain)
 	destinationDomainID := d.getDomainID(ctx, newDomain)
 	if currentDomainID == "" {
 		ErrorAndExit("Failed to get domainID for the current domain.", nil)
@@ -860,7 +860,7 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 		if len(configKey.Filters()) == 1 && configKey.Filters()[0] == dc.DomainName {
 			// Use the helper method to get the GetDynamicConfigRequest
 			currRequest := dynamicconfig.ToGetDynamicConfigFilterRequest(configKey.String(), []dynamicconfig.FilterOption{
-				dynamicconfig.DomainFilter(domain),
+				dynamicconfig.DomainFilter(currDomain),
 			})
 
 			newRequest := dynamicconfig.ToGetDynamicConfigFilterRequest(configKey.String(), []dynamicconfig.FilterOption{
@@ -881,10 +881,14 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 				mismatchedConfig = MismatchedDynamicConfig{
 					Key: configKey,
 					CurrValues: []*types.DynamicConfigValue{
-						toDynamicConfigValue(configKey.Filters(), currResp.Value, domain, "", ""),
+						toDynamicConfigValue(currResp.Value, map[dc.Filter]interface{}{
+							dynamicconfig.DomainName: currDomain,
+						}),
 					},
 					NewValues: []*types.DynamicConfigValue{
-						toDynamicConfigValue(configKey.Filters(), newResp.Value, newDomain, "", ""),
+						toDynamicConfigValue(currResp.Value, map[dc.Filter]interface{}{
+							dynamicconfig.DomainName: newDomain,
+						}),
 					},
 				}
 			}
@@ -912,10 +916,14 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 				mismatchedConfig = MismatchedDynamicConfig{
 					Key: configKey,
 					CurrValues: []*types.DynamicConfigValue{
-						toDynamicConfigValue(configKey.Filters(), currResp.Value, domain, "", currentDomainID),
+						toDynamicConfigValue(currResp.Value, map[dc.Filter]interface{}{
+							dynamicconfig.DomainID: currentDomainID,
+						}),
 					},
 					NewValues: []*types.DynamicConfigValue{
-						toDynamicConfigValue(configKey.Filters(), newResp.Value, newDomain, "", destinationDomainID),
+						toDynamicConfigValue(currResp.Value, map[dc.Filter]interface{}{
+							dynamicconfig.DomainID: destinationDomainID,
+						}),
 					},
 				}
 			}
@@ -925,7 +933,7 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 			for _, taskList := range taskLists {
 
 				currRequest := dynamicconfig.ToGetDynamicConfigFilterRequest(configKey.String(), []dynamicconfig.FilterOption{
-					dynamicconfig.DomainFilter(domain),
+					dynamicconfig.DomainFilter(currDomain),
 					dynamicconfig.TaskListFilter(taskList),
 				})
 
@@ -949,10 +957,14 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 					mismatchedConfig := MismatchedDynamicConfig{
 						Key: configKey,
 						CurrValues: []*types.DynamicConfigValue{
-							toDynamicConfigValue(configKey.Filters(), currResp.Value, domain, taskList, ""),
+							toDynamicConfigValue(currResp.Value, map[dc.Filter]interface{}{
+								dynamicconfig.TaskType: taskLists,
+							}),
 						},
 						NewValues: []*types.DynamicConfigValue{
-							toDynamicConfigValue(configKey.Filters(), newResp.Value, newDomain, taskList, ""),
+							toDynamicConfigValue(currResp.Value, map[dc.Filter]interface{}{
+								dynamicconfig.TaskType: taskLists,
+							}),
 						},
 					}
 					mismatchedConfigs = append(mismatchedConfigs, mismatchedConfig)
@@ -977,38 +989,25 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 	return validationRow
 }
 
-// was struggling to import this method from configstore
-func jsonMarshalHelper(v interface{}) []byte {
-	data, _ := json.Marshal(v)
-	return data
+func valueToDataBlob(value interface{}) *types.DataBlob {
+	if value == nil {
+		return nil
+	}
+	// No need to handle error as this is a private helper method
+	// where the correct value will always be passed regardless
+	data, _ := json.Marshal(value)
+	return &types.DataBlob{
+		EncodingType: types.EncodingTypeJSON.Ptr(),
+		Data:         data,
+	}
 }
 
-func toDynamicConfigValue(filters []dynamicconfig.Filter, value *types.DataBlob, domainNameValue string, taskListNameValue string, domainIDValue string) *types.DynamicConfigValue {
+func toDynamicConfigValue(value *types.DataBlob, filterMaps map[dynamicconfig.Filter]interface{}) *types.DynamicConfigValue {
 	var configFilters []*types.DynamicConfigFilter
-	for _, filter := range filters {
-		var filterValue *types.DataBlob
-
-		switch filter {
-		case dc.DomainName:
-			filterValue = &types.DataBlob{
-				EncodingType: types.EncodingTypeJSON.Ptr(),
-				Data:         jsonMarshalHelper(domainNameValue),
-			}
-		case dc.DomainID:
-			filterValue = &types.DataBlob{
-				EncodingType: types.EncodingTypeJSON.Ptr(),
-				Data:         jsonMarshalHelper(domainIDValue),
-			}
-		case dc.TaskListName:
-			filterValue = &types.DataBlob{
-				EncodingType: types.EncodingTypeJSON.Ptr(),
-				Data:         jsonMarshalHelper(taskListNameValue),
-			}
-		}
-
+	for filter, filterValue := range filterMaps {
 		configFilters = append(configFilters, &types.DynamicConfigFilter{
 			Name:  filter.String(),
-			Value: filterValue,
+			Value: valueToDataBlob(filterValue),
 		})
 	}
 
