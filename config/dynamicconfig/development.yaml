@@ -10,6 +10,9 @@ history.EnableConsistentQueryByDomain:
 system.enableExecutionTTL:
     - value: true
       constraints: {}
+system.TTLBufferDays:
+    - value: 15
+      constraints: {}
 history.enableCrossClusterOperations:
 - value: true
   constraints: {}
