@@ -29,6 +29,7 @@ import (
 
 	cclient "go.uber.org/cadence/client"
 	"go.uber.org/cadence/workflow"
+	"go.uber.org/zap"
 
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cache"
@@ -88,7 +89,7 @@ func CurrentExecutionManager(
 ) invariant.Manager {
 	var ivs []invariant.Invariant
 	collections := ParseCollections(params.ScannerConfig)
-	for _, fn := range CurrentExecutionType.ToInvariants(collections) {
+	for _, fn := range CurrentExecutionType.ToInvariants(collections, zap.NewNop()) {
 		ivs = append(ivs, fn(pr, domainCache))
 	}
 	return invariant.NewInvariantManager(ivs)
@@ -111,7 +112,7 @@ func CurrentExecutionConfig(ctx shardscanner.Context) shardscanner.CustomScanner
 	res := shardscanner.CustomScannerConfig{}
 
 	if ctx.Config.DynamicCollection.GetBoolProperty(dynamicconfig.CurrentExecutionsScannerInvariantCollectionHistory)() {
-		res[invariant.CollectionHistory.String()] = strconv.FormatBool(true)
+		res[invariant.CollectionHistory.String()] = strconv.FormatBool(true) // TODO: this appears unused, executions/types.go for current does not check this const
 	}
 	if ctx.Config.DynamicCollection.GetBoolProperty(dynamicconfig.CurrentExecutionsScannerInvariantCollectionMutableState)() {
 		res[invariant.CollectionMutableState.String()] = strconv.FormatBool(true)

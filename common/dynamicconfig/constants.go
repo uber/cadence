@@ -1709,6 +1709,12 @@ const (
 	// Default value: true
 	// Allowed filters: N/A
 	ConcreteExecutionsScannerInvariantCollectionHistory
+	// ConcreteExecutionsScannerInvariantCollectionStale indicates if the stale workflow invariant should be run
+	// KeyName: worker.executionsScannerInvariantCollectionStale
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: N/A
+	ConcreteExecutionsScannerInvariantCollectionStale
 	// CurrentExecutionsScannerEnabled is indicates if current executions scanner should be started as part of worker.Scanner
 	// KeyName: worker.currentExecutionsScannerEnabled
 	// Value type: Bool
@@ -3883,6 +3889,11 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		KeyName:      "worker.executionsScannerInvariantCollectionHistory",
 		Description:  "ConcreteExecutionsScannerInvariantCollectionHistory is indicates if history invariant checks should be run",
 		DefaultValue: true,
+	},
+	ConcreteExecutionsScannerInvariantCollectionStale: DynamicBool{
+		KeyName:      "worker.executionsScannerInvariantCollectionStale",
+		Description:  "ConcreteExecutionsScannerInvariantCollectionStale indicates if the stale-workflow invariant should be run",
+		DefaultValue: false, // may be enabled after further verification, but for now it's a bit too risky to enable by default
 	},
 	CurrentExecutionsScannerEnabled: DynamicBool{
 		KeyName:      "worker.currentExecutionsScannerEnabled",

@@ -29,6 +29,7 @@ import (
 
 	cclient "go.uber.org/cadence/client"
 	"go.uber.org/cadence/workflow"
+	"go.uber.org/zap"
 
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cache"
@@ -107,7 +108,7 @@ func ScannerManager(
 	collections := ParseCollections(params.ScannerConfig)
 
 	var ivs []invariant.Invariant
-	for _, fn := range ConcreteExecutionType.ToInvariants(collections) {
+	for _, fn := range ConcreteExecutionType.ToInvariants(collections, zap.NewNop()) {
 		ivs = append(ivs, fn(pr, domainCache))
 	}
 
@@ -137,7 +138,7 @@ func FixerManager(_ context.Context, pr persistence.Retryer, _ shardscanner.FixS
 
 	collections = append(collections, invariant.CollectionHistory, invariant.CollectionMutableState)
 
-	for _, fn := range ConcreteExecutionType.ToInvariants(collections) {
+	for _, fn := range ConcreteExecutionType.ToInvariants(collections, zap.NewNop()) {
 		ivs = append(ivs, fn(pr, domainCache))
 	}
 	return invariant.NewInvariantManager(ivs)
@@ -152,6 +153,9 @@ func ConcreteExecutionConfig(ctx shardscanner.Context) shardscanner.CustomScanne
 	}
 	if ctx.Config.DynamicCollection.GetBoolProperty(dynamicconfig.ConcreteExecutionsScannerInvariantCollectionMutableState)() {
 		res[invariant.CollectionMutableState.String()] = strconv.FormatBool(true)
+	}
+	if ctx.Config.DynamicCollection.GetBoolProperty(dynamicconfig.ConcreteExecutionsScannerInvariantCollectionStale)() {
+		res[invariant.CollectionStale.String()] = strconv.FormatBool(true)
 	}
 
 	return res

@@ -877,6 +877,12 @@ func newDBCommands() []cli.Command {
 		Value: &collections,
 	}
 
+	verboseFlag := cli.BoolFlag{
+		Name:     FlagVerbose,
+		Usage:    "verbose output",
+		Required: false,
+	}
+
 	return []cli.Command{
 		{
 			Name:  "scan",
@@ -893,6 +899,7 @@ func newDBCommands() []cli.Command {
 					Name:  FlagInputFileWithAlias,
 					Usage: "Input file of executions to scan in JSON format {\"DomainID\":\"x\",\"WorkflowID\":\"x\",\"RunID\":\"x\"} separated by a newline",
 				},
+				verboseFlag,
 			),
 
 			Action: func(c *cli.Context) {
@@ -940,6 +947,7 @@ func newDBCommands() []cli.Command {
 					Name:  FlagInputFileWithAlias,
 					Usage: "Input file of execution to clean in JSON format. Use `scan` command to generate list of executions.",
 				},
+				verboseFlag,
 			),
 			Action: func(c *cli.Context) {
 				AdminDBClean(c)

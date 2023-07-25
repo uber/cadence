@@ -25,10 +25,11 @@ import (
 	"fmt"
 	"time"
 
+	"go.uber.org/cadence"
+
 	"github.com/uber-go/tally"
 	"go.uber.org/zap"
 
-	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/client"
 	"go.uber.org/cadence/worker"
@@ -243,12 +244,10 @@ func (s *Scanner) startWorkflow(
 
 	cancel()
 
-	switch err.(type) {
-	case *shared.WorkflowExecutionAlreadyStartedError, nil:
+	if cadence.IsWorkflowExecutionAlreadyStartedError(err) {
 		return nil
-	default:
-		return err
 	}
+	return err
 }
 
 // NewScannerContext provides context to be used as background activity context
