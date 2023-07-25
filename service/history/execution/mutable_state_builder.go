@@ -4816,22 +4816,32 @@ func (e *mutableStateBuilder) logDataInconsistency() {
 func (e *mutableStateBuilder) calculateTTL() (int, error) {
 	domainID := e.executionInfo.DomainID
 	//Calculating the TTL for workflow Execution.
-
+	//Default state of TTL, means there is no TTL attached.
+	TTLInSeconds := 0
 	domainObj, err := e.shard.GetDomainCache().GetDomainByID(domainID)
 	if err != nil {
-		return 0, err
+		return TTLInSeconds, err
 	}
 	config := domainObj.GetConfig()
 	retention := time.Duration(config.Retention)
-	daysInSeconds := int(retention) + e.config.TTLBufferDays()*dayToSecondMultiplier
-	//Default state of TTL, means there is no TTL attached.
-	TTLInSeconds := 0
+	daysInSeconds := (int(retention) + e.config.TTLBufferDays()) * dayToSecondMultiplier
 	startTime := e.executionInfo.StartTimestamp
+	//Cassandra as of now has an upper bound on the TTL as the Cassandra will stop the support on 2038-01-19T03:14:06+00:00.
+	//The current value and the subsequent check on it ensures that the TTL value will never surpass the upper limit.
+	// Parse the time string
+	layout := "2006-01-02T15:04:05-07:00"
+	t, err := time.Parse(layout, "2038-01-19T03:14:06+00:00")
+	if err != nil {
+		return TTLInSeconds, err
+	}
+	// Calculate the upper bound duration
+	upperbound := t.Sub(time.Now())
+
 	//Handles Cron and Delaystart. For Cron workflows the StartTimestamp does not show up until the wf has started.
 	//default value os TTL ie. 0 will be passed down in this case. The TTL is calculated only if the startTime is non zero.
 	if !time.Time.IsZero(startTime) {
 		CalculateTTLInSeconds := int(e.executionInfo.WorkflowTimeout) - int(time.Now().Sub(startTime).Seconds()) + daysInSeconds
-		if CalculateTTLInSeconds >= 0 {
+		if CalculateTTLInSeconds >= 0 || CalculateTTLInSeconds >= int(upperbound.Seconds()) {
 			return CalculateTTLInSeconds, nil
 		}
 	}

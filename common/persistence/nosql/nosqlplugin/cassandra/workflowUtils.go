@@ -1062,6 +1062,22 @@ func (db *cdb) resetWorkflowExecutionAndMapsAndEventBuffer(
 	workflowID string,
 	execution *nosqlplugin.WorkflowExecutionRequest,
 ) error {
+	//Fires when the workflow status is closed.
+	if (execution.State == persistence.WorkflowStateCompleted || execution.State == persistence.WorkflowStateCorrupted) && db.dc.EnableExecutionTTL(domainID) {
+		batch.Query(templateUpdateWorkflowExecutionWithVersionHistoriesQueryPart1,
+			domainID,
+			execution.RunID,
+			shardID,
+			rowTypeExecutionTaskID,
+			rowTypeExecution,
+			defaultVisibilityTimestamp,
+			workflowID,
+			execution.TTLInSeconds,
+		)
+	} else {
+		//0 is the default value of TTL when either of the above condition is not met. 0 TTL essentially means that there is no TTL.
+		execution.TTLInSeconds = 0
+	}
 	err := db.updateWorkflowExecution(batch, shardID, domainID, workflowID, execution)
 	if err != nil {
 		return err
@@ -1151,6 +1167,22 @@ func (db *cdb) updateWorkflowExecutionAndEventBufferWithMergeAndDeleteMaps(
 	workflowID string,
 	execution *nosqlplugin.WorkflowExecutionRequest,
 ) error {
+	//Fires when the workflow status is closed.
+	if (execution.State == persistence.WorkflowStateCompleted || execution.State == persistence.WorkflowStateCorrupted) && db.dc.EnableExecutionTTL(domainID) {
+		batch.Query(templateUpdateWorkflowExecutionWithVersionHistoriesQueryPart1,
+			domainID,
+			execution.RunID,
+			shardID,
+			rowTypeExecutionTaskID,
+			rowTypeExecution,
+			defaultVisibilityTimestamp,
+			workflowID,
+			execution.TTLInSeconds,
+		)
+	} else {
+		//0 is the default value of TTL when either of the above condition is not met. 0 TTL essentially means that there is no TTL.
+		execution.TTLInSeconds = 0
+	}
 	err := db.updateWorkflowExecution(batch, shardID, domainID, workflowID, execution)
 	if err != nil {
 		return err
@@ -1203,26 +1235,8 @@ func (db *cdb) updateWorkflowExecution(
 ) error {
 	execution.StartTimestamp = db.convertToCassandraTimestamp(execution.StartTimestamp)
 	execution.LastUpdatedTimestamp = db.convertToCassandraTimestamp(execution.LastUpdatedTimestamp)
-	//default TTL Value. 0 TTL means no ttl is set, hence your records will persist forever unless explicitly deleted.
-	ttlInSeconds := 0
-	//Only fires when the workflow is closing.
-	if execution.State == persistence.WorkflowStateCompleted || execution.State == persistence.WorkflowStateCorrupted {
-		if db.dc.EnableExecutionTTL(domainID) {
-			ttlInSeconds = int(execution.TTLInSeconds)
-		}
-		batch.Query(templateUpdateWorkflowExecutionWithVersionHistoriesQueryPart1,
-			domainID,
-			execution.RunID,
-			shardID,
-			rowTypeExecutionTaskID,
-			rowTypeExecution,
-			defaultVisibilityTimestamp,
-			workflowID,
-			ttlInSeconds,
-		)
-	}
 	batch.Query(templateUpdateWorkflowExecutionWithVersionHistoriesQueryPart2,
-		ttlInSeconds,
+		execution.TTLInSeconds,
 		domainID,
 		workflowID,
 		execution.RunID,
