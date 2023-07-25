@@ -61,6 +61,8 @@ type (
 
 		// act as admin to modify domain in DB directly
 		domainHandler domain.Handler
+
+		mismatchedConfigsMutex sync.Mutex
 	}
 )
 
@@ -415,31 +417,37 @@ VisibilityArchivalURI: {{.}}{{end}}
 {{with .FailoverInfo}}Graceful failover info:
 {{table .}}{{end}}`
 
-var newtemplateDomain = `Validation Check: 
+var newtemplateDomain = `Validation Check:
 {{- range .}}
 - {{.ValidationCheck}}: {{.ValidationResult}}
-  {{- with .ValidationDetails}}
-    {{- with .CurrentDomainRow}}
-      Current Domain:
-        Name: {{.DomainInfo.Name}}
-        UUID: {{.DomainInfo.UUID}}
-    {{- end}}
-    {{- with .NewDomainRow}}
-      New Domain:
-        Name: {{.DomainInfo.Name}}
-        UUID: {{.DomainInfo.UUID}}
-    {{- end}}
-    {{- if .LongRunningWorkFlowNum}}
-      Long Running Workflow Num: {{.LongRunningWorkFlowNum}}
-    {{- end}}
-    {{- range .MismatchedDynamicConfig}}
-      Mismatched Dynamic Config:
-        Current Response: 
-          Value: {{.CurrResp.Value}}
-        New Response: 
-          Value: {{.NewResp.Value}}
-    {{- end}}
-  {{- end}}
+{{- with .ValidationDetails}}
+{{- with .CurrentDomainRow}}
+Current Domain:
+  Name: {{.DomainInfo.Name}}
+  UUID: {{.DomainInfo.UUID}}
+{{- end}}
+{{- with .NewDomainRow}}
+New Domain:
+  Name: {{.DomainInfo.Name}}
+  UUID: {{.DomainInfo.UUID}}
+{{- end}}
+{{- if .LongRunningWorkFlowNum}}
+Long Running Workflow Num: {{.LongRunningWorkFlowNum}}
+{{- end}}
+{{- range .MismatchedDynamicConfig}}
+Mismatched Dynamic Config:
+{{- range $index, $currValue := .CurrValues}}
+  Current Response:
+    Encoding Type: {{ $currValue.Value.EncodingType }}
+    Data: {{ $currValue.Value.Data }}
+{{- end}}
+{{- range $index, $newValue := .NewValues}}
+  New Response:
+    Encoding Type: {{ $newValue.Value.EncodingType }}
+    Data: {{ $newValue.Value.Data }}
+{{- end}}
+{{- end}}
+{{- end}}
 {{- end}}
 `
 
@@ -751,6 +759,7 @@ func (d *domainCLIImpl) migrateDomain(c *cli.Context) {
 	checkers := []func(*cli.Context) DomainMigrationRow{
 		d.migrationDomainMetaDataCheck,
 		d.migrationDomainWorkFlowCheck,
+		d.migrationDynamicConfigCheck,
 	}
 	wg := &sync.WaitGroup{}
 	for i := range checkers {
@@ -776,7 +785,9 @@ func (d *domainCLIImpl) migrateDomain(c *cli.Context) {
 }
 
 func (d *domainCLIImpl) migrationDomainMetaDataCheck(c *cli.Context) DomainMigrationRow {
-
+	d.destinationClient = newClientFactory(func(c *cli.Context) string {
+		return c.String(FlagDestinationAddress)
+	}).ServerFrontendClient(c)
 	domain := c.GlobalString(FlagDomain)
 	newDomain := c.String(FlagDestinationDomain)
 	request := &types.DescribeDomainRequest{
@@ -787,7 +798,9 @@ func (d *domainCLIImpl) migrationDomainMetaDataCheck(c *cli.Context) DomainMigra
 	}
 	ctx, cancel := newContext(c)
 	defer cancel()
+	d.frontendClient = initializeFrontendClient(c)
 	currResp, err := d.frontendClient.DescribeDomain(ctx, request)
+
 	if err != nil {
 		ErrorAndExit(fmt.Sprintf("Could not describe old domain, Please check to see if old domain exists before migrating."), err)
 	}
@@ -819,6 +832,9 @@ func metaDataValidation(currResp *types.DescribeDomainResponse, newResp *types.D
 }
 
 func (d *domainCLIImpl) migrationDomainWorkFlowCheck(c *cli.Context) DomainMigrationRow {
+	d.destinationClient = newClientFactory(func(c *cli.Context) string {
+		return c.String(FlagDestinationAddress)
+	}).ServerFrontendClient(c)
 	countWorkFlows := d.countLongRunningWorkflowinDest(c)
 	if countWorkFlows > 0 {
 		ErrorAndExit(fmt.Sprintf("Number of workflows is > 0"), nil)
@@ -878,7 +894,7 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 
 			if currResp.Value != newResp.Value {
 				check = false
-				mismatchedConfig = MismatchedDynamicConfig{
+				mismatchedConfigs = append(mismatchedConfigs, MismatchedDynamicConfig{
 					Key: configKey,
 					CurrValues: []*types.DynamicConfigValue{
 						toDynamicConfigValue(currResp.Value, map[dc.Filter]interface{}{
@@ -890,7 +906,7 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 							dynamicconfig.DomainName: newDomain,
 						}),
 					},
-				}
+				})
 			}
 
 		} else if len(configKey.Filters()) == 1 && configKey.Filters()[0] == dc.DomainID {
@@ -913,7 +929,7 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 
 			if currResp.Value != newResp.Value {
 				check = false
-				mismatchedConfig = MismatchedDynamicConfig{
+				mismatchedConfigs = append(mismatchedConfigs, MismatchedDynamicConfig{
 					Key: configKey,
 					CurrValues: []*types.DynamicConfigValue{
 						toDynamicConfigValue(currResp.Value, map[dc.Filter]interface{}{
@@ -925,7 +941,7 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 							dynamicconfig.DomainID: destinationDomainID,
 						}),
 					},
-				}
+				})
 			}
 
 		} else if containsFilter(configKey, dc.DomainName.String()) && containsFilter(configKey, dc.TaskListName.String()) {
@@ -952,22 +968,23 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 				}
 				if currResp.Value != newResp.Value {
 					check = false
+					var mismatchedCurValues []*types.DynamicConfigValue
+					var mismatchedNewValues []*types.DynamicConfigValue
 
-					// create a new MismatchedDynamicConfig entity for each mismatch
-					mismatchedConfig := MismatchedDynamicConfig{
-						Key: configKey,
-						CurrValues: []*types.DynamicConfigValue{
-							toDynamicConfigValue(currResp.Value, map[dc.Filter]interface{}{
-								dynamicconfig.TaskType: taskLists,
-							}),
-						},
-						NewValues: []*types.DynamicConfigValue{
-							toDynamicConfigValue(currResp.Value, map[dc.Filter]interface{}{
-								dynamicconfig.TaskType: taskLists,
-							}),
-						},
-					}
-					mismatchedConfigs = append(mismatchedConfigs, mismatchedConfig)
+					mismatchedCurValues = append(mismatchedCurValues, toDynamicConfigValue(currResp.Value, map[dc.Filter]interface{}{
+						dynamicconfig.DomainName:   currDomain,
+						dynamicconfig.TaskListName: taskLists,
+					}))
+					mismatchedNewValues = append(mismatchedNewValues, toDynamicConfigValue(newResp.Value, map[dc.Filter]interface{}{
+						dynamicconfig.DomainName:   newDomain,
+						dynamicconfig.TaskListName: taskLists,
+					}))
+					d.mismatchedConfigsMutex.Lock()
+					mismatchedConfigs = append(mismatchedConfigs, MismatchedDynamicConfig{
+						CurrValues: mismatchedCurValues,
+						NewValues:  mismatchedNewValues,
+					})
+					d.mismatchedConfigsMutex.Unlock()
 				}
 			}
 		}
