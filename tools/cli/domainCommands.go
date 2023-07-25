@@ -417,36 +417,87 @@ VisibilityArchivalURI: {{.}}{{end}}
 {{with .FailoverInfo}}Graceful failover info:
 {{table .}}{{end}}`
 
+//
+//var newtemplateDomain = `Validation Check:
+//{{- range .}}
+//- {{.ValidationCheck}}: {{.ValidationResult}}
+//{{- with .ValidationDetails}}
+//{{- with .CurrentDomainRow}}
+//Current Domain:
+//  Name: {{.DomainInfo.Name}}
+//  UUID: {{.DomainInfo.UUID}}
+//{{- end}}
+//{{- with .NewDomainRow}}
+//New Domain:
+//  Name: {{.DomainInfo.Name}}
+//  UUID: {{.DomainInfo.UUID}}
+//{{- end}}
+//{{- if .LongRunningWorkFlowNum}}
+//Long Running Workflow Num: {{.LongRunningWorkFlowNum}}
+//{{- end}}
+//{{- range .MismatchedDynamicConfig}}
+//Mismatched Dynamic Config:
+//Config Key: {{.Key}}
+//{{- range $index, $value := .CurrValues}}
+//{{- if eq $index 0 }}
+//  Current Response:
+//{{- end}}
+//    Data: {{ printf "%s" $value.Value.Data }}
+//{{- end}}
+//{{- range $index, $value := .NewValues}}
+//{{- if eq $index 0 }}
+//  New Response:
+//{{- end}}
+//    Data: {{ printf "%s" $value.Value.Data }}
+//{{- end}}
+//{{- end}}
+//{{- end}}
+//{{- end}}
+//`
+
 var newtemplateDomain = `Validation Check:
 {{- range .}}
 - {{.ValidationCheck}}: {{.ValidationResult}}
 {{- with .ValidationDetails}}
-{{- with .CurrentDomainRow}}
-Current Domain:
-  Name: {{.DomainInfo.Name}}
-  UUID: {{.DomainInfo.UUID}}
-{{- end}}
-{{- with .NewDomainRow}}
-New Domain:
-  Name: {{.DomainInfo.Name}}
-  UUID: {{.DomainInfo.UUID}}
-{{- end}}
-{{- if .LongRunningWorkFlowNum}}
-Long Running Workflow Num: {{.LongRunningWorkFlowNum}}
-{{- end}}
-{{- range .MismatchedDynamicConfig}}
-Mismatched Dynamic Config:
-{{- range $index, $currValue := .CurrValues}}
-  Current Response:
-    Encoding Type: {{ $currValue.Value.EncodingType }}
-    Data: {{ $currValue.Value.Data }}
-{{- end}}
-{{- range $index, $newValue := .NewValues}}
-  New Response:
-    Encoding Type: {{ $newValue.Value.EncodingType }}
-    Data: {{ $newValue.Value.Data }}
-{{- end}}
-{{- end}}
+ {{- with .CurrentDomainRow}}
+ Current Domain:
+   Name: {{.DomainInfo.Name}}
+   UUID: {{.DomainInfo.UUID}}
+ {{- end}}
+ {{- with .NewDomainRow}}
+ New Domain:
+   Name: {{.DomainInfo.Name}}
+   UUID: {{.DomainInfo.UUID}}
+ {{- end}}
+ {{- if .LongRunningWorkFlowNum}}
+ Long Running Workflow Num: {{.LongRunningWorkFlowNum}}
+ {{- end}}
+ {{- range .MismatchedDynamicConfig}}
+ Mismatched Dynamic Config:
+ Config Key: {{.Key}}
+   {{- range $index, $value := .CurrValues}}
+   {{- if eq $index 0 }}
+   Current Response:
+   {{- end}}
+     Data: {{ printf "%s" $value.Value.Data }}
+     Filters:
+     {{- range $filter := $value.Filters}}
+       - Name: {{ $filter.Name }}
+         Value: {{ printf "%s" $filter.Value }}
+     {{- end}}
+   {{- end}}
+   {{- range $index, $value := .NewValues}}
+   {{- if eq $index 0 }}
+   New Response:
+   {{- end}}
+     Data: {{ printf "%s" $value.Value.Data }}
+     Filters:
+     {{- range $filter := $value.Filters}}
+       - Name: {{ $filter.Name }}
+         Value: {{ printf "%s" $filter.Value }}
+     {{- end}}
+   {{- end}}
+ {{- end}}
 {{- end}}
 {{- end}}
 `
@@ -892,8 +943,13 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 				newResp = &types.GetDynamicConfigResponse{}
 			}
 
-			if currResp.Value != newResp.Value {
+			if !reflect.DeepEqual(currResp.Value, newResp.Value) {
 				check = false
+			}
+
+			if currResp.Value != newResp.Value {
+				// added this so it would still print details regardless. do we not want it if
+				// the checker returns true?
 				mismatchedConfigs = append(mismatchedConfigs, MismatchedDynamicConfig{
 					Key: configKey,
 					CurrValues: []*types.DynamicConfigValue{
@@ -927,8 +983,11 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 				newResp = &types.GetDynamicConfigResponse{}
 			}
 
-			if currResp.Value != newResp.Value {
+			if !reflect.DeepEqual(currResp.Value, newResp.Value) {
 				check = false
+			}
+
+			if currResp.Value != newResp.Value {
 				mismatchedConfigs = append(mismatchedConfigs, MismatchedDynamicConfig{
 					Key: configKey,
 					CurrValues: []*types.DynamicConfigValue{
@@ -966,8 +1025,12 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 				if err != nil {
 					newResp = &types.GetDynamicConfigResponse{}
 				}
-				if currResp.Value != newResp.Value {
+
+				if !reflect.DeepEqual(currResp.Value, newResp.Value) {
 					check = false
+				}
+
+				if currResp.Value != newResp.Value {
 					var mismatchedCurValues []*types.DynamicConfigValue
 					var mismatchedNewValues []*types.DynamicConfigValue
 
@@ -1007,25 +1070,44 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 }
 
 func valueToDataBlob(value interface{}) *types.DataBlob {
+
 	if value == nil {
 		return nil
 	}
 	// No need to handle error as this is a private helper method
 	// where the correct value will always be passed regardless
 	data, _ := json.Marshal(value)
+
 	return &types.DataBlob{
 		EncodingType: types.EncodingTypeJSON.Ptr(),
 		Data:         data,
 	}
 }
 
+func unmarshalJSONData(data []byte, v interface{}) error {
+	return json.Unmarshal(data, v)
+}
+
 func toDynamicConfigValue(value *types.DataBlob, filterMaps map[dynamicconfig.Filter]interface{}) *types.DynamicConfigValue {
 	var configFilters []*types.DynamicConfigFilter
 	for filter, filterValue := range filterMaps {
+		sub := valueToDataBlob(filterValue)
+		var decodedValue interface{}
+		err := unmarshalJSONData(sub.Data, &decodedValue)
+		if err != nil {
+			fmt.Printf("Error unmarshaling filterValue: %v\n", err)
+			continue
+		}
 		configFilters = append(configFilters, &types.DynamicConfigFilter{
-			Name:  filter.String(),
-			Value: valueToDataBlob(filterValue),
+			Name: filter.String(),
+			//Value: valueToDataBlob(filterValue),
+			Value: &types.DataBlob{
+				EncodingType: sub.EncodingType,
+				//Data:         json.Unmarshal(sub.Data, &result),
+				Data: valueToDataBlob(decodedValue).Data,
+			},
 		})
+		fmt.Println("Data:", string(configFilters[len(configFilters)-1].Value.Data))
 	}
 
 	return &types.DynamicConfigValue{
