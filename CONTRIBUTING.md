@@ -74,7 +74,7 @@ docker-compose -f ./docker/dev/cassandra.yml up -d
 ```
 Also use `docker-compose -f ./docker/dev/cassandra.yml down` to stop and clean up the resources.
 
-* Alternatively, use `./docker/dev/mysql.yml` for MySQL dependency
+* Alternatively, use `./docker/dev/mysql.yml` for MySQL dependency. (MySQL has been updated from 5.7 to 8.0)
 * Alternatively, use `./docker/dev/postgres.yml` for PostgreSQL dependency 
 * Alternatively, use `./docker/dev/cassandra-esv7-kafka.yml` for Cassandra, ElasticSearch(v7) and Kafka/ZooKeeper dependencies
 * Alternatively, use `./docker/dev/mysql-esv7-kafka.yml` for MySQL, ElasticSearch(v7) and Kafka/ZooKeeper dependencies
