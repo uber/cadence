@@ -1408,6 +1408,13 @@ const (
 	LargeShardHistoryBlobMetricThreshold
 	// LastIntKey must be the last one in this const group
 	LastIntKey
+
+	// TTLBufferDays are the buffer days added into the TTL time for security reasons.
+	// KeyName: system.TTLBufferDays
+	// Value type: Int
+	// Default value: 15
+	// Allowed filters: N/A
+	TTLBufferDays
 )
 
 const (
@@ -3622,6 +3629,11 @@ var IntKeys = map[IntKey]DynamicInt{
 		KeyName:      "system.isolationGroupStateUpdateRetryAttempts",
 		Description:  "The number of attempts to push Isolation group configuration to the config store",
 		DefaultValue: 2,
+	},
+	TTLBufferDays: DynamicInt{
+		KeyName:      "system.TTLBufferDays",
+		Description:  "The number of buffer day in the TTL value",
+		DefaultValue: 15,
 	},
 }
 
