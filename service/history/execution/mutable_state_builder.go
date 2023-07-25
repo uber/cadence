@@ -4841,7 +4841,7 @@ func (e *mutableStateBuilder) calculateTTL() (int, error) {
 	//default value os TTL ie. 0 will be passed down in this case. The TTL is calculated only if the startTime is non zero.
 	if !time.Time.IsZero(startTime) {
 		CalculateTTLInSeconds := int(e.executionInfo.WorkflowTimeout) - int(time.Now().Sub(startTime).Seconds()) + daysInSeconds
-		if CalculateTTLInSeconds >= 0 || CalculateTTLInSeconds >= int(upperbound.Seconds()) {
+		if CalculateTTLInSeconds >= 0 && CalculateTTLInSeconds <= int(upperbound.Seconds()) {
 			return CalculateTTLInSeconds, nil
 		}
 	}
