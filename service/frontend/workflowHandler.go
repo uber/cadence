@@ -4261,8 +4261,10 @@ func validateExecution(w *types.WorkflowExecution) error {
 	if w.GetWorkflowID() == "" {
 		return errWorkflowIDNotSet
 	}
-	if _, err := uuid.Parse(w.GetRunID()); err != nil {
-		return errInvalidRunID
+	if w.GetRunID() != "" {
+		if _, err := uuid.Parse(w.GetRunID()); err != nil {
+			return errInvalidRunID
+		}
 	}
 	return nil
 }

@@ -1394,7 +1394,7 @@ func (s *workflowHandlerSuite) TestRestartWorkflowExecution__Success() {
 		},
 		Identity: "",
 	})
-	s.Equal(resp.GetRunID(), testRunID)
+	s.Equal(testRunID, resp.GetRunID())
 	s.NoError(err)
 }
 
