@@ -240,7 +240,7 @@ func sanitizeAttr(inkey string, invalue string) (string, string) {
 }
 
 const (
-	testSchemaDir = "schema/mysql/v57"
+	testSchemaDir = "schema/mysql/v8"
 )
 
 // GetTestClusterOption return test options
