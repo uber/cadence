@@ -713,19 +713,19 @@ func readOpenWorkflowExecutionRecord(
 	var parentRunID string
 	if iter.Scan(&workflowID, &runID, &startTime, &executionTime, &typeName, &memo, &encoding, &taskList, &isCron, &numClusters, &updateTime, &shardID, &parentWorkflowID, &parentRunID) {
 		record := &persistence.InternalVisibilityWorkflowExecutionInfo{
-			WorkflowID:    workflowID,
-			RunID:         runID,
-			TypeName:      typeName,
-			StartTime:     startTime,
-			ExecutionTime: executionTime,
-			Memo:          persistence.NewDataBlob(memo, common.EncodingType(encoding)),
-			TaskList:      taskList,
-			IsCron:        isCron,
-			NumClusters:   numClusters,
-			UpdateTime:    updateTime,
-			ShardID:       shardID,
+			WorkflowID:       workflowID,
+			RunID:            runID,
+			TypeName:         typeName,
+			StartTime:        startTime,
+			ExecutionTime:    executionTime,
+			Memo:             persistence.NewDataBlob(memo, common.EncodingType(encoding)),
+			TaskList:         taskList,
+			IsCron:           isCron,
+			NumClusters:      numClusters,
+			UpdateTime:       updateTime,
+			ShardID:          shardID,
 			ParentWorkflowID: parentWorkflowID,
-			ParentRunID: parentRunID,
+			ParentRunID:      parentRunID,
 		}
 		return record, true
 	}
@@ -754,22 +754,22 @@ func readClosedWorkflowExecutionRecord(
 	var parentRunID string
 	if iter.Scan(&workflowID, &runID, &startTime, &executionTime, &closeTime, &typeName, &status, &historyLength, &memo, &encoding, &taskList, &isCron, &numClusters, &updateTime, &shardID, &parentWorkflowID, &parentRunID) {
 		record := &persistence.InternalVisibilityWorkflowExecutionInfo{
-			WorkflowID:    workflowID,
-			RunID:         runID,
-			TypeName:      typeName,
-			StartTime:     startTime,
-			ExecutionTime: executionTime,
-			CloseTime:     closeTime,
-			Status:        thrift.ToWorkflowExecutionCloseStatus(&status),
-			HistoryLength: historyLength,
-			Memo:          persistence.NewDataBlob(memo, common.EncodingType(encoding)),
-			TaskList:      taskList,
-			IsCron:        isCron,
-			NumClusters:   numClusters,
-			UpdateTime:    updateTime,
-			ShardID:       shardID,
+			WorkflowID:       workflowID,
+			RunID:            runID,
+			TypeName:         typeName,
+			StartTime:        startTime,
+			ExecutionTime:    executionTime,
+			CloseTime:        closeTime,
+			Status:           thrift.ToWorkflowExecutionCloseStatus(&status),
+			HistoryLength:    historyLength,
+			Memo:             persistence.NewDataBlob(memo, common.EncodingType(encoding)),
+			TaskList:         taskList,
+			IsCron:           isCron,
+			NumClusters:      numClusters,
+			UpdateTime:       updateTime,
+			ShardID:          shardID,
 			ParentWorkflowID: parentWorkflowID,
-			ParentRunID: parentRunID,
+			ParentRunID:      parentRunID,
 		}
 		return record, true
 	}

@@ -71,19 +71,19 @@ func (v *nosqlVisibilityStore) RecordWorkflowExecutionStarted(
 	err := v.db.InsertVisibility(ctx, ttl, &nosqlplugin.VisibilityRowForInsert{
 		DomainID: request.DomainUUID,
 		VisibilityRow: nosqlplugin.VisibilityRow{
-			WorkflowID:    request.WorkflowID,
-			RunID:         request.RunID,
-			TypeName:      request.WorkflowTypeName,
-			StartTime:     request.StartTimestamp,
-			ExecutionTime: request.ExecutionTimestamp,
-			Memo:          request.Memo,
-			TaskList:      request.TaskList,
-			IsCron:        request.IsCron,
-			NumClusters:   request.NumClusters,
-			UpdateTime:    request.UpdateTimestamp,
-			ShardID:       request.ShardID,
+			WorkflowID:       request.WorkflowID,
+			RunID:            request.RunID,
+			TypeName:         request.WorkflowTypeName,
+			StartTime:        request.StartTimestamp,
+			ExecutionTime:    request.ExecutionTimestamp,
+			Memo:             request.Memo,
+			TaskList:         request.TaskList,
+			IsCron:           request.IsCron,
+			NumClusters:      request.NumClusters,
+			UpdateTime:       request.UpdateTimestamp,
+			ShardID:          request.ShardID,
 			ParentWorkflowID: request.ParentWorkflowID,
-			ParentRunID: request.ParentRunID,
+			ParentRunID:      request.ParentRunID,
 		},
 	})
 	if err != nil {
@@ -123,7 +123,7 @@ func (v *nosqlVisibilityStore) RecordWorkflowExecutionClosed(
 			UpdateTime:    request.UpdateTimestamp,
 
 			ParentWorkflowID: request.ParentWorkflowID,
-			ParentRunID: request.ParentRunID,
+			ParentRunID:      request.ParentRunID,
 		},
 	})
 
