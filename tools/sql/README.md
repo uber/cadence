@@ -31,20 +31,20 @@ SQL_USER=$USERNAME SQL_PASSWORD=$PASSWD make install-schema-mysql
 
 ```
 ./cadence-sql-tool --ep $SQL_HOST_ADDR -p $port --plugin mysql --db cadence setup-schema -v 0.0 -- this sets up just the schema version tables with initial version of 0.0
-./cadence-sql-tool --ep $SQL_HOST_ADDR -p $port --plugin mysql --db cadence update-schema -d ./schema/mysql/v57/cadence/versioned -- upgrades your schema to the latest version
+./cadence-sql-tool --ep $SQL_HOST_ADDR -p $port --plugin mysql --db cadence update-schema -d ./schema/mysql/v8/cadence/versioned -- upgrades your schema to the latest version
 
 ./cadence-sql-tool --ep $SQL_HOST_ADDR -p $port --plugin mysql --db cadence_visibility setup-schema -v 0.0 -- this sets up just the schema version tables with initial version of 0.0 for visibility
-./cadence-sql-tool --ep $SQL_HOST_ADDR -p $port --plugin mysql --db cadence_visibility update-schema -d ./schema/mysql/v57/visibility/versioned  -- upgrades your schema to the latest version for visibility
+./cadence-sql-tool --ep $SQL_HOST_ADDR -p $port --plugin mysql --db cadence_visibility update-schema -d ./schema/mysql/v8/visibility/versioned  -- upgrades your schema to the latest version for visibility
 ```
 
 ### Update schema as part of a release
 You can only upgrade to a new version after the initial setup done above.
 
 ```
-./cadence-sql-tool --ep $SQL_HOST_ADDR -p $port --plugin mysql --db cadence update-schema -d ./schema/mysql/v57/cadence/versioned -v x.x --dryrun -- executes a dryrun of upgrade to version x.x
-./cadence-sql-tool --ep $SQL_HOST_ADDR -p $port --plugin mysql --db cadence update-schema -d ./schema/mysql/v57/cadence/versioned -v x.x    -- actually executes the upgrade to version x.x
+./cadence-sql-tool --ep $SQL_HOST_ADDR -p $port --plugin mysql --db cadence update-schema -d ./schema/mysql/v8/cadence/versioned -v x.x --dryrun -- executes a dryrun of upgrade to version x.x
+./cadence-sql-tool --ep $SQL_HOST_ADDR -p $port --plugin mysql --db cadence update-schema -d ./schema/mysql/v8/cadence/versioned -v x.x    -- actually executes the upgrade to version x.x
 
-./cadence-sql-tool --ep $SQL_HOST_ADDR -p $port --plugin mysql --db cadence_visibility update-schema -d ./schema/mysql/v57/cadence/versioned -v x.x --dryrun -- executes a dryrun of upgrade to version x.x
-./cadence-sql-tool --ep $SQL_HOST_ADDR -p $port --plugin mysql --db cadence_visibility update-schema -d ./schema/mysql/v57/cadence/versioned -v x.x    -- actually executes the upgrade to version x.x
+./cadence-sql-tool --ep $SQL_HOST_ADDR -p $port --plugin mysql --db cadence_visibility update-schema -d ./schema/mysql/v8/cadence/versioned -v x.x --dryrun -- executes a dryrun of upgrade to version x.x
+./cadence-sql-tool --ep $SQL_HOST_ADDR -p $port --plugin mysql --db cadence_visibility update-schema -d ./schema/mysql/v8/cadence/versioned -v x.x    -- actually executes the upgrade to version x.x
 ```
 
