@@ -41,6 +41,10 @@ import (
 
 var epochStartTime = time.Unix(0, 0)
 
+const (
+	defaultTaskBufferIsolationGroup = "default-task-buffer-isolation-group" // a task buffer which is not using an isolation group
+)
+
 type (
 	taskReader struct {
 		taskBuffers     map[string]chan *persistence.TaskInfo
@@ -75,7 +79,7 @@ type (
 func newTaskReader(tlMgr *taskListManagerImpl, isolationGroups []string) *taskReader {
 	ctx, cancel := context.WithCancel(context.Background())
 	taskBuffers := make(map[string]chan *persistence.TaskInfo)
-	taskBuffers[""] = make(chan *persistence.TaskInfo, tlMgr.config.GetTasksBatchSize()-1)
+	taskBuffers[defaultTaskBufferIsolationGroup] = make(chan *persistence.TaskInfo, tlMgr.config.GetTasksBatchSize()-1)
 	for _, g := range isolationGroups {
 		taskBuffers[g] = make(chan *persistence.TaskInfo, tlMgr.config.GetTasksBatchSize()-1)
 	}

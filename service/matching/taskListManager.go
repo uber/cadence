@@ -597,7 +597,7 @@ func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, task
 			}
 			// if we're unable to get the isolation group, log the error and fallback to no isolation
 			c.logger.Error("Failed to get isolation group from partition library", tag.WorkflowID(taskInfo.WorkflowID), tag.WorkflowRunID(taskInfo.RunID), tag.TaskID(taskInfo.TaskID), tag.Error(err))
-			return "", nil
+			return defaultTaskBufferIsolationGroup, nil
 		}
 		c.logger.Debug("get isolation group", tag.PollerGroups(pollerIsolationGroups), tag.IsolationGroup(group), tag.PartitionConfig(partitionConfig))
 		// For a sticky tasklist, it is possible that when an isolation group is undrained, the tasks from one workflow is reassigned
@@ -615,7 +615,7 @@ func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, task
 		}
 		return group, nil
 	}
-	return "", nil
+	return defaultTaskBufferIsolationGroup, nil
 }
 
 func getTaskListTypeTag(taskListType int) metrics.Tag {
