@@ -42,7 +42,7 @@ import (
 var epochStartTime = time.Unix(0, 0)
 
 const (
-	defaultTaskBufferIsolationGroup = "default-task-buffer-isolation-group" // a task buffer which is not using an isolation group
+	defaultTaskBufferIsolationGroup = "" // a task buffer which is not using an isolation group
 )
 
 type (
