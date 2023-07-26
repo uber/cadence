@@ -417,44 +417,6 @@ VisibilityArchivalURI: {{.}}{{end}}
 {{with .FailoverInfo}}Graceful failover info:
 {{table .}}{{end}}`
 
-//
-//var newtemplateDomain = `Validation Check:
-//{{- range .}}
-//- {{.ValidationCheck}}: {{.ValidationResult}}
-//{{- with .ValidationDetails}}
-//{{- with .CurrentDomainRow}}
-//Current Domain:
-//  Name: {{.DomainInfo.Name}}
-//  UUID: {{.DomainInfo.UUID}}
-//{{- end}}
-//{{- with .NewDomainRow}}
-//New Domain:
-//  Name: {{.DomainInfo.Name}}
-//  UUID: {{.DomainInfo.UUID}}
-//{{- end}}
-//{{- if .LongRunningWorkFlowNum}}
-//Long Running Workflow Num: {{.LongRunningWorkFlowNum}}
-//{{- end}}
-//{{- range .MismatchedDynamicConfig}}
-//Mismatched Dynamic Config:
-//Config Key: {{.Key}}
-//{{- range $index, $value := .CurrValues}}
-//{{- if eq $index 0 }}
-//  Current Response:
-//{{- end}}
-//    Data: {{ printf "%s" $value.Value.Data }}
-//{{- end}}
-//{{- range $index, $value := .NewValues}}
-//{{- if eq $index 0 }}
-//  New Response:
-//{{- end}}
-//    Data: {{ printf "%s" $value.Value.Data }}
-//{{- end}}
-//{{- end}}
-//{{- end}}
-//{{- end}}
-//`
-
 var newtemplateDomain = `Validation Check:
 {{- range .}}
 - {{.ValidationCheck}}: {{.ValidationResult}}
@@ -922,10 +884,8 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 	}
 
 	for _, configKey := range resp {
-		var mismatchedConfig MismatchedDynamicConfig
-
 		if len(configKey.Filters()) == 1 && configKey.Filters()[0] == dc.DomainName {
-			// Use the helper method to get the GetDynamicConfigRequest
+			// Validate dynamic configs with only domainName filter
 			currRequest := dynamicconfig.ToGetDynamicConfigFilterRequest(configKey.String(), []dynamicconfig.FilterOption{
 				dynamicconfig.DomainFilter(currDomain),
 			})
@@ -945,11 +905,6 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 
 			if !reflect.DeepEqual(currResp.Value, newResp.Value) {
 				check = false
-			}
-
-			if currResp.Value != newResp.Value {
-				// added this so it would still print details regardless. do we not want it if
-				// the checker returns true?
 				mismatchedConfigs = append(mismatchedConfigs, MismatchedDynamicConfig{
 					Key: configKey,
 					CurrValues: []*types.DynamicConfigValue{
@@ -966,6 +921,7 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 			}
 
 		} else if len(configKey.Filters()) == 1 && configKey.Filters()[0] == dc.DomainID {
+			// Validate dynamic configs with only domainID filter
 			currRequest := dynamicconfig.ToGetDynamicConfigFilterRequest(configKey.String(), []dynamicconfig.FilterOption{
 				dynamicconfig.DomainIDFilter(currentDomainID),
 			})
@@ -985,9 +941,6 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 
 			if !reflect.DeepEqual(currResp.Value, newResp.Value) {
 				check = false
-			}
-
-			if currResp.Value != newResp.Value {
 				mismatchedConfigs = append(mismatchedConfigs, MismatchedDynamicConfig{
 					Key: configKey,
 					CurrValues: []*types.DynamicConfigValue{
@@ -1004,7 +957,10 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 			}
 
 		} else if containsFilter(configKey, dc.DomainName.String()) && containsFilter(configKey, dc.TaskListName.String()) {
+			// Validate dynamic configs with only domainName and TaskList filters
 			taskLists := c.StringSlice(FlagTaskList)
+			var mismatchedCurValues []*types.DynamicConfigValue
+			var mismatchedNewValues []*types.DynamicConfigValue
 			for _, taskList := range taskLists {
 
 				currRequest := dynamicconfig.ToGetDynamicConfigFilterRequest(configKey.String(), []dynamicconfig.FilterOption{
@@ -1028,12 +984,6 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 
 				if !reflect.DeepEqual(currResp.Value, newResp.Value) {
 					check = false
-				}
-
-				if currResp.Value != newResp.Value {
-					var mismatchedCurValues []*types.DynamicConfigValue
-					var mismatchedNewValues []*types.DynamicConfigValue
-
 					mismatchedCurValues = append(mismatchedCurValues, toDynamicConfigValue(currResp.Value, map[dc.Filter]interface{}{
 						dynamicconfig.DomainName:   currDomain,
 						dynamicconfig.TaskListName: taskLists,
@@ -1042,19 +992,15 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 						dynamicconfig.DomainName:   newDomain,
 						dynamicconfig.TaskListName: taskLists,
 					}))
-					d.mismatchedConfigsMutex.Lock()
-					mismatchedConfigs = append(mismatchedConfigs, MismatchedDynamicConfig{
-						CurrValues: mismatchedCurValues,
-						NewValues:  mismatchedNewValues,
-					})
-					d.mismatchedConfigsMutex.Unlock()
+
 				}
 			}
-		}
-
-		// append to mismatchedConfigs after the tasklist for loop
-		if mismatchedConfig.Key != nil {
-			mismatchedConfigs = append(mismatchedConfigs, mismatchedConfig)
+			if len(mismatchedCurValues) > 0 && len(mismatchedNewValues) > 0 {
+				mismatchedConfigs = append(mismatchedConfigs, MismatchedDynamicConfig{
+					CurrValues: mismatchedCurValues,
+					NewValues:  mismatchedNewValues,
+				})
+			}
 		}
 	}
 
@@ -1100,11 +1046,9 @@ func toDynamicConfigValue(value *types.DataBlob, filterMaps map[dynamicconfig.Fi
 		}
 		configFilters = append(configFilters, &types.DynamicConfigFilter{
 			Name: filter.String(),
-			//Value: valueToDataBlob(filterValue),
 			Value: &types.DataBlob{
 				EncodingType: sub.EncodingType,
-				//Data:         json.Unmarshal(sub.Data, &result),
-				Data: valueToDataBlob(decodedValue).Data,
+				Data:         valueToDataBlob(decodedValue).Data,
 			},
 		})
 		fmt.Println("Data:", string(configFilters[len(configFilters)-1].Value.Data))
