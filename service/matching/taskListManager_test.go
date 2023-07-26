@@ -227,7 +227,7 @@ func tlMgrStartWithoutNotifyEvent(tlm *taskListManagerImpl) {
 	// mimic tlm.Start() but avoid calling notifyEvent
 	tlm.liveness.Start()
 	tlm.startWG.Done()
-	go tlm.taskReader.dispatchBufferedTasks("")
+	go tlm.taskReader.dispatchBufferedTasks(defaultTaskBufferIsolationGroup)
 	go tlm.taskReader.getTasksPump()
 }
 
