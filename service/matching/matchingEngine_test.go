@@ -1167,8 +1167,8 @@ func (s *matchingEngineSuite) TaskExpiryAndCompletion(taskType int) {
 		batchSize          int
 		maxTimeBtwnDeletes time.Duration
 	}{
-		{2, time.Minute}, // test taskGC deleting due to size threshold
-		//{100, time.Nanosecond}, // test taskGC deleting due to time condition
+		{2, time.Minute},       // test taskGC deleting due to size threshold
+		{100, time.Nanosecond}, // test taskGC deleting due to time condition
 	}
 
 	for _, tc := range testCases {
