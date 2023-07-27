@@ -287,7 +287,7 @@ type Interface interface {
 
 // New builds a new client for the WorkflowService service.
 //
-// 	client := workflowserviceclient.New(dispatcher.ClientConfig("workflowservice"))
+//	client := workflowserviceclient.New(dispatcher.ClientConfig("workflowservice"))
 func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 	return client{
 		c: thrift.New(thrift.Config{

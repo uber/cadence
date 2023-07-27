@@ -26,27 +26,27 @@
 // Package metafx provides better integration for Fx for services
 // implementing or calling Meta.
 //
-// Clients
+// # Clients
 //
 // If you are making requests to Meta, use the Client function to inject a
 // Meta client into your container.
 //
-// 	fx.Provide(metafx.Client("..."))
+//	fx.Provide(metafx.Client("..."))
 //
-// Servers
+// # Servers
 //
 // If you are implementing Meta, provide a metaserver.Interface into
 // the container and use the Server function.
 //
 // Given,
 //
-// 	func NewMetaHandler() metaserver.Interface
+//	func NewMetaHandler() metaserver.Interface
 //
 // You can do the following to have the procedures of Meta made available
 // to an Fx application.
 //
-// 	fx.Provide(
-// 		NewMetaHandler,
-// 		metafx.Server(),
-// 	)
+//	fx.Provide(
+//		NewMetaHandler,
+//		metafx.Server(),
+//	)
 package metafx

@@ -54,12 +54,12 @@ type ServerResult struct {
 // Server provides procedures for HistoryService to an Fx application. It expects a
 // historyservicefx.Interface to be present in the container.
 //
-// 	fx.Provide(
-// 		func(h *MyHistoryServiceHandler) historyserviceserver.Interface {
-// 			return h
-// 		},
-// 		historyservicefx.Server(),
-// 	)
+//	fx.Provide(
+//		func(h *MyHistoryServiceHandler) historyserviceserver.Interface {
+//			return h
+//		},
+//		historyservicefx.Server(),
+//	)
 func Server(opts ...thrift.RegisterOption) interface{} {
 	return func(p ServerParams) ServerResult {
 		procedures := historyserviceserver.New(p.Handler, opts...)
