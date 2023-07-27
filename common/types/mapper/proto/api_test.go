@@ -792,7 +792,7 @@ func TestParentExecutionInfoFields(t *testing.T) {
 	assert.Equal(t, testdata.ParentExecutionInfo.InitiatedID, *ToParentInitiatedID(info))
 }
 func TestWorkflowExecutionInfo(t *testing.T) {
-	for _, item := range []*types.WorkflowExecutionInfo{nil, {}, &testdata.WorkflowExecutionInfo} {
+	for _, item := range []*types.WorkflowExecutionInfo{nil, {}, &testdata.WorkflowExecutionInfo, &testdata.CronWorkflowExecutionInfo} {
 		assert.Equal(t, item, ToWorkflowExecutionInfo(FromWorkflowExecutionInfo(item)))
 	}
 }
