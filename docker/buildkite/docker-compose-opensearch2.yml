@@ -36,7 +36,7 @@ services:
           - elasticsearch
     environment:
       - discovery.type=single-node
-      - plugins.security.disabled=true
+      - "DISABLE_SECURITY_PLUGIN=true"
 
   integration-test-cassandra:
     build:
@@ -48,7 +48,7 @@ services:
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
       - "TEST_TAG=esintegration"
-      - "ES_VERSION=v7"
+      - "ES_VERSION=os2"
       - BUILDKITE_AGENT_ACCESS_TOKEN
       - BUILDKITE_JOB_ID
       - BUILDKITE_BUILD_ID

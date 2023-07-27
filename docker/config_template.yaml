@@ -118,6 +118,14 @@ services:
             port: {{ default .Env.FRONTEND_PORT "7933" }}
             grpcPort: {{ default .Env.GRPC_FRONTEND_PORT "7833" }}
             bindOnIP: {{ default .Env.BIND_ON_IP "127.0.0.1" }}
+            {{- if .Env.FRONTEND_HTTP_PORT }}
+            http:
+                port: {{ .Env.FRONTEND_HTTP_PORT }}
+                procedures:
+                {{- range $seed := (split .Env.FRONTEND_HTTP_PROCEDURES ",") }}
+                    - {{ . }}
+                {{- end }}
+            {{- end }}
         {{- if .Env.STATSD_ENDPOINT }}
         metrics:
             statsd:

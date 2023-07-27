@@ -72,12 +72,15 @@ func (tgc *taskGC) tryDeleteNextBatch(ackLevel int64, ignoreTimeCond bool) {
 		return
 	}
 	tgc.lastDeleteTime = time.Now()
-	n, err := tgc.db.CompleteTasksLessThan(ackLevel, batchSize)
-	switch {
-	case err != nil:
-		return
-	case n < batchSize:
-		tgc.ackLevel = ackLevel
+	for {
+		n, err := tgc.db.CompleteTasksLessThan(ackLevel, batchSize)
+		if err != nil {
+			break
+		}
+		if n < batchSize {
+			tgc.ackLevel = ackLevel
+			break
+		}
 	}
 }
 

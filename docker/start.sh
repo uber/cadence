@@ -35,7 +35,7 @@ setup_cassandra_schema() {
 }
 
 setup_mysql_schema() {
-    SCHEMA_DIR=$CADENCE_HOME/schema/mysql/v57/cadence/versioned
+    SCHEMA_DIR=$CADENCE_HOME/schema/mysql/v8/cadence/versioned
     if [ "$MYSQL_TX_ISOLATION_COMPAT" == "true" ]; then
         CONNECT_ATTR='--connect-attributes tx_isolation=READ-COMMITTED'
     fi
