@@ -344,6 +344,25 @@ var (
 		TaskList:          TaskListName,
 		PartitionConfig:   PartitionConfig,
 	}
+	CronWorkflowExecutionInfo = types.WorkflowExecutionInfo{
+		Execution:         &WorkflowExecution,
+		Type:              &WorkflowType,
+		StartTime:         &Timestamp1,
+		CloseTime:         &Timestamp2,
+		CloseStatus:       &WorkflowExecutionCloseStatus,
+		HistoryLength:     HistoryLength,
+		ParentDomainID:    common.StringPtr(DomainID),
+		ParentDomain:      common.StringPtr(DomainName),
+		ParentExecution:   &WorkflowExecution,
+		ParentInitiatedID: common.Int64Ptr(EventID1),
+		ExecutionTime:     &Timestamp3,
+		Memo:              &Memo,
+		SearchAttributes:  &SearchAttributes,
+		AutoResetPoints:   &ResetPoints,
+		TaskList:          TaskListName,
+		PartitionConfig:   PartitionConfig,
+		IsCron:            true,
+	}
 	WorkflowExecutionInfoArray = []*types.WorkflowExecutionInfo{&WorkflowExecutionInfo}
 
 	WorkflowQuery = types.WorkflowQuery{
