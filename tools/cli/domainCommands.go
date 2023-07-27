@@ -61,8 +61,6 @@ type (
 
 		// act as admin to modify domain in DB directly
 		domainHandler domain.Handler
-
-		mismatchedConfigsMutex sync.Mutex
 	}
 )
 
@@ -434,29 +432,24 @@ var newtemplateDomain = `Validation Check:
  {{- if .LongRunningWorkFlowNum}}
  Long Running Workflow Num: {{.LongRunningWorkFlowNum}}
  {{- end}}
- {{- range .MismatchedDynamicConfig}}
+{{- range .MismatchedDynamicConfig}}
+ {{ $dynamicConfig := . }}
  Mismatched Dynamic Config:
  Config Key: {{.Key}}
-   {{- range $index, $value := .CurrValues}}
-   {{- if eq $index 0 }}
+   {{- range $i, $v := .CurrValues}}
    Current Response:
-   {{- end}}
-     Data: {{ printf "%s" $value.Value.Data }}
+     Data: {{ printf "%s" (index $dynamicConfig.CurrValues $i).Value.Data }}
      Filters:
-     {{- range $filter := $value.Filters}}
+     {{- range $filter := (index $dynamicConfig.CurrValues $i).Filters}}
        - Name: {{ $filter.Name }}
-         Value: {{ printf "%s" $filter.Value }}
+         Value: {{ printf "%s" $filter.Value.Data }}
      {{- end}}
-   {{- end}}
-   {{- range $index, $value := .NewValues}}
-   {{- if eq $index 0 }}
    New Response:
-   {{- end}}
-     Data: {{ printf "%s" $value.Value.Data }}
+     Data: {{ printf "%s" (index $dynamicConfig.NewValues $i).Value.Data }}
      Filters:
-     {{- range $filter := $value.Filters}}
+     {{- range $filter := (index $dynamicConfig.NewValues $i).Filters}}
        - Name: {{ $filter.Name }}
-         Value: {{ printf "%s" $filter.Value }}
+         Value: {{ printf "%s" $filter.Value.Data }}
      {{- end}}
    {{- end}}
  {{- end}}
@@ -913,7 +906,7 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 						}),
 					},
 					NewValues: []*types.DynamicConfigValue{
-						toDynamicConfigValue(currResp.Value, map[dc.Filter]interface{}{
+						toDynamicConfigValue(newResp.Value, map[dc.Filter]interface{}{
 							dynamicconfig.DomainName: newDomain,
 						}),
 					},
@@ -949,7 +942,7 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 						}),
 					},
 					NewValues: []*types.DynamicConfigValue{
-						toDynamicConfigValue(currResp.Value, map[dc.Filter]interface{}{
+						toDynamicConfigValue(newResp.Value, map[dc.Filter]interface{}{
 							dynamicconfig.DomainID: destinationDomainID,
 						}),
 					},
@@ -997,6 +990,7 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 			}
 			if len(mismatchedCurValues) > 0 && len(mismatchedNewValues) > 0 {
 				mismatchedConfigs = append(mismatchedConfigs, MismatchedDynamicConfig{
+					Key:        configKey,
 					CurrValues: mismatchedCurValues,
 					NewValues:  mismatchedNewValues,
 				})
@@ -1016,7 +1010,6 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 }
 
 func valueToDataBlob(value interface{}) *types.DataBlob {
-
 	if value == nil {
 		return nil
 	}
@@ -1030,26 +1023,12 @@ func valueToDataBlob(value interface{}) *types.DataBlob {
 	}
 }
 
-func unmarshalJSONData(data []byte, v interface{}) error {
-	return json.Unmarshal(data, v)
-}
-
 func toDynamicConfigValue(value *types.DataBlob, filterMaps map[dynamicconfig.Filter]interface{}) *types.DynamicConfigValue {
 	var configFilters []*types.DynamicConfigFilter
 	for filter, filterValue := range filterMaps {
-		sub := valueToDataBlob(filterValue)
-		var decodedValue interface{}
-		err := unmarshalJSONData(sub.Data, &decodedValue)
-		if err != nil {
-			fmt.Printf("Error unmarshaling filterValue: %v\n", err)
-			continue
-		}
 		configFilters = append(configFilters, &types.DynamicConfigFilter{
-			Name: filter.String(),
-			Value: &types.DataBlob{
-				EncodingType: sub.EncodingType,
-				Data:         valueToDataBlob(decodedValue).Data,
-			},
+			Name:  filter.String(),
+			Value: valueToDataBlob(filterValue),
 		})
 		fmt.Println("Data:", string(configFilters[len(configFilters)-1].Value.Data))
 	}
