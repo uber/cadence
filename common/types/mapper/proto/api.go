@@ -4697,6 +4697,7 @@ func FromWorkflowExecutionInfo(t *types.WorkflowExecutionInfo) *apiv1.WorkflowEx
 		AutoResetPoints:     FromResetPoints(t.AutoResetPoints),
 		TaskList:            t.TaskList,
 		PartitionConfig:     t.PartitionConfig,
+		IsCron:              t.IsCron,
 	}
 }
 
@@ -4721,6 +4722,7 @@ func ToWorkflowExecutionInfo(t *apiv1.WorkflowExecutionInfo) *types.WorkflowExec
 		AutoResetPoints:   ToResetPoints(t.AutoResetPoints),
 		TaskList:          t.TaskList,
 		PartitionConfig:   t.PartitionConfig,
+		IsCron:            t.IsCron,
 	}
 }
 
