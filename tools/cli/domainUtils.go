@@ -214,6 +214,11 @@ var (
 			Usage: "t",
 		},
 
+		cli.StringSliceFlag{
+			Name:  FlagTaskList,
+			Usage: "t",
+		},
+
 		getFormatFlag(),
 	}
 
