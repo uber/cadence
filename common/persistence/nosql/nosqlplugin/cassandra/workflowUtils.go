@@ -477,10 +477,12 @@ func (db *cdb) updateSignalsRequested(
 	runID string,
 	signalReqIDs []string,
 	deleteSignalReqIDs []string,
+	ttlInSeconds int64,
 ) error {
 
 	if len(signalReqIDs) > 0 {
 		batch.Query(templateUpdateSignalRequestedQuery,
+			ttlInSeconds,
 			signalReqIDs,
 			shardID,
 			rowTypeExecution,
@@ -554,9 +556,11 @@ func (db *cdb) updateSignalInfos(
 	runID string,
 	signalInfos map[int64]*persistence.SignalInfo,
 	deleteInfos []int64,
+	ttlInSeconds int64,
 ) error {
 	for _, c := range signalInfos {
 		batch.Query(templateUpdateSignalInfoQuery,
+			ttlInSeconds,
 			c.InitiatedID,
 			c.Version,
 			c.InitiatedID,
@@ -635,10 +639,12 @@ func (db *cdb) updateRequestCancelInfos(
 	runID string,
 	requestCancelInfos map[int64]*persistence.RequestCancelInfo,
 	deleteInfos []int64,
+	ttlInSeconds int64,
 ) error {
 
 	for _, c := range requestCancelInfos {
 		batch.Query(templateUpdateRequestCancelInfoQuery,
+			ttlInSeconds,
 			c.InitiatedID,
 			c.Version,
 			c.InitiatedID,
@@ -732,10 +738,12 @@ func (db *cdb) updateChildExecutionInfos(
 	runID string,
 	childExecutionInfos map[int64]*persistence.InternalChildExecutionInfo,
 	deleteInfos []int64,
+	ttlInSeconds int64,
 ) error {
 
 	for _, c := range childExecutionInfos {
 		batch.Query(templateUpdateChildExecutionInfoQuery,
+			ttlInSeconds,
 			c.InitiatedID,
 			c.Version,
 			c.InitiatedID,
@@ -825,9 +833,11 @@ func (db *cdb) updateTimerInfos(
 	runID string,
 	timerInfos map[string]*persistence.TimerInfo,
 	deleteInfos []string,
+	ttlInSeconds int64,
 ) error {
 	for _, timerInfo := range timerInfos {
 		batch.Query(templateUpdateTimerInfoQuery,
+			ttlInSeconds,
 			timerInfo.TimerID,
 			timerInfo.Version,
 			timerInfo.TimerID,
@@ -937,9 +947,11 @@ func (db *cdb) updateActivityInfos(
 	runID string,
 	activityInfos map[int64]*persistence.InternalActivityInfo,
 	deleteInfos []int64,
+	ttlInSeconds int64,
 ) error {
 	for _, a := range activityInfos {
 		batch.Query(templateUpdateActivityInfoQuery,
+			ttlInSeconds,
 			a.ScheduleID,
 			a.Version,
 			a.ScheduleID,
@@ -1032,27 +1044,27 @@ func (db *cdb) createWorkflowExecutionWithMergeMaps(
 		return fmt.Errorf("should only support WorkflowExecutionMapsWriteModeCreate")
 	}
 
-	err = db.updateActivityInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ActivityInfos, nil)
+	err = db.updateActivityInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ActivityInfos, nil, 0)
 	if err != nil {
 		return err
 	}
-	err = db.updateTimerInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.TimerInfos, nil)
+	err = db.updateTimerInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.TimerInfos, nil, 0)
 	if err != nil {
 		return err
 	}
-	err = db.updateChildExecutionInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ChildWorkflowInfos, nil)
+	err = db.updateChildExecutionInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ChildWorkflowInfos, nil, 0)
 	if err != nil {
 		return err
 	}
-	err = db.updateRequestCancelInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.RequestCancelInfos, nil)
+	err = db.updateRequestCancelInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.RequestCancelInfos, nil, 0)
 	if err != nil {
 		return err
 	}
-	err = db.updateSignalInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.SignalInfos, nil)
+	err = db.updateSignalInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.SignalInfos, nil, 0)
 	if err != nil {
 		return err
 	}
-	return db.updateSignalsRequested(batch, shardID, domainID, workflowID, execution.RunID, execution.SignalRequestedIDs, nil)
+	return db.updateSignalsRequested(batch, shardID, domainID, workflowID, execution.RunID, execution.SignalRequestedIDs, nil, 0)
 }
 
 func (db *cdb) resetWorkflowExecutionAndMapsAndEventBuffer(
@@ -1063,21 +1075,7 @@ func (db *cdb) resetWorkflowExecutionAndMapsAndEventBuffer(
 	execution *nosqlplugin.WorkflowExecutionRequest,
 ) error {
 	//Fires when the workflow status is closed.
-	if (execution.State == persistence.WorkflowStateCompleted || execution.State == persistence.WorkflowStateCorrupted) && db.dc.EnableExecutionTTL(domainID) {
-		batch.Query(templateUpdateWorkflowExecutionWithVersionHistoriesQueryPart1,
-			domainID,
-			execution.RunID,
-			shardID,
-			rowTypeExecutionTaskID,
-			rowTypeExecution,
-			defaultVisibilityTimestamp,
-			workflowID,
-			execution.TTLInSeconds,
-		)
-	} else {
-		//0 is the default value of TTL when either of the above condition is not met. 0 TTL essentially means that there is no TTL.
-		execution.TTLInSeconds = 0
-	}
+	execution, _ = db.assignTtlonClose(batch, shardID, domainID, workflowID, execution)
 	err := db.updateWorkflowExecution(batch, shardID, domainID, workflowID, execution)
 	if err != nil {
 		return err
@@ -1167,22 +1165,9 @@ func (db *cdb) updateWorkflowExecutionAndEventBufferWithMergeAndDeleteMaps(
 	workflowID string,
 	execution *nosqlplugin.WorkflowExecutionRequest,
 ) error {
-	//Fires when the workflow status is closed.
-	if (execution.State == persistence.WorkflowStateCompleted || execution.State == persistence.WorkflowStateCorrupted) && db.dc.EnableExecutionTTL(domainID) {
-		batch.Query(templateUpdateWorkflowExecutionWithVersionHistoriesQueryPart1,
-			domainID,
-			execution.RunID,
-			shardID,
-			rowTypeExecutionTaskID,
-			rowTypeExecution,
-			defaultVisibilityTimestamp,
-			workflowID,
-			execution.TTLInSeconds,
-		)
-	} else {
-		//0 is the default value of TTL when either of the above condition is not met. 0 TTL essentially means that there is no TTL.
-		execution.TTLInSeconds = 0
-	}
+	//Fires when the workflow status is closed. The TTL gets assigned to the primary keys for execution object.
+	execution, _ = db.assignTtlonClose(batch, shardID, domainID, workflowID, execution)
+
 	err := db.updateWorkflowExecution(batch, shardID, domainID, workflowID, execution)
 	if err != nil {
 		return err
@@ -1203,27 +1188,27 @@ func (db *cdb) updateWorkflowExecutionAndEventBufferWithMergeAndDeleteMaps(
 		return fmt.Errorf("should only support WorkflowExecutionMapsWriteModeUpdate")
 	}
 
-	err = db.updateActivityInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ActivityInfos, execution.ActivityInfoKeysToDelete)
+	err = db.updateActivityInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ActivityInfos, execution.ActivityInfoKeysToDelete, execution.TTLInSeconds)
 	if err != nil {
 		return err
 	}
-	err = db.updateTimerInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.TimerInfos, execution.TimerInfoKeysToDelete)
+	err = db.updateTimerInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.TimerInfos, execution.TimerInfoKeysToDelete, execution.TTLInSeconds)
 	if err != nil {
 		return err
 	}
-	err = db.updateChildExecutionInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ChildWorkflowInfos, execution.ChildWorkflowInfoKeysToDelete)
+	err = db.updateChildExecutionInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ChildWorkflowInfos, execution.ChildWorkflowInfoKeysToDelete, execution.TTLInSeconds)
 	if err != nil {
 		return err
 	}
-	err = db.updateRequestCancelInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.RequestCancelInfos, execution.RequestCancelInfoKeysToDelete)
+	err = db.updateRequestCancelInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.RequestCancelInfos, execution.RequestCancelInfoKeysToDelete, execution.TTLInSeconds)
 	if err != nil {
 		return err
 	}
-	err = db.updateSignalInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.SignalInfos, execution.SignalInfoKeysToDelete)
+	err = db.updateSignalInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.SignalInfos, execution.SignalInfoKeysToDelete, execution.TTLInSeconds)
 	if err != nil {
 		return err
 	}
-	return db.updateSignalsRequested(batch, shardID, domainID, workflowID, execution.RunID, execution.SignalRequestedIDs, execution.SignalRequestedIDsKeysToDelete)
+	return db.updateSignalsRequested(batch, shardID, domainID, workflowID, execution.RunID, execution.SignalRequestedIDs, execution.SignalRequestedIDsKeysToDelete, execution.TTLInSeconds)
 }
 
 func (db *cdb) updateWorkflowExecution(
@@ -1520,4 +1505,29 @@ func populateGetReplicationTasks(
 	err := iter.Close()
 
 	return tasks, nextPageToken, err
+}
+
+func (db *cdb) assignTtlonClose(batch gocql.Batch,
+	shardID int,
+	domainID string,
+	workflowID string,
+	execution *nosqlplugin.WorkflowExecutionRequest,
+) (*nosqlplugin.WorkflowExecutionRequest, error) {
+	if (execution.State == persistence.WorkflowStateCompleted || execution.State == persistence.WorkflowStateCorrupted) && db.dc.EnableExecutionTTL(domainID) {
+		batch.Query(templateUpdateWorkflowExecutionWithVersionHistoriesQueryPart1,
+			domainID,
+			execution.RunID,
+			shardID,
+			rowTypeExecutionTaskID,
+			rowTypeExecution,
+			defaultVisibilityTimestamp,
+			workflowID,
+			execution.TTLInSeconds,
+		)
+	} else {
+		//0 is the default value of TTL when either of the above condition is not met. 0 TTL essentially means that there is no TTL.
+		execution.TTLInSeconds = 0
+	}
+
+	return execution, nil
 }

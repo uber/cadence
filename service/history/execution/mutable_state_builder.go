@@ -54,6 +54,7 @@ const (
 	mutableStateInvalidHistoryActionMsgTemplate = mutableStateInvalidHistoryActionMsg + ": %v"
 
 	timerCancellationMsgTimerIDUnknown = "TIMER_ID_UNKNOWN"
+	cassandraUpperBound                = "2038-01-19T03:14:06+00:00"
 )
 
 var (
@@ -4830,7 +4831,7 @@ func (e *mutableStateBuilder) calculateTTL() (int, error) {
 	//The current value and the subsequent check on it ensures that the TTL value will never surpass the upper limit.
 	// Parse the time string
 	layout := "2006-01-02T15:04:05-07:00"
-	t, err := time.Parse(layout, "2038-01-19T03:14:06+00:00")
+	t, err := time.Parse(layout, cassandraUpperBound)
 	if err != nil {
 		return TTLInSeconds, err
 	}

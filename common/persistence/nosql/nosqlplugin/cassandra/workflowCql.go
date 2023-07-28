@@ -343,7 +343,7 @@ workflow_state = ? ` +
 		`IF next_event_id = ? `
 
 	templateUpdateActivityInfoQuery = `UPDATE executions ` +
-		`SET activity_map[ ? ] =` + templateActivityInfoType + ` ` +
+		`USING TTL ? SET activity_map[ ? ] =` + templateActivityInfoType + ` ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
@@ -363,7 +363,7 @@ workflow_state = ? ` +
 		`and task_id = ? `
 
 	templateUpdateTimerInfoQuery = `UPDATE executions ` +
-		`SET timer_map[ ? ] =` + templateTimerInfoType + ` ` +
+		`USING TTL ? SET timer_map[ ? ] =` + templateTimerInfoType + ` ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
@@ -383,7 +383,7 @@ workflow_state = ? ` +
 		`and task_id = ? `
 
 	templateUpdateChildExecutionInfoQuery = `UPDATE executions ` +
-		`SET child_executions_map[ ? ] =` + templateChildExecutionInfoType + ` ` +
+		`USING TTL ? SET child_executions_map[ ? ] =` + templateChildExecutionInfoType + ` ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
@@ -403,7 +403,7 @@ workflow_state = ? ` +
 		`and task_id = ? `
 
 	templateUpdateRequestCancelInfoQuery = `UPDATE executions ` +
-		`SET request_cancel_map[ ? ] =` + templateRequestCancelInfoType + ` ` +
+		`USING TTL ? SET request_cancel_map[ ? ] =` + templateRequestCancelInfoType + ` ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
@@ -423,7 +423,7 @@ workflow_state = ? ` +
 		`and task_id = ? `
 
 	templateUpdateSignalInfoQuery = `UPDATE executions ` +
-		`SET signal_map[ ? ] =` + templateSignalInfoType + ` ` +
+		`USING TTL ? SET signal_map[ ? ] =` + templateSignalInfoType + ` ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
@@ -443,7 +443,7 @@ workflow_state = ? ` +
 		`and task_id = ? `
 
 	templateUpdateSignalRequestedQuery = `UPDATE executions ` +
-		`SET signal_requested = signal_requested + ? ` +
+		`USING TTL ? SET signal_requested = signal_requested + ? ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
