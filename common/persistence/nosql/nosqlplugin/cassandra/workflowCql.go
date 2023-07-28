@@ -353,7 +353,7 @@ workflow_state = ? ` +
 		`and task_id = ? `
 
 	templateResetActivityInfoQuery = `UPDATE executions ` +
-		`SET activity_map = ?` +
+		`USING TTL ? SET activity_map = ?` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
@@ -373,7 +373,7 @@ workflow_state = ? ` +
 		`and task_id = ? `
 
 	templateResetTimerInfoQuery = `UPDATE executions ` +
-		`SET timer_map = ?` +
+		`USING TTL ? SET timer_map = ?` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
@@ -393,7 +393,7 @@ workflow_state = ? ` +
 		`and task_id = ? `
 
 	templateResetChildExecutionInfoQuery = `UPDATE executions ` +
-		`SET child_executions_map = ?` +
+		`USING TTL ? SET child_executions_map = ?` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
@@ -413,7 +413,7 @@ workflow_state = ? ` +
 		`and task_id = ? `
 
 	templateResetRequestCancelInfoQuery = `UPDATE executions ` +
-		`SET request_cancel_map = ?` +
+		`USING TTL ? SET request_cancel_map = ?` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
@@ -433,7 +433,7 @@ workflow_state = ? ` +
 		`and task_id = ? `
 
 	templateResetSignalInfoQuery = `UPDATE executions ` +
-		`SET signal_map = ?` +
+		`USING TTL ? SET signal_map = ?` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
@@ -453,7 +453,7 @@ workflow_state = ? ` +
 		`and task_id = ? `
 
 	templateResetSignalRequestedQuery = `UPDATE executions ` +
-		`SET signal_requested = ?` +
+		`USING TTL ? SET signal_requested = ?` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +

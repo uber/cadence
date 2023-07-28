@@ -456,8 +456,10 @@ func (db *cdb) resetSignalsRequested(
 	workflowID string,
 	runID string,
 	signalReqIDs []string,
+	ttlInSeconds int64,
 ) error {
 	batch.Query(templateResetSignalRequestedQuery,
+		ttlInSeconds,
 		signalReqIDs,
 		shardID,
 		rowTypeExecution,
@@ -514,8 +516,10 @@ func (db *cdb) resetSignalInfos(
 	workflowID string,
 	runID string,
 	signalInfos map[int64]*persistence.SignalInfo,
+	ttlInSeconds int64,
 ) error {
 	batch.Query(templateResetSignalInfoQuery,
+		ttlInSeconds,
 		resetSignalInfoMap(signalInfos),
 		shardID,
 		rowTypeExecution,
@@ -600,8 +604,10 @@ func (db *cdb) resetRequestCancelInfos(
 	workflowID string,
 	runID string,
 	requestCancelInfos map[int64]*persistence.RequestCancelInfo,
+	ttlInSeconds int64,
 ) error {
 	batch.Query(templateResetRequestCancelInfoQuery,
+		ttlInSeconds,
 		resetRequestCancelInfoMap(requestCancelInfos),
 		shardID,
 		rowTypeExecution,
@@ -681,12 +687,14 @@ func (db *cdb) resetChildExecutionInfos(
 	workflowID string,
 	runID string,
 	childExecutionInfos map[int64]*persistence.InternalChildExecutionInfo,
+	ttlInSeconds int64,
 ) error {
 	infoMap, err := resetChildExecutionInfoMap(childExecutionInfos)
 	if err != nil {
 		return err
 	}
 	batch.Query(templateResetChildExecutionInfoQuery,
+		ttlInSeconds,
 		infoMap,
 		shardID,
 		rowTypeExecution,
@@ -790,8 +798,10 @@ func (db *cdb) resetTimerInfos(
 	workflowID string,
 	runID string,
 	timerInfos map[string]*persistence.TimerInfo,
+	ttlInSeconds int64,
 ) error {
 	batch.Query(templateResetTimerInfoQuery,
+		ttlInSeconds,
 		resetTimerInfoMap(timerInfos),
 		shardID,
 		rowTypeExecution,
@@ -874,6 +884,7 @@ func (db *cdb) resetActivityInfos(
 	workflowID string,
 	runID string,
 	activityInfos map[int64]*persistence.InternalActivityInfo,
+	ttlInSeconds int64,
 ) error {
 	infoMap, err := resetActivityInfoMap(activityInfos)
 	if err != nil {
@@ -881,6 +892,7 @@ func (db *cdb) resetActivityInfos(
 	}
 
 	batch.Query(templateResetActivityInfoQuery,
+		ttlInSeconds,
 		infoMap,
 		shardID,
 		rowTypeExecution,
@@ -1092,27 +1104,27 @@ func (db *cdb) resetWorkflowExecutionAndMapsAndEventBuffer(
 	if execution.MapsWriteMode != nosqlplugin.WorkflowExecutionMapsWriteModeReset {
 		return fmt.Errorf("should only support WorkflowExecutionMapsWriteModeReset")
 	}
-	err = db.resetActivityInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ActivityInfos)
+	err = db.resetActivityInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ActivityInfos, execution.TTLInSeconds)
 	if err != nil {
 		return err
 	}
-	err = db.resetTimerInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.TimerInfos)
+	err = db.resetTimerInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.TimerInfos, execution.TTLInSeconds)
 	if err != nil {
 		return err
 	}
-	err = db.resetChildExecutionInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ChildWorkflowInfos)
+	err = db.resetChildExecutionInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ChildWorkflowInfos, execution.TTLInSeconds)
 	if err != nil {
 		return err
 	}
-	err = db.resetRequestCancelInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.RequestCancelInfos)
+	err = db.resetRequestCancelInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.RequestCancelInfos, execution.TTLInSeconds)
 	if err != nil {
 		return err
 	}
-	err = db.resetSignalInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.SignalInfos)
+	err = db.resetSignalInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.SignalInfos, execution.TTLInSeconds)
 	if err != nil {
 		return err
 	}
-	return db.resetSignalsRequested(batch, shardID, domainID, workflowID, execution.RunID, execution.SignalRequestedIDs)
+	return db.resetSignalsRequested(batch, shardID, domainID, workflowID, execution.RunID, execution.SignalRequestedIDs, execution.TTLInSeconds)
 }
 
 func appendBufferedEvents(
