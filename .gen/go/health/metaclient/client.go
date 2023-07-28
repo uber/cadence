@@ -47,7 +47,7 @@ type Interface interface {
 
 // New builds a new client for the Meta service.
 //
-// 	client := metaclient.New(dispatcher.ClientConfig("meta"))
+//	client := metaclient.New(dispatcher.ClientConfig("meta"))
 func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 	return client{
 		c: thrift.New(thrift.Config{

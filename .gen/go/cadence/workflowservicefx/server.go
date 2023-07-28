@@ -54,12 +54,12 @@ type ServerResult struct {
 // Server provides procedures for WorkflowService to an Fx application. It expects a
 // workflowservicefx.Interface to be present in the container.
 //
-// 	fx.Provide(
-// 		func(h *MyWorkflowServiceHandler) workflowserviceserver.Interface {
-// 			return h
-// 		},
-// 		workflowservicefx.Server(),
-// 	)
+//	fx.Provide(
+//		func(h *MyWorkflowServiceHandler) workflowserviceserver.Interface {
+//			return h
+//		},
+//		workflowservicefx.Server(),
+//	)
 func Server(opts ...thrift.RegisterOption) interface{} {
 	return func(p ServerParams) ServerResult {
 		procedures := workflowserviceserver.New(p.Handler, opts...)
