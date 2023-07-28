@@ -299,6 +299,7 @@ const (
 	FlagIsolationGroupSetDrains           = "set-drains"
 	FlagIsolationGroupJSONConfigurations  = "json"
 	FlagIsolationGroupsRemoveAllDrains    = "remove-all-drains"
+	FlagSearchAttribute                   = "search-attribute"
 )
 
 var flagsForExecution = []cli.Flag{
