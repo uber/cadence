@@ -697,10 +697,6 @@ func (d *handlerImpl) UpdateIsolationGroups(
 	configVersion := currentDomainConfig.ConfigVersion
 	lastUpdatedTime := time.Unix(0, currentDomainConfig.LastUpdatedTime)
 
-	if lastUpdatedTime.Add(d.config.FailoverCoolDown(currentDomainConfig.Info.Name)).After(d.timeSource.Now()) {
-		return errDomainUpdateTooFrequent
-	}
-
 	// Check the failover cool down time
 	if lastUpdatedTime.Add(d.config.FailoverCoolDown(currentDomainConfig.Info.Name)).After(d.timeSource.Now()) {
 		return errDomainUpdateTooFrequent
