@@ -58,14 +58,14 @@ type Field struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//	x, err := v.ToWire()
-//	if err != nil {
-//	  return err
-//	}
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
 //
-//	if err := binaryProtocol.Encode(x, writer); err != nil {
-//	  return err
-//	}
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
 func (v *Field) ToWire() (wire.Value, error) {
 	var (
 		fields [5]wire.Field
@@ -131,16 +131,16 @@ func _FieldType_Read(w wire.Value) (FieldType, error) {
 // An error is returned if we were unable to build a Field struct
 // from the provided intermediate representation.
 //
-//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//	if err != nil {
-//	  return nil, err
-//	}
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
 //
-//	var v Field
-//	if err := v.FromWire(x); err != nil {
-//	  return nil, err
-//	}
-//	return &v, nil
+//   var v Field
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
 func (v *Field) FromWire(w wire.Value) error {
 	var err error
 
@@ -579,8 +579,8 @@ func FieldType_Values() []FieldType {
 // UnmarshalText tries to decode FieldType from a byte slice
 // containing its name.
 //
-//	var v FieldType
-//	err := v.UnmarshalText([]byte("String"))
+//   var v FieldType
+//   err := v.UnmarshalText([]byte("String"))
 func (v *FieldType) UnmarshalText(value []byte) error {
 	switch s := string(value); s {
 	case "String":
@@ -651,10 +651,10 @@ func (v FieldType) Ptr() *FieldType {
 
 // Encode encodes FieldType directly to bytes.
 //
-//	sWriter := BinaryStreamer.Writer(writer)
+//   sWriter := BinaryStreamer.Writer(writer)
 //
-//	var v FieldType
-//	return v.Encode(sWriter)
+//   var v FieldType
+//   return v.Encode(sWriter)
 func (v FieldType) Encode(sw stream.Writer) error {
 	return sw.WriteInt32(int32(v))
 }
@@ -671,16 +671,16 @@ func (v FieldType) ToWire() (wire.Value, error) {
 // FromWire deserializes FieldType from its Thrift-level
 // representation.
 //
-//	x, err := binaryProtocol.Decode(reader, wire.TI32)
-//	if err != nil {
-//	  return FieldType(0), err
-//	}
+//   x, err := binaryProtocol.Decode(reader, wire.TI32)
+//   if err != nil {
+//     return FieldType(0), err
+//   }
 //
-//	var v FieldType
-//	if err := v.FromWire(x); err != nil {
-//	  return FieldType(0), err
-//	}
-//	return v, nil
+//   var v FieldType
+//   if err := v.FromWire(x); err != nil {
+//     return FieldType(0), err
+//   }
+//   return v, nil
 func (v *FieldType) FromWire(w wire.Value) error {
 	*v = (FieldType)(w.GetI32())
 	return nil
@@ -688,13 +688,13 @@ func (v *FieldType) FromWire(w wire.Value) error {
 
 // Decode reads off the encoded FieldType directly off of the wire.
 //
-//	sReader := BinaryStreamer.Reader(reader)
+//   sReader := BinaryStreamer.Reader(reader)
 //
-//	var v FieldType
-//	if err := v.Decode(sReader); err != nil {
-//	  return FieldType(0), err
-//	}
-//	return v, nil
+//   var v FieldType
+//   if err := v.Decode(sReader); err != nil {
+//     return FieldType(0), err
+//   }
+//   return v, nil
 func (v *FieldType) Decode(sr stream.Reader) error {
 	i, err := sr.ReadInt32()
 	if err != nil {
@@ -837,14 +837,14 @@ func (_Map_String_Field_MapItemList) Close() {}
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//	x, err := v.ToWire()
-//	if err != nil {
-//	  return err
-//	}
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
 //
-//	if err := binaryProtocol.Encode(x, writer); err != nil {
-//	  return err
-//	}
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
 func (v *Message) ToWire() (wire.Value, error) {
 	var (
 		fields [7]wire.Field
@@ -966,16 +966,16 @@ func _VisibilityOperation_Read(w wire.Value) (VisibilityOperation, error) {
 // An error is returned if we were unable to build a Message struct
 // from the provided intermediate representation.
 //
-//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//	if err != nil {
-//	  return nil, err
-//	}
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
 //
-//	var v Message
-//	if err := v.FromWire(x); err != nil {
-//	  return nil, err
-//	}
-//	return &v, nil
+//   var v Message
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
 func (v *Message) FromWire(w wire.Value) error {
 	var err error
 
@@ -1608,8 +1608,8 @@ func MessageType_Values() []MessageType {
 // UnmarshalText tries to decode MessageType from a byte slice
 // containing its name.
 //
-//	var v MessageType
-//	err := v.UnmarshalText([]byte("Index"))
+//   var v MessageType
+//   err := v.UnmarshalText([]byte("Index"))
 func (v *MessageType) UnmarshalText(value []byte) error {
 	switch s := string(value); s {
 	case "Index":
@@ -1673,10 +1673,10 @@ func (v MessageType) Ptr() *MessageType {
 
 // Encode encodes MessageType directly to bytes.
 //
-//	sWriter := BinaryStreamer.Writer(writer)
+//   sWriter := BinaryStreamer.Writer(writer)
 //
-//	var v MessageType
-//	return v.Encode(sWriter)
+//   var v MessageType
+//   return v.Encode(sWriter)
 func (v MessageType) Encode(sw stream.Writer) error {
 	return sw.WriteInt32(int32(v))
 }
@@ -1693,16 +1693,16 @@ func (v MessageType) ToWire() (wire.Value, error) {
 // FromWire deserializes MessageType from its Thrift-level
 // representation.
 //
-//	x, err := binaryProtocol.Decode(reader, wire.TI32)
-//	if err != nil {
-//	  return MessageType(0), err
-//	}
+//   x, err := binaryProtocol.Decode(reader, wire.TI32)
+//   if err != nil {
+//     return MessageType(0), err
+//   }
 //
-//	var v MessageType
-//	if err := v.FromWire(x); err != nil {
-//	  return MessageType(0), err
-//	}
-//	return v, nil
+//   var v MessageType
+//   if err := v.FromWire(x); err != nil {
+//     return MessageType(0), err
+//   }
+//   return v, nil
 func (v *MessageType) FromWire(w wire.Value) error {
 	*v = (MessageType)(w.GetI32())
 	return nil
@@ -1710,13 +1710,13 @@ func (v *MessageType) FromWire(w wire.Value) error {
 
 // Decode reads off the encoded MessageType directly off of the wire.
 //
-//	sReader := BinaryStreamer.Reader(reader)
+//   sReader := BinaryStreamer.Reader(reader)
 //
-//	var v MessageType
-//	if err := v.Decode(sReader); err != nil {
-//	  return MessageType(0), err
-//	}
-//	return v, nil
+//   var v MessageType
+//   if err := v.Decode(sReader); err != nil {
+//     return MessageType(0), err
+//   }
+//   return v, nil
 func (v *MessageType) Decode(sr stream.Reader) error {
 	i, err := sr.ReadInt32()
 	if err != nil {
@@ -1812,14 +1812,14 @@ type PinotMessage struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//	x, err := v.ToWire()
-//	if err != nil {
-//	  return err
-//	}
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
 //
-//	if err := binaryProtocol.Encode(x, writer); err != nil {
-//	  return err
-//	}
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
 func (v *PinotMessage) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -1855,16 +1855,16 @@ func (v *PinotMessage) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a PinotMessage struct
 // from the provided intermediate representation.
 //
-//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//	if err != nil {
-//	  return nil, err
-//	}
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
 //
-//	var v PinotMessage
-//	if err := v.FromWire(x); err != nil {
-//	  return nil, err
-//	}
-//	return &v, nil
+//   var v PinotMessage
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
 func (v *PinotMessage) FromWire(w wire.Value) error {
 	var err error
 
@@ -2090,8 +2090,8 @@ func VisibilityOperation_Values() []VisibilityOperation {
 // UnmarshalText tries to decode VisibilityOperation from a byte slice
 // containing its name.
 //
-//	var v VisibilityOperation
-//	err := v.UnmarshalText([]byte("RecordStarted"))
+//   var v VisibilityOperation
+//   err := v.UnmarshalText([]byte("RecordStarted"))
 func (v *VisibilityOperation) UnmarshalText(value []byte) error {
 	switch s := string(value); s {
 	case "RecordStarted":
@@ -2155,10 +2155,10 @@ func (v VisibilityOperation) Ptr() *VisibilityOperation {
 
 // Encode encodes VisibilityOperation directly to bytes.
 //
-//	sWriter := BinaryStreamer.Writer(writer)
+//   sWriter := BinaryStreamer.Writer(writer)
 //
-//	var v VisibilityOperation
-//	return v.Encode(sWriter)
+//   var v VisibilityOperation
+//   return v.Encode(sWriter)
 func (v VisibilityOperation) Encode(sw stream.Writer) error {
 	return sw.WriteInt32(int32(v))
 }
@@ -2175,16 +2175,16 @@ func (v VisibilityOperation) ToWire() (wire.Value, error) {
 // FromWire deserializes VisibilityOperation from its Thrift-level
 // representation.
 //
-//	x, err := binaryProtocol.Decode(reader, wire.TI32)
-//	if err != nil {
-//	  return VisibilityOperation(0), err
-//	}
+//   x, err := binaryProtocol.Decode(reader, wire.TI32)
+//   if err != nil {
+//     return VisibilityOperation(0), err
+//   }
 //
-//	var v VisibilityOperation
-//	if err := v.FromWire(x); err != nil {
-//	  return VisibilityOperation(0), err
-//	}
-//	return v, nil
+//   var v VisibilityOperation
+//   if err := v.FromWire(x); err != nil {
+//     return VisibilityOperation(0), err
+//   }
+//   return v, nil
 func (v *VisibilityOperation) FromWire(w wire.Value) error {
 	*v = (VisibilityOperation)(w.GetI32())
 	return nil
@@ -2192,13 +2192,13 @@ func (v *VisibilityOperation) FromWire(w wire.Value) error {
 
 // Decode reads off the encoded VisibilityOperation directly off of the wire.
 //
-//	sReader := BinaryStreamer.Reader(reader)
+//   sReader := BinaryStreamer.Reader(reader)
 //
-//	var v VisibilityOperation
-//	if err := v.Decode(sReader); err != nil {
-//	  return VisibilityOperation(0), err
-//	}
-//	return v, nil
+//   var v VisibilityOperation
+//   if err := v.Decode(sReader); err != nil {
+//     return VisibilityOperation(0), err
+//   }
+//   return v, nil
 func (v *VisibilityOperation) Decode(sr stream.Reader) error {
 	i, err := sr.ReadInt32()
 	if err != nil {
