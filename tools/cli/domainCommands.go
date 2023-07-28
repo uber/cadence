@@ -548,10 +548,12 @@ type DomainMigrationRow struct {
 }
 
 type ValidationDetails struct {
-	CurrentDomainRow        *types.DescribeDomainResponse
-	NewDomainRow            *types.DescribeDomainResponse
-	LongRunningWorkFlowNum  *int
-	MismatchedDynamicConfig []MismatchedDynamicConfig
+	CurrentDomainRow            *types.DescribeDomainResponse
+	NewDomainRow                *types.DescribeDomainResponse
+	LongRunningWorkFlowNum      *int
+	MismatchedDynamicConfig     []MismatchedDynamicConfig
+	MissingCurrSearchAttributes *[]string
+	MissingNewSearchAttributes  *[]string
 }
 
 type MismatchedDynamicConfig struct {
@@ -852,6 +854,70 @@ func (d *domainCLIImpl) migrationDomainWorkFlowCheck(c *cli.Context) DomainMigra
 			LongRunningWorkFlowNum: &countWorkFlows,
 		},
 	}
+}
+
+func (d *domainCLIImpl) searchAttributesChecker(c *cli.Context) DomainMigrationRow {
+	ctx, cancel := newContext(c)
+	defer cancel()
+
+	// getting user provided search attributes
+	searchAttributes := c.StringSlice(FlagSearchAttribute)
+	if len(searchAttributes) == 0 {
+		ErrorAndExit("Please provide search attributes.", nil)
+	}
+
+	// getting search attributes for curr domain
+	currentSearchAttributes, err := d.frontendClient.GetSearchAttributes(ctx)
+	if err != nil {
+		ErrorAndExit("Unable to get search attributes for current domain.", err)
+	}
+
+	// getting search attributes for new domain
+	destinationSearchAttributes, err := d.destinationClient.GetSearchAttributes(ctx)
+	if err != nil {
+		ErrorAndExit("Unable to get search attributes for new domain.", err)
+	}
+
+	// converting to  map[string]string for easier comparing?
+	currentSearchAttrs := make(map[string]string)
+	for key, indexedValueType := range currentSearchAttributes.Keys {
+		currentSearchAttrs[key] = indexedValueType.String()
+	}
+
+	destinationSearchAttrs := make(map[string]string)
+	for key, indexedValueType := range destinationSearchAttributes.Keys {
+		destinationSearchAttrs[key] = indexedValueType.String()
+	}
+
+	// checking to see if search attributes exist
+	missingInCurrent := findMissingAttributes(searchAttributes, currentSearchAttrs)
+	missingInNew := findMissingAttributes(searchAttributes, destinationSearchAttrs)
+
+	validationResult := len(missingInCurrent) == 0 && len(missingInNew) == 0
+
+	validationRow := DomainMigrationRow{
+		ValidationCheck:  "Search Attributes Check",
+		ValidationResult: validationResult,
+		ValidationDetails: ValidationDetails{
+			MissingCurrSearchAttributes: &missingInCurrent,
+			MissingNewSearchAttributes:  &missingInNew,
+		},
+	}
+
+	return validationRow
+}
+
+// finds missing attributed in a map of existing attributed based on slice of required attributes
+func findMissingAttributes(requiredAttributes []string, existingAttributes map[string]string) []string {
+	missingAttributes := make([]string, 0)
+
+	for _, attr := range requiredAttributes {
+		if _, ok := existingAttributes[attr]; !ok {
+			missingAttributes = append(missingAttributes, attr)
+		}
+	}
+
+	return missingAttributes
 }
 
 func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrationRow {
