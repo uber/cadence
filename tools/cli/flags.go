@@ -32,6 +32,7 @@ const (
 	FlagDecodingTypes                     = "decoding_types"
 	FlagAddress                           = "address"
 	FlagAddressWithAlias                  = FlagAddress + ", ad"
+	FlagDestinationAddress                = "destination_address"
 	FlagHistoryAddress                    = "history_address"
 	FlagDBType                            = "db_type"
 	FlagDBAddress                         = "db_address"
@@ -42,6 +43,7 @@ const (
 	FlagProtoVersion                      = "protocol_version"
 	FlagDomainID                          = "domain_id"
 	FlagDomain                            = "domain"
+	FlagDestinationDomain                 = "destination_domain"
 	FlagDomainWithAlias                   = FlagDomain + ", do"
 	FlagShardID                           = "shard_id"
 	FlagShardIDWithAlias                  = FlagShardID + ", sid"
@@ -297,6 +299,7 @@ const (
 	FlagIsolationGroupSetDrains           = "set-drains"
 	FlagIsolationGroupJSONConfigurations  = "json"
 	FlagIsolationGroupsRemoveAllDrains    = "remove-all-drains"
+	FlagSearchAttribute                   = "search-attr"
 )
 
 var flagsForExecution = []cli.Flag{

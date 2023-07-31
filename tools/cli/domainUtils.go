@@ -23,6 +23,8 @@ package cli
 import (
 	"strings"
 
+	"github.com/uber/cadence/client/admin"
+
 	"github.com/uber/cadence/tools/common/flag"
 
 	"github.com/stretchr/testify/mock"
@@ -201,6 +203,30 @@ var (
 		getFormatFlag(),
 	}
 
+	migrateDomainFlags = []cli.Flag{
+
+		cli.StringFlag{
+			Name:  FlagDestinationAddress,
+			Usage: "t",
+		},
+		cli.StringFlag{
+			Name:  FlagDestinationDomain,
+			Usage: "t",
+		},
+
+		cli.StringSliceFlag{
+			Name:  FlagTaskList,
+			Usage: "t",
+		},
+
+		cli.StringSliceFlag{
+			Name:  FlagSearchAttribute,
+			Usage: "Specify search attributes in the format key:type, available types are STRING, KEYWORD, INT, DOUBLE, BOOL, DATETIME",
+		},
+
+		getFormatFlag(),
+	}
+
 	adminDomainCommonFlags = getDBFlags()
 
 	adminRegisterDomainFlags = append(
@@ -228,6 +254,12 @@ func initializeFrontendClient(
 	context *cli.Context,
 ) frontend.Client {
 	return cFactory.ServerFrontendClient(context)
+}
+
+func initializeFrontendAdminClient(
+	context *cli.Context,
+) admin.Client {
+	return cFactory.ServerAdminClient(context)
 }
 
 func initializeAdminDomainHandler(
