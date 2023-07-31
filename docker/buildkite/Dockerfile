@@ -6,7 +6,7 @@ FROM golang:1.20
 # ENV PYTHONWARNINGS=ignore::yaml.YAMLLoadWarning
 # ENV PYTHONWARNINGS=ignore
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN rm -rf /var/lib/apt/lists/* && apt-get update && apt-get install -y --no-install-recommends \
       curl \
       gettext-base \
       libyaml-dev \
