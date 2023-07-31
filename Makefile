@@ -336,7 +336,7 @@ $(BUILD)/proto-lint: $(PROTO_FILES) $(STABLE_BIN)/$(BUF_VERSION_BIN) | $(BUILD)
 # it's a coarse "you probably don't need to re-lint" filter, nothing more.
 $(BUILD)/lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
 	$Q echo "lint..."
-	$Q $(BIN)/revive -config revive.toml -exclude './vendor/...' -formatter stylish ./...
+	$Q $(BIN)/revive -config revive.toml -exclude './vendor/...' -exclude './.gen/...' -formatter stylish ./...
 	$Q touch $@
 
 # fmt and copyright are mutually cyclic with their inputs, so if a copyright header is modified:
