@@ -76,6 +76,7 @@ func newDomainCLI(
 			return c.String(FlagDestinationAddress)
 		}).ServerFrontendClient(c)
 	} else {
+		d.frontendClient = initializeFrontendClient(c)
 		d.frontendAdminClient = initializeFrontendAdminClient(c)
 		d.destinationAdminClient = newClientFactory(func(c *cli.Context) string {
 			return c.String(FlagDestinationAddress)
@@ -414,48 +415,6 @@ VisibilityArchivalURI: {{.}}{{end}}
 {{table .}}{{end}}
 {{with .FailoverInfo}}Graceful failover info:
 {{table .}}{{end}}`
-
-//var newtemplateDomain = `Validation Check:
-//{{- range .}}
-//- {{.ValidationCheck}}: {{.ValidationResult}}
-//{{- with .ValidationDetails}}
-//{{- with .CurrentDomainRow}}
-//Current Domain:
-//  Name: {{.DomainInfo.Name}}
-//  UUID: {{.DomainInfo.UUID}}
-//{{- end}}
-//{{- with .NewDomainRow}}
-//New Domain:
-//  Name: {{.DomainInfo.Name}}
-//  UUID: {{.DomainInfo.UUID}}
-//{{- end}}
-//{{- if .LongRunningWorkFlowNum}}
-//Long Running Workflow Num: {{.LongRunningWorkFlowNum}}
-//{{- end}}
-//{{- range .MismatchedDynamicConfig}}
-//{{ $dynamicConfig := . }}
-//Mismatched Dynamic Config:
-//Config Key: {{.Key}}
-//  {{- range $i, $v := .CurrValues}}
-//  Current Response:
-//    Data: {{ printf "%s" (index $dynamicConfig.CurrValues $i).Value.Data }}
-//    Filters:
-//    {{- range $filter := (index $dynamicConfig.CurrValues $i).Filters}}
-//      - Name: {{ $filter.Name }}
-//        Value: {{ printf "%s" $filter.Value.Data }}
-//    {{- end}}
-//  New Response:
-//    Data: {{ printf "%s" (index $dynamicConfig.NewValues $i).Value.Data }}
-//    Filters:
-//    {{- range $filter := (index $dynamicConfig.NewValues $i).Filters}}
-//      - Name: {{ $filter.Name }}
-//        Value: {{ printf "%s" $filter.Value.Data }}
-//    {{- end}}
-//  {{- end}}
-//{{- end}}
-//{{- end}}
-//{{- end}}
-//` (will remove this after confirming new template works)
 
 var newtemplateDomain = `Validation Check:
 {{- range .}}
@@ -861,7 +820,7 @@ func (d *domainCLIImpl) migrationDomainMetaDataCheck(c *cli.Context) DomainMigra
 	}
 	ctx, cancel := newContext(c)
 	defer cancel()
-	d.frontendClient = initializeFrontendClient(c)
+
 	currResp, err := d.frontendClient.DescribeDomain(ctx, request)
 
 	if err != nil {
@@ -939,8 +898,6 @@ func (d *domainCLIImpl) searchAttributesChecker(c *cli.Context) DomainMigrationR
 		requiredAttributes[key] = ivt
 	}
 
-	d.frontendClient = initializeFrontendClient(c)
-
 	// getting search attributes for current domain
 	currentSearchAttributes, err := d.frontendClient.GetSearchAttributes(ctx)
 	if err != nil {
@@ -980,22 +937,12 @@ func (d *domainCLIImpl) searchAttributesChecker(c *cli.Context) DomainMigrationR
 
 // helper to parse types.IndexedValueType from string
 func parseIndexedValueType(valueType string) (types.IndexedValueType, error) {
-	switch valueType {
-	case "STRING":
-		return types.IndexedValueTypeString, nil
-	case "KEYWORD":
-		return types.IndexedValueTypeKeyword, nil
-	case "INT":
-		return types.IndexedValueTypeInt, nil
-	case "DOUBLE":
-		return types.IndexedValueTypeDouble, nil
-	case "DATETIME":
-		return types.IndexedValueTypeDatetime, nil
-	case "BOOL":
-		return types.IndexedValueTypeBool, nil
-	default:
-		return 0, errors.New("invalid indexed value type")
+	var result types.IndexedValueType
+	valueTypeBytes := []byte(valueType)
+	if err := result.UnmarshalText(valueTypeBytes); err != nil {
+		return 0, err
 	}
+	return result, nil
 }
 
 // finds missing attributed in a map of existing attributed based on required attributes
