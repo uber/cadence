@@ -219,6 +219,11 @@ var (
 			Usage: "t",
 		},
 
+		cli.StringSliceFlag{
+			Name:  FlagSearchAttribute,
+			Usage: "Specify search attributes in the format key:type, available types are STRING, KEYWORD, INT, DOUBLE, BOOL, DATETIME",
+		},
+
 		getFormatFlag(),
 	}
 

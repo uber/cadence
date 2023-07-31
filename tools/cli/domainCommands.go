@@ -70,12 +70,11 @@ func newDomainCLI(
 	isAdminMode bool,
 ) *domainCLIImpl {
 	d := &domainCLIImpl{}
-	if !isAdminMode {
-		d.frontendClient = initializeFrontendClient(c)
-		d.destinationClient = newClientFactory(func(c *cli.Context) string {
-			return c.String(FlagDestinationAddress)
-		}).ServerFrontendClient(c)
-	} else {
+	d.frontendClient = initializeFrontendClient(c)
+	d.destinationClient = newClientFactory(func(c *cli.Context) string {
+		return c.String(FlagDestinationAddress)
+	}).ServerFrontendClient(c)
+	if isAdminMode {
 		d.frontendAdminClient = initializeFrontendAdminClient(c)
 		d.destinationAdminClient = newClientFactory(func(c *cli.Context) string {
 			return c.String(FlagDestinationAddress)
@@ -419,40 +418,52 @@ var newtemplateDomain = `Validation Check:
 {{- range .}}
 - {{.ValidationCheck}}: {{.ValidationResult}}
 {{- with .ValidationDetails}}
- {{- with .CurrentDomainRow}}
- Current Domain:
-   Name: {{.DomainInfo.Name}}
-   UUID: {{.DomainInfo.UUID}}
- {{- end}}
- {{- with .NewDomainRow}}
- New Domain:
-   Name: {{.DomainInfo.Name}}
-   UUID: {{.DomainInfo.UUID}}
- {{- end}}
- {{- if .LongRunningWorkFlowNum}}
- Long Running Workflow Num: {{.LongRunningWorkFlowNum}}
- {{- end}}
+{{- with .CurrentDomainRow}}
+Current Domain:
+  Name: {{.DomainInfo.Name}}
+  UUID: {{.DomainInfo.UUID}}
+{{- end}}
+{{- with .NewDomainRow}}
+New Domain:
+  Name: {{.DomainInfo.Name}}
+  UUID: {{.DomainInfo.UUID}}
+{{- end}}
+{{- if .LongRunningWorkFlowNum}}
+Long Running Workflow Num: {{.LongRunningWorkFlowNum}}
+{{- end}}
+{{- if .MissingCurrSearchAttributes}}
+Missing Search Attributes in Current Domain:
+{{- range .MissingCurrSearchAttributes}}
+  - {{.}}
+{{- end}}
+{{- end}}
+{{- if .MissingNewSearchAttributes}}
+Missing Search Attributes in New Domain:
+{{- range .MissingNewSearchAttributes}}
+  - {{.}}
+{{- end}}
+{{- end}}
 {{- range .MismatchedDynamicConfig}}
- {{ $dynamicConfig := . }}
- Mismatched Dynamic Config:
- Config Key: {{.Key}}
-   {{- range $i, $v := .CurrValues}}
-   Current Response:
-     Data: {{ printf "%s" (index $dynamicConfig.CurrValues $i).Value.Data }}
-     Filters:
-     {{- range $filter := (index $dynamicConfig.CurrValues $i).Filters}}
-       - Name: {{ $filter.Name }}
-         Value: {{ printf "%s" $filter.Value.Data }}
-     {{- end}}
-   New Response:
-     Data: {{ printf "%s" (index $dynamicConfig.NewValues $i).Value.Data }}
-     Filters:
-     {{- range $filter := (index $dynamicConfig.NewValues $i).Filters}}
-       - Name: {{ $filter.Name }}
-         Value: {{ printf "%s" $filter.Value.Data }}
-     {{- end}}
-   {{- end}}
- {{- end}}
+{{ $dynamicConfig := . }}
+Mismatched Dynamic Config:
+Config Key: {{.Key}}
+  {{- range $i, $v := .CurrValues}}
+  Current Response:
+    Data: {{ printf "%s" (index $dynamicConfig.CurrValues $i).Value.Data }}
+    Filters:
+    {{- range $filter := (index $dynamicConfig.CurrValues $i).Filters}}
+      - Name: {{ $filter.Name }}
+        Value: {{ printf "%s" $filter.Value.Data }}
+    {{- end}}
+  New Response:
+    Data: {{ printf "%s" (index $dynamicConfig.NewValues $i).Value.Data }}
+    Filters:
+    {{- range $filter := (index $dynamicConfig.NewValues $i).Filters}}
+      - Name: {{ $filter.Name }}
+        Value: {{ printf "%s" $filter.Value.Data }}
+    {{- end}}
+  {{- end}}
+{{- end}}
 {{- end}}
 {{- end}}
 `
@@ -548,10 +559,12 @@ type DomainMigrationRow struct {
 }
 
 type ValidationDetails struct {
-	CurrentDomainRow        *types.DescribeDomainResponse
-	NewDomainRow            *types.DescribeDomainResponse
-	LongRunningWorkFlowNum  *int
-	MismatchedDynamicConfig []MismatchedDynamicConfig
+	CurrentDomainRow            *types.DescribeDomainResponse
+	NewDomainRow                *types.DescribeDomainResponse
+	LongRunningWorkFlowNum      *int
+	MismatchedDynamicConfig     []MismatchedDynamicConfig
+	MissingCurrSearchAttributes []string
+	MissingNewSearchAttributes  []string
 }
 
 type MismatchedDynamicConfig struct {
@@ -766,6 +779,7 @@ func (d *domainCLIImpl) migrateDomain(c *cli.Context) {
 		d.migrationDomainMetaDataCheck,
 		d.migrationDomainWorkFlowCheck,
 		d.migrationDynamicConfigCheck,
+		d.searchAttributesChecker,
 	}
 	wg := &sync.WaitGroup{}
 	for i := range checkers {
@@ -804,7 +818,7 @@ func (d *domainCLIImpl) migrationDomainMetaDataCheck(c *cli.Context) DomainMigra
 	}
 	ctx, cancel := newContext(c)
 	defer cancel()
-	d.frontendClient = initializeFrontendClient(c)
+
 	currResp, err := d.frontendClient.DescribeDomain(ctx, request)
 
 	if err != nil {
@@ -852,6 +866,95 @@ func (d *domainCLIImpl) migrationDomainWorkFlowCheck(c *cli.Context) DomainMigra
 			LongRunningWorkFlowNum: &countWorkFlows,
 		},
 	}
+}
+
+func (d *domainCLIImpl) searchAttributesChecker(c *cli.Context) DomainMigrationRow {
+	ctx, cancel := newContext(c)
+	defer cancel()
+
+	// getting user provided search attributes
+	searchAttributes := c.StringSlice(FlagSearchAttribute)
+	if len(searchAttributes) == 0 {
+		return DomainMigrationRow{
+			ValidationCheck:  "Search Attributes Check",
+			ValidationResult: true,
+		}
+	}
+
+	// Parse the provided search attributes into a map[string]IndexValueType
+	requiredAttributes := make(map[string]types.IndexedValueType)
+	for _, attr := range searchAttributes {
+		parts := strings.SplitN(attr, ":", 2)
+		if len(parts) != 2 {
+			ErrorAndExit(fmt.Sprintf("Invalid search attribute format: %s", attr), nil)
+		}
+		key, valueType := parts[0], parts[1]
+		ivt, err := parseIndexedValueType(valueType)
+		if err != nil {
+			ErrorAndExit(fmt.Sprintf("Invalid search attribute type for %s: %s", key, valueType), err)
+		}
+		requiredAttributes[key] = ivt
+	}
+
+	// getting search attributes for current domain
+	currentSearchAttributes, err := d.frontendClient.GetSearchAttributes(ctx)
+	if err != nil {
+		ErrorAndExit("Unable to get search attributes for current domain.", err)
+	}
+
+	d.destinationClient = newClientFactory(func(c *cli.Context) string {
+		return c.String(FlagDestinationAddress)
+	}).ServerFrontendClient(c)
+
+	// getting search attributes for new domain
+	destinationSearchAttributes, err := d.destinationClient.GetSearchAttributes(ctx)
+	if err != nil {
+		ErrorAndExit("Unable to get search attributes for new domain.", err)
+	}
+
+	currentSearchAttrs := currentSearchAttributes.Keys
+	destinationSearchAttrs := destinationSearchAttributes.Keys
+
+	// checking to see if search attributes exist
+	missingInCurrent := findMissingAttributes(requiredAttributes, currentSearchAttrs)
+	missingInNew := findMissingAttributes(requiredAttributes, destinationSearchAttrs)
+
+	validationResult := len(missingInCurrent) == 0 && len(missingInNew) == 0
+
+	validationRow := DomainMigrationRow{
+		ValidationCheck:  "Search Attributes Check",
+		ValidationResult: validationResult,
+		ValidationDetails: ValidationDetails{
+			MissingCurrSearchAttributes: missingInCurrent,
+			MissingNewSearchAttributes:  missingInNew,
+		},
+	}
+
+	return validationRow
+}
+
+// helper to parse types.IndexedValueType from string
+func parseIndexedValueType(valueType string) (types.IndexedValueType, error) {
+	var result types.IndexedValueType
+	valueTypeBytes := []byte(valueType)
+	if err := result.UnmarshalText(valueTypeBytes); err != nil {
+		return 0, err
+	}
+	return result, nil
+}
+
+// finds missing attributed in a map of existing attributed based on required attributes
+func findMissingAttributes(requiredAttributes map[string]types.IndexedValueType, existingAttributes map[string]types.IndexedValueType) []string {
+	missingAttributes := make([]string, 0)
+	for key, requiredType := range requiredAttributes {
+		existingType, ok := existingAttributes[key]
+		if !ok || existingType != requiredType {
+			// construct the key:type string format
+			attr := fmt.Sprintf("%s:%s", key, requiredType)
+			missingAttributes = append(missingAttributes, attr)
+		}
+	}
+	return missingAttributes
 }
 
 func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrationRow {
