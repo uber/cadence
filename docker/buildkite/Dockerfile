@@ -6,14 +6,17 @@ FROM golang:1.20
 # ENV PYTHONWARNINGS=ignore::yaml.YAMLLoadWarning
 # ENV PYTHONWARNINGS=ignore
 
-RUN rm -rf /var/lib/apt/lists/* && apt-get update && apt-get install -y --no-install-recommends \
+RUN sudo rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
       curl \
       gettext-base \
       libyaml-dev \
       python3-pip \
       time \
-      unzip \
-    && rm -rf /var/lib/apt/lists/*
+      unzip
+
+RUN sudo rm -rf /var/lib/apt/lists/*
 
 # We want to install cqlsh to system.
 # After python 3.11 that is restricted and advised to use use specific versions, but we are using a single user setup, so there is no point of it.
