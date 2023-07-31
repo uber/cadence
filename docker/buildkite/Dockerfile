@@ -11,15 +11,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       gettext-base \
       libyaml-dev \
       python3-pip \
+      python-setuptools \
       time \
       unzip \
-    rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
-# We want to install cqlsh to system.
-# After python 3.11 that is restricted and advised to use use specific versions, but we are using a single user setup, so there is no point of it.
-ENV PIP_BREAK_SYSTEM_PACKAGES 1
-
-RUN pip install --user cqlsh
+RUN pip install cqlsh
 # verbose test output from `make`, can be disabled with V=0
 ENV V=1
 
