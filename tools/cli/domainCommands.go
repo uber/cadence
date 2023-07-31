@@ -552,8 +552,8 @@ type ValidationDetails struct {
 	NewDomainRow                *types.DescribeDomainResponse
 	LongRunningWorkFlowNum      *int
 	MismatchedDynamicConfig     []MismatchedDynamicConfig
-	MissingCurrSearchAttributes *[]string
-	MissingNewSearchAttributes  *[]string
+	MissingCurrSearchAttributes []string
+	MissingNewSearchAttributes  []string
 }
 
 type MismatchedDynamicConfig struct {
@@ -863,10 +863,28 @@ func (d *domainCLIImpl) searchAttributesChecker(c *cli.Context) DomainMigrationR
 	// getting user provided search attributes
 	searchAttributes := c.StringSlice(FlagSearchAttribute)
 	if len(searchAttributes) == 0 {
-		ErrorAndExit("Please provide search attributes.", nil)
+		return DomainMigrationRow{
+			ValidationCheck:  "Search Attributes Check",
+			ValidationResult: true,
+		}
 	}
 
-	// getting search attributes for curr domain
+	// Parse the provided search attributes into a map[string]IndexValueType
+	requiredAttributes := make(map[string]types.IndexedValueType)
+	for _, attr := range searchAttributes {
+		parts := strings.SplitN(attr, ":", 2)
+		if len(parts) != 2 {
+			ErrorAndExit(fmt.Sprintf("Invalid search attribute format: %s", attr), nil)
+		}
+		key, valueType := parts[0], parts[1]
+		ivt, err := parseIndexedValueType(valueType)
+		if err != nil {
+			ErrorAndExit(fmt.Sprintf("Invalid search attribute type for %s: %s", key, valueType), err)
+		}
+		requiredAttributes[key] = ivt
+	}
+
+	// getting search attributes for current domain
 	currentSearchAttributes, err := d.frontendClient.GetSearchAttributes(ctx)
 	if err != nil {
 		ErrorAndExit("Unable to get search attributes for current domain.", err)
@@ -878,20 +896,12 @@ func (d *domainCLIImpl) searchAttributesChecker(c *cli.Context) DomainMigrationR
 		ErrorAndExit("Unable to get search attributes for new domain.", err)
 	}
 
-	// converting to  map[string]string for easier comparing?
-	currentSearchAttrs := make(map[string]string)
-	for key, indexedValueType := range currentSearchAttributes.Keys {
-		currentSearchAttrs[key] = indexedValueType.String()
-	}
-
-	destinationSearchAttrs := make(map[string]string)
-	for key, indexedValueType := range destinationSearchAttributes.Keys {
-		destinationSearchAttrs[key] = indexedValueType.String()
-	}
+	currentSearchAttrs := currentSearchAttributes.Keys
+	destinationSearchAttrs := destinationSearchAttributes.Keys
 
 	// checking to see if search attributes exist
-	missingInCurrent := findMissingAttributes(searchAttributes, currentSearchAttrs)
-	missingInNew := findMissingAttributes(searchAttributes, destinationSearchAttrs)
+	missingInCurrent := findMissingAttributes(requiredAttributes, currentSearchAttrs)
+	missingInNew := findMissingAttributes(requiredAttributes, destinationSearchAttrs)
 
 	validationResult := len(missingInCurrent) == 0 && len(missingInNew) == 0
 
@@ -899,24 +909,43 @@ func (d *domainCLIImpl) searchAttributesChecker(c *cli.Context) DomainMigrationR
 		ValidationCheck:  "Search Attributes Check",
 		ValidationResult: validationResult,
 		ValidationDetails: ValidationDetails{
-			MissingCurrSearchAttributes: &missingInCurrent,
-			MissingNewSearchAttributes:  &missingInNew,
+			MissingCurrSearchAttributes: missingInCurrent,
+			MissingNewSearchAttributes:  missingInNew,
 		},
 	}
 
 	return validationRow
 }
 
-// finds missing attributed in a map of existing attributed based on slice of required attributes
-func findMissingAttributes(requiredAttributes []string, existingAttributes map[string]string) []string {
-	missingAttributes := make([]string, 0)
+// helper to parse types.IndexedValueType from string
+func parseIndexedValueType(valueType string) (types.IndexedValueType, error) {
+	switch valueType {
+	case "String":
+		return types.IndexedValueTypeString, nil
+	case "Keyword":
+		return types.IndexedValueTypeKeyword, nil
+	case "Int":
+		return types.IndexedValueTypeInt, nil
+	case "Double":
+		return types.IndexedValueTypeDouble, nil
+	case "Bool":
+		return types.IndexedValueTypeBool, nil
+	default:
+		return 0, errors.New("invalid indexed value type")
+	}
+}
 
-	for _, attr := range requiredAttributes {
-		if _, ok := existingAttributes[attr]; !ok {
+// finds missing attributed in a map of existing attributed based on required attributes
+func findMissingAttributes(requiredAttributes map[string]types.IndexedValueType, existingAttributes map[string]types.IndexedValueType) []string {
+	missingAttributes := make([]string, 0)
+	for key, requiredType := range requiredAttributes {
+		existingType, ok := existingAttributes[key]
+		if !ok || existingType != requiredType {
+			// construct the key:type string format
+			attr := fmt.Sprintf("%s:%s", key, requiredType)
 			missingAttributes = append(missingAttributes, attr)
 		}
 	}
-
 	return missingAttributes
 }
 
