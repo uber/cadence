@@ -443,6 +443,9 @@ Missing Search Attributes in New Domain:
   - {{.}}
 {{- end}}
 {{- end}}
+{{- if ne (len .MismatchedDomainMetaData) 0 }}   
+Mismatched Domain Meta Data: {{.MismatchedDomainMetaData}}
+{{- end }}                                      
 {{- range .MismatchedDynamicConfig}}
 {{ $dynamicConfig := . }}
 Mismatched Dynamic Config:
@@ -561,6 +564,7 @@ type DomainMigrationRow struct {
 type ValidationDetails struct {
 	CurrentDomainRow            *types.DescribeDomainResponse
 	NewDomainRow                *types.DescribeDomainResponse
+	MismatchedDomainMetaData    string
 	LongRunningWorkFlowNum      *int
 	MismatchedDynamicConfig     []MismatchedDynamicConfig
 	MissingCurrSearchAttributes []string
@@ -810,45 +814,42 @@ func (d *domainCLIImpl) migrationDomainMetaDataCheck(c *cli.Context) DomainMigra
 	}).ServerFrontendClient(c)
 	domain := c.GlobalString(FlagDomain)
 	newDomain := c.String(FlagDestinationDomain)
-	request := &types.DescribeDomainRequest{
-		Name: &domain,
-	}
-	request2 := &types.DescribeDomainRequest{
-		Name: &newDomain,
-	}
 	ctx, cancel := newContext(c)
 	defer cancel()
-
-	currResp, err := d.frontendClient.DescribeDomain(ctx, request)
-
+	currResp, err := d.frontendClient.DescribeDomain(ctx, &types.DescribeDomainRequest{
+		Name: &domain,
+	})
 	if err != nil {
 		ErrorAndExit(fmt.Sprintf("Could not describe old domain, Please check to see if old domain exists before migrating."), err)
 	}
-	newResp, err := d.destinationClient.DescribeDomain(ctx, request2)
+	newResp, err := d.destinationClient.DescribeDomain(ctx, &types.DescribeDomainRequest{
+		Name: &newDomain,
+	})
 	if err != nil {
 		ErrorAndExit(fmt.Sprintf("Could not describe new domain, Please check to see if new domain exists before migrating."), err)
 	}
-	validationResult := metaDataValidation(currResp, newResp)
+	validationResult, mismatchedMetaData := metaDataValidation(currResp, newResp)
 	validationRow := DomainMigrationRow{
 		ValidationCheck:  "Domain Meta Data",
 		ValidationResult: validationResult,
 		ValidationDetails: ValidationDetails{
-			CurrentDomainRow: currResp,
-			NewDomainRow:     newResp,
+			CurrentDomainRow:         currResp,
+			NewDomainRow:             newResp,
+			MismatchedDomainMetaData: mismatchedMetaData,
 		},
 	}
 	return validationRow
 }
 
-func metaDataValidation(currResp *types.DescribeDomainResponse, newResp *types.DescribeDomainResponse) bool {
+func metaDataValidation(currResp *types.DescribeDomainResponse, newResp *types.DescribeDomainResponse) (bool, string) {
 	if !reflect.DeepEqual(currResp.Configuration, newResp.Configuration) {
-		return false
+		return false, "mismatched DomainConfiguration"
 	}
 
 	if currResp.DomainInfo.OwnerEmail != newResp.DomainInfo.OwnerEmail {
-		return false
+		return false, "mismatched OwnerEmail"
 	}
-	return true
+	return true, ""
 }
 
 func (d *domainCLIImpl) migrationDomainWorkFlowCheck(c *cli.Context) DomainMigrationRow {
@@ -856,12 +857,10 @@ func (d *domainCLIImpl) migrationDomainWorkFlowCheck(c *cli.Context) DomainMigra
 		return c.String(FlagDestinationAddress)
 	}).ServerFrontendClient(c)
 	countWorkFlows := d.countLongRunningWorkflowinDest(c)
-	if countWorkFlows > 0 {
-		ErrorAndExit(fmt.Sprintf("Number of workflows is > 0"), nil)
-	}
+	check := countWorkFlows == 0
 	return DomainMigrationRow{
 		ValidationCheck:  "Workflow Check",
-		ValidationResult: true,
+		ValidationResult: check,
 		ValidationDetails: ValidationDetails{
 			LongRunningWorkFlowNum: &countWorkFlows,
 		},
@@ -992,10 +991,12 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 
 			currResp, err := d.frontendAdminClient.GetDynamicConfig(ctx, currRequest)
 			if err != nil {
+				// empty to indicate N/A
 				currResp = &types.GetDynamicConfigResponse{}
 			}
 			newResp, err := d.destinationAdminClient.GetDynamicConfig(ctx, newRequest)
 			if err != nil {
+				// empty to indicate N/A
 				newResp = &types.GetDynamicConfigResponse{}
 			}
 
@@ -1028,10 +1029,12 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 
 			currResp, err := d.frontendAdminClient.GetDynamicConfig(ctx, currRequest)
 			if err != nil {
+				// empty to indicate N/A
 				currResp = &types.GetDynamicConfigResponse{}
 			}
 			newResp, err := d.destinationAdminClient.GetDynamicConfig(ctx, newRequest)
 			if err != nil {
+				// empty to indicate N/A
 				newResp = &types.GetDynamicConfigResponse{}
 			}
 
@@ -1071,10 +1074,12 @@ func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrat
 
 				currResp, err := d.frontendAdminClient.GetDynamicConfig(ctx, currRequest)
 				if err != nil {
+					// empty to indicate N/A
 					currResp = &types.GetDynamicConfigResponse{}
 				}
 				newResp, err := d.destinationAdminClient.GetDynamicConfig(ctx, newRequest)
 				if err != nil {
+					// empty to indicate N/A
 					newResp = &types.GetDynamicConfigResponse{}
 				}
 

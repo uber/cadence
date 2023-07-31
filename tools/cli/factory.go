@@ -95,9 +95,10 @@ func newClientFactory(f func(c *cli.Context) string) ClientFactory {
 	if err != nil {
 		panic(err)
 	}
+
 	return &clientFactory{
-		addressFlagFunc: f,
 		logger:          logger,
+		addressFlagFunc: f,
 	}
 }
 
@@ -167,7 +168,6 @@ func (b *clientFactory) ensureDispatcher(c *cli.Context) {
 	if addr := b.addressFlagFunc(c); addr != "" {
 		b.hostPort = addr
 	}
-
 	var outbounds transport.Outbounds
 	if shouldUseGrpc {
 		grpcTransport := grpc.NewTransport()

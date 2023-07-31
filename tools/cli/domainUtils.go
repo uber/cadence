@@ -207,16 +207,16 @@ var (
 
 		cli.StringFlag{
 			Name:  FlagDestinationAddress,
-			Usage: "t",
+			Usage: "Destination cadence-frontend address in <host>:<port> format",
 		},
 		cli.StringFlag{
 			Name:  FlagDestinationDomain,
-			Usage: "t",
+			Usage: "Destination domain name",
 		},
 
 		cli.StringSliceFlag{
 			Name:  FlagTaskList,
-			Usage: "t",
+			Usage: "All tasklists in the current domain",
 		},
 
 		cli.StringSliceFlag{
