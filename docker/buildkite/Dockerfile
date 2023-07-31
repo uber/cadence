@@ -1,4 +1,4 @@
-FROM golang:1.20
+FROM golang:1.20-bullseye
 
 # Tried to set Python to ignore warnings due to the instructions at this link:
 # https://github.com/yaml/pyyaml/wiki/PyYAML-yaml.load(input)-Deprecation
@@ -6,17 +6,14 @@ FROM golang:1.20
 # ENV PYTHONWARNINGS=ignore::yaml.YAMLLoadWarning
 # ENV PYTHONWARNINGS=ignore
 
-RUN sudo rm -rf /var/lib/apt/lists/*
-
 RUN apt-get update && apt-get install -y --no-install-recommends \
       curl \
       gettext-base \
       libyaml-dev \
       python3-pip \
       time \
-      unzip
-
-RUN sudo rm -rf /var/lib/apt/lists/*
+      unzip \
+    rm -rf /var/lib/apt/lists/*
 
 # We want to install cqlsh to system.
 # After python 3.11 that is restricted and advised to use use specific versions, but we are using a single user setup, so there is no point of it.
