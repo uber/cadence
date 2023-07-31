@@ -415,44 +415,98 @@ VisibilityArchivalURI: {{.}}{{end}}
 {{with .FailoverInfo}}Graceful failover info:
 {{table .}}{{end}}`
 
+//var newtemplateDomain = `Validation Check:
+//{{- range .}}
+//- {{.ValidationCheck}}: {{.ValidationResult}}
+//{{- with .ValidationDetails}}
+//{{- with .CurrentDomainRow}}
+//Current Domain:
+//  Name: {{.DomainInfo.Name}}
+//  UUID: {{.DomainInfo.UUID}}
+//{{- end}}
+//{{- with .NewDomainRow}}
+//New Domain:
+//  Name: {{.DomainInfo.Name}}
+//  UUID: {{.DomainInfo.UUID}}
+//{{- end}}
+//{{- if .LongRunningWorkFlowNum}}
+//Long Running Workflow Num: {{.LongRunningWorkFlowNum}}
+//{{- end}}
+//{{- range .MismatchedDynamicConfig}}
+//{{ $dynamicConfig := . }}
+//Mismatched Dynamic Config:
+//Config Key: {{.Key}}
+//  {{- range $i, $v := .CurrValues}}
+//  Current Response:
+//    Data: {{ printf "%s" (index $dynamicConfig.CurrValues $i).Value.Data }}
+//    Filters:
+//    {{- range $filter := (index $dynamicConfig.CurrValues $i).Filters}}
+//      - Name: {{ $filter.Name }}
+//        Value: {{ printf "%s" $filter.Value.Data }}
+//    {{- end}}
+//  New Response:
+//    Data: {{ printf "%s" (index $dynamicConfig.NewValues $i).Value.Data }}
+//    Filters:
+//    {{- range $filter := (index $dynamicConfig.NewValues $i).Filters}}
+//      - Name: {{ $filter.Name }}
+//        Value: {{ printf "%s" $filter.Value.Data }}
+//    {{- end}}
+//  {{- end}}
+//{{- end}}
+//{{- end}}
+//{{- end}}
+//` (will remove this after confirming new template works)
+
 var newtemplateDomain = `Validation Check:
 {{- range .}}
 - {{.ValidationCheck}}: {{.ValidationResult}}
 {{- with .ValidationDetails}}
- {{- with .CurrentDomainRow}}
- Current Domain:
-   Name: {{.DomainInfo.Name}}
-   UUID: {{.DomainInfo.UUID}}
- {{- end}}
- {{- with .NewDomainRow}}
- New Domain:
-   Name: {{.DomainInfo.Name}}
-   UUID: {{.DomainInfo.UUID}}
- {{- end}}
- {{- if .LongRunningWorkFlowNum}}
- Long Running Workflow Num: {{.LongRunningWorkFlowNum}}
- {{- end}}
+{{- with .CurrentDomainRow}}
+Current Domain:
+  Name: {{.DomainInfo.Name}}
+  UUID: {{.DomainInfo.UUID}}
+{{- end}}
+{{- with .NewDomainRow}}
+New Domain:
+  Name: {{.DomainInfo.Name}}
+  UUID: {{.DomainInfo.UUID}}
+{{- end}}
+{{- if .LongRunningWorkFlowNum}}
+Long Running Workflow Num: {{.LongRunningWorkFlowNum}}
+{{- end}}
+{{- if .MissingCurrSearchAttributes}}
+Missing Search Attributes in Current Domain:
+{{- range .MissingCurrSearchAttributes}}
+  - {{.}}
+{{- end}}
+{{- end}}
+{{- if .MissingNewSearchAttributes}}
+Missing Search Attributes in New Domain:
+{{- range .MissingNewSearchAttributes}}
+  - {{.}}
+{{- end}}
+{{- end}}
 {{- range .MismatchedDynamicConfig}}
- {{ $dynamicConfig := . }}
- Mismatched Dynamic Config:
- Config Key: {{.Key}}
-   {{- range $i, $v := .CurrValues}}
-   Current Response:
-     Data: {{ printf "%s" (index $dynamicConfig.CurrValues $i).Value.Data }}
-     Filters:
-     {{- range $filter := (index $dynamicConfig.CurrValues $i).Filters}}
-       - Name: {{ $filter.Name }}
-         Value: {{ printf "%s" $filter.Value.Data }}
-     {{- end}}
-   New Response:
-     Data: {{ printf "%s" (index $dynamicConfig.NewValues $i).Value.Data }}
-     Filters:
-     {{- range $filter := (index $dynamicConfig.NewValues $i).Filters}}
-       - Name: {{ $filter.Name }}
-         Value: {{ printf "%s" $filter.Value.Data }}
-     {{- end}}
-   {{- end}}
- {{- end}}
+{{ $dynamicConfig := . }}
+Mismatched Dynamic Config:
+Config Key: {{.Key}}
+  {{- range $i, $v := .CurrValues}}
+  Current Response:
+    Data: {{ printf "%s" (index $dynamicConfig.CurrValues $i).Value.Data }}
+    Filters:
+    {{- range $filter := (index $dynamicConfig.CurrValues $i).Filters}}
+      - Name: {{ $filter.Name }}
+        Value: {{ printf "%s" $filter.Value.Data }}
+    {{- end}}
+  New Response:
+    Data: {{ printf "%s" (index $dynamicConfig.NewValues $i).Value.Data }}
+    Filters:
+    {{- range $filter := (index $dynamicConfig.NewValues $i).Filters}}
+      - Name: {{ $filter.Name }}
+        Value: {{ printf "%s" $filter.Value.Data }}
+    {{- end}}
+  {{- end}}
+{{- end}}
 {{- end}}
 {{- end}}
 `
@@ -768,6 +822,7 @@ func (d *domainCLIImpl) migrateDomain(c *cli.Context) {
 		d.migrationDomainMetaDataCheck,
 		d.migrationDomainWorkFlowCheck,
 		d.migrationDynamicConfigCheck,
+		d.searchAttributesChecker,
 	}
 	wg := &sync.WaitGroup{}
 	for i := range checkers {
@@ -884,11 +939,17 @@ func (d *domainCLIImpl) searchAttributesChecker(c *cli.Context) DomainMigrationR
 		requiredAttributes[key] = ivt
 	}
 
+	d.frontendClient = initializeFrontendClient(c)
+
 	// getting search attributes for current domain
 	currentSearchAttributes, err := d.frontendClient.GetSearchAttributes(ctx)
 	if err != nil {
 		ErrorAndExit("Unable to get search attributes for current domain.", err)
 	}
+
+	d.destinationClient = newClientFactory(func(c *cli.Context) string {
+		return c.String(FlagDestinationAddress)
+	}).ServerFrontendClient(c)
 
 	// getting search attributes for new domain
 	destinationSearchAttributes, err := d.destinationClient.GetSearchAttributes(ctx)
@@ -920,15 +981,17 @@ func (d *domainCLIImpl) searchAttributesChecker(c *cli.Context) DomainMigrationR
 // helper to parse types.IndexedValueType from string
 func parseIndexedValueType(valueType string) (types.IndexedValueType, error) {
 	switch valueType {
-	case "String":
+	case "STRING":
 		return types.IndexedValueTypeString, nil
-	case "Keyword":
+	case "KEYWORD":
 		return types.IndexedValueTypeKeyword, nil
-	case "Int":
+	case "INT":
 		return types.IndexedValueTypeInt, nil
-	case "Double":
+	case "DOUBLE":
 		return types.IndexedValueTypeDouble, nil
-	case "Bool":
+	case "DATETIME":
+		return types.IndexedValueTypeDatetime, nil
+	case "BOOL":
 		return types.IndexedValueTypeBool, nil
 	default:
 		return 0, errors.New("invalid indexed value type")
