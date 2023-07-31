@@ -70,13 +70,11 @@ func newDomainCLI(
 	isAdminMode bool,
 ) *domainCLIImpl {
 	d := &domainCLIImpl{}
-	if !isAdminMode {
-		d.frontendClient = initializeFrontendClient(c)
-		d.destinationClient = newClientFactory(func(c *cli.Context) string {
-			return c.String(FlagDestinationAddress)
-		}).ServerFrontendClient(c)
-	} else {
-		d.frontendClient = initializeFrontendClient(c)
+	d.frontendClient = initializeFrontendClient(c)
+	d.destinationClient = newClientFactory(func(c *cli.Context) string {
+		return c.String(FlagDestinationAddress)
+	}).ServerFrontendClient(c)
+	if isAdminMode {
 		d.frontendAdminClient = initializeFrontendAdminClient(c)
 		d.destinationAdminClient = newClientFactory(func(c *cli.Context) string {
 			return c.String(FlagDestinationAddress)
