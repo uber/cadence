@@ -76,20 +76,29 @@ type ClientFactory interface {
 }
 
 type clientFactory struct {
-	hostPort   string
-	dispatcher *yarpc.Dispatcher
-	logger     *zap.Logger
+	addressFlagFunc func(c *cli.Context) string
+	hostPort        string
+	dispatcher      *yarpc.Dispatcher
+	logger          *zap.Logger
 }
 
+// DEPRECATED don't use, only reserved for backward compatibility purposes
 // NewClientFactory creates a new ClientFactory
 func NewClientFactory() ClientFactory {
+	return newClientFactory(func(c *cli.Context) string {
+		return c.GlobalString(FlagAddress)
+	})
+}
+
+func newClientFactory(f func(c *cli.Context) string) ClientFactory {
 	logger, err := zap.NewDevelopment()
 	if err != nil {
 		panic(err)
 	}
 
 	return &clientFactory{
-		logger: logger,
+		logger:          logger,
+		addressFlagFunc: f,
 	}
 }
 
@@ -156,7 +165,7 @@ func (b *clientFactory) ensureDispatcher(c *cli.Context) {
 	if shouldUseGrpc {
 		b.hostPort = grpcPort
 	}
-	if addr := c.GlobalString(FlagAddress); addr != "" {
+	if addr := b.addressFlagFunc(c); addr != "" {
 		b.hostPort = addr
 	}
 	var outbounds transport.Outbounds
