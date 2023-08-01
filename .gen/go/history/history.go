@@ -54,14 +54,14 @@ type DescribeMutableStateRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *DescribeMutableStateRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -103,16 +103,16 @@ func _WorkflowExecution_Read(w wire.Value) (*shared.WorkflowExecution, error) {
 // An error is returned if we were unable to build a DescribeMutableStateRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v DescribeMutableStateRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v DescribeMutableStateRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *DescribeMutableStateRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -346,14 +346,14 @@ type DescribeMutableStateResponse struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *DescribeMutableStateResponse) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -389,16 +389,16 @@ func (v *DescribeMutableStateResponse) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a DescribeMutableStateResponse struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v DescribeMutableStateResponse
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v DescribeMutableStateResponse
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *DescribeMutableStateResponse) FromWire(w wire.Value) error {
 	var err error
 
@@ -620,14 +620,14 @@ type DescribeWorkflowExecutionRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *DescribeWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -669,16 +669,16 @@ func _DescribeWorkflowExecutionRequest_Read(w wire.Value) (*shared.DescribeWorkf
 // An error is returned if we were unable to build a DescribeWorkflowExecutionRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v DescribeWorkflowExecutionRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v DescribeWorkflowExecutionRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *DescribeWorkflowExecutionRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -928,14 +928,14 @@ func (_List_String_ValueList) Close() {}
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *DomainFilter) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -989,16 +989,16 @@ func _List_String_Read(l wire.ValueList) ([]string, error) {
 // An error is returned if we were unable to build a DomainFilter struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v DomainFilter
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v DomainFilter
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *DomainFilter) FromWire(w wire.Value) error {
 	var err error
 
@@ -1299,14 +1299,14 @@ type EventAlreadyStartedError struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *EventAlreadyStartedError) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -1332,16 +1332,16 @@ func (v *EventAlreadyStartedError) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a EventAlreadyStartedError struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v EventAlreadyStartedError
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v EventAlreadyStartedError
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *EventAlreadyStartedError) FromWire(w wire.Value) error {
 	var err error
 
@@ -1540,14 +1540,14 @@ func (_List_I32_ValueList) Close() {}
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *FailoverMarkerToken) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -1607,16 +1607,16 @@ func _FailoverMarkerAttributes_Read(w wire.Value) (*replicator.FailoverMarkerAtt
 // An error is returned if we were unable to build a FailoverMarkerToken struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v FailoverMarkerToken
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v FailoverMarkerToken
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *FailoverMarkerToken) FromWire(w wire.Value) error {
 	var err error
 
@@ -1909,14 +1909,14 @@ type GetFailoverInfoRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *GetFailoverInfoRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -1944,16 +1944,16 @@ func (v *GetFailoverInfoRequest) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a GetFailoverInfoRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v GetFailoverInfoRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v GetFailoverInfoRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *GetFailoverInfoRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -2120,14 +2120,14 @@ type GetFailoverInfoResponse struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *GetFailoverInfoResponse) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -2163,16 +2163,16 @@ func (v *GetFailoverInfoResponse) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a GetFailoverInfoResponse struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v GetFailoverInfoResponse
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v GetFailoverInfoResponse
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *GetFailoverInfoResponse) FromWire(w wire.Value) error {
 	var err error
 
@@ -2402,14 +2402,14 @@ type GetMutableStateRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *GetMutableStateRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [4]wire.Field
@@ -2461,16 +2461,16 @@ func (v *GetMutableStateRequest) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a GetMutableStateRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v GetMutableStateRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v GetMutableStateRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *GetMutableStateRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -2820,14 +2820,14 @@ type GetMutableStateResponse struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *GetMutableStateResponse) ToWire() (wire.Value, error) {
 	var (
 		fields [18]wire.Field
@@ -3009,16 +3009,16 @@ func _VersionHistories_Read(w wire.Value) (*shared.VersionHistories, error) {
 // An error is returned if we were unable to build a GetMutableStateResponse struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v GetMutableStateResponse
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v GetMutableStateResponse
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *GetMutableStateResponse) FromWire(w wire.Value) error {
 	var err error
 
@@ -4142,14 +4142,14 @@ func (_List_FailoverMarkerToken_ValueList) Close() {}
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *NotifyFailoverMarkersRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -4201,16 +4201,16 @@ func _List_FailoverMarkerToken_Read(l wire.ValueList) ([]*FailoverMarkerToken, e
 // An error is returned if we were unable to build a NotifyFailoverMarkersRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v NotifyFailoverMarkersRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v NotifyFailoverMarkersRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *NotifyFailoverMarkersRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -4458,14 +4458,14 @@ type ParentExecutionInfo struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *ParentExecutionInfo) ToWire() (wire.Value, error) {
 	var (
 		fields [4]wire.Field
@@ -4517,16 +4517,16 @@ func (v *ParentExecutionInfo) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a ParentExecutionInfo struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v ParentExecutionInfo
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v ParentExecutionInfo
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *ParentExecutionInfo) FromWire(w wire.Value) error {
 	var err error
 
@@ -4856,14 +4856,14 @@ type PollMutableStateRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *PollMutableStateRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [4]wire.Field
@@ -4915,16 +4915,16 @@ func (v *PollMutableStateRequest) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a PollMutableStateRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v PollMutableStateRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v PollMutableStateRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *PollMutableStateRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -5261,14 +5261,14 @@ type PollMutableStateResponse struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *PollMutableStateResponse) ToWire() (wire.Value, error) {
 	var (
 		fields [15]wire.Field
@@ -5408,16 +5408,16 @@ func (v *PollMutableStateResponse) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a PollMutableStateResponse struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v PollMutableStateResponse
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v PollMutableStateResponse
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *PollMutableStateResponse) FromWire(w wire.Value) error {
 	var err error
 
@@ -6332,14 +6332,14 @@ type ProcessingQueueState struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *ProcessingQueueState) ToWire() (wire.Value, error) {
 	var (
 		fields [4]wire.Field
@@ -6397,16 +6397,16 @@ func _DomainFilter_Read(w wire.Value) (*DomainFilter, error) {
 // An error is returned if we were unable to build a ProcessingQueueState struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v ProcessingQueueState
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v ProcessingQueueState
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *ProcessingQueueState) FromWire(w wire.Value) error {
 	var err error
 
@@ -6806,14 +6806,14 @@ func (_Map_String_List_ProcessingQueueState_MapItemList) Close() {}
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *ProcessingQueueStates) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -6893,16 +6893,16 @@ func _Map_String_List_ProcessingQueueState_Read(m wire.MapItemList) (map[string]
 // An error is returned if we were unable to build a ProcessingQueueStates struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v ProcessingQueueStates
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v ProcessingQueueStates
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *ProcessingQueueStates) FromWire(w wire.Value) error {
 	var err error
 
@@ -7242,14 +7242,14 @@ type QueryWorkflowRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *QueryWorkflowRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -7291,16 +7291,16 @@ func _QueryWorkflowRequest_Read(w wire.Value) (*shared.QueryWorkflowRequest, err
 // An error is returned if we were unable to build a QueryWorkflowRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v QueryWorkflowRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v QueryWorkflowRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *QueryWorkflowRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -7523,14 +7523,14 @@ type QueryWorkflowResponse struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *QueryWorkflowResponse) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -7564,16 +7564,16 @@ func _QueryWorkflowResponse_Read(w wire.Value) (*shared.QueryWorkflowResponse, e
 // An error is returned if we were unable to build a QueryWorkflowResponse struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v QueryWorkflowResponse
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v QueryWorkflowResponse
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *QueryWorkflowResponse) FromWire(w wire.Value) error {
 	var err error
 
@@ -7742,14 +7742,14 @@ type ReapplyEventsRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *ReapplyEventsRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -7791,16 +7791,16 @@ func _ReapplyEventsRequest_Read(w wire.Value) (*shared.ReapplyEventsRequest, err
 // An error is returned if we were unable to build a ReapplyEventsRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v ReapplyEventsRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v ReapplyEventsRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *ReapplyEventsRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -8024,14 +8024,14 @@ type RecordActivityTaskHeartbeatRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *RecordActivityTaskHeartbeatRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -8073,16 +8073,16 @@ func _RecordActivityTaskHeartbeatRequest_Read(w wire.Value) (*shared.RecordActiv
 // An error is returned if we were unable to build a RecordActivityTaskHeartbeatRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v RecordActivityTaskHeartbeatRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v RecordActivityTaskHeartbeatRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *RecordActivityTaskHeartbeatRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -8310,14 +8310,14 @@ type RecordActivityTaskStartedRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *RecordActivityTaskStartedRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [6]wire.Field
@@ -8391,16 +8391,16 @@ func _PollForActivityTaskRequest_Read(w wire.Value) (*shared.PollForActivityTask
 // An error is returned if we were unable to build a RecordActivityTaskStartedRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v RecordActivityTaskStartedRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v RecordActivityTaskStartedRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *RecordActivityTaskStartedRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -8845,14 +8845,14 @@ type RecordActivityTaskStartedResponse struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *RecordActivityTaskStartedResponse) ToWire() (wire.Value, error) {
 	var (
 		fields [7]wire.Field
@@ -8934,16 +8934,16 @@ func _HistoryEvent_Read(w wire.Value) (*shared.HistoryEvent, error) {
 // An error is returned if we were unable to build a RecordActivityTaskStartedResponse struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v RecordActivityTaskStartedResponse
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v RecordActivityTaskStartedResponse
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *RecordActivityTaskStartedResponse) FromWire(w wire.Value) error {
 	var err error
 
@@ -9442,14 +9442,14 @@ type RecordChildExecutionCompletedRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *RecordChildExecutionCompletedRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [5]wire.Field
@@ -9509,16 +9509,16 @@ func (v *RecordChildExecutionCompletedRequest) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a RecordChildExecutionCompletedRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v RecordChildExecutionCompletedRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v RecordChildExecutionCompletedRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *RecordChildExecutionCompletedRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -9897,14 +9897,14 @@ type RecordDecisionTaskStartedRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *RecordDecisionTaskStartedRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [6]wire.Field
@@ -9978,16 +9978,16 @@ func _PollForDecisionTaskRequest_Read(w wire.Value) (*shared.PollForDecisionTask
 // An error is returned if we were unable to build a RecordDecisionTaskStartedRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v RecordDecisionTaskStartedRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v RecordDecisionTaskStartedRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *RecordDecisionTaskStartedRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -10477,14 +10477,14 @@ func (_Map_String_WorkflowQuery_MapItemList) Close() {}
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *RecordDecisionTaskStartedResponse) ToWire() (wire.Value, error) {
 	var (
 		fields [14]wire.Field
@@ -10656,16 +10656,16 @@ func _Map_String_WorkflowQuery_Read(m wire.MapItemList) (map[string]*shared.Work
 // An error is returned if we were unable to build a RecordDecisionTaskStartedResponse struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v RecordDecisionTaskStartedResponse
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v RecordDecisionTaskStartedResponse
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *RecordDecisionTaskStartedResponse) FromWire(w wire.Value) error {
 	var err error
 
@@ -11633,14 +11633,14 @@ type RefreshWorkflowTasksRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *RefreshWorkflowTasksRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -11682,16 +11682,16 @@ func _RefreshWorkflowTasksRequest_Read(w wire.Value) (*shared.RefreshWorkflowTas
 // An error is returned if we were unable to build a RefreshWorkflowTasksRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v RefreshWorkflowTasksRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v RefreshWorkflowTasksRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *RefreshWorkflowTasksRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -11916,14 +11916,14 @@ type RemoveSignalMutableStateRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *RemoveSignalMutableStateRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [3]wire.Field
@@ -11967,16 +11967,16 @@ func (v *RemoveSignalMutableStateRequest) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a RemoveSignalMutableStateRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v RemoveSignalMutableStateRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v RemoveSignalMutableStateRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *RemoveSignalMutableStateRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -12281,14 +12281,14 @@ func (_List_VersionHistoryItem_ValueList) Close() {}
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *ReplicateEventsV2Request) ToWire() (wire.Value, error) {
 	var (
 		fields [5]wire.Field
@@ -12378,16 +12378,16 @@ func _DataBlob_Read(w wire.Value) (*shared.DataBlob, error) {
 // An error is returned if we were unable to build a ReplicateEventsV2Request struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v ReplicateEventsV2Request
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v ReplicateEventsV2Request
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *ReplicateEventsV2Request) FromWire(w wire.Value) error {
 	var err error
 
@@ -12850,14 +12850,14 @@ type RequestCancelWorkflowExecutionRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *RequestCancelWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [5]wire.Field
@@ -12923,16 +12923,16 @@ func _RequestCancelWorkflowExecutionRequest_Read(w wire.Value) (*shared.RequestC
 // An error is returned if we were unable to build a RequestCancelWorkflowExecutionRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v RequestCancelWorkflowExecutionRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v RequestCancelWorkflowExecutionRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *RequestCancelWorkflowExecutionRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -13317,14 +13317,14 @@ type ResetStickyTaskListRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *ResetStickyTaskListRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -13360,16 +13360,16 @@ func (v *ResetStickyTaskListRequest) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a ResetStickyTaskListRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v ResetStickyTaskListRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v ResetStickyTaskListRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *ResetStickyTaskListRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -13585,14 +13585,14 @@ type ResetStickyTaskListResponse struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *ResetStickyTaskListResponse) ToWire() (wire.Value, error) {
 	var (
 		fields [0]wire.Field
@@ -13609,16 +13609,16 @@ func (v *ResetStickyTaskListResponse) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a ResetStickyTaskListResponse struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v ResetStickyTaskListResponse
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v ResetStickyTaskListResponse
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *ResetStickyTaskListResponse) FromWire(w wire.Value) error {
 
 	for _, field := range w.GetStruct().Fields {
@@ -13729,14 +13729,14 @@ type ResetWorkflowExecutionRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *ResetWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -13778,16 +13778,16 @@ func _ResetWorkflowExecutionRequest_Read(w wire.Value) (*shared.ResetWorkflowExe
 // An error is returned if we were unable to build a ResetWorkflowExecutionRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v ResetWorkflowExecutionRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v ResetWorkflowExecutionRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *ResetWorkflowExecutionRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -14011,14 +14011,14 @@ type RespondActivityTaskCanceledRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *RespondActivityTaskCanceledRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -14060,16 +14060,16 @@ func _RespondActivityTaskCanceledRequest_Read(w wire.Value) (*shared.RespondActi
 // An error is returned if we were unable to build a RespondActivityTaskCanceledRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v RespondActivityTaskCanceledRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v RespondActivityTaskCanceledRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *RespondActivityTaskCanceledRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -14293,14 +14293,14 @@ type RespondActivityTaskCompletedRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *RespondActivityTaskCompletedRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -14342,16 +14342,16 @@ func _RespondActivityTaskCompletedRequest_Read(w wire.Value) (*shared.RespondAct
 // An error is returned if we were unable to build a RespondActivityTaskCompletedRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v RespondActivityTaskCompletedRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v RespondActivityTaskCompletedRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *RespondActivityTaskCompletedRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -14575,14 +14575,14 @@ type RespondActivityTaskFailedRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *RespondActivityTaskFailedRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -14624,16 +14624,16 @@ func _RespondActivityTaskFailedRequest_Read(w wire.Value) (*shared.RespondActivi
 // An error is returned if we were unable to build a RespondActivityTaskFailedRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v RespondActivityTaskFailedRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v RespondActivityTaskFailedRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *RespondActivityTaskFailedRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -14857,14 +14857,14 @@ type RespondDecisionTaskCompletedRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *RespondDecisionTaskCompletedRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -14906,16 +14906,16 @@ func _RespondDecisionTaskCompletedRequest_Read(w wire.Value) (*shared.RespondDec
 // An error is returned if we were unable to build a RespondDecisionTaskCompletedRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v RespondDecisionTaskCompletedRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v RespondDecisionTaskCompletedRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *RespondDecisionTaskCompletedRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -15177,14 +15177,14 @@ func (_Map_String_ActivityLocalDispatchInfo_MapItemList) Close() {}
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *RespondDecisionTaskCompletedResponse) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -15260,16 +15260,16 @@ func _Map_String_ActivityLocalDispatchInfo_Read(m wire.MapItemList) (map[string]
 // An error is returned if we were unable to build a RespondDecisionTaskCompletedResponse struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v RespondDecisionTaskCompletedResponse
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v RespondDecisionTaskCompletedResponse
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *RespondDecisionTaskCompletedResponse) FromWire(w wire.Value) error {
 	var err error
 
@@ -15589,14 +15589,14 @@ type RespondDecisionTaskFailedRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *RespondDecisionTaskFailedRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -15638,16 +15638,16 @@ func _RespondDecisionTaskFailedRequest_Read(w wire.Value) (*shared.RespondDecisi
 // An error is returned if we were unable to build a RespondDecisionTaskFailedRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v RespondDecisionTaskFailedRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v RespondDecisionTaskFailedRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *RespondDecisionTaskFailedRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -15872,14 +15872,14 @@ type ScheduleDecisionTaskRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *ScheduleDecisionTaskRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [3]wire.Field
@@ -15923,16 +15923,16 @@ func (v *ScheduleDecisionTaskRequest) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a ScheduleDecisionTaskRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v ScheduleDecisionTaskRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v ScheduleDecisionTaskRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *ScheduleDecisionTaskRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -16205,14 +16205,14 @@ type ShardOwnershipLostError struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *ShardOwnershipLostError) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -16248,16 +16248,16 @@ func (v *ShardOwnershipLostError) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a ShardOwnershipLostError struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v ShardOwnershipLostError
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v ShardOwnershipLostError
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *ShardOwnershipLostError) FromWire(w wire.Value) error {
 	var err error
 
@@ -16525,14 +16525,14 @@ func (_Map_String_String_MapItemList) Close() {}
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *SignalWithStartWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [3]wire.Field
@@ -16610,16 +16610,16 @@ func _Map_String_String_Read(m wire.MapItemList) (map[string]string, error) {
 // An error is returned if we were unable to build a SignalWithStartWorkflowExecutionRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v SignalWithStartWorkflowExecutionRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v SignalWithStartWorkflowExecutionRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *SignalWithStartWorkflowExecutionRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -16987,14 +16987,14 @@ type SignalWorkflowExecutionRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *SignalWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [4]wire.Field
@@ -17052,16 +17052,16 @@ func _SignalWorkflowExecutionRequest_Read(w wire.Value) (*shared.SignalWorkflowE
 // An error is returned if we were unable to build a SignalWorkflowExecutionRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v SignalWorkflowExecutionRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v SignalWorkflowExecutionRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *SignalWorkflowExecutionRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -17400,14 +17400,14 @@ type StartWorkflowExecutionRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *StartWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [11]wire.Field
@@ -17533,16 +17533,16 @@ func _ContinueAsNewInitiator_Read(w wire.Value) (shared.ContinueAsNewInitiator, 
 // An error is returned if we were unable to build a StartWorkflowExecutionRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v StartWorkflowExecutionRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v StartWorkflowExecutionRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *StartWorkflowExecutionRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -18280,14 +18280,14 @@ type SyncActivityRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *SyncActivityRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [15]wire.Field
@@ -18433,16 +18433,16 @@ func _VersionHistory_Read(w wire.Value) (*shared.VersionHistory, error) {
 // An error is returned if we were unable to build a SyncActivityRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v SyncActivityRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v SyncActivityRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *SyncActivityRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -19374,14 +19374,14 @@ type SyncShardStatusRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *SyncShardStatusRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [3]wire.Field
@@ -19425,16 +19425,16 @@ func (v *SyncShardStatusRequest) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a SyncShardStatusRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v SyncShardStatusRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v SyncShardStatusRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *SyncShardStatusRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -19713,14 +19713,14 @@ type TerminateWorkflowExecutionRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *TerminateWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [4]wire.Field
@@ -19778,16 +19778,16 @@ func _TerminateWorkflowExecutionRequest_Read(w wire.Value) (*shared.TerminateWor
 // An error is returned if we were unable to build a TerminateWorkflowExecutionRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v TerminateWorkflowExecutionRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v TerminateWorkflowExecutionRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *TerminateWorkflowExecutionRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -20134,14 +20134,14 @@ type HistoryService_CloseShard_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_CloseShard_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -20175,16 +20175,16 @@ func _CloseShardRequest_Read(w wire.Value) (*shared.CloseShardRequest, error) {
 // An error is returned if we were unable to build a HistoryService_CloseShard_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_CloseShard_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_CloseShard_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_CloseShard_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -20483,14 +20483,14 @@ type HistoryService_CloseShard_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_CloseShard_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [3]wire.Field
@@ -20556,16 +20556,16 @@ func _AccessDeniedError_Read(w wire.Value) (*shared.AccessDeniedError, error) {
 // An error is returned if we were unable to build a HistoryService_CloseShard_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_CloseShard_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_CloseShard_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_CloseShard_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -20908,14 +20908,14 @@ type HistoryService_DescribeHistoryHost_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_DescribeHistoryHost_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -20949,16 +20949,16 @@ func _DescribeHistoryHostRequest_Read(w wire.Value) (*shared.DescribeHistoryHost
 // An error is returned if we were unable to build a HistoryService_DescribeHistoryHost_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_DescribeHistoryHost_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_DescribeHistoryHost_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_DescribeHistoryHost_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -21267,14 +21267,14 @@ type HistoryService_DescribeHistoryHost_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_DescribeHistoryHost_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [4]wire.Field
@@ -21336,16 +21336,16 @@ func _DescribeHistoryHostResponse_Read(w wire.Value) (*shared.DescribeHistoryHos
 // An error is returned if we were unable to build a HistoryService_DescribeHistoryHost_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_DescribeHistoryHost_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_DescribeHistoryHost_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_DescribeHistoryHost_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -21736,14 +21736,14 @@ type HistoryService_DescribeMutableState_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_DescribeMutableState_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -21777,16 +21777,16 @@ func _DescribeMutableStateRequest_Read(w wire.Value) (*DescribeMutableStateReque
 // An error is returned if we were unable to build a HistoryService_DescribeMutableState_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_DescribeMutableState_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_DescribeMutableState_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_DescribeMutableState_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -22131,14 +22131,14 @@ type HistoryService_DescribeMutableState_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_DescribeMutableState_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [7]wire.Field
@@ -22242,16 +22242,16 @@ func _LimitExceededError_Read(w wire.Value) (*shared.LimitExceededError, error) 
 // An error is returned if we were unable to build a HistoryService_DescribeMutableState_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_DescribeMutableState_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_DescribeMutableState_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_DescribeMutableState_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -22840,14 +22840,14 @@ type HistoryService_DescribeQueue_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_DescribeQueue_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -22881,16 +22881,16 @@ func _DescribeQueueRequest_Read(w wire.Value) (*shared.DescribeQueueRequest, err
 // An error is returned if we were unable to build a HistoryService_DescribeQueue_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_DescribeQueue_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_DescribeQueue_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_DescribeQueue_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -23199,14 +23199,14 @@ type HistoryService_DescribeQueue_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_DescribeQueue_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [4]wire.Field
@@ -23268,16 +23268,16 @@ func _DescribeQueueResponse_Read(w wire.Value) (*shared.DescribeQueueResponse, e
 // An error is returned if we were unable to build a HistoryService_DescribeQueue_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_DescribeQueue_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_DescribeQueue_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_DescribeQueue_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -23668,14 +23668,14 @@ type HistoryService_DescribeWorkflowExecution_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_DescribeWorkflowExecution_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -23709,16 +23709,16 @@ func _DescribeWorkflowExecutionRequest_1_Read(w wire.Value) (*DescribeWorkflowEx
 // An error is returned if we were unable to build a HistoryService_DescribeWorkflowExecution_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_DescribeWorkflowExecution_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_DescribeWorkflowExecution_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_DescribeWorkflowExecution_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -24063,14 +24063,14 @@ type HistoryService_DescribeWorkflowExecution_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_DescribeWorkflowExecution_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [7]wire.Field
@@ -24162,16 +24162,16 @@ func _ServiceBusyError_Read(w wire.Value) (*shared.ServiceBusyError, error) {
 // An error is returned if we were unable to build a HistoryService_DescribeWorkflowExecution_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_DescribeWorkflowExecution_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_DescribeWorkflowExecution_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_DescribeWorkflowExecution_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -24748,14 +24748,14 @@ type HistoryService_GetCrossClusterTasks_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_GetCrossClusterTasks_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -24789,16 +24789,16 @@ func _GetCrossClusterTasksRequest_Read(w wire.Value) (*shared.GetCrossClusterTas
 // An error is returned if we were unable to build a HistoryService_GetCrossClusterTasks_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_GetCrossClusterTasks_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_GetCrossClusterTasks_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_GetCrossClusterTasks_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -25107,14 +25107,14 @@ type HistoryService_GetCrossClusterTasks_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_GetCrossClusterTasks_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [4]wire.Field
@@ -25176,16 +25176,16 @@ func _GetCrossClusterTasksResponse_Read(w wire.Value) (*shared.GetCrossClusterTa
 // An error is returned if we were unable to build a HistoryService_GetCrossClusterTasks_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_GetCrossClusterTasks_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_GetCrossClusterTasks_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_GetCrossClusterTasks_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -25576,14 +25576,14 @@ type HistoryService_GetDLQReplicationMessages_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_GetDLQReplicationMessages_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -25617,16 +25617,16 @@ func _GetDLQReplicationMessagesRequest_Read(w wire.Value) (*replicator.GetDLQRep
 // An error is returned if we were unable to build a HistoryService_GetDLQReplicationMessages_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_GetDLQReplicationMessages_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_GetDLQReplicationMessages_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_GetDLQReplicationMessages_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -25947,14 +25947,14 @@ type HistoryService_GetDLQReplicationMessages_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_GetDLQReplicationMessages_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [5]wire.Field
@@ -26024,16 +26024,16 @@ func _GetDLQReplicationMessagesResponse_Read(w wire.Value) (*replicator.GetDLQRe
 // An error is returned if we were unable to build a HistoryService_GetDLQReplicationMessages_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_GetDLQReplicationMessages_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_GetDLQReplicationMessages_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_GetDLQReplicationMessages_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -26484,14 +26484,14 @@ type HistoryService_GetFailoverInfo_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_GetFailoverInfo_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -26525,16 +26525,16 @@ func _GetFailoverInfoRequest_Read(w wire.Value) (*GetFailoverInfoRequest, error)
 // An error is returned if we were unable to build a HistoryService_GetFailoverInfo_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_GetFailoverInfo_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_GetFailoverInfo_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_GetFailoverInfo_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -26855,14 +26855,14 @@ type HistoryService_GetFailoverInfo_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_GetFailoverInfo_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [5]wire.Field
@@ -26932,16 +26932,16 @@ func _GetFailoverInfoResponse_Read(w wire.Value) (*GetFailoverInfoResponse, erro
 // An error is returned if we were unable to build a HistoryService_GetFailoverInfo_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_GetFailoverInfo_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_GetFailoverInfo_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_GetFailoverInfo_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -27392,14 +27392,14 @@ type HistoryService_GetMutableState_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_GetMutableState_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -27433,16 +27433,16 @@ func _GetMutableStateRequest_Read(w wire.Value) (*GetMutableStateRequest, error)
 // An error is returned if we were unable to build a HistoryService_GetMutableState_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_GetMutableState_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_GetMutableState_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_GetMutableState_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -27799,14 +27799,14 @@ type HistoryService_GetMutableState_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_GetMutableState_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [8]wire.Field
@@ -27906,16 +27906,16 @@ func _CurrentBranchChangedError_Read(w wire.Value) (*shared.CurrentBranchChanged
 // An error is returned if we were unable to build a HistoryService_GetMutableState_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_GetMutableState_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_GetMutableState_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_GetMutableState_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -28552,14 +28552,14 @@ type HistoryService_GetReplicationMessages_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_GetReplicationMessages_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -28593,16 +28593,16 @@ func _GetReplicationMessagesRequest_Read(w wire.Value) (*replicator.GetReplicati
 // An error is returned if we were unable to build a HistoryService_GetReplicationMessages_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_GetReplicationMessages_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_GetReplicationMessages_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_GetReplicationMessages_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -28935,14 +28935,14 @@ type HistoryService_GetReplicationMessages_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_GetReplicationMessages_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [6]wire.Field
@@ -29026,16 +29026,16 @@ func _ClientVersionNotSupportedError_Read(w wire.Value) (*shared.ClientVersionNo
 // An error is returned if we were unable to build a HistoryService_GetReplicationMessages_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_GetReplicationMessages_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_GetReplicationMessages_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_GetReplicationMessages_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -29552,14 +29552,14 @@ type HistoryService_MergeDLQMessages_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_MergeDLQMessages_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -29593,16 +29593,16 @@ func _MergeDLQMessagesRequest_Read(w wire.Value) (*replicator.MergeDLQMessagesRe
 // An error is returned if we were unable to build a HistoryService_MergeDLQMessages_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_MergeDLQMessages_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_MergeDLQMessages_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_MergeDLQMessages_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -29935,14 +29935,14 @@ type HistoryService_MergeDLQMessages_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_MergeDLQMessages_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [6]wire.Field
@@ -30020,16 +30020,16 @@ func _MergeDLQMessagesResponse_Read(w wire.Value) (*replicator.MergeDLQMessagesR
 // An error is returned if we were unable to build a HistoryService_MergeDLQMessages_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_MergeDLQMessages_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_MergeDLQMessages_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_MergeDLQMessages_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -30540,14 +30540,14 @@ type HistoryService_NotifyFailoverMarkers_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_NotifyFailoverMarkers_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -30581,16 +30581,16 @@ func _NotifyFailoverMarkersRequest_Read(w wire.Value) (*NotifyFailoverMarkersReq
 // An error is returned if we were unable to build a HistoryService_NotifyFailoverMarkers_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_NotifyFailoverMarkers_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_NotifyFailoverMarkers_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_NotifyFailoverMarkers_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -30889,14 +30889,14 @@ type HistoryService_NotifyFailoverMarkers_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_NotifyFailoverMarkers_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [3]wire.Field
@@ -30944,16 +30944,16 @@ func (v *HistoryService_NotifyFailoverMarkers_Result) ToWire() (wire.Value, erro
 // An error is returned if we were unable to build a HistoryService_NotifyFailoverMarkers_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_NotifyFailoverMarkers_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_NotifyFailoverMarkers_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_NotifyFailoverMarkers_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -31278,14 +31278,14 @@ type HistoryService_PollMutableState_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_PollMutableState_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -31319,16 +31319,16 @@ func _PollMutableStateRequest_Read(w wire.Value) (*PollMutableStateRequest, erro
 // An error is returned if we were unable to build a HistoryService_PollMutableState_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_PollMutableState_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_PollMutableState_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_PollMutableState_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -31685,14 +31685,14 @@ type HistoryService_PollMutableState_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_PollMutableState_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [8]wire.Field
@@ -31786,16 +31786,16 @@ func _PollMutableStateResponse_Read(w wire.Value) (*PollMutableStateResponse, er
 // An error is returned if we were unable to build a HistoryService_PollMutableState_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_PollMutableState_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_PollMutableState_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_PollMutableState_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -32426,14 +32426,14 @@ type HistoryService_PurgeDLQMessages_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_PurgeDLQMessages_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -32467,16 +32467,16 @@ func _PurgeDLQMessagesRequest_Read(w wire.Value) (*replicator.PurgeDLQMessagesRe
 // An error is returned if we were unable to build a HistoryService_PurgeDLQMessages_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_PurgeDLQMessages_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_PurgeDLQMessages_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_PurgeDLQMessages_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -32799,14 +32799,14 @@ type HistoryService_PurgeDLQMessages_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_PurgeDLQMessages_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [5]wire.Field
@@ -32870,16 +32870,16 @@ func (v *HistoryService_PurgeDLQMessages_Result) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a HistoryService_PurgeDLQMessages_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_PurgeDLQMessages_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_PurgeDLQMessages_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_PurgeDLQMessages_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -33324,14 +33324,14 @@ type HistoryService_QueryWorkflow_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_QueryWorkflow_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -33365,16 +33365,16 @@ func _QueryWorkflowRequest_1_Read(w wire.Value) (*QueryWorkflowRequest, error) {
 // An error is returned if we were unable to build a HistoryService_QueryWorkflow_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_QueryWorkflow_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_QueryWorkflow_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_QueryWorkflow_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -33731,14 +33731,14 @@ type HistoryService_QueryWorkflow_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_QueryWorkflow_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [8]wire.Field
@@ -33838,16 +33838,16 @@ func _QueryFailedError_Read(w wire.Value) (*shared.QueryFailedError, error) {
 // An error is returned if we were unable to build a HistoryService_QueryWorkflow_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_QueryWorkflow_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_QueryWorkflow_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_QueryWorkflow_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -34484,14 +34484,14 @@ type HistoryService_ReadDLQMessages_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_ReadDLQMessages_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -34525,16 +34525,16 @@ func _ReadDLQMessagesRequest_Read(w wire.Value) (*replicator.ReadDLQMessagesRequ
 // An error is returned if we were unable to build a HistoryService_ReadDLQMessages_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_ReadDLQMessages_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_ReadDLQMessages_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_ReadDLQMessages_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -34867,14 +34867,14 @@ type HistoryService_ReadDLQMessages_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_ReadDLQMessages_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [6]wire.Field
@@ -34952,16 +34952,16 @@ func _ReadDLQMessagesResponse_Read(w wire.Value) (*replicator.ReadDLQMessagesRes
 // An error is returned if we were unable to build a HistoryService_ReadDLQMessages_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_ReadDLQMessages_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_ReadDLQMessages_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_ReadDLQMessages_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -35472,14 +35472,14 @@ type HistoryService_ReapplyEvents_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_ReapplyEvents_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -35513,16 +35513,16 @@ func _ReapplyEventsRequest_1_Read(w wire.Value) (*ReapplyEventsRequest, error) {
 // An error is returned if we were unable to build a HistoryService_ReapplyEvents_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_ReapplyEvents_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_ReapplyEvents_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_ReapplyEvents_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -35869,14 +35869,14 @@ type HistoryService_ReapplyEvents_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_ReapplyEvents_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [7]wire.Field
@@ -35962,16 +35962,16 @@ func _DomainNotActiveError_Read(w wire.Value) (*shared.DomainNotActiveError, err
 // An error is returned if we were unable to build a HistoryService_ReapplyEvents_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_ReapplyEvents_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_ReapplyEvents_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_ReapplyEvents_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -36542,14 +36542,14 @@ type HistoryService_RecordActivityTaskHeartbeat_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_RecordActivityTaskHeartbeat_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -36583,16 +36583,16 @@ func _RecordActivityTaskHeartbeatRequest_1_Read(w wire.Value) (*RecordActivityTa
 // An error is returned if we were unable to build a HistoryService_RecordActivityTaskHeartbeat_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_RecordActivityTaskHeartbeat_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_RecordActivityTaskHeartbeat_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_RecordActivityTaskHeartbeat_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -36961,14 +36961,14 @@ type HistoryService_RecordActivityTaskHeartbeat_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_RecordActivityTaskHeartbeat_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [9]wire.Field
@@ -37076,16 +37076,16 @@ func _WorkflowExecutionAlreadyCompletedError_Read(w wire.Value) (*shared.Workflo
 // An error is returned if we were unable to build a HistoryService_RecordActivityTaskHeartbeat_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_RecordActivityTaskHeartbeat_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_RecordActivityTaskHeartbeat_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_RecordActivityTaskHeartbeat_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -37782,14 +37782,14 @@ type HistoryService_RecordActivityTaskStarted_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_RecordActivityTaskStarted_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -37823,16 +37823,16 @@ func _RecordActivityTaskStartedRequest_Read(w wire.Value) (*RecordActivityTaskSt
 // An error is returned if we were unable to build a HistoryService_RecordActivityTaskStarted_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_RecordActivityTaskStarted_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_RecordActivityTaskStarted_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_RecordActivityTaskStarted_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -38213,14 +38213,14 @@ type HistoryService_RecordActivityTaskStarted_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_RecordActivityTaskStarted_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [10]wire.Field
@@ -38336,16 +38336,16 @@ func _EventAlreadyStartedError_Read(w wire.Value) (*EventAlreadyStartedError, er
 // An error is returned if we were unable to build a HistoryService_RecordActivityTaskStarted_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_RecordActivityTaskStarted_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_RecordActivityTaskStarted_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_RecordActivityTaskStarted_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -39102,14 +39102,14 @@ type HistoryService_RecordChildExecutionCompleted_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_RecordChildExecutionCompleted_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -39143,16 +39143,16 @@ func _RecordChildExecutionCompletedRequest_Read(w wire.Value) (*RecordChildExecu
 // An error is returned if we were unable to build a HistoryService_RecordChildExecutionCompleted_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_RecordChildExecutionCompleted_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_RecordChildExecutionCompleted_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_RecordChildExecutionCompleted_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -39511,14 +39511,14 @@ type HistoryService_RecordChildExecutionCompleted_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_RecordChildExecutionCompleted_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [8]wire.Field
@@ -39606,16 +39606,16 @@ func (v *HistoryService_RecordChildExecutionCompleted_Result) ToWire() (wire.Val
 // An error is returned if we were unable to build a HistoryService_RecordChildExecutionCompleted_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_RecordChildExecutionCompleted_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_RecordChildExecutionCompleted_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_RecordChildExecutionCompleted_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -40240,14 +40240,14 @@ type HistoryService_RecordDecisionTaskStarted_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_RecordDecisionTaskStarted_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -40281,16 +40281,16 @@ func _RecordDecisionTaskStartedRequest_Read(w wire.Value) (*RecordDecisionTaskSt
 // An error is returned if we were unable to build a HistoryService_RecordDecisionTaskStarted_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_RecordDecisionTaskStarted_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_RecordDecisionTaskStarted_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_RecordDecisionTaskStarted_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -40671,14 +40671,14 @@ type HistoryService_RecordDecisionTaskStarted_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_RecordDecisionTaskStarted_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [10]wire.Field
@@ -40782,16 +40782,16 @@ func (v *HistoryService_RecordDecisionTaskStarted_Result) ToWire() (wire.Value, 
 // An error is returned if we were unable to build a HistoryService_RecordDecisionTaskStarted_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_RecordDecisionTaskStarted_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_RecordDecisionTaskStarted_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_RecordDecisionTaskStarted_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -41536,14 +41536,14 @@ type HistoryService_RefreshWorkflowTasks_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_RefreshWorkflowTasks_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -41577,16 +41577,16 @@ func _RefreshWorkflowTasksRequest_1_Read(w wire.Value) (*RefreshWorkflowTasksReq
 // An error is returned if we were unable to build a HistoryService_RefreshWorkflowTasks_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_RefreshWorkflowTasks_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_RefreshWorkflowTasks_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_RefreshWorkflowTasks_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -41921,14 +41921,14 @@ type HistoryService_RefreshWorkflowTasks_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_RefreshWorkflowTasks_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [6]wire.Field
@@ -42000,16 +42000,16 @@ func (v *HistoryService_RefreshWorkflowTasks_Result) ToWire() (wire.Value, error
 // An error is returned if we were unable to build a HistoryService_RefreshWorkflowTasks_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_RefreshWorkflowTasks_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_RefreshWorkflowTasks_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_RefreshWorkflowTasks_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -42514,14 +42514,14 @@ type HistoryService_RemoveSignalMutableState_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_RemoveSignalMutableState_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -42555,16 +42555,16 @@ func _RemoveSignalMutableStateRequest_Read(w wire.Value) (*RemoveSignalMutableSt
 // An error is returned if we were unable to build a HistoryService_RemoveSignalMutableState_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_RemoveSignalMutableState_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_RemoveSignalMutableState_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_RemoveSignalMutableState_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -42923,14 +42923,14 @@ type HistoryService_RemoveSignalMutableState_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_RemoveSignalMutableState_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [8]wire.Field
@@ -43018,16 +43018,16 @@ func (v *HistoryService_RemoveSignalMutableState_Result) ToWire() (wire.Value, e
 // An error is returned if we were unable to build a HistoryService_RemoveSignalMutableState_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_RemoveSignalMutableState_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_RemoveSignalMutableState_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_RemoveSignalMutableState_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -43652,14 +43652,14 @@ type HistoryService_RemoveTask_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_RemoveTask_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -43693,16 +43693,16 @@ func _RemoveTaskRequest_Read(w wire.Value) (*shared.RemoveTaskRequest, error) {
 // An error is returned if we were unable to build a HistoryService_RemoveTask_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_RemoveTask_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_RemoveTask_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_RemoveTask_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -44001,14 +44001,14 @@ type HistoryService_RemoveTask_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_RemoveTask_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [3]wire.Field
@@ -44056,16 +44056,16 @@ func (v *HistoryService_RemoveTask_Result) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a HistoryService_RemoveTask_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_RemoveTask_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_RemoveTask_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_RemoveTask_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -44390,14 +44390,14 @@ type HistoryService_ReplicateEventsV2_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_ReplicateEventsV2_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -44431,16 +44431,16 @@ func _ReplicateEventsV2Request_Read(w wire.Value) (*ReplicateEventsV2Request, er
 // An error is returned if we were unable to build a HistoryService_ReplicateEventsV2_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_ReplicateEventsV2_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_ReplicateEventsV2_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_ReplicateEventsV2_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -44787,14 +44787,14 @@ type HistoryService_ReplicateEventsV2_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_ReplicateEventsV2_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [7]wire.Field
@@ -44880,16 +44880,16 @@ func _RetryTaskV2Error_Read(w wire.Value) (*shared.RetryTaskV2Error, error) {
 // An error is returned if we were unable to build a HistoryService_ReplicateEventsV2_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_ReplicateEventsV2_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_ReplicateEventsV2_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_ReplicateEventsV2_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -45460,14 +45460,14 @@ type HistoryService_RequestCancelWorkflowExecution_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_RequestCancelWorkflowExecution_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -45501,16 +45501,16 @@ func _RequestCancelWorkflowExecutionRequest_1_Read(w wire.Value) (*RequestCancel
 // An error is returned if we were unable to build a HistoryService_RequestCancelWorkflowExecution_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_RequestCancelWorkflowExecution_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_RequestCancelWorkflowExecution_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_RequestCancelWorkflowExecution_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -45881,14 +45881,14 @@ type HistoryService_RequestCancelWorkflowExecution_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_RequestCancelWorkflowExecution_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [9]wire.Field
@@ -45990,16 +45990,16 @@ func _CancellationAlreadyRequestedError_Read(w wire.Value) (*shared.Cancellation
 // An error is returned if we were unable to build a HistoryService_RequestCancelWorkflowExecution_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_RequestCancelWorkflowExecution_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_RequestCancelWorkflowExecution_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_RequestCancelWorkflowExecution_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -46690,14 +46690,14 @@ type HistoryService_ResetQueue_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_ResetQueue_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -46731,16 +46731,16 @@ func _ResetQueueRequest_Read(w wire.Value) (*shared.ResetQueueRequest, error) {
 // An error is returned if we were unable to build a HistoryService_ResetQueue_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_ResetQueue_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_ResetQueue_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_ResetQueue_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -47039,14 +47039,14 @@ type HistoryService_ResetQueue_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_ResetQueue_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [3]wire.Field
@@ -47094,16 +47094,16 @@ func (v *HistoryService_ResetQueue_Result) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a HistoryService_ResetQueue_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_ResetQueue_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_ResetQueue_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_ResetQueue_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -47428,14 +47428,14 @@ type HistoryService_ResetStickyTaskList_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_ResetStickyTaskList_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -47469,16 +47469,16 @@ func _ResetStickyTaskListRequest_Read(w wire.Value) (*ResetStickyTaskListRequest
 // An error is returned if we were unable to build a HistoryService_ResetStickyTaskList_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_ResetStickyTaskList_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_ResetStickyTaskList_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_ResetStickyTaskList_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -47835,14 +47835,14 @@ type HistoryService_ResetStickyTaskList_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_ResetStickyTaskList_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [8]wire.Field
@@ -47936,16 +47936,16 @@ func _ResetStickyTaskListResponse_Read(w wire.Value) (*ResetStickyTaskListRespon
 // An error is returned if we were unable to build a HistoryService_ResetStickyTaskList_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_ResetStickyTaskList_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_ResetStickyTaskList_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_ResetStickyTaskList_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -48576,14 +48576,14 @@ type HistoryService_ResetWorkflowExecution_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_ResetWorkflowExecution_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -48617,16 +48617,16 @@ func _ResetWorkflowExecutionRequest_1_Read(w wire.Value) (*ResetWorkflowExecutio
 // An error is returned if we were unable to build a HistoryService_ResetWorkflowExecution_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_ResetWorkflowExecution_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_ResetWorkflowExecution_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_ResetWorkflowExecution_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -48983,14 +48983,14 @@ type HistoryService_ResetWorkflowExecution_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_ResetWorkflowExecution_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [8]wire.Field
@@ -49084,16 +49084,16 @@ func _ResetWorkflowExecutionResponse_Read(w wire.Value) (*shared.ResetWorkflowEx
 // An error is returned if we were unable to build a HistoryService_ResetWorkflowExecution_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_ResetWorkflowExecution_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_ResetWorkflowExecution_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_ResetWorkflowExecution_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -49724,14 +49724,14 @@ type HistoryService_RespondActivityTaskCanceled_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_RespondActivityTaskCanceled_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -49765,16 +49765,16 @@ func _RespondActivityTaskCanceledRequest_1_Read(w wire.Value) (*RespondActivityT
 // An error is returned if we were unable to build a HistoryService_RespondActivityTaskCanceled_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_RespondActivityTaskCanceled_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_RespondActivityTaskCanceled_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_RespondActivityTaskCanceled_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -50133,14 +50133,14 @@ type HistoryService_RespondActivityTaskCanceled_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_RespondActivityTaskCanceled_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [8]wire.Field
@@ -50228,16 +50228,16 @@ func (v *HistoryService_RespondActivityTaskCanceled_Result) ToWire() (wire.Value
 // An error is returned if we were unable to build a HistoryService_RespondActivityTaskCanceled_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_RespondActivityTaskCanceled_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_RespondActivityTaskCanceled_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_RespondActivityTaskCanceled_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -50862,14 +50862,14 @@ type HistoryService_RespondActivityTaskCompleted_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_RespondActivityTaskCompleted_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -50903,16 +50903,16 @@ func _RespondActivityTaskCompletedRequest_1_Read(w wire.Value) (*RespondActivity
 // An error is returned if we were unable to build a HistoryService_RespondActivityTaskCompleted_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_RespondActivityTaskCompleted_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_RespondActivityTaskCompleted_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_RespondActivityTaskCompleted_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -51271,14 +51271,14 @@ type HistoryService_RespondActivityTaskCompleted_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_RespondActivityTaskCompleted_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [8]wire.Field
@@ -51366,16 +51366,16 @@ func (v *HistoryService_RespondActivityTaskCompleted_Result) ToWire() (wire.Valu
 // An error is returned if we were unable to build a HistoryService_RespondActivityTaskCompleted_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_RespondActivityTaskCompleted_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_RespondActivityTaskCompleted_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_RespondActivityTaskCompleted_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -52000,14 +52000,14 @@ type HistoryService_RespondActivityTaskFailed_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_RespondActivityTaskFailed_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -52041,16 +52041,16 @@ func _RespondActivityTaskFailedRequest_1_Read(w wire.Value) (*RespondActivityTas
 // An error is returned if we were unable to build a HistoryService_RespondActivityTaskFailed_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_RespondActivityTaskFailed_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_RespondActivityTaskFailed_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_RespondActivityTaskFailed_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -52409,14 +52409,14 @@ type HistoryService_RespondActivityTaskFailed_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_RespondActivityTaskFailed_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [8]wire.Field
@@ -52504,16 +52504,16 @@ func (v *HistoryService_RespondActivityTaskFailed_Result) ToWire() (wire.Value, 
 // An error is returned if we were unable to build a HistoryService_RespondActivityTaskFailed_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_RespondActivityTaskFailed_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_RespondActivityTaskFailed_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_RespondActivityTaskFailed_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -53138,14 +53138,14 @@ type HistoryService_RespondCrossClusterTasksCompleted_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_RespondCrossClusterTasksCompleted_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -53179,16 +53179,16 @@ func _RespondCrossClusterTasksCompletedRequest_Read(w wire.Value) (*shared.Respo
 // An error is returned if we were unable to build a HistoryService_RespondCrossClusterTasksCompleted_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_RespondCrossClusterTasksCompleted_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_RespondCrossClusterTasksCompleted_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_RespondCrossClusterTasksCompleted_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -53509,14 +53509,14 @@ type HistoryService_RespondCrossClusterTasksCompleted_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_RespondCrossClusterTasksCompleted_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [5]wire.Field
@@ -53586,16 +53586,16 @@ func _RespondCrossClusterTasksCompletedResponse_Read(w wire.Value) (*shared.Resp
 // An error is returned if we were unable to build a HistoryService_RespondCrossClusterTasksCompleted_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_RespondCrossClusterTasksCompleted_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_RespondCrossClusterTasksCompleted_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_RespondCrossClusterTasksCompleted_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -54046,14 +54046,14 @@ type HistoryService_RespondDecisionTaskCompleted_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_RespondDecisionTaskCompleted_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -54087,16 +54087,16 @@ func _RespondDecisionTaskCompletedRequest_1_Read(w wire.Value) (*RespondDecision
 // An error is returned if we were unable to build a HistoryService_RespondDecisionTaskCompleted_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_RespondDecisionTaskCompleted_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_RespondDecisionTaskCompleted_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_RespondDecisionTaskCompleted_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -54465,14 +54465,14 @@ type HistoryService_RespondDecisionTaskCompleted_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_RespondDecisionTaskCompleted_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [9]wire.Field
@@ -54574,16 +54574,16 @@ func _RespondDecisionTaskCompletedResponse_Read(w wire.Value) (*RespondDecisionT
 // An error is returned if we were unable to build a HistoryService_RespondDecisionTaskCompleted_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_RespondDecisionTaskCompleted_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_RespondDecisionTaskCompleted_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_RespondDecisionTaskCompleted_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -55274,14 +55274,14 @@ type HistoryService_RespondDecisionTaskFailed_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_RespondDecisionTaskFailed_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -55315,16 +55315,16 @@ func _RespondDecisionTaskFailedRequest_1_Read(w wire.Value) (*RespondDecisionTas
 // An error is returned if we were unable to build a HistoryService_RespondDecisionTaskFailed_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_RespondDecisionTaskFailed_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_RespondDecisionTaskFailed_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_RespondDecisionTaskFailed_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -55683,14 +55683,14 @@ type HistoryService_RespondDecisionTaskFailed_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_RespondDecisionTaskFailed_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [8]wire.Field
@@ -55778,16 +55778,16 @@ func (v *HistoryService_RespondDecisionTaskFailed_Result) ToWire() (wire.Value, 
 // An error is returned if we were unable to build a HistoryService_RespondDecisionTaskFailed_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_RespondDecisionTaskFailed_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_RespondDecisionTaskFailed_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_RespondDecisionTaskFailed_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -56412,14 +56412,14 @@ type HistoryService_ScheduleDecisionTask_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_ScheduleDecisionTask_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -56453,16 +56453,16 @@ func _ScheduleDecisionTaskRequest_Read(w wire.Value) (*ScheduleDecisionTaskReque
 // An error is returned if we were unable to build a HistoryService_ScheduleDecisionTask_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_ScheduleDecisionTask_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_ScheduleDecisionTask_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_ScheduleDecisionTask_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -56821,14 +56821,14 @@ type HistoryService_ScheduleDecisionTask_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_ScheduleDecisionTask_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [8]wire.Field
@@ -56916,16 +56916,16 @@ func (v *HistoryService_ScheduleDecisionTask_Result) ToWire() (wire.Value, error
 // An error is returned if we were unable to build a HistoryService_ScheduleDecisionTask_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_ScheduleDecisionTask_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_ScheduleDecisionTask_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_ScheduleDecisionTask_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -57550,14 +57550,14 @@ type HistoryService_SignalWithStartWorkflowExecution_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_SignalWithStartWorkflowExecution_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -57591,16 +57591,16 @@ func _SignalWithStartWorkflowExecutionRequest_1_Read(w wire.Value) (*SignalWithS
 // An error is returned if we were unable to build a HistoryService_SignalWithStartWorkflowExecution_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_SignalWithStartWorkflowExecution_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_SignalWithStartWorkflowExecution_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_SignalWithStartWorkflowExecution_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -57957,14 +57957,14 @@ type HistoryService_SignalWithStartWorkflowExecution_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_SignalWithStartWorkflowExecution_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [8]wire.Field
@@ -58064,16 +58064,16 @@ func _WorkflowExecutionAlreadyStartedError_Read(w wire.Value) (*shared.WorkflowE
 // An error is returned if we were unable to build a HistoryService_SignalWithStartWorkflowExecution_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_SignalWithStartWorkflowExecution_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_SignalWithStartWorkflowExecution_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_SignalWithStartWorkflowExecution_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -58710,14 +58710,14 @@ type HistoryService_SignalWorkflowExecution_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_SignalWorkflowExecution_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -58751,16 +58751,16 @@ func _SignalWorkflowExecutionRequest_1_Read(w wire.Value) (*SignalWorkflowExecut
 // An error is returned if we were unable to build a HistoryService_SignalWorkflowExecution_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_SignalWorkflowExecution_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_SignalWorkflowExecution_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_SignalWorkflowExecution_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -59119,14 +59119,14 @@ type HistoryService_SignalWorkflowExecution_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_SignalWorkflowExecution_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [8]wire.Field
@@ -59214,16 +59214,16 @@ func (v *HistoryService_SignalWorkflowExecution_Result) ToWire() (wire.Value, er
 // An error is returned if we were unable to build a HistoryService_SignalWorkflowExecution_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_SignalWorkflowExecution_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_SignalWorkflowExecution_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_SignalWorkflowExecution_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -59848,14 +59848,14 @@ type HistoryService_StartWorkflowExecution_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_StartWorkflowExecution_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -59889,16 +59889,16 @@ func _StartWorkflowExecutionRequest_1_Read(w wire.Value) (*StartWorkflowExecutio
 // An error is returned if we were unable to build a HistoryService_StartWorkflowExecution_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_StartWorkflowExecution_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_StartWorkflowExecution_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_StartWorkflowExecution_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -60255,14 +60255,14 @@ type HistoryService_StartWorkflowExecution_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_StartWorkflowExecution_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [8]wire.Field
@@ -60350,16 +60350,16 @@ func (v *HistoryService_StartWorkflowExecution_Result) ToWire() (wire.Value, err
 // An error is returned if we were unable to build a HistoryService_StartWorkflowExecution_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_StartWorkflowExecution_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_StartWorkflowExecution_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_StartWorkflowExecution_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -60984,14 +60984,14 @@ type HistoryService_SyncActivity_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_SyncActivity_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -61025,16 +61025,16 @@ func _SyncActivityRequest_Read(w wire.Value) (*SyncActivityRequest, error) {
 // An error is returned if we were unable to build a HistoryService_SyncActivity_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_SyncActivity_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_SyncActivity_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_SyncActivity_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -61369,14 +61369,14 @@ type HistoryService_SyncActivity_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_SyncActivity_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [6]wire.Field
@@ -61448,16 +61448,16 @@ func (v *HistoryService_SyncActivity_Result) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a HistoryService_SyncActivity_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_SyncActivity_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_SyncActivity_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_SyncActivity_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -61962,14 +61962,14 @@ type HistoryService_SyncShardStatus_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_SyncShardStatus_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -62003,16 +62003,16 @@ func _SyncShardStatusRequest_Read(w wire.Value) (*SyncShardStatusRequest, error)
 // An error is returned if we were unable to build a HistoryService_SyncShardStatus_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_SyncShardStatus_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_SyncShardStatus_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_SyncShardStatus_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -62335,14 +62335,14 @@ type HistoryService_SyncShardStatus_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_SyncShardStatus_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [5]wire.Field
@@ -62406,16 +62406,16 @@ func (v *HistoryService_SyncShardStatus_Result) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a HistoryService_SyncShardStatus_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_SyncShardStatus_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_SyncShardStatus_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_SyncShardStatus_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -62860,14 +62860,14 @@ type HistoryService_TerminateWorkflowExecution_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_TerminateWorkflowExecution_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -62901,16 +62901,16 @@ func _TerminateWorkflowExecutionRequest_1_Read(w wire.Value) (*TerminateWorkflow
 // An error is returned if we were unable to build a HistoryService_TerminateWorkflowExecution_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_TerminateWorkflowExecution_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_TerminateWorkflowExecution_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_TerminateWorkflowExecution_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -63269,14 +63269,14 @@ type HistoryService_TerminateWorkflowExecution_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HistoryService_TerminateWorkflowExecution_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [8]wire.Field
@@ -63364,16 +63364,16 @@ func (v *HistoryService_TerminateWorkflowExecution_Result) ToWire() (wire.Value,
 // An error is returned if we were unable to build a HistoryService_TerminateWorkflowExecution_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HistoryService_TerminateWorkflowExecution_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HistoryService_TerminateWorkflowExecution_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HistoryService_TerminateWorkflowExecution_Result) FromWire(w wire.Value) error {
 	var err error
 

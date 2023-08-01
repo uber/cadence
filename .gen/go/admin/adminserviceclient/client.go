@@ -229,7 +229,7 @@ type Interface interface {
 
 // New builds a new client for the AdminService service.
 //
-// 	client := adminserviceclient.New(dispatcher.ClientConfig("adminservice"))
+//	client := adminserviceclient.New(dispatcher.ClientConfig("adminservice"))
 func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 	return client{
 		c: thrift.New(thrift.Config{
