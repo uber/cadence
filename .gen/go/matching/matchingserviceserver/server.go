@@ -94,8 +94,8 @@ type Interface interface {
 // New prepares an implementation of the MatchingService service for
 // registration.
 //
-// 	handler := MatchingServiceHandler{}
-// 	dispatcher.Register(matchingserviceserver.New(handler))
+//	handler := MatchingServiceHandler{}
+//	dispatcher.Register(matchingserviceserver.New(handler))
 func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 	h := handler{impl}
 	service := thrift.Service{
