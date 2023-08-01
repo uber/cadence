@@ -26,27 +26,27 @@
 // Package adminservicefx provides better integration for Fx for services
 // implementing or calling AdminService.
 //
-// Clients
+// # Clients
 //
 // If you are making requests to AdminService, use the Client function to inject a
 // AdminService client into your container.
 //
-// 	fx.Provide(adminservicefx.Client("..."))
+//	fx.Provide(adminservicefx.Client("..."))
 //
-// Servers
+// # Servers
 //
 // If you are implementing AdminService, provide a adminserviceserver.Interface into
 // the container and use the Server function.
 //
 // Given,
 //
-// 	func NewAdminServiceHandler() adminserviceserver.Interface
+//	func NewAdminServiceHandler() adminserviceserver.Interface
 //
 // You can do the following to have the procedures of AdminService made available
 // to an Fx application.
 //
-// 	fx.Provide(
-// 		NewAdminServiceHandler,
-// 		adminservicefx.Server(),
-// 	)
+//	fx.Provide(
+//		NewAdminServiceHandler,
+//		adminservicefx.Server(),
+//	)
 package adminservicefx

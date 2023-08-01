@@ -26,27 +26,27 @@
 // Package historyservicefx provides better integration for Fx for services
 // implementing or calling HistoryService.
 //
-// Clients
+// # Clients
 //
 // If you are making requests to HistoryService, use the Client function to inject a
 // HistoryService client into your container.
 //
-// 	fx.Provide(historyservicefx.Client("..."))
+//	fx.Provide(historyservicefx.Client("..."))
 //
-// Servers
+// # Servers
 //
 // If you are implementing HistoryService, provide a historyserviceserver.Interface into
 // the container and use the Server function.
 //
 // Given,
 //
-// 	func NewHistoryServiceHandler() historyserviceserver.Interface
+//	func NewHistoryServiceHandler() historyserviceserver.Interface
 //
 // You can do the following to have the procedures of HistoryService made available
 // to an Fx application.
 //
-// 	fx.Provide(
-// 		NewHistoryServiceHandler,
-// 		historyservicefx.Server(),
-// 	)
+//	fx.Provide(
+//		NewHistoryServiceHandler,
+//		historyservicefx.Server(),
+//	)
 package historyservicefx
