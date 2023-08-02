@@ -1057,8 +1057,10 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 
 	// wait until all tasks are read by the task pump and enqeued into the in-memory buffer
 	// at the end of this step, ackManager readLevel will also be equal to the buffer size
-	expectedBufSize := common.MinInt(cap(tlMgr.taskReader.taskBuffer), taskCount)
-	s.True(s.awaitCondition(func() bool { return len(tlMgr.taskReader.taskBuffer) == expectedBufSize }, time.Second))
+	expectedBufSize := common.MinInt(cap(tlMgr.taskReader.taskBuffers[defaultTaskBufferIsolationGroup]), taskCount)
+	s.True(s.awaitCondition(func() bool {
+		return len(tlMgr.taskReader.taskBuffers[defaultTaskBufferIsolationGroup]) == expectedBufSize
+	}, time.Second))
 
 	// stop all goroutines that read / write tasks in the background
 	// remainder of this test works with the in-memory buffer
@@ -1195,7 +1197,9 @@ func (s *matchingEngineSuite) TaskExpiryAndCompletion(taskType int) {
 
 		// wait until all tasks are loaded by into in-memory buffers by task list manager
 		// the buffer size should be one less than expected because dispatcher will dequeue the head
-		s.True(s.awaitCondition(func() bool { return len(tlMgr.taskReader.taskBuffer) >= (taskCount/2 - 1) }, time.Second))
+		s.True(s.awaitCondition(func() bool {
+			return len(tlMgr.taskReader.taskBuffers[defaultTaskBufferIsolationGroup]) >= (taskCount/2 - 1)
+		}, time.Second))
 
 		maxTimeBetweenTaskDeletes = tc.maxTimeBtwnDeletes
 		s.matchingEngine.config.MaxTaskDeleteBatchSize = dynamicconfig.GetIntPropertyFilteredByTaskListInfo(tc.batchSize)
@@ -1295,7 +1299,7 @@ func (s *matchingEngineSuite) TestDrainDecisionBacklogNoPollersIsolationGroup() 
 func (s *matchingEngineSuite) DrainBacklogNoPollersIsolationGroup(taskType int) {
 	s.matchingEngine.config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
 	s.matchingEngine.config.EnableTasklistIsolation = dynamicconfig.GetBoolPropertyFnFilteredByDomainID(true)
-	s.matchingEngine.config.AsyncTaskDispatchTimeout = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(100 * time.Millisecond)
+	s.matchingEngine.config.AsyncTaskDispatchTimeout = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
 
 	isolationGroups := s.matchingEngine.config.AllIsolationGroups
 
@@ -1303,6 +1307,8 @@ func (s *matchingEngineSuite) DrainBacklogNoPollersIsolationGroup(taskType int) 
 	const initialRangeID = 102
 	// TODO: Understand why publish is low when rangeSize is 3
 	const rangeSize = 30
+	// use a const scheduleID because we don't know the order of task polled
+	const scheduleID = 11111
 
 	testParam := newTestParam(taskType)
 	s.taskManager.getTaskListManager(testParam.TaskListID).rangeID = initialRangeID
@@ -1316,7 +1322,6 @@ func (s *matchingEngineSuite) DrainBacklogNoPollersIsolationGroup(taskType int) 
 	s.setupGetDrainStatus()
 
 	for i := int64(0); i < taskCount; i++ {
-		scheduleID := i * 3
 		addRequest := &addTaskRequest{
 			TaskType:                      taskType,
 			DomainUUID:                    testParam.DomainID,
@@ -1334,7 +1339,6 @@ func (s *matchingEngineSuite) DrainBacklogNoPollersIsolationGroup(taskType int) 
 	s.setupRecordTaskStartedMock(taskType, testParam, false)
 
 	for i := int64(0); i < taskCount; {
-		scheduleID := i * 3
 		pollReq := &pollTaskRequest{
 			TaskType:       taskType,
 			DomainUUID:     testParam.DomainID,
@@ -1800,7 +1804,7 @@ func (m *testTaskManager) GetTasks(
 	_ context.Context,
 	request *persistence.GetTasksRequest,
 ) (*persistence.GetTasksResponse, error) {
-	m.logger.Debug(fmt.Sprintf("testTaskManager.GetTasks readLevel=%v, maxReadLevel=%v", request.ReadLevel, request.MaxReadLevel))
+	m.logger.Debug(fmt.Sprintf("testTaskManager.GetTasks readLevel=%v, maxReadLevel=%v", request.ReadLevel, *request.MaxReadLevel))
 
 	tlm := m.getTaskListManager(newTestTaskListID(request.DomainID, request.TaskList, request.TaskType))
 	tlm.Lock()
