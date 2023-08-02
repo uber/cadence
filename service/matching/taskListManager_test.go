@@ -47,12 +47,11 @@ func TestDeliverBufferTasks(t *testing.T) {
 	defer controller.Finish()
 
 	tests := []func(tlm *taskListManagerImpl){
-		func(tlm *taskListManagerImpl) { close(tlm.taskReader.taskBuffer) },
 		func(tlm *taskListManagerImpl) { tlm.taskReader.cancelFunc() },
 		func(tlm *taskListManagerImpl) {
 			rps := 0.1
 			tlm.matcher.UpdateRatelimit(&rps)
-			tlm.taskReader.taskBuffer <- &persistence.TaskInfo{}
+			tlm.taskReader.taskBuffers[defaultTaskBufferIsolationGroup] <- &persistence.TaskInfo{}
 			_, err := tlm.matcher.ratelimit(context.Background()) // consume the token
 			assert.NoError(t, err)
 			tlm.taskReader.cancelFunc()
@@ -64,7 +63,7 @@ func TestDeliverBufferTasks(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			tlm.taskReader.dispatchBufferedTasks()
+			tlm.taskReader.dispatchBufferedTasks(defaultTaskBufferIsolationGroup)
 		}()
 		test(tlm)
 		// dispatchBufferedTasks should stop after invocation of the test function
@@ -77,11 +76,11 @@ func TestDeliverBufferTasks_NoPollers(t *testing.T) {
 	defer controller.Finish()
 
 	tlm := createTestTaskListManager(controller)
-	tlm.taskReader.taskBuffer <- &persistence.TaskInfo{}
+	tlm.taskReader.taskBuffers[defaultTaskBufferIsolationGroup] <- &persistence.TaskInfo{}
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		tlm.taskReader.dispatchBufferedTasks()
+		tlm.taskReader.dispatchBufferedTasks("")
 		wg.Done()
 	}()
 	time.Sleep(100 * time.Millisecond) // let go routine run first and block on tasksForPoll
@@ -228,7 +227,7 @@ func tlMgrStartWithoutNotifyEvent(tlm *taskListManagerImpl) {
 	// mimic tlm.Start() but avoid calling notifyEvent
 	tlm.liveness.Start()
 	tlm.startWG.Done()
-	go tlm.taskReader.dispatchBufferedTasks()
+	go tlm.taskReader.dispatchBufferedTasks(defaultTaskBufferIsolationGroup)
 	go tlm.taskReader.getTasksPump()
 }
 

@@ -25,9 +25,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
+
+	"github.com/uber/cadence/client/admin"
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 
 	"github.com/uber/cadence/tools/common/flag"
 
@@ -36,7 +42,7 @@ import (
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/domain"
-	"github.com/uber/cadence/common/types"
+	dc "github.com/uber/cadence/common/dynamicconfig"
 )
 
 var (
@@ -47,6 +53,11 @@ type (
 	domainCLIImpl struct {
 		// used when making RPC call to frontend service
 		frontendClient frontend.Client
+		// used by migration command to make RPC call to frontend service of the destination domain
+		destinationClient frontend.Client
+
+		frontendAdminClient    admin.Client
+		destinationAdminClient admin.Client
 
 		// act as admin to modify domain in DB directly
 		domainHandler domain.Handler
@@ -58,18 +69,19 @@ func newDomainCLI(
 	c *cli.Context,
 	isAdminMode bool,
 ) *domainCLIImpl {
-
-	var frontendClient frontend.Client
-	var domainHandler domain.Handler
-	if !isAdminMode {
-		frontendClient = initializeFrontendClient(c)
-	} else {
-		domainHandler = initializeAdminDomainHandler(c)
+	d := &domainCLIImpl{}
+	d.frontendClient = initializeFrontendClient(c)
+	d.destinationClient = newClientFactory(func(c *cli.Context) string {
+		return c.String(FlagDestinationAddress)
+	}).ServerFrontendClient(c)
+	if isAdminMode {
+		d.frontendAdminClient = initializeFrontendAdminClient(c)
+		d.destinationAdminClient = newClientFactory(func(c *cli.Context) string {
+			return c.String(FlagDestinationAddress)
+		}).ServerAdminClient(c)
+		d.domainHandler = initializeAdminDomainHandler(c)
 	}
-	return &domainCLIImpl{
-		frontendClient: frontendClient,
-		domainHandler:  domainHandler,
-	}
+	return d
 }
 
 // RegisterDomain register a domain
@@ -402,6 +414,63 @@ VisibilityArchivalURI: {{.}}{{end}}
 {{with .FailoverInfo}}Graceful failover info:
 {{table .}}{{end}}`
 
+var newtemplateDomain = `Validation Check:
+{{- range .}}
+- {{.ValidationCheck}}: {{.ValidationResult}}
+{{- with .ValidationDetails}}
+{{- with .CurrentDomainRow}}
+Current Domain:
+  Name: {{.DomainInfo.Name}}
+  UUID: {{.DomainInfo.UUID}}
+{{- end}}
+{{- with .NewDomainRow}}
+New Domain:
+  Name: {{.DomainInfo.Name}}
+  UUID: {{.DomainInfo.UUID}}
+{{- end}}
+{{- if .LongRunningWorkFlowNum}}
+Long Running Workflow Num: {{.LongRunningWorkFlowNum}}
+{{- end}}
+{{- if .MissingCurrSearchAttributes}}
+Missing Search Attributes in Current Domain:
+{{- range .MissingCurrSearchAttributes}}
+  - {{.}}
+{{- end}}
+{{- end}}
+{{- if .MissingNewSearchAttributes}}
+Missing Search Attributes in New Domain:
+{{- range .MissingNewSearchAttributes}}
+  - {{.}}
+{{- end}}
+{{- end}}
+{{- if ne (len .MismatchedDomainMetaData) 0 }}   
+Mismatched Domain Meta Data: {{.MismatchedDomainMetaData}}
+{{- end }}                                      
+{{- range .MismatchedDynamicConfig}}
+{{ $dynamicConfig := . }}
+Mismatched Dynamic Config:
+Config Key: {{.Key}}
+  {{- range $i, $v := .CurrValues}}
+  Current Response:
+    Data: {{ printf "%s" (index $dynamicConfig.CurrValues $i).Value.Data }}
+    Filters:
+    {{- range $filter := (index $dynamicConfig.CurrValues $i).Filters}}
+      - Name: {{ $filter.Name }}
+        Value: {{ printf "%s" $filter.Value.Data }}
+    {{- end}}
+  New Response:
+    Data: {{ printf "%s" (index $dynamicConfig.NewValues $i).Value.Data }}
+    Filters:
+    {{- range $filter := (index $dynamicConfig.NewValues $i).Filters}}
+      - Name: {{ $filter.Name }}
+        Value: {{ printf "%s" $filter.Value.Data }}
+    {{- end}}
+  {{- end}}
+{{- end}}
+{{- end}}
+{{- end}}
+`
+
 // DescribeDomain updates a domain
 func (d *domainCLIImpl) DescribeDomain(c *cli.Context) {
 	domainName := c.GlobalString(FlagDomain)
@@ -446,6 +515,10 @@ func (d *domainCLIImpl) DescribeDomain(c *cli.Context) {
 	})
 }
 
+func (d *domainCLIImpl) MigrateDomain(c *cli.Context) {
+	d.migrateDomain(c)
+}
+
 type BadBinaryRow struct {
 	Checksum  string    `header:"Binary Checksum"`
 	Operator  string    `header:"Operator"`
@@ -479,6 +552,29 @@ type DomainRow struct {
 	VisibilityArchivalURI    string               `header:"Visibility Archival URI"`
 	BadBinaries              []BadBinaryRow
 	FailoverInfo             *FailoverInfoRow
+	LongRunningWorkFlowNum   *int
+}
+
+type DomainMigrationRow struct {
+	ValidationCheck   string `header: "Validation Checker"`
+	ValidationResult  bool   `header: "Validation Result"`
+	ValidationDetails ValidationDetails
+}
+
+type ValidationDetails struct {
+	CurrentDomainRow            *types.DescribeDomainResponse
+	NewDomainRow                *types.DescribeDomainResponse
+	MismatchedDomainMetaData    string
+	LongRunningWorkFlowNum      *int
+	MismatchedDynamicConfig     []MismatchedDynamicConfig
+	MissingCurrSearchAttributes []string
+	MissingNewSearchAttributes  []string
+}
+
+type MismatchedDynamicConfig struct {
+	Key        dynamicconfig.Key
+	CurrValues []*types.DynamicConfigValue
+	NewValues  []*types.DynamicConfigValue
 }
 
 func newDomainRow(domain *types.DescribeDomainResponse) DomainRow {
@@ -681,6 +777,399 @@ func (d *domainCLIImpl) describeDomain(
 	return d.domainHandler.DescribeDomain(ctx, request)
 }
 
+func (d *domainCLIImpl) migrateDomain(c *cli.Context) {
+	var results []DomainMigrationRow
+	checkers := []func(*cli.Context) DomainMigrationRow{
+		d.migrationDomainMetaDataCheck,
+		d.migrationDomainWorkFlowCheck,
+		d.migrationDynamicConfigCheck,
+		d.searchAttributesChecker,
+	}
+	wg := &sync.WaitGroup{}
+	for i := range checkers {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			result := checkers[i](c)
+			results = append(results, result)
+		}(i)
+	}
+	wg.Wait()
+
+	renderOpts := RenderOptions{
+		DefaultTemplate: newtemplateDomain,
+		Color:           true,
+		Border:          true,
+		PrintDateTime:   true,
+	}
+
+	if err := Render(c, results, renderOpts); err != nil {
+		ErrorAndExit("Failed to render", err)
+	}
+}
+
+func (d *domainCLIImpl) migrationDomainMetaDataCheck(c *cli.Context) DomainMigrationRow {
+	d.destinationClient = newClientFactory(func(c *cli.Context) string {
+		return c.String(FlagDestinationAddress)
+	}).ServerFrontendClient(c)
+	domain := c.GlobalString(FlagDomain)
+	newDomain := c.String(FlagDestinationDomain)
+	ctx, cancel := newContext(c)
+	defer cancel()
+	currResp, err := d.frontendClient.DescribeDomain(ctx, &types.DescribeDomainRequest{
+		Name: &domain,
+	})
+	if err != nil {
+		ErrorAndExit(fmt.Sprintf("Could not describe old domain, Please check to see if old domain exists before migrating."), err)
+	}
+	newResp, err := d.destinationClient.DescribeDomain(ctx, &types.DescribeDomainRequest{
+		Name: &newDomain,
+	})
+	if err != nil {
+		ErrorAndExit(fmt.Sprintf("Could not describe new domain, Please check to see if new domain exists before migrating."), err)
+	}
+	validationResult, mismatchedMetaData := metaDataValidation(currResp, newResp)
+	validationRow := DomainMigrationRow{
+		ValidationCheck:  "Domain Meta Data",
+		ValidationResult: validationResult,
+		ValidationDetails: ValidationDetails{
+			CurrentDomainRow:         currResp,
+			NewDomainRow:             newResp,
+			MismatchedDomainMetaData: mismatchedMetaData,
+		},
+	}
+	return validationRow
+}
+
+func metaDataValidation(currResp *types.DescribeDomainResponse, newResp *types.DescribeDomainResponse) (bool, string) {
+	if !reflect.DeepEqual(currResp.Configuration, newResp.Configuration) {
+		return false, "mismatched DomainConfiguration"
+	}
+
+	if currResp.DomainInfo.OwnerEmail != newResp.DomainInfo.OwnerEmail {
+		return false, "mismatched OwnerEmail"
+	}
+	return true, ""
+}
+
+func (d *domainCLIImpl) migrationDomainWorkFlowCheck(c *cli.Context) DomainMigrationRow {
+	d.destinationClient = newClientFactory(func(c *cli.Context) string {
+		return c.String(FlagDestinationAddress)
+	}).ServerFrontendClient(c)
+	countWorkFlows := d.countLongRunningWorkflowinDest(c)
+	check := countWorkFlows == 0
+	return DomainMigrationRow{
+		ValidationCheck:  "Workflow Check",
+		ValidationResult: check,
+		ValidationDetails: ValidationDetails{
+			LongRunningWorkFlowNum: &countWorkFlows,
+		},
+	}
+}
+
+func (d *domainCLIImpl) searchAttributesChecker(c *cli.Context) DomainMigrationRow {
+	ctx, cancel := newContext(c)
+	defer cancel()
+
+	// getting user provided search attributes
+	searchAttributes := c.StringSlice(FlagSearchAttribute)
+	if len(searchAttributes) == 0 {
+		return DomainMigrationRow{
+			ValidationCheck:  "Search Attributes Check",
+			ValidationResult: true,
+		}
+	}
+
+	// Parse the provided search attributes into a map[string]IndexValueType
+	requiredAttributes := make(map[string]types.IndexedValueType)
+	for _, attr := range searchAttributes {
+		parts := strings.SplitN(attr, ":", 2)
+		if len(parts) != 2 {
+			ErrorAndExit(fmt.Sprintf("Invalid search attribute format: %s", attr), nil)
+		}
+		key, valueType := parts[0], parts[1]
+		ivt, err := parseIndexedValueType(valueType)
+		if err != nil {
+			ErrorAndExit(fmt.Sprintf("Invalid search attribute type for %s: %s", key, valueType), err)
+		}
+		requiredAttributes[key] = ivt
+	}
+
+	// getting search attributes for current domain
+	currentSearchAttributes, err := d.frontendClient.GetSearchAttributes(ctx)
+	if err != nil {
+		ErrorAndExit("Unable to get search attributes for current domain.", err)
+	}
+
+	d.destinationClient = newClientFactory(func(c *cli.Context) string {
+		return c.String(FlagDestinationAddress)
+	}).ServerFrontendClient(c)
+
+	// getting search attributes for new domain
+	destinationSearchAttributes, err := d.destinationClient.GetSearchAttributes(ctx)
+	if err != nil {
+		ErrorAndExit("Unable to get search attributes for new domain.", err)
+	}
+
+	currentSearchAttrs := currentSearchAttributes.Keys
+	destinationSearchAttrs := destinationSearchAttributes.Keys
+
+	// checking to see if search attributes exist
+	missingInCurrent := findMissingAttributes(requiredAttributes, currentSearchAttrs)
+	missingInNew := findMissingAttributes(requiredAttributes, destinationSearchAttrs)
+
+	validationResult := len(missingInCurrent) == 0 && len(missingInNew) == 0
+
+	validationRow := DomainMigrationRow{
+		ValidationCheck:  "Search Attributes Check",
+		ValidationResult: validationResult,
+		ValidationDetails: ValidationDetails{
+			MissingCurrSearchAttributes: missingInCurrent,
+			MissingNewSearchAttributes:  missingInNew,
+		},
+	}
+
+	return validationRow
+}
+
+// helper to parse types.IndexedValueType from string
+func parseIndexedValueType(valueType string) (types.IndexedValueType, error) {
+	var result types.IndexedValueType
+	valueTypeBytes := []byte(valueType)
+	if err := result.UnmarshalText(valueTypeBytes); err != nil {
+		return 0, err
+	}
+	return result, nil
+}
+
+// finds missing attributed in a map of existing attributed based on required attributes
+func findMissingAttributes(requiredAttributes map[string]types.IndexedValueType, existingAttributes map[string]types.IndexedValueType) []string {
+	missingAttributes := make([]string, 0)
+	for key, requiredType := range requiredAttributes {
+		existingType, ok := existingAttributes[key]
+		if !ok || existingType != requiredType {
+			// construct the key:type string format
+			attr := fmt.Sprintf("%s:%s", key, requiredType)
+			missingAttributes = append(missingAttributes, attr)
+		}
+	}
+	return missingAttributes
+}
+
+func (d *domainCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrationRow {
+	var mismatchedConfigs []MismatchedDynamicConfig
+	check := true
+
+	resp := dynamicconfig.ListAllProductionKeys()
+
+	currDomain := c.GlobalString(FlagDomain)
+	newDomain := c.String(FlagDestinationDomain)
+
+	ctx, cancel := newContext(c)
+	defer cancel()
+
+	currentDomainID := d.getDomainID(ctx, currDomain)
+	destinationDomainID := d.getDomainID(ctx, newDomain)
+	if currentDomainID == "" {
+		ErrorAndExit("Failed to get domainID for the current domain.", nil)
+	}
+
+	if destinationDomainID == "" {
+		ErrorAndExit("Failed to get domainID for the destination domain.", nil)
+	}
+
+	for _, configKey := range resp {
+		if len(configKey.Filters()) == 1 && configKey.Filters()[0] == dc.DomainName {
+			// Validate dynamic configs with only domainName filter
+			currRequest := dynamicconfig.ToGetDynamicConfigFilterRequest(configKey.String(), []dynamicconfig.FilterOption{
+				dynamicconfig.DomainFilter(currDomain),
+			})
+
+			newRequest := dynamicconfig.ToGetDynamicConfigFilterRequest(configKey.String(), []dynamicconfig.FilterOption{
+				dynamicconfig.DomainFilter(newDomain),
+			})
+
+			currResp, err := d.frontendAdminClient.GetDynamicConfig(ctx, currRequest)
+			if err != nil {
+				// empty to indicate N/A
+				currResp = &types.GetDynamicConfigResponse{}
+			}
+			newResp, err := d.destinationAdminClient.GetDynamicConfig(ctx, newRequest)
+			if err != nil {
+				// empty to indicate N/A
+				newResp = &types.GetDynamicConfigResponse{}
+			}
+
+			if !reflect.DeepEqual(currResp.Value, newResp.Value) {
+				check = false
+				mismatchedConfigs = append(mismatchedConfigs, MismatchedDynamicConfig{
+					Key: configKey,
+					CurrValues: []*types.DynamicConfigValue{
+						toDynamicConfigValue(currResp.Value, map[dc.Filter]interface{}{
+							dynamicconfig.DomainName: currDomain,
+						}),
+					},
+					NewValues: []*types.DynamicConfigValue{
+						toDynamicConfigValue(newResp.Value, map[dc.Filter]interface{}{
+							dynamicconfig.DomainName: newDomain,
+						}),
+					},
+				})
+			}
+
+		} else if len(configKey.Filters()) == 1 && configKey.Filters()[0] == dc.DomainID {
+			// Validate dynamic configs with only domainID filter
+			currRequest := dynamicconfig.ToGetDynamicConfigFilterRequest(configKey.String(), []dynamicconfig.FilterOption{
+				dynamicconfig.DomainIDFilter(currentDomainID),
+			})
+
+			newRequest := dynamicconfig.ToGetDynamicConfigFilterRequest(configKey.String(), []dynamicconfig.FilterOption{
+				dynamicconfig.DomainIDFilter(destinationDomainID),
+			})
+
+			currResp, err := d.frontendAdminClient.GetDynamicConfig(ctx, currRequest)
+			if err != nil {
+				// empty to indicate N/A
+				currResp = &types.GetDynamicConfigResponse{}
+			}
+			newResp, err := d.destinationAdminClient.GetDynamicConfig(ctx, newRequest)
+			if err != nil {
+				// empty to indicate N/A
+				newResp = &types.GetDynamicConfigResponse{}
+			}
+
+			if !reflect.DeepEqual(currResp.Value, newResp.Value) {
+				check = false
+				mismatchedConfigs = append(mismatchedConfigs, MismatchedDynamicConfig{
+					Key: configKey,
+					CurrValues: []*types.DynamicConfigValue{
+						toDynamicConfigValue(currResp.Value, map[dc.Filter]interface{}{
+							dynamicconfig.DomainID: currentDomainID,
+						}),
+					},
+					NewValues: []*types.DynamicConfigValue{
+						toDynamicConfigValue(newResp.Value, map[dc.Filter]interface{}{
+							dynamicconfig.DomainID: destinationDomainID,
+						}),
+					},
+				})
+			}
+
+		} else if containsFilter(configKey, dc.DomainName.String()) && containsFilter(configKey, dc.TaskListName.String()) {
+			// Validate dynamic configs with only domainName and TaskList filters
+			taskLists := c.StringSlice(FlagTaskList)
+			var mismatchedCurValues []*types.DynamicConfigValue
+			var mismatchedNewValues []*types.DynamicConfigValue
+			for _, taskList := range taskLists {
+
+				currRequest := dynamicconfig.ToGetDynamicConfigFilterRequest(configKey.String(), []dynamicconfig.FilterOption{
+					dynamicconfig.DomainFilter(currDomain),
+					dynamicconfig.TaskListFilter(taskList),
+				})
+
+				newRequest := dynamicconfig.ToGetDynamicConfigFilterRequest(configKey.String(), []dynamicconfig.FilterOption{
+					dynamicconfig.DomainFilter(newDomain),
+					dynamicconfig.TaskListFilter(taskList),
+				})
+
+				currResp, err := d.frontendAdminClient.GetDynamicConfig(ctx, currRequest)
+				if err != nil {
+					// empty to indicate N/A
+					currResp = &types.GetDynamicConfigResponse{}
+				}
+				newResp, err := d.destinationAdminClient.GetDynamicConfig(ctx, newRequest)
+				if err != nil {
+					// empty to indicate N/A
+					newResp = &types.GetDynamicConfigResponse{}
+				}
+
+				if !reflect.DeepEqual(currResp.Value, newResp.Value) {
+					check = false
+					mismatchedCurValues = append(mismatchedCurValues, toDynamicConfigValue(currResp.Value, map[dc.Filter]interface{}{
+						dynamicconfig.DomainName:   currDomain,
+						dynamicconfig.TaskListName: taskLists,
+					}))
+					mismatchedNewValues = append(mismatchedNewValues, toDynamicConfigValue(newResp.Value, map[dc.Filter]interface{}{
+						dynamicconfig.DomainName:   newDomain,
+						dynamicconfig.TaskListName: taskLists,
+					}))
+
+				}
+			}
+			if len(mismatchedCurValues) > 0 && len(mismatchedNewValues) > 0 {
+				mismatchedConfigs = append(mismatchedConfigs, MismatchedDynamicConfig{
+					Key:        configKey,
+					CurrValues: mismatchedCurValues,
+					NewValues:  mismatchedNewValues,
+				})
+			}
+		}
+	}
+
+	validationRow := DomainMigrationRow{
+		ValidationCheck:  "Dynamic Config Check",
+		ValidationResult: check,
+		ValidationDetails: ValidationDetails{
+			MismatchedDynamicConfig: mismatchedConfigs,
+		},
+	}
+
+	return validationRow
+}
+
+func valueToDataBlob(value interface{}) *types.DataBlob {
+	if value == nil {
+		return nil
+	}
+	// No need to handle error as this is a private helper method
+	// where the correct value will always be passed regardless
+	data, _ := json.Marshal(value)
+
+	return &types.DataBlob{
+		EncodingType: types.EncodingTypeJSON.Ptr(),
+		Data:         data,
+	}
+}
+
+func toDynamicConfigValue(value *types.DataBlob, filterMaps map[dynamicconfig.Filter]interface{}) *types.DynamicConfigValue {
+	var configFilters []*types.DynamicConfigFilter
+	for filter, filterValue := range filterMaps {
+		configFilters = append(configFilters, &types.DynamicConfigFilter{
+			Name:  filter.String(),
+			Value: valueToDataBlob(filterValue),
+		})
+		fmt.Println("Data:", string(configFilters[len(configFilters)-1].Value.Data))
+	}
+
+	return &types.DynamicConfigValue{
+		Value:   value,
+		Filters: configFilters,
+	}
+}
+
+func containsFilter(key dynamicconfig.Key, value string) bool {
+	filters := key.Filters()
+	for _, filter := range filters {
+		if filter.String() == value {
+			return true
+		}
+	}
+	return false
+}
+
+func (d *domainCLIImpl) getDomainID(c context.Context, domain string) string {
+	request := &types.DescribeDomainRequest{
+		Name: &domain,
+	}
+
+	resp, err := d.describeDomain(c, request)
+	if err != nil {
+		ErrorAndExit("Failed to describe domain.", err)
+	}
+
+	return resp.DomainInfo.GetUUID()
+}
+
 func archivalStatus(c *cli.Context, statusFlagName string) *types.ArchivalStatus {
 	if c.IsSet(statusFlagName) {
 		switch c.String(statusFlagName) {
@@ -693,6 +1182,23 @@ func archivalStatus(c *cli.Context, statusFlagName string) *types.ArchivalStatus
 		}
 	}
 	return nil
+}
+
+func (d *domainCLIImpl) countLongRunningWorkflowinDest(c *cli.Context) int {
+	domain := getRequiredOption(c, FlagDestinationDomain)
+	now := time.Now()
+	past14Days := now.Add(-14 * 24 * time.Hour)
+	request := &types.CountWorkflowExecutionsRequest{
+		Domain: domain,
+		Query:  "CloseTime=missing AND StartTime < " + strconv.FormatInt(past14Days.UnixNano(), 10),
+	}
+	ctx, cancel := newContextForLongPoll(c)
+	defer cancel()
+	response, err := d.destinationClient.CountWorkflowExecutions(ctx, request)
+	if err != nil {
+		ErrorAndExit("Failed to count workflow.", err)
+	}
+	return int(response.GetCount())
 }
 
 func clustersToStrings(clusters []*types.ClusterReplicationConfiguration) []string {
