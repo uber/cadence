@@ -90,14 +90,14 @@ func (_Map_String_IndexedValueType_MapItemList) Close() {}
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AddSearchAttributeRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -167,16 +167,16 @@ func _Map_String_IndexedValueType_Read(m wire.MapItemList) (map[string]shared.In
 // An error is returned if we were unable to build a AddSearchAttributeRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AddSearchAttributeRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AddSearchAttributeRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AddSearchAttributeRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -501,14 +501,14 @@ type AdminDeleteWorkflowRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminDeleteWorkflowRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -550,16 +550,16 @@ func _WorkflowExecution_Read(w wire.Value) (*shared.WorkflowExecution, error) {
 // An error is returned if we were unable to build a AdminDeleteWorkflowRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminDeleteWorkflowRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminDeleteWorkflowRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminDeleteWorkflowRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -784,14 +784,14 @@ type AdminDeleteWorkflowResponse struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminDeleteWorkflowResponse) ToWire() (wire.Value, error) {
 	var (
 		fields [3]wire.Field
@@ -835,16 +835,16 @@ func (v *AdminDeleteWorkflowResponse) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a AdminDeleteWorkflowResponse struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminDeleteWorkflowResponse
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminDeleteWorkflowResponse
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminDeleteWorkflowResponse) FromWire(w wire.Value) error {
 	var err error
 
@@ -1131,14 +1131,14 @@ type AdminMaintainWorkflowRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminMaintainWorkflowRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -1174,16 +1174,16 @@ func (v *AdminMaintainWorkflowRequest) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a AdminMaintainWorkflowRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminMaintainWorkflowRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminMaintainWorkflowRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminMaintainWorkflowRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -1402,14 +1402,14 @@ type AdminMaintainWorkflowResponse struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminMaintainWorkflowResponse) ToWire() (wire.Value, error) {
 	var (
 		fields [3]wire.Field
@@ -1453,16 +1453,16 @@ func (v *AdminMaintainWorkflowResponse) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a AdminMaintainWorkflowResponse struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminMaintainWorkflowResponse
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminMaintainWorkflowResponse
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminMaintainWorkflowResponse) FromWire(w wire.Value) error {
 	var err error
 
@@ -1778,14 +1778,14 @@ func (_Map_String_PersistenceInfo_MapItemList) Close() {}
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *DescribeClusterResponse) ToWire() (wire.Value, error) {
 	var (
 		fields [3]wire.Field
@@ -1875,16 +1875,16 @@ func _Map_String_PersistenceInfo_Read(m wire.MapItemList) (map[string]*Persisten
 // An error is returned if we were unable to build a DescribeClusterResponse struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v DescribeClusterResponse
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v DescribeClusterResponse
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *DescribeClusterResponse) FromWire(w wire.Value) error {
 	var err error
 
@@ -2261,14 +2261,14 @@ type DescribeWorkflowExecutionRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *DescribeWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -2304,16 +2304,16 @@ func (v *DescribeWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a DescribeWorkflowExecutionRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v DescribeWorkflowExecutionRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v DescribeWorkflowExecutionRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *DescribeWorkflowExecutionRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -2533,14 +2533,14 @@ type DescribeWorkflowExecutionResponse struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *DescribeWorkflowExecutionResponse) ToWire() (wire.Value, error) {
 	var (
 		fields [4]wire.Field
@@ -2592,16 +2592,16 @@ func (v *DescribeWorkflowExecutionResponse) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a DescribeWorkflowExecutionResponse struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v DescribeWorkflowExecutionResponse
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v DescribeWorkflowExecutionResponse
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *DescribeWorkflowExecutionResponse) FromWire(w wire.Value) error {
 	var err error
 
@@ -2932,14 +2932,14 @@ type GetDomainIsolationGroupsRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *GetDomainIsolationGroupsRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -2967,16 +2967,16 @@ func (v *GetDomainIsolationGroupsRequest) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a GetDomainIsolationGroupsRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v GetDomainIsolationGroupsRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v GetDomainIsolationGroupsRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *GetDomainIsolationGroupsRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -3142,14 +3142,14 @@ type GetDomainIsolationGroupsResponse struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *GetDomainIsolationGroupsResponse) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -3183,16 +3183,16 @@ func _IsolationGroupConfiguration_Read(w wire.Value) (*shared.IsolationGroupConf
 // An error is returned if we were unable to build a GetDomainIsolationGroupsResponse struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v GetDomainIsolationGroupsResponse
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v GetDomainIsolationGroupsResponse
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *GetDomainIsolationGroupsResponse) FromWire(w wire.Value) error {
 	var err error
 
@@ -3390,14 +3390,14 @@ func (_List_DynamicConfigFilter_ValueList) Close() {}
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *GetDynamicConfigRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -3457,16 +3457,16 @@ func _List_DynamicConfigFilter_Read(l wire.ValueList) ([]*config.DynamicConfigFi
 // An error is returned if we were unable to build a GetDynamicConfigRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v GetDynamicConfigRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v GetDynamicConfigRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *GetDynamicConfigRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -3766,14 +3766,14 @@ type GetDynamicConfigResponse struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *GetDynamicConfigResponse) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -3807,16 +3807,16 @@ func _DataBlob_Read(w wire.Value) (*shared.DataBlob, error) {
 // An error is returned if we were unable to build a GetDynamicConfigResponse struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v GetDynamicConfigResponse
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v GetDynamicConfigResponse
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *GetDynamicConfigResponse) FromWire(w wire.Value) error {
 	var err error
 
@@ -3983,14 +3983,14 @@ type GetGlobalIsolationGroupsRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *GetGlobalIsolationGroupsRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [0]wire.Field
@@ -4007,16 +4007,16 @@ func (v *GetGlobalIsolationGroupsRequest) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a GetGlobalIsolationGroupsRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v GetGlobalIsolationGroupsRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v GetGlobalIsolationGroupsRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *GetGlobalIsolationGroupsRequest) FromWire(w wire.Value) error {
 
 	for _, field := range w.GetStruct().Fields {
@@ -4126,14 +4126,14 @@ type GetGlobalIsolationGroupsResponse struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *GetGlobalIsolationGroupsResponse) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -4161,16 +4161,16 @@ func (v *GetGlobalIsolationGroupsResponse) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a GetGlobalIsolationGroupsResponse struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v GetGlobalIsolationGroupsResponse
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v GetGlobalIsolationGroupsResponse
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *GetGlobalIsolationGroupsResponse) FromWire(w wire.Value) error {
 	var err error
 
@@ -4341,14 +4341,14 @@ type GetWorkflowExecutionRawHistoryV2Request struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *GetWorkflowExecutionRawHistoryV2Request) ToWire() (wire.Value, error) {
 	var (
 		fields [8]wire.Field
@@ -4432,16 +4432,16 @@ func (v *GetWorkflowExecutionRawHistoryV2Request) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a GetWorkflowExecutionRawHistoryV2Request struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v GetWorkflowExecutionRawHistoryV2Request
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v GetWorkflowExecutionRawHistoryV2Request
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *GetWorkflowExecutionRawHistoryV2Request) FromWire(w wire.Value) error {
 	var err error
 
@@ -5035,14 +5035,14 @@ func (_List_DataBlob_ValueList) Close() {}
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *GetWorkflowExecutionRawHistoryV2Response) ToWire() (wire.Value, error) {
 	var (
 		fields [3]wire.Field
@@ -5110,16 +5110,16 @@ func _VersionHistory_Read(w wire.Value) (*shared.VersionHistory, error) {
 // An error is returned if we were unable to build a GetWorkflowExecutionRawHistoryV2Response struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v GetWorkflowExecutionRawHistoryV2Response
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v GetWorkflowExecutionRawHistoryV2Response
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *GetWorkflowExecutionRawHistoryV2Response) FromWire(w wire.Value) error {
 	var err error
 
@@ -5466,14 +5466,14 @@ type HostInfo struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *HostInfo) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -5501,16 +5501,16 @@ func (v *HostInfo) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a HostInfo struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v HostInfo
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v HostInfo
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *HostInfo) FromWire(w wire.Value) error {
 	var err error
 
@@ -5676,14 +5676,14 @@ type ListDynamicConfigRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *ListDynamicConfigRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -5711,16 +5711,16 @@ func (v *ListDynamicConfigRequest) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a ListDynamicConfigRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v ListDynamicConfigRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v ListDynamicConfigRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *ListDynamicConfigRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -5915,14 +5915,14 @@ func (_List_DynamicConfigEntry_ValueList) Close() {}
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *ListDynamicConfigResponse) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -5974,16 +5974,16 @@ func _List_DynamicConfigEntry_Read(l wire.ValueList) ([]*config.DynamicConfigEnt
 // An error is returned if we were unable to build a ListDynamicConfigResponse struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v ListDynamicConfigResponse
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v ListDynamicConfigResponse
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *ListDynamicConfigResponse) FromWire(w wire.Value) error {
 	var err error
 
@@ -6285,14 +6285,14 @@ func (_List_RingInfo_ValueList) Close() {}
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *MembershipInfo) ToWire() (wire.Value, error) {
 	var (
 		fields [3]wire.Field
@@ -6384,16 +6384,16 @@ func _List_RingInfo_Read(l wire.ValueList) ([]*RingInfo, error) {
 // An error is returned if we were unable to build a MembershipInfo struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v MembershipInfo
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v MembershipInfo
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *MembershipInfo) FromWire(w wire.Value) error {
 	var err error
 
@@ -6821,14 +6821,14 @@ type PersistenceFeature struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *PersistenceFeature) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -6864,16 +6864,16 @@ func (v *PersistenceFeature) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a PersistenceFeature struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v PersistenceFeature
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v PersistenceFeature
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *PersistenceFeature) FromWire(w wire.Value) error {
 	var err error
 
@@ -7154,14 +7154,14 @@ func (_List_PersistenceFeature_ValueList) Close() {}
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *PersistenceInfo) ToWire() (wire.Value, error) {
 	var (
 		fields [3]wire.Field
@@ -7253,16 +7253,16 @@ func _List_PersistenceFeature_Read(l wire.ValueList) ([]*PersistenceFeature, err
 // An error is returned if we were unable to build a PersistenceInfo struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v PersistenceInfo
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v PersistenceInfo
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *PersistenceInfo) FromWire(w wire.Value) error {
 	var err error
 
@@ -7697,14 +7697,14 @@ type PersistenceSetting struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *PersistenceSetting) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -7740,16 +7740,16 @@ func (v *PersistenceSetting) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a PersistenceSetting struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v PersistenceSetting
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v PersistenceSetting
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *PersistenceSetting) FromWire(w wire.Value) error {
 	var err error
 
@@ -7977,14 +7977,14 @@ type ResendReplicationTasksRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *ResendReplicationTasksRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [8]wire.Field
@@ -8068,16 +8068,16 @@ func (v *ResendReplicationTasksRequest) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a ResendReplicationTasksRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v ResendReplicationTasksRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v ResendReplicationTasksRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *ResendReplicationTasksRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -8629,14 +8629,14 @@ type RestoreDynamicConfigRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *RestoreDynamicConfigRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -8672,16 +8672,16 @@ func (v *RestoreDynamicConfigRequest) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a RestoreDynamicConfigRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v RestoreDynamicConfigRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v RestoreDynamicConfigRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *RestoreDynamicConfigRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -8929,14 +8929,14 @@ func (_List_HostInfo_ValueList) Close() {}
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *RingInfo) ToWire() (wire.Value, error) {
 	var (
 		fields [3]wire.Field
@@ -8998,16 +8998,16 @@ func _List_HostInfo_Read(l wire.ValueList) ([]*HostInfo, error) {
 // An error is returned if we were unable to build a RingInfo struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v RingInfo
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v RingInfo
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *RingInfo) FromWire(w wire.Value) error {
 	var err error
 
@@ -9357,14 +9357,14 @@ type UpdateDomainIsolationGroupsRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *UpdateDomainIsolationGroupsRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -9400,16 +9400,16 @@ func (v *UpdateDomainIsolationGroupsRequest) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a UpdateDomainIsolationGroupsRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v UpdateDomainIsolationGroupsRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v UpdateDomainIsolationGroupsRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *UpdateDomainIsolationGroupsRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -9625,14 +9625,14 @@ type UpdateDomainIsolationGroupsResponse struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *UpdateDomainIsolationGroupsResponse) ToWire() (wire.Value, error) {
 	var (
 		fields [0]wire.Field
@@ -9649,16 +9649,16 @@ func (v *UpdateDomainIsolationGroupsResponse) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a UpdateDomainIsolationGroupsResponse struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v UpdateDomainIsolationGroupsResponse
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v UpdateDomainIsolationGroupsResponse
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *UpdateDomainIsolationGroupsResponse) FromWire(w wire.Value) error {
 
 	for _, field := range w.GetStruct().Fields {
@@ -9798,14 +9798,14 @@ func (_List_DynamicConfigValue_ValueList) Close() {}
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *UpdateDynamicConfigRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -9865,16 +9865,16 @@ func _List_DynamicConfigValue_Read(l wire.ValueList) ([]*config.DynamicConfigVal
 // An error is returned if we were unable to build a UpdateDynamicConfigRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v UpdateDynamicConfigRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v UpdateDynamicConfigRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *UpdateDynamicConfigRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -10174,14 +10174,14 @@ type UpdateGlobalIsolationGroupsRequest struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *UpdateGlobalIsolationGroupsRequest) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -10209,16 +10209,16 @@ func (v *UpdateGlobalIsolationGroupsRequest) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a UpdateGlobalIsolationGroupsRequest struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v UpdateGlobalIsolationGroupsRequest
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v UpdateGlobalIsolationGroupsRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *UpdateGlobalIsolationGroupsRequest) FromWire(w wire.Value) error {
 	var err error
 
@@ -10379,14 +10379,14 @@ type UpdateGlobalIsolationGroupsResponse struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *UpdateGlobalIsolationGroupsResponse) ToWire() (wire.Value, error) {
 	var (
 		fields [0]wire.Field
@@ -10403,16 +10403,16 @@ func (v *UpdateGlobalIsolationGroupsResponse) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a UpdateGlobalIsolationGroupsResponse struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v UpdateGlobalIsolationGroupsResponse
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v UpdateGlobalIsolationGroupsResponse
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *UpdateGlobalIsolationGroupsResponse) FromWire(w wire.Value) error {
 
 	for _, field := range w.GetStruct().Fields {
@@ -10541,14 +10541,14 @@ type AdminService_AddSearchAttribute_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_AddSearchAttribute_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -10582,16 +10582,16 @@ func _AddSearchAttributeRequest_Read(w wire.Value) (*AddSearchAttributeRequest, 
 // An error is returned if we were unable to build a AdminService_AddSearchAttribute_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_AddSearchAttribute_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_AddSearchAttribute_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_AddSearchAttribute_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -10890,14 +10890,14 @@ type AdminService_AddSearchAttribute_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_AddSearchAttribute_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [3]wire.Field
@@ -10963,16 +10963,16 @@ func _ServiceBusyError_Read(w wire.Value) (*shared.ServiceBusyError, error) {
 // An error is returned if we were unable to build a AdminService_AddSearchAttribute_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_AddSearchAttribute_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_AddSearchAttribute_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_AddSearchAttribute_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -11315,14 +11315,14 @@ type AdminService_CloseShard_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_CloseShard_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -11356,16 +11356,16 @@ func _CloseShardRequest_Read(w wire.Value) (*shared.CloseShardRequest, error) {
 // An error is returned if we were unable to build a AdminService_CloseShard_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_CloseShard_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_CloseShard_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_CloseShard_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -11664,14 +11664,14 @@ type AdminService_CloseShard_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_CloseShard_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [3]wire.Field
@@ -11725,16 +11725,16 @@ func _AccessDeniedError_Read(w wire.Value) (*shared.AccessDeniedError, error) {
 // An error is returned if we were unable to build a AdminService_CloseShard_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_CloseShard_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_CloseShard_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_CloseShard_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -12065,14 +12065,14 @@ type AdminService_DeleteWorkflow_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_DeleteWorkflow_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -12106,16 +12106,16 @@ func _AdminDeleteWorkflowRequest_Read(w wire.Value) (*AdminDeleteWorkflowRequest
 // An error is returned if we were unable to build a AdminService_DeleteWorkflow_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_DeleteWorkflow_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_DeleteWorkflow_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_DeleteWorkflow_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -12424,14 +12424,14 @@ type AdminService_DeleteWorkflow_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_DeleteWorkflow_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [4]wire.Field
@@ -12499,16 +12499,16 @@ func _EntityNotExistsError_Read(w wire.Value) (*shared.EntityNotExistsError, err
 // An error is returned if we were unable to build a AdminService_DeleteWorkflow_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_DeleteWorkflow_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_DeleteWorkflow_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_DeleteWorkflow_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -12904,14 +12904,14 @@ type AdminService_DescribeCluster_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_DescribeCluster_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [0]wire.Field
@@ -12928,16 +12928,16 @@ func (v *AdminService_DescribeCluster_Args) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a AdminService_DescribeCluster_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_DescribeCluster_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_DescribeCluster_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_DescribeCluster_Args) FromWire(w wire.Value) error {
 
 	for _, field := range w.GetStruct().Fields {
@@ -13170,14 +13170,14 @@ type AdminService_DescribeCluster_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_DescribeCluster_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [3]wire.Field
@@ -13231,16 +13231,16 @@ func _DescribeClusterResponse_Read(w wire.Value) (*DescribeClusterResponse, erro
 // An error is returned if we were unable to build a AdminService_DescribeCluster_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_DescribeCluster_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_DescribeCluster_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_DescribeCluster_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -13571,14 +13571,14 @@ type AdminService_DescribeHistoryHost_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_DescribeHistoryHost_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -13612,16 +13612,16 @@ func _DescribeHistoryHostRequest_Read(w wire.Value) (*shared.DescribeHistoryHost
 // An error is returned if we were unable to build a AdminService_DescribeHistoryHost_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_DescribeHistoryHost_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_DescribeHistoryHost_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_DescribeHistoryHost_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -13930,14 +13930,14 @@ type AdminService_DescribeHistoryHost_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_DescribeHistoryHost_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [4]wire.Field
@@ -13999,16 +13999,16 @@ func _DescribeHistoryHostResponse_Read(w wire.Value) (*shared.DescribeHistoryHos
 // An error is returned if we were unable to build a AdminService_DescribeHistoryHost_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_DescribeHistoryHost_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_DescribeHistoryHost_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_DescribeHistoryHost_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -14399,14 +14399,14 @@ type AdminService_DescribeQueue_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_DescribeQueue_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -14440,16 +14440,16 @@ func _DescribeQueueRequest_Read(w wire.Value) (*shared.DescribeQueueRequest, err
 // An error is returned if we were unable to build a AdminService_DescribeQueue_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_DescribeQueue_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_DescribeQueue_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_DescribeQueue_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -14758,14 +14758,14 @@ type AdminService_DescribeQueue_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_DescribeQueue_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [4]wire.Field
@@ -14827,16 +14827,16 @@ func _DescribeQueueResponse_Read(w wire.Value) (*shared.DescribeQueueResponse, e
 // An error is returned if we were unable to build a AdminService_DescribeQueue_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_DescribeQueue_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_DescribeQueue_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_DescribeQueue_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -15227,14 +15227,14 @@ type AdminService_DescribeShardDistribution_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_DescribeShardDistribution_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -15268,16 +15268,16 @@ func _DescribeShardDistributionRequest_Read(w wire.Value) (*shared.DescribeShard
 // An error is returned if we were unable to build a AdminService_DescribeShardDistribution_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_DescribeShardDistribution_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_DescribeShardDistribution_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_DescribeShardDistribution_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -15562,14 +15562,14 @@ type AdminService_DescribeShardDistribution_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_DescribeShardDistribution_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -15615,16 +15615,16 @@ func _DescribeShardDistributionResponse_Read(w wire.Value) (*shared.DescribeShar
 // An error is returned if we were unable to build a AdminService_DescribeShardDistribution_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_DescribeShardDistribution_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_DescribeShardDistribution_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_DescribeShardDistribution_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -15895,14 +15895,14 @@ type AdminService_DescribeWorkflowExecution_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_DescribeWorkflowExecution_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -15936,16 +15936,16 @@ func _DescribeWorkflowExecutionRequest_Read(w wire.Value) (*DescribeWorkflowExec
 // An error is returned if we were unable to build a AdminService_DescribeWorkflowExecution_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_DescribeWorkflowExecution_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_DescribeWorkflowExecution_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_DescribeWorkflowExecution_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -16266,14 +16266,14 @@ type AdminService_DescribeWorkflowExecution_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_DescribeWorkflowExecution_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [5]wire.Field
@@ -16343,16 +16343,16 @@ func _DescribeWorkflowExecutionResponse_Read(w wire.Value) (*DescribeWorkflowExe
 // An error is returned if we were unable to build a AdminService_DescribeWorkflowExecution_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_DescribeWorkflowExecution_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_DescribeWorkflowExecution_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_DescribeWorkflowExecution_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -16803,14 +16803,14 @@ type AdminService_GetCrossClusterTasks_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_GetCrossClusterTasks_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -16844,16 +16844,16 @@ func _GetCrossClusterTasksRequest_Read(w wire.Value) (*shared.GetCrossClusterTas
 // An error is returned if we were unable to build a AdminService_GetCrossClusterTasks_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_GetCrossClusterTasks_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_GetCrossClusterTasks_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_GetCrossClusterTasks_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -17162,14 +17162,14 @@ type AdminService_GetCrossClusterTasks_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_GetCrossClusterTasks_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [4]wire.Field
@@ -17231,16 +17231,16 @@ func _GetCrossClusterTasksResponse_Read(w wire.Value) (*shared.GetCrossClusterTa
 // An error is returned if we were unable to build a AdminService_GetCrossClusterTasks_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_GetCrossClusterTasks_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_GetCrossClusterTasks_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_GetCrossClusterTasks_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -17631,14 +17631,14 @@ type AdminService_GetDLQReplicationMessages_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_GetDLQReplicationMessages_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -17672,16 +17672,16 @@ func _GetDLQReplicationMessagesRequest_Read(w wire.Value) (*replicator.GetDLQRep
 // An error is returned if we were unable to build a AdminService_GetDLQReplicationMessages_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_GetDLQReplicationMessages_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_GetDLQReplicationMessages_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_GetDLQReplicationMessages_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -17978,14 +17978,14 @@ type AdminService_GetDLQReplicationMessages_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_GetDLQReplicationMessages_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [3]wire.Field
@@ -18039,16 +18039,16 @@ func _GetDLQReplicationMessagesResponse_Read(w wire.Value) (*replicator.GetDLQRe
 // An error is returned if we were unable to build a AdminService_GetDLQReplicationMessages_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_GetDLQReplicationMessages_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_GetDLQReplicationMessages_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_GetDLQReplicationMessages_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -18379,14 +18379,14 @@ type AdminService_GetDomainIsolationGroups_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_GetDomainIsolationGroups_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -18420,16 +18420,16 @@ func _GetDomainIsolationGroupsRequest_Read(w wire.Value) (*GetDomainIsolationGro
 // An error is returned if we were unable to build a AdminService_GetDomainIsolationGroups_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_GetDomainIsolationGroups_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_GetDomainIsolationGroups_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_GetDomainIsolationGroups_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -18714,14 +18714,14 @@ type AdminService_GetDomainIsolationGroups_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_GetDomainIsolationGroups_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -18767,16 +18767,16 @@ func _GetDomainIsolationGroupsResponse_Read(w wire.Value) (*GetDomainIsolationGr
 // An error is returned if we were unable to build a AdminService_GetDomainIsolationGroups_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_GetDomainIsolationGroups_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_GetDomainIsolationGroups_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_GetDomainIsolationGroups_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -19047,14 +19047,14 @@ type AdminService_GetDomainReplicationMessages_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_GetDomainReplicationMessages_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -19088,16 +19088,16 @@ func _GetDomainReplicationMessagesRequest_Read(w wire.Value) (*replicator.GetDom
 // An error is returned if we were unable to build a AdminService_GetDomainReplicationMessages_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_GetDomainReplicationMessages_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_GetDomainReplicationMessages_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_GetDomainReplicationMessages_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -19418,14 +19418,14 @@ type AdminService_GetDomainReplicationMessages_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_GetDomainReplicationMessages_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [5]wire.Field
@@ -19507,16 +19507,16 @@ func _ClientVersionNotSupportedError_Read(w wire.Value) (*shared.ClientVersionNo
 // An error is returned if we were unable to build a AdminService_GetDomainReplicationMessages_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_GetDomainReplicationMessages_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_GetDomainReplicationMessages_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_GetDomainReplicationMessages_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -19979,14 +19979,14 @@ type AdminService_GetDynamicConfig_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_GetDynamicConfig_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -20020,16 +20020,16 @@ func _GetDynamicConfigRequest_Read(w wire.Value) (*GetDynamicConfigRequest, erro
 // An error is returned if we were unable to build a AdminService_GetDynamicConfig_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_GetDynamicConfig_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_GetDynamicConfig_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_GetDynamicConfig_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -20326,14 +20326,14 @@ type AdminService_GetDynamicConfig_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_GetDynamicConfig_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [3]wire.Field
@@ -20387,16 +20387,16 @@ func _GetDynamicConfigResponse_Read(w wire.Value) (*GetDynamicConfigResponse, er
 // An error is returned if we were unable to build a AdminService_GetDynamicConfig_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_GetDynamicConfig_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_GetDynamicConfig_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_GetDynamicConfig_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -20727,14 +20727,14 @@ type AdminService_GetGlobalIsolationGroups_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_GetGlobalIsolationGroups_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -20768,16 +20768,16 @@ func _GetGlobalIsolationGroupsRequest_Read(w wire.Value) (*GetGlobalIsolationGro
 // An error is returned if we were unable to build a AdminService_GetGlobalIsolationGroups_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_GetGlobalIsolationGroups_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_GetGlobalIsolationGroups_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_GetGlobalIsolationGroups_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -21062,14 +21062,14 @@ type AdminService_GetGlobalIsolationGroups_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_GetGlobalIsolationGroups_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -21115,16 +21115,16 @@ func _GetGlobalIsolationGroupsResponse_Read(w wire.Value) (*GetGlobalIsolationGr
 // An error is returned if we were unable to build a AdminService_GetGlobalIsolationGroups_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_GetGlobalIsolationGroups_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_GetGlobalIsolationGroups_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_GetGlobalIsolationGroups_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -21395,14 +21395,14 @@ type AdminService_GetReplicationMessages_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_GetReplicationMessages_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -21436,16 +21436,16 @@ func _GetReplicationMessagesRequest_Read(w wire.Value) (*replicator.GetReplicati
 // An error is returned if we were unable to build a AdminService_GetReplicationMessages_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_GetReplicationMessages_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_GetReplicationMessages_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_GetReplicationMessages_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -21766,14 +21766,14 @@ type AdminService_GetReplicationMessages_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_GetReplicationMessages_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [5]wire.Field
@@ -21843,16 +21843,16 @@ func _GetReplicationMessagesResponse_Read(w wire.Value) (*replicator.GetReplicat
 // An error is returned if we were unable to build a AdminService_GetReplicationMessages_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_GetReplicationMessages_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_GetReplicationMessages_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_GetReplicationMessages_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -22303,14 +22303,14 @@ type AdminService_GetWorkflowExecutionRawHistoryV2_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_GetWorkflowExecutionRawHistoryV2_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -22344,16 +22344,16 @@ func _GetWorkflowExecutionRawHistoryV2Request_Read(w wire.Value) (*GetWorkflowEx
 // An error is returned if we were unable to build a AdminService_GetWorkflowExecutionRawHistoryV2_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_GetWorkflowExecutionRawHistoryV2_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_GetWorkflowExecutionRawHistoryV2_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_GetWorkflowExecutionRawHistoryV2_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -22674,14 +22674,14 @@ type AdminService_GetWorkflowExecutionRawHistoryV2_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_GetWorkflowExecutionRawHistoryV2_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [5]wire.Field
@@ -22751,16 +22751,16 @@ func _GetWorkflowExecutionRawHistoryV2Response_Read(w wire.Value) (*GetWorkflowE
 // An error is returned if we were unable to build a AdminService_GetWorkflowExecutionRawHistoryV2_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_GetWorkflowExecutionRawHistoryV2_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_GetWorkflowExecutionRawHistoryV2_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_GetWorkflowExecutionRawHistoryV2_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -23211,14 +23211,14 @@ type AdminService_ListDynamicConfig_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_ListDynamicConfig_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -23252,16 +23252,16 @@ func _ListDynamicConfigRequest_Read(w wire.Value) (*ListDynamicConfigRequest, er
 // An error is returned if we were unable to build a AdminService_ListDynamicConfig_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_ListDynamicConfig_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_ListDynamicConfig_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_ListDynamicConfig_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -23546,14 +23546,14 @@ type AdminService_ListDynamicConfig_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_ListDynamicConfig_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -23599,16 +23599,16 @@ func _ListDynamicConfigResponse_Read(w wire.Value) (*ListDynamicConfigResponse, 
 // An error is returned if we were unable to build a AdminService_ListDynamicConfig_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_ListDynamicConfig_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_ListDynamicConfig_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_ListDynamicConfig_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -23879,14 +23879,14 @@ type AdminService_MaintainCorruptWorkflow_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_MaintainCorruptWorkflow_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -23920,16 +23920,16 @@ func _AdminMaintainWorkflowRequest_Read(w wire.Value) (*AdminMaintainWorkflowReq
 // An error is returned if we were unable to build a AdminService_MaintainCorruptWorkflow_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_MaintainCorruptWorkflow_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_MaintainCorruptWorkflow_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_MaintainCorruptWorkflow_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -24238,14 +24238,14 @@ type AdminService_MaintainCorruptWorkflow_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_MaintainCorruptWorkflow_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [4]wire.Field
@@ -24307,16 +24307,16 @@ func _AdminMaintainWorkflowResponse_Read(w wire.Value) (*AdminMaintainWorkflowRe
 // An error is returned if we were unable to build a AdminService_MaintainCorruptWorkflow_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_MaintainCorruptWorkflow_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_MaintainCorruptWorkflow_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_MaintainCorruptWorkflow_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -24707,14 +24707,14 @@ type AdminService_MergeDLQMessages_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_MergeDLQMessages_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -24748,16 +24748,16 @@ func _MergeDLQMessagesRequest_Read(w wire.Value) (*replicator.MergeDLQMessagesRe
 // An error is returned if we were unable to build a AdminService_MergeDLQMessages_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_MergeDLQMessages_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_MergeDLQMessages_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_MergeDLQMessages_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -25078,14 +25078,14 @@ type AdminService_MergeDLQMessages_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_MergeDLQMessages_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [5]wire.Field
@@ -25155,16 +25155,16 @@ func _MergeDLQMessagesResponse_Read(w wire.Value) (*replicator.MergeDLQMessagesR
 // An error is returned if we were unable to build a AdminService_MergeDLQMessages_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_MergeDLQMessages_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_MergeDLQMessages_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_MergeDLQMessages_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -25615,14 +25615,14 @@ type AdminService_PurgeDLQMessages_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_PurgeDLQMessages_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -25656,16 +25656,16 @@ func _PurgeDLQMessagesRequest_Read(w wire.Value) (*replicator.PurgeDLQMessagesRe
 // An error is returned if we were unable to build a AdminService_PurgeDLQMessages_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_PurgeDLQMessages_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_PurgeDLQMessages_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_PurgeDLQMessages_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -25976,14 +25976,14 @@ type AdminService_PurgeDLQMessages_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_PurgeDLQMessages_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [4]wire.Field
@@ -26039,16 +26039,16 @@ func (v *AdminService_PurgeDLQMessages_Result) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a AdminService_PurgeDLQMessages_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_PurgeDLQMessages_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_PurgeDLQMessages_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_PurgeDLQMessages_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -26433,14 +26433,14 @@ type AdminService_ReadDLQMessages_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_ReadDLQMessages_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -26474,16 +26474,16 @@ func _ReadDLQMessagesRequest_Read(w wire.Value) (*replicator.ReadDLQMessagesRequ
 // An error is returned if we were unable to build a AdminService_ReadDLQMessages_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_ReadDLQMessages_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_ReadDLQMessages_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_ReadDLQMessages_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -26804,14 +26804,14 @@ type AdminService_ReadDLQMessages_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_ReadDLQMessages_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [5]wire.Field
@@ -26881,16 +26881,16 @@ func _ReadDLQMessagesResponse_Read(w wire.Value) (*replicator.ReadDLQMessagesRes
 // An error is returned if we were unable to build a AdminService_ReadDLQMessages_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_ReadDLQMessages_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_ReadDLQMessages_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_ReadDLQMessages_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -27341,14 +27341,14 @@ type AdminService_ReapplyEvents_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_ReapplyEvents_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -27382,16 +27382,16 @@ func _ReapplyEventsRequest_Read(w wire.Value) (*shared.ReapplyEventsRequest, err
 // An error is returned if we were unable to build a AdminService_ReapplyEvents_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_ReapplyEvents_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_ReapplyEvents_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_ReapplyEvents_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -27714,14 +27714,14 @@ type AdminService_ReapplyEvents_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_ReapplyEvents_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [5]wire.Field
@@ -27791,16 +27791,16 @@ func _DomainNotActiveError_Read(w wire.Value) (*shared.DomainNotActiveError, err
 // An error is returned if we were unable to build a AdminService_ReapplyEvents_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_ReapplyEvents_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_ReapplyEvents_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_ReapplyEvents_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -28251,14 +28251,14 @@ type AdminService_RefreshWorkflowTasks_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_RefreshWorkflowTasks_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -28292,16 +28292,16 @@ func _RefreshWorkflowTasksRequest_Read(w wire.Value) (*shared.RefreshWorkflowTas
 // An error is returned if we were unable to build a AdminService_RefreshWorkflowTasks_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_RefreshWorkflowTasks_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_RefreshWorkflowTasks_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_RefreshWorkflowTasks_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -28612,14 +28612,14 @@ type AdminService_RefreshWorkflowTasks_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_RefreshWorkflowTasks_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [4]wire.Field
@@ -28675,16 +28675,16 @@ func (v *AdminService_RefreshWorkflowTasks_Result) ToWire() (wire.Value, error) 
 // An error is returned if we were unable to build a AdminService_RefreshWorkflowTasks_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_RefreshWorkflowTasks_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_RefreshWorkflowTasks_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_RefreshWorkflowTasks_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -29069,14 +29069,14 @@ type AdminService_RemoveTask_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_RemoveTask_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -29110,16 +29110,16 @@ func _RemoveTaskRequest_Read(w wire.Value) (*shared.RemoveTaskRequest, error) {
 // An error is returned if we were unable to build a AdminService_RemoveTask_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_RemoveTask_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_RemoveTask_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_RemoveTask_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -29418,14 +29418,14 @@ type AdminService_RemoveTask_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_RemoveTask_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [3]wire.Field
@@ -29473,16 +29473,16 @@ func (v *AdminService_RemoveTask_Result) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a AdminService_RemoveTask_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_RemoveTask_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_RemoveTask_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_RemoveTask_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -29807,14 +29807,14 @@ type AdminService_ResendReplicationTasks_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_ResendReplicationTasks_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -29848,16 +29848,16 @@ func _ResendReplicationTasksRequest_Read(w wire.Value) (*ResendReplicationTasksR
 // An error is returned if we were unable to build a AdminService_ResendReplicationTasks_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_ResendReplicationTasks_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_ResendReplicationTasks_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_ResendReplicationTasks_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -30156,14 +30156,14 @@ type AdminService_ResendReplicationTasks_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_ResendReplicationTasks_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [3]wire.Field
@@ -30211,16 +30211,16 @@ func (v *AdminService_ResendReplicationTasks_Result) ToWire() (wire.Value, error
 // An error is returned if we were unable to build a AdminService_ResendReplicationTasks_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_ResendReplicationTasks_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_ResendReplicationTasks_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_ResendReplicationTasks_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -30545,14 +30545,14 @@ type AdminService_ResetQueue_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_ResetQueue_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -30586,16 +30586,16 @@ func _ResetQueueRequest_Read(w wire.Value) (*shared.ResetQueueRequest, error) {
 // An error is returned if we were unable to build a AdminService_ResetQueue_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_ResetQueue_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_ResetQueue_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_ResetQueue_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -30894,14 +30894,14 @@ type AdminService_ResetQueue_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_ResetQueue_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [3]wire.Field
@@ -30949,16 +30949,16 @@ func (v *AdminService_ResetQueue_Result) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a AdminService_ResetQueue_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_ResetQueue_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_ResetQueue_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_ResetQueue_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -31283,14 +31283,14 @@ type AdminService_RespondCrossClusterTasksCompleted_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_RespondCrossClusterTasksCompleted_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -31324,16 +31324,16 @@ func _RespondCrossClusterTasksCompletedRequest_Read(w wire.Value) (*shared.Respo
 // An error is returned if we were unable to build a AdminService_RespondCrossClusterTasksCompleted_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_RespondCrossClusterTasksCompleted_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_RespondCrossClusterTasksCompleted_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_RespondCrossClusterTasksCompleted_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -31642,14 +31642,14 @@ type AdminService_RespondCrossClusterTasksCompleted_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_RespondCrossClusterTasksCompleted_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [4]wire.Field
@@ -31711,16 +31711,16 @@ func _RespondCrossClusterTasksCompletedResponse_Read(w wire.Value) (*shared.Resp
 // An error is returned if we were unable to build a AdminService_RespondCrossClusterTasksCompleted_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_RespondCrossClusterTasksCompleted_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_RespondCrossClusterTasksCompleted_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_RespondCrossClusterTasksCompleted_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -32111,14 +32111,14 @@ type AdminService_RestoreDynamicConfig_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_RestoreDynamicConfig_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -32152,16 +32152,16 @@ func _RestoreDynamicConfigRequest_Read(w wire.Value) (*RestoreDynamicConfigReque
 // An error is returned if we were unable to build a AdminService_RestoreDynamicConfig_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_RestoreDynamicConfig_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_RestoreDynamicConfig_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_RestoreDynamicConfig_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -32448,14 +32448,14 @@ type AdminService_RestoreDynamicConfig_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_RestoreDynamicConfig_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -32495,16 +32495,16 @@ func (v *AdminService_RestoreDynamicConfig_Result) ToWire() (wire.Value, error) 
 // An error is returned if we were unable to build a AdminService_RestoreDynamicConfig_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_RestoreDynamicConfig_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_RestoreDynamicConfig_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_RestoreDynamicConfig_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -32769,14 +32769,14 @@ type AdminService_UpdateDomainIsolationGroups_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_UpdateDomainIsolationGroups_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -32810,16 +32810,16 @@ func _UpdateDomainIsolationGroupsRequest_Read(w wire.Value) (*UpdateDomainIsolat
 // An error is returned if we were unable to build a AdminService_UpdateDomainIsolationGroups_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_UpdateDomainIsolationGroups_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_UpdateDomainIsolationGroups_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_UpdateDomainIsolationGroups_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -33104,14 +33104,14 @@ type AdminService_UpdateDomainIsolationGroups_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_UpdateDomainIsolationGroups_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -33157,16 +33157,16 @@ func _UpdateDomainIsolationGroupsResponse_Read(w wire.Value) (*UpdateDomainIsola
 // An error is returned if we were unable to build a AdminService_UpdateDomainIsolationGroups_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_UpdateDomainIsolationGroups_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_UpdateDomainIsolationGroups_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_UpdateDomainIsolationGroups_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -33437,14 +33437,14 @@ type AdminService_UpdateDynamicConfig_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_UpdateDynamicConfig_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -33478,16 +33478,16 @@ func _UpdateDynamicConfigRequest_Read(w wire.Value) (*UpdateDynamicConfigRequest
 // An error is returned if we were unable to build a AdminService_UpdateDynamicConfig_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_UpdateDynamicConfig_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_UpdateDynamicConfig_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_UpdateDynamicConfig_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -33774,14 +33774,14 @@ type AdminService_UpdateDynamicConfig_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_UpdateDynamicConfig_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -33821,16 +33821,16 @@ func (v *AdminService_UpdateDynamicConfig_Result) ToWire() (wire.Value, error) {
 // An error is returned if we were unable to build a AdminService_UpdateDynamicConfig_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_UpdateDynamicConfig_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_UpdateDynamicConfig_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_UpdateDynamicConfig_Result) FromWire(w wire.Value) error {
 	var err error
 
@@ -34095,14 +34095,14 @@ type AdminService_UpdateGlobalIsolationGroups_Args struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_UpdateGlobalIsolationGroups_Args) ToWire() (wire.Value, error) {
 	var (
 		fields [1]wire.Field
@@ -34136,16 +34136,16 @@ func _UpdateGlobalIsolationGroupsRequest_Read(w wire.Value) (*UpdateGlobalIsolat
 // An error is returned if we were unable to build a AdminService_UpdateGlobalIsolationGroups_Args struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_UpdateGlobalIsolationGroups_Args
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_UpdateGlobalIsolationGroups_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_UpdateGlobalIsolationGroups_Args) FromWire(w wire.Value) error {
 	var err error
 
@@ -34430,14 +34430,14 @@ type AdminService_UpdateGlobalIsolationGroups_Result struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *AdminService_UpdateGlobalIsolationGroups_Result) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -34483,16 +34483,16 @@ func _UpdateGlobalIsolationGroupsResponse_Read(w wire.Value) (*UpdateGlobalIsola
 // An error is returned if we were unable to build a AdminService_UpdateGlobalIsolationGroups_Result struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v AdminService_UpdateGlobalIsolationGroups_Result
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v AdminService_UpdateGlobalIsolationGroups_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *AdminService_UpdateGlobalIsolationGroups_Result) FromWire(w wire.Value) error {
 	var err error
 
