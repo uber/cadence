@@ -1134,6 +1134,7 @@ func appendBufferedEvents(
 	domainID string,
 	workflowID string,
 	runID string,
+	ttlInSeconds int64,
 ) error {
 	values := make(map[string]interface{})
 	values["encoding_type"] = newBufferedEvents.Encoding
@@ -1141,6 +1142,7 @@ func appendBufferedEvents(
 	values["data"] = newBufferedEvents.Data
 	newEventValues := []map[string]interface{}{values}
 	batch.Query(templateAppendBufferedEventsQuery,
+		ttlInSeconds,
 		newEventValues,
 		shardID,
 		rowTypeExecution,
@@ -1191,7 +1193,7 @@ func (db *cdb) updateWorkflowExecutionAndEventBufferWithMergeAndDeleteMaps(
 			return err
 		}
 	} else if execution.EventBufferWriteMode == nosqlplugin.EventBufferWriteModeAppend {
-		err = appendBufferedEvents(batch, execution.NewBufferedEventBatch, shardID, domainID, workflowID, execution.RunID)
+		err = appendBufferedEvents(batch, execution.NewBufferedEventBatch, shardID, domainID, workflowID, execution.RunID, execution.TTLInSeconds)
 		if err != nil {
 			return err
 		}

@@ -463,7 +463,7 @@ workflow_state = ? ` +
 		`and task_id = ? `
 
 	templateAppendBufferedEventsQuery = `UPDATE executions ` +
-		`SET buffered_events_list = buffered_events_list + ? ` +
+		`SET USING TTL ? buffered_events_list = buffered_events_list + ? ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +

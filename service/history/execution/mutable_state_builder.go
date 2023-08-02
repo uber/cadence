@@ -28,6 +28,8 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
+
 	"github.com/pborman/uuid"
 
 	"github.com/uber/cadence/common"
@@ -54,7 +56,6 @@ const (
 	mutableStateInvalidHistoryActionMsgTemplate = mutableStateInvalidHistoryActionMsg + ": %v"
 
 	timerCancellationMsgTimerIDUnknown = "TIMER_ID_UNKNOWN"
-	cassandraUpperBound                = "2038-01-19T03:14:06+00:00"
 )
 
 var (
@@ -4827,22 +4828,12 @@ func (e *mutableStateBuilder) calculateTTL() (int, error) {
 	retention := time.Duration(config.Retention)
 	daysInSeconds := (int(retention) + e.config.TTLBufferDays()) * dayToSecondMultiplier
 	startTime := e.executionInfo.StartTimestamp
-	//Cassandra as of now has an upper bound on the TTL as the Cassandra will stop the support on 2038-01-19T03:14:06+00:00.
-	//The current value and the subsequent check on it ensures that the TTL value will never surpass the upper limit.
-	// Parse the time string
-	layout := "2006-01-02T15:04:05-07:00"
-	t, err := time.Parse(layout, cassandraUpperBound)
-	if err != nil {
-		return TTLInSeconds, err
-	}
-	// Calculate the upper bound duration
-	upperbound := t.Sub(time.Now())
-
+	cassUpperbound, _ := cassandra.CalculateUpperBound()
 	//Handles Cron and Delaystart. For Cron workflows the StartTimestamp does not show up until the wf has started.
 	//default value os TTL ie. 0 will be passed down in this case. The TTL is calculated only if the startTime is non zero.
 	if !time.Time.IsZero(startTime) {
 		CalculateTTLInSeconds := int(e.executionInfo.WorkflowTimeout) - int(time.Now().Sub(startTime).Seconds()) + daysInSeconds
-		if CalculateTTLInSeconds >= 0 && CalculateTTLInSeconds <= int(upperbound.Seconds()) {
+		if CalculateTTLInSeconds >= 0 && CalculateTTLInSeconds <= cassUpperbound {
 			return CalculateTTLInSeconds, nil
 		}
 	}

@@ -37,6 +37,7 @@ const (
 	PluginName            = "cassandra"
 	defaultSessionTimeout = 10 * time.Second
 	defaultConnectTimeout = 2 * time.Second
+	cassandraUpperBound   = "2038-01-19T03:14:06+00:00"
 )
 
 type plugin struct{}
@@ -101,4 +102,12 @@ func toGoCqlConfig(cfg *config.NoSQL) gocql.ClusterConfig {
 		Timeout:               defaultSessionTimeout,
 		ConnectTimeout:        defaultConnectTimeout,
 	}
+}
+
+func CalculateUpperBound() (int, error) {
+	// Your function logic here
+	layout := "2006-01-02T15:04:05-07:00"
+	t, _ := time.Parse(layout, cassandraUpperBound)
+	upperbound := t.Sub(time.Now())
+	return int(upperbound.Seconds()), nil
 }
