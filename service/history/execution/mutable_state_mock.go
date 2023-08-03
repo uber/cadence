@@ -2592,3 +2592,11 @@ func (mr *MockMutableStateMockRecorder) UpdateWorkflowStateCloseStatus(state, cl
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateWorkflowStateCloseStatus", reflect.TypeOf((*MockMutableState)(nil).UpdateWorkflowStateCloseStatus), state, closeStatus)
 }
+
+// GetHistorySize mocks base method.
+func (m *MockMutableState) GetHistorySize() int64 {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetHistorySize")
+	ret0, _ := ret[0].(int64)
+	return ret0
+}

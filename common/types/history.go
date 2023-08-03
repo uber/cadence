@@ -147,6 +147,8 @@ type GetMutableStateResponse struct {
 	WorkflowCloseState                   *int32             `json:"workflowCloseState,omitempty"`
 	VersionHistories                     *VersionHistories  `json:"versionHistories,omitempty"`
 	IsStickyTaskListEnabled              bool               `json:"isStickyTaskListEnabled,omitempty"`
+	HistorySize                          int64              `json:"historySize,omitempty"`
+	HistoryCount                         int64              `json:"historyCount,omitempty"`
 }
 
 // GetNextEventID is an internal getter (TBD...)

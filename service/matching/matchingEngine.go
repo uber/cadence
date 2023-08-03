@@ -459,6 +459,7 @@ pollLoop:
 		if task.isStarted() {
 			// tasks received from remote are already started. So, simply forward the response
 			return task.pollForDecisionResponse(), nil
+			// TODO: Maybe add history expose here?
 		}
 
 		if task.isQuery() {
@@ -475,6 +476,8 @@ pollLoop:
 				e.deliverQueryResult(task.query.taskID, &queryResult{internalError: err}) //nolint:errcheck
 				return emptyPollForDecisionTaskResponse, nil
 			}
+
+			e.logger.Info("Testing history size 22222222", tag.Dynamic("historySize", mutableStateResp.HistorySize))
 
 			isStickyEnabled := false
 			supportsSticky := client.NewVersionChecker().SupportsStickyQuery(mutableStateResp.GetClientImpl(), mutableStateResp.GetClientFeatureVersion()) == nil
