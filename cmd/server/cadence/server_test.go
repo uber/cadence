@@ -29,6 +29,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+
 	"github.com/uber/cadence/testflags"
 
 	"github.com/stretchr/testify/require"
@@ -94,7 +96,7 @@ func (s *ServerSuite) TestServerStartup() {
 		log.Fatalf("config validation failed: %v", err)
 	}
 	// cassandra schema version validation
-	if err := cassandra.VerifyCompatibleVersion(cfg.Persistence); err != nil {
+	if err := cassandra.VerifyCompatibleVersion(cfg.Persistence, gocql.All); err != nil {
 		log.Fatal("cassandra schema version compatibility check failed: ", err)
 	}
 

@@ -56,7 +56,7 @@ type Client interface {
 type Response struct {
 	TookInMillis int64
 	TotalHits    int64
-	Hits         *SearchHits // response from ES server as bytes, used to unmarshal to internal structs
+	Hits         *SearchHits
 	Aggregations map[string]json.RawMessage
 	Sort         []interface{}
 	ScrollID     string
@@ -64,13 +64,19 @@ type Response struct {
 
 // SearchHits specifies the list of search hits.
 type SearchHits struct {
-	Hits []*SearchHit `json:"hits,omitempty"` // the actual hits returned
+	TotalHits *TotalHits   // total number of hits found
+	Hits      []*SearchHit // the actual hits returned
+}
+
+// TotalHits specifies total number of hits and its relation
+type TotalHits struct {
+	Value int64 // value of the total hit count
 }
 
 // SearchHit is a single hit.
 type SearchHit struct {
-	Index  string          `json:"_index,omitempty"`  // index name
-	ID     string          `json:"_id,omitempty"`     // external or internal
-	Sort   []interface{}   `json:"sort,omitempty"`    // sort information
-	Source json.RawMessage `json:"_source,omitempty"` // stored document source
+	Index  string          // index name
+	ID     string          // external or internal
+	Sort   []interface{}   // sort information
+	Source json.RawMessage // stored document source
 }

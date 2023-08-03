@@ -234,16 +234,14 @@ func (i *Indexer) addMessageToES(indexMsg *indexer.Message, kafkaMsg messaging.M
 	switch indexMsg.GetMessageType() {
 	case indexer.MessageTypeIndex:
 		keyToKafkaMsg = fmt.Sprintf("%v-%v", kafkaMsg.Partition(), kafkaMsg.Offset())
-		doc := i.generateESDoc(indexMsg, keyToKafkaMsg)
-		req.Doc = doc
+		req.Doc = i.generateESDoc(indexMsg, keyToKafkaMsg)
 		req.RequestType = bulk.BulkableIndexRequest
 	case indexer.MessageTypeDelete:
 		keyToKafkaMsg = docID
 		req.RequestType = bulk.BulkableDeleteRequest
 	case indexer.MessageTypeCreate:
 		keyToKafkaMsg = fmt.Sprintf("%v-%v", kafkaMsg.Partition(), kafkaMsg.Offset())
-		doc := i.generateESDoc(indexMsg, keyToKafkaMsg)
-		req.Doc = doc
+		req.Doc = i.generateESDoc(indexMsg, keyToKafkaMsg)
 		req.RequestType = bulk.BulkableCreateRequest
 	default:
 		logger.Error("Unknown message type")

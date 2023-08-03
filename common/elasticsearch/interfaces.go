@@ -26,10 +26,13 @@ import (
 	"fmt"
 	"net/http"
 
+	esaws "github.com/olivere/elastic/aws/v4"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/elasticsearch/bulk"
 	esc "github.com/uber/cadence/common/elasticsearch/client"
+	"github.com/uber/cadence/common/elasticsearch/client/os2"
 	v6 "github.com/uber/cadence/common/elasticsearch/client/v6"
 	v7 "github.com/uber/cadence/common/elasticsearch/client/v7"
 	"github.com/uber/cadence/common/elasticsearch/query"
@@ -49,11 +52,12 @@ func NewGenericClient(
 	var signingAWSClient *http.Client
 
 	if connectConfig.AWSSigning.Enable {
-		var err error
-		signingAWSClient, err = buildAWSSigningClient(connectConfig.AWSSigning)
+		creds, region, err := connectConfig.AWSSigning.GetCredentials()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("getting AWS credentials: %w", err)
 		}
+
+		signingAWSClient = esaws.NewV4SigningClient(creds, *region)
 	}
 
 	if connectConfig.TLS.Enabled {
@@ -72,6 +76,8 @@ func NewGenericClient(
 		esClient, err = v6.NewV6Client(connectConfig, logger, tlsClient, signingAWSClient)
 	case "v7":
 		esClient, err = v7.NewV7Client(connectConfig, logger, tlsClient, signingAWSClient)
+	case "os2":
+		esClient, err = os2.NewClient(connectConfig, logger, tlsClient)
 	default:
 		return nil, fmt.Errorf("not supported ElasticSearch version: %v", connectConfig.Version)
 	}

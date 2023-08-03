@@ -34,7 +34,7 @@ STABLE_BIN := .bin
 #
 # this can _likely_ remain a major version, as fmt output does not tend to change in minor versions,
 # which will allow findstring to match any minor version.
-EXPECTED_GO_VERSION := go1.17
+EXPECTED_GO_VERSION := go1.20
 CURRENT_GO_VERSION := $(shell go version)
 ifeq (,$(findstring $(EXPECTED_GO_VERSION),$(CURRENT_GO_VERSION)))
 # if you are seeing this warning: consider using https://github.com/travis-ci/gimme to pin your version
@@ -336,7 +336,7 @@ $(BUILD)/proto-lint: $(PROTO_FILES) $(STABLE_BIN)/$(BUF_VERSION_BIN) | $(BUILD)
 # it's a coarse "you probably don't need to re-lint" filter, nothing more.
 $(BUILD)/lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
 	$Q echo "lint..."
-	$Q $(BIN)/revive -config revive.toml -exclude './vendor/...' -formatter stylish ./...
+	$Q $(BIN)/revive -config revive.toml -exclude './vendor/...' -exclude './.gen/...' -formatter stylish ./...
 	$Q touch $@
 
 # fmt and copyright are mutually cyclic with their inputs, so if a copyright header is modified:
@@ -609,24 +609,24 @@ install-schema: cadence-cassandra-tool
 install-schema-mysql: cadence-sql-tool
 	./cadence-sql-tool --user root --pw cadence create --db cadence
 	./cadence-sql-tool --user root --pw cadence --db cadence setup-schema -v 0.0
-	./cadence-sql-tool --user root --pw cadence --db cadence update-schema -d ./schema/mysql/v57/cadence/versioned
+	./cadence-sql-tool --user root --pw cadence --db cadence update-schema -d ./schema/mysql/v8/cadence/versioned
 	./cadence-sql-tool --user root --pw cadence create --db cadence_visibility
 	./cadence-sql-tool --user root --pw cadence --db cadence_visibility setup-schema -v 0.0
-	./cadence-sql-tool --user root --pw cadence --db cadence_visibility update-schema -d ./schema/mysql/v57/visibility/versioned
+	./cadence-sql-tool --user root --pw cadence --db cadence_visibility update-schema -d ./schema/mysql/v8/visibility/versioned
 
 install-schema-multiple-mysql: cadence-sql-tool install-schema-es-v7
 	./cadence-sql-tool --user root --pw cadence create --db cadence0
 	./cadence-sql-tool --user root --pw cadence --db cadence0 setup-schema -v 0.0
-	./cadence-sql-tool --user root --pw cadence --db cadence0 update-schema -d ./schema/mysql/v57/cadence/versioned
+	./cadence-sql-tool --user root --pw cadence --db cadence0 update-schema -d ./schema/mysql/v8/cadence/versioned
 	./cadence-sql-tool --user root --pw cadence create --db cadence1
 	./cadence-sql-tool --user root --pw cadence --db cadence1 setup-schema -v 0.0
-	./cadence-sql-tool --user root --pw cadence --db cadence1 update-schema -d ./schema/mysql/v57/cadence/versioned
+	./cadence-sql-tool --user root --pw cadence --db cadence1 update-schema -d ./schema/mysql/v8/cadence/versioned
 	./cadence-sql-tool --user root --pw cadence create --db cadence2
 	./cadence-sql-tool --user root --pw cadence --db cadence2 setup-schema -v 0.0
-	./cadence-sql-tool --user root --pw cadence --db cadence2 update-schema -d ./schema/mysql/v57/cadence/versioned
+	./cadence-sql-tool --user root --pw cadence --db cadence2 update-schema -d ./schema/mysql/v8/cadence/versioned
 	./cadence-sql-tool --user root --pw cadence create --db cadence3
 	./cadence-sql-tool --user root --pw cadence --db cadence3 setup-schema -v 0.0
-	./cadence-sql-tool --user root --pw cadence --db cadence3 update-schema -d ./schema/mysql/v57/cadence/versioned
+	./cadence-sql-tool --user root --pw cadence --db cadence3 update-schema -d ./schema/mysql/v8/cadence/versioned
 
 install-schema-postgres: cadence-sql-tool
 	./cadence-sql-tool -p 5432 -u postgres -pw cadence --pl postgres create --db cadence
@@ -645,7 +645,7 @@ install-schema-es-v6:
 	curl -X PUT "http://127.0.0.1:9200/cadence-visibility-dev"
 
 install-schema-es-opensearch:
-	curl -X PUT "https://127.0.0.1:9200/_template/cadence-visibility-template" -H 'Content-Type: application/json' -d @./schema/elasticsearch/v7/visibility/index_template.json -u admin:admin --insecure
+	curl -X PUT "https://127.0.0.1:9200/_template/cadence-visibility-template" -H 'Content-Type: application/json' -d @./schema/elasticsearch/os2/visibility/index_template.json -u admin:admin --insecure
 	curl -X PUT "https://127.0.0.1:9200/cadence-visibility-dev" -u admin:admin --insecure
 
 start: bins
