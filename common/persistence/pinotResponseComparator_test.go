@@ -427,7 +427,7 @@ func TestCompareListWorkflowExecutions(t *testing.T) {
 		expectedResult error
 	}{
 		"Case1: pass case": {
-			esInfo: []*types.WorkflowExecutionInfo{&types.WorkflowExecutionInfo{
+			esInfo: []*types.WorkflowExecutionInfo{{
 				Execution: &types.WorkflowExecution{
 					WorkflowID: testWorkflowID,
 					RunID:      testRunID,
@@ -436,7 +436,7 @@ func TestCompareListWorkflowExecutions(t *testing.T) {
 				StartTime: &testEarliestTime,
 				CloseTime: &testLatestTime,
 			},
-				&types.WorkflowExecutionInfo{
+				{
 					Execution: &types.WorkflowExecution{
 						WorkflowID: "testWorkflowID",
 						RunID:      testRunID,
@@ -446,7 +446,7 @@ func TestCompareListWorkflowExecutions(t *testing.T) {
 					CloseTime:        &testLatestTime,
 					SearchAttributes: &types.SearchAttributes{IndexedFields: testSearchAttributeMap1},
 				}},
-			pinotInfo: []*types.WorkflowExecutionInfo{&types.WorkflowExecutionInfo{
+			pinotInfo: []*types.WorkflowExecutionInfo{{
 				Execution: &types.WorkflowExecution{
 					WorkflowID: testWorkflowID,
 					RunID:      testRunID,
@@ -455,7 +455,7 @@ func TestCompareListWorkflowExecutions(t *testing.T) {
 				StartTime: &testEarliestTime,
 				CloseTime: &testLatestTime,
 			},
-				&types.WorkflowExecutionInfo{
+				{
 					Execution: &types.WorkflowExecution{
 						WorkflowID: "testWorkflowID",
 						RunID:      testRunID,
@@ -473,7 +473,7 @@ func TestCompareListWorkflowExecutions(t *testing.T) {
 			expectedResult: nil,
 		},
 		"Case3: one nil case": {
-			esInfo: []*types.WorkflowExecutionInfo{&types.WorkflowExecutionInfo{
+			esInfo: []*types.WorkflowExecutionInfo{{
 				Execution: &types.WorkflowExecution{
 					WorkflowID: testWorkflowID,
 					RunID:      testRunID,
@@ -487,7 +487,7 @@ func TestCompareListWorkflowExecutions(t *testing.T) {
 			expectedResult: fmt.Errorf("Comparison failed. One of the response is nil. "),
 		},
 		"Case4: length not equal case": {
-			esInfo: []*types.WorkflowExecutionInfo{&types.WorkflowExecutionInfo{
+			esInfo: []*types.WorkflowExecutionInfo{{
 				Execution: &types.WorkflowExecution{
 					WorkflowID: testWorkflowID,
 					RunID:      testRunID,
@@ -497,7 +497,7 @@ func TestCompareListWorkflowExecutions(t *testing.T) {
 				CloseTime:        &testLatestTime,
 				SearchAttributes: &types.SearchAttributes{IndexedFields: testSearchAttributeMap1},
 			},
-				&types.WorkflowExecutionInfo{
+				{
 					Execution: &types.WorkflowExecution{
 						WorkflowID: testWorkflowID,
 						RunID:      testRunID,
@@ -507,7 +507,7 @@ func TestCompareListWorkflowExecutions(t *testing.T) {
 					CloseTime:        &testLatestTime,
 					SearchAttributes: &types.SearchAttributes{IndexedFields: testSearchAttributeMap1},
 				}},
-			pinotInfo: []*types.WorkflowExecutionInfo{&types.WorkflowExecutionInfo{
+			pinotInfo: []*types.WorkflowExecutionInfo{{
 				Execution: &types.WorkflowExecution{
 					WorkflowID: testWorkflowID,
 					RunID:      testRunID,

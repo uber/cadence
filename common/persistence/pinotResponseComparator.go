@@ -223,18 +223,20 @@ func comparePinotESListOpenResponse(
 	request *ListWorkflowExecutionsRequest,
 	logger log.Logger,
 ) (*ListWorkflowExecutionsResponse, error) {
-	esResponse, err := ESManager.ListOpenWorkflowExecutions(ctx, request)
-	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("ListOpenWorkflowExecutions in comparator error, ES: %s", err))
+	esResponse, err1 := ESManager.ListOpenWorkflowExecutions(ctx, request)
+	pinotResponse, err2 := PinotManager.ListOpenWorkflowExecutions(ctx, request)
+
+	if err1 != nil && err2 != nil {
+		return nil, fmt.Errorf("ListOpenWorkflowExecutions in comparator error, no available results")
+	} else if err1 != nil {
+		logger.Error(fmt.Sprintf("ListOpenWorkflowExecutions in comparator error, ES: %s", err1))
+		return pinotResponse, nil
+	} else if err2 != nil {
+		logger.Error(fmt.Sprintf("ListOpenWorkflowExecutions in comparator error, Pinot: %s", err2))
+		return esResponse, nil
 	}
 
-	pinotResponse, err := PinotManager.ListOpenWorkflowExecutions(ctx, request)
-	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf(fmt.Sprintf("ListOpenWorkflowExecutions in comparator error, Pinot: %s", err)))
-
-	}
-
-	err = compareListWorkflowExecutions(esResponse.Executions, pinotResponse.Executions)
+	err := compareListWorkflowExecutions(esResponse.Executions, pinotResponse.Executions)
 	if err != nil {
 		logger.Error("ES/Pinot Response comparison Error! ", tag.Error(err))
 		return esResponse, nil
@@ -249,17 +251,20 @@ func comparePinotESListClosedResponse(
 	request *ListWorkflowExecutionsRequest,
 	logger log.Logger,
 ) (*ListWorkflowExecutionsResponse, error) {
-	esResponse, err := ESManager.ListOpenWorkflowExecutions(ctx, request)
-	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("ListClosedWorkflowExecutions in comparator error, ES: %s", err))
+	esResponse, err1 := ESManager.ListOpenWorkflowExecutions(ctx, request)
+	pinotResponse, err2 := PinotManager.ListOpenWorkflowExecutions(ctx, request)
+
+	if err1 != nil && err2 != nil {
+		return nil, fmt.Errorf("ListClosedWorkflowExecutions in comparator error, no available results")
+	} else if err1 != nil {
+		logger.Error(fmt.Sprintf("ListClosedWorkflowExecutions in comparator error, ES: %s", err1))
+		return pinotResponse, nil
+	} else if err2 != nil {
+		logger.Error(fmt.Sprintf("ListClosedWorkflowExecutions in comparator error, Pinot: %s", err2))
+		return esResponse, nil
 	}
 
-	pinotResponse, err := PinotManager.ListOpenWorkflowExecutions(ctx, request)
-	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("ListClosedWorkflowExecutions in comparator error, Pinot: %s", err))
-	}
-
-	err = compareListWorkflowExecutions(esResponse.Executions, pinotResponse.Executions)
+	err := compareListWorkflowExecutions(esResponse.Executions, pinotResponse.Executions)
 	if err != nil {
 		logger.Error("ES/Pinot Response comparison Error! ", tag.Error(err))
 		return esResponse, nil
@@ -274,17 +279,20 @@ func comparePinotESListOpenByTypeResponse(
 	request *ListWorkflowExecutionsByTypeRequest,
 	logger log.Logger,
 ) (*ListWorkflowExecutionsResponse, error) {
-	esResponse, err := ESManager.ListOpenWorkflowExecutionsByType(ctx, request)
-	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("ListOpenWorkflowExecutionsByType in comparator error, ES: %s", err))
+	esResponse, err1 := ESManager.ListOpenWorkflowExecutionsByType(ctx, request)
+	pinotResponse, err2 := PinotManager.ListOpenWorkflowExecutionsByType(ctx, request)
+
+	if err1 != nil && err2 != nil {
+		return nil, fmt.Errorf("ListOpenWorkflowExecutionsByType in comparator error, no available results")
+	} else if err1 != nil {
+		logger.Error(fmt.Sprintf("ListOpenWorkflowExecutionsByType in comparator error, ES: %s", err1))
+		return pinotResponse, nil
+	} else if err2 != nil {
+		logger.Error(fmt.Sprintf("ListOpenWorkflowExecutionsByType in comparator error, Pinot: %s", err2))
+		return esResponse, nil
 	}
 
-	pinotResponse, err := PinotManager.ListOpenWorkflowExecutionsByType(ctx, request)
-	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("ListOpenWorkflowExecutionsByType in comparator error, Pinot: %s", err))
-	}
-
-	err = compareListWorkflowExecutions(esResponse.Executions, pinotResponse.Executions)
+	err := compareListWorkflowExecutions(esResponse.Executions, pinotResponse.Executions)
 	if err != nil {
 		logger.Error("ES/Pinot Response comparison Error! ", tag.Error(err))
 		return esResponse, nil
@@ -299,17 +307,20 @@ func comparePinotESListClosedByTypeResponse(
 	request *ListWorkflowExecutionsByTypeRequest,
 	logger log.Logger,
 ) (*ListWorkflowExecutionsResponse, error) {
-	esResponse, err := ESManager.ListClosedWorkflowExecutionsByType(ctx, request)
-	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("ListClosedWorkflowExecutionsByType in comparator error, ES: %s", err))
+	esResponse, err1 := ESManager.ListClosedWorkflowExecutionsByType(ctx, request)
+	pinotResponse, err2 := PinotManager.ListClosedWorkflowExecutionsByType(ctx, request)
+
+	if err1 != nil && err2 != nil {
+		return nil, fmt.Errorf("ListClosedWorkflowExecutionsByType in comparator error, no available results")
+	} else if err1 != nil {
+		logger.Error(fmt.Sprintf("ListClosedWorkflowExecutionsByType in comparator error, ES: %s", err1))
+		return pinotResponse, nil
+	} else if err2 != nil {
+		logger.Error(fmt.Sprintf("ListClosedWorkflowExecutionsByType in comparator error, Pinot: %s", err2))
+		return esResponse, nil
 	}
 
-	pinotResponse, err := PinotManager.ListClosedWorkflowExecutionsByType(ctx, request)
-	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("ListClosedWorkflowExecutionsByType in comparator error, Pinot: %s", err))
-	}
-
-	err = compareListWorkflowExecutions(esResponse.Executions, pinotResponse.Executions)
+	err := compareListWorkflowExecutions(esResponse.Executions, pinotResponse.Executions)
 	if err != nil {
 		logger.Error("ES/Pinot Response comparison Error! ", tag.Error(err))
 		return esResponse, nil
@@ -324,17 +335,20 @@ func comparePinotESListOpenByWorkflowIDResponse(
 	request *ListWorkflowExecutionsByWorkflowIDRequest,
 	logger log.Logger,
 ) (*ListWorkflowExecutionsResponse, error) {
-	esResponse, err := ESManager.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
-	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("ListOpenWorkflowExecutionsByWorkflowID in comparator error, ES: %s", err))
+	esResponse, err1 := ESManager.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
+	pinotResponse, err2 := PinotManager.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
+
+	if err1 != nil && err2 != nil {
+		return nil, fmt.Errorf("ListOpenWorkflowExecutionsByWorkflowID in comparator error, no available results")
+	} else if err1 != nil {
+		logger.Error(fmt.Sprintf("ListOpenWorkflowExecutionsByWorkflowID in comparator error, ES: %s", err1))
+		return pinotResponse, nil
+	} else if err2 != nil {
+		logger.Error(fmt.Sprintf("ListOpenWorkflowExecutionsByWorkflowID in comparator error, Pinot: %s", err2))
+		return esResponse, nil
 	}
 
-	pinotResponse, err := PinotManager.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
-	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("ListOpenWorkflowExecutionsByWorkflowID in comparator error, Pinot: %s", err))
-	}
-
-	err = compareListWorkflowExecutions(esResponse.Executions, pinotResponse.Executions)
+	err := compareListWorkflowExecutions(esResponse.Executions, pinotResponse.Executions)
 	if err != nil {
 		logger.Error("ES/Pinot Response comparison Error! ", tag.Error(err))
 		return esResponse, nil
@@ -349,20 +363,21 @@ func comparePinotESListClosedByWorkflowIDResponse(
 	request *ListWorkflowExecutionsByWorkflowIDRequest,
 	logger log.Logger,
 ) (*ListWorkflowExecutionsResponse, error) {
-	esResponse, err := ESManager.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
-	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("ListClosedWorkflowExecutionsByWorkflowID in comparator error, ES: %s", err))
-	}
+	esResponse, err1 := ESManager.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
+	pinotResponse, err2 := PinotManager.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
 
-	pinotResponse, err := PinotManager.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
-	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("ListClosedWorkflowExecutionsByWorkflowID in comparator error, Pinot: %s", err))
+	if err1 != nil && err2 != nil {
+		return nil, fmt.Errorf("ListClosedWorkflowExecutionsByWorkflowID in comparator error, no available results")
+	} else if err1 != nil {
+		logger.Error(fmt.Sprintf("ListClosedWorkflowExecutionsByWorkflowID in comparator error, ES: %s", err1))
+		return pinotResponse, nil
+	} else if err2 != nil {
+		logger.Error(fmt.Sprintf("ListClosedWorkflowExecutionsByWorkflowID in comparator error, Pinot: %s", err2))
+		return esResponse, nil
 	}
-
-	err = compareListWorkflowExecutions(esResponse.Executions, pinotResponse.Executions)
+	err := compareListWorkflowExecutions(esResponse.Executions, pinotResponse.Executions)
 	if err != nil {
 		logger.Error("ES/Pinot Response comparison Error! ", tag.Error(err))
-		return esResponse, nil
 	}
 	return esResponse, nil
 }
@@ -374,17 +389,20 @@ func comparePinotESListClosedByStatusResponse(
 	request *ListClosedWorkflowExecutionsByStatusRequest,
 	logger log.Logger,
 ) (*ListWorkflowExecutionsResponse, error) {
-	esResponse, err := ESManager.ListClosedWorkflowExecutionsByStatus(ctx, request)
-	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("ListClosedWorkflowExecutionsByStatus in comparator error, ES: %s", err))
+	esResponse, err1 := ESManager.ListClosedWorkflowExecutionsByStatus(ctx, request)
+	pinotResponse, err2 := PinotManager.ListClosedWorkflowExecutionsByStatus(ctx, request)
+
+	if err1 != nil && err2 != nil {
+		return nil, fmt.Errorf("ListClosedWorkflowExecutionsByStatus in comparator error, no available results")
+	} else if err1 != nil {
+		logger.Error(fmt.Sprintf("ListClosedWorkflowExecutionsByStatus in comparator error, ES: %s", err1))
+		return pinotResponse, nil
+	} else if err2 != nil {
+		logger.Error(fmt.Sprintf("ListClosedWorkflowExecutionsByStatus in comparator error, Pinot: %s", err2))
+		return esResponse, nil
 	}
 
-	pinotResponse, err := PinotManager.ListClosedWorkflowExecutionsByStatus(ctx, request)
-	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("ListClosedWorkflowExecutionsByStatus in comparator error, Pinot: %s", err))
-	}
-
-	err = compareListWorkflowExecutions(esResponse.Executions, pinotResponse.Executions)
+	err := compareListWorkflowExecutions(esResponse.Executions, pinotResponse.Executions)
 	if err != nil {
 		logger.Error("ES/Pinot Response comparison Error! ", tag.Error(err))
 		return esResponse, nil
@@ -399,17 +417,20 @@ func comparePinotESGetClosedByStatusResponse(
 	request *GetClosedWorkflowExecutionRequest,
 	logger log.Logger,
 ) (*GetClosedWorkflowExecutionResponse, error) {
-	esResponse, err := ESManager.GetClosedWorkflowExecution(ctx, request)
-	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("GetClosedWorkflowExecutions in comparator error, ES: %s", err))
+	esResponse, err1 := ESManager.GetClosedWorkflowExecution(ctx, request)
+	pinotResponse, err2 := PinotManager.GetClosedWorkflowExecution(ctx, request)
+
+	if err1 != nil && err2 != nil {
+		return nil, fmt.Errorf("GetClosedWorkflowExecutions in comparator error, no available results")
+	} else if err1 != nil {
+		logger.Error(fmt.Sprintf("GetClosedWorkflowExecutions in comparator error, ES: %s", err1))
+		return pinotResponse, nil
+	} else if err2 != nil {
+		logger.Error(fmt.Sprintf("GetClosedWorkflowExecutions in comparator error, Pinot: %s", err2))
+		return esResponse, nil
 	}
 
-	pinotResponse, err := PinotManager.GetClosedWorkflowExecution(ctx, request)
-	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("GetClosedWorkflowExecutions in comparator error, Pinot: %s", err))
-	}
-
-	err = compareListWorkflowExecutionInfo(esResponse.Execution, pinotResponse.Execution)
+	err := compareListWorkflowExecutionInfo(esResponse.Execution, pinotResponse.Execution)
 	if err != nil {
 		logger.Error("ES/Pinot Response comparison Error! ", tag.Error(err))
 		return esResponse, nil
@@ -424,17 +445,20 @@ func comparePinotESListByQueryResponse(
 	request *ListWorkflowExecutionsByQueryRequest,
 	logger log.Logger,
 ) (*ListWorkflowExecutionsResponse, error) {
-	esResponse, err := ESManager.ListWorkflowExecutions(ctx, request)
-	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("ListWorkflowExecutionsByQuery in comparator error, ES: %s", err))
+	esResponse, err1 := ESManager.ListWorkflowExecutions(ctx, request)
+	pinotResponse, err2 := PinotManager.ListWorkflowExecutions(ctx, request)
+
+	if err1 != nil && err2 != nil {
+		return nil, fmt.Errorf("ListOpenWorkflowExecutionsByQuery in comparator error, no available results")
+	} else if err1 != nil {
+		logger.Error(fmt.Sprintf("ListOpenWorkflowExecutionsByQuery in comparator error, ES: %s", err1))
+		return pinotResponse, nil
+	} else if err2 != nil {
+		logger.Error(fmt.Sprintf("ListOpenWorkflowExecutionsByQuery in comparator error, Pinot: %s", err2))
+		return esResponse, nil
 	}
 
-	pinotResponse, err := PinotManager.ListWorkflowExecutions(ctx, request)
-	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("ListOpenWorkflowExecutionsByQuery in comparator error, Pinot: %s", err))
-	}
-
-	err = compareListWorkflowExecutions(esResponse.Executions, pinotResponse.Executions)
+	err := compareListWorkflowExecutions(esResponse.Executions, pinotResponse.Executions)
 	if err != nil {
 		logger.Error("ES/Pinot Response comparison Error! ", tag.Error(err))
 		return esResponse, nil
@@ -449,17 +473,20 @@ func comparePinotESScanResponse(
 	request *ListWorkflowExecutionsByQueryRequest,
 	logger log.Logger,
 ) (*ListWorkflowExecutionsResponse, error) {
-	esResponse, err := ESManager.ScanWorkflowExecutions(ctx, request)
-	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("ScanWorkflowExecutions in comparator error, ES: %s", err))
+	esResponse, err1 := ESManager.ScanWorkflowExecutions(ctx, request)
+	pinotResponse, err2 := PinotManager.ScanWorkflowExecutions(ctx, request)
+
+	if err1 != nil && err2 != nil {
+		return nil, fmt.Errorf("ScanWorkflowExecutions in comparator error, no available results")
+	} else if err1 != nil {
+		logger.Error(fmt.Sprintf("ScanWorkflowExecutions in comparator error, ES: %s", err1))
+		return pinotResponse, nil
+	} else if err2 != nil {
+		logger.Error(fmt.Sprintf("ScanWorkflowExecutions in comparator error, Pinot: %s", err2))
+		return esResponse, nil
 	}
 
-	pinotResponse, err := PinotManager.ScanWorkflowExecutions(ctx, request)
-	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("ScanWorkflowExecutions in comparator error, Pinot: %s", err))
-	}
-
-	err = compareListWorkflowExecutions(esResponse.Executions, pinotResponse.Executions)
+	err := compareListWorkflowExecutions(esResponse.Executions, pinotResponse.Executions)
 	if err != nil {
 		logger.Error("ES/Pinot Response comparison Error! ", tag.Error(err))
 		return esResponse, nil
@@ -474,18 +501,21 @@ func comparePinotESCountResponse(
 	request *CountWorkflowExecutionsRequest,
 	logger log.Logger,
 ) (*CountWorkflowExecutionsResponse, error) {
-	esResponse, err := ESManager.CountWorkflowExecutions(ctx, request)
-	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("CountOpenWorkflowExecutions in comparator error, ES: %s", err))
-	}
+	esResponse, err1 := ESManager.CountWorkflowExecutions(ctx, request)
+	pinotResponse, err2 := PinotManager.CountWorkflowExecutions(ctx, request)
 
-	pinotResponse, err := PinotManager.CountWorkflowExecutions(ctx, request)
-	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("CountOpenWorkflowExecutions in comparator error, Pinot: %s", err))
+	if err1 != nil && err2 != nil {
+		return nil, fmt.Errorf("CountOpenWorkflowExecutions in comparator error, no available results")
+	} else if err1 != nil {
+		logger.Error(fmt.Sprintf("CountOpenWorkflowExecutions in comparator error, ES: %s", err1))
+		return pinotResponse, nil
+	} else if err2 != nil {
+		logger.Error(fmt.Sprintf("CountOpenWorkflowExecutions in comparator error, Pinot: %s", err2))
+		return esResponse, nil
 	}
 
 	if esResponse.Count != pinotResponse.Count {
-		err = fmt.Errorf(fmt.Sprintf("Comparison Failed: counts are not equal. ES value = %v, Pinot value = %v", esResponse.Count, pinotResponse.Count))
+		err := fmt.Errorf(fmt.Sprintf("Comparison Failed: counts are not equal. ES value = %v, Pinot value = %v", esResponse.Count, pinotResponse.Count))
 		logger.Error("ES/Pinot Response comparison Error! ", tag.Error(err))
 		return esResponse, nil
 	}
