@@ -297,6 +297,7 @@ func (f *factoryImpl) NewVisibilityManager(
 			visibilityFromPinot,
 			visibilityFromES,
 			resourceConfig.EnableReadVisibilityFromPinot,
+			resourceConfig.EnableReadVisibilityFromES,
 			resourceConfig.AdvancedVisibilityWritingMode,
 			f.logger,
 		), nil
