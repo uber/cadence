@@ -34,7 +34,7 @@ STABLE_BIN := .bin
 #
 # this can _likely_ remain a major version, as fmt output does not tend to change in minor versions,
 # which will allow findstring to match any minor version.
-EXPECTED_GO_VERSION := go1.17
+EXPECTED_GO_VERSION := go1.20
 CURRENT_GO_VERSION := $(shell go version)
 ifeq (,$(findstring $(EXPECTED_GO_VERSION),$(CURRENT_GO_VERSION)))
 # if you are seeing this warning: consider using https://github.com/travis-ci/gimme to pin your version
@@ -336,7 +336,7 @@ $(BUILD)/proto-lint: $(PROTO_FILES) $(STABLE_BIN)/$(BUF_VERSION_BIN) | $(BUILD)
 # it's a coarse "you probably don't need to re-lint" filter, nothing more.
 $(BUILD)/lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
 	$Q echo "lint..."
-	$Q $(BIN)/revive -config revive.toml -exclude './vendor/...' -formatter stylish ./...
+	$Q $(BIN)/revive -config revive.toml -exclude './vendor/...' -exclude './.gen/...' -formatter stylish ./...
 	$Q touch $@
 
 # fmt and copyright are mutually cyclic with their inputs, so if a copyright header is modified:
