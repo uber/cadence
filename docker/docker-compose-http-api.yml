@@ -1,0 +1,60 @@
+version: '3'
+services:
+  cassandra:
+    image: cassandra:3.11
+    ports:
+      - "9042:9042"
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus:/etc/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    ports:
+      - '9090:9090'
+  node-exporter:
+    image: prom/node-exporter
+    ports:
+      - '9100:9100'
+  cadence:
+    image: ubercadence/server:master-auto-setup
+    ports:
+     - "8000:8000"
+     - "8001:8001"
+     - "8002:8002"
+     - "8003:8003"
+     - "7933:7933"
+     - "7934:7934"
+     - "7935:7935"
+     - "7939:7939"
+     - "7833:7833"
+     - "8800:8800"
+    environment:
+      - "CASSANDRA_SEEDS=cassandra"
+      - "PROMETHEUS_ENDPOINT_0=0.0.0.0:8000"
+      - "PROMETHEUS_ENDPOINT_1=0.0.0.0:8001"
+      - "PROMETHEUS_ENDPOINT_2=0.0.0.0:8002"
+      - "PROMETHEUS_ENDPOINT_3=0.0.0.0:8003"
+      - "DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development.yaml"
+      - "FRONTEND_HTTP_PORT=8800"
+      - "FRONTEND_HTTP_PROCEDURES=uber.cadence.api.v1.WorkflowAPI::StartWorkflowExecution,uber.cadence.api.v1.WorkflowAPI::SignalWorkflowExecution,uber.cadence.api.v1.WorkflowAPI::QueryWorkflow,uber.cadence.api.v1.WorkflowAPI::DescribeWorkflowExecution,uber.cadence.api.v1.VisibilityAPI::ListWorkflowExecutions"
+    depends_on:
+      - cassandra
+      - prometheus
+  cadence-web:
+    image: ubercadence/web:latest
+    environment:
+      - "CADENCE_TCHANNEL_PEERS=cadence:7933"
+    ports:
+      - "8088:8088"
+    depends_on:
+      - cadence
+  grafana:
+    image: grafana/grafana
+    volumes:
+      - ./grafana:/etc/grafana
+    user: "1000"
+    depends_on:
+      - prometheus
+    ports:
+      - '3000:3000'
