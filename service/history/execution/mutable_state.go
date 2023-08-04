@@ -238,5 +238,6 @@ type (
 		CloseTransactionAsSnapshot(now time.Time, transactionPolicy TransactionPolicy) (*persistence.WorkflowSnapshot, []*persistence.WorkflowEvents, error)
 
 		GetHistorySize() int64
+		SetHistorySize(size int64) error
 	}
 )

@@ -497,6 +497,15 @@ pollLoop:
 
 		e.emitTaskIsolationMetrics(hCtx.scope, task.event.PartitionConfig, req.GetIsolationGroup())
 		resp, err := e.recordDecisionTaskStarted(hCtx.Context, request, task)
+		mutableStateResp, err := e.historyService.GetMutableState(hCtx.Context, &types.GetMutableStateRequest{
+			DomainUUID: req.DomainUUID,
+			Execution:  task.workflowExecution(),
+		})
+		if err != nil {
+			return emptyPollForDecisionTaskResponse, nil
+		}
+		e.logger.Info("Testing history size 33333333", tag.Dynamic("historySize", mutableStateResp.HistorySize))
+
 		if err != nil {
 			switch err.(type) {
 			case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError, *types.EventAlreadyStartedError:

@@ -314,6 +314,10 @@ func (c *contextImpl) LoadWorkflowExecutionWithTaskVersion(
 			Message: "workflowExecutionContext counter flushBeforeReady status after loading mutable state from DB",
 		}
 	}
+	err = c.mutableState.SetHistorySize(c.stats.HistorySize)
+	if err != nil {
+		return nil, err
+	}
 	return c.mutableState, nil
 }
 

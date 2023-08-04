@@ -4208,6 +4208,11 @@ func (e *mutableStateBuilder) GetHistorySize() int64 {
 	return e.executionStats.HistorySize
 }
 
+func (e *mutableStateBuilder) SetHistorySize(size int64) error {
+	e.executionStats.HistorySize = size
+	return nil
+}
+
 func (e *mutableStateBuilder) prepareCloseTransaction(
 	transactionPolicy TransactionPolicy,
 ) error {
