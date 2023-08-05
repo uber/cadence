@@ -1502,7 +1502,7 @@ func (e *historyEngineImpl) getMutableState(
 	if versionHistories != nil {
 		retResp.VersionHistories = versionHistories.ToInternalType()
 	}
-	e.logger.Info(fmt.Sprintf("55555 History Engine reporting history size of %d", mutableState.GetHistorySize()))
+	e.logger.Info(fmt.Sprintf("55555 History Engine reporting history size of %d", retResp.HistorySize))
 	return
 }
 
