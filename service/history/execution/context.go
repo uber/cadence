@@ -254,6 +254,7 @@ func (c *contextImpl) LoadWorkflowExecutionWithTaskVersion(
 	ctx context.Context,
 	incomingVersion int64,
 ) (MutableState, error) {
+	c.logger.Info(fmt.Sprintf("444444 Loading history size %d from context", c.stats.HistorySize))
 
 	domainEntry, err := c.shard.GetDomainCache().GetDomainByID(c.domainID)
 	if err != nil {
@@ -739,6 +740,7 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 		persistedBlobs = append(persistedBlobs, blob)
 	}
 	c.SetHistorySize(currentWorkflowSize)
+	c.mutableState.SetHistorySize(currentWorkflowSize)
 	currentWorkflow.ExecutionStats = &persistence.ExecutionStats{
 		HistorySize: currentWorkflowSize,
 	}
