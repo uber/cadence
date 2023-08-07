@@ -122,6 +122,7 @@ func (c *clientImpl) GetMutableState(
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
 		response, err = c.client.GetMutableState(ctx, request, append(opts, yarpc.WithShardKey(peer))...)
+		c.logger.Info(fmt.Sprintf("History ClientImpl History size %d", response.HistorySize))
 		return err
 	}
 	err = c.executeWithRedirect(ctx, peer, op)

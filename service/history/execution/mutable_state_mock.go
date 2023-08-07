@@ -1271,6 +1271,20 @@ func (mr *MockMutableStateMockRecorder) GetHistoryBuilder() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHistoryBuilder", reflect.TypeOf((*MockMutableState)(nil).GetHistoryBuilder))
 }
 
+// GetHistorySize mocks base method.
+func (m *MockMutableState) GetHistorySize() int64 {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetHistorySize")
+	ret0, _ := ret[0].(int64)
+	return ret0
+}
+
+// GetHistorySize indicates an expected call of GetHistorySize.
+func (mr *MockMutableStateMockRecorder) GetHistorySize() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHistorySize", reflect.TypeOf((*MockMutableState)(nil).GetHistorySize))
+}
+
 // GetInFlightDecision mocks base method.
 func (m *MockMutableState) GetInFlightDecision() (*DecisionInfo, bool) {
 	m.ctrl.T.Helper()
@@ -2434,6 +2448,20 @@ func (mr *MockMutableStateMockRecorder) SetHistoryBuilder(hBuilder interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHistoryBuilder", reflect.TypeOf((*MockMutableState)(nil).SetHistoryBuilder), hBuilder)
 }
 
+// SetHistorySize mocks base method.
+func (m *MockMutableState) SetHistorySize(size int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetHistorySize", size)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetHistorySize indicates an expected call of SetHistorySize.
+func (mr *MockMutableStateMockRecorder) SetHistorySize(size interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHistorySize", reflect.TypeOf((*MockMutableState)(nil).SetHistorySize), size)
+}
+
 // SetHistoryTree mocks base method.
 func (m *MockMutableState) SetHistoryTree(treeID string) error {
 	m.ctrl.T.Helper()
@@ -2591,12 +2619,4 @@ func (m *MockMutableState) UpdateWorkflowStateCloseStatus(state, closeStatus int
 func (mr *MockMutableStateMockRecorder) UpdateWorkflowStateCloseStatus(state, closeStatus interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateWorkflowStateCloseStatus", reflect.TypeOf((*MockMutableState)(nil).UpdateWorkflowStateCloseStatus), state, closeStatus)
-}
-
-// GetHistorySize mocks base method.
-func (m *MockMutableState) GetHistorySize() int64 {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetHistorySize")
-	ret0, _ := ret[0].(int64)
-	return ret0
 }
