@@ -1177,7 +1177,7 @@ func (d *domainCLIImpl) countLongRunningWorkflow(c *cli.Context) int {
 	}
 	ctx, cancel := newContextForLongPoll(c)
 	defer cancel()
-	response, err := d.destinationClient.CountWorkflowExecutions(ctx, request)
+	response, err := d.frontendClient.CountWorkflowExecutions(ctx, request)
 	if err != nil {
 		ErrorAndExit("Failed to count workflow.", err)
 	}
