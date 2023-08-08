@@ -31,8 +31,72 @@ services:
       #  }
       http:
         port: 8800
-        procedures:
+        procedures: # list of available API procedures
+          # Admin API
+          - uber.cadence.admin.v1.AdminAPI::AddSearchAttribute
+          - uber.cadence.admin.v1.AdminAPI::CloseShard
+          - uber.cadence.admin.v1.AdminAPI::CountDLQMessages
+          - uber.cadence.admin.v1.AdminAPI::DeleteWorkflow
+          - uber.cadence.admin.v1.AdminAPI::DescribeCluster
+          - uber.cadence.admin.v1.AdminAPI::DescribeHistoryHost
+          - uber.cadence.admin.v1.AdminAPI::DescribeQueue
+          - uber.cadence.admin.v1.AdminAPI::DescribeShardDistribution
+          - uber.cadence.admin.v1.AdminAPI::DescribeWorkflowExecution
+          - uber.cadence.admin.v1.AdminAPI::GetCrossClusterTasks
+          - uber.cadence.admin.v1.AdminAPI::GetDLQReplicationMessages
+          - uber.cadence.admin.v1.AdminAPI::GetDomainIsolationGroups
+          - uber.cadence.admin.v1.AdminAPI::GetDomainReplicationMessages
+          - uber.cadence.admin.v1.AdminAPI::GetDynamicConfig
+          - uber.cadence.admin.v1.AdminAPI::GetGlobalIsolationGroups
+          - uber.cadence.admin.v1.AdminAPI::GetReplicationMessages
+          - uber.cadence.admin.v1.AdminAPI::GetWorkflowExecutionRawHistoryV2
+          - uber.cadence.admin.v1.AdminAPI::ListDynamicConfig
+          - uber.cadence.admin.v1.AdminAPI::MaintainCorruptWorkflow
+          - uber.cadence.admin.v1.AdminAPI::MergeDLQMessages
+          - uber.cadence.admin.v1.AdminAPI::PurgeDLQMessages
+          - uber.cadence.admin.v1.AdminAPI::ReadDLQMessages
+          - uber.cadence.admin.v1.AdminAPI::ReapplyEvents
+          - uber.cadence.admin.v1.AdminAPI::RefreshWorkflowTasks
+          - uber.cadence.admin.v1.AdminAPI::RemoveTask
+          - uber.cadence.admin.v1.AdminAPI::ResendReplicationTasks
+          - uber.cadence.admin.v1.AdminAPI::ResetQueue
+          - uber.cadence.admin.v1.AdminAPI::RespondCrossClusterTasksCompleted
+          - uber.cadence.admin.v1.AdminAPI::RestoreDynamicConfig
+          - uber.cadence.admin.v1.AdminAPI::UpdateDomainIsolationGroups
+          - uber.cadence.admin.v1.AdminAPI::UpdateDynamicConfig
+          - uber.cadence.admin.v1.AdminAPI::UpdateGlobalIsolationGroups
+          # Domain operations related API
+          - uber.cadence.api.v1.DomainAPI::DeprecateDomain
+          - uber.cadence.api.v1.DomainAPI::DescribeDomain
+          - uber.cadence.api.v1.DomainAPI::ListDomains
+          - uber.cadence.api.v1.DomainAPI::RegisterDomain
+          - uber.cadence.api.v1.DomainAPI::UpdateDomain
+          # Health check endpoint
+          - uber.cadence.api.v1.MetaAPI::Health
+          # Searching for workflows
+          - uber.cadence.api.v1.VisibilityAPI::CountWorkflowExecutions
+          - uber.cadence.api.v1.VisibilityAPI::GetSearchAttributes
+          - uber.cadence.api.v1.VisibilityAPI::ListArchivedWorkflowExecutions
+          - uber.cadence.api.v1.VisibilityAPI::ListClosedWorkflowExecutions
+          - uber.cadence.api.v1.VisibilityAPI::ListOpenWorkflowExecutions
+          - uber.cadence.api.v1.VisibilityAPI::ListWorkflowExecutions
+          - uber.cadence.api.v1.VisibilityAPI::ScanWorkflowExecutions
+          # Workflow execution related API endpoints
+          - uber.cadence.api.v1.WorkflowAPI::DescribeTaskList
+          - uber.cadence.api.v1.WorkflowAPI::DescribeWorkflowExecution
+          - uber.cadence.api.v1.WorkflowAPI::GetClusterInfo
+          - uber.cadence.api.v1.WorkflowAPI::GetTaskListsByDomain
+          - uber.cadence.api.v1.WorkflowAPI::GetWorkflowExecutionHistory
+          - uber.cadence.api.v1.WorkflowAPI::ListTaskListPartitions
+          - uber.cadence.api.v1.WorkflowAPI::QueryWorkflow
+          - uber.cadence.api.v1.WorkflowAPI::RefreshWorkflowTasks
+          - uber.cadence.api.v1.WorkflowAPI::RequestCancelWorkflowExecution
+          - uber.cadence.api.v1.WorkflowAPI::ResetWorkflowExecution
+          - uber.cadence.api.v1.WorkflowAPI::RestartWorkflowExecution
+          - uber.cadence.api.v1.WorkflowAPI::SignalWithStartWorkflowExecution
+          - uber.cadence.api.v1.WorkflowAPI::SignalWorkflowExecution
           - uber.cadence.api.v1.WorkflowAPI::StartWorkflowExecution
+          - uber.cadence.api.v1.WorkflowAPI::TerminateWorkflowExecution
     metrics:
       statsd:
         hostPort: "127.0.0.1:8125"
