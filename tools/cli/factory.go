@@ -137,8 +137,8 @@ func (b *clientFactory) ServerAdminClient(c *cli.Context) admin.Client {
 
 // ServerFrontendClientForMigration builds a frontend client (based on server side thrift interface)
 func (b *clientFactory) ServerFrontendClientForMigration(c *cli.Context) frontend.Client {
-	b.ensureDispatcher(c)
-	clientConfig := b.dispatcher.ClientConfig(cadenceFrontendService)
+	b.ensureDispatcherForMigration(c)
+	clientConfig := b.dispatcherMigration.ClientConfig(cadenceFrontendService)
 	if c.GlobalString(FlagTransport) == grpcTransport {
 		return frontend.NewGRPCClient(
 			apiv1.NewDomainAPIYARPCClient(clientConfig),
@@ -152,8 +152,8 @@ func (b *clientFactory) ServerFrontendClientForMigration(c *cli.Context) fronten
 
 // ServerAdminClientForMigration builds an admin client (based on server side thrift interface)
 func (b *clientFactory) ServerAdminClientForMigration(c *cli.Context) admin.Client {
-	b.ensureDispatcher(c)
-	clientConfig := b.dispatcher.ClientConfig(cadenceFrontendService)
+	b.ensureDispatcherForMigration(c)
+	clientConfig := b.dispatcherMigration.ClientConfig(cadenceFrontendService)
 	if c.GlobalString(FlagTransport) == grpcTransport {
 		return admin.NewGRPCClient(adminv1.NewAdminAPIYARPCClient(clientConfig))
 	}
