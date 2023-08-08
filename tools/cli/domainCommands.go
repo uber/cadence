@@ -71,14 +71,10 @@ func newDomainCLI(
 ) *domainCLIImpl {
 	d := &domainCLIImpl{}
 	d.frontendClient = initializeFrontendClient(c)
-	d.destinationClient = newClientFactory(func(c *cli.Context) string {
-		return c.String(FlagDestinationAddress)
-	}).ServerFrontendClient(c)
+	d.destinationClient = cFactory.ServerFrontendClientForMigration(c)
 	if isAdminMode {
 		d.frontendAdminClient = initializeFrontendAdminClient(c)
-		d.destinationAdminClient = newClientFactory(func(c *cli.Context) string {
-			return c.String(FlagDestinationAddress)
-		}).ServerAdminClient(c)
+		d.destinationAdminClient = cFactory.ServerAdminClientForMigration(c)
 		d.domainHandler = initializeAdminDomainHandler(c)
 	}
 	return d
@@ -414,60 +410,59 @@ VisibilityArchivalURI: {{.}}{{end}}
 {{with .FailoverInfo}}Graceful failover info:
 {{table .}}{{end}}`
 
-var newtemplateDomain = `Validation Check:
+var domainMigrationTemplate = `Validation Check:
 {{- range .}}
 - {{.ValidationCheck}}: {{.ValidationResult}}
 {{- with .ValidationDetails}}
-{{- with .CurrentDomainRow}}
-Current Domain:
-  Name: {{.DomainInfo.Name}}
-  UUID: {{.DomainInfo.UUID}}
-{{- end}}
-{{- with .NewDomainRow}}
-New Domain:
-  Name: {{.DomainInfo.Name}}
-  UUID: {{.DomainInfo.UUID}}
-{{- end}}
-{{- if .LongRunningWorkFlowNum}}
-Long Running Workflow Num: {{.LongRunningWorkFlowNum}}
-{{- end}}
-{{- if .MissingCurrSearchAttributes}}
-Missing Search Attributes in Current Domain:
-{{- range .MissingCurrSearchAttributes}}
-  - {{.}}
-{{- end}}
-{{- end}}
-{{- if .MissingNewSearchAttributes}}
-Missing Search Attributes in New Domain:
-{{- range .MissingNewSearchAttributes}}
-  - {{.}}
-{{- end}}
-{{- end}}
-{{- if ne (len .MismatchedDomainMetaData) 0 }}   
-Mismatched Domain Meta Data: {{.MismatchedDomainMetaData}}
-{{- end }}                                      
-{{- range .MismatchedDynamicConfig}}
-{{ $dynamicConfig := . }}
-Mismatched Dynamic Config:
-Config Key: {{.Key}}
-  {{- range $i, $v := .CurrValues}}
-  Current Response:
-    Data: {{ printf "%s" (index $dynamicConfig.CurrValues $i).Value.Data }}
-    Filters:
-    {{- range $filter := (index $dynamicConfig.CurrValues $i).Filters}}
-      - Name: {{ $filter.Name }}
-        Value: {{ printf "%s" $filter.Value.Data }}
-    {{- end}}
-  New Response:
-    Data: {{ printf "%s" (index $dynamicConfig.NewValues $i).Value.Data }}
-    Filters:
-    {{- range $filter := (index $dynamicConfig.NewValues $i).Filters}}
-      - Name: {{ $filter.Name }}
-        Value: {{ printf "%s" $filter.Value.Data }}
+  {{- with .CurrentDomainRow}}
+    Current Domain:
+      Name: {{.DomainInfo.Name}}
+      UUID: {{.DomainInfo.UUID}}
+  {{- end}}
+  {{- with .NewDomainRow}}
+    New Domain:
+      Name: {{.DomainInfo.Name}}
+      UUID: {{.DomainInfo.UUID}}
+  {{- end}}
+  {{- if ne (len .MismatchedDomainMetaData) 0 }}   
+    Mismatched Domain Meta Data: {{.MismatchedDomainMetaData}}
+  {{- end }}
+  {{- if .LongRunningWorkFlowNum}}
+    Long Running Workflow Num: {{.LongRunningWorkFlowNum}}
+  {{- end}}
+  {{- if .MissingCurrSearchAttributes}}
+    Missing Search Attributes in Current Domain:
+    {{- range .MissingCurrSearchAttributes}}
+      - {{.}}
     {{- end}}
   {{- end}}
-{{- end}}
-{{- end}}
+  {{- if .MissingNewSearchAttributes}}
+    Missing Search Attributes in New Domain:
+    {{- range .MissingNewSearchAttributes}}
+      - {{.}}
+    {{- end}}
+  {{- end}}
+  {{- range .MismatchedDynamicConfig}}
+    {{- $dynamicConfig := . }}
+    - Config Key: {{.Key}}
+      {{- range $i, $v := .CurrValues}}
+        Current Response:
+          Data: {{ printf "%s" (index $dynamicConfig.CurrValues $i).Value.Data }}
+          Filters:
+          {{- range $filter := (index $dynamicConfig.CurrValues $i).Filters}}
+            - Name: {{ $filter.Name }}
+              Value: {{ printf "%s" $filter.Value.Data }}
+          {{- end}}
+        New Response:
+          Data: {{ printf "%s" (index $dynamicConfig.NewValues $i).Value.Data }}
+          Filters:
+          {{- range $filter := (index $dynamicConfig.NewValues $i).Filters}}
+            - Name: {{ $filter.Name }}
+              Value: {{ printf "%s" $filter.Value.Data }}
+          {{- end}}
+        {{- end}}
+      {{- end}}
+  {{- end}}
 {{- end}}
 `
 
@@ -778,7 +773,6 @@ func (d *domainCLIImpl) describeDomain(
 }
 
 func (d *domainCLIImpl) migrateDomain(c *cli.Context) {
-	var results []DomainMigrationRow
 	checkers := []func(*cli.Context) DomainMigrationRow{
 		d.migrationDomainMetaDataCheck,
 		d.migrationDomainWorkFlowCheck,
@@ -786,18 +780,18 @@ func (d *domainCLIImpl) migrateDomain(c *cli.Context) {
 		d.searchAttributesChecker,
 	}
 	wg := &sync.WaitGroup{}
+	results := make([]DomainMigrationRow, len(checkers))
 	for i := range checkers {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			result := checkers[i](c)
-			results = append(results, result)
+			results[i] = checkers[i](c)
 		}(i)
 	}
 	wg.Wait()
 
 	renderOpts := RenderOptions{
-		DefaultTemplate: newtemplateDomain,
+		DefaultTemplate: domainMigrationTemplate,
 		Color:           true,
 		Border:          true,
 		PrintDateTime:   true,
@@ -809,9 +803,6 @@ func (d *domainCLIImpl) migrateDomain(c *cli.Context) {
 }
 
 func (d *domainCLIImpl) migrationDomainMetaDataCheck(c *cli.Context) DomainMigrationRow {
-	d.destinationClient = newClientFactory(func(c *cli.Context) string {
-		return c.String(FlagDestinationAddress)
-	}).ServerFrontendClient(c)
 	domain := c.GlobalString(FlagDomain)
 	newDomain := c.String(FlagDestinationDomain)
 	ctx, cancel := newContext(c)
@@ -853,10 +844,7 @@ func metaDataValidation(currResp *types.DescribeDomainResponse, newResp *types.D
 }
 
 func (d *domainCLIImpl) migrationDomainWorkFlowCheck(c *cli.Context) DomainMigrationRow {
-	d.destinationClient = newClientFactory(func(c *cli.Context) string {
-		return c.String(FlagDestinationAddress)
-	}).ServerFrontendClient(c)
-	countWorkFlows := d.countLongRunningWorkflowinDest(c)
+	countWorkFlows := d.countLongRunningWorkflow(c)
 	check := countWorkFlows == 0
 	return DomainMigrationRow{
 		ValidationCheck:  "Workflow Check",
@@ -900,10 +888,6 @@ func (d *domainCLIImpl) searchAttributesChecker(c *cli.Context) DomainMigrationR
 	if err != nil {
 		ErrorAndExit("Unable to get search attributes for current domain.", err)
 	}
-
-	d.destinationClient = newClientFactory(func(c *cli.Context) string {
-		return c.String(FlagDestinationAddress)
-	}).ServerFrontendClient(c)
 
 	// getting search attributes for new domain
 	destinationSearchAttributes, err := d.destinationClient.GetSearchAttributes(ctx)
@@ -1138,7 +1122,6 @@ func toDynamicConfigValue(value *types.DataBlob, filterMaps map[dynamicconfig.Fi
 			Name:  filter.String(),
 			Value: valueToDataBlob(filterValue),
 		})
-		fmt.Println("Data:", string(configFilters[len(configFilters)-1].Value.Data))
 	}
 
 	return &types.DynamicConfigValue{
@@ -1184,8 +1167,8 @@ func archivalStatus(c *cli.Context, statusFlagName string) *types.ArchivalStatus
 	return nil
 }
 
-func (d *domainCLIImpl) countLongRunningWorkflowinDest(c *cli.Context) int {
-	domain := getRequiredOption(c, FlagDestinationDomain)
+func (d *domainCLIImpl) countLongRunningWorkflow(c *cli.Context) int {
+	domain := c.GlobalString(FlagDomain)
 	now := time.Now()
 	past14Days := now.Add(-14 * 24 * time.Hour)
 	request := &types.CountWorkflowExecutionsRequest{
