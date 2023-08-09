@@ -1497,12 +1497,12 @@ func (e *historyEngineImpl) getMutableState(
 		WorkflowCloseState:                   common.Int32Ptr(int32(workflowCloseState)),
 		IsStickyTaskListEnabled:              mutableState.IsStickyTaskListEnabled(),
 		HistorySize:                          mutableState.GetHistorySize(),
+		HistoryCount:                         mutableState.GetNextEventID() - 1,
 	}
 	versionHistories := mutableState.GetVersionHistories()
 	if versionHistories != nil {
 		retResp.VersionHistories = versionHistories.ToInternalType()
 	}
-	e.logger.Info(fmt.Sprintf("55555 History Engine reporting history size of %d", retResp.HistorySize))
 	return
 }
 

@@ -946,7 +946,6 @@ func (h *handlerImpl) GetMutableState(
 	}
 
 	resp, err2 := engine.GetMutableState(ctx, getRequest)
-	h.GetLogger().Info(fmt.Sprintf("66666 Handler history size is %d", resp.HistorySize))
 	if err2 != nil {
 		return nil, h.error(err2, scope, domainID, workflowID)
 	}
