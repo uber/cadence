@@ -30,12 +30,8 @@ import (
 	pnt "github.com/uber/cadence/common/pinot"
 )
 
-/*type PinotClient struct {
-	client pnt.GenericClient
-}*/
-
-func CreatePinotClient(s suite.Suite, url string, pinotConfig *config.PinotVisibilityConfig, logger log.Logger) pnt.GenericClient {
-	pinotRawClient, err := pinot.NewFromBrokerList([]string{url})
+func CreatePinotClient(s suite.Suite, pinotConfig *config.PinotVisibilityConfig, logger log.Logger) pnt.GenericClient {
+	pinotRawClient, err := pinot.NewFromBrokerList([]string{pinotConfig.Broker})
 	s.Require().NoError(err)
 	pinotClient := pnt.NewPinotClient(pinotRawClient, logger, pinotConfig)
 	return pinotClient

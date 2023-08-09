@@ -229,21 +229,6 @@ func (s *server) startService() common.Daemon {
 			params.ESConfig = esVisStore.ElasticSearch
 			pinotBroker := params.PinotConfig.Broker
 			pinotRawClient, err := pinot.NewFromBrokerList([]string{pinotBroker})
-			/*pinotRawClient, err := pinot.NewWithConfig(&pinot.ClientConfig{
-				ControllerConfig: &pinot.ControllerConfig{
-					ControllerAddress: pinotController,
-					// Frequency of broker data refresh in milliseconds via controller API - defaults to 1000ms
-					UpdateFreqMs: 500,
-					// Additional HTTP headers to include in the controller API request
-					//ExtraControllerAPIHeaders: map[string]string{
-					//	"header": "val",
-					//},
-				},
-				// additional header added to Broker Query API requests
-				ExtraHTTPHeader: map[string]string{
-					"Content-Type": "application/json",
-				},
-			})*/
 			if err != nil || pinotRawClient == nil {
 				log.Fatalf("Creating Pinot visibility client failed: %v", err)
 			}
