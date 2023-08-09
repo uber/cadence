@@ -31,6 +31,10 @@
       "dataType": "INT"
     },
     {
+      "name": "KafkaKey",
+      "dataType": "STRING"
+    },
+    {
       "name": "TaskList",
       "dataType": "STRING"
     },
