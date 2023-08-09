@@ -238,6 +238,9 @@ func (c *contextImpl) GetHistorySize() int64 {
 
 func (c *contextImpl) SetHistorySize(size int64) {
 	c.stats.HistorySize = size
+	if c.mutableState != nil {
+		c.mutableState.SetHistorySize(size)
+	}
 }
 
 func (c *contextImpl) LoadExecutionStats(
@@ -315,10 +318,7 @@ func (c *contextImpl) LoadWorkflowExecutionWithTaskVersion(
 			Message: "workflowExecutionContext counter flushBeforeReady status after loading mutable state from DB",
 		}
 	}
-	err = c.mutableState.SetHistorySize(c.stats.HistorySize)
-	if err != nil {
-		return nil, err
-	}
+
 	return c.mutableState, nil
 }
 
@@ -740,7 +740,6 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 		persistedBlobs = append(persistedBlobs, blob)
 	}
 	c.SetHistorySize(currentWorkflowSize)
-	c.mutableState.SetHistorySize(currentWorkflowSize)
 	currentWorkflow.ExecutionStats = &persistence.ExecutionStats{
 		HistorySize: currentWorkflowSize,
 	}

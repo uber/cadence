@@ -2449,11 +2449,9 @@ func (mr *MockMutableStateMockRecorder) SetHistoryBuilder(hBuilder interface{}) 
 }
 
 // SetHistorySize mocks base method.
-func (m *MockMutableState) SetHistorySize(size int64) error {
+func (m *MockMutableState) SetHistorySize(size int64) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetHistorySize", size)
-	ret0, _ := ret[0].(error)
-	return ret0
+	m.ctrl.Call(m, "SetHistorySize", size)
 }
 
 // SetHistorySize indicates an expected call of SetHistorySize.

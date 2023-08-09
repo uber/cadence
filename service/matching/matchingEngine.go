@@ -477,7 +477,7 @@ pollLoop:
 				return emptyPollForDecisionTaskResponse, nil
 			}
 
-			e.logger.Info("Testing history size 22222222", tag.Dynamic("historySize", mutableStateResp.HistorySize))
+			e.logger.Info(fmt.Sprintf("Testing history size of %d and count of %d", mutableStateResp.HistorySize, mutableStateResp.HistoryCount))
 
 			isStickyEnabled := false
 			supportsSticky := client.NewVersionChecker().SupportsStickyQuery(mutableStateResp.GetClientImpl(), mutableStateResp.GetClientFeatureVersion()) == nil
@@ -497,14 +497,6 @@ pollLoop:
 
 		e.emitTaskIsolationMetrics(hCtx.scope, task.event.PartitionConfig, req.GetIsolationGroup())
 		resp, err := e.recordDecisionTaskStarted(hCtx.Context, request, task)
-		mutableStateResp, err := e.historyService.GetMutableState(hCtx.Context, &types.GetMutableStateRequest{
-			DomainUUID: req.DomainUUID,
-			Execution:  task.workflowExecution(),
-		})
-		if err != nil {
-			return emptyPollForDecisionTaskResponse, nil
-		}
-		e.logger.Info("Testing history size 33333333", tag.Dynamic("historySize", mutableStateResp.HistorySize))
 
 		if err != nil {
 			switch err.(type) {
