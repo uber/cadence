@@ -338,7 +338,6 @@ func FromHistoryGetMutableStateResponse(t *types.GetMutableStateResponse) *histo
 		VersionHistories:                     FromVersionHistories(t.VersionHistories),
 		IsStickyTaskListEnabled:              t.IsStickyTaskListEnabled,
 		HistorySize:                          t.HistorySize,
-		HistoryCount:                         t.HistoryCount,
 	}
 }
 
@@ -366,7 +365,6 @@ func ToHistoryGetMutableStateResponse(t *historyv1.GetMutableStateResponse) *typ
 		IsStickyTaskListEnabled:              t.IsStickyTaskListEnabled,
 		IsWorkflowRunning:                    t.WorkflowState == sharedv1.WorkflowState_WORKFLOW_STATE_RUNNING,
 		HistorySize:                          t.HistorySize,
-		HistoryCount:                         t.HistoryCount,
 	}
 }
 
@@ -897,6 +895,7 @@ func FromHistoryRecordDecisionTaskStartedResponse(t *types.RecordDecisionTaskSta
 		ScheduledTime:             unixNanoToTime(t.ScheduledTimestamp),
 		StartedTime:               unixNanoToTime(t.StartedTimestamp),
 		Queries:                   FromWorkflowQueryMap(t.Queries),
+		HistorySize:               t.HistorySize,
 	}
 }
 
@@ -919,6 +918,7 @@ func ToHistoryRecordDecisionTaskStartedResponse(t *historyv1.RecordDecisionTaskS
 		ScheduledTimestamp:        timeToUnixNano(t.ScheduledTime),
 		StartedTimestamp:          timeToUnixNano(t.StartedTime),
 		Queries:                   ToWorkflowQueryMap(t.Queries),
+		HistorySize:               t.HistorySize,
 	}
 }
 

@@ -350,7 +350,6 @@ message GetMutableStateResponse {
   shared.v1.VersionHistories version_histories = 16;
   bool is_sticky_task_list_enabled = 17;
   int64 history_size = 18;
-  int64 history_count = 19;
 }
 
 message PollMutableStateRequest {
@@ -403,6 +402,7 @@ message RecordDecisionTaskStartedResponse {
   google.protobuf.Timestamp scheduled_time = 12;
   google.protobuf.Timestamp started_time = 13;
   map<string, api.v1.WorkflowQuery> queries = 14;
+  int64 history_size = 15;
 }
 
 message RecordActivityTaskStartedRequest {

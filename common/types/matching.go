@@ -414,7 +414,6 @@ type MatchingPollForDecisionTaskResponse struct {
 	StartedTimestamp          *int64                    `json:"startedTimestamp,omitempty"`
 	Queries                   map[string]*WorkflowQuery `json:"queries,omitempty"`
 	CurrentHistorySize        int64                     `json:"currentHistorySize,omitempty"`
-	CurrentHistoryCount       int64                     `json:"currentHistoryCount,omitempty"`
 }
 
 // GetWorkflowExecution is an internal getter (TBD...)

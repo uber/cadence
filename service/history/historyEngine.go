@@ -1497,7 +1497,6 @@ func (e *historyEngineImpl) getMutableState(
 		WorkflowCloseState:                   common.Int32Ptr(int32(workflowCloseState)),
 		IsStickyTaskListEnabled:              mutableState.IsStickyTaskListEnabled(),
 		HistorySize:                          mutableState.GetHistorySize(),
-		HistoryCount:                         mutableState.GetNextEventID() - 1,
 	}
 	versionHistories := mutableState.GetVersionHistories()
 	if versionHistories != nil {

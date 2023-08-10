@@ -148,7 +148,6 @@ type GetMutableStateResponse struct {
 	VersionHistories                     *VersionHistories  `json:"versionHistories,omitempty"`
 	IsStickyTaskListEnabled              bool               `json:"isStickyTaskListEnabled,omitempty"`
 	HistorySize                          int64              `json:"historySize,omitempty"`
-	HistoryCount                         int64              `json:"historyCount,omitempty"`
 }
 
 // GetNextEventID is an internal getter (TBD...)
@@ -587,6 +586,7 @@ type RecordDecisionTaskStartedResponse struct {
 	ScheduledTimestamp        *int64                    `json:"scheduledTimestamp,omitempty"`
 	StartedTimestamp          *int64                    `json:"startedTimestamp,omitempty"`
 	Queries                   map[string]*WorkflowQuery `json:"queries,omitempty"`
+	HistorySize               int64                     `json:"historySize,omitempty"`
 }
 
 // GetPreviousStartedEventID is an internal getter (TBD...)

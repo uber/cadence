@@ -94,6 +94,12 @@ type (
 		membershipResolver   membership.Resolver
 		partitioner          partition.Partitioner
 	}
+
+	// HistoryInfo consists of two integer regarding the history size and history count
+	//HistoryInfo struct {
+	//	historySize  int64
+	//	historyCount int64
+	//}
 )
 
 var (
@@ -477,7 +483,7 @@ pollLoop:
 				return emptyPollForDecisionTaskResponse, nil
 			}
 
-			e.logger.Info(fmt.Sprintf("Testing history size of %d and count of %d", mutableStateResp.HistorySize, mutableStateResp.HistoryCount))
+			e.logger.Info(fmt.Sprintf("Testing history size of %d and count of %d", mutableStateResp.HistorySize, mutableStateResp.NextEventID-1))
 
 			isStickyEnabled := false
 			supportsSticky := client.NewVersionChecker().SupportsStickyQuery(mutableStateResp.GetClientImpl(), mutableStateResp.GetClientFeatureVersion()) == nil
@@ -491,6 +497,7 @@ pollLoop:
 				StickyExecutionEnabled:    isStickyEnabled,
 				WorkflowExecutionTaskList: mutableStateResp.TaskList,
 				BranchToken:               mutableStateResp.CurrentBranchToken,
+				HistorySize:               mutableStateResp.HistorySize,
 			}
 			return e.createPollForDecisionTaskResponse(task, resp, hCtx.scope), nil
 		}
@@ -891,6 +898,11 @@ func (e *matchingEngineImpl) getTask(
 	return tlMgr.GetTask(ctx, maxDispatchPerSecond)
 }
 
+//
+//func (e *matchingEngineImpl) getHistoryInfo() (HistoryInfo, error) {
+//
+//}
+
 func (e *matchingEngineImpl) unloadTaskList(tlMgr taskListManager) {
 	id := tlMgr.TaskListID()
 	e.taskListsLock.Lock()
@@ -940,6 +952,7 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(
 		response.Query = task.query.request.QueryRequest.Query
 	}
 	response.BacklogCountHint = task.backlogCountHint
+	e.logger.Info(fmt.Sprintf("Emit history size %d and count %d from createPollForDecisionTaskResponse", response.CurrentHistorySize, response.NextEventID-1))
 	return response
 }
 
