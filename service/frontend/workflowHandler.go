@@ -28,7 +28,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/pborman/uuid"
+	"github.com/google/uuid"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/yarpcerrors"
 	"golang.org/x/sync/errgroup"
@@ -131,7 +131,6 @@ var (
 	errQueryTypeNotSet                            = &types.BadRequestError{Message: "QueryType is not set on request."}
 	errRequestNotSet                              = &types.BadRequestError{Message: "Request is nil."}
 	errNoPermission                               = &types.BadRequestError{Message: "No permission to do this operation."}
-	errRequestIDNotSet                            = &types.BadRequestError{Message: "RequestId is not set on request."}
 	errWorkflowTypeNotSet                         = &types.BadRequestError{Message: "WorkflowType is not set on request."}
 	errInvalidRetention                           = &types.BadRequestError{Message: "RetentionDays is invalid."}
 	errInvalidExecutionStartToCloseTimeoutSeconds = &types.BadRequestError{Message: "A valid ExecutionStartToCloseTimeoutSeconds is not set on request."}
@@ -615,7 +614,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 	); err != nil {
 		return &types.PollForActivityTaskResponse{}, nil
 	}
-	pollerID := uuid.New()
+	pollerID := uuid.New().String()
 	op := func() error {
 		resp, err = wh.GetMatchingClient().PollForActivityTask(ctx, &types.MatchingPollForActivityTaskRequest{
 			DomainUUID:     domainID,
@@ -745,7 +744,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		return &types.PollForDecisionTaskResponse{}, nil
 	}
 
-	pollerID := uuid.New()
+	pollerID := uuid.New().String()
 	var matchingResp *types.MatchingPollForDecisionTaskResponse
 	op := func() error {
 		matchingResp, err = wh.GetMatchingClient().PollForDecisionTask(ctx, &types.MatchingPollForDecisionTaskRequest{
@@ -2082,16 +2081,12 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendStartWorkflowExecutionScope, startRequest)
 	defer sw.Stop()
 
-	if wh.isShuttingDown() {
-		return nil, errShuttingDown
-	}
-
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return nil, wh.error(err, scope)
-	}
-
 	if startRequest == nil {
 		return nil, wh.error(errRequestNotSet, scope)
+	}
+
+	if wh.isShuttingDown() {
+		return nil, errShuttingDown
 	}
 
 	domainName := startRequest.GetDomain()
@@ -2102,6 +2097,21 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 
 	if domainName == "" {
 		return nil, wh.error(errDomainNotSet, scope, tags...)
+	}
+
+	if startRequest.GetWorkflowID() == "" {
+		return nil, wh.error(errWorkflowIDNotSet, scope, tags...)
+	}
+
+	if _, err := uuid.Parse(startRequest.RequestID); err != nil {
+		return nil, wh.error(&types.BadRequestError{Message: fmt.Sprintf("requestId %q is not a valid UUID", startRequest.RequestID)}, scope, tags...)
+	}
+	if startRequest.WorkflowType == nil || startRequest.WorkflowType.GetName() == "" {
+		return nil, wh.error(errWorkflowTypeNotSet, scope, tags...)
+	}
+
+	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
+		return nil, wh.error(err, scope)
 	}
 
 	if ok := wh.allow(ratelimitTypeUser, startRequest); !ok {
@@ -2121,10 +2131,6 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(errDomainTooLong, scope, tags...)
 	}
 
-	if startRequest.GetWorkflowID() == "" {
-		return nil, wh.error(errWorkflowIDNotSet, scope, tags...)
-	}
-
 	if !common.ValidIDLength(
 		startRequest.GetWorkflowID(),
 		scope,
@@ -2141,19 +2147,9 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(err, scope, tags...)
 	}
 
-	if startRequest.GetCronSchedule() != "" {
-		if _, err := backoff.ValidateSchedule(startRequest.GetCronSchedule()); err != nil {
-			return nil, wh.error(err, scope, tags...)
-		}
-	}
-
 	wh.GetLogger().Debug(
 		"Received StartWorkflowExecution. WorkflowID",
 		tag.WorkflowID(startRequest.GetWorkflowID()))
-
-	if startRequest.WorkflowType == nil || startRequest.WorkflowType.GetName() == "" {
-		return nil, wh.error(errWorkflowTypeNotSet, scope, tags...)
-	}
 
 	if !common.ValidIDLength(
 		startRequest.WorkflowType.GetName(),
@@ -2189,6 +2185,11 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 
 	jitter := startRequest.GetJitterStartSeconds()
 	cron := startRequest.GetCronSchedule()
+	if cron != "" {
+		if _, err := backoff.ValidateSchedule(startRequest.GetCronSchedule()); err != nil {
+			return nil, wh.error(err, scope, tags...)
+		}
+	}
 	if jitter > 0 && cron != "" {
 		// Calculate the cron duration and ensure that jitter is not greater than the cron duration,
 		// because that would be confusing to users.
@@ -2203,10 +2204,6 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		if jitter > backoffSeconds {
 			return nil, wh.error(errInvalidJitterStartSeconds2, scope, tags...)
 		}
-	}
-
-	if startRequest.GetRequestID() == "" {
-		return nil, wh.error(errRequestIDNotSet, scope, tags...)
 	}
 
 	if !common.ValidIDLength(
@@ -4264,8 +4261,10 @@ func validateExecution(w *types.WorkflowExecution) error {
 	if w.GetWorkflowID() == "" {
 		return errWorkflowIDNotSet
 	}
-	if w.GetRunID() != "" && uuid.Parse(w.GetRunID()) == nil {
-		return errInvalidRunID
+	if w.GetRunID() != "" {
+		if _, err := uuid.Parse(w.GetRunID()); err != nil {
+			return errInvalidRunID
+		}
 	}
 	return nil
 }
@@ -4715,7 +4714,7 @@ func (wh *WorkflowHandler) normalizeVersionedErrors(ctx context.Context, err err
 func constructRestartWorkflowRequest(w *types.WorkflowExecutionStartedEventAttributes, domain string, identity string, workflowID string) *types.StartWorkflowExecutionRequest {
 
 	startRequest := &types.StartWorkflowExecutionRequest{
-		RequestID:  uuid.New(),
+		RequestID:  uuid.New().String(),
 		Domain:     domain,
 		WorkflowID: workflowID,
 		WorkflowType: &types.WorkflowType{
