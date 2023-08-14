@@ -48,7 +48,7 @@ var _ VisibilityManager = (*pinotVisibilityTripleManager)(nil)
 // NewPinotVisibilityTripleManager create a visibility manager that operate on DB or Pinot based on dynamic config.
 func NewPinotVisibilityTripleManager(
 	dbVisibilityManager VisibilityManager, // one of the VisibilityManager can be nil
-	pinotVisibilityManager VisibilityManager, // one of the VisibilityManager can be nil
+	pinotVisibilityManager VisibilityManager,
 	esVisibilityManager VisibilityManager,
 	readModeIsFromPinot dynamicconfig.BoolPropertyFnWithDomainFilter,
 	readModeIsFromES dynamicconfig.BoolPropertyFnWithDomainFilter,
@@ -224,6 +224,8 @@ func (v *pinotVisibilityTripleManager) chooseVisibilityManagerForWrite(ctx conte
 	}
 
 	switch writeMode {
+	//only perform as triple manager during migration by setting write mode to triple,
+	//other time perform as a dual visibility manager of pinot and db
 	case common.AdvancedVisibilityWritingModeOff:
 		if v.dbVisibilityManager != nil {
 			return dbVisFunc()
@@ -397,6 +399,7 @@ func (v *pinotVisibilityTripleManager) chooseVisibilityManagerForRead(domain str
 	var visibilityMgr VisibilityManager
 	var visibilityMgr2 VisibilityManager
 	if v.readModeIsFromPinot(domain) && v.readModeIsFromES(domain) {
+		// during migration, we enable read from both ES and Pinot so we can compare the response
 		if v.esVisibilityManager != nil && v.pinotVisibilityManager != nil {
 			visibilityMgr = v.esVisibilityManager
 			visibilityMgr2 = v.pinotVisibilityManager
