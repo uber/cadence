@@ -173,7 +173,6 @@ func (s *PinotIntegrationSuite) TestListWorkflow() {
 
 	we, err := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err)
-	//query := fmt.Sprintf(`WorkflowID = '%s'`, id)
 	query := fmt.Sprintf(`WorkflowID = "%s"`, id)
 	s.testHelperForReadOnce(we.GetRunID(), query, false, false)
 }
