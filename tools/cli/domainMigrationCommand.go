@@ -46,7 +46,8 @@ const (
 	longRunningDuration = 14 * 24 * time.Hour
 )
 
-var domainMigrationTemplate = `Validation Check:
+var (
+	domainMigrationTemplate = `Validation Check:
 {{- range .}}
 - {{.ValidationCheck}}: {{.ValidationResult}}
 {{- with .ValidationDetails}}
@@ -101,6 +102,12 @@ var domainMigrationTemplate = `Validation Check:
   {{- end}}
 {{- end}}
 `
+	emptyGetDynamicConfigRequest = &types.GetDynamicConfigResponse{
+		Value: &types.DataBlob{
+			EncodingType: types.EncodingTypeJSON.Ptr(),
+		},
+	}
+)
 
 type domainMigrationCLIImpl struct {
 	frontendClient, destinationClient           frontend.Client
@@ -336,20 +343,12 @@ func (d *domainMigrationCLIImpl) migrationDynamicConfigCheck(c *cli.Context) Dom
 			currResp, err := d.frontendAdminClient.GetDynamicConfig(ctx, currRequest)
 			if err != nil {
 				// empty to indicate N/A
-				currResp = &types.GetDynamicConfigResponse{
-					Value: &types.DataBlob{
-						EncodingType: types.EncodingTypeJSON.Ptr(),
-					},
-				}
+				currResp = emptyGetDynamicConfigRequest
 			}
 			newResp, err := d.destinationAdminClient.GetDynamicConfig(ctx, newRequest)
 			if err != nil {
 				// empty to indicate N/A
-				newResp = &types.GetDynamicConfigResponse{
-					Value: &types.DataBlob{
-						EncodingType: types.EncodingTypeJSON.Ptr(),
-					},
-				}
+				newResp = emptyGetDynamicConfigRequest
 			}
 
 			if !reflect.DeepEqual(currResp.Value, newResp.Value) {
@@ -382,20 +381,12 @@ func (d *domainMigrationCLIImpl) migrationDynamicConfigCheck(c *cli.Context) Dom
 			currResp, err := d.frontendAdminClient.GetDynamicConfig(ctx, currRequest)
 			if err != nil {
 				// empty to indicate N/A
-				currResp = &types.GetDynamicConfigResponse{
-					Value: &types.DataBlob{
-						EncodingType: types.EncodingTypeJSON.Ptr(),
-					},
-				}
+				currResp = emptyGetDynamicConfigRequest
 			}
 			newResp, err := d.destinationAdminClient.GetDynamicConfig(ctx, newRequest)
 			if err != nil {
 				// empty to indicate N/A
-				newResp = &types.GetDynamicConfigResponse{
-					Value: &types.DataBlob{
-						EncodingType: types.EncodingTypeJSON.Ptr(),
-					},
-				}
+				newResp = emptyGetDynamicConfigRequest
 			}
 
 			if !reflect.DeepEqual(currResp.Value, newResp.Value) {
@@ -435,20 +426,12 @@ func (d *domainMigrationCLIImpl) migrationDynamicConfigCheck(c *cli.Context) Dom
 				currResp, err := d.frontendAdminClient.GetDynamicConfig(ctx, currRequest)
 				if err != nil {
 					// empty to indicate N/A
-					currResp = &types.GetDynamicConfigResponse{
-						Value: &types.DataBlob{
-							EncodingType: types.EncodingTypeJSON.Ptr(),
-						},
-					}
+					currResp = emptyGetDynamicConfigRequest
 				}
 				newResp, err := d.destinationAdminClient.GetDynamicConfig(ctx, newRequest)
 				if err != nil {
 					// empty to indicate N/A
-					newResp = &types.GetDynamicConfigResponse{
-						Value: &types.DataBlob{
-							EncodingType: types.EncodingTypeJSON.Ptr(),
-						},
-					}
+					newResp = emptyGetDynamicConfigRequest
 				}
 
 				if !reflect.DeepEqual(currResp.Value, newResp.Value) {
