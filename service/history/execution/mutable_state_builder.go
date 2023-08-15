@@ -4823,7 +4823,7 @@ func (e *mutableStateBuilder) calculateTTL() (int, error) {
 	}
 	config := domainObj.GetConfig()
 	retention := time.Duration(config.Retention)
-	daysInSeconds := int(retention) + e.config.TTLBufferDays()*dayToSecondMultiplier
+	daysInSeconds := int((retention + ttlBufferDays) * dayToSecondMultiplier)
 	//Default state of TTL, means there is no TTL attached.
 	TTLInSeconds := 0
 	startTime := e.executionInfo.StartTimestamp
