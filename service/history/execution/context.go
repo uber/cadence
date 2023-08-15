@@ -45,6 +45,7 @@ import (
 
 const (
 	defaultRemoteCallTimeout = 30 * time.Second
+	ttlBufferDays            = 15
 	dayToSecondMultiplier    = 86400
 )
 
