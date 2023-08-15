@@ -41,6 +41,11 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
+const (
+	// workflows running longer than 14 days are considered long running workflows
+	longRunningDuration = 14 * 24 * time.Hour
+)
+
 var domainMigrationTemplate = `Validation Check:
 {{- range .}}
 - {{.ValidationCheck}}: {{.ValidationResult}}
@@ -59,7 +64,7 @@ var domainMigrationTemplate = `Validation Check:
     Mismatched Domain Meta Data: {{.MismatchedDomainMetaData}}
   {{- end }}
   {{- if .LongRunningWorkFlowNum}}
-    Long Running Workflow Num: {{.LongRunningWorkFlowNum}}
+    Long Running Workflow Num (> 14 days): {{.LongRunningWorkFlowNum}}
   {{- end}}
   {{- if .MissingCurrSearchAttributes}}
     Missing Search Attributes in Current Domain:
@@ -196,11 +201,10 @@ func (d *domainMigrationCLIImpl) migrationDomainWorkFlowCheck(c *cli.Context) Do
 
 func (d *domainMigrationCLIImpl) countLongRunningWorkflow(c *cli.Context) int {
 	domain := c.GlobalString(FlagDomain)
-	now := time.Now()
-	past14Days := now.Add(-14 * 24 * time.Hour)
+	thresholdOfLongRunning := time.Now().Add(-longRunningDuration)
 	request := &types.CountWorkflowExecutionsRequest{
 		Domain: domain,
-		Query:  "CloseTime=missing AND StartTime < " + strconv.FormatInt(past14Days.UnixNano(), 10),
+		Query:  "CloseTime=missing AND StartTime < " + strconv.FormatInt(thresholdOfLongRunning.UnixNano(), 10),
 	}
 	ctx, cancel := newContextForLongPoll(c)
 	defer cancel()
@@ -332,12 +336,20 @@ func (d *domainMigrationCLIImpl) migrationDynamicConfigCheck(c *cli.Context) Dom
 			currResp, err := d.frontendAdminClient.GetDynamicConfig(ctx, currRequest)
 			if err != nil {
 				// empty to indicate N/A
-				currResp = &types.GetDynamicConfigResponse{}
+				currResp = &types.GetDynamicConfigResponse{
+					Value: &types.DataBlob{
+						EncodingType: types.EncodingTypeJSON.Ptr(),
+					},
+				}
 			}
 			newResp, err := d.destinationAdminClient.GetDynamicConfig(ctx, newRequest)
 			if err != nil {
 				// empty to indicate N/A
-				newResp = &types.GetDynamicConfigResponse{}
+				newResp = &types.GetDynamicConfigResponse{
+					Value: &types.DataBlob{
+						EncodingType: types.EncodingTypeJSON.Ptr(),
+					},
+				}
 			}
 
 			if !reflect.DeepEqual(currResp.Value, newResp.Value) {
@@ -370,12 +382,20 @@ func (d *domainMigrationCLIImpl) migrationDynamicConfigCheck(c *cli.Context) Dom
 			currResp, err := d.frontendAdminClient.GetDynamicConfig(ctx, currRequest)
 			if err != nil {
 				// empty to indicate N/A
-				currResp = &types.GetDynamicConfigResponse{}
+				currResp = &types.GetDynamicConfigResponse{
+					Value: &types.DataBlob{
+						EncodingType: types.EncodingTypeJSON.Ptr(),
+					},
+				}
 			}
 			newResp, err := d.destinationAdminClient.GetDynamicConfig(ctx, newRequest)
 			if err != nil {
 				// empty to indicate N/A
-				newResp = &types.GetDynamicConfigResponse{}
+				newResp = &types.GetDynamicConfigResponse{
+					Value: &types.DataBlob{
+						EncodingType: types.EncodingTypeJSON.Ptr(),
+					},
+				}
 			}
 
 			if !reflect.DeepEqual(currResp.Value, newResp.Value) {
@@ -415,12 +435,20 @@ func (d *domainMigrationCLIImpl) migrationDynamicConfigCheck(c *cli.Context) Dom
 				currResp, err := d.frontendAdminClient.GetDynamicConfig(ctx, currRequest)
 				if err != nil {
 					// empty to indicate N/A
-					currResp = &types.GetDynamicConfigResponse{}
+					currResp = &types.GetDynamicConfigResponse{
+						Value: &types.DataBlob{
+							EncodingType: types.EncodingTypeJSON.Ptr(),
+						},
+					}
 				}
 				newResp, err := d.destinationAdminClient.GetDynamicConfig(ctx, newRequest)
 				if err != nil {
 					// empty to indicate N/A
-					newResp = &types.GetDynamicConfigResponse{}
+					newResp = &types.GetDynamicConfigResponse{
+						Value: &types.DataBlob{
+							EncodingType: types.EncodingTypeJSON.Ptr(),
+						},
+					}
 				}
 
 				if !reflect.DeepEqual(currResp.Value, newResp.Value) {
