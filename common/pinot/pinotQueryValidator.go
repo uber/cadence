@@ -48,15 +48,13 @@ func NewPinotQueryValidator(validSearchAttributes map[string]interface{}) *Visib
 	}
 }
 
-// ValidateQuery validates that search attributes in the query are legal.
-// Adds attr prefix for customized fields and returns modified query.
+// ValidateQuery validates that search attributes in the query and returns modified query.
 func (qv *VisibilityQueryValidator) ValidateQuery(whereClause string) (string, error) {
 	if len(whereClause) != 0 {
 		// Build a placeholder query that allows us to easily parse the contents of the where clause.
 		// IMPORTANT: This query is never executed, it is just used to parse and validate whereClause
 		var placeholderQuery string
 		whereClause := strings.TrimSpace(whereClause)
-		// #nosec
 		if common.IsJustOrderByClause(whereClause) { // just order by
 			placeholderQuery = fmt.Sprintf("SELECT * FROM dummy %s", whereClause)
 		} else {
@@ -158,7 +156,7 @@ func (qv *VisibilityQueryValidator) validateComparisonExpr(expr sqlparser.Expr) 
 			if strings.ToLower(colNameStr) == "historylength" {
 				newColVal = "0"
 			} else {
-				newColVal = "-1"
+				newColVal = "-1" // -1 is the default value for all Closed workflows related fields
 			}
 			comparisonExpr.Right = &sqlparser.ColName{
 				Metadata:  colName.Metadata,

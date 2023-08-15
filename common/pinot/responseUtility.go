@@ -50,6 +50,8 @@ func buildMap(hit []interface{}, columnNames []string, isSystemKey func(key stri
 }
 
 // VisibilityRecord is a struct of doc for deserialization
+// this is different from InternalVisibilityWorkflowExecutionInfo
+// use this to deserialize the systemKeyMap from Pinot response
 type VisibilityRecord struct {
 	WorkflowID    string
 	RunID         string
@@ -65,7 +67,7 @@ type VisibilityRecord struct {
 	IsCron        bool
 	NumClusters   int16
 	UpdateTime    int64
-	Attr          string
+	ShardID       int16
 }
 
 func ConvertSearchResultToVisibilityRecord(hit []interface{}, columnNames []string, logger log.Logger, isSystemKey func(key string) bool) *p.InternalVisibilityWorkflowExecutionInfo {
@@ -75,7 +77,7 @@ func ConvertSearchResultToVisibilityRecord(hit []interface{}, columnNames []stri
 
 	systemKeyMap, customKeyMap := buildMap(hit, columnNames, isSystemKey)
 	jsonSystemKeyMap, err := json.Marshal(systemKeyMap)
-	if err != nil { // log and skip error
+	if err != nil {
 		logger.Error("unable to marshal systemKeyMap",
 			tag.Error(err), //tag.ESDocID(fmt.Sprintf(columnNameToValue["DocID"]))
 		)
@@ -84,7 +86,7 @@ func ConvertSearchResultToVisibilityRecord(hit []interface{}, columnNames []stri
 
 	var source *VisibilityRecord
 	err = json.Unmarshal(jsonSystemKeyMap, &source)
-	if err != nil { // log and skip error
+	if err != nil {
 		logger.Error("unable to Unmarshal systemKeyMap",
 			tag.Error(err), //tag.ESDocID(fmt.Sprintf(columnNameToValue["DocID"]))
 		)
@@ -102,6 +104,7 @@ func ConvertSearchResultToVisibilityRecord(hit []interface{}, columnNames []stri
 		TaskList:         source.TaskList,
 		IsCron:           source.IsCron,
 		NumClusters:      source.NumClusters,
+		ShardID:          source.ShardID,
 		SearchAttributes: customKeyMap,
 	}
 	if source.UpdateTime != 0 {

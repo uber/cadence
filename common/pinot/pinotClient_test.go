@@ -144,8 +144,8 @@ func TestGetInternalListWorkflowExecutionsResponse(t *testing.T) {
 		SelectionResults:   nil,
 		ResultTable: &pinot.ResultTable{
 			DataSchema: pinot.RespSchema{
-				nil,
-				columnName,
+				ColumnDataTypes: nil,
+				ColumnNames:     columnName,
 			},
 			Rows: [][]interface{}{
 				hit1,
@@ -239,8 +239,8 @@ func TestGetInternalGetClosedWorkflowExecutionResponse(t *testing.T) {
 		SelectionResults:   nil,
 		ResultTable: &pinot.ResultTable{
 			DataSchema: pinot.RespSchema{
-				nil,
-				columnName,
+				ColumnDataTypes: nil,
+				ColumnNames:     columnName,
 			},
 			Rows: [][]interface{}{
 				hit1,

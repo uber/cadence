@@ -116,7 +116,7 @@ func NewPinotVisibilityStore(
 }
 
 func (v *pinotVisibilityStore) Close() {
-	return // TODO: need to double check what is close trace do. Does it close the client?
+	// TODO: need to double check what is close trace do. Does it close the client?
 }
 
 func (v *pinotVisibilityStore) GetName() string {
@@ -142,10 +142,10 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionStarted(
 		request.Memo.GetEncoding(),
 		request.IsCron,
 		request.NumClusters,
-		-1,                                  // represent invalid close time, means open workflow execution
-		-1,                                  // represent invalid close status, means open workflow execution
-		0,                                   // will not be used
-		request.UpdateTimestamp.UnixMilli(), // will be updated when workflow execution updates
+		-1, // represent invalid close time, means open workflow execution
+		-1, // represent invalid close status, means open workflow execution
+		0,  // will be updated when workflow execution updates
+		request.UpdateTimestamp.UnixMilli(),
 		int64(request.ShardID),
 		request.SearchAttributes,
 	)
@@ -205,7 +205,7 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionUninitialized(ctx context.
 		0,
 		-1, // represent invalid close time, means open workflow execution
 		-1, // represent invalid close status, means open workflow execution
-		0,
+		0,  //will be updated when workflow execution updates
 		request.UpdateTimestamp.UnixMilli(),
 		request.ShardID,
 		nil,
@@ -585,6 +585,10 @@ type PinotQuery struct {
 	limits  string
 }
 
+type PinotQueryFilter struct {
+	string
+}
+
 func NewPinotQuery(tableName string) PinotQuery {
 	return PinotQuery{
 		query:   fmt.Sprintf("SELECT *\nFROM %s\n", tableName),
@@ -626,10 +630,6 @@ func (q *PinotQuery) addLimits(limit int) {
 
 func (q *PinotQuery) addOffsetAndLimits(offset int, limit int) {
 	q.limits += fmt.Sprintf("LIMIT %d, %d\n", offset, limit)
-}
-
-type PinotQueryFilter struct {
-	string
 }
 
 func (f *PinotQueryFilter) checkFirstFilter() {
@@ -778,9 +778,9 @@ func filterPrefix(query string) string {
 
 /*
 Can have cases:
-1. A=B
-2. A<=B
-3. A>=B
+1. A = B
+2. A < B
+3. A > B
 4. A <= B
 5. A >= B
 */

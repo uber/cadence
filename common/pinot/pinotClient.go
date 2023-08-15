@@ -94,7 +94,9 @@ func (c *PinotClient) GetTableName() string {
 	return c.tableName
 }
 
-/****************************** Response Translator ******************************/
+// Pinot Response Translator
+// We flattened the search attributes into columns in Pinot table
+// This function converts the search result back to VisibilityRecord
 func (c *PinotClient) getInternalListWorkflowExecutionsResponse(
 	resp *pinot.BrokerResponse,
 	isRecordValid func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool,
@@ -107,12 +109,9 @@ func (c *PinotClient) getInternalListWorkflowExecutionsResponse(
 		return response, nil
 	}
 	schema := resp.ResultTable.DataSchema // get the schema to map results
-	//columnDataTypes := schema.ColumnDataTypes
 	columnNames := schema.ColumnNames
 	actualHits := resp.ResultTable.Rows
-
 	numOfActualHits := resp.ResultTable.GetRowCount()
-
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
 
 	for i := 0; i < numOfActualHits; i++ {
@@ -129,9 +128,7 @@ func (c *PinotClient) getInternalListWorkflowExecutionsResponse(
 		var err error
 
 		// ES Search API support pagination using From and PageSize, but has limit that From+PageSize cannot exceed a threshold
-		// TODO: need to confirm if pinot has similar settings
-		// don't need to retrieve deeper pages in pinot, and no functions like ES SearchAfter
-
+		// In pinot we just skip (previous pages * page limit) items and take the next (number of page limit) items
 		nextPageToken, err = SerializePageToken(&PinotVisibilityPageToken{From: token.From + numOfActualHits})
 
 		if err != nil {
@@ -141,8 +138,6 @@ func (c *PinotClient) getInternalListWorkflowExecutionsResponse(
 		response.NextPageToken = make([]byte, len(nextPageToken))
 		copy(response.NextPageToken, nextPageToken)
 	}
-	//m, _ := json.Marshal(response.Executions)
-	//panic(fmt.Sprintf("ABCDDDBUG: %s", response.NextPageToken))
 	return response, nil
 }
 
@@ -163,7 +158,8 @@ func (c *PinotClient) getInternalGetClosedWorkflowExecutionResponse(resp *pinot.
 	return response, nil
 }
 
-// checks if a string is system key
+// checks if a string is system key,
+// non system key means customized search attribtues
 func isSystemKey(key string) bool {
 	return definition.IsSystemIndexedKey(key)
 }
