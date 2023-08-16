@@ -4361,6 +4361,7 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(
 		StartedTimestamp:          matchingResp.StartedTimestamp,
 		Queries:                   matchingResp.Queries,
 		NextEventID:               matchingResp.NextEventID,
+		TotalHistoryBytes:         matchingResp.TotalHistoryBytes,
 	}
 
 	return resp, nil

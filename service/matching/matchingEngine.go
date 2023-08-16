@@ -483,8 +483,6 @@ pollLoop:
 				return emptyPollForDecisionTaskResponse, nil
 			}
 
-			e.logger.Info(fmt.Sprintf("Testing history size of %d and count of %d", mutableStateResp.HistorySize, mutableStateResp.NextEventID-1))
-
 			isStickyEnabled := false
 			supportsSticky := client.NewVersionChecker().SupportsStickyQuery(mutableStateResp.GetClientImpl(), mutableStateResp.GetClientFeatureVersion()) == nil
 			if len(mutableStateResp.StickyTaskList.GetName()) != 0 && supportsSticky {
@@ -952,7 +950,6 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(
 		response.Query = task.query.request.QueryRequest.Query
 	}
 	response.BacklogCountHint = task.backlogCountHint
-	e.logger.Info(fmt.Sprintf("Emit history size %d and count %d from createPollForDecisionTaskResponse", response.CurrentHistorySize, response.NextEventID-1))
 	return response
 }
 

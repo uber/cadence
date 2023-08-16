@@ -4029,8 +4029,7 @@ type PollForDecisionTaskResponse struct {
 	StartedTimestamp          *int64                    `json:"startedTimestamp,omitempty"`
 	Queries                   map[string]*WorkflowQuery `json:"queries,omitempty"`
 	NextEventID               int64                     `json:"nextEventId,omitempty"`
-	HistorySize               int64                     `json:"historySize,omitempty"`
-	HistoryCount              int64                     `json:"historyCount,omitempty"`
+	TotalHistoryBytes         int64                     `json:"historySize,omitempty"`
 }
 
 // GetTaskToken is an internal getter (TBD...)
@@ -4083,7 +4082,7 @@ func (v *PollForDecisionTaskResponse) GetNextEventID() (o int64) {
 
 func (v *PollForDecisionTaskResponse) GetHistorySize() (o int64) {
 	if v != nil {
-		return v.HistorySize
+		return v.TotalHistoryBytes
 	}
 	return
 }
