@@ -142,7 +142,6 @@ func NewTestBaseWithNoSQL(options *TestBaseOptions) TestBase {
 		EnableCassandraAllConsistencyLevelDelete: dynamicconfig.GetBoolPropertyFn(true),
 		PersistenceSampleLoggingRate:             dynamicconfig.GetIntPropertyFn(100),
 		EnableShardIDMetrics:                     dynamicconfig.GetBoolPropertyFn(true),
-		EnableExecutionTTL:                       dynamicconfig.GetBoolPropertyFnFilteredByDomainID(true),
 	}
 	params := TestBaseParams{
 		DefaultTestCluster:    testCluster,

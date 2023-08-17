@@ -467,6 +467,7 @@ func (d *nosqlExecutionStore) ConflictResolveWorkflowExecution(
 		ShardID: d.shardID,
 		RangeID: request.RangeID,
 	}
+
 	err = d.db.UpdateWorkflowExecutionWithTasks(
 		ctx, currentWorkflowWriteReq,
 		mutateExecution, insertExecution, resetExecution,

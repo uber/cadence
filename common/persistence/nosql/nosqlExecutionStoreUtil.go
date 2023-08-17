@@ -85,10 +85,9 @@ func (d *nosqlExecutionStore) prepareResetWorkflowExecutionRequestWithMapsAndEve
 	versionHistories := resetWorkflow.VersionHistories
 	nowTimestamp := time.Now()
 
-	//TTLInSeconds is invalid in this case so passing a default value of 0.
 	executionRequest, err := d.prepareUpdateWorkflowExecutionTxn(
 		executionInfo, versionHistories, checkSum,
-		nowTimestamp, lastWriteVersion, 0,
+		nowTimestamp, lastWriteVersion,
 	)
 	if err != nil {
 		return nil, err
@@ -128,14 +127,13 @@ func (d *nosqlExecutionStore) prepareUpdateWorkflowExecutionRequestWithMapsAndEv
 ) (*nosqlplugin.WorkflowExecutionRequest, error) {
 	executionInfo := workflowMutation.ExecutionInfo
 	lastWriteVersion := workflowMutation.LastWriteVersion
-	ttlInSeconds := workflowMutation.TTLInSeconds
 	checkSum := workflowMutation.Checksum
 	versionHistories := workflowMutation.VersionHistories
 	nowTimestamp := time.Now()
 
 	executionRequest, err := d.prepareUpdateWorkflowExecutionTxn(
 		executionInfo, versionHistories, checkSum,
-		nowTimestamp, lastWriteVersion, ttlInSeconds,
+		nowTimestamp, lastWriteVersion,
 	)
 	if err != nil {
 		return nil, err
@@ -609,7 +607,6 @@ func (d *nosqlExecutionStore) prepareUpdateWorkflowExecutionTxn(
 	checksum checksum.Checksum,
 	nowTimestamp time.Time,
 	lastWriteVersion int64,
-	ttlInSeconds int64,
 ) (*nosqlplugin.WorkflowExecutionRequest, error) {
 	// validate workflow state & close status
 	if err := p.ValidateUpdateWorkflowStateCloseStatus(
@@ -639,7 +636,6 @@ func (d *nosqlExecutionStore) prepareUpdateWorkflowExecutionTxn(
 		VersionHistories:              versionHistories,
 		Checksums:                     &checksum,
 		LastWriteVersion:              lastWriteVersion,
-		TTLInSeconds:                  ttlInSeconds,
 	}, nil
 }
 
