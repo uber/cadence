@@ -4066,11 +4066,6 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 	// impact the checksum calculation
 	checksum := e.generateChecksum()
 
-	TTLInSeconds, err := e.calculateTTL()
-	if err != nil {
-		e.logError("TTL calculation failed")
-	}
-
 	workflowMutation := &persistence.WorkflowMutation{
 		ExecutionInfo:    e.executionInfo,
 		VersionHistories: e.versionHistories,
@@ -4095,9 +4090,8 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 		ReplicationTasks:  e.insertReplicationTasks,
 		TimerTasks:        e.insertTimerTasks,
 
-		Condition:    e.nextEventIDInDB,
-		Checksum:     checksum,
-		TTLInSeconds: int64(TTLInSeconds),
+		Condition: e.nextEventIDInDB,
+		Checksum:  checksum,
 	}
 
 	e.checksum = checksum
@@ -4812,28 +4806,4 @@ func (e *mutableStateBuilder) logDataInconsistency() {
 		tag.WorkflowID(workflowID),
 		tag.WorkflowRunID(runID),
 	)
-}
-func (e *mutableStateBuilder) calculateTTL() (int, error) {
-	domainID := e.executionInfo.DomainID
-	//Calculating the TTL for workflow Execution.
-
-	domainObj, err := e.shard.GetDomainCache().GetDomainByID(domainID)
-	if err != nil {
-		return 0, err
-	}
-	config := domainObj.GetConfig()
-	retention := time.Duration(config.Retention)
-	daysInSeconds := int((retention + ttlBufferDays) * dayToSecondMultiplier)
-	//Default state of TTL, means there is no TTL attached.
-	TTLInSeconds := 0
-	startTime := e.executionInfo.StartTimestamp
-	//Handles Cron and Delaystart. For Cron workflows the StartTimestamp does not show up until the wf has started.
-	//default value os TTL ie. 0 will be passed down in this case. The TTL is calculated only if the startTime is non zero.
-	if !time.Time.IsZero(startTime) {
-		CalculateTTLInSeconds := int(e.executionInfo.WorkflowTimeout) - int(time.Now().Sub(startTime).Seconds()) + daysInSeconds
-		if CalculateTTLInSeconds >= 0 {
-			return CalculateTTLInSeconds, nil
-		}
-	}
-	return TTLInSeconds, nil
 }
