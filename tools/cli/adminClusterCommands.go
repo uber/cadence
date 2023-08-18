@@ -23,6 +23,7 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 
 	"github.com/fatih/color"
 	"github.com/pborman/uuid"
@@ -36,10 +37,15 @@ import (
 
 // An indirection for the prompt function so that it can be mocked in the unit tests
 var promptFn = prompt
+var validSearchAttributeKey = regexp.MustCompile(`^[a-zA-Z][a-zA-Z_0-9]*$`)
 
 // AdminAddSearchAttribute to whitelist search attribute
 func AdminAddSearchAttribute(c *cli.Context) {
 	key := getRequiredOption(c, FlagSearchAttributesKey)
+	if err := validateSearchAttributeKey(key); err != nil {
+		ErrorAndExit("Invalid search-attribute key.", err)
+	}
+
 	valType := getRequiredIntOption(c, FlagSearchAttributesType)
 	if !isValueTypeValid(valType) {
 		ErrorAndExit("Unknown Search Attributes value type.", nil)
@@ -151,6 +157,13 @@ func intValTypeToString(valType int) string {
 	default:
 		return ""
 	}
+}
+
+func validateSearchAttributeKey(name string) error {
+	if !validSearchAttributeKey.MatchString(name) {
+		return fmt.Errorf("has to be contain alphanumeric and start with a letter")
+	}
+	return nil
 }
 
 func isValueTypeValid(valType int) bool {

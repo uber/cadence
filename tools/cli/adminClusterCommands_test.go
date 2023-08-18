@@ -121,3 +121,14 @@ func TestAdminFailover(t *testing.T) {
 	assert.Equal(t, 0, len(succeed))
 	assert.Equal(t, 0, len(failed))
 }
+
+func TestValidSearchAttributeKey(t *testing.T) {
+	assert.NoError(t, validateSearchAttributeKey("city"))
+	assert.NoError(t, validateSearchAttributeKey("cityId"))
+	assert.NoError(t, validateSearchAttributeKey("paymentProfileUUID"))
+	assert.NoError(t, validateSearchAttributeKey("job_type"))
+
+	assert.Error(t, validateSearchAttributeKey("payments-biling-invoices-TransactionUUID"))
+	assert.Error(t, validateSearchAttributeKey("9lives"))
+	assert.Error(t, validateSearchAttributeKey("tax%"))
+}
