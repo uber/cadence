@@ -42,8 +42,8 @@ var validSearchAttributeKey = regexp.MustCompile(`^[a-zA-Z][a-zA-Z_0-9]*$`)
 // AdminAddSearchAttribute to whitelist search attribute
 func AdminAddSearchAttribute(c *cli.Context) {
 	key := getRequiredOption(c, FlagSearchAttributesKey)
-	if !isValidSearchAttributeKey(key) {
-		ErrorAndExit("Invalid search-attribute key.", nil)
+	if err := validateSearchAttributeKey(key); err != nil {
+		ErrorAndExit("Invalid search-attribute key.", err)
 	}
 
 	valType := getRequiredIntOption(c, FlagSearchAttributesType)
@@ -159,8 +159,11 @@ func intValTypeToString(valType int) string {
 	}
 }
 
-func isValidSearchAttributeKey(name string) bool {
-	return validSearchAttributeKey.MatchString(name)
+func validateSearchAttributeKey(name string) error {
+	if !validSearchAttributeKey.MatchString(name) {
+		return fmt.Errorf("has to be contain alphanumeric and start with a letter")
+	}
+	return nil
 }
 
 func isValueTypeValid(valType int) bool {

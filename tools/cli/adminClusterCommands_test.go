@@ -123,12 +123,12 @@ func TestAdminFailover(t *testing.T) {
 }
 
 func TestValidSearchAttributeKey(t *testing.T) {
-	assert.True(t, isValidSearchAttributeKey("city"))
-	assert.True(t, isValidSearchAttributeKey("cityId"))
-	assert.True(t, isValidSearchAttributeKey("paymentProfileUUID"))
-	assert.True(t, isValidSearchAttributeKey("job_type"))
+	assert.NoError(t, validateSearchAttributeKey("city"))
+	assert.NoError(t, validateSearchAttributeKey("cityId"))
+	assert.NoError(t, validateSearchAttributeKey("paymentProfileUUID"))
+	assert.NoError(t, validateSearchAttributeKey("job_type"))
 
-	assert.False(t, isValidSearchAttributeKey("payments-biling-invoices-TransactionUUID"))
-	assert.False(t, isValidSearchAttributeKey("9lives"))
-	assert.False(t, isValidSearchAttributeKey("tax%"))
+	assert.Error(t, validateSearchAttributeKey("payments-biling-invoices-TransactionUUID"))
+	assert.Error(t, validateSearchAttributeKey("9lives"))
+	assert.Error(t, validateSearchAttributeKey("tax%"))
 }
