@@ -223,9 +223,9 @@ func (s *server) startService() common.Daemon {
 			log.Fatalf("not able to find advanced visibility store in config: %v", advancedVisStoreKey)
 		}
 
-		if params.PersistenceConfig.AdvancedVisibilityStore == "pinot-visibility" {
+		if params.PersistenceConfig.AdvancedVisibilityStore == common.PinotVisibilityStoreName {
 			params.PinotConfig = advancedVisStore.Pinot
-			esVisStore := s.cfg.Persistence.DataStores["es-visibility"]
+			esVisStore := s.cfg.Persistence.DataStores[common.ESVisibilityStoreName]
 			params.ESConfig = esVisStore.ElasticSearch
 			pinotBroker := params.PinotConfig.Broker
 			pinotRawClient, err := pinot.NewFromBrokerList([]string{pinotBroker})

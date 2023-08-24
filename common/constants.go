@@ -89,6 +89,12 @@ const (
 	PinotVisibilityAppName = "pinot-visibility"
 )
 
+const (
+	// VisibilityStoreName is used to find advanced visibility store
+	ESVisibilityStoreName    = "es-visibility"
+	PinotVisibilityStoreName = "pinot-visibility"
+)
+
 // This was flagged by salus as potentially hardcoded credentials. This is a false positive by the scanner and should be
 // disregarded.
 // #nosec

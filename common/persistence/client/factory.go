@@ -277,7 +277,7 @@ func (f *factoryImpl) NewVisibilityManager(
 			return nil, err
 		}
 	}
-	if params.PersistenceConfig.AdvancedVisibilityStore == "pinot-visibility" {
+	if params.PersistenceConfig.AdvancedVisibilityStore == common.PinotVisibilityStoreName {
 		visibilityProducer, err := params.MessagingClient.NewProducer(common.PinotVisibilityAppName)
 		if err != nil {
 			f.logger.Fatal("Creating visibility producer failed", tag.Error(err))
