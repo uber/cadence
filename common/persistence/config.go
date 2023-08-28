@@ -31,7 +31,6 @@ type (
 		EnableCassandraAllConsistencyLevelDelete dynamicconfig.BoolPropertyFn
 		PersistenceSampleLoggingRate             dynamicconfig.IntPropertyFn
 		EnableShardIDMetrics                     dynamicconfig.BoolPropertyFn
-		EnableExecutionTTL                       dynamicconfig.BoolPropertyFnWithDomainIDFilter
 	}
 )
 
@@ -42,6 +41,5 @@ func NewDynamicConfiguration(dc *dynamicconfig.Collection) *DynamicConfiguration
 		EnableCassandraAllConsistencyLevelDelete: dc.GetBoolProperty(dynamicconfig.EnableCassandraAllConsistencyLevelDelete),
 		PersistenceSampleLoggingRate:             dc.GetIntProperty(dynamicconfig.SampleLoggingRate),
 		EnableShardIDMetrics:                     dc.GetBoolProperty(dynamicconfig.EnableShardIDMetrics),
-		EnableExecutionTTL:                       dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.EnableExecutionTTL),
 	}
 }

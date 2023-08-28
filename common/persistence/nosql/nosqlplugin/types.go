@@ -39,7 +39,6 @@ type (
 		VersionHistories *persistence.DataBlob
 		Checksums        *checksum.Checksum
 		LastWriteVersion int64
-		TTLInSeconds     int64
 		// condition checking for updating execution info
 		PreviousNextEventIDCondition *int64
 

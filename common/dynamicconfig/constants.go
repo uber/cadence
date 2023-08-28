@@ -1408,13 +1408,6 @@ const (
 	LargeShardHistoryBlobMetricThreshold
 	// LastIntKey must be the last one in this const group
 	LastIntKey
-
-	// TTLBufferDays are the buffer days added into the TTL time for security reasons.
-	// KeyName: system.TTLBufferDays
-	// Value type: Int
-	// Default value: 15
-	// Allowed filters: N/A
-	TTLBufferDays
 )
 
 const (
@@ -1874,13 +1867,6 @@ const (
 	EnableShardIDMetrics
 	// LastBoolKey must be the last one in this const group
 	LastBoolKey
-
-	// EnableExecutionTTL is which domains are allowed to have workflow executions with a TTL
-	// KeyName: system.enableExecutionTTL
-	// Value type: Bool
-	// Default value: false
-	// Allowed filters: DomainID
-	EnableExecutionTTL
 )
 
 const (
@@ -3630,11 +3616,6 @@ var IntKeys = map[IntKey]DynamicInt{
 		Description:  "The number of attempts to push Isolation group configuration to the config store",
 		DefaultValue: 2,
 	},
-	TTLBufferDays: DynamicInt{
-		KeyName:      "system.TTLBufferDays",
-		Description:  "The number of buffer day in the TTL value",
-		DefaultValue: 15,
-	},
 }
 
 var BoolKeys = map[BoolKey]DynamicBool{
@@ -4041,12 +4022,6 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		KeyName:      "system.enableShardIDMetrics",
 		Description:  "Enable shardId metrics in persistence client",
 		DefaultValue: true,
-	},
-	EnableExecutionTTL: DynamicBool{
-		KeyName:      "system.enableExecutionTTL",
-		Filters:      []Filter{DomainID},
-		Description:  "EnableExecutionTTL is which domains are allowed to have workflow executions with a TTL",
-		DefaultValue: false,
 	},
 }
 

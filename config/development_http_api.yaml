@@ -30,6 +30,15 @@ services:
       #    "requestId": "4D1E4058-6FCF-4BA8-BF16-8FA8B02F9651"
       #  }
       http:
+        # To enable HTTP TLS uncomment the following section
+        #tls:
+        #  enabled: true
+        #  certFile: config/credentials/keytest.crt
+        #  keyFile: config/credentials/keytest
+        #  caFiles:
+        #    - config/credentials/client.crt
+        #  requireClientAuth: true
+        #TLSMode: enforced
         port: 8800
         procedures: # list of available API procedures
           # Admin API

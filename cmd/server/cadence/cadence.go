@@ -56,7 +56,7 @@ func startHandler(c *cli.Context) {
 	var cfg config.Config
 	err := config.Load(env, configDir, zone, &cfg)
 	if err != nil {
-		log.Fatal("Config file corrupted.", err)
+		log.Fatal(fmt.Sprintf("Config file corrupted: %v", err))
 	}
 	if cfg.Log.Level == "debug" {
 		log.Printf("config=\n%v\n", cfg.String())

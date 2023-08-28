@@ -73,6 +73,7 @@ type (
 		onFatalErr               func()
 		dispatchTask             func(context.Context, *InternalTask) error
 		getIsolationGroupForTask func(context.Context, *persistence.TaskInfo) (string, error)
+		ratePerSecond            func() float64
 	}
 )
 
@@ -105,6 +106,7 @@ func newTaskReader(tlMgr *taskListManagerImpl, isolationGroups []string) *taskRe
 		onFatalErr:               tlMgr.Stop,
 		dispatchTask:             tlMgr.DispatchTask,
 		getIsolationGroupForTask: tlMgr.getIsolationGroupForTask,
+		ratePerSecond:            tlMgr.matcher.Rate,
 		throttleRetry: backoff.NewThrottleRetry(
 			backoff.WithRetryPolicy(persistenceOperationRetryPolicy),
 			backoff.WithRetryableError(persistence.IsTransientError),
@@ -398,15 +400,23 @@ func (tr *taskReader) completeTask(task *persistence.TaskInfo, err error) {
 }
 
 func (tr *taskReader) newDispatchContext(isolationGroup string) (context.Context, context.CancelFunc) {
-	if isolationGroup != "" {
+	rps := tr.ratePerSecond()
+	if isolationGroup != "" || rps > 1e-7 { // 1e-7 is a random number chosen to avoid overflow, normally user don't set such a low rps
+		// this is the minimum timeout required to dispatch a task, if the timeout value is smaller than this
+		// async task dispatch can be completely throttled, which could happen when ratePerSecond is pretty low
+		minTimeout := time.Duration(float64(len(tr.taskBuffers))/rps) * time.Second
+		timeout := tr.config.AsyncTaskDispatchTimeout()
+		if timeout < minTimeout {
+			timeout = minTimeout
+		}
 		domainEntry, err := tr.domainCache.GetDomainByID(tr.taskListID.domainID)
 		if err != nil {
 			// we don't know if the domain is active in the current cluster, assume it is active and set the timeout
-			return context.WithTimeout(tr.cancelCtx, tr.config.AsyncTaskDispatchTimeout())
+			return context.WithTimeout(tr.cancelCtx, timeout)
 		}
 		if _, err := domainEntry.IsActiveIn(tr.clusterMetadata.GetCurrentClusterName()); err == nil {
 			// if the domain is active in the current cluster, set the timeout
-			return context.WithTimeout(tr.cancelCtx, tr.config.AsyncTaskDispatchTimeout())
+			return context.WithTimeout(tr.cancelCtx, timeout)
 		}
 	}
 	return tr.cancelCtx, func() {}
