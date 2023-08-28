@@ -102,6 +102,8 @@ func (rl *RateLimiter) Allow() bool {
 
 // Limit returns the current rate per second limit for this ratelimiter
 func (rl *RateLimiter) Limit() float64 {
+	rl.RLock()
+	defer rl.RUnlock()
 	if rl.maxDispatchPerSecond != nil {
 		return *rl.maxDispatchPerSecond
 	}
