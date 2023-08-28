@@ -2900,6 +2900,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		LargeHistoryBlobCount:                                        {metricName: "large_history_blob_count", metricType: Counter},
 		LargeHistoryEventCount:                                       {metricName: "large_history_event_count", metricType: Counter},
 		LargeHistorySizeCount:                                        {metricName: "large_history_size_count", metricType: Counter},
+		UpdateWorkflowExecutionCount:                                 {metricName: "update_workflow_execution_count", metricType: Counter},
 	},
 	Matching: {
 		PollSuccessPerTaskListCounter:               {metricName: "poll_success_per_tl", metricRollupName: "poll_success"},
