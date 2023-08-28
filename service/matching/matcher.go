@@ -218,8 +218,7 @@ func (tm *TaskMatcher) OfferQuery(ctx context.Context, task *InternalTask) (*typ
 }
 
 // MustOffer blocks until a consumer is found to handle this task
-// Returns error only when context is canceled or the ratelimit is set to zero (allow nothing)
-// The passed in context MUST NOT have a deadline associated with it
+// Returns error only when context is canceled, expired or the ratelimit is set to zero (allow nothing)
 func (tm *TaskMatcher) MustOffer(ctx context.Context, task *InternalTask) error {
 	if _, err := tm.ratelimit(ctx); err != nil {
 		return err
