@@ -2293,6 +2293,7 @@ const (
 	LargeHistoryBlobCount
 	LargeHistoryEventCount
 	LargeHistorySizeCount
+	UpdateWorkflowExecutionCount
 
 	NumHistoryMetrics
 )
