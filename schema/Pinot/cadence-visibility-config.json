@@ -9,6 +9,15 @@
   },
   "tenants": {},
   "tableIndexConfig": {
+    "jsonIndexConfigs": {
+      "Attr": {
+        "excludeArray": false,
+        "disableCrossArrayUnnest": true,
+        "includePaths": null,
+        "excludePaths": null,
+        "excludeFields": null
+      }
+    },
     "loadMode": "MMAP",
     "streamConfigs": {
       "streamType": "kafka",

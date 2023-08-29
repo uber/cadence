@@ -3,7 +3,7 @@ frontend.enableClientVersionCheck:
 system.advancedVisibilityWritingMode:
   - value: "triple"
 system.enableReadVisibilityFromES:
-  - value: true
+  - value: false
 system.enableReadVisibilityFromPinot:
   - value: true
 frontend.validSearchAttributes:

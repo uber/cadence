@@ -532,6 +532,7 @@ func createVisibilityMessage(
 	m[UpdateTime] = updateTimeUnixNano
 	m[ShardID] = shardID
 
+	SearchAttributes := make(map[string]interface{})
 	var err error
 	for key, value := range rawSearchAttributes {
 		value, err = isTimeStruct(value)
@@ -544,8 +545,9 @@ func createVisibilityMessage(
 		if err != nil {
 			return nil, err
 		}
-		m[key] = val
+		SearchAttributes[key] = val
 	}
+	m[Attr] = SearchAttributes
 
 	serializedMsg, err := json.Marshal(m)
 	if err != nil {
