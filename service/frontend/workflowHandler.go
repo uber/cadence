@@ -788,17 +788,11 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 }
 
 func (wh *WorkflowHandler) getIsolationGroup(ctx context.Context, domainName string) string {
-	if wh.config.EnableTasklistIsolation(domainName) {
-		return partition.IsolationGroupFromContext(ctx)
-	}
-	return ""
+	return partition.IsolationGroupFromContext(ctx)
 }
 
 func (wh *WorkflowHandler) getPartitionConfig(ctx context.Context, domainName string) map[string]string {
-	if wh.config.EnableTasklistIsolation(domainName) {
-		return partition.ConfigFromContext(ctx)
-	}
-	return nil
+	return partition.ConfigFromContext(ctx)
 }
 
 func (wh *WorkflowHandler) isIsolationGroupHealthy(ctx context.Context, domainName, isolationGroup string) bool {
