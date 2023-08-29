@@ -226,17 +226,27 @@ func (h *consumerHandlerImpl) ConsumeClaim(session sarama.ConsumerGroupSession, 
 
 	// NOTE: Do not move the code below to a goroutine.
 	// The `ConsumeClaim` itself is called within a goroutine:
-	for message := range claim.Messages() {
-		h.manager.AddMessage(message.Partition, message.Offset)
-		h.msgChan <- &messageImpl{
-			saramaMsg: message,
-			session:   session,
-			handler:   h,
-			logger:    h.logger,
+	for {
+		select {
+		case message, ok := <-claim.Messages():
+			if !ok {
+				// message channel was closed
+				h.logger.Info("consumer group claim messages channel closed", tag.Name(string(session.GenerationID())))
+				return nil
+			}
+			h.manager.AddMessage(message.Partition, message.Offset)
+			h.msgChan <- &messageImpl{
+				saramaMsg: message,
+				session:   session,
+				handler:   h,
+				logger:    h.logger,
+			}
+		// Should return when `session.Context()` is done.
+		case <-session.Context().Done():
+			h.logger.Info("consumer group session context done", tag.Name(string(session.GenerationID())))
+			return nil
 		}
 	}
-
-	return nil
 }
 
 func (h *consumerHandlerImpl) stop() {
