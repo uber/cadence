@@ -78,13 +78,11 @@ func (qv *VisibilityQueryValidator) ValidateQuery(whereClause string) (string, e
 			if err != nil {
 				return "", &types.BadRequestError{Message: err.Error()}
 			}
-			//sel.Where.Expr.Format(buf)
 		}
 
 		sel.OrderBy.Format(buf)
 		res += buf.String()
 		return res, nil
-		//return buf.String(), nil
 	}
 	return whereClause, nil
 }
