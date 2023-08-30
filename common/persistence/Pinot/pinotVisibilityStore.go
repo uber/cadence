@@ -413,6 +413,7 @@ func (v *pinotVisibilityStore) ListWorkflowExecutions(ctx context.Context, reque
 	checkPageSize(request)
 
 	query := v.getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request)
+	//v.logger.Error("ABUCDDGBUG " + query)
 
 	req := &pnt.SearchRequest{
 		Query:           query,

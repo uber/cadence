@@ -110,7 +110,7 @@ func TestGetListWorkflowExecutionQuery(t *testing.T) {
 				`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND JSON_MATCH(Attr, '"$.CustomKeywordField"=''keywordCustomized''')
+AND (JSON_MATCH(Attr, '"$.CustomKeywordField"=''keywordCustomized''') or JSON_MATCH(Attr, '"$.CustomKeywordField[*]"=''keywordCustomized'''))
 Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName),
@@ -128,7 +128,7 @@ LIMIT 0, 10
 				`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND JSON_MATCH(Attr, '"$.CustomIntField"=''2''') and JSON_MATCH(Attr, '"$.CustomKeywordField"=''Update2''')
+AND JSON_MATCH(Attr, '"$.CustomIntField"=''2''') and (JSON_MATCH(Attr, '"$.CustomKeywordField"=''Update2''') or JSON_MATCH(Attr, '"$.CustomKeywordField[*]"=''Update2'''))
 order by CustomDatetimeField DESC
 LIMIT 0, 10
 `, testTableName),
@@ -145,7 +145,7 @@ LIMIT 0, 10
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND JSON_MATCH(Attr, '"$.CustomKeywordField"=''keywordCustomized''') and JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'STRING') LIKE '%%String and or order by%%'
+AND (JSON_MATCH(Attr, '"$.CustomKeywordField"=''keywordCustomized''') or JSON_MATCH(Attr, '"$.CustomKeywordField[*]"=''keywordCustomized''')) and JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'STRING') LIKE '%%String and or order by%%'
 Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName),
@@ -230,7 +230,7 @@ LIMIT 0, 10
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND CloseStatus < 0 and JSON_MATCH(Attr, '"$.CustomKeywordField"=''keywordCustomized''') and JSON_MATCH(Attr, '"$.CustomIntField"=''10''') and JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'STRING') LIKE '%%String field is for text%%'
+AND CloseStatus < 0 and (JSON_MATCH(Attr, '"$.CustomKeywordField"=''keywordCustomized''') or JSON_MATCH(Attr, '"$.CustomKeywordField[*]"=''keywordCustomized''')) and JSON_MATCH(Attr, '"$.CustomIntField"=''10''') and JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'STRING') LIKE '%%String field is for text%%'
 Order by DomainID Desc
 LIMIT 11, 10
 `, testTableName),

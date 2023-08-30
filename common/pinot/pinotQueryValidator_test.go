@@ -55,7 +55,7 @@ func TestValidateQuery(t *testing.T) {
 		},
 		"Case5: custom keyword field query": {
 			query:     "CustomKeywordField = 'custom'",
-			validated: "JSON_MATCH(Attr, '\"$.CustomKeywordField\"=''custom''')",
+			validated: "(JSON_MATCH(Attr, '\"$.CustomKeywordField\"=''custom''') or JSON_MATCH(Attr, '\"$.CustomKeywordField[*]\"=''custom'''))",
 		},
 		"Case6-1: complex query I: with parenthesis": {
 			query:     "(CustomStringField = 'custom and custom2 or custom3 order by') or CustomIntField between 1 and 10",

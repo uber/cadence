@@ -260,5 +260,11 @@ func (qv *VisibilityQueryValidator) processCustomKey(expr sqlparser.Expr) (strin
 
 	}
 	// case2-2: otherwise, exact match
+	// case2-2-1: if it is keyword, need to deal with a situation when value is an array
+	if indexValType == types.IndexedValueTypeKeyword {
+		return fmt.Sprintf("(JSON_MATCH(Attr, '\"$.%s\"=''%s''') or JSON_MATCH(Attr, '\"$.%s[*]\"=''%s'''))",
+			colNameStr, colValStr, colNameStr, colValStr), nil
+	}
+	// case2-2-2: other cases:
 	return fmt.Sprintf("JSON_MATCH(Attr, '\"$.%s\"=''%s''')", colNameStr, colValStr), nil
 }
