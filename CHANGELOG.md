@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 You can find a list of previous releases on the [github releases](https://github.com/uber/cadence/releases) page.
 
+## [1.2.2] - 2023-08-29
+### Added
+Added a update workflow execution count metric for RI (#5386)
+
+### Fixed
+Fixed nil pointer issue in domain migration command rendering (#5378)
+
+### Changed
+Pass partition config and isolation group to history/matching even if isolation is disabled (#5385)
+
 ## [1.2.1] - 2023-08-24
 ### Added
 Added guardrail to on scalable tasklist number of write partitions (#5331)
