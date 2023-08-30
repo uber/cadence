@@ -107,7 +107,6 @@ func (qv *VisibilityQueryValidator) validateWhereExpr(expr sqlparser.Expr) (stri
 	default:
 		return "", errors.New("invalid where clause")
 	}
-
 }
 
 func (qv *VisibilityQueryValidator) validateAndOrExpr(expr sqlparser.Expr) (string, error) {
@@ -137,7 +136,6 @@ func (qv *VisibilityQueryValidator) validateAndOrExpr(expr sqlparser.Expr) (stri
 
 	if isAnd {
 		return fmt.Sprintf("%s and %s", leftRes, rightRes), nil
-
 	}
 
 	return fmt.Sprintf("(%s or %s)", leftRes, rightRes), nil
