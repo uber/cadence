@@ -2694,8 +2694,9 @@ var IntKeys = map[IntKey]DynamicInt{
 	},
 	BlobSizeLimitError: DynamicInt{
 		KeyName:      "limit.blobSize.error",
+		Filters:      []Filter{DomainName},
 		Description:  "BlobSizeLimitError is the per event blob size limit",
-		DefaultValue: 2 * 1024 * 1024,
+		DefaultValue: 512 * 1024,
 	},
 	BlobSizeLimitWarn: DynamicInt{
 		KeyName:      "limit.blobSize.warn",
@@ -2707,25 +2708,25 @@ var IntKeys = map[IntKey]DynamicInt{
 		KeyName:      "limit.historySize.error",
 		Filters:      []Filter{DomainName},
 		Description:  "HistorySizeLimitError is the per workflow execution history size limit",
-		DefaultValue: 200 * 1024 * 1024,
+		DefaultValue: 50 * 1024 * 1024,
 	},
 	HistorySizeLimitWarn: DynamicInt{
 		KeyName:      "limit.historySize.warn",
 		Filters:      []Filter{DomainName},
 		Description:  "HistorySizeLimitWarn is the per workflow execution history size limit for warning",
-		DefaultValue: 50 * 1024 * 1024,
+		DefaultValue: 25 * 1024 * 1024,
 	},
 	HistoryCountLimitError: DynamicInt{
 		KeyName:      "limit.historyCount.error",
 		Filters:      []Filter{DomainName},
 		Description:  "HistoryCountLimitError is the per workflow execution history event count limit",
-		DefaultValue: 200 * 1024,
+		DefaultValue: 50000,
 	},
 	HistoryCountLimitWarn: DynamicInt{
 		KeyName:      "limit.historyCount.warn",
 		Filters:      []Filter{DomainName},
 		Description:  "HistoryCountLimitWarn is the per workflow execution history event count limit for warning",
-		DefaultValue: 50 * 1024,
+		DefaultValue: 25000,
 	},
 	PendingActivitiesCountLimitError: DynamicInt{
 		KeyName:      "limit.pendingActivityCount.error",
@@ -2741,7 +2742,7 @@ var IntKeys = map[IntKey]DynamicInt{
 		KeyName:      "limit.domainNameLength",
 		Filters:      []Filter{DomainName},
 		Description:  "DomainNameMaxLength is the length limit for domain name",
-		DefaultValue: 1000,
+		DefaultValue: 128,
 	},
 	IdentityMaxLength: DynamicInt{
 		KeyName:      "limit.identityLength",
@@ -2753,7 +2754,7 @@ var IntKeys = map[IntKey]DynamicInt{
 		KeyName:      "limit.workflowIDLength",
 		Filters:      []Filter{DomainName},
 		Description:  "WorkflowIDMaxLength is the length limit for workflowID",
-		DefaultValue: 1000,
+		DefaultValue: 128,
 	},
 	SignalNameMaxLength: DynamicInt{
 		KeyName:      "limit.signalNameLength",
@@ -2771,13 +2772,13 @@ var IntKeys = map[IntKey]DynamicInt{
 		KeyName:      "limit.requestIDLength",
 		Filters:      []Filter{DomainName},
 		Description:  "RequestIDMaxLength is the length limit for requestID",
-		DefaultValue: 1000,
+		DefaultValue: 64,
 	},
 	TaskListNameMaxLength: DynamicInt{
 		KeyName:      "limit.taskListNameLength",
 		Filters:      []Filter{DomainName},
 		Description:  "TaskListNameMaxLength is the length limit for task list name",
-		DefaultValue: 1000,
+		DefaultValue: 128,
 	},
 	ActivityIDMaxLength: DynamicInt{
 		KeyName:      "limit.activityIDLength",
@@ -2801,7 +2802,7 @@ var IntKeys = map[IntKey]DynamicInt{
 		KeyName:      "limit.timerIDLength",
 		Filters:      []Filter{DomainName},
 		Description:  "TimerIDMaxLength is the length limit for timerID",
-		DefaultValue: 1000,
+		DefaultValue: 64,
 	},
 	MaxIDLengthWarnLimit: DynamicInt{
 		KeyName:      "limit.maxIDWarnLength",
