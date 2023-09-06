@@ -505,7 +505,6 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Multiple_CanU
 		s.Equal(1, len(input.UpdateWorkflowMutation.UpsertActivityInfos))
 		mutableState.GetExecutionInfo().LastUpdatedTimestamp = input.UpdateWorkflowMutation.ExecutionInfo.LastUpdatedTimestamp
 		input.RangeID = 0
-		input.UpdateWorkflowMutation.TTLInSeconds = 0
 		input.UpdateWorkflowMutation.ExecutionInfo.LastEventTaskID = 0
 		mutableState.GetExecutionInfo().LastEventTaskID = 0
 		mutableState.GetExecutionInfo().DecisionOriginalScheduledTimestamp = input.UpdateWorkflowMutation.ExecutionInfo.DecisionOriginalScheduledTimestamp
@@ -530,10 +529,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Multiple_CanU
 				UpsertSignalRequestedIDs:  []string{},
 				DeleteSignalRequestedIDs:  []string{},
 				NewBufferedEvents:         nil,
-				TTLInSeconds:              0,
 				ClearBufferedEvents:       false,
-
-				VersionHistories: mutableState.GetVersionHistories(),
+				VersionHistories:          mutableState.GetVersionHistories(),
 			},
 			NewWorkflowSnapshot: nil,
 			Encoding:            common.EncodingType(s.mockShard.GetConfig().EventEncodingType(s.domainID)),

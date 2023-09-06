@@ -144,6 +144,7 @@ func emitSessionUpdateStats(
 	countScope.RecordTimer(metrics.TimerTasksCount, time.Duration(stats.TimerTasksCount))
 	countScope.RecordTimer(metrics.CrossClusterTasksCount, time.Duration(stats.CrossClusterTaskCount))
 	countScope.RecordTimer(metrics.ReplicationTasksCount, time.Duration(stats.ReplicationTasksCount))
+	countScope.IncCounter(metrics.UpdateWorkflowExecutionCount)
 }
 
 func emitWorkflowCompletionStats(

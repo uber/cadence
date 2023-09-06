@@ -36,6 +36,7 @@ import (
 	c "github.com/uber/cadence/common/dynamicconfig/configstore/config"
 	"github.com/uber/cadence/common/peerprovider/ringpopprovider"
 	"github.com/uber/cadence/common/service"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
 )
 
 type (
@@ -160,6 +161,11 @@ type (
 		Port uint16 `yaml:"port"`
 		// List of RPC procedures available to call using HTTP
 		Procedures []string `yaml:"procedures"`
+		// TLS allows configuring TLS/SSL for HTTP requests
+		TLS TLS `yaml:"tls"`
+		// Mode represents the TLS mode of the transport.
+		// Available modes: disabled, permissive, enforced
+		TLSMode yarpctls.Mode `yaml:"TLSMode"`
 	}
 
 	// Blobstore contains the config for blobstore
