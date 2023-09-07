@@ -30,8 +30,6 @@ import (
 	"github.com/uber-go/tally/m3"
 	"github.com/uber-go/tally/prometheus"
 
-	yarpctls "go.uber.org/yarpc/api/transport/tls"
-
 	"github.com/uber/cadence/common/dynamicconfig"
 	c "github.com/uber/cadence/common/dynamicconfig/configstore/config"
 	"github.com/uber/cadence/common/peerprovider/ringpopprovider"
