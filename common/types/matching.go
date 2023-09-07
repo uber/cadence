@@ -456,8 +456,8 @@ func (v *MatchingPollForDecisionTaskResponse) GetBranchToken() (o []byte) {
 	return
 }
 
-// GetHistorySize is an internal getter of returning the history size in bytes
-func (v *MatchingPollForDecisionTaskResponse) GetHistorySize() (o int64) {
+// GetTotalHistoryBytes is an internal getter of returning the history size in bytes
+func (v *MatchingPollForDecisionTaskResponse) GetTotalHistoryBytes() (o int64) {
 	if v != nil {
 		return v.TotalHistoryBytes
 	}

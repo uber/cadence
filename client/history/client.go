@@ -22,7 +22,6 @@ package history
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
 	"sync"
 	"time"
@@ -128,7 +127,6 @@ func (c *clientImpl) GetMutableState(
 	if err != nil {
 		return nil, err
 	}
-	c.logger.Info(fmt.Sprintf("History ClientImpl History size %d", response.HistorySize))
 	return response, nil
 }
 
