@@ -800,6 +800,11 @@ type (
 		GetAckLevels(ctx context.Context, queueType persistence.QueueType, forUpdate bool) (map[string]int64, error)
 		GetQueueSize(ctx context.Context, queueType persistence.QueueType) (int64, error)
 
+		// InsertConfig insert a config entry with version. Return nosqlplugin.NewConditionFailure if the same version of the row_type is existing
+		InsertConfig(ctx context.Context, row *persistence.InternalConfigStoreEntry) error
+		// SelectLatestConfig returns the config entry of the row_type with the largest(latest) version value
+		SelectLatestConfig(ctx context.Context, rowType int) (*persistence.InternalConfigStoreEntry, error)
+
 		// The follow provide information about the underlying sql crud implementation
 		SupportsTTL() bool
 		MaxAllowedTTL() (*time.Duration, error)
