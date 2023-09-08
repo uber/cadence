@@ -28,6 +28,7 @@ import (
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )
@@ -54,9 +55,23 @@ func NewSQLConfigStore(
 }
 
 func (m *sqlConfigStore) FetchConfig(ctx context.Context, configType persistence.ConfigType) (*persistence.InternalConfigStoreEntry, error) {
-	return nil, fmt.Errorf("not implemented")
+	entry, err := m.db.SelectLatestConfig(ctx, int(configType))
+	if m.db.IsNotFoundError(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, convertCommonErrors(m.db, "FetchConfig", "", err)
+	}
+	return entry, nil
 }
 
 func (m *sqlConfigStore) UpdateConfig(ctx context.Context, value *persistence.InternalConfigStoreEntry) error {
-	return fmt.Errorf("not implemented")
+	err := m.db.InsertConfig(ctx, value)
+	if err != nil {
+		if _, ok := err.(*nosqlplugin.ConditionFailure); ok {
+			return &persistence.ConditionFailedError{Msg: fmt.Sprintf("Version %v already exists. Condition Failed", value.Version)}
+		}
+		return convertCommonErrors(m.db, "UpdateConfig", "", err)
+	}
+	return nil
 }
