@@ -93,7 +93,7 @@ const (
 	FlagSignalInputFileWithAlias          = FlagSignalInputFile + ", sif"
 	FlagExcludeFile                       = "exclude_file"
 	FlagInputSeparator                    = "input_separator"
-	FlagParallism                         = "input_parallism"
+	FlagParallelism                       = "input_parallelism"
 	FlagScanType                          = "scan_type"
 	FlagInvariantCollection               = "invariant_collection"
 	FlagSkipCurrentOpen                   = "skip_current_open"
