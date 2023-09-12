@@ -94,7 +94,7 @@ const (
 	FlagExcludeFile                       = "exclude_file"
 	FlagInputSeparator                    = "input_separator"
 	FlagParallelism                       = "input_parallelism"
-	FlagParallism                         = "input_parallism"
+	FlagParallismDeprecated               = "input_parallism" // typo, replaced by FlagParallelism
 	FlagScanType                          = "scan_type"
 	FlagInvariantCollection               = "invariant_collection"
 	FlagSkipCurrentOpen                   = "skip_current_open"

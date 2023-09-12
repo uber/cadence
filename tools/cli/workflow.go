@@ -299,7 +299,7 @@ func newWorkflowCommands() []cli.Command {
 					Usage: "Reason for reset, required for tracking purpose",
 				},
 				cli.IntFlag{
-					Name:   FlagParallism,
+					Name:   FlagParallismDeprecated,
 					Value:  1,
 					Usage:  "Number of goroutines to run in parallel. Each goroutine would process one line for every second.",
 					Hidden: true,
