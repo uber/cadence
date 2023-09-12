@@ -160,6 +160,8 @@ type (
 		logger                     log.Logger
 		metricsClient              metrics.Client
 		pendingActivityWarningSent bool
+
+		executionStats *persistence.ExecutionStats
 	}
 )
 
@@ -241,6 +243,7 @@ func newMutableStateBuilder(
 	s.taskGenerator = NewMutableStateTaskGenerator(shard.GetClusterMetadata(), shard.GetDomainCache(), s)
 	s.decisionTaskManager = newMutableStateDecisionTaskManager(s)
 
+	s.executionStats = &persistence.ExecutionStats{}
 	return s
 }
 
@@ -333,6 +336,7 @@ func (e *mutableStateBuilder) Load(
 	// TODO: remove this after all 2DC workflows complete
 	e.replicationState = state.ReplicationState
 	e.checksum = state.Checksum
+	e.executionStats = state.ExecutionStats
 
 	e.fillForBackwardsCompatibility()
 
@@ -4192,6 +4196,14 @@ func (e *mutableStateBuilder) UpdateDuplicatedResource(
 ) {
 	id := definition.GenerateDeduplicationKey(resourceDedupKey)
 	e.appliedEvents[id] = struct{}{}
+}
+
+func (e *mutableStateBuilder) GetHistorySize() int64 {
+	return e.executionStats.HistorySize
+}
+
+func (e *mutableStateBuilder) SetHistorySize(size int64) {
+	e.executionStats.HistorySize = size
 }
 
 func (e *mutableStateBuilder) prepareCloseTransaction(

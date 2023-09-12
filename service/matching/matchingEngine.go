@@ -94,6 +94,12 @@ type (
 		membershipResolver   membership.Resolver
 		partitioner          partition.Partitioner
 	}
+
+	// HistoryInfo consists of two integer regarding the history size and history count
+	//HistoryInfo struct {
+	//	historySize  int64
+	//	historyCount int64
+	//}
 )
 
 var (
@@ -459,6 +465,7 @@ pollLoop:
 		if task.isStarted() {
 			// tasks received from remote are already started. So, simply forward the response
 			return task.pollForDecisionResponse(), nil
+			// TODO: Maybe add history expose here?
 		}
 
 		if task.isQuery() {
@@ -488,12 +495,14 @@ pollLoop:
 				StickyExecutionEnabled:    isStickyEnabled,
 				WorkflowExecutionTaskList: mutableStateResp.TaskList,
 				BranchToken:               mutableStateResp.CurrentBranchToken,
+				HistorySize:               mutableStateResp.HistorySize,
 			}
 			return e.createPollForDecisionTaskResponse(task, resp, hCtx.scope), nil
 		}
 
 		e.emitTaskIsolationMetrics(hCtx.scope, task.event.PartitionConfig, req.GetIsolationGroup())
 		resp, err := e.recordDecisionTaskStarted(hCtx.Context, request, task)
+
 		if err != nil {
 			switch err.(type) {
 			case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError, *types.EventAlreadyStartedError:
@@ -886,6 +895,11 @@ func (e *matchingEngineImpl) getTask(
 	}
 	return tlMgr.GetTask(ctx, maxDispatchPerSecond)
 }
+
+//
+//func (e *matchingEngineImpl) getHistoryInfo() (HistoryInfo, error) {
+//
+//}
 
 func (e *matchingEngineImpl) unloadTaskList(tlMgr taskListManager) {
 	id := tlMgr.TaskListID()

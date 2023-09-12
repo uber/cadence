@@ -72,6 +72,7 @@ var (
 		WorkflowCloseState:                   common.Int32Ptr(persistence.WorkflowCloseStatusTimedOut),
 		VersionHistories:                     &VersionHistories,
 		IsStickyTaskListEnabled:              true,
+		HistorySize:                          HistorySizeInBytes,
 	}
 	HistoryGetReplicationMessagesRequest  = AdminGetReplicationMessagesRequest
 	HistoryGetReplicationMessagesResponse = AdminGetReplicationMessagesResponse
@@ -171,6 +172,7 @@ var (
 		ScheduledTimestamp:        &Timestamp1,
 		StartedTimestamp:          &Timestamp2,
 		Queries:                   WorkflowQueryMap,
+		HistorySize:               HistorySizeInBytes,
 	}
 	HistoryRefreshWorkflowTasksRequest = types.HistoryRefreshWorkflowTasksRequest{
 		DomainUIID: DomainID,

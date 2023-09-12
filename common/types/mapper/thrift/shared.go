@@ -3590,6 +3590,7 @@ func FromPollForDecisionTaskResponse(t *types.PollForDecisionTaskResponse) *shar
 		StartedTimestamp:          t.StartedTimestamp,
 		Queries:                   FromWorkflowQueryMap(t.Queries),
 		NextEventId:               &t.NextEventID,
+		TotalHistoryBytes:         &t.TotalHistoryBytes,
 	}
 }
 
@@ -3614,6 +3615,7 @@ func ToPollForDecisionTaskResponse(t *shared.PollForDecisionTaskResponse) *types
 		StartedTimestamp:          t.StartedTimestamp,
 		Queries:                   ToWorkflowQueryMap(t.Queries),
 		NextEventID:               t.GetNextEventId(),
+		TotalHistoryBytes:         t.GetTotalHistoryBytes(),
 	}
 }
 

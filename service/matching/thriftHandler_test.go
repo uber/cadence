@@ -93,6 +93,7 @@ func TestThriftHandler(t *testing.T) {
 			StickyExecutionEnabled: common.BoolPtr(false),
 			BacklogCountHint:       common.Int64Ptr(0),
 			EventStoreVersion:      common.Int32Ptr(0),
+			TotalHistoryBytes:      common.Int64Ptr(0),
 		}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
