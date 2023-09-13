@@ -343,3 +343,48 @@ func TestAddTaskStandby(t *testing.T) {
 	require.Error(t, err) // should not persist the task
 	require.False(t, syncMatch)
 }
+
+func TestGetPollerIsolationGroup(t *testing.T) {
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	config := defaultTestConfig()
+	config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(30 * time.Second)
+	tlm := createTestTaskListManagerWithConfig(controller, config)
+
+	bgCtx := context.WithValue(context.Background(), pollerIDKey, "poller0")
+	bgCtx = context.WithValue(bgCtx, identityKey, "id0")
+	bgCtx = context.WithValue(bgCtx, _isolationGroupKey, config.AllIsolationGroups[0])
+	ctx, cancel := context.WithTimeout(bgCtx, time.Second)
+	_, err := tlm.GetTask(ctx, nil)
+	cancel()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), ErrNoTasks.Error())
+
+	// we should get isolation groups that showed up within last 10 seconds
+	groups := tlm.getPollerIsolationGroups()
+	assert.Equal(t, 1, len(groups))
+	assert.Equal(t, config.AllIsolationGroups[0], groups[0])
+
+	// after 10s, the poller from that isolation group are cleared from the poller history
+	time.Sleep(10 * time.Second)
+	groups = tlm.getPollerIsolationGroups()
+	assert.Equal(t, 0, len(groups))
+
+	// we should get isolation groups of outstanding pollers
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		ctx, cancel := context.WithTimeout(bgCtx, time.Second*20)
+		_, err := tlm.GetTask(ctx, nil)
+		cancel()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), ErrNoTasks.Error())
+	}()
+	time.Sleep(11 * time.Second)
+	groups = tlm.getPollerIsolationGroups()
+	wg.Wait()
+	assert.Equal(t, 1, len(groups))
+	assert.Equal(t, config.AllIsolationGroups[0], groups[0])
+}
