@@ -145,7 +145,7 @@ LIMIT 0, 10
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND (JSON_MATCH(Attr, '"$.CustomKeywordField"=''keywordCustomized''') or JSON_MATCH(Attr, '"$.CustomKeywordField[*]"=''keywordCustomized''')) and JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'STRING') LIKE '%%String and or order by%%'
+AND (JSON_MATCH(Attr, '"$.CustomKeywordField"=''keywordCustomized''') or JSON_MATCH(Attr, '"$.CustomKeywordField[*]"=''keywordCustomized''')) and (JSON_MATCH(Attr, '"$.CustomStringField" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'String and or order by*'))
 Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName),
@@ -162,7 +162,7 @@ LIMIT 0, 10
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND (JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'STRING') LIKE '%%Or%%' or JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'STRING') LIKE '%%and%%')
+AND ((JSON_MATCH(Attr, '"$.CustomStringField" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'Or*')) or (JSON_MATCH(Attr, '"$.CustomStringField" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'and*')))
 Order by StartTime DESC
 LIMIT 0, 10
 `, testTableName),
@@ -179,7 +179,7 @@ LIMIT 0, 10
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND WorkflowID = 'wid' and (JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'STRING') LIKE '%%custom and custom2 or custom3 order by%%' or CustomIntField between 1 and 10)
+AND WorkflowID = 'wid' and ((JSON_MATCH(Attr, '"$.CustomStringField" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'custom and custom2 or custom3 order by*')) or CustomIntField between 1 and 10)
 Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName),
@@ -230,7 +230,7 @@ LIMIT 0, 10
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND CloseStatus < 0 and (JSON_MATCH(Attr, '"$.CustomKeywordField"=''keywordCustomized''') or JSON_MATCH(Attr, '"$.CustomKeywordField[*]"=''keywordCustomized''')) and JSON_MATCH(Attr, '"$.CustomIntField"=''10''') and JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'STRING') LIKE '%%String field is for text%%'
+AND CloseStatus < 0 and (JSON_MATCH(Attr, '"$.CustomKeywordField"=''keywordCustomized''') or JSON_MATCH(Attr, '"$.CustomKeywordField[*]"=''keywordCustomized''')) and JSON_MATCH(Attr, '"$.CustomIntField"=''10''') and (JSON_MATCH(Attr, '"$.CustomStringField" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'String field is for text*'))
 Order by DomainID Desc
 LIMIT 11, 10
 `, testTableName),

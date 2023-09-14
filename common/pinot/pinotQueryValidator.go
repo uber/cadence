@@ -256,8 +256,9 @@ func (qv *VisibilityQueryValidator) processCustomKey(expr sqlparser.Expr) (strin
 			Type: sqlparser.StrVal,
 			Val:  []byte("%" + colValStr + "%"),
 		}
-		return fmt.Sprintf("JSON_EXTRACT_SCALAR(Attr, '$.%s', 'STRING') LIKE '%%%s%%'", colNameStr, colValStr), nil
-
+		//return fmt.Sprintf("JSON_EXTRACT_SCALAR(Attr, '$.%s', 'STRING') LIKE '%%%s%%'", colNameStr, colValStr), nil
+		return fmt.Sprintf("(JSON_MATCH(Attr, '\"$.%s\" is not null') "+
+			"AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.%s', 'string'), '%s*'))", colNameStr, colNameStr, colValStr), nil
 	}
 	// case2-2: otherwise, exact match
 	// case2-2-1: if it is keyword, need to deal with a situation when value is an array
