@@ -48,6 +48,29 @@ const (
 	dateOnly = "2006-01-02"
 )
 
+// sane time ranges for workflows.
+// this is largely to protect against accidental conversions from zero values, or incorrect second/nanosecond/etc scales.
+var (
+	// too old to be real.  e.g. prior to Cadence existing.
+	//
+	// anything "reasonable" is likely fine, but this should be substantially newer than 1970 to catch zero times.
+	impossiblyOld = time.Date(2015, 0, 0, 0, 0, 0, 0, time.UTC)
+	// too far in the future to be real.
+	//
+	// crazy values are technically possible if someone sets a 100-year timeout on a workflow or something,
+	// but we should probably block those anyway.  hopefully nonexistent or rare enough to handle manually (and correct).
+	impossiblyFuture = time.Date(2100, 0, 0, 0, 0, 0, 0, time.UTC)
+	// our internal limits are:
+	// - practically: 30 days
+	// - for monthly-job people: 40 days
+	// - rare exceptions we are trying to eliminate: 90+ days
+	//
+	// this should be far beyond that and should imply bad data, not merely an exceptional domain.
+	//
+	// note that this is not used to *force* deletion.  workflows in domains beyond this value will fail and be skipped.
+	maxRetentionDays = 200
+)
+
 // NewStaleWorkflow checks to see if a workflow has out-lived its retention window.
 // This primarily asserts that that now < (min(start + execution timeout, min) + (domain retention*2)).
 // If a workflow fails this check, its data is still lingering well beyond when it should have been cleaned up.
@@ -185,29 +208,6 @@ func (c *staleWorkflowCheck) Name() Name {
 	return StaleWorkflow
 }
 
-// sane time ranges for workflows.
-// this is largely to protect against accidental conversions from zero values, or incorrect second/nanosecond/etc scales.
-var (
-	// too old to be real.  e.g. prior to Cadence existing.
-	//
-	// anything "reasonable" is likely fine, but this should be substantially newer than 1970 to catch zero times.
-	impossiblyOld = time.Date(2015, 0, 0, 0, 0, 0, 0, time.UTC)
-	// too far in the future to be real.
-	//
-	// crazy values are technically possible if someone sets a 100-year timeout on a workflow or something,
-	// but we should probably block those anyway.  hopefully nonexistent or rare enough to handle manually (and correct).
-	impossiblyFuture = time.Date(2100, 0, 0, 0, 0, 0, 0, time.UTC)
-	// our internal limits are:
-	// - practically: 30 days
-	// - for monthly-job people: 40 days
-	// - rare exceptions we are trying to eliminate: 90+ days
-	//
-	// this should be far beyond that and should imply bad data, not merely an exceptional domain.
-	//
-	// note that this is not used to *force* deletion.  workflows in domains beyond this value will fail and be skipped.
-	maxRetentionDays = 200
-)
-
 func (c *staleWorkflowCheck) checkAge(workflow *persistence.GetWorkflowExecutionResponse) (pastExpiration bool, result CheckResult) {
 	info := workflow.State.ExecutionInfo
 	retentionNum, domainName, err := c.testable.getDomainInfo(info)
@@ -264,13 +264,20 @@ func (c *staleWorkflowCheck) checkAge(workflow *persistence.GetWorkflowExecution
 			logStaleWorkflow("zombie", expected)
 		}
 		return stale, result
+	} else if info.State == persistence.WorkflowStateCompleted {
+		stale, expected, result := c.checkClosedAge(workflow, maxLifespan, domainName)
+		if stale {
+			// we know these exist, but we don't have a good feel for the distribution
+			logStaleWorkflow("closed", expected)
+		}
+		return stale, result
 	}
-	stale, expected, result := c.checkClosedAge(workflow, maxLifespan, domainName)
-	if stale {
-		// we know these exist, but we don't have a good feel for the distribution
-		logStaleWorkflow("closed", expected)
-	}
-	return stale, result
+
+	// currently one of: corrupted, created, void
+	// but if more are added in the future, this is still the safe option.
+	return false, c.failed(
+		"unhandled workflow state",
+		"info.State value: %d", info.State)
 }
 
 func (c *staleWorkflowCheck) checkRunningAge(workflow *persistence.GetWorkflowExecutionResponse, maxLifespan time.Duration, domainName string) (pastExpiration bool, expected time.Time, result CheckResult) {
@@ -589,6 +596,7 @@ func (c *staleWorkflowCheck) getLastEvent(branchToken []byte, domainName string)
 		pageSize      = 1000   // multiple 1000/page limits elsewhere, also fine to change
 		batchTimeout  = 5 * time.Second
 	)
+	shard := c.pr.GetShardID()
 	iter := 0
 	var nextPageToken []byte
 	var lastEvent *types.HistoryEvent
@@ -596,7 +604,6 @@ func (c *staleWorkflowCheck) getLastEvent(branchToken []byte, domainName string)
 		ctx, cancel := context.WithTimeout(context.Background(), batchTimeout)
 		defer cancel() // revive:disable-line:defer clean up on panics, dups are just noops
 
-		shard := c.pr.GetShardID()
 		history, err := c.pr.ReadHistoryBranch(ctx, &persistence.ReadHistoryBranchRequest{
 			BranchToken: branchToken,
 			// only interested in the last event, but we have to read in order to get there.
