@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 You can find a list of previous releases on the [github releases](https://github.com/uber/cadence/releases) page.
 
+## [1.2.3] - 2023-09-15
+### Added
+Expose workflow history size and count to client (#5392)
+
+### Fixed
+[cadence-cli] fix typo in input flag for parallelism (#5397)
+
+### Changed
+Update config store client to support SQL database (#5395)
+Scaffold config store for sql plugins (#5396)
+Improve poller detection for isolation (#5399)
+
 ## [1.2.2] - 2023-08-29
 ### Added
 Added a update workflow execution count metric for RI (#5386)
