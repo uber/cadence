@@ -30,17 +30,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
-	"github.com/uber/cadence/common/config"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/mongodb"
 	"github.com/uber/cadence/common/types"
 )
-
-var supportedPlugins = map[string]bool{
-	cassandra.PluginName: true,
-	mongodb.PluginName:   true,
-}
 
 // Currently you cannot clear or remove any entries in cluster_config table
 // Therefore, Teardown and Setup of Test DB is required before every test.
@@ -75,10 +67,6 @@ func (s *ConfigStorePersistenceSuite) TearDownSuite() {
 
 // Tests if error is returned when trying to fetch dc values from empty table
 func (s *ConfigStorePersistenceSuite) TestFetchFromEmptyTable() {
-	if !validDatabaseCheck(s.Config()) {
-		s.T().Skip()
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
@@ -91,10 +79,6 @@ func (s *ConfigStorePersistenceSuite) TestFetchFromEmptyTable() {
 }
 
 func (s *ConfigStorePersistenceSuite) TestUpdateSimpleSuccess() {
-	if !validDatabaseCheck(s.Config()) {
-		s.T().Skip()
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
@@ -113,10 +97,6 @@ func (s *ConfigStorePersistenceSuite) TestUpdateSimpleSuccess() {
 }
 
 func (s *ConfigStorePersistenceSuite) TestUpdateVersionCollisionFailure() {
-	if !validDatabaseCheck(s.Config()) {
-		s.T().Skip()
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
@@ -133,10 +113,6 @@ func (s *ConfigStorePersistenceSuite) TestUpdateVersionCollisionFailure() {
 }
 
 func (s *ConfigStorePersistenceSuite) TestUpdateIncrementalVersionSuccess() {
-	if !validDatabaseCheck(s.Config()) {
-		s.T().Skip()
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
@@ -152,10 +128,6 @@ func (s *ConfigStorePersistenceSuite) TestUpdateIncrementalVersionSuccess() {
 }
 
 func (s *ConfigStorePersistenceSuite) TestFetchLatestVersionSuccess() {
-	if !validDatabaseCheck(s.Config()) {
-		s.T().Skip()
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
@@ -200,15 +172,6 @@ func generateRandomSnapshot(version int64) *p.DynamicConfigSnapshot {
 			Entries:       entries,
 		},
 	}
-}
-
-func validDatabaseCheck(cfg config.Persistence) bool {
-	if datastore, ok := cfg.DataStores[cfg.DefaultStore]; ok {
-		if datastore.NoSQL != nil {
-			return supportedPlugins[datastore.NoSQL.PluginName]
-		}
-	}
-	return false
 }
 
 func (s *ConfigStorePersistenceSuite) FetchDynamicConfig(ctx context.Context) (*p.DynamicConfigSnapshot, error) {
