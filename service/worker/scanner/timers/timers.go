@@ -84,11 +84,10 @@ func FixerWorkflow(
 
 // ScannerHooks provides hooks for timers scanner.
 func ScannerHooks() *shardscanner.ScannerHooks {
-	h, err := shardscanner.NewScannerHooks(Manager, Iterator)
+	h, err := shardscanner.NewScannerHooks(Manager, Iterator, Config)
 	if err != nil {
 		return nil
 	}
-	h.SetConfig(Config)
 
 	return h
 }

@@ -227,19 +227,15 @@ func getShardBatches(
 	return result
 }
 
-// SetConfig allow to pass optional config resolver hook
-func (sh *ScannerHooks) SetConfig(config func(scanner Context) CustomScannerConfig) {
-	sh.GetScannerConfig = config
-}
-
 // NewScannerHooks is used to have per scanner iterator and invariant manager
-func NewScannerHooks(manager ManagerCB, iterator IteratorCB) (*ScannerHooks, error) {
+func NewScannerHooks(manager ManagerCB, iterator IteratorCB, config func(scanner Context) CustomScannerConfig) (*ScannerHooks, error) {
 	if manager == nil || iterator == nil {
 		return nil, errors.New("manager or iterator not provided")
 	}
 
 	return &ScannerHooks{
-		Manager:  manager,
-		Iterator: iterator,
+		Manager:          manager,
+		Iterator:         iterator,
+		GetScannerConfig: config,
 	}, nil
 }

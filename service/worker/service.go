@@ -145,8 +145,8 @@ func NewConfig(params *resource.Params) *Config {
 			TaskListScannerEnabled: dc.GetBoolProperty(dynamicconfig.TaskListScannerEnabled),
 			HistoryScannerEnabled:  dc.GetBoolProperty(dynamicconfig.HistoryScannerEnabled),
 			ShardScanners: []*shardscanner.ScannerConfig{
-				executions.ConcreteExecutionScannerConfig(dc),
-				executions.CurrentExecutionScannerConfig(dc),
+				executions.ConcreteExecutionConfig(dc),
+				executions.CurrentExecutionConfig(dc),
 				timers.ScannerConfig(dc),
 			},
 			MaxWorkflowRetentionInDays: dc.GetIntProperty(dynamicconfig.MaxRetentionDays),

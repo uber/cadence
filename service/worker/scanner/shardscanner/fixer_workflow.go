@@ -63,12 +63,14 @@ type FixerIteratorCB func(
 type FixerHooks struct {
 	InvariantManager FixerManagerCB
 	Iterator         FixerIteratorCB
+	GetFixerConfig   func(fixer FixerContext) CustomScannerConfig
 }
 
 // NewFixerHooks returns initialized callbacks for shard scanner workflow implementation.
 func NewFixerHooks(
 	manager FixerManagerCB,
 	iterator FixerIteratorCB,
+	config func(fixer FixerContext) CustomScannerConfig,
 ) (*FixerHooks, error) {
 	if manager == nil || iterator == nil {
 		return nil, errors.New("manager or iterator not provided")
@@ -76,6 +78,7 @@ func NewFixerHooks(
 	return &FixerHooks{
 		InvariantManager: manager,
 		Iterator:         iterator,
+		GetFixerConfig:   config,
 	}, nil
 }
 
@@ -125,6 +128,17 @@ func NewFixerWorkflow(
 func (fx *FixerWorkflow) Start(ctx workflow.Context) error {
 
 	resolvedConfig := resolveFixerConfig(fx.Params.FixerWorkflowConfigOverwrites)
+
+	var enabled []invariant.Collection
+	if workflow.GetVersion(ctx, "dynamic fixer config", workflow.DefaultVersion, 1) == 1 {
+		activityCtx := getShortActivityContext(ctx)
+		var out FixShardConfigResults
+		if err := workflow.ExecuteActivity(activityCtx, ActivityFixerConfig, FixShardConfigParams{}).Get(activityCtx, &out); err != nil {
+			return err
+		}
+		enabled = out.Invariants
+	}
+
 	shardReportChan := workflow.GetSignalChannel(ctx, fixShardReportChan)
 
 	for i := 0; i < resolvedConfig.Concurrency; i++ {
@@ -137,6 +151,7 @@ func (fx *FixerWorkflow) Start(ctx workflow.Context) error {
 				if err := workflow.ExecuteActivity(activityCtx, ActivityFixShard, FixShardActivityParams{
 					CorruptedKeysEntries:        batch,
 					ResolvedFixerWorkflowConfig: resolvedConfig,
+					EnabledInvariants:           enabled,
 				}).Get(ctx, &reports); err != nil {
 					errStr := err.Error()
 					shardReportChan.Send(ctx, FixReportError{

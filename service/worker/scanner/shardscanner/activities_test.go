@@ -65,10 +65,10 @@ func TestActivitiesSuite(t *testing.T) {
 }
 
 func (s *activitiesSuite) SetupSuite() {
-	activity.Register(ScannerConfigActivity)
-	activity.Register(FixerCorruptedKeysActivity)
-	activity.Register(ScanShardActivity)
-	activity.Register(FixShardActivity)
+	activity.Register(scannerConfigActivity)
+	activity.Register(fixerCorruptedKeysActivity)
+	activity.Register(scanShardActivity)
+	activity.Register(fixShardActivity)
 }
 
 func (s *activitiesSuite) SetupTest() {
@@ -143,7 +143,7 @@ func (s *activitiesSuite) TestScanShardActivity() {
 		env.SetWorkerOptions(worker.Options{
 			BackgroundActivityContext: ctx,
 		})
-		report, err := env.ExecuteActivity(ScanShardActivity, tc.params)
+		report, err := env.ExecuteActivity(scanShardActivity, tc.params)
 		if tc.wantErr {
 			s.Error(err)
 			break
@@ -246,7 +246,7 @@ func (s *activitiesSuite) TestFixShardActivity() {
 			env.SetWorkerOptions(worker.Options{
 				BackgroundActivityContext: NewFixerContext(context.Background(), testWorkflowName, fc),
 			})
-			report, execErr := env.ExecuteActivity(FixShardActivity, tc.params)
+			report, execErr := env.ExecuteActivity(fixShardActivity, tc.params)
 			if tc.wantErr {
 				s.Error(execErr)
 			} else {
@@ -374,7 +374,7 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 		},
 		)
 
-		resolvedValue, err := env.ExecuteActivity(ScannerConfigActivity, tc.params)
+		resolvedValue, err := env.ExecuteActivity(scannerConfigActivity, tc.params)
 		s.NoError(err)
 		var resolved ResolvedScannerWorkflowConfig
 		s.NoError(resolvedValue.Get(&resolved))
@@ -427,7 +427,7 @@ func (s *activitiesSuite) TestFixerCorruptedKeysActivity() {
 		QueryResult: queryResultData,
 	}, nil)
 	env := s.getFixerActivityEnvironment()
-	fixerResultValue, err := env.ExecuteActivity(FixerCorruptedKeysActivity, FixerCorruptedKeysActivityParams{})
+	fixerResultValue, err := env.ExecuteActivity(fixerCorruptedKeysActivity, FixerCorruptedKeysActivityParams{})
 	s.NoError(err)
 	fixerResult := &FixerCorruptedKeysActivityResult{}
 	s.NoError(fixerResultValue.Get(&fixerResult))
@@ -480,7 +480,7 @@ func (s *activitiesSuite) TestFixerCorruptedKeysActivity_Fails_WhenNoSuitableExe
 	s.mockResource.SDKClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).Return(response, nil)
 
 	env := s.getFixerActivityEnvironment()
-	fixerResultValue, err := env.ExecuteActivity(FixerCorruptedKeysActivity, FixerCorruptedKeysActivityParams{})
+	fixerResultValue, err := env.ExecuteActivity(fixerCorruptedKeysActivity, FixerCorruptedKeysActivityParams{})
 	s.Nil(fixerResultValue)
 	s.EqualError(err, "failed to find a recent scanner workflow execution with ContinuedAsNew status")
 }

@@ -72,7 +72,7 @@ type (
 		Logger   log.Logger
 	}
 
-	// ScannerEmitMetricsActivityParams is the parameter for ScannerEmitMetricsActivity
+	// ScannerEmitMetricsActivityParams is the parameter for scannerEmitMetricsActivity
 	ScannerEmitMetricsActivityParams struct {
 		ShardSuccessCount            int
 		ShardControlFlowFailureCount int
@@ -99,12 +99,12 @@ type (
 		ScannerWorkflowConfigOverwrites ScannerWorkflowConfigOverwrites
 	}
 
-	// ScannerConfigActivityParams is the parameter for ScannerConfigActivity
+	// ScannerConfigActivityParams is the parameter for scannerConfigActivity
 	ScannerConfigActivityParams struct {
 		Overwrites ScannerWorkflowConfigOverwrites
 	}
 
-	// ScanShardActivityParams is the parameter for ScanShardActivity
+	// ScanShardActivityParams is the parameter for scanShardActivity
 	ScanShardActivityParams struct {
 		Shards                  []int
 		PageSize                int
@@ -201,21 +201,32 @@ type (
 		InfoDetails string
 	}
 
-	// FixerCorruptedKeysActivityParams is the parameter for FixerCorruptedKeysActivity
+	// FixerCorruptedKeysActivityParams is the parameter for fixerCorruptedKeysActivity
 	FixerCorruptedKeysActivityParams struct {
 		ScannerWorkflowWorkflowID string
 		ScannerWorkflowRunID      string
 		StartingShardID           *int
 	}
 
-	// FixShardActivityParams is the parameter for FixShardActivity
+	// FixShardActivityParams is the parameter for fixShardActivity
 	FixShardActivityParams struct {
 		CorruptedKeysEntries        []CorruptedKeysEntry
 		ResolvedFixerWorkflowConfig ResolvedFixerWorkflowConfig
+
+		// EnabledInvariants contains all known invariants for fixer, with "true" or "false" values.
+		// In current code it should never be empty.
+		//
+		// When empty, EnabledInvariants came from old serialized data prior to this field existing,
+		// and the historical list of invariants should be used.
+		EnabledInvariants CustomScannerConfig
 	}
 
-	// CustomScannerConfig is used to pass key/value parameters between shardscanner activity and scanner implementation
-	// this is used to have activities with better determinism
+	// CustomScannerConfig is used to pass key/value parameters between shardscanner activity and scanner/fixer implementations.
+	// this is used to have activities with better consistency, as the workflow records one config and uses it for all shards,
+	// even after config / code changes.
+	//
+	// It is currently only used to pass invariant names to control whether they are enabled or not.
+	// Please do not use this for other purposes.
 	CustomScannerConfig map[string]string
 
 	// GenericScannerConfig is a generic params for all shard scanners
