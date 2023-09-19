@@ -24,15 +24,37 @@ package mysql
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
+)
+
+const (
+	_selectLatestConfigQuery = "SELECT row_type, version, timestamp, data, data_encoding FROM cluster_config WHERE row_type = ? ORDER BY version LIMIT 1;"
+
+	_insertConfigQuery = "INSERT INTO cluster_config (row_type, version, timestamp, data, data_encoding) VALUES(?, ?, ?, ?, ?)"
 )
 
 func (mdb *db) InsertConfig(ctx context.Context, row *persistence.InternalConfigStoreEntry) error {
-	return fmt.Errorf("not implemented")
+	_, err := mdb.driver.ExecContext(ctx, sqlplugin.DbDefaultShard, _insertConfigQuery, row.RowType, -1*row.Version, mdb.converter.ToMySQLDateTime(row.Timestamp), row.Values.Data, row.Values.Encoding)
+	return err
 }
 
 func (mdb *db) SelectLatestConfig(ctx context.Context, rowType int) (*persistence.InternalConfigStoreEntry, error) {
-	return nil, fmt.Errorf("not implemented")
+	var row sqlplugin.ClusterConfigRow
+	err := mdb.driver.GetContext(ctx, sqlplugin.DbDefaultShard, &row, _selectLatestConfigQuery, rowType)
+	if err != nil {
+		return nil, err
+	}
+	row.Version *= -1
+	return &persistence.InternalConfigStoreEntry{
+		RowType:   row.RowType,
+		Version:   row.Version,
+		Timestamp: mdb.converter.FromMySQLDateTime(row.Timestamp),
+		Values: &persistence.DataBlob{
+			Data:     row.Data,
+			Encoding: common.EncodingType(row.DataEncoding),
+		},
+	}, nil
 }
