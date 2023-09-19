@@ -253,6 +253,63 @@ func (v *pinotVisibilityStore) UpsertWorkflowExecution(ctx context.Context, requ
 	return v.producer.Publish(ctx, msg)
 }
 
+func (v *pinotVisibilityStore) DeleteWorkflowExecution(
+	ctx context.Context,
+	request *p.VisibilityDeleteWorkflowExecutionRequest,
+) error {
+	v.checkProducer()
+	msg, err := createVisibilityMessage(
+		request.DomainID,
+		request.WorkflowID,
+		request.RunID,
+		"",
+		"",
+		-1,
+		-1,
+		request.TaskID,
+		nil,
+		"",
+		false,
+		-1,
+		-1,
+		-1,
+		-1,
+		-1,
+		-1,
+		nil,
+		true,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return v.producer.Publish(ctx, msg)
+}
+
+func (v *pinotVisibilityStore) DeleteUninitializedWorkflowExecution(
+	ctx context.Context,
+	request *p.VisibilityDeleteWorkflowExecutionRequest,
+) error {
+	// verify if it is uninitialized workflow execution record
+	// if it is, then call the existing delete method to delete
+	query := fmt.Sprintf("StartTime = missing and DomainID = %s and RunID = %s", request.DomainID, request.RunID)
+	queryRequest := &p.CountWorkflowExecutionsRequest{
+		Domain: request.Domain,
+		Query:  query,
+	}
+	resp, err := v.CountWorkflowExecutions(ctx, queryRequest)
+	if err != nil {
+		return err
+	}
+	if resp.Count > 0 {
+		if err = v.DeleteWorkflowExecution(ctx, request); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (v *pinotVisibilityStore) ListOpenWorkflowExecutions(
 	ctx context.Context,
 	request *p.InternalListWorkflowExecutionsRequest,
@@ -475,58 +532,6 @@ func (v *pinotVisibilityStore) CountWorkflowExecutions(ctx context.Context, requ
 	}, nil
 }
 
-func (v *pinotVisibilityStore) DeleteWorkflowExecution(
-	ctx context.Context,
-	request *p.VisibilityDeleteWorkflowExecutionRequest,
-) error {
-	v.checkProducer()
-	msg, _ := createVisibilityMessage(
-		request.DomainID,
-		request.WorkflowID,
-		request.RunID,
-		"",
-		"",
-		-1,
-		-1,
-		request.TaskID,
-		nil,
-		"",
-		false,
-		-1,
-		-1,
-		-1,
-		-1,
-		-1,
-		-1,
-		nil,
-		true,
-	)
-	return v.producer.Publish(ctx, msg)
-}
-
-func (v *pinotVisibilityStore) DeleteUninitializedWorkflowExecution(
-	ctx context.Context,
-	request *p.VisibilityDeleteWorkflowExecutionRequest,
-) error {
-	// verify if it is uninitialized workflow execution record
-	// if it is, then call the existing delete method to delete
-	query := fmt.Sprintf("StartTime = missing and DomainID = %s and RunID = %s", request.DomainID, request.RunID)
-	queryRequest := &p.CountWorkflowExecutionsRequest{
-		Domain: request.Domain,
-		Query:  query,
-	}
-	resp, err := v.CountWorkflowExecutions(ctx, queryRequest)
-	if err != nil {
-		return err
-	}
-	if resp.Count > 0 {
-		if err = v.DeleteWorkflowExecution(ctx, request); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func (v *pinotVisibilityStore) checkProducer() {
 	if v.producer == nil {
 		// must be bug, check history setup
@@ -592,7 +597,6 @@ func createVisibilityMessage(
 		SearchAttributes[key] = val
 	}
 	m[Attr] = SearchAttributes
-
 	serializedMsg, err := json.Marshal(m)
 	if err != nil {
 		return nil, err
