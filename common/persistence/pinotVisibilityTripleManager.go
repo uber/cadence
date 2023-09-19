@@ -155,9 +155,11 @@ func (v *pinotVisibilityTripleManager) DeleteWorkflowExecution(
 			return v.dbVisibilityManager.DeleteWorkflowExecution(ctx, request)
 		},
 		func() error {
+			//panic("DEBUG: ES")
 			return v.esVisibilityManager.DeleteWorkflowExecution(ctx, request)
 		},
 		func() error {
+			//panic("DEBUG: Pinot")
 			return v.pinotVisibilityManager.DeleteWorkflowExecution(ctx, request)
 		},
 	)
