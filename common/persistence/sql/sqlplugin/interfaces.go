@@ -569,6 +569,15 @@ type (
 		Data      []byte
 	}
 
+	// ClusterConfigRow represents a row in cluster_config table
+	ClusterConfigRow struct {
+		RowType      int
+		Version      int64
+		Timestamp    time.Time
+		Data         []byte
+		DataEncoding string
+	}
+
 	// tableCRUD defines the API for interacting with the database tables
 	tableCRUD interface {
 		InsertIntoDomain(ctx context.Context, rows *DomainRow) (sql.Result, error)
