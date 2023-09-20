@@ -258,25 +258,10 @@ func (v *pinotVisibilityStore) DeleteWorkflowExecution(
 	request *p.VisibilityDeleteWorkflowExecutionRequest,
 ) error {
 	v.checkProducer()
-	msg, err := createVisibilityMessage(
+	msg, err := createDeleteVisibilityMessage(
 		request.DomainID,
 		request.WorkflowID,
 		request.RunID,
-		"",
-		"",
-		-1,
-		-1,
-		request.TaskID,
-		nil,
-		"",
-		false,
-		-1,
-		-1,
-		-1,
-		-1,
-		-1,
-		-1,
-		nil,
 		true,
 	)
 
@@ -537,6 +522,29 @@ func (v *pinotVisibilityStore) checkProducer() {
 		// must be bug, check history setup
 		panic("message producer is nil")
 	}
+}
+
+func createDeleteVisibilityMessage(domainID string,
+	wid,
+	rid string,
+	isDeleted bool,
+) (*indexer.PinotMessage, error) {
+	m := make(map[string]interface{})
+	m[DocID] = wid + "-" + rid
+	m[DomainID] = domainID
+	m[WorkflowID] = wid
+	m[RunID] = rid
+	m[IsDeleted] = isDeleted
+	serializedMsg, err := json.Marshal(m)
+	if err != nil {
+		return nil, err
+	}
+
+	msg := &indexer.PinotMessage{
+		WorkflowID: common.StringPtr(wid),
+		Payload:    serializedMsg,
+	}
+	return msg, nil
 }
 
 func createVisibilityMessage(
