@@ -54,4 +54,5 @@ frontend.validSearchAttributes:
     project: 1
     service: 1
     user: 1
+    IsDeleted: 1
   constraints: {}
