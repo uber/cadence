@@ -120,7 +120,7 @@ func CurrentFixerWorkflow(
 }
 
 // currentExecutionCustomScannerConfig resolves dynamic config for current executions scanner.
-func currentExecutionCustomScannerConfig(ctx shardscanner.Context) shardscanner.CustomScannerConfig {
+func currentExecutionCustomScannerConfig(ctx shardscanner.ScannerContext) shardscanner.CustomScannerConfig {
 	res := shardscanner.CustomScannerConfig{}
 
 	if ctx.Config.DynamicCollection.GetBoolProperty(dynamicconfig.CurrentExecutionsScannerInvariantCollectionHistory)() {

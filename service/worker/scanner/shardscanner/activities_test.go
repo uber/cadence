@@ -135,7 +135,9 @@ func (s *activitiesSuite) TestScanShardActivity() {
 	for _, tc := range testCases {
 
 		env := s.NewTestActivityEnvironment()
-		hooks, _ := NewScannerHooks(tc.managerHook, tc.itHook)
+		hooks, _ := NewScannerHooks(tc.managerHook, tc.itHook, func(scanner ScannerContext) CustomScannerConfig {
+			return nil // no config overrides
+		})
 		sc := NewShardScannerContext(s.mockResource, &ScannerConfig{
 			ScannerHooks: func() *ScannerHooks { return hooks },
 		})
@@ -358,7 +360,7 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 		if tc.addHook {
 			cfg.ScannerHooks = func() *ScannerHooks {
 				return &ScannerHooks{
-					GetScannerConfig: func(scanner Context) CustomScannerConfig {
+					GetScannerConfig: func(scanner ScannerContext) CustomScannerConfig {
 						return map[string]string{"test-key": "test-value"}
 					},
 				}

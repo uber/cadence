@@ -78,7 +78,7 @@ type ScannerWorkflow struct {
 type ScannerHooks struct {
 	Manager          ManagerCB
 	Iterator         IteratorCB
-	GetScannerConfig func(scanner Context) CustomScannerConfig
+	GetScannerConfig func(scanner ScannerContext) CustomScannerConfig
 }
 
 // NewScannerWorkflow creates instance of shard scanner
@@ -228,7 +228,7 @@ func getShardBatches(
 }
 
 // NewScannerHooks is used to have per scanner iterator and invariant manager
-func NewScannerHooks(manager ManagerCB, iterator IteratorCB, config func(scanner Context) CustomScannerConfig) (*ScannerHooks, error) {
+func NewScannerHooks(manager ManagerCB, iterator IteratorCB, config func(scanner ScannerContext) CustomScannerConfig) (*ScannerHooks, error) {
 	if manager == nil || iterator == nil || config == nil {
 		return nil, errors.New("all scanner hooks args are required")
 	}

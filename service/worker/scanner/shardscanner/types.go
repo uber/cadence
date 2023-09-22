@@ -54,8 +54,8 @@ const (
 type (
 	contextKey string
 
-	// Context is the resource that is available in activities under ShardScanner context key
-	Context struct {
+	// ScannerContext is the resource that is available in activities under ShardScanner context key
+	ScannerContext struct {
 		Resource resource.Resource
 		Hooks    *ScannerHooks
 		Scope    metrics.Scope
@@ -447,8 +447,8 @@ func (s Shards) Flatten() ([]int, int, int) {
 func NewShardScannerContext(
 	res resource.Resource,
 	config *ScannerConfig,
-) Context {
-	return Context{
+) ScannerContext {
+	return ScannerContext{
 		Resource: res,
 		Scope:    res.GetMetricsClient().Scope(metrics.ExecutionsScannerScope),
 		Config:   config,
@@ -484,7 +484,7 @@ func NewFixerContext(
 func NewScannerContext(
 	ctx context.Context,
 	workflowName string,
-	scannerContext Context,
+	scannerContext ScannerContext,
 ) context.Context {
 	return context.WithValue(ctx, contextKey(workflowName), scannerContext)
 }
@@ -492,14 +492,14 @@ func NewScannerContext(
 // GetScannerContext extracts scanner context from activity context
 func GetScannerContext(
 	ctx context.Context,
-) (Context, error) {
+) (ScannerContext, error) {
 	info := activity.GetInfo(ctx)
 	if info.WorkflowType == nil {
-		return Context{}, fmt.Errorf("workflowType is nil")
+		return ScannerContext{}, fmt.Errorf("workflowType is nil")
 	}
-	val, ok := ctx.Value(contextKey(info.WorkflowType.Name)).(Context)
+	val, ok := ctx.Value(contextKey(info.WorkflowType.Name)).(ScannerContext)
 	if !ok {
-		return Context{}, fmt.Errorf("context type is not %T for a key %q", val, info.WorkflowType.Name)
+		return ScannerContext{}, fmt.Errorf("context type is not %T for a key %q", val, info.WorkflowType.Name)
 	}
 	return val, nil
 }
