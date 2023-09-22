@@ -119,6 +119,14 @@ func (c *staleWorkflowCheck) Check(
 	ctx context.Context,
 	execution interface{},
 ) CheckResult {
+	x := true
+	if x {
+		return CheckResult{
+			CheckResultType: CheckResultTypeCorrupted,
+			InvariantName:   c.Name(),
+			Info:            "fake corrupt",
+		}
+	}
 	_, result := c.check(ctx, execution)
 	return result
 }
@@ -244,7 +252,9 @@ func (c *staleWorkflowCheck) checkAge(workflow *persistence.GetWorkflowExecution
 		)
 	}
 
-	if info.State == persistence.WorkflowStateRunning {
+	// treat "running" (has had decision tasks) and "created" (no decisions, e.g. cron / delay / lost initial tasks)
+	// as essentially the same thing.  either way there's no close event to check.
+	if info.State == persistence.WorkflowStateRunning || info.State == persistence.WorkflowStateCreated {
 		stale, expected, result := c.checkRunningAge(workflow, maxLifespan, domainName)
 		if stale {
 			// we know these exist, but we don't expect them to be numerous "recently".
@@ -583,7 +593,6 @@ func anyPresent(items ...interface{}) bool {
 	for _, i := range items {
 		// cannot use `i == nil` because typed nil pointers are boxed into non-nil interface{} due to having a type
 		if !reflect.ValueOf(i).IsNil() {
-			fmt.Printf("not nil: %T\n", i)
 			return true
 		}
 	}

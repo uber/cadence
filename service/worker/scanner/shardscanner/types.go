@@ -216,8 +216,9 @@ type (
 		// EnabledInvariants contains all known invariants for fixer, with "true" or "false" values.
 		// In current code it should never be empty.
 		//
-		// When empty, EnabledInvariants came from old serialized data prior to this field existing,
-		// and the historical list of invariants should be used.
+		// If empty, EnabledInvariants came from old serialized data prior to this field existing,
+		// and the historical list of invariants should be used.  This should be a one-time event
+		// after upgrading.
 		EnabledInvariants CustomScannerConfig
 	}
 

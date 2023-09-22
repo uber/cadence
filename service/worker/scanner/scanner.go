@@ -25,14 +25,12 @@ import (
 	"fmt"
 	"time"
 
-	"go.uber.org/cadence"
-
 	"github.com/uber-go/tally"
-	"go.uber.org/zap"
-
+	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/client"
 	"go.uber.org/cadence/worker"
+	"go.uber.org/zap"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"

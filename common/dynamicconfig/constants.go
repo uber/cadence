@@ -1709,6 +1709,24 @@ const (
 	// Default value: true
 	// Allowed filters: N/A
 	ConcreteExecutionsScannerInvariantCollectionHistory
+	// ConcreteExecutionsFixerInvariantCollectionStale indicates if the stale workflow invariant should be run
+	// KeyName: worker.executionsFixerInvariantCollectionStale
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: N/A
+	ConcreteExecutionsFixerInvariantCollectionStale
+	// ConcreteExecutionsFixerInvariantCollectionMutableState is indicates if mutable state invariant checks should be run
+	// KeyName: worker.executionsFixerInvariantCollectionMutableState
+	// Value type: Bool
+	// Default value: true
+	// Allowed filters: N/A
+	ConcreteExecutionsFixerInvariantCollectionMutableState
+	// ConcreteExecutionsFixerInvariantCollectionHistory is indicates if history invariant checks should be run
+	// KeyName: worker.executionsFixerInvariantCollectionHistory
+	// Value type: Bool
+	// Default value: true
+	// Allowed filters: N/A
+	ConcreteExecutionsFixerInvariantCollectionHistory
 	// ConcreteExecutionsScannerInvariantCollectionStale indicates if the stale workflow invariant should be run
 	// KeyName: worker.executionsScannerInvariantCollectionStale
 	// Value type: Bool
@@ -3893,6 +3911,21 @@ var BoolKeys = map[BoolKey]DynamicBool{
 	ConcreteExecutionsScannerInvariantCollectionStale: DynamicBool{
 		KeyName:      "worker.executionsScannerInvariantCollectionStale",
 		Description:  "ConcreteExecutionsScannerInvariantCollectionStale indicates if the stale-workflow invariant should be run",
+		DefaultValue: false, // may be enabled after further verification, but for now it's a bit too risky to enable by default
+	},
+	ConcreteExecutionsFixerInvariantCollectionMutableState: DynamicBool{
+		KeyName:      "worker.executionsFixerInvariantCollectionMutableState",
+		Description:  "ConcreteExecutionsFixerInvariantCollectionMutableState is indicates if mutable state invariant checks should be run",
+		DefaultValue: true,
+	},
+	ConcreteExecutionsFixerInvariantCollectionHistory: DynamicBool{
+		KeyName:      "worker.executionsFixerInvariantCollectionHistory",
+		Description:  "ConcreteExecutionsFixerInvariantCollectionHistory is indicates if history invariant checks should be run",
+		DefaultValue: true,
+	},
+	ConcreteExecutionsFixerInvariantCollectionStale: DynamicBool{
+		KeyName:      "worker.executionsFixerInvariantCollectionStale",
+		Description:  "ConcreteExecutionsFixerInvariantCollectionStale indicates if the stale-workflow invariant should be run",
 		DefaultValue: false, // may be enabled after further verification, but for now it's a bit too risky to enable by default
 	},
 	CurrentExecutionsScannerEnabled: DynamicBool{

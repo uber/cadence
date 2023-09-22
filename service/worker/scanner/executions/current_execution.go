@@ -24,7 +24,6 @@ package executions
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -57,6 +56,20 @@ const (
 	CurrentExecutionsFixerTaskListName = "cadence-sys-current-executions-fixer-tasklist-0"
 )
 
+/*
+
+!!!!!!!!!!!!!!
+NOTE: Current execution fixers have never been run.
+Beware drawing any conclusions from current-execution scanner/fixer code.
+!!!!!!!!!!!!!!
+
+While this code appears structurally complete, the wrong fixer manager is being
+used, and we have apparently never fully enabled it in our production clusters.
+
+It likely needs further checks and possibly a rewrite before attempting to use.
+
+*/
+
 // CurrentScannerWorkflow is the workflow that scans over all current executions
 func CurrentScannerWorkflow(
 	ctx workflow.Context,
@@ -70,13 +83,12 @@ func CurrentScannerWorkflow(
 	return wf.Start(ctx)
 }
 
-// currentExecutionsScannerHooks provides hooks for current executions scanner.
-func currentExecutionsScannerHooks() *shardscanner.ScannerHooks {
+// currentExecutionScannerHooks provides hooks for current executions scanner.
+func currentExecutionScannerHooks() *shardscanner.ScannerHooks {
 	wf, err := shardscanner.NewScannerHooks(currentExecutionScannerManager, currentExecutionScannerIterator, currentExecutionCustomScannerConfig)
 	if err != nil {
 		return nil
 	}
-
 	return wf
 }
 
@@ -89,34 +101,6 @@ func currentExecutionScannerManager(
 ) invariant.Manager {
 	var ivs []invariant.Invariant
 	collections := ParseCollections(params.ScannerConfig)
-	for _, fn := range CurrentExecutionType.ToInvariants(collections, zap.NewNop()) {
-		ivs = append(ivs, fn(pr, domainCache))
-	}
-	return invariant.NewInvariantManager(ivs)
-}
-
-// currentExecutionFixerManager provides invariant manager for concrete execution fixer.
-func currentExecutionFixerManager(_ context.Context, pr persistence.Retryer, params shardscanner.FixShardActivityParams, domainCache cache.DomainCache) invariant.Manager {
-	var ivs []invariant.Invariant
-	var collections []invariant.Collection
-
-	if len(params.EnabledInvariants) == 0 {
-		// if none, fall back to historical behavior.  this may be removed.
-		collections = append(collections, invariant.CollectionHistory, invariant.CollectionMutableState)
-	} else {
-		// convert to invariants.
-		// this may produce an empty list if it all fixers are intentionally disabled.
-		for k, v := range params.EnabledInvariants {
-			if v == strconv.FormatBool(true) {
-				ivc, err := invariant.CollectionString(k)
-				if err != nil {
-					panic(fmt.Sprintf("invalid collection name: %v", err)) // error includes the name
-				}
-				collections = append(collections, ivc)
-			}
-		}
-	}
-
 	for _, fn := range CurrentExecutionType.ToInvariants(collections, zap.NewNop()) {
 		ivs = append(ivs, fn(pr, domainCache))
 	}
@@ -140,7 +124,7 @@ func currentExecutionCustomScannerConfig(ctx shardscanner.Context) shardscanner.
 	res := shardscanner.CustomScannerConfig{}
 
 	if ctx.Config.DynamicCollection.GetBoolProperty(dynamicconfig.CurrentExecutionsScannerInvariantCollectionHistory)() {
-		res[invariant.CollectionHistory.String()] = strconv.FormatBool(true) // TODO: this appears unused, executions/types.go for current does not check this const
+		res[invariant.CollectionHistory.String()] = strconv.FormatBool(true)
 	}
 	if ctx.Config.DynamicCollection.GetBoolProperty(dynamicconfig.CurrentExecutionsScannerInvariantCollectionMutableState)() {
 		res[invariant.CollectionMutableState.String()] = strconv.FormatBool(true)
@@ -149,18 +133,13 @@ func currentExecutionCustomScannerConfig(ctx shardscanner.Context) shardscanner.
 	return res
 }
 
-// currentExecutionCustomFixerConfig resolves dynamic config for current executions fixer.
-func currentExecutionCustomFixerConfig(ctx shardscanner.FixerContext) shardscanner.CustomScannerConfig {
-	res := shardscanner.CustomScannerConfig{}
-	res[invariant.CollectionMutableState.String()] = strconv.FormatBool(
-		ctx.Config.DynamicCollection.GetBoolProperty(dynamicconfig.CurrentExecutionsFixerInvariantCollectionMutableState)(),
-	)
-	return res
-}
-
 // currentExecutionFixerHooks provides hooks for current executions fixer.
 func currentExecutionFixerHooks() *shardscanner.FixerHooks {
-	h, err := shardscanner.NewFixerHooks(currentExecutionFixerManager, currentExecutionFixerIterator, currentExecutionCustomFixerConfig)
+	noCustomConfig := func(fixer shardscanner.FixerContext) shardscanner.CustomScannerConfig {
+		return nil
+	}
+	// TODO: yes, this DOES incorrectly use the concrete execution fixer manager, which does not work.
+	h, err := shardscanner.NewFixerHooks(concreteExecutionFixerManager, currentExecutionFixerIterator, noCustomConfig)
 	if err != nil {
 		return nil
 	}
@@ -182,7 +161,7 @@ func CurrentExecutionConfig(dc *dynamicconfig.Collection) *shardscanner.ScannerC
 			ActivityBatchSize:       dc.GetIntProperty(dynamicconfig.CurrentExecutionsScannerActivityBatchSize),
 			AllowDomain:             dc.GetBoolPropertyFilteredByDomain(dynamicconfig.CurrentExecutionFixerDomainAllow),
 		},
-		ScannerHooks: currentExecutionsScannerHooks,
+		ScannerHooks: currentExecutionScannerHooks,
 		FixerHooks:   currentExecutionFixerHooks,
 		StartWorkflowOptions: cclient.StartWorkflowOptions{
 			ID:                           currentExecutionsScannerWFID,

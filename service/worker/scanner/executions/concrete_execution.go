@@ -179,6 +179,7 @@ func concreteExecutionCustomScannerConfig(ctx shardscanner.Context) shardscanner
 func concreteExecutionCustomFixerConfig(ctx shardscanner.FixerContext) shardscanner.CustomScannerConfig {
 	res := shardscanner.CustomScannerConfig{}
 
+	// unlike scanner, fixer expects keys to exist when both true and false, to differentiate from pre-config behavior
 	res[invariant.CollectionHistory.String()] = strconv.FormatBool(
 		ctx.Config.DynamicCollection.GetBoolProperty(dynamicconfig.ConcreteExecutionsFixerInvariantCollectionHistory)(),
 	)

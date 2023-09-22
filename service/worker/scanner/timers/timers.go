@@ -94,7 +94,10 @@ func ScannerHooks() *shardscanner.ScannerHooks {
 
 // FixerHooks provides hooks needed for timers fixer.
 func FixerHooks() *shardscanner.FixerHooks {
-	h, err := shardscanner.NewFixerHooks(FixerManager, FixerIterator)
+	noConfig := func(fixer shardscanner.FixerContext) shardscanner.CustomScannerConfig {
+		return nil
+	}
+	h, err := shardscanner.NewFixerHooks(FixerManager, FixerIterator, noConfig)
 	if err != nil {
 		return nil
 	}

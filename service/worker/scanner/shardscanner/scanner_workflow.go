@@ -229,8 +229,8 @@ func getShardBatches(
 
 // NewScannerHooks is used to have per scanner iterator and invariant manager
 func NewScannerHooks(manager ManagerCB, iterator IteratorCB, config func(scanner Context) CustomScannerConfig) (*ScannerHooks, error) {
-	if manager == nil || iterator == nil {
-		return nil, errors.New("manager or iterator not provided")
+	if manager == nil || iterator == nil || config == nil {
+		return nil, errors.New("all scanner hooks args are required")
 	}
 
 	return &ScannerHooks{

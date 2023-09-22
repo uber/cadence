@@ -72,8 +72,8 @@ func NewFixerHooks(
 	iterator FixerIteratorCB,
 	config func(fixer FixerContext) CustomScannerConfig,
 ) (*FixerHooks, error) {
-	if manager == nil || iterator == nil {
-		return nil, errors.New("manager or iterator not provided")
+	if manager == nil || iterator == nil || config == nil {
+		return nil, errors.New("all fixer hooks args are required")
 	}
 	return &FixerHooks{
 		InvariantManager: manager,
@@ -124,19 +124,26 @@ func NewFixerWorkflow(
 	return &wf, nil
 }
 
+func supportsFixerConfig(ctx workflow.Context) bool {
+	// relatively minor, but this allows an upgrade to retain the most-recent workflow runs.
+	// removing this check and always executing the activity may temporarily break anyone who
+	// has not upgraded incrementally, but the workflows should be safe to terminate and restart.
+	return workflow.GetVersion(ctx, "dynamic fixer config", workflow.DefaultVersion, 1) == 1
+}
+
 // Start starts a shard fixer workflow.
 func (fx *FixerWorkflow) Start(ctx workflow.Context) error {
 
 	resolvedConfig := resolveFixerConfig(fx.Params.FixerWorkflowConfigOverwrites)
 
-	var enabled []invariant.Collection
-	if workflow.GetVersion(ctx, "dynamic fixer config", workflow.DefaultVersion, 1) == 1 {
+	var enabled CustomScannerConfig
+	if supportsFixerConfig(ctx) {
 		activityCtx := getShortActivityContext(ctx)
 		var out FixShardConfigResults
 		if err := workflow.ExecuteActivity(activityCtx, ActivityFixerConfig, FixShardConfigParams{}).Get(activityCtx, &out); err != nil {
 			return err
 		}
-		enabled = out.Invariants
+		enabled = out.EnabledInvariants
 	}
 
 	shardReportChan := workflow.GetSignalChannel(ctx, fixShardReportChan)
