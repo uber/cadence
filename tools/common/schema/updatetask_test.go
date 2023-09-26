@@ -132,7 +132,7 @@ func (s *UpdateTaskTestSuite) TestReadSchemaDirFromEmbeddings() {
 	s.NoError(err)
 	ans, err = readSchemaDir(fsys, "0.3", "")
 	s.NoError(err)
-	s.Equal([]string{"v0.4"}, ans)
+	s.Equal([]string{"v0.4", "v0.5"}, ans)
 
 	fsys, err = fs.Sub(postgres.SchemaFS, "visibility/versioned")
 	s.NoError(err)
