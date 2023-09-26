@@ -40,7 +40,7 @@ frontend.validSearchAttributes:
       BinaryChecksums: 1
       Passed: 4
       ShardID: 2
-      IsDeleted: 1
+      IsDeleted: 4
 system.minRetentionDays:
     - value: 0
 history.EnableConsistentQueryByDomain:
