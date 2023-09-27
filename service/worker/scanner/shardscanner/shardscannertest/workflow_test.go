@@ -24,6 +24,7 @@ package shardscannertest
 
 import (
 	"errors"
+	"github.com/uber/cadence/common/reconciliation/invariant"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -179,6 +180,17 @@ func (s *workflowsSuite) TestFixerWorkflow_Success() {
 		},
 	}, nil)
 
+	enabledFixInvariants := shardscanner.CustomScannerConfig{
+		// historically enabled by default
+		invariant.CollectionHistory.String():      "true",
+		invariant.CollectionMutableState.String(): "true",
+		// disabled by default
+		invariant.CollectionStale.String(): "false",
+	}
+	env.OnActivity(shardscanner.ActivityFixerConfig, mock.Anything, shardscanner.FixShardConfigParams{ /* no contents currently */ }).Return(&shardscanner.FixShardConfigResults{
+		EnabledInvariants: enabledFixInvariants,
+	}, nil)
+
 	fixerWorkflowConfigOverwrites := shardscanner.FixerWorkflowConfigOverwrites{
 		Concurrency:             common.IntPtr(3),
 		BlobstoreFlushThreshold: common.IntPtr(1000),
@@ -247,6 +259,7 @@ func (s *workflowsSuite) TestFixerWorkflow_Success() {
 		env.OnActivity(shardscanner.ActivityFixShard, mock.Anything, shardscanner.FixShardActivityParams{
 			CorruptedKeysEntries:        corruptedKeys,
 			ResolvedFixerWorkflowConfig: resolvedFixerWorkflowConfig,
+			EnabledInvariants:           enabledFixInvariants,
 		}).Return(reports, nil)
 	}
 
