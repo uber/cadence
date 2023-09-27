@@ -397,32 +397,23 @@ func (v *pinotVisibilityTripleManager) CountWorkflowExecutions(
 
 func (v *pinotVisibilityTripleManager) chooseVisibilityManagerForRead(domain string) (VisibilityManager, VisibilityManager) {
 	var visibilityMgr VisibilityManager
-	//var visibilityMgr2 VisibilityManager
+	var visibilityMgr2 VisibilityManager
 	if v.readModeIsFromPinot(domain) && v.readModeIsFromES(domain) {
-		//// during migration, we enable read from both ES and Pinot so we can compare the response
-		//if v.esVisibilityManager != nil && v.pinotVisibilityManager != nil {
-		//	visibilityMgr = v.esVisibilityManager
-		//	visibilityMgr2 = v.pinotVisibilityManager
-		//	// mgr1 = esManager, mgr2 = pinotManager
-		//	return visibilityMgr, visibilityMgr2
-		//} else if v.esVisibilityManager != nil {
-		//	v.logger.Warn("Enable dual read mode failed! Will use ES visibility manager. ")
-		//	visibilityMgr = v.esVisibilityManager
-		//} else if v.pinotVisibilityManager != nil {
-		//	v.logger.Warn("Enable dual read mode failed! Will use Pinot visibility manager. ")
-		//	visibilityMgr = v.pinotVisibilityManager
-		//} else {
-		//	v.logger.Warn("Enable dual read mode failed! Will use db visibility manager. ")
-		//	visibilityMgr = v.dbVisibilityManager
-		//}
-		// TODO: deleted read from ES because it will always return results from ES, which made
-		// us harder to debug. Will change it back later.
-		if v.pinotVisibilityManager != nil {
+		// during migration, we enable read from both ES and Pinot so we can compare the response
+		if v.esVisibilityManager != nil && v.pinotVisibilityManager != nil {
+			visibilityMgr = v.esVisibilityManager
+			visibilityMgr2 = v.pinotVisibilityManager
+			// mgr1 = esManager, mgr2 = pinotManager
+			return visibilityMgr, visibilityMgr2
+		} else if v.esVisibilityManager != nil {
+			v.logger.Warn("Enable dual read mode failed! Will use ES visibility manager. ")
+			visibilityMgr = v.esVisibilityManager
+		} else if v.pinotVisibilityManager != nil {
+			v.logger.Warn("Enable dual read mode failed! Will use Pinot visibility manager. ")
 			visibilityMgr = v.pinotVisibilityManager
 		} else {
+			v.logger.Warn("Enable dual read mode failed! Will use db visibility manager. ")
 			visibilityMgr = v.dbVisibilityManager
-			v.logger.Warn("domain is configured to read from advanced visibility(Pinot based) but it's not available, fall back to basic visibility",
-				tag.WorkflowDomainName(domain))
 		}
 	} else if v.readModeIsFromPinot(domain) {
 		if v.pinotVisibilityManager != nil {
