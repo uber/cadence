@@ -525,7 +525,7 @@ func (v *pinotVisibilityStore) checkProducer() {
 }
 
 // a new function to create visibility message for deletion
-// don't use the other function and provide some nil values because it may cause nil pointer exceptions.
+// don't use the other function and provide some nil values because it may cause nil pointer exceptions
 func createDeleteVisibilityMessage(domainID string,
 	wid,
 	rid string,
