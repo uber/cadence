@@ -53,6 +53,10 @@
     {
       "name": "Attr",
       "dataType": "JSON"
+    },
+    {
+      "name": "IsDeleted",
+      "dataType": "BOOLEAN"
     }
 
   ],
