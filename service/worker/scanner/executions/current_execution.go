@@ -139,6 +139,7 @@ func currentExecutionFixerHooks() *shardscanner.FixerHooks {
 		return nil
 	}
 	// TODO: yes, this DOES incorrectly use the concrete execution fixer manager, which does not work.
+	// It is retained for now to avoid making a lot of mostly-unrelated changes / fixes / cleanup.
 	h, err := shardscanner.NewFixerHooks(concreteExecutionFixerManager, currentExecutionFixerIterator, noCustomConfig)
 	if err != nil {
 		return nil

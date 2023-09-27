@@ -136,7 +136,7 @@ func concreteExecutionFixerManager(_ context.Context, pr persistence.Retryer, pa
 	var collections []invariant.Collection
 
 	if len(params.EnabledInvariants) == 0 {
-		// if none, fall back to historical behavior.  this may be removed.
+		// if none, this is old serialized data, fall back to historical behavior.  this may be removed.
 		collections = append(collections, invariant.CollectionHistory, invariant.CollectionMutableState)
 	} else {
 		// convert to invariants.

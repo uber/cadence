@@ -119,14 +119,6 @@ func (c *staleWorkflowCheck) Check(
 	ctx context.Context,
 	execution interface{},
 ) CheckResult {
-	x := true
-	if x {
-		return CheckResult{
-			CheckResultType: CheckResultTypeCorrupted,
-			InvariantName:   c.Name(),
-			Info:            "fake corrupt",
-		}
-	}
 	_, result := c.check(ctx, execution)
 	return result
 }
