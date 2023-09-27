@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 You can find a list of previous releases on the [github releases](https://github.com/uber/cadence/releases) page.
 
-## next
+## [Unreleased]
 ### Added
 - Stale-workflow detection and cleanup added to shardscanner, disabled by default. (#5361)
 - New dynamic config to better control scanner and fixer, particularly for concrete executions. (#5361)
