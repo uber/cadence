@@ -3,7 +3,7 @@ frontend.enableClientVersionCheck:
 system.advancedVisibilityWritingMode:
   - value: "triple"
 system.enableReadVisibilityFromES:
-  - value: true
+  - value: false
 system.enableReadVisibilityFromPinot:
   - value: true
 frontend.validSearchAttributes:
@@ -40,6 +40,7 @@ frontend.validSearchAttributes:
       BinaryChecksums: 1
       Passed: 4
       ShardID: 2
+      IsDeleted: 4
 system.minRetentionDays:
     - value: 0
 history.EnableConsistentQueryByDomain:

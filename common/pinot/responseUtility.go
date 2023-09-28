@@ -24,6 +24,7 @@ package pinot
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/uber/cadence/common/log"
@@ -32,21 +33,15 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-func buildMap(hit []interface{}, columnNames []string, isSystemKey func(key string) bool) (map[string]interface{}, map[string]interface{}) {
+func buildMap(hit []interface{}, columnNames []string) map[string]interface{} {
 	systemKeyMap := make(map[string]interface{})
-	customKeyMap := make(map[string]interface{})
 
 	for i := 0; i < len(columnNames); i++ {
 		key := columnNames[i]
-		// checks if it is system key, if yes, put it into the system map; otherwise put it into custom map
-		if isSystemKey(key) {
-			systemKeyMap[key] = hit[i]
-		} else {
-			customKeyMap[key] = hit[i]
-		}
+		systemKeyMap[key] = hit[i]
 	}
 
-	return systemKeyMap, customKeyMap
+	return systemKeyMap
 }
 
 // VisibilityRecord is a struct of doc for deserialization
@@ -68,14 +63,16 @@ type VisibilityRecord struct {
 	NumClusters   int16
 	UpdateTime    int64
 	ShardID       int16
+	//SearchAttributes map[string]interface{}
 }
 
-func ConvertSearchResultToVisibilityRecord(hit []interface{}, columnNames []string, logger log.Logger, isSystemKey func(key string) bool) *p.InternalVisibilityWorkflowExecutionInfo {
+func ConvertSearchResultToVisibilityRecord(hit []interface{}, columnNames []string, logger log.Logger) *p.InternalVisibilityWorkflowExecutionInfo {
 	if len(hit) != len(columnNames) {
 		return nil
 	}
 
-	systemKeyMap, customKeyMap := buildMap(hit, columnNames, isSystemKey)
+	systemKeyMap := buildMap(hit, columnNames)
+
 	jsonSystemKeyMap, err := json.Marshal(systemKeyMap)
 	if err != nil {
 		logger.Error("unable to marshal systemKeyMap",
@@ -84,10 +81,16 @@ func ConvertSearchResultToVisibilityRecord(hit []interface{}, columnNames []stri
 		return nil
 	}
 
+	attributeMap := make(map[string]interface{})
+	err = json.Unmarshal([]byte(fmt.Sprintf("%s", systemKeyMap["Attr"])), &attributeMap)
+	if err != nil {
+		logger.Error("Unable to Unmarshal searchAttribute map", tag.Error(err))
+	}
+
 	var source *VisibilityRecord
 	err = json.Unmarshal(jsonSystemKeyMap, &source)
 	if err != nil {
-		logger.Error("unable to Unmarshal systemKeyMap",
+		logger.Error("Unable to Unmarshal systemKeyMap",
 			tag.Error(err), //tag.ESDocID(fmt.Sprintf(columnNameToValue["DocID"]))
 		)
 		return nil
@@ -99,13 +102,13 @@ func ConvertSearchResultToVisibilityRecord(hit []interface{}, columnNames []stri
 		WorkflowID:       source.WorkflowID,
 		RunID:            source.RunID,
 		TypeName:         source.WorkflowType,
-		StartTime:        time.UnixMilli(source.StartTime), // be careful: source.StartTime is in milisecond
+		StartTime:        time.UnixMilli(source.StartTime), // be careful: source.StartTime is in milliseconds
 		ExecutionTime:    time.UnixMilli(source.ExecutionTime),
 		TaskList:         source.TaskList,
 		IsCron:           source.IsCron,
 		NumClusters:      source.NumClusters,
 		ShardID:          source.ShardID,
-		SearchAttributes: customKeyMap,
+		SearchAttributes: attributeMap,
 	}
 	if source.UpdateTime != 0 {
 		record.UpdateTime = time.UnixMilli(source.UpdateTime)

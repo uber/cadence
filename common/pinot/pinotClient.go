@@ -27,7 +27,6 @@ import (
 	"fmt"
 
 	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/definition"
 
 	"github.com/startreedata/pinot-client-go/pinot"
 
@@ -113,10 +112,8 @@ func (c *PinotClient) getInternalListWorkflowExecutionsResponse(
 	actualHits := resp.ResultTable.Rows
 	numOfActualHits := resp.ResultTable.GetRowCount()
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-
 	for i := 0; i < numOfActualHits; i++ {
-
-		workflowExecutionInfo := ConvertSearchResultToVisibilityRecord(actualHits[i], columnNames, c.logger, isSystemKey)
+		workflowExecutionInfo := ConvertSearchResultToVisibilityRecord(actualHits[i], columnNames, c.logger)
 
 		if isRecordValid == nil || isRecordValid(workflowExecutionInfo) {
 			response.Executions = append(response.Executions, workflowExecutionInfo)
@@ -153,13 +150,7 @@ func (c *PinotClient) getInternalGetClosedWorkflowExecutionResponse(resp *pinot.
 	schema := resp.ResultTable.DataSchema // get the schema to map results
 	columnNames := schema.ColumnNames
 	actualHits := resp.ResultTable.Rows
-	response.Execution = ConvertSearchResultToVisibilityRecord(actualHits[0], columnNames, c.logger, isSystemKey)
+	response.Execution = ConvertSearchResultToVisibilityRecord(actualHits[0], columnNames, c.logger)
 
 	return response, nil
-}
-
-// checks if a string is system key,
-// non system key means customized search attribtues
-func isSystemKey(key string) bool {
-	return definition.IsSystemIndexedKey(key)
 }

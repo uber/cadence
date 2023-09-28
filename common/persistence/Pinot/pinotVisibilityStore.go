@@ -63,6 +63,7 @@ const (
 	ExecutionTime        = "ExecutionTime"
 	Encoding             = "Encoding"
 	LikeStatement        = "%s LIKE '%%%s%%'"
+	IsDeleted            = "IsDeleted"
 
 	// used to be micro second
 	oneMicroSecondInNano = int64(time.Microsecond / time.Nanosecond)
@@ -148,6 +149,7 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionStarted(
 		request.UpdateTimestamp.UnixMilli(),
 		int64(request.ShardID),
 		request.SearchAttributes,
+		false,
 	)
 
 	if err != nil {
@@ -179,6 +181,7 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionClosed(ctx context.Context
 		request.UpdateTimestamp.UnixMilli(),
 		int64(request.ShardID),
 		request.SearchAttributes,
+		false,
 	)
 
 	if err != nil {
@@ -209,6 +212,7 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionUninitialized(ctx context.
 		request.UpdateTimestamp.UnixMilli(),
 		request.ShardID,
 		nil,
+		false,
 	)
 
 	if err != nil {
@@ -239,6 +243,7 @@ func (v *pinotVisibilityStore) UpsertWorkflowExecution(ctx context.Context, requ
 		request.UpdateTimestamp.UnixMilli(),
 		request.ShardID,
 		request.SearchAttributes,
+		false,
 	)
 
 	if err != nil {
@@ -246,6 +251,48 @@ func (v *pinotVisibilityStore) UpsertWorkflowExecution(ctx context.Context, requ
 	}
 
 	return v.producer.Publish(ctx, msg)
+}
+
+func (v *pinotVisibilityStore) DeleteWorkflowExecution(
+	ctx context.Context,
+	request *p.VisibilityDeleteWorkflowExecutionRequest,
+) error {
+	v.checkProducer()
+	msg, err := createDeleteVisibilityMessage(
+		request.DomainID,
+		request.WorkflowID,
+		request.RunID,
+		true,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return v.producer.Publish(ctx, msg)
+}
+
+func (v *pinotVisibilityStore) DeleteUninitializedWorkflowExecution(
+	ctx context.Context,
+	request *p.VisibilityDeleteWorkflowExecutionRequest,
+) error {
+	// verify if it is uninitialized workflow execution record
+	// if it is, then call the existing delete method to delete
+	query := fmt.Sprintf("StartTime = missing and DomainID = %s and RunID = %s", request.DomainID, request.RunID)
+	queryRequest := &p.CountWorkflowExecutionsRequest{
+		Domain: request.Domain,
+		Query:  query,
+	}
+	resp, err := v.CountWorkflowExecutions(ctx, queryRequest)
+	if err != nil {
+		return err
+	}
+	if resp.Count > 0 {
+		if err = v.DeleteWorkflowExecution(ctx, request); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (v *pinotVisibilityStore) ListOpenWorkflowExecutions(
@@ -470,26 +517,36 @@ func (v *pinotVisibilityStore) CountWorkflowExecutions(ctx context.Context, requ
 	}, nil
 }
 
-func (v *pinotVisibilityStore) DeleteWorkflowExecution(
-	ctx context.Context,
-	request *p.VisibilityDeleteWorkflowExecutionRequest,
-) error {
-	return &types.BadRequestError{Message: "Operation is not supported. Pinot doesn't support this operation so far."}
-}
-
-func (v *pinotVisibilityStore) DeleteUninitializedWorkflowExecution(
-	ctx context.Context,
-	request *p.VisibilityDeleteWorkflowExecutionRequest,
-) error {
-	// temporary: not implemented, only implemented for ES
-	return &types.BadRequestError{Message: "Operation is not supported. Pinot doesn't support this operation so far."}
-}
-
 func (v *pinotVisibilityStore) checkProducer() {
 	if v.producer == nil {
 		// must be bug, check history setup
 		panic("message producer is nil")
 	}
+}
+
+// a new function to create visibility message for deletion
+// don't use the other function and provide some nil values because it may cause nil pointer exceptions
+func createDeleteVisibilityMessage(domainID string,
+	wid,
+	rid string,
+	isDeleted bool,
+) (*indexer.PinotMessage, error) {
+	m := make(map[string]interface{})
+	m[DocID] = wid + "-" + rid
+	m[DomainID] = domainID
+	m[WorkflowID] = wid
+	m[RunID] = rid
+	m[IsDeleted] = isDeleted
+	serializedMsg, err := json.Marshal(m)
+	if err != nil {
+		return nil, err
+	}
+
+	msg := &indexer.PinotMessage{
+		WorkflowID: common.StringPtr(wid),
+		Payload:    serializedMsg,
+	}
+	return msg, nil
 }
 
 func createVisibilityMessage(
@@ -513,6 +570,7 @@ func createVisibilityMessage(
 	updateTimeUnixNano int64, // update execution,
 	shardID int64,
 	rawSearchAttributes map[string][]byte,
+	isDeleted bool,
 ) (*indexer.PinotMessage, error) {
 	m := make(map[string]interface{})
 	//loop through all input parameters
@@ -531,7 +589,9 @@ func createVisibilityMessage(
 	m[HistoryLength] = historyLength
 	m[UpdateTime] = updateTimeUnixNano
 	m[ShardID] = shardID
+	m[IsDeleted] = isDeleted
 
+	SearchAttributes := make(map[string]interface{})
 	var err error
 	for key, value := range rawSearchAttributes {
 		value, err = isTimeStruct(value)
@@ -544,9 +604,9 @@ func createVisibilityMessage(
 		if err != nil {
 			return nil, err
 		}
-		m[key] = val
+		SearchAttributes[key] = val
 	}
-
+	m[Attr] = SearchAttributes
 	serializedMsg, err := json.Marshal(m)
 	if err != nil {
 		return nil, err
@@ -692,6 +752,7 @@ func (v *pinotVisibilityStore) getCountWorkflowExecutionsQuery(tableName string,
 
 	// need to add Domain ID
 	query.filters.addEqual(DomainID, request.DomainUUID)
+	query.filters.addEqual(IsDeleted, false)
 
 	requestQuery := strings.TrimSpace(request.Query)
 
@@ -729,6 +790,7 @@ func (v *pinotVisibilityStore) getListWorkflowExecutionsByQueryQuery(tableName s
 
 	// need to add Domain ID
 	query.filters.addEqual(DomainID, request.DomainUUID)
+	query.filters.addEqual(IsDeleted, false)
 
 	requestQuery := strings.TrimSpace(request.Query)
 
@@ -887,6 +949,7 @@ func getListWorkflowExecutionsQuery(tableName string, request *p.InternalListWor
 
 	query := NewPinotQuery(tableName)
 	query.filters.addEqual(DomainID, request.DomainUUID)
+	query.filters.addEqual(IsDeleted, false)
 
 	earliest := request.EarliestTime.UnixMilli() - oneMicroSecondInNano
 	latest := request.LatestTime.UnixMilli() + oneMicroSecondInNano
@@ -914,6 +977,7 @@ func getListWorkflowExecutionsByTypeQuery(tableName string, request *p.InternalL
 	query := NewPinotQuery(tableName)
 
 	query.filters.addEqual(DomainID, request.DomainUUID)
+	query.filters.addEqual(IsDeleted, false)
 	query.filters.addEqual(WorkflowType, request.WorkflowTypeName)
 	earliest := request.EarliestTime.UnixMilli() - oneMicroSecondInNano
 	latest := request.LatestTime.UnixMilli() + oneMicroSecondInNano
@@ -949,6 +1013,7 @@ func getListWorkflowExecutionsByWorkflowIDQuery(tableName string, request *p.Int
 	query := NewPinotQuery(tableName)
 
 	query.filters.addEqual(DomainID, request.DomainUUID)
+	query.filters.addEqual(IsDeleted, false)
 	query.filters.addEqual(WorkflowID, request.WorkflowID)
 	earliest := request.EarliestTime.UnixMilli() - oneMicroSecondInNano
 	latest := request.LatestTime.UnixMilli() + oneMicroSecondInNano
@@ -984,6 +1049,7 @@ func getListWorkflowExecutionsByStatusQuery(tableName string, request *p.Interna
 	query := NewPinotQuery(tableName)
 
 	query.filters.addEqual(DomainID, request.DomainUUID)
+	query.filters.addEqual(IsDeleted, false)
 
 	status := "0"
 	switch request.Status.String() {
@@ -1026,6 +1092,7 @@ func getGetClosedWorkflowExecutionQuery(tableName string, request *p.InternalGet
 	query := NewPinotQuery(tableName)
 
 	query.filters.addEqual(DomainID, request.DomainUUID)
+	query.filters.addEqual(IsDeleted, false)
 	query.filters.addGte(CloseStatus, 0)
 	query.filters.addEqual(WorkflowID, request.Execution.GetWorkflowID())
 

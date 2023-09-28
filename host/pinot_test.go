@@ -29,7 +29,6 @@
 package host
 
 import (
-	"bytes"
 	"flag"
 	"strconv"
 	"time"
@@ -608,7 +607,7 @@ func (s *PinotIntegrationSuite) TestListWorkflow_OrderBy() {
 
 	time.Sleep(waitForPinotToSettle)
 
-	desc := "desc"
+	//desc := "desc"
 	asc := "asc"
 	queryTemplate := `WorkflowType = "%s" order by %s %s`
 	pageSize := int32(defaultTestValueOfESIndexMaxResultWindow)
@@ -634,77 +633,79 @@ func (s *PinotIntegrationSuite) TestListWorkflow_OrderBy() {
 	for i := int32(1); i < pageSize; i++ {
 		s.True(openExecutions[i-1].GetCloseTime() <= openExecutions[i].GetCloseTime())
 	}
+	// comment out things below, because json index column can't use order by
 
 	// greatest effort to reduce duplicate code
-	testHelper := func(query, searchAttrKey string, prevVal, currVal interface{}) {
-		listRequest.Query = query
-		listRequest.NextPageToken = []byte{}
-		resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
-		s.Nil(err)
-		openExecutions = resp.GetExecutions()
-		dec := json.NewDecoder(bytes.NewReader(openExecutions[0].GetSearchAttributes().GetIndexedFields()[searchAttrKey]))
-		dec.UseNumber()
-		err = dec.Decode(&prevVal)
-		s.Nil(err)
-		for i := int32(1); i < pageSize; i++ {
-			indexedFields := openExecutions[i].GetSearchAttributes().GetIndexedFields()
-			searchAttrBytes, ok := indexedFields[searchAttrKey]
-			if !ok { // last one doesn't have search attr
-				s.Equal(pageSize-1, i)
-				break
-			}
-			dec := json.NewDecoder(bytes.NewReader(searchAttrBytes))
-			dec.UseNumber()
-			err = dec.Decode(&currVal)
-			s.Nil(err)
-			var v1, v2 interface{}
-			switch searchAttrKey {
-			case definition.CustomIntField:
-				v1, _ = prevVal.(json.Number).Int64()
-				v2, _ = currVal.(json.Number).Int64()
-				s.True(v1.(int64) >= v2.(int64))
-			case definition.CustomDoubleField:
-				v1, _ := strconv.ParseFloat(fmt.Sprint(prevVal), 64)
-				v2, _ := strconv.ParseFloat(fmt.Sprint(currVal), 64)
-				s.True(v1 >= v2)
-			case definition.CustomKeywordField:
-				s.True(prevVal.(string) >= currVal.(string))
-			case definition.CustomDatetimeField:
-				v1, _ = strconv.ParseInt(fmt.Sprint(prevVal), 10, 64)
-				v2, _ = strconv.ParseInt(fmt.Sprint(currVal), 10, 64)
-				s.True(v1.(int64) >= v2.(int64))
-			}
-			prevVal = currVal
-		}
-		listRequest.NextPageToken = resp.GetNextPageToken()
-		resp, err = s.engine.ListWorkflowExecutions(createContext(), listRequest) // last page
-		s.Nil(err)
-		s.Equal(1, len(resp.GetExecutions()))
-	}
+	//testHelper := func(query, searchAttrKey string, prevVal, currVal interface{}) {
+	//	listRequest.Query = query
+	//	listRequest.NextPageToken = []byte{}
+	//	resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
+	//	s.Nil(err)
+	//	openExecutions = resp.GetExecutions()
+	//	dec := json.NewDecoder(bytes.NewReader(openExecutions[0].GetSearchAttributes().GetIndexedFields()[searchAttrKey]))
+	//	dec.UseNumber()
+	//	err = dec.Decode(&prevVal)
+	//	s.Nil(err)
+	//	for i := int32(1); i < pageSize; i++ {
+	//		indexedFields := openExecutions[i].GetSearchAttributes().GetIndexedFields()
+	//		searchAttrBytes, ok := indexedFields[searchAttrKey]
+	//		if !ok { // last one doesn't have search attr
+	//			s.Equal(pageSize-1, i)
+	//			break
+	//		}
+	//		dec := json.NewDecoder(bytes.NewReader(searchAttrBytes))
+	//		dec.UseNumber()
+	//		err = dec.Decode(&currVal)
+	//		s.Nil(err)
+	//		var v1, v2 interface{}
+	//		switch searchAttrKey {
+	//		case definition.CustomIntField:
+	//			v1, _ = prevVal.(json.Number).Int64()
+	//			v2, _ = currVal.(json.Number).Int64()
+	//			s.True(v1.(int64) >= v2.(int64))
+	//		case definition.CustomDoubleField:
+	//			v1, _ := strconv.ParseFloat(fmt.Sprint(prevVal), 64)
+	//			v2, _ := strconv.ParseFloat(fmt.Sprint(currVal), 64)
+	//			s.True(v1 >= v2)
+	//		case definition.CustomKeywordField:
+	//			s.True(prevVal.(string) >= currVal.(string))
+	//		case definition.CustomDatetimeField:
+	//			v1, _ = strconv.ParseInt(fmt.Sprint(prevVal), 10, 64)
+	//			v2, _ = strconv.ParseInt(fmt.Sprint(currVal), 10, 64)
+	//			s.True(v1.(int64) >= v2.(int64))
+	//		}
+	//		prevVal = currVal
+	//	}
+	//	listRequest.NextPageToken = resp.GetNextPageToken()
+	//	resp, err = s.engine.ListWorkflowExecutions(createContext(), listRequest) // last page
+	//	s.Nil(err)
+	//	s.Equal(1, len(resp.GetExecutions()))
+	//}
 
-	// order by CustomIntField desc
-	field := definition.CustomIntField
-	query := fmt.Sprintf(queryTemplate, wt, field, desc)
-	var int1, int2 int
-	testHelper(query, field, int1, int2)
-
-	// order by CustomDoubleField desc
-	field = definition.CustomDoubleField
-	query = fmt.Sprintf(queryTemplate, wt, field, desc)
-	var double1, double2 float64
-	testHelper(query, field, double1, double2)
-
-	// order by CustomKeywordField desc
-	field = definition.CustomKeywordField
-	query = fmt.Sprintf(queryTemplate, wt, field, desc)
-	var s1, s2 string
-	testHelper(query, field, s1, s2)
-
-	// order by CustomDatetimeField desc
-	field = definition.CustomDatetimeField
-	query = fmt.Sprintf(queryTemplate, wt, field, desc)
-	var t1, t2 time.Time
-	testHelper(query, field, t1, t2)
+	//
+	//// order by CustomIntField desc
+	//field := definition.CustomIntField
+	//query := fmt.Sprintf(queryTemplate, wt, field, desc)
+	//var int1, int2 int
+	//testHelper(query, field, int1, int2)
+	//
+	//// order by CustomDoubleField desc
+	//field = definition.CustomDoubleField
+	//query = fmt.Sprintf(queryTemplate, wt, field, desc)
+	//var double1, double2 float64
+	//testHelper(query, field, double1, double2)
+	//
+	//// order by CustomKeywordField desc
+	//field = definition.CustomKeywordField
+	//query = fmt.Sprintf(queryTemplate, wt, field, desc)
+	//var s1, s2 string
+	//testHelper(query, field, s1, s2)
+	//
+	//// order by CustomDatetimeField desc
+	//field = definition.CustomDatetimeField
+	//query = fmt.Sprintf(queryTemplate, wt, field, desc)
+	//var t1, t2 time.Time
+	//testHelper(query, field, t1, t2)
 }
 
 func (s *PinotIntegrationSuite) testListWorkflowHelper(numOfWorkflows, pageSize int,
@@ -1058,13 +1059,13 @@ func (s *PinotIntegrationSuite) testListResultForUpsertSearchAttributes(listRequ
 		s.Nil(err)
 
 		//res2B, _ := json.Marshal(resp.GetExecutions())
-		//panic(fmt.Sprintf("ABCDDDBUG: %s", res2B))
+		//panic(fmt.Sprintf("ABCDDDBUG: %s", listRequest.Query))
 
 		if len(resp.GetExecutions()) == 1 {
 			execution := resp.GetExecutions()[0]
 			retrievedSearchAttr := execution.SearchAttributes
-			//if retrievedSearchAttr != nil && len(retrievedSearchAttr.GetIndexedFields()) == 3 {
-			if retrievedSearchAttr != nil && len(retrievedSearchAttr.GetIndexedFields()) > 0 {
+			if retrievedSearchAttr != nil && len(retrievedSearchAttr.GetIndexedFields()) == 3 {
+				//if retrievedSearchAttr != nil && len(retrievedSearchAttr.GetIndexedFields()) > 0 {
 				fields := retrievedSearchAttr.GetIndexedFields()
 				searchValBytes := fields[s.testSearchAttributeKey]
 				var searchVal string

@@ -251,8 +251,8 @@ func comparePinotESListClosedResponse(
 	request *ListWorkflowExecutionsRequest,
 	logger log.Logger,
 ) (*ListWorkflowExecutionsResponse, error) {
-	esResponse, err1 := ESManager.ListOpenWorkflowExecutions(ctx, request)
-	pinotResponse, err2 := PinotManager.ListOpenWorkflowExecutions(ctx, request)
+	esResponse, err1 := ESManager.ListClosedWorkflowExecutions(ctx, request)
+	pinotResponse, err2 := PinotManager.ListClosedWorkflowExecutions(ctx, request)
 
 	if err1 != nil && err2 != nil {
 		return nil, fmt.Errorf("ListClosedWorkflowExecutions in comparator error, no available results")

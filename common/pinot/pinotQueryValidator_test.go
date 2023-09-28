@@ -32,103 +32,98 @@ import (
 )
 
 func TestValidateQuery(t *testing.T) {
-	tests := []struct {
-		msg       string
+	tests := map[string]struct {
 		query     string
 		validated string
 		err       string
 	}{
-		{
-			msg:       "empty query",
+		"Case1: empty query": {
 			query:     "",
 			validated: "",
 		},
-		{
-			msg:       "simple query",
+		"Case2: simple query": {
 			query:     "WorkflowID = 'wid'",
 			validated: "WorkflowID = 'wid'",
 		},
-		{
-			msg:       "custom field",
+		"Case3: query with custom field": {
 			query:     "CustomStringField = 'custom'",
-			validated: "CustomStringField like '%custom%'",
+			validated: "(JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'custom*'))",
 		},
-		{
-			msg:       "custom field with Or",
+		"Case4: custom field query with or in string": {
 			query:     "CustomStringField='Or'",
-			validated: "CustomStringField like '%Or%'",
+			validated: "(JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'Or*'))",
 		},
-		{
-			msg:       "custom keyword field",
+		"Case5: custom keyword field query": {
 			query:     "CustomKeywordField = 'custom'",
-			validated: "CustomKeywordField = 'custom'",
+			validated: "(JSON_MATCH(Attr, '\"$.CustomKeywordField\"=''custom''') or JSON_MATCH(Attr, '\"$.CustomKeywordField[*]\"=''custom'''))",
 		},
-		{
-			msg:       "complex query",
-			query:     "WorkflowID = 'wid' and ((CustomStringField = 'custom and custom2 or custom3 order by') or CustomIntField between 1 and 10)",
-			validated: "WorkflowID = 'wid' and ((CustomStringField like '%custom and custom2 or custom3 order by%') or CustomIntField between 1 and 10)",
+		"Case6-1: complex query I: with parenthesis": {
+			query:     "(CustomStringField = 'custom and custom2 or custom3 order by') or CustomIntField between 1 and 10",
+			validated: "((JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'custom and custom2 or custom3 order by*')) or CustomIntField between 1 and 10)",
 		},
-		{
-			msg:   "invalid SQL",
+		"Case6-2: complex query II: with only system keys": {
+			query:     "DomainID = 'd-id' and (RunID = 'run-id' or WorkflowID = 'wid')",
+			validated: "DomainID = 'd-id' and (RunID = 'run-id' or WorkflowID = 'wid')",
+		},
+		"Case6-3: complex query III: operation priorities": {
+			query:     "DomainID = 'd-id' or RunID = 'run-id' and WorkflowID = 'wid'",
+			validated: "(DomainID = 'd-id' or RunID = 'run-id' and WorkflowID = 'wid')",
+		},
+		"Case6-4: complex query IV": {
+			query:     "WorkflowID = 'wid' and (CustomStringField = 'custom and custom2 or custom3 order by' or CustomIntField between 1 and 10)",
+			validated: "WorkflowID = 'wid' and ((JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'custom and custom2 or custom3 order by*')) or CustomIntField between 1 and 10)",
+		},
+		"Case7: invalid sql query": {
 			query: "Invalid SQL",
 			err:   "Invalid query.",
 		},
-		{
-			msg:       "SQL with missing val",
+		"Case8: query with missing val": {
 			query:     "CloseTime = missing",
 			validated: "CloseTime = `-1`",
 		},
-		{
-			msg:   "invalid where expression",
+		"Case9: invalid where expression": {
 			query: "InvalidWhereExpr",
 			err:   "invalid where clause",
 		},
-		{
-			msg:   "invalid search attribute in comparison",
+		"Case10: invalid search attribute": {
 			query: "Invalid = 'a' and 1 < 2",
 			err:   "invalid search attribute \"Invalid\"",
 		},
-		{
-			msg:       "only order by",
+		"Case11-1: order by clause": {
 			query:     "order by CloseTime desc",
 			validated: " order by CloseTime desc",
 		},
-		{
-			msg:       "only order by search attribute",
+		"Case11-2: only order by clause with custom field": {
 			query:     "order by CustomIntField desc",
 			validated: " order by CustomIntField desc",
 		},
-		{
-			msg:       "condition + order by",
+		"Case11-3: order by clause with custom field": {
 			query:     "WorkflowID = 'wid' order by CloseTime desc",
 			validated: "WorkflowID = 'wid' order by CloseTime desc",
 		},
-		{
-			msg:   "security SQL injection - with another statement",
+		"Case12-1: security SQL injection - with another statement": {
 			query: "WorkflowID = 'wid'; SELECT * FROM important_table;",
 			err:   "Invalid query.",
 		},
-		{
-			msg:   "security SQL injection - with union",
+		"Case12-2: security SQL injection - with union": {
 			query: "WorkflowID = 'wid' union select * from dummy",
 			err:   "Invalid select query.",
 		},
-		{
-			msg:       "or clause",
+		"Case13: or clause": {
 			query:     "CustomIntField = 1 or CustomIntField = 2",
-			validated: "CustomIntField = 1 or CustomIntField = 2",
+			validated: "(JSON_MATCH(Attr, '\"$.CustomIntField\"=''1''') or JSON_MATCH(Attr, '\"$.CustomIntField\"=''2'''))",
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.msg, func(t *testing.T) {
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
 			validSearchAttr := dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys())
 			qv := NewPinotQueryValidator(validSearchAttr())
-			validated, err := qv.ValidateQuery(tt.query)
+			validated, err := qv.ValidateQuery(test.query)
 			if err != nil {
-				assert.Equal(t, tt.err, err.Error())
+				assert.Equal(t, test.err, err.Error())
 			} else {
-				assert.Equal(t, tt.validated, validated)
+				assert.Equal(t, test.validated, validated)
 			}
 		})
 	}

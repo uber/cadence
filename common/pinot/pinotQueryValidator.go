@@ -71,26 +71,27 @@ func (qv *VisibilityQueryValidator) ValidateQuery(whereClause string) (string, e
 			return "", &types.BadRequestError{Message: "Invalid select query."}
 		}
 		buf := sqlparser.NewTrackedBuffer(nil)
+		res := ""
 		// validate where expr
 		if sel.Where != nil {
-			err = qv.validateWhereExpr(sel.Where.Expr)
+			res, err = qv.validateWhereExpr(sel.Where.Expr)
 			if err != nil {
 				return "", &types.BadRequestError{Message: err.Error()}
 			}
-			sel.Where.Expr.Format(buf)
 		}
 
 		sel.OrderBy.Format(buf)
-
-		return buf.String(), nil
+		res += buf.String()
+		return res, nil
 	}
 	return whereClause, nil
 }
 
-func (qv *VisibilityQueryValidator) validateWhereExpr(expr sqlparser.Expr) error {
+func (qv *VisibilityQueryValidator) validateWhereExpr(expr sqlparser.Expr) (string, error) {
 	if expr == nil {
-		return nil
+		return "", nil
 	}
+	buf := sqlparser.NewTrackedBuffer(nil)
 
 	switch expr := expr.(type) {
 	case *sqlparser.AndExpr, *sqlparser.OrExpr:
@@ -98,95 +99,71 @@ func (qv *VisibilityQueryValidator) validateWhereExpr(expr sqlparser.Expr) error
 	case *sqlparser.ComparisonExpr:
 		return qv.validateComparisonExpr(expr)
 	case *sqlparser.RangeCond:
-		return nil
+		expr.Format(buf)
+		return buf.String(), nil
 		//return qv.validateRangeExpr(expr)
 	case *sqlparser.ParenExpr:
 		return qv.validateWhereExpr(expr.Expr)
 	default:
-		return errors.New("invalid where clause")
+		return "", errors.New("invalid where clause")
 	}
-
 }
 
-func (qv *VisibilityQueryValidator) validateAndOrExpr(expr sqlparser.Expr) error {
+func (qv *VisibilityQueryValidator) validateAndOrExpr(expr sqlparser.Expr) (string, error) {
 	var leftExpr sqlparser.Expr
 	var rightExpr sqlparser.Expr
+	isAnd := false
 
 	switch expr := expr.(type) {
 	case *sqlparser.AndExpr:
 		leftExpr = expr.Left
 		rightExpr = expr.Right
+		isAnd = true
 	case *sqlparser.OrExpr:
 		leftExpr = expr.Left
 		rightExpr = expr.Right
 	}
 
-	if err := qv.validateWhereExpr(leftExpr); err != nil {
-		return err
+	leftRes, err := qv.validateWhereExpr(leftExpr)
+	if err != nil {
+		return "", err
 	}
-	return qv.validateWhereExpr(rightExpr)
+
+	rightRes, err := qv.validateWhereExpr(rightExpr)
+	if err != nil {
+		return "", err
+	}
+
+	if isAnd {
+		return fmt.Sprintf("%s and %s", leftRes, rightRes), nil
+	}
+
+	return fmt.Sprintf("(%s or %s)", leftRes, rightRes), nil
 }
 
-func (qv *VisibilityQueryValidator) validateComparisonExpr(expr sqlparser.Expr) error {
+func (qv *VisibilityQueryValidator) validateComparisonExpr(expr sqlparser.Expr) (string, error) {
 	comparisonExpr := expr.(*sqlparser.ComparisonExpr)
+
 	colName, ok := comparisonExpr.Left.(*sqlparser.ColName)
 	if !ok {
-		return errors.New("invalid comparison expression, left")
+		return "", errors.New("invalid comparison expression, left")
 	}
 
 	colNameStr := colName.Name.String()
 
 	if !qv.isValidSearchAttributes(colNameStr) {
-		return fmt.Errorf("invalid search attribute %q", colNameStr)
+		return "", fmt.Errorf("invalid search attribute %q", colNameStr)
 	}
 
+	// Case1: it is system key
+	// this means that we don't need to change the structure of the query,
+	// just need to check if a value == "missing"
 	if definition.IsSystemIndexedKey(colNameStr) {
-		if comparisonExpr.Operator != sqlparser.EqualStr {
-			return nil
-		}
-		// need to deal with missing value
-		// Question: why is the right side of a system attribute a colname, custom attribute is a SQLVal?
-		colVal, ok := comparisonExpr.Right.(*sqlparser.ColName)
-		if !ok {
-			return nil
-		}
-		colValStr := colVal.Name.String()
-		if colValStr == "missing" {
-			var newColVal string
-			if strings.ToLower(colNameStr) == "historylength" {
-				newColVal = "0"
-			} else {
-				newColVal = "-1" // -1 is the default value for all Closed workflows related fields
-			}
-			comparisonExpr.Right = &sqlparser.ColName{
-				Metadata:  colName.Metadata,
-				Name:      sqlparser.NewColIdent(newColVal),
-				Qualifier: colName.Qualifier,
-			}
-		}
-
-	} else { // check type: if is IndexedValueTypeString, change to like statement for partial match
-		if valType, ok := qv.validSearchAttributes[colNameStr]; ok {
-			indexValType := common.ConvertIndexedValueTypeToInternalType(valType, log.NewNoop())
-
-			if indexValType == types.IndexedValueTypeString {
-				colVal, ok := comparisonExpr.Right.(*sqlparser.SQLVal)
-				if !ok {
-					return errors.New("invalid comparison expression, right")
-				}
-				colValStr := string(colVal.Val)
-
-				// change to like statement for partial match
-				comparisonExpr.Operator = sqlparser.LikeStr
-				comparisonExpr.Right = &sqlparser.SQLVal{
-					Type: sqlparser.StrVal,
-					Val:  []byte("%" + colValStr + "%"),
-				}
-			}
-		}
+		return qv.processSystemKey(expr)
 	}
-
-	return nil
+	// Case2: when a value is not system key
+	// This means, the value is from Attr so that we need to change the query to be a Json index format
+	return qv.processCustomKey(expr)
 }
 
 // isValidSearchAttributes return true if key is registered
@@ -194,4 +171,101 @@ func (qv *VisibilityQueryValidator) isValidSearchAttributes(key string) bool {
 	validAttr := qv.validSearchAttributes
 	_, isValidKey := validAttr[key]
 	return isValidKey
+}
+
+func (qv *VisibilityQueryValidator) processSystemKey(expr sqlparser.Expr) (string, error) {
+	comparisonExpr := expr.(*sqlparser.ComparisonExpr)
+	buf := sqlparser.NewTrackedBuffer(nil)
+
+	colName, ok := comparisonExpr.Left.(*sqlparser.ColName)
+	if !ok {
+		return "", errors.New("invalid comparison expression, left")
+	}
+	colNameStr := colName.Name.String()
+
+	if comparisonExpr.Operator != sqlparser.EqualStr {
+		expr.Format(buf)
+		return buf.String(), nil
+	}
+	// need to deal with missing value e.g. CloseTime = missing
+	// Question: why is the right side is sometimes a type of "colName", and sometimes a type of "SQLVal"?
+	// Answer: for any value, sqlParser will treat any string that doesn't surrounded by single quote as ColName;
+	// any string that surrounded by single quote as SQLVal
+	_, ok = comparisonExpr.Right.(*sqlparser.SQLVal)
+	if !ok { // this means, the value is a string, and not surrounded by single qoute, which means, val = missing
+		colVal, ok := comparisonExpr.Right.(*sqlparser.ColName)
+		if !ok {
+			return "", fmt.Errorf("error: Failed to convert val")
+		}
+		colValStr := colVal.Name.String()
+
+		// double check if val is not missing
+		if colValStr != "missing" {
+			return "", fmt.Errorf("error: failed to convert val")
+		}
+
+		var newColVal string
+		if strings.ToLower(colNameStr) == "historylength" {
+			newColVal = "0"
+		} else {
+			newColVal = "-1" // -1 is the default value for all Closed workflows related fields
+		}
+		comparisonExpr.Right = &sqlparser.ColName{
+			Metadata:  colName.Metadata,
+			Name:      sqlparser.NewColIdent(newColVal),
+			Qualifier: colName.Qualifier,
+		}
+	}
+
+	// For this branch, we still have a sqlExpr type. So need to use a buf to return the string
+	comparisonExpr.Format(buf)
+	return buf.String(), nil
+}
+
+func (qv *VisibilityQueryValidator) processCustomKey(expr sqlparser.Expr) (string, error) {
+	comparisonExpr := expr.(*sqlparser.ComparisonExpr)
+
+	colName, ok := comparisonExpr.Left.(*sqlparser.ColName)
+	if !ok {
+		return "", errors.New("invalid comparison expression, left")
+	}
+
+	colNameStr := colName.Name.String()
+
+	// check type: if is IndexedValueTypeString, change to like statement for partial match
+	valType, ok := qv.validSearchAttributes[colNameStr]
+	if !ok {
+		return "", fmt.Errorf("invalid search attribute")
+	}
+
+	// get the column value
+	colVal, ok := comparisonExpr.Right.(*sqlparser.SQLVal)
+	if !ok {
+		return "", errors.New("invalid comparison expression, right")
+	}
+	colValStr := string(colVal.Val)
+
+	// get the value type
+	indexValType := common.ConvertIndexedValueTypeToInternalType(valType, log.NewNoop())
+
+	// Case2-1: when it is string, need partial match
+	if indexValType == types.IndexedValueTypeString {
+		// change to like statement for partial match
+		comparisonExpr.Operator = sqlparser.LikeStr
+		comparisonExpr.Right = &sqlparser.SQLVal{
+			Type: sqlparser.StrVal,
+			Val:  []byte("%" + colValStr + "%"),
+		}
+		//return fmt.Sprintf("JSON_EXTRACT_SCALAR(Attr, '$.%s', 'STRING') LIKE '%%%s%%'", colNameStr, colValStr), nil
+		return fmt.Sprintf("(JSON_MATCH(Attr, '\"$.%s\" is not null') "+
+			"AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.%s', 'string'), '%s*'))", colNameStr, colNameStr, colValStr), nil
+	}
+	// case2-2: otherwise, exact match
+	// case2-2-1: if it is keyword, need to deal with a situation when value is an array
+	if indexValType == types.IndexedValueTypeKeyword {
+		return fmt.Sprintf("(JSON_MATCH(Attr, '\"$.%s\"=''%s''') or JSON_MATCH(Attr, '\"$.%s[*]\"=''%s'''))",
+			colNameStr, colValStr, colNameStr, colValStr), nil
+	}
+	// case2-2-2: other cases:
+	return fmt.Sprintf("JSON_MATCH(Attr, '\"$.%s\"=''%s''')", colNameStr, colValStr), nil
 }
