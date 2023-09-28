@@ -27,7 +27,6 @@ import (
 	"fmt"
 
 	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/definition"
 
 	"github.com/startreedata/pinot-client-go/pinot"
 
@@ -154,10 +153,4 @@ func (c *PinotClient) getInternalGetClosedWorkflowExecutionResponse(resp *pinot.
 	response.Execution = ConvertSearchResultToVisibilityRecord(actualHits[0], columnNames, c.logger)
 
 	return response, nil
-}
-
-// checks if a string is system key,
-// non system key means customized search attribtues
-func isSystemKey(key string) bool {
-	return definition.IsSystemIndexedKey(key)
 }

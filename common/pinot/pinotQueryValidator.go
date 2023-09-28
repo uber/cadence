@@ -187,7 +187,7 @@ func (qv *VisibilityQueryValidator) processSystemKey(expr sqlparser.Expr) (strin
 		expr.Format(buf)
 		return buf.String(), nil
 	}
-	// need to deal with missing value
+	// need to deal with missing value e.g. CloseTime = missing
 	// Question: why is the right side is sometimes a type of "colName", and sometimes a type of "SQLVal"?
 	// Answer: for any value, sqlParser will treat any string that doesn't surrounded by single quote as ColName;
 	// any string that surrounded by single quote as SQLVal

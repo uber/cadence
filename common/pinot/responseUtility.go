@@ -102,7 +102,7 @@ func ConvertSearchResultToVisibilityRecord(hit []interface{}, columnNames []stri
 		WorkflowID:       source.WorkflowID,
 		RunID:            source.RunID,
 		TypeName:         source.WorkflowType,
-		StartTime:        time.UnixMilli(source.StartTime), // be careful: source.StartTime is in milisecond
+		StartTime:        time.UnixMilli(source.StartTime), // be careful: source.StartTime is in milliseconds
 		ExecutionTime:    time.UnixMilli(source.ExecutionTime),
 		TaskList:         source.TaskList,
 		IsCron:           source.IsCron,
