@@ -91,13 +91,9 @@ func NewConfigStoreClient(clientCfg *csc.ClientConfig,
 		return nil, errors.New("persistence cfg is nil")
 	}
 
-	store, ok := persistenceCfg.DataStores[persistenceCfg.DefaultStore]
+	ds, ok := persistenceCfg.DataStores[persistenceCfg.DefaultStore]
 	if !ok {
 		return nil, errors.New("default persistence config missing")
-	}
-
-	if store.NoSQL == nil && store.ShardedNoSQL == nil {
-		return nil, errors.New("NoSQL and ShardedNoSQL structs are nil")
 	}
 
 	if err := validateClientConfig(clientCfg); err != nil {
@@ -105,7 +101,6 @@ func NewConfigStoreClient(clientCfg *csc.ClientConfig,
 		clientCfg = defaultConfigValues
 	}
 
-	ds := persistenceCfg.DataStores[persistenceCfg.DefaultStore]
 	client, err := newConfigStoreClient(clientCfg, &ds, logger, configType)
 	if err != nil {
 		return nil, err
@@ -138,6 +133,7 @@ func newConfigStoreClient(
 		}
 		store, err = sql.NewSQLConfigStore(db, logger, nil)
 	default:
+		return nil, errors.New("both NoSQL and SQL store are not provided")
 	}
 	if err != nil {
 		return nil, err
@@ -376,6 +372,7 @@ func (csc *configStoreClient) Stop() {
 		return
 	}
 	close(csc.doneCh)
+	csc.configStoreManager.Close()
 }
 
 func (csc *configStoreClient) Start() {

@@ -13,6 +13,16 @@ You can find a list of previous releases on the [github releases](https://github
 - Documentation about how scanner/fixer work and how to control them, see [the scanner readme.md](service/worker/scanner/README.md) (#5361)
   - This also includes example config to enable the new fixer.
 
+## [1.2.4] - 2023-09-27
+### Added
+Implement config store for MySQL (#5403)
+Implement config store for PostgresSQL (#5405)
+
+### Fixed
+Remove database check for config store tests (#5401)
+Fix persistence tests setup (#5402)
+Retract v1.2.3 (#5406)
+
 ## [1.2.3] - 2023-09-15
 ### Added
 Expose workflow history size and count to client (#5392)
