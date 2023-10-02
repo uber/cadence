@@ -2,7 +2,12 @@
 
 First and foremost: most code in this folder is disabled by default dynamic config,
 and it should be considered beta-like quality in general.  Understand what you are
-enabling before enabling it, and run it at your own risk.
+enabling before enabling it, and run it at your own risk.  It is shared primarily so
+others can learn from and leverage what we have already encountered, if they end up
+needing it or something similar.
+
+**Any _actually recommended_ fixing processes will be explicitly called out in release
+notes or similar.**  This document is **not** recommending any, merely describing.
 
 There are a variety of problems with the Scanner and Fixer related code, so
 please do not take this document as a sign that it is a structure we want to _keep_.
@@ -10,11 +15,31 @@ It has just been confusing enough that it took substantial time to understand,
 and now some of that effort is written down to save people the full effort in
 the future.
 
-And so, this doc is **almost entirely** concerned with the `Scanner` and `Fixer`
-and the surrounding code and how they are run.  Other code in this folder doesn't
-need as much of a guide, so it's mostly ignored.
+## What is this folder for
 
-## Basic structure
+This folder as a whole contains a variety of data-cleanup workflows.
+
+Stuff like:
+- Find old, unnecessary data and delete it.
+- Find data caused by old bugs and fix it.
+- Clean up and remove abandoned tasklists so they do not continue taking up space.
+
+As a general rule, these all scan the full database (for one kind of data), check
+some data, and clean it up if necessary.  
+*How their code does that* varies quite a bit, however.
+
+E.g. the "history scavenger" finds old branches of history that lost their CAS race
+to update the workflow's official history.  It is not possible to guarantee that
+these are cleaned up while a workflow runs, because any cleanup could have failed.  
+Instead, the history scavenger periodically walks through the whole database and
+looks for these orphaned history branches, and deletes them.
+
+The most complex of these processes are based around `Scanner` and `Fixer`, and
+so **this readme is almost exclusively written for them**.  
+For others, just read their code, it's probably faster than reading any doc about
+their code.
+
+## Basic structure of `Scanner` and `Fixer` workflows
 
 - "Invariants" define `Check` and `Fix` methods that make sure our invariants hold,
   and fixes them if they did not for some reason.
