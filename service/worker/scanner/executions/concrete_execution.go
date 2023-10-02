@@ -132,26 +132,21 @@ func concreteExecutionFixerIterator(ctx context.Context, client blobstore.Client
 
 // concreteExecutionFixerManager provides invariant manager for concrete execution fixer.
 func concreteExecutionFixerManager(_ context.Context, pr persistence.Retryer, params shardscanner.FixShardActivityParams, domainCache cache.DomainCache) invariant.Manager {
-	var ivs []invariant.Invariant
+	// convert to invariants.
+	// this may produce an empty list if it all fixers are intentionally disabled,
+	// or if the list came from a previous version of the server which lacked this config.
 	var collections []invariant.Collection
-
-	if len(params.EnabledInvariants) == 0 {
-		// if none, this is old serialized data, fall back to historical behavior.  this may be removed.
-		collections = append(collections, invariant.CollectionHistory, invariant.CollectionMutableState)
-	} else {
-		// convert to invariants.
-		// this may produce an empty list if it all fixers are intentionally disabled.
-		for k, v := range params.EnabledInvariants {
-			if v == strconv.FormatBool(true) {
-				ivc, err := invariant.CollectionString(k)
-				if err != nil {
-					panic(fmt.Sprintf("invalid collection name: %v", err)) // error includes the name
-				}
-				collections = append(collections, ivc)
+	for k, v := range params.EnabledInvariants {
+		if v == strconv.FormatBool(true) {
+			ivc, err := invariant.CollectionString(k)
+			if err != nil {
+				panic(fmt.Sprintf("invalid collection name: %v", err)) // error includes the name
 			}
+			collections = append(collections, ivc)
 		}
 	}
 
+	var ivs []invariant.Invariant
 	for _, fn := range ConcreteExecutionType.ToInvariants(collections, zap.NewNop()) {
 		ivs = append(ivs, fn(pr, domainCache))
 	}

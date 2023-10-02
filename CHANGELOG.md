@@ -8,10 +8,14 @@ You can find a list of previous releases on the [github releases](https://github
 
 ## [Unreleased]
 ### Added
-- Stale-workflow detection and cleanup added to shardscanner, disabled by default. (#5361)
-- New dynamic config to better control scanner and fixer, particularly for concrete executions. (#5361)
-- Documentation about how scanner/fixer work and how to control them, see [the scanner readme.md](service/worker/scanner/README.md) (#5361)
-  - This also includes example config to enable the new fixer.
+- Scanner / Fixer changes (#5361)
+  - Stale-workflow detection and cleanup added to shardscanner, disabled by default.
+  - New dynamic config to better control scanner and fixer, particularly for concrete executions.
+  - Documentation about how scanner/fixer work and how to control them, see [the scanner readme.md](service/worker/scanner/README.md)
+    - This also includes example config to enable the new fixer.
+
+### Upgrade notes
+- Any concrete execution fixer run on upgrade may be missing the new config and those activities will have no invariants for a single run.  Later runs will work normally. (#5361)
 
 ## [1.2.4] - 2023-09-27
 ### Added

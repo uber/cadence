@@ -43,28 +43,37 @@ var (
 	errQueryNotReady = errors.New("query is not yet ready to be handled, please try again shortly")
 )
 
-// FixerManagerCB is a function which returns invariant manager for fixer.
-type FixerManagerCB func(
-	context.Context,
-	persistence.Retryer,
-	FixShardActivityParams,
-	cache.DomainCache,
-) invariant.Manager
+type (
+	// FixerManagerCB is a function which returns invariant manager for fixer.
+	FixerManagerCB func(
+		context.Context,
+		persistence.Retryer,
+		FixShardActivityParams,
+		cache.DomainCache,
+	) invariant.Manager
 
-// FixerIteratorCB is a function which returns ScanOutputIterator for fixer.
-type FixerIteratorCB func(
-	context.Context,
-	blobstore.Client,
-	store.Keys,
-	FixShardActivityParams,
-) store.ScanOutputIterator
+	// FixerIteratorCB is a function which returns ScanOutputIterator for fixer.
+	FixerIteratorCB func(
+		context.Context,
+		blobstore.Client,
+		store.Keys,
+		FixShardActivityParams,
+	) store.ScanOutputIterator
 
-// FixerHooks holds callback functions for shard scanner workflow implementation.
-type FixerHooks struct {
-	InvariantManager FixerManagerCB
-	Iterator         FixerIteratorCB
-	GetFixerConfig   func(fixer FixerContext) CustomScannerConfig
-}
+	// FixerHooks holds callback functions for shard scanner workflow implementation.
+	FixerHooks struct {
+		InvariantManager FixerManagerCB
+		Iterator         FixerIteratorCB
+		GetFixerConfig   func(fixer FixerContext) CustomScannerConfig
+	}
+
+	// FixerWorkflow is the workflow that fixes all entities from a scan output.
+	FixerWorkflow struct {
+		Aggregator *ShardFixResultAggregator
+		Params     FixerWorkflowParams
+		Keys       *FixerCorruptedKeysActivityResult
+	}
+)
 
 // NewFixerHooks returns initialized callbacks for shard scanner workflow implementation.
 func NewFixerHooks(
@@ -80,13 +89,6 @@ func NewFixerHooks(
 		Iterator:         iterator,
 		GetFixerConfig:   config,
 	}, nil
-}
-
-// FixerWorkflow is the workflow that fixes all entities from a scan output.
-type FixerWorkflow struct {
-	Aggregator *ShardFixResultAggregator
-	Params     FixerWorkflowParams
-	Keys       *FixerCorruptedKeysActivityResult
 }
 
 // NewFixerWorkflow returns a new instance of fixer workflow
@@ -125,9 +127,8 @@ func NewFixerWorkflow(
 }
 
 func supportsFixerConfig(ctx workflow.Context) bool {
-	// relatively minor, but this allows an upgrade to retain the most-recent workflow runs.
-	// removing this check and always executing the activity may temporarily break anyone who
-	// has not upgraded incrementally, but the workflows should be safe to terminate and restart.
+	// this can probably be removed after a version or three, it just prevents a one-time
+	// non-determinism failure when resuming a previous version's fixer run.
 	return workflow.GetVersion(ctx, "dynamic fixer config", workflow.DefaultVersion, 1) == 1
 }
 

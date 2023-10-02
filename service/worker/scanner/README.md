@@ -1,5 +1,9 @@
 # A brief* overview of Scanner and Fixer and how to control them
 
+First and foremost: most code in this folder is disabled by default dynamic config,
+and it should be considered beta-like quality in general.  Understand what you are
+enabling before enabling it, and run it at your own risk.
+
 There are a variety of problems with the Scanner and Fixer related code, so
 please do not take this document as a sign that it is a structure we want to _keep_.
 It has just been confusing enough that it took substantial time to understand,
