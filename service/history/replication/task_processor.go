@@ -403,7 +403,7 @@ func (p *taskProcessorImpl) processSingleTask(replicationTask *types.Replication
 		return err
 	case err == execution.ErrMissingVersionHistories:
 		// skip the workflow without version histories
-		p.logger.Warn("Encounter workflow withour version histories")
+		p.logger.Warn("Encounter workflow without version histories")
 		return nil
 	default:
 		//handle error
@@ -430,10 +430,11 @@ func (p *taskProcessorImpl) processSingleTask(replicationTask *types.Replication
 			tag.Error(err),
 		)
 		//TODO: uncomment this when the execution fixer workflow is ready
-		//if err = p.triggerDataInconsistencyScan(replicationTask); err != nil {
-		//	p.logger.Warn("Failed to trigger data scan", tag.Error(err))
-		//	p.metricsClient.IncCounter(metrics.ReplicationDLQStatsScope, metrics.ReplicationDLQValidationFailed)
-		//}
+		// Uncommenting this to verify that the scanner indeed gets triggered.
+		if err = p.triggerDataInconsistencyScan(replicationTask); err != nil {
+			p.logger.Warn("Failed to trigger data scan", tag.Error(err))
+			p.metricsClient.IncCounter(metrics.ReplicationDLQStatsScope, metrics.ReplicationDLQValidationFailed)
+		}
 		return p.putReplicationTaskToDLQ(request)
 	}
 }
