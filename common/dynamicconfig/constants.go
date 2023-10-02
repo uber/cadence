@@ -4408,7 +4408,7 @@ var DurationKeys = map[DurationKey]DynamicDuration{
 	TimerProcessorArchivalTimeLimit: DynamicDuration{
 		KeyName:      "history.timerProcessorArchivalTimeLimit",
 		Description:  "TimerProcessorArchivalTimeLimit is the upper time limit for inline history archival",
-		DefaultValue: time.Second * 2,
+		DefaultValue: time.Second * 8,
 	},
 	TimerProcessorMaxTimeShift: DynamicDuration{
 		KeyName:      "history.timerProcessorMaxTimeShift",
@@ -4448,7 +4448,7 @@ var DurationKeys = map[DurationKey]DynamicDuration{
 	TransferProcessorVisibilityArchivalTimeLimit: DynamicDuration{
 		KeyName:      "history.transferProcessorVisibilityArchivalTimeLimit",
 		Description:  "TransferProcessorVisibilityArchivalTimeLimit is the upper time limit for archiving visibility records",
-		DefaultValue: time.Millisecond * 400,
+		DefaultValue: time.Millisecond * 1600,
 	},
 	CrossClusterSourceProcessorMaxPollInterval: DynamicDuration{
 		KeyName:      "history.crossClusterSourceProcessorMaxPollInterval",
