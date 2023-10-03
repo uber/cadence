@@ -29,11 +29,11 @@ import (
 	"strings"
 )
 
-const _CollectionName = "CollectionMutableStateCollectionHistoryCollectionDomain"
+const _CollectionName = "CollectionMutableStateCollectionHistoryCollectionDomainCollectionStale"
 
-var _CollectionIndex = [...]uint8{0, 22, 39, 55}
+var _CollectionIndex = [...]uint8{0, 22, 39, 55, 70}
 
-const _CollectionLowerName = "collectionmutablestatecollectionhistorycollectiondomain"
+const _CollectionLowerName = "collectionmutablestatecollectionhistorycollectiondomaincollectionstale"
 
 func (i Collection) String() string {
 	if i < 0 || i >= Collection(len(_CollectionIndex)-1) {
@@ -49,9 +49,10 @@ func _CollectionNoOp() {
 	_ = x[CollectionMutableState-(0)]
 	_ = x[CollectionHistory-(1)]
 	_ = x[CollectionDomain-(2)]
+	_ = x[CollectionStale-(3)]
 }
 
-var _CollectionValues = []Collection{CollectionMutableState, CollectionHistory, CollectionDomain}
+var _CollectionValues = []Collection{CollectionMutableState, CollectionHistory, CollectionDomain, CollectionStale}
 
 var _CollectionNameToValueMap = map[string]Collection{
 	_CollectionName[0:22]:       CollectionMutableState,
@@ -60,12 +61,15 @@ var _CollectionNameToValueMap = map[string]Collection{
 	_CollectionLowerName[22:39]: CollectionHistory,
 	_CollectionName[39:55]:      CollectionDomain,
 	_CollectionLowerName[39:55]: CollectionDomain,
+	_CollectionName[55:70]:      CollectionStale,
+	_CollectionLowerName[55:70]: CollectionStale,
 }
 
 var _CollectionNames = []string{
 	_CollectionName[0:22],
 	_CollectionName[22:39],
 	_CollectionName[39:55],
+	_CollectionName[55:70],
 }
 
 // CollectionString retrieves an enum value from the enum constants string name.

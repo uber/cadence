@@ -24,6 +24,7 @@ import "github.com/urfave/cli"
 
 // Flags used to specify cli command line arguments
 const (
+	FlagVerbose                           = "verbose"
 	FlagUsername                          = "username"
 	FlagPassword                          = "password"
 	FlagKeyspace                          = "keyspace"

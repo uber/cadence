@@ -70,7 +70,7 @@ type (
 		ErrorStr *string
 	}
 
-	// FixerCorruptedKeysActivityResult is the result of FixerCorruptedKeysActivity
+	// FixerCorruptedKeysActivityResult is the result of fixerCorruptedKeysActivity
 	FixerCorruptedKeysActivityResult struct {
 		CorruptedKeys             []CorruptedKeysEntry
 		MinShard                  *int
