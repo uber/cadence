@@ -432,6 +432,7 @@ func (p *taskProcessorImpl) processSingleTask(replicationTask *types.Replication
 		//TODO: uncomment this when the execution fixer workflow is ready
 		// Uncommenting this to verify that the scanner indeed gets triggered.
 		if err = p.triggerDataInconsistencyScan(replicationTask); err != nil {
+			p.logger.Info("Triggering a data scan")
 			p.logger.Warn("Failed to trigger data scan", tag.Error(err))
 			p.metricsClient.IncCounter(metrics.ReplicationDLQStatsScope, metrics.ReplicationDLQValidationFailed)
 		}
@@ -557,7 +558,7 @@ func (p *taskProcessorImpl) generateDLQRequest(
 }
 
 func (p *taskProcessorImpl) triggerDataInconsistencyScan(replicationTask *types.ReplicationTask) error {
-
+	p.logger.Info("Initiating a data scan")
 	var failoverVersion int64
 	var domainID string
 	var workflowID string
