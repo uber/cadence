@@ -709,6 +709,41 @@ const (
 	// ElasticsearchDeleteUninitializedWorkflowExecutionsScope tracks DeleteUninitializedWorkflowExecution calls made by service to persistence layer
 	ElasticsearchDeleteUninitializedWorkflowExecutionsScope
 
+	// PinotRecordWorkflowExecutionStartedScope tracks RecordWorkflowExecutionStarted calls made by service to persistence layer
+	PinotRecordWorkflowExecutionStartedScope
+	// PinotRecordWorkflowExecutionClosedScope tracks RecordWorkflowExecutionClosed calls made by service to persistence layer
+	PinotRecordWorkflowExecutionClosedScope
+	// PinotRecordWorkflowExecutionUninitializedScope tracks RecordWorkflowExecutionUninitialized calls made by service to persistence layer
+	PinotRecordWorkflowExecutionUninitializedScope
+	// PinotUpsertWorkflowExecutionScope tracks UpsertWorkflowExecution calls made by service to persistence layer
+	PinotUpsertWorkflowExecutionScope
+	// PinotListOpenWorkflowExecutionsScope tracks ListOpenWorkflowExecutions calls made by service to persistence layer
+	PinotListOpenWorkflowExecutionsScope
+	// PinotListClosedWorkflowExecutionsScope tracks ListClosedWorkflowExecutions calls made by service to persistence layer
+	PinotListClosedWorkflowExecutionsScope
+	// PinotListOpenWorkflowExecutionsByTypeScope tracks ListOpenWorkflowExecutionsByType calls made by service to persistence layer
+	PinotListOpenWorkflowExecutionsByTypeScope
+	// PinotListClosedWorkflowExecutionsByTypeScope tracks ListClosedWorkflowExecutionsByType calls made by service to persistence layer
+	PinotListClosedWorkflowExecutionsByTypeScope
+	// PinotListOpenWorkflowExecutionsByWorkflowIDScope tracks ListOpenWorkflowExecutionsByWorkflowID calls made by service to persistence layer
+	PinotListOpenWorkflowExecutionsByWorkflowIDScope
+	// PinotListClosedWorkflowExecutionsByWorkflowIDScope tracks ListClosedWorkflowExecutionsByWorkflowID calls made by service to persistence layer
+	PinotListClosedWorkflowExecutionsByWorkflowIDScope
+	// PinotListClosedWorkflowExecutionsByStatusScope tracks ListClosedWorkflowExecutionsByStatus calls made by service to persistence layer
+	PinotListClosedWorkflowExecutionsByStatusScope
+	// PinotGetClosedWorkflowExecutionScope tracks GetClosedWorkflowExecution calls made by service to persistence layer
+	PinotGetClosedWorkflowExecutionScope
+	// PinotListWorkflowExecutionsScope tracks ListWorkflowExecutions calls made by service to persistence layer
+	PinotListWorkflowExecutionsScope
+	// PinotScanWorkflowExecutionsScope tracks ScanWorkflowExecutions calls made by service to persistence layer
+	PinotScanWorkflowExecutionsScope
+	// PinotCountWorkflowExecutionsScope tracks CountWorkflowExecutions calls made by service to persistence layer
+	PinotCountWorkflowExecutionsScope
+	// PinotDeleteWorkflowExecutionsScope tracks DeleteWorkflowExecution calls made by service to persistence layer
+	PinotDeleteWorkflowExecutionsScope
+	// PinotDeleteUninitializedWorkflowExecutionsScope tracks DeleteUninitializedWorkflowExecution calls made by service to persistence layer
+	PinotDeleteUninitializedWorkflowExecutionsScope
+
 	// SequentialTaskProcessingScope is used by sequential task processing logic
 	SequentialTaskProcessingScope
 	// ParallelTaskProcessingScope is used by parallel task processing logic
@@ -1934,6 +1969,17 @@ const (
 	ElasticsearchLatencyPerDomain
 	ElasticsearchErrBadRequestCounterPerDomain
 	ElasticsearchErrBusyCounterPerDomain
+
+	PinotRequests
+	PinotFailures
+	PinotLatency
+	PinotErrBadRequestCounter
+	PinotErrBusyCounter
+	PinotRequestsPerDomain
+	PinotFailuresPerDomain
+	PinotLatencyPerDomain
+	PinotErrBadRequestCounterPerDomain
+	PinotErrBusyCounterPerDomain
 
 	SequentialTaskSubmitRequest
 	SequentialTaskSubmitRequestTaskQueueExist
