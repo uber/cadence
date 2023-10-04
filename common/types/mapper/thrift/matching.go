@@ -279,6 +279,7 @@ func FromMatchingPollForDecisionTaskResponse(t *types.MatchingPollForDecisionTas
 		ScheduledTimestamp:        t.ScheduledTimestamp,
 		StartedTimestamp:          t.StartedTimestamp,
 		Queries:                   FromWorkflowQueryMap(t.Queries),
+		TotalHistoryBytes:         &t.TotalHistoryBytes,
 	}
 }
 
@@ -305,6 +306,7 @@ func ToMatchingPollForDecisionTaskResponse(t *matching.PollForDecisionTaskRespon
 		ScheduledTimestamp:        t.ScheduledTimestamp,
 		StartedTimestamp:          t.StartedTimestamp,
 		Queries:                   ToWorkflowQueryMap(t.Queries),
+		TotalHistoryBytes:         t.GetTotalHistoryBytes(),
 	}
 }
 

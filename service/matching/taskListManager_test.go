@@ -47,12 +47,11 @@ func TestDeliverBufferTasks(t *testing.T) {
 	defer controller.Finish()
 
 	tests := []func(tlm *taskListManagerImpl){
-		func(tlm *taskListManagerImpl) { close(tlm.taskReader.taskBuffer) },
 		func(tlm *taskListManagerImpl) { tlm.taskReader.cancelFunc() },
 		func(tlm *taskListManagerImpl) {
 			rps := 0.1
 			tlm.matcher.UpdateRatelimit(&rps)
-			tlm.taskReader.taskBuffer <- &persistence.TaskInfo{}
+			tlm.taskReader.taskBuffers[defaultTaskBufferIsolationGroup] <- &persistence.TaskInfo{}
 			_, err := tlm.matcher.ratelimit(context.Background()) // consume the token
 			assert.NoError(t, err)
 			tlm.taskReader.cancelFunc()
@@ -64,7 +63,7 @@ func TestDeliverBufferTasks(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			tlm.taskReader.dispatchBufferedTasks()
+			tlm.taskReader.dispatchBufferedTasks(defaultTaskBufferIsolationGroup)
 		}()
 		test(tlm)
 		// dispatchBufferedTasks should stop after invocation of the test function
@@ -77,11 +76,11 @@ func TestDeliverBufferTasks_NoPollers(t *testing.T) {
 	defer controller.Finish()
 
 	tlm := createTestTaskListManager(controller)
-	tlm.taskReader.taskBuffer <- &persistence.TaskInfo{}
+	tlm.taskReader.taskBuffers[defaultTaskBufferIsolationGroup] <- &persistence.TaskInfo{}
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		tlm.taskReader.dispatchBufferedTasks()
+		tlm.taskReader.dispatchBufferedTasks("")
 		wg.Done()
 	}()
 	time.Sleep(100 * time.Millisecond) // let go routine run first and block on tasksForPoll
@@ -228,7 +227,7 @@ func tlMgrStartWithoutNotifyEvent(tlm *taskListManagerImpl) {
 	// mimic tlm.Start() but avoid calling notifyEvent
 	tlm.liveness.Start()
 	tlm.startWG.Done()
-	go tlm.taskReader.dispatchBufferedTasks()
+	go tlm.taskReader.dispatchBufferedTasks(defaultTaskBufferIsolationGroup)
 	go tlm.taskReader.getTasksPump()
 }
 
@@ -343,4 +342,49 @@ func TestAddTaskStandby(t *testing.T) {
 	syncMatch, err = tlm.AddTask(context.Background(), addTaskParam)
 	require.Error(t, err) // should not persist the task
 	require.False(t, syncMatch)
+}
+
+func TestGetPollerIsolationGroup(t *testing.T) {
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	config := defaultTestConfig()
+	config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(30 * time.Second)
+	tlm := createTestTaskListManagerWithConfig(controller, config)
+
+	bgCtx := context.WithValue(context.Background(), pollerIDKey, "poller0")
+	bgCtx = context.WithValue(bgCtx, identityKey, "id0")
+	bgCtx = context.WithValue(bgCtx, _isolationGroupKey, config.AllIsolationGroups[0])
+	ctx, cancel := context.WithTimeout(bgCtx, time.Second)
+	_, err := tlm.GetTask(ctx, nil)
+	cancel()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), ErrNoTasks.Error())
+
+	// we should get isolation groups that showed up within last 10 seconds
+	groups := tlm.getPollerIsolationGroups()
+	assert.Equal(t, 1, len(groups))
+	assert.Equal(t, config.AllIsolationGroups[0], groups[0])
+
+	// after 10s, the poller from that isolation group are cleared from the poller history
+	time.Sleep(10 * time.Second)
+	groups = tlm.getPollerIsolationGroups()
+	assert.Equal(t, 0, len(groups))
+
+	// we should get isolation groups of outstanding pollers
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		ctx, cancel := context.WithTimeout(bgCtx, time.Second*20)
+		_, err := tlm.GetTask(ctx, nil)
+		cancel()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), ErrNoTasks.Error())
+	}()
+	time.Sleep(11 * time.Second)
+	groups = tlm.getPollerIsolationGroups()
+	wg.Wait()
+	assert.Equal(t, 1, len(groups))
+	assert.Equal(t, config.AllIsolationGroups[0], groups[0])
 }

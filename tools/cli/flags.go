@@ -24,6 +24,7 @@ import "github.com/urfave/cli"
 
 // Flags used to specify cli command line arguments
 const (
+	FlagVerbose                           = "verbose"
 	FlagUsername                          = "username"
 	FlagPassword                          = "password"
 	FlagKeyspace                          = "keyspace"
@@ -32,6 +33,7 @@ const (
 	FlagDecodingTypes                     = "decoding_types"
 	FlagAddress                           = "address"
 	FlagAddressWithAlias                  = FlagAddress + ", ad"
+	FlagDestinationAddress                = "destination_address"
 	FlagHistoryAddress                    = "history_address"
 	FlagDBType                            = "db_type"
 	FlagDBAddress                         = "db_address"
@@ -42,6 +44,7 @@ const (
 	FlagProtoVersion                      = "protocol_version"
 	FlagDomainID                          = "domain_id"
 	FlagDomain                            = "domain"
+	FlagDestinationDomain                 = "destination_domain"
 	FlagDomainWithAlias                   = FlagDomain + ", do"
 	FlagShardID                           = "shard_id"
 	FlagShardIDWithAlias                  = FlagShardID + ", sid"
@@ -91,7 +94,8 @@ const (
 	FlagSignalInputFileWithAlias          = FlagSignalInputFile + ", sif"
 	FlagExcludeFile                       = "exclude_file"
 	FlagInputSeparator                    = "input_separator"
-	FlagParallism                         = "input_parallism"
+	FlagParallelism                       = "input_parallelism"
+	FlagParallismDeprecated               = "input_parallism" // typo, replaced by FlagParallelism
 	FlagScanType                          = "scan_type"
 	FlagInvariantCollection               = "invariant_collection"
 	FlagSkipCurrentOpen                   = "skip_current_open"
@@ -297,6 +301,7 @@ const (
 	FlagIsolationGroupSetDrains           = "set-drains"
 	FlagIsolationGroupJSONConfigurations  = "json"
 	FlagIsolationGroupsRemoveAllDrains    = "remove-all-drains"
+	FlagSearchAttribute                   = "search_attr"
 )
 
 var flagsForExecution = []cli.Flag{

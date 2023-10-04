@@ -142,7 +142,6 @@ func NewTestBaseWithNoSQL(options *TestBaseOptions) TestBase {
 		EnableCassandraAllConsistencyLevelDelete: dynamicconfig.GetBoolPropertyFn(true),
 		PersistenceSampleLoggingRate:             dynamicconfig.GetIntPropertyFn(100),
 		EnableShardIDMetrics:                     dynamicconfig.GetBoolPropertyFn(true),
-		EnableExecutionTTL:                       dynamicconfig.GetBoolPropertyFnFilteredByDomainID(true),
 	}
 	params := TestBaseParams{
 		DefaultTestCluster:    testCluster,
@@ -215,10 +214,8 @@ func (s *TestBase) Setup() {
 	s.ShardMgr, err = factory.NewShardManager()
 	s.fatalOnError("NewShardManager", err)
 
-	if cfg.DefaultStoreType() == config.StoreTypeCassandra {
-		s.ConfigStoreManager, err = factory.NewConfigStoreManager()
-		s.fatalOnError("NewConfigStoreManager", err)
-	}
+	s.ConfigStoreManager, err = factory.NewConfigStoreManager()
+	s.fatalOnError("NewConfigStoreManager", err)
 
 	s.ExecutionMgrFactory = factory
 	s.ExecutionManager, err = factory.NewExecutionManager(shardID)

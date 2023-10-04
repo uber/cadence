@@ -569,6 +569,15 @@ type (
 		Data      []byte
 	}
 
+	// ClusterConfigRow represents a row in cluster_config table
+	ClusterConfigRow struct {
+		RowType      int
+		Version      int64
+		Timestamp    time.Time
+		Data         []byte
+		DataEncoding string
+	}
+
 	// tableCRUD defines the API for interacting with the database tables
 	tableCRUD interface {
 		InsertIntoDomain(ctx context.Context, rows *DomainRow) (sql.Result, error)
@@ -799,6 +808,11 @@ type (
 		UpdateAckLevels(ctx context.Context, queueType persistence.QueueType, clusterAckLevels map[string]int64) error
 		GetAckLevels(ctx context.Context, queueType persistence.QueueType, forUpdate bool) (map[string]int64, error)
 		GetQueueSize(ctx context.Context, queueType persistence.QueueType) (int64, error)
+
+		// InsertConfig insert a config entry with version. Return nosqlplugin.NewConditionFailure if the same version of the row_type is existing
+		InsertConfig(ctx context.Context, row *persistence.InternalConfigStoreEntry) error
+		// SelectLatestConfig returns the config entry of the row_type with the largest(latest) version value
+		SelectLatestConfig(ctx context.Context, rowType int) (*persistence.InternalConfigStoreEntry, error)
 
 		// The follow provide information about the underlying sql crud implementation
 		SupportsTTL() bool

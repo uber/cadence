@@ -84,18 +84,20 @@ func FixerWorkflow(
 
 // ScannerHooks provides hooks for timers scanner.
 func ScannerHooks() *shardscanner.ScannerHooks {
-	h, err := shardscanner.NewScannerHooks(Manager, Iterator)
+	h, err := shardscanner.NewScannerHooks(Manager, Iterator, Config)
 	if err != nil {
 		return nil
 	}
-	h.SetConfig(Config)
 
 	return h
 }
 
 // FixerHooks provides hooks needed for timers fixer.
 func FixerHooks() *shardscanner.FixerHooks {
-	h, err := shardscanner.NewFixerHooks(FixerManager, FixerIterator)
+	noConfig := func(fixer shardscanner.FixerContext) shardscanner.CustomScannerConfig {
+		return nil
+	}
+	h, err := shardscanner.NewFixerHooks(FixerManager, FixerIterator, noConfig)
 	if err != nil {
 		return nil
 	}
@@ -155,7 +157,7 @@ func FixerManager(
 }
 
 // Config resolves dynamic config for timers scanner.
-func Config(ctx shardscanner.Context) shardscanner.CustomScannerConfig {
+func Config(ctx shardscanner.ScannerContext) shardscanner.CustomScannerConfig {
 	res := shardscanner.CustomScannerConfig{}
 	res[periodStartKey] = strconv.Itoa(ctx.Config.DynamicCollection.GetIntProperty(dynamicconfig.TimersScannerPeriodStart)())
 	res[periodEndKey] = strconv.Itoa(ctx.Config.DynamicCollection.GetIntProperty(dynamicconfig.TimersScannerPeriodEnd)())

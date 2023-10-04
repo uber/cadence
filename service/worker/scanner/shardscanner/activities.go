@@ -26,6 +26,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"go.uber.org/cadence"
@@ -40,22 +41,24 @@ import (
 )
 
 const (
-	// ActivityScannerEmitMetrics is the activity name for ScannerEmitMetricsActivity
+	// ActivityScannerEmitMetrics is the activity name for scannerEmitMetricsActivity
 	ActivityScannerEmitMetrics = "cadence-sys-shardscanner-emit-metrics-activity"
-	// ActivityScannerConfig is the activity name ScannerConfigActivity
+	// ActivityScannerConfig is the activity name scannerConfigActivity
 	ActivityScannerConfig = "cadence-sys-shardscanner-config-activity"
-	// ActivityScanShard is the activity name for ScanShardActivity
+	// ActivityFixerConfig is the activity name fixerConfigActivity
+	ActivityFixerConfig = "cadence-sys-shardscanner-fixer-config-activity"
+	// ActivityScanShard is the activity name for scanShardActivity
 	ActivityScanShard = "cadence-sys-shardscanner-scanshard-activity"
-	// ActivityFixerCorruptedKeys is the activity name for FixerCorruptedKeysActivity
+	// ActivityFixerCorruptedKeys is the activity name for fixerCorruptedKeysActivity
 	ActivityFixerCorruptedKeys = "cadence-sys-shardscanner-corruptedkeys-activity"
-	// ActivityFixShard is the activity name for FixShardActivity
+	// ActivityFixShard is the activity name for fixShardActivity
 	ActivityFixShard = "cadence-sys-shardscanner-fixshard-activity"
 	// ShardCorruptKeysQuery is the query name for the query used to get all completed shards with at least one corruption
 	ShardCorruptKeysQuery = "shard_corrupt_keys"
 )
 
-// ScannerConfigActivity will read dynamic config, apply overwrites and return a resolved config.
-func ScannerConfigActivity(
+// scannerConfigActivity will read dynamic config, apply overwrites and return a resolved config.
+func scannerConfigActivity(
 	activityCtx context.Context,
 	params ScannerConfigActivityParams,
 ) (ResolvedScannerWorkflowConfig, error) {
@@ -104,8 +107,8 @@ func ScannerConfigActivity(
 	return result, nil
 }
 
-// ScanShardActivity will scan a collection of shards for invariant violations.
-func ScanShardActivity(
+// scanShardActivity will scan a collection of shards for invariant violations.
+func scanShardActivity(
 	activityCtx context.Context,
 	params ScanShardActivityParams,
 ) ([]ScanReport, error) {
@@ -189,11 +192,11 @@ func scanShard(
 	return &report, nil
 }
 
-// FixerCorruptedKeysActivity will fetch the keys of blobs from shards with corruptions from a completed scan workflow.
+// fixerCorruptedKeysActivity will fetch the keys of blobs from shards with corruptions from a completed scan workflow.
 // If scan workflow is not closed or if query fails activity will return an error.
 // Accepts as input the shard to start query at and returns a next page token, therefore this activity can
 // be used to do pagination.
-func FixerCorruptedKeysActivity(
+func fixerCorruptedKeysActivity(
 	activityCtx context.Context,
 	params FixerCorruptedKeysActivityParams,
 ) (*FixerCorruptedKeysActivityResult, error) {
@@ -296,8 +299,38 @@ func FixerCorruptedKeysActivity(
 	}, nil
 }
 
-// FixShardActivity will fix a collection of shards.
-func FixShardActivity(
+type (
+	FixShardConfigParams struct {
+		// intentionally empty, no args needed currently.  just reserving arg space for future needs.
+	}
+	FixShardConfigResults struct {
+		EnabledInvariants CustomScannerConfig
+	}
+)
+
+// fixerConfigActivity returns a list of all enabled invariants for this fixer.
+// The type of the workflow determines the type of the fixer (concrete, current, etc).
+//
+// It essentially mirrors scannerConfigActivity, but does not try to merge into a common structure.
+func fixerConfigActivity(activityCtx context.Context, params FixShardConfigParams) (*FixShardConfigResults, error) {
+	ctx, err := GetFixerContext(activityCtx)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg := ctx.Hooks.GetFixerConfig(ctx)
+	if len(cfg) == 0 {
+		// sanity check for new code.  historically this field did not exist, now it is required to be populated.
+		return nil, fmt.Errorf(`invalid empty fixer config, you must explicitly specify "true" or "false" for all relevant invariants`)
+	}
+
+	return &FixShardConfigResults{
+		EnabledInvariants: cfg,
+	}, nil
+}
+
+// fixShardActivity will fix a collection of shards.
+func fixShardActivity(
 	activityCtx context.Context,
 	params FixShardActivityParams,
 ) ([]FixReport, error) {
@@ -384,8 +417,8 @@ func fixShard(
 	return &report, nil
 }
 
-// ScannerEmitMetricsActivity will emit metrics for a complete run of ShardScanner
-func ScannerEmitMetricsActivity(
+// scannerEmitMetricsActivity will emit metrics for a complete run of ShardScanner
+func scannerEmitMetricsActivity(
 	activityCtx context.Context,
 	params ScannerEmitMetricsActivityParams,
 ) error {

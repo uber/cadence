@@ -692,6 +692,7 @@ func (handler *handlerImpl) createRecordDecisionTaskStartedResponse(
 		queries[id] = input
 	}
 	response.Queries = queries
+	response.HistorySize = msBuilder.GetHistorySize()
 	return response, nil
 }
 

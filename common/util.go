@@ -413,6 +413,7 @@ func CreateMatchingPollForDecisionTaskResponse(historyResponse *types.RecordDeci
 		ScheduledTimestamp:        historyResponse.ScheduledTimestamp,
 		StartedTimestamp:          historyResponse.StartedTimestamp,
 		Queries:                   historyResponse.Queries,
+		TotalHistoryBytes:         historyResponse.HistorySize,
 	}
 	if historyResponse.GetPreviousStartedEventID() != EmptyEventID {
 		matchingResp.PreviousStartedEventID = historyResponse.PreviousStartedEventID

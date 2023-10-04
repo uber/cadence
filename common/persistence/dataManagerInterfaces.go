@@ -1024,9 +1024,8 @@ type (
 		ReplicationTasks  []Task
 		TimerTasks        []Task
 
-		Condition    int64
-		TTLInSeconds int64
-		Checksum     checksum.Checksum
+		Condition int64
+		Checksum  checksum.Checksum
 	}
 
 	// WorkflowSnapshot is used as generic workflow execution state snapshot

@@ -129,7 +129,9 @@ func (s *fixerWorkflowSuite) TestNewFixerHooks() {
 
 	for _, tc := range testCases {
 		s.Run(tc.name, func() {
-			_, err := NewFixerHooks(tc.manager, tc.iterator)
+			_, err := NewFixerHooks(tc.manager, tc.iterator, func(fixer FixerContext) CustomScannerConfig {
+				return nil // no config overrides
+			})
 			if tc.wantErr {
 				s.Error(err)
 			} else {

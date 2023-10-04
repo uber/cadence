@@ -41,10 +41,14 @@ import (
 
 var epochStartTime = time.Unix(0, 0)
 
+const (
+	defaultTaskBufferIsolationGroup = "" // a task buffer which is not using an isolation group
+)
+
 type (
 	taskReader struct {
-		taskBuffer      chan *persistence.TaskInfo // tasks loaded from persistence
-		notifyC         chan struct{}              // Used as signal to notify pump of new tasks
+		taskBuffers     map[string]chan *persistence.TaskInfo
+		notifyC         chan struct{} // Used as signal to notify pump of new tasks
 		tlMgr           *taskListManagerImpl
 		taskListID      *taskListID
 		config          *taskListConfig
@@ -69,11 +73,17 @@ type (
 		onFatalErr               func()
 		dispatchTask             func(context.Context, *InternalTask) error
 		getIsolationGroupForTask func(context.Context, *persistence.TaskInfo) (string, error)
+		ratePerSecond            func() float64
 	}
 )
 
-func newTaskReader(tlMgr *taskListManagerImpl) *taskReader {
+func newTaskReader(tlMgr *taskListManagerImpl, isolationGroups []string) *taskReader {
 	ctx, cancel := context.WithCancel(context.Background())
+	taskBuffers := make(map[string]chan *persistence.TaskInfo)
+	taskBuffers[defaultTaskBufferIsolationGroup] = make(chan *persistence.TaskInfo, tlMgr.config.GetTasksBatchSize()-1)
+	for _, g := range isolationGroups {
+		taskBuffers[g] = make(chan *persistence.TaskInfo, tlMgr.config.GetTasksBatchSize()-1)
+	}
 	return &taskReader{
 		tlMgr:          tlMgr,
 		taskListID:     tlMgr.taskListID,
@@ -87,7 +97,7 @@ func newTaskReader(tlMgr *taskListManagerImpl) *taskReader {
 		notifyC:        make(chan struct{}, 1),
 		// we always dequeue the head of the buffer and try to dispatch it to a poller
 		// so allocate one less than desired target buffer size
-		taskBuffer:               make(chan *persistence.TaskInfo, tlMgr.config.GetTasksBatchSize()-1),
+		taskBuffers:              taskBuffers,
 		domainCache:              tlMgr.domainCache,
 		clusterMetadata:          tlMgr.clusterMetadata,
 		logger:                   tlMgr.logger,
@@ -96,6 +106,7 @@ func newTaskReader(tlMgr *taskListManagerImpl) *taskReader {
 		onFatalErr:               tlMgr.Stop,
 		dispatchTask:             tlMgr.DispatchTask,
 		getIsolationGroupForTask: tlMgr.getIsolationGroupForTask,
+		ratePerSecond:            tlMgr.matcher.Rate,
 		throttleRetry: backoff.NewThrottleRetry(
 			backoff.WithRetryPolicy(persistenceOperationRetryPolicy),
 			backoff.WithRetryableError(persistence.IsTransientError),
@@ -105,7 +116,9 @@ func newTaskReader(tlMgr *taskListManagerImpl) *taskReader {
 
 func (tr *taskReader) Start() {
 	tr.Signal()
-	go tr.dispatchBufferedTasks()
+	for g := range tr.taskBuffers {
+		go tr.dispatchBufferedTasks(g)
+	}
 	go tr.getTasksPump()
 }
 
@@ -129,34 +142,19 @@ func (tr *taskReader) Signal() {
 	}
 }
 
-func (tr *taskReader) dispatchBufferedTasks() {
+func (tr *taskReader) dispatchBufferedTasks(isolationGroup string) {
 dispatchLoop:
 	for {
 		select {
-		case taskInfo, ok := <-tr.taskBuffer:
+		case taskInfo, ok := <-tr.taskBuffers[isolationGroup]:
 			if !ok { // Task list getTasks pump is shutdown
 				break dispatchLoop
 			}
 			for {
-				// find isolation group of the task
-				isolationGroup, err := tr.getIsolationGroupForTask(tr.cancelCtx, taskInfo)
-				if err != nil {
-					// it only errors when the tasklist is a sticky tasklist and
-					// the sticky pollers are not available, in this case, we just complete the task
-					// and let the decision get timed out and rescheduled to non-sticky tasklist
-					if err == _stickyPollerUnavailableError {
-						tr.completeTask(taskInfo, nil)
-					} else {
-						// it should never happen, unless there is a bug in 'getIsolationGroupForTask' method
-						tr.logger.Error("taskReader: unexpected error getting isolation group", tag.Error(err))
-						tr.completeTask(taskInfo, err)
-					}
-					break
-				}
 				task := newInternalTask(taskInfo, tr.completeTask, types.TaskSourceDbBacklog, "", false, nil, isolationGroup)
 				dispatchCtx, cancel := tr.newDispatchContext(isolationGroup)
 				timerScope := tr.scope.StartTimer(metrics.AsyncMatchLatencyPerTaskList)
-				err = tr.dispatchTask(dispatchCtx, task)
+				err := tr.dispatchTask(dispatchCtx, task)
 				timerScope.Stop()
 				cancel()
 				if err == nil {
@@ -171,9 +169,35 @@ dispatchLoop:
 					// if this happens, we don't want to block the task dispatching, because there might be pollers from
 					// other isolation groups, we just simply continue and dispatch the task to a new isolation group which
 					// has pollers
-					tr.logger.Warn("Async task dispatch timed out")
+					tr.logger.Warn("Async task dispatch timed out", tag.IsolationGroup(isolationGroup))
 					tr.scope.IncCounter(metrics.AsyncMatchDispatchTimeoutCounterPerTaskList)
-					continue
+					group, err := tr.getIsolationGroupForTask(tr.cancelCtx, taskInfo)
+					if err != nil {
+						// it only errors when the tasklist is a sticky tasklist and
+						// the sticky pollers are not available, in this case, we just complete the task
+						// and let the decision get timed out and rescheduled to non-sticky tasklist
+						if err == _stickyPollerUnavailableError {
+							tr.completeTask(taskInfo, nil)
+						} else {
+							// it should never happen, unless there is a bug in 'getIsolationGroupForTask' method
+							tr.logger.Error("taskReader: unexpected error getting isolation group", tag.Error(err))
+							tr.completeTask(taskInfo, err)
+						}
+						break
+					}
+					if group == isolationGroup {
+						continue
+					} else {
+						// if there is no poller in the isolation group or the isolation group is drained,
+						// we want to redistribute the tasks to other isolation groups in this case to drain
+						// the backlog
+						select {
+						case <-tr.cancelCtx.Done():
+							break dispatchLoop
+						case tr.taskBuffers[group] <- taskInfo:
+						}
+						break
+					}
 				}
 				// this should never happen unless there is a bug - don't drop the task
 				tr.scope.IncCounter(metrics.BufferThrottlePerTaskListCounter)
@@ -187,8 +211,6 @@ dispatchLoop:
 }
 
 func (tr *taskReader) getTasksPump() {
-	defer close(tr.taskBuffer)
-
 	updateAckTimer := time.NewTimer(tr.config.UpdateAckInterval())
 	defer updateAckTimer.Stop()
 getTasksPumpLoop:
@@ -308,13 +330,25 @@ func (tr *taskReader) addSingleTaskToBuffer(task *persistence.TaskInfo) bool {
 	if err != nil {
 		tr.logger.Fatal("critical bug when adding item to ackManager", tag.Error(err))
 	}
-	for {
-		select {
-		case tr.taskBuffer <- task:
-			return true
-		case <-tr.cancelCtx.Done():
-			return false
+	isolationGroup, err := tr.getIsolationGroupForTask(tr.cancelCtx, task)
+	if err != nil {
+		// it only errors when the tasklist is a sticky tasklist and
+		// the sticky pollers are not available, in this case, we just complete the task
+		// and let the decision get timed out and rescheduled to non-sticky tasklist
+		if err == _stickyPollerUnavailableError {
+			tr.completeTask(task, nil)
+		} else {
+			// it should never happen, unless there is a bug in 'getIsolationGroupForTask' method
+			tr.logger.Error("taskReader: unexpected error getting isolation group", tag.Error(err))
+			tr.completeTask(task, err)
 		}
+		return true
+	}
+	select {
+	case tr.taskBuffers[isolationGroup] <- task:
+		return true
+	case <-tr.cancelCtx.Done():
+		return false
 	}
 }
 
@@ -366,15 +400,23 @@ func (tr *taskReader) completeTask(task *persistence.TaskInfo, err error) {
 }
 
 func (tr *taskReader) newDispatchContext(isolationGroup string) (context.Context, context.CancelFunc) {
-	if isolationGroup != "" {
+	rps := tr.ratePerSecond()
+	if isolationGroup != "" || rps > 1e-7 { // 1e-7 is a random number chosen to avoid overflow, normally user don't set such a low rps
+		// this is the minimum timeout required to dispatch a task, if the timeout value is smaller than this
+		// async task dispatch can be completely throttled, which could happen when ratePerSecond is pretty low
+		minTimeout := time.Duration(float64(len(tr.taskBuffers))/rps) * time.Second
+		timeout := tr.config.AsyncTaskDispatchTimeout()
+		if timeout < minTimeout {
+			timeout = minTimeout
+		}
 		domainEntry, err := tr.domainCache.GetDomainByID(tr.taskListID.domainID)
 		if err != nil {
 			// we don't know if the domain is active in the current cluster, assume it is active and set the timeout
-			return context.WithTimeout(tr.cancelCtx, tr.config.AsyncTaskDispatchTimeout())
+			return context.WithTimeout(tr.cancelCtx, timeout)
 		}
 		if _, err := domainEntry.IsActiveIn(tr.clusterMetadata.GetCurrentClusterName()); err == nil {
 			// if the domain is active in the current cluster, set the timeout
-			return context.WithTimeout(tr.cancelCtx, tr.config.AsyncTaskDispatchTimeout())
+			return context.WithTimeout(tr.cancelCtx, timeout)
 		}
 	}
 	return tr.cancelCtx, func() {}

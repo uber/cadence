@@ -33,6 +33,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/urfave/cli"
+	"go.uber.org/zap"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
@@ -121,7 +122,16 @@ func AdminDBClean(c *cli.Context) {
 		collections = append(collections, collection)
 	}
 
-	invariants := scanType.ToInvariants(collections)
+	logger := zap.NewNop()
+	if c.Bool(FlagVerbose) {
+		logger, err = zap.NewDevelopment()
+		if err != nil {
+			// probably impossible with default config
+			ErrorAndExit("could not construct logger", err)
+		}
+	}
+
+	invariants := scanType.ToInvariants(collections, logger)
 	if len(invariants) < 1 {
 		ErrorAndExit(
 			fmt.Sprintf("no invariants for scantype %q and collections %q",

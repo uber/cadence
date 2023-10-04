@@ -92,3 +92,11 @@ func TestMySQLQueuePersistence(t *testing.T) {
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
+
+func TestMySQLConfigPersistence(t *testing.T) {
+	testflags.RequireMySQL(t)
+	s := new(pt.ConfigStorePersistenceSuite)
+	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
+	s.TestBase.Setup()
+	suite.Run(t, s)
+}

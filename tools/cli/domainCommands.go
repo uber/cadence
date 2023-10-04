@@ -29,6 +29,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/uber/cadence/client/admin"
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/types"
+
 	"github.com/uber/cadence/tools/common/flag"
 
 	"github.com/urfave/cli"
@@ -36,7 +40,6 @@ import (
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/domain"
-	"github.com/uber/cadence/common/types"
 )
 
 var (
@@ -46,7 +49,8 @@ var (
 type (
 	domainCLIImpl struct {
 		// used when making RPC call to frontend service
-		frontendClient frontend.Client
+		frontendClient      frontend.Client
+		frontendAdminClient admin.Client
 
 		// act as admin to modify domain in DB directly
 		domainHandler domain.Handler
@@ -58,18 +62,13 @@ func newDomainCLI(
 	c *cli.Context,
 	isAdminMode bool,
 ) *domainCLIImpl {
-
-	var frontendClient frontend.Client
-	var domainHandler domain.Handler
-	if !isAdminMode {
-		frontendClient = initializeFrontendClient(c)
-	} else {
-		domainHandler = initializeAdminDomainHandler(c)
+	d := &domainCLIImpl{}
+	d.frontendClient = initializeFrontendClient(c)
+	if isAdminMode {
+		d.frontendAdminClient = initializeFrontendAdminClient(c)
+		d.domainHandler = initializeAdminDomainHandler(c)
 	}
-	return &domainCLIImpl{
-		frontendClient: frontendClient,
-		domainHandler:  domainHandler,
-	}
+	return d
 }
 
 // RegisterDomain register a domain
@@ -479,6 +478,29 @@ type DomainRow struct {
 	VisibilityArchivalURI    string               `header:"Visibility Archival URI"`
 	BadBinaries              []BadBinaryRow
 	FailoverInfo             *FailoverInfoRow
+	LongRunningWorkFlowNum   *int
+}
+
+type DomainMigrationRow struct {
+	ValidationCheck   string `header: "Validation Checker"`
+	ValidationResult  bool   `header: "Validation Result"`
+	ValidationDetails ValidationDetails
+}
+
+type ValidationDetails struct {
+	CurrentDomainRow            *types.DescribeDomainResponse
+	NewDomainRow                *types.DescribeDomainResponse
+	MismatchedDomainMetaData    string
+	LongRunningWorkFlowNum      *int
+	MismatchedDynamicConfig     []MismatchedDynamicConfig
+	MissingCurrSearchAttributes []string
+	MissingNewSearchAttributes  []string
+}
+
+type MismatchedDynamicConfig struct {
+	Key        dynamicconfig.Key
+	CurrValues []*types.DynamicConfigValue
+	NewValues  []*types.DynamicConfigValue
 }
 
 func newDomainRow(domain *types.DescribeDomainResponse) DomainRow {

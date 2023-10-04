@@ -23,7 +23,7 @@ package config
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"io/ioutil"
+	"os"
 )
 
 type (
@@ -84,7 +84,7 @@ func (config TLS) ToTLSConfig() (*tls.Config, error) {
 	if len(caFiles) > 0 {
 		caCertPool := x509.NewCertPool()
 		for _, caFile := range caFiles {
-			caCert, err := ioutil.ReadFile(caFile)
+			caCert, err := os.ReadFile(caFile)
 			if err != nil {
 				return nil, err
 			}

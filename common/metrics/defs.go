@@ -2293,6 +2293,7 @@ const (
 	LargeHistoryBlobCount
 	LargeHistoryEventCount
 	LargeHistorySizeCount
+	UpdateWorkflowExecutionCount
 
 	NumHistoryMetrics
 )
@@ -2329,6 +2330,7 @@ const (
 	RemoteToRemoteMatchPerTaskListCounter
 	IsolationTaskMatchPerTaskListCounter
 	PollerPerTaskListCounter
+	PollerInvalidIsolationGroupCounter
 	TaskListManagersGauge
 	TaskLagPerTaskListGauge
 	TaskBacklogPerTaskListGauge
@@ -2898,6 +2900,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		LargeHistoryBlobCount:                                        {metricName: "large_history_blob_count", metricType: Counter},
 		LargeHistoryEventCount:                                       {metricName: "large_history_event_count", metricType: Counter},
 		LargeHistorySizeCount:                                        {metricName: "large_history_size_count", metricType: Counter},
+		UpdateWorkflowExecutionCount:                                 {metricName: "update_workflow_execution_count", metricType: Counter},
 	},
 	Matching: {
 		PollSuccessPerTaskListCounter:               {metricName: "poll_success_per_tl", metricRollupName: "poll_success"},
@@ -2930,6 +2933,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		RemoteToRemoteMatchPerTaskListCounter:       {metricName: "remote_to_remote_matches_per_tl", metricRollupName: "remote_to_remote_matches"},
 		IsolationTaskMatchPerTaskListCounter:        {metricName: "isolation_task_matches_per_tl", metricType: Counter},
 		PollerPerTaskListCounter:                    {metricName: "poller_count_per_tl", metricRollupName: "poller_count"},
+		PollerInvalidIsolationGroupCounter:          {metricName: "poller_invalid_isolation_group_per_tl", metricType: Counter},
 		TaskListManagersGauge:                       {metricName: "tasklist_managers", metricType: Gauge},
 		TaskLagPerTaskListGauge:                     {metricName: "task_lag_per_tl", metricType: Gauge},
 		TaskBacklogPerTaskListGauge:                 {metricName: "task_backlog_per_tl", metricType: Gauge},

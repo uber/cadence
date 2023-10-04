@@ -1509,7 +1509,10 @@ func ResetInBatch(c *cli.Context) {
 	excludeFileName := c.String(FlagExcludeFile)
 	excludeQuery := c.String(FlagExcludeWorkflowIDByQuery)
 	separator := c.String(FlagInputSeparator)
-	parallel := c.Int(FlagParallism)
+	parallel := c.Int(FlagParallismDeprecated)
+	if parallel == 1 {
+		parallel = c.Int(FlagParallelism)
+	}
 
 	extraForResetType, ok := resetTypesMap[resetType]
 	if !ok {
