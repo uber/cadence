@@ -6,6 +6,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 You can find a list of previous releases on the [github releases](https://github.com/uber/cadence/releases) page.
 
+## [Unreleased]
+### Added
+- Scanner / Fixer changes (#5361)
+  - Stale-workflow detection and cleanup added to shardscanner, disabled by default.
+  - New dynamic config to better control scanner and fixer, particularly for concrete executions.
+  - Documentation about how scanner/fixer work and how to control them, see [the scanner readme.md](service/worker/scanner/README.md)
+    - This also includes example config to enable the new fixer.
+
+### Upgrade notes
+- Any concrete execution fixer run on upgrade may be missing the new config and those activities will have no invariants for a single run.  Later runs will work normally. (#5361)
+
+## [1.2.4] - 2023-09-27
+### Added
+Implement config store for MySQL (#5403)
+Implement config store for PostgresSQL (#5405)
+
+### Fixed
+Remove database check for config store tests (#5401)
+Fix persistence tests setup (#5402)
+Retract v1.2.3 (#5406)
+
 ## [1.2.3] - 2023-09-15
 ### Added
 Expose workflow history size and count to client (#5392)

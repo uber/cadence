@@ -102,3 +102,11 @@ FAIL: TestPostgresSQLQueuePersistence/TestDomainReplicationQueue (0.26s)
 //	s.TestBase.Setup()
 //	suite.Run(t, s)
 //}
+
+func TestPostgresSQLConfigPersistence(t *testing.T) {
+	testflags.RequirePostgres(t)
+	s := new(pt.ConfigStorePersistenceSuite)
+	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
+	s.TestBase.Setup()
+	suite.Run(t, s)
+}
