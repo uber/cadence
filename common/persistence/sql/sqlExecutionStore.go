@@ -185,9 +185,13 @@ func (m *sqlExecutionStore) createWorkflowExecutionTx(
 			}
 
 		case p.CreateWorkflowModeContinueAsNew:
-			// continueAsNew mode expects a current run exists
-			if err := assertRunIDMismatch(serialization.MustParseUUID(executionInfo.RunID), row.RunID); err != nil {
-				return nil, err
+			runIDStr := row.RunID.String()
+			if runIDStr != request.PreviousRunID {
+				return nil, &p.CurrentWorkflowConditionFailedError{
+					Msg: fmt.Sprintf("Workflow execution creation condition failed. WorkflowId: %v, "+
+						"RunID: %v, PreviousRunID: %v",
+						workflowID, runIDStr, request.PreviousRunID),
+				}
 			}
 
 		default:
