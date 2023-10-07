@@ -303,6 +303,9 @@ const (
 	PersistenceUpdateDynamicConfigScope
 	// PersistenceShardRequestCountScope tracks number of persistence calls made to each shard
 	PersistenceShardRequestCountScope
+
+	// ResolverHostNotFoundScope is a simple low level error indicating a lookup failed in the membership resolver
+	ResolverHostNotFoundScope
 	// HistoryClientStartWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientStartWorkflowExecutionScope
 	// HistoryClientDescribeHistoryHostScope tracks RPC calls to history service
@@ -1353,6 +1356,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceFetchDynamicConfigScope:                             {operation: "FetchDynamicConfig"},
 		PersistenceUpdateDynamicConfigScope:                            {operation: "UpdateDynamicConfig"},
 		PersistenceShardRequestCountScope:                              {operation: "ShardIdPersistenceRequest"},
+		ResolverHostNotFoundScope:                                      {operation: "ResolverHostNotFound"},
 
 		ClusterMetadataArchivalConfigScope: {operation: "ArchivalConfig"},
 

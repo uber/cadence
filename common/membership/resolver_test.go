@@ -23,6 +23,7 @@
 package membership
 
 import (
+	"github.com/uber/cadence/common/metrics"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -136,5 +137,6 @@ func newTestResolver(t *testing.T) (*MultiringResolver, *MockPeerProvider) {
 		testServices,
 		pp,
 		log.NewNoop(),
+		metrics.NewNoopMetricsClient(),
 	), pp
 }

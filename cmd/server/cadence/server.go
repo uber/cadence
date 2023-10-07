@@ -182,6 +182,7 @@ func (s *server) startService() common.Daemon {
 	params.MembershipResolver, err = membership.NewResolver(
 		peerProvider,
 		params.Logger,
+		params.MetricsClient,
 	)
 	if err != nil {
 		log.Fatalf("error creating membership monitor: %v", err)

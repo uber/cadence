@@ -26,6 +26,7 @@ package membership
 import (
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/common/metrics"
 	"sync/atomic"
 
 	"github.com/uber/cadence/common"
@@ -80,7 +81,8 @@ type (
 
 // MultiringResolver uses ring-per-service for membership information
 type MultiringResolver struct {
-	status int32
+	metrics metrics.Client
+	status  int32
 
 	provider PeerProvider
 	rings    map[string]*ring
@@ -92,8 +94,9 @@ var _ Resolver = (*MultiringResolver)(nil)
 func NewResolver(
 	provider PeerProvider,
 	logger log.Logger,
+	metrics metrics.Client,
 ) (*MultiringResolver, error) {
-	return NewMultiringResolver(service.List, provider, logger.WithTags(tag.ComponentServiceResolver)), nil
+	return NewMultiringResolver(service.List, provider, logger.WithTags(tag.ComponentServiceResolver), metrics), nil
 }
 
 // NewMultiringResolver creates hashrings for all services
@@ -101,11 +104,13 @@ func NewMultiringResolver(
 	services []string,
 	provider PeerProvider,
 	logger log.Logger,
+	metrics metrics.Client,
 ) *MultiringResolver {
 	rpo := &MultiringResolver{
 		status:   common.DaemonStatusInitialized,
 		provider: provider,
 		rings:    make(map[string]*ring),
+		metrics:  metrics,
 	}
 
 	for _, s := range services {
@@ -193,6 +198,7 @@ func (rpo *MultiringResolver) Unsubscribe(service string, name string) error {
 func (rpo *MultiringResolver) Members(service string) ([]HostInfo, error) {
 	ring, err := rpo.getRing(service)
 	if err != nil {
+		rpo.metrics.Scope(metrics.ResolverHostNotFoundScope).IncCounter(1)
 		return nil, err
 	}
 	return ring.Members(), nil
@@ -208,7 +214,8 @@ func (rpo *MultiringResolver) LookupByAddress(service, address string) (HostInfo
 			return m, nil
 		}
 	}
-	return HostInfo{}, errors.New("host not found")
+	rpo.metrics.Scope(metrics.ResolverHostNotFoundScope).IncCounter(1)
+	return HostInfo{}, errors.New("host not found while looking up by address")
 }
 
 func (rpo *MultiringResolver) MemberCount(service string) (int, error) {
