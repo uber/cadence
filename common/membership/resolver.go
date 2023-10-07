@@ -215,7 +215,7 @@ func (rpo *MultiringResolver) LookupByAddress(service, address string) (HostInfo
 		}
 	}
 	rpo.metrics.Scope(metrics.ResolverHostNotFoundScope).IncCounter(1)
-	return HostInfo{}, errors.New("host not found while looking up by address")
+	return HostInfo{}, errors.New("host not found")
 }
 
 func (rpo *MultiringResolver) MemberCount(service string) (int, error) {
