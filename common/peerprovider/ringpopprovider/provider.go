@@ -86,7 +86,16 @@ func New(
 		DiscoverProvider: discoveryProvider,
 	}
 
-	rp, err := ringpop.New(config.Name, ringpop.Channel(channel.(*tcg.Channel)))
+	ringpopOptions := []ringpop.Option{
+		ringpop.Channel(channel.(*tcg.Channel)),
+	}
+
+	if len(config.Address) > 0 {
+		logger.Info(fmt.Sprintf("Ringpop Option Address: %s", config.Address))
+		ringpopOptions = append(ringpopOptions, ringpop.Address(config.Address))
+	}
+
+	rp, err := ringpop.New(config.Name, ringpopOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("ringpop instance creation: %w", err)
 	}
