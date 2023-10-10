@@ -1,11 +1,7 @@
 {
   "schemaName": "cadence_visibility_pinot",
-  "primaryKeyColumns": ["DocID"],
+  "primaryKeyColumns": ["RunID"],
   "dimensionFieldSpecs": [
-    {
-      "name": "DocID",
-      "dataType": "STRING"
-    },
     {
       "name": "DomainID",
       "dataType": "STRING"
@@ -29,10 +25,6 @@
     {
       "name": "HistoryLength",
       "dataType": "INT"
-    },
-    {
-      "name": "KafkaKey",
-      "dataType": "STRING"
     },
     {
       "name": "TaskList",
@@ -77,6 +69,11 @@
     "granularity": "1:MILLISECONDS"
   },{
     "name": "ExecutionTime",
+    "dataType": "LONG",
+    "format" : "1:MILLISECONDS:EPOCH",
+    "granularity": "1:MILLISECONDS"
+  },{
+    "name": "SecondsSinceEpoch",
     "dataType": "LONG",
     "format" : "1:MILLISECONDS:EPOCH",
     "granularity": "1:MILLISECONDS"
