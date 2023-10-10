@@ -198,7 +198,6 @@ func (rpo *MultiringResolver) Unsubscribe(service string, name string) error {
 func (rpo *MultiringResolver) Members(service string) ([]HostInfo, error) {
 	ring, err := rpo.getRing(service)
 	if err != nil {
-		rpo.metrics.Scope(metrics.ResolverHostNotFoundScope).IncCounter(1)
 		return nil, err
 	}
 	return ring.Members(), nil
