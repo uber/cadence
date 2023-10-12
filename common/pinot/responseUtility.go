@@ -57,13 +57,11 @@ type VisibilityRecord struct {
 	CloseTime     int64
 	CloseStatus   int
 	HistoryLength int64
-	Encoding      string
 	TaskList      string
 	IsCron        bool
 	NumClusters   int16
 	UpdateTime    int64
 	ShardID       int16
-	//SearchAttributes map[string]interface{}
 }
 
 func ConvertSearchResultToVisibilityRecord(hit []interface{}, columnNames []string, logger log.Logger) *p.InternalVisibilityWorkflowExecutionInfo {
@@ -76,8 +74,7 @@ func ConvertSearchResultToVisibilityRecord(hit []interface{}, columnNames []stri
 	jsonSystemKeyMap, err := json.Marshal(systemKeyMap)
 	if err != nil {
 		logger.Error("unable to marshal systemKeyMap",
-			tag.Error(err), //tag.ESDocID(fmt.Sprintf(columnNameToValue["DocID"]))
-		)
+			tag.Error(err))
 		return nil
 	}
 

@@ -77,25 +77,6 @@ type (
 		config              *service.Config
 		pinotQueryValidator *pnt.VisibilityQueryValidator
 	}
-
-	visibilityMessage struct {
-		DomainID      string `json:"DomainID,omitempty"`
-		WorkflowID    string `json:"WorkflowID,omitempty"`
-		RunID         string `json:"RunID,omitempty"`
-		WorkflowType  string `json:"WorkflowType,omitempty"`
-		TaskList      string `json:"TaskList,omitempty"`
-		StartTime     int64  `json:"StartTime,omitempty"`
-		ExecutionTime int64  `json:"ExecutionTime,omitempty"`
-		TaskID        int64  `json:"TaskID,omitempty"`
-		IsCron        bool   `json:"IsCron,omitempty"`
-		NumClusters   int64  `json:"NumClusters,omitempty"`
-		UpdateTime    int64  `json:"UpdateTime,omitempty"` // update execution,
-		ShardID       int64  `json:"ShardID,omitempty"`
-		// specific to certain status
-		CloseTime     int64 `json:"CloseTime,omitempty"`     // close execution
-		CloseStatus   int64 `json:"CloseStatus"`             // close execution
-		HistoryLength int64 `json:"HistoryLength,omitempty"` // close execution
-	}
 )
 
 var _ p.VisibilityStore = (*pinotVisibilityStore)(nil)
@@ -106,6 +87,10 @@ func NewPinotVisibilityStore(
 	producer messaging.Producer,
 	logger log.Logger,
 ) p.VisibilityStore {
+	if producer == nil {
+		// must be bug, check history setup
+		logger.Fatal("message producer is nil")
+	}
 	return &pinotVisibilityStore{
 		pinotClient:         pinotClient,
 		producer:            producer,
@@ -116,7 +101,7 @@ func NewPinotVisibilityStore(
 }
 
 func (v *pinotVisibilityStore) Close() {
-	// TODO: need to double check what is close trace do. Does it close the client?
+	// Not needed for pinot, just keep for visibility store interface
 }
 
 func (v *pinotVisibilityStore) GetName() string {
@@ -127,7 +112,6 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionStarted(
 	ctx context.Context,
 	request *p.InternalRecordWorkflowExecutionStartedRequest,
 ) error {
-	v.checkProducer()
 
 	msg, err := createVisibilityMessage(
 		request.DomainUUID,
@@ -159,7 +143,6 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionStarted(
 }
 
 func (v *pinotVisibilityStore) RecordWorkflowExecutionClosed(ctx context.Context, request *p.InternalRecordWorkflowExecutionClosedRequest) error {
-	v.checkProducer()
 
 	msg, err := createVisibilityMessage(
 		request.DomainUUID,
@@ -191,7 +174,7 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionClosed(ctx context.Context
 }
 
 func (v *pinotVisibilityStore) RecordWorkflowExecutionUninitialized(ctx context.Context, request *p.InternalRecordWorkflowExecutionUninitializedRequest) error {
-	v.checkProducer()
+
 	msg, err := createVisibilityMessage(
 		request.DomainUUID,
 		request.WorkflowID,
@@ -222,7 +205,7 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionUninitialized(ctx context.
 }
 
 func (v *pinotVisibilityStore) UpsertWorkflowExecution(ctx context.Context, request *p.InternalUpsertWorkflowExecutionRequest) error {
-	v.checkProducer()
+
 	msg, err := createVisibilityMessage(
 		request.DomainUUID,
 		request.WorkflowID,
@@ -256,7 +239,7 @@ func (v *pinotVisibilityStore) DeleteWorkflowExecution(
 	ctx context.Context,
 	request *p.VisibilityDeleteWorkflowExecutionRequest,
 ) error {
-	v.checkProducer()
+
 	msg, err := createDeleteVisibilityMessage(
 		request.DomainID,
 		request.WorkflowID,
@@ -514,13 +497,6 @@ func (v *pinotVisibilityStore) CountWorkflowExecutions(ctx context.Context, requ
 	return &p.CountWorkflowExecutionsResponse{
 		Count: resp,
 	}, nil
-}
-
-func (v *pinotVisibilityStore) checkProducer() {
-	if v.producer == nil {
-		// must be bug, check history setup
-		panic("message producer is nil")
-	}
 }
 
 // a new function to create visibility message for deletion
