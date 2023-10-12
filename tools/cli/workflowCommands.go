@@ -1025,6 +1025,7 @@ type WorkflowRow struct {
 	ExecutionTime    time.Time              `header:"Execution Time"`
 	EndTime          time.Time              `header:"End Time"`
 	CloseStatus      string                 `header:"Close Status"`
+	HistoryLength    int64                  `header:"History Length"`
 	Memo             map[string]string      `header:"Memo"`
 	SearchAttributes map[string]interface{} `header:"Search Attributes"`
 }
@@ -1052,6 +1053,7 @@ func newWorkflowRow(workflow *types.WorkflowExecutionInfo) WorkflowRow {
 		ExecutionTime:    time.Unix(0, workflow.GetExecutionTime()),
 		EndTime:          time.Unix(0, workflow.GetCloseTime()),
 		CloseStatus:      workflow.CloseStatus.String(),
+		HistoryLength:    workflow.HistoryLength,
 		Memo:             memo,
 		SearchAttributes: sa,
 	}
