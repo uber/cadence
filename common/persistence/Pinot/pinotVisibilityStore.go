@@ -45,7 +45,6 @@ const (
 	pinotPersistenceName = "pinot"
 	DescendingOrder      = "DESC"
 	AcendingOrder        = "ASC"
-	DocID                = "DocID"
 	DomainID             = "DomainID"
 	WorkflowID           = "WorkflowID"
 	RunID                = "RunID"
@@ -63,7 +62,8 @@ const (
 	ExecutionTime        = "ExecutionTime"
 	Encoding             = "Encoding"
 	LikeStatement        = "%s LIKE '%%%s%%'"
-	IsDeleted            = "IsDeleted"
+	IsDeleted            = "IsDeleted"         // used for Pinot deletion/rolling upsert only, not visible to user
+	SecondsSinceEpoch    = "SecondsSinceEpoch" // used for Pinot deletion/rolling upsert only, not visible to user
 
 	// used to be micro second
 	oneMicroSecondInNano = int64(time.Microsecond / time.Nanosecond)
@@ -79,7 +79,6 @@ type (
 	}
 
 	visibilityMessage struct {
-		DocID         string `json:"DocID,omitempty"`
 		DomainID      string `json:"DomainID,omitempty"`
 		WorkflowID    string `json:"WorkflowID,omitempty"`
 		RunID         string `json:"RunID,omitempty"`
@@ -532,11 +531,11 @@ func createDeleteVisibilityMessage(domainID string,
 	isDeleted bool,
 ) (*indexer.PinotMessage, error) {
 	m := make(map[string]interface{})
-	m[DocID] = wid + "-" + rid
 	m[DomainID] = domainID
 	m[WorkflowID] = wid
 	m[RunID] = rid
 	m[IsDeleted] = isDeleted
+	m[SecondsSinceEpoch] = time.Now().UnixNano()
 	serializedMsg, err := json.Marshal(m)
 	if err != nil {
 		return nil, err
@@ -574,7 +573,6 @@ func createVisibilityMessage(
 ) (*indexer.PinotMessage, error) {
 	m := make(map[string]interface{})
 	//loop through all input parameters
-	m[DocID] = wid + "-" + rid
 	m[DomainID] = domainID
 	m[WorkflowID] = wid
 	m[RunID] = rid
@@ -590,6 +588,7 @@ func createVisibilityMessage(
 	m[UpdateTime] = updateTimeUnixNano
 	m[ShardID] = shardID
 	m[IsDeleted] = isDeleted
+	m[SecondsSinceEpoch] = updateTimeUnixNano // same as update time when record is upserted, could not use updateTime directly since this will be modified by Pinot
 
 	SearchAttributes := make(map[string]interface{})
 	var err error
