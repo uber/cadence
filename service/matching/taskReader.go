@@ -452,8 +452,6 @@ func (tr *taskReader) dispatchSingleTaskFromBuffer(isolationGroup string, taskIn
 					// todo (david.porter) work out if this should be failed at some point
 					time.Sleep(time.Millisecond * 250)
 				}
-				// todo (david.porter... understand if we need this break
-				break
 			}
 		}
 		// this should never happen unless there is a bug - don't drop the task
