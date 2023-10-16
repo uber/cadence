@@ -2309,6 +2309,8 @@ const (
 	RespondQueryTaskFailedPerTaskListCounter
 	SyncThrottlePerTaskListCounter
 	BufferThrottlePerTaskListCounter
+	BufferIsolationGroupRedirectCounter
+	BufferIsolationGroupRedirectFailureCounter
 	SyncMatchLatencyPerTaskList
 	AsyncMatchLatencyPerTaskList
 	AsyncMatchDispatchLatencyPerTaskList
@@ -2912,6 +2914,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		RespondQueryTaskFailedPerTaskListCounter:    {metricName: "respond_query_failed_per_tl", metricRollupName: "respond_query_failed"},
 		SyncThrottlePerTaskListCounter:              {metricName: "sync_throttle_count_per_tl", metricRollupName: "sync_throttle_count"},
 		BufferThrottlePerTaskListCounter:            {metricName: "buffer_throttle_count_per_tl", metricRollupName: "buffer_throttle_count"},
+		BufferIsolationGroupRedirectCounter:         {metricName: "buffer_isolation_group_redirected", metricRollupName: "buffer_isolation_group_redirected"},
+		BufferIsolationGroupRedirectFailureCounter:  {metricName: "buffer_isolation_group_redirect_failure", metricRollupName: "buffer_isolation_group_redirect_failure"},
 		ExpiredTasksPerTaskListCounter:              {metricName: "tasks_expired_per_tl", metricRollupName: "tasks_expired"},
 		ForwardedPerTaskListCounter:                 {metricName: "forwarded_per_tl", metricRollupName: "forwarded"},
 		ForwardTaskCallsPerTaskList:                 {metricName: "forward_task_calls_per_tl", metricRollupName: "forward_task_calls"},

@@ -388,3 +388,30 @@ func TestGetPollerIsolationGroup(t *testing.T) {
 	assert.Equal(t, 1, len(groups))
 	assert.Equal(t, config.AllIsolationGroups[0], groups[0])
 }
+
+// The intent of this test: SingleTaskDispatch is one of two places where tasks are written to
+// the taskreader.taskBuffers channels. As such, it needs to take care to not accidentally
+// hit the channel when it's full, as it'll block, causing a deadlock (due to both this dispatch
+// and the async task pump blocking trying to read to the channel)
+func TestSingleTaskDispatchDoesNotDeadlock(t *testing.T) {
+	controller := gomock.NewController(t)
+
+	config := defaultTestConfig()
+	config.EnableTasklistIsolation = func(domain string) bool { return true }
+	tlm := createTestTaskListManagerWithConfig(controller, config)
+
+	// mock a timeout to cause tasks to be rerouted
+	tlm.taskReader.dispatchTask = func(ctx context.Context, task *InternalTask) error {
+		return context.DeadlineExceeded
+	}
+	tlm.taskReader.getIsolationGroupForTask = func(ctx context.Context, info *persistence.TaskInfo) (string, error) {
+		// force this, on the second read, to always reroute to the other DC
+		return "datacenterB", nil
+	}
+
+	// the Assertion here is that this doesn't block on the channel being full
+	// and is able to continue
+	for i := 0; i < config.GetTasksBatchSize("", "", 0); i++ {
+		tlm.taskReader.dispatchSingleTaskFromBuffer("datacenterA", &persistence.TaskInfo{})
+	}
+}
