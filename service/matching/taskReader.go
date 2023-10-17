@@ -438,7 +438,7 @@ func (tr *taskReader) dispatchSingleTaskFromBuffer(isolationGroup string, taskIn
 			// there's a programmatic error. Something has gone wrong with tasklist instantiation
 			// don't block and redirect to the default group
 			tr.scope.IncCounter(metrics.BufferIsolationGroupRedirectFailureCounter)
-			tr.logger.Error("An isolation group buffer was misconfigured and couln't be found. Redirecting to default",
+			tr.logger.Error("An isolation group buffer was misconfigured and couldn't be found. Redirecting to default",
 				tag.IsolationGroup(group),
 				tag.WorkflowRunID(taskInfo.RunID),
 				tag.WorkflowID(taskInfo.WorkflowID),
