@@ -89,7 +89,7 @@ func newDomainCommands() []cli.Command {
 			Usage:   "Migrate existing domain to new domain. This command only validates the settings. It does not perform actual data migration",
 			Flags:   migrateDomainFlags,
 			Action: func(c *cli.Context) {
-				newDomainMigrationCLIImpl(c).Validation(c)
+				NewDomainMigrationChecker(c).Validation(c)
 			},
 		},
 	}
