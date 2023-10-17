@@ -487,9 +487,7 @@ func (tr *taskReader) dispatchSingleTaskFromBuffer(isolationGroup string, taskIn
 			// the task async buffers on the other isolation-group are already full, wait and retry
 		}
 	}
-	// this should never happen unless there is a bug - don't drop the task
 	tr.scope.IncCounter(metrics.BufferThrottlePerTaskListCounter)
-	tr.logger.Error("taskReader: unexpected error dispatching task", tag.Error(err))
 	runtime.Gosched()
 	return false, false
 }
