@@ -25,7 +25,7 @@ import (
 
 	pnt "github.com/uber/cadence/common/pinot"
 
-	pinotVisibility "github.com/uber/cadence/common/persistence/Pinot"
+	pinotVisibility "github.com/uber/cadence/common/persistence/pinot"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
