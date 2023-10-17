@@ -389,6 +389,25 @@ func TestGetPollerIsolationGroup(t *testing.T) {
 	assert.Equal(t, config.AllIsolationGroups[0], groups[0])
 }
 
+// return a client side tasklist throttle error from the rate limiter.
+// The expected behaviour is to retry
+func TestRateLimitErrorsFromTasklistDispatch(t *testing.T) {
+	controller := gomock.NewController(t)
+
+	config := defaultTestConfig()
+	config.EnableTasklistIsolation = func(domain string) bool { return true }
+	tlm := createTestTaskListManagerWithConfig(controller, config)
+
+	tlm.taskReader.dispatchTask = func(ctx context.Context, task *InternalTask) error {
+		return ErrTasklistThrottled
+	}
+	tlm.taskReader.getIsolationGroupForTask = func(ctx context.Context, info *persistence.TaskInfo) (string, error) { return "datacenterA", nil }
+
+	breakDispatcher, breakRetryLoop := tlm.taskReader.dispatchSingleTaskFromBuffer("datacenterA", &persistence.TaskInfo{})
+	assert.False(t, breakDispatcher)
+	assert.False(t, breakRetryLoop)
+}
+
 // The intent of this test: SingleTaskDispatch is one of two places where tasks are written to
 // the taskreader.taskBuffers channels. As such, it needs to take care to not accidentally
 // hit the channel when it's full, as it'll block, causing a deadlock (due to both this dispatch

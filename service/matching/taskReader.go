@@ -24,6 +24,7 @@ package matching
 
 import (
 	"context"
+	"errors"
 	"runtime"
 	"sync/atomic"
 	"time"
@@ -394,19 +395,28 @@ func (tr *taskReader) dispatchSingleTaskFromBuffer(isolationGroup string, taskIn
 	err := tr.dispatchTask(dispatchCtx, task)
 	timerScope.Stop()
 	cancel()
+
 	if err == nil {
 		return false, true
 	}
-	if err == context.Canceled {
+
+	if errors.Is(err, context.Canceled) {
 		tr.logger.Info("Tasklist manager context is cancelled, shutting down")
 		return true, true
 	}
-	if err == context.DeadlineExceeded {
+
+	if errors.Is(err, context.DeadlineExceeded) {
 		// it only happens when isolation is enabled and there is no pollers from the given isolation group
 		// if this happens, we don't want to block the task dispatching, because there might be pollers from
 		// other isolation groups, we just simply continue and dispatch the task to a new isolation group which
 		// has pollers
-		tr.logger.Warn("Async task dispatch timed out", tag.IsolationGroup(isolationGroup))
+		tr.logger.Warn("Async task dispatch timed out",
+			tag.IsolationGroup(isolationGroup),
+			tag.WorkflowRunID(taskInfo.RunID),
+			tag.WorkflowID(taskInfo.WorkflowID),
+			tag.TaskID(taskInfo.TaskID),
+			tag.WorkflowDomainID(taskInfo.DomainID),
+		)
 		tr.scope.IncCounter(metrics.AsyncMatchDispatchTimeoutCounterPerTaskList)
 
 		// the idea here is that by re-fetching the isolation-groups, if something has shifted
@@ -422,7 +432,9 @@ func (tr *taskReader) dispatchSingleTaskFromBuffer(isolationGroup string, taskIn
 				return false, true
 			}
 			// it should never happen, unless there is a bug in 'getIsolationGroupForTask' method
-			tr.logger.Error("taskReader: unexpected error getting isolation group", tag.Error(err))
+			tr.logger.Error("taskReader: unexpected error getting isolation group",
+				tag.Error(err),
+				tag.IsolationGroup(group))
 			tr.completeTask(taskInfo, err)
 			return false, true
 		}
@@ -439,6 +451,8 @@ func (tr *taskReader) dispatchSingleTaskFromBuffer(isolationGroup string, taskIn
 			// don't block and redirect to the default group
 			tr.scope.IncCounter(metrics.BufferIsolationGroupRedirectFailureCounter)
 			tr.logger.Error("An isolation group buffer was misconfigured and couldn't be found. Redirecting to default",
+				tag.Dynamic("redirection-from-isolation-group", isolationGroup),
+				tag.Dynamic("redirection-to-isolation-group", group),
 				tag.IsolationGroup(group),
 				tag.WorkflowRunID(taskInfo.RunID),
 				tag.WorkflowID(taskInfo.WorkflowID),
@@ -469,7 +483,9 @@ func (tr *taskReader) dispatchSingleTaskFromBuffer(isolationGroup string, taskIn
 		case tr.taskBuffers[group] <- taskInfo:
 			// successful redirect
 			tr.scope.IncCounter(metrics.BufferIsolationGroupRedirectCounter)
-			tr.logger.Warn("some tasks were redirected to another isolation group", tag.IsolationGroup(group),
+			tr.logger.Warn("some tasks were redirected to another isolation group.",
+				tag.Dynamic("redirection-from-isolation-group", isolationGroup),
+				tag.Dynamic("redirection-to-isolation-group", group),
 				tag.WorkflowRunID(taskInfo.RunID),
 				tag.WorkflowID(taskInfo.WorkflowID),
 				tag.TaskID(taskInfo.TaskID),
@@ -478,16 +494,32 @@ func (tr *taskReader) dispatchSingleTaskFromBuffer(isolationGroup string, taskIn
 			return false, true
 		default:
 			tr.scope.IncCounter(metrics.BufferIsolationGroupRedirectFailureCounter)
-			tr.logger.Error("some tasks could not be redirected to another isolation group as the buffer's already full", tag.IsolationGroup(group),
+			tr.logger.Error("some tasks could not be redirected to another isolation group as the buffer's already full",
 				tag.WorkflowRunID(taskInfo.RunID),
+				tag.Dynamic("redirection-from-isolation-group", isolationGroup),
+				tag.Dynamic("redirection-to-isolation-group", group),
 				tag.WorkflowID(taskInfo.WorkflowID),
 				tag.TaskID(taskInfo.TaskID),
 				tag.WorkflowDomainID(taskInfo.DomainID),
 			)
 			// the task async buffers on the other isolation-group are already full, wait and retry
+			return false, false
 		}
 	}
-	tr.scope.IncCounter(metrics.BufferThrottlePerTaskListCounter)
-	runtime.Gosched()
+
+	if errors.Is(err, ErrTasklistThrottled) {
+		tr.scope.IncCounter(metrics.BufferThrottlePerTaskListCounter)
+		runtime.Gosched()
+		return false, false
+	}
+
+	tr.logger.Error("Unknown error while dispatching task",
+		tag.Error(err),
+		tag.IsolationGroup(isolationGroup),
+		tag.WorkflowRunID(taskInfo.RunID),
+		tag.WorkflowID(taskInfo.WorkflowID),
+		tag.TaskID(taskInfo.TaskID),
+		tag.WorkflowDomainID(taskInfo.DomainID),
+	)
 	return false, false
 }
