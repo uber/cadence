@@ -223,10 +223,16 @@ func (s *server) startService() common.Daemon {
 			log.Fatalf("not able to find advanced visibility store in config: %v", advancedVisStoreKey)
 		}
 
+		params.ESConfig = advancedVisStore.ElasticSearch
 		if params.PersistenceConfig.AdvancedVisibilityStore == common.PinotVisibilityStoreName {
+			// components like ESAnalyzer is still using ElasticSearch
+			// The plan is to clean those after we switch to operate on Pinot
+			esVisibilityStore, ok := s.cfg.Persistence.DataStores[common.ESVisibilityStoreName]
+			if !ok {
+				log.Fatalf("Missing Elasticsearch config")
+			}
+			params.ESConfig = esVisibilityStore.ElasticSearch
 			params.PinotConfig = advancedVisStore.Pinot
-			esVisStore := s.cfg.Persistence.DataStores[common.ESVisibilityStoreName]
-			params.ESConfig = esVisStore.ElasticSearch
 			pinotBroker := params.PinotConfig.Broker
 			pinotRawClient, err := pinot.NewFromBrokerList([]string{pinotBroker})
 			if err != nil || pinotRawClient == nil {
@@ -234,8 +240,6 @@ func (s *server) startService() common.Daemon {
 			}
 			pinotClient := pnt.NewPinotClient(pinotRawClient, params.Logger, params.PinotConfig)
 			params.PinotClient = pinotClient
-		} else {
-			params.ESConfig = advancedVisStore.ElasticSearch
 		}
 		params.ESConfig.SetUsernamePassword()
 		esClient, err := elasticsearch.NewGenericClient(params.ESConfig, params.Logger)
