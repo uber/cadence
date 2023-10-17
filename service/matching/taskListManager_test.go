@@ -447,6 +447,11 @@ func TestSingleTaskDispatchDoesNotDeadlock(t *testing.T) {
 	breakDispatcher, breakRetryLoop := tlm.taskReader.dispatchSingleTaskFromBuffer("datacenterA", &persistence.TaskInfo{})
 	assert.False(t, breakDispatcher, "dispatch isn't shutting down")
 	assert.False(t, breakRetryLoop, "in the event of a task being unable to be cross-dispatched, the expectation is that it'll keep retrying")
+
+	// and to be certain and avoid any accidental off-by-one errors, one more time to just be sure
+	breakDispatcher, breakRetryLoop = tlm.taskReader.dispatchSingleTaskFromBuffer("datacenterA", &persistence.TaskInfo{})
+	assert.False(t, breakDispatcher, "dispatch isn't shutting down")
+	assert.False(t, breakRetryLoop, "in the event of a task being unable to be cross-dispatched, the expectation is that it'll keep retrying")
 }
 
 // This is a bit of a strange unit-test as it's
