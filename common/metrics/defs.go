@@ -2309,6 +2309,7 @@ const (
 	RespondQueryTaskFailedPerTaskListCounter
 	SyncThrottlePerTaskListCounter
 	BufferThrottlePerTaskListCounter
+	BufferUnknownTaskDispatchError
 	BufferIsolationGroupRedirectCounter
 	BufferIsolationGroupRedirectFailureCounter
 	BufferIsolationGroupMisconfiguredCounter
@@ -2915,6 +2916,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		RespondQueryTaskFailedPerTaskListCounter:    {metricName: "respond_query_failed_per_tl", metricRollupName: "respond_query_failed"},
 		SyncThrottlePerTaskListCounter:              {metricName: "sync_throttle_count_per_tl", metricRollupName: "sync_throttle_count"},
 		BufferThrottlePerTaskListCounter:            {metricName: "buffer_throttle_count_per_tl", metricRollupName: "buffer_throttle_count"},
+		BufferUnknownTaskDispatchError:              {metricName: "buffer_unknown_task_dispatch_error_per_tl", metricRollupName: "buffer_unknown_task_dispatch_error"},
 		BufferIsolationGroupRedirectCounter:         {metricName: "buffer_isolation_group_redirected_per_tl", metricRollupName: "buffer_isolation_group_redirected"},
 		BufferIsolationGroupRedirectFailureCounter:  {metricName: "buffer_isolation_group_redirect_failure_per_tl", metricRollupName: "buffer_isolation_group_redirect_failure"},
 		BufferIsolationGroupMisconfiguredCounter:    {metricName: "buffer_isolation_group_misconfigured_failure_per_tl", metricRollupName: "buffer_isolation_group_misconfigured_failure"},
