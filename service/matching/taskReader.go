@@ -461,7 +461,7 @@ func (tr *taskReader) dispatchSingleTaskFromBuffer(isolationGroup string, taskIn
 
 		// if there is no poller in the isolation group or the isolation group is drained,
 		// we want to redistribute the tasks to other isolation groups in this case to drain
-		// the backlog
+		// the backlog.
 		select {
 		case <-tr.cancelCtx.Done():
 			// the task reader is shutting down
