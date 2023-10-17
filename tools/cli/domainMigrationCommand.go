@@ -109,7 +109,7 @@ var (
 	}
 )
 
-type DomainMigrationChecker interface {
+type DomainMigrationCommand interface {
 	Validation(c *cli.Context)
 	DomainMetaDataCheck(c *cli.Context) DomainMigrationRow
 	DomainWorkFlowCheck(c *cli.Context) DomainMigrationRow
@@ -127,7 +127,7 @@ func (d *domainMigrationCLIImpl) NewDomainMigrationCLIImpl(c *cli.Context) *doma
 }
 
 // Export a function to create an instance of the domainMigrationCLIImpl.
-func NewDomainMigrationChecker(c *cli.Context) DomainMigrationChecker {
+func NewDomainMigrationCommand(c *cli.Context) DomainMigrationCommand {
 	return &domainMigrationCLIImpl{}
 }
 
