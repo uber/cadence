@@ -514,7 +514,7 @@ func (tr *taskReader) dispatchSingleTaskFromBuffer(isolationGroup string, taskIn
 	}
 
 	tr.scope.IncCounter(metrics.BufferUnknownTaskDispatchError)
-	tr.logger.Error("Unknown error while dispatching task",
+	tr.logger.Error("unknown error while dispatching task",
 		tag.Error(err),
 		tag.IsolationGroup(isolationGroup),
 		tag.WorkflowRunID(taskInfo.RunID),
