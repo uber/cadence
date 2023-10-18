@@ -475,7 +475,6 @@ func TestMisconfiguredZoneDoesNotBlock(t *testing.T) {
 	}
 
 	maxBufferSize := config.GetTasksBatchSize("", "", 0) - 1
-
 	tlm.taskReader.logger = loggerimpl.NewNopLogger()
 
 	for i := 0; i < maxBufferSize; i++ {
