@@ -35,7 +35,7 @@ require (
 	github.com/pborman/uuid v0.0.0-20180906182336-adf5a7427709
 	github.com/robfig/cron v1.2.0
 	github.com/sirupsen/logrus v1.9.0
-	github.com/startreedata/pinot-client-go v0.0.0-20230303070132-3b84c28a9e95
+	github.com/startreedata/pinot-client-go v0.0.0-20230303070132-3b84c28a9e95 // latest release doesn't support pinot v0.12, so use master branch
 	github.com/stretchr/testify v1.8.1
 	github.com/uber-go/tally v3.3.15+incompatible
 	github.com/uber/cadence-idl v0.0.0-20230905165949-03586319b849
