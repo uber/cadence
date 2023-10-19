@@ -91,22 +91,56 @@ func (qv *VisibilityQueryValidator) validateWhereExpr(expr sqlparser.Expr) (stri
 	if expr == nil {
 		return "", nil
 	}
-	buf := sqlparser.NewTrackedBuffer(nil)
-
 	switch expr := expr.(type) {
 	case *sqlparser.AndExpr, *sqlparser.OrExpr:
 		return qv.validateAndOrExpr(expr)
 	case *sqlparser.ComparisonExpr:
 		return qv.validateComparisonExpr(expr)
 	case *sqlparser.RangeCond:
-		expr.Format(buf)
-		return buf.String(), nil
-		//return qv.validateRangeExpr(expr)
+		//expr.Format(buf)
+		//return buf.String(), nil
+		return qv.validateRangeExpr(expr)
 	case *sqlparser.ParenExpr:
 		return qv.validateWhereExpr(expr.Expr)
 	default:
 		return "", errors.New("invalid where clause")
 	}
+}
+
+func (qv *VisibilityQueryValidator) validateRangeExpr(expr sqlparser.Expr) (string, error) {
+	buf := sqlparser.NewTrackedBuffer(nil)
+	rangeCond := expr.(*sqlparser.RangeCond)
+	colName, ok := rangeCond.Left.(*sqlparser.ColName)
+	if !ok {
+		return "", errors.New("invalid range expression: fail to get colname")
+	}
+	colNameStr := colName.Name.String()
+
+	if !qv.isValidSearchAttributes(colNameStr) {
+		return "", fmt.Errorf("invalid search attribute %q", colNameStr)
+	}
+
+	if definition.IsSystemIndexedKey(colNameStr) {
+		expr.Format(buf)
+		return buf.String(), nil
+	}
+
+	//lowerBound, ok := rangeCond.From.(*sqlparser.ColName)
+	lowerBound, ok := rangeCond.From.(*sqlparser.SQLVal)
+	if !ok {
+		return "", errors.New("invalid range expression: fail to get lowerbound")
+	}
+	lowerBoundString := string(lowerBound.Val)
+
+	upperBound, ok := rangeCond.To.(*sqlparser.SQLVal)
+	if !ok {
+		return "", errors.New("invalid range expression: fail to get upperbound")
+	}
+	upperBoundString := string(upperBound.Val)
+
+	return fmt.Sprintf("(JSON_MATCH(Attr, '\"$.%s\" is not null') "+
+		"AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.%s') AS INT) >= %s "+
+		"AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.%s') AS INT) <= %s)", colNameStr, colNameStr, lowerBoundString, colNameStr, upperBoundString), nil
 }
 
 func (qv *VisibilityQueryValidator) validateAndOrExpr(expr sqlparser.Expr) (string, error) {
@@ -263,8 +297,14 @@ func (qv *VisibilityQueryValidator) processCustomKey(expr sqlparser.Expr) (strin
 	// case2-2: otherwise, exact match
 	// case2-2-1: if it is keyword, need to deal with a situation when value is an array
 	if indexValType == types.IndexedValueTypeKeyword {
-		return fmt.Sprintf("(JSON_MATCH(Attr, '\"$.%s\"=''%s''') or JSON_MATCH(Attr, '\"$.%s[*]\"=''%s'''))",
-			colNameStr, colValStr, colNameStr, colValStr), nil
+		// case2-2-1-1 is equal sign
+		if comparisonExpr.Operator == sqlparser.EqualStr {
+			return fmt.Sprintf("(JSON_MATCH(Attr, '\"$.%s\"=''%s''') or JSON_MATCH(Attr, '\"$.%s[*]\"=''%s'''))",
+				colNameStr, colValStr, colNameStr, colValStr), nil
+		}
+		// case2-2-1-2
+		return fmt.Sprintf("(JSON_MATCH(Attr, '\"$.%s\" is not null') "+
+			"AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.%s[*]') AS INT) %s %s)", colNameStr, colNameStr, comparisonExpr.Operator, colValStr), nil
 	}
 	// case2-2-2: other cases:
 	return fmt.Sprintf("JSON_MATCH(Attr, '\"$.%s\"=''%s''')", colNameStr, colValStr), nil

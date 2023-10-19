@@ -113,6 +113,14 @@ func TestValidateQuery(t *testing.T) {
 			query:     "CustomIntField = 1 or CustomIntField = 2",
 			validated: "(JSON_MATCH(Attr, '\"$.CustomIntField\"=''1''') or JSON_MATCH(Attr, '\"$.CustomIntField\"=''2'''))",
 		},
+		"Case14-1: range query: custom filed": {
+			query:     "CustomIntField BETWEEN 1 AND 2",
+			validated: "(JSON_MATCH(Attr, '\"$.CustomIntField\" is not null') AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomIntField') AS INT) >= 1 AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomIntField') AS INT) <= 2)",
+		},
+		"Case14-2: range query: system filed": {
+			query:     "NumClusters BETWEEN 1 AND 2",
+			validated: "NumClusters between 1 and 2",
+		},
 	}
 
 	for name, test := range tests {
