@@ -109,12 +109,15 @@ var (
 	}
 )
 
-type domainMigrationCLIImpl struct {
-	frontendClient, destinationClient           frontend.Client
-	frontendAdminClient, destinationAdminClient admin.Client
+type DomainMigrationCommand interface {
+	Validation(c *cli.Context)
+	DomainMetaDataCheck(c *cli.Context) DomainMigrationRow
+	DomainWorkFlowCheck(c *cli.Context) DomainMigrationRow
+	SearchAttributesChecker(c *cli.Context) DomainMigrationRow
+	DynamicConfigCheck(c *cli.Context) DomainMigrationRow
 }
 
-func newDomainMigrationCLIImpl(c *cli.Context) *domainMigrationCLIImpl {
+func (d *domainMigrationCLIImpl) NewDomainMigrationCLIImpl(c *cli.Context) *domainMigrationCLIImpl {
 	return &domainMigrationCLIImpl{
 		frontendClient:         cFactory.ServerFrontendClient(c),
 		destinationClient:      cFactory.ServerFrontendClientForMigration(c),
@@ -123,12 +126,22 @@ func newDomainMigrationCLIImpl(c *cli.Context) *domainMigrationCLIImpl {
 	}
 }
 
+// Export a function to create an instance of the domainMigrationCLIImpl.
+func NewDomainMigrationCommand(c *cli.Context) DomainMigrationCommand {
+	return &domainMigrationCLIImpl{}
+}
+
+type domainMigrationCLIImpl struct {
+	frontendClient, destinationClient           frontend.Client
+	frontendAdminClient, destinationAdminClient admin.Client
+}
+
 func (d *domainMigrationCLIImpl) Validation(c *cli.Context) {
 	checkers := []func(*cli.Context) DomainMigrationRow{
-		d.migrationDomainMetaDataCheck,
-		d.migrationDomainWorkFlowCheck,
-		d.migrationDynamicConfigCheck,
-		d.searchAttributesChecker,
+		d.DomainMetaDataCheck,
+		d.DomainWorkFlowCheck,
+		d.DynamicConfigCheck,
+		d.SearchAttributesChecker,
 	}
 	wg := &sync.WaitGroup{}
 	results := make([]DomainMigrationRow, len(checkers))
@@ -153,7 +166,7 @@ func (d *domainMigrationCLIImpl) Validation(c *cli.Context) {
 	}
 }
 
-func (d *domainMigrationCLIImpl) migrationDomainMetaDataCheck(c *cli.Context) DomainMigrationRow {
+func (d *domainMigrationCLIImpl) DomainMetaDataCheck(c *cli.Context) DomainMigrationRow {
 	domain := c.GlobalString(FlagDomain)
 	newDomain := c.String(FlagDestinationDomain)
 	ctx, cancel := newContext(c)
@@ -194,7 +207,7 @@ func metaDataValidation(currResp *types.DescribeDomainResponse, newResp *types.D
 	return true, ""
 }
 
-func (d *domainMigrationCLIImpl) migrationDomainWorkFlowCheck(c *cli.Context) DomainMigrationRow {
+func (d *domainMigrationCLIImpl) DomainWorkFlowCheck(c *cli.Context) DomainMigrationRow {
 	countWorkFlows := d.countLongRunningWorkflow(c)
 	check := countWorkFlows == 0
 	return DomainMigrationRow{
@@ -222,7 +235,7 @@ func (d *domainMigrationCLIImpl) countLongRunningWorkflow(c *cli.Context) int {
 	return int(response.GetCount())
 }
 
-func (d *domainMigrationCLIImpl) searchAttributesChecker(c *cli.Context) DomainMigrationRow {
+func (d *domainMigrationCLIImpl) SearchAttributesChecker(c *cli.Context) DomainMigrationRow {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
@@ -307,7 +320,7 @@ func findMissingAttributes(requiredAttributes map[string]types.IndexedValueType,
 	return missingAttributes
 }
 
-func (d *domainMigrationCLIImpl) migrationDynamicConfigCheck(c *cli.Context) DomainMigrationRow {
+func (d *domainMigrationCLIImpl) DynamicConfigCheck(c *cli.Context) DomainMigrationRow {
 	var mismatchedConfigs []MismatchedDynamicConfig
 	check := true
 
