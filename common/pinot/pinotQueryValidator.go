@@ -282,30 +282,49 @@ func (qv *VisibilityQueryValidator) processCustomKey(expr sqlparser.Expr) (strin
 	// get the value type
 	indexValType := common.ConvertIndexedValueTypeToInternalType(valType, log.NewNoop())
 
-	// Case2-1: when it is string, need partial match
-	if indexValType == types.IndexedValueTypeString {
-		// change to like statement for partial match
-		comparisonExpr.Operator = sqlparser.LikeStr
-		comparisonExpr.Right = &sqlparser.SQLVal{
-			Type: sqlparser.StrVal,
-			Val:  []byte("%" + colValStr + "%"),
-		}
-		//return fmt.Sprintf("JSON_EXTRACT_SCALAR(Attr, '$.%s', 'STRING') LIKE '%%%s%%'", colNameStr, colValStr), nil
-		return fmt.Sprintf("(JSON_MATCH(Attr, '\"$.%s\" is not null') "+
-			"AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.%s', 'string'), '%s*'))", colNameStr, colNameStr, colValStr), nil
+	operator := comparisonExpr.Operator
+
+	switch indexValType {
+	case types.IndexedValueTypeString:
+		return processCustomString(comparisonExpr, colNameStr, colValStr), nil
+	case types.IndexedValueTypeKeyword:
+		return processCustomKeyword(operator, colNameStr, colValStr), nil
+	case types.IndexedValueTypeDatetime:
+		return processCustomNum(operator, colNameStr, colValStr, "BIGINT"), nil
+	case types.IndexedValueTypeDouble:
+		return processCustomNum(operator, colNameStr, colValStr, "DOUBLE"), nil
+	case types.IndexedValueTypeInt:
+		return processCustomNum(operator, colNameStr, colValStr, "INT"), nil
+	default:
+		return processEqual(colNameStr, colValStr), nil
 	}
-	// case2-2: otherwise, exact match
-	// case2-2-1: if it is keyword, need to deal with a situation when value is an array
-	if indexValType == types.IndexedValueTypeKeyword {
-		// case2-2-1-1 is equal sign
-		if comparisonExpr.Operator == sqlparser.EqualStr {
-			return fmt.Sprintf("(JSON_MATCH(Attr, '\"$.%s\"=''%s''') or JSON_MATCH(Attr, '\"$.%s[*]\"=''%s'''))",
-				colNameStr, colValStr, colNameStr, colValStr), nil
-		}
-		// case2-2-1-2
-		return fmt.Sprintf("(JSON_MATCH(Attr, '\"$.%s\" is not null') "+
-			"AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.%s[*]') AS INT) %s %s)", colNameStr, colNameStr, comparisonExpr.Operator, colValStr), nil
+}
+
+func processCustomNum(operator string, colNameStr string, colValStr string, valType string) string {
+	if operator == sqlparser.EqualStr {
+		return processEqual(colNameStr, colValStr)
 	}
-	// case2-2-2: other cases:
-	return fmt.Sprintf("JSON_MATCH(Attr, '\"$.%s\"=''%s''')", colNameStr, colValStr), nil
+	return fmt.Sprintf("(JSON_MATCH(Attr, '\"$.%s\" is not null') "+
+		"AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.%s') AS %s) %s %s)", colNameStr, colNameStr, valType, operator, colValStr)
+}
+
+func processEqual(colNameStr string, colValStr string) string {
+	return fmt.Sprintf("JSON_MATCH(Attr, '\"$.%s\"=''%s''')", colNameStr, colValStr)
+}
+
+func processCustomKeyword(operator string, colNameStr string, colValStr string) string {
+	return fmt.Sprintf("(JSON_MATCH(Attr, '\"$.%s\"%s''%s''') or JSON_MATCH(Attr, '\"$.%s[*]\"%s''%s'''))",
+		colNameStr, operator, colValStr, colNameStr, operator, colValStr)
+}
+
+func processCustomString(comparisonExpr *sqlparser.ComparisonExpr, colNameStr string, colValStr string) string {
+	// change to like statement for partial match
+	comparisonExpr.Operator = sqlparser.LikeStr
+	comparisonExpr.Right = &sqlparser.SQLVal{
+		Type: sqlparser.StrVal,
+		Val:  []byte("%" + colValStr + "%"),
+	}
+	//return fmt.Sprintf("JSON_EXTRACT_SCALAR(Attr, '$.%s', 'STRING') LIKE '%%%s%%'", colNameStr, colValStr), nil
+	return fmt.Sprintf("(JSON_MATCH(Attr, '\"$.%s\" is not null') "+
+		"AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.%s', 'string'), '%s*'))", colNameStr, colNameStr, colValStr)
 }
