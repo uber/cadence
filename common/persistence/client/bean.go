@@ -25,6 +25,8 @@ package client
 import (
 	"sync"
 
+	"github.com/uber/cadence/common/pinot"
+
 	"github.com/uber/cadence/common/config"
 	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/messaging"
@@ -85,6 +87,8 @@ type (
 		MessagingClient   messaging.Client
 		ESClient          es.GenericClient
 		ESConfig          *config.ElasticSearchConfig
+		PinotConfig       *config.PinotVisibilityConfig
+		PinotClient       pinot.GenericClient
 	}
 )
 

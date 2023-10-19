@@ -1,11 +1,7 @@
 {
-  "schemaName": "cadence-visibility-pinot",
-  "primaryKeyColumns": ["DocID"],
+  "schemaName": "cadence_visibility_pinot",
+  "primaryKeyColumns": ["RunID"],
   "dimensionFieldSpecs": [
-    {
-      "name": "DocID",
-      "dataType": "STRING"
-    },
     {
       "name": "DomainID",
       "dataType": "STRING"
@@ -31,10 +27,6 @@
       "dataType": "INT"
     },
     {
-      "name": "KafkaKey",
-      "dataType": "STRING"
-    },
-    {
       "name": "TaskList",
       "dataType": "STRING"
     },
@@ -43,7 +35,7 @@
       "dataType": "BOOLEAN"
     },
     {
-      "name": "NumCluster",
+      "name": "NumClusters",
       "dataType": "INT"
     },
     {
@@ -52,8 +44,13 @@
     },
     {
       "name": "Attr",
-      "dataType": "STRING"
+      "dataType": "JSON"
+    },
+    {
+      "name": "IsDeleted",
+      "dataType": "BOOLEAN"
     }
+
   ],
   "dateTimeFieldSpecs": [{
     "name": "StartTime",
@@ -72,6 +69,11 @@
     "granularity": "1:MILLISECONDS"
   },{
     "name": "ExecutionTime",
+    "dataType": "LONG",
+    "format" : "1:MILLISECONDS:EPOCH",
+    "granularity": "1:MILLISECONDS"
+  },{
+    "name": "SecondsSinceEpoch",
     "dataType": "LONG",
     "format" : "1:MILLISECONDS:EPOCH",
     "granularity": "1:MILLISECONDS"
