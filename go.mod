@@ -54,11 +54,11 @@ require (
 	go.uber.org/thriftrw v1.29.2
 	go.uber.org/yarpc v1.70.3
 	go.uber.org/zap v1.13.0
-	golang.org/x/net v0.7.0
+	golang.org/x/net v0.17.0
 	golang.org/x/oauth2 v0.0.0-20220622183110-fd043fe589d2
-	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
+	golang.org/x/sync v0.1.0
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
-	golang.org/x/tools v0.1.12
+	golang.org/x/tools v0.6.0
 	gonum.org/v1/gonum v0.7.0
 	google.golang.org/api v0.85.0
 	google.golang.org/grpc v1.47.0
@@ -136,13 +136,13 @@ require (
 	go.opencensus.io v0.23.0 // indirect
 	go.uber.org/dig v1.10.0 // indirect
 	go.uber.org/net/metrics v1.3.0 // indirect
-	golang.org/x/crypto v0.1.0 // indirect
+	golang.org/x/crypto v0.14.0 // indirect
 	golang.org/x/exp v0.0.0-20200224162631-6cc2880d07d6 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20220218215828-6cf2b201936e // indirect
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
-	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
-	golang.org/x/sys v0.5.0 // indirect
-	golang.org/x/text v0.7.0 // indirect
+	golang.org/x/mod v0.8.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220609144429-65e65417b02f // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20220617124728-180714bec0ad // indirect
