@@ -97,8 +97,6 @@ func (qv *VisibilityQueryValidator) validateWhereExpr(expr sqlparser.Expr) (stri
 	case *sqlparser.ComparisonExpr:
 		return qv.validateComparisonExpr(expr)
 	case *sqlparser.RangeCond:
-		//expr.Format(buf)
-		//return buf.String(), nil
 		return qv.validateRangeExpr(expr)
 	case *sqlparser.ParenExpr:
 		return qv.validateWhereExpr(expr.Expr)
@@ -324,7 +322,6 @@ func processCustomString(comparisonExpr *sqlparser.ComparisonExpr, colNameStr st
 		Type: sqlparser.StrVal,
 		Val:  []byte("%" + colValStr + "%"),
 	}
-	//return fmt.Sprintf("JSON_EXTRACT_SCALAR(Attr, '$.%s', 'STRING') LIKE '%%%s%%'", colNameStr, colValStr), nil
 	return fmt.Sprintf("(JSON_MATCH(Attr, '\"$.%s\" is not null') "+
 		"AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.%s', 'string'), '%s*'))", colNameStr, colNameStr, colValStr)
 }
