@@ -90,8 +90,9 @@ const (
 )
 
 const (
-	// VisibilityStoreName is used to find advanced visibility store
-	ESVisibilityStoreName    = "es-visibility"
+	// ESVisibilityStoreName is used to find es advanced visibility store
+	ESVisibilityStoreName = "es-visibility"
+	// PinotVisibilityStoreName is used to find pinot advanced visibility store
 	PinotVisibilityStoreName = "pinot-visibility"
 )
 
