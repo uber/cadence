@@ -105,6 +105,8 @@ func (qv *VisibilityQueryValidator) validateWhereExpr(expr sqlparser.Expr) (stri
 	}
 }
 
+// for "between...and..." only
+// <, >, >=, <= are included in validateComparisonExpr()
 func (qv *VisibilityQueryValidator) validateRangeExpr(expr sqlparser.Expr) (string, error) {
 	buf := sqlparser.NewTrackedBuffer(nil)
 	rangeCond := expr.(*sqlparser.RangeCond)
