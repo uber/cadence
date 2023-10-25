@@ -23,6 +23,10 @@ package client
 import (
 	"sync"
 
+	pnt "github.com/uber/cadence/common/pinot"
+
+	pinotVisibility "github.com/uber/cadence/common/persistence/pinot"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	es "github.com/uber/cadence/common/elasticsearch"
@@ -265,7 +269,7 @@ func (f *factoryImpl) NewVisibilityManager(
 		// No need to create visibility manager as no read/write needed
 		return nil, nil
 	}
-	var visibilityFromDB, visibilityFromES p.VisibilityManager
+	var visibilityFromDB, visibilityFromES, visibilityFromPinot p.VisibilityManager
 	var err error
 	if params.PersistenceConfig.VisibilityStore != "" {
 		visibilityFromDB, err = f.newDBVisibilityManager(resourceConfig)
@@ -273,7 +277,31 @@ func (f *factoryImpl) NewVisibilityManager(
 			return nil, err
 		}
 	}
-	if params.PersistenceConfig.AdvancedVisibilityStore != "" {
+	if params.PersistenceConfig.AdvancedVisibilityStore == common.PinotVisibilityStoreName {
+		visibilityProducer, err := params.MessagingClient.NewProducer(common.PinotVisibilityAppName)
+		if err != nil {
+			f.logger.Fatal("Creating visibility producer failed", tag.Error(err))
+		}
+
+		visibilityFromPinot = newPinotVisibilityManager(
+			params.PinotClient, resourceConfig, visibilityProducer, params.MetricsClient, f.logger)
+
+		esVisibilityProducer, err := params.MessagingClient.NewProducer(common.VisibilityAppName)
+		visibilityIndexName := params.ESConfig.Indices[common.VisibilityAppName]
+		visibilityFromES = newESVisibilityManager(
+			visibilityIndexName, params.ESClient, resourceConfig, esVisibilityProducer, params.MetricsClient, f.logger,
+		)
+
+		return p.NewPinotVisibilityTripleManager(
+			visibilityFromDB,
+			visibilityFromPinot,
+			visibilityFromES,
+			resourceConfig.EnableReadVisibilityFromPinot,
+			resourceConfig.EnableReadVisibilityFromES,
+			resourceConfig.AdvancedVisibilityWritingMode,
+			f.logger,
+		), nil
+	} else if params.PersistenceConfig.AdvancedVisibilityStore != "" {
 		visibilityIndexName := params.ESConfig.Indices[common.VisibilityAppName]
 		visibilityProducer, err := params.MessagingClient.NewProducer(common.VisibilityAppName)
 		if err != nil {
@@ -290,6 +318,33 @@ func (f *factoryImpl) NewVisibilityManager(
 		resourceConfig.AdvancedVisibilityWritingMode,
 		f.logger,
 	), nil
+}
+
+// NewESVisibilityManager create a visibility manager for ElasticSearch
+// In history, it only needs kafka producer for writing data;
+// In frontend, it only needs ES client and related config for reading data
+func newPinotVisibilityManager(
+	pinotClient pnt.GenericClient,
+	visibilityConfig *service.Config,
+	producer messaging.Producer,
+	metricsClient metrics.Client,
+	log log.Logger,
+) p.VisibilityManager {
+	visibilityFromPinotStore := pinotVisibility.NewPinotVisibilityStore(pinotClient, visibilityConfig, producer, log)
+	visibilityFromPinot := p.NewVisibilityManagerImpl(visibilityFromPinotStore, log)
+
+	// wrap with rate limiter
+	if visibilityConfig.PersistenceMaxQPS != nil && visibilityConfig.PersistenceMaxQPS() != 0 {
+		pinotRateLimiter := quotas.NewDynamicRateLimiter(visibilityConfig.PersistenceMaxQPS.AsFloat64())
+		visibilityFromPinot = p.NewVisibilityPersistenceRateLimitedClient(visibilityFromPinot, pinotRateLimiter, log)
+	}
+
+	if metricsClient != nil {
+		// wrap with metrics
+		visibilityFromPinot = pinotVisibility.NewPinotVisibilityMetricsClient(visibilityFromPinot, metricsClient, log)
+	}
+
+	return visibilityFromPinot
 }
 
 // NewESVisibilityManager create a visibility manager for ElasticSearch

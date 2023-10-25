@@ -28,6 +28,7 @@ import (
 
 	"github.com/uber/cadence/common/isolationgroup"
 	"github.com/uber/cadence/common/partition"
+	"github.com/uber/cadence/common/pinot"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
@@ -75,5 +76,7 @@ type (
 		IsolationGroupStore      configstore.Client       // This can be nil, the default config store will be created if so
 		IsolationGroupState      isolationgroup.State     // This can be nil, the default state store will be chosen if so
 		Partitioner              partition.Partitioner
+		PinotConfig              *config.PinotVisibilityConfig
+		PinotClient              pinot.GenericClient
 	}
 )

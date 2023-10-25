@@ -896,11 +896,6 @@ func (e *matchingEngineImpl) getTask(
 	return tlMgr.GetTask(ctx, maxDispatchPerSecond)
 }
 
-//
-//func (e *matchingEngineImpl) getHistoryInfo() (HistoryInfo, error) {
-//
-//}
-
 func (e *matchingEngineImpl) unloadTaskList(tlMgr taskListManager) {
 	id := tlMgr.TaskListID()
 	e.taskListsLock.Lock()
