@@ -1895,6 +1895,14 @@ const (
 	// Value type: Bool
 	// Default value: true
 	EnableShardIDMetrics
+
+	// EnableDataScan turns on or off shardId metrics
+	// KeyName: history.enableDataScan
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: DomainID
+	EnableDataScan
+
 	// LastBoolKey must be the last one in this const group
 	LastBoolKey
 )
@@ -4077,6 +4085,12 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		KeyName:      "system.enableShardIDMetrics",
 		Description:  "Enable shardId metrics in persistence client",
 		DefaultValue: true,
+	},
+	EnableDataScan: DynamicBool{
+		KeyName:      "history.enableDataScan",
+		Filters:      []Filter{DomainID},
+		Description:  "Enable DataInconsistencyScan during task processing",
+		DefaultValue: false,
 	},
 }
 

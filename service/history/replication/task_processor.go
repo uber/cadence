@@ -372,6 +372,8 @@ func (p *taskProcessorImpl) handleSyncShardStatus(
 }
 
 func (p *taskProcessorImpl) processSingleTask(replicationTask *types.ReplicationTask) error {
+	//Adding logs for testing purposes, will remove them later.
+	p.logger.Info("Processing Single Task")
 	retryTransientError := func() error {
 		throttleRetry := backoff.NewThrottleRetry(
 			backoff.WithRetryPolicy(p.taskRetryPolicy),
@@ -429,12 +431,15 @@ func (p *taskProcessorImpl) processSingleTask(replicationTask *types.Replication
 			tag.TaskType(request.TaskInfo.GetTaskType()),
 			tag.Error(err),
 		)
-		//TODO: uncomment this when the execution fixer workflow is ready
+
 		// Uncommenting this to verify that the scanner indeed gets triggered.
-		if err = p.triggerDataInconsistencyScan(replicationTask); err != nil {
-			p.logger.Info("Triggering a data scan")
-			p.logger.Warn("Failed to trigger data scan", tag.Error(err))
-			p.metricsClient.IncCounter(metrics.ReplicationDLQStatsScope, metrics.ReplicationDLQValidationFailed)
+		//Adding extra flipr protection since this is an ongoing test.
+		if p.config.EnableDataScan(request.TaskInfo.GetDomainID()) {
+			err = p.triggerDataInconsistencyScan(replicationTask)
+			if err != nil {
+				p.logger.Warn("Failed to trigger data scan", tag.Error(err))
+				p.metricsClient.IncCounter(metrics.ReplicationDLQStatsScope, metrics.ReplicationDLQValidationFailed)
+			}
 		}
 		return p.putReplicationTaskToDLQ(request)
 	}
