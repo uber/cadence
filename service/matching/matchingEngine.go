@@ -454,7 +454,7 @@ pollLoop:
 		task, err := e.getTask(pollerCtx, taskList, nil, taskListKind)
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
-			if err == ErrNoTasks || err == errPumpClosed {
+			if errors.Is(err, ErrNoTasks) || errors.Is(err, errPumpClosed) {
 				return emptyPollForDecisionTaskResponse, nil
 			}
 			return nil, fmt.Errorf("couldn't get task: %w", err)

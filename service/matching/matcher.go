@@ -23,6 +23,9 @@ package matching
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"time"
 
 	"golang.org/x/time/rate"
@@ -36,6 +39,7 @@ import (
 // Producers are usually rpc calls from history or taskReader
 // that drains backlog from db. Consumers are the task list pollers
 type TaskMatcher struct {
+	log log.Logger
 	// synchronous task channel to match producer/consumer for any isolation group
 	// tasks having no isolation requirement are added to this channel
 	// and pollers from all isolation groups read from this channel
@@ -67,7 +71,7 @@ var ErrTasklistThrottled = errors.New("tasklist limit exceeded")
 // newTaskMatcher returns an task matcher instance. The returned instance can be
 // used by task producers and consumers to find a match. Both sync matches and non-sync
 // matches should use this implementation
-func newTaskMatcher(config *taskListConfig, fwdr *Forwarder, scope metrics.Scope, isolationGroups []string) *TaskMatcher {
+func newTaskMatcher(config *taskListConfig, fwdr *Forwarder, scope metrics.Scope, isolationGroups []string, log log.Logger) *TaskMatcher {
 	dPtr := _defaultTaskDispatchRPS
 	limiter := quotas.NewRateLimiter(&dPtr, _defaultTaskDispatchRPSTTL, config.MinTaskThrottlingBurstSize())
 	isolatedTaskC := make(map[string]chan *InternalTask)
@@ -75,6 +79,7 @@ func newTaskMatcher(config *taskListConfig, fwdr *Forwarder, scope metrics.Scope
 		isolatedTaskC[g] = make(chan *InternalTask)
 	}
 	return &TaskMatcher{
+		log:           log,
 		limiter:       limiter,
 		scope:         scope,
 		fwdr:          fwdr,
@@ -222,7 +227,8 @@ func (tm *TaskMatcher) OfferQuery(ctx context.Context, task *InternalTask) (*typ
 // Returns error only when context is canceled, expired or the ratelimit is set to zero (allow nothing)
 func (tm *TaskMatcher) MustOffer(ctx context.Context, task *InternalTask) error {
 	if _, err := tm.ratelimit(ctx); err != nil {
-		return err
+		tm.log.Debug("rate limiting task", tag.TaskID(task.event.TaskID), tag.WorkflowDomainID(task.event.DomainID))
+		return fmt.Errorf("rate limit error dispatching: %w", err)
 	}
 
 	// attempt a match with local poller first. When that
@@ -232,8 +238,14 @@ func (tm *TaskMatcher) MustOffer(ctx context.Context, task *InternalTask) error 
 	case taskC <- task: // poller picked up the task
 		return nil
 	case <-ctx.Done():
-		return ctx.Err()
+		return fmt.Errorf("context done when trying to forward local task: %w", ctx.Err())
 	default:
+		tm.log.Debug("unable to find local poller",
+			tag.IsolationGroup(task.isolationGroup),
+			tag.TaskID(task.event.TaskID),
+			tag.WorkflowID(task.event.WorkflowID),
+			tag.WorkflowDomainID(task.event.DomainID),
+		)
 	}
 
 forLoop:
@@ -246,6 +258,12 @@ forLoop:
 			err := tm.fwdr.ForwardTask(childCtx, task)
 			token.release("")
 			if err != nil {
+				tm.log.Debug("failed to forward task",
+					tag.Error(err),
+					tag.TaskID(task.event.TaskID),
+					tag.WorkflowID(task.event.WorkflowID),
+					tag.WorkflowDomainID(task.event.DomainID),
+				)
 				// forwarder returns error only when the call is rate limited. To
 				// avoid a busy loop on such rate limiting events, we only attempt to make
 				// the next forwarded call after this childCtx expires. Till then, we block
@@ -257,7 +275,7 @@ forLoop:
 				case <-childCtx.Done():
 				case <-ctx.Done():
 					cancel()
-					return ctx.Err()
+					return fmt.Errorf("failed to dispatch after failing to forward task: %w", ctx.Err())
 				}
 				cancel()
 				continue forLoop
@@ -269,7 +287,7 @@ forLoop:
 			task.finish(nil)
 			return nil
 		case <-ctx.Done():
-			return ctx.Err()
+			return fmt.Errorf("failed to offer task: %w", ctx.Err())
 		}
 	}
 }
@@ -291,6 +309,9 @@ func (tm *TaskMatcher) Poll(ctx context.Context, isolationGroup string) (*Intern
 	// there is no local poller available to pickup this task. Now block waiting
 	// either for a local poller or a forwarding token to be available. When a
 	// forwarding token becomes available, send this poll to a parent partition
+	tm.log.Debug("falling back to non-local polling",
+		tag.IsolationGroup(isolationGroup),
+	)
 	return tm.pollOrForward(ctx, isolationGroup, isolatedTaskC, tm.taskC, tm.queryTaskC)
 }
 
