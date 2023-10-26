@@ -356,7 +356,7 @@ func (c *taskListManagerImpl) GetTask(
 	c.liveness.markAlive(time.Now())
 	task, err := c.getTask(ctx, maxDispatchPerSecond)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("couldnt' get task: %w", err)
 	}
 	task.domainName = c.domainName
 	task.backlogCountHint = c.taskAckManager.GetBacklogCount()
@@ -397,7 +397,7 @@ func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond 
 
 	domainEntry, err := c.domainCache.GetDomainByID(c.taskListID.domainID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to fetch domain from cache: %w", err)
 	}
 
 	// the desired global rate limit for the task list comes from the

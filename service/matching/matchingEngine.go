@@ -443,7 +443,7 @@ pollLoop:
 
 		taskList, err := newTaskListID(domainID, taskListName, persistence.TaskListTypeDecision)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("couldn't create new decision tasklist %w", err)
 		}
 
 		// Add frontend generated pollerID to context so tasklistMgr can support cancellation of
@@ -457,7 +457,7 @@ pollLoop:
 			if err == ErrNoTasks || err == errPumpClosed {
 				return emptyPollForDecisionTaskResponse, nil
 			}
-			return nil, err
+			return nil, fmt.Errorf("couldn't get task: %w", err)
 		}
 
 		e.emitForwardedFromStats(hCtx.scope, task.isForwarded(), req.GetForwardedFrom())
@@ -518,6 +518,16 @@ pollLoop:
 				)
 				task.finish(nil)
 			default:
+				e.emitInfoOrDebugLog(
+					task.event.DomainID,
+					"unknown error recording task started",
+					tag.WorkflowDomainID(domainID),
+					tag.WorkflowID(task.event.WorkflowID),
+					tag.WorkflowRunID(task.event.RunID),
+					tag.WorkflowTaskListName(taskListName),
+					tag.WorkflowScheduleID(task.event.ScheduleID),
+					tag.TaskID(task.event.TaskID),
+				)
 				task.finish(err)
 			}
 
@@ -891,7 +901,7 @@ func (e *matchingEngineImpl) getTask(
 ) (*InternalTask, error) {
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("couldn't load tasklist namanger: %w", err)
 	}
 	return tlMgr.GetTask(ctx, maxDispatchPerSecond)
 }
