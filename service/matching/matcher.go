@@ -75,6 +75,8 @@ func newTaskMatcher(config *taskListConfig, fwdr *Forwarder, scope metrics.Scope
 	dPtr := _defaultTaskDispatchRPS
 	limiter := quotas.NewRateLimiter(&dPtr, _defaultTaskDispatchRPSTTL, config.MinTaskThrottlingBurstSize())
 	isolatedTaskC := make(map[string]chan *InternalTask)
+	// the default un-isolated channel is used for fallbacks
+	isolatedTaskC[defaultTaskBufferIsolationGroup] = make(chan *InternalTask)
 	for _, g := range isolationGroups {
 		isolatedTaskC[g] = make(chan *InternalTask)
 	}
