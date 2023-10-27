@@ -1,14 +1,23 @@
 {
-  "tableName": "cadence-visibility-pinot",
+  "tableName": "cadence_visibility_pinot",
   "tableType": "REALTIME",
   "segmentsConfig": {
     "timeColumnName": "StartTime",
     "timeType": "MILLISECONDS",
-    "schemaName": "cadence-visibility-pinot",
+    "schemaName": "cadence_visibility_pinot",
     "replicasPerPartition": "1"
   },
   "tenants": {},
   "tableIndexConfig": {
+    "jsonIndexConfigs": {
+      "Attr": {
+        "excludeArray": false,
+        "disableCrossArrayUnnest": true,
+        "includePaths": null,
+        "excludePaths": null,
+        "excludeFields": null
+      }
+    },
     "loadMode": "MMAP",
     "streamConfigs": {
       "streamType": "kafka",
@@ -33,3 +42,4 @@
   },
   "metadata": {}
 }
+

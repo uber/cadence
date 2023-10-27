@@ -388,3 +388,108 @@ func TestGetPollerIsolationGroup(t *testing.T) {
 	assert.Equal(t, 1, len(groups))
 	assert.Equal(t, config.AllIsolationGroups[0], groups[0])
 }
+
+// return a client side tasklist throttle error from the rate limiter.
+// The expected behaviour is to retry
+func TestRateLimitErrorsFromTasklistDispatch(t *testing.T) {
+	controller := gomock.NewController(t)
+
+	config := defaultTestConfig()
+	config.EnableTasklistIsolation = func(domain string) bool { return true }
+	tlm := createTestTaskListManagerWithConfig(controller, config)
+
+	tlm.taskReader.dispatchTask = func(ctx context.Context, task *InternalTask) error {
+		return ErrTasklistThrottled
+	}
+	tlm.taskReader.getIsolationGroupForTask = func(ctx context.Context, info *persistence.TaskInfo) (string, error) { return "datacenterA", nil }
+
+	breakDispatcher, breakRetryLoop := tlm.taskReader.dispatchSingleTaskFromBuffer("datacenterA", &persistence.TaskInfo{})
+	assert.False(t, breakDispatcher)
+	assert.False(t, breakRetryLoop)
+}
+
+// The intent of this test: SingleTaskDispatch is one of two places where tasks are written to
+// the taskreader.taskBuffers channels. As such, it needs to take care to not accidentally
+// hit the channel when it's full, as it'll block, causing a deadlock (due to both this dispatch
+// and the async task pump blocking trying to read to the channel)
+func TestSingleTaskDispatchDoesNotDeadlock(t *testing.T) {
+	controller := gomock.NewController(t)
+
+	config := defaultTestConfig()
+	config.EnableTasklistIsolation = func(domain string) bool { return true }
+	tlm := createTestTaskListManagerWithConfig(controller, config)
+
+	// mock a timeout to cause tasks to be rerouted
+	tlm.taskReader.dispatchTask = func(ctx context.Context, task *InternalTask) error {
+		return context.DeadlineExceeded
+	}
+	tlm.taskReader.getIsolationGroupForTask = func(ctx context.Context, info *persistence.TaskInfo) (string, error) {
+		// force this, on the second read, to always reroute to the other DC
+		return "datacenterB", nil
+	}
+
+	maxBufferSize := config.GetTasksBatchSize("", "", 0) - 1
+
+	tlm.taskReader.logger = loggerimpl.NewNopLogger()
+
+	for i := 0; i < maxBufferSize; i++ {
+		breakDispatcher, breakRetryLoop := tlm.taskReader.dispatchSingleTaskFromBuffer("datacenterA", &persistence.TaskInfo{})
+		assert.False(t, breakDispatcher, "dispatch isn't shutting down")
+		assert.True(t, breakRetryLoop, "should be able to successfully dispatch all these tasks to the other isolation group")
+	}
+	// We should see them all being redirected
+	assert.Len(t, tlm.taskReader.taskBuffers["datacenterB"], maxBufferSize)
+	// we should see none in DC A (they're not being redirected here)
+	assert.Len(t, tlm.taskReader.taskBuffers["datacenterA"], 0)
+
+	// ok, and here we try and ensure that this *does not block
+	// and instead complains and live-retries
+	breakDispatcher, breakRetryLoop := tlm.taskReader.dispatchSingleTaskFromBuffer("datacenterA", &persistence.TaskInfo{})
+	assert.False(t, breakDispatcher, "dispatch isn't shutting down")
+	assert.False(t, breakRetryLoop, "in the event of a task being unable to be cross-dispatched, the expectation is that it'll keep retrying")
+
+	// and to be certain and avoid any accidental off-by-one errors, one more time to just be sure
+	breakDispatcher, breakRetryLoop = tlm.taskReader.dispatchSingleTaskFromBuffer("datacenterA", &persistence.TaskInfo{})
+	assert.False(t, breakDispatcher, "dispatch isn't shutting down")
+	assert.False(t, breakRetryLoop, "in the event of a task being unable to be cross-dispatched, the expectation is that it'll keep retrying")
+}
+
+// This is a bit of a strange unit-test as it's
+// ensuring that invalid behaviour is handled defensively.
+// It *should never be the case* that the isolation group tries to
+// dispatch to a buffer that isn't there, however, if it does, we want to just
+// log this, emit a metric and fallback to the default isolation group.
+func TestMisconfiguredZoneDoesNotBlock(t *testing.T) {
+	controller := gomock.NewController(t)
+
+	config := defaultTestConfig()
+	config.EnableTasklistIsolation = func(domain string) bool { return true }
+	tlm := createTestTaskListManagerWithConfig(controller, config)
+
+	// mock a timeout to cause tasks to be rerouted
+	tlm.taskReader.dispatchTask = func(ctx context.Context, task *InternalTask) error {
+		return context.DeadlineExceeded
+	}
+	tlm.taskReader.getIsolationGroupForTask = func(ctx context.Context, info *persistence.TaskInfo) (string, error) {
+		return "a misconfigured isolation group", nil
+	}
+
+	maxBufferSize := config.GetTasksBatchSize("", "", 0) - 1
+	tlm.taskReader.logger = loggerimpl.NewNopLogger()
+
+	for i := 0; i < maxBufferSize; i++ {
+		breakDispatcher, breakRetryLoop := tlm.taskReader.dispatchSingleTaskFromBuffer("datacenterA", &persistence.TaskInfo{})
+		assert.False(t, breakDispatcher, "dispatch isn't shutting down")
+		assert.True(t, breakRetryLoop, "should be able to successfully dispatch all these tasks to the default isolation group")
+	}
+	// We should see them all being redirected
+	assert.Len(t, tlm.taskReader.taskBuffers[defaultTaskBufferIsolationGroup], maxBufferSize)
+	// we should see none in DC A (they're not being redirected here)
+	assert.Len(t, tlm.taskReader.taskBuffers["datacenterA"], 0)
+
+	// ok, and here we try and ensure that this *does not block
+	// and instead complains and live-retries
+	breakDispatcher, breakRetryLoop := tlm.taskReader.dispatchSingleTaskFromBuffer("datacenterA", &persistence.TaskInfo{})
+	assert.False(t, breakDispatcher, "dispatch isn't shutting down")
+	assert.False(t, breakRetryLoop, "in the event of a task being unable to be cross-dispatched, the expectation is that it'll keep retrying")
+}
