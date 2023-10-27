@@ -75,8 +75,6 @@ func newTaskMatcher(config *taskListConfig, fwdr *Forwarder, scope metrics.Scope
 	dPtr := _defaultTaskDispatchRPS
 	limiter := quotas.NewRateLimiter(&dPtr, _defaultTaskDispatchRPSTTL, config.MinTaskThrottlingBurstSize())
 	isolatedTaskC := make(map[string]chan *InternalTask)
-	// the default un-isolated channel is used for fallbacks
-	isolatedTaskC[defaultTaskBufferIsolationGroup] = make(chan *InternalTask)
 	for _, g := range isolationGroups {
 		isolatedTaskC[g] = make(chan *InternalTask)
 	}
@@ -313,6 +311,8 @@ func (tm *TaskMatcher) Poll(ctx context.Context, isolationGroup string) (*Intern
 	// forwarding token becomes available, send this poll to a parent partition
 	tm.log.Debug("falling back to non-local polling",
 		tag.IsolationGroup(isolationGroup),
+		tag.Dynamic("isolated channel", len(isolatedTaskC)),
+		tag.Dynamic("fallback channel", len(tm.taskC)),
 	)
 	return tm.pollOrForward(ctx, isolationGroup, isolatedTaskC, tm.taskC, tm.queryTaskC)
 }

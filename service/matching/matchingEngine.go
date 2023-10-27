@@ -514,6 +514,7 @@ pollLoop:
 					tag.WorkflowRunID(task.event.RunID),
 					tag.WorkflowTaskListName(taskListName),
 					tag.WorkflowScheduleID(task.event.ScheduleID),
+					tag.Error(err),
 					tag.TaskID(task.event.TaskID),
 				)
 				task.finish(nil)
@@ -522,6 +523,7 @@ pollLoop:
 					task.event.DomainID,
 					"unknown error recording task started",
 					tag.WorkflowDomainID(domainID),
+					tag.Error(err),
 					tag.WorkflowID(task.event.WorkflowID),
 					tag.WorkflowRunID(task.event.RunID),
 					tag.WorkflowTaskListName(taskListName),
@@ -579,9 +581,14 @@ pollLoop:
 		task, err := e.getTask(pollerCtx, taskList, maxDispatch, taskListKind)
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
-			if err == ErrNoTasks || err == errPumpClosed {
+			if errors.Is(err, ErrNoTasks) || errors.Is(err, errPumpClosed) {
 				return emptyPollForActivityTaskResponse, nil
 			}
+			e.logger.Error("Received unexpected err while getting task",
+				tag.WorkflowTaskListName(taskListName),
+				tag.WorkflowDomainID(domainID),
+				tag.Error(err),
+			)
 			return nil, err
 		}
 
