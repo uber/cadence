@@ -1079,6 +1079,8 @@ func (db *cdb) resetWorkflowExecutionAndMapsAndEventBuffer(
 		return fmt.Errorf("should only support WorkflowExecutionMapsWriteModeReset")
 	}
 
+	//This is another category of execution update where only the non-frozen column types in
+	// Cassandra are updated to a previous state in the Execution Update flow.
 	err = db.resetActivityInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ActivityInfos)
 	if err != nil {
 		return err
@@ -1173,6 +1175,8 @@ func (db *cdb) updateWorkflowExecutionAndEventBufferWithMergeAndDeleteMaps(
 		return fmt.Errorf("should only support WorkflowExecutionMapsWriteModeUpdate")
 	}
 
+	// In certain cases, some of the execution update cycles update particular columns asynchronously before reaching the final cycle.
+	// Each of these functions are updating a non-frozen column type in Cassandra table.
 	err = db.updateActivityInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ActivityInfos, execution.ActivityInfoKeysToDelete)
 	if err != nil {
 		return err
@@ -1196,6 +1200,9 @@ func (db *cdb) updateWorkflowExecutionAndEventBufferWithMergeAndDeleteMaps(
 	return db.updateSignalsRequested(batch, shardID, domainID, workflowID, execution.RunID, execution.SignalRequestedIDs, execution.SignalRequestedIDsKeysToDelete)
 }
 
+// updateWorkflowExecution is responsible for updating the execution state in different cycles until the
+// Status changes to close at the Final update cycle. Information is updated linearly, and synchronization usually occurs in every cycle.
+// refer to https://docs.google.com/document/d/1OX9h6SE7AQo6QlpownhRdFyhTjm66wgU2A4inFenEhg/edit?usp=sharing for more details.
 func (db *cdb) updateWorkflowExecution(
 	batch gocql.Batch,
 	shardID int,
