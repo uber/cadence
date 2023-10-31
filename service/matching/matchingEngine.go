@@ -468,12 +468,6 @@ pollLoop:
 		e.emitForwardedFromStats(hCtx.scope, task.isForwarded(), req.GetForwardedFrom())
 
 		if task.isStarted() {
-			// tasks received from remote are already started. So, simply forward the response
-			e.logger.Debug("decision task already started, returning task response",
-				tag.WorkflowTaskListName(taskListName),
-				tag.TaskID(task.event.TaskID),
-				tag.WorkflowDomainID(domainID),
-			)
 			return task.pollForDecisionResponse(), nil
 			// TODO: Maybe add history expose here?
 		}
