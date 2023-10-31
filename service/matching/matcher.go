@@ -258,6 +258,7 @@ forLoop:
 			err := tm.fwdr.ForwardTask(childCtx, task)
 			token.release("")
 			if err != nil {
+
 				tm.log.Debug("failed to forward task",
 					tag.Error(err),
 					tag.TaskID(task.event.TaskID),
