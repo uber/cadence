@@ -24,6 +24,7 @@ package matching
 
 import (
 	"context"
+	"github.com/uber/cadence/common/partition"
 	"sync"
 	"time"
 

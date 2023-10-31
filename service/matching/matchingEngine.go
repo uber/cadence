@@ -455,6 +455,13 @@ pollLoop:
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
 			if errors.Is(err, ErrNoTasks) || errors.Is(err, errPumpClosed) {
+				e.logger.Debug("no decision tasks",
+					tag.WorkflowTaskListName(taskListName),
+					tag.TaskID(task.event.TaskID),
+					tag.WorkflowDomainID(domainID),
+					tag.WorkflowRunID(task.event.RunID),
+					tag.Error(err),
+				)
 				return emptyPollForDecisionTaskResponse, nil
 			}
 			return nil, fmt.Errorf("couldn't get task: %w", err)
@@ -464,6 +471,13 @@ pollLoop:
 
 		if task.isStarted() {
 			// tasks received from remote are already started. So, simply forward the response
+			e.logger.Debug("decision task already started, returning task response",
+				tag.WorkflowTaskListName(taskListName),
+				tag.TaskID(task.event.TaskID),
+				tag.WorkflowDomainID(domainID),
+				tag.WorkflowRunID(task.event.RunID),
+				tag.Dynamic("decision-task-attempt", task.pollForDecisionResponse().Attempt),
+			)
 			return task.pollForDecisionResponse(), nil
 			// TODO: Maybe add history expose here?
 		}

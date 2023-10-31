@@ -214,6 +214,14 @@ writerLoop:
 
 				taskIDs, err := w.allocTaskIDs(batchSize)
 				if err != nil {
+					w.logger.Debug("error allocating task ids",
+						tag.Error(err),
+						tag.WorkflowDomainID(request.taskInfo.DomainID),
+						tag.WorkflowID(request.taskInfo.WorkflowID),
+						tag.WorkflowRunID(request.taskInfo.RunID),
+						tag.TaskID(request.taskInfo.TaskID),
+						tag.PartitionConfig(request.taskInfo.PartitionConfig),
+					)
 					w.sendWriteResponse(reqs, err, nil)
 					continue writerLoop
 				}
@@ -235,6 +243,10 @@ writerLoop:
 						tag.StoreOperationCreateTasks,
 						tag.Error(err),
 						tag.Number(taskIDs[0]),
+						tag.WorkflowDomainID(request.taskInfo.DomainID),
+						tag.WorkflowID(request.taskInfo.WorkflowID),
+						tag.WorkflowRunID(request.taskInfo.RunID),
+						tag.TaskID(request.taskInfo.TaskID),
 						tag.NextNumber(taskIDs[batchSize-1]),
 					)
 				}
