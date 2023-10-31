@@ -457,9 +457,7 @@ pollLoop:
 			if errors.Is(err, ErrNoTasks) || errors.Is(err, errPumpClosed) {
 				e.logger.Debug("no decision tasks",
 					tag.WorkflowTaskListName(taskListName),
-					tag.TaskID(task.event.TaskID),
 					tag.WorkflowDomainID(domainID),
-					tag.WorkflowRunID(task.event.RunID),
 					tag.Error(err),
 				)
 				return emptyPollForDecisionTaskResponse, nil
@@ -475,8 +473,6 @@ pollLoop:
 				tag.WorkflowTaskListName(taskListName),
 				tag.TaskID(task.event.TaskID),
 				tag.WorkflowDomainID(domainID),
-				tag.WorkflowRunID(task.event.RunID),
-				tag.Dynamic("decision-task-attempt", task.pollForDecisionResponse().Attempt),
 			)
 			return task.pollForDecisionResponse(), nil
 			// TODO: Maybe add history expose here?
