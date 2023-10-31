@@ -308,34 +308,34 @@ func (h *handlerImpl) RecordActivityTaskHeartbeat(
 
 	domainID := wrappedRequest.GetDomainUUID()
 	if domainID == "" {
-		return nil, h.error(errDomainNotSet, scope, domainID, "")
+		return nil, h.error(errDomainNotSet, scope, domainID, "", "")
 	}
 
 	if ok := h.rateLimiter.Allow(); !ok {
-		return nil, h.error(errHistoryHostThrottle, scope, domainID, "")
+		return nil, h.error(errHistoryHostThrottle, scope, domainID, "", "")
 	}
 
 	heartbeatRequest := wrappedRequest.HeartbeatRequest
 	token, err0 := h.tokenSerializer.Deserialize(heartbeatRequest.TaskToken)
 	if err0 != nil {
 		err0 = &types.BadRequestError{Message: fmt.Sprintf("Error deserializing task token. Error: %v", err0)}
-		return nil, h.error(err0, scope, domainID, "")
+		return nil, h.error(err0, scope, domainID, "", "")
 	}
 
 	err0 = validateTaskToken(token)
 	if err0 != nil {
-		return nil, h.error(err0, scope, domainID, "")
+		return nil, h.error(err0, scope, domainID, "", "")
 	}
 	workflowID := token.WorkflowID
 
 	engine, err1 := h.controller.GetEngine(workflowID)
 	if err1 != nil {
-		return nil, h.error(err1, scope, domainID, workflowID)
+		return nil, h.error(err1, scope, domainID, workflowID, "")
 	}
 
 	response, err2 := engine.RecordActivityTaskHeartbeat(ctx, wrappedRequest)
 	if err2 != nil {
-		return nil, h.error(err2, scope, domainID, workflowID)
+		return nil, h.error(err2, scope, domainID, workflowID, "")
 	}
 
 	return response, nil
@@ -367,21 +367,21 @@ func (h *handlerImpl) RecordActivityTaskStarted(
 	)
 
 	if recordRequest.GetDomainUUID() == "" {
-		return nil, h.error(errDomainNotSet, scope, domainID, workflowID)
+		return nil, h.error(errDomainNotSet, scope, domainID, workflowID, "")
 	}
 
 	if ok := h.rateLimiter.Allow(); !ok {
-		return nil, h.error(errHistoryHostThrottle, scope, domainID, workflowID)
+		return nil, h.error(errHistoryHostThrottle, scope, domainID, workflowID, "")
 	}
 
 	engine, err1 := h.controller.GetEngine(workflowID)
 	if err1 != nil {
-		return nil, h.error(err1, scope, domainID, workflowID)
+		return nil, h.error(err1, scope, domainID, workflowID, "")
 	}
 
 	response, err2 := engine.RecordActivityTaskStarted(ctx, recordRequest)
 	if err2 != nil {
-		return nil, h.error(err2, scope, domainID, workflowID)
+		return nil, h.error(err2, scope, domainID, workflowID, "")
 	}
 
 	return response, nil
@@ -402,6 +402,7 @@ func (h *handlerImpl) RecordDecisionTaskStarted(
 	domainID := recordRequest.GetDomainUUID()
 	workflowExecution := recordRequest.WorkflowExecution
 	workflowID := workflowExecution.GetWorkflowID()
+	runID := workflowExecution.GetRunID()
 
 	h.emitInfoOrDebugLog(
 		domainID,
@@ -413,15 +414,15 @@ func (h *handlerImpl) RecordDecisionTaskStarted(
 	)
 
 	if domainID == "" {
-		return nil, h.error(errDomainNotSet, scope, domainID, workflowID)
+		return nil, h.error(errDomainNotSet, scope, domainID, workflowID, runID)
 	}
 
 	if ok := h.rateLimiter.Allow(); !ok {
-		return nil, h.error(errHistoryHostThrottle, scope, domainID, workflowID)
+		return nil, h.error(errHistoryHostThrottle, scope, domainID, workflowID, runID)
 	}
 
 	if recordRequest.PollRequest == nil || recordRequest.PollRequest.TaskList.GetName() == "" {
-		return nil, h.error(errTaskListNotSet, scope, domainID, workflowID)
+		return nil, h.error(errTaskListNotSet, scope, domainID, workflowID, runID)
 	}
 
 	engine, err1 := h.controller.GetEngine(workflowID)
@@ -429,15 +430,16 @@ func (h *handlerImpl) RecordDecisionTaskStarted(
 		h.GetLogger().Error("RecordDecisionTaskStarted failed.",
 			tag.Error(err1),
 			tag.WorkflowID(recordRequest.WorkflowExecution.GetWorkflowID()),
+			tag.WorkflowRunID(runID),
 			tag.WorkflowRunID(recordRequest.WorkflowExecution.GetRunID()),
 			tag.WorkflowScheduleID(recordRequest.GetScheduleID()),
 		)
-		return nil, h.error(err1, scope, domainID, workflowID)
+		return nil, h.error(err1, scope, domainID, workflowID, runID)
 	}
 
 	response, err2 := engine.RecordDecisionTaskStarted(ctx, recordRequest)
 	if err2 != nil {
-		return nil, h.error(err2, scope, domainID, workflowID)
+		return nil, h.error(err2, scope, domainID, workflowID, runID)
 	}
 
 	return response, nil
@@ -457,34 +459,35 @@ func (h *handlerImpl) RespondActivityTaskCompleted(
 
 	domainID := wrappedRequest.GetDomainUUID()
 	if domainID == "" {
-		return h.error(errDomainNotSet, scope, domainID, "")
+		return h.error(errDomainNotSet, scope, domainID, "", "")
 	}
 
 	if ok := h.rateLimiter.Allow(); !ok {
-		return h.error(errHistoryHostThrottle, scope, domainID, "")
+		return h.error(errHistoryHostThrottle, scope, domainID, "", "")
 	}
 
 	completeRequest := wrappedRequest.CompleteRequest
 	token, err0 := h.tokenSerializer.Deserialize(completeRequest.TaskToken)
 	if err0 != nil {
 		err0 = &types.BadRequestError{Message: fmt.Sprintf("Error deserializing task token. Error: %v", err0)}
-		return h.error(err0, scope, domainID, "")
+		return h.error(err0, scope, domainID, "", "")
 	}
 
 	err0 = validateTaskToken(token)
 	if err0 != nil {
-		return h.error(err0, scope, domainID, "")
+		return h.error(err0, scope, domainID, "", "")
 	}
 	workflowID := token.WorkflowID
+	runID := token.RunID
 
 	engine, err1 := h.controller.GetEngine(workflowID)
 	if err1 != nil {
-		return h.error(err1, scope, domainID, workflowID)
+		return h.error(err1, scope, domainID, workflowID, runID)
 	}
 
 	err2 := engine.RespondActivityTaskCompleted(ctx, wrappedRequest)
 	if err2 != nil {
-		return h.error(err2, scope, domainID, workflowID)
+		return h.error(err2, scope, domainID, workflowID, runID)
 	}
 
 	return nil
@@ -504,34 +507,35 @@ func (h *handlerImpl) RespondActivityTaskFailed(
 
 	domainID := wrappedRequest.GetDomainUUID()
 	if domainID == "" {
-		return h.error(errDomainNotSet, scope, domainID, "")
+		return h.error(errDomainNotSet, scope, domainID, "", "")
 	}
 
 	if ok := h.rateLimiter.Allow(); !ok {
-		return h.error(errHistoryHostThrottle, scope, domainID, "")
+		return h.error(errHistoryHostThrottle, scope, domainID, "", "")
 	}
 
 	failRequest := wrappedRequest.FailedRequest
 	token, err0 := h.tokenSerializer.Deserialize(failRequest.TaskToken)
 	if err0 != nil {
 		err0 = &types.BadRequestError{Message: fmt.Sprintf("Error deserializing task token. Error: %v", err0)}
-		return h.error(err0, scope, domainID, "")
+		return h.error(err0, scope, domainID, "", "")
 	}
 
 	err0 = validateTaskToken(token)
 	if err0 != nil {
-		return h.error(err0, scope, domainID, "")
+		return h.error(err0, scope, domainID, "", "")
 	}
 	workflowID := token.WorkflowID
+	runID := token.RunID
 
 	engine, err1 := h.controller.GetEngine(workflowID)
 	if err1 != nil {
-		return h.error(err1, scope, domainID, workflowID)
+		return h.error(err1, scope, domainID, workflowID, runID)
 	}
 
 	err2 := engine.RespondActivityTaskFailed(ctx, wrappedRequest)
 	if err2 != nil {
-		return h.error(err2, scope, domainID, workflowID)
+		return h.error(err2, scope, domainID, workflowID, runID)
 	}
 
 	return nil
@@ -551,34 +555,35 @@ func (h *handlerImpl) RespondActivityTaskCanceled(
 
 	domainID := wrappedRequest.GetDomainUUID()
 	if domainID == "" {
-		return h.error(errDomainNotSet, scope, domainID, "")
+		return h.error(errDomainNotSet, scope, domainID, "", "")
 	}
 
 	if ok := h.rateLimiter.Allow(); !ok {
-		return h.error(errHistoryHostThrottle, scope, domainID, "")
+		return h.error(errHistoryHostThrottle, scope, domainID, "", "")
 	}
 
 	cancelRequest := wrappedRequest.CancelRequest
 	token, err0 := h.tokenSerializer.Deserialize(cancelRequest.TaskToken)
 	if err0 != nil {
 		err0 = &types.BadRequestError{Message: fmt.Sprintf("Error deserializing task token. Error: %v", err0)}
-		return h.error(err0, scope, domainID, "")
+		return h.error(err0, scope, domainID, "", "")
 	}
 
 	err0 = validateTaskToken(token)
 	if err0 != nil {
-		return h.error(err0, scope, domainID, "")
+		return h.error(err0, scope, domainID, "", "")
 	}
 	workflowID := token.WorkflowID
+	runID := token.RunID
 
 	engine, err1 := h.controller.GetEngine(workflowID)
 	if err1 != nil {
-		return h.error(err1, scope, domainID, workflowID)
+		return h.error(err1, scope, domainID, workflowID, runID)
 	}
 
 	err2 := engine.RespondActivityTaskCanceled(ctx, wrappedRequest)
 	if err2 != nil {
-		return h.error(err2, scope, domainID, workflowID)
+		return h.error(err2, scope, domainID, workflowID, runID)
 	}
 
 	return nil
@@ -598,11 +603,11 @@ func (h *handlerImpl) RespondDecisionTaskCompleted(
 
 	domainID := wrappedRequest.GetDomainUUID()
 	if domainID == "" {
-		return nil, h.error(errDomainNotSet, scope, domainID, "")
+		return nil, h.error(errDomainNotSet, scope, domainID, "", "")
 	}
 
 	if ok := h.rateLimiter.Allow(); !ok {
-		return nil, h.error(errHistoryHostThrottle, scope, domainID, "")
+		return nil, h.error(errHistoryHostThrottle, scope, domainID, "", "")
 	}
 
 	completeRequest := wrappedRequest.CompleteRequest
@@ -612,7 +617,7 @@ func (h *handlerImpl) RespondDecisionTaskCompleted(
 	token, err0 := h.tokenSerializer.Deserialize(completeRequest.TaskToken)
 	if err0 != nil {
 		err0 = &types.BadRequestError{Message: fmt.Sprintf("Error deserializing task token. Error: %v", err0)}
-		return nil, h.error(err0, scope, domainID, "")
+		return nil, h.error(err0, scope, domainID, "", "")
 	}
 
 	h.GetLogger().Debug(fmt.Sprintf("RespondDecisionTaskCompleted. DomainID: %v, WorkflowID: %v, RunID: %v, ScheduleID: %v",
@@ -623,18 +628,19 @@ func (h *handlerImpl) RespondDecisionTaskCompleted(
 
 	err0 = validateTaskToken(token)
 	if err0 != nil {
-		return nil, h.error(err0, scope, domainID, "")
+		return nil, h.error(err0, scope, domainID, "", "")
 	}
 	workflowID := token.WorkflowID
+	runID := token.RunID
 
 	engine, err1 := h.controller.GetEngine(workflowID)
 	if err1 != nil {
-		return nil, h.error(err1, scope, domainID, workflowID)
+		return nil, h.error(err1, scope, domainID, workflowID, runID)
 	}
 
 	response, err2 := engine.RespondDecisionTaskCompleted(ctx, wrappedRequest)
 	if err2 != nil {
-		return nil, h.error(err2, scope, domainID, workflowID)
+		return nil, h.error(err2, scope, domainID, workflowID, runID)
 	}
 
 	return response, nil
@@ -654,18 +660,18 @@ func (h *handlerImpl) RespondDecisionTaskFailed(
 
 	domainID := wrappedRequest.GetDomainUUID()
 	if domainID == "" {
-		return h.error(errDomainNotSet, scope, domainID, "")
+		return h.error(errDomainNotSet, scope, domainID, "", "")
 	}
 
 	if ok := h.rateLimiter.Allow(); !ok {
-		return h.error(errHistoryHostThrottle, scope, domainID, "")
+		return h.error(errHistoryHostThrottle, scope, domainID, "", "")
 	}
 
 	failedRequest := wrappedRequest.FailedRequest
 	token, err0 := h.tokenSerializer.Deserialize(failedRequest.TaskToken)
 	if err0 != nil {
 		err0 = &types.BadRequestError{Message: fmt.Sprintf("Error deserializing task token. Error: %v", err0)}
-		return h.error(err0, scope, domainID, "")
+		return h.error(err0, scope, domainID, "", "")
 	}
 
 	h.GetLogger().Debug(fmt.Sprintf("RespondDecisionTaskFailed. DomainID: %v, WorkflowID: %v, RunID: %v, ScheduleID: %v",
@@ -689,18 +695,19 @@ func (h *handlerImpl) RespondDecisionTaskFailed(
 	}
 	err0 = validateTaskToken(token)
 	if err0 != nil {
-		return h.error(err0, scope, domainID, "")
+		return h.error(err0, scope, domainID, "", "")
 	}
 	workflowID := token.WorkflowID
+	runID := token.RunID
 
 	engine, err1 := h.controller.GetEngine(workflowID)
 	if err1 != nil {
-		return h.error(err1, scope, domainID, workflowID)
+		return h.error(err1, scope, domainID, workflowID, runID)
 	}
 
 	err2 := engine.RespondDecisionTaskFailed(ctx, wrappedRequest)
 	if err2 != nil {
-		return h.error(err2, scope, domainID, workflowID)
+		return h.error(err2, scope, domainID, workflowID, runID)
 	}
 
 	return nil
@@ -720,23 +727,24 @@ func (h *handlerImpl) StartWorkflowExecution(
 
 	domainID := wrappedRequest.GetDomainUUID()
 	if domainID == "" {
-		return nil, h.error(errDomainNotSet, scope, domainID, "")
+		return nil, h.error(errDomainNotSet, scope, domainID, "", "")
 	}
 
 	if ok := h.rateLimiter.Allow(); !ok {
-		return nil, h.error(errHistoryHostThrottle, scope, domainID, "")
+		return nil, h.error(errHistoryHostThrottle, scope, domainID, "", "")
 	}
 
 	startRequest := wrappedRequest.StartRequest
 	workflowID := startRequest.GetWorkflowID()
 	engine, err1 := h.controller.GetEngine(workflowID)
 	if err1 != nil {
-		return nil, h.error(err1, scope, domainID, workflowID)
+		return nil, h.error(err1, scope, domainID, workflowID, "")
 	}
 
 	response, err2 := engine.StartWorkflowExecution(ctx, wrappedRequest)
+	runID := response.GetRunID()
 	if err2 != nil {
-		return nil, h.error(err2, scope, domainID, workflowID)
+		return nil, h.error(err2, scope, domainID, workflowID, runID)
 	}
 
 	return response, nil
@@ -832,7 +840,7 @@ func (h *handlerImpl) ResetQueue(
 
 	engine, err := h.controller.GetEngineForShard(int(request.GetShardID()))
 	if err != nil {
-		return h.error(err, scope, "", "")
+		return h.error(err, scope, "", "", "")
 	}
 
 	switch taskType := common.TaskType(request.GetType()); taskType {
@@ -847,7 +855,7 @@ func (h *handlerImpl) ResetQueue(
 	}
 
 	if err != nil {
-		return h.error(err, scope, "", "")
+		return h.error(err, scope, "", "", "")
 	}
 	return nil
 }
@@ -866,7 +874,7 @@ func (h *handlerImpl) DescribeQueue(
 
 	engine, err := h.controller.GetEngineForShard(int(request.GetShardID()))
 	if err != nil {
-		return nil, h.error(err, scope, "", "")
+		return nil, h.error(err, scope, "", "", "")
 	}
 
 	switch taskType := common.TaskType(request.GetType()); taskType {
@@ -881,7 +889,7 @@ func (h *handlerImpl) DescribeQueue(
 	}
 
 	if err != nil {
-		return nil, h.error(err, scope, "", "")
+		return nil, h.error(err, scope, "", "", "")
 	}
 	return resp, nil
 }
@@ -900,19 +908,20 @@ func (h *handlerImpl) DescribeMutableState(
 
 	domainID := request.GetDomainUUID()
 	if domainID == "" {
-		return nil, h.error(errDomainNotSet, scope, domainID, "")
+		return nil, h.error(errDomainNotSet, scope, domainID, "", "")
 	}
 
 	workflowExecution := request.Execution
 	workflowID := workflowExecution.GetWorkflowID()
+	runID := workflowExecution.GetRunID()
 	engine, err1 := h.controller.GetEngine(workflowID)
 	if err1 != nil {
-		return nil, h.error(err1, scope, domainID, workflowID)
+		return nil, h.error(err1, scope, domainID, workflowID, runID)
 	}
 
 	resp, err2 := engine.DescribeMutableState(ctx, request)
 	if err2 != nil {
-		return nil, h.error(err2, scope, domainID, workflowID)
+		return nil, h.error(err2, scope, domainID, workflowID, runID)
 	}
 	return resp, nil
 }
@@ -931,23 +940,24 @@ func (h *handlerImpl) GetMutableState(
 
 	domainID := getRequest.GetDomainUUID()
 	if domainID == "" {
-		return nil, h.error(errDomainNotSet, scope, domainID, "")
+		return nil, h.error(errDomainNotSet, scope, domainID, "", "")
 	}
 
 	if ok := h.rateLimiter.Allow(); !ok {
-		return nil, h.error(errHistoryHostThrottle, scope, domainID, "")
+		return nil, h.error(errHistoryHostThrottle, scope, domainID, "", "")
 	}
 
 	workflowExecution := getRequest.Execution
 	workflowID := workflowExecution.GetWorkflowID()
+	runID := workflowExecution.GetWorkflowID()
 	engine, err1 := h.controller.GetEngine(workflowID)
 	if err1 != nil {
-		return nil, h.error(err1, scope, domainID, workflowID)
+		return nil, h.error(err1, scope, domainID, workflowID, runID)
 	}
 
 	resp, err2 := engine.GetMutableState(ctx, getRequest)
 	if err2 != nil {
-		return nil, h.error(err2, scope, domainID, workflowID)
+		return nil, h.error(err2, scope, domainID, workflowID, runID)
 	}
 	return resp, nil
 }
@@ -966,23 +976,24 @@ func (h *handlerImpl) PollMutableState(
 
 	domainID := getRequest.GetDomainUUID()
 	if domainID == "" {
-		return nil, h.error(errDomainNotSet, scope, domainID, "")
+		return nil, h.error(errDomainNotSet, scope, domainID, "", "")
 	}
 
 	if ok := h.rateLimiter.Allow(); !ok {
-		return nil, h.error(errHistoryHostThrottle, scope, domainID, "")
+		return nil, h.error(errHistoryHostThrottle, scope, domainID, "", "")
 	}
 
 	workflowExecution := getRequest.Execution
 	workflowID := workflowExecution.GetWorkflowID()
+	runID := workflowExecution.GetRunID()
 	engine, err1 := h.controller.GetEngine(workflowID)
 	if err1 != nil {
-		return nil, h.error(err1, scope, domainID, workflowID)
+		return nil, h.error(err1, scope, domainID, workflowID, runID)
 	}
 
 	resp, err2 := engine.PollMutableState(ctx, getRequest)
 	if err2 != nil {
-		return nil, h.error(err2, scope, domainID, workflowID)
+		return nil, h.error(err2, scope, domainID, workflowID, runID)
 	}
 	return resp, nil
 }
@@ -1001,23 +1012,24 @@ func (h *handlerImpl) DescribeWorkflowExecution(
 
 	domainID := request.GetDomainUUID()
 	if domainID == "" {
-		return nil, h.error(errDomainNotSet, scope, domainID, "")
+		return nil, h.error(errDomainNotSet, scope, domainID, "", "")
 	}
 
 	if ok := h.rateLimiter.Allow(); !ok {
-		return nil, h.error(errHistoryHostThrottle, scope, domainID, "")
+		return nil, h.error(errHistoryHostThrottle, scope, domainID, "", "")
 	}
 
 	workflowExecution := request.Request.Execution
 	workflowID := workflowExecution.GetWorkflowID()
+	runID := workflowExecution.GetRunID()
 	engine, err1 := h.controller.GetEngine(workflowID)
 	if err1 != nil {
-		return nil, h.error(err1, scope, domainID, workflowID)
+		return nil, h.error(err1, scope, domainID, workflowID, runID)
 	}
 
 	resp, err2 := engine.DescribeWorkflowExecution(ctx, request)
 	if err2 != nil {
-		return nil, h.error(err2, scope, domainID, workflowID)
+		return nil, h.error(err2, scope, domainID, workflowID, runID)
 	}
 	return resp, nil
 }
@@ -1040,11 +1052,11 @@ func (h *handlerImpl) RequestCancelWorkflowExecution(
 
 	domainID := request.GetDomainUUID()
 	if domainID == "" || request.CancelRequest.GetDomain() == "" {
-		return h.error(errDomainNotSet, scope, domainID, "")
+		return h.error(errDomainNotSet, scope, domainID, "", "")
 	}
 
 	if ok := h.rateLimiter.Allow(); !ok {
-		return h.error(errHistoryHostThrottle, scope, domainID, "")
+		return h.error(errHistoryHostThrottle, scope, domainID, "", "")
 	}
 
 	cancelRequest := request.CancelRequest
@@ -1055,14 +1067,15 @@ func (h *handlerImpl) RequestCancelWorkflowExecution(
 		cancelRequest.WorkflowExecution.GetRunID()))
 
 	workflowID := cancelRequest.WorkflowExecution.GetWorkflowID()
+	runID := cancelRequest.WorkflowExecution.GetRunID()
 	engine, err1 := h.controller.GetEngine(workflowID)
 	if err1 != nil {
-		return h.error(err1, scope, domainID, workflowID)
+		return h.error(err1, scope, domainID, workflowID, runID)
 	}
 
 	err2 := engine.RequestCancelWorkflowExecution(ctx, request)
 	if err2 != nil {
-		return h.error(err2, scope, domainID, workflowID)
+		return h.error(err2, scope, domainID, workflowID, runID)
 	}
 
 	return nil
@@ -1087,23 +1100,24 @@ func (h *handlerImpl) SignalWorkflowExecution(
 
 	domainID := wrappedRequest.GetDomainUUID()
 	if domainID == "" {
-		return h.error(errDomainNotSet, scope, domainID, "")
+		return h.error(errDomainNotSet, scope, domainID, "", "")
 	}
 
 	if ok := h.rateLimiter.Allow(); !ok {
-		return h.error(errHistoryHostThrottle, scope, domainID, "")
+		return h.error(errHistoryHostThrottle, scope, domainID, "", "")
 	}
 
 	workflowExecution := wrappedRequest.SignalRequest.WorkflowExecution
 	workflowID := workflowExecution.GetWorkflowID()
+	runID := workflowExecution.GetRunID()
 	engine, err1 := h.controller.GetEngine(workflowID)
 	if err1 != nil {
-		return h.error(err1, scope, domainID, workflowID)
+		return h.error(err1, scope, domainID, workflowID, runID)
 	}
 
 	err2 := engine.SignalWorkflowExecution(ctx, wrappedRequest)
 	if err2 != nil {
-		return h.error(err2, scope, domainID, workflowID)
+		return h.error(err2, scope, domainID, workflowID, runID)
 	}
 
 	return nil
@@ -1131,18 +1145,18 @@ func (h *handlerImpl) SignalWithStartWorkflowExecution(
 
 	domainID := wrappedRequest.GetDomainUUID()
 	if domainID == "" {
-		return nil, h.error(errDomainNotSet, scope, domainID, "")
+		return nil, h.error(errDomainNotSet, scope, domainID, "", "")
 	}
 
 	if ok := h.rateLimiter.Allow(); !ok {
-		return nil, h.error(errHistoryHostThrottle, scope, domainID, "")
+		return nil, h.error(errHistoryHostThrottle, scope, domainID, "", "")
 	}
 
 	signalWithStartRequest := wrappedRequest.SignalWithStartRequest
 	workflowID := signalWithStartRequest.GetWorkflowID()
 	engine, err1 := h.controller.GetEngine(workflowID)
 	if err1 != nil {
-		return nil, h.error(err1, scope, domainID, workflowID)
+		return nil, h.error(err1, scope, domainID, workflowID, "")
 	}
 
 	resp, err2 := engine.SignalWithStartWorkflowExecution(ctx, wrappedRequest)
@@ -1159,12 +1173,12 @@ func (h *handlerImpl) SignalWithStartWorkflowExecution(
 	var e1 *persistence.WorkflowExecutionAlreadyStartedError
 	var e2 *persistence.CurrentWorkflowConditionFailedError
 	if !errors.As(err2, &e1) && !errors.As(err2, &e2) {
-		return nil, h.error(err2, scope, domainID, workflowID)
+		return nil, h.error(err2, scope, domainID, workflowID, resp.GetRunID())
 	}
 
 	resp, err2 = engine.SignalWithStartWorkflowExecution(ctx, wrappedRequest)
 	if err2 != nil {
-		return nil, h.error(err2, scope, domainID, workflowID)
+		return nil, h.error(err2, scope, domainID, workflowID, resp.GetRunID())
 	}
 	return resp, nil
 }
@@ -1188,23 +1202,24 @@ func (h *handlerImpl) RemoveSignalMutableState(
 
 	domainID := wrappedRequest.GetDomainUUID()
 	if domainID == "" {
-		return h.error(errDomainNotSet, scope, domainID, "")
+		return h.error(errDomainNotSet, scope, domainID, "", "")
 	}
 
 	if ok := h.rateLimiter.Allow(); !ok {
-		return h.error(errHistoryHostThrottle, scope, domainID, "")
+		return h.error(errHistoryHostThrottle, scope, domainID, "", "")
 	}
 
 	workflowExecution := wrappedRequest.WorkflowExecution
 	workflowID := workflowExecution.GetWorkflowID()
+	runID := workflowExecution.GetRunID()
 	engine, err1 := h.controller.GetEngine(workflowID)
 	if err1 != nil {
-		return h.error(err1, scope, domainID, workflowID)
+		return h.error(err1, scope, domainID, workflowID, runID)
 	}
 
 	err2 := engine.RemoveSignalMutableState(ctx, wrappedRequest)
 	if err2 != nil {
-		return h.error(err2, scope, domainID, workflowID)
+		return h.error(err2, scope, domainID, workflowID, runID)
 	}
 
 	return nil
@@ -1229,23 +1244,24 @@ func (h *handlerImpl) TerminateWorkflowExecution(
 
 	domainID := wrappedRequest.GetDomainUUID()
 	if domainID == "" {
-		return h.error(errDomainNotSet, scope, domainID, "")
+		return h.error(errDomainNotSet, scope, domainID, "", "")
 	}
 
 	if ok := h.rateLimiter.Allow(); !ok {
-		return h.error(errHistoryHostThrottle, scope, domainID, "")
+		return h.error(errHistoryHostThrottle, scope, domainID, "", "")
 	}
 
 	workflowExecution := wrappedRequest.TerminateRequest.WorkflowExecution
 	workflowID := workflowExecution.GetWorkflowID()
+	runID := workflowExecution.GetRunID()
 	engine, err1 := h.controller.GetEngine(workflowID)
 	if err1 != nil {
-		return h.error(err1, scope, domainID, workflowID)
+		return h.error(err1, scope, domainID, workflowID, runID)
 	}
 
 	err2 := engine.TerminateWorkflowExecution(ctx, wrappedRequest)
 	if err2 != nil {
-		return h.error(err2, scope, domainID, workflowID)
+		return h.error(err2, scope, domainID, workflowID, runID)
 	}
 
 	return nil
@@ -1270,23 +1286,24 @@ func (h *handlerImpl) ResetWorkflowExecution(
 
 	domainID := wrappedRequest.GetDomainUUID()
 	if domainID == "" {
-		return nil, h.error(errDomainNotSet, scope, domainID, "")
+		return nil, h.error(errDomainNotSet, scope, domainID, "", "")
 	}
 
 	if ok := h.rateLimiter.Allow(); !ok {
-		return nil, h.error(errHistoryHostThrottle, scope, domainID, "")
+		return nil, h.error(errHistoryHostThrottle, scope, domainID, "", "")
 	}
 
 	workflowExecution := wrappedRequest.ResetRequest.WorkflowExecution
 	workflowID := workflowExecution.GetWorkflowID()
+	runID := workflowExecution.GetRunID()
 	engine, err1 := h.controller.GetEngine(workflowID)
 	if err1 != nil {
-		return nil, h.error(err1, scope, domainID, workflowID)
+		return nil, h.error(err1, scope, domainID, workflowID, runID)
 	}
 
 	resp, err2 := engine.ResetWorkflowExecution(ctx, wrappedRequest)
 	if err2 != nil {
-		return nil, h.error(err2, scope, domainID, workflowID)
+		return nil, h.error(err2, scope, domainID, workflowID, runID)
 	}
 
 	return resp, nil
@@ -1309,22 +1326,23 @@ func (h *handlerImpl) QueryWorkflow(
 
 	domainID := request.GetDomainUUID()
 	if domainID == "" {
-		return nil, h.error(errDomainNotSet, scope, domainID, "")
+		return nil, h.error(errDomainNotSet, scope, domainID, "", "")
 	}
 
 	if ok := h.rateLimiter.Allow(); !ok {
-		return nil, h.error(errHistoryHostThrottle, scope, domainID, "")
+		return nil, h.error(errHistoryHostThrottle, scope, domainID, "", "")
 	}
 
 	workflowID := request.GetRequest().GetExecution().GetWorkflowID()
+	runID := request.GetRequest().GetExecution().GetRunID()
 	engine, err1 := h.controller.GetEngine(workflowID)
 	if err1 != nil {
-		return nil, h.error(err1, scope, domainID, workflowID)
+		return nil, h.error(err1, scope, domainID, workflowID, runID)
 	}
 
 	resp, err2 := engine.QueryWorkflow(ctx, request)
 	if err2 != nil {
-		return nil, h.error(err2, scope, domainID, workflowID)
+		return nil, h.error(err2, scope, domainID, workflowID, runID)
 	}
 
 	return resp, nil
@@ -1351,27 +1369,28 @@ func (h *handlerImpl) ScheduleDecisionTask(
 
 	domainID := request.GetDomainUUID()
 	if domainID == "" {
-		return h.error(errDomainNotSet, scope, domainID, "")
+		return h.error(errDomainNotSet, scope, domainID, "", "")
 	}
 
 	if ok := h.rateLimiter.Allow(); !ok {
-		return h.error(errHistoryHostThrottle, scope, domainID, "")
+		return h.error(errHistoryHostThrottle, scope, domainID, "", "")
 	}
 
 	if request.WorkflowExecution == nil {
-		return h.error(errWorkflowExecutionNotSet, scope, domainID, "")
+		return h.error(errWorkflowExecutionNotSet, scope, domainID, "", "")
 	}
 
 	workflowExecution := request.WorkflowExecution
 	workflowID := workflowExecution.GetWorkflowID()
+	runID := workflowExecution.GetRunID()
 	engine, err1 := h.controller.GetEngine(workflowID)
 	if err1 != nil {
-		return h.error(err1, scope, domainID, workflowID)
+		return h.error(err1, scope, domainID, workflowID, runID)
 	}
 
 	err2 := engine.ScheduleDecisionTask(ctx, request)
 	if err2 != nil {
-		return h.error(err2, scope, domainID, workflowID)
+		return h.error(err2, scope, domainID, workflowID, runID)
 	}
 
 	return nil
@@ -1396,27 +1415,28 @@ func (h *handlerImpl) RecordChildExecutionCompleted(
 
 	domainID := request.GetDomainUUID()
 	if domainID == "" {
-		return h.error(errDomainNotSet, scope, domainID, "")
+		return h.error(errDomainNotSet, scope, domainID, "", "")
 	}
 
 	if ok := h.rateLimiter.Allow(); !ok {
-		return h.error(errHistoryHostThrottle, scope, domainID, "")
+		return h.error(errHistoryHostThrottle, scope, domainID, "", "")
 	}
 
 	if request.WorkflowExecution == nil {
-		return h.error(errWorkflowExecutionNotSet, scope, domainID, "")
+		return h.error(errWorkflowExecutionNotSet, scope, domainID, "", "")
 	}
 
 	workflowExecution := request.WorkflowExecution
 	workflowID := workflowExecution.GetWorkflowID()
+	runID := workflowExecution.GetRunID()
 	engine, err1 := h.controller.GetEngine(workflowID)
 	if err1 != nil {
-		return h.error(err1, scope, domainID, workflowID)
+		return h.error(err1, scope, domainID, workflowID, runID)
 	}
 
 	err2 := engine.RecordChildExecutionCompleted(ctx, request)
 	if err2 != nil {
-		return h.error(err2, scope, domainID, workflowID)
+		return h.error(err2, scope, domainID, workflowID, runID)
 	}
 
 	return nil
@@ -1446,22 +1466,23 @@ func (h *handlerImpl) ResetStickyTaskList(
 
 	domainID := resetRequest.GetDomainUUID()
 	if domainID == "" {
-		return nil, h.error(errDomainNotSet, scope, domainID, "")
+		return nil, h.error(errDomainNotSet, scope, domainID, "", "")
 	}
 
 	if ok := h.rateLimiter.Allow(); !ok {
-		return nil, h.error(errHistoryHostThrottle, scope, domainID, "")
+		return nil, h.error(errHistoryHostThrottle, scope, domainID, "", "")
 	}
 
 	workflowID := resetRequest.Execution.GetWorkflowID()
+	runID := resetRequest.Execution.GetRunID()
 	engine, err := h.controller.GetEngine(workflowID)
 	if err != nil {
-		return nil, h.error(err, scope, domainID, workflowID)
+		return nil, h.error(err, scope, domainID, workflowID, runID)
 	}
 
 	resp, err = engine.ResetStickyTaskList(ctx, resetRequest)
 	if err != nil {
-		return nil, h.error(err, scope, domainID, workflowID)
+		return nil, h.error(err, scope, domainID, workflowID, runID)
 	}
 
 	return resp, nil
@@ -1485,23 +1506,24 @@ func (h *handlerImpl) ReplicateEventsV2(
 
 	domainID := replicateRequest.GetDomainUUID()
 	if domainID == "" {
-		return h.error(errDomainNotSet, scope, domainID, "")
+		return h.error(errDomainNotSet, scope, domainID, "", "")
 	}
 
 	if ok := h.rateLimiter.Allow(); !ok {
-		return h.error(errHistoryHostThrottle, scope, domainID, "")
+		return h.error(errHistoryHostThrottle, scope, domainID, "", "")
 	}
 
 	workflowExecution := replicateRequest.WorkflowExecution
 	workflowID := workflowExecution.GetWorkflowID()
+	runID := workflowExecution.GetRunID()
 	engine, err1 := h.controller.GetEngine(workflowID)
 	if err1 != nil {
-		return h.error(err1, scope, domainID, workflowID)
+		return h.error(err1, scope, domainID, workflowID, runID)
 	}
 
 	err2 := engine.ReplicateEventsV2(ctx, replicateRequest)
 	if err2 != nil {
-		return h.error(err2, scope, domainID, workflowID)
+		return h.error(err2, scope, domainID, workflowID, runID)
 	}
 
 	return nil
@@ -1524,26 +1546,26 @@ func (h *handlerImpl) SyncShardStatus(
 	}
 
 	if ok := h.rateLimiter.Allow(); !ok {
-		return h.error(errHistoryHostThrottle, scope, "", "")
+		return h.error(errHistoryHostThrottle, scope, "", "", "")
 	}
 
 	if syncShardStatusRequest.SourceCluster == "" {
-		return h.error(errSourceClusterNotSet, scope, "", "")
+		return h.error(errSourceClusterNotSet, scope, "", "", "")
 	}
 
 	if syncShardStatusRequest.Timestamp == nil {
-		return h.error(errTimestampNotSet, scope, "", "")
+		return h.error(errTimestampNotSet, scope, "", "", "")
 	}
 
 	// shard ID is already provided in the request
 	engine, err := h.controller.GetEngineForShard(int(syncShardStatusRequest.GetShardID()))
 	if err != nil {
-		return h.error(err, scope, "", "")
+		return h.error(err, scope, "", "", "")
 	}
 
 	err = engine.SyncShardStatus(ctx, syncShardStatusRequest)
 	if err != nil {
-		return h.error(err, scope, "", "")
+		return h.error(err, scope, "", "", "")
 	}
 
 	return nil
@@ -1567,30 +1589,31 @@ func (h *handlerImpl) SyncActivity(
 
 	domainID := syncActivityRequest.GetDomainID()
 	if syncActivityRequest.DomainID == "" || uuid.Parse(syncActivityRequest.GetDomainID()) == nil {
-		return h.error(errDomainNotSet, scope, domainID, "")
+		return h.error(errDomainNotSet, scope, domainID, "", "")
 	}
 
 	if ok := h.rateLimiter.Allow(); !ok {
-		return h.error(errHistoryHostThrottle, scope, domainID, "")
+		return h.error(errHistoryHostThrottle, scope, domainID, "", "")
 	}
 
 	if syncActivityRequest.WorkflowID == "" {
-		return h.error(errWorkflowIDNotSet, scope, domainID, "")
+		return h.error(errWorkflowIDNotSet, scope, domainID, "", "")
 	}
 
 	if syncActivityRequest.RunID == "" || uuid.Parse(syncActivityRequest.GetRunID()) == nil {
-		return h.error(errRunIDNotValid, scope, domainID, "")
+		return h.error(errRunIDNotValid, scope, domainID, "", "")
 	}
 
 	workflowID := syncActivityRequest.GetWorkflowID()
+	runID := syncActivityRequest.GetRunID()
 	engine, err := h.controller.GetEngine(workflowID)
 	if err != nil {
-		return h.error(err, scope, domainID, workflowID)
+		return h.error(err, scope, domainID, workflowID, runID)
 	}
 
 	err = engine.SyncActivity(ctx, syncActivityRequest)
 	if err != nil {
-		return h.error(err, scope, domainID, workflowID)
+		return h.error(err, scope, domainID, workflowID, runID)
 	}
 
 	return nil
@@ -1765,9 +1788,10 @@ func (h *handlerImpl) ReapplyEvents(
 
 	domainID := request.GetDomainUUID()
 	workflowID := request.GetRequest().GetWorkflowExecution().GetWorkflowID()
+	runID := request.GetRequest().GetWorkflowExecution().GetRunID()
 	engine, err := h.controller.GetEngine(workflowID)
 	if err != nil {
-		return h.error(err, scope, domainID, workflowID)
+		return h.error(err, scope, domainID, workflowID, runID)
 	}
 	// deserialize history event object
 	historyEvents, err := h.GetPayloadSerializer().DeserializeBatchEvents(&persistence.DataBlob{
@@ -1775,7 +1799,7 @@ func (h *handlerImpl) ReapplyEvents(
 		Data:     request.GetRequest().GetEvents().GetData(),
 	})
 	if err != nil {
-		return h.error(err, scope, domainID, workflowID)
+		return h.error(err, scope, domainID, workflowID, runID)
 	}
 
 	execution := request.GetRequest().GetWorkflowExecution()
@@ -1786,7 +1810,7 @@ func (h *handlerImpl) ReapplyEvents(
 		execution.GetRunID(),
 		historyEvents,
 	); err != nil {
-		return h.error(err, scope, domainID, workflowID)
+		return h.error(err, scope, domainID, workflowID, runID)
 	}
 	return nil
 }
@@ -1834,7 +1858,7 @@ func (h *handlerImpl) CountDLQMessages(
 	}
 
 	err := g.Wait()
-	return &types.HistoryCountDLQMessagesResponse{Entries: entries}, h.error(err, scope, "", "")
+	return &types.HistoryCountDLQMessagesResponse{Entries: entries}, h.error(err, scope, "", "", "")
 }
 
 // ReadDLQMessages reads replication DLQ messages
@@ -1855,7 +1879,7 @@ func (h *handlerImpl) ReadDLQMessages(
 
 	engine, err := h.controller.GetEngineForShard(int(request.GetShardID()))
 	if err != nil {
-		return nil, h.error(err, scope, "", "")
+		return nil, h.error(err, scope, "", "", "")
 	}
 
 	return engine.ReadDLQMessages(ctx, request)
@@ -1879,7 +1903,7 @@ func (h *handlerImpl) PurgeDLQMessages(
 
 	engine, err := h.controller.GetEngineForShard(int(request.GetShardID()))
 	if err != nil {
-		return h.error(err, scope, "", "")
+		return h.error(err, scope, "", "", "")
 	}
 
 	return engine.PurgeDLQMessages(ctx, request)
@@ -1903,7 +1927,7 @@ func (h *handlerImpl) MergeDLQMessages(
 
 	engine, err := h.controller.GetEngineForShard(int(request.GetShardID()))
 	if err != nil {
-		return nil, h.error(err, scope, "", "")
+		return nil, h.error(err, scope, "", "", "")
 	}
 
 	return engine.MergeDLQMessages(ctx, request)
@@ -1924,9 +1948,10 @@ func (h *handlerImpl) RefreshWorkflowTasks(
 	domainID := request.DomainUIID
 	execution := request.GetRequest().GetExecution()
 	workflowID := execution.GetWorkflowID()
+	runID := execution.GetWorkflowID()
 	engine, err := h.controller.GetEngine(workflowID)
 	if err != nil {
-		return h.error(err, scope, domainID, workflowID)
+		return h.error(err, scope, domainID, workflowID, runID)
 	}
 
 	err = engine.RefreshWorkflowTasks(
@@ -1939,7 +1964,7 @@ func (h *handlerImpl) RefreshWorkflowTasks(
 	)
 
 	if err != nil {
-		return h.error(err, scope, domainID, workflowID)
+		return h.error(err, scope, domainID, workflowID, runID)
 	}
 
 	return nil
@@ -2041,12 +2066,12 @@ func (h *handlerImpl) RespondCrossClusterTasksCompleted(
 
 	engine, err := h.controller.GetEngineForShard(int(request.GetShardID()))
 	if err != nil {
-		return nil, h.error(err, scope, "", "")
+		return nil, h.error(err, scope, "", "", "")
 	}
 
 	err = engine.RespondCrossClusterTasksCompleted(ctx, request.TargetCluster, request.TaskResponses)
 	if err != nil {
-		return nil, h.error(err, scope, "", "")
+		return nil, h.error(err, scope, "", "", "")
 	}
 
 	response := &types.RespondCrossClusterTasksCompletedResponse{}
@@ -2056,7 +2081,7 @@ func (h *handlerImpl) RespondCrossClusterTasksCompleted(
 
 		response.Tasks, err = engine.GetCrossClusterTasks(fetchTaskCtx, request.TargetCluster)
 		if err != nil {
-			return nil, h.error(err, scope, "", "")
+			return nil, h.error(err, scope, "", "", "")
 		}
 	}
 	return response, nil
@@ -2078,7 +2103,7 @@ func (h *handlerImpl) GetFailoverInfo(
 
 	resp, err := h.failoverCoordinator.GetFailoverInfo(request.GetDomainID())
 	if err != nil {
-		return nil, h.error(err, scope, request.GetDomainID(), "")
+		return nil, h.error(err, scope, request.GetDomainID(), "", "")
 	}
 	return resp, nil
 }
@@ -2110,51 +2135,74 @@ func (h *handlerImpl) updateErrorMetric(
 	scope metrics.Scope,
 	domainID string,
 	workflowID string,
+	runID string,
 	err error,
 ) {
+
+	var yarpcE *yarpcerrors.Status
 
 	if err == context.DeadlineExceeded || err == context.Canceled {
 		scope.IncCounter(metrics.CadenceErrContextTimeoutCounter)
 		return
 	}
 
-	switch err := err.(type) {
-	case *types.ShardOwnershipLostError:
+	if errors.Is(err, types.ShardOwnershipLostError{}) {
 		scope.IncCounter(metrics.CadenceErrShardOwnershipLostCounter)
-	case *types.EventAlreadyStartedError:
+
+	} else if errors.Is(err, types.EventAlreadyStartedError{}) {
 		scope.IncCounter(metrics.CadenceErrEventAlreadyStartedCounter)
-	case *types.BadRequestError:
+
+	} else if errors.Is(err, types.BadRequestError{}) {
 		scope.IncCounter(metrics.CadenceErrBadRequestCounter)
-	case *types.DomainNotActiveError:
+
+	} else if errors.Is(err, types.DomainNotActiveError{}) {
 		scope.IncCounter(metrics.CadenceErrBadRequestCounter)
-	case *types.WorkflowExecutionAlreadyStartedError:
+
+	} else if errors.Is(err, types.WorkflowExecutionAlreadyStartedError{}) {
 		scope.IncCounter(metrics.CadenceErrExecutionAlreadyStartedCounter)
-	case *types.EntityNotExistsError:
+
+	} else if errors.Is(err, types.EntityNotExistsError{}) {
 		scope.IncCounter(metrics.CadenceErrEntityNotExistsCounter)
-	case *types.WorkflowExecutionAlreadyCompletedError:
+
+	} else if errors.Is(err, types.WorkflowExecutionAlreadyCompletedError{}) {
 		scope.IncCounter(metrics.CadenceErrWorkflowExecutionAlreadyCompletedCounter)
-	case *types.CancellationAlreadyRequestedError:
+
+	} else if errors.Is(err, types.CancellationAlreadyRequestedError{}) {
 		scope.IncCounter(metrics.CadenceErrCancellationAlreadyRequestedCounter)
-	case *types.LimitExceededError:
+
+	} else if errors.Is(err, types.LimitExceededError{}) {
 		scope.IncCounter(metrics.CadenceErrLimitExceededCounter)
-	case *types.RetryTaskV2Error:
+
+	} else if errors.Is(err, types.RetryTaskV2Error{}) {
 		scope.IncCounter(metrics.CadenceErrRetryTaskCounter)
-	case *types.ServiceBusyError:
+
+	} else if errors.Is(err, types.ServiceBusyError{}) {
 		scope.IncCounter(metrics.CadenceErrServiceBusyCounter)
-	case *yarpcerrors.Status:
-		if err.Code() == yarpcerrors.CodeDeadlineExceeded {
+
+	} else if errors.As(err, &yarpcE) {
+
+		if yarpcE.Code() == yarpcerrors.CodeDeadlineExceeded {
 			scope.IncCounter(metrics.CadenceErrContextTimeoutCounter)
 		}
 		scope.IncCounter(metrics.CadenceFailures)
-	case *types.InternalServiceError:
+
+	} else if errors.Is(err, types.InternalServiceError{}) {
 		scope.IncCounter(metrics.CadenceFailures)
+
 		h.GetLogger().Error("Internal service error",
 			tag.Error(err),
 			tag.WorkflowID(workflowID),
+			tag.WorkflowRunID(runID),
 			tag.WorkflowDomainID(domainID))
-	default:
+
+	} else {
+		// Default / unknown error fallback
 		scope.IncCounter(metrics.CadenceFailures)
-		h.getLoggerWithTags(domainID, workflowID).Error("Uncategorized error", tag.Error(err))
+		h.GetLogger().Error("Uncategorized error",
+			tag.Error(err),
+			tag.WorkflowID(workflowID),
+			tag.WorkflowRunID(runID),
+			tag.WorkflowDomainID(domainID))
 	}
 }
 
@@ -2163,29 +2211,11 @@ func (h *handlerImpl) error(
 	scope metrics.Scope,
 	domainID string,
 	workflowID string,
+	runID string,
 ) error {
-
 	err = h.convertError(err)
-	h.updateErrorMetric(scope, domainID, workflowID, err)
-
+	h.updateErrorMetric(scope, domainID, workflowID, runID, err)
 	return err
-}
-
-func (h *handlerImpl) getLoggerWithTags(
-	domainID string,
-	workflowID string,
-) log.Logger {
-
-	logger := h.GetLogger()
-	if domainID != "" {
-		logger = logger.WithTags(tag.WorkflowDomainID(domainID))
-	}
-
-	if workflowID != "" {
-		logger = logger.WithTags(tag.WorkflowID(workflowID))
-	}
-
-	return logger
 }
 
 func (h *handlerImpl) emitInfoOrDebugLog(
