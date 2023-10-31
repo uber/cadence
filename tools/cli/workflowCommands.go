@@ -1024,6 +1024,9 @@ type WorkflowRow struct {
 	StartTime        time.Time              `header:"Start Time"`
 	ExecutionTime    time.Time              `header:"Execution Time"`
 	EndTime          time.Time              `header:"End Time"`
+	CloseStatus      string                 `header:"Close Status"`
+	HistoryLength    int64                  `header:"History Length"`
+	UpdateTime       time.Time              `header:"Update Time"`
 	Memo             map[string]string      `header:"Memo"`
 	SearchAttributes map[string]interface{} `header:"Search Attributes"`
 }
@@ -1050,6 +1053,9 @@ func newWorkflowRow(workflow *types.WorkflowExecutionInfo) WorkflowRow {
 		StartTime:        time.Unix(0, workflow.GetStartTime()),
 		ExecutionTime:    time.Unix(0, workflow.GetExecutionTime()),
 		EndTime:          time.Unix(0, workflow.GetCloseTime()),
+		UpdateTime:       time.Unix(0, workflow.GetUpdateTime()),
+		CloseStatus:      workflow.GetCloseStatus().String(),
+		HistoryLength:    workflow.HistoryLength,
 		Memo:             memo,
 		SearchAttributes: sa,
 	}
@@ -1263,9 +1269,7 @@ func listWorkflows(c *cli.Context) getWorkflowPageFn {
 			Query:  c.String(FlagListQuery),
 		},
 	)
-	if err != nil {
-		printError("Unable to count workflows. Proceeding with fetching list of workflows...", err)
-	} else {
+	if err == nil {
 		fmt.Printf("Fetching %v workflows...\n", resp.GetCount())
 	}
 

@@ -59,6 +59,7 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/pinot"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/rpc"
 	"github.com/uber/cadence/common/service"
@@ -115,6 +116,8 @@ type (
 		mockAdminClient               map[string]adminClient.Client
 		domainReplicationTaskExecutor domain.ReplicationTaskExecutor
 		authorizationConfig           config.Authorization
+		pinotConfig                   *config.PinotVisibilityConfig
+		pinotClient                   pinot.GenericClient
 	}
 
 	// HistoryConfig contains configs for history service
@@ -146,6 +149,8 @@ type (
 		MockAdminClient               map[string]adminClient.Client
 		DomainReplicationTaskExecutor domain.ReplicationTaskExecutor
 		AuthorizationConfig           config.Authorization
+		PinotConfig                   *config.PinotVisibilityConfig
+		PinotClient                   pinot.GenericClient
 	}
 )
 
@@ -171,6 +176,8 @@ func NewCadence(params *CadenceParams) Cadence {
 		mockAdminClient:               params.MockAdminClient,
 		domainReplicationTaskExecutor: params.DomainReplicationTaskExecutor,
 		authorizationConfig:           params.AuthorizationConfig,
+		pinotConfig:                   params.PinotConfig,
+		pinotClient:                   params.PinotClient,
 	}
 }
 
@@ -424,6 +431,8 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]membership.HostInfo, star
 	params.ArchiverProvider = c.archiverProvider
 	params.ESConfig = c.esConfig
 	params.ESClient = c.esClient
+	params.PinotConfig = c.pinotConfig
+	params.PinotClient = c.pinotClient
 	var err error
 	authorizer, err := authorization.NewAuthorizer(c.authorizationConfig, params.Logger, nil)
 	if err != nil {
@@ -435,7 +444,14 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]membership.HostInfo, star
 		c.logger.Fatal("Failed to copy persistence config for frontend", tag.Error(err))
 	}
 
-	if c.esConfig != nil {
+	if c.pinotConfig != nil {
+		pinotDataStoreName := "pinot-visibility"
+		params.PersistenceConfig.AdvancedVisibilityStore = pinotDataStoreName
+		params.DynamicConfig.UpdateValue(dynamicconfig.EnableReadVisibilityFromES, false)
+		params.PersistenceConfig.DataStores[pinotDataStoreName] = config.DataStore{
+			Pinot: c.pinotConfig,
+		}
+	} else if c.esConfig != nil {
 		esDataStoreName := "es-visibility"
 		params.PersistenceConfig.AdvancedVisibilityStore = esDataStoreName
 		params.PersistenceConfig.DataStores[esDataStoreName] = config.DataStore{
@@ -499,7 +515,14 @@ func (c *cadenceImpl) startHistory(
 			c.logger.Fatal("Failed to copy persistence config for history", tag.Error(err))
 		}
 
-		if c.esConfig != nil {
+		if c.pinotConfig != nil {
+			pinotDataStoreName := "pinot-visibility"
+			params.PersistenceConfig.AdvancedVisibilityStore = pinotDataStoreName
+			params.PersistenceConfig.DataStores[pinotDataStoreName] = config.DataStore{
+				Pinot:         c.pinotConfig,
+				ElasticSearch: c.esConfig,
+			}
+		} else if c.esConfig != nil {
 			esDataStoreName := "es-visibility"
 			params.PersistenceConfig.AdvancedVisibilityStore = esDataStoreName
 			params.PersistenceConfig.DataStores[esDataStoreName] = config.DataStore{

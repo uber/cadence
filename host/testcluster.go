@@ -52,12 +52,14 @@ import (
 	"github.com/uber/cadence/common/persistence/persistence-tests/testcluster"
 	"github.com/uber/cadence/testflags"
 
+	"github.com/startreedata/pinot-client-go/pinot"
 	// the import is a test dependency
 	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin/postgres"
+	pnt "github.com/uber/cadence/common/pinot"
 )
 
 type (
@@ -91,6 +93,7 @@ type (
 		ESConfig              *config.ElasticSearchConfig
 		WorkerConfig          *WorkerConfig
 		MockAdminClient       map[string]adminClient.Client
+		PinotConfig           *config.PinotVisibilityConfig
 	}
 
 	// MessagingClientConfig is the config for messaging config
@@ -159,6 +162,70 @@ func NewCluster(options *TestClusterConfig, logger log.Logger, params persistenc
 		MockAdminClient:               options.MockAdminClient,
 		DomainReplicationTaskExecutor: domain.NewReplicationTaskExecutor(testBase.DomainManager, clock.NewRealTimeSource(), logger),
 		AuthorizationConfig:           aConfig,
+	}
+	cluster := NewCadence(cadenceParams)
+	if err := cluster.Start(); err != nil {
+		return nil, err
+	}
+
+	return &TestCluster{testBase: testBase, archiverBase: archiverBase, host: cluster}, nil
+}
+
+func NewPinotTestCluster(options *TestClusterConfig, logger log.Logger, params persistencetests.TestBaseParams) (*TestCluster, error) {
+	testBase := persistencetests.NewTestBaseFromParams(params)
+	testBase.Setup()
+	setupShards(testBase, options.HistoryConfig.NumHistoryShards, logger)
+	archiverBase := newArchiverBase(options.EnableArchival, logger)
+	messagingClient := getMessagingClient(options.MessagingClientConfig, logger)
+	pConfig := testBase.Config()
+	pConfig.NumHistoryShards = options.HistoryConfig.NumHistoryShards
+	var esClient elasticsearch.GenericClient
+	var pinotClient pnt.GenericClient
+	if options.WorkerConfig.EnableIndexer {
+		var err error
+		esClient, err = elasticsearch.NewGenericClient(options.ESConfig, logger)
+		if err != nil {
+			return nil, err
+		}
+		pConfig.AdvancedVisibilityStore = "pinot-visibility"
+		pinotBroker := options.PinotConfig.Broker
+		pinotRawClient, err := pinot.NewFromBrokerList([]string{pinotBroker})
+		if err != nil || pinotRawClient == nil {
+			return nil, err
+		}
+		pinotClient = pnt.NewPinotClient(pinotRawClient, logger, options.PinotConfig)
+	}
+
+	scope := tally.NewTestScope("integration-test", nil)
+	metricsClient := metrics.NewClient(scope, metrics.ServiceIdx(0))
+	domainReplicationQueue := domain.NewReplicationQueue(
+		testBase.DomainReplicationQueueMgr,
+		options.ClusterGroupMetadata.CurrentClusterName,
+		metricsClient,
+		logger,
+	)
+	aConfig := noopAuthorizationConfig()
+	cadenceParams := &CadenceParams{
+		ClusterMetadata:               params.ClusterMetadata,
+		PersistenceConfig:             pConfig,
+		MessagingClient:               messagingClient,
+		DomainManager:                 testBase.DomainManager,
+		HistoryV2Mgr:                  testBase.HistoryV2Mgr,
+		ExecutionMgrFactory:           testBase.ExecutionMgrFactory,
+		DomainReplicationQueue:        domainReplicationQueue,
+		Logger:                        logger,
+		ClusterNo:                     options.ClusterNo,
+		ESConfig:                      options.ESConfig,
+		ESClient:                      esClient,
+		ArchiverMetadata:              archiverBase.metadata,
+		ArchiverProvider:              archiverBase.provider,
+		HistoryConfig:                 options.HistoryConfig,
+		WorkerConfig:                  options.WorkerConfig,
+		MockAdminClient:               options.MockAdminClient,
+		DomainReplicationTaskExecutor: domain.NewReplicationTaskExecutor(testBase.DomainManager, clock.NewRealTimeSource(), logger),
+		AuthorizationConfig:           aConfig,
+		PinotConfig:                   options.PinotConfig,
+		PinotClient:                   pinotClient,
 	}
 	cluster := NewCadence(cadenceParams)
 	if err := cluster.Start(); err != nil {
