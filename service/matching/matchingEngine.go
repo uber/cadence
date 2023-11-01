@@ -518,6 +518,7 @@ pollLoop:
 					tag.WorkflowRunID(task.GetRunID()),
 					tag.WorkflowTaskListName(taskListName),
 					tag.Error(err),
+					tag.WorkflowScheduleID(task.GetWorkflowScheduleID()),
 					tag.TaskID(task.GetTaskID()),
 				)
 				task.finish(nil)

@@ -189,3 +189,10 @@ func (task *InternalTask) GetDomainID() string {
 	}
 	return ""
 }
+
+func (task *InternalTask) GetWorkflowScheduleID() int64 {
+	if task != nil && task.event != nil {
+		return task.event.ScheduleID
+	}
+	return -1
+}
