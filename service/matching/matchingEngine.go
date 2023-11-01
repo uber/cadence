@@ -512,7 +512,7 @@ pollLoop:
 			case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError, *types.EventAlreadyStartedError:
 				e.emitInfoOrDebugLog(
 					task.event.DomainID,
-					"Duplicated decision task",
+					"duplicated decision task",
 					tag.WorkflowDomainID(domainID),
 					tag.WorkflowID(task.GetWorkflowID()),
 					tag.WorkflowRunID(task.GetRunID()),
