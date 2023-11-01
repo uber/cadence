@@ -36,5 +36,12 @@ func TestTaskInfoGetters(t *testing.T) {
 		t.GetWorkflowID()
 		t.GetWorkflowScheduleID()
 		t.GetRunID()
+
+		var t1 *InternalTask
+		t1.GetTaskID()
+		t1.GetDomainID()
+		t1.GetWorkflowID()
+		t1.GetWorkflowScheduleID()
+		t1.GetRunID()
 	})
 }

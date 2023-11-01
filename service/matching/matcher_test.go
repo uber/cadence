@@ -664,5 +664,11 @@ func TestGetters(t *testing.T) {
 		t.GetWorkflowID()
 		t.GetRunID()
 		t.GetTaskID()
+
+		var t1 *InternalTask
+		t1.GetDomainID()
+		t1.GetWorkflowID()
+		t1.GetRunID()
+		t1.GetTaskID()
 	})
 }
