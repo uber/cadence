@@ -390,7 +390,6 @@ func (tr *taskReader) dispatchSingleTaskFromBufferWithRetries(isolationGroup str
 
 func (tr *taskReader) dispatchSingleTaskFromBuffer(isolationGroup string, taskInfo *persistence.TaskInfo) (breakDispatchLoop bool, breakRetries bool) {
 	task := newInternalTask(taskInfo, tr.completeTask, types.TaskSourceDbBacklog, "", false, nil, isolationGroup)
-
 	dispatchCtx, cancel := tr.newDispatchContext(isolationGroup)
 	timerScope := tr.scope.StartTimer(metrics.AsyncMatchLatencyPerTaskList)
 	err := tr.dispatchTask(dispatchCtx, task)
