@@ -22,7 +22,6 @@ package tag
 
 import (
 	"fmt"
-	"github.com/uber/cadence/common/persistence"
 	"time"
 
 	"github.com/uber/cadence/common/types"
@@ -937,9 +936,4 @@ func FallbackIsolationGroup(group string) Tag {
 
 func PollerGroupsConfiguration(pollers types.IsolationGroupConfiguration) Tag {
 	return newObjectTag("poller-isolation-groups", pollers.ToPartitionList())
-}
-
-// WorkflowRunID returns tag for WorkflowRunID
-func TaskInfo(t persistence.TaskInfo) Tag {
-	return newObjectTag("taskinfo", t)
 }
