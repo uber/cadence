@@ -26,8 +26,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/uber/cadence/common/log/loggerimpl"
 
 	"github.com/golang/mock/gomock"
@@ -655,20 +653,4 @@ func ensureAsyncReady(ctxTimeout time.Duration, cb func(ctx context.Context)) (w
 	return func() {
 		<-ctx.Done()
 	}
-}
-
-func TestGetters(t *testing.T) {
-	assert.NotPanics(t, func() {
-		t := &InternalTask{}
-		t.GetDomainID()
-		t.GetWorkflowID()
-		t.GetRunID()
-		t.GetTaskID()
-
-		var t1 *InternalTask
-		t1.GetDomainID()
-		t1.GetWorkflowID()
-		t1.GetRunID()
-		t1.GetTaskID()
-	})
 }

@@ -281,17 +281,3 @@ func (w *taskWriter) sendWriteResponse(reqs []*writeTaskRequest,
 		req.responseCh <- resp
 	}
 }
-
-func (r *writeTaskRequest) GetWorkflowExecution() *types.WorkflowExecution {
-	if r.execution != nil {
-		return r.execution
-	}
-	return nil
-}
-
-func (r *writeTaskRequest) GetTaskInfo() *persistence.TaskInfo {
-	if r != nil && r.taskInfo != nil {
-		return r.taskInfo
-	}
-	return nil
-}

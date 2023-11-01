@@ -161,38 +161,3 @@ func (task *InternalTask) finish(err error) {
 		task.event.completionFunc(task.event.TaskInfo, err)
 	}
 }
-
-func (task *InternalTask) GetWorkflowID() string {
-	if task != nil && task.event != nil {
-		return task.event.WorkflowID
-	}
-	return ""
-}
-
-func (task *InternalTask) GetRunID() string {
-	if task != nil && task.event != nil {
-		return task.event.RunID
-	}
-	return ""
-}
-
-func (task *InternalTask) GetTaskID() int64 {
-	if task != nil && task.event != nil {
-		return task.event.TaskID
-	}
-	return -1
-}
-
-func (task *InternalTask) GetDomainID() string {
-	if task != nil && task.event != nil {
-		return task.event.DomainID
-	}
-	return ""
-}
-
-func (task *InternalTask) GetWorkflowScheduleID() int64 {
-	if task != nil && task.event != nil {
-		return task.event.ScheduleID
-	}
-	return -1
-}
