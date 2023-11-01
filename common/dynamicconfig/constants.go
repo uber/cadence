@@ -1896,7 +1896,7 @@ const (
 	// Default value: true
 	EnableShardIDMetrics
 
-	// EnableDataScan turns on or off shardId metrics
+	// EnableDataScan turns on or off the DataInconsistencyScan in replication task processing.
 	// KeyName: history.enableDataScan
 	// Value type: Bool
 	// Default value: false
