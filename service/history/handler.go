@@ -2141,7 +2141,7 @@ func (h *handlerImpl) updateErrorMetric(
 
 	var yarpcE *yarpcerrors.Status
 
-	if err == context.DeadlineExceeded || err == context.Canceled {
+	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 		scope.IncCounter(metrics.CadenceErrContextTimeoutCounter)
 		return
 	}
