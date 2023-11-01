@@ -58,3 +58,12 @@ func TestIsTransientError(t *testing.T) {
 		require.False(t, IsTransientError(err))
 	}
 }
+
+func TestTaskinfoGetters(t *testing.T) {
+	assert.NotPanics(t, func() {
+		t := &TaskInfo{}
+		t.GetDomainID()
+		t.GetWorkflowRunID()
+		t.GetDomainID()
+	})
+}

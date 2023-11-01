@@ -214,13 +214,11 @@ writerLoop:
 
 				taskIDs, err := w.allocTaskIDs(batchSize)
 				if err != nil {
-					w.logger.Debug("error allocating task ids",
+					w.logger.Error("error allocating task ids",
 						tag.Error(err),
-						tag.WorkflowDomainID(request.taskInfo.DomainID),
-						tag.WorkflowID(request.taskInfo.WorkflowID),
-						tag.WorkflowRunID(request.taskInfo.RunID),
-						tag.TaskID(request.taskInfo.TaskID),
-						tag.PartitionConfig(request.taskInfo.PartitionConfig),
+						tag.WorkflowDomainID(request.GetTaskInfo().GetDomainID()),
+						tag.WorkflowID(request.GetTaskInfo().GetWorkflowID()),
+						tag.WorkflowRunID(request.GetTaskInfo().GetWorkflowRunID()),
 					)
 					w.sendWriteResponse(reqs, err, nil)
 					continue writerLoop
@@ -243,10 +241,9 @@ writerLoop:
 						tag.StoreOperationCreateTasks,
 						tag.Error(err),
 						tag.Number(taskIDs[0]),
-						tag.WorkflowDomainID(request.taskInfo.DomainID),
-						tag.WorkflowID(request.taskInfo.WorkflowID),
-						tag.WorkflowRunID(request.taskInfo.RunID),
-						tag.TaskID(request.taskInfo.TaskID),
+						tag.WorkflowDomainID(request.GetTaskInfo().GetDomainID()),
+						tag.WorkflowID(request.GetTaskInfo().GetWorkflowID()),
+						tag.WorkflowRunID(request.GetTaskInfo().GetWorkflowRunID()),
 						tag.NextNumber(taskIDs[batchSize-1]),
 					)
 				}
@@ -289,4 +286,18 @@ func (w *taskWriter) sendWriteResponse(reqs []*writeTaskRequest,
 
 		req.responseCh <- resp
 	}
+}
+
+func (r *writeTaskRequest) GetWorkflowExecution() *types.WorkflowExecution {
+	if r.execution != nil {
+		return r.execution
+	}
+	return nil
+}
+
+func (r *writeTaskRequest) GetTaskInfo() *persistence.TaskInfo {
+	if r != nil && r.taskInfo != nil {
+		return r.taskInfo
+	}
+	return nil
 }

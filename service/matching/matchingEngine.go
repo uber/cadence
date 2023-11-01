@@ -514,12 +514,11 @@ pollLoop:
 					task.event.DomainID,
 					"Duplicated decision task",
 					tag.WorkflowDomainID(domainID),
-					tag.WorkflowID(task.event.WorkflowID),
-					tag.WorkflowRunID(task.event.RunID),
+					tag.WorkflowID(task.GetWorkflowID()),
+					tag.WorkflowRunID(task.GetRunID()),
 					tag.WorkflowTaskListName(taskListName),
-					tag.WorkflowScheduleID(task.event.ScheduleID),
 					tag.Error(err),
-					tag.TaskID(task.event.TaskID),
+					tag.TaskID(task.GetTaskID()),
 				)
 				task.finish(nil)
 			default:
@@ -528,11 +527,10 @@ pollLoop:
 					"unknown error recording task started",
 					tag.WorkflowDomainID(domainID),
 					tag.Error(err),
-					tag.WorkflowID(task.event.WorkflowID),
-					tag.WorkflowRunID(task.event.RunID),
+					tag.WorkflowID(task.GetWorkflowID()),
+					tag.WorkflowRunID(task.GetRunID()),
 					tag.WorkflowTaskListName(taskListName),
-					tag.WorkflowScheduleID(task.event.ScheduleID),
-					tag.TaskID(task.event.TaskID),
+					tag.TaskID(task.GetTaskID()),
 				)
 				task.finish(err)
 			}

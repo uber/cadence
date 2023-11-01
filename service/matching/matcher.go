@@ -24,9 +24,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	"time"
 
 	"golang.org/x/time/rate"
 
@@ -242,9 +243,9 @@ func (tm *TaskMatcher) MustOffer(ctx context.Context, task *InternalTask) error 
 	default:
 		tm.log.Debug("unable to find local poller",
 			tag.IsolationGroup(task.isolationGroup),
-			tag.TaskID(task.event.TaskID),
-			tag.WorkflowID(task.event.WorkflowID),
-			tag.WorkflowDomainID(task.event.DomainID),
+			tag.TaskID(task.GetTaskID()),
+			tag.WorkflowID(task.GetWorkflowID()),
+			tag.WorkflowDomainID(task.GetDomainID()),
 		)
 	}
 
@@ -261,9 +262,9 @@ forLoop:
 
 				tm.log.Debug("failed to forward task",
 					tag.Error(err),
-					tag.TaskID(task.event.TaskID),
-					tag.WorkflowID(task.event.WorkflowID),
-					tag.WorkflowDomainID(task.event.DomainID),
+					tag.TaskID(task.GetTaskID()),
+					tag.WorkflowID(task.GetWorkflowID()),
+					tag.WorkflowDomainID(task.GetDomainID()),
 				)
 				// forwarder returns error only when the call is rate limited. To
 				// avoid a busy loop on such rate limiting events, we only attempt to make

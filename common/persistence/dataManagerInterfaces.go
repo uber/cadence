@@ -2733,11 +2733,17 @@ func (t *TransferTaskInfo) GetVisibilityTimestamp() time.Time {
 
 // GetWorkflowID returns the workflow ID for transfer task
 func (t *TransferTaskInfo) GetWorkflowID() string {
+	if t == nil {
+		return ""
+	}
 	return t.WorkflowID
 }
 
 // GetRunID returns the run ID for transfer task
 func (t *TransferTaskInfo) GetRunID() string {
+	if t == nil {
+		return ""
+	}
 	return t.RunID
 }
 
@@ -3039,4 +3045,25 @@ func HasMoreRowsToDelete(rowsDeleted, batchSize int) bool {
 		return false
 	}
 	return true
+}
+
+func (t *TaskInfo) GetWorkflowID() string {
+	if t != nil {
+		return t.WorkflowID
+	}
+	return ""
+}
+
+func (t *TaskInfo) GetWorkflowRunID() string {
+	if t != nil {
+		return t.RunID
+	}
+	return ""
+}
+
+func (t *TaskInfo) GetDomainID() string {
+	if t != nil {
+		return t.DomainID
+	}
+	return ""
 }
