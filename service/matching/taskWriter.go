@@ -216,9 +216,6 @@ writerLoop:
 				if err != nil {
 					w.logger.Error("error allocating task ids",
 						tag.Error(err),
-						tag.WorkflowDomainID(request.GetTaskInfo().GetDomainID()),
-						tag.WorkflowID(request.GetTaskInfo().GetWorkflowID()),
-						tag.WorkflowRunID(request.GetTaskInfo().GetWorkflowRunID()),
 					)
 					w.sendWriteResponse(reqs, err, nil)
 					continue writerLoop
@@ -241,9 +238,6 @@ writerLoop:
 						tag.StoreOperationCreateTasks,
 						tag.Error(err),
 						tag.Number(taskIDs[0]),
-						tag.WorkflowDomainID(request.GetTaskInfo().GetDomainID()),
-						tag.WorkflowID(request.GetTaskInfo().GetWorkflowID()),
-						tag.WorkflowRunID(request.GetTaskInfo().GetWorkflowRunID()),
 						tag.NextNumber(taskIDs[batchSize-1]),
 					)
 				}

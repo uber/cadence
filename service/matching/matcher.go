@@ -228,7 +228,6 @@ func (tm *TaskMatcher) OfferQuery(ctx context.Context, task *InternalTask) (*typ
 // Returns error only when context is canceled, expired or the ratelimit is set to zero (allow nothing)
 func (tm *TaskMatcher) MustOffer(ctx context.Context, task *InternalTask) error {
 	if _, err := tm.ratelimit(ctx); err != nil {
-		tm.log.Debug("rate limiting task", tag.TaskID(task.event.TaskID), tag.WorkflowDomainID(task.event.DomainID))
 		return fmt.Errorf("rate limit error dispatching: %w", err)
 	}
 
@@ -241,12 +240,6 @@ func (tm *TaskMatcher) MustOffer(ctx context.Context, task *InternalTask) error 
 	case <-ctx.Done():
 		return fmt.Errorf("context done when trying to forward local task: %w", ctx.Err())
 	default:
-		tm.log.Debug("unable to find local poller",
-			tag.IsolationGroup(task.isolationGroup),
-			tag.TaskID(task.GetTaskID()),
-			tag.WorkflowID(task.GetWorkflowID()),
-			tag.WorkflowDomainID(task.GetDomainID()),
-		)
 	}
 
 forLoop:
@@ -263,8 +256,6 @@ forLoop:
 				tm.log.Debug("failed to forward task",
 					tag.Error(err),
 					tag.TaskID(task.GetTaskID()),
-					tag.WorkflowID(task.GetWorkflowID()),
-					tag.WorkflowDomainID(task.GetDomainID()),
 				)
 				// forwarder returns error only when the call is rate limited. To
 				// avoid a busy loop on such rate limiting events, we only attempt to make
