@@ -30,7 +30,6 @@ import (
 func TestTaskInfoGetters(t *testing.T) {
 	assert.NotPanics(t, func() {
 		t := &InternalTask{}
-
 		t.GetTaskID()
 		t.GetDomainID()
 		t.GetWorkflowID()
