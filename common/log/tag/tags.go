@@ -182,7 +182,7 @@ func WorkflowCronSchedule(schedule string) Tag {
 
 // WorkflowCloseStatus returns a tag to report a workflow's close status
 func WorkflowCloseStatus(status int) Tag {
-	return newInt("close status", status)
+	return newInt("close-status", status)
 }
 
 // IsWorkflowOpen returns a tag to report a workflow is open or not
