@@ -255,7 +255,7 @@ forLoop:
 
 				tm.log.Debug("failed to forward task",
 					tag.Error(err),
-					tag.TaskID(task.GetTaskID()),
+					tag.TaskID(task.event.TaskID),
 				)
 				// forwarder returns error only when the call is rate limited. To
 				// avoid a busy loop on such rate limiting events, we only attempt to make
