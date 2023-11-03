@@ -57,7 +57,7 @@ func NewPinotVisibilityTripleManager(
 	readModeIsFromPinot dynamicconfig.BoolPropertyFnWithDomainFilter,
 	readModeIsFromES dynamicconfig.BoolPropertyFnWithDomainFilter,
 	visWritingMode dynamicconfig.StringPropertyFn,
-	logCustomerQueryParameter dynamicconfig.BoolPropertyFnWithDomainFilter,
+	logCustomerQueryParameter dynamicconfig.BoolPropertyFn,
 	logger log.Logger,
 ) VisibilityManager {
 	if dbVisibilityManager == nil && pinotVisibilityManager == nil && esVisibilityManager == nil {
@@ -65,14 +65,15 @@ func NewPinotVisibilityTripleManager(
 		return nil
 	}
 	return &pinotVisibilityTripleManager{
-		dbVisibilityManager:    dbVisibilityManager,
-		pinotVisibilityManager: pinotVisibilityManager,
-		esVisibilityManager:    esVisibilityManager,
-		readModeIsFromPinot:    readModeIsFromPinot,
-		readModeIsFromES:       readModeIsFromES,
-		writeMode:              visWritingMode,
-		logger:                 logger,
-		queryFilter:            NewVisibilityQueryFilter(),
+		dbVisibilityManager:       dbVisibilityManager,
+		pinotVisibilityManager:    pinotVisibilityManager,
+		esVisibilityManager:       esVisibilityManager,
+		readModeIsFromPinot:       readModeIsFromPinot,
+		readModeIsFromES:          readModeIsFromES,
+		writeMode:                 visWritingMode,
+		logger:                    logger,
+		logCustomerQueryParameter: logCustomerQueryParameter,
+		queryFilter:               NewVisibilityQueryFilter(),
 	}
 }
 
