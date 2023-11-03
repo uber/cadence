@@ -35,14 +35,15 @@ import (
 
 type (
 	pinotVisibilityTripleManager struct {
-		logger                 log.Logger
-		dbVisibilityManager    VisibilityManager
-		pinotVisibilityManager VisibilityManager
-		esVisibilityManager    VisibilityManager
-		readModeIsFromPinot    dynamicconfig.BoolPropertyFnWithDomainFilter
-		readModeIsFromES       dynamicconfig.BoolPropertyFnWithDomainFilter
-		writeMode              dynamicconfig.StringPropertyFn
-		queryFilter            *VisibilityQueryFilter
+		logger                    log.Logger
+		dbVisibilityManager       VisibilityManager
+		pinotVisibilityManager    VisibilityManager
+		esVisibilityManager       VisibilityManager
+		readModeIsFromPinot       dynamicconfig.BoolPropertyFnWithDomainFilter
+		readModeIsFromES          dynamicconfig.BoolPropertyFnWithDomainFilter
+		writeMode                 dynamicconfig.StringPropertyFn
+		logCustomerQueryParameter dynamicconfig.BoolPropertyFn
+		queryFilter               *VisibilityQueryFilter
 	}
 )
 
@@ -56,6 +57,7 @@ func NewPinotVisibilityTripleManager(
 	readModeIsFromPinot dynamicconfig.BoolPropertyFnWithDomainFilter,
 	readModeIsFromES dynamicconfig.BoolPropertyFnWithDomainFilter,
 	visWritingMode dynamicconfig.StringPropertyFn,
+	logCustomerQueryParameter dynamicconfig.BoolPropertyFnWithDomainFilter,
 	logger log.Logger,
 ) VisibilityManager {
 	if dbVisibilityManager == nil && pinotVisibilityManager == nil && esVisibilityManager == nil {
@@ -306,6 +308,9 @@ type userParameters struct {
 // For Pinot Migration uses. It will be a temporary usage
 // logUserQueryParameters will log user queries' parameters so that a comparator workflow can consume
 func (v *pinotVisibilityTripleManager) logUserQueryParameters(userParam userParameters) {
+	if !v.logCustomerQueryParameter() {
+		return
+	}
 	randNum := rand.Intn(10)
 	if randNum != 5 { // Intentionally to have 1/10 chance to log custom query parameters
 		return
