@@ -93,9 +93,10 @@ func New(
 			PersistenceGlobalMaxQPS: config.PersistenceGlobalMaxQPS,
 			ThrottledLoggerMaxRPS:   config.ThrottledLogRPS,
 
-			EnableReadVisibilityFromES:    nil, // history service never read,
-			AdvancedVisibilityWritingMode: config.AdvancedVisibilityWritingMode,
-			EnableReadVisibilityFromPinot: nil, // history service never read,
+			EnableReadVisibilityFromES:      nil, // history service never read,
+			AdvancedVisibilityWritingMode:   config.AdvancedVisibilityWritingMode,
+			EnableReadVisibilityFromPinot:   nil, // history service never read,
+			EnableLogCustomerQueryParameter: nil,
 
 			EnableDBVisibilitySampling:                  config.EnableVisibilitySampling,
 			EnableReadDBVisibilityFromClosedExecutionV2: nil, // history service never read,
