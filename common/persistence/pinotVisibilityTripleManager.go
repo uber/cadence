@@ -201,6 +201,8 @@ func (v *pinotVisibilityTripleManager) UpsertWorkflowExecution(
 
 func (v *pinotVisibilityTripleManager) chooseVisibilityModeForAdmin() string {
 	switch {
+	case v.dbVisibilityManager != nil && v.esVisibilityManager != nil && v.pinotVisibilityManager != nil:
+		return common.AdvacnedVisibilityWritingModeTriple
 	case v.dbVisibilityManager != nil && v.pinotVisibilityManager != nil:
 		return common.AdvancedVisibilityWritingModeDual
 	case v.pinotVisibilityManager != nil:
