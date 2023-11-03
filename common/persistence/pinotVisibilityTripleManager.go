@@ -309,6 +309,7 @@ type userParameters struct {
 // For Pinot Migration uses. It will be a temporary usage
 // logUserQueryParameters will log user queries' parameters so that a comparator workflow can consume
 func (v *pinotVisibilityTripleManager) logUserQueryParameters(userParam userParameters) {
+	// Don't log if it is not enabled
 	if !v.logCustomerQueryParameter() {
 		return
 	}
