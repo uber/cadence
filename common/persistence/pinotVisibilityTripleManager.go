@@ -208,6 +208,8 @@ func (v *pinotVisibilityTripleManager) UpsertWorkflowExecution(
 
 func (v *pinotVisibilityTripleManager) chooseVisibilityModeForAdmin() string {
 	switch {
+	case v.dbVisibilityManager != nil && v.esVisibilityManager != nil && v.pinotVisibilityManager != nil:
+		return common.AdvancedVisibilityWritingModeTriple
 	case v.dbVisibilityManager != nil && v.pinotVisibilityManager != nil:
 		return common.AdvancedVisibilityWritingModeDual
 	case v.pinotVisibilityManager != nil:
@@ -272,7 +274,7 @@ func (v *pinotVisibilityTripleManager) chooseVisibilityManagerForWrite(ctx conte
 		}
 		v.logger.Warn("advanced visibility is not available to write")
 		return dbVisFunc()
-	case common.AdvacnedVisibilityWritingModeTriple:
+	case common.AdvancedVisibilityWritingModeTriple:
 		if v.pinotVisibilityManager != nil && v.esVisibilityManager != nil {
 			if err := pinotVisFunc(); err != nil {
 				return err
