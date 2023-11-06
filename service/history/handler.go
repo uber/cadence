@@ -26,6 +26,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/service/history/workflow"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -2215,6 +2216,9 @@ func (h *handlerImpl) error(
 ) error {
 	err = h.convertError(err)
 	h.updateErrorMetric(scope, domainID, workflowID, runID, err)
+	if errors.Is(err, workflow.ErrMaxAttemptsExceeded) {
+		h.GetCorruptionChecker().SupiciousWorkflowCheck(workflowID, domainID, "")
+	}
 	return err
 }
 
