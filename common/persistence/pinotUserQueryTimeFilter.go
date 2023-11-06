@@ -44,6 +44,12 @@ func NewVisibilityQueryFilter() *VisibilityQueryFilter {
 }
 
 // FilterQuery validates that search attributes in the query and returns modified query.
+// This one is a much easier version that we only need to replace everything that contains "StartTime" to be "".
+// but, if we want to re-use the queryValidator, there'll be more parameters that needed to be passed in, and there'll be more branches,
+// which can make the code more complicated.
+// We can make the queryValidator to be an interface so that this filter can implement the interface,
+// but given that this is only a temporary component, I think that this might be an overkill.
+// TL; DR: This filter code will be removed when Pinot Migration is completely done.
 func (qv *VisibilityQueryFilter) FilterQuery(whereClause string) (string, error) {
 	if len(whereClause) != 0 {
 		// Build a placeholder query that allows us to easily parse the contents of the where clause.
