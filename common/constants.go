@@ -157,8 +157,8 @@ const (
 	AdvancedVisibilityWritingModeOn = "on"
 	// AdvancedVisibilityWritingModeDual means write to both normal visibility and advanced visibility store
 	AdvancedVisibilityWritingModeDual = "dual"
-	// AdvacnedVisibilityWritingModeTriple means write to both normal visibility and advanced visibility store, includes ES and Pinot
-	AdvacnedVisibilityWritingModeTriple = "triple"
+	// AdvancedVisibilityWritingModeTriple means write to both normal visibility and advanced visibility store, includes ES and Pinot
+	AdvancedVisibilityWritingModeTriple = "triple"
 )
 
 const (
