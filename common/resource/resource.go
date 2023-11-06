@@ -117,7 +117,6 @@ type (
 		GetIsolationGroupState() isolationgroup.State
 		GetPartitioner() partition.Partitioner
 		GetIsolationGroupStore() configstore.Client
-
 		//GetTaskValidator returns the taskValidator
 		GetTaskValidator() taskvalidator.Checker
 	}
