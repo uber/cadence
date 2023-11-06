@@ -26,6 +26,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/service/history/workflow"
 	"strconv"
 	"sync"
 	"sync/atomic"
