@@ -25,11 +25,13 @@ package persistence
 import (
 	"errors"
 	"fmt"
+	"strings"
+
+	"github.com/xwb1989/sqlparser"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/types"
-	"github.com/xwb1989/sqlparser"
-	"strings"
 )
 
 // VisibilityQueryFilter for sql query validation
