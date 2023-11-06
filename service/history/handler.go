@@ -26,12 +26,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/service/history/workflow"
 	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/uber/cadence/service/history/workflow"
 
 	"golang.org/x/sync/errgroup"
 
