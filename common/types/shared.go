@@ -1328,6 +1328,14 @@ func (v *DecisionTaskTimedOutEventAttributes) GetForkEventVersion() (o int64) {
 	return
 }
 
+// GetCause is an internal getter (TBD...)
+func (v *DecisionTaskTimedOutEventAttributes) GetCause() (o DecisionTaskTimedOutCause) {
+	if v != nil && v.Cause != nil {
+		return *v.Cause
+	}
+	return
+}
+
 // DecisionType is an internal type (TBD...)
 type DecisionType int32
 
