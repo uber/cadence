@@ -7,7 +7,7 @@ system.enableReadVisibilityFromES:
 system.enableReadVisibilityFromPinot:
   - value: true
 system.enableLogCustomerQueryParameter:
-    -value: true
+    -value: false
 frontend.validSearchAttributes:
   - value:
       DomainID: 1

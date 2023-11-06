@@ -42,7 +42,7 @@ type (
 		readModeIsFromPinot       dynamicconfig.BoolPropertyFnWithDomainFilter
 		readModeIsFromES          dynamicconfig.BoolPropertyFnWithDomainFilter
 		writeMode                 dynamicconfig.StringPropertyFn
-		logCustomerQueryParameter dynamicconfig.BoolPropertyFn
+		logCustomerQueryParameter dynamicconfig.BoolPropertyFnWithDomainFilter
 		queryFilter               *VisibilityQueryFilter
 	}
 )
@@ -57,7 +57,7 @@ func NewPinotVisibilityTripleManager(
 	readModeIsFromPinot dynamicconfig.BoolPropertyFnWithDomainFilter,
 	readModeIsFromES dynamicconfig.BoolPropertyFnWithDomainFilter,
 	visWritingMode dynamicconfig.StringPropertyFn,
-	logCustomerQueryParameter dynamicconfig.BoolPropertyFn,
+	logCustomerQueryParameter dynamicconfig.BoolPropertyFnWithDomainFilter,
 	logger log.Logger,
 ) VisibilityManager {
 	if dbVisibilityManager == nil && pinotVisibilityManager == nil && esVisibilityManager == nil {
@@ -308,9 +308,9 @@ type userParameters struct {
 
 // For Pinot Migration uses. It will be a temporary usage
 // logUserQueryParameters will log user queries' parameters so that a comparator workflow can consume
-func (v *pinotVisibilityTripleManager) logUserQueryParameters(userParam userParameters) {
+func (v *pinotVisibilityTripleManager) logUserQueryParameters(userParam userParameters, domain string) {
 	// Don't log if it is not enabled
-	if !v.logCustomerQueryParameter() {
+	if !v.logCustomerQueryParameter(domain) {
 		return
 	}
 	randNum := rand.Intn(10)
@@ -346,7 +346,7 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutions(
 		workflowID:   "",
 		closeStatus:  math.MinInt, // set the default close status to be Integer.MIN_VALUE
 		customQuery:  "",
-	})
+	}, request.Domain)
 
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
 	override := ctx.Value("visibility-override")
@@ -368,7 +368,7 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutions(
 		workflowID:   "",
 		closeStatus:  math.MinInt,
 		customQuery:  "",
-	})
+	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
 	override := ctx.Value("visibility-override")
 	if override == "ES" { // assume pinot manager is the default read
@@ -389,7 +389,7 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutionsByType(
 		workflowID:   "",
 		closeStatus:  math.MinInt,
 		customQuery:  "",
-	})
+	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
 	override := ctx.Value("visibility-override")
 	if override == "ES" { // assume pinot manager is the default read
@@ -410,7 +410,7 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByType(
 		workflowID:   "",
 		closeStatus:  math.MinInt,
 		customQuery:  "",
-	})
+	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
 	override := ctx.Value("visibility-override")
 	if override == "ES" { // assume pinot manager is the default read
@@ -431,7 +431,7 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutionsByWorkflowID(
 		workflowID:   request.WorkflowID,
 		closeStatus:  math.MinInt,
 		customQuery:  "",
-	})
+	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
 	override := ctx.Value("visibility-override")
 	if override == "ES" { // assume pinot manager is the default read
@@ -452,7 +452,7 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByWorkflowID(
 		workflowID:   request.WorkflowID,
 		closeStatus:  math.MinInt,
 		customQuery:  "",
-	})
+	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
 	override := ctx.Value("visibility-override")
 	if override == "ES" { // assume pinot manager is the default read
@@ -473,7 +473,7 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByStatus(
 		workflowID:   "",
 		closeStatus:  math.MinInt,
 		customQuery:  "",
-	})
+	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
 	override := ctx.Value("visibility-override")
 	if override == "ES" { // assume pinot manager is the default read
@@ -494,7 +494,7 @@ func (v *pinotVisibilityTripleManager) GetClosedWorkflowExecution(
 		workflowID:   "",
 		closeStatus:  math.MinInt,
 		customQuery:  "",
-	})
+	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
 	override := ctx.Value("visibility-override")
 	if override == "ES" { // assume pinot manager is the default read
@@ -515,7 +515,7 @@ func (v *pinotVisibilityTripleManager) ListWorkflowExecutions(
 		workflowID:   "",
 		closeStatus:  math.MinInt,
 		customQuery:  request.Query,
-	})
+	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
 	override := ctx.Value("visibility-override")
 	if override == "ES" { // assume pinot manager is the default read
@@ -536,7 +536,7 @@ func (v *pinotVisibilityTripleManager) ScanWorkflowExecutions(
 		workflowID:   "",
 		closeStatus:  math.MinInt,
 		customQuery:  request.Query,
-	})
+	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
 	return manager.ScanWorkflowExecutions(ctx, request)
 }
@@ -553,7 +553,7 @@ func (v *pinotVisibilityTripleManager) CountWorkflowExecutions(
 		workflowID:   "",
 		closeStatus:  math.MinInt,
 		customQuery:  request.Query,
-	})
+	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
 	override := ctx.Value("visibility-override")
 	if override == "ES" { // assume pinot manager is the default read

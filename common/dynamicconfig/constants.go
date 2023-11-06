@@ -3688,11 +3688,13 @@ var BoolKeys = map[BoolKey]DynamicBool{
 	},
 	EnableReadVisibilityFromPinot: DynamicBool{
 		KeyName:      "system.enableReadVisibilityFromPinot",
+		Filters:      []Filter{DomainName},
 		Description:  "EnableReadVisibilityFromPinot is key for enable read from pinot or db visibility, usually using with AdvancedVisibilityWritingMode for seamless migration from db visibility to advanced visibility",
 		DefaultValue: true,
 	},
 	EnableLogCustomerQueryParameter: DynamicBool{
 		KeyName:      "system.enableLogCustomerQueryParameter",
+		Filters:      []Filter{DomainName},
 		Description:  "EnableLogCustomerQueryParameter is key for enable log customer query parameters",
 		DefaultValue: false,
 	},
