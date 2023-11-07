@@ -1827,6 +1827,10 @@ func (m *testTaskManager) GetTasks(
 	}, nil
 }
 
+func (m *testTaskManager) GetTaskListSize(_ context.Context, request *persistence.GetTaskListSizeRequest) (*persistence.GetTaskListSizeResponse, error) {
+	return nil, fmt.Errorf("Not implemented")
+}
+
 func (m *testTaskManager) GetOrphanTasks(_ context.Context, request *persistence.GetOrphanTasksRequest) (*persistence.GetOrphanTasksResponse, error) {
 	return &persistence.GetOrphanTasksResponse{}, nil
 }
