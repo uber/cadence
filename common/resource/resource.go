@@ -21,10 +21,10 @@
 package resource
 
 import (
-	"github.com/uber/cadence/common/corruptionchecker"
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/common/dynamicconfig/configstore"
+	"github.com/uber/cadence/common/taskvalidator"
 
 	"github.com/uber/cadence/common/isolationgroup"
 	"github.com/uber/cadence/common/partition"
@@ -118,6 +118,7 @@ type (
 		GetPartitioner() partition.Partitioner
 		GetIsolationGroupStore() configstore.Client
 
-		GetCorruptionChecker() corruptionchecker.Checker
+		//GetTaskValidator returns the taskValidator
+		GetTaskValidator() taskvalidator.Checker
 	}
 )
