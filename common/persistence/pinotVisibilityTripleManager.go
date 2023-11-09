@@ -47,6 +47,11 @@ type (
 	}
 )
 
+const (
+	Primary   = "Primary"
+	Secondary = "Secondary"
+)
+
 var _ VisibilityManager = (*pinotVisibilityTripleManager)(nil)
 
 // NewPinotVisibilityTripleManager create a visibility manager that operate on DB or Pinot based on dynamic config.
@@ -351,9 +356,9 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutions(
 	}, request.Domain)
 
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
-	if override := ctx.Value("visibility-override"); override == "ES" {
+	if override := ctx.Value("visibility-override"); override == Primary {
 		manager = v.esVisibilityManager
-	} else if override == "Pinot" {
+	} else if override == Secondary {
 		manager = v.pinotVisibilityManager
 	}
 	return manager.ListOpenWorkflowExecutions(ctx, request)
@@ -373,9 +378,9 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutions(
 		customQuery:  "",
 	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
-	if override := ctx.Value("visibility-override"); override == "ES" {
+	if override := ctx.Value("visibility-override"); override == Primary {
 		manager = v.esVisibilityManager
-	} else if override == "Pinot" {
+	} else if override == Secondary {
 		manager = v.pinotVisibilityManager
 	}
 	return manager.ListClosedWorkflowExecutions(ctx, request)
@@ -395,9 +400,9 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutionsByType(
 		customQuery:  "",
 	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
-	if override := ctx.Value("visibility-override"); override == "ES" {
+	if override := ctx.Value("visibility-override"); override == Primary {
 		manager = v.esVisibilityManager
-	} else if override == "Pinot" {
+	} else if override == Secondary {
 		manager = v.pinotVisibilityManager
 	}
 	return manager.ListOpenWorkflowExecutionsByType(ctx, request)
@@ -417,9 +422,9 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByType(
 		customQuery:  "",
 	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
-	if override := ctx.Value("visibility-override"); override == "ES" {
+	if override := ctx.Value("visibility-override"); override == Primary {
 		manager = v.esVisibilityManager
-	} else if override == "Pinot" {
+	} else if override == Secondary {
 		manager = v.pinotVisibilityManager
 	}
 	return manager.ListClosedWorkflowExecutionsByType(ctx, request)
@@ -439,9 +444,9 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutionsByWorkflowID(
 		customQuery:  "",
 	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
-	if override := ctx.Value("visibility-override"); override == "ES" {
+	if override := ctx.Value("visibility-override"); override == Primary {
 		manager = v.esVisibilityManager
-	} else if override == "Pinot" {
+	} else if override == Secondary {
 		manager = v.pinotVisibilityManager
 	}
 	return manager.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
@@ -461,9 +466,9 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByWorkflowID(
 		customQuery:  "",
 	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
-	if override := ctx.Value("visibility-override"); override == "ES" {
+	if override := ctx.Value("visibility-override"); override == Primary {
 		manager = v.esVisibilityManager
-	} else if override == "Pinot" {
+	} else if override == Secondary {
 		manager = v.pinotVisibilityManager
 	}
 	return manager.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
@@ -483,9 +488,9 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByStatus(
 		customQuery:  "",
 	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
-	if override := ctx.Value("visibility-override"); override == "ES" {
+	if override := ctx.Value("visibility-override"); override == Primary {
 		manager = v.esVisibilityManager
-	} else if override == "Pinot" {
+	} else if override == Secondary {
 		manager = v.pinotVisibilityManager
 	}
 	return manager.ListClosedWorkflowExecutionsByStatus(ctx, request)
@@ -505,9 +510,9 @@ func (v *pinotVisibilityTripleManager) GetClosedWorkflowExecution(
 		customQuery:  "",
 	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
-	if override := ctx.Value("visibility-override"); override == "ES" {
+	if override := ctx.Value("visibility-override"); override == Primary {
 		manager = v.esVisibilityManager
-	} else if override == "Pinot" {
+	} else if override == Secondary {
 		manager = v.pinotVisibilityManager
 	}
 	return manager.GetClosedWorkflowExecution(ctx, request)
@@ -527,9 +532,9 @@ func (v *pinotVisibilityTripleManager) ListWorkflowExecutions(
 		customQuery:  request.Query,
 	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
-	if override := ctx.Value("visibility-override"); override == "ES" {
+	if override := ctx.Value("visibility-override"); override == Primary {
 		manager = v.esVisibilityManager
-	} else if override == "Pinot" {
+	} else if override == Secondary {
 		manager = v.pinotVisibilityManager
 	}
 	return manager.ListWorkflowExecutions(ctx, request)
@@ -549,9 +554,9 @@ func (v *pinotVisibilityTripleManager) ScanWorkflowExecutions(
 		customQuery:  request.Query,
 	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
-	if override := ctx.Value("visibility-override"); override == "ES" {
+	if override := ctx.Value("visibility-override"); override == Primary {
 		manager = v.esVisibilityManager
-	} else if override == "Pinot" {
+	} else if override == Secondary {
 		manager = v.pinotVisibilityManager
 	}
 	return manager.ScanWorkflowExecutions(ctx, request)
@@ -571,9 +576,9 @@ func (v *pinotVisibilityTripleManager) CountWorkflowExecutions(
 		customQuery:  request.Query,
 	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
-	if override := ctx.Value("visibility-override"); override == "ES" {
+	if override := ctx.Value("visibility-override"); override == Primary {
 		manager = v.esVisibilityManager
-	} else if override == "Pinot" {
+	} else if override == Secondary {
 		manager = v.pinotVisibilityManager
 	}
 	return manager.CountWorkflowExecutions(ctx, request)
