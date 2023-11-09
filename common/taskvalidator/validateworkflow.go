@@ -20,28 +20,37 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package taskvalidator //taskvalidator
+// Package taskvalidator provides a Work in Progress service for workflow validations.
+package taskvalidator
 
-type (
-	Checker interface {
-		//StaleWorkflowCheck
-		//DeprecateDomainCheck
-		//MissingHistoryCheck - archival
-		SupiciousWorkflowCheck(workflowID string, domainID string, runID string) error
-	}
+import (
+	"fmt"
 
-	checkerImpl struct {
-	}
+	"github.com/uber/cadence/common/log"
 )
 
-func NewWfChecker() Checker {
-	return nil
+// Checker is an interface for initiating the validation process.
+type Checker interface {
+	WorkflowCheckforValidation(workflowID string, domainID string, runID string) error
 }
 
-func (w *checkerImpl) SuspiciousWorkflowCheck(workflowID string, domainID string, runID string) error {
-	//reuse some components from the Invariant checks
-	//delete the validated wfs
-	//Tailor the checks based on Callers.
-	//{callername- [validators]}
+// checkerImpl is the implementation of the Checker interface.
+type checkerImpl struct {
+	logger log.Logger
+}
+
+// NewWfChecker creates a new instance of Checker.
+func NewWfChecker(logger log.Logger) Checker {
+	return &checkerImpl{logger: logger}
+}
+
+// WorkflowCheckforValidation is a dummy implementation of workflow validation.
+func (w *checkerImpl) WorkflowCheckforValidation(workflowID string, domainID string, runID string) error {
+	// Emitting just the log to ensure that the workflow is called for now.
+	// TODO: add some validations to check the wf for corruptions.
+	w.logger.Info(fmt.Sprintf("WorkflowCheckforValidation. DomainID: %v, WorkflowID: %v, RunID: %v",
+		domainID,
+		workflowID,
+		runID))
 	return nil
 }
