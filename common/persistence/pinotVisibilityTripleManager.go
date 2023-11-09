@@ -43,7 +43,6 @@ type (
 		readModeIsFromES          dynamicconfig.BoolPropertyFnWithDomainFilter
 		writeMode                 dynamicconfig.StringPropertyFn
 		logCustomerQueryParameter dynamicconfig.BoolPropertyFnWithDomainFilter
-		queryFilter               *VisibilityQueryFilter
 	}
 )
 
@@ -78,7 +77,6 @@ func NewPinotVisibilityTripleManager(
 		writeMode:                 visWritingMode,
 		logger:                    logger,
 		logCustomerQueryParameter: logCustomerQueryParameter,
-		queryFilter:               NewVisibilityQueryFilter(),
 	}
 }
 
@@ -325,12 +323,6 @@ func (v *pinotVisibilityTripleManager) logUserQueryParameters(userParam userPara
 		return
 	}
 
-	// filters start time range if user provided one
-	filteredQuery, err := v.queryFilter.FilterQuery(userParam.customQuery)
-	if err != nil {
-		v.logger.Error(fmt.Sprintf("Query filter error! %s", err))
-	}
-
 	v.logger.Info("Logging user query parameters for Pinot/ES response comparator...",
 		tag.OperationName(userParam.operation),
 		tag.IsWorkflowOpen(userParam.isOpen),
@@ -338,7 +330,7 @@ func (v *pinotVisibilityTripleManager) logUserQueryParameters(userParam userPara
 		tag.WorkflowType(userParam.workflowType),
 		tag.WorkflowID(userParam.workflowID),
 		tag.WorkflowCloseStatus(userParam.closeStatus),
-		tag.VisibilityQuery(filteredQuery))
+		tag.VisibilityQuery(userParam.customQuery))
 }
 
 func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutions(
