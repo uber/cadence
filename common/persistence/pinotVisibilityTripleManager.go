@@ -23,7 +23,6 @@ package persistence
 import (
 	"context"
 	"fmt"
-	"math"
 	"math/rand"
 
 	"github.com/uber/cadence/common"
@@ -50,6 +49,16 @@ const (
 	Primary   = "Primary"
 	Secondary = "Secondary"
 )
+
+type OperationType string
+
+var Operation = struct {
+	LIST  OperationType
+	COUNT OperationType
+}{
+	LIST:  string(Operation.LIST),
+	COUNT: "count",
+}
 
 var _ VisibilityManager = (*pinotVisibilityTripleManager)(nil)
 
@@ -338,13 +347,10 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutions(
 	request *ListWorkflowExecutionsRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
 	v.logUserQueryParameters(userParameters{
-		operation:    "list",
-		isOpen:       true,
-		domainName:   request.Domain,
-		workflowType: "",
-		workflowID:   "",
-		closeStatus:  math.MinInt, // set the default close status to be Integer.MIN_VALUE
-		customQuery:  "",
+		operation:   string(Operation.LIST),
+		isOpen:      true,
+		domainName:  request.Domain,
+		closeStatus: -1, // set the default close status to be Integer.MIN_VALUE
 	}, request.Domain)
 
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
@@ -361,13 +367,10 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutions(
 	request *ListWorkflowExecutionsRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
 	v.logUserQueryParameters(userParameters{
-		operation:    "list",
-		isOpen:       false,
-		domainName:   request.Domain,
-		workflowType: "",
-		workflowID:   "",
-		closeStatus:  math.MinInt,
-		customQuery:  "",
+		operation:   string(Operation.LIST),
+		isOpen:      false,
+		domainName:  request.Domain,
+		closeStatus: -1,
 	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
 	if override := ctx.Value("visibility-override"); override == Primary {
@@ -383,13 +386,11 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutionsByType(
 	request *ListWorkflowExecutionsByTypeRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
 	v.logUserQueryParameters(userParameters{
-		operation:    "list",
+		operation:    string(Operation.LIST),
 		isOpen:       true,
 		domainName:   request.Domain,
 		workflowType: request.WorkflowTypeName,
-		workflowID:   "",
-		closeStatus:  math.MinInt,
-		customQuery:  "",
+		closeStatus:  -1,
 	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
 	if override := ctx.Value("visibility-override"); override == Primary {
@@ -405,13 +406,11 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByType(
 	request *ListWorkflowExecutionsByTypeRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
 	v.logUserQueryParameters(userParameters{
-		operation:    "list",
+		operation:    string(Operation.LIST),
 		isOpen:       false,
 		domainName:   request.Domain,
 		workflowType: request.WorkflowTypeName,
-		workflowID:   "",
-		closeStatus:  math.MinInt,
-		customQuery:  "",
+		closeStatus:  -1,
 	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
 	if override := ctx.Value("visibility-override"); override == Primary {
@@ -427,13 +426,11 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutionsByWorkflowID(
 	request *ListWorkflowExecutionsByWorkflowIDRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
 	v.logUserQueryParameters(userParameters{
-		operation:    "list",
-		isOpen:       true,
-		domainName:   request.Domain,
-		workflowType: "",
-		workflowID:   request.WorkflowID,
-		closeStatus:  math.MinInt,
-		customQuery:  "",
+		operation:   string(Operation.LIST),
+		isOpen:      true,
+		domainName:  request.Domain,
+		workflowID:  request.WorkflowID,
+		closeStatus: -1,
 	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
 	if override := ctx.Value("visibility-override"); override == Primary {
@@ -449,13 +446,11 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByWorkflowID(
 	request *ListWorkflowExecutionsByWorkflowIDRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
 	v.logUserQueryParameters(userParameters{
-		operation:    "list",
-		isOpen:       false,
-		domainName:   request.Domain,
-		workflowType: "",
-		workflowID:   request.WorkflowID,
-		closeStatus:  math.MinInt,
-		customQuery:  "",
+		operation:   string(Operation.LIST),
+		isOpen:      false,
+		domainName:  request.Domain,
+		workflowID:  request.WorkflowID,
+		closeStatus: -1,
 	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
 	if override := ctx.Value("visibility-override"); override == Primary {
@@ -471,13 +466,10 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByStatus(
 	request *ListClosedWorkflowExecutionsByStatusRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
 	v.logUserQueryParameters(userParameters{
-		operation:    "list",
-		isOpen:       false,
-		domainName:   request.Domain,
-		workflowType: "",
-		workflowID:   "",
-		closeStatus:  math.MinInt,
-		customQuery:  "",
+		operation:   string(Operation.LIST),
+		isOpen:      false,
+		domainName:  request.Domain,
+		closeStatus: int(request.Status),
 	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
 	if override := ctx.Value("visibility-override"); override == Primary {
@@ -493,13 +485,10 @@ func (v *pinotVisibilityTripleManager) GetClosedWorkflowExecution(
 	request *GetClosedWorkflowExecutionRequest,
 ) (*GetClosedWorkflowExecutionResponse, error) {
 	v.logUserQueryParameters(userParameters{
-		operation:    "list",
-		isOpen:       false,
-		domainName:   request.Domain,
-		workflowType: "",
-		workflowID:   "",
-		closeStatus:  math.MinInt,
-		customQuery:  "",
+		operation:   string(Operation.LIST),
+		isOpen:      false,
+		domainName:  request.Domain,
+		closeStatus: -1,
 	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
 	if override := ctx.Value("visibility-override"); override == Primary {
@@ -515,13 +504,11 @@ func (v *pinotVisibilityTripleManager) ListWorkflowExecutions(
 	request *ListWorkflowExecutionsByQueryRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
 	v.logUserQueryParameters(userParameters{
-		operation:    "list",
-		isOpen:       false, // the default value for isOpen is false, because if it is open, in the cli there'll be a --open flag
-		domainName:   request.Domain,
-		workflowType: "",
-		workflowID:   "",
-		closeStatus:  math.MinInt,
-		customQuery:  request.Query,
+		operation:   string(Operation.LIST),
+		isOpen:      false, // the default value for isOpen is false, because if it is open, in the cli there'll be a --open flag
+		domainName:  request.Domain,
+		closeStatus: -1,
+		customQuery: request.Query,
 	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
 	if override := ctx.Value("visibility-override"); override == Primary {
@@ -537,13 +524,11 @@ func (v *pinotVisibilityTripleManager) ScanWorkflowExecutions(
 	request *ListWorkflowExecutionsByQueryRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
 	v.logUserQueryParameters(userParameters{
-		operation:    "list",
-		isOpen:       false,
-		domainName:   request.Domain,
-		workflowType: "",
-		workflowID:   "",
-		closeStatus:  math.MinInt,
-		customQuery:  request.Query,
+		operation:   string(Operation.LIST),
+		isOpen:      false,
+		domainName:  request.Domain,
+		closeStatus: -1,
+		customQuery: request.Query,
 	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
 	if override := ctx.Value("visibility-override"); override == Primary {
@@ -559,13 +544,11 @@ func (v *pinotVisibilityTripleManager) CountWorkflowExecutions(
 	request *CountWorkflowExecutionsRequest,
 ) (*CountWorkflowExecutionsResponse, error) {
 	v.logUserQueryParameters(userParameters{
-		operation:    "count",
-		isOpen:       false,
-		domainName:   request.Domain,
-		workflowType: "",
-		workflowID:   "",
-		closeStatus:  math.MinInt,
-		customQuery:  request.Query,
+		operation:   string(Operation.COUNT),
+		isOpen:      false,
+		domainName:  request.Domain,
+		closeStatus: -1,
+		customQuery: request.Query,
 	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
 	if override := ctx.Value("visibility-override"); override == Primary {
