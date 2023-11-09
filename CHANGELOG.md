@@ -8,11 +8,31 @@ You can find a list of previous releases on the [github releases](https://github
 
 ## [Unreleased]
 ### Added
+- Improves history handler error metrics and logs (#5438)
+- Added range query support for Pinot json index (#5426)
+
+### Fixed
+- Fixed workflow replication for reset workflow (#5412)
+- Fixed visibility mode for admin when use Pinot visibility (#5441)
+
+## [1.2.5] - 2023-11-01
+### Added
 - Scanner / Fixer changes (#5361)
   - Stale-workflow detection and cleanup added to shardscanner, disabled by default.
   - New dynamic config to better control scanner and fixer, particularly for concrete executions.
   - Documentation about how scanner/fixer work and how to control them, see [the scanner readme.md](service/worker/scanner/README.md)
     - This also includes example config to enable the new fixer.
+- MigrationChecker interface to expose migration CLI (#5424)
+- Added Pinot as new visibility store option (#5201)
+  - Added pinot visibility triple manager to provide options to write to both ES and Pinot.
+  - Added pinotVisibilityStore and pinotClient to support CRUD operations for Pinot.
+  - Added pinot integration test to set up Pinot test cluster and test Pinot functionality.
+
+### Fixed
+- Fix CreateWorkflowModeContinueAsNew for SQL (#5413)
+- Fix CLI count&list workflows error message (#5417)
+- Hotfix for async matching for isolation-group redirection (#5423)
+- Fix closeStatus for --format flag (#5422)
 
 ### Upgrade notes
 - Any concrete execution fixer run on upgrade may be missing the new config and those activities will have no invariants for a single run.  Later runs will work normally. (#5361)
