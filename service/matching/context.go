@@ -87,6 +87,7 @@ func (reqCtx *handlerContext) handleErr(err error) error {
 		return nil
 	}
 
+	// TODO: remove this comment. Added to trigger a buildkite build
 	switch err.(type) {
 	case *types.InternalServiceError:
 		reqCtx.scope.IncCounter(metrics.CadenceFailuresPerTaskList)
