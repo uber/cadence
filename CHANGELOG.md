@@ -9,7 +9,7 @@ You can find a list of previous releases on the [github releases](https://github
 ## [Unreleased]
 ### Added
 - Improves history handler error metrics and logs (#5438)
-- Range query support for Pinot json index (#5426)
+- Added range query support for Pinot json index (#5426)
 
 ### Fixed
 - Fixed workflow replication for reset workflow (#5412)
