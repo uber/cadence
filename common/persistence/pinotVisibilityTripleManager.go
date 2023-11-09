@@ -56,7 +56,7 @@ var Operation = struct {
 	LIST  OperationType
 	COUNT OperationType
 }{
-	LIST:  string(Operation.LIST),
+	LIST:  "list",
 	COUNT: "count",
 }
 
