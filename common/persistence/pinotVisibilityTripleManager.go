@@ -53,11 +53,13 @@ const (
 type OperationType string
 
 var Operation = struct {
-	LIST  OperationType
-	COUNT OperationType
+	LIST                   OperationType
+	COUNT                  OperationType
+	LISTWORKFLOWEXECUTIONS OperationType
 }{
-	LIST:  "list",
-	COUNT: "count",
+	LIST:                   "list",
+	COUNT:                  "count",
+	LISTWORKFLOWEXECUTIONS: "listWorkflowExecutions",
 }
 
 var _ VisibilityManager = (*pinotVisibilityTripleManager)(nil)
@@ -312,11 +314,10 @@ func (v *pinotVisibilityTripleManager) chooseVisibilityManagerForWrite(ctx conte
 // For Pinot Migration uses. It will be a temporary usage
 type userParameters struct {
 	operation    string
-	isOpen       bool
 	domainName   string
 	workflowType string
 	workflowID   string
-	closeStatus  int
+	closeStatus  int // if it is -1, then will have --open flag in comparator workflow
 	customQuery  string
 }
 
@@ -334,7 +335,6 @@ func (v *pinotVisibilityTripleManager) logUserQueryParameters(userParam userPara
 
 	v.logger.Info("Logging user query parameters for Pinot/ES response comparator...",
 		tag.OperationName(userParam.operation),
-		tag.IsWorkflowOpen(userParam.isOpen),
 		tag.WorkflowDomainName(userParam.domainName),
 		tag.WorkflowType(userParam.workflowType),
 		tag.WorkflowID(userParam.workflowID),
@@ -348,9 +348,8 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutions(
 ) (*ListWorkflowExecutionsResponse, error) {
 	v.logUserQueryParameters(userParameters{
 		operation:   string(Operation.LIST),
-		isOpen:      true,
 		domainName:  request.Domain,
-		closeStatus: -1, // set the default close status to be Integer.MIN_VALUE
+		closeStatus: -1, // is open. Will have --open flag in comparator workflow
 	}, request.Domain)
 
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
@@ -368,9 +367,8 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutions(
 ) (*ListWorkflowExecutionsResponse, error) {
 	v.logUserQueryParameters(userParameters{
 		operation:   string(Operation.LIST),
-		isOpen:      false,
 		domainName:  request.Domain,
-		closeStatus: -1,
+		closeStatus: 0, // is closed. Will not have --open flag in comparator workflow
 	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
 	if override := ctx.Value("visibility-override"); override == Primary {
@@ -387,7 +385,6 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutionsByType(
 ) (*ListWorkflowExecutionsResponse, error) {
 	v.logUserQueryParameters(userParameters{
 		operation:    string(Operation.LIST),
-		isOpen:       true,
 		domainName:   request.Domain,
 		workflowType: request.WorkflowTypeName,
 		closeStatus:  -1,
@@ -407,10 +404,9 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByType(
 ) (*ListWorkflowExecutionsResponse, error) {
 	v.logUserQueryParameters(userParameters{
 		operation:    string(Operation.LIST),
-		isOpen:       false,
 		domainName:   request.Domain,
 		workflowType: request.WorkflowTypeName,
-		closeStatus:  -1,
+		closeStatus:  0,
 	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
 	if override := ctx.Value("visibility-override"); override == Primary {
@@ -427,7 +423,6 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutionsByWorkflowID(
 ) (*ListWorkflowExecutionsResponse, error) {
 	v.logUserQueryParameters(userParameters{
 		operation:   string(Operation.LIST),
-		isOpen:      true,
 		domainName:  request.Domain,
 		workflowID:  request.WorkflowID,
 		closeStatus: -1,
@@ -447,10 +442,9 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByWorkflowID(
 ) (*ListWorkflowExecutionsResponse, error) {
 	v.logUserQueryParameters(userParameters{
 		operation:   string(Operation.LIST),
-		isOpen:      false,
 		domainName:  request.Domain,
 		workflowID:  request.WorkflowID,
-		closeStatus: -1,
+		closeStatus: 0,
 	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
 	if override := ctx.Value("visibility-override"); override == Primary {
@@ -467,7 +461,6 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByStatus(
 ) (*ListWorkflowExecutionsResponse, error) {
 	v.logUserQueryParameters(userParameters{
 		operation:   string(Operation.LIST),
-		isOpen:      false,
 		domainName:  request.Domain,
 		closeStatus: int(request.Status),
 	}, request.Domain)
@@ -486,9 +479,8 @@ func (v *pinotVisibilityTripleManager) GetClosedWorkflowExecution(
 ) (*GetClosedWorkflowExecutionResponse, error) {
 	v.logUserQueryParameters(userParameters{
 		operation:   string(Operation.LIST),
-		isOpen:      false,
 		domainName:  request.Domain,
-		closeStatus: -1,
+		closeStatus: 0,
 	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
 	if override := ctx.Value("visibility-override"); override == Primary {
@@ -505,9 +497,8 @@ func (v *pinotVisibilityTripleManager) ListWorkflowExecutions(
 ) (*ListWorkflowExecutionsResponse, error) {
 	v.logUserQueryParameters(userParameters{
 		operation:   string(Operation.LIST),
-		isOpen:      false, // the default value for isOpen is false, because if it is open, in the cli there'll be a --open flag
 		domainName:  request.Domain,
-		closeStatus: -1,
+		closeStatus: 0,
 		customQuery: request.Query,
 	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
@@ -525,9 +516,8 @@ func (v *pinotVisibilityTripleManager) ScanWorkflowExecutions(
 ) (*ListWorkflowExecutionsResponse, error) {
 	v.logUserQueryParameters(userParameters{
 		operation:   string(Operation.LIST),
-		isOpen:      false,
 		domainName:  request.Domain,
-		closeStatus: -1,
+		closeStatus: 0,
 		customQuery: request.Query,
 	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
@@ -545,9 +535,8 @@ func (v *pinotVisibilityTripleManager) CountWorkflowExecutions(
 ) (*CountWorkflowExecutionsResponse, error) {
 	v.logUserQueryParameters(userParameters{
 		operation:   string(Operation.COUNT),
-		isOpen:      false,
 		domainName:  request.Domain,
-		closeStatus: -1,
+		closeStatus: 0,
 		customQuery: request.Query,
 	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
