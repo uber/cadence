@@ -59,7 +59,7 @@ func TestValidateQuery(t *testing.T) {
 		},
 		"Case6-1: complex query I: with parenthesis": {
 			query:     "(CustomStringField = 'custom and custom2 or custom3 order by') or CustomIntField between 1 and 10",
-			validated: "((JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'custom and custom2 or custom3 order by*')) or CustomIntField between 1 and 10)",
+			validated: "((JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'custom and custom2 or custom3 order by*')) or (JSON_MATCH(Attr, '\"$.CustomIntField\" is not null') AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomIntField') AS INT) >= 1 AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomIntField') AS INT) <= 10))",
 		},
 		"Case6-2: complex query II: with only system keys": {
 			query:     "DomainID = 'd-id' and (RunID = 'run-id' or WorkflowID = 'wid')",
@@ -71,7 +71,7 @@ func TestValidateQuery(t *testing.T) {
 		},
 		"Case6-4: complex query IV": {
 			query:     "WorkflowID = 'wid' and (CustomStringField = 'custom and custom2 or custom3 order by' or CustomIntField between 1 and 10)",
-			validated: "WorkflowID = 'wid' and ((JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'custom and custom2 or custom3 order by*')) or CustomIntField between 1 and 10)",
+			validated: "WorkflowID = 'wid' and ((JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'custom and custom2 or custom3 order by*')) or (JSON_MATCH(Attr, '\"$.CustomIntField\" is not null') AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomIntField') AS INT) >= 1 AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomIntField') AS INT) <= 10))",
 		},
 		"Case7: invalid sql query": {
 			query: "Invalid SQL",
@@ -112,6 +112,43 @@ func TestValidateQuery(t *testing.T) {
 		"Case13: or clause": {
 			query:     "CustomIntField = 1 or CustomIntField = 2",
 			validated: "(JSON_MATCH(Attr, '\"$.CustomIntField\"=''1''') or JSON_MATCH(Attr, '\"$.CustomIntField\"=''2'''))",
+		},
+		"Case14-1: range query: custom filed": {
+			query:     "CustomIntField BETWEEN 1 AND 2",
+			validated: "(JSON_MATCH(Attr, '\"$.CustomIntField\" is not null') AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomIntField') AS INT) >= 1 AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomIntField') AS INT) <= 2)",
+		},
+		"Case14-2: range query: system filed": {
+			query:     "NumClusters BETWEEN 1 AND 2",
+			validated: "NumClusters between 1 and 2",
+		},
+		"Case15-1: custom date attribute less than": {
+			query:     "CustomDatetimeField < 1697754674",
+			validated: "(JSON_MATCH(Attr, '\"$.CustomDatetimeField\" is not null') AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomDatetimeField') AS BIGINT) < 1697754674)",
+		},
+		"Case15-2: custom date attribute greater than or equal to": {
+			query:     "CustomDatetimeField >= 1697754674",
+			validated: "(JSON_MATCH(Attr, '\"$.CustomDatetimeField\" is not null') AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomDatetimeField') AS BIGINT) >= 1697754674)",
+		},
+		"Case15-3: system date attribute greater than or equal to": {
+			query:     "StartTime >= 1697754674",
+			validated: "StartTime >= 1697754674",
+		},
+		"Case16-1: custom int attribute greater than or equal to": {
+			query:     "CustomIntField >= 0",
+			validated: "(JSON_MATCH(Attr, '\"$.CustomIntField\" is not null') AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomIntField') AS INT) >= 0)",
+		},
+		"Case16-2: custom double attribute greater than or equal to": {
+			query:     "CustomDoubleField >= 0",
+			validated: "(JSON_MATCH(Attr, '\"$.CustomDoubleField\" is not null') AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomDoubleField') AS DOUBLE) >= 0)",
+		},
+		"Case17: custom keyword attribute greater than or equal to. Will return error run time": {
+			query:     "CustomKeywordField < 0",
+			validated: "(JSON_MATCH(Attr, '\"$.CustomKeywordField\"<''0''') or JSON_MATCH(Attr, '\"$.CustomKeywordField[*]\"<''0'''))",
+		},
+		// TODO
+		"Case18: custom int order by. Will have errors at run time. Doesn't support for now": {
+			query:     "CustomIntField = 0 order by CustomIntField desc",
+			validated: "JSON_MATCH(Attr, '\"$.CustomIntField\"=''0''') order by CustomIntField desc",
 		},
 	}
 

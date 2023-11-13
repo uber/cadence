@@ -49,7 +49,7 @@ type (
 		getLogger() log.Logger
 		getVersionHistory() *persistence.VersionHistory
 		isWorkflowReset() bool
-		getWorkflowResetMetadata() (string, string, int64)
+		getWorkflowResetMetadata() (string, string, int64, bool)
 
 		splitTask(taskStartTime time.Time) (replicationTask, replicationTask, error)
 	}
@@ -214,15 +214,16 @@ func (t *replicationTaskImpl) getVersionHistory() *persistence.VersionHistory {
 
 func (t *replicationTaskImpl) isWorkflowReset() bool {
 
-	baseRunID, newRunID, baseEventVersion := t.getWorkflowResetMetadata()
-	return len(baseRunID) > 0 && baseEventVersion != 0 && len(newRunID) > 0
+	baseRunID, newRunID, baseEventVersion, isReset := t.getWorkflowResetMetadata()
+	return len(baseRunID) > 0 && baseEventVersion != common.EmptyVersion && len(newRunID) > 0 && isReset
 }
 
-func (t *replicationTaskImpl) getWorkflowResetMetadata() (string, string, int64) {
+func (t *replicationTaskImpl) getWorkflowResetMetadata() (string, string, int64, bool) {
 
 	var baseRunID string
 	var newRunID string
 	var baseEventVersion = common.EmptyVersion
+	var isReset bool
 	switch t.getFirstEvent().GetEventType() {
 	case types.EventTypeDecisionTaskFailed:
 		decisionTaskFailedEvent := t.getFirstEvent()
@@ -230,6 +231,9 @@ func (t *replicationTaskImpl) getWorkflowResetMetadata() (string, string, int64)
 		baseRunID = attr.GetBaseRunID()
 		baseEventVersion = attr.GetForkEventVersion()
 		newRunID = attr.GetNewRunID()
+		if attr.GetCause() == types.DecisionTaskFailedCauseResetWorkflow {
+			isReset = true
+		}
 
 	case types.EventTypeDecisionTaskTimedOut:
 		decisionTaskTimedOutEvent := t.getFirstEvent()
@@ -238,8 +242,11 @@ func (t *replicationTaskImpl) getWorkflowResetMetadata() (string, string, int64)
 		baseRunID = attr.GetBaseRunID()
 		baseEventVersion = attr.GetForkEventVersion()
 		newRunID = attr.GetNewRunID()
+		if attr.GetCause() == types.DecisionTaskTimedOutCauseReset {
+			isReset = true
+		}
 	}
-	return baseRunID, newRunID, baseEventVersion
+	return baseRunID, newRunID, baseEventVersion, isReset
 }
 
 func (t *replicationTaskImpl) splitTask(
