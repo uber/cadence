@@ -1206,6 +1206,31 @@ func (p *taskErrorInjectionPersistenceClient) DeleteTaskList(
 	return persistenceErr
 }
 
+func (p *taskErrorInjectionPersistenceClient) GetTaskListSize(
+	ctx context.Context,
+	request *GetTaskListSizeRequest,
+) (*GetTaskListSizeResponse, error) {
+	fakeErr := generateFakeError(p.errorRate)
+
+	var resp *GetTaskListSizeResponse
+	var persistenceErr error
+	var forwardCall bool
+	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
+		resp, persistenceErr = p.persistence.GetTaskListSize(ctx, request)
+	}
+
+	if fakeErr != nil {
+		p.logger.Error(msgInjectedFakeErr,
+			tag.StoreOperationGetTaskListSize,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(persistenceErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, persistenceErr
+}
+
 func (p *taskErrorInjectionPersistenceClient) Close() {
 	p.persistence.Close()
 }

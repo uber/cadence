@@ -219,6 +219,8 @@ const (
 	PersistenceListTaskListScope
 	// PersistenceDeleteTaskListScope is the metric scope for persistence.TaskManager.DeleteTaskList API
 	PersistenceDeleteTaskListScope
+	// PersistenceGetTaskListSizeScope is the metric scope for persistence.TaskManager.GetTaskListSize API
+	PersistenceGetTaskListSizeScope
 	// PersistenceAppendHistoryEventsScope tracks AppendHistoryEvents calls made by service to persistence layer
 	PersistenceAppendHistoryEventsScope
 	// PersistenceGetWorkflowExecutionHistoryScope tracks GetWorkflowExecutionHistory calls made by service to persistence layer
@@ -1339,6 +1341,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceUpdateTaskListScope:                                 {operation: "UpdateTaskList"},
 		PersistenceListTaskListScope:                                   {operation: "ListTaskList"},
 		PersistenceDeleteTaskListScope:                                 {operation: "DeleteTaskList"},
+		PersistenceGetTaskListSizeScope:                                {operation: "GetTaskListSize"},
 		PersistenceAppendHistoryEventsScope:                            {operation: "AppendHistoryEvents"},
 		PersistenceGetWorkflowExecutionHistoryScope:                    {operation: "GetWorkflowExecutionHistory"},
 		PersistenceDeleteWorkflowExecutionHistoryScope:                 {operation: "DeleteWorkflowExecutionHistory"},

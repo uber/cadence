@@ -952,8 +952,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 	recordStart bool,
 ) (retError error) {
 
-	workflowStartedScope := t.metricsClient.Scope(metrics.TransferActiveTaskRecordWorkflowStartedScope,
-		metrics.DomainTag(task.DomainID))
+	workflowStartedScope := getOrCreateDomainTaggedScope(t.shard, metrics.TransferActiveTaskRecordWorkflowStartedScope, task.DomainID, t.logger)
 
 	wfContext, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
 		task.DomainID,
