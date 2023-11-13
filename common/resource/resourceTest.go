@@ -213,7 +213,7 @@ func NewTest(
 		// logger
 
 		Logger:        logger,
-		taskvalidator: taskvalidator.NewWfChecker(),
+		taskvalidator: taskvalidator.NewWfChecker(logger),
 	}
 }
 
