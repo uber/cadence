@@ -29,6 +29,8 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/zap"
 
+	"github.com/uber/cadence/common/taskvalidator"
+
 	"github.com/uber/cadence/common/dynamicconfig/configstore"
 
 	"github.com/uber/cadence/client"
@@ -101,6 +103,7 @@ type (
 		Partitioner         *partition.MockPartitioner
 		HostName            string
 		Logger              log.Logger
+		taskvalidator       taskvalidator.Checker
 	}
 )
 
@@ -209,7 +212,8 @@ func NewTest(
 
 		// logger
 
-		Logger: logger,
+		Logger:        logger,
+		taskvalidator: taskvalidator.NewWfChecker(logger),
 	}
 }
 
@@ -266,6 +270,11 @@ func (s *Test) GetTimeSource() clock.TimeSource {
 // GetPayloadSerializer for testing
 func (s *Test) GetPayloadSerializer() persistence.PayloadSerializer {
 	return s.PayloadSerializer
+}
+
+// GetPayloadSerializer for testing
+func (s *Test) GetTaskValidator() taskvalidator.Checker {
+	return s.taskvalidator
 }
 
 // GetMetricsClient for testing

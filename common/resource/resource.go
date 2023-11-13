@@ -24,6 +24,7 @@ import (
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/common/dynamicconfig/configstore"
+	"github.com/uber/cadence/common/taskvalidator"
 
 	"github.com/uber/cadence/common/isolationgroup"
 	"github.com/uber/cadence/common/partition"
@@ -116,5 +117,8 @@ type (
 		GetIsolationGroupState() isolationgroup.State
 		GetPartitioner() partition.Partitioner
 		GetIsolationGroupStore() configstore.Client
+
+		//GetTaskValidator returns the taskValidator
+		GetTaskValidator() taskvalidator.Checker
 	}
 )

@@ -27,6 +27,7 @@ import (
 
 	"github.com/uber/cadence/common/dynamicconfig/configstore"
 	csc "github.com/uber/cadence/common/dynamicconfig/configstore/config"
+	"github.com/uber/cadence/common/taskvalidator"
 
 	"github.com/uber/cadence/common/isolationgroup/defaultisolationgroupstate"
 
@@ -133,6 +134,7 @@ type (
 		isolationGroups           isolationgroup.State
 		isolationGroupConfigStore configstore.Client
 		partitioner               partition.Partitioner
+		taskvalidator             taskvalidator.Checker
 	}
 )
 
@@ -335,12 +337,13 @@ func New(
 		rpcFactory:                params.RPCFactory,
 		isolationGroups:           isolationGroupState,
 		isolationGroupConfigStore: isolationGroupStore, // can be nil where persistence is not available
-		partitioner:               partitioner,         // can be nil where persistence is not available
+		partitioner:               partitioner,
+		taskvalidator:             taskvalidator.NewWfChecker(logger),
 	}
 	return impl, nil
 }
 
-// Start start all resources
+// Start all resources
 func (h *Impl) Start() {
 
 	if !atomic.CompareAndSwapInt32(
@@ -439,6 +442,10 @@ func (h *Impl) GetTimeSource() clock.TimeSource {
 // GetPayloadSerializer return binary payload serializer
 func (h *Impl) GetPayloadSerializer() persistence.PayloadSerializer {
 	return h.payloadSerializer
+}
+
+func (h *Impl) GetTaskValidator() taskvalidator.Checker {
+	return h.taskvalidator
 }
 
 // GetMetricsClient return metrics client
