@@ -2223,10 +2223,8 @@ func (h *handlerImpl) error(
 		// the following workflow. Based on the validations (is the workflow stale? does the workflow come from a deprecated domain?)
 		// We will delete the workflow or mark the workflow as corrupted.
 		// Placing a dummy call to the function to check the coherency of the design.
-		err := h.GetTaskValidator().WorkflowCheckforValidation(workflowID, domainID, "")
-		if err != nil {
-			return err
-		}
+		// The function returns nil error so removing error handling for now.
+		h.GetTaskValidator().WorkflowCheckforValidation(workflowID, domainID, "")
 	}
 	return err
 }

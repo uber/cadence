@@ -338,12 +338,12 @@ func New(
 		isolationGroups:           isolationGroupState,
 		isolationGroupConfigStore: isolationGroupStore, // can be nil where persistence is not available
 		partitioner:               partitioner,
-		taskvalidator:             taskvalidator.NewWfChecker(),
+		taskvalidator:             taskvalidator.NewWfChecker(logger),
 	}
 	return impl, nil
 }
 
-// Start start all resources
+// Start all resources
 func (h *Impl) Start() {
 
 	if !atomic.CompareAndSwapInt32(
