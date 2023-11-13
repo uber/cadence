@@ -115,11 +115,11 @@ type (
 		clearBufferedEvents  bool                  // delete buffered events from persistence
 
 		// This section includes Workflow Execution Info parameters like StartTimestamp,
-		//which are only visible after the workflow has begun.
-		//However, there are other parameters such as LastEventTimestamp,
-		//which are updated as the execution progresses through various cycles.
-		//It's common to encounter null values for these timestamps initially,
-		//as they are populated once the update cycles are initiated.
+		// which are only visible after the workflow has begun.
+		// However, there are other parameters such as LastEventTimestamp,
+		// which are updated as the execution progresses through various cycles.
+		// It's common to encounter null values for these timestamps initially,
+		// as they are populated once the update cycles are initiated.
 		executionInfo    *persistence.WorkflowExecutionInfo // Workflow mutable state info.
 		versionHistories *persistence.VersionHistories
 		// TODO: remove this struct after all 2DC workflows complete
