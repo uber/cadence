@@ -1079,7 +1079,7 @@ func (db *cdb) resetWorkflowExecutionAndMapsAndEventBuffer(
 		return fmt.Errorf("should only support WorkflowExecutionMapsWriteModeReset")
 	}
 
-	//This is another category of execution update where only the non-frozen column types in
+	// This is another category of execution update where only the non-frozen column types in
 	// Cassandra are updated to a previous state in the Execution Update flow.
 	err = db.resetActivityInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ActivityInfos)
 	if err != nil {
