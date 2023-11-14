@@ -309,13 +309,7 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams)
 		return c.taskWriter.appendTask(params.execution, params.taskInfo)
 	})
 
-	if err != nil {
-		c.logger.Error("Failed to add task",
-			tag.Error(err),
-			tag.WorkflowTaskListName(c.taskListID.name),
-			tag.WorkflowTaskListType(c.taskListID.taskType),
-		)
-	} else {
+	if err == nil && !syncMatch {
 		c.taskReader.Signal()
 	}
 
