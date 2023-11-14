@@ -1279,7 +1279,7 @@ type (
 	}
 
 	GetTaskListSizeResponse struct {
-		Size int
+		Size int64
 	}
 
 	// CreateTasksRequest is used to create a new task for a workflow exectution

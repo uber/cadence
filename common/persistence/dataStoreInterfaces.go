@@ -57,6 +57,7 @@ type (
 		UpdateTaskList(ctx context.Context, request *UpdateTaskListRequest) (*UpdateTaskListResponse, error)
 		ListTaskList(ctx context.Context, request *ListTaskListRequest) (*ListTaskListResponse, error)
 		DeleteTaskList(ctx context.Context, request *DeleteTaskListRequest) error
+		GetTaskListSize(ctx context.Context, request *GetTaskListSizeRequest) (*GetTaskListSizeResponse, error)
 		CreateTasks(ctx context.Context, request *InternalCreateTasksRequest) (*CreateTasksResponse, error)
 		GetTasks(ctx context.Context, request *GetTasksRequest) (*InternalGetTasksResponse, error)
 		CompleteTask(ctx context.Context, request *CompleteTaskRequest) error

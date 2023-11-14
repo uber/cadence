@@ -26,7 +26,6 @@ import (
 	"context"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -71,7 +70,7 @@ func (t *taskManager) DeleteTaskList(ctx context.Context, request *DeleteTaskLis
 }
 
 func (t *taskManager) GetTaskListSize(ctx context.Context, request *GetTaskListSizeRequest) (*GetTaskListSizeResponse, error) {
-	return nil, &types.InternalServiceError{Message: "Not yet implemented"}
+	return t.persistence.GetTaskListSize(ctx, request)
 }
 
 func (t *taskManager) CreateTasks(ctx context.Context, request *CreateTasksRequest) (*CreateTasksResponse, error) {
