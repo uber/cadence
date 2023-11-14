@@ -922,6 +922,21 @@ func (mr *MockTaskManagerMockRecorder) GetOrphanTasks(ctx, request interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOrphanTasks", reflect.TypeOf((*MockTaskManager)(nil).GetOrphanTasks), ctx, request)
 }
 
+// GetTaskListSize mocks base method.
+func (m *MockTaskManager) GetTaskListSize(ctx context.Context, request *GetTaskListSizeRequest) (*GetTaskListSizeResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTaskListSize", ctx, request)
+	ret0, _ := ret[0].(*GetTaskListSizeResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTaskListSize indicates an expected call of GetTaskListSize.
+func (mr *MockTaskManagerMockRecorder) GetTaskListSize(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTaskListSize", reflect.TypeOf((*MockTaskManager)(nil).GetTaskListSize), ctx, request)
+}
+
 // GetTasks mocks base method.
 func (m *MockTaskManager) GetTasks(ctx context.Context, request *GetTasksRequest) (*GetTasksResponse, error) {
 	m.ctrl.T.Helper()
