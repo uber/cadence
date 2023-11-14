@@ -31,6 +31,8 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
+const TimerInvalidName = "TimerInvalid"
+
 type TimerInvalid struct {
 	pr    persistence.Retryer
 	cache cache.DomainCache
@@ -161,5 +163,5 @@ func (h *TimerInvalid) Fix(
 }
 
 func (h *TimerInvalid) Name() Name {
-	return "TimerInvalid"
+	return TimerInvalidName
 }
