@@ -31,6 +31,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/service/history/workflow"
+
 	"golang.org/x/sync/errgroup"
 
 	"github.com/uber/cadence/common/membership"
@@ -2214,7 +2216,16 @@ func (h *handlerImpl) error(
 	runID string,
 ) error {
 	err = h.convertError(err)
+
 	h.updateErrorMetric(scope, domainID, workflowID, runID, err)
+	if errors.Is(err, workflow.ErrMaxAttemptsExceeded) {
+		// Calling the dummy Workflow Check from task Validator. This is an ongoing project where we plan to do some validations on
+		// the following workflow. Based on the validations (is the workflow stale? does the workflow come from a deprecated domain?)
+		// We will delete the workflow or mark the workflow as corrupted.
+		// Placing a dummy call to the function to check the coherency of the design.
+		// The function returns nil error so removing error handling for now.
+		h.GetTaskValidator().WorkflowCheckforValidation(workflowID, domainID, "")
+	}
 	return err
 }
 
