@@ -2404,6 +2404,7 @@ const (
 	TaskListManagersGauge
 	TaskLagPerTaskListGauge
 	TaskBacklogPerTaskListGauge
+	TaskCountPerTaskListGauge
 
 	NumMatchingMetrics
 )
@@ -3021,6 +3022,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		TaskListManagersGauge:                       {metricName: "tasklist_managers", metricType: Gauge},
 		TaskLagPerTaskListGauge:                     {metricName: "task_lag_per_tl", metricType: Gauge},
 		TaskBacklogPerTaskListGauge:                 {metricName: "task_backlog_per_tl", metricType: Gauge},
+		TaskCountPerTaskListGauge:                   {metricName: "task_count_per_tl", metricType: Gauge},
 	},
 	Worker: {
 		ReplicatorMessages:                            {metricName: "replicator_messages"},

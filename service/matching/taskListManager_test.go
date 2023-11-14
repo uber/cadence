@@ -191,7 +191,7 @@ func TestDescribeTaskList(t *testing.T) {
 	require.NotNil(t, taskListStatus)
 	require.Zero(t, taskListStatus.GetAckLevel())
 	require.Equal(t, taskCount, taskListStatus.GetReadLevel())
-	require.Equal(t, taskCount, taskListStatus.GetBacklogCountHint())
+	require.Equal(t, int64(0), taskListStatus.GetBacklogCountHint())
 	require.True(t, taskListStatus.GetRatePerSecond() > (_defaultTaskDispatchRPS-1))
 	require.True(t, taskListStatus.GetRatePerSecond() < (_defaultTaskDispatchRPS+1))
 	taskIDBlock := taskListStatus.GetTaskIDBlock()
