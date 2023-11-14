@@ -385,7 +385,7 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutionsByType(
 		operation:    string(Operation.LIST),
 		domainName:   request.Domain,
 		workflowType: request.WorkflowTypeName,
-		closeStatus:  -1,
+		closeStatus:  -1, // is open. Will have --open flag in comparator workflow
 	}, request.Domain)
 	manager := v.chooseVisibilityManagerForRead(request.Domain)
 	if override := ctx.Value("visibility-override"); override == Primary {
