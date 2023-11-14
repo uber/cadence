@@ -53,13 +53,11 @@ const (
 type OperationType string
 
 var Operation = struct {
-	LIST                   OperationType
-	COUNT                  OperationType
-	LISTWORKFLOWEXECUTIONS OperationType
+	LIST  OperationType
+	COUNT OperationType
 }{
-	LIST:                   "list",
-	COUNT:                  "count",
-	LISTWORKFLOWEXECUTIONS: "listWorkflowExecutions",
+	LIST:  "list",
+	COUNT: "count",
 }
 
 var _ VisibilityManager = (*pinotVisibilityTripleManager)(nil)
