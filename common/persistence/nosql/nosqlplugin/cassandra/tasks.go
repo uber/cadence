@@ -81,6 +81,14 @@ const (
 		`and task_id > ? ` +
 		`and task_id <= ?`
 
+	templateGetTasksCountQuery = `SELECT count(1) as count ` +
+		`FROM tasks ` +
+		`WHERE domain_id = ? ` +
+		`and task_list_name = ? ` +
+		`and task_list_type = ? ` +
+		`and type = ? ` +
+		`and task_id > ? `
+
 	templateCompleteTasksLessThanQuery = `DELETE FROM tasks ` +
 		`WHERE domain_id = ? ` +
 		`AND task_list_name = ? ` +
@@ -406,6 +414,24 @@ func (db *cdb) InsertTasks(
 		return err
 	}
 	return handleTaskListAppliedError(applied, previous)
+}
+
+// GetTasksCount returns number of tasks from a tasklist
+func (db *cdb) GetTasksCount(ctx context.Context, filter *nosqlplugin.TasksFilter) (int64, error) {
+	query := db.session.Query(templateGetTasksCountQuery,
+		filter.DomainID,
+		filter.TaskListName,
+		filter.TaskListType,
+		rowTypeTask,
+		filter.MinTaskID,
+	).WithContext(ctx)
+	result := make(map[string]interface{})
+	if err := query.MapScan(result); err != nil {
+		return 0, err
+	}
+
+	queueSize := result["count"].(int64)
+	return queueSize, nil
 }
 
 // SelectTasks return tasks that associated to a tasklist

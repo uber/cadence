@@ -222,6 +222,7 @@ var (
 	StoreOperationUpdateTaskList        = storeOperation("update-task-list")
 	StoreOperationListTaskList          = storeOperation("list-task-list")
 	StoreOperationDeleteTaskList        = storeOperation("delete-task-list")
+	StoreOperationGetTaskListSize       = storeOperation("get-task-list-size")
 	StoreOperationStopTaskList          = storeOperation("stop-task-list")
 
 	StoreOperationCreateDomain       = storeOperation("create-domain")

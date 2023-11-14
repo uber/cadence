@@ -35,7 +35,7 @@ You can find a list of previous releases on the [github releases](https://github
 - Fix closeStatus for --format flag (#5422)
 
 ### Upgrade notes
-- Any concrete execution fixer run on upgrade may be missing the new config and those activities will have no invariants for a single run.  Later runs will work normally. (#5361)
+- Any "concrete execution" or "timers" fixers run on upgrade may be missing the new config and those activities will have no invariants for a single run.  Later runs will work normally. (#5361)
 
 ## [1.2.4] - 2023-09-27
 ### Added
