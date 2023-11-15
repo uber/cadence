@@ -35,6 +35,8 @@ type (
 		AdvancedVisibilityWritingMode dynamicconfig.StringPropertyFn
 		// EnableReadVisibilityFromPinot is the read mode of visibility
 		EnableReadVisibilityFromPinot dynamicconfig.BoolPropertyFnWithDomainFilter
+		// EnableLogCustomerQueryParameter is to enable log customer parameters
+		EnableLogCustomerQueryParameter dynamicconfig.BoolPropertyFnWithDomainFilter
 
 		// configs for db visibility
 		EnableDBVisibilitySampling                  dynamicconfig.BoolPropertyFn                `yaml:"-" json:"-"`

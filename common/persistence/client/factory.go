@@ -299,6 +299,7 @@ func (f *factoryImpl) NewVisibilityManager(
 			resourceConfig.EnableReadVisibilityFromPinot,
 			resourceConfig.EnableReadVisibilityFromES,
 			resourceConfig.AdvancedVisibilityWritingMode,
+			resourceConfig.EnableLogCustomerQueryParameter,
 			f.logger,
 		), nil
 	} else if params.PersistenceConfig.AdvancedVisibilityStore != "" {
