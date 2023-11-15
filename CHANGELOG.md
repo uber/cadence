@@ -14,8 +14,20 @@ You can find a list of previous releases on the [github releases](https://github
 ### Fixed
 - Fixed workflow replication for reset workflow (#5412)
 - Fixed visibility mode for admin when use Pinot visibility (#5441)
+- Fix timer-fixer, unfortunately broken in 1.2.5 (#5433)
 
 ## [1.2.5] - 2023-11-01
+
+### Caution:
+
+Prefer 1.2.4 or 1.2.6 if you have enabled the timer fixer.
+These were broken by #5361, and fixed by #5433.
+
+By default this fixer is _disabled_, so the version has not been retracted.
+
+If you have already upgraded to 1.2.5, downgrading or using 1.2.6 should restore the timer fixer.
+Or apply #5433 as a local patch.
+
 ### Added
 - Scanner / Fixer changes (#5361)
   - Stale-workflow detection and cleanup added to shardscanner, disabled by default.
