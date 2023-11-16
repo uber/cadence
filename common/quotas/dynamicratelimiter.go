@@ -6,7 +6,8 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// DynamicRateLimiter implements a dynamic config wrapper around the rate limiter
+// DynamicRateLimiter implements a dynamic config wrapper around the rate limiter,
+// checks for updates to the dynamic config and updates the rate limiter accordingly
 type DynamicRateLimiter struct {
 	rps RPSFunc
 	rl  *RateLimiter
