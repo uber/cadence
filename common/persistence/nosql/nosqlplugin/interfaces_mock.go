@@ -388,6 +388,21 @@ func (mr *MockDBMockRecorder) GetQueueSize(ctx, queueType interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetQueueSize", reflect.TypeOf((*MockDB)(nil).GetQueueSize), ctx, queueType)
 }
 
+// GetTasksCount mocks base method.
+func (m *MockDB) GetTasksCount(ctx context.Context, filter *TasksFilter) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTasksCount", ctx, filter)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTasksCount indicates an expected call of GetTasksCount.
+func (mr *MockDBMockRecorder) GetTasksCount(ctx, filter interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTasksCount", reflect.TypeOf((*MockDB)(nil).GetTasksCount), ctx, filter)
+}
+
 // InsertConfig mocks base method.
 func (m *MockDB) InsertConfig(ctx context.Context, row *persistence.InternalConfigStoreEntry) error {
 	m.ctrl.T.Helper()
@@ -1486,6 +1501,21 @@ func (m *MocktableCRUD) GetQueueSize(ctx context.Context, queueType persistence.
 func (mr *MocktableCRUDMockRecorder) GetQueueSize(ctx, queueType interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetQueueSize", reflect.TypeOf((*MocktableCRUD)(nil).GetQueueSize), ctx, queueType)
+}
+
+// GetTasksCount mocks base method.
+func (m *MocktableCRUD) GetTasksCount(ctx context.Context, filter *TasksFilter) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTasksCount", ctx, filter)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTasksCount indicates an expected call of GetTasksCount.
+func (mr *MocktableCRUDMockRecorder) GetTasksCount(ctx, filter interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTasksCount", reflect.TypeOf((*MocktableCRUD)(nil).GetTasksCount), ctx, filter)
 }
 
 // InsertConfig mocks base method.
@@ -2965,6 +2995,21 @@ func (m *MockTaskCRUD) DeleteTaskList(ctx context.Context, filter *TaskListFilte
 func (mr *MockTaskCRUDMockRecorder) DeleteTaskList(ctx, filter, previousRangeID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTaskList", reflect.TypeOf((*MockTaskCRUD)(nil).DeleteTaskList), ctx, filter, previousRangeID)
+}
+
+// GetTasksCount mocks base method.
+func (m *MockTaskCRUD) GetTasksCount(ctx context.Context, filter *TasksFilter) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTasksCount", ctx, filter)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTasksCount indicates an expected call of GetTasksCount.
+func (mr *MockTaskCRUDMockRecorder) GetTasksCount(ctx, filter interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTasksCount", reflect.TypeOf((*MockTaskCRUD)(nil).GetTasksCount), ctx, filter)
 }
 
 // InsertTaskList mocks base method.

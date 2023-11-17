@@ -62,6 +62,22 @@ func newTaskPersistence(
 	}, nil
 }
 
+func (m *sqlTaskStore) GetTaskListSize(ctx context.Context, request *persistence.GetTaskListSizeRequest) (*persistence.GetTaskListSizeResponse, error) {
+	dbShardID := sqlplugin.GetDBShardIDFromDomainIDAndTasklist(request.DomainID, request.TaskListName, m.db.GetTotalNumDBShards())
+	domainID := serialization.MustParseUUID(request.DomainID)
+	size, err := m.db.GetTasksCount(ctx, &sqlplugin.TasksFilter{
+		ShardID:      dbShardID,
+		DomainID:     domainID,
+		TaskListName: request.TaskListName,
+		TaskType:     int64(request.TaskListType),
+		MinTaskID:    &request.AckLevel,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &persistence.GetTaskListSizeResponse{Size: size}, nil
+}
+
 func (m *sqlTaskStore) LeaseTaskList(
 	ctx context.Context,
 	request *persistence.LeaseTaskListRequest,

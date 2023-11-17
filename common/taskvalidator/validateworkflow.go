@@ -20,7 +20,37 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package metrics
+// Package taskvalidator provides a Work in Progress service for workflow validations.
+package taskvalidator
 
-// VersionString the current release version
-const VersionString = "1.2.5"
+import (
+	"fmt"
+
+	"github.com/uber/cadence/common/log"
+)
+
+// Checker is an interface for initiating the validation process.
+type Checker interface {
+	WorkflowCheckforValidation(workflowID string, domainID string, runID string) error
+}
+
+// checkerImpl is the implementation of the Checker interface.
+type checkerImpl struct {
+	logger log.Logger
+}
+
+// NewWfChecker creates a new instance of Checker.
+func NewWfChecker(logger log.Logger) Checker {
+	return &checkerImpl{logger: logger}
+}
+
+// WorkflowCheckforValidation is a dummy implementation of workflow validation.
+func (w *checkerImpl) WorkflowCheckforValidation(workflowID string, domainID string, runID string) error {
+	// Emitting just the log to ensure that the workflow is called for now.
+	// TODO: add some validations to check the wf for corruptions.
+	w.logger.Info(fmt.Sprintf("WorkflowCheckforValidation. DomainID: %v, WorkflowID: %v, RunID: %v",
+		domainID,
+		workflowID,
+		runID))
+	return nil
+}

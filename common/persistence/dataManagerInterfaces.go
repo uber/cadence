@@ -1270,6 +1270,18 @@ type (
 		RangeID      int64
 	}
 
+	GetTaskListSizeRequest struct {
+		DomainID     string
+		DomainName   string
+		TaskListName string
+		TaskListType int
+		AckLevel     int64
+	}
+
+	GetTaskListSizeResponse struct {
+		Size int64
+	}
+
 	// CreateTasksRequest is used to create a new task for a workflow exectution
 	CreateTasksRequest struct {
 		TaskListInfo *TaskListInfo
@@ -1793,6 +1805,7 @@ type (
 		UpdateTaskList(ctx context.Context, request *UpdateTaskListRequest) (*UpdateTaskListResponse, error)
 		ListTaskList(ctx context.Context, request *ListTaskListRequest) (*ListTaskListResponse, error)
 		DeleteTaskList(ctx context.Context, request *DeleteTaskListRequest) error
+		GetTaskListSize(ctx context.Context, request *GetTaskListSizeRequest) (*GetTaskListSizeResponse, error)
 		CreateTasks(ctx context.Context, request *CreateTasksRequest) (*CreateTasksResponse, error)
 		GetTasks(ctx context.Context, request *GetTasksRequest) (*GetTasksResponse, error)
 		CompleteTask(ctx context.Context, request *CompleteTaskRequest) error

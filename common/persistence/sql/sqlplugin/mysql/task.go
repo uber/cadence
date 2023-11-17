@@ -82,6 +82,10 @@ task_type = :task_type
 		`FROM tasks ` +
 		`WHERE domain_id = ? AND task_list_name = ? AND task_type = ? AND task_id > ? ORDER BY task_id LIMIT ?`
 
+	getTasksCountQry = `SELECT count(1) as count ` +
+		`FROM tasks ` +
+		`WHERE domain_id = ? AND task_list_name = ? AND task_type = ? AND task_id > ?`
+
 	createTaskQry = `INSERT INTO ` +
 		`tasks(domain_id, task_list_name, task_type, task_id, data, data_encoding) ` +
 		`VALUES(:domain_id, :task_list_name, :task_type, :task_id, :data, :data_encoding)`
@@ -207,6 +211,14 @@ func (mdb *db) LockTaskLists(ctx context.Context, filter *sqlplugin.TaskListsFil
 	var rangeID int64
 	err := mdb.driver.GetContext(ctx, filter.ShardID, &rangeID, lockTaskListQry, filter.ShardID, *filter.DomainID, *filter.Name, *filter.TaskType)
 	return rangeID, err
+}
+
+func (mdb *db) GetTasksCount(ctx context.Context, filter *sqlplugin.TasksFilter) (int64, error) {
+	var size []int64
+	if err := mdb.driver.SelectContext(ctx, filter.ShardID, &size, getTasksCountQry, filter.DomainID, filter.TaskListName, filter.TaskType, *filter.MinTaskID); err != nil {
+		return 0, err
+	}
+	return size[0], nil
 }
 
 // InsertIntoTasksWithTTL is not supported in MySQL

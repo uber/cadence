@@ -1691,6 +1691,19 @@ func (s *TestBase) CreateDecisionTask(ctx context.Context, domainID string, work
 	return taskID, err
 }
 
+func (s *TestBase) GetDecisionTaskListSize(ctx context.Context, domainID, taskList string, ackLevel int64) (int64, error) {
+	resp, err := s.TaskMgr.GetTaskListSize(ctx, &persistence.GetTaskListSizeRequest{
+		DomainID:     domainID,
+		TaskListName: taskList,
+		TaskListType: persistence.TaskListTypeDecision,
+		AckLevel:     ackLevel,
+	})
+	if err != nil {
+		return 0, err
+	}
+	return resp.Size, nil
+}
+
 // CreateActivityTasks is a utility method to create tasks
 func (s *TestBase) CreateActivityTasks(ctx context.Context, domainID string, workflowExecution types.WorkflowExecution,
 	activities map[int64]string, partitionConfig map[string]string) ([]int64, error) {

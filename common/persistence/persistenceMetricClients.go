@@ -1029,6 +1029,23 @@ func (p *taskPersistenceClient) DeleteTaskList(
 	return p.call(metrics.PersistenceDeleteTaskListScope, op, metrics.DomainTag(request.DomainName))
 }
 
+func (p *taskPersistenceClient) GetTaskListSize(
+	ctx context.Context,
+	request *GetTaskListSizeRequest,
+) (*GetTaskListSizeResponse, error) {
+	var resp *GetTaskListSizeResponse
+	op := func() error {
+		var err error
+		resp, err = p.persistence.GetTaskListSize(ctx, request)
+		return err
+	}
+	err := p.call(metrics.PersistenceGetTaskListSizeScope, op)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
 func (p *taskPersistenceClient) UpdateTaskList(
 	ctx context.Context,
 	request *UpdateTaskListRequest,

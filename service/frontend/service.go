@@ -45,9 +45,10 @@ type Config struct {
 	EnableVisibilitySampling        dynamicconfig.BoolPropertyFn
 	EnableReadFromClosedExecutionV2 dynamicconfig.BoolPropertyFn
 	// deprecated: never used for ratelimiting, only sampling-based failure injection, and only on database-based visibility
-	VisibilityListMaxQPS          dynamicconfig.IntPropertyFnWithDomainFilter
-	EnableReadVisibilityFromES    dynamicconfig.BoolPropertyFnWithDomainFilter
-	EnableReadVisibilityFromPinot dynamicconfig.BoolPropertyFnWithDomainFilter
+	VisibilityListMaxQPS            dynamicconfig.IntPropertyFnWithDomainFilter
+	EnableReadVisibilityFromES      dynamicconfig.BoolPropertyFnWithDomainFilter
+	EnableReadVisibilityFromPinot   dynamicconfig.BoolPropertyFnWithDomainFilter
+	EnableLogCustomerQueryParameter dynamicconfig.BoolPropertyFnWithDomainFilter
 	// deprecated: never read from
 	ESVisibilityListMaxQPS            dynamicconfig.IntPropertyFnWithDomainFilter
 	ESIndexMaxResultWindow            dynamicconfig.IntPropertyFn
@@ -137,6 +138,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, isAdvancedVis
 		ESVisibilityListMaxQPS:                      dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendESVisibilityListMaxQPS),
 		EnableReadVisibilityFromES:                  dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableReadVisibilityFromES),
 		EnableReadVisibilityFromPinot:               dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableReadVisibilityFromPinot),
+		EnableLogCustomerQueryParameter:             dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableLogCustomerQueryParameter),
 		ESIndexMaxResultWindow:                      dc.GetIntProperty(dynamicconfig.FrontendESIndexMaxResultWindow),
 		HistoryMaxPageSize:                          dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendHistoryMaxPageSize),
 		UserRPS:                                     dc.GetIntProperty(dynamicconfig.FrontendUserRPS),
@@ -241,9 +243,10 @@ func NewService(
 			PersistenceGlobalMaxQPS: serviceConfig.PersistenceGlobalMaxQPS,
 			ThrottledLoggerMaxRPS:   serviceConfig.ThrottledLogRPS,
 
-			EnableReadVisibilityFromES:    serviceConfig.EnableReadVisibilityFromES,
-			AdvancedVisibilityWritingMode: nil, // frontend service never write
-			EnableReadVisibilityFromPinot: serviceConfig.EnableReadVisibilityFromPinot,
+			EnableReadVisibilityFromES:      serviceConfig.EnableReadVisibilityFromES,
+			AdvancedVisibilityWritingMode:   nil, // frontend service never write
+			EnableReadVisibilityFromPinot:   serviceConfig.EnableReadVisibilityFromPinot,
+			EnableLogCustomerQueryParameter: serviceConfig.EnableLogCustomerQueryParameter,
 
 			EnableDBVisibilitySampling:                  serviceConfig.EnableVisibilitySampling,
 			EnableReadDBVisibilityFromClosedExecutionV2: serviceConfig.EnableReadFromClosedExecutionV2,

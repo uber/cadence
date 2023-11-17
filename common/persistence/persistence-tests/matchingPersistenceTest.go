@@ -140,6 +140,32 @@ func (s *MatchingPersistenceSuite) TestGetDecisionTasks() {
 	s.Equal(partitionConfig, tasks1Response.Tasks[0].PartitionConfig)
 }
 
+func (s *MatchingPersistenceSuite) TestGetTaskListSize() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	domainID := uuid.New()
+	workflowExecution := types.WorkflowExecution{WorkflowID: "get-decision-task-test",
+		RunID: "db20f7e2-1a1e-40d9-9278-d8b886738e05"}
+	taskList := "d8b886738e05"
+	partitionConfig := map[string]string{"userid": uuid.New()}
+
+	size, err1 := s.GetDecisionTaskListSize(ctx, domainID, taskList, 0)
+	s.NoError(err1)
+	s.Equal(int64(0), size)
+
+	task0, err0 := s.CreateDecisionTask(ctx, domainID, workflowExecution, taskList, 5, partitionConfig)
+	s.NoError(err0)
+
+	size, err1 = s.GetDecisionTaskListSize(ctx, domainID, taskList, task0)
+	s.NoError(err1)
+	s.Equal(int64(0), size)
+
+	size, err1 = s.GetDecisionTaskListSize(ctx, domainID, taskList, task0-1)
+	s.NoError(err1)
+	s.Equal(int64(1), size)
+}
+
 // TestGetTasksWithNoMaxReadLevel test
 func (s *MatchingPersistenceSuite) TestGetTasksWithNoMaxReadLevel() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
