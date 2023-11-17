@@ -20,7 +20,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package metrics
+package taskvalidator
 
-// VersionString the current release version
-const VersionString = "1.2.5"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/uber/cadence/common/log"
+)
+
+func TestWorkflowCheckforValidation(t *testing.T) {
+	// Create a logger for testing
+	logger := log.NewNoop()
+
+	// Create a new Checker
+	checker := NewWfChecker(logger)
+
+	// Test with sample data
+	err := checker.WorkflowCheckforValidation("workflow123", "domain456", "run789")
+
+	// Assert that there is no error
+	assert.Nil(t, err)
+}

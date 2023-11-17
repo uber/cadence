@@ -8,14 +8,46 @@ You can find a list of previous releases on the [github releases](https://github
 
 ## [Unreleased]
 ### Added
+- Improves history handler error metrics and logs (#5438)
+- Added range query support for Pinot json index (#5426)
+
+### Fixed
+- Fixed workflow replication for reset workflow (#5412)
+- Fixed visibility mode for admin when use Pinot visibility (#5441)
+- Fix timer-fixer, unfortunately broken in 1.2.5 (#5433)
+
+## [1.2.5] - 2023-11-01
+
+### Caution:
+
+Prefer 1.2.4 or 1.2.6 if you have enabled the timer fixer.
+These were broken by #5361, and fixed by #5433.
+
+By default this fixer is _disabled_, so the version has not been retracted.
+
+If you have already upgraded to 1.2.5, downgrading or using 1.2.6 should restore the timer fixer.
+Or apply #5433 as a local patch.
+
+### Added
 - Scanner / Fixer changes (#5361)
   - Stale-workflow detection and cleanup added to shardscanner, disabled by default.
   - New dynamic config to better control scanner and fixer, particularly for concrete executions.
   - Documentation about how scanner/fixer work and how to control them, see [the scanner readme.md](service/worker/scanner/README.md)
     - This also includes example config to enable the new fixer.
+- MigrationChecker interface to expose migration CLI (#5424)
+- Added Pinot as new visibility store option (#5201)
+  - Added pinot visibility triple manager to provide options to write to both ES and Pinot.
+  - Added pinotVisibilityStore and pinotClient to support CRUD operations for Pinot.
+  - Added pinot integration test to set up Pinot test cluster and test Pinot functionality.
+
+### Fixed
+- Fix CreateWorkflowModeContinueAsNew for SQL (#5413)
+- Fix CLI count&list workflows error message (#5417)
+- Hotfix for async matching for isolation-group redirection (#5423)
+- Fix closeStatus for --format flag (#5422)
 
 ### Upgrade notes
-- Any concrete execution fixer run on upgrade may be missing the new config and those activities will have no invariants for a single run.  Later runs will work normally. (#5361)
+- Any "concrete execution" or "timers" fixers run on upgrade may be missing the new config and those activities will have no invariants for a single run.  Later runs will work normally. (#5361)
 
 ## [1.2.4] - 2023-09-27
 ### Added

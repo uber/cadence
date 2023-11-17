@@ -72,7 +72,7 @@ var (
 	errMatchingHostThrottle = &types.ServiceBusyError{Message: "Matching host rps exceeded"}
 )
 
-// NewHandler creates a thrift handler for the history service
+// NewHandler creates a thrift handler for the matching service
 func NewHandler(
 	engine Engine,
 	config *Config,

@@ -680,6 +680,16 @@ func (p *taskRateLimitedPersistenceClient) DeleteTaskList(
 	return p.persistence.DeleteTaskList(ctx, request)
 }
 
+func (p *taskRateLimitedPersistenceClient) GetTaskListSize(
+	ctx context.Context,
+	request *GetTaskListSizeRequest,
+) (*GetTaskListSizeResponse, error) {
+	if ok := p.rateLimiter.Allow(); !ok {
+		return nil, ErrPersistenceLimitExceeded
+	}
+	return p.persistence.GetTaskListSize(ctx, request)
+}
+
 func (p *taskRateLimitedPersistenceClient) Close() {
 	p.persistence.Close()
 }

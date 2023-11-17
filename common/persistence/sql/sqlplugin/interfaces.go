@@ -612,6 +612,7 @@ type (
 		//    - {domainID, tasklistName, taskType, taskIDLessThanEquals, limit }
 		//    - this will delete up to limit number of tasks less than or equal to the given task id
 		DeleteFromTasks(ctx context.Context, filter *TasksFilter) (sql.Result, error)
+		GetTasksCount(ctx context.Context, filter *TasksFilter) (int64, error)
 		GetOrphanTasks(ctx context.Context, filter *OrphanTasksFilter) ([]TaskKeyRow, error)
 
 		InsertIntoTaskLists(ctx context.Context, row *TaskListsRow) (sql.Result, error)
