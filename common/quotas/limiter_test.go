@@ -141,7 +141,7 @@ func newFixedRpsMultiStageRateLimiter(globalRps, domainRps float64) Policy {
 		NewDynamicRateLimiter(func() float64 {
 			return globalRps
 		}),
-		NewCollection(DynamicRateLimiterFactory(func(domain string) float64 {
+		NewCollection(NewDynamicRateLimiterFactory(func(domain string) float64 {
 			return domainRps
 		})),
 	)
