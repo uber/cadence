@@ -174,39 +174,30 @@ func NewWorkflowHandler(
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
 		userRateLimiter: quotas.NewMultiStageRateLimiter(
 			quotas.NewDynamicRateLimiter(config.UserRPS.AsFloat64()),
-			quotas.NewCollection(quotas.NewDynamicRateLimiterFactory(
-				func(domain string) float64 {
-					return quotas.PerMember(
-						service.Frontend,
-						float64(config.GlobalDomainUserRPS(domain)),
-						float64(config.MaxDomainUserRPSPerInstance(domain)),
-						resource.GetMembershipResolver(),
-					)
-				})),
+			quotas.NewCollection(quotas.NewPerMemberDynamicRateLimiterFactory(
+				service.Frontend,
+				config.GlobalDomainUserRPS,
+				config.MaxDomainUserRPSPerInstance,
+				resource.GetMembershipResolver(),
+			)),
 		),
 		workerRateLimiter: quotas.NewMultiStageRateLimiter(
 			quotas.NewDynamicRateLimiter(config.WorkerRPS.AsFloat64()),
-			quotas.NewCollection(quotas.NewDynamicRateLimiterFactory(
-				func(domain string) float64 {
-					return quotas.PerMember(
-						service.Frontend,
-						float64(config.GlobalDomainWorkerRPS(domain)),
-						float64(config.MaxDomainWorkerRPSPerInstance(domain)),
-						resource.GetMembershipResolver(),
-					)
-				})),
+			quotas.NewCollection(quotas.NewPerMemberDynamicRateLimiterFactory(
+				service.Frontend,
+				config.GlobalDomainWorkerRPS,
+				config.MaxDomainWorkerRPSPerInstance,
+				resource.GetMembershipResolver(),
+			)),
 		),
 		visibilityRateLimiter: quotas.NewMultiStageRateLimiter(
 			quotas.NewDynamicRateLimiter(config.VisibilityRPS.AsFloat64()),
-			quotas.NewCollection(quotas.NewDynamicRateLimiterFactory(
-				func(domain string) float64 {
-					return quotas.PerMember(
-						service.Frontend,
-						float64(config.GlobalDomainVisibilityRPS(domain)),
-						float64(config.MaxDomainVisibilityRPSPerInstance(domain)),
-						resource.GetMembershipResolver(),
-					)
-				})),
+			quotas.NewCollection(quotas.NewPerMemberDynamicRateLimiterFactory(
+				service.Frontend,
+				config.GlobalDomainVisibilityRPS,
+				config.MaxDomainVisibilityRPSPerInstance,
+				resource.GetMembershipResolver(),
+			)),
 		),
 		versionChecker: versionChecker,
 		domainHandler:  domainHandler,

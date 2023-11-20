@@ -24,20 +24,33 @@ package quotas
 
 import "github.com/uber/cadence/common/dynamicconfig"
 
-type LimiterFactory interface {
-	GetLimiter(domain string) Limiter
-}
-
-func NewSimpleDynamicRateLimiterFactory(rps dynamicconfig.IntPropertyFnWithDomainFilter) LimiterFactory {
-	return dynamicRateLimiterFactory{
-		rps: rps,
+func NewFallbackDynamicRateLimiterFactory(
+	primary dynamicconfig.IntPropertyFnWithDomainFilter,
+	secondary dynamicconfig.IntPropertyFn,
+) LimiterFactory {
+	return fallbackDynamicRateLimiterFactory{
+		primary:   primary,
+		secondary: secondary,
 	}
 }
 
-type dynamicRateLimiterFactory struct {
-	rps dynamicconfig.IntPropertyFnWithDomainFilter
+type fallbackDynamicRateLimiterFactory struct {
+	primary dynamicconfig.IntPropertyFnWithDomainFilter
+	// secondary is used when primary is not set
+	secondary dynamicconfig.IntPropertyFn
 }
 
-func (f dynamicRateLimiterFactory) GetLimiter(domain string) Limiter {
-	return NewDynamicRateLimiter(func() float64 { return float64(f.rps(domain)) })
+func (f fallbackDynamicRateLimiterFactory) GetLimiter(domain string) Limiter {
+	return NewDynamicRateLimiter(func() float64 {
+		return limitWithFallback(
+			float64(f.primary(domain)),
+			float64(f.secondary()))
+	})
+}
+
+func limitWithFallback(primary, secondary float64) float64 {
+	if primary > 0 {
+		return primary
+	}
+	return secondary
 }

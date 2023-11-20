@@ -23,6 +23,7 @@ package quotas
 import (
 	"math"
 
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/membership"
 )
 
@@ -40,4 +41,36 @@ func PerMember(service string, globalRPS, instanceRPS float64, resolver membersh
 
 	avgQuota := math.Max(globalRPS/float64(memberCount), 1)
 	return math.Min(avgQuota, instanceRPS)
+}
+
+func NewPerMemberDynamicRateLimiterFactory(
+	service string,
+	globalRPS dynamicconfig.IntPropertyFnWithDomainFilter,
+	instanceRPS dynamicconfig.IntPropertyFnWithDomainFilter,
+	resolver membership.Resolver,
+) LimiterFactory {
+	return perMemberFactory{
+		service:     service,
+		globalRPS:   globalRPS,
+		instanceRPS: instanceRPS,
+		resolver:    resolver,
+	}
+}
+
+type perMemberFactory struct {
+	service     string
+	globalRPS   dynamicconfig.IntPropertyFnWithDomainFilter
+	instanceRPS dynamicconfig.IntPropertyFnWithDomainFilter
+	resolver    membership.Resolver
+}
+
+func (f perMemberFactory) GetLimiter(domain string) Limiter {
+	return NewDynamicRateLimiter(func() float64 {
+		return PerMember(
+			f.service,
+			float64(f.globalRPS(domain)),
+			float64(f.instanceRPS(domain)),
+			f.resolver,
+		)
+	})
 }
