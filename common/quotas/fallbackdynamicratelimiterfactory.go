@@ -24,6 +24,9 @@ package quotas
 
 import "github.com/uber/cadence/common/dynamicconfig"
 
+// LimiterFactory is used to create a Limiter for a given domain
+// the created Limiter will use the primary dynamic config if it is set
+// otherwise it will use the secondary dynamic config
 func NewFallbackDynamicRateLimiterFactory(
 	primary dynamicconfig.IntPropertyFnWithDomainFilter,
 	secondary dynamicconfig.IntPropertyFn,
@@ -40,6 +43,7 @@ type fallbackDynamicRateLimiterFactory struct {
 	secondary dynamicconfig.IntPropertyFn
 }
 
+// GetLimiter returns a new Limiter for the given domain
 func (f fallbackDynamicRateLimiterFactory) GetLimiter(domain string) Limiter {
 	return NewDynamicRateLimiter(func() float64 {
 		return limitWithFallback(
