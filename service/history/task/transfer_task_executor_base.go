@@ -157,6 +157,8 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 	visibilityMemo *types.Memo,
 	updateTimeUnixNano int64,
 	searchAttributes map[string][]byte,
+	parentWorkflowID string,
+	parentRunID string,
 ) error {
 
 	domain := defaultDomainName
@@ -193,6 +195,8 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 		UpdateTimestamp:    updateTimeUnixNano,
 		SearchAttributes:   searchAttributes,
 		ShardID:            int16(t.shard.GetShardID()),
+		ParentWorkflowID:   parentWorkflowID,
+		ParentRunID:        parentRunID,
 	}
 
 	if t.config.EnableRecordWorkflowExecutionUninitialized(domain) {
@@ -231,6 +235,8 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 	numClusters int16,
 	updateTimeUnixNano int64,
 	searchAttributes map[string][]byte,
+	parentWorkflowID string,
+	parentRunID string,
 ) error {
 
 	domain, err := t.shard.GetDomainCache().GetDomainName(domainID)
@@ -260,6 +266,8 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 		SearchAttributes:   searchAttributes,
 		UpdateTimestamp:    updateTimeUnixNano,
 		ShardID:            int64(t.shard.GetShardID()),
+		ParentWorkflowID:   parentWorkflowID,
+		ParentRunID:        parentRunID,
 	}
 
 	return t.visibilityMgr.UpsertWorkflowExecution(ctx, request)
@@ -283,6 +291,8 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 	numClusters int16,
 	updateTimeUnixNano int64,
 	searchAttributes map[string][]byte,
+	parentWorkflowID string,
+	parentRunID string,
 ) error {
 
 	// Record closing in visibility store
@@ -334,6 +344,8 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 			UpdateTimestamp:    updateTimeUnixNano,
 			NumClusters:        numClusters,
 			ShardID:            int16(t.shard.GetShardID()),
+			ParentWorkflowID:   parentWorkflowID,
+			ParentRunID:        parentRunID,
 		}); err != nil {
 			return err
 		}

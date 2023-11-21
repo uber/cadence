@@ -79,6 +79,8 @@ func (s *sqlVisibilityStore) RecordWorkflowExecutionStarted(
 		NumClusters:      request.NumClusters,
 		UpdateTime:       request.UpdateTimestamp,
 		ShardID:          request.ShardID,
+		ParentWorkflowID: request.ParentWorkflowID,
+		ParentRunID:      request.ParentRunID,
 	})
 
 	if err != nil {
@@ -108,6 +110,8 @@ func (s *sqlVisibilityStore) RecordWorkflowExecutionClosed(
 		NumClusters:      request.NumClusters,
 		UpdateTime:       request.UpdateTimestamp,
 		ShardID:          request.ShardID,
+		ParentWorkflowID: request.ParentWorkflowID,
+		ParentRunID:      request.ParentRunID,
 	})
 	if err != nil {
 		return convertCommonErrors(s.db, "RecordWorkflowExecutionClosed", "", err)
@@ -338,16 +342,18 @@ func (s *sqlVisibilityStore) rowToInfo(row *sqlplugin.VisibilityRow) *p.Internal
 		row.ExecutionTime = row.StartTime
 	}
 	info := &p.InternalVisibilityWorkflowExecutionInfo{
-		WorkflowID:    row.WorkflowID,
-		RunID:         row.RunID,
-		TypeName:      row.WorkflowTypeName,
-		StartTime:     row.StartTime,
-		ExecutionTime: row.ExecutionTime,
-		IsCron:        row.IsCron,
-		NumClusters:   row.NumClusters,
-		Memo:          p.NewDataBlob(row.Memo, common.EncodingType(row.Encoding)),
-		UpdateTime:    row.UpdateTime,
-		ShardID:       row.ShardID,
+		WorkflowID:       row.WorkflowID,
+		RunID:            row.RunID,
+		TypeName:         row.WorkflowTypeName,
+		StartTime:        row.StartTime,
+		ExecutionTime:    row.ExecutionTime,
+		IsCron:           row.IsCron,
+		NumClusters:      row.NumClusters,
+		Memo:             p.NewDataBlob(row.Memo, common.EncodingType(row.Encoding)),
+		UpdateTime:       row.UpdateTime,
+		ShardID:          row.ShardID,
+		ParentWorkflowID: row.ParentWorkflowID,
+		ParentRunID:      row.ParentRunID,
 	}
 	if row.CloseStatus != nil {
 		status := workflow.WorkflowExecutionCloseStatus(*row.CloseStatus)

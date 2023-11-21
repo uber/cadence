@@ -39,17 +39,17 @@ const (
 
 const (
 	///////////////// Open Executions /////////////////
-	openExecutionsColumnsForSelect = " workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding, task_list, is_cron, num_clusters, update_time, shard_id "
+	openExecutionsColumnsForSelect = " workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding, task_list, is_cron, num_clusters, update_time, shard_id, parent_workflow_id, parent_run_id "
 
 	openExecutionsColumnsForInsert = "(domain_id, domain_partition, " + openExecutionsColumnsForSelect + ")"
 
 	templateCreateWorkflowExecutionStartedWithTTL = `INSERT INTO open_executions ` +
 		openExecutionsColumnsForInsert +
-		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) using TTL ?`
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) using TTL ?`
 
 	templateCreateWorkflowExecutionStarted = `INSERT INTO open_executions` +
 		openExecutionsColumnsForInsert +
-		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	templateDeleteWorkflowExecutionStarted = `DELETE FROM open_executions ` +
 		`WHERE domain_id = ? ` +
@@ -96,25 +96,25 @@ const (
 		`and run_id = ? `
 
 	///////////////// Closed Executions /////////////////
-	closedExecutionColumnsForSelect = " workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo, encoding, task_list, is_cron, num_clusters, update_time, shard_id "
+	closedExecutionColumnsForSelect = " workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo, encoding, task_list, is_cron, num_clusters, update_time, shard_id, parent_workflow_id, parent_run_id "
 
 	closedExecutionColumnsForInsert = "(domain_id, domain_partition, " + closedExecutionColumnsForSelect + ")"
 
 	templateCreateWorkflowExecutionClosedWithTTL = `INSERT INTO closed_executions ` +
 		closedExecutionColumnsForInsert +
-		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) using TTL ?`
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) using TTL ?`
 
 	templateCreateWorkflowExecutionClosed = `INSERT INTO closed_executions ` +
 		closedExecutionColumnsForInsert +
-		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	templateCreateWorkflowExecutionClosedWithTTLV2 = `INSERT INTO closed_executions_v2 ` +
 		closedExecutionColumnsForInsert +
-		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) using TTL ?`
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) using TTL ?`
 
 	templateCreateWorkflowExecutionClosedV2 = `INSERT INTO closed_executions_v2 ` +
 		closedExecutionColumnsForInsert +
-		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	templateGetClosedWorkflowExecutions = `SELECT ` + closedExecutionColumnsForSelect +
 		`FROM closed_executions ` +
@@ -206,6 +206,8 @@ func (db *cdb) InsertVisibility(ctx context.Context, ttlSeconds int64, row *nosq
 			row.NumClusters,
 			row.UpdateTime,
 			row.ShardID,
+			row.ParentWorkflowID,
+			row.ParentRunID,
 		).WithContext(ctx)
 	} else {
 		query = db.session.Query(templateCreateWorkflowExecutionStartedWithTTL,
@@ -224,6 +226,8 @@ func (db *cdb) InsertVisibility(ctx context.Context, ttlSeconds int64, row *nosq
 			row.UpdateTime,
 			row.ShardID,
 			ttlSeconds,
+			row.ParentWorkflowID,
+			row.ParentRunID,
 		).WithContext(ctx)
 	}
 	query = query.WithTimestamp(persistence.UnixNanoToDBTimestamp(row.StartTime.UnixNano()))
@@ -268,6 +272,8 @@ func (db *cdb) UpdateVisibility(ctx context.Context, ttlSeconds int64, row *nosq
 			row.NumClusters,
 			row.UpdateTime,
 			row.ShardID,
+			row.ParentWorkflowID,
+			row.ParentRunID,
 		)
 		// duplicate write to v2 to order by close time
 		batch.Query(templateCreateWorkflowExecutionClosedV2,
@@ -288,6 +294,8 @@ func (db *cdb) UpdateVisibility(ctx context.Context, ttlSeconds int64, row *nosq
 			row.NumClusters,
 			row.UpdateTime,
 			row.ShardID,
+			row.ParentWorkflowID,
+			row.ParentRunID,
 		)
 	} else {
 		batch.Query(templateCreateWorkflowExecutionClosedWithTTL,
@@ -309,6 +317,8 @@ func (db *cdb) UpdateVisibility(ctx context.Context, ttlSeconds int64, row *nosq
 			row.UpdateTime,
 			row.ShardID,
 			ttlSeconds,
+			row.ParentWorkflowID,
+			row.ParentRunID,
 		)
 		// duplicate write to v2 to order by close time
 		batch.Query(templateCreateWorkflowExecutionClosedWithTTLV2,
@@ -330,6 +340,8 @@ func (db *cdb) UpdateVisibility(ctx context.Context, ttlSeconds int64, row *nosq
 			row.UpdateTime,
 			row.ShardID,
 			ttlSeconds,
+			row.ParentWorkflowID,
+			row.ParentRunID,
 		)
 	}
 
@@ -697,19 +709,23 @@ func readOpenWorkflowExecutionRecord(
 	var numClusters int16
 	var updateTime time.Time
 	var shardID int16
-	if iter.Scan(&workflowID, &runID, &startTime, &executionTime, &typeName, &memo, &encoding, &taskList, &isCron, &numClusters, &updateTime, &shardID) {
+	var parentWorkflowID string
+	var parentRunID string
+	if iter.Scan(&workflowID, &runID, &startTime, &executionTime, &typeName, &memo, &encoding, &taskList, &isCron, &numClusters, &updateTime, &shardID, &parentWorkflowID, &parentRunID) {
 		record := &persistence.InternalVisibilityWorkflowExecutionInfo{
-			WorkflowID:    workflowID,
-			RunID:         runID,
-			TypeName:      typeName,
-			StartTime:     startTime,
-			ExecutionTime: executionTime,
-			Memo:          persistence.NewDataBlob(memo, common.EncodingType(encoding)),
-			TaskList:      taskList,
-			IsCron:        isCron,
-			NumClusters:   numClusters,
-			UpdateTime:    updateTime,
-			ShardID:       shardID,
+			WorkflowID:       workflowID,
+			RunID:            runID,
+			TypeName:         typeName,
+			StartTime:        startTime,
+			ExecutionTime:    executionTime,
+			Memo:             persistence.NewDataBlob(memo, common.EncodingType(encoding)),
+			TaskList:         taskList,
+			IsCron:           isCron,
+			NumClusters:      numClusters,
+			UpdateTime:       updateTime,
+			ShardID:          shardID,
+			ParentWorkflowID: parentWorkflowID,
+			ParentRunID:      parentRunID,
 		}
 		return record, true
 	}
@@ -734,22 +750,26 @@ func readClosedWorkflowExecutionRecord(
 	var numClusters int16
 	var updateTime time.Time
 	var shardID int16
-	if iter.Scan(&workflowID, &runID, &startTime, &executionTime, &closeTime, &typeName, &status, &historyLength, &memo, &encoding, &taskList, &isCron, &numClusters, &updateTime, &shardID) {
+	var parentWorkflowID string
+	var parentRunID string
+	if iter.Scan(&workflowID, &runID, &startTime, &executionTime, &closeTime, &typeName, &status, &historyLength, &memo, &encoding, &taskList, &isCron, &numClusters, &updateTime, &shardID, &parentWorkflowID, &parentRunID) {
 		record := &persistence.InternalVisibilityWorkflowExecutionInfo{
-			WorkflowID:    workflowID,
-			RunID:         runID,
-			TypeName:      typeName,
-			StartTime:     startTime,
-			ExecutionTime: executionTime,
-			CloseTime:     closeTime,
-			Status:        thrift.ToWorkflowExecutionCloseStatus(&status),
-			HistoryLength: historyLength,
-			Memo:          persistence.NewDataBlob(memo, common.EncodingType(encoding)),
-			TaskList:      taskList,
-			IsCron:        isCron,
-			NumClusters:   numClusters,
-			UpdateTime:    updateTime,
-			ShardID:       shardID,
+			WorkflowID:       workflowID,
+			RunID:            runID,
+			TypeName:         typeName,
+			StartTime:        startTime,
+			ExecutionTime:    executionTime,
+			CloseTime:        closeTime,
+			Status:           thrift.ToWorkflowExecutionCloseStatus(&status),
+			HistoryLength:    historyLength,
+			Memo:             persistence.NewDataBlob(memo, common.EncodingType(encoding)),
+			TaskList:         taskList,
+			IsCron:           isCron,
+			NumClusters:      numClusters,
+			UpdateTime:       updateTime,
+			ShardID:          shardID,
+			ParentWorkflowID: parentWorkflowID,
+			ParentRunID:      parentRunID,
 		}
 		return record, true
 	}

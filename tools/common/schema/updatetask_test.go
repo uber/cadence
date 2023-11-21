@@ -114,7 +114,7 @@ func (s *UpdateTaskTestSuite) TestReadSchemaDirFromEmbeddings() {
 	s.NoError(err)
 	ans, err = readSchemaDir(fsys, "0.6", "")
 	s.NoError(err)
-	s.Equal([]string{"v0.7", "v0.8", "v0.9"}, ans)
+	s.Equal([]string{"v0.7", "v0.8", "v0.9", "v10.0"}, ans)
 
 	fsys, err = fs.Sub(mysql.SchemaFS, "v8/cadence/versioned")
 	s.NoError(err)
@@ -126,7 +126,7 @@ func (s *UpdateTaskTestSuite) TestReadSchemaDirFromEmbeddings() {
 	s.NoError(err)
 	ans, err = readSchemaDir(fsys, "0.5", "")
 	s.NoError(err)
-	s.Equal([]string{"v0.6", "v0.7"}, ans)
+	s.Equal([]string{"v0.6", "v0.7", "v0.8"}, ans)
 
 	fsys, err = fs.Sub(postgres.SchemaFS, "cadence/versioned")
 	s.NoError(err)
@@ -138,7 +138,7 @@ func (s *UpdateTaskTestSuite) TestReadSchemaDirFromEmbeddings() {
 	s.NoError(err)
 	ans, err = readSchemaDir(fsys, "0.5", "")
 	s.NoError(err)
-	s.Equal([]string{"v0.6", "v0.7"}, ans)
+	s.Equal([]string{"v0.6", "v0.7", "v0.8"}, ans)
 }
 
 func (s *UpdateTaskTestSuite) TestReadManifest() {

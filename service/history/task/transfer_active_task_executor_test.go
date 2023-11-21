@@ -1552,7 +1552,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessRecordWorkflowStartedTask()
 		"RecordWorkflowExecutionStarted",
 		mock.Anything,
 		createRecordWorkflowExecutionStartedRequest(
-			s.domainName, startEvent, transferTask, mutableState, 2, s.mockShard.GetTimeSource().Now()),
+			s.domainName, startEvent, transferTask, mutableState, 2, s.mockShard.GetTimeSource().Now(), executionInfo.ParentWorkflowID, executionInfo.ParentRunID),
 	).Once().Return(nil)
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
@@ -1671,6 +1671,8 @@ func createRecordWorkflowExecutionStartedRequest(
 	mutableState execution.MutableState,
 	numClusters int16,
 	updateTime time.Time,
+	parentWorkflowID string,
+	parentRunID string,
 ) *persistence.RecordWorkflowExecutionStartedRequest {
 	taskInfo := transferTask.GetInfo().(*persistence.TransferTaskInfo)
 	workflowExecution := types.WorkflowExecution{
@@ -1696,6 +1698,8 @@ func createRecordWorkflowExecutionStartedRequest(
 		IsCron:             len(executionInfo.CronSchedule) > 0,
 		NumClusters:        numClusters,
 		UpdateTimestamp:    updateTime.UnixNano(),
+		ParentWorkflowID:   parentWorkflowID,
+		ParentRunID:        parentRunID,
 	}
 }
 
@@ -1839,6 +1843,8 @@ func createUpsertWorkflowSearchAttributesRequest(
 		IsCron:             len(executionInfo.CronSchedule) > 0,
 		NumClusters:        numClusters,
 		UpdateTimestamp:    updateTime.UnixNano(),
+		ParentWorkflowID:   executionInfo.ParentWorkflowID,
+		ParentRunID:        executionInfo.ParentRunID,
 	}
 }
 

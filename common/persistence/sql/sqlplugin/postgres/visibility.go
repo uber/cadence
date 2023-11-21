@@ -32,13 +32,13 @@ import (
 
 const (
 	templateCreateWorkflowExecutionStarted = `INSERT INTO executions_visibility (` +
-		`domain_id, workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding, is_cron, num_clusters, update_time, shard_id) ` +
-		`VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+		`domain_id, workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding, is_cron, num_clusters, update_time, shard_id, parent_workflow_id, parent_run_id) ` +
+		`VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
          ON CONFLICT (domain_id, run_id) DO NOTHING`
 
 	templateCreateWorkflowExecutionClosed = `INSERT INTO executions_visibility (` +
-		`domain_id, workflow_id, run_id, start_time, execution_time, workflow_type_name, close_time, close_status, history_length, memo, encoding, is_cron, num_clusters, update_time, shard_id) ` +
-		`VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+		`domain_id, workflow_id, run_id, start_time, execution_time, workflow_type_name, close_time, close_status, history_length, memo, encoding, is_cron, num_clusters, update_time, shard_id, parent_workflow_id, parent_run_id) ` +
+		`VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 		ON CONFLICT (domain_id, run_id) DO UPDATE
 		  SET workflow_id = excluded.workflow_id,
 		      start_time = excluded.start_time,
@@ -52,7 +52,9 @@ const (
 				is_cron = excluded.is_cron,
 				num_clusters = excluded.num_clusters,
 				update_time = excluded.update_time,
-				shard_id = excluded.shard_id`
+				shard_id = excluded.shard_id,
+				parent_workflow_id = excluded.parent_workflow_id,
+				parent_run_id = excluded.parent_run_id`
 
 	// RunID condition is needed for correct pagination
 	templateConditions1 = ` AND domain_id = $1
@@ -69,7 +71,7 @@ const (
          ORDER BY start_time DESC, run_id
          LIMIT $7`
 
-	templateOpenFieldNames = `workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding, is_cron, update_time, shard_id`
+	templateOpenFieldNames = `workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding, is_cron, update_time, shard_id, parent_workflow_id, parent_run_id`
 	templateOpenSelect     = `SELECT ` + templateOpenFieldNames + ` FROM executions_visibility WHERE close_status IS NULL `
 
 	templateClosedSelect = `SELECT ` + templateOpenFieldNames + `, close_time, close_status, history_length
@@ -89,7 +91,7 @@ const (
 
 	templateGetClosedWorkflowExecutionsByStatus = templateClosedSelect + `AND close_status = $1` + templateConditions2
 
-	templateGetClosedWorkflowExecution = `SELECT workflow_id, run_id, start_time, execution_time, memo, encoding, close_time, workflow_type_name, close_status, history_length, is_cron, update_time, shard_id
+	templateGetClosedWorkflowExecution = `SELECT workflow_id, run_id, start_time, execution_time, memo, encoding, close_time, workflow_type_name, close_status, history_length, is_cron, update_time, shard_id, parent_workflow_id, parent_run_id
 		 FROM executions_visibility
 		 WHERE domain_id = $1 AND close_status IS NOT NULL
 		 AND run_id = $2`
@@ -116,7 +118,9 @@ func (pdb *db) InsertIntoVisibility(ctx context.Context, row *sqlplugin.Visibili
 		row.IsCron,
 		row.NumClusters,
 		row.UpdateTime,
-		row.ShardID)
+		row.ShardID,
+		row.ParentWorkflowID,
+		row.ParentRunID)
 }
 
 // ReplaceIntoVisibility replaces an existing row if it exist or creates a new row in visibility table
@@ -141,7 +145,9 @@ func (pdb *db) ReplaceIntoVisibility(ctx context.Context, row *sqlplugin.Visibil
 			row.IsCron,
 			row.NumClusters,
 			row.UpdateTime,
-			row.ShardID)
+			row.ShardID,
+			row.ParentWorkflowID,
+			row.ParentRunID)
 	default:
 		return nil, errCloseParams
 	}

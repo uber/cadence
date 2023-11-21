@@ -15,6 +15,8 @@ CREATE TABLE executions_visibility (
   num_clusters         INT NULL,
   update_time          DATETIME(6) NULL,
   shard_id             INT NULL,
+  parent_workflow_id   VARCHAR(255) NULL,
+  parent_run_id        CHAR(64) NULL,
 
   PRIMARY KEY  (domain_id, run_id)
 );

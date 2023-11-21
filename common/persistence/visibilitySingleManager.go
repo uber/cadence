@@ -81,6 +81,8 @@ func (v *visibilityManagerImpl) RecordWorkflowExecutionStarted(
 		UpdateTimestamp:    time.Unix(0, request.UpdateTimestamp),
 		SearchAttributes:   request.SearchAttributes,
 		ShardID:            request.ShardID,
+		ParentWorkflowID:   request.ParentWorkflowID,
+		ParentRunID:        request.ParentRunID,
 	}
 	return v.persistence.RecordWorkflowExecutionStarted(ctx, req)
 }
@@ -108,6 +110,8 @@ func (v *visibilityManagerImpl) RecordWorkflowExecutionClosed(
 		NumClusters:        request.NumClusters,
 		UpdateTimestamp:    time.Unix(0, request.UpdateTimestamp),
 		ShardID:            request.ShardID,
+		ParentWorkflowID:   request.ParentWorkflowID,
+		ParentRunID:        request.ParentRunID,
 	}
 	return v.persistence.RecordWorkflowExecutionClosed(ctx, req)
 }
@@ -146,6 +150,8 @@ func (v *visibilityManagerImpl) UpsertWorkflowExecution(
 		UpdateTimestamp:    time.Unix(0, request.UpdateTimestamp),
 		SearchAttributes:   request.SearchAttributes,
 		ShardID:            request.ShardID,
+		ParentWorkflowID:   request.ParentWorkflowID,
+		ParentRunID:        request.ParentRunID,
 	}
 	return v.persistence.UpsertWorkflowExecution(ctx, req)
 }
