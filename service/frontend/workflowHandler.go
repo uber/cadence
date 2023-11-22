@@ -174,36 +174,39 @@ func NewWorkflowHandler(
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
 		userRateLimiter: quotas.NewMultiStageRateLimiter(
 			quotas.NewDynamicRateLimiter(config.UserRPS.AsFloat64()),
-			quotas.NewCollection(func(domain string) quotas.Limiter {
-				return quotas.NewDynamicRateLimiter(quotas.PerMemberDynamic(
-					service.Frontend,
-					config.GlobalDomainUserRPS.AsFloat64(domain),
-					config.MaxDomainUserRPSPerInstance.AsFloat64(domain),
-					resource.GetMembershipResolver(),
-				))
-			}),
+			quotas.NewCollection(quotas.NewDynamicRateLimiterFactory(
+				func(domain string) float64 {
+					return quotas.PerMember(
+						service.Frontend,
+						float64(config.GlobalDomainUserRPS(domain)),
+						float64(config.MaxDomainUserRPSPerInstance(domain)),
+						resource.GetMembershipResolver(),
+					)
+				})),
 		),
 		workerRateLimiter: quotas.NewMultiStageRateLimiter(
 			quotas.NewDynamicRateLimiter(config.WorkerRPS.AsFloat64()),
-			quotas.NewCollection(func(domain string) quotas.Limiter {
-				return quotas.NewDynamicRateLimiter(quotas.PerMemberDynamic(
-					service.Frontend,
-					config.GlobalDomainWorkerRPS.AsFloat64(domain),
-					config.MaxDomainWorkerRPSPerInstance.AsFloat64(domain),
-					resource.GetMembershipResolver(),
-				))
-			}),
+			quotas.NewCollection(quotas.NewDynamicRateLimiterFactory(
+				func(domain string) float64 {
+					return quotas.PerMember(
+						service.Frontend,
+						float64(config.GlobalDomainWorkerRPS(domain)),
+						float64(config.MaxDomainWorkerRPSPerInstance(domain)),
+						resource.GetMembershipResolver(),
+					)
+				})),
 		),
 		visibilityRateLimiter: quotas.NewMultiStageRateLimiter(
 			quotas.NewDynamicRateLimiter(config.VisibilityRPS.AsFloat64()),
-			quotas.NewCollection(func(domain string) quotas.Limiter {
-				return quotas.NewDynamicRateLimiter(quotas.PerMemberDynamic(
-					service.Frontend,
-					config.GlobalDomainVisibilityRPS.AsFloat64(domain),
-					config.MaxDomainVisibilityRPSPerInstance.AsFloat64(domain),
-					resource.GetMembershipResolver(),
-				))
-			}),
+			quotas.NewCollection(quotas.NewDynamicRateLimiterFactory(
+				func(domain string) float64 {
+					return quotas.PerMember(
+						service.Frontend,
+						float64(config.GlobalDomainVisibilityRPS(domain)),
+						float64(config.MaxDomainVisibilityRPSPerInstance(domain)),
+						resource.GetMembershipResolver(),
+					)
+				})),
 		),
 		versionChecker: versionChecker,
 		domainHandler:  domainHandler,

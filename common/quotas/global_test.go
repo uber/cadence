@@ -38,23 +38,16 @@ func Test_PerMember(t *testing.T) {
 
 	// Invalid service - fallback to instanceRPS
 	assert.Equal(t, 3.0, PerMember("X", 20.0, 3.0, resolver))
-	assert.Equal(t, 3.0, PerMemberDynamic("X", rps(20.0), rps(3.0), resolver)())
 
 	// Invalid member count - fallback to instanceRPS
 	assert.Equal(t, 3.0, PerMember("Y", 20.0, 3.0, resolver))
-	assert.Equal(t, 3.0, PerMemberDynamic("Y", rps(20.0), rps(3.0), resolver)())
 
 	// GlobalRPS not provided - fallback to instanceRPS
 	assert.Equal(t, 3.0, PerMember("A", 0, 3.0, resolver))
-	assert.Equal(t, 3.0, PerMemberDynamic("A", rps(0.0), rps(3.0), resolver)())
 
 	// Calculate average per member RPS (prefer averaged global - lower)
 	assert.Equal(t, 2.0, PerMember("A", 20.0, 3.0, resolver))
-	assert.Equal(t, 2.0, PerMemberDynamic("A", rps(20.0), rps(3.0), resolver)())
 
 	// Calculate average per member RPS (prefer instanceRPS - lower)
 	assert.Equal(t, 3.0, PerMember("A", 100.0, 3.0, resolver))
-	assert.Equal(t, 3.0, PerMemberDynamic("A", rps(100.0), rps(3.0), resolver)())
 }
-
-func rps(val float64) RPSFunc { return func() float64 { return val } }

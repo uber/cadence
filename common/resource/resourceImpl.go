@@ -27,6 +27,7 @@ import (
 
 	"github.com/uber/cadence/common/dynamicconfig/configstore"
 	csc "github.com/uber/cadence/common/dynamicconfig/configstore/config"
+	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/taskvalidator"
 
 	"github.com/uber/cadence/common/isolationgroup/defaultisolationgroupstate"
@@ -60,7 +61,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
-	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -179,12 +179,14 @@ func New(
 
 	persistenceBean, err := persistenceClient.NewBeanFromFactory(persistenceClient.NewFactory(
 		&params.PersistenceConfig,
-		quotas.PerMemberDynamic(
-			serviceName,
-			serviceConfig.PersistenceGlobalMaxQPS.AsFloat64(),
-			serviceConfig.PersistenceMaxQPS.AsFloat64(),
-			membershipResolver,
-		),
+		func() float64 {
+			return quotas.PerMember(
+				serviceName,
+				float64(serviceConfig.PersistenceGlobalMaxQPS()),
+				float64(serviceConfig.PersistenceMaxQPS()),
+				membershipResolver,
+			)
+		},
 		params.ClusterMetadata.GetCurrentClusterName(),
 		params.MetricsClient,
 		logger,
