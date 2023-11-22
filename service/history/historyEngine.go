@@ -194,18 +194,22 @@ func NewEngineWithShardContext(
 			publicClient,
 			shard.GetConfig().NumArchiveSystemWorkflows,
 			quotas.NewDynamicRateLimiter(config.ArchiveRequestRPS.AsFloat64()),
-			quotas.NewDynamicRateLimiter(quotas.PerMemberDynamic(
-				service.History,
-				config.ArchiveInlineHistoryGlobalRPS.AsFloat64(),
-				config.ArchiveInlineHistoryRPS.AsFloat64(),
-				shard.GetService().GetMembershipResolver(),
-			)),
-			quotas.NewDynamicRateLimiter(quotas.PerMemberDynamic(
-				service.History,
-				config.ArchiveInlineVisibilityGlobalRPS.AsFloat64(),
-				config.ArchiveInlineVisibilityRPS.AsFloat64(),
-				shard.GetService().GetMembershipResolver(),
-			)),
+			quotas.NewDynamicRateLimiter(func() float64 {
+				return quotas.PerMember(
+					service.History,
+					float64(config.ArchiveInlineHistoryGlobalRPS()),
+					float64(config.ArchiveInlineHistoryRPS()),
+					shard.GetService().GetMembershipResolver(),
+				)
+			}),
+			quotas.NewDynamicRateLimiter(func() float64 {
+				return quotas.PerMember(
+					service.History,
+					float64(config.ArchiveInlineVisibilityGlobalRPS()),
+					float64(config.ArchiveInlineVisibilityRPS()),
+					shard.GetService().GetMembershipResolver(),
+				)
+			}),
 			shard.GetService().GetArchiverProvider(),
 			config.AllowArchivingIncompleteHistory,
 		),

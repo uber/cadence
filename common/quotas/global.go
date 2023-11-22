@@ -41,8 +41,3 @@ func PerMember(service string, globalRPS, instanceRPS float64, resolver membersh
 	avgQuota := math.Max(globalRPS/float64(memberCount), 1)
 	return math.Min(avgQuota, instanceRPS)
 }
-
-// PerMemberDynamic is a dynamic variant (using RPSFunc) of PerMember
-func PerMemberDynamic(service string, globalRPS, instanceRPS RPSFunc, resolver membership.Resolver) RPSFunc {
-	return func() float64 { return PerMember(service, globalRPS(), instanceRPS(), resolver) }
-}

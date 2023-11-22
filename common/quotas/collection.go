@@ -25,13 +25,13 @@ import "sync"
 // Collection stores a map of limiters by key
 type Collection struct {
 	mu       sync.RWMutex
-	factory  func(string) Limiter
+	factory  LimiterFactory
 	limiters map[string]Limiter
 }
 
 // NewCollection create a new limiter collection.
 // Given factory is called to create new individual limiter.
-func NewCollection(factory func(string) Limiter) *Collection {
+func NewCollection(factory LimiterFactory) *Collection {
 	return &Collection{
 		factory:  factory,
 		limiters: make(map[string]Limiter),
@@ -47,7 +47,7 @@ func (c *Collection) For(key string) Limiter {
 
 	if !ok {
 		// create a new limiter
-		newLimiter := c.factory(key)
+		newLimiter := c.factory.GetLimiter(key)
 
 		// verify that it is needed and add to map
 		c.mu.Lock()
