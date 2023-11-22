@@ -529,9 +529,7 @@ test: bins ## Build and run all tests. This target is for local development. The
 	$Q rm -f test.log
 	$Q echo Running special test cases without race detector:
 	$Q go test -v ./cmd/server/cadence/
-	$Q for dir in $(PKG_TEST_DIRS); do \
-		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
-	done;
+	$Q go test $(TEST_ARG) -coverprofile=$@ ./... $(TEST_TAG) | tee -a test.log
 
 test_e2e: bins
 	$Q rm -f test
@@ -551,16 +549,11 @@ test_e2e_xdc: bins
 cover_profile:
 	$Q mkdir -p $(BUILD)
 	$Q mkdir -p $(COVER_ROOT)
-	$Q echo "mode: atomic" > $(UNIT_COVER_FILE)
 
 	$Q echo Running special test cases without race detector:
 	$Q go test ./cmd/server/cadence/
 	$Q echo Running package tests:
-	$Q for dir in $(PKG_TEST_DIRS); do \
-		mkdir -p $(BUILD)/"$$dir"; \
-		go test "$$dir" $(TEST_ARG) -coverprofile=$(BUILD)/"$$dir"/coverage.out || exit 1; \
-		cat $(BUILD)/"$$dir"/coverage.out | grep -v "^mode: \w\+" >> $(UNIT_COVER_FILE); \
-	done;
+	$Q go test ./... $(TEST_ARG) -coverprofile=$(UNIT_COVER_FILE);
 
 cover_integration_profile: bins
 	$Q mkdir -p $(BUILD)
