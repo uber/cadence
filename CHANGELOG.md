@@ -10,6 +10,8 @@ You can find a list of previous releases on the [github releases](https://github
 ### Added
 - Improves history handler error metrics and logs (#5438)
 - Added range query support for Pinot json index (#5426)
+- Cassandra version is changed from 3.11 to 4.1.3 (#5461)
+  - If your machine already has ubercadence/server:master-auto-setup image then you need to repull so it works with latest docker-compose*.yml files
 
 ### Fixed
 - Fixed workflow replication for reset workflow (#5412)
