@@ -629,6 +629,11 @@ func QueryWorkflowUsingStackTrace(c *cli.Context) {
 	queryWorkflowHelper(c, "__stack_trace")
 }
 
+// QueryWorkflowUsingQueryTypes list all query types of the workflow using __query_types as query type
+func QueryWorkflowUsingQueryTypes(c *cli.Context) {
+	queryWorkflowHelper(c, "__query_types")
+}
+
 func queryWorkflowHelper(c *cli.Context, queryType string) {
 	serviceClient := cFactory.ServerFrontendClient(c)
 
