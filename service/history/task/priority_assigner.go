@@ -68,10 +68,8 @@ func NewPriorityAssigner(
 		config:             config,
 		logger:             logger,
 		scope:              metricClient.Scope(metrics.TaskPriorityAssignerScope),
-		rateLimiters: quotas.NewCollection(quotas.NewDynamicRateLimiterFactory(
-			func(domain string) float64 {
-				return float64(config.TaskProcessRPS(domain))
-			},
+		rateLimiters: quotas.NewCollection(quotas.NewSimpleDynamicRateLimiterFactory(
+			config.TaskProcessRPS,
 		)),
 	}
 }

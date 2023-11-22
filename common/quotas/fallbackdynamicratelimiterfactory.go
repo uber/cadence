@@ -25,24 +25,36 @@ package quotas
 import "github.com/uber/cadence/common/dynamicconfig"
 
 // LimiterFactory is used to create a Limiter for a given domain
-type LimiterFactory interface {
-	// GetLimiter returns a new Limiter for the given domain
-	GetLimiter(domain string) Limiter
-}
-
-// NewSimpleDynamicRateLimiterFactory creates a new LimiterFactory which creates
-// a new DynamicRateLimiter for each domain, the RPS for the DynamicRateLimiter is given by the dynamic config
-func NewSimpleDynamicRateLimiterFactory(rps dynamicconfig.IntPropertyFnWithDomainFilter) LimiterFactory {
-	return dynamicRateLimiterFactory{
-		rps: rps,
+// the created Limiter will use the primary dynamic config if it is set
+// otherwise it will use the secondary dynamic config
+func NewFallbackDynamicRateLimiterFactory(
+	primary dynamicconfig.IntPropertyFnWithDomainFilter,
+	secondary dynamicconfig.IntPropertyFn,
+) LimiterFactory {
+	return fallbackDynamicRateLimiterFactory{
+		primary:   primary,
+		secondary: secondary,
 	}
 }
 
-type dynamicRateLimiterFactory struct {
-	rps dynamicconfig.IntPropertyFnWithDomainFilter
+type fallbackDynamicRateLimiterFactory struct {
+	primary dynamicconfig.IntPropertyFnWithDomainFilter
+	// secondary is used when primary is not set
+	secondary dynamicconfig.IntPropertyFn
 }
 
 // GetLimiter returns a new Limiter for the given domain
-func (f dynamicRateLimiterFactory) GetLimiter(domain string) Limiter {
-	return NewDynamicRateLimiter(func() float64 { return float64(f.rps(domain)) })
+func (f fallbackDynamicRateLimiterFactory) GetLimiter(domain string) Limiter {
+	return NewDynamicRateLimiter(func() float64 {
+		return limitWithFallback(
+			float64(f.primary(domain)),
+			float64(f.secondary()))
+	})
+}
+
+func limitWithFallback(primary, secondary float64) float64 {
+	if primary > 0 {
+		return primary
+	}
+	return secondary
 }
