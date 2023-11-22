@@ -17,7 +17,6 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v2
       - name: Push to Docker Hub (server build)
-        if: "!github.event.release.prerelease"
         uses: docker/build-push-action@v1
         with:
           username: ${{ secrets.CADENCE_SERVER_DOCKERHUB_USERNAME }}
@@ -32,7 +31,6 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v2
       - name: Push to Docker Hub (auto-setup build)
-        if: "!github.event.release.prerelease"
         uses: docker/build-push-action@v1
         with:
           username: ${{ secrets.CADENCE_SERVER_DOCKERHUB_USERNAME }}
