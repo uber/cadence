@@ -288,6 +288,9 @@ type Config struct {
 	EnableReplicationTaskGeneration                    dynamicconfig.BoolPropertyFnWithDomainIDAndWorkflowIDFilter
 	EnableRecordWorkflowExecutionUninitialized         dynamicconfig.BoolPropertyFnWithDomainFilter
 
+	// The following are used by the history workflow cache
+	MaxWorkflowCacheSize dynamicconfig.IntPropertyFn
+
 	// The following are used by consistent query
 	EnableConsistentQuery         dynamicconfig.BoolPropertyFn
 	EnableConsistentQueryByDomain dynamicconfig.BoolPropertyFnWithDomainFilter
@@ -546,6 +549,8 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, s
 		ReplicationTaskGenerationQPS:                       dc.GetFloat64Property(dynamicconfig.ReplicationTaskGenerationQPS),
 		EnableReplicationTaskGeneration:                    dc.GetBoolPropertyFilteredByDomainIDAndWorkflowID(dynamicconfig.EnableReplicationTaskGeneration),
 		EnableRecordWorkflowExecutionUninitialized:         dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableRecordWorkflowExecutionUninitialized),
+
+		MaxWorkflowCacheSize: dc.GetIntProperty(dynamicconfig.MaxWorkflowCacheSize),
 
 		EnableConsistentQuery:                 dc.GetBoolProperty(dynamicconfig.EnableConsistentQuery),
 		EnableConsistentQueryByDomain:         dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableConsistentQueryByDomain),
