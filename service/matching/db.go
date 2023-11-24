@@ -39,6 +39,7 @@ type (
 		taskListKind int
 		taskType     int
 		rangeID      int64
+		backlogCount int64
 		store        persistence.TaskManager
 		logger       log.Logger
 	}
@@ -75,6 +76,11 @@ func (db *taskListDB) RangeID() int64 {
 	db.Lock()
 	defer db.Unlock()
 	return db.rangeID
+}
+
+// BacklogCount returns the current backlog size
+func (db *taskListDB) BacklogCount() int64 {
+	return atomic.LoadInt64(&db.backlogCount)
 }
 
 // RenewLease renews the lease on a tasklist. If there is no previous lease,
@@ -188,4 +194,20 @@ func (db *taskListDB) CompleteTasksLessThan(taskID int64, limit int) (int, error
 		return 0, err
 	}
 	return resp.TasksCompleted, nil
+}
+
+// GetTaskListSize gets the backlog size of a tasklist
+func (db *taskListDB) GetTaskListSize(ackLevel int64) (int64, error) {
+	resp, err := db.store.GetTaskListSize(context.Background(), &persistence.GetTaskListSizeRequest{
+		DomainID:     db.domainID,
+		DomainName:   db.domainName,
+		TaskListName: db.taskListName,
+		TaskListType: db.taskType,
+		AckLevel:     ackLevel,
+	})
+	if err != nil {
+		return 0, err
+	}
+	atomic.StoreInt64(&db.backlogCount, resp.Size)
+	return resp.Size, nil
 }
