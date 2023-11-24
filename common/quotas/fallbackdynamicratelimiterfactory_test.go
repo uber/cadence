@@ -23,43 +23,36 @@
 package quotas
 
 import (
-	"context"
+	"testing"
 
-	"golang.org/x/time/rate"
+	"github.com/stretchr/testify/assert"
+	"github.com/uber/cadence/common/dynamicconfig"
 )
 
-// DynamicRateLimiter implements a dynamic config wrapper around the rate limiter,
-// checks for updates to the dynamic config and updates the rate limiter accordingly
-type DynamicRateLimiter struct {
-	rps RPSFunc
-	rl  *RateLimiter
+func TestNewFallbackDynamicRateLimiterFactory(t *testing.T) {
+	factory := NewFallbackDynamicRateLimiterFactory(
+		func(string) int { return 2 },
+		func(opts ...dynamicconfig.FilterOption) int { return 100 },
+	)
+
+	limiter := factory.GetLimiter("TestDomainName")
+
+	// The limiter should accept 2 requests per second
+	assert.Equal(t, true, limiter.Allow())
+	assert.Equal(t, true, limiter.Allow())
+	assert.Equal(t, false, limiter.Allow())
 }
 
-// NewDynamicRateLimiter returns a rate limiter which handles dynamic config
-func NewDynamicRateLimiter(rps RPSFunc) *DynamicRateLimiter {
-	initialRps := rps()
-	rl := NewRateLimiter(&initialRps, _defaultRPSTTL, _burstSize)
-	return &DynamicRateLimiter{rps, rl}
-}
+func TestNewFallbackDynamicRateLimiterFactoryFallback(t *testing.T) {
+	factory := NewFallbackDynamicRateLimiterFactory(
+		func(string) int { return 0 },
+		func(opts ...dynamicconfig.FilterOption) int { return 2 },
+	)
 
-// Allow immediately returns with true or false indicating if a rate limit
-// token is available or not
-func (d *DynamicRateLimiter) Allow() bool {
-	rps := d.rps()
-	d.rl.UpdateMaxDispatch(&rps)
-	return d.rl.Allow()
-}
+	limiter := factory.GetLimiter("TestDomainName")
 
-// Wait waits up till deadline for a rate limit token
-func (d *DynamicRateLimiter) Wait(ctx context.Context) error {
-	rps := d.rps()
-	d.rl.UpdateMaxDispatch(&rps)
-	return d.rl.Wait(ctx)
-}
-
-// Reserve reserves a rate limit token
-func (d *DynamicRateLimiter) Reserve() *rate.Reservation {
-	rps := d.rps()
-	d.rl.UpdateMaxDispatch(&rps)
-	return d.rl.Reserve()
+	// The limiter should accept 2 requests per second
+	assert.Equal(t, true, limiter.Allow())
+	assert.Equal(t, true, limiter.Allow())
+	assert.Equal(t, false, limiter.Allow())
 }

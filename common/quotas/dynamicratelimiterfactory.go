@@ -22,44 +22,27 @@
 
 package quotas
 
-import (
-	"context"
+import "github.com/uber/cadence/common/dynamicconfig"
 
-	"golang.org/x/time/rate"
-)
-
-// DynamicRateLimiter implements a dynamic config wrapper around the rate limiter,
-// checks for updates to the dynamic config and updates the rate limiter accordingly
-type DynamicRateLimiter struct {
-	rps RPSFunc
-	rl  *RateLimiter
+// LimiterFactory is used to create a Limiter for a given domain
+type LimiterFactory interface {
+	// GetLimiter returns a new Limiter for the given domain
+	GetLimiter(domain string) Limiter
 }
 
-// NewDynamicRateLimiter returns a rate limiter which handles dynamic config
-func NewDynamicRateLimiter(rps RPSFunc) *DynamicRateLimiter {
-	initialRps := rps()
-	rl := NewRateLimiter(&initialRps, _defaultRPSTTL, _burstSize)
-	return &DynamicRateLimiter{rps, rl}
+// NewSimpleDynamicRateLimiterFactory creates a new LimiterFactory which creates
+// a new DynamicRateLimiter for each domain, the RPS for the DynamicRateLimiter is given by the dynamic config
+func NewSimpleDynamicRateLimiterFactory(rps dynamicconfig.IntPropertyFnWithDomainFilter) LimiterFactory {
+	return dynamicRateLimiterFactory{
+		rps: rps,
+	}
 }
 
-// Allow immediately returns with true or false indicating if a rate limit
-// token is available or not
-func (d *DynamicRateLimiter) Allow() bool {
-	rps := d.rps()
-	d.rl.UpdateMaxDispatch(&rps)
-	return d.rl.Allow()
+type dynamicRateLimiterFactory struct {
+	rps dynamicconfig.IntPropertyFnWithDomainFilter
 }
 
-// Wait waits up till deadline for a rate limit token
-func (d *DynamicRateLimiter) Wait(ctx context.Context) error {
-	rps := d.rps()
-	d.rl.UpdateMaxDispatch(&rps)
-	return d.rl.Wait(ctx)
-}
-
-// Reserve reserves a rate limit token
-func (d *DynamicRateLimiter) Reserve() *rate.Reservation {
-	rps := d.rps()
-	d.rl.UpdateMaxDispatch(&rps)
-	return d.rl.Reserve()
+// GetLimiter returns a new Limiter for the given domain
+func (f dynamicRateLimiterFactory) GetLimiter(domain string) Limiter {
+	return NewDynamicRateLimiter(func() float64 { return float64(f.rps(domain)) })
 }

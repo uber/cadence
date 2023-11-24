@@ -22,44 +22,39 @@
 
 package quotas
 
-import (
-	"context"
+import "github.com/uber/cadence/common/dynamicconfig"
 
-	"golang.org/x/time/rate"
-)
-
-// DynamicRateLimiter implements a dynamic config wrapper around the rate limiter,
-// checks for updates to the dynamic config and updates the rate limiter accordingly
-type DynamicRateLimiter struct {
-	rps RPSFunc
-	rl  *RateLimiter
+// LimiterFactory is used to create a Limiter for a given domain
+// the created Limiter will use the primary dynamic config if it is set
+// otherwise it will use the secondary dynamic config
+func NewFallbackDynamicRateLimiterFactory(
+	primary dynamicconfig.IntPropertyFnWithDomainFilter,
+	secondary dynamicconfig.IntPropertyFn,
+) LimiterFactory {
+	return fallbackDynamicRateLimiterFactory{
+		primary:   primary,
+		secondary: secondary,
+	}
 }
 
-// NewDynamicRateLimiter returns a rate limiter which handles dynamic config
-func NewDynamicRateLimiter(rps RPSFunc) *DynamicRateLimiter {
-	initialRps := rps()
-	rl := NewRateLimiter(&initialRps, _defaultRPSTTL, _burstSize)
-	return &DynamicRateLimiter{rps, rl}
+type fallbackDynamicRateLimiterFactory struct {
+	primary dynamicconfig.IntPropertyFnWithDomainFilter
+	// secondary is used when primary is not set
+	secondary dynamicconfig.IntPropertyFn
 }
 
-// Allow immediately returns with true or false indicating if a rate limit
-// token is available or not
-func (d *DynamicRateLimiter) Allow() bool {
-	rps := d.rps()
-	d.rl.UpdateMaxDispatch(&rps)
-	return d.rl.Allow()
+// GetLimiter returns a new Limiter for the given domain
+func (f fallbackDynamicRateLimiterFactory) GetLimiter(domain string) Limiter {
+	return NewDynamicRateLimiter(func() float64 {
+		return limitWithFallback(
+			float64(f.primary(domain)),
+			float64(f.secondary()))
+	})
 }
 
-// Wait waits up till deadline for a rate limit token
-func (d *DynamicRateLimiter) Wait(ctx context.Context) error {
-	rps := d.rps()
-	d.rl.UpdateMaxDispatch(&rps)
-	return d.rl.Wait(ctx)
-}
-
-// Reserve reserves a rate limit token
-func (d *DynamicRateLimiter) Reserve() *rate.Reservation {
-	rps := d.rps()
-	d.rl.UpdateMaxDispatch(&rps)
-	return d.rl.Reserve()
+func limitWithFallback(primary, secondary float64) float64 {
+	if primary > 0 {
+		return primary
+	}
+	return secondary
 }

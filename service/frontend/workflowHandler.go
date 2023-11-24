@@ -174,36 +174,30 @@ func NewWorkflowHandler(
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
 		userRateLimiter: quotas.NewMultiStageRateLimiter(
 			quotas.NewDynamicRateLimiter(config.UserRPS.AsFloat64()),
-			quotas.NewCollection(func(domain string) quotas.Limiter {
-				return quotas.NewDynamicRateLimiter(quotas.PerMemberDynamic(
-					service.Frontend,
-					config.GlobalDomainUserRPS.AsFloat64(domain),
-					config.MaxDomainUserRPSPerInstance.AsFloat64(domain),
-					resource.GetMembershipResolver(),
-				))
-			}),
+			quotas.NewCollection(quotas.NewPerMemberDynamicRateLimiterFactory(
+				service.Frontend,
+				config.GlobalDomainUserRPS,
+				config.MaxDomainUserRPSPerInstance,
+				resource.GetMembershipResolver(),
+			)),
 		),
 		workerRateLimiter: quotas.NewMultiStageRateLimiter(
 			quotas.NewDynamicRateLimiter(config.WorkerRPS.AsFloat64()),
-			quotas.NewCollection(func(domain string) quotas.Limiter {
-				return quotas.NewDynamicRateLimiter(quotas.PerMemberDynamic(
-					service.Frontend,
-					config.GlobalDomainWorkerRPS.AsFloat64(domain),
-					config.MaxDomainWorkerRPSPerInstance.AsFloat64(domain),
-					resource.GetMembershipResolver(),
-				))
-			}),
+			quotas.NewCollection(quotas.NewPerMemberDynamicRateLimiterFactory(
+				service.Frontend,
+				config.GlobalDomainWorkerRPS,
+				config.MaxDomainWorkerRPSPerInstance,
+				resource.GetMembershipResolver(),
+			)),
 		),
 		visibilityRateLimiter: quotas.NewMultiStageRateLimiter(
 			quotas.NewDynamicRateLimiter(config.VisibilityRPS.AsFloat64()),
-			quotas.NewCollection(func(domain string) quotas.Limiter {
-				return quotas.NewDynamicRateLimiter(quotas.PerMemberDynamic(
-					service.Frontend,
-					config.GlobalDomainVisibilityRPS.AsFloat64(domain),
-					config.MaxDomainVisibilityRPSPerInstance.AsFloat64(domain),
-					resource.GetMembershipResolver(),
-				))
-			}),
+			quotas.NewCollection(quotas.NewPerMemberDynamicRateLimiterFactory(
+				service.Frontend,
+				config.GlobalDomainVisibilityRPS,
+				config.MaxDomainVisibilityRPSPerInstance,
+				resource.GetMembershipResolver(),
+			)),
 		),
 		versionChecker: versionChecker,
 		domainHandler:  domainHandler,
