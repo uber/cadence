@@ -1181,7 +1181,7 @@ const (
 	// MaxWorkflowCacheSize is the max number of workflows for which we store in memory information
 	// Keyname: history.MaxWorkflowCacheSize
 	// Value type: Int
-	// Default value: 1000
+	// Default value: 512
 	// Allowed filters: N/A
 	MaxWorkflowCacheSize
 
@@ -3466,7 +3466,7 @@ var IntKeys = map[IntKey]DynamicInt{
 	MaxWorkflowCacheSize: DynamicInt{
 		KeyName:      "history.MaxWorkflowCacheSize",
 		Description:  "is the max number of workflows for which we store in memory information",
-		DefaultValue: 1000,
+		DefaultValue: 512,
 	},
 	WorkerPersistenceMaxQPS: DynamicInt{
 		KeyName:      "worker.persistenceMaxQPS",
