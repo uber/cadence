@@ -205,7 +205,6 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionUninitialized(ctx context.
 }
 
 func (v *pinotVisibilityStore) UpsertWorkflowExecution(ctx context.Context, request *p.InternalUpsertWorkflowExecutionRequest) error {
-
 	msg, err := createVisibilityMessage(
 		request.DomainUUID,
 		request.WorkflowID,
