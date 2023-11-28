@@ -427,7 +427,7 @@ func TestEvictItemsPastTimeToLive_SomeExpired(t *testing.T) {
 	assert.Equal(t, 3, cache.Size())
 	time.Sleep(time.Millisecond * 25)
 
-	// Everything is expired but nothing is evicted
+	// Two items are expired but nothing is evicted
 	assert.Equal(t, 3, cache.Size())
 
 	// Evict all expired items
