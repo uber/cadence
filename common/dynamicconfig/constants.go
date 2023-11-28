@@ -1178,7 +1178,7 @@ const (
 	// Allowed filters: ShardID
 	ReplicationTaskProcessorErrorRetryMaxAttempts
 
-	// MaxBufferedReplicationTasks is the max number of workflows for which we store in memory information
+	// MaxWorkflowCacheSize is the max number of workflows for which we store in memory information
 	// Keyname: history.MaxWorkflowCacheSize
 	// Value type: Int
 	// Default value: 1000
