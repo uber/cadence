@@ -245,6 +245,17 @@ func (c *lru) Size() int {
 	return len(c.byKey)
 }
 
+// EvictItemsPastTimeToLive evicts all items in the cache which are expired
+// This is not called automatically, but can be called periodically to evict expired items
+func (c *lru) EvictItemsPastTimeToLive() {
+	c.mut.Lock()
+	defer c.mut.Unlock()
+
+	for elt := c.byAccess.Back(); len(c.byKey) > 0 && c.isEntryExpired(elt.Value.(*entryImpl), time.Now()); elt = c.byAccess.Back() {
+		c.deleteInternal(elt)
+	}
+}
+
 // Put puts a new value associated with a given key, returning the existing value (if present)
 // allowUpdate flag is used to control overwrite behavior if the value exists
 func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) (interface{}, error) {

@@ -175,6 +175,10 @@ func (c *simple) Iterator() Iterator {
 	return iterator
 }
 
+// EvictItemsPastTimeToLive evicts all items in the cache which are expired
+// the simple cache does not have a concept of TTL so this is a no-op
+func (c *simple) EvictItemsPastTimeToLive() {}
+
 func (c *simple) putInternal(key interface{}, value interface{}, allowUpdate bool) interface{} {
 	elt := c.accessMap[key]
 	if elt != nil {
