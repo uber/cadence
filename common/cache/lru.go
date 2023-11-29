@@ -38,18 +38,19 @@ const cacheCountLimit = 1 << 25
 // lru is a concurrent fixed size cache that evicts elements in lru order
 type (
 	lru struct {
-		mut         sync.Mutex
-		byAccess    *list.List
-		byKey       map[interface{}]*list.Element
-		maxCount    int
-		ttl         time.Duration
-		pin         bool
-		rmFunc      RemovedFunc
-		sizeFunc    GetCacheItemSizeFunc
-		maxSize     uint64
-		currSize    uint64
-		sizeByKey   map[interface{}]uint64
-		isSizeBased bool
+		mut           sync.Mutex
+		byAccess      *list.List
+		byKey         map[interface{}]*list.Element
+		maxCount      int
+		ttl           time.Duration
+		pin           bool
+		rmFunc        RemovedFunc
+		sizeFunc      GetCacheItemSizeFunc
+		maxSize       uint64
+		currSize      uint64
+		sizeByKey     map[interface{}]uint64
+		isSizeBased   bool
+		activelyEvict bool
 	}
 
 	iteratorImpl struct {
@@ -141,11 +142,12 @@ func New(opts *Options) Cache {
 	}
 
 	cache := &lru{
-		byAccess: list.New(),
-		byKey:    make(map[interface{}]*list.Element, opts.InitialCapacity),
-		ttl:      opts.TTL,
-		pin:      opts.Pin,
-		rmFunc:   opts.RemovedFunc,
+		byAccess:      list.New(),
+		byKey:         make(map[interface{}]*list.Element, opts.InitialCapacity),
+		ttl:           opts.TTL,
+		pin:           opts.Pin,
+		rmFunc:        opts.RemovedFunc,
+		activelyEvict: opts.ActivelyEvict,
 	}
 
 	cache.isSizeBased = opts.GetCacheItemSizeFunc != nil && opts.MaxSize > 0
@@ -166,6 +168,10 @@ func New(opts *Options) Cache {
 
 // Get retrieves the value stored under the given key
 func (c *lru) Get(key interface{}) interface{} {
+	if c.activelyEvict {
+		c.EvictItemsPastTimeToLive()
+	}
+
 	c.mut.Lock()
 	defer c.mut.Unlock()
 
@@ -215,6 +221,10 @@ func (c *lru) PutIfNotExist(key interface{}, value interface{}) (interface{}, er
 
 // Delete deletes a key, value pair associated with a key
 func (c *lru) Delete(key interface{}) {
+	if c.activelyEvict {
+		c.EvictItemsPastTimeToLive()
+	}
+
 	c.mut.Lock()
 	defer c.mut.Unlock()
 
@@ -239,6 +249,10 @@ func (c *lru) Release(key interface{}) {
 
 // Size returns the number of entries currently in the lru, useful if cache is not full
 func (c *lru) Size() int {
+	if c.activelyEvict {
+		c.EvictItemsPastTimeToLive()
+	}
+
 	c.mut.Lock()
 	defer c.mut.Unlock()
 
@@ -259,6 +273,10 @@ func (c *lru) EvictItemsPastTimeToLive() {
 // Put puts a new value associated with a given key, returning the existing value (if present)
 // allowUpdate flag is used to control overwrite behavior if the value exists
 func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) (interface{}, error) {
+	if c.activelyEvict {
+		c.EvictItemsPastTimeToLive()
+	}
+
 	valueSize := c.sizeFunc(value)
 	c.mut.Lock()
 	defer c.mut.Unlock()
