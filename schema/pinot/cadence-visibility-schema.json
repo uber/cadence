@@ -73,7 +73,7 @@
     "format" : "1:MILLISECONDS:EPOCH",
     "granularity": "1:MILLISECONDS"
   },{
-    "name": "SecondsSinceEpoch",
+    "name": "EventTimeMs",
     "dataType": "LONG",
     "format" : "1:MILLISECONDS:EPOCH",
     "granularity": "1:MILLISECONDS"
