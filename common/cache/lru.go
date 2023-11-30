@@ -169,7 +169,7 @@ func New(opts *Options) Cache {
 // Get retrieves the value stored under the given key
 func (c *lru) Get(key interface{}) interface{} {
 	if c.activelyEvict {
-		c.evictItemsPastTimeToLive()
+		c.evictExpiredItems()
 	}
 
 	c.mut.Lock()
@@ -222,7 +222,7 @@ func (c *lru) PutIfNotExist(key interface{}, value interface{}) (interface{}, er
 // Delete deletes a key, value pair associated with a key
 func (c *lru) Delete(key interface{}) {
 	if c.activelyEvict {
-		c.evictItemsPastTimeToLive()
+		c.evictExpiredItems()
 	}
 
 	c.mut.Lock()
@@ -250,7 +250,7 @@ func (c *lru) Release(key interface{}) {
 // Size returns the number of entries currently in the lru, useful if cache is not full
 func (c *lru) Size() int {
 	if c.activelyEvict {
-		c.evictItemsPastTimeToLive()
+		c.evictExpiredItems()
 	}
 
 	c.mut.Lock()
@@ -259,9 +259,9 @@ func (c *lru) Size() int {
 	return len(c.byKey)
 }
 
-// evictItemsPastTimeToLive evicts all items in the cache which are expired
+// evictExpiredItems evicts all items in the cache which are expired
 // This is not called automatically, but can be called periodically to evict expired items
-func (c *lru) evictItemsPastTimeToLive() {
+func (c *lru) evictExpiredItems() {
 	c.mut.Lock()
 	defer c.mut.Unlock()
 
@@ -274,7 +274,7 @@ func (c *lru) evictItemsPastTimeToLive() {
 // allowUpdate flag is used to control overwrite behavior if the value exists
 func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) (interface{}, error) {
 	if c.activelyEvict {
-		c.evictItemsPastTimeToLive()
+		c.evictExpiredItems()
 	}
 
 	valueSize := c.sizeFunc(value)

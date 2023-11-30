@@ -90,7 +90,6 @@ type Options struct {
 	// Should be used when it's important for memory that the expired items are evicted as soon as possible
 	// If not set expired items will be evicted when one of these happens
 	// - when the cache is full
-	// - when evictItemsPastTimeToLive is called
 	// - when the item is accessed
 	ActivelyEvict bool
 }
