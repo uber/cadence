@@ -53,10 +53,6 @@ type Cache interface {
 
 	// Size returns the number of entries currently stored in the Cache
 	Size() int
-
-	// EvictItemsPastTimeToLive evicts all items in the cache which are expired
-	// This is not called automatically, but can be called periodically to evict expired items
-	EvictItemsPastTimeToLive()
 }
 
 // Options control the behavior of the cache
@@ -94,7 +90,7 @@ type Options struct {
 	// Should be used when it's important for memory that the expired items are evicted as soon as possible
 	// If not set expired items will be evicted when one of these happens
 	// - when the cache is full
-	// - when EvictItemsPastTimeToLive is called
+	// - when evictItemsPastTimeToLive is called
 	// - when the item is accessed
 	ActivelyEvict bool
 }
