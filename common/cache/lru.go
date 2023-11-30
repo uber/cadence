@@ -168,12 +168,12 @@ func New(opts *Options) Cache {
 
 // Get retrieves the value stored under the given key
 func (c *lru) Get(key interface{}) interface{} {
+	c.mut.Lock()
+	defer c.mut.Unlock()
+
 	if c.activelyEvict {
 		c.evictExpiredItems()
 	}
-
-	c.mut.Lock()
-	defer c.mut.Unlock()
 
 	element := c.byKey[key]
 	if element == nil {
@@ -221,12 +221,12 @@ func (c *lru) PutIfNotExist(key interface{}, value interface{}) (interface{}, er
 
 // Delete deletes a key, value pair associated with a key
 func (c *lru) Delete(key interface{}) {
+	c.mut.Lock()
+	defer c.mut.Unlock()
+
 	if c.activelyEvict {
 		c.evictExpiredItems()
 	}
-
-	c.mut.Lock()
-	defer c.mut.Unlock()
 
 	element := c.byKey[key]
 	if element != nil {
@@ -249,22 +249,18 @@ func (c *lru) Release(key interface{}) {
 
 // Size returns the number of entries currently in the lru, useful if cache is not full
 func (c *lru) Size() int {
+	c.mut.Lock()
+	defer c.mut.Unlock()
+
 	if c.activelyEvict {
 		c.evictExpiredItems()
 	}
-
-	c.mut.Lock()
-	defer c.mut.Unlock()
 
 	return len(c.byKey)
 }
 
 // evictExpiredItems evicts all items in the cache which are expired
-// This is not called automatically, but can be called periodically to evict expired items
 func (c *lru) evictExpiredItems() {
-	c.mut.Lock()
-	defer c.mut.Unlock()
-
 	for elt := c.byAccess.Back(); len(c.byKey) > 0 && c.isEntryExpired(elt.Value.(*entryImpl), time.Now()); elt = c.byAccess.Back() {
 		c.deleteInternal(elt)
 	}
@@ -273,13 +269,13 @@ func (c *lru) evictExpiredItems() {
 // Put puts a new value associated with a given key, returning the existing value (if present)
 // allowUpdate flag is used to control overwrite behavior if the value exists
 func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) (interface{}, error) {
-	if c.activelyEvict {
-		c.evictExpiredItems()
-	}
-
 	valueSize := c.sizeFunc(value)
 	c.mut.Lock()
 	defer c.mut.Unlock()
+
+	if c.activelyEvict {
+		c.evictExpiredItems()
+	}
 
 	elt := c.byKey[key]
 	if elt != nil {
