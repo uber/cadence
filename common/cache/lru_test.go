@@ -388,7 +388,7 @@ func TestPanicOptionsIsNil(t *testing.T) {
 func TestEvictItemsPastTimeToLive_AllExpired_ActivelyEvict(t *testing.T) {
 	cache := New(&Options{
 		MaxCount:      5,
-		TTL:           time.Millisecond * 50,
+		TTL:           time.Millisecond * 75,
 		ActivelyEvict: true,
 	})
 
@@ -404,4 +404,29 @@ func TestEvictItemsPastTimeToLive_AllExpired_ActivelyEvict(t *testing.T) {
 
 	// Calling any action, such as size should evict the expired items
 	assert.Equal(t, 0, cache.Size())
+}
+
+func TestEvictItemsPastTimeToLive_SomeExpired_ActivelyEvict(t *testing.T) {
+	cache := New(&Options{
+		MaxCount:      5,
+		TTL:           time.Millisecond * 75,
+		ActivelyEvict: true,
+	})
+
+	_, err := cache.PutIfNotExist("A", t)
+	assert.NoError(t, err)
+	_, err = cache.PutIfNotExist("B", t)
+	assert.NoError(t, err)
+
+	time.Sleep(time.Millisecond * 50)
+	_, err = cache.PutIfNotExist("C", t)
+	assert.NoError(t, err)
+
+	// Nothing is expired yet
+	assert.Equal(t, 3, cache.Size())
+	time.Sleep(time.Millisecond * 50)
+
+	// Calling any action, such as size should evict the expired items
+	// should only have "C" left
+	assert.Equal(t, 1, cache.Size())
 }
