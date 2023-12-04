@@ -385,48 +385,39 @@ func TestPanicOptionsIsNil(t *testing.T) {
 	New(nil)
 }
 
-func TestEvictItemsPastTimeToLive_AllExpired_ActivelyEvict(t *testing.T) {
+func TestEvictItemsPastTimeToLive_ActivelyEvict(t *testing.T) {
 	cache := New(&Options{
 		MaxCount:      5,
 		TTL:           time.Millisecond * 75,
 		ActivelyEvict: true,
 	})
 
-	_, err := cache.PutIfNotExist("A", t)
+	_, err := cache.PutIfNotExist("A", 1)
 	assert.NoError(t, err)
-	_, err = cache.PutIfNotExist("B", t)
-	assert.NoError(t, err)
-	_, err = cache.PutIfNotExist("C", t)
-	assert.NoError(t, err)
-
-	assert.Equal(t, 3, cache.Size())
-	time.Sleep(time.Millisecond * 100)
-
-	// Calling any action, such as size should evict the expired items
-	assert.Equal(t, 0, cache.Size())
-}
-
-func TestEvictItemsPastTimeToLive_SomeExpired_ActivelyEvict(t *testing.T) {
-	cache := New(&Options{
-		MaxCount:      5,
-		TTL:           time.Millisecond * 75,
-		ActivelyEvict: true,
-	})
-
-	_, err := cache.PutIfNotExist("A", t)
-	assert.NoError(t, err)
-	_, err = cache.PutIfNotExist("B", t)
+	_, err = cache.PutIfNotExist("B", 2)
 	assert.NoError(t, err)
 
 	time.Sleep(time.Millisecond * 50)
-	_, err = cache.PutIfNotExist("C", t)
-	assert.NoError(t, err)
 
 	// Nothing is expired yet
-	assert.Equal(t, 3, cache.Size())
+	assert.Equal(t, 2, cache.Size())
+
+	_, err = cache.PutIfNotExist("C", 3)
+	assert.NoError(t, err)
+	_, err = cache.PutIfNotExist("D", 4)
+	assert.NoError(t, err)
+
+	// Still nothing is expired yet
+	assert.Equal(t, 4, cache.Size())
 	time.Sleep(time.Millisecond * 50)
 
 	// Calling any action, such as size should evict the expired items
-	// should only have "C" left
-	assert.Equal(t, 1, cache.Size())
+	// should only have "C" and "D" left
+	assert.Equal(t, 2, cache.Size())
+
+	time.Sleep(time.Millisecond * 50)
+
+	// Calling any action, such as size should evict the expired items
+	// should be empty now
+	assert.Equal(t, 0, cache.Size())
 }
