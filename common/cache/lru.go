@@ -174,9 +174,7 @@ func (c *lru) Get(key interface{}) interface{} {
 	c.mut.Lock()
 	defer c.mut.Unlock()
 
-	if c.activelyEvict {
-		c.evictExpiredItems()
-	}
+	c.evictExpiredItems()
 
 	element := c.byKey[key]
 	if element == nil {
@@ -227,9 +225,7 @@ func (c *lru) Delete(key interface{}) {
 	c.mut.Lock()
 	defer c.mut.Unlock()
 
-	if c.activelyEvict {
-		c.evictExpiredItems()
-	}
+	c.evictExpiredItems()
 
 	element := c.byKey[key]
 	if element != nil {
@@ -255,15 +251,17 @@ func (c *lru) Size() int {
 	c.mut.Lock()
 	defer c.mut.Unlock()
 
-	if c.activelyEvict {
-		c.evictExpiredItems()
-	}
+	c.evictExpiredItems()
 
 	return len(c.byKey)
 }
 
 // evictExpiredItems evicts all items in the cache which are expired
 func (c *lru) evictExpiredItems() {
+	if !c.activelyEvict {
+		return // do nothing if activelyEvict is not set
+	}
+
 	for elt := c.byAccess.Back(); len(c.byKey) > 0 && c.isEntryExpired(elt.Value.(*entryImpl), c.now()); elt = c.byAccess.Back() {
 		c.deleteInternal(elt)
 	}
@@ -276,9 +274,7 @@ func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) 
 	c.mut.Lock()
 	defer c.mut.Unlock()
 
-	if c.activelyEvict {
-		c.evictExpiredItems()
-	}
+	c.evictExpiredItems()
 
 	elt := c.byKey[key]
 	if elt != nil {
