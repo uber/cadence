@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type keyType struct {
@@ -386,38 +387,40 @@ func TestPanicOptionsIsNil(t *testing.T) {
 }
 
 func TestEvictItemsPastTimeToLive_ActivelyEvict(t *testing.T) {
-	cache := New(&Options{
+	// Create the cache with a TTL of 75s
+	cache, ok := New(&Options{
 		MaxCount:      5,
-		TTL:           time.Millisecond * 75,
+		TTL:           time.Second * 75,
 		ActivelyEvict: true,
-	})
+	}).(*lru)
+	require.True(t, ok)
+
+	// We will capture this in the caches now function, and advance time as needed
+	currentTime := time.UnixMilli(0)
+	cache.now = func() time.Time { return currentTime }
 
 	_, err := cache.PutIfNotExist("A", 1)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	_, err = cache.PutIfNotExist("B", 2)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	time.Sleep(time.Millisecond * 50)
-
-	// Nothing is expired yet
+	// Nothing is expired after 50s
+	currentTime = currentTime.Add(time.Second * 50)
 	assert.Equal(t, 2, cache.Size())
 
 	_, err = cache.PutIfNotExist("C", 3)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	_, err = cache.PutIfNotExist("D", 4)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	// Still nothing is expired yet
+	// No time has passed, so still nothing is expired
 	assert.Equal(t, 4, cache.Size())
-	time.Sleep(time.Millisecond * 50)
 
-	// Calling any action, such as size should evict the expired items
-	// should only have "C" and "D" left
+	// Advance time to 100s, so A and B should be expired
+	currentTime = currentTime.Add(time.Second * 50)
 	assert.Equal(t, 2, cache.Size())
 
-	time.Sleep(time.Millisecond * 50)
-
-	// Calling any action, such as size should evict the expired items
-	// should be empty now
+	// Advance time to 150s, so C and D should be expired as well
+	currentTime = currentTime.Add(time.Second * 50)
 	assert.Equal(t, 0, cache.Size())
 }
