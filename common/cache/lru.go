@@ -51,6 +51,8 @@ type (
 		sizeByKey     map[interface{}]uint64
 		isSizeBased   bool
 		activelyEvict bool
+		// We use this instead of time.Now() in order to make testing easier
+		now func() time.Time
 	}
 
 	iteratorImpl struct {
@@ -115,7 +117,7 @@ func (c *lru) Iterator() Iterator {
 	c.mut.Lock()
 	iterator := &iteratorImpl{
 		lru:        c,
-		createTime: time.Now(),
+		createTime: c.now(),
 		nextItem:   c.byAccess.Front(),
 	}
 	iterator.prepareNext()
@@ -148,6 +150,7 @@ func New(opts *Options) Cache {
 		pin:           opts.Pin,
 		rmFunc:        opts.RemovedFunc,
 		activelyEvict: opts.ActivelyEvict,
+		now:           time.Now,
 	}
 
 	cache.isSizeBased = opts.GetCacheItemSizeFunc != nil && opts.MaxSize > 0
@@ -182,7 +185,7 @@ func (c *lru) Get(key interface{}) interface{} {
 
 	entry := element.Value.(*entryImpl)
 
-	if c.isEntryExpired(entry, time.Now()) {
+	if c.isEntryExpired(entry, c.now()) {
 		// Entry has expired
 		c.deleteInternal(element)
 		return nil
@@ -261,7 +264,7 @@ func (c *lru) Size() int {
 
 // evictExpiredItems evicts all items in the cache which are expired
 func (c *lru) evictExpiredItems() {
-	for elt := c.byAccess.Back(); len(c.byKey) > 0 && c.isEntryExpired(elt.Value.(*entryImpl), time.Now()); elt = c.byAccess.Back() {
+	for elt := c.byAccess.Back(); len(c.byKey) > 0 && c.isEntryExpired(elt.Value.(*entryImpl), c.now()); elt = c.byAccess.Back() {
 		c.deleteInternal(elt)
 	}
 }
@@ -280,7 +283,7 @@ func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) 
 	elt := c.byKey[key]
 	if elt != nil {
 		entry := elt.Value.(*entryImpl)
-		if c.isEntryExpired(entry, time.Now()) {
+		if c.isEntryExpired(entry, c.now()) {
 			// Entry has expired
 			c.deleteInternal(elt)
 		} else {
@@ -288,7 +291,7 @@ func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) 
 			if allowUpdate {
 				entry.value = value
 				if c.ttl != 0 {
-					entry.createTime = time.Now()
+					entry.createTime = c.now()
 				}
 			}
 
@@ -310,7 +313,7 @@ func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) 
 	}
 
 	if c.ttl != 0 {
-		entry.createTime = time.Now()
+		entry.createTime = c.now()
 	}
 
 	c.byKey[key] = c.byAccess.PushFront(entry)
