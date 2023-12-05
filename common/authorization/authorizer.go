@@ -25,7 +25,10 @@ package authorization
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"os"
+	"strings"
+
+	"github.com/uber/cadence/common"
 
 	clientworker "go.uber.org/cadence/worker"
 
@@ -92,7 +95,7 @@ type Authorizer interface {
 }
 
 func GetAuthProviderClient(privateKey string) (clientworker.AuthorizationProvider, error) {
-	pk, err := ioutil.ReadFile(privateKey)
+	pk, err := os.ReadFile(privateKey)
 	if err != nil {
 		return nil, fmt.Errorf("invalid private key path %s", privateKey)
 	}
@@ -102,4 +105,29 @@ func GetAuthProviderClient(privateKey string) (clientworker.AuthorizationProvide
 // FilteredRequestBody request object except for data inputs (PII)
 type FilteredRequestBody interface {
 	SerializeForLogging() (string, error)
+}
+
+func validatePermission(claims *JWTClaims, attributes *Attributes, data map[string]string) error {
+	groups := ""
+	switch attributes.Permission {
+	case PermissionRead:
+		groups = data[common.DomainDataKeyForReadGroups] + groupSeparator + data[common.DomainDataKeyForWriteGroups]
+	case PermissionWrite:
+		groups = data[common.DomainDataKeyForWriteGroups]
+	default:
+		return fmt.Errorf("token doesn't have permission for %v API", attributes.Permission)
+	}
+	// groups are separated by space
+	allowedGroups := strings.Split(groups, groupSeparator)    // groups that allowed by domain configuration(in domainData)
+	jwtGroups := strings.Split(claims.Groups, groupSeparator) // groups that the request has associated with
+
+	for _, group1 := range allowedGroups {
+		for _, group2 := range jwtGroups {
+			if group1 == group2 {
+				return nil
+			}
+		}
+	}
+
+	return fmt.Errorf("token doesn't have the right permission, jwt groups: %v, allowed groups: %v", jwtGroups, allowedGroups)
 }

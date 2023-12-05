@@ -22,10 +22,9 @@ package authorization
 
 import (
 	"context"
-	"crypto/rsa"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/cristalhq/jwt/v3"
@@ -42,7 +41,7 @@ type oauthAuthority struct {
 	authorizationCfg config.OAuthAuthorizer
 	domainCache      cache.DomainCache
 	log              log.Logger
-	publicKey        *rsa.PublicKey
+	verifier         jwt.Verifier
 }
 
 type JWTClaims struct {
@@ -64,13 +63,23 @@ func NewOAuthAuthorizer(
 ) (Authorizer, error) {
 	publicKey, err := common.LoadRSAPublicKey(authorizationCfg.JwtCredentials.PublicKey)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("loading RSA public key: %w", err)
 	}
+
+	verifier, err := jwt.NewVerifierRS(
+		jwt.Algorithm(authorizationCfg.JwtCredentials.Algorithm),
+		publicKey,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("creating JWT verifier: %w", err)
+	}
+
 	return &oauthAuthority{
 		authorizationCfg: authorizationCfg,
 		domainCache:      domainCache,
 		log:              log,
-		publicKey:        publicKey,
+		verifier:         verifier,
 	}, nil
 }
 
@@ -80,25 +89,24 @@ func (a *oauthAuthority) Authorize(
 	attributes *Attributes,
 ) (Result, error) {
 	call := yarpc.CallFromContext(ctx)
-	verifier, err := a.getVerifier()
-	if err != nil {
-		return Result{Decision: DecisionDeny}, err
-	}
+
 	token := call.Header(common.AuthorizationTokenHeaderName)
 	if token == "" {
-		a.log.Debug("request is not authorized", tag.Error(fmt.Errorf("token is not set in header")))
+		a.log.Debug("request is not authorized", tag.Error(errors.New("token is not set in header")))
 		return Result{Decision: DecisionDeny}, nil
 	}
-	claims, err := a.parseToken(token, verifier)
+
+	claims, err := a.parseToken(token, a.verifier)
 	if err != nil {
 		a.log.Debug("request is not authorized", tag.Error(err))
 		return Result{Decision: DecisionDeny}, nil
 	}
-	err = a.validateTTL(claims)
-	if err != nil {
+
+	if err := a.validateTTL(claims); err != nil {
 		a.log.Debug("request is not authorized", tag.Error(err))
 		return Result{Decision: DecisionDeny}, nil
 	}
+
 	if claims.Admin {
 		return Result{Decision: DecisionAllow}, nil
 	}
@@ -107,28 +115,18 @@ func (a *oauthAuthority) Authorize(
 		return Result{Decision: DecisionDeny}, err
 	}
 
-	err = a.validatePermission(claims, attributes, domain.GetInfo().Data)
-	if err != nil {
+	if err := validatePermission(claims, attributes, domain.GetInfo().Data); err != nil {
 		a.log.Debug("request is not authorized", tag.Error(err))
 		return Result{Decision: DecisionDeny}, nil
 	}
+
 	return Result{Decision: DecisionAllow}, nil
 }
 
-func (a *oauthAuthority) getVerifier() (jwt.Verifier, error) {
-
-	algorithm := jwt.Algorithm(a.authorizationCfg.JwtCredentials.Algorithm)
-	verifier, err := jwt.NewVerifierRS(algorithm, a.publicKey)
-	if err != nil {
-		return nil, err
-	}
-	return verifier, nil
-}
-
 func (a *oauthAuthority) parseToken(tokenStr string, verifier jwt.Verifier) (*JWTClaims, error) {
-	token, verifyErr := jwt.ParseAndVerifyString(tokenStr, verifier)
-	if verifyErr != nil {
-		return nil, verifyErr
+	token, err := jwt.ParseAndVerifyString(tokenStr, verifier)
+	if err != nil {
+		return nil, fmt.Errorf("parse token: %w", err)
 	}
 	var claims JWTClaims
 	_ = json.Unmarshal(token.RawClaims(), &claims)
@@ -137,34 +135,10 @@ func (a *oauthAuthority) parseToken(tokenStr string, verifier jwt.Verifier) (*JW
 
 func (a *oauthAuthority) validateTTL(claims *JWTClaims) error {
 	if claims.TTL > a.authorizationCfg.MaxJwtTTL {
-		return fmt.Errorf("TTL in token is larger than MaxTTL allowed")
+		return fmt.Errorf("token TTL: %d is larger than MaxTTL allowed: %d", claims.TTL, a.authorizationCfg.MaxJwtTTL)
 	}
 	if claims.Iat+claims.TTL < time.Now().Unix() {
-		return fmt.Errorf("JWT has expired")
+		return errors.New("JWT has expired")
 	}
 	return nil
-}
-
-func (a *oauthAuthority) validatePermission(claims *JWTClaims, attributes *Attributes, data map[string]string) error {
-	groups := ""
-	switch attributes.Permission {
-	case PermissionRead:
-		groups = data[common.DomainDataKeyForReadGroups] + groupSeparator + data[common.DomainDataKeyForWriteGroups]
-	case PermissionWrite:
-		groups = data[common.DomainDataKeyForWriteGroups]
-	default:
-		return fmt.Errorf("token doesn't have permission for %v API", attributes.Permission)
-	}
-	// groups are separated by space
-	allowedGroups := strings.Split(groups, groupSeparator)    // groups that allowed by domain configuration(in domainData)
-	jwtGroups := strings.Split(claims.Groups, groupSeparator) // groups that the request has associated with
-
-	for _, group1 := range allowedGroups {
-		for _, group2 := range jwtGroups {
-			if group1 == group2 {
-				return nil
-			}
-		}
-	}
-	return fmt.Errorf("token doesn't have the right permission, jwt groups: %v, allowed groups: %v", jwtGroups, allowedGroups)
 }
