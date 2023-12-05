@@ -262,7 +262,7 @@ func (c *lru) evictExpiredItems() {
 		return // do nothing if activelyEvict is not set
 	}
 
-	for elt := c.byAccess.Back(); len(c.byKey) > 0 && c.isEntryExpired(elt.Value.(*entryImpl), c.now()); elt = c.byAccess.Back() {
+	for elt := c.byAccess.Back(); elt != nil && c.isEntryExpired(elt.Value.(*entryImpl), c.now()); elt = c.byAccess.Back() {
 		c.deleteInternal(elt)
 	}
 }
