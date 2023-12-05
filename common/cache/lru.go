@@ -262,8 +262,9 @@ func (c *lru) evictExpiredItems() {
 		return // do nothing if activelyEvict is not set
 	}
 
+	now := c.now()
 	for elt := c.byAccess.Back(); elt != nil; elt = c.byAccess.Back() {
-		if !c.isEntryExpired(elt.Value.(*entryImpl), c.now()) {
+		if !c.isEntryExpired(elt.Value.(*entryImpl), now) {
 			// List is sorted by item age, so we can stop as soon as we found first non expired item.
 			break
 		}
