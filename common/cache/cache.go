@@ -84,6 +84,14 @@ type Options struct {
 	// to control the max size in bytes of the cache
 	// It is required option if MaxCount is not provided
 	MaxSize uint64
+
+	// ActivelyEvict will evict items that has expired TTL at every operation in the cache
+	// This can be expensive if a lot of items expire at the same time
+	// Should be used when it's important for memory that the expired items are evicted as soon as possible
+	// If not set expired items will be evicted when one of these happens
+	// - when the cache is full
+	// - when the item is accessed
+	ActivelyEvict bool
 }
 
 // SimpleOptions provides options that can be used to configure SimpleCache
