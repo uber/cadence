@@ -35,6 +35,7 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	cerrors "github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/types/mapper/proto"
 
@@ -2143,42 +2144,42 @@ func (h *handlerImpl) updateErrorMetric(
 
 	var yarpcE *yarpcerrors.Status
 
-	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+	if err == context.DeadlineExceeded || err == context.Canceled {
 		scope.IncCounter(metrics.CadenceErrContextTimeoutCounter)
 		return
 	}
 
-	if errors.Is(err, types.ShardOwnershipLostError{}) {
+	if cerrors.IsShardOwnershipLostErrorType(err) {
 		scope.IncCounter(metrics.CadenceErrShardOwnershipLostCounter)
 
-	} else if errors.Is(err, types.EventAlreadyStartedError{}) {
+	} else if cerrors.IsEventAlreadyStartedErrorType(err) {
 		scope.IncCounter(metrics.CadenceErrEventAlreadyStartedCounter)
 
-	} else if errors.Is(err, types.BadRequestError{}) {
+	} else if cerrors.IsBadRequestErrorType(err) {
 		scope.IncCounter(metrics.CadenceErrBadRequestCounter)
 
-	} else if errors.Is(err, types.DomainNotActiveError{}) {
-		scope.IncCounter(metrics.CadenceErrBadRequestCounter)
+	} else if cerrors.IsDomainNotActiveErrorType(err) {
+		scope.IncCounter(metrics.CadenceErrDomainNotActiveCounter)
 
-	} else if errors.Is(err, types.WorkflowExecutionAlreadyStartedError{}) {
+	} else if cerrors.IsWorkflowExecutionAlreadyStartedErrorType(err) {
 		scope.IncCounter(metrics.CadenceErrExecutionAlreadyStartedCounter)
 
-	} else if errors.Is(err, types.EntityNotExistsError{}) {
+	} else if cerrors.IsEntityNotExistsErrorType(err) {
 		scope.IncCounter(metrics.CadenceErrEntityNotExistsCounter)
 
-	} else if errors.Is(err, types.WorkflowExecutionAlreadyCompletedError{}) {
+	} else if cerrors.IsWorkflowExecutionAlreadyCompletedErrorType(err) {
 		scope.IncCounter(metrics.CadenceErrWorkflowExecutionAlreadyCompletedCounter)
 
-	} else if errors.Is(err, types.CancellationAlreadyRequestedError{}) {
+	} else if cerrors.IsCancellationAlreadyRequestedErrorType(err) {
 		scope.IncCounter(metrics.CadenceErrCancellationAlreadyRequestedCounter)
 
-	} else if errors.Is(err, types.LimitExceededError{}) {
+	} else if cerrors.IsLimitExceededErrorType(err) {
 		scope.IncCounter(metrics.CadenceErrLimitExceededCounter)
 
-	} else if errors.Is(err, types.RetryTaskV2Error{}) {
+	} else if cerrors.IsRetryTaskV2ErrorType(err) {
 		scope.IncCounter(metrics.CadenceErrRetryTaskCounter)
 
-	} else if errors.Is(err, types.ServiceBusyError{}) {
+	} else if cerrors.IsServiceBusyErrorType(err) {
 		scope.IncCounter(metrics.CadenceErrServiceBusyCounter)
 
 	} else if errors.As(err, &yarpcE) {
@@ -2188,9 +2189,8 @@ func (h *handlerImpl) updateErrorMetric(
 		}
 		scope.IncCounter(metrics.CadenceFailures)
 
-	} else if errors.Is(err, types.InternalServiceError{}) {
+	} else if cerrors.IsInternalServiceErrorType(err) {
 		scope.IncCounter(metrics.CadenceFailures)
-
 		h.GetLogger().Error("Internal service error",
 			tag.Error(err),
 			tag.WorkflowID(workflowID),

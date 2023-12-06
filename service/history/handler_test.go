@@ -23,6 +23,8 @@ package history
 import (
 	"context"
 	"errors"
+	"github.com/uber/cadence/common/metrics/mocks"
+	"go.uber.org/yarpc/yarpcerrors"
 	"math/rand"
 	"sync/atomic"
 	"testing"
@@ -146,5 +148,145 @@ func (s *handlerSuite) testRespondCrossClusterTaskCompleted(
 		s.Empty(response.Tasks)
 	} else {
 		s.Len(response.Tasks, numTasks)
+	}
+}
+
+func TestCorrectUseOfErrorHandling(t *testing.T) {
+
+	tests := map[string]struct {
+		input       error
+		expectation func(scope *mocks.Scope)
+	}{
+		"A deadline exceeded error": {
+			input: context.DeadlineExceeded,
+			expectation: func(scope *mocks.Scope) {
+				scope.Mock.On("IncCounter", metrics.CadenceErrContextTimeoutCounter).Once()
+			},
+		},
+		"A cancelled error": {
+			input: context.Canceled,
+			expectation: func(scope *mocks.Scope) {
+				scope.Mock.On("IncCounter", metrics.CadenceErrContextTimeoutCounter).Once()
+			},
+		},
+		"A shard ownership lost error": {
+			input: &types.ShardOwnershipLostError{
+				Message: "something is lost",
+				Owner:   "owner",
+			},
+			expectation: func(scope *mocks.Scope) {
+				scope.Mock.On("IncCounter", metrics.CadenceErrShardOwnershipLostCounter).Once()
+			},
+		},
+		"a workflow is already started": {
+			input: &types.EventAlreadyStartedError{
+				Message: "workflow already running",
+			},
+			expectation: func(scope *mocks.Scope) {
+				scope.Mock.On("IncCounter", metrics.CadenceErrEventAlreadyStartedCounter).Once()
+			},
+		},
+		"a bad request": {
+			input: &types.BadRequestError{
+				Message: "bad request",
+			},
+			expectation: func(scope *mocks.Scope) {
+				scope.Mock.On("IncCounter", metrics.CadenceErrBadRequestCounter).Once()
+			},
+		},
+		"domain is not active": {
+			input: &types.DomainNotActiveError{
+				Message: "domain not active",
+			},
+			expectation: func(scope *mocks.Scope) {
+				scope.Mock.On("IncCounter", metrics.CadenceErrDomainNotActiveCounter).Once()
+			},
+		},
+		"workflow is already started err": {
+			input: &types.WorkflowExecutionAlreadyStartedError{
+				Message: "bad already started",
+			},
+			expectation: func(scope *mocks.Scope) {
+				scope.Mock.On("IncCounter", metrics.CadenceErrExecutionAlreadyStartedCounter).Once()
+			},
+		},
+		"does not exist": {
+			input: &types.EntityNotExistsError{
+				Message: "the workflow doesn't exist",
+			},
+			expectation: func(scope *mocks.Scope) {
+				scope.Mock.On("IncCounter", metrics.CadenceErrEntityNotExistsCounter).Once()
+			},
+		},
+		"already completed": {
+			input: &types.WorkflowExecutionAlreadyCompletedError{
+				Message: "the workflow is done",
+			},
+			expectation: func(scope *mocks.Scope) {
+				scope.Mock.On("IncCounter", metrics.CadenceErrWorkflowExecutionAlreadyCompletedCounter).Once()
+			},
+		},
+		"Cancellation already requested": {
+			input: &types.CancellationAlreadyRequestedError{
+				Message: "the workflow is cancelled already",
+			},
+			expectation: func(scope *mocks.Scope) {
+				scope.Mock.On("IncCounter", metrics.CadenceErrCancellationAlreadyRequestedCounter).Once()
+			},
+		},
+		"rate-limits": {
+			input: &types.LimitExceededError{
+				Message: "limits exceeded",
+			},
+			expectation: func(scope *mocks.Scope) {
+				scope.Mock.On("IncCounter", metrics.CadenceErrLimitExceededCounter).Once()
+			},
+		},
+		"retry tasks": {
+			input: &types.RetryTaskV2Error{
+				Message: "limits exceeded",
+			},
+			expectation: func(scope *mocks.Scope) {
+				scope.Mock.On("IncCounter", metrics.CadenceErrRetryTaskCounter).Once()
+			},
+		},
+		"service busy error": {
+			input: &types.ServiceBusyError{
+				Message: "limits exceeded - service is busy",
+			},
+			expectation: func(scope *mocks.Scope) {
+				scope.Mock.On("IncCounter", metrics.CadenceErrServiceBusyCounter).Once()
+			},
+		},
+		"deadline exceeded": {
+			input: yarpcerrors.DeadlineExceededErrorf("some deadline exceeded err"),
+			expectation: func(scope *mocks.Scope) {
+				scope.Mock.On("IncCounter", metrics.CadenceErrContextTimeoutCounter).Once()
+				scope.Mock.On("IncCounter", metrics.CadenceFailures).Once()
+			},
+		},
+		"internal error": {
+			input: types.InternalServiceError{Message: "internal error"},
+			expectation: func(scope *mocks.Scope) {
+				scope.Mock.On("IncCounter", metrics.CadenceFailures).Once()
+			},
+		},
+		"uncategorized error": {
+			input: errors.New("some random error"),
+			expectation: func(scope *mocks.Scope) {
+				scope.Mock.On("IncCounter", metrics.CadenceFailures).Once()
+			},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			scope := mocks.Scope{}
+			td.expectation(&scope)
+			h := handlerImpl{
+				Resource: resource.NewTest(gomock.NewController(t), 0),
+			}
+			h.error(td.input, &scope, "some-domain", "some-wf", "some-run")
+		})
 	}
 }
