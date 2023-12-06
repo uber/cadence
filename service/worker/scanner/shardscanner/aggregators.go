@@ -330,6 +330,14 @@ func (a *ShardFixResultAggregator) GetReport(shardID int) (*FixReport, error) {
 	return nil, fmt.Errorf("shard %v has not finished yet, check back later for report", shardID)
 }
 
+func (a *ShardFixResultAggregator) GetAllFixResults() (map[int]FixResult, error) {
+	result := make(map[int]FixResult, len(a.reports))
+	for k, v := range a.reports {
+		result[k] = v.Result
+	}
+	return result, nil
+}
+
 func (a *ShardFixResultAggregator) adjustAggregation(stats FixStats, fn func(a, b int64) int64) {
 	a.aggregation.EntitiesCount = fn(a.aggregation.EntitiesCount, stats.EntitiesCount)
 	a.aggregation.SkippedCount = fn(a.aggregation.SkippedCount, stats.SkippedCount)

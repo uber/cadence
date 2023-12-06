@@ -47,13 +47,14 @@ const (
 	ShardSizeQuery = "shard_size"
 	// DomainReportQuery is the query name for the query used to get the reports per domains for all finished shards
 	DomainReportQuery = "domain_report"
-	// AllScanResultsQuery returns filenames / paginating data for corruptions and failures in this workflow,
-	// for shards which have finished processing.
+	// AllResultsQuery returns filenames / paginating data for corruptions and failures in this workflow,
+	// for shards which have finished processing.  This works for both scanner and fixer, and the return structures
+	// are very similar.
 	//
 	// This data is also available for a single shard under ShardReportQuery, but using that requires
 	// re-querying repeatedly if more than that single shard's data is desired, e.g. for manual
 	// troubleshooting purposes.
-	AllScanResultsQuery = "all_scan_results"
+	AllResultsQuery = "all_results"
 
 	scanShardReportChan = "scanShardReportChan"
 )
@@ -213,7 +214,7 @@ func getScanHandlers(aggregator *ShardScanResultAggregator) map[string]interface
 		DomainReportQuery: func(req DomainReportQueryRequest) (*DomainScanReportQueryResult, error) {
 			return aggregator.GetDomainStatus(req)
 		},
-		AllScanResultsQuery: func() (map[int]ScanResult, error) {
+		AllResultsQuery: func() (map[int]ScanResult, error) {
 			return aggregator.GetAllScanResults()
 		},
 	}
