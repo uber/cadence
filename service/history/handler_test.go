@@ -23,6 +23,7 @@ package history
 import (
 	"context"
 	"errors"
+	"github.com/stretchr/testify/mock"
 	"github.com/uber/cadence/common/metrics/mocks"
 	"go.uber.org/yarpc/yarpcerrors"
 	"math/rand"
@@ -287,6 +288,9 @@ func TestCorrectUseOfErrorHandling(t *testing.T) {
 				Resource: resource.NewTest(gomock.NewController(t), 0),
 			}
 			h.error(td.input, &scope, "some-domain", "some-wf", "some-run")
+			// we're doing the args assertion in the On, so using mock.Anything to avoid having to duplicate this
+			// a wrong metric being emitted will fail the mock.On() expectation. This will catch missing calls
+			scope.Mock.AssertCalled(t, "IncCounter", mock.Anything)
 		})
 	}
 }
