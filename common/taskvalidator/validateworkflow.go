@@ -24,7 +24,8 @@
 package taskvalidator
 
 import (
-	"fmt"
+	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 
 	"github.com/uber/cadence/common/log"
 )
@@ -36,21 +37,25 @@ type Checker interface {
 
 // checkerImpl is the implementation of the Checker interface.
 type checkerImpl struct {
-	logger log.Logger
+	logger        log.Logger
+	metricsClient metrics.Client
 }
 
 // NewWfChecker creates a new instance of Checker.
-func NewWfChecker(logger log.Logger) Checker {
-	return &checkerImpl{logger: logger}
+func NewWfChecker(logger log.Logger, metrics metrics.Client) Checker {
+	return &checkerImpl{logger: logger,
+		metricsClient: metrics}
 }
 
 // WorkflowCheckforValidation is a dummy implementation of workflow validation.
 func (w *checkerImpl) WorkflowCheckforValidation(workflowID string, domainID string, runID string) error {
 	// Emitting just the log to ensure that the workflow is called for now.
 	// TODO: add some validations to check the wf for corruptions.
-	w.logger.Info(fmt.Sprintf("WorkflowCheckforValidation. DomainID: %v, WorkflowID: %v, RunID: %v",
-		domainID,
-		workflowID,
-		runID))
+	w.logger.Info("WorkflowCheckforValidation",
+		tag.WorkflowID(workflowID),
+		tag.WorkflowRunID(runID),
+		tag.WorkflowDomainID(domainID))
+	// Emit the number of workflows that have come in for the validation.
+	w.metricsClient.Scope(metrics.TaskValidatorScope).IncCounter(metrics.ValidatedWorkflowCount)
 	return nil
 }
