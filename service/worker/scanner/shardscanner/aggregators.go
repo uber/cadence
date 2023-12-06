@@ -557,6 +557,14 @@ func (a *ShardScanResultAggregator) adjustAggregation(stats ScanStats, fn func(a
 	}
 }
 
+func (a *ShardScanResultAggregator) GetAllScanResults() (map[int]ScanResult, error) {
+	result := make(map[int]ScanResult, len(a.reports))
+	for k, v := range a.reports {
+		result[k] = v.Result
+	}
+	return result, nil
+}
+
 func getStatusResult(
 	minShardID int,
 	maxShardID int,
