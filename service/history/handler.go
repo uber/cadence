@@ -26,7 +26,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/service/history/workflow"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -58,6 +57,7 @@ import (
 	"github.com/uber/cadence/service/history/resource"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
+	"github.com/uber/cadence/service/history/workflow"
 )
 
 const shardOwnershipTransferDelay = 5 * time.Second
@@ -2176,7 +2176,7 @@ func (h *handlerImpl) error(
 		// The function returns nil error so removing error handling for now.
 		domainName, err := h.GetDomainCache().GetDomainName(domainID)
 		if err != nil {
-			domainName = ""
+			return err
 		}
 		h.GetTaskValidator().WorkflowCheckforValidation(workflowID, domainID, domainName, "")
 	}
