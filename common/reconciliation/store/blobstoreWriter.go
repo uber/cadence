@@ -27,9 +27,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/rand"
+	"time"
 
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/pagination"
+)
+
+const (
+	MaxRetries        = 3                // Maximum number of retries
+	InitialRetryDelay = 2 * time.Second  // Initial delay between retries
+	MaxRetryDelay     = 30 * time.Second // Maximum delay between retries
 )
 
 type (
@@ -106,12 +114,33 @@ func getBlobstoreWriteFn(
 			},
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), Timeout)
-		defer cancel()
-		if _, err := client.Put(ctx, req); err != nil {
-			return nil, err
+		var lastErr error
+		retryDelay := InitialRetryDelay
+		// The idea is to implement a loop that retries the write operation a certain number of times before finally failing.
+		// We'll also include a delay between retries to give transient issues (like temporary network glitches) a chance to resolve.
+		for attempt := 0; attempt < MaxRetries; attempt++ {
+			ctx, cancel := context.WithTimeout(context.Background(), Timeout)
+			if _, err := client.Put(ctx, req); err != nil {
+				lastErr = err
+				cancel()
+				time.Sleep(retryDelay)
+
+				// Exponential backoff with jitter
+				retryDelay = time.Duration(float64(retryDelay) * 1.5)
+				if retryDelay > MaxRetryDelay {
+					retryDelay = MaxRetryDelay
+				}
+				//The jitter helps in scenarios where many clients are potentially retrying operations simultaneously,
+				//as it avoids creating new peaks of demand.
+				retryDelay += time.Duration(rand.Intn(1000)) * time.Millisecond // Add jitter
+
+				continue
+			}
+			cancel()
+			return blobIndex + 1, nil
 		}
-		return blobIndex + 1, nil
+
+		return nil, lastErr
 	}
 }
 
