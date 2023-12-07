@@ -54,7 +54,8 @@ func (w *checkerImpl) WorkflowCheckforValidation(workflowID string, domainID str
 	w.logger.Info("WorkflowCheckforValidation",
 		tag.WorkflowID(workflowID),
 		tag.WorkflowRunID(runID),
-		tag.WorkflowDomainID(domainID))
+		tag.WorkflowDomainID(domainID),
+		tag.WorkflowDomainName(domainName))
 	// Emit the number of workflows that have come in for the validation. Including the domain tag.
 	// The domain name will be useful when I introduce a flipr switch to turn on validation.
 	w.metricsClient.Scope(metrics.TaskValidatorScope, metrics.DomainTag(domainName)).IncCounter(metrics.ValidatedWorkflowCount)
