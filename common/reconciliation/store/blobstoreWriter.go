@@ -55,15 +55,18 @@ func NewBlobstoreWriter(
 	client blobstore.Client,
 	flushThreshold int,
 ) ExecutionWriter {
+	// Set a longer expiration interval than timeout for the entire retry process
+	totalRetryDuration := 2 * Timeout
+
 	retryPolicy := backoff.NewExponentialRetryPolicy(initialRetryDelay)
 	retryPolicy.SetMaximumInterval(maxRetryDelay)
-	retryPolicy.SetExpirationInterval(Timeout)
+	retryPolicy.SetExpirationInterval(totalRetryDuration)
 	// Setting the attempts to 3 as a precaution. If we don't see any significant latency we can remove this config.
 	retryPolicy.SetMaximumAttempts(maxRetries)
 
 	throttlePolicy := backoff.NewExponentialRetryPolicy(initialRetryDelay)
 	throttlePolicy.SetMaximumInterval(maxRetryDelay)
-	throttlePolicy.SetExpirationInterval(Timeout)
+	throttlePolicy.SetExpirationInterval(totalRetryDuration)
 
 	return &blobstoreWriter{
 		writer: pagination.NewWriter(
