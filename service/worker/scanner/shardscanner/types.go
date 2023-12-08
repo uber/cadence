@@ -519,3 +519,44 @@ func GetFixerContext(
 	}
 	return val, nil
 }
+
+// Empty returns true if this ScanResult has no "real" data, e.g. only nils or empty values.
+func (s *ScanResult) Empty() bool {
+	if s == nil {
+		return true
+	}
+	if s.ControlFlowFailure != nil && (*s.ControlFlowFailure != ControlFlowFailure{}) {
+		return false // at least control flow failure has data
+	}
+	if s.ShardScanKeys != nil {
+		if s.ShardScanKeys.Corrupt != nil && (*s.ShardScanKeys.Corrupt != store.Keys{}) {
+			return false // corrupt data exists
+		}
+		if s.ShardScanKeys.Failed != nil && (*s.ShardScanKeys.Failed != store.Keys{}) {
+			return false // failed data exists
+		}
+	}
+	return true // both empty
+}
+
+// Empty returns true if this FixResult has no "real" data, e.g. only nils or empty values.
+func (f *FixResult) Empty() bool {
+	if f == nil {
+		return true
+	}
+	if f.ControlFlowFailure != nil && (*f.ControlFlowFailure != ControlFlowFailure{}) {
+		return false // at least control flow failure has data
+	}
+	if f.ShardFixKeys != nil {
+		if f.ShardFixKeys.Fixed != nil && (*f.ShardFixKeys.Fixed != store.Keys{}) {
+			return false // fixed data exists
+		}
+		if f.ShardFixKeys.Failed != nil && (*f.ShardFixKeys.Failed != store.Keys{}) {
+			return false // failed data exists
+		}
+		if f.ShardFixKeys.Skipped != nil && (*f.ShardFixKeys.Skipped != store.Keys{}) {
+			return false // skipped data exists
+		}
+	}
+	return true // both empty
+}
