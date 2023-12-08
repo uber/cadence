@@ -27,9 +27,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"time"
 
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/pagination"
 )
@@ -114,33 +114,36 @@ func getBlobstoreWriteFn(
 			},
 		}
 
-		var lastErr error
-		retryDelay := InitialRetryDelay
-		// The idea is to implement a loop that retries the write operation a certain number of times before finally failing.
-		// We'll also include a delay between retries to give transient issues (like temporary network glitches) a chance to resolve.
-		for attempt := 0; attempt < MaxRetries; attempt++ {
+		operation := func() error {
 			ctx, cancel := context.WithTimeout(context.Background(), Timeout)
-			if _, err := client.Put(ctx, req); err != nil {
-				lastErr = err
-				cancel()
-				time.Sleep(retryDelay)
-
-				// Exponential backoff with jitter
-				retryDelay = time.Duration(float64(retryDelay) * 1.5)
-				if retryDelay > MaxRetryDelay {
-					retryDelay = MaxRetryDelay
-				}
-				//The jitter helps in scenarios where many clients are potentially retrying operations simultaneously,
-				//as it avoids creating new peaks of demand.
-				retryDelay += time.Duration(rand.Intn(1000)) * time.Millisecond // Add jitter
-
-				continue
-			}
-			cancel()
-			return blobIndex + 1, nil
+			defer cancel()
+			_, err := client.Put(ctx, req)
+			return err
 		}
+		// Using the ThrottleRetry struct and its Do method to implement the retry logic in the getBlobstoreWriteFn.
+		// This struct offers a way to retry operations with a specified policy and also to throttle retries if necessary.
+		retryPolicy := backoff.NewExponentialRetryPolicy(InitialRetryDelay)
+		retryPolicy.SetMaximumInterval(MaxRetryDelay)
+		retryPolicy.SetExpirationInterval(Timeout)
 
-		return nil, lastErr
+		throttlePolicy := backoff.NewExponentialRetryPolicy(InitialRetryDelay)
+		throttlePolicy.SetMaximumInterval(MaxRetryDelay)
+		throttlePolicy.SetExpirationInterval(Timeout)
+
+		throttleRetry := backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(retryPolicy),
+			backoff.WithThrottlePolicy(throttlePolicy),
+			backoff.WithRetryableError(func(err error) bool {
+				return true // assuming all errors are retryable
+			}),
+		)
+
+		//The Do method of throttleRetry is used to execute the operation with retries according to the policy.
+		err := throttleRetry.Do(context.Background(), operation)
+		if err != nil {
+			return nil, err
+		}
+		return blobIndex + 1, nil
 	}
 }
 
