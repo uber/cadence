@@ -36,19 +36,6 @@ import (
 )
 
 func TestBlobstoreWriter(t *testing.T) {
-	uuid := "test-uuid"
-	extension := Extension("test")
-	outputDir := t.TempDir()
-
-	cfg := &config.FileBlobstore{
-		OutputDirectory: outputDir,
-	}
-	//Reusing the Filestoreclient from the other sister test in the same package.
-	blobstoreClient, err := filestore.NewFilestoreClient(cfg)
-	require.NoError(t, err)
-
-	blobstoreWriter := NewBlobstoreWriter(uuid, extension, blobstoreClient, 10).(*blobstoreWriter)
-
 	type testCase struct {
 		name        string
 		input       string
@@ -66,34 +53,48 @@ func TestBlobstoreWriter(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			uuid := "test-uuid"
+			extension := Extension("test")
+			outputDir := t.TempDir()
+
+			cfg := &config.FileBlobstore{
+				OutputDirectory: outputDir,
+			}
+			//Reusing the FilestoreClient from the other sister test in the same package.
+			blobstoreClient, err := filestore.NewFilestoreClient(cfg)
+			require.NoError(t, err)
+
+			blobstoreWriter := NewBlobstoreWriter(uuid, extension, blobstoreClient, 10).(*blobstoreWriter)
 			// Add data to the writer
-			err := blobstoreWriter.Add(tc.input)
+			err = blobstoreWriter.Add(tc.input)
 			if tc.expectedErr {
 				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-
-				// Flush the writer to write data to the blobstore
-				err = blobstoreWriter.Flush()
-				assert.NoError(t, err)
-
-				// Retrieve the keys of flushed data
-				flushedKeys := blobstoreWriter.FlushedKeys()
-				assert.NotNil(t, flushedKeys)
-
-				// Read back the data from the blobstore
-				key := pageNumberToKey(uuid, extension, flushedKeys.MinPage)
-				req := &blobstore.GetRequest{Key: key}
-				ctx := context.Background()
-				resp, err := blobstoreClient.Get(ctx, req)
-				assert.NoError(t, err)
-
-				// Verify the contents
-				var result string
-				err = json.Unmarshal(resp.Blob.Body, &result)
-				require.NoError(t, err)
-				assert.Equal(t, tc.input, result)
+				return
 			}
+			assert.NoError(t, err)
+
+			// Flush the writer to write data to the blobstore
+			err = blobstoreWriter.Flush()
+			assert.NoError(t, err)
+
+			// Retrieve the keys of flushed data
+			flushedKeys := blobstoreWriter.FlushedKeys()
+			if flushedKeys == nil {
+				t.Error("Expected flushedKeys to be not nil")
+			}
+
+			// Read back the data from the blobstore
+			key := pageNumberToKey(uuid, extension, flushedKeys.MinPage)
+			req := &blobstore.GetRequest{Key: key}
+			ctx := context.Background()
+			resp, err := blobstoreClient.Get(ctx, req)
+			assert.NoError(t, err)
+
+			// Verify the contents
+			var result string
+			err = json.Unmarshal(resp.Blob.Body, &result)
+			require.NoError(t, err)
+			assert.Equal(t, tc.input, result)
 		})
 	}
 }
