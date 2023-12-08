@@ -76,11 +76,6 @@ func (v *DomainFilter) GetReverseMatch() (o bool) {
 	return
 }
 
-// EventAlreadyStartedError is an internal type (TBD...)
-type EventAlreadyStartedError struct {
-	Message string `json:"message,required"`
-}
-
 // FailoverMarkerToken is an internal type (TBD...)
 type FailoverMarkerToken struct {
 	ShardIDs       []int32                   `json:"shardIDs,omitempty"`
