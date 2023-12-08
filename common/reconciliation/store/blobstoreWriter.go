@@ -55,9 +55,19 @@ func NewBlobstoreWriter(
 	client blobstore.Client,
 	flushThreshold int,
 ) ExecutionWriter {
+	retryPolicy := backoff.NewExponentialRetryPolicy(initialRetryDelay)
+	retryPolicy.SetMaximumInterval(maxRetryDelay)
+	retryPolicy.SetExpirationInterval(Timeout)
+	// Setting the attempts to 3 as a precaution. If we don't see any significant latency we can remove this config.
+	retryPolicy.SetMaximumAttempts(maxRetries)
+
+	throttlePolicy := backoff.NewExponentialRetryPolicy(initialRetryDelay)
+	throttlePolicy.SetMaximumInterval(maxRetryDelay)
+	throttlePolicy.SetExpirationInterval(Timeout)
+
 	return &blobstoreWriter{
 		writer: pagination.NewWriter(
-			getBlobstoreWriteFn(uuid, extension, client),
+			getBlobstoreWriteFn(uuid, extension, client, retryPolicy, throttlePolicy),
 			getBlobstoreShouldFlushFn(flushThreshold),
 			0),
 		uuid:      uuid,
@@ -94,6 +104,8 @@ func getBlobstoreWriteFn(
 	uuid string,
 	extension Extension,
 	client blobstore.Client,
+	retryPolicy backoff.RetryPolicy,
+	throttlePolicy backoff.RetryPolicy,
 ) pagination.WriteFn {
 	return func(page pagination.Page) (pagination.PageToken, error) {
 		blobIndex := page.CurrentToken.(int)
@@ -122,16 +134,6 @@ func getBlobstoreWriteFn(
 		}
 		// Using the ThrottleRetry struct and its Do method to implement the retry logic in the getBlobstoreWriteFn.
 		// This struct offers a way to retry operations with a specified policy and also to throttle retries if necessary.
-		retryPolicy := backoff.NewExponentialRetryPolicy(initialRetryDelay)
-		retryPolicy.SetMaximumInterval(maxRetryDelay)
-		retryPolicy.SetExpirationInterval(Timeout)
-		// Setting the attempts to 3 as a precaution. If we don't see any significant latency we can remove this config.
-		retryPolicy.SetMaximumAttempts(maxRetries)
-
-		throttlePolicy := backoff.NewExponentialRetryPolicy(initialRetryDelay)
-		throttlePolicy.SetMaximumInterval(maxRetryDelay)
-		throttlePolicy.SetExpirationInterval(Timeout)
-
 		throttleRetry := backoff.NewThrottleRetry(
 			backoff.WithRetryPolicy(retryPolicy),
 			backoff.WithThrottlePolicy(throttlePolicy),
