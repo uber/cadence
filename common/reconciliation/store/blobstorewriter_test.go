@@ -24,72 +24,76 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
-	"github.com/uber/cadence/common/blobstore"
-
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 
+	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/blobstore/filestore"
 	"github.com/uber/cadence/common/config"
 )
 
-type BlobstoreWriterSuite struct {
-	suite.Suite
-	*require.Assertions
-	blobstoreWriter *blobstoreWriter
-	uuid            string
-	extension       Extension
-	outputDir       string
-	blobstoreClient blobstore.Client
-}
-
-func TestBlobstoreWriterSuite(t *testing.T) {
-	suite.Run(t, new(BlobstoreWriterSuite))
-}
-
-func (s *BlobstoreWriterSuite) SetupTest() {
-	s.Assertions = require.New(s.T())
-	s.uuid = "test-uuid"
-	s.extension = Extension("test")
-	s.outputDir = s.T().TempDir()
+func TestBlobstoreWriter(t *testing.T) {
+	uuid := "test-uuid"
+	extension := Extension("test")
+	outputDir := t.TempDir()
 
 	cfg := &config.FileBlobstore{
-		OutputDirectory: s.outputDir,
+		OutputDirectory: outputDir,
 	}
-	var err error
-	s.blobstoreClient, err = filestore.NewFilestoreClient(cfg)
-	require.NoError(s.T(), err)
+	//Reusing the Filestoreclient from the other sister test in the same package.
+	blobstoreClient, err := filestore.NewFilestoreClient(cfg)
+	require.NoError(t, err)
 
-	s.blobstoreWriter = NewBlobstoreWriter(s.uuid, s.extension, s.blobstoreClient, 10).(*blobstoreWriter)
+	blobstoreWriter := NewBlobstoreWriter(uuid, extension, blobstoreClient, 10).(*blobstoreWriter)
+
+	type testCase struct {
+		name        string
+		input       string
+		expectedErr bool
+	}
+
+	//Trying a table test approach this time.
+	testCases := []testCase{
+		{
+			name:        "Normal case",
+			input:       "test-data",
+			expectedErr: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Add data to the writer
+			err := blobstoreWriter.Add(tc.input)
+			if tc.expectedErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+
+				// Flush the writer to write data to the blobstore
+				err = blobstoreWriter.Flush()
+				assert.NoError(t, err)
+
+				// Retrieve the keys of flushed data
+				flushedKeys := blobstoreWriter.FlushedKeys()
+				assert.NotNil(t, flushedKeys)
+
+				// Read back the data from the blobstore
+				key := pageNumberToKey(uuid, extension, flushedKeys.MinPage)
+				req := &blobstore.GetRequest{Key: key}
+				ctx := context.Background()
+				resp, err := blobstoreClient.Get(ctx, req)
+				assert.NoError(t, err)
+
+				// Verify the contents
+				var result string
+				err = json.Unmarshal(resp.Blob.Body, &result)
+				require.NoError(t, err)
+				assert.Equal(t, tc.input, result)
+			}
+		})
+	}
 }
-
-func (s *BlobstoreWriterSuite) TestBlobstoreWriter() {
-	// Example test data
-	testData := "test-data"
-
-	// Add data to the writer
-	err := s.blobstoreWriter.Add(testData)
-	s.NoError(err)
-
-	// Flush the writer to write data to the blobstore
-	err = s.blobstoreWriter.Flush()
-	s.NoError(err)
-
-	// Retrieve the keys of flushed data
-	flushedKeys := s.blobstoreWriter.FlushedKeys()
-	s.NotNil(flushedKeys)
-
-	// Read back the data from the blobstore
-	key := pageNumberToKey(s.uuid, s.extension, flushedKeys.MinPage)
-	req := &blobstore.GetRequest{Key: key}
-	ctx := context.Background()
-	resp, err := s.blobstoreClient.Get(ctx, req)
-	s.NoError(err)
-
-	// Verify the contents
-	s.Equal(testData, string(resp.Blob.Body))
-}
-
-// Additional test cases can be added here
