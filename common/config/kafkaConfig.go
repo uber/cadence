@@ -43,7 +43,8 @@ type (
 
 	// TopicConfig describes the mapping from topic to Kafka cluster
 	TopicConfig struct {
-		Cluster string `yaml:"cluster"`
+		Cluster  string `yaml:"cluster"`
+		IsSecure *bool  `yaml:"isSecure,omitempty"`
 	}
 
 	// TopicList describes the topic names for each cluster
@@ -98,4 +99,12 @@ func (k *KafkaConfig) GetBrokersForKafkaCluster(kafkaCluster string) []string {
 // GetTopicsForApplication gets topic from application
 func (k *KafkaConfig) GetTopicsForApplication(app string) TopicList {
 	return k.Applications[app]
+}
+
+// GetKafkaClusterSecureConfigForTopic gets isSecure status from topic
+func (k *KafkaConfig) GetKafkaSecureConfigForTopic(topic string) bool {
+	if k.Topics[topic].IsSecure != nil {
+		return *k.Topics[topic].IsSecure
+	}
+	return false
 }
