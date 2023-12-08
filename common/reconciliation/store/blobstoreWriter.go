@@ -35,9 +35,9 @@ import (
 )
 
 const (
-	MaxRetries        = 3
-	InitialRetryDelay = 2 * time.Second  // Initial delay between retries
-	MaxRetryDelay     = 30 * time.Second // Maximum delay between retries
+	maxRetries        = 3
+	initialRetryDelay = 2 * time.Second  // Initial delay between retries
+	maxRetryDelay     = 30 * time.Second // Maximum delay between retries
 )
 
 type (
@@ -122,14 +122,14 @@ func getBlobstoreWriteFn(
 		}
 		// Using the ThrottleRetry struct and its Do method to implement the retry logic in the getBlobstoreWriteFn.
 		// This struct offers a way to retry operations with a specified policy and also to throttle retries if necessary.
-		retryPolicy := backoff.NewExponentialRetryPolicy(InitialRetryDelay)
-		retryPolicy.SetMaximumInterval(MaxRetryDelay)
+		retryPolicy := backoff.NewExponentialRetryPolicy(initialRetryDelay)
+		retryPolicy.SetMaximumInterval(maxRetryDelay)
 		retryPolicy.SetExpirationInterval(Timeout)
 		// Setting the attempts to 3 as a precaution. If we don't see any significant latency we can remove this config.
-		retryPolicy.SetMaximumAttempts(MaxRetries)
+		retryPolicy.SetMaximumAttempts(maxRetries)
 
-		throttlePolicy := backoff.NewExponentialRetryPolicy(InitialRetryDelay)
-		throttlePolicy.SetMaximumInterval(MaxRetryDelay)
+		throttlePolicy := backoff.NewExponentialRetryPolicy(initialRetryDelay)
+		throttlePolicy.SetMaximumInterval(maxRetryDelay)
 		throttlePolicy.SetExpirationInterval(Timeout)
 
 		throttleRetry := backoff.NewThrottleRetry(

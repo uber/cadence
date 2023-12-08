@@ -162,9 +162,6 @@ func (s *ShardScanner) Scan(ctx context.Context) ScanReport {
 				Execution: execution,
 				Result:    checkResult,
 			}); err != nil {
-				// This looks like one of the contributors of the high number of skipped_scans in the system.
-				// Upon closer investigation we discovered that there is no retry mechanism in the Blobstore write function, which might
-				// result in unnecessary skip of some scans. Especially, the ones that might have happened due to network blip.
 				result.Result.ControlFlowFailure = &ControlFlowFailure{
 					Info:        "blobstore add failed for failed execution check",
 					InfoDetails: err.Error(),
