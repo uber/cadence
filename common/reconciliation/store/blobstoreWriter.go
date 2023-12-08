@@ -35,7 +35,7 @@ import (
 )
 
 const (
-	MaxRetries        = 3                // Maximum number of retries
+	MaxRetries        = 3
 	InitialRetryDelay = 2 * time.Second  // Initial delay between retries
 	MaxRetryDelay     = 30 * time.Second // Maximum delay between retries
 )
@@ -125,6 +125,8 @@ func getBlobstoreWriteFn(
 		retryPolicy := backoff.NewExponentialRetryPolicy(InitialRetryDelay)
 		retryPolicy.SetMaximumInterval(MaxRetryDelay)
 		retryPolicy.SetExpirationInterval(Timeout)
+		// Setting the attempts to 3 as a precaution. If we don't see any significant latency we can remove this config.
+		retryPolicy.SetMaximumAttempts(MaxRetries)
 
 		throttlePolicy := backoff.NewExponentialRetryPolicy(InitialRetryDelay)
 		throttlePolicy.SetMaximumInterval(MaxRetryDelay)
