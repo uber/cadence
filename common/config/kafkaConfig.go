@@ -43,8 +43,10 @@ type (
 
 	// TopicConfig describes the mapping from topic to Kafka cluster
 	TopicConfig struct {
-		Cluster  string `yaml:"cluster"`
-		IsSecure bool   `yaml:"isSecure,omitempty"`
+		Cluster string `yaml:"cluster"`
+		// IsSecure describes whether the topic is secure, by default it is false
+		// If it is set to true, it allows to pass in the token to initialize secure producer for this topic
+		IsSecure bool `yaml:"isSecure,omitempty"`
 	}
 
 	// TopicList describes the topic names for each cluster
