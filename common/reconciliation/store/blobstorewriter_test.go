@@ -42,7 +42,6 @@ func TestBlobstoreWriter(t *testing.T) {
 		expectedErr bool
 	}
 
-	//Trying a table test approach this time.
 	testCases := []testCase{
 		{
 			name:        "Normal case",
