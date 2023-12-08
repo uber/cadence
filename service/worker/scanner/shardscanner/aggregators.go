@@ -333,6 +333,9 @@ func (a *ShardFixResultAggregator) GetReport(shardID int) (*FixReport, error) {
 func (a *ShardFixResultAggregator) GetAllFixResults() (map[int]FixResult, error) {
 	result := make(map[int]FixResult, len(a.reports))
 	for k, v := range a.reports {
+		if v.Result.Empty() {
+			continue
+		}
 		result[k] = v.Result
 	}
 	return result, nil
@@ -568,6 +571,9 @@ func (a *ShardScanResultAggregator) adjustAggregation(stats ScanStats, fn func(a
 func (a *ShardScanResultAggregator) GetAllScanResults() (map[int]ScanResult, error) {
 	result := make(map[int]ScanResult, len(a.reports))
 	for k, v := range a.reports {
+		if v.Result.Empty() {
+			continue
+		}
 		result[k] = v.Result
 	}
 	return result, nil
