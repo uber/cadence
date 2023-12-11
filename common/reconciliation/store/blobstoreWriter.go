@@ -27,9 +27,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/pagination"
+)
+
+const (
+	maxRetries        = 3
+	initialRetryDelay = 2 * time.Second  // Initial delay between retries
+	maxRetryDelay     = 30 * time.Second // Maximum delay between retries
 )
 
 type (
@@ -47,9 +55,22 @@ func NewBlobstoreWriter(
 	client blobstore.Client,
 	flushThreshold int,
 ) ExecutionWriter {
+	// Set a longer expiration interval than timeout for the entire retry process
+	totalRetryDuration := 2 * Timeout
+
+	retryPolicy := backoff.NewExponentialRetryPolicy(initialRetryDelay)
+	retryPolicy.SetMaximumInterval(maxRetryDelay)
+	retryPolicy.SetExpirationInterval(totalRetryDuration)
+	// Setting the attempts to 3 as a precaution. If we don't see any significant latency we can remove this config.
+	retryPolicy.SetMaximumAttempts(maxRetries)
+
+	throttlePolicy := backoff.NewExponentialRetryPolicy(initialRetryDelay)
+	throttlePolicy.SetMaximumInterval(maxRetryDelay)
+	throttlePolicy.SetExpirationInterval(totalRetryDuration)
+
 	return &blobstoreWriter{
 		writer: pagination.NewWriter(
-			getBlobstoreWriteFn(uuid, extension, client),
+			getBlobstoreWriteFn(uuid, extension, client, retryPolicy, throttlePolicy),
 			getBlobstoreShouldFlushFn(flushThreshold),
 			0),
 		uuid:      uuid,
@@ -86,6 +107,8 @@ func getBlobstoreWriteFn(
 	uuid string,
 	extension Extension,
 	client blobstore.Client,
+	retryPolicy backoff.RetryPolicy,
+	throttlePolicy backoff.RetryPolicy,
 ) pagination.WriteFn {
 	return func(page pagination.Page) (pagination.PageToken, error) {
 		blobIndex := page.CurrentToken.(int)
@@ -106,9 +129,25 @@ func getBlobstoreWriteFn(
 			},
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), Timeout)
-		defer cancel()
-		if _, err := client.Put(ctx, req); err != nil {
+		operation := func() error {
+			ctx, cancel := context.WithTimeout(context.Background(), Timeout)
+			defer cancel()
+			_, err := client.Put(ctx, req)
+			return err
+		}
+		// Using the ThrottleRetry struct and its Do method to implement the retry logic in the getBlobstoreWriteFn.
+		// This struct offers a way to retry operations with a specified policy and also to throttle retries if necessary.
+		throttleRetry := backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(retryPolicy),
+			backoff.WithThrottlePolicy(throttlePolicy),
+			backoff.WithRetryableError(func(err error) bool {
+				return true // assuming all errors are retryable
+			}),
+		)
+
+		//The Do method of throttleRetry is used to execute the operation with retries according to the policy.
+		err := throttleRetry.Do(context.Background(), operation)
+		if err != nil {
 			return nil, err
 		}
 		return blobIndex + 1, nil
