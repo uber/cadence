@@ -23,12 +23,14 @@ package history
 import (
 	"context"
 	"errors"
-	"github.com/stretchr/testify/mock"
-	"github.com/uber/cadence/common/metrics/mocks"
-	"go.uber.org/yarpc/yarpcerrors"
 	"math/rand"
 	"sync/atomic"
 	"testing"
+
+	"github.com/stretchr/testify/mock"
+	"go.uber.org/yarpc/yarpcerrors"
+
+	"github.com/uber/cadence/common/metrics/mocks"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
