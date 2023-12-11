@@ -24,7 +24,6 @@ package store
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -39,13 +38,15 @@ func TestBlobstoreWriter(t *testing.T) {
 	type testCase struct {
 		name        string
 		input       string
+		input2      string
 		expectedErr bool
 	}
 
 	testCases := []testCase{
 		{
 			name:        "Normal case",
-			input:       "test-data",
+			input:       "one",
+			input2:      "two",
 			expectedErr: false,
 		},
 	}
@@ -66,6 +67,7 @@ func TestBlobstoreWriter(t *testing.T) {
 			blobstoreWriter := NewBlobstoreWriter(uuid, extension, blobstoreClient, 10).(*blobstoreWriter)
 			// Add data to the writer
 			err = blobstoreWriter.Add(tc.input)
+			err = blobstoreWriter.Add(tc.input2)
 			if tc.expectedErr {
 				assert.Error(t, err)
 				return
@@ -79,7 +81,7 @@ func TestBlobstoreWriter(t *testing.T) {
 			// Retrieve the keys of flushed data
 			flushedKeys := blobstoreWriter.FlushedKeys()
 			if flushedKeys == nil {
-				t.Error("Expected flushedKeys to be not nil")
+				t.Fatal("Expected flushedKeys to be not nil")
 			}
 
 			// Read back the data from the blobstore
@@ -90,10 +92,7 @@ func TestBlobstoreWriter(t *testing.T) {
 			assert.NoError(t, err)
 
 			// Verify the contents
-			var result string
-			err = json.Unmarshal(resp.Blob.Body, &result)
-			require.NoError(t, err)
-			assert.Equal(t, tc.input, result)
+			assert.Equal(t, string(resp.Blob.Body), "\"one\"\r\n\"two\"\r\n")
 		})
 	}
 }
