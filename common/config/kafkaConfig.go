@@ -45,7 +45,7 @@ type (
 	TopicConfig struct {
 		Cluster string `yaml:"cluster"`
 		// Properties map describes whether the topic properties, such as whether it is secure
-		Properties map[string]interface{} `yaml:"Properties,omitempty"`
+		Properties map[string]interface{} `yaml:"properties,omitempty"`
 	}
 
 	// TopicList describes the topic names for each cluster
