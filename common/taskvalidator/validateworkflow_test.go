@@ -48,12 +48,11 @@ func TestWorkflowCheckforValidation(t *testing.T) {
 	workflowID := "testWorkflowID"
 	domainID := "testDomainID"
 	runID := "testRunID"
+	domainName := "testDomainName"
 
 	// Call the method being tested
-	err := checker.WorkflowCheckforValidation(workflowID, domainID, runID)
+	err := checker.WorkflowCheckforValidation(workflowID, domainID, domainName, runID)
 
 	// Assert that the method returned no error
 	assert.NoError(t, err)
-
-	// Add additional assertions as needed based on the expected behavior of the method
 }

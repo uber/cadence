@@ -31,8 +31,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/service/history/workflow"
-
 	"golang.org/x/sync/errgroup"
 
 	"github.com/uber/cadence/common/membership"
@@ -59,6 +57,7 @@ import (
 	"github.com/uber/cadence/service/history/resource"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
+	"github.com/uber/cadence/service/history/workflow"
 )
 
 const shardOwnershipTransferDelay = 5 * time.Second
@@ -2236,7 +2235,11 @@ func (h *handlerImpl) error(
 		// We will delete the workflow or mark the workflow as corrupted.
 		// Placing a dummy call to the function to check the coherency of the design.
 		// The function returns nil error so removing error handling for now.
-		h.GetTaskValidator().WorkflowCheckforValidation(workflowID, domainID, "")
+		domainName, err := h.GetDomainCache().GetDomainName(domainID)
+		if err != nil {
+			return err
+		}
+		h.GetTaskValidator().WorkflowCheckforValidation(workflowID, domainID, domainName, "")
 	}
 	return err
 }
