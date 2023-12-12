@@ -36,10 +36,7 @@ type (
 )
 
 // NewProcessingQueueCollection creates a new collection for non-overlapping queues
-func NewProcessingQueueCollection(
-	level int,
-	queues []ProcessingQueue,
-) ProcessingQueueCollection {
+func NewProcessingQueueCollection(level int, queues []ProcessingQueue) ProcessingQueueCollection {
 	sortProcessingQueue(queues)
 	queueCollection := &processingQueueCollection{
 		level:  level,
@@ -62,10 +59,7 @@ func (c *processingQueueCollection) ActiveQueue() ProcessingQueue {
 	return c.activeQueue
 }
 
-func (c *processingQueueCollection) AddTasks(
-	tasks map[task.Key]task.Task,
-	newReadLevel task.Key,
-) {
+func (c *processingQueueCollection) AddTasks(tasks map[task.Key]task.Task, newReadLevel task.Key) {
 	activeQueue := c.ActiveQueue()
 	activeQueue.AddTasks(tasks, newReadLevel)
 
@@ -215,9 +209,7 @@ func (c *processingQueueCollection) resetActiveQueue() {
 	c.activeQueue = nil
 }
 
-func sortProcessingQueue(
-	queues []ProcessingQueue,
-) {
+func sortProcessingQueue(queues []ProcessingQueue) {
 	sort.Slice(queues, func(i, j int) bool {
 		if queues[i].State().Level() == queues[j].State().Level() {
 			return queues[i].State().AckLevel().Less(queues[j].State().AckLevel())

@@ -113,10 +113,24 @@ func setDefaultMsg(msg string) string {
 	return msg
 }
 
+func (lg *loggerImpl) Debugf(msg string, args ...any) {
+	ce := lg.zapLogger.Check(zap.DebugLevel, setDefaultMsg(fmt.Sprintf(msg, args...)))
+	if ce == nil {
+		return
+	}
+
+	fields := lg.buildFieldsWithCallat(nil)
+	ce.Write(fields...)
+}
+
 func (lg *loggerImpl) Debug(msg string, tags ...tag.Tag) {
-	msg = setDefaultMsg(msg)
+	ce := lg.zapLogger.Check(zap.DebugLevel, setDefaultMsg(msg))
+	if ce == nil {
+		return
+	}
+
 	fields := lg.buildFieldsWithCallat(tags)
-	lg.zapLogger.Debug(msg, fields...)
+	ce.Write(fields...)
 }
 
 func (lg *loggerImpl) Info(msg string, tags ...tag.Tag) {

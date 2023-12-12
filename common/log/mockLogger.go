@@ -31,6 +31,11 @@ type MockLogger struct {
 	mock.Mock
 }
 
+// Debugf provides a mock function with given fields: msg, args
+func (_m *MockLogger) Debugf(msg string, args ...any) {
+	_m.Called(msg, args)
+}
+
 // Debug provides a mock function with given fields: msg, tags
 func (_m *MockLogger) Debug(msg string, tags ...tag.Tag) {
 	_m.Called(msg, tags)
