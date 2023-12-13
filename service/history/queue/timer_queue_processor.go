@@ -189,10 +189,7 @@ func (t *timerQueueProcessor) Stop() {
 	common.AwaitWaitGroup(&t.shutdownWG, time.Minute)
 }
 
-func (t *timerQueueProcessor) NotifyNewTask(
-	clusterName string,
-	info *hcommon.NotifyTaskInfo,
-) {
+func (t *timerQueueProcessor) NotifyNewTask(clusterName string, info *hcommon.NotifyTaskInfo) {
 	if clusterName == t.currentClusterName {
 		t.activeQueueProcessor.notifyNewTimers(info.Tasks)
 		return
@@ -200,15 +197,17 @@ func (t *timerQueueProcessor) NotifyNewTask(
 
 	standbyQueueProcessor, ok := t.standbyQueueProcessors[clusterName]
 	if !ok {
-		panic(fmt.Sprintf("Cannot find timer processor for %s.", clusterName))
+		panic(fmt.Sprintf("Cannot find standby timer processor for %s.", clusterName))
 	}
 
 	standbyQueueTimerGate, ok := t.standbyQueueTimerGates[clusterName]
 	if !ok {
-		panic(fmt.Sprintf("Cannot find timer gate for %s.", clusterName))
+		panic(fmt.Sprintf("Cannot find standby timer gate for %s.", clusterName))
 	}
 
-	standbyQueueTimerGate.SetCurrentTime(t.shard.GetCurrentTime(clusterName))
+	curTime := t.shard.GetCurrentTime(clusterName)
+	standbyQueueTimerGate.SetCurrentTime(curTime)
+	t.logger.Debug("Current time for standby queue timergate is updated", tag.ClusterName(clusterName), tag.Timestamp(curTime))
 	standbyQueueProcessor.notifyNewTimers(info.Tasks)
 }
 
