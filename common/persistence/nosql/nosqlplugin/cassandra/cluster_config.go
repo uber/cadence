@@ -29,13 +29,6 @@ import (
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
 
-const (
-	// version is the clustering key(DESC order) so this query will always return the record with largest version
-	templateSelectLatestConfig = `SELECT row_type, version, timestamp, values, encoding FROM cluster_config WHERE row_type = ? LIMIT 1;`
-
-	templateInsertConfig = `INSERT INTO cluster_config (row_type, version, timestamp, values, encoding) VALUES (?, ?, ?, ?, ?) IF NOT EXISTS;`
-)
-
 func (db *cdb) InsertConfig(ctx context.Context, row *persistence.InternalConfigStoreEntry) error {
 	query := db.session.Query(templateInsertConfig, row.RowType, row.Version, row.Timestamp, row.Values.Data, row.Values.Encoding).WithContext(ctx)
 	applied, err := query.MapScanCAS(make(map[string]interface{}))

@@ -36,10 +36,7 @@ import (
 
 var _emptyUUID = cql.UUID{}
 
-func parseWorkflowExecutionInfo(
-	result map[string]interface{},
-) *persistence.InternalWorkflowExecutionInfo {
-
+func parseWorkflowExecutionInfo(result map[string]interface{}) *persistence.InternalWorkflowExecutionInfo {
 	info := &persistence.InternalWorkflowExecutionInfo{}
 	var completionEventData []byte
 	var completionEventEncoding common.EncodingType
