@@ -29,10 +29,9 @@ import (
 	"strings"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
 
 	clientworker "go.uber.org/cadence/worker"
-
-	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -52,6 +51,7 @@ const (
 )
 
 type (
+	domainData map[string]string
 	// Attributes is input for authority to make decision.
 	// It can be extended in future if required auth on resources like WorkflowType and TaskList
 	Attributes struct {
@@ -89,6 +89,14 @@ func NewPermission(permission string) Permission {
 	}
 }
 
+func (d domainData) Groups(groupType string) []string {
+	res, ok := d[groupType]
+	if !ok {
+		return nil
+	}
+	return strings.Split(res, groupSeparator)
+}
+
 // Authorizer is an interface for authorization
 type Authorizer interface {
 	Authorize(ctx context.Context, attributes *Attributes) (Result, error)
@@ -107,27 +115,29 @@ type FilteredRequestBody interface {
 	SerializeForLogging() (string, error)
 }
 
-func validatePermission(claims *JWTClaims, attributes *Attributes, data map[string]string) error {
-	groups := ""
-	switch attributes.Permission {
-	case PermissionRead:
-		groups = data[common.DomainDataKeyForReadGroups] + groupSeparator + data[common.DomainDataKeyForWriteGroups]
-	case PermissionWrite:
-		groups = data[common.DomainDataKeyForWriteGroups]
-	default:
-		return fmt.Errorf("token doesn't have permission for %v API", attributes.Permission)
+func validatePermission(claims *JWTClaims, attributes *Attributes, data domainData) error {
+	if (attributes.Permission < PermissionRead) || (attributes.Permission > PermissionAdmin) {
+		return fmt.Errorf("permission %v is not supported", attributes.Permission)
 	}
-	// groups are separated by space
-	allowedGroups := strings.Split(groups, groupSeparator)    // groups that allowed by domain configuration(in domainData)
-	jwtGroups := strings.Split(claims.Groups, groupSeparator) // groups that the request has associated with
 
-	for _, group1 := range allowedGroups {
-		for _, group2 := range jwtGroups {
-			if group1 == group2 {
-				return nil
-			}
+	allowedGroups := map[string]bool{}
+	// groups that allowed by domain configuration(in domainData)
+	// write groups are always checked
+	for _, g := range data.Groups(common.DomainDataKeyForWriteGroups) {
+		allowedGroups[g] = true
+	}
+
+	if attributes.Permission == PermissionRead {
+		for _, g := range data.Groups(common.DomainDataKeyForReadGroups) {
+			allowedGroups[g] = true
 		}
 	}
 
-	return fmt.Errorf("token doesn't have the right permission, jwt groups: %v, allowed groups: %v", jwtGroups, allowedGroups)
+	for _, jwtGroup := range claims.GetGroups() {
+		if _, ok := allowedGroups[jwtGroup]; ok {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("token doesn't have the right permission, jwt groups: %v, allowed groups: %v", claims.GetGroups(), allowedGroups)
 }

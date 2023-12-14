@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/cristalhq/jwt/v3"
@@ -51,6 +52,10 @@ type JWTClaims struct {
 	Admin  bool
 	Iat    int64
 	TTL    int64
+}
+
+func (j JWTClaims) GetGroups() []string {
+	return strings.Split(j.Groups, groupSeparator)
 }
 
 const groupSeparator = " "

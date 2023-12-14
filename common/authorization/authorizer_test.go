@@ -2,22 +2,25 @@ package authorization
 
 import (
 	"github.com/stretchr/testify/assert"
+	"github.com/uber/cadence/common"
 	"testing"
 )
 
-func TestValidatePermissions(t *testing.T) {
-
-	assert.Error(t, validatePermission(&JWTClaims{}, &Attributes{}, map[string]string{}), "no arguments should always fail")
-
-}
-
 func Test_validatePermission(t *testing.T) {
 
-	attr := &Attributes{
-		DomainName: "test-domain",
-		TaskList:   nil,
-		Permission: PermissionRead,
+	readRequestAttr := &Attributes{Permission: PermissionRead}
+	writeRequestAttr := &Attributes{Permission: PermissionWrite}
+
+	readWriteDomainData := domainData{
+		common.DomainDataKeyForReadGroups:  "read1",
+		common.DomainDataKeyForWriteGroups: "write1",
 	}
+
+	readDomainData := domainData{
+		common.DomainDataKeyForReadGroups: "read1",
+	}
+
+	emptyDomainData := domainData{}
 
 	tests := []struct {
 		name       string
@@ -30,15 +33,36 @@ func Test_validatePermission(t *testing.T) {
 			name:       "no args should always fail",
 			claims:     &JWTClaims{},
 			attributes: &Attributes{},
-			data:       map[string]string{},
+			data:       emptyDomainData,
 			wantErr:    assert.Error,
 		},
 		{
-			name:       "No claim defined should always fail",
+			name:       "Empty claims will be denied even when domain data has no groups",
 			claims:     &JWTClaims{},
-			attributes: attr,
-			data:       map[string]string{},
+			attributes: writeRequestAttr,
+			data:       emptyDomainData,
 			wantErr:    assert.Error,
+		},
+		{
+			name:       "Empty claims will be denied when domain data has at least one group",
+			claims:     &JWTClaims{},
+			attributes: writeRequestAttr,
+			data:       readDomainData,
+			wantErr:    assert.Error,
+		},
+		{
+			name:       "Read-only groups should not get access to write groups",
+			claims:     &JWTClaims{Groups: "read1"},
+			attributes: writeRequestAttr,
+			data:       readWriteDomainData,
+			wantErr:    assert.Error,
+		},
+		{
+			name:       "Write-only groups should get access to read groups",
+			claims:     &JWTClaims{Groups: "write1"},
+			attributes: readRequestAttr,
+			data:       readWriteDomainData,
+			wantErr:    assert.NoError,
 		},
 	}
 	for _, tt := range tests {

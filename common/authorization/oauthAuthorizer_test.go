@@ -230,7 +230,7 @@ func (s *oauthSuite) TestDifferentGroup() {
 	authorizer, err := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	s.NoError(err)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
-		return fmt.Sprintf("%v", t[0].Field().Interface) == "token doesn't have the right permission, jwt groups: [a b c], allowed groups: []"
+		return fmt.Sprintf("%v", t[0].Field().Interface) == "token doesn't have the right permission, jwt groups: [a b c], allowed groups: map[]"
 	}))
 	result, _ := authorizer.Authorize(s.ctx, &s.att)
 	s.Equal(result.Decision, DecisionDeny)
@@ -242,7 +242,7 @@ func (s *oauthSuite) TestIncorrectPermission() {
 	authorizer, err := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	s.NoError(err)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
-		return fmt.Sprintf("%v", t[0].Field().Interface) == "token doesn't have permission for 15 API"
+		return fmt.Sprintf("%v", t[0].Field().Interface) == "permission 15 is not supported"
 	}))
 	result, err := authorizer.Authorize(s.ctx, &s.att)
 	s.NoError(err)
