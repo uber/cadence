@@ -180,7 +180,7 @@ const (
 		`}`
 
 	templateChildExecutionInfoType = `{` +
-		`version: ?,` +
+		`version: ?, ` +
 		`initiated_id: ?, ` +
 		`initiated_event_batch_id: ?, ` +
 		`initiated_event: ?, ` +
@@ -204,7 +204,7 @@ const (
 		`}`
 
 	templateSignalInfoType = `{` +
-		`version: ?,` +
+		`version: ?, ` +
 		`initiated_id: ?, ` +
 		`initiated_event_batch_id: ?, ` +
 		`signal_request_id: ?, ` +
@@ -373,7 +373,7 @@ workflow_state = ? ` +
 		`and task_id = ? `
 
 	templateUpdateChildExecutionInfoQuery = `UPDATE executions ` +
-		`SET child_executions_map[ ? ] =` + templateChildExecutionInfoType + ` ` +
+		`SET child_executions_map[ ? ] = ` + templateChildExecutionInfoType + ` ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
@@ -393,7 +393,7 @@ workflow_state = ? ` +
 		`and task_id = ? `
 
 	templateUpdateRequestCancelInfoQuery = `UPDATE executions ` +
-		`SET request_cancel_map[ ? ] =` + templateRequestCancelInfoType + ` ` +
+		`SET request_cancel_map[ ? ] = ` + templateRequestCancelInfoType + ` ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
@@ -413,7 +413,7 @@ workflow_state = ? ` +
 		`and task_id = ? `
 
 	templateUpdateSignalInfoQuery = `UPDATE executions ` +
-		`SET signal_map[ ? ] =` + templateSignalInfoType + ` ` +
+		`SET signal_map[ ? ] = ` + templateSignalInfoType + ` ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
@@ -423,7 +423,7 @@ workflow_state = ? ` +
 		`and task_id = ? `
 
 	templateResetSignalInfoQuery = `UPDATE executions ` +
-		`SET signal_map = ?` +
+		`SET signal_map = ? ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
@@ -443,7 +443,7 @@ workflow_state = ? ` +
 		`and task_id = ? `
 
 	templateResetSignalRequestedQuery = `UPDATE executions ` +
-		`SET signal_requested = ?` +
+		`SET signal_requested = ? ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
