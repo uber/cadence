@@ -78,6 +78,7 @@ services:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
     environment:
+      - "CASSANDRA_HOST=cassandra"
       - "CASSANDRA=1"
       - "MYSQL=1"
       - "POSTGRES=1"

@@ -21,7 +21,7 @@ steps:
           run: unit-test
           config: docker/buildkite/docker-compose.yml
 
-  - label: ":golangci-lint: validate code is clean"
+  - label: ":lint: validate code is clean"
     agents:
       queue: "workers"
       docker: "*"
@@ -39,7 +39,9 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    command: "make cover_integration_profile"
+    commands:
+      - "make .just-build" # ensure that we are not rebuilding binaries and not regenerating code
+      - "make cover_integration_profile"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
@@ -54,7 +56,9 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    command: "make cover_integration_profile"
+    command:
+      - "make .just-build" # ensure that we are not rebuilding binaries and not regenerating code
+      - "make cover_integration_profile"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
@@ -68,7 +72,9 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    command: "make cover_integration_profile"
+    commands:
+      - "make .just-build" # ensure that we are not rebuilding binaries and not regenerating code
+      - "make cover_integration_profile"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
@@ -82,7 +88,9 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    command: "make cover_ndc_profile"
+    commands:
+      - "make .just-build" # ensure that we are not rebuilding binaries and not regenerating code
+      - "make cover_ndc_profile"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
@@ -97,7 +105,9 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    command: "make cover_integration_profile"
+    commands:
+      - "make .just-build" # ensure that we are not rebuilding binaries and not regenerating code
+      - "make cover_integration_profile"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
@@ -112,7 +122,9 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    command: "make cover_ndc_profile"
+    commands:
+      - "make .just-build" # ensure that we are not rebuilding binaries and not regenerating code
+      - "make cover_ndc_profile"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
@@ -127,7 +139,9 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    command: "make cover_integration_profile"
+    commands:
+      - "make .just-build" # ensure that we are not rebuilding binaries and not regenerating code
+      - "make cover_integration_profile"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
@@ -142,7 +156,9 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    command: "make cover_ndc_profile"
+    commands:
+      - "make .just-build" # ensure that we are not rebuilding binaries and not regenerating code
+      - "make cover_ndc_profile"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
