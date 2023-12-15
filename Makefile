@@ -548,7 +548,7 @@ test_e2e_xdc: bins
 		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
 	done;
 
-cover_profile: bins
+cover_profile:
 	$Q mkdir -p $(BUILD)
 	$Q mkdir -p $(COVER_ROOT)
 	$Q echo "mode: atomic" > $(UNIT_COVER_FILE)
@@ -599,12 +599,14 @@ cover_ci: $(COVER_ROOT)/cover.out $(BIN)/goveralls
 	$(BIN)/goveralls -coverprofile=$(COVER_ROOT)/cover.out -service=buildkite || echo Coveralls failed;
 
 install-schema: cadence-cassandra-tool
+	$Q echo installing schema
 	./cadence-cassandra-tool create -k cadence --rf 1
 	./cadence-cassandra-tool -k cadence setup-schema -v 0.0
 	./cadence-cassandra-tool -k cadence update-schema -d ./schema/cassandra/cadence/versioned
 	./cadence-cassandra-tool create -k cadence_visibility --rf 1
 	./cadence-cassandra-tool -k cadence_visibility setup-schema -v 0.0
 	./cadence-cassandra-tool -k cadence_visibility update-schema -d ./schema/cassandra/visibility/versioned
+	$Q echo installed schema
 
 install-schema-mysql: cadence-sql-tool
 	./cadence-sql-tool --user root --pw cadence create --db cadence
