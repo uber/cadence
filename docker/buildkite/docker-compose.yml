@@ -10,7 +10,7 @@ services:
     healthcheck:
       test: ["CMD", "cqlsh", "-u cassandra", "-p cassandra" ,"-e describe keyspaces"]
       interval: 15s
-      timeout: 10s
+      timeout: 30s
       retries: 10
 
   mysql:
