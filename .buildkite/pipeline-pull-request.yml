@@ -32,7 +32,7 @@ steps:
         limit: 1
     plugins:
       - docker-compose#v3.0.0:
-          run: unit-test
+          run: coverage-report
           config: docker/buildkite/docker-compose.yml
 
   - label: ":golang: integration test with cassandra"

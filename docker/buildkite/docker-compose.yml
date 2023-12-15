@@ -92,10 +92,14 @@ services:
       - BUILDKITE_BUILD_ID
       - BUILDKITE_BUILD_NUMBER
     depends_on:
-      - cassandra
-      - mysql
-      - postgres
-      - mongo
+      cassandra:
+        condition: service_healthy
+      mysql:
+        condition: service_started
+      postgres:
+        condition: service_started
+      mongo:
+        condition: service_started
     volumes:
       - ../../:/cadence
       - /usr/bin/buildkite-agent:/usr/bin/buildkite-agent
@@ -119,9 +123,12 @@ services:
       - BUILDKITE_BUILD_ID
       - BUILDKITE_BUILD_NUMBER
     depends_on:
-      - cassandra
-      - elasticsearch
-      - kafka
+      cassandra:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_started
+      kafka:
+        condition: service_started
     volumes:
       - ../../:/cadence
       - /usr/bin/buildkite-agent:/usr/bin/buildkite-agent
@@ -201,9 +208,12 @@ services:
       - BUILDKITE_BUILD_ID
       - BUILDKITE_BUILD_NUMBER
     depends_on:
-      - cassandra
-      - elasticsearch
-      - kafka
+      cassandra:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_started
+      kafka:
+        condition: service_started
     volumes:
       - ../../:/cadence
       - /usr/bin/buildkite-agent:/usr/bin/buildkite-agent

@@ -213,9 +213,12 @@ services:
       - "KAFKA_SEEDS=kafka"
       - "TEST_TAG=esintegration"
     depends_on:
-      - cassandra
-      - elasticsearch
-      - kafka
+      cassandra:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_started
+      kafka:
+        condition: service_started
     volumes:
       - ../../:/cadence
       - /cadence/.build/ # ensure we don't mount the build directory
@@ -238,9 +241,12 @@ services:
       - "KAFKA_SEEDS=kafka"
       - "TEST_TAG=esintegration"
     depends_on:
-      - cassandra
-      - elasticsearch
-      - kafka
+      cassandra:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_started
+      kafka:
+        condition: service_started
     volumes:
       - ../../:/cadence
       - /cadence/.build/ # ensure we don't mount the build directory
