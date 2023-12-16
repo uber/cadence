@@ -30,7 +30,7 @@ import (
 func getCadencePackageDir() (string, error) {
 	cmdOut, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
 	if err != nil {
-		panic(err)
+		return "", fmt.Errorf("get root directory failed: %w", err)
 	}
 
 	return strings.TrimSpace(string(cmdOut)), err
