@@ -22,18 +22,18 @@
 package nosqlplugin
 
 import (
-	"fmt"
-	"os/exec"
+	"os"
 	"strings"
 )
 
 func getCadencePackageDir() (string, error) {
-	cmdOut, err := exec.Command("git", "rev-parse", "--show-toplevel").CombinedOutput()
+	cadencePackageDir, err := os.Getwd()
 	if err != nil {
-		return "", fmt.Errorf("get root directory failed: error %w, output %s", err, cmdOut)
+		panic(err)
 	}
-
-	return strings.TrimSpace(string(cmdOut)), err
+	cadenceIndex := strings.LastIndex(cadencePackageDir, "cadence/")
+	cadencePackageDir = cadencePackageDir[:cadenceIndex+len("cadence/")]
+	return cadencePackageDir, err
 }
 
 func GetDefaultTestSchemaDir(testSchemaRelativePath string) (string, error) {
@@ -41,5 +41,5 @@ func GetDefaultTestSchemaDir(testSchemaRelativePath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("%s/%s", cadencePackageDir, testSchemaRelativePath), nil
+	return cadencePackageDir + testSchemaRelativePath, nil
 }
