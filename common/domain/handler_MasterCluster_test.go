@@ -65,19 +65,19 @@ type (
 
 func TestDomainHandlerGlobalDomainEnabledPrimaryClusterSuite(t *testing.T) {
 	testflags.RequireCassandra(t)
-	s := new(domainHandlerGlobalDomainEnabledPrimaryClusterSuite)
-	suite.Run(t, s)
-}
 
-func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) SetupSuite() {
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
 	}
+
+	s := new(domainHandlerGlobalDomainEnabledPrimaryClusterSuite)
 
 	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{
 		ClusterMetadata: cluster.GetTestClusterMetadata(true),
 	})
 	s.Setup()
+
+	suite.Run(t, s)
 }
 
 func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TearDownSuite() {

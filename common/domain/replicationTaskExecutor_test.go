@@ -22,6 +22,8 @@ package domain
 
 import (
 	"context"
+	"log"
+	"os"
 	"testing"
 
 	"github.com/pborman/uuid"
@@ -47,20 +49,20 @@ type (
 
 func TestDomainReplicationTaskExecutorSuite(t *testing.T) {
 	testflags.RequireCassandra(t)
+
+	if testing.Verbose() {
+		log.SetOutput(os.Stdout)
+	}
+
 	s := new(domainReplicationTaskExecutorSuite)
+
+	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{})
+	s.Setup()
+
 	suite.Run(t, s)
 }
 
-func (s *domainReplicationTaskExecutorSuite) SetupSuite() {
-}
-
-func (s *domainReplicationTaskExecutorSuite) TearDownSuite() {
-
-}
-
 func (s *domainReplicationTaskExecutorSuite) SetupTest() {
-	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{})
-	s.Setup()
 	zapLogger, err := zap.NewDevelopment()
 	s.Require().NoError(err)
 	logger := loggerimpl.NewLogger(zapLogger)
