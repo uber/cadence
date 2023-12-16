@@ -80,16 +80,17 @@ func TestDomainHandlerCommonSuite(t *testing.T) {
 	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{
 		ClusterMetadata: cluster.GetTestClusterMetadata(true),
 	})
-	s.Setup()
 
 	suite.Run(t, s)
 }
 
 func (s *domainHandlerCommonSuite) TearDownSuite() {
-	s.TestBase.TearDownWorkflowStore()
+	s.TearDownWorkflowStore()
 }
 
 func (s *domainHandlerCommonSuite) SetupTest() {
+	s.Setup()
+
 	logger := loggerimpl.NewNopLogger()
 	dcCollection := dc.NewCollection(dc.NewNopClient(), logger)
 	s.minRetentionDays = 1

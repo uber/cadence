@@ -75,7 +75,6 @@ func TestDomainHandlerGlobalDomainEnabledPrimaryClusterSuite(t *testing.T) {
 	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{
 		ClusterMetadata: cluster.GetTestClusterMetadata(true),
 	})
-	s.Setup()
 
 	suite.Run(t, s)
 }
@@ -85,6 +84,8 @@ func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TearDownSuite() {
 }
 
 func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) SetupTest() {
+	s.Setup()
+
 	logger := loggerimpl.NewNopLogger()
 	dcCollection := dc.NewCollection(dc.NewNopClient(), logger)
 	s.minRetentionDays = 1

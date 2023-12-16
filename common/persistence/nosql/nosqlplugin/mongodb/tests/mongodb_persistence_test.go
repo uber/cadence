@@ -104,7 +104,7 @@ func TestMongoDBConfigStorePersistence(t *testing.T) {
 // 	suite.Run(t, s)
 // }
 
-func NewTestBaseWithMongo() persistencetests.TestBase {
+func NewTestBaseWithMongo() *persistencetests.TestBase {
 	options := &persistencetests.TestBaseOptions{
 		DBPluginName: mongodb.PluginName,
 		DBHost:       getTestConfig().Hosts,

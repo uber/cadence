@@ -57,12 +57,13 @@ func TestDomainReplicationTaskExecutorSuite(t *testing.T) {
 	s := new(domainReplicationTaskExecutorSuite)
 
 	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{})
-	s.Setup()
 
 	suite.Run(t, s)
 }
 
 func (s *domainReplicationTaskExecutorSuite) SetupTest() {
+	s.Setup()
+
 	zapLogger, err := zap.NewDevelopment()
 	s.Require().NoError(err)
 	logger := loggerimpl.NewLogger(zapLogger)
