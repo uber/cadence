@@ -40,8 +40,7 @@ import (
 
 type (
 	domainReplicationTaskExecutorSuite struct {
-		suite.Suite
-		persistencetests.TestBase
+		*persistencetests.TestBase
 		domainReplicator *domainReplicationTaskExecutorImpl
 	}
 )
@@ -61,7 +60,7 @@ func (s *domainReplicationTaskExecutorSuite) TearDownSuite() {
 
 func (s *domainReplicationTaskExecutorSuite) SetupTest() {
 	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{})
-	s.TestBase.Setup()
+	s.Setup()
 	zapLogger, err := zap.NewDevelopment()
 	s.Require().NoError(err)
 	logger := loggerimpl.NewLogger(zapLogger)

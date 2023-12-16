@@ -49,8 +49,7 @@ import (
 
 type (
 	domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite struct {
-		suite.Suite
-		persistencetests.TestBase
+		*persistencetests.TestBase
 
 		minRetentionDays     int
 		maxBadBinaryCount    int
@@ -78,7 +77,7 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) SetupSuite() {
 	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{
 		ClusterMetadata: cluster.GetTestClusterMetadata(false),
 	})
-	s.TestBase.Setup()
+	s.Setup()
 }
 
 func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TearDownSuite() {
