@@ -36,21 +36,21 @@ type (
 		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
 		// not merely log an error
 		*require.Assertions
-		IntegrationBase
+		*IntegrationBase
 	}
 
 	SizeLimitIntegrationSuite struct {
 		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
 		// not merely log an error
 		*require.Assertions
-		IntegrationBase
+		*IntegrationBase
 	}
 
 	ClientIntegrationSuite struct {
 		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
 		// not merely log an error
 		*require.Assertions
-		IntegrationBase
+		*IntegrationBase
 		wfService workflowserviceclient.Interface
 		wfClient  client.Client
 		worker    worker.Worker

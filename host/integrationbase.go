@@ -71,8 +71,8 @@ type (
 	}
 )
 
-func NewIntegrationBase(params IntegrationBaseParams) IntegrationBase {
-	return IntegrationBase{
+func NewIntegrationBase(params IntegrationBaseParams) *IntegrationBase {
+	return &IntegrationBase{
 		defaultTestCluster:    params.DefaultTestCluster,
 		visibilityTestCluster: params.VisibilityTestCluster,
 		testClusterConfig:     params.TestClusterConfig,
