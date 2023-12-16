@@ -23,6 +23,7 @@ package persistencetests
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -32,7 +33,6 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
 	"github.com/uber/cadence/common"

@@ -22,6 +22,7 @@ package persistencetests
 
 import (
 	"context"
+	"log"
 	"math"
 	"math/rand"
 	"os"
@@ -31,7 +32,6 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 

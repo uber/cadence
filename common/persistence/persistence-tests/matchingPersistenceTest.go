@@ -23,12 +23,12 @@ package persistencetests
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/pborman/uuid"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
 	p "github.com/uber/cadence/common/persistence"
