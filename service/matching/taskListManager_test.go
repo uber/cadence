@@ -44,7 +44,6 @@ import (
 
 func TestDeliverBufferTasks(t *testing.T) {
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	tests := []func(tlm *taskListManagerImpl){
 		func(tlm *taskListManagerImpl) { tlm.taskReader.cancelFunc() },
@@ -73,7 +72,6 @@ func TestDeliverBufferTasks(t *testing.T) {
 
 func TestDeliverBufferTasks_NoPollers(t *testing.T) {
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	tlm := createTestTaskListManager(controller)
 	tlm.taskReader.taskBuffers[defaultTaskBufferIsolationGroup] <- &persistence.TaskInfo{}
@@ -90,7 +88,6 @@ func TestDeliverBufferTasks_NoPollers(t *testing.T) {
 
 func TestReadLevelForAllExpiredTasksInBatch(t *testing.T) {
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	tlm := createTestTaskListManager(controller)
 	tlm.db.rangeID = int64(1)
@@ -165,7 +162,6 @@ func createTestTaskListManagerWithConfig(controller *gomock.Controller, cfg *Con
 
 func TestDescribeTaskList(t *testing.T) {
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	startTaskID := int64(1)
 	taskCount := int64(3)
@@ -233,7 +229,6 @@ func tlMgrStartWithoutNotifyEvent(tlm *taskListManagerImpl) {
 
 func TestCheckIdleTaskList(t *testing.T) {
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	cfg := NewConfig(dynamicconfig.NewNopCollection(), "some random hostname")
 	cfg.IdleTasklistCheckInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
@@ -289,7 +284,6 @@ func TestCheckIdleTaskList(t *testing.T) {
 
 func TestAddTaskStandby(t *testing.T) {
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	cfg := NewConfig(dynamicconfig.NewNopCollection(), "some random hostname")
 	cfg.IdleTasklistCheckInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
@@ -346,7 +340,6 @@ func TestAddTaskStandby(t *testing.T) {
 
 func TestGetPollerIsolationGroup(t *testing.T) {
 	controller := gomock.NewController(t)
-	defer controller.Finish()
 
 	config := defaultTestConfig()
 	config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(30 * time.Second)

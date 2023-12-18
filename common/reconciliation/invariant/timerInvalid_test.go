@@ -140,7 +140,6 @@ func (ts *TimerInvalidTest) TestCheck() {
 	}
 	ctrl := gomock.NewController(ts.T())
 	mockDomainCache := cache.NewMockDomainCache(ctrl)
-	defer ctrl.Finish()
 	for _, tc := range testCases {
 		mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain-name", nil).AnyTimes()
 		ts.Run(tc.name, func() {
@@ -268,7 +267,6 @@ func (ts *TimerInvalidTest) TestFix() {
 	}
 	ctrl := gomock.NewController(ts.T())
 	mockDomainCache := cache.NewMockDomainCache(ctrl)
-	defer ctrl.Finish()
 	for _, tc := range testCases {
 		mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain-name", nil).AnyTimes()
 		ts.Run(tc.name, func() {

@@ -36,7 +36,6 @@ import (
 
 func TestThriftHandler(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	h := NewMockHandler(ctrl)
 	th := NewThriftHandler(h)
