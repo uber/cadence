@@ -67,7 +67,7 @@ func (s *handlerSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.controller = gomock.NewController(s.T())
-	s.mockResource = resource.NewTest(s.controller, metrics.History)
+	s.mockResource = resource.NewTest(s.T(), s.controller, metrics.History)
 	s.mockResource.Logger = testlogger.New(s.Suite.T())
 	s.mockShardController = shard.NewMockController(s.controller)
 	s.mockEngine = engine.NewMockEngine(s.controller)
@@ -285,7 +285,7 @@ func TestCorrectUseOfErrorHandling(t *testing.T) {
 			scope := mocks.Scope{}
 			td.expectation(&scope)
 			h := handlerImpl{
-				Resource: resource.NewTest(gomock.NewController(t), 0),
+				Resource: resource.NewTest(t, gomock.NewController(t), 0),
 			}
 			h.error(td.input, &scope, "some-domain", "some-wf", "some-run")
 			// we're doing the args assertion in the On, so using mock.Anything to avoid having to duplicate this

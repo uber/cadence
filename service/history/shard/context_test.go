@@ -74,7 +74,7 @@ func (s *contextTestSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.controller = gomock.NewController(s.T())
-	s.mockResource = resource.NewTest(s.controller, metrics.History)
+	s.mockResource = resource.NewTest(s.T(), s.controller, metrics.History)
 	s.mockShardManager = s.mockResource.ShardMgr
 
 	s.metricsClient = metrics.NewClient(tally.NoopScope, metrics.History)

@@ -92,7 +92,7 @@ func (s *fetcherSuite) TestCrossClusterTaskFetchers() {
 	shardIDs := []int32{1, 10, 123}
 	tasksByShard := make(map[int32][]*types.CrossClusterTaskRequest)
 
-	mockResource := resource.NewTest(s.controller, metrics.History)
+	mockResource := resource.NewTest(s.T(), s.controller, metrics.History)
 	mockResource.RemoteAdminClient.EXPECT().GetCrossClusterTasks(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, request *types.GetCrossClusterTasksRequest, option ...yarpc.CallOption) (*types.GetCrossClusterTasksResponse, error) {
 			s.Equal(currentCluster, request.GetTargetCluster())

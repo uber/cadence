@@ -105,7 +105,7 @@ func (s *IntegrationBase) setupSuite() {
 		s.adminClient = NewAdminClient(dispatcher)
 	} else {
 		s.Logger.Info("Running integration test against test cluster")
-		clusterMetadata := NewClusterMetadata(s.testClusterConfig)
+		clusterMetadata := NewClusterMetadata(s.T(), s.testClusterConfig)
 		dc := persistence.DynamicConfiguration{
 			EnableSQLAsyncTransaction:                dynamicconfig.GetBoolPropertyFn(false),
 			EnableCassandraAllConsistencyLevelDelete: dynamicconfig.GetBoolPropertyFn(true),
@@ -146,7 +146,7 @@ func (s *IntegrationBase) setupSuiteForPinotTest() {
 	s.setupLogger()
 
 	s.Logger.Info("Running integration test against test cluster")
-	clusterMetadata := NewClusterMetadata(s.testClusterConfig)
+	clusterMetadata := NewClusterMetadata(s.T(), s.testClusterConfig)
 	dc := persistence.DynamicConfiguration{
 		EnableSQLAsyncTransaction:                dynamicconfig.GetBoolPropertyFn(false),
 		EnableCassandraAllConsistencyLevelDelete: dynamicconfig.GetBoolPropertyFn(true),

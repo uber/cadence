@@ -28,11 +28,9 @@ import (
 
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"
-	"go.uber.org/zap"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
@@ -64,13 +62,10 @@ func TestDomainReplicationTaskExecutorSuite(t *testing.T) {
 func (s *domainReplicationTaskExecutorSuite) SetupTest() {
 	s.Setup()
 
-	zapLogger, err := zap.NewDevelopment()
-	s.Require().NoError(err)
-	logger := loggerimpl.NewLogger(zapLogger)
 	s.domainReplicator = NewReplicationTaskExecutor(
 		s.DomainManager,
 		clock.NewRealTimeSource(),
-		logger,
+		s.Logger,
 	).(*domainReplicationTaskExecutorImpl)
 }
 

@@ -65,7 +65,7 @@ func (s *taskFetcherSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 	s.controller = gomock.NewController(s.T())
 
-	s.mockResource = resource.NewTest(s.controller, metrics.History)
+	s.mockResource = resource.NewTest(s.T(), s.controller, metrics.History)
 	s.frontendClient = s.mockResource.RemoteAdminClient
 	logger := log.NewNoop()
 	s.config = config.NewForTest()
