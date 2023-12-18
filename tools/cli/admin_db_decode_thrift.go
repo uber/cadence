@@ -144,32 +144,3 @@ func decodeUserInput(input, encoding string) ([]byte, error) {
 
 	return nil, fmt.Errorf("unknown input encoding: %s", encoding)
 }
-
-func generate() (string, error) {
-	hist := shared.History{
-		Events: []*shared.HistoryEvent{
-			{
-				EventId:   common.Int64Ptr(1),
-				Timestamp: common.Int64Ptr(123),
-				EventType: shared.EventTypeWorkflowExecutionStarted.Ptr(),
-				Version:   common.Int64Ptr(1),
-				WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
-					WorkflowType: &shared.WorkflowType{
-						Name: common.StringPtr("test"),
-					},
-					TaskList: &shared.TaskList{
-						Name: common.StringPtr("tasklist"),
-					},
-					Input: []byte("input"),
-				},
-			},
-		},
-	}
-
-	encoder := codec.NewThriftRWEncoder()
-	data, err := encoder.Encode(&hist)
-	if err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(data), nil
-}
