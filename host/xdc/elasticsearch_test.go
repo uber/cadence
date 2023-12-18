@@ -72,6 +72,9 @@ type esCrossDCTestSuite struct {
 }
 
 func TestESCrossDCTestSuite(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test suite in short mode")
+	}
 	flag.Parse()
 	suite.Run(t, new(esCrossDCTestSuite))
 }

@@ -57,6 +57,9 @@ var (
 )
 
 func TestNDCIntegrationTestSuite(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test suite in short mode")
+	}
 	flag.Parse()
 
 	clusterConfigs, err := host.GetTestClusterConfigs("../testdata/ndc_integration_test_clusters.yaml")

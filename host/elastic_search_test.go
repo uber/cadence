@@ -61,6 +61,9 @@ type ElasticSearchIntegrationSuite struct {
 }
 
 func TestElasticsearchIntegrationSuite(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test suite in short mode")
+	}
 	flag.Parse()
 
 	clusterConfig, err := GetTestClusterConfig("testdata/integration_elasticsearch_" + environment.GetESVersion() + "_cluster.yaml")

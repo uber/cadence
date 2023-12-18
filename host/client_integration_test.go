@@ -61,7 +61,9 @@ func init() {
 }
 
 func TestClientIntegrationSuite(t *testing.T) {
-
+	if testing.Short() {
+		t.Skip("skipping integration test suite in short mode")
+	}
 	flag.Parse()
 
 	clusterConfig, err := GetTestClusterConfig("testdata/clientintegrationtestcluster.yaml")
