@@ -33,14 +33,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/yarpc"
-	"go.uber.org/zap"
 
 	adminClient "github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/persistence"
 	pt "github.com/uber/cadence/common/persistence/persistence-tests"
 	test "github.com/uber/cadence/common/testing"
@@ -77,11 +76,8 @@ func TestNDCIntegrationTestSuite(t *testing.T) {
 }
 
 func (s *NDCIntegrationTestSuite) SetupSuite() {
-	zapLogger, err := zap.NewDevelopment()
-	// cannot use s.Nil since it is not initialized
-	s.Require().NoError(err)
 	s.serializer = persistence.NewPayloadSerializer()
-	s.logger = loggerimpl.NewLogger(zapLogger)
+	s.logger = testlogger.New(s.T())
 
 	s.standByReplicationTasksChan = make(chan *types.ReplicationTask, 100)
 
@@ -113,7 +109,7 @@ func (s *NDCIntegrationTestSuite) SetupSuite() {
 	s.mockAdminClient["other"] = mockOtherClient
 	s.clusterConfigs[0].MockAdminClient = s.mockAdminClient
 
-	clusterMetadata := host.NewClusterMetadata(s.clusterConfigs[0])
+	clusterMetadata := host.NewClusterMetadata(s.T(), s.clusterConfigs[0])
 	dc := persistence.DynamicConfiguration{
 		EnableSQLAsyncTransaction:                dynamicconfig.GetBoolPropertyFn(false),
 		EnableCassandraAllConsistencyLevelDelete: dynamicconfig.GetBoolPropertyFn(true),
@@ -124,7 +120,7 @@ func (s *NDCIntegrationTestSuite) SetupSuite() {
 		ClusterMetadata:       clusterMetadata,
 		DynamicConfiguration:  dc,
 	}
-	cluster, err := host.NewCluster(s.clusterConfigs[0], s.logger.WithTags(tag.ClusterName(clusterName[0])), params)
+	cluster, err := host.NewCluster(s.T(), s.clusterConfigs[0], s.logger.WithTags(tag.ClusterName(clusterName[0])), params)
 	s.Require().NoError(err)
 	s.active = cluster
 

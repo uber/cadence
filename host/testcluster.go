@@ -41,8 +41,8 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/messaging/kafka"
 	"github.com/uber/cadence/common/metrics"
@@ -115,8 +115,8 @@ const (
 )
 
 // NewCluster creates and sets up the test cluster
-func NewCluster(options *TestClusterConfig, logger log.Logger, params persistencetests.TestBaseParams) (*TestCluster, error) {
-	testBase := persistencetests.NewTestBaseFromParams(params)
+func NewCluster(t *testing.T, options *TestClusterConfig, logger log.Logger, params persistencetests.TestBaseParams) (*TestCluster, error) {
+	testBase := persistencetests.NewTestBaseFromParams(t, params)
 	testBase.Setup()
 	setupShards(testBase, options.HistoryConfig.NumHistoryShards, logger)
 	archiverBase := newArchiverBase(options.EnableArchival, logger)
@@ -170,8 +170,8 @@ func NewCluster(options *TestClusterConfig, logger log.Logger, params persistenc
 	return &TestCluster{testBase: testBase, archiverBase: archiverBase, host: cluster}, nil
 }
 
-func NewPinotTestCluster(options *TestClusterConfig, logger log.Logger, params persistencetests.TestBaseParams) (*TestCluster, error) {
-	testBase := persistencetests.NewTestBaseFromParams(params)
+func NewPinotTestCluster(t *testing.T, options *TestClusterConfig, logger log.Logger, params persistencetests.TestBaseParams) (*TestCluster, error) {
+	testBase := persistencetests.NewTestBaseFromParams(t, params)
 	testBase.Setup()
 	setupShards(testBase, options.HistoryConfig.NumHistoryShards, logger)
 	archiverBase := newArchiverBase(options.EnableArchival, logger)
@@ -246,7 +246,7 @@ func noopAuthorizationConfig() config.Authorization {
 }
 
 // NewClusterMetadata returns cluster metdata from config
-func NewClusterMetadata(options *TestClusterConfig) cluster.Metadata {
+func NewClusterMetadata(t *testing.T, options *TestClusterConfig) cluster.Metadata {
 	clusterMetadata := cluster.GetTestClusterMetadata(options.IsPrimaryCluster)
 	if !options.IsPrimaryCluster && options.ClusterGroupMetadata.PrimaryClusterName != "" { // xdc cluster metadata setup
 		clusterMetadata = cluster.NewMetadata(
@@ -256,7 +256,7 @@ func NewClusterMetadata(options *TestClusterConfig) cluster.Metadata {
 			options.ClusterGroupMetadata.ClusterGroup,
 			func(domain string) bool { return false },
 			metrics.NewNoopMetricsClient(),
-			loggerimpl.NewNopLogger(),
+			testlogger.New(t),
 		)
 	}
 	return clusterMetadata
@@ -273,7 +273,16 @@ func NewPersistenceTestCluster(t *testing.T, clusterConfig *TestClusterConfig) t
 		ops := clusterConfig.Persistence
 		ops.DBPluginName = "cassandra"
 		testflags.RequireCassandra(t)
-		testCluster = nosql.NewTestCluster(ops.DBPluginName, ops.DBName, ops.DBUsername, ops.DBPassword, ops.DBHost, ops.DBPort, ops.ProtoVersion, "")
+		testCluster = nosql.NewTestCluster(t, nosql.TestClusterParams{
+			PluginName:    ops.DBPluginName,
+			KeySpace:      ops.DBName,
+			Username:      ops.DBUsername,
+			Password:      ops.DBPassword,
+			Host:          ops.DBHost,
+			Port:          ops.DBPort,
+			ProtoVersion:  ops.ProtoVersion,
+			SchemaBaseDir: "",
+		})
 	} else if TestFlags.PersistenceType == config.StoreTypeSQL {
 		var ops *persistencetests.TestBaseOptions
 		if TestFlags.SQLPluginName == mysql.PluginName {

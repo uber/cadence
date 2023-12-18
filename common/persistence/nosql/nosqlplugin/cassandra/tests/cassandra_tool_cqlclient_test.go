@@ -23,12 +23,13 @@ package tests
 import (
 	"testing"
 
+	"github.com/uber/cadence/testflags"
+
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common/log/tag"
 	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public" // needed to load the default gocql client
-	"github.com/uber/cadence/testflags"
 	"github.com/uber/cadence/tools/cassandra"
 	"github.com/uber/cadence/tools/common/schema/test"
 )

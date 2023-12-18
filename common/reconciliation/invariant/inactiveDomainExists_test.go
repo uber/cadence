@@ -26,6 +26,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/uber/cadence/service/history/constants"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -36,7 +38,6 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/service/history/constants"
 )
 
 type InactiveInactiveDomainExistsSuite struct {

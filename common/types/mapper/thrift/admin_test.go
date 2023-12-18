@@ -26,10 +26,11 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/uber/cadence/.gen/go/shared"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/.gen/go/admin"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/types"
 )
 

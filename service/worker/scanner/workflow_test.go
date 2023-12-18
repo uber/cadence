@@ -28,14 +28,15 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-	"go.uber.org/cadence/testsuite"
-	"go.uber.org/cadence/worker"
 
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/service/worker/scanner/tasklist"
+
+	"go.uber.org/cadence/testsuite"
+	"go.uber.org/cadence/worker"
 )
 
 type scannerWorkflowTestSuite struct {
@@ -57,7 +58,7 @@ func (s *scannerWorkflowTestSuite) TestWorkflow() {
 func (s *scannerWorkflowTestSuite) TestScavengerActivity() {
 	env := s.NewTestActivityEnvironment()
 	controller := gomock.NewController(s.T())
-	mockResource := resource.NewTest(controller, metrics.Worker)
+	mockResource := resource.NewTest(s.T(), controller, metrics.Worker)
 	defer mockResource.Finish(s.T())
 
 	mockResource.TaskMgr.On("ListTaskList", mock.Anything, mock.Anything).Return(&p.ListTaskListResponse{}, nil)

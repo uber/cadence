@@ -31,11 +31,10 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
-	"go.uber.org/zap"
 
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
@@ -67,11 +66,7 @@ func (s *ScavengerTestSuite) SetupTest() {
 	s.taskMgr = &mocks.TaskManager{}
 	s.taskListTable = &mockTaskListTable{}
 	s.taskTables = make(map[string]*mockTaskTable)
-	zapLogger, err := zap.NewDevelopment()
-	if err != nil {
-		s.Require().NoError(err)
-	}
-	logger := loggerimpl.NewLogger(zapLogger)
+	logger := testlogger.New(s.T())
 	ctrl := gomock.NewController(s.T())
 	s.mockDomainCache = cache.NewMockDomainCache(ctrl)
 	scvgrCtx, scvgrCancelFn := context.WithTimeout(context.Background(), scavengerTestTimeout)
@@ -198,8 +193,16 @@ func (s *ScavengerTestSuite) TestAllExpiredTasksWithErrors() {
 func (s *ScavengerTestSuite) runScavenger() {
 	s.scvgr.Start()
 	timer := time.NewTimer(scavengerTestTimeout)
+
+	waiter := make(chan struct{})
+
+	go func() {
+		s.scvgr.stopWG.Wait()
+		close(waiter)
+	}()
+
 	select {
-	case <-s.scvgr.stopC:
+	case <-waiter:
 		timer.Stop()
 		return
 	case <-timer.C:

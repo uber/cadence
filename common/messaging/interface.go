@@ -20,7 +20,9 @@
 
 package messaging
 
-import "context"
+import (
+	"context"
+)
 
 type (
 	// Client is the interface used to abstract out interaction with messaging system for replication

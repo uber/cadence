@@ -23,10 +23,10 @@ package proto
 import (
 	"errors"
 
-	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	"go.uber.org/yarpc/encoding/protobuf"
 	"go.uber.org/yarpc/yarpcerrors"
 
+	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	sharedv1 "github.com/uber/cadence/.gen/proto/shared/v1"
 	"github.com/uber/cadence/common/types"
 )

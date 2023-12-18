@@ -23,6 +23,8 @@ package s3store
 import (
 	"context"
 
+	"github.com/uber/cadence/common/metrics"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -31,7 +33,6 @@ import (
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 )
 

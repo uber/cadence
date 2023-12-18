@@ -29,12 +29,13 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"go.uber.org/yarpc/transport/tchannel"
+
 	"github.com/uber/ringpop-go"
 	"github.com/uber/ringpop-go/events"
 	rpmembership "github.com/uber/ringpop-go/membership"
 	"github.com/uber/ringpop-go/swim"
 	tcg "github.com/uber/tchannel-go"
-	"go.uber.org/yarpc/transport/tchannel"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"

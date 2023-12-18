@@ -33,7 +33,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common/isolationgroup"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -93,7 +93,7 @@ func TestPickingAZone(t *testing.T) {
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
 			partitioner := defaultPartitioner{
-				log:                 loggerimpl.NewNopLogger(),
+				log:                 testlogger.New(t),
 				isolationGroupState: nil,
 			}
 			res := partitioner.pickIsolationGroup(td.wfPartitionCfg, td.availablePartitionGroups)
@@ -209,7 +209,7 @@ func TestDefaultPartitioner_GetIsolationGroupByDomainID(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			ig := isolationgroup.NewMockState(ctrl)
 			td.stateAffordance(ig)
-			partitioner := NewDefaultPartitioner(loggerimpl.NewNopLogger(), ig)
+			partitioner := NewDefaultPartitioner(testlogger.New(t), ig)
 			res, err := partitioner.GetIsolationGroupByDomainID(td.incomingContext, domainID, td.partitionKeyPassedIn, isolationGroups)
 
 			assert.Equal(t, td.expectedValue, res)

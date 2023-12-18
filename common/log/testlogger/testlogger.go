@@ -20,17 +20,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package partition
-
-//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination partitioning_mock.go -self_package github.com/uber/cadence/common/partition
+package testlogger
 
 import (
-	"context"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zaptest"
+
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 )
 
-type Partitioner interface {
-	// GetIsolationGroupByDomainID gets where the task workflow should be executing. Largely used by Matching
-	// when determining which isolationGroup to place the tasks in.
-	// Implementations ought to return (nil, nil) for when the feature is not enabled.
-	GetIsolationGroupByDomainID(ctx context.Context, DomainID string, partitionKey PartitionConfig, availableIsolationGroups []string) (string, error)
+// New is a helper to create new development logger in unit test
+func New(t zaptest.TestingT) log.Logger {
+	if testing.Verbose() {
+		logger, err := loggerimpl.NewDevelopment()
+		require.NoError(t, err)
+		return logger
+	}
+	return loggerimpl.NewLogger(zaptest.NewLogger(t))
 }

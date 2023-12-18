@@ -27,26 +27,29 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber-go/tally"
+	"go.uber.org/cadence/activity"
+
+	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/elasticsearch"
+	"github.com/uber/cadence/common/persistence"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-go/tally"
-	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/testsuite"
 	"go.uber.org/cadence/worker"
 	"go.uber.org/cadence/workflow"
 
+	"github.com/uber/cadence/common/dynamicconfig"
+	esMocks "github.com/uber/cadence/common/elasticsearch/mocks"
+
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/elasticsearch"
-	esMocks "github.com/uber/cadence/common/elasticsearch/mocks"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/metrics/mocks"
-	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/resource"
 )
 
@@ -118,7 +121,7 @@ func (s *esanalyzerWorkflowTestSuite) SetupTest() {
 	s.workflowEnv = s.NewTestWorkflowEnvironment()
 	s.controller = gomock.NewController(s.T())
 	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
-	s.resource = resource.NewTest(s.controller, metrics.Worker)
+	s.resource = resource.NewTest(s.T(), s.controller, metrics.Worker)
 	s.mockAdminClient = admin.NewMockClient(s.controller)
 	s.clientBean = client.NewMockBean(s.controller)
 	s.logger = &log.MockLogger{}

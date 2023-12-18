@@ -21,13 +21,14 @@
 package resource
 
 import (
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	publicservicetest "go.uber.org/cadence/.gen/go/cadence/workflowservicetest"
 	"go.uber.org/yarpc"
-	"go.uber.org/zap"
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
@@ -44,7 +45,7 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig/configstore"
 	"github.com/uber/cadence/common/isolationgroup"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
@@ -117,15 +118,11 @@ var (
 
 // NewTest returns a new test resource instance
 func NewTest(
+	t *testing.T,
 	controller *gomock.Controller,
 	serviceMetricsIndex metrics.ServiceIdx,
 ) *Test {
-
-	zapLogger, err := zap.NewDevelopment()
-	if err != nil {
-		panic(err)
-	}
-	logger := loggerimpl.NewLogger(zapLogger)
+	logger := testlogger.New(t)
 
 	frontendClient := frontend.NewMockClient(controller)
 	matchingClient := matching.NewMockClient(controller)

@@ -31,6 +31,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
+
 	"github.com/pborman/uuid"
 
 	"github.com/uber/cadence/.gen/go/shared"
@@ -42,7 +44,6 @@ import (
 	"github.com/uber/cadence/common/domain"
 	dc "github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/elasticsearch"
-	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"

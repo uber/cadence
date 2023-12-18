@@ -28,12 +28,13 @@ import (
 	"regexp"
 	"strconv"
 
-	"go.uber.org/yarpc"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
 
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/service"
+
+	"go.uber.org/yarpc"
 )
 
 // Params allows to configure rpc.Factory

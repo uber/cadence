@@ -20,7 +20,9 @@
 
 package persistence
 
-import "github.com/uber/cadence/common/dynamicconfig"
+import (
+	"github.com/uber/cadence/common/dynamicconfig"
+)
 
 type (
 	// DynamicConfiguration represents dynamic configuration for persistence layer

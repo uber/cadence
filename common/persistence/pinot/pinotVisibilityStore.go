@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/uber/cadence/.gen/go/indexer"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"

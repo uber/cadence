@@ -20,7 +20,9 @@
 
 package esql
 
-import "github.com/xwb1989/sqlparser"
+import (
+	"github.com/xwb1989/sqlparser"
+)
 
 // used for invert operator when NOT is specified
 var oppositeOperator = map[string]string{

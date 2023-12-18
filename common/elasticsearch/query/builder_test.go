@@ -24,10 +24,11 @@ package query
 
 import (
 	"encoding/json"
-	"testing"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/assert"
+
+	"testing"
 )
 
 func TestQueryBuilder(t *testing.T) {

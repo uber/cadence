@@ -25,12 +25,13 @@ package client
 import (
 	"sync"
 
+	"github.com/uber/cadence/common/pinot"
+
 	"github.com/uber/cadence/common/config"
 	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/pinot"
 	"github.com/uber/cadence/common/service"
 )
 

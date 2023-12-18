@@ -31,12 +31,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
-	"go.uber.org/zap"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/gcloud/connector/mocks"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 )
@@ -48,9 +47,8 @@ const (
 
 func (s *visibilityArchiverSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
-	zapLogger := zap.NewNop()
 	s.container = &archiver.VisibilityBootstrapContainer{
-		Logger:        loggerimpl.NewLogger(zapLogger),
+		Logger:        testlogger.New(s.T()),
 		MetricsClient: metrics.NewClient(tally.NoopScope, metrics.History),
 	}
 	s.expectedVisibilityRecords = []*visibilityRecord{

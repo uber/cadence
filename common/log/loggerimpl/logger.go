@@ -26,10 +26,8 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"go.uber.org/zap/zaptest"
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -51,11 +49,6 @@ func NewNopLogger() log.Logger {
 	return &loggerImpl{
 		zapLogger: zap.NewNop(),
 	}
-}
-
-// NewLoggerForTest is a helper to create new development logger in unit test
-func NewLoggerForTest(s suite.Suite) log.Logger {
-	return NewLogger(zaptest.NewLogger(s.T()))
 }
 
 // NewDevelopment returns a logger at debug level and log into STDERR

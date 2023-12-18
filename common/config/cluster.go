@@ -25,9 +25,10 @@ import (
 	"fmt"
 	"log"
 
-	"go.uber.org/multierr"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
+
+	"go.uber.org/multierr"
 )
 
 type (

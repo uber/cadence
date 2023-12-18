@@ -26,10 +26,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uber/cadence/common/persistence/serialization"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 	"github.com/uber/cadence/common/types"
 )

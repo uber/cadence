@@ -22,7 +22,6 @@ package proto
 
 import (
 	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 )

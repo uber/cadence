@@ -23,9 +23,9 @@ package history
 import (
 	"context"
 
-	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	"go.uber.org/yarpc"
 
+	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	historyv1 "github.com/uber/cadence/.gen/proto/history/v1"
 	"github.com/uber/cadence/common/types/mapper/proto"
 )

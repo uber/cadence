@@ -22,7 +22,9 @@
 
 package task
 
-import "github.com/uber/cadence/common"
+import (
+	"github.com/uber/cadence/common"
+)
 
 type (
 	// Processor is the generic coroutine pool interface

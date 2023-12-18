@@ -20,7 +20,9 @@
 
 package mocks
 
-import "github.com/uber/cadence/common/messaging"
+import (
+	"github.com/uber/cadence/common/messaging"
+)
 
 type (
 	// MessagingClient is the mock implementation for Service interface

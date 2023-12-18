@@ -29,13 +29,15 @@ import (
 
 	"github.com/pborman/uuid"
 	"github.com/uber-go/tally"
-	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
+
 	cwsc "go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/compatibility"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
+
+	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 
 	adminClient "github.com/uber/cadence/client/admin"
 	frontendClient "github.com/uber/cadence/client/frontend"

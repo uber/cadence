@@ -20,7 +20,9 @@
 
 package host
 
-import "flag"
+import (
+	"flag"
+)
 
 // TestFlags contains the feature flags for integration tests
 var TestFlags struct {

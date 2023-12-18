@@ -44,7 +44,7 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	esmock "github.com/uber/cadence/common/elasticsearch/mocks"
 	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
@@ -88,7 +88,7 @@ func (s *adminHandlerSuite) SetupTest() {
 	s.domainID = "some random domain ID"
 
 	s.controller = gomock.NewController(s.T())
-	s.mockResource = resource.NewTest(s.controller, metrics.Frontend)
+	s.mockResource = resource.NewTest(s.T(), s.controller, metrics.Frontend)
 	s.mockDomainCache = s.mockResource.DomainCache
 	s.mockHistoryClient = s.mockResource.HistoryClient
 	s.mockHistoryV2Mgr = s.mockResource.HistoryMgr
@@ -96,8 +96,8 @@ func (s *adminHandlerSuite) SetupTest() {
 	s.mockResolver = s.mockResource.MembershipResolver
 
 	params := &resource.Params{
-		Logger:          loggerimpl.NewNopLogger(),
-		ThrottledLogger: loggerimpl.NewNopLogger(),
+		Logger:          testlogger.New(s.T()),
+		ThrottledLogger: testlogger.New(s.T()),
 		MetricScope:     tally.NewTestScope(service.Frontend, make(map[string]string)),
 		MetricsClient:   metrics.NewNoopMetricsClient(),
 		PersistenceConfig: config.Persistence{
@@ -816,7 +816,7 @@ func Test_GetGlobalIsolationGroups(t *testing.T) {
 
 			handler := adminHandlerImpl{
 				Resource: &resource.Test{
-					Logger:        loggerimpl.NewNopLogger(),
+					Logger:        testlogger.New(t),
 					MetricsClient: metrics.NewNoopMetricsClient(),
 				},
 				isolationGroups: igMock,
@@ -879,7 +879,7 @@ func Test_UpdateGlobalIsolationGroups(t *testing.T) {
 
 			handler := adminHandlerImpl{
 				Resource: &resource.Test{
-					Logger:        loggerimpl.NewNopLogger(),
+					Logger:        testlogger.New(t),
 					MetricsClient: metrics.NewNoopMetricsClient(),
 				},
 				isolationGroups: igMock,
@@ -896,7 +896,7 @@ func Test_UpdateGlobalIsolationGroups(t *testing.T) {
 func Test_IsolationGroupsNotEnabled(t *testing.T) {
 	handler := adminHandlerImpl{
 		Resource: &resource.Test{
-			Logger:        loggerimpl.NewNopLogger(),
+			Logger:        testlogger.New(t),
 			MetricsClient: metrics.NewNoopMetricsClient(),
 		},
 		isolationGroups: nil, // valid state, the isolation-groups feature is not available for all persistence types
@@ -959,7 +959,7 @@ func Test_GetDomainIsolationGroups(t *testing.T) {
 
 			handler := adminHandlerImpl{
 				Resource: &resource.Test{
-					Logger:        loggerimpl.NewNopLogger(),
+					Logger:        testlogger.New(t),
 					MetricsClient: metrics.NewNoopMetricsClient(),
 				},
 				isolationGroups: igMock,
@@ -1025,7 +1025,7 @@ func Test_UpdateDomainIsolationGroups(t *testing.T) {
 
 			handler := adminHandlerImpl{
 				Resource: &resource.Test{
-					Logger:        loggerimpl.NewNopLogger(),
+					Logger:        testlogger.New(t),
 					MetricsClient: metrics.NewNoopMetricsClient(),
 				},
 				isolationGroups: igMock,

@@ -26,13 +26,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uber/cadence/common/elasticsearch/bulk"
+
 	"github.com/uber/cadence/.gen/go/indexer"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/definition"
 	es "github.com/uber/cadence/common/elasticsearch"
-	"github.com/uber/cadence/common/elasticsearch/bulk"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"

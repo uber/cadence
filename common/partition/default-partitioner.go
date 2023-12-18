@@ -28,11 +28,12 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/uber/cadence/common/isolationgroup"
+	"github.com/uber/cadence/common/log/tag"
+
 	"github.com/dgryski/go-farm"
 
-	"github.com/uber/cadence/common/isolationgroup"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/types"
 )
 

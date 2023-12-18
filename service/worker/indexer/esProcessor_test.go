@@ -26,17 +26,19 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/common/elasticsearch/bulk"
+	mocks2 "github.com/uber/cadence/common/elasticsearch/bulk/mocks"
+
+	"go.uber.org/zap/zaptest"
+
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-	"go.uber.org/zap/zaptest"
 
 	"github.com/uber/cadence/.gen/go/indexer"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/elasticsearch"
-	"github.com/uber/cadence/common/elasticsearch/bulk"
-	mocks2 "github.com/uber/cadence/common/elasticsearch/bulk/mocks"
 	esMocks "github.com/uber/cadence/common/elasticsearch/mocks"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	msgMocks "github.com/uber/cadence/common/messaging/mocks"

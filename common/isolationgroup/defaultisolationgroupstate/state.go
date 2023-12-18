@@ -27,13 +27,15 @@ import (
 	"fmt"
 	"sync/atomic"
 
+	"github.com/uber/cadence/common/metrics"
+
+	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/isolationgroup"
-	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 )
 

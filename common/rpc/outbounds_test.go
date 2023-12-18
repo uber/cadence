@@ -25,6 +25,9 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/service"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc"
@@ -33,9 +36,6 @@ import (
 	"go.uber.org/yarpc/peer/direct"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
-
-	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/service"
 )
 
 func TestCombineOutbounds(t *testing.T) {

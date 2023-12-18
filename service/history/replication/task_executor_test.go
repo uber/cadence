@@ -82,6 +82,7 @@ func (s *taskExecutorSuite) SetupTest() {
 	s.config = config.NewForTestByShardNumber(2)
 	s.controller = gomock.NewController(s.T())
 	s.mockShard = shard.NewTestContext(
+		s.T(),
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID:                0,

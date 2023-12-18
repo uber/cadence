@@ -23,11 +23,12 @@ package nosql
 import (
 	"fmt"
 
+	"github.com/uber/cadence/common/log/tag"
+
 	"github.com/dgryski/go-farm"
 
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 )
 
 type (

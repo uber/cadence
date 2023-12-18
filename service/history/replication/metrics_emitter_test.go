@@ -32,7 +32,7 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 )
@@ -52,7 +52,7 @@ func TestMetricsEmitter(t *testing.T) {
 	},
 		func(d string) bool { return false },
 		metrics.NewNoopMetricsClient(),
-		loggerimpl.NewNopLogger(),
+		testlogger.New(t),
 	)
 	testShardData := newTestShardData(timeSource, metadata)
 	timeSource.Update(time.Unix(10000, 0))

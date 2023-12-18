@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common/config"
+
 	"github.com/uber/cadence/common/log"
 	pnt "github.com/uber/cadence/common/pinot"
 )

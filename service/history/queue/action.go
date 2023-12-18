@@ -20,7 +20,9 @@
 
 package queue
 
-import "github.com/uber/cadence/common/types"
+import (
+	"github.com/uber/cadence/common/types"
+)
 
 type (
 	// ActionType specifies the type of the Action

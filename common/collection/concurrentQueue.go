@@ -20,7 +20,9 @@
 
 package collection
 
-import "sync"
+import (
+	"sync"
+)
 
 type (
 	concurrentQueueImpl struct {

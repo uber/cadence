@@ -27,9 +27,6 @@ import (
 	"strconv"
 	"time"
 
-	"go.uber.org/cadence/client"
-	"go.uber.org/cadence/workflow"
-
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -40,6 +37,9 @@ import (
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/reconciliation/store"
 	"github.com/uber/cadence/service/worker/scanner/shardscanner"
+
+	"go.uber.org/cadence/client"
+	"go.uber.org/cadence/workflow"
 )
 
 const (

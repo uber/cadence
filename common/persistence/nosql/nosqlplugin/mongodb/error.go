@@ -20,7 +20,9 @@
 
 package mongodb
 
-import "go.mongodb.org/mongo-driver/mongo"
+import (
+	"go.mongodb.org/mongo-driver/mongo"
+)
 
 func (db *mdb) IsNotFoundError(err error) bool {
 	return err == mongo.ErrNoDocuments

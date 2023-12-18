@@ -31,6 +31,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/partition"
+	"github.com/uber/cadence/common/service"
+
 	"github.com/pborman/uuid"
 
 	"github.com/uber/cadence/client/history"
@@ -39,14 +43,11 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/client"
-	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 )
 

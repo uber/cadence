@@ -31,22 +31,24 @@ import (
 	"sync/atomic"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
+	"github.com/uber/cadence/common/membership"
+	"github.com/uber/cadence/common/types/mapper/proto"
+
 	"github.com/pborman/uuid"
 	"go.uber.org/yarpc/yarpcerrors"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/future"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/proto"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"

@@ -24,10 +24,11 @@ import (
 	"fmt"
 	"sync"
 
+	p "github.com/uber/cadence/common/persistence"
+
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	p "github.com/uber/cadence/common/persistence"
 )
 
 type (

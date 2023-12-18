@@ -22,7 +22,9 @@
 
 package messaging
 
-import "context"
+import (
+	"context"
+)
 
 type noopProducer struct{}
 

@@ -21,7 +21,9 @@
 
 package dynamodb
 
-import "github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+import (
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+)
 
 var _ nosqlplugin.AdminDB = (*ddb)(nil)
 

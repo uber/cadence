@@ -81,6 +81,7 @@ func (s *transactionManagerSuite) SetupTest() {
 	s.mockWorkflowResetter = reset.NewMockWorkflowResetter(s.controller)
 
 	s.mockShard = shard.NewTestContext(
+		s.T(),
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID:          10,

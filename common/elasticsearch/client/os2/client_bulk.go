@@ -28,11 +28,11 @@ import (
 	"encoding/json"
 	"io"
 
-	"github.com/opensearch-project/opensearch-go/v2/opensearchutil"
-
 	"github.com/uber/cadence/common/elasticsearch/bulk"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+
+	"github.com/opensearch-project/opensearch-go/v2/opensearchutil"
 )
 
 // metricsRequest is used for a callback/metrics needs
