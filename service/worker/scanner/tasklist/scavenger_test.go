@@ -34,7 +34,7 @@ import (
 
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/log/testlogger"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
@@ -66,7 +66,9 @@ func (s *ScavengerTestSuite) SetupTest() {
 	s.taskMgr = &mocks.TaskManager{}
 	s.taskListTable = &mockTaskListTable{}
 	s.taskTables = make(map[string]*mockTaskTable)
-	logger := testlogger.New(s.T())
+	zapLogger, err := zap.NewDevelopment()
+	s.Require().NoError(err)
+	logger := loggerimpl.NewLogger(zapLogger)
 	ctrl := gomock.NewController(s.T())
 	s.mockDomainCache = cache.NewMockDomainCache(ctrl)
 	scvgrCtx, scvgrCancelFn := context.WithTimeout(context.Background(), scavengerTestTimeout)
