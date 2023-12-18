@@ -40,7 +40,7 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
 	dc "github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
@@ -91,7 +91,7 @@ func (s *domainHandlerCommonSuite) TearDownSuite() {
 func (s *domainHandlerCommonSuite) SetupTest() {
 	s.Setup()
 
-	logger := loggerimpl.NewNopLogger()
+	logger := s.Logger
 	dcCollection := dc.NewCollection(dc.NewNopClient(), logger)
 	s.minRetentionDays = 1
 	s.maxBadBinaryCount = 10
@@ -709,7 +709,7 @@ func TestHandlerImpl_UpdateIsolationGroups(t *testing.T) {
 			td.managerAffordance(domainMgrMock)
 
 			producer := messaging.NewNoopProducer()
-			replicator := NewDomainReplicator(producer, loggerimpl.NewNopLogger())
+			replicator := NewDomainReplicator(producer, testlogger.New(t))
 
 			handler := handlerImpl{
 				domainManager:       domainMgrMock,
@@ -724,7 +724,7 @@ func TestHandlerImpl_UpdateIsolationGroups(t *testing.T) {
 					MaxBadBinaryCount: func(string) int { return 3 },
 					FailoverCoolDown:  func(string) time.Duration { return time.Second },
 				},
-				logger: loggerimpl.NewNopLogger(),
+				logger: testlogger.New(t),
 			}
 
 			err := handler.UpdateIsolationGroups(context.TODO(), td.in)

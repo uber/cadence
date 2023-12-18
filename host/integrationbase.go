@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"testing"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -37,8 +38,8 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/persistence"
 	pt "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/persistence/persistence-tests/testcluster"
@@ -65,6 +66,7 @@ type (
 	}
 
 	IntegrationBaseParams struct {
+		T                     *testing.T
 		DefaultTestCluster    testcluster.PersistenceTestCluster
 		VisibilityTestCluster testcluster.PersistenceTestCluster
 		TestClusterConfig     *TestClusterConfig
@@ -111,6 +113,7 @@ func (s *IntegrationBase) setupSuite() {
 			EnableShardIDMetrics:                     dynamicconfig.GetBoolPropertyFn(true),
 		}
 		params := pt.TestBaseParams{
+			T:                     s.T(),
 			DefaultTestCluster:    s.defaultTestCluster,
 			VisibilityTestCluster: s.visibilityTestCluster,
 			ClusterMetadata:       clusterMetadata,
@@ -180,7 +183,7 @@ func (s *IntegrationBase) setupSuiteForPinotTest() {
 }
 
 func (s *IntegrationBase) setupLogger() {
-	s.Logger = loggerimpl.NewLoggerForTest(s.Suite)
+	s.Logger = testlogger.New(s.Suite.T())
 }
 
 // GetTestClusterConfig return test cluster config

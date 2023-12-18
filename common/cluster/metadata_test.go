@@ -32,6 +32,7 @@ import (
 
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 )
 
@@ -94,7 +95,7 @@ func TestMetadataBehaviour(t *testing.T) {
 				},
 				useNewFailoverVersionOverride: func(domain string) bool { return false },
 				metrics:                       metrics.NewNoopMetricsClient().Scope(0),
-				log:                           loggerimpl.NewNopLogger(),
+				log:                           testlogger.New(t),
 			}
 			assert.Equal(t, td.expectedOut, m.GetNextFailoverVersion(td.failoverCluster, td.currentVersion, "a domain"), name)
 		})
@@ -132,7 +133,7 @@ func TestFailoverVersionLogicIsMonotonic(t *testing.T) {
 		},
 		useNewFailoverVersionOverride: func(domain string) bool { return someDomainMigrating == domain },
 		metrics:                       metrics.NewNoopMetricsClient().Scope(0),
-		log:                           loggerimpl.NewNopLogger(),
+		log:                           testlogger.New(t),
 	}
 
 	current := int64(0)

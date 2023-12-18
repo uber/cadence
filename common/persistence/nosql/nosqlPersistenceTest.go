@@ -21,18 +21,21 @@
 package nosql
 
 import (
-	"log"
+	"testing"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/persistence-tests/testcluster"
 )
 
 // testCluster allows executing cassandra operations in testing.
 type testCluster struct {
+	logger log.Logger
+
 	keyspace      string
 	schemaBaseDir string
 	cfg           config.NoSQL
@@ -40,26 +43,38 @@ type testCluster struct {
 
 var _ testcluster.PersistenceTestCluster = (*testCluster)(nil)
 
+// TestClusterParams are params for test cluster initialization.
+type TestClusterParams struct {
+	PluginName    string
+	KeySpace      string
+	Username      string
+	Password      string
+	Host          string
+	Port          int
+	ProtoVersion  int
+	SchemaBaseDir string
+}
+
 // NewTestCluster returns a new cassandra test cluster
 // if schemaBaseDir is empty, it will be auto-resolved based on os.Getwd()
 // otherwise the specified value will be used (used by internal tests)
 func NewTestCluster(
-	pluginName, keyspace, username, password, host string,
-	port, protoVersion int,
-	schemaBaseDir string,
+	t *testing.T,
+	params TestClusterParams,
 ) testcluster.PersistenceTestCluster {
 	return &testCluster{
-		keyspace:      keyspace,
-		schemaBaseDir: schemaBaseDir,
+		logger:        testlogger.New(t),
+		keyspace:      params.KeySpace,
+		schemaBaseDir: params.SchemaBaseDir,
 		cfg: config.NoSQL{
-			PluginName:   pluginName,
-			User:         username,
-			Password:     password,
-			Hosts:        host,
-			Port:         port,
+			PluginName:   params.PluginName,
+			User:         params.Username,
+			Password:     params.Password,
+			Hosts:        params.Host,
+			Port:         params.Port,
 			MaxConns:     2,
-			Keyspace:     keyspace,
-			ProtoVersion: protoVersion,
+			Keyspace:     params.KeySpace,
+			ProtoVersion: params.ProtoVersion,
 		},
 	}
 }
@@ -79,25 +94,25 @@ func (s *testCluster) Config() config.Persistence {
 
 // SetupTestDatabase from PersistenceTestCluster interface
 func (s *testCluster) SetupTestDatabase() {
-	adminDB, err := NewNoSQLAdminDB(&s.cfg, loggerimpl.NewNopLogger(), &persistence.DynamicConfiguration{})
+	adminDB, err := NewNoSQLAdminDB(&s.cfg, s.logger, &persistence.DynamicConfiguration{})
 
 	if err != nil {
-		log.Fatal(err)
+		s.logger.Fatal(err.Error())
 	}
 	err = adminDB.SetupTestDatabase(s.schemaBaseDir)
 	if err != nil {
-		log.Fatal(err)
+		s.logger.Fatal(err.Error())
 	}
 }
 
 // TearDownTestDatabase from PersistenceTestCluster interface
 func (s *testCluster) TearDownTestDatabase() {
-	adminDB, err := NewNoSQLAdminDB(&s.cfg, loggerimpl.NewNopLogger(), &persistence.DynamicConfiguration{})
+	adminDB, err := NewNoSQLAdminDB(&s.cfg, s.logger, &persistence.DynamicConfiguration{})
 	if err != nil {
-		log.Fatal(err)
+		s.logger.Fatal(err.Error())
 	}
 	err = adminDB.TeardownTestDatabase()
 	if err != nil {
-		log.Fatal(err)
+		s.logger.Fatal(err.Error())
 	}
 }

@@ -27,6 +27,7 @@ import (
 	"math"
 	"math/rand"
 	"sync/atomic"
+	"testing"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -39,8 +40,8 @@ import (
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/client"
@@ -59,6 +60,7 @@ type (
 
 	// TestBaseOptions options to configure workflow test base.
 	TestBaseOptions struct {
+		T               *testing.T
 		DBPluginName    string
 		DBName          string
 		DBUsername      string
@@ -94,6 +96,7 @@ type (
 
 	// TestBaseParams defines the input of TestBase
 	TestBaseParams struct {
+		T                     *testing.T
 		DefaultTestCluster    testcluster.PersistenceTestCluster
 		VisibilityTestCluster testcluster.PersistenceTestCluster
 		ClusterMetadata       cluster.Metadata
@@ -112,17 +115,11 @@ const (
 
 // NewTestBaseFromParams returns a customized test base from given input
 func NewTestBaseFromParams(params TestBaseParams) *TestBase {
-	logger, err := loggerimpl.NewDevelopment()
-	if err != nil {
-		panic(err)
-	}
-
 	return &TestBase{
 		DefaultTestCluster:    params.DefaultTestCluster,
 		VisibilityTestCluster: params.VisibilityTestCluster,
 		ClusterMetadata:       params.ClusterMetadata,
 		PayloadSerializer:     persistence.NewPayloadSerializer(),
-		Logger:                logger,
 		DynamicConfiguration:  params.DynamicConfiguration,
 	}
 }
@@ -132,7 +129,15 @@ func NewTestBaseWithNoSQL(options *TestBaseOptions) *TestBase {
 	if options.DBName == "" {
 		options.DBName = "test_" + GenerateRandomDBName(10)
 	}
-	testCluster := nosql.NewTestCluster(options.DBPluginName, options.DBName, options.DBUsername, options.DBPassword, options.DBHost, options.DBPort, options.ProtoVersion, "")
+	testCluster := nosql.NewTestCluster(options.T, nosql.TestClusterParams{
+		PluginName:   options.DBPluginName,
+		KeySpace:     options.DBName,
+		Username:     options.DBUsername,
+		Password:     options.DBPassword,
+		Host:         options.DBHost,
+		Port:         options.DBPort,
+		ProtoVersion: options.ProtoVersion,
+	})
 	metadata := options.ClusterMetadata
 	if metadata.GetCurrentClusterName() == "" {
 		metadata = cluster.GetTestClusterMetadata(false)
@@ -194,6 +199,8 @@ func (s *TestBase) Setup() {
 	var err error
 	shardID := 10
 	clusterName := s.ClusterMetadata.GetCurrentClusterName()
+
+	s.Logger = testlogger.New(s.T())
 
 	s.DefaultTestCluster.SetupTestDatabase()
 

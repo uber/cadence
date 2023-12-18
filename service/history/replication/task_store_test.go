@@ -26,8 +26,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/uber/cadence/common/log/loggerimpl"
-
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common/cache"
@@ -35,6 +33,7 @@ import (
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 	hconfig "github.com/uber/cadence/service/history/config"
@@ -44,26 +43,26 @@ func TestTaskStore(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("Get error on unknown cluster", func(t *testing.T) {
-		ts := createTestTaskStore(nil, nil)
+		ts := createTestTaskStore(t, nil, nil)
 		_, err := ts.Get(ctx, "unknown cluster", testTask11)
 		assert.Equal(t, ErrUnknownCluster, err)
 	})
 
 	t.Run("Get error resolving domain", func(t *testing.T) {
-		ts := createTestTaskStore(fakeDomainCache{}, nil)
+		ts := createTestTaskStore(t, fakeDomainCache{}, nil)
 		_, err := ts.Get(ctx, testClusterA, testTask11)
 		assert.EqualError(t, err, "resolving domain: domain does not exist")
 	})
 
 	t.Run("Get skips task for domains non belonging to polling cluster", func(t *testing.T) {
-		ts := createTestTaskStore(fakeDomainCache{testDomainID: testDomain}, nil)
+		ts := createTestTaskStore(t, fakeDomainCache{testDomainID: testDomain}, nil)
 		task, err := ts.Get(ctx, testClusterB, testTask11)
 		assert.NoError(t, err)
 		assert.Nil(t, task)
 	})
 
 	t.Run("Get returns cached replication task", func(t *testing.T) {
-		ts := createTestTaskStore(fakeDomainCache{testDomainID: testDomain}, nil)
+		ts := createTestTaskStore(t, fakeDomainCache{testDomainID: testDomain}, nil)
 		ts.Put(&testHydratedTask11)
 		task, err := ts.Get(ctx, testClusterA, testTask11)
 		assert.NoError(t, err)
@@ -71,21 +70,21 @@ func TestTaskStore(t *testing.T) {
 	})
 
 	t.Run("Get returns non-cached replication task by hydrating it", func(t *testing.T) {
-		ts := createTestTaskStore(fakeDomainCache{testDomainID: testDomain}, fakeTaskHydrator{testTask11.TaskID: testHydratedTask11})
+		ts := createTestTaskStore(t, fakeDomainCache{testDomainID: testDomain}, fakeTaskHydrator{testTask11.TaskID: testHydratedTask11})
 		task, err := ts.Get(ctx, testClusterA, testTask11)
 		assert.NoError(t, err)
 		assert.Equal(t, &testHydratedTask11, task)
 	})
 
 	t.Run("Get fails to hydrate replication task", func(t *testing.T) {
-		ts := createTestTaskStore(fakeDomainCache{testDomainID: testDomain}, fakeTaskHydrator{testTask11.TaskID: testHydratedTaskErrorNonRecoverable})
+		ts := createTestTaskStore(t, fakeDomainCache{testDomainID: testDomain}, fakeTaskHydrator{testTask11.TaskID: testHydratedTaskErrorNonRecoverable})
 		task, err := ts.Get(ctx, testClusterA, testTask11)
 		assert.EqualError(t, err, "error hydrating task")
 		assert.Nil(t, task)
 	})
 
 	t.Run("Put does not store nil task", func(t *testing.T) {
-		ts := createTestTaskStore(nil, nil)
+		ts := createTestTaskStore(t, nil, nil)
 		ts.Put(nil)
 		for _, cache := range ts.clusters {
 			assert.Zero(t, cache.Size())
@@ -93,7 +92,7 @@ func TestTaskStore(t *testing.T) {
 	})
 
 	t.Run("Put error resolving domain - does not store task", func(t *testing.T) {
-		ts := createTestTaskStore(fakeDomainCache{}, nil)
+		ts := createTestTaskStore(t, fakeDomainCache{}, nil)
 		ts.Put(&testHydratedTask11)
 		ts.Put(&testHydratedTask12)
 		ts.Put(&testHydratedTask14)
@@ -103,7 +102,7 @@ func TestTaskStore(t *testing.T) {
 	})
 
 	t.Run("Put hydrated task into appropriate cache", func(t *testing.T) {
-		ts := createTestTaskStore(fakeDomainCache{testDomainID: testDomain}, nil)
+		ts := createTestTaskStore(t, fakeDomainCache{testDomainID: testDomain}, nil)
 		ts.Put(&testHydratedTask11)
 		for _, cluster := range testDomain.GetReplicationConfig().Clusters {
 			assert.Equal(t, 1, ts.clusters[cluster.ClusterName].Size())
@@ -111,7 +110,7 @@ func TestTaskStore(t *testing.T) {
 	})
 
 	t.Run("Put hydrated task without domain info - will put it to all caches", func(t *testing.T) {
-		ts := createTestTaskStore(fakeDomainCache{testDomainID: testDomain}, nil)
+		ts := createTestTaskStore(t, fakeDomainCache{testDomainID: testDomain}, nil)
 		ts.Put(&types.ReplicationTask{SourceTaskID: 123})
 		for _, cluster := range testDomain.GetReplicationConfig().Clusters {
 			assert.Equal(t, 1, ts.clusters[cluster.ClusterName].Size())
@@ -119,7 +118,7 @@ func TestTaskStore(t *testing.T) {
 	})
 
 	t.Run("Put full cache error", func(t *testing.T) {
-		ts := createTestTaskStore(fakeDomainCache{testDomainID: testDomain}, nil)
+		ts := createTestTaskStore(t, fakeDomainCache{testDomainID: testDomain}, nil)
 		ts.Put(&testHydratedTask11)
 		ts.Put(&testHydratedTask12)
 		ts.Put(&testHydratedTask14)
@@ -129,7 +128,7 @@ func TestTaskStore(t *testing.T) {
 	})
 
 	t.Run("Put will not store acked task", func(t *testing.T) {
-		ts := createTestTaskStore(fakeDomainCache{testDomainID: testDomain}, nil)
+		ts := createTestTaskStore(t, fakeDomainCache{testDomainID: testDomain}, nil)
 		for _, cluster := range testDomain.GetReplicationConfig().Clusters {
 			ts.Ack(cluster.ClusterName, testHydratedTask11.SourceTaskID)
 			ts.Put(&testHydratedTask11)
@@ -138,13 +137,13 @@ func TestTaskStore(t *testing.T) {
 	})
 
 	t.Run("Ack error on unknown cluster", func(t *testing.T) {
-		ts := createTestTaskStore(nil, nil)
+		ts := createTestTaskStore(t, nil, nil)
 		err := ts.Ack("unknown cluster", 0)
 		assert.Equal(t, ErrUnknownCluster, err)
 	})
 }
 
-func createTestTaskStore(domains domainCache, hydrator taskHydrator) *TaskStore {
+func createTestTaskStore(t *testing.T, domains domainCache, hydrator taskHydrator) *TaskStore {
 	cfg := hconfig.Config{
 		ReplicatorCacheCapacity:         dynamicconfig.GetIntPropertyFn(2),
 		ReplicationTaskGenerationQPS:    dynamicconfig.GetFloatPropertyFn(0),
@@ -158,7 +157,7 @@ func createTestTaskStore(domains domainCache, hydrator taskHydrator) *TaskStore 
 	},
 		func(d string) bool { return false },
 		metrics.NewNoopMetricsClient(),
-		loggerimpl.NewNopLogger(),
+		testlogger.New(t),
 	)
 
 	return NewTaskStore(&cfg, clusterMetadata, domains, metrics.NewNoopMetricsClient(), log.NewNoop(), hydrator)

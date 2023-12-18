@@ -25,6 +25,7 @@ package ringpopprovider
 import (
 	"fmt"
 	"strings"
+	"testing"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -33,8 +34,8 @@ import (
 	"github.com/uber/ringpop-go/swim"
 	"github.com/uber/tchannel-go"
 
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/membership"
 )
 
@@ -55,9 +56,9 @@ type TestRingpopCluster struct {
 // NewTestRingpopCluster creates a new test cluster with the given name and cluster size
 // All the nodes in the test cluster will register themselves in Ringpop
 // with the specified name. This is only intended for unit tests.
-func NewTestRingpopCluster(ringPopApp string, size int, ipAddr string, seed string, serviceName string) *TestRingpopCluster {
+func NewTestRingpopCluster(t *testing.T, ringPopApp string, size int, ipAddr string, seed string, serviceName string) *TestRingpopCluster {
 
-	logger := loggerimpl.NewNopLogger()
+	logger := testlogger.New(t)
 	cluster := &TestRingpopCluster{
 		hostUUIDs: make([]string, size),
 		hostAddrs: make([]string, size),

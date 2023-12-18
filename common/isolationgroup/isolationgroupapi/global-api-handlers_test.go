@@ -32,7 +32,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -62,7 +62,7 @@ func TestUpdateGlobalState(t *testing.T) {
 			dcMock := dynamicconfig.NewMockClient(gomock.NewController(t))
 			td.dcAffordance(dcMock)
 			handler := handlerImpl{
-				log:                        loggerimpl.NewNopLogger(),
+				log:                        testlogger.New(t),
 				globalIsolationGroupDrains: dcMock,
 			}
 			err := handler.UpdateGlobalState(context.Background(), td.in)
@@ -123,7 +123,7 @@ func TestGetGlobalState(t *testing.T) {
 			dcMock := dynamicconfig.NewMockClient(gomock.NewController(t))
 			td.dcAffordance(dcMock)
 			handler := handlerImpl{
-				log:                        loggerimpl.NewNopLogger(),
+				log:                        testlogger.New(t),
 				globalIsolationGroupDrains: dcMock,
 			}
 			res, err := handler.GetGlobalState(context.Background())

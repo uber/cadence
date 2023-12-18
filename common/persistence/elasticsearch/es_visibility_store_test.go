@@ -41,7 +41,7 @@ import (
 	es "github.com/uber/cadence/common/elasticsearch"
 	esMocks "github.com/uber/cadence/common/elasticsearch/mocks"
 	"github.com/uber/cadence/common/elasticsearch/query"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
@@ -105,7 +105,7 @@ func (s *ESVisibilitySuite) SetupTest() {
 	}
 
 	s.mockProducer = &mocks.KafkaProducer{}
-	mgr := NewElasticSearchVisibilityStore(s.mockESClient, testIndex, s.mockProducer, config, loggerimpl.NewLoggerForTest(s.Suite))
+	mgr := NewElasticSearchVisibilityStore(s.mockESClient, testIndex, s.mockProducer, config, testlogger.New(s.Suite.T()))
 	s.visibilityStore = mgr.(*esVisibilityStore)
 }
 
