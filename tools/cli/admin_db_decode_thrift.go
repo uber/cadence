@@ -35,7 +35,6 @@ import (
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
 
 	"github.com/davecgh/go-spew/spew"
