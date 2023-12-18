@@ -30,7 +30,6 @@ import (
 
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
-
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )

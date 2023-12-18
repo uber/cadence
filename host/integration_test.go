@@ -27,7 +27,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"log"
 	"math"
 	"sort"
 	"strconv"
@@ -129,7 +128,7 @@ func (s *IntegrationSuite) TestStartWorkflowExecution() {
 	we2, err2 := s.engine.StartWorkflowExecution(createContext(), newRequest)
 	s.NotNil(err2)
 	s.IsType(&types.WorkflowExecutionAlreadyStartedError{}, err2)
-	log.Printf("Unable to start workflow execution: %v\n", err2.Error())
+	s.T().Logf("Unable to start workflow execution: %v\n", err2.Error())
 	s.Nil(we2)
 }
 
