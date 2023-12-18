@@ -29,34 +29,27 @@
 package host
 
 import (
+	"encoding/json"
 	"flag"
+	"fmt"
 	"strconv"
+	"testing"
 	"time"
 
+	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/zap"
 
-	"github.com/uber/cadence/common/definition"
-	pnt "github.com/uber/cadence/common/pinot"
-
-	"testing"
-
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
-
-	"go.uber.org/zap"
-
-	"github.com/uber/cadence/host/pinotutils"
-
-	"encoding/json"
-	"fmt"
-
-	"github.com/pborman/uuid"
-
-	"github.com/uber/cadence/common"
+	pnt "github.com/uber/cadence/common/pinot"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/host/pinotutils"
 )
 
 const (

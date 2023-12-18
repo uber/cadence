@@ -20,9 +20,7 @@
 
 package archiver
 
-import (
-	"errors"
-)
+import "errors"
 
 const (
 	// ArchiveNonRetriableErrorMsg is the log message when the Archive() method encounters a non-retriable error

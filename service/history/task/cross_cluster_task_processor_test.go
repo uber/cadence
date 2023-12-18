@@ -27,11 +27,10 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cluster"

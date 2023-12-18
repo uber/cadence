@@ -27,18 +27,16 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/stretchr/testify/mock"
-	"go.uber.org/yarpc/yarpcerrors"
-
-	"github.com/uber/cadence/common/metrics/mocks"
-
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/yarpc/yarpcerrors"
 
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/metrics/mocks"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"

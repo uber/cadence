@@ -27,29 +27,26 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uber-go/tally"
-	"go.uber.org/cadence/activity"
-
-	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/elasticsearch"
-	"github.com/uber/cadence/common/persistence"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
+	"github.com/uber-go/tally"
+	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/testsuite"
 	"go.uber.org/cadence/worker"
 	"go.uber.org/cadence/workflow"
 
-	"github.com/uber/cadence/common/dynamicconfig"
-	esMocks "github.com/uber/cadence/common/elasticsearch/mocks"
-
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/elasticsearch"
+	esMocks "github.com/uber/cadence/common/elasticsearch/mocks"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/metrics/mocks"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/resource"
 )
 

@@ -29,6 +29,7 @@ import (
 
 	"github.com/startreedata/pinot-client-go/pinot"
 	"github.com/uber-go/tally"
+
 	adminClient "github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/filestore"
@@ -50,6 +51,7 @@ import (
 	"github.com/uber/cadence/common/persistence/nosql"
 	"github.com/uber/cadence/common/persistence/persistence-tests/testcluster"
 	"github.com/uber/cadence/testflags"
+
 	// the import is a test dependency
 	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"

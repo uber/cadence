@@ -27,35 +27,31 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/uber/cadence/common/partition"
-
-	"github.com/uber/cadence/common/domain"
-	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/uber-go/tally"
-
-	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/service"
-
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/dynamicconfig"
 	esmock "github.com/uber/cadence/common/elasticsearch/mocks"
+	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
+	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 )
 

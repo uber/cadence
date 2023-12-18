@@ -31,8 +31,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/uber/cadence/common/elasticsearch/query"
-
 	"github.com/cch123/elasticsql"
 	"github.com/valyala/fastjson"
 
@@ -41,6 +39,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	es "github.com/uber/cadence/common/elasticsearch"
+	"github.com/uber/cadence/common/elasticsearch/query"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"

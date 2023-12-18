@@ -29,18 +29,15 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/uber/cadence/common/metrics"
-
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
 	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-
-	"github.com/stretchr/testify/assert"
-
 	"github.com/uber/cadence/common/types"
 )
 

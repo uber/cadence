@@ -33,7 +33,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
+	"github.com/emirpasic/gods/maps/treemap"
 	"github.com/golang/mock/gomock"
+	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/suite"
+	"github.com/uber-go/tally"
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/client/history"
@@ -51,12 +56,6 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/types"
-
-	"github.com/davecgh/go-spew/spew"
-	"github.com/emirpasic/gods/maps/treemap"
-	"github.com/pborman/uuid"
-	"github.com/stretchr/testify/suite"
-	"github.com/uber-go/tally"
 )
 
 type (
