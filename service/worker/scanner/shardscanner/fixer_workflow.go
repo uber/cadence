@@ -240,6 +240,12 @@ func setHandlers(aggregator *ShardFixResultAggregator) map[string]interface{} {
 			}
 			return aggregator.GetDomainStatus(req)
 		},
+		AllResultsQuery: func() (map[int]FixResult, error) {
+			if aggregator == nil {
+				return nil, errQueryNotReady
+			}
+			return aggregator.GetAllFixResults()
+		},
 	}
 }
 

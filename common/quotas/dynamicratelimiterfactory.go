@@ -22,20 +22,27 @@
 
 package quotas
 
+import "github.com/uber/cadence/common/dynamicconfig"
+
+// LimiterFactory is used to create a Limiter for a given domain
 type LimiterFactory interface {
+	// GetLimiter returns a new Limiter for the given domain
 	GetLimiter(domain string) Limiter
 }
 
-func NewDynamicRateLimiterFactory(rps RPSKeyFunc) LimiterFactory {
+// NewSimpleDynamicRateLimiterFactory creates a new LimiterFactory which creates
+// a new DynamicRateLimiter for each domain, the RPS for the DynamicRateLimiter is given by the dynamic config
+func NewSimpleDynamicRateLimiterFactory(rps dynamicconfig.IntPropertyFnWithDomainFilter) LimiterFactory {
 	return dynamicRateLimiterFactory{
 		rps: rps,
 	}
 }
 
 type dynamicRateLimiterFactory struct {
-	rps RPSKeyFunc
+	rps dynamicconfig.IntPropertyFnWithDomainFilter
 }
 
+// GetLimiter returns a new Limiter for the given domain
 func (f dynamicRateLimiterFactory) GetLimiter(domain string) Limiter {
-	return NewDynamicRateLimiter(func() float64 { return f.rps(domain) })
+	return NewDynamicRateLimiter(func() float64 { return float64(f.rps(domain)) })
 }

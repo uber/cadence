@@ -70,6 +70,12 @@ func NewThrottledLogger(logger log.Logger, rps dynamicconfig.IntPropertyFn) log.
 	return tl
 }
 
+func (tl *throttledLogger) Debugf(msg string, args ...any) {
+	tl.rateLimit(func() {
+		tl.log.Debugf(msg, args...)
+	})
+}
+
 func (tl *throttledLogger) Debug(msg string, tags ...tag.Tag) {
 	tl.rateLimit(func() {
 		tl.log.Debug(msg, tags...)

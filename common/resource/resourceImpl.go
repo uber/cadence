@@ -340,7 +340,7 @@ func New(
 		isolationGroups:           isolationGroupState,
 		isolationGroupConfigStore: isolationGroupStore, // can be nil where persistence is not available
 		partitioner:               partitioner,
-		taskvalidator:             taskvalidator.NewWfChecker(logger),
+		taskvalidator:             taskvalidator.NewWfChecker(logger, params.MetricsClient),
 	}
 	return impl, nil
 }

@@ -35,13 +35,6 @@ type DynamicRateLimiter struct {
 	rl  *RateLimiter
 }
 
-// DynamicRateLimiterFactory creates a factory function for creating DynamicRateLimiters
-func DynamicRateLimiterFactory(rps RPSKeyFunc) func(string) Limiter {
-	return func(key string) Limiter {
-		return NewDynamicRateLimiter(func() float64 { return rps(key) })
-	}
-}
-
 // NewDynamicRateLimiter returns a rate limiter which handles dynamic config
 func NewDynamicRateLimiter(rps RPSFunc) *DynamicRateLimiter {
 	initialRps := rps()

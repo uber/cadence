@@ -8,13 +8,45 @@ You can find a list of previous releases on the [github releases](https://github
 
 ## [Unreleased]
 ### Added
-- Improves history handler error metrics and logs (#5438)
+- Added metrics to monitor task validation (#5466)
+- Added config map for kafka topic (#5473, #5474)
+- Add an "all results" query to scanner/fixer workflow (#5470)
+- Add retries into Scanner BlobWriter (#5471)
+- Added a unit test for the BlobStoreWriter (#5472)
+
+### Changed
+- Improves metric and error handling for history (#5469)
+- Minor change to include domainTag and pass domainName (#5468)
+
+## [1.2.6] - 2023-12-14
+### Added
 - Added range query support for Pinot json index (#5426)
+- Implemented GetTaskListSize method at persistence layer (#5442, #5447)
+- Added a framework for the Task validator service (#5446)
+- Added nit comments describing the Update workflow cycle (#5432)
+- Added log user query param (#5437)
+- Added CODEOWNERS file (#5453)
+- Added a function to evict all elements older than the cache TTL (#5464)
 
 ### Fixed
 - Fixed workflow replication for reset workflow (#5412)
 - Fixed visibility mode for admin when use Pinot visibility (#5441)
-- Fix timer-fixer, unfortunately broken in 1.2.5 (#5433)
+- Fixed workflow started metric (#5443)
+- Fixed timer-fixer, unfortunately broken in 1.2.5 (#5433)
+- Fixed confusing comment in matching handler (#5450)
+
+### Changed
+- Cassandra version is changed from 3.11 to 4.1.3 (#5461)
+  - If your machine already has ubercadence/server:master-auto-setup image then you need to repull so it works with latest docker-compose*.yml files
+- Move dynamic ratelimiter to its own file (#5451)
+- Create and use a limiter struct instead of just passing a function (#5454)
+- Dynamic ratelimiter factories (#5455)
+- Update github action for image publishing to released (#5460)
+- Update matching to emit metric for tasklist backlog size (#5448)
+- Change variable name from SecondsSinceEpoch into EventTimeMs (#5463)
+
+### Removed
+- Get rid of noisy task adding failure log in matching service (#5445)
 
 ## [1.2.5] - 2023-11-01
 

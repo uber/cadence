@@ -782,7 +782,8 @@ const (
 	ClusterMetadataScope
 	// GetAvailableIsolationGroupsScope is the metric for the default partitioner's getIsolationGroups operation
 	GetAvailableIsolationGroupsScope
-
+	// TaskValidatorScope is the metric for the taskvalidator's workflow check operation.
+	TaskValidatorScope
 	NumCommonScopes
 )
 
@@ -1623,6 +1624,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		GetAvailableIsolationGroupsScope: {operation: "GetAvailableIsolationGroups"},
 
 		DomainFailoverScope:         {operation: "DomainFailover"},
+		TaskValidatorScope:          {operation: "TaskValidation"},
 		DomainReplicationQueueScope: {operation: "DomainReplicationQueue"},
 		ClusterMetadataScope:        {operation: "ClusterMetadata"},
 	},
@@ -2085,6 +2087,7 @@ const (
 	IsolationGroupStatePollerUnavailable
 	IsolationGroupStateDrained
 	IsolationGroupStateHealthy
+	ValidatedWorkflowCount
 
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
@@ -2360,7 +2363,6 @@ const (
 	LargeHistoryEventCount
 	LargeHistorySizeCount
 	UpdateWorkflowExecutionCount
-
 	NumHistoryMetrics
 )
 
@@ -2404,6 +2406,7 @@ const (
 	TaskListManagersGauge
 	TaskLagPerTaskListGauge
 	TaskBacklogPerTaskListGauge
+	TaskCountPerTaskListGauge
 
 	NumMatchingMetrics
 )
@@ -2715,6 +2718,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		IsolationGroupStatePollerUnavailable: {metricName: "isolation_group_poller_unavailable", metricType: Counter},
 		IsolationGroupStateDrained:           {metricName: "isolation_group_drained", metricType: Counter},
 		IsolationGroupStateHealthy:           {metricName: "isolation_group_healthy", metricType: Counter},
+		ValidatedWorkflowCount:               {metricName: "task_validator_count", metricType: Counter},
 	},
 	History: {
 		TaskRequests:             {metricName: "task_requests", metricType: Counter},
@@ -3021,6 +3025,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		TaskListManagersGauge:                       {metricName: "tasklist_managers", metricType: Gauge},
 		TaskLagPerTaskListGauge:                     {metricName: "task_lag_per_tl", metricType: Gauge},
 		TaskBacklogPerTaskListGauge:                 {metricName: "task_backlog_per_tl", metricType: Gauge},
+		TaskCountPerTaskListGauge:                   {metricName: "task_count_per_tl", metricType: Gauge},
 	},
 	Worker: {
 		ReplicatorMessages:                            {metricName: "replicator_messages"},

@@ -26,33 +26,10 @@ import (
 	"sort"
 	"time"
 
-	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/types"
-)
-
-const (
-	// below are templates for history_node table
-	v2templateUpsertData = `INSERT INTO history_node (` +
-		`tree_id, branch_id, node_id, txn_id, data, data_encoding) ` +
-		`VALUES (?, ?, ?, ?, ?, ?) `
-
-	v2templateReadData = `SELECT node_id, txn_id, data, data_encoding FROM history_node ` +
-		`WHERE tree_id = ? AND branch_id = ? AND node_id >= ? AND node_id < ? `
-
-	v2templateRangeDeleteData = `DELETE FROM history_node WHERE tree_id = ? AND branch_id = ? AND node_id >= ? `
-
-	// below are templates for history_tree table
-	v2templateInsertTree = `INSERT INTO history_tree (` +
-		`tree_id, branch_id, ancestors, fork_time, info) ` +
-		`VALUES (?, ?, ?, ?, ?) `
-
-	v2templateReadAllBranches = `SELECT branch_id, ancestors, fork_time, info FROM history_tree WHERE tree_id = ? `
-
-	v2templateDeleteBranch = `DELETE FROM history_tree WHERE tree_id = ? AND branch_id = ? `
-
-	v2templateScanAllTreeBranches = `SELECT tree_id, branch_id, fork_time, info FROM history_tree `
 )
 
 // InsertIntoHistoryTreeAndNode inserts one or two rows: tree row and node row(at least one of them)
@@ -76,7 +53,7 @@ func (db *cdb) InsertIntoHistoryTreeAndNode(ctx context.Context, treeRow *nosqlp
 		// Note: for perf, prefer using batch for inserting more than one records
 		batch := db.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
 		batch.Query(v2templateInsertTree,
-			treeRow.TreeID, treeRow.BranchID, ancs, p.UnixNanoToDBTimestamp(treeRow.CreateTimestamp.UnixNano()), treeRow.Info)
+			treeRow.TreeID, treeRow.BranchID, ancs, persistence.UnixNanoToDBTimestamp(treeRow.CreateTimestamp.UnixNano()), treeRow.Info)
 		batch.Query(v2templateUpsertData,
 			nodeRow.TreeID, nodeRow.BranchID, nodeRow.NodeID, nodeRow.TxnID, nodeRow.Data, nodeRow.DataEncoding)
 		err = db.session.ExecuteBatch(batch)
@@ -84,7 +61,7 @@ func (db *cdb) InsertIntoHistoryTreeAndNode(ctx context.Context, treeRow *nosqlp
 		var query gocql.Query
 		if treeRow != nil {
 			query = db.session.Query(v2templateInsertTree,
-				treeRow.TreeID, treeRow.BranchID, ancs, p.UnixNanoToDBTimestamp(treeRow.CreateTimestamp.UnixNano()), treeRow.Info).WithContext(ctx)
+				treeRow.TreeID, treeRow.BranchID, ancs, persistence.UnixNanoToDBTimestamp(treeRow.CreateTimestamp.UnixNano()), treeRow.Info).WithContext(ctx)
 		}
 		if nodeRow != nil {
 			query = db.session.Query(v2templateUpsertData,
@@ -149,7 +126,7 @@ func (db *cdb) SelectAllHistoryTrees(ctx context.Context, nextPageToken []byte, 
 	var rows []*nosqlplugin.HistoryTreeRow
 	row := &nosqlplugin.HistoryTreeRow{}
 	for iter.Scan(&row.TreeID, &row.BranchID, &createTime, &row.Info) {
-		row.CreateTimestamp = time.Unix(0, p.DBTimestampToUnixNano(p.UnixNanoToDBTimestamp(createTime.UnixNano())))
+		row.CreateTimestamp = time.Unix(0, persistence.DBTimestampToUnixNano(persistence.UnixNanoToDBTimestamp(createTime.UnixNano())))
 		rows = append(rows, row)
 		row = &nosqlplugin.HistoryTreeRow{}
 	}

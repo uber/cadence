@@ -28,18 +28,31 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/metrics"
 )
 
+// MockMetricsScope implements the metrics.Scope interface for testing purposes.
+type MockMetricsScope struct{}
+
+func (s *MockMetricsScope) IncCounter(counter int) {}
+
 func TestWorkflowCheckforValidation(t *testing.T) {
-	// Create a logger for testing
+	// Create a mock logger and metrics client
 	logger := log.NewNoop()
+	metricsClient := metrics.NewNoopMetricsClient()
 
-	// Create a new Checker
-	checker := NewWfChecker(logger)
+	// Create an instance of checkerImpl with the mock logger and metrics client
+	checker := NewWfChecker(logger, metricsClient)
 
-	// Test with sample data
-	err := checker.WorkflowCheckforValidation("workflow123", "domain456", "run789")
+	// Define test inputs
+	workflowID := "testWorkflowID"
+	domainID := "testDomainID"
+	runID := "testRunID"
+	domainName := "testDomainName"
 
-	// Assert that there is no error
-	assert.Nil(t, err)
+	// Call the method being tested
+	err := checker.WorkflowCheckforValidation(workflowID, domainID, domainName, runID)
+
+	// Assert that the method returned no error
+	assert.NoError(t, err)
 }

@@ -140,10 +140,10 @@ func (s *timerQueueProcessorBaseSuite) TestGetTimerTasks_More() {
 	mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything, request).Return(response, nil).Once()
 
 	timerQueueProcessBase := s.newTestTimerQueueProcessorBase(nil, nil, nil, nil, nil)
-	timers, token, err := timerQueueProcessBase.getTimerTasks(readLevel, maxReadLevel, request.NextPageToken, batchSize)
+	got, err := timerQueueProcessBase.getTimerTasks(readLevel, maxReadLevel, request.NextPageToken, batchSize)
 	s.Nil(err)
-	s.Equal(response.Timers, timers)
-	s.Equal(response.NextPageToken, token)
+	s.Equal(response.Timers, got.Timers)
+	s.Equal(response.NextPageToken, got.NextPageToken)
 }
 
 func (s *timerQueueProcessorBaseSuite) TestGetTimerTasks_NoMore() {
@@ -179,10 +179,10 @@ func (s *timerQueueProcessorBaseSuite) TestGetTimerTasks_NoMore() {
 	mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything, request).Return(response, nil).Once()
 
 	timerQueueProcessBase := s.newTestTimerQueueProcessorBase(nil, nil, nil, nil, nil)
-	timers, token, err := timerQueueProcessBase.getTimerTasks(readLevel, maxReadLevel, request.NextPageToken, batchSize)
+	got, err := timerQueueProcessBase.getTimerTasks(readLevel, maxReadLevel, request.NextPageToken, batchSize)
 	s.Nil(err)
-	s.Equal(response.Timers, timers)
-	s.Empty(token)
+	s.Equal(response.Timers, got.Timers)
+	s.Empty(got.NextPageToken)
 }
 
 func (s *timerQueueProcessorBaseSuite) TestReadLookAheadTask() {
@@ -264,11 +264,11 @@ func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_NoLookAhead_NoNext
 	mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything, lookAheadRequest).Return(&persistence.GetTimerIndexTasksResponse{}, nil).Once()
 
 	timerQueueProcessBase := s.newTestTimerQueueProcessorBase(nil, nil, nil, nil, nil)
-	filteredTasks, lookAheadTask, nextPageToken, err := timerQueueProcessBase.readAndFilterTasks(readLevel, maxReadLevel, request.NextPageToken)
+	got, err := timerQueueProcessBase.readAndFilterTasks(readLevel, maxReadLevel, request.NextPageToken)
 	s.Nil(err)
-	s.Equal(response.Timers, filteredTasks)
-	s.Nil(lookAheadTask)
-	s.Nil(nextPageToken)
+	s.Equal(response.Timers, got.timerTasks)
+	s.Nil(got.lookAheadTask)
+	s.Nil(got.nextPageToken)
 }
 
 func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_NoLookAhead_HasNextPage() {
@@ -303,11 +303,11 @@ func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_NoLookAhead_HasNex
 	mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything, request).Return(response, nil).Once()
 
 	timerQueueProcessBase := s.newTestTimerQueueProcessorBase(nil, nil, nil, nil, nil)
-	filteredTasks, lookAheadTask, nextPageToken, err := timerQueueProcessBase.readAndFilterTasks(readLevel, maxReadLevel, request.NextPageToken)
+	got, err := timerQueueProcessBase.readAndFilterTasks(readLevel, maxReadLevel, request.NextPageToken)
 	s.Nil(err)
-	s.Equal(response.Timers, filteredTasks)
-	s.Nil(lookAheadTask)
-	s.Equal(response.NextPageToken, nextPageToken)
+	s.Equal(response.Timers, got.timerTasks)
+	s.Nil(got.lookAheadTask)
+	s.Equal(response.NextPageToken, got.nextPageToken)
 }
 
 func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_HasLookAhead_NoNextPage() {
@@ -353,11 +353,11 @@ func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_HasLookAhead_NoNex
 	mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything, request).Return(response, nil).Once()
 
 	timerQueueProcessBase := s.newTestTimerQueueProcessorBase(nil, nil, nil, nil, nil)
-	filteredTasks, lookAheadTask, nextPageToken, err := timerQueueProcessBase.readAndFilterTasks(readLevel, maxReadLevel, request.NextPageToken)
+	got, err := timerQueueProcessBase.readAndFilterTasks(readLevel, maxReadLevel, request.NextPageToken)
 	s.Nil(err)
-	s.Equal([]*persistence.TimerTaskInfo{response.Timers[0]}, filteredTasks)
-	s.Equal(response.Timers[1], lookAheadTask)
-	s.Nil(nextPageToken)
+	s.Equal([]*persistence.TimerTaskInfo{response.Timers[0]}, got.timerTasks)
+	s.Equal(response.Timers[1], got.lookAheadTask)
+	s.Nil(got.nextPageToken)
 }
 
 func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_HasLookAhead_HasNextPage() {
@@ -403,11 +403,11 @@ func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_HasLookAhead_HasNe
 	mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything, request).Return(response, nil).Once()
 
 	timerQueueProcessBase := s.newTestTimerQueueProcessorBase(nil, nil, nil, nil, nil)
-	filteredTasks, lookAheadTask, nextPageToken, err := timerQueueProcessBase.readAndFilterTasks(readLevel, maxReadLevel, request.NextPageToken)
+	got, err := timerQueueProcessBase.readAndFilterTasks(readLevel, maxReadLevel, request.NextPageToken)
 	s.Nil(err)
-	s.Equal([]*persistence.TimerTaskInfo{response.Timers[0]}, filteredTasks)
-	s.Equal(response.Timers[1], lookAheadTask)
-	s.Nil(nextPageToken)
+	s.Equal([]*persistence.TimerTaskInfo{response.Timers[0]}, got.timerTasks)
+	s.Equal(response.Timers[1], got.lookAheadTask)
+	s.Nil(got.nextPageToken)
 }
 
 func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_LookAheadFailed_NoNextPage() {
@@ -461,11 +461,11 @@ func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_LookAheadFailed_No
 	mockExecutionMgr.On("GetTimerIndexTasks", mock.Anything, lookAheadRequest).Return(nil, errors.New("some random error")).Times(s.mockShard.GetConfig().TimerProcessorGetFailureRetryCount())
 
 	timerQueueProcessBase := s.newTestTimerQueueProcessorBase(nil, nil, nil, nil, nil)
-	filteredTasks, lookAheadTask, nextPageToken, err := timerQueueProcessBase.readAndFilterTasks(readLevel, maxReadLevel, request.NextPageToken)
+	got, err := timerQueueProcessBase.readAndFilterTasks(readLevel, maxReadLevel, request.NextPageToken)
 	s.Nil(err)
-	s.Equal(response.Timers, filteredTasks)
-	s.Equal(maxReadLevel.(timerTaskKey).visibilityTimestamp, lookAheadTask.VisibilityTimestamp)
-	s.Nil(nextPageToken)
+	s.Equal(response.Timers, got.timerTasks)
+	s.Equal(maxReadLevel.(timerTaskKey).visibilityTimestamp, got.lookAheadTask.VisibilityTimestamp)
+	s.Nil(got.nextPageToken)
 }
 
 func (s *timerQueueProcessorBaseSuite) TestNotifyNewTimes() {

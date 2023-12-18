@@ -2,13 +2,18 @@ version: "3.5"
 
 services:
   cassandra:
-    image: cassandra:3.11
+    image: cassandra:4.1.3
     expose:
       - "9042"
     networks:
       services-network:
         aliases:
           - cassandra
+    healthcheck:
+      test: ["CMD", "cqlsh", "-u cassandra", "-p cassandra" ,"-e describe keyspaces"]
+      interval: 15s
+      timeout: 30s
+      retries: 10
 
   mysql:
     image: mysql:8.0
@@ -86,8 +91,9 @@ services:
     build:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
-    command: make cover_profile
+    command: sh -c "make .just-build && make install-schema && make cover_profile"
     environment:
+      - "CASSANDRA_HOST=cassandra"
       - "CASSANDRA=1"
       - "MYSQL=1"
       - "POSTGRES=1"
@@ -98,12 +104,18 @@ services:
       - "POSTGRES_USER=cadence"
       - "POSTGRES_PASSWORD=cadence"
     depends_on:
-      - cassandra
-      - mysql
-      - postgres
-      - mongo
+      cassandra:
+        condition: service_healthy
+      mysql:
+        condition: service_started
+      postgres:
+        condition: service_started
+      mongo:
+        condition: service_started
     volumes:
       - ../../:/cadence
+      - /cadence/.build/ # ensure we don't mount the build directory
+      - /cadence/.bin/ # ensure we don't mount the bin directory
     networks:
       services-network:
         aliases:
@@ -115,17 +127,23 @@ services:
       dockerfile: ./docker/buildkite/Dockerfile
     command: make cover_integration_profile
     environment:
+      - "CASSANDRA_HOST=cassandra"
       - "CASSANDRA=1"
       - "CASSANDRA_SEEDS=cassandra"
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
       - "TEST_TAG=esintegration"
     depends_on:
-      - cassandra
-      - elasticsearch
-      - kafka
+      cassandra:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_started
+      kafka:
+        condition: service_started
     volumes:
       - ../../:/cadence
+      - /cadence/.build/ # ensure we don't mount the build directory
+      - /cadence/.bin/ # ensure we don't mount the bin directory
     networks:
       services-network:
         aliases:
@@ -149,6 +167,8 @@ services:
       - kafka
     volumes:
       - ../../:/cadence
+      - /cadence/.build/ # ensure we don't mount the build directory
+      - /cadence/.bin/ # ensure we don't mount the bin directory
     networks:
       services-network:
         aliases:
@@ -173,6 +193,8 @@ services:
       - kafka
     volumes:
       - ../../:/cadence
+      - /cadence/.build/ # ensure we don't mount the build directory
+      - /cadence/.bin/ # ensure we don't mount the bin directory
     networks:
       services-network:
         aliases:
@@ -184,17 +206,23 @@ services:
       dockerfile: ./docker/buildkite/Dockerfile
     command: make cover_integration_profile EVENTSV2=true
     environment:
+      - "CASSANDRA_HOST=cassandra"
       - "CASSANDRA=1"
       - "CASSANDRA_SEEDS=cassandra"
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
       - "TEST_TAG=esintegration"
     depends_on:
-      - cassandra
-      - elasticsearch
-      - kafka
+      cassandra:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_started
+      kafka:
+        condition: service_started
     volumes:
       - ../../:/cadence
+      - /cadence/.build/ # ensure we don't mount the build directory
+      - /cadence/.bin/ # ensure we don't mount the bin directory
     networks:
       services-network:
         aliases:
@@ -206,17 +234,23 @@ services:
       dockerfile: ./docker/buildkite/Dockerfile
     command: make cover_ndc_profile
     environment:
+      - "CASSANDRA_HOST=cassandra"
       - "CASSANDRA=1"
       - "CASSANDRA_SEEDS=cassandra"
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
       - "TEST_TAG=esintegration"
     depends_on:
-      - cassandra
-      - elasticsearch
-      - kafka
+      cassandra:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_started
+      kafka:
+        condition: service_started
     volumes:
       - ../../:/cadence
+      - /cadence/.build/ # ensure we don't mount the build directory
+      - /cadence/.bin/ # ensure we don't mount the bin directory
     networks:
       services-network:
         aliases:
@@ -240,6 +274,8 @@ services:
       - kafka
     volumes:
       - ../../:/cadence
+      - /cadence/.build/ # ensure we don't mount the build directory
+      - /cadence/.bin/ # ensure we don't mount the bin directory
     networks:
       services-network:
         aliases:

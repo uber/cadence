@@ -1828,7 +1828,19 @@ func (m *testTaskManager) GetTasks(
 }
 
 func (m *testTaskManager) GetTaskListSize(_ context.Context, request *persistence.GetTaskListSizeRequest) (*persistence.GetTaskListSizeResponse, error) {
-	return nil, fmt.Errorf("Not implemented")
+	tlm := m.getTaskListManager(newTestTaskListID(request.DomainID, request.TaskListName, request.TaskListType))
+	tlm.Lock()
+	defer tlm.Unlock()
+	count := int64(0)
+	it := tlm.tasks.Iterator()
+	for it.Next() {
+		taskID := it.Key().(int64)
+		if taskID <= request.AckLevel {
+			continue
+		}
+		count++
+	}
+	return &persistence.GetTaskListSizeResponse{Size: count}, nil
 }
 
 func (m *testTaskManager) GetOrphanTasks(_ context.Context, request *persistence.GetOrphanTasksRequest) (*persistence.GetOrphanTasksResponse, error) {

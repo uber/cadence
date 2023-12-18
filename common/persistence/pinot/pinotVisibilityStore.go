@@ -62,8 +62,8 @@ const (
 	ExecutionTime        = "ExecutionTime"
 	Encoding             = "Encoding"
 	LikeStatement        = "%s LIKE '%%%s%%'"
-	IsDeleted            = "IsDeleted"         // used for Pinot deletion/rolling upsert only, not visible to user
-	SecondsSinceEpoch    = "SecondsSinceEpoch" // used for Pinot deletion/rolling upsert only, not visible to user
+	IsDeleted            = "IsDeleted"   // used for Pinot deletion/rolling upsert only, not visible to user
+	EventTimeMs          = "EventTimeMs" // used for Pinot deletion/rolling upsert only, not visible to user
 
 	// used to be micro second
 	oneMicroSecondInNano = int64(time.Microsecond / time.Nanosecond)
@@ -205,7 +205,6 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionUninitialized(ctx context.
 }
 
 func (v *pinotVisibilityStore) UpsertWorkflowExecution(ctx context.Context, request *p.InternalUpsertWorkflowExecutionRequest) error {
-
 	msg, err := createVisibilityMessage(
 		request.DomainUUID,
 		request.WorkflowID,
@@ -511,7 +510,7 @@ func createDeleteVisibilityMessage(domainID string,
 	m[WorkflowID] = wid
 	m[RunID] = rid
 	m[IsDeleted] = isDeleted
-	m[SecondsSinceEpoch] = time.Now().UnixNano()
+	m[EventTimeMs] = time.Now().UnixMilli()
 	serializedMsg, err := json.Marshal(m)
 	if err != nil {
 		return nil, err
@@ -531,18 +530,18 @@ func createVisibilityMessage(
 	rid string,
 	workflowTypeName string,
 	taskList string,
-	startTimeUnixNano int64,
-	executionTimeUnixNano int64,
+	startTimeUnixMilli int64,
+	executionTimeUnixMilli int64,
 	taskID int64,
 	memo []byte,
 	encoding common.EncodingType,
 	isCron bool,
 	numClusters int16,
 	// specific to certain status
-	closeTimeUnixNano int64, // close execution
+	closeTimeUnixMilli int64, // close execution
 	closeStatus workflow.WorkflowExecutionCloseStatus, // close execution
 	historyLength int64, // close execution
-	updateTimeUnixNano int64, // update execution,
+	updateTimeUnixMilli int64, // update execution,
 	shardID int64,
 	rawSearchAttributes map[string][]byte,
 	isDeleted bool,
@@ -554,17 +553,17 @@ func createVisibilityMessage(
 	m[RunID] = rid
 	m[WorkflowType] = workflowTypeName
 	m[TaskList] = taskList
-	m[StartTime] = startTimeUnixNano
-	m[ExecutionTime] = executionTimeUnixNano
+	m[StartTime] = startTimeUnixMilli
+	m[ExecutionTime] = executionTimeUnixMilli
 	m[IsCron] = isCron
 	m[NumClusters] = numClusters
-	m[CloseTime] = closeTimeUnixNano
+	m[CloseTime] = closeTimeUnixMilli
 	m[CloseStatus] = int(closeStatus)
 	m[HistoryLength] = historyLength
-	m[UpdateTime] = updateTimeUnixNano
+	m[UpdateTime] = updateTimeUnixMilli
 	m[ShardID] = shardID
 	m[IsDeleted] = isDeleted
-	m[SecondsSinceEpoch] = updateTimeUnixNano // same as update time when record is upserted, could not use updateTime directly since this will be modified by Pinot
+	m[EventTimeMs] = updateTimeUnixMilli // same as update time when record is upserted, could not use updateTime directly since this will be modified by Pinot
 
 	SearchAttributes := make(map[string]interface{})
 	var err error

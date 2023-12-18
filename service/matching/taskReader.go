@@ -200,6 +200,11 @@ getTasksPumpLoop:
 			}
 		case <-updateAckTimer.C:
 			{
+				ackLevel := tr.taskAckManager.GetAckLevel()
+				if size, err := tr.db.GetTaskListSize(ackLevel); err == nil {
+					tr.scope.Tagged(getTaskListTypeTag(tr.taskListID.taskType)).
+						UpdateGauge(metrics.TaskCountPerTaskListGauge, float64(size))
+				}
 				if err := tr.handleErr(tr.persistAckLevel()); err != nil {
 					tr.logger.Error("Persistent store operation failure",
 						tag.StoreOperationUpdateTaskList,
