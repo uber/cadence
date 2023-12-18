@@ -22,6 +22,7 @@ package proto
 
 import (
 	adminv1 "github.com/uber/cadence-idl/go/proto/admin/v1"
+
 	sharedv1 "github.com/uber/cadence/.gen/proto/shared/v1"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"

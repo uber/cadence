@@ -26,7 +26,6 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/cadence/testsuite"

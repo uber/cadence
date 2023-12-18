@@ -20,9 +20,7 @@
 
 package config
 
-import (
-	"fmt"
-)
+import "fmt"
 
 type (
 	// KafkaConfig describes the configuration needed to connect to all kafka clusters

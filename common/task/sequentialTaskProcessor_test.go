@@ -26,13 +26,11 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
-	"github.com/uber/cadence/common/log/testlogger"
-
-	"github.com/stretchr/testify/suite"
-
 	"github.com/uber/cadence/common/collection"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 )
 

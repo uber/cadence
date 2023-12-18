@@ -29,14 +29,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/pborman/uuid"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/types"
-
-	"github.com/google/go-cmp/cmp"
-	"github.com/pborman/uuid"
 )
 
 // fakeSession is fake implementation of gocql.Session

@@ -20,9 +20,7 @@
 
 package testing
 
-import (
-	"math/rand"
-)
+import "math/rand"
 
 const (
 	emptyCandidateIndex = -1
