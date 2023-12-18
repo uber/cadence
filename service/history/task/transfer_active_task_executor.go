@@ -476,6 +476,8 @@ func (t *transferActiveTaskExecutor) processCloseExecutionTaskHelper(
 			numClusters,
 			updateTimestamp.UnixNano(),
 			searchAttr,
+			executionInfo.ParentWorkflowID,
+			executionInfo.ParentRunID,
 		); err != nil {
 			return err
 		}
@@ -1030,6 +1032,8 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 			visibilityMemo,
 			updateTimestamp.UnixNano(),
 			searchAttr,
+			executionInfo.ParentWorkflowID,
+			executionInfo.ParentRunID,
 		)
 	}
 	return t.upsertWorkflowExecution(
@@ -1048,6 +1052,8 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 		numClusters,
 		updateTimestamp.UnixNano(),
 		searchAttr,
+		executionInfo.ParentWorkflowID,
+		executionInfo.ParentRunID,
 	)
 }
 

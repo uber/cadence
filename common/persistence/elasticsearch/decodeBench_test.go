@@ -64,17 +64,19 @@ func BenchmarkJSONDecodeToType(b *testing.B) {
 		var source *es.VisibilityRecord
 		json.Unmarshal(*bytes, &source)
 		record := &p.InternalVisibilityWorkflowExecutionInfo{
-			DomainID:      source.DomainID,
-			WorkflowType:  source.WorkflowType,
-			WorkflowID:    source.WorkflowID,
-			RunID:         source.RunID,
-			TypeName:      source.WorkflowType,
-			StartTime:     time.Unix(0, source.StartTime),
-			ExecutionTime: time.Unix(0, source.ExecutionTime),
-			Memo:          p.NewDataBlob(source.Memo, common.EncodingType(source.Encoding)),
-			TaskList:      source.TaskList,
-			IsCron:        source.IsCron,
-			NumClusters:   source.NumClusters,
+			DomainID:         source.DomainID,
+			WorkflowType:     source.WorkflowType,
+			WorkflowID:       source.WorkflowID,
+			RunID:            source.RunID,
+			TypeName:         source.WorkflowType,
+			StartTime:        time.Unix(0, source.StartTime),
+			ExecutionTime:    time.Unix(0, source.ExecutionTime),
+			Memo:             p.NewDataBlob(source.Memo, common.EncodingType(source.Encoding)),
+			TaskList:         source.TaskList,
+			IsCron:           source.IsCron,
+			NumClusters:      source.NumClusters,
+			ParentWorkflowID: source.ParentWorkflowID,
+			ParentRunID:      source.ParentRunID,
 		}
 		record.CloseTime = time.Unix(0, source.CloseTime)
 		record.Status = thrift.ToWorkflowExecutionCloseStatus(&source.CloseStatus)
@@ -97,17 +99,19 @@ func BenchmarkJSONDecodeToMap(b *testing.B) {
 		historyLen, _ := source[definition.HistoryLength].(json.Number).Int64()
 
 		record := &p.InternalVisibilityWorkflowExecutionInfo{
-			DomainID:      source[definition.DomainID].(string),
-			WorkflowType:  source[definition.WorkflowType].(string),
-			WorkflowID:    source[definition.WorkflowID].(string),
-			RunID:         source[definition.RunID].(string),
-			TypeName:      source[definition.WorkflowType].(string),
-			StartTime:     time.Unix(0, startTime),
-			ExecutionTime: time.Unix(0, executionTime),
-			TaskList:      source[definition.TaskList].(string),
-			IsCron:        source[definition.IsCron].(bool),
-			NumClusters:   source[definition.NumClusters].(int16),
-			Memo:          p.NewDataBlob([]byte(source[definition.Memo].(string)), common.EncodingType(source[definition.Encoding].(string))),
+			DomainID:         source[definition.DomainID].(string),
+			WorkflowType:     source[definition.WorkflowType].(string),
+			WorkflowID:       source[definition.WorkflowID].(string),
+			RunID:            source[definition.RunID].(string),
+			TypeName:         source[definition.WorkflowType].(string),
+			StartTime:        time.Unix(0, startTime),
+			ExecutionTime:    time.Unix(0, executionTime),
+			TaskList:         source[definition.TaskList].(string),
+			IsCron:           source[definition.IsCron].(bool),
+			NumClusters:      source[definition.NumClusters].(int16),
+			Memo:             p.NewDataBlob([]byte(source[definition.Memo].(string)), common.EncodingType(source[definition.Encoding].(string))),
+			ParentWorkflowID: source[definition.ParentWorkflowID].(string),
+			ParentRunID:      source[definition.ParentRunID].(string),
 		}
 		record.CloseTime = time.Unix(0, closeTime)
 		status := (shared.WorkflowExecutionCloseStatus)(int32(closeStatus))

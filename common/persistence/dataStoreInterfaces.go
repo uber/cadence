@@ -651,6 +651,8 @@ type (
 		UpdateTime       time.Time
 		SearchAttributes map[string]interface{}
 		ShardID          int16
+		ParentWorkflowID string
+		ParentRunID      string
 	}
 
 	// InternalListWorkflowExecutionsResponse is response from ListWorkflowExecutions
@@ -708,6 +710,8 @@ type (
 		UpdateTimestamp    time.Time
 		SearchAttributes   map[string][]byte
 		ShardID            int16
+		ParentWorkflowID   string
+		ParentRunID        string
 	}
 
 	// InternalRecordWorkflowExecutionClosedRequest is request to RecordWorkflowExecutionClosed
@@ -730,6 +734,8 @@ type (
 		NumClusters        int16
 		UpdateTimestamp    time.Time
 		ShardID            int16
+		ParentWorkflowID   string
+		ParentRunID        string
 	}
 
 	// InternalRecordWorkflowExecutionUninitializedRequest is used to add a record of a newly uninitialized execution
@@ -759,6 +765,8 @@ type (
 		UpdateTimestamp    time.Time
 		SearchAttributes   map[string][]byte
 		ShardID            int64
+		ParentWorkflowID   string
+		ParentRunID        string
 	}
 
 	// InternalListWorkflowExecutionsRequest is used to list executions in a domain
