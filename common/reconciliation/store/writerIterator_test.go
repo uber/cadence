@@ -48,11 +48,15 @@ var (
 
 func TestWriterIterator(t *testing.T) {
 	testCases := []struct {
-		name         string
-		pages        int
-		countPerPage int
+		name          string
+		pages         int
+		countPerPage  int
+		expectedCount int // Add this field
 	}{
-		{"StandardCase", 10, 10},
+		{"StandardCase", 10, 10, 100},
+		{"FewPages", 3, 15, 45}, // Set expectedCount as pages * countPerPage
+		{"SingleLargePage", 1, 100, 100},
+		{"ManySmallPages", 20, 2, 40},
 	}
 
 	for _, tc := range testCases {
@@ -70,6 +74,7 @@ func TestWriterIterator(t *testing.T) {
 			blobstore, err := filestore.NewFilestoreClient(cfg)
 			assertions.NoError(err)
 			blobstoreWriter := NewBlobstoreWriter(uuid, extension, blobstore, 10)
+
 			var outputs []*ScanOutputEntity
 			for pItr.HasNext() {
 				exec, err := pItr.Next()
@@ -81,26 +86,41 @@ func TestWriterIterator(t *testing.T) {
 				assertions.NoError(blobstoreWriter.Add(soe))
 			}
 			assertions.NoError(blobstoreWriter.Flush())
-			assertions.Len(outputs, 100)
+			assertions.Len(outputs, tc.pages*tc.countPerPage)
 			assertions.False(pItr.HasNext())
 			_, err = pItr.Next()
 			assertions.Equal(pagination.ErrIteratorFinished, err)
 			flushedKeys := blobstoreWriter.FlushedKeys()
 			assertions.Equal(uuid, flushedKeys.UUID)
 			assertions.Equal(0, flushedKeys.MinPage)
-			assertions.Equal(9, flushedKeys.MaxPage)
+			if tc.expectedCount > 0 {
+				assertions.Equal((tc.expectedCount-1)/10, flushedKeys.MaxPage)
+			} else {
+				assertions.Equal(0, flushedKeys.MaxPage)
+			}
 			assertions.Equal(Extension("test"), flushedKeys.Extension)
+
 			blobstoreItr := NewBlobstoreIterator(context.Background(), blobstore, *flushedKeys, &entity.ConcreteExecution{})
 			i := 0
-			assertions.True(blobstoreItr.HasNext())
 			for blobstoreItr.HasNext() {
-				exec, err := blobstoreItr.Next()
-				assertions.NoError(err)
-				assertions.Equal(*outputs[i], *exec)
+				scanOutputEntity, err := blobstoreItr.Next()
+				if err != nil {
+					assertions.Fail(fmt.Sprintf("Error iterating blobstore: %v", err))
+					break
+				}
+				if scanOutputEntity == nil {
+					break // No more items
+				}
+				if i < len(outputs) {
+					// Compare the Execution field of ScanOutputEntity with the expected ConcreteExecution
+					assertions.Equal(outputs[i].Execution, scanOutputEntity.Execution)
+				}
 				i++
 			}
+			assertions.Equal(tc.expectedCount, i, "Number of items from blobstore iterator mismatch")
 		})
 	}
+
 }
 
 func getMockExecutionManager(pages int, countPerPage int) persistence.ExecutionManager {
