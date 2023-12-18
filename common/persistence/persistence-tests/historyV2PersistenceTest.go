@@ -33,7 +33,6 @@ import (
 
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -47,8 +46,7 @@ import (
 type (
 	// HistoryV2PersistenceSuite contains history persistence tests
 	HistoryV2PersistenceSuite struct {
-		suite.Suite
-		TestBase
+		*TestBase
 		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
 		// not merely log an error
 		*require.Assertions

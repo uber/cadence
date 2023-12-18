@@ -111,13 +111,13 @@ const (
 )
 
 // NewTestBaseFromParams returns a customized test base from given input
-func NewTestBaseFromParams(params TestBaseParams) TestBase {
+func NewTestBaseFromParams(params TestBaseParams) *TestBase {
 	logger, err := loggerimpl.NewDevelopment()
 	if err != nil {
 		panic(err)
 	}
 
-	return TestBase{
+	return &TestBase{
 		DefaultTestCluster:    params.DefaultTestCluster,
 		VisibilityTestCluster: params.VisibilityTestCluster,
 		ClusterMetadata:       params.ClusterMetadata,
@@ -128,7 +128,7 @@ func NewTestBaseFromParams(params TestBaseParams) TestBase {
 }
 
 // NewTestBaseWithNoSQL returns a persistence test base backed by nosql datastore
-func NewTestBaseWithNoSQL(options *TestBaseOptions) TestBase {
+func NewTestBaseWithNoSQL(options *TestBaseOptions) *TestBase {
 	if options.DBName == "" {
 		options.DBName = "test_" + GenerateRandomDBName(10)
 	}
@@ -153,7 +153,7 @@ func NewTestBaseWithNoSQL(options *TestBaseOptions) TestBase {
 }
 
 // NewTestBaseWithSQL returns a new persistence test base backed by SQL
-func NewTestBaseWithSQL(options *TestBaseOptions) TestBase {
+func NewTestBaseWithSQL(options *TestBaseOptions) *TestBase {
 	if options.DBName == "" {
 		options.DBName = "test_" + GenerateRandomDBName(10)
 	}
