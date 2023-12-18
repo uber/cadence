@@ -19,7 +19,6 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 package store
 
 import (
@@ -30,7 +29,6 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore/filestore"
@@ -48,60 +46,60 @@ var (
 	testShardID       = 1
 )
 
-type WriterIteratorSuite struct {
-	*require.Assertions
-	suite.Suite
-}
-
-func TestWriterIteratorSuite(t *testing.T) {
-	suite.Run(t, new(WriterIteratorSuite))
-}
-
-func (s *WriterIteratorSuite) SetupTest() {
-	s.Assertions = require.New(s.T())
-}
-
-func (s *WriterIteratorSuite) TestWriterIterator() {
-	pr := persistence.NewPersistenceRetryer(getMockExecutionManager(10, 10), nil, common.CreatePersistenceRetryPolicy())
-	pItr := fetcher.ConcreteExecutionIterator(context.Background(), pr, executionPageSize)
-
-	uuid := "uuid"
-	extension := Extension("test")
-	outputDir := s.T().TempDir()
-	cfg := &config.FileBlobstore{
-		OutputDirectory: outputDir,
+func TestWriterIterator(t *testing.T) {
+	testCases := []struct {
+		name         string
+		pages        int
+		countPerPage int
+	}{
+		{"StandardCase", 10, 10},
 	}
-	blobstore, err := filestore.NewFilestoreClient(cfg)
-	s.NoError(err)
-	blobstoreWriter := NewBlobstoreWriter(uuid, extension, blobstore, 10)
-	var outputs []*ScanOutputEntity
-	for pItr.HasNext() {
-		exec, err := pItr.Next()
-		s.NoError(err)
-		soe := &ScanOutputEntity{
-			Execution: exec,
-		}
-		outputs = append(outputs, soe)
-		s.NoError(blobstoreWriter.Add(soe))
-	}
-	s.NoError(blobstoreWriter.Flush())
-	s.Len(outputs, 100)
-	s.False(pItr.HasNext())
-	_, err = pItr.Next()
-	s.Equal(pagination.ErrIteratorFinished, err)
-	flushedKeys := blobstoreWriter.FlushedKeys()
-	s.Equal(uuid, flushedKeys.UUID)
-	s.Equal(0, flushedKeys.MinPage)
-	s.Equal(9, flushedKeys.MaxPage)
-	s.Equal(Extension("test"), flushedKeys.Extension)
-	blobstoreItr := NewBlobstoreIterator(context.Background(), blobstore, *flushedKeys, &entity.ConcreteExecution{})
-	i := 0
-	s.True(blobstoreItr.HasNext())
-	for blobstoreItr.HasNext() {
-		exec, err := blobstoreItr.Next()
-		s.NoError(err)
-		s.Equal(*outputs[i], *exec)
-		i++
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assertions := require.New(t)
+			pr := persistence.NewPersistenceRetryer(getMockExecutionManager(tc.pages, tc.countPerPage), nil, common.CreatePersistenceRetryPolicy())
+			pItr := fetcher.ConcreteExecutionIterator(context.Background(), pr, executionPageSize)
+
+			uuid := "uuid"
+			extension := Extension("test")
+			outputDir := t.TempDir()
+			cfg := &config.FileBlobstore{
+				OutputDirectory: outputDir,
+			}
+			blobstore, err := filestore.NewFilestoreClient(cfg)
+			assertions.NoError(err)
+			blobstoreWriter := NewBlobstoreWriter(uuid, extension, blobstore, 10)
+			var outputs []*ScanOutputEntity
+			for pItr.HasNext() {
+				exec, err := pItr.Next()
+				assertions.NoError(err)
+				soe := &ScanOutputEntity{
+					Execution: exec,
+				}
+				outputs = append(outputs, soe)
+				assertions.NoError(blobstoreWriter.Add(soe))
+			}
+			assertions.NoError(blobstoreWriter.Flush())
+			assertions.Len(outputs, 100)
+			assertions.False(pItr.HasNext())
+			_, err = pItr.Next()
+			assertions.Equal(pagination.ErrIteratorFinished, err)
+			flushedKeys := blobstoreWriter.FlushedKeys()
+			assertions.Equal(uuid, flushedKeys.UUID)
+			assertions.Equal(0, flushedKeys.MinPage)
+			assertions.Equal(9, flushedKeys.MaxPage)
+			assertions.Equal(Extension("test"), flushedKeys.Extension)
+			blobstoreItr := NewBlobstoreIterator(context.Background(), blobstore, *flushedKeys, &entity.ConcreteExecution{})
+			i := 0
+			assertions.True(blobstoreItr.HasNext())
+			for blobstoreItr.HasNext() {
+				exec, err := blobstoreItr.Next()
+				assertions.NoError(err)
+				assertions.Equal(*outputs[i], *exec)
+				i++
+			}
+		})
 	}
 }
 
