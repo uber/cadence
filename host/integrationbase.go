@@ -154,6 +154,7 @@ func (s *IntegrationBase) setupSuiteForPinotTest() {
 		EnableShardIDMetrics:                     dynamicconfig.GetBoolPropertyFn(true),
 	}
 	params := pt.TestBaseParams{
+		T:                     s.T(),
 		DefaultTestCluster:    s.defaultTestCluster,
 		VisibilityTestCluster: s.visibilityTestCluster,
 		ClusterMetadata:       clusterMetadata,
@@ -183,7 +184,7 @@ func (s *IntegrationBase) setupSuiteForPinotTest() {
 }
 
 func (s *IntegrationBase) setupLogger() {
-	s.Logger = testlogger.New(s.Suite.T())
+	s.Logger = testlogger.New(s.T())
 }
 
 // GetTestClusterConfig return test cluster config

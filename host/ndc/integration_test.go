@@ -115,6 +115,7 @@ func (s *NDCIntegrationTestSuite) SetupSuite() {
 		EnableCassandraAllConsistencyLevelDelete: dynamicconfig.GetBoolPropertyFn(true),
 	}
 	params := pt.TestBaseParams{
+		T:                     s.T(),
 		DefaultTestCluster:    s.defaultTestCluster,
 		VisibilityTestCluster: s.visibilityTestCluster,
 		ClusterMetadata:       clusterMetadata,

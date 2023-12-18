@@ -149,6 +149,7 @@ func NewTestBaseWithNoSQL(options *TestBaseOptions) *TestBase {
 		EnableShardIDMetrics:                     dynamicconfig.GetBoolPropertyFn(true),
 	}
 	params := TestBaseParams{
+		T:                     options.T,
 		DefaultTestCluster:    testCluster,
 		VisibilityTestCluster: testCluster,
 		ClusterMetadata:       metadata,
@@ -174,6 +175,7 @@ func NewTestBaseWithSQL(options *TestBaseOptions) *TestBase {
 		EnableShardIDMetrics:                     dynamicconfig.GetBoolPropertyFn(true),
 	}
 	params := TestBaseParams{
+		T:                     options.T,
 		DefaultTestCluster:    testCluster,
 		VisibilityTestCluster: testCluster,
 		ClusterMetadata:       metadata,
