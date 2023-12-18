@@ -22,11 +22,11 @@ package persistencetests
 
 import (
 	"context"
+	"log"
 	"os"
 	"sync"
 	"testing"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
 

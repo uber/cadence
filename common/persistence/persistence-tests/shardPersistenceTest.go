@@ -22,13 +22,12 @@ package persistencetests
 
 import (
 	"context"
+	"log"
 	"os"
 	"testing"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
 	p "github.com/uber/cadence/common/persistence"
@@ -74,7 +73,7 @@ func (s *ShardPersistenceSuite) TestCreateShard() {
 	err1 := s.CreateShard(ctx, 19, "test_create_shard2", 124)
 	s.NotNil(err1, "expected non nil error.")
 	s.IsType(&p.ShardAlreadyExistError{}, err1)
-	log.Infof("CreateShard failed with error: %v", err1)
+	s.T().Logf("CreateShard failed with error: %v\n", err1)
 }
 
 // TestGetShard test
@@ -99,7 +98,7 @@ func (s *ShardPersistenceSuite) TestGetShard() {
 	_, err2 := s.GetShard(ctx, 4766)
 	s.NotNil(err2)
 	s.IsType(&types.EntityNotExistsError{}, err2)
-	log.Infof("GetShard failed with error: %v", err2)
+	s.T().Logf("GetShard failed with error: %v\n", err2)
 }
 
 // TestUpdateShard test
@@ -189,7 +188,7 @@ func (s *ShardPersistenceSuite) TestUpdateShard() {
 	err4 := s.UpdateShard(ctx, failedUpdateInfo, shardInfo.RangeID)
 	s.NotNil(err4)
 	s.IsType(&p.ShardOwnershipLostError{}, err4)
-	log.Infof("Update shard failed with error: %v", err4)
+	s.T().Logf("Update shard failed with error: %v\n", err4)
 
 	info2, err5 := s.GetShard(ctx, shardID)
 	s.Nil(err5)

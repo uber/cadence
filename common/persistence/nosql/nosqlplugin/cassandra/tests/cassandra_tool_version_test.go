@@ -23,21 +23,19 @@ package tests
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
-
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
 	cassandra_db "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/testflags"
 	"github.com/uber/cadence/tools/cassandra"
