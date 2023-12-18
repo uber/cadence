@@ -111,6 +111,7 @@ func (s *transferStandbyTaskExecutorSuite) SetupTest() {
 	s.mockNDCHistoryResender = ndc.NewMockHistoryResender(s.controller)
 
 	s.mockShard = shard.NewTestContext(
+		s.T(),
 		s.controller,
 		&persistence.ShardInfo{
 			RangeID:          1,

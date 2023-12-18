@@ -613,7 +613,7 @@ func (s *failoverWorkflowTestSuite) assertQueryState(env *testsuite.TestWorkflow
 
 func (s *failoverWorkflowTestSuite) prepareTestActivityEnv() (*testsuite.TestActivityEnvironment, *resource.Test) {
 	controller := gomock.NewController(s.T())
-	mockResource := resource.NewTest(controller, metrics.Worker)
+	mockResource := resource.NewTest(s.T(), controller, metrics.Worker)
 
 	ctx := &FailoverManager{
 		svcClient:  mockResource.GetSDKClient(),

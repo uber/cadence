@@ -30,14 +30,13 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
-	"go.uber.org/zap"
 
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
@@ -58,11 +57,7 @@ func TestScavengerTestSuite(t *testing.T) {
 }
 
 func (s *ScavengerTestSuite) SetupTest() {
-	zapLogger, err := zap.NewDevelopment()
-	if err != nil {
-		s.Require().NoError(err)
-	}
-	s.logger = loggerimpl.NewLogger(zapLogger)
+	s.logger = testlogger.New(s.T())
 	s.metric = metrics.NewClient(tally.NoopScope, metrics.Worker)
 	controller := gomock.NewController(s.T())
 	s.mockCache = cache.NewMockDomainCache(controller)

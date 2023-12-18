@@ -30,7 +30,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 )
@@ -67,7 +67,7 @@ func (s *dlqMessageHandlerSuite) SetupTest() {
 	s.mockReplicationTaskExecutor = NewMockReplicationTaskExecutor(s.controller)
 	s.mockReplicationQueue = NewMockReplicationQueue(s.controller)
 
-	logger := loggerimpl.NewLoggerForTest(s.Suite)
+	logger := testlogger.New(s.Suite.T())
 	s.dlqMessageHandler = NewDLQMessageHandler(
 		s.mockReplicationTaskExecutor,
 		s.mockReplicationQueue,

@@ -32,7 +32,7 @@ import (
 	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/common/definition"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -60,7 +60,7 @@ func (s *eventReapplicationSuite) SetupTest() {
 
 	s.controller = gomock.NewController(s.T())
 
-	logger := loggerimpl.NewLoggerForTest(s.Suite)
+	logger := testlogger.New(s.Suite.T())
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.reapplication = NewEventsReapplier(
 		metricsClient,

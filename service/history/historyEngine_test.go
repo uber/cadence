@@ -45,7 +45,7 @@ import (
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -113,6 +113,7 @@ func (s *engineSuite) SetupTest() {
 	s.mockTimerProcessor.EXPECT().NotifyNewTask(gomock.Any(), gomock.Any()).AnyTimes()
 
 	s.mockShard = shard.NewTestContext(
+		s.T(),
 		s.controller,
 		&persistence.ShardInfo{
 			RangeID:          1,
@@ -194,7 +195,7 @@ func (s *engineSuite) TestGetMutableStateSync() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -258,7 +259,7 @@ func (s *engineSuite) TestGetMutableStateLongPoll() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -332,7 +333,7 @@ func (s *engineSuite) TestGetMutableStateLongPoll_CurrentBranchChanged() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -397,7 +398,7 @@ func (s *engineSuite) TestGetMutableStateLongPollTimeout() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -448,7 +449,7 @@ func (s *engineSuite) TestQueryWorkflow_RejectBasedOnCompleted() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -487,7 +488,7 @@ func (s *engineSuite) TestQueryWorkflow_RejectBasedOnFailed() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -540,7 +541,7 @@ func (s *engineSuite) TestQueryWorkflow_FirstDecisionNotCompleted() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -573,7 +574,7 @@ func (s *engineSuite) TestQueryWorkflow_DirectlyThroughMatching() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -615,7 +616,7 @@ func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Timeout() {
 	identity := "testIdentity"
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -675,7 +676,7 @@ func (s *engineSuite) TestQueryWorkflow_ConsistentQueryBufferFull() {
 	identity := "testIdentity"
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -722,7 +723,7 @@ func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Complete() {
 	identity := "testIdentity"
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -794,7 +795,7 @@ func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Unblocked() {
 	identity := "testIdentity"
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -929,7 +930,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedUpdateExecutionFailed() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -972,7 +973,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedIfTaskCompleted() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -1013,7 +1014,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedIfTaskNotStarted() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -1058,7 +1059,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedConflictOnUpdate() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -1182,7 +1183,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedMaxAttemptsExceeded() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -1248,7 +1249,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowFailed() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -1336,7 +1337,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowFailed() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -1419,7 +1420,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedBadDecisionAttributes() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -1543,7 +1544,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledAtt
 
 		msBuilder := execution.NewMutableStateBuilderWithEventV2(
 			s.mockHistoryEngine.shard,
-			loggerimpl.NewLoggerForTest(s.Suite),
+			testlogger.New(s.Suite.T()),
 			we.GetRunID(),
 			constants.TestLocalDomainEntry,
 		)
@@ -1637,7 +1638,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedBadBinary() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		domainEntry,
 	)
@@ -1694,7 +1695,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledDec
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -1769,7 +1770,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatTimeout(
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -1817,7 +1818,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatNotTimeo
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -1865,7 +1866,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatNotTimeo
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -1914,7 +1915,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowSuccess() 
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -1973,7 +1974,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowSuccess() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -2031,7 +2032,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowSucc
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -2092,7 +2093,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedStartChildWorkflowWithAban
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -2161,7 +2162,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedStartChildWorkflowWithTerm
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -2230,7 +2231,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFail
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -2282,7 +2283,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFail
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -2421,7 +2422,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfNoAIdProvided() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		constants.TestRunID,
 		constants.TestLocalDomainEntry,
 	)
@@ -2460,7 +2461,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfNotFound() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		constants.TestRunID,
 		constants.TestLocalDomainEntry,
 	)
@@ -2503,7 +2504,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedUpdateExecutionFailed() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -2555,7 +2556,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfTaskCompleted() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -2608,7 +2609,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfTaskNotStarted() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -2660,7 +2661,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedConflictOnUpdate() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -2732,7 +2733,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedMaxAttemptsExceeded() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -2785,7 +2786,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedSuccess() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -2848,7 +2849,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedByIdSuccess() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -2991,7 +2992,7 @@ func (s *engineSuite) TestRespondActivityTaskFailededIfNoAIdProvided() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		constants.TestRunID,
 		constants.TestLocalDomainEntry,
 	)
@@ -3030,7 +3031,7 @@ func (s *engineSuite) TestRespondActivityTaskFailededIfNotFound() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		constants.TestRunID,
 		constants.TestLocalDomainEntry,
 	)
@@ -3072,7 +3073,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedUpdateExecutionFailed() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -3124,7 +3125,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedIfTaskCompleted() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -3177,7 +3178,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedIfTaskNotStarted() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -3230,7 +3231,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedConflictOnUpdate() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -3306,7 +3307,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedMaxAttemptsExceeded() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -3359,7 +3360,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedSuccess() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -3424,7 +3425,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedByIDSuccess() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -3488,7 +3489,7 @@ func (s *engineSuite) TestRecordActivityTaskHeartBeatSuccess_NoTimer() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -3539,7 +3540,7 @@ func (s *engineSuite) TestRecordActivityTaskHeartBeatSuccess_TimerRunning() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -3597,7 +3598,7 @@ func (s *engineSuite) TestRecordActivityTaskHeartBeatByIDSuccess() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -3648,7 +3649,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceled_Scheduled() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -3696,7 +3697,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceled_Started() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -3759,7 +3760,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceledByID_Started() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -3836,7 +3837,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceledIfNoAIdProvided() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		constants.TestRunID,
 		constants.TestLocalDomainEntry,
 	)
@@ -3868,7 +3869,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceledIfNotFound() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		constants.TestRunID,
 		constants.TestLocalDomainEntry,
 	)
@@ -3906,7 +3907,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NotSchedule
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -3964,7 +3965,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Scheduled()
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -4033,7 +4034,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Started() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -4100,7 +4101,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Completed()
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -4172,7 +4173,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NoHeartBeat
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -4279,7 +4280,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Success() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -4385,7 +4386,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -4532,7 +4533,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -4622,7 +4623,7 @@ func (s *engineSuite) TestStarTimer_DuplicateTimerID() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -4722,7 +4723,7 @@ func (s *engineSuite) TestUserTimer_RespondDecisionTaskCompleted() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -4785,7 +4786,7 @@ func (s *engineSuite) TestCancelTimer_RespondDecisionTaskCompleted_NoStartTimer(
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -4843,7 +4844,7 @@ func (s *engineSuite) TestCancelTimer_RespondDecisionTaskCompleted_TimerFired() 
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -4926,7 +4927,7 @@ func (s *engineSuite) TestSignalWorkflowExecution() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -4969,7 +4970,7 @@ func (s *engineSuite) TestSignalWorkflowExecution_DuplicateRequest_WorkflowOpen(
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -5012,7 +5013,7 @@ func (s *engineSuite) TestSignalWorkflowExecution_DuplicateRequest_WorkflowCompl
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -5054,7 +5055,7 @@ func (s *engineSuite) TestSignalWorkflowExecution_WorkflowCompleted() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -5090,7 +5091,7 @@ func (s *engineSuite) TestRemoveSignalMutableState() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		constants.TestRunID,
 		constants.TestLocalDomainEntry,
 	)
@@ -5121,7 +5122,7 @@ func (s *engineSuite) TestReapplyEvents_ReturnSuccess() {
 	}
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -5156,7 +5157,7 @@ func (s *engineSuite) TestReapplyEvents_IgnoreSameVersionEvents() {
 	}
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -5192,7 +5193,7 @@ func (s *engineSuite) TestReapplyEvents_ResetWorkflow() {
 	}
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)

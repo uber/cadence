@@ -29,34 +29,25 @@
 package host
 
 import (
+	"encoding/json"
 	"flag"
+	"fmt"
 	"strconv"
+	"testing"
 	"time"
 
+	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/common/definition"
-	pnt "github.com/uber/cadence/common/pinot"
-
-	"testing"
-
-	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/log/tag"
-
-	"go.uber.org/zap"
-
-	"github.com/uber/cadence/host/pinotutils"
-
-	"encoding/json"
-	"fmt"
-
-	"github.com/pborman/uuid"
-
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/definition"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
+	pnt "github.com/uber/cadence/common/pinot"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/host/pinotutils"
 )
 
 const (
@@ -95,9 +86,6 @@ func TestPinotIntegrationSuite(t *testing.T) {
 
 func (s *PinotIntegrationSuite) SetupSuite() {
 	s.setupSuiteForPinotTest()
-	zapLogger, err := zap.NewDevelopment()
-	s.Require().NoError(err)
-	s.logger = loggerimpl.NewLogger(zapLogger)
 	tableName := "cadence_visibility_pinot" //cadence_visibility_pinot_integration_test
 	pinotConfig := &config.PinotVisibilityConfig{
 		Cluster:     "",
@@ -105,10 +93,11 @@ func (s *PinotIntegrationSuite) SetupSuite() {
 		Table:       tableName,
 		ServiceName: "",
 	}
-	s.pinotClient = pinotutils.CreatePinotClient(s.Suite, pinotConfig, s.logger)
+	s.pinotClient = pinotutils.CreatePinotClient(s.Suite, pinotConfig, s.Logger)
 }
 
 func (s *PinotIntegrationSuite) SetupTest() {
+
 	s.Assertions = require.New(s.T())
 	s.testSearchAttributeKey = definition.CustomStringField
 	s.testSearchAttributeVal = "test value"

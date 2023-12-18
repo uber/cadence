@@ -150,6 +150,7 @@ func TestWorkflowLoad(t *testing.T) {
 		t.Run(tc.msg, func(t *testing.T) {
 			controller := gomock.NewController(t)
 			mockShard := shard.NewTestContext(
+				t,
 				controller,
 				&persistence.ShardInfo{
 					ShardID: 10,

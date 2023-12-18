@@ -32,7 +32,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -75,7 +75,7 @@ func TestReplicationTaskResetEvent(t *testing.T) {
 		NewRunEvents:        nil,
 	}
 
-	task, err := newReplicationTask(clusterMetadata, historySerializer, taskStartTime, loggerimpl.NewNopLogger(), request)
+	task, err := newReplicationTask(clusterMetadata, historySerializer, taskStartTime, testlogger.New(t), request)
 	require.NoError(t, err)
 	assert.True(t, task.isWorkflowReset())
 }
