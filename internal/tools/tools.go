@@ -26,6 +26,7 @@ package tools
 import (
 	// thriftrw code gen
 	_ "go.uber.org/thriftrw"
+
 	// yarpc plugin for thriftrw code gen
 	_ "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc"
 
@@ -33,18 +34,24 @@ import (
 	_ "github.com/gogo/protobuf/protoc-gen-gofast"
 	_ "go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go"
 
-	// goimports
-	_ "golang.org/x/tools/cmd/goimports"
+	// forces one import-order pattern
+	_ "github.com/NonLogicalDev/gofancyimports/cmd/gofancyimports"
+
 	// mockgen for generating mocks
 	_ "github.com/golang/mock/mockgen"
+
 	// mockery for generating mocks
 	_ "github.com/vektra/mockery/v2"
+
 	// enumer for generating utility methods for const enums
 	_ "github.com/dmarkham/enumer"
+
 	// gowrap for generating decorators for interface
 	_ "github.com/hexdigest/gowrap"
+
 	// replaces golint - configurable and much faster
 	_ "github.com/mgechev/revive"
+
 	// coverage reporting
 	_ "github.com/mattn/goveralls"
 )

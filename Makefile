@@ -20,7 +20,7 @@ default: help
 # temporary build products and book-keeping targets that are always good to / safe to clean.
 BUILD := .build
 # bins that are `make clean` friendly, i.e. they build quickly and do not require new downloads.
-# in particular this should include goimports, as it changes based on which version of go compiles it,
+# in particular this should include gofmt, as it changes based on which version of go compiles it,
 # and few know to do more than `make clean`.
 BIN := $(BUILD)/bin
 # relatively stable build products, e.g. tools.
@@ -29,7 +29,7 @@ STABLE_BIN := .bin
 
 
 # current (when committed) version of Go used in CI, and ideally also our docker images.
-# this generally does not matter, but can impact goimports output.
+# this generally does not matter, but can impact gofmt output.
 # for maximum stability, make sure you use the same version as CI uses.
 #
 # this can _likely_ remain a major version, as fmt output does not tend to change in minor versions,
@@ -180,8 +180,15 @@ $(BIN)/mockery: internal/tools/go.mod
 $(BIN)/enumer: internal/tools/go.mod
 	$(call go_build_tool,github.com/dmarkham/enumer)
 
-$(BIN)/goimports: internal/tools/go.mod
-	$(call go_build_tool,golang.org/x/tools/cmd/goimports)
+# it's important that the formatter is NOT whatever version they have installed,
+# so build it for this project.
+# prefer go_build_tool to support newer go versions, but either is reasonable.
+$(BIN)/gofmt: internal/tools/go.mod
+	$(call go_build_tool,cmd/gofmt)
+
+# only organizes imports, does not reformat code
+$(BIN)/gofancyimports: internal/tools/go.mod
+	$(call go_build_tool,github.com/NonLogicalDev/gofancyimports/cmd/gofancyimports)
 
 $(BIN)/gowrap: go.mod
 	$(call go_build_tool,github.com/hexdigest/gowrap/cmd/gowrap)
@@ -352,10 +359,13 @@ $(BUILD)/lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
 # if either changes, this will need to change.
 MAYBE_TOUCH_COPYRIGHT=
 
-$(BUILD)/fmt: $(ALL_SRC) $(BIN)/goimports | $(BUILD)
-	$Q echo "goimports..."
-	$Q # use FRESH_ALL_SRC so it won't miss any generated files produced earlier
-	$Q $(BIN)/goimports -local "github.com/uber/cadence" -w $(FRESH_ALL_SRC)
+# use FRESH_ALL_SRC so it won't miss any generated files produced earlier.
+$(BUILD)/fmt: $(ALL_SRC) $(BIN)/gofmt $(BIN)/gofancyimports | $(BUILD)
+	$Q echo "grouping imports..."
+	$Q $(BIN)/gofancyimports fix --local github.com/uber/cadence/ --write $(FRESH_ALL_SRC)
+	$Q # gofancyimports does not -w code, so also run gofmt
+	$Q echo "formatting..."
+	$Q $(BIN)/gofmt -w $(FRESH_ALL_SRC)
 	$Q touch $@
 	$Q $(MAYBE_TOUCH_COPYRIGHT)
 
@@ -386,8 +396,8 @@ endef
 lint: ## (re)run the linter
 	$(call remake,proto-lint lint)
 
-# intentionally not re-making, goimports is slow and it's clear when it's unnecessary
-fmt: $(BUILD)/fmt ## run goimports
+# intentionally not re-making, it's a bit slow and it's clear when it's unnecessary
+fmt: $(BUILD)/fmt ## run gofmt / organize imports / etc
 
 # not identical to the intermediate target, but does provide the same codegen (or more).
 copyright: $(BIN)/copyright | $(BUILD) ## update copyright headers
