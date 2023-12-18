@@ -113,13 +113,12 @@ func (s *IntegrationBase) setupSuite() {
 			EnableShardIDMetrics:                     dynamicconfig.GetBoolPropertyFn(true),
 		}
 		params := pt.TestBaseParams{
-			T:                     s.T(),
 			DefaultTestCluster:    s.defaultTestCluster,
 			VisibilityTestCluster: s.visibilityTestCluster,
 			ClusterMetadata:       clusterMetadata,
 			DynamicConfiguration:  dc,
 		}
-		cluster, err := NewCluster(s.testClusterConfig, s.Logger, params)
+		cluster, err := NewCluster(s.T(), s.testClusterConfig, s.Logger, params)
 		s.Require().NoError(err)
 		s.testCluster = cluster
 		s.engine = s.testCluster.GetFrontendClient()
@@ -154,13 +153,12 @@ func (s *IntegrationBase) setupSuiteForPinotTest() {
 		EnableShardIDMetrics:                     dynamicconfig.GetBoolPropertyFn(true),
 	}
 	params := pt.TestBaseParams{
-		T:                     s.T(),
 		DefaultTestCluster:    s.defaultTestCluster,
 		VisibilityTestCluster: s.visibilityTestCluster,
 		ClusterMetadata:       clusterMetadata,
 		DynamicConfiguration:  dc,
 	}
-	cluster, err := NewPinotTestCluster(s.testClusterConfig, s.Logger, params)
+	cluster, err := NewPinotTestCluster(s.T(), s.testClusterConfig, s.Logger, params)
 	s.Require().NoError(err)
 	s.testCluster = cluster
 	s.engine = s.testCluster.GetFrontendClient()

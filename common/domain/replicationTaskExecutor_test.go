@@ -54,7 +54,7 @@ func TestDomainReplicationTaskExecutorSuite(t *testing.T) {
 
 	s := new(domainReplicationTaskExecutorSuite)
 
-	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{})
+	s.TestBase = public.NewTestBaseWithPublicCassandra(t, &persistencetests.TestBaseOptions{})
 
 	suite.Run(t, s)
 }

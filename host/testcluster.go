@@ -115,8 +115,8 @@ const (
 )
 
 // NewCluster creates and sets up the test cluster
-func NewCluster(options *TestClusterConfig, logger log.Logger, params persistencetests.TestBaseParams) (*TestCluster, error) {
-	testBase := persistencetests.NewTestBaseFromParams(params)
+func NewCluster(t *testing.T, options *TestClusterConfig, logger log.Logger, params persistencetests.TestBaseParams) (*TestCluster, error) {
+	testBase := persistencetests.NewTestBaseFromParams(t, params)
 	testBase.Setup()
 	setupShards(testBase, options.HistoryConfig.NumHistoryShards, logger)
 	archiverBase := newArchiverBase(options.EnableArchival, logger)
@@ -170,8 +170,8 @@ func NewCluster(options *TestClusterConfig, logger log.Logger, params persistenc
 	return &TestCluster{testBase: testBase, archiverBase: archiverBase, host: cluster}, nil
 }
 
-func NewPinotTestCluster(options *TestClusterConfig, logger log.Logger, params persistencetests.TestBaseParams) (*TestCluster, error) {
-	testBase := persistencetests.NewTestBaseFromParams(params)
+func NewPinotTestCluster(t *testing.T, options *TestClusterConfig, logger log.Logger, params persistencetests.TestBaseParams) (*TestCluster, error) {
+	testBase := persistencetests.NewTestBaseFromParams(t, params)
 	testBase.Setup()
 	setupShards(testBase, options.HistoryConfig.NumHistoryShards, logger)
 	archiverBase := newArchiverBase(options.EnableArchival, logger)

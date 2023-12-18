@@ -105,11 +105,11 @@ func (s *esCrossDCTestSuite) SetupSuite() {
 	s.Require().NoError(yaml.Unmarshal(confContent, &clusterConfigs))
 	s.clusterConfigs = clusterConfigs
 
-	c, err := host.NewCluster(clusterConfigs[0], s.logger.WithTags(tag.ClusterName(clusterNameES[0])))
+	c, err := host.NewCluster(s.T(), clusterConfigs[0], s.logger.WithTags(tag.ClusterName(clusterNameES[0])))
 	s.Require().NoError(err)
 	s.cluster1 = c
 
-	c, err = host.NewCluster(clusterConfigs[1], s.logger.WithTags(tag.ClusterName(clusterNameES[1])))
+	c, err = host.NewCluster(s.T(), clusterConfigs[1], s.logger.WithTags(tag.ClusterName(clusterNameES[1])))
 	s.Require().NoError(err)
 	s.cluster2 = c
 

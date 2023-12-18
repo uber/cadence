@@ -77,7 +77,7 @@ func TestDomainHandlerCommonSuite(t *testing.T) {
 
 	s := new(domainHandlerCommonSuite)
 
-	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{
+	s.TestBase = public.NewTestBaseWithPublicCassandra(t, &persistencetests.TestBaseOptions{
 		ClusterMetadata: cluster.GetTestClusterMetadata(true),
 	})
 

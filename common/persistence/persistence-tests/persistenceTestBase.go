@@ -60,7 +60,6 @@ type (
 
 	// TestBaseOptions options to configure workflow test base.
 	TestBaseOptions struct {
-		T               *testing.T
 		DBPluginName    string
 		DBName          string
 		DBUsername      string
@@ -96,7 +95,6 @@ type (
 
 	// TestBaseParams defines the input of TestBase
 	TestBaseParams struct {
-		T                     *testing.T
 		DefaultTestCluster    testcluster.PersistenceTestCluster
 		VisibilityTestCluster testcluster.PersistenceTestCluster
 		ClusterMetadata       cluster.Metadata
@@ -114,22 +112,24 @@ const (
 )
 
 // NewTestBaseFromParams returns a customized test base from given input
-func NewTestBaseFromParams(params TestBaseParams) *TestBase {
-	return &TestBase{
+func NewTestBaseFromParams(t *testing.T, params TestBaseParams) *TestBase {
+	res := &TestBase{
 		DefaultTestCluster:    params.DefaultTestCluster,
 		VisibilityTestCluster: params.VisibilityTestCluster,
 		ClusterMetadata:       params.ClusterMetadata,
 		PayloadSerializer:     persistence.NewPayloadSerializer(),
 		DynamicConfiguration:  params.DynamicConfiguration,
 	}
+	res.SetT(t)
+	return res
 }
 
 // NewTestBaseWithNoSQL returns a persistence test base backed by nosql datastore
-func NewTestBaseWithNoSQL(options *TestBaseOptions) *TestBase {
+func NewTestBaseWithNoSQL(t *testing.T, options *TestBaseOptions) *TestBase {
 	if options.DBName == "" {
 		options.DBName = "test_" + GenerateRandomDBName(10)
 	}
-	testCluster := nosql.NewTestCluster(options.T, nosql.TestClusterParams{
+	testCluster := nosql.NewTestCluster(t, nosql.TestClusterParams{
 		PluginName:   options.DBPluginName,
 		KeySpace:     options.DBName,
 		Username:     options.DBUsername,
@@ -149,17 +149,16 @@ func NewTestBaseWithNoSQL(options *TestBaseOptions) *TestBase {
 		EnableShardIDMetrics:                     dynamicconfig.GetBoolPropertyFn(true),
 	}
 	params := TestBaseParams{
-		T:                     options.T,
 		DefaultTestCluster:    testCluster,
 		VisibilityTestCluster: testCluster,
 		ClusterMetadata:       metadata,
 		DynamicConfiguration:  dc,
 	}
-	return NewTestBaseFromParams(params)
+	return NewTestBaseFromParams(t, params)
 }
 
 // NewTestBaseWithSQL returns a new persistence test base backed by SQL
-func NewTestBaseWithSQL(options *TestBaseOptions) *TestBase {
+func NewTestBaseWithSQL(t *testing.T, options *TestBaseOptions) *TestBase {
 	if options.DBName == "" {
 		options.DBName = "test_" + GenerateRandomDBName(10)
 	}
@@ -175,13 +174,12 @@ func NewTestBaseWithSQL(options *TestBaseOptions) *TestBase {
 		EnableShardIDMetrics:                     dynamicconfig.GetBoolPropertyFn(true),
 	}
 	params := TestBaseParams{
-		T:                     options.T,
 		DefaultTestCluster:    testCluster,
 		VisibilityTestCluster: testCluster,
 		ClusterMetadata:       metadata,
 		DynamicConfiguration:  dc,
 	}
-	return NewTestBaseFromParams(params)
+	return NewTestBaseFromParams(t, params)
 }
 
 // Config returns the persistence configuration for this test

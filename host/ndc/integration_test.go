@@ -115,13 +115,12 @@ func (s *NDCIntegrationTestSuite) SetupSuite() {
 		EnableCassandraAllConsistencyLevelDelete: dynamicconfig.GetBoolPropertyFn(true),
 	}
 	params := pt.TestBaseParams{
-		T:                     s.T(),
 		DefaultTestCluster:    s.defaultTestCluster,
 		VisibilityTestCluster: s.visibilityTestCluster,
 		ClusterMetadata:       clusterMetadata,
 		DynamicConfiguration:  dc,
 	}
-	cluster, err := host.NewCluster(s.clusterConfigs[0], s.logger.WithTags(tag.ClusterName(clusterName[0])), params)
+	cluster, err := host.NewCluster(s.T(), s.clusterConfigs[0], s.logger.WithTags(tag.ClusterName(clusterName[0])), params)
 	s.Require().NoError(err)
 	s.active = cluster
 

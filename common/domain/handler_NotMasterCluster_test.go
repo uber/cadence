@@ -71,7 +71,7 @@ func TestDomainHandlerGlobalDomainEnabledNotPrimaryClusterSuite(t *testing.T) {
 
 	s := new(domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite)
 
-	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{
+	s.TestBase = public.NewTestBaseWithPublicCassandra(t, &persistencetests.TestBaseOptions{
 		ClusterMetadata: cluster.GetTestClusterMetadata(false),
 	})
 
