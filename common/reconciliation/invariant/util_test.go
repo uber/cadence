@@ -83,7 +83,6 @@ func (s *UtilSuite) TestDeleteExecution() {
 	}
 	ctrl := gomock.NewController(s.T())
 	mockDomainCache := cache.NewMockDomainCache(ctrl)
-	ctrl.Finish()
 	for _, tc := range testCases {
 		execManager := &mocks.ExecutionManager{}
 		execManager.On("DeleteWorkflowExecution", mock.Anything, mock.Anything, mock.Anything).Return(tc.deleteConcreteErr).Once()
@@ -143,7 +142,6 @@ func (s *UtilSuite) TestExecutionStillOpen() {
 	}
 	ctrl := gomock.NewController(s.T())
 	mockDomainCache := cache.NewMockDomainCache(ctrl)
-	defer ctrl.Finish()
 	for _, tc := range testCases {
 		execManager := &mocks.ExecutionManager{}
 		execManager.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(tc.getExecResp, tc.getExecErr)
@@ -191,7 +189,6 @@ func (s *UtilSuite) TestExecutionStillExists() {
 	}
 	ctrl := gomock.NewController(s.T())
 	mockDomainCache := cache.NewMockDomainCache(ctrl)
-	defer ctrl.Finish()
 	for _, tc := range testCases {
 		execManager := &mocks.ExecutionManager{}
 		execManager.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(tc.getExecResp, tc.getExecErr)

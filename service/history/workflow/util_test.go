@@ -92,8 +92,6 @@ func TestUpdateHelper(t *testing.T) {
 			tc.mockSetupFn(mockContext, mockMutableState)
 			err := updateHelper(context.Background(), workflowContext, time.Now(), tc.actionFn)
 			require.NoError(t, err)
-
-			controller.Finish()
 		})
 	}
 
@@ -179,8 +177,6 @@ func TestWorkflowLoad(t *testing.T) {
 			require.Equal(t, constants.TestWorkflowID, workflowContext.GetWorkflowID())
 			require.Equal(t, constants.TestRunID, workflowContext.GetRunID())
 			workflowContext.GetReleaseFn()(nil)
-
-			controller.Finish()
 		})
 	}
 }

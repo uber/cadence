@@ -68,19 +68,18 @@ func (s *ScavengerTestSuite) SetupTest() {
 	s.mockCache = cache.NewMockDomainCache(controller)
 }
 
-func (s *ScavengerTestSuite) createTestScavenger(rps int) (*mocks.HistoryV2Manager, *history.MockClient, *Scavenger, *gomock.Controller) {
+func (s *ScavengerTestSuite) createTestScavenger(rps int) (*mocks.HistoryV2Manager, *history.MockClient, *Scavenger) {
 	db := &mocks.HistoryV2Manager{}
 	controller := gomock.NewController(s.T())
 	workflowClient := history.NewMockClient(controller)
 	maxWorkflowRetentionInDays := dynamicconfig.GetIntPropertyFn(dynamicconfig.MaxRetentionDays.DefaultInt())
 	scvgr := NewScavenger(db, rps, workflowClient, ScavengerHeartbeatDetails{}, s.metric, s.logger, maxWorkflowRetentionInDays, s.mockCache)
 	scvgr.isInTest = true
-	return db, workflowClient, scvgr, controller
+	return db, workflowClient, scvgr
 }
 
 func (s *ScavengerTestSuite) TestAllSkipTasksTwoPages() {
-	db, _, scvgr, controller := s.createTestScavenger(100)
-	defer controller.Finish()
+	db, _, scvgr := s.createTestScavenger(100)
 	db.On("GetAllHistoryTreeBranches", mock.Anything, &p.GetAllHistoryTreeBranchesRequest{
 		PageSize: pageSize,
 	}).Return(&p.GetAllHistoryTreeBranchesResponse{
@@ -131,8 +130,7 @@ func (s *ScavengerTestSuite) TestAllSkipTasksTwoPages() {
 }
 
 func (s *ScavengerTestSuite) TestAllErrorSplittingTasksTwoPages() {
-	db, _, scvgr, controller := s.createTestScavenger(100)
-	defer controller.Finish()
+	db, _, scvgr := s.createTestScavenger(100)
 	db.On("GetAllHistoryTreeBranches", mock.Anything, &p.GetAllHistoryTreeBranchesRequest{
 		PageSize: pageSize,
 	}).Return(&p.GetAllHistoryTreeBranchesResponse{
@@ -183,8 +181,7 @@ func (s *ScavengerTestSuite) TestAllErrorSplittingTasksTwoPages() {
 }
 
 func (s *ScavengerTestSuite) TestNoGarbageTwoPages() {
-	db, client, scvgr, controller := s.createTestScavenger(100)
-	defer controller.Finish()
+	db, client, scvgr := s.createTestScavenger(100)
 	db.On("GetAllHistoryTreeBranches", mock.Anything, &p.GetAllHistoryTreeBranchesRequest{
 		PageSize: pageSize,
 	}).Return(&p.GetAllHistoryTreeBranchesResponse{
@@ -264,8 +261,7 @@ func (s *ScavengerTestSuite) TestNoGarbageTwoPages() {
 }
 
 func (s *ScavengerTestSuite) TestDeletingBranchesTwoPages() {
-	db, client, scvgr, controller := s.createTestScavenger(100)
-	defer controller.Finish()
+	db, client, scvgr := s.createTestScavenger(100)
 	db.On("GetAllHistoryTreeBranches", mock.Anything, &p.GetAllHistoryTreeBranchesRequest{
 		PageSize: pageSize,
 	}).Return(&p.GetAllHistoryTreeBranchesResponse{
@@ -374,8 +370,7 @@ func (s *ScavengerTestSuite) TestDeletingBranchesTwoPages() {
 }
 
 func (s *ScavengerTestSuite) TestMixesTwoPages() {
-	db, client, scvgr, controller := s.createTestScavenger(100)
-	defer controller.Finish()
+	db, client, scvgr := s.createTestScavenger(100)
 	db.On("GetAllHistoryTreeBranches", mock.Anything, &p.GetAllHistoryTreeBranchesRequest{
 		PageSize: pageSize,
 	}).Return(&p.GetAllHistoryTreeBranchesResponse{

@@ -134,7 +134,6 @@ func (h *historyArchiverSuite) TestArchive_Fail_InvalidURI() {
 	storageWrapper, _ := connector.NewClientWithParams(mockStorageClient)
 
 	mockCtrl := gomock.NewController(h.T())
-	defer mockCtrl.Finish()
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
 
 	historyArchiver := newHistoryArchiver(h.container, historyIterator, storageWrapper)
@@ -161,7 +160,6 @@ func (h *historyArchiverSuite) TestArchive_Fail_InvalidRequest() {
 	storageWrapper.On("Exist", ctx, URI, "").Return(true, nil).Times(1)
 	mockCtrl := gomock.NewController(h.T())
 
-	defer mockCtrl.Finish()
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
 
 	historyArchiver := newHistoryArchiver(h.container, historyIterator, storageWrapper)
@@ -187,7 +185,6 @@ func (h *historyArchiverSuite) TestArchive_Fail_ErrorOnReadHistory() {
 	storageWrapper.On("Exist", ctx, URI, "").Return(true, nil).Times(1)
 
 	mockCtrl := gomock.NewController(h.T())
-	defer mockCtrl.Finish()
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
 	gomock.InOrder(
 		historyIterator.EXPECT().HasNext().Return(true),
@@ -215,7 +212,6 @@ func (h *historyArchiverSuite) TestArchive_Fail_TimeoutWhenReadingHistory() {
 	storageWrapper := &mocks.Client{}
 	storageWrapper.On("Exist", mock.Anything, mock.Anything, "").Return(true, nil).Times(1)
 
-	defer mockCtrl.Finish()
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
 	gomock.InOrder(
 		historyIterator.EXPECT().HasNext().Return(true),
@@ -244,7 +240,6 @@ func (h *historyArchiverSuite) TestArchive_Fail_HistoryMutated() {
 	storageWrapper := &mocks.Client{}
 	storageWrapper.On("Exist", ctx, URI, "").Return(true, nil).Times(1)
 
-	defer mockCtrl.Finish()
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
 	historyBatches := []*types.History{
 		{
@@ -291,7 +286,6 @@ func (h *historyArchiverSuite) TestArchive_Fail_NonRetriableErrorOption() {
 	storageWrapper := &mocks.Client{}
 	storageWrapper.On("Exist", ctx, URI, "").Return(true, nil).Times(1)
 
-	defer mockCtrl.Finish()
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
 	gomock.InOrder(
 		historyIterator.EXPECT().HasNext().Return(true),
@@ -321,7 +315,6 @@ func (h *historyArchiverSuite) TestArchive_Skip() {
 	storageWrapper.On("Exist", ctx, URI, mock.Anything).Return(true, nil)
 	storageWrapper.On("Upload", ctx, URI, mock.Anything, mock.Anything).Return(nil)
 
-	defer mockCtrl.Finish()
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
 	historyBlob := &archiver.HistoryBlob{
 		Header: &archiver.HistoryBlobHeader{
@@ -369,7 +362,6 @@ func (h *historyArchiverSuite) TestArchive_Success() {
 	storageWrapper.On("Exist", ctx, URI, mock.Anything).Return(false, nil)
 	storageWrapper.On("Upload", ctx, URI, mock.Anything, mock.Anything).Return(nil)
 
-	defer mockCtrl.Finish()
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
 	historyBatches := []*types.History{
 		{
