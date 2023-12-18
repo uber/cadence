@@ -34,7 +34,7 @@ import (
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 )
 
@@ -67,7 +67,7 @@ func (s *redispatcherSuite) SetupTest() {
 	s.mockTimeSource = clock.NewEventTimeSource()
 
 	s.metricsScope = metrics.NewClient(tally.NoopScope, metrics.History).Scope(0)
-	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
+	s.logger = testlogger.New(s.Suite.T())
 
 	s.redispatcher = s.newTestRedispatcher()
 }

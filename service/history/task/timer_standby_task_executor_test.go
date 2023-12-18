@@ -102,6 +102,7 @@ func (s *timerStandbyTaskExecutorSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
 
 	s.mockShard = shard.NewTestContext(
+		s.T(),
 		s.controller,
 		&persistence.ShardInfo{
 			RangeID:          1,

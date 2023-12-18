@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -139,6 +139,6 @@ func (s *UtilSuite) TestHistoryMutated() {
 		},
 	}
 	for _, tc := range testCases {
-		s.Equal(tc.isMutated, IsHistoryMutated(tc.request, tc.historyBatches, tc.isLast, loggerimpl.NewNopLogger()))
+		s.Equal(tc.isMutated, IsHistoryMutated(tc.request, tc.historyBatches, tc.isLast, testlogger.New(s.T())))
 	}
 }

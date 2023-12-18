@@ -121,7 +121,7 @@ func (s *esanalyzerWorkflowTestSuite) SetupTest() {
 	s.workflowEnv = s.NewTestWorkflowEnvironment()
 	s.controller = gomock.NewController(s.T())
 	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
-	s.resource = resource.NewTest(s.controller, metrics.Worker)
+	s.resource = resource.NewTest(s.T(), s.controller, metrics.Worker)
 	s.mockAdminClient = admin.NewMockClient(s.controller)
 	s.clientBean = client.NewMockBean(s.controller)
 	s.logger = &log.MockLogger{}

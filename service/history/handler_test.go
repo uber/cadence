@@ -27,18 +27,16 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/stretchr/testify/mock"
-	"go.uber.org/yarpc/yarpcerrors"
-
-	"github.com/uber/cadence/common/metrics/mocks"
-
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/yarpc/yarpcerrors"
 
 	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/metrics/mocks"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
@@ -69,8 +67,8 @@ func (s *handlerSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.controller = gomock.NewController(s.T())
-	s.mockResource = resource.NewTest(s.controller, metrics.History)
-	s.mockResource.Logger = loggerimpl.NewLoggerForTest(s.Suite)
+	s.mockResource = resource.NewTest(s.T(), s.controller, metrics.History)
+	s.mockResource.Logger = testlogger.New(s.Suite.T())
 	s.mockShardController = shard.NewMockController(s.controller)
 	s.mockEngine = engine.NewMockEngine(s.controller)
 	s.mockShardController.EXPECT().GetEngineForShard(gomock.Any()).Return(s.mockEngine, nil).AnyTimes()
@@ -287,7 +285,7 @@ func TestCorrectUseOfErrorHandling(t *testing.T) {
 			scope := mocks.Scope{}
 			td.expectation(&scope)
 			h := handlerImpl{
-				Resource: resource.NewTest(gomock.NewController(t), 0),
+				Resource: resource.NewTest(t, gomock.NewController(t), 0),
 			}
 			h.error(td.input, &scope, "some-domain", "some-wf", "some-run")
 			// we're doing the args assertion in the On, so using mock.Anything to avoid having to duplicate this

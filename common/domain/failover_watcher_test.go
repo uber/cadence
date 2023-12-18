@@ -37,7 +37,7 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
@@ -83,7 +83,7 @@ func (s *failoverWatcherSuite) SetupTest() {
 		NotificationVersion: 1,
 	}, nil)
 
-	logger := loggerimpl.NewNopLogger()
+	logger := testlogger.New(s.T())
 	scope := tally.NewTestScope("failover_test", nil)
 	metricsClient := metrics.NewClient(scope, metrics.Frontend)
 	s.watcher = NewFailoverWatcher(

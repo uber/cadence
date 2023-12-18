@@ -29,7 +29,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 )
 
 type (
@@ -44,7 +44,7 @@ func TestFactorySuite(t *testing.T) {
 }
 
 func (s *factorySuite) SetupTest() {
-	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
+	s.logger = testlogger.New(s.Suite.T())
 }
 
 func cfgNoop() config.Authorization {
