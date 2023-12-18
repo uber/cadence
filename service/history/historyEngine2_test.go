@@ -103,6 +103,7 @@ func (s *engine2Suite) SetupTest() {
 	s.mockTimerProcessor.EXPECT().NotifyNewTask(gomock.Any(), gomock.Any()).AnyTimes()
 
 	s.mockShard = shard.NewTestContext(
+		s.T(),
 		s.controller,
 		&p.ShardInfo{
 			ShardID:          0,
