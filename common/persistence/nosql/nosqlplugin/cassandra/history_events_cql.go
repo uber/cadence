@@ -1,4 +1,5 @@
 // Copyright (c) 2021 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,42 +19,27 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package host
+package cassandra
 
-import (
-	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
-	"go.uber.org/cadence/client"
-	"go.uber.org/cadence/worker"
+const (
+	// below are templates for history_node table
+	v2templateUpsertData = `INSERT INTO history_node (` +
+		`tree_id, branch_id, node_id, txn_id, data, data_encoding) ` +
+		`VALUES (?, ?, ?, ?, ?, ?) `
 
-	"github.com/stretchr/testify/require"
-)
+	v2templateReadData = `SELECT node_id, txn_id, data, data_encoding FROM history_node ` +
+		`WHERE tree_id = ? AND branch_id = ? AND node_id >= ? AND node_id < ? `
 
-// NOTE: the following definitions can't be defined in *_test.go
-// since they need to be exported and used by our internal tests
+	v2templateRangeDeleteData = `DELETE FROM history_node WHERE tree_id = ? AND branch_id = ? AND node_id >= ? `
 
-type (
-	IntegrationSuite struct {
-		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
-		// not merely log an error
-		*require.Assertions
-		*IntegrationBase
-	}
+	// below are templates for history_tree table
+	v2templateInsertTree = `INSERT INTO history_tree (` +
+		`tree_id, branch_id, ancestors, fork_time, info) ` +
+		`VALUES (?, ?, ?, ?, ?) `
 
-	SizeLimitIntegrationSuite struct {
-		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
-		// not merely log an error
-		*require.Assertions
-		*IntegrationBase
-	}
+	v2templateReadAllBranches = `SELECT branch_id, ancestors, fork_time, info FROM history_tree WHERE tree_id = ? `
 
-	ClientIntegrationSuite struct {
-		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
-		// not merely log an error
-		*require.Assertions
-		*IntegrationBase
-		wfService workflowserviceclient.Interface
-		wfClient  client.Client
-		worker    worker.Worker
-		taskList  string
-	}
+	v2templateDeleteBranch = `DELETE FROM history_tree WHERE tree_id = ? AND branch_id = ? `
+
+	v2templateScanAllTreeBranches = `SELECT tree_id, branch_id, fork_time, info FROM history_tree `
 )

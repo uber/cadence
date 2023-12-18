@@ -70,7 +70,6 @@ func TestAdminAddSearchAttribute_isValueTypeValid(t *testing.T) {
 
 func TestAdminFailover(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
 	serverFrontendClient := frontend.NewMockClient(mockCtrl)
 	domainCLI := &domainCLIImpl{
 		frontendClient: serverFrontendClient,

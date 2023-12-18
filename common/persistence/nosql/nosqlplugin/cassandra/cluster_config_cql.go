@@ -1,4 +1,5 @@
-// Copyright (c) 2017-2021 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,18 +19,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package public
+package cassandra
 
-import (
-	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra" // needed to load cassandra plugin
-	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
+const (
+	// version is the clustering key(DESC order) so this query will always return the record with largest version
+	templateSelectLatestConfig = `SELECT row_type, version, timestamp, values, encoding FROM cluster_config ` +
+		`WHERE row_type = ? ` +
+		`LIMIT 1;`
+
+	templateInsertConfig = `INSERT INTO cluster_config (row_type, version, timestamp, values, encoding) ` +
+		`VALUES (?, ?, ?, ?, ?) ` +
+		`IF NOT EXISTS;`
 )
-
-// NewTestBaseWithPublicCassandra returns a persistence test base backed by cassandra datastore
-// It is only being used by testing against external/public Cassandra, which require to load the default gocql client
-func NewTestBaseWithPublicCassandra(options *persistencetests.TestBaseOptions) *persistencetests.TestBase {
-	if options.DBPluginName == "" {
-		options.DBPluginName = "cassandra"
-	}
-	return persistencetests.NewTestBaseWithNoSQL(options)
-}

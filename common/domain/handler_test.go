@@ -27,16 +27,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/testflags"
-
 	"github.com/golang/mock/gomock"
-
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-
-	"github.com/uber/cadence/common/messaging"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
@@ -46,17 +41,18 @@ import (
 	"github.com/uber/cadence/common/config"
 	dc "github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/testflags"
 )
 
 type (
 	domainHandlerCommonSuite struct {
-		suite.Suite
-		persistencetests.TestBase
+		*persistencetests.TestBase
 
 		minRetentionDays     int
 		maxBadBinaryCount    int
@@ -74,26 +70,27 @@ var nowInt64 = time.Now().UnixNano()
 
 func TestDomainHandlerCommonSuite(t *testing.T) {
 	testflags.RequireCassandra(t)
-	s := new(domainHandlerCommonSuite)
-	suite.Run(t, s)
-}
 
-func (s *domainHandlerCommonSuite) SetupSuite() {
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
 	}
 
+	s := new(domainHandlerCommonSuite)
+
 	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{
 		ClusterMetadata: cluster.GetTestClusterMetadata(true),
 	})
-	s.TestBase.Setup()
+
+	suite.Run(t, s)
 }
 
 func (s *domainHandlerCommonSuite) TearDownSuite() {
-	s.TestBase.TearDownWorkflowStore()
+	s.TearDownWorkflowStore()
 }
 
 func (s *domainHandlerCommonSuite) SetupTest() {
+	s.Setup()
+
 	logger := loggerimpl.NewNopLogger()
 	dcCollection := dc.NewCollection(dc.NewNopClient(), logger)
 	s.minRetentionDays = 1

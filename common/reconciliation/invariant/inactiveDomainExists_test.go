@@ -73,7 +73,6 @@ func (s *InactiveInactiveDomainExistsSuite) TestCheck() {
 
 	ctrl := gomock.NewController(s.T())
 	domainCache := cache.NewMockDomainCache(ctrl)
-	defer ctrl.Finish()
 	for _, tc := range testCases {
 		execManager := &mocks.ExecutionManager{}
 		execManager.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(tc.getExecResp, tc.getExecErr)

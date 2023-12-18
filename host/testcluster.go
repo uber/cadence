@@ -27,10 +27,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/common/log/loggerimpl"
-
+	"github.com/startreedata/pinot-client-go/pinot"
 	"github.com/uber-go/tally"
-
 	adminClient "github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/filestore"
@@ -42,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/messaging/kafka"
@@ -51,8 +50,6 @@ import (
 	"github.com/uber/cadence/common/persistence/nosql"
 	"github.com/uber/cadence/common/persistence/persistence-tests/testcluster"
 	"github.com/uber/cadence/testflags"
-
-	"github.com/startreedata/pinot-client-go/pinot"
 	// the import is a test dependency
 	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
@@ -65,7 +62,7 @@ import (
 type (
 	// TestCluster is a base struct for integration tests
 	TestCluster struct {
-		testBase     persistencetests.TestBase
+		testBase     *persistencetests.TestBase
 		archiverBase *ArchiverBase
 		host         Cadence
 	}
@@ -293,7 +290,7 @@ func NewPersistenceTestCluster(t *testing.T, clusterConfig *TestClusterConfig) t
 	return testCluster
 }
 
-func setupShards(testBase persistencetests.TestBase, numHistoryShards int, logger log.Logger) {
+func setupShards(testBase *persistencetests.TestBase, numHistoryShards int, logger log.Logger) {
 	// shard 0 is always created, we create additional shards if needed
 	for shardID := 1; shardID < numHistoryShards; shardID++ {
 		ctx, cancel := context.WithTimeout(context.Background(), defaultTestPersistenceTimeout)

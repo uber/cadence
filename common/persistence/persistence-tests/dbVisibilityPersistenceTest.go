@@ -22,14 +22,13 @@ package persistencetests
 
 import (
 	"context"
+	"log"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/pborman/uuid"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/definition"
@@ -44,7 +43,7 @@ type (
 	// DBVisibilityPersistenceSuite tests visibility persistence
 	// It only tests against DB based visibility, AdvancedVisibility test is in ESVisibilitySuite
 	DBVisibilityPersistenceSuite struct {
-		TestBase
+		*TestBase
 		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
 		// not merely log an error
 		*require.Assertions

@@ -58,7 +58,6 @@ func (s *scannerWorkflowTestSuite) TestWorkflow() {
 func (s *scannerWorkflowTestSuite) TestScavengerActivity() {
 	env := s.NewTestActivityEnvironment()
 	controller := gomock.NewController(s.T())
-	defer controller.Finish()
 	mockResource := resource.NewTest(controller, metrics.Worker)
 	defer mockResource.Finish(s.T())
 

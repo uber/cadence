@@ -21,7 +21,7 @@
 package nosql
 
 import (
-	log "github.com/sirupsen/logrus"
+	"log"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"

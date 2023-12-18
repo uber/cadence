@@ -2999,42 +2999,35 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 	}, nil
 }
 
-func (e *historyEngineImpl) NotifyNewHistoryEvent(
-	event *events.Notification,
-) {
-
+func (e *historyEngineImpl) NotifyNewHistoryEvent(event *events.Notification) {
 	e.historyEventNotifier.NotifyNewHistoryEvent(event)
 }
 
-func (e *historyEngineImpl) NotifyNewTransferTasks(
-	info *hcommon.NotifyTaskInfo,
-) {
+func (e *historyEngineImpl) NotifyNewTransferTasks(info *hcommon.NotifyTaskInfo) {
+	if len(info.Tasks) == 0 {
+		return
+	}
 
-	if len(info.Tasks) > 0 {
-		task := info.Tasks[0]
-		clusterName, err := e.clusterMetadata.ClusterNameForFailoverVersion(task.GetVersion())
-		if err == nil {
-			e.txProcessor.NotifyNewTask(clusterName, info)
-		}
+	task := info.Tasks[0]
+	clusterName, err := e.clusterMetadata.ClusterNameForFailoverVersion(task.GetVersion())
+	if err == nil {
+		e.txProcessor.NotifyNewTask(clusterName, info)
 	}
 }
 
-func (e *historyEngineImpl) NotifyNewTimerTasks(
-	info *hcommon.NotifyTaskInfo,
-) {
+func (e *historyEngineImpl) NotifyNewTimerTasks(info *hcommon.NotifyTaskInfo) {
+	if len(info.Tasks) == 0 {
+		return
+	}
 
-	if len(info.Tasks) > 0 {
-		task := info.Tasks[0]
-		clusterName, err := e.clusterMetadata.ClusterNameForFailoverVersion(task.GetVersion())
-		if err == nil {
-			e.timerProcessor.NotifyNewTask(clusterName, info)
-		}
+	task := info.Tasks[0]
+	clusterName, err := e.clusterMetadata.ClusterNameForFailoverVersion(task.GetVersion())
+	if err == nil {
+		e.timerProcessor.NotifyNewTask(clusterName, info)
 	}
 }
 
-func (e *historyEngineImpl) NotifyNewCrossClusterTasks(
-	info *hcommon.NotifyTaskInfo,
-) {
+func (e *historyEngineImpl) NotifyNewCrossClusterTasks(info *hcommon.NotifyTaskInfo) {
 	taskByTargetCluster := make(map[string][]persistence.Task)
 	for _, task := range info.Tasks {
 		// TODO: consider defining a new interface in persistence package

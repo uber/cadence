@@ -68,7 +68,7 @@ const (
 type PinotIntegrationSuite struct {
 	*require.Assertions
 	logger log.Logger
-	IntegrationBase
+	*IntegrationBase
 	pinotClient pnt.GenericClient
 
 	testSearchAttributeKey string

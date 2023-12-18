@@ -49,8 +49,7 @@ import (
 
 type (
 	domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite struct {
-		suite.Suite
-		persistencetests.TestBase
+		*persistencetests.TestBase
 
 		minRetentionDays     int
 		maxBadBinaryCount    int
@@ -66,19 +65,18 @@ type (
 
 func TestDomainHandlerGlobalDomainEnabledNotPrimaryClusterSuite(t *testing.T) {
 	testflags.RequireCassandra(t)
-	s := new(domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite)
-	suite.Run(t, s)
-}
 
-func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) SetupSuite() {
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
 	}
 
+	s := new(domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite)
+
 	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{
 		ClusterMetadata: cluster.GetTestClusterMetadata(false),
 	})
-	s.TestBase.Setup()
+
+	suite.Run(t, s)
 }
 
 func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TearDownSuite() {
@@ -86,6 +84,8 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TearDownSuite()
 }
 
 func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) SetupTest() {
+	s.Setup()
+
 	logger := loggerimpl.NewNopLogger()
 	dcCollection := dc.NewCollection(dc.NewNopClient(), logger)
 	s.minRetentionDays = 1

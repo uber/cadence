@@ -4,6 +4,14 @@ services:
     image: cassandra:4.1.3
     ports:
       - "9042:9042"
+    environment:
+      - "MAX_HEAP_SIZE=256M"
+      - "HEAP_NEWSIZE=128M"
+    healthcheck:
+      test: ["CMD", "cqlsh", "-u cassandra", "-p cassandra" ,"-e describe keyspaces"]
+      interval: 15s
+      timeout: 30s
+      retries: 10
   prometheus:
     image: prom/prometheus:latest
     volumes:
@@ -39,8 +47,10 @@ services:
       - "FRONTEND_HTTP_PORT=8800"
       - "FRONTEND_HTTP_PROCEDURES=uber.cadence.api.v1.WorkflowAPI::StartWorkflowExecution,uber.cadence.api.v1.WorkflowAPI::SignalWorkflowExecution,uber.cadence.api.v1.WorkflowAPI::QueryWorkflow,uber.cadence.api.v1.WorkflowAPI::DescribeWorkflowExecution,uber.cadence.api.v1.VisibilityAPI::ListWorkflowExecutions"
     depends_on:
-      - cassandra
-      - prometheus
+      cassandra:
+        condition: service_healthy
+      prometheus:
+        condition: service_started
   cadence-web:
     image: ubercadence/web:latest
     environment:

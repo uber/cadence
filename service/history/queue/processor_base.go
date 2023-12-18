@@ -460,9 +460,7 @@ func (p *processorBase) getProcessingQueueStates() *ActionResult {
 	}
 }
 
-func (p *processorBase) submitTask(
-	task task.Task,
-) (bool, error) {
+func (p *processorBase) submitTask(task task.Task) (bool, error) {
 	submitted, err := p.taskProcessor.TrySubmit(task)
 	if err != nil {
 		select {

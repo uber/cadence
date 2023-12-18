@@ -94,7 +94,6 @@ func (s *dataCorruptionWorkflowTestSuite) TestWorkflow_TimerFire_Success() {
 func (s *dataCorruptionWorkflowTestSuite) TestExecutionFixerActivity_Success() {
 	env := s.NewTestActivityEnvironment()
 	controller := gomock.NewController(s.T())
-	defer controller.Finish()
 	mockResource := resource.NewTest(controller, metrics.Worker)
 	defer mockResource.Finish(s.T())
 	fixList := []entity.Execution{

@@ -34,14 +34,15 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-func (db *cdb) executeCreateWorkflowBatchTransaction(
+func executeCreateWorkflowBatchTransaction(
+	session gocql.Session,
 	batch gocql.Batch,
 	currentWorkflowRequest *nosqlplugin.CurrentWorkflowWriteRequest,
 	execution *nosqlplugin.WorkflowExecutionRequest,
 	shardCondition *nosqlplugin.ShardCondition,
 ) error {
 	previous := make(map[string]interface{})
-	applied, iter, err := db.session.MapExecuteBatchCAS(batch, previous)
+	applied, iter, err := session.MapExecuteBatchCAS(batch, previous)
 	defer func() {
 		if iter != nil {
 			_ = iter.Close()
@@ -52,120 +53,119 @@ func (db *cdb) executeCreateWorkflowBatchTransaction(
 		return err
 	}
 
-	if !applied {
-		requestConditionalRunID := ""
-		if currentWorkflowRequest.Condition != nil {
-			requestConditionalRunID = currentWorkflowRequest.Condition.GetCurrentRunID()
+	if applied {
+		return nil
+	}
+
+	requestConditionalRunID := ""
+	if currentWorkflowRequest.Condition != nil {
+		requestConditionalRunID = currentWorkflowRequest.Condition.GetCurrentRunID()
+	}
+	// There can be two reasons why the query does not get applied. Either the RangeID has changed, or
+	// the workflow is already started. Check the row info returned by Cassandra to figure out which one it is.
+	for {
+		rowType, ok := previous["type"].(int)
+		if !ok {
+			// This should never happen, as all our rows have the type field.
+			break
 		}
-		// There can be two reasons why the query does not get applied. Either the RangeID has changed, or
-		// the workflow is already started. Check the row info returned by Cassandra to figure out which one it is.
-	GetFailureReasonLoop:
-		for {
-			rowType, ok := previous["type"].(int)
-			if !ok {
-				// This should never happen, as all our rows have the type field.
-				break GetFailureReasonLoop
-			}
-			runID := previous["run_id"].(gocql.UUID).String()
+		runID := previous["run_id"].(gocql.UUID).String()
 
-			if rowType == rowTypeShard {
-				if rangeID, ok := previous["range_id"].(int64); ok && rangeID != shardCondition.RangeID {
-					// CreateWorkflowExecution failed because rangeID was modified
-					return &nosqlplugin.WorkflowOperationConditionFailure{
-						ShardRangeIDNotMatch: common.Int64Ptr(rangeID),
-					}
-				}
-
-			} else if rowType == rowTypeExecution && runID == permanentRunID {
-				var columns []string
-				for k, v := range previous {
-					columns = append(columns, fmt.Sprintf("%s=%v", k, v))
-				}
-
-				if execution, ok := previous["execution"].(map[string]interface{}); ok {
-					// CreateWorkflowExecution failed because it already exists
-					executionInfo := parseWorkflowExecutionInfo(execution)
-					lastWriteVersion := common.EmptyVersion
-					if previous["workflow_last_write_version"] != nil {
-						lastWriteVersion = previous["workflow_last_write_version"].(int64)
-					}
-
-					msg := fmt.Sprintf("Workflow execution already running. WorkflowId: %v, RunId: %v, rangeID: %v, columns: (%v)",
-						executionInfo.WorkflowID, executionInfo.RunID, shardCondition.RangeID, strings.Join(columns, ","))
-
-					if currentWorkflowRequest.WriteMode == nosqlplugin.CurrentWorkflowWriteModeInsert {
-						return &nosqlplugin.WorkflowOperationConditionFailure{
-							WorkflowExecutionAlreadyExists: &nosqlplugin.WorkflowExecutionAlreadyExists{
-								OtherInfo:        msg,
-								CreateRequestID:  executionInfo.CreateRequestID,
-								RunID:            executionInfo.RunID,
-								State:            executionInfo.State,
-								CloseStatus:      executionInfo.CloseStatus,
-								LastWriteVersion: lastWriteVersion,
-							},
-						}
-					}
-					return &nosqlplugin.WorkflowOperationConditionFailure{
-						CurrentWorkflowConditionFailInfo: &msg,
-					}
-
-				}
-
-				if prevRunID := previous["current_run_id"].(gocql.UUID).String(); requestConditionalRunID != "" && prevRunID != requestConditionalRunID {
-					// currentRunID on previous run has been changed, return to caller to handle
-					msg := fmt.Sprintf("Workflow execution creation condition failed by mismatch runID. WorkflowId: %v, Expected Current RunID: %v, Actual Current RunID: %v",
-						execution.WorkflowID, currentWorkflowRequest.Condition.GetCurrentRunID(), prevRunID)
-					return &nosqlplugin.WorkflowOperationConditionFailure{
-						CurrentWorkflowConditionFailInfo: &msg,
-					}
-				}
-
-				msg := fmt.Sprintf("Workflow execution creation condition failed. WorkflowId: %v, CurrentRunID: %v, columns: (%v)",
-					execution.WorkflowID, execution.RunID, strings.Join(columns, ","))
+		if rowType == rowTypeShard {
+			if rangeID, ok := previous["range_id"].(int64); ok && rangeID != shardCondition.RangeID {
+				// CreateWorkflowExecution failed because rangeID was modified
 				return &nosqlplugin.WorkflowOperationConditionFailure{
-					CurrentWorkflowConditionFailInfo: &msg,
+					ShardRangeIDNotMatch: common.Int64Ptr(rangeID),
 				}
-			} else if rowType == rowTypeExecution && execution.RunID == runID {
-				msg := fmt.Sprintf("Workflow execution already running. WorkflowId: %v, RunId: %v, rangeID: %v",
-					execution.WorkflowID, execution.RunID, shardCondition.RangeID)
+			}
+
+		} else if rowType == rowTypeExecution && runID == permanentRunID {
+			var columns []string
+			for k, v := range previous {
+				columns = append(columns, fmt.Sprintf("%s=%v", k, v))
+			}
+
+			if execution, ok := previous["execution"].(map[string]interface{}); ok {
+				// CreateWorkflowExecution failed because it already exists
+				executionInfo := parseWorkflowExecutionInfo(execution)
 				lastWriteVersion := common.EmptyVersion
 				if previous["workflow_last_write_version"] != nil {
 					lastWriteVersion = previous["workflow_last_write_version"].(int64)
 				}
+
+				msg := fmt.Sprintf("Workflow execution already running. WorkflowId: %v, RunId: %v, rangeID: %v, columns: (%v)",
+					executionInfo.WorkflowID, executionInfo.RunID, shardCondition.RangeID, strings.Join(columns, ","))
+
+				if currentWorkflowRequest.WriteMode == nosqlplugin.CurrentWorkflowWriteModeInsert {
+					return &nosqlplugin.WorkflowOperationConditionFailure{
+						WorkflowExecutionAlreadyExists: &nosqlplugin.WorkflowExecutionAlreadyExists{
+							OtherInfo:        msg,
+							CreateRequestID:  executionInfo.CreateRequestID,
+							RunID:            executionInfo.RunID,
+							State:            executionInfo.State,
+							CloseStatus:      executionInfo.CloseStatus,
+							LastWriteVersion: lastWriteVersion,
+						},
+					}
+				}
 				return &nosqlplugin.WorkflowOperationConditionFailure{
-					WorkflowExecutionAlreadyExists: &nosqlplugin.WorkflowExecutionAlreadyExists{
-						OtherInfo:        msg,
-						CreateRequestID:  execution.CreateRequestID,
-						RunID:            execution.RunID,
-						State:            execution.State,
-						CloseStatus:      execution.CloseStatus,
-						LastWriteVersion: lastWriteVersion,
-					},
+					CurrentWorkflowConditionFailInfo: &msg,
 				}
 			}
 
-			previous = make(map[string]interface{})
-			if !iter.MapScan(previous) {
-				// Cassandra returns the actual row that caused a condition failure, so we should always return
-				// from the checks above, but just in case.
-				break GetFailureReasonLoop
+			if prevRunID := previous["current_run_id"].(gocql.UUID).String(); requestConditionalRunID != "" && prevRunID != requestConditionalRunID {
+				// currentRunID on previous run has been changed, return to caller to handle
+				msg := fmt.Sprintf("Workflow execution creation condition failed by mismatch runID. WorkflowId: %v, Expected Current RunID: %v, Actual Current RunID: %v",
+					execution.WorkflowID, currentWorkflowRequest.Condition.GetCurrentRunID(), prevRunID)
+				return &nosqlplugin.WorkflowOperationConditionFailure{
+					CurrentWorkflowConditionFailInfo: &msg,
+				}
+			}
+
+			msg := fmt.Sprintf("Workflow execution creation condition failed. WorkflowId: %v, CurrentRunID: %v, columns: (%v)",
+				execution.WorkflowID, execution.RunID, strings.Join(columns, ","))
+			return &nosqlplugin.WorkflowOperationConditionFailure{
+				CurrentWorkflowConditionFailInfo: &msg,
+			}
+		} else if rowType == rowTypeExecution && execution.RunID == runID {
+			msg := fmt.Sprintf("Workflow execution already running. WorkflowId: %v, RunId: %v, rangeID: %v",
+				execution.WorkflowID, execution.RunID, shardCondition.RangeID)
+			lastWriteVersion := common.EmptyVersion
+			if previous["workflow_last_write_version"] != nil {
+				lastWriteVersion = previous["workflow_last_write_version"].(int64)
+			}
+			return &nosqlplugin.WorkflowOperationConditionFailure{
+				WorkflowExecutionAlreadyExists: &nosqlplugin.WorkflowExecutionAlreadyExists{
+					OtherInfo:        msg,
+					CreateRequestID:  execution.CreateRequestID,
+					RunID:            execution.RunID,
+					State:            execution.State,
+					CloseStatus:      execution.CloseStatus,
+					LastWriteVersion: lastWriteVersion,
+				},
 			}
 		}
 
-		return newUnknownConditionFailureReason(shardCondition.RangeID, previous)
+		previous = make(map[string]interface{})
+		if !iter.MapScan(previous) {
+			// Cassandra returns the actual row that caused a condition failure, so we should always return
+			// from the checks above, but just in case.
+			break
+		}
 	}
 
-	return nil
+	return newUnknownConditionFailureReason(shardCondition.RangeID, previous)
 }
 
-func (db *cdb) executeUpdateWorkflowBatchTransaction(
+func executeUpdateWorkflowBatchTransaction(
+	session gocql.Session,
 	batch gocql.Batch,
 	currentWorkflowRequest *nosqlplugin.CurrentWorkflowWriteRequest,
-	PreviousNextEventIDCondition int64,
+	previousNextEventIDCondition int64,
 	shardCondition *nosqlplugin.ShardCondition,
 ) error {
 	previous := make(map[string]interface{})
-	applied, iter, err := db.session.MapExecuteBatchCAS(batch, previous)
+	applied, iter, err := session.MapExecuteBatchCAS(batch, previous)
 	defer func() {
 		if iter != nil {
 			_ = iter.Close()
@@ -176,101 +176,100 @@ func (db *cdb) executeUpdateWorkflowBatchTransaction(
 		return err
 	}
 
-	if !applied {
-		requestRunID := currentWorkflowRequest.Row.RunID
-		requestCondition := PreviousNextEventIDCondition
-		requestRangeID := shardCondition.RangeID
-		requestConditionalRunID := ""
-		if currentWorkflowRequest.Condition != nil {
-			requestConditionalRunID = currentWorkflowRequest.Condition.GetCurrentRunID()
+	if applied {
+		return nil
+	}
+
+	requestRunID := currentWorkflowRequest.Row.RunID
+	requestRangeID := shardCondition.RangeID
+	requestConditionalRunID := ""
+	if currentWorkflowRequest.Condition != nil {
+		requestConditionalRunID = currentWorkflowRequest.Condition.GetCurrentRunID()
+	}
+
+	// There can be three reasons why the query does not get applied: the RangeID has changed, or the next_event_id or current_run_id check failed.
+	// Check the row info returned by Cassandra to figure out which one it is.
+	rangeIDMismatch := false
+	actualRangeID := int64(0)
+	nextEventIDMismatch := false
+	actualNextEventID := int64(0)
+	runIDMismatch := false
+	actualCurrRunID := ""
+	var allPrevious []map[string]interface{}
+
+	for {
+		rowType, ok := previous["type"].(int)
+		if !ok {
+			// This should never happen, as all our rows have the type field.
+			break
 		}
 
-		// There can be three reasons why the query does not get applied: the RangeID has changed, or the next_event_id or current_run_id check failed.
-		// Check the row info returned by Cassandra to figure out which one it is.
-		rangeIDUnmatch := false
-		actualRangeID := int64(0)
-		nextEventIDUnmatch := false
-		actualNextEventID := int64(0)
-		runIDUnmatch := false
-		actualCurrRunID := ""
-		var allPrevious []map[string]interface{}
+		runID := previous["run_id"].(gocql.UUID).String()
 
-	GetFailureReasonLoop:
-		for {
-			rowType, ok := previous["type"].(int)
-			if !ok {
-				// This should never happen, as all our rows have the type field.
-				break GetFailureReasonLoop
+		if rowType == rowTypeShard {
+			if actualRangeID, ok = previous["range_id"].(int64); ok && actualRangeID != requestRangeID {
+				// UpdateWorkflowExecution failed because rangeID was modified
+				rangeIDMismatch = true
 			}
-
-			runID := previous["run_id"].(gocql.UUID).String()
-
-			if rowType == rowTypeShard {
-				if actualRangeID, ok = previous["range_id"].(int64); ok && actualRangeID != requestRangeID {
-					// UpdateWorkflowExecution failed because rangeID was modified
-					rangeIDUnmatch = true
-				}
-			} else if rowType == rowTypeExecution && runID == requestRunID {
-				if actualNextEventID, ok = previous["next_event_id"].(int64); ok && actualNextEventID != requestCondition {
-					// UpdateWorkflowExecution failed because next event ID is unexpected
-					nextEventIDUnmatch = true
-				}
-			} else if rowType == rowTypeExecution && runID == permanentRunID {
-				// UpdateWorkflowExecution failed because current_run_id is unexpected
-				if actualCurrRunID = previous["current_run_id"].(gocql.UUID).String(); requestConditionalRunID != "" && actualCurrRunID != requestConditionalRunID {
-					// UpdateWorkflowExecution failed because next event ID is unexpected
-					runIDUnmatch = true
-				}
+		} else if rowType == rowTypeExecution && runID == requestRunID {
+			if actualNextEventID, ok = previous["next_event_id"].(int64); ok && actualNextEventID != previousNextEventIDCondition {
+				// UpdateWorkflowExecution failed because next event ID is unexpected
+				nextEventIDMismatch = true
 			}
-
-			allPrevious = append(allPrevious, previous)
-			previous = make(map[string]interface{})
-			if !iter.MapScan(previous) {
-				// Cassandra returns the actual row that caused a condition failure, so we should always return
-				// from the checks above, but just in case.
-				break GetFailureReasonLoop
+		} else if rowType == rowTypeExecution && runID == permanentRunID {
+			// UpdateWorkflowExecution failed because current_run_id is unexpected
+			if actualCurrRunID = previous["current_run_id"].(gocql.UUID).String(); requestConditionalRunID != "" && actualCurrRunID != requestConditionalRunID {
+				// UpdateWorkflowExecution failed because next event ID is unexpected
+				runIDMismatch = true
 			}
 		}
 
-		if rangeIDUnmatch {
-			return &nosqlplugin.WorkflowOperationConditionFailure{
-				ShardRangeIDNotMatch: common.Int64Ptr(actualRangeID),
-			}
+		allPrevious = append(allPrevious, previous)
+		previous = make(map[string]interface{})
+		if !iter.MapScan(previous) {
+			// Cassandra returns the actual row that caused a condition failure, so we should always return
+			// from the checks above, but just in case.
+			break
 		}
+	}
 
-		if runIDUnmatch {
-			msg := fmt.Sprintf("Failed to update mutable state.  Request Condition: %v, Actual Value: %v, Request Current RunID: %v, Actual Value: %v",
-				requestCondition, actualNextEventID, requestConditionalRunID, actualCurrRunID)
-			return &nosqlplugin.WorkflowOperationConditionFailure{
-				CurrentWorkflowConditionFailInfo: &msg,
-			}
+	if rangeIDMismatch {
+		return &nosqlplugin.WorkflowOperationConditionFailure{
+			ShardRangeIDNotMatch: common.Int64Ptr(actualRangeID),
 		}
+	}
 
-		if nextEventIDUnmatch {
-			msg := fmt.Sprintf("Failed to update mutable state.  Request Condition: %v, Actual Value: %v, Request Current RunID: %v, Actual Value: %v",
-				requestCondition, actualNextEventID, requestConditionalRunID, actualCurrRunID)
-			return &nosqlplugin.WorkflowOperationConditionFailure{
-				UnknownConditionFailureDetails: &msg,
-			}
+	if runIDMismatch {
+		msg := fmt.Sprintf("Failed to update mutable state. requestConditionalRunID: %v, Actual Value: %v",
+			requestConditionalRunID, actualCurrRunID)
+		return &nosqlplugin.WorkflowOperationConditionFailure{
+			CurrentWorkflowConditionFailInfo: &msg,
 		}
+	}
 
-		// At this point we only know that the write was not applied.
-		var columns []string
-		columnID := 0
-		for _, previous := range allPrevious {
-			for k, v := range previous {
-				columns = append(columns, fmt.Sprintf("%v: %s=%v", columnID, k, v))
-			}
-			columnID++
-		}
-		msg := fmt.Sprintf("Failed to update mutable state. ShardID: %v, RangeID: %v, Condition: %v, Request Current RunID: %v, columns: (%v)",
-			shardCondition.ShardID, requestRangeID, requestCondition, requestConditionalRunID, strings.Join(columns, ","))
+	if nextEventIDMismatch {
+		msg := fmt.Sprintf("Failed to update mutable state. previousNextEventIDCondition: %v, actualNextEventID: %v, Request Current RunID: %v",
+			previousNextEventIDCondition, actualNextEventID, requestRunID)
 		return &nosqlplugin.WorkflowOperationConditionFailure{
 			UnknownConditionFailureDetails: &msg,
 		}
 	}
 
-	return nil
+	// At this point we only know that the write was not applied.
+	var columns []string
+	columnID := 0
+	for _, previous := range allPrevious {
+		for k, v := range previous {
+			columns = append(columns, fmt.Sprintf("%v: %s=%v", columnID, k, v))
+		}
+		columnID++
+	}
+
+	msg := fmt.Sprintf("Failed to update mutable state. ShardID: %v, RangeID: %v, previousNextEventIDCondition: %v, requestConditionalRunID: %v, columns: (%v)",
+		shardCondition.ShardID, requestRangeID, previousNextEventIDCondition, requestConditionalRunID, strings.Join(columns, ","))
+	return &nosqlplugin.WorkflowOperationConditionFailure{
+		UnknownConditionFailureDetails: &msg,
+	}
 }
 
 func newUnknownConditionFailureReason(
@@ -293,7 +292,7 @@ func newUnknownConditionFailureReason(
 	}
 }
 
-func (db *cdb) assertShardRangeID(batch gocql.Batch, shardID int, rangeID int64) error {
+func assertShardRangeID(batch gocql.Batch, shardID int, rangeID int64) error {
 	batch.Query(templateUpdateLeaseQuery,
 		rangeID,
 		shardID,
@@ -308,7 +307,7 @@ func (db *cdb) assertShardRangeID(batch gocql.Batch, shardID int, rangeID int64)
 	return nil
 }
 
-func (db *cdb) createTimerTasks(
+func createTimerTasks(
 	batch gocql.Batch,
 	shardID int,
 	domainID string,
@@ -341,14 +340,14 @@ func (db *cdb) createTimerTasks(
 	return nil
 }
 
-func (db *cdb) createReplicationTasks(
+func createReplicationTasks(
 	batch gocql.Batch,
 	shardID int,
 	domainID string,
 	workflowID string,
-	transferTasks []*nosqlplugin.ReplicationTask,
+	replicationTasks []*nosqlplugin.ReplicationTask,
 ) error {
-	for _, task := range transferTasks {
+	for _, task := range replicationTasks {
 		batch.Query(templateCreateReplicationTaskQuery,
 			shardID,
 			rowTypeReplicationTask,
@@ -376,7 +375,7 @@ func (db *cdb) createReplicationTasks(
 	return nil
 }
 
-func (db *cdb) createTransferTasks(
+func createTransferTasks(
 	batch gocql.Batch,
 	shardID int,
 	domainID string,
@@ -412,14 +411,14 @@ func (db *cdb) createTransferTasks(
 	return nil
 }
 
-func (db *cdb) createCrossClusterTasks(
+func createCrossClusterTasks(
 	batch gocql.Batch,
 	shardID int,
 	domainID string,
 	workflowID string,
-	transferTasks []*nosqlplugin.CrossClusterTask,
+	xClusterTasks []*nosqlplugin.CrossClusterTask,
 ) error {
-	for _, task := range transferTasks {
+	for _, task := range xClusterTasks {
 		batch.Query(templateCreateCrossClusterTaskQuery,
 			shardID,
 			rowTypeCrossClusterTask,
@@ -449,7 +448,7 @@ func (db *cdb) createCrossClusterTasks(
 	return nil
 }
 
-func (db *cdb) resetSignalsRequested(
+func resetSignalsRequested(
 	batch gocql.Batch,
 	shardID int,
 	domainID string,
@@ -469,7 +468,7 @@ func (db *cdb) resetSignalsRequested(
 	return nil
 }
 
-func (db *cdb) updateSignalsRequested(
+func updateSignalsRequested(
 	batch gocql.Batch,
 	shardID int,
 	domainID string,
@@ -478,7 +477,6 @@ func (db *cdb) updateSignalsRequested(
 	signalReqIDs []string,
 	deleteSignalReqIDs []string,
 ) error {
-
 	if len(signalReqIDs) > 0 {
 		batch.Query(templateUpdateSignalRequestedQuery,
 			signalReqIDs,
@@ -505,7 +503,7 @@ func (db *cdb) updateSignalsRequested(
 	return nil
 }
 
-func (db *cdb) resetSignalInfos(
+func resetSignalInfos(
 	batch gocql.Batch,
 	shardID int,
 	domainID string,
@@ -525,10 +523,7 @@ func (db *cdb) resetSignalInfos(
 	return nil
 }
 
-func resetSignalInfoMap(
-	signalInfos map[int64]*persistence.SignalInfo,
-) map[int64]map[string]interface{} {
-
+func resetSignalInfoMap(signalInfos map[int64]*persistence.SignalInfo) map[int64]map[string]interface{} {
 	sMap := make(map[int64]map[string]interface{})
 	for _, s := range signalInfos {
 		sInfo := make(map[string]interface{})
@@ -539,14 +534,13 @@ func resetSignalInfoMap(
 		sInfo["signal_name"] = s.SignalName
 		sInfo["input"] = s.Input
 		sInfo["control"] = s.Control
-
 		sMap[s.InitiatedID] = sInfo
 	}
 
 	return sMap
 }
 
-func (db *cdb) updateSignalInfos(
+func updateSignalInfos(
 	batch gocql.Batch,
 	shardID int,
 	domainID string,
@@ -589,7 +583,7 @@ func (db *cdb) updateSignalInfos(
 	return nil
 }
 
-func (db *cdb) resetRequestCancelInfos(
+func resetRequestCancelInfos(
 	batch gocql.Batch,
 	shardID int,
 	domainID string,
@@ -609,10 +603,7 @@ func (db *cdb) resetRequestCancelInfos(
 	return nil
 }
 
-func resetRequestCancelInfoMap(
-	requestCancelInfos map[int64]*persistence.RequestCancelInfo,
-) map[int64]map[string]interface{} {
-
+func resetRequestCancelInfoMap(requestCancelInfos map[int64]*persistence.RequestCancelInfo) map[int64]map[string]interface{} {
 	rcMap := make(map[int64]map[string]interface{})
 	for _, rc := range requestCancelInfos {
 		rcInfo := make(map[string]interface{})
@@ -620,14 +611,13 @@ func resetRequestCancelInfoMap(
 		rcInfo["initiated_id"] = rc.InitiatedID
 		rcInfo["initiated_event_batch_id"] = rc.InitiatedEventBatchID
 		rcInfo["cancel_request_id"] = rc.CancelRequestID
-
 		rcMap[rc.InitiatedID] = rcInfo
 	}
 
 	return rcMap
 }
 
-func (db *cdb) updateRequestCancelInfos(
+func updateRequestCancelInfos(
 	batch gocql.Batch,
 	shardID int,
 	domainID string,
@@ -636,7 +626,6 @@ func (db *cdb) updateRequestCancelInfos(
 	requestCancelInfos map[int64]*persistence.RequestCancelInfo,
 	deleteInfos []int64,
 ) error {
-
 	for _, c := range requestCancelInfos {
 		batch.Query(templateUpdateRequestCancelInfoQuery,
 			c.InitiatedID,
@@ -668,7 +657,7 @@ func (db *cdb) updateRequestCancelInfos(
 	return nil
 }
 
-func (db *cdb) resetChildExecutionInfos(
+func resetChildExecutionInfos(
 	batch gocql.Batch,
 	shardID int,
 	domainID string,
@@ -692,10 +681,7 @@ func (db *cdb) resetChildExecutionInfos(
 	return nil
 }
 
-func resetChildExecutionInfoMap(
-	childExecutionInfos map[int64]*persistence.InternalChildExecutionInfo,
-) (map[int64]map[string]interface{}, error) {
-
+func resetChildExecutionInfoMap(childExecutionInfos map[int64]*persistence.InternalChildExecutionInfo) (map[int64]map[string]interface{}, error) {
 	cMap := make(map[int64]map[string]interface{})
 	for _, c := range childExecutionInfos {
 		cInfo := make(map[string]interface{})
@@ -724,7 +710,7 @@ func resetChildExecutionInfoMap(
 	return cMap, nil
 }
 
-func (db *cdb) updateChildExecutionInfos(
+func updateChildExecutionInfos(
 	batch gocql.Batch,
 	shardID int,
 	domainID string,
@@ -733,7 +719,6 @@ func (db *cdb) updateChildExecutionInfos(
 	childExecutionInfos map[int64]*persistence.InternalChildExecutionInfo,
 	deleteInfos []int64,
 ) error {
-
 	for _, c := range childExecutionInfos {
 		batch.Query(templateUpdateChildExecutionInfoQuery,
 			c.InitiatedID,
@@ -775,7 +760,7 @@ func (db *cdb) updateChildExecutionInfos(
 	return nil
 }
 
-func (db *cdb) resetTimerInfos(
+func resetTimerInfos(
 	batch gocql.Batch,
 	shardID int,
 	domainID string,
@@ -795,10 +780,7 @@ func (db *cdb) resetTimerInfos(
 	return nil
 }
 
-func resetTimerInfoMap(
-	timerInfos map[string]*persistence.TimerInfo,
-) map[string]map[string]interface{} {
-
+func resetTimerInfoMap(timerInfos map[string]*persistence.TimerInfo) map[string]map[string]interface{} {
 	tMap := make(map[string]map[string]interface{})
 	for _, t := range timerInfos {
 		tInfo := make(map[string]interface{})
@@ -817,7 +799,7 @@ func resetTimerInfoMap(
 	return tMap
 }
 
-func (db *cdb) updateTimerInfos(
+func updateTimerInfos(
 	batch gocql.Batch,
 	shardID int,
 	domainID string,
@@ -857,7 +839,7 @@ func (db *cdb) updateTimerInfos(
 	return nil
 }
 
-func (db *cdb) resetActivityInfos(
+func resetActivityInfos(
 	batch gocql.Batch,
 	shardID int,
 	domainID string,
@@ -882,10 +864,7 @@ func (db *cdb) resetActivityInfos(
 	return nil
 }
 
-func resetActivityInfoMap(
-	activityInfos map[int64]*persistence.InternalActivityInfo,
-) (map[int64]map[string]interface{}, error) {
-
+func resetActivityInfoMap(activityInfos map[int64]*persistence.InternalActivityInfo) (map[int64]map[string]interface{}, error) {
 	aMap := make(map[int64]map[string]interface{})
 	for _, a := range activityInfos {
 		aInfo := make(map[string]interface{})
@@ -929,7 +908,7 @@ func resetActivityInfoMap(
 	return aMap, nil
 }
 
-func (db *cdb) updateActivityInfos(
+func updateActivityInfos(
 	batch gocql.Batch,
 	shardID int,
 	domainID string,
@@ -1000,11 +979,10 @@ func (db *cdb) updateActivityInfos(
 // NOTE: not sure we still need it. We keep the behavior for safe during refactoring
 // In theory we can just return the input as output
 // TODO: if possible, remove it in the future or add more comment of why we need this conversion
-func (db *cdb) convertToCassandraTimestamp(in time.Time) time.Time {
+func convertToCassandraTimestamp(in time.Time) time.Time {
 	return time.Unix(0, persistence.DBTimestampToUnixNano(persistence.UnixNanoToDBTimestamp(in.UnixNano())))
 }
 
-// TODO: if possible, remove the copy in the future, or add comment of why we need it
 func getNextPageToken(iter gocql.Iter) []byte {
 	nextPageToken := iter.PageState()
 	newPageToken := make([]byte, len(nextPageToken))
@@ -1012,14 +990,14 @@ func getNextPageToken(iter gocql.Iter) []byte {
 	return newPageToken
 }
 
-func (db *cdb) createWorkflowExecutionWithMergeMaps(
+func createWorkflowExecutionWithMergeMaps(
 	batch gocql.Batch,
 	shardID int,
 	domainID string,
 	workflowID string,
 	execution *nosqlplugin.WorkflowExecutionRequest,
 ) error {
-	err := db.createWorkflowExecution(batch, shardID, domainID, workflowID, execution)
+	err := createWorkflowExecution(batch, shardID, domainID, workflowID, execution)
 	if err != nil {
 		return err
 	}
@@ -1032,37 +1010,37 @@ func (db *cdb) createWorkflowExecutionWithMergeMaps(
 		return fmt.Errorf("should only support WorkflowExecutionMapsWriteModeCreate")
 	}
 
-	err = db.updateActivityInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ActivityInfos, nil)
+	err = updateActivityInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ActivityInfos, nil)
 	if err != nil {
 		return err
 	}
-	err = db.updateTimerInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.TimerInfos, nil)
+	err = updateTimerInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.TimerInfos, nil)
 	if err != nil {
 		return err
 	}
-	err = db.updateChildExecutionInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ChildWorkflowInfos, nil)
+	err = updateChildExecutionInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ChildWorkflowInfos, nil)
 	if err != nil {
 		return err
 	}
-	err = db.updateRequestCancelInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.RequestCancelInfos, nil)
+	err = updateRequestCancelInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.RequestCancelInfos, nil)
 	if err != nil {
 		return err
 	}
-	err = db.updateSignalInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.SignalInfos, nil)
+	err = updateSignalInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.SignalInfos, nil)
 	if err != nil {
 		return err
 	}
-	return db.updateSignalsRequested(batch, shardID, domainID, workflowID, execution.RunID, execution.SignalRequestedIDs, nil)
+	return updateSignalsRequested(batch, shardID, domainID, workflowID, execution.RunID, execution.SignalRequestedIDs, nil)
 }
 
-func (db *cdb) resetWorkflowExecutionAndMapsAndEventBuffer(
+func resetWorkflowExecutionAndMapsAndEventBuffer(
 	batch gocql.Batch,
 	shardID int,
 	domainID string,
 	workflowID string,
 	execution *nosqlplugin.WorkflowExecutionRequest,
 ) error {
-	err := db.updateWorkflowExecution(batch, shardID, domainID, workflowID, execution)
+	err := updateWorkflowExecution(batch, shardID, domainID, workflowID, execution)
 	if err != nil {
 		return err
 	}
@@ -1081,27 +1059,27 @@ func (db *cdb) resetWorkflowExecutionAndMapsAndEventBuffer(
 
 	// This is another category of execution update where only the non-frozen column types in
 	// Cassandra are updated to a previous state in the Execution Update flow.
-	err = db.resetActivityInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ActivityInfos)
+	err = resetActivityInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ActivityInfos)
 	if err != nil {
 		return err
 	}
-	err = db.resetTimerInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.TimerInfos)
+	err = resetTimerInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.TimerInfos)
 	if err != nil {
 		return err
 	}
-	err = db.resetChildExecutionInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ChildWorkflowInfos)
+	err = resetChildExecutionInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ChildWorkflowInfos)
 	if err != nil {
 		return err
 	}
-	err = db.resetRequestCancelInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.RequestCancelInfos)
+	err = resetRequestCancelInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.RequestCancelInfos)
 	if err != nil {
 		return err
 	}
-	err = db.resetSignalInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.SignalInfos)
+	err = resetSignalInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.SignalInfos)
 	if err != nil {
 		return err
 	}
-	return db.resetSignalsRequested(batch, shardID, domainID, workflowID, execution.RunID, execution.SignalRequestedIDs)
+	return resetSignalsRequested(batch, shardID, domainID, workflowID, execution.RunID, execution.SignalRequestedIDs)
 }
 
 func appendBufferedEvents(
@@ -1147,14 +1125,14 @@ func deleteBufferedEvents(
 	return nil
 }
 
-func (db *cdb) updateWorkflowExecutionAndEventBufferWithMergeAndDeleteMaps(
+func updateWorkflowExecutionAndEventBufferWithMergeAndDeleteMaps(
 	batch gocql.Batch,
 	shardID int,
 	domainID string,
 	workflowID string,
 	execution *nosqlplugin.WorkflowExecutionRequest,
 ) error {
-	err := db.updateWorkflowExecution(batch, shardID, domainID, workflowID, execution)
+	err := updateWorkflowExecution(batch, shardID, domainID, workflowID, execution)
 	if err != nil {
 		return err
 	}
@@ -1177,40 +1155,40 @@ func (db *cdb) updateWorkflowExecutionAndEventBufferWithMergeAndDeleteMaps(
 
 	// In certain cases, some of the execution update cycles update particular columns asynchronously before reaching the final cycle.
 	// Each of these functions are updating a non-frozen column type in Cassandra table.
-	err = db.updateActivityInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ActivityInfos, execution.ActivityInfoKeysToDelete)
+	err = updateActivityInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ActivityInfos, execution.ActivityInfoKeysToDelete)
 	if err != nil {
 		return err
 	}
-	err = db.updateTimerInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.TimerInfos, execution.TimerInfoKeysToDelete)
+	err = updateTimerInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.TimerInfos, execution.TimerInfoKeysToDelete)
 	if err != nil {
 		return err
 	}
-	err = db.updateChildExecutionInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ChildWorkflowInfos, execution.ChildWorkflowInfoKeysToDelete)
+	err = updateChildExecutionInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ChildWorkflowInfos, execution.ChildWorkflowInfoKeysToDelete)
 	if err != nil {
 		return err
 	}
-	err = db.updateRequestCancelInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.RequestCancelInfos, execution.RequestCancelInfoKeysToDelete)
+	err = updateRequestCancelInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.RequestCancelInfos, execution.RequestCancelInfoKeysToDelete)
 	if err != nil {
 		return err
 	}
-	err = db.updateSignalInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.SignalInfos, execution.SignalInfoKeysToDelete)
+	err = updateSignalInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.SignalInfos, execution.SignalInfoKeysToDelete)
 	if err != nil {
 		return err
 	}
-	return db.updateSignalsRequested(batch, shardID, domainID, workflowID, execution.RunID, execution.SignalRequestedIDs, execution.SignalRequestedIDsKeysToDelete)
+	return updateSignalsRequested(batch, shardID, domainID, workflowID, execution.RunID, execution.SignalRequestedIDs, execution.SignalRequestedIDsKeysToDelete)
 }
 
 // updateWorkflowExecution is responsible for updating the execution state in different cycles until the
 // Status changes to close at the Final update cycle. Information is updated linearly, and synchronization usually occurs in every cycle.
-func (db *cdb) updateWorkflowExecution(
+func updateWorkflowExecution(
 	batch gocql.Batch,
 	shardID int,
 	domainID string,
 	workflowID string,
 	execution *nosqlplugin.WorkflowExecutionRequest,
 ) error {
-	execution.StartTimestamp = db.convertToCassandraTimestamp(execution.StartTimestamp)
-	execution.LastUpdatedTimestamp = db.convertToCassandraTimestamp(execution.LastUpdatedTimestamp)
+	execution.StartTimestamp = convertToCassandraTimestamp(execution.StartTimestamp)
+	execution.LastUpdatedTimestamp = convertToCassandraTimestamp(execution.LastUpdatedTimestamp)
 
 	batch.Query(templateUpdateWorkflowExecutionWithVersionHistoriesQuery,
 		domainID,
@@ -1293,15 +1271,15 @@ func (db *cdb) updateWorkflowExecution(
 	return nil
 }
 
-func (db *cdb) createWorkflowExecution(
+func createWorkflowExecution(
 	batch gocql.Batch,
 	shardID int,
 	domainID string,
 	workflowID string,
 	execution *nosqlplugin.WorkflowExecutionRequest,
 ) error {
-	execution.StartTimestamp = db.convertToCassandraTimestamp(execution.StartTimestamp)
-	execution.LastUpdatedTimestamp = db.convertToCassandraTimestamp(execution.LastUpdatedTimestamp)
+	execution.StartTimestamp = convertToCassandraTimestamp(execution.StartTimestamp)
+	execution.LastUpdatedTimestamp = convertToCassandraTimestamp(execution.LastUpdatedTimestamp)
 
 	batch.Query(templateCreateWorkflowExecutionWithVersionHistoriesQuery,
 		shardID,
@@ -1383,7 +1361,7 @@ func (db *cdb) createWorkflowExecution(
 	return nil
 }
 
-func (db *cdb) createOrUpdateCurrentWorkflow(
+func createOrUpdateCurrentWorkflow(
 	batch gocql.Batch,
 	shardID int,
 	domainID string,
@@ -1473,9 +1451,7 @@ func mustConvertToSlice(value interface{}) []interface{} {
 	}
 }
 
-func populateGetReplicationTasks(
-	query gocql.Query,
-) ([]*nosqlplugin.ReplicationTask, []byte, error) {
+func populateGetReplicationTasks(query gocql.Query) ([]*nosqlplugin.ReplicationTask, []byte, error) {
 	iter := query.Iter()
 	if iter == nil {
 		return nil, nil, &types.InternalServiceError{
