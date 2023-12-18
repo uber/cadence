@@ -46,6 +46,10 @@ import (
 )
 
 func TestIntegrationSuite(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
 	flag.Parse()
 
 	clusterConfig, err := GetTestClusterConfig("testdata/integration_test_cluster.yaml")

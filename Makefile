@@ -529,7 +529,7 @@ test: bins ## Build and run all tests. This target is for local development. The
 	$Q rm -f test.log
 	$Q echo Running special test cases without race detector:
 	$Q go test -v ./cmd/server/cadence/
-	$Q go test $(TEST_ARG) -coverprofile=$@ ./... $(TEST_TAG) | tee -a test.log
+	$Q go test -short $(TEST_ARG) -coverprofile=$@ ./... $(TEST_TAG) | tee -a test.log
 
 test_e2e: bins
 	$Q rm -f test
@@ -553,7 +553,7 @@ cover_profile:
 	$Q echo Running special test cases without race detector:
 	$Q go test ./cmd/server/cadence/
 	$Q echo Running package tests:
-	$Q go test ./... $(TEST_ARG) -coverprofile=$(UNIT_COVER_FILE);
+	$Q go test -short ./... $(TEST_ARG) -coverprofile=$(UNIT_COVER_FILE);
 
 cover_integration_profile: bins
 	$Q mkdir -p $(BUILD)
