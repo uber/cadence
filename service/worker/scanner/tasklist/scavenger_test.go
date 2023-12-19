@@ -193,16 +193,8 @@ func (s *ScavengerTestSuite) TestAllExpiredTasksWithErrors() {
 func (s *ScavengerTestSuite) runScavenger() {
 	s.scvgr.Start()
 	timer := time.NewTimer(scavengerTestTimeout)
-
-	waiter := make(chan struct{})
-
-	go func() {
-		s.scvgr.stopWG.Wait()
-		close(waiter)
-	}()
-
 	select {
-	case <-waiter:
+	case <-s.scvgr.stopped:
 		timer.Stop()
 		return
 	case <-timer.C:
