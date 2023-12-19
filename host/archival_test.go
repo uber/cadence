@@ -47,6 +47,7 @@ func (s *IntegrationSuite) TestArchival_TimerQueueProcessor() {
 	domainID := s.getDomainID(s.archivalDomainName)
 	WorkflowID := "archival-timer-queue-processor-workflow-id"
 	workflowType := "archival-timer-queue-processor-type"
+
 	taskList := "archival-timer-queue-processor-task-list"
 	numActivities := 1
 	numRuns := 1

@@ -180,11 +180,11 @@ $(BIN)/mockery: internal/tools/go.mod
 $(BIN)/enumer: internal/tools/go.mod
 	$(call go_build_tool,github.com/dmarkham/enumer)
 
-# only organizes imports, does not reformat code
-$(BIN)/gofancyimports: internal/tools/go.mod
-	$(call go_build_tool,github.com/NonLogicalDev/gofancyimports/cmd/gofancyimports)
+# organizes imports and reformats
+$(BIN)/gci: internal/tools/go.mod
+	$(call go_build_tool,github.com/daixiang0/gci)
 
-# removes unused imports and formats code (does not have -s for simplify though)
+# removes unused imports and reformats
 $(BIN)/goimports: internal/tools/go.mod
 	$(call go_build_tool,golang.org/x/tools/cmd/goimports)
 
@@ -358,11 +358,11 @@ $(BUILD)/lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
 MAYBE_TOUCH_COPYRIGHT=
 
 # use FRESH_ALL_SRC so it won't miss any generated files produced earlier.
-$(BUILD)/fmt: $(ALL_SRC) $(BIN)/goimports $(BIN)/gofancyimports | $(BUILD)
-	$Q echo "formatting and removing unused imports..."
+$(BUILD)/fmt: $(ALL_SRC) $(BIN)/goimports $(BIN)/gci | $(BUILD)
+	$Q echo "removing unused imports..."
 	$Q $(BIN)/goimports -w $(FRESH_ALL_SRC)
 	$Q echo "grouping imports..."
-	$Q $(BIN)/gofancyimports fix --local github.com/uber/cadence/ --write $(FRESH_ALL_SRC)
+	$Q $(BIN)/gci write --section standard --section 'Prefix(github.com/uber/cadence/)' --section default --section blank $(FRESH_ALL_SRC)
 	$Q touch $@
 	$Q $(MAYBE_TOUCH_COPYRIGHT)
 

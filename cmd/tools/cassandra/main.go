@@ -23,8 +23,9 @@ package main
 import (
 	"os"
 
-	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public" // needed to load the default gocql client
 	"github.com/uber/cadence/tools/cassandra"
+
+	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public" // needed to load the default gocql client
 )
 
 func main() {
