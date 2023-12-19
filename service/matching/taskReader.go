@@ -26,6 +26,7 @@ import (
 	"context"
 	"errors"
 	"runtime"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -80,6 +81,9 @@ type (
 		dispatchTask             func(context.Context, *InternalTask) error
 		getIsolationGroupForTask func(context.Context, *persistence.TaskInfo) (string, error)
 		ratePerSecond            func() float64
+
+		// stopWg is used to wait for all dispatchers to stop.
+		stopWg sync.WaitGroup
 	}
 )
 
@@ -137,6 +141,7 @@ func (tr *taskReader) Stop() {
 				tag.Error(err))
 		}
 		tr.taskGC.RunNow(tr.taskAckManager.GetAckLevel())
+		tr.stopWg.Wait()
 	}
 }
 
@@ -149,6 +154,8 @@ func (tr *taskReader) Signal() {
 }
 
 func (tr *taskReader) dispatchBufferedTasks(isolationGroup string) {
+	tr.stopWg.Add(1)
+	defer tr.stopWg.Done()
 dispatchLoop:
 	for {
 		select {
@@ -168,6 +175,9 @@ dispatchLoop:
 }
 
 func (tr *taskReader) getTasksPump() {
+	tr.stopWg.Add(1)
+	defer tr.stopWg.Done()
+
 	updateAckTimer := time.NewTimer(tr.config.UpdateAckInterval())
 	defer updateAckTimer.Stop()
 getTasksPumpLoop:
