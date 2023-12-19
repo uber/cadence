@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/tchannel"
@@ -116,7 +117,7 @@ func (s *IntegrationBase) setupSuite() {
 			ClusterMetadata:       clusterMetadata,
 			DynamicConfiguration:  dc,
 		}
-		cluster, err := NewCluster(s.testClusterConfig, s.Logger, params)
+		cluster, err := NewCluster(s.T(), s.testClusterConfig, s.Logger, params)
 		s.Require().NoError(err)
 		s.testCluster = cluster
 		s.engine = s.testCluster.GetFrontendClient()
@@ -156,7 +157,7 @@ func (s *IntegrationBase) setupSuiteForPinotTest() {
 		ClusterMetadata:       clusterMetadata,
 		DynamicConfiguration:  dc,
 	}
-	cluster, err := NewPinotTestCluster(s.testClusterConfig, s.Logger, params)
+	cluster, err := NewPinotTestCluster(s.T(), s.testClusterConfig, s.Logger, params)
 	s.Require().NoError(err)
 	s.testCluster = cluster
 	s.engine = s.testCluster.GetFrontendClient()
@@ -180,7 +181,9 @@ func (s *IntegrationBase) setupSuiteForPinotTest() {
 }
 
 func (s *IntegrationBase) setupLogger() {
-	s.Logger = loggerimpl.NewLoggerForTest(s.Suite)
+	l, err := loggerimpl.NewDevelopment()
+	require.NoError(s.T(), err)
+	s.Logger = l
 }
 
 // GetTestClusterConfig return test cluster config
