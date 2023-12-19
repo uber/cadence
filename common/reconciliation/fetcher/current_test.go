@@ -34,8 +34,6 @@ import (
 
 func TestGetCurrentExecution(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	mockRetryer := persistence.NewMockRetryer(ctrl)
 	ctx := context.Background()
 	pageSize := 10
