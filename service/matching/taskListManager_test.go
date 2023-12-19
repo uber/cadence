@@ -220,68 +220,77 @@ func TestDescribeTaskList(t *testing.T) {
 	require.Zero(t, taskListStatus.GetBacklogCountHint())
 }
 
-func tlMgrStartWithoutNotifyEvent(tlm *taskListManagerImpl) {
-	// mimic tlm.Start() but avoid calling notifyEvent
-	tlm.liveness.Start()
-	tlm.startWG.Done()
-	go tlm.taskReader.dispatchBufferedTasks(defaultTaskBufferIsolationGroup)
-	go tlm.taskReader.getTasksPump()
-}
-
 func TestCheckIdleTaskList(t *testing.T) {
-	controller := gomock.NewController(t)
-	logger := testlogger.New(t)
-
 	cfg := NewConfig(dynamicconfig.NewNopCollection(), "some random hostname")
 	cfg.IdleTasklistCheckInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
 
-	// Idle
-	tlm := createTestTaskListManagerWithConfig(logger, controller, cfg)
-	tlMgrStartWithoutNotifyEvent(tlm)
-	time.Sleep(20 * time.Millisecond)
-	require.False(t, atomic.CompareAndSwapInt32(&tlm.stopped, 0, 1))
+	t.Run("Idle task-list", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		tlm := createTestTaskListManagerWithConfig(testlogger.New(t), ctrl, cfg)
+		require.NoError(t, tlm.Start())
 
-	// Active poll-er
-	tlm = createTestTaskListManagerWithConfig(logger, controller, cfg)
-	tlMgrStartWithoutNotifyEvent(tlm)
-	time.Sleep(8 * time.Millisecond)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Microsecond)
-	_, _ = tlm.GetTask(ctx, nil)
-	cancel()
-	time.Sleep(6 * time.Millisecond)
-	require.Equal(t, int32(0), tlm.stopped)
-	tlm.Stop()
-	require.Equal(t, int32(1), tlm.stopped)
+		require.EqualValues(t, 0, atomic.LoadInt32(&tlm.stopped), "idle check interval had not passed yet")
+		time.Sleep(20 * time.Millisecond)
+		require.EqualValues(t, 1, atomic.LoadInt32(&tlm.stopped), "idle check interval should have pass")
+	})
 
-	// Active adding task
-	domainID := uuid.New()
-	workflowID := "some random workflowID"
-	runID := "some random runID"
+	t.Run("Active poll-er", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		tlm := createTestTaskListManagerWithConfig(testlogger.New(t), ctrl, cfg)
+		require.NoError(t, tlm.Start())
 
-	addTaskParam := addTaskParams{
-		execution: &types.WorkflowExecution{
-			WorkflowID: workflowID,
-			RunID:      runID,
-		},
-		taskInfo: &persistence.TaskInfo{
-			DomainID:               domainID,
-			WorkflowID:             workflowID,
-			RunID:                  runID,
-			ScheduleID:             2,
-			ScheduleToStartTimeout: 5,
-			CreatedTime:            time.Now(),
-		},
-	}
-	tlm = createTestTaskListManagerWithConfig(logger, controller, cfg)
-	tlMgrStartWithoutNotifyEvent(tlm)
-	time.Sleep(8 * time.Millisecond)
-	ctx, cancel = context.WithTimeout(context.Background(), time.Microsecond)
-	_, _ = tlm.AddTask(ctx, addTaskParam)
-	cancel()
-	time.Sleep(6 * time.Millisecond)
-	require.Equal(t, int32(0), tlm.stopped)
-	tlm.Stop()
-	require.Equal(t, int32(1), tlm.stopped)
+		time.Sleep(8 * time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		_, _ = tlm.GetTask(ctx, nil)
+		cancel()
+
+		// task list manager should have been stopped,
+		// but GetTask extends auto-stop until the next check-idle-task-list-interval
+		time.Sleep(6 * time.Millisecond)
+		require.EqualValues(t, 0, atomic.LoadInt32(&tlm.stopped))
+
+		time.Sleep(20 * time.Millisecond)
+		require.EqualValues(t, 1, atomic.LoadInt32(&tlm.stopped), "idle check interval should have pass")
+	})
+
+	t.Run("Active adding task", func(t *testing.T) {
+		domainID := uuid.New()
+		workflowID := uuid.New()
+		runID := uuid.New()
+
+		addTaskParam := addTaskParams{
+			execution: &types.WorkflowExecution{
+				WorkflowID: workflowID,
+				RunID:      runID,
+			},
+			taskInfo: &persistence.TaskInfo{
+				DomainID:               domainID,
+				WorkflowID:             workflowID,
+				RunID:                  runID,
+				ScheduleID:             2,
+				ScheduleToStartTimeout: 5,
+				CreatedTime:            time.Now(),
+			},
+		}
+
+		ctrl := gomock.NewController(t)
+		tlm := createTestTaskListManagerWithConfig(testlogger.New(t), ctrl, cfg)
+		require.NoError(t, tlm.Start())
+
+		time.Sleep(8 * time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		_, err := tlm.AddTask(ctx, addTaskParam)
+		require.NoError(t, err)
+		cancel()
+
+		// task list manager should have been stopped,
+		// but AddTask extends auto-stop until the next check-idle-task-list-interval
+		time.Sleep(6 * time.Millisecond)
+		require.EqualValues(t, 0, atomic.LoadInt32(&tlm.stopped))
+
+		time.Sleep(20 * time.Millisecond)
+		require.EqualValues(t, 1, atomic.LoadInt32(&tlm.stopped), "idle check interval should have pass")
+	})
 }
 
 func TestAddTaskStandby(t *testing.T) {
@@ -292,7 +301,8 @@ func TestAddTaskStandby(t *testing.T) {
 	cfg.IdleTasklistCheckInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
 
 	tlm := createTestTaskListManagerWithConfig(logger, controller, cfg)
-	tlMgrStartWithoutNotifyEvent(tlm)
+	require.NoError(t, tlm.Start())
+
 	// stop taskWriter so that we can check if there's any call to it
 	// otherwise the task persist process is async and hard to test
 	tlm.taskWriter.Stop()
