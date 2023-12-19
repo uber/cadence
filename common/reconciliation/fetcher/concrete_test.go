@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
@@ -64,7 +65,15 @@ func TestGetBranchToken(t *testing.T) {
 			treeID:      testTreeID,
 			branchID:    testBranchID,
 		},
-		// Add other test cases here...
+		{
+			name: "InvalidBranchToken",
+			entity: &persistence.ListConcreteExecutionsEntity{
+				ExecutionInfo: &persistence.WorkflowExecutionInfo{
+					BranchToken: invalidBranchToken,
+				},
+			},
+			expectError: true,
+		},
 	}
 
 	for _, tc := range testCases {
