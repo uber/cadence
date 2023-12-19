@@ -360,7 +360,8 @@ MAYBE_TOUCH_COPYRIGHT=
 # use FRESH_ALL_SRC so it won't miss any generated files produced earlier.
 $(BUILD)/fmt: $(ALL_SRC) $(BIN)/goimports $(BIN)/gci | $(BUILD)
 	$Q echo "removing unused imports..."
-	$Q $(BIN)/goimports -w $(FRESH_ALL_SRC)
+	$Q # goimports thrashes on internal/tools, sadly.  just hide it.
+	$Q $(BIN)/goimports -w $(filter-out ./internal/tools/tools.go,$(FRESH_ALL_SRC))
 	$Q echo "grouping imports..."
 	$Q $(BIN)/gci write --section standard --section 'Prefix(github.com/uber/cadence/)' --section default --section blank $(FRESH_ALL_SRC)
 	$Q touch $@
