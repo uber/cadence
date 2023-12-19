@@ -702,6 +702,51 @@ func (s *workflowHandlerSuite) TestRegisterDomain_Success_NotEnabled() {
 	s.NoError(err)
 }
 
+func (s *workflowHandlerSuite) TestListDomains_Success() {
+	listDomainResp := &persistence.ListDomainsResponse{
+		Domains: []*persistence.GetDomainResponse{
+			persistenceGetDomainResponse(
+				&domain.ArchivalState{Status: types.ArchivalStatusDisabled, URI: ""},
+				&domain.ArchivalState{Status: types.ArchivalStatusDisabled, URI: ""},
+			),
+			persistenceGetDomainResponse(
+				&domain.ArchivalState{Status: types.ArchivalStatusEnabled, URI: ""},
+				&domain.ArchivalState{Status: types.ArchivalStatusEnabled, URI: ""},
+			),
+		},
+	}
+	s.mockMetadataMgr.On("ListDomains", mock.Anything, mock.Anything).Return(listDomainResp, nil)
+
+	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
+	result, err := wh.ListDomains(context.Background(), &types.ListDomainsRequest{})
+
+	s.NoError(err)
+	s.NotNil(result)
+	s.Equal(2, len(result.GetDomains()))
+}
+
+func (s *workflowHandlerSuite) TestListDomains_RequestNotSet() {
+	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
+	result, err := wh.ListDomains(context.Background(), nil)
+
+	s.Error(err)
+	s.Nil(result)
+}
+
+func (s *workflowHandlerSuite) TestHealth_StatusOK() {
+	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
+
+	result, err := wh.Health(context.Background())
+	s.NoError(err)
+	s.False(result.Ok)
+
+	wh.UpdateHealthStatus(HealthStatusOK)
+	result, err = wh.Health(context.Background())
+
+	s.NoError(err)
+	s.True(result.Ok)
+}
+
 func (s *workflowHandlerSuite) TestDescribeDomain_Success_ArchivalDisabled() {
 	getDomainResp := persistenceGetDomainResponse(
 		&domain.ArchivalState{Status: types.ArchivalStatusDisabled, URI: ""},
