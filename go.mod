@@ -68,7 +68,7 @@ require (
 
 require (
 	github.com/google/go-cmp v0.5.8
-	github.com/google/gofuzz v1.0.0
+	github.com/google/gofuzz v1.2.0
 )
 
 require (
