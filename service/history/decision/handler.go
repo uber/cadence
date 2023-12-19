@@ -356,7 +356,7 @@ Update_History_Loop:
 
 		if !msBuilder.IsWorkflowExecutionRunning() || !isRunning || currentDecision.Attempt != token.ScheduleAttempt || currentDecision.StartedID == common.EmptyEventID {
 			logger.Debugf("Decision task not found. IsWorkflowExecutionRunning: %v, isRunning: %v, currentDecision.Attempt: %v, token.ScheduleAttempt: %v, currentDecision.StartID: %v",
-				msBuilder.IsWorkflowExecutionRunning(), isRunning, currentDecision.Attempt, token.ScheduleAttempt, currentDecision.StartedID)
+				msBuilder.IsWorkflowExecutionRunning(), isRunning, getDecisionInfoAttempt(currentDecision), token.ScheduleAttempt, getDecisionInfoStartedID(currentDecision))
 			return nil, &types.EntityNotExistsError{Message: "Decision task not found."}
 		}
 
@@ -893,4 +893,18 @@ func (handler *handlerImpl) failDecisionHelper(
 
 func (handler *handlerImpl) getActiveDomainByID(id string) (*cache.DomainCacheEntry, error) {
 	return cache.GetActiveDomainByID(handler.shard.GetDomainCache(), handler.shard.GetClusterMetadata().GetCurrentClusterName(), id)
+}
+
+func getDecisionInfoAttempt(di *execution.DecisionInfo) int64 {
+	if di == nil {
+		return 0
+	}
+	return di.Attempt
+}
+
+func getDecisionInfoStartedID(di *execution.DecisionInfo) int64 {
+	if di == nil {
+		return 0
+	}
+	return di.StartedID
 }
