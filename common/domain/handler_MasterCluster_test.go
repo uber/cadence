@@ -38,7 +38,6 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
 	dc "github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public"
@@ -72,7 +71,7 @@ func TestDomainHandlerGlobalDomainEnabledPrimaryClusterSuite(t *testing.T) {
 
 	s := new(domainHandlerGlobalDomainEnabledPrimaryClusterSuite)
 
-	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{
+	s.TestBase = public.NewTestBaseWithPublicCassandra(t, &persistencetests.TestBaseOptions{
 		ClusterMetadata: cluster.GetTestClusterMetadata(true),
 	})
 
@@ -86,7 +85,7 @@ func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TearDownSuite() {
 func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) SetupTest() {
 	s.Setup()
 
-	logger := loggerimpl.NewNopLogger()
+	logger := s.Logger
 	dcCollection := dc.NewCollection(dc.NewNopClient(), logger)
 	s.minRetentionDays = 1
 	s.maxBadBinaryCount = 10
@@ -880,7 +879,7 @@ func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestUpdateDomain_C
 	}
 	s.handler = NewHandler(
 		domainConfig,
-		loggerimpl.NewNopLogger(),
+		s.Logger,
 		s.domainManager,
 		s.ClusterMetadata,
 		s.mockDomainReplicator,

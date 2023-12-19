@@ -534,7 +534,6 @@ func resetSignalInfoMap(signalInfos map[int64]*persistence.SignalInfo) map[int64
 		sInfo["signal_name"] = s.SignalName
 		sInfo["input"] = s.Input
 		sInfo["control"] = s.Control
-
 		sMap[s.InitiatedID] = sInfo
 	}
 
@@ -612,7 +611,6 @@ func resetRequestCancelInfoMap(requestCancelInfos map[int64]*persistence.Request
 		rcInfo["initiated_id"] = rc.InitiatedID
 		rcInfo["initiated_event_batch_id"] = rc.InitiatedEventBatchID
 		rcInfo["cancel_request_id"] = rc.CancelRequestID
-
 		rcMap[rc.InitiatedID] = rcInfo
 	}
 
@@ -628,7 +626,6 @@ func updateRequestCancelInfos(
 	requestCancelInfos map[int64]*persistence.RequestCancelInfo,
 	deleteInfos []int64,
 ) error {
-
 	for _, c := range requestCancelInfos {
 		batch.Query(templateUpdateRequestCancelInfoQuery,
 			c.InitiatedID,
@@ -722,7 +719,6 @@ func updateChildExecutionInfos(
 	childExecutionInfos map[int64]*persistence.InternalChildExecutionInfo,
 	deleteInfos []int64,
 ) error {
-
 	for _, c := range childExecutionInfos {
 		batch.Query(templateUpdateChildExecutionInfoQuery,
 			c.InitiatedID,

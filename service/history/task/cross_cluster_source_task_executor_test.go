@@ -73,6 +73,7 @@ func (s *crossClusterSourceTaskExecutorSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
 	config := config.NewForTest()
 	s.mockShard = shard.NewTestContext(
+		s.T(),
 		s.controller,
 		&p.ShardInfo{
 			ShardID: 0,

@@ -28,10 +28,11 @@ import (
 
 	"github.com/uber-go/tally"
 
+	"github.com/uber/cadence/common/log/testlogger"
+
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common/collection"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 )
 
@@ -62,8 +63,7 @@ func TestSequentialTaskProcessorSuite(t *testing.T) {
 }
 
 func (s *SequentialTaskProcessorSuite) SetupTest() {
-	logger, err := loggerimpl.NewDevelopment()
-	s.Nil(err)
+	logger := testlogger.New(s.T())
 	s.processor = NewSequentialTaskProcessor(
 		20,
 		func(key interface{}) uint32 {

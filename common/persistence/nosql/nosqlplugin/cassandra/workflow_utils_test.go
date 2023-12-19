@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+	"github.com/uber/cadence/common/types"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/pborman/uuid"
@@ -371,9 +372,6 @@ func TestExecuteCreateWorkflowBatchTransaction(t *testing.T) {
 			if diff := errDiff(tc.wantErr, err); diff != "" {
 				t.Fatalf("Error mismatch (-want +got):\n%s", diff)
 			}
-			if err != nil {
-				return
-			}
 			if !tc.session.iter.closed {
 				t.Error("iterator not closed")
 			}
@@ -518,9 +516,6 @@ func TestExecuteUpdateWorkflowBatchTransaction(t *testing.T) {
 			err := executeUpdateWorkflowBatchTransaction(tc.session, tc.batch, tc.currentWFReq, tc.prevNextEventIDCond, tc.shardCond)
 			if diff := errDiff(tc.wantErr, err); diff != "" {
 				t.Fatalf("Error mismatch (-want +got):\n%s", diff)
-			}
-			if err != nil {
-				return
 			}
 			if !tc.session.iter.closed {
 				t.Error("iterator not closed")
@@ -810,6 +805,541 @@ func TestCrossClusterTasks(t *testing.T) {
 			err := createCrossClusterTasks(batch, tc.shardID, tc.domainID, tc.workflowID, tc.xClusterTasks)
 			if err != nil {
 				t.Fatalf("createCrossClusterTasks failed: %v", err)
+			}
+
+			if diff := cmp.Diff(tc.wantQueries, batch.queries); diff != "" {
+				t.Fatalf("Query mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestResetSignalsRequested(t *testing.T) {
+	tests := []struct {
+		desc         string
+		shardID      int
+		domainID     string
+		workflowID   string
+		runID        string
+		signalReqIDs []string
+		// expectations
+		wantQueries []string
+	}{
+		{
+			desc:         "ok",
+			shardID:      1000,
+			domainID:     "domain_123",
+			workflowID:   "workflow_123",
+			runID:        "runid_123",
+			signalReqIDs: []string{"signalReqID_1", "signalReqID_2"},
+			wantQueries: []string{
+				`UPDATE executions SET signal_requested = [signalReqID_1 signalReqID_2] WHERE ` +
+					`shard_id = 1000 and type = 1 and domain_id = domain_123 and workflow_id = workflow_123 and ` +
+					`run_id = runid_123 and visibility_ts = 946684800000 and task_id = -10 `,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			batch := &fakeBatch{}
+			err := resetSignalsRequested(batch, tc.shardID, tc.domainID, tc.workflowID, tc.runID, tc.signalReqIDs)
+			if err != nil {
+				t.Fatalf("resetSignalsRequested failed: %v", err)
+			}
+
+			if diff := cmp.Diff(tc.wantQueries, batch.queries); diff != "" {
+				t.Fatalf("Query mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestUpdateSignalsRequested(t *testing.T) {
+	tests := []struct {
+		desc               string
+		shardID            int
+		domainID           string
+		workflowID         string
+		runID              string
+		signalReqIDs       []string
+		deleteSignalReqIDs []string
+		// expectations
+		wantQueries []string
+	}{
+		{
+			desc:               "update only",
+			shardID:            1000,
+			domainID:           "domain_abc",
+			workflowID:         "workflow_abc",
+			runID:              "runid_abc",
+			signalReqIDs:       []string{"signalReqID_3", "signalReqID_4"},
+			deleteSignalReqIDs: []string{},
+			wantQueries: []string{
+				`UPDATE executions SET signal_requested = signal_requested + [signalReqID_3 signalReqID_4] WHERE ` +
+					`shard_id = 1000 and type = 1 and domain_id = domain_abc and workflow_id = workflow_abc and ` +
+					`run_id = runid_abc and visibility_ts = 946684800000 and task_id = -10 `,
+			},
+		},
+		{
+			desc:               "delete only",
+			shardID:            1001,
+			domainID:           "domain_def",
+			workflowID:         "workflow_def",
+			runID:              "runid_def",
+			signalReqIDs:       []string{},
+			deleteSignalReqIDs: []string{"signalReqID_5", "signalReqID_6"},
+			wantQueries: []string{
+				`UPDATE executions SET signal_requested = signal_requested - [signalReqID_5 signalReqID_6] WHERE ` +
+					`shard_id = 1001 and type = 1 and domain_id = domain_def and workflow_id = workflow_def and ` +
+					`run_id = runid_def and visibility_ts = 946684800000 and task_id = -10 `,
+			},
+		},
+		{
+			desc:               "update and delete",
+			shardID:            1002,
+			domainID:           "domain_ghi",
+			workflowID:         "workflow_ghi",
+			runID:              "runid_ghi",
+			signalReqIDs:       []string{"signalReqID_7"},
+			deleteSignalReqIDs: []string{"signalReqID_8"},
+			wantQueries: []string{
+				`UPDATE executions SET signal_requested = signal_requested + [signalReqID_7] WHERE ` +
+					`shard_id = 1002 and type = 1 and domain_id = domain_ghi and workflow_id = workflow_ghi and ` +
+					`run_id = runid_ghi and visibility_ts = 946684800000 and task_id = -10 `,
+				`UPDATE executions SET signal_requested = signal_requested - [signalReqID_8] WHERE ` +
+					`shard_id = 1002 and type = 1 and domain_id = domain_ghi and workflow_id = workflow_ghi and ` +
+					`run_id = runid_ghi and visibility_ts = 946684800000 and task_id = -10 `,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			batch := &fakeBatch{}
+			err := updateSignalsRequested(batch, tc.shardID, tc.domainID, tc.workflowID, tc.runID, tc.signalReqIDs, tc.deleteSignalReqIDs)
+			if err != nil {
+				t.Fatalf("updateSignalsRequested failed: %v", err)
+			}
+
+			if diff := cmp.Diff(tc.wantQueries, batch.queries); diff != "" {
+				t.Fatalf("Query mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestResetSignalInfos(t *testing.T) {
+	tests := []struct {
+		desc        string
+		shardID     int
+		domainID    string
+		workflowID  string
+		runID       string
+		signalInfos map[int64]*persistence.SignalInfo
+		// expectations
+		wantQueries []string
+	}{
+		{
+			desc:       "single signal info",
+			shardID:    1000,
+			domainID:   "domain1",
+			workflowID: "workflow1",
+			runID:      "runid1",
+			signalInfos: map[int64]*persistence.SignalInfo{
+				1: {
+					Version:               1,
+					InitiatedID:           1,
+					InitiatedEventBatchID: 2,
+					SignalRequestID:       "request1",
+					SignalName:            "signal1",
+					Input:                 []byte("input1"),
+					Control:               []byte("control1"),
+				},
+				2: {
+					Version:               1,
+					InitiatedID:           5,
+					InitiatedEventBatchID: 6,
+					SignalRequestID:       "request2",
+					SignalName:            "signal2",
+					Input:                 []byte("input2"),
+					Control:               []byte("control2"),
+				},
+			},
+			wantQueries: []string{
+				`UPDATE executions SET signal_map = map[` +
+					`1:map[control:[99 111 110 116 114 111 108 49] initiated_event_batch_id:2 initiated_id:1 input:[105 110 112 117 116 49] signal_name:signal1 signal_request_id:request1 version:1] ` +
+					`5:map[control:[99 111 110 116 114 111 108 50] initiated_event_batch_id:6 initiated_id:5 input:[105 110 112 117 116 50] signal_name:signal2 signal_request_id:request2 version:1]` +
+					`] WHERE ` +
+					`shard_id = 1000 and type = 1 and domain_id = domain1 and workflow_id = workflow1 and ` +
+					`run_id = runid1 and visibility_ts = 946684800000 and task_id = -10 `,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			batch := &fakeBatch{}
+
+			err := resetSignalInfos(batch, tc.shardID, tc.domainID, tc.workflowID, tc.runID, tc.signalInfos)
+			if err != nil {
+				t.Fatalf("resetSignalInfos failed: %v", err)
+			}
+
+			if diff := cmp.Diff(tc.wantQueries, batch.queries); diff != "" {
+				t.Fatalf("Query mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestUpdateSignalInfos(t *testing.T) {
+	tests := []struct {
+		desc        string
+		shardID     int
+		domainID    string
+		workflowID  string
+		runID       string
+		signalInfos map[int64]*persistence.SignalInfo
+		deleteInfos []int64
+		// expectations
+		wantQueries []string
+	}{
+		{
+			desc:       "update and delete signal infos",
+			shardID:    1000,
+			domainID:   "domain1",
+			workflowID: "workflow1",
+			runID:      "runid1",
+			signalInfos: map[int64]*persistence.SignalInfo{
+				1: {
+					Version:               1,
+					InitiatedID:           1,
+					InitiatedEventBatchID: 2,
+					SignalRequestID:       "request1",
+					SignalName:            "signal1",
+					Input:                 []byte("input1"),
+					Control:               []byte("control1"),
+				},
+			},
+			deleteInfos: []int64{2},
+			wantQueries: []string{
+				`UPDATE executions SET signal_map[ 1 ] = {` +
+					`version: 1, initiated_id: 1, initiated_event_batch_id: 2, signal_request_id: request1, ` +
+					`signal_name: signal1, input: [105 110 112 117 116 49], ` +
+					`control: [99 111 110 116 114 111 108 49]` +
+					`} WHERE ` +
+					`shard_id = 1000 and type = 1 and domain_id = domain1 and ` +
+					`workflow_id = workflow1 and run_id = runid1 and ` +
+					`visibility_ts = 946684800000 and task_id = -10 `,
+				`DELETE signal_map[ 2 ] FROM executions WHERE ` +
+					`shard_id = 1000 and type = 1 and domain_id = domain1 and ` +
+					`workflow_id = workflow1 and run_id = runid1 ` +
+					`and visibility_ts = 946684800000 and task_id = -10 `,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			batch := &fakeBatch{}
+
+			err := updateSignalInfos(batch, tc.shardID, tc.domainID, tc.workflowID, tc.runID, tc.signalInfos, tc.deleteInfos)
+			if err != nil {
+				t.Fatalf("updateSignalInfos failed: %v", err)
+			}
+
+			if diff := cmp.Diff(tc.wantQueries, batch.queries); diff != "" {
+				t.Fatalf("Query mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestResetRequestCancelInfos(t *testing.T) {
+	tests := []struct {
+		desc               string
+		shardID            int
+		domainID           string
+		workflowID         string
+		runID              string
+		requestCancelInfos map[int64]*persistence.RequestCancelInfo
+		// expectations
+		wantQueries []string
+	}{
+		{
+			desc:       "ok",
+			shardID:    1000,
+			domainID:   "domain1",
+			workflowID: "workflow1",
+			runID:      "runid1",
+			requestCancelInfos: map[int64]*persistence.RequestCancelInfo{
+				1: {
+					Version:               1,
+					InitiatedID:           1,
+					InitiatedEventBatchID: 2,
+					CancelRequestID:       "cancelRequest1",
+				},
+				3: {
+					Version:               2,
+					InitiatedID:           3,
+					InitiatedEventBatchID: 4,
+					CancelRequestID:       "cancelRequest3",
+				},
+			},
+			wantQueries: []string{
+				`UPDATE executions SET request_cancel_map = map[` +
+					`1:map[cancel_request_id:cancelRequest1 initiated_event_batch_id:2 initiated_id:1 version:1] ` +
+					`3:map[cancel_request_id:cancelRequest3 initiated_event_batch_id:4 initiated_id:3 version:2]` +
+					`]WHERE shard_id = 1000 and type = 1 and domain_id = domain1 and ` +
+					`workflow_id = workflow1 and run_id = runid1 and ` +
+					`visibility_ts = 946684800000 and task_id = -10 `,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			batch := &fakeBatch{}
+
+			err := resetRequestCancelInfos(batch, tc.shardID, tc.domainID, tc.workflowID, tc.runID, tc.requestCancelInfos)
+			if err != nil {
+				t.Fatalf("resetRequestCancelInfos failed: %v", err)
+			}
+
+			if diff := cmp.Diff(tc.wantQueries, batch.queries); diff != "" {
+				t.Fatalf("Query mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestUpdateRequestCancelInfos(t *testing.T) {
+	tests := []struct {
+		desc               string
+		shardID            int
+		domainID           string
+		workflowID         string
+		runID              string
+		requestCancelInfos map[int64]*persistence.RequestCancelInfo
+		deleteInfos        []int64
+		// expectations
+		wantQueries []string
+	}{
+		{
+			desc:       "update and delete request cancel infos",
+			shardID:    1000,
+			domainID:   "domain1",
+			workflowID: "workflow1",
+			runID:      "runid1",
+			requestCancelInfos: map[int64]*persistence.RequestCancelInfo{
+				1: {
+					Version:               1,
+					InitiatedID:           1,
+					InitiatedEventBatchID: 2,
+					CancelRequestID:       "cancelRequest1",
+				},
+			},
+			deleteInfos: []int64{2},
+			wantQueries: []string{
+				`UPDATE executions SET request_cancel_map[ 1 ] = ` +
+					`{version: 1,initiated_id: 1, initiated_event_batch_id: 2, cancel_request_id: cancelRequest1 } ` +
+					`WHERE shard_id = 1000 and type = 1 and domain_id = domain1 and ` +
+					`workflow_id = workflow1 and run_id = runid1 and visibility_ts = 946684800000 and task_id = -10 `,
+				`DELETE request_cancel_map[ 2 ] FROM executions WHERE ` +
+					`shard_id = 1000 and type = 1 and domain_id = domain1 and workflow_id = workflow1 and ` +
+					`run_id = runid1 and visibility_ts = 946684800000 and task_id = -10 `,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			batch := &fakeBatch{}
+
+			err := updateRequestCancelInfos(batch, tc.shardID, tc.domainID, tc.workflowID, tc.runID, tc.requestCancelInfos, tc.deleteInfos)
+			if err != nil {
+				t.Fatalf("updateRequestCancelInfos failed: %v", err)
+			}
+
+			if diff := cmp.Diff(tc.wantQueries, batch.queries); diff != "" {
+				t.Fatalf("Query mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestResetChildExecutionInfos(t *testing.T) {
+	tests := []struct {
+		desc                string
+		shardID             int
+		domainID            string
+		workflowID          string
+		runID               string
+		childExecutionInfos map[int64]*persistence.InternalChildExecutionInfo
+		// expectations
+		wantQueries []string
+		wantErr     bool
+	}{
+		{
+			desc:       "execution info with runid",
+			shardID:    1000,
+			domainID:   "domain1",
+			workflowID: "workflow1",
+			runID:      "runid1",
+			childExecutionInfos: map[int64]*persistence.InternalChildExecutionInfo{
+				1: {
+					Version:               1,
+					InitiatedID:           1,
+					InitiatedEventBatchID: 2,
+					StartedID:             3,
+					StartedEvent: &persistence.DataBlob{
+						Encoding: common.EncodingTypeThriftRW,
+					},
+					StartedWorkflowID: "startedWorkflowID1",
+					StartedRunID:      "startedRunID1",
+					CreateRequestID:   "createRequestID1",
+					InitiatedEvent: &persistence.DataBlob{
+						Encoding: common.EncodingTypeThriftRW,
+					},
+					DomainID:          "domain1",
+					WorkflowTypeName:  "workflowType1",
+					ParentClosePolicy: types.ParentClosePolicyAbandon,
+				},
+			},
+			wantQueries: []string{
+				`UPDATE executions SET child_executions_map = ` +
+					`map[1:map[` +
+					`create_request_id:createRequestID1 domain_id:domain1 domain_name: event_data_encoding:thriftrw ` +
+					`initiated_event:[] initiated_event_batch_id:2 initiated_id:1 parent_close_policy:0 ` +
+					`started_event:[] started_id:3 started_run_id:startedRunID1 started_workflow_id:startedWorkflowID1 ` +
+					`version:1 workflow_type_name:workflowType1` +
+					`]]` +
+					`WHERE shard_id = 1000 and type = 1 and domain_id = domain1 and workflow_id = workflow1 and ` +
+					`run_id = runid1 and visibility_ts = 946684800000 and task_id = -10 `,
+			},
+		},
+		{
+			desc:       "execution info without runid",
+			shardID:    1000,
+			domainID:   "domain1",
+			workflowID: "workflow1",
+			runID:      emptyRunID,
+			childExecutionInfos: map[int64]*persistence.InternalChildExecutionInfo{
+				1: {
+					Version:               1,
+					InitiatedID:           1,
+					InitiatedEventBatchID: 2,
+					StartedID:             3,
+					StartedEvent: &persistence.DataBlob{
+						Encoding: common.EncodingTypeThriftRW,
+					},
+					StartedWorkflowID: "startedWorkflowID1",
+					StartedRunID:      "", // leave empty and validate it's querying empty runid
+					CreateRequestID:   "createRequestID1",
+					InitiatedEvent: &persistence.DataBlob{
+						Encoding: common.EncodingTypeThriftRW,
+					},
+					DomainID:          "domain1",
+					WorkflowTypeName:  "workflowType1",
+					ParentClosePolicy: types.ParentClosePolicyAbandon,
+				},
+			},
+			wantQueries: []string{
+				`UPDATE executions SET child_executions_map = ` +
+					`map[1:map[` +
+					`create_request_id:createRequestID1 domain_id:domain1 domain_name: event_data_encoding:thriftrw ` +
+					`initiated_event:[] initiated_event_batch_id:2 initiated_id:1 parent_close_policy:0 ` +
+					`started_event:[] started_id:3 started_run_id:30000000-0000-f000-f000-000000000000 started_workflow_id:startedWorkflowID1 ` +
+					`version:1 workflow_type_name:workflowType1` +
+					`]]` +
+					`WHERE shard_id = 1000 and type = 1 and domain_id = domain1 and workflow_id = workflow1 and ` +
+					`run_id = 30000000-0000-f000-f000-000000000000 and visibility_ts = 946684800000 and task_id = -10 `,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			batch := &fakeBatch{}
+
+			err := resetChildExecutionInfos(batch, tc.shardID, tc.domainID, tc.workflowID, tc.runID, tc.childExecutionInfos)
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("resetChildExecutionInfos() error = %v, wantErr %v", err, tc.wantErr)
+			}
+			if err != nil {
+				return
+			}
+
+			if diff := cmp.Diff(tc.wantQueries, batch.queries); diff != "" {
+				t.Fatalf("Query mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestUpdateChildExecutionInfos(t *testing.T) {
+	tests := []struct {
+		desc                string
+		shardID             int
+		domainID            string
+		workflowID          string
+		runID               string
+		childExecutionInfos map[int64]*persistence.InternalChildExecutionInfo
+		deleteInfos         []int64
+		// expectations
+		wantQueries []string
+	}{
+		{
+			desc:       "update and delete child execution infos",
+			shardID:    1000,
+			domainID:   "domain1",
+			workflowID: "workflow1",
+			runID:      "runid1",
+			childExecutionInfos: map[int64]*persistence.InternalChildExecutionInfo{
+				1: {
+					Version:               1,
+					InitiatedID:           1,
+					InitiatedEventBatchID: 2,
+					StartedID:             3,
+					StartedEvent: &persistence.DataBlob{
+						Encoding: common.EncodingTypeThriftRW,
+					},
+					StartedWorkflowID: "startedWorkflowID1",
+					StartedRunID:      "startedRunID1",
+					CreateRequestID:   "createRequestID1",
+					InitiatedEvent: &persistence.DataBlob{
+						Encoding: common.EncodingTypeThriftRW,
+					},
+					DomainID:          "domain1",
+					WorkflowTypeName:  "workflowType1",
+					ParentClosePolicy: types.ParentClosePolicyAbandon,
+				},
+			},
+			deleteInfos: []int64{2},
+			wantQueries: []string{
+				`UPDATE executions SET child_executions_map[ 1 ] = {` +
+					`version: 1, initiated_id: 1, initiated_event_batch_id: 2, initiated_event: [], ` +
+					`started_id: 3, started_workflow_id: startedWorkflowID1, started_run_id: startedRunID1, ` +
+					`started_event: [], create_request_id: createRequestID1, event_data_encoding: thriftrw, ` +
+					`domain_id: domain1, domain_name: , workflow_type_name: workflowType1, parent_close_policy: 0` +
+					`} WHERE ` +
+					`shard_id = 1000 and type = 1 and domain_id = domain1 and workflow_id = workflow1 and ` +
+					`run_id = runid1 and visibility_ts = 946684800000 and task_id = -10 `,
+				`DELETE child_executions_map[ 2 ] FROM executions WHERE ` +
+					`shard_id = 1000 and type = 1 and domain_id = domain1 and workflow_id = workflow1 and ` +
+					`run_id = runid1 and visibility_ts = 946684800000 and task_id = -10 `,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			batch := &fakeBatch{}
+
+			err := updateChildExecutionInfos(batch, tc.shardID, tc.domainID, tc.workflowID, tc.runID, tc.childExecutionInfos, tc.deleteInfos)
+			if err != nil {
+				t.Fatalf("updateChildExecutionInfos failed: %v", err)
 			}
 
 			if diff := cmp.Diff(tc.wantQueries, batch.queries); diff != "" {

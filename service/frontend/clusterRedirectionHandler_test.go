@@ -94,7 +94,7 @@ func (s *clusterRedirectionHandlerSuite) SetupTest() {
 	s.mockClusterRedirectionPolicy = &MockClusterRedirectionPolicy{}
 
 	s.controller = gomock.NewController(s.T())
-	s.mockResource = resource.NewTest(s.controller, metrics.Frontend)
+	s.mockResource = resource.NewTest(s.T(), s.controller, metrics.Frontend)
 	s.mockRemoteFrontendClient = s.mockResource.RemoteFrontendClient
 
 	s.config = NewConfig(

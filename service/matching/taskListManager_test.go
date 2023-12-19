@@ -35,8 +35,9 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -44,6 +45,7 @@ import (
 
 func TestDeliverBufferTasks(t *testing.T) {
 	controller := gomock.NewController(t)
+	logger := testlogger.New(t)
 
 	tests := []func(tlm *taskListManagerImpl){
 		func(tlm *taskListManagerImpl) { tlm.taskReader.cancelFunc() },
@@ -57,7 +59,7 @@ func TestDeliverBufferTasks(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		tlm := createTestTaskListManager(controller)
+		tlm := createTestTaskListManager(logger, controller)
 		var wg sync.WaitGroup
 		wg.Add(1)
 		go func() {
@@ -72,8 +74,9 @@ func TestDeliverBufferTasks(t *testing.T) {
 
 func TestDeliverBufferTasks_NoPollers(t *testing.T) {
 	controller := gomock.NewController(t)
+	logger := testlogger.New(t)
 
-	tlm := createTestTaskListManager(controller)
+	tlm := createTestTaskListManager(logger, controller)
 	tlm.taskReader.taskBuffers[defaultTaskBufferIsolationGroup] <- &persistence.TaskInfo{}
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -88,8 +91,9 @@ func TestDeliverBufferTasks_NoPollers(t *testing.T) {
 
 func TestReadLevelForAllExpiredTasksInBatch(t *testing.T) {
 	controller := gomock.NewController(t)
+	logger := testlogger.New(t)
 
-	tlm := createTestTaskListManager(controller)
+	tlm := createTestTaskListManager(logger, controller)
 	tlm.db.rangeID = int64(1)
 	tlm.taskAckManager.SetAckLevel(0)
 	tlm.taskAckManager.SetReadLevel(0)
@@ -131,15 +135,11 @@ func TestReadLevelForAllExpiredTasksInBatch(t *testing.T) {
 	require.Equal(t, int64(14), tlm.taskAckManager.GetReadLevel())
 }
 
-func createTestTaskListManager(controller *gomock.Controller) *taskListManagerImpl {
-	return createTestTaskListManagerWithConfig(controller, defaultTestConfig())
+func createTestTaskListManager(logger log.Logger, controller *gomock.Controller) *taskListManagerImpl {
+	return createTestTaskListManagerWithConfig(logger, controller, defaultTestConfig())
 }
 
-func createTestTaskListManagerWithConfig(controller *gomock.Controller, cfg *Config) *taskListManagerImpl {
-	logger, err := loggerimpl.NewDevelopment()
-	if err != nil {
-		panic(err)
-	}
+func createTestTaskListManagerWithConfig(logger log.Logger, controller *gomock.Controller, cfg *Config) *taskListManagerImpl {
 	tm := newTestTaskManager(logger)
 	mockPartitioner := partition.NewMockPartitioner(controller)
 	mockPartitioner.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil).AnyTimes()
@@ -162,13 +162,14 @@ func createTestTaskListManagerWithConfig(controller *gomock.Controller, cfg *Con
 
 func TestDescribeTaskList(t *testing.T) {
 	controller := gomock.NewController(t)
+	logger := testlogger.New(t)
 
 	startTaskID := int64(1)
 	taskCount := int64(3)
 	PollerIdentity := "test-poll"
 
 	// Create taskList Manager and set taskList state
-	tlm := createTestTaskListManager(controller)
+	tlm := createTestTaskListManager(logger, controller)
 	tlm.db.rangeID = int64(1)
 	tlm.taskAckManager.SetAckLevel(0)
 
@@ -219,77 +220,89 @@ func TestDescribeTaskList(t *testing.T) {
 	require.Zero(t, taskListStatus.GetBacklogCountHint())
 }
 
-func tlMgrStartWithoutNotifyEvent(tlm *taskListManagerImpl) {
-	// mimic tlm.Start() but avoid calling notifyEvent
-	tlm.liveness.Start()
-	tlm.startWG.Done()
-	go tlm.taskReader.dispatchBufferedTasks(defaultTaskBufferIsolationGroup)
-	go tlm.taskReader.getTasksPump()
-}
-
 func TestCheckIdleTaskList(t *testing.T) {
-	controller := gomock.NewController(t)
-
 	cfg := NewConfig(dynamicconfig.NewNopCollection(), "some random hostname")
 	cfg.IdleTasklistCheckInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
 
-	// Idle
-	tlm := createTestTaskListManagerWithConfig(controller, cfg)
-	tlMgrStartWithoutNotifyEvent(tlm)
-	time.Sleep(20 * time.Millisecond)
-	require.False(t, atomic.CompareAndSwapInt32(&tlm.stopped, 0, 1))
+	t.Run("Idle task-list", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		tlm := createTestTaskListManagerWithConfig(testlogger.New(t), ctrl, cfg)
+		require.NoError(t, tlm.Start())
 
-	// Active poll-er
-	tlm = createTestTaskListManagerWithConfig(controller, cfg)
-	tlMgrStartWithoutNotifyEvent(tlm)
-	time.Sleep(8 * time.Millisecond)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Microsecond)
-	_, _ = tlm.GetTask(ctx, nil)
-	cancel()
-	time.Sleep(6 * time.Millisecond)
-	require.Equal(t, int32(0), tlm.stopped)
-	tlm.Stop()
-	require.Equal(t, int32(1), tlm.stopped)
+		require.EqualValues(t, 0, atomic.LoadInt32(&tlm.stopped), "idle check interval had not passed yet")
+		time.Sleep(20 * time.Millisecond)
+		require.EqualValues(t, 1, atomic.LoadInt32(&tlm.stopped), "idle check interval should have pass")
+	})
 
-	// Active adding task
-	domainID := uuid.New()
-	workflowID := "some random workflowID"
-	runID := "some random runID"
+	t.Run("Active poll-er", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		tlm := createTestTaskListManagerWithConfig(testlogger.New(t), ctrl, cfg)
+		require.NoError(t, tlm.Start())
 
-	addTaskParam := addTaskParams{
-		execution: &types.WorkflowExecution{
-			WorkflowID: workflowID,
-			RunID:      runID,
-		},
-		taskInfo: &persistence.TaskInfo{
-			DomainID:               domainID,
-			WorkflowID:             workflowID,
-			RunID:                  runID,
-			ScheduleID:             2,
-			ScheduleToStartTimeout: 5,
-			CreatedTime:            time.Now(),
-		},
-	}
-	tlm = createTestTaskListManagerWithConfig(controller, cfg)
-	tlMgrStartWithoutNotifyEvent(tlm)
-	time.Sleep(8 * time.Millisecond)
-	ctx, cancel = context.WithTimeout(context.Background(), time.Microsecond)
-	_, _ = tlm.AddTask(ctx, addTaskParam)
-	cancel()
-	time.Sleep(6 * time.Millisecond)
-	require.Equal(t, int32(0), tlm.stopped)
-	tlm.Stop()
-	require.Equal(t, int32(1), tlm.stopped)
+		time.Sleep(8 * time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		_, _ = tlm.GetTask(ctx, nil)
+		cancel()
+
+		// task list manager should have been stopped,
+		// but GetTask extends auto-stop until the next check-idle-task-list-interval
+		time.Sleep(6 * time.Millisecond)
+		require.EqualValues(t, 0, atomic.LoadInt32(&tlm.stopped))
+
+		time.Sleep(20 * time.Millisecond)
+		require.EqualValues(t, 1, atomic.LoadInt32(&tlm.stopped), "idle check interval should have pass")
+	})
+
+	t.Run("Active adding task", func(t *testing.T) {
+		domainID := uuid.New()
+		workflowID := uuid.New()
+		runID := uuid.New()
+
+		addTaskParam := addTaskParams{
+			execution: &types.WorkflowExecution{
+				WorkflowID: workflowID,
+				RunID:      runID,
+			},
+			taskInfo: &persistence.TaskInfo{
+				DomainID:               domainID,
+				WorkflowID:             workflowID,
+				RunID:                  runID,
+				ScheduleID:             2,
+				ScheduleToStartTimeout: 5,
+				CreatedTime:            time.Now(),
+			},
+		}
+
+		ctrl := gomock.NewController(t)
+		tlm := createTestTaskListManagerWithConfig(testlogger.New(t), ctrl, cfg)
+		require.NoError(t, tlm.Start())
+
+		time.Sleep(8 * time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		_, err := tlm.AddTask(ctx, addTaskParam)
+		require.NoError(t, err)
+		cancel()
+
+		// task list manager should have been stopped,
+		// but AddTask extends auto-stop until the next check-idle-task-list-interval
+		time.Sleep(6 * time.Millisecond)
+		require.EqualValues(t, 0, atomic.LoadInt32(&tlm.stopped))
+
+		time.Sleep(20 * time.Millisecond)
+		require.EqualValues(t, 1, atomic.LoadInt32(&tlm.stopped), "idle check interval should have pass")
+	})
 }
 
 func TestAddTaskStandby(t *testing.T) {
 	controller := gomock.NewController(t)
+	logger := testlogger.New(t)
 
 	cfg := NewConfig(dynamicconfig.NewNopCollection(), "some random hostname")
 	cfg.IdleTasklistCheckInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
 
-	tlm := createTestTaskListManagerWithConfig(controller, cfg)
-	tlMgrStartWithoutNotifyEvent(tlm)
+	tlm := createTestTaskListManagerWithConfig(logger, controller, cfg)
+	require.NoError(t, tlm.Start())
+
 	// stop taskWriter so that we can check if there's any call to it
 	// otherwise the task persist process is async and hard to test
 	tlm.taskWriter.Stop()
@@ -340,10 +353,11 @@ func TestAddTaskStandby(t *testing.T) {
 
 func TestGetPollerIsolationGroup(t *testing.T) {
 	controller := gomock.NewController(t)
+	logger := testlogger.New(t)
 
 	config := defaultTestConfig()
 	config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(30 * time.Second)
-	tlm := createTestTaskListManagerWithConfig(controller, config)
+	tlm := createTestTaskListManagerWithConfig(logger, controller, config)
 
 	bgCtx := context.WithValue(context.Background(), pollerIDKey, "poller0")
 	bgCtx = context.WithValue(bgCtx, identityKey, "id0")
@@ -386,10 +400,11 @@ func TestGetPollerIsolationGroup(t *testing.T) {
 // The expected behaviour is to retry
 func TestRateLimitErrorsFromTasklistDispatch(t *testing.T) {
 	controller := gomock.NewController(t)
+	logger := testlogger.New(t)
 
 	config := defaultTestConfig()
 	config.EnableTasklistIsolation = func(domain string) bool { return true }
-	tlm := createTestTaskListManagerWithConfig(controller, config)
+	tlm := createTestTaskListManagerWithConfig(logger, controller, config)
 
 	tlm.taskReader.dispatchTask = func(ctx context.Context, task *InternalTask) error {
 		return ErrTasklistThrottled
@@ -407,10 +422,11 @@ func TestRateLimitErrorsFromTasklistDispatch(t *testing.T) {
 // and the async task pump blocking trying to read to the channel)
 func TestSingleTaskDispatchDoesNotDeadlock(t *testing.T) {
 	controller := gomock.NewController(t)
+	logger := testlogger.New(t)
 
 	config := defaultTestConfig()
 	config.EnableTasklistIsolation = func(domain string) bool { return true }
-	tlm := createTestTaskListManagerWithConfig(controller, config)
+	tlm := createTestTaskListManagerWithConfig(logger, controller, config)
 
 	// mock a timeout to cause tasks to be rerouted
 	tlm.taskReader.dispatchTask = func(ctx context.Context, task *InternalTask) error {
@@ -423,7 +439,7 @@ func TestSingleTaskDispatchDoesNotDeadlock(t *testing.T) {
 
 	maxBufferSize := config.GetTasksBatchSize("", "", 0) - 1
 
-	tlm.taskReader.logger = loggerimpl.NewNopLogger()
+	tlm.taskReader.logger = testlogger.New(t)
 
 	for i := 0; i < maxBufferSize; i++ {
 		breakDispatcher, breakRetryLoop := tlm.taskReader.dispatchSingleTaskFromBuffer("datacenterA", &persistence.TaskInfo{})
@@ -454,10 +470,11 @@ func TestSingleTaskDispatchDoesNotDeadlock(t *testing.T) {
 // log this, emit a metric and fallback to the default isolation group.
 func TestMisconfiguredZoneDoesNotBlock(t *testing.T) {
 	controller := gomock.NewController(t)
+	logger := testlogger.New(t)
 
 	config := defaultTestConfig()
 	config.EnableTasklistIsolation = func(domain string) bool { return true }
-	tlm := createTestTaskListManagerWithConfig(controller, config)
+	tlm := createTestTaskListManagerWithConfig(logger, controller, config)
 
 	// mock a timeout to cause tasks to be rerouted
 	tlm.taskReader.dispatchTask = func(ctx context.Context, task *InternalTask) error {
@@ -468,7 +485,6 @@ func TestMisconfiguredZoneDoesNotBlock(t *testing.T) {
 	}
 
 	maxBufferSize := config.GetTasksBatchSize("", "", 0) - 1
-	tlm.taskReader.logger = loggerimpl.NewNopLogger()
 
 	for i := 0; i < maxBufferSize; i++ {
 		breakDispatcher, breakRetryLoop := tlm.taskReader.dispatchSingleTaskFromBuffer("datacenterA", &persistence.TaskInfo{})

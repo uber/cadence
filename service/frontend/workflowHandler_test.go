@@ -106,7 +106,7 @@ func (s *workflowHandlerSuite) SetupTest() {
 	s.testDomainID = "e4f90ec0-1313-45be-9877-8aa41f72a45a"
 
 	s.controller = gomock.NewController(s.T())
-	s.mockResource = resource.NewTest(s.controller, metrics.Frontend)
+	s.mockResource = resource.NewTest(s.T(), s.controller, metrics.Frontend)
 	s.mockDomainCache = s.mockResource.DomainCache
 	s.mockHistoryClient = s.mockResource.HistoryClient
 	s.mockMetadataMgr = s.mockResource.MetadataMgr
