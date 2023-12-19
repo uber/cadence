@@ -20,7 +20,7 @@ default: help
 # temporary build products and book-keeping targets that are always good to / safe to clean.
 BUILD := .build
 # bins that are `make clean` friendly, i.e. they build quickly and do not require new downloads.
-# in particular this should include gofmt, as it changes based on which version of go compiles it,
+# in particular this should include goimports, as it changes based on which version of go compiles it,
 # and few know to do more than `make clean`.
 BIN := $(BUILD)/bin
 # relatively stable build products, e.g. tools.
@@ -29,7 +29,7 @@ STABLE_BIN := .bin
 
 
 # current (when committed) version of Go used in CI, and ideally also our docker images.
-# this generally does not matter, but can impact gofmt output.
+# this generally does not matter, but can impact goimports output.
 # for maximum stability, make sure you use the same version as CI uses.
 #
 # this can _likely_ remain a major version, as fmt output does not tend to change in minor versions,
@@ -358,7 +358,7 @@ $(BUILD)/lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
 MAYBE_TOUCH_COPYRIGHT=
 
 # use FRESH_ALL_SRC so it won't miss any generated files produced earlier.
-$(BUILD)/fmt: $(ALL_SRC) $(BIN)/gofmt $(BIN)/gofancyimports | $(BUILD)
+$(BUILD)/fmt: $(ALL_SRC) $(BIN)/goimports $(BIN)/gofancyimports | $(BUILD)
 	$Q echo "formatting and removing unused imports..."
 	$Q $(BIN)/goimports -w $(FRESH_ALL_SRC)
 	$Q echo "grouping imports..."
@@ -475,6 +475,7 @@ build: ## Build all packages and all tests (ensures everything compiles)
 	$Q go build ./...
 	$Q # "tests" by building and then running `true`, and hides test-success output
 	$Q echo 'Building all tests (~5x slower)...'
+	$Q # intentionally not -race due to !race build tags
 	$Q go test -exec /usr/bin/true ./... >/dev/null
 
 clean: ## Clean build products
@@ -486,7 +487,7 @@ clean: ## Clean build products
 
 # v----- not yet cleaned up -----v
 
-.PHONY: git-submodules test bins clean cover cover_ci help
+.PHONY: git-submodules test bins build clean cover cover_ci help
 
 TOOLS_CMD_ROOT=./cmd/tools
 INTEG_TEST_ROOT=./host
