@@ -4,3 +4,6 @@ services:
     image: cassandra:4.1.3
     ports:
       - "9042:9042"
+    environment:
+      - "MAX_HEAP_SIZE=256M"
+      - "HEAP_NEWSIZE=128M"
