@@ -37,6 +37,9 @@ import (
 	// forces one import-order pattern
 	_ "github.com/NonLogicalDev/gofancyimports/cmd/gofancyimports"
 
+	// removes unused imports and formats
+	_ "golang.org/x/tools/cmd/goimports"
+
 	// mockgen for generating mocks
 	_ "github.com/golang/mock/mockgen"
 

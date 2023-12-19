@@ -180,15 +180,13 @@ $(BIN)/mockery: internal/tools/go.mod
 $(BIN)/enumer: internal/tools/go.mod
 	$(call go_build_tool,github.com/dmarkham/enumer)
 
-# it's important that the formatter is NOT whatever version they have installed,
-# so build it for this project.
-# prefer go_build_tool to support newer go versions, but either is reasonable.
-$(BIN)/gofmt: internal/tools/go.mod
-	$(call go_build_tool,cmd/gofmt)
-
 # only organizes imports, does not reformat code
 $(BIN)/gofancyimports: internal/tools/go.mod
 	$(call go_build_tool,github.com/NonLogicalDev/gofancyimports/cmd/gofancyimports)
+
+# removes unused imports and formats code (does not have -s for simplify though)
+$(BIN)/goimports: internal/tools/go.mod
+	$(call go_build_tool,golang.org/x/tools/cmd/goimports)
 
 $(BIN)/gowrap: go.mod
 	$(call go_build_tool,github.com/hexdigest/gowrap/cmd/gowrap)
@@ -361,11 +359,10 @@ MAYBE_TOUCH_COPYRIGHT=
 
 # use FRESH_ALL_SRC so it won't miss any generated files produced earlier.
 $(BUILD)/fmt: $(ALL_SRC) $(BIN)/gofmt $(BIN)/gofancyimports | $(BUILD)
+	$Q echo "formatting and removing unused imports..."
+	$Q $(BIN)/goimports -w $(FRESH_ALL_SRC)
 	$Q echo "grouping imports..."
 	$Q $(BIN)/gofancyimports fix --local github.com/uber/cadence/ --write $(FRESH_ALL_SRC)
-	$Q # gofancyimports does not -w code, so also run gofmt
-	$Q echo "formatting..."
-	$Q $(BIN)/gofmt -w $(FRESH_ALL_SRC)
 	$Q touch $@
 	$Q $(MAYBE_TOUCH_COPYRIGHT)
 
@@ -472,6 +469,13 @@ go-generate: $(BIN)/mockgen $(BIN)/enumer $(BIN)/mockery  $(BIN)/gowrap ## run g
 release: ## Re-generate generated code and run tests
 	$(MAKE) --no-print-directory go-generate
 	$(MAKE) --no-print-directory test
+
+build: ## Build all packages and all tests (ensures everything compiles)
+	$Q echo 'Building all packages...'
+	$Q go build ./...
+	$Q # "tests" by building and then running `true`, and hides test-success output
+	$Q echo 'Building all tests (~5x slower)...'
+	$Q go test -exec /usr/bin/true ./... >/dev/null
 
 clean: ## Clean build products
 	rm -f $(BINS)
