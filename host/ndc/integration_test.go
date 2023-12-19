@@ -124,7 +124,7 @@ func (s *NDCIntegrationTestSuite) SetupSuite() {
 		ClusterMetadata:       clusterMetadata,
 		DynamicConfiguration:  dc,
 	}
-	cluster, err := host.NewCluster(s.clusterConfigs[0], s.logger.WithTags(tag.ClusterName(clusterName[0])), params)
+	cluster, err := host.NewCluster(s.T(), s.clusterConfigs[0], s.logger.WithTags(tag.ClusterName(clusterName[0])), params)
 	s.Require().NoError(err)
 	s.active = cluster
 
