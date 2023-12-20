@@ -53,7 +53,7 @@ func TestGettersForAllNilInfos(t *testing.T) {
 	} {
 		name := reflect.TypeOf(info).String()
 		t.Run(name, func(t *testing.T) {
-			res := emptyView(info)
+			res := nilView(info)
 			if diff := cmp.Diff(expectedNil[name], res); diff != "" {
 				t.Errorf("nilValue mismatch (-want +got):\n%s", diff)
 			}
@@ -336,7 +336,7 @@ func TestGettersForInfos(t *testing.T) {
 	}
 }
 
-func emptyView(info any) map[string]any {
+func nilView(info any) map[string]any {
 	infoVal := reflect.ValueOf(info)
 	infoT := reflect.TypeOf(infoVal.Interface())
 	v := reflect.Zero(infoT)
@@ -345,6 +345,20 @@ func emptyView(info any) map[string]any {
 		method := infoT.Method(i)
 		if strings.HasPrefix(method.Name, "Get") {
 			res[method.Name] = v.MethodByName(method.Name).Call(nil)[0].Interface()
+		}
+	}
+
+	return res
+}
+
+func emptyView(info any) map[string]any {
+	infoVal := reflect.ValueOf(info)
+	infoT := reflect.TypeOf(infoVal.Interface())
+	res := make(map[string]any)
+	for i := 0; i < infoT.NumMethod(); i++ {
+		method := infoT.Method(i)
+		if strings.HasPrefix(method.Name, "Get") {
+			res[method.Name] = infoVal.MethodByName(method.Name).Call(nil)[0].Interface()
 		}
 	}
 
