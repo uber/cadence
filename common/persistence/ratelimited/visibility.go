@@ -81,6 +81,10 @@ func (p *visibilityClient) RecordWorkflowExecutionUninitialized(
 	ctx context.Context,
 	request *persistence.RecordWorkflowExecutionUninitializedRequest,
 ) error {
+	if ok := p.rateLimiter.Allow(); !ok {
+		return ErrPersistenceLimitExceeded
+	}
+
 	err := p.persistence.RecordWorkflowExecutionUninitialized(ctx, request)
 	return err
 }
