@@ -93,9 +93,7 @@ func (s *processingQueueStateImpl) String() string {
 	)
 }
 
-func copyQueueState(
-	state ProcessingQueueState,
-) *processingQueueStateImpl {
+func copyQueueState(state ProcessingQueueState) *processingQueueStateImpl {
 	return newProcessingQueueState(
 		state.Level(),
 		state.AckLevel(),
