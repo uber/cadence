@@ -24,6 +24,7 @@ package fetcher
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -41,23 +42,21 @@ func TestGetUserTimers(t *testing.T) {
 		t.Fatalf("Failed to parse timestamp: %v", err)
 	}
 
-	ctrl := gomock.NewController(t)
-
-	mockRetryer := persistence.NewMockRetryer(ctrl)
-	ctx := context.Background()
 	pageSize := 10
 	minTimestamp := fixedTimestamp.Add(-time.Hour)
 	maxTimestamp := fixedTimestamp
 	nonNilToken := []byte("non-nil-token")
+
 	testCases := []struct {
 		name          string
-		setupMock     func() []*persistence.TimerTaskInfo
+		setupMock     func(ctrl *gomock.Controller) *persistence.MockRetryer
 		expectedPage  pagination.Page
-		expectedError bool
+		expectedError error
 	}{
 		{
 			name: "Success",
-			setupMock: func() []*persistence.TimerTaskInfo {
+			setupMock: func(ctrl *gomock.Controller) *persistence.MockRetryer {
+				mockRetryer := persistence.NewMockRetryer(ctrl)
 				timerTasks := []*persistence.TimerTaskInfo{
 					{
 						DomainID:            "testDomainID",
@@ -69,7 +68,7 @@ func TestGetUserTimers(t *testing.T) {
 				}
 
 				mockRetryer.EXPECT().
-					GetTimerIndexTasks(ctx, &persistence.GetTimerIndexTasksRequest{
+					GetTimerIndexTasks(gomock.Any(), &persistence.GetTimerIndexTasksRequest{
 						MinTimestamp:  minTimestamp,
 						MaxTimestamp:  maxTimestamp,
 						BatchSize:     pageSize,
@@ -82,7 +81,7 @@ func TestGetUserTimers(t *testing.T) {
 
 				mockRetryer.EXPECT().GetShardID().Return(123)
 
-				return timerTasks
+				return mockRetryer
 			},
 			expectedPage: pagination.Page{
 				Entities: []pagination.Entity{
@@ -96,48 +95,49 @@ func TestGetUserTimers(t *testing.T) {
 					},
 				},
 			},
-			expectedError: false,
+			expectedError: nil,
 		},
 		{
-			name: "Non-nil Pagination Token Passed",
-			setupMock: func() []*persistence.TimerTaskInfo {
-				nonNilToken := []byte("non-nil-token")
+			name: "Non-nil Pagination Token Provdied",
+			setupMock: func(ctrl *gomock.Controller) *persistence.MockRetryer {
+				mockRetryer := persistence.NewMockRetryer(ctrl)
 
 				mockRetryer.EXPECT().
-					GetTimerIndexTasks(ctx, &persistence.GetTimerIndexTasksRequest{
+					GetTimerIndexTasks(gomock.Any(), &persistence.GetTimerIndexTasksRequest{
 						MinTimestamp:  minTimestamp,
 						MaxTimestamp:  maxTimestamp,
 						BatchSize:     pageSize,
 						NextPageToken: nonNilToken,
 					}).
 					Return(&persistence.GetTimerIndexTasksResponse{
-						Timers:        nil, // Adjust based on expected behavior
+						Timers:        nil,
 						NextPageToken: nonNilToken,
 					}, nil)
 
-				return nil // No timers expected in response
+				return mockRetryer
 			},
 			expectedPage: pagination.Page{
 				Entities:     nil,
 				CurrentToken: nonNilToken,
 				NextToken:    nonNilToken,
 			},
-			expectedError: false,
+			expectedError: nil,
 		},
 		{
 			name: "Invalid Timer Causes Error",
-			setupMock: func() []*persistence.TimerTaskInfo {
-				// Example setup of an invalid timer
+			setupMock: func(ctrl *gomock.Controller) *persistence.MockRetryer {
+				mockRetryer := persistence.NewMockRetryer(ctrl)
+
 				invalidTimer := &persistence.TimerTaskInfo{
-					DomainID:            "",               // Invalid as it's empty
-					WorkflowID:          "testWorkflowID", // Valid
-					RunID:               "testRunID",      // Valid
-					VisibilityTimestamp: time.Time{},      // Invalid as it's the zero value
+					DomainID:            "", // Invalid as it's empty
+					WorkflowID:          "testWorkflowID",
+					RunID:               "testRunID",
+					VisibilityTimestamp: fixedTimestamp,
 					TaskType:            persistence.TaskTypeUserTimer,
 				}
 
 				mockRetryer.EXPECT().
-					GetTimerIndexTasks(ctx, &persistence.GetTimerIndexTasksRequest{
+					GetTimerIndexTasks(gomock.Any(), &persistence.GetTimerIndexTasksRequest{
 						MinTimestamp:  minTimestamp,
 						MaxTimestamp:  maxTimestamp,
 						BatchSize:     pageSize,
@@ -150,25 +150,34 @@ func TestGetUserTimers(t *testing.T) {
 
 				mockRetryer.EXPECT().GetShardID().Return(123)
 
-				return []*persistence.TimerTaskInfo{invalidTimer}
+				return mockRetryer
 			},
-			expectedPage:  pagination.Page{}, // No page is expected due to error
-			expectedError: true,              // An error is expected due to the invalid timer
+			expectedPage:  pagination.Page{},            // No page is expected due to error
+			expectedError: fmt.Errorf("empty DomainID"), // Adjusted to match the actual error message
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.setupMock()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRetryer := tc.setupMock(ctrl)
 
 			var token pagination.PageToken
-			if tc.name == "Non-nil Pagination Token Passed" {
+			if tc.name == "Non-nil Pagination Token Provided" {
 				token = nonNilToken
 			}
-			fetchFn := getUserTimers(mockRetryer, minTimestamp, maxTimestamp, pageSize)
-			page, err := fetchFn(ctx, token)
 
-			require.Equal(t, tc.expectedError, err != nil)
+			fetchFn := getUserTimers(mockRetryer, minTimestamp, maxTimestamp, pageSize)
+			page, err := fetchFn(context.Background(), token)
+
+			if tc.expectedError != nil {
+				require.Error(t, err)
+				require.EqualError(t, err, tc.expectedError.Error())
+			} else {
+				require.NoError(t, err)
+			}
 			require.True(t, reflect.DeepEqual(tc.expectedPage.CurrentToken, page.CurrentToken), "CurrentToken should match")
 			require.True(t, reflect.DeepEqual(tc.expectedPage.NextToken, page.NextToken), "NextToken should match")
 			require.Equal(t, tc.expectedPage.Entities, page.Entities, "Entities should match")
