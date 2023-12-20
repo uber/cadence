@@ -621,7 +621,7 @@ func (s *matchingEngineSuite) SyncMatchTasks(taskType int, enableIsolation bool)
 			defer wg.Done()
 			result, pollErr = pollFunc(_defaultTaskDispatchRPS, group)
 		}()
-		time.Sleep(20 * time.Millisecond) // Wait for a short period of time to let the poller start so that sync match will happen
+		time.Sleep(200 * time.Millisecond) // Wait for a short period of time to let the poller start so that sync match will happen
 		addRequest := &addTaskRequest{
 			TaskType:                      taskType,
 			DomainUUID:                    testParam.DomainID,
