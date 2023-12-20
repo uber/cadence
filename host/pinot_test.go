@@ -39,13 +39,11 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"go.uber.org/zap"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	pnt "github.com/uber/cadence/common/pinot"
 	"github.com/uber/cadence/common/types"
@@ -88,9 +86,6 @@ func TestPinotIntegrationSuite(t *testing.T) {
 
 func (s *PinotIntegrationSuite) SetupSuite() {
 	s.setupSuiteForPinotTest()
-	zapLogger, err := zap.NewDevelopment()
-	s.Require().NoError(err)
-	s.logger = loggerimpl.NewLogger(zapLogger)
 	tableName := "cadence_visibility_pinot" //cadence_visibility_pinot_integration_test
 	pinotConfig := &config.PinotVisibilityConfig{
 		Cluster:     "",
@@ -98,10 +93,11 @@ func (s *PinotIntegrationSuite) SetupSuite() {
 		Table:       tableName,
 		ServiceName: "",
 	}
-	s.pinotClient = pinotutils.CreatePinotClient(s.Suite, pinotConfig, s.logger)
+	s.pinotClient = pinotutils.CreatePinotClient(s.Suite, pinotConfig, s.Logger)
 }
 
 func (s *PinotIntegrationSuite) SetupTest() {
+
 	s.Assertions = require.New(s.T())
 	s.testSearchAttributeKey = definition.CustomStringField
 	s.testSearchAttributeVal = "test value"

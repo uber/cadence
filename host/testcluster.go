@@ -41,8 +41,8 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/messaging/kafka"
 	"github.com/uber/cadence/common/metrics"
@@ -246,7 +246,7 @@ func noopAuthorizationConfig() config.Authorization {
 }
 
 // NewClusterMetadata returns cluster metdata from config
-func NewClusterMetadata(options *TestClusterConfig) cluster.Metadata {
+func NewClusterMetadata(t *testing.T, options *TestClusterConfig) cluster.Metadata {
 	clusterMetadata := cluster.GetTestClusterMetadata(options.IsPrimaryCluster)
 	if !options.IsPrimaryCluster && options.ClusterGroupMetadata.PrimaryClusterName != "" { // xdc cluster metadata setup
 		clusterMetadata = cluster.NewMetadata(
@@ -256,7 +256,7 @@ func NewClusterMetadata(options *TestClusterConfig) cluster.Metadata {
 			options.ClusterGroupMetadata.ClusterGroup,
 			func(domain string) bool { return false },
 			metrics.NewNoopMetricsClient(),
-			loggerimpl.NewNopLogger(),
+			testlogger.New(t),
 		)
 	}
 	return clusterMetadata

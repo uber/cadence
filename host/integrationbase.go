@@ -25,10 +25,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"testing"
 	"time"
 
 	"github.com/pborman/uuid"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/tchannel"
@@ -38,8 +38,8 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/persistence"
 	pt "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/persistence/persistence-tests/testcluster"
@@ -66,6 +66,7 @@ type (
 	}
 
 	IntegrationBaseParams struct {
+		T                     *testing.T
 		DefaultTestCluster    testcluster.PersistenceTestCluster
 		VisibilityTestCluster testcluster.PersistenceTestCluster
 		TestClusterConfig     *TestClusterConfig
@@ -104,7 +105,7 @@ func (s *IntegrationBase) setupSuite() {
 		s.adminClient = NewAdminClient(dispatcher)
 	} else {
 		s.Logger.Info("Running integration test against test cluster")
-		clusterMetadata := NewClusterMetadata(s.testClusterConfig)
+		clusterMetadata := NewClusterMetadata(s.T(), s.testClusterConfig)
 		dc := persistence.DynamicConfiguration{
 			EnableSQLAsyncTransaction:                dynamicconfig.GetBoolPropertyFn(false),
 			EnableCassandraAllConsistencyLevelDelete: dynamicconfig.GetBoolPropertyFn(true),
@@ -144,7 +145,7 @@ func (s *IntegrationBase) setupSuiteForPinotTest() {
 	s.setupLogger()
 
 	s.Logger.Info("Running integration test against test cluster")
-	clusterMetadata := NewClusterMetadata(s.testClusterConfig)
+	clusterMetadata := NewClusterMetadata(s.T(), s.testClusterConfig)
 	dc := persistence.DynamicConfiguration{
 		EnableSQLAsyncTransaction:                dynamicconfig.GetBoolPropertyFn(false),
 		EnableCassandraAllConsistencyLevelDelete: dynamicconfig.GetBoolPropertyFn(true),
@@ -181,9 +182,7 @@ func (s *IntegrationBase) setupSuiteForPinotTest() {
 }
 
 func (s *IntegrationBase) setupLogger() {
-	l, err := loggerimpl.NewDevelopment()
-	require.NoError(s.T(), err)
-	s.Logger = l
+	s.Logger = testlogger.New(s.T())
 }
 
 // GetTestClusterConfig return test cluster config
