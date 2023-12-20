@@ -332,6 +332,7 @@ type (
 
 		// attributes which are not related to mutable state at all
 		HistorySize int64
+		IsCron      bool
 	}
 
 	// InternalWorkflowMutableState indicates workflow related state for Persistence Interface
