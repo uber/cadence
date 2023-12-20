@@ -576,7 +576,7 @@ func (s *matchingEngineSuite) SyncMatchTasks(taskType int, enableIsolation bool)
 	isolationGroups := s.matchingEngine.config.AllIsolationGroups
 
 	// Set a short long poll expiration so we don't have to wait too long for 0 throttling cases
-	s.matchingEngine.config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(50 * time.Millisecond)
+	s.matchingEngine.config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(1 * time.Second)
 	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
 	// So we can get snapshots
 	scope := tally.NewTestScope("test", nil)
@@ -621,7 +621,7 @@ func (s *matchingEngineSuite) SyncMatchTasks(taskType int, enableIsolation bool)
 			defer wg.Done()
 			result, pollErr = pollFunc(_defaultTaskDispatchRPS, group)
 		}()
-		time.Sleep(200 * time.Millisecond) // Wait for a short period of time to let the poller start so that sync match will happen
+		time.Sleep(500 * time.Millisecond) // Wait for a short period of time to let the poller start so that sync match will happen
 		addRequest := &addTaskRequest{
 			TaskType:                      taskType,
 			DomainUUID:                    testParam.DomainID,
@@ -652,7 +652,7 @@ func (s *matchingEngineSuite) SyncMatchTasks(taskType int, enableIsolation bool)
 			defer wg.Done()
 			result, pollErr = pollFunc(0.0, group)
 		}()
-		time.Sleep(20 * time.Millisecond) // Wait for a short period of time to let the poller start so that sync match will happen
+		time.Sleep(500 * time.Millisecond) // Wait for a short period of time to let the poller start so that sync match will happen
 		addRequest := &addTaskRequest{
 			TaskType:                      taskType,
 			DomainUUID:                    testParam.DomainID,
