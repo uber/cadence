@@ -49,10 +49,6 @@ import (
 	"github.com/uber/cadence/service/worker/archiver"
 )
 
-const (
-	defaultProcessingQueueLevel = 0
-)
-
 var (
 	errUnexpectedQueueTask = errors.New("unexpected queue task")
 	errProcessorShutdown   = errors.New("queue processor has been shutdown")
@@ -60,29 +56,27 @@ var (
 	maximumTransferTaskKey = newTransferTaskKey(math.MaxInt64)
 )
 
-type (
-	transferQueueProcessor struct {
-		shard         shard.Context
-		historyEngine engine.Engine
-		taskProcessor task.Processor
+type transferQueueProcessor struct {
+	shard         shard.Context
+	historyEngine engine.Engine
+	taskProcessor task.Processor
 
-		config             *config.Config
-		currentClusterName string
+	config             *config.Config
+	currentClusterName string
 
-		metricsClient metrics.Client
-		logger        log.Logger
+	metricsClient metrics.Client
+	logger        log.Logger
 
-		status       int32
-		shutdownChan chan struct{}
-		shutdownWG   sync.WaitGroup
+	status       int32
+	shutdownChan chan struct{}
+	shutdownWG   sync.WaitGroup
 
-		ackLevel               int64
-		taskAllocator          TaskAllocator
-		activeTaskExecutor     task.Executor
-		activeQueueProcessor   *transferQueueProcessorBase
-		standbyQueueProcessors map[string]*transferQueueProcessorBase
-	}
-)
+	ackLevel               int64
+	taskAllocator          TaskAllocator
+	activeTaskExecutor     task.Executor
+	activeQueueProcessor   *transferQueueProcessorBase
+	standbyQueueProcessors map[string]*transferQueueProcessorBase
+}
 
 // NewTransferQueueProcessor creates a new transfer QueueProcessor
 func NewTransferQueueProcessor(
