@@ -77,16 +77,23 @@ type fakeBatch struct {
 
 // Query is fake implementation of gocql.Batch.Query
 func (b *fakeBatch) Query(queryTmpl string, args ...interface{}) {
-	argsDereferenced := make([]interface{}, len(args))
+	argsSanitized := make([]interface{}, len(args))
 	for i, arg := range args {
+		// use values instead of pointer so that we can compare them in tests
 		if reflect.ValueOf(arg).Kind() == reflect.Ptr && !reflect.ValueOf(arg).IsZero() {
-			argsDereferenced[i] = reflect.ValueOf(arg).Elem().Interface()
+			argsSanitized[i] = reflect.ValueOf(arg).Elem().Interface()
 		} else {
-			argsDereferenced[i] = arg
+			argsSanitized[i] = arg
 		}
+
+		if t, ok := argsSanitized[i].(time.Time); ok {
+			// use fixed time format to avoid flakiness
+			argsSanitized[i] = t.UTC().Format(time.RFC3339)
+		}
+
 	}
 	queryTmpl = strings.ReplaceAll(queryTmpl, "?", "%v")
-	b.queries = append(b.queries, fmt.Sprintf(queryTmpl, argsDereferenced...))
+	b.queries = append(b.queries, fmt.Sprintf(queryTmpl, argsSanitized...))
 }
 
 // WithContext is fake implementation of gocql.Batch.WithContext
@@ -729,14 +736,14 @@ func TestTransferTasks(t *testing.T) {
 			wantQueries: []string{
 				`INSERT INTO executions (shard_id, type, domain_id, workflow_id, run_id, transfer, visibility_ts, task_id) ` +
 					`VALUES(1000, 2, 10000000-3000-f000-f000-000000000000, 20000000-3000-f000-f000-000000000000, 30000000-3000-f000-f000-000000000000, ` +
-					`{domain_id: domain_xyz, workflow_id: workflow_xyz, run_id: rundid_1, visibility_ts: 2023-12-12 22:08:41 +0000 UTC, ` +
+					`{domain_id: domain_xyz, workflow_id: workflow_xyz, run_id: rundid_1, visibility_ts: 2023-12-12T22:08:41Z, ` +
 					`task_id: 355, target_domain_id: e2bf2c8f-0ddf-4451-8840-27cfe8addd62, target_domain_ids: map[],` +
 					`target_workflow_id: 20000000-0000-f000-f000-000000000001, target_run_id: 30000000-0000-f000-f000-000000000002, ` +
 					`target_child_workflow_only: true, task_list: tasklist_1, type: 0, schedule_id: 14, record_visibility: false, version: 1}, ` +
 					`946684800000, 355)`,
 				`INSERT INTO executions (shard_id, type, domain_id, workflow_id, run_id, transfer, visibility_ts, task_id) ` +
 					`VALUES(1000, 2, 10000000-3000-f000-f000-000000000000, 20000000-3000-f000-f000-000000000000, 30000000-3000-f000-f000-000000000000, ` +
-					`{domain_id: domain_xyz, workflow_id: workflow_xyz, run_id: rundid_2, visibility_ts: 2023-12-12 22:09:41 +0000 UTC, ` +
+					`{domain_id: domain_xyz, workflow_id: workflow_xyz, run_id: rundid_2, visibility_ts: 2023-12-12T22:09:41Z, ` +
 					`task_id: 220, target_domain_id: e2bf2c8f-0ddf-4451-8840-27cfe8addd62, target_domain_ids: map[],` +
 					`target_workflow_id: 20000000-0000-f000-f000-000000000001, target_run_id: 30000000-0000-f000-f000-000000000002, ` +
 					`target_child_workflow_only: true, task_list: tasklist_2, type: 0, schedule_id: 3, record_visibility: false, version: 1}, ` +
@@ -800,7 +807,7 @@ func TestCrossClusterTasks(t *testing.T) {
 			wantQueries: []string{
 				`INSERT INTO executions (shard_id, type, domain_id, workflow_id, run_id, cross_cluster, visibility_ts, task_id) ` +
 					`VALUES(1000, 6, 10000000-7000-f000-f000-000000000000, , 30000000-7000-f000-f000-000000000000, ` +
-					`{domain_id: domain_xyz, workflow_id: workflow_xyz, run_id: rundid_1, visibility_ts: 2023-12-12 22:08:41 +0000 UTC, ` +
+					`{domain_id: domain_xyz, workflow_id: workflow_xyz, run_id: rundid_1, visibility_ts: 2023-12-12T22:08:41Z, ` +
 					`task_id: 355, target_domain_id: e2bf2c8f-0ddf-4451-8840-27cfe8addd62, target_domain_ids: map[],` +
 					`target_workflow_id: 20000000-0000-f000-f000-000000000001, target_run_id: 30000000-0000-f000-f000-000000000002, ` +
 					`target_child_workflow_only: true, task_list: tasklist_1, type: 0, schedule_id: 14, record_visibility: false, version: 1}, ` +
@@ -1385,7 +1392,7 @@ func TestResetTimerInfos(t *testing.T) {
 					Version:    1,
 					TimerID:    "timer1",
 					StartedID:  2,
-					ExpiryTime: ts,
+					ExpiryTime: ts.UTC(),
 					TaskStatus: 1,
 				},
 			},
@@ -1443,14 +1450,14 @@ func TestUpdateTimerInfos(t *testing.T) {
 					TimerID:    "timer1",
 					Version:    1,
 					StartedID:  2,
-					ExpiryTime: ts,
+					ExpiryTime: ts.UTC(),
 					TaskStatus: 1,
 				},
 			},
 			deleteInfos: []string{"timer2"},
 			wantQueries: []string{
 				`UPDATE executions SET timer_map[ timer1 ] = {` +
-					`version: 1, timer_id: timer1, started_id: 2, expiry_time: 2023-12-19 22:08:41 +0000 UTC, task_id: 1` +
+					`version: 1, timer_id: timer1, started_id: 2, expiry_time: 2023-12-19T22:08:41Z, task_id: 1` +
 					`} WHERE ` +
 					`shard_id = 1000 and type = 1 and domain_id = domain1 and workflow_id = workflow1 and ` +
 					`run_id = runid1 and visibility_ts = 946684800000 and task_id = -10 `,
@@ -1506,7 +1513,7 @@ func TestResetActivityInfos(t *testing.T) {
 						Encoding: common.EncodingTypeThriftRW,
 						Data:     []byte("thrift-encoded-scheduled-event-data"),
 					},
-					ScheduledTime: ts,
+					ScheduledTime: ts.UTC(),
 					ScheduleID:    1,
 					StartedID:     2,
 					StartedEvent: &persistence.DataBlob{
@@ -1530,7 +1537,7 @@ func TestResetActivityInfos(t *testing.T) {
 						Encoding: common.EncodingTypeThriftRW,
 						Data:     []byte("thrift-encoded-scheduled-event-data"),
 					},
-					ScheduledTime: ts,
+					ScheduledTime: ts.UTC(),
 					ScheduleID:    2,
 					StartedID:     3,
 					StartedEvent: &persistence.DataBlob{
@@ -1626,7 +1633,7 @@ func TestUpdateActivityInfos(t *testing.T) {
 						Encoding: common.EncodingTypeThriftRW,
 						Data:     []byte("thrift-encoded-scheduled-event-data"),
 					},
-					ScheduledTime: ts,
+					ScheduledTime: ts.UTC(),
 					ScheduleID:    1,
 					StartedID:     2,
 					StartedEvent: &persistence.DataBlob{
@@ -1650,13 +1657,13 @@ func TestUpdateActivityInfos(t *testing.T) {
 				`UPDATE executions SET activity_map[ 1 ] = {` +
 					`version: 1, schedule_id: 1, scheduled_event_batch_id: 0, ` +
 					`scheduled_event: [116 104 114 105 102 116 45 101 110 99 111 100 101 100 45 115 99 104 101 100 117 108 101 100 45 101 118 101 110 116 45 100 97 116 97], ` +
-					`scheduled_time: 2023-12-19 22:08:41 +0000 UTC, started_id: 2, ` +
+					`scheduled_time: 2023-12-19T22:08:41Z, started_id: 2, ` +
 					`started_event: [116 104 114 105 102 116 45 101 110 99 111 100 101 100 45 115 116 97 114 116 101 100 45 101 118 101 110 116 45 100 97 116 97], ` +
-					`started_time: 0001-01-01 00:00:00 +0000 UTC, activity_id: activity1, request_id: , ` +
+					`started_time: 0001-01-01T00:00:00Z, activity_id: activity1, request_id: , ` +
 					`details: [], schedule_to_start_timeout: 60, schedule_to_close_timeout: 120, start_to_close_timeout: 180, ` +
-					`heart_beat_timeout: 60, cancel_requested: false, cancel_request_id: 0, last_hb_updated_time: 0001-01-01 00:00:00 +0000 UTC, ` +
+					`heart_beat_timeout: 60, cancel_requested: false, cancel_request_id: 0, last_hb_updated_time: 0001-01-01T00:00:00Z, ` +
 					`timer_task_status: 0, attempt: 3, task_list: tasklist1, started_identity: , has_retry_policy: true, ` +
-					`init_interval: 0, backoff_coefficient: 0, max_interval: 0, expiration_time: 0001-01-01 00:00:00 +0000 UTC, ` +
+					`init_interval: 0, backoff_coefficient: 0, max_interval: 0, expiration_time: 0001-01-01T00:00:00Z, ` +
 					`max_attempts: 5, non_retriable_errors: [], last_failure_reason: retry reason, last_worker_identity: , ` +
 					`last_failure_details: [], event_data_encoding: thriftrw` +
 					`} WHERE ` +
@@ -1755,7 +1762,7 @@ func TestCreateWorkflowExecutionWithMergeMaps(t *testing.T) {
 							Encoding: common.EncodingTypeThriftRW,
 							Data:     []byte("thrift-encoded-scheduled-event-data"),
 						},
-						ScheduledTime: ts,
+						ScheduledTime: ts.UTC(),
 						ScheduleID:    1,
 						StartedID:     2,
 						StartedEvent: &persistence.DataBlob{
@@ -2003,7 +2010,7 @@ func TestUpdateWorkflowExecutionAndEventBufferWithMergeAndDeleteMaps(t *testing.
 							Encoding: common.EncodingTypeThriftRW,
 							Data:     []byte("thrift-encoded-scheduled-event-data"),
 						},
-						ScheduledTime: ts,
+						ScheduledTime: ts.UTC(),
 						ScheduleID:    1,
 						StartedID:     2,
 						StartedEvent: &persistence.DataBlob{
@@ -2027,7 +2034,7 @@ func TestUpdateWorkflowExecutionAndEventBufferWithMergeAndDeleteMaps(t *testing.
 						Version:    1,
 						TimerID:    "timer1",
 						StartedID:  2,
-						ExpiryTime: ts,
+						ExpiryTime: ts.UTC(),
 						TaskStatus: 1,
 					},
 				},
@@ -2152,13 +2159,13 @@ func TestUpdateWorkflowExecution(t *testing.T) {
 					`parent_run_id: parentRunID1, initiated_id: 0, completion_event_batch_id: 0, completion_event: [], ` +
 					`completion_event_data_encoding: , task_list: tasklist1, workflow_type_name: workflowType1, workflow_timeout: 0, ` +
 					`decision_task_timeout: 0, execution_context: [], state: 0, close_status: 0, last_first_event_id: 0, last_event_task_id: 0, ` +
-					`next_event_id: 0, last_processed_event: 0, start_time: 2023-12-19 14:08:41 -0800 PST, last_updated_time: 2023-12-19 14:09:41 -0800 PST, ` +
+					`next_event_id: 0, last_processed_event: 0, start_time: 2023-12-19T22:08:41Z, last_updated_time: 2023-12-19T22:09:41Z, ` +
 					`create_request_id: , signal_count: 0, history_size: 0, decision_version: 0, decision_schedule_id: 2, decision_started_id: 3, ` +
 					`decision_request_id: , decision_timeout: 0, decision_attempt: 0, decision_timestamp: -6795364578871345152, ` +
 					`decision_scheduled_timestamp: -6795364578871345152, decision_original_scheduled_timestamp: -6795364578871345152, ` +
 					`cancel_requested: false, cancel_request_id: , sticky_task_list: , sticky_schedule_to_start_timeout: 0,client_library_version: , ` +
 					`client_feature_version: , client_impl: , auto_reset_points: [], auto_reset_points_encoding: , attempt: 0, has_retry_policy: false, ` +
-					`init_interval: 0, backoff_coefficient: 0, max_interval: 0, expiration_time: 0001-01-01 00:00:00 +0000 UTC, max_attempts: 0, ` +
+					`init_interval: 0, backoff_coefficient: 0, max_interval: 0, expiration_time: 0001-01-01T00:00:00Z, max_attempts: 0, ` +
 					`non_retriable_errors: [], event_store_version: 2, branch_token: [], cron_schedule: , expiration_seconds: 0, search_attributes: map[], ` +
 					`memo: map[], partition_config: map[] ` +
 					`}, next_event_id = 0 , version_histories = [] , version_histories_encoding =  , checksum = {version: 0, flavor: 0, value: [] }, workflow_last_write_version = 0 , workflow_state = 0 ` +
@@ -2232,13 +2239,13 @@ func TestCreateWorkflowExecution(t *testing.T) {
 					`{domain_id: domain1, workflow_id: workflow1, run_id: runid1, first_run_id: , parent_domain_id: , parent_workflow_id: , ` +
 					`parent_run_id: parentRunID1, initiated_id: 0, completion_event_batch_id: 0, completion_event: [], completion_event_data_encoding: , ` +
 					`task_list: tasklist1, workflow_type_name: workflowType1, workflow_timeout: 0, decision_task_timeout: 0, execution_context: [], state: 0, ` +
-					`close_status: 0, last_first_event_id: 0, last_event_task_id: 0, next_event_id: 0, last_processed_event: 0, start_time: 2023-12-19 14:08:41 -0800 PST, ` +
-					`last_updated_time: 2023-12-19 14:09:41 -0800 PST, create_request_id: , signal_count: 0, history_size: 0, decision_version: 0, ` +
+					`close_status: 0, last_first_event_id: 0, last_event_task_id: 0, next_event_id: 0, last_processed_event: 0, start_time: 2023-12-19T22:08:41Z, ` +
+					`last_updated_time: 2023-12-19T22:09:41Z, create_request_id: , signal_count: 0, history_size: 0, decision_version: 0, ` +
 					`decision_schedule_id: 2, decision_started_id: 3, decision_request_id: , decision_timeout: 0, decision_attempt: 0, ` +
 					`decision_timestamp: -6795364578871345152, decision_scheduled_timestamp: -6795364578871345152, decision_original_scheduled_timestamp: -6795364578871345152, ` +
 					`cancel_requested: false, cancel_request_id: , sticky_task_list: , sticky_schedule_to_start_timeout: 0,client_library_version: , client_feature_version: , ` +
 					`client_impl: , auto_reset_points: [], auto_reset_points_encoding: , attempt: 0, has_retry_policy: false, init_interval: 0, ` +
-					`backoff_coefficient: 0, max_interval: 0, expiration_time: 0001-01-01 00:00:00 +0000 UTC, max_attempts: 0, non_retriable_errors: [], ` +
+					`backoff_coefficient: 0, max_interval: 0, expiration_time: 0001-01-01T00:00:00Z, max_attempts: 0, non_retriable_errors: [], ` +
 					`event_store_version: 2, branch_token: [], cron_schedule: , expiration_seconds: 0, search_attributes: map[], memo: map[], partition_config: map[] ` +
 					`}, 0, 946684800000, -10, [], , {version: 0, flavor: 0, value: [] }, 0, 0) IF NOT EXISTS `,
 			},
