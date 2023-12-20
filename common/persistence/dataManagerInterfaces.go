@@ -233,57 +233,6 @@ const (
 )
 
 type (
-	// InvalidPersistenceRequestError represents invalid request to persistence
-	InvalidPersistenceRequestError struct {
-		Msg string
-	}
-
-	// CurrentWorkflowConditionFailedError represents a failed conditional update for current workflow record
-	CurrentWorkflowConditionFailedError struct {
-		Msg string
-	}
-
-	// ConditionFailedError represents a failed conditional update for execution record
-	ConditionFailedError struct {
-		Msg string
-	}
-
-	// ShardAlreadyExistError is returned when conditionally creating a shard fails
-	ShardAlreadyExistError struct {
-		Msg string
-	}
-
-	// ShardOwnershipLostError is returned when conditional update fails due to RangeID for the shard
-	ShardOwnershipLostError struct {
-		ShardID int
-		Msg     string
-	}
-
-	// WorkflowExecutionAlreadyStartedError is returned when creating a new workflow failed.
-	WorkflowExecutionAlreadyStartedError struct {
-		Msg              string
-		StartRequestID   string
-		RunID            string
-		State            int
-		CloseStatus      int
-		LastWriteVersion int64
-	}
-
-	// TimeoutError is returned when a write operation fails due to a timeout
-	TimeoutError struct {
-		Msg string
-	}
-
-	// DBUnavailableError is returned when the database is unavailable, could be for various reasons.
-	DBUnavailableError struct {
-		Msg string
-	}
-
-	// TransactionSizeLimitError is returned when the transaction size is too large
-	TransactionSizeLimitError struct {
-		Msg string
-	}
-
 	// ShardInfo describes a shard
 	ShardInfo struct {
 		ShardID                           int                               `json:"shard_id"`
@@ -1893,42 +1842,6 @@ type (
 		//can add functions for config types other than dynamic config
 	}
 )
-
-func (e *InvalidPersistenceRequestError) Error() string {
-	return e.Msg
-}
-
-func (e *CurrentWorkflowConditionFailedError) Error() string {
-	return e.Msg
-}
-
-func (e *ConditionFailedError) Error() string {
-	return e.Msg
-}
-
-func (e *ShardAlreadyExistError) Error() string {
-	return e.Msg
-}
-
-func (e *ShardOwnershipLostError) Error() string {
-	return e.Msg
-}
-
-func (e *WorkflowExecutionAlreadyStartedError) Error() string {
-	return e.Msg
-}
-
-func (e *TimeoutError) Error() string {
-	return e.Msg
-}
-
-func (e *DBUnavailableError) Error() string {
-	return e.Msg
-}
-
-func (e *TransactionSizeLimitError) Error() string {
-	return e.Msg
-}
 
 // IsTimeoutError check whether error is TimeoutError
 func IsTimeoutError(err error) bool {
