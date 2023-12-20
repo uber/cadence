@@ -320,6 +320,7 @@ func workflowExecutionInfoFromThrift(info *sqlblobs.WorkflowExecutionInfo) *Work
 		VersionHistoriesEncoding:           info.GetVersionHistoriesEncoding(),
 		FirstExecutionRunID:                info.FirstExecutionRunID,
 		PartitionConfig:                    info.PartitionConfig,
+		IsCron:                             info.GetCronSchedule() != "",
 	}
 }
 
