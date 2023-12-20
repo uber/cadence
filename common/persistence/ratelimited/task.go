@@ -30,30 +30,30 @@ import (
 	"github.com/uber/cadence/common/quotas"
 )
 
-type taskRateLimitedPersistenceClient struct {
+type taskClient struct {
 	rateLimiter quotas.Limiter
 	persistence persistence.TaskManager
 	logger      log.Logger
 }
 
-// NewTaskPersistenceRateLimitedClient creates a client to manage tasks
-func NewTaskPersistenceRateLimitedClient(
+// NewTaskClient creates a client to manage tasks
+func NewTaskClient(
 	persistence persistence.TaskManager,
 	rateLimiter quotas.Limiter,
 	logger log.Logger,
 ) persistence.TaskManager {
-	return &taskRateLimitedPersistenceClient{
+	return &taskClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
 		logger:      logger,
 	}
 }
 
-func (p *taskRateLimitedPersistenceClient) GetName() string {
+func (p *taskClient) GetName() string {
 	return p.persistence.GetName()
 }
 
-func (p *taskRateLimitedPersistenceClient) CreateTasks(
+func (p *taskClient) CreateTasks(
 	ctx context.Context,
 	request *persistence.CreateTasksRequest,
 ) (*persistence.CreateTasksResponse, error) {
@@ -65,7 +65,7 @@ func (p *taskRateLimitedPersistenceClient) CreateTasks(
 	return response, err
 }
 
-func (p *taskRateLimitedPersistenceClient) GetTasks(
+func (p *taskClient) GetTasks(
 	ctx context.Context,
 	request *persistence.GetTasksRequest,
 ) (*persistence.GetTasksResponse, error) {
@@ -77,7 +77,7 @@ func (p *taskRateLimitedPersistenceClient) GetTasks(
 	return response, err
 }
 
-func (p *taskRateLimitedPersistenceClient) CompleteTask(
+func (p *taskClient) CompleteTask(
 	ctx context.Context,
 	request *persistence.CompleteTaskRequest,
 ) error {
@@ -89,7 +89,7 @@ func (p *taskRateLimitedPersistenceClient) CompleteTask(
 	return err
 }
 
-func (p *taskRateLimitedPersistenceClient) CompleteTasksLessThan(
+func (p *taskClient) CompleteTasksLessThan(
 	ctx context.Context,
 	request *persistence.CompleteTasksLessThanRequest,
 ) (*persistence.CompleteTasksLessThanResponse, error) {
@@ -99,14 +99,14 @@ func (p *taskRateLimitedPersistenceClient) CompleteTasksLessThan(
 	return p.persistence.CompleteTasksLessThan(ctx, request)
 }
 
-func (p *taskRateLimitedPersistenceClient) GetOrphanTasks(ctx context.Context, request *persistence.GetOrphanTasksRequest) (*persistence.GetOrphanTasksResponse, error) {
+func (p *taskClient) GetOrphanTasks(ctx context.Context, request *persistence.GetOrphanTasksRequest) (*persistence.GetOrphanTasksResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
 	return p.persistence.GetOrphanTasks(ctx, request)
 }
 
-func (p *taskRateLimitedPersistenceClient) LeaseTaskList(
+func (p *taskClient) LeaseTaskList(
 	ctx context.Context,
 	request *persistence.LeaseTaskListRequest,
 ) (*persistence.LeaseTaskListResponse, error) {
@@ -118,7 +118,7 @@ func (p *taskRateLimitedPersistenceClient) LeaseTaskList(
 	return response, err
 }
 
-func (p *taskRateLimitedPersistenceClient) UpdateTaskList(
+func (p *taskClient) UpdateTaskList(
 	ctx context.Context,
 	request *persistence.UpdateTaskListRequest,
 ) (*persistence.UpdateTaskListResponse, error) {
@@ -130,7 +130,7 @@ func (p *taskRateLimitedPersistenceClient) UpdateTaskList(
 	return response, err
 }
 
-func (p *taskRateLimitedPersistenceClient) ListTaskList(
+func (p *taskClient) ListTaskList(
 	ctx context.Context,
 	request *persistence.ListTaskListRequest,
 ) (*persistence.ListTaskListResponse, error) {
@@ -140,7 +140,7 @@ func (p *taskRateLimitedPersistenceClient) ListTaskList(
 	return p.persistence.ListTaskList(ctx, request)
 }
 
-func (p *taskRateLimitedPersistenceClient) DeleteTaskList(
+func (p *taskClient) DeleteTaskList(
 	ctx context.Context,
 	request *persistence.DeleteTaskListRequest,
 ) error {
@@ -150,7 +150,7 @@ func (p *taskRateLimitedPersistenceClient) DeleteTaskList(
 	return p.persistence.DeleteTaskList(ctx, request)
 }
 
-func (p *taskRateLimitedPersistenceClient) GetTaskListSize(
+func (p *taskClient) GetTaskListSize(
 	ctx context.Context,
 	request *persistence.GetTaskListSizeRequest,
 ) (*persistence.GetTaskListSizeResponse, error) {
@@ -160,6 +160,6 @@ func (p *taskRateLimitedPersistenceClient) GetTaskListSize(
 	return p.persistence.GetTaskListSize(ctx, request)
 }
 
-func (p *taskRateLimitedPersistenceClient) Close() {
+func (p *taskClient) Close() {
 	p.persistence.Close()
 }

@@ -30,30 +30,30 @@ import (
 	"github.com/uber/cadence/common/quotas"
 )
 
-type visibilityRateLimitedPersistenceClient struct {
+type visibilityClient struct {
 	rateLimiter quotas.Limiter
 	persistence persistence.VisibilityManager
 	logger      log.Logger
 }
 
-// NewVisibilityPersistenceRateLimitedClient creates a client to manage visibility
-func NewVisibilityPersistenceRateLimitedClient(
+// NewVisibilityClient creates a client to manage visibility
+func NewVisibilityClient(
 	persistence persistence.VisibilityManager,
 	rateLimiter quotas.Limiter,
 	logger log.Logger,
 ) persistence.VisibilityManager {
-	return &visibilityRateLimitedPersistenceClient{
+	return &visibilityClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
 		logger:      logger,
 	}
 }
 
-func (p *visibilityRateLimitedPersistenceClient) GetName() string {
+func (p *visibilityClient) GetName() string {
 	return p.persistence.GetName()
 }
 
-func (p *visibilityRateLimitedPersistenceClient) RecordWorkflowExecutionStarted(
+func (p *visibilityClient) RecordWorkflowExecutionStarted(
 	ctx context.Context,
 	request *persistence.RecordWorkflowExecutionStartedRequest,
 ) error {
@@ -65,7 +65,7 @@ func (p *visibilityRateLimitedPersistenceClient) RecordWorkflowExecutionStarted(
 	return err
 }
 
-func (p *visibilityRateLimitedPersistenceClient) RecordWorkflowExecutionClosed(
+func (p *visibilityClient) RecordWorkflowExecutionClosed(
 	ctx context.Context,
 	request *persistence.RecordWorkflowExecutionClosedRequest,
 ) error {
@@ -77,7 +77,7 @@ func (p *visibilityRateLimitedPersistenceClient) RecordWorkflowExecutionClosed(
 	return err
 }
 
-func (p *visibilityRateLimitedPersistenceClient) RecordWorkflowExecutionUninitialized(
+func (p *visibilityClient) RecordWorkflowExecutionUninitialized(
 	ctx context.Context,
 	request *persistence.RecordWorkflowExecutionUninitializedRequest,
 ) error {
@@ -85,7 +85,7 @@ func (p *visibilityRateLimitedPersistenceClient) RecordWorkflowExecutionUninitia
 	return err
 }
 
-func (p *visibilityRateLimitedPersistenceClient) UpsertWorkflowExecution(
+func (p *visibilityClient) UpsertWorkflowExecution(
 	ctx context.Context,
 	request *persistence.UpsertWorkflowExecutionRequest,
 ) error {
@@ -97,7 +97,7 @@ func (p *visibilityRateLimitedPersistenceClient) UpsertWorkflowExecution(
 	return err
 }
 
-func (p *visibilityRateLimitedPersistenceClient) ListOpenWorkflowExecutions(
+func (p *visibilityClient) ListOpenWorkflowExecutions(
 	ctx context.Context,
 	request *persistence.ListWorkflowExecutionsRequest,
 ) (*persistence.ListWorkflowExecutionsResponse, error) {
@@ -109,7 +109,7 @@ func (p *visibilityRateLimitedPersistenceClient) ListOpenWorkflowExecutions(
 	return response, err
 }
 
-func (p *visibilityRateLimitedPersistenceClient) ListClosedWorkflowExecutions(
+func (p *visibilityClient) ListClosedWorkflowExecutions(
 	ctx context.Context,
 	request *persistence.ListWorkflowExecutionsRequest,
 ) (*persistence.ListWorkflowExecutionsResponse, error) {
@@ -121,7 +121,7 @@ func (p *visibilityRateLimitedPersistenceClient) ListClosedWorkflowExecutions(
 	return response, err
 }
 
-func (p *visibilityRateLimitedPersistenceClient) ListOpenWorkflowExecutionsByType(
+func (p *visibilityClient) ListOpenWorkflowExecutionsByType(
 	ctx context.Context,
 	request *persistence.ListWorkflowExecutionsByTypeRequest,
 ) (*persistence.ListWorkflowExecutionsResponse, error) {
@@ -133,7 +133,7 @@ func (p *visibilityRateLimitedPersistenceClient) ListOpenWorkflowExecutionsByTyp
 	return response, err
 }
 
-func (p *visibilityRateLimitedPersistenceClient) ListClosedWorkflowExecutionsByType(
+func (p *visibilityClient) ListClosedWorkflowExecutionsByType(
 	ctx context.Context,
 	request *persistence.ListWorkflowExecutionsByTypeRequest,
 ) (*persistence.ListWorkflowExecutionsResponse, error) {
@@ -145,7 +145,7 @@ func (p *visibilityRateLimitedPersistenceClient) ListClosedWorkflowExecutionsByT
 	return response, err
 }
 
-func (p *visibilityRateLimitedPersistenceClient) ListOpenWorkflowExecutionsByWorkflowID(
+func (p *visibilityClient) ListOpenWorkflowExecutionsByWorkflowID(
 	ctx context.Context,
 	request *persistence.ListWorkflowExecutionsByWorkflowIDRequest,
 ) (*persistence.ListWorkflowExecutionsResponse, error) {
@@ -157,7 +157,7 @@ func (p *visibilityRateLimitedPersistenceClient) ListOpenWorkflowExecutionsByWor
 	return response, err
 }
 
-func (p *visibilityRateLimitedPersistenceClient) ListClosedWorkflowExecutionsByWorkflowID(
+func (p *visibilityClient) ListClosedWorkflowExecutionsByWorkflowID(
 	ctx context.Context,
 	request *persistence.ListWorkflowExecutionsByWorkflowIDRequest,
 ) (*persistence.ListWorkflowExecutionsResponse, error) {
@@ -169,7 +169,7 @@ func (p *visibilityRateLimitedPersistenceClient) ListClosedWorkflowExecutionsByW
 	return response, err
 }
 
-func (p *visibilityRateLimitedPersistenceClient) ListClosedWorkflowExecutionsByStatus(
+func (p *visibilityClient) ListClosedWorkflowExecutionsByStatus(
 	ctx context.Context,
 	request *persistence.ListClosedWorkflowExecutionsByStatusRequest,
 ) (*persistence.ListWorkflowExecutionsResponse, error) {
@@ -181,7 +181,7 @@ func (p *visibilityRateLimitedPersistenceClient) ListClosedWorkflowExecutionsByS
 	return response, err
 }
 
-func (p *visibilityRateLimitedPersistenceClient) GetClosedWorkflowExecution(
+func (p *visibilityClient) GetClosedWorkflowExecution(
 	ctx context.Context,
 	request *persistence.GetClosedWorkflowExecutionRequest,
 ) (*persistence.GetClosedWorkflowExecutionResponse, error) {
@@ -193,7 +193,7 @@ func (p *visibilityRateLimitedPersistenceClient) GetClosedWorkflowExecution(
 	return response, err
 }
 
-func (p *visibilityRateLimitedPersistenceClient) DeleteWorkflowExecution(
+func (p *visibilityClient) DeleteWorkflowExecution(
 	ctx context.Context,
 	request *persistence.VisibilityDeleteWorkflowExecutionRequest,
 ) error {
@@ -203,7 +203,7 @@ func (p *visibilityRateLimitedPersistenceClient) DeleteWorkflowExecution(
 	return p.persistence.DeleteWorkflowExecution(ctx, request)
 }
 
-func (p *visibilityRateLimitedPersistenceClient) DeleteUninitializedWorkflowExecution(
+func (p *visibilityClient) DeleteUninitializedWorkflowExecution(
 	ctx context.Context,
 	request *persistence.VisibilityDeleteWorkflowExecutionRequest,
 ) error {
@@ -213,7 +213,7 @@ func (p *visibilityRateLimitedPersistenceClient) DeleteUninitializedWorkflowExec
 	return p.persistence.DeleteUninitializedWorkflowExecution(ctx, request)
 }
 
-func (p *visibilityRateLimitedPersistenceClient) ListWorkflowExecutions(
+func (p *visibilityClient) ListWorkflowExecutions(
 	ctx context.Context,
 	request *persistence.ListWorkflowExecutionsByQueryRequest,
 ) (*persistence.ListWorkflowExecutionsResponse, error) {
@@ -223,7 +223,7 @@ func (p *visibilityRateLimitedPersistenceClient) ListWorkflowExecutions(
 	return p.persistence.ListWorkflowExecutions(ctx, request)
 }
 
-func (p *visibilityRateLimitedPersistenceClient) ScanWorkflowExecutions(
+func (p *visibilityClient) ScanWorkflowExecutions(
 	ctx context.Context,
 	request *persistence.ListWorkflowExecutionsByQueryRequest,
 ) (*persistence.ListWorkflowExecutionsResponse, error) {
@@ -233,7 +233,7 @@ func (p *visibilityRateLimitedPersistenceClient) ScanWorkflowExecutions(
 	return p.persistence.ScanWorkflowExecutions(ctx, request)
 }
 
-func (p *visibilityRateLimitedPersistenceClient) CountWorkflowExecutions(
+func (p *visibilityClient) CountWorkflowExecutions(
 	ctx context.Context,
 	request *persistence.CountWorkflowExecutionsRequest,
 ) (*persistence.CountWorkflowExecutionsResponse, error) {
@@ -243,6 +243,6 @@ func (p *visibilityRateLimitedPersistenceClient) CountWorkflowExecutions(
 	return p.persistence.CountWorkflowExecutions(ctx, request)
 }
 
-func (p *visibilityRateLimitedPersistenceClient) Close() {
+func (p *visibilityClient) Close() {
 	p.persistence.Close()
 }

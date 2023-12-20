@@ -30,30 +30,30 @@ import (
 	"github.com/uber/cadence/common/quotas"
 )
 
-type metadataRateLimitedPersistenceClient struct {
+type domainClient struct {
 	rateLimiter quotas.Limiter
 	persistence persistence.DomainManager
 	logger      log.Logger
 }
 
-// NewDomainPersistenceRateLimitedClient creates a DomainManager client to manage metadata
-func NewDomainPersistenceRateLimitedClient(
+// NewDomainClient creates a DomainManager client to manage metadata
+func NewDomainClient(
 	persistence persistence.DomainManager,
 	rateLimiter quotas.Limiter,
 	logger log.Logger,
 ) persistence.DomainManager {
-	return &metadataRateLimitedPersistenceClient{
+	return &domainClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
 		logger:      logger,
 	}
 }
 
-func (p *metadataRateLimitedPersistenceClient) GetName() string {
+func (p *domainClient) GetName() string {
 	return p.persistence.GetName()
 }
 
-func (p *metadataRateLimitedPersistenceClient) CreateDomain(
+func (p *domainClient) CreateDomain(
 	ctx context.Context,
 	request *persistence.CreateDomainRequest,
 ) (*persistence.CreateDomainResponse, error) {
@@ -65,7 +65,7 @@ func (p *metadataRateLimitedPersistenceClient) CreateDomain(
 	return response, err
 }
 
-func (p *metadataRateLimitedPersistenceClient) GetDomain(
+func (p *domainClient) GetDomain(
 	ctx context.Context,
 	request *persistence.GetDomainRequest,
 ) (*persistence.GetDomainResponse, error) {
@@ -77,7 +77,7 @@ func (p *metadataRateLimitedPersistenceClient) GetDomain(
 	return response, err
 }
 
-func (p *metadataRateLimitedPersistenceClient) UpdateDomain(
+func (p *domainClient) UpdateDomain(
 	ctx context.Context,
 	request *persistence.UpdateDomainRequest,
 ) error {
@@ -89,7 +89,7 @@ func (p *metadataRateLimitedPersistenceClient) UpdateDomain(
 	return err
 }
 
-func (p *metadataRateLimitedPersistenceClient) DeleteDomain(
+func (p *domainClient) DeleteDomain(
 	ctx context.Context,
 	request *persistence.DeleteDomainRequest,
 ) error {
@@ -101,7 +101,7 @@ func (p *metadataRateLimitedPersistenceClient) DeleteDomain(
 	return err
 }
 
-func (p *metadataRateLimitedPersistenceClient) DeleteDomainByName(
+func (p *domainClient) DeleteDomainByName(
 	ctx context.Context,
 	request *persistence.DeleteDomainByNameRequest,
 ) error {
@@ -113,7 +113,7 @@ func (p *metadataRateLimitedPersistenceClient) DeleteDomainByName(
 	return err
 }
 
-func (p *metadataRateLimitedPersistenceClient) ListDomains(
+func (p *domainClient) ListDomains(
 	ctx context.Context,
 	request *persistence.ListDomainsRequest,
 ) (*persistence.ListDomainsResponse, error) {
@@ -125,7 +125,7 @@ func (p *metadataRateLimitedPersistenceClient) ListDomains(
 	return response, err
 }
 
-func (p *metadataRateLimitedPersistenceClient) GetMetadata(
+func (p *domainClient) GetMetadata(
 	ctx context.Context,
 ) (*persistence.GetMetadataResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
@@ -136,6 +136,6 @@ func (p *metadataRateLimitedPersistenceClient) GetMetadata(
 	return response, err
 }
 
-func (p *metadataRateLimitedPersistenceClient) Close() {
+func (p *domainClient) Close() {
 	p.persistence.Close()
 }

@@ -30,35 +30,35 @@ import (
 	"github.com/uber/cadence/common/quotas"
 )
 
-type historyRateLimitedPersistenceClient struct {
+type historyClient struct {
 	rateLimiter quotas.Limiter
 	persistence persistence.HistoryManager
 	logger      log.Logger
 }
 
-// NewHistoryPersistenceRateLimitedClient creates a HistoryManager client to manage workflow execution history
-func NewHistoryPersistenceRateLimitedClient(
+// NewHistoryClient creates a HistoryManager client to manage workflow execution history
+func NewHistoryClient(
 	persistence persistence.HistoryManager,
 	rateLimiter quotas.Limiter,
 	logger log.Logger,
 ) persistence.HistoryManager {
-	return &historyRateLimitedPersistenceClient{
+	return &historyClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
 		logger:      logger,
 	}
 }
 
-func (p *historyRateLimitedPersistenceClient) GetName() string {
+func (p *historyClient) GetName() string {
 	return p.persistence.GetName()
 }
 
-func (p *historyRateLimitedPersistenceClient) Close() {
+func (p *historyClient) Close() {
 	p.persistence.Close()
 }
 
 // AppendHistoryNodes add(or override) a node to a history branch
-func (p *historyRateLimitedPersistenceClient) AppendHistoryNodes(
+func (p *historyClient) AppendHistoryNodes(
 	ctx context.Context,
 	request *persistence.AppendHistoryNodesRequest,
 ) (*persistence.AppendHistoryNodesResponse, error) {
@@ -69,7 +69,7 @@ func (p *historyRateLimitedPersistenceClient) AppendHistoryNodes(
 }
 
 // ReadHistoryBranch returns history node data for a branch
-func (p *historyRateLimitedPersistenceClient) ReadHistoryBranch(
+func (p *historyClient) ReadHistoryBranch(
 	ctx context.Context,
 	request *persistence.ReadHistoryBranchRequest,
 ) (*persistence.ReadHistoryBranchResponse, error) {
@@ -81,7 +81,7 @@ func (p *historyRateLimitedPersistenceClient) ReadHistoryBranch(
 }
 
 // ReadHistoryBranchByBatch returns history node data for a branch
-func (p *historyRateLimitedPersistenceClient) ReadHistoryBranchByBatch(
+func (p *historyClient) ReadHistoryBranchByBatch(
 	ctx context.Context,
 	request *persistence.ReadHistoryBranchRequest,
 ) (*persistence.ReadHistoryBranchByBatchResponse, error) {
@@ -92,8 +92,8 @@ func (p *historyRateLimitedPersistenceClient) ReadHistoryBranchByBatch(
 	return response, err
 }
 
-// ReadHistoryBranchByBatch returns history node data for a branch
-func (p *historyRateLimitedPersistenceClient) ReadRawHistoryBranch(
+// ReadRawHistoryBranch returns history node data for a branch
+func (p *historyClient) ReadRawHistoryBranch(
 	ctx context.Context,
 	request *persistence.ReadHistoryBranchRequest,
 ) (*persistence.ReadRawHistoryBranchResponse, error) {
@@ -105,7 +105,7 @@ func (p *historyRateLimitedPersistenceClient) ReadRawHistoryBranch(
 }
 
 // ForkHistoryBranch forks a new branch from a old branch
-func (p *historyRateLimitedPersistenceClient) ForkHistoryBranch(
+func (p *historyClient) ForkHistoryBranch(
 	ctx context.Context,
 	request *persistence.ForkHistoryBranchRequest,
 ) (*persistence.ForkHistoryBranchResponse, error) {
@@ -117,7 +117,7 @@ func (p *historyRateLimitedPersistenceClient) ForkHistoryBranch(
 }
 
 // DeleteHistoryBranch removes a branch
-func (p *historyRateLimitedPersistenceClient) DeleteHistoryBranch(
+func (p *historyClient) DeleteHistoryBranch(
 	ctx context.Context,
 	request *persistence.DeleteHistoryBranchRequest,
 ) error {
@@ -129,7 +129,7 @@ func (p *historyRateLimitedPersistenceClient) DeleteHistoryBranch(
 }
 
 // GetHistoryTree returns all branch information of a tree
-func (p *historyRateLimitedPersistenceClient) GetHistoryTree(
+func (p *historyClient) GetHistoryTree(
 	ctx context.Context,
 	request *persistence.GetHistoryTreeRequest,
 ) (*persistence.GetHistoryTreeResponse, error) {
@@ -140,7 +140,7 @@ func (p *historyRateLimitedPersistenceClient) GetHistoryTree(
 	return response, err
 }
 
-func (p *historyRateLimitedPersistenceClient) GetAllHistoryTreeBranches(
+func (p *historyClient) GetAllHistoryTreeBranches(
 	ctx context.Context,
 	request *persistence.GetAllHistoryTreeBranchesRequest,
 ) (*persistence.GetAllHistoryTreeBranchesResponse, error) {

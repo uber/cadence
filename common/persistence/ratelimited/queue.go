@@ -30,26 +30,26 @@ import (
 	"github.com/uber/cadence/common/quotas"
 )
 
-type queueRateLimitedPersistenceClient struct {
+type queueClient struct {
 	rateLimiter quotas.Limiter
 	persistence persistence.QueueManager
 	logger      log.Logger
 }
 
-// NewQueuePersistenceRateLimitedClient creates a client to manage queue
-func NewQueuePersistenceRateLimitedClient(
+// NewQueueClient creates a client to manage queue
+func NewQueueClient(
 	persistence persistence.QueueManager,
 	rateLimiter quotas.Limiter,
 	logger log.Logger,
 ) persistence.QueueManager {
-	return &queueRateLimitedPersistenceClient{
+	return &queueClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
 		logger:      logger,
 	}
 }
 
-func (p *queueRateLimitedPersistenceClient) EnqueueMessage(
+func (p *queueClient) EnqueueMessage(
 	ctx context.Context,
 	message []byte,
 ) error {
@@ -60,7 +60,7 @@ func (p *queueRateLimitedPersistenceClient) EnqueueMessage(
 	return p.persistence.EnqueueMessage(ctx, message)
 }
 
-func (p *queueRateLimitedPersistenceClient) ReadMessages(
+func (p *queueClient) ReadMessages(
 	ctx context.Context,
 	lastMessageID int64,
 	maxCount int,
@@ -72,7 +72,7 @@ func (p *queueRateLimitedPersistenceClient) ReadMessages(
 	return p.persistence.ReadMessages(ctx, lastMessageID, maxCount)
 }
 
-func (p *queueRateLimitedPersistenceClient) UpdateAckLevel(
+func (p *queueClient) UpdateAckLevel(
 	ctx context.Context,
 	messageID int64,
 	clusterName string,
@@ -84,7 +84,7 @@ func (p *queueRateLimitedPersistenceClient) UpdateAckLevel(
 	return p.persistence.UpdateAckLevel(ctx, messageID, clusterName)
 }
 
-func (p *queueRateLimitedPersistenceClient) GetAckLevels(
+func (p *queueClient) GetAckLevels(
 	ctx context.Context,
 ) (map[string]int64, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
@@ -94,7 +94,7 @@ func (p *queueRateLimitedPersistenceClient) GetAckLevels(
 	return p.persistence.GetAckLevels(ctx)
 }
 
-func (p *queueRateLimitedPersistenceClient) DeleteMessagesBefore(
+func (p *queueClient) DeleteMessagesBefore(
 	ctx context.Context,
 	messageID int64,
 ) error {
@@ -105,7 +105,7 @@ func (p *queueRateLimitedPersistenceClient) DeleteMessagesBefore(
 	return p.persistence.DeleteMessagesBefore(ctx, messageID)
 }
 
-func (p *queueRateLimitedPersistenceClient) EnqueueMessageToDLQ(
+func (p *queueClient) EnqueueMessageToDLQ(
 	ctx context.Context,
 	message []byte,
 ) error {
@@ -116,7 +116,7 @@ func (p *queueRateLimitedPersistenceClient) EnqueueMessageToDLQ(
 	return p.persistence.EnqueueMessageToDLQ(ctx, message)
 }
 
-func (p *queueRateLimitedPersistenceClient) ReadMessagesFromDLQ(
+func (p *queueClient) ReadMessagesFromDLQ(
 	ctx context.Context,
 	firstMessageID int64,
 	lastMessageID int64,
@@ -130,7 +130,7 @@ func (p *queueRateLimitedPersistenceClient) ReadMessagesFromDLQ(
 	return p.persistence.ReadMessagesFromDLQ(ctx, firstMessageID, lastMessageID, pageSize, pageToken)
 }
 
-func (p *queueRateLimitedPersistenceClient) RangeDeleteMessagesFromDLQ(
+func (p *queueClient) RangeDeleteMessagesFromDLQ(
 	ctx context.Context,
 	firstMessageID int64,
 	lastMessageID int64,
@@ -142,7 +142,7 @@ func (p *queueRateLimitedPersistenceClient) RangeDeleteMessagesFromDLQ(
 	return p.persistence.RangeDeleteMessagesFromDLQ(ctx, firstMessageID, lastMessageID)
 }
 
-func (p *queueRateLimitedPersistenceClient) UpdateDLQAckLevel(
+func (p *queueClient) UpdateDLQAckLevel(
 	ctx context.Context,
 	messageID int64,
 	clusterName string,
@@ -154,7 +154,7 @@ func (p *queueRateLimitedPersistenceClient) UpdateDLQAckLevel(
 	return p.persistence.UpdateDLQAckLevel(ctx, messageID, clusterName)
 }
 
-func (p *queueRateLimitedPersistenceClient) GetDLQAckLevels(
+func (p *queueClient) GetDLQAckLevels(
 	ctx context.Context,
 ) (map[string]int64, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
@@ -164,7 +164,7 @@ func (p *queueRateLimitedPersistenceClient) GetDLQAckLevels(
 	return p.persistence.GetDLQAckLevels(ctx)
 }
 
-func (p *queueRateLimitedPersistenceClient) GetDLQSize(
+func (p *queueClient) GetDLQSize(
 	ctx context.Context,
 ) (int64, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
@@ -174,7 +174,7 @@ func (p *queueRateLimitedPersistenceClient) GetDLQSize(
 	return p.persistence.GetDLQSize(ctx)
 }
 
-func (p *queueRateLimitedPersistenceClient) DeleteMessageFromDLQ(
+func (p *queueClient) DeleteMessageFromDLQ(
 	ctx context.Context,
 	messageID int64,
 ) error {
@@ -185,6 +185,6 @@ func (p *queueRateLimitedPersistenceClient) DeleteMessageFromDLQ(
 	return p.persistence.DeleteMessageFromDLQ(ctx, messageID)
 }
 
-func (p *queueRateLimitedPersistenceClient) Close() {
+func (p *queueClient) Close() {
 	p.persistence.Close()
 }

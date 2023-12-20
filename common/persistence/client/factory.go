@@ -169,7 +169,7 @@ func (f *factoryImpl) NewTaskManager() (p.TaskManager, error) {
 		result = p.NewTaskPersistenceErrorInjectionClient(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = ratelimited.NewTaskPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
+		result = ratelimited.NewTaskClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
 		result = p.NewTaskPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
@@ -189,7 +189,7 @@ func (f *factoryImpl) NewShardManager() (p.ShardManager, error) {
 		result = p.NewShardPersistenceErrorInjectionClient(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = ratelimited.NewShardPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
+		result = ratelimited.NewShardClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
 		result = p.NewShardPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
@@ -209,7 +209,7 @@ func (f *factoryImpl) NewHistoryManager() (p.HistoryManager, error) {
 		result = p.NewHistoryPersistenceErrorInjectionClient(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = ratelimited.NewHistoryPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
+		result = ratelimited.NewHistoryClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
 		result = p.NewHistoryPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
@@ -231,7 +231,7 @@ func (f *factoryImpl) NewDomainManager() (p.DomainManager, error) {
 		result = p.NewDomainPersistenceErrorInjectionClient(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = ratelimited.NewDomainPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
+		result = ratelimited.NewDomainClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
 		result = p.NewDomainPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
@@ -251,7 +251,7 @@ func (f *factoryImpl) NewExecutionManager(shardID int) (p.ExecutionManager, erro
 		result = p.NewWorkflowExecutionPersistenceErrorInjectionClient(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = ratelimited.NewWorkflowExecutionPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
+		result = ratelimited.NewWorkflowExecutionClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
 		result = p.NewWorkflowExecutionPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config, f.dc.PersistenceSampleLoggingRate, f.dc.EnableShardIDMetrics)
@@ -336,7 +336,7 @@ func newPinotVisibilityManager(
 	// wrap with rate limiter
 	if visibilityConfig.PersistenceMaxQPS != nil && visibilityConfig.PersistenceMaxQPS() != 0 {
 		pinotRateLimiter := quotas.NewDynamicRateLimiter(visibilityConfig.PersistenceMaxQPS.AsFloat64())
-		visibilityFromPinot = ratelimited.NewVisibilityPersistenceRateLimitedClient(visibilityFromPinot, pinotRateLimiter, log)
+		visibilityFromPinot = ratelimited.NewVisibilityClient(visibilityFromPinot, pinotRateLimiter, log)
 	}
 
 	if metricsClient != nil {
@@ -365,7 +365,7 @@ func newESVisibilityManager(
 	// wrap with rate limiter
 	if visibilityConfig.PersistenceMaxQPS != nil && visibilityConfig.PersistenceMaxQPS() != 0 {
 		esRateLimiter := quotas.NewDynamicRateLimiter(visibilityConfig.PersistenceMaxQPS.AsFloat64())
-		visibilityFromES = ratelimited.NewVisibilityPersistenceRateLimitedClient(visibilityFromES, esRateLimiter, log)
+		visibilityFromES = ratelimited.NewVisibilityClient(visibilityFromES, esRateLimiter, log)
 	}
 	if metricsClient != nil {
 		// wrap with metrics
@@ -395,7 +395,7 @@ func (f *factoryImpl) newDBVisibilityManager(
 		result = p.NewVisibilityPersistenceErrorInjectionClient(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = ratelimited.NewVisibilityPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
+		result = ratelimited.NewVisibilityClient(result, ds.ratelimit, f.logger)
 	}
 	if visibilityConfig.EnableDBVisibilitySampling != nil && visibilityConfig.EnableDBVisibilitySampling() {
 		result = p.NewVisibilitySamplingClient(result, &p.SamplingConfig{
@@ -422,7 +422,7 @@ func (f *factoryImpl) NewDomainReplicationQueueManager() (p.QueueManager, error)
 		result = p.NewQueuePersistenceErrorInjectionClient(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = ratelimited.NewQueuePersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
+		result = ratelimited.NewQueueClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
 		result = p.NewQueuePersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
@@ -442,7 +442,7 @@ func (f *factoryImpl) NewConfigStoreManager() (p.ConfigStoreManager, error) {
 		result = p.NewConfigStoreErrorInjectionPersistenceClient(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = ratelimited.NewConfigStorePersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
+		result = ratelimited.NewConfigStoreClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
 		result = p.NewConfigStorePersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)

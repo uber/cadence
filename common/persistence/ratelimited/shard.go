@@ -30,30 +30,30 @@ import (
 	"github.com/uber/cadence/common/quotas"
 )
 
-type shardRateLimitedPersistenceClient struct {
+type shardClient struct {
 	rateLimiter quotas.Limiter
 	persistence persistence.ShardManager
 	logger      log.Logger
 }
 
-// NewShardPersistenceRateLimitedClient creates a client to manage shards
-func NewShardPersistenceRateLimitedClient(
+// NewShardClient creates a client to manage shards
+func NewShardClient(
 	persistence persistence.ShardManager,
 	rateLimiter quotas.Limiter,
 	logger log.Logger,
 ) persistence.ShardManager {
-	return &shardRateLimitedPersistenceClient{
+	return &shardClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
 		logger:      logger,
 	}
 }
 
-func (p *shardRateLimitedPersistenceClient) GetName() string {
+func (p *shardClient) GetName() string {
 	return p.persistence.GetName()
 }
 
-func (p *shardRateLimitedPersistenceClient) CreateShard(
+func (p *shardClient) CreateShard(
 	ctx context.Context,
 	request *persistence.CreateShardRequest,
 ) error {
@@ -65,7 +65,7 @@ func (p *shardRateLimitedPersistenceClient) CreateShard(
 	return err
 }
 
-func (p *shardRateLimitedPersistenceClient) GetShard(
+func (p *shardClient) GetShard(
 	ctx context.Context,
 	request *persistence.GetShardRequest,
 ) (*persistence.GetShardResponse, error) {
@@ -77,7 +77,7 @@ func (p *shardRateLimitedPersistenceClient) GetShard(
 	return response, err
 }
 
-func (p *shardRateLimitedPersistenceClient) UpdateShard(
+func (p *shardClient) UpdateShard(
 	ctx context.Context,
 	request *persistence.UpdateShardRequest,
 ) error {
@@ -89,6 +89,6 @@ func (p *shardRateLimitedPersistenceClient) UpdateShard(
 	return err
 }
 
-func (p *shardRateLimitedPersistenceClient) Close() {
+func (p *shardClient) Close() {
 	p.persistence.Close()
 }

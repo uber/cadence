@@ -30,34 +30,34 @@ import (
 	"github.com/uber/cadence/common/quotas"
 )
 
-type workflowExecutionRateLimitedPersistenceClient struct {
+type workflowExecutionClient struct {
 	rateLimiter quotas.Limiter
 	persistence persistence.ExecutionManager
 	logger      log.Logger
 }
 
-// NewWorkflowExecutionPersistenceRateLimitedClient creates a client to manage executions
-func NewWorkflowExecutionPersistenceRateLimitedClient(
+// NewWorkflowExecutionClient creates a client to manage executions
+func NewWorkflowExecutionClient(
 	persistence persistence.ExecutionManager,
 	rateLimiter quotas.Limiter,
 	logger log.Logger,
 ) persistence.ExecutionManager {
-	return &workflowExecutionRateLimitedPersistenceClient{
+	return &workflowExecutionClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
 		logger:      logger,
 	}
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) GetName() string {
+func (p *workflowExecutionClient) GetName() string {
 	return p.persistence.GetName()
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) GetShardID() int {
+func (p *workflowExecutionClient) GetShardID() int {
 	return p.persistence.GetShardID()
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) CreateWorkflowExecution(
+func (p *workflowExecutionClient) CreateWorkflowExecution(
 	ctx context.Context,
 	request *persistence.CreateWorkflowExecutionRequest,
 ) (*persistence.CreateWorkflowExecutionResponse, error) {
@@ -69,7 +69,7 @@ func (p *workflowExecutionRateLimitedPersistenceClient) CreateWorkflowExecution(
 	return response, err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) GetWorkflowExecution(
+func (p *workflowExecutionClient) GetWorkflowExecution(
 	ctx context.Context,
 	request *persistence.GetWorkflowExecutionRequest,
 ) (*persistence.GetWorkflowExecutionResponse, error) {
@@ -81,7 +81,7 @@ func (p *workflowExecutionRateLimitedPersistenceClient) GetWorkflowExecution(
 	return response, err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) UpdateWorkflowExecution(
+func (p *workflowExecutionClient) UpdateWorkflowExecution(
 	ctx context.Context,
 	request *persistence.UpdateWorkflowExecutionRequest,
 ) (*persistence.UpdateWorkflowExecutionResponse, error) {
@@ -93,7 +93,7 @@ func (p *workflowExecutionRateLimitedPersistenceClient) UpdateWorkflowExecution(
 	return resp, err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) ConflictResolveWorkflowExecution(
+func (p *workflowExecutionClient) ConflictResolveWorkflowExecution(
 	ctx context.Context,
 	request *persistence.ConflictResolveWorkflowExecutionRequest,
 ) (*persistence.ConflictResolveWorkflowExecutionResponse, error) {
@@ -105,7 +105,7 @@ func (p *workflowExecutionRateLimitedPersistenceClient) ConflictResolveWorkflowE
 	return resp, err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) DeleteWorkflowExecution(
+func (p *workflowExecutionClient) DeleteWorkflowExecution(
 	ctx context.Context,
 	request *persistence.DeleteWorkflowExecutionRequest,
 ) error {
@@ -117,7 +117,7 @@ func (p *workflowExecutionRateLimitedPersistenceClient) DeleteWorkflowExecution(
 	return err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) DeleteCurrentWorkflowExecution(
+func (p *workflowExecutionClient) DeleteCurrentWorkflowExecution(
 	ctx context.Context,
 	request *persistence.DeleteCurrentWorkflowExecutionRequest,
 ) error {
@@ -129,7 +129,7 @@ func (p *workflowExecutionRateLimitedPersistenceClient) DeleteCurrentWorkflowExe
 	return err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) GetCurrentExecution(
+func (p *workflowExecutionClient) GetCurrentExecution(
 	ctx context.Context,
 	request *persistence.GetCurrentExecutionRequest,
 ) (*persistence.GetCurrentExecutionResponse, error) {
@@ -141,7 +141,7 @@ func (p *workflowExecutionRateLimitedPersistenceClient) GetCurrentExecution(
 	return response, err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) ListCurrentExecutions(
+func (p *workflowExecutionClient) ListCurrentExecutions(
 	ctx context.Context,
 	request *persistence.ListCurrentExecutionsRequest,
 ) (*persistence.ListCurrentExecutionsResponse, error) {
@@ -153,7 +153,7 @@ func (p *workflowExecutionRateLimitedPersistenceClient) ListCurrentExecutions(
 	return response, err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) IsWorkflowExecutionExists(
+func (p *workflowExecutionClient) IsWorkflowExecutionExists(
 	ctx context.Context,
 	request *persistence.IsWorkflowExecutionExistsRequest,
 ) (*persistence.IsWorkflowExecutionExistsResponse, error) {
@@ -165,7 +165,7 @@ func (p *workflowExecutionRateLimitedPersistenceClient) IsWorkflowExecutionExist
 	return response, err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) ListConcreteExecutions(
+func (p *workflowExecutionClient) ListConcreteExecutions(
 	ctx context.Context,
 	request *persistence.ListConcreteExecutionsRequest,
 ) (*persistence.ListConcreteExecutionsResponse, error) {
@@ -177,7 +177,7 @@ func (p *workflowExecutionRateLimitedPersistenceClient) ListConcreteExecutions(
 	return response, err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) GetTransferTasks(
+func (p *workflowExecutionClient) GetTransferTasks(
 	ctx context.Context,
 	request *persistence.GetTransferTasksRequest,
 ) (*persistence.GetTransferTasksResponse, error) {
@@ -189,7 +189,7 @@ func (p *workflowExecutionRateLimitedPersistenceClient) GetTransferTasks(
 	return response, err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) GetCrossClusterTasks(
+func (p *workflowExecutionClient) GetCrossClusterTasks(
 	ctx context.Context,
 	request *persistence.GetCrossClusterTasksRequest,
 ) (*persistence.GetCrossClusterTasksResponse, error) {
@@ -201,7 +201,7 @@ func (p *workflowExecutionRateLimitedPersistenceClient) GetCrossClusterTasks(
 	return response, err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) GetReplicationTasks(
+func (p *workflowExecutionClient) GetReplicationTasks(
 	ctx context.Context,
 	request *persistence.GetReplicationTasksRequest,
 ) (*persistence.GetReplicationTasksResponse, error) {
@@ -213,7 +213,7 @@ func (p *workflowExecutionRateLimitedPersistenceClient) GetReplicationTasks(
 	return response, err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) CompleteTransferTask(
+func (p *workflowExecutionClient) CompleteTransferTask(
 	ctx context.Context,
 	request *persistence.CompleteTransferTaskRequest,
 ) error {
@@ -225,7 +225,7 @@ func (p *workflowExecutionRateLimitedPersistenceClient) CompleteTransferTask(
 	return err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) RangeCompleteTransferTask(
+func (p *workflowExecutionClient) RangeCompleteTransferTask(
 	ctx context.Context,
 	request *persistence.RangeCompleteTransferTaskRequest,
 ) (*persistence.RangeCompleteTransferTaskResponse, error) {
@@ -236,7 +236,7 @@ func (p *workflowExecutionRateLimitedPersistenceClient) RangeCompleteTransferTas
 	return p.persistence.RangeCompleteTransferTask(ctx, request)
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) CompleteCrossClusterTask(
+func (p *workflowExecutionClient) CompleteCrossClusterTask(
 	ctx context.Context,
 	request *persistence.CompleteCrossClusterTaskRequest,
 ) error {
@@ -248,7 +248,7 @@ func (p *workflowExecutionRateLimitedPersistenceClient) CompleteCrossClusterTask
 	return err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) RangeCompleteCrossClusterTask(
+func (p *workflowExecutionClient) RangeCompleteCrossClusterTask(
 	ctx context.Context,
 	request *persistence.RangeCompleteCrossClusterTaskRequest,
 ) (*persistence.RangeCompleteCrossClusterTaskResponse, error) {
@@ -259,7 +259,7 @@ func (p *workflowExecutionRateLimitedPersistenceClient) RangeCompleteCrossCluste
 	return p.persistence.RangeCompleteCrossClusterTask(ctx, request)
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) CompleteReplicationTask(
+func (p *workflowExecutionClient) CompleteReplicationTask(
 	ctx context.Context,
 	request *persistence.CompleteReplicationTaskRequest,
 ) error {
@@ -271,7 +271,7 @@ func (p *workflowExecutionRateLimitedPersistenceClient) CompleteReplicationTask(
 	return err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) RangeCompleteReplicationTask(
+func (p *workflowExecutionClient) RangeCompleteReplicationTask(
 	ctx context.Context,
 	request *persistence.RangeCompleteReplicationTaskRequest,
 ) (*persistence.RangeCompleteReplicationTaskResponse, error) {
@@ -282,7 +282,7 @@ func (p *workflowExecutionRateLimitedPersistenceClient) RangeCompleteReplication
 	return p.persistence.RangeCompleteReplicationTask(ctx, request)
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) PutReplicationTaskToDLQ(
+func (p *workflowExecutionClient) PutReplicationTaskToDLQ(
 	ctx context.Context,
 	request *persistence.PutReplicationTaskToDLQRequest,
 ) error {
@@ -293,7 +293,7 @@ func (p *workflowExecutionRateLimitedPersistenceClient) PutReplicationTaskToDLQ(
 	return p.persistence.PutReplicationTaskToDLQ(ctx, request)
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) GetReplicationTasksFromDLQ(
+func (p *workflowExecutionClient) GetReplicationTasksFromDLQ(
 	ctx context.Context,
 	request *persistence.GetReplicationTasksFromDLQRequest,
 ) (*persistence.GetReplicationTasksFromDLQResponse, error) {
@@ -304,7 +304,7 @@ func (p *workflowExecutionRateLimitedPersistenceClient) GetReplicationTasksFromD
 	return p.persistence.GetReplicationTasksFromDLQ(ctx, request)
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) GetReplicationDLQSize(
+func (p *workflowExecutionClient) GetReplicationDLQSize(
 	ctx context.Context,
 	request *persistence.GetReplicationDLQSizeRequest,
 ) (*persistence.GetReplicationDLQSizeResponse, error) {
@@ -315,7 +315,7 @@ func (p *workflowExecutionRateLimitedPersistenceClient) GetReplicationDLQSize(
 	return p.persistence.GetReplicationDLQSize(ctx, request)
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) DeleteReplicationTaskFromDLQ(
+func (p *workflowExecutionClient) DeleteReplicationTaskFromDLQ(
 	ctx context.Context,
 	request *persistence.DeleteReplicationTaskFromDLQRequest,
 ) error {
@@ -326,7 +326,7 @@ func (p *workflowExecutionRateLimitedPersistenceClient) DeleteReplicationTaskFro
 	return p.persistence.DeleteReplicationTaskFromDLQ(ctx, request)
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) RangeDeleteReplicationTaskFromDLQ(
+func (p *workflowExecutionClient) RangeDeleteReplicationTaskFromDLQ(
 	ctx context.Context,
 	request *persistence.RangeDeleteReplicationTaskFromDLQRequest,
 ) (*persistence.RangeDeleteReplicationTaskFromDLQResponse, error) {
@@ -337,7 +337,7 @@ func (p *workflowExecutionRateLimitedPersistenceClient) RangeDeleteReplicationTa
 	return p.persistence.RangeDeleteReplicationTaskFromDLQ(ctx, request)
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) CreateFailoverMarkerTasks(
+func (p *workflowExecutionClient) CreateFailoverMarkerTasks(
 	ctx context.Context,
 	request *persistence.CreateFailoverMarkersRequest,
 ) error {
@@ -349,7 +349,7 @@ func (p *workflowExecutionRateLimitedPersistenceClient) CreateFailoverMarkerTask
 	return err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) GetTimerIndexTasks(
+func (p *workflowExecutionClient) GetTimerIndexTasks(
 	ctx context.Context,
 	request *persistence.GetTimerIndexTasksRequest,
 ) (*persistence.GetTimerIndexTasksResponse, error) {
@@ -361,7 +361,7 @@ func (p *workflowExecutionRateLimitedPersistenceClient) GetTimerIndexTasks(
 	return response, err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) CompleteTimerTask(
+func (p *workflowExecutionClient) CompleteTimerTask(
 	ctx context.Context,
 	request *persistence.CompleteTimerTaskRequest,
 ) error {
@@ -373,7 +373,7 @@ func (p *workflowExecutionRateLimitedPersistenceClient) CompleteTimerTask(
 	return err
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) RangeCompleteTimerTask(
+func (p *workflowExecutionClient) RangeCompleteTimerTask(
 	ctx context.Context,
 	request *persistence.RangeCompleteTimerTaskRequest,
 ) (*persistence.RangeCompleteTimerTaskResponse, error) {
@@ -384,6 +384,6 @@ func (p *workflowExecutionRateLimitedPersistenceClient) RangeCompleteTimerTask(
 	return p.persistence.RangeCompleteTimerTask(ctx, request)
 }
 
-func (p *workflowExecutionRateLimitedPersistenceClient) Close() {
+func (p *workflowExecutionClient) Close() {
 	p.persistence.Close()
 }

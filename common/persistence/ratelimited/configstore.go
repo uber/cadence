@@ -30,26 +30,26 @@ import (
 	"github.com/uber/cadence/common/quotas"
 )
 
-type configStoreRateLimitedPersistenceClient struct {
+type configStoreClient struct {
 	rateLimiter quotas.Limiter
 	persistence persistence.ConfigStoreManager
 	logger      log.Logger
 }
 
-// NewConfigStorePersistenceRateLimitedClient creates a client to manage config store
-func NewConfigStorePersistenceRateLimitedClient(
+// NewConfigStoreClient creates a client to manage config store
+func NewConfigStoreClient(
 	persistence persistence.ConfigStoreManager,
 	rateLimiter quotas.Limiter,
 	logger log.Logger,
 ) persistence.ConfigStoreManager {
-	return &configStoreRateLimitedPersistenceClient{
+	return &configStoreClient{
 		persistence: persistence,
 		rateLimiter: rateLimiter,
 		logger:      logger,
 	}
 }
 
-func (p *configStoreRateLimitedPersistenceClient) FetchDynamicConfig(ctx context.Context, configType persistence.ConfigType) (*persistence.FetchDynamicConfigResponse, error) {
+func (p *configStoreClient) FetchDynamicConfig(ctx context.Context, configType persistence.ConfigType) (*persistence.FetchDynamicConfigResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
 	}
@@ -57,13 +57,13 @@ func (p *configStoreRateLimitedPersistenceClient) FetchDynamicConfig(ctx context
 	return p.persistence.FetchDynamicConfig(ctx, configType)
 }
 
-func (p *configStoreRateLimitedPersistenceClient) UpdateDynamicConfig(ctx context.Context, request *persistence.UpdateDynamicConfigRequest, configType persistence.ConfigType) error {
+func (p *configStoreClient) UpdateDynamicConfig(ctx context.Context, request *persistence.UpdateDynamicConfigRequest, configType persistence.ConfigType) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded
 	}
 	return p.persistence.UpdateDynamicConfig(ctx, request, configType)
 }
 
-func (p *configStoreRateLimitedPersistenceClient) Close() {
+func (p *configStoreClient) Close() {
 	p.persistence.Close()
 }
