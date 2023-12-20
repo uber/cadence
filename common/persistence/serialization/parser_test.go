@@ -103,7 +103,6 @@ func TestParserRoundTrip(t *testing.T) {
 			CompletionEventBatchID:             common.Int64Ptr(1),
 			CompletionEvent:                    []byte{1, 2, 3},
 			CompletionEventEncoding:            "",
-			IsCron:                             true,
 			TaskList:                           "test_task_list",
 			WorkflowTypeName:                   "test_workflow_type_name",
 			WorkflowTimeout:                    48 * time.Hour,
