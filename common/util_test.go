@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -388,5 +389,36 @@ func TestIntersectionStringSlice(t *testing.T) {
 		b := []string{"c", "b", "f"}
 		c := IntersectionStringSlice(a, b)
 		assert.ElementsMatch(t, []string{"c", "b"}, c)
+	})
+}
+
+func TestAwaitWaitGroup(t *testing.T) {
+	t.Run("wait group done before timeout", func(t *testing.T) {
+		var wg sync.WaitGroup
+
+		wg.Add(1)
+		wg.Done()
+
+		got := AwaitWaitGroup(&wg, time.Second)
+		require.True(t, got)
+	})
+
+	t.Run("wait group done after timeout", func(t *testing.T) {
+		var (
+			wg    sync.WaitGroup
+			doneC = make(chan struct{})
+		)
+
+		wg.Add(1)
+		go func() {
+			<-doneC
+			wg.Done()
+		}()
+
+		got := AwaitWaitGroup(&wg, time.Microsecond)
+		require.False(t, got)
+
+		doneC <- struct{}{}
+		close(doneC)
 	})
 }
