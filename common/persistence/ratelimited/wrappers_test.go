@@ -1,3 +1,25 @@
+// The MIT License (MIT)
+
+// Copyright (c) 2017-2020 Uber Technologies Inc.
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package ratelimited
 
 import (
@@ -10,8 +32,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/testlogger"
+
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/types"
@@ -23,20 +44,22 @@ var _staticMethods = map[string]bool{
 	"GetShardID": true,
 }
 
+var wrappers = []any{
+	&ratelimitedConfigStoreManager{},
+	&ratelimitedDomainManager{},
+	&ratelimitedHistoryManager{},
+	&ratelimitedQueueManager{},
+	&ratelimitedShardManager{},
+	&ratelimitedTaskManager{},
+	&ratelimitedVisibilityManager{},
+	&ratelimitedExecutionManager{},
+}
+
 func TestClientsRateLimitAlwaysAllow(t *testing.T) {
-	for _, injector := range []any{
-		&configStoreClient{},
-		&domainClient{},
-		&historyClient{},
-		&queueClient{},
-		&shardClient{},
-		&taskClient{},
-		&visibilityClient{},
-		&workflowExecutionClient{},
-	} {
+	for _, injector := range wrappers {
 		name := reflect.TypeOf(injector).String()
 		t.Run(name, func(t *testing.T) {
-			object := builderForPassThrough(t, injector, &limiterAlwaysAllow{}, testlogger.New(t), true, nil)
+			object := builderForPassThrough(t, injector, &limiterAlwaysAllow{}, true, nil)
 			v := reflect.ValueOf(object)
 			infoT := reflect.TypeOf(v.Interface())
 			for i := 0; i < infoT.NumMethod(); i++ {
@@ -64,19 +87,10 @@ func TestClientsRateLimitAlwaysAllow(t *testing.T) {
 }
 
 func TestClientsAlwaysRateLimited(t *testing.T) {
-	for _, injector := range []any{
-		&configStoreClient{},
-		&domainClient{},
-		&historyClient{},
-		&queueClient{},
-		&shardClient{},
-		&taskClient{},
-		&visibilityClient{},
-		&workflowExecutionClient{},
-	} {
+	for _, injector := range wrappers {
 		name := reflect.TypeOf(injector).String()
 		t.Run(name, func(t *testing.T) {
-			object := builderForPassThrough(t, injector, &limiterNeverAllow{}, testlogger.New(t), false, nil)
+			object := builderForPassThrough(t, injector, &limiterNeverAllow{}, false, nil)
 			v := reflect.ValueOf(object)
 			infoT := reflect.TypeOf(v.Interface())
 			for i := 0; i < infoT.NumMethod(); i++ {
@@ -108,20 +122,11 @@ func TestClientsAlwaysRateLimited(t *testing.T) {
 }
 
 func TestInjectorsWithUnderlyingErrors(t *testing.T) {
-	for _, injector := range []any{
-		&configStoreClient{},
-		&domainClient{},
-		&historyClient{},
-		&queueClient{},
-		&shardClient{},
-		&taskClient{},
-		&visibilityClient{},
-		&workflowExecutionClient{},
-	} {
+	for _, injector := range wrappers {
 		name := reflect.TypeOf(injector).String()
 		t.Run(name, func(t *testing.T) {
 			expectedMethodErr := fmt.Errorf("%s: injected error", name)
-			object := builderForPassThrough(t, injector, &limiterAlwaysAllow{}, testlogger.New(t), true, expectedMethodErr)
+			object := builderForPassThrough(t, injector, &limiterAlwaysAllow{}, true, expectedMethodErr)
 			v := reflect.ValueOf(object)
 			infoT := reflect.TypeOf(v.Interface())
 			for i := 0; i < infoT.NumMethod(); i++ {
@@ -149,19 +154,19 @@ func TestInjectorsWithUnderlyingErrors(t *testing.T) {
 	}
 }
 
-func builderForPassThrough(t *testing.T, injector any, limiter quotas.Limiter, logger log.Logger, expectCalls bool, expectedErr error) (object any) {
+func builderForPassThrough(t *testing.T, injector any, limiter quotas.Limiter, expectCalls bool, expectedErr error) (object any) {
 	ctrl := gomock.NewController(t)
 	switch injector.(type) {
-	case *configStoreClient:
+	case *ratelimitedConfigStoreManager:
 		mocked := persistence.NewMockConfigStoreManager(ctrl)
-		object = NewConfigStoreClient(mocked, limiter, logger)
+		object = NewConfigStoreManager(mocked, limiter)
 		if expectCalls {
 			mocked.EXPECT().UpdateDynamicConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(expectedErr)
 			mocked.EXPECT().FetchDynamicConfig(gomock.Any(), gomock.Any()).Return(&persistence.FetchDynamicConfigResponse{}, expectedErr)
 		}
-	case *domainClient:
+	case *ratelimitedDomainManager:
 		mocked := persistence.NewMockDomainManager(ctrl)
-		object = NewDomainClient(mocked, limiter, logger)
+		object = NewDomainManager(mocked, limiter)
 		if expectCalls {
 			mocked.EXPECT().CreateDomain(gomock.Any(), gomock.Any()).Return(&persistence.CreateDomainResponse{}, expectedErr)
 			mocked.EXPECT().GetDomain(gomock.Any(), gomock.Any()).Return(&persistence.GetDomainResponse{}, expectedErr)
@@ -171,9 +176,9 @@ func builderForPassThrough(t *testing.T, injector any, limiter quotas.Limiter, l
 			mocked.EXPECT().ListDomains(gomock.Any(), gomock.Any()).Return(&persistence.ListDomainsResponse{}, expectedErr)
 			mocked.EXPECT().GetMetadata(gomock.Any()).Return(&persistence.GetMetadataResponse{}, expectedErr)
 		}
-	case *historyClient:
+	case *ratelimitedHistoryManager:
 		mocked := persistence.NewMockHistoryManager(ctrl)
-		object = NewHistoryClient(mocked, limiter, logger)
+		object = NewHistoryManager(mocked, limiter)
 		if expectCalls {
 			mocked.EXPECT().AppendHistoryNodes(gomock.Any(), gomock.Any()).Return(&persistence.AppendHistoryNodesResponse{}, expectedErr)
 			mocked.EXPECT().ReadHistoryBranch(gomock.Any(), gomock.Any()).Return(&persistence.ReadHistoryBranchResponse{}, expectedErr)
@@ -184,9 +189,9 @@ func builderForPassThrough(t *testing.T, injector any, limiter quotas.Limiter, l
 			mocked.EXPECT().GetHistoryTree(gomock.Any(), gomock.Any()).Return(&persistence.GetHistoryTreeResponse{}, expectedErr)
 			mocked.EXPECT().GetAllHistoryTreeBranches(gomock.Any(), gomock.Any()).Return(&persistence.GetAllHistoryTreeBranchesResponse{}, expectedErr)
 		}
-	case *queueClient:
+	case *ratelimitedQueueManager:
 		mocked := persistence.NewMockQueueManager(ctrl)
-		object = NewQueueClient(mocked, limiter, logger)
+		object = NewQueueManager(mocked, limiter)
 		if expectCalls {
 			mocked.EXPECT().EnqueueMessage(gomock.Any(), gomock.Any()).Return(expectedErr)
 			mocked.EXPECT().ReadMessages(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*persistence.QueueMessage{}, expectedErr)
@@ -201,17 +206,17 @@ func builderForPassThrough(t *testing.T, injector any, limiter quotas.Limiter, l
 			mocked.EXPECT().ReadMessagesFromDLQ(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*persistence.QueueMessage{}, nil, expectedErr)
 			mocked.EXPECT().UpdateDLQAckLevel(gomock.Any(), gomock.Any(), gomock.Any()).Return(expectedErr)
 		}
-	case *shardClient:
+	case *ratelimitedShardManager:
 		mocked := persistence.NewMockShardManager(ctrl)
-		object = NewShardClient(mocked, limiter, logger)
+		object = NewShardManager(mocked, limiter)
 		if expectCalls {
 			mocked.EXPECT().GetShard(gomock.Any(), gomock.Any()).Return(&persistence.GetShardResponse{}, expectedErr)
 			mocked.EXPECT().UpdateShard(gomock.Any(), gomock.Any()).Return(expectedErr)
 			mocked.EXPECT().CreateShard(gomock.Any(), gomock.Any()).Return(expectedErr)
 		}
-	case *taskClient:
+	case *ratelimitedTaskManager:
 		mocked := persistence.NewMockTaskManager(ctrl)
-		object = NewTaskClient(mocked, limiter, logger)
+		object = NewTaskManager(mocked, limiter)
 		if expectCalls {
 			mocked.EXPECT().CompleteTasksLessThan(gomock.Any(), gomock.Any()).Return(&persistence.CompleteTasksLessThanResponse{}, expectedErr)
 			mocked.EXPECT().CompleteTask(gomock.Any(), gomock.Any()).Return(expectedErr)
@@ -224,9 +229,9 @@ func builderForPassThrough(t *testing.T, injector any, limiter quotas.Limiter, l
 			mocked.EXPECT().ListTaskList(gomock.Any(), gomock.Any()).Return(&persistence.ListTaskListResponse{}, expectedErr)
 			mocked.EXPECT().UpdateTaskList(gomock.Any(), gomock.Any()).Return(&persistence.UpdateTaskListResponse{}, expectedErr)
 		}
-	case *visibilityClient:
+	case *ratelimitedVisibilityManager:
 		mocked := persistence.NewMockVisibilityManager(ctrl)
-		object = NewVisibilityClient(mocked, limiter, logger)
+		object = NewVisibilityManager(mocked, limiter)
 		if expectCalls {
 			mocked.EXPECT().DeleteUninitializedWorkflowExecution(gomock.Any(), gomock.Any()).Return(expectedErr)
 			mocked.EXPECT().DeleteWorkflowExecution(gomock.Any(), gomock.Any()).Return(expectedErr)
@@ -246,9 +251,9 @@ func builderForPassThrough(t *testing.T, injector any, limiter quotas.Limiter, l
 			mocked.EXPECT().UpsertWorkflowExecution(gomock.Any(), gomock.Any()).Return(expectedErr)
 			mocked.EXPECT().ScanWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&persistence.ListWorkflowExecutionsResponse{}, expectedErr)
 		}
-	case *workflowExecutionClient:
+	case *ratelimitedExecutionManager:
 		mocked := persistence.NewMockExecutionManager(ctrl)
-		object = NewWorkflowExecutionClient(mocked, limiter, logger)
+		object = NewExecutionManager(mocked, limiter)
 		if expectCalls {
 			mocked.EXPECT().CompleteTimerTask(gomock.Any(), gomock.Any()).Return(expectedErr)
 			mocked.EXPECT().CompleteTransferTask(gomock.Any(), gomock.Any()).Return(expectedErr)

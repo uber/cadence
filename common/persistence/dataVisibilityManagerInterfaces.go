@@ -19,6 +19,7 @@
 // THE SOFTWARE.
 
 //go:generate mockgen -package $GOPACKAGE -destination dataVisibilityManagerInterfaces_mock.go -self_package github.com/uber/cadence/common/persistence github.com/uber/cadence/common/persistence VisibilityManager
+//go:generate gowrap gen -g -p . -i VisibilityManager -t ./ratelimited/template/ratelimited.tmpl -o ratelimited/visibility.go
 
 package persistence
 

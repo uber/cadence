@@ -169,7 +169,7 @@ func (f *factoryImpl) NewTaskManager() (p.TaskManager, error) {
 		result = p.NewTaskPersistenceErrorInjectionClient(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = ratelimited.NewTaskClient(result, ds.ratelimit, f.logger)
+		result = ratelimited.NewTaskManager(result, ds.ratelimit)
 	}
 	if f.metricsClient != nil {
 		result = p.NewTaskPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
@@ -189,7 +189,7 @@ func (f *factoryImpl) NewShardManager() (p.ShardManager, error) {
 		result = p.NewShardPersistenceErrorInjectionClient(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = ratelimited.NewShardClient(result, ds.ratelimit, f.logger)
+		result = ratelimited.NewShardManager(result, ds.ratelimit)
 	}
 	if f.metricsClient != nil {
 		result = p.NewShardPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
@@ -209,7 +209,7 @@ func (f *factoryImpl) NewHistoryManager() (p.HistoryManager, error) {
 		result = p.NewHistoryPersistenceErrorInjectionClient(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = ratelimited.NewHistoryClient(result, ds.ratelimit, f.logger)
+		result = ratelimited.NewHistoryManager(result, ds.ratelimit)
 	}
 	if f.metricsClient != nil {
 		result = p.NewHistoryPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
@@ -231,7 +231,7 @@ func (f *factoryImpl) NewDomainManager() (p.DomainManager, error) {
 		result = p.NewDomainPersistenceErrorInjectionClient(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = ratelimited.NewDomainClient(result, ds.ratelimit, f.logger)
+		result = ratelimited.NewDomainManager(result, ds.ratelimit)
 	}
 	if f.metricsClient != nil {
 		result = p.NewDomainPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
@@ -251,7 +251,7 @@ func (f *factoryImpl) NewExecutionManager(shardID int) (p.ExecutionManager, erro
 		result = p.NewWorkflowExecutionPersistenceErrorInjectionClient(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = ratelimited.NewWorkflowExecutionClient(result, ds.ratelimit, f.logger)
+		result = ratelimited.NewExecutionManager(result, ds.ratelimit)
 	}
 	if f.metricsClient != nil {
 		result = p.NewWorkflowExecutionPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config, f.dc.PersistenceSampleLoggingRate, f.dc.EnableShardIDMetrics)
@@ -336,7 +336,7 @@ func newPinotVisibilityManager(
 	// wrap with rate limiter
 	if visibilityConfig.PersistenceMaxQPS != nil && visibilityConfig.PersistenceMaxQPS() != 0 {
 		pinotRateLimiter := quotas.NewDynamicRateLimiter(visibilityConfig.PersistenceMaxQPS.AsFloat64())
-		visibilityFromPinot = ratelimited.NewVisibilityClient(visibilityFromPinot, pinotRateLimiter, log)
+		visibilityFromPinot = ratelimited.NewVisibilityManager(visibilityFromPinot, pinotRateLimiter)
 	}
 
 	if metricsClient != nil {
@@ -365,7 +365,7 @@ func newESVisibilityManager(
 	// wrap with rate limiter
 	if visibilityConfig.PersistenceMaxQPS != nil && visibilityConfig.PersistenceMaxQPS() != 0 {
 		esRateLimiter := quotas.NewDynamicRateLimiter(visibilityConfig.PersistenceMaxQPS.AsFloat64())
-		visibilityFromES = ratelimited.NewVisibilityClient(visibilityFromES, esRateLimiter, log)
+		visibilityFromES = ratelimited.NewVisibilityManager(visibilityFromES, esRateLimiter)
 	}
 	if metricsClient != nil {
 		// wrap with metrics
@@ -395,7 +395,7 @@ func (f *factoryImpl) newDBVisibilityManager(
 		result = p.NewVisibilityPersistenceErrorInjectionClient(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = ratelimited.NewVisibilityClient(result, ds.ratelimit, f.logger)
+		result = ratelimited.NewVisibilityManager(result, ds.ratelimit)
 	}
 	if visibilityConfig.EnableDBVisibilitySampling != nil && visibilityConfig.EnableDBVisibilitySampling() {
 		result = p.NewVisibilitySamplingClient(result, &p.SamplingConfig{
@@ -422,7 +422,7 @@ func (f *factoryImpl) NewDomainReplicationQueueManager() (p.QueueManager, error)
 		result = p.NewQueuePersistenceErrorInjectionClient(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = ratelimited.NewQueueClient(result, ds.ratelimit, f.logger)
+		result = ratelimited.NewQueueManager(result, ds.ratelimit)
 	}
 	if f.metricsClient != nil {
 		result = p.NewQueuePersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
@@ -442,7 +442,7 @@ func (f *factoryImpl) NewConfigStoreManager() (p.ConfigStoreManager, error) {
 		result = p.NewConfigStoreErrorInjectionPersistenceClient(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = ratelimited.NewConfigStoreClient(result, ds.ratelimit, f.logger)
+		result = ratelimited.NewConfigStoreManager(result, ds.ratelimit)
 	}
 	if f.metricsClient != nil {
 		result = p.NewConfigStorePersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)

@@ -20,6 +20,14 @@
 // THE SOFTWARE.
 
 //go:generate mockgen -package $GOPACKAGE -destination dataManagerInterfaces_mock.go -self_package github.com/uber/cadence/common/persistence github.com/uber/cadence/common/persistence Task,ShardManager,ExecutionManager,ExecutionManagerFactory,TaskManager,HistoryManager,DomainManager,QueueManager,ConfigStoreManager
+//go:generate gowrap gen -g -p . -i ConfigStoreManager -t ./ratelimited/template/ratelimited.tmpl -o ratelimited/configstore.go
+//go:generate gowrap gen -g -p . -i DomainManager -t ./ratelimited/template/ratelimited.tmpl -o ratelimited/domain.go
+//go:generate gowrap gen -g -p . -i HistoryManager -t ./ratelimited/template/ratelimited.tmpl -o ratelimited/history.go
+//go:generate gowrap gen -g -p . -i ExecutionManager -t ./ratelimited/template/ratelimited.tmpl -o ratelimited/execution.go
+//go:generate gowrap gen -g -p . -i QueueManager -t ./ratelimited/template/ratelimited.tmpl -o ratelimited/queue.go
+//go:generate gowrap gen -g -p . -i TaskManager -t ./ratelimited/template/ratelimited.tmpl -o ratelimited/task.go
+//go:generate gowrap gen -g -p . -i ShardManager -t ./ratelimited/template/ratelimited.tmpl -o ratelimited/shard.go
+
 package persistence
 
 import (
