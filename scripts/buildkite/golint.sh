@@ -4,7 +4,8 @@ set -ex
 
 make go-generate && make fmt && make lint && make copyright
 
-if [ -n "$(git status --porcelain)" ]; then
+# intentionally capture stderr, so status-errors are also PR-failing
+if [ -n "$(git status --porcelain >&1)" ]; then
   echo "There are changes after make go-generate && make fmt && make lint && make copyright"
   echo "Please rerun the command and commit the changes"
   git status --porcelain
