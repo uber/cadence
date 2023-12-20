@@ -24,6 +24,7 @@ package fetcher
 
 import (
 	"context"
+	"reflect"
 	"testing"
 	"time"
 
@@ -35,15 +36,19 @@ import (
 )
 
 func TestGetUserTimers(t *testing.T) {
+	fixedTimestamp, err := time.Parse(time.RFC3339, "2023-12-12T22:08:41Z")
+	if err != nil {
+		t.Fatalf("Failed to parse timestamp: %v", err)
+	}
+
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	mockRetryer := persistence.NewMockRetryer(ctrl)
 	ctx := context.Background()
 	pageSize := 10
-	minTimestamp := time.Now().Add(-time.Hour)
-	maxTimestamp := time.Now()
-
+	minTimestamp := fixedTimestamp.Add(-time.Hour)
+	maxTimestamp := fixedTimestamp
+	nonNilToken := []byte("non-nil-token")
 	testCases := []struct {
 		name          string
 		setupMock     func() []*persistence.TimerTaskInfo
@@ -58,7 +63,7 @@ func TestGetUserTimers(t *testing.T) {
 						DomainID:            "testDomainID",
 						WorkflowID:          "testWorkflowID",
 						RunID:               "testRunID",
-						VisibilityTimestamp: time.Now(),
+						VisibilityTimestamp: fixedTimestamp,
 						TaskType:            persistence.TaskTypeUserTimer,
 					},
 				}
@@ -87,31 +92,86 @@ func TestGetUserTimers(t *testing.T) {
 						WorkflowID:          "testWorkflowID",
 						RunID:               "testRunID",
 						TaskType:            persistence.TaskTypeUserTimer,
-						VisibilityTimestamp: time.Now(), // This will be set to the current time in the test
+						VisibilityTimestamp: fixedTimestamp,
 					},
 				},
 			},
 			expectedError: false,
 		},
+		{
+			name: "Non-nil Pagination Token Passed",
+			setupMock: func() []*persistence.TimerTaskInfo {
+				nonNilToken := []byte("non-nil-token")
+
+				mockRetryer.EXPECT().
+					GetTimerIndexTasks(ctx, &persistence.GetTimerIndexTasksRequest{
+						MinTimestamp:  minTimestamp,
+						MaxTimestamp:  maxTimestamp,
+						BatchSize:     pageSize,
+						NextPageToken: nonNilToken,
+					}).
+					Return(&persistence.GetTimerIndexTasksResponse{
+						Timers:        nil, // Adjust based on expected behavior
+						NextPageToken: nonNilToken,
+					}, nil)
+
+				return nil // No timers expected in response
+			},
+			expectedPage: pagination.Page{
+				Entities:     nil,
+				CurrentToken: nonNilToken,
+				NextToken:    nonNilToken,
+			},
+			expectedError: false,
+		},
+		{
+			name: "Invalid Timer Causes Error",
+			setupMock: func() []*persistence.TimerTaskInfo {
+				// Example setup of an invalid timer
+				invalidTimer := &persistence.TimerTaskInfo{
+					DomainID:            "",               // Invalid as it's empty
+					WorkflowID:          "testWorkflowID", // Valid
+					RunID:               "testRunID",      // Valid
+					VisibilityTimestamp: time.Time{},      // Invalid as it's the zero value
+					TaskType:            persistence.TaskTypeUserTimer,
+				}
+
+				mockRetryer.EXPECT().
+					GetTimerIndexTasks(ctx, &persistence.GetTimerIndexTasksRequest{
+						MinTimestamp:  minTimestamp,
+						MaxTimestamp:  maxTimestamp,
+						BatchSize:     pageSize,
+						NextPageToken: nil,
+					}).
+					Return(&persistence.GetTimerIndexTasksResponse{
+						Timers:        []*persistence.TimerTaskInfo{invalidTimer},
+						NextPageToken: nil,
+					}, nil)
+
+				mockRetryer.EXPECT().GetShardID().Return(123)
+
+				return []*persistence.TimerTaskInfo{invalidTimer}
+			},
+			expectedPage:  pagination.Page{}, // No page is expected due to error
+			expectedError: true,              // An error is expected due to the invalid timer
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			timerTasks := tc.setupMock()
+			tc.setupMock()
+
+			var token pagination.PageToken
+			if tc.name == "Non-nil Pagination Token Passed" {
+				token = nonNilToken
+			}
 			fetchFn := getUserTimers(mockRetryer, minTimestamp, maxTimestamp, pageSize)
-			page, err := fetchFn(ctx, nil)
+			page, err := fetchFn(ctx, token)
 
-			// Update the expected timestamp to match the mock data
-			if len(timerTasks) > 0 {
-				tc.expectedPage.Entities[0].(*entity.Timer).VisibilityTimestamp = timerTasks[0].VisibilityTimestamp
-			}
-
-			if tc.expectedError {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.expectedPage, page)
-			}
+			require.Equal(t, tc.expectedError, err != nil)
+			require.True(t, reflect.DeepEqual(tc.expectedPage.CurrentToken, page.CurrentToken), "CurrentToken should match")
+			require.True(t, reflect.DeepEqual(tc.expectedPage.NextToken, page.NextToken), "NextToken should match")
+			require.Equal(t, tc.expectedPage.Entities, page.Entities, "Entities should match")
 		})
 	}
 }
