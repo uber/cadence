@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package error_injectors
+package errorinjectors
 
 import (
 	"context"
@@ -30,46 +30,45 @@ import (
 	"github.com/uber/cadence/common/persistence"
 )
 
-type historyClient struct {
-	persistence persistence.HistoryManager
+type taskClient struct {
+	persistence persistence.TaskManager
 	errorRate   float64
 	logger      log.Logger
 }
 
-// NewHistoryClient creates an error injection HistoryManager client to manage workflow execution history
-func NewHistoryClient(
-	persistence persistence.HistoryManager,
+// NewTaskClient creates an error injection client to manage tasks
+func NewTaskClient(
+	persistence persistence.TaskManager,
 	errorRate float64,
 	logger log.Logger,
-) persistence.HistoryManager {
-	return &historyClient{
+) persistence.TaskManager {
+	return &taskClient{
 		persistence: persistence,
 		errorRate:   errorRate,
 		logger:      logger,
 	}
 }
 
-func (p *historyClient) GetName() string {
+func (p *taskClient) GetName() string {
 	return p.persistence.GetName()
 }
 
-// AppendHistoryNodes add(or override) a node to a history branch
-func (p *historyClient) AppendHistoryNodes(
+func (p *taskClient) CreateTasks(
 	ctx context.Context,
-	request *persistence.AppendHistoryNodesRequest,
-) (*persistence.AppendHistoryNodesResponse, error) {
+	request *persistence.CreateTasksRequest,
+) (*persistence.CreateTasksResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *persistence.AppendHistoryNodesResponse
+	var response *persistence.CreateTasksResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		response, persistenceErr = p.persistence.AppendHistoryNodes(ctx, request)
+		response, persistenceErr = p.persistence.CreateTasks(ctx, request)
 	}
 
 	if fakeErr != nil {
 		p.logger.Error(msgInjectedFakeErr,
-			tag.StoreOperationAppendHistoryNodes,
+			tag.StoreOperationCreateTasks,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
 			tag.StoreError(persistenceErr),
@@ -79,23 +78,22 @@ func (p *historyClient) AppendHistoryNodes(
 	return response, persistenceErr
 }
 
-// ReadHistoryBranch returns history node data for a branch
-func (p *historyClient) ReadHistoryBranch(
+func (p *taskClient) GetTasks(
 	ctx context.Context,
-	request *persistence.ReadHistoryBranchRequest,
-) (*persistence.ReadHistoryBranchResponse, error) {
+	request *persistence.GetTasksRequest,
+) (*persistence.GetTasksResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *persistence.ReadHistoryBranchResponse
+	var response *persistence.GetTasksResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		response, persistenceErr = p.persistence.ReadHistoryBranch(ctx, request)
+		response, persistenceErr = p.persistence.GetTasks(ctx, request)
 	}
 
 	if fakeErr != nil {
 		p.logger.Error(msgInjectedFakeErr,
-			tag.StoreOperationReadHistoryBranch,
+			tag.StoreOperationGetTasks,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
 			tag.StoreError(persistenceErr),
@@ -105,100 +103,21 @@ func (p *historyClient) ReadHistoryBranch(
 	return response, persistenceErr
 }
 
-// ReadHistoryBranchByBatch returns history node data for a branch
-func (p *historyClient) ReadHistoryBranchByBatch(
+func (p *taskClient) CompleteTask(
 	ctx context.Context,
-	request *persistence.ReadHistoryBranchRequest,
-) (*persistence.ReadHistoryBranchByBatchResponse, error) {
-	fakeErr := generateFakeError(p.errorRate)
-
-	var response *persistence.ReadHistoryBranchByBatchResponse
-	var persistenceErr error
-	var forwardCall bool
-	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		response, persistenceErr = p.persistence.ReadHistoryBranchByBatch(ctx, request)
-	}
-
-	if fakeErr != nil {
-		p.logger.Error(msgInjectedFakeErr,
-			tag.StoreOperationReadHistoryBranchByBatch,
-			tag.Error(fakeErr),
-			tag.Bool(forwardCall),
-			tag.StoreError(persistenceErr),
-		)
-		return nil, fakeErr
-	}
-	return response, persistenceErr
-}
-
-// ReadRawHistoryBranch returns history node data for a branch
-func (p *historyClient) ReadRawHistoryBranch(
-	ctx context.Context,
-	request *persistence.ReadHistoryBranchRequest,
-) (*persistence.ReadRawHistoryBranchResponse, error) {
-	fakeErr := generateFakeError(p.errorRate)
-
-	var response *persistence.ReadRawHistoryBranchResponse
-	var persistenceErr error
-	var forwardCall bool
-	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		response, persistenceErr = p.persistence.ReadRawHistoryBranch(ctx, request)
-	}
-
-	if fakeErr != nil {
-		p.logger.Error(msgInjectedFakeErr,
-			tag.StoreOperationReadRawHistoryBranch,
-			tag.Error(fakeErr),
-			tag.Bool(forwardCall),
-			tag.StoreError(persistenceErr),
-		)
-		return nil, fakeErr
-	}
-	return response, persistenceErr
-}
-
-// ForkHistoryBranch forks a new branch from a old branch
-func (p *historyClient) ForkHistoryBranch(
-	ctx context.Context,
-	request *persistence.ForkHistoryBranchRequest,
-) (*persistence.ForkHistoryBranchResponse, error) {
-	fakeErr := generateFakeError(p.errorRate)
-
-	var response *persistence.ForkHistoryBranchResponse
-	var persistenceErr error
-	var forwardCall bool
-	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		response, persistenceErr = p.persistence.ForkHistoryBranch(ctx, request)
-	}
-
-	if fakeErr != nil {
-		p.logger.Error(msgInjectedFakeErr,
-			tag.StoreOperationForkHistoryBranch,
-			tag.Error(fakeErr),
-			tag.Bool(forwardCall),
-			tag.StoreError(persistenceErr),
-		)
-		return nil, fakeErr
-	}
-	return response, persistenceErr
-}
-
-// DeleteHistoryBranch removes a branch
-func (p *historyClient) DeleteHistoryBranch(
-	ctx context.Context,
-	request *persistence.DeleteHistoryBranchRequest,
+	request *persistence.CompleteTaskRequest,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		persistenceErr = p.persistence.DeleteHistoryBranch(ctx, request)
+		persistenceErr = p.persistence.CompleteTask(ctx, request)
 	}
 
 	if fakeErr != nil {
 		p.logger.Error(msgInjectedFakeErr,
-			tag.StoreOperationDeleteHistoryBranch,
+			tag.StoreOperationCompleteTask,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
 			tag.StoreError(persistenceErr),
@@ -208,23 +127,22 @@ func (p *historyClient) DeleteHistoryBranch(
 	return persistenceErr
 }
 
-// GetHistoryTree returns all branch information of a tree
-func (p *historyClient) GetHistoryTree(
+func (p *taskClient) CompleteTasksLessThan(
 	ctx context.Context,
-	request *persistence.GetHistoryTreeRequest,
-) (*persistence.GetHistoryTreeResponse, error) {
+	request *persistence.CompleteTasksLessThanRequest,
+) (*persistence.CompleteTasksLessThanResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *persistence.GetHistoryTreeResponse
+	var response *persistence.CompleteTasksLessThanResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		response, persistenceErr = p.persistence.GetHistoryTree(ctx, request)
+		response, persistenceErr = p.persistence.CompleteTasksLessThan(ctx, request)
 	}
 
 	if fakeErr != nil {
 		p.logger.Error(msgInjectedFakeErr,
-			tag.StoreOperationGetHistoryTree,
+			tag.StoreOperationCompleteTasksLessThan,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
 			tag.StoreError(persistenceErr),
@@ -234,22 +152,22 @@ func (p *historyClient) GetHistoryTree(
 	return response, persistenceErr
 }
 
-func (p *historyClient) GetAllHistoryTreeBranches(
+func (p *taskClient) GetOrphanTasks(
 	ctx context.Context,
-	request *persistence.GetAllHistoryTreeBranchesRequest,
-) (*persistence.GetAllHistoryTreeBranchesResponse, error) {
+	request *persistence.GetOrphanTasksRequest,
+) (*persistence.GetOrphanTasksResponse, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *persistence.GetAllHistoryTreeBranchesResponse
+	var response *persistence.GetOrphanTasksResponse
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		response, persistenceErr = p.persistence.GetAllHistoryTreeBranches(ctx, request)
+		response, persistenceErr = p.persistence.GetOrphanTasks(ctx, request)
 	}
 
 	if fakeErr != nil {
 		p.logger.Error(msgInjectedFakeErr,
-			tag.StoreOperationGetAllHistoryTreeBranches,
+			tag.StoreOperationCompleteTask,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
 			tag.StoreError(persistenceErr),
@@ -259,6 +177,130 @@ func (p *historyClient) GetAllHistoryTreeBranches(
 	return response, persistenceErr
 }
 
-func (p *historyClient) Close() {
+func (p *taskClient) LeaseTaskList(
+	ctx context.Context,
+	request *persistence.LeaseTaskListRequest,
+) (*persistence.LeaseTaskListResponse, error) {
+	fakeErr := generateFakeError(p.errorRate)
+
+	var response *persistence.LeaseTaskListResponse
+	var persistenceErr error
+	var forwardCall bool
+	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
+		response, persistenceErr = p.persistence.LeaseTaskList(ctx, request)
+	}
+
+	if fakeErr != nil {
+		p.logger.Error(msgInjectedFakeErr,
+			tag.StoreOperationLeaseTaskList,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(persistenceErr),
+		)
+		return nil, fakeErr
+	}
+	return response, persistenceErr
+}
+
+func (p *taskClient) UpdateTaskList(
+	ctx context.Context,
+	request *persistence.UpdateTaskListRequest,
+) (*persistence.UpdateTaskListResponse, error) {
+	fakeErr := generateFakeError(p.errorRate)
+
+	var response *persistence.UpdateTaskListResponse
+	var persistenceErr error
+	var forwardCall bool
+	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
+		response, persistenceErr = p.persistence.UpdateTaskList(ctx, request)
+	}
+
+	if fakeErr != nil {
+		p.logger.Error(msgInjectedFakeErr,
+			tag.StoreOperationUpdateTaskList,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(persistenceErr),
+		)
+		return nil, fakeErr
+	}
+	return response, persistenceErr
+}
+
+func (p *taskClient) ListTaskList(
+	ctx context.Context,
+	request *persistence.ListTaskListRequest,
+) (*persistence.ListTaskListResponse, error) {
+	fakeErr := generateFakeError(p.errorRate)
+
+	var response *persistence.ListTaskListResponse
+	var persistenceErr error
+	var forwardCall bool
+	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
+		response, persistenceErr = p.persistence.ListTaskList(ctx, request)
+	}
+
+	if fakeErr != nil {
+		p.logger.Error(msgInjectedFakeErr,
+			tag.StoreOperationListTaskList,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(persistenceErr),
+		)
+		return nil, fakeErr
+	}
+	return response, persistenceErr
+}
+
+func (p *taskClient) DeleteTaskList(
+	ctx context.Context,
+	request *persistence.DeleteTaskListRequest,
+) error {
+	fakeErr := generateFakeError(p.errorRate)
+
+	var persistenceErr error
+	var forwardCall bool
+	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
+		persistenceErr = p.persistence.DeleteTaskList(ctx, request)
+	}
+
+	if fakeErr != nil {
+		p.logger.Error(msgInjectedFakeErr,
+			tag.StoreOperationDeleteTaskList,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(persistenceErr),
+		)
+		return fakeErr
+	}
+	return persistenceErr
+}
+
+func (p *taskClient) GetTaskListSize(
+	ctx context.Context,
+	request *persistence.GetTaskListSizeRequest,
+) (*persistence.GetTaskListSizeResponse, error) {
+	fakeErr := generateFakeError(p.errorRate)
+
+	var resp *persistence.GetTaskListSizeResponse
+	var persistenceErr error
+	var forwardCall bool
+	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
+		resp, persistenceErr = p.persistence.GetTaskListSize(ctx, request)
+	}
+
+	if fakeErr != nil {
+		p.logger.Error(msgInjectedFakeErr,
+			tag.StoreOperationGetTaskListSize,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(persistenceErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, persistenceErr
+}
+
+func (p *taskClient) Close() {
 	p.persistence.Close()
 }

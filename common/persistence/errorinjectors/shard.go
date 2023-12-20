@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package error_injectors
+package errorinjectors
 
 import (
 	"context"
@@ -30,68 +30,87 @@ import (
 	"github.com/uber/cadence/common/persistence"
 )
 
-type configStoreClient struct {
-	persistence persistence.ConfigStoreManager
+type shardClient struct {
+	persistence persistence.ShardManager
 	errorRate   float64
 	logger      log.Logger
 }
 
-// NewConfigStoreClient creates an error injection client to manage config store
-func NewConfigStoreClient(
-	persistence persistence.ConfigStoreManager,
+// NewShardClient creates an error injection client to manage shards.
+func NewShardClient(
+	persistence persistence.ShardManager,
 	errorRate float64,
 	logger log.Logger,
-) persistence.ConfigStoreManager {
-	return &configStoreClient{
+) persistence.ShardManager {
+	return &shardClient{
 		persistence: persistence,
 		errorRate:   errorRate,
 		logger:      logger,
 	}
 }
 
-func (p *configStoreClient) FetchDynamicConfig(ctx context.Context, cfgType persistence.ConfigType) (*persistence.FetchDynamicConfigResponse, error) {
-	fakeErr := generateFakeError(p.errorRate)
-
-	var response *persistence.FetchDynamicConfigResponse
-	var persistenceErr error
-	var forwardCall bool
-	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		response, persistenceErr = p.persistence.FetchDynamicConfig(ctx, cfgType)
-	}
-
-	if fakeErr != nil {
-		p.logger.Error(msgInjectedFakeErr,
-			tag.StoreOperationFetchDynamicConfig,
-			tag.Error(fakeErr),
-			tag.Bool(forwardCall),
-			tag.StoreError(persistenceErr),
-		)
-		return nil, fakeErr
-	}
-	return response, persistenceErr
+func (p *shardClient) GetName() string {
+	return p.persistence.GetName()
 }
 
-func (p *configStoreClient) UpdateDynamicConfig(ctx context.Context, request *persistence.UpdateDynamicConfigRequest, cfgType persistence.ConfigType) error {
+func (p *shardClient) CreateShard(
+	ctx context.Context,
+	request *persistence.CreateShardRequest,
+) error {
 	fakeErr := generateFakeError(p.errorRate)
 
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		persistenceErr = p.persistence.UpdateDynamicConfig(ctx, request, cfgType)
+		persistenceErr = p.persistence.CreateShard(ctx, request)
 	}
 
 	if fakeErr != nil {
-		p.logger.Error(msgInjectedFakeErr,
-			tag.StoreOperationUpdateDynamicConfig,
-			tag.Error(fakeErr),
-			tag.Bool(forwardCall),
-			tag.StoreError(persistenceErr),
-		)
+		p.logger.Error(msgInjectedFakeErr, tag.StoreOperationCreateShard, tag.Error(fakeErr), tag.Bool(forwardCall), tag.StoreError(persistenceErr))
 		return fakeErr
 	}
 	return persistenceErr
 }
 
-func (p *configStoreClient) Close() {
+func (p *shardClient) GetShard(
+	ctx context.Context,
+	request *persistence.GetShardRequest,
+) (*persistence.GetShardResponse, error) {
+	fakeErr := generateFakeError(p.errorRate)
+
+	var response *persistence.GetShardResponse
+	var persistenceErr error
+	var forwardCall bool
+	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
+		response, persistenceErr = p.persistence.GetShard(ctx, request)
+	}
+
+	if fakeErr != nil {
+		p.logger.Error(msgInjectedFakeErr, tag.StoreOperationGetShard, tag.Error(fakeErr), tag.Bool(forwardCall), tag.StoreError(persistenceErr))
+		return nil, fakeErr
+	}
+	return response, persistenceErr
+}
+
+func (p *shardClient) UpdateShard(
+	ctx context.Context,
+	request *persistence.UpdateShardRequest,
+) error {
+	fakeErr := generateFakeError(p.errorRate)
+
+	var persistenceErr error
+	var forwardCall bool
+	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
+		persistenceErr = p.persistence.UpdateShard(ctx, request)
+	}
+
+	if fakeErr != nil {
+		p.logger.Error(msgInjectedFakeErr, tag.StoreOperationUpdateShard, tag.Error(fakeErr), tag.Bool(forwardCall), tag.StoreError(persistenceErr))
+		return fakeErr
+	}
+	return persistenceErr
+}
+
+func (p *shardClient) Close() {
 	p.persistence.Close()
 }

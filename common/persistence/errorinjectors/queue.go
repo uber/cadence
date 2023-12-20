@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package error_injectors
+package errorinjectors
 
 import (
 	"context"
@@ -30,94 +30,40 @@ import (
 	"github.com/uber/cadence/common/persistence"
 )
 
-type taskClient struct {
-	persistence persistence.TaskManager
+type queueClient struct {
+	persistence persistence.QueueManager
 	errorRate   float64
 	logger      log.Logger
 }
 
-// NewTaskClient creates an error injection client to manage tasks
-func NewTaskClient(
-	persistence persistence.TaskManager,
+// NewQueueClient creates an error injection client to manage queue
+func NewQueueClient(
+	persistence persistence.QueueManager,
 	errorRate float64,
 	logger log.Logger,
-) persistence.TaskManager {
-	return &taskClient{
+) persistence.QueueManager {
+	return &queueClient{
 		persistence: persistence,
 		errorRate:   errorRate,
 		logger:      logger,
 	}
 }
 
-func (p *taskClient) GetName() string {
-	return p.persistence.GetName()
-}
-
-func (p *taskClient) CreateTasks(
+func (p *queueClient) EnqueueMessage(
 	ctx context.Context,
-	request *persistence.CreateTasksRequest,
-) (*persistence.CreateTasksResponse, error) {
-	fakeErr := generateFakeError(p.errorRate)
-
-	var response *persistence.CreateTasksResponse
-	var persistenceErr error
-	var forwardCall bool
-	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		response, persistenceErr = p.persistence.CreateTasks(ctx, request)
-	}
-
-	if fakeErr != nil {
-		p.logger.Error(msgInjectedFakeErr,
-			tag.StoreOperationCreateTasks,
-			tag.Error(fakeErr),
-			tag.Bool(forwardCall),
-			tag.StoreError(persistenceErr),
-		)
-		return nil, fakeErr
-	}
-	return response, persistenceErr
-}
-
-func (p *taskClient) GetTasks(
-	ctx context.Context,
-	request *persistence.GetTasksRequest,
-) (*persistence.GetTasksResponse, error) {
-	fakeErr := generateFakeError(p.errorRate)
-
-	var response *persistence.GetTasksResponse
-	var persistenceErr error
-	var forwardCall bool
-	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		response, persistenceErr = p.persistence.GetTasks(ctx, request)
-	}
-
-	if fakeErr != nil {
-		p.logger.Error(msgInjectedFakeErr,
-			tag.StoreOperationGetTasks,
-			tag.Error(fakeErr),
-			tag.Bool(forwardCall),
-			tag.StoreError(persistenceErr),
-		)
-		return nil, fakeErr
-	}
-	return response, persistenceErr
-}
-
-func (p *taskClient) CompleteTask(
-	ctx context.Context,
-	request *persistence.CompleteTaskRequest,
+	message []byte,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		persistenceErr = p.persistence.CompleteTask(ctx, request)
+		persistenceErr = p.persistence.EnqueueMessage(ctx, message)
 	}
 
 	if fakeErr != nil {
 		p.logger.Error(msgInjectedFakeErr,
-			tag.StoreOperationCompleteTask,
+			tag.StoreOperationEnqueueMessage,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
 			tag.StoreError(persistenceErr),
@@ -127,22 +73,23 @@ func (p *taskClient) CompleteTask(
 	return persistenceErr
 }
 
-func (p *taskClient) CompleteTasksLessThan(
+func (p *queueClient) ReadMessages(
 	ctx context.Context,
-	request *persistence.CompleteTasksLessThanRequest,
-) (*persistence.CompleteTasksLessThanResponse, error) {
+	lastMessageID int64,
+	maxCount int,
+) ([]*persistence.QueueMessage, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response *persistence.CompleteTasksLessThanResponse
+	var response []*persistence.QueueMessage
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		response, persistenceErr = p.persistence.CompleteTasksLessThan(ctx, request)
+		response, persistenceErr = p.persistence.ReadMessages(ctx, lastMessageID, maxCount)
 	}
 
 	if fakeErr != nil {
 		p.logger.Error(msgInjectedFakeErr,
-			tag.StoreOperationCompleteTasksLessThan,
+			tag.StoreOperationReadMessages,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
 			tag.StoreError(persistenceErr),
@@ -152,121 +99,22 @@ func (p *taskClient) CompleteTasksLessThan(
 	return response, persistenceErr
 }
 
-func (p *taskClient) GetOrphanTasks(
+func (p *queueClient) UpdateAckLevel(
 	ctx context.Context,
-	request *persistence.GetOrphanTasksRequest,
-) (*persistence.GetOrphanTasksResponse, error) {
-	fakeErr := generateFakeError(p.errorRate)
-
-	var response *persistence.GetOrphanTasksResponse
-	var persistenceErr error
-	var forwardCall bool
-	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		response, persistenceErr = p.persistence.GetOrphanTasks(ctx, request)
-	}
-
-	if fakeErr != nil {
-		p.logger.Error(msgInjectedFakeErr,
-			tag.StoreOperationCompleteTask,
-			tag.Error(fakeErr),
-			tag.Bool(forwardCall),
-			tag.StoreError(persistenceErr),
-		)
-		return nil, fakeErr
-	}
-	return response, persistenceErr
-}
-
-func (p *taskClient) LeaseTaskList(
-	ctx context.Context,
-	request *persistence.LeaseTaskListRequest,
-) (*persistence.LeaseTaskListResponse, error) {
-	fakeErr := generateFakeError(p.errorRate)
-
-	var response *persistence.LeaseTaskListResponse
-	var persistenceErr error
-	var forwardCall bool
-	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		response, persistenceErr = p.persistence.LeaseTaskList(ctx, request)
-	}
-
-	if fakeErr != nil {
-		p.logger.Error(msgInjectedFakeErr,
-			tag.StoreOperationLeaseTaskList,
-			tag.Error(fakeErr),
-			tag.Bool(forwardCall),
-			tag.StoreError(persistenceErr),
-		)
-		return nil, fakeErr
-	}
-	return response, persistenceErr
-}
-
-func (p *taskClient) UpdateTaskList(
-	ctx context.Context,
-	request *persistence.UpdateTaskListRequest,
-) (*persistence.UpdateTaskListResponse, error) {
-	fakeErr := generateFakeError(p.errorRate)
-
-	var response *persistence.UpdateTaskListResponse
-	var persistenceErr error
-	var forwardCall bool
-	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		response, persistenceErr = p.persistence.UpdateTaskList(ctx, request)
-	}
-
-	if fakeErr != nil {
-		p.logger.Error(msgInjectedFakeErr,
-			tag.StoreOperationUpdateTaskList,
-			tag.Error(fakeErr),
-			tag.Bool(forwardCall),
-			tag.StoreError(persistenceErr),
-		)
-		return nil, fakeErr
-	}
-	return response, persistenceErr
-}
-
-func (p *taskClient) ListTaskList(
-	ctx context.Context,
-	request *persistence.ListTaskListRequest,
-) (*persistence.ListTaskListResponse, error) {
-	fakeErr := generateFakeError(p.errorRate)
-
-	var response *persistence.ListTaskListResponse
-	var persistenceErr error
-	var forwardCall bool
-	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		response, persistenceErr = p.persistence.ListTaskList(ctx, request)
-	}
-
-	if fakeErr != nil {
-		p.logger.Error(msgInjectedFakeErr,
-			tag.StoreOperationListTaskList,
-			tag.Error(fakeErr),
-			tag.Bool(forwardCall),
-			tag.StoreError(persistenceErr),
-		)
-		return nil, fakeErr
-	}
-	return response, persistenceErr
-}
-
-func (p *taskClient) DeleteTaskList(
-	ctx context.Context,
-	request *persistence.DeleteTaskListRequest,
+	messageID int64,
+	clusterName string,
 ) error {
 	fakeErr := generateFakeError(p.errorRate)
 
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		persistenceErr = p.persistence.DeleteTaskList(ctx, request)
+		persistenceErr = p.persistence.UpdateAckLevel(ctx, messageID, clusterName)
 	}
 
 	if fakeErr != nil {
 		p.logger.Error(msgInjectedFakeErr,
-			tag.StoreOperationDeleteTaskList,
+			tag.StoreOperationUpdateAckLevel,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
 			tag.StoreError(persistenceErr),
@@ -276,31 +124,229 @@ func (p *taskClient) DeleteTaskList(
 	return persistenceErr
 }
 
-func (p *taskClient) GetTaskListSize(
+func (p *queueClient) GetAckLevels(
 	ctx context.Context,
-	request *persistence.GetTaskListSizeRequest,
-) (*persistence.GetTaskListSizeResponse, error) {
+) (map[string]int64, error) {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var resp *persistence.GetTaskListSizeResponse
+	var response map[string]int64
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		resp, persistenceErr = p.persistence.GetTaskListSize(ctx, request)
+		response, persistenceErr = p.persistence.GetAckLevels(ctx)
 	}
 
 	if fakeErr != nil {
 		p.logger.Error(msgInjectedFakeErr,
-			tag.StoreOperationGetTaskListSize,
+			tag.StoreOperationGetAckLevels,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
 			tag.StoreError(persistenceErr),
 		)
 		return nil, fakeErr
 	}
-	return resp, persistenceErr
+	return response, persistenceErr
 }
 
-func (p *taskClient) Close() {
+func (p *queueClient) DeleteMessagesBefore(
+	ctx context.Context,
+	messageID int64,
+) error {
+	fakeErr := generateFakeError(p.errorRate)
+
+	var persistenceErr error
+	var forwardCall bool
+	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
+		persistenceErr = p.persistence.DeleteMessagesBefore(ctx, messageID)
+	}
+
+	if fakeErr != nil {
+		p.logger.Error(msgInjectedFakeErr,
+			tag.StoreOperationDeleteMessagesBefore,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(persistenceErr),
+		)
+		return fakeErr
+	}
+	return persistenceErr
+}
+
+func (p *queueClient) EnqueueMessageToDLQ(
+	ctx context.Context,
+	message []byte,
+) error {
+	fakeErr := generateFakeError(p.errorRate)
+
+	var persistenceErr error
+	var forwardCall bool
+	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
+		persistenceErr = p.persistence.EnqueueMessageToDLQ(ctx, message)
+	}
+
+	if fakeErr != nil {
+		p.logger.Error(msgInjectedFakeErr,
+			tag.StoreOperationEnqueueMessageToDLQ,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(persistenceErr),
+		)
+		return fakeErr
+	}
+	return persistenceErr
+}
+
+func (p *queueClient) ReadMessagesFromDLQ(
+	ctx context.Context,
+	firstMessageID int64,
+	lastMessageID int64,
+	pageSize int,
+	pageToken []byte,
+) ([]*persistence.QueueMessage, []byte, error) {
+	fakeErr := generateFakeError(p.errorRate)
+
+	var response []*persistence.QueueMessage
+	var token []byte
+	var persistenceErr error
+	var forwardCall bool
+	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
+		response, token, persistenceErr = p.persistence.ReadMessagesFromDLQ(ctx, firstMessageID, lastMessageID, pageSize, pageToken)
+	}
+
+	if fakeErr != nil {
+		p.logger.Error(msgInjectedFakeErr,
+			tag.StoreOperationReadMessagesFromDLQ,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(persistenceErr),
+		)
+		return nil, nil, fakeErr
+	}
+	return response, token, persistenceErr
+}
+
+func (p *queueClient) RangeDeleteMessagesFromDLQ(
+	ctx context.Context,
+	firstMessageID int64,
+	lastMessageID int64,
+) error {
+	fakeErr := generateFakeError(p.errorRate)
+
+	var persistenceErr error
+	var forwardCall bool
+	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
+		persistenceErr = p.persistence.RangeDeleteMessagesFromDLQ(ctx, firstMessageID, lastMessageID)
+	}
+
+	if fakeErr != nil {
+		p.logger.Error(msgInjectedFakeErr,
+			tag.StoreOperationRangeDeleteMessagesFromDLQ,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(persistenceErr),
+		)
+		return fakeErr
+	}
+	return persistenceErr
+}
+
+func (p *queueClient) UpdateDLQAckLevel(
+	ctx context.Context,
+	messageID int64,
+	clusterName string,
+) error {
+	fakeErr := generateFakeError(p.errorRate)
+
+	var persistenceErr error
+	var forwardCall bool
+	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
+		persistenceErr = p.persistence.UpdateDLQAckLevel(ctx, messageID, clusterName)
+	}
+
+	if fakeErr != nil {
+		p.logger.Error(msgInjectedFakeErr,
+			tag.StoreOperationUpdateDLQAckLevel,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(persistenceErr),
+		)
+		return fakeErr
+	}
+	return persistenceErr
+}
+
+func (p *queueClient) GetDLQAckLevels(
+	ctx context.Context,
+) (map[string]int64, error) {
+	fakeErr := generateFakeError(p.errorRate)
+
+	var response map[string]int64
+	var persistenceErr error
+	var forwardCall bool
+	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
+		response, persistenceErr = p.persistence.GetDLQAckLevels(ctx)
+	}
+
+	if fakeErr != nil {
+		p.logger.Error(msgInjectedFakeErr,
+			tag.StoreOperationGetDLQAckLevels,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(persistenceErr),
+		)
+		return nil, fakeErr
+	}
+	return response, persistenceErr
+}
+
+func (p *queueClient) GetDLQSize(
+	ctx context.Context,
+) (int64, error) {
+	fakeErr := generateFakeError(p.errorRate)
+
+	var response int64
+	var persistenceErr error
+	var forwardCall bool
+	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
+		response, persistenceErr = p.persistence.GetDLQSize(ctx)
+	}
+
+	if fakeErr != nil {
+		p.logger.Error(msgInjectedFakeErr,
+			tag.StoreOperationGetDLQSize,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(persistenceErr),
+		)
+		return 0, fakeErr
+	}
+	return response, persistenceErr
+}
+
+func (p *queueClient) DeleteMessageFromDLQ(
+	ctx context.Context,
+	messageID int64,
+) error {
+	fakeErr := generateFakeError(p.errorRate)
+
+	var persistenceErr error
+	var forwardCall bool
+	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
+		persistenceErr = p.persistence.DeleteMessageFromDLQ(ctx, messageID)
+	}
+
+	if fakeErr != nil {
+		p.logger.Error(msgInjectedFakeErr,
+			tag.StoreOperationDeleteMessageFromDLQ,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(persistenceErr),
+		)
+		return fakeErr
+	}
+	return persistenceErr
+}
+
+func (p *queueClient) Close() {
 	p.persistence.Close()
 }
