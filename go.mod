@@ -23,7 +23,6 @@ require (
 	github.com/hashicorp/go-version v1.2.0
 	github.com/iancoleman/strcase v0.0.0-20190422225806-e506e3ef7365
 	github.com/jmoiron/sqlx v1.2.1-0.20200615141059-0794cb1f47ee
-	github.com/jonboulle/clockwork v0.1.0
 	github.com/lib/pq v1.2.0
 	github.com/m3db/prometheus_client_golang v0.8.1
 	github.com/olekukonko/tablewriter v0.0.4
