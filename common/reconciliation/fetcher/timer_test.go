@@ -25,12 +25,12 @@ package fetcher
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
+
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
@@ -50,6 +50,7 @@ func TestGetUserTimers(t *testing.T) {
 	testCases := []struct {
 		name          string
 		setupMock     func(ctrl *gomock.Controller) *persistence.MockRetryer
+		token         pagination.PageToken
 		expectedPage  pagination.Page
 		expectedError error
 	}{
@@ -83,6 +84,7 @@ func TestGetUserTimers(t *testing.T) {
 
 				return mockRetryer
 			},
+			token: nil,
 			expectedPage: pagination.Page{
 				Entities: []pagination.Entity{
 					&entity.Timer{
@@ -98,7 +100,7 @@ func TestGetUserTimers(t *testing.T) {
 			expectedError: nil,
 		},
 		{
-			name: "Non-nil Pagination Token Provdied",
+			name: "Non-nil Pagination Token Provided",
 			setupMock: func(ctrl *gomock.Controller) *persistence.MockRetryer {
 				mockRetryer := persistence.NewMockRetryer(ctrl)
 
@@ -116,6 +118,7 @@ func TestGetUserTimers(t *testing.T) {
 
 				return mockRetryer
 			},
+			token: nonNilToken,
 			expectedPage: pagination.Page{
 				Entities:     nil,
 				CurrentToken: nonNilToken,
@@ -152,8 +155,9 @@ func TestGetUserTimers(t *testing.T) {
 
 				return mockRetryer
 			},
-			expectedPage:  pagination.Page{},            // No page is expected due to error
-			expectedError: fmt.Errorf("empty DomainID"), // Adjusted to match the actual error message
+			token:         nil,
+			expectedPage:  pagination.Page{},
+			expectedError: fmt.Errorf("empty DomainID"),
 		},
 	}
 
@@ -164,23 +168,17 @@ func TestGetUserTimers(t *testing.T) {
 
 			mockRetryer := tc.setupMock(ctrl)
 
-			var token pagination.PageToken
-			if tc.name == "Non-nil Pagination Token Provided" {
-				token = nonNilToken
-			}
-
 			fetchFn := getUserTimers(mockRetryer, minTimestamp, maxTimestamp, pageSize)
-			page, err := fetchFn(context.Background(), token)
+			page, err := fetchFn(context.Background(), tc.token)
 
 			if tc.expectedError != nil {
 				require.Error(t, err)
-				require.EqualError(t, err, tc.expectedError.Error())
+				require.EqualError(t, err, tc.expectedError.Error(), "Error should match")
 			} else {
-				require.NoError(t, err)
+				require.NoError(t, err, "No error is expected")
 			}
-			require.True(t, reflect.DeepEqual(tc.expectedPage.CurrentToken, page.CurrentToken), "CurrentToken should match")
-			require.True(t, reflect.DeepEqual(tc.expectedPage.NextToken, page.NextToken), "NextToken should match")
-			require.Equal(t, tc.expectedPage.Entities, page.Entities, "Entities should match")
+
+			require.Equal(t, tc.expectedPage, page, "Page should match")
 		})
 	}
 }

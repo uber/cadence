@@ -30,7 +30,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
