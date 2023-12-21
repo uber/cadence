@@ -167,7 +167,7 @@ func (f *factoryImpl) NewTaskManager() (p.TaskManager, error) {
 	}
 	result := p.NewTaskManager(store)
 	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
-		result = errorinjectors.NewTaskClient(result, errorRate, f.logger)
+		result = errorinjectors.NewTaskManager(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
 		result = ratelimited.NewTaskManager(result, ds.ratelimit)
@@ -187,7 +187,7 @@ func (f *factoryImpl) NewShardManager() (p.ShardManager, error) {
 	}
 	result := p.NewShardManager(store)
 	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
-		result = errorinjectors.NewShardClient(result, errorRate, f.logger)
+		result = errorinjectors.NewShardManager(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
 		result = ratelimited.NewShardManager(result, ds.ratelimit)
@@ -207,7 +207,7 @@ func (f *factoryImpl) NewHistoryManager() (p.HistoryManager, error) {
 	}
 	result := p.NewHistoryV2ManagerImpl(store, f.logger, f.config.TransactionSizeLimit)
 	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
-		result = errorinjectors.NewHistoryClient(result, errorRate, f.logger)
+		result = errorinjectors.NewHistoryManager(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
 		result = ratelimited.NewHistoryManager(result, ds.ratelimit)
@@ -229,7 +229,7 @@ func (f *factoryImpl) NewDomainManager() (p.DomainManager, error) {
 	}
 	result := p.NewDomainManagerImpl(store, f.logger)
 	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
-		result = errorinjectors.NewDomainClient(result, errorRate, f.logger)
+		result = errorinjectors.NewDomainManager(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
 		result = ratelimited.NewDomainManager(result, ds.ratelimit)
@@ -249,7 +249,7 @@ func (f *factoryImpl) NewExecutionManager(shardID int) (p.ExecutionManager, erro
 	}
 	result := p.NewExecutionManagerImpl(store, f.logger)
 	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
-		result = errorinjectors.NewWorkflowExecutionClient(result, errorRate, f.logger)
+		result = errorinjectors.NewExecutionManager(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
 		result = ratelimited.NewExecutionManager(result, ds.ratelimit)
@@ -393,7 +393,7 @@ func (f *factoryImpl) newDBVisibilityManager(
 	}
 	result := p.NewVisibilityManagerImpl(store, f.logger)
 	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
-		result = errorinjectors.NewVisibilityClient(result, errorRate, f.logger)
+		result = errorinjectors.NewVisibilityManager(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
 		result = ratelimited.NewVisibilityManager(result, ds.ratelimit)
@@ -420,7 +420,7 @@ func (f *factoryImpl) NewDomainReplicationQueueManager() (p.QueueManager, error)
 	}
 	result := p.NewQueueManager(store)
 	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
-		result = errorinjectors.NewQueueClient(result, errorRate, f.logger)
+		result = errorinjectors.NewQueueManager(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
 		result = ratelimited.NewQueueManager(result, ds.ratelimit)
@@ -440,7 +440,7 @@ func (f *factoryImpl) NewConfigStoreManager() (p.ConfigStoreManager, error) {
 	}
 	result := p.NewConfigStoreManagerImpl(store, f.logger)
 	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
-		result = errorinjectors.NewConfigStoreClient(result, errorRate, f.logger)
+		result = errorinjectors.NewConfigStoreManager(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
 		result = ratelimited.NewConfigStoreManager(result, ds.ratelimit)
