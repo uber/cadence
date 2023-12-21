@@ -225,7 +225,7 @@ func (v *attrValidator) validateActivityScheduleAttributes(
 	}
 
 	idLengthWarnLimit := v.config.MaxIDLengthWarnLimit()
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		attributes.GetActivityID(),
 		v.metricsClient.Scope(metricsScope),
 		idLengthWarnLimit,
@@ -237,7 +237,7 @@ func (v *attrValidator) validateActivityScheduleAttributes(
 		return &types.BadRequestError{Message: "ActivityID exceeds length limit."}
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		attributes.GetActivityType().GetName(),
 		v.metricsClient.Scope(metricsScope),
 		idLengthWarnLimit,
@@ -249,7 +249,7 @@ func (v *attrValidator) validateActivityScheduleAttributes(
 		return &types.BadRequestError{Message: "ActivityType exceeds length limit."}
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		attributes.GetDomain(),
 		v.metricsClient.Scope(metricsScope),
 		idLengthWarnLimit,
@@ -366,7 +366,7 @@ func (v *attrValidator) validateTimerScheduleAttributes(
 	if attributes.GetTimerID() == "" {
 		return &types.BadRequestError{Message: "TimerId is not set on decision."}
 	}
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		attributes.GetTimerID(),
 		v.metricsClient.Scope(metricsScope),
 		v.config.MaxIDLengthWarnLimit(),
@@ -398,7 +398,7 @@ func (v *attrValidator) validateActivityCancelAttributes(
 		return &types.BadRequestError{Message: "ActivityId is not set on decision."}
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		attributes.GetActivityID(),
 		v.metricsClient.Scope(metricsScope),
 		v.config.MaxIDLengthWarnLimit(),
@@ -424,7 +424,7 @@ func (v *attrValidator) validateTimerCancelAttributes(
 	if attributes.GetTimerID() == "" {
 		return &types.BadRequestError{Message: "TimerId is not set on decision."}
 	}
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		attributes.GetTimerID(),
 		v.metricsClient.Scope(metricsScope),
 		v.config.MaxIDLengthWarnLimit(),
@@ -450,7 +450,7 @@ func (v *attrValidator) validateRecordMarkerAttributes(
 	if attributes.GetMarkerName() == "" {
 		return &types.BadRequestError{Message: "MarkerName is not set on decision."}
 	}
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		attributes.GetMarkerName(),
 		v.metricsClient.Scope(metricsScope),
 		v.config.MaxIDLengthWarnLimit(),
@@ -520,7 +520,7 @@ func (v *attrValidator) validateCancelExternalWorkflowExecutionAttributes(
 	}
 
 	idLengthWarnLimit := v.config.MaxIDLengthWarnLimit()
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		attributes.GetDomain(),
 		v.metricsClient.Scope(metricsScope),
 		idLengthWarnLimit,
@@ -532,7 +532,7 @@ func (v *attrValidator) validateCancelExternalWorkflowExecutionAttributes(
 		return &types.BadRequestError{Message: "Domain exceeds length limit."}
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		attributes.GetWorkflowID(),
 		v.metricsClient.Scope(metricsScope),
 		idLengthWarnLimit,
@@ -576,7 +576,7 @@ func (v *attrValidator) validateSignalExternalWorkflowExecutionAttributes(
 	}
 
 	idLengthWarnLimit := v.config.MaxIDLengthWarnLimit()
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		attributes.GetDomain(),
 		v.metricsClient.Scope(metricsScope),
 		idLengthWarnLimit,
@@ -588,7 +588,7 @@ func (v *attrValidator) validateSignalExternalWorkflowExecutionAttributes(
 		return &types.BadRequestError{Message: "Domain exceeds length limit."}
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		attributes.Execution.GetWorkflowID(),
 		v.metricsClient.Scope(metricsScope),
 		idLengthWarnLimit,
@@ -647,7 +647,7 @@ func (v *attrValidator) validateContinueAsNewWorkflowExecutionAttributes(
 		attributes.WorkflowType = &types.WorkflowType{Name: executionInfo.WorkflowTypeName}
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		attributes.WorkflowType.GetName(),
 		v.metricsClient.Scope(metricsScope),
 		v.config.MaxIDLengthWarnLimit(),
@@ -716,7 +716,7 @@ func (v *attrValidator) validateStartChildExecutionAttributes(
 	}
 
 	idLengthWarnLimit := v.config.MaxIDLengthWarnLimit()
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		attributes.GetDomain(),
 		v.metricsClient.Scope(metricsScope),
 		idLengthWarnLimit,
@@ -727,7 +727,7 @@ func (v *attrValidator) validateStartChildExecutionAttributes(
 		tag.IDTypeDomainName) {
 		return &types.BadRequestError{Message: "Domain exceeds length limit."}
 	}
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		attributes.GetWorkflowID(),
 		v.metricsClient.Scope(metricsScope),
 		idLengthWarnLimit,
@@ -739,7 +739,7 @@ func (v *attrValidator) validateStartChildExecutionAttributes(
 		return &types.BadRequestError{Message: "WorkflowId exceeds length limit."}
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		attributes.WorkflowType.GetName(),
 		v.metricsClient.Scope(metricsScope),
 		idLengthWarnLimit,
@@ -801,7 +801,7 @@ func (v *attrValidator) validatedTaskList(
 	}
 
 	name := taskList.GetName()
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		name,
 		v.metricsClient.Scope(metricsScope),
 		v.config.MaxIDLengthWarnLimit(),

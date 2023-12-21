@@ -38,7 +38,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/yarpcerrors"
 
-	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -425,13 +424,13 @@ func TestAwaitWaitGroup(t *testing.T) {
 	})
 }
 
-func TestValidIDLength(t *testing.T) {
+func TestIsValidIDLength(t *testing.T) {
 	t.Run("valid id length, no warnings", func(t *testing.T) {
-		got := ValidIDLength("12345", nil, 7, 10, 0, "", nil, tag.Tag{})
+		got := IsValidIDLength("12345", nil, 7, 10, 0, "", nil, tag.Tag{})
 		require.True(t, got, "expected true, because id length is 5 and it's less than error limit 10")
 	})
 	t.Run("non valid id length", func(t *testing.T) {
-		got := ValidIDLength("12345", nil, 1, 4, 0, "", nil, tag.Tag{})
+		got := IsValidIDLength("12345", nil, 1, 4, 0, "", nil, tag.Tag{})
 		require.False(t, got, "expected false, because id length is 5 and it's more than error limit 4")
 	})
 }

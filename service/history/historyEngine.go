@@ -3199,7 +3199,7 @@ func (e *historyEngineImpl) validateStartWorkflowExecutionRequest(
 		return &types.BadRequestError{Message: "Missing WorkflowType."}
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		request.GetDomain(),
 		e.metricsClient.Scope(metricsScope),
 		e.config.MaxIDLengthWarnLimit(),
@@ -3211,7 +3211,7 @@ func (e *historyEngineImpl) validateStartWorkflowExecutionRequest(
 		return &types.BadRequestError{Message: "Domain exceeds length limit."}
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		request.GetWorkflowID(),
 		e.metricsClient.Scope(metricsScope),
 		e.config.MaxIDLengthWarnLimit(),
@@ -3222,7 +3222,7 @@ func (e *historyEngineImpl) validateStartWorkflowExecutionRequest(
 		tag.IDTypeWorkflowID) {
 		return &types.BadRequestError{Message: "WorkflowId exceeds length limit."}
 	}
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		request.TaskList.GetName(),
 		e.metricsClient.Scope(metricsScope),
 		e.config.MaxIDLengthWarnLimit(),
@@ -3233,7 +3233,7 @@ func (e *historyEngineImpl) validateStartWorkflowExecutionRequest(
 		tag.IDTypeTaskListName) {
 		return &types.BadRequestError{Message: "TaskList exceeds length limit."}
 	}
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		request.WorkflowType.GetName(),
 		e.metricsClient.Scope(metricsScope),
 		e.config.MaxIDLengthWarnLimit(),

@@ -224,8 +224,8 @@ func CreateReplicationServiceBusyRetryPolicy() backoff.RetryPolicy {
 	return policy
 }
 
-// ValidIDLength checks if id is valid according to its length
-func ValidIDLength(
+// IsValidIDLength checks if id is valid according to its length
+func IsValidIDLength(
 	id string,
 	scope metrics.Scope,
 	warnLimit int,
