@@ -20,9 +20,7 @@
 
 package log
 
-import (
-	"github.com/uber/cadence/common/log/tag"
-)
+import "github.com/uber/cadence/common/log/tag"
 
 // Logger is our abstraction for logging
 // Usage examples:

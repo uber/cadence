@@ -23,10 +23,6 @@ package client
 import (
 	"sync"
 
-	pnt "github.com/uber/cadence/common/pinot"
-
-	pinotVisibility "github.com/uber/cadence/common/persistence/pinot"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	es "github.com/uber/cadence/common/elasticsearch"
@@ -37,8 +33,10 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/elasticsearch"
 	"github.com/uber/cadence/common/persistence/nosql"
+	pinotVisibility "github.com/uber/cadence/common/persistence/pinot"
 	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/persistence/sql"
+	pnt "github.com/uber/cadence/common/pinot"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service"
 )

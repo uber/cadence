@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
-
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"

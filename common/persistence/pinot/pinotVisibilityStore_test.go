@@ -28,16 +28,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/common/definition"
-
-	pnt "github.com/uber/cadence/common/pinot"
-
 	"github.com/stretchr/testify/assert"
 
-	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/types"
-
+	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
+	p "github.com/uber/cadence/common/persistence"
+	pnt "github.com/uber/cadence/common/pinot"
+	"github.com/uber/cadence/common/types"
 )
 
 var (

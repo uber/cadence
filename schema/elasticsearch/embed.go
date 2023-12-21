@@ -20,7 +20,7 @@
 
 package elasticsearch
 
-import _ "embed"
+import _ "embed" // enable embedding
 
 //go:embed v6/visibility/index_template.json
 var IndexTemplateV6 []byte
