@@ -216,6 +216,7 @@ var (
 
 	StoreOperationCreateTasks           = storeOperation("create-tasks")
 	StoreOperationGetTasks              = storeOperation("get-tasks")
+	StoreOperationGetOrphanTasks        = storeOperation("get-orphan-tasks")
 	StoreOperationCompleteTask          = storeOperation("complete-task")
 	StoreOperationCompleteTasksLessThan = storeOperation("complete-tasks-less-than")
 	StoreOperationLeaseTaskList         = storeOperation("lease-task-list")
@@ -248,6 +249,8 @@ var (
 	StoreOperationListWorkflowExecutions                   = storeOperation("list-wf-executions")
 	StoreOperationScanWorkflowExecutions                   = storeOperation("scan-wf-executions")
 	StoreOperationCountWorkflowExecutions                  = storeOperation("count-wf-executions")
+	StoreOperationDeleteUninitializedWorkflowExecution     = storeOperation("delete-uninitialized-wf-execution")
+	StoreOperationRecordWorkflowExecutionUninitialized     = storeOperation("record-wf-execution-uninitialized")
 
 	StoreOperationAppendHistoryNodes        = storeOperation("append-history-nodes")
 	StoreOperationReadHistoryBranch         = storeOperation("read-history-branch")

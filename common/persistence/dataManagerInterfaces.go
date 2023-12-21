@@ -19,6 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+// Geneate rate limiter wrappers.
 //go:generate mockgen -package $GOPACKAGE -destination dataManagerInterfaces_mock.go -self_package github.com/uber/cadence/common/persistence github.com/uber/cadence/common/persistence Task,ShardManager,ExecutionManager,ExecutionManagerFactory,TaskManager,HistoryManager,DomainManager,QueueManager,ConfigStoreManager
 //go:generate gowrap gen -g -p . -i ConfigStoreManager -t ./ratelimited/template/ratelimited.tmpl -o ratelimited/configstore.go
 //go:generate gowrap gen -g -p . -i DomainManager -t ./ratelimited/template/ratelimited.tmpl -o ratelimited/domain.go
@@ -27,6 +28,15 @@
 //go:generate gowrap gen -g -p . -i QueueManager -t ./ratelimited/template/ratelimited.tmpl -o ratelimited/queue.go
 //go:generate gowrap gen -g -p . -i TaskManager -t ./ratelimited/template/ratelimited.tmpl -o ratelimited/task.go
 //go:generate gowrap gen -g -p . -i ShardManager -t ./ratelimited/template/ratelimited.tmpl -o ratelimited/shard.go
+
+// Geneate error injector wrappers.
+//go:generate gowrap gen -g -p . -i ConfigStoreManager -t ./errorinjectors/template/errorinjector.tmpl -o errorinjectors/configstore.go
+//go:generate gowrap gen -g -p . -i ShardManager -t ./errorinjectors/template/errorinjector.tmpl -o errorinjectors/shard.go
+//go:generate gowrap gen -g -p . -i ExecutionManager -t ./errorinjectors/template/errorinjector.tmpl -o errorinjectors/execution.go
+//go:generate gowrap gen -g -p . -i TaskManager -t ./errorinjectors/template/errorinjector.tmpl -o errorinjectors/task.go
+//go:generate gowrap gen -g -p . -i HistoryManager -t ./errorinjectors/template/errorinjector.tmpl -o errorinjectors/history.go
+//go:generate gowrap gen -g -p . -i DomainManager -t ./errorinjectors/template/errorinjector.tmpl -o errorinjectors/domain.go
+//go:generate gowrap gen -g -p . -i QueueManager -t ./errorinjectors/template/errorinjector.tmpl -o errorinjectors/queue.go
 
 package persistence
 
