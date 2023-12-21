@@ -19,6 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+// Geneate rate limiter wrappers.
 //go:generate mockgen -package $GOPACKAGE -destination dataManagerInterfaces_mock.go -self_package github.com/uber/cadence/common/persistence github.com/uber/cadence/common/persistence Task,ShardManager,ExecutionManager,ExecutionManagerFactory,TaskManager,HistoryManager,DomainManager,QueueManager,ConfigStoreManager
 //go:generate gowrap gen -g -p . -i ConfigStoreManager -t ./ratelimited/template/ratelimited.tmpl -o ratelimited/configstore.go
 //go:generate gowrap gen -g -p . -i DomainManager -t ./ratelimited/template/ratelimited.tmpl -o ratelimited/domain.go
@@ -27,6 +28,15 @@
 //go:generate gowrap gen -g -p . -i QueueManager -t ./ratelimited/template/ratelimited.tmpl -o ratelimited/queue.go
 //go:generate gowrap gen -g -p . -i TaskManager -t ./ratelimited/template/ratelimited.tmpl -o ratelimited/task.go
 //go:generate gowrap gen -g -p . -i ShardManager -t ./ratelimited/template/ratelimited.tmpl -o ratelimited/shard.go
+
+// Geneate error injector wrappers.
+//go:generate gowrap gen -g -p . -i ConfigStoreManager -t ./errorinjectors/template/errorinjector.tmpl -o errorinjectors/configstore.go
+//go:generate gowrap gen -g -p . -i ShardManager -t ./errorinjectors/template/errorinjector.tmpl -o errorinjectors/shard.go
+//go:generate gowrap gen -g -p . -i ExecutionManager -t ./errorinjectors/template/errorinjector.tmpl -o errorinjectors/execution.go
+//go:generate gowrap gen -g -p . -i TaskManager -t ./errorinjectors/template/errorinjector.tmpl -o errorinjectors/task.go
+//go:generate gowrap gen -g -p . -i HistoryManager -t ./errorinjectors/template/errorinjector.tmpl -o errorinjectors/history.go
+//go:generate gowrap gen -g -p . -i DomainManager -t ./errorinjectors/template/errorinjector.tmpl -o errorinjectors/domain.go
+//go:generate gowrap gen -g -p . -i QueueManager -t ./errorinjectors/template/errorinjector.tmpl -o errorinjectors/queue.go
 
 package persistence
 
@@ -233,57 +243,6 @@ const (
 )
 
 type (
-	// InvalidPersistenceRequestError represents invalid request to persistence
-	InvalidPersistenceRequestError struct {
-		Msg string
-	}
-
-	// CurrentWorkflowConditionFailedError represents a failed conditional update for current workflow record
-	CurrentWorkflowConditionFailedError struct {
-		Msg string
-	}
-
-	// ConditionFailedError represents a failed conditional update for execution record
-	ConditionFailedError struct {
-		Msg string
-	}
-
-	// ShardAlreadyExistError is returned when conditionally creating a shard fails
-	ShardAlreadyExistError struct {
-		Msg string
-	}
-
-	// ShardOwnershipLostError is returned when conditional update fails due to RangeID for the shard
-	ShardOwnershipLostError struct {
-		ShardID int
-		Msg     string
-	}
-
-	// WorkflowExecutionAlreadyStartedError is returned when creating a new workflow failed.
-	WorkflowExecutionAlreadyStartedError struct {
-		Msg              string
-		StartRequestID   string
-		RunID            string
-		State            int
-		CloseStatus      int
-		LastWriteVersion int64
-	}
-
-	// TimeoutError is returned when a write operation fails due to a timeout
-	TimeoutError struct {
-		Msg string
-	}
-
-	// DBUnavailableError is returned when the database is unavailable, could be for various reasons.
-	DBUnavailableError struct {
-		Msg string
-	}
-
-	// TransactionSizeLimitError is returned when the transaction size is too large
-	TransactionSizeLimitError struct {
-		Msg string
-	}
-
 	// ShardInfo describes a shard
 	ShardInfo struct {
 		ShardID                           int                               `json:"shard_id"`
@@ -1893,42 +1852,6 @@ type (
 		//can add functions for config types other than dynamic config
 	}
 )
-
-func (e *InvalidPersistenceRequestError) Error() string {
-	return e.Msg
-}
-
-func (e *CurrentWorkflowConditionFailedError) Error() string {
-	return e.Msg
-}
-
-func (e *ConditionFailedError) Error() string {
-	return e.Msg
-}
-
-func (e *ShardAlreadyExistError) Error() string {
-	return e.Msg
-}
-
-func (e *ShardOwnershipLostError) Error() string {
-	return e.Msg
-}
-
-func (e *WorkflowExecutionAlreadyStartedError) Error() string {
-	return e.Msg
-}
-
-func (e *TimeoutError) Error() string {
-	return e.Msg
-}
-
-func (e *DBUnavailableError) Error() string {
-	return e.Msg
-}
-
-func (e *TransactionSizeLimitError) Error() string {
-	return e.Msg
-}
 
 // IsTimeoutError check whether error is TimeoutError
 func IsTimeoutError(err error) bool {
