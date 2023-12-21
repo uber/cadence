@@ -127,9 +127,18 @@ func newTaskReader(tlMgr *taskListManagerImpl, isolationGroups []string) *taskRe
 func (tr *taskReader) Start() {
 	tr.Signal()
 	for g := range tr.taskBuffers {
-		go tr.dispatchBufferedTasks(g)
+		g := g
+		tr.stopWg.Add(1)
+		go func() {
+			defer tr.stopWg.Done()
+			tr.dispatchBufferedTasks(g)
+		}()
 	}
-	go tr.getTasksPump()
+	tr.stopWg.Add(1)
+	go func() {
+		defer tr.stopWg.Done()
+		tr.getTasksPump()
+	}()
 }
 
 func (tr *taskReader) Stop() {
@@ -154,8 +163,6 @@ func (tr *taskReader) Signal() {
 }
 
 func (tr *taskReader) dispatchBufferedTasks(isolationGroup string) {
-	tr.stopWg.Add(1)
-	defer tr.stopWg.Done()
 dispatchLoop:
 	for {
 		select {
@@ -175,9 +182,6 @@ dispatchLoop:
 }
 
 func (tr *taskReader) getTasksPump() {
-	tr.stopWg.Add(1)
-	defer tr.stopWg.Done()
-
 	updateAckTimer := time.NewTimer(tr.config.UpdateAckInterval())
 	defer updateAckTimer.Stop()
 getTasksPumpLoop:

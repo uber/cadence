@@ -192,6 +192,7 @@ func (s *ScavengerTestSuite) TestAllExpiredTasksWithErrors() {
 
 func (s *ScavengerTestSuite) runScavenger() {
 	s.scvgr.Start()
+	defer s.scvgr.Stop()
 	timer := time.NewTimer(scavengerTestTimeout)
 	select {
 	case <-s.scvgr.stopped:
