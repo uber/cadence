@@ -26,7 +26,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/common/log/tag"
 	"math/rand"
 	"strconv"
 	"sync"
@@ -38,6 +37,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/yarpcerrors"
 
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/types"
 )
 
