@@ -150,8 +150,9 @@ func (tr *taskReader) Stop() {
 				tag.Error(err))
 		}
 		tr.taskGC.RunNow(tr.taskAckManager.GetAckLevel())
-		tr.stopWg.Wait()
 	}
+	// There could be multiple calls to Stop() but all of them should block before task reader is completely stopped.
+	tr.stopWg.Wait()
 }
 
 func (tr *taskReader) Signal() {
