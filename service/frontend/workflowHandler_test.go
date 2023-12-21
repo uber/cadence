@@ -636,6 +636,93 @@ func (s *workflowHandlerSuite) TestRecordActivityTaskHeartbeat_TaskTokenNotSet()
 	s.Nil(result)
 }
 
+func (s *workflowHandlerSuite) TestRecordActivityTaskHeartbeatByID_Success() {
+	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
+	req := &types.RecordActivityTaskHeartbeatByIDRequest{
+		Domain:     s.testDomain,
+		WorkflowID: testWorkflowID,
+		RunID:      testRunID,
+		ActivityID: "1",
+		Details:    nil,
+		Identity:   "",
+	}
+	resp := &types.RecordActivityTaskHeartbeatResponse{CancelRequested: false}
+
+	s.mockDomainCache.EXPECT().GetDomainID(s.testDomain).Return(s.testDomainID, nil)
+	s.mockHistoryClient.EXPECT().RecordActivityTaskHeartbeat(gomock.Any(), gomock.Any()).Return(resp, nil)
+
+	result, err := wh.RecordActivityTaskHeartbeatByID(context.Background(), req)
+	s.NoError(err)
+	s.Equal(resp, result)
+}
+
+func (s *workflowHandlerSuite) TestRecordActivityTaskHeartbeatByID_RequestNotSet() {
+	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
+	result, err := wh.RecordActivityTaskHeartbeatByID(context.Background(), nil /*request is not set*/)
+
+	s.Error(err)
+	s.Equal(errRequestNotSet, err)
+	s.Nil(result)
+}
+
+func (s *workflowHandlerSuite) TestRecordActivityTaskHeartbeatByID_DomainNotSet() {
+	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
+	result, err := wh.RecordActivityTaskHeartbeatByID(
+		context.Background(),
+		&types.RecordActivityTaskHeartbeatByIDRequest{
+			Domain: "", // domain not set
+		})
+
+	s.Error(err)
+	s.Equal(errDomainNotSet, err)
+	s.Nil(result)
+}
+
+func (s *workflowHandlerSuite) TestRespondActivityTaskCompleted_Success() {
+	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
+	taskToken := common.TaskToken{
+		DomainID:   s.testDomainID,
+		WorkflowID: testWorkflowID,
+		RunID:      testRunID,
+		ActivityID: "1",
+	}
+	taskTokenBytes, err := wh.tokenSerializer.Serialize(&taskToken)
+	s.NoError(err)
+	req := &types.RespondActivityTaskCompletedRequest{
+		TaskToken: taskTokenBytes,
+		Result:    nil,
+		Identity:  "",
+	}
+
+	s.mockDomainCache.EXPECT().GetDomainName(s.testDomainID).Return(s.testDomain, nil)
+	s.mockHistoryClient.EXPECT().RespondActivityTaskCompleted(gomock.Any(),
+		&types.HistoryRespondActivityTaskCompletedRequest{
+			DomainUUID:      taskToken.DomainID,
+			CompleteRequest: req,
+		}).Return(nil)
+
+	err = wh.RespondActivityTaskCompleted(context.Background(), req)
+	s.NoError(err)
+}
+
+func (s *workflowHandlerSuite) TestRespondActivityTaskCompletedByID_Success() {
+	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
+	req := &types.RespondActivityTaskCompletedByIDRequest{
+		Domain:     s.testDomain,
+		WorkflowID: testWorkflowID,
+		RunID:      testRunID,
+		ActivityID: "1",
+		Result:     nil,
+		Identity:   "",
+	}
+
+	s.mockDomainCache.EXPECT().GetDomainID(s.testDomain).Return(s.testDomainID, nil)
+	s.mockHistoryClient.EXPECT().RespondActivityTaskCompleted(gomock.Any(), gomock.Any()).Return(nil)
+
+	err := wh.RespondActivityTaskCompletedByID(context.Background(), req)
+	s.NoError(err)
+}
+
 func (s *workflowHandlerSuite) TestRegisterDomain_Failure_MissingDomainDataKey() {
 	dynamicClient := dc.NewInMemoryClient()
 	err := dynamicClient.UpdateValue(dc.RequiredDomainDataKeys, map[string]interface{}{"Tier": true})
