@@ -127,6 +127,7 @@ func newTaskReader(tlMgr *taskListManagerImpl, isolationGroups []string) *taskRe
 func (tr *taskReader) Start() {
 	tr.Signal()
 	for g := range tr.taskBuffers {
+		g := g
 		tr.stopWg.Add(1)
 		go func() {
 			defer tr.stopWg.Done()
