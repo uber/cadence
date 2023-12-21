@@ -1447,7 +1447,7 @@ func mustConvertToSlice(value interface{}) []interface{} {
 		}
 		return result
 	default:
-		panic(fmt.Sprintf("Unable to convert %v to slice", value))
+		panic(fmt.Sprintf("Unable to convert %v to slice which is of type %T", value, value))
 	}
 }
 
