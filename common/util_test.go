@@ -26,6 +26,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/common/log/tag"
 	"math/rand"
 	"strconv"
 	"sync"
