@@ -190,8 +190,8 @@ func (t *timerQueueProcessorBase) Stop() {
 	}
 	t.pollTimeLock.Unlock()
 
-	if success := common.AwaitWaitGroup(&t.shutdownWG, time.Minute); !success {
-		t.logger.Warn("", tag.LifeCycleStopTimedout)
+	if success := common.AwaitWaitGroup(&t.shutdownWG, gracefulShutdownTimeout); !success {
+		t.logger.Warn("timerQueueProcessorBase timed out on shut down", tag.LifeCycleStopTimedout)
 	}
 
 	t.redispatcher.Stop()
@@ -212,7 +212,12 @@ func (t *timerQueueProcessorBase) processorPump() {
 			t.updateTimerGates()
 		case <-updateAckTimer.C:
 			if stopPump := t.handleAckLevelUpdate(updateAckTimer); stopPump {
-				go t.Stop()
+				if !t.options.EnableGracefulSyncShutdown() {
+					go t.Stop()
+					return
+				}
+
+				t.Stop()
 				return
 			}
 		case <-t.newTimerCh:
@@ -666,6 +671,7 @@ func newTimerQueueProcessorOptions(
 		SplitQueueIntervalJitterCoefficient:  config.TimerProcessorSplitQueueIntervalJitterCoefficient,
 		PollBackoffInterval:                  config.QueueProcessorPollBackoffInterval,
 		PollBackoffIntervalJitterCoefficient: config.QueueProcessorPollBackoffIntervalJitterCoefficient,
+		EnableGracefulSyncShutdown:           config.QueueProcessorEnableGracefulSyncShutdown,
 	}
 
 	if isFailover {
