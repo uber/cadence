@@ -26,7 +26,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 	"math/rand"
 	"strconv"
 	"sync"
@@ -432,5 +434,30 @@ func TestIsValidIDLength(t *testing.T) {
 	t.Run("non valid id length", func(t *testing.T) {
 		got := IsValidIDLength("12345", nil, 1, 4, 0, "", nil, tag.Tag{})
 		require.False(t, got, "expected false, because id length is 5 and it's more than error limit 4")
+	})
+}
+
+func TestWarnIDLengthExceedsLimit(t *testing.T) {
+	t.Run("nil scope and logger", func(t *testing.T) {
+		warnIDLengthExceedsLimit("12345", nil, 0, "", nil, tag.Tag{})
+	})
+	t.Run("with scope and logger", func(t *testing.T) {
+		scope := metrics.NoopScope(0)
+		logger := new(log.MockLogger)
+
+		someTag := tag.ClusterName("someTag")
+
+		logger.On(
+			"Warn",
+			"ID length exceeds limit.",
+			[]tag.Tag{
+				tag.WorkflowDomainName("domain_name"),
+				tag.Name("12345"),
+				someTag,
+			},
+		).Once()
+
+		warnIDLengthExceedsLimit("12345", scope, 0, "domain_name", logger, someTag)
+		logger.AssertExpectations(t)
 	})
 }
