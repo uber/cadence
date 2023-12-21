@@ -439,8 +439,10 @@ func TestIsValidIDLength(t *testing.T) {
 
 func TestWarnIDLengthExceedsLimit(t *testing.T) {
 	t.Run("nil scope and logger", func(t *testing.T) {
+		// no panic expected
 		warnIDLengthExceedsLimit("12345", nil, 0, "", nil, tag.Tag{})
 	})
+
 	t.Run("with scope and logger", func(t *testing.T) {
 		scope := metrics.NoopScope(0)
 		logger := new(log.MockLogger)
@@ -458,6 +460,8 @@ func TestWarnIDLengthExceedsLimit(t *testing.T) {
 		).Once()
 
 		warnIDLengthExceedsLimit("12345", scope, 0, "domain_name", logger, someTag)
+
+		// logger should be called once
 		logger.AssertExpectations(t)
 	})
 }
