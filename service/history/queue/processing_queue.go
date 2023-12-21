@@ -37,14 +37,6 @@ var (
 )
 
 type (
-	processingQueueStateImpl struct {
-		level        int
-		ackLevel     task.Key
-		readLevel    task.Key
-		maxLevel     task.Key
-		domainFilter DomainFilter
-	}
-
 	processingQueueImpl struct {
 		state            *processingQueueStateImpl
 		outstandingTasks map[task.Key]task.Task
@@ -53,39 +45,6 @@ type (
 		metricsClient metrics.Client // TODO: emit metrics
 	}
 )
-
-// NewProcessingQueueState creates a new state instance for processing queue
-// readLevel will be set to the same value as ackLevel
-func NewProcessingQueueState(
-	level int,
-	ackLevel task.Key,
-	maxLevel task.Key,
-	domainFilter DomainFilter,
-) ProcessingQueueState {
-	return newProcessingQueueState(
-		level,
-		ackLevel,
-		ackLevel,
-		maxLevel,
-		domainFilter,
-	)
-}
-
-func newProcessingQueueState(
-	level int,
-	ackLevel task.Key,
-	readLevel task.Key,
-	maxLevel task.Key,
-	domainFilter DomainFilter,
-) *processingQueueStateImpl {
-	return &processingQueueStateImpl{
-		level:        level,
-		ackLevel:     ackLevel,
-		readLevel:    readLevel,
-		maxLevel:     maxLevel,
-		domainFilter: domainFilter,
-	}
-}
 
 // NewProcessingQueue creates a new processing queue based on its state
 func NewProcessingQueue(
@@ -134,39 +93,11 @@ func newProcessingQueue(
 	return queue
 }
 
-func (s *processingQueueStateImpl) Level() int {
-	return s.level
-}
-
-func (s *processingQueueStateImpl) MaxLevel() task.Key {
-	return s.maxLevel
-}
-
-func (s *processingQueueStateImpl) AckLevel() task.Key {
-	return s.ackLevel
-}
-
-func (s *processingQueueStateImpl) ReadLevel() task.Key {
-	return s.readLevel
-}
-
-func (s *processingQueueStateImpl) DomainFilter() DomainFilter {
-	return s.domainFilter
-}
-
-func (s *processingQueueStateImpl) String() string {
-	return fmt.Sprintf("&{level: %+v, ackLevel: %+v, readLevel: %+v, maxLevel: %+v, domainFilter: %+v}",
-		s.level, s.ackLevel, s.readLevel, s.maxLevel, s.domainFilter,
-	)
-}
-
 func (q *processingQueueImpl) State() ProcessingQueueState {
 	return q.state
 }
 
-func (q *processingQueueImpl) Split(
-	policy ProcessingQueueSplitPolicy,
-) []ProcessingQueue {
+func (q *processingQueueImpl) Split(policy ProcessingQueueSplitPolicy) []ProcessingQueue {
 	newQueueStates := policy.Evaluate(q)
 	if len(newQueueStates) == 0 {
 		// no need to split, return self
@@ -176,9 +107,7 @@ func (q *processingQueueImpl) Split(
 	return splitProcessingQueue([]*processingQueueImpl{q}, newQueueStates, q.logger, q.metricsClient)
 }
 
-func (q *processingQueueImpl) Merge(
-	queue ProcessingQueue,
-) []ProcessingQueue {
+func (q *processingQueueImpl) Merge(queue ProcessingQueue) []ProcessingQueue {
 	q1, q2 := q, queue.(*processingQueueImpl)
 
 	if q1.State().Level() != q2.State().Level() {
@@ -246,10 +175,7 @@ func (q *processingQueueImpl) Merge(
 	return splitProcessingQueue([]*processingQueueImpl{q1, q2}, newQueueStates, q.logger, q.metricsClient)
 }
 
-func (q *processingQueueImpl) AddTasks(
-	tasks map[task.Key]task.Task,
-	newReadLevel task.Key,
-) {
+func (q *processingQueueImpl) AddTasks(tasks map[task.Key]task.Task, newReadLevel task.Key) {
 	if newReadLevel.Less(q.state.readLevel) {
 		q.logger.Fatal("processing queue read level moved backward", tag.Error(
 			fmt.Errorf("current read level: %v, new read level: %v", q.state.readLevel, newReadLevel),
@@ -411,51 +337,26 @@ func splitProcessingQueue(
 	return newQueues
 }
 
-func taskBelongsToProcessQueue(
-	state ProcessingQueueState,
-	key task.Key,
-	task task.Task,
-) bool {
+func taskBelongsToProcessQueue(state ProcessingQueueState, key task.Key, task task.Task) bool {
 	return state.DomainFilter().Filter(task.GetDomainID()) &&
 		state.AckLevel().Less(key) &&
 		!state.MaxLevel().Less(key)
 }
 
-func taskKeyEquals(
-	key1 task.Key,
-	key2 task.Key,
-) bool {
+func taskKeyEquals(key1 task.Key, key2 task.Key) bool {
 	return !key1.Less(key2) && !key2.Less(key1)
 }
 
-func minTaskKey(
-	key1 task.Key,
-	key2 task.Key,
-) task.Key {
+func minTaskKey(key1 task.Key, key2 task.Key) task.Key {
 	if key1.Less(key2) {
 		return key1
 	}
 	return key2
 }
 
-func maxTaskKey(
-	key1 task.Key,
-	key2 task.Key,
-) task.Key {
+func maxTaskKey(key1 task.Key, key2 task.Key) task.Key {
 	if key1.Less(key2) {
 		return key2
 	}
 	return key1
-}
-
-func copyQueueState(
-	state ProcessingQueueState,
-) *processingQueueStateImpl {
-	return newProcessingQueueState(
-		state.Level(),
-		state.AckLevel(),
-		state.ReadLevel(),
-		state.MaxLevel(),
-		state.DomainFilter(),
-	)
 }

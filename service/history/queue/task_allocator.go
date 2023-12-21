@@ -168,11 +168,7 @@ func (t *taskAllocatorImpl) VerifyStandbyTask(standbyCluster string, taskDomainI
 	return true, nil
 }
 
-func (t *taskAllocatorImpl) checkDomainPendingActive(
-	domainEntry *cache.DomainCacheEntry,
-	taskDomainID string,
-	task interface{},
-) error {
+func (t *taskAllocatorImpl) checkDomainPendingActive(domainEntry *cache.DomainCacheEntry, taskDomainID string, task interface{}) error {
 
 	if domainEntry.IsGlobalDomain() && domainEntry.GetFailoverEndTime() != nil {
 		// the domain is pending active, pause on processing this task
