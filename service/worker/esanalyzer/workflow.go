@@ -26,12 +26,11 @@ import (
 	"fmt"
 	"time"
 
-	"go.uber.org/cadence/activity"
-	"go.uber.org/zap"
-
 	"go.uber.org/cadence"
+	"go.uber.org/cadence/activity"
 	cclient "go.uber.org/cadence/client"
 	"go.uber.org/cadence/workflow"
+	"go.uber.org/zap"
 )
 
 const (

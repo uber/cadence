@@ -29,9 +29,8 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/uber/cadence/common/log/tag"
-
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/types"
 )
 

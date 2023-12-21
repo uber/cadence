@@ -29,17 +29,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/uber/cadence/client/admin"
-	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/types"
-
-	"github.com/uber/cadence/tools/common/flag"
-
 	"github.com/urfave/cli"
 
+	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/domain"
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/tools/common/flag"
 )
 
 var (

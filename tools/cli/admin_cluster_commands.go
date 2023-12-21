@@ -30,9 +30,8 @@ import (
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/service/worker/failovermanager"
-
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/worker/failovermanager"
 )
 
 // An indirection for the prompt function so that it can be mocked in the unit tests

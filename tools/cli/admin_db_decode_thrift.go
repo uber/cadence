@@ -30,15 +30,15 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/davecgh/go-spew/spew"
+	"github.com/urfave/cli"
+
 	"github.com/uber/cadence/.gen/go/config"
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common/codec"
-
-	"github.com/davecgh/go-spew/spew"
-	"github.com/urfave/cli"
 )
 
 var decodingTypes = map[string]func() codec.ThriftObject{

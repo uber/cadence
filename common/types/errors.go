@@ -20,9 +20,7 @@
 
 package types
 
-import (
-	"go.uber.org/zap/zapcore"
-)
+import "go.uber.org/zap/zapcore"
 
 // EventAlreadyStartedError is an internal type (TBD...)
 type EventAlreadyStartedError struct {

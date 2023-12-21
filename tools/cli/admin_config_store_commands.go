@@ -25,11 +25,11 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/types"
-
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
+
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 )
 
 type cliEntry struct {

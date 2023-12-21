@@ -26,14 +26,14 @@ import (
 	"net"
 	nethttp "net/http"
 
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
-
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/grpc"
 	yarpchttp "go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
 	"google.golang.org/grpc/credentials"
+
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 )
 
 const defaultGRPCSizeLimit = 4 * 1024 * 1024

@@ -22,9 +22,7 @@
 
 package pinot
 
-import (
-	p "github.com/uber/cadence/common/persistence"
-)
+import p "github.com/uber/cadence/common/persistence"
 
 type (
 	// GenericClient is a generic interface for all versions of Pinot clients
