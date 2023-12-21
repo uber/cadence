@@ -26,6 +26,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/common/log/tag"
 	"math/rand"
 	"strconv"
 	"sync"
@@ -420,5 +421,16 @@ func TestAwaitWaitGroup(t *testing.T) {
 
 		doneC <- struct{}{}
 		close(doneC)
+	})
+}
+
+func TestValidIDLength(t *testing.T) {
+	t.Run("valid id length, no warnings", func(t *testing.T) {
+		got := ValidIDLength("12345", nil, 7, 10, 0, "", nil, tag.Tag{})
+		require.True(t, got)
+	})
+	t.Run("non valid id length", func(t *testing.T) {
+		got := ValidIDLength("12345", nil, 1, 4, 0, "", nil, tag.Tag{})
+		require.False(t, got)
 	})
 }
