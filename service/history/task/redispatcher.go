@@ -159,8 +159,6 @@ func (r *redispatcherImpl) AddTask(task Task) {
 
 func (r *redispatcherImpl) Redispatch(targetSize int) {
 	doneCh := make(chan struct{})
-	defer close(doneCh)
-
 	ntf := redispatchNotification{
 		targetSize: targetSize,
 		doneCh:     doneCh,
@@ -171,6 +169,7 @@ func (r *redispatcherImpl) Redispatch(targetSize int) {
 		// block until the redispatch is done
 		<-doneCh
 	case <-r.shutdownCh:
+		close(doneCh)
 		return
 	}
 }
