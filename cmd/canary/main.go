@@ -143,4 +143,3 @@ func main() {
 	app := buildCLI()
 	app.Run(os.Args)
 }
-
