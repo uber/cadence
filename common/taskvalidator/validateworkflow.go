@@ -24,10 +24,9 @@
 package taskvalidator
 
 import (
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
-
-	"github.com/uber/cadence/common/log"
 )
 
 // Checker is an interface for initiating the validation process.

@@ -31,17 +31,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/uber/cadence/common/clock"
-	"github.com/uber/cadence/common/elasticsearch"
-	"github.com/uber/cadence/common/tokenbucket"
-
 	"github.com/olekukonko/tablewriter"
 	"github.com/olivere/elastic"
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/.gen/go/indexer"
+	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/elasticsearch"
 	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/elasticsearch/esql"
+	"github.com/uber/cadence/common/tokenbucket"
 )
 
 const (

@@ -32,7 +32,6 @@ import (
 	math_bits "math/bits"
 
 	proto "github.com/gogo/protobuf/proto"
-
 	v1 "github.com/uber/cadence-idl/go/proto/api/v1"
 )
 

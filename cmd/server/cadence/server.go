@@ -24,12 +24,10 @@ import (
 	"log"
 	"time"
 
+	"github.com/startreedata/pinot-client-go/pinot"
+	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/compatibility"
-
-	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
-	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/service/worker"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
@@ -46,16 +44,15 @@ import (
 	"github.com/uber/cadence/common/messaging/kafka"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/peerprovider/ringpopprovider"
+	"github.com/uber/cadence/common/persistence"
+	pnt "github.com/uber/cadence/common/pinot"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/rpc"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/service/frontend"
 	"github.com/uber/cadence/service/history"
 	"github.com/uber/cadence/service/matching"
-
-	"github.com/startreedata/pinot-client-go/pinot"
-
-	pnt "github.com/uber/cadence/common/pinot"
+	"github.com/uber/cadence/service/worker"
 )
 
 type (

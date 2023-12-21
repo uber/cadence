@@ -20,9 +20,7 @@
 
 package testdata
 
-import (
-	"github.com/uber/cadence/common/types"
-)
+import "github.com/uber/cadence/common/types"
 
 const (
 	DomainID          = "DomainID"

@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
-
 	"github.com/uber/cadence/common/metrics"
 )
 

@@ -21,9 +21,8 @@
 package thrift
 
 import (
-	"github.com/uber/cadence/common/types"
-
 	"github.com/uber/cadence/.gen/go/history"
+	"github.com/uber/cadence/common/types"
 )
 
 // FromDescribeMutableStateRequest converts internal DescribeMutableStateRequest type to thrift

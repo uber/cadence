@@ -88,70 +88,70 @@ func TestInsertConfig(t *testing.T) {
 }
 
 func TestSelectLatestConfig(t *testing.T) {
-    now := time.Now()
-    testCases := []struct {
-        name        string
-        rowType     int
-        setupMock   func(*sqldriver.MockDriver)
-        expectError bool
-        expectedRow *persistence.InternalConfigStoreEntry
-    }{
-        {
-            name:    "Success case",
-            rowType: 1,
-            setupMock: func(md *sqldriver.MockDriver) {
-                row := sqlplugin.ClusterConfigRow{
-                    RowType:      1,
-                    Version:      -2,
-                    Timestamp:    now,
-                    Data:         []byte("test data"),
-                    DataEncoding: "json",
-                }
-                md.EXPECT().GetContext(gomock.Any(), sqlplugin.DbDefaultShard, gomock.Any(), _selectLatestConfigQuery, 1).DoAndReturn(
-                    func(ctx context.Context, shardID int, r *sqlplugin.ClusterConfigRow, query string, args ...interface{}) error {
-                        *r = row
-                        return nil
-                    },
-                )
-            },
-            expectError: false,
-            expectedRow: &persistence.InternalConfigStoreEntry{
-                RowType:   1,
-                Version:   2,
-                Timestamp: now,
-                Values: &persistence.DataBlob{
-                    Data:     []byte("test data"),
-                    Encoding: common.EncodingType("json"),
-                },
-            },
-        },
-        {
-            name:    "Error case",
-            rowType: 2,
-            setupMock: func(md *sqldriver.MockDriver) {
-                md.EXPECT().GetContext(gomock.Any(), sqlplugin.DbDefaultShard, gomock.Any(), _selectLatestConfigQuery, 2).Return(errors.New("some error"))
-            },
-            expectError: true,
-        },
-    }
+	now := time.Now()
+	testCases := []struct {
+		name        string
+		rowType     int
+		setupMock   func(*sqldriver.MockDriver)
+		expectError bool
+		expectedRow *persistence.InternalConfigStoreEntry
+	}{
+		{
+			name:    "Success case",
+			rowType: 1,
+			setupMock: func(md *sqldriver.MockDriver) {
+				row := sqlplugin.ClusterConfigRow{
+					RowType:      1,
+					Version:      -2,
+					Timestamp:    now,
+					Data:         []byte("test data"),
+					DataEncoding: "json",
+				}
+				md.EXPECT().GetContext(gomock.Any(), sqlplugin.DbDefaultShard, gomock.Any(), _selectLatestConfigQuery, 1).DoAndReturn(
+					func(ctx context.Context, shardID int, r *sqlplugin.ClusterConfigRow, query string, args ...interface{}) error {
+						*r = row
+						return nil
+					},
+				)
+			},
+			expectError: false,
+			expectedRow: &persistence.InternalConfigStoreEntry{
+				RowType:   1,
+				Version:   2,
+				Timestamp: now,
+				Values: &persistence.DataBlob{
+					Data:     []byte("test data"),
+					Encoding: common.EncodingType("json"),
+				},
+			},
+		},
+		{
+			name:    "Error case",
+			rowType: 2,
+			setupMock: func(md *sqldriver.MockDriver) {
+				md.EXPECT().GetContext(gomock.Any(), sqlplugin.DbDefaultShard, gomock.Any(), _selectLatestConfigQuery, 2).Return(errors.New("some error"))
+			},
+			expectError: true,
+		},
+	}
 
-    for _, tc := range testCases {
-        t.Run(tc.name, func(t *testing.T) {
-            ctrl := gomock.NewController(t)
-            defer ctrl.Finish()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
-            mockDriver := sqldriver.NewMockDriver(ctrl)
-            mdb := &db{driver: mockDriver, converter: &converter{}}
+			mockDriver := sqldriver.NewMockDriver(ctrl)
+			mdb := &db{driver: mockDriver, converter: &converter{}}
 
-            tc.setupMock(mockDriver)
+			tc.setupMock(mockDriver)
 
-            row, err := mdb.SelectLatestConfig(context.Background(), tc.rowType)
-            if tc.expectError {
-                assert.Error(t, err, "Expected an error for test case")
-            } else {
-                assert.NoError(t, err, "Did not expect an error for test case")
-                assert.Equal(t, tc.expectedRow, row, "Expected result to be the same for test case")
-            }
-        })
-    }
+			row, err := mdb.SelectLatestConfig(context.Background(), tc.rowType)
+			if tc.expectError {
+				assert.Error(t, err, "Expected an error for test case")
+			} else {
+				assert.NoError(t, err, "Did not expect an error for test case")
+				assert.Equal(t, tc.expectedRow, row, "Expected result to be the same for test case")
+			}
+		})
+	}
 }
