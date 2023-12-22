@@ -22,15 +22,15 @@ package domain
 
 import (
 	"context"
+	"log"
+	"os"
 	"testing"
 
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"
-	"go.uber.org/zap"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
@@ -40,35 +40,32 @@ import (
 
 type (
 	domainReplicationTaskExecutorSuite struct {
-		suite.Suite
-		persistencetests.TestBase
+		*persistencetests.TestBase
 		domainReplicator *domainReplicationTaskExecutorImpl
 	}
 )
 
 func TestDomainReplicationTaskExecutorSuite(t *testing.T) {
 	testflags.RequireCassandra(t)
+
+	if testing.Verbose() {
+		log.SetOutput(os.Stdout)
+	}
+
 	s := new(domainReplicationTaskExecutorSuite)
+
+	s.TestBase = public.NewTestBaseWithPublicCassandra(t, &persistencetests.TestBaseOptions{})
+
 	suite.Run(t, s)
 }
 
-func (s *domainReplicationTaskExecutorSuite) SetupSuite() {
-}
-
-func (s *domainReplicationTaskExecutorSuite) TearDownSuite() {
-
-}
-
 func (s *domainReplicationTaskExecutorSuite) SetupTest() {
-	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{})
-	s.TestBase.Setup()
-	zapLogger, err := zap.NewDevelopment()
-	s.Require().NoError(err)
-	logger := loggerimpl.NewLogger(zapLogger)
+	s.Setup()
+
 	s.domainReplicator = NewReplicationTaskExecutor(
 		s.DomainManager,
 		clock.NewRealTimeSource(),
-		logger,
+		s.Logger,
 	).(*domainReplicationTaskExecutorImpl)
 }
 

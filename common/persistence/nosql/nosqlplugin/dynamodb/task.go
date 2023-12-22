@@ -88,6 +88,11 @@ func (db *ddb) SelectTasks(ctx context.Context, filter *nosqlplugin.TasksFilter)
 	panic("TODO")
 }
 
+// SelectTasks return tasks that associated to a tasklist
+func (db *ddb) GetTasksCount(ctx context.Context, filter *nosqlplugin.TasksFilter) (int64, error) {
+	panic("TODO")
+}
+
 // DeleteTask delete a batch tasks that taskIDs less than the row
 // If TTL is not implemented, then should also return the number of rows deleted, otherwise persistence.UnknownNumRowsAffected
 // NOTE: This API ignores the `BatchSize` request parameter i.e. either all tasks leq the task_id will be deleted or an error will

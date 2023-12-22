@@ -29,19 +29,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
-
-	"github.com/uber/cadence/testflags"
-
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+	"github.com/uber/cadence/common/service"
+	"github.com/uber/cadence/testflags"
+	"github.com/uber/cadence/tools/cassandra"
+
 	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"              // needed to load cassandra plugin
 	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public" // needed to load the default gocql client
-	"github.com/uber/cadence/common/service"
-	"github.com/uber/cadence/tools/cassandra"
 )
 
 type ServerSuite struct {
@@ -68,7 +67,7 @@ func (s *ServerSuite) TestServerStartup() {
 	rootDir := "../../../"
 	configDir := constructPathIfNeed(rootDir, "config")
 
-	log.Printf("Loading config; env=%v,zone=%v,configDir=%v\n", env, zone, configDir)
+	s.T().Logf("Loading config; env=%v,zone=%v,configDir=%v\n", env, zone, configDir)
 
 	var cfg config.Config
 	err := config.Load(env, configDir, zone, &cfg)
@@ -88,7 +87,7 @@ func (s *ServerSuite) TestServerStartup() {
 		cfg.Persistence.DataStores[cfg.Persistence.VisibilityStore] = ds
 	}
 
-	log.Printf("config=\n%v\n", cfg.String())
+	s.T().Logf("config=\n%v\n", cfg.String())
 
 	cfg.DynamicConfig.FileBased.Filepath = constructPathIfNeed(rootDir, cfg.DynamicConfig.FileBased.Filepath)
 

@@ -21,10 +21,9 @@
 package thrift
 
 import (
+	"github.com/uber/cadence/.gen/go/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
-
-	"github.com/uber/cadence/.gen/go/matching"
 )
 
 // FromAddActivityTaskRequest converts internal AddActivityTaskRequest type to thrift

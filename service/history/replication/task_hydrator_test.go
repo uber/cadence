@@ -557,6 +557,7 @@ func TestMutableStateLoader_GetMutableState(t *testing.T) {
 	ctx := context.Background()
 	controller := gomock.NewController(t)
 	testShardContext := shard.NewTestContext(
+		t,
 		controller,
 		&persistence.ShardInfo{
 			ShardID:                 testShardID,

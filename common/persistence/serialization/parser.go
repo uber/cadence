@@ -353,8 +353,6 @@ func getDecoder(encoding common.EncodingType) (decoder, error) {
 	switch encoding {
 	case common.EncodingTypeThriftRW:
 		return newThriftDecoder(), nil
-	case common.EncodingTypeProto:
-		return newProtoDecoder(), nil
 	default:
 		return nil, unsupportedEncodingError(encoding)
 	}
@@ -364,8 +362,6 @@ func getEncoder(encoding common.EncodingType) (encoder, error) {
 	switch encoding {
 	case common.EncodingTypeThriftRW:
 		return newThriftEncoder(), nil
-	case common.EncodingTypeProto:
-		return newProtoEncoder(), nil
 	default:
 		return nil, unsupportedEncodingError(encoding)
 	}

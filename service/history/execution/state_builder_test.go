@@ -79,6 +79,7 @@ func (s *stateBuilderSuite) SetupTest() {
 	s.mockMutableState = NewMockMutableState(s.controller)
 
 	s.mockShard = shard.NewTestContext(
+		s.T(),
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID:          0,

@@ -25,14 +25,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/common/dynamicconfig/configstore"
-	csc "github.com/uber/cadence/common/dynamicconfig/configstore/config"
-
-	"github.com/uber/cadence/common/isolationgroup/defaultisolationgroupstate"
-
-	"github.com/uber/cadence/common/isolationgroup"
-	"github.com/uber/cadence/common/partition"
-
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc"
@@ -51,16 +43,22 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/dynamicconfig/configstore"
+	csc "github.com/uber/cadence/common/dynamicconfig/configstore/config"
+	"github.com/uber/cadence/common/isolationgroup"
+	"github.com/uber/cadence/common/isolationgroup/defaultisolationgroupstate"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service"
+	"github.com/uber/cadence/common/taskvalidator"
 )
 
 type (
@@ -133,6 +131,7 @@ type (
 		isolationGroups           isolationgroup.State
 		isolationGroupConfigStore configstore.Client
 		partitioner               partition.Partitioner
+		taskvalidator             taskvalidator.Checker
 	}
 )
 
@@ -177,12 +176,14 @@ func New(
 
 	persistenceBean, err := persistenceClient.NewBeanFromFactory(persistenceClient.NewFactory(
 		&params.PersistenceConfig,
-		quotas.PerMemberDynamic(
-			serviceName,
-			serviceConfig.PersistenceGlobalMaxQPS.AsFloat64(),
-			serviceConfig.PersistenceMaxQPS.AsFloat64(),
-			membershipResolver,
-		),
+		func() float64 {
+			return quotas.PerMember(
+				serviceName,
+				float64(serviceConfig.PersistenceGlobalMaxQPS()),
+				float64(serviceConfig.PersistenceMaxQPS()),
+				membershipResolver,
+			)
+		},
 		params.ClusterMetadata.GetCurrentClusterName(),
 		params.MetricsClient,
 		logger,
@@ -335,12 +336,13 @@ func New(
 		rpcFactory:                params.RPCFactory,
 		isolationGroups:           isolationGroupState,
 		isolationGroupConfigStore: isolationGroupStore, // can be nil where persistence is not available
-		partitioner:               partitioner,         // can be nil where persistence is not available
+		partitioner:               partitioner,
+		taskvalidator:             taskvalidator.NewWfChecker(logger, params.MetricsClient),
 	}
 	return impl, nil
 }
 
-// Start start all resources
+// Start all resources
 func (h *Impl) Start() {
 
 	if !atomic.CompareAndSwapInt32(
@@ -439,6 +441,10 @@ func (h *Impl) GetTimeSource() clock.TimeSource {
 // GetPayloadSerializer return binary payload serializer
 func (h *Impl) GetPayloadSerializer() persistence.PayloadSerializer {
 	return h.payloadSerializer
+}
+
+func (h *Impl) GetTaskValidator() taskvalidator.Checker {
+	return h.taskvalidator
 }
 
 // GetMetricsClient return metrics client

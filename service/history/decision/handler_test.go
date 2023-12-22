@@ -29,7 +29,7 @@ import (
 	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/common/client"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -64,7 +64,7 @@ func (s *DecisionHandlerSuite) SetupTest() {
 		versionChecker: client.NewVersionChecker(),
 		metricsClient:  metrics.NewClient(tally.NoopScope, metrics.History),
 		config:         config.NewForTest(),
-		logger:         loggerimpl.NewNopLogger(),
+		logger:         testlogger.New(s.T()),
 	}
 	s.queryRegistry = s.constructQueryRegistry(10)
 	s.mockMutableState = execution.NewMockMutableState(s.controller)

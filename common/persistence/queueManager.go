@@ -22,9 +22,7 @@
 
 package persistence
 
-import (
-	"context"
-)
+import "context"
 
 type (
 	queueManager struct {

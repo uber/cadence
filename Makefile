@@ -180,6 +180,11 @@ $(BIN)/mockery: internal/tools/go.mod
 $(BIN)/enumer: internal/tools/go.mod
 	$(call go_build_tool,github.com/dmarkham/enumer)
 
+# organizes imports and reformats
+$(BIN)/gci: internal/tools/go.mod
+	$(call go_build_tool,github.com/daixiang0/gci)
+
+# removes unused imports and reformats
 $(BIN)/goimports: internal/tools/go.mod
 	$(call go_build_tool,golang.org/x/tools/cmd/goimports)
 
@@ -352,10 +357,13 @@ $(BUILD)/lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
 # if either changes, this will need to change.
 MAYBE_TOUCH_COPYRIGHT=
 
-$(BUILD)/fmt: $(ALL_SRC) $(BIN)/goimports | $(BUILD)
-	$Q echo "goimports..."
-	$Q # use FRESH_ALL_SRC so it won't miss any generated files produced earlier
-	$Q $(BIN)/goimports -local "github.com/uber/cadence" -w $(FRESH_ALL_SRC)
+# use FRESH_ALL_SRC so it won't miss any generated files produced earlier.
+$(BUILD)/fmt: $(ALL_SRC) $(BIN)/goimports $(BIN)/gci | $(BUILD)
+	$Q echo "removing unused imports..."
+	$Q # goimports thrashes on internal/tools, sadly.  just hide it.
+	$Q $(BIN)/goimports -w $(filter-out ./internal/tools/tools.go,$(FRESH_ALL_SRC))
+	$Q echo "grouping imports..."
+	$Q $(BIN)/gci write --section standard --section 'Prefix(github.com/uber/cadence/)' --section default --section blank $(FRESH_ALL_SRC)
 	$Q touch $@
 	$Q $(MAYBE_TOUCH_COPYRIGHT)
 
@@ -386,8 +394,8 @@ endef
 lint: ## (re)run the linter
 	$(call remake,proto-lint lint)
 
-# intentionally not re-making, goimports is slow and it's clear when it's unnecessary
-fmt: $(BUILD)/fmt ## run goimports
+# intentionally not re-making, it's a bit slow and it's clear when it's unnecessary
+fmt: $(BUILD)/fmt ## run gofmt / organize imports / etc
 
 # not identical to the intermediate target, but does provide the same codegen (or more).
 copyright: $(BIN)/copyright | $(BUILD) ## update copyright headers
@@ -463,6 +471,14 @@ release: ## Re-generate generated code and run tests
 	$(MAKE) --no-print-directory go-generate
 	$(MAKE) --no-print-directory test
 
+build: ## Build all packages and all tests (ensures everything compiles)
+	$Q echo 'Building all packages...'
+	$Q go build ./...
+	$Q # "tests" by building and then running `true`, and hides test-success output
+	$Q echo 'Building all tests (~5x slower)...'
+	$Q # intentionally not -race due to !race build tags
+	$Q go test -exec /usr/bin/true ./... >/dev/null
+
 clean: ## Clean build products
 	rm -f $(BINS)
 	rm -Rf $(BUILD)
@@ -472,7 +488,7 @@ clean: ## Clean build products
 
 # v----- not yet cleaned up -----v
 
-.PHONY: git-submodules test bins clean cover cover_ci help
+.PHONY: git-submodules test bins build clean cover cover_ci help
 
 TOOLS_CMD_ROOT=./cmd/tools
 INTEG_TEST_ROOT=./host
@@ -548,13 +564,13 @@ test_e2e_xdc: bins
 		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
 	done;
 
-cover_profile: bins
+cover_profile:
 	$Q mkdir -p $(BUILD)
 	$Q mkdir -p $(COVER_ROOT)
 	$Q echo "mode: atomic" > $(UNIT_COVER_FILE)
 
 	$Q echo Running special test cases without race detector:
-	$Q go test -v ./cmd/server/cadence/
+	$Q go test ./cmd/server/cadence/
 	$Q echo Running package tests:
 	$Q for dir in $(PKG_TEST_DIRS); do \
 		mkdir -p $(BUILD)/"$$dir"; \
@@ -579,7 +595,7 @@ cover_ndc_profile: bins
 
 	$Q echo Running integration test for 3+ dc with $(PERSISTENCE_TYPE) $(PERSISTENCE_PLUGIN)
 	$Q mkdir -p $(BUILD)/$(INTEG_TEST_NDC_DIR)
-	$Q time go test -v -timeout $(TEST_TIMEOUT) $(INTEG_TEST_NDC_ROOT) $(TEST_TAG) -persistenceType=$(PERSISTENCE_TYPE) -sqlPluginName=$(PERSISTENCE_PLUGIN) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_NDC_DIR)/coverage.out -count=$(TEST_RUN_COUNT) || exit 1;
+	$Q time go test -timeout $(TEST_TIMEOUT) $(INTEG_TEST_NDC_ROOT) $(TEST_TAG) -persistenceType=$(PERSISTENCE_TYPE) -sqlPluginName=$(PERSISTENCE_PLUGIN) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_NDC_DIR)/coverage.out -count=$(TEST_RUN_COUNT) || exit 1;
 	$Q cat $(BUILD)/$(INTEG_TEST_NDC_DIR)/coverage.out | grep -v "^mode: \w\+" | grep -v "mode: set" >> $(INTEG_NDC_COVER_FILE)
 
 $(COVER_ROOT)/cover.out: $(UNIT_COVER_FILE) $(INTEG_COVER_FILE_CASS) $(INTEG_COVER_FILE_MYSQL) $(INTEG_COVER_FILE_POSTGRES) $(INTEG_NDC_COVER_FILE_CASS) $(INTEG_NDC_COVER_FILE_MYSQL) $(INTEG_NDC_COVER_FILE_POSTGRES)
@@ -599,12 +615,14 @@ cover_ci: $(COVER_ROOT)/cover.out $(BIN)/goveralls
 	$(BIN)/goveralls -coverprofile=$(COVER_ROOT)/cover.out -service=buildkite || echo Coveralls failed;
 
 install-schema: cadence-cassandra-tool
+	$Q echo installing schema
 	./cadence-cassandra-tool create -k cadence --rf 1
 	./cadence-cassandra-tool -k cadence setup-schema -v 0.0
 	./cadence-cassandra-tool -k cadence update-schema -d ./schema/cassandra/cadence/versioned
 	./cadence-cassandra-tool create -k cadence_visibility --rf 1
 	./cadence-cassandra-tool -k cadence_visibility setup-schema -v 0.0
 	./cadence-cassandra-tool -k cadence_visibility update-schema -d ./schema/cassandra/visibility/versioned
+	$Q echo installed schema
 
 install-schema-mysql: cadence-sql-tool
 	./cadence-sql-tool --user root --pw cadence create --db cadence

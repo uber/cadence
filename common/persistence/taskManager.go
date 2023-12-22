@@ -69,6 +69,10 @@ func (t *taskManager) DeleteTaskList(ctx context.Context, request *DeleteTaskLis
 	return t.persistence.DeleteTaskList(ctx, request)
 }
 
+func (t *taskManager) GetTaskListSize(ctx context.Context, request *GetTaskListSizeRequest) (*GetTaskListSizeResponse, error) {
+	return t.persistence.GetTaskListSize(ctx, request)
+}
+
 func (t *taskManager) CreateTasks(ctx context.Context, request *CreateTasksRequest) (*CreateTasksResponse, error) {
 	var internalCreateTasks []*InternalCreateTasksInfo
 	for _, task := range request.Tasks {

@@ -28,16 +28,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/common/definition"
-
-	pnt "github.com/uber/cadence/common/pinot"
-
 	"github.com/stretchr/testify/assert"
 
-	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/types"
-
+	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
+	p "github.com/uber/cadence/common/persistence"
+	pnt "github.com/uber/cadence/common/pinot"
+	"github.com/uber/cadence/common/types"
 )
 
 var (
@@ -185,7 +182,7 @@ LIMIT 0, 10
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND IsDeleted = false
-AND WorkflowID = 'wid' and ((JSON_MATCH(Attr, '"$.CustomStringField" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'custom and custom2 or custom3 order by*')) or CustomIntField between 1 and 10)
+AND WorkflowID = 'wid' and ((JSON_MATCH(Attr, '"$.CustomStringField" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'custom and custom2 or custom3 order by*')) or (JSON_MATCH(Attr, '"$.CustomIntField" is not null') AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomIntField') AS INT) >= 1 AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomIntField') AS INT) <= 10))
 Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName),
@@ -239,7 +236,7 @@ LIMIT 0, 10
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND IsDeleted = false
-AND CloseStatus < 0 and (JSON_MATCH(Attr, '"$.CustomKeywordField"=''keywordCustomized''') or JSON_MATCH(Attr, '"$.CustomKeywordField[*]"=''keywordCustomized''')) and JSON_MATCH(Attr, '"$.CustomIntField"=''10''') and (JSON_MATCH(Attr, '"$.CustomStringField" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'String field is for text*'))
+AND CloseStatus < 0 and (JSON_MATCH(Attr, '"$.CustomKeywordField"=''keywordCustomized''') or JSON_MATCH(Attr, '"$.CustomKeywordField[*]"=''keywordCustomized''')) and (JSON_MATCH(Attr, '"$.CustomIntField" is not null') AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomIntField') AS INT) <= 10) and (JSON_MATCH(Attr, '"$.CustomStringField" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'String field is for text*'))
 Order by DomainID Desc
 LIMIT 11, 10
 `, testTableName),

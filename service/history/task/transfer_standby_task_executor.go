@@ -455,8 +455,7 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 	isRecordStart bool,
 ) error {
 
-	workflowStartedScope := t.metricsClient.Scope(metrics.TransferStandbyTaskRecordWorkflowStartedScope,
-		metrics.DomainTag(transferTask.DomainID))
+	workflowStartedScope := getOrCreateDomainTaggedScope(t.shard, metrics.TransferStandbyTaskRecordWorkflowStartedScope, transferTask.DomainID, t.logger)
 
 	// verify task version for RecordWorkflowStarted.
 	// upsert doesn't require verifyTask, because it is just a sync of mutableState.

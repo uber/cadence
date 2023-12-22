@@ -23,10 +23,10 @@ package persistence
 import (
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
-
-	"github.com/stretchr/testify/suite"
 )
 
 type (

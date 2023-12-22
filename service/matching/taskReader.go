@@ -26,6 +26,7 @@ import (
 	"context"
 	"errors"
 	"runtime"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -80,6 +81,9 @@ type (
 		dispatchTask             func(context.Context, *InternalTask) error
 		getIsolationGroupForTask func(context.Context, *persistence.TaskInfo) (string, error)
 		ratePerSecond            func() float64
+
+		// stopWg is used to wait for all dispatchers to stop.
+		stopWg sync.WaitGroup
 	}
 )
 
@@ -123,9 +127,18 @@ func newTaskReader(tlMgr *taskListManagerImpl, isolationGroups []string) *taskRe
 func (tr *taskReader) Start() {
 	tr.Signal()
 	for g := range tr.taskBuffers {
-		go tr.dispatchBufferedTasks(g)
+		g := g
+		tr.stopWg.Add(1)
+		go func() {
+			defer tr.stopWg.Done()
+			tr.dispatchBufferedTasks(g)
+		}()
 	}
-	go tr.getTasksPump()
+	tr.stopWg.Add(1)
+	go func() {
+		defer tr.stopWg.Done()
+		tr.getTasksPump()
+	}()
 }
 
 func (tr *taskReader) Stop() {
@@ -137,6 +150,7 @@ func (tr *taskReader) Stop() {
 				tag.Error(err))
 		}
 		tr.taskGC.RunNow(tr.taskAckManager.GetAckLevel())
+		tr.stopWg.Wait()
 	}
 }
 
@@ -200,6 +214,11 @@ getTasksPumpLoop:
 			}
 		case <-updateAckTimer.C:
 			{
+				ackLevel := tr.taskAckManager.GetAckLevel()
+				if size, err := tr.db.GetTaskListSize(ackLevel); err == nil {
+					tr.scope.Tagged(getTaskListTypeTag(tr.taskListID.taskType)).
+						UpdateGauge(metrics.TaskCountPerTaskListGauge, float64(size))
+				}
 				if err := tr.handleErr(tr.persistAckLevel()); err != nil {
 					tr.logger.Error("Persistent store operation failure",
 						tag.StoreOperationUpdateTaskList,

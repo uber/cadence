@@ -82,6 +82,10 @@ task_type = :task_type
 		`FROM tasks ` +
 		`WHERE domain_id = $1 AND task_list_name = $2 AND task_type = $3 AND task_id > $4 ORDER BY task_id LIMIT $5`
 
+	getTasksCountQry = `SELECT count(1) as count ` +
+		`FROM tasks ` +
+		`WHERE domain_id = $1 AND task_list_name = $2 AND task_type = $3 AND task_id > $4`
+
 	createTaskQry = `INSERT INTO ` +
 		`tasks(domain_id, task_list_name, task_type, task_id, data, data_encoding) ` +
 		`VALUES(:domain_id, :task_list_name, :task_type, :task_id, :data, :data_encoding)`
@@ -137,6 +141,14 @@ func (pdb *db) DeleteFromTasks(ctx context.Context, filter *sqlplugin.TasksFilte
 			filter.DomainID, filter.TaskListName, filter.TaskType, *filter.TaskIDLessThanEquals, *filter.Limit)
 	}
 	return pdb.driver.ExecContext(ctx, filter.ShardID, deleteTaskQry, filter.DomainID, filter.TaskListName, filter.TaskType, *filter.TaskID)
+}
+
+func (pdb *db) GetTasksCount(ctx context.Context, filter *sqlplugin.TasksFilter) (int64, error) {
+	var size []int64
+	if err := pdb.driver.SelectContext(ctx, filter.ShardID, &size, getTasksCountQry, filter.DomainID, filter.TaskListName, filter.TaskType, *filter.MinTaskID); err != nil {
+		return 0, err
+	}
+	return size[0], nil
 }
 
 func (pdb *db) GetOrphanTasks(ctx context.Context, filter *sqlplugin.OrphanTasksFilter) ([]sqlplugin.TaskKeyRow, error) {

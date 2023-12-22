@@ -20,9 +20,7 @@
 
 package common
 
-import (
-	"go.uber.org/yarpc"
-)
+import "go.uber.org/yarpc"
 
 const (
 	// LibraryVersionHeaderName refers to the name of the

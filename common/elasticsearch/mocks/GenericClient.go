@@ -29,7 +29,6 @@ import (
 
 	elasticsearch "github.com/uber/cadence/common/elasticsearch"
 	bulk "github.com/uber/cadence/common/elasticsearch/bulk"
-
 	persistence "github.com/uber/cadence/common/persistence"
 )
 

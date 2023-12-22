@@ -23,9 +23,9 @@ package matching
 import (
 	"context"
 
+	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	"go.uber.org/yarpc"
 
-	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	matchingv1 "github.com/uber/cadence/.gen/proto/matching/v1"
 	"github.com/uber/cadence/common/types/mapper/proto"
 )

@@ -23,10 +23,6 @@ package clock
 import (
 	"sync/atomic"
 	"time"
-
-	// clockwork is not currently used but it is useful to have the option to use this in testing code
-	// this comment is needed to stop lint from complaining about this _ import
-	_ "github.com/jonboulle/clockwork"
 )
 
 type (
