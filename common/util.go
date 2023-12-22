@@ -361,6 +361,10 @@ func CreateChildContext(
 
 // GenerateRandomString is used for generate test string
 func GenerateRandomString(n int) string {
+	if n <= 0 {
+		return ""
+	}
+
 	rand.Seed(time.Now().UnixNano())
 	letterRunes := []rune("random")
 	b := make([]rune, n)
