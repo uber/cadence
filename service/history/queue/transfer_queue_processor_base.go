@@ -543,9 +543,7 @@ func (t *transferQueueProcessorBase) readTasks(
 	return response.Tasks, len(response.NextPageToken) != 0, nil
 }
 
-func newTransferTaskKey(
-	taskID int64,
-) task.Key {
+func newTransferTaskKey(taskID int64) task.Key {
 	return transferTaskKey{
 		taskID: taskID,
 	}

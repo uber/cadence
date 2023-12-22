@@ -84,9 +84,7 @@ func newTransferQueueValidator(
 	}
 }
 
-func (v *transferQueueValidator) addTasks(
-	info *hcommon.NotifyTaskInfo,
-) {
+func (v *transferQueueValidator) addTasks(info *hcommon.NotifyTaskInfo) {
 	v.Lock()
 	defer v.Unlock()
 

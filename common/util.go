@@ -238,7 +238,9 @@ func ValidIDLength(
 	idLength := len(id)
 	valid := idLength <= errorLimit
 	if idLength > warnLimit {
-		scope.IncCounter(metricsCounter)
+		if scope != nil {
+			scope.IncCounter(metricsCounter)
+		}
 		if logger != nil {
 			logger.Warn("ID length exceeds limit.",
 				tag.WorkflowDomainName(domainName),

@@ -27,6 +27,7 @@ import (
 
 	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/ratelimited"
 	"github.com/uber/cadence/service/worker/scanner/executor"
 )
 
@@ -144,7 +145,7 @@ func (s *Scavenger) completeOrphanTasksHandler() handlerStatus {
 	var nDeleted int
 	batchSize := s.getOrphanTasksPageSizeFn()
 	resp, err := s.getOrphanTasks(batchSize)
-	if err == p.ErrPersistenceLimitExceeded {
+	if err == ratelimited.ErrPersistenceLimitExceeded {
 		s.logger.Info("scavenger.completeOrphanTasksHandler query was ratelimited; will retry")
 		return handlerStatusDefer
 	}
@@ -158,7 +159,7 @@ func (s *Scavenger) completeOrphanTasksHandler() handlerStatus {
 			Name:     taskKey.TaskListName,
 			TaskType: taskKey.TaskType,
 		}, taskKey.TaskID)
-		if err == p.ErrPersistenceLimitExceeded {
+		if err == ratelimited.ErrPersistenceLimitExceeded {
 			s.logger.Info("scavenger.completeOrphanTasksHandler query was ratelimited; will retry")
 			return handlerStatusDefer
 		}
