@@ -478,3 +478,15 @@ func TestIsValidIDLength(t *testing.T) {
 		logger.AssertExpectations(t)
 	})
 }
+
+func TestIsEntityNotExistsError(t *testing.T) {
+	t.Run("is entity not exists error", func(t *testing.T) {
+		err := &types.EntityNotExistsError{}
+		require.True(t, IsEntityNotExistsError(err), "expected true, because err is entity not exists error")
+	})
+
+	t.Run("is not entity not exists error", func(t *testing.T) {
+		err := fmt.Errorf("generic error")
+		require.False(t, IsEntityNotExistsError(err), "expected false, because err is a generic error")
+	})
+}
