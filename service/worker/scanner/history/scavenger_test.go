@@ -115,7 +115,9 @@ func (s *ScavengerTestSuite) TestAllSkipTasksTwoPages() {
 		},
 	}, nil).Once()
 
-	hbd, err := scvgr.Run(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	hbd, err := scvgr.Run(ctx)
 	s.Nil(err)
 	s.Equal(4, hbd.SkipCount)
 	s.Equal(0, hbd.SuccCount)
@@ -166,7 +168,9 @@ func (s *ScavengerTestSuite) TestAllErrorSplittingTasksTwoPages() {
 		},
 	}, nil).Once()
 
-	hbd, err := scvgr.Run(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	hbd, err := scvgr.Run(ctx)
 	s.Nil(err)
 	s.Equal(0, hbd.SkipCount)
 	s.Equal(0, hbd.SuccCount)
@@ -246,7 +250,9 @@ func (s *ScavengerTestSuite) TestNoGarbageTwoPages() {
 		},
 	}).Return(nil, nil)
 
-	hbd, err := scvgr.Run(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	hbd, err := scvgr.Run(ctx)
 	s.Nil(err)
 	s.Equal(0, hbd.SkipCount)
 	s.Equal(4, hbd.SuccCount)
@@ -355,7 +361,9 @@ func (s *ScavengerTestSuite) TestDeletingBranchesTwoPages() {
 		DomainName:  domainName,
 	}).Return(nil).Once()
 
-	hbd, err := scvgr.Run(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	hbd, err := scvgr.Run(ctx)
 	s.Nil(err)
 	s.Equal(0, hbd.SkipCount)
 	s.Equal(4, hbd.SuccCount)
@@ -456,7 +464,9 @@ func (s *ScavengerTestSuite) TestMixesTwoPages() {
 		DomainName:  domainName,
 	}).Return(fmt.Errorf("failed to delete history")).Once()
 
-	hbd, err := scvgr.Run(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	hbd, err := scvgr.Run(ctx)
 	s.Nil(err)
 	s.Equal(1, hbd.SkipCount)
 	s.Equal(2, hbd.SuccCount)

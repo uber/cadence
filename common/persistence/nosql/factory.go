@@ -41,7 +41,7 @@ type (
 
 	executionStoreFactory struct {
 		logger            log.Logger
-		shardedNosqlStore shardedNosqlStore
+		shardedNosqlStore *shardedNosqlStore
 	}
 )
 
@@ -142,7 +142,7 @@ func newExecutionStoreFactory(
 	}
 	return &executionStoreFactory{
 		logger:            logger,
-		shardedNosqlStore: *s,
+		shardedNosqlStore: s,
 	}, nil
 }
 
