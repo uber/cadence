@@ -30,6 +30,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/metrics"
 )
 
 var testServices = []string{"test-worker", "test-services"}
@@ -136,5 +137,6 @@ func newTestResolver(t *testing.T) (*MultiringResolver, *MockPeerProvider) {
 		testServices,
 		pp,
 		log.NewNoop(),
+		metrics.NewNoopMetricsClient(),
 	), pp
 }
