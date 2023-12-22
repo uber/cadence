@@ -224,8 +224,8 @@ func CreateReplicationServiceBusyRetryPolicy() backoff.RetryPolicy {
 	return policy
 }
 
-// ValidIDLength checks if id is valid according to its length
-func ValidIDLength(
+// IsValidIDLength checks if id is valid according to its length
+func IsValidIDLength(
 	id string,
 	scope metrics.Scope,
 	warnLimit int,
@@ -235,20 +235,14 @@ func ValidIDLength(
 	logger log.Logger,
 	idTypeViolationTag tag.Tag,
 ) bool {
-	idLength := len(id)
-	valid := idLength <= errorLimit
-	if idLength > warnLimit {
-		if scope != nil {
-			scope.IncCounter(metricsCounter)
-		}
-		if logger != nil {
-			logger.Warn("ID length exceeds limit.",
-				tag.WorkflowDomainName(domainName),
-				tag.Name(id),
-				idTypeViolationTag)
-		}
+	if len(id) > warnLimit {
+		scope.IncCounter(metricsCounter)
+		logger.Warn("ID length exceeds limit.",
+			tag.WorkflowDomainName(domainName),
+			tag.Name(id),
+			idTypeViolationTag)
 	}
-	return valid
+	return len(id) <= errorLimit
 }
 
 // CheckDecisionResultLimit checks if decision result count exceeds limits.
