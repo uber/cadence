@@ -694,6 +694,20 @@ func TestValidateRetryPolicy_Error(t *testing.T) {
 	}
 }
 
+func TestConvertGetTaskFailedCauseToErr(t *testing.T) {
+	for cause, wantErr := range map[types.GetTaskFailedCause]error{
+		types.GetTaskFailedCauseServiceBusy:        &types.ServiceBusyError{},
+		types.GetTaskFailedCauseTimeout:            context.DeadlineExceeded,
+		types.GetTaskFailedCauseShardOwnershipLost: &types.ShardOwnershipLostError{},
+		types.GetTaskFailedCauseUncategorized:      &types.InternalServiceError{Message: "uncategorized error"},
+	} {
+		t.Run(cause.String(), func(t *testing.T) {
+			gotErr := ConvertGetTaskFailedCauseToErr(cause)
+			require.Equal(t, wantErr, gotErr)
+		})
+	}
+}
+
 func TestDurationToDays(t *testing.T) {
 	for duration, want := range map[time.Duration]int32{
 		0:              0,
