@@ -73,17 +73,21 @@ func ConcreteScannerWorkflow(ctx workflow.Context, params shardscanner.ScannerWo
 }
 
 // ConcreteFixerWorkflow starts concrete executions fixer.
-func ConcreteFixerWorkflow(
-	ctx workflow.Context,
-	params shardscanner.FixerWorkflowParams,
-) error {
+func ConcreteFixerWorkflow(ctx workflow.Context, params shardscanner.FixerWorkflowParams) error {
+	logger := workflow.GetLogger(ctx)
+	logger.Info("Starting ConcreteExecutionsFixerWorkflow", zap.Any("Params", params))
 
 	wf, err := shardscanner.NewFixerWorkflow(ctx, ConcreteExecutionsFixerWFTypeName, params)
 	if err != nil {
+		logger.Error("Failed to create new fixer workflow", zap.Error(err))
 		return err
 	}
 
-	return wf.Start(ctx)
+	err = wf.Start(ctx)
+	if err != nil {
+		logger.Error("Failed to start fixer workflow", zap.Error(err))
+	}
+	return err
 }
 
 // concreteExecutionScannerHooks provides hooks for concrete executions scanner
