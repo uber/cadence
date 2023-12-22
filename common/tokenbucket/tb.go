@@ -25,7 +25,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/common/clock"
+	"github.com/benbjohnson/clock"
+
 	"github.com/uber/cadence/common/dynamicconfig"
 )
 
@@ -66,7 +67,7 @@ type (
 		overflowTokens         int
 		nextRefillTime         int64
 		nextOverflowRefillTime int64
-		timeSource             clock.TimeSource
+		clock                  clock.Clock
 	}
 
 	dynamicTokenBucketImpl struct {
@@ -89,7 +90,7 @@ type (
 		overflowRps            int
 		overflowTokens         int
 		nextOverflowRefillTime int64
-		timeSource             clock.TimeSource
+		timeSource             clock.Clock
 	}
 )
 
@@ -122,19 +123,19 @@ const (
 // BenchmarkGolangRateParallel 	10000000	       153 ns/op
 // BenchmarkTokenBucketParallel-8	10000000	       129 ns/op
 // BenchmarkGolangRateParallel-8 	10000000	       208 ns/op
-func New(rps int, timeSource clock.TimeSource) TokenBucket {
+func New(rps int, timeSource clock.Clock) TokenBucket {
 	return newTokenBucket(rps, timeSource)
 }
 
-func newTokenBucket(rps int, timeSource clock.TimeSource) *tokenBucketImpl {
+func newTokenBucket(rps int, timeSource clock.Clock) *tokenBucketImpl {
 	tb := new(tokenBucketImpl)
-	tb.timeSource = timeSource
+	tb.clock = timeSource
 	tb.reset(rps)
 	return tb
 }
 
 func (tb *tokenBucketImpl) TryConsume(count int) (bool, time.Duration) {
-	now := tb.timeSource.Now().UnixNano()
+	now := tb.clock.Now().UnixNano()
 	tb.Lock()
 	tb.refill(now)
 	nextRefillTime := time.Duration(tb.nextRefillTime - now)
@@ -150,7 +151,7 @@ func (tb *tokenBucketImpl) TryConsume(count int) (bool, time.Duration) {
 func (tb *tokenBucketImpl) Consume(count int, timeout time.Duration) bool {
 
 	var remTime = int64(timeout)
-	var expiryTime = time.Now().UnixNano() + int64(timeout)
+	var expiryTime = tb.clock.Now().UnixNano() + int64(timeout)
 
 	for {
 
@@ -159,12 +160,12 @@ func (tb *tokenBucketImpl) Consume(count int, timeout time.Duration) bool {
 		}
 
 		if remTime < backoffInterval {
-			time.Sleep(time.Duration(remTime))
+			tb.clock.Sleep(time.Duration(remTime))
 		} else {
-			time.Sleep(time.Duration(backoffInterval))
+			tb.clock.Sleep(time.Duration(backoffInterval))
 		}
 
-		now := time.Now().UnixNano()
+		now := tb.clock.Now().UnixNano()
 		if now >= expiryTime {
 			return false
 		}
@@ -217,7 +218,7 @@ func (tb *tokenBucketImpl) isOverflowRefillDue(now int64) bool {
 // @param rps
 //
 //	Dynamic config function for rate per second
-func NewDynamicTokenBucket(rps dynamicconfig.IntPropertyFn, timeSource clock.TimeSource) TokenBucket {
+func NewDynamicTokenBucket(rps dynamicconfig.IntPropertyFn, timeSource clock.Clock) TokenBucket {
 	initialRPS := rps()
 	return &dynamicTokenBucketImpl{
 		rps:        rps,
@@ -264,30 +265,30 @@ func (dtb *dynamicTokenBucketImpl) resetRateIfChanged(newRPS int) {
 // @param rps
 //
 //	Desired rate per second
-func NewPriorityTokenBucket(numOfPriority, rps int, timeSource clock.TimeSource) PriorityTokenBucket {
+func NewPriorityTokenBucket(numOfPriority, rps int, timeSource clock.Clock) PriorityTokenBucket {
 	tb := new(priorityTokenBucketImpl)
 	tb.tokens = make([]int, numOfPriority)
 	tb.timeSource = timeSource
 	tb.fillInterval = int64(time.Millisecond * 100)
 	tb.fillRate = (rps * 100) / millisPerSecond
 	tb.overflowRps = rps - (10 * tb.fillRate)
-	tb.refill(time.Now().UnixNano())
+	tb.refill(tb.timeSource.Now().UnixNano())
 	return tb
 }
 
 // NewFullPriorityTokenBucket creates and returns a new priority token bucket with all bucket init with full tokens.
 // With all buckets full, get tokens from low priority buckets won't be missed initially, but may caused bursts.
-func NewFullPriorityTokenBucket(numOfPriority, rps int, timeSource clock.TimeSource) PriorityTokenBucket {
+func NewFullPriorityTokenBucket(numOfPriority, rps int, timeSource clock.Clock) PriorityTokenBucket {
 	tb := new(priorityTokenBucketImpl)
 	tb.tokens = make([]int, numOfPriority)
 	tb.timeSource = timeSource
 	tb.fillInterval = int64(time.Millisecond * 100)
 	tb.fillRate = (rps * 100) / millisPerSecond
 	tb.overflowRps = rps - (10 * tb.fillRate)
-	tb.refill(time.Now().UnixNano())
+	tb.refill(tb.timeSource.Now().UnixNano())
 	for i := 1; i < numOfPriority; i++ {
 		tb.nextRefillTime = int64(0)
-		tb.refill(time.Now().UnixNano())
+		tb.refill(tb.timeSource.Now().UnixNano())
 	}
 	return tb
 }

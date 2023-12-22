@@ -25,7 +25,7 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/uber/cadence/common/clock"
+	"github.com/benbjohnson/clock"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -108,7 +108,7 @@ func (m *domainToBucketMap) getRateLimiter(domain string, numOfPriority, qps int
 		m.Unlock()
 		return rateLimiter
 	}
-	rateLimiter = tokenbucket.NewFullPriorityTokenBucket(numOfPriority, qps, clock.NewRealTimeSource())
+	rateLimiter = tokenbucket.NewFullPriorityTokenBucket(numOfPriority, qps, clock.New())
 	m.mappings[domain] = rateLimiter
 	m.Unlock()
 	return rateLimiter

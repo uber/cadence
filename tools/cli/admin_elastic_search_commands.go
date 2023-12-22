@@ -31,12 +31,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/benbjohnson/clock"
 	"github.com/olekukonko/tablewriter"
 	"github.com/olivere/elastic"
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/.gen/go/indexer"
-	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/elasticsearch"
 	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/elasticsearch/esql"
@@ -179,7 +179,7 @@ func AdminDelete(c *cli.Context) {
 	inputFileName := getRequiredOption(c, FlagInputFile)
 	batchSize := c.Int(FlagBatchSize)
 	rps := c.Int(FlagRPS)
-	ratelimiter := tokenbucket.New(rps, clock.NewRealTimeSource())
+	ratelimiter := tokenbucket.New(rps, clock.New())
 
 	// This is only executed from the CLI by an admin user
 	// #nosec
