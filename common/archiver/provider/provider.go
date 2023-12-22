@@ -24,10 +24,9 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/uber/cadence/common/archiver/gcloud"
-
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/filestore"
+	"github.com/uber/cadence/common/archiver/gcloud"
 	"github.com/uber/cadence/common/archiver/s3store"
 	"github.com/uber/cadence/common/config"
 )

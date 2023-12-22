@@ -27,13 +27,12 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc"
-
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/yarpc"
 
 	hclient "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
@@ -134,6 +133,7 @@ func (s *transferActiveTaskExecutorSuite) SetupTest() {
 
 	config := config.NewForTest()
 	s.mockShard = shard.NewTestContext(
+		s.T(),
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID:          0,

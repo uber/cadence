@@ -25,12 +25,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/service/history/constants"
-
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/cadence/testsuite"
 	"go.uber.org/cadence/worker"
 
 	"github.com/uber/cadence/common/metrics"
@@ -39,8 +38,7 @@ import (
 	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/resource"
-
-	"go.uber.org/cadence/testsuite"
+	"github.com/uber/cadence/service/history/constants"
 )
 
 const testWorkflowName = "default-test-workflow-type-name"
@@ -94,8 +92,7 @@ func (s *dataCorruptionWorkflowTestSuite) TestWorkflow_TimerFire_Success() {
 func (s *dataCorruptionWorkflowTestSuite) TestExecutionFixerActivity_Success() {
 	env := s.NewTestActivityEnvironment()
 	controller := gomock.NewController(s.T())
-	defer controller.Finish()
-	mockResource := resource.NewTest(controller, metrics.Worker)
+	mockResource := resource.NewTest(s.T(), controller, metrics.Worker)
 	defer mockResource.Finish(s.T())
 	fixList := []entity.Execution{
 		{

@@ -27,7 +27,10 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/suite"
 	"go.uber.org/cadence/activity"
+	"go.uber.org/cadence/testsuite"
 	"go.uber.org/cadence/worker"
 	"go.uber.org/cadence/workflow"
 
@@ -35,10 +38,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/types"
-
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/suite"
-	"go.uber.org/cadence/testsuite"
 )
 
 var clusters = []*types.ClusterReplicationConfiguration{
@@ -327,9 +326,7 @@ func (s *failoverWorkflowTestSuite) TestShouldFailover() {
 }
 
 func (s *failoverWorkflowTestSuite) TestGetDomainsActivity() {
-	env, mockResource, controller := s.prepareTestActivityEnv()
-	defer controller.Finish()
-	defer mockResource.Finish(s.T())
+	env, mockResource := s.prepareTestActivityEnv()
 
 	domains := &types.ListDomainsResponse{
 		Domains: []*types.DescribeDomainResponse{
@@ -360,9 +357,7 @@ func (s *failoverWorkflowTestSuite) TestGetDomainsActivity() {
 }
 
 func (s *failoverWorkflowTestSuite) TestGetDomainsActivity_WithTargetDomains() {
-	env, mockResource, controller := s.prepareTestActivityEnv()
-	defer controller.Finish()
-	defer mockResource.Finish(s.T())
+	env, mockResource := s.prepareTestActivityEnv()
 
 	domains := &types.ListDomainsResponse{
 		Domains: []*types.DescribeDomainResponse{
@@ -415,9 +410,7 @@ func (s *failoverWorkflowTestSuite) TestGetDomainsActivity_WithTargetDomains() {
 }
 
 func (s *failoverWorkflowTestSuite) TestFailoverActivity_ForceFailover_Success() {
-	env, mockResource, controller := s.prepareTestActivityEnv()
-	defer controller.Finish()
-	defer mockResource.Finish(s.T())
+	env, mockResource := s.prepareTestActivityEnv()
 
 	domains := []string{"d1", "d2"}
 	describeTaskListResp := &types.DescribeTaskListResponse{Pollers: []*types.PollerInfo{
@@ -452,9 +445,7 @@ func (s *failoverWorkflowTestSuite) TestFailoverActivity_ForceFailover_Success()
 }
 
 func (s *failoverWorkflowTestSuite) TestFailoverActivity_GracefulFailover_Success() {
-	env, mockResource, controller := s.prepareTestActivityEnv()
-	defer controller.Finish()
-	defer mockResource.Finish(s.T())
+	env, mockResource := s.prepareTestActivityEnv()
 
 	domains := []string{"d1", "d2"}
 	describeTaskListResp := &types.DescribeTaskListResponse{Pollers: []*types.PollerInfo{
@@ -500,9 +491,7 @@ func (s *failoverWorkflowTestSuite) TestFailoverActivity_GracefulFailover_Succes
 }
 
 func (s *failoverWorkflowTestSuite) TestFailoverActivity_Error() {
-	env, mockResource, controller := s.prepareTestActivityEnv()
-	defer controller.Finish()
-	defer mockResource.Finish(s.T())
+	env, mockResource := s.prepareTestActivityEnv()
 
 	domains := []string{"d1", "d2"}
 	targetCluster := "c2"
@@ -548,9 +537,7 @@ func (s *failoverWorkflowTestSuite) TestFailoverActivity_Error() {
 }
 
 func (s *failoverWorkflowTestSuite) TestFailoverActivity_NoPoller_Error() {
-	env, mockResource, controller := s.prepareTestActivityEnv()
-	defer controller.Finish()
-	defer mockResource.Finish(s.T())
+	env, mockResource := s.prepareTestActivityEnv()
 
 	domains := []string{"d1", "d2"}
 	targetCluster := "c2"
@@ -623,9 +610,9 @@ func (s *failoverWorkflowTestSuite) assertQueryState(env *testsuite.TestWorkflow
 	s.Equal(expectedState, res.State)
 }
 
-func (s *failoverWorkflowTestSuite) prepareTestActivityEnv() (*testsuite.TestActivityEnvironment, *resource.Test, *gomock.Controller) {
+func (s *failoverWorkflowTestSuite) prepareTestActivityEnv() (*testsuite.TestActivityEnvironment, *resource.Test) {
 	controller := gomock.NewController(s.T())
-	mockResource := resource.NewTest(controller, metrics.Worker)
+	mockResource := resource.NewTest(s.T(), controller, metrics.Worker)
 
 	ctx := &FailoverManager{
 		svcClient:  mockResource.GetSDKClient(),
@@ -635,5 +622,10 @@ func (s *failoverWorkflowTestSuite) prepareTestActivityEnv() (*testsuite.TestAct
 	s.activityEnv.SetWorkerOptions(worker.Options{
 		BackgroundActivityContext: context.WithValue(context.Background(), failoverManagerContextKey, ctx),
 	})
-	return s.activityEnv, mockResource, controller
+
+	s.T().Cleanup(func() {
+		mockResource.Finish(s.T())
+	})
+
+	return s.activityEnv, mockResource
 }

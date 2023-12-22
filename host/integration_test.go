@@ -34,7 +34,6 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -129,7 +128,7 @@ func (s *IntegrationSuite) TestStartWorkflowExecution() {
 	we2, err2 := s.engine.StartWorkflowExecution(createContext(), newRequest)
 	s.NotNil(err2)
 	s.IsType(&types.WorkflowExecutionAlreadyStartedError{}, err2)
-	log.Infof("Unable to start workflow execution: %v", err2.Error())
+	s.T().Logf("Unable to start workflow execution: %v\n", err2.Error())
 	s.Nil(we2)
 }
 

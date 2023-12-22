@@ -26,9 +26,9 @@ import (
 	"fmt"
 	"text/tabwriter"
 
-	"github.com/uber/cadence/common/types"
-
 	"github.com/urfave/cli"
+
+	"github.com/uber/cadence/common/types"
 )
 
 func AdminGetGlobalIsolationGroups(c *cli.Context) {

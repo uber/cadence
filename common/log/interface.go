@@ -20,9 +20,7 @@
 
 package log
 
-import (
-	"github.com/uber/cadence/common/log/tag"
-)
+import "github.com/uber/cadence/common/log/tag"
 
 // Logger is our abstraction for logging
 // Usage examples:
@@ -41,6 +39,7 @@ import (
 //	 Note: msg should be static, it is not recommended to use fmt.Sprintf() for msg.
 //	       Anything dynamic should be tagged.
 type Logger interface {
+	Debugf(msg string, args ...any)
 	Debug(msg string, tags ...tag.Tag)
 	Info(msg string, tags ...tag.Tag)
 	Warn(msg string, tags ...tag.Tag)
@@ -57,6 +56,7 @@ func NewNoop() Logger {
 	return &noop{}
 }
 
+func (n *noop) Debugf(msg string, args ...any)                         {}
 func (n *noop) Debug(msg string, tags ...tag.Tag)                      {}
 func (n *noop) Info(msg string, tags ...tag.Tag)                       {}
 func (n *noop) Warn(msg string, tags ...tag.Tag)                       {}

@@ -29,13 +29,12 @@ import (
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/cadence/testsuite"
 	"go.uber.org/cadence/worker"
-	"go.uber.org/zap"
 
 	carchiver "github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	mmocks "github.com/uber/cadence/common/metrics/mocks"
 	"github.com/uber/cadence/common/mocks"
@@ -76,8 +75,7 @@ func TestActivitiesSuite(t *testing.T) {
 }
 
 func (s *activitiesSuite) SetupTest() {
-	zapLogger := zap.NewNop()
-	s.logger = loggerimpl.NewLogger(zapLogger)
+	s.logger = testlogger.New(s.T())
 	s.metricsClient = &mmocks.Client{}
 	s.metricsScope = &mmocks.Scope{}
 	s.archiverProvider = &provider.MockArchiverProvider{}

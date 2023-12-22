@@ -20,9 +20,7 @@
 
 package archiver
 
-import (
-	"net/url"
-)
+import "net/url"
 
 type (
 	// URI identifies the archival resource to which records are written to and read from.

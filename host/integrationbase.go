@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"testing"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -37,8 +38,8 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/persistence"
 	pt "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/persistence/persistence-tests/testcluster"
@@ -65,14 +66,15 @@ type (
 	}
 
 	IntegrationBaseParams struct {
+		T                     *testing.T
 		DefaultTestCluster    testcluster.PersistenceTestCluster
 		VisibilityTestCluster testcluster.PersistenceTestCluster
 		TestClusterConfig     *TestClusterConfig
 	}
 )
 
-func NewIntegrationBase(params IntegrationBaseParams) IntegrationBase {
-	return IntegrationBase{
+func NewIntegrationBase(params IntegrationBaseParams) *IntegrationBase {
+	return &IntegrationBase{
 		defaultTestCluster:    params.DefaultTestCluster,
 		visibilityTestCluster: params.VisibilityTestCluster,
 		testClusterConfig:     params.TestClusterConfig,
@@ -103,7 +105,7 @@ func (s *IntegrationBase) setupSuite() {
 		s.adminClient = NewAdminClient(dispatcher)
 	} else {
 		s.Logger.Info("Running integration test against test cluster")
-		clusterMetadata := NewClusterMetadata(s.testClusterConfig)
+		clusterMetadata := NewClusterMetadata(s.T(), s.testClusterConfig)
 		dc := persistence.DynamicConfiguration{
 			EnableSQLAsyncTransaction:                dynamicconfig.GetBoolPropertyFn(false),
 			EnableCassandraAllConsistencyLevelDelete: dynamicconfig.GetBoolPropertyFn(true),
@@ -116,7 +118,7 @@ func (s *IntegrationBase) setupSuite() {
 			ClusterMetadata:       clusterMetadata,
 			DynamicConfiguration:  dc,
 		}
-		cluster, err := NewCluster(s.testClusterConfig, s.Logger, params)
+		cluster, err := NewCluster(s.T(), s.testClusterConfig, s.Logger, params)
 		s.Require().NoError(err)
 		s.testCluster = cluster
 		s.engine = s.testCluster.GetFrontendClient()
@@ -143,7 +145,7 @@ func (s *IntegrationBase) setupSuiteForPinotTest() {
 	s.setupLogger()
 
 	s.Logger.Info("Running integration test against test cluster")
-	clusterMetadata := NewClusterMetadata(s.testClusterConfig)
+	clusterMetadata := NewClusterMetadata(s.T(), s.testClusterConfig)
 	dc := persistence.DynamicConfiguration{
 		EnableSQLAsyncTransaction:                dynamicconfig.GetBoolPropertyFn(false),
 		EnableCassandraAllConsistencyLevelDelete: dynamicconfig.GetBoolPropertyFn(true),
@@ -156,7 +158,7 @@ func (s *IntegrationBase) setupSuiteForPinotTest() {
 		ClusterMetadata:       clusterMetadata,
 		DynamicConfiguration:  dc,
 	}
-	cluster, err := NewPinotTestCluster(s.testClusterConfig, s.Logger, params)
+	cluster, err := NewPinotTestCluster(s.T(), s.testClusterConfig, s.Logger, params)
 	s.Require().NoError(err)
 	s.testCluster = cluster
 	s.engine = s.testCluster.GetFrontendClient()
@@ -180,7 +182,7 @@ func (s *IntegrationBase) setupSuiteForPinotTest() {
 }
 
 func (s *IntegrationBase) setupLogger() {
-	s.Logger = loggerimpl.NewLoggerForTest(s.Suite)
+	s.Logger = testlogger.New(s.T())
 }
 
 // GetTestClusterConfig return test cluster config

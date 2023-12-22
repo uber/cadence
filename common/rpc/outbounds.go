@@ -24,10 +24,6 @@ import (
 	"crypto/tls"
 	"fmt"
 
-	"github.com/uber/cadence/common/authorization"
-	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/service"
-
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/middleware"
@@ -35,6 +31,10 @@ import (
 	"go.uber.org/yarpc/peer/direct"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
+
+	"github.com/uber/cadence/common/authorization"
+	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/service"
 )
 
 const (

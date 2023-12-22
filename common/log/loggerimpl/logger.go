@@ -26,10 +26,8 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"go.uber.org/zap/zaptest"
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -51,11 +49,6 @@ func NewNopLogger() log.Logger {
 	return &loggerImpl{
 		zapLogger: zap.NewNop(),
 	}
-}
-
-// NewLoggerForTest is a helper to create new development logger in unit test
-func NewLoggerForTest(s suite.Suite) log.Logger {
-	return NewLogger(zaptest.NewLogger(s.T()))
 }
 
 // NewDevelopment returns a logger at debug level and log into STDERR
@@ -113,10 +106,24 @@ func setDefaultMsg(msg string) string {
 	return msg
 }
 
+func (lg *loggerImpl) Debugf(msg string, args ...any) {
+	ce := lg.zapLogger.Check(zap.DebugLevel, setDefaultMsg(fmt.Sprintf(msg, args...)))
+	if ce == nil {
+		return
+	}
+
+	fields := lg.buildFieldsWithCallat(nil)
+	ce.Write(fields...)
+}
+
 func (lg *loggerImpl) Debug(msg string, tags ...tag.Tag) {
-	msg = setDefaultMsg(msg)
+	ce := lg.zapLogger.Check(zap.DebugLevel, setDefaultMsg(msg))
+	if ce == nil {
+		return
+	}
+
 	fields := lg.buildFieldsWithCallat(tags)
-	lg.zapLogger.Debug(msg, fields...)
+	ce.Write(fields...)
 }
 
 func (lg *loggerImpl) Info(msg string, tags ...tag.Tag) {

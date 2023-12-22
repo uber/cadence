@@ -38,18 +38,21 @@ const cacheCountLimit = 1 << 25
 // lru is a concurrent fixed size cache that evicts elements in lru order
 type (
 	lru struct {
-		mut         sync.Mutex
-		byAccess    *list.List
-		byKey       map[interface{}]*list.Element
-		maxCount    int
-		ttl         time.Duration
-		pin         bool
-		rmFunc      RemovedFunc
-		sizeFunc    GetCacheItemSizeFunc
-		maxSize     uint64
-		currSize    uint64
-		sizeByKey   map[interface{}]uint64
-		isSizeBased bool
+		mut           sync.Mutex
+		byAccess      *list.List
+		byKey         map[interface{}]*list.Element
+		maxCount      int
+		ttl           time.Duration
+		pin           bool
+		rmFunc        RemovedFunc
+		sizeFunc      GetCacheItemSizeFunc
+		maxSize       uint64
+		currSize      uint64
+		sizeByKey     map[interface{}]uint64
+		isSizeBased   bool
+		activelyEvict bool
+		// We use this instead of time.Now() in order to make testing easier
+		now func() time.Time
 	}
 
 	iteratorImpl struct {
@@ -114,7 +117,7 @@ func (c *lru) Iterator() Iterator {
 	c.mut.Lock()
 	iterator := &iteratorImpl{
 		lru:        c,
-		createTime: time.Now(),
+		createTime: c.now(),
 		nextItem:   c.byAccess.Front(),
 	}
 	iterator.prepareNext()
@@ -141,11 +144,13 @@ func New(opts *Options) Cache {
 	}
 
 	cache := &lru{
-		byAccess: list.New(),
-		byKey:    make(map[interface{}]*list.Element, opts.InitialCapacity),
-		ttl:      opts.TTL,
-		pin:      opts.Pin,
-		rmFunc:   opts.RemovedFunc,
+		byAccess:      list.New(),
+		byKey:         make(map[interface{}]*list.Element, opts.InitialCapacity),
+		ttl:           opts.TTL,
+		pin:           opts.Pin,
+		rmFunc:        opts.RemovedFunc,
+		activelyEvict: opts.ActivelyEvict,
+		now:           time.Now,
 	}
 
 	cache.isSizeBased = opts.GetCacheItemSizeFunc != nil && opts.MaxSize > 0
@@ -169,6 +174,8 @@ func (c *lru) Get(key interface{}) interface{} {
 	c.mut.Lock()
 	defer c.mut.Unlock()
 
+	c.evictExpiredItems()
+
 	element := c.byKey[key]
 	if element == nil {
 		return nil
@@ -176,7 +183,7 @@ func (c *lru) Get(key interface{}) interface{} {
 
 	entry := element.Value.(*entryImpl)
 
-	if c.isEntryExpired(entry, time.Now()) {
+	if c.isEntryExpired(entry, c.now()) {
 		// Entry has expired
 		c.deleteInternal(element)
 		return nil
@@ -218,6 +225,8 @@ func (c *lru) Delete(key interface{}) {
 	c.mut.Lock()
 	defer c.mut.Unlock()
 
+	c.evictExpiredItems()
+
 	element := c.byKey[key]
 	if element != nil {
 		c.deleteInternal(element)
@@ -242,7 +251,25 @@ func (c *lru) Size() int {
 	c.mut.Lock()
 	defer c.mut.Unlock()
 
+	c.evictExpiredItems()
+
 	return len(c.byKey)
+}
+
+// evictExpiredItems evicts all items in the cache which are expired
+func (c *lru) evictExpiredItems() {
+	if !c.activelyEvict {
+		return // do nothing if activelyEvict is not set
+	}
+
+	now := c.now()
+	for elt := c.byAccess.Back(); elt != nil; elt = c.byAccess.Back() {
+		if !c.isEntryExpired(elt.Value.(*entryImpl), now) {
+			// List is sorted by item age, so we can stop as soon as we found first non expired item.
+			break
+		}
+		c.deleteInternal(elt)
+	}
 }
 
 // Put puts a new value associated with a given key, returning the existing value (if present)
@@ -252,10 +279,12 @@ func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) 
 	c.mut.Lock()
 	defer c.mut.Unlock()
 
+	c.evictExpiredItems()
+
 	elt := c.byKey[key]
 	if elt != nil {
 		entry := elt.Value.(*entryImpl)
-		if c.isEntryExpired(entry, time.Now()) {
+		if c.isEntryExpired(entry, c.now()) {
 			// Entry has expired
 			c.deleteInternal(elt)
 		} else {
@@ -263,7 +292,7 @@ func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) 
 			if allowUpdate {
 				entry.value = value
 				if c.ttl != 0 {
-					entry.createTime = time.Now()
+					entry.createTime = c.now()
 				}
 			}
 
@@ -285,7 +314,7 @@ func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) 
 	}
 
 	if c.ttl != 0 {
-		entry.createTime = time.Now()
+		entry.createTime = c.now()
 	}
 
 	c.byKey[key] = c.byAccess.PushFront(entry)

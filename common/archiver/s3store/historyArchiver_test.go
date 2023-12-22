@@ -41,12 +41,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
-	"go.uber.org/zap"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/s3store/mocks"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 )
@@ -97,9 +96,8 @@ func (s *historyArchiverSuite) TearDownSuite() {
 func (s *historyArchiverSuite) SetupTest() {
 	scope := tally.NewTestScope("test", nil)
 	s.Assertions = require.New(s.T())
-	zapLogger := zap.NewNop()
 	s.container = &archiver.HistoryBootstrapContainer{
-		Logger:        loggerimpl.NewLogger(zapLogger),
+		Logger:        testlogger.New(s.T()),
 		MetricsClient: metrics.NewClient(scope, metrics.HistoryArchiverScope),
 	}
 }
@@ -281,7 +279,7 @@ func (s *historyArchiverSuite) TestArchive_Fail_InvalidRequest() {
 
 func (s *historyArchiverSuite) TestArchive_Fail_ErrorOnReadHistory() {
 	mockCtrl := gomock.NewController(s.T())
-	defer mockCtrl.Finish()
+
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
 	gomock.InOrder(
 		historyIterator.EXPECT().HasNext().Return(true),
@@ -304,7 +302,6 @@ func (s *historyArchiverSuite) TestArchive_Fail_ErrorOnReadHistory() {
 
 func (s *historyArchiverSuite) TestArchive_Fail_TimeoutWhenReadingHistory() {
 	mockCtrl := gomock.NewController(s.T())
-	defer mockCtrl.Finish()
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
 	gomock.InOrder(
 		historyIterator.EXPECT().HasNext().Return(true),
@@ -327,7 +324,6 @@ func (s *historyArchiverSuite) TestArchive_Fail_TimeoutWhenReadingHistory() {
 
 func (s *historyArchiverSuite) TestArchive_Fail_HistoryMutated() {
 	mockCtrl := gomock.NewController(s.T())
-	defer mockCtrl.Finish()
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
 	historyBatches := []*types.History{
 		{
@@ -367,7 +363,6 @@ func (s *historyArchiverSuite) TestArchive_Fail_HistoryMutated() {
 
 func (s *historyArchiverSuite) TestArchive_Fail_NonRetriableErrorOption() {
 	mockCtrl := gomock.NewController(s.T())
-	defer mockCtrl.Finish()
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
 	gomock.InOrder(
 		historyIterator.EXPECT().HasNext().Return(true),
@@ -391,7 +386,6 @@ func (s *historyArchiverSuite) TestArchive_Fail_NonRetriableErrorOption() {
 
 func (s *historyArchiverSuite) TestArchive_Skip() {
 	mockCtrl := gomock.NewController(s.T())
-	defer mockCtrl.Finish()
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
 	historyBlob := &archiver.HistoryBlob{
 		Header: &archiver.HistoryBlobHeader{
@@ -437,7 +431,6 @@ func (s *historyArchiverSuite) TestArchive_Skip() {
 
 func (s *historyArchiverSuite) TestArchive_Success() {
 	mockCtrl := gomock.NewController(s.T())
-	defer mockCtrl.Finish()
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
 	historyBatches := []*types.History{
 		{
@@ -626,7 +619,6 @@ func (s *historyArchiverSuite) TestGet_Success_SmallPageSize() {
 
 func (s *historyArchiverSuite) TestArchiveAndGet() {
 	mockCtrl := gomock.NewController(s.T())
-	defer mockCtrl.Finish()
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
 	gomock.InOrder(
 		historyIterator.EXPECT().HasNext().Return(true),

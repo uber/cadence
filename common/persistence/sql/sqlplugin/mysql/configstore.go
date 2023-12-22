@@ -30,12 +30,6 @@ import (
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )
 
-const (
-	_selectLatestConfigQuery = "SELECT row_type, version, timestamp, data, data_encoding FROM cluster_config WHERE row_type = ? ORDER BY version LIMIT 1;"
-
-	_insertConfigQuery = "INSERT INTO cluster_config (row_type, version, timestamp, data, data_encoding) VALUES(?, ?, ?, ?, ?)"
-)
-
 func (mdb *db) InsertConfig(ctx context.Context, row *persistence.InternalConfigStoreEntry) error {
 	_, err := mdb.driver.ExecContext(ctx, sqlplugin.DbDefaultShard, _insertConfigQuery, row.RowType, -1*row.Version, mdb.converter.ToMySQLDateTime(row.Timestamp), row.Values.Data, row.Values.Encoding)
 	return err

@@ -30,7 +30,6 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
-
 	"github.com/uber/cadence/common/config"
 	dc "github.com/uber/cadence/common/dynamicconfig"
 	csc "github.com/uber/cadence/common/dynamicconfig/configstore/config"

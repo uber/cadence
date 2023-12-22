@@ -85,27 +85,17 @@ func NewHandler(
 		metricsClient: metricsClient,
 		userRateLimiter: quotas.NewMultiStageRateLimiter(
 			quotas.NewDynamicRateLimiter(config.UserRPS.AsFloat64()),
-			quotas.NewCollection(quotas.DynamicRateLimiterFactory(
-				func(domain string) float64 {
-					domainRPS := float64(config.DomainUserRPS(domain))
-					if domainRPS > 0 {
-						return domainRPS
-					}
-					// if domain rps not set, use host rps to keep the old behavior
-					return float64(config.UserRPS())
-				})),
+			quotas.NewCollection(quotas.NewFallbackDynamicRateLimiterFactory(
+				config.DomainUserRPS,
+				config.UserRPS,
+			)),
 		),
 		workerRateLimiter: quotas.NewMultiStageRateLimiter(
 			quotas.NewDynamicRateLimiter(config.WorkerRPS.AsFloat64()),
-			quotas.NewCollection(quotas.DynamicRateLimiterFactory(
-				func(domain string) float64 {
-					domainRPS := float64(config.DomainWorkerRPS(domain))
-					if domainRPS > 0 {
-						return domainRPS
-					}
-					// if domain rps not set, use host rps to keep the old behavior
-					return float64(config.WorkerRPS())
-				})),
+			quotas.NewCollection(quotas.NewFallbackDynamicRateLimiterFactory(
+				config.DomainWorkerRPS,
+				config.WorkerRPS,
+			)),
 		),
 		engine:          engine,
 		logger:          logger,

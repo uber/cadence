@@ -20,9 +20,7 @@
 
 package execution
 
-import (
-	"github.com/uber/cadence/common/types"
-)
+import "github.com/uber/cadence/common/types"
 
 // TerminateWorkflow is a helper function to terminate workflow
 func TerminateWorkflow(

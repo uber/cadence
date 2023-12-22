@@ -450,10 +450,15 @@ func (c *taskListManagerImpl) DescribeTaskList(includeTaskListStatus bool) *type
 	}
 
 	taskIDBlock := rangeIDToTaskIDBlock(c.db.RangeID(), c.config.RangeSize)
+	backlogCount, err := c.db.GetTaskListSize(c.taskAckManager.GetAckLevel())
+	if err != nil {
+		// fallback to im-memory backlog, if failed to get count from db
+		backlogCount = c.taskAckManager.GetBacklogCount()
+	}
 	response.TaskListStatus = &types.TaskListStatus{
 		ReadLevel:        c.taskAckManager.GetReadLevel(),
 		AckLevel:         c.taskAckManager.GetAckLevel(),
-		BacklogCountHint: c.taskAckManager.GetBacklogCount(),
+		BacklogCountHint: backlogCount,
 		RatePerSecond:    c.matcher.Rate(),
 		TaskIDBlock: &types.TaskIDBlock{
 			StartID: taskIDBlock.start,

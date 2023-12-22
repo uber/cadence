@@ -23,11 +23,9 @@ package thrift
 import (
 	"sort"
 
-	"github.com/uber/cadence/.gen/go/shared"
-
-	"github.com/uber/cadence/common/types"
-
 	"github.com/uber/cadence/.gen/go/admin"
+	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types"
 )
 
 // FromAddSearchAttributeRequest converts internal AddSearchAttributeRequest type to thrift

@@ -30,14 +30,13 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
-	"go.uber.org/zap"
 
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
@@ -58,29 +57,24 @@ func TestScavengerTestSuite(t *testing.T) {
 }
 
 func (s *ScavengerTestSuite) SetupTest() {
-	zapLogger, err := zap.NewDevelopment()
-	if err != nil {
-		s.Require().NoError(err)
-	}
-	s.logger = loggerimpl.NewLogger(zapLogger)
+	s.logger = testlogger.New(s.T())
 	s.metric = metrics.NewClient(tally.NoopScope, metrics.Worker)
 	controller := gomock.NewController(s.T())
 	s.mockCache = cache.NewMockDomainCache(controller)
 }
 
-func (s *ScavengerTestSuite) createTestScavenger(rps int) (*mocks.HistoryV2Manager, *history.MockClient, *Scavenger, *gomock.Controller) {
+func (s *ScavengerTestSuite) createTestScavenger(rps int) (*mocks.HistoryV2Manager, *history.MockClient, *Scavenger) {
 	db := &mocks.HistoryV2Manager{}
 	controller := gomock.NewController(s.T())
 	workflowClient := history.NewMockClient(controller)
 	maxWorkflowRetentionInDays := dynamicconfig.GetIntPropertyFn(dynamicconfig.MaxRetentionDays.DefaultInt())
 	scvgr := NewScavenger(db, rps, workflowClient, ScavengerHeartbeatDetails{}, s.metric, s.logger, maxWorkflowRetentionInDays, s.mockCache)
 	scvgr.isInTest = true
-	return db, workflowClient, scvgr, controller
+	return db, workflowClient, scvgr
 }
 
 func (s *ScavengerTestSuite) TestAllSkipTasksTwoPages() {
-	db, _, scvgr, controller := s.createTestScavenger(100)
-	defer controller.Finish()
+	db, _, scvgr := s.createTestScavenger(100)
 	db.On("GetAllHistoryTreeBranches", mock.Anything, &p.GetAllHistoryTreeBranchesRequest{
 		PageSize: pageSize,
 	}).Return(&p.GetAllHistoryTreeBranchesResponse{
@@ -131,8 +125,7 @@ func (s *ScavengerTestSuite) TestAllSkipTasksTwoPages() {
 }
 
 func (s *ScavengerTestSuite) TestAllErrorSplittingTasksTwoPages() {
-	db, _, scvgr, controller := s.createTestScavenger(100)
-	defer controller.Finish()
+	db, _, scvgr := s.createTestScavenger(100)
 	db.On("GetAllHistoryTreeBranches", mock.Anything, &p.GetAllHistoryTreeBranchesRequest{
 		PageSize: pageSize,
 	}).Return(&p.GetAllHistoryTreeBranchesResponse{
@@ -183,8 +176,7 @@ func (s *ScavengerTestSuite) TestAllErrorSplittingTasksTwoPages() {
 }
 
 func (s *ScavengerTestSuite) TestNoGarbageTwoPages() {
-	db, client, scvgr, controller := s.createTestScavenger(100)
-	defer controller.Finish()
+	db, client, scvgr := s.createTestScavenger(100)
 	db.On("GetAllHistoryTreeBranches", mock.Anything, &p.GetAllHistoryTreeBranchesRequest{
 		PageSize: pageSize,
 	}).Return(&p.GetAllHistoryTreeBranchesResponse{
@@ -264,8 +256,7 @@ func (s *ScavengerTestSuite) TestNoGarbageTwoPages() {
 }
 
 func (s *ScavengerTestSuite) TestDeletingBranchesTwoPages() {
-	db, client, scvgr, controller := s.createTestScavenger(100)
-	defer controller.Finish()
+	db, client, scvgr := s.createTestScavenger(100)
 	db.On("GetAllHistoryTreeBranches", mock.Anything, &p.GetAllHistoryTreeBranchesRequest{
 		PageSize: pageSize,
 	}).Return(&p.GetAllHistoryTreeBranchesResponse{
@@ -374,8 +365,7 @@ func (s *ScavengerTestSuite) TestDeletingBranchesTwoPages() {
 }
 
 func (s *ScavengerTestSuite) TestMixesTwoPages() {
-	db, client, scvgr, controller := s.createTestScavenger(100)
-	defer controller.Finish()
+	db, client, scvgr := s.createTestScavenger(100)
 	db.On("GetAllHistoryTreeBranches", mock.Anything, &p.GetAllHistoryTreeBranchesRequest{
 		PageSize: pageSize,
 	}).Return(&p.GetAllHistoryTreeBranchesResponse{

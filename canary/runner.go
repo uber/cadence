@@ -21,14 +21,14 @@
 package canary
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"sync"
 	"time"
 
-	"crypto/tls"
-	"crypto/x509"
-	"io/ioutil"
-
+	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/compatibility"
 	"go.uber.org/yarpc"
@@ -39,8 +39,6 @@ import (
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/credentials"
-
-	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 
 	"github.com/uber/cadence/common/log/loggerimpl"
 )

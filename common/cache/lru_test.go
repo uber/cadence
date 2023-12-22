@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type keyType struct {
@@ -93,10 +94,17 @@ func TestLRUWithTTL(t *testing.T) {
 	cache := New(&Options{
 		MaxCount: 5,
 		TTL:      time.Millisecond * 100,
-	})
+	}).(*lru)
+
+	// We will capture this in the caches now function, and advance time as needed
+	currentTime := time.UnixMilli(0)
+	cache.now = func() time.Time { return currentTime }
+
 	cache.Put("A", "foo")
 	assert.Equal(t, "foo", cache.Get("A"))
-	time.Sleep(time.Millisecond * 300)
+
+	currentTime = currentTime.Add(time.Millisecond * 300)
+
 	assert.Nil(t, cache.Get("A"))
 	assert.Equal(t, 0, cache.Size())
 }
@@ -188,18 +196,23 @@ func TestRemovedFuncWithTTL(t *testing.T) {
 			assert.True(t, ok)
 			ch <- true
 		},
-	})
+	}).(*lru)
+
+	// We will capture this in the caches now function, and advance time as needed
+	currentTime := time.UnixMilli(0)
+	cache.now = func() time.Time { return currentTime }
 
 	cache.Put("A", t)
 	assert.Equal(t, t, cache.Get("A"))
-	time.Sleep(time.Millisecond * 100)
+
+	currentTime = currentTime.Add(time.Millisecond * 100)
+
 	assert.Nil(t, cache.Get("A"))
 
-	timeout := time.NewTimer(time.Millisecond * 300)
 	select {
 	case b := <-ch:
 		assert.True(t, b)
-	case <-timeout.C:
+	case <-time.After(100 * time.Millisecond):
 		t.Error("RemovedFunc did not send true on channel ch")
 	}
 }
@@ -215,12 +228,16 @@ func TestRemovedFuncWithTTL_Pin(t *testing.T) {
 			assert.True(t, ok)
 			ch <- true
 		},
-	})
+	}).(*lru)
+
+	// We will capture this in the caches now function, and advance time as needed
+	currentTime := time.UnixMilli(0)
+	cache.now = func() time.Time { return currentTime }
 
 	_, err := cache.PutIfNotExist("A", t)
 	assert.NoError(t, err)
 	assert.Equal(t, t, cache.Get("A"))
-	time.Sleep(time.Millisecond * 100)
+	currentTime = currentTime.Add(time.Millisecond * 100)
 	assert.Equal(t, t, cache.Get("A"))
 	// release 3 time since put if not exist also increase the counter
 	cache.Release("A")
@@ -228,11 +245,10 @@ func TestRemovedFuncWithTTL_Pin(t *testing.T) {
 	cache.Release("A")
 	assert.Nil(t, cache.Get("A"))
 
-	timeout := time.NewTimer(time.Millisecond * 300)
 	select {
 	case b := <-ch:
 		assert.True(t, b)
-	case <-timeout.C:
+	case <-time.After(300 * time.Millisecond):
 		t.Error("RemovedFunc did not send true on channel ch")
 	}
 }
@@ -383,4 +399,43 @@ func TestPanicOptionsIsNil(t *testing.T) {
 	}()
 
 	New(nil)
+}
+
+func TestEvictItemsPastTimeToLive_ActivelyEvict(t *testing.T) {
+	// Create the cache with a TTL of 75s
+	cache, ok := New(&Options{
+		MaxCount:      5,
+		TTL:           time.Second * 75,
+		ActivelyEvict: true,
+	}).(*lru)
+	require.True(t, ok)
+
+	// We will capture this in the caches now function, and advance time as needed
+	currentTime := time.UnixMilli(0)
+	cache.now = func() time.Time { return currentTime }
+
+	_, err := cache.PutIfNotExist("A", 1)
+	require.NoError(t, err)
+	_, err = cache.PutIfNotExist("B", 2)
+	require.NoError(t, err)
+
+	// Nothing is expired after 50s
+	currentTime = currentTime.Add(time.Second * 50)
+	assert.Equal(t, 2, cache.Size())
+
+	_, err = cache.PutIfNotExist("C", 3)
+	require.NoError(t, err)
+	_, err = cache.PutIfNotExist("D", 4)
+	require.NoError(t, err)
+
+	// No time has passed, so still nothing is expired
+	assert.Equal(t, 4, cache.Size())
+
+	// Advance time to 100s, so A and B should be expired
+	currentTime = currentTime.Add(time.Second * 50)
+	assert.Equal(t, 2, cache.Size())
+
+	// Advance time to 150s, so C and D should be expired as well
+	currentTime = currentTime.Add(time.Second * 50)
+	assert.Equal(t, 0, cache.Size())
 }

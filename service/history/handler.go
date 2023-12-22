@@ -31,26 +31,22 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/service/history/workflow"
-
-	"golang.org/x/sync/errgroup"
-
-	"github.com/uber/cadence/common/membership"
-	"github.com/uber/cadence/common/types/mapper/proto"
-
 	"github.com/pborman/uuid"
 	"go.uber.org/yarpc/yarpcerrors"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/future"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/proto"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
@@ -59,6 +55,7 @@ import (
 	"github.com/uber/cadence/service/history/resource"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
+	"github.com/uber/cadence/service/history/workflow"
 )
 
 const shardOwnershipTransferDelay = 5 * time.Second
@@ -2143,42 +2140,55 @@ func (h *handlerImpl) updateErrorMetric(
 
 	var yarpcE *yarpcerrors.Status
 
-	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+	var shardOwnershipLostError *types.ShardOwnershipLostError
+	var eventAlreadyStartedError *types.EventAlreadyStartedError
+	var badRequestError *types.BadRequestError
+	var domainNotActiveError *types.DomainNotActiveError
+	var workflowExecutionAlreadyStartedError *types.WorkflowExecutionAlreadyStartedError
+	var entityNotExistsError *types.EntityNotExistsError
+	var workflowExecutionAlreadyCompletedError *types.WorkflowExecutionAlreadyCompletedError
+	var cancellationAlreadyRequestedError *types.CancellationAlreadyRequestedError
+	var limitExceededError *types.LimitExceededError
+	var retryTaskV2Error *types.RetryTaskV2Error
+	var serviceBusyError *types.ServiceBusyError
+	var internalServiceError *types.InternalServiceError
+
+	if err == context.DeadlineExceeded || err == context.Canceled {
 		scope.IncCounter(metrics.CadenceErrContextTimeoutCounter)
 		return
 	}
 
-	if errors.Is(err, types.ShardOwnershipLostError{}) {
+	if errors.As(err, &shardOwnershipLostError) {
 		scope.IncCounter(metrics.CadenceErrShardOwnershipLostCounter)
 
-	} else if errors.Is(err, types.EventAlreadyStartedError{}) {
+	} else if errors.As(err, &eventAlreadyStartedError) {
 		scope.IncCounter(metrics.CadenceErrEventAlreadyStartedCounter)
 
-	} else if errors.Is(err, types.BadRequestError{}) {
+	} else if errors.As(err, &badRequestError) {
 		scope.IncCounter(metrics.CadenceErrBadRequestCounter)
 
-	} else if errors.Is(err, types.DomainNotActiveError{}) {
-		scope.IncCounter(metrics.CadenceErrBadRequestCounter)
+	} else if errors.As(err, &domainNotActiveError) {
+		scope.IncCounter(metrics.CadenceErrDomainNotActiveCounter)
 
-	} else if errors.Is(err, types.WorkflowExecutionAlreadyStartedError{}) {
+	} else if errors.As(err, &workflowExecutionAlreadyStartedError) {
 		scope.IncCounter(metrics.CadenceErrExecutionAlreadyStartedCounter)
 
-	} else if errors.Is(err, types.EntityNotExistsError{}) {
+	} else if errors.As(err, &entityNotExistsError) {
 		scope.IncCounter(metrics.CadenceErrEntityNotExistsCounter)
 
-	} else if errors.Is(err, types.WorkflowExecutionAlreadyCompletedError{}) {
+	} else if errors.As(err, &workflowExecutionAlreadyCompletedError) {
 		scope.IncCounter(metrics.CadenceErrWorkflowExecutionAlreadyCompletedCounter)
 
-	} else if errors.Is(err, types.CancellationAlreadyRequestedError{}) {
+	} else if errors.As(err, &cancellationAlreadyRequestedError) {
 		scope.IncCounter(metrics.CadenceErrCancellationAlreadyRequestedCounter)
 
-	} else if errors.Is(err, types.LimitExceededError{}) {
+	} else if errors.As(err, &limitExceededError) {
 		scope.IncCounter(metrics.CadenceErrLimitExceededCounter)
 
-	} else if errors.Is(err, types.RetryTaskV2Error{}) {
+	} else if errors.As(err, &retryTaskV2Error) {
 		scope.IncCounter(metrics.CadenceErrRetryTaskCounter)
 
-	} else if errors.Is(err, types.ServiceBusyError{}) {
+	} else if errors.As(err, &serviceBusyError) {
 		scope.IncCounter(metrics.CadenceErrServiceBusyCounter)
 
 	} else if errors.As(err, &yarpcE) {
@@ -2188,9 +2198,8 @@ func (h *handlerImpl) updateErrorMetric(
 		}
 		scope.IncCounter(metrics.CadenceFailures)
 
-	} else if errors.Is(err, types.InternalServiceError{}) {
+	} else if errors.As(err, &internalServiceError) {
 		scope.IncCounter(metrics.CadenceFailures)
-
 		h.GetLogger().Error("Internal service error",
 			tag.Error(err),
 			tag.WorkflowID(workflowID),
@@ -2224,7 +2233,11 @@ func (h *handlerImpl) error(
 		// We will delete the workflow or mark the workflow as corrupted.
 		// Placing a dummy call to the function to check the coherency of the design.
 		// The function returns nil error so removing error handling for now.
-		h.GetTaskValidator().WorkflowCheckforValidation(workflowID, domainID, "")
+		domainName, err := h.GetDomainCache().GetDomainName(domainID)
+		if err != nil {
+			return err
+		}
+		h.GetTaskValidator().WorkflowCheckforValidation(workflowID, domainID, domainName, "")
 	}
 	return err
 }

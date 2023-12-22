@@ -24,10 +24,9 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"strings"
-
-	log "github.com/sirupsen/logrus"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"

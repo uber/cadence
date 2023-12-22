@@ -66,9 +66,7 @@ func (s *rebalanceWorkflowTestSuite) TearDownTest() {
 }
 
 func (s *rebalanceWorkflowTestSuite) TestGetDomainsForRebalanceActivity_ReturnOne() {
-	actEnv, mockResource, controller := s.prepareTestActivityEnv()
-	defer controller.Finish()
-	defer mockResource.Finish(s.T())
+	actEnv, mockResource := s.prepareTestActivityEnv()
 
 	domains := &types.ListDomainsResponse{
 		Domains: []*types.DescribeDomainResponse{
@@ -153,9 +151,7 @@ func (s *rebalanceWorkflowTestSuite) TestGetDomainsForRebalanceActivity_ReturnOn
 }
 
 func (s *rebalanceWorkflowTestSuite) TestGetDomainsForRebalanceActivity_Error() {
-	actEnv, mockResource, controller := s.prepareTestActivityEnv()
-	defer controller.Finish()
-	defer mockResource.Finish(s.T())
+	actEnv, mockResource := s.prepareTestActivityEnv()
 
 	mockResource.FrontendClient.EXPECT().ListDomains(gomock.Any(), gomock.Any()).
 		Return(nil, fmt.Errorf("test"))
@@ -291,9 +287,9 @@ func (s *rebalanceWorkflowTestSuite) TestWorkflow_GetRebalanceDomainsActivityErr
 	s.Error(err)
 }
 
-func (s *rebalanceWorkflowTestSuite) prepareTestActivityEnv() (*testsuite.TestActivityEnvironment, *resource.Test, *gomock.Controller) {
+func (s *rebalanceWorkflowTestSuite) prepareTestActivityEnv() (*testsuite.TestActivityEnvironment, *resource.Test) {
 	controller := gomock.NewController(s.T())
-	mockResource := resource.NewTest(controller, metrics.Worker)
+	mockResource := resource.NewTest(s.T(), controller, metrics.Worker)
 
 	ctx := &FailoverManager{
 		svcClient:  mockResource.GetSDKClient(),
@@ -303,5 +299,10 @@ func (s *rebalanceWorkflowTestSuite) prepareTestActivityEnv() (*testsuite.TestAc
 	s.activityEnv.SetWorkerOptions(worker.Options{
 		BackgroundActivityContext: context.WithValue(context.Background(), failoverManagerContextKey, ctx),
 	})
-	return s.activityEnv, mockResource, controller
+
+	s.T().Cleanup(func() {
+		mockResource.Finish(s.T())
+	})
+
+	return s.activityEnv, mockResource
 }

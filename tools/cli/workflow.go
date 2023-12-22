@@ -170,6 +170,14 @@ func newWorkflowCommands() []cli.Command {
 			},
 		},
 		{
+			Name:  "query-types",
+			Usage: "list all available query types",
+			Flags: getFlagsForStack(),
+			Action: func(c *cli.Context) {
+				QueryWorkflowUsingQueryTypes(c)
+			},
+		},
+		{
 			Name:  "stack",
 			Usage: "query workflow execution with __stack_trace as query type",
 			Flags: getFlagsForStack(),

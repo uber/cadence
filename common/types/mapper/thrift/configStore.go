@@ -21,9 +21,8 @@
 package thrift
 
 import (
-	"github.com/uber/cadence/common/types"
-
 	"github.com/uber/cadence/.gen/go/config"
+	"github.com/uber/cadence/common/types"
 )
 
 // FromDynamicConfigBlob converts internal DynamicConfigBlob type to thrift
