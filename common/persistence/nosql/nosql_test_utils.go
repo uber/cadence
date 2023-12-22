@@ -41,8 +41,6 @@ type testCluster struct {
 	cfg           config.NoSQL
 }
 
-var _ testcluster.PersistenceTestCluster = (*testCluster)(nil)
-
 // TestClusterParams are params for test cluster initialization.
 type TestClusterParams struct {
 	PluginName    string
@@ -58,10 +56,7 @@ type TestClusterParams struct {
 // NewTestCluster returns a new cassandra test cluster
 // if schemaBaseDir is empty, it will be auto-resolved based on os.Getwd()
 // otherwise the specified value will be used (used by internal tests)
-func NewTestCluster(
-	t *testing.T,
-	params TestClusterParams,
-) testcluster.PersistenceTestCluster {
+func NewTestCluster(t *testing.T, params TestClusterParams) testcluster.PersistenceTestCluster {
 	return &testCluster{
 		logger:        testlogger.New(t),
 		keyspace:      params.KeySpace,

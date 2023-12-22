@@ -30,17 +30,15 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 )
 
-type (
-	// shardingPolicy holds the configuration for the sharding logic
-	shardingPolicy struct {
-		logger       log.Logger
-		defaultShard string
-		config       config.ShardedNoSQL
+// shardingPolicy holds the configuration for the sharding logic
+type shardingPolicy struct {
+	logger       log.Logger
+	defaultShard string
+	config       config.ShardedNoSQL
 
-		hasShardedHistory  bool
-		hasShardedTasklist bool
-	}
-)
+	hasShardedHistory  bool
+	hasShardedTasklist bool
+}
 
 func newShardingPolicy(logger log.Logger, cfg config.ShardedNoSQL) (shardingPolicy, error) {
 	sp := shardingPolicy{

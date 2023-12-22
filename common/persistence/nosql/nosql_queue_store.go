@@ -27,7 +27,6 @@ import (
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
-	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/types"
 )
@@ -36,18 +35,16 @@ const (
 	emptyMessageID = -1
 )
 
-type (
-	nosqlQueueStore struct {
-		queueType persistence.QueueType
-		nosqlStore
-	}
-)
+type nosqlQueueStore struct {
+	queueType persistence.QueueType
+	nosqlStore
+}
 
 func newNoSQLQueueStore(
 	cfg config.ShardedNoSQL,
 	logger log.Logger,
 	queueType persistence.QueueType,
-	dc *p.DynamicConfiguration,
+	dc *persistence.DynamicConfiguration,
 ) (persistence.Queue, error) {
 	shardedStore, err := newShardedNosqlStore(cfg, logger, dc)
 	if err != nil {

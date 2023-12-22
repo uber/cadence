@@ -27,25 +27,23 @@ import (
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence"
 )
 
-type (
-	// shardedNosqlStore is a store that may have one or more shards
-	shardedNosqlStore struct {
-		sync.RWMutex
+// shardedNosqlStore is a store that may have one or more shards
+type shardedNosqlStore struct {
+	sync.RWMutex
 
-		config config.ShardedNoSQL
-		dc     *p.DynamicConfiguration
-		logger log.Logger
+	config config.ShardedNoSQL
+	dc     *persistence.DynamicConfiguration
+	logger log.Logger
 
-		connectedShards map[string]nosqlStore
-		defaultShard    nosqlStore
-		shardingPolicy  shardingPolicy
-	}
-)
+	connectedShards map[string]nosqlStore
+	defaultShard    nosqlStore
+	shardingPolicy  shardingPolicy
+}
 
-func newShardedNosqlStore(cfg config.ShardedNoSQL, logger log.Logger, dc *p.DynamicConfiguration) (*shardedNosqlStore, error) {
+func newShardedNosqlStore(cfg config.ShardedNoSQL, logger log.Logger, dc *persistence.DynamicConfiguration) (*shardedNosqlStore, error) {
 	sn := shardedNosqlStore{
 		config: cfg,
 		dc:     dc,
