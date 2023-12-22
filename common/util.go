@@ -129,35 +129,12 @@ func AwaitWaitGroup(wg *sync.WaitGroup, timeout time.Duration) bool {
 	}
 }
 
-// AddSecondsToBaseTime - Gets the UnixNano with given duration and base time.
-func AddSecondsToBaseTime(baseTimeInNanoSec int64, durationInSeconds int64) int64 {
-	timeOut := time.Duration(durationInSeconds) * time.Second
-	return time.Unix(0, baseTimeInNanoSec).Add(timeOut).UnixNano()
-}
-
 // CreatePersistenceRetryPolicy creates a retry policy for persistence layer operations
 func CreatePersistenceRetryPolicy() backoff.RetryPolicy {
 	policy := backoff.NewExponentialRetryPolicy(retryPersistenceOperationInitialInterval)
 	policy.SetMaximumInterval(retryPersistenceOperationMaxInterval)
 	policy.SetExpirationInterval(retryPersistenceOperationExpirationInterval)
 
-	return policy
-}
-
-// CreatePersistenceRetryPolicyWithContext create a retry policy for persistence layer operations
-// which has an expiration interval computed based on the context's deadline
-func CreatePersistenceRetryPolicyWithContext(ctx context.Context) backoff.RetryPolicy {
-	if ctx == nil {
-		return CreatePersistenceRetryPolicy()
-	}
-	deadline, ok := ctx.Deadline()
-	if !ok {
-		return CreatePersistenceRetryPolicy()
-	}
-
-	policy := backoff.NewExponentialRetryPolicy(retryPersistenceOperationInitialInterval)
-	policy.SetMaximumInterval(retryPersistenceOperationMaxInterval)
-	policy.SetExpirationInterval(time.Until(deadline))
 	return policy
 }
 
