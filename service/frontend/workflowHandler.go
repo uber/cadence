@@ -174,36 +174,30 @@ func NewWorkflowHandler(
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
 		userRateLimiter: quotas.NewMultiStageRateLimiter(
 			quotas.NewDynamicRateLimiter(config.UserRPS.AsFloat64()),
-			quotas.NewCollection(func(domain string) quotas.Limiter {
-				return quotas.NewDynamicRateLimiter(quotas.PerMemberDynamic(
-					service.Frontend,
-					config.GlobalDomainUserRPS.AsFloat64(domain),
-					config.MaxDomainUserRPSPerInstance.AsFloat64(domain),
-					resource.GetMembershipResolver(),
-				))
-			}),
+			quotas.NewCollection(quotas.NewPerMemberDynamicRateLimiterFactory(
+				service.Frontend,
+				config.GlobalDomainUserRPS,
+				config.MaxDomainUserRPSPerInstance,
+				resource.GetMembershipResolver(),
+			)),
 		),
 		workerRateLimiter: quotas.NewMultiStageRateLimiter(
 			quotas.NewDynamicRateLimiter(config.WorkerRPS.AsFloat64()),
-			quotas.NewCollection(func(domain string) quotas.Limiter {
-				return quotas.NewDynamicRateLimiter(quotas.PerMemberDynamic(
-					service.Frontend,
-					config.GlobalDomainWorkerRPS.AsFloat64(domain),
-					config.MaxDomainWorkerRPSPerInstance.AsFloat64(domain),
-					resource.GetMembershipResolver(),
-				))
-			}),
+			quotas.NewCollection(quotas.NewPerMemberDynamicRateLimiterFactory(
+				service.Frontend,
+				config.GlobalDomainWorkerRPS,
+				config.MaxDomainWorkerRPSPerInstance,
+				resource.GetMembershipResolver(),
+			)),
 		),
 		visibilityRateLimiter: quotas.NewMultiStageRateLimiter(
 			quotas.NewDynamicRateLimiter(config.VisibilityRPS.AsFloat64()),
-			quotas.NewCollection(func(domain string) quotas.Limiter {
-				return quotas.NewDynamicRateLimiter(quotas.PerMemberDynamic(
-					service.Frontend,
-					config.GlobalDomainVisibilityRPS.AsFloat64(domain),
-					config.MaxDomainVisibilityRPSPerInstance.AsFloat64(domain),
-					resource.GetMembershipResolver(),
-				))
-			}),
+			quotas.NewCollection(quotas.NewPerMemberDynamicRateLimiterFactory(
+				service.Frontend,
+				config.GlobalDomainVisibilityRPS,
+				config.MaxDomainVisibilityRPSPerInstance,
+				resource.GetMembershipResolver(),
+			)),
 		),
 		versionChecker: versionChecker,
 		domainHandler:  domainHandler,
@@ -563,7 +557,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 	}
 
 	idLengthWarnLimit := wh.config.MaxIDLengthWarnLimit()
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		domainName,
 		scope,
 		idLengthWarnLimit,
@@ -579,7 +573,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 		return nil, wh.error(err, scope, tags...)
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		pollRequest.GetIdentity(),
 		scope,
 		idLengthWarnLimit,
@@ -686,7 +680,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	}
 
 	idLengthWarnLimit := wh.config.MaxIDLengthWarnLimit()
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		domainName,
 		scope,
 		idLengthWarnLimit,
@@ -698,7 +692,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		return nil, wh.error(errDomainTooLong, scope, tags...)
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		pollRequest.GetIdentity(),
 		scope,
 		idLengthWarnLimit,
@@ -1141,7 +1135,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 		RunID:      taskToken.RunID,
 	})
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		completeRequest.GetIdentity(),
 		scope,
 		wh.config.MaxIDLengthWarnLimit(),
@@ -1248,7 +1242,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 		return wh.error(errActivityIDNotSet, scope, tags...)
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		completeRequest.GetIdentity(),
 		scope,
 		wh.config.MaxIDLengthWarnLimit(),
@@ -1375,7 +1369,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 		RunID:      taskToken.RunID,
 	})
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		failedRequest.GetIdentity(),
 		scope,
 		wh.config.MaxIDLengthWarnLimit(),
@@ -1470,7 +1464,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 		return wh.error(errActivityIDNotSet, scope, tags...)
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		failedRequest.GetIdentity(),
 		scope,
 		wh.config.MaxIDLengthWarnLimit(),
@@ -1588,7 +1582,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 		RunID:      taskToken.RunID,
 	})
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		cancelRequest.GetIdentity(),
 		scope,
 		wh.config.MaxIDLengthWarnLimit(),
@@ -1695,7 +1689,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 		return wh.error(errActivityIDNotSet, scope, tags...)
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		cancelRequest.GetIdentity(),
 		scope,
 		wh.config.MaxIDLengthWarnLimit(),
@@ -1822,7 +1816,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 		RunID:      taskToken.RunID,
 	})
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		completeRequest.GetIdentity(),
 		scope,
 		wh.config.MaxIDLengthWarnLimit(),
@@ -1932,7 +1926,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 		RunID:      taskToken.RunID,
 	})
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		failedRequest.GetIdentity(),
 		scope,
 		wh.config.MaxIDLengthWarnLimit(),
@@ -2113,7 +2107,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	}
 
 	idLengthWarnLimit := wh.config.MaxIDLengthWarnLimit()
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		domainName,
 		scope,
 		idLengthWarnLimit,
@@ -2125,7 +2119,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(errDomainTooLong, scope, tags...)
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		startRequest.GetWorkflowID(),
 		scope,
 		idLengthWarnLimit,
@@ -2145,7 +2139,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		"Received StartWorkflowExecution. WorkflowID",
 		tag.WorkflowID(startRequest.GetWorkflowID()))
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		startRequest.WorkflowType.GetName(),
 		scope,
 		idLengthWarnLimit,
@@ -2200,7 +2194,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		}
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		startRequest.GetRequestID(),
 		scope,
 		idLengthWarnLimit,
@@ -2575,7 +2569,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 	}
 
 	idLengthWarnLimit := wh.config.MaxIDLengthWarnLimit()
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		domainName,
 		scope,
 		idLengthWarnLimit,
@@ -2591,7 +2585,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 		return wh.error(errSignalNameNotSet, scope, tags...)
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		signalRequest.GetSignalName(),
 		scope,
 		idLengthWarnLimit,
@@ -2603,7 +2597,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 		return wh.error(errSignalNameTooLong, scope, tags...)
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		signalRequest.GetRequestID(),
 		scope,
 		idLengthWarnLimit,
@@ -2697,7 +2691,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 	}
 
 	idLengthWarnLimit := wh.config.MaxIDLengthWarnLimit()
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		domainName,
 		scope,
 		idLengthWarnLimit,
@@ -2709,7 +2703,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		return nil, wh.error(errDomainTooLong, scope, tags...)
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		signalWithStartRequest.GetWorkflowID(),
 		scope,
 		idLengthWarnLimit,
@@ -2725,7 +2719,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		return nil, wh.error(errSignalNameNotSet, scope, tags...)
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		signalWithStartRequest.GetSignalName(),
 		scope,
 		idLengthWarnLimit,
@@ -2741,7 +2735,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		return nil, wh.error(errWorkflowTypeNotSet, scope, tags...)
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		signalWithStartRequest.WorkflowType.GetName(),
 		scope,
 		idLengthWarnLimit,
@@ -2757,7 +2751,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		return nil, wh.error(err, scope, tags...)
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		signalWithStartRequest.GetRequestID(),
 		scope,
 		idLengthWarnLimit,
@@ -4234,7 +4228,7 @@ func (wh *WorkflowHandler) validateTaskList(t *types.TaskList, scope metrics.Sco
 		return errTaskListNotSet
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		t.GetName(),
 		scope,
 		wh.config.MaxIDLengthWarnLimit(),

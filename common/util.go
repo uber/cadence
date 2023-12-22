@@ -129,35 +129,12 @@ func AwaitWaitGroup(wg *sync.WaitGroup, timeout time.Duration) bool {
 	}
 }
 
-// AddSecondsToBaseTime - Gets the UnixNano with given duration and base time.
-func AddSecondsToBaseTime(baseTimeInNanoSec int64, durationInSeconds int64) int64 {
-	timeOut := time.Duration(durationInSeconds) * time.Second
-	return time.Unix(0, baseTimeInNanoSec).Add(timeOut).UnixNano()
-}
-
 // CreatePersistenceRetryPolicy creates a retry policy for persistence layer operations
 func CreatePersistenceRetryPolicy() backoff.RetryPolicy {
 	policy := backoff.NewExponentialRetryPolicy(retryPersistenceOperationInitialInterval)
 	policy.SetMaximumInterval(retryPersistenceOperationMaxInterval)
 	policy.SetExpirationInterval(retryPersistenceOperationExpirationInterval)
 
-	return policy
-}
-
-// CreatePersistenceRetryPolicyWithContext create a retry policy for persistence layer operations
-// which has an expiration interval computed based on the context's deadline
-func CreatePersistenceRetryPolicyWithContext(ctx context.Context) backoff.RetryPolicy {
-	if ctx == nil {
-		return CreatePersistenceRetryPolicy()
-	}
-	deadline, ok := ctx.Deadline()
-	if !ok {
-		return CreatePersistenceRetryPolicy()
-	}
-
-	policy := backoff.NewExponentialRetryPolicy(retryPersistenceOperationInitialInterval)
-	policy.SetMaximumInterval(retryPersistenceOperationMaxInterval)
-	policy.SetExpirationInterval(time.Until(deadline))
 	return policy
 }
 
@@ -224,8 +201,8 @@ func CreateReplicationServiceBusyRetryPolicy() backoff.RetryPolicy {
 	return policy
 }
 
-// ValidIDLength checks if id is valid according to its length
-func ValidIDLength(
+// IsValidIDLength checks if id is valid according to its length
+func IsValidIDLength(
 	id string,
 	scope metrics.Scope,
 	warnLimit int,
@@ -235,18 +212,14 @@ func ValidIDLength(
 	logger log.Logger,
 	idTypeViolationTag tag.Tag,
 ) bool {
-	idLength := len(id)
-	valid := idLength <= errorLimit
-	if idLength > warnLimit {
+	if len(id) > warnLimit {
 		scope.IncCounter(metricsCounter)
-		if logger != nil {
-			logger.Warn("ID length exceeds limit.",
-				tag.WorkflowDomainName(domainName),
-				tag.Name(id),
-				idTypeViolationTag)
-		}
+		logger.Warn("ID length exceeds limit.",
+			tag.WorkflowDomainName(domainName),
+			tag.Name(id),
+			idTypeViolationTag)
 	}
-	return valid
+	return len(id) <= errorLimit
 }
 
 // CheckDecisionResultLimit checks if decision result count exceeds limits.

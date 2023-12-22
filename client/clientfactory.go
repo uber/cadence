@@ -23,18 +23,16 @@ package client
 import (
 	"time"
 
+	adminv1 "github.com/uber/cadence-idl/go/proto/admin/v1"
+	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	"go.uber.org/yarpc/api/transport"
 
 	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/.gen/go/history/historyserviceclient"
 	"github.com/uber/cadence/.gen/go/matching/matchingserviceclient"
-
-	adminv1 "github.com/uber/cadence-idl/go/proto/admin/v1"
-	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	historyv1 "github.com/uber/cadence/.gen/proto/history/v1"
 	matchingv1 "github.com/uber/cadence/.gen/proto/matching/v1"
-
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"

@@ -25,9 +25,8 @@ import (
 	"fmt"
 	"time"
 
-	shared "go.uber.org/cadence/.gen/go/shared"
-
 	"github.com/google/uuid"
+	shared "go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"

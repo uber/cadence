@@ -56,7 +56,7 @@ func TestFixerSuite(t *testing.T) {
 func (s *FixerSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 	s.controller = gomock.NewController(s.T())
-	s.mockResource = resource.NewTest(s.controller, metrics.Worker)
+	s.mockResource = resource.NewTest(s.T(), s.controller, metrics.Worker)
 }
 
 func (s *FixerSuite) TearDownTest() {

@@ -80,6 +80,12 @@ type (
 
 		processingQueueReadProgress map[int]timeTaskReadProgress
 	}
+
+	filteredTimerTasksResponse struct {
+		timerTasks    []*persistence.TimerTaskInfo
+		lookAheadTask *persistence.TimerTaskInfo
+		nextPageToken []byte
+	}
 )
 
 func newTimerQueueProcessorBase(
@@ -193,87 +199,26 @@ func (t *timerQueueProcessorBase) Stop() {
 
 func (t *timerQueueProcessorBase) processorPump() {
 	defer t.shutdownWG.Done()
-
-	updateAckTimer := time.NewTimer(backoff.JitDuration(
-		t.options.UpdateAckInterval(),
-		t.options.UpdateAckIntervalJitterCoefficient(),
-	))
+	updateAckTimer := time.NewTimer(backoff.JitDuration(t.options.UpdateAckInterval(), t.options.UpdateAckIntervalJitterCoefficient()))
 	defer updateAckTimer.Stop()
-
-	splitQueueTimer := time.NewTimer(backoff.JitDuration(
-		t.options.SplitQueueInterval(),
-		t.options.SplitQueueIntervalJitterCoefficient(),
-	))
+	splitQueueTimer := time.NewTimer(backoff.JitDuration(t.options.SplitQueueInterval(), t.options.SplitQueueIntervalJitterCoefficient()))
 	defer splitQueueTimer.Stop()
 
-processorPumpLoop:
 	for {
 		select {
 		case <-t.shutdownCh:
-			break processorPumpLoop
+			return
 		case <-t.timerGate.FireChan():
-			maxRedispatchQueueSize := t.options.MaxRedispatchQueueSize()
-			if t.redispatcher.Size() > maxRedispatchQueueSize {
-				t.redispatcher.Redispatch(maxRedispatchQueueSize)
-				if t.redispatcher.Size() > maxRedispatchQueueSize {
-					// if redispatcher still has a large number of tasks
-					// this only happens when system is under very high load
-					// we should backoff here instead of keeping submitting tasks to task processor
-					// don't call t.timerGate.Update(time.Now() + loadQueueTaskThrottleRetryDelay) as the time in
-					// standby timer processor is not real time and is managed separately
-					time.Sleep(backoff.JitDuration(
-						t.options.PollBackoffInterval(),
-						t.options.PollBackoffIntervalJitterCoefficient(),
-					))
-				}
-				t.timerGate.Update(time.Time{})
-				continue processorPumpLoop
-			}
-
-			t.pollTimeLock.Lock()
-			levels := make(map[int]struct{})
-			now := t.shard.GetCurrentTime(t.clusterName)
-			for level, pollTime := range t.nextPollTime {
-				if !now.Before(pollTime) {
-					levels[level] = struct{}{}
-					delete(t.nextPollTime, level)
-				} else {
-					t.timerGate.Update(pollTime)
-				}
-			}
-			t.pollTimeLock.Unlock()
-
-			t.processQueueCollections(levels)
+			t.updateTimerGates()
 		case <-updateAckTimer.C:
-			processFinished, _, err := t.updateAckLevel()
-			if err == shard.ErrShardClosed || (err == nil && processFinished) {
+			if stopPump := t.handleAckLevelUpdate(updateAckTimer); stopPump {
 				go t.Stop()
-				break processorPumpLoop
+				return
 			}
-			updateAckTimer.Reset(backoff.JitDuration(
-				t.options.UpdateAckInterval(),
-				t.options.UpdateAckIntervalJitterCoefficient(),
-			))
 		case <-t.newTimerCh:
-			t.newTimeLock.Lock()
-			newTime := t.newTime
-			t.newTime = time.Time{}
-			t.newTimeLock.Unlock()
-
-			// New Timer has arrived.
-			t.metricsScope.IncCounter(metrics.NewTimerNotifyCounter)
-			// notify all queue collections as they are waiting for the notification when there's
-			// no more task to process. For non-default queue, we choose to do periodic polling
-			// in the future, then we don't need to notify them.
-			for _, queueCollection := range t.processingQueueCollections {
-				t.upsertPollTime(queueCollection.Level(), newTime)
-			}
+			t.handleNewTimer()
 		case <-splitQueueTimer.C:
-			t.splitQueue()
-			splitQueueTimer.Reset(backoff.JitDuration(
-				t.options.SplitQueueInterval(),
-				t.options.SplitQueueIntervalJitterCoefficient(),
-			))
+			t.splitQueue(splitQueueTimer)
 		case notification := <-t.actionNotifyCh:
 			t.handleActionNotification(notification)
 		}
@@ -292,6 +237,7 @@ func (t *timerQueueProcessorBase) processQueueCollections(levels map[int]struct{
 			// process for this queue collection has finished
 			// it's possible that new queue will be added to this collection later though,
 			// pollTime will be updated after split/merge
+			t.logger.Debug("Active queue is nil for timer queue at this level", tag.QueueLevel(level))
 			continue
 		}
 
@@ -317,6 +263,7 @@ func (t *timerQueueProcessorBase) processQueueCollections(levels map[int]struct{
 		if !readLevel.Less(maxReadLevel) {
 			// notify timer gate about the min time
 			t.upsertPollTime(level, readLevel.(timerTaskKey).visibilityTimestamp)
+			t.logger.Debug("Skipping processing timer queue at this level because readLevel >= maxReadLevel", tag.QueueLevel(level))
 			continue
 		}
 
@@ -332,7 +279,7 @@ func (t *timerQueueProcessorBase) processQueueCollections(levels map[int]struct{
 		}
 		cancel()
 
-		timerTaskInfos, lookAheadTask, nextPageToken, err := t.readAndFilterTasks(readLevel, maxReadLevel, nextPageToken)
+		resp, err := t.readAndFilterTasks(readLevel, maxReadLevel, nextPageToken)
 		if err != nil {
 			t.logger.Error("Processor unable to retrieve tasks", tag.Error(err))
 			t.upsertPollTime(level, time.Time{}) // re-enqueue the event
@@ -341,7 +288,8 @@ func (t *timerQueueProcessorBase) processQueueCollections(levels map[int]struct{
 
 		tasks := make(map[task.Key]task.Task)
 		taskChFull := false
-		for _, taskInfo := range timerTaskInfos {
+		submittedCount := 0
+		for _, taskInfo := range resp.timerTasks {
 			if !domainFilter.Filter(taskInfo.GetDomainID()) {
 				continue
 			}
@@ -355,43 +303,57 @@ func (t *timerQueueProcessorBase) processQueueCollections(levels map[int]struct{
 				return
 			}
 			taskChFull = taskChFull || !submitted
+			if submitted {
+				submittedCount++
+			}
 		}
+		t.logger.Debugf("Submitted %d timer tasks successfully out of %d tasks", submittedCount, len(resp.timerTasks))
 
 		var newReadLevel task.Key
-		if len(nextPageToken) == 0 {
+		if len(resp.nextPageToken) == 0 {
 			newReadLevel = maxReadLevel
-			if lookAheadTask != nil {
+			if resp.lookAheadTask != nil {
 				// lookAheadTask may exist only when nextPageToken is empty
 				// notice that lookAheadTask.VisibilityTimestamp may be larger than shard max read level,
 				// which means new tasks can be generated before that timestamp. This issue is solved by
 				// upsertPollTime whenever there are new tasks
-				t.upsertPollTime(level, lookAheadTask.VisibilityTimestamp)
-				newReadLevel = minTaskKey(newReadLevel, newTimerTaskKey(lookAheadTask.GetVisibilityTimestamp(), 0))
+				lookAheadTimestamp := resp.lookAheadTask.GetVisibilityTimestamp()
+				t.upsertPollTime(level, lookAheadTimestamp)
+				newReadLevel = minTaskKey(newReadLevel, newTimerTaskKey(lookAheadTimestamp, 0))
+				t.logger.Debugf("nextPageToken is empty for timer queue at level %d so setting newReadLevel to max(lookAheadTask.timestamp: %v, maxReadLevel: %v)", level, lookAheadTimestamp, maxReadLevel)
+			} else {
+				// else we have no idea when the next poll should happen
+				// rely on notifyNewTask to trigger the next poll even for non-default queue.
+				// another option for non-default queue is that we can setup a backoff timer to check back later
+				t.logger.Debugf("nextPageToken is empty for timer queue at level %d and there' no lookAheadTask. setting readLevel to maxReadLevel: %v", level, maxReadLevel)
 			}
-			// else we have no idea when the next poll should happen
-			// rely on notifyNewTask to trigger the next poll even for non-default queue.
-			// another option for non-default queue is that we can setup a backoff timer to check back later
 		} else {
 			// more tasks should be loaded for this processing queue
 			// record the current progress and update the poll time
 			if level == defaultProcessingQueueLevel || !taskChFull {
+				t.logger.Debugf("upserting poll time for timer queue at level %d because nextPageToken is not empty and !taskChFull", level)
 				t.upsertPollTime(level, time.Time{})
 			} else {
+				t.logger.Debugf("setting up backoff timer for timer queue at level %d because nextPageToken is not empty and taskChFull", level)
 				t.setupBackoffTimer(level)
 			}
 			t.processingQueueReadProgress[level] = timeTaskReadProgress{
 				currentQueue:  activeQueue,
 				readLevel:     readLevel,
 				maxReadLevel:  maxReadLevel,
-				nextPageToken: nextPageToken,
+				nextPageToken: resp.nextPageToken,
 			}
-			newReadLevel = newTimerTaskKey(timerTaskInfos[len(timerTaskInfos)-1].GetVisibilityTimestamp(), 0)
+			if len(resp.timerTasks) > 0 {
+				newReadLevel = newTimerTaskKey(resp.timerTasks[len(resp.timerTasks)-1].GetVisibilityTimestamp(), 0)
+			}
 		}
 		queueCollection.AddTasks(tasks, newReadLevel)
 	}
 }
 
-func (t *timerQueueProcessorBase) splitQueue() {
+// splitQueue splits the processing queue collection based on some policy
+// and resets the timer with jitter for next run
+func (t *timerQueueProcessorBase) splitQueue(splitQueueTimer *time.Timer) {
 	splitPolicy := t.initializeSplitPolicy(
 		func(key task.Key, domainID string) task.Key {
 			return newTimerTaskKey(
@@ -404,6 +366,76 @@ func (t *timerQueueProcessorBase) splitQueue() {
 	)
 
 	t.splitProcessingQueueCollection(splitPolicy, t.upsertPollTime)
+
+	splitQueueTimer.Reset(backoff.JitDuration(
+		t.options.SplitQueueInterval(),
+		t.options.SplitQueueIntervalJitterCoefficient(),
+	))
+}
+
+// handleAckLevelUpdate updates ack level and resets timer with jitter.
+// returns true if processing should be terminated
+func (t *timerQueueProcessorBase) handleAckLevelUpdate(updateAckTimer *time.Timer) bool {
+	processFinished, _, err := t.updateAckLevel()
+	if err == shard.ErrShardClosed || (err == nil && processFinished) {
+		return true
+	}
+	updateAckTimer.Reset(backoff.JitDuration(
+		t.options.UpdateAckInterval(),
+		t.options.UpdateAckIntervalJitterCoefficient(),
+	))
+	return false
+}
+
+func (t *timerQueueProcessorBase) updateTimerGates() {
+	maxRedispatchQueueSize := t.options.MaxRedispatchQueueSize()
+	if t.redispatcher.Size() > maxRedispatchQueueSize {
+		t.redispatcher.Redispatch(maxRedispatchQueueSize)
+		if t.redispatcher.Size() > maxRedispatchQueueSize {
+			// if redispatcher still has a large number of tasks
+			// this only happens when system is under very high load
+			// we should backoff here instead of keeping submitting tasks to task processor
+			// don't call t.timerGate.Update(time.Now() + loadQueueTaskThrottleRetryDelay) as the time in
+			// standby timer processor is not real time and is managed separately
+			time.Sleep(backoff.JitDuration(
+				t.options.PollBackoffInterval(),
+				t.options.PollBackoffIntervalJitterCoefficient(),
+			))
+		}
+		t.timerGate.Update(time.Time{})
+		return
+	}
+
+	t.pollTimeLock.Lock()
+	levels := make(map[int]struct{})
+	now := t.shard.GetCurrentTime(t.clusterName)
+	for level, pollTime := range t.nextPollTime {
+		if !now.Before(pollTime) {
+			levels[level] = struct{}{}
+			delete(t.nextPollTime, level)
+		} else {
+			t.timerGate.Update(pollTime)
+		}
+	}
+	t.pollTimeLock.Unlock()
+
+	t.processQueueCollections(levels)
+}
+
+func (t *timerQueueProcessorBase) handleNewTimer() {
+	t.newTimeLock.Lock()
+	newTime := t.newTime
+	t.newTime = time.Time{}
+	t.newTimeLock.Unlock()
+
+	// New Timer has arrived.
+	t.metricsScope.IncCounter(metrics.NewTimerNotifyCounter)
+	// notify all queue collections as they are waiting for the notification when there's
+	// no more task to process. For non-default queue, we choose to do periodic polling
+	// in the future, then we don't need to notify them.
+	for _, queueCollection := range t.processingQueueCollections {
+		t.upsertPollTime(queueCollection.Level(), newTime)
+	}
 }
 
 func (t *timerQueueProcessorBase) handleActionNotification(notification actionNotification) {
@@ -415,29 +447,26 @@ func (t *timerQueueProcessorBase) handleActionNotification(notification actionNo
 	})
 }
 
-func (t *timerQueueProcessorBase) readAndFilterTasks(
-	readLevel task.Key,
-	maxReadLevel task.Key,
-	nextPageToken []byte,
-) ([]*persistence.TimerTaskInfo, *persistence.TimerTaskInfo, []byte, error) {
-	timerTasks, nextPageToken, err := t.getTimerTasks(readLevel, maxReadLevel, nextPageToken, t.options.BatchSize())
+func (t *timerQueueProcessorBase) readAndFilterTasks(readLevel, maxReadLevel task.Key, nextPageToken []byte) (*filteredTimerTasksResponse, error) {
+	resp, err := t.getTimerTasks(readLevel, maxReadLevel, nextPageToken, t.options.BatchSize())
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
 
 	var lookAheadTask *persistence.TimerTaskInfo
 	filteredTasks := []*persistence.TimerTaskInfo{}
-
-	for _, timerTask := range timerTasks {
+	for _, timerTask := range resp.Timers {
 		if !t.isProcessNow(timerTask.GetVisibilityTimestamp()) {
+			// found the first task that is not ready to be processed yet.
+			// reset NextPageToken so we can load more tasks starting from this lookAheadTask next time.
 			lookAheadTask = timerTask
-			nextPageToken = nil
+			resp.NextPageToken = nil
 			break
 		}
 		filteredTasks = append(filteredTasks, timerTask)
 	}
 
-	if len(nextPageToken) == 0 && lookAheadTask == nil {
+	if len(resp.NextPageToken) == 0 && lookAheadTask == nil {
 		// only look ahead within the processing queue boundary
 		lookAheadTask, err = t.readLookAheadTask(maxReadLevel, maximumTimerTaskKey)
 		if err != nil {
@@ -447,39 +476,30 @@ func (t *timerQueueProcessorBase) readAndFilterTasks(
 			lookAheadTask = &persistence.TimerTaskInfo{
 				VisibilityTimestamp: maxReadLevel.(timerTaskKey).visibilityTimestamp,
 			}
-			return filteredTasks, lookAheadTask, nil, nil
 		}
 	}
 
-	return filteredTasks, lookAheadTask, nextPageToken, nil
+	t.logger.Debugf("readAndFilterTasks returning %d tasks and lookAheadTask: %#v for readLevel: %#v, maxReadLevel: %#v", len(filteredTasks), lookAheadTask, readLevel, maxReadLevel)
+	return &filteredTimerTasksResponse{
+		timerTasks:    filteredTasks,
+		lookAheadTask: lookAheadTask,
+		nextPageToken: resp.NextPageToken,
+	}, nil
 }
 
-func (t *timerQueueProcessorBase) readLookAheadTask(
-	lookAheadStartLevel task.Key,
-	lookAheadMaxLevel task.Key,
-) (*persistence.TimerTaskInfo, error) {
-	tasks, _, err := t.getTimerTasks(
-		lookAheadStartLevel,
-		lookAheadMaxLevel,
-		nil,
-		1,
-	)
+func (t *timerQueueProcessorBase) readLookAheadTask(lookAheadStartLevel task.Key, lookAheadMaxLevel task.Key) (*persistence.TimerTaskInfo, error) {
+	resp, err := t.getTimerTasks(lookAheadStartLevel, lookAheadMaxLevel, nil, 1)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(tasks) == 1 {
-		return tasks[0], nil
+	if len(resp.Timers) == 1 {
+		return resp.Timers[0], nil
 	}
 	return nil, nil
 }
 
-func (t *timerQueueProcessorBase) getTimerTasks(
-	readLevel task.Key,
-	maxReadLevel task.Key,
-	nextPageToken []byte,
-	batchSize int,
-) ([]*persistence.TimerTaskInfo, []byte, error) {
+func (t *timerQueueProcessorBase) getTimerTasks(readLevel, maxReadLevel task.Key, nextPageToken []byte, batchSize int) (*persistence.GetTimerIndexTasksResponse, error) {
 	request := &persistence.GetTimerIndexTasksRequest{
 		MinTimestamp:  readLevel.(timerTaskKey).visibilityTimestamp,
 		MaxTimestamp:  maxReadLevel.(timerTaskKey).visibilityTimestamp,
@@ -493,33 +513,29 @@ func (t *timerQueueProcessorBase) getTimerTasks(
 	for attempt := 0; attempt < retryCount; attempt++ {
 		response, err = t.shard.GetExecutionManager().GetTimerIndexTasks(context.Background(), request)
 		if err == nil {
-			return response.Timers, response.NextPageToken, nil
+			return response, nil
 		}
-		backoff := time.Duration(attempt * 100)
-		time.Sleep(backoff * time.Millisecond)
+		backoff := time.Duration(attempt*100) * time.Millisecond
+		t.logger.Debugf("Failed to get timer tasks from execution manager. error: %v, attempt: %d, retryCount: %d, backoff: %v", err, attempt, retryCount, backoff)
+		time.Sleep(backoff)
 	}
-	return nil, nil, err
+	return nil, err
 }
 
-func (t *timerQueueProcessorBase) isProcessNow(
-	expiryTime time.Time,
-) bool {
+func (t *timerQueueProcessorBase) isProcessNow(expiryTime time.Time) bool {
 	if expiryTime.IsZero() {
 		// return true, but somewhere probably have bug creating empty timerTask.
 		t.logger.Warn("Timer task has timestamp zero")
 	}
-	return expiryTime.UnixNano() <= t.shard.GetCurrentTime(t.clusterName).UnixNano()
+	return !t.shard.GetCurrentTime(t.clusterName).Before(expiryTime)
 }
 
-func (t *timerQueueProcessorBase) notifyNewTimers(
-	timerTasks []persistence.Task,
-) {
+func (t *timerQueueProcessorBase) notifyNewTimers(timerTasks []persistence.Task) {
 	if len(timerTasks) == 0 {
 		return
 	}
 
 	isActive := t.options.MetricScope == metrics.TimerActiveQueueProcessorScope
-
 	minNewTime := timerTasks[0].GetVisibilityTimestamp()
 	for _, timerTask := range timerTasks {
 		ts := timerTask.GetVisibilityTimestamp()
@@ -537,13 +553,12 @@ func (t *timerQueueProcessorBase) notifyNewTimers(
 	t.notifyNewTimer(minNewTime)
 }
 
-func (t *timerQueueProcessorBase) notifyNewTimer(
-	newTime time.Time,
-) {
+func (t *timerQueueProcessorBase) notifyNewTimer(newTime time.Time) {
 	t.newTimeLock.Lock()
 	defer t.newTimeLock.Unlock()
 
 	if t.newTime.IsZero() || newTime.Before(t.newTime) {
+		t.logger.Debugf("Updating newTime from %v to %v", t.newTime, newTime)
 		t.newTime = newTime
 		select {
 		case t.newTimerCh <- struct{}{}:
@@ -560,13 +575,19 @@ func (t *timerQueueProcessorBase) upsertPollTime(level int, newPollTime time.Tim
 
 	if _, ok := t.backoffTimer[level]; ok {
 		// honor existing backoff timer
+		t.logger.Debugf("Skipping upsertPollTime for timer queue at level %d because there's a backoff timer", level)
 		return
 	}
 
-	if currentPollTime, ok := t.nextPollTime[level]; !ok || newPollTime.Before(currentPollTime) {
+	currentPollTime, ok := t.nextPollTime[level]
+	if !ok || newPollTime.Before(currentPollTime) {
+		t.logger.Debugf("Updating poll timer for timer queue at level %d. CurrentPollTime: %v, newPollTime: %v", level, currentPollTime, newPollTime)
 		t.nextPollTime[level] = newPollTime
 		t.timerGate.Update(newPollTime)
+		return
 	}
+
+	t.logger.Debugf("Skipping upsertPollTime for level %d because currentPollTime %v is before newPollTime %v", level, currentPollTime, newPollTime)
 }
 
 // setupBackoffTimer will trigger a poll for the specified processing queue collection
@@ -605,10 +626,7 @@ func (t *timerQueueProcessorBase) setupBackoffTimer(level int) {
 	})
 }
 
-func newTimerTaskKey(
-	visibilityTimestamp time.Time,
-	taskID int64,
-) task.Key {
+func newTimerTaskKey(visibilityTimestamp time.Time, taskID int64) task.Key {
 	return timerTaskKey{
 		visibilityTimestamp: visibilityTimestamp,
 		taskID:              taskID,

@@ -8,14 +8,78 @@ You can find a list of previous releases on the [github releases](https://github
 
 ## [Unreleased]
 ### Added
+- Added metrics to monitor task validation (#5466)
+- Added config map for kafka topic (#5473, #5474)
+- Add an "all results" query to scanner/fixer workflow (#5470)
+- Add retries into Scanner BlobWriter (#5471)
+- Added a unit test for the BlobStoreWriter (#5472)
+
+### Changed
+- Improves metric and error handling for history (#5469)
+- Minor change to include domainTag and pass domainName (#5468)
+
+## [1.2.6] - 2023-12-14
+### Added
+- Added range query support for Pinot json index (#5426)
+- Implemented GetTaskListSize method at persistence layer (#5442, #5447)
+- Added a framework for the Task validator service (#5446)
+- Added nit comments describing the Update workflow cycle (#5432)
+- Added log user query param (#5437)
+- Added CODEOWNERS file (#5453)
+- Added a function to evict all elements older than the cache TTL (#5464)
+
+### Fixed
+- Fixed workflow replication for reset workflow (#5412)
+- Fixed visibility mode for admin when use Pinot visibility (#5441)
+- Fixed workflow started metric (#5443)
+- Fixed timer-fixer, unfortunately broken in 1.2.5 (#5433)
+- Fixed confusing comment in matching handler (#5450)
+
+### Changed
+- Cassandra version is changed from 3.11 to 4.1.3 (#5461)
+  - If your machine already has ubercadence/server:master-auto-setup image then you need to repull so it works with latest docker-compose*.yml files
+- Move dynamic ratelimiter to its own file (#5451)
+- Create and use a limiter struct instead of just passing a function (#5454)
+- Dynamic ratelimiter factories (#5455)
+- Update github action for image publishing to released (#5460)
+- Update matching to emit metric for tasklist backlog size (#5448)
+- Change variable name from SecondsSinceEpoch into EventTimeMs (#5463)
+
+### Removed
+- Get rid of noisy task adding failure log in matching service (#5445)
+
+## [1.2.5] - 2023-11-01
+
+### Caution:
+
+Prefer 1.2.4 or 1.2.6 if you have enabled the timer fixer.
+These were broken by #5361, and fixed by #5433.
+
+By default this fixer is _disabled_, so the version has not been retracted.
+
+If you have already upgraded to 1.2.5, downgrading or using 1.2.6 should restore the timer fixer.
+Or apply #5433 as a local patch.
+
+### Added
 - Scanner / Fixer changes (#5361)
   - Stale-workflow detection and cleanup added to shardscanner, disabled by default.
   - New dynamic config to better control scanner and fixer, particularly for concrete executions.
   - Documentation about how scanner/fixer work and how to control them, see [the scanner readme.md](service/worker/scanner/README.md)
     - This also includes example config to enable the new fixer.
+- MigrationChecker interface to expose migration CLI (#5424)
+- Added Pinot as new visibility store option (#5201)
+  - Added pinot visibility triple manager to provide options to write to both ES and Pinot.
+  - Added pinotVisibilityStore and pinotClient to support CRUD operations for Pinot.
+  - Added pinot integration test to set up Pinot test cluster and test Pinot functionality.
+
+### Fixed
+- Fix CreateWorkflowModeContinueAsNew for SQL (#5413)
+- Fix CLI count&list workflows error message (#5417)
+- Hotfix for async matching for isolation-group redirection (#5423)
+- Fix closeStatus for --format flag (#5422)
 
 ### Upgrade notes
-- Any concrete execution fixer run on upgrade may be missing the new config and those activities will have no invariants for a single run.  Later runs will work normally. (#5361)
+- Any "concrete execution" or "timers" fixers run on upgrade may be missing the new config and those activities will have no invariants for a single run.  Later runs will work normally. (#5361)
 
 ## [1.2.4] - 2023-09-27
 ### Added

@@ -30,6 +30,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/persistence"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/types"
@@ -69,6 +70,25 @@ func (t *nosqlTaskStore) GetOrphanTasks(ctx context.Context, request *p.GetOrpha
 	return nil, &types.InternalServiceError{
 		Message: "Unimplemented call to GetOrphanTasks for NoSQL",
 	}
+}
+
+func (t *nosqlTaskStore) GetTaskListSize(ctx context.Context, request *p.GetTaskListSizeRequest) (*p.GetTaskListSizeResponse, error) {
+	storeShard, err := t.GetStoreShardByTaskList(request.DomainID, request.TaskListName, request.TaskListType)
+	if err != nil {
+		return nil, err
+	}
+	size, err := storeShard.db.GetTasksCount(ctx, &nosqlplugin.TasksFilter{
+		TaskListFilter: nosqlplugin.TaskListFilter{
+			DomainID:     request.DomainID,
+			TaskListName: request.TaskListName,
+			TaskListType: request.TaskListType,
+		},
+		MinTaskID: request.AckLevel,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &persistence.GetTaskListSizeResponse{Size: size}, nil
 }
 
 func (t *nosqlTaskStore) LeaseTaskList(

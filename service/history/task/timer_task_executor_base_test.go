@@ -84,6 +84,7 @@ func (s *timerQueueTaskExecutorBaseSuite) SetupTest() {
 
 	config := config.NewForTest()
 	s.mockShard = shard.NewTestContext(
+		s.T(),
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID:          0,

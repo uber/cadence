@@ -26,19 +26,18 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
+	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/future"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/types"
@@ -78,7 +77,7 @@ func (s *fetcherSuite) SetupTest() {
 		TimerJitterCoefficient: dynamicconfig.GetFloatPropertyFn(0.5),
 	}
 	s.metricsClient = metrics.NewClient(tally.NoopScope, metrics.History)
-	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
+	s.logger = testlogger.New(s.Suite.T())
 }
 
 func (s *fetcherSuite) TearDownTest() {
@@ -93,7 +92,7 @@ func (s *fetcherSuite) TestCrossClusterTaskFetchers() {
 	shardIDs := []int32{1, 10, 123}
 	tasksByShard := make(map[int32][]*types.CrossClusterTaskRequest)
 
-	mockResource := resource.NewTest(s.controller, metrics.History)
+	mockResource := resource.NewTest(s.T(), s.controller, metrics.History)
 	mockResource.RemoteAdminClient.EXPECT().GetCrossClusterTasks(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, request *types.GetCrossClusterTasksRequest, option ...yarpc.CallOption) (*types.GetCrossClusterTasksResponse, error) {
 			s.Equal(currentCluster, request.GetTargetCluster())

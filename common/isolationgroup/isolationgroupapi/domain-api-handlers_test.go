@@ -31,7 +31,7 @@ import (
 
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -129,7 +129,7 @@ func TestUpdateDomainState(t *testing.T) {
 			domainHandlerMock := domain.NewMockHandler(ctrl)
 			td.domainHandlerAffordance(domainHandlerMock)
 			handler := handlerImpl{
-				log:                        loggerimpl.NewNopLogger(),
+				log:                        testlogger.New(t),
 				domainHandler:              domainHandlerMock,
 				globalIsolationGroupDrains: dcMock,
 			}
@@ -236,7 +236,7 @@ func TestGetDomainState(t *testing.T) {
 			domainHandlerMock := domain.NewMockHandler(ctrl)
 			td.domainHandlerAffordance(domainHandlerMock)
 			handler := handlerImpl{
-				log:           loggerimpl.NewNopLogger(),
+				log:           testlogger.New(t),
 				domainHandler: domainHandlerMock,
 			}
 			res, err := handler.GetDomainState(context.Background(), td.in)

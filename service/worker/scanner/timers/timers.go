@@ -27,6 +27,9 @@ import (
 	"strconv"
 	"time"
 
+	"go.uber.org/cadence/client"
+	"go.uber.org/cadence/workflow"
+
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -37,9 +40,6 @@ import (
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/reconciliation/store"
 	"github.com/uber/cadence/service/worker/scanner/shardscanner"
-
-	"go.uber.org/cadence/client"
-	"go.uber.org/cadence/workflow"
 )
 
 const (
@@ -94,14 +94,22 @@ func ScannerHooks() *shardscanner.ScannerHooks {
 
 // FixerHooks provides hooks needed for timers fixer.
 func FixerHooks() *shardscanner.FixerHooks {
-	noConfig := func(fixer shardscanner.FixerContext) shardscanner.CustomScannerConfig {
-		return nil
-	}
-	h, err := shardscanner.NewFixerHooks(FixerManager, FixerIterator, noConfig)
+	h, err := shardscanner.NewFixerHooks(FixerManager, FixerIterator, timerCustomConfig)
 	if err != nil {
 		return nil
 	}
 	return h
+}
+
+func timerCustomConfig(_ shardscanner.FixerContext) shardscanner.CustomScannerConfig {
+	// must be non-empty to pass backwards-compat check,
+	// and this allows safely adding more invariants in the future.
+	//
+	// currently this is not read anywhere because "fixer enabled"
+	// means "run this one invariant's fixes".
+	return map[string]string{
+		invariant.TimerInvalidName: "true",
+	}
 }
 
 // Manager provides invariant manager for timers scanner.

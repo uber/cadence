@@ -87,45 +87,43 @@ func (reqCtx *handlerContext) handleErr(err error) error {
 		return nil
 	}
 
-	scope := reqCtx.scope
-
 	switch err.(type) {
 	case *types.InternalServiceError:
-		scope.IncCounter(metrics.CadenceFailuresPerTaskList)
+		reqCtx.scope.IncCounter(metrics.CadenceFailuresPerTaskList)
 		reqCtx.logger.Error("Internal service error", tag.Error(err))
 		return err
 	case *types.BadRequestError:
-		scope.IncCounter(metrics.CadenceErrBadRequestPerTaskListCounter)
+		reqCtx.scope.IncCounter(metrics.CadenceErrBadRequestPerTaskListCounter)
 		return err
 	case *types.EntityNotExistsError:
-		scope.IncCounter(metrics.CadenceErrEntityNotExistsPerTaskListCounter)
+		reqCtx.scope.IncCounter(metrics.CadenceErrEntityNotExistsPerTaskListCounter)
 		return err
 	case *types.WorkflowExecutionAlreadyStartedError:
-		scope.IncCounter(metrics.CadenceErrExecutionAlreadyStartedPerTaskListCounter)
+		reqCtx.scope.IncCounter(metrics.CadenceErrExecutionAlreadyStartedPerTaskListCounter)
 		return err
 	case *types.DomainAlreadyExistsError:
-		scope.IncCounter(metrics.CadenceErrDomainAlreadyExistsPerTaskListCounter)
+		reqCtx.scope.IncCounter(metrics.CadenceErrDomainAlreadyExistsPerTaskListCounter)
 		return err
 	case *types.QueryFailedError:
-		scope.IncCounter(metrics.CadenceErrQueryFailedPerTaskListCounter)
+		reqCtx.scope.IncCounter(metrics.CadenceErrQueryFailedPerTaskListCounter)
 		return err
 	case *types.LimitExceededError:
-		scope.IncCounter(metrics.CadenceErrLimitExceededPerTaskListCounter)
+		reqCtx.scope.IncCounter(metrics.CadenceErrLimitExceededPerTaskListCounter)
 		return err
 	case *types.ServiceBusyError:
-		scope.IncCounter(metrics.CadenceErrServiceBusyPerTaskListCounter)
+		reqCtx.scope.IncCounter(metrics.CadenceErrServiceBusyPerTaskListCounter)
 		return err
 	case *types.DomainNotActiveError:
-		scope.IncCounter(metrics.CadenceErrDomainNotActivePerTaskListCounter)
+		reqCtx.scope.IncCounter(metrics.CadenceErrDomainNotActivePerTaskListCounter)
 		return err
 	case *types.RemoteSyncMatchedError:
-		scope.IncCounter(metrics.CadenceErrRemoteSyncMatchFailedPerTaskListCounter)
+		reqCtx.scope.IncCounter(metrics.CadenceErrRemoteSyncMatchFailedPerTaskListCounter)
 		return err
 	case *types.StickyWorkerUnavailableError:
-		scope.IncCounter(metrics.CadenceErrStickyWorkerUnavailablePerTaskListCounter)
+		reqCtx.scope.IncCounter(metrics.CadenceErrStickyWorkerUnavailablePerTaskListCounter)
 		return err
 	default:
-		scope.IncCounter(metrics.CadenceFailuresPerTaskList)
+		reqCtx.scope.IncCounter(metrics.CadenceFailuresPerTaskList)
 		reqCtx.logger.Error("Uncategorized error", tag.Error(err))
 		return &types.InternalServiceError{Message: err.Error()}
 	}

@@ -22,9 +22,7 @@
 
 package shardscanner
 
-import (
-	"go.uber.org/cadence/activity"
-)
+import "go.uber.org/cadence/activity"
 
 func init() {
 	// shardscanner activities

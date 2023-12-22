@@ -21,8 +21,7 @@
 package clitest
 
 import (
-	log "github.com/sirupsen/logrus"
-
+	"log"
 	"os"
 
 	"github.com/uber/cadence/environment"

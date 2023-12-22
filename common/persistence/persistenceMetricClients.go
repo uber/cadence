@@ -25,9 +25,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/uber/cadence/common/dynamicconfig"
-
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -1027,6 +1026,23 @@ func (p *taskPersistenceClient) DeleteTaskList(
 		return p.persistence.DeleteTaskList(ctx, request)
 	}
 	return p.call(metrics.PersistenceDeleteTaskListScope, op, metrics.DomainTag(request.DomainName))
+}
+
+func (p *taskPersistenceClient) GetTaskListSize(
+	ctx context.Context,
+	request *GetTaskListSizeRequest,
+) (*GetTaskListSizeResponse, error) {
+	var resp *GetTaskListSizeResponse
+	op := func() error {
+		var err error
+		resp, err = p.persistence.GetTaskListSize(ctx, request)
+		return err
+	}
+	err := p.call(metrics.PersistenceGetTaskListSizeScope, op)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (p *taskPersistenceClient) UpdateTaskList(

@@ -24,12 +24,10 @@ import (
 	"log"
 	"time"
 
-	"github.com/uber/cadence/common/persistence"
-
+	"github.com/startreedata/pinot-client-go/pinot"
+	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/compatibility"
-
-	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
@@ -46,6 +44,8 @@ import (
 	"github.com/uber/cadence/common/messaging/kafka"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/peerprovider/ringpopprovider"
+	"github.com/uber/cadence/common/persistence"
+	pnt "github.com/uber/cadence/common/pinot"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/rpc"
 	"github.com/uber/cadence/common/service"
@@ -222,6 +222,23 @@ func (s *server) startService() common.Daemon {
 		}
 
 		params.ESConfig = advancedVisStore.ElasticSearch
+		if params.PersistenceConfig.AdvancedVisibilityStore == common.PinotVisibilityStoreName {
+			// components like ESAnalyzer is still using ElasticSearch
+			// The plan is to clean those after we switch to operate on Pinot
+			esVisibilityStore, ok := s.cfg.Persistence.DataStores[common.ESVisibilityStoreName]
+			if !ok {
+				log.Fatalf("Missing Elasticsearch config")
+			}
+			params.ESConfig = esVisibilityStore.ElasticSearch
+			params.PinotConfig = advancedVisStore.Pinot
+			pinotBroker := params.PinotConfig.Broker
+			pinotRawClient, err := pinot.NewFromBrokerList([]string{pinotBroker})
+			if err != nil || pinotRawClient == nil {
+				log.Fatalf("Creating Pinot visibility client failed: %v", err)
+			}
+			pinotClient := pnt.NewPinotClient(pinotRawClient, params.Logger, params.PinotConfig)
+			params.PinotClient = pinotClient
+		}
 		params.ESConfig.SetUsernamePassword()
 		esClient, err := elasticsearch.NewGenericClient(params.ESConfig, params.Logger)
 		if err != nil {

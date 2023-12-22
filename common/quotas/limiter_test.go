@@ -136,12 +136,12 @@ func BenchmarkMultiStageRateLimiter1000Domains(b *testing.B) {
 	}
 }
 
-func newFixedRpsMultiStageRateLimiter(globalRps, domainRps float64) Policy {
+func newFixedRpsMultiStageRateLimiter(globalRps float64, domainRps int) Policy {
 	return NewMultiStageRateLimiter(
 		NewDynamicRateLimiter(func() float64 {
 			return globalRps
 		}),
-		NewCollection(DynamicRateLimiterFactory(func(domain string) float64 {
+		NewCollection(NewSimpleDynamicRateLimiterFactory(func(domain string) int {
 			return domainRps
 		})),
 	)

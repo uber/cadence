@@ -28,7 +28,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -58,7 +58,7 @@ func (s *transmissionTaskSuite) SetupTest() {
 	s.kafkaProducer = &mocks.KafkaProducer{}
 	s.domainReplicator = NewDomainReplicator(
 		s.kafkaProducer,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 	).(*domainReplicatorImpl)
 }
 

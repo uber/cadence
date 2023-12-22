@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN pip install cqlsh
 # verbose test output from `make`, can be disabled with V=0
-ENV V=1
+ENV V=0
 
 # https://github.com/docker-library/golang/blob/c1baf037d71331eb0b8d4c70cff4c29cf124c5e0/1.4/Dockerfile
 RUN mkdir -p /cadence

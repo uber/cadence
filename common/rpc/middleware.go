@@ -25,14 +25,14 @@ import (
 	"encoding/json"
 	"io"
 
+	"go.uber.org/cadence/worker"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/partition"
-
-	"go.uber.org/cadence/worker"
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/transport"
 )
 
 type authOutboundMiddleware struct {

@@ -180,6 +180,16 @@ func WorkflowCronSchedule(schedule string) Tag {
 	return newStringTag("wf-cron-schedule", schedule)
 }
 
+// WorkflowCloseStatus returns a tag to report a workflow's close status
+func WorkflowCloseStatus(status int) Tag {
+	return newInt("close-status", status)
+}
+
+// IsWorkflowOpen returns a tag to report a workflow is open or not
+func IsWorkflowOpen(isOpen bool) Tag {
+	return newBoolTag("is-workflow-open", isOpen)
+}
+
 // domain related
 
 // WorkflowDomainID returns tag for WorkflowDomainID

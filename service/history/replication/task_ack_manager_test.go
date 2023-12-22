@@ -211,7 +211,7 @@ func TestTaskAckManager_GetTasks(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			taskStore := createTestTaskStore(tt.domains, tt.hydrator)
+			taskStore := createTestTaskStore(t, tt.domains, tt.hydrator)
 			ackManager := NewTaskAckManager(testShardID, tt.ackLevels, metrics.NewNoopMetricsClient(), log.NewNoop(), tt.reader, taskStore)
 			result, err := ackManager.GetTasks(context.Background(), tt.pollingCluster, tt.lastReadLevel)
 

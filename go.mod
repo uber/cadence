@@ -23,7 +23,6 @@ require (
 	github.com/hashicorp/go-version v1.2.0
 	github.com/iancoleman/strcase v0.0.0-20190422225806-e506e3ef7365
 	github.com/jmoiron/sqlx v1.2.1-0.20200615141059-0794cb1f47ee
-	github.com/jonboulle/clockwork v0.1.0
 	github.com/lib/pq v1.2.0
 	github.com/m3db/prometheus_client_golang v0.8.1
 	github.com/olekukonko/tablewriter v0.0.4
@@ -34,7 +33,8 @@ require (
 	github.com/otiai10/copy v1.1.1
 	github.com/pborman/uuid v0.0.0-20180906182336-adf5a7427709
 	github.com/robfig/cron v1.2.0
-	github.com/sirupsen/logrus v1.8.1
+	github.com/sirupsen/logrus v1.9.0 // indirect
+	github.com/startreedata/pinot-client-go v0.0.0-20230303070132-3b84c28a9e95 // latest release doesn't support pinot v0.12, so use master branch
 	github.com/stretchr/testify v1.8.1
 	github.com/uber-go/tally v3.3.15+incompatible
 	github.com/uber/cadence-idl v0.0.0-20230905165949-03586319b849
@@ -65,6 +65,8 @@ require (
 	gopkg.in/yaml.v2 v2.3.0
 )
 
+require github.com/google/go-cmp v0.5.8
+
 require (
 	cloud.google.com/go v0.102.1 // indirect
 	cloud.google.com/go/compute v1.7.0 // indirect
@@ -87,7 +89,6 @@ require (
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/google/go-cmp v0.5.8 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.1.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.4.0 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
@@ -122,6 +123,7 @@ require (
 	github.com/prometheus/procfs v0.6.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/russross/blackfriday/v2 v2.0.1 // indirect
+	github.com/samuel/go-zookeeper v0.0.0-20201211165307-7117e9ea2414 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/uber-common/bark v1.2.1 // indirect

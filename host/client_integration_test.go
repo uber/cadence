@@ -35,6 +35,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/activity"
@@ -46,8 +47,6 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/zap"
-
-	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/service"

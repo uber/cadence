@@ -29,7 +29,6 @@ import (
 
 	"github.com/uber-go/tally/m3"
 	"github.com/uber-go/tally/prometheus"
-
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
 
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -219,6 +218,8 @@ type (
 		ShardedNoSQL *ShardedNoSQL `yaml:"shardedNosql"`
 		// ElasticSearch contains the config for a ElasticSearch datastore
 		ElasticSearch *ElasticSearchConfig `yaml:"elasticsearch"`
+		// Pinot contains the config for a Pinot datastore
+		Pinot *PinotVisibilityConfig `yaml:"pinot"`
 	}
 
 	// Cassandra contains configuration to connect to Cassandra cluster
