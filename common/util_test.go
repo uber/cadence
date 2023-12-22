@@ -37,7 +37,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/yarpcerrors"
 
+	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -424,13 +427,333 @@ func TestAwaitWaitGroup(t *testing.T) {
 	})
 }
 
-func TestValidIDLength(t *testing.T) {
+func TestIsValidIDLength(t *testing.T) {
+	var (
+		// test setup
+		scope = metrics.NoopScope(0)
+
+		// arguments
+		metricCounter      = 0
+		idTypeViolationTag = tag.ClusterName("idTypeViolationTag")
+		domainName         = "domain_name"
+		id                 = "12345"
+	)
+
+	mockWarnCall := func(logger *log.MockLogger) {
+		logger.On(
+			"Warn",
+			"ID length exceeds limit.",
+			[]tag.Tag{
+				tag.WorkflowDomainName(domainName),
+				tag.Name(id),
+				idTypeViolationTag,
+			},
+		).Once()
+	}
+
 	t.Run("valid id length, no warnings", func(t *testing.T) {
-		got := ValidIDLength("12345", nil, 7, 10, 0, "", nil, tag.Tag{})
+		logger := new(log.MockLogger)
+		got := IsValidIDLength(id, scope, 7, 10, metricCounter, domainName, logger, idTypeViolationTag)
 		require.True(t, got, "expected true, because id length is 5 and it's less than error limit 10")
 	})
-	t.Run("non valid id length", func(t *testing.T) {
-		got := ValidIDLength("12345", nil, 1, 4, 0, "", nil, tag.Tag{})
-		require.False(t, got, "expected false, because id length is 5 and it's more than error limit 4")
+
+	t.Run("valid id length, with warnings", func(t *testing.T) {
+		logger := new(log.MockLogger)
+		mockWarnCall(logger)
+
+		got := IsValidIDLength(id, scope, 4, 10, metricCounter, domainName, logger, idTypeViolationTag)
+		require.True(t, got, "expected true, because id length is 5 and it's less than error limit 10")
+
+		// logger should be called once
+		logger.AssertExpectations(t)
 	})
+
+	t.Run("non valid id length", func(t *testing.T) {
+		logger := new(log.MockLogger)
+		mockWarnCall(logger)
+
+		got := IsValidIDLength(id, scope, 1, 4, metricCounter, domainName, logger, idTypeViolationTag)
+		require.False(t, got, "expected false, because id length is 5 and it's more than error limit 4")
+
+		// logger should be called once
+		logger.AssertExpectations(t)
+	})
+}
+
+func TestIsEntityNotExistsError(t *testing.T) {
+	t.Run("is entity not exists error", func(t *testing.T) {
+		err := &types.EntityNotExistsError{}
+		require.True(t, IsEntityNotExistsError(err), "expected true, because err is entity not exists error")
+	})
+
+	t.Run("is not entity not exists error", func(t *testing.T) {
+		err := fmt.Errorf("generic error")
+		require.False(t, IsEntityNotExistsError(err), "expected false, because err is a generic error")
+	})
+}
+
+func TestCreateXXXRetryPolicyWithSetExpirationInterval(t *testing.T) {
+	for name, c := range map[string]struct {
+		createFn func() backoff.RetryPolicy
+
+		wantInitialInterval       time.Duration
+		wantMaximumInterval       time.Duration
+		wantSetExpirationInterval time.Duration
+	}{
+		"CreatePersistenceRetryPolicy": {
+			createFn:                  CreatePersistenceRetryPolicy,
+			wantInitialInterval:       retryPersistenceOperationInitialInterval,
+			wantMaximumInterval:       retryPersistenceOperationMaxInterval,
+			wantSetExpirationInterval: retryPersistenceOperationExpirationInterval,
+		},
+		"CreateHistoryServiceRetryPolicy": {
+			createFn:                  CreateHistoryServiceRetryPolicy,
+			wantInitialInterval:       historyServiceOperationInitialInterval,
+			wantMaximumInterval:       historyServiceOperationMaxInterval,
+			wantSetExpirationInterval: historyServiceOperationExpirationInterval,
+		},
+		"CreateMatchingServiceRetryPolicy": {
+			createFn:                  CreateMatchingServiceRetryPolicy,
+			wantInitialInterval:       matchingServiceOperationInitialInterval,
+			wantMaximumInterval:       matchingServiceOperationMaxInterval,
+			wantSetExpirationInterval: matchingServiceOperationExpirationInterval,
+		},
+		"CreateFrontendServiceRetryPolicy": {
+			createFn:                  CreateFrontendServiceRetryPolicy,
+			wantInitialInterval:       frontendServiceOperationInitialInterval,
+			wantMaximumInterval:       frontendServiceOperationMaxInterval,
+			wantSetExpirationInterval: frontendServiceOperationExpirationInterval,
+		},
+		"CreateAdminServiceRetryPolicy": {
+			createFn:                  CreateAdminServiceRetryPolicy,
+			wantInitialInterval:       adminServiceOperationInitialInterval,
+			wantMaximumInterval:       adminServiceOperationMaxInterval,
+			wantSetExpirationInterval: adminServiceOperationExpirationInterval,
+		},
+		"CreateReplicationServiceBusyRetryPolicy": {
+			createFn:                  CreateReplicationServiceBusyRetryPolicy,
+			wantInitialInterval:       replicationServiceBusyInitialInterval,
+			wantMaximumInterval:       replicationServiceBusyMaxInterval,
+			wantSetExpirationInterval: replicationServiceBusyExpirationInterval,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			want := backoff.NewExponentialRetryPolicy(c.wantInitialInterval)
+			want.SetMaximumInterval(c.wantMaximumInterval)
+			want.SetExpirationInterval(c.wantSetExpirationInterval)
+			got := c.createFn()
+			require.Equal(t, want, got)
+		})
+	}
+}
+
+func TestCreateXXXRetryPolicyWithMaximumAttempts(t *testing.T) {
+	for name, c := range map[string]struct {
+		createFn func() backoff.RetryPolicy
+
+		wantInitialInterval time.Duration
+		wantMaximumInterval time.Duration
+		wantMaximumAttempts int
+	}{
+		"CreateDlqPublishRetryPolicy": {
+			createFn:            CreateDlqPublishRetryPolicy,
+			wantInitialInterval: retryKafkaOperationInitialInterval,
+			wantMaximumInterval: retryKafkaOperationMaxInterval,
+			wantMaximumAttempts: retryKafkaOperationMaxAttempts,
+		},
+		"CreateTaskProcessingRetryPolicy": {
+			createFn:            CreateTaskProcessingRetryPolicy,
+			wantInitialInterval: retryTaskProcessingInitialInterval,
+			wantMaximumInterval: retryTaskProcessingMaxInterval,
+			wantMaximumAttempts: retryTaskProcessingMaxAttempts,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			want := backoff.NewExponentialRetryPolicy(c.wantInitialInterval)
+			want.SetMaximumInterval(c.wantMaximumInterval)
+			want.SetMaximumAttempts(c.wantMaximumAttempts)
+			got := c.createFn()
+			require.Equal(t, want, got)
+		})
+	}
+}
+
+func TestValidateRetryPolicy_Success(t *testing.T) {
+	for name, policy := range map[string]*types.RetryPolicy{
+		"nil policy": nil,
+		"MaximumAttempts is no zero": &types.RetryPolicy{
+			InitialIntervalInSeconds:    2,
+			BackoffCoefficient:          1,
+			MaximumIntervalInSeconds:    0,
+			MaximumAttempts:             1,
+			ExpirationIntervalInSeconds: 0,
+		},
+		"ExpirationIntervalInSeconds is no zero": &types.RetryPolicy{
+			InitialIntervalInSeconds:    2,
+			BackoffCoefficient:          1,
+			MaximumIntervalInSeconds:    0,
+			MaximumAttempts:             0,
+			ExpirationIntervalInSeconds: 1,
+		},
+		"MaximumIntervalInSeconds is greater than InitialIntervalInSeconds": &types.RetryPolicy{
+			InitialIntervalInSeconds:    2,
+			BackoffCoefficient:          1,
+			MaximumIntervalInSeconds:    0,
+			MaximumAttempts:             0,
+			ExpirationIntervalInSeconds: 1,
+		},
+		"MaximumIntervalInSeconds equals InitialIntervalInSeconds": &types.RetryPolicy{
+			InitialIntervalInSeconds:    2,
+			BackoffCoefficient:          1,
+			MaximumIntervalInSeconds:    2,
+			MaximumAttempts:             0,
+			ExpirationIntervalInSeconds: 1,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			require.NoError(t, ValidateRetryPolicy(policy))
+		})
+	}
+}
+
+func TestValidateRetryPolicy_Error(t *testing.T) {
+	for name, c := range map[string]struct {
+		policy  *types.RetryPolicy
+		wantErr *types.BadRequestError
+	}{
+		"InitialIntervalInSeconds equals 0": {
+			policy: &types.RetryPolicy{
+				InitialIntervalInSeconds: 0,
+			},
+			wantErr: &types.BadRequestError{Message: "InitialIntervalInSeconds must be greater than 0 on retry policy."},
+		},
+		"InitialIntervalInSeconds less than 0": {
+			policy: &types.RetryPolicy{
+				InitialIntervalInSeconds: -1,
+			},
+			wantErr: &types.BadRequestError{Message: "InitialIntervalInSeconds must be greater than 0 on retry policy."},
+		},
+		"BackoffCoefficient equals 0": {
+			policy: &types.RetryPolicy{
+				InitialIntervalInSeconds: 1,
+				BackoffCoefficient:       0,
+			},
+			wantErr: &types.BadRequestError{Message: "BackoffCoefficient cannot be less than 1 on retry policy."},
+		},
+		"MaximumIntervalInSeconds equals -1": {
+			policy: &types.RetryPolicy{
+				InitialIntervalInSeconds: 1,
+				BackoffCoefficient:       1,
+				MaximumIntervalInSeconds: -1,
+			},
+			wantErr: &types.BadRequestError{Message: "MaximumIntervalInSeconds cannot be less than 0 on retry policy."},
+		},
+		"MaximumIntervalInSeconds equals 1 and less than InitialIntervalInSeconds": {
+			policy: &types.RetryPolicy{
+				InitialIntervalInSeconds: 2,
+				BackoffCoefficient:       1,
+				MaximumIntervalInSeconds: 1,
+			},
+			wantErr: &types.BadRequestError{Message: "MaximumIntervalInSeconds cannot be less than InitialIntervalInSeconds on retry policy."},
+		},
+		"MaximumAttempts equals -1": {
+			policy: &types.RetryPolicy{
+				InitialIntervalInSeconds: 2,
+				BackoffCoefficient:       1,
+				MaximumIntervalInSeconds: 0,
+				MaximumAttempts:          -1,
+			},
+			wantErr: &types.BadRequestError{Message: "MaximumAttempts cannot be less than 0 on retry policy."},
+		},
+		"ExpirationIntervalInSeconds equals -1": {
+			policy: &types.RetryPolicy{
+				InitialIntervalInSeconds:    2,
+				BackoffCoefficient:          1,
+				MaximumIntervalInSeconds:    0,
+				MaximumAttempts:             0,
+				ExpirationIntervalInSeconds: -1,
+			},
+			wantErr: &types.BadRequestError{Message: "ExpirationIntervalInSeconds cannot be less than 0 on retry policy."},
+		},
+		"MaximumAttempts and ExpirationIntervalInSeconds equal 0": {
+			policy: &types.RetryPolicy{
+				InitialIntervalInSeconds:    2,
+				BackoffCoefficient:          1,
+				MaximumIntervalInSeconds:    0,
+				MaximumAttempts:             0,
+				ExpirationIntervalInSeconds: 0,
+			},
+			wantErr: &types.BadRequestError{Message: "MaximumAttempts and ExpirationIntervalInSeconds are both 0. At least one of them must be specified."},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got := ValidateRetryPolicy(c.policy)
+			require.Error(t, got)
+			require.ErrorContains(t, got, c.wantErr.Message)
+		})
+	}
+}
+
+func TestConvertGetTaskFailedCauseToErr(t *testing.T) {
+	for cause, wantErr := range map[types.GetTaskFailedCause]error{
+		types.GetTaskFailedCauseServiceBusy:        &types.ServiceBusyError{},
+		types.GetTaskFailedCauseTimeout:            context.DeadlineExceeded,
+		types.GetTaskFailedCauseShardOwnershipLost: &types.ShardOwnershipLostError{},
+		types.GetTaskFailedCauseUncategorized:      &types.InternalServiceError{Message: "uncategorized error"},
+	} {
+		t.Run(cause.String(), func(t *testing.T) {
+			gotErr := ConvertGetTaskFailedCauseToErr(cause)
+			require.Equal(t, wantErr, gotErr)
+		})
+	}
+}
+
+func TestWorkflowIDToHistoryShard(t *testing.T) {
+	for _, c := range []struct {
+		workflowID     string
+		numberOfShards int
+
+		want int
+	}{
+		{
+			workflowID:     "",
+			numberOfShards: 1000,
+			want:           242,
+		},
+		{
+			workflowID:     "workflowId",
+			numberOfShards: 1000,
+			want:           580,
+		},
+	} {
+		t.Run(fmt.Sprintf("%s-%v", c.workflowID, c.numberOfShards), func(t *testing.T) {
+			got := WorkflowIDToHistoryShard(c.workflowID, c.numberOfShards)
+			require.Equal(t, c.want, got)
+		})
+	}
+}
+
+func TestDomainIDToHistoryShard(t *testing.T) {
+	for _, c := range []struct {
+		domainID       string
+		numberOfShards int
+
+		want int
+	}{
+		{
+			domainID:       "",
+			numberOfShards: 1000,
+			want:           242,
+		},
+		{
+			domainID:       "domainId",
+			numberOfShards: 1000,
+			want:           600,
+		},
+	} {
+		t.Run(fmt.Sprintf("%s-%v", c.domainID, c.numberOfShards), func(t *testing.T) {
+			got := DomainIDToHistoryShard(c.domainID, c.numberOfShards)
+			require.Equal(t, c.want, got)
+		})
+	}
 }
