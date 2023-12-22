@@ -761,7 +761,7 @@ func (s *engine2Suite) TestRecordActivityTaskStartedResurrected() {
 	identity := "testIdentity"
 	tl := "testTaskList"
 
-	timeSource := clock.NewEventTimeSource()
+	timeSource := clock.NewMockedTimeSource()
 	s.historyEngine.timeSource = timeSource
 	timeSource.Update(time.Now())
 

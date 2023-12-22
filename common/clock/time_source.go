@@ -21,51 +21,118 @@
 package clock
 
 import (
-	"sync/atomic"
 	"time"
+
+	"github.com/jonboulle/clockwork"
 )
 
 type (
-	// TimeSource is an interface for any
-	// entity that provides the current
-	// time. Its primarily used to mock
-	// out timesources in unit test
+	// TimeSource provides an interface that packages can use instead of directly using
+	// the [time] module, so that chronology-related behavior can be tested.
 	TimeSource interface {
+		After(d time.Duration) <-chan time.Time
+		Sleep(d time.Duration)
 		Now() time.Time
+		Since(t time.Time) time.Duration
+		NewTicker(d time.Duration) Ticker
+		NewTimer(d time.Duration) Timer
+		AfterFunc(d time.Duration, f func()) Timer
 	}
-	// RealTimeSource serves real wall-clock time
-	RealTimeSource struct{}
 
-	// EventTimeSource serves fake controlled time
-	EventTimeSource struct {
-		now int64
+	// Ticker provides an interface which can be used instead of directly using
+	// [time.Ticker]. The real-time ticker t provides ticks through t.C which
+	// becomes t.Chan() to make this channel requirement definable in this
+	// interface.
+	Ticker interface {
+		Chan() <-chan time.Time
+		Reset(d time.Duration)
+		Stop()
+	}
+
+	// Timer provides an interface which can be used instead of directly using
+	// [time.Timer]. The real-time timer t provides events through t.C which becomes
+	// t.Chan() to make this channel requirement definable in this interface.
+	Timer interface {
+		Chan() <-chan time.Time
+		Reset(d time.Duration) bool
+		Stop() bool
+	}
+
+	// clock serves real wall-clock time
+	clock struct {
+		clockwork.Clock
+	}
+
+	// fakeClock serves fake controlled time
+	fakeClock struct {
+		clockwork.FakeClock
+	}
+
+	// MockedTimeSource provides an interface for a clock which can be manually advanced
+	// through time.
+	//
+	// MockedTimeSource maintains a list of "waiters," which consists of all callers
+	// waiting on the underlying clock (i.e. Tickers and Timers including callers of
+	// Sleep or After). Users can call BlockUntil to block until the clock has an
+	// expected number of waiters.
+	MockedTimeSource interface {
+		TimeSource
+		// Advance advances the FakeClock to a new point in time, ensuring any existing
+		// waiters are notified appropriately before returning.
+		Advance(d time.Duration)
+		// BlockUntil blocks until the FakeClock has the given number of waiters.
+		BlockUntil(waiters int)
 	}
 )
 
+var _ TimeSource = (*clock)(nil)
+var _ TimeSource = (*fakeClock)(nil)
+var _ MockedTimeSource = (*fakeClock)(nil)
+
 // NewRealTimeSource returns a time source that servers
 // real wall clock time
-func NewRealTimeSource() *RealTimeSource {
-	return &RealTimeSource{}
+func NewRealTimeSource() TimeSource {
+	return &clock{
+		Clock: clockwork.NewRealClock(),
+	}
 }
 
-// Now return the real current time
-func (ts *RealTimeSource) Now() time.Time {
-	return time.Now()
-}
-
-// NewEventTimeSource returns a time source that servers
+// NewMockedTimeSource returns a time source that servers
 // fake controlled time
-func NewEventTimeSource() *EventTimeSource {
-	return &EventTimeSource{}
+func NewMockedTimeSource() MockedTimeSource {
+	return &fakeClock{
+		FakeClock: clockwork.NewFakeClock(),
+	}
 }
 
-// Now return the fake current time
-func (ts *EventTimeSource) Now() time.Time {
-	return time.Unix(0, atomic.LoadInt64(&ts.now)).UTC()
+// NewMockedTimeSourceAt returns a time source that servers
+// fake controlled time. The initial time of the MockedTimeSource will be the given time.
+func NewMockedTimeSourceAt(t time.Time) MockedTimeSource {
+	return &fakeClock{
+		FakeClock: clockwork.NewFakeClockAt(t),
+	}
 }
 
-// Update update the fake current time
-func (ts *EventTimeSource) Update(now time.Time) *EventTimeSource {
-	atomic.StoreInt64(&ts.now, now.UnixNano())
-	return ts
+func (r *clock) NewTicker(d time.Duration) Ticker {
+	return r.Clock.NewTicker(d)
+}
+
+func (r *clock) NewTimer(d time.Duration) Timer {
+	return r.Clock.NewTimer(d)
+}
+
+func (r *clock) AfterFunc(d time.Duration, f func()) Timer {
+	return r.Clock.AfterFunc(d, f)
+}
+
+func (c *fakeClock) NewTicker(d time.Duration) Ticker {
+	return c.FakeClock.NewTicker(d)
+}
+
+func (c *fakeClock) NewTimer(d time.Duration) Timer {
+	return c.FakeClock.NewTimer(d)
+}
+
+func (c *fakeClock) AfterFunc(d time.Duration, f func()) Timer {
+	return c.FakeClock.AfterFunc(d, f)
 }

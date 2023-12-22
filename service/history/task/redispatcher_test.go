@@ -64,7 +64,7 @@ func (s *redispatcherSuite) SetupTest() {
 
 	s.controller = gomock.NewController(s.T())
 	s.mockProcessor = NewMockProcessor(s.controller)
-	s.mockTimeSource = clock.NewEventTimeSource()
+	s.mockTimeSource = clock.NewMockedTimeSource()
 
 	s.metricsScope = metrics.NewClient(tally.NoopScope, metrics.History).Scope(0)
 	s.logger = testlogger.New(s.Suite.T())

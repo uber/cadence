@@ -44,7 +44,7 @@ var (
 )
 
 func TestMetricsEmitter(t *testing.T) {
-	timeSource := clock.NewEventTimeSource()
+	timeSource := clock.NewMockedTimeSource()
 	metadata := cluster.NewMetadata(0, cluster1, cluster1, map[string]config.ClusterInformation{
 		cluster1: {Enabled: true},
 		cluster2: {Enabled: true},

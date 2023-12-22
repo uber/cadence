@@ -94,7 +94,7 @@ func (s *timerActiveTaskExecutorSuite) SetupTest() {
 	s.domainEntry = constants.TestGlobalDomainEntry
 	s.version = s.domainEntry.GetFailoverVersion()
 	s.now = time.Now()
-	s.timeSource = clock.NewEventTimeSource().Update(s.now)
+	s.timeSource = clock.NewMockedTimeSource().Update(s.now)
 
 	s.controller = gomock.NewController(s.T())
 

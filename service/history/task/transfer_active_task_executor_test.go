@@ -127,7 +127,7 @@ func (s *transferActiveTaskExecutorSuite) SetupTest() {
 	s.childDomainEntry = constants.TestGlobalChildDomainEntry
 	s.version = s.domainEntry.GetFailoverVersion()
 	s.now = time.Now()
-	s.timeSource = clock.NewEventTimeSource().Update(s.now)
+	s.timeSource = clock.NewMockedTimeSource().Update(s.now)
 
 	s.controller = gomock.NewController(s.T())
 

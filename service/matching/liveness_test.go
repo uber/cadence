@@ -59,7 +59,7 @@ func (s *livenessSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.ttl = 2 * time.Second
-	s.timeSource = clock.NewEventTimeSource()
+	s.timeSource = clock.NewMockedTimeSource()
 	s.timeSource.Update(time.Now())
 	s.shutdownFlag = 0
 }

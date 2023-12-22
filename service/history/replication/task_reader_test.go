@@ -159,7 +159,7 @@ func TestDynamicTaskReader(t *testing.T) {
 				ReplicatorUpperLatency:                 dynamicconfig.GetDurationPropertyFn(testUpperLatency),
 			}
 
-			timeSource := clock.NewEventTimeSource()
+			timeSource := clock.NewMockedTimeSource()
 			timeSource.Update(testTime)
 
 			reader := NewDynamicTaskReader(testShardID, em, timeSource, &config)

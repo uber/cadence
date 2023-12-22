@@ -24,72 +24,53 @@ import (
 	"testing"
 	"time"
 
-	"github.com/benbjohnson/clock"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
+	"github.com/stretchr/testify/assert"
 
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/dynamicconfig"
 )
 
-type (
-	TokenBucketSuite struct {
-		*require.Assertions // override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test, not merely log an error
-		suite.Suite
-	}
-)
-
-func TestTokenBucketSuite(t *testing.T) {
-	suite.Run(t, new(TokenBucketSuite))
-}
-
-func (s *TokenBucketSuite) SetupTest() {
-	s.Assertions = require.New(s.T()) // Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
-}
-
-func (s *TokenBucketSuite) TestRpsEnforced() {
-	ts := clock.NewMock()
-	ts.Set(time.Now())
+func TestRpsEnforced(t *testing.T) {
+	ts := clock.NewMockedTimeSource()
 	tb := New(99, ts)
 	for i := 0; i < 2; i++ {
-		total, attempts := s.testRpsEnforcedHelper(tb, ts, 11, 90, 10)
-		s.Equal(90, total, "Token bucket failed to enforce limit")
-		s.Equal(9, attempts, "Token bucket gave out tokens too quickly")
-		ts.Add(time.Millisecond * 101)
+		total, attempts := testRpsEnforcedHelper(tb, ts, 11, 90, 10)
+		assert.Equal(t, 90, total, "Token bucket failed to enforce limit")
+		assert.Equal(t, 9, attempts, "Token bucket gave out tokens too quickly")
+		ts.Advance(time.Millisecond * 101)
 		ok, _ := tb.TryConsume(9)
-		s.True(ok, "Token bucket failed to enforce limit")
+		assert.True(t, ok, "Token bucket failed to enforce limit")
 		ok, _ = tb.TryConsume(1)
-		s.False(ok, "Token bucket failed to enforce limit")
-		ts.Add(time.Second)
+		assert.False(t, ok, "Token bucket failed to enforce limit")
+		ts.Advance(time.Second)
 	}
 }
 
-func (s *TokenBucketSuite) TestLowRpsEnforced() {
-	ts := clock.NewMock()
-	ts.Set(time.Now())
+func TestLowRpsEnforced(t *testing.T) {
+	ts := clock.NewMockedTimeSource()
 	tb := New(3, ts)
 
-	total, attempts := s.testRpsEnforcedHelper(tb, ts, 10, 3, 1)
-	s.Equal(3, total, "Token bucket failed to enforce limit")
-	s.Equal(3, attempts, "Token bucket gave out tokens too quickly")
+	total, attempts := testRpsEnforcedHelper(tb, ts, 10, 3, 1)
+	assert.Equal(t, 3, total, "Token bucket failed to enforce limit")
+	assert.Equal(t, 3, attempts, "Token bucket gave out tokens too quickly")
 }
 
-func (s *TokenBucketSuite) TestDynamicRpsEnforced() {
-	rpsConfigFn, rpsPtr := s.getTestRPSConfigFn(99)
-	ts := clock.NewMock()
-	ts.Set(time.Now())
+func TestDynamicRpsEnforced(t *testing.T) {
+	rpsConfigFn, rpsPtr := getTestRPSConfigFn(99)
+	ts := clock.NewMockedTimeSource()
 	dtb := NewDynamicTokenBucket(rpsConfigFn, ts)
-	total, attempts := s.testRpsEnforcedHelper(dtb, ts, 11, 90, 10)
-	s.Equal(90, total, "Token bucket failed to enforce limit")
-	s.Equal(9, attempts, "Token bucket gave out tokens too quickly")
-	ts.Add(time.Second)
+	total, attempts := testRpsEnforcedHelper(dtb, ts, 11, 90, 10)
+	assert.Equal(t, 90, total, "Token bucket failed to enforce limit")
+	assert.Equal(t, 9, attempts, "Token bucket gave out tokens too quickly")
+	ts.Advance(time.Second)
 
 	*rpsPtr = 3
-	total, attempts = s.testRpsEnforcedHelper(dtb, ts, 10, 3, 1)
-	s.Equal(3, total, "Token bucket failed to enforce limit")
-	s.Equal(3, attempts, "Token bucket gave out tokens too quickly")
+	total, attempts = testRpsEnforcedHelper(dtb, ts, 10, 3, 1)
+	assert.Equal(t, 3, total, "Token bucket failed to enforce limit")
+	assert.Equal(t, 3, attempts, "Token bucket gave out tokens too quickly")
 }
 
-func (s *TokenBucketSuite) testRpsEnforcedHelper(tb TokenBucket, ts *clock.Mock, maxAttempts, tokenNeeded, consumeRate int) (total, attempts int) {
+func testRpsEnforcedHelper(tb TokenBucket, ts clock.MockedTimeSource, maxAttempts, tokenNeeded, consumeRate int) (total, attempts int) {
 	total = 0
 	attempts = 1
 	for ; attempts < maxAttempts+1; attempts++ {
@@ -101,21 +82,20 @@ func (s *TokenBucketSuite) testRpsEnforcedHelper(tb TokenBucket, ts *clock.Mock,
 		if total >= tokenNeeded {
 			break
 		}
-		ts.Add(time.Millisecond * 101)
+		ts.Advance(time.Millisecond * 101)
 	}
 	return
 }
 
-func (s *TokenBucketSuite) getTestRPSConfigFn(defaultValue int) (dynamicconfig.IntPropertyFn, *int) {
+func getTestRPSConfigFn(defaultValue int) (dynamicconfig.IntPropertyFn, *int) {
 	rps := defaultValue
 	return func(_ ...dynamicconfig.FilterOption) int {
 		return rps
 	}, &rps
 }
 
-func (s *TokenBucketSuite) TestPriorityRpsEnforced() {
-	ts := clock.NewMock()
-	ts.Set(time.Now())
+func TestPriorityRpsEnforced(t *testing.T) {
+	ts := clock.NewMockedTimeSource()
 	tb := NewPriorityTokenBucket(1, 99, ts) // behavior same to tokenBucketImpl
 
 	for i := 0; i < 2; i++ {
@@ -131,23 +111,22 @@ func (s *TokenBucketSuite) TestPriorityRpsEnforced() {
 			if total >= 90 {
 				break
 			}
-			ts.Add(time.Millisecond * 101)
+			ts.Advance(time.Millisecond * 101)
 		}
-		s.Equal(90, total, "Token bucket failed to enforce limit")
-		s.Equal(9, attempts, "Token bucket gave out tokens too quickly")
+		assert.Equal(t, 90, total, "Token bucket failed to enforce limit")
+		assert.Equal(t, 9, attempts, "Token bucket gave out tokens too quickly")
 
-		ts.Add(time.Millisecond * 101)
+		ts.Advance(time.Millisecond * 101)
 		ok, _ := tb.GetToken(0, 9)
-		s.True(ok, "Token bucket failed to enforce limit")
+		assert.True(t, ok, "Token bucket failed to enforce limit")
 		ok, _ = tb.GetToken(0, 1)
-		s.False(ok, "Token bucket failed to enforce limit")
-		ts.Add(time.Second)
+		assert.False(t, ok, "Token bucket failed to enforce limit")
+		ts.Advance(time.Second)
 	}
 }
 
-func (s *TokenBucketSuite) TestPriorityLowRpsEnforced() {
-	ts := clock.NewMock()
-	ts.Set(time.Now())
+func TestPriorityLowRpsEnforced(t *testing.T) {
+	ts := clock.NewMockedTimeSource()
 	tb := NewPriorityTokenBucket(1, 3, ts) // behavior same to tokenBucketImpl
 
 	total := 0
@@ -161,64 +140,132 @@ func (s *TokenBucketSuite) TestPriorityLowRpsEnforced() {
 		if total >= 3 {
 			break
 		}
-		ts.Add(time.Millisecond * 101)
+		ts.Advance(time.Millisecond * 101)
 	}
-	s.Equal(3, total, "Token bucket failed to enforce limit")
-	s.Equal(3, attempts, "Token bucket gave out tokens too quickly")
+	assert.Equal(t, 3, total, "Token bucket failed to enforce limit")
+	assert.Equal(t, 3, attempts, "Token bucket gave out tokens too quickly")
 }
 
-func (s *TokenBucketSuite) TestPriorityTokenBucket() {
-	ts := clock.NewMock()
-	ts.Set(time.Now())
+func TestPriorityTokenBucket(t *testing.T) {
+	ts := clock.NewMockedTimeSource()
 	tb := NewPriorityTokenBucket(2, 100, ts)
 
 	for i := 0; i < 2; i++ {
 		ok2, _ := tb.GetToken(1, 1)
-		s.False(ok2)
+		assert.False(t, ok2)
 		ok, _ := tb.GetToken(0, 10)
-		s.True(ok)
-		ts.Add(time.Millisecond * 101)
+		assert.True(t, ok)
+		ts.Advance(time.Millisecond * 101)
 	}
 
 	for i := 0; i < 2; i++ {
 		ok, _ := tb.GetToken(0, 9)
-		s.True(ok) // 1 token remaining in 1st bucket, 0 in 2nd
+		assert.True(t, ok) // 1 token remaining in 1st bucket, 0 in 2nd
 		ok2, _ := tb.GetToken(1, 1)
-		s.False(ok2)
-		ts.Add(time.Millisecond * 101)
+		assert.False(t, ok2)
+		ts.Advance(time.Millisecond * 101)
 		ok2, _ = tb.GetToken(1, 2)
-		s.False(ok2)
+		assert.False(t, ok2)
 		ok2, _ = tb.GetToken(1, 1)
-		s.True(ok2)
+		assert.True(t, ok2)
 	}
 }
 
-func (s *TokenBucketSuite) TestFullPriorityTokenBucket() {
-	ts := clock.NewMock()
-	ts.Set(time.Now())
+func TestFullPriorityTokenBucket(t *testing.T) {
+	ts := clock.NewMockedTimeSource()
 	tb := NewFullPriorityTokenBucket(2, 100, ts)
 
 	ok2, _ := tb.GetToken(1, 10)
-	s.True(ok2)
+	assert.True(t, ok2)
 
 	for i := 0; i < 2; i++ {
 		ok2, _ := tb.GetToken(1, 1)
-		s.False(ok2)
+		assert.False(t, ok2)
 		ok, _ := tb.GetToken(0, 10)
-		s.True(ok)
-		ts.Add(time.Millisecond * 101)
+		assert.True(t, ok)
+		ts.Advance(time.Millisecond * 101)
 	}
 
 	ok2, _ = tb.GetToken(1, 1)
-	s.False(ok2)
-	ts.Add(time.Millisecond * 101)
+	assert.False(t, ok2)
+	ts.Advance(time.Millisecond * 101)
 	ok2, _ = tb.GetToken(1, 5)
-	s.True(ok2)
-	ts.Add(time.Millisecond * 101)
+	assert.True(t, ok2)
+	ts.Advance(time.Millisecond * 101)
 	ok2, _ = tb.GetToken(1, 15)
-	s.False(ok2)
+	assert.False(t, ok2)
 	ok2, _ = tb.GetToken(1, 10)
-	s.True(ok2)
+	assert.True(t, ok2)
 	ok, _ := tb.GetToken(0, 10)
-	s.True(ok)
+	assert.True(t, ok)
+}
+
+func TestTokenBucketConsume(t *testing.T) {
+	t.Run("consume", func(t *testing.T) {
+		// make sure we don't deadlock inside the test.
+		go panicOnTimeout(time.Minute)
+
+		ts := clock.NewMockedTimeSource()
+		tb := New(10, ts)
+		ok, _ := tb.TryConsume(1)
+		assert.True(t, ok)
+		consumeFinished := make(chan struct{})
+		go func() {
+			success := tb.Consume(1, 2*refillRate)
+			assert.True(t, success, "Consume returned wrong result")
+			close(consumeFinished)
+		}()
+		ts.BlockUntil(1)
+		select {
+		case <-consumeFinished:
+			assert.Fail(t, "Consume returned before refill")
+		default:
+		}
+		// tb should refill at 1 token per second
+		ts.Advance(backoffInterval + 1)
+		ts.BlockUntil(1)
+		select {
+		case <-consumeFinished:
+			assert.Fail(t, "Consume returned before refill")
+		default:
+		}
+		ts.Advance(refillRate + 1)
+		select {
+		case <-consumeFinished:
+		}
+	})
+	t.Run("timeout", func(t *testing.T) {
+		// make sure we don't deadlock inside the test.
+		go panicOnTimeout(time.Minute)
+
+		ts := clock.NewMockedTimeSource()
+		tb := New(10, ts)
+		ok, _ := tb.TryConsume(1)
+		assert.True(t, ok)
+		consumeFinished := make(chan struct{})
+		go func() {
+			success := tb.Consume(1, backoffInterval/2)
+			assert.False(t, success, "Consume returned wrong result")
+			close(consumeFinished)
+		}()
+		ts.BlockUntil(1)
+		select {
+		case <-consumeFinished:
+			assert.Fail(t, "Consume returned before refill")
+		default:
+		}
+		// tb should refill at 1 token per second
+		ts.Advance(backoffInterval)
+		select {
+		case <-consumeFinished:
+		default:
+		}
+	})
+}
+
+func panicOnTimeout(d time.Duration) {
+	select {
+	case <-time.After(d):
+		panic("timeout")
+	}
 }

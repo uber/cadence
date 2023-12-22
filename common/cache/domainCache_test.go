@@ -79,7 +79,7 @@ func (s *domainCacheSuite) SetupTest() {
 	s.domainCache = NewDomainCache(s.metadataMgr, cluster.GetTestClusterMetadata(true), metricsClient, s.logger).(*domainCache)
 
 	s.now = time.Now()
-	s.domainCache.timeSource = clock.NewEventTimeSource().Update(s.now)
+	s.domainCache.timeSource = clock.NewMockedTimeSource().Update(s.now)
 }
 
 func (s *domainCacheSuite) TearDownTest() {

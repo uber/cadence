@@ -94,7 +94,7 @@ func (s *timerStandbyTaskExecutorSuite) SetupTest() {
 	s.version = s.domainEntry.GetFailoverVersion()
 	s.clusterName = cluster.TestAlternativeClusterName
 	s.now = time.Now()
-	s.timeSource = clock.NewEventTimeSource().Update(s.now)
+	s.timeSource = clock.NewMockedTimeSource().Update(s.now)
 	s.fetchHistoryDuration = config.StandbyTaskMissingEventsResendDelay() +
 		(config.StandbyTaskMissingEventsDiscardDelay()-config.StandbyTaskMissingEventsResendDelay())/2
 	s.discardDuration = config.StandbyTaskMissingEventsDiscardDelay() * 2

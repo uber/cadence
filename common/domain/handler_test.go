@@ -629,7 +629,7 @@ func TestHandlerImpl_UpdateIsolationGroups(t *testing.T) {
 
 	t0 := int64(1565914445 * time.Second)
 	t1 := int64(1685914445 * time.Second)
-	clock := clock.NewEventTimeSource().Update(time.Unix(0, t1))
+	clock := clock.NewMockedTimeSource().Update(time.Unix(0, t1))
 
 	info := persistence.DomainInfo{
 		ID:   "10CF5859-C5CC-4CCC-888E-631F84D53F57",
