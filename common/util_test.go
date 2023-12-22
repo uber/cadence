@@ -37,7 +37,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/yarpcerrors"
 
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -424,13 +426,55 @@ func TestAwaitWaitGroup(t *testing.T) {
 	})
 }
 
-func TestValidIDLength(t *testing.T) {
+func TestIsValidIDLength(t *testing.T) {
+	var (
+		// test setup
+		scope = metrics.NoopScope(0)
+
+		// arguments
+		metricCounter      = 0
+		idTypeViolationTag = tag.ClusterName("idTypeViolationTag")
+		domainName         = "domain_name"
+		id                 = "12345"
+	)
+
+	mockWarnCall := func(logger *log.MockLogger) {
+		logger.On(
+			"Warn",
+			"ID length exceeds limit.",
+			[]tag.Tag{
+				tag.WorkflowDomainName(domainName),
+				tag.Name(id),
+				idTypeViolationTag,
+			},
+		).Once()
+	}
+
 	t.Run("valid id length, no warnings", func(t *testing.T) {
-		got := ValidIDLength("12345", nil, 7, 10, 0, "", nil, tag.Tag{})
+		logger := new(log.MockLogger)
+		got := IsValidIDLength(id, scope, 7, 10, metricCounter, domainName, logger, idTypeViolationTag)
 		require.True(t, got, "expected true, because id length is 5 and it's less than error limit 10")
 	})
+
+	t.Run("valid id length, with warnings", func(t *testing.T) {
+		logger := new(log.MockLogger)
+		mockWarnCall(logger)
+
+		got := IsValidIDLength(id, scope, 4, 10, metricCounter, domainName, logger, idTypeViolationTag)
+		require.True(t, got, "expected true, because id length is 5 and it's less than error limit 10")
+
+		// logger should be called once
+		logger.AssertExpectations(t)
+	})
+
 	t.Run("non valid id length", func(t *testing.T) {
-		got := ValidIDLength("12345", nil, 1, 4, 0, "", nil, tag.Tag{})
+		logger := new(log.MockLogger)
+		mockWarnCall(logger)
+
+		got := IsValidIDLength(id, scope, 1, 4, metricCounter, domainName, logger, idTypeViolationTag)
 		require.False(t, got, "expected false, because id length is 5 and it's more than error limit 4")
+
+		// logger should be called once
+		logger.AssertExpectations(t)
 	})
 }
