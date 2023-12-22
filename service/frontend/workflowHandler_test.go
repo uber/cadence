@@ -643,8 +643,6 @@ func (s *workflowHandlerSuite) TestRecordActivityTaskHeartbeatByID_Success() {
 		WorkflowID: testWorkflowID,
 		RunID:      testRunID,
 		ActivityID: "1",
-		Details:    nil,
-		Identity:   "",
 	}
 	resp := &types.RecordActivityTaskHeartbeatResponse{CancelRequested: false}
 
@@ -690,8 +688,6 @@ func (s *workflowHandlerSuite) TestRespondActivityTaskCompleted_Success() {
 	s.NoError(err)
 	req := &types.RespondActivityTaskCompletedRequest{
 		TaskToken: taskTokenBytes,
-		Result:    nil,
-		Identity:  "",
 	}
 
 	s.mockDomainCache.EXPECT().GetDomainName(s.testDomainID).Return(s.testDomain, nil)
@@ -702,6 +698,7 @@ func (s *workflowHandlerSuite) TestRespondActivityTaskCompleted_Success() {
 		}).Return(nil)
 
 	err = wh.RespondActivityTaskCompleted(context.Background(), req)
+	// only checking for successful write here
 	s.NoError(err)
 }
 
@@ -712,14 +709,13 @@ func (s *workflowHandlerSuite) TestRespondActivityTaskCompletedByID_Success() {
 		WorkflowID: testWorkflowID,
 		RunID:      testRunID,
 		ActivityID: "1",
-		Result:     nil,
-		Identity:   "",
 	}
 
 	s.mockDomainCache.EXPECT().GetDomainID(s.testDomain).Return(s.testDomainID, nil)
 	s.mockHistoryClient.EXPECT().RespondActivityTaskCompleted(gomock.Any(), gomock.Any()).Return(nil)
 
 	err := wh.RespondActivityTaskCompletedByID(context.Background(), req)
+	// only checking for successful write here
 	s.NoError(err)
 }
 
