@@ -29,8 +29,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/metrics"
 )
 
 var testServices = []string{"test-worker", "test-services"}
