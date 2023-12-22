@@ -26,6 +26,7 @@ import (
 	"sync"
 
 	"github.com/benbjohnson/clock"
+
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
