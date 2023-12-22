@@ -490,3 +490,119 @@ func TestIsEntityNotExistsError(t *testing.T) {
 		require.False(t, IsEntityNotExistsError(err), "expected false, because err is a generic error")
 	})
 }
+
+func TestValidateRetryPolicy_Success(t *testing.T) {
+	for name, policy := range map[string]*types.RetryPolicy{
+		"nil policy": nil,
+		"MaximumAttempts is no zero": &types.RetryPolicy{
+			InitialIntervalInSeconds:    2,
+			BackoffCoefficient:          1,
+			MaximumIntervalInSeconds:    0,
+			MaximumAttempts:             1,
+			ExpirationIntervalInSeconds: 0,
+		},
+		"ExpirationIntervalInSeconds is no zero": &types.RetryPolicy{
+			InitialIntervalInSeconds:    2,
+			BackoffCoefficient:          1,
+			MaximumIntervalInSeconds:    0,
+			MaximumAttempts:             0,
+			ExpirationIntervalInSeconds: 1,
+		},
+		"MaximumIntervalInSeconds is greater than InitialIntervalInSeconds": &types.RetryPolicy{
+			InitialIntervalInSeconds:    2,
+			BackoffCoefficient:          1,
+			MaximumIntervalInSeconds:    0,
+			MaximumAttempts:             0,
+			ExpirationIntervalInSeconds: 1,
+		},
+		"MaximumIntervalInSeconds equals InitialIntervalInSeconds": &types.RetryPolicy{
+			InitialIntervalInSeconds:    2,
+			BackoffCoefficient:          1,
+			MaximumIntervalInSeconds:    2,
+			MaximumAttempts:             0,
+			ExpirationIntervalInSeconds: 1,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			require.NoError(t, ValidateRetryPolicy(policy))
+		})
+	}
+}
+
+func TestValidateRetryPolicy_Error(t *testing.T) {
+	for name, c := range map[string]struct {
+		policy  *types.RetryPolicy
+		wantErr *types.BadRequestError
+	}{
+		"InitialIntervalInSeconds equals 0": {
+			policy: &types.RetryPolicy{
+				InitialIntervalInSeconds: 0,
+			},
+			wantErr: &types.BadRequestError{Message: "InitialIntervalInSeconds must be greater than 0 on retry policy."},
+		},
+		"InitialIntervalInSeconds less than 0": {
+			policy: &types.RetryPolicy{
+				InitialIntervalInSeconds: -1,
+			},
+			wantErr: &types.BadRequestError{Message: "InitialIntervalInSeconds must be greater than 0 on retry policy."},
+		},
+		"BackoffCoefficient equals 0": {
+			policy: &types.RetryPolicy{
+				InitialIntervalInSeconds: 1,
+				BackoffCoefficient:       0,
+			},
+			wantErr: &types.BadRequestError{Message: "BackoffCoefficient cannot be less than 1 on retry policy."},
+		},
+		"MaximumIntervalInSeconds equals -1": {
+			policy: &types.RetryPolicy{
+				InitialIntervalInSeconds: 1,
+				BackoffCoefficient:       1,
+				MaximumIntervalInSeconds: -1,
+			},
+			wantErr: &types.BadRequestError{Message: "MaximumIntervalInSeconds cannot be less than 0 on retry policy."},
+		},
+		"MaximumIntervalInSeconds equals 1 and less than InitialIntervalInSeconds": {
+			policy: &types.RetryPolicy{
+				InitialIntervalInSeconds: 2,
+				BackoffCoefficient:       1,
+				MaximumIntervalInSeconds: 1,
+			},
+			wantErr: &types.BadRequestError{Message: "MaximumIntervalInSeconds cannot be less than InitialIntervalInSeconds on retry policy."},
+		},
+		"MaximumAttempts equals -1": {
+			policy: &types.RetryPolicy{
+				InitialIntervalInSeconds: 2,
+				BackoffCoefficient:       1,
+				MaximumIntervalInSeconds: 0,
+				MaximumAttempts:          -1,
+			},
+			wantErr: &types.BadRequestError{Message: "MaximumAttempts cannot be less than 0 on retry policy."},
+		},
+		"ExpirationIntervalInSeconds equals -1": {
+			policy: &types.RetryPolicy{
+				InitialIntervalInSeconds:    2,
+				BackoffCoefficient:          1,
+				MaximumIntervalInSeconds:    0,
+				MaximumAttempts:             0,
+				ExpirationIntervalInSeconds: -1,
+			},
+			wantErr: &types.BadRequestError{Message: "ExpirationIntervalInSeconds cannot be less than 0 on retry policy."},
+		},
+		"MaximumAttempts and ExpirationIntervalInSeconds equal 0": {
+			policy: &types.RetryPolicy{
+				InitialIntervalInSeconds:    2,
+				BackoffCoefficient:          1,
+				MaximumIntervalInSeconds:    0,
+				MaximumAttempts:             0,
+				ExpirationIntervalInSeconds: 0,
+			},
+			wantErr: &types.BadRequestError{Message: "MaximumAttempts and ExpirationIntervalInSeconds are both 0. At least one of them must be specified."},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got := ValidateRetryPolicy(c.policy)
+			require.Error(t, got)
+			require.ErrorContains(t, got, c.wantErr.Message)
+		})
+	}
+}
