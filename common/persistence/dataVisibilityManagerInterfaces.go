@@ -20,10 +20,10 @@
 
 //go:generate mockgen -package $GOPACKAGE -destination dataVisibilityManagerInterfaces_mock.go -self_package github.com/uber/cadence/common/persistence github.com/uber/cadence/common/persistence VisibilityManager
 // Generate rate limiter wrapper.
-//go:generate gowrap gen -g -p . -i VisibilityManager -t ./ratelimited/template/ratelimited.tmpl -o ratelimited/visibility.go
+//go:generate gowrap gen -g -p . -i VisibilityManager -t ./wrappers/templates/ratelimited.tmpl -o wrappers/ratelimited/visibility.go
 
 // Generate error injection wrapper.
-//go:generate gowrap gen -g -p . -i VisibilityManager -t ./errorinjectors/template/errorinjector.tmpl -o errorinjectors/visibility.go
+//go:generate gowrap gen -g -p . -i VisibilityManager -t ./wrappers/templates/errorinjector.tmpl -o wrappers/errorinjectors/visibility.go
 
 package persistence
 
