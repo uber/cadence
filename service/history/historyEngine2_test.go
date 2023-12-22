@@ -763,7 +763,6 @@ func (s *engine2Suite) TestRecordActivityTaskStartedResurrected() {
 
 	timeSource := clock.NewMockedTimeSource()
 	s.historyEngine.timeSource = timeSource
-	timeSource.Update(time.Now())
 
 	msBuilder := s.createExecutionStartedState(workflowExecution, tl, identity, true)
 	decisionCompletedEvent := test.AddDecisionTaskCompletedEvent(msBuilder, int64(2), int64(3), nil, identity)
@@ -787,7 +786,7 @@ func (s *engine2Suite) TestRecordActivityTaskStartedResurrected() {
 	})).Return(&p.UpdateWorkflowExecutionResponse{}, nil).Once()
 
 	// Ensure enough time passed
-	timeSource.Update(timeSource.Now().Add(time.Hour))
+	timeSource.Advance(time.Hour)
 
 	_, err := s.historyEngine.RecordActivityTaskStarted(context.Background(), &types.RecordActivityTaskStartedRequest{
 		DomainUUID:        domainID,

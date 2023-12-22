@@ -69,14 +69,14 @@ type (
 		mockArchivalMetadata *archiver.MockArchivalMetadata
 		mockArchiverProvider *provider.MockArchiverProvider
 
-		logger               log.Logger
-		domainID             string
-		domainName           string
-		domainEntry          *cache.DomainCacheEntry
-		version              int64
-		clusterName          string
-		now                  time.Time
-		timeSource           *clock.EventTimeSource
+		logger      log.Logger
+		domainID    string
+		domainName  string
+		domainEntry *cache.DomainCacheEntry
+		version     int64
+		clusterName string
+
+		timeSource           clock.MockedTimeSource
 		fetchHistoryDuration time.Duration
 		discardDuration      time.Duration
 
@@ -101,8 +101,8 @@ func (s *transferStandbyTaskExecutorSuite) SetupTest() {
 	s.domainName = constants.TestDomainName
 	s.domainEntry = constants.TestGlobalDomainEntry
 	s.version = s.domainEntry.GetFailoverVersion()
-	s.now = time.Now()
-	s.timeSource = clock.NewMockedTimeSource().Update(s.now)
+
+	s.timeSource = clock.NewMockedTimeSource()
 	s.fetchHistoryDuration = config.StandbyTaskMissingEventsResendDelay() +
 		(config.StandbyTaskMissingEventsDiscardDelay()-config.StandbyTaskMissingEventsResendDelay())/2
 	s.discardDuration = config.StandbyTaskMissingEventsDiscardDelay() * 2

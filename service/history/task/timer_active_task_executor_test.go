@@ -65,14 +65,14 @@ type (
 		mockExecutionMgr *mocks.ExecutionManager
 		mockHistoryV2Mgr *mocks.HistoryV2Manager
 
-		executionCache          *execution.Cache
-		logger                  log.Logger
-		domainID                string
-		domain                  string
-		domainEntry             *cache.DomainCacheEntry
-		version                 int64
-		now                     time.Time
-		timeSource              *clock.EventTimeSource
+		executionCache *execution.Cache
+		logger         log.Logger
+		domainID       string
+		domain         string
+		domainEntry    *cache.DomainCacheEntry
+		version        int64
+
+		timeSource              clock.MockedTimeSource
 		timerActiveTaskExecutor *timerActiveTaskExecutor
 	}
 )
@@ -93,8 +93,8 @@ func (s *timerActiveTaskExecutorSuite) SetupTest() {
 	s.domain = constants.TestDomainName
 	s.domainEntry = constants.TestGlobalDomainEntry
 	s.version = s.domainEntry.GetFailoverVersion()
-	s.now = time.Now()
-	s.timeSource = clock.NewMockedTimeSource().Update(s.now)
+
+	s.timeSource = clock.NewMockedTimeSource()
 
 	s.controller = gomock.NewController(s.T())
 
@@ -184,7 +184,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessUserTimerTimeout_Fire() {
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&persistence.AppendHistoryNodesResponse{}, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
 
-	s.timeSource.Update(s.now.Add(2 * timerTimeout))
+	s.timeSource.Advance(2 * timerTimeout)
 	err = s.timerActiveTaskExecutor.Execute(timerTask, true)
 	s.NoError(err)
 
@@ -226,7 +226,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessUserTimerTimeout_Noop() {
 	s.NoError(err)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 
-	s.timeSource.Update(s.now.Add(2 * timerTimeout))
+	s.timeSource.Advance(2 * timerTimeout)
 	err = s.timerActiveTaskExecutor.Execute(timerTask, true)
 	s.NoError(err)
 }
@@ -309,7 +309,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessUserTimerTimeout_Resurrected()
 	})).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
 
 	s.timerActiveTaskExecutor.config.ResurrectionCheckMinDelay = dynamicconfig.GetDurationPropertyFnFilteredByDomain(timerTimeout2 - timerTimeout1)
-	s.timeSource.Update(s.now.Add(timerTimeout2))
+	s.timeSource.Advance(timerTimeout2)
 	err = s.timerActiveTaskExecutor.Execute(timerTask, true)
 	s.NoError(err)
 }
@@ -357,7 +357,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_NoRetryPolicy_
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&persistence.AppendHistoryNodesResponse{}, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
 
-	s.timeSource.Update(s.now.Add(2 * timerTimeout))
+	s.timeSource.Advance(2 * timerTimeout)
 	err = s.timerActiveTaskExecutor.Execute(timerTask, true)
 	s.NoError(err)
 
@@ -411,7 +411,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_NoRetryPolicy_
 	s.NoError(err)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 
-	s.timeSource.Update(s.now.Add(2 * timerTimeout))
+	s.timeSource.Advance(2 * timerTimeout)
 	err = s.timerActiveTaskExecutor.Execute(timerTask, true)
 	s.NoError(err)
 }
@@ -468,7 +468,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_Re
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
 
-	s.timeSource.Update(s.now.Add(2 * timerTimeout))
+	s.timeSource.Advance(2 * timerTimeout)
 	err = s.timerActiveTaskExecutor.Execute(timerTask, true)
 	s.NoError(err)
 
@@ -530,7 +530,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_Re
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
 
-	s.timeSource.Update(s.now.Add(2 * timerTimeout))
+	s.timeSource.Advance(2 * timerTimeout)
 	err = s.timerActiveTaskExecutor.Execute(timerTask, true)
 	s.NoError(err)
 
@@ -597,7 +597,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_No
 	s.NoError(err)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 
-	s.timeSource.Update(s.now.Add(2 * timerTimeout))
+	s.timeSource.Advance(2 * timerTimeout)
 	err = s.timerActiveTaskExecutor.Execute(timerTask, true)
 	s.NoError(err)
 }
@@ -770,7 +770,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_Resurrected() 
 	})).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
 
 	s.timerActiveTaskExecutor.config.ResurrectionCheckMinDelay = dynamicconfig.GetDurationPropertyFnFilteredByDomain(timerTimeout2 - timerTimeout1)
-	s.timeSource.Update(s.now.Add(timerTimeout2))
+	s.timeSource.Advance(timerTimeout2)
 	err = s.timerActiveTaskExecutor.Execute(timerTask, true)
 	s.NoError(err)
 }
@@ -790,7 +790,7 @@ func (s *timerActiveTaskExecutorSuite) TestDecisionScheduleToStartTimeout_Normal
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeDecisionTimeout,
 		TimeoutType:         int(types.TimeoutTypeScheduleToStart),
-		VisibilityTimestamp: s.now,
+		VisibilityTimestamp: s.timeSource.Now(),
 		EventID:             di.ScheduleID,
 	})
 
@@ -827,7 +827,7 @@ func (s *timerActiveTaskExecutorSuite) TestDecisionScheduleToStartTimeout_Transi
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeDecisionTimeout,
 		TimeoutType:         int(types.TimeoutTypeScheduleToStart),
-		VisibilityTimestamp: s.now,
+		VisibilityTimestamp: s.timeSource.Now(),
 		EventID:             di.ScheduleID,
 		ScheduleAttempt:     decisionAttempt,
 	})
@@ -854,7 +854,7 @@ func (s *timerActiveTaskExecutorSuite) TestDecisionScheduleToStartTimeout_Sticky
 	executionInfo := mutableState.GetExecutionInfo()
 	executionInfo.StickyTaskList = "sticky-tasklist"
 	executionInfo.StickyScheduleToStartTimeout = 1
-	executionInfo.LastUpdatedTimestamp = s.now
+	executionInfo.LastUpdatedTimestamp = s.timeSource.Now()
 
 	// schedule a second (sticky) decision task
 	di := test.AddDecisionTaskScheduledEvent(mutableState)
@@ -867,7 +867,7 @@ func (s *timerActiveTaskExecutorSuite) TestDecisionScheduleToStartTimeout_Sticky
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeDecisionTimeout,
 		TimeoutType:         int(types.TimeoutTypeScheduleToStart),
-		VisibilityTimestamp: s.now,
+		VisibilityTimestamp: s.timeSource.Now(),
 		EventID:             di.ScheduleID,
 	})
 
@@ -905,7 +905,7 @@ func (s *timerActiveTaskExecutorSuite) TestDecisionStartToCloseTimeout_Fire() {
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeDecisionTimeout,
 		TimeoutType:         int(types.TimeoutTypeStartToClose),
-		VisibilityTimestamp: s.now,
+		VisibilityTimestamp: s.timeSource.Now(),
 		EventID:             di.ScheduleID,
 	})
 
@@ -941,7 +941,7 @@ func (s *timerActiveTaskExecutorSuite) TestDecisionStartToCloseTimeout_Noop() {
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeDecisionTimeout,
 		TimeoutType:         int(types.TimeoutTypeStartToClose),
-		VisibilityTimestamp: s.now,
+		VisibilityTimestamp: s.timeSource.Now(),
 		EventID:             di.ScheduleID - 1, // no corresponding decision for this scheduleID
 	})
 
@@ -966,7 +966,7 @@ func (s *timerActiveTaskExecutorSuite) TestWorkflowBackoffTimer_Fire() {
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeWorkflowBackoffTimer,
 		TimeoutType:         persistence.WorkflowBackoffTimeoutTypeRetry,
-		VisibilityTimestamp: s.now,
+		VisibilityTimestamp: s.timeSource.Now(),
 		EventID:             0,
 	})
 
@@ -1001,7 +1001,7 @@ func (s *timerActiveTaskExecutorSuite) TestWorkflowBackoffTimer_Noop() {
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeWorkflowBackoffTimer,
 		TimeoutType:         persistence.WorkflowBackoffTimeoutTypeRetry,
-		VisibilityTimestamp: s.now,
+		VisibilityTimestamp: s.timeSource.Now(),
 		EventID:             0,
 	})
 
@@ -1049,7 +1049,7 @@ func (s *timerActiveTaskExecutorSuite) TestActivityRetryTimer_Fire() {
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeActivityRetryTimer,
 		TimeoutType:         0,
-		VisibilityTimestamp: s.now,
+		VisibilityTimestamp: s.timeSource.Now(),
 		EventID:             activityInfo.ScheduleID,
 		ScheduleAttempt:     int64(activityInfo.Attempt),
 	})
@@ -1113,7 +1113,7 @@ func (s *timerActiveTaskExecutorSuite) TestActivityRetryTimer_Noop() {
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeActivityRetryTimer,
 		TimeoutType:         0,
-		VisibilityTimestamp: s.now,
+		VisibilityTimestamp: s.timeSource.Now(),
 		EventID:             activityInfo.ScheduleID,
 		ScheduleAttempt:     int64(activityInfo.Attempt),
 	})
@@ -1139,7 +1139,7 @@ func (s *timerActiveTaskExecutorSuite) TestWorkflowTimeout_Fire() {
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeWorkflowTimeout,
 		TimeoutType:         int(types.TimeoutTypeStartToClose),
-		VisibilityTimestamp: s.now,
+		VisibilityTimestamp: s.timeSource.Now(),
 	})
 
 	persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, decisionCompletionID, mutableState.GetCurrentVersion())
@@ -1163,7 +1163,7 @@ func (s *timerActiveTaskExecutorSuite) TestWorkflowTimeout_ContinueAsNew_Retry()
 	// need to override the workflow retry policy
 	executionInfo := mutableState.GetExecutionInfo()
 	executionInfo.HasRetryPolicy = true
-	executionInfo.ExpirationTime = s.now.Add(1000 * time.Second)
+	executionInfo.ExpirationTime = s.timeSource.Now().Add(1000 * time.Second)
 	executionInfo.MaximumAttempts = 10
 	executionInfo.InitialInterval = 1
 	executionInfo.MaximumInterval = 1
@@ -1177,7 +1177,7 @@ func (s *timerActiveTaskExecutorSuite) TestWorkflowTimeout_ContinueAsNew_Retry()
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeWorkflowTimeout,
 		TimeoutType:         int(types.TimeoutTypeStartToClose),
-		VisibilityTimestamp: s.now,
+		VisibilityTimestamp: s.timeSource.Now(),
 	})
 
 	persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, decisionCompletionID, mutableState.GetCurrentVersion())
@@ -1201,7 +1201,7 @@ func (s *timerActiveTaskExecutorSuite) TestWorkflowTimeout_ContinueAsNew_Cron() 
 	s.NoError(err)
 
 	executionInfo := mutableState.GetExecutionInfo()
-	executionInfo.StartTimestamp = s.now
+	executionInfo.StartTimestamp = s.timeSource.Now()
 	executionInfo.CronSchedule = "* * * * *"
 
 	timerTask := s.newTimerTaskFromInfo(&persistence.TimerTaskInfo{
@@ -1212,7 +1212,7 @@ func (s *timerActiveTaskExecutorSuite) TestWorkflowTimeout_ContinueAsNew_Cron() 
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeWorkflowTimeout,
 		TimeoutType:         int(types.TimeoutTypeStartToClose),
-		VisibilityTimestamp: s.now,
+		VisibilityTimestamp: s.timeSource.Now(),
 	})
 
 	persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, decisionCompletionID, mutableState.GetCurrentVersion())

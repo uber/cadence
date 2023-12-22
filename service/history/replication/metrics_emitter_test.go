@@ -55,7 +55,6 @@ func TestMetricsEmitter(t *testing.T) {
 		testlogger.New(t),
 	)
 	testShardData := newTestShardData(timeSource, metadata)
-	timeSource.Update(time.Unix(10000, 0))
 
 	task1 := persistence.ReplicationTaskInfo{TaskID: 1, CreationTime: timeSource.Now().Add(-time.Hour).UnixNano()}
 	task2 := persistence.ReplicationTaskInfo{TaskID: 2, CreationTime: timeSource.Now().Add(-time.Minute).UnixNano()}
