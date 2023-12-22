@@ -365,7 +365,6 @@ func GenerateRandomString(n int) string {
 		return ""
 	}
 
-	rand.Seed(time.Now().UnixNano())
 	letterRunes := []rune("random")
 	b := make([]rune, n)
 	for i := range b {
