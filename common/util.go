@@ -236,28 +236,13 @@ func IsValidIDLength(
 	idTypeViolationTag tag.Tag,
 ) bool {
 	if len(id) > warnLimit {
-		warnIDLengthExceedsLimit(id, scope, metricsCounter, domainName, logger, idTypeViolationTag)
-	}
-	return len(id) <= errorLimit
-}
-
-func warnIDLengthExceedsLimit(
-	id string,
-	scope metrics.Scope,
-	metricsCounter int,
-	domainName string,
-	logger log.Logger,
-	idTypeViolationTag tag.Tag,
-) {
-	if scope != nil {
 		scope.IncCounter(metricsCounter)
-	}
-	if logger != nil {
 		logger.Warn("ID length exceeds limit.",
 			tag.WorkflowDomainName(domainName),
 			tag.Name(id),
 			idTypeViolationTag)
 	}
+	return len(id) <= errorLimit
 }
 
 // CheckDecisionResultLimit checks if decision result count exceeds limits.
