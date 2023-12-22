@@ -26,6 +26,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/common/backoff"
 	"math/rand"
 	"strconv"
 	"sync"
@@ -489,4 +490,90 @@ func TestIsEntityNotExistsError(t *testing.T) {
 		err := fmt.Errorf("generic error")
 		require.False(t, IsEntityNotExistsError(err), "expected false, because err is a generic error")
 	})
+}
+
+func TestCreateXXXRetryPolicyWithSetExpirationInterval(t *testing.T) {
+	for name, c := range map[string]struct {
+		createFn func() backoff.RetryPolicy
+
+		wantInitialInterval       time.Duration
+		wantMaximumInterval       time.Duration
+		wantSetExpirationInterval time.Duration
+	}{
+		"CreatePersistenceRetryPolicy": {
+			createFn:                  CreatePersistenceRetryPolicy,
+			wantInitialInterval:       retryPersistenceOperationInitialInterval,
+			wantMaximumInterval:       retryPersistenceOperationMaxInterval,
+			wantSetExpirationInterval: retryPersistenceOperationExpirationInterval,
+		},
+		"CreateHistoryServiceRetryPolicy": {
+			createFn:                  CreateHistoryServiceRetryPolicy,
+			wantInitialInterval:       historyServiceOperationInitialInterval,
+			wantMaximumInterval:       historyServiceOperationMaxInterval,
+			wantSetExpirationInterval: historyServiceOperationExpirationInterval,
+		},
+		"CreateMatchingServiceRetryPolicy": {
+			createFn:                  CreateMatchingServiceRetryPolicy,
+			wantInitialInterval:       matchingServiceOperationInitialInterval,
+			wantMaximumInterval:       matchingServiceOperationMaxInterval,
+			wantSetExpirationInterval: matchingServiceOperationExpirationInterval,
+		},
+		"CreateFrontendServiceRetryPolicy": {
+			createFn:                  CreateFrontendServiceRetryPolicy,
+			wantInitialInterval:       frontendServiceOperationInitialInterval,
+			wantMaximumInterval:       frontendServiceOperationMaxInterval,
+			wantSetExpirationInterval: frontendServiceOperationExpirationInterval,
+		},
+		"CreateAdminServiceRetryPolicy": {
+			createFn:                  CreateAdminServiceRetryPolicy,
+			wantInitialInterval:       adminServiceOperationInitialInterval,
+			wantMaximumInterval:       adminServiceOperationMaxInterval,
+			wantSetExpirationInterval: adminServiceOperationExpirationInterval,
+		},
+		"CreateReplicationServiceBusyRetryPolicy": {
+			createFn:                  CreateReplicationServiceBusyRetryPolicy,
+			wantInitialInterval:       replicationServiceBusyInitialInterval,
+			wantMaximumInterval:       replicationServiceBusyMaxInterval,
+			wantSetExpirationInterval: replicationServiceBusyExpirationInterval,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			want := backoff.NewExponentialRetryPolicy(c.wantInitialInterval)
+			want.SetMaximumInterval(c.wantMaximumInterval)
+			want.SetExpirationInterval(c.wantSetExpirationInterval)
+			got := c.createFn()
+			require.Equal(t, want, got)
+		})
+	}
+}
+
+func TestCreateXXXRetryPolicyWithMaximumAttempts(t *testing.T) {
+	for name, c := range map[string]struct {
+		createFn func() backoff.RetryPolicy
+
+		wantInitialInterval time.Duration
+		wantMaximumInterval time.Duration
+		wantMaximumAttempts int
+	}{
+		"CreateDlqPublishRetryPolicy": {
+			createFn:            CreateDlqPublishRetryPolicy,
+			wantInitialInterval: retryKafkaOperationInitialInterval,
+			wantMaximumInterval: retryKafkaOperationMaxInterval,
+			wantMaximumAttempts: retryKafkaOperationMaxAttempts,
+		},
+		"CreateTaskProcessingRetryPolicy": {
+			createFn:            CreateTaskProcessingRetryPolicy,
+			wantInitialInterval: retryTaskProcessingInitialInterval,
+			wantMaximumInterval: retryTaskProcessingMaxInterval,
+			wantMaximumAttempts: retryTaskProcessingMaxAttempts,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			want := backoff.NewExponentialRetryPolicy(c.wantInitialInterval)
+			want.SetMaximumInterval(c.wantMaximumInterval)
+			want.SetMaximumAttempts(c.wantMaximumAttempts)
+			got := c.createFn()
+			require.Equal(t, want, got)
+		})
+	}
 }
