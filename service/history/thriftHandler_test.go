@@ -24,20 +24,19 @@ import (
 	"context"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/uber/cadence/.gen/go/health"
 	hist "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
-
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestThriftHandler(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	h := NewMockHandler(ctrl)
 	th := NewThriftHandler(h)
@@ -104,6 +103,7 @@ func TestThriftHandler(t *testing.T) {
 			ClientImpl:              common.StringPtr(""),
 			EventStoreVersion:       common.Int32Ptr(0),
 			IsStickyTaskListEnabled: common.BoolPtr(false),
+			HistorySize:             common.Int64Ptr(0),
 		}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
@@ -185,6 +185,7 @@ func TestThriftHandler(t *testing.T) {
 			Attempt:                common.Int64Ptr(0),
 			StickyExecutionEnabled: common.BoolPtr(false),
 			EventStoreVersion:      common.Int32Ptr(0),
+			HistorySize:            common.Int64Ptr(0),
 		}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})

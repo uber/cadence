@@ -23,7 +23,6 @@ package matching
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"golang.org/x/time/rate"
@@ -62,7 +61,8 @@ const (
 	_defaultTaskDispatchRPSTTL = 60 * time.Second
 )
 
-var errTasklistThrottled = errors.New("cannot add to tasklist, limit exceeded")
+// ErrTasklistThrottled implies a tasklist was throttled
+var ErrTasklistThrottled = errors.New("tasklist limit exceeded")
 
 // newTaskMatcher returns an task matcher instance. The returned instance can be
 // used by task producers and consumers to find a match. Both sync matches and non-sync
@@ -219,8 +219,7 @@ func (tm *TaskMatcher) OfferQuery(ctx context.Context, task *InternalTask) (*typ
 }
 
 // MustOffer blocks until a consumer is found to handle this task
-// Returns error only when context is canceled or the ratelimit is set to zero (allow nothing)
-// The passed in context MUST NOT have a deadline associated with it
+// Returns error only when context is canceled, expired or the ratelimit is set to zero (allow nothing)
 func (tm *TaskMatcher) MustOffer(ctx context.Context, task *InternalTask) error {
 	if _, err := tm.ratelimit(ctx); err != nil {
 		return err
@@ -281,7 +280,9 @@ forLoop:
 func (tm *TaskMatcher) Poll(ctx context.Context, isolationGroup string) (*InternalTask, error) {
 	isolatedTaskC, ok := tm.isolatedTaskC[isolationGroup]
 	if !ok && isolationGroup != "" {
-		return nil, &types.BadRequestError{Message: fmt.Sprintf("invalid isolation group: %s", isolationGroup)}
+		// fallback to default isolation group instead of making poller crash if the isolation group is invalid
+		isolatedTaskC = tm.taskC
+		tm.scope.IncCounter(metrics.PollerInvalidIsolationGroupCounter)
 	}
 	// try local match first without blocking until context timeout
 	if task, err := tm.pollNonBlocking(ctx, isolatedTaskC, tm.taskC, tm.queryTaskC); err == nil {
@@ -454,7 +455,7 @@ func (tm *TaskMatcher) ratelimit(ctx context.Context) (*rate.Reservation, error)
 		if rsv.OK() { // if we were indeed given a reservation, return it before we bail out
 			rsv.Cancel()
 		}
-		return nil, errTasklistThrottled
+		return nil, ErrTasklistThrottled
 	}
 
 	time.Sleep(rsv.Delay())

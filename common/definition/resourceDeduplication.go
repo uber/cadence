@@ -20,9 +20,7 @@
 
 package definition
 
-import (
-	"fmt"
-)
+import "fmt"
 
 const (
 	resourceIDTemplate       = "%v::%v"

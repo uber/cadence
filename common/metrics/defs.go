@@ -219,6 +219,8 @@ const (
 	PersistenceListTaskListScope
 	// PersistenceDeleteTaskListScope is the metric scope for persistence.TaskManager.DeleteTaskList API
 	PersistenceDeleteTaskListScope
+	// PersistenceGetTaskListSizeScope is the metric scope for persistence.TaskManager.GetTaskListSize API
+	PersistenceGetTaskListSizeScope
 	// PersistenceAppendHistoryEventsScope tracks AppendHistoryEvents calls made by service to persistence layer
 	PersistenceAppendHistoryEventsScope
 	// PersistenceGetWorkflowExecutionHistoryScope tracks GetWorkflowExecutionHistory calls made by service to persistence layer
@@ -709,6 +711,41 @@ const (
 	// ElasticsearchDeleteUninitializedWorkflowExecutionsScope tracks DeleteUninitializedWorkflowExecution calls made by service to persistence layer
 	ElasticsearchDeleteUninitializedWorkflowExecutionsScope
 
+	// PinotRecordWorkflowExecutionStartedScope tracks RecordWorkflowExecutionStarted calls made by service to persistence layer
+	PinotRecordWorkflowExecutionStartedScope
+	// PinotRecordWorkflowExecutionClosedScope tracks RecordWorkflowExecutionClosed calls made by service to persistence layer
+	PinotRecordWorkflowExecutionClosedScope
+	// PinotRecordWorkflowExecutionUninitializedScope tracks RecordWorkflowExecutionUninitialized calls made by service to persistence layer
+	PinotRecordWorkflowExecutionUninitializedScope
+	// PinotUpsertWorkflowExecutionScope tracks UpsertWorkflowExecution calls made by service to persistence layer
+	PinotUpsertWorkflowExecutionScope
+	// PinotListOpenWorkflowExecutionsScope tracks ListOpenWorkflowExecutions calls made by service to persistence layer
+	PinotListOpenWorkflowExecutionsScope
+	// PinotListClosedWorkflowExecutionsScope tracks ListClosedWorkflowExecutions calls made by service to persistence layer
+	PinotListClosedWorkflowExecutionsScope
+	// PinotListOpenWorkflowExecutionsByTypeScope tracks ListOpenWorkflowExecutionsByType calls made by service to persistence layer
+	PinotListOpenWorkflowExecutionsByTypeScope
+	// PinotListClosedWorkflowExecutionsByTypeScope tracks ListClosedWorkflowExecutionsByType calls made by service to persistence layer
+	PinotListClosedWorkflowExecutionsByTypeScope
+	// PinotListOpenWorkflowExecutionsByWorkflowIDScope tracks ListOpenWorkflowExecutionsByWorkflowID calls made by service to persistence layer
+	PinotListOpenWorkflowExecutionsByWorkflowIDScope
+	// PinotListClosedWorkflowExecutionsByWorkflowIDScope tracks ListClosedWorkflowExecutionsByWorkflowID calls made by service to persistence layer
+	PinotListClosedWorkflowExecutionsByWorkflowIDScope
+	// PinotListClosedWorkflowExecutionsByStatusScope tracks ListClosedWorkflowExecutionsByStatus calls made by service to persistence layer
+	PinotListClosedWorkflowExecutionsByStatusScope
+	// PinotGetClosedWorkflowExecutionScope tracks GetClosedWorkflowExecution calls made by service to persistence layer
+	PinotGetClosedWorkflowExecutionScope
+	// PinotListWorkflowExecutionsScope tracks ListWorkflowExecutions calls made by service to persistence layer
+	PinotListWorkflowExecutionsScope
+	// PinotScanWorkflowExecutionsScope tracks ScanWorkflowExecutions calls made by service to persistence layer
+	PinotScanWorkflowExecutionsScope
+	// PinotCountWorkflowExecutionsScope tracks CountWorkflowExecutions calls made by service to persistence layer
+	PinotCountWorkflowExecutionsScope
+	// PinotDeleteWorkflowExecutionsScope tracks DeleteWorkflowExecution calls made by service to persistence layer
+	PinotDeleteWorkflowExecutionsScope
+	// PinotDeleteUninitializedWorkflowExecutionsScope tracks DeleteUninitializedWorkflowExecution calls made by service to persistence layer
+	PinotDeleteUninitializedWorkflowExecutionsScope
+
 	// SequentialTaskProcessingScope is used by sequential task processing logic
 	SequentialTaskProcessingScope
 	// ParallelTaskProcessingScope is used by parallel task processing logic
@@ -745,7 +782,8 @@ const (
 	ClusterMetadataScope
 	// GetAvailableIsolationGroupsScope is the metric for the default partitioner's getIsolationGroups operation
 	GetAvailableIsolationGroupsScope
-
+	// TaskValidatorScope is the metric for the taskvalidator's workflow check operation.
+	TaskValidatorScope
 	NumCommonScopes
 )
 
@@ -1304,6 +1342,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceUpdateTaskListScope:                                 {operation: "UpdateTaskList"},
 		PersistenceListTaskListScope:                                   {operation: "ListTaskList"},
 		PersistenceDeleteTaskListScope:                                 {operation: "DeleteTaskList"},
+		PersistenceGetTaskListSizeScope:                                {operation: "GetTaskListSize"},
 		PersistenceAppendHistoryEventsScope:                            {operation: "AppendHistoryEvents"},
 		PersistenceGetWorkflowExecutionHistoryScope:                    {operation: "GetWorkflowExecutionHistory"},
 		PersistenceDeleteWorkflowExecutionHistoryScope:                 {operation: "DeleteWorkflowExecutionHistory"},
@@ -1551,6 +1590,23 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ElasticsearchCountWorkflowExecutionsScope:                  {operation: "CountWorkflowExecutions"},
 		ElasticsearchDeleteWorkflowExecutionsScope:                 {operation: "DeleteWorkflowExecution"},
 		ElasticsearchDeleteUninitializedWorkflowExecutionsScope:    {operation: "DeleteUninitializedWorkflowExecution"},
+		PinotRecordWorkflowExecutionStartedScope:                   {operation: "RecordWorkflowExecutionStarted"},
+		PinotRecordWorkflowExecutionClosedScope:                    {operation: "RecordWorkflowExecutionClosed"},
+		PinotRecordWorkflowExecutionUninitializedScope:             {operation: "RecordWorkflowExecutionUninitialized"},
+		PinotUpsertWorkflowExecutionScope:                          {operation: "UpsertWorkflowExecution"},
+		PinotListOpenWorkflowExecutionsScope:                       {operation: "ListOpenWorkflowExecutions"},
+		PinotListClosedWorkflowExecutionsScope:                     {operation: "ListClosedWorkflowExecutions"},
+		PinotListOpenWorkflowExecutionsByTypeScope:                 {operation: "ListOpenWorkflowExecutionsByType"},
+		PinotListClosedWorkflowExecutionsByTypeScope:               {operation: "ListClosedWorkflowExecutionsByType"},
+		PinotListOpenWorkflowExecutionsByWorkflowIDScope:           {operation: "ListOpenWorkflowExecutionsByWorkflowID"},
+		PinotListClosedWorkflowExecutionsByWorkflowIDScope:         {operation: "ListClosedWorkflowExecutionsByWorkflowID"},
+		PinotListClosedWorkflowExecutionsByStatusScope:             {operation: "ListClosedWorkflowExecutionsByStatus"},
+		PinotGetClosedWorkflowExecutionScope:                       {operation: "GetClosedWorkflowExecution"},
+		PinotListWorkflowExecutionsScope:                           {operation: "ListWorkflowExecutions"},
+		PinotScanWorkflowExecutionsScope:                           {operation: "ScanWorkflowExecutions"},
+		PinotCountWorkflowExecutionsScope:                          {operation: "CountWorkflowExecutions"},
+		PinotDeleteWorkflowExecutionsScope:                         {operation: "DeleteWorkflowExecution"},
+		PinotDeleteUninitializedWorkflowExecutionsScope:            {operation: "DeleteUninitializedWorkflowExecution"},
 		SequentialTaskProcessingScope:                              {operation: "SequentialTaskProcessing"},
 		ParallelTaskProcessingScope:                                {operation: "ParallelTaskProcessing"},
 		TaskSchedulerScope:                                         {operation: "TaskScheduler"},
@@ -1568,6 +1624,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		GetAvailableIsolationGroupsScope: {operation: "GetAvailableIsolationGroups"},
 
 		DomainFailoverScope:         {operation: "DomainFailover"},
+		TaskValidatorScope:          {operation: "TaskValidation"},
 		DomainReplicationQueueScope: {operation: "DomainReplicationQueue"},
 		ClusterMetadataScope:        {operation: "ClusterMetadata"},
 	},
@@ -1935,6 +1992,17 @@ const (
 	ElasticsearchErrBadRequestCounterPerDomain
 	ElasticsearchErrBusyCounterPerDomain
 
+	PinotRequests
+	PinotFailures
+	PinotLatency
+	PinotErrBadRequestCounter
+	PinotErrBusyCounter
+	PinotRequestsPerDomain
+	PinotFailuresPerDomain
+	PinotLatencyPerDomain
+	PinotErrBadRequestCounterPerDomain
+	PinotErrBusyCounterPerDomain
+
 	SequentialTaskSubmitRequest
 	SequentialTaskSubmitRequestTaskQueueExist
 	SequentialTaskSubmitRequestTaskQueueMissing
@@ -2019,6 +2087,7 @@ const (
 	IsolationGroupStatePollerUnavailable
 	IsolationGroupStateDrained
 	IsolationGroupStateHealthy
+	ValidatedWorkflowCount
 
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
@@ -2293,7 +2362,7 @@ const (
 	LargeHistoryBlobCount
 	LargeHistoryEventCount
 	LargeHistorySizeCount
-
+	UpdateWorkflowExecutionCount
 	NumHistoryMetrics
 )
 
@@ -2308,6 +2377,10 @@ const (
 	RespondQueryTaskFailedPerTaskListCounter
 	SyncThrottlePerTaskListCounter
 	BufferThrottlePerTaskListCounter
+	BufferUnknownTaskDispatchError
+	BufferIsolationGroupRedirectCounter
+	BufferIsolationGroupRedirectFailureCounter
+	BufferIsolationGroupMisconfiguredCounter
 	SyncMatchLatencyPerTaskList
 	AsyncMatchLatencyPerTaskList
 	AsyncMatchDispatchLatencyPerTaskList
@@ -2329,9 +2402,11 @@ const (
 	RemoteToRemoteMatchPerTaskListCounter
 	IsolationTaskMatchPerTaskListCounter
 	PollerPerTaskListCounter
+	PollerInvalidIsolationGroupCounter
 	TaskListManagersGauge
 	TaskLagPerTaskListGauge
 	TaskBacklogPerTaskListGauge
+	TaskCountPerTaskListGauge
 
 	NumMatchingMetrics
 )
@@ -2516,6 +2591,16 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ElasticsearchLatencyPerDomain:                                {metricName: "elasticsearch_latency_per_domain", metricRollupName: "elasticsearch_latency", metricType: Timer},
 		ElasticsearchErrBadRequestCounterPerDomain:                   {metricName: "elasticsearch_errors_bad_request_per_domain", metricRollupName: "elasticsearch_errors_bad_request", metricType: Counter},
 		ElasticsearchErrBusyCounterPerDomain:                         {metricName: "elasticsearch_errors_busy_per_domain", metricRollupName: "elasticsearch_errors_busy", metricType: Counter},
+		PinotRequests:                                                {metricName: "pinot_requests", metricType: Counter},
+		PinotFailures:                                                {metricName: "pinot_errors", metricType: Counter},
+		PinotLatency:                                                 {metricName: "pinot_latency", metricType: Timer},
+		PinotErrBadRequestCounter:                                    {metricName: "pinot_errors_bad_request", metricType: Counter},
+		PinotErrBusyCounter:                                          {metricName: "pinot_errors_busy", metricType: Counter},
+		PinotRequestsPerDomain:                                       {metricName: "pinot_requests_per_domain", metricRollupName: "pinot_requests", metricType: Counter},
+		PinotFailuresPerDomain:                                       {metricName: "pinot_errors_per_domain", metricRollupName: "pinot_errors", metricType: Counter},
+		PinotLatencyPerDomain:                                        {metricName: "pinot_latency_per_domain", metricRollupName: "pinot_latency", metricType: Timer},
+		PinotErrBadRequestCounterPerDomain:                           {metricName: "pinot_errors_bad_request_per_domain", metricRollupName: "pinot_errors_bad_request", metricType: Counter},
+		PinotErrBusyCounterPerDomain:                                 {metricName: "pinot_errors_busy_per_domain", metricRollupName: "pinot_errors_busy", metricType: Counter},
 		SequentialTaskSubmitRequest:                                  {metricName: "sequentialtask_submit_request", metricType: Counter},
 		SequentialTaskSubmitRequestTaskQueueExist:                    {metricName: "sequentialtask_submit_request_taskqueue_exist", metricType: Counter},
 		SequentialTaskSubmitRequestTaskQueueMissing:                  {metricName: "sequentialtask_submit_request_taskqueue_missing", metricType: Counter},
@@ -2633,6 +2718,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		IsolationGroupStatePollerUnavailable: {metricName: "isolation_group_poller_unavailable", metricType: Counter},
 		IsolationGroupStateDrained:           {metricName: "isolation_group_drained", metricType: Counter},
 		IsolationGroupStateHealthy:           {metricName: "isolation_group_healthy", metricType: Counter},
+		ValidatedWorkflowCount:               {metricName: "task_validator_count", metricType: Counter},
 	},
 	History: {
 		TaskRequests:             {metricName: "task_requests", metricType: Counter},
@@ -2898,6 +2984,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		LargeHistoryBlobCount:                                        {metricName: "large_history_blob_count", metricType: Counter},
 		LargeHistoryEventCount:                                       {metricName: "large_history_event_count", metricType: Counter},
 		LargeHistorySizeCount:                                        {metricName: "large_history_size_count", metricType: Counter},
+		UpdateWorkflowExecutionCount:                                 {metricName: "update_workflow_execution_count", metricType: Counter},
 	},
 	Matching: {
 		PollSuccessPerTaskListCounter:               {metricName: "poll_success_per_tl", metricRollupName: "poll_success"},
@@ -2909,6 +2996,10 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		RespondQueryTaskFailedPerTaskListCounter:    {metricName: "respond_query_failed_per_tl", metricRollupName: "respond_query_failed"},
 		SyncThrottlePerTaskListCounter:              {metricName: "sync_throttle_count_per_tl", metricRollupName: "sync_throttle_count"},
 		BufferThrottlePerTaskListCounter:            {metricName: "buffer_throttle_count_per_tl", metricRollupName: "buffer_throttle_count"},
+		BufferUnknownTaskDispatchError:              {metricName: "buffer_unknown_task_dispatch_error_per_tl", metricRollupName: "buffer_unknown_task_dispatch_error"},
+		BufferIsolationGroupRedirectCounter:         {metricName: "buffer_isolation_group_redirected_per_tl", metricRollupName: "buffer_isolation_group_redirected"},
+		BufferIsolationGroupRedirectFailureCounter:  {metricName: "buffer_isolation_group_redirect_failure_per_tl", metricRollupName: "buffer_isolation_group_redirect_failure"},
+		BufferIsolationGroupMisconfiguredCounter:    {metricName: "buffer_isolation_group_misconfigured_failure_per_tl", metricRollupName: "buffer_isolation_group_misconfigured_failure"},
 		ExpiredTasksPerTaskListCounter:              {metricName: "tasks_expired_per_tl", metricRollupName: "tasks_expired"},
 		ForwardedPerTaskListCounter:                 {metricName: "forwarded_per_tl", metricRollupName: "forwarded"},
 		ForwardTaskCallsPerTaskList:                 {metricName: "forward_task_calls_per_tl", metricRollupName: "forward_task_calls"},
@@ -2930,9 +3021,11 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		RemoteToRemoteMatchPerTaskListCounter:       {metricName: "remote_to_remote_matches_per_tl", metricRollupName: "remote_to_remote_matches"},
 		IsolationTaskMatchPerTaskListCounter:        {metricName: "isolation_task_matches_per_tl", metricType: Counter},
 		PollerPerTaskListCounter:                    {metricName: "poller_count_per_tl", metricRollupName: "poller_count"},
+		PollerInvalidIsolationGroupCounter:          {metricName: "poller_invalid_isolation_group_per_tl", metricType: Counter},
 		TaskListManagersGauge:                       {metricName: "tasklist_managers", metricType: Gauge},
 		TaskLagPerTaskListGauge:                     {metricName: "task_lag_per_tl", metricType: Gauge},
 		TaskBacklogPerTaskListGauge:                 {metricName: "task_backlog_per_tl", metricType: Gauge},
+		TaskCountPerTaskListGauge:                   {metricName: "task_count_per_tl", metricType: Gauge},
 	},
 	Worker: {
 		ReplicatorMessages:                            {metricName: "replicator_messages"},

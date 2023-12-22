@@ -24,11 +24,6 @@ import (
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 
-	"github.com/uber/cadence/common/dynamicconfig/configstore"
-
-	"github.com/uber/cadence/common/isolationgroup"
-	"github.com/uber/cadence/common/partition"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
@@ -37,11 +32,15 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/dynamicconfig/configstore"
 	es "github.com/uber/cadence/common/elasticsearch"
+	"github.com/uber/cadence/common/isolationgroup"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/partition"
+	"github.com/uber/cadence/common/pinot"
 )
 
 type (
@@ -75,5 +74,7 @@ type (
 		IsolationGroupStore      configstore.Client       // This can be nil, the default config store will be created if so
 		IsolationGroupState      isolationgroup.State     // This can be nil, the default state store will be chosen if so
 		Partitioner              partition.Partitioner
+		PinotConfig              *config.PinotVisibilityConfig
+		PinotClient              pinot.GenericClient
 	}
 )

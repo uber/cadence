@@ -54,8 +54,8 @@ const (
 type (
 	contextKey string
 
-	// Context is the resource that is available in activities under ShardScanner context key
-	Context struct {
+	// ScannerContext is the resource that is available in activities under ShardScanner context key
+	ScannerContext struct {
 		Resource resource.Resource
 		Hooks    *ScannerHooks
 		Scope    metrics.Scope
@@ -72,7 +72,7 @@ type (
 		Logger   log.Logger
 	}
 
-	// ScannerEmitMetricsActivityParams is the parameter for ScannerEmitMetricsActivity
+	// ScannerEmitMetricsActivityParams is the parameter for scannerEmitMetricsActivity
 	ScannerEmitMetricsActivityParams struct {
 		ShardSuccessCount            int
 		ShardControlFlowFailureCount int
@@ -99,12 +99,12 @@ type (
 		ScannerWorkflowConfigOverwrites ScannerWorkflowConfigOverwrites
 	}
 
-	// ScannerConfigActivityParams is the parameter for ScannerConfigActivity
+	// ScannerConfigActivityParams is the parameter for scannerConfigActivity
 	ScannerConfigActivityParams struct {
 		Overwrites ScannerWorkflowConfigOverwrites
 	}
 
-	// ScanShardActivityParams is the parameter for ScanShardActivity
+	// ScanShardActivityParams is the parameter for scanShardActivity
 	ScanShardActivityParams struct {
 		Shards                  []int
 		PageSize                int
@@ -201,21 +201,33 @@ type (
 		InfoDetails string
 	}
 
-	// FixerCorruptedKeysActivityParams is the parameter for FixerCorruptedKeysActivity
+	// FixerCorruptedKeysActivityParams is the parameter for fixerCorruptedKeysActivity
 	FixerCorruptedKeysActivityParams struct {
 		ScannerWorkflowWorkflowID string
 		ScannerWorkflowRunID      string
 		StartingShardID           *int
 	}
 
-	// FixShardActivityParams is the parameter for FixShardActivity
+	// FixShardActivityParams is the parameter for fixShardActivity
 	FixShardActivityParams struct {
 		CorruptedKeysEntries        []CorruptedKeysEntry
 		ResolvedFixerWorkflowConfig ResolvedFixerWorkflowConfig
+
+		// EnabledInvariants contains all known invariants for fixer, with "true" or "false" values.
+		// In current code it should never be empty.
+		//
+		// If empty, EnabledInvariants came from old serialized data prior to this field existing,
+		// and the historical list of invariants should be used.  This should be a one-time event
+		// after upgrading.
+		EnabledInvariants CustomScannerConfig
 	}
 
-	// CustomScannerConfig is used to pass key/value parameters between shardscanner activity and scanner implementation
-	// this is used to have activities with better determinism
+	// CustomScannerConfig is used to pass key/value parameters between shardscanner activity and scanner/fixer implementations.
+	// this is used to have activities with better consistency, as the workflow records one config and uses it for all shards,
+	// even after config / code changes.
+	//
+	// It is currently only used to pass invariant names to control whether they are enabled or not.
+	// Please do not use this for other purposes.
 	CustomScannerConfig map[string]string
 
 	// GenericScannerConfig is a generic params for all shard scanners
@@ -435,8 +447,8 @@ func (s Shards) Flatten() ([]int, int, int) {
 func NewShardScannerContext(
 	res resource.Resource,
 	config *ScannerConfig,
-) Context {
-	return Context{
+) ScannerContext {
+	return ScannerContext{
 		Resource: res,
 		Scope:    res.GetMetricsClient().Scope(metrics.ExecutionsScannerScope),
 		Config:   config,
@@ -472,7 +484,7 @@ func NewFixerContext(
 func NewScannerContext(
 	ctx context.Context,
 	workflowName string,
-	scannerContext Context,
+	scannerContext ScannerContext,
 ) context.Context {
 	return context.WithValue(ctx, contextKey(workflowName), scannerContext)
 }
@@ -480,14 +492,14 @@ func NewScannerContext(
 // GetScannerContext extracts scanner context from activity context
 func GetScannerContext(
 	ctx context.Context,
-) (Context, error) {
+) (ScannerContext, error) {
 	info := activity.GetInfo(ctx)
 	if info.WorkflowType == nil {
-		return Context{}, fmt.Errorf("workflowType is nil")
+		return ScannerContext{}, fmt.Errorf("workflowType is nil")
 	}
-	val, ok := ctx.Value(contextKey(info.WorkflowType.Name)).(Context)
+	val, ok := ctx.Value(contextKey(info.WorkflowType.Name)).(ScannerContext)
 	if !ok {
-		return Context{}, fmt.Errorf("context type is not %T for a key %q", val, info.WorkflowType.Name)
+		return ScannerContext{}, fmt.Errorf("context type is not %T for a key %q", val, info.WorkflowType.Name)
 	}
 	return val, nil
 }
@@ -506,4 +518,45 @@ func GetFixerContext(
 		return FixerContext{}, fmt.Errorf("context type is not %T for a key %q", val, info.WorkflowType.Name)
 	}
 	return val, nil
+}
+
+// Empty returns true if this ScanResult has no "real" data, e.g. only nils or empty values.
+func (s *ScanResult) Empty() bool {
+	if s == nil {
+		return true
+	}
+	if s.ControlFlowFailure != nil && (*s.ControlFlowFailure != ControlFlowFailure{}) {
+		return false // at least control flow failure has data
+	}
+	if s.ShardScanKeys != nil {
+		if s.ShardScanKeys.Corrupt != nil && (*s.ShardScanKeys.Corrupt != store.Keys{}) {
+			return false // corrupt data exists
+		}
+		if s.ShardScanKeys.Failed != nil && (*s.ShardScanKeys.Failed != store.Keys{}) {
+			return false // failed data exists
+		}
+	}
+	return true // both empty
+}
+
+// Empty returns true if this FixResult has no "real" data, e.g. only nils or empty values.
+func (f *FixResult) Empty() bool {
+	if f == nil {
+		return true
+	}
+	if f.ControlFlowFailure != nil && (*f.ControlFlowFailure != ControlFlowFailure{}) {
+		return false // at least control flow failure has data
+	}
+	if f.ShardFixKeys != nil {
+		if f.ShardFixKeys.Fixed != nil && (*f.ShardFixKeys.Fixed != store.Keys{}) {
+			return false // fixed data exists
+		}
+		if f.ShardFixKeys.Failed != nil && (*f.ShardFixKeys.Failed != store.Keys{}) {
+			return false // failed data exists
+		}
+		if f.ShardFixKeys.Skipped != nil && (*f.ShardFixKeys.Skipped != store.Keys{}) {
+			return false // skipped data exists
+		}
+	}
+	return true // both empty
 }

@@ -24,8 +24,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/uber/cadence/common/domain"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -36,6 +34,7 @@ import (
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
@@ -94,7 +93,7 @@ func (s *clusterRedirectionHandlerSuite) SetupTest() {
 	s.mockClusterRedirectionPolicy = &MockClusterRedirectionPolicy{}
 
 	s.controller = gomock.NewController(s.T())
-	s.mockResource = resource.NewTest(s.controller, metrics.Frontend)
+	s.mockResource = resource.NewTest(s.T(), s.controller, metrics.Frontend)
 	s.mockRemoteFrontendClient = s.mockResource.RemoteFrontendClient
 
 	s.config = NewConfig(

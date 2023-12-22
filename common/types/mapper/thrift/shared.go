@@ -3590,6 +3590,7 @@ func FromPollForDecisionTaskResponse(t *types.PollForDecisionTaskResponse) *shar
 		StartedTimestamp:          t.StartedTimestamp,
 		Queries:                   FromWorkflowQueryMap(t.Queries),
 		NextEventId:               &t.NextEventID,
+		TotalHistoryBytes:         &t.TotalHistoryBytes,
 	}
 }
 
@@ -3614,6 +3615,7 @@ func ToPollForDecisionTaskResponse(t *shared.PollForDecisionTaskResponse) *types
 		StartedTimestamp:          t.StartedTimestamp,
 		Queries:                   ToWorkflowQueryMap(t.Queries),
 		NextEventID:               t.GetNextEventId(),
+		TotalHistoryBytes:         t.GetTotalHistoryBytes(),
 	}
 }
 
@@ -6266,6 +6268,8 @@ func FromWorkflowExecutionInfo(t *types.WorkflowExecutionInfo) *shared.WorkflowE
 		CloseStatus:      FromWorkflowExecutionCloseStatus(t.CloseStatus),
 		HistoryLength:    &t.HistoryLength,
 		ParentDomainId:   t.ParentDomainID,
+		ParentDomainName: t.ParentDomain,
+		ParentInitatedId: t.ParentInitiatedID,
 		ParentExecution:  FromWorkflowExecution(t.ParentExecution),
 		ExecutionTime:    t.ExecutionTime,
 		Memo:             FromMemo(t.Memo),
@@ -6284,22 +6288,24 @@ func ToWorkflowExecutionInfo(t *shared.WorkflowExecutionInfo) *types.WorkflowExe
 		return nil
 	}
 	return &types.WorkflowExecutionInfo{
-		Execution:        ToWorkflowExecution(t.Execution),
-		Type:             ToWorkflowType(t.Type),
-		StartTime:        t.StartTime,
-		CloseTime:        t.CloseTime,
-		CloseStatus:      ToWorkflowExecutionCloseStatus(t.CloseStatus),
-		HistoryLength:    t.GetHistoryLength(),
-		ParentDomainID:   t.ParentDomainId,
-		ParentExecution:  ToWorkflowExecution(t.ParentExecution),
-		ExecutionTime:    t.ExecutionTime,
-		Memo:             ToMemo(t.Memo),
-		SearchAttributes: ToSearchAttributes(t.SearchAttributes),
-		AutoResetPoints:  ToResetPoints(t.AutoResetPoints),
-		TaskList:         t.GetTaskList(),
-		IsCron:           t.GetIsCron(),
-		UpdateTime:       t.UpdateTime,
-		PartitionConfig:  t.PartitionConfig,
+		Execution:         ToWorkflowExecution(t.Execution),
+		Type:              ToWorkflowType(t.Type),
+		StartTime:         t.StartTime,
+		CloseTime:         t.CloseTime,
+		CloseStatus:       ToWorkflowExecutionCloseStatus(t.CloseStatus),
+		HistoryLength:     t.GetHistoryLength(),
+		ParentDomainID:    t.ParentDomainId,
+		ParentDomain:      t.ParentDomainName,
+		ParentInitiatedID: t.ParentInitatedId,
+		ParentExecution:   ToWorkflowExecution(t.ParentExecution),
+		ExecutionTime:     t.ExecutionTime,
+		Memo:              ToMemo(t.Memo),
+		SearchAttributes:  ToSearchAttributes(t.SearchAttributes),
+		AutoResetPoints:   ToResetPoints(t.AutoResetPoints),
+		TaskList:          t.GetTaskList(),
+		IsCron:            t.GetIsCron(),
+		UpdateTime:        t.UpdateTime,
+		PartitionConfig:   t.PartitionConfig,
 	}
 }
 

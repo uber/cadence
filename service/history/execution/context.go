@@ -45,7 +45,6 @@ import (
 
 const (
 	defaultRemoteCallTimeout = 30 * time.Second
-	dayToSecondMultiplier    = 86400
 )
 
 type conflictError struct {
@@ -238,6 +237,9 @@ func (c *contextImpl) GetHistorySize() int64 {
 
 func (c *contextImpl) SetHistorySize(size int64) {
 	c.stats.HistorySize = size
+	if c.mutableState != nil {
+		c.mutableState.SetHistorySize(size)
+	}
 }
 
 func (c *contextImpl) LoadExecutionStats(
@@ -314,6 +316,7 @@ func (c *contextImpl) LoadWorkflowExecutionWithTaskVersion(
 			Message: "workflowExecutionContext counter flushBeforeReady status after loading mutable state from DB",
 		}
 	}
+
 	return c.mutableState, nil
 }
 
@@ -1215,6 +1218,7 @@ func (c *contextImpl) updateWorkflowExecutionWithRetry(
 		resp, err = c.shard.UpdateWorkflowExecution(ctx, request)
 		return err
 	}
+
 	isRetryable := func(err error) bool {
 		if _, ok := err.(*persistence.TimeoutError); ok {
 			// timeout error is not retryable for update workflow execution

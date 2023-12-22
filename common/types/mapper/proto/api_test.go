@@ -24,8 +24,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
 	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/testdata"
@@ -792,7 +792,7 @@ func TestParentExecutionInfoFields(t *testing.T) {
 	assert.Equal(t, testdata.ParentExecutionInfo.InitiatedID, *ToParentInitiatedID(info))
 }
 func TestWorkflowExecutionInfo(t *testing.T) {
-	for _, item := range []*types.WorkflowExecutionInfo{nil, {}, &testdata.WorkflowExecutionInfo} {
+	for _, item := range []*types.WorkflowExecutionInfo{nil, {}, &testdata.WorkflowExecutionInfo, &testdata.CronWorkflowExecutionInfo} {
 		assert.Equal(t, item, ToWorkflowExecutionInfo(FromWorkflowExecutionInfo(item)))
 	}
 }

@@ -93,8 +93,10 @@ func New(
 			PersistenceGlobalMaxQPS: config.PersistenceGlobalMaxQPS,
 			ThrottledLoggerMaxRPS:   config.ThrottledLogRPS,
 
-			EnableReadVisibilityFromES:    nil, // history service never read,
-			AdvancedVisibilityWritingMode: config.AdvancedVisibilityWritingMode,
+			EnableReadVisibilityFromES:      nil, // history service never read,
+			AdvancedVisibilityWritingMode:   config.AdvancedVisibilityWritingMode,
+			EnableReadVisibilityFromPinot:   nil, // history service never read,
+			EnableLogCustomerQueryParameter: nil, // log customer parameter will be done in front-end
 
 			EnableDBVisibilitySampling:                  config.EnableVisibilitySampling,
 			EnableReadDBVisibilityFromClosedExecutionV2: nil, // history service never read,
@@ -102,9 +104,9 @@ func New(
 			WriteDBVisibilityOpenMaxQPS:                 config.VisibilityOpenMaxQPS,
 			WriteDBVisibilityClosedMaxQPS:               config.VisibilityClosedMaxQPS,
 
-			ESVisibilityListMaxQPS: nil, // history service never read,
-			ESIndexMaxResultWindow: nil, // history service never read,
-			ValidSearchAttributes:  nil, // history service never read,
+			ESVisibilityListMaxQPS: nil,                          // history service never read,
+			ESIndexMaxResultWindow: nil,                          // history service never read,
+			ValidSearchAttributes:  config.ValidSearchAttributes, // history service never read, (Pinot need this to initialize pinotQueryValidator)
 		},
 	)
 	if err != nil {

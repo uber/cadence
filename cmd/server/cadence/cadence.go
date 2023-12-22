@@ -29,13 +29,12 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
-
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/tools/cassandra"
 	"github.com/uber/cadence/tools/sql"
@@ -56,7 +55,7 @@ func startHandler(c *cli.Context) {
 	var cfg config.Config
 	err := config.Load(env, configDir, zone, &cfg)
 	if err != nil {
-		log.Fatal("Config file corrupted.", err)
+		log.Fatal(fmt.Sprintf("Config file corrupted: %v", err))
 	}
 	if cfg.Log.Level == "debug" {
 		log.Printf("config=\n%v\n", cfg.String())

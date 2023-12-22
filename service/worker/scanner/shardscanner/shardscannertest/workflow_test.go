@@ -28,11 +28,11 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-
 	"go.uber.org/cadence/testsuite"
 	"go.uber.org/cadence/workflow"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/reconciliation/store"
 	"github.com/uber/cadence/service/worker/scanner/shardscanner"
 )
@@ -179,6 +179,17 @@ func (s *workflowsSuite) TestFixerWorkflow_Success() {
 		},
 	}, nil)
 
+	enabledFixInvariants := shardscanner.CustomScannerConfig{
+		// historically enabled by default
+		invariant.CollectionHistory.String():      "true",
+		invariant.CollectionMutableState.String(): "true",
+		// disabled by default
+		invariant.CollectionStale.String(): "false",
+	}
+	env.OnActivity(shardscanner.ActivityFixerConfig, mock.Anything, shardscanner.FixShardConfigParams{ /* no contents currently */ }).Return(&shardscanner.FixShardConfigResults{
+		EnabledInvariants: enabledFixInvariants,
+	}, nil)
+
 	fixerWorkflowConfigOverwrites := shardscanner.FixerWorkflowConfigOverwrites{
 		Concurrency:             common.IntPtr(3),
 		BlobstoreFlushThreshold: common.IntPtr(1000),
@@ -247,6 +258,7 @@ func (s *workflowsSuite) TestFixerWorkflow_Success() {
 		env.OnActivity(shardscanner.ActivityFixShard, mock.Anything, shardscanner.FixShardActivityParams{
 			CorruptedKeysEntries:        corruptedKeys,
 			ResolvedFixerWorkflowConfig: resolvedFixerWorkflowConfig,
+			EnabledInvariants:           enabledFixInvariants,
 		}).Return(reports, nil)
 	}
 

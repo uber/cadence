@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
-
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -144,6 +143,7 @@ func emitSessionUpdateStats(
 	countScope.RecordTimer(metrics.TimerTasksCount, time.Duration(stats.TimerTasksCount))
 	countScope.RecordTimer(metrics.CrossClusterTasksCount, time.Duration(stats.CrossClusterTaskCount))
 	countScope.RecordTimer(metrics.ReplicationTasksCount, time.Duration(stats.ReplicationTasksCount))
+	countScope.IncCounter(metrics.UpdateWorkflowExecutionCount)
 }
 
 func emitWorkflowCompletionStats(

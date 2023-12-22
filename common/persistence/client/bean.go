@@ -30,6 +30,7 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/pinot"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -85,6 +86,8 @@ type (
 		MessagingClient   messaging.Client
 		ESClient          es.GenericClient
 		ESConfig          *config.ElasticSearchConfig
+		PinotConfig       *config.PinotVisibilityConfig
+		PinotClient       pinot.GenericClient
 	}
 )
 

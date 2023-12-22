@@ -1408,13 +1408,6 @@ const (
 	LargeShardHistoryBlobMetricThreshold
 	// LastIntKey must be the last one in this const group
 	LastIntKey
-
-	// TTLBufferDays are the buffer days added into the TTL time for security reasons.
-	// KeyName: system.TTLBufferDays
-	// Value type: Int
-	// Default value: 15
-	// Allowed filters: N/A
-	TTLBufferDays
 )
 
 const (
@@ -1445,6 +1438,17 @@ const (
 	// Default value: true
 	// Allowed filters: DomainName
 	EnableReadVisibilityFromES
+	// EnableReadVisibilityFromPinot is key for enable read from pinot or db visibility, usually using with AdvancedVisibilityWritingMode for seamless migration from db visibility to advanced visibility
+	// KeyName: system.enableReadVisibilityFromPinot
+	// Value type: Bool
+	// Default value: true
+	// Allowed filters: DomainName
+	EnableReadVisibilityFromPinot
+	// EnableLogCustomerQueryParameter is key for enable log customer query parameters
+	// KeyName: system.enableLogCustomerQueryParameter
+	// Value type: Bool
+	// Default value: false
+	EnableLogCustomerQueryParameter
 	// EmitShardDiffLog is whether emit the shard diff log
 	// KeyName: history.emitShardDiffLog
 	// Value type: Bool
@@ -1716,6 +1720,30 @@ const (
 	// Default value: true
 	// Allowed filters: N/A
 	ConcreteExecutionsScannerInvariantCollectionHistory
+	// ConcreteExecutionsFixerInvariantCollectionStale indicates if the stale workflow invariant should be run
+	// KeyName: worker.executionsFixerInvariantCollectionStale
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: N/A
+	ConcreteExecutionsFixerInvariantCollectionStale
+	// ConcreteExecutionsFixerInvariantCollectionMutableState is indicates if mutable state invariant checks should be run
+	// KeyName: worker.executionsFixerInvariantCollectionMutableState
+	// Value type: Bool
+	// Default value: true
+	// Allowed filters: N/A
+	ConcreteExecutionsFixerInvariantCollectionMutableState
+	// ConcreteExecutionsFixerInvariantCollectionHistory is indicates if history invariant checks should be run
+	// KeyName: worker.executionsFixerInvariantCollectionHistory
+	// Value type: Bool
+	// Default value: true
+	// Allowed filters: N/A
+	ConcreteExecutionsFixerInvariantCollectionHistory
+	// ConcreteExecutionsScannerInvariantCollectionStale indicates if the stale workflow invariant should be run
+	// KeyName: worker.executionsScannerInvariantCollectionStale
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: N/A
+	ConcreteExecutionsScannerInvariantCollectionStale
 	// CurrentExecutionsScannerEnabled is indicates if current executions scanner should be started as part of worker.Scanner
 	// KeyName: worker.currentExecutionsScannerEnabled
 	// Value type: Bool
@@ -1874,13 +1902,6 @@ const (
 	EnableShardIDMetrics
 	// LastBoolKey must be the last one in this const group
 	LastBoolKey
-
-	// EnableExecutionTTL is which domains are allowed to have workflow executions with a TTL
-	// KeyName: system.enableExecutionTTL
-	// Value type: Bool
-	// Default value: false
-	// Allowed filters: DomainID
-	EnableExecutionTTL
 )
 
 const (
@@ -3630,11 +3651,6 @@ var IntKeys = map[IntKey]DynamicInt{
 		Description:  "The number of attempts to push Isolation group configuration to the config store",
 		DefaultValue: 2,
 	},
-	TTLBufferDays: DynamicInt{
-		KeyName:      "system.TTLBufferDays",
-		Description:  "The number of buffer day in the TTL value",
-		DefaultValue: 15,
-	},
 }
 
 var BoolKeys = map[BoolKey]DynamicBool{
@@ -3669,6 +3685,18 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		Filters:      []Filter{DomainName},
 		Description:  "EnableReadVisibilityFromES is key for enable read from elastic search or db visibility, usually using with AdvancedVisibilityWritingMode for seamless migration from db visibility to advanced visibility",
 		DefaultValue: true,
+	},
+	EnableReadVisibilityFromPinot: DynamicBool{
+		KeyName:      "system.enableReadVisibilityFromPinot",
+		Filters:      []Filter{DomainName},
+		Description:  "EnableReadVisibilityFromPinot is key for enable read from pinot or db visibility, usually using with AdvancedVisibilityWritingMode for seamless migration from db visibility to advanced visibility",
+		DefaultValue: true,
+	},
+	EnableLogCustomerQueryParameter: DynamicBool{
+		KeyName:      "system.enableLogCustomerQueryParameter",
+		Filters:      []Filter{DomainName},
+		Description:  "EnableLogCustomerQueryParameter is key for enable log customer query parameters",
+		DefaultValue: false,
 	},
 	EmitShardDiffLog: DynamicBool{
 		KeyName:      "history.emitShardDiffLog",
@@ -3903,6 +3931,26 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		Description:  "ConcreteExecutionsScannerInvariantCollectionHistory is indicates if history invariant checks should be run",
 		DefaultValue: true,
 	},
+	ConcreteExecutionsScannerInvariantCollectionStale: DynamicBool{
+		KeyName:      "worker.executionsScannerInvariantCollectionStale",
+		Description:  "ConcreteExecutionsScannerInvariantCollectionStale indicates if the stale-workflow invariant should be run",
+		DefaultValue: false, // may be enabled after further verification, but for now it's a bit too risky to enable by default
+	},
+	ConcreteExecutionsFixerInvariantCollectionMutableState: DynamicBool{
+		KeyName:      "worker.executionsFixerInvariantCollectionMutableState",
+		Description:  "ConcreteExecutionsFixerInvariantCollectionMutableState is indicates if mutable state invariant checks should be run",
+		DefaultValue: true,
+	},
+	ConcreteExecutionsFixerInvariantCollectionHistory: DynamicBool{
+		KeyName:      "worker.executionsFixerInvariantCollectionHistory",
+		Description:  "ConcreteExecutionsFixerInvariantCollectionHistory is indicates if history invariant checks should be run",
+		DefaultValue: true,
+	},
+	ConcreteExecutionsFixerInvariantCollectionStale: DynamicBool{
+		KeyName:      "worker.executionsFixerInvariantCollectionStale",
+		Description:  "ConcreteExecutionsFixerInvariantCollectionStale indicates if the stale-workflow invariant should be run",
+		DefaultValue: false, // may be enabled after further verification, but for now it's a bit too risky to enable by default
+	},
 	CurrentExecutionsScannerEnabled: DynamicBool{
 		KeyName:      "worker.currentExecutionsScannerEnabled",
 		Description:  "CurrentExecutionsScannerEnabled is indicates if current executions scanner should be started as part of worker.Scanner",
@@ -4041,12 +4089,6 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		KeyName:      "system.enableShardIDMetrics",
 		Description:  "Enable shardId metrics in persistence client",
 		DefaultValue: true,
-	},
-	EnableExecutionTTL: DynamicBool{
-		KeyName:      "system.enableExecutionTTL",
-		Filters:      []Filter{DomainID},
-		Description:  "EnableExecutionTTL is which domains are allowed to have workflow executions with a TTL",
-		DefaultValue: false,
 	},
 }
 

@@ -32,7 +32,7 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -129,8 +129,7 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) SetupTest() {
 	s.currentClusterName = cluster.TestCurrentClusterName
 	s.alternativeClusterName = cluster.TestAlternativeClusterName
 
-	logger, err := loggerimpl.NewDevelopment()
-	s.Nil(err)
+	logger := testlogger.New(s.T())
 
 	s.mockConfig = NewConfig(dynamicconfig.NewCollection(
 		dynamicconfig.NewNopClient(),

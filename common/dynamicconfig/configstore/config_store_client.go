@@ -30,7 +30,6 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
-
 	"github.com/uber/cadence/common/config"
 	dc "github.com/uber/cadence/common/dynamicconfig"
 	csc "github.com/uber/cadence/common/dynamicconfig/configstore/config"
@@ -38,6 +37,8 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql"
+	"github.com/uber/cadence/common/persistence/sql"
+	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -89,13 +90,9 @@ func NewConfigStoreClient(clientCfg *csc.ClientConfig,
 		return nil, errors.New("persistence cfg is nil")
 	}
 
-	store, ok := persistenceCfg.DataStores[persistenceCfg.DefaultStore]
+	ds, ok := persistenceCfg.DataStores[persistenceCfg.DefaultStore]
 	if !ok {
 		return nil, errors.New("default persistence config missing")
-	}
-
-	if store.NoSQL == nil && store.ShardedNoSQL == nil {
-		return nil, errors.New("NoSQL and ShardedNoSQL structs are nil")
 	}
 
 	if err := validateClientConfig(clientCfg); err != nil {
@@ -103,15 +100,7 @@ func NewConfigStoreClient(clientCfg *csc.ClientConfig,
 		clientCfg = defaultConfigValues
 	}
 
-	ds := persistenceCfg.DataStores[persistenceCfg.DefaultStore]
-	var dsConfig *config.ShardedNoSQL
-	if ds.ShardedNoSQL != nil {
-		dsConfig = ds.ShardedNoSQL
-	} else {
-		dsConfig = ds.NoSQL.ConvertToShardedNoSQLConfig()
-	}
-
-	client, err := newConfigStoreClient(clientCfg, dsConfig, logger, configType)
+	client, err := newConfigStoreClient(clientCfg, &ds, logger, configType)
 	if err != nil {
 		return nil, err
 	}
@@ -124,11 +113,27 @@ func NewConfigStoreClient(clientCfg *csc.ClientConfig,
 
 func newConfigStoreClient(
 	clientCfg *csc.ClientConfig,
-	persistenceCfg *config.ShardedNoSQL,
+	ds *config.DataStore,
 	logger log.Logger,
 	configType persistence.ConfigType,
 ) (*configStoreClient, error) {
-	store, err := nosql.NewNoSQLConfigStore(*persistenceCfg, logger, nil)
+	var store persistence.ConfigStore
+	var err error
+	switch {
+	case ds.ShardedNoSQL != nil:
+		store, err = nosql.NewNoSQLConfigStore(*ds.ShardedNoSQL, logger, nil)
+	case ds.NoSQL != nil:
+		store, err = nosql.NewNoSQLConfigStore(*ds.NoSQL.ConvertToShardedNoSQLConfig(), logger, nil)
+	case ds.SQL != nil:
+		var db sqlplugin.DB
+		db, err = sql.NewSQLDB(ds.SQL)
+		if err != nil {
+			return nil, err
+		}
+		store, err = sql.NewSQLConfigStore(db, logger, nil)
+	default:
+		return nil, errors.New("both NoSQL and SQL store are not provided")
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -366,6 +371,7 @@ func (csc *configStoreClient) Stop() {
 		return
 	}
 	close(csc.doneCh)
+	csc.configStoreManager.Close()
 }
 
 func (csc *configStoreClient) Start() {

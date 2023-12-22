@@ -22,29 +22,26 @@ package cli
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"io/ioutil"
 	"time"
 
+	"github.com/olivere/elastic"
+	adminv1 "github.com/uber/cadence-idl/go/proto/admin/v1"
+	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
+	"github.com/urfave/cli"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/peer"
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
+	"go.uber.org/zap"
 	"google.golang.org/grpc/credentials"
 
-	"github.com/olivere/elastic"
-	"github.com/urfave/cli"
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/zap"
-
-	"crypto/tls"
-	"crypto/x509"
-	"io/ioutil"
-
-	adminv1 "github.com/uber/cadence-idl/go/proto/admin/v1"
-	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	serverAdmin "github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	serverFrontend "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
-
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
@@ -70,15 +67,20 @@ type ClientFactory interface {
 	ServerFrontendClient(c *cli.Context) frontend.Client
 	ServerAdminClient(c *cli.Context) admin.Client
 
+	// ServerFrontendClientForMigration frontend client of the migration destination
+	ServerFrontendClientForMigration(c *cli.Context) frontend.Client
+	// ServerAdminClientForMigration admin client of the migration destination
+	ServerAdminClientForMigration(c *cli.Context) admin.Client
+
 	ElasticSearchClient(c *cli.Context) *elastic.Client
 
 	ServerConfig(c *cli.Context) (*config.Config, error)
 }
 
 type clientFactory struct {
-	hostPort   string
-	dispatcher *yarpc.Dispatcher
-	logger     *zap.Logger
+	dispatcher          *yarpc.Dispatcher
+	dispatcherMigration *yarpc.Dispatcher
+	logger              *zap.Logger
 }
 
 // NewClientFactory creates a new ClientFactory
@@ -130,6 +132,31 @@ func (b *clientFactory) ServerAdminClient(c *cli.Context) admin.Client {
 	return admin.NewThriftClient(serverAdmin.New(clientConfig))
 }
 
+// ServerFrontendClientForMigration builds a frontend client (based on server side thrift interface)
+func (b *clientFactory) ServerFrontendClientForMigration(c *cli.Context) frontend.Client {
+	b.ensureDispatcherForMigration(c)
+	clientConfig := b.dispatcherMigration.ClientConfig(cadenceFrontendService)
+	if c.GlobalString(FlagTransport) == grpcTransport {
+		return frontend.NewGRPCClient(
+			apiv1.NewDomainAPIYARPCClient(clientConfig),
+			apiv1.NewWorkflowAPIYARPCClient(clientConfig),
+			apiv1.NewWorkerAPIYARPCClient(clientConfig),
+			apiv1.NewVisibilityAPIYARPCClient(clientConfig),
+		)
+	}
+	return frontend.NewThriftClient(serverFrontend.New(clientConfig))
+}
+
+// ServerAdminClientForMigration builds an admin client (based on server side thrift interface)
+func (b *clientFactory) ServerAdminClientForMigration(c *cli.Context) admin.Client {
+	b.ensureDispatcherForMigration(c)
+	clientConfig := b.dispatcherMigration.ClientConfig(cadenceFrontendService)
+	if c.GlobalString(FlagTransport) == grpcTransport {
+		return admin.NewGRPCClient(adminv1.NewAdminAPIYARPCClient(clientConfig))
+	}
+	return admin.NewThriftClient(serverAdmin.New(clientConfig))
+}
+
 // ElasticSearchClient builds an ElasticSearch client
 func (b *clientFactory) ElasticSearchClient(c *cli.Context) *elastic.Client {
 	url := getRequiredOption(c, FlagURL)
@@ -150,19 +177,30 @@ func (b *clientFactory) ensureDispatcher(c *cli.Context) {
 	if b.dispatcher != nil {
 		return
 	}
+	b.dispatcher = b.newClientDispatcher(c, c.GlobalString(FlagAddress))
+}
+
+func (b *clientFactory) ensureDispatcherForMigration(c *cli.Context) {
+	if b.dispatcherMigration != nil {
+		return
+	}
+	b.dispatcherMigration = b.newClientDispatcher(c, c.String(FlagDestinationAddress))
+}
+
+func (b *clientFactory) newClientDispatcher(c *cli.Context, hostPortOverride string) *yarpc.Dispatcher {
 	shouldUseGrpc := c.GlobalString(FlagTransport) == grpcTransport
 
-	b.hostPort = tchannelPort
+	hostPort := tchannelPort
 	if shouldUseGrpc {
-		b.hostPort = grpcPort
+		hostPort = grpcPort
 	}
-	if addr := c.GlobalString(FlagAddress); addr != "" {
-		b.hostPort = addr
+	if hostPortOverride != "" {
+		hostPort = hostPortOverride
 	}
 	var outbounds transport.Outbounds
 	if shouldUseGrpc {
 		grpcTransport := grpc.NewTransport()
-		outbounds = transport.Outbounds{Unary: grpc.NewTransport().NewSingleOutbound(b.hostPort)}
+		outbounds = transport.Outbounds{Unary: grpc.NewTransport().NewSingleOutbound(hostPort)}
 
 		tlsCertificatePath := c.GlobalString(FlagTLSCertPath)
 		if tlsCertificatePath != "" {
@@ -178,7 +216,7 @@ func (b *clientFactory) ensureDispatcher(c *cli.Context) {
 				RootCAs: caCertPool,
 			}
 			tlsCreds := credentials.NewTLS(&tlsConfig)
-			tlsChooser := peer.NewSingle(hostport.Identify(b.hostPort), grpcTransport.NewDialer(grpc.DialerCredentials(tlsCreds)))
+			tlsChooser := peer.NewSingle(hostport.Identify(hostPort), grpcTransport.NewDialer(grpc.DialerCredentials(tlsCreds)))
 			outbounds = transport.Outbounds{Unary: grpc.NewTransport().NewOutbound(tlsChooser)}
 		}
 	} else {
@@ -186,10 +224,10 @@ func (b *clientFactory) ensureDispatcher(c *cli.Context) {
 		if err != nil {
 			b.logger.Fatal("Failed to create transport channel", zap.Error(err))
 		}
-		outbounds = transport.Outbounds{Unary: ch.NewSingleOutbound(b.hostPort)}
+		outbounds = transport.Outbounds{Unary: ch.NewSingleOutbound(hostPort)}
 	}
 
-	b.dispatcher = yarpc.NewDispatcher(yarpc.Config{
+	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name:      cadenceClientName,
 		Outbounds: yarpc.Outbounds{cadenceFrontendService: outbounds},
 		OutboundMiddleware: yarpc.OutboundMiddleware{
@@ -197,10 +235,11 @@ func (b *clientFactory) ensureDispatcher(c *cli.Context) {
 		},
 	})
 
-	if err := b.dispatcher.Start(); err != nil {
-		b.dispatcher.Stop()
+	if err := dispatcher.Start(); err != nil {
+		dispatcher.Stop()
 		b.logger.Fatal("Failed to create outbound transport channel: %v", zap.Error(err))
 	}
+	return dispatcher
 }
 
 type versionMiddleware struct {

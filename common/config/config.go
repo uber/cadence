@@ -29,6 +29,7 @@ import (
 
 	"github.com/uber-go/tally/m3"
 	"github.com/uber-go/tally/prometheus"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
 
 	"github.com/uber/cadence/common/dynamicconfig"
 	c "github.com/uber/cadence/common/dynamicconfig/configstore/config"
@@ -158,6 +159,11 @@ type (
 		Port uint16 `yaml:"port"`
 		// List of RPC procedures available to call using HTTP
 		Procedures []string `yaml:"procedures"`
+		// TLS allows configuring TLS/SSL for HTTP requests
+		TLS TLS `yaml:"tls"`
+		// Mode represents the TLS mode of the transport.
+		// Available modes: disabled, permissive, enforced
+		TLSMode yarpctls.Mode `yaml:"TLSMode"`
 	}
 
 	// Blobstore contains the config for blobstore
@@ -212,6 +218,8 @@ type (
 		ShardedNoSQL *ShardedNoSQL `yaml:"shardedNosql"`
 		// ElasticSearch contains the config for a ElasticSearch datastore
 		ElasticSearch *ElasticSearchConfig `yaml:"elasticsearch"`
+		// Pinot contains the config for a Pinot datastore
+		Pinot *PinotVisibilityConfig `yaml:"pinot"`
 	}
 
 	// Cassandra contains configuration to connect to Cassandra cluster

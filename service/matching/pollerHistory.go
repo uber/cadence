@@ -21,7 +21,6 @@
 package matching
 
 import (
-	"sort"
 	"time"
 
 	"github.com/uber/cadence/common"
@@ -104,7 +103,7 @@ func (pollers *pollerHistory) getPollerInfo(earliestAccessTime time.Time) []*typ
 	return result
 }
 
-func (pollers *pollerHistory) getPollerIsolationGroups(earliestAccessTime time.Time) []string {
+func (pollers *pollerHistory) getPollerIsolationGroups(earliestAccessTime time.Time) map[string]struct{} {
 	groupSet := make(map[string]struct{})
 	ite := pollers.history.Iterator()
 	defer ite.Close()
@@ -118,10 +117,5 @@ func (pollers *pollerHistory) getPollerIsolationGroups(earliestAccessTime time.T
 			}
 		}
 	}
-	result := make([]string, 0, len(groupSet))
-	for k := range groupSet {
-		result = append(result, k)
-	}
-	sort.Strings(result)
-	return result
+	return groupSet
 }

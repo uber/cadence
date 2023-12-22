@@ -28,7 +28,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/pborman/uuid"
+	"github.com/google/uuid"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/yarpcerrors"
 	"golang.org/x/sync/errgroup"
@@ -131,7 +131,6 @@ var (
 	errQueryTypeNotSet                            = &types.BadRequestError{Message: "QueryType is not set on request."}
 	errRequestNotSet                              = &types.BadRequestError{Message: "Request is nil."}
 	errNoPermission                               = &types.BadRequestError{Message: "No permission to do this operation."}
-	errRequestIDNotSet                            = &types.BadRequestError{Message: "RequestId is not set on request."}
 	errWorkflowTypeNotSet                         = &types.BadRequestError{Message: "WorkflowType is not set on request."}
 	errInvalidRetention                           = &types.BadRequestError{Message: "RetentionDays is invalid."}
 	errInvalidExecutionStartToCloseTimeoutSeconds = &types.BadRequestError{Message: "A valid ExecutionStartToCloseTimeoutSeconds is not set on request."}
@@ -175,36 +174,30 @@ func NewWorkflowHandler(
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
 		userRateLimiter: quotas.NewMultiStageRateLimiter(
 			quotas.NewDynamicRateLimiter(config.UserRPS.AsFloat64()),
-			quotas.NewCollection(func(domain string) quotas.Limiter {
-				return quotas.NewDynamicRateLimiter(quotas.PerMemberDynamic(
-					service.Frontend,
-					config.GlobalDomainUserRPS.AsFloat64(domain),
-					config.MaxDomainUserRPSPerInstance.AsFloat64(domain),
-					resource.GetMembershipResolver(),
-				))
-			}),
+			quotas.NewCollection(quotas.NewPerMemberDynamicRateLimiterFactory(
+				service.Frontend,
+				config.GlobalDomainUserRPS,
+				config.MaxDomainUserRPSPerInstance,
+				resource.GetMembershipResolver(),
+			)),
 		),
 		workerRateLimiter: quotas.NewMultiStageRateLimiter(
 			quotas.NewDynamicRateLimiter(config.WorkerRPS.AsFloat64()),
-			quotas.NewCollection(func(domain string) quotas.Limiter {
-				return quotas.NewDynamicRateLimiter(quotas.PerMemberDynamic(
-					service.Frontend,
-					config.GlobalDomainWorkerRPS.AsFloat64(domain),
-					config.MaxDomainWorkerRPSPerInstance.AsFloat64(domain),
-					resource.GetMembershipResolver(),
-				))
-			}),
+			quotas.NewCollection(quotas.NewPerMemberDynamicRateLimiterFactory(
+				service.Frontend,
+				config.GlobalDomainWorkerRPS,
+				config.MaxDomainWorkerRPSPerInstance,
+				resource.GetMembershipResolver(),
+			)),
 		),
 		visibilityRateLimiter: quotas.NewMultiStageRateLimiter(
 			quotas.NewDynamicRateLimiter(config.VisibilityRPS.AsFloat64()),
-			quotas.NewCollection(func(domain string) quotas.Limiter {
-				return quotas.NewDynamicRateLimiter(quotas.PerMemberDynamic(
-					service.Frontend,
-					config.GlobalDomainVisibilityRPS.AsFloat64(domain),
-					config.MaxDomainVisibilityRPSPerInstance.AsFloat64(domain),
-					resource.GetMembershipResolver(),
-				))
-			}),
+			quotas.NewCollection(quotas.NewPerMemberDynamicRateLimiterFactory(
+				service.Frontend,
+				config.GlobalDomainVisibilityRPS,
+				config.MaxDomainVisibilityRPSPerInstance,
+				resource.GetMembershipResolver(),
+			)),
 		),
 		versionChecker: versionChecker,
 		domainHandler:  domainHandler,
@@ -564,7 +557,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 	}
 
 	idLengthWarnLimit := wh.config.MaxIDLengthWarnLimit()
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		domainName,
 		scope,
 		idLengthWarnLimit,
@@ -580,7 +573,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 		return nil, wh.error(err, scope, tags...)
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		pollRequest.GetIdentity(),
 		scope,
 		idLengthWarnLimit,
@@ -615,7 +608,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 	); err != nil {
 		return &types.PollForActivityTaskResponse{}, nil
 	}
-	pollerID := uuid.New()
+	pollerID := uuid.New().String()
 	op := func() error {
 		resp, err = wh.GetMatchingClient().PollForActivityTask(ctx, &types.MatchingPollForActivityTaskRequest{
 			DomainUUID:     domainID,
@@ -687,7 +680,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	}
 
 	idLengthWarnLimit := wh.config.MaxIDLengthWarnLimit()
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		domainName,
 		scope,
 		idLengthWarnLimit,
@@ -699,7 +692,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		return nil, wh.error(errDomainTooLong, scope, tags...)
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		pollRequest.GetIdentity(),
 		scope,
 		idLengthWarnLimit,
@@ -745,7 +738,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		return &types.PollForDecisionTaskResponse{}, nil
 	}
 
-	pollerID := uuid.New()
+	pollerID := uuid.New().String()
 	var matchingResp *types.MatchingPollForDecisionTaskResponse
 	op := func() error {
 		matchingResp, err = wh.GetMatchingClient().PollForDecisionTask(ctx, &types.MatchingPollForDecisionTaskRequest{
@@ -789,17 +782,11 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 }
 
 func (wh *WorkflowHandler) getIsolationGroup(ctx context.Context, domainName string) string {
-	if wh.config.EnableTasklistIsolation(domainName) {
-		return partition.IsolationGroupFromContext(ctx)
-	}
-	return ""
+	return partition.IsolationGroupFromContext(ctx)
 }
 
 func (wh *WorkflowHandler) getPartitionConfig(ctx context.Context, domainName string) map[string]string {
-	if wh.config.EnableTasklistIsolation(domainName) {
-		return partition.ConfigFromContext(ctx)
-	}
-	return nil
+	return partition.ConfigFromContext(ctx)
 }
 
 func (wh *WorkflowHandler) isIsolationGroupHealthy(ctx context.Context, domainName, isolationGroup string) bool {
@@ -1148,7 +1135,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 		RunID:      taskToken.RunID,
 	})
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		completeRequest.GetIdentity(),
 		scope,
 		wh.config.MaxIDLengthWarnLimit(),
@@ -1255,7 +1242,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 		return wh.error(errActivityIDNotSet, scope, tags...)
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		completeRequest.GetIdentity(),
 		scope,
 		wh.config.MaxIDLengthWarnLimit(),
@@ -1382,7 +1369,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 		RunID:      taskToken.RunID,
 	})
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		failedRequest.GetIdentity(),
 		scope,
 		wh.config.MaxIDLengthWarnLimit(),
@@ -1477,7 +1464,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 		return wh.error(errActivityIDNotSet, scope, tags...)
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		failedRequest.GetIdentity(),
 		scope,
 		wh.config.MaxIDLengthWarnLimit(),
@@ -1595,7 +1582,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 		RunID:      taskToken.RunID,
 	})
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		cancelRequest.GetIdentity(),
 		scope,
 		wh.config.MaxIDLengthWarnLimit(),
@@ -1702,7 +1689,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 		return wh.error(errActivityIDNotSet, scope, tags...)
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		cancelRequest.GetIdentity(),
 		scope,
 		wh.config.MaxIDLengthWarnLimit(),
@@ -1829,7 +1816,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 		RunID:      taskToken.RunID,
 	})
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		completeRequest.GetIdentity(),
 		scope,
 		wh.config.MaxIDLengthWarnLimit(),
@@ -1939,7 +1926,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 		RunID:      taskToken.RunID,
 	})
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		failedRequest.GetIdentity(),
 		scope,
 		wh.config.MaxIDLengthWarnLimit(),
@@ -2082,16 +2069,12 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendStartWorkflowExecutionScope, startRequest)
 	defer sw.Stop()
 
-	if wh.isShuttingDown() {
-		return nil, errShuttingDown
-	}
-
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return nil, wh.error(err, scope)
-	}
-
 	if startRequest == nil {
 		return nil, wh.error(errRequestNotSet, scope)
+	}
+
+	if wh.isShuttingDown() {
+		return nil, errShuttingDown
 	}
 
 	domainName := startRequest.GetDomain()
@@ -2104,12 +2087,27 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(errDomainNotSet, scope, tags...)
 	}
 
+	if startRequest.GetWorkflowID() == "" {
+		return nil, wh.error(errWorkflowIDNotSet, scope, tags...)
+	}
+
+	if _, err := uuid.Parse(startRequest.RequestID); err != nil {
+		return nil, wh.error(&types.BadRequestError{Message: fmt.Sprintf("requestId %q is not a valid UUID", startRequest.RequestID)}, scope, tags...)
+	}
+	if startRequest.WorkflowType == nil || startRequest.WorkflowType.GetName() == "" {
+		return nil, wh.error(errWorkflowTypeNotSet, scope, tags...)
+	}
+
+	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
+		return nil, wh.error(err, scope)
+	}
+
 	if ok := wh.allow(ratelimitTypeUser, startRequest); !ok {
 		return nil, wh.error(createServiceBusyError(), scope, tags...)
 	}
 
 	idLengthWarnLimit := wh.config.MaxIDLengthWarnLimit()
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		domainName,
 		scope,
 		idLengthWarnLimit,
@@ -2121,11 +2119,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(errDomainTooLong, scope, tags...)
 	}
 
-	if startRequest.GetWorkflowID() == "" {
-		return nil, wh.error(errWorkflowIDNotSet, scope, tags...)
-	}
-
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		startRequest.GetWorkflowID(),
 		scope,
 		idLengthWarnLimit,
@@ -2141,21 +2135,11 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(err, scope, tags...)
 	}
 
-	if startRequest.GetCronSchedule() != "" {
-		if _, err := backoff.ValidateSchedule(startRequest.GetCronSchedule()); err != nil {
-			return nil, wh.error(err, scope, tags...)
-		}
-	}
-
 	wh.GetLogger().Debug(
 		"Received StartWorkflowExecution. WorkflowID",
 		tag.WorkflowID(startRequest.GetWorkflowID()))
 
-	if startRequest.WorkflowType == nil || startRequest.WorkflowType.GetName() == "" {
-		return nil, wh.error(errWorkflowTypeNotSet, scope, tags...)
-	}
-
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		startRequest.WorkflowType.GetName(),
 		scope,
 		idLengthWarnLimit,
@@ -2189,6 +2173,11 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 
 	jitter := startRequest.GetJitterStartSeconds()
 	cron := startRequest.GetCronSchedule()
+	if cron != "" {
+		if _, err := backoff.ValidateSchedule(startRequest.GetCronSchedule()); err != nil {
+			return nil, wh.error(err, scope, tags...)
+		}
+	}
 	if jitter > 0 && cron != "" {
 		// Calculate the cron duration and ensure that jitter is not greater than the cron duration,
 		// because that would be confusing to users.
@@ -2205,11 +2194,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		}
 	}
 
-	if startRequest.GetRequestID() == "" {
-		return nil, wh.error(errRequestIDNotSet, scope, tags...)
-	}
-
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		startRequest.GetRequestID(),
 		scope,
 		idLengthWarnLimit,
@@ -2584,7 +2569,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 	}
 
 	idLengthWarnLimit := wh.config.MaxIDLengthWarnLimit()
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		domainName,
 		scope,
 		idLengthWarnLimit,
@@ -2600,7 +2585,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 		return wh.error(errSignalNameNotSet, scope, tags...)
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		signalRequest.GetSignalName(),
 		scope,
 		idLengthWarnLimit,
@@ -2612,7 +2597,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 		return wh.error(errSignalNameTooLong, scope, tags...)
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		signalRequest.GetRequestID(),
 		scope,
 		idLengthWarnLimit,
@@ -2706,7 +2691,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 	}
 
 	idLengthWarnLimit := wh.config.MaxIDLengthWarnLimit()
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		domainName,
 		scope,
 		idLengthWarnLimit,
@@ -2718,7 +2703,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		return nil, wh.error(errDomainTooLong, scope, tags...)
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		signalWithStartRequest.GetWorkflowID(),
 		scope,
 		idLengthWarnLimit,
@@ -2734,7 +2719,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		return nil, wh.error(errSignalNameNotSet, scope, tags...)
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		signalWithStartRequest.GetSignalName(),
 		scope,
 		idLengthWarnLimit,
@@ -2750,7 +2735,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		return nil, wh.error(errWorkflowTypeNotSet, scope, tags...)
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		signalWithStartRequest.WorkflowType.GetName(),
 		scope,
 		idLengthWarnLimit,
@@ -2766,7 +2751,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		return nil, wh.error(err, scope, tags...)
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		signalWithStartRequest.GetRequestID(),
 		scope,
 		idLengthWarnLimit,
@@ -4243,7 +4228,7 @@ func (wh *WorkflowHandler) validateTaskList(t *types.TaskList, scope metrics.Sco
 		return errTaskListNotSet
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		t.GetName(),
 		scope,
 		wh.config.MaxIDLengthWarnLimit(),
@@ -4264,8 +4249,10 @@ func validateExecution(w *types.WorkflowExecution) error {
 	if w.GetWorkflowID() == "" {
 		return errWorkflowIDNotSet
 	}
-	if w.GetRunID() != "" && uuid.Parse(w.GetRunID()) == nil {
-		return errInvalidRunID
+	if w.GetRunID() != "" {
+		if _, err := uuid.Parse(w.GetRunID()); err != nil {
+			return errInvalidRunID
+		}
 	}
 	return nil
 }
@@ -4361,6 +4348,7 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(
 		StartedTimestamp:          matchingResp.StartedTimestamp,
 		Queries:                   matchingResp.Queries,
 		NextEventID:               matchingResp.NextEventID,
+		TotalHistoryBytes:         matchingResp.TotalHistoryBytes,
 	}
 
 	return resp, nil
@@ -4715,7 +4703,7 @@ func (wh *WorkflowHandler) normalizeVersionedErrors(ctx context.Context, err err
 func constructRestartWorkflowRequest(w *types.WorkflowExecutionStartedEventAttributes, domain string, identity string, workflowID string) *types.StartWorkflowExecutionRequest {
 
 	startRequest := &types.StartWorkflowExecutionRequest{
-		RequestID:  uuid.New(),
+		RequestID:  uuid.New().String(),
 		Domain:     domain,
 		WorkflowID: workflowID,
 		WorkflowType: &types.WorkflowType{

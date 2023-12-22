@@ -420,6 +420,7 @@ func FromMatchingPollForDecisionTaskResponse(t *types.MatchingPollForDecisionTas
 		ScheduledTime:             unixNanoToTime(t.ScheduledTimestamp),
 		StartedTime:               unixNanoToTime(t.StartedTimestamp),
 		Queries:                   FromWorkflowQueryMap(t.Queries),
+		TotalHistoryBytes:         t.TotalHistoryBytes,
 	}
 }
 
@@ -445,6 +446,7 @@ func ToMatchingPollForDecisionTaskResponse(t *matchingv1.PollForDecisionTaskResp
 		ScheduledTimestamp:        timeToUnixNano(t.ScheduledTime),
 		StartedTimestamp:          timeToUnixNano(t.StartedTime),
 		Queries:                   ToWorkflowQueryMap(t.Queries),
+		TotalHistoryBytes:         t.TotalHistoryBytes,
 	}
 }
 

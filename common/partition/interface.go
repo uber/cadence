@@ -24,9 +24,7 @@ package partition
 
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination partitioning_mock.go -self_package github.com/uber/cadence/common/partition
 
-import (
-	"context"
-)
+import "context"
 
 type Partitioner interface {
 	// GetIsolationGroupByDomainID gets where the task workflow should be executing. Largely used by Matching

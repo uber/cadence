@@ -27,6 +27,7 @@ import (
 	"math"
 	"math/rand"
 	"sync/atomic"
+	"testing"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -39,8 +40,8 @@ import (
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/client"
@@ -111,28 +112,32 @@ const (
 )
 
 // NewTestBaseFromParams returns a customized test base from given input
-func NewTestBaseFromParams(params TestBaseParams) TestBase {
-	logger, err := loggerimpl.NewDevelopment()
-	if err != nil {
-		panic(err)
-	}
-
-	return TestBase{
+func NewTestBaseFromParams(t *testing.T, params TestBaseParams) *TestBase {
+	res := &TestBase{
 		DefaultTestCluster:    params.DefaultTestCluster,
 		VisibilityTestCluster: params.VisibilityTestCluster,
 		ClusterMetadata:       params.ClusterMetadata,
 		PayloadSerializer:     persistence.NewPayloadSerializer(),
-		Logger:                logger,
 		DynamicConfiguration:  params.DynamicConfiguration,
 	}
+	res.SetT(t)
+	return res
 }
 
 // NewTestBaseWithNoSQL returns a persistence test base backed by nosql datastore
-func NewTestBaseWithNoSQL(options *TestBaseOptions) TestBase {
+func NewTestBaseWithNoSQL(t *testing.T, options *TestBaseOptions) *TestBase {
 	if options.DBName == "" {
 		options.DBName = "test_" + GenerateRandomDBName(10)
 	}
-	testCluster := nosql.NewTestCluster(options.DBPluginName, options.DBName, options.DBUsername, options.DBPassword, options.DBHost, options.DBPort, options.ProtoVersion, "")
+	testCluster := nosql.NewTestCluster(t, nosql.TestClusterParams{
+		PluginName:   options.DBPluginName,
+		KeySpace:     options.DBName,
+		Username:     options.DBUsername,
+		Password:     options.DBPassword,
+		Host:         options.DBHost,
+		Port:         options.DBPort,
+		ProtoVersion: options.ProtoVersion,
+	})
 	metadata := options.ClusterMetadata
 	if metadata.GetCurrentClusterName() == "" {
 		metadata = cluster.GetTestClusterMetadata(false)
@@ -142,7 +147,6 @@ func NewTestBaseWithNoSQL(options *TestBaseOptions) TestBase {
 		EnableCassandraAllConsistencyLevelDelete: dynamicconfig.GetBoolPropertyFn(true),
 		PersistenceSampleLoggingRate:             dynamicconfig.GetIntPropertyFn(100),
 		EnableShardIDMetrics:                     dynamicconfig.GetBoolPropertyFn(true),
-		EnableExecutionTTL:                       dynamicconfig.GetBoolPropertyFnFilteredByDomainID(true),
 	}
 	params := TestBaseParams{
 		DefaultTestCluster:    testCluster,
@@ -150,11 +154,11 @@ func NewTestBaseWithNoSQL(options *TestBaseOptions) TestBase {
 		ClusterMetadata:       metadata,
 		DynamicConfiguration:  dc,
 	}
-	return NewTestBaseFromParams(params)
+	return NewTestBaseFromParams(t, params)
 }
 
 // NewTestBaseWithSQL returns a new persistence test base backed by SQL
-func NewTestBaseWithSQL(options *TestBaseOptions) TestBase {
+func NewTestBaseWithSQL(t *testing.T, options *TestBaseOptions) *TestBase {
 	if options.DBName == "" {
 		options.DBName = "test_" + GenerateRandomDBName(10)
 	}
@@ -175,7 +179,7 @@ func NewTestBaseWithSQL(options *TestBaseOptions) TestBase {
 		ClusterMetadata:       metadata,
 		DynamicConfiguration:  dc,
 	}
-	return NewTestBaseFromParams(params)
+	return NewTestBaseFromParams(t, params)
 }
 
 // Config returns the persistence configuration for this test
@@ -196,6 +200,8 @@ func (s *TestBase) Setup() {
 	shardID := 10
 	clusterName := s.ClusterMetadata.GetCurrentClusterName()
 
+	s.Logger = testlogger.New(s.T())
+
 	s.DefaultTestCluster.SetupTestDatabase()
 
 	cfg := s.DefaultTestCluster.Config()
@@ -215,10 +221,8 @@ func (s *TestBase) Setup() {
 	s.ShardMgr, err = factory.NewShardManager()
 	s.fatalOnError("NewShardManager", err)
 
-	if cfg.DefaultStoreType() == config.StoreTypeCassandra {
-		s.ConfigStoreManager, err = factory.NewConfigStoreManager()
-		s.fatalOnError("NewConfigStoreManager", err)
-	}
+	s.ConfigStoreManager, err = factory.NewConfigStoreManager()
+	s.fatalOnError("NewConfigStoreManager", err)
 
 	s.ExecutionMgrFactory = factory
 	s.ExecutionManager, err = factory.NewExecutionManager(shardID)
@@ -1692,6 +1696,19 @@ func (s *TestBase) CreateDecisionTask(ctx context.Context, domainID string, work
 	}
 
 	return taskID, err
+}
+
+func (s *TestBase) GetDecisionTaskListSize(ctx context.Context, domainID, taskList string, ackLevel int64) (int64, error) {
+	resp, err := s.TaskMgr.GetTaskListSize(ctx, &persistence.GetTaskListSizeRequest{
+		DomainID:     domainID,
+		TaskListName: taskList,
+		TaskListType: persistence.TaskListTypeDecision,
+		AckLevel:     ackLevel,
+	})
+	if err != nil {
+		return 0, err
+	}
+	return resp.Size, nil
 }
 
 // CreateActivityTasks is a utility method to create tasks

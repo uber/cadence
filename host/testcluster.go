@@ -27,8 +27,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/common/log/loggerimpl"
-
+	"github.com/startreedata/pinot-client-go/pinot"
 	"github.com/uber-go/tally"
 
 	adminClient "github.com/uber/cadence/client/admin"
@@ -43,27 +42,29 @@ import (
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/messaging/kafka"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql"
+	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/persistence/persistence-tests/testcluster"
+	"github.com/uber/cadence/common/persistence/sql"
+	"github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql"
+	"github.com/uber/cadence/common/persistence/sql/sqlplugin/postgres"
+	pnt "github.com/uber/cadence/common/pinot"
 	"github.com/uber/cadence/testflags"
 
 	// the import is a test dependency
 	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public"
-	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
-	"github.com/uber/cadence/common/persistence/sql"
-	"github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql"
-	"github.com/uber/cadence/common/persistence/sql/sqlplugin/postgres"
 )
 
 type (
 	// TestCluster is a base struct for integration tests
 	TestCluster struct {
-		testBase     persistencetests.TestBase
+		testBase     *persistencetests.TestBase
 		archiverBase *ArchiverBase
 		host         Cadence
 	}
@@ -91,6 +92,7 @@ type (
 		ESConfig              *config.ElasticSearchConfig
 		WorkerConfig          *WorkerConfig
 		MockAdminClient       map[string]adminClient.Client
+		PinotConfig           *config.PinotVisibilityConfig
 	}
 
 	// MessagingClientConfig is the config for messaging config
@@ -113,8 +115,8 @@ const (
 )
 
 // NewCluster creates and sets up the test cluster
-func NewCluster(options *TestClusterConfig, logger log.Logger, params persistencetests.TestBaseParams) (*TestCluster, error) {
-	testBase := persistencetests.NewTestBaseFromParams(params)
+func NewCluster(t *testing.T, options *TestClusterConfig, logger log.Logger, params persistencetests.TestBaseParams) (*TestCluster, error) {
+	testBase := persistencetests.NewTestBaseFromParams(t, params)
 	testBase.Setup()
 	setupShards(testBase, options.HistoryConfig.NumHistoryShards, logger)
 	archiverBase := newArchiverBase(options.EnableArchival, logger)
@@ -168,6 +170,70 @@ func NewCluster(options *TestClusterConfig, logger log.Logger, params persistenc
 	return &TestCluster{testBase: testBase, archiverBase: archiverBase, host: cluster}, nil
 }
 
+func NewPinotTestCluster(t *testing.T, options *TestClusterConfig, logger log.Logger, params persistencetests.TestBaseParams) (*TestCluster, error) {
+	testBase := persistencetests.NewTestBaseFromParams(t, params)
+	testBase.Setup()
+	setupShards(testBase, options.HistoryConfig.NumHistoryShards, logger)
+	archiverBase := newArchiverBase(options.EnableArchival, logger)
+	messagingClient := getMessagingClient(options.MessagingClientConfig, logger)
+	pConfig := testBase.Config()
+	pConfig.NumHistoryShards = options.HistoryConfig.NumHistoryShards
+	var esClient elasticsearch.GenericClient
+	var pinotClient pnt.GenericClient
+	if options.WorkerConfig.EnableIndexer {
+		var err error
+		esClient, err = elasticsearch.NewGenericClient(options.ESConfig, logger)
+		if err != nil {
+			return nil, err
+		}
+		pConfig.AdvancedVisibilityStore = "pinot-visibility"
+		pinotBroker := options.PinotConfig.Broker
+		pinotRawClient, err := pinot.NewFromBrokerList([]string{pinotBroker})
+		if err != nil || pinotRawClient == nil {
+			return nil, err
+		}
+		pinotClient = pnt.NewPinotClient(pinotRawClient, logger, options.PinotConfig)
+	}
+
+	scope := tally.NewTestScope("integration-test", nil)
+	metricsClient := metrics.NewClient(scope, metrics.ServiceIdx(0))
+	domainReplicationQueue := domain.NewReplicationQueue(
+		testBase.DomainReplicationQueueMgr,
+		options.ClusterGroupMetadata.CurrentClusterName,
+		metricsClient,
+		logger,
+	)
+	aConfig := noopAuthorizationConfig()
+	cadenceParams := &CadenceParams{
+		ClusterMetadata:               params.ClusterMetadata,
+		PersistenceConfig:             pConfig,
+		MessagingClient:               messagingClient,
+		DomainManager:                 testBase.DomainManager,
+		HistoryV2Mgr:                  testBase.HistoryV2Mgr,
+		ExecutionMgrFactory:           testBase.ExecutionMgrFactory,
+		DomainReplicationQueue:        domainReplicationQueue,
+		Logger:                        logger,
+		ClusterNo:                     options.ClusterNo,
+		ESConfig:                      options.ESConfig,
+		ESClient:                      esClient,
+		ArchiverMetadata:              archiverBase.metadata,
+		ArchiverProvider:              archiverBase.provider,
+		HistoryConfig:                 options.HistoryConfig,
+		WorkerConfig:                  options.WorkerConfig,
+		MockAdminClient:               options.MockAdminClient,
+		DomainReplicationTaskExecutor: domain.NewReplicationTaskExecutor(testBase.DomainManager, clock.NewRealTimeSource(), logger),
+		AuthorizationConfig:           aConfig,
+		PinotConfig:                   options.PinotConfig,
+		PinotClient:                   pinotClient,
+	}
+	cluster := NewCadence(cadenceParams)
+	if err := cluster.Start(); err != nil {
+		return nil, err
+	}
+
+	return &TestCluster{testBase: testBase, archiverBase: archiverBase, host: cluster}, nil
+}
+
 func noopAuthorizationConfig() config.Authorization {
 	return config.Authorization{
 		OAuthAuthorizer: config.OAuthAuthorizer{
@@ -180,7 +246,7 @@ func noopAuthorizationConfig() config.Authorization {
 }
 
 // NewClusterMetadata returns cluster metdata from config
-func NewClusterMetadata(options *TestClusterConfig) cluster.Metadata {
+func NewClusterMetadata(t *testing.T, options *TestClusterConfig) cluster.Metadata {
 	clusterMetadata := cluster.GetTestClusterMetadata(options.IsPrimaryCluster)
 	if !options.IsPrimaryCluster && options.ClusterGroupMetadata.PrimaryClusterName != "" { // xdc cluster metadata setup
 		clusterMetadata = cluster.NewMetadata(
@@ -190,7 +256,7 @@ func NewClusterMetadata(options *TestClusterConfig) cluster.Metadata {
 			options.ClusterGroupMetadata.ClusterGroup,
 			func(domain string) bool { return false },
 			metrics.NewNoopMetricsClient(),
-			loggerimpl.NewNopLogger(),
+			testlogger.New(t),
 		)
 	}
 	return clusterMetadata
@@ -207,7 +273,16 @@ func NewPersistenceTestCluster(t *testing.T, clusterConfig *TestClusterConfig) t
 		ops := clusterConfig.Persistence
 		ops.DBPluginName = "cassandra"
 		testflags.RequireCassandra(t)
-		testCluster = nosql.NewTestCluster(ops.DBPluginName, ops.DBName, ops.DBUsername, ops.DBPassword, ops.DBHost, ops.DBPort, ops.ProtoVersion, "")
+		testCluster = nosql.NewTestCluster(t, nosql.TestClusterParams{
+			PluginName:    ops.DBPluginName,
+			KeySpace:      ops.DBName,
+			Username:      ops.DBUsername,
+			Password:      ops.DBPassword,
+			Host:          ops.DBHost,
+			Port:          ops.DBPort,
+			ProtoVersion:  ops.ProtoVersion,
+			SchemaBaseDir: "",
+		})
 	} else if TestFlags.PersistenceType == config.StoreTypeSQL {
 		var ops *persistencetests.TestBaseOptions
 		if TestFlags.SQLPluginName == mysql.PluginName {
@@ -226,7 +301,7 @@ func NewPersistenceTestCluster(t *testing.T, clusterConfig *TestClusterConfig) t
 	return testCluster
 }
 
-func setupShards(testBase persistencetests.TestBase, numHistoryShards int, logger log.Logger) {
+func setupShards(testBase *persistencetests.TestBase, numHistoryShards int, logger log.Logger) {
 	// shard 0 is always created, we create additional shards if needed
 	for shardID := 1; shardID < numHistoryShards; shardID++ {
 		ctx, cancel := context.WithTimeout(context.Background(), defaultTestPersistenceTimeout)

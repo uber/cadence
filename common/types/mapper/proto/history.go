@@ -22,6 +22,7 @@ package proto
 
 import (
 	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
+
 	historyv1 "github.com/uber/cadence/.gen/proto/history/v1"
 	sharedv1 "github.com/uber/cadence/.gen/proto/shared/v1"
 	"github.com/uber/cadence/common"
@@ -337,6 +338,7 @@ func FromHistoryGetMutableStateResponse(t *types.GetMutableStateResponse) *histo
 		WorkflowCloseState:                   FromWorkflowExecutionCloseStatus(workflowCloseState),
 		VersionHistories:                     FromVersionHistories(t.VersionHistories),
 		IsStickyTaskListEnabled:              t.IsStickyTaskListEnabled,
+		HistorySize:                          t.HistorySize,
 	}
 }
 
@@ -363,6 +365,7 @@ func ToHistoryGetMutableStateResponse(t *historyv1.GetMutableStateResponse) *typ
 		VersionHistories:                     ToVersionHistories(t.VersionHistories),
 		IsStickyTaskListEnabled:              t.IsStickyTaskListEnabled,
 		IsWorkflowRunning:                    t.WorkflowState == sharedv1.WorkflowState_WORKFLOW_STATE_RUNNING,
+		HistorySize:                          t.HistorySize,
 	}
 }
 
@@ -893,6 +896,7 @@ func FromHistoryRecordDecisionTaskStartedResponse(t *types.RecordDecisionTaskSta
 		ScheduledTime:             unixNanoToTime(t.ScheduledTimestamp),
 		StartedTime:               unixNanoToTime(t.StartedTimestamp),
 		Queries:                   FromWorkflowQueryMap(t.Queries),
+		HistorySize:               t.HistorySize,
 	}
 }
 
@@ -915,6 +919,7 @@ func ToHistoryRecordDecisionTaskStartedResponse(t *historyv1.RecordDecisionTaskS
 		ScheduledTimestamp:        timeToUnixNano(t.ScheduledTime),
 		StartedTimestamp:          timeToUnixNano(t.StartedTime),
 		Queries:                   ToWorkflowQueryMap(t.Queries),
+		HistorySize:               t.HistorySize,
 	}
 }
 

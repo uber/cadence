@@ -22,18 +22,18 @@ package persistencetests
 
 import (
 	"context"
+	"log"
 	"os"
 	"sync"
 	"testing"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
 
 type (
 	// QueuePersistenceSuite contains queue persistence tests
 	QueuePersistenceSuite struct {
-		TestBase
+		*TestBase
 		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
 		// not merely log an error
 		*require.Assertions

@@ -57,6 +57,7 @@ type (
 		UpdateTaskList(ctx context.Context, request *UpdateTaskListRequest) (*UpdateTaskListResponse, error)
 		ListTaskList(ctx context.Context, request *ListTaskListRequest) (*ListTaskListResponse, error)
 		DeleteTaskList(ctx context.Context, request *DeleteTaskListRequest) error
+		GetTaskListSize(ctx context.Context, request *GetTaskListSizeRequest) (*GetTaskListSizeResponse, error)
 		CreateTasks(ctx context.Context, request *InternalCreateTasksRequest) (*CreateTasksResponse, error)
 		GetTasks(ctx context.Context, request *GetTasksRequest) (*InternalGetTasksResponse, error)
 		CompleteTask(ctx context.Context, request *CompleteTaskRequest) error
@@ -331,6 +332,7 @@ type (
 
 		// attributes which are not related to mutable state at all
 		HistorySize int64
+		IsCron      bool
 	}
 
 	// InternalWorkflowMutableState indicates workflow related state for Persistence Interface
@@ -460,8 +462,8 @@ type (
 		CrossClusterTasks []Task
 		TimerTasks        []Task
 		ReplicationTasks  []Task
-		TTLInSeconds      int64
-		Condition         int64
+
+		Condition int64
 
 		Checksum checksum.Checksum
 	}

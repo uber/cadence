@@ -79,6 +79,7 @@ func (s *mutableStateSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
 
 	s.mockShard = shard.NewTestContext(
+		s.T(),
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID:          0,
@@ -97,7 +98,6 @@ func (s *mutableStateSuite) SetupTest() {
 	s.logger = s.mockShard.GetLogger()
 
 	s.mockShard.Resource.DomainCache.EXPECT().GetDomainID(constants.TestDomainName).Return(constants.TestDomainID, nil).AnyTimes()
-	s.mockShard.Resource.DomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(constants.TestLocalDomainEntry, nil).AnyTimes()
 
 	s.msBuilder = newMutableStateBuilder(s.mockShard, s.logger, constants.TestLocalDomainEntry)
 }

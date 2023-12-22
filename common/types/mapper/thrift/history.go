@@ -21,9 +21,8 @@
 package thrift
 
 import (
-	"github.com/uber/cadence/common/types"
-
 	"github.com/uber/cadence/.gen/go/history"
+	"github.com/uber/cadence/common/types"
 )
 
 // FromDescribeMutableStateRequest converts internal DescribeMutableStateRequest type to thrift
@@ -206,6 +205,7 @@ func FromGetMutableStateResponse(t *types.GetMutableStateResponse) *history.GetM
 		WorkflowCloseState:                   t.WorkflowCloseState,
 		VersionHistories:                     FromVersionHistories(t.VersionHistories),
 		IsStickyTaskListEnabled:              &t.IsStickyTaskListEnabled,
+		HistorySize:                          &t.HistorySize,
 	}
 }
 
@@ -233,6 +233,7 @@ func ToGetMutableStateResponse(t *history.GetMutableStateResponse) *types.GetMut
 		WorkflowCloseState:                   t.WorkflowCloseState,
 		VersionHistories:                     ToVersionHistories(t.VersionHistories),
 		IsStickyTaskListEnabled:              t.GetIsStickyTaskListEnabled(),
+		HistorySize:                          t.GetHistorySize(),
 	}
 }
 
@@ -628,6 +629,7 @@ func FromRecordDecisionTaskStartedResponse(t *types.RecordDecisionTaskStartedRes
 		ScheduledTimestamp:        t.ScheduledTimestamp,
 		StartedTimestamp:          t.StartedTimestamp,
 		Queries:                   FromWorkflowQueryMap(t.Queries),
+		HistorySize:               &t.HistorySize,
 	}
 }
 
@@ -651,6 +653,7 @@ func ToRecordDecisionTaskStartedResponse(t *history.RecordDecisionTaskStartedRes
 		ScheduledTimestamp:        t.ScheduledTimestamp,
 		StartedTimestamp:          t.StartedTimestamp,
 		Queries:                   ToWorkflowQueryMap(t.Queries),
+		HistorySize:               t.GetHistorySize(),
 	}
 }
 

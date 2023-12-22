@@ -1328,6 +1328,14 @@ func (v *DecisionTaskTimedOutEventAttributes) GetForkEventVersion() (o int64) {
 	return
 }
 
+// GetCause is an internal getter (TBD...)
+func (v *DecisionTaskTimedOutEventAttributes) GetCause() (o DecisionTaskTimedOutCause) {
+	if v != nil && v.Cause != nil {
+		return *v.Cause
+	}
+	return
+}
+
 // DecisionType is an internal type (TBD...)
 type DecisionType int32
 
@@ -4029,6 +4037,7 @@ type PollForDecisionTaskResponse struct {
 	StartedTimestamp          *int64                    `json:"startedTimestamp,omitempty"`
 	Queries                   map[string]*WorkflowQuery `json:"queries,omitempty"`
 	NextEventID               int64                     `json:"nextEventId,omitempty"`
+	TotalHistoryBytes         int64                     `json:"historySize,omitempty"`
 }
 
 // GetTaskToken is an internal getter (TBD...)
@@ -4075,6 +4084,13 @@ func (v *PollForDecisionTaskResponse) GetQueries() (o map[string]*WorkflowQuery)
 func (v *PollForDecisionTaskResponse) GetNextEventID() (o int64) {
 	if v != nil {
 		return v.NextEventID
+	}
+	return
+}
+
+func (v *PollForDecisionTaskResponse) GetHistorySize() (o int64) {
+	if v != nil {
+		return v.TotalHistoryBytes
 	}
 	return
 }
@@ -7163,7 +7179,7 @@ type WorkflowExecutionInfo struct {
 	StartTime         *int64                        `json:"startTime,omitempty"`
 	CloseTime         *int64                        `json:"closeTime,omitempty"`
 	CloseStatus       *WorkflowExecutionCloseStatus `json:"closeStatus,omitempty"`
-	HistoryLength     int64                         `json:"historyLength,omitempty"`
+	HistoryLength     int64                         `json:"historyLength,omitempty"` //should be history count
 	ParentDomainID    *string                       `json:"parentDomainId,omitempty"`
 	ParentDomain      *string                       `json:"parentDomain,omitempty"`
 	ParentExecution   *WorkflowExecution            `json:"parentExecution,omitempty"`

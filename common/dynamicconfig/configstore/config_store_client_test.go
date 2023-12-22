@@ -313,10 +313,11 @@ func (s *configStoreClientSuite) SetupTest() {
 			FetchTimeout:        time.Second * 1,
 			UpdateTimeout:       time.Second * 1,
 		},
-
-		&config.ShardedNoSQL{
-			DefaultShard: config.NonShardedStoreName,
-			Connections:  connections,
+		&config.DataStore{
+			ShardedNoSQL: &config.ShardedNoSQL{
+				DefaultShard: config.NonShardedStoreName,
+				Connections:  connections,
+			},
 		}, log.NewNoop(), p.DynamicConfig)
 	s.Require().NoError(err)
 

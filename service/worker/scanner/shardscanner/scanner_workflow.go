@@ -47,6 +47,14 @@ const (
 	ShardSizeQuery = "shard_size"
 	// DomainReportQuery is the query name for the query used to get the reports per domains for all finished shards
 	DomainReportQuery = "domain_report"
+	// AllResultsQuery returns filenames / paginating data for corruptions and failures in this workflow,
+	// for shards which have finished processing.  This works for both scanner and fixer, and the return structures
+	// are very similar.
+	//
+	// This data is also available for a single shard under ShardReportQuery, but using that requires
+	// re-querying repeatedly if more than that single shard's data is desired, e.g. for manual
+	// troubleshooting purposes.
+	AllResultsQuery = "all_results"
 
 	scanShardReportChan = "scanShardReportChan"
 )
@@ -78,7 +86,7 @@ type ScannerWorkflow struct {
 type ScannerHooks struct {
 	Manager          ManagerCB
 	Iterator         IteratorCB
-	GetScannerConfig func(scanner Context) CustomScannerConfig
+	GetScannerConfig func(scanner ScannerContext) CustomScannerConfig
 }
 
 // NewScannerWorkflow creates instance of shard scanner
@@ -206,6 +214,9 @@ func getScanHandlers(aggregator *ShardScanResultAggregator) map[string]interface
 		DomainReportQuery: func(req DomainReportQueryRequest) (*DomainScanReportQueryResult, error) {
 			return aggregator.GetDomainStatus(req)
 		},
+		AllResultsQuery: func() (map[int]ScanResult, error) {
+			return aggregator.GetAllScanResults()
+		},
 	}
 }
 
@@ -227,19 +238,15 @@ func getShardBatches(
 	return result
 }
 
-// SetConfig allow to pass optional config resolver hook
-func (sh *ScannerHooks) SetConfig(config func(scanner Context) CustomScannerConfig) {
-	sh.GetScannerConfig = config
-}
-
 // NewScannerHooks is used to have per scanner iterator and invariant manager
-func NewScannerHooks(manager ManagerCB, iterator IteratorCB) (*ScannerHooks, error) {
-	if manager == nil || iterator == nil {
-		return nil, errors.New("manager or iterator not provided")
+func NewScannerHooks(manager ManagerCB, iterator IteratorCB, config func(scanner ScannerContext) CustomScannerConfig) (*ScannerHooks, error) {
+	if manager == nil || iterator == nil || config == nil {
+		return nil, errors.New("all scanner hooks args are required")
 	}
 
 	return &ScannerHooks{
-		Manager:  manager,
-		Iterator: iterator,
+		Manager:          manager,
+		Iterator:         iterator,
+		GetScannerConfig: config,
 	}, nil
 }

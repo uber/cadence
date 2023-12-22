@@ -36,7 +36,7 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/reconciliation/invariant"
@@ -76,7 +76,7 @@ func (s *historyResenderSuite) SetupTest() {
 	s.mockHistoryClient = history.NewMockClient(s.controller)
 	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
 
-	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
+	s.logger = testlogger.New(s.Suite.T())
 
 	s.domainID = uuid.New()
 	s.domainName = "some random domain name"

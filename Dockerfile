@@ -4,7 +4,7 @@ ARG TARGET=server
 ARG GOPROXY
 
 # Build Cadence binaries
-FROM golang:1.18.8-alpine3.15 AS builder
+FROM golang:1.20-alpine3.18 AS builder
 
 ARG RELEASE_VERSION
 
@@ -30,7 +30,7 @@ RUN CGO_ENABLED=0 make cadence-cassandra-tool cadence-sql-tool cadence cadence-s
 
 
 # Download dockerize
-FROM alpine:3.15 AS dockerize
+FROM alpine:3.18 AS dockerize
 
 RUN apk add --no-cache openssl
 
@@ -43,13 +43,13 @@ RUN wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSI
 
 
 # Alpine base image
-FROM alpine:3.15 AS alpine
+FROM alpine:3.18 AS alpine
 
 RUN apk add --update --no-cache ca-certificates tzdata bash curl
 
 # set up nsswitch.conf for Go's "netgo" implementation
 # https://github.com/gliderlabs/docker-alpine/issues/367#issuecomment-424546457
-RUN test ! -e /etc/nsswitch.conf && echo 'hosts: files dns' > /etc/nsswitch.conf
+RUN [ -e /etc/nsswitch.conf ] && grep '^hosts: files dns' /etc/nsswitch.conf
 
 SHELL ["/bin/bash", "-c"]
 

@@ -1,0 +1,81 @@
+{
+  "schemaName": "cadence_visibility_pinot",
+  "primaryKeyColumns": ["RunID"],
+  "dimensionFieldSpecs": [
+    {
+      "name": "DomainID",
+      "dataType": "STRING"
+    },
+    {
+      "name": "WorkflowID",
+      "dataType": "STRING"
+    },
+    {
+      "name": "RunID",
+      "dataType": "STRING"
+    },
+    {
+      "name": "WorkflowType",
+      "dataType": "STRING"
+    },
+    {
+      "name": "CloseStatus",
+      "dataType": "INT"
+    },
+    {
+      "name": "HistoryLength",
+      "dataType": "INT"
+    },
+    {
+      "name": "TaskList",
+      "dataType": "STRING"
+    },
+    {
+      "name": "IsCron",
+      "dataType": "BOOLEAN"
+    },
+    {
+      "name": "NumClusters",
+      "dataType": "INT"
+    },
+    {
+      "name": "ShardID",
+      "dataType": "INT"
+    },
+    {
+      "name": "Attr",
+      "dataType": "JSON"
+    },
+    {
+      "name": "IsDeleted",
+      "dataType": "BOOLEAN"
+    }
+
+  ],
+  "dateTimeFieldSpecs": [{
+    "name": "StartTime",
+    "dataType": "LONG",
+    "format" : "1:MILLISECONDS:EPOCH",
+    "granularity": "1:MILLISECONDS"
+  },{
+    "name": "CloseTime",
+    "dataType": "LONG",
+    "format" : "1:MILLISECONDS:EPOCH",
+    "granularity": "1:MILLISECONDS"
+  },{
+    "name": "UpdateTime",
+    "dataType": "LONG",
+    "format" : "1:MILLISECONDS:EPOCH",
+    "granularity": "1:MILLISECONDS"
+  },{
+    "name": "ExecutionTime",
+    "dataType": "LONG",
+    "format" : "1:MILLISECONDS:EPOCH",
+    "granularity": "1:MILLISECONDS"
+  },{
+    "name": "EventTimeMs",
+    "dataType": "LONG",
+    "format" : "1:MILLISECONDS:EPOCH",
+    "granularity": "1:MILLISECONDS"
+  }]
+}

@@ -31,10 +31,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/partition"
-	"github.com/uber/cadence/common/service"
-
 	"github.com/pborman/uuid"
 
 	"github.com/uber/cadence/client/history"
@@ -43,11 +39,14 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/client"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -94,6 +93,12 @@ type (
 		membershipResolver   membership.Resolver
 		partitioner          partition.Partitioner
 	}
+
+	// HistoryInfo consists of two integer regarding the history size and history count
+	//HistoryInfo struct {
+	//	historySize  int64
+	//	historyCount int64
+	//}
 )
 
 var (
@@ -158,10 +163,10 @@ func (e *matchingEngineImpl) Stop() {
 	}
 }
 
-func (e *matchingEngineImpl) getTaskLists(maxCount int) (lists []taskListManager) {
+func (e *matchingEngineImpl) getTaskLists(maxCount int) []taskListManager {
 	e.taskListsLock.RLock()
 	defer e.taskListsLock.RUnlock()
-	lists = make([]taskListManager, 0, len(e.taskLists))
+	lists := make([]taskListManager, 0, len(e.taskLists))
 	count := 0
 	for _, tlMgr := range e.taskLists {
 		lists = append(lists, tlMgr)
@@ -170,7 +175,7 @@ func (e *matchingEngineImpl) getTaskLists(maxCount int) (lists []taskListManager
 			break
 		}
 	}
-	return
+	return lists
 }
 
 func (e *matchingEngineImpl) String() string {
@@ -184,11 +189,7 @@ func (e *matchingEngineImpl) String() string {
 
 // Returns taskListManager for a task list. If not already cached gets new range from DB and
 // if successful creates one.
-func (e *matchingEngineImpl) getTaskListManager(
-	taskList *taskListID,
-	taskListKind *types.TaskListKind,
-) (taskListManager, error) {
-
+func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID, taskListKind *types.TaskListKind) (taskListManager, error) {
 	// The first check is an optimization so almost all requests will have a task list manager
 	// and return avoiding the write lock
 	e.taskListsLock.RLock()
@@ -197,6 +198,7 @@ func (e *matchingEngineImpl) getTaskListManager(
 		return result, nil
 	}
 	e.taskListsLock.RUnlock()
+
 	// If it gets here, write lock and check again in case a task list is created between the two locks
 	e.taskListsLock.Lock()
 	if result, ok := e.taskLists[*taskList]; ok {
@@ -234,9 +236,7 @@ func (e *matchingEngineImpl) getTaskListManager(
 	return mgr, nil
 }
 
-func (e *matchingEngineImpl) getTaskListByDomainLocked(
-	domainID string,
-) *types.GetTaskListsByDomainResponse {
+func (e *matchingEngineImpl) getTaskListByDomainLocked(domainID string) *types.GetTaskListsByDomainResponse {
 	decisionTaskListMap := make(map[string]*types.DescribeTaskListResponse)
 	activityTaskListMap := make(map[string]*types.DescribeTaskListResponse)
 	for tl, tlm := range e.taskLists {
@@ -264,11 +264,12 @@ func (e *matchingEngineImpl) updateTaskList(taskList *taskListID, mgr taskListMa
 func (e *matchingEngineImpl) removeTaskListManager(tlMgr taskListManager) {
 	id := tlMgr.TaskListID()
 	e.taskListsLock.Lock()
+	defer e.taskListsLock.Unlock()
 	currentTlMgr, ok := e.taskLists[*id]
 	if ok && tlMgr == currentTlMgr {
 		delete(e.taskLists, *id)
 	}
-	e.taskListsLock.Unlock()
+
 	e.metricsClient.Scope(metrics.MatchingTaskListMgrScope).UpdateGauge(
 		metrics.TaskListManagersGauge,
 		float64(len(e.taskLists)),
@@ -459,6 +460,7 @@ pollLoop:
 		if task.isStarted() {
 			// tasks received from remote are already started. So, simply forward the response
 			return task.pollForDecisionResponse(), nil
+			// TODO: Maybe add history expose here?
 		}
 
 		if task.isQuery() {
@@ -488,12 +490,14 @@ pollLoop:
 				StickyExecutionEnabled:    isStickyEnabled,
 				WorkflowExecutionTaskList: mutableStateResp.TaskList,
 				BranchToken:               mutableStateResp.CurrentBranchToken,
+				HistorySize:               mutableStateResp.HistorySize,
 			}
 			return e.createPollForDecisionTaskResponse(task, resp, hCtx.scope), nil
 		}
 
 		e.emitTaskIsolationMetrics(hCtx.scope, task.event.PartitionConfig, req.GetIsolationGroup())
 		resp, err := e.recordDecisionTaskStarted(hCtx.Context, request, task)
+
 		if err != nil {
 			switch err.(type) {
 			case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError, *types.EventAlreadyStartedError:
@@ -877,9 +881,7 @@ func (e *matchingEngineImpl) getAllPartitions(
 }
 
 // Loads a task from persistence and wraps it in a task context
-func (e *matchingEngineImpl) getTask(
-	ctx context.Context, taskList *taskListID, maxDispatchPerSecond *float64, taskListKind *types.TaskListKind,
-) (*InternalTask, error) {
+func (e *matchingEngineImpl) getTask(ctx context.Context, taskList *taskListID, maxDispatchPerSecond *float64, taskListKind *types.TaskListKind) (*InternalTask, error) {
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
 	if err != nil {
 		return nil, err

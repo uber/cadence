@@ -132,6 +132,7 @@ var (
 	ComponentCrossClusterTaskFetcher    = component("cross-cluster-task-fetcher")
 	ComponentShardScanner               = component("shardscanner-scanner")
 	ComponentShardFixer                 = component("shardscanner-fixer")
+	ComponentPinotVisibilityManager     = component("pinot-visibility-manager")
 )
 
 // Pre-defined values for TagSysLifecycle
@@ -215,12 +216,14 @@ var (
 
 	StoreOperationCreateTasks           = storeOperation("create-tasks")
 	StoreOperationGetTasks              = storeOperation("get-tasks")
+	StoreOperationGetOrphanTasks        = storeOperation("get-orphan-tasks")
 	StoreOperationCompleteTask          = storeOperation("complete-task")
 	StoreOperationCompleteTasksLessThan = storeOperation("complete-tasks-less-than")
 	StoreOperationLeaseTaskList         = storeOperation("lease-task-list")
 	StoreOperationUpdateTaskList        = storeOperation("update-task-list")
 	StoreOperationListTaskList          = storeOperation("list-task-list")
 	StoreOperationDeleteTaskList        = storeOperation("delete-task-list")
+	StoreOperationGetTaskListSize       = storeOperation("get-task-list-size")
 	StoreOperationStopTaskList          = storeOperation("stop-task-list")
 
 	StoreOperationCreateDomain       = storeOperation("create-domain")
@@ -246,6 +249,8 @@ var (
 	StoreOperationListWorkflowExecutions                   = storeOperation("list-wf-executions")
 	StoreOperationScanWorkflowExecutions                   = storeOperation("scan-wf-executions")
 	StoreOperationCountWorkflowExecutions                  = storeOperation("count-wf-executions")
+	StoreOperationDeleteUninitializedWorkflowExecution     = storeOperation("delete-uninitialized-wf-execution")
+	StoreOperationRecordWorkflowExecutionUninitialized     = storeOperation("record-wf-execution-uninitialized")
 
 	StoreOperationAppendHistoryNodes        = storeOperation("append-history-nodes")
 	StoreOperationReadHistoryBranch         = storeOperation("read-history-branch")

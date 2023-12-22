@@ -54,13 +54,18 @@ type (
 		logger                   log.Logger
 		stats                    stats
 		status                   int32
-		stopC                    chan struct{}
-		stopWG                   sync.WaitGroup
 		getOrphanTasksPageSizeFn dynamicconfig.IntPropertyFn
 		taskBatchSizeFn          dynamicconfig.IntPropertyFn
 		maxTasksPerJobFn         dynamicconfig.IntPropertyFn
 		cleanOrphans             dynamicconfig.BoolPropertyFn
 		pollInterval             time.Duration
+
+		// stopC is used to signal the scavenger to stop
+		stopC chan struct{}
+		// stopWG is used to wait for the scavenger to stop
+		stopWG sync.WaitGroup
+		// stoppedC is closed once the scavenger is stopped
+		stopped chan struct{}
 	}
 
 	stats struct {
@@ -166,6 +171,7 @@ func NewScavenger(
 		scope:                    metricsClient.Scope(metrics.TaskListScavengerScope),
 		logger:                   logger,
 		stopC:                    make(chan struct{}),
+		stopped:                  make(chan struct{}),
 		executor:                 taskExecutor,
 		cleanOrphans:             cleanOrphans,
 		taskBatchSizeFn:          taskBatchSizeFn,
@@ -199,6 +205,7 @@ func (s *Scavenger) Stop() {
 	s.executor.Stop()
 	s.stopWG.Wait()
 	s.logger.Info("Tasklist scavenger stopped")
+	close(s.stopped)
 }
 
 // Alive returns true if the scavenger is still running

@@ -768,8 +768,8 @@ func newIndefiniteContext(c *cli.Context) (context.Context, context.CancelFunc) 
 }
 
 func newTimedContext(c *cli.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
-	if c.GlobalIsSet(FlagContextTimeout) {
-		timeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
+	if overrideTimeout := c.GlobalInt(FlagContextTimeout); overrideTimeout > 0 {
+		timeout = time.Duration(overrideTimeout) * time.Second
 	}
 	ctx := populateContextFromCLIContext(context.Background(), c)
 	return context.WithTimeout(ctx, timeout)

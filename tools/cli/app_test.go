@@ -60,6 +60,14 @@ func (m *clientFactoryMock) ServerAdminClient(c *cli.Context) admin.Client {
 	return m.serverAdminClient
 }
 
+func (m *clientFactoryMock) ServerFrontendClientForMigration(c *cli.Context) frontend.Client {
+	panic("not implemented")
+}
+
+func (m *clientFactoryMock) ServerAdminClientForMigration(c *cli.Context) admin.Client {
+	panic("not implemented")
+}
+
 func (m *clientFactoryMock) ElasticSearchClient(c *cli.Context) *elastic.Client {
 	panic("not implemented")
 }

@@ -170,6 +170,14 @@ func newWorkflowCommands() []cli.Command {
 			},
 		},
 		{
+			Name:  "query-types",
+			Usage: "list all available query types",
+			Flags: getFlagsForStack(),
+			Action: func(c *cli.Context) {
+				QueryWorkflowUsingQueryTypes(c)
+			},
+		},
+		{
 			Name:  "stack",
 			Usage: "query workflow execution with __stack_trace as query type",
 			Flags: getFlagsForStack(),
@@ -299,7 +307,13 @@ func newWorkflowCommands() []cli.Command {
 					Usage: "Reason for reset, required for tracking purpose",
 				},
 				cli.IntFlag{
-					Name:  FlagParallism,
+					Name:   FlagParallismDeprecated,
+					Value:  1,
+					Usage:  "Number of goroutines to run in parallel. Each goroutine would process one line for every second.",
+					Hidden: true,
+				},
+				cli.IntFlag{
+					Name:  FlagParallelism,
 					Value: 1,
 					Usage: "Number of goroutines to run in parallel. Each goroutine would process one line for every second.",
 				},

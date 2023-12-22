@@ -21,6 +21,7 @@
 package loggerimpl
 
 import (
+	"fmt"
 	"math/rand"
 
 	"go.uber.org/cadence/workflow"
@@ -55,6 +56,14 @@ func NewReplayLogger(logger log.Logger, ctx workflow.Context, enableLogInReplay 
 		ctx:               ctx,
 		enableLogInReplay: enableLogInReplay,
 	}
+}
+
+func (r *replayLogger) Debugf(msg string, args ...any) {
+	if workflow.IsReplaying(r.ctx) && !r.enableLogInReplay {
+		return
+	}
+
+	r.logger.Debugf(fmt.Sprintf(msg, args...))
 }
 
 func (r *replayLogger) Debug(msg string, tags ...tag.Tag) {

@@ -22,6 +22,7 @@ package proto
 
 import (
 	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 )
@@ -2191,6 +2192,7 @@ func FromPollForDecisionTaskResponse(t *types.PollForDecisionTaskResponse) *apiv
 		StartedTime:               unixNanoToTime(t.StartedTimestamp),
 		Queries:                   FromWorkflowQueryMap(t.Queries),
 		NextEventId:               t.NextEventID,
+		TotalHistoryBytes:         t.TotalHistoryBytes,
 	}
 }
 
@@ -2214,6 +2216,7 @@ func ToPollForDecisionTaskResponse(t *apiv1.PollForDecisionTaskResponse) *types.
 		StartedTimestamp:          timeToUnixNano(t.StartedTime),
 		Queries:                   ToWorkflowQueryMap(t.Queries),
 		NextEventID:               t.NextEventId,
+		TotalHistoryBytes:         t.TotalHistoryBytes,
 	}
 }
 
@@ -4697,6 +4700,7 @@ func FromWorkflowExecutionInfo(t *types.WorkflowExecutionInfo) *apiv1.WorkflowEx
 		AutoResetPoints:     FromResetPoints(t.AutoResetPoints),
 		TaskList:            t.TaskList,
 		PartitionConfig:     t.PartitionConfig,
+		IsCron:              t.IsCron,
 	}
 }
 
@@ -4721,6 +4725,7 @@ func ToWorkflowExecutionInfo(t *apiv1.WorkflowExecutionInfo) *types.WorkflowExec
 		AutoResetPoints:   ToResetPoints(t.AutoResetPoints),
 		TaskList:          t.TaskList,
 		PartitionConfig:   t.PartitionConfig,
+		IsCron:            t.IsCron,
 	}
 }
 

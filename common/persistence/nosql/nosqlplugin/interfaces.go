@@ -344,6 +344,8 @@ type (
 		// DeleteTask delete a batch of tasks
 		// Also return the number of rows deleted -- if it's not supported then ignore the batchSize, and return persistence.UnknownNumRowsAffected
 		RangeDeleteTasks(ctx context.Context, filter *TasksFilter) (rowsDeleted int, err error)
+		// GetTasksCount return the number of tasks
+		GetTasksCount(ctx context.Context, filter *TasksFilter) (int64, error)
 	}
 
 	/**
