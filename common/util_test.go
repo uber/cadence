@@ -577,3 +577,18 @@ func TestCreateXXXRetryPolicyWithMaximumAttempts(t *testing.T) {
 		})
 	}
 }
+
+func TestDurationToDays(t *testing.T) {
+	for duration, want := range map[time.Duration]int32{
+		0:              0,
+		time.Hour:      0,
+		24 * time.Hour: 1,
+		25 * time.Hour: 1,
+		48 * time.Hour: 2,
+	} {
+		t.Run(duration.String(), func(t *testing.T) {
+			got := DurationToDays(duration)
+			require.Equal(t, want, got)
+		})
+	}
+}
