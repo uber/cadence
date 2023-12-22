@@ -56,12 +56,20 @@ const (
 
 // ConcreteScannerWorkflow starts concrete executions scanner.
 func ConcreteScannerWorkflow(ctx workflow.Context, params shardscanner.ScannerWorkflowParams) error {
+	logger := workflow.GetLogger(ctx)
+	logger.Info("Starting ConcreteExecutionsScannerWorkflow", zap.Any("Params", params))
+
 	wf, err := shardscanner.NewScannerWorkflow(ctx, ConcreteExecutionsScannerWFTypeName, params)
 	if err != nil {
+		logger.Error("Failed to create new scanner workflow", zap.Error(err))
 		return err
 	}
 
-	return wf.Start(ctx)
+	err = wf.Start(ctx)
+	if err != nil {
+		logger.Error("Failed to start scanner workflow", zap.Error(err))
+	}
+	return err
 }
 
 // ConcreteFixerWorkflow starts concrete executions fixer.
