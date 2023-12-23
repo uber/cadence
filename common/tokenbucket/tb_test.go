@@ -201,35 +201,51 @@ func TestFullPriorityTokenBucket(t *testing.T) {
 }
 
 func TestTokenBucketConsume(t *testing.T) {
-	t.Run("consume", func(t *testing.T) {
+	t.Run("consume_wait", func(t *testing.T) {
 		// make sure we don't deadlock inside the test.
 		go panicOnTimeout(time.Minute)
 
 		ts := clock.NewMockedTimeSource()
+
+		// I provide 10 rps, which means I can consume 10 tokens per second.
+		// tokenBucketImpl will fill 1 token and then refill it every 100 milliseconds.
 		tb := New(10, ts)
+
+		// I consume 1 token, so the next Consume call will block until refill.
 		ok, _ := tb.TryConsume(1)
 		assert.True(t, ok)
+
 		consumeFinished := make(chan struct{})
 		go func() {
 			success := tb.Consume(1, 2*refillRate)
-			assert.True(t, success, "Consume returned wrong result")
+			assert.True(t, success, "Consume must acquire token successfully")
 			close(consumeFinished)
 		}()
+
+		// I need to make sure that goroutine with Consume call is blocked on time.Sleep.
+		// BlockUntil awaits for at least 1 goroutine to be blocked on time.Sleep/timer/ticker.
 		ts.BlockUntil(1)
+		// Checking that consume is still blocked.
 		select {
 		case <-consumeFinished:
 			assert.Fail(t, "Consume returned before refill")
 		default:
 		}
-		// tb should refill at 1 token per second
+		// tb has internal retries to acquire tokens which happens at most backoffInterval (10 * time.Millisecond).
+		// I advance time once, so the next iteration is still blocked.
 		ts.Advance(backoffInterval + 1)
+		// wait until Consume did one iteration and stopped on time.Sleep
 		ts.BlockUntil(1)
+		// Checking that consume is still blocked.
 		select {
 		case <-consumeFinished:
 			assert.Fail(t, "Consume returned before refill")
 		default:
 		}
-		ts.Advance(refillRate + 1)
+		// Advance time to the next refill time.
+		ts.Advance(refillRate - backoffInterval + 1)
+		// Advance should unblock Consume and it should return afterwards.
+		// I don't provide a timeout, since I have a goroutine to panic on timeout.
 		select {
 		case <-consumeFinished:
 		}
@@ -239,23 +255,34 @@ func TestTokenBucketConsume(t *testing.T) {
 		go panicOnTimeout(time.Minute)
 
 		ts := clock.NewMockedTimeSource()
+		// I provide 10 rps, which means I can consume 10 tokens per second.
+		// tokenBucketImpl will fill 1 token and then refill it every 100 milliseconds.
 		tb := New(10, ts)
+
+		// I consume 1 token, so the next Consume call will block until refill.
 		ok, _ := tb.TryConsume(1)
 		assert.True(t, ok)
+
+		// This time in consume I provide a small timeout of backoffInterval/2.
+		// So Consume will do only one internal iteration and then return before refill.
 		consumeFinished := make(chan struct{})
 		go func() {
 			success := tb.Consume(1, backoffInterval/2)
-			assert.False(t, success, "Consume returned wrong result")
+			assert.False(t, success, "Consume must fail to acquire token")
 			close(consumeFinished)
 		}()
+
+		// I need to make sure that goroutine with Consume call is blocked on time.Sleep.
+		// BlockUntil awaits for at least 1 goroutine to be blocked on time.Sleep/timer/ticker.
 		ts.BlockUntil(1)
 		select {
 		case <-consumeFinished:
 			assert.Fail(t, "Consume returned before refill")
 		default:
 		}
-		// tb should refill at 1 token per second
-		ts.Advance(backoffInterval)
+
+		// advance time to wake Consume up and make it return before refill.
+		ts.Advance(backoffInterval/2 + 1)
 		select {
 		case <-consumeFinished:
 		default:

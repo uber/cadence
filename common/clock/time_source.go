@@ -81,6 +81,7 @@ type (
 		// waiters are notified appropriately before returning.
 		Advance(d time.Duration)
 		// BlockUntil blocks until the FakeClock has the given number of waiters.
+		// waiters are either time.Sleep, time.After, time.Ticker, or time.Timer.
 		BlockUntil(waiters int)
 	}
 )
