@@ -108,10 +108,6 @@ PROJECT_ROOT = github.com/uber/cadence
 # I'd recommend not exporting this in general, to reduce the chance of accidentally using non-versioned tools.
 BIN_PATH := PATH="$(abspath $(BIN)):$(abspath $(STABLE_BIN)):$$PATH"
 
-# version, git sha, etc flags.
-# reasonable to make a :=, but it's only used in one place, so just leave it lazy or do it inline.
-GO_BUILD_LDFLAGS = $(shell ./scripts/go-build-ldflags.sh LDFLAG)
-
 # automatically gather all source files that currently exist.
 # works by ignoring everything in the parens (and does not descend into matching folders) due to `-prune`,
 # and everything else goes to the other side of the `-o` branch, which is `-print`ed.
@@ -424,34 +420,34 @@ BINS  += cadence-cassandra-tool
 TOOLS += cadence-cassandra-tool
 cadence-cassandra-tool: $(BINS_DEPEND_ON)
 	$Q echo "compiling cadence-cassandra-tool with OS: $(GOOS), ARCH: $(GOARCH)"
-	$Q go build -o $@ cmd/tools/cassandra/main.go
+	$Q ./scripts/build-with-ldflags.sh -o $@ cmd/tools/cassandra/main.go
 
 BINS  += cadence-sql-tool
 TOOLS += cadence-sql-tool
 cadence-sql-tool: $(BINS_DEPEND_ON)
 	$Q echo "compiling cadence-sql-tool with OS: $(GOOS), ARCH: $(GOARCH)"
-	$Q go build -o $@ cmd/tools/sql/main.go
+	$Q ./scripts/build-with-ldflags.sh -o $@ cmd/tools/sql/main.go
 
 BINS  += cadence
 TOOLS += cadence
 cadence: $(BINS_DEPEND_ON)
 	$Q echo "compiling cadence with OS: $(GOOS), ARCH: $(GOARCH)"
-	$Q go build -ldflags '$(GO_BUILD_LDFLAGS)' -o $@ cmd/tools/cli/main.go
+	$Q ./scripts/build-with-ldflags.sh -o $@ cmd/tools/cli/main.go
 
 BINS += cadence-server
 cadence-server: $(BINS_DEPEND_ON)
 	$Q echo "compiling cadence-server with OS: $(GOOS), ARCH: $(GOARCH)"
-	$Q go build -ldflags '$(GO_BUILD_LDFLAGS)' -o $@ cmd/server/main.go
+	$Q ./scripts/build-with-ldflags.sh -o $@ cmd/tools/cli/main.go
 
 BINS += cadence-canary
 cadence-canary: $(BINS_DEPEND_ON)
 	$Q echo "compiling cadence-canary with OS: $(GOOS), ARCH: $(GOARCH)"
-	$Q go build -o $@ cmd/canary/main.go
+	$Q ./scripts/build-with-ldflags.sh -o $@ cmd/canary/main.go
 
 BINS += cadence-bench
 cadence-bench: $(BINS_DEPEND_ON)
 	$Q echo "compiling cadence-bench with OS: $(GOOS), ARCH: $(GOARCH)"
-	$Q go build -o $@ cmd/bench/main.go
+	$Q ./scripts/build-with-ldflags.sh -o $@ cmd/bench/main.go
 
 .PHONY: go-generate bins tools release clean
 

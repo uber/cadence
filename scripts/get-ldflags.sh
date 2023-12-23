@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -eo pipefail
+
 MODE=$1
 
 if [ "$MODE" != "LDFLAG" ] && [ "$MODE" != "ECHO" ]; then
