@@ -49,6 +49,7 @@ type queueProcessorOptions struct {
 	PollBackoffIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
 	EnablePersistQueueStates             dynamicconfig.BoolPropertyFn
 	EnableLoadQueueStates                dynamicconfig.BoolPropertyFn
+	EnableGracefulSyncShutdown           dynamicconfig.BoolPropertyFn
 	EnableValidator                      dynamicconfig.BoolPropertyFn
 	ValidationInterval                   dynamicconfig.DurationPropertyFn
 	// MaxPendingTaskSize is used in cross cluster queue to limit the pending task count

@@ -113,7 +113,6 @@ var (
 // Returns true if the Wait() call succeeded before the timeout
 // Returns false if the Wait() did not return before the timeout
 func AwaitWaitGroup(wg *sync.WaitGroup, timeout time.Duration) bool {
-
 	doneC := make(chan struct{})
 
 	go func() {
