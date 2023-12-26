@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package thrifttests
+package thrift
 
 import (
 	"testing"
@@ -26,12 +26,11 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/common/types/testdata"
 )
 
 func TestHistoryTerminateWorkflowExecutionRequest(t *testing.T) {
 	for _, item := range []*types.HistoryTerminateWorkflowExecutionRequest{nil, {}, &testdata.HistoryTerminateWorkflowExecutionRequest} {
-		assert.Equal(t, item, thrift.ToHistoryTerminateWorkflowExecutionRequest(thrift.FromHistoryTerminateWorkflowExecutionRequest(item)))
+		assert.Equal(t, item, ToHistoryTerminateWorkflowExecutionRequest(FromHistoryTerminateWorkflowExecutionRequest(item)))
 	}
 }
