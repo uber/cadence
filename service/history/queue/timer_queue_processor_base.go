@@ -65,13 +65,11 @@ type (
 		*processorBase
 
 		taskInitializer task.Initializer
-
-		clusterName string
-
-		pollTimeLock sync.Mutex
-		backoffTimer map[int]*time.Timer
-		nextPollTime map[int]time.Time
-		timerGate    TimerGate
+		clusterName     string
+		pollTimeLock    sync.Mutex
+		backoffTimer    map[int]*time.Timer
+		nextPollTime    map[int]time.Time
+		timerGate       TimerGate
 
 		// timer notification
 		newTimerCh  chan struct{}
@@ -79,6 +77,9 @@ type (
 		newTime     time.Time
 
 		processingQueueReadProgress map[int]timeTaskReadProgress
+
+		updateAckLevelFn                 func() (bool, task.Key, error)
+		splitProcessingQueueCollectionFn func(splitPolicy ProcessingQueueSplitPolicy, upsertPollTimeFn func(int, time.Time))
 	}
 
 	filteredTimerTasksResponse struct {
@@ -122,9 +123,8 @@ func newTimerQueueProcessorBase(
 		queueType = task.QueueTypeStandbyTimer
 	}
 
-	return &timerQueueProcessorBase{
+	t := &timerQueueProcessorBase{
 		processorBase: processorBase,
-
 		taskInitializer: func(taskInfo task.Info) task.Task {
 			return task.NewTimerTask(
 				shard,
@@ -138,17 +138,17 @@ func newTimerQueueProcessorBase(
 				shard.GetConfig().TaskCriticalRetryCount,
 			)
 		},
-
-		clusterName: clusterName,
-
-		backoffTimer: make(map[int]*time.Timer),
-		nextPollTime: make(map[int]time.Time),
-		timerGate:    timerGate,
-
-		newTimerCh: make(chan struct{}, 1),
-
+		clusterName:                 clusterName,
+		backoffTimer:                make(map[int]*time.Timer),
+		nextPollTime:                make(map[int]time.Time),
+		timerGate:                   timerGate,
+		newTimerCh:                  make(chan struct{}, 1),
 		processingQueueReadProgress: make(map[int]timeTaskReadProgress),
 	}
+
+	t.updateAckLevelFn = t.updateAckLevel
+	t.splitProcessingQueueCollectionFn = t.splitProcessingQueueCollection
+	return t
 }
 
 func (t *timerQueueProcessorBase) Start() {
@@ -370,7 +370,7 @@ func (t *timerQueueProcessorBase) splitQueue(splitQueueTimer *time.Timer) {
 		},
 	)
 
-	t.splitProcessingQueueCollection(splitPolicy, t.upsertPollTime)
+	t.splitProcessingQueueCollectionFn(splitPolicy, t.upsertPollTime)
 
 	splitQueueTimer.Reset(backoff.JitDuration(
 		t.options.SplitQueueInterval(),
@@ -381,7 +381,7 @@ func (t *timerQueueProcessorBase) splitQueue(splitQueueTimer *time.Timer) {
 // handleAckLevelUpdate updates ack level and resets timer with jitter.
 // returns true if processing should be terminated
 func (t *timerQueueProcessorBase) handleAckLevelUpdate(updateAckTimer *time.Timer) bool {
-	processFinished, _, err := t.updateAckLevel()
+	processFinished, _, err := t.updateAckLevelFn()
 	if err == shard.ErrShardClosed || (err == nil && processFinished) {
 		return true
 	}

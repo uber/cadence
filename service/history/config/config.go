@@ -601,6 +601,17 @@ func NewForTestByShardNumber(shardNumber int) *Config {
 	panicIfErr(inMem.UpdateValue(dynamicconfig.NormalDecisionScheduleToStartMaxAttempts, 3))
 	panicIfErr(inMem.UpdateValue(dynamicconfig.EnablePendingActivityValidation, true))
 	panicIfErr(inMem.UpdateValue(dynamicconfig.QueueProcessorEnableGracefulSyncShutdown, true))
+	panicIfErr(inMem.UpdateValue(dynamicconfig.QueueProcessorSplitMaxLevel, 2))
+	panicIfErr(inMem.UpdateValue(dynamicconfig.QueueProcessorPendingTaskSplitThreshold, map[string]interface{}{
+		"0": 1000,
+		"1": 5000,
+	}))
+	panicIfErr(inMem.UpdateValue(dynamicconfig.QueueProcessorStuckTaskSplitThreshold, map[string]interface{}{
+		"0": 10,
+		"1": 50,
+	}))
+	panicIfErr(inMem.UpdateValue(dynamicconfig.QueueProcessorRandomSplitProbability, 0.5))
+
 	dc := dynamicconfig.NewCollection(inMem, log.NewNoop())
 	config := New(dc, shardNumber, 1024*1024, config.StoreTypeCassandra, false, "")
 	// reduce the duration of long poll to increase test speed
@@ -615,6 +626,10 @@ func NewForTestByShardNumber(shardNumber int) *Config {
 	config.NormalDecisionScheduleToStartMaxAttempts = dc.GetIntPropertyFilteredByDomain(dynamicconfig.NormalDecisionScheduleToStartMaxAttempts)
 	config.PendingActivityValidationEnabled = dc.GetBoolProperty(dynamicconfig.EnablePendingActivityValidation)
 	config.QueueProcessorEnableGracefulSyncShutdown = dc.GetBoolProperty(dynamicconfig.QueueProcessorEnableGracefulSyncShutdown)
+	config.QueueProcessorSplitMaxLevel = dc.GetIntProperty(dynamicconfig.QueueProcessorSplitMaxLevel)
+	config.QueueProcessorPendingTaskSplitThreshold = dc.GetMapProperty(dynamicconfig.QueueProcessorPendingTaskSplitThreshold)
+	config.QueueProcessorStuckTaskSplitThreshold = dc.GetMapProperty(dynamicconfig.QueueProcessorStuckTaskSplitThreshold)
+	config.QueueProcessorRandomSplitProbability = dc.GetFloat64Property(dynamicconfig.QueueProcessorRandomSplitProbability)
 	return config
 }
 

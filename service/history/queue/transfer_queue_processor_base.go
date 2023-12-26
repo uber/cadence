@@ -76,6 +76,9 @@ type (
 
 		// for validating if the queue failed to load any tasks
 		validator *transferQueueValidator
+
+		processQueueCollectionsFn func()
+		updateAckLevelFn          func() (bool, task.Key, error)
 	}
 )
 
@@ -113,7 +116,6 @@ func newTransferQueueProcessorBase(
 
 	transferQueueProcessorBase := &transferQueueProcessorBase{
 		processorBase: processorBase,
-
 		taskInitializer: func(taskInfo task.Info) task.Task {
 			return task.NewTransferTask(
 				shard,
@@ -127,16 +129,16 @@ func newTransferQueueProcessorBase(
 				shard.GetConfig().TaskCriticalRetryCount,
 			)
 		},
-
-		notifyCh:  make(chan struct{}, 1),
-		processCh: make(chan struct{}, 1),
-
-		backoffTimer:  make(map[int]*time.Timer),
-		shouldProcess: make(map[int]bool),
-
+		notifyCh:         make(chan struct{}, 1),
+		processCh:        make(chan struct{}, 1),
+		backoffTimer:     make(map[int]*time.Timer),
+		shouldProcess:    make(map[int]bool),
 		lastSplitTime:    time.Time{},
 		lastMaxReadLevel: 0,
 	}
+
+	transferQueueProcessorBase.processQueueCollectionsFn = transferQueueProcessorBase.processQueueCollections
+	transferQueueProcessorBase.updateAckLevelFn = transferQueueProcessorBase.updateAckLevel
 
 	if shard.GetConfig().EnableDebugMode && options.EnableValidator() {
 		transferQueueProcessorBase.validator = newTransferQueueValidator(
@@ -329,10 +331,10 @@ func (t *transferQueueProcessorBase) processorPump() {
 				default:
 				}
 			} else {
-				t.processQueueCollections()
+				t.processQueueCollectionsFn()
 			}
 		case <-updateAckTimer.C:
-			processFinished, _, err := t.updateAckLevel()
+			processFinished, _, err := t.updateAckLevelFn()
 			if err == shard.ErrShardClosed || (err == nil && processFinished) {
 				if !t.options.EnableGracefulSyncShutdown() {
 					go t.Stop()
