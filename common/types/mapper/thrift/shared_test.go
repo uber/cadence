@@ -33,25 +33,13 @@ import (
 	"github.com/uber/cadence/common/types/testdata"
 )
 
-func TestDecisionTaskTimedOutEventAttributes(t *testing.T) {
-	for _, item := range []*types.DecisionTaskTimedOutEventAttributes{nil, {}, &testdata.DecisionTaskTimedOutEventAttributes} {
-		assert.Equal(t, item, ToDecisionTaskTimedOutEventAttributes(FromDecisionTaskTimedOutEventAttributes(item)))
-	}
-}
-
-func TestRemoveTaskRequest(t *testing.T) {
-	for _, item := range []*types.RemoveTaskRequest{nil, {}, &testdata.AdminRemoveTaskRequest} {
-		assert.Equal(t, item, ToRemoveTaskRequest(FromRemoveTaskRequest(item)))
-	}
-}
-
-func TestCrossClusterTaskInfo(t *testing.T) {
+func TestCrossClusterTaskInfoConversion(t *testing.T) {
 	for _, item := range []*types.CrossClusterTaskInfo{nil, {}, &testdata.CrossClusterTaskInfo} {
 		assert.Equal(t, item, ToCrossClusterTaskInfo(FromCrossClusterTaskInfo(item)))
 	}
 }
 
-func TestCrossClusterTaskRequest(t *testing.T) {
+func TestCrossClusterTaskRequestConversion(t *testing.T) {
 	for _, item := range []*types.CrossClusterTaskRequest{
 		nil,
 		{},
@@ -63,7 +51,7 @@ func TestCrossClusterTaskRequest(t *testing.T) {
 	}
 }
 
-func TestCrossClusterTaskResponse(t *testing.T) {
+func TestCrossClusterTaskResponseConversion(t *testing.T) {
 	for _, item := range []*types.CrossClusterTaskResponse{
 		nil,
 		{},
@@ -75,93 +63,67 @@ func TestCrossClusterTaskResponse(t *testing.T) {
 	}
 }
 
-func TestCrossClusterTaskRequestArray(t *testing.T) {
+func TestCrossClusterTaskRequestArrayConversion(t *testing.T) {
 	for _, item := range [][]*types.CrossClusterTaskRequest{nil, {}, testdata.CrossClusterTaskRequestArray} {
 		assert.Equal(t, item, ToCrossClusterTaskRequestArray(FromCrossClusterTaskRequestArray(item)))
 	}
 }
 
-func TestCrossClusterTaskResponseArray(t *testing.T) {
+func TestCrossClusterTaskResponseArrayConversion(t *testing.T) {
 	for _, item := range [][]*types.CrossClusterTaskResponse{nil, {}, testdata.CrossClusterTaskResponseArray} {
 		assert.Equal(t, item, ToCrossClusterTaskResponseArray(FromCrossClusterTaskResponseArray(item)))
 	}
 }
 
-func TestCrossClusterTaskRequestMap(t *testing.T) {
+func TestCrossClusterTaskRequestMapConversion(t *testing.T) {
 	for _, item := range []map[int32][]*types.CrossClusterTaskRequest{nil, {}, testdata.CrossClusterTaskRequestMap} {
 		assert.Equal(t, item, ToCrossClusterTaskRequestMap(FromCrossClusterTaskRequestMap(item)))
 	}
 }
 
-func TestGetTaskFailedCauseMap(t *testing.T) {
+func TestGetTaskFailedCauseMapConversion(t *testing.T) {
 	for _, item := range []map[int32]types.GetTaskFailedCause{nil, {}, testdata.GetCrossClusterTaskFailedCauseMap} {
 		assert.Equal(t, item, ToGetTaskFailedCauseMap(FromGetTaskFailedCauseMap(item)))
 	}
 }
 
-func TestGetCrossClusterTasksRequest(t *testing.T) {
+func TestGetCrossClusterTasksRequestConversion(t *testing.T) {
 	for _, item := range []*types.GetCrossClusterTasksRequest{nil, {}, &testdata.GetCrossClusterTasksRequest} {
 		assert.Equal(t, item, ToGetCrossClusterTasksRequest(FromGetCrossClusterTasksRequest(item)))
 	}
 }
 
-func TestGetCrossClusterTasksResponse(t *testing.T) {
+func TestGetCrossClusterTasksResponseConversion(t *testing.T) {
 	for _, item := range []*types.GetCrossClusterTasksResponse{nil, {}, &testdata.GetCrossClusterTasksResponse} {
 		assert.Equal(t, item, ToGetCrossClusterTasksResponse(FromGetCrossClusterTasksResponse(item)))
 	}
 }
 
-func TestRespondCrossClusterTasksCompletedRequest(t *testing.T) {
+func TestRespondCrossClusterTasksCompletedRequestConversion(t *testing.T) {
 	for _, item := range []*types.RespondCrossClusterTasksCompletedRequest{nil, {}, &testdata.RespondCrossClusterTasksCompletedRequest} {
 		assert.Equal(t, item, ToRespondCrossClusterTasksCompletedRequest(FromRespondCrossClusterTasksCompletedRequest(item)))
 	}
 }
 
-func TestRespondCrossClusterTasksCompletedResponse(t *testing.T) {
+func TestRespondCrossClusterTasksCompletedResponseConversion(t *testing.T) {
 	for _, item := range []*types.RespondCrossClusterTasksCompletedResponse{nil, {}, &testdata.RespondCrossClusterTasksCompletedResponse} {
 		assert.Equal(t, item, ToRespondCrossClusterTasksCompletedResponse(FromRespondCrossClusterTasksCompletedResponse(item)))
 	}
 }
 
-func TestGetTaskListsByDomainRequest(t *testing.T) {
-	for _, item := range []*types.GetTaskListsByDomainRequest{nil, {}, &testdata.MatchingGetTaskListsByDomainRequest} {
-		assert.Equal(t, item, ToGetTaskListsByDomainRequest(FromGetTaskListsByDomainRequest(item)))
-	}
-}
-
-func TestGetTaskListsByDomainResponse(t *testing.T) {
-	for _, item := range []*types.GetTaskListsByDomainResponse{nil, {}, &testdata.GetTaskListsByDomainResponse} {
-		i := FromGetTaskListsByDomainResponse(item)
-		assert.Equal(t, item, ToGetTaskListsByDomainResponse(i))
-	}
-}
-
-func TestDescribeTaskListResponseMap(t *testing.T) {
-	for _, item := range []map[string]*types.DescribeTaskListResponse{nil, {}, testdata.DescribeTaskListResponseMap} {
-		i := FromDescribeTaskListResponseMap(item)
-		assert.Equal(t, item, ToDescribeTaskListResponseMap(i))
-	}
-}
-
-func TestGetFailoverInfoRequest(t *testing.T) {
+func TestGetFailoverInfoRequestConversion(t *testing.T) {
 	for _, item := range []*types.GetFailoverInfoRequest{nil, {}, &testdata.GetFailoverInfoRequest} {
 		assert.Equal(t, item, ToGetFailoverInfoRequest(FromGetFailoverInfoRequest(item)))
 	}
 }
 
-func TestGetFailoverInfoResponse(t *testing.T) {
+func TestGetFailoverInfoResponseConversion(t *testing.T) {
 	for _, item := range []*types.GetFailoverInfoResponse{nil, {}, &testdata.GetFailoverInfoResponse} {
 		assert.Equal(t, item, ToGetFailoverInfoResponse(FromGetFailoverInfoResponse(item)))
 	}
 }
 
-func TestFailoverInfo(t *testing.T) {
-	for _, item := range []*types.FailoverInfo{nil, {}, &testdata.FailoverInfo} {
-		assert.Equal(t, item, ToFailoverInfo(FromFailoverInfo(item)))
-	}
-}
-
-func TestCrossClusterApplyParentClosePolicyRequestAttributes(t *testing.T) {
+func TestCrossClusterApplyParentClosePolicyRequestAttributesConversion(t *testing.T) {
 	item := testdata.CrossClusterApplyParentClosePolicyRequestAttributes
 	assert.Equal(
 		t,
@@ -172,7 +134,7 @@ func TestCrossClusterApplyParentClosePolicyRequestAttributes(t *testing.T) {
 	)
 }
 
-func TestApplyParentClosePolicyAttributes(t *testing.T) {
+func TestApplyParentClosePolicyAttributesConversion(t *testing.T) {
 	item := testdata.ApplyParentClosePolicyAttributes
 	assert.Equal(
 		t,
@@ -183,7 +145,7 @@ func TestApplyParentClosePolicyAttributes(t *testing.T) {
 	)
 }
 
-func TestApplyParentClosePolicyResult(t *testing.T) {
+func TestApplyParentClosePolicyResultConversion(t *testing.T) {
 	item := testdata.ApplyParentClosePolicyResult
 	assert.Equal(
 		t,
@@ -194,7 +156,7 @@ func TestApplyParentClosePolicyResult(t *testing.T) {
 	)
 }
 
-func TestCrossClusterApplyParentClosePolicyResponse(t *testing.T) {
+func TestCrossClusterApplyParentClosePolicyResponseConversion(t *testing.T) {
 	item := testdata.CrossClusterApplyParentClosePolicyResponseWithChildren
 	assert.Equal(
 		t,
@@ -205,8 +167,7 @@ func TestCrossClusterApplyParentClosePolicyResponse(t *testing.T) {
 	)
 }
 
-func TestIsolationGroupToDomainBlob(t *testing.T) {
-
+func TestIsolationGroupToDomainBlobConversion(t *testing.T) {
 	zone1 := "zone-1"
 	zone2 := "zone-2"
 	drained := shared.IsolationGroupStateDrained
@@ -260,8 +221,7 @@ func TestIsolationGroupToDomainBlob(t *testing.T) {
 	}
 }
 
-func TestIsolationGroupFromDomainBlob(t *testing.T) {
-
+func TestIsolationGroupFromDomainBlobConversion(t *testing.T) {
 	zone1 := "zone-1"
 	zone2 := "zone-2"
 	drained := shared.IsolationGroupStateDrained
@@ -315,7 +275,7 @@ func TestIsolationGroupFromDomainBlob(t *testing.T) {
 	}
 }
 
-func TestWorkflowExecutionInfo(t *testing.T) {
+func TestWorkflowExecutionInfoConversion(t *testing.T) {
 	for _, item := range []*types.WorkflowExecutionInfo{nil, {}, &testdata.WorkflowExecutionInfo, &testdata.CronWorkflowExecutionInfo} {
 		assert.Equal(t, item, ToWorkflowExecutionInfo(FromWorkflowExecutionInfo(item)))
 	}
@@ -1749,7 +1709,7 @@ func TestGetTaskListsByDomainRequestConversion(t *testing.T) {
 	testCases := []*types.GetTaskListsByDomainRequest{
 		nil,
 		{},
-		{Domain: "test-domain"},
+		&testdata.MatchingGetTaskListsByDomainRequest,
 	}
 
 	for _, original := range testCases {
