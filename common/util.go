@@ -870,9 +870,7 @@ func ConvertIntMapToDynamicConfigMapProperty(
 
 // ConvertDynamicConfigMapPropertyToIntMap convert a map property from dynamic config to a map
 // whose type for both key and value are int
-func ConvertDynamicConfigMapPropertyToIntMap(
-	dcValue map[string]interface{},
-) (map[int]int, error) {
+func ConvertDynamicConfigMapPropertyToIntMap(dcValue map[string]interface{}) (map[int]int, error) {
 	intMap := make(map[int]int)
 	for key, value := range dcValue {
 		intKey, err := strconv.Atoi(strings.TrimSpace(key))
