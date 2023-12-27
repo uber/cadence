@@ -434,6 +434,7 @@ func (tr *taskReader) dispatchSingleTaskFromBuffer(isolationGroup string, taskIn
 			tag.WorkflowRunID(taskInfo.RunID),
 			tag.WorkflowID(taskInfo.WorkflowID),
 			tag.TaskID(taskInfo.TaskID),
+			tag.Error(err),
 			tag.WorkflowDomainID(taskInfo.DomainID),
 		)
 		tr.scope.IncCounter(metrics.AsyncMatchDispatchTimeoutCounterPerTaskList)

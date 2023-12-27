@@ -111,6 +111,7 @@ func New(
 	if err != nil {
 		resource.GetLogger().Fatal("failed to initialize zap logger", tag.Error(err))
 	}
+	zapLogger.Info("Initializing new scanner")
 	return &Scanner{
 		context: scannerContext{
 			resource: resource,
@@ -159,10 +160,13 @@ func (s *Scanner) Start() error {
 	}
 
 	for _, tl := range workerTaskListNames {
+		s.zapLogger.Info("Starting worker for task list", zap.String("TaskList", tl))
 		if err := worker.New(s.context.resource.GetSDKClient(), common.SystemLocalDomainName, tl, workerOpts).Start(); err != nil {
+			s.zapLogger.Error("Failed to start worker", zap.String("TaskList", tl), zap.Error(err))
 			return err
 		}
 	}
+	s.zapLogger.Info("Scanner started successfully", zap.Strings("workerTaskListNames", workerTaskListNames))
 	return nil
 }
 
@@ -243,7 +247,13 @@ func (s *Scanner) startWorkflow(
 	cancel()
 
 	if cadence.IsWorkflowExecutionAlreadyStartedError(err) {
+		s.zapLogger.Error("Workflow had already started", zap.String("workflowType", workflowType), zap.Error(err))
 		return nil
+	}
+	if err != nil {
+		s.zapLogger.Error("Failed to start workflow", zap.String("workflowType", workflowType), zap.Error(err))
+	} else {
+		s.zapLogger.Info("Workflow started", zap.String("workflowType", workflowType))
 	}
 	return err
 }

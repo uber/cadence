@@ -223,9 +223,7 @@ func (t *taskImpl) Execute() error {
 	return t.taskExecutor.Execute(t, t.shouldProcessTask)
 }
 
-func (t *taskImpl) HandleErr(
-	err error,
-) (retErr error) {
+func (t *taskImpl) HandleErr(err error) (retErr error) {
 	defer func() {
 		if retErr != nil {
 			logEvent(t.eventLogger, "Failed to handle error", retErr)
@@ -333,9 +331,7 @@ func (t *taskImpl) HandleErr(
 	return err
 }
 
-func (t *taskImpl) RetryErr(
-	err error,
-) bool {
+func (t *taskImpl) RetryErr(err error) bool {
 	if err == errWorkflowBusy || isRedispatchErr(err) || err == ErrTaskPendingActive || common.IsContextTimeoutError(err) {
 		return false
 	}
@@ -392,9 +388,7 @@ func (t *taskImpl) Priority() int {
 	return t.priority
 }
 
-func (t *taskImpl) SetPriority(
-	priority int,
-) {
+func (t *taskImpl) SetPriority(priority int) {
 	t.Lock()
 	defer t.Unlock()
 

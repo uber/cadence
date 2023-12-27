@@ -708,6 +708,56 @@ func TestConvertGetTaskFailedCauseToErr(t *testing.T) {
 	}
 }
 
+func TestWorkflowIDToHistoryShard(t *testing.T) {
+	for _, c := range []struct {
+		workflowID     string
+		numberOfShards int
+
+		want int
+	}{
+		{
+			workflowID:     "",
+			numberOfShards: 1000,
+			want:           242,
+		},
+		{
+			workflowID:     "workflowId",
+			numberOfShards: 1000,
+			want:           580,
+		},
+	} {
+		t.Run(fmt.Sprintf("%s-%v", c.workflowID, c.numberOfShards), func(t *testing.T) {
+			got := WorkflowIDToHistoryShard(c.workflowID, c.numberOfShards)
+			require.Equal(t, c.want, got)
+		})
+	}
+}
+
+func TestDomainIDToHistoryShard(t *testing.T) {
+	for _, c := range []struct {
+		domainID       string
+		numberOfShards int
+
+		want int
+	}{
+		{
+			domainID:       "",
+			numberOfShards: 1000,
+			want:           242,
+		},
+		{
+			domainID:       "domainId",
+			numberOfShards: 1000,
+			want:           600,
+		},
+	} {
+		t.Run(fmt.Sprintf("%s-%v", c.domainID, c.numberOfShards), func(t *testing.T) {
+			got := DomainIDToHistoryShard(c.domainID, c.numberOfShards)
+			require.Equal(t, c.want, got)
+		})
+	}
+}
+
 func TestGenerateRandomString(t *testing.T) {
 	for input, wantSize := range map[int]int{
 		-1: 0,
