@@ -333,6 +333,9 @@ func IsValidContext(ctx context.Context) error {
 	return nil
 }
 
+// emptyCancelFunc wraps an empty func by context.CancelFunc interface
+var emptyCancelFunc = context.CancelFunc(func() {})
+
 // CreateChildContext creates a child context which shorted context timeout
 // from the given parent context
 // tailroom must be in range [0, 1] and
@@ -342,16 +345,16 @@ func CreateChildContext(
 	tailroom float64,
 ) (context.Context, context.CancelFunc) {
 	if parent == nil {
-		return nil, func() {}
+		return nil, emptyCancelFunc
 	}
 	if parent.Err() != nil {
-		return parent, func() {}
+		return parent, emptyCancelFunc
 	}
 
 	now := time.Now()
 	deadline, ok := parent.Deadline()
 	if !ok || deadline.Before(now) {
-		return parent, func() {}
+		return parent, emptyCancelFunc
 	}
 
 	newDeadline := now.Add(time.Duration(math.Ceil(float64(deadline.Sub(now)) * (1.0 - tailroom))))
