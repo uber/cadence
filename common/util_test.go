@@ -26,6 +26,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/stretchr/testify/mock"
 	"math/rand"
 	"reflect"
 	"runtime"
@@ -1042,4 +1043,65 @@ func TestDeserializeSearchAttributeValue_Error(t *testing.T) {
 			require.Nil(t, gotValue)
 		})
 	}
+}
+
+func TestValidateLongPollContextTimeout(t *testing.T) {
+	const handlerName = "testHandler"
+
+	t.Run("context timeout os not set", func(t *testing.T) {
+		logger := new(log.MockLogger)
+		logger.On(
+			"Error",
+			"Context timeout not set for long poll API.",
+			[]tag.Tag{
+				tag.WorkflowHandlerName(handlerName),
+				tag.Error(ErrContextTimeoutNotSet),
+			},
+		)
+
+		ctx := context.Background()
+		got := ValidateLongPollContextTimeout(ctx, handlerName, logger)
+		require.Error(t, got)
+		require.ErrorIs(t, got, ErrContextTimeoutNotSet)
+		logger.AssertExpectations(t)
+	})
+
+	t.Run("context timeout is set, but less than MinLongPollTimeout", func(t *testing.T) {
+		logger := new(log.MockLogger)
+		logger.On(
+			"Error",
+			"Context timeout is too short for long poll API.",
+			// we can't mock time between deadline and now, so we just check it as it is
+			mock.Anything,
+		)
+		ctx, _ := context.WithTimeout(context.Background(), time.Second)
+		got := ValidateLongPollContextTimeout(ctx, handlerName, logger)
+		require.Error(t, got)
+		require.ErrorIs(t, got, ErrContextTimeoutTooShort, "should return ErrContextTimeoutTooShort, because context timeout is less than MinLongPollTimeout")
+		logger.AssertExpectations(t)
+
+	})
+
+	t.Run("context timeout is set, but less than CriticalLongPollTimeout", func(t *testing.T) {
+		logger := new(log.MockLogger)
+		logger.On(
+			"Warn",
+			"Context timeout is lower than critical value for long poll API.",
+			// we can't mock time between deadline and now, so we just check it as it is
+			mock.Anything,
+		)
+		ctx, _ := context.WithTimeout(context.Background(), 15*time.Second)
+		got := ValidateLongPollContextTimeout(ctx, handlerName, logger)
+		require.NoError(t, got)
+		logger.AssertExpectations(t)
+
+	})
+
+	t.Run("context timeout is set, but greater than CriticalLongPollTimeout", func(t *testing.T) {
+		logger := new(log.MockLogger)
+		ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
+		got := ValidateLongPollContextTimeout(ctx, handlerName, logger)
+		require.NoError(t, got)
+		logger.AssertExpectations(t)
+	})
 }
