@@ -22,7 +22,6 @@ package testdata
 
 import (
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -68,8 +67,8 @@ var (
 		StickyTaskListScheduleToStartTimeout: &Duration1,
 		EventStoreVersion:                    EventStoreVersion,
 		CurrentBranchToken:                   BranchToken,
-		WorkflowState:                        common.Int32Ptr(persistence.WorkflowStateRunning),
-		WorkflowCloseState:                   common.Int32Ptr(persistence.WorkflowCloseStatusTimedOut),
+		WorkflowState:                        common.Int32Ptr(1), // persistence.WorkflowStateRunning
+		WorkflowCloseState:                   common.Int32Ptr(6), // persistence.WorkflowCloseStatusTimedOut
 		VersionHistories:                     &VersionHistories,
 		IsStickyTaskListEnabled:              true,
 		HistorySize:                          HistorySizeInBytes,
@@ -103,8 +102,8 @@ var (
 		StickyTaskListScheduleToStartTimeout: &Duration1,
 		CurrentBranchToken:                   BranchToken,
 		VersionHistories:                     &VersionHistories,
-		WorkflowState:                        common.Int32Ptr(persistence.WorkflowStateCorrupted),
-		WorkflowCloseState:                   common.Int32Ptr(persistence.WorkflowCloseStatusTimedOut),
+		WorkflowState:                        common.Int32Ptr(5), // persistence.WorkflowStateCorrupted
+		WorkflowCloseState:                   common.Int32Ptr(6), // persistence.WorkflowCloseStatusTimedOut
 	}
 	HistoryPurgeDLQMessagesRequest = AdminPurgeDLQMessagesRequest
 	HistoryQueryWorkflowRequest    = types.HistoryQueryWorkflowRequest{
