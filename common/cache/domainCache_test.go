@@ -53,7 +53,6 @@ type (
 
 		domainCache *domainCache
 		logger      log.Logger
-		now         time.Time
 	}
 )
 
@@ -78,8 +77,7 @@ func (s *domainCacheSuite) SetupTest() {
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.domainCache = NewDomainCache(s.metadataMgr, cluster.GetTestClusterMetadata(true), metricsClient, s.logger).(*domainCache)
 
-	s.now = time.Now()
-	s.domainCache.timeSource = clock.NewEventTimeSource().Update(s.now)
+	s.domainCache.timeSource = clock.NewMockedTimeSource()
 }
 
 func (s *domainCacheSuite) TearDownTest() {
@@ -527,7 +525,7 @@ func (s *domainCacheSuite) TestUpdateCache_TriggerCallBack() {
 		NextPageToken: nil,
 	}, nil).Once()
 
-	s.domainCache.timeSource.(*clock.EventTimeSource).Update(s.now.Add(domainCacheMinRefreshInterval))
+	s.domainCache.timeSource.(clock.MockedTimeSource).Advance(domainCacheMinRefreshInterval)
 	s.Nil(s.domainCache.refreshDomains())
 
 	// the order matters here: the record 2 got updated first, thus with a lower notification version
