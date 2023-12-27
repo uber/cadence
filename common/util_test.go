@@ -27,6 +27,8 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"reflect"
+	"runtime"
 	"strconv"
 	"sync"
 	"testing"
@@ -798,4 +800,114 @@ func TestIsValidContext(t *testing.T) {
 		ctx, _ := context.WithTimeout(context.Background(), contextExpireThreshold*2)
 		require.NoError(t, IsValidContext(ctx), "nil should be returned, because context timeout is later than now + contextExpireThreshold")
 	})
+}
+
+func TestCreateChildContext(t *testing.T) {
+	t.Run("nil parent", func(t *testing.T) {
+		gotCtx, gotFunc := CreateChildContext(nil, 0)
+		require.Nil(t, gotCtx)
+		require.Equal(t, funcName(emptyCancelFunc), funcName(gotFunc))
+	})
+	t.Run("canceled parent", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		gotCtx, gotFunc := CreateChildContext(ctx, 0)
+		require.Equal(t, ctx, gotCtx)
+		require.Equal(t, funcName(emptyCancelFunc), funcName(gotFunc))
+	})
+	t.Run("non-canceled parent without deadline", func(t *testing.T) {
+		ctx, _ := context.WithCancel(context.Background())
+		gotCtx, gotFunc := CreateChildContext(ctx, 0)
+		require.Equal(t, ctx, gotCtx)
+		require.Equal(t, funcName(emptyCancelFunc), funcName(gotFunc))
+	})
+	t.Run("context with deadline exceeded", func(t *testing.T) {
+		ctx, _ := context.WithTimeout(context.Background(), -time.Second)
+		gotCtx, gotFunc := CreateChildContext(ctx, 0)
+		require.Equal(t, ctx, gotCtx)
+		require.Equal(t, funcName(emptyCancelFunc), funcName(gotFunc))
+	})
+
+	t.Run("tailroom is less or equal to 0", func(t *testing.T) {
+		testCase := func(t *testing.T, tailroom float64) {
+			deadline := time.Now().Add(time.Hour)
+			ctx, _ := context.WithDeadline(context.Background(), deadline)
+			gotCtx, gotFunc := CreateChildContext(ctx, tailroom)
+
+			gotDeadline, ok := gotCtx.Deadline()
+			require.True(t, ok)
+			require.Equal(t, deadline, gotDeadline, "deadline should be equal to parent deadline")
+
+			require.NotEqual(t, ctx, gotCtx)
+			require.NotEqual(t, funcName(emptyCancelFunc), funcName(gotFunc))
+		}
+
+		t.Run("0", func(t *testing.T) {
+			testCase(t, 0)
+		})
+		t.Run("-1", func(t *testing.T) {
+			testCase(t, -1)
+		})
+
+	})
+
+	t.Run("tailroom is greater or equal to 1", func(t *testing.T) {
+		testCase := func(t *testing.T, tailroom float64) {
+			deadline := time.Now().Add(time.Hour)
+			ctx, _ := context.WithDeadline(context.Background(), deadline)
+
+			// we can't mock time.Now, but we know that the deadline should be in
+			// range between the start and finish of function's execution
+			beforeNow := time.Now()
+			gotCtx, gotFunc := CreateChildContext(ctx, tailroom)
+			afterNow := time.Now()
+
+			gotDeadline, ok := gotCtx.Deadline()
+			require.True(t, ok)
+			require.NotEqual(t, deadline, gotDeadline)
+			require.Less(t, gotDeadline, deadline)
+
+			// gotDeadline should be between beforeNow and afterNow (exclusive)
+			require.GreaterOrEqual(t, afterNow, gotDeadline)
+			require.LessOrEqual(t, beforeNow, gotDeadline)
+
+			require.NotEqual(t, ctx, gotCtx)
+			require.NotEqual(t, funcName(emptyCancelFunc), funcName(gotFunc))
+		}
+		t.Run("1", func(t *testing.T) {
+			testCase(t, 1)
+		})
+		t.Run("2", func(t *testing.T) {
+			testCase(t, 2)
+		})
+	})
+	t.Run("tailroom is 0.5", func(t *testing.T) {
+		now := time.Now()
+		deadline := now.Add(time.Hour)
+
+		ctx, _ := context.WithDeadline(context.Background(), deadline)
+		gotCtx, gotFunc := CreateChildContext(ctx, 0.5)
+
+		gotDeadline, ok := gotCtx.Deadline()
+		require.True(t, ok)
+		require.NotEqual(t, deadline, gotDeadline)
+		require.Less(t, gotDeadline, deadline)
+
+		// we can't mock time.Now, so we assume that the deadline should be
+		// in range 29:59 and 30:01 minutes after start
+		minDeadline := now.Add(30*time.Minute - time.Second)
+		maxDeadline := now.Add(30*time.Minute + time.Second)
+
+		// gotDeadline should be between minDeadline and maxDeadline (exclusive)
+		require.GreaterOrEqual(t, maxDeadline, gotDeadline)
+		require.LessOrEqual(t, minDeadline, gotDeadline)
+
+		require.NotEqual(t, ctx, gotCtx)
+		require.NotEqual(t, funcName(emptyCancelFunc), funcName(gotFunc))
+	})
+}
+
+// funcName returns the name of the function
+func funcName(fn any) string {
+	return runtime.FuncForPC(reflect.ValueOf(fn).Pointer()).Name()
 }
