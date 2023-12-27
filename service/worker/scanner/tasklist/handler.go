@@ -27,7 +27,7 @@ import (
 
 	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/ratelimited"
+	"github.com/uber/cadence/common/persistence/wrappers/ratelimited"
 	"github.com/uber/cadence/service/worker/scanner/executor"
 )
 
