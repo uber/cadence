@@ -26,44 +26,23 @@ import (
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/types"
 )
 
-type (
-	// Implements ExecutionStore
-	nosqlExecutionStore struct {
-		shardID int
-		nosqlStore
-	}
-)
-
-var _ p.ExecutionStore = (*nosqlExecutionStore)(nil)
-
-// Guidelines for creating new special UUID constants for all NoSQL
-// For DB specific constants(e.g. Cassandra), create them in the db specific package.
-// Each UUID should be of the form: E0000000-R000-f000-f000-00000000000x
-// Where x is any hexadecimal value, E represents the entity type valid values are:
-// E = {DomainID = 1, WorkflowID = 2, RunID = 3}
-// R represents row type in executions table, valid values are:
-// R = {Shard = 1, Execution = 2, Transfer = 3, Timer = 4, Replication = 5, Replication_DLQ = 6, CrossCluster = 7}
-const (
-	// Special Domains related constants
-	emptyDomainID = "10000000-0000-f000-f000-000000000000"
-	// Special Run IDs
-	emptyRunID                   = "30000000-0000-f000-f000-000000000000"
-	rowTypeReplicationWorkflowID = "20000000-5000-f000-f000-000000000000"
-	rowTypeReplicationRunID      = "30000000-5000-f000-f000-000000000000"
-	emptyInitiatedID             = int64(-7)
-)
+// Implements ExecutionStore
+type nosqlExecutionStore struct {
+	shardID int
+	nosqlStore
+}
 
 // NewExecutionStore is used to create an instance of ExecutionStore implementation
 func NewExecutionStore(
 	shardID int,
 	db nosqlplugin.DB,
 	logger log.Logger,
-) (p.ExecutionStore, error) {
+) (persistence.ExecutionStore, error) {
 	return &nosqlExecutionStore{
 		nosqlStore: nosqlStore{
 			logger: logger,
@@ -79,8 +58,8 @@ func (d *nosqlExecutionStore) GetShardID() int {
 
 func (d *nosqlExecutionStore) CreateWorkflowExecution(
 	ctx context.Context,
-	request *p.InternalCreateWorkflowExecutionRequest,
-) (*p.CreateWorkflowExecutionResponse, error) {
+	request *persistence.InternalCreateWorkflowExecutionRequest,
+) (*persistence.CreateWorkflowExecutionResponse, error) {
 
 	newWorkflow := request.NewWorkflowSnapshot
 	executionInfo := newWorkflow.ExecutionInfo
@@ -89,7 +68,7 @@ func (d *nosqlExecutionStore) CreateWorkflowExecution(
 	workflowID := executionInfo.WorkflowID
 	runID := executionInfo.RunID
 
-	if err := p.ValidateCreateWorkflowModeState(
+	if err := persistence.ValidateCreateWorkflowModeState(
 		request.Mode,
 		newWorkflow,
 	); err != nil {
@@ -131,22 +110,22 @@ func (d *nosqlExecutionStore) CreateWorkflowExecution(
 		if isConditionFailedError {
 			switch {
 			case conditionFailureErr.UnknownConditionFailureDetails != nil:
-				return nil, &p.ShardOwnershipLostError{
+				return nil, &persistence.ShardOwnershipLostError{
 					ShardID: d.shardID,
 					Msg:     *conditionFailureErr.UnknownConditionFailureDetails,
 				}
 			case conditionFailureErr.ShardRangeIDNotMatch != nil:
-				return nil, &p.ShardOwnershipLostError{
+				return nil, &persistence.ShardOwnershipLostError{
 					ShardID: d.shardID,
 					Msg: fmt.Sprintf("Failed to create workflow execution.  Request RangeID: %v, Actual RangeID: %v",
 						request.RangeID, *conditionFailureErr.ShardRangeIDNotMatch),
 				}
 			case conditionFailureErr.CurrentWorkflowConditionFailInfo != nil:
-				return nil, &p.CurrentWorkflowConditionFailedError{
+				return nil, &persistence.CurrentWorkflowConditionFailedError{
 					Msg: *conditionFailureErr.CurrentWorkflowConditionFailInfo,
 				}
 			case conditionFailureErr.WorkflowExecutionAlreadyExists != nil:
-				return nil, &p.WorkflowExecutionAlreadyStartedError{
+				return nil, &persistence.WorkflowExecutionAlreadyStartedError{
 					Msg:              conditionFailureErr.WorkflowExecutionAlreadyExists.OtherInfo,
 					StartRequestID:   conditionFailureErr.WorkflowExecutionAlreadyExists.CreateRequestID,
 					RunID:            conditionFailureErr.WorkflowExecutionAlreadyExists.RunID,
@@ -164,13 +143,13 @@ func (d *nosqlExecutionStore) CreateWorkflowExecution(
 		return nil, convertCommonErrors(d.db, "CreateWorkflowExecution", err)
 	}
 
-	return &p.CreateWorkflowExecutionResponse{}, nil
+	return &persistence.CreateWorkflowExecutionResponse{}, nil
 }
 
 func (d *nosqlExecutionStore) GetWorkflowExecution(
 	ctx context.Context,
-	request *p.InternalGetWorkflowExecutionRequest,
-) (*p.InternalGetWorkflowExecutionResponse, error) {
+	request *persistence.InternalGetWorkflowExecutionRequest,
+) (*persistence.InternalGetWorkflowExecutionResponse, error) {
 
 	execution := request.Execution
 	state, err := d.db.SelectWorkflowExecution(ctx, d.shardID, request.DomainID, execution.WorkflowID, execution.RunID)
@@ -185,12 +164,12 @@ func (d *nosqlExecutionStore) GetWorkflowExecution(
 		return nil, convertCommonErrors(d.db, "GetWorkflowExecution", err)
 	}
 
-	return &p.InternalGetWorkflowExecutionResponse{State: state}, nil
+	return &persistence.InternalGetWorkflowExecutionResponse{State: state}, nil
 }
 
 func (d *nosqlExecutionStore) UpdateWorkflowExecution(
 	ctx context.Context,
-	request *p.InternalUpdateWorkflowExecutionRequest,
+	request *persistence.InternalUpdateWorkflowExecutionRequest,
 ) error {
 	updateWorkflow := request.UpdateWorkflowMutation
 	newWorkflow := request.NewWorkflowSnapshot
@@ -200,7 +179,7 @@ func (d *nosqlExecutionStore) UpdateWorkflowExecution(
 	workflowID := executionInfo.WorkflowID
 	runID := executionInfo.RunID
 
-	if err := p.ValidateUpdateWorkflowModeState(
+	if err := persistence.ValidateUpdateWorkflowModeState(
 		request.Mode,
 		updateWorkflow,
 		newWorkflow,
@@ -211,11 +190,11 @@ func (d *nosqlExecutionStore) UpdateWorkflowExecution(
 	var currentWorkflowWriteReq *nosqlplugin.CurrentWorkflowWriteRequest
 
 	switch request.Mode {
-	case p.UpdateWorkflowModeIgnoreCurrent:
+	case persistence.UpdateWorkflowModeIgnoreCurrent:
 		currentWorkflowWriteReq = &nosqlplugin.CurrentWorkflowWriteRequest{
 			WriteMode: nosqlplugin.CurrentWorkflowWriteModeNoop,
 		}
-	case p.UpdateWorkflowModeBypassCurrent:
+	case persistence.UpdateWorkflowModeBypassCurrent:
 		if err := d.assertNotCurrentExecution(
 			ctx,
 			domainID,
@@ -227,7 +206,7 @@ func (d *nosqlExecutionStore) UpdateWorkflowExecution(
 			WriteMode: nosqlplugin.CurrentWorkflowWriteModeNoop,
 		}
 
-	case p.UpdateWorkflowModeUpdateCurrent:
+	case persistence.UpdateWorkflowModeUpdateCurrent:
 		if newWorkflow != nil {
 			newExecutionInfo := newWorkflow.ExecutionInfo
 			newLastWriteVersion := newWorkflow.LastWriteVersion
@@ -339,7 +318,7 @@ func (d *nosqlExecutionStore) UpdateWorkflowExecution(
 
 func (d *nosqlExecutionStore) ConflictResolveWorkflowExecution(
 	ctx context.Context,
-	request *p.InternalConflictResolveWorkflowExecutionRequest,
+	request *persistence.InternalConflictResolveWorkflowExecutionRequest,
 ) error {
 	currentWorkflow := request.CurrentWorkflowMutation
 	resetWorkflow := request.ResetWorkflowSnapshot
@@ -348,7 +327,7 @@ func (d *nosqlExecutionStore) ConflictResolveWorkflowExecution(
 	domainID := resetWorkflow.ExecutionInfo.DomainID
 	workflowID := resetWorkflow.ExecutionInfo.WorkflowID
 
-	if err := p.ValidateConflictResolveWorkflowModeState(
+	if err := persistence.ValidateConflictResolveWorkflowModeState(
 		request.Mode,
 		resetWorkflow,
 		newWorkflow,
@@ -361,7 +340,7 @@ func (d *nosqlExecutionStore) ConflictResolveWorkflowExecution(
 	var prevRunID string
 
 	switch request.Mode {
-	case p.ConflictResolveWorkflowModeBypassCurrent:
+	case persistence.ConflictResolveWorkflowModeBypassCurrent:
 		if err := d.assertNotCurrentExecution(
 			ctx,
 			domainID,
@@ -372,7 +351,7 @@ func (d *nosqlExecutionStore) ConflictResolveWorkflowExecution(
 		currentWorkflowWriteReq = &nosqlplugin.CurrentWorkflowWriteRequest{
 			WriteMode: nosqlplugin.CurrentWorkflowWriteModeNoop,
 		}
-	case p.ConflictResolveWorkflowModeUpdateCurrent:
+	case persistence.ConflictResolveWorkflowModeUpdateCurrent:
 		executionInfo := resetWorkflow.ExecutionInfo
 		lastWriteVersion := resetWorkflow.LastWriteVersion
 		if newWorkflow != nil {
@@ -478,7 +457,7 @@ func (d *nosqlExecutionStore) ConflictResolveWorkflowExecution(
 
 func (d *nosqlExecutionStore) DeleteWorkflowExecution(
 	ctx context.Context,
-	request *p.DeleteWorkflowExecutionRequest,
+	request *persistence.DeleteWorkflowExecutionRequest,
 ) error {
 	err := d.db.DeleteWorkflowExecution(ctx, d.shardID, request.DomainID, request.WorkflowID, request.RunID)
 	if err != nil {
@@ -490,7 +469,7 @@ func (d *nosqlExecutionStore) DeleteWorkflowExecution(
 
 func (d *nosqlExecutionStore) DeleteCurrentWorkflowExecution(
 	ctx context.Context,
-	request *p.DeleteCurrentWorkflowExecutionRequest,
+	request *persistence.DeleteCurrentWorkflowExecutionRequest,
 ) error {
 	err := d.db.DeleteCurrentWorkflow(ctx, d.shardID, request.DomainID, request.WorkflowID, request.RunID)
 	if err != nil {
@@ -502,8 +481,8 @@ func (d *nosqlExecutionStore) DeleteCurrentWorkflowExecution(
 
 func (d *nosqlExecutionStore) GetCurrentExecution(
 	ctx context.Context,
-	request *p.GetCurrentExecutionRequest,
-) (*p.GetCurrentExecutionResponse,
+	request *persistence.GetCurrentExecutionRequest,
+) (*persistence.GetCurrentExecutionResponse,
 	error) {
 	result, err := d.db.SelectCurrentWorkflow(ctx, d.shardID, request.DomainID, request.WorkflowID)
 
@@ -517,7 +496,7 @@ func (d *nosqlExecutionStore) GetCurrentExecution(
 		return nil, convertCommonErrors(d.db, "GetCurrentExecution", err)
 	}
 
-	return &p.GetCurrentExecutionResponse{
+	return &persistence.GetCurrentExecutionResponse{
 		RunID:            result.RunID,
 		StartRequestID:   result.CreateRequestID,
 		State:            result.State,
@@ -528,13 +507,13 @@ func (d *nosqlExecutionStore) GetCurrentExecution(
 
 func (d *nosqlExecutionStore) ListCurrentExecutions(
 	ctx context.Context,
-	request *p.ListCurrentExecutionsRequest,
-) (*p.ListCurrentExecutionsResponse, error) {
+	request *persistence.ListCurrentExecutionsRequest,
+) (*persistence.ListCurrentExecutionsResponse, error) {
 	executions, token, err := d.db.SelectAllCurrentWorkflows(ctx, d.shardID, request.PageToken, request.PageSize)
 	if err != nil {
 		return nil, convertCommonErrors(d.db, "ListCurrentExecutions", err)
 	}
-	return &p.ListCurrentExecutionsResponse{
+	return &persistence.ListCurrentExecutionsResponse{
 		Executions: executions,
 		PageToken:  token,
 	}, nil
@@ -542,26 +521,26 @@ func (d *nosqlExecutionStore) ListCurrentExecutions(
 
 func (d *nosqlExecutionStore) IsWorkflowExecutionExists(
 	ctx context.Context,
-	request *p.IsWorkflowExecutionExistsRequest,
-) (*p.IsWorkflowExecutionExistsResponse, error) {
+	request *persistence.IsWorkflowExecutionExistsRequest,
+) (*persistence.IsWorkflowExecutionExistsResponse, error) {
 	exists, err := d.db.IsWorkflowExecutionExists(ctx, d.shardID, request.DomainID, request.WorkflowID, request.RunID)
 	if err != nil {
 		return nil, convertCommonErrors(d.db, "IsWorkflowExecutionExists", err)
 	}
-	return &p.IsWorkflowExecutionExistsResponse{
+	return &persistence.IsWorkflowExecutionExistsResponse{
 		Exists: exists,
 	}, nil
 }
 
 func (d *nosqlExecutionStore) ListConcreteExecutions(
 	ctx context.Context,
-	request *p.ListConcreteExecutionsRequest,
-) (*p.InternalListConcreteExecutionsResponse, error) {
+	request *persistence.ListConcreteExecutionsRequest,
+) (*persistence.InternalListConcreteExecutionsResponse, error) {
 	executions, nextPageToken, err := d.db.SelectAllWorkflowExecutions(ctx, d.shardID, request.PageToken, request.PageSize)
 	if err != nil {
 		return nil, convertCommonErrors(d.db, "ListConcreteExecutions", err)
 	}
-	return &p.InternalListConcreteExecutionsResponse{
+	return &persistence.InternalListConcreteExecutionsResponse{
 		Executions:    executions,
 		NextPageToken: nextPageToken,
 	}, nil
@@ -569,15 +548,15 @@ func (d *nosqlExecutionStore) ListConcreteExecutions(
 
 func (d *nosqlExecutionStore) GetTransferTasks(
 	ctx context.Context,
-	request *p.GetTransferTasksRequest,
-) (*p.GetTransferTasksResponse, error) {
+	request *persistence.GetTransferTasksRequest,
+) (*persistence.GetTransferTasksResponse, error) {
 
 	tasks, nextPageToken, err := d.db.SelectTransferTasksOrderByTaskID(ctx, d.shardID, request.BatchSize, request.NextPageToken, request.ReadLevel, request.MaxReadLevel)
 	if err != nil {
 		return nil, convertCommonErrors(d.db, "GetTransferTasks", err)
 	}
 
-	return &p.GetTransferTasksResponse{
+	return &persistence.GetTransferTasksResponse{
 		Tasks:         tasks,
 		NextPageToken: nextPageToken,
 	}, nil
@@ -585,8 +564,8 @@ func (d *nosqlExecutionStore) GetTransferTasks(
 
 func (d *nosqlExecutionStore) GetCrossClusterTasks(
 	ctx context.Context,
-	request *p.GetCrossClusterTasksRequest,
-) (*p.GetCrossClusterTasksResponse, error) {
+	request *persistence.GetCrossClusterTasksRequest,
+) (*persistence.GetCrossClusterTasksResponse, error) {
 
 	cTasks, nextPageToken, err := d.db.SelectCrossClusterTasksOrderByTaskID(ctx, d.shardID, request.BatchSize, request.NextPageToken, request.TargetCluster, request.ReadLevel, request.MaxReadLevel)
 
@@ -594,12 +573,12 @@ func (d *nosqlExecutionStore) GetCrossClusterTasks(
 		return nil, convertCommonErrors(d.db, "GetCrossClusterTasks", err)
 	}
 
-	var tTasks []*p.CrossClusterTaskInfo
+	var tTasks []*persistence.CrossClusterTaskInfo
 	for _, t := range cTasks {
 		// revive:disable-next-line:range-val-address Appending address of TransferTask, not of t.
 		tTasks = append(tTasks, &t.TransferTask)
 	}
-	return &p.GetCrossClusterTasksResponse{
+	return &persistence.GetCrossClusterTasksResponse{
 		Tasks:         tTasks,
 		NextPageToken: nextPageToken,
 	}, nil
@@ -607,14 +586,14 @@ func (d *nosqlExecutionStore) GetCrossClusterTasks(
 
 func (d *nosqlExecutionStore) GetReplicationTasks(
 	ctx context.Context,
-	request *p.GetReplicationTasksRequest,
-) (*p.InternalGetReplicationTasksResponse, error) {
+	request *persistence.GetReplicationTasksRequest,
+) (*persistence.InternalGetReplicationTasksResponse, error) {
 
 	tasks, nextPageToken, err := d.db.SelectReplicationTasksOrderByTaskID(ctx, d.shardID, request.BatchSize, request.NextPageToken, request.ReadLevel, request.MaxReadLevel)
 	if err != nil {
 		return nil, convertCommonErrors(d.db, "GetReplicationTasks", err)
 	}
-	return &p.InternalGetReplicationTasksResponse{
+	return &persistence.InternalGetReplicationTasksResponse{
 		Tasks:         tasks,
 		NextPageToken: nextPageToken,
 	}, nil
@@ -622,7 +601,7 @@ func (d *nosqlExecutionStore) GetReplicationTasks(
 
 func (d *nosqlExecutionStore) CompleteTransferTask(
 	ctx context.Context,
-	request *p.CompleteTransferTaskRequest,
+	request *persistence.CompleteTransferTaskRequest,
 ) error {
 	err := d.db.DeleteTransferTask(ctx, d.shardID, request.TaskID)
 	if err != nil {
@@ -634,19 +613,19 @@ func (d *nosqlExecutionStore) CompleteTransferTask(
 
 func (d *nosqlExecutionStore) RangeCompleteTransferTask(
 	ctx context.Context,
-	request *p.RangeCompleteTransferTaskRequest,
-) (*p.RangeCompleteTransferTaskResponse, error) {
+	request *persistence.RangeCompleteTransferTaskRequest,
+) (*persistence.RangeCompleteTransferTaskResponse, error) {
 	err := d.db.RangeDeleteTransferTasks(ctx, d.shardID, request.ExclusiveBeginTaskID, request.InclusiveEndTaskID)
 	if err != nil {
 		return nil, convertCommonErrors(d.db, "RangeCompleteTransferTask", err)
 	}
 
-	return &p.RangeCompleteTransferTaskResponse{TasksCompleted: p.UnknownNumRowsAffected}, nil
+	return &persistence.RangeCompleteTransferTaskResponse{TasksCompleted: persistence.UnknownNumRowsAffected}, nil
 }
 
 func (d *nosqlExecutionStore) CompleteCrossClusterTask(
 	ctx context.Context,
-	request *p.CompleteCrossClusterTaskRequest,
+	request *persistence.CompleteCrossClusterTaskRequest,
 ) error {
 
 	err := d.db.DeleteCrossClusterTask(ctx, d.shardID, request.TargetCluster, request.TaskID)
@@ -659,20 +638,20 @@ func (d *nosqlExecutionStore) CompleteCrossClusterTask(
 
 func (d *nosqlExecutionStore) RangeCompleteCrossClusterTask(
 	ctx context.Context,
-	request *p.RangeCompleteCrossClusterTaskRequest,
-) (*p.RangeCompleteCrossClusterTaskResponse, error) {
+	request *persistence.RangeCompleteCrossClusterTaskRequest,
+) (*persistence.RangeCompleteCrossClusterTaskResponse, error) {
 
 	err := d.db.RangeDeleteCrossClusterTasks(ctx, d.shardID, request.TargetCluster, request.ExclusiveBeginTaskID, request.InclusiveEndTaskID)
 	if err != nil {
 		return nil, convertCommonErrors(d.db, "RangeCompleteCrossClusterTask", err)
 	}
 
-	return &p.RangeCompleteCrossClusterTaskResponse{TasksCompleted: p.UnknownNumRowsAffected}, nil
+	return &persistence.RangeCompleteCrossClusterTaskResponse{TasksCompleted: persistence.UnknownNumRowsAffected}, nil
 }
 
 func (d *nosqlExecutionStore) CompleteReplicationTask(
 	ctx context.Context,
-	request *p.CompleteReplicationTaskRequest,
+	request *persistence.CompleteReplicationTaskRequest,
 ) error {
 	err := d.db.DeleteReplicationTask(ctx, d.shardID, request.TaskID)
 	if err != nil {
@@ -684,20 +663,20 @@ func (d *nosqlExecutionStore) CompleteReplicationTask(
 
 func (d *nosqlExecutionStore) RangeCompleteReplicationTask(
 	ctx context.Context,
-	request *p.RangeCompleteReplicationTaskRequest,
-) (*p.RangeCompleteReplicationTaskResponse, error) {
+	request *persistence.RangeCompleteReplicationTaskRequest,
+) (*persistence.RangeCompleteReplicationTaskResponse, error) {
 
 	err := d.db.RangeDeleteReplicationTasks(ctx, d.shardID, request.InclusiveEndTaskID)
 	if err != nil {
 		return nil, convertCommonErrors(d.db, "RangeCompleteReplicationTask", err)
 	}
 
-	return &p.RangeCompleteReplicationTaskResponse{TasksCompleted: p.UnknownNumRowsAffected}, nil
+	return &persistence.RangeCompleteReplicationTaskResponse{TasksCompleted: persistence.UnknownNumRowsAffected}, nil
 }
 
 func (d *nosqlExecutionStore) CompleteTimerTask(
 	ctx context.Context,
-	request *p.CompleteTimerTaskRequest,
+	request *persistence.CompleteTimerTaskRequest,
 ) error {
 	err := d.db.DeleteTimerTask(ctx, d.shardID, request.TaskID, request.VisibilityTimestamp)
 	if err != nil {
@@ -709,27 +688,27 @@ func (d *nosqlExecutionStore) CompleteTimerTask(
 
 func (d *nosqlExecutionStore) RangeCompleteTimerTask(
 	ctx context.Context,
-	request *p.RangeCompleteTimerTaskRequest,
-) (*p.RangeCompleteTimerTaskResponse, error) {
+	request *persistence.RangeCompleteTimerTaskRequest,
+) (*persistence.RangeCompleteTimerTaskResponse, error) {
 	err := d.db.RangeDeleteTimerTasks(ctx, d.shardID, request.InclusiveBeginTimestamp, request.ExclusiveEndTimestamp)
 	if err != nil {
 		return nil, convertCommonErrors(d.db, "RangeCompleteTimerTask", err)
 	}
 
-	return &p.RangeCompleteTimerTaskResponse{TasksCompleted: p.UnknownNumRowsAffected}, nil
+	return &persistence.RangeCompleteTimerTaskResponse{TasksCompleted: persistence.UnknownNumRowsAffected}, nil
 }
 
 func (d *nosqlExecutionStore) GetTimerIndexTasks(
 	ctx context.Context,
-	request *p.GetTimerIndexTasksRequest,
-) (*p.GetTimerIndexTasksResponse, error) {
+	request *persistence.GetTimerIndexTasksRequest,
+) (*persistence.GetTimerIndexTasksResponse, error) {
 
 	timers, nextPageToken, err := d.db.SelectTimerTasksOrderByVisibilityTime(ctx, d.shardID, request.BatchSize, request.NextPageToken, request.MinTimestamp, request.MaxTimestamp)
 	if err != nil {
 		return nil, convertCommonErrors(d.db, "GetTimerTasks", err)
 	}
 
-	return &p.GetTimerIndexTasksResponse{
+	return &persistence.GetTimerIndexTasksResponse{
 		Timers:        timers,
 		NextPageToken: nextPageToken,
 	}, nil
@@ -737,7 +716,7 @@ func (d *nosqlExecutionStore) GetTimerIndexTasks(
 
 func (d *nosqlExecutionStore) PutReplicationTaskToDLQ(
 	ctx context.Context,
-	request *p.InternalPutReplicationTaskToDLQRequest,
+	request *persistence.InternalPutReplicationTaskToDLQRequest,
 ) error {
 
 	err := d.db.InsertReplicationDLQTask(ctx, d.shardID, request.SourceClusterName, *request.TaskInfo)
@@ -750,13 +729,13 @@ func (d *nosqlExecutionStore) PutReplicationTaskToDLQ(
 
 func (d *nosqlExecutionStore) GetReplicationTasksFromDLQ(
 	ctx context.Context,
-	request *p.GetReplicationTasksFromDLQRequest,
-) (*p.InternalGetReplicationTasksFromDLQResponse, error) {
+	request *persistence.GetReplicationTasksFromDLQRequest,
+) (*persistence.InternalGetReplicationTasksFromDLQResponse, error) {
 	tasks, nextPageToken, err := d.db.SelectReplicationDLQTasksOrderByTaskID(ctx, d.shardID, request.SourceClusterName, request.BatchSize, request.NextPageToken, request.ReadLevel, request.MaxReadLevel)
 	if err != nil {
 		return nil, convertCommonErrors(d.db, "GetReplicationTasksFromDLQ", err)
 	}
-	return &p.InternalGetReplicationTasksResponse{
+	return &persistence.InternalGetReplicationTasksResponse{
 		Tasks:         tasks,
 		NextPageToken: nextPageToken,
 	}, nil
@@ -764,21 +743,21 @@ func (d *nosqlExecutionStore) GetReplicationTasksFromDLQ(
 
 func (d *nosqlExecutionStore) GetReplicationDLQSize(
 	ctx context.Context,
-	request *p.GetReplicationDLQSizeRequest,
-) (*p.GetReplicationDLQSizeResponse, error) {
+	request *persistence.GetReplicationDLQSizeRequest,
+) (*persistence.GetReplicationDLQSizeResponse, error) {
 
 	size, err := d.db.SelectReplicationDLQTasksCount(ctx, d.shardID, request.SourceClusterName)
 	if err != nil {
 		return nil, convertCommonErrors(d.db, "GetReplicationDLQSize", err)
 	}
-	return &p.GetReplicationDLQSizeResponse{
+	return &persistence.GetReplicationDLQSizeResponse{
 		Size: size,
 	}, nil
 }
 
 func (d *nosqlExecutionStore) DeleteReplicationTaskFromDLQ(
 	ctx context.Context,
-	request *p.DeleteReplicationTaskFromDLQRequest,
+	request *persistence.DeleteReplicationTaskFromDLQRequest,
 ) error {
 
 	err := d.db.DeleteReplicationDLQTask(ctx, d.shardID, request.SourceClusterName, request.TaskID)
@@ -791,25 +770,25 @@ func (d *nosqlExecutionStore) DeleteReplicationTaskFromDLQ(
 
 func (d *nosqlExecutionStore) RangeDeleteReplicationTaskFromDLQ(
 	ctx context.Context,
-	request *p.RangeDeleteReplicationTaskFromDLQRequest,
-) (*p.RangeDeleteReplicationTaskFromDLQResponse, error) {
+	request *persistence.RangeDeleteReplicationTaskFromDLQRequest,
+) (*persistence.RangeDeleteReplicationTaskFromDLQResponse, error) {
 
 	err := d.db.RangeDeleteReplicationDLQTasks(ctx, d.shardID, request.SourceClusterName, request.ExclusiveBeginTaskID, request.InclusiveEndTaskID)
 	if err != nil {
 		return nil, convertCommonErrors(d.db, "RangeDeleteReplicationTaskFromDLQ", err)
 	}
 
-	return &p.RangeDeleteReplicationTaskFromDLQResponse{TasksCompleted: p.UnknownNumRowsAffected}, nil
+	return &persistence.RangeDeleteReplicationTaskFromDLQResponse{TasksCompleted: persistence.UnknownNumRowsAffected}, nil
 }
 
 func (d *nosqlExecutionStore) CreateFailoverMarkerTasks(
 	ctx context.Context,
-	request *p.CreateFailoverMarkersRequest,
+	request *persistence.CreateFailoverMarkersRequest,
 ) error {
 
 	var nosqlTasks []*nosqlplugin.ReplicationTask
 	for _, task := range request.Markers {
-		ts := []p.Task{task}
+		ts := []persistence.Task{task}
 
 		tasks, err := d.prepareReplicationTasksForWorkflowTxn(task.DomainID, rowTypeReplicationWorkflowID, rowTypeReplicationRunID, ts)
 		if err != nil {
@@ -826,7 +805,7 @@ func (d *nosqlExecutionStore) CreateFailoverMarkerTasks(
 	if err != nil {
 		conditionFailureErr, isConditionFailedError := err.(*nosqlplugin.ShardOperationConditionFailure)
 		if isConditionFailedError {
-			return &p.ShardOwnershipLostError{
+			return &persistence.ShardOwnershipLostError{
 				ShardID: d.shardID,
 				Msg: fmt.Sprintf("Failed to create workflow execution.  Request RangeID: %v, columns: (%v)",
 					conditionFailureErr.RangeID, conditionFailureErr.Details),

@@ -31,14 +31,13 @@ import (
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
-	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/types"
 )
 
 type (
 	nosqlTaskStore struct {
-		shardedNosqlStore
+		*shardedNosqlStore
 	}
 )
 
@@ -48,31 +47,29 @@ const (
 	stickyTaskListTTL = int64(24 * time.Hour / time.Second) // if sticky task_list stopped being updated, remove it in one day
 )
 
-var _ p.TaskStore = (*nosqlTaskStore)(nil)
-
 // newNoSQLTaskStore is used to create an instance of TaskStore implementation
 func newNoSQLTaskStore(
 	cfg config.ShardedNoSQL,
 	logger log.Logger,
-	dc *p.DynamicConfiguration,
-) (p.TaskStore, error) {
+	dc *persistence.DynamicConfiguration,
+) (persistence.TaskStore, error) {
 	s, err := newShardedNosqlStore(cfg, logger, dc)
 	if err != nil {
 		return nil, err
 	}
 	return &nosqlTaskStore{
-		shardedNosqlStore: *s,
+		shardedNosqlStore: s,
 	}, nil
 }
 
-func (t *nosqlTaskStore) GetOrphanTasks(ctx context.Context, request *p.GetOrphanTasksRequest) (*p.GetOrphanTasksResponse, error) {
+func (t *nosqlTaskStore) GetOrphanTasks(ctx context.Context, request *persistence.GetOrphanTasksRequest) (*persistence.GetOrphanTasksResponse, error) {
 	// TODO: It's unclear if this's necessary or possible for NoSQL
 	return nil, &types.InternalServiceError{
 		Message: "Unimplemented call to GetOrphanTasks for NoSQL",
 	}
 }
 
-func (t *nosqlTaskStore) GetTaskListSize(ctx context.Context, request *p.GetTaskListSizeRequest) (*p.GetTaskListSizeResponse, error) {
+func (t *nosqlTaskStore) GetTaskListSize(ctx context.Context, request *persistence.GetTaskListSizeRequest) (*persistence.GetTaskListSizeResponse, error) {
 	storeShard, err := t.GetStoreShardByTaskList(request.DomainID, request.TaskListName, request.TaskListType)
 	if err != nil {
 		return nil, err
@@ -93,8 +90,8 @@ func (t *nosqlTaskStore) GetTaskListSize(ctx context.Context, request *p.GetTask
 
 func (t *nosqlTaskStore) LeaseTaskList(
 	ctx context.Context,
-	request *p.LeaseTaskListRequest,
-) (*p.LeaseTaskListResponse, error) {
+	request *persistence.LeaseTaskListRequest,
+) (*persistence.LeaseTaskListResponse, error) {
 	if len(request.TaskList) == 0 {
 		return nil, &types.InternalServiceError{
 			Message: "LeaseTaskList requires non empty task list",
@@ -134,7 +131,7 @@ func (t *nosqlTaskStore) LeaseTaskList(
 		// lease on the task list. If request.RangeID=0, we are trying to steal
 		// the tasklist from its current owner
 		if request.RangeID > 0 && request.RangeID != currTL.RangeID {
-			return nil, &p.ConditionFailedError{
+			return nil, &persistence.ConditionFailedError{
 				Msg: fmt.Sprintf("leaseTaskList:renew failed: taskList:%v, taskListType:%v, haveRangeID:%v, gotRangeID:%v",
 					request.TaskList, request.TaskType, request.RangeID, currTL.RangeID),
 			}
@@ -156,14 +153,14 @@ func (t *nosqlTaskStore) LeaseTaskList(
 	if err != nil {
 		conditionFailure, ok := err.(*nosqlplugin.TaskOperationConditionFailure)
 		if ok {
-			return nil, &p.ConditionFailedError{
+			return nil, &persistence.ConditionFailedError{
 				Msg: fmt.Sprintf("leaseTaskList: taskList:%v, taskListType:%v, haveRangeID:%v, gotRangeID:%v",
 					request.TaskList, request.TaskType, currTL.RangeID, conditionFailure.RangeID),
 			}
 		}
 		return nil, convertCommonErrors(storeShard.db, "LeaseTaskList", err)
 	}
-	tli := &p.TaskListInfo{
+	tli := &persistence.TaskListInfo{
 		DomainID:    request.DomainID,
 		Name:        request.TaskList,
 		TaskType:    request.TaskType,
@@ -172,13 +169,13 @@ func (t *nosqlTaskStore) LeaseTaskList(
 		Kind:        request.TaskListKind,
 		LastUpdated: now,
 	}
-	return &p.LeaseTaskListResponse{TaskListInfo: tli}, nil
+	return &persistence.LeaseTaskListResponse{TaskListInfo: tli}, nil
 }
 
 func (t *nosqlTaskStore) UpdateTaskList(
 	ctx context.Context,
-	request *p.UpdateTaskListRequest,
-) (*p.UpdateTaskListResponse, error) {
+	request *persistence.UpdateTaskListRequest,
+) (*persistence.UpdateTaskListResponse, error) {
 	tli := request.TaskListInfo
 	var err error
 	taskListToUpdate := &nosqlplugin.TaskListRow{
@@ -195,7 +192,7 @@ func (t *nosqlTaskStore) UpdateTaskList(
 		return nil, err
 	}
 
-	if tli.Kind == p.TaskListKindSticky { // if task_list is sticky, then update with TTL
+	if tli.Kind == persistence.TaskListKindSticky { // if task_list is sticky, then update with TTL
 		err = storeShard.db.UpdateTaskListWithTTL(ctx, stickyTaskListTTL, taskListToUpdate, tli.RangeID)
 	} else {
 		err = storeShard.db.UpdateTaskList(ctx, taskListToUpdate, tli.RangeID)
@@ -204,7 +201,7 @@ func (t *nosqlTaskStore) UpdateTaskList(
 	if err != nil {
 		conditionFailure, ok := err.(*nosqlplugin.TaskOperationConditionFailure)
 		if ok {
-			return nil, &p.ConditionFailedError{
+			return nil, &persistence.ConditionFailedError{
 				Msg: fmt.Sprintf("Failed to update task list. name: %v, type: %v, rangeID: %v, columns: (%v)",
 					tli.Name, tli.TaskType, tli.RangeID, conditionFailure.Details),
 			}
@@ -212,13 +209,13 @@ func (t *nosqlTaskStore) UpdateTaskList(
 		return nil, convertCommonErrors(storeShard.db, "UpdateTaskList", err)
 	}
 
-	return &p.UpdateTaskListResponse{}, nil
+	return &persistence.UpdateTaskListResponse{}, nil
 }
 
 func (t *nosqlTaskStore) ListTaskList(
 	_ context.Context,
-	_ *p.ListTaskListRequest,
-) (*p.ListTaskListResponse, error) {
+	_ *persistence.ListTaskListRequest,
+) (*persistence.ListTaskListResponse, error) {
 	return nil, &types.InternalServiceError{
 		Message: "unsupported operation",
 	}
@@ -226,7 +223,7 @@ func (t *nosqlTaskStore) ListTaskList(
 
 func (t *nosqlTaskStore) DeleteTaskList(
 	ctx context.Context,
-	request *p.DeleteTaskListRequest,
+	request *persistence.DeleteTaskListRequest,
 ) error {
 	storeShard, err := t.GetStoreShardByTaskList(request.DomainID, request.TaskListName, request.TaskListType)
 	if err != nil {
@@ -242,7 +239,7 @@ func (t *nosqlTaskStore) DeleteTaskList(
 	if err != nil {
 		conditionFailure, ok := err.(*nosqlplugin.TaskOperationConditionFailure)
 		if ok {
-			return &p.ConditionFailedError{
+			return &persistence.ConditionFailedError{
 				Msg: fmt.Sprintf("Failed to delete task list. name: %v, type: %v, rangeID: %v, columns: (%v)",
 					request.TaskListName, request.TaskListType, request.RangeID, conditionFailure.Details),
 			}
@@ -255,8 +252,8 @@ func (t *nosqlTaskStore) DeleteTaskList(
 
 func (t *nosqlTaskStore) CreateTasks(
 	ctx context.Context,
-	request *p.InternalCreateTasksRequest,
-) (*p.CreateTasksResponse, error) {
+	request *persistence.InternalCreateTasksRequest,
+) (*persistence.CreateTasksResponse, error) {
 	now := time.Now()
 	var tasks []*nosqlplugin.TaskRowForInsert
 	for _, t := range request.Tasks {
@@ -296,7 +293,7 @@ func (t *nosqlTaskStore) CreateTasks(
 	if err != nil {
 		conditionFailure, ok := err.(*nosqlplugin.TaskOperationConditionFailure)
 		if ok {
-			return nil, &p.ConditionFailedError{
+			return nil, &persistence.ConditionFailedError{
 				Msg: fmt.Sprintf("Failed to insert tasks. name: %v, type: %v, rangeID: %v, columns: (%v)",
 					request.TaskListInfo.Name, request.TaskListInfo.TaskType, request.TaskListInfo.RangeID, conditionFailure.Details),
 			}
@@ -304,19 +301,19 @@ func (t *nosqlTaskStore) CreateTasks(
 		return nil, convertCommonErrors(storeShard.db, "CreateTasks", err)
 	}
 
-	return &p.CreateTasksResponse{}, nil
+	return &persistence.CreateTasksResponse{}, nil
 }
 
 func (t *nosqlTaskStore) GetTasks(
 	ctx context.Context,
-	request *p.GetTasksRequest,
-) (*p.InternalGetTasksResponse, error) {
+	request *persistence.GetTasksRequest,
+) (*persistence.InternalGetTasksResponse, error) {
 	if request.MaxReadLevel == nil {
 		request.MaxReadLevel = common.Int64Ptr(math.MaxInt64)
 	}
 
 	if request.ReadLevel > *request.MaxReadLevel {
-		return &p.InternalGetTasksResponse{}, nil
+		return &persistence.InternalGetTasksResponse{}, nil
 	}
 
 	storeShard, err := t.GetStoreShardByTaskList(request.DomainID, request.TaskList, request.TaskType)
@@ -340,7 +337,7 @@ func (t *nosqlTaskStore) GetTasks(
 		return nil, convertCommonErrors(storeShard.db, "GetTasks", err)
 	}
 
-	response := &p.InternalGetTasksResponse{}
+	response := &persistence.InternalGetTasksResponse{}
 	for _, t := range resp {
 		response.Tasks = append(response.Tasks, toTaskInfo(t))
 	}
@@ -348,8 +345,8 @@ func (t *nosqlTaskStore) GetTasks(
 	return response, nil
 }
 
-func toTaskInfo(t *nosqlplugin.TaskRow) *p.InternalTaskInfo {
-	return &p.InternalTaskInfo{
+func toTaskInfo(t *nosqlplugin.TaskRow) *persistence.InternalTaskInfo {
+	return &persistence.InternalTaskInfo{
 		DomainID:        t.DomainID,
 		WorkflowID:      t.WorkflowID,
 		RunID:           t.RunID,
@@ -362,7 +359,7 @@ func toTaskInfo(t *nosqlplugin.TaskRow) *p.InternalTaskInfo {
 
 func (t *nosqlTaskStore) CompleteTask(
 	ctx context.Context,
-	request *p.CompleteTaskRequest,
+	request *persistence.CompleteTaskRequest,
 ) error {
 	tli := request.TaskList
 	storeShard, err := t.GetStoreShardByTaskList(tli.DomainID, tli.Name, tli.TaskType)
@@ -394,8 +391,8 @@ func (t *nosqlTaskStore) CompleteTask(
 // be returned to the caller
 func (t *nosqlTaskStore) CompleteTasksLessThan(
 	ctx context.Context,
-	request *p.CompleteTasksLessThanRequest,
-) (*p.CompleteTasksLessThanResponse, error) {
+	request *persistence.CompleteTasksLessThanRequest,
+) (*persistence.CompleteTasksLessThanResponse, error) {
 	storeShard, err := t.GetStoreShardByTaskList(request.DomainID, request.TaskListName, request.TaskType)
 	if err != nil {
 		return nil, err
@@ -421,5 +418,5 @@ func (t *nosqlTaskStore) CompleteTasksLessThan(
 	if err != nil {
 		return nil, convertCommonErrors(storeShard.db, "CompleteTasksLessThan", err)
 	}
-	return &p.CompleteTasksLessThanResponse{TasksCompleted: num}, nil
+	return &persistence.CompleteTasksLessThanResponse{TasksCompleted: num}, nil
 }

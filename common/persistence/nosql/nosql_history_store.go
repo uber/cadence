@@ -22,36 +22,33 @@ package nosql
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
-	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	persistenceutils "github.com/uber/cadence/common/persistence/persistence-utils"
 	"github.com/uber/cadence/common/types"
 )
 
-type (
-	nosqlHistoryStore struct {
-		shardedNosqlStore
-	}
-)
+type nosqlHistoryStore struct {
+	*shardedNosqlStore
+}
 
 // newNoSQLHistoryStore is used to create an instance of HistoryStore implementation
 func newNoSQLHistoryStore(
 	cfg config.ShardedNoSQL,
 	logger log.Logger,
-	dc *p.DynamicConfiguration,
-) (p.HistoryStore, error) {
+	dc *persistence.DynamicConfiguration,
+) (persistence.HistoryStore, error) {
 	s, err := newShardedNosqlStore(cfg, logger, dc)
 	if err != nil {
 		return nil, err
 	}
 	return &nosqlHistoryStore{
-		shardedNosqlStore: *s,
+		shardedNosqlStore: s,
 	}, nil
 }
 
@@ -59,14 +56,13 @@ func newNoSQLHistoryStore(
 // Note that it's not allowed to append above the branch's ancestors' nodes, which means nodeID >= ForkNodeID
 func (h *nosqlHistoryStore) AppendHistoryNodes(
 	ctx context.Context,
-	request *p.InternalAppendHistoryNodesRequest,
+	request *persistence.InternalAppendHistoryNodesRequest,
 ) error {
-
 	branchInfo := request.BranchInfo
 	beginNodeID := persistenceutils.GetBeginNodeID(branchInfo)
 
 	if request.NodeID < beginNodeID {
-		return &p.InvalidPersistenceRequestError{
+		return &persistence.InvalidPersistenceRequestError{
 			Msg: "cannot append to ancestors' nodes",
 		}
 	}
@@ -111,8 +107,8 @@ func (h *nosqlHistoryStore) AppendHistoryNodes(
 // NOTE: For branch that has ancestors, we need to query Cassandra multiple times, because it doesn't support OR/UNION operator
 func (h *nosqlHistoryStore) ReadHistoryBranch(
 	ctx context.Context,
-	request *p.InternalReadHistoryBranchRequest,
-) (*p.InternalReadHistoryBranchResponse, error) {
+	request *persistence.InternalReadHistoryBranchRequest,
+) (*persistence.InternalReadHistoryBranchResponse, error) {
 	filter := &nosqlplugin.HistoryNodeFilter{
 		ShardID:       request.ShardID,
 		TreeID:        request.TreeID,
@@ -133,9 +129,9 @@ func (h *nosqlHistoryStore) ReadHistoryBranch(
 		return nil, convertCommonErrors(storeShard.db, "SelectFromHistoryNode", err)
 	}
 
-	history := make([]*p.DataBlob, 0, int(request.PageSize))
+	history := make([]*persistence.DataBlob, 0, int(request.PageSize))
 
-	eventBlob := &p.DataBlob{}
+	eventBlob := &persistence.DataBlob{}
 	nodeID := int64(0)
 	txnID := int64(0)
 	lastNodeID := request.LastNodeID
@@ -174,11 +170,11 @@ func (h *nosqlHistoryStore) ReadHistoryBranch(
 			lastTxnID = txnID
 			lastNodeID = nodeID
 			history = append(history, eventBlob)
-			eventBlob = &p.DataBlob{}
+			eventBlob = &persistence.DataBlob{}
 		}
 	}
 
-	return &p.InternalReadHistoryBranchResponse{
+	return &persistence.InternalReadHistoryBranchResponse{
 		History:           history,
 		NextPageToken:     pagingToken,
 		LastNodeID:        lastNodeID,
@@ -235,8 +231,8 @@ func (h *nosqlHistoryStore) ReadHistoryBranch(
 //	 8[8,9]
 func (h *nosqlHistoryStore) ForkHistoryBranch(
 	ctx context.Context,
-	request *p.InternalForkHistoryBranchRequest,
-) (*p.InternalForkHistoryBranchResponse, error) {
+	request *persistence.InternalForkHistoryBranchRequest,
+) (*persistence.InternalForkHistoryBranchResponse, error) {
 
 	forkB := request.ForkBranchInfo
 	treeID := forkB.TreeID
@@ -267,7 +263,7 @@ func (h *nosqlHistoryStore) ForkHistoryBranch(
 		})
 	}
 
-	resp := &p.InternalForkHistoryBranchResponse{
+	resp := &persistence.InternalForkHistoryBranchResponse{
 		NewBranchInfo: types.HistoryBranch{
 			TreeID:    treeID,
 			BranchID:  request.NewBranchID,
@@ -306,7 +302,7 @@ func (h *nosqlHistoryStore) ForkHistoryBranch(
 // DeleteHistoryBranch removes a branch
 func (h *nosqlHistoryStore) DeleteHistoryBranch(
 	ctx context.Context,
-	request *p.InternalDeleteHistoryBranchRequest,
+	request *persistence.InternalDeleteHistoryBranchRequest,
 ) error {
 
 	branch := request.BranchInfo
@@ -318,7 +314,7 @@ func (h *nosqlHistoryStore) DeleteHistoryBranch(
 		BeginNodeID: beginNodeID,
 	})
 
-	rsp, err := h.GetHistoryTree(ctx, &p.InternalGetHistoryTreeRequest{
+	rsp, err := h.GetHistoryTree(ctx, &persistence.InternalGetHistoryTreeRequest{
 		TreeID:  treeID,
 		ShardID: &request.ShardID,
 	})
@@ -376,12 +372,12 @@ func (h *nosqlHistoryStore) DeleteHistoryBranch(
 
 func (h *nosqlHistoryStore) GetAllHistoryTreeBranches(
 	ctx context.Context,
-	request *p.GetAllHistoryTreeBranchesRequest,
-) (*p.GetAllHistoryTreeBranchesResponse, error) {
+	request *persistence.GetAllHistoryTreeBranchesRequest,
+) (*persistence.GetAllHistoryTreeBranchesResponse, error) {
 
 	if h.shardingPolicy.hasShardedHistory {
 		return nil, &types.InternalServiceError{
-			Message: fmt.Sprintf("SelectAllHistoryTrees is not supported on sharded nosql db"),
+			Message: "SelectAllHistoryTrees is not supported on sharded nosql db",
 		}
 	}
 
@@ -391,11 +387,11 @@ func (h *nosqlHistoryStore) GetAllHistoryTreeBranches(
 		return nil, convertCommonErrors(storeShard.db, "SelectAllHistoryTrees", err)
 	}
 
-	branchDetails := make([]p.HistoryBranchDetail, 0, int(request.PageSize))
+	branchDetails := make([]persistence.HistoryBranchDetail, 0, int(request.PageSize))
 
 	for _, branch := range dbBranches {
 
-		branchDetail := p.HistoryBranchDetail{
+		branchDetail := persistence.HistoryBranchDetail{
 			TreeID:   branch.TreeID,
 			BranchID: branch.BranchID,
 			ForkTime: branch.CreateTimestamp,
@@ -404,7 +400,7 @@ func (h *nosqlHistoryStore) GetAllHistoryTreeBranches(
 		branchDetails = append(branchDetails, branchDetail)
 	}
 
-	response := &p.GetAllHistoryTreeBranchesResponse{
+	response := &persistence.GetAllHistoryTreeBranchesResponse{
 		Branches:      branchDetails,
 		NextPageToken: pagingToken,
 	}
@@ -415,8 +411,8 @@ func (h *nosqlHistoryStore) GetAllHistoryTreeBranches(
 // GetHistoryTree returns all branch information of a tree
 func (h *nosqlHistoryStore) GetHistoryTree(
 	ctx context.Context,
-	request *p.InternalGetHistoryTreeRequest,
-) (*p.InternalGetHistoryTreeResponse, error) {
+	request *persistence.InternalGetHistoryTreeRequest,
+) (*persistence.InternalGetHistoryTreeResponse, error) {
 
 	treeID := request.TreeID
 	storeShard, err := h.GetStoreShardByHistoryShard(*request.ShardID)
@@ -441,7 +437,7 @@ func (h *nosqlHistoryStore) GetHistoryTree(
 		}
 		branches = append(branches, br)
 	}
-	return &p.InternalGetHistoryTreeResponse{
+	return &persistence.InternalGetHistoryTreeResponse{
 		Branches: branches,
 	}, nil
 }

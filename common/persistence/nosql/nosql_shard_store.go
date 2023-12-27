@@ -27,41 +27,37 @@ import (
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/types"
 )
 
-type (
-	// Implements ShardStore
-	nosqlShardStore struct {
-		shardedNosqlStore
-		currentClusterName string
-	}
-)
-
-var _ p.ShardStore = (*nosqlShardStore)(nil)
+// Implements ShardStore
+type nosqlShardStore struct {
+	*shardedNosqlStore
+	currentClusterName string
+}
 
 // newNoSQLShardStore is used to create an instance of ShardStore implementation
 func newNoSQLShardStore(
 	cfg config.ShardedNoSQL,
 	clusterName string,
 	logger log.Logger,
-	dc *p.DynamicConfiguration,
-) (p.ShardStore, error) {
+	dc *persistence.DynamicConfiguration,
+) (persistence.ShardStore, error) {
 	s, err := newShardedNosqlStore(cfg, logger, dc)
 	if err != nil {
 		return nil, err
 	}
 	return &nosqlShardStore{
-		shardedNosqlStore:  *s,
+		shardedNosqlStore:  s,
 		currentClusterName: clusterName,
 	}, nil
 }
 
 func (sh *nosqlShardStore) CreateShard(
 	ctx context.Context,
-	request *p.InternalCreateShardRequest,
+	request *persistence.InternalCreateShardRequest,
 ) error {
 	storeShard, err := sh.GetStoreShardByHistoryShard(request.ShardInfo.ShardID)
 	if err != nil {
@@ -71,7 +67,7 @@ func (sh *nosqlShardStore) CreateShard(
 	if err != nil {
 		conditionFailure, ok := err.(*nosqlplugin.ShardOperationConditionFailure)
 		if ok {
-			return &p.ShardAlreadyExistError{
+			return &persistence.ShardAlreadyExistError{
 				Msg: fmt.Sprintf("Shard already exists in executions table.  ShardId: %v, request_range_id: %v, actual_range_id : %v, columns: (%v)",
 					request.ShardInfo.ShardID, request.ShardInfo.RangeID, conditionFailure.RangeID, conditionFailure.Details),
 			}
@@ -84,8 +80,8 @@ func (sh *nosqlShardStore) CreateShard(
 
 func (sh *nosqlShardStore) GetShard(
 	ctx context.Context,
-	request *p.InternalGetShardRequest,
-) (*p.InternalGetShardResponse, error) {
+	request *persistence.InternalGetShardRequest,
+) (*persistence.InternalGetShardResponse, error) {
 	shardID := request.ShardID
 	storeShard, err := sh.GetStoreShardByHistoryShard(shardID)
 	if err != nil {
@@ -128,7 +124,7 @@ func (sh *nosqlShardStore) GetShard(
 		// as the value from rangeID columns is returned, shardInfoRangeID will also be updated to the correct value.
 	}
 
-	return &p.InternalGetShardResponse{ShardInfo: shardInfo}, nil
+	return &persistence.InternalGetShardResponse{ShardInfo: shardInfo}, nil
 }
 
 func (sh *nosqlShardStore) updateRangeID(
@@ -145,7 +141,7 @@ func (sh *nosqlShardStore) updateRangeID(
 	if err != nil {
 		conditionFailure, ok := err.(*nosqlplugin.ShardOperationConditionFailure)
 		if ok {
-			return &p.ShardOwnershipLostError{
+			return &persistence.ShardOwnershipLostError{
 				ShardID: shardID,
 				Msg: fmt.Sprintf("Failed to update shard rangeID.  request_range_id: %v, actual_range_id : %v, columns: (%v)",
 					previousRangeID, conditionFailure.RangeID, conditionFailure.Details),
@@ -159,7 +155,7 @@ func (sh *nosqlShardStore) updateRangeID(
 
 func (sh *nosqlShardStore) UpdateShard(
 	ctx context.Context,
-	request *p.InternalUpdateShardRequest,
+	request *persistence.InternalUpdateShardRequest,
 ) error {
 	storeShard, err := sh.GetStoreShardByHistoryShard(request.ShardInfo.ShardID)
 	if err != nil {
@@ -169,7 +165,7 @@ func (sh *nosqlShardStore) UpdateShard(
 	if err != nil {
 		conditionFailure, ok := err.(*nosqlplugin.ShardOperationConditionFailure)
 		if ok {
-			return &p.ShardOwnershipLostError{
+			return &persistence.ShardOwnershipLostError{
 				ShardID: request.ShardInfo.ShardID,
 				Msg: fmt.Sprintf("Failed to update shard rangeID.  request_range_id: %v, actual_range_id : %v, columns: (%v)",
 					request.PreviousRangeID, conditionFailure.RangeID, conditionFailure.Details),

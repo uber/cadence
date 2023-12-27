@@ -28,25 +28,23 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
-	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/types"
 )
 
-type (
-	nosqlDomainStore struct {
-		nosqlStore
-		currentClusterName string
-	}
-)
+type nosqlDomainStore struct {
+	nosqlStore
+	currentClusterName string
+}
 
 // newNoSQLDomainStore is used to create an instance of DomainStore implementation
 func newNoSQLDomainStore(
 	cfg config.ShardedNoSQL,
 	currentClusterName string,
 	logger log.Logger,
-	dc *p.DynamicConfiguration,
-) (p.DomainStore, error) {
+	dc *persistence.DynamicConfiguration,
+) (persistence.DomainStore, error) {
 	shardedStore, err := newShardedNosqlStore(cfg, logger, dc)
 	if err != nil {
 		return nil, err
@@ -64,8 +62,8 @@ func newNoSQLDomainStore(
 // orphaned entry from domains table.  We might need a background job to delete those orphaned record.
 func (m *nosqlDomainStore) CreateDomain(
 	ctx context.Context,
-	request *p.InternalCreateDomainRequest,
-) (*p.CreateDomainResponse, error) {
+	request *persistence.InternalCreateDomainRequest,
+) (*persistence.CreateDomainResponse, error) {
 	config, err := m.toNoSQLInternalDomainConfig(request.Config)
 	if err != nil {
 		return nil, err
@@ -76,7 +74,7 @@ func (m *nosqlDomainStore) CreateDomain(
 		ReplicationConfig:           request.ReplicationConfig,
 		ConfigVersion:               request.ConfigVersion,
 		FailoverVersion:             request.FailoverVersion,
-		FailoverNotificationVersion: p.InitialFailoverNotificationVersion,
+		FailoverNotificationVersion: persistence.InitialFailoverNotificationVersion,
 		PreviousFailoverVersion:     common.InitialPreviousFailoverVersion,
 		FailoverEndTime:             nil,
 		IsGlobalDomain:              request.IsGlobalDomain,
@@ -92,12 +90,12 @@ func (m *nosqlDomainStore) CreateDomain(
 		return nil, convertCommonErrors(m.db, "CreateDomain", err)
 	}
 
-	return &p.CreateDomainResponse{ID: request.Info.ID}, nil
+	return &persistence.CreateDomainResponse{ID: request.Info.ID}, nil
 }
 
 func (m *nosqlDomainStore) UpdateDomain(
 	ctx context.Context,
-	request *p.InternalUpdateDomainRequest,
+	request *persistence.InternalUpdateDomainRequest,
 ) error {
 	config, err := m.toNoSQLInternalDomainConfig(request.Config)
 	if err != nil {
@@ -127,8 +125,8 @@ func (m *nosqlDomainStore) UpdateDomain(
 
 func (m *nosqlDomainStore) GetDomain(
 	ctx context.Context,
-	request *p.GetDomainRequest,
-) (*p.InternalGetDomainResponse, error) {
+	request *persistence.GetDomainRequest,
+) (*persistence.InternalGetDomainResponse, error) {
 	if len(request.ID) > 0 && len(request.Name) > 0 {
 		return nil, &types.BadRequestError{
 			Message: "GetDomain operation failed.  Both ID and Name specified in request.",
@@ -178,7 +176,7 @@ func (m *nosqlDomainStore) GetDomain(
 		}
 	}
 
-	return &p.InternalGetDomainResponse{
+	return &persistence.InternalGetDomainResponse{
 		Info:                        row.Info,
 		Config:                      domainConfig,
 		ReplicationConfig:           row.ReplicationConfig,
@@ -195,13 +193,13 @@ func (m *nosqlDomainStore) GetDomain(
 
 func (m *nosqlDomainStore) ListDomains(
 	ctx context.Context,
-	request *p.ListDomainsRequest,
-) (*p.InternalListDomainsResponse, error) {
+	request *persistence.ListDomainsRequest,
+) (*persistence.InternalListDomainsResponse, error) {
 	rows, nextPageToken, err := m.db.SelectAllDomains(ctx, request.PageSize, request.NextPageToken)
 	if err != nil {
 		return nil, convertCommonErrors(m.db, "ListDomains", err)
 	}
-	var domains []*p.InternalGetDomainResponse
+	var domains []*persistence.InternalGetDomainResponse
 	for _, row := range rows {
 		if row.Info.Data == nil {
 			row.Info.Data = map[string]string{}
@@ -216,7 +214,7 @@ func (m *nosqlDomainStore) ListDomains(
 			}
 		}
 
-		domains = append(domains, &p.InternalGetDomainResponse{
+		domains = append(domains, &persistence.InternalGetDomainResponse{
 			Info:                        row.Info,
 			Config:                      domainConfig,
 			ReplicationConfig:           row.ReplicationConfig,
@@ -231,7 +229,7 @@ func (m *nosqlDomainStore) ListDomains(
 		})
 	}
 
-	return &p.InternalListDomainsResponse{
+	return &persistence.InternalListDomainsResponse{
 		Domains:       domains,
 		NextPageToken: nextPageToken,
 	}, nil
@@ -239,7 +237,7 @@ func (m *nosqlDomainStore) ListDomains(
 
 func (m *nosqlDomainStore) DeleteDomain(
 	ctx context.Context,
-	request *p.DeleteDomainRequest,
+	request *persistence.DeleteDomainRequest,
 ) error {
 	if err := m.db.DeleteDomain(ctx, &request.ID, nil); err != nil {
 		return convertCommonErrors(m.db, "DeleteDomain", err)
@@ -250,7 +248,7 @@ func (m *nosqlDomainStore) DeleteDomain(
 
 func (m *nosqlDomainStore) DeleteDomainByName(
 	ctx context.Context,
-	request *p.DeleteDomainByNameRequest,
+	request *persistence.DeleteDomainByNameRequest,
 ) error {
 	if err := m.db.DeleteDomain(ctx, nil, &request.Name); err != nil {
 		return convertCommonErrors(m.db, "DeleteDomainByName", err)
@@ -261,16 +259,16 @@ func (m *nosqlDomainStore) DeleteDomainByName(
 
 func (m *nosqlDomainStore) GetMetadata(
 	ctx context.Context,
-) (*p.GetMetadataResponse, error) {
+) (*persistence.GetMetadataResponse, error) {
 	notificationVersion, err := m.db.SelectDomainMetadata(ctx)
 	if err != nil {
 		return nil, convertCommonErrors(m.db, "GetMetadata", err)
 	}
-	return &p.GetMetadataResponse{NotificationVersion: notificationVersion}, nil
+	return &persistence.GetMetadataResponse{NotificationVersion: notificationVersion}, nil
 }
 
 func (m *nosqlDomainStore) toNoSQLInternalDomainConfig(
-	domainConfig *p.InternalDomainConfig,
+	domainConfig *persistence.InternalDomainConfig,
 ) (*nosqlplugin.NoSQLInternalDomainConfig, error) {
 	return &nosqlplugin.NoSQLInternalDomainConfig{
 		Retention:                domainConfig.Retention,
@@ -288,8 +286,8 @@ func (m *nosqlDomainStore) toNoSQLInternalDomainConfig(
 
 func (m *nosqlDomainStore) fromNoSQLInternalDomainConfig(
 	domainConfig *nosqlplugin.NoSQLInternalDomainConfig,
-) (*p.InternalDomainConfig, error) {
-	return &p.InternalDomainConfig{
+) (*persistence.InternalDomainConfig, error) {
+	return &persistence.InternalDomainConfig{
 		Retention:                domainConfig.Retention,
 		EmitMetric:               domainConfig.EmitMetric,
 		ArchivalBucket:           domainConfig.ArchivalBucket,

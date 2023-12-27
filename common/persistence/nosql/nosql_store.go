@@ -25,13 +25,11 @@ import (
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
 
-type (
-	// a shared struct for all stores in this package
-	nosqlStore struct {
-		logger log.Logger
-		db     nosqlplugin.DB
-	}
-)
+// a shared struct for all stores in this package
+type nosqlStore struct {
+	logger log.Logger
+	db     nosqlplugin.DB
+}
 
 func (nm *nosqlStore) GetName() string {
 	return nm.db.PluginName()

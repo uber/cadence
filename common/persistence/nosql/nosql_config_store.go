@@ -30,11 +30,9 @@ import (
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
 
-type (
-	nosqlConfigStore struct {
-		nosqlStore
-	}
-)
+type nosqlConfigStore struct {
+	nosqlStore
+}
 
 func NewNoSQLConfigStore(
 	cfg config.ShardedNoSQL,

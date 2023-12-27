@@ -27,7 +27,7 @@ import (
 
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
-	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/types"
 )
@@ -38,20 +38,18 @@ const (
 	openExecutionTTLBuffer = int64(86400) // setting it to a day to account for shard going down
 )
 
-type (
-	nosqlVisibilityStore struct {
-		sortByCloseTime bool
-		nosqlStore
-	}
-)
+type nosqlVisibilityStore struct {
+	sortByCloseTime bool
+	nosqlStore
+}
 
 // newNoSQLVisibilityStore is used to create an instance of VisibilityStore implementation
 func newNoSQLVisibilityStore(
 	listClosedOrderingByCloseTime bool,
 	cfg config.ShardedNoSQL,
 	logger log.Logger,
-	dc *p.DynamicConfiguration,
-) (p.VisibilityStore, error) {
+	dc *persistence.DynamicConfiguration,
+) (persistence.VisibilityStore, error) {
 	shardedStore, err := newShardedNosqlStore(cfg, logger, dc)
 	if err != nil {
 		return nil, err
@@ -64,7 +62,7 @@ func newNoSQLVisibilityStore(
 
 func (v *nosqlVisibilityStore) RecordWorkflowExecutionStarted(
 	ctx context.Context,
-	request *p.InternalRecordWorkflowExecutionStartedRequest,
+	request *persistence.InternalRecordWorkflowExecutionStartedRequest,
 ) error {
 	ttl := int64(request.WorkflowTimeout.Seconds()) + openExecutionTTLBuffer
 
@@ -93,7 +91,7 @@ func (v *nosqlVisibilityStore) RecordWorkflowExecutionStarted(
 
 func (v *nosqlVisibilityStore) RecordWorkflowExecutionClosed(
 	ctx context.Context,
-	request *p.InternalRecordWorkflowExecutionClosedRequest,
+	request *persistence.InternalRecordWorkflowExecutionClosedRequest,
 ) error {
 	// Find how long to keep the row
 	retention := request.RetentionPeriod
@@ -130,7 +128,7 @@ func (v *nosqlVisibilityStore) RecordWorkflowExecutionClosed(
 
 func (v *nosqlVisibilityStore) RecordWorkflowExecutionUninitialized(
 	ctx context.Context,
-	request *p.InternalRecordWorkflowExecutionUninitializedRequest,
+	request *persistence.InternalRecordWorkflowExecutionUninitializedRequest,
 ) error {
 	// temporary: not implemented, only implemented for ES
 	return nil
@@ -138,18 +136,18 @@ func (v *nosqlVisibilityStore) RecordWorkflowExecutionUninitialized(
 
 func (v *nosqlVisibilityStore) UpsertWorkflowExecution(
 	ctx context.Context,
-	request *p.InternalUpsertWorkflowExecutionRequest,
+	request *persistence.InternalUpsertWorkflowExecutionRequest,
 ) error {
-	if p.IsNopUpsertWorkflowRequest(request) {
+	if persistence.IsNopUpsertWorkflowRequest(request) {
 		return nil
 	}
-	return p.ErrVisibilityOperationNotSupported
+	return persistence.ErrVisibilityOperationNotSupported
 }
 
 func (v *nosqlVisibilityStore) ListOpenWorkflowExecutions(
 	ctx context.Context,
-	request *p.InternalListWorkflowExecutionsRequest,
-) (*p.InternalListWorkflowExecutionsResponse, error) {
+	request *persistence.InternalListWorkflowExecutionsRequest,
+) (*persistence.InternalListWorkflowExecutionsResponse, error) {
 	resp, err := v.db.SelectVisibility(ctx, &nosqlplugin.VisibilityFilter{
 		ListRequest: *request,
 		FilterType:  nosqlplugin.AllOpen,
@@ -159,7 +157,7 @@ func (v *nosqlVisibilityStore) ListOpenWorkflowExecutions(
 		return nil, convertCommonErrors(v.db, "ListOpenWorkflowExecutions", err)
 	}
 
-	return &p.InternalListWorkflowExecutionsResponse{
+	return &persistence.InternalListWorkflowExecutionsResponse{
 		Executions:    resp.Executions,
 		NextPageToken: resp.NextPageToken,
 	}, nil
@@ -167,8 +165,8 @@ func (v *nosqlVisibilityStore) ListOpenWorkflowExecutions(
 
 func (v *nosqlVisibilityStore) ListClosedWorkflowExecutions(
 	ctx context.Context,
-	request *p.InternalListWorkflowExecutionsRequest,
-) (*p.InternalListWorkflowExecutionsResponse, error) {
+	request *persistence.InternalListWorkflowExecutionsRequest,
+) (*persistence.InternalListWorkflowExecutionsResponse, error) {
 	var filter *nosqlplugin.VisibilityFilter
 	if v.sortByCloseTime {
 		filter = &nosqlplugin.VisibilityFilter{
@@ -188,7 +186,7 @@ func (v *nosqlVisibilityStore) ListClosedWorkflowExecutions(
 		return nil, convertCommonErrors(v.db, "ListClosedWorkflowExecutions", err)
 	}
 
-	return &p.InternalListWorkflowExecutionsResponse{
+	return &persistence.InternalListWorkflowExecutionsResponse{
 		Executions:    resp.Executions,
 		NextPageToken: resp.NextPageToken,
 	}, nil
@@ -196,8 +194,8 @@ func (v *nosqlVisibilityStore) ListClosedWorkflowExecutions(
 
 func (v *nosqlVisibilityStore) ListOpenWorkflowExecutionsByType(
 	ctx context.Context,
-	request *p.InternalListWorkflowExecutionsByTypeRequest,
-) (*p.InternalListWorkflowExecutionsResponse, error) {
+	request *persistence.InternalListWorkflowExecutionsByTypeRequest,
+) (*persistence.InternalListWorkflowExecutionsResponse, error) {
 	resp, err := v.db.SelectVisibility(ctx, &nosqlplugin.VisibilityFilter{
 		ListRequest:  request.InternalListWorkflowExecutionsRequest,
 		FilterType:   nosqlplugin.OpenByWorkflowType,
@@ -208,7 +206,7 @@ func (v *nosqlVisibilityStore) ListOpenWorkflowExecutionsByType(
 		return nil, convertCommonErrors(v.db, "ListOpenWorkflowExecutionsByType", err)
 	}
 
-	return &p.InternalListWorkflowExecutionsResponse{
+	return &persistence.InternalListWorkflowExecutionsResponse{
 		Executions:    resp.Executions,
 		NextPageToken: resp.NextPageToken,
 	}, nil
@@ -216,8 +214,8 @@ func (v *nosqlVisibilityStore) ListOpenWorkflowExecutionsByType(
 
 func (v *nosqlVisibilityStore) ListClosedWorkflowExecutionsByType(
 	ctx context.Context,
-	request *p.InternalListWorkflowExecutionsByTypeRequest,
-) (*p.InternalListWorkflowExecutionsResponse, error) {
+	request *persistence.InternalListWorkflowExecutionsByTypeRequest,
+) (*persistence.InternalListWorkflowExecutionsResponse, error) {
 	var filter *nosqlplugin.VisibilityFilter
 	if v.sortByCloseTime {
 		filter = &nosqlplugin.VisibilityFilter{
@@ -239,7 +237,7 @@ func (v *nosqlVisibilityStore) ListClosedWorkflowExecutionsByType(
 		return nil, convertCommonErrors(v.db, "ListClosedWorkflowExecutionsByType", err)
 	}
 
-	return &p.InternalListWorkflowExecutionsResponse{
+	return &persistence.InternalListWorkflowExecutionsResponse{
 		Executions:    resp.Executions,
 		NextPageToken: resp.NextPageToken,
 	}, nil
@@ -247,8 +245,8 @@ func (v *nosqlVisibilityStore) ListClosedWorkflowExecutionsByType(
 
 func (v *nosqlVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(
 	ctx context.Context,
-	request *p.InternalListWorkflowExecutionsByWorkflowIDRequest,
-) (*p.InternalListWorkflowExecutionsResponse, error) {
+	request *persistence.InternalListWorkflowExecutionsByWorkflowIDRequest,
+) (*persistence.InternalListWorkflowExecutionsResponse, error) {
 	resp, err := v.db.SelectVisibility(ctx, &nosqlplugin.VisibilityFilter{
 		ListRequest: request.InternalListWorkflowExecutionsRequest,
 		FilterType:  nosqlplugin.OpenByWorkflowID,
@@ -259,7 +257,7 @@ func (v *nosqlVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(
 		return nil, convertCommonErrors(v.db, "ListOpenWorkflowExecutionsByWorkflowID", err)
 	}
 
-	return &p.InternalListWorkflowExecutionsResponse{
+	return &persistence.InternalListWorkflowExecutionsResponse{
 		Executions:    resp.Executions,
 		NextPageToken: resp.NextPageToken,
 	}, nil
@@ -267,8 +265,8 @@ func (v *nosqlVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(
 
 func (v *nosqlVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(
 	ctx context.Context,
-	request *p.InternalListWorkflowExecutionsByWorkflowIDRequest,
-) (*p.InternalListWorkflowExecutionsResponse, error) {
+	request *persistence.InternalListWorkflowExecutionsByWorkflowIDRequest,
+) (*persistence.InternalListWorkflowExecutionsResponse, error) {
 	var filter *nosqlplugin.VisibilityFilter
 	if v.sortByCloseTime {
 		filter = &nosqlplugin.VisibilityFilter{
@@ -290,7 +288,7 @@ func (v *nosqlVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(
 		return nil, convertCommonErrors(v.db, "ListClosedWorkflowExecutionsByWorkflowID", err)
 	}
 
-	return &p.InternalListWorkflowExecutionsResponse{
+	return &persistence.InternalListWorkflowExecutionsResponse{
 		Executions:    resp.Executions,
 		NextPageToken: resp.NextPageToken,
 	}, nil
@@ -298,8 +296,8 @@ func (v *nosqlVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(
 
 func (v *nosqlVisibilityStore) ListClosedWorkflowExecutionsByStatus(
 	ctx context.Context,
-	request *p.InternalListClosedWorkflowExecutionsByStatusRequest,
-) (*p.InternalListWorkflowExecutionsResponse, error) {
+	request *persistence.InternalListClosedWorkflowExecutionsByStatusRequest,
+) (*persistence.InternalListWorkflowExecutionsResponse, error) {
 	var filter *nosqlplugin.VisibilityFilter
 	if v.sortByCloseTime {
 		filter = &nosqlplugin.VisibilityFilter{
@@ -321,7 +319,7 @@ func (v *nosqlVisibilityStore) ListClosedWorkflowExecutionsByStatus(
 		return nil, convertCommonErrors(v.db, "ListClosedWorkflowExecutionsByStatus", err)
 	}
 
-	return &p.InternalListWorkflowExecutionsResponse{
+	return &persistence.InternalListWorkflowExecutionsResponse{
 		Executions:    resp.Executions,
 		NextPageToken: resp.NextPageToken,
 	}, nil
@@ -329,8 +327,8 @@ func (v *nosqlVisibilityStore) ListClosedWorkflowExecutionsByStatus(
 
 func (v *nosqlVisibilityStore) GetClosedWorkflowExecution(
 	ctx context.Context,
-	request *p.InternalGetClosedWorkflowExecutionRequest,
-) (*p.InternalGetClosedWorkflowExecutionResponse, error) {
+	request *persistence.InternalGetClosedWorkflowExecutionRequest,
+) (*persistence.InternalGetClosedWorkflowExecutionResponse, error) {
 	wfexecution, err := v.db.SelectOneClosedWorkflow(ctx, request.DomainUUID, request.Execution.GetWorkflowID(), request.Execution.GetRunID())
 
 	if err != nil {
@@ -343,14 +341,14 @@ func (v *nosqlVisibilityStore) GetClosedWorkflowExecution(
 				request.Execution.GetWorkflowID(), request.Execution.GetRunID()),
 		}
 	}
-	return &p.InternalGetClosedWorkflowExecutionResponse{
+	return &persistence.InternalGetClosedWorkflowExecutionResponse{
 		Execution: wfexecution,
 	}, nil
 }
 
 func (v *nosqlVisibilityStore) DeleteWorkflowExecution(
 	ctx context.Context,
-	request *p.VisibilityDeleteWorkflowExecutionRequest,
+	request *persistence.VisibilityDeleteWorkflowExecutionRequest,
 ) error {
 	err := v.db.DeleteVisibility(ctx, request.DomainID, request.WorkflowID, request.RunID)
 	if err != nil {
@@ -361,7 +359,7 @@ func (v *nosqlVisibilityStore) DeleteWorkflowExecution(
 
 func (v *nosqlVisibilityStore) DeleteUninitializedWorkflowExecution(
 	ctx context.Context,
-	request *p.VisibilityDeleteWorkflowExecutionRequest,
+	request *persistence.VisibilityDeleteWorkflowExecutionRequest,
 ) error {
 	// temporary: not implemented, only implemented for ES
 	return nil
@@ -369,20 +367,20 @@ func (v *nosqlVisibilityStore) DeleteUninitializedWorkflowExecution(
 
 func (v *nosqlVisibilityStore) ListWorkflowExecutions(
 	_ context.Context,
-	_ *p.ListWorkflowExecutionsByQueryRequest,
-) (*p.InternalListWorkflowExecutionsResponse, error) {
-	return nil, p.ErrVisibilityOperationNotSupported
+	_ *persistence.ListWorkflowExecutionsByQueryRequest,
+) (*persistence.InternalListWorkflowExecutionsResponse, error) {
+	return nil, persistence.ErrVisibilityOperationNotSupported
 }
 
 func (v *nosqlVisibilityStore) ScanWorkflowExecutions(
 	_ context.Context,
-	_ *p.ListWorkflowExecutionsByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
-	return nil, p.ErrVisibilityOperationNotSupported
+	_ *persistence.ListWorkflowExecutionsByQueryRequest) (*persistence.InternalListWorkflowExecutionsResponse, error) {
+	return nil, persistence.ErrVisibilityOperationNotSupported
 }
 
 func (v *nosqlVisibilityStore) CountWorkflowExecutions(
 	_ context.Context,
-	_ *p.CountWorkflowExecutionsRequest,
-) (*p.CountWorkflowExecutionsResponse, error) {
-	return nil, p.ErrVisibilityOperationNotSupported
+	_ *persistence.CountWorkflowExecutionsRequest,
+) (*persistence.CountWorkflowExecutionsResponse, error) {
+	return nil, persistence.ErrVisibilityOperationNotSupported
 }

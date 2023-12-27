@@ -29,14 +29,12 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
 	"github.com/uber/cadence/common/log/tag"
-	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/types"
 )
 
-func (d *nosqlExecutionStore) prepareCreateWorkflowExecutionRequestWithMaps(
-	newWorkflow *p.InternalWorkflowSnapshot,
-) (*nosqlplugin.WorkflowExecutionRequest, error) {
+func (d *nosqlExecutionStore) prepareCreateWorkflowExecutionRequestWithMaps(newWorkflow *persistence.InternalWorkflowSnapshot) (*nosqlplugin.WorkflowExecutionRequest, error) {
 	executionInfo := newWorkflow.ExecutionInfo
 	lastWriteVersion := newWorkflow.LastWriteVersion
 	checkSum := newWorkflow.Checksum
@@ -76,9 +74,7 @@ func (d *nosqlExecutionStore) prepareCreateWorkflowExecutionRequestWithMaps(
 	return executionRequest, nil
 }
 
-func (d *nosqlExecutionStore) prepareResetWorkflowExecutionRequestWithMapsAndEventBuffer(
-	resetWorkflow *p.InternalWorkflowSnapshot,
-) (*nosqlplugin.WorkflowExecutionRequest, error) {
+func (d *nosqlExecutionStore) prepareResetWorkflowExecutionRequestWithMapsAndEventBuffer(resetWorkflow *persistence.InternalWorkflowSnapshot) (*nosqlplugin.WorkflowExecutionRequest, error) {
 	executionInfo := resetWorkflow.ExecutionInfo
 	lastWriteVersion := resetWorkflow.LastWriteVersion
 	checkSum := resetWorkflow.Checksum
@@ -122,9 +118,7 @@ func (d *nosqlExecutionStore) prepareResetWorkflowExecutionRequestWithMapsAndEve
 	return executionRequest, nil
 }
 
-func (d *nosqlExecutionStore) prepareUpdateWorkflowExecutionRequestWithMapsAndEventBuffer(
-	workflowMutation *p.InternalWorkflowMutation,
-) (*nosqlplugin.WorkflowExecutionRequest, error) {
+func (d *nosqlExecutionStore) prepareUpdateWorkflowExecutionRequestWithMapsAndEventBuffer(workflowMutation *persistence.InternalWorkflowMutation) (*nosqlplugin.WorkflowExecutionRequest, error) {
 	executionInfo := workflowMutation.ExecutionInfo
 	lastWriteVersion := workflowMutation.LastWriteVersion
 	checkSum := workflowMutation.Checksum
@@ -187,10 +181,7 @@ func (d *nosqlExecutionStore) prepareUpdateWorkflowExecutionRequestWithMapsAndEv
 	return executionRequest, nil
 }
 
-func (d *nosqlExecutionStore) prepareTimerTasksForWorkflowTxn(
-	domainID, workflowID, runID string,
-	timerTasks []p.Task,
-) ([]*nosqlplugin.TimerTask, error) {
+func (d *nosqlExecutionStore) prepareTimerTasksForWorkflowTxn(domainID, workflowID, runID string, timerTasks []persistence.Task) ([]*nosqlplugin.TimerTask, error) {
 	var tasks []*nosqlplugin.TimerTask
 
 	for _, task := range timerTasks {
@@ -200,31 +191,31 @@ func (d *nosqlExecutionStore) prepareTimerTasksForWorkflowTxn(
 		timeoutType := 0
 
 		switch t := task.(type) {
-		case *p.DecisionTimeoutTask:
+		case *persistence.DecisionTimeoutTask:
 			eventID = t.EventID
 			timeoutType = t.TimeoutType
 			attempt = t.ScheduleAttempt
 
-		case *p.ActivityTimeoutTask:
+		case *persistence.ActivityTimeoutTask:
 			eventID = t.EventID
 			timeoutType = t.TimeoutType
 			attempt = t.Attempt
 
-		case *p.UserTimerTask:
+		case *persistence.UserTimerTask:
 			eventID = t.EventID
 
-		case *p.ActivityRetryTimerTask:
+		case *persistence.ActivityRetryTimerTask:
 			eventID = t.EventID
 			attempt = int64(t.Attempt)
 
-		case *p.WorkflowBackoffTimerTask:
+		case *persistence.WorkflowBackoffTimerTask:
 			eventID = t.EventID
 			timeoutType = t.TimeoutType
 
-		case *p.WorkflowTimeoutTask:
+		case *persistence.WorkflowTimeoutTask:
 			// noop
 
-		case *p.DeleteHistoryEventTask:
+		case *persistence.DeleteHistoryEventTask:
 			// noop
 
 		default:
@@ -253,10 +244,7 @@ func (d *nosqlExecutionStore) prepareTimerTasksForWorkflowTxn(
 	return tasks, nil
 }
 
-func (d *nosqlExecutionStore) prepareReplicationTasksForWorkflowTxn(
-	domainID, workflowID, runID string,
-	replicationTasks []p.Task,
-) ([]*nosqlplugin.ReplicationTask, error) {
+func (d *nosqlExecutionStore) prepareReplicationTasksForWorkflowTxn(domainID, workflowID, runID string, replicationTasks []persistence.Task) ([]*nosqlplugin.ReplicationTask, error) {
 	var tasks []*nosqlplugin.ReplicationTask
 
 	for _, task := range replicationTasks {
@@ -268,19 +256,19 @@ func (d *nosqlExecutionStore) prepareReplicationTasksForWorkflowTxn(
 		var branchToken, newRunBranchToken []byte
 
 		switch task.GetType() {
-		case p.ReplicationTaskTypeHistory:
-			histTask := task.(*p.HistoryReplicationTask)
+		case persistence.ReplicationTaskTypeHistory:
+			histTask := task.(*persistence.HistoryReplicationTask)
 			branchToken = histTask.BranchToken
 			newRunBranchToken = histTask.NewRunBranchToken
 			firstEventID = histTask.FirstEventID
 			nextEventID = histTask.NextEventID
 			version = task.GetVersion()
 
-		case p.ReplicationTaskTypeSyncActivity:
+		case persistence.ReplicationTaskTypeSyncActivity:
 			version = task.GetVersion()
-			activityScheduleID = task.(*p.SyncActivityTask).ScheduledID
+			activityScheduleID = task.(*persistence.SyncActivityTask).ScheduledID
 
-		case p.ReplicationTaskTypeFailoverMarker:
+		case persistence.ReplicationTaskTypeFailoverMarker:
 			version = task.GetVersion()
 
 		default:
@@ -309,10 +297,7 @@ func (d *nosqlExecutionStore) prepareReplicationTasksForWorkflowTxn(
 	return tasks, nil
 }
 
-func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
-	domainID, workflowID, runID string,
-	crossClusterTasks []p.Task,
-) ([]*nosqlplugin.CrossClusterTask, error) {
+func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(domainID, workflowID, runID string, crossClusterTasks []persistence.Task) ([]*nosqlplugin.CrossClusterTask, error) {
 	var tasks []*nosqlplugin.CrossClusterTask
 
 	for _, task := range crossClusterTasks {
@@ -322,51 +307,51 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 		targetDomainID := domainID // default to source domain, can't be empty, since empty string is not valid UUID
 		targetDomainIDs := map[string]struct{}{}
 		var targetWorkflowID string
-		targetRunID := p.CrossClusterTaskDefaultTargetRunID
+		targetRunID := persistence.CrossClusterTaskDefaultTargetRunID
 		targetChildWorkflowOnly := false
 		recordVisibility := false
 
 		switch task.GetType() {
-		case p.CrossClusterTaskTypeStartChildExecution:
-			targetCluster = task.(*p.CrossClusterStartChildExecutionTask).TargetCluster
-			targetDomainID = task.(*p.CrossClusterStartChildExecutionTask).TargetDomainID
-			targetWorkflowID = task.(*p.CrossClusterStartChildExecutionTask).TargetWorkflowID
-			scheduleID = task.(*p.CrossClusterStartChildExecutionTask).InitiatedID
+		case persistence.CrossClusterTaskTypeStartChildExecution:
+			targetCluster = task.(*persistence.CrossClusterStartChildExecutionTask).TargetCluster
+			targetDomainID = task.(*persistence.CrossClusterStartChildExecutionTask).TargetDomainID
+			targetWorkflowID = task.(*persistence.CrossClusterStartChildExecutionTask).TargetWorkflowID
+			scheduleID = task.(*persistence.CrossClusterStartChildExecutionTask).InitiatedID
 
-		case p.CrossClusterTaskTypeCancelExecution:
-			targetCluster = task.(*p.CrossClusterCancelExecutionTask).TargetCluster
-			targetDomainID = task.(*p.CrossClusterCancelExecutionTask).TargetDomainID
-			targetWorkflowID = task.(*p.CrossClusterCancelExecutionTask).TargetWorkflowID
-			targetRunID = task.(*p.CrossClusterCancelExecutionTask).TargetRunID
+		case persistence.CrossClusterTaskTypeCancelExecution:
+			targetCluster = task.(*persistence.CrossClusterCancelExecutionTask).TargetCluster
+			targetDomainID = task.(*persistence.CrossClusterCancelExecutionTask).TargetDomainID
+			targetWorkflowID = task.(*persistence.CrossClusterCancelExecutionTask).TargetWorkflowID
+			targetRunID = task.(*persistence.CrossClusterCancelExecutionTask).TargetRunID
 			if targetRunID == "" {
-				targetRunID = p.CrossClusterTaskDefaultTargetRunID
+				targetRunID = persistence.CrossClusterTaskDefaultTargetRunID
 			}
-			targetChildWorkflowOnly = task.(*p.CrossClusterCancelExecutionTask).TargetChildWorkflowOnly
-			scheduleID = task.(*p.CrossClusterCancelExecutionTask).InitiatedID
+			targetChildWorkflowOnly = task.(*persistence.CrossClusterCancelExecutionTask).TargetChildWorkflowOnly
+			scheduleID = task.(*persistence.CrossClusterCancelExecutionTask).InitiatedID
 
-		case p.CrossClusterTaskTypeSignalExecution:
-			targetCluster = task.(*p.CrossClusterSignalExecutionTask).TargetCluster
-			targetDomainID = task.(*p.CrossClusterSignalExecutionTask).TargetDomainID
-			targetWorkflowID = task.(*p.CrossClusterSignalExecutionTask).TargetWorkflowID
-			targetRunID = task.(*p.CrossClusterSignalExecutionTask).TargetRunID
+		case persistence.CrossClusterTaskTypeSignalExecution:
+			targetCluster = task.(*persistence.CrossClusterSignalExecutionTask).TargetCluster
+			targetDomainID = task.(*persistence.CrossClusterSignalExecutionTask).TargetDomainID
+			targetWorkflowID = task.(*persistence.CrossClusterSignalExecutionTask).TargetWorkflowID
+			targetRunID = task.(*persistence.CrossClusterSignalExecutionTask).TargetRunID
 			if targetRunID == "" {
-				targetRunID = p.CrossClusterTaskDefaultTargetRunID
+				targetRunID = persistence.CrossClusterTaskDefaultTargetRunID
 			}
-			targetChildWorkflowOnly = task.(*p.CrossClusterSignalExecutionTask).TargetChildWorkflowOnly
-			scheduleID = task.(*p.CrossClusterSignalExecutionTask).InitiatedID
+			targetChildWorkflowOnly = task.(*persistence.CrossClusterSignalExecutionTask).TargetChildWorkflowOnly
+			scheduleID = task.(*persistence.CrossClusterSignalExecutionTask).InitiatedID
 
-		case p.CrossClusterTaskTypeRecordChildExeuctionCompleted:
-			targetCluster = task.(*p.CrossClusterRecordChildExecutionCompletedTask).TargetCluster
-			targetDomainID = task.(*p.CrossClusterRecordChildExecutionCompletedTask).TargetDomainID
-			targetWorkflowID = task.(*p.CrossClusterRecordChildExecutionCompletedTask).TargetWorkflowID
-			targetRunID = task.(*p.CrossClusterRecordChildExecutionCompletedTask).TargetRunID
+		case persistence.CrossClusterTaskTypeRecordChildExeuctionCompleted:
+			targetCluster = task.(*persistence.CrossClusterRecordChildExecutionCompletedTask).TargetCluster
+			targetDomainID = task.(*persistence.CrossClusterRecordChildExecutionCompletedTask).TargetDomainID
+			targetWorkflowID = task.(*persistence.CrossClusterRecordChildExecutionCompletedTask).TargetWorkflowID
+			targetRunID = task.(*persistence.CrossClusterRecordChildExecutionCompletedTask).TargetRunID
 			if targetRunID == "" {
-				targetRunID = p.CrossClusterTaskDefaultTargetRunID
+				targetRunID = persistence.CrossClusterTaskDefaultTargetRunID
 			}
 
-		case p.CrossClusterTaskTypeApplyParentClosePolicy:
-			targetCluster = task.(*p.CrossClusterApplyParentClosePolicyTask).TargetCluster
-			targetDomainIDs = task.(*p.CrossClusterApplyParentClosePolicyTask).TargetDomainIDs
+		case persistence.CrossClusterTaskTypeApplyParentClosePolicy:
+			targetCluster = task.(*persistence.CrossClusterApplyParentClosePolicyTask).TargetCluster
+			targetDomainIDs = task.(*persistence.CrossClusterApplyParentClosePolicyTask).TargetDomainIDs
 
 		default:
 			return nil, &types.InternalServiceError{
@@ -402,7 +387,7 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 
 func (d *nosqlExecutionStore) prepareNoSQLTasksForWorkflowTxn(
 	domainID, workflowID, runID string,
-	persistenceTransferTasks, persistenceCrossClusterTasks, persistenceReplicationTasks, persistenceTimerTasks []p.Task,
+	persistenceTransferTasks, persistenceCrossClusterTasks, persistenceReplicationTasks, persistenceTimerTasks []persistence.Task,
 	transferTasksToAppend []*nosqlplugin.TransferTask,
 	crossClusterTasksToAppend []*nosqlplugin.CrossClusterTask,
 	replicationTasksToAppend []*nosqlplugin.ReplicationTask,
@@ -434,10 +419,7 @@ func (d *nosqlExecutionStore) prepareNoSQLTasksForWorkflowTxn(
 	return transferTasksToAppend, crossClusterTasksToAppend, replicationTasksToAppend, timerTasksToAppend, nil
 }
 
-func (d *nosqlExecutionStore) prepareTransferTasksForWorkflowTxn(
-	domainID, workflowID, runID string,
-	transferTasks []p.Task,
-) ([]*nosqlplugin.TransferTask, error) {
+func (d *nosqlExecutionStore) prepareTransferTasksForWorkflowTxn(domainID, workflowID, runID string, transferTasks []persistence.Task) ([]*nosqlplugin.TransferTask, error) {
 	var tasks []*nosqlplugin.TransferTask
 
 	for _, task := range transferTasks {
@@ -445,64 +427,64 @@ func (d *nosqlExecutionStore) prepareTransferTasksForWorkflowTxn(
 		var scheduleID int64
 		targetDomainID := domainID
 		targetDomainIDs := map[string]struct{}{}
-		targetWorkflowID := p.TransferTaskTransferTargetWorkflowID
-		targetRunID := p.TransferTaskTransferTargetRunID
+		targetWorkflowID := persistence.TransferTaskTransferTargetWorkflowID
+		targetRunID := persistence.TransferTaskTransferTargetRunID
 		targetChildWorkflowOnly := false
 		recordVisibility := false
 
 		switch task.GetType() {
-		case p.TransferTaskTypeActivityTask:
-			targetDomainID = task.(*p.ActivityTask).DomainID
-			taskList = task.(*p.ActivityTask).TaskList
-			scheduleID = task.(*p.ActivityTask).ScheduleID
+		case persistence.TransferTaskTypeActivityTask:
+			targetDomainID = task.(*persistence.ActivityTask).DomainID
+			taskList = task.(*persistence.ActivityTask).TaskList
+			scheduleID = task.(*persistence.ActivityTask).ScheduleID
 
-		case p.TransferTaskTypeDecisionTask:
-			targetDomainID = task.(*p.DecisionTask).DomainID
-			taskList = task.(*p.DecisionTask).TaskList
-			scheduleID = task.(*p.DecisionTask).ScheduleID
-			recordVisibility = task.(*p.DecisionTask).RecordVisibility
+		case persistence.TransferTaskTypeDecisionTask:
+			targetDomainID = task.(*persistence.DecisionTask).DomainID
+			taskList = task.(*persistence.DecisionTask).TaskList
+			scheduleID = task.(*persistence.DecisionTask).ScheduleID
+			recordVisibility = task.(*persistence.DecisionTask).RecordVisibility
 
-		case p.TransferTaskTypeCancelExecution:
-			targetDomainID = task.(*p.CancelExecutionTask).TargetDomainID
-			targetWorkflowID = task.(*p.CancelExecutionTask).TargetWorkflowID
-			targetRunID = task.(*p.CancelExecutionTask).TargetRunID
+		case persistence.TransferTaskTypeCancelExecution:
+			targetDomainID = task.(*persistence.CancelExecutionTask).TargetDomainID
+			targetWorkflowID = task.(*persistence.CancelExecutionTask).TargetWorkflowID
+			targetRunID = task.(*persistence.CancelExecutionTask).TargetRunID
 			if targetRunID == "" {
-				targetRunID = p.TransferTaskTransferTargetRunID
+				targetRunID = persistence.TransferTaskTransferTargetRunID
 			}
-			targetChildWorkflowOnly = task.(*p.CancelExecutionTask).TargetChildWorkflowOnly
-			scheduleID = task.(*p.CancelExecutionTask).InitiatedID
+			targetChildWorkflowOnly = task.(*persistence.CancelExecutionTask).TargetChildWorkflowOnly
+			scheduleID = task.(*persistence.CancelExecutionTask).InitiatedID
 
-		case p.TransferTaskTypeSignalExecution:
-			targetDomainID = task.(*p.SignalExecutionTask).TargetDomainID
-			targetWorkflowID = task.(*p.SignalExecutionTask).TargetWorkflowID
-			targetRunID = task.(*p.SignalExecutionTask).TargetRunID
+		case persistence.TransferTaskTypeSignalExecution:
+			targetDomainID = task.(*persistence.SignalExecutionTask).TargetDomainID
+			targetWorkflowID = task.(*persistence.SignalExecutionTask).TargetWorkflowID
+			targetRunID = task.(*persistence.SignalExecutionTask).TargetRunID
 			if targetRunID == "" {
-				targetRunID = p.TransferTaskTransferTargetRunID
+				targetRunID = persistence.TransferTaskTransferTargetRunID
 			}
-			targetChildWorkflowOnly = task.(*p.SignalExecutionTask).TargetChildWorkflowOnly
-			scheduleID = task.(*p.SignalExecutionTask).InitiatedID
+			targetChildWorkflowOnly = task.(*persistence.SignalExecutionTask).TargetChildWorkflowOnly
+			scheduleID = task.(*persistence.SignalExecutionTask).InitiatedID
 
-		case p.TransferTaskTypeStartChildExecution:
-			targetDomainID = task.(*p.StartChildExecutionTask).TargetDomainID
-			targetWorkflowID = task.(*p.StartChildExecutionTask).TargetWorkflowID
-			scheduleID = task.(*p.StartChildExecutionTask).InitiatedID
+		case persistence.TransferTaskTypeStartChildExecution:
+			targetDomainID = task.(*persistence.StartChildExecutionTask).TargetDomainID
+			targetWorkflowID = task.(*persistence.StartChildExecutionTask).TargetWorkflowID
+			scheduleID = task.(*persistence.StartChildExecutionTask).InitiatedID
 
-		case p.TransferTaskTypeRecordChildExecutionCompleted:
-			targetDomainID = task.(*p.RecordChildExecutionCompletedTask).TargetDomainID
-			targetWorkflowID = task.(*p.RecordChildExecutionCompletedTask).TargetWorkflowID
-			targetRunID = task.(*p.RecordChildExecutionCompletedTask).TargetRunID
+		case persistence.TransferTaskTypeRecordChildExecutionCompleted:
+			targetDomainID = task.(*persistence.RecordChildExecutionCompletedTask).TargetDomainID
+			targetWorkflowID = task.(*persistence.RecordChildExecutionCompletedTask).TargetWorkflowID
+			targetRunID = task.(*persistence.RecordChildExecutionCompletedTask).TargetRunID
 			if targetRunID == "" {
-				targetRunID = p.TransferTaskTransferTargetRunID
+				targetRunID = persistence.TransferTaskTransferTargetRunID
 			}
 
-		case p.TransferTaskTypeApplyParentClosePolicy:
-			targetDomainIDs = task.(*p.ApplyParentClosePolicyTask).TargetDomainIDs
+		case persistence.TransferTaskTypeApplyParentClosePolicy:
+			targetDomainIDs = task.(*persistence.ApplyParentClosePolicyTask).TargetDomainIDs
 
-		case p.TransferTaskTypeCloseExecution,
-			p.TransferTaskTypeRecordWorkflowStarted,
-			p.TransferTaskTypeResetWorkflow,
-			p.TransferTaskTypeUpsertWorkflowSearchAttributes,
-			p.TransferTaskTypeRecordWorkflowClosed:
+		case persistence.TransferTaskTypeCloseExecution,
+			persistence.TransferTaskTypeRecordWorkflowStarted,
+			persistence.TransferTaskTypeResetWorkflow,
+			persistence.TransferTaskTypeUpsertWorkflowSearchAttributes,
+			persistence.TransferTaskTypeRecordWorkflowClosed:
 			// No explicit property needs to be set
 
 		default:
@@ -532,15 +514,13 @@ func (d *nosqlExecutionStore) prepareTransferTasksForWorkflowTxn(
 	return tasks, nil
 }
 
-func (d *nosqlExecutionStore) prepareActivityInfosForWorkflowTxn(
-	activityInfos []*p.InternalActivityInfo,
-) (map[int64]*p.InternalActivityInfo, error) {
-	m := map[int64]*p.InternalActivityInfo{}
+func (d *nosqlExecutionStore) prepareActivityInfosForWorkflowTxn(activityInfos []*persistence.InternalActivityInfo) (map[int64]*persistence.InternalActivityInfo, error) {
+	m := map[int64]*persistence.InternalActivityInfo{}
 	for _, a := range activityInfos {
-		_, scheduleEncoding := p.FromDataBlob(a.ScheduledEvent)
-		_, startEncoding := p.FromDataBlob(a.StartedEvent)
+		_, scheduleEncoding := persistence.FromDataBlob(a.ScheduledEvent)
+		_, startEncoding := persistence.FromDataBlob(a.StartedEvent)
 		if a.StartedEvent != nil && scheduleEncoding != startEncoding {
-			return nil, p.NewCadenceSerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", scheduleEncoding, startEncoding))
+			return nil, persistence.NewCadenceSerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", scheduleEncoding, startEncoding))
 		}
 		a.ScheduledEvent = a.ScheduledEvent.ToNilSafeDataBlob()
 		a.StartedEvent = a.StartedEvent.ToNilSafeDataBlob()
@@ -549,25 +529,21 @@ func (d *nosqlExecutionStore) prepareActivityInfosForWorkflowTxn(
 	return m, nil
 }
 
-func (d *nosqlExecutionStore) prepareTimerInfosForWorkflowTxn(
-	timerInfo []*p.TimerInfo,
-) (map[string]*p.TimerInfo, error) {
-	m := map[string]*p.TimerInfo{}
+func (d *nosqlExecutionStore) prepareTimerInfosForWorkflowTxn(timerInfo []*persistence.TimerInfo) (map[string]*persistence.TimerInfo, error) {
+	m := map[string]*persistence.TimerInfo{}
 	for _, a := range timerInfo {
 		m[a.TimerID] = a
 	}
 	return m, nil
 }
 
-func (d *nosqlExecutionStore) prepareChildWFInfosForWorkflowTxn(
-	childWFInfos []*p.InternalChildExecutionInfo,
-) (map[int64]*p.InternalChildExecutionInfo, error) {
-	m := map[int64]*p.InternalChildExecutionInfo{}
+func (d *nosqlExecutionStore) prepareChildWFInfosForWorkflowTxn(childWFInfos []*persistence.InternalChildExecutionInfo) (map[int64]*persistence.InternalChildExecutionInfo, error) {
+	m := map[int64]*persistence.InternalChildExecutionInfo{}
 	for _, c := range childWFInfos {
-		_, initiatedEncoding := p.FromDataBlob(c.InitiatedEvent)
-		_, startEncoding := p.FromDataBlob(c.StartedEvent)
+		_, initiatedEncoding := persistence.FromDataBlob(c.InitiatedEvent)
+		_, startEncoding := persistence.FromDataBlob(c.StartedEvent)
 		if c.StartedEvent != nil && initiatedEncoding != startEncoding {
-			return nil, p.NewCadenceSerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", initiatedEncoding, startEncoding))
+			return nil, persistence.NewCadenceSerializationError(fmt.Sprintf("expect to have the same encoding, but %v != %v", initiatedEncoding, startEncoding))
 		}
 
 		if c.StartedRunID == "" {
@@ -581,20 +557,16 @@ func (d *nosqlExecutionStore) prepareChildWFInfosForWorkflowTxn(
 	return m, nil
 }
 
-func (d *nosqlExecutionStore) prepareRequestCancelsForWorkflowTxn(
-	requestCancels []*p.RequestCancelInfo,
-) (map[int64]*p.RequestCancelInfo, error) {
-	m := map[int64]*p.RequestCancelInfo{}
+func (d *nosqlExecutionStore) prepareRequestCancelsForWorkflowTxn(requestCancels []*persistence.RequestCancelInfo) (map[int64]*persistence.RequestCancelInfo, error) {
+	m := map[int64]*persistence.RequestCancelInfo{}
 	for _, c := range requestCancels {
 		m[c.InitiatedID] = c
 	}
 	return m, nil
 }
 
-func (d *nosqlExecutionStore) prepareSignalInfosForWorkflowTxn(
-	signalInfos []*p.SignalInfo,
-) (map[int64]*p.SignalInfo, error) {
-	m := map[int64]*p.SignalInfo{}
+func (d *nosqlExecutionStore) prepareSignalInfosForWorkflowTxn(signalInfos []*persistence.SignalInfo) (map[int64]*persistence.SignalInfo, error) {
+	m := map[int64]*persistence.SignalInfo{}
 	for _, c := range signalInfos {
 		m[c.InitiatedID] = c
 	}
@@ -602,14 +574,14 @@ func (d *nosqlExecutionStore) prepareSignalInfosForWorkflowTxn(
 }
 
 func (d *nosqlExecutionStore) prepareUpdateWorkflowExecutionTxn(
-	executionInfo *p.InternalWorkflowExecutionInfo,
-	versionHistories *p.DataBlob,
+	executionInfo *persistence.InternalWorkflowExecutionInfo,
+	versionHistories *persistence.DataBlob,
 	checksum checksum.Checksum,
 	nowTimestamp time.Time,
 	lastWriteVersion int64,
 ) (*nosqlplugin.WorkflowExecutionRequest, error) {
 	// validate workflow state & close status
-	if err := p.ValidateUpdateWorkflowStateCloseStatus(
+	if err := persistence.ValidateUpdateWorkflowStateCloseStatus(
 		executionInfo.State,
 		executionInfo.CloseStatus); err != nil {
 		return nil, err
@@ -640,14 +612,14 @@ func (d *nosqlExecutionStore) prepareUpdateWorkflowExecutionTxn(
 }
 
 func (d *nosqlExecutionStore) prepareCreateWorkflowExecutionTxn(
-	executionInfo *p.InternalWorkflowExecutionInfo,
-	versionHistories *p.DataBlob,
+	executionInfo *persistence.InternalWorkflowExecutionInfo,
+	versionHistories *persistence.DataBlob,
 	checksum checksum.Checksum,
 	nowTimestamp time.Time,
 	lastWriteVersion int64,
 ) (*nosqlplugin.WorkflowExecutionRequest, error) {
 	// validate workflow state & close status
-	if err := p.ValidateCreateWorkflowStateCloseStatus(
+	if err := persistence.ValidateCreateWorkflowStateCloseStatus(
 		executionInfo.State,
 		executionInfo.CloseStatus); err != nil {
 		return nil, err
@@ -689,9 +661,9 @@ func (d *nosqlExecutionStore) prepareCreateWorkflowExecutionTxn(
 
 func (d *nosqlExecutionStore) prepareCurrentWorkflowRequestForCreateWorkflowTxn(
 	domainID, workflowID, runID string,
-	executionInfo *p.InternalWorkflowExecutionInfo,
+	executionInfo *persistence.InternalWorkflowExecutionInfo,
 	lastWriteVersion int64,
-	request *p.InternalCreateWorkflowExecutionRequest,
+	request *persistence.InternalCreateWorkflowExecutionRequest,
 ) (*nosqlplugin.CurrentWorkflowWriteRequest, error) {
 	currentWorkflowWriteReq := &nosqlplugin.CurrentWorkflowWriteRequest{
 		Row: nosqlplugin.CurrentWorkflowRow{
@@ -706,22 +678,22 @@ func (d *nosqlExecutionStore) prepareCurrentWorkflowRequestForCreateWorkflowTxn(
 		},
 	}
 	switch request.Mode {
-	case p.CreateWorkflowModeZombie:
+	case persistence.CreateWorkflowModeZombie:
 		// noop
 		currentWorkflowWriteReq.WriteMode = nosqlplugin.CurrentWorkflowWriteModeNoop
-	case p.CreateWorkflowModeContinueAsNew:
+	case persistence.CreateWorkflowModeContinueAsNew:
 		currentWorkflowWriteReq.WriteMode = nosqlplugin.CurrentWorkflowWriteModeUpdate
 		currentWorkflowWriteReq.Condition = &nosqlplugin.CurrentWorkflowWriteCondition{
 			CurrentRunID: common.StringPtr(request.PreviousRunID),
 		}
-	case p.CreateWorkflowModeWorkflowIDReuse:
+	case persistence.CreateWorkflowModeWorkflowIDReuse:
 		currentWorkflowWriteReq.WriteMode = nosqlplugin.CurrentWorkflowWriteModeUpdate
 		currentWorkflowWriteReq.Condition = &nosqlplugin.CurrentWorkflowWriteCondition{
 			CurrentRunID:     common.StringPtr(request.PreviousRunID),
-			State:            common.IntPtr(p.WorkflowStateCompleted),
+			State:            common.IntPtr(persistence.WorkflowStateCompleted),
 			LastWriteVersion: common.Int64Ptr(request.PreviousLastWriteVersion),
 		}
-	case p.CreateWorkflowModeBrandNew:
+	case persistence.CreateWorkflowModeBrandNew:
 		currentWorkflowWriteReq.WriteMode = nosqlplugin.CurrentWorkflowWriteModeInsert
 	default:
 		return nil, &types.InternalServiceError{
@@ -737,17 +709,17 @@ func (d *nosqlExecutionStore) processUpdateWorkflowResult(err error, rangeID int
 		if isConditionFailedError {
 			switch {
 			case conditionFailureErr.UnknownConditionFailureDetails != nil:
-				return &p.ConditionFailedError{
+				return &persistence.ConditionFailedError{
 					Msg: *conditionFailureErr.UnknownConditionFailureDetails,
 				}
 			case conditionFailureErr.ShardRangeIDNotMatch != nil:
-				return &p.ShardOwnershipLostError{
+				return &persistence.ShardOwnershipLostError{
 					ShardID: d.shardID,
 					Msg: fmt.Sprintf("Failed to update workflow execution.  Request RangeID: %v, Actual RangeID: %v",
 						rangeID, *conditionFailureErr.ShardRangeIDNotMatch),
 				}
 			case conditionFailureErr.CurrentWorkflowConditionFailInfo != nil:
-				return &p.CurrentWorkflowConditionFailedError{
+				return &persistence.CurrentWorkflowConditionFailedError{
 					Msg: *conditionFailureErr.CurrentWorkflowConditionFailInfo,
 				}
 			default:
@@ -770,7 +742,7 @@ func (d *nosqlExecutionStore) assertNotCurrentExecution(
 	runID string,
 ) error {
 
-	if resp, err := d.GetCurrentExecution(ctx, &p.GetCurrentExecutionRequest{
+	if resp, err := d.GetCurrentExecution(ctx, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}); err != nil {
@@ -780,7 +752,7 @@ func (d *nosqlExecutionStore) assertNotCurrentExecution(
 		}
 		return err
 	} else if resp.RunID == runID {
-		return &p.ConditionFailedError{
+		return &persistence.ConditionFailedError{
 			Msg: fmt.Sprintf("Assertion on current record failed. Current run ID is not expected: %v", resp.RunID),
 		}
 	}
