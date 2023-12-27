@@ -1602,8 +1602,14 @@ const (
 	// KeyName: history.queueProcessorEnableGracefulSyncShutdown
 	// Value type: Bool
 	// Default value: false
-	// Allowed filters: ShardID
+	// Allowed filters: N/A
 	QueueProcessorEnableGracefulSyncShutdown
+	// ReplicationTaskFetcherEnableGracefulSyncShutdown indicates whether task fetcher should be shutdown gracefully & synchronously
+	// KeyName: history.replicationTaskFetcherEnableGracefulSyncShutdown
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: N/A
+	ReplicationTaskFetcherEnableGracefulSyncShutdown
 	// TransferProcessorEnableValidator is whether validator should be enabled for transferQueueProcessor
 	// KeyName: history.transferProcessorEnableValidator
 	// Value type: Bool
@@ -3837,6 +3843,11 @@ var BoolKeys = map[BoolKey]DynamicBool{
 	QueueProcessorEnableGracefulSyncShutdown: DynamicBool{
 		KeyName:      "history.queueProcessorEnableGracefulSyncShutdown",
 		Description:  "QueueProcessorEnableGracefulSyncShutdown indicates whether processing queue should be shutdown gracefully & synchronously",
+		DefaultValue: false,
+	},
+	ReplicationTaskFetcherEnableGracefulSyncShutdown: DynamicBool{
+		KeyName:      "history.replicationTaskFetcherEnableGracefulSyncShutdown",
+		Description:  "ReplicationTaskFetcherEnableGracefulSyncShutdown is whether we should gracefully drain replication task fetcher on shutdown",
 		DefaultValue: false,
 	},
 	TransferProcessorEnableValidator: DynamicBool{
