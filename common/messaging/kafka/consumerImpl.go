@@ -210,7 +210,13 @@ func (h *consumerHandlerImpl) completeMessage(message *messageImpl, isAck bool) 
 				tag.KafkaOffset(message.Offset()))
 		}
 	}
-	ackLevel := h.manager.CompleteMessage(message.Partition(), message.Offset(), isAck)
+	ackLevel, err := h.manager.CompleteMessage(message.Partition(), message.Offset(), isAck)
+	if err != nil {
+		h.logger.Error("complete an message that hasn't been added",
+			tag.KafkaPartition(message.Partition()),
+			tag.KafkaOffset(message.Offset()))
+		return
+	}
 	h.currentSession.MarkOffset(h.topic, message.Partition(), ackLevel+1, "")
 }
 
