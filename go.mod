@@ -65,7 +65,10 @@ require (
 	gopkg.in/yaml.v2 v2.3.0
 )
 
-require github.com/google/go-cmp v0.5.9
+require (
+	github.com/google/go-cmp v0.5.9
+	github.com/jonboulle/clockwork v0.4.0
+)
 
 require (
 	cloud.google.com/go v0.110.0 // indirect
