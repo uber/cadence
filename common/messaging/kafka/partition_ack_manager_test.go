@@ -57,9 +57,6 @@ func TestCompleteMessage(t *testing.T) {
 
 	partitionID := int32(1)
 	messageID := int64(100)
-	
-	// Add a message first to simulate a real-world scenario, this will create ackMgr for partition
-	pam.AddMessage(partitionID, messageID)
 
 	testCases := []struct {
 		name        string
@@ -97,6 +94,9 @@ func TestCompleteMessage(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			// Add a message first to simulate a real-world scenario, this will create ackMgr for partition
+			pam.AddMessage(partitionID, messageID)
+
 			ackLevel, err := pam.CompleteMessage(tc.partitionID, tc.messageID, tc.isAck)
 			assert.True(t, ackLevel == tc.expected, "Test case %s failed: expected ackLevel %d, got %d", tc.name, tc.expected, ackLevel)
 

@@ -212,7 +212,7 @@ func (h *consumerHandlerImpl) completeMessage(message *messageImpl, isAck bool) 
 	}
 	ackLevel, err := h.manager.CompleteMessage(message.Partition(), message.Offset(), isAck)
 	if err != nil {
-		h.logger.Error("complete an message that hasn't been added",
+		h.logger.Error("Failed to complete an message that hasn't been added to the partition",
 			tag.KafkaPartition(message.Partition()),
 			tag.KafkaOffset(message.Offset()))
 		return

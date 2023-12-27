@@ -92,7 +92,7 @@ func (pam *partitionAckManager) CompleteMessage(partitionID int32, messageID int
 			pam.scopes[partitionID].IncCounter(metrics.KafkaConsumerMessageNack)
 		}
 	} else {
-		return -1, errors.New("complete an message that hasn't been added")
+		return -1, errors.New("Failed to complete an message that hasn't been added to the partition")
 	}
 	return ackLevel, nil
 }
