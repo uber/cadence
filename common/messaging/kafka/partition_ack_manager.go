@@ -21,6 +21,7 @@
 package kafka
 
 import (
+	"errors"
 	"sync"
 
 	"github.com/uber/cadence/common/log"
@@ -80,7 +81,7 @@ func (pam *partitionAckManager) AddMessage(partitionID int32, messageID int64) {
 }
 
 // CompleteMessage complete the message from ack/nack kafka message
-func (pam *partitionAckManager) CompleteMessage(partitionID int32, messageID int64, isAck bool) (ackLevel int64) {
+func (pam *partitionAckManager) CompleteMessage(partitionID int32, messageID int64, isAck bool) (ackLevel int64, err error) {
 	pam.RLock()
 	defer pam.RUnlock()
 	if am, ok := pam.ackMgrs[partitionID]; ok {
@@ -91,10 +92,7 @@ func (pam *partitionAckManager) CompleteMessage(partitionID int32, messageID int
 			pam.scopes[partitionID].IncCounter(metrics.KafkaConsumerMessageNack)
 		}
 	} else {
-		pam.logger.Fatal("complete an message that hasn't been added",
-			tag.KafkaPartition(partitionID),
-			tag.KafkaOffset(messageID))
-		ackLevel = -1
+		return -1, errors.New("Failed to complete an message that hasn't been added to the partition")
 	}
-	return ackLevel
+	return ackLevel, nil
 }
