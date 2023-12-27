@@ -879,3 +879,55 @@ func TestDeserializeSearchAttributeValue_Success(t *testing.T) {
 		})
 	}
 }
+
+func TestDeserializeSearchAttributeValue_Error(t *testing.T) {
+	for name, c := range map[string]struct {
+		value     string
+		valueType types.IndexedValueType
+
+		wantErrorMsg string
+	}{
+		"invalid string": {
+			value:        `"string`,
+			valueType:    types.IndexedValueTypeString,
+			wantErrorMsg: "unexpected end of JSON input",
+		},
+		"invalid keyword": {
+			value:        `"keyword`,
+			valueType:    types.IndexedValueTypeKeyword,
+			wantErrorMsg: "unexpected end of JSON input",
+		},
+		"invalid int": {
+			value:        `1.1`,
+			valueType:    types.IndexedValueTypeInt,
+			wantErrorMsg: "json: cannot unmarshal number into Go value of type []int64",
+		},
+		"invalid double": {
+			value:        `1as`,
+			valueType:    types.IndexedValueTypeDouble,
+			wantErrorMsg: "invalid character 'a' after top-level value",
+		},
+		"invalid bool": {
+			value:        `1`,
+			valueType:    types.IndexedValueTypeBool,
+			wantErrorMsg: "json: cannot unmarshal number into Go value of type []bool",
+		},
+		"invalid datetime": {
+			value:        `1`,
+			valueType:    types.IndexedValueTypeDatetime,
+			wantErrorMsg: "json: cannot unmarshal number into Go value of type []time.Time",
+		},
+		"invalid value type": {
+			value:        `1`,
+			valueType:    types.IndexedValueType(100),
+			wantErrorMsg: fmt.Sprintf("error: unknown index value type [%v]", types.IndexedValueType(100)),
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			gotValue, err := DeserializeSearchAttributeValue([]byte(c.value), c.valueType)
+			require.Error(t, err)
+			require.ErrorContains(t, err, c.wantErrorMsg)
+			require.Nil(t, gotValue)
+		})
+	}
+}
