@@ -770,3 +770,32 @@ func TestGenerateRandomString(t *testing.T) {
 		})
 	}
 }
+
+func TestIsValidContext(t *testing.T) {
+	t.Run("background context", func(t *testing.T) {
+		require.NoError(t, IsValidContext(context.Background()))
+	})
+	t.Run("canceled context", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		got := IsValidContext(ctx)
+		require.Error(t, got)
+		require.ErrorIs(t, got, context.Canceled)
+	})
+	t.Run("deadline exceeded context", func(t *testing.T) {
+		ctx, _ := context.WithTimeout(context.Background(), -time.Second)
+		got := IsValidContext(ctx)
+		require.Error(t, got)
+		require.ErrorIs(t, got, context.DeadlineExceeded)
+	})
+	t.Run("context with deadline exceeded contextExpireThreshold", func(t *testing.T) {
+		ctx, _ := context.WithTimeout(context.Background(), contextExpireThreshold/2)
+		got := IsValidContext(ctx)
+		require.Error(t, got)
+		require.ErrorIs(t, got, context.DeadlineExceeded, "context.DeadlineExceeded should be returned, because context timeout is not later than now + contextExpireThreshold")
+	})
+	t.Run("valid context", func(t *testing.T) {
+		ctx, _ := context.WithTimeout(context.Background(), contextExpireThreshold*2)
+		require.NoError(t, IsValidContext(ctx), "nil should be returned, because context timeout is later than now + contextExpireThreshold")
+	})
+}
