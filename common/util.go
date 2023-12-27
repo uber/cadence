@@ -340,6 +340,8 @@ var emptyCancelFunc = context.CancelFunc(func() {})
 // from the given parent context
 // tailroom must be in range [0, 1] and
 // (1-tailroom) * parent timeout will be the new child context timeout
+// if tailroom is less 0, tailroom will be considered as 0
+// if tailroom is greater than 1, tailroom wil be considered as 1
 func CreateChildContext(
 	parent context.Context,
 	tailroom float64,
@@ -355,6 +357,15 @@ func CreateChildContext(
 	deadline, ok := parent.Deadline()
 	if !ok || deadline.Before(now) {
 		return parent, emptyCancelFunc
+	}
+
+	// if tailroom is about or less 0, then return a context with the same deadline as parent
+	if tailroom <= 0 {
+		return context.WithDeadline(parent, deadline)
+	}
+	// if tailroom is about or greater 1, then return a context with deadline of now
+	if tailroom >= 1 {
+		return context.WithDeadline(parent, now)
 	}
 
 	newDeadline := now.Add(time.Duration(math.Ceil(float64(deadline.Sub(now)) * (1.0 - tailroom))))
