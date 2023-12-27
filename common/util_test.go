@@ -911,3 +911,135 @@ func TestCreateChildContext(t *testing.T) {
 func funcName(fn any) string {
 	return runtime.FuncForPC(reflect.ValueOf(fn).Pointer()).Name()
 }
+
+func TestDeserializeSearchAttributeValue_Success(t *testing.T) {
+	for name, c := range map[string]struct {
+		value     string
+		valueType types.IndexedValueType
+
+		wantValue any
+	}{
+		"string": {
+			value:     `"string"`,
+			valueType: types.IndexedValueTypeString,
+			wantValue: "string",
+		},
+		"[]string": {
+			value:     `["1", "2", "3"]`,
+			valueType: types.IndexedValueTypeString,
+			wantValue: []string{"1", "2", "3"},
+		},
+		"keyword": {
+			value:     `"keyword"`,
+			valueType: types.IndexedValueTypeKeyword,
+			wantValue: "keyword",
+		},
+		"[]keyword": {
+			value:     `["1", "2", "3"]`,
+			valueType: types.IndexedValueTypeKeyword,
+			wantValue: []string{"1", "2", "3"},
+		},
+		"int": {
+			value:     `1`,
+			valueType: types.IndexedValueTypeInt,
+			wantValue: int64(1),
+		},
+		"[]int": {
+			value:     `[1, 2, 3]`,
+			valueType: types.IndexedValueTypeInt,
+			wantValue: []int64{1, 2, 3},
+		},
+		"double": {
+			value:     `1.1`,
+			valueType: types.IndexedValueTypeDouble,
+			wantValue: float64(1.1),
+		},
+		"[]double": {
+			value:     `[1.1, 2.2, 3.3]`,
+			valueType: types.IndexedValueTypeDouble,
+			wantValue: []float64{1.1, 2.2, 3.3},
+		},
+		"bool": {
+			value:     `true`,
+			valueType: types.IndexedValueTypeBool,
+			wantValue: true,
+		},
+		"[]bool": {
+			value:     `[true, false, true]`,
+			valueType: types.IndexedValueTypeBool,
+			wantValue: []bool{true, false, true},
+		},
+		"datetime": {
+			value:     `"2020-01-01T00:00:00Z"`,
+			valueType: types.IndexedValueTypeDatetime,
+			wantValue: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		"[]datetime": {
+			value:     `["2020-01-01T00:00:00Z", "2020-01-02T00:00:00Z", "2020-01-03T00:00:00Z"]`,
+			valueType: types.IndexedValueTypeDatetime,
+			wantValue: []time.Time{
+				time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+				time.Date(2020, 1, 2, 0, 0, 0, 0, time.UTC),
+				time.Date(2020, 1, 3, 0, 0, 0, 0, time.UTC),
+			},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			gotValue, err := DeserializeSearchAttributeValue([]byte(c.value), c.valueType)
+			require.NoError(t, err)
+			require.Equal(t, c.wantValue, gotValue)
+		})
+	}
+}
+
+func TestDeserializeSearchAttributeValue_Error(t *testing.T) {
+	for name, c := range map[string]struct {
+		value     string
+		valueType types.IndexedValueType
+
+		wantErrorMsg string
+	}{
+		"invalid string": {
+			value:        `"string`,
+			valueType:    types.IndexedValueTypeString,
+			wantErrorMsg: "unexpected end of JSON input",
+		},
+		"invalid keyword": {
+			value:        `"keyword`,
+			valueType:    types.IndexedValueTypeKeyword,
+			wantErrorMsg: "unexpected end of JSON input",
+		},
+		"invalid int": {
+			value:        `1.1`,
+			valueType:    types.IndexedValueTypeInt,
+			wantErrorMsg: "json: cannot unmarshal number into Go value of type []int64",
+		},
+		"invalid double": {
+			value:        `1as`,
+			valueType:    types.IndexedValueTypeDouble,
+			wantErrorMsg: "invalid character 'a' after top-level value",
+		},
+		"invalid bool": {
+			value:        `1`,
+			valueType:    types.IndexedValueTypeBool,
+			wantErrorMsg: "json: cannot unmarshal number into Go value of type []bool",
+		},
+		"invalid datetime": {
+			value:        `1`,
+			valueType:    types.IndexedValueTypeDatetime,
+			wantErrorMsg: "json: cannot unmarshal number into Go value of type []time.Time",
+		},
+		"invalid value type": {
+			value:        `1`,
+			valueType:    types.IndexedValueType(100),
+			wantErrorMsg: fmt.Sprintf("error: unknown index value type [%v]", types.IndexedValueType(100)),
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			gotValue, err := DeserializeSearchAttributeValue([]byte(c.value), c.valueType)
+			require.Error(t, err)
+			require.ErrorContains(t, err, c.wantErrorMsg)
+			require.Nil(t, gotValue)
+		})
+	}
+}
