@@ -23,6 +23,7 @@ package queue
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -425,12 +426,15 @@ func (t *timerQueueProcessor) completeTimer() error {
 	}
 
 	newAckLevelTimestamp := newAckLevel.(timerTaskKey).visibilityTimestamp
-	t.logger.Debugf("Start completing timer task from: %v, to %v", t.ackLevel, newAckLevelTimestamp)
 	if !t.ackLevel.Before(newAckLevelTimestamp) {
+		t.logger.Debugf("Skipping timer task completion because new ack level %v is not before ack level %v", newAckLevelTimestamp, t.ackLevel)
 		return nil
 	}
 
-	t.metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.TaskBatchCompleteCounter)
+	t.logger.Debugf("Start completing timer task from: %v, to %v", t.ackLevel, newAckLevelTimestamp)
+	t.metricsClient.Scope(metrics.TimerQueueProcessorScope).
+		Tagged(metrics.ShardIDTag(strconv.Itoa(t.shard.GetShardID()))).
+		IncCounter(metrics.TaskBatchCompleteCounter)
 
 	for {
 		pageSize := t.config.TimerTaskDeleteBatchSize()

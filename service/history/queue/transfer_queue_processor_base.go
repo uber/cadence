@@ -46,7 +46,6 @@ const (
 
 var (
 	loadQueueTaskThrottleRetryDelay = 5 * time.Second
-
 	persistenceOperationRetryPolicy = common.CreatePersistenceRetryPolicy()
 )
 
@@ -145,7 +144,7 @@ func newTransferQueueProcessorBase(
 			transferQueueProcessorBase,
 			options.ValidationInterval,
 			logger,
-			metricsClient.Scope(options.MetricScope),
+			processorBase.metricsScope,
 		)
 	}
 

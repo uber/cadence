@@ -23,6 +23,7 @@ package queue
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -94,7 +95,7 @@ func newProcessorBase(
 	logger log.Logger,
 	metricsClient metrics.Client,
 ) *processorBase {
-	metricsScope := metricsClient.Scope(options.MetricScope)
+	metricsScope := metricsClient.Scope(options.MetricScope).Tagged(metrics.ShardIDTag(strconv.Itoa(shard.GetShardID())))
 	return &processorBase{
 		shard:         shard,
 		taskProcessor: taskProcessor,

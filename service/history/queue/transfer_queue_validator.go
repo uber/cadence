@@ -71,11 +71,10 @@ func newTransferQueueValidator(
 ) *transferQueueValidator {
 	timeSource := processor.shard.GetTimeSource()
 	return &transferQueueValidator{
-		processor:    processor,
-		timeSource:   timeSource,
-		logger:       logger,
-		metricsScope: metricsScope,
-
+		processor:          processor,
+		timeSource:         timeSource,
+		logger:             logger,
+		metricsScope:       metricsScope,
 		pendingTaskInfos:   make(map[int64]pendingTaskInfo),
 		maxReadLevels:      make(map[int]task.Key),
 		minReadTaskID:      0,

@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -423,7 +424,9 @@ func (t *transferQueueProcessor) completeTransfer() error {
 		return nil
 	}
 
-	t.metricsClient.IncCounter(metrics.TransferQueueProcessorScope, metrics.TaskBatchCompleteCounter)
+	t.metricsClient.Scope(metrics.TransferQueueProcessorScope).
+		Tagged(metrics.ShardIDTag(strconv.Itoa(t.shard.GetShardID()))).
+		IncCounter(metrics.TaskBatchCompleteCounter)
 
 	for {
 		pageSize := t.config.TransferTaskDeleteBatchSize()
