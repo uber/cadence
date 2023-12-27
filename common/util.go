@@ -323,9 +323,10 @@ func IsValidContext(ctx context.Context) error {
 		case <-ch:
 			return ctx.Err()
 		default:
-			return nil
+			// go to the next line
 		}
 	}
+
 	deadline, ok := ctx.Deadline()
 	if ok && time.Until(deadline) < contextExpireThreshold {
 		return context.DeadlineExceeded
