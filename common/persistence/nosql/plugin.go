@@ -25,7 +25,7 @@ import (
 
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
-	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
 
@@ -65,7 +65,7 @@ func GetRegisteredPluginNames() []string {
 // underlying NoSQL database. The returned object is to tied to a single
 // NoSQL database and the object can be used to perform CRUD operations on
 // the tables in the database
-func NewNoSQLDB(cfg *config.NoSQL, logger log.Logger, dc *p.DynamicConfiguration) (nosqlplugin.DB, error) {
+func NewNoSQLDB(cfg *config.NoSQL, logger log.Logger, dc *persistence.DynamicConfiguration) (nosqlplugin.DB, error) {
 	plugin, ok := supportedPlugins[cfg.PluginName]
 
 	if !ok {
@@ -76,7 +76,7 @@ func NewNoSQLDB(cfg *config.NoSQL, logger log.Logger, dc *p.DynamicConfiguration
 }
 
 // NewNoSQLAdminDB returns a AdminDB
-func NewNoSQLAdminDB(cfg *config.NoSQL, logger log.Logger, dc *p.DynamicConfiguration) (nosqlplugin.AdminDB, error) {
+func NewNoSQLAdminDB(cfg *config.NoSQL, logger log.Logger, dc *persistence.DynamicConfiguration) (nosqlplugin.AdminDB, error) {
 	plugin, ok := supportedPlugins[cfg.PluginName]
 
 	if !ok {
