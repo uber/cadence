@@ -799,3 +799,83 @@ func TestIsValidContext(t *testing.T) {
 		require.NoError(t, IsValidContext(ctx), "nil should be returned, because context timeout is later than now + contextExpireThreshold")
 	})
 }
+
+func TestDeserializeSearchAttributeValue_Success(t *testing.T) {
+	for name, c := range map[string]struct {
+		value     string
+		valueType types.IndexedValueType
+
+		wantValue any
+	}{
+		"string": {
+			value:     `"string"`,
+			valueType: types.IndexedValueTypeString,
+			wantValue: "string",
+		},
+		"[]string": {
+			value:     `["1", "2", "3"]`,
+			valueType: types.IndexedValueTypeString,
+			wantValue: []string{"1", "2", "3"},
+		},
+		"keyword": {
+			value:     `"keyword"`,
+			valueType: types.IndexedValueTypeKeyword,
+			wantValue: "keyword",
+		},
+		"[]keyword": {
+			value:     `["1", "2", "3"]`,
+			valueType: types.IndexedValueTypeKeyword,
+			wantValue: []string{"1", "2", "3"},
+		},
+		"int": {
+			value:     `1`,
+			valueType: types.IndexedValueTypeInt,
+			wantValue: int64(1),
+		},
+		"[]int": {
+			value:     `[1, 2, 3]`,
+			valueType: types.IndexedValueTypeInt,
+			wantValue: []int64{1, 2, 3},
+		},
+		"double": {
+			value:     `1.1`,
+			valueType: types.IndexedValueTypeDouble,
+			wantValue: float64(1.1),
+		},
+		"[]double": {
+			value:     `[1.1, 2.2, 3.3]`,
+			valueType: types.IndexedValueTypeDouble,
+			wantValue: []float64{1.1, 2.2, 3.3},
+		},
+		"bool": {
+			value:     `true`,
+			valueType: types.IndexedValueTypeBool,
+			wantValue: true,
+		},
+		"[]bool": {
+			value:     `[true, false, true]`,
+			valueType: types.IndexedValueTypeBool,
+			wantValue: []bool{true, false, true},
+		},
+		"datetime": {
+			value:     `"2020-01-01T00:00:00Z"`,
+			valueType: types.IndexedValueTypeDatetime,
+			wantValue: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		"[]datetime": {
+			value:     `["2020-01-01T00:00:00Z", "2020-01-02T00:00:00Z", "2020-01-03T00:00:00Z"]`,
+			valueType: types.IndexedValueTypeDatetime,
+			wantValue: []time.Time{
+				time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+				time.Date(2020, 1, 2, 0, 0, 0, 0, time.UTC),
+				time.Date(2020, 1, 3, 0, 0, 0, 0, time.UTC),
+			},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			gotValue, err := DeserializeSearchAttributeValue([]byte(c.value), c.valueType)
+			require.NoError(t, err)
+			require.Equal(t, c.wantValue, gotValue)
+		})
+	}
+}
