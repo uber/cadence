@@ -37,8 +37,6 @@ type nosqlExecutionStore struct {
 	nosqlStore
 }
 
-var _ persistence.ExecutionStore = (*nosqlExecutionStore)(nil)
-
 // NewExecutionStore is used to create an instance of ExecutionStore implementation
 func NewExecutionStore(
 	shardID int,
