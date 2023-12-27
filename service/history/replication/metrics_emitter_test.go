@@ -44,7 +44,7 @@ var (
 )
 
 func TestMetricsEmitter(t *testing.T) {
-	timeSource := clock.NewEventTimeSource()
+	timeSource := clock.NewMockedTimeSource()
 	metadata := cluster.NewMetadata(0, cluster1, cluster1, map[string]config.ClusterInformation{
 		cluster1: {Enabled: true},
 		cluster2: {Enabled: true},
@@ -55,7 +55,6 @@ func TestMetricsEmitter(t *testing.T) {
 		testlogger.New(t),
 	)
 	testShardData := newTestShardData(timeSource, metadata)
-	timeSource.Update(time.Unix(10000, 0))
 
 	task1 := persistence.ReplicationTaskInfo{TaskID: 1, CreationTime: timeSource.Now().Add(-time.Hour).UnixNano()}
 	task2 := persistence.ReplicationTaskInfo{TaskID: 2, CreationTime: timeSource.Now().Add(-time.Minute).UnixNano()}
