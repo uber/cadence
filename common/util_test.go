@@ -757,3 +757,16 @@ func TestDomainIDToHistoryShard(t *testing.T) {
 		})
 	}
 }
+
+func TestGenerateRandomString(t *testing.T) {
+	for input, wantSize := range map[int]int{
+		-1: 0,
+		0:  0,
+		10: 10,
+	} {
+		t.Run(fmt.Sprintf("%d", input), func(t *testing.T) {
+			got := GenerateRandomString(input)
+			require.Len(t, got, wantSize)
+		})
+	}
+}
