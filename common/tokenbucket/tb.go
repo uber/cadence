@@ -79,7 +79,6 @@ type (
 		sync.Mutex
 		tokens         []int
 		fillRate       int
-		fillInterval   time.Duration
 		nextRefillTime time.Time
 		// Because we divide the per-second quota equally
 		// every 100 millis, there could be a remainder when
@@ -269,7 +268,6 @@ func NewPriorityTokenBucket(numOfPriority, rps int, timeSource clock.TimeSource)
 	tb := new(priorityTokenBucketImpl)
 	tb.tokens = make([]int, numOfPriority)
 	tb.timeSource = timeSource
-	tb.fillInterval = time.Millisecond * 100
 	tb.fillRate = (rps * 100) / millisPerSecond
 	tb.overflowRps = rps - (10 * tb.fillRate)
 	tb.refill(tb.timeSource.Now())
@@ -282,7 +280,6 @@ func NewFullPriorityTokenBucket(numOfPriority, rps int, timeSource clock.TimeSou
 	tb := new(priorityTokenBucketImpl)
 	tb.tokens = make([]int, numOfPriority)
 	tb.timeSource = timeSource
-	tb.fillInterval = refillRate
 	tb.fillRate = (rps * 100) / millisPerSecond
 	tb.overflowRps = rps - (10 * tb.fillRate)
 	tb.refill(tb.timeSource.Now())
@@ -324,7 +321,7 @@ func (tb *priorityTokenBucketImpl) refill(now time.Time) {
 			tb.tokens[0]++
 			tb.overflowTokens--
 		}
-		tb.nextRefillTime = now.Add(tb.fillInterval)
+		tb.nextRefillTime = now.Add(refillRate)
 	}
 }
 

@@ -203,7 +203,7 @@ func TestFullPriorityTokenBucket(t *testing.T) {
 func TestTokenBucketConsume(t *testing.T) {
 	t.Run("consume_wait", func(t *testing.T) {
 		// make sure we don't deadlock inside the test.
-		go panicOnTimeout(time.Minute)
+		go panicOnTimeout(time.Minute)()
 
 		ts := clock.NewMockedTimeSource()
 
@@ -246,13 +246,11 @@ func TestTokenBucketConsume(t *testing.T) {
 		ts.Advance(refillRate - backoffInterval + 1)
 		// Advance should unblock Consume and it should return afterwards.
 		// I don't provide a timeout, since I have a goroutine to panic on timeout.
-		select {
-		case <-consumeFinished:
-		}
+		<-consumeFinished
 	})
 	t.Run("timeout", func(t *testing.T) {
 		// make sure we don't deadlock inside the test.
-		go panicOnTimeout(time.Minute)
+		go panicOnTimeout(time.Minute)()
 
 		ts := clock.NewMockedTimeSource()
 		// I provide 10 rps, which means I can consume 10 tokens per second.
@@ -283,16 +281,18 @@ func TestTokenBucketConsume(t *testing.T) {
 
 		// advance time to wake Consume up and make it return before refill.
 		ts.Advance(backoffInterval/2 + 1)
-		select {
-		case <-consumeFinished:
-		default:
-		}
+		<-consumeFinished
 	})
 }
 
-func panicOnTimeout(d time.Duration) {
-	select {
-	case <-time.After(d):
-		panic("timeout")
-	}
+func panicOnTimeout(d time.Duration) (cancel func()) {
+	stop := make(chan struct{})
+	go func() {
+		select {
+		case <-time.After(d):
+			panic("timeout")
+		case <-stop: // noop
+		}
+	}()
+	return func() { close(stop) }
 }
