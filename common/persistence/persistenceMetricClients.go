@@ -417,8 +417,11 @@ func (p *workflowExecutionPersistenceClient) CreateWorkflowExecution(
 		resp, err = p.persistence.CreateWorkflowExecution(ctx, request)
 		return err
 	}
-	p.logger.SampleInfo("Persistence CreateWorkflowExecution called", p.sampleLoggingRate(),
-		tag.WorkflowDomainName(request.DomainName), tag.WorkflowID(request.NewWorkflowSnapshot.ExecutionInfo.WorkflowID), tag.ShardID(p.GetShardID()))
+	tags := []tag.Tag{tag.WorkflowDomainName(request.DomainName), tag.ShardID(p.GetShardID())}
+	if request != nil && request.NewWorkflowSnapshot.ExecutionInfo != nil {
+		tags = append(tags, tag.WorkflowID(request.NewWorkflowSnapshot.ExecutionInfo.WorkflowID))
+	}
+	p.logger.SampleInfo("Persistence CreateWorkflowExecution called", p.sampleLoggingRate(), tags...)
 	var err error
 	if p.enableShardIDMetrics() {
 		err = p.callWithDomainAndShardScope(metrics.PersistenceCreateWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName),
@@ -465,8 +468,11 @@ func (p *workflowExecutionPersistenceClient) UpdateWorkflowExecution(
 		resp, err = p.persistence.UpdateWorkflowExecution(ctx, request)
 		return err
 	}
-	p.logger.SampleInfo("Persistence UpdateWorkflowExecution called", p.sampleLoggingRate(),
-		tag.WorkflowDomainName(request.DomainName), tag.WorkflowID(request.UpdateWorkflowMutation.ExecutionInfo.WorkflowID), tag.ShardID(p.GetShardID()))
+	tags := []tag.Tag{tag.WorkflowDomainName(request.DomainName), tag.ShardID(p.GetShardID())}
+	if request != nil && request.UpdateWorkflowMutation.ExecutionInfo != nil {
+		tags = append(tags, tag.WorkflowID(request.UpdateWorkflowMutation.ExecutionInfo.WorkflowID))
+	}
+	p.logger.SampleInfo("Persistence UpdateWorkflowExecution called", p.sampleLoggingRate(), tags...)
 	var err error
 	if p.enableShardIDMetrics() {
 		err = p.callWithDomainAndShardScope(metrics.PersistenceUpdateWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName),

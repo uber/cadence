@@ -125,19 +125,33 @@ func (r UpdateTaskListRequest) MetricTags() []metrics.Tag {
 // If GetDomainName() string is defined, then the request will have extra log and shard metrics.
 // GetExtraLogTags() []tag.Tag is defined, then the request will have extra log tags.
 
-func (r CreateWorkflowExecutionRequest) GetDomainName() string {
+func (r *CreateWorkflowExecutionRequest) GetDomainName() string {
 	return r.DomainName
 }
 
-func (r CreateWorkflowExecutionRequest) GetExtraLogTags() []tag.Tag {
+func (r *IsWorkflowExecutionExistsRequest) GetDomainName() string {
+	return r.DomainName
+}
+
+func (r *PutReplicationTaskToDLQRequest) MetricTags() []metrics.Tag {
+	return []metrics.Tag{metrics.DomainTag(r.DomainName)}
+}
+
+func (r *CreateWorkflowExecutionRequest) GetExtraLogTags() []tag.Tag {
+	if r == nil || r.NewWorkflowSnapshot.ExecutionInfo == nil {
+		return nil
+	}
 	return []tag.Tag{tag.WorkflowID(r.NewWorkflowSnapshot.ExecutionInfo.WorkflowID)}
 }
 
-func (r UpdateWorkflowExecutionRequest) GetDomainName() string {
+func (r *UpdateWorkflowExecutionRequest) GetDomainName() string {
 	return r.DomainName
 }
 
-func (r UpdateWorkflowExecutionRequest) GetExtraLogTags() []tag.Tag {
+func (r *UpdateWorkflowExecutionRequest) GetExtraLogTags() []tag.Tag {
+	if r == nil || r.UpdateWorkflowMutation.ExecutionInfo == nil {
+		return nil
+	}
 	return []tag.Tag{tag.WorkflowID(r.UpdateWorkflowMutation.ExecutionInfo.WorkflowID)}
 }
 

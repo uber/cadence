@@ -37,6 +37,7 @@ import (
 	"golang.org/x/exp/maps"
 
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
@@ -127,6 +128,21 @@ func TestWrappersAgainstPreviousImplementation(t *testing.T) {
 
 				oldObj := persistence.NewVisibilityPersistenceMetricsClient(wrapped, oldMetricsClient, oldLogger, &config.Persistence{EnablePersistenceLatencyHistogramMetrics: true})
 				newObj := NewVisibilityManager(wrapped, newMetricsClient, newLogger, &config.Persistence{EnablePersistenceLatencyHistogramMetrics: true})
+
+				return oldObj, newObj, wrapped
+			},
+		},
+		{
+			name: "ExecutionManager",
+			prepareMock: func(t *testing.T, ctrl *gomock.Controller, oldMetricsClient metrics.Client, oldLogger log.Logger, newMetricsClient metrics.Client, newLogger log.Logger) (oldManager any, newManager any, mocked any) {
+				wrapped := persistence.NewMockExecutionManager(ctrl)
+
+				wrapped.EXPECT().GetShardID().Return(0).AnyTimes()
+
+				oldObj := persistence.NewWorkflowExecutionPersistenceMetricsClient(wrapped, oldMetricsClient, oldLogger, &config.Persistence{EnablePersistenceLatencyHistogramMetrics: true},
+					dynamicconfig.GetIntPropertyFn(1), dynamicconfig.GetBoolPropertyFn(true))
+				newObj := NewExecutionManager(wrapped, newMetricsClient, newLogger, &config.Persistence{EnablePersistenceLatencyHistogramMetrics: true},
+					dynamicconfig.GetIntPropertyFn(1), dynamicconfig.GetBoolPropertyFn(true))
 
 				return oldObj, newObj, wrapped
 			},
@@ -266,39 +282,35 @@ func prepareMockForTest(t *testing.T, input interface{}, expectedErr error) {
 		mocked.EXPECT().RecordWorkflowExecutionUninitialized(gomock.Any(), gomock.Any()).Return(expectedErr).Times(2)
 		mocked.EXPECT().UpsertWorkflowExecution(gomock.Any(), gomock.Any()).Return(expectedErr).Times(2)
 		mocked.EXPECT().ScanWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&persistence.ListWorkflowExecutionsResponse{}, expectedErr).Times(2)
-	//case *meteredExecutionManager:
-	//	mocked := persistence.NewMockExecutionManager(ctrl)
-	//	object = NewExecutionManager(mocked, metricsClient, logger, &config.Persistence{EnablePersistenceLatencyHistogramMetrics: true})
-	//	if expectCalls {
-	//		mocked.EXPECT().CompleteTimerTask(gomock.Any(), gomock.Any()).Return(expectedErr)
-	//		mocked.EXPECT().CompleteTransferTask(gomock.Any(), gomock.Any()).Return(expectedErr)
-	//		mocked.EXPECT().CreateWorkflowExecution(gomock.Any(), gomock.Any()).Return(&persistence.CreateWorkflowExecutionResponse{}, expectedErr)
-	//		mocked.EXPECT().GetWorkflowExecution(gomock.Any(), gomock.Any()).Return(&persistence.GetWorkflowExecutionResponse{}, expectedErr)
-	//		mocked.EXPECT().UpdateWorkflowExecution(gomock.Any(), gomock.Any()).Return(&persistence.UpdateWorkflowExecutionResponse{}, expectedErr)
-	//		mocked.EXPECT().DeleteWorkflowExecution(gomock.Any(), gomock.Any()).Return(expectedErr)
-	//		mocked.EXPECT().DeleteCurrentWorkflowExecution(gomock.Any(), gomock.Any()).Return(expectedErr)
-	//		mocked.EXPECT().GetCurrentExecution(gomock.Any(), gomock.Any()).Return(&persistence.GetCurrentExecutionResponse{}, expectedErr)
-	//		mocked.EXPECT().CompleteCrossClusterTask(gomock.Any(), gomock.Any()).Return(expectedErr)
-	//		mocked.EXPECT().RangeCompleteCrossClusterTask(gomock.Any(), gomock.Any()).Return(&persistence.RangeCompleteCrossClusterTaskResponse{}, expectedErr)
-	//		mocked.EXPECT().CompleteReplicationTask(gomock.Any(), gomock.Any()).Return(expectedErr)
-	//		mocked.EXPECT().ConflictResolveWorkflowExecution(gomock.Any(), gomock.Any()).Return(&persistence.ConflictResolveWorkflowExecutionResponse{}, expectedErr)
-	//		mocked.EXPECT().CreateFailoverMarkerTasks(gomock.Any(), gomock.Any()).Return(expectedErr)
-	//		mocked.EXPECT().DeleteReplicationTaskFromDLQ(gomock.Any(), gomock.Any()).Return(expectedErr)
-	//		mocked.EXPECT().GetCrossClusterTasks(gomock.Any(), gomock.Any()).Return(&persistence.GetCrossClusterTasksResponse{}, expectedErr)
-	//		mocked.EXPECT().GetReplicationDLQSize(gomock.Any(), gomock.Any()).Return(&persistence.GetReplicationDLQSizeResponse{}, expectedErr)
-	//		mocked.EXPECT().GetReplicationTasks(gomock.Any(), gomock.Any()).Return(&persistence.GetReplicationTasksResponse{}, expectedErr)
-	//		mocked.EXPECT().GetReplicationTasksFromDLQ(gomock.Any(), gomock.Any()).Return(&persistence.GetReplicationTasksFromDLQResponse{}, expectedErr)
-	//		mocked.EXPECT().GetTimerIndexTasks(gomock.Any(), gomock.Any()).Return(&persistence.GetTimerIndexTasksResponse{}, expectedErr)
-	//		mocked.EXPECT().GetTransferTasks(gomock.Any(), gomock.Any()).Return(&persistence.GetTransferTasksResponse{}, expectedErr)
-	//		mocked.EXPECT().IsWorkflowExecutionExists(gomock.Any(), gomock.Any()).Return(&persistence.IsWorkflowExecutionExistsResponse{}, expectedErr)
-	//		mocked.EXPECT().ListConcreteExecutions(gomock.Any(), gomock.Any()).Return(&persistence.ListConcreteExecutionsResponse{}, expectedErr)
-	//		mocked.EXPECT().ListCurrentExecutions(gomock.Any(), gomock.Any()).Return(&persistence.ListCurrentExecutionsResponse{}, expectedErr)
-	//		mocked.EXPECT().PutReplicationTaskToDLQ(gomock.Any(), gomock.Any()).Return(expectedErr)
-	//		mocked.EXPECT().RangeCompleteReplicationTask(gomock.Any(), gomock.Any()).Return(&persistence.RangeCompleteReplicationTaskResponse{}, expectedErr)
-	//		mocked.EXPECT().RangeCompleteTimerTask(gomock.Any(), gomock.Any()).Return(&persistence.RangeCompleteTimerTaskResponse{}, expectedErr)
-	//		mocked.EXPECT().RangeCompleteTransferTask(gomock.Any(), gomock.Any()).Return(&persistence.RangeCompleteTransferTaskResponse{}, expectedErr)
-	//		mocked.EXPECT().RangeDeleteReplicationTaskFromDLQ(gomock.Any(), gomock.Any()).Return(&persistence.RangeDeleteReplicationTaskFromDLQResponse{}, expectedErr)
-	//	}
+	case *persistence.MockExecutionManager:
+		mocked.EXPECT().CompleteTimerTask(gomock.Any(), gomock.Any()).Return(expectedErr).Times(2)
+		mocked.EXPECT().CompleteTransferTask(gomock.Any(), gomock.Any()).Return(expectedErr).Times(2)
+		mocked.EXPECT().CreateWorkflowExecution(gomock.Any(), gomock.Any()).Return(&persistence.CreateWorkflowExecutionResponse{}, expectedErr).Times(2)
+		mocked.EXPECT().GetWorkflowExecution(gomock.Any(), gomock.Any()).Return(&persistence.GetWorkflowExecutionResponse{}, expectedErr).Times(2)
+		mocked.EXPECT().UpdateWorkflowExecution(gomock.Any(), gomock.Any()).Return(&persistence.UpdateWorkflowExecutionResponse{}, expectedErr).Times(2)
+		mocked.EXPECT().DeleteWorkflowExecution(gomock.Any(), gomock.Any()).Return(expectedErr).Times(2)
+		mocked.EXPECT().DeleteCurrentWorkflowExecution(gomock.Any(), gomock.Any()).Return(expectedErr).Times(2)
+		mocked.EXPECT().GetCurrentExecution(gomock.Any(), gomock.Any()).Return(&persistence.GetCurrentExecutionResponse{}, expectedErr).Times(2)
+		mocked.EXPECT().CompleteCrossClusterTask(gomock.Any(), gomock.Any()).Return(expectedErr).Times(2)
+		mocked.EXPECT().RangeCompleteCrossClusterTask(gomock.Any(), gomock.Any()).Return(&persistence.RangeCompleteCrossClusterTaskResponse{}, expectedErr).Times(2)
+		mocked.EXPECT().CompleteReplicationTask(gomock.Any(), gomock.Any()).Return(expectedErr).Times(2)
+		mocked.EXPECT().ConflictResolveWorkflowExecution(gomock.Any(), gomock.Any()).Return(&persistence.ConflictResolveWorkflowExecutionResponse{}, expectedErr).Times(2)
+		mocked.EXPECT().CreateFailoverMarkerTasks(gomock.Any(), gomock.Any()).Return(expectedErr).Times(2)
+		mocked.EXPECT().DeleteReplicationTaskFromDLQ(gomock.Any(), gomock.Any()).Return(expectedErr).Times(2)
+		mocked.EXPECT().GetCrossClusterTasks(gomock.Any(), gomock.Any()).Return(&persistence.GetCrossClusterTasksResponse{}, expectedErr).Times(2)
+		mocked.EXPECT().GetReplicationDLQSize(gomock.Any(), gomock.Any()).Return(&persistence.GetReplicationDLQSizeResponse{}, expectedErr).Times(2)
+		mocked.EXPECT().GetReplicationTasks(gomock.Any(), gomock.Any()).Return(&persistence.GetReplicationTasksResponse{}, expectedErr).Times(2)
+		mocked.EXPECT().GetReplicationTasksFromDLQ(gomock.Any(), gomock.Any()).Return(&persistence.GetReplicationTasksFromDLQResponse{}, expectedErr).Times(2)
+		mocked.EXPECT().GetTimerIndexTasks(gomock.Any(), gomock.Any()).Return(&persistence.GetTimerIndexTasksResponse{}, expectedErr).Times(2)
+		mocked.EXPECT().GetTransferTasks(gomock.Any(), gomock.Any()).Return(&persistence.GetTransferTasksResponse{}, expectedErr).Times(2)
+		mocked.EXPECT().IsWorkflowExecutionExists(gomock.Any(), gomock.Any()).Return(&persistence.IsWorkflowExecutionExistsResponse{}, expectedErr).Times(2)
+		mocked.EXPECT().ListConcreteExecutions(gomock.Any(), gomock.Any()).Return(&persistence.ListConcreteExecutionsResponse{}, expectedErr).Times(2)
+		mocked.EXPECT().ListCurrentExecutions(gomock.Any(), gomock.Any()).Return(&persistence.ListCurrentExecutionsResponse{}, expectedErr).Times(2)
+		mocked.EXPECT().PutReplicationTaskToDLQ(gomock.Any(), gomock.Any()).Return(expectedErr).Times(2)
+		mocked.EXPECT().RangeCompleteReplicationTask(gomock.Any(), gomock.Any()).Return(&persistence.RangeCompleteReplicationTaskResponse{}, expectedErr).Times(2)
+		mocked.EXPECT().RangeCompleteTimerTask(gomock.Any(), gomock.Any()).Return(&persistence.RangeCompleteTimerTaskResponse{}, expectedErr).Times(2)
+		mocked.EXPECT().RangeCompleteTransferTask(gomock.Any(), gomock.Any()).Return(&persistence.RangeCompleteTransferTaskResponse{}, expectedErr).Times(2)
+		mocked.EXPECT().RangeDeleteReplicationTaskFromDLQ(gomock.Any(), gomock.Any()).Return(&persistence.RangeDeleteReplicationTaskFromDLQResponse{}, expectedErr).Times(2)
 	default:
 		t.Errorf("unsupported type %v", reflect.TypeOf(input))
 		t.FailNow()

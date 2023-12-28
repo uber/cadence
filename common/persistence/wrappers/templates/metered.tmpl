@@ -38,7 +38,7 @@ func New{{.Interface.Name}}(
         func (c *{{$decorator}}) {{$method.Declaration}} {
 	        op := func() error {
 		        {{$method.ResultsNames}} = c.wrapped.{{$method.Call}}
-		        {{ if and (ge (len $method.Params) 2) (ge (len $method.Results) 1) -}}
+		        {{ if and (gt (len $method.Params) 1) (gt (len $method.Results) 0) -}}
 		             c.emptyMetric("{{$interfaceName}}.{{$methodName}}", {{(index $method.Params 1).Name}}, {{(index $method.Results 0).Name}}, err)
 		        {{ end -}}
 		        return err
