@@ -73,7 +73,7 @@ func (m *sqlTaskStore) GetTaskListSize(ctx context.Context, request *persistence
 		MinTaskID:    &request.AckLevel,
 	})
 	if err != nil {
-		return nil, err
+		return nil, convertCommonErrors(m.db, "GetTaskListSize", "", err)
 	}
 	return &persistence.GetTaskListSizeResponse{Size: size}, nil
 }
@@ -273,25 +273,24 @@ type taskListPageToken struct {
 
 // ListTaskList lists tasklist from DB
 // DomainID translates into byte array in SQL. The minUUID is not the minimum byte array.
-// This API could return incomplete result set.
-// https://github.com/uber/cadence/issues/3911
 func (m *sqlTaskStore) ListTaskList(
 	ctx context.Context,
 	request *persistence.ListTaskListRequest,
 ) (*persistence.ListTaskListResponse, error) {
-	pageToken := taskListPageToken{TaskType: math.MinInt16, DomainID: serialization.UUID{}}
-	if request.PageToken != nil {
+	pageToken := taskListPageToken{DomainID: serialization.UUID{}}
+	if len(request.PageToken) > 0 {
 		if err := gobDeserialize(request.PageToken, &pageToken); err != nil {
 			return nil, &types.InternalServiceError{Message: fmt.Sprintf("error deserializing page token: %v", err)}
 		}
+	} else {
+		pageToken = taskListPageToken{TaskType: math.MinInt16, DomainID: serialization.UUID{}}
 	}
 	var err error
 	var rows []sqlplugin.TaskListsRow
-	domainID := pageToken.DomainID
 	for pageToken.ShardID < m.nShards {
 		rows, err = m.db.SelectFromTaskLists(ctx, &sqlplugin.TaskListsFilter{
 			ShardID:             pageToken.ShardID,
-			DomainIDGreaterThan: &domainID,
+			DomainIDGreaterThan: &pageToken.DomainID,
 			NameGreaterThan:     &pageToken.Name,
 			TaskTypeGreaterThan: &pageToken.TaskType,
 			PageSize:            &request.PageSize,
@@ -515,7 +514,7 @@ func (m *sqlTaskStore) CompleteTask(
 		TaskListName: taskList.Name,
 		TaskType:     int64(taskList.TaskType),
 		TaskID:       &taskID})
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil {
 		return convertCommonErrors(m.db, "CompleteTask", "", err)
 	}
 	return nil

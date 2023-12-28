@@ -22,7 +22,6 @@ package persistence
 
 import (
 	"context"
-	"strconv"
 	"time"
 
 	"github.com/uber/cadence/common/config"
@@ -423,7 +422,7 @@ func (p *workflowExecutionPersistenceClient) CreateWorkflowExecution(
 	var err error
 	if p.enableShardIDMetrics() {
 		err = p.callWithDomainAndShardScope(metrics.PersistenceCreateWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName),
-			metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
+			metrics.ShardIDTag(p.GetShardID()))
 	} else {
 		err = p.call(metrics.PersistenceCreateWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
 	}
@@ -446,7 +445,7 @@ func (p *workflowExecutionPersistenceClient) GetWorkflowExecution(
 	var err error
 	if p.enableShardIDMetrics() {
 		err = p.callWithDomainAndShardScope(metrics.PersistenceGetWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName),
-			metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
+			metrics.ShardIDTag(p.GetShardID()))
 	} else {
 		err = p.call(metrics.PersistenceGetWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
 	}
@@ -471,7 +470,7 @@ func (p *workflowExecutionPersistenceClient) UpdateWorkflowExecution(
 	var err error
 	if p.enableShardIDMetrics() {
 		err = p.callWithDomainAndShardScope(metrics.PersistenceUpdateWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName),
-			metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
+			metrics.ShardIDTag(p.GetShardID()))
 	} else {
 		err = p.call(metrics.PersistenceUpdateWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
 	}
@@ -496,7 +495,7 @@ func (p *workflowExecutionPersistenceClient) ConflictResolveWorkflowExecution(
 	var err error
 	if p.enableShardIDMetrics() {
 		err = p.callWithDomainAndShardScope(metrics.PersistenceConflictResolveWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName),
-			metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
+			metrics.ShardIDTag(p.GetShardID()))
 	} else {
 		err = p.call(metrics.PersistenceConflictResolveWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
 	}
@@ -517,7 +516,7 @@ func (p *workflowExecutionPersistenceClient) DeleteWorkflowExecution(
 		tag.WorkflowDomainName(request.DomainName), tag.WorkflowID(request.WorkflowID), tag.ShardID(p.GetShardID()))
 	if p.enableShardIDMetrics() {
 		return p.callWithDomainAndShardScope(metrics.PersistenceDeleteWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName),
-			metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
+			metrics.ShardIDTag(p.GetShardID()))
 	}
 	return p.call(metrics.PersistenceDeleteWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
 
@@ -534,7 +533,7 @@ func (p *workflowExecutionPersistenceClient) DeleteCurrentWorkflowExecution(
 		tag.WorkflowDomainName(request.DomainName), tag.WorkflowID(request.WorkflowID), tag.ShardID(p.GetShardID()))
 	if p.enableShardIDMetrics() {
 		return p.callWithDomainAndShardScope(metrics.PersistenceDeleteCurrentWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName),
-			metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
+			metrics.ShardIDTag(p.GetShardID()))
 	}
 	return p.call(metrics.PersistenceDeleteCurrentWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
 }
@@ -554,7 +553,7 @@ func (p *workflowExecutionPersistenceClient) GetCurrentExecution(
 	var err error
 	if p.enableShardIDMetrics() {
 		err = p.callWithDomainAndShardScope(metrics.PersistenceGetCurrentExecutionScope, op, metrics.DomainTag(request.DomainName),
-			metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
+			metrics.ShardIDTag(p.GetShardID()))
 	} else {
 		err = p.call(metrics.PersistenceGetCurrentExecutionScope, op, metrics.DomainTag(request.DomainName))
 	}
@@ -599,7 +598,7 @@ func (p *workflowExecutionPersistenceClient) IsWorkflowExecutionExists(
 	var err error
 	if p.enableShardIDMetrics() {
 		err = p.callWithDomainAndShardScope(metrics.PersistenceIsWorkflowExecutionExistsScope, op, metrics.DomainTag(request.DomainName),
-			metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
+			metrics.ShardIDTag(p.GetShardID()))
 	} else {
 		err = p.call(metrics.PersistenceIsWorkflowExecutionExistsScope, op, metrics.DomainTag(request.DomainName))
 	}

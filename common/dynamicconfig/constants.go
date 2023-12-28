@@ -1646,12 +1646,19 @@ const (
 	// Default value: false
 	// Allowed filters: DomainName
 	EnableConsistentQueryByDomain
-	// EnableCrossClusterOperations indicates if cross cluster operations can be scheduled for a domain
+	// EnableCrossClusterEngine is used as an overall switch for the cross-cluster feature, a feature which, if not enabled
+	// can be quite expensive in terms of resources
+	// KeyName: history.enableCrossClusterEngine
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: DomainName
+	EnableCrossClusterEngine
+	// EnableCrossClusterOperationsForDomain indicates if cross cluster operations can be scheduled for a domain
 	// KeyName: history.enableCrossClusterOperations
 	// Value type: Bool
 	// Default value: false
 	// Allowed filters: DomainName
-	EnableCrossClusterOperations
+	EnableCrossClusterOperationsForDomain
 	// EnableHistoryCorruptionCheck enables additional sanity check for corrupted history. This allows early catches of DB corruptions but potiantally increased latency.
 	// KeyName: history.enableHistoryCorruptionCheck
 	// Value type: Bool
@@ -3883,10 +3890,15 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		Description:  "EnableConsistentQueryByDomain indicates if consistent query is enabled for a domain",
 		DefaultValue: false,
 	},
-	EnableCrossClusterOperations: DynamicBool{
+	EnableCrossClusterEngine: DynamicBool{
+		KeyName:      "history.enableCrossClusterEngine",
+		Description:  "an overall toggle for the cross-cluster domain feature",
+		DefaultValue: false,
+	},
+	EnableCrossClusterOperationsForDomain: DynamicBool{
 		KeyName:      "history.enableCrossClusterOperations",
 		Filters:      []Filter{DomainName},
-		Description:  "EnableCrossClusterOperations indicates if cross cluster operations can be scheduled for a domain",
+		Description:  "EnableCrossClusterOperationsForDomain indicates if cross cluster operations can be scheduled for a domain",
 		DefaultValue: false,
 	},
 	EnableHistoryCorruptionCheck: DynamicBool{

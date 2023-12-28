@@ -45,6 +45,7 @@ const (
 type (
 	// CrossClusterTaskProcessorOptions configures crossClusterTaskProcessor
 	CrossClusterTaskProcessorOptions struct {
+		Enabled                    dynamicconfig.BoolPropertyFn
 		MaxPendingTasks            dynamicconfig.IntPropertyFn
 		TaskMaxRetryCount          dynamicconfig.IntPropertyFn
 		TaskRedispatchInterval     dynamicconfig.DurationPropertyFn
@@ -89,15 +90,19 @@ func NewCrossClusterTaskProcessors(
 	options *CrossClusterTaskProcessorOptions,
 ) common.Daemon {
 	processors := make(crossClusterTaskProcessors, 0, len(taskFetchers))
-	for _, fetcher := range taskFetchers {
-		processor := newCrossClusterTaskProcessor(
-			shard,
-			taskProcessor,
-			fetcher,
-			options,
-		)
-		processors = append(processors, processor)
+
+	if options.Enabled() {
+		for _, fetcher := range taskFetchers {
+			processor := newCrossClusterTaskProcessor(
+				shard,
+				taskProcessor,
+				fetcher,
+				options,
+			)
+			processors = append(processors, processor)
+		}
 	}
+
 	return processors
 }
 
