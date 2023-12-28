@@ -293,7 +293,8 @@ type Config struct {
 	EnableConsistentQueryByDomain dynamicconfig.BoolPropertyFnWithDomainFilter
 	MaxBufferedQueryCount         dynamicconfig.IntPropertyFn
 
-	EnableCrossClusterOperations dynamicconfig.BoolPropertyFnWithDomainFilter
+	EnableCrossClusterEngine              dynamicconfig.BoolPropertyFn
+	EnableCrossClusterOperationsForDomain dynamicconfig.BoolPropertyFnWithDomainFilter
 
 	// Data integrity check related config knobs
 	MutableStateChecksumGenProbability    dynamicconfig.IntPropertyFnWithDomainFilter
@@ -547,7 +548,8 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, s
 
 		EnableConsistentQuery:                 dc.GetBoolProperty(dynamicconfig.EnableConsistentQuery),
 		EnableConsistentQueryByDomain:         dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableConsistentQueryByDomain),
-		EnableCrossClusterOperations:          dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableCrossClusterOperations),
+		EnableCrossClusterEngine:              dc.GetBoolProperty(dynamicconfig.EnableCrossClusterEngine),
+		EnableCrossClusterOperationsForDomain: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableCrossClusterOperationsForDomain),
 		MaxBufferedQueryCount:                 dc.GetIntProperty(dynamicconfig.MaxBufferedQueryCount),
 		MutableStateChecksumGenProbability:    dc.GetIntPropertyFilteredByDomain(dynamicconfig.MutableStateChecksumGenProbability),
 		MutableStateChecksumVerifyProbability: dc.GetIntPropertyFilteredByDomain(dynamicconfig.MutableStateChecksumVerifyProbability),
@@ -599,7 +601,7 @@ func NewForTestByShardNumber(shardNumber int) *Config {
 	panicIfErr(inMem.UpdateValue(dynamicconfig.ReplicationTaskProcessorStartWait, time.Nanosecond))
 	panicIfErr(inMem.UpdateValue(dynamicconfig.EnableActivityLocalDispatchByDomain, true))
 	panicIfErr(inMem.UpdateValue(dynamicconfig.MaxActivityCountDispatchByDomain, 0))
-	panicIfErr(inMem.UpdateValue(dynamicconfig.EnableCrossClusterOperations, true))
+	panicIfErr(inMem.UpdateValue(dynamicconfig.EnableCrossClusterOperationsForDomain, true))
 	panicIfErr(inMem.UpdateValue(dynamicconfig.NormalDecisionScheduleToStartMaxAttempts, 3))
 	panicIfErr(inMem.UpdateValue(dynamicconfig.EnablePendingActivityValidation, true))
 	panicIfErr(inMem.UpdateValue(dynamicconfig.QueueProcessorEnableGracefulSyncShutdown, true))
@@ -625,7 +627,7 @@ func NewForTestByShardNumber(shardNumber int) *Config {
 	config.ReplicationTaskProcessorStartWait = dc.GetDurationPropertyFilteredByShardID(dynamicconfig.ReplicationTaskProcessorStartWait)
 	config.EnableActivityLocalDispatchByDomain = dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableActivityLocalDispatchByDomain)
 	config.MaxActivityCountDispatchByDomain = dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaxActivityCountDispatchByDomain)
-	config.EnableCrossClusterOperations = dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableCrossClusterOperations)
+	config.EnableCrossClusterOperationsForDomain = dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableCrossClusterOperationsForDomain)
 	config.NormalDecisionScheduleToStartMaxAttempts = dc.GetIntPropertyFilteredByDomain(dynamicconfig.NormalDecisionScheduleToStartMaxAttempts)
 	config.PendingActivityValidationEnabled = dc.GetBoolProperty(dynamicconfig.EnablePendingActivityValidation)
 	config.QueueProcessorEnableGracefulSyncShutdown = dc.GetBoolProperty(dynamicconfig.QueueProcessorEnableGracefulSyncShutdown)
