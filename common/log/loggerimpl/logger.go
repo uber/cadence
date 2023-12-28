@@ -47,9 +47,7 @@ const (
 
 // NewNopLogger returns a no-op logger
 func NewNopLogger() log.Logger {
-	return &loggerImpl{
-		zapLogger: zap.NewNop(),
-	}
+	return NewLogger(zap.NewNop())
 }
 
 // NewDevelopment returns a logger at debug level and log into STDERR
@@ -63,13 +61,9 @@ func NewDevelopment() (log.Logger, error) {
 
 // NewLogger returns a new logger
 func NewLogger(zapLogger *zap.Logger) log.Logger {
-	return &loggerImpl{
-		zapLogger: zapLogger,
-		skip:      skipForDefaultLogger,
-		sampleLocalFn: func(i int) bool {
-			return rand.Intn(i) == 0
-		},
-	}
+	return NewLoggerWithSampleFunc(zapLogger, func(i int) bool {
+		return rand.Intn(i) == 0
+	})
 }
 
 // NewLoggerWithSampleFunc returns a new logger with sample function.
