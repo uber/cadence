@@ -39,5 +39,6 @@ func New(t zaptest.TestingT) log.Logger {
 		require.NoError(t, err)
 		return logger
 	}
-	return loggerimpl.NewLogger(zaptest.NewLogger(t))
+	// test logger samples all logs
+	return loggerimpl.NewLoggerWithSampleFunc(zaptest.NewLogger(t), func(int) bool { return true })
 }

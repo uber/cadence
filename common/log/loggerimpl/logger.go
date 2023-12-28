@@ -34,8 +34,9 @@ import (
 )
 
 type loggerImpl struct {
-	zapLogger *zap.Logger
-	skip      int
+	zapLogger     *zap.Logger
+	skip          int
+	sampleLocalFn func(int) bool
 }
 
 const (
@@ -65,6 +66,18 @@ func NewLogger(zapLogger *zap.Logger) log.Logger {
 	return &loggerImpl{
 		zapLogger: zapLogger,
 		skip:      skipForDefaultLogger,
+		sampleLocalFn: func(i int) bool {
+			return rand.Intn(i) == 0
+		},
+	}
+}
+
+// NewLoggerWithSampleFunc returns a new logger with sample function.
+func NewLoggerWithSampleFunc(zapLogger *zap.Logger, sampleLocalFn func(int) bool) log.Logger {
+	return &loggerImpl{
+		zapLogger:     zapLogger,
+		skip:          skipForDefaultLogger,
+		sampleLocalFn: sampleLocalFn,
 	}
 }
 
@@ -160,7 +173,7 @@ func (lg *loggerImpl) WithTags(tags ...tag.Tag) log.Logger {
 }
 
 func (lg *loggerImpl) SampleInfo(msg string, sampleRate int, tags ...tag.Tag) {
-	if rand.Intn(sampleRate) == 0 {
+	if lg.sampleLocalFn(sampleRate) {
 		msg = setDefaultMsg(msg)
 		fields := lg.buildFieldsWithCallat(tags)
 		lg.zapLogger.Info(msg, fields...)
