@@ -336,7 +336,10 @@ func (s *TestBase) CreateWorkflowExecutionWithBranchToken(
 
 	now := time.Now()
 	versionHistory := persistence.NewVersionHistory(branchToken, []*persistence.VersionHistoryItem{
-		{decisionScheduleID, common.EmptyVersion},
+		{
+			EventID: decisionScheduleID,
+			Version: common.EmptyVersion,
+		},
 	})
 	versionHistories := persistence.NewVersionHistories(versionHistory)
 	response, err := s.ExecutionManager.CreateWorkflowExecution(ctx, &persistence.CreateWorkflowExecutionRequest{
@@ -413,7 +416,10 @@ func (s *TestBase) CreateChildWorkflowExecution(ctx context.Context, domainID st
 	decisionScheduleID int64, timerTasks []persistence.Task, partitionConfig map[string]string) (*persistence.CreateWorkflowExecutionResponse, error) {
 	now := time.Now()
 	versionHistory := persistence.NewVersionHistory([]byte{}, []*persistence.VersionHistoryItem{
-		{decisionScheduleID, common.EmptyVersion},
+		{
+			EventID: decisionScheduleID,
+			Version: common.EmptyVersion,
+		},
 	})
 	versionHistories := persistence.NewVersionHistories(versionHistory)
 	response, err := s.ExecutionManager.CreateWorkflowExecution(ctx, &persistence.CreateWorkflowExecutionRequest{
@@ -524,7 +530,10 @@ func (s *TestBase) ContinueAsNewExecution(
 		ScheduleID: int64(decisionScheduleID),
 	}
 	versionHistory := persistence.NewVersionHistory([]byte{}, []*persistence.VersionHistoryItem{
-		{decisionScheduleID, common.EmptyVersion},
+		{
+			EventID: decisionScheduleID,
+			Version: common.EmptyVersion,
+		},
 	})
 	versionHistories := persistence.NewVersionHistories(versionHistory)
 
