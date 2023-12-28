@@ -161,8 +161,9 @@ func (lg *loggerImpl) WithTags(tags ...tag.Tag) log.Logger {
 	fields := lg.buildFields(tags)
 	zapLogger := lg.zapLogger.With(fields...)
 	return &loggerImpl{
-		zapLogger: zapLogger,
-		skip:      lg.skip,
+		zapLogger:     zapLogger,
+		skip:          lg.skip,
+		sampleLocalFn: lg.sampleLocalFn,
 	}
 }
 
