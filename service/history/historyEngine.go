@@ -294,6 +294,7 @@ func NewEngineWithShardContext(
 		queueTaskProcessor,
 		crossClusterTaskFetchers,
 		&task.CrossClusterTaskProcessorOptions{
+			Enabled:                    config.EnableCrossClusterEngine,
 			MaxPendingTasks:            config.CrossClusterTargetProcessorMaxPendingTasks,
 			TaskMaxRetryCount:          config.CrossClusterTargetProcessorMaxRetryCount,
 			TaskRedispatchInterval:     config.ActiveTaskRedispatchInterval,
