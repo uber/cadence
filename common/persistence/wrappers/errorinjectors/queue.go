@@ -178,11 +178,11 @@ func (c *injectorQueueManager) RangeDeleteMessagesFromDLQ(ctx context.Context, f
 	return
 }
 
-func (c *injectorQueueManager) ReadMessages(ctx context.Context, lastMessageID int64, maxCount int) (qpa1 []*persistence.QueueMessage, err error) {
+func (c *injectorQueueManager) ReadMessages(ctx context.Context, lastMessageID int64, maxCount int) (q1 persistence.QueueMessageList, err error) {
 	fakeErr := generateFakeError(c.errorRate)
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		qpa1, err = c.wrapped.ReadMessages(ctx, lastMessageID, maxCount)
+		q1, err = c.wrapped.ReadMessages(ctx, lastMessageID, maxCount)
 	}
 
 	if fakeErr != nil {

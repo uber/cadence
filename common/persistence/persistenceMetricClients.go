@@ -915,7 +915,7 @@ func (p *taskPersistenceClient) CreateTasks(
 		resp, err = p.persistence.CreateTasks(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceCreateTaskScope, op, metrics.DomainTag(request.DomainName))
+	err := p.call(metrics.PersistenceCreateTasksScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -931,7 +931,8 @@ func (p *taskPersistenceClient) GetTasks(
 		var err error
 		resp, err = p.persistence.GetTasks(ctx, request)
 		if err == nil && len(resp.Tasks) == 0 {
-			p.metricClient.IncCounter(metrics.PersistenceGetTasksScope, metrics.PersistenceEmptyResponseCounter)
+			scope := p.metricClient.Scope(metrics.PersistenceGetTasksScope, metrics.DomainTag(request.DomainName))
+			scope.IncCounter(metrics.PersistenceEmptyResponseCounter)
 		}
 		return err
 	}
@@ -1142,11 +1143,11 @@ func (p *metadataPersistenceClient) ListDomains(
 		var err error
 		resp, err = p.persistence.ListDomains(ctx, request)
 		if err == nil && len(resp.Domains) == 0 {
-			p.metricClient.IncCounter(metrics.PersistenceListDomainScope, metrics.PersistenceEmptyResponseCounter)
+			p.metricClient.IncCounter(metrics.PersistenceListDomainsScope, metrics.PersistenceEmptyResponseCounter)
 		}
 		return err
 	}
-	err := p.call(metrics.PersistenceListDomainScope, op)
+	err := p.call(metrics.PersistenceListDomainsScope, op)
 	if err != nil {
 		return nil, err
 	}
@@ -1370,7 +1371,7 @@ func (p *visibilityPersistenceClient) DeleteUninitializedWorkflowExecution(
 	op := func() error {
 		return p.persistence.DeleteUninitializedWorkflowExecution(ctx, request)
 	}
-	return p.call(metrics.PersistenceVisibilityDeleteUninitializedWorkflowExecutionScope, op)
+	return p.call(metrics.PersistenceDeleteUninitializedWorkflowExecutionScope, op)
 }
 
 func (p *visibilityPersistenceClient) ListWorkflowExecutions(
@@ -1593,17 +1594,17 @@ func (p *queuePersistenceClient) ReadMessages(
 	ctx context.Context,
 	lastMessageID int64,
 	maxCount int,
-) ([]*QueueMessage, error) {
-	var resp []*QueueMessage
+) (QueueMessageList, error) {
+	var resp QueueMessageList
 	op := func() error {
 		var err error
 		resp, err = p.persistence.ReadMessages(ctx, lastMessageID, maxCount)
 		if err == nil && len(resp) == 0 {
-			p.metricClient.IncCounter(metrics.PersistenceReadQueueMessagesScope, metrics.PersistenceEmptyResponseCounter)
+			p.metricClient.IncCounter(metrics.PersistenceReadMessagesScope, metrics.PersistenceEmptyResponseCounter)
 		}
 		return err
 	}
-	err := p.call(metrics.PersistenceReadQueueMessagesScope, op)
+	err := p.call(metrics.PersistenceReadMessagesScope, op)
 	if err != nil {
 		return nil, err
 	}
@@ -1630,7 +1631,7 @@ func (p *queuePersistenceClient) GetAckLevels(
 		resp, err = p.persistence.GetAckLevels(ctx)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetAckLevelScope, op)
+	err := p.call(metrics.PersistenceGetAckLevelsScope, op)
 	if err != nil {
 		return nil, err
 	}
@@ -1644,7 +1645,7 @@ func (p *queuePersistenceClient) DeleteMessagesBefore(
 	op := func() error {
 		return p.persistence.DeleteMessagesBefore(ctx, messageID)
 	}
-	return p.call(metrics.PersistenceDeleteQueueMessagesScope, op)
+	return p.call(metrics.PersistenceDeleteMessagesBeforeScope, op)
 }
 
 func (p *queuePersistenceClient) EnqueueMessageToDLQ(
@@ -1671,7 +1672,7 @@ func (p *queuePersistenceClient) ReadMessagesFromDLQ(
 		result, token, err = p.persistence.ReadMessagesFromDLQ(ctx, firstMessageID, lastMessageID, pageSize, pageToken)
 		return err
 	}
-	err := p.call(metrics.PersistenceReadQueueMessagesFromDLQScope, op)
+	err := p.call(metrics.PersistenceReadMessagesFromDLQScope, op)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1685,7 +1686,7 @@ func (p *queuePersistenceClient) DeleteMessageFromDLQ(
 	op := func() error {
 		return p.persistence.DeleteMessageFromDLQ(ctx, messageID)
 	}
-	return p.call(metrics.PersistenceDeleteQueueMessageFromDLQScope, op)
+	return p.call(metrics.PersistenceDeleteMessageFromDLQScope, op)
 }
 
 func (p *queuePersistenceClient) RangeDeleteMessagesFromDLQ(
@@ -1719,7 +1720,7 @@ func (p *queuePersistenceClient) GetDLQAckLevels(
 		resp, err = p.persistence.GetDLQAckLevels(ctx)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetDLQAckLevelScope, op)
+	err := p.call(metrics.PersistenceGetDLQAckLevelsScope, op)
 	if err != nil {
 		return nil, err
 	}
