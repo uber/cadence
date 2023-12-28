@@ -25,7 +25,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -425,7 +424,7 @@ func (t *transferQueueProcessor) completeTransfer() error {
 	}
 
 	t.metricsClient.Scope(metrics.TransferQueueProcessorScope).
-		Tagged(metrics.ShardIDTag(strconv.Itoa(t.shard.GetShardID()))).
+		Tagged(metrics.ShardIDTag(t.shard.GetShardID())).
 		IncCounter(metrics.TaskBatchCompleteCounter)
 
 	for {

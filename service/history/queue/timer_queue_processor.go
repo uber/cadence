@@ -23,7 +23,6 @@ package queue
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -433,7 +432,7 @@ func (t *timerQueueProcessor) completeTimer() error {
 
 	t.logger.Debugf("Start completing timer task from: %v, to %v", t.ackLevel, newAckLevelTimestamp)
 	t.metricsClient.Scope(metrics.TimerQueueProcessorScope).
-		Tagged(metrics.ShardIDTag(strconv.Itoa(t.shard.GetShardID()))).
+		Tagged(metrics.ShardIDTag(t.shard.GetShardID())).
 		IncCounter(metrics.TaskBatchCompleteCounter)
 
 	for {
