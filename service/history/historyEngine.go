@@ -27,7 +27,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -294,6 +293,7 @@ func NewEngineWithShardContext(
 		queueTaskProcessor,
 		crossClusterTaskFetchers,
 		&task.CrossClusterTaskProcessorOptions{
+			Enabled:                    config.EnableCrossClusterEngine,
 			MaxPendingTasks:            config.CrossClusterTargetProcessorMaxPendingTasks,
 			TaskMaxRetryCount:          config.CrossClusterTargetProcessorMaxRetryCount,
 			TaskRedispatchInterval:     config.ActiveTaskRedispatchInterval,
@@ -1171,7 +1171,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 ) (retResp *types.HistoryQueryWorkflowResponse, retErr error) {
 
 	scope := e.metricsClient.Scope(metrics.HistoryQueryWorkflowScope).Tagged(metrics.DomainTag(request.GetRequest().GetDomain()))
-	shardMetricScope := e.metricsClient.Scope(metrics.HistoryQueryWorkflowScope, metrics.ShardIDTag(strconv.Itoa(e.shard.GetShardID())))
+	shardMetricScope := e.metricsClient.Scope(metrics.HistoryQueryWorkflowScope, metrics.ShardIDTag(e.shard.GetShardID()))
 
 	consistentQueryEnabled := e.config.EnableConsistentQuery() && e.config.EnableConsistentQueryByDomain(request.GetRequest().GetDomain())
 	if request.GetRequest().GetQueryConsistencyLevel() == types.QueryConsistencyLevelStrong {
