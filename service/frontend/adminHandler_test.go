@@ -1038,3 +1038,71 @@ func Test_UpdateDomainIsolationGroups(t *testing.T) {
 		})
 	}
 }
+
+func TestShardFiltering(t *testing.T) {
+
+	tests := map[string]struct {
+		input       *types.GetReplicationMessagesRequest
+		expectedOut *types.GetReplicationMessagesRequest
+		expectedErr error
+	}{
+		"Normal replication - no changes whatsoever expected - replication from 4 shards to 4 shards clusters": {
+			input: &types.GetReplicationMessagesRequest{
+				Tokens: []*types.ReplicationToken{
+					{ShardID: 0, LastRetrievedMessageID: 0, LastProcessedMessageID: 0},
+					{ShardID: 1, LastRetrievedMessageID: 1, LastProcessedMessageID: 1},
+					{ShardID: 2, LastRetrievedMessageID: 2, LastProcessedMessageID: 2},
+					{ShardID: 3, LastRetrievedMessageID: 3, LastProcessedMessageID: 3},
+				},
+				ClusterName: "cluster2-with-4-shards",
+			},
+			expectedOut: &types.GetReplicationMessagesRequest{
+				Tokens: []*types.ReplicationToken{
+					{ShardID: 0, LastRetrievedMessageID: 0, LastProcessedMessageID: 0},
+					{ShardID: 1, LastRetrievedMessageID: 1, LastProcessedMessageID: 1},
+					{ShardID: 2, LastRetrievedMessageID: 2, LastProcessedMessageID: 2},
+					{ShardID: 3, LastRetrievedMessageID: 3, LastProcessedMessageID: 3},
+				},
+				ClusterName: "cluster2-with-4-shards",
+			},
+		},
+		"filtering replication - the new cluster's asking for shards that aren't present": {
+			input: &types.GetReplicationMessagesRequest{
+				Tokens: []*types.ReplicationToken{
+					{ShardID: 3, LastRetrievedMessageID: 3, LastProcessedMessageID: 3},
+					{ShardID: 4, LastRetrievedMessageID: 0, LastProcessedMessageID: 0},
+					{ShardID: 5, LastRetrievedMessageID: 1, LastProcessedMessageID: 1},
+					{ShardID: 6, LastRetrievedMessageID: 2, LastProcessedMessageID: 2},
+				},
+				ClusterName: "cluster2-with-8-shards",
+			},
+			expectedOut: &types.GetReplicationMessagesRequest{
+				Tokens: []*types.ReplicationToken{
+					{ShardID: 3, LastRetrievedMessageID: 3, LastProcessedMessageID: 3},
+				},
+				ClusterName: "cluster2-with-8-shards",
+			},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			goMock := gomock.NewController(t)
+			mockhistoryclient := history.NewMockClient(goMock)
+
+			mockhistoryclient.EXPECT().GetReplicationMessages(gomock.Any(), td.expectedOut).Return(&types.GetReplicationMessagesResponse{}, nil)
+
+			handler := adminHandlerImpl{
+				config: &Config{NumHistoryShards: 4},
+				Resource: &resource.Test{
+					Logger:        testlogger.New(t),
+					MetricsClient: metrics.NewNoopMetricsClient(),
+					HistoryClient: mockhistoryclient,
+				},
+			}
+
+			_, err := handler.GetReplicationMessages(context.Background(), td.input)
+			assert.Equal(t, td.expectedErr, err)
+		})
+	}
+}

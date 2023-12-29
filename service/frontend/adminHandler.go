@@ -967,9 +967,17 @@ func (adh *adminHandlerImpl) GetReplicationMessages(
 		return nil, adh.error(errClusterNameNotSet, scope)
 	}
 
-	request = filterReplicationShards(adh.config.NumHistoryShards, request)
+	// Ensures that the request is able to be fulfilled by the current cluster.
+	// If this cluster receives a request for replication from shards that are
+	// higher than what it can handle, it'll drop them.
+	filteredRequest := filterReplicationShards(adh.config.NumHistoryShards, request)
+	if len(filteredRequest.Tokens) != len(request.Tokens) {
+		adh.GetLogger().Warn("Warning! Received replication request from a cluster with a greater number of shards."+
+			"Some workflows will not be replicated they are active in this larger cluster"+
+			"and are intended to be replicated here", tag.ClusterName(request.ClusterName))
+	}
 
-	resp, err = adh.GetHistoryRawClient().GetReplicationMessages(ctx, request)
+	resp, err = adh.GetHistoryRawClient().GetReplicationMessages(ctx, filteredRequest)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
