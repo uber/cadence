@@ -29,6 +29,7 @@ import (
 )
 
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interface_mock.go -package matching github.com/uber/cadence/client/matching Client
+//go:generate gowrap gen -g -p . -i Client -t ../templates/retry.tmpl -o ../wrappers/retryable/matching_generated.go -v client=Matching
 
 // Client is the interface exposed by types service client
 type Client interface {

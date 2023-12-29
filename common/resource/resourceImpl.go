@@ -34,6 +34,7 @@ import (
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
+	"github.com/uber/cadence/client/wrappers/retryable"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
@@ -217,7 +218,7 @@ func New(
 	)
 
 	frontendRawClient := clientBean.GetFrontendClient()
-	frontendClient := frontend.NewRetryableClient(
+	frontendClient := retryable.NewRetryableFrontendClient(
 		frontendRawClient,
 		common.CreateFrontendServiceRetryPolicy(),
 		common.IsServiceTransientError,
@@ -227,14 +228,14 @@ func New(
 	if err != nil {
 		return nil, err
 	}
-	matchingClient := matching.NewRetryableClient(
+	matchingClient := retryable.NewRetryableMatchingClient(
 		matchingRawClient,
 		common.CreateMatchingServiceRetryPolicy(),
 		common.IsServiceTransientError,
 	)
 
 	historyRawClient := clientBean.GetHistoryClient()
-	historyClient := history.NewRetryableClient(
+	historyClient := retryable.NewRetryableHistoryClient(
 		historyRawClient,
 		common.CreateHistoryServiceRetryPolicy(),
 		common.IsServiceTransientError,
