@@ -967,6 +967,8 @@ func (adh *adminHandlerImpl) GetReplicationMessages(
 		return nil, adh.error(errClusterNameNotSet, scope)
 	}
 
+	request = filterReplicationShards(adh.config.NumHistoryShards, request)
+
 	resp, err = adh.GetHistoryRawClient().GetReplicationMessages(ctx, request)
 	if err != nil {
 		return nil, adh.error(err, scope)
@@ -1809,4 +1811,31 @@ func convertFilterListToMap(filters []*types.DynamicConfigFilter) (map[dc.Filter
 		newFilters[dc.ParseFilter(filter.Name)] = val
 	}
 	return newFilters, nil
+}
+
+// Ensures that shards received are within the range of the server,
+// or they'll be filtered out. This necessarily means that replication requests
+// that are for shards that don't exist are dropped.
+//
+// Replication is therefore the min(clusterA.NumberHistoryShards, clusterB.NumberHistoryShards).
+// Shards that are above this limit will just not be replicated. This is a
+// compromise because I've not found any way to translate shards from higher-shards
+// to lower ones.
+//
+// Simple division (such as divide by 2) doesn't work because each
+// replication response returns offsets for the shard (like kafka), so that
+// consumers can manage their own offset locations. Any attempts to do
+// reductions or translations would require keeping track of the offsets
+// of the translated shards.
+func filterReplicationShards(maxShards int, req *types.GetReplicationMessagesRequest) *types.GetReplicationMessagesRequest {
+	var out []*types.ReplicationToken
+	for _, v := range req.Tokens {
+		if int(v.ShardID) < maxShards {
+			out = append(out, v)
+		}
+	}
+	return &types.GetReplicationMessagesRequest{
+		Tokens:      out,
+		ClusterName: req.ClusterName,
+	}
 }
