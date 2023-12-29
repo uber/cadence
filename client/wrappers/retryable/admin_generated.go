@@ -36,15 +36,15 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-// retryableAdminClient implements admin.Client interface instrumented with retries
-type retryableAdminClient struct {
+// adminClient implements admin.Client interface instrumented with retries
+type adminClient struct {
 	client        admin.Client
 	throttleRetry *backoff.ThrottleRetry
 }
 
-// NewRetryableAdminClient creates a new instance of retryableAdminClient with retry policy
-func NewRetryableAdminClient(client admin.Client, policy backoff.RetryPolicy, isRetryable backoff.IsRetryable) admin.Client {
-	return &retryableAdminClient{
+// NewAdminClient creates a new instance of adminClient with retry policy
+func NewAdminClient(client admin.Client, policy backoff.RetryPolicy, isRetryable backoff.IsRetryable) admin.Client {
+	return &adminClient{
 		client: client,
 		throttleRetry: backoff.NewThrottleRetry(
 			backoff.WithRetryPolicy(policy),
@@ -53,21 +53,21 @@ func NewRetryableAdminClient(client admin.Client, policy backoff.RetryPolicy, is
 	}
 }
 
-func (c *retryableAdminClient) AddSearchAttribute(ctx context.Context, ap1 *types.AddSearchAttributeRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *adminClient) AddSearchAttribute(ctx context.Context, ap1 *types.AddSearchAttributeRequest, p1 ...yarpc.CallOption) (err error) {
 	op := func() error {
 		return c.client.AddSearchAttribute(ctx, ap1, p1...)
 	}
 	return c.throttleRetry.Do(ctx, op)
 }
 
-func (c *retryableAdminClient) CloseShard(ctx context.Context, cp1 *types.CloseShardRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *adminClient) CloseShard(ctx context.Context, cp1 *types.CloseShardRequest, p1 ...yarpc.CallOption) (err error) {
 	op := func() error {
 		return c.client.CloseShard(ctx, cp1, p1...)
 	}
 	return c.throttleRetry.Do(ctx, op)
 }
 
-func (c *retryableAdminClient) CountDLQMessages(ctx context.Context, cp1 *types.CountDLQMessagesRequest, p1 ...yarpc.CallOption) (cp2 *types.CountDLQMessagesResponse, err error) {
+func (c *adminClient) CountDLQMessages(ctx context.Context, cp1 *types.CountDLQMessagesRequest, p1 ...yarpc.CallOption) (cp2 *types.CountDLQMessagesResponse, err error) {
 	var resp *types.CountDLQMessagesResponse
 	op := func() error {
 		var err error
@@ -78,7 +78,7 @@ func (c *retryableAdminClient) CountDLQMessages(ctx context.Context, cp1 *types.
 	return resp, err
 }
 
-func (c *retryableAdminClient) DeleteWorkflow(ctx context.Context, ap1 *types.AdminDeleteWorkflowRequest, p1 ...yarpc.CallOption) (ap2 *types.AdminDeleteWorkflowResponse, err error) {
+func (c *adminClient) DeleteWorkflow(ctx context.Context, ap1 *types.AdminDeleteWorkflowRequest, p1 ...yarpc.CallOption) (ap2 *types.AdminDeleteWorkflowResponse, err error) {
 	var resp *types.AdminDeleteWorkflowResponse
 	op := func() error {
 		var err error
@@ -89,7 +89,7 @@ func (c *retryableAdminClient) DeleteWorkflow(ctx context.Context, ap1 *types.Ad
 	return resp, err
 }
 
-func (c *retryableAdminClient) DescribeCluster(ctx context.Context, p1 ...yarpc.CallOption) (dp1 *types.DescribeClusterResponse, err error) {
+func (c *adminClient) DescribeCluster(ctx context.Context, p1 ...yarpc.CallOption) (dp1 *types.DescribeClusterResponse, err error) {
 	var resp *types.DescribeClusterResponse
 	op := func() error {
 		var err error
@@ -100,7 +100,7 @@ func (c *retryableAdminClient) DescribeCluster(ctx context.Context, p1 ...yarpc.
 	return resp, err
 }
 
-func (c *retryableAdminClient) DescribeHistoryHost(ctx context.Context, dp1 *types.DescribeHistoryHostRequest, p1 ...yarpc.CallOption) (dp2 *types.DescribeHistoryHostResponse, err error) {
+func (c *adminClient) DescribeHistoryHost(ctx context.Context, dp1 *types.DescribeHistoryHostRequest, p1 ...yarpc.CallOption) (dp2 *types.DescribeHistoryHostResponse, err error) {
 	var resp *types.DescribeHistoryHostResponse
 	op := func() error {
 		var err error
@@ -111,7 +111,7 @@ func (c *retryableAdminClient) DescribeHistoryHost(ctx context.Context, dp1 *typ
 	return resp, err
 }
 
-func (c *retryableAdminClient) DescribeQueue(ctx context.Context, dp1 *types.DescribeQueueRequest, p1 ...yarpc.CallOption) (dp2 *types.DescribeQueueResponse, err error) {
+func (c *adminClient) DescribeQueue(ctx context.Context, dp1 *types.DescribeQueueRequest, p1 ...yarpc.CallOption) (dp2 *types.DescribeQueueResponse, err error) {
 	var resp *types.DescribeQueueResponse
 	op := func() error {
 		var err error
@@ -122,7 +122,7 @@ func (c *retryableAdminClient) DescribeQueue(ctx context.Context, dp1 *types.Des
 	return resp, err
 }
 
-func (c *retryableAdminClient) DescribeShardDistribution(ctx context.Context, dp1 *types.DescribeShardDistributionRequest, p1 ...yarpc.CallOption) (dp2 *types.DescribeShardDistributionResponse, err error) {
+func (c *adminClient) DescribeShardDistribution(ctx context.Context, dp1 *types.DescribeShardDistributionRequest, p1 ...yarpc.CallOption) (dp2 *types.DescribeShardDistributionResponse, err error) {
 	var resp *types.DescribeShardDistributionResponse
 	op := func() error {
 		var err error
@@ -133,7 +133,7 @@ func (c *retryableAdminClient) DescribeShardDistribution(ctx context.Context, dp
 	return resp, err
 }
 
-func (c *retryableAdminClient) DescribeWorkflowExecution(ctx context.Context, ap1 *types.AdminDescribeWorkflowExecutionRequest, p1 ...yarpc.CallOption) (ap2 *types.AdminDescribeWorkflowExecutionResponse, err error) {
+func (c *adminClient) DescribeWorkflowExecution(ctx context.Context, ap1 *types.AdminDescribeWorkflowExecutionRequest, p1 ...yarpc.CallOption) (ap2 *types.AdminDescribeWorkflowExecutionResponse, err error) {
 	var resp *types.AdminDescribeWorkflowExecutionResponse
 	op := func() error {
 		var err error
@@ -144,7 +144,7 @@ func (c *retryableAdminClient) DescribeWorkflowExecution(ctx context.Context, ap
 	return resp, err
 }
 
-func (c *retryableAdminClient) GetCrossClusterTasks(ctx context.Context, gp1 *types.GetCrossClusterTasksRequest, p1 ...yarpc.CallOption) (gp2 *types.GetCrossClusterTasksResponse, err error) {
+func (c *adminClient) GetCrossClusterTasks(ctx context.Context, gp1 *types.GetCrossClusterTasksRequest, p1 ...yarpc.CallOption) (gp2 *types.GetCrossClusterTasksResponse, err error) {
 	var resp *types.GetCrossClusterTasksResponse
 	op := func() error {
 		var err error
@@ -155,7 +155,7 @@ func (c *retryableAdminClient) GetCrossClusterTasks(ctx context.Context, gp1 *ty
 	return resp, err
 }
 
-func (c *retryableAdminClient) GetDLQReplicationMessages(ctx context.Context, gp1 *types.GetDLQReplicationMessagesRequest, p1 ...yarpc.CallOption) (gp2 *types.GetDLQReplicationMessagesResponse, err error) {
+func (c *adminClient) GetDLQReplicationMessages(ctx context.Context, gp1 *types.GetDLQReplicationMessagesRequest, p1 ...yarpc.CallOption) (gp2 *types.GetDLQReplicationMessagesResponse, err error) {
 	var resp *types.GetDLQReplicationMessagesResponse
 	op := func() error {
 		var err error
@@ -166,7 +166,7 @@ func (c *retryableAdminClient) GetDLQReplicationMessages(ctx context.Context, gp
 	return resp, err
 }
 
-func (c *retryableAdminClient) GetDomainIsolationGroups(ctx context.Context, request *types.GetDomainIsolationGroupsRequest, opts ...yarpc.CallOption) (gp1 *types.GetDomainIsolationGroupsResponse, err error) {
+func (c *adminClient) GetDomainIsolationGroups(ctx context.Context, request *types.GetDomainIsolationGroupsRequest, opts ...yarpc.CallOption) (gp1 *types.GetDomainIsolationGroupsResponse, err error) {
 	var resp *types.GetDomainIsolationGroupsResponse
 	op := func() error {
 		var err error
@@ -177,7 +177,7 @@ func (c *retryableAdminClient) GetDomainIsolationGroups(ctx context.Context, req
 	return resp, err
 }
 
-func (c *retryableAdminClient) GetDomainReplicationMessages(ctx context.Context, gp1 *types.GetDomainReplicationMessagesRequest, p1 ...yarpc.CallOption) (gp2 *types.GetDomainReplicationMessagesResponse, err error) {
+func (c *adminClient) GetDomainReplicationMessages(ctx context.Context, gp1 *types.GetDomainReplicationMessagesRequest, p1 ...yarpc.CallOption) (gp2 *types.GetDomainReplicationMessagesResponse, err error) {
 	var resp *types.GetDomainReplicationMessagesResponse
 	op := func() error {
 		var err error
@@ -188,7 +188,7 @@ func (c *retryableAdminClient) GetDomainReplicationMessages(ctx context.Context,
 	return resp, err
 }
 
-func (c *retryableAdminClient) GetDynamicConfig(ctx context.Context, gp1 *types.GetDynamicConfigRequest, p1 ...yarpc.CallOption) (gp2 *types.GetDynamicConfigResponse, err error) {
+func (c *adminClient) GetDynamicConfig(ctx context.Context, gp1 *types.GetDynamicConfigRequest, p1 ...yarpc.CallOption) (gp2 *types.GetDynamicConfigResponse, err error) {
 	var resp *types.GetDynamicConfigResponse
 	op := func() error {
 		var err error
@@ -199,7 +199,7 @@ func (c *retryableAdminClient) GetDynamicConfig(ctx context.Context, gp1 *types.
 	return resp, err
 }
 
-func (c *retryableAdminClient) GetGlobalIsolationGroups(ctx context.Context, request *types.GetGlobalIsolationGroupsRequest, opts ...yarpc.CallOption) (gp1 *types.GetGlobalIsolationGroupsResponse, err error) {
+func (c *adminClient) GetGlobalIsolationGroups(ctx context.Context, request *types.GetGlobalIsolationGroupsRequest, opts ...yarpc.CallOption) (gp1 *types.GetGlobalIsolationGroupsResponse, err error) {
 	var resp *types.GetGlobalIsolationGroupsResponse
 	op := func() error {
 		var err error
@@ -210,7 +210,7 @@ func (c *retryableAdminClient) GetGlobalIsolationGroups(ctx context.Context, req
 	return resp, err
 }
 
-func (c *retryableAdminClient) GetReplicationMessages(ctx context.Context, gp1 *types.GetReplicationMessagesRequest, p1 ...yarpc.CallOption) (gp2 *types.GetReplicationMessagesResponse, err error) {
+func (c *adminClient) GetReplicationMessages(ctx context.Context, gp1 *types.GetReplicationMessagesRequest, p1 ...yarpc.CallOption) (gp2 *types.GetReplicationMessagesResponse, err error) {
 	var resp *types.GetReplicationMessagesResponse
 	op := func() error {
 		var err error
@@ -221,7 +221,7 @@ func (c *retryableAdminClient) GetReplicationMessages(ctx context.Context, gp1 *
 	return resp, err
 }
 
-func (c *retryableAdminClient) GetWorkflowExecutionRawHistoryV2(ctx context.Context, gp1 *types.GetWorkflowExecutionRawHistoryV2Request, p1 ...yarpc.CallOption) (gp2 *types.GetWorkflowExecutionRawHistoryV2Response, err error) {
+func (c *adminClient) GetWorkflowExecutionRawHistoryV2(ctx context.Context, gp1 *types.GetWorkflowExecutionRawHistoryV2Request, p1 ...yarpc.CallOption) (gp2 *types.GetWorkflowExecutionRawHistoryV2Response, err error) {
 	var resp *types.GetWorkflowExecutionRawHistoryV2Response
 	op := func() error {
 		var err error
@@ -232,7 +232,7 @@ func (c *retryableAdminClient) GetWorkflowExecutionRawHistoryV2(ctx context.Cont
 	return resp, err
 }
 
-func (c *retryableAdminClient) ListDynamicConfig(ctx context.Context, lp1 *types.ListDynamicConfigRequest, p1 ...yarpc.CallOption) (lp2 *types.ListDynamicConfigResponse, err error) {
+func (c *adminClient) ListDynamicConfig(ctx context.Context, lp1 *types.ListDynamicConfigRequest, p1 ...yarpc.CallOption) (lp2 *types.ListDynamicConfigResponse, err error) {
 	var resp *types.ListDynamicConfigResponse
 	op := func() error {
 		var err error
@@ -243,7 +243,7 @@ func (c *retryableAdminClient) ListDynamicConfig(ctx context.Context, lp1 *types
 	return resp, err
 }
 
-func (c *retryableAdminClient) MaintainCorruptWorkflow(ctx context.Context, ap1 *types.AdminMaintainWorkflowRequest, p1 ...yarpc.CallOption) (ap2 *types.AdminMaintainWorkflowResponse, err error) {
+func (c *adminClient) MaintainCorruptWorkflow(ctx context.Context, ap1 *types.AdminMaintainWorkflowRequest, p1 ...yarpc.CallOption) (ap2 *types.AdminMaintainWorkflowResponse, err error) {
 	var resp *types.AdminMaintainWorkflowResponse
 	op := func() error {
 		var err error
@@ -254,7 +254,7 @@ func (c *retryableAdminClient) MaintainCorruptWorkflow(ctx context.Context, ap1 
 	return resp, err
 }
 
-func (c *retryableAdminClient) MergeDLQMessages(ctx context.Context, mp1 *types.MergeDLQMessagesRequest, p1 ...yarpc.CallOption) (mp2 *types.MergeDLQMessagesResponse, err error) {
+func (c *adminClient) MergeDLQMessages(ctx context.Context, mp1 *types.MergeDLQMessagesRequest, p1 ...yarpc.CallOption) (mp2 *types.MergeDLQMessagesResponse, err error) {
 	var resp *types.MergeDLQMessagesResponse
 	op := func() error {
 		var err error
@@ -265,14 +265,14 @@ func (c *retryableAdminClient) MergeDLQMessages(ctx context.Context, mp1 *types.
 	return resp, err
 }
 
-func (c *retryableAdminClient) PurgeDLQMessages(ctx context.Context, pp1 *types.PurgeDLQMessagesRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *adminClient) PurgeDLQMessages(ctx context.Context, pp1 *types.PurgeDLQMessagesRequest, p1 ...yarpc.CallOption) (err error) {
 	op := func() error {
 		return c.client.PurgeDLQMessages(ctx, pp1, p1...)
 	}
 	return c.throttleRetry.Do(ctx, op)
 }
 
-func (c *retryableAdminClient) ReadDLQMessages(ctx context.Context, rp1 *types.ReadDLQMessagesRequest, p1 ...yarpc.CallOption) (rp2 *types.ReadDLQMessagesResponse, err error) {
+func (c *adminClient) ReadDLQMessages(ctx context.Context, rp1 *types.ReadDLQMessagesRequest, p1 ...yarpc.CallOption) (rp2 *types.ReadDLQMessagesResponse, err error) {
 	var resp *types.ReadDLQMessagesResponse
 	op := func() error {
 		var err error
@@ -283,42 +283,42 @@ func (c *retryableAdminClient) ReadDLQMessages(ctx context.Context, rp1 *types.R
 	return resp, err
 }
 
-func (c *retryableAdminClient) ReapplyEvents(ctx context.Context, rp1 *types.ReapplyEventsRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *adminClient) ReapplyEvents(ctx context.Context, rp1 *types.ReapplyEventsRequest, p1 ...yarpc.CallOption) (err error) {
 	op := func() error {
 		return c.client.ReapplyEvents(ctx, rp1, p1...)
 	}
 	return c.throttleRetry.Do(ctx, op)
 }
 
-func (c *retryableAdminClient) RefreshWorkflowTasks(ctx context.Context, rp1 *types.RefreshWorkflowTasksRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *adminClient) RefreshWorkflowTasks(ctx context.Context, rp1 *types.RefreshWorkflowTasksRequest, p1 ...yarpc.CallOption) (err error) {
 	op := func() error {
 		return c.client.RefreshWorkflowTasks(ctx, rp1, p1...)
 	}
 	return c.throttleRetry.Do(ctx, op)
 }
 
-func (c *retryableAdminClient) RemoveTask(ctx context.Context, rp1 *types.RemoveTaskRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *adminClient) RemoveTask(ctx context.Context, rp1 *types.RemoveTaskRequest, p1 ...yarpc.CallOption) (err error) {
 	op := func() error {
 		return c.client.RemoveTask(ctx, rp1, p1...)
 	}
 	return c.throttleRetry.Do(ctx, op)
 }
 
-func (c *retryableAdminClient) ResendReplicationTasks(ctx context.Context, rp1 *types.ResendReplicationTasksRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *adminClient) ResendReplicationTasks(ctx context.Context, rp1 *types.ResendReplicationTasksRequest, p1 ...yarpc.CallOption) (err error) {
 	op := func() error {
 		return c.client.ResendReplicationTasks(ctx, rp1, p1...)
 	}
 	return c.throttleRetry.Do(ctx, op)
 }
 
-func (c *retryableAdminClient) ResetQueue(ctx context.Context, rp1 *types.ResetQueueRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *adminClient) ResetQueue(ctx context.Context, rp1 *types.ResetQueueRequest, p1 ...yarpc.CallOption) (err error) {
 	op := func() error {
 		return c.client.ResetQueue(ctx, rp1, p1...)
 	}
 	return c.throttleRetry.Do(ctx, op)
 }
 
-func (c *retryableAdminClient) RespondCrossClusterTasksCompleted(ctx context.Context, rp1 *types.RespondCrossClusterTasksCompletedRequest, p1 ...yarpc.CallOption) (rp2 *types.RespondCrossClusterTasksCompletedResponse, err error) {
+func (c *adminClient) RespondCrossClusterTasksCompleted(ctx context.Context, rp1 *types.RespondCrossClusterTasksCompletedRequest, p1 ...yarpc.CallOption) (rp2 *types.RespondCrossClusterTasksCompletedResponse, err error) {
 	var resp *types.RespondCrossClusterTasksCompletedResponse
 	op := func() error {
 		var err error
@@ -329,14 +329,14 @@ func (c *retryableAdminClient) RespondCrossClusterTasksCompleted(ctx context.Con
 	return resp, err
 }
 
-func (c *retryableAdminClient) RestoreDynamicConfig(ctx context.Context, rp1 *types.RestoreDynamicConfigRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *adminClient) RestoreDynamicConfig(ctx context.Context, rp1 *types.RestoreDynamicConfigRequest, p1 ...yarpc.CallOption) (err error) {
 	op := func() error {
 		return c.client.RestoreDynamicConfig(ctx, rp1, p1...)
 	}
 	return c.throttleRetry.Do(ctx, op)
 }
 
-func (c *retryableAdminClient) UpdateDomainIsolationGroups(ctx context.Context, request *types.UpdateDomainIsolationGroupsRequest, opts ...yarpc.CallOption) (up1 *types.UpdateDomainIsolationGroupsResponse, err error) {
+func (c *adminClient) UpdateDomainIsolationGroups(ctx context.Context, request *types.UpdateDomainIsolationGroupsRequest, opts ...yarpc.CallOption) (up1 *types.UpdateDomainIsolationGroupsResponse, err error) {
 	var resp *types.UpdateDomainIsolationGroupsResponse
 	op := func() error {
 		var err error
@@ -347,14 +347,14 @@ func (c *retryableAdminClient) UpdateDomainIsolationGroups(ctx context.Context, 
 	return resp, err
 }
 
-func (c *retryableAdminClient) UpdateDynamicConfig(ctx context.Context, up1 *types.UpdateDynamicConfigRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *adminClient) UpdateDynamicConfig(ctx context.Context, up1 *types.UpdateDynamicConfigRequest, p1 ...yarpc.CallOption) (err error) {
 	op := func() error {
 		return c.client.UpdateDynamicConfig(ctx, up1, p1...)
 	}
 	return c.throttleRetry.Do(ctx, op)
 }
 
-func (c *retryableAdminClient) UpdateGlobalIsolationGroups(ctx context.Context, request *types.UpdateGlobalIsolationGroupsRequest, opts ...yarpc.CallOption) (up1 *types.UpdateGlobalIsolationGroupsResponse, err error) {
+func (c *adminClient) UpdateGlobalIsolationGroups(ctx context.Context, request *types.UpdateGlobalIsolationGroupsRequest, opts ...yarpc.CallOption) (up1 *types.UpdateGlobalIsolationGroupsResponse, err error) {
 	var resp *types.UpdateGlobalIsolationGroupsResponse
 	op := func() error {
 		var err error

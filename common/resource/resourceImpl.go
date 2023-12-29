@@ -218,7 +218,7 @@ func New(
 	)
 
 	frontendRawClient := clientBean.GetFrontendClient()
-	frontendClient := retryable.NewRetryableFrontendClient(
+	frontendClient := retryable.NewFrontendClient(
 		frontendRawClient,
 		common.CreateFrontendServiceRetryPolicy(),
 		common.IsServiceTransientError,
@@ -228,14 +228,14 @@ func New(
 	if err != nil {
 		return nil, err
 	}
-	matchingClient := retryable.NewRetryableMatchingClient(
+	matchingClient := retryable.NewMatchingClient(
 		matchingRawClient,
 		common.CreateMatchingServiceRetryPolicy(),
 		common.IsServiceTransientError,
 	)
 
 	historyRawClient := clientBean.GetHistoryClient()
-	historyClient := retryable.NewRetryableHistoryClient(
+	historyClient := retryable.NewHistoryClient(
 		historyRawClient,
 		common.CreateHistoryServiceRetryPolicy(),
 		common.IsServiceTransientError,

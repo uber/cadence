@@ -7,8 +7,8 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-{{ $decorator := (printf "retryable%s%s" (index .Vars "client") .Interface.Name) }}
-{{ $Decorator := (printf "Retryable%s%s" (index .Vars "client") .Interface.Name) }}
+{{ $decorator := (printf "%s%s" (down (index .Vars "client")) .Interface.Name) }}
+{{ $Decorator := (printf "%s%s" (index .Vars "client") .Interface.Name) }}
 
 // {{$decorator}} implements {{.Interface.Type}} interface instrumented with retries
 type {{$decorator}} struct {

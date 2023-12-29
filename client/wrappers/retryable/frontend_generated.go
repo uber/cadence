@@ -36,15 +36,15 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-// retryableFrontendClient implements frontend.Client interface instrumented with retries
-type retryableFrontendClient struct {
+// frontendClient implements frontend.Client interface instrumented with retries
+type frontendClient struct {
 	client        frontend.Client
 	throttleRetry *backoff.ThrottleRetry
 }
 
-// NewRetryableFrontendClient creates a new instance of retryableFrontendClient with retry policy
-func NewRetryableFrontendClient(client frontend.Client, policy backoff.RetryPolicy, isRetryable backoff.IsRetryable) frontend.Client {
-	return &retryableFrontendClient{
+// NewFrontendClient creates a new instance of frontendClient with retry policy
+func NewFrontendClient(client frontend.Client, policy backoff.RetryPolicy, isRetryable backoff.IsRetryable) frontend.Client {
+	return &frontendClient{
 		client: client,
 		throttleRetry: backoff.NewThrottleRetry(
 			backoff.WithRetryPolicy(policy),
@@ -53,7 +53,7 @@ func NewRetryableFrontendClient(client frontend.Client, policy backoff.RetryPoli
 	}
 }
 
-func (c *retryableFrontendClient) CountWorkflowExecutions(ctx context.Context, cp1 *types.CountWorkflowExecutionsRequest, p1 ...yarpc.CallOption) (cp2 *types.CountWorkflowExecutionsResponse, err error) {
+func (c *frontendClient) CountWorkflowExecutions(ctx context.Context, cp1 *types.CountWorkflowExecutionsRequest, p1 ...yarpc.CallOption) (cp2 *types.CountWorkflowExecutionsResponse, err error) {
 	var resp *types.CountWorkflowExecutionsResponse
 	op := func() error {
 		var err error
@@ -64,14 +64,14 @@ func (c *retryableFrontendClient) CountWorkflowExecutions(ctx context.Context, c
 	return resp, err
 }
 
-func (c *retryableFrontendClient) DeprecateDomain(ctx context.Context, dp1 *types.DeprecateDomainRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *frontendClient) DeprecateDomain(ctx context.Context, dp1 *types.DeprecateDomainRequest, p1 ...yarpc.CallOption) (err error) {
 	op := func() error {
 		return c.client.DeprecateDomain(ctx, dp1, p1...)
 	}
 	return c.throttleRetry.Do(ctx, op)
 }
 
-func (c *retryableFrontendClient) DescribeDomain(ctx context.Context, dp1 *types.DescribeDomainRequest, p1 ...yarpc.CallOption) (dp2 *types.DescribeDomainResponse, err error) {
+func (c *frontendClient) DescribeDomain(ctx context.Context, dp1 *types.DescribeDomainRequest, p1 ...yarpc.CallOption) (dp2 *types.DescribeDomainResponse, err error) {
 	var resp *types.DescribeDomainResponse
 	op := func() error {
 		var err error
@@ -82,7 +82,7 @@ func (c *retryableFrontendClient) DescribeDomain(ctx context.Context, dp1 *types
 	return resp, err
 }
 
-func (c *retryableFrontendClient) DescribeTaskList(ctx context.Context, dp1 *types.DescribeTaskListRequest, p1 ...yarpc.CallOption) (dp2 *types.DescribeTaskListResponse, err error) {
+func (c *frontendClient) DescribeTaskList(ctx context.Context, dp1 *types.DescribeTaskListRequest, p1 ...yarpc.CallOption) (dp2 *types.DescribeTaskListResponse, err error) {
 	var resp *types.DescribeTaskListResponse
 	op := func() error {
 		var err error
@@ -93,7 +93,7 @@ func (c *retryableFrontendClient) DescribeTaskList(ctx context.Context, dp1 *typ
 	return resp, err
 }
 
-func (c *retryableFrontendClient) DescribeWorkflowExecution(ctx context.Context, dp1 *types.DescribeWorkflowExecutionRequest, p1 ...yarpc.CallOption) (dp2 *types.DescribeWorkflowExecutionResponse, err error) {
+func (c *frontendClient) DescribeWorkflowExecution(ctx context.Context, dp1 *types.DescribeWorkflowExecutionRequest, p1 ...yarpc.CallOption) (dp2 *types.DescribeWorkflowExecutionResponse, err error) {
 	var resp *types.DescribeWorkflowExecutionResponse
 	op := func() error {
 		var err error
@@ -104,7 +104,7 @@ func (c *retryableFrontendClient) DescribeWorkflowExecution(ctx context.Context,
 	return resp, err
 }
 
-func (c *retryableFrontendClient) GetClusterInfo(ctx context.Context, p1 ...yarpc.CallOption) (cp1 *types.ClusterInfo, err error) {
+func (c *frontendClient) GetClusterInfo(ctx context.Context, p1 ...yarpc.CallOption) (cp1 *types.ClusterInfo, err error) {
 	var resp *types.ClusterInfo
 	op := func() error {
 		var err error
@@ -115,7 +115,7 @@ func (c *retryableFrontendClient) GetClusterInfo(ctx context.Context, p1 ...yarp
 	return resp, err
 }
 
-func (c *retryableFrontendClient) GetSearchAttributes(ctx context.Context, p1 ...yarpc.CallOption) (gp1 *types.GetSearchAttributesResponse, err error) {
+func (c *frontendClient) GetSearchAttributes(ctx context.Context, p1 ...yarpc.CallOption) (gp1 *types.GetSearchAttributesResponse, err error) {
 	var resp *types.GetSearchAttributesResponse
 	op := func() error {
 		var err error
@@ -126,7 +126,7 @@ func (c *retryableFrontendClient) GetSearchAttributes(ctx context.Context, p1 ..
 	return resp, err
 }
 
-func (c *retryableFrontendClient) GetTaskListsByDomain(ctx context.Context, gp1 *types.GetTaskListsByDomainRequest, p1 ...yarpc.CallOption) (gp2 *types.GetTaskListsByDomainResponse, err error) {
+func (c *frontendClient) GetTaskListsByDomain(ctx context.Context, gp1 *types.GetTaskListsByDomainRequest, p1 ...yarpc.CallOption) (gp2 *types.GetTaskListsByDomainResponse, err error) {
 	var resp *types.GetTaskListsByDomainResponse
 	op := func() error {
 		var err error
@@ -137,7 +137,7 @@ func (c *retryableFrontendClient) GetTaskListsByDomain(ctx context.Context, gp1 
 	return resp, err
 }
 
-func (c *retryableFrontendClient) GetWorkflowExecutionHistory(ctx context.Context, gp1 *types.GetWorkflowExecutionHistoryRequest, p1 ...yarpc.CallOption) (gp2 *types.GetWorkflowExecutionHistoryResponse, err error) {
+func (c *frontendClient) GetWorkflowExecutionHistory(ctx context.Context, gp1 *types.GetWorkflowExecutionHistoryRequest, p1 ...yarpc.CallOption) (gp2 *types.GetWorkflowExecutionHistoryResponse, err error) {
 	var resp *types.GetWorkflowExecutionHistoryResponse
 	op := func() error {
 		var err error
@@ -148,7 +148,7 @@ func (c *retryableFrontendClient) GetWorkflowExecutionHistory(ctx context.Contex
 	return resp, err
 }
 
-func (c *retryableFrontendClient) ListArchivedWorkflowExecutions(ctx context.Context, lp1 *types.ListArchivedWorkflowExecutionsRequest, p1 ...yarpc.CallOption) (lp2 *types.ListArchivedWorkflowExecutionsResponse, err error) {
+func (c *frontendClient) ListArchivedWorkflowExecutions(ctx context.Context, lp1 *types.ListArchivedWorkflowExecutionsRequest, p1 ...yarpc.CallOption) (lp2 *types.ListArchivedWorkflowExecutionsResponse, err error) {
 	var resp *types.ListArchivedWorkflowExecutionsResponse
 	op := func() error {
 		var err error
@@ -159,7 +159,7 @@ func (c *retryableFrontendClient) ListArchivedWorkflowExecutions(ctx context.Con
 	return resp, err
 }
 
-func (c *retryableFrontendClient) ListClosedWorkflowExecutions(ctx context.Context, lp1 *types.ListClosedWorkflowExecutionsRequest, p1 ...yarpc.CallOption) (lp2 *types.ListClosedWorkflowExecutionsResponse, err error) {
+func (c *frontendClient) ListClosedWorkflowExecutions(ctx context.Context, lp1 *types.ListClosedWorkflowExecutionsRequest, p1 ...yarpc.CallOption) (lp2 *types.ListClosedWorkflowExecutionsResponse, err error) {
 	var resp *types.ListClosedWorkflowExecutionsResponse
 	op := func() error {
 		var err error
@@ -170,7 +170,7 @@ func (c *retryableFrontendClient) ListClosedWorkflowExecutions(ctx context.Conte
 	return resp, err
 }
 
-func (c *retryableFrontendClient) ListDomains(ctx context.Context, lp1 *types.ListDomainsRequest, p1 ...yarpc.CallOption) (lp2 *types.ListDomainsResponse, err error) {
+func (c *frontendClient) ListDomains(ctx context.Context, lp1 *types.ListDomainsRequest, p1 ...yarpc.CallOption) (lp2 *types.ListDomainsResponse, err error) {
 	var resp *types.ListDomainsResponse
 	op := func() error {
 		var err error
@@ -181,7 +181,7 @@ func (c *retryableFrontendClient) ListDomains(ctx context.Context, lp1 *types.Li
 	return resp, err
 }
 
-func (c *retryableFrontendClient) ListOpenWorkflowExecutions(ctx context.Context, lp1 *types.ListOpenWorkflowExecutionsRequest, p1 ...yarpc.CallOption) (lp2 *types.ListOpenWorkflowExecutionsResponse, err error) {
+func (c *frontendClient) ListOpenWorkflowExecutions(ctx context.Context, lp1 *types.ListOpenWorkflowExecutionsRequest, p1 ...yarpc.CallOption) (lp2 *types.ListOpenWorkflowExecutionsResponse, err error) {
 	var resp *types.ListOpenWorkflowExecutionsResponse
 	op := func() error {
 		var err error
@@ -192,7 +192,7 @@ func (c *retryableFrontendClient) ListOpenWorkflowExecutions(ctx context.Context
 	return resp, err
 }
 
-func (c *retryableFrontendClient) ListTaskListPartitions(ctx context.Context, lp1 *types.ListTaskListPartitionsRequest, p1 ...yarpc.CallOption) (lp2 *types.ListTaskListPartitionsResponse, err error) {
+func (c *frontendClient) ListTaskListPartitions(ctx context.Context, lp1 *types.ListTaskListPartitionsRequest, p1 ...yarpc.CallOption) (lp2 *types.ListTaskListPartitionsResponse, err error) {
 	var resp *types.ListTaskListPartitionsResponse
 	op := func() error {
 		var err error
@@ -203,7 +203,7 @@ func (c *retryableFrontendClient) ListTaskListPartitions(ctx context.Context, lp
 	return resp, err
 }
 
-func (c *retryableFrontendClient) ListWorkflowExecutions(ctx context.Context, lp1 *types.ListWorkflowExecutionsRequest, p1 ...yarpc.CallOption) (lp2 *types.ListWorkflowExecutionsResponse, err error) {
+func (c *frontendClient) ListWorkflowExecutions(ctx context.Context, lp1 *types.ListWorkflowExecutionsRequest, p1 ...yarpc.CallOption) (lp2 *types.ListWorkflowExecutionsResponse, err error) {
 	var resp *types.ListWorkflowExecutionsResponse
 	op := func() error {
 		var err error
@@ -214,7 +214,7 @@ func (c *retryableFrontendClient) ListWorkflowExecutions(ctx context.Context, lp
 	return resp, err
 }
 
-func (c *retryableFrontendClient) PollForActivityTask(ctx context.Context, pp1 *types.PollForActivityTaskRequest, p1 ...yarpc.CallOption) (pp2 *types.PollForActivityTaskResponse, err error) {
+func (c *frontendClient) PollForActivityTask(ctx context.Context, pp1 *types.PollForActivityTaskRequest, p1 ...yarpc.CallOption) (pp2 *types.PollForActivityTaskResponse, err error) {
 	var resp *types.PollForActivityTaskResponse
 	op := func() error {
 		var err error
@@ -225,7 +225,7 @@ func (c *retryableFrontendClient) PollForActivityTask(ctx context.Context, pp1 *
 	return resp, err
 }
 
-func (c *retryableFrontendClient) PollForDecisionTask(ctx context.Context, pp1 *types.PollForDecisionTaskRequest, p1 ...yarpc.CallOption) (pp2 *types.PollForDecisionTaskResponse, err error) {
+func (c *frontendClient) PollForDecisionTask(ctx context.Context, pp1 *types.PollForDecisionTaskRequest, p1 ...yarpc.CallOption) (pp2 *types.PollForDecisionTaskResponse, err error) {
 	var resp *types.PollForDecisionTaskResponse
 	op := func() error {
 		var err error
@@ -236,7 +236,7 @@ func (c *retryableFrontendClient) PollForDecisionTask(ctx context.Context, pp1 *
 	return resp, err
 }
 
-func (c *retryableFrontendClient) QueryWorkflow(ctx context.Context, qp1 *types.QueryWorkflowRequest, p1 ...yarpc.CallOption) (qp2 *types.QueryWorkflowResponse, err error) {
+func (c *frontendClient) QueryWorkflow(ctx context.Context, qp1 *types.QueryWorkflowRequest, p1 ...yarpc.CallOption) (qp2 *types.QueryWorkflowResponse, err error) {
 	var resp *types.QueryWorkflowResponse
 	op := func() error {
 		var err error
@@ -247,7 +247,7 @@ func (c *retryableFrontendClient) QueryWorkflow(ctx context.Context, qp1 *types.
 	return resp, err
 }
 
-func (c *retryableFrontendClient) RecordActivityTaskHeartbeat(ctx context.Context, rp1 *types.RecordActivityTaskHeartbeatRequest, p1 ...yarpc.CallOption) (rp2 *types.RecordActivityTaskHeartbeatResponse, err error) {
+func (c *frontendClient) RecordActivityTaskHeartbeat(ctx context.Context, rp1 *types.RecordActivityTaskHeartbeatRequest, p1 ...yarpc.CallOption) (rp2 *types.RecordActivityTaskHeartbeatResponse, err error) {
 	var resp *types.RecordActivityTaskHeartbeatResponse
 	op := func() error {
 		var err error
@@ -258,7 +258,7 @@ func (c *retryableFrontendClient) RecordActivityTaskHeartbeat(ctx context.Contex
 	return resp, err
 }
 
-func (c *retryableFrontendClient) RecordActivityTaskHeartbeatByID(ctx context.Context, rp1 *types.RecordActivityTaskHeartbeatByIDRequest, p1 ...yarpc.CallOption) (rp2 *types.RecordActivityTaskHeartbeatResponse, err error) {
+func (c *frontendClient) RecordActivityTaskHeartbeatByID(ctx context.Context, rp1 *types.RecordActivityTaskHeartbeatByIDRequest, p1 ...yarpc.CallOption) (rp2 *types.RecordActivityTaskHeartbeatResponse, err error) {
 	var resp *types.RecordActivityTaskHeartbeatResponse
 	op := func() error {
 		var err error
@@ -269,28 +269,28 @@ func (c *retryableFrontendClient) RecordActivityTaskHeartbeatByID(ctx context.Co
 	return resp, err
 }
 
-func (c *retryableFrontendClient) RefreshWorkflowTasks(ctx context.Context, rp1 *types.RefreshWorkflowTasksRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *frontendClient) RefreshWorkflowTasks(ctx context.Context, rp1 *types.RefreshWorkflowTasksRequest, p1 ...yarpc.CallOption) (err error) {
 	op := func() error {
 		return c.client.RefreshWorkflowTasks(ctx, rp1, p1...)
 	}
 	return c.throttleRetry.Do(ctx, op)
 }
 
-func (c *retryableFrontendClient) RegisterDomain(ctx context.Context, rp1 *types.RegisterDomainRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *frontendClient) RegisterDomain(ctx context.Context, rp1 *types.RegisterDomainRequest, p1 ...yarpc.CallOption) (err error) {
 	op := func() error {
 		return c.client.RegisterDomain(ctx, rp1, p1...)
 	}
 	return c.throttleRetry.Do(ctx, op)
 }
 
-func (c *retryableFrontendClient) RequestCancelWorkflowExecution(ctx context.Context, rp1 *types.RequestCancelWorkflowExecutionRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *frontendClient) RequestCancelWorkflowExecution(ctx context.Context, rp1 *types.RequestCancelWorkflowExecutionRequest, p1 ...yarpc.CallOption) (err error) {
 	op := func() error {
 		return c.client.RequestCancelWorkflowExecution(ctx, rp1, p1...)
 	}
 	return c.throttleRetry.Do(ctx, op)
 }
 
-func (c *retryableFrontendClient) ResetStickyTaskList(ctx context.Context, rp1 *types.ResetStickyTaskListRequest, p1 ...yarpc.CallOption) (rp2 *types.ResetStickyTaskListResponse, err error) {
+func (c *frontendClient) ResetStickyTaskList(ctx context.Context, rp1 *types.ResetStickyTaskListRequest, p1 ...yarpc.CallOption) (rp2 *types.ResetStickyTaskListResponse, err error) {
 	var resp *types.ResetStickyTaskListResponse
 	op := func() error {
 		var err error
@@ -301,7 +301,7 @@ func (c *retryableFrontendClient) ResetStickyTaskList(ctx context.Context, rp1 *
 	return resp, err
 }
 
-func (c *retryableFrontendClient) ResetWorkflowExecution(ctx context.Context, rp1 *types.ResetWorkflowExecutionRequest, p1 ...yarpc.CallOption) (rp2 *types.ResetWorkflowExecutionResponse, err error) {
+func (c *frontendClient) ResetWorkflowExecution(ctx context.Context, rp1 *types.ResetWorkflowExecutionRequest, p1 ...yarpc.CallOption) (rp2 *types.ResetWorkflowExecutionResponse, err error) {
 	var resp *types.ResetWorkflowExecutionResponse
 	op := func() error {
 		var err error
@@ -312,49 +312,49 @@ func (c *retryableFrontendClient) ResetWorkflowExecution(ctx context.Context, rp
 	return resp, err
 }
 
-func (c *retryableFrontendClient) RespondActivityTaskCanceled(ctx context.Context, rp1 *types.RespondActivityTaskCanceledRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *frontendClient) RespondActivityTaskCanceled(ctx context.Context, rp1 *types.RespondActivityTaskCanceledRequest, p1 ...yarpc.CallOption) (err error) {
 	op := func() error {
 		return c.client.RespondActivityTaskCanceled(ctx, rp1, p1...)
 	}
 	return c.throttleRetry.Do(ctx, op)
 }
 
-func (c *retryableFrontendClient) RespondActivityTaskCanceledByID(ctx context.Context, rp1 *types.RespondActivityTaskCanceledByIDRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *frontendClient) RespondActivityTaskCanceledByID(ctx context.Context, rp1 *types.RespondActivityTaskCanceledByIDRequest, p1 ...yarpc.CallOption) (err error) {
 	op := func() error {
 		return c.client.RespondActivityTaskCanceledByID(ctx, rp1, p1...)
 	}
 	return c.throttleRetry.Do(ctx, op)
 }
 
-func (c *retryableFrontendClient) RespondActivityTaskCompleted(ctx context.Context, rp1 *types.RespondActivityTaskCompletedRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *frontendClient) RespondActivityTaskCompleted(ctx context.Context, rp1 *types.RespondActivityTaskCompletedRequest, p1 ...yarpc.CallOption) (err error) {
 	op := func() error {
 		return c.client.RespondActivityTaskCompleted(ctx, rp1, p1...)
 	}
 	return c.throttleRetry.Do(ctx, op)
 }
 
-func (c *retryableFrontendClient) RespondActivityTaskCompletedByID(ctx context.Context, rp1 *types.RespondActivityTaskCompletedByIDRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *frontendClient) RespondActivityTaskCompletedByID(ctx context.Context, rp1 *types.RespondActivityTaskCompletedByIDRequest, p1 ...yarpc.CallOption) (err error) {
 	op := func() error {
 		return c.client.RespondActivityTaskCompletedByID(ctx, rp1, p1...)
 	}
 	return c.throttleRetry.Do(ctx, op)
 }
 
-func (c *retryableFrontendClient) RespondActivityTaskFailed(ctx context.Context, rp1 *types.RespondActivityTaskFailedRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *frontendClient) RespondActivityTaskFailed(ctx context.Context, rp1 *types.RespondActivityTaskFailedRequest, p1 ...yarpc.CallOption) (err error) {
 	op := func() error {
 		return c.client.RespondActivityTaskFailed(ctx, rp1, p1...)
 	}
 	return c.throttleRetry.Do(ctx, op)
 }
 
-func (c *retryableFrontendClient) RespondActivityTaskFailedByID(ctx context.Context, rp1 *types.RespondActivityTaskFailedByIDRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *frontendClient) RespondActivityTaskFailedByID(ctx context.Context, rp1 *types.RespondActivityTaskFailedByIDRequest, p1 ...yarpc.CallOption) (err error) {
 	op := func() error {
 		return c.client.RespondActivityTaskFailedByID(ctx, rp1, p1...)
 	}
 	return c.throttleRetry.Do(ctx, op)
 }
 
-func (c *retryableFrontendClient) RespondDecisionTaskCompleted(ctx context.Context, rp1 *types.RespondDecisionTaskCompletedRequest, p1 ...yarpc.CallOption) (rp2 *types.RespondDecisionTaskCompletedResponse, err error) {
+func (c *frontendClient) RespondDecisionTaskCompleted(ctx context.Context, rp1 *types.RespondDecisionTaskCompletedRequest, p1 ...yarpc.CallOption) (rp2 *types.RespondDecisionTaskCompletedResponse, err error) {
 	var resp *types.RespondDecisionTaskCompletedResponse
 	op := func() error {
 		var err error
@@ -365,21 +365,21 @@ func (c *retryableFrontendClient) RespondDecisionTaskCompleted(ctx context.Conte
 	return resp, err
 }
 
-func (c *retryableFrontendClient) RespondDecisionTaskFailed(ctx context.Context, rp1 *types.RespondDecisionTaskFailedRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *frontendClient) RespondDecisionTaskFailed(ctx context.Context, rp1 *types.RespondDecisionTaskFailedRequest, p1 ...yarpc.CallOption) (err error) {
 	op := func() error {
 		return c.client.RespondDecisionTaskFailed(ctx, rp1, p1...)
 	}
 	return c.throttleRetry.Do(ctx, op)
 }
 
-func (c *retryableFrontendClient) RespondQueryTaskCompleted(ctx context.Context, rp1 *types.RespondQueryTaskCompletedRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *frontendClient) RespondQueryTaskCompleted(ctx context.Context, rp1 *types.RespondQueryTaskCompletedRequest, p1 ...yarpc.CallOption) (err error) {
 	op := func() error {
 		return c.client.RespondQueryTaskCompleted(ctx, rp1, p1...)
 	}
 	return c.throttleRetry.Do(ctx, op)
 }
 
-func (c *retryableFrontendClient) RestartWorkflowExecution(ctx context.Context, rp1 *types.RestartWorkflowExecutionRequest, p1 ...yarpc.CallOption) (rp2 *types.RestartWorkflowExecutionResponse, err error) {
+func (c *frontendClient) RestartWorkflowExecution(ctx context.Context, rp1 *types.RestartWorkflowExecutionRequest, p1 ...yarpc.CallOption) (rp2 *types.RestartWorkflowExecutionResponse, err error) {
 	var resp *types.RestartWorkflowExecutionResponse
 	op := func() error {
 		var err error
@@ -390,7 +390,7 @@ func (c *retryableFrontendClient) RestartWorkflowExecution(ctx context.Context, 
 	return resp, err
 }
 
-func (c *retryableFrontendClient) ScanWorkflowExecutions(ctx context.Context, lp1 *types.ListWorkflowExecutionsRequest, p1 ...yarpc.CallOption) (lp2 *types.ListWorkflowExecutionsResponse, err error) {
+func (c *frontendClient) ScanWorkflowExecutions(ctx context.Context, lp1 *types.ListWorkflowExecutionsRequest, p1 ...yarpc.CallOption) (lp2 *types.ListWorkflowExecutionsResponse, err error) {
 	var resp *types.ListWorkflowExecutionsResponse
 	op := func() error {
 		var err error
@@ -401,7 +401,7 @@ func (c *retryableFrontendClient) ScanWorkflowExecutions(ctx context.Context, lp
 	return resp, err
 }
 
-func (c *retryableFrontendClient) SignalWithStartWorkflowExecution(ctx context.Context, sp1 *types.SignalWithStartWorkflowExecutionRequest, p1 ...yarpc.CallOption) (sp2 *types.StartWorkflowExecutionResponse, err error) {
+func (c *frontendClient) SignalWithStartWorkflowExecution(ctx context.Context, sp1 *types.SignalWithStartWorkflowExecutionRequest, p1 ...yarpc.CallOption) (sp2 *types.StartWorkflowExecutionResponse, err error) {
 	var resp *types.StartWorkflowExecutionResponse
 	op := func() error {
 		var err error
@@ -412,14 +412,14 @@ func (c *retryableFrontendClient) SignalWithStartWorkflowExecution(ctx context.C
 	return resp, err
 }
 
-func (c *retryableFrontendClient) SignalWorkflowExecution(ctx context.Context, sp1 *types.SignalWorkflowExecutionRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *frontendClient) SignalWorkflowExecution(ctx context.Context, sp1 *types.SignalWorkflowExecutionRequest, p1 ...yarpc.CallOption) (err error) {
 	op := func() error {
 		return c.client.SignalWorkflowExecution(ctx, sp1, p1...)
 	}
 	return c.throttleRetry.Do(ctx, op)
 }
 
-func (c *retryableFrontendClient) StartWorkflowExecution(ctx context.Context, sp1 *types.StartWorkflowExecutionRequest, p1 ...yarpc.CallOption) (sp2 *types.StartWorkflowExecutionResponse, err error) {
+func (c *frontendClient) StartWorkflowExecution(ctx context.Context, sp1 *types.StartWorkflowExecutionRequest, p1 ...yarpc.CallOption) (sp2 *types.StartWorkflowExecutionResponse, err error) {
 	var resp *types.StartWorkflowExecutionResponse
 	op := func() error {
 		var err error
@@ -430,14 +430,14 @@ func (c *retryableFrontendClient) StartWorkflowExecution(ctx context.Context, sp
 	return resp, err
 }
 
-func (c *retryableFrontendClient) TerminateWorkflowExecution(ctx context.Context, tp1 *types.TerminateWorkflowExecutionRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *frontendClient) TerminateWorkflowExecution(ctx context.Context, tp1 *types.TerminateWorkflowExecutionRequest, p1 ...yarpc.CallOption) (err error) {
 	op := func() error {
 		return c.client.TerminateWorkflowExecution(ctx, tp1, p1...)
 	}
 	return c.throttleRetry.Do(ctx, op)
 }
 
-func (c *retryableFrontendClient) UpdateDomain(ctx context.Context, up1 *types.UpdateDomainRequest, p1 ...yarpc.CallOption) (up2 *types.UpdateDomainResponse, err error) {
+func (c *frontendClient) UpdateDomain(ctx context.Context, up1 *types.UpdateDomainRequest, p1 ...yarpc.CallOption) (up2 *types.UpdateDomainResponse, err error) {
 	var resp *types.UpdateDomainResponse
 	op := func() error {
 		var err error

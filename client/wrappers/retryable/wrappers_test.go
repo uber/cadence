@@ -45,7 +45,7 @@ func TestFrontendClientRetryableError(t *testing.T) {
 	clientMock.EXPECT().CountWorkflowExecutions(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil, nil).Times(1)
 
-	retryableClient := NewRetryableFrontendClient(
+	retryableClient := NewFrontendClient(
 		clientMock,
 		common.CreateFrontendServiceRetryPolicy(),
 		common.IsServiceBusyError)
@@ -63,7 +63,7 @@ func TestFrontendClientNonRetryableError(t *testing.T) {
 			Message: "error",
 		}).Times(1)
 
-	retryableClient := NewRetryableFrontendClient(
+	retryableClient := NewFrontendClient(
 		clientMock,
 		common.CreateFrontendServiceRetryPolicy(),
 		common.IsServiceBusyError)
