@@ -25,6 +25,9 @@
 // Generate error injection wrapper.
 //go:generate gowrap gen -g -p . -i VisibilityManager -t ./wrappers/templates/errorinjector.tmpl -o wrappers/errorinjectors/visibility.go
 
+// Generate metered wrapper.
+//go:generate gowrap gen -g -p . -i VisibilityManager -t ./wrappers/templates/metered.tmpl -o wrappers/metered/visibility.go
+
 package persistence
 
 import (

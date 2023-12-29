@@ -119,7 +119,7 @@ func (c *ratelimitedQueueManager) RangeDeleteMessagesFromDLQ(ctx context.Context
 	return c.wrapped.RangeDeleteMessagesFromDLQ(ctx, firstMessageID, lastMessageID)
 }
 
-func (c *ratelimitedQueueManager) ReadMessages(ctx context.Context, lastMessageID int64, maxCount int) (qpa1 []*persistence.QueueMessage, err error) {
+func (c *ratelimitedQueueManager) ReadMessages(ctx context.Context, lastMessageID int64, maxCount int) (q1 persistence.QueueMessageList, err error) {
 	if ok := c.rateLimiter.Allow(); !ok {
 		err = ErrPersistenceLimitExceeded
 		return
