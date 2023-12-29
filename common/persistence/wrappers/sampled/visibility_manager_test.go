@@ -36,283 +36,204 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/tokenbucket"
+	"github.com/uber/cadence/common/types"
 )
 
-func TestVisibilityManager_RecordWorkflowExecutionStarted(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockedManager := persistence.NewMockVisibilityManager(ctrl)
+func TestVisibilityManagerSampledCalls(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		priority    int
+		prepareMock func(*persistence.MockVisibilityManager)
+		operation   func(context.Context, string, persistence.VisibilityManager) error
+	}{
+		{
+			name: "RecordWorkflowExecutionStarted",
+			prepareMock: func(mock *persistence.MockVisibilityManager) {
+				mock.EXPECT().RecordWorkflowExecutionStarted(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			operation: func(ctx context.Context, domain string, m persistence.VisibilityManager) error {
+				return m.RecordWorkflowExecutionStarted(ctx, &persistence.RecordWorkflowExecutionStartedRequest{
+					Domain: domain,
+				})
+			},
+		},
+		{
+			name: "RecordWorkflowExecutionClosed",
+			prepareMock: func(mock *persistence.MockVisibilityManager) {
+				mock.EXPECT().RecordWorkflowExecutionClosed(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			operation: func(ctx context.Context, domain string, m persistence.VisibilityManager) error {
+				return m.RecordWorkflowExecutionClosed(ctx, &persistence.RecordWorkflowExecutionClosedRequest{
+					Domain: domain,
+					Status: types.WorkflowExecutionCloseStatusCanceled,
+				})
+			},
+		},
+		{
+			name:     "RecordWorkflowExecutionClosed_Completed",
+			priority: 1,
+			prepareMock: func(mock *persistence.MockVisibilityManager) {
+				mock.EXPECT().RecordWorkflowExecutionClosed(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			operation: func(ctx context.Context, domain string, m persistence.VisibilityManager) error {
+				return m.RecordWorkflowExecutionClosed(ctx, &persistence.RecordWorkflowExecutionClosedRequest{
+					Domain: domain,
+					Status: types.WorkflowExecutionCloseStatusCompleted,
+				})
+			},
+		},
+		{
+			name: "UpsertWorkflowExecution",
+			prepareMock: func(mock *persistence.MockVisibilityManager) {
+				mock.EXPECT().UpsertWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			operation: func(ctx context.Context, domain string, m persistence.VisibilityManager) error {
+				return m.UpsertWorkflowExecution(ctx, &persistence.UpsertWorkflowExecutionRequest{
+					Domain: domain,
+				})
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockedManager := persistence.NewMockVisibilityManager(ctrl)
 
-	testDomain := "domain1"
+			testDomain := "domain1"
 
-	m := NewVisibilityManager(mockedManager, Params{
-		Config:       &Config{},
-		MetricClient: metrics.NewNoopMetricsClient(),
-		Logger:       testlogger.New(t),
-		TimeSource:   clock.NewMockedTimeSource(),
-		RateLimiterFactoryFunc: rateLimiterStubFunc(map[string]tokenbucket.PriorityTokenBucket{
-			testDomain: &tokenBucketFactoryStub{tokens: map[int]int{0: 1}},
-		}),
-	})
+			m := NewVisibilityManager(mockedManager, Params{
+				Config:       &Config{},
+				MetricClient: metrics.NewNoopMetricsClient(),
+				Logger:       testlogger.New(t),
+				TimeSource:   clock.NewMockedTimeSource(),
+				RateLimiterFactoryFunc: rateLimiterStubFunc(map[string]tokenbucket.PriorityTokenBucket{
+					testDomain: &tokenBucketFactoryStub{tokens: map[int]int{tc.priority: 1}},
+				}),
+			})
 
-	mockedManager.EXPECT().RecordWorkflowExecutionStarted(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			tc.prepareMock(mockedManager)
 
-	err := m.RecordWorkflowExecutionStarted(context.Background(), &persistence.RecordWorkflowExecutionStartedRequest{
-		Domain: testDomain,
-	})
-	assert.NoError(t, err, "first call should succeed")
+			err := tc.operation(context.Background(), testDomain, m)
+			assert.NoError(t, err, "first call should succeed")
 
-	err = m.RecordWorkflowExecutionStarted(context.Background(), &persistence.RecordWorkflowExecutionStartedRequest{
-		Domain: testDomain,
-	})
-	assert.NoError(t, err, "second call should succeed, but underlying call should be blocked by rate limiter")
+			err = tc.operation(context.Background(), testDomain, m)
+			assert.NoError(t, err, "second call should not fail, but underlying call should be blocked by rate limiter")
+		})
+	}
 }
 
-func TestVisibilityManager_RecordWorkflowExecutionClosed(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockedManager := persistence.NewMockVisibilityManager(ctrl)
-
-	testDomain := "domain1"
-
-	m := NewVisibilityManager(mockedManager, Params{
-		Config:       &Config{},
-		MetricClient: metrics.NewNoopMetricsClient(),
-		Logger:       testlogger.New(t),
-		TimeSource:   clock.NewMockedTimeSource(),
-		RateLimiterFactoryFunc: rateLimiterStubFunc(map[string]tokenbucket.PriorityTokenBucket{
-			testDomain: &tokenBucketFactoryStub{tokens: map[int]int{1: 1}},
-		}),
-	})
-
-	mockedManager.EXPECT().RecordWorkflowExecutionClosed(gomock.Any(), gomock.Any()).Return(nil).Times(1)
-
-	err := m.RecordWorkflowExecutionClosed(context.Background(), &persistence.RecordWorkflowExecutionClosedRequest{
-		Domain: testDomain,
-	})
-	assert.NoError(t, err, "first call should succeed")
-
-	err = m.RecordWorkflowExecutionClosed(context.Background(), &persistence.RecordWorkflowExecutionClosedRequest{
-		Domain: testDomain,
-	})
-	assert.NoError(t, err, "second call should succeed, but underlying call should be blocked by rate limiter")
-}
-
-func TestVisibilityManager_UpsertWorkflowExecution(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockedManager := persistence.NewMockVisibilityManager(ctrl)
-
-	testDomain := "domain1"
-
-	m := NewVisibilityManager(mockedManager, Params{
-		Config:       &Config{},
-		MetricClient: metrics.NewNoopMetricsClient(),
-		Logger:       testlogger.New(t),
-		TimeSource:   clock.NewMockedTimeSource(),
-		RateLimiterFactoryFunc: rateLimiterStubFunc(map[string]tokenbucket.PriorityTokenBucket{
-			testDomain: &tokenBucketFactoryStub{tokens: map[int]int{0: 1}},
-		}),
-	})
-
-	mockedManager.EXPECT().UpsertWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil).Times(1)
-
-	err := m.UpsertWorkflowExecution(context.Background(), &persistence.UpsertWorkflowExecutionRequest{
-		Domain: testDomain,
-	})
-	assert.NoError(t, err, "first call should succeed")
-
-	err = m.UpsertWorkflowExecution(context.Background(), &persistence.UpsertWorkflowExecutionRequest{
-		Domain: testDomain,
-	})
-	assert.NoError(t, err, "second call should succeed, but underlying call should be blocked by rate limiter")
-}
-
-func TestVisibilityManager_ListOpenWorkflowExecutions(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockedManager := persistence.NewMockVisibilityManager(ctrl)
-
-	testDomain := "domain1"
-
-	m := NewVisibilityManager(mockedManager, Params{
-		Config:       &Config{},
-		MetricClient: metrics.NewNoopMetricsClient(),
-		Logger:       testlogger.New(t),
-		TimeSource:   clock.NewMockedTimeSource(),
-		RateLimiterFactoryFunc: rateLimiterStubFunc(map[string]tokenbucket.PriorityTokenBucket{
-			testDomain: &tokenBucketFactoryStub{tokens: map[int]int{0: 1}},
-		}),
-	})
-
-	mockedManager.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&persistence.ListWorkflowExecutionsResponse{}, nil).Times(1)
-
-	_, err := m.ListOpenWorkflowExecutions(context.Background(), &persistence.ListWorkflowExecutionsRequest{
-		Domain: testDomain,
-	})
-	assert.NoError(t, err, "first call should succeed")
-
-	_, err = m.ListOpenWorkflowExecutions(context.Background(), &persistence.ListWorkflowExecutionsRequest{
-		Domain: testDomain,
-	})
-	assert.Error(t, err, "second call should fail since underlying call should be blocked by rate limiter")
-}
-
-func TestVisibilityManager_ListClosedWorkflowExecutions(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockedManager := persistence.NewMockVisibilityManager(ctrl)
-
-	testDomain := "domain1"
-
-	m := NewVisibilityManager(mockedManager, Params{
-		Config:       &Config{},
-		MetricClient: metrics.NewNoopMetricsClient(),
-		Logger:       testlogger.New(t),
-		TimeSource:   clock.NewMockedTimeSource(),
-		RateLimiterFactoryFunc: rateLimiterStubFunc(map[string]tokenbucket.PriorityTokenBucket{
-			testDomain: &tokenBucketFactoryStub{tokens: map[int]int{0: 1}},
-		}),
-	})
-
-	mockedManager.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&persistence.ListWorkflowExecutionsResponse{}, nil).Times(1)
-
-	_, err := m.ListClosedWorkflowExecutions(context.Background(), &persistence.ListWorkflowExecutionsRequest{
-		Domain: testDomain,
-	})
-	assert.NoError(t, err, "first call should succeed")
-
-	_, err = m.ListClosedWorkflowExecutions(context.Background(), &persistence.ListWorkflowExecutionsRequest{
-		Domain: testDomain,
-	})
-	assert.Error(t, err, "second call should fail since underlying call should be blocked by rate limiter")
-}
-
-func TestVisibilityManager_ListOpenWorkflowExecutionsByType(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockedManager := persistence.NewMockVisibilityManager(ctrl)
-
-	testDomain := "domain1"
-
-	m := NewVisibilityManager(mockedManager, Params{
-		Config:       &Config{},
-		MetricClient: metrics.NewNoopMetricsClient(),
-		Logger:       testlogger.New(t),
-		TimeSource:   clock.NewMockedTimeSource(),
-		RateLimiterFactoryFunc: rateLimiterStubFunc(map[string]tokenbucket.PriorityTokenBucket{
-			testDomain: &tokenBucketFactoryStub{tokens: map[int]int{0: 1}},
-		}),
-	})
-
-	mockedManager.EXPECT().ListOpenWorkflowExecutionsByType(gomock.Any(), gomock.Any()).Return(&persistence.ListWorkflowExecutionsResponse{}, nil).Times(1)
-
-	_, err := m.ListOpenWorkflowExecutionsByType(context.Background(), &persistence.ListWorkflowExecutionsByTypeRequest{
-		ListWorkflowExecutionsRequest: persistence.ListWorkflowExecutionsRequest{
-			Domain: testDomain,
+func TestVisibilityManagerListOperations(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		priority    int
+		prepareMock func(*persistence.MockVisibilityManager)
+		operation   func(context.Context, string, persistence.VisibilityManager) error
+	}{
+		{
+			name: "ListOpenWorkflowExecutions",
+			prepareMock: func(mock *persistence.MockVisibilityManager) {
+				mock.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&persistence.ListWorkflowExecutionsResponse{}, nil).Times(1)
+			},
+			operation: func(ctx context.Context, domain string, m persistence.VisibilityManager) error {
+				_, err := m.ListOpenWorkflowExecutions(ctx, &persistence.ListWorkflowExecutionsRequest{
+					Domain: domain,
+				})
+				return err
+			},
 		},
-	})
-	assert.NoError(t, err, "first call should succeed")
-
-	_, err = m.ListOpenWorkflowExecutionsByType(context.Background(), &persistence.ListWorkflowExecutionsByTypeRequest{
-		ListWorkflowExecutionsRequest: persistence.ListWorkflowExecutionsRequest{
-			Domain: testDomain,
+		{
+			name: "ListClosedWorkflowExecutions",
+			prepareMock: func(mock *persistence.MockVisibilityManager) {
+				mock.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&persistence.ListWorkflowExecutionsResponse{}, nil).Times(1)
+			},
+			operation: func(ctx context.Context, domain string, m persistence.VisibilityManager) error {
+				_, err := m.ListClosedWorkflowExecutions(ctx, &persistence.ListWorkflowExecutionsRequest{
+					Domain: domain,
+				})
+				return err
+			},
 		},
-	})
-	assert.Error(t, err, "second call should fail since underlying call should be blocked by rate limiter")
-}
-
-func TestVisibilityManager_ListClosedWorkflowExecutionsByType(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockedManager := persistence.NewMockVisibilityManager(ctrl)
-
-	testDomain := "domain1"
-
-	m := NewVisibilityManager(mockedManager, Params{
-		Config:       &Config{},
-		MetricClient: metrics.NewNoopMetricsClient(),
-		Logger:       testlogger.New(t),
-		TimeSource:   clock.NewMockedTimeSource(),
-		RateLimiterFactoryFunc: rateLimiterStubFunc(map[string]tokenbucket.PriorityTokenBucket{
-			testDomain: &tokenBucketFactoryStub{tokens: map[int]int{0: 1}},
-		}),
-	})
-
-	mockedManager.EXPECT().ListClosedWorkflowExecutionsByType(gomock.Any(), gomock.Any()).Return(&persistence.ListWorkflowExecutionsResponse{}, nil).Times(1)
-
-	_, err := m.ListClosedWorkflowExecutionsByType(context.Background(), &persistence.ListWorkflowExecutionsByTypeRequest{
-		ListWorkflowExecutionsRequest: persistence.ListWorkflowExecutionsRequest{
-			Domain: testDomain,
+		{
+			name: "ListOpenWorkflowExecutionsByType",
+			prepareMock: func(mock *persistence.MockVisibilityManager) {
+				mock.EXPECT().ListOpenWorkflowExecutionsByType(gomock.Any(), gomock.Any()).Return(&persistence.ListWorkflowExecutionsResponse{}, nil).Times(1)
+			},
+			operation: func(ctx context.Context, domain string, m persistence.VisibilityManager) error {
+				_, err := m.ListOpenWorkflowExecutionsByType(ctx, &persistence.ListWorkflowExecutionsByTypeRequest{
+					ListWorkflowExecutionsRequest: persistence.ListWorkflowExecutionsRequest{
+						Domain: domain,
+					},
+				})
+				return err
+			},
 		},
-	})
-	assert.NoError(t, err, "first call should succeed")
-
-	_, err = m.ListClosedWorkflowExecutionsByType(context.Background(), &persistence.ListWorkflowExecutionsByTypeRequest{
-		ListWorkflowExecutionsRequest: persistence.ListWorkflowExecutionsRequest{
-			Domain: testDomain,
+		{
+			name: "ListClosedWorkflowExecutionsByType",
+			prepareMock: func(mock *persistence.MockVisibilityManager) {
+				mock.EXPECT().ListClosedWorkflowExecutionsByType(gomock.Any(), gomock.Any()).Return(&persistence.ListWorkflowExecutionsResponse{}, nil).Times(1)
+			},
+			operation: func(ctx context.Context, domain string, m persistence.VisibilityManager) error {
+				_, err := m.ListClosedWorkflowExecutionsByType(ctx, &persistence.ListWorkflowExecutionsByTypeRequest{
+					ListWorkflowExecutionsRequest: persistence.ListWorkflowExecutionsRequest{
+						Domain: domain,
+					},
+				})
+				return err
+			},
 		},
-	})
-	assert.Error(t, err, "second call should fail since underlying call should be blocked by rate limiter")
-}
-
-func TestVisibilityManager_ListOpenWorkflowExecutionsByWorkflowID(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockedManager := persistence.NewMockVisibilityManager(ctrl)
-
-	testDomain := "domain1"
-
-	m := NewVisibilityManager(mockedManager, Params{
-		Config:       &Config{},
-		MetricClient: metrics.NewNoopMetricsClient(),
-		Logger:       testlogger.New(t),
-		TimeSource:   clock.NewMockedTimeSource(),
-		RateLimiterFactoryFunc: rateLimiterStubFunc(map[string]tokenbucket.PriorityTokenBucket{
-			testDomain: &tokenBucketFactoryStub{tokens: map[int]int{0: 1}},
-		}),
-	})
-
-	mockedManager.EXPECT().ListOpenWorkflowExecutionsByWorkflowID(gomock.Any(), gomock.Any()).Return(&persistence.ListWorkflowExecutionsResponse{}, nil).Times(1)
-
-	_, err := m.ListOpenWorkflowExecutionsByWorkflowID(context.Background(), &persistence.ListWorkflowExecutionsByWorkflowIDRequest{
-		ListWorkflowExecutionsRequest: persistence.ListWorkflowExecutionsRequest{
-			Domain: testDomain,
+		{
+			name: "ListOpenWorkflowExecutionsByWorkflowID",
+			prepareMock: func(mock *persistence.MockVisibilityManager) {
+				mock.EXPECT().ListOpenWorkflowExecutionsByWorkflowID(gomock.Any(), gomock.Any()).Return(&persistence.ListWorkflowExecutionsResponse{}, nil).Times(1)
+			},
+			operation: func(ctx context.Context, domain string, m persistence.VisibilityManager) error {
+				_, err := m.ListOpenWorkflowExecutionsByWorkflowID(ctx, &persistence.ListWorkflowExecutionsByWorkflowIDRequest{
+					ListWorkflowExecutionsRequest: persistence.ListWorkflowExecutionsRequest{
+						Domain: domain,
+					},
+				})
+				return err
+			},
 		},
-	})
-	assert.NoError(t, err, "first call should succeed")
-
-	_, err = m.ListOpenWorkflowExecutionsByWorkflowID(context.Background(), &persistence.ListWorkflowExecutionsByWorkflowIDRequest{
-		ListWorkflowExecutionsRequest: persistence.ListWorkflowExecutionsRequest{
-			Domain: testDomain,
+		{
+			name: "ListClosedWorkflowExecutionsByWorkflowID",
+			prepareMock: func(mock *persistence.MockVisibilityManager) {
+				mock.EXPECT().ListClosedWorkflowExecutionsByWorkflowID(gomock.Any(), gomock.Any()).Return(&persistence.ListWorkflowExecutionsResponse{}, nil).Times(1)
+			},
+			operation: func(ctx context.Context, domain string, m persistence.VisibilityManager) error {
+				_, err := m.ListClosedWorkflowExecutionsByWorkflowID(ctx, &persistence.ListWorkflowExecutionsByWorkflowIDRequest{
+					ListWorkflowExecutionsRequest: persistence.ListWorkflowExecutionsRequest{
+						Domain: domain,
+					},
+				})
+				return err
+			},
 		},
-	})
-	assert.Error(t, err, "second call should fail since underlying call should be blocked by rate limiter")
-}
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockedManager := persistence.NewMockVisibilityManager(ctrl)
 
-func TestVisibilityManager_ListClosedWorkflowExecutionsByWorkflowID(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockedManager := persistence.NewMockVisibilityManager(ctrl)
+			testDomain := "domain1"
 
-	testDomain := "domain1"
+			m := NewVisibilityManager(mockedManager, Params{
+				Config:       &Config{},
+				MetricClient: metrics.NewNoopMetricsClient(),
+				Logger:       testlogger.New(t),
+				TimeSource:   clock.NewMockedTimeSource(),
+				RateLimiterFactoryFunc: rateLimiterStubFunc(map[string]tokenbucket.PriorityTokenBucket{
+					testDomain: &tokenBucketFactoryStub{tokens: map[int]int{tc.priority: 1}},
+				}),
+			})
 
-	m := NewVisibilityManager(mockedManager, Params{
-		Config:       &Config{},
-		MetricClient: metrics.NewNoopMetricsClient(),
-		Logger:       testlogger.New(t),
-		TimeSource:   clock.NewMockedTimeSource(),
-		RateLimiterFactoryFunc: rateLimiterStubFunc(map[string]tokenbucket.PriorityTokenBucket{
-			testDomain: &tokenBucketFactoryStub{tokens: map[int]int{0: 1}},
-		}),
-	})
+			tc.prepareMock(mockedManager)
 
-	mockedManager.EXPECT().ListClosedWorkflowExecutionsByWorkflowID(gomock.Any(), gomock.Any()).Return(&persistence.ListWorkflowExecutionsResponse{}, nil).Times(1)
+			err := tc.operation(context.Background(), testDomain, m)
+			assert.NoError(t, err, "first call should succeed")
 
-	_, err := m.ListClosedWorkflowExecutionsByWorkflowID(context.Background(), &persistence.ListWorkflowExecutionsByWorkflowIDRequest{
-		ListWorkflowExecutionsRequest: persistence.ListWorkflowExecutionsRequest{
-			Domain: testDomain,
-		},
-	})
-	assert.NoError(t, err, "first call should succeed")
-
-	_, err = m.ListClosedWorkflowExecutionsByWorkflowID(context.Background(), &persistence.ListWorkflowExecutionsByWorkflowIDRequest{
-		ListWorkflowExecutionsRequest: persistence.ListWorkflowExecutionsRequest{
-			Domain: testDomain,
-		},
-	})
-	assert.Error(t, err, "second call should fail since underlying call should be blocked by rate limiter")
+			err = tc.operation(context.Background(), testDomain, m)
+			assert.Error(t, err, "second call should fail since underlying call should be blocked by rate limiter")
+		})
+	}
 }
 
 func rateLimiterStubFunc(domainData map[string]tokenbucket.PriorityTokenBucket) RateLimiterFactoryFunc {
