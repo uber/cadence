@@ -215,7 +215,7 @@ func (w *weightedRoundRobinTaskSchedulerImpl) dispatcher() {
 		for priority, taskCh := range taskChs {
 			count, ok := weights[priority]
 			if !ok {
-				w.logger.Error("weights not found for task priority", tag.Dynamic("priority", priority), tag.Dynamic("weigths", weights))
+				w.logger.Error("weights not found for task priority", tag.Dynamic("priority", priority), tag.Dynamic("weights", weights))
 				continue
 			}
 		Submit_Loop:
