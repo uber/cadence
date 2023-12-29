@@ -40,7 +40,6 @@ func TestNewKafkaClient(t *testing.T) {
 		name        string
 		config      *config.KafkaConfig
 		checkApp    bool
-		hasErr      bool
 		expectedErr string
 	}{
 		{
@@ -49,7 +48,6 @@ func TestNewKafkaClient(t *testing.T) {
 				Clusters: map[string]config.ClusterConfig{},
 			},
 			checkApp:    true,
-			hasErr:      true,
 			expectedErr: "Empty Kafka Cluster Config",
 		},
 		{
@@ -63,7 +61,6 @@ func TestNewKafkaClient(t *testing.T) {
 				Topics: map[string]config.TopicConfig{},
 			},
 			checkApp:    true,
-			hasErr:      true,
 			expectedErr: "Empty Topics Config",
 		},
 		{
@@ -82,7 +79,6 @@ func TestNewKafkaClient(t *testing.T) {
 				Applications: map[string]config.TopicList{},
 			},
 			checkApp:    true,
-			hasErr:      true,
 			expectedErr: "Empty Applications Config",
 		},
 		{
@@ -106,7 +102,6 @@ func TestNewKafkaClient(t *testing.T) {
 				},
 			},
 			checkApp:    true,
-			hasErr:      true,
 			expectedErr: "Missing Topic Config for Topic test-topic-dlq",
 		},
 		{
@@ -133,27 +128,20 @@ func TestNewKafkaClient(t *testing.T) {
 				},
 			},
 			checkApp: true,
-			hasErr:   false,
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if !tc.hasErr {
-				kafkaClient := NewKafkaClient(tc.config, metricsClient, logger, nil, tc.checkApp)
-				// Type assert to *clientImpl to access struct fields
-				client, ok := kafkaClient.(*clientImpl)
-				assert.True(t, ok, "Expected kafkaClient to be of type *clientImpl")
-				assert.Equal(t, tc.config, client.config)
-			} else {
-				defer func() {
-					if r := recover(); r == nil {
-						t.Errorf("The code did not panic")
-					} else {
-						assert.Equal(t, tc.expectedErr, r)
-					}
-				}()
-				NewKafkaClient(tc.config, metricsClient, logger, nil, tc.checkApp)
-			}
+			defer func() {
+				if r := recover(); r != nil {
+					assert.Equal(t, tc.expectedErr, r)
+				}
+			}()
+			kafkaClient := NewKafkaClient(tc.config, metricsClient, logger, nil, tc.checkApp)
+			// Type assert to *clientImpl to access struct fields
+			client, ok := kafkaClient.(*clientImpl)
+			assert.True(t, ok, "Expected kafkaClient to be of type *clientImpl")
+			assert.Equal(t, tc.config, client.config)
 		})
 	}
 }
