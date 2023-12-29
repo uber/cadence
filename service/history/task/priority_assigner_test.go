@@ -144,7 +144,7 @@ func (s *taskPriorityAssignerSuite) TestGetDomainInfo_Fail_UnknownError() {
 func (s *taskPriorityAssignerSuite) TestAssign_ReplicationTask() {
 	mockTask := NewMockTask(s.controller)
 	mockTask.EXPECT().GetQueueType().Return(QueueTypeReplication).Times(1)
-	mockTask.EXPECT().Priority().Return(common.NoPriority).Times(1)
+	mockTask.EXPECT().Priority().Return(noPriority).Times(1)
 	mockTask.EXPECT().SetPriority(common.GetTaskPriority(common.LowPriorityClass, common.DefaultPrioritySubclass)).Times(1)
 
 	err := s.priorityAssigner.Assign(mockTask)
@@ -161,7 +161,7 @@ func (s *taskPriorityAssignerSuite) TestAssign_StandbyTask_StandbyDomain() {
 	mockTask := NewMockTask(s.controller)
 	mockTask.EXPECT().GetQueueType().Return(QueueTypeStandbyTransfer).AnyTimes()
 	mockTask.EXPECT().GetDomainID().Return(constants.TestDomainID).Times(1)
-	mockTask.EXPECT().Priority().Return(common.NoPriority).Times(1)
+	mockTask.EXPECT().Priority().Return(noPriority).Times(1)
 	mockTask.EXPECT().SetPriority(common.GetTaskPriority(common.LowPriorityClass, common.DefaultPrioritySubclass)).Times(1)
 
 	err := s.priorityAssigner.Assign(mockTask)
@@ -174,7 +174,7 @@ func (s *taskPriorityAssignerSuite) TestAssign_StandbyTask_ActiveDomain() {
 	mockTask := NewMockTask(s.controller)
 	mockTask.EXPECT().GetQueueType().Return(QueueTypeStandbyTransfer).AnyTimes()
 	mockTask.EXPECT().GetDomainID().Return(constants.TestDomainID).Times(1)
-	mockTask.EXPECT().Priority().Return(common.NoPriority).Times(1)
+	mockTask.EXPECT().Priority().Return(noPriority).Times(1)
 	mockTask.EXPECT().SetPriority(common.GetTaskPriority(common.HighPriorityClass, common.DefaultPrioritySubclass)).Times(1)
 
 	err := s.priorityAssigner.Assign(mockTask)
@@ -191,7 +191,7 @@ func (s *taskPriorityAssignerSuite) TestAssign_ActiveTask_StandbyDomain() {
 	mockTask := NewMockTask(s.controller)
 	mockTask.EXPECT().GetQueueType().Return(QueueTypeActiveTimer).AnyTimes()
 	mockTask.EXPECT().GetDomainID().Return(constants.TestDomainID).Times(1)
-	mockTask.EXPECT().Priority().Return(common.NoPriority).Times(1)
+	mockTask.EXPECT().Priority().Return(noPriority).Times(1)
 	mockTask.EXPECT().SetPriority(common.GetTaskPriority(common.HighPriorityClass, common.DefaultPrioritySubclass)).Times(1)
 
 	err := s.priorityAssigner.Assign(mockTask)
@@ -204,7 +204,7 @@ func (s *taskPriorityAssignerSuite) TestAssign_ActiveTransferTask_ActiveDomain()
 	mockTask := NewMockTask(s.controller)
 	mockTask.EXPECT().GetQueueType().Return(QueueTypeActiveTransfer).AnyTimes()
 	mockTask.EXPECT().GetDomainID().Return(constants.TestDomainID).Times(1)
-	mockTask.EXPECT().Priority().Return(common.NoPriority).Times(1)
+	mockTask.EXPECT().Priority().Return(noPriority).Times(1)
 	mockTask.EXPECT().SetPriority(common.GetTaskPriority(common.HighPriorityClass, common.DefaultPrioritySubclass)).Times(1)
 
 	err := s.priorityAssigner.Assign(mockTask)
@@ -217,7 +217,7 @@ func (s *taskPriorityAssignerSuite) TestAssign_ActiveTimerTask_ActiveDomain() {
 	mockTask := NewMockTask(s.controller)
 	mockTask.EXPECT().GetQueueType().Return(QueueTypeActiveTimer).AnyTimes()
 	mockTask.EXPECT().GetDomainID().Return(constants.TestDomainID).Times(1)
-	mockTask.EXPECT().Priority().Return(common.NoPriority).Times(1)
+	mockTask.EXPECT().Priority().Return(noPriority).Times(1)
 	mockTask.EXPECT().SetPriority(common.GetTaskPriority(common.HighPriorityClass, common.DefaultPrioritySubclass)).Times(1)
 
 	err := s.priorityAssigner.Assign(mockTask)
@@ -231,7 +231,7 @@ func (s *taskPriorityAssignerSuite) TestAssign_ThrottledTask() {
 		mockTask := NewMockTask(s.controller)
 		mockTask.EXPECT().GetQueueType().Return(QueueTypeActiveTimer).AnyTimes()
 		mockTask.EXPECT().GetDomainID().Return(constants.TestDomainID).Times(1)
-		mockTask.EXPECT().Priority().Return(common.NoPriority).Times(1)
+		mockTask.EXPECT().Priority().Return(noPriority).Times(1)
 		if i < s.testTaskProcessRPS {
 			mockTask.EXPECT().SetPriority(common.GetTaskPriority(common.HighPriorityClass, common.DefaultPrioritySubclass)).Times(1)
 		} else {

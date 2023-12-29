@@ -40,16 +40,6 @@ import (
 	"github.com/uber/cadence/service/history/shard"
 )
 
-const (
-	loadDomainEntryForTaskRetryDelay = 100 * time.Millisecond
-
-	activeTaskResubmitMaxAttempts = 10
-
-	defaultTaskEventLoggerSize = 100
-
-	stickyTaskMaxRetryCount = 100
-)
-
 // redispatchError is the error indicating that the timer / transfer task should be redispatched and retried.
 type redispatchError struct {
 	Reason string
@@ -176,7 +166,7 @@ func newTask(
 		Info:               taskInfo,
 		shard:              shard,
 		state:              ctask.TaskStatePending,
-		priority:           common.NoPriority,
+		priority:           noPriority,
 		queueType:          queueType,
 		scopeIdx:           scopeIdx,
 		scope:              nil,
