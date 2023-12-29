@@ -45,6 +45,8 @@ const (
 	defaultMsgForEmpty = "none"
 )
 
+var defaultSampleFn = func(i int) bool { return rand.Intn(i) == 0 }
+
 // NewNopLogger returns a no-op logger
 func NewNopLogger() log.Logger {
 	return NewLogger(zap.NewNop())
@@ -60,19 +62,16 @@ func NewDevelopment() (log.Logger, error) {
 }
 
 // NewLogger returns a new logger
-func NewLogger(zapLogger *zap.Logger) log.Logger {
-	return NewLoggerWithSampleFunc(zapLogger, func(i int) bool {
-		return rand.Intn(i) == 0
-	})
-}
-
-// NewLoggerWithSampleFunc returns a new logger with sample function.
-func NewLoggerWithSampleFunc(zapLogger *zap.Logger, sampleLocalFn func(int) bool) log.Logger {
-	return &loggerImpl{
+func NewLogger(zapLogger *zap.Logger, opts ...Option) log.Logger {
+	impl := &loggerImpl{
 		zapLogger:     zapLogger,
 		skip:          skipForDefaultLogger,
-		sampleLocalFn: sampleLocalFn,
+		sampleLocalFn: defaultSampleFn,
 	}
+	for _, opt := range opts {
+		opt(impl)
+	}
+	return impl
 }
 
 func caller(skip int) string {
