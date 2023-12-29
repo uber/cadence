@@ -20,25 +20,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package testlogger
+package loggerimpl
 
-import (
-	"testing"
+// Option is used to set options for the logger.
+type Option func(impl *loggerImpl)
 
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap/zaptest"
-
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
-)
-
-// New is a helper to create new development logger in unit test
-func New(t zaptest.TestingT) log.Logger {
-	if testing.Verbose() {
-		logger, err := loggerimpl.NewDevelopment()
-		require.NoError(t, err)
-		return logger
+// WithSampleFunc sets the sampling function for the logger.
+func WithSampleFunc(fn func(int) bool) Option {
+	return func(impl *loggerImpl) {
+		impl.sampleLocalFn = fn
 	}
-	// test logger samples all logs
-	return loggerimpl.NewLogger(zaptest.NewLogger(t), loggerimpl.WithSampleFunc(func(int) bool { return true }))
 }

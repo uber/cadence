@@ -30,7 +30,6 @@ func New{{.Interface.Name}}(
 }
 
 {{range $methodName, $method := .Interface.Methods}}
-    {{$resultsLength := len ($method.Results)}}
     {{- if (and $method.AcceptsContext $method.ReturnsError)}}
         func (c *{{$decorator}}) {{$method.Declaration}} {
 	        fakeErr := generateFakeError(c.errorRate)
