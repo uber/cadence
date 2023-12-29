@@ -220,7 +220,7 @@ func (m *sqlExecutionStore) createWorkflowExecutionTx(
 		return nil, err
 	}
 
-	if err := m.applyWorkflowSnapshotTxAsNew(ctx, tx, shardID, &request.NewWorkflowSnapshot, m.parser); err != nil {
+	if err := applyWorkflowSnapshotTxAsNew(ctx, tx, shardID, &request.NewWorkflowSnapshot, m.parser); err != nil {
 		return nil, err
 	}
 
@@ -490,7 +490,7 @@ func (m *sqlExecutionStore) updateWorkflowExecutionTx(
 		return err
 	}
 	if newWorkflow != nil {
-		if err := m.applyWorkflowSnapshotTxAsNew(ctx, tx, shardID, newWorkflow, m.parser); err != nil {
+		if err := applyWorkflowSnapshotTxAsNew(ctx, tx, shardID, newWorkflow, m.parser); err != nil {
 			return err
 		}
 	}
@@ -611,7 +611,7 @@ func (m *sqlExecutionStore) conflictResolveWorkflowExecutionTx(
 		}
 	}
 	if newWorkflow != nil {
-		if err := m.applyWorkflowSnapshotTxAsNew(ctx, tx, shardID, newWorkflow, m.parser); err != nil {
+		if err := applyWorkflowSnapshotTxAsNew(ctx, tx, shardID, newWorkflow, m.parser); err != nil {
 			return err
 		}
 	}
