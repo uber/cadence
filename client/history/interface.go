@@ -29,6 +29,7 @@ import (
 )
 
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interface_mock.go -package history github.com/uber/cadence/client/history Client
+//go:generate gowrap gen -g -p . -i Client -t ../templates/retry.tmpl -o ../wrappers/retryable/history.go -v client=History
 
 // Client is the interface exposed by history service client
 type Client interface {
