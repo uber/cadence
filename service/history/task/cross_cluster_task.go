@@ -268,7 +268,7 @@ func newCrossClusterTaskBase(
 		shard:           shard,
 		state:           ctask.TaskStatePending,
 		processingState: processingState,
-		priority:        common.NoPriority,
+		priority:        noPriority,
 		attempt:         0,
 		timeSource:      timeSource,
 		submitTime:      timeSource.Now(),

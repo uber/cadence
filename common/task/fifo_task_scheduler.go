@@ -26,34 +26,22 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/backoff"
-	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 )
 
-type (
-	// FIFOTaskSchedulerOptions configs FIFO task scheduler
-	FIFOTaskSchedulerOptions struct {
-		QueueSize       int
-		WorkerCount     dynamicconfig.IntPropertyFn
-		DispatcherCount int
-		RetryPolicy     backoff.RetryPolicy
-	}
+type fifoTaskSchedulerImpl struct {
+	status       int32
+	logger       log.Logger
+	metricsScope metrics.Scope
+	options      *FIFOTaskSchedulerOptions
+	dispatcherWG sync.WaitGroup
+	taskCh       chan PriorityTask
+	shutdownCh   chan struct{}
 
-	fifoTaskSchedulerImpl struct {
-		status       int32
-		logger       log.Logger
-		metricsScope metrics.Scope
-		options      *FIFOTaskSchedulerOptions
-		dispatcherWG sync.WaitGroup
-		taskCh       chan PriorityTask
-		shutdownCh   chan struct{}
-
-		processor Processor
-	}
-)
+	processor Processor
+}
 
 // NewFIFOTaskScheduler creates a new FIFO task scheduler
 // it's an no-op implementation as it simply copy tasks from
@@ -116,9 +104,7 @@ func (f *fifoTaskSchedulerImpl) Stop() {
 	f.logger.Info("FIFO task scheduler shutdown.")
 }
 
-func (f *fifoTaskSchedulerImpl) Submit(
-	task PriorityTask,
-) error {
+func (f *fifoTaskSchedulerImpl) Submit(task PriorityTask) error {
 	f.metricsScope.IncCounter(metrics.ParallelTaskSubmitRequest)
 	sw := f.metricsScope.StartTimer(metrics.ParallelTaskSubmitLatency)
 	defer sw.Stop()
@@ -138,9 +124,7 @@ func (f *fifoTaskSchedulerImpl) Submit(
 	}
 }
 
-func (f *fifoTaskSchedulerImpl) TrySubmit(
-	task PriorityTask,
-) (bool, error) {
+func (f *fifoTaskSchedulerImpl) TrySubmit(task PriorityTask) (bool, error) {
 	if f.isStopped() {
 		return false, ErrTaskSchedulerClosed
 	}
