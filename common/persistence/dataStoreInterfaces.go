@@ -942,6 +942,9 @@ func (d *DataBlob) ToNilSafeDataBlob() *DataBlob {
 }
 
 func (d *DataBlob) GetEncodingString() string {
+	if d == nil {
+		return ""
+	}
 	return string(d.Encoding)
 }
 
@@ -955,7 +958,7 @@ func (d *DataBlob) GetData() []byte {
 
 // GetEncoding returns encoding type
 func (d *DataBlob) GetEncoding() common.EncodingType {
-	encodingStr := string(d.Encoding)
+	encodingStr := d.GetEncodingString()
 
 	switch common.EncodingType(encodingStr) {
 	case common.EncodingTypeGob:
