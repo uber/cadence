@@ -50,8 +50,9 @@ func NewThrottledLogger(logger log.Logger, rps dynamicconfig.IntPropertyFn) log.
 	lg, ok := logger.(*loggerImpl)
 	if ok {
 		log = &loggerImpl{
-			zapLogger: lg.zapLogger,
-			skip:      skipForThrottleLogger,
+			zapLogger:     lg.zapLogger,
+			skip:          skipForThrottleLogger,
+			sampleLocalFn: lg.sampleLocalFn,
 		}
 	} else {
 		logger.Warn("ReplayLogger may not emit callat tag correctly because the logger passed in is not loggerImpl")
