@@ -18,19 +18,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package persistence
+package sampled
 
 import (
 	"context"
-	"runtime"
-	"sync"
 
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/tokenbucket"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -44,21 +42,18 @@ const (
 // errPersistenceLimitExceededForList is the error indicating QPS limit reached for list visibility.
 var errPersistenceLimitExceededForList = &types.ServiceBusyError{Message: "Persistence Max QPS Reached for List Operations."}
 
-type visibilitySamplingClient struct {
-	rateLimitersForOpen   *domainToBucketMap
-	rateLimitersForClosed *domainToBucketMap
-	rateLimitersForList   *domainToBucketMap
-	persistence           VisibilityManager
-	config                *SamplingConfig
+type visibilityManager struct {
+	rateLimitersForOpen   RateLimiterFactory
+	rateLimitersForClosed RateLimiterFactory
+	rateLimitersForList   RateLimiterFactory
+	persistence           persistence.VisibilityManager
 	metricClient          metrics.Client
 	logger                log.Logger
 }
 
-var _ VisibilityManager = (*visibilitySamplingClient)(nil)
-
 type (
-	// SamplingConfig is config for visibility
-	SamplingConfig struct {
+	// Config is config for visibility
+	Config struct {
 		VisibilityOpenMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
 		// VisibilityClosedMaxQPS max QPS for record closed workflows
 		VisibilityClosedMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
@@ -67,61 +62,37 @@ type (
 	}
 )
 
-// NewVisibilitySamplingClient creates a client to manage visibility with sampling
+type Params struct {
+	Config                 *Config
+	MetricClient           metrics.Client
+	Logger                 log.Logger
+	TimeSource             clock.TimeSource
+	RateLimiterFactoryFunc RateLimiterFactoryFunc
+}
+
+// NewVisibilityManager creates a client to manage visibility with sampling
 // For write requests, it will do sampling which will lose some records
 // For read requests, it will do sampling which will return service busy errors.
 // Note that this is different from NewVisibilityPersistenceRateLimitedClient which is overlapping with the read processing.
-func NewVisibilitySamplingClient(persistence VisibilityManager, config *SamplingConfig, metricClient metrics.Client, logger log.Logger) VisibilityManager {
-	return &visibilitySamplingClient{
+func NewVisibilityManager(persistence persistence.VisibilityManager, p Params) persistence.VisibilityManager {
+	return &visibilityManager{
 		persistence:           persistence,
-		rateLimitersForOpen:   newDomainToBucketMap(),
-		rateLimitersForClosed: newDomainToBucketMap(),
-		rateLimitersForList:   newDomainToBucketMap(),
-		config:                config,
-		metricClient:          metricClient,
-		logger:                logger,
+		rateLimitersForOpen:   p.RateLimiterFactoryFunc(p.TimeSource, numOfPriorityForOpen, p.Config.VisibilityOpenMaxQPS),
+		rateLimitersForClosed: p.RateLimiterFactoryFunc(p.TimeSource, numOfPriorityForClosed, p.Config.VisibilityClosedMaxQPS),
+		rateLimitersForList:   p.RateLimiterFactoryFunc(p.TimeSource, numOfPriorityForList, p.Config.VisibilityListMaxQPS),
+		metricClient:          p.MetricClient,
+		logger:                p.Logger,
 	}
 }
 
-type domainToBucketMap struct {
-	sync.RWMutex
-	mappings map[string]tokenbucket.PriorityTokenBucket
-}
-
-func newDomainToBucketMap() *domainToBucketMap {
-	return &domainToBucketMap{
-		mappings: make(map[string]tokenbucket.PriorityTokenBucket),
-	}
-}
-
-func (m *domainToBucketMap) getRateLimiter(domain string, numOfPriority, qps int) tokenbucket.PriorityTokenBucket {
-	m.RLock()
-	rateLimiter, exist := m.mappings[domain]
-	m.RUnlock()
-
-	if exist {
-		return rateLimiter
-	}
-
-	m.Lock()
-	if rateLimiter, ok := m.mappings[domain]; ok { // read again to ensure no duplicate create
-		m.Unlock()
-		return rateLimiter
-	}
-	rateLimiter = tokenbucket.NewFullPriorityTokenBucket(numOfPriority, qps, clock.NewRealTimeSource())
-	m.mappings[domain] = rateLimiter
-	m.Unlock()
-	return rateLimiter
-}
-
-func (p *visibilitySamplingClient) RecordWorkflowExecutionStarted(
+func (p *visibilityManager) RecordWorkflowExecutionStarted(
 	ctx context.Context,
-	request *RecordWorkflowExecutionStartedRequest,
+	request *persistence.RecordWorkflowExecutionStartedRequest,
 ) error {
 	domain := request.Domain
 	domainID := request.DomainUUID
 
-	rateLimiter := p.rateLimitersForOpen.getRateLimiter(domain, numOfPriorityForOpen, p.config.VisibilityOpenMaxQPS(domain))
+	rateLimiter := p.rateLimitersForOpen.GetRateLimiter(domain)
 	if ok, _ := rateLimiter.GetToken(0, 1); ok {
 		return p.persistence.RecordWorkflowExecutionStarted(ctx, request)
 	}
@@ -137,15 +108,15 @@ func (p *visibilitySamplingClient) RecordWorkflowExecutionStarted(
 	return nil
 }
 
-func (p *visibilitySamplingClient) RecordWorkflowExecutionClosed(
+func (p *visibilityManager) RecordWorkflowExecutionClosed(
 	ctx context.Context,
-	request *RecordWorkflowExecutionClosedRequest,
+	request *persistence.RecordWorkflowExecutionClosedRequest,
 ) error {
 	domain := request.Domain
 	domainID := request.DomainUUID
 	priority := getRequestPriority(request)
 
-	rateLimiter := p.rateLimitersForClosed.getRateLimiter(domain, numOfPriorityForClosed, p.config.VisibilityClosedMaxQPS(domain))
+	rateLimiter := p.rateLimitersForClosed.GetRateLimiter(domain)
 	if ok, _ := rateLimiter.GetToken(priority, 1); ok {
 		return p.persistence.RecordWorkflowExecutionClosed(ctx, request)
 	}
@@ -161,21 +132,14 @@ func (p *visibilitySamplingClient) RecordWorkflowExecutionClosed(
 	return nil
 }
 
-func (p *visibilitySamplingClient) RecordWorkflowExecutionUninitialized(
+func (p *visibilityManager) UpsertWorkflowExecution(
 	ctx context.Context,
-	request *RecordWorkflowExecutionUninitializedRequest,
-) error {
-	return p.persistence.RecordWorkflowExecutionUninitialized(ctx, request)
-}
-
-func (p *visibilitySamplingClient) UpsertWorkflowExecution(
-	ctx context.Context,
-	request *UpsertWorkflowExecutionRequest,
+	request *persistence.UpsertWorkflowExecutionRequest,
 ) error {
 	domain := request.Domain
 	domainID := request.DomainUUID
 
-	rateLimiter := p.rateLimitersForClosed.getRateLimiter(domain, numOfPriorityForClosed, p.config.VisibilityClosedMaxQPS(domain))
+	rateLimiter := p.rateLimitersForClosed.GetRateLimiter(domain)
 	if ok, _ := rateLimiter.GetToken(0, 1); ok {
 		return p.persistence.UpsertWorkflowExecution(ctx, request)
 	}
@@ -191,134 +155,141 @@ func (p *visibilitySamplingClient) UpsertWorkflowExecution(
 	return nil
 }
 
-func (p *visibilitySamplingClient) ListOpenWorkflowExecutions(
+func (p *visibilityManager) ListOpenWorkflowExecutions(
 	ctx context.Context,
-	request *ListWorkflowExecutionsRequest,
-) (*ListWorkflowExecutionsResponse, error) {
-	if err := p.tryConsumeListToken(request.Domain); err != nil {
+	request *persistence.ListWorkflowExecutionsRequest,
+) (*persistence.ListWorkflowExecutionsResponse, error) {
+	if err := p.tryConsumeListToken(request.Domain, "ListOpenWorkflowExecutions"); err != nil {
 		return nil, err
 	}
 
 	return p.persistence.ListOpenWorkflowExecutions(ctx, request)
 }
 
-func (p *visibilitySamplingClient) ListClosedWorkflowExecutions(
+func (p *visibilityManager) ListClosedWorkflowExecutions(
 	ctx context.Context,
-	request *ListWorkflowExecutionsRequest,
-) (*ListWorkflowExecutionsResponse, error) {
-	if err := p.tryConsumeListToken(request.Domain); err != nil {
+	request *persistence.ListWorkflowExecutionsRequest,
+) (*persistence.ListWorkflowExecutionsResponse, error) {
+	if err := p.tryConsumeListToken(request.Domain, "ListClosedWorkflowExecutions"); err != nil {
 		return nil, err
 	}
 
 	return p.persistence.ListClosedWorkflowExecutions(ctx, request)
 }
 
-func (p *visibilitySamplingClient) ListOpenWorkflowExecutionsByType(
+func (p *visibilityManager) ListOpenWorkflowExecutionsByType(
 	ctx context.Context,
-	request *ListWorkflowExecutionsByTypeRequest,
-) (*ListWorkflowExecutionsResponse, error) {
-	if err := p.tryConsumeListToken(request.Domain); err != nil {
+	request *persistence.ListWorkflowExecutionsByTypeRequest,
+) (*persistence.ListWorkflowExecutionsResponse, error) {
+	if err := p.tryConsumeListToken(request.Domain, "ListOpenWorkflowExecutionsByType"); err != nil {
 		return nil, err
 	}
 
 	return p.persistence.ListOpenWorkflowExecutionsByType(ctx, request)
 }
 
-func (p *visibilitySamplingClient) ListClosedWorkflowExecutionsByType(
+func (p *visibilityManager) ListClosedWorkflowExecutionsByType(
 	ctx context.Context,
-	request *ListWorkflowExecutionsByTypeRequest,
-) (*ListWorkflowExecutionsResponse, error) {
-	if err := p.tryConsumeListToken(request.Domain); err != nil {
+	request *persistence.ListWorkflowExecutionsByTypeRequest,
+) (*persistence.ListWorkflowExecutionsResponse, error) {
+	if err := p.tryConsumeListToken(request.Domain, "ListClosedWorkflowExecutionsByType"); err != nil {
 		return nil, err
 	}
 
 	return p.persistence.ListClosedWorkflowExecutionsByType(ctx, request)
 }
 
-func (p *visibilitySamplingClient) ListOpenWorkflowExecutionsByWorkflowID(
+func (p *visibilityManager) ListOpenWorkflowExecutionsByWorkflowID(
 	ctx context.Context,
-	request *ListWorkflowExecutionsByWorkflowIDRequest,
-) (*ListWorkflowExecutionsResponse, error) {
-	if err := p.tryConsumeListToken(request.Domain); err != nil {
+	request *persistence.ListWorkflowExecutionsByWorkflowIDRequest,
+) (*persistence.ListWorkflowExecutionsResponse, error) {
+	if err := p.tryConsumeListToken(request.Domain, "ListOpenWorkflowExecutionsByWorkflowID"); err != nil {
 		return nil, err
 	}
 
 	return p.persistence.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
 }
 
-func (p *visibilitySamplingClient) ListClosedWorkflowExecutionsByWorkflowID(
+func (p *visibilityManager) ListClosedWorkflowExecutionsByWorkflowID(
 	ctx context.Context,
-	request *ListWorkflowExecutionsByWorkflowIDRequest,
-) (*ListWorkflowExecutionsResponse, error) {
-	if err := p.tryConsumeListToken(request.Domain); err != nil {
+	request *persistence.ListWorkflowExecutionsByWorkflowIDRequest,
+) (*persistence.ListWorkflowExecutionsResponse, error) {
+	if err := p.tryConsumeListToken(request.Domain, "ListClosedWorkflowExecutionsByWorkflowID"); err != nil {
 		return nil, err
 	}
 
 	return p.persistence.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
 }
 
-func (p *visibilitySamplingClient) ListClosedWorkflowExecutionsByStatus(
+func (p *visibilityManager) ListClosedWorkflowExecutionsByStatus(
 	ctx context.Context,
-	request *ListClosedWorkflowExecutionsByStatusRequest,
-) (*ListWorkflowExecutionsResponse, error) {
-	if err := p.tryConsumeListToken(request.Domain); err != nil {
+	request *persistence.ListClosedWorkflowExecutionsByStatusRequest,
+) (*persistence.ListWorkflowExecutionsResponse, error) {
+	if err := p.tryConsumeListToken(request.Domain, "ListClosedWorkflowExecutionsByStatus"); err != nil {
 		return nil, err
 	}
 
 	return p.persistence.ListClosedWorkflowExecutionsByStatus(ctx, request)
 }
 
-func (p *visibilitySamplingClient) GetClosedWorkflowExecution(
+func (p *visibilityManager) RecordWorkflowExecutionUninitialized(
 	ctx context.Context,
-	request *GetClosedWorkflowExecutionRequest,
-) (*GetClosedWorkflowExecutionResponse, error) {
+	request *persistence.RecordWorkflowExecutionUninitializedRequest,
+) error {
+	return p.persistence.RecordWorkflowExecutionUninitialized(ctx, request)
+}
+
+func (p *visibilityManager) GetClosedWorkflowExecution(
+	ctx context.Context,
+	request *persistence.GetClosedWorkflowExecutionRequest,
+) (*persistence.GetClosedWorkflowExecutionResponse, error) {
 	return p.persistence.GetClosedWorkflowExecution(ctx, request)
 }
 
-func (p *visibilitySamplingClient) DeleteWorkflowExecution(
+func (p *visibilityManager) DeleteWorkflowExecution(
 	ctx context.Context,
-	request *VisibilityDeleteWorkflowExecutionRequest,
+	request *persistence.VisibilityDeleteWorkflowExecutionRequest,
 ) error {
 	return p.persistence.DeleteWorkflowExecution(ctx, request)
 }
 
-func (p *visibilitySamplingClient) DeleteUninitializedWorkflowExecution(
+func (p *visibilityManager) DeleteUninitializedWorkflowExecution(
 	ctx context.Context,
-	request *VisibilityDeleteWorkflowExecutionRequest,
+	request *persistence.VisibilityDeleteWorkflowExecutionRequest,
 ) error {
 	return p.persistence.DeleteUninitializedWorkflowExecution(ctx, request)
 }
 
-func (p *visibilitySamplingClient) ListWorkflowExecutions(
+func (p *visibilityManager) ListWorkflowExecutions(
 	ctx context.Context,
-	request *ListWorkflowExecutionsByQueryRequest,
-) (*ListWorkflowExecutionsResponse, error) {
+	request *persistence.ListWorkflowExecutionsByQueryRequest,
+) (*persistence.ListWorkflowExecutionsResponse, error) {
 	return p.persistence.ListWorkflowExecutions(ctx, request)
 }
 
-func (p *visibilitySamplingClient) ScanWorkflowExecutions(
+func (p *visibilityManager) ScanWorkflowExecutions(
 	ctx context.Context,
-	request *ListWorkflowExecutionsByQueryRequest,
-) (*ListWorkflowExecutionsResponse, error) {
+	request *persistence.ListWorkflowExecutionsByQueryRequest,
+) (*persistence.ListWorkflowExecutionsResponse, error) {
 	return p.persistence.ScanWorkflowExecutions(ctx, request)
 }
 
-func (p *visibilitySamplingClient) CountWorkflowExecutions(
+func (p *visibilityManager) CountWorkflowExecutions(
 	ctx context.Context,
-	request *CountWorkflowExecutionsRequest,
-) (*CountWorkflowExecutionsResponse, error) {
+	request *persistence.CountWorkflowExecutionsRequest,
+) (*persistence.CountWorkflowExecutionsResponse, error) {
 	return p.persistence.CountWorkflowExecutions(ctx, request)
 }
 
-func (p *visibilitySamplingClient) Close() {
+func (p *visibilityManager) Close() {
 	p.persistence.Close()
 }
 
-func (p *visibilitySamplingClient) GetName() string {
+func (p *visibilityManager) GetName() string {
 	return p.persistence.GetName()
 }
 
-func getRequestPriority(request *RecordWorkflowExecutionClosedRequest) int {
+func getRequestPriority(request *persistence.RecordWorkflowExecutionClosedRequest) int {
 	priority := 0
 	if request.Status == types.WorkflowExecutionCloseStatusCompleted {
 		priority = 1 // low priority for completed workflows
@@ -326,22 +297,13 @@ func getRequestPriority(request *RecordWorkflowExecutionClosedRequest) int {
 	return priority
 }
 
-func (p *visibilitySamplingClient) tryConsumeListToken(domain string) error {
-	rateLimiter := p.rateLimitersForList.getRateLimiter(domain, numOfPriorityForList, p.config.VisibilityListMaxQPS(domain))
+func (p *visibilityManager) tryConsumeListToken(domain, method string) error {
+	rateLimiter := p.rateLimitersForList.GetRateLimiter(domain)
 	ok, _ := rateLimiter.GetToken(0, 1)
 	if ok {
-		p.logger.Debug("List API request consumed QPS token", tag.WorkflowDomainName(domain), tag.Name(callerFuncName(2)))
+		p.logger.Debug("List API request consumed QPS token", tag.WorkflowDomainName(domain), tag.Name(method))
 		return nil
 	}
-	p.logger.Debug("List API request is being sampled", tag.WorkflowDomainName(domain), tag.Name(callerFuncName(2)))
+	p.logger.Debug("List API request is being sampled", tag.WorkflowDomainName(domain), tag.Name(method))
 	return errPersistenceLimitExceededForList
-}
-
-func callerFuncName(skip int) string {
-	pc, _, _, ok := runtime.Caller(skip)
-	details := runtime.FuncForPC(pc)
-	if ok && details != nil {
-		return details.Name()
-	}
-	return ""
 }

@@ -32,7 +32,6 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
@@ -632,7 +631,7 @@ func applyWorkflowMutationAsyncTx(
 	return g.Wait()
 }
 
-func (m *sqlExecutionStore) applyWorkflowSnapshotTxAsNew(
+func applyWorkflowSnapshotTxAsNew(
 	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
@@ -648,7 +647,7 @@ func (m *sqlExecutionStore) applyWorkflowSnapshotTxAsNew(
 	workflowID := executionInfo.WorkflowID
 	runID := serialization.MustParseUUID(executionInfo.RunID)
 
-	if err := m.createExecution(
+	if err := createExecution(
 		ctx,
 		tx,
 		executionInfo,
@@ -777,7 +776,7 @@ func (m *sqlExecutionStore) applyWorkflowSnapshotAsyncTxAsNew(
 
 	g.Go(func() (e error) {
 		defer func() { recoverPanic(recover(), &e) }()
-		e = m.createExecution(
+		e = createExecution(
 			ctx,
 			tx,
 			executionInfo,
@@ -1748,7 +1747,7 @@ func buildExecutionRow(
 	}, nil
 }
 
-func (m *sqlExecutionStore) createExecution(
+func createExecution(
 	ctx context.Context,
 	tx sqlplugin.Tx,
 	executionInfo *p.InternalWorkflowExecutionInfo,
@@ -1767,13 +1766,9 @@ func (m *sqlExecutionStore) createExecution(
 	}
 
 	now := time.Now()
+	// TODO: this case seems to be always false
 	if executionInfo.StartTimestamp.IsZero() {
 		executionInfo.StartTimestamp = now
-		m.logger.Error("Workflow startTimestamp not set, fallback to now",
-			tag.WorkflowDomainID(executionInfo.DomainID),
-			tag.WorkflowID(executionInfo.WorkflowID),
-			tag.WorkflowRunID(executionInfo.RunID),
-		)
 	}
 
 	row, err := buildExecutionRow(
@@ -1789,7 +1784,7 @@ func (m *sqlExecutionStore) createExecution(
 	}
 	result, err := tx.InsertIntoExecutions(ctx, row)
 	if err != nil {
-		if m.db.IsDupEntryError(err) {
+		if tx.IsDupEntryError(err) {
 			return &p.WorkflowExecutionAlreadyStartedError{
 				Msg:              fmt.Sprintf("Workflow execution already running. WorkflowId: %v", executionInfo.WorkflowID),
 				StartRequestID:   executionInfo.CreateRequestID,
