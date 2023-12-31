@@ -563,7 +563,7 @@ func (adh *adminHandlerImpl) DeleteWorkflow(
 	request *types.AdminDeleteWorkflowRequest,
 ) (*types.AdminDeleteWorkflowResponse, error) {
 	logger := adh.GetLogger()
-	scope := adh.GetMetricsClient().Scope(metrics.AdminDeleteWorkflowScope).Tagged(metrics.GetContextTags(ctx)...)
+	scope := adh.GetMetricsClient().Scope(metrics.AdminClientDeleteWorkflowScope).Tagged(metrics.GetContextTags(ctx)...)
 	if request.GetExecution() == nil {
 		logger.Info(fmt.Sprintf("Bad request: %#v", request))
 		return nil, adh.error(errRequestNotSet, scope)

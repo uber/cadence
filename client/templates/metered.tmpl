@@ -1,0 +1,42 @@
+import (
+	"context"
+
+	"go.uber.org/yarpc"
+
+	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/types"
+)
+
+{{$clientName := (index .Vars "client")}}
+{{ $decorator := (printf "%s%s" (down $clientName) .Interface.Name) }}
+{{ $Decorator := (printf "%s%s" $clientName .Interface.Name) }}
+
+// {{$decorator}} implements {{.Interface.Type}} interface instrumented with retries
+type {{$decorator}} struct {
+    client        {{.Interface.Type}}
+    metricsClient metrics.Client
+}
+
+// New{{$Decorator}} creates a new instance of {{$decorator}} with retry policy
+func New{{$Decorator}}(client {{.Interface.Type}}, metricsClient metrics.Client) {{.Interface.Type}} {
+    return &{{$decorator}}{
+        client:        client,
+        metricsClient: metricsClient,
+    }
+}
+
+{{range $method := .Interface.Methods}}
+func (c *{{$decorator}}) {{$method.Declaration}} {
+    {{$scopeName:=printf "%sClient%sScope" $clientName $method.Name}}
+	c.metricsClient.IncCounter(metrics.{{$scopeName}}, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.{{$scopeName}}, metrics.CadenceClientLatency)
+	{{$method.ResultsNames}} = c.client.{{$method.Call}}
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.{{$scopeName}}, metrics.CadenceClientFailures)
+	}
+	return {{$method.ResultsNames}}
+}
+{{end}}
