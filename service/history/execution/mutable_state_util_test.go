@@ -21,16 +21,16 @@
 package execution
 
 import (
-	fuzz "github.com/google/gofuzz"
-	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/testing/testdatagen"
 	"testing"
 	"time"
 
+	fuzz "github.com/google/gofuzz"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/testing/testdatagen"
 	"github.com/uber/cadence/common/types"
 )
 

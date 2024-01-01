@@ -23,7 +23,8 @@
 package testdatagen
 
 import (
-	"github.com/google/gofuzz"
+	fuzz "github.com/google/gofuzz"
+
 	"github.com/uber/cadence/common/types"
 )
 

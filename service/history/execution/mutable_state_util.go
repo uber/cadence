@@ -23,6 +23,7 @@ package execution
 
 import (
 	"encoding/json"
+
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/persistence"
