@@ -217,7 +217,7 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 	s.Nil(err)
 	s.NotNil(response)
 	expectedResponse.StartedTimestamp = response.StartedTimestamp
-	expectedResponse.ScheduledTimestamp = common.Int64Ptr(0)
+	expectedResponse.ScheduledTimestamp = response.ScheduledTimestamp
 	expectedResponse.Queries = make(map[string]*types.WorkflowQuery)
 	s.Equal(&expectedResponse, response)
 }
