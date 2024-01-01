@@ -67,6 +67,7 @@ require (
 
 require (
 	github.com/google/go-cmp v0.5.9
+	github.com/google/gofuzz v1.0.0
 	github.com/jonboulle/clockwork v0.4.0
 	golang.org/x/exp v0.0.0-20231226003508-02704c960a9b
 )

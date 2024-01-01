@@ -23,7 +23,6 @@ package execution
 
 import (
 	"encoding/json"
-
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/persistence"
@@ -328,6 +327,7 @@ func CopyWorkflowExecutionInfo(sourceInfo *persistence.WorkflowExecutionInfo) *p
 		ParentDomainID:                     sourceInfo.ParentDomainID,
 		ParentWorkflowID:                   sourceInfo.ParentWorkflowID,
 		ParentRunID:                        sourceInfo.ParentRunID,
+		IsCron:                             sourceInfo.IsCron,
 		InitiatedID:                        sourceInfo.InitiatedID,
 		CompletionEventBatchID:             sourceInfo.CompletionEventBatchID,
 		CompletionEvent:                    sourceInfo.CompletionEvent,
@@ -354,6 +354,7 @@ func CopyWorkflowExecutionInfo(sourceInfo *persistence.WorkflowExecutionInfo) *p
 		DecisionRequestID:                  sourceInfo.DecisionRequestID,
 		DecisionTimeout:                    sourceInfo.DecisionTimeout,
 		DecisionAttempt:                    sourceInfo.DecisionAttempt,
+		DecisionScheduledTimestamp:         sourceInfo.DecisionScheduledTimestamp,
 		DecisionStartedTimestamp:           sourceInfo.DecisionStartedTimestamp,
 		DecisionOriginalScheduledTimestamp: sourceInfo.DecisionOriginalScheduledTimestamp,
 		CancelRequested:                    sourceInfo.CancelRequested,
@@ -381,8 +382,11 @@ func CopyWorkflowExecutionInfo(sourceInfo *persistence.WorkflowExecutionInfo) *p
 
 // CopyActivityInfo copies ActivityInfo
 func CopyActivityInfo(sourceInfo *persistence.ActivityInfo) *persistence.ActivityInfo {
-	details := make([]byte, len(sourceInfo.Details))
-	copy(details, sourceInfo.Details)
+	var details []byte
+	if sourceInfo.Details != nil {
+		details = make([]byte, len(sourceInfo.Details))
+		copy(details, sourceInfo.Details)
+	}
 
 	return &persistence.ActivityInfo{
 		Version:                  sourceInfo.Version,
@@ -437,24 +441,30 @@ func CopyTimerInfo(sourceInfo *persistence.TimerInfo) *persistence.TimerInfo {
 // CopyCancellationInfo copies RequestCancelInfo
 func CopyCancellationInfo(sourceInfo *persistence.RequestCancelInfo) *persistence.RequestCancelInfo {
 	return &persistence.RequestCancelInfo{
-		Version:         sourceInfo.Version,
-		InitiatedID:     sourceInfo.InitiatedID,
-		CancelRequestID: sourceInfo.CancelRequestID,
+		Version:               sourceInfo.Version,
+		InitiatedID:           sourceInfo.InitiatedID,
+		InitiatedEventBatchID: sourceInfo.InitiatedEventBatchID,
+		CancelRequestID:       sourceInfo.CancelRequestID,
 	}
 }
 
 // CopySignalInfo copies SignalInfo
 func CopySignalInfo(sourceInfo *persistence.SignalInfo) *persistence.SignalInfo {
 	result := &persistence.SignalInfo{
-		Version:         sourceInfo.Version,
-		InitiatedID:     sourceInfo.InitiatedID,
-		SignalRequestID: sourceInfo.SignalRequestID,
-		SignalName:      sourceInfo.SignalName,
+		Version:               sourceInfo.Version,
+		InitiatedEventBatchID: sourceInfo.InitiatedEventBatchID,
+		InitiatedID:           sourceInfo.InitiatedID,
+		SignalRequestID:       sourceInfo.SignalRequestID,
+		SignalName:            sourceInfo.SignalName,
 	}
-	result.Input = make([]byte, len(sourceInfo.Input))
-	copy(result.Input, sourceInfo.Input)
-	result.Control = make([]byte, len(sourceInfo.Control))
-	copy(result.Control, sourceInfo.Control)
+	if sourceInfo.Input != nil {
+		result.Input = make([]byte, len(sourceInfo.Input))
+		copy(result.Input, sourceInfo.Input)
+	}
+	if sourceInfo.Control != nil {
+		result.Control = make([]byte, len(sourceInfo.Control))
+		copy(result.Control, sourceInfo.Control)
+	}
 	return result
 }
 
