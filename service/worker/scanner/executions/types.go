@@ -22,7 +22,7 @@
 
 package executions
 
-//go:generate enumer -type=ScanType
+//go:generate enumer -type=ScanType -output scantype_enumer_generated.go
 
 import (
 	"context"
