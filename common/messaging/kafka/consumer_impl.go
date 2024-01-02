@@ -185,7 +185,7 @@ func (h *consumerHandlerImpl) getCurrentSession() sarama.ConsumerGroupSession {
 	return h.currentSession
 }
 
-func (h *consumerHandlerImpl) completeMessage(message *messageImpl, isAck bool) {
+func (h *consumerHandlerImpl) completeMessage(message *messageImpl, isAck bool) error {
 	h.RLock()
 	defer h.RUnlock()
 
@@ -215,9 +215,10 @@ func (h *consumerHandlerImpl) completeMessage(message *messageImpl, isAck bool) 
 		h.logger.Error("Failed to complete an message that hasn't been added to the partition",
 			tag.KafkaPartition(message.Partition()),
 			tag.KafkaOffset(message.Offset()))
-		return
+		return err
 	}
 	h.currentSession.MarkOffset(h.topic, message.Partition(), ackLevel+1, "")
+	return nil
 }
 
 // Cleanup is run at the end of a session, once all ConsumeClaim goroutines have exited
@@ -265,16 +266,14 @@ func (m *messageImpl) Ack() error {
 	if m.isFromPreviousSession() {
 		return nil
 	}
-	m.handler.completeMessage(m, true)
-	return nil
+	return m.handler.completeMessage(m, true)
 }
 
 func (m *messageImpl) Nack() error {
 	if m.isFromPreviousSession() {
 		return nil
 	}
-	m.handler.completeMessage(m, false)
-	return nil
+	return m.handler.completeMessage(m, false)
 }
 
 func (m *messageImpl) isFromPreviousSession() bool {
