@@ -29,7 +29,7 @@ import (
 )
 
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interface_mock.go -self_package github.com/uber/cadence/client/frontend
-//go:generate gowrap gen -g -p . -i Client -t ./template/retry -o retryable_client_generated.go
+//go:generate gowrap gen -g -p . -i Client -t ../templates/retry.tmpl -o ../wrappers/retryable/frontend_generated.go -v client=Frontend
 
 // Client is the interface exposed by frontend service client
 type Client interface {
