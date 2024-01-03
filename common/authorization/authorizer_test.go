@@ -23,9 +23,11 @@
 package authorization
 
 import (
-	"github.com/stretchr/testify/assert"
-	"github.com/uber/cadence/common"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/uber/cadence/common"
 )
 
 func Test_validatePermission(t *testing.T) {

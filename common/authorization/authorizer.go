@@ -28,10 +28,10 @@ import (
 	"os"
 	"strings"
 
+	clientworker "go.uber.org/cadence/worker"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
-
-	clientworker "go.uber.org/cadence/worker"
 )
 
 const (
