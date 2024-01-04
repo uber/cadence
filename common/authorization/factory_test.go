@@ -73,14 +73,20 @@ func cfgOAuth() config.Authorization {
 
 func (s *factorySuite) TestFactoryNoopAuthorizer() {
 	cfgOAuthVar := cfgOAuth()
+
 	publicKey, _ := common.LoadRSAPublicKey(cfgOAuthVar.OAuthAuthorizer.JwtCredentials.PublicKey)
+
+	verifier, _ := jwt.NewVerifierRS(
+		jwt.Algorithm(cfgOAuthVar.OAuthAuthorizer.JwtCredentials.Algorithm),
+		publicKey,
+	)
 	var tests = []struct {
 		cfg      config.Authorization
 		expected Authorizer
 		err      error
 	}{
 		{cfgNoop(), &nopAuthority{}, nil},
-		{cfgOAuthVar, &oauthAuthority{authorizationCfg: cfgOAuthVar.OAuthAuthorizer, log: s.logger, publicKey: publicKey}, nil},
+		{cfgOAuthVar, &oauthAuthority{authorizationCfg: cfgOAuthVar.OAuthAuthorizer, log: s.logger, verifier: verifier}, nil},
 	}
 
 	for _, test := range tests {
