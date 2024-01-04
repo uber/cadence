@@ -30,6 +30,7 @@ import (
 
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interface_mock.go -package admin github.com/uber/cadence/client/admin Client
 //go:generate gowrap gen -g -p . -i Client -t ../templates/retry.tmpl -o ../wrappers/retryable/admin_generated.go -v client=Admin
+//go:generate gowrap gen -g -p . -i Client -t ../templates/metered.tmpl -o ../wrappers/metered/admin_generated.go -v client=Admin
 
 // Client is the interface exposed by admin service client
 type Client interface {
