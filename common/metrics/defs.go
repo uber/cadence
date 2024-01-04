@@ -873,6 +873,8 @@ const (
 	AdminRestoreDynamicConfigScope
 	// AdminListDynamicConfigScope is the metric scope for admin.ListDynamicConfig
 	AdminListDynamicConfigScope
+	// AdminDeleteWorkflowScope is the metric scope for admin.DeleteWorkflow
+	AdminDeleteWorkflowScope
 	// GetGlobalIsolationGroups is the scope for getting global isolation groups
 	GetGlobalIsolationGroups
 	// UpdateGlobalIsolationGroups is the scope for getting global isolation groups
@@ -1528,7 +1530,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendClientGetTaskListsByDomainScope:               {operation: "FrontendClientGetTaskListsByDomain", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		FrontendClientRestartWorkflowExecutionScope:           {operation: "FrontendClientRestartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 
-		AdminClientGetReplicationTasksScope:               {operation: "AdminClientGetReplicationTasksScope", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientGetReplicationTasksScope:               {operation: "AdminClientGetReplicationTasks", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientAddSearchAttributeScope:                {operation: "AdminClientAddSearchAttribute", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientDescribeHistoryHostScope:               {operation: "AdminClientDescribeHistoryHost", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientDescribeShardDistributionScope:         {operation: "AdminClientDescribeShardDistribution", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
@@ -1700,6 +1702,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminUpdateDynamicConfigScope:               {operation: "AdminUpdateDynamicConfig"},
 		AdminRestoreDynamicConfigScope:              {operation: "AdminRestoreDynamicConfig"},
 		AdminListDynamicConfigScope:                 {operation: "AdminListDynamicConfig"},
+		AdminDeleteWorkflowScope:                    {operation: "AdminDeleteWorkflow"},
 		GetGlobalIsolationGroups:                    {operation: "GetGlobalIsolationGroups"},
 		UpdateGlobalIsolationGroups:                 {operation: "UpdateGlobalIsolationGroups"},
 		GetDomainIsolationGroups:                    {operation: "GetDomainIsolationGroups"},
