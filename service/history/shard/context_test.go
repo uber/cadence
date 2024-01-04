@@ -25,6 +25,7 @@ package shard
 import (
 	"context"
 	"errors"
+	"github.com/pborman/uuid"
 	"math"
 	"testing"
 	"time"
@@ -117,6 +118,8 @@ func (s *contextTestSuite) newContext() *contextImpl {
 		timerMaxReadLevelMap:      make(map[string]time.Time),
 		remoteClusterCurrentTime:  make(map[string]time.Time),
 		eventsCache:               eventsCache,
+		transferFailoverLevels:    make(map[string]TransferFailoverLevel),
+		timerFailoverLevels:       make(map[string]TimerFailoverLevel),
 	}
 	return context
 }
@@ -225,7 +228,59 @@ func (s *contextTestSuite) TestGetAndUpdateProcessingQueueStates() {
 	s.Equal(updatedCrossClusterQueueStates, s.context.GetCrossClusterProcessingQueueStates(clusterName))
 	s.Equal(updatedTimerQueueStates, s.context.GetTimerProcessingQueueStates(clusterName))
 
-	// check if cluster ack level for transfer and timer is backfilled for backward compatibility
+	// check if cluster ack level for transfer and timer is backfield for backward compatibility
 	s.Equal(updatedTransferQueueStates[0].GetAckLevel(), s.context.GetTransferClusterAckLevel(clusterName))
 	s.Equal(time.Unix(0, updatedTimerQueueStates[0].GetAckLevel()), s.context.GetTimerClusterAckLevel(clusterName))
+
+	defaultAckLevel := s.context.GetTimerAckLevel()
+	err = s.context.UpdateTimerClusterAckLevel(clusterName, defaultAckLevel)
+	s.NoError(err)
+}
+
+func (s *contextTestSuite) TestGetAndUpdateClusterReplicationLevel() {
+	clusterName := cluster.TestCurrentClusterName
+	s.context.shardInfo.ClusterReplicationLevel = map[string]int64{clusterName: -1}
+	s.mockShardManager.On("UpdateShard", mock.Anything, mock.Anything).Return(nil)
+
+	taskID, err := s.context.GenerateTransferTaskID()
+	s.NoError(err)
+	err = s.context.UpdateClusterReplicationLevel(clusterName, taskID)
+	s.NoError(err)
+	s.Equal(taskID, s.context.GetClusterReplicationLevel(clusterName))
+}
+
+func (s *contextTestSuite) TestGetAndUpdateTransferFailoverLevels() {
+	transferFailoverLevel := &TransferFailoverLevel{
+		StartTime:    time.Now(),
+		MinLevel:     0,
+		CurrentLevel: 2,
+		MaxLevel:     4,
+		DomainIDs:    nil,
+	}
+	failoverID := uuid.New()
+
+	err := s.context.UpdateTransferFailoverLevel(failoverID, *transferFailoverLevel)
+	s.NoError(err)
+	s.Equal(1, len(s.context.GetAllTransferFailoverLevels()))
+	err = s.context.DeleteTransferFailoverLevel(failoverID)
+	s.NoError(err)
+	s.Equal(0, len(s.context.GetAllTransferFailoverLevels()))
+}
+
+func (s *contextTestSuite) TestGetAndUpdateTimerFailoverLevels() {
+	timerFailoverLevel := &TimerFailoverLevel{
+		StartTime:    time.Now(),
+		MinLevel:     time.Now().Add(-time.Hour * 1),
+		CurrentLevel: time.Now().Add(time.Hour * 2),
+		MaxLevel:     time.Now().Add(time.Hour * 4),
+		DomainIDs:    nil,
+	}
+	failoverID := uuid.New()
+
+	err := s.context.UpdateTimerFailoverLevel(failoverID, *timerFailoverLevel)
+	s.NoError(err)
+	s.Equal(1, len(s.context.GetAllTimerFailoverLevels()))
+	err = s.context.DeleteTimerFailoverLevel(failoverID)
+	s.NoError(err)
+	s.Equal(0, len(s.context.GetAllTimerFailoverLevels()))
 }
