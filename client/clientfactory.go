@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
+	"github.com/uber/cadence/client/wrappers/metered"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
@@ -125,7 +126,7 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 		client = history.NewErrorInjectionClient(client, errorRate, cf.logger)
 	}
 	if cf.metricsClient != nil {
-		client = history.NewMetricClient(client, cf.metricsClient)
+		client = metered.NewHistoryClient(client, cf.metricsClient)
 	}
 	return client, nil
 }
@@ -158,7 +159,7 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 		client = matching.NewErrorInjectionClient(client, errorRate, cf.logger)
 	}
 	if cf.metricsClient != nil {
-		client = matching.NewMetricClient(client, cf.metricsClient)
+		client = metered.NewMatchingClient(client, cf.metricsClient)
 	}
 	return client, nil
 
@@ -181,7 +182,7 @@ func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndConfig(
 		client = admin.NewErrorInjectionClient(client, errorRate, cf.logger)
 	}
 	if cf.metricsClient != nil {
-		client = admin.NewMetricClient(client, cf.metricsClient)
+		client = metered.NewAdminClient(client, cf.metricsClient)
 	}
 	return client, nil
 }
@@ -208,7 +209,7 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndConfig(
 		client = frontend.NewErrorInjectionClient(client, errorRate, cf.logger)
 	}
 	if cf.metricsClient != nil {
-		client = frontend.NewMetricClient(client, cf.metricsClient)
+		client = metered.NewFrontendClient(client, cf.metricsClient)
 	}
 	return client, nil
 }

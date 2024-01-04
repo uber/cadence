@@ -394,6 +394,11 @@ const (
 	HistoryClientRespondCrossClusterTasksCompletedScope
 	// HistoryClientGetFailoverInfoScope tracks RPC calls to history service
 	HistoryClientGetFailoverInfoScope
+	// HistoryClientGetDLQReplicationMessagesScope tracks RPC calls to history service
+	HistoryClientGetDLQReplicationMessagesScope
+	// HistoryClientGetReplicationMessagesScope tracks RPC calls to history service
+	HistoryClientGetReplicationMessagesScope
+
 	// MatchingClientPollForDecisionTaskScope tracks RPC calls to matching service
 	MatchingClientPollForDecisionTaskScope
 	// MatchingClientPollForActivityTaskScope tracks RPC calls to matching service
@@ -480,6 +485,8 @@ const (
 	FrontendClientSignalWorkflowExecutionScope
 	// FrontendClientStartWorkflowExecutionScope tracks RPC calls to frontend service
 	FrontendClientStartWorkflowExecutionScope
+	// FrontendClientRestartWorkflowExecutionScope tracks RPC calls to frontend service
+	FrontendClientRestartWorkflowExecutionScope
 	// FrontendClientTerminateWorkflowExecutionScope tracks RPC calls to frontend service
 	FrontendClientTerminateWorkflowExecutionScope
 	// FrontendClientUpdateDomainScope tracks RPC calls to frontend service
@@ -506,6 +513,7 @@ const (
 	FrontendClientListTaskListPartitionsScope
 	// FrontendClientGetTaskListsByDomainScope tracks RPC calls to frontend service
 	FrontendClientGetTaskListsByDomainScope
+
 	// AdminClientAddSearchAttributeScope tracks RPC calls to admin service
 	AdminClientAddSearchAttributeScope
 	// AdminClientCloseShardScope tracks RPC calls to admin service
@@ -558,6 +566,21 @@ const (
 	AdminClientGetDomainIsolationGroupsScope
 	// AdminClientUpdateDomainIsolationGroupsScope is a request to update the domains isolation-groups
 	AdminClientUpdateDomainIsolationGroupsScope
+	// AdminClientDeleteWorkflowScope is the metric scope for admin.DeleteWorkflow
+	AdminClientDeleteWorkflowScope
+	// AdminClientMaintainCorruptWorkflowScope is the metric scope for admin.MaintainCorruptWorkflow
+	AdminClientMaintainCorruptWorkflowScope
+	// AdminClientGetReplicationTasksScope is the metric scope for admin.GetReplicationTasks
+	AdminClientGetReplicationTasksScope
+	// AdminClientReapplyEventsScope is the metric scope for admin.ReapplyEvents
+	AdminClientReapplyEventsScope
+	// AdminClientGetDLQReplicationMessagesScope is the metric scope for admin.GetDLQReplicationMessages
+	AdminClientGetDLQReplicationMessagesScope
+	// AdminClientGetDomainReplicationMessagesScope is the metric scope for admin.GetDomainReplicationMessages
+	AdminClientGetDomainReplicationMessagesScope
+	// AdminClientGetReplicationMessagesScope is the metric scope for admin.GetReplicationMessages
+	AdminClientGetReplicationMessagesScope
+
 	// DCRedirectionDeprecateDomainScope tracks RPC calls for dc redirection
 	DCRedirectionDeprecateDomainScope
 	// DCRedirectionDescribeDomainScope tracks RPC calls for dc redirection
@@ -852,8 +875,6 @@ const (
 	AdminListDynamicConfigScope
 	// AdminDeleteWorkflowScope is the metric scope for admin.DeleteWorkflow
 	AdminDeleteWorkflowScope
-	// MaintainCorruptWorkflowScope is the metric scope for admin.MaintainCorruptWorkflow
-	MaintainCorruptWorkflowScope
 	// GetGlobalIsolationGroups is the scope for getting global isolation groups
 	GetGlobalIsolationGroups
 	// UpdateGlobalIsolationGroups is the scope for getting global isolation groups
@@ -1405,49 +1426,52 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 
 		ClusterMetadataArchivalConfigScope: {operation: "ArchivalConfig"},
 
-		HistoryClientStartWorkflowExecutionScope:              {operation: "HistoryClientStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientDescribeHistoryHostScope:                 {operation: "HistoryClientDescribeHistoryHost", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientRemoveTaskScope:                          {operation: "HistoryClientRemoveTask", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientCloseShardScope:                          {operation: "HistoryClientCloseShard", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientResetQueueScope:                          {operation: "HistoryClientResetQueue", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientDescribeQueueScope:                       {operation: "HistoryClientDescribeQueue", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientRecordActivityTaskHeartbeatScope:         {operation: "HistoryClientRecordActivityTaskHeartbeat", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientRespondDecisionTaskCompletedScope:        {operation: "HistoryClientRespondDecisionTaskCompleted", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientRespondDecisionTaskFailedScope:           {operation: "HistoryClientRespondDecisionTaskFailed", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientRespondActivityTaskCompletedScope:        {operation: "HistoryClientRespondActivityTaskCompleted", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientRespondActivityTaskFailedScope:           {operation: "HistoryClientRespondActivityTaskFailed", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientRespondActivityTaskCanceledScope:         {operation: "HistoryClientRespondActivityTaskCanceled", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientDescribeMutableStateScope:                {operation: "HistoryClientDescribeMutableState", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientGetMutableStateScope:                     {operation: "HistoryClientGetMutableState", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientPollMutableStateScope:                    {operation: "HistoryClientPollMutableState", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientResetStickyTaskListScope:                 {operation: "HistoryClientResetStickyTaskListScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientDescribeWorkflowExecutionScope:           {operation: "HistoryClientDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientRecordDecisionTaskStartedScope:           {operation: "HistoryClientRecordDecisionTaskStarted", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientRecordActivityTaskStartedScope:           {operation: "HistoryClientRecordActivityTaskStarted", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientRequestCancelWorkflowExecutionScope:      {operation: "HistoryClientRequestCancelWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientSignalWorkflowExecutionScope:             {operation: "HistoryClientSignalWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientSignalWithStartWorkflowExecutionScope:    {operation: "HistoryClientSignalWithStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientRemoveSignalMutableStateScope:            {operation: "HistoryClientRemoveSignalMutableStateScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientTerminateWorkflowExecutionScope:          {operation: "HistoryClientTerminateWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientResetWorkflowExecutionScope:              {operation: "HistoryClientResetWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientScheduleDecisionTaskScope:                {operation: "HistoryClientScheduleDecisionTask", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientRecordChildExecutionCompletedScope:       {operation: "HistoryClientRecordChildExecutionCompleted", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientReplicateEventsV2Scope:                   {operation: "HistoryClientReplicateEventsV2", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientSyncShardStatusScope:                     {operation: "HistoryClientSyncShardStatusScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientSyncActivityScope:                        {operation: "HistoryClientSyncActivityScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientGetReplicationTasksScope:                 {operation: "HistoryClientGetReplicationTasksScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientGetDLQReplicationTasksScope:              {operation: "HistoryClientGetDLQReplicationTasksScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientQueryWorkflowScope:                       {operation: "HistoryClientQueryWorkflowScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientReapplyEventsScope:                       {operation: "HistoryClientReapplyEventsScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientCountDLQMessagesScope:                    {operation: "HistoryClientCountDLQMessagesScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientReadDLQMessagesScope:                     {operation: "HistoryClientReadDLQMessagesScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientPurgeDLQMessagesScope:                    {operation: "HistoryClientPurgeDLQMessagesScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientMergeDLQMessagesScope:                    {operation: "HistoryClientMergeDLQMessagesScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientRefreshWorkflowTasksScope:                {operation: "HistoryClientRefreshWorkflowTasksScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientNotifyFailoverMarkersScope:               {operation: "HistoryClientNotifyFailoverMarkersScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientGetCrossClusterTasksScope:                {operation: "HistoryClientGetCrossClusterTasks", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientRespondCrossClusterTasksCompletedScope:   {operation: "HistoryClientRespondCrossClusterTasksCompleted", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
-		HistoryClientGetFailoverInfoScope:                     {operation: "HistoryClientGetFailoverInfo", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientStartWorkflowExecutionScope:            {operation: "HistoryClientStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientDescribeHistoryHostScope:               {operation: "HistoryClientDescribeHistoryHost", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRemoveTaskScope:                        {operation: "HistoryClientRemoveTask", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientCloseShardScope:                        {operation: "HistoryClientCloseShard", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientResetQueueScope:                        {operation: "HistoryClientResetQueue", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientDescribeQueueScope:                     {operation: "HistoryClientDescribeQueue", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRecordActivityTaskHeartbeatScope:       {operation: "HistoryClientRecordActivityTaskHeartbeat", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRespondDecisionTaskCompletedScope:      {operation: "HistoryClientRespondDecisionTaskCompleted", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRespondDecisionTaskFailedScope:         {operation: "HistoryClientRespondDecisionTaskFailed", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRespondActivityTaskCompletedScope:      {operation: "HistoryClientRespondActivityTaskCompleted", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRespondActivityTaskFailedScope:         {operation: "HistoryClientRespondActivityTaskFailed", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRespondActivityTaskCanceledScope:       {operation: "HistoryClientRespondActivityTaskCanceled", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientDescribeMutableStateScope:              {operation: "HistoryClientDescribeMutableState", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientGetMutableStateScope:                   {operation: "HistoryClientGetMutableState", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientPollMutableStateScope:                  {operation: "HistoryClientPollMutableState", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientResetStickyTaskListScope:               {operation: "HistoryClientResetStickyTaskList", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientDescribeWorkflowExecutionScope:         {operation: "HistoryClientDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRecordDecisionTaskStartedScope:         {operation: "HistoryClientRecordDecisionTaskStarted", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRecordActivityTaskStartedScope:         {operation: "HistoryClientRecordActivityTaskStarted", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRequestCancelWorkflowExecutionScope:    {operation: "HistoryClientRequestCancelWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientSignalWorkflowExecutionScope:           {operation: "HistoryClientSignalWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientSignalWithStartWorkflowExecutionScope:  {operation: "HistoryClientSignalWithStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRemoveSignalMutableStateScope:          {operation: "HistoryClientRemoveSignalMutableState", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientTerminateWorkflowExecutionScope:        {operation: "HistoryClientTerminateWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientResetWorkflowExecutionScope:            {operation: "HistoryClientResetWorkflowExecution", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientScheduleDecisionTaskScope:              {operation: "HistoryClientScheduleDecisionTask", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRecordChildExecutionCompletedScope:     {operation: "HistoryClientRecordChildExecutionCompleted", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientReplicateEventsV2Scope:                 {operation: "HistoryClientReplicateEventsV2", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientSyncShardStatusScope:                   {operation: "HistoryClientSyncShardStatus", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientSyncActivityScope:                      {operation: "HistoryClientSyncActivity", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientGetReplicationTasksScope:               {operation: "HistoryClientGetReplicationTasks", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientGetDLQReplicationTasksScope:            {operation: "HistoryClientGetDLQReplicationTasks", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientQueryWorkflowScope:                     {operation: "HistoryClientQueryWorkflow", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientReapplyEventsScope:                     {operation: "HistoryClientReapplyEvents", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientCountDLQMessagesScope:                  {operation: "HistoryClientCountDLQMessages", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientReadDLQMessagesScope:                   {operation: "HistoryClientReadDLQMessages", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientPurgeDLQMessagesScope:                  {operation: "HistoryClientPurgeDLQMessages", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientMergeDLQMessagesScope:                  {operation: "HistoryClientMergeDLQMessages", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRefreshWorkflowTasksScope:              {operation: "HistoryClientRefreshWorkflowTasks", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientNotifyFailoverMarkersScope:             {operation: "HistoryClientNotifyFailoverMarkers", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientGetCrossClusterTasksScope:              {operation: "HistoryClientGetCrossClusterTasks", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRespondCrossClusterTasksCompletedScope: {operation: "HistoryClientRespondCrossClusterTasksCompleted", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientGetFailoverInfoScope:                   {operation: "HistoryClientGetFailoverInfo", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientGetDLQReplicationMessagesScope:         {operation: "HistoryClientGetDLQReplicationMessages", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientGetReplicationMessagesScope:            {operation: "HistoryClientGetReplicationMessages", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+
 		MatchingClientPollForDecisionTaskScope:                {operation: "MatchingClientPollForDecisionTask", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
 		MatchingClientPollForActivityTaskScope:                {operation: "MatchingClientPollForActivityTask", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
 		MatchingClientAddActivityTaskScope:                    {operation: "MatchingClientAddActivityTask", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
@@ -1497,80 +1521,90 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendClientScanWorkflowExecutionsScope:             {operation: "FrontendClientScanWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		FrontendClientCountWorkflowExecutionsScope:            {operation: "FrontendClientCountWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		FrontendClientGetSearchAttributesScope:                {operation: "FrontendClientGetSearchAttributes", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
-		FrontendClientGetReplicationTasksScope:                {operation: "FrontendClientGetReplicationTasksScope", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
-		FrontendClientGetDomainReplicationTasksScope:          {operation: "FrontendClientGetDomainReplicationTasksScope", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
-		FrontendClientGetDLQReplicationTasksScope:             {operation: "FrontendClientGetDLQReplicationTasksScope", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
-		FrontendClientReapplyEventsScope:                      {operation: "FrontendClientReapplyEventsScope", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
-		FrontendClientGetClusterInfoScope:                     {operation: "FrontendClientGetClusterInfoScope", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientGetReplicationTasksScope:                {operation: "FrontendClientGetReplicationTasks", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientGetDomainReplicationTasksScope:          {operation: "FrontendClientGetDomainReplicationTasks", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientGetDLQReplicationTasksScope:             {operation: "FrontendClientGetDLQReplicationTasks", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientReapplyEventsScope:                      {operation: "FrontendClientReapplyEvents", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientGetClusterInfoScope:                     {operation: "FrontendClientGetClusterInfo", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		FrontendClientListTaskListPartitionsScope:             {operation: "FrontendClientListTaskListPartitions", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		FrontendClientGetTaskListsByDomainScope:               {operation: "FrontendClientGetTaskListsByDomain", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
-		AdminClientAddSearchAttributeScope:                    {operation: "AdminClientAddSearchAttribute", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientDescribeHistoryHostScope:                   {operation: "AdminClientDescribeHistoryHost", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientDescribeShardDistributionScope:             {operation: "AdminClientDescribeShardDistribution", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientDescribeWorkflowExecutionScope:             {operation: "AdminClientDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientGetWorkflowExecutionRawHistoryV2Scope:      {operation: "AdminClientGetWorkflowExecutionRawHistoryV2", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientDescribeClusterScope:                       {operation: "AdminClientDescribeCluster", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientRefreshWorkflowTasksScope:                  {operation: "AdminClientRefreshWorkflowTasks", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientResendReplicationTasksScope:                {operation: "AdminClientResendReplicationTasks", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientCloseShardScope:                            {operation: "AdminClientCloseShard", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientRemoveTaskScope:                            {operation: "AdminClientRemoveTask", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientResetQueueScope:                            {operation: "AdminClientResetQueue", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientDescribeQueueScope:                         {operation: "AdminClientDescribeQueue", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientCountDLQMessagesScope:                      {operation: "AdminClientCountDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientReadDLQMessagesScope:                       {operation: "AdminClientReadDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientPurgeDLQMessagesScope:                      {operation: "AdminClientPurgeDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientMergeDLQMessagesScope:                      {operation: "AdminClientMergeDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientGetCrossClusterTasksScope:                  {operation: "AdminClientGetCrossClusterTasks", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientRespondCrossClusterTasksCompletedScope:     {operation: "AdminClientRespondCrossClusterTasksCompleted", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientGetDynamicConfigScope:                      {operation: "AdminClientGetDynamicConfigScope", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientUpdateDynamicConfigScope:                   {operation: "AdminClientUpdateDynamicConfigScope", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientRestoreDynamicConfigScope:                  {operation: "AdminClientRestoreDynamicConfigScope", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientListDynamicConfigScope:                     {operation: "AdminClientListDynamicConfigScope", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientGetGlobalIsolationGroupsScope:              {operation: "AdminClientGetGlobalIsolationGroups", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientUpdateGlobalIsolationGroupsScope:           {operation: "AdminClientUpdateGlobalIsolationGroups", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientGetDomainIsolationGroupsScope:              {operation: "AdminClientGetDomainIsolationGroups", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientUpdateDomainIsolationGroupsScope:           {operation: "AdminClientUpdateDomainIsolationGroups", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		DCRedirectionDeprecateDomainScope:                     {operation: "DCRedirectionDeprecateDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionDescribeDomainScope:                      {operation: "DCRedirectionDescribeDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionDescribeTaskListScope:                    {operation: "DCRedirectionDescribeTaskList", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionDescribeWorkflowExecutionScope:           {operation: "DCRedirectionDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionGetWorkflowExecutionHistoryScope:         {operation: "DCRedirectionGetWorkflowExecutionHistory", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionGetWorkflowExecutionRawHistoryScope:      {operation: "DCRedirectionGetWorkflowExecutionRawHistoryScope", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionPollForWorklfowExecutionRawHistoryScope:  {operation: "DCRedirectionPollForWorklfowExecutionRawHistory", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionListArchivedWorkflowExecutionsScope:      {operation: "DCRedirectionListArchivedWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionListClosedWorkflowExecutionsScope:        {operation: "DCRedirectionListClosedWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionListDomainsScope:                         {operation: "DCRedirectionListDomains", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionListOpenWorkflowExecutionsScope:          {operation: "DCRedirectionListOpenWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionListWorkflowExecutionsScope:              {operation: "DCRedirectionListWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionScanWorkflowExecutionsScope:              {operation: "DCRedirectionScanWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionCountWorkflowExecutionsScope:             {operation: "DCRedirectionCountWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionGetSearchAttributesScope:                 {operation: "DCRedirectionGetSearchAttributes", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionPollForActivityTaskScope:                 {operation: "DCRedirectionPollForActivityTask", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionPollForDecisionTaskScope:                 {operation: "DCRedirectionPollForDecisionTask", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionQueryWorkflowScope:                       {operation: "DCRedirectionQueryWorkflow", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionRecordActivityTaskHeartbeatScope:         {operation: "DCRedirectionRecordActivityTaskHeartbeat", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionRecordActivityTaskHeartbeatByIDScope:     {operation: "DCRedirectionRecordActivityTaskHeartbeatByID", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionRegisterDomainScope:                      {operation: "DCRedirectionRegisterDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionRequestCancelWorkflowExecutionScope:      {operation: "DCRedirectionRequestCancelWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionResetStickyTaskListScope:                 {operation: "DCRedirectionResetStickyTaskList", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionResetWorkflowExecutionScope:              {operation: "DCRedirectionResetWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionRespondActivityTaskCanceledScope:         {operation: "DCRedirectionRespondActivityTaskCanceled", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionRespondActivityTaskCanceledByIDScope:     {operation: "DCRedirectionRespondActivityTaskCanceledByID", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionRespondActivityTaskCompletedScope:        {operation: "DCRedirectionRespondActivityTaskCompleted", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionRespondActivityTaskCompletedByIDScope:    {operation: "DCRedirectionRespondActivityTaskCompletedByID", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionRespondActivityTaskFailedScope:           {operation: "DCRedirectionRespondActivityTaskFailed", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionRespondActivityTaskFailedByIDScope:       {operation: "DCRedirectionRespondActivityTaskFailedByID", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionRespondDecisionTaskCompletedScope:        {operation: "DCRedirectionRespondDecisionTaskCompleted", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionRespondDecisionTaskFailedScope:           {operation: "DCRedirectionRespondDecisionTaskFailed", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionRespondQueryTaskCompletedScope:           {operation: "DCRedirectionRespondQueryTaskCompleted", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionSignalWithStartWorkflowExecutionScope:    {operation: "DCRedirectionSignalWithStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionSignalWorkflowExecutionScope:             {operation: "DCRedirectionSignalWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionStartWorkflowExecutionScope:              {operation: "DCRedirectionStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionTerminateWorkflowExecutionScope:          {operation: "DCRedirectionTerminateWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionUpdateDomainScope:                        {operation: "DCRedirectionUpdateDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionListTaskListPartitionsScope:              {operation: "DCRedirectionListTaskListPartitions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionGetTaskListsByDomainScope:                {operation: "DCRedirectionGetTaskListsByDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
-		DCRedirectionRefreshWorkflowTasksScope:                {operation: "DCRedirectionRefreshWorkflowTasks", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		FrontendClientRestartWorkflowExecutionScope:           {operation: "FrontendClientRestartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+
+		AdminClientGetReplicationTasksScope:               {operation: "AdminClientGetReplicationTasks", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientAddSearchAttributeScope:                {operation: "AdminClientAddSearchAttribute", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientDescribeHistoryHostScope:               {operation: "AdminClientDescribeHistoryHost", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientDescribeShardDistributionScope:         {operation: "AdminClientDescribeShardDistribution", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientDescribeWorkflowExecutionScope:         {operation: "AdminClientDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientGetWorkflowExecutionRawHistoryV2Scope:  {operation: "AdminClientGetWorkflowExecutionRawHistoryV2", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientDescribeClusterScope:                   {operation: "AdminClientDescribeCluster", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientRefreshWorkflowTasksScope:              {operation: "AdminClientRefreshWorkflowTasks", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientResendReplicationTasksScope:            {operation: "AdminClientResendReplicationTasks", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientCloseShardScope:                        {operation: "AdminClientCloseShard", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientRemoveTaskScope:                        {operation: "AdminClientRemoveTask", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientResetQueueScope:                        {operation: "AdminClientResetQueue", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientDescribeQueueScope:                     {operation: "AdminClientDescribeQueue", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientCountDLQMessagesScope:                  {operation: "AdminClientCountDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientReadDLQMessagesScope:                   {operation: "AdminClientReadDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientPurgeDLQMessagesScope:                  {operation: "AdminClientPurgeDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientMergeDLQMessagesScope:                  {operation: "AdminClientMergeDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientGetCrossClusterTasksScope:              {operation: "AdminClientGetCrossClusterTasks", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientRespondCrossClusterTasksCompletedScope: {operation: "AdminClientRespondCrossClusterTasksCompleted", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientGetDynamicConfigScope:                  {operation: "AdminClientGetDynamicConfig", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientUpdateDynamicConfigScope:               {operation: "AdminClientUpdateDynamicConfig", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientRestoreDynamicConfigScope:              {operation: "AdminClientRestoreDynamicConfig", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientListDynamicConfigScope:                 {operation: "AdminClientListDynamicConfigScope", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientGetGlobalIsolationGroupsScope:          {operation: "AdminClientGetGlobalIsolationGroups", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientUpdateGlobalIsolationGroupsScope:       {operation: "AdminClientUpdateGlobalIsolationGroups", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientGetDomainIsolationGroupsScope:          {operation: "AdminClientGetDomainIsolationGroups", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientUpdateDomainIsolationGroupsScope:       {operation: "AdminClientUpdateDomainIsolationGroups", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientDeleteWorkflowScope:                    {operation: "AdminClientDeleteWorkflow", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientMaintainCorruptWorkflowScope:           {operation: "AdminClientMaintainCorruptWorkflow", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientReapplyEventsScope:                     {operation: "AdminClientReapplyEvents", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientGetDLQReplicationMessagesScope:         {operation: "AdminClientGetDLQReplicationMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientGetDomainReplicationMessagesScope:      {operation: "AdminClientGetDomainReplicationMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientGetReplicationMessagesScope:            {operation: "AdminClientGetReplicationMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+
+		DCRedirectionDeprecateDomainScope:                    {operation: "DCRedirectionDeprecateDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionDescribeDomainScope:                     {operation: "DCRedirectionDescribeDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionDescribeTaskListScope:                   {operation: "DCRedirectionDescribeTaskList", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionDescribeWorkflowExecutionScope:          {operation: "DCRedirectionDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionGetWorkflowExecutionHistoryScope:        {operation: "DCRedirectionGetWorkflowExecutionHistory", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionGetWorkflowExecutionRawHistoryScope:     {operation: "DCRedirectionGetWorkflowExecutionRawHistoryScope", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionPollForWorklfowExecutionRawHistoryScope: {operation: "DCRedirectionPollForWorklfowExecutionRawHistory", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionListArchivedWorkflowExecutionsScope:     {operation: "DCRedirectionListArchivedWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionListClosedWorkflowExecutionsScope:       {operation: "DCRedirectionListClosedWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionListDomainsScope:                        {operation: "DCRedirectionListDomains", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionListOpenWorkflowExecutionsScope:         {operation: "DCRedirectionListOpenWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionListWorkflowExecutionsScope:             {operation: "DCRedirectionListWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionScanWorkflowExecutionsScope:             {operation: "DCRedirectionScanWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionCountWorkflowExecutionsScope:            {operation: "DCRedirectionCountWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionGetSearchAttributesScope:                {operation: "DCRedirectionGetSearchAttributes", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionPollForActivityTaskScope:                {operation: "DCRedirectionPollForActivityTask", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionPollForDecisionTaskScope:                {operation: "DCRedirectionPollForDecisionTask", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionQueryWorkflowScope:                      {operation: "DCRedirectionQueryWorkflow", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRecordActivityTaskHeartbeatScope:        {operation: "DCRedirectionRecordActivityTaskHeartbeat", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRecordActivityTaskHeartbeatByIDScope:    {operation: "DCRedirectionRecordActivityTaskHeartbeatByID", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRegisterDomainScope:                     {operation: "DCRedirectionRegisterDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRequestCancelWorkflowExecutionScope:     {operation: "DCRedirectionRequestCancelWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionResetStickyTaskListScope:                {operation: "DCRedirectionResetStickyTaskList", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionResetWorkflowExecutionScope:             {operation: "DCRedirectionResetWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRespondActivityTaskCanceledScope:        {operation: "DCRedirectionRespondActivityTaskCanceled", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRespondActivityTaskCanceledByIDScope:    {operation: "DCRedirectionRespondActivityTaskCanceledByID", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRespondActivityTaskCompletedScope:       {operation: "DCRedirectionRespondActivityTaskCompleted", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRespondActivityTaskCompletedByIDScope:   {operation: "DCRedirectionRespondActivityTaskCompletedByID", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRespondActivityTaskFailedScope:          {operation: "DCRedirectionRespondActivityTaskFailed", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRespondActivityTaskFailedByIDScope:      {operation: "DCRedirectionRespondActivityTaskFailedByID", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRespondDecisionTaskCompletedScope:       {operation: "DCRedirectionRespondDecisionTaskCompleted", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRespondDecisionTaskFailedScope:          {operation: "DCRedirectionRespondDecisionTaskFailed", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRespondQueryTaskCompletedScope:          {operation: "DCRedirectionRespondQueryTaskCompleted", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionSignalWithStartWorkflowExecutionScope:   {operation: "DCRedirectionSignalWithStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionSignalWorkflowExecutionScope:            {operation: "DCRedirectionSignalWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionStartWorkflowExecutionScope:             {operation: "DCRedirectionStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionTerminateWorkflowExecutionScope:         {operation: "DCRedirectionTerminateWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionUpdateDomainScope:                       {operation: "DCRedirectionUpdateDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionListTaskListPartitionsScope:             {operation: "DCRedirectionListTaskListPartitions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionGetTaskListsByDomainScope:               {operation: "DCRedirectionGetTaskListsByDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRefreshWorkflowTasksScope:               {operation: "DCRedirectionRefreshWorkflowTasks", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 
 		MessagingClientPublishScope:      {operation: "MessagingClientPublish"},
 		MessagingClientPublishBatchScope: {operation: "MessagingClientPublishBatch"},
@@ -1669,7 +1703,6 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminRestoreDynamicConfigScope:              {operation: "AdminRestoreDynamicConfig"},
 		AdminListDynamicConfigScope:                 {operation: "AdminListDynamicConfig"},
 		AdminDeleteWorkflowScope:                    {operation: "AdminDeleteWorkflow"},
-		MaintainCorruptWorkflowScope:                {operation: "MaintainCorruptWorkflow"},
 		GetGlobalIsolationGroups:                    {operation: "GetGlobalIsolationGroups"},
 		UpdateGlobalIsolationGroups:                 {operation: "UpdateGlobalIsolationGroups"},
 		GetDomainIsolationGroups:                    {operation: "GetDomainIsolationGroups"},
