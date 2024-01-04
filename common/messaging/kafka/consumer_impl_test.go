@@ -24,7 +24,6 @@ package kafka
 
 import (
 	"context"
-	"sync"
 	"testing"
 
 	"github.com/Shopify/sarama"
@@ -74,6 +73,11 @@ func TestNewConsumer(t *testing.T) {
 		nil, metricsClient, logger)
 	assert.NoError(t, err, "An error was not expected but got %v", err)
 	assert.NotNil(t, consumer, "Expected consumer but got nil")
+
+	err = consumer.Start()
+	assert.NoError(t, err)
+
+	consumer.Stop()
 }
 
 func TestNewConsumerHandlerImpl(t *testing.T) {
@@ -116,23 +120,27 @@ func TestMessageImpl(t *testing.T) {
 	}
 
 	// Ack message that is from a previous session
-	msgImpl.handler.Setup(NewMockConsumerGroupSession(int32(2)))
-	err := msgImpl.Ack()
+	err := msgImpl.handler.Setup(NewMockConsumerGroupSession(int32(2)))
+	assert.NoError(t, err)
+	err = msgImpl.Ack()
 	assert.NoError(t, err)
 
 	// normal case
-	msgImpl.handler.Setup(NewMockConsumerGroupSession(int32(1)))
+	err = msgImpl.handler.Setup(NewMockConsumerGroupSession(int32(1)))
+	assert.NoError(t, err)
 	msgImpl.handler.manager.AddMessage(partition, offset)
 	err = msgImpl.Ack()
 	assert.NoError(t, err)
 
 	// Nack message that is from a previous session
-	msgImpl.handler.Setup(NewMockConsumerGroupSession(int32(2)))
+	err = msgImpl.handler.Setup(NewMockConsumerGroupSession(int32(2)))
+	assert.NoError(t, err)
 	err = msgImpl.Nack()
 	assert.NoError(t, err)
 
 	// normal case
-	msgImpl.handler.Setup(NewMockConsumerGroupSession(int32(1)))
+	err = msgImpl.handler.Setup(NewMockConsumerGroupSession(int32(1)))
+	assert.NoError(t, err)
 	mockProducer.ExpectSendMessageAndSucceed()
 	msgImpl.handler.manager.AddMessage(partition, offset)
 	err = msgImpl.Nack()
@@ -146,9 +154,8 @@ type MockConsumerGroupSession struct {
 	claims       map[string][]int32
 	memberID     string
 	generationID int32
-	offsets      map[string]map[int32]int64 // You can store offsets here to verify MarkOffset calls.
+	offsets      map[string]map[int32]int64
 	commitCalled bool
-	mu           sync.Mutex
 	context      context.Context
 }
 
@@ -175,19 +182,11 @@ func (m *MockConsumerGroupSession) GenerationID() int32 {
 }
 
 func (m *MockConsumerGroupSession) MarkOffset(topic string, partition int32, offset int64, metadata string) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	if m.offsets[topic] == nil {
-		m.offsets[topic] = make(map[int32]int64)
-	}
-	m.offsets[topic][partition] = offset
+	// not needed for testing
 }
 
 func (m *MockConsumerGroupSession) Commit() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.commitCalled = true
+	// not needed for testing
 }
 
 func (m *MockConsumerGroupSession) ResetOffset(topic string, partition int32, offset int64, metadata string) {
