@@ -329,6 +329,14 @@ func (v *MatchingPollForActivityTaskRequest) GetPollRequest() (o *PollForActivit
 	return
 }
 
+// GetTaskList is an internal getter.
+func (v *MatchingPollForActivityTaskRequest) GetTaskList() (o *TaskList) {
+	if v != nil && v.PollRequest != nil {
+		return v.PollRequest.TaskList
+	}
+	return
+}
+
 // GetForwardedFrom is an internal getter (TBD...)
 func (v *MatchingPollForActivityTaskRequest) GetForwardedFrom() (o string) {
 	if v != nil {
@@ -374,6 +382,14 @@ func (v *MatchingPollForDecisionTaskRequest) GetPollerID() (o string) {
 func (v *MatchingPollForDecisionTaskRequest) GetPollRequest() (o *PollForDecisionTaskRequest) {
 	if v != nil && v.PollRequest != nil {
 		return v.PollRequest
+	}
+	return
+}
+
+// GetTaskList is an internal getter.
+func (v *MatchingPollForDecisionTaskRequest) GetTaskList() (o *TaskList) {
+	if v != nil && v.PollRequest != nil {
+		return v.PollRequest.TaskList
 	}
 	return
 }

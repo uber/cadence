@@ -27,16 +27,48 @@ func New{{$Decorator}}(client {{.Interface.Type}}, metricsClient metrics.Client)
 
 {{range $method := .Interface.Methods}}
 func (c *{{$decorator}}) {{$method.Declaration}} {
-    {{$scopeName:=printf "%sClient%sScope" $clientName $method.Name}}
-	c.metricsClient.IncCounter(metrics.{{$scopeName}}, metrics.CadenceClientRequests)
+    {{- $scopeName:=printf "metrics.%sClient%sScope" $clientName $method.Name }}
+	c.metricsClient.IncCounter({{$scopeName}}, metrics.CadenceClientRequests)
 
-	sw := c.metricsClient.StartTimer(metrics.{{$scopeName}}, metrics.CadenceClientLatency)
+    {{- if eq $clientName "Matching" }}
+    c.emitForwardedFromStats({{$scopeName}}, {{(index $method.Params 1).Name}})
+    {{ end }}
+
+	sw := c.metricsClient.StartTimer({{$scopeName}}, metrics.CadenceClientLatency)
 	{{$method.ResultsNames}} = c.client.{{$method.Call}}
 	sw.Stop()
 
 	if err != nil {
-		c.metricsClient.IncCounter(metrics.{{$scopeName}}, metrics.CadenceClientFailures)
-	}
+        c.metricsClient.IncCounter({{$scopeName}}, metrics.CadenceClientFailures)
+    }
 	return {{$method.ResultsNames}}
 }
 {{end}}
+
+{{- if eq $clientName "Matching" }}
+type forwardedRequest interface {
+    GetForwardedFrom() string
+    GetTaskList() *types.TaskList
+}
+
+func (c *{{$decorator}}) emitForwardedFromStats(scope int, req any) {
+    p, ok := req.(forwardedRequest)
+    if !ok || p.GetTaskList() == nil {
+        return
+    }
+
+    taskList := p.GetTaskList()
+    forwardedFrom := p.GetForwardedFrom()
+
+    isChildPartition := strings.HasPrefix(taskList.GetName(), common.ReservedTaskListPrefix)
+    if forwardedFrom != ""{
+        c.metricsClient.IncCounter(scope, metrics.MatchingClientForwardedCounter)
+        return
+    }
+
+    if isChildPartition {
+        c.metricsClient.IncCounter(scope, metrics.MatchingClientInvalidTaskListName)
+    }
+    return
+}
+{{ end -}}

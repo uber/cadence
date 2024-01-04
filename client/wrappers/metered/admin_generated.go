@@ -51,7 +51,6 @@ func NewAdminClient(client admin.Client, metricsClient metrics.Client) admin.Cli
 }
 
 func (c *adminClient) AddSearchAttribute(ctx context.Context, ap1 *types.AddSearchAttributeRequest, p1 ...yarpc.CallOption) (err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientAddSearchAttributeScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientAddSearchAttributeScope, metrics.CadenceClientLatency)
@@ -65,7 +64,6 @@ func (c *adminClient) AddSearchAttribute(ctx context.Context, ap1 *types.AddSear
 }
 
 func (c *adminClient) CloseShard(ctx context.Context, cp1 *types.CloseShardRequest, p1 ...yarpc.CallOption) (err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientCloseShardScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientCloseShardScope, metrics.CadenceClientLatency)
@@ -79,7 +77,6 @@ func (c *adminClient) CloseShard(ctx context.Context, cp1 *types.CloseShardReque
 }
 
 func (c *adminClient) CountDLQMessages(ctx context.Context, cp1 *types.CountDLQMessagesRequest, p1 ...yarpc.CallOption) (cp2 *types.CountDLQMessagesResponse, err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientCountDLQMessagesScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientCountDLQMessagesScope, metrics.CadenceClientLatency)
@@ -93,7 +90,6 @@ func (c *adminClient) CountDLQMessages(ctx context.Context, cp1 *types.CountDLQM
 }
 
 func (c *adminClient) DeleteWorkflow(ctx context.Context, ap1 *types.AdminDeleteWorkflowRequest, p1 ...yarpc.CallOption) (ap2 *types.AdminDeleteWorkflowResponse, err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientDeleteWorkflowScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientDeleteWorkflowScope, metrics.CadenceClientLatency)
@@ -107,7 +103,6 @@ func (c *adminClient) DeleteWorkflow(ctx context.Context, ap1 *types.AdminDelete
 }
 
 func (c *adminClient) DescribeCluster(ctx context.Context, p1 ...yarpc.CallOption) (dp1 *types.DescribeClusterResponse, err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientDescribeClusterScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientDescribeClusterScope, metrics.CadenceClientLatency)
@@ -121,7 +116,6 @@ func (c *adminClient) DescribeCluster(ctx context.Context, p1 ...yarpc.CallOptio
 }
 
 func (c *adminClient) DescribeHistoryHost(ctx context.Context, dp1 *types.DescribeHistoryHostRequest, p1 ...yarpc.CallOption) (dp2 *types.DescribeHistoryHostResponse, err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientDescribeHistoryHostScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientDescribeHistoryHostScope, metrics.CadenceClientLatency)
@@ -135,7 +129,6 @@ func (c *adminClient) DescribeHistoryHost(ctx context.Context, dp1 *types.Descri
 }
 
 func (c *adminClient) DescribeQueue(ctx context.Context, dp1 *types.DescribeQueueRequest, p1 ...yarpc.CallOption) (dp2 *types.DescribeQueueResponse, err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientDescribeQueueScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientDescribeQueueScope, metrics.CadenceClientLatency)
@@ -149,7 +142,6 @@ func (c *adminClient) DescribeQueue(ctx context.Context, dp1 *types.DescribeQueu
 }
 
 func (c *adminClient) DescribeShardDistribution(ctx context.Context, dp1 *types.DescribeShardDistributionRequest, p1 ...yarpc.CallOption) (dp2 *types.DescribeShardDistributionResponse, err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientDescribeShardDistributionScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientDescribeShardDistributionScope, metrics.CadenceClientLatency)
@@ -163,7 +155,6 @@ func (c *adminClient) DescribeShardDistribution(ctx context.Context, dp1 *types.
 }
 
 func (c *adminClient) DescribeWorkflowExecution(ctx context.Context, ap1 *types.AdminDescribeWorkflowExecutionRequest, p1 ...yarpc.CallOption) (ap2 *types.AdminDescribeWorkflowExecutionResponse, err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientDescribeWorkflowExecutionScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientDescribeWorkflowExecutionScope, metrics.CadenceClientLatency)
@@ -177,7 +168,6 @@ func (c *adminClient) DescribeWorkflowExecution(ctx context.Context, ap1 *types.
 }
 
 func (c *adminClient) GetCrossClusterTasks(ctx context.Context, gp1 *types.GetCrossClusterTasksRequest, p1 ...yarpc.CallOption) (gp2 *types.GetCrossClusterTasksResponse, err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientGetCrossClusterTasksScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientGetCrossClusterTasksScope, metrics.CadenceClientLatency)
@@ -191,7 +181,6 @@ func (c *adminClient) GetCrossClusterTasks(ctx context.Context, gp1 *types.GetCr
 }
 
 func (c *adminClient) GetDLQReplicationMessages(ctx context.Context, gp1 *types.GetDLQReplicationMessagesRequest, p1 ...yarpc.CallOption) (gp2 *types.GetDLQReplicationMessagesResponse, err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientGetDLQReplicationMessagesScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientGetDLQReplicationMessagesScope, metrics.CadenceClientLatency)
@@ -205,7 +194,6 @@ func (c *adminClient) GetDLQReplicationMessages(ctx context.Context, gp1 *types.
 }
 
 func (c *adminClient) GetDomainIsolationGroups(ctx context.Context, request *types.GetDomainIsolationGroupsRequest, opts ...yarpc.CallOption) (gp1 *types.GetDomainIsolationGroupsResponse, err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientGetDomainIsolationGroupsScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientGetDomainIsolationGroupsScope, metrics.CadenceClientLatency)
@@ -219,7 +207,6 @@ func (c *adminClient) GetDomainIsolationGroups(ctx context.Context, request *typ
 }
 
 func (c *adminClient) GetDomainReplicationMessages(ctx context.Context, gp1 *types.GetDomainReplicationMessagesRequest, p1 ...yarpc.CallOption) (gp2 *types.GetDomainReplicationMessagesResponse, err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientGetDomainReplicationMessagesScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientGetDomainReplicationMessagesScope, metrics.CadenceClientLatency)
@@ -233,7 +220,6 @@ func (c *adminClient) GetDomainReplicationMessages(ctx context.Context, gp1 *typ
 }
 
 func (c *adminClient) GetDynamicConfig(ctx context.Context, gp1 *types.GetDynamicConfigRequest, p1 ...yarpc.CallOption) (gp2 *types.GetDynamicConfigResponse, err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientGetDynamicConfigScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientGetDynamicConfigScope, metrics.CadenceClientLatency)
@@ -247,7 +233,6 @@ func (c *adminClient) GetDynamicConfig(ctx context.Context, gp1 *types.GetDynami
 }
 
 func (c *adminClient) GetGlobalIsolationGroups(ctx context.Context, request *types.GetGlobalIsolationGroupsRequest, opts ...yarpc.CallOption) (gp1 *types.GetGlobalIsolationGroupsResponse, err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientGetGlobalIsolationGroupsScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientGetGlobalIsolationGroupsScope, metrics.CadenceClientLatency)
@@ -261,7 +246,6 @@ func (c *adminClient) GetGlobalIsolationGroups(ctx context.Context, request *typ
 }
 
 func (c *adminClient) GetReplicationMessages(ctx context.Context, gp1 *types.GetReplicationMessagesRequest, p1 ...yarpc.CallOption) (gp2 *types.GetReplicationMessagesResponse, err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientGetReplicationMessagesScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientGetReplicationMessagesScope, metrics.CadenceClientLatency)
@@ -275,7 +259,6 @@ func (c *adminClient) GetReplicationMessages(ctx context.Context, gp1 *types.Get
 }
 
 func (c *adminClient) GetWorkflowExecutionRawHistoryV2(ctx context.Context, gp1 *types.GetWorkflowExecutionRawHistoryV2Request, p1 ...yarpc.CallOption) (gp2 *types.GetWorkflowExecutionRawHistoryV2Response, err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientGetWorkflowExecutionRawHistoryV2Scope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientGetWorkflowExecutionRawHistoryV2Scope, metrics.CadenceClientLatency)
@@ -289,7 +272,6 @@ func (c *adminClient) GetWorkflowExecutionRawHistoryV2(ctx context.Context, gp1 
 }
 
 func (c *adminClient) ListDynamicConfig(ctx context.Context, lp1 *types.ListDynamicConfigRequest, p1 ...yarpc.CallOption) (lp2 *types.ListDynamicConfigResponse, err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientListDynamicConfigScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientListDynamicConfigScope, metrics.CadenceClientLatency)
@@ -303,7 +285,6 @@ func (c *adminClient) ListDynamicConfig(ctx context.Context, lp1 *types.ListDyna
 }
 
 func (c *adminClient) MaintainCorruptWorkflow(ctx context.Context, ap1 *types.AdminMaintainWorkflowRequest, p1 ...yarpc.CallOption) (ap2 *types.AdminMaintainWorkflowResponse, err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientMaintainCorruptWorkflowScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientMaintainCorruptWorkflowScope, metrics.CadenceClientLatency)
@@ -317,7 +298,6 @@ func (c *adminClient) MaintainCorruptWorkflow(ctx context.Context, ap1 *types.Ad
 }
 
 func (c *adminClient) MergeDLQMessages(ctx context.Context, mp1 *types.MergeDLQMessagesRequest, p1 ...yarpc.CallOption) (mp2 *types.MergeDLQMessagesResponse, err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientMergeDLQMessagesScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientMergeDLQMessagesScope, metrics.CadenceClientLatency)
@@ -331,7 +311,6 @@ func (c *adminClient) MergeDLQMessages(ctx context.Context, mp1 *types.MergeDLQM
 }
 
 func (c *adminClient) PurgeDLQMessages(ctx context.Context, pp1 *types.PurgeDLQMessagesRequest, p1 ...yarpc.CallOption) (err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientPurgeDLQMessagesScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientPurgeDLQMessagesScope, metrics.CadenceClientLatency)
@@ -345,7 +324,6 @@ func (c *adminClient) PurgeDLQMessages(ctx context.Context, pp1 *types.PurgeDLQM
 }
 
 func (c *adminClient) ReadDLQMessages(ctx context.Context, rp1 *types.ReadDLQMessagesRequest, p1 ...yarpc.CallOption) (rp2 *types.ReadDLQMessagesResponse, err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientReadDLQMessagesScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientReadDLQMessagesScope, metrics.CadenceClientLatency)
@@ -359,7 +337,6 @@ func (c *adminClient) ReadDLQMessages(ctx context.Context, rp1 *types.ReadDLQMes
 }
 
 func (c *adminClient) ReapplyEvents(ctx context.Context, rp1 *types.ReapplyEventsRequest, p1 ...yarpc.CallOption) (err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientReapplyEventsScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientReapplyEventsScope, metrics.CadenceClientLatency)
@@ -373,7 +350,6 @@ func (c *adminClient) ReapplyEvents(ctx context.Context, rp1 *types.ReapplyEvent
 }
 
 func (c *adminClient) RefreshWorkflowTasks(ctx context.Context, rp1 *types.RefreshWorkflowTasksRequest, p1 ...yarpc.CallOption) (err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientRefreshWorkflowTasksScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientRefreshWorkflowTasksScope, metrics.CadenceClientLatency)
@@ -387,7 +363,6 @@ func (c *adminClient) RefreshWorkflowTasks(ctx context.Context, rp1 *types.Refre
 }
 
 func (c *adminClient) RemoveTask(ctx context.Context, rp1 *types.RemoveTaskRequest, p1 ...yarpc.CallOption) (err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientRemoveTaskScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientRemoveTaskScope, metrics.CadenceClientLatency)
@@ -401,7 +376,6 @@ func (c *adminClient) RemoveTask(ctx context.Context, rp1 *types.RemoveTaskReque
 }
 
 func (c *adminClient) ResendReplicationTasks(ctx context.Context, rp1 *types.ResendReplicationTasksRequest, p1 ...yarpc.CallOption) (err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientResendReplicationTasksScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientResendReplicationTasksScope, metrics.CadenceClientLatency)
@@ -415,7 +389,6 @@ func (c *adminClient) ResendReplicationTasks(ctx context.Context, rp1 *types.Res
 }
 
 func (c *adminClient) ResetQueue(ctx context.Context, rp1 *types.ResetQueueRequest, p1 ...yarpc.CallOption) (err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientResetQueueScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientResetQueueScope, metrics.CadenceClientLatency)
@@ -429,7 +402,6 @@ func (c *adminClient) ResetQueue(ctx context.Context, rp1 *types.ResetQueueReque
 }
 
 func (c *adminClient) RespondCrossClusterTasksCompleted(ctx context.Context, rp1 *types.RespondCrossClusterTasksCompletedRequest, p1 ...yarpc.CallOption) (rp2 *types.RespondCrossClusterTasksCompletedResponse, err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientRespondCrossClusterTasksCompletedScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientRespondCrossClusterTasksCompletedScope, metrics.CadenceClientLatency)
@@ -443,7 +415,6 @@ func (c *adminClient) RespondCrossClusterTasksCompleted(ctx context.Context, rp1
 }
 
 func (c *adminClient) RestoreDynamicConfig(ctx context.Context, rp1 *types.RestoreDynamicConfigRequest, p1 ...yarpc.CallOption) (err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientRestoreDynamicConfigScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientRestoreDynamicConfigScope, metrics.CadenceClientLatency)
@@ -457,7 +428,6 @@ func (c *adminClient) RestoreDynamicConfig(ctx context.Context, rp1 *types.Resto
 }
 
 func (c *adminClient) UpdateDomainIsolationGroups(ctx context.Context, request *types.UpdateDomainIsolationGroupsRequest, opts ...yarpc.CallOption) (up1 *types.UpdateDomainIsolationGroupsResponse, err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientUpdateDomainIsolationGroupsScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientUpdateDomainIsolationGroupsScope, metrics.CadenceClientLatency)
@@ -471,7 +441,6 @@ func (c *adminClient) UpdateDomainIsolationGroups(ctx context.Context, request *
 }
 
 func (c *adminClient) UpdateDynamicConfig(ctx context.Context, up1 *types.UpdateDynamicConfigRequest, p1 ...yarpc.CallOption) (err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientUpdateDynamicConfigScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientUpdateDynamicConfigScope, metrics.CadenceClientLatency)
@@ -485,7 +454,6 @@ func (c *adminClient) UpdateDynamicConfig(ctx context.Context, up1 *types.Update
 }
 
 func (c *adminClient) UpdateGlobalIsolationGroups(ctx context.Context, request *types.UpdateGlobalIsolationGroupsRequest, opts ...yarpc.CallOption) (up1 *types.UpdateGlobalIsolationGroupsResponse, err error) {
-
 	c.metricsClient.IncCounter(metrics.AdminClientUpdateGlobalIsolationGroupsScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminClientUpdateGlobalIsolationGroupsScope, metrics.CadenceClientLatency)
