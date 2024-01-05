@@ -34,8 +34,9 @@ import (
 )
 
 type loggerImpl struct {
-	zapLogger *zap.Logger
-	skip      int
+	zapLogger     *zap.Logger
+	skip          int
+	sampleLocalFn func(int) bool
 }
 
 const (
@@ -44,11 +45,11 @@ const (
 	defaultMsgForEmpty = "none"
 )
 
+var defaultSampleFn = func(i int) bool { return rand.Intn(i) == 0 }
+
 // NewNopLogger returns a no-op logger
 func NewNopLogger() log.Logger {
-	return &loggerImpl{
-		zapLogger: zap.NewNop(),
-	}
+	return NewLogger(zap.NewNop())
 }
 
 // NewDevelopment returns a logger at debug level and log into STDERR
@@ -61,11 +62,16 @@ func NewDevelopment() (log.Logger, error) {
 }
 
 // NewLogger returns a new logger
-func NewLogger(zapLogger *zap.Logger) log.Logger {
-	return &loggerImpl{
-		zapLogger: zapLogger,
-		skip:      skipForDefaultLogger,
+func NewLogger(zapLogger *zap.Logger, opts ...Option) log.Logger {
+	impl := &loggerImpl{
+		zapLogger:     zapLogger,
+		skip:          skipForDefaultLogger,
+		sampleLocalFn: defaultSampleFn,
 	}
+	for _, opt := range opts {
+		opt(impl)
+	}
+	return impl
 }
 
 func caller(skip int) string {
@@ -154,13 +160,14 @@ func (lg *loggerImpl) WithTags(tags ...tag.Tag) log.Logger {
 	fields := lg.buildFields(tags)
 	zapLogger := lg.zapLogger.With(fields...)
 	return &loggerImpl{
-		zapLogger: zapLogger,
-		skip:      lg.skip,
+		zapLogger:     zapLogger,
+		skip:          lg.skip,
+		sampleLocalFn: lg.sampleLocalFn,
 	}
 }
 
 func (lg *loggerImpl) SampleInfo(msg string, sampleRate int, tags ...tag.Tag) {
-	if rand.Intn(sampleRate) == 0 {
+	if lg.sampleLocalFn(sampleRate) {
 		msg = setDefaultMsg(msg)
 		fields := lg.buildFieldsWithCallat(tags)
 		lg.zapLogger.Info(msg, fields...)

@@ -24,6 +24,7 @@ import (
 	"sync"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/config"
 	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
@@ -32,12 +33,13 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/elasticsearch"
-	"github.com/uber/cadence/common/persistence/errorinjectors"
 	"github.com/uber/cadence/common/persistence/nosql"
 	pinotVisibility "github.com/uber/cadence/common/persistence/pinot"
-	"github.com/uber/cadence/common/persistence/ratelimited"
 	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/persistence/sql"
+	"github.com/uber/cadence/common/persistence/wrappers/errorinjectors"
+	"github.com/uber/cadence/common/persistence/wrappers/ratelimited"
+	"github.com/uber/cadence/common/persistence/wrappers/sampled"
 	pnt "github.com/uber/cadence/common/pinot"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service"
@@ -399,11 +401,17 @@ func (f *factoryImpl) newDBVisibilityManager(
 		result = ratelimited.NewVisibilityManager(result, ds.ratelimit)
 	}
 	if visibilityConfig.EnableDBVisibilitySampling != nil && visibilityConfig.EnableDBVisibilitySampling() {
-		result = p.NewVisibilitySamplingClient(result, &p.SamplingConfig{
-			VisibilityClosedMaxQPS: visibilityConfig.WriteDBVisibilityClosedMaxQPS,
-			VisibilityListMaxQPS:   visibilityConfig.DBVisibilityListMaxQPS,
-			VisibilityOpenMaxQPS:   visibilityConfig.WriteDBVisibilityOpenMaxQPS,
-		}, f.metricsClient, f.logger)
+		result = sampled.NewVisibilityManager(result, sampled.Params{
+			Config: &sampled.Config{
+				VisibilityClosedMaxQPS: visibilityConfig.WriteDBVisibilityClosedMaxQPS,
+				VisibilityListMaxQPS:   visibilityConfig.DBVisibilityListMaxQPS,
+				VisibilityOpenMaxQPS:   visibilityConfig.WriteDBVisibilityOpenMaxQPS,
+			},
+			MetricClient:           f.metricsClient,
+			Logger:                 f.logger,
+			TimeSource:             clock.NewRealTimeSource(),
+			RateLimiterFactoryFunc: sampled.NewDomainToBucketMap,
+		})
 	}
 	if f.metricsClient != nil {
 		result = p.NewVisibilityPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)

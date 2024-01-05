@@ -33,6 +33,7 @@ import (
 	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
@@ -827,6 +828,75 @@ func (s *timerQueueProcessorBaseSuite) TestProcessBatch_NoNextPage_NoLookAhead()
 	case <-timerQueueProcessBase.timerGate.FireChan():
 		s.Fail("timer gate should not fire")
 	default:
+	}
+}
+
+func (s *timerQueueProcessorBaseSuite) TestTimerProcessorPump_HandleAckLevelUpdate() {
+	now := time.Now()
+	queueLevel := 0
+	ackLevel := newTimerTaskKey(now.Add(50*time.Millisecond), 0)
+	maxLevel := newTimerTaskKey(now.Add(10*time.Second), 0)
+	processingQueueStates := []ProcessingQueueState{
+		NewProcessingQueueState(
+			queueLevel,
+			ackLevel,
+			maxLevel,
+			NewDomainFilter(map[string]struct{}{"testDomain1": {}}, false),
+		),
+	}
+	updateMaxReadLevel := func() task.Key {
+		return newTimerTaskKey(now, 0)
+	}
+
+	timerQueueProcessBase := s.newTestTimerQueueProcessorBase(processingQueueStates, updateMaxReadLevel, nil, nil, nil)
+	timerQueueProcessBase.options.UpdateAckInterval = dynamicconfig.GetDurationPropertyFn(1 * time.Millisecond)
+	updatedCh := make(chan struct{}, 1)
+	timerQueueProcessBase.updateAckLevelFn = func() (bool, task.Key, error) {
+		updatedCh <- struct{}{}
+		return false, nil, nil
+	}
+	timerQueueProcessBase.Start()
+	defer timerQueueProcessBase.Stop()
+
+	select {
+	case <-updatedCh:
+		return
+	case <-time.After(100 * time.Millisecond):
+		s.Fail("Ack level update not called")
+	}
+}
+
+func (s *timerQueueProcessorBaseSuite) TestTimerProcessorPump_SplitQueue() {
+	now := time.Now()
+	queueLevel := 0
+	ackLevel := newTimerTaskKey(now.Add(50*time.Millisecond), 0)
+	maxLevel := newTimerTaskKey(now.Add(10*time.Second), 0)
+	processingQueueStates := []ProcessingQueueState{
+		NewProcessingQueueState(
+			queueLevel,
+			ackLevel,
+			maxLevel,
+			NewDomainFilter(map[string]struct{}{"testDomain1": {}}, false),
+		),
+	}
+	updateMaxReadLevel := func() task.Key {
+		return newTimerTaskKey(now, 0)
+	}
+
+	timerQueueProcessBase := s.newTestTimerQueueProcessorBase(processingQueueStates, updateMaxReadLevel, nil, nil, nil)
+	timerQueueProcessBase.options.SplitQueueInterval = dynamicconfig.GetDurationPropertyFn(1 * time.Millisecond)
+	splittedCh := make(chan struct{}, 1)
+	timerQueueProcessBase.splitProcessingQueueCollectionFn = func(splitPolicy ProcessingQueueSplitPolicy, upsertPollTimeFn func(int, time.Time)) {
+		splittedCh <- struct{}{}
+	}
+	timerQueueProcessBase.Start()
+	defer timerQueueProcessBase.Stop()
+
+	select {
+	case <-splittedCh:
+		return
+	case <-time.After(100 * time.Millisecond):
+		s.Fail("splitProcessingQueueCollectionFn not called")
 	}
 }
 

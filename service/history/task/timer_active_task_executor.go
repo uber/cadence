@@ -203,6 +203,30 @@ Loop:
 			return err
 		}
 		updateMutableState = true
+
+		if t.config.EnableDebugMode && t.config.EnableTimerDebugLogByDomainID(task.DomainID) {
+			t.logger.Info("User timer fired",
+				tag.WorkflowDomainID(task.DomainID),
+				tag.WorkflowID(task.WorkflowID),
+				tag.WorkflowRunID(task.RunID),
+				tag.TaskType(task.TaskType),
+				tag.TaskID(task.TaskID),
+				tag.WorkflowTimerID(timerInfo.TimerID),
+				tag.WorkflowScheduleID(timerInfo.StartedID),
+				tag.WorkflowNextEventID(mutableState.GetNextEventID()),
+			)
+		} else {
+			t.logger.Debug("User timer fired",
+				tag.WorkflowDomainID(task.DomainID),
+				tag.WorkflowID(task.WorkflowID),
+				tag.WorkflowRunID(task.RunID),
+				tag.TaskType(task.TaskType),
+				tag.TaskID(task.TaskID),
+				tag.WorkflowTimerID(timerInfo.TimerID),
+				tag.WorkflowScheduleID(timerInfo.StartedID),
+				tag.WorkflowNextEventID(mutableState.GetNextEventID()),
+			)
+		}
 	}
 
 	if !updateMutableState {

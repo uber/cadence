@@ -113,7 +113,6 @@ var (
 // Returns true if the Wait() call succeeded before the timeout
 // Returns false if the Wait() did not return before the timeout
 func AwaitWaitGroup(wg *sync.WaitGroup, timeout time.Duration) bool {
-
 	doneC := make(chan struct{})
 
 	go func() {
@@ -324,9 +323,10 @@ func IsValidContext(ctx context.Context) error {
 		case <-ch:
 			return ctx.Err()
 		default:
-			return nil
+			// go to the next line
 		}
 	}
+
 	deadline, ok := ctx.Deadline()
 	if ok && time.Until(deadline) < contextExpireThreshold {
 		return context.DeadlineExceeded
@@ -334,25 +334,39 @@ func IsValidContext(ctx context.Context) error {
 	return nil
 }
 
+// emptyCancelFunc wraps an empty func by context.CancelFunc interface
+var emptyCancelFunc = context.CancelFunc(func() {})
+
 // CreateChildContext creates a child context which shorted context timeout
 // from the given parent context
 // tailroom must be in range [0, 1] and
 // (1-tailroom) * parent timeout will be the new child context timeout
+// if tailroom is less 0, tailroom will be considered as 0
+// if tailroom is greater than 1, tailroom wil be considered as 1
 func CreateChildContext(
 	parent context.Context,
 	tailroom float64,
 ) (context.Context, context.CancelFunc) {
 	if parent == nil {
-		return nil, func() {}
+		return nil, emptyCancelFunc
 	}
 	if parent.Err() != nil {
-		return parent, func() {}
+		return parent, emptyCancelFunc
 	}
 
 	now := time.Now()
 	deadline, ok := parent.Deadline()
 	if !ok || deadline.Before(now) {
-		return parent, func() {}
+		return parent, emptyCancelFunc
+	}
+
+	// if tailroom is about or less 0, then return a context with the same deadline as parent
+	if tailroom <= 0 {
+		return context.WithDeadline(parent, deadline)
+	}
+	// if tailroom is about or greater 1, then return a context with deadline of now
+	if tailroom >= 1 {
+		return context.WithDeadline(parent, now)
 	}
 
 	newDeadline := now.Add(time.Duration(math.Ceil(float64(deadline.Sub(now)) * (1.0 - tailroom))))
@@ -361,7 +375,10 @@ func CreateChildContext(
 
 // GenerateRandomString is used for generate test string
 func GenerateRandomString(n int) string {
-	rand.Seed(time.Now().UnixNano())
+	if n <= 0 {
+		return ""
+	}
+
 	letterRunes := []rune("random")
 	b := make([]rune, n)
 	for i := range b {
@@ -638,7 +655,7 @@ func GetSizeOfMapStringToByteArray(input map[string][]byte) int {
 
 // GetSizeOfHistoryEvent returns approximate size in bytes of the history event taking into account byte arrays only now
 func GetSizeOfHistoryEvent(event *types.HistoryEvent) uint64 {
-	if event == nil {
+	if event == nil || event.EventType == nil {
 		return 0
 	}
 
@@ -731,10 +748,7 @@ func GetSizeOfHistoryEvent(event *types.HistoryEvent) uint64 {
 	case types.EventTypeStartChildWorkflowExecutionFailed:
 		res += len(event.StartChildWorkflowExecutionFailedEventAttributes.Control)
 	case types.EventTypeChildWorkflowExecutionStarted:
-		if event.ChildWorkflowExecutionStartedEventAttributes == nil {
-			return 0
-		}
-		if event.ChildWorkflowExecutionStartedEventAttributes.Header != nil {
+		if event.ChildWorkflowExecutionStartedEventAttributes != nil && event.ChildWorkflowExecutionStartedEventAttributes.Header != nil {
 			res += GetSizeOfMapStringToByteArray(event.ChildWorkflowExecutionStartedEventAttributes.Header.Fields)
 		}
 	case types.EventTypeChildWorkflowExecutionCompleted:
@@ -871,9 +885,7 @@ func ConvertIntMapToDynamicConfigMapProperty(
 
 // ConvertDynamicConfigMapPropertyToIntMap convert a map property from dynamic config to a map
 // whose type for both key and value are int
-func ConvertDynamicConfigMapPropertyToIntMap(
-	dcValue map[string]interface{},
-) (map[int]int, error) {
+func ConvertDynamicConfigMapPropertyToIntMap(dcValue map[string]interface{}) (map[int]int, error) {
 	intMap := make(map[int]int)
 	for key, value := range dcValue {
 		intKey, err := strconv.Atoi(strings.TrimSpace(key))

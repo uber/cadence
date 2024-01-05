@@ -176,13 +176,27 @@ func (t *timerQueueProcessor) Stop() {
 		return
 	}
 
+	if !t.shard.GetConfig().QueueProcessorEnableGracefulSyncShutdown() {
+		t.activeQueueProcessor.Stop()
+		for _, standbyQueueProcessor := range t.standbyQueueProcessors {
+			standbyQueueProcessor.Stop()
+		}
+
+		close(t.shutdownChan)
+		common.AwaitWaitGroup(&t.shutdownWG, time.Minute)
+		return
+	}
+
+	// close the shutdown channel first so processor pumps drains tasks
+	// and then stop the processors
+	close(t.shutdownChan)
+	if !common.AwaitWaitGroup(&t.shutdownWG, gracefulShutdownTimeout) {
+		t.logger.Warn("transferQueueProcessor timed out on shut down", tag.LifeCycleStopTimedout)
+	}
 	t.activeQueueProcessor.Stop()
 	for _, standbyQueueProcessor := range t.standbyQueueProcessors {
 		standbyQueueProcessor.Stop()
 	}
-
-	close(t.shutdownChan)
-	common.AwaitWaitGroup(&t.shutdownWG, time.Minute)
 }
 
 func (t *timerQueueProcessor) NotifyNewTask(clusterName string, info *hcommon.NotifyTaskInfo) {
@@ -225,10 +239,16 @@ func (t *timerQueueProcessor) FailoverDomain(domainIDs map[string]struct{}) {
 		}
 	}
 
+	if standbyClusterName != t.currentClusterName {
+		t.logger.Debugf("Timer queue failover will use minLevel: %v from standbyClusterName: %s", minLevel, standbyClusterName)
+	} else {
+		t.logger.Debugf("Timer queue failover will use minLevel: %v from current cluster: %s", minLevel, t.currentClusterName)
+	}
+
 	maxReadLevel := time.Time{}
 	actionResult, err := t.HandleAction(context.Background(), t.currentClusterName, NewGetStateAction())
 	if err != nil {
-		t.logger.Error("Timer Failover Failed", tag.WorkflowDomainIDs(domainIDs), tag.Error(err))
+		t.logger.Error("Timer failover failed while getting queue states", tag.WorkflowDomainIDs(domainIDs), tag.Error(err))
 		if err == errProcessorShutdown {
 			// processor/shard already shutdown, we don't need to create failover queue processor
 			return
@@ -236,12 +256,20 @@ func (t *timerQueueProcessor) FailoverDomain(domainIDs map[string]struct{}) {
 		// other errors should never be returned for GetStateAction
 		panic(fmt.Sprintf("unknown error for GetStateAction: %v", err))
 	}
+
+	var maxReadLevelQueueLevel int
 	for _, queueState := range actionResult.GetStateActionResult.States {
 		queueReadLevel := queueState.ReadLevel().(timerTaskKey).visibilityTimestamp
 		if maxReadLevel.Before(queueReadLevel) {
 			maxReadLevel = queueReadLevel
+			maxReadLevelQueueLevel = queueState.Level()
 		}
 	}
+
+	if !maxReadLevel.IsZero() {
+		t.logger.Debugf("Timer queue failover will use maxReadLevel: %v from queue at level: %v", maxReadLevel, maxReadLevelQueueLevel)
+	}
+
 	// TODO: Below Add call has no effect, understand the underlying intent and fix it.
 	maxReadLevel.Add(1 * time.Millisecond)
 
@@ -318,6 +346,12 @@ func (t *timerQueueProcessor) UnlockTaskProcessing() {
 	t.taskAllocator.Unlock()
 }
 
+func (t *timerQueueProcessor) drain() {
+	if err := t.completeTimer(); err != nil {
+		t.logger.Error("Failed to complete timer task during shutdown", tag.Error(err))
+	}
+}
+
 func (t *timerQueueProcessor) completeTimerLoop() {
 	defer t.shutdownWG.Done()
 
@@ -327,9 +361,7 @@ func (t *timerQueueProcessor) completeTimerLoop() {
 	for {
 		select {
 		case <-t.shutdownChan:
-			if err := t.completeTimer(); err != nil {
-				t.logger.Error("Error complete timer task", tag.Error(err))
-			}
+			t.drain()
 			return
 		case <-completeTimer.C:
 			for attempt := 0; attempt < t.config.TimerProcessorCompleteTimerFailureRetryCount(); attempt++ {
@@ -338,19 +370,23 @@ func (t *timerQueueProcessor) completeTimerLoop() {
 					break
 				}
 
-				t.logger.Error("Error complete timer task", tag.Error(err))
+				t.logger.Error("Failed to complete timer task", tag.Error(err))
 				if err == shard.ErrShardClosed {
-					go t.Stop()
+					if !t.shard.GetConfig().QueueProcessorEnableGracefulSyncShutdown() {
+						go t.Stop()
+						return
+					}
+
+					t.Stop()
 					return
 				}
-				backoff := time.Duration(attempt * 100)
-				time.Sleep(backoff * time.Millisecond)
 
 				select {
 				case <-t.shutdownChan:
-					// break the retry loop if shutdown chan is closed
-					break
-				default:
+					t.drain()
+					return
+				case <-time.After(time.Duration(attempt*100) * time.Millisecond):
+					// do nothing. retry loop will continue
 				}
 			}
 
@@ -389,12 +425,15 @@ func (t *timerQueueProcessor) completeTimer() error {
 	}
 
 	newAckLevelTimestamp := newAckLevel.(timerTaskKey).visibilityTimestamp
-	t.logger.Debug(fmt.Sprintf("Start completing timer task from: %v, to %v", t.ackLevel, newAckLevelTimestamp))
 	if !t.ackLevel.Before(newAckLevelTimestamp) {
+		t.logger.Debugf("Skipping timer task completion because new ack level %v is not before ack level %v", newAckLevelTimestamp, t.ackLevel)
 		return nil
 	}
 
-	t.metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.TaskBatchCompleteCounter)
+	t.logger.Debugf("Start completing timer task from: %v, to %v", t.ackLevel, newAckLevelTimestamp)
+	t.metricsClient.Scope(metrics.TimerQueueProcessorScope).
+		Tagged(metrics.ShardIDTag(t.shard.GetShardID())).
+		IncCounter(metrics.TaskBatchCompleteCounter)
 
 	for {
 		pageSize := t.config.TimerTaskDeleteBatchSize()

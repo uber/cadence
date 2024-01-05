@@ -46,7 +46,6 @@ const (
 
 var (
 	loadQueueTaskThrottleRetryDelay = 5 * time.Second
-
 	persistenceOperationRetryPolicy = common.CreatePersistenceRetryPolicy()
 )
 
@@ -76,6 +75,9 @@ type (
 
 		// for validating if the queue failed to load any tasks
 		validator *transferQueueValidator
+
+		processQueueCollectionsFn func()
+		updateAckLevelFn          func() (bool, task.Key, error)
 	}
 )
 
@@ -113,7 +115,6 @@ func newTransferQueueProcessorBase(
 
 	transferQueueProcessorBase := &transferQueueProcessorBase{
 		processorBase: processorBase,
-
 		taskInitializer: func(taskInfo task.Info) task.Task {
 			return task.NewTransferTask(
 				shard,
@@ -127,23 +128,23 @@ func newTransferQueueProcessorBase(
 				shard.GetConfig().TaskCriticalRetryCount,
 			)
 		},
-
-		notifyCh:  make(chan struct{}, 1),
-		processCh: make(chan struct{}, 1),
-
-		backoffTimer:  make(map[int]*time.Timer),
-		shouldProcess: make(map[int]bool),
-
+		notifyCh:         make(chan struct{}, 1),
+		processCh:        make(chan struct{}, 1),
+		backoffTimer:     make(map[int]*time.Timer),
+		shouldProcess:    make(map[int]bool),
 		lastSplitTime:    time.Time{},
 		lastMaxReadLevel: 0,
 	}
+
+	transferQueueProcessorBase.processQueueCollectionsFn = transferQueueProcessorBase.processQueueCollections
+	transferQueueProcessorBase.updateAckLevelFn = transferQueueProcessorBase.updateAckLevel
 
 	if shard.GetConfig().EnableDebugMode && options.EnableValidator() {
 		transferQueueProcessorBase.validator = newTransferQueueValidator(
 			transferQueueProcessorBase,
 			options.ValidationInterval,
 			logger,
-			metricsClient.Scope(options.MetricScope),
+			processorBase.metricsScope,
 		)
 	}
 
@@ -197,16 +198,14 @@ func (t *transferQueueProcessorBase) Stop() {
 	}
 	t.processingLock.Unlock()
 
-	if success := common.AwaitWaitGroup(&t.shutdownWG, time.Minute); !success {
-		t.logger.Warn("", tag.LifeCycleStopTimedout)
+	if success := common.AwaitWaitGroup(&t.shutdownWG, gracefulShutdownTimeout); !success {
+		t.logger.Warn("transferQueueProcessorBase timed out on shut down", tag.LifeCycleStopTimedout)
 	}
 
 	t.redispatcher.Stop()
 }
 
-func (t *transferQueueProcessorBase) notifyNewTask(
-	info *hcommon.NotifyTaskInfo,
-) {
+func (t *transferQueueProcessorBase) notifyNewTask(info *hcommon.NotifyTaskInfo) {
 	select {
 	case t.notifyCh <- struct{}{}:
 	default:
@@ -295,11 +294,10 @@ func (t *transferQueueProcessorBase) processorPump() {
 	))
 	defer maxPollTimer.Stop()
 
-processorPumpLoop:
 	for {
 		select {
 		case <-t.shutdownCh:
-			break processorPumpLoop
+			return
 		case <-t.notifyCh:
 			// notify all queue collections as they are waiting for the notification when there's
 			// no more task to process. For non-default queue, if we choose to do periodic polling
@@ -313,13 +311,14 @@ processorPumpLoop:
 			))
 		case <-t.processCh:
 			maxRedispatchQueueSize := t.options.MaxRedispatchQueueSize()
-			if t.redispatcher.Size() > maxRedispatchQueueSize {
-				// has too many pending tasks in re-dispatch queue, block loading tasks from persistence
+			if redispathSize := t.redispatcher.Size(); redispathSize > maxRedispatchQueueSize {
+				t.logger.Debugf("Transfer queue has too many pending tasks in re-dispatch queue: %v > maxRedispatchQueueSize: %v, block loading tasks from persistence", redispathSize, maxRedispatchQueueSize)
 				t.redispatcher.Redispatch(maxRedispatchQueueSize)
-				if t.redispatcher.Size() > maxRedispatchQueueSize {
+				if redispathSize := t.redispatcher.Size(); redispathSize > maxRedispatchQueueSize {
 					// if redispatcher still has a large number of tasks
 					// this only happens when system is under very high load
 					// we should backoff here instead of keeping submitting tasks to task processor
+					t.logger.Debugf("Transfer queue still has too many pending tasks in re-dispatch queue: %v > maxRedispatchQueueSize: %v, backing off for %v", redispathSize, maxRedispatchQueueSize, t.options.PollBackoffInterval())
 					time.Sleep(backoff.JitDuration(
 						t.options.PollBackoffInterval(),
 						t.options.PollBackoffIntervalJitterCoefficient(),
@@ -330,15 +329,19 @@ processorPumpLoop:
 				case t.processCh <- struct{}{}:
 				default:
 				}
-				continue processorPumpLoop
+			} else {
+				t.processQueueCollectionsFn()
 			}
-
-			t.processQueueCollections()
 		case <-updateAckTimer.C:
-			processFinished, _, err := t.updateAckLevel()
+			processFinished, _, err := t.updateAckLevelFn()
 			if err == shard.ErrShardClosed || (err == nil && processFinished) {
-				go t.Stop()
-				break processorPumpLoop
+				if !t.options.EnableGracefulSyncShutdown() {
+					go t.Stop()
+					return
+				}
+
+				t.Stop()
+				return
 			}
 			updateAckTimer.Reset(backoff.JitDuration(
 				t.options.UpdateAckInterval(),
@@ -576,6 +579,7 @@ func newTransferQueueProcessorOptions(
 		PollBackoffIntervalJitterCoefficient: config.QueueProcessorPollBackoffIntervalJitterCoefficient,
 		EnableValidator:                      config.TransferProcessorEnableValidator,
 		ValidationInterval:                   config.TransferProcessorValidationInterval,
+		EnableGracefulSyncShutdown:           config.QueueProcessorEnableGracefulSyncShutdown,
 	}
 
 	if isFailover {

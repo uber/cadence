@@ -98,7 +98,7 @@ func (s *attrValidatorSuite) SetupTest() {
 		ActivityMaxScheduleToStartTimeoutForRetry: dynamicconfig.GetDurationPropertyFnFilteredByDomain(
 			time.Duration(s.testActivityMaxScheduleToStartTimeoutForRetryInSeconds) * time.Second,
 		),
-		EnableCrossClusterOperations: dynamicconfig.GetBoolPropertyFnFilteredByDomain(false),
+		EnableCrossClusterOperationsForDomain: dynamicconfig.GetBoolPropertyFnFilteredByDomain(false),
 	}
 	s.validator = newAttrValidator(
 		s.mockDomainCache,
@@ -495,7 +495,7 @@ func (s *attrValidatorSuite) TestValidateCrossDomainCall_GlobalToGlobal_DiffDoma
 	err := s.validator.validateCrossDomainCall(s.testDomainID, s.testTargetDomainID)
 	s.IsType(&types.BadRequestError{}, err)
 
-	s.validator.config.EnableCrossClusterOperations = dynamicconfig.GetBoolPropertyFnFilteredByDomain(true)
+	s.validator.config.EnableCrossClusterOperationsForDomain = dynamicconfig.GetBoolPropertyFnFilteredByDomain(true)
 	err = s.validator.validateCrossDomainCall(s.testDomainID, s.testTargetDomainID)
 	s.Nil(err)
 }

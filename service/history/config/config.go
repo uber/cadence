@@ -118,6 +118,7 @@ type Config struct {
 	QueueProcessorPollBackoffIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
 	QueueProcessorEnablePersistQueueStates             dynamicconfig.BoolPropertyFn
 	QueueProcessorEnableLoadQueueStates                dynamicconfig.BoolPropertyFn
+	QueueProcessorEnableGracefulSyncShutdown           dynamicconfig.BoolPropertyFn
 
 	// TimerQueueProcessor settings
 	TimerTaskBatchSize                                dynamicconfig.IntPropertyFn
@@ -270,6 +271,7 @@ type Config struct {
 	ReplicationTaskFetcherTimerJitterCoefficient       dynamicconfig.FloatPropertyFn
 	ReplicationTaskFetcherErrorRetryWait               dynamicconfig.DurationPropertyFn
 	ReplicationTaskFetcherServiceBusyWait              dynamicconfig.DurationPropertyFn
+	ReplicationTaskFetcherEnableGracefulSyncShutdown   dynamicconfig.BoolPropertyFn
 	ReplicationTaskProcessorErrorRetryWait             dynamicconfig.DurationPropertyFnWithShardIDFilter
 	ReplicationTaskProcessorErrorRetryMaxAttempts      dynamicconfig.IntPropertyFnWithShardIDFilter
 	ReplicationTaskProcessorErrorSecondRetryWait       dynamicconfig.DurationPropertyFnWithShardIDFilter
@@ -291,7 +293,8 @@ type Config struct {
 	EnableConsistentQueryByDomain dynamicconfig.BoolPropertyFnWithDomainFilter
 	MaxBufferedQueryCount         dynamicconfig.IntPropertyFn
 
-	EnableCrossClusterOperations dynamicconfig.BoolPropertyFnWithDomainFilter
+	EnableCrossClusterEngine              dynamicconfig.BoolPropertyFn
+	EnableCrossClusterOperationsForDomain dynamicconfig.BoolPropertyFnWithDomainFilter
 
 	// Data integrity check related config knobs
 	MutableStateChecksumGenProbability    dynamicconfig.IntPropertyFnWithDomainFilter
@@ -314,8 +317,9 @@ type Config struct {
 	ActivityMaxScheduleToStartTimeoutForRetry dynamicconfig.DurationPropertyFnWithDomainFilter
 
 	// Debugging configurations
-	EnableDebugMode             bool // note that this value is initialized once on service start
-	EnableTaskInfoLogByDomainID dynamicconfig.BoolPropertyFnWithDomainIDFilter
+	EnableDebugMode               bool // note that this value is initialized once on service start
+	EnableTaskInfoLogByDomainID   dynamicconfig.BoolPropertyFnWithDomainIDFilter
+	EnableTimerDebugLogByDomainID dynamicconfig.BoolPropertyFnWithDomainIDFilter
 
 	// Hotshard stuff
 	SampleLoggingRate                     dynamicconfig.IntPropertyFn
@@ -405,6 +409,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, s
 		QueueProcessorPollBackoffIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.QueueProcessorPollBackoffIntervalJitterCoefficient),
 		QueueProcessorEnablePersistQueueStates:             dc.GetBoolProperty(dynamicconfig.QueueProcessorEnablePersistQueueStates),
 		QueueProcessorEnableLoadQueueStates:                dc.GetBoolProperty(dynamicconfig.QueueProcessorEnableLoadQueueStates),
+		QueueProcessorEnableGracefulSyncShutdown:           dc.GetBoolProperty(dynamicconfig.QueueProcessorEnableGracefulSyncShutdown),
 
 		TimerTaskBatchSize:                                dc.GetIntProperty(dynamicconfig.TimerTaskBatchSize),
 		TimerTaskDeleteBatchSize:                          dc.GetIntProperty(dynamicconfig.TimerTaskDeleteBatchSize),
@@ -525,6 +530,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, s
 		ReplicationTaskFetcherTimerJitterCoefficient:       dc.GetFloat64Property(dynamicconfig.ReplicationTaskFetcherTimerJitterCoefficient),
 		ReplicationTaskFetcherErrorRetryWait:               dc.GetDurationProperty(dynamicconfig.ReplicationTaskFetcherErrorRetryWait),
 		ReplicationTaskFetcherServiceBusyWait:              dc.GetDurationProperty(dynamicconfig.ReplicationTaskFetcherServiceBusyWait),
+		ReplicationTaskFetcherEnableGracefulSyncShutdown:   dc.GetBoolProperty(dynamicconfig.ReplicationTaskFetcherEnableGracefulSyncShutdown),
 		ReplicationTaskProcessorErrorRetryWait:             dc.GetDurationPropertyFilteredByShardID(dynamicconfig.ReplicationTaskProcessorErrorRetryWait),
 		ReplicationTaskProcessorErrorRetryMaxAttempts:      dc.GetIntPropertyFilteredByShardID(dynamicconfig.ReplicationTaskProcessorErrorRetryMaxAttempts),
 		ReplicationTaskProcessorErrorSecondRetryWait:       dc.GetDurationPropertyFilteredByShardID(dynamicconfig.ReplicationTaskProcessorErrorSecondRetryWait),
@@ -543,7 +549,8 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, s
 
 		EnableConsistentQuery:                 dc.GetBoolProperty(dynamicconfig.EnableConsistentQuery),
 		EnableConsistentQueryByDomain:         dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableConsistentQueryByDomain),
-		EnableCrossClusterOperations:          dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableCrossClusterOperations),
+		EnableCrossClusterEngine:              dc.GetBoolProperty(dynamicconfig.EnableCrossClusterEngine),
+		EnableCrossClusterOperationsForDomain: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableCrossClusterOperationsForDomain),
 		MaxBufferedQueryCount:                 dc.GetIntProperty(dynamicconfig.MaxBufferedQueryCount),
 		MutableStateChecksumGenProbability:    dc.GetIntPropertyFilteredByDomain(dynamicconfig.MutableStateChecksumGenProbability),
 		MutableStateChecksumVerifyProbability: dc.GetIntPropertyFilteredByDomain(dynamicconfig.MutableStateChecksumVerifyProbability),
@@ -560,8 +567,9 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, s
 
 		ActivityMaxScheduleToStartTimeoutForRetry: dc.GetDurationPropertyFilteredByDomain(dynamicconfig.ActivityMaxScheduleToStartTimeoutForRetry),
 
-		EnableDebugMode:             dc.GetBoolProperty(dynamicconfig.EnableDebugMode)(),
-		EnableTaskInfoLogByDomainID: dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.HistoryEnableTaskInfoLogByDomainID),
+		EnableDebugMode:               dc.GetBoolProperty(dynamicconfig.EnableDebugMode)(),
+		EnableTaskInfoLogByDomainID:   dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.HistoryEnableTaskInfoLogByDomainID),
+		EnableTimerDebugLogByDomainID: dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.EnableTimerDebugLogByDomainID),
 
 		SampleLoggingRate:                     dc.GetIntProperty(dynamicconfig.SampleLoggingRate),
 		EnableShardIDMetrics:                  dc.GetBoolProperty(dynamicconfig.EnableShardIDMetrics),
@@ -595,9 +603,22 @@ func NewForTestByShardNumber(shardNumber int) *Config {
 	panicIfErr(inMem.UpdateValue(dynamicconfig.ReplicationTaskProcessorStartWait, time.Nanosecond))
 	panicIfErr(inMem.UpdateValue(dynamicconfig.EnableActivityLocalDispatchByDomain, true))
 	panicIfErr(inMem.UpdateValue(dynamicconfig.MaxActivityCountDispatchByDomain, 0))
-	panicIfErr(inMem.UpdateValue(dynamicconfig.EnableCrossClusterOperations, true))
+	panicIfErr(inMem.UpdateValue(dynamicconfig.EnableCrossClusterOperationsForDomain, true))
 	panicIfErr(inMem.UpdateValue(dynamicconfig.NormalDecisionScheduleToStartMaxAttempts, 3))
 	panicIfErr(inMem.UpdateValue(dynamicconfig.EnablePendingActivityValidation, true))
+	panicIfErr(inMem.UpdateValue(dynamicconfig.QueueProcessorEnableGracefulSyncShutdown, true))
+	panicIfErr(inMem.UpdateValue(dynamicconfig.QueueProcessorSplitMaxLevel, 2))
+	panicIfErr(inMem.UpdateValue(dynamicconfig.QueueProcessorPendingTaskSplitThreshold, map[string]interface{}{
+		"0": 1000,
+		"1": 5000,
+	}))
+	panicIfErr(inMem.UpdateValue(dynamicconfig.QueueProcessorStuckTaskSplitThreshold, map[string]interface{}{
+		"0": 10,
+		"1": 50,
+	}))
+	panicIfErr(inMem.UpdateValue(dynamicconfig.QueueProcessorRandomSplitProbability, 0.5))
+	panicIfErr(inMem.UpdateValue(dynamicconfig.ReplicationTaskFetcherEnableGracefulSyncShutdown, true))
+
 	dc := dynamicconfig.NewCollection(inMem, log.NewNoop())
 	config := New(dc, shardNumber, 1024*1024, config.StoreTypeCassandra, false, "")
 	// reduce the duration of long poll to increase test speed
@@ -608,9 +629,15 @@ func NewForTestByShardNumber(shardNumber int) *Config {
 	config.ReplicationTaskProcessorStartWait = dc.GetDurationPropertyFilteredByShardID(dynamicconfig.ReplicationTaskProcessorStartWait)
 	config.EnableActivityLocalDispatchByDomain = dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableActivityLocalDispatchByDomain)
 	config.MaxActivityCountDispatchByDomain = dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaxActivityCountDispatchByDomain)
-	config.EnableCrossClusterOperations = dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableCrossClusterOperations)
+	config.EnableCrossClusterOperationsForDomain = dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableCrossClusterOperationsForDomain)
 	config.NormalDecisionScheduleToStartMaxAttempts = dc.GetIntPropertyFilteredByDomain(dynamicconfig.NormalDecisionScheduleToStartMaxAttempts)
 	config.PendingActivityValidationEnabled = dc.GetBoolProperty(dynamicconfig.EnablePendingActivityValidation)
+	config.QueueProcessorEnableGracefulSyncShutdown = dc.GetBoolProperty(dynamicconfig.QueueProcessorEnableGracefulSyncShutdown)
+	config.QueueProcessorSplitMaxLevel = dc.GetIntProperty(dynamicconfig.QueueProcessorSplitMaxLevel)
+	config.QueueProcessorPendingTaskSplitThreshold = dc.GetMapProperty(dynamicconfig.QueueProcessorPendingTaskSplitThreshold)
+	config.QueueProcessorStuckTaskSplitThreshold = dc.GetMapProperty(dynamicconfig.QueueProcessorStuckTaskSplitThreshold)
+	config.QueueProcessorRandomSplitProbability = dc.GetFloat64Property(dynamicconfig.QueueProcessorRandomSplitProbability)
+	config.ReplicationTaskFetcherEnableGracefulSyncShutdown = dc.GetBoolProperty(dynamicconfig.ReplicationTaskFetcherEnableGracefulSyncShutdown)
 	return config
 }
 
