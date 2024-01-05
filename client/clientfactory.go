@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
+	"github.com/uber/cadence/client/wrappers/errorinjectors"
 	"github.com/uber/cadence/client/wrappers/metered"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -123,7 +124,7 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 		cf.logger,
 	)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.HistoryErrorInjectionRate)(); errorRate != 0 {
-		client = history.NewErrorInjectionClient(client, errorRate, cf.logger)
+		client = errorinjectors.NewHistoryClient(client, errorRate, cf.logger)
 	}
 	if cf.metricsClient != nil {
 		client = metered.NewHistoryClient(client, cf.metricsClient)
@@ -156,7 +157,7 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 		matching.NewLoadBalancer(domainIDToName, cf.dynConfig),
 	)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.MatchingErrorInjectionRate)(); errorRate != 0 {
-		client = matching.NewErrorInjectionClient(client, errorRate, cf.logger)
+		client = errorinjectors.NewMatchingClient(client, errorRate, cf.logger)
 	}
 	if cf.metricsClient != nil {
 		client = metered.NewMatchingClient(client, cf.metricsClient)
@@ -179,7 +180,7 @@ func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndConfig(
 
 	client = admin.NewClient(timeout, largeTimeout, client)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.AdminErrorInjectionRate)(); errorRate != 0 {
-		client = admin.NewErrorInjectionClient(client, errorRate, cf.logger)
+		client = errorinjectors.NewAdminClient(client, errorRate, cf.logger)
 	}
 	if cf.metricsClient != nil {
 		client = metered.NewAdminClient(client, cf.metricsClient)
@@ -206,7 +207,7 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndConfig(
 
 	client = frontend.NewClient(timeout, longPollTimeout, client)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.FrontendErrorInjectionRate)(); errorRate != 0 {
-		client = frontend.NewErrorInjectionClient(client, errorRate, cf.logger)
+		client = errorinjectors.NewFrontendClient(client, errorRate, cf.logger)
 	}
 	if cf.metricsClient != nil {
 		client = metered.NewFrontendClient(client, cf.metricsClient)
