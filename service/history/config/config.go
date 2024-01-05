@@ -317,8 +317,9 @@ type Config struct {
 	ActivityMaxScheduleToStartTimeoutForRetry dynamicconfig.DurationPropertyFnWithDomainFilter
 
 	// Debugging configurations
-	EnableDebugMode             bool // note that this value is initialized once on service start
-	EnableTaskInfoLogByDomainID dynamicconfig.BoolPropertyFnWithDomainIDFilter
+	EnableDebugMode               bool // note that this value is initialized once on service start
+	EnableTaskInfoLogByDomainID   dynamicconfig.BoolPropertyFnWithDomainIDFilter
+	EnableTimerDebugLogByDomainID dynamicconfig.BoolPropertyFnWithDomainIDFilter
 
 	// Hotshard stuff
 	SampleLoggingRate                     dynamicconfig.IntPropertyFn
@@ -566,8 +567,9 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, s
 
 		ActivityMaxScheduleToStartTimeoutForRetry: dc.GetDurationPropertyFilteredByDomain(dynamicconfig.ActivityMaxScheduleToStartTimeoutForRetry),
 
-		EnableDebugMode:             dc.GetBoolProperty(dynamicconfig.EnableDebugMode)(),
-		EnableTaskInfoLogByDomainID: dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.HistoryEnableTaskInfoLogByDomainID),
+		EnableDebugMode:               dc.GetBoolProperty(dynamicconfig.EnableDebugMode)(),
+		EnableTaskInfoLogByDomainID:   dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.HistoryEnableTaskInfoLogByDomainID),
+		EnableTimerDebugLogByDomainID: dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.EnableTimerDebugLogByDomainID),
 
 		SampleLoggingRate:                     dc.GetIntProperty(dynamicconfig.SampleLoggingRate),
 		EnableShardIDMetrics:                  dc.GetBoolProperty(dynamicconfig.EnableShardIDMetrics),
