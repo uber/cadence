@@ -185,6 +185,59 @@ const (
 	minContextTimeout           = 1 * time.Second
 )
 
+func newContextImpl(
+	resource resource.Resource,
+	shardItem *historyShardsItem,
+	shardID int,
+	rangeID int64,
+	executionManager persistence.ExecutionManager,
+	eventsCache events.Cache,
+	closeCallback func(int, *historyShardsItem),
+	closed int32,
+	config *config.Config,
+	logger log.Logger,
+	throttledLogger log.Logger,
+	engine engine.Engine,
+	RWMutex sync.RWMutex,
+	lastUpdated time.Time,
+	shardInfo *persistence.ShardInfo,
+	transferSequenceNumber int64,
+	maxTransferSequenceNumber int64,
+	transferMaxReadLevel int64,
+	timerMaxReadLevelMap map[string]time.Time,
+	transferFailoverLevels map[string]TransferFailoverLevel,
+	timerFailoverLevels map[string]TimerFailoverLevel,
+	remoteClusterCurrentTime map[string]time.Time,
+	previousShardOwnerWasDifferent bool,
+) *contextImpl {
+	newContext := &contextImpl{
+		Resource:                       resource,
+		shardItem:                      shardItem,
+		shardID:                        shardID,
+		rangeID:                        rangeID,
+		executionManager:               executionManager,
+		eventsCache:                    eventsCache,
+		closeCallback:                  closeCallback,
+		closed:                         closed,
+		config:                         config,
+		logger:                         logger,
+		throttledLogger:                throttledLogger,
+		engine:                         engine,
+		RWMutex:                        RWMutex,
+		lastUpdated:                    lastUpdated,
+		shardInfo:                      shardInfo,
+		transferSequenceNumber:         transferSequenceNumber,
+		maxTransferSequenceNumber:      maxTransferSequenceNumber,
+		transferMaxReadLevel:           transferMaxReadLevel,
+		timerMaxReadLevelMap:           timerMaxReadLevelMap,
+		transferFailoverLevels:         transferFailoverLevels,
+		timerFailoverLevels:            timerFailoverLevels,
+		remoteClusterCurrentTime:       remoteClusterCurrentTime,
+		previousShardOwnerWasDifferent: previousShardOwnerWasDifferent,
+	}
+	return newContext
+}
+
 func (s *contextImpl) GetShardID() int {
 	return s.shardID
 }
