@@ -1919,6 +1919,9 @@ const (
 	// Value type: Bool
 	// Default value: true
 	EnableShardIDMetrics
+
+	EnableTimerDebugLogByDomainID
+
 	// LastBoolKey must be the last one in this const group
 	LastBoolKey
 )
@@ -4123,6 +4126,12 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		KeyName:      "system.enableShardIDMetrics",
 		Description:  "Enable shardId metrics in persistence client",
 		DefaultValue: true,
+	},
+	EnableTimerDebugLogByDomainID: DynamicBool{
+		KeyName:      "history.enableTimerDebugLogByDomainID",
+		Filters:      []Filter{DomainID},
+		Description:  "Enable log for debugging timer task issue by domain",
+		DefaultValue: false,
 	},
 }
 
