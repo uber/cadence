@@ -25,34 +25,57 @@ package taskvalidator
 import (
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
 )
 
-// MockMetricsScope implements the metrics.Scope interface for testing purposes.
-type MockMetricsScope struct{}
-
-func (s *MockMetricsScope) IncCounter(counter int) {}
-
 func TestWorkflowCheckforValidation(t *testing.T) {
-	// Create a mock logger and metrics client
-	logger := log.NewNoop()
-	metricsClient := metrics.NewNoopMetricsClient()
+	testCases := []struct {
+		name         string
+		domainID     string
+		domainStatus int
+		expectError  bool
+	}{
+		{
+			name:         "ActiveDomain",
+			domainID:     "activeDomainID",
+			domainStatus: 0, // Assuming 0 represents an active domain
+			expectError:  false,
+		},
+	}
 
-	// Create an instance of checkerImpl with the mock logger and metrics client
-	checker := NewWfChecker(logger, metricsClient)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
-	// Define test inputs
-	workflowID := "testWorkflowID"
-	domainID := "testDomainID"
-	runID := "testRunID"
-	domainName := "testDomainName"
+			logger := log.NewNoop()
+			metricsClient := metrics.NewNoopMetricsClient()
+			mockDomainCache := cache.NewMockDomainCache(ctrl)
 
-	// Call the method being tested
-	err := checker.WorkflowCheckforValidation(workflowID, domainID, domainName, runID)
+			checker := &checkerImpl{
+				logger:        logger,
+				metricsClient: metricsClient,
+				dc:            mockDomainCache,
+			}
 
-	// Assert that the method returned no error
-	assert.NoError(t, err)
+			// Create a real DomainCacheEntry with the necessary DomainInfo
+			domainInfo := &persistence.DomainInfo{Status: tc.domainStatus}
+			domainEntry := &cache.DomainCacheEntry{Info: domainInfo}
+
+			// Mock GetDomainByID to return the manually created DomainCacheEntry
+			mockDomainCache.EXPECT().GetDomainByID(tc.domainID).Return(domainEntry, nil).AnyTimes()
+
+			err := checker.WorkflowCheckforValidation("testWorkflowID", tc.domainID, "testDomainName", "testRunID")
+			if tc.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
