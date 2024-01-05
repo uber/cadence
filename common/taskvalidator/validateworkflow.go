@@ -56,7 +56,7 @@ func NewWfChecker(logger log.Logger, metrics metrics.Client) Checker {
 // WorkflowCheckforValidation is a dummy implementation of workflow validation.
 func (w *checkerImpl) WorkflowCheckforValidation(workflowID string, domainID string, domainName string, runID string) error {
 	// Emitting just the log to ensure that the workflow is called for now.
-	// TODO: add some validations to check the wf for corruptions.
+	// TODO: Ass tsale workflow check validation.
 	w.logger.Info("WorkflowCheckforValidation",
 		tag.WorkflowID(workflowID),
 		tag.WorkflowRunID(runID),
@@ -64,6 +64,7 @@ func (w *checkerImpl) WorkflowCheckforValidation(workflowID string, domainID str
 		tag.WorkflowDomainName(domainName))
 	// Emit the number of workflows that have come in for the validation. Including the domain tag.
 	// The domain name will be useful when I introduce a flipr switch to turn on validation.
+	// TODO: Add this as a first validation before the stale workflow check. Add a deleteworkflow call if true.
 	err := w.deprecatedDomainCheck(domainID, domainName)
 	if err != nil {
 		return err
