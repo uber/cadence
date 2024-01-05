@@ -168,16 +168,14 @@ func (s *oauthSuite) TestIncorrectPublicKey() {
 	s.cfg.JwtCredentials.PublicKey = "incorrectPublicKey"
 	authorizer, err := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	s.Equal(authorizer, nil)
-	s.EqualError(err, "invalid public key path incorrectPublicKey")
+	s.EqualError(err, "loading RSA public key: invalid public key path incorrectPublicKey")
 }
 
 func (s *oauthSuite) TestIncorrectAlgorithm() {
 	s.cfg.JwtCredentials.Algorithm = "SHA256"
 	authorizer, err := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
-	s.NoError(err)
-	result, err := authorizer.Authorize(s.ctx, &s.att)
-	s.EqualError(err, "jwt: algorithm is not supported")
-	s.Equal(result.Decision, DecisionDeny)
+	s.Equal(authorizer, nil)
+	s.ErrorContains(err, "jwt: algorithm is not supported")
 }
 
 func (s *oauthSuite) TestMaxTTLLargerInToken() {
@@ -185,7 +183,7 @@ func (s *oauthSuite) TestMaxTTLLargerInToken() {
 	authorizer, err := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	s.NoError(err)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
-		return fmt.Sprintf("%v", t[0].Field().Interface) == "TTL in token is larger than MaxTTL allowed"
+		return fmt.Sprintf("%v", t[0].Field().Interface) == "token TTL: 300000000 is larger than MaxTTL allowed: 1"
 	}))
 	result, _ := authorizer.Authorize(s.ctx, &s.att)
 	s.Equal(result.Decision, DecisionDeny)
@@ -201,7 +199,7 @@ func (s *oauthSuite) TestIncorrectToken() {
 	authorizer, err := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	s.NoError(err)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
-		return fmt.Sprintf("%v", t[0].Field().Interface) == "jwt: token format is not valid"
+		return fmt.Sprintf("%v", t[0].Field().Interface) == "parse token: jwt: token format is not valid"
 	}))
 	result, _ := authorizer.Authorize(ctx, &s.att)
 	s.Equal(result.Decision, DecisionDeny)
@@ -232,7 +230,7 @@ func (s *oauthSuite) TestDifferentGroup() {
 	authorizer, err := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	s.NoError(err)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
-		return fmt.Sprintf("%v", t[0].Field().Interface) == "token doesn't have the right permission, jwt groups: [a b c], allowed groups: []"
+		return fmt.Sprintf("%v", t[0].Field().Interface) == "token doesn't have the right permission, jwt groups: [a b c], allowed groups: map[]"
 	}))
 	result, _ := authorizer.Authorize(s.ctx, &s.att)
 	s.Equal(result.Decision, DecisionDeny)
@@ -244,7 +242,7 @@ func (s *oauthSuite) TestIncorrectPermission() {
 	authorizer, err := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	s.NoError(err)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
-		return fmt.Sprintf("%v", t[0].Field().Interface) == "token doesn't have permission for 15 API"
+		return fmt.Sprintf("%v", t[0].Field().Interface) == "permission 15 is not supported"
 	}))
 	result, err := authorizer.Authorize(s.ctx, &s.att)
 	s.NoError(err)
