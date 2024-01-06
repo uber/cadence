@@ -54,7 +54,6 @@ endif
 # note that vars that do not yet exist are empty, so any prerequisites defined below are ineffective here.
 $(BUILD)/lint: $(BUILD)/fmt # lint will fail if fmt fails, so fmt first
 $(BUILD)/proto-lint:
-$(BUILD)/shell-lint:
 $(BUILD)/fmt: $(BUILD)/copyright # formatting must occur only after all other go-file-modifications are done
 $(BUILD)/copyright: $(BUILD)/codegen # must add copyright to generated code, sometimes needs re-formatting
 $(BUILD)/codegen: $(BUILD)/thrift $(BUILD)/protoc
@@ -331,19 +330,13 @@ $(BUILD)/protoc: $(PROTO_FILES) $(STABLE_BIN)/$(PROTOC_VERSION_BIN) $(BIN)/proto
 # ====================================
 
 $(BUILD)/proto-lint: $(PROTO_FILES) $(STABLE_BIN)/$(BUF_VERSION_BIN) | $(BUILD)
-	$Q echo 'buf...'
 	$Q cd $(PROTO_ROOT) && ../$(STABLE_BIN)/$(BUF_VERSION_BIN) lint
 	$Q touch $@
-
-$(BUILD)/shell-lint:
-	$Q # shellcheck is run by a buildkite action, but many have it installed locally
-	$Q echo 'shellcheck...'
-	$Q find . -name '*.sh' | xargs shellcheck -S warning
 
 # note that LINT_SRC is fairly fake as a prerequisite.
 # it's a coarse "you probably don't need to re-lint" filter, nothing more.
 $(BUILD)/lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
-	$Q echo "revive..."
+	$Q echo "lint..."
 	$Q $(BIN)/revive -config revive.toml -exclude './vendor/...' -exclude './.gen/...' -formatter stylish ./...
 	$Q touch $@
 
@@ -395,7 +388,7 @@ endef
 # useful to actually re-run to get output again.
 # reuse the intermediates for simplicity and consistency.
 lint: ## (re)run the linter
-	$(call remake,proto-lint shell-lint lint)
+	$(call remake,proto-lint lint)
 
 # intentionally not re-making, it's a bit slow and it's clear when it's unnecessary
 fmt: $(BUILD)/fmt ## run gofmt / organize imports / etc
