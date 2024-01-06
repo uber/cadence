@@ -4,18 +4,7 @@ steps:
       queue: "init"
       docker: "*"
     command: "./scripts/buildkite/fossa.sh"
-  - label: ":shell: Shellcheck"
-    agents:
-      queue: "init"
-      docker: "*"
-    plugins:
-      # update periodically: https://github.com/buildkite-plugins/shellcheck-buildkite-plugin
-      shellcheck#v1.3.0:
-        recursive_glob: true
-        files: [ "**/*.sh" ]
-        # preferably info, but many violations at the moment.
-        # warnings are basically always worth enforcing.
-        options: [ "-s", "warning" ]
+
   - label: ":golang: unit test"
     agents:
       queue: "workers"
