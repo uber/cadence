@@ -5,6 +5,9 @@ steps:
       docker: "*"
     command: "./scripts/buildkite/fossa.sh"
   - label: ":shell: Shellcheck"
+    agents:
+      queue: "workers"
+      docker: "*"
     plugins:
       # update periodically: https://github.com/buildkite-plugins/shellcheck-buildkite-plugin
       shellcheck#v1.3.0:
