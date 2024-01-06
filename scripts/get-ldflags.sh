@@ -2,6 +2,9 @@
 
 set -eo pipefail
 
+# add verbose env var for debugging
+test -n "$V" && set -x
+
 MODE=$1
 
 if [ "$MODE" != "LDFLAG" ] && [ "$MODE" != "ECHO" ]; then
