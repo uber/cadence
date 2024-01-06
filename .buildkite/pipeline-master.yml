@@ -3,14 +3,12 @@ steps:
     agents:
       queue: "init"
       docker: "*"
-    commands: "./scripts/buildkite/fossa.sh"
+    command: "./scripts/buildkite/fossa.sh"
   - label: ":golang: unit test"
     agents:
       queue: "workers"
       docker: "*"
-    commands:
-      - "git config --global --add safe.directory /cadence" # else all git statusy things fail
-      - "CASSANDRA_HOST=cassandra make install-schema && make cover_profile" # make install-schema is needed for a server startup test. See main_test.go
+    command: "CASSANDRA_HOST=cassandra make install-schema && make cover_profile" # make install-schema is needed for a server startup test. See main_test.go
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
@@ -25,9 +23,7 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    commands:
-      - "git config --global --add safe.directory /cadence" # else all git statusy things fail
-      - "./scripts/buildkite/golint.sh"
+    command: "./scripts/buildkite/golint.sh"
     artifact_paths: []
     retry:
       automatic:
@@ -41,9 +37,7 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    commands:
-      - "git config --global --add safe.directory /cadence" # else all git statusy things fail
-      - "make cover_integration_profile"
+    command: "make cover_integration_profile"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
@@ -58,9 +52,7 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    commands:
-      - "git config --global --add safe.directory /cadence" # else all git statusy things fail
-      - "make cover_integration_profile"
+    command: "make cover_integration_profile"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
@@ -75,9 +67,7 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    commands:
-      - "git config --global --add safe.directory /cadence" # else all git statusy things fail
-      - "make cover_ndc_profile"
+    command: "make cover_ndc_profile"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
@@ -92,9 +82,7 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    commands:
-      - "git config --global --add safe.directory /cadence" # else all git statusy things fail
-      - "make cover_integration_profile"
+    command: "make cover_integration_profile"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
@@ -109,9 +97,7 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    commands:
-      - "git config --global --add safe.directory /cadence" # else all git statusy things fail
-      - "make cover_ndc_profile"
+    command: "make cover_ndc_profile"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
@@ -126,9 +112,7 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    commands:
-      - "git config --global --add safe.directory /cadence" # else all git statusy things fail
-      - "make cover_integration_profile"
+    command: "make cover_integration_profile"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
@@ -143,9 +127,7 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    commands:
-      - "git config --global --add safe.directory /cadence" # else all git statusy things fail
-      - "make cover_ndc_profile"
+    command: "make cover_ndc_profile"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
@@ -162,9 +144,7 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    commands:
-      - "git config --global --add safe.directory /cadence" # else all git statusy things fail
-      - "scripts/buildkite/gocov.sh"
+    command: "scripts/buildkite/gocov.sh"
     retry:
       automatic:
         limit: 2
@@ -177,9 +157,7 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    commands:
-      - "git config --global --add safe.directory /cadence" # else all git statusy things fail
-      - "scripts/buildkite/docker-push.sh"
+    command: "scripts/buildkite/docker-push.sh"
     retry:
       automatic:
         limit: 1
