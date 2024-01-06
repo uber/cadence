@@ -264,3 +264,8 @@ const (
 	// DefaultHistoryMaxAutoResetPoints is the default maximum number for auto reset points
 	DefaultHistoryMaxAutoResetPoints = 20
 )
+
+const (
+	DeprecatedDomainStatus = 1
+	DeletedDomainStatus    = 2
+)

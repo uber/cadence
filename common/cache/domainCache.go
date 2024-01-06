@@ -40,7 +40,6 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -940,7 +939,7 @@ func GetActiveDomainByID(cache DomainCache, currentCluster string, domainID stri
 
 // This function checks the domain status to see if the domain has been deprecated or deleted.
 func (entry *DomainCacheEntry) IsDeprecatedOrDeleted() bool {
-	if entry.info.Status == invariant.DeprecatedDomainStatus || entry.info.Status == invariant.DeletedDomainStatus {
+	if entry.info.Status == common.DeprecatedDomainStatus || entry.info.Status == common.DeletedDomainStatus {
 		return true
 	}
 	return false

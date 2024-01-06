@@ -25,14 +25,10 @@ package invariant
 import (
 	"context"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
-)
-
-const (
-	DeprecatedDomainStatus = 1
-	DeletedDomainStatus    = 2
 )
 
 type (
@@ -77,7 +73,7 @@ func (idc *inactiveDomainExists) Check(
 			InfoDetails:     err.Error(),
 		}
 	}
-	if domain.GetInfo().Status == DeprecatedDomainStatus || domain.GetInfo().Status == deletedDomainStatus {
+	if domain.GetInfo().Status == common.DeprecatedDomainStatus || domain.GetInfo().Status == common.DeletedDomainStatus {
 		return CheckResult{
 			CheckResultType: CheckResultTypeCorrupted,
 			InvariantName:   idc.Name(),
