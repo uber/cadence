@@ -10,6 +10,7 @@ steps:
       queue: "workers"
       docker: "*"
     commands:
+      - "git config --global --add safe.directory /cadence" # else all git statusy things fail
       - "make .just-build" # ensure that we are not rebuilding binaries and not regenerating code
       - "CASSANDRA_HOST=cassandra make install-schema && make cover_profile" # make install-schema is needed for a server startup test. See main_test.go
     artifact_paths:
@@ -26,7 +27,9 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    command: "./scripts/buildkite/golint.sh"
+    commands:
+      - "git config --global --add safe.directory /cadence" # else all git statusy things fail
+      - "./scripts/buildkite/golint.sh"
     artifact_paths: []
     retry:
       automatic:
@@ -41,6 +44,7 @@ steps:
       queue: "workers"
       docker: "*"
     commands:
+      - "git config --global --add safe.directory /cadence" # else all git statusy things fail
       - "make .just-build" # ensure that we are not rebuilding binaries and not regenerating code
       - "make cover_integration_profile"
     artifact_paths:
@@ -57,7 +61,8 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    command:
+    commands:
+      - "git config --global --add safe.directory /cadence" # else all git statusy things fail
       - "make .just-build" # ensure that we are not rebuilding binaries and not regenerating code
       - "make cover_integration_profile"
     artifact_paths:
@@ -74,6 +79,7 @@ steps:
       queue: "workers"
       docker: "*"
     commands:
+      - "git config --global --add safe.directory /cadence" # else all git statusy things fail
       - "make .just-build" # ensure that we are not rebuilding binaries and not regenerating code
       - "make cover_integration_profile"
     artifact_paths:
@@ -90,6 +96,7 @@ steps:
       queue: "workers"
       docker: "*"
     commands:
+      - "git config --global --add safe.directory /cadence" # else all git statusy things fail
       - "make .just-build" # ensure that we are not rebuilding binaries and not regenerating code
       - "make cover_ndc_profile"
     artifact_paths:
@@ -107,6 +114,7 @@ steps:
       queue: "workers"
       docker: "*"
     commands:
+      - "git config --global --add safe.directory /cadence" # else all git statusy things fail
       - "make .just-build" # ensure that we are not rebuilding binaries and not regenerating code
       - "make cover_integration_profile"
     artifact_paths:
@@ -124,6 +132,7 @@ steps:
       queue: "workers"
       docker: "*"
     commands:
+      - "git config --global --add safe.directory /cadence" # else all git statusy things fail
       - "make .just-build" # ensure that we are not rebuilding binaries and not regenerating code
       - "make cover_ndc_profile"
     artifact_paths:
@@ -141,6 +150,7 @@ steps:
       queue: "workers"
       docker: "*"
     commands:
+      - "git config --global --add safe.directory /cadence" # else all git statusy things fail
       - "make .just-build" # ensure that we are not rebuilding binaries and not regenerating code
       - "make cover_integration_profile"
     artifact_paths:
@@ -158,6 +168,7 @@ steps:
       queue: "workers"
       docker: "*"
     commands:
+      - "git config --global --add safe.directory /cadence" # else all git statusy things fail
       - "make .just-build" # ensure that we are not rebuilding binaries and not regenerating code
       - "make cover_ndc_profile"
     artifact_paths:
@@ -176,7 +187,9 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    command: "scripts/buildkite/gocov.sh"
+    commands:
+      - "git config --global --add safe.directory /cadence" # else all git statusy things fail
+      - "scripts/buildkite/gocov.sh"
     retry:
       automatic:
         limit: 2
@@ -189,7 +202,9 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    command: "scripts/buildkite/docker-build.sh"
+    commands:
+      - "git config --global --add safe.directory /cadence" # else all git statusy things fail
+      - "scripts/buildkite/docker-build.sh"
     retry:
       automatic:
         limit: 1
