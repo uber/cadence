@@ -31,8 +31,8 @@ import (
 )
 
 const (
-	deprecatedDomainStatus = 1
-	deletedDomainStatus    = 2
+	DeprecatedDomainStatus = 1
+	DeletedDomainStatus    = 2
 )
 
 type (
@@ -77,7 +77,7 @@ func (idc *inactiveDomainExists) Check(
 			InfoDetails:     err.Error(),
 		}
 	}
-	if domain.GetInfo().Status == deprecatedDomainStatus || domain.GetInfo().Status == deletedDomainStatus {
+	if domain.GetInfo().Status == DeprecatedDomainStatus || domain.GetInfo().Status == deletedDomainStatus {
 		return CheckResult{
 			CheckResultType: CheckResultTypeCorrupted,
 			InvariantName:   idc.Name(),
