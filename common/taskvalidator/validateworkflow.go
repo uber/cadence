@@ -30,11 +30,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 )
 
-const (
-	deprecatedDomainStatus = 1
-	deletedDomainStatus    = 2
-)
-
 // Checker is an interface for initiating the validation process.
 type Checker interface {
 	WorkflowCheckforValidation(workflowID string, domainID string, domainName string, runID string) error
@@ -48,15 +43,18 @@ type checkerImpl struct {
 }
 
 // NewWfChecker creates a new instance of Checker.
-func NewWfChecker(logger log.Logger, metrics metrics.Client) Checker {
-	return &checkerImpl{logger: logger,
-		metricsClient: metrics}
+func NewWfChecker(logger log.Logger, metrics metrics.Client, domainCache cache.DomainCache) Checker {
+	return &checkerImpl{
+		logger:        logger,
+		metricsClient: metrics,
+		dc:            domainCache,
+	}
 }
 
 // WorkflowCheckforValidation is a dummy implementation of workflow validation.
 func (w *checkerImpl) WorkflowCheckforValidation(workflowID string, domainID string, domainName string, runID string) error {
 	// Emitting just the log to ensure that the workflow is called for now.
-	// TODO: Ass tsale workflow check validation.
+	// TODO: Add stale workflow check validation.
 	w.logger.Info("WorkflowCheckforValidation",
 		tag.WorkflowID(workflowID),
 		tag.WorkflowRunID(runID),
@@ -76,14 +74,12 @@ func (w *checkerImpl) WorkflowCheckforValidation(workflowID string, domainID str
 func (w *checkerImpl) deprecatedDomainCheck(domainID string, domainName string) error {
 	domain, err := w.dc.GetDomainByID(domainID)
 	if err != nil {
-		w.logger.Error("Error getting domain by ID", tag.Error(err))
 		return err
 	}
-	if domain.GetInfo().Status == deprecatedDomainStatus || domain.GetInfo().Status == deletedDomainStatus {
-		w.logger.Error("The workflow domain doesn't exist", tag.WorkflowDomainID(domainID),
+	status := domain.IsDeprecatedOrDeleted()
+	if status {
+		w.logger.Info("The workflow domain doesn't exist", tag.WorkflowDomainID(domainID),
 			tag.WorkflowDomainName(domainName))
-		return nil
 	}
-
 	return nil
 }

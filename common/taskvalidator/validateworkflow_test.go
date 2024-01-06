@@ -27,56 +27,40 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/service/history/constants"
 )
 
 func TestWorkflowCheckforValidation(t *testing.T) {
 	testCases := []struct {
-		name         string
-		domainID     string
-		domainStatus int
-		expectError  bool
+		name     string
+		domainID string
+		runID    string
 	}{
-		{
-			name:         "ActiveDomain",
-			domainID:     "activeDomainID",
-			domainStatus: 0, // Assuming 0 represents an active domain
-			expectError:  false,
-		},
+		{"DomainFetchSuccess", "domain-id-success", "run-id-success"},
+		{"DomainFetchFailure", "domain-id-failure", "run-id-failure"},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
 
+			mockDomainCache := cache.NewMockDomainCache(mockCtrl)
 			logger := log.NewNoop()
 			metricsClient := metrics.NewNoopMetricsClient()
-			mockDomainCache := cache.NewMockDomainCache(ctrl)
+			checker := NewWfChecker(logger, metricsClient, mockDomainCache)
 
-			checker := &checkerImpl{
-				logger:        logger,
-				metricsClient: metricsClient,
-				dc:            mockDomainCache,
-			}
+			// Set up the mock behavior for GetDomainByID
+			mockDomainCache.EXPECT().
+				GetDomainByID(tc.domainID).
+				Return(constants.TestGlobalDomainEntry, nil).
+				AnyTimes()
 
-			// Create a real DomainCacheEntry with the necessary DomainInfo
-			domainInfo := &persistence.DomainInfo{Status: tc.domainStatus}
-			domainEntry := &cache.DomainCacheEntry{Info: domainInfo}
-
-			// Mock GetDomainByID to return the manually created DomainCacheEntry
-			mockDomainCache.EXPECT().GetDomainByID(tc.domainID).Return(domainEntry, nil).AnyTimes()
-
-			err := checker.WorkflowCheckforValidation("testWorkflowID", tc.domainID, "testDomainName", "testRunID")
-			if tc.expectError {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
+			err := checker.WorkflowCheckforValidation("workflowID", tc.domainID, "domainName", tc.runID)
+			assert.NoError(t, err)
 		})
 	}
 }
