@@ -1389,3 +1389,32 @@ func TestGetSizeOfHistoryEvent(t *testing.T) {
 		})
 	}
 }
+
+func TestIsAdvancedVisibilityWritingEnabled(t *testing.T) {
+	for name, c := range map[string]struct {
+		advancedVisibilityWritingMode string
+		isAdvancedVisConfigExist      bool
+		want                          bool
+	}{
+		"mode is someMode, config exist": {
+			advancedVisibilityWritingMode: "someMode",
+			isAdvancedVisConfigExist:      true,
+			want:                          true,
+		},
+		"mode is someMode, config not exist": {
+			advancedVisibilityWritingMode: "someMode",
+			isAdvancedVisConfigExist:      false,
+			want:                          false,
+		},
+		"mode is off, config exist": {
+			advancedVisibilityWritingMode: "off",
+			isAdvancedVisConfigExist:      true,
+			want:                          false,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got := IsAdvancedVisibilityWritingEnabled(c.advancedVisibilityWritingMode, c.isAdvancedVisConfigExist)
+			require.Equal(t, c.want, got)
+		})
+	}
+}
