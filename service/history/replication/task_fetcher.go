@@ -71,7 +71,9 @@ type (
 		remotePeer     admin.Client
 		rateLimiter    *quotas.DynamicRateLimiter
 		requestChan    chan *request
-		done           chan struct{}
+		ctx            context.Context
+		cancelCtx      context.CancelFunc
+		stoppedCh      chan struct{}
 	}
 
 	// taskFetchersImpl is a group of fetchers, one per source DC.
@@ -92,9 +94,7 @@ func NewTaskFetchers(
 	clusterMetadata cluster.Metadata,
 	clientBean client.Bean,
 ) TaskFetchers {
-
 	currentCluster := clusterMetadata.GetCurrentClusterName()
-
 	var fetchers []TaskFetcher
 	for clusterName := range clusterMetadata.GetRemoteClusterInfo() {
 		remoteFrontendClient := clientBean.GetRemoteAdminClient(clusterName)
@@ -124,7 +124,7 @@ func (f *taskFetchersImpl) Start() {
 	for _, fetcher := range f.fetchers {
 		fetcher.Start()
 	}
-	f.logger.Info("Replication task fetchers started.")
+	f.logger.Info("Replication task fetchers started.", tag.Counter(len(f.fetchers)))
 }
 
 // Stop stops the fetchers
@@ -136,7 +136,7 @@ func (f *taskFetchersImpl) Stop() {
 	for _, fetcher := range f.fetchers {
 		fetcher.Stop()
 	}
-	f.logger.Info("Replication task fetchers stopped.")
+	f.logger.Info("Replication task fetchers stopped.", tag.Counter(len(f.fetchers)))
 }
 
 // GetFetchers returns all the fetchers
@@ -152,7 +152,7 @@ func newReplicationTaskFetcher(
 	config *config.Config,
 	sourceFrontend admin.Client,
 ) TaskFetcher {
-
+	ctx, cancel := context.WithCancel(context.Background())
 	return &taskFetcherImpl{
 		status:         common.DaemonStatusInitialized,
 		config:         config,
@@ -162,7 +162,9 @@ func newReplicationTaskFetcher(
 		sourceCluster:  sourceCluster,
 		rateLimiter:    quotas.NewDynamicRateLimiter(config.ReplicationTaskProcessorHostQPS.AsFloat64()),
 		requestChan:    make(chan *request, requestChanBufferSize),
-		done:           make(chan struct{}),
+		ctx:            ctx,
+		cancelCtx:      cancel,
+		stoppedCh:      make(chan struct{}),
 	}
 }
 
@@ -184,7 +186,11 @@ func (f *taskFetcherImpl) Stop() {
 		return
 	}
 
-	close(f.done)
+	f.cancelCtx()
+	if f.config.ReplicationTaskFetcherEnableGracefulSyncShutdown() {
+		f.logger.Debug("Replication task fetcher is waiting on stoppedCh before shutting down")
+		<-f.stoppedCh
+	}
 	f.logger.Info("Replication task fetcher stopped.")
 }
 
@@ -194,9 +200,10 @@ func (f *taskFetcherImpl) fetchTasks() {
 		f.config.ReplicationTaskFetcherAggregationInterval(),
 		f.config.ReplicationTaskFetcherTimerJitterCoefficient(),
 	))
+	defer timer.Stop()
+	defer close(f.stoppedCh)
 
 	requestByShard := make(map[int32]*request)
-
 	for {
 		select {
 		case request := <-f.requestChan:
@@ -230,8 +237,7 @@ func (f *taskFetcherImpl) fetchTasks() {
 					f.config.ReplicationTaskFetcherTimerJitterCoefficient(),
 				))
 			}
-		case <-f.done:
-			timer.Stop()
+		case <-f.ctx.Done():
 			return
 		}
 	}
@@ -248,12 +254,14 @@ func (f *taskFetcherImpl) fetchAndDistributeTasks(requestByShard map[int32]*requ
 	if err != nil {
 		if _, ok := err.(*types.ServiceBusyError); !ok {
 			f.logger.Error("Failed to get replication tasks", tag.Error(err))
-			return err
+		} else {
+			f.logger.Debug("Failed to get replication tasks because service busy")
 		}
+
+		return err
 	}
 
 	f.logger.Debug("Successfully fetched replication tasks.", tag.Counter(len(messagesByShard)))
-
 	for shardID, tasks := range messagesByShard {
 		request := requestByShard[shardID]
 		request.respChan <- tasks
@@ -261,18 +269,20 @@ func (f *taskFetcherImpl) fetchAndDistributeTasks(requestByShard map[int32]*requ
 		delete(requestByShard, shardID)
 	}
 
-	return err
+	return nil
 }
 
-func (f *taskFetcherImpl) getMessages(
-	requestByShard map[int32]*request,
-) (map[int32]*types.ReplicationMessages, error) {
+func (f *taskFetcherImpl) getMessages(requestByShard map[int32]*request) (map[int32]*types.ReplicationMessages, error) {
 	var tokens []*types.ReplicationToken
 	for _, request := range requestByShard {
 		tokens = append(tokens, request.token)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), fetchTaskRequestTimeout)
+	parentCtx := f.ctx
+	if !f.config.ReplicationTaskFetcherEnableGracefulSyncShutdown() {
+		parentCtx = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(parentCtx, fetchTaskRequestTimeout)
 	defer cancel()
 
 	request := &types.GetReplicationMessagesRequest{

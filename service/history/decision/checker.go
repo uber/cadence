@@ -862,7 +862,7 @@ func (v *attrValidator) validateCrossDomainCall(
 	// both global domain with > 1 replication cluster
 	// when code reaches here, at least one domain has more than one cluster
 	if len(sourceClusters) == len(targetClusters) &&
-		v.config.EnableCrossClusterOperations(sourceDomainEntry.GetInfo().Name) {
+		v.config.EnableCrossClusterOperationsForDomain(sourceDomainEntry.GetInfo().Name) {
 		// check if the source domain cluster matches those for the target domain
 		for _, sourceCluster := range sourceClusters {
 			found := false

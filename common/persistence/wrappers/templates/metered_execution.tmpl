@@ -1,0 +1,83 @@
+import (
+	"context"
+
+	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
+)
+
+{{ $decorator := (printf "metered%s" .Interface.Name) }}
+{{ $interfaceName := .Interface.Name }}
+
+// {{$decorator}} implements {{.Interface.Type}} interface instrumented with rate limiter.
+type {{$decorator}} struct {
+    base
+    wrapped     {{.Interface.Type}}
+}
+
+// New{{.Interface.Name}} creates a new instance of {{.Interface.Name}} with ratelimiter.
+func New{{.Interface.Name}}(
+	wrapped      persistence.{{.Interface.Name}},
+	metricClient metrics.Client,
+	logger       log.Logger,
+	cfg          *config.Persistence,
+    sampleLoggingRate dynamicconfig.IntPropertyFn,
+    enableShardIDMetrics dynamicconfig.BoolPropertyFn,
+) persistence.{{.Interface.Name}} {
+    return &{{$decorator}}{
+        wrapped: wrapped,
+        base:       base{
+			metricClient:                  metricClient,
+			logger:                        logger.WithTags(tag.ShardID(wrapped.GetShardID())),
+			enableLatencyHistogramMetrics: cfg.EnablePersistenceLatencyHistogramMetrics,
+			sampleLoggingRate:             sampleLoggingRate,
+			enableShardIDMetrics:          enableShardIDMetrics,
+        },
+    }
+}
+
+{{range $methodName, $method := .Interface.Methods}}
+    {{- if (and $method.AcceptsContext $method.ReturnsError)}}
+        func (c *{{$decorator}}) {{$method.Declaration}} {
+        	op := func() error {
+        	    {{$method.ResultsNames}} = c.wrapped.{{$method.Call}}
+        		{{ if gt (len $method.Results) 1 -}}
+        		    c.emptyMetric("{{$interfaceName}}.{{$methodName}}", {{(index $method.Params 1).Name}}, {{(index $method.Results 0).Name}}, err)
+        		{{ end -}}
+        		return err
+        	}
+
+        	{{$scopeName := printf "metrics.Persistence%sScope" $methodName}}
+
+            {{ if gt (len $method.Params) 1 -}}
+                {{ $reqName := (index $method.Params 1).Name }}
+                if domainName, hasDomainName := getDomainNameFromRequest({{$reqName}}); hasDomainName {
+                    logTags := append([]tag.Tag{tag.WorkflowDomainName(domainName)}, getCustomLogTags({{$reqName}})...)
+                    c.logger.SampleInfo("Persistence {{$methodName}} called", c.sampleLoggingRate(), logTags...)
+                	if c.enableShardIDMetrics() {
+                	    err = c.callWithDomainAndShardScope({{$scopeName}}, op, metrics.DomainTag(domainName),
+                	    metrics.ShardIDTag(c.GetShardID()))
+                	} else {
+                		err = c.call({{$scopeName}}, op, metrics.DomainTag(domainName))
+                	}
+                	return
+                }
+            {{ end -}}
+
+             {{$extraTags := ""}}
+             {{ if gt (len $method.Params) 1 -}}
+                  {{ $reqName := (index $method.Params 1).Name }}
+                  {{ $extraTags = printf ", getCustomMetricTags(%s)..." $reqName }}
+             {{ end -}}
+
+	        err = c.call({{$scopeName}}, op{{$extraTags}})
+
+	        return
+        }
+    {{else}}
+           func (c *{{$decorator}}) {{$method.Declaration}} {
+               {{ $method.Pass "c.wrapped." }}
+           }
+    {{end}}
+{{end}}

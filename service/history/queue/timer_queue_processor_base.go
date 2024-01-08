@@ -542,6 +542,7 @@ func (t *timerQueueProcessorBase) notifyNewTimers(timerTasks []persistence.Task)
 
 	isActive := t.options.MetricScope == metrics.TimerActiveQueueProcessorScope
 	minNewTime := timerTasks[0].GetVisibilityTimestamp()
+	shardIDTag := metrics.ShardIDTag(t.shard.GetShardID())
 	for _, timerTask := range timerTasks {
 		ts := timerTask.GetVisibilityTimestamp()
 		if ts.Before(minNewTime) {
@@ -552,7 +553,7 @@ func (t *timerQueueProcessorBase) notifyNewTimers(timerTasks []persistence.Task)
 			timerTask.GetType(),
 			isActive,
 		)
-		t.metricsClient.IncCounter(taskScopeIdx, metrics.NewTimerCounter)
+		t.metricsClient.Scope(taskScopeIdx).Tagged(shardIDTag).IncCounter(metrics.NewTimerNotifyCounter)
 	}
 
 	t.notifyNewTimer(minNewTime)
