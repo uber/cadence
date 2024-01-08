@@ -23,6 +23,7 @@ package common
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -244,14 +245,22 @@ func ToServiceTransientError(err error) error {
 
 // IsServiceTransientError checks if the error is a transient error.
 func IsServiceTransientError(err error) bool {
-	switch err.(type) {
-	case *types.InternalServiceError:
+
+	var (
+		typesInternalServiceError    *types.InternalServiceError
+		typesServiceBusyError        *types.ServiceBusyError
+		typesShardOwnershipLostError *types.ShardOwnershipLostError
+		yarpcErrorsStatus            *yarpcerrors.Status
+	)
+
+	switch {
+	case errors.As(err, &typesInternalServiceError):
 		return true
-	case *types.ServiceBusyError:
+	case errors.As(err, &typesServiceBusyError):
 		return true
-	case *types.ShardOwnershipLostError:
+	case errors.As(err, &typesShardOwnershipLostError):
 		return true
-	case *yarpcerrors.Status:
+	case errors.As(err, &yarpcErrorsStatus):
 		// We only selectively retry the following yarpc errors client can safe retry with a backoff
 		if yarpcerrors.IsUnavailable(err) ||
 			yarpcerrors.IsUnknown(err) ||
