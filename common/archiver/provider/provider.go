@@ -26,7 +26,6 @@ import (
 
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/filestore"
-	"github.com/uber/cadence/common/archiver/gcloud"
 	"github.com/uber/cadence/common/archiver/s3store"
 	"github.com/uber/cadence/common/config"
 )
@@ -138,13 +137,6 @@ func (p *archiverProvider) GetHistoryArchiver(scheme, serviceName string) (histo
 		}
 		historyArchiver, err = filestore.NewHistoryArchiver(container, p.historyArchiverConfigs.Filestore)
 
-	case gcloud.URIScheme:
-		if p.historyArchiverConfigs.Gstorage == nil {
-			return nil, ErrArchiverConfigNotFound
-		}
-
-		historyArchiver, err = gcloud.NewHistoryArchiver(container, p.historyArchiverConfigs.Gstorage)
-
 	case s3store.URIScheme:
 		if p.historyArchiverConfigs.S3store == nil {
 			return nil, ErrArchiverConfigNotFound
@@ -195,12 +187,6 @@ func (p *archiverProvider) GetVisibilityArchiver(scheme, serviceName string) (ar
 			return nil, ErrArchiverConfigNotFound
 		}
 		visibilityArchiver, err = s3store.NewVisibilityArchiver(container, p.visibilityArchiverConfigs.S3store)
-	case gcloud.URIScheme:
-		if p.visibilityArchiverConfigs.Gstorage == nil {
-			return nil, ErrArchiverConfigNotFound
-		}
-		visibilityArchiver, err = gcloud.NewVisibilityArchiver(container, p.visibilityArchiverConfigs.Gstorage)
-
 	default:
 		return nil, ErrUnknownScheme
 	}
