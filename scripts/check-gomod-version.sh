@@ -13,7 +13,7 @@ if ! toolmod="$(go list -mod=readonly -modfile=internal/tools/go.mod -f '{{ .Mod
     exit 1
 fi
 
-if [[ $gomod != $toolmod ]]; then
+if [[ $gomod != "$toolmod" ]]; then
 	>&2 echo "error: mismatched go.mod and tools go.mod"
     >&2 echo "ensure internal/tools/go.mod contains the same version as go.mod and try again:"
     >&2 echo -e "\t$gomod"
