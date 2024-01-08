@@ -65,7 +65,7 @@ type (
 	// PriorityTask is the interface for tasks which have and can be assigned a priority
 	PriorityTask interface {
 		Task
-		// Priority returns the priority of the task, or NoPriority if no priority was previously assigned
+		// Priority returns the priority of the task, or noPriority if no priority was previously assigned
 		Priority() int
 		// SetPriority sets the priority of the task
 		SetPriority(int)

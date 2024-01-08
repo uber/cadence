@@ -655,7 +655,7 @@ func GetSizeOfMapStringToByteArray(input map[string][]byte) int {
 
 // GetSizeOfHistoryEvent returns approximate size in bytes of the history event taking into account byte arrays only now
 func GetSizeOfHistoryEvent(event *types.HistoryEvent) uint64 {
-	if event == nil {
+	if event == nil || event.EventType == nil {
 		return 0
 	}
 
@@ -748,10 +748,7 @@ func GetSizeOfHistoryEvent(event *types.HistoryEvent) uint64 {
 	case types.EventTypeStartChildWorkflowExecutionFailed:
 		res += len(event.StartChildWorkflowExecutionFailedEventAttributes.Control)
 	case types.EventTypeChildWorkflowExecutionStarted:
-		if event.ChildWorkflowExecutionStartedEventAttributes == nil {
-			return 0
-		}
-		if event.ChildWorkflowExecutionStartedEventAttributes.Header != nil {
+		if event.ChildWorkflowExecutionStartedEventAttributes != nil && event.ChildWorkflowExecutionStartedEventAttributes.Header != nil {
 			res += GetSizeOfMapStringToByteArray(event.ChildWorkflowExecutionStartedEventAttributes.Header.Fields)
 		}
 	case types.EventTypeChildWorkflowExecutionCompleted:

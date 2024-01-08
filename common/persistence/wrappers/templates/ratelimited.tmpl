@@ -25,7 +25,6 @@ func New{{.Interface.Name}}(
 }
 
 {{range $method := .Interface.Methods}}
-    {{$resultsLength := len ($method.Results)}}
     {{- if (and $method.AcceptsContext $method.ReturnsError)}}
         func (c *{{$decorator}}) {{$method.Declaration}} {
 	        if ok := c.rateLimiter.Allow(); !ok {

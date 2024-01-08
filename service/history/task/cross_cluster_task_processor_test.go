@@ -80,6 +80,7 @@ func (s *crossClusterTaskProcessorSuite) SetupTest() {
 	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(constants.TestDomainID).Return(constants.TestDomainName, nil).AnyTimes()
 
 	s.processorOptions = &CrossClusterTaskProcessorOptions{
+		Enabled:                    dynamicconfig.GetBoolPropertyFn(true),
 		MaxPendingTasks:            dynamicconfig.GetIntPropertyFn(100),
 		TaskMaxRetryCount:          dynamicconfig.GetIntPropertyFn(100),
 		TaskRedispatchInterval:     dynamicconfig.GetDurationPropertyFn(time.Hour),

@@ -39,20 +39,16 @@ var (
 	lowTaskPriority     = common.GetTaskPriority(common.LowPriorityClass, common.DefaultPrioritySubclass)
 )
 
-type (
-	priorityAssignerImpl struct {
-		sync.RWMutex
+type priorityAssignerImpl struct {
+	sync.RWMutex
 
-		currentClusterName string
-		domainCache        cache.DomainCache
-		config             *config.Config
-		logger             log.Logger
-		scope              metrics.Scope
-		rateLimiters       *quotas.Collection
-	}
-)
-
-var _ PriorityAssigner = (*priorityAssignerImpl)(nil)
+	currentClusterName string
+	domainCache        cache.DomainCache
+	config             *config.Config
+	logger             log.Logger
+	scope              metrics.Scope
+	rateLimiters       *quotas.Collection
+}
 
 // NewPriorityAssigner creates a new task priority assigner
 func NewPriorityAssigner(
@@ -74,10 +70,8 @@ func NewPriorityAssigner(
 	}
 }
 
-func (a *priorityAssignerImpl) Assign(
-	queueTask Task,
-) error {
-	if priority := queueTask.Priority(); priority != common.NoPriority {
+func (a *priorityAssignerImpl) Assign(queueTask Task) error {
+	if priority := queueTask.Priority(); priority != noPriority {
 		if priority != lowTaskPriority && queueTask.GetAttempt() > a.config.TaskCriticalRetryCount() {
 			// automatically lower the priority if task attempt exceeds certain threshold
 			queueTask.SetPriority(lowTaskPriority)
@@ -137,9 +131,7 @@ func (a *priorityAssignerImpl) Assign(
 //  1. domain name
 //  2. if domain is active
 //  3. error, if any
-func (a *priorityAssignerImpl) getDomainInfo(
-	domainID string,
-) (string, bool, error) {
+func (a *priorityAssignerImpl) getDomainInfo(domainID string) (string, bool, error) {
 	domainEntry, err := a.domainCache.GetDomainByID(domainID)
 	if err != nil {
 		if _, ok := err.(*types.EntityNotExistsError); !ok {

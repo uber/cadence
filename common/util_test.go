@@ -1069,3 +1069,319 @@ func TestDeserializeSearchAttributeValue_Error(t *testing.T) {
 		})
 	}
 }
+
+// someMapStringToByteArraySize is the size of someMapStringToByteArray calculated by GetSizeOfMapStringToByteArray
+const someMapStringToByteArraySize = 66
+
+var someMapStringToByteArray = map[string][]byte{
+	"key":  []byte("value"),
+	"key2": []byte("value2"),
+}
+
+// someBytesArraySize is len(someBytesArray)
+const someBytesArraySize = 17
+
+var someBytesArray = []byte("some random bytes")
+
+func TestGetSizeOfMapStringToByteArray(t *testing.T) {
+	require.Equal(t, someMapStringToByteArraySize, GetSizeOfMapStringToByteArray(someMapStringToByteArray))
+}
+
+func TestGetSizeOfHistoryEvent_NilEvent(t *testing.T) {
+	require.Equal(t, uint64(0), GetSizeOfHistoryEvent(nil))
+	require.Equal(t, uint64(0), GetSizeOfHistoryEvent(&types.HistoryEvent{}), "should be zero, because eventType is nil")
+}
+
+func TestGetSizeOfHistoryEvent(t *testing.T) {
+	for eventType, c := range map[types.EventType]struct {
+		event *types.HistoryEvent
+		want  uint64
+	}{
+		types.EventTypeWorkflowExecutionStarted: {
+			event: &types.HistoryEvent{
+				WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
+					Input:                   someBytesArray, // 17 bytes
+					ContinuedFailureDetails: someBytesArray, // 17 bytes
+					LastCompletionResult:    someBytesArray, // 17 bytes
+					Memo: &types.Memo{
+						Fields: someMapStringToByteArray, // 66 bytes
+					},
+					Header: &types.Header{
+						Fields: someMapStringToByteArray, // 66 bytes
+					},
+					SearchAttributes: &types.SearchAttributes{
+						IndexedFields: someMapStringToByteArray, // 66 bytes
+					},
+				},
+			},
+			want: 3*someBytesArraySize + 3*someMapStringToByteArraySize,
+		},
+		types.EventTypeWorkflowExecutionCompleted: {
+			event: &types.HistoryEvent{
+				WorkflowExecutionCompletedEventAttributes: &types.WorkflowExecutionCompletedEventAttributes{
+					Result: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeWorkflowExecutionFailed: {
+			event: &types.HistoryEvent{
+				WorkflowExecutionFailedEventAttributes: &types.WorkflowExecutionFailedEventAttributes{
+					Details: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeWorkflowExecutionTimedOut: {event: &types.HistoryEvent{}, want: 0},
+		types.EventTypeDecisionTaskScheduled:     {event: &types.HistoryEvent{}, want: 0},
+		types.EventTypeDecisionTaskStarted:       {event: &types.HistoryEvent{}, want: 0},
+		types.EventTypeDecisionTaskCompleted: {
+			event: &types.HistoryEvent{
+				DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
+					ExecutionContext: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeDecisionTaskTimedOut: {event: &types.HistoryEvent{}, want: 0},
+		types.EventTypeDecisionTaskFailed: {
+			event: &types.HistoryEvent{
+				DecisionTaskFailedEventAttributes: &types.DecisionTaskFailedEventAttributes{
+					Details: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeActivityTaskScheduled: {
+			event: &types.HistoryEvent{
+				ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{
+					Input: someBytesArray, // 17 bytes
+					Header: &types.Header{
+						Fields: someMapStringToByteArray, // 66 bytes
+					},
+				},
+			},
+			want: someBytesArraySize + someMapStringToByteArraySize,
+		},
+		types.EventTypeActivityTaskStarted: {
+			event: &types.HistoryEvent{
+				ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+					LastFailureDetails: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeActivityTaskCompleted: {
+			event: &types.HistoryEvent{
+				ActivityTaskCompletedEventAttributes: &types.ActivityTaskCompletedEventAttributes{
+					Result: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeActivityTaskFailed: {
+			event: &types.HistoryEvent{
+				ActivityTaskFailedEventAttributes: &types.ActivityTaskFailedEventAttributes{
+					Details: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeActivityTaskTimedOut: {
+			event: &types.HistoryEvent{
+				ActivityTaskTimedOutEventAttributes: &types.ActivityTaskTimedOutEventAttributes{
+					Details:            someBytesArray, // 17 bytes
+					LastFailureDetails: someBytesArray, // 17 bytes
+				},
+			},
+			want: 2 * someBytesArraySize,
+		},
+		types.EventTypeActivityTaskCancelRequested:     {event: &types.HistoryEvent{}, want: 0},
+		types.EventTypeRequestCancelActivityTaskFailed: {event: &types.HistoryEvent{}, want: 0},
+		types.EventTypeActivityTaskCanceled: {
+			event: &types.HistoryEvent{
+				ActivityTaskCanceledEventAttributes: &types.ActivityTaskCanceledEventAttributes{
+					Details: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeTimerStarted:                     {event: &types.HistoryEvent{}, want: 0},
+		types.EventTypeTimerFired:                       {event: &types.HistoryEvent{}, want: 0},
+		types.EventTypeCancelTimerFailed:                {event: &types.HistoryEvent{}, want: 0},
+		types.EventTypeTimerCanceled:                    {event: &types.HistoryEvent{}, want: 0},
+		types.EventTypeWorkflowExecutionCancelRequested: {event: &types.HistoryEvent{}, want: 0},
+		types.EventTypeWorkflowExecutionCanceled: {
+			event: &types.HistoryEvent{
+				WorkflowExecutionCanceledEventAttributes: &types.WorkflowExecutionCanceledEventAttributes{
+					Details: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeRequestCancelExternalWorkflowExecutionInitiated: {
+			event: &types.HistoryEvent{
+				RequestCancelExternalWorkflowExecutionInitiatedEventAttributes: &types.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes{
+					Control: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeRequestCancelExternalWorkflowExecutionFailed: {
+			event: &types.HistoryEvent{
+				RequestCancelExternalWorkflowExecutionFailedEventAttributes: &types.RequestCancelExternalWorkflowExecutionFailedEventAttributes{
+					Control: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeExternalWorkflowExecutionCancelRequested: {event: &types.HistoryEvent{}, want: 0},
+		types.EventTypeMarkerRecorded: {
+			event: &types.HistoryEvent{
+				MarkerRecordedEventAttributes: &types.MarkerRecordedEventAttributes{
+					Details: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeWorkflowExecutionSignaled: {
+			event: &types.HistoryEvent{
+				WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
+					Input: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeWorkflowExecutionTerminated: {
+			event: &types.HistoryEvent{
+				WorkflowExecutionTerminatedEventAttributes: &types.WorkflowExecutionTerminatedEventAttributes{
+					Details: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeWorkflowExecutionContinuedAsNew: {
+			event: &types.HistoryEvent{
+				WorkflowExecutionContinuedAsNewEventAttributes: &types.WorkflowExecutionContinuedAsNewEventAttributes{
+					Input: someBytesArray, // 17 bytes
+					Memo: &types.Memo{
+						Fields: someMapStringToByteArray, // 66 bytes
+					},
+					Header: &types.Header{
+						Fields: someMapStringToByteArray, // 66 bytes
+					},
+					SearchAttributes: &types.SearchAttributes{
+						IndexedFields: someMapStringToByteArray, // 66 bytes
+					},
+				},
+			},
+			want: someBytesArraySize + 3*someMapStringToByteArraySize,
+		},
+		types.EventTypeStartChildWorkflowExecutionInitiated: {
+			event: &types.HistoryEvent{
+				StartChildWorkflowExecutionInitiatedEventAttributes: &types.StartChildWorkflowExecutionInitiatedEventAttributes{
+					Input:   someBytesArray, // 17 bytes
+					Control: someBytesArray, // 17 bytes
+					Memo: &types.Memo{
+						Fields: someMapStringToByteArray, // 66 bytes
+					},
+					Header: &types.Header{
+						Fields: someMapStringToByteArray, // 66 bytes
+					},
+					SearchAttributes: &types.SearchAttributes{
+						IndexedFields: someMapStringToByteArray, // 66 bytes
+					},
+				},
+			},
+			want: 2*someBytesArraySize + 3*someMapStringToByteArraySize,
+		},
+		types.EventTypeStartChildWorkflowExecutionFailed: {
+			event: &types.HistoryEvent{
+				StartChildWorkflowExecutionFailedEventAttributes: &types.StartChildWorkflowExecutionFailedEventAttributes{
+					Control: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeChildWorkflowExecutionStarted: {
+			event: &types.HistoryEvent{
+				ChildWorkflowExecutionStartedEventAttributes: &types.ChildWorkflowExecutionStartedEventAttributes{
+					Header: &types.Header{
+						Fields: someMapStringToByteArray, // 66 bytes
+					},
+				},
+			},
+			want: someMapStringToByteArraySize,
+		},
+		types.EventTypeChildWorkflowExecutionCompleted: {
+			event: &types.HistoryEvent{
+				ChildWorkflowExecutionCompletedEventAttributes: &types.ChildWorkflowExecutionCompletedEventAttributes{
+					Result: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeChildWorkflowExecutionFailed: {
+			event: &types.HistoryEvent{
+				ChildWorkflowExecutionFailedEventAttributes: &types.ChildWorkflowExecutionFailedEventAttributes{
+					Details: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeChildWorkflowExecutionCanceled: {
+			event: &types.HistoryEvent{
+				ChildWorkflowExecutionCanceledEventAttributes: &types.ChildWorkflowExecutionCanceledEventAttributes{
+					Details: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeChildWorkflowExecutionTimedOut:   {event: &types.HistoryEvent{}, want: 0},
+		types.EventTypeChildWorkflowExecutionTerminated: {event: &types.HistoryEvent{}, want: 0},
+		types.EventTypeSignalExternalWorkflowExecutionInitiated: {
+			event: &types.HistoryEvent{
+				SignalExternalWorkflowExecutionInitiatedEventAttributes: &types.SignalExternalWorkflowExecutionInitiatedEventAttributes{
+					Input:   someBytesArray, // 17 bytes
+					Control: someBytesArray, // 17 bytes
+				},
+			},
+			want: 2 * someBytesArraySize,
+		},
+		types.EventTypeSignalExternalWorkflowExecutionFailed: {
+			event: &types.HistoryEvent{
+				SignalExternalWorkflowExecutionFailedEventAttributes: &types.SignalExternalWorkflowExecutionFailedEventAttributes{
+					Control: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeExternalWorkflowExecutionSignaled: {
+			event: &types.HistoryEvent{
+				ExternalWorkflowExecutionSignaledEventAttributes: &types.ExternalWorkflowExecutionSignaledEventAttributes{
+					Control: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeUpsertWorkflowSearchAttributes: {
+			event: &types.HistoryEvent{
+				UpsertWorkflowSearchAttributesEventAttributes: &types.UpsertWorkflowSearchAttributesEventAttributes{
+					SearchAttributes: &types.SearchAttributes{
+						IndexedFields: someMapStringToByteArray, // 66 bytes
+					},
+				},
+			},
+			want: someMapStringToByteArraySize,
+		},
+	} {
+		t.Run(eventType.String(), func(t *testing.T) {
+			if c.event != nil {
+				c.event.EventType = &eventType
+			}
+
+			got := GetSizeOfHistoryEvent(c.event)
+			require.Equal(t, c.want, got)
+		})
+	}
+}

@@ -218,7 +218,7 @@ func TestLookupAndRefreshRaceCondition(t *testing.T) {
 	wg.Add(2)
 	go func() {
 		for i := 0; i < 50; i++ {
-			hr.Lookup("a")
+			_, _ = hr.Lookup("a")
 		}
 		wg.Done()
 	}()
@@ -226,7 +226,7 @@ func TestLookupAndRefreshRaceCondition(t *testing.T) {
 		for i := 0; i < 50; i++ {
 			// to bypass internal check
 			hr.members.refreshed = time.Now().AddDate(0, 0, -1)
-			hr.refresh()
+			assert.NoError(t, hr.refresh())
 		}
 		wg.Done()
 	}()

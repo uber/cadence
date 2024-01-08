@@ -240,9 +240,6 @@ const (
 
 const (
 	numBitsPerLevel = 3
-
-	// NoPriority is the value returned if no priority is ever assigned to the task
-	NoPriority = -1
 )
 
 const (
@@ -266,4 +263,9 @@ const (
 const (
 	// DefaultHistoryMaxAutoResetPoints is the default maximum number for auto reset points
 	DefaultHistoryMaxAutoResetPoints = 20
+)
+
+const (
+	DeprecatedDomainStatus = 1
+	DeletedDomainStatus    = 2
 )
