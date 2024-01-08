@@ -25,34 +25,43 @@ package taskvalidator
 import (
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/service/history/constants"
 )
 
-// MockMetricsScope implements the metrics.Scope interface for testing purposes.
-type MockMetricsScope struct{}
-
-func (s *MockMetricsScope) IncCounter(counter int) {}
-
 func TestWorkflowCheckforValidation(t *testing.T) {
-	// Create a mock logger and metrics client
-	logger := log.NewNoop()
-	metricsClient := metrics.NewNoopMetricsClient()
+	testCases := []struct {
+		name     string
+		domainID string
+		runID    string
+	}{
+		{"DomainFetchSuccess", "domain-id-success", "run-id-success"},
+		{"DomainFetchFailure", "domain-id-failure", "run-id-failure"},
+	}
 
-	// Create an instance of checkerImpl with the mock logger and metrics client
-	checker := NewWfChecker(logger, metricsClient)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
 
-	// Define test inputs
-	workflowID := "testWorkflowID"
-	domainID := "testDomainID"
-	runID := "testRunID"
-	domainName := "testDomainName"
+			mockDomainCache := cache.NewMockDomainCache(mockCtrl)
+			logger := log.NewNoop()
+			metricsClient := metrics.NewNoopMetricsClient()
+			checker := NewWfChecker(logger, metricsClient, mockDomainCache)
 
-	// Call the method being tested
-	err := checker.WorkflowCheckforValidation(workflowID, domainID, domainName, runID)
+			// Set up the mock behavior for GetDomainByID
+			mockDomainCache.EXPECT().
+				GetDomainByID(tc.domainID).
+				Return(constants.TestGlobalDomainEntry, nil).
+				AnyTimes()
 
-	// Assert that the method returned no error
-	assert.NoError(t, err)
+			err := checker.WorkflowCheckforValidation("workflowID", tc.domainID, "domainName", tc.runID)
+			assert.NoError(t, err)
+		})
+	}
 }

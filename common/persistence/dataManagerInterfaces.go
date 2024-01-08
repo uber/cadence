@@ -21,22 +21,33 @@
 
 // Geneate rate limiter wrappers.
 //go:generate mockgen -package $GOPACKAGE -destination dataManagerInterfaces_mock.go -self_package github.com/uber/cadence/common/persistence github.com/uber/cadence/common/persistence Task,ShardManager,ExecutionManager,ExecutionManagerFactory,TaskManager,HistoryManager,DomainManager,QueueManager,ConfigStoreManager
-//go:generate gowrap gen -g -p . -i ConfigStoreManager -t ./wrappers/templates/ratelimited.tmpl -o wrappers/ratelimited/configstore.go
-//go:generate gowrap gen -g -p . -i DomainManager -t ./wrappers/templates/ratelimited.tmpl -o wrappers/ratelimited/domain.go
-//go:generate gowrap gen -g -p . -i HistoryManager -t ./wrappers/templates/ratelimited.tmpl -o wrappers/ratelimited/history.go
-//go:generate gowrap gen -g -p . -i ExecutionManager -t ./wrappers/templates/ratelimited.tmpl -o wrappers/ratelimited/execution.go
-//go:generate gowrap gen -g -p . -i QueueManager -t ./wrappers/templates/ratelimited.tmpl -o wrappers/ratelimited/queue.go
-//go:generate gowrap gen -g -p . -i TaskManager -t ./wrappers/templates/ratelimited.tmpl -o wrappers/ratelimited/task.go
-//go:generate gowrap gen -g -p . -i ShardManager -t ./wrappers/templates/ratelimited.tmpl -o wrappers/ratelimited/shard.go
+//go:generate gowrap gen -g -p . -i ConfigStoreManager -t ./wrappers/templates/ratelimited.tmpl -o wrappers/ratelimited/configstore_generated.go
+//go:generate gowrap gen -g -p . -i DomainManager -t ./wrappers/templates/ratelimited.tmpl -o wrappers/ratelimited/domain_generated.go
+//go:generate gowrap gen -g -p . -i HistoryManager -t ./wrappers/templates/ratelimited.tmpl -o wrappers/ratelimited/history_generated.go
+//go:generate gowrap gen -g -p . -i ExecutionManager -t ./wrappers/templates/ratelimited.tmpl -o wrappers/ratelimited/execution_generated.go
+//go:generate gowrap gen -g -p . -i QueueManager -t ./wrappers/templates/ratelimited.tmpl -o wrappers/ratelimited/queue_generated.go
+//go:generate gowrap gen -g -p . -i TaskManager -t ./wrappers/templates/ratelimited.tmpl -o wrappers/ratelimited/task_generated.go
+//go:generate gowrap gen -g -p . -i ShardManager -t ./wrappers/templates/ratelimited.tmpl -o wrappers/ratelimited/shard_generated.go
 
 // Geneate error injector wrappers.
-//go:generate gowrap gen -g -p . -i ConfigStoreManager -t ./wrappers/templates/errorinjector.tmpl -o wrappers/errorinjectors/configstore.go
-//go:generate gowrap gen -g -p . -i ShardManager -t ./wrappers/templates/errorinjector.tmpl -o wrappers/errorinjectors/shard.go
-//go:generate gowrap gen -g -p . -i ExecutionManager -t ./wrappers/templates/errorinjector.tmpl -o wrappers/errorinjectors/execution.go
-//go:generate gowrap gen -g -p . -i TaskManager -t ./wrappers/templates/errorinjector.tmpl -o wrappers/errorinjectors/task.go
-//go:generate gowrap gen -g -p . -i HistoryManager -t ./wrappers/templates/errorinjector.tmpl -o wrappers/errorinjectors/history.go
-//go:generate gowrap gen -g -p . -i DomainManager -t ./wrappers/templates/errorinjector.tmpl -o wrappers/errorinjectors/domain.go
-//go:generate gowrap gen -g -p . -i QueueManager -t ./wrappers/templates/errorinjector.tmpl -o wrappers/errorinjectors/queue.go
+//go:generate gowrap gen -g -p . -i ConfigStoreManager -t ./wrappers/templates/errorinjector.tmpl -o wrappers/errorinjectors/configstore_generated.go
+//go:generate gowrap gen -g -p . -i ShardManager -t ./wrappers/templates/errorinjector.tmpl -o wrappers/errorinjectors/shard_generated.go
+//go:generate gowrap gen -g -p . -i ExecutionManager -t ./wrappers/templates/errorinjector.tmpl -o wrappers/errorinjectors/execution_generated.go
+//go:generate gowrap gen -g -p . -i TaskManager -t ./wrappers/templates/errorinjector.tmpl -o wrappers/errorinjectors/task_generated.go
+//go:generate gowrap gen -g -p . -i HistoryManager -t ./wrappers/templates/errorinjector.tmpl -o wrappers/errorinjectors/history_generated.go
+//go:generate gowrap gen -g -p . -i DomainManager -t ./wrappers/templates/errorinjector.tmpl -o wrappers/errorinjectors/domain_generated.go
+//go:generate gowrap gen -g -p . -i QueueManager -t ./wrappers/templates/errorinjector.tmpl -o wrappers/errorinjectors/queue_generated.go
+
+// Generate metered wrappers.
+//go:generate gowrap gen -g -p . -i ConfigStoreManager -t ./wrappers/templates/metered.tmpl -o wrappers/metered/configstore_generated.go
+//go:generate gowrap gen -g -p . -i ShardManager -t ./wrappers/templates/metered.tmpl -o wrappers/metered/shard_generated.go
+//go:generate gowrap gen -g -p . -i TaskManager -t ./wrappers/templates/metered.tmpl -o wrappers/metered/task_generated.go
+//go:generate gowrap gen -g -p . -i HistoryManager -t ./wrappers/templates/metered.tmpl -o wrappers/metered/history_generated.go
+//go:generate gowrap gen -g -p . -i DomainManager -t ./wrappers/templates/metered.tmpl -o wrappers/metered/domain_generated.go
+//go:generate gowrap gen -g -p . -i QueueManager -t ./wrappers/templates/metered.tmpl -o wrappers/metered/queue_generated.go
+
+// execution metered wrapper is special
+//go:generate gowrap gen -g -p . -i ExecutionManager -t ./wrappers/templates/metered_execution.tmpl -o wrappers/metered/execution_generated.go
 
 package persistence
 
@@ -1825,7 +1836,7 @@ type (
 	QueueManager interface {
 		Closeable
 		EnqueueMessage(ctx context.Context, messagePayload []byte) error
-		ReadMessages(ctx context.Context, lastMessageID int64, maxCount int) ([]*QueueMessage, error)
+		ReadMessages(ctx context.Context, lastMessageID int64, maxCount int) (QueueMessageList, error)
 		DeleteMessagesBefore(ctx context.Context, messageID int64) error
 		UpdateAckLevel(ctx context.Context, messageID int64, clusterName string) error
 		GetAckLevels(ctx context.Context) (map[string]int64, error)
@@ -1844,6 +1855,8 @@ type (
 		QueueType QueueType `json:"queue_type"`
 		Payload   []byte    `json:"message_payload"`
 	}
+
+	QueueMessageList []*QueueMessage
 
 	ConfigStoreManager interface {
 		Closeable

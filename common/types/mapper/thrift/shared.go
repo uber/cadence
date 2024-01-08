@@ -894,6 +894,7 @@ func FromContinueAsNewWorkflowExecutionDecisionAttributes(t *types.ContinueAsNew
 		Header:                              FromHeader(t.Header),
 		Memo:                                FromMemo(t.Memo),
 		SearchAttributes:                    FromSearchAttributes(t.SearchAttributes),
+		JitterStartSeconds:                  t.JitterStartSeconds,
 	}
 }
 
@@ -918,6 +919,7 @@ func ToContinueAsNewWorkflowExecutionDecisionAttributes(t *shared.ContinueAsNewW
 		Header:                              ToHeader(t.Header),
 		Memo:                                ToMemo(t.Memo),
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
+		JitterStartSeconds:                  t.JitterStartSeconds,
 	}
 }
 
@@ -1575,17 +1577,6 @@ func FromDescribeHistoryHostRequest(t *types.DescribeHistoryHostRequest) *shared
 	}
 }
 
-// FromDescribeShardDistributionRequest converts internal DescribeHistoryHostRequest type to thrift
-func FromDescribeShardDistributionRequest(t *types.DescribeShardDistributionRequest) *shared.DescribeShardDistributionRequest {
-	if t == nil {
-		return nil
-	}
-	return &shared.DescribeShardDistributionRequest{
-		PageSize: &t.PageSize,
-		PageID:   &t.PageID,
-	}
-}
-
 // ToDescribeHistoryHostRequest converts thrift DescribeHistoryHostRequest type to internal
 func ToDescribeHistoryHostRequest(t *shared.DescribeHistoryHostRequest) *types.DescribeHistoryHostRequest {
 	if t == nil {
@@ -1595,6 +1586,17 @@ func ToDescribeHistoryHostRequest(t *shared.DescribeHistoryHostRequest) *types.D
 		HostAddress:      t.HostAddress,
 		ShardIDForHost:   t.ShardIdForHost,
 		ExecutionForHost: ToWorkflowExecution(t.ExecutionForHost),
+	}
+}
+
+// FromDescribeShardDistributionRequest converts internal DescribeHistoryHostRequest type to thrift
+func FromDescribeShardDistributionRequest(t *types.DescribeShardDistributionRequest) *shared.DescribeShardDistributionRequest {
+	if t == nil {
+		return nil
+	}
+	return &shared.DescribeShardDistributionRequest{
+		PageSize: &t.PageSize,
+		PageID:   &t.PageID,
 	}
 }
 
@@ -1623,17 +1625,6 @@ func FromDescribeHistoryHostResponse(t *types.DescribeHistoryHostResponse) *shar
 	}
 }
 
-// FromDescribeShardDistributionResponse converts internal DescribeHistoryHostResponse type to thrift
-func FromDescribeShardDistributionResponse(t *types.DescribeShardDistributionResponse) *shared.DescribeShardDistributionResponse {
-	if t == nil {
-		return nil
-	}
-	return &shared.DescribeShardDistributionResponse{
-		NumberOfShards: &t.NumberOfShards,
-		Shards:         t.Shards,
-	}
-}
-
 // ToDescribeHistoryHostResponse converts thrift DescribeHistoryHostResponse type to internal
 func ToDescribeHistoryHostResponse(t *shared.DescribeHistoryHostResponse) *types.DescribeHistoryHostResponse {
 	if t == nil {
@@ -1645,6 +1636,17 @@ func ToDescribeHistoryHostResponse(t *shared.DescribeHistoryHostResponse) *types
 		DomainCache:           ToDomainCacheInfo(t.DomainCache),
 		ShardControllerStatus: t.GetShardControllerStatus(),
 		Address:               t.GetAddress(),
+	}
+}
+
+// FromDescribeShardDistributionResponse converts internal DescribeHistoryHostResponse type to thrift
+func FromDescribeShardDistributionResponse(t *types.DescribeShardDistributionResponse) *shared.DescribeShardDistributionResponse {
+	if t == nil {
+		return nil
+	}
+	return &shared.DescribeShardDistributionResponse{
+		NumberOfShards: &t.NumberOfShards,
+		Shards:         t.Shards,
 	}
 }
 
@@ -4765,6 +4767,18 @@ func ToRetryTaskV2Error(t *shared.RetryTaskV2Error) *types.RetryTaskV2Error {
 	}
 }
 
+// FromRestartWorkflowExecutionRequest converts internal RestartWorkflowExecutionRequest type to thrift
+func FromRestartWorkflowExecutionRequest(t *types.RestartWorkflowExecutionRequest) *shared.RestartWorkflowExecutionRequest {
+	if t == nil {
+		return nil
+	}
+	return &shared.RestartWorkflowExecutionRequest{
+		Domain:            &t.Domain,
+		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
+		Identity:          &t.Identity,
+	}
+}
+
 // ToRestartWorkflowExecutionRequest converts thrift RestartWorkflowExecutionRequest type to internal
 func ToRestartWorkflowExecutionRequest(t *shared.RestartWorkflowExecutionRequest) *types.RestartWorkflowExecutionRequest {
 	if t == nil {
@@ -5548,18 +5562,6 @@ func ToRestartWorkflowExecutionResponse(t *shared.RestartWorkflowExecutionRespon
 	}
 	return &types.RestartWorkflowExecutionResponse{
 		RunID: t.GetRunId(),
-	}
-}
-
-// FromRestartWorkflowExecutionRequest converts internal RestartWorkflowExecutionRequest type to thrift
-func FromRestartWorkflowExecutionRequest(t *types.RestartWorkflowExecutionRequest) *shared.RestartWorkflowExecutionRequest {
-	if t == nil {
-		return nil
-	}
-	return &shared.RestartWorkflowExecutionRequest{
-		Domain:            &t.Domain,
-		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
-		Identity:          &t.Identity,
 	}
 }
 

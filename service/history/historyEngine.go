@@ -27,16 +27,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/pborman/uuid"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc/yarpcerrors"
 
-	"github.com/uber/cadence/client/admin"
-	hc "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
+	"github.com/uber/cadence/client/wrappers/retryable"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/client"
@@ -294,6 +292,7 @@ func NewEngineWithShardContext(
 		queueTaskProcessor,
 		crossClusterTaskFetchers,
 		&task.CrossClusterTaskProcessorOptions{
+			Enabled:                    config.EnableCrossClusterEngine,
 			MaxPendingTasks:            config.CrossClusterTargetProcessorMaxPendingTasks,
 			TaskMaxRetryCount:          config.CrossClusterTargetProcessorMaxRetryCount,
 			TaskRedispatchInterval:     config.ActiveTaskRedispatchInterval,
@@ -307,7 +306,7 @@ func NewEngineWithShardContext(
 	replicationTaskExecutors := make(map[string]replication.TaskExecutor)
 	// Intentionally use the raw client to create its own retry policy
 	historyRawClient := shard.GetService().GetClientBean().GetHistoryClient()
-	historyRetryableClient := hc.NewRetryableClient(
+	historyRetryableClient := retryable.NewHistoryClient(
 		historyRawClient,
 		common.CreateReplicationServiceBusyRetryPolicy(),
 		common.IsServiceBusyError,
@@ -319,7 +318,7 @@ func NewEngineWithShardContext(
 		sourceCluster := replicationTaskFetcher.GetSourceCluster()
 		// Intentionally use the raw client to create its own retry policy
 		adminClient := shard.GetService().GetClientBean().GetRemoteAdminClient(sourceCluster)
-		adminRetryableClient := admin.NewRetryableClient(
+		adminRetryableClient := retryable.NewAdminClient(
 			adminClient,
 			common.CreateReplicationServiceBusyRetryPolicy(),
 			common.IsServiceBusyError,
@@ -1171,7 +1170,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 ) (retResp *types.HistoryQueryWorkflowResponse, retErr error) {
 
 	scope := e.metricsClient.Scope(metrics.HistoryQueryWorkflowScope).Tagged(metrics.DomainTag(request.GetRequest().GetDomain()))
-	shardMetricScope := e.metricsClient.Scope(metrics.HistoryQueryWorkflowScope, metrics.ShardIDTag(strconv.Itoa(e.shard.GetShardID())))
+	shardMetricScope := e.metricsClient.Scope(metrics.HistoryQueryWorkflowScope, metrics.ShardIDTag(e.shard.GetShardID()))
 
 	consistentQueryEnabled := e.config.EnableConsistentQuery() && e.config.EnableConsistentQueryByDomain(request.GetRequest().GetDomain())
 	if request.GetRequest().GetQueryConsistencyLevel() == types.QueryConsistencyLevelStrong {

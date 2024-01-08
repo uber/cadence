@@ -1602,8 +1602,14 @@ const (
 	// KeyName: history.queueProcessorEnableGracefulSyncShutdown
 	// Value type: Bool
 	// Default value: false
-	// Allowed filters: ShardID
+	// Allowed filters: N/A
 	QueueProcessorEnableGracefulSyncShutdown
+	// ReplicationTaskFetcherEnableGracefulSyncShutdown indicates whether task fetcher should be shutdown gracefully & synchronously
+	// KeyName: history.replicationTaskFetcherEnableGracefulSyncShutdown
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: N/A
+	ReplicationTaskFetcherEnableGracefulSyncShutdown
 	// TransferProcessorEnableValidator is whether validator should be enabled for transferQueueProcessor
 	// KeyName: history.transferProcessorEnableValidator
 	// Value type: Bool
@@ -1640,12 +1646,19 @@ const (
 	// Default value: false
 	// Allowed filters: DomainName
 	EnableConsistentQueryByDomain
-	// EnableCrossClusterOperations indicates if cross cluster operations can be scheduled for a domain
+	// EnableCrossClusterEngine is used as an overall switch for the cross-cluster feature, a feature which, if not enabled
+	// can be quite expensive in terms of resources
+	// KeyName: history.enableCrossClusterEngine
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: DomainName
+	EnableCrossClusterEngine
+	// EnableCrossClusterOperationsForDomain indicates if cross cluster operations can be scheduled for a domain
 	// KeyName: history.enableCrossClusterOperations
 	// Value type: Bool
 	// Default value: false
 	// Allowed filters: DomainName
-	EnableCrossClusterOperations
+	EnableCrossClusterOperationsForDomain
 	// EnableHistoryCorruptionCheck enables additional sanity check for corrupted history. This allows early catches of DB corruptions but potiantally increased latency.
 	// KeyName: history.enableHistoryCorruptionCheck
 	// Value type: Bool
@@ -1906,6 +1919,9 @@ const (
 	// Value type: Bool
 	// Default value: true
 	EnableShardIDMetrics
+
+	EnableTimerDebugLogByDomainID
+
 	// LastBoolKey must be the last one in this const group
 	LastBoolKey
 )
@@ -3839,6 +3855,11 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		Description:  "QueueProcessorEnableGracefulSyncShutdown indicates whether processing queue should be shutdown gracefully & synchronously",
 		DefaultValue: false,
 	},
+	ReplicationTaskFetcherEnableGracefulSyncShutdown: DynamicBool{
+		KeyName:      "history.replicationTaskFetcherEnableGracefulSyncShutdown",
+		Description:  "ReplicationTaskFetcherEnableGracefulSyncShutdown is whether we should gracefully drain replication task fetcher on shutdown",
+		DefaultValue: false,
+	},
 	TransferProcessorEnableValidator: DynamicBool{
 		KeyName:      "history.transferProcessorEnableValidator",
 		Description:  "TransferProcessorEnableValidator is whether validator should be enabled for transferQueueProcessor",
@@ -3872,10 +3893,15 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		Description:  "EnableConsistentQueryByDomain indicates if consistent query is enabled for a domain",
 		DefaultValue: false,
 	},
-	EnableCrossClusterOperations: DynamicBool{
+	EnableCrossClusterEngine: DynamicBool{
+		KeyName:      "history.enableCrossClusterEngine",
+		Description:  "an overall toggle for the cross-cluster domain feature",
+		DefaultValue: false,
+	},
+	EnableCrossClusterOperationsForDomain: DynamicBool{
 		KeyName:      "history.enableCrossClusterOperations",
 		Filters:      []Filter{DomainName},
-		Description:  "EnableCrossClusterOperations indicates if cross cluster operations can be scheduled for a domain",
+		Description:  "EnableCrossClusterOperationsForDomain indicates if cross cluster operations can be scheduled for a domain",
 		DefaultValue: false,
 	},
 	EnableHistoryCorruptionCheck: DynamicBool{
@@ -4100,6 +4126,12 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		KeyName:      "system.enableShardIDMetrics",
 		Description:  "Enable shardId metrics in persistence client",
 		DefaultValue: true,
+	},
+	EnableTimerDebugLogByDomainID: DynamicBool{
+		KeyName:      "history.enableTimerDebugLogByDomainID",
+		Filters:      []Filter{DomainID},
+		Description:  "Enable log for debugging timer task issue by domain",
+		DefaultValue: false,
 	},
 }
 
