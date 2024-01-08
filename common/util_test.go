@@ -26,7 +26,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/stretchr/testify/mock"
 	"math/rand"
 	"reflect"
 	"runtime"
@@ -37,6 +36,7 @@ import (
 
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/yarpcerrors"
 
