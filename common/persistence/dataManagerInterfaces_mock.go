@@ -1432,10 +1432,10 @@ func (mr *MockQueueManagerMockRecorder) RangeDeleteMessagesFromDLQ(arg0, arg1, a
 }
 
 // ReadMessages mocks base method.
-func (m *MockQueueManager) ReadMessages(arg0 context.Context, arg1 int64, arg2 int) ([]*QueueMessage, error) {
+func (m *MockQueueManager) ReadMessages(arg0 context.Context, arg1 int64, arg2 int) (QueueMessageList, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReadMessages", arg0, arg1, arg2)
-	ret0, _ := ret[0].([]*QueueMessage)
+	ret0, _ := ret[0].(QueueMessageList)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

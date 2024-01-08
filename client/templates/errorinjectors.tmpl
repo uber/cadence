@@ -1,0 +1,68 @@
+import (
+	"context"
+
+	"go.uber.org/yarpc"
+
+	"github.com/uber/cadence/common/errors"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/types"
+)
+
+{{$clientName := (index .Vars "client")}}
+{{ $decorator := (printf "%s%s" (down $clientName) .Interface.Name) }}
+{{ $Decorator := (printf "%s%s" $clientName .Interface.Name) }}
+
+
+{{$fakeErr := printf "msg%sInjectedFakeErr" $clientName}}
+const (
+	{{$fakeErr}} = "Injected fake {{down $clientName}} client error"
+)
+
+// {{$decorator}} implements {{.Interface.Type}} interface instrumented with retries
+type {{$decorator}} struct {
+    client        {{.Interface.Type}}
+	errorRate     float64
+	logger        log.Logger
+	fakeErrFn     func(float64) error
+	forwardCallFn func(error) bool
+}
+
+// New{{$Decorator}} creates a new instance of {{$decorator}} that injects error into every call with a given rate.
+func New{{$Decorator}}(client {{.Interface.Type}}, errorRate float64, logger log.Logger) {{.Interface.Type}} {
+    return &{{$decorator}}{
+        client:        client,
+        errorRate:     errorRate,
+        logger:        logger,
+        fakeErrFn:     errors.GenerateFakeError,
+        forwardCallFn: errors.ShouldForwardCall,
+    }
+}
+
+{{range $method := .Interface.Methods}}
+    {{- if (and $method.AcceptsContext $method.ReturnsError)}}
+        func (c *{{$decorator}}) {{$method.Declaration}} {
+	        fakeErr := c.fakeErrFn(c.errorRate)
+	        var forwardCall bool
+	        if forwardCall = c.forwardCallFn(fakeErr); forwardCall {
+	            {{$method.ResultsNames}} = c.client.{{$method.Call}}
+	        }
+
+	        if fakeErr != nil {
+                c.logger.Error({{$fakeErr}},
+			        {{printf "tag.%sClientOperation%s" $clientName .Name}},
+			        tag.Error(fakeErr),
+			        tag.Bool(forwardCall),
+			        tag.ClientError(err),
+		        )
+	            err = fakeErr
+	            return
+            }
+            return
+        }
+    {{else}}
+           func (c *{{$decorator}}) {{$method.Declaration}} {
+               {{ $method.Pass "c.wrapped." }}
+           }
+    {{end}}
+{{end}}

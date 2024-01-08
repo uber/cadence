@@ -1258,49 +1258,49 @@ const (
 	// Default value: 256
 	// Allowed filters: N/A
 	ScannerMaxTasksProcessedPerTasklistJob
-	// ConcreteExecutionsScannerConcurrency is indicates the concurrency of concrete execution scanner
+	// ConcreteExecutionsScannerConcurrency indicates the concurrency of concrete execution scanner
 	// KeyName: worker.executionsScannerConcurrency
 	// Value type: Int
 	// Default value: 25
 	// Allowed filters: N/A
 	ConcreteExecutionsScannerConcurrency
-	// ConcreteExecutionsScannerBlobstoreFlushThreshold is indicates the flush threshold of blobstore in concrete execution scanner
+	// ConcreteExecutionsScannerBlobstoreFlushThreshold indicates the flush threshold of blobstore in concrete execution scanner
 	// KeyName: worker.executionsScannerBlobstoreFlushThreshold
 	// Value type: Int
 	// Default value: 100
 	// Allowed filters: N/A
 	ConcreteExecutionsScannerBlobstoreFlushThreshold
-	// ConcreteExecutionsScannerActivityBatchSize is indicates the batch size of scanner activities
+	// ConcreteExecutionsScannerActivityBatchSize indicates the batch size of scanner activities
 	// KeyName: worker.executionsScannerActivityBatchSize
 	// Value type: Int
 	// Default value: 25
 	// Allowed filters: N/A
 	ConcreteExecutionsScannerActivityBatchSize
-	// ConcreteExecutionsScannerPersistencePageSize is indicates the page size of execution persistence fetches in concrete execution scanner
+	// ConcreteExecutionsScannerPersistencePageSize indicates the page size of execution persistence fetches in concrete execution scanner
 	// KeyName: worker.executionsScannerPersistencePageSize
 	// Value type: Int
 	// Default value: 1000
 	// Allowed filters: N/A
 	ConcreteExecutionsScannerPersistencePageSize
-	// CurrentExecutionsScannerConcurrency is indicates the concurrency of current executions scanner
+	// CurrentExecutionsScannerConcurrency indicates the concurrency of current executions scanner
 	// KeyName: worker.currentExecutionsConcurrency
 	// Value type: Int
 	// Default value: 25
 	// Allowed filters: N/A
 	CurrentExecutionsScannerConcurrency
-	// CurrentExecutionsScannerBlobstoreFlushThreshold is indicates the flush threshold of blobstore in current executions scanner
+	// CurrentExecutionsScannerBlobstoreFlushThreshold indicates the flush threshold of blobstore in current executions scanner
 	// KeyName: worker.currentExecutionsBlobstoreFlushThreshold
 	// Value type: Int
 	// Default value: 100
 	// Allowed filters: N/A
 	CurrentExecutionsScannerBlobstoreFlushThreshold
-	// CurrentExecutionsScannerActivityBatchSize is indicates the batch size of scanner activities
+	// CurrentExecutionsScannerActivityBatchSize indicates the batch size of scanner activities
 	// KeyName: worker.currentExecutionsActivityBatchSize
 	// Value type: Int
 	// Default value: 25
 	// Allowed filters: N/A
 	CurrentExecutionsScannerActivityBatchSize
-	// CurrentExecutionsScannerPersistencePageSize is indicates the page size of execution persistence fetches in current executions scanner
+	// CurrentExecutionsScannerPersistencePageSize indicates the page size of execution persistence fetches in current executions scanner
 	// KeyName: worker.currentExecutionsPersistencePageSize
 	// Value type: INt
 	// Default value: 1000
@@ -1562,42 +1562,54 @@ const (
 	// Default value: false
 	// Allowed filters: N/A
 	EventsCacheGlobalEnable
-	// QueueProcessorEnableSplit is indicates whether processing queue split policy should be enabled
+	// QueueProcessorEnableSplit indicates whether processing queue split policy should be enabled
 	// KeyName: history.queueProcessorEnableSplit
 	// Value type: Bool
 	// Default value: false
 	// Allowed filters: N/A
 	QueueProcessorEnableSplit
-	// QueueProcessorEnableRandomSplitByDomainID is indicates whether random queue split policy should be enabled for a domain
+	// QueueProcessorEnableRandomSplitByDomainID indicates whether random queue split policy should be enabled for a domain
 	// KeyName: history.queueProcessorEnableRandomSplitByDomainID
 	// Value type: Bool
 	// Default value: false
 	// Allowed filters: DomainID
 	QueueProcessorEnableRandomSplitByDomainID
-	// QueueProcessorEnablePendingTaskSplitByDomainID is indicates whether pending task split policy should be enabled
+	// QueueProcessorEnablePendingTaskSplitByDomainID indicates whether pending task split policy should be enabled
 	// KeyName: history.queueProcessorEnablePendingTaskSplitByDomainID
 	// Value type: Bool
 	// Default value: false
 	// Allowed filters: DomainID
 	QueueProcessorEnablePendingTaskSplitByDomainID
-	// QueueProcessorEnableStuckTaskSplitByDomainID is indicates whether stuck task split policy should be enabled
+	// QueueProcessorEnableStuckTaskSplitByDomainID indicates whether stuck task split policy should be enabled
 	// KeyName: history.queueProcessorEnableStuckTaskSplitByDomainID
 	// Value type: Bool
 	// Default value: false
 	// Allowed filters: DomainID
 	QueueProcessorEnableStuckTaskSplitByDomainID
-	// QueueProcessorEnablePersistQueueStates is indicates whether processing queue states should be persisted
+	// QueueProcessorEnablePersistQueueStates indicates whether processing queue states should be persisted
 	// KeyName: history.queueProcessorEnablePersistQueueStates
 	// Value type: Bool
 	// Default value: true
 	// Allowed filters: N/A
 	QueueProcessorEnablePersistQueueStates
-	// QueueProcessorEnableLoadQueueStates is indicates whether processing queue states should be loaded
+	// QueueProcessorEnableLoadQueueStates indicates whether processing queue states should be loaded
 	// KeyName: history.queueProcessorEnableLoadQueueStates
 	// Value type: Bool
 	// Default value: true
 	// Allowed filters: N/A
 	QueueProcessorEnableLoadQueueStates
+	// QueueProcessorEnableGracefulSyncShutdown indicates whether processing queue should be shutdown gracefully & synchronously
+	// KeyName: history.queueProcessorEnableGracefulSyncShutdown
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: N/A
+	QueueProcessorEnableGracefulSyncShutdown
+	// ReplicationTaskFetcherEnableGracefulSyncShutdown indicates whether task fetcher should be shutdown gracefully & synchronously
+	// KeyName: history.replicationTaskFetcherEnableGracefulSyncShutdown
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: N/A
+	ReplicationTaskFetcherEnableGracefulSyncShutdown
 	// TransferProcessorEnableValidator is whether validator should be enabled for transferQueueProcessor
 	// KeyName: history.transferProcessorEnableValidator
 	// Value type: Bool
@@ -1634,12 +1646,19 @@ const (
 	// Default value: false
 	// Allowed filters: DomainName
 	EnableConsistentQueryByDomain
-	// EnableCrossClusterOperations indicates if cross cluster operations can be scheduled for a domain
+	// EnableCrossClusterEngine is used as an overall switch for the cross-cluster feature, a feature which, if not enabled
+	// can be quite expensive in terms of resources
+	// KeyName: history.enableCrossClusterEngine
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: DomainName
+	EnableCrossClusterEngine
+	// EnableCrossClusterOperationsForDomain indicates if cross cluster operations can be scheduled for a domain
 	// KeyName: history.enableCrossClusterOperations
 	// Value type: Bool
 	// Default value: false
 	// Allowed filters: DomainName
-	EnableCrossClusterOperations
+	EnableCrossClusterOperationsForDomain
 	// EnableHistoryCorruptionCheck enables additional sanity check for corrupted history. This allows early catches of DB corruptions but potiantally increased latency.
 	// KeyName: history.enableHistoryCorruptionCheck
 	// Value type: Bool
@@ -1690,31 +1709,31 @@ const (
 	// Default value: false
 	// Allowed filters: N/A
 	EnableCleaningOrphanTaskInTasklistScavenger
-	// TaskListScannerEnabled is indicates if task list scanner should be started as part of worker.Scanner
+	// TaskListScannerEnabled indicates if task list scanner should be started as part of worker.Scanner
 	// KeyName: worker.taskListScannerEnabled
 	// Value type: Bool
 	// Default value: true
 	// Allowed filters: N/A
 	TaskListScannerEnabled
-	// HistoryScannerEnabled is indicates if history scanner should be started as part of worker.Scanner
+	// HistoryScannerEnabled indicates if history scanner should be started as part of worker.Scanner
 	// KeyName: worker.historyScannerEnabled
 	// Value type: Bool
 	// Default value: false
 	// Allowed filters: N/A
 	HistoryScannerEnabled
-	// ConcreteExecutionsScannerEnabled is indicates if executions scanner should be started as part of worker.Scanner
+	// ConcreteExecutionsScannerEnabled indicates if executions scanner should be started as part of worker.Scanner
 	// KeyName: worker.executionsScannerEnabled
 	// Value type: Bool
 	// Default value: false
 	// Allowed filters: N/A
 	ConcreteExecutionsScannerEnabled
-	// ConcreteExecutionsScannerInvariantCollectionMutableState is indicates if mutable state invariant checks should be run
+	// ConcreteExecutionsScannerInvariantCollectionMutableState indicates if mutable state invariant checks should be run
 	// KeyName: worker.executionsScannerInvariantCollectionMutableState
 	// Value type: Bool
 	// Default value: true
 	// Allowed filters: N/A
 	ConcreteExecutionsScannerInvariantCollectionMutableState
-	// ConcreteExecutionsScannerInvariantCollectionHistory is indicates if history invariant checks should be run
+	// ConcreteExecutionsScannerInvariantCollectionHistory indicates if history invariant checks should be run
 	// KeyName: worker.executionsScannerInvariantCollectionHistory
 	// Value type: Bool
 	// Default value: true
@@ -1726,13 +1745,13 @@ const (
 	// Default value: false
 	// Allowed filters: N/A
 	ConcreteExecutionsFixerInvariantCollectionStale
-	// ConcreteExecutionsFixerInvariantCollectionMutableState is indicates if mutable state invariant checks should be run
+	// ConcreteExecutionsFixerInvariantCollectionMutableState indicates if mutable state invariant checks should be run
 	// KeyName: worker.executionsFixerInvariantCollectionMutableState
 	// Value type: Bool
 	// Default value: true
 	// Allowed filters: N/A
 	ConcreteExecutionsFixerInvariantCollectionMutableState
-	// ConcreteExecutionsFixerInvariantCollectionHistory is indicates if history invariant checks should be run
+	// ConcreteExecutionsFixerInvariantCollectionHistory indicates if history invariant checks should be run
 	// KeyName: worker.executionsFixerInvariantCollectionHistory
 	// Value type: Bool
 	// Default value: true
@@ -1744,19 +1763,19 @@ const (
 	// Default value: false
 	// Allowed filters: N/A
 	ConcreteExecutionsScannerInvariantCollectionStale
-	// CurrentExecutionsScannerEnabled is indicates if current executions scanner should be started as part of worker.Scanner
+	// CurrentExecutionsScannerEnabled indicates if current executions scanner should be started as part of worker.Scanner
 	// KeyName: worker.currentExecutionsScannerEnabled
 	// Value type: Bool
 	// Default value: false
 	// Allowed filters: N/A
 	CurrentExecutionsScannerEnabled
-	// CurrentExecutionsScannerInvariantCollectionHistory is indicates if history invariant checks should be run
+	// CurrentExecutionsScannerInvariantCollectionHistory indicates if history invariant checks should be run
 	// KeyName: worker.currentExecutionsScannerInvariantCollectionHistory
 	// Value type: Bool
 	// Default value: true
 	// Allowed filters: N/A
 	CurrentExecutionsScannerInvariantCollectionHistory
-	// CurrentExecutionsScannerInvariantCollectionMutableState is indicates if mutable state invariant checks should be run
+	// CurrentExecutionsScannerInvariantCollectionMutableState indicates if mutable state invariant checks should be run
 	// KeyName: worker.currentExecutionsInvariantCollectionMutableState
 	// Value type: Bool
 	// Default value: true
@@ -1781,13 +1800,13 @@ const (
 	// Allowed filters: N/A
 	EnableESAnalyzer
 
-	// EnableStickyQuery is indicates if sticky query should be enabled per domain
+	// EnableStickyQuery indicates if sticky query should be enabled per domain
 	// KeyName: system.enableStickyQuery
 	// Value type: Bool
 	// Default value: true
 	// Allowed filters: DomainName
 	EnableStickyQuery
-	// EnableFailoverManager is indicates if failover manager is enabled
+	// EnableFailoverManager indicates if failover manager is enabled
 	// KeyName: system.enableFailoverManager
 	// Value type: Bool
 	// Default value: true
@@ -1900,6 +1919,9 @@ const (
 	// Value type: Bool
 	// Default value: true
 	EnableShardIDMetrics
+
+	EnableTimerDebugLogByDomainID
+
 	// LastBoolKey must be the last one in this const group
 	LastBoolKey
 )
@@ -3523,42 +3545,42 @@ var IntKeys = map[IntKey]DynamicInt{
 	},
 	ConcreteExecutionsScannerConcurrency: DynamicInt{
 		KeyName:      "worker.executionsScannerConcurrency",
-		Description:  "ConcreteExecutionsScannerConcurrency is indicates the concurrency of concrete execution scanner",
+		Description:  "ConcreteExecutionsScannerConcurrency indicates the concurrency of concrete execution scanner",
 		DefaultValue: 25,
 	},
 	ConcreteExecutionsScannerBlobstoreFlushThreshold: DynamicInt{
 		KeyName:      "worker.executionsScannerBlobstoreFlushThreshold",
-		Description:  "ConcreteExecutionsScannerBlobstoreFlushThreshold is indicates the flush threshold of blobstore in concrete execution scanner",
+		Description:  "ConcreteExecutionsScannerBlobstoreFlushThreshold indicates the flush threshold of blobstore in concrete execution scanner",
 		DefaultValue: 100,
 	},
 	ConcreteExecutionsScannerActivityBatchSize: DynamicInt{
 		KeyName:      "worker.executionsScannerActivityBatchSize",
-		Description:  "ConcreteExecutionsScannerActivityBatchSize is indicates the batch size of scanner activities",
+		Description:  "ConcreteExecutionsScannerActivityBatchSize indicates the batch size of scanner activities",
 		DefaultValue: 25,
 	},
 	ConcreteExecutionsScannerPersistencePageSize: DynamicInt{
 		KeyName:      "worker.executionsScannerPersistencePageSize",
-		Description:  "ConcreteExecutionsScannerPersistencePageSize is indicates the page size of execution persistence fetches in concrete execution scanner",
+		Description:  "ConcreteExecutionsScannerPersistencePageSize indicates the page size of execution persistence fetches in concrete execution scanner",
 		DefaultValue: 1000,
 	},
 	CurrentExecutionsScannerConcurrency: DynamicInt{
 		KeyName:      "worker.currentExecutionsConcurrency",
-		Description:  "CurrentExecutionsScannerConcurrency is indicates the concurrency of current executions scanner",
+		Description:  "CurrentExecutionsScannerConcurrency indicates the concurrency of current executions scanner",
 		DefaultValue: 25,
 	},
 	CurrentExecutionsScannerBlobstoreFlushThreshold: DynamicInt{
 		KeyName:      "worker.currentExecutionsBlobstoreFlushThreshold",
-		Description:  "CurrentExecutionsScannerBlobstoreFlushThreshold is indicates the flush threshold of blobstore in current executions scanner",
+		Description:  "CurrentExecutionsScannerBlobstoreFlushThreshold indicates the flush threshold of blobstore in current executions scanner",
 		DefaultValue: 100,
 	},
 	CurrentExecutionsScannerActivityBatchSize: DynamicInt{
 		KeyName:      "worker.currentExecutionsActivityBatchSize",
-		Description:  "CurrentExecutionsScannerActivityBatchSize is indicates the batch size of scanner activities",
+		Description:  "CurrentExecutionsScannerActivityBatchSize indicates the batch size of scanner activities",
 		DefaultValue: 25,
 	},
 	CurrentExecutionsScannerPersistencePageSize: DynamicInt{
 		KeyName:      "worker.currentExecutionsPersistencePageSize",
-		Description:  "CurrentExecutionsScannerPersistencePageSize is indicates the page size of execution persistence fetches in current executions scanner",
+		Description:  "CurrentExecutionsScannerPersistencePageSize indicates the page size of execution persistence fetches in current executions scanner",
 		DefaultValue: 1000,
 	},
 	TimersScannerConcurrency: DynamicInt{
@@ -3797,36 +3819,46 @@ var BoolKeys = map[BoolKey]DynamicBool{
 	},
 	QueueProcessorEnableSplit: DynamicBool{
 		KeyName:      "history.queueProcessorEnableSplit",
-		Description:  "QueueProcessorEnableSplit is indicates whether processing queue split policy should be enabled",
+		Description:  "QueueProcessorEnableSplit indicates whether processing queue split policy should be enabled",
 		DefaultValue: false,
 	},
 	QueueProcessorEnableRandomSplitByDomainID: DynamicBool{
 		KeyName:      "history.queueProcessorEnableRandomSplitByDomainID",
 		Filters:      []Filter{DomainID},
-		Description:  "QueueProcessorEnableRandomSplitByDomainID is indicates whether random queue split policy should be enabled for a domain",
+		Description:  "QueueProcessorEnableRandomSplitByDomainID indicates whether random queue split policy should be enabled for a domain",
 		DefaultValue: false,
 	},
 	QueueProcessorEnablePendingTaskSplitByDomainID: DynamicBool{
 		KeyName:      "history.queueProcessorEnablePendingTaskSplitByDomainID",
 		Filters:      []Filter{DomainID},
-		Description:  "ueueProcessorEnablePendingTaskSplitByDomainID is indicates whether pending task split policy should be enabled",
+		Description:  "ueueProcessorEnablePendingTaskSplitByDomainID indicates whether pending task split policy should be enabled",
 		DefaultValue: false,
 	},
 	QueueProcessorEnableStuckTaskSplitByDomainID: DynamicBool{
 		KeyName:      "history.queueProcessorEnableStuckTaskSplitByDomainID",
 		Filters:      []Filter{DomainID},
-		Description:  "QueueProcessorEnableStuckTaskSplitByDomainID is indicates whether stuck task split policy should be enabled",
+		Description:  "QueueProcessorEnableStuckTaskSplitByDomainID indicates whether stuck task split policy should be enabled",
 		DefaultValue: false,
 	},
 	QueueProcessorEnablePersistQueueStates: DynamicBool{
 		KeyName:      "history.queueProcessorEnablePersistQueueStates",
-		Description:  "QueueProcessorEnablePersistQueueStates is indicates whether processing queue states should be persisted",
+		Description:  "QueueProcessorEnablePersistQueueStates indicates whether processing queue states should be persisted",
 		DefaultValue: true,
 	},
 	QueueProcessorEnableLoadQueueStates: DynamicBool{
 		KeyName:      "history.queueProcessorEnableLoadQueueStates",
-		Description:  "QueueProcessorEnableLoadQueueStates is indicates whether processing queue states should be loaded",
+		Description:  "QueueProcessorEnableLoadQueueStates indicates whether processing queue states should be loaded",
 		DefaultValue: true,
+	},
+	QueueProcessorEnableGracefulSyncShutdown: DynamicBool{
+		KeyName:      "history.queueProcessorEnableGracefulSyncShutdown",
+		Description:  "QueueProcessorEnableGracefulSyncShutdown indicates whether processing queue should be shutdown gracefully & synchronously",
+		DefaultValue: false,
+	},
+	ReplicationTaskFetcherEnableGracefulSyncShutdown: DynamicBool{
+		KeyName:      "history.replicationTaskFetcherEnableGracefulSyncShutdown",
+		Description:  "ReplicationTaskFetcherEnableGracefulSyncShutdown is whether we should gracefully drain replication task fetcher on shutdown",
+		DefaultValue: false,
 	},
 	TransferProcessorEnableValidator: DynamicBool{
 		KeyName:      "history.transferProcessorEnableValidator",
@@ -3861,10 +3893,15 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		Description:  "EnableConsistentQueryByDomain indicates if consistent query is enabled for a domain",
 		DefaultValue: false,
 	},
-	EnableCrossClusterOperations: DynamicBool{
+	EnableCrossClusterEngine: DynamicBool{
+		KeyName:      "history.enableCrossClusterEngine",
+		Description:  "an overall toggle for the cross-cluster domain feature",
+		DefaultValue: false,
+	},
+	EnableCrossClusterOperationsForDomain: DynamicBool{
 		KeyName:      "history.enableCrossClusterOperations",
 		Filters:      []Filter{DomainName},
-		Description:  "EnableCrossClusterOperations indicates if cross cluster operations can be scheduled for a domain",
+		Description:  "EnableCrossClusterOperationsForDomain indicates if cross cluster operations can be scheduled for a domain",
 		DefaultValue: false,
 	},
 	EnableHistoryCorruptionCheck: DynamicBool{
@@ -3908,27 +3945,27 @@ var BoolKeys = map[BoolKey]DynamicBool{
 	},
 	TaskListScannerEnabled: DynamicBool{
 		KeyName:      "worker.taskListScannerEnabled",
-		Description:  "TaskListScannerEnabled is indicates if task list scanner should be started as part of worker.Scanner",
+		Description:  "TaskListScannerEnabled indicates if task list scanner should be started as part of worker.Scanner",
 		DefaultValue: true,
 	},
 	HistoryScannerEnabled: DynamicBool{
 		KeyName:      "worker.historyScannerEnabled",
-		Description:  "HistoryScannerEnabled is indicates if history scanner should be started as part of worker.Scanner",
+		Description:  "HistoryScannerEnabled indicates if history scanner should be started as part of worker.Scanner",
 		DefaultValue: false,
 	},
 	ConcreteExecutionsScannerEnabled: DynamicBool{
 		KeyName:      "worker.executionsScannerEnabled",
-		Description:  "ConcreteExecutionsScannerEnabled is indicates if executions scanner should be started as part of worker.Scanner",
+		Description:  "ConcreteExecutionsScannerEnabled indicates if executions scanner should be started as part of worker.Scanner",
 		DefaultValue: false,
 	},
 	ConcreteExecutionsScannerInvariantCollectionMutableState: DynamicBool{
 		KeyName:      "worker.executionsScannerInvariantCollectionMutableState",
-		Description:  "ConcreteExecutionsScannerInvariantCollectionMutableState is indicates if mutable state invariant checks should be run",
+		Description:  "ConcreteExecutionsScannerInvariantCollectionMutableState indicates if mutable state invariant checks should be run",
 		DefaultValue: true,
 	},
 	ConcreteExecutionsScannerInvariantCollectionHistory: DynamicBool{
 		KeyName:      "worker.executionsScannerInvariantCollectionHistory",
-		Description:  "ConcreteExecutionsScannerInvariantCollectionHistory is indicates if history invariant checks should be run",
+		Description:  "ConcreteExecutionsScannerInvariantCollectionHistory indicates if history invariant checks should be run",
 		DefaultValue: true,
 	},
 	ConcreteExecutionsScannerInvariantCollectionStale: DynamicBool{
@@ -3938,12 +3975,12 @@ var BoolKeys = map[BoolKey]DynamicBool{
 	},
 	ConcreteExecutionsFixerInvariantCollectionMutableState: DynamicBool{
 		KeyName:      "worker.executionsFixerInvariantCollectionMutableState",
-		Description:  "ConcreteExecutionsFixerInvariantCollectionMutableState is indicates if mutable state invariant checks should be run",
+		Description:  "ConcreteExecutionsFixerInvariantCollectionMutableState indicates if mutable state invariant checks should be run",
 		DefaultValue: true,
 	},
 	ConcreteExecutionsFixerInvariantCollectionHistory: DynamicBool{
 		KeyName:      "worker.executionsFixerInvariantCollectionHistory",
-		Description:  "ConcreteExecutionsFixerInvariantCollectionHistory is indicates if history invariant checks should be run",
+		Description:  "ConcreteExecutionsFixerInvariantCollectionHistory indicates if history invariant checks should be run",
 		DefaultValue: true,
 	},
 	ConcreteExecutionsFixerInvariantCollectionStale: DynamicBool{
@@ -3953,17 +3990,17 @@ var BoolKeys = map[BoolKey]DynamicBool{
 	},
 	CurrentExecutionsScannerEnabled: DynamicBool{
 		KeyName:      "worker.currentExecutionsScannerEnabled",
-		Description:  "CurrentExecutionsScannerEnabled is indicates if current executions scanner should be started as part of worker.Scanner",
+		Description:  "CurrentExecutionsScannerEnabled indicates if current executions scanner should be started as part of worker.Scanner",
 		DefaultValue: false,
 	},
 	CurrentExecutionsScannerInvariantCollectionHistory: DynamicBool{
 		KeyName:      "worker.currentExecutionsScannerInvariantCollectionHistory",
-		Description:  "CurrentExecutionsScannerInvariantCollectionHistory is indicates if history invariant checks should be run",
+		Description:  "CurrentExecutionsScannerInvariantCollectionHistory indicates if history invariant checks should be run",
 		DefaultValue: true,
 	},
 	CurrentExecutionsScannerInvariantCollectionMutableState: DynamicBool{
 		KeyName:      "worker.currentExecutionsInvariantCollectionMutableState",
-		Description:  "CurrentExecutionsScannerInvariantCollectionMutableState is indicates if mutable state invariant checks should be run",
+		Description:  "CurrentExecutionsScannerInvariantCollectionMutableState indicates if mutable state invariant checks should be run",
 		DefaultValue: true,
 	},
 	EnableBatcher: DynamicBool{
@@ -3984,12 +4021,12 @@ var BoolKeys = map[BoolKey]DynamicBool{
 	EnableStickyQuery: DynamicBool{
 		KeyName:      "system.enableStickyQuery",
 		Filters:      []Filter{DomainName},
-		Description:  "EnableStickyQuery is indicates if sticky query should be enabled per domain",
+		Description:  "EnableStickyQuery indicates if sticky query should be enabled per domain",
 		DefaultValue: true,
 	},
 	EnableFailoverManager: DynamicBool{
 		KeyName:      "system.enableFailoverManager",
-		Description:  "EnableFailoverManager is indicates if failover manager is enabled",
+		Description:  "EnableFailoverManager indicates if failover manager is enabled",
 		DefaultValue: true,
 	},
 	EnableWorkflowShadower: DynamicBool{
@@ -4089,6 +4126,12 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		KeyName:      "system.enableShardIDMetrics",
 		Description:  "Enable shardId metrics in persistence client",
 		DefaultValue: true,
+	},
+	EnableTimerDebugLogByDomainID: DynamicBool{
+		KeyName:      "history.enableTimerDebugLogByDomainID",
+		Filters:      []Filter{DomainID},
+		Description:  "Enable log for debugging timer task issue by domain",
+		DefaultValue: false,
 	},
 }
 

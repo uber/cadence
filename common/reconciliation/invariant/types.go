@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination mocks.go -self_package github.com/uber/cadence/common/reconciliation/invariant
-//go:generate enumer -type=Collection
+//go:generate enumer -type=Collection -output collection_enumer_generated.go
 
 package invariant
 

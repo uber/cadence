@@ -84,8 +84,8 @@ func metricWithUnknown(key, value string) Tag {
 	return simpleMetric{key: key, value: value}
 }
 
-func ShardIDTag(shardIDStr string) Tag {
-	return metricWithUnknown(shardID, shardIDStr)
+func ShardIDTag(shardIDVal int) Tag {
+	return metricWithUnknown(shardID, strconv.Itoa(shardIDVal))
 }
 
 // DomainTag returns a new domain tag. For timers, this also ensures that we

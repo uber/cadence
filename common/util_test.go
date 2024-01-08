@@ -27,6 +27,8 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"reflect"
+	"runtime"
 	"strconv"
 	"sync"
 	"testing"
@@ -44,23 +46,53 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-func TestIsServiceTransientError_ContextTimeout(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
-	defer cancel()
-	time.Sleep(100 * time.Millisecond)
+func TestIsServiceTransientError(t *testing.T) {
+	for name, c := range map[string]struct {
+		err  error
+		want bool
+	}{
+		"ContextTimeout": {
+			err:  context.DeadlineExceeded,
+			want: false,
+		},
+		"YARPCDeadlineExceeded": {
+			err:  yarpcerrors.DeadlineExceededErrorf("yarpc deadline exceeded"),
+			want: false,
+		},
+		"YARPCUnavailable": {
+			err:  yarpcerrors.UnavailableErrorf("yarpc unavailable"),
+			want: true,
+		},
+		"YARPCUnavailable wrapped": {
+			err:  fmt.Errorf("wrapped err: %w", yarpcerrors.UnavailableErrorf("yarpc unavailable")),
+			want: true,
+		},
+		"YARPCUnknown": {
+			err:  yarpcerrors.UnknownErrorf("yarpc unknown"),
+			want: true,
+		},
+		"YARPCInternal": {
+			err:  yarpcerrors.InternalErrorf("yarpc internal"),
+			want: true,
+		},
+		"ContextCancel": {
+			err:  context.Canceled,
+			want: false,
+		},
+		"ServiceBusyError": {
+			err:  &types.ServiceBusyError{},
+			want: true,
+		},
+		"ShardOwnershipLostError": {
+			err:  &types.ShardOwnershipLostError{},
+			want: true,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, c.want, IsServiceTransientError(c.err))
+		})
+	}
 
-	require.False(t, IsServiceTransientError(ctx.Err()))
-}
-
-func TestIsServiceTransientError_YARPCDeadlineExceeded(t *testing.T) {
-	yarpcErr := yarpcerrors.DeadlineExceededErrorf("yarpc deadline exceeded")
-	require.False(t, IsServiceTransientError(yarpcErr))
-}
-
-func TestIsServiceTransientError_ContextCancel(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-	require.False(t, IsServiceTransientError(ctx.Err()))
 }
 
 func TestIsContextTimeoutError(t *testing.T) {
@@ -704,6 +736,656 @@ func TestConvertGetTaskFailedCauseToErr(t *testing.T) {
 		t.Run(cause.String(), func(t *testing.T) {
 			gotErr := ConvertGetTaskFailedCauseToErr(cause)
 			require.Equal(t, wantErr, gotErr)
+		})
+	}
+}
+
+func TestWorkflowIDToHistoryShard(t *testing.T) {
+	for _, c := range []struct {
+		workflowID     string
+		numberOfShards int
+
+		want int
+	}{
+		{
+			workflowID:     "",
+			numberOfShards: 1000,
+			want:           242,
+		},
+		{
+			workflowID:     "workflowId",
+			numberOfShards: 1000,
+			want:           580,
+		},
+	} {
+		t.Run(fmt.Sprintf("%s-%v", c.workflowID, c.numberOfShards), func(t *testing.T) {
+			got := WorkflowIDToHistoryShard(c.workflowID, c.numberOfShards)
+			require.Equal(t, c.want, got)
+		})
+	}
+}
+
+func TestDomainIDToHistoryShard(t *testing.T) {
+	for _, c := range []struct {
+		domainID       string
+		numberOfShards int
+
+		want int
+	}{
+		{
+			domainID:       "",
+			numberOfShards: 1000,
+			want:           242,
+		},
+		{
+			domainID:       "domainId",
+			numberOfShards: 1000,
+			want:           600,
+		},
+	} {
+		t.Run(fmt.Sprintf("%s-%v", c.domainID, c.numberOfShards), func(t *testing.T) {
+			got := DomainIDToHistoryShard(c.domainID, c.numberOfShards)
+			require.Equal(t, c.want, got)
+		})
+	}
+}
+
+func TestGenerateRandomString(t *testing.T) {
+	for input, wantSize := range map[int]int{
+		-1: 0,
+		0:  0,
+		10: 10,
+	} {
+		t.Run(fmt.Sprintf("%d", input), func(t *testing.T) {
+			got := GenerateRandomString(input)
+			require.Len(t, got, wantSize)
+		})
+	}
+}
+
+func TestIsValidContext(t *testing.T) {
+	t.Run("background context", func(t *testing.T) {
+		require.NoError(t, IsValidContext(context.Background()))
+	})
+	t.Run("canceled context", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		got := IsValidContext(ctx)
+		require.Error(t, got)
+		require.ErrorIs(t, got, context.Canceled)
+	})
+	t.Run("deadline exceeded context", func(t *testing.T) {
+		ctx, _ := context.WithTimeout(context.Background(), -time.Second)
+		got := IsValidContext(ctx)
+		require.Error(t, got)
+		require.ErrorIs(t, got, context.DeadlineExceeded)
+	})
+	t.Run("context with deadline exceeded contextExpireThreshold", func(t *testing.T) {
+		ctx, _ := context.WithTimeout(context.Background(), contextExpireThreshold/2)
+		got := IsValidContext(ctx)
+		require.Error(t, got)
+		require.ErrorIs(t, got, context.DeadlineExceeded, "context.DeadlineExceeded should be returned, because context timeout is not later than now + contextExpireThreshold")
+	})
+	t.Run("valid context", func(t *testing.T) {
+		ctx, _ := context.WithTimeout(context.Background(), contextExpireThreshold*2)
+		require.NoError(t, IsValidContext(ctx), "nil should be returned, because context timeout is later than now + contextExpireThreshold")
+	})
+}
+
+func TestCreateChildContext(t *testing.T) {
+	t.Run("nil parent", func(t *testing.T) {
+		gotCtx, gotFunc := CreateChildContext(nil, 0)
+		require.Nil(t, gotCtx)
+		require.Equal(t, funcName(emptyCancelFunc), funcName(gotFunc))
+	})
+	t.Run("canceled parent", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		gotCtx, gotFunc := CreateChildContext(ctx, 0)
+		require.Equal(t, ctx, gotCtx)
+		require.Equal(t, funcName(emptyCancelFunc), funcName(gotFunc))
+	})
+	t.Run("non-canceled parent without deadline", func(t *testing.T) {
+		ctx, _ := context.WithCancel(context.Background())
+		gotCtx, gotFunc := CreateChildContext(ctx, 0)
+		require.Equal(t, ctx, gotCtx)
+		require.Equal(t, funcName(emptyCancelFunc), funcName(gotFunc))
+	})
+	t.Run("context with deadline exceeded", func(t *testing.T) {
+		ctx, _ := context.WithTimeout(context.Background(), -time.Second)
+		gotCtx, gotFunc := CreateChildContext(ctx, 0)
+		require.Equal(t, ctx, gotCtx)
+		require.Equal(t, funcName(emptyCancelFunc), funcName(gotFunc))
+	})
+
+	t.Run("tailroom is less or equal to 0", func(t *testing.T) {
+		testCase := func(t *testing.T, tailroom float64) {
+			deadline := time.Now().Add(time.Hour)
+			ctx, _ := context.WithDeadline(context.Background(), deadline)
+			gotCtx, gotFunc := CreateChildContext(ctx, tailroom)
+
+			gotDeadline, ok := gotCtx.Deadline()
+			require.True(t, ok)
+			require.Equal(t, deadline, gotDeadline, "deadline should be equal to parent deadline")
+
+			require.NotEqual(t, ctx, gotCtx)
+			require.NotEqual(t, funcName(emptyCancelFunc), funcName(gotFunc))
+		}
+
+		t.Run("0", func(t *testing.T) {
+			testCase(t, 0)
+		})
+		t.Run("-1", func(t *testing.T) {
+			testCase(t, -1)
+		})
+
+	})
+
+	t.Run("tailroom is greater or equal to 1", func(t *testing.T) {
+		testCase := func(t *testing.T, tailroom float64) {
+			deadline := time.Now().Add(time.Hour)
+			ctx, _ := context.WithDeadline(context.Background(), deadline)
+
+			// we can't mock time.Now, but we know that the deadline should be in
+			// range between the start and finish of function's execution
+			beforeNow := time.Now()
+			gotCtx, gotFunc := CreateChildContext(ctx, tailroom)
+			afterNow := time.Now()
+
+			gotDeadline, ok := gotCtx.Deadline()
+			require.True(t, ok)
+			require.NotEqual(t, deadline, gotDeadline)
+			require.Less(t, gotDeadline, deadline)
+
+			// gotDeadline should be between beforeNow and afterNow (exclusive)
+			require.GreaterOrEqual(t, afterNow, gotDeadline)
+			require.LessOrEqual(t, beforeNow, gotDeadline)
+
+			require.NotEqual(t, ctx, gotCtx)
+			require.NotEqual(t, funcName(emptyCancelFunc), funcName(gotFunc))
+		}
+		t.Run("1", func(t *testing.T) {
+			testCase(t, 1)
+		})
+		t.Run("2", func(t *testing.T) {
+			testCase(t, 2)
+		})
+	})
+	t.Run("tailroom is 0.5", func(t *testing.T) {
+		now := time.Now()
+		deadline := now.Add(time.Hour)
+
+		ctx, _ := context.WithDeadline(context.Background(), deadline)
+		gotCtx, gotFunc := CreateChildContext(ctx, 0.5)
+
+		gotDeadline, ok := gotCtx.Deadline()
+		require.True(t, ok)
+		require.NotEqual(t, deadline, gotDeadline)
+		require.Less(t, gotDeadline, deadline)
+
+		// we can't mock time.Now, so we assume that the deadline should be
+		// in range 29:59 and 30:01 minutes after start
+		minDeadline := now.Add(30*time.Minute - time.Second)
+		maxDeadline := now.Add(30*time.Minute + time.Second)
+
+		// gotDeadline should be between minDeadline and maxDeadline (exclusive)
+		require.GreaterOrEqual(t, maxDeadline, gotDeadline)
+		require.LessOrEqual(t, minDeadline, gotDeadline)
+
+		require.NotEqual(t, ctx, gotCtx)
+		require.NotEqual(t, funcName(emptyCancelFunc), funcName(gotFunc))
+	})
+}
+
+// funcName returns the name of the function
+func funcName(fn any) string {
+	return runtime.FuncForPC(reflect.ValueOf(fn).Pointer()).Name()
+}
+
+func TestDeserializeSearchAttributeValue_Success(t *testing.T) {
+	for name, c := range map[string]struct {
+		value     string
+		valueType types.IndexedValueType
+
+		wantValue any
+	}{
+		"string": {
+			value:     `"string"`,
+			valueType: types.IndexedValueTypeString,
+			wantValue: "string",
+		},
+		"[]string": {
+			value:     `["1", "2", "3"]`,
+			valueType: types.IndexedValueTypeString,
+			wantValue: []string{"1", "2", "3"},
+		},
+		"keyword": {
+			value:     `"keyword"`,
+			valueType: types.IndexedValueTypeKeyword,
+			wantValue: "keyword",
+		},
+		"[]keyword": {
+			value:     `["1", "2", "3"]`,
+			valueType: types.IndexedValueTypeKeyword,
+			wantValue: []string{"1", "2", "3"},
+		},
+		"int": {
+			value:     `1`,
+			valueType: types.IndexedValueTypeInt,
+			wantValue: int64(1),
+		},
+		"[]int": {
+			value:     `[1, 2, 3]`,
+			valueType: types.IndexedValueTypeInt,
+			wantValue: []int64{1, 2, 3},
+		},
+		"double": {
+			value:     `1.1`,
+			valueType: types.IndexedValueTypeDouble,
+			wantValue: float64(1.1),
+		},
+		"[]double": {
+			value:     `[1.1, 2.2, 3.3]`,
+			valueType: types.IndexedValueTypeDouble,
+			wantValue: []float64{1.1, 2.2, 3.3},
+		},
+		"bool": {
+			value:     `true`,
+			valueType: types.IndexedValueTypeBool,
+			wantValue: true,
+		},
+		"[]bool": {
+			value:     `[true, false, true]`,
+			valueType: types.IndexedValueTypeBool,
+			wantValue: []bool{true, false, true},
+		},
+		"datetime": {
+			value:     `"2020-01-01T00:00:00Z"`,
+			valueType: types.IndexedValueTypeDatetime,
+			wantValue: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		"[]datetime": {
+			value:     `["2020-01-01T00:00:00Z", "2020-01-02T00:00:00Z", "2020-01-03T00:00:00Z"]`,
+			valueType: types.IndexedValueTypeDatetime,
+			wantValue: []time.Time{
+				time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+				time.Date(2020, 1, 2, 0, 0, 0, 0, time.UTC),
+				time.Date(2020, 1, 3, 0, 0, 0, 0, time.UTC),
+			},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			gotValue, err := DeserializeSearchAttributeValue([]byte(c.value), c.valueType)
+			require.NoError(t, err)
+			require.Equal(t, c.wantValue, gotValue)
+		})
+	}
+}
+
+func TestDeserializeSearchAttributeValue_Error(t *testing.T) {
+	for name, c := range map[string]struct {
+		value     string
+		valueType types.IndexedValueType
+
+		wantErrorMsg string
+	}{
+		"invalid string": {
+			value:        `"string`,
+			valueType:    types.IndexedValueTypeString,
+			wantErrorMsg: "unexpected end of JSON input",
+		},
+		"invalid keyword": {
+			value:        `"keyword`,
+			valueType:    types.IndexedValueTypeKeyword,
+			wantErrorMsg: "unexpected end of JSON input",
+		},
+		"invalid int": {
+			value:        `1.1`,
+			valueType:    types.IndexedValueTypeInt,
+			wantErrorMsg: "json: cannot unmarshal number into Go value of type []int64",
+		},
+		"invalid double": {
+			value:        `1as`,
+			valueType:    types.IndexedValueTypeDouble,
+			wantErrorMsg: "invalid character 'a' after top-level value",
+		},
+		"invalid bool": {
+			value:        `1`,
+			valueType:    types.IndexedValueTypeBool,
+			wantErrorMsg: "json: cannot unmarshal number into Go value of type []bool",
+		},
+		"invalid datetime": {
+			value:        `1`,
+			valueType:    types.IndexedValueTypeDatetime,
+			wantErrorMsg: "json: cannot unmarshal number into Go value of type []time.Time",
+		},
+		"invalid value type": {
+			value:        `1`,
+			valueType:    types.IndexedValueType(100),
+			wantErrorMsg: fmt.Sprintf("error: unknown index value type [%v]", types.IndexedValueType(100)),
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			gotValue, err := DeserializeSearchAttributeValue([]byte(c.value), c.valueType)
+			require.Error(t, err)
+			require.ErrorContains(t, err, c.wantErrorMsg)
+			require.Nil(t, gotValue)
+		})
+	}
+}
+
+// someMapStringToByteArraySize is the size of someMapStringToByteArray calculated by GetSizeOfMapStringToByteArray
+const someMapStringToByteArraySize = 66
+
+var someMapStringToByteArray = map[string][]byte{
+	"key":  []byte("value"),
+	"key2": []byte("value2"),
+}
+
+// someBytesArraySize is len(someBytesArray)
+const someBytesArraySize = 17
+
+var someBytesArray = []byte("some random bytes")
+
+func TestGetSizeOfMapStringToByteArray(t *testing.T) {
+	require.Equal(t, someMapStringToByteArraySize, GetSizeOfMapStringToByteArray(someMapStringToByteArray))
+}
+
+func TestGetSizeOfHistoryEvent_NilEvent(t *testing.T) {
+	require.Equal(t, uint64(0), GetSizeOfHistoryEvent(nil))
+	require.Equal(t, uint64(0), GetSizeOfHistoryEvent(&types.HistoryEvent{}), "should be zero, because eventType is nil")
+}
+
+func TestGetSizeOfHistoryEvent(t *testing.T) {
+	for eventType, c := range map[types.EventType]struct {
+		event *types.HistoryEvent
+		want  uint64
+	}{
+		types.EventTypeWorkflowExecutionStarted: {
+			event: &types.HistoryEvent{
+				WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
+					Input:                   someBytesArray, // 17 bytes
+					ContinuedFailureDetails: someBytesArray, // 17 bytes
+					LastCompletionResult:    someBytesArray, // 17 bytes
+					Memo: &types.Memo{
+						Fields: someMapStringToByteArray, // 66 bytes
+					},
+					Header: &types.Header{
+						Fields: someMapStringToByteArray, // 66 bytes
+					},
+					SearchAttributes: &types.SearchAttributes{
+						IndexedFields: someMapStringToByteArray, // 66 bytes
+					},
+				},
+			},
+			want: 3*someBytesArraySize + 3*someMapStringToByteArraySize,
+		},
+		types.EventTypeWorkflowExecutionCompleted: {
+			event: &types.HistoryEvent{
+				WorkflowExecutionCompletedEventAttributes: &types.WorkflowExecutionCompletedEventAttributes{
+					Result: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeWorkflowExecutionFailed: {
+			event: &types.HistoryEvent{
+				WorkflowExecutionFailedEventAttributes: &types.WorkflowExecutionFailedEventAttributes{
+					Details: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeWorkflowExecutionTimedOut: {event: &types.HistoryEvent{}, want: 0},
+		types.EventTypeDecisionTaskScheduled:     {event: &types.HistoryEvent{}, want: 0},
+		types.EventTypeDecisionTaskStarted:       {event: &types.HistoryEvent{}, want: 0},
+		types.EventTypeDecisionTaskCompleted: {
+			event: &types.HistoryEvent{
+				DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
+					ExecutionContext: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeDecisionTaskTimedOut: {event: &types.HistoryEvent{}, want: 0},
+		types.EventTypeDecisionTaskFailed: {
+			event: &types.HistoryEvent{
+				DecisionTaskFailedEventAttributes: &types.DecisionTaskFailedEventAttributes{
+					Details: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeActivityTaskScheduled: {
+			event: &types.HistoryEvent{
+				ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{
+					Input: someBytesArray, // 17 bytes
+					Header: &types.Header{
+						Fields: someMapStringToByteArray, // 66 bytes
+					},
+				},
+			},
+			want: someBytesArraySize + someMapStringToByteArraySize,
+		},
+		types.EventTypeActivityTaskStarted: {
+			event: &types.HistoryEvent{
+				ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+					LastFailureDetails: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeActivityTaskCompleted: {
+			event: &types.HistoryEvent{
+				ActivityTaskCompletedEventAttributes: &types.ActivityTaskCompletedEventAttributes{
+					Result: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeActivityTaskFailed: {
+			event: &types.HistoryEvent{
+				ActivityTaskFailedEventAttributes: &types.ActivityTaskFailedEventAttributes{
+					Details: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeActivityTaskTimedOut: {
+			event: &types.HistoryEvent{
+				ActivityTaskTimedOutEventAttributes: &types.ActivityTaskTimedOutEventAttributes{
+					Details:            someBytesArray, // 17 bytes
+					LastFailureDetails: someBytesArray, // 17 bytes
+				},
+			},
+			want: 2 * someBytesArraySize,
+		},
+		types.EventTypeActivityTaskCancelRequested:     {event: &types.HistoryEvent{}, want: 0},
+		types.EventTypeRequestCancelActivityTaskFailed: {event: &types.HistoryEvent{}, want: 0},
+		types.EventTypeActivityTaskCanceled: {
+			event: &types.HistoryEvent{
+				ActivityTaskCanceledEventAttributes: &types.ActivityTaskCanceledEventAttributes{
+					Details: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeTimerStarted:                     {event: &types.HistoryEvent{}, want: 0},
+		types.EventTypeTimerFired:                       {event: &types.HistoryEvent{}, want: 0},
+		types.EventTypeCancelTimerFailed:                {event: &types.HistoryEvent{}, want: 0},
+		types.EventTypeTimerCanceled:                    {event: &types.HistoryEvent{}, want: 0},
+		types.EventTypeWorkflowExecutionCancelRequested: {event: &types.HistoryEvent{}, want: 0},
+		types.EventTypeWorkflowExecutionCanceled: {
+			event: &types.HistoryEvent{
+				WorkflowExecutionCanceledEventAttributes: &types.WorkflowExecutionCanceledEventAttributes{
+					Details: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeRequestCancelExternalWorkflowExecutionInitiated: {
+			event: &types.HistoryEvent{
+				RequestCancelExternalWorkflowExecutionInitiatedEventAttributes: &types.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes{
+					Control: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeRequestCancelExternalWorkflowExecutionFailed: {
+			event: &types.HistoryEvent{
+				RequestCancelExternalWorkflowExecutionFailedEventAttributes: &types.RequestCancelExternalWorkflowExecutionFailedEventAttributes{
+					Control: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeExternalWorkflowExecutionCancelRequested: {event: &types.HistoryEvent{}, want: 0},
+		types.EventTypeMarkerRecorded: {
+			event: &types.HistoryEvent{
+				MarkerRecordedEventAttributes: &types.MarkerRecordedEventAttributes{
+					Details: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeWorkflowExecutionSignaled: {
+			event: &types.HistoryEvent{
+				WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
+					Input: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeWorkflowExecutionTerminated: {
+			event: &types.HistoryEvent{
+				WorkflowExecutionTerminatedEventAttributes: &types.WorkflowExecutionTerminatedEventAttributes{
+					Details: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeWorkflowExecutionContinuedAsNew: {
+			event: &types.HistoryEvent{
+				WorkflowExecutionContinuedAsNewEventAttributes: &types.WorkflowExecutionContinuedAsNewEventAttributes{
+					Input: someBytesArray, // 17 bytes
+					Memo: &types.Memo{
+						Fields: someMapStringToByteArray, // 66 bytes
+					},
+					Header: &types.Header{
+						Fields: someMapStringToByteArray, // 66 bytes
+					},
+					SearchAttributes: &types.SearchAttributes{
+						IndexedFields: someMapStringToByteArray, // 66 bytes
+					},
+				},
+			},
+			want: someBytesArraySize + 3*someMapStringToByteArraySize,
+		},
+		types.EventTypeStartChildWorkflowExecutionInitiated: {
+			event: &types.HistoryEvent{
+				StartChildWorkflowExecutionInitiatedEventAttributes: &types.StartChildWorkflowExecutionInitiatedEventAttributes{
+					Input:   someBytesArray, // 17 bytes
+					Control: someBytesArray, // 17 bytes
+					Memo: &types.Memo{
+						Fields: someMapStringToByteArray, // 66 bytes
+					},
+					Header: &types.Header{
+						Fields: someMapStringToByteArray, // 66 bytes
+					},
+					SearchAttributes: &types.SearchAttributes{
+						IndexedFields: someMapStringToByteArray, // 66 bytes
+					},
+				},
+			},
+			want: 2*someBytesArraySize + 3*someMapStringToByteArraySize,
+		},
+		types.EventTypeStartChildWorkflowExecutionFailed: {
+			event: &types.HistoryEvent{
+				StartChildWorkflowExecutionFailedEventAttributes: &types.StartChildWorkflowExecutionFailedEventAttributes{
+					Control: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeChildWorkflowExecutionStarted: {
+			event: &types.HistoryEvent{
+				ChildWorkflowExecutionStartedEventAttributes: &types.ChildWorkflowExecutionStartedEventAttributes{
+					Header: &types.Header{
+						Fields: someMapStringToByteArray, // 66 bytes
+					},
+				},
+			},
+			want: someMapStringToByteArraySize,
+		},
+		types.EventTypeChildWorkflowExecutionCompleted: {
+			event: &types.HistoryEvent{
+				ChildWorkflowExecutionCompletedEventAttributes: &types.ChildWorkflowExecutionCompletedEventAttributes{
+					Result: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeChildWorkflowExecutionFailed: {
+			event: &types.HistoryEvent{
+				ChildWorkflowExecutionFailedEventAttributes: &types.ChildWorkflowExecutionFailedEventAttributes{
+					Details: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeChildWorkflowExecutionCanceled: {
+			event: &types.HistoryEvent{
+				ChildWorkflowExecutionCanceledEventAttributes: &types.ChildWorkflowExecutionCanceledEventAttributes{
+					Details: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeChildWorkflowExecutionTimedOut:   {event: &types.HistoryEvent{}, want: 0},
+		types.EventTypeChildWorkflowExecutionTerminated: {event: &types.HistoryEvent{}, want: 0},
+		types.EventTypeSignalExternalWorkflowExecutionInitiated: {
+			event: &types.HistoryEvent{
+				SignalExternalWorkflowExecutionInitiatedEventAttributes: &types.SignalExternalWorkflowExecutionInitiatedEventAttributes{
+					Input:   someBytesArray, // 17 bytes
+					Control: someBytesArray, // 17 bytes
+				},
+			},
+			want: 2 * someBytesArraySize,
+		},
+		types.EventTypeSignalExternalWorkflowExecutionFailed: {
+			event: &types.HistoryEvent{
+				SignalExternalWorkflowExecutionFailedEventAttributes: &types.SignalExternalWorkflowExecutionFailedEventAttributes{
+					Control: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeExternalWorkflowExecutionSignaled: {
+			event: &types.HistoryEvent{
+				ExternalWorkflowExecutionSignaledEventAttributes: &types.ExternalWorkflowExecutionSignaledEventAttributes{
+					Control: someBytesArray, // 17 bytes
+				},
+			},
+			want: someBytesArraySize,
+		},
+		types.EventTypeUpsertWorkflowSearchAttributes: {
+			event: &types.HistoryEvent{
+				UpsertWorkflowSearchAttributesEventAttributes: &types.UpsertWorkflowSearchAttributesEventAttributes{
+					SearchAttributes: &types.SearchAttributes{
+						IndexedFields: someMapStringToByteArray, // 66 bytes
+					},
+				},
+			},
+			want: someMapStringToByteArraySize,
+		},
+	} {
+		t.Run(eventType.String(), func(t *testing.T) {
+			if c.event != nil {
+				c.event.EventType = &eventType
+			}
+
+			got := GetSizeOfHistoryEvent(c.event)
+			require.Equal(t, c.want, got)
 		})
 	}
 }

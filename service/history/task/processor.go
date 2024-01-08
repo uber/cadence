@@ -27,35 +27,27 @@ import (
 	"sync/atomic"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/task"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/shard"
 )
 
-type (
-	schedulerOptions struct {
-		schedulerType        task.SchedulerType
-		fifoSchedulerOptions *task.FIFOTaskSchedulerOptions
-		wrrSchedulerOptions  *task.WeightedRoundRobinTaskSchedulerOptions
-	}
+type processorImpl struct {
+	sync.RWMutex
 
-	processorImpl struct {
-		sync.RWMutex
+	priorityAssigner PriorityAssigner
+	hostScheduler    task.Scheduler
+	shardSchedulers  map[shard.Context]task.Scheduler
 
-		priorityAssigner PriorityAssigner
-		hostScheduler    task.Scheduler
-		shardSchedulers  map[shard.Context]task.Scheduler
-
-		status        int32
-		options       *schedulerOptions
-		shardOptions  *schedulerOptions
-		logger        log.Logger
-		metricsClient metrics.Client
-	}
-)
+	status        int32
+	options       *task.SchedulerOptions
+	shardOptions  *task.SchedulerOptions
+	logger        log.Logger
+	metricsClient metrics.Client
+}
 
 var (
 	errTaskProcessorNotRunning = errors.New("queue task processor is not running")
@@ -68,7 +60,7 @@ func NewProcessor(
 	logger log.Logger,
 	metricsClient metrics.Client,
 ) (Processor, error) {
-	options, err := newSchedulerOptions(
+	options, err := task.NewSchedulerOptions(
 		config.TaskSchedulerType(),
 		config.TaskSchedulerQueueSize(),
 		config.TaskSchedulerWorkerCount,
@@ -78,10 +70,15 @@ func NewProcessor(
 	if err != nil {
 		return nil, err
 	}
+	hostScheduler, err := createTaskScheduler(options, logger, metricsClient)
+	if err != nil {
+		return nil, err
+	}
+	logger.Debug("Host level task scheduler is created", tag.Dynamic("scheduler_options", options.String()))
 
-	var shardOptions *schedulerOptions
+	var shardOptions *task.SchedulerOptions
 	if config.TaskSchedulerShardWorkerCount() > 0 {
-		shardOptions, err = newSchedulerOptions(
+		shardOptions, err = task.NewSchedulerOptions(
 			config.TaskSchedulerType(),
 			config.TaskSchedulerShardQueueSize(),
 			config.TaskSchedulerShardWorkerCount,
@@ -91,16 +88,12 @@ func NewProcessor(
 		if err != nil {
 			return nil, err
 		}
-	}
-
-	scheduler, err := createTaskScheduler(options, logger, metricsClient)
-	if err != nil {
-		return nil, err
+		logger.Debug("Shard level task scheduler is enabled", tag.Dynamic("scheduler_options", shardOptions.String()))
 	}
 
 	return &processorImpl{
 		priorityAssigner: priorityAssigner,
-		hostScheduler:    scheduler,
+		hostScheduler:    hostScheduler,
 		shardSchedulers:  make(map[shard.Context]task.Scheduler),
 		status:           common.DaemonStatusInitialized,
 		options:          options,
@@ -138,9 +131,7 @@ func (p *processorImpl) Stop() {
 	p.logger.Info("Queue task processor stopped.")
 }
 
-func (p *processorImpl) StopShardProcessor(
-	shard shard.Context,
-) {
+func (p *processorImpl) StopShardProcessor(shard shard.Context) {
 	p.Lock()
 	scheduler, ok := p.shardSchedulers[shard]
 	if !ok {
@@ -155,9 +146,7 @@ func (p *processorImpl) StopShardProcessor(
 	scheduler.Stop()
 }
 
-func (p *processorImpl) Submit(
-	task Task,
-) error {
+func (p *processorImpl) Submit(task Task) error {
 	if err := p.priorityAssigner.Assign(task); err != nil {
 		return err
 	}
@@ -184,9 +173,7 @@ func (p *processorImpl) Submit(
 	return p.hostScheduler.Submit(task)
 }
 
-func (p *processorImpl) TrySubmit(
-	task Task,
-) (bool, error) {
+func (p *processorImpl) TrySubmit(task Task) (bool, error) {
 	if err := p.priorityAssigner.Assign(task); err != nil {
 		return false, err
 	}
@@ -213,9 +200,7 @@ func (p *processorImpl) TrySubmit(
 	return false, nil
 }
 
-func (p *processorImpl) getOrCreateShardTaskScheduler(
-	shard shard.Context,
-) (task.Scheduler, error) {
+func (p *processorImpl) getOrCreateShardTaskScheduler(shard shard.Context) (task.Scheduler, error) {
 	if p.shardOptions == nil {
 		return nil, nil
 	}
@@ -238,7 +223,7 @@ func (p *processorImpl) getOrCreateShardTaskScheduler(
 		return nil, errTaskProcessorNotRunning
 	}
 
-	scheduler, err := createTaskScheduler(p.shardOptions, p.logger, p.metricsClient)
+	scheduler, err := createTaskScheduler(p.shardOptions, p.logger.WithTags(tag.ShardID(shard.GetShardID())), p.metricsClient)
 	if err != nil {
 		p.Unlock()
 		return nil, err
@@ -249,6 +234,10 @@ func (p *processorImpl) getOrCreateShardTaskScheduler(
 
 	// don't hold the lock while starting the scheduler
 	scheduler.Start()
+	p.logger.Debug("Shard level task scheduler is started",
+		tag.ShardID(shard.GetShardID()),
+		tag.Dynamic("scheduler_options", p.shardOptions.String()),
+	)
 	return scheduler, nil
 }
 
@@ -256,61 +245,29 @@ func (p *processorImpl) isRunning() bool {
 	return atomic.LoadInt32(&p.status) == common.DaemonStatusStarted
 }
 
-func newSchedulerOptions(
-	schedulerType int,
-	queueSize int,
-	workerCount dynamicconfig.IntPropertyFn,
-	dispatcherCount int,
-	weights dynamicconfig.MapPropertyFn,
-) (*schedulerOptions, error) {
-	options := &schedulerOptions{
-		schedulerType: task.SchedulerType(schedulerType),
-	}
-	switch task.SchedulerType(schedulerType) {
-	case task.SchedulerTypeFIFO:
-		options.fifoSchedulerOptions = &task.FIFOTaskSchedulerOptions{
-			QueueSize:       queueSize,
-			WorkerCount:     workerCount,
-			DispatcherCount: dispatcherCount,
-			RetryPolicy:     common.CreateTaskProcessingRetryPolicy(),
-		}
-	case task.SchedulerTypeWRR:
-		options.wrrSchedulerOptions = &task.WeightedRoundRobinTaskSchedulerOptions{
-			Weights:         weights,
-			QueueSize:       queueSize,
-			WorkerCount:     workerCount,
-			DispatcherCount: dispatcherCount,
-			RetryPolicy:     common.CreateTaskProcessingRetryPolicy(),
-		}
-	default:
-		return nil, fmt.Errorf("unknown task scheduler type: %v", schedulerType)
-	}
-	return options, nil
-}
-
 func createTaskScheduler(
-	options *schedulerOptions,
+	options *task.SchedulerOptions,
 	logger log.Logger,
 	metricsClient metrics.Client,
 ) (task.Scheduler, error) {
 	var scheduler task.Scheduler
 	var err error
-	switch options.schedulerType {
+	switch options.SchedulerType {
 	case task.SchedulerTypeFIFO:
 		scheduler = task.NewFIFOTaskScheduler(
 			logger,
 			metricsClient,
-			options.fifoSchedulerOptions,
+			options.FIFOSchedulerOptions,
 		)
 	case task.SchedulerTypeWRR:
 		scheduler, err = task.NewWeightedRoundRobinTaskScheduler(
 			logger,
 			metricsClient,
-			options.wrrSchedulerOptions,
+			options.WRRSchedulerOptions,
 		)
 	default:
 		// the scheduler type has already been verified when initializing the processor
-		panic(fmt.Sprintf("Unknown task scheduler type, %v", options.schedulerType))
+		panic(fmt.Sprintf("Unknown task scheduler type, %v", options.SchedulerType))
 	}
 
 	return scheduler, err

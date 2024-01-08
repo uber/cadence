@@ -94,7 +94,7 @@ func newProcessorBase(
 	logger log.Logger,
 	metricsClient metrics.Client,
 ) *processorBase {
-	metricsScope := metricsClient.Scope(options.MetricScope)
+	metricsScope := metricsClient.Scope(options.MetricScope).Tagged(metrics.ShardIDTag(shard.GetShardID()))
 	return &processorBase{
 		shard:         shard,
 		taskProcessor: taskProcessor,
@@ -108,28 +108,19 @@ func newProcessorBase(
 			logger,
 			metricsScope,
 		),
-
 		options:                     options,
 		updateMaxReadLevel:          updateMaxReadLevel,
 		updateClusterAckLevel:       updateClusterAckLevel,
 		updateProcessingQueueStates: updateProcessingQueueStates,
 		queueShutdown:               queueShutdown,
-
-		logger:        logger,
-		metricsClient: metricsClient,
-		metricsScope:  metricsScope,
-
-		rateLimiter: quotas.NewDynamicRateLimiter(options.MaxPollRPS.AsFloat64()),
-
-		status:         common.DaemonStatusInitialized,
-		shutdownCh:     make(chan struct{}),
-		actionNotifyCh: make(chan actionNotification),
-
-		processingQueueCollections: newProcessingQueueCollections(
-			processingQueueStates,
-			logger,
-			metricsClient,
-		),
+		logger:                      logger,
+		metricsClient:               metricsClient,
+		metricsScope:                metricsScope,
+		rateLimiter:                 quotas.NewDynamicRateLimiter(options.MaxPollRPS.AsFloat64()),
+		status:                      common.DaemonStatusInitialized,
+		shutdownCh:                  make(chan struct{}),
+		actionNotifyCh:              make(chan actionNotification),
+		processingQueueCollections:  newProcessingQueueCollections(processingQueueStates, logger, metricsClient),
 	}
 }
 
