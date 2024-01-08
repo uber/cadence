@@ -46,23 +46,53 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-func TestIsServiceTransientError_ContextTimeout(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
-	defer cancel()
-	time.Sleep(100 * time.Millisecond)
+func TestIsServiceTransientError(t *testing.T) {
+	for name, c := range map[string]struct {
+		err  error
+		want bool
+	}{
+		"ContextTimeout": {
+			err:  context.DeadlineExceeded,
+			want: false,
+		},
+		"YARPCDeadlineExceeded": {
+			err:  yarpcerrors.DeadlineExceededErrorf("yarpc deadline exceeded"),
+			want: false,
+		},
+		"YARPCUnavailable": {
+			err:  yarpcerrors.UnavailableErrorf("yarpc unavailable"),
+			want: true,
+		},
+		"YARPCUnavailable wrapped": {
+			err:  fmt.Errorf("wrapped err: %w", yarpcerrors.UnavailableErrorf("yarpc unavailable")),
+			want: true,
+		},
+		"YARPCUnknown": {
+			err:  yarpcerrors.UnknownErrorf("yarpc unknown"),
+			want: true,
+		},
+		"YARPCInternal": {
+			err:  yarpcerrors.InternalErrorf("yarpc internal"),
+			want: true,
+		},
+		"ContextCancel": {
+			err:  context.Canceled,
+			want: false,
+		},
+		"ServiceBusyError": {
+			err:  &types.ServiceBusyError{},
+			want: true,
+		},
+		"ShardOwnershipLostError": {
+			err:  &types.ShardOwnershipLostError{},
+			want: true,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, c.want, IsServiceTransientError(c.err))
+		})
+	}
 
-	require.False(t, IsServiceTransientError(ctx.Err()))
-}
-
-func TestIsServiceTransientError_YARPCDeadlineExceeded(t *testing.T) {
-	yarpcErr := yarpcerrors.DeadlineExceededErrorf("yarpc deadline exceeded")
-	require.False(t, IsServiceTransientError(yarpcErr))
-}
-
-func TestIsServiceTransientError_ContextCancel(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-	require.False(t, IsServiceTransientError(ctx.Err()))
 }
 
 func TestIsContextTimeoutError(t *testing.T) {
