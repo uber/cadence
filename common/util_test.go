@@ -1394,7 +1394,7 @@ func TestGetSizeOfHistoryEvent(t *testing.T) {
 func TestValidateLongPollContextTimeout(t *testing.T) {
 	const handlerName = "testHandler"
 
-	t.Run("context timeout os not set", func(t *testing.T) {
+	t.Run("context timeout is not set", func(t *testing.T) {
 		logger := new(log.MockLogger)
 		logger.On(
 			"Error",
