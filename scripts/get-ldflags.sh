@@ -12,7 +12,6 @@ if [ "$MODE" != "LDFLAG" ] && [ "$MODE" != "ECHO" ]; then
     exit 1
 fi
 
-# $(git rev-parse --short HEAD) \"$(git log -1 --format=%cI-%h)\"
 GIT_REVISION=$(git log -1 --format=%cI-%h) # use commit date time and hash: e.g. 2021-07-27 19:36:53 -0700-40c5f1896, doc: https://git-scm.com/docs/pretty-formats
 GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 BUILD_DATE=$(date '+%F-%T') # outputs something in this format 2017-08-21-18:58:45
@@ -25,9 +24,6 @@ else
   # If passing a CADENCE_RELEASE_VERSION explicitly, then use it
   RELEASE_VERSION=${CADENCE_RELEASE_VERSION}
 fi
-
-# var-setting and exporting must be done separately or `set -e` does not catch errors
-export GIT_REVISION GIT_BRANCH BUILD_DATE BUILD_TS_UNIX BASE_PACKAGE RELEASE_VERSION
 
 if [ "$MODE" = "LDFLAG" ]; then
   LD_FLAGS="-X ${BASE_PACKAGE}.Revision=${GIT_REVISION} \
