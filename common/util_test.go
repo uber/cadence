@@ -63,6 +63,10 @@ func TestIsServiceTransientError(t *testing.T) {
 			err:  yarpcerrors.UnavailableErrorf("yarpc unavailable"),
 			want: true,
 		},
+		"YARPCUnavailable wrapped": {
+			err:  fmt.Errorf("wrapped err: %w", yarpcerrors.UnavailableErrorf("yarpc unavailable")),
+			want: true,
+		},
 		"YARPCUnknown": {
 			err:  yarpcerrors.UnknownErrorf("yarpc unknown"),
 			want: true,
