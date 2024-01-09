@@ -1480,3 +1480,58 @@ func TestValidateLongPollContextTimeout(t *testing.T) {
 		logger.AssertExpectations(t)
 	})
 }
+
+func TestDurationToDays(t *testing.T) {
+	for duration, want := range map[time.Duration]int32{
+		0:              0,
+		time.Hour:      0,
+		24 * time.Hour: 1,
+		25 * time.Hour: 1,
+		48 * time.Hour: 2,
+	} {
+		t.Run(duration.String(), func(t *testing.T) {
+			got := DurationToDays(duration)
+			require.Equal(t, want, got)
+		})
+	}
+}
+
+func TestDurationToSeconds(t *testing.T) {
+	for duration, want := range map[time.Duration]int64{
+		0:                           0,
+		time.Second:                 1,
+		time.Second + time.Second/2: 1,
+		2 * time.Second:             2,
+	} {
+		t.Run(duration.String(), func(t *testing.T) {
+			got := DurationToSeconds(duration)
+			require.Equal(t, want, got)
+		})
+	}
+}
+
+func TestDaysToDuration(t *testing.T) {
+	for days, want := range map[int32]time.Duration{
+		0: 0,
+		1: 24 * time.Hour,
+		2: 48 * time.Hour,
+	} {
+		t.Run(strconv.Itoa(int(days)), func(t *testing.T) {
+			got := DaysToDuration(days)
+			require.Equal(t, want, got)
+		})
+	}
+}
+
+func TestSecondsToDuration(t *testing.T) {
+	for seconds, want := range map[int64]time.Duration{
+		0: 0,
+		1: time.Second,
+		2: 2 * time.Second,
+	} {
+		t.Run(strconv.Itoa(int(seconds)), func(t *testing.T) {
+			got := SecondsToDuration(seconds)
+			require.Equal(t, want, got)
+		})
+	}
+}
