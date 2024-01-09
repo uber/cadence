@@ -22,13 +22,12 @@ package authorization
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/cristalhq/jwt/v3"
+	"github.com/golang-jwt/jwt/v5"
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/common"
@@ -38,20 +37,24 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 )
 
+var _ jwt.Claims = (*JWTClaims)(nil)
+
 type oauthAuthority struct {
 	authorizationCfg config.OAuthAuthorizer
 	domainCache      cache.DomainCache
 	log              log.Logger
-	verifier         jwt.Verifier
+	parser           *jwt.Parser
+	publicKey        interface{}
 }
 
+// JWTClaims is a Cadence specific claim with embeded Claims defined https://datatracker.ietf.org/doc/html/rfc7519#section-4.1
 type JWTClaims struct {
-	Sub    string
+	jwt.RegisteredClaims
+
 	Name   string
 	Groups string // separated by space
 	Admin  bool
-	Iat    int64
-	TTL    int64
+	TTL    int64 // TODO should be removed. ExpiresAt should be used
 }
 
 func (j JWTClaims) GetGroups() []string {
@@ -66,25 +69,25 @@ func NewOAuthAuthorizer(
 	log log.Logger,
 	domainCache cache.DomainCache,
 ) (Authorizer, error) {
-	publicKey, err := common.LoadRSAPublicKey(authorizationCfg.JwtCredentials.PublicKey)
+
+	key, err := common.LoadRSAPublicKey(authorizationCfg.JwtCredentials.PublicKey)
 	if err != nil {
 		return nil, fmt.Errorf("loading RSA public key: %w", err)
 	}
 
-	verifier, err := jwt.NewVerifierRS(
-		jwt.Algorithm(authorizationCfg.JwtCredentials.Algorithm),
-		publicKey,
-	)
-
-	if err != nil {
-		return nil, fmt.Errorf("creating JWT verifier: %w", err)
+	if authorizationCfg.JwtCredentials.Algorithm != jwt.SigningMethodRS256.Name {
+		return nil, fmt.Errorf("algorithm %q is not supported", authorizationCfg.JwtCredentials.Algorithm)
 	}
 
 	return &oauthAuthority{
 		authorizationCfg: authorizationCfg,
 		domainCache:      domainCache,
 		log:              log,
-		verifier:         verifier,
+		parser: jwt.NewParser(
+			jwt.WithValidMethods([]string{authorizationCfg.JwtCredentials.Algorithm}),
+			jwt.WithIssuedAt(),
+		),
+		publicKey: key,
 	}, nil
 }
 
@@ -101,13 +104,16 @@ func (a *oauthAuthority) Authorize(
 		return Result{Decision: DecisionDeny}, nil
 	}
 
-	claims, err := a.parseToken(token, a.verifier)
+	var claims JWTClaims
+
+	_, err := a.parser.ParseWithClaims(token, &claims, a.keyFunc)
+
 	if err != nil {
 		a.log.Debug("request is not authorized", tag.Error(err))
 		return Result{Decision: DecisionDeny}, nil
 	}
 
-	if err := a.validateTTL(claims); err != nil {
+	if err := a.validateTTL(&claims); err != nil {
 		a.log.Debug("request is not authorized", tag.Error(err))
 		return Result{Decision: DecisionDeny}, nil
 	}
@@ -115,12 +121,13 @@ func (a *oauthAuthority) Authorize(
 	if claims.Admin {
 		return Result{Decision: DecisionAllow}, nil
 	}
+
 	domain, err := a.domainCache.GetDomain(attributes.DomainName)
 	if err != nil {
 		return Result{Decision: DecisionDeny}, err
 	}
 
-	if err := validatePermission(claims, attributes, domain.GetInfo().Data); err != nil {
+	if err := validatePermission(&claims, attributes, domain.GetInfo().Data); err != nil {
 		a.log.Debug("request is not authorized", tag.Error(err))
 		return Result{Decision: DecisionDeny}, nil
 	}
@@ -128,22 +135,37 @@ func (a *oauthAuthority) Authorize(
 	return Result{Decision: DecisionAllow}, nil
 }
 
-func (a *oauthAuthority) parseToken(tokenStr string, verifier jwt.Verifier) (*JWTClaims, error) {
-	token, err := jwt.ParseAndVerifyString(tokenStr, verifier)
-	if err != nil {
-		return nil, fmt.Errorf("parse token: %w", err)
-	}
-	var claims JWTClaims
-	_ = json.Unmarshal(token.RawClaims(), &claims)
-	return &claims, nil
+// keyFunc returns correct key to check signature
+func (a *oauthAuthority) keyFunc(token *jwt.Token) (interface{}, error) {
+	// only local public key is supported currently
+	return a.publicKey, nil
 }
 
 func (a *oauthAuthority) validateTTL(claims *JWTClaims) error {
-	if claims.TTL > a.authorizationCfg.MaxJwtTTL {
-		return fmt.Errorf("token TTL: %d is larger than MaxTTL allowed: %d", claims.TTL, a.authorizationCfg.MaxJwtTTL)
+
+	if claims.IssuedAt == nil {
+		return errors.New("IssuedAt is not set")
 	}
-	if claims.Iat+claims.TTL < time.Now().Unix() {
-		return errors.New("JWT has expired")
+
+	// Fill ExpiresAt when TTL is passed
+	if claims.TTL > 0 {
+		claims.ExpiresAt = jwt.NewNumericDate(claims.IssuedAt.Time.Add(time.Second * time.Duration(claims.TTL)))
 	}
+
+	exp, err := claims.GetExpirationTime()
+
+	if err != nil || exp == nil {
+		return errors.New("ExpiresAt is not set")
+	}
+
+	timeLeft := exp.Unix() - time.Now().Unix()
+	if timeLeft < 0 {
+		return errors.New("token is expired")
+	}
+
+	if timeLeft > a.authorizationCfg.MaxJwtTTL {
+		return fmt.Errorf("token TTL: %d is larger than MaxTTL allowed: %d", timeLeft, a.authorizationCfg.MaxJwtTTL)
+	}
+
 	return nil
 }

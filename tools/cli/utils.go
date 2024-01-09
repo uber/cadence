@@ -39,8 +39,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cristalhq/jwt/v3"
 	"github.com/fatih/color"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/urfave/cli"
 	"github.com/valyala/fastjson"
 
@@ -731,19 +731,18 @@ func processJWTFlags(ctx context.Context, cliCtx *cli.Context) context.Context {
 	path := getJWTPrivateKey(cliCtx)
 	t := getJWT(cliCtx)
 	var token string
+	var err error
 
 	if t != "" {
 		token = t
 	} else if path != "" {
-		createdToken, err := createJWT(path)
+		token, err = createJWT(path)
 		if err != nil {
 			ErrorAndExit("Error creating JWT token", err)
 		}
-		token = *createdToken
 	}
 
-	ctx = context.WithValue(ctx, CtxKeyJWT, token)
-	return ctx
+	return context.WithValue(ctx, CtxKeyJWT, token)
 }
 
 func populateContextFromCLIContext(ctx context.Context, cliCtx *cli.Context) context.Context {
@@ -990,29 +989,22 @@ func getInputFile(inputFile string) *os.File {
 }
 
 // createJWT defines the logic to create a JWT
-func createJWT(keyPath string) (*string, error) {
-	claims := authorization.JWTClaims{
-		Admin: true,
-		Iat:   time.Now().Unix(),
-		TTL:   60 * 10,
-	}
-
+func createJWT(keyPath string) (string, error) {
 	privateKey, err := common.LoadRSAPrivateKey(keyPath)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	signer, err := jwt.NewSignerRS(jwt.RS256, privateKey)
-	if err != nil {
-		return nil, err
+	ttl := int64(60 * 10)
+	claims := authorization.JWTClaims{
+		Admin: true,
+		RegisteredClaims: jwt.RegisteredClaims{
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Second * time.Duration(ttl))),
+		},
 	}
-	builder := jwt.NewBuilder(signer)
-	token, err := builder.Build(claims)
-	if token == nil {
-		return nil, err
-	}
-	tokenString := token.String()
-	return &tokenString, nil
+
+	return jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(privateKey)
 }
 
 func getWorkflowMemo(input map[string]interface{}) (*types.Memo, error) {
