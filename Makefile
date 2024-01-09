@@ -437,7 +437,7 @@ cadence: $(BINS_DEPEND_ON)
 BINS += cadence-server
 cadence-server: $(BINS_DEPEND_ON)
 	$Q echo "compiling cadence-server with OS: $(GOOS), ARCH: $(GOARCH)"
-	$Q ./scripts/build-with-ldflags.sh -o $@ cmd/tools/cli/main.go
+	$Q ./scripts/build-with-ldflags.sh -o $@ cmd/server/main.go
 
 BINS += cadence-canary
 cadence-canary: $(BINS_DEPEND_ON)
