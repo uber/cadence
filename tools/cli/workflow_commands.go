@@ -697,7 +697,7 @@ func queryWorkflowHelper(c *cli.Context, queryType string) {
 
 // ListWorkflow list workflow executions based on filters
 func ListWorkflow(c *cli.Context) {
-	displayPagedWorkflows(c, listWorkflows(c), !c.Bool(FlagMore))
+	displayPagedWorkflows(c, filterExcludedWorkflows(c, listWorkflows(c)), !c.Bool(FlagMore))
 }
 
 // ListAllWorkflow list all workflow executions based on filters
