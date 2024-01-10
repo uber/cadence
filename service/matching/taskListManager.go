@@ -201,7 +201,7 @@ func newTaskListManager(
 	if tlMgr.isFowardingAllowed(taskList, *taskListKind) {
 		fwdr = newForwarder(&taskListConfig.forwarderConfig, taskList, *taskListKind, e.matchingClient, isolationGroups)
 	}
-	tlMgr.matcher = newTaskMatcher(taskListConfig, fwdr, tlMgr.scope, isolationGroups)
+	tlMgr.matcher = newTaskMatcher(taskListConfig, fwdr, tlMgr.scope, isolationGroups, tlMgr.logger)
 	tlMgr.taskWriter = newTaskWriter(tlMgr)
 	tlMgr.taskReader = newTaskReader(tlMgr, isolationGroups)
 	tlMgr.startWG.Add(1)
@@ -350,7 +350,7 @@ func (c *taskListManagerImpl) GetTask(
 	c.liveness.markAlive(time.Now())
 	task, err := c.getTask(ctx, maxDispatchPerSecond)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("couldn't get task: %w", err)
 	}
 	task.domainName = c.domainName
 	task.backlogCountHint = c.taskAckManager.GetBacklogCount()
@@ -391,7 +391,7 @@ func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond 
 
 	domainEntry, err := c.domainCache.GetDomainByID(c.taskListID.domainID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to fetch domain from cache: %w", err)
 	}
 
 	// the desired global rate limit for the task list comes from the

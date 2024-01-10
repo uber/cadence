@@ -27,9 +27,7 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-func convertToPersistenceTransferProcessingQueueStates(
-	states []ProcessingQueueState,
-) []*types.ProcessingQueueState {
+func convertToPersistenceTransferProcessingQueueStates(states []ProcessingQueueState) []*types.ProcessingQueueState {
 	pStates := make([]*types.ProcessingQueueState, 0, len(states))
 	for _, state := range states {
 		pStates = append(pStates, &types.ProcessingQueueState{
@@ -43,9 +41,7 @@ func convertToPersistenceTransferProcessingQueueStates(
 	return pStates
 }
 
-func convertFromPersistenceTransferProcessingQueueStates(
-	pStates []*types.ProcessingQueueState,
-) []ProcessingQueueState {
+func convertFromPersistenceTransferProcessingQueueStates(pStates []*types.ProcessingQueueState) []ProcessingQueueState {
 	states := make([]ProcessingQueueState, 0, len(pStates))
 	for _, pState := range pStates {
 		states = append(states, NewProcessingQueueState(
@@ -59,9 +55,7 @@ func convertFromPersistenceTransferProcessingQueueStates(
 	return states
 }
 
-func convertToPersistenceTimerProcessingQueueStates(
-	states []ProcessingQueueState,
-) []*types.ProcessingQueueState {
+func convertToPersistenceTimerProcessingQueueStates(states []ProcessingQueueState) []*types.ProcessingQueueState {
 	pStates := make([]*types.ProcessingQueueState, 0, len(states))
 	for _, state := range states {
 		pStates = append(pStates, &types.ProcessingQueueState{
@@ -75,9 +69,7 @@ func convertToPersistenceTimerProcessingQueueStates(
 	return pStates
 }
 
-func convertFromPersistenceTimerProcessingQueueStates(
-	pStates []*types.ProcessingQueueState,
-) []ProcessingQueueState {
+func convertFromPersistenceTimerProcessingQueueStates(pStates []*types.ProcessingQueueState) []ProcessingQueueState {
 	states := make([]ProcessingQueueState, 0, len(pStates))
 	for _, pState := range pStates {
 		states = append(states, NewProcessingQueueState(
@@ -91,9 +83,7 @@ func convertFromPersistenceTimerProcessingQueueStates(
 	return states
 }
 
-func convertToPersistenceDomainFilter(
-	domainFilter DomainFilter,
-) *types.DomainFilter {
+func convertToPersistenceDomainFilter(domainFilter DomainFilter) *types.DomainFilter {
 	domainIDs := make([]string, 0, len(domainFilter.DomainIDs))
 	for domainID := range domainFilter.DomainIDs {
 		domainIDs = append(domainIDs, domainID)
@@ -105,9 +95,7 @@ func convertToPersistenceDomainFilter(
 	}
 }
 
-func convertFromPersistenceDomainFilter(
-	domainFilter *types.DomainFilter,
-) DomainFilter {
+func convertFromPersistenceDomainFilter(domainFilter *types.DomainFilter) DomainFilter {
 	domainIDs := make(map[string]struct{})
 	for _, domainID := range domainFilter.DomainIDs {
 		domainIDs[domainID] = struct{}{}
@@ -116,10 +104,7 @@ func convertFromPersistenceDomainFilter(
 	return NewDomainFilter(domainIDs, domainFilter.GetReverseMatch())
 }
 
-func validateProcessingQueueStates(
-	pStates []*types.ProcessingQueueState,
-	ackLevel interface{},
-) bool {
+func validateProcessingQueueStates(pStates []*types.ProcessingQueueState, ackLevel interface{}) bool {
 	if len(pStates) == 0 {
 		return false
 	}

@@ -32,9 +32,8 @@ import (
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/service/worker/batcher"
-
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/worker/batcher"
 )
 
 // TerminateBatchJob stops abatch job

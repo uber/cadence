@@ -29,7 +29,6 @@ import (
 
 	"github.com/uber-go/tally/m3"
 	"github.com/uber-go/tally/prometheus"
-
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
 
 	"github.com/uber/cadence/common/dynamicconfig"

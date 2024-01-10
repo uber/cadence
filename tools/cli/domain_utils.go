@@ -23,14 +23,11 @@ package cli
 import (
 	"strings"
 
-	"github.com/uber/cadence/client/admin"
-
-	"github.com/uber/cadence/tools/common/flag"
-
 	"github.com/stretchr/testify/mock"
 	"github.com/uber-go/tally"
 	"github.com/urfave/cli"
 
+	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
@@ -45,6 +42,7 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
+	"github.com/uber/cadence/tools/common/flag"
 )
 
 const (

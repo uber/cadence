@@ -23,11 +23,8 @@ package client
 import (
 	"sync"
 
-	pnt "github.com/uber/cadence/common/pinot"
-
-	pinotVisibility "github.com/uber/cadence/common/persistence/pinot"
-
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/config"
 	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
@@ -37,8 +34,13 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/elasticsearch"
 	"github.com/uber/cadence/common/persistence/nosql"
+	pinotVisibility "github.com/uber/cadence/common/persistence/pinot"
 	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/persistence/sql"
+	"github.com/uber/cadence/common/persistence/wrappers/errorinjectors"
+	"github.com/uber/cadence/common/persistence/wrappers/ratelimited"
+	"github.com/uber/cadence/common/persistence/wrappers/sampled"
+	pnt "github.com/uber/cadence/common/pinot"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service"
 )
@@ -167,10 +169,10 @@ func (f *factoryImpl) NewTaskManager() (p.TaskManager, error) {
 	}
 	result := p.NewTaskManager(store)
 	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
-		result = p.NewTaskPersistenceErrorInjectionClient(result, errorRate, f.logger)
+		result = errorinjectors.NewTaskManager(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = p.NewTaskPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
+		result = ratelimited.NewTaskManager(result, ds.ratelimit)
 	}
 	if f.metricsClient != nil {
 		result = p.NewTaskPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
@@ -187,10 +189,10 @@ func (f *factoryImpl) NewShardManager() (p.ShardManager, error) {
 	}
 	result := p.NewShardManager(store)
 	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
-		result = p.NewShardPersistenceErrorInjectionClient(result, errorRate, f.logger)
+		result = errorinjectors.NewShardManager(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = p.NewShardPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
+		result = ratelimited.NewShardManager(result, ds.ratelimit)
 	}
 	if f.metricsClient != nil {
 		result = p.NewShardPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
@@ -207,10 +209,10 @@ func (f *factoryImpl) NewHistoryManager() (p.HistoryManager, error) {
 	}
 	result := p.NewHistoryV2ManagerImpl(store, f.logger, f.config.TransactionSizeLimit)
 	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
-		result = p.NewHistoryPersistenceErrorInjectionClient(result, errorRate, f.logger)
+		result = errorinjectors.NewHistoryManager(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = p.NewHistoryPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
+		result = ratelimited.NewHistoryManager(result, ds.ratelimit)
 	}
 	if f.metricsClient != nil {
 		result = p.NewHistoryPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
@@ -229,10 +231,10 @@ func (f *factoryImpl) NewDomainManager() (p.DomainManager, error) {
 	}
 	result := p.NewDomainManagerImpl(store, f.logger)
 	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
-		result = p.NewDomainPersistenceErrorInjectionClient(result, errorRate, f.logger)
+		result = errorinjectors.NewDomainManager(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = p.NewDomainPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
+		result = ratelimited.NewDomainManager(result, ds.ratelimit)
 	}
 	if f.metricsClient != nil {
 		result = p.NewDomainPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
@@ -249,10 +251,10 @@ func (f *factoryImpl) NewExecutionManager(shardID int) (p.ExecutionManager, erro
 	}
 	result := p.NewExecutionManagerImpl(store, f.logger)
 	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
-		result = p.NewWorkflowExecutionPersistenceErrorInjectionClient(result, errorRate, f.logger)
+		result = errorinjectors.NewExecutionManager(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = p.NewWorkflowExecutionPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
+		result = ratelimited.NewExecutionManager(result, ds.ratelimit)
 	}
 	if f.metricsClient != nil {
 		result = p.NewWorkflowExecutionPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config, f.dc.PersistenceSampleLoggingRate, f.dc.EnableShardIDMetrics)
@@ -337,7 +339,7 @@ func newPinotVisibilityManager(
 	// wrap with rate limiter
 	if visibilityConfig.PersistenceMaxQPS != nil && visibilityConfig.PersistenceMaxQPS() != 0 {
 		pinotRateLimiter := quotas.NewDynamicRateLimiter(visibilityConfig.PersistenceMaxQPS.AsFloat64())
-		visibilityFromPinot = p.NewVisibilityPersistenceRateLimitedClient(visibilityFromPinot, pinotRateLimiter, log)
+		visibilityFromPinot = ratelimited.NewVisibilityManager(visibilityFromPinot, pinotRateLimiter)
 	}
 
 	if metricsClient != nil {
@@ -366,7 +368,7 @@ func newESVisibilityManager(
 	// wrap with rate limiter
 	if visibilityConfig.PersistenceMaxQPS != nil && visibilityConfig.PersistenceMaxQPS() != 0 {
 		esRateLimiter := quotas.NewDynamicRateLimiter(visibilityConfig.PersistenceMaxQPS.AsFloat64())
-		visibilityFromES = p.NewVisibilityPersistenceRateLimitedClient(visibilityFromES, esRateLimiter, log)
+		visibilityFromES = ratelimited.NewVisibilityManager(visibilityFromES, esRateLimiter)
 	}
 	if metricsClient != nil {
 		// wrap with metrics
@@ -393,17 +395,23 @@ func (f *factoryImpl) newDBVisibilityManager(
 	}
 	result := p.NewVisibilityManagerImpl(store, f.logger)
 	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
-		result = p.NewVisibilityPersistenceErrorInjectionClient(result, errorRate, f.logger)
+		result = errorinjectors.NewVisibilityManager(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = p.NewVisibilityPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
+		result = ratelimited.NewVisibilityManager(result, ds.ratelimit)
 	}
 	if visibilityConfig.EnableDBVisibilitySampling != nil && visibilityConfig.EnableDBVisibilitySampling() {
-		result = p.NewVisibilitySamplingClient(result, &p.SamplingConfig{
-			VisibilityClosedMaxQPS: visibilityConfig.WriteDBVisibilityClosedMaxQPS,
-			VisibilityListMaxQPS:   visibilityConfig.DBVisibilityListMaxQPS,
-			VisibilityOpenMaxQPS:   visibilityConfig.WriteDBVisibilityOpenMaxQPS,
-		}, f.metricsClient, f.logger)
+		result = sampled.NewVisibilityManager(result, sampled.Params{
+			Config: &sampled.Config{
+				VisibilityClosedMaxQPS: visibilityConfig.WriteDBVisibilityClosedMaxQPS,
+				VisibilityListMaxQPS:   visibilityConfig.DBVisibilityListMaxQPS,
+				VisibilityOpenMaxQPS:   visibilityConfig.WriteDBVisibilityOpenMaxQPS,
+			},
+			MetricClient:           f.metricsClient,
+			Logger:                 f.logger,
+			TimeSource:             clock.NewRealTimeSource(),
+			RateLimiterFactoryFunc: sampled.NewDomainToBucketMap,
+		})
 	}
 	if f.metricsClient != nil {
 		result = p.NewVisibilityPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
@@ -420,10 +428,10 @@ func (f *factoryImpl) NewDomainReplicationQueueManager() (p.QueueManager, error)
 	}
 	result := p.NewQueueManager(store)
 	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
-		result = p.NewQueuePersistenceErrorInjectionClient(result, errorRate, f.logger)
+		result = errorinjectors.NewQueueManager(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = p.NewQueuePersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
+		result = ratelimited.NewQueueManager(result, ds.ratelimit)
 	}
 	if f.metricsClient != nil {
 		result = p.NewQueuePersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
@@ -440,10 +448,10 @@ func (f *factoryImpl) NewConfigStoreManager() (p.ConfigStoreManager, error) {
 	}
 	result := p.NewConfigStoreManagerImpl(store, f.logger)
 	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
-		result = p.NewConfigStoreErrorInjectionPersistenceClient(result, errorRate, f.logger)
+		result = errorinjectors.NewConfigStoreManager(result, errorRate, f.logger)
 	}
 	if ds.ratelimit != nil {
-		result = p.NewConfigStorePersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
+		result = ratelimited.NewConfigStoreManager(result, ds.ratelimit)
 	}
 	if f.metricsClient != nil {
 		result = p.NewConfigStorePersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)

@@ -23,22 +23,22 @@ package client
 import (
 	"time"
 
+	adminv1 "github.com/uber/cadence-idl/go/proto/admin/v1"
+	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	"go.uber.org/yarpc/api/transport"
 
 	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/.gen/go/history/historyserviceclient"
 	"github.com/uber/cadence/.gen/go/matching/matchingserviceclient"
-
-	adminv1 "github.com/uber/cadence-idl/go/proto/admin/v1"
-	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	historyv1 "github.com/uber/cadence/.gen/proto/history/v1"
 	matchingv1 "github.com/uber/cadence/.gen/proto/matching/v1"
-
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
+	"github.com/uber/cadence/client/wrappers/errorinjectors"
+	"github.com/uber/cadence/client/wrappers/metered"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
@@ -124,10 +124,10 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 		cf.logger,
 	)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.HistoryErrorInjectionRate)(); errorRate != 0 {
-		client = history.NewErrorInjectionClient(client, errorRate, cf.logger)
+		client = errorinjectors.NewHistoryClient(client, errorRate, cf.logger)
 	}
 	if cf.metricsClient != nil {
-		client = history.NewMetricClient(client, cf.metricsClient)
+		client = metered.NewHistoryClient(client, cf.metricsClient)
 	}
 	return client, nil
 }
@@ -157,10 +157,10 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 		matching.NewLoadBalancer(domainIDToName, cf.dynConfig),
 	)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.MatchingErrorInjectionRate)(); errorRate != 0 {
-		client = matching.NewErrorInjectionClient(client, errorRate, cf.logger)
+		client = errorinjectors.NewMatchingClient(client, errorRate, cf.logger)
 	}
 	if cf.metricsClient != nil {
-		client = matching.NewMetricClient(client, cf.metricsClient)
+		client = metered.NewMatchingClient(client, cf.metricsClient)
 	}
 	return client, nil
 
@@ -180,10 +180,10 @@ func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndConfig(
 
 	client = admin.NewClient(timeout, largeTimeout, client)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.AdminErrorInjectionRate)(); errorRate != 0 {
-		client = admin.NewErrorInjectionClient(client, errorRate, cf.logger)
+		client = errorinjectors.NewAdminClient(client, errorRate, cf.logger)
 	}
 	if cf.metricsClient != nil {
-		client = admin.NewMetricClient(client, cf.metricsClient)
+		client = metered.NewAdminClient(client, cf.metricsClient)
 	}
 	return client, nil
 }
@@ -207,10 +207,10 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndConfig(
 
 	client = frontend.NewClient(timeout, longPollTimeout, client)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.FrontendErrorInjectionRate)(); errorRate != 0 {
-		client = frontend.NewErrorInjectionClient(client, errorRate, cf.logger)
+		client = errorinjectors.NewFrontendClient(client, errorRate, cf.logger)
 	}
 	if cf.metricsClient != nil {
-		client = frontend.NewMetricClient(client, cf.metricsClient)
+		client = metered.NewFrontendClient(client, cf.metricsClient)
 	}
 	return client, nil
 }

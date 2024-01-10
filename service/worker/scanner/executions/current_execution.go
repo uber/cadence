@@ -75,12 +75,20 @@ func CurrentScannerWorkflow(
 	ctx workflow.Context,
 	params shardscanner.ScannerWorkflowParams,
 ) error {
+	logger := workflow.GetLogger(ctx)
+	logger.Info("Starting CurrentScannerWorkflow", zap.Any("Params", params))
+
 	wf, err := shardscanner.NewScannerWorkflow(ctx, CurrentExecutionsScannerWFTypeName, params)
 	if err != nil {
+		logger.Error("Failed to start new scanner workflow", zap.Error(err))
 		return err
 	}
 
-	return wf.Start(ctx)
+	err = wf.Start(ctx)
+	if err != nil {
+		logger.Error("Failed to execute scanner workflow", zap.Error(err))
+	}
+	return err
 }
 
 // currentExecutionScannerHooks provides hooks for current executions scanner.
@@ -99,6 +107,8 @@ func currentExecutionScannerManager(
 	params shardscanner.ScanShardActivityParams,
 	domainCache cache.DomainCache,
 ) invariant.Manager {
+	logger := zap.L()
+	logger.Info("Creating invariant manager for current execution scanner", zap.Any("Params", params))
 	var ivs []invariant.Invariant
 	collections := ParseCollections(params.ScannerConfig)
 	for _, fn := range CurrentExecutionType.ToInvariants(collections, zap.NewNop()) {

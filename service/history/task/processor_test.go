@@ -207,7 +207,7 @@ func (s *queueTaskProcessorSuite) TestTrySubmit_Fail() {
 }
 
 func (s *queueTaskProcessorSuite) TestNewSchedulerOptions_UnknownSchedulerType() {
-	options, err := newSchedulerOptions(0, 100, dynamicconfig.GetIntPropertyFn(10), 1, nil)
+	options, err := task.NewSchedulerOptions(0, 100, dynamicconfig.GetIntPropertyFn(10), 1, nil)
 	s.Error(err)
 	s.Nil(options)
 }

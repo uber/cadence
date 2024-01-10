@@ -1,6 +1,7 @@
 #!/bin/bash
 
-export HOST_IP=`hostname -i`
+HOST_IP=`hostname -i`
+export HOST_IP
 
 if [ "$BIND_ON_LOCALHOST" == true ] || [ "$BIND_ON_IP" == "127.0.0.1" ]; then
     export BIND_ON_IP="127.0.0.1"

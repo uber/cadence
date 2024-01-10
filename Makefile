@@ -108,10 +108,6 @@ PROJECT_ROOT = github.com/uber/cadence
 # I'd recommend not exporting this in general, to reduce the chance of accidentally using non-versioned tools.
 BIN_PATH := PATH="$(abspath $(BIN)):$(abspath $(STABLE_BIN)):$$PATH"
 
-# version, git sha, etc flags.
-# reasonable to make a :=, but it's only used in one place, so just leave it lazy or do it inline.
-GO_BUILD_LDFLAGS = $(shell ./scripts/go-build-ldflags.sh LDFLAG)
-
 # automatically gather all source files that currently exist.
 # works by ignoring everything in the parens (and does not descend into matching folders) due to `-prune`,
 # and everything else goes to the other side of the `-o` branch, which is `-print`ed.
@@ -180,6 +176,11 @@ $(BIN)/mockery: internal/tools/go.mod
 $(BIN)/enumer: internal/tools/go.mod
 	$(call go_build_tool,github.com/dmarkham/enumer)
 
+# organizes imports and reformats
+$(BIN)/gci: internal/tools/go.mod
+	$(call go_build_tool,github.com/daixiang0/gci)
+
+# removes unused imports and reformats
 $(BIN)/goimports: internal/tools/go.mod
 	$(call go_build_tool,golang.org/x/tools/cmd/goimports)
 
@@ -352,10 +353,13 @@ $(BUILD)/lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
 # if either changes, this will need to change.
 MAYBE_TOUCH_COPYRIGHT=
 
-$(BUILD)/fmt: $(ALL_SRC) $(BIN)/goimports | $(BUILD)
-	$Q echo "goimports..."
-	$Q # use FRESH_ALL_SRC so it won't miss any generated files produced earlier
-	$Q $(BIN)/goimports -local "github.com/uber/cadence" -w $(FRESH_ALL_SRC)
+# use FRESH_ALL_SRC so it won't miss any generated files produced earlier.
+$(BUILD)/fmt: $(ALL_SRC) $(BIN)/goimports $(BIN)/gci | $(BUILD)
+	$Q echo "removing unused imports..."
+	$Q # goimports thrashes on internal/tools, sadly.  just hide it.
+	$Q $(BIN)/goimports -w $(filter-out ./internal/tools/tools.go,$(FRESH_ALL_SRC))
+	$Q echo "grouping imports..."
+	$Q $(BIN)/gci write --section standard --section 'Prefix(github.com/uber/cadence/)' --section default --section blank $(FRESH_ALL_SRC)
 	$Q touch $@
 	$Q $(MAYBE_TOUCH_COPYRIGHT)
 
@@ -386,8 +390,8 @@ endef
 lint: ## (re)run the linter
 	$(call remake,proto-lint lint)
 
-# intentionally not re-making, goimports is slow and it's clear when it's unnecessary
-fmt: $(BUILD)/fmt ## run goimports
+# intentionally not re-making, it's a bit slow and it's clear when it's unnecessary
+fmt: $(BUILD)/fmt ## run gofmt / organize imports / etc
 
 # not identical to the intermediate target, but does provide the same codegen (or more).
 copyright: $(BIN)/copyright | $(BUILD) ## update copyright headers
@@ -416,34 +420,34 @@ BINS  += cadence-cassandra-tool
 TOOLS += cadence-cassandra-tool
 cadence-cassandra-tool: $(BINS_DEPEND_ON)
 	$Q echo "compiling cadence-cassandra-tool with OS: $(GOOS), ARCH: $(GOARCH)"
-	$Q go build -o $@ cmd/tools/cassandra/main.go
+	$Q ./scripts/build-with-ldflags.sh -o $@ cmd/tools/cassandra/main.go
 
 BINS  += cadence-sql-tool
 TOOLS += cadence-sql-tool
 cadence-sql-tool: $(BINS_DEPEND_ON)
 	$Q echo "compiling cadence-sql-tool with OS: $(GOOS), ARCH: $(GOARCH)"
-	$Q go build -o $@ cmd/tools/sql/main.go
+	$Q ./scripts/build-with-ldflags.sh -o $@ cmd/tools/sql/main.go
 
 BINS  += cadence
 TOOLS += cadence
 cadence: $(BINS_DEPEND_ON)
 	$Q echo "compiling cadence with OS: $(GOOS), ARCH: $(GOARCH)"
-	$Q go build -ldflags '$(GO_BUILD_LDFLAGS)' -o $@ cmd/tools/cli/main.go
+	$Q ./scripts/build-with-ldflags.sh -o $@ cmd/tools/cli/main.go
 
 BINS += cadence-server
 cadence-server: $(BINS_DEPEND_ON)
 	$Q echo "compiling cadence-server with OS: $(GOOS), ARCH: $(GOARCH)"
-	$Q go build -ldflags '$(GO_BUILD_LDFLAGS)' -o $@ cmd/server/main.go
+	$Q ./scripts/build-with-ldflags.sh -o $@ cmd/server/main.go
 
 BINS += cadence-canary
 cadence-canary: $(BINS_DEPEND_ON)
 	$Q echo "compiling cadence-canary with OS: $(GOOS), ARCH: $(GOARCH)"
-	$Q go build -o $@ cmd/canary/main.go
+	$Q ./scripts/build-with-ldflags.sh -o $@ cmd/canary/main.go
 
 BINS += cadence-bench
 cadence-bench: $(BINS_DEPEND_ON)
 	$Q echo "compiling cadence-bench with OS: $(GOOS), ARCH: $(GOARCH)"
-	$Q go build -o $@ cmd/bench/main.go
+	$Q ./scripts/build-with-ldflags.sh -o $@ cmd/bench/main.go
 
 .PHONY: go-generate bins tools release clean
 
@@ -463,6 +467,14 @@ release: ## Re-generate generated code and run tests
 	$(MAKE) --no-print-directory go-generate
 	$(MAKE) --no-print-directory test
 
+build: ## Build all packages and all tests (ensures everything compiles)
+	$Q echo 'Building all packages...'
+	$Q go build ./...
+	$Q # "tests" by building and then running `true`, and hides test-success output
+	$Q echo 'Building all tests (~5x slower)...'
+	$Q # intentionally not -race due to !race build tags
+	$Q go test -exec /usr/bin/true ./... >/dev/null
+
 clean: ## Clean build products
 	rm -f $(BINS)
 	rm -Rf $(BUILD)
@@ -472,7 +484,7 @@ clean: ## Clean build products
 
 # v----- not yet cleaned up -----v
 
-.PHONY: git-submodules test bins clean cover cover_ci help
+.PHONY: git-submodules test bins build clean cover cover_ci help
 
 TOOLS_CMD_ROOT=./cmd/tools
 INTEG_TEST_ROOT=./host
@@ -577,13 +589,13 @@ cover_ndc_profile: bins
 
 $(COVER_ROOT)/cover.out: $(UNIT_COVER_FILE) $(INTEG_COVER_FILE_CASS) $(INTEG_COVER_FILE_MYSQL) $(INTEG_COVER_FILE_POSTGRES) $(INTEG_NDC_COVER_FILE_CASS) $(INTEG_NDC_COVER_FILE_MYSQL) $(INTEG_NDC_COVER_FILE_POSTGRES)
 	$Q echo "mode: atomic" > $(COVER_ROOT)/cover.out
-	cat $(UNIT_COVER_FILE) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
-	cat $(INTEG_COVER_FILE_CASS) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
-	cat $(INTEG_COVER_FILE_MYSQL) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
-	cat $(INTEG_COVER_FILE_POSTGRES) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
-	cat $(INTEG_NDC_COVER_FILE_CASS) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
-	cat $(INTEG_NDC_COVER_FILE_MYSQL) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
-	cat $(INTEG_NDC_COVER_FILE_POSTGRES) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
+	cat $(UNIT_COVER_FILE) | grep -v "^mode: \w\+" | grep -vP ".gen|_generated|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_COVER_FILE_CASS) | grep -v "^mode: \w\+" | grep -vP ".gen|_generated|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_COVER_FILE_MYSQL) | grep -v "^mode: \w\+" | grep -vP ".gen|_generated|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_COVER_FILE_POSTGRES) | grep -v "^mode: \w\+" | grep -vP ".gen|_generated|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_NDC_COVER_FILE_CASS) | grep -v "^mode: \w\+" | grep -vP ".gen|_generated|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_NDC_COVER_FILE_MYSQL) | grep -v "^mode: \w\+" | grep -vP ".gen|_generated|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_NDC_COVER_FILE_POSTGRES) | grep -v "^mode: \w\+" | grep -vP ".gen|_generated|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
 
 cover: $(COVER_ROOT)/cover.out
 	go tool cover -html=$(COVER_ROOT)/cover.out;

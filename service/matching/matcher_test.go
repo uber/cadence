@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -72,12 +73,12 @@ func (t *MatcherTestSuite) SetupTest() {
 	t.cfg = tlCfg
 	t.isolationGroups = []string{"dca1", "dca2"}
 	t.fwdr = newForwarder(&t.cfg.forwarderConfig, t.taskList, types.TaskListKindNormal, t.client, []string{"dca1", "dca2"})
-	t.matcher = newTaskMatcher(tlCfg, t.fwdr, metrics.NoopScope(metrics.Matching), []string{"dca1", "dca2"})
+	t.matcher = newTaskMatcher(tlCfg, t.fwdr, metrics.NoopScope(metrics.Matching), []string{"dca1", "dca2"}, loggerimpl.NewNopLogger())
 
 	rootTaskList := newTestTaskListID(t.taskList.domainID, t.taskList.Parent(20), persistence.TaskListTypeDecision)
 	rootTasklistCfg, err := newTaskListConfig(rootTaskList, cfg, t.newDomainCache())
 	t.NoError(err)
-	t.rootMatcher = newTaskMatcher(rootTasklistCfg, nil, metrics.NoopScope(metrics.Matching), []string{"dca1", "dca2"})
+	t.rootMatcher = newTaskMatcher(rootTasklistCfg, nil, metrics.NoopScope(metrics.Matching), []string{"dca1", "dca2"}, loggerimpl.NewNopLogger())
 }
 
 func (t *MatcherTestSuite) TearDownTest() {

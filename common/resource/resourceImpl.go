@@ -25,16 +25,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/common/dynamicconfig/configstore"
-	csc "github.com/uber/cadence/common/dynamicconfig/configstore/config"
-	"github.com/uber/cadence/common/quotas"
-	"github.com/uber/cadence/common/taskvalidator"
-
-	"github.com/uber/cadence/common/isolationgroup/defaultisolationgroupstate"
-
-	"github.com/uber/cadence/common/isolationgroup"
-	"github.com/uber/cadence/common/partition"
-
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc"
@@ -44,6 +34,7 @@ import (
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
+	"github.com/uber/cadence/client/wrappers/retryable"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
@@ -53,15 +44,22 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/dynamicconfig/configstore"
+	csc "github.com/uber/cadence/common/dynamicconfig/configstore/config"
+	"github.com/uber/cadence/common/isolationgroup"
+	"github.com/uber/cadence/common/isolationgroup/defaultisolationgroupstate"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
+	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service"
+	"github.com/uber/cadence/common/taskvalidator"
 )
 
 type (
@@ -220,7 +218,7 @@ func New(
 	)
 
 	frontendRawClient := clientBean.GetFrontendClient()
-	frontendClient := frontend.NewRetryableClient(
+	frontendClient := retryable.NewFrontendClient(
 		frontendRawClient,
 		common.CreateFrontendServiceRetryPolicy(),
 		common.IsServiceTransientError,
@@ -230,14 +228,14 @@ func New(
 	if err != nil {
 		return nil, err
 	}
-	matchingClient := matching.NewRetryableClient(
+	matchingClient := retryable.NewMatchingClient(
 		matchingRawClient,
 		common.CreateMatchingServiceRetryPolicy(),
 		common.IsServiceTransientError,
 	)
 
 	historyRawClient := clientBean.GetHistoryClient()
-	historyClient := history.NewRetryableClient(
+	historyClient := retryable.NewHistoryClient(
 		historyRawClient,
 		common.CreateHistoryServiceRetryPolicy(),
 		common.IsServiceTransientError,
@@ -340,7 +338,7 @@ func New(
 		isolationGroups:           isolationGroupState,
 		isolationGroupConfigStore: isolationGroupStore, // can be nil where persistence is not available
 		partitioner:               partitioner,
-		taskvalidator:             taskvalidator.NewWfChecker(logger, params.MetricsClient),
+		taskvalidator:             taskvalidator.NewWfChecker(logger, params.MetricsClient, domainCache),
 	}
 	return impl, nil
 }

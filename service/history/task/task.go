@@ -40,16 +40,6 @@ import (
 	"github.com/uber/cadence/service/history/shard"
 )
 
-const (
-	loadDomainEntryForTaskRetryDelay = 100 * time.Millisecond
-
-	activeTaskResubmitMaxAttempts = 10
-
-	defaultTaskEventLoggerSize = 100
-
-	stickyTaskMaxRetryCount = 100
-)
-
 // redispatchError is the error indicating that the timer / transfer task should be redispatched and retried.
 type redispatchError struct {
 	Reason string
@@ -176,7 +166,7 @@ func newTask(
 		Info:               taskInfo,
 		shard:              shard,
 		state:              ctask.TaskStatePending,
-		priority:           common.NoPriority,
+		priority:           noPriority,
 		queueType:          queueType,
 		scopeIdx:           scopeIdx,
 		scope:              nil,
@@ -223,9 +213,7 @@ func (t *taskImpl) Execute() error {
 	return t.taskExecutor.Execute(t, t.shouldProcessTask)
 }
 
-func (t *taskImpl) HandleErr(
-	err error,
-) (retErr error) {
+func (t *taskImpl) HandleErr(err error) (retErr error) {
 	defer func() {
 		if retErr != nil {
 			logEvent(t.eventLogger, "Failed to handle error", retErr)
@@ -333,9 +321,7 @@ func (t *taskImpl) HandleErr(
 	return err
 }
 
-func (t *taskImpl) RetryErr(
-	err error,
-) bool {
+func (t *taskImpl) RetryErr(err error) bool {
 	if err == errWorkflowBusy || isRedispatchErr(err) || err == ErrTaskPendingActive || common.IsContextTimeoutError(err) {
 		return false
 	}
@@ -392,9 +378,7 @@ func (t *taskImpl) Priority() int {
 	return t.priority
 }
 
-func (t *taskImpl) SetPriority(
-	priority int,
-) {
+func (t *taskImpl) SetPriority(priority int) {
 	t.Lock()
 	defer t.Unlock()
 

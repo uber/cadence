@@ -27,13 +27,12 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc"
-
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/yarpc"
 
 	hclient "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
@@ -92,8 +91,7 @@ type (
 		childDomainName            string
 		childDomainEntry           *cache.DomainCacheEntry
 		version                    int64
-		now                        time.Time
-		timeSource                 *clock.EventTimeSource
+		timeSource                 clock.MockedTimeSource
 		transferActiveTaskExecutor *transferActiveTaskExecutor
 	}
 )
@@ -127,8 +125,7 @@ func (s *transferActiveTaskExecutorSuite) SetupTest() {
 	s.childDomainName = constants.TestChildDomainName
 	s.childDomainEntry = constants.TestGlobalChildDomainEntry
 	s.version = s.domainEntry.GetFailoverVersion()
-	s.now = time.Now()
-	s.timeSource = clock.NewEventTimeSource().Update(s.now)
+	s.timeSource = clock.NewMockedTimeSource()
 
 	s.controller = gomock.NewController(s.T())
 

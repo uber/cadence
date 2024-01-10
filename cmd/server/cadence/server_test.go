@@ -34,12 +34,13 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
-	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra" // needed to load cassandra plugin
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
-	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public" // needed to load the default gocql client
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/testflags"
 	"github.com/uber/cadence/tools/cassandra"
+
+	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"              // needed to load cassandra plugin
+	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public" // needed to load the default gocql client
 )
 
 type ServerSuite struct {

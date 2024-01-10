@@ -162,17 +162,13 @@ func NewRandomSplitPolicy(
 // that which combines other policies. Policies are evaluated in the order
 // they passed in, and if one policy returns an non-empty result, that result
 // will be returned as is and policies after that one will not be evaluated
-func NewAggregatedSplitPolicy(
-	policies ...ProcessingQueueSplitPolicy,
-) ProcessingQueueSplitPolicy {
+func NewAggregatedSplitPolicy(policies ...ProcessingQueueSplitPolicy) ProcessingQueueSplitPolicy {
 	return &aggregatedSplitPolicy{
 		policies: policies,
 	}
 }
 
-func (p *pendingTaskSplitPolicy) Evaluate(
-	queue ProcessingQueue,
-) []ProcessingQueueState {
+func (p *pendingTaskSplitPolicy) Evaluate(queue ProcessingQueue) []ProcessingQueueState {
 	queueImpl := queue.(*processingQueueImpl)
 
 	if queueImpl.state.level == p.maxNewQueueLevel {
@@ -221,9 +217,7 @@ func (p *pendingTaskSplitPolicy) Evaluate(
 	)
 }
 
-func (p *stuckTaskSplitPolicy) Evaluate(
-	queue ProcessingQueue,
-) []ProcessingQueueState {
+func (p *stuckTaskSplitPolicy) Evaluate(queue ProcessingQueue) []ProcessingQueueState {
 	queueImpl := queue.(*processingQueueImpl)
 
 	if queueImpl.state.level == p.maxNewQueueLevel {
@@ -267,9 +261,7 @@ func (p *stuckTaskSplitPolicy) Evaluate(
 	)
 }
 
-func (p *selectedDomainSplitPolicy) Evaluate(
-	queue ProcessingQueue,
-) []ProcessingQueueState {
+func (p *selectedDomainSplitPolicy) Evaluate(queue ProcessingQueue) []ProcessingQueueState {
 	domainBelongsToQueue := false
 	currentQueueState := queue.State()
 	currentDomainFilter := currentQueueState.DomainFilter()
@@ -312,9 +304,7 @@ func (p *selectedDomainSplitPolicy) Evaluate(
 	}
 }
 
-func (p *randomSplitPolicy) Evaluate(
-	queue ProcessingQueue,
-) []ProcessingQueueState {
+func (p *randomSplitPolicy) Evaluate(queue ProcessingQueue) []ProcessingQueueState {
 	queueImpl := queue.(*processingQueueImpl)
 
 	if queueImpl.state.level == p.maxNewQueueLevel {
@@ -364,9 +354,7 @@ func (p *randomSplitPolicy) Evaluate(
 	)
 }
 
-func (p *aggregatedSplitPolicy) Evaluate(
-	queue ProcessingQueue,
-) []ProcessingQueueState {
+func (p *aggregatedSplitPolicy) Evaluate(queue ProcessingQueue) []ProcessingQueueState {
 	for _, policy := range p.policies {
 		newStates := policy.Evaluate(queue)
 		if len(newStates) != 0 {

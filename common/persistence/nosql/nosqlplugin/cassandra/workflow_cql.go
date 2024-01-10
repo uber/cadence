@@ -136,7 +136,7 @@ const (
 		`}`
 
 	templateActivityInfoType = `{` +
-		`version: ?,` +
+		`version: ?, ` +
 		`schedule_id: ?, ` +
 		`scheduled_event_batch_id: ?, ` +
 		`scheduled_event: ?, ` +
@@ -172,7 +172,7 @@ const (
 		`}`
 
 	templateTimerInfoType = `{` +
-		`version: ?,` +
+		`version: ?, ` +
 		`timer_id: ?, ` +
 		`started_id: ?, ` +
 		`expiry_time: ?, ` +
@@ -220,10 +220,10 @@ const (
 		`}`
 
 	templateUpdateCurrentWorkflowExecutionQuery = `UPDATE executions USING TTL 0 ` +
-		`SET current_run_id = ?,
-execution = {run_id: ?, create_request_id: ?, state: ?, close_status: ?},
-workflow_last_write_version = ?,
-workflow_state = ? ` +
+		`SET current_run_id = ?, ` +
+		`execution = {run_id: ?, create_request_id: ?, state: ?, close_status: ?}, ` +
+		`workflow_last_write_version = ?, ` +
+		`workflow_state = ? ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
@@ -333,7 +333,7 @@ workflow_state = ? ` +
 		`IF next_event_id = ? `
 
 	templateUpdateActivityInfoQuery = `UPDATE executions ` +
-		`SET activity_map[ ? ] =` + templateActivityInfoType + ` ` +
+		`SET activity_map[ ? ] = ` + templateActivityInfoType + ` ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
@@ -343,7 +343,7 @@ workflow_state = ? ` +
 		`and task_id = ? `
 
 	templateResetActivityInfoQuery = `UPDATE executions ` +
-		`SET activity_map = ?` +
+		`SET activity_map = ? ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
@@ -353,7 +353,7 @@ workflow_state = ? ` +
 		`and task_id = ? `
 
 	templateUpdateTimerInfoQuery = `UPDATE executions ` +
-		`SET timer_map[ ? ] =` + templateTimerInfoType + ` ` +
+		`SET timer_map[ ? ] = ` + templateTimerInfoType + ` ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
@@ -363,7 +363,7 @@ workflow_state = ? ` +
 		`and task_id = ? `
 
 	templateResetTimerInfoQuery = `UPDATE executions ` +
-		`SET timer_map = ?` +
+		`SET timer_map = ? ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +

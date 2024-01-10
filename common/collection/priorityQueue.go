@@ -20,9 +20,7 @@
 
 package collection
 
-import (
-	"container/heap"
-)
+import "container/heap"
 
 type (
 	priorityQueueImpl struct {

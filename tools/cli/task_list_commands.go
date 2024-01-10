@@ -24,9 +24,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/uber/cadence/common/types"
-
 	"github.com/urfave/cli"
+
+	"github.com/uber/cadence/common/types"
 )
 
 type (

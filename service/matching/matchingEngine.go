@@ -31,10 +31,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/partition"
-	"github.com/uber/cadence/common/service"
-
 	"github.com/pborman/uuid"
 
 	"github.com/uber/cadence/client/history"
@@ -43,11 +39,14 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/client"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -439,7 +438,7 @@ pollLoop:
 
 		taskList, err := newTaskListID(domainID, taskListName, persistence.TaskListTypeDecision)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("couldn't create new decision tasklist %w", err)
 		}
 
 		// Add frontend generated pollerID to context so tasklistMgr can support cancellation of
@@ -450,16 +449,20 @@ pollLoop:
 		task, err := e.getTask(pollerCtx, taskList, nil, taskListKind)
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
-			if err == ErrNoTasks || err == errPumpClosed {
+			if errors.Is(err, ErrNoTasks) || errors.Is(err, errPumpClosed) {
+				e.logger.Debug("no decision tasks",
+					tag.WorkflowTaskListName(taskListName),
+					tag.WorkflowDomainID(domainID),
+					tag.Error(err),
+				)
 				return emptyPollForDecisionTaskResponse, nil
 			}
-			return nil, err
+			return nil, fmt.Errorf("couldn't get task: %w", err)
 		}
 
 		e.emitForwardedFromStats(hCtx.scope, task.isForwarded(), req.GetForwardedFrom())
 
 		if task.isStarted() {
-			// tasks received from remote are already started. So, simply forward the response
 			return task.pollForDecisionResponse(), nil
 			// TODO: Maybe add history expose here?
 		}
@@ -511,9 +514,17 @@ pollLoop:
 					tag.WorkflowTaskListName(taskListName),
 					tag.WorkflowScheduleID(task.event.ScheduleID),
 					tag.TaskID(task.event.TaskID),
+					tag.Error(err),
 				)
 				task.finish(nil)
 			default:
+				e.emitInfoOrDebugLog(
+					task.event.DomainID,
+					"unknown error recording task started",
+					tag.WorkflowDomainID(domainID),
+					tag.Error(err),
+					tag.WorkflowTaskListName(taskListName),
+				)
 				task.finish(err)
 			}
 
@@ -565,9 +576,14 @@ pollLoop:
 		task, err := e.getTask(pollerCtx, taskList, maxDispatch, taskListKind)
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
-			if err == ErrNoTasks || err == errPumpClosed {
+			if errors.Is(err, ErrNoTasks) || errors.Is(err, errPumpClosed) {
 				return emptyPollForActivityTaskResponse, nil
 			}
+			e.logger.Error("Received unexpected err while getting task",
+				tag.WorkflowTaskListName(taskListName),
+				tag.WorkflowDomainID(domainID),
+				tag.Error(err),
+			)
 			return nil, err
 		}
 
@@ -885,7 +901,7 @@ func (e *matchingEngineImpl) getAllPartitions(
 func (e *matchingEngineImpl) getTask(ctx context.Context, taskList *taskListID, maxDispatchPerSecond *float64, taskListKind *types.TaskListKind) (*InternalTask, error) {
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("couldn't load tasklist namanger: %w", err)
 	}
 	return tlMgr.GetTask(ctx, maxDispatchPerSecond)
 }
