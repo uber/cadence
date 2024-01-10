@@ -27,7 +27,6 @@ import (
 	"errors"
 	"github.com/pborman/uuid"
 	"math"
-	"sync"
 	"testing"
 	"time"
 
@@ -86,7 +85,7 @@ func (s *contextTestSuite) SetupTest() {
 
 func (s *contextTestSuite) newContext() *contextImpl {
 	eventsCache := events.NewMockCache(s.controller)
-	testConfig := config.NewForTest()
+	config := config.NewForTest()
 	shardInfo := &persistence.ShardInfo{
 		ShardID: 0,
 		RangeID: 1,
@@ -104,25 +103,25 @@ func (s *contextTestSuite) newContext() *contextImpl {
 			StatesByCluster: make(map[string][]*types.ProcessingQueueState),
 		},
 	}
-	newContext := newContextImpl(s.mockResource, nil, shardInfo.ShardID, shardInfo.RangeID, s.mockResource.ExecutionMgr, eventsCache,
-		nil,
-		0,
-		testConfig,
-		s.logger,
-		s.logger,
-		nil,
-		sync.RWMutex{},
-		time.Time{},
-		shardInfo,
-		1,
-		100000,
-		0,
-		make(map[string]time.Time),
-		make(map[string]TransferFailoverLevel),
-		make(map[string]TimerFailoverLevel),
-		make(map[string]time.Time),
-		false)
-	return newContext
+	context := &contextImpl{
+		Resource:                  s.mockResource,
+		shardID:                   shardInfo.ShardID,
+		rangeID:                   shardInfo.RangeID,
+		shardInfo:                 shardInfo,
+		executionManager:          s.mockResource.ExecutionMgr,
+		config:                    config,
+		logger:                    s.logger,
+		throttledLogger:           s.logger,
+		transferSequenceNumber:    1,
+		transferMaxReadLevel:      0,
+		maxTransferSequenceNumber: 100000,
+		timerMaxReadLevelMap:      make(map[string]time.Time),
+		remoteClusterCurrentTime:  make(map[string]time.Time),
+		eventsCache:               eventsCache,
+		transferFailoverLevels:    make(map[string]TransferFailoverLevel),
+		timerFailoverLevels:       make(map[string]TimerFailoverLevel),
+	}
+	return context
 }
 
 func (s *contextTestSuite) TearDownTest() {
