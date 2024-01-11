@@ -333,6 +333,15 @@ $(BUILD)/proto-lint: $(PROTO_FILES) $(STABLE_BIN)/$(BUF_VERSION_BIN) | $(BUILD)
 	$Q cd $(PROTO_ROOT) && ../$(STABLE_BIN)/$(BUF_VERSION_BIN) lint
 	$Q touch $@
 
+# lints that go modules are as expected, e.g. parent does not import submodule.
+# tool builds that need to be in sync with the parent are partially checked through go_mod_build_tool, but should probably be checked here too
+$(BUILD)/gomod-lint: go.mod internal/tools/go.mod common/archiver/gcloud/go.mod | $(BUILD)
+	$Q # this is likely impossible as it'd be a cycle
+	$Q grep github.com/uber/cadence/common/archiver/gcloud go.mod && echo "gcloud submodule cannot be imported by main module" || true
+	$Q # intentionally kept separate so the server does not include tool-only dependencies
+	$Q grep github.com/uber/cadence/internal go.mod && echo "internal module cannot be imported by main module" || true
+	$Q touch $@
+
 # note that LINT_SRC is fairly fake as a prerequisite.
 # it's a coarse "you probably don't need to re-lint" filter, nothing more.
 $(BUILD)/lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
@@ -388,7 +397,7 @@ endef
 # useful to actually re-run to get output again.
 # reuse the intermediates for simplicity and consistency.
 lint: ## (re)run the linter
-	$(call remake,proto-lint lint)
+	$(call remake,proto-lint gomod-lint lint)
 
 # intentionally not re-making, it's a bit slow and it's clear when it's unnecessary
 fmt: $(BUILD)/fmt ## run gofmt / organize imports / etc
@@ -509,6 +518,9 @@ endif
 
 # all directories with *_test.go files in them (exclude host/xdc)
 TEST_DIRS := $(filter-out $(INTEG_TEST_XDC_ROOT)%, $(sort $(dir $(filter %_test.go,$(ALL_SRC)))))
+# necessary until we switch to "go test ./...`": exclude any submodule(s).
+# these fail a top-level `go test` because it's using the wrong go.mod, but ./... correctly excludes them.
+TEST_DIRS := $(filter-out ./common/archiver/gcloud%, $(TEST_DIRS))
 # all tests other than end-to-end integration test fall into the pkg_test category
 PKG_TEST_DIRS := $(filter-out $(INTEG_TEST_ROOT)% $(OPT_OUT_TEST), $(TEST_DIRS))
 
