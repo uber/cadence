@@ -2,6 +2,9 @@ module github.com/uber/cadence/common/archiver/gcloud
 
 go 1.20
 
+// TODO: must be removed before PR is merged
+replace github.com/uber/cadence => github.com/Groxx/cadence v0.16.1-0.20240111183709-64c572e8e5c1
+
 require (
 	github.com/aws/aws-sdk-go v1.44.180 // indirect
 	github.com/cactus/go-statsd-client/statsd v0.0.0-20191106001114-12b4e2b38748 // indirect
@@ -39,6 +42,7 @@ require (
 
 require (
 	cloud.google.com/go/storage v1.36.0
+	github.com/uber/cadence v0.0.0-00010101000000-000000000000
 	golang.org/x/oauth2 v0.13.0
 	google.golang.org/api v0.150.0
 )
