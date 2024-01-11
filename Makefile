@@ -54,6 +54,7 @@ endif
 # note that vars that do not yet exist are empty, so any prerequisites defined below are ineffective here.
 $(BUILD)/lint: $(BUILD)/fmt # lint will fail if fmt fails, so fmt first
 $(BUILD)/proto-lint:
+$(BUILD)/gomod-lint:
 $(BUILD)/fmt: $(BUILD)/copyright # formatting must occur only after all other go-file-modifications are done
 $(BUILD)/copyright: $(BUILD)/codegen # must add copyright to generated code, sometimes needs re-formatting
 $(BUILD)/codegen: $(BUILD)/thrift $(BUILD)/protoc
@@ -344,7 +345,7 @@ $(BUILD)/gomod-lint: go.mod internal/tools/go.mod common/archiver/gcloud/go.mod 
 
 # note that LINT_SRC is fairly fake as a prerequisite.
 # it's a coarse "you probably don't need to re-lint" filter, nothing more.
-$(BUILD)/lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
+$(BUILD)/code-lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
 	$Q echo "lint..."
 	$Q $(BIN)/revive -config revive.toml -exclude './vendor/...' -exclude './.gen/...' -formatter stylish ./...
 	$Q touch $@
@@ -397,7 +398,7 @@ endef
 # useful to actually re-run to get output again.
 # reuse the intermediates for simplicity and consistency.
 lint: ## (re)run the linter
-	$(call remake,proto-lint gomod-lint lint)
+	$(call remake,proto-lint gomod-lint code-lint)
 
 # intentionally not re-making, it's a bit slow and it's clear when it's unnecessary
 fmt: $(BUILD)/fmt ## run gofmt / organize imports / etc
