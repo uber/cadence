@@ -3,7 +3,7 @@ module github.com/uber/cadence/common/archiver/gcloud
 go 1.20
 
 // TODO: must be removed before PR is merged
-replace github.com/uber/cadence => github.com/Groxx/cadence v0.16.1-0.20240111183709-64c572e8e5c1
+replace github.com/uber/cadence => github.com/Groxx/cadence v0.16.1-0.20240111210323-18eb16e67c32
 
 require (
 	github.com/aws/aws-sdk-go v1.44.180 // indirect
