@@ -185,6 +185,13 @@ const (
 	minContextTimeout           = 1 * time.Second
 )
 
+func (s *contextImpl) setMappedValuesForContext() {
+	s.timerMaxReadLevelMap = make(map[string]time.Time)
+	s.timerFailoverLevels = make(map[string]TimerFailoverLevel)
+	s.transferFailoverLevels = make(map[string]TransferFailoverLevel)
+	s.remoteClusterCurrentTime = make(map[string]time.Time)
+}
+
 func (s *contextImpl) GetShardID() int {
 	return s.shardID
 }
