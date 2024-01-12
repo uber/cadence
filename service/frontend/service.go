@@ -302,7 +302,7 @@ func (s *Service) Start() {
 		handler = NewClusterRedirectionHandler(handler, s, s.config, *s.params.ClusterRedirectionPolicy)
 	}
 
-	handler = NewAccessControlledHandlerImpl(handler, s, s.params.Authorizer, s.params.AuthorizationConfig)
+	handler = NewAccessControlledHandler(handler, s, s.params.Authorizer, s.params.AuthorizationConfig)
 
 	// Register the latest (most decorated) handler
 	thriftHandler := NewThriftHandler(handler)
@@ -312,7 +312,7 @@ func (s *Service) Start() {
 	grpcHandler.register(s.GetDispatcher())
 
 	s.adminHandler = NewAdminHandler(s, s.params, s.config, dh)
-	s.adminHandler = NewAccessControlledAdminHandlerImpl(s.adminHandler, s, s.params.Authorizer, s.params.AuthorizationConfig)
+	s.adminHandler = NewAccessControlledAdminHandler(s.adminHandler, s, s.params.Authorizer, s.params.AuthorizationConfig)
 
 	adminThriftHandler := NewAdminThriftHandler(s.adminHandler)
 	adminThriftHandler.register(s.GetDispatcher())
