@@ -85,7 +85,7 @@ func (s *contextTestSuite) SetupTest() {
 
 func (s *contextTestSuite) newContext() *contextImpl {
 	eventsCache := events.NewMockCache(s.controller)
-	config := config.NewForTest()
+	testConfig := config.NewForTest()
 	shardInfo := &persistence.ShardInfo{
 		ShardID: 0,
 		RangeID: 1,
@@ -103,25 +103,22 @@ func (s *contextTestSuite) newContext() *contextImpl {
 			StatesByCluster: make(map[string][]*types.ProcessingQueueState),
 		},
 	}
-	context := &contextImpl{
+	newContext := &contextImpl{
 		Resource:                  s.mockResource,
 		shardID:                   shardInfo.ShardID,
 		rangeID:                   shardInfo.RangeID,
 		shardInfo:                 shardInfo,
 		executionManager:          s.mockResource.ExecutionMgr,
-		config:                    config,
+		config:                    testConfig,
 		logger:                    s.logger,
 		throttledLogger:           s.logger,
 		transferSequenceNumber:    1,
 		transferMaxReadLevel:      0,
 		maxTransferSequenceNumber: 100000,
-		timerMaxReadLevelMap:      make(map[string]time.Time),
-		remoteClusterCurrentTime:  make(map[string]time.Time),
 		eventsCache:               eventsCache,
-		transferFailoverLevels:    make(map[string]TransferFailoverLevel),
-		timerFailoverLevels:       make(map[string]TimerFailoverLevel),
 	}
-	return context
+	newContext.setMappedValuesForContext()
+	return newContext
 }
 
 func (s *contextTestSuite) TearDownTest() {
