@@ -19,6 +19,7 @@
 // THE SOFTWARE.
 
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination adminHandler_mock.go -package frontend github.com/uber/cadence/service/frontend AdminHandler
+//go:generate gowrap gen -g -p . -i AdminHandler -t ./templates/accesscontrolled.tmpl -o ./access_controlled_admin_generated.go -v handler=AccessControlled
 
 package frontend
 
