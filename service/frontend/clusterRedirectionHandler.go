@@ -32,9 +32,11 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/frontend/api"
+	frontendcfg "github.com/uber/cadence/service/frontend/config"
 )
 
-var _ Handler = (*ClusterRedirectionHandlerImpl)(nil)
+var _ api.Handler = (*ClusterRedirectionHandlerImpl)(nil)
 
 type (
 	// ClusterRedirectionHandlerImpl is simple wrapper over frontend service, doing redirection based on policy for global domains not being active in current cluster
@@ -44,16 +46,16 @@ type (
 		currentClusterName string
 		redirectionPolicy  ClusterRedirectionPolicy
 		tokenSerializer    common.TaskTokenSerializer
-		frontendHandler    Handler
+		frontendHandler    api.Handler
 		callOptions        []yarpc.CallOption
 	}
 )
 
 // NewClusterRedirectionHandler creates a frontend handler to handle cluster redirection for global domains not being active in current cluster
 func NewClusterRedirectionHandler(
-	wfHandler Handler,
+	wfHandler api.Handler,
 	resource resource.Resource,
-	config *Config,
+	config *frontendcfg.Config,
 	policy config.ClusterRedirectionPolicy,
 ) *ClusterRedirectionHandlerImpl {
 	dcRedirectionPolicy := RedirectionPolicyGenerator(

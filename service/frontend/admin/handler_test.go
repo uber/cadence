@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package frontend
+package admin
 
 import (
 	"context"
@@ -53,6 +53,8 @@ import (
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
+	frontendcfg "github.com/uber/cadence/service/frontend/config"
+	"github.com/uber/cadence/service/frontend/validate"
 )
 
 type (
@@ -104,13 +106,13 @@ func (s *adminHandlerSuite) SetupTest() {
 			NumHistoryShards: 1,
 		},
 	}
-	config := &Config{
+	config := &frontendcfg.Config{
 		EnableAdminProtection:  dynamicconfig.GetBoolPropertyFn(false),
 		EnableGracefulFailover: dynamicconfig.GetBoolPropertyFn(false),
 	}
 
 	dh := domain.NewMockHandler(s.controller)
-	s.handler = NewAdminHandler(s.mockResource, params, config, dh).(*adminHandlerImpl)
+	s.handler = NewHandler(s.mockResource, params, config, dh).(*adminHandlerImpl)
 	s.handler.Start()
 }
 
@@ -646,7 +648,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 func (s *adminHandlerSuite) Test_AddSearchAttribute_Permission() {
 	ctx := context.Background()
 	handler := s.handler
-	handler.config = &Config{
+	handler.config = &frontendcfg.Config{
 		EnableAdminProtection: dynamicconfig.GetBoolPropertyFn(true),
 		AdminOperationToken:   dynamicconfig.GetStringPropertyFn(dynamicconfig.AdminOperationToken.DefaultString()),
 	}
@@ -662,7 +664,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Permission() {
 			Request: &types.AddSearchAttributeRequest{
 				SecurityToken: "unknown",
 			},
-			Expected: errNoPermission,
+			Expected: validate.ErrNoPermission,
 		},
 		{
 			Name: "correct token",

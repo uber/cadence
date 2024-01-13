@@ -28,6 +28,7 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/types"
+	frontendcfg "github.com/uber/cadence/service/frontend/config"
 )
 
 const (
@@ -89,7 +90,7 @@ type (
 	// which (based on domain) forwards selected APIs calls or all domain APIs to active cluster
 	selectedOrAllAPIsForwardingRedirectionPolicy struct {
 		currentClusterName string
-		config             *Config
+		config             *frontendcfg.Config
 		domainCache        cache.DomainCache
 		allDomainAPIs      bool
 		selectedAPIs       map[string]struct{}
@@ -132,7 +133,7 @@ var selectedAPIsForwardingRedirectionPolicyAPIAllowlistV2 = map[string]struct{}{
 }
 
 // RedirectionPolicyGenerator generate corresponding redirection policy
-func RedirectionPolicyGenerator(clusterMetadata cluster.Metadata, config *Config,
+func RedirectionPolicyGenerator(clusterMetadata cluster.Metadata, config *frontendcfg.Config,
 	domainCache cache.DomainCache, policy config.ClusterRedirectionPolicy) ClusterRedirectionPolicy {
 	switch policy.Policy {
 	case DCRedirectionPolicyDefault:
@@ -176,7 +177,7 @@ func (policy *noopRedirectionPolicy) WithDomainNameRedirect(ctx context.Context,
 }
 
 // newSelectedOrAllAPIsForwardingPolicy creates a forwarding policy for selected APIs based on domain
-func newSelectedOrAllAPIsForwardingPolicy(currentClusterName string, config *Config, domainCache cache.DomainCache, allDoaminAPIs bool, selectedAPIs map[string]struct{}, targetCluster string) *selectedOrAllAPIsForwardingRedirectionPolicy {
+func newSelectedOrAllAPIsForwardingPolicy(currentClusterName string, config *frontendcfg.Config, domainCache cache.DomainCache, allDoaminAPIs bool, selectedAPIs map[string]struct{}, targetCluster string) *selectedOrAllAPIsForwardingRedirectionPolicy {
 	return &selectedOrAllAPIsForwardingRedirectionPolicy{
 		currentClusterName: currentClusterName,
 		config:             config,

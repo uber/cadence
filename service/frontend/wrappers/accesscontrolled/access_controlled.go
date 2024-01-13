@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package frontend
+package accesscontrolled
 
 import (
 	"context"
@@ -32,7 +32,7 @@ import (
 
 var errUnauthorized = &types.AccessDeniedError{Message: "Request unauthorized."}
 
-func (a *accesscontrolledAdminHandler) isAuthorized(ctx context.Context, attr *authorization.Attributes) (bool, error) {
+func (a *adminHandler) isAuthorized(ctx context.Context, attr *authorization.Attributes) (bool, error) {
 	result, err := a.authorizer.Authorize(ctx, attr)
 	if err != nil {
 		return false, err
@@ -41,7 +41,7 @@ func (a *accesscontrolledAdminHandler) isAuthorized(ctx context.Context, attr *a
 	return isAuth, nil
 }
 
-func (a *accesscontrolledHandler) isAuthorized(
+func (a *apiHandler) isAuthorized(
 	ctx context.Context,
 	attr *authorization.Attributes,
 	scope metrics.Scope,
@@ -62,23 +62,12 @@ func (a *accesscontrolledHandler) isAuthorized(
 }
 
 // getMetricsScopeWithDomain return metrics scope with domain tag
-func (a *accesscontrolledHandler) getMetricsScopeWithDomain(
+func (a *apiHandler) getMetricsScopeWithDomain(
 	scope int,
-	d domainGetter,
+	domain string,
 ) metrics.Scope {
-	return getMetricsScopeWithDomain(scope, d, a.GetMetricsClient())
-}
-
-func getMetricsScopeWithDomain(
-	scope int,
-	d domainGetter,
-	metricsClient metrics.Client,
-) metrics.Scope {
-	var metricsScope metrics.Scope
-	if d != nil {
-		metricsScope = metricsClient.Scope(scope).Tagged(metrics.DomainTag(d.GetDomain()))
-	} else {
-		metricsScope = metricsClient.Scope(scope).Tagged(metrics.DomainUnknownTag())
+	if domain != "" {
+		return a.GetMetricsClient().Scope(scope).Tagged(metrics.DomainTag(domain))
 	}
-	return metricsScope
+	return a.GetMetricsClient().Scope(scope).Tagged(metrics.DomainUnknownTag())
 }

@@ -39,6 +39,8 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/frontend/api"
+	frontendcfg "github.com/uber/cadence/service/frontend/config"
 )
 
 type (
@@ -48,7 +50,7 @@ type (
 
 		controller               *gomock.Controller
 		mockResource             *resource.Test
-		mockFrontendHandler      *MockHandler
+		mockFrontendHandler      *api.MockHandler
 		mockRemoteFrontendClient *frontend.MockClient
 
 		mockClusterRedirectionPolicy *MockClusterRedirectionPolicy
@@ -57,7 +59,7 @@ type (
 		domainID               string
 		currentClusterName     string
 		alternativeClusterName string
-		config                 *Config
+		config                 *frontendcfg.Config
 
 		handler *ClusterRedirectionHandlerImpl
 	}
@@ -96,7 +98,7 @@ func (s *clusterRedirectionHandlerSuite) SetupTest() {
 	s.mockResource = resource.NewTest(s.T(), s.controller, metrics.Frontend)
 	s.mockRemoteFrontendClient = s.mockResource.RemoteFrontendClient
 
-	s.config = NewConfig(
+	s.config = frontendcfg.NewConfig(
 		dynamicconfig.NewCollection(
 			dynamicconfig.NewNopClient(),
 			s.mockResource.GetLogger(),
@@ -106,9 +108,9 @@ func (s *clusterRedirectionHandlerSuite) SetupTest() {
 		"hostname",
 	)
 	dh := domain.NewMockHandler(s.controller)
-	frontendHandler := NewWorkflowHandler(s.mockResource, s.config, client.NewVersionChecker(), dh)
+	frontendHandler := api.NewWorkflowHandler(s.mockResource, s.config, client.NewVersionChecker(), dh)
 
-	s.mockFrontendHandler = NewMockHandler(s.controller)
+	s.mockFrontendHandler = api.NewMockHandler(s.controller)
 	s.handler = NewClusterRedirectionHandler(frontendHandler, s.mockResource, s.config, config.ClusterRedirectionPolicy{})
 	s.handler.frontendHandler = s.mockFrontendHandler
 	s.handler.redirectionPolicy = s.mockClusterRedirectionPolicy

@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package frontend
+package api
 
 import (
 	"context"
@@ -44,7 +44,7 @@ func NewThriftHandler(h Handler) ThriftHandler {
 	return ThriftHandler{h}
 }
 
-func (t ThriftHandler) register(dispatcher *yarpc.Dispatcher) {
+func (t ThriftHandler) Register(dispatcher *yarpc.Dispatcher) {
 	dispatcher.Register(workflowserviceserver.New(t))
 	dispatcher.Register(metaserver.New(t))
 }

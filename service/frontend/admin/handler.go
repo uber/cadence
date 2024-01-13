@@ -18,10 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination adminHandler_mock.go -package frontend github.com/uber/cadence/service/frontend AdminHandler
-//go:generate gowrap gen -g -p . -i AdminHandler -t ./templates/accesscontrolled.tmpl -o ./access_controlled_admin_generated.go -v handler=AccessControlled
-
-package frontend
+package admin
 
 import (
 	"context"
@@ -32,7 +29,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/pborman/uuid"
+	"github.com/google/uuid"
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -52,65 +49,25 @@ import (
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/frontend/config"
+	"github.com/uber/cadence/service/frontend/validate"
 	"github.com/uber/cadence/service/history/execution"
 )
 
-var _ AdminHandler = (*adminHandlerImpl)(nil)
-
 const (
-	endMessageID int64 = 1<<63 - 1
-)
-
-var (
-	errInvalidFilters = &types.BadRequestError{Message: "Request Filters are invalid, unable to parse."}
+	getDomainReplicationMessageBatchSize = 100
+	defaultLastMessageID                 = int64(-1)
+	endMessageID                         = int64(1<<63 - 1)
 )
 
 type (
-	// AdminHandler interface for admin service
-	AdminHandler interface {
-		common.Daemon
-
-		AddSearchAttribute(context.Context, *types.AddSearchAttributeRequest) error
-		CloseShard(context.Context, *types.CloseShardRequest) error
-		DescribeCluster(context.Context) (*types.DescribeClusterResponse, error)
-		DescribeShardDistribution(context.Context, *types.DescribeShardDistributionRequest) (*types.DescribeShardDistributionResponse, error)
-		DescribeHistoryHost(context.Context, *types.DescribeHistoryHostRequest) (*types.DescribeHistoryHostResponse, error)
-		DescribeQueue(context.Context, *types.DescribeQueueRequest) (*types.DescribeQueueResponse, error)
-		DescribeWorkflowExecution(context.Context, *types.AdminDescribeWorkflowExecutionRequest) (*types.AdminDescribeWorkflowExecutionResponse, error)
-		GetDLQReplicationMessages(context.Context, *types.GetDLQReplicationMessagesRequest) (*types.GetDLQReplicationMessagesResponse, error)
-		GetDomainReplicationMessages(context.Context, *types.GetDomainReplicationMessagesRequest) (*types.GetDomainReplicationMessagesResponse, error)
-		GetReplicationMessages(context.Context, *types.GetReplicationMessagesRequest) (*types.GetReplicationMessagesResponse, error)
-		GetWorkflowExecutionRawHistoryV2(context.Context, *types.GetWorkflowExecutionRawHistoryV2Request) (*types.GetWorkflowExecutionRawHistoryV2Response, error)
-		CountDLQMessages(context.Context, *types.CountDLQMessagesRequest) (*types.CountDLQMessagesResponse, error)
-		MergeDLQMessages(context.Context, *types.MergeDLQMessagesRequest) (*types.MergeDLQMessagesResponse, error)
-		PurgeDLQMessages(context.Context, *types.PurgeDLQMessagesRequest) error
-		ReadDLQMessages(context.Context, *types.ReadDLQMessagesRequest) (*types.ReadDLQMessagesResponse, error)
-		ReapplyEvents(context.Context, *types.ReapplyEventsRequest) error
-		RefreshWorkflowTasks(context.Context, *types.RefreshWorkflowTasksRequest) error
-		RemoveTask(context.Context, *types.RemoveTaskRequest) error
-		ResendReplicationTasks(context.Context, *types.ResendReplicationTasksRequest) error
-		ResetQueue(context.Context, *types.ResetQueueRequest) error
-		GetCrossClusterTasks(context.Context, *types.GetCrossClusterTasksRequest) (*types.GetCrossClusterTasksResponse, error)
-		RespondCrossClusterTasksCompleted(context.Context, *types.RespondCrossClusterTasksCompletedRequest) (*types.RespondCrossClusterTasksCompletedResponse, error)
-		GetDynamicConfig(context.Context, *types.GetDynamicConfigRequest) (*types.GetDynamicConfigResponse, error)
-		UpdateDynamicConfig(context.Context, *types.UpdateDynamicConfigRequest) error
-		RestoreDynamicConfig(context.Context, *types.RestoreDynamicConfigRequest) error
-		ListDynamicConfig(context.Context, *types.ListDynamicConfigRequest) (*types.ListDynamicConfigResponse, error)
-		DeleteWorkflow(context.Context, *types.AdminDeleteWorkflowRequest) (*types.AdminDeleteWorkflowResponse, error)
-		MaintainCorruptWorkflow(context.Context, *types.AdminMaintainWorkflowRequest) (*types.AdminMaintainWorkflowResponse, error)
-		GetGlobalIsolationGroups(ctx context.Context, request *types.GetGlobalIsolationGroupsRequest) (*types.GetGlobalIsolationGroupsResponse, error)
-		UpdateGlobalIsolationGroups(ctx context.Context, request *types.UpdateGlobalIsolationGroupsRequest) (*types.UpdateGlobalIsolationGroupsResponse, error)
-		GetDomainIsolationGroups(ctx context.Context, request *types.GetDomainIsolationGroupsRequest) (*types.GetDomainIsolationGroupsResponse, error)
-		UpdateDomainIsolationGroups(ctx context.Context, request *types.UpdateDomainIsolationGroupsRequest) (*types.UpdateDomainIsolationGroupsResponse, error)
-	}
-
 	// adminHandlerImpl is an implementation for admin service independent of wire protocol
 	adminHandlerImpl struct {
 		resource.Resource
 
 		numberOfHistoryShards int
 		params                *resource.Params
-		config                *Config
+		config                *config.Config
 		domainDLQHandler      domain.DLQMessageHandler
 		domainFailoverWatcher domain.FailoverWatcher
 		eventSerializer       persistence.PayloadSerializer
@@ -147,13 +104,13 @@ var (
 	}
 )
 
-// NewAdminHandler creates a thrift service for the cadence admin service
-func NewAdminHandler(
+// NewHandler creates a thrift service for the cadence admin service
+func NewHandler(
 	resource resource.Resource,
 	params *resource.Params,
-	config *Config,
+	config *config.Config,
 	domainHandler domain.Handler,
-) AdminHandler {
+) Handler {
 
 	domainReplicationTaskExecutor := domain.NewReplicationTaskExecutor(
 		resource.GetDomainManager(),
@@ -218,10 +175,10 @@ func (adh *adminHandlerImpl) AddSearchAttribute(
 
 	// validate request
 	if request == nil {
-		return adh.error(errRequestNotSet, scope)
+		return adh.error(validate.ErrRequestNotSet, scope)
 	}
-	if err := checkPermission(adh.config, request.SecurityToken); err != nil {
-		return adh.error(errNoPermission, scope)
+	if err := validate.CheckPermission(adh.config, request.SecurityToken); err != nil {
+		return adh.error(validate.ErrNoPermission, scope)
 	}
 	if len(request.GetSearchAttribute()) == 0 {
 		return adh.error(&types.BadRequestError{Message: "SearchAttributes are not provided"}, scope)
@@ -290,10 +247,10 @@ func (adh *adminHandlerImpl) DescribeWorkflowExecution(
 	defer sw.Stop()
 
 	if request == nil {
-		return nil, adh.error(errRequestNotSet, scope)
+		return nil, adh.error(validate.ErrRequestNotSet, scope)
 	}
 
-	if err := validateExecution(request.Execution); err != nil {
+	if err := validate.CheckExecution(request.Execution); err != nil {
 		return nil, adh.error(err, scope)
 	}
 
@@ -338,7 +295,7 @@ func (adh *adminHandlerImpl) RemoveTask(
 	defer sw.Stop()
 
 	if request == nil || request.Type == nil {
-		return adh.error(errRequestNotSet, scope)
+		return adh.error(validate.ErrRequestNotSet, scope)
 	}
 	if err := adh.GetHistoryClient().RemoveTask(ctx, request); err != nil {
 		return adh.error(err, scope)
@@ -567,7 +524,7 @@ func (adh *adminHandlerImpl) DeleteWorkflow(
 	scope := adh.GetMetricsClient().Scope(metrics.AdminDeleteWorkflowScope).Tagged(metrics.GetContextTags(ctx)...)
 	if request.GetExecution() == nil {
 		logger.Info(fmt.Sprintf("Bad request: %#v", request))
-		return nil, adh.error(errRequestNotSet, scope)
+		return nil, adh.error(validate.ErrRequestNotSet, scope)
 	}
 	domainName := request.GetDomain()
 	workflowID := request.GetExecution().GetWorkflowID()
@@ -642,7 +599,7 @@ func (adh *adminHandlerImpl) CloseShard(
 	defer sw.Stop()
 
 	if request == nil {
-		return adh.error(errRequestNotSet, scope)
+		return adh.error(validate.ErrRequestNotSet, scope)
 	}
 	if err := adh.GetHistoryClient().CloseShard(ctx, request); err != nil {
 		return adh.error(err, scope)
@@ -661,10 +618,10 @@ func (adh *adminHandlerImpl) ResetQueue(
 	defer sw.Stop()
 
 	if request == nil || request.Type == nil {
-		return adh.error(errRequestNotSet, scope)
+		return adh.error(validate.ErrRequestNotSet, scope)
 	}
 	if request.GetClusterName() == "" {
-		return adh.error(errClusterNameNotSet, scope)
+		return adh.error(validate.ErrClusterNameNotSet, scope)
 	}
 
 	if err := adh.GetHistoryClient().ResetQueue(ctx, request); err != nil {
@@ -684,10 +641,10 @@ func (adh *adminHandlerImpl) DescribeQueue(
 	defer sw.Stop()
 
 	if request == nil || request.Type == nil {
-		return nil, adh.error(errRequestNotSet, scope)
+		return nil, adh.error(validate.ErrRequestNotSet, scope)
 	}
 	if request.GetClusterName() == "" {
-		return nil, adh.error(errClusterNameNotSet, scope)
+		return nil, adh.error(validate.ErrClusterNameNotSet, scope)
 	}
 
 	return adh.GetHistoryClient().DescribeQueue(ctx, request)
@@ -733,11 +690,11 @@ func (adh *adminHandlerImpl) DescribeHistoryHost(
 	defer sw.Stop()
 
 	if request == nil || (request.ShardIDForHost == nil && request.ExecutionForHost == nil && request.HostAddress == nil) {
-		return nil, adh.error(errRequestNotSet, scope)
+		return nil, adh.error(validate.ErrRequestNotSet, scope)
 	}
 
 	if request.ExecutionForHost != nil {
-		if err := validateExecution(request.ExecutionForHost); err != nil {
+		if err := validate.CheckExecution(request.ExecutionForHost); err != nil {
 			return nil, adh.error(err, scope)
 		}
 	}
@@ -962,10 +919,10 @@ func (adh *adminHandlerImpl) GetReplicationMessages(
 	defer sw.Stop()
 
 	if request == nil {
-		return nil, adh.error(errRequestNotSet, scope)
+		return nil, adh.error(validate.ErrRequestNotSet, scope)
 	}
 	if request.ClusterName == "" {
-		return nil, adh.error(errClusterNameNotSet, scope)
+		return nil, adh.error(validate.ErrClusterNameNotSet, scope)
 	}
 
 	resp, err = adh.GetHistoryRawClient().GetReplicationMessages(ctx, request)
@@ -986,7 +943,7 @@ func (adh *adminHandlerImpl) GetDomainReplicationMessages(
 	defer sw.Stop()
 
 	if request == nil {
-		return nil, adh.error(errRequestNotSet, scope)
+		return nil, adh.error(validate.ErrRequestNotSet, scope)
 	}
 
 	if adh.GetDomainReplicationQueue() == nil {
@@ -1045,10 +1002,10 @@ func (adh *adminHandlerImpl) GetDLQReplicationMessages(
 	defer sw.Stop()
 
 	if request == nil {
-		return nil, adh.error(errRequestNotSet, scope)
+		return nil, adh.error(validate.ErrRequestNotSet, scope)
 	}
 	if len(request.GetTaskInfos()) == 0 {
-		return nil, adh.error(errEmptyReplicationInfo, scope)
+		return nil, adh.error(validate.ErrEmptyReplicationInfo, scope)
 	}
 
 	resp, err = adh.GetHistoryClient().GetDLQReplicationMessages(ctx, request)
@@ -1069,19 +1026,19 @@ func (adh *adminHandlerImpl) ReapplyEvents(
 	defer sw.Stop()
 
 	if request == nil {
-		return adh.error(errRequestNotSet, scope)
+		return adh.error(validate.ErrRequestNotSet, scope)
 	}
 	if request.GetDomainName() == "" {
-		return adh.error(errDomainNotSet, scope)
+		return adh.error(validate.ErrDomainNotSet, scope)
 	}
 	if request.WorkflowExecution == nil {
-		return adh.error(errExecutionNotSet, scope)
+		return adh.error(validate.ErrExecutionNotSet, scope)
 	}
 	if request.GetWorkflowExecution().GetWorkflowID() == "" {
-		return adh.error(errWorkflowIDNotSet, scope)
+		return adh.error(validate.ErrWorkflowIDNotSet, scope)
 	}
 	if request.GetEvents() == nil {
-		return adh.error(errWorkflowIDNotSet, scope)
+		return adh.error(validate.ErrWorkflowIDNotSet, scope)
 	}
 	domainEntry, err := adh.GetDomainCache().GetDomain(request.GetDomainName())
 	if err != nil {
@@ -1109,11 +1066,11 @@ func (adh *adminHandlerImpl) ReadDLQMessages(
 	defer sw.Stop()
 
 	if request == nil {
-		return nil, adh.error(errRequestNotSet, scope)
+		return nil, adh.error(validate.ErrRequestNotSet, scope)
 	}
 
 	if request.Type == nil {
-		return nil, adh.error(errEmptyQueueType, scope)
+		return nil, adh.error(validate.ErrEmptyQueueType, scope)
 	}
 
 	if request.GetMaximumPageSize() <= 0 {
@@ -1170,11 +1127,11 @@ func (adh *adminHandlerImpl) PurgeDLQMessages(
 	defer sw.Stop()
 
 	if request == nil {
-		return adh.error(errRequestNotSet, scope)
+		return adh.error(validate.ErrRequestNotSet, scope)
 	}
 
 	if request.Type == nil {
-		return adh.error(errEmptyQueueType, scope)
+		return adh.error(validate.ErrEmptyQueueType, scope)
 	}
 
 	if request.InclusiveEndMessageID == nil {
@@ -1244,11 +1201,11 @@ func (adh *adminHandlerImpl) MergeDLQMessages(
 	defer sw.Stop()
 
 	if request == nil {
-		return nil, adh.error(errRequestNotSet, scope)
+		return nil, adh.error(validate.ErrRequestNotSet, scope)
 	}
 
 	if request.Type == nil {
-		return nil, adh.error(errEmptyQueueType, scope)
+		return nil, adh.error(validate.ErrEmptyQueueType, scope)
 	}
 
 	if request.InclusiveEndMessageID == nil {
@@ -1300,9 +1257,9 @@ func (adh *adminHandlerImpl) RefreshWorkflowTasks(
 	defer sw.Stop()
 
 	if request == nil {
-		return adh.error(errRequestNotSet, scope)
+		return adh.error(validate.ErrRequestNotSet, scope)
 	}
-	if err := validateExecution(request.Execution); err != nil {
+	if err := validate.CheckExecution(request.Execution); err != nil {
 		return adh.error(err, scope)
 	}
 	domainEntry, err := adh.GetDomainCache().GetDomain(request.GetDomain())
@@ -1330,7 +1287,7 @@ func (adh *adminHandlerImpl) ResendReplicationTasks(
 	defer sw.Stop()
 
 	if request == nil {
-		return adh.error(errRequestNotSet, scope)
+		return adh.error(validate.ErrRequestNotSet, scope)
 	}
 	resender := ndc.NewHistoryResender(
 		adh.GetDomainCache(),
@@ -1363,10 +1320,10 @@ func (adh *adminHandlerImpl) GetCrossClusterTasks(
 	defer sw.Stop()
 
 	if request == nil {
-		return nil, adh.error(errRequestNotSet, scope)
+		return nil, adh.error(validate.ErrRequestNotSet, scope)
 	}
 	if request.TargetCluster == "" {
-		return nil, adh.error(errClusterNameNotSet, scope)
+		return nil, adh.error(validate.ErrClusterNameNotSet, scope)
 	}
 
 	resp, err = adh.GetHistoryRawClient().GetCrossClusterTasks(ctx, request)
@@ -1386,10 +1343,10 @@ func (adh *adminHandlerImpl) RespondCrossClusterTasksCompleted(
 	defer sw.Stop()
 
 	if request == nil {
-		return nil, adh.error(errRequestNotSet, scope)
+		return nil, adh.error(validate.ErrRequestNotSet, scope)
 	}
 	if request.TargetCluster == "" {
-		return nil, adh.error(errClusterNameNotSet, scope)
+		return nil, adh.error(validate.ErrClusterNameNotSet, scope)
 	}
 
 	resp, err = adh.GetHistoryClient().RespondCrossClusterTasksCompleted(ctx, request)
@@ -1410,7 +1367,7 @@ func (adh *adminHandlerImpl) validateGetWorkflowExecutionRawHistoryV2Request(
 	// TODO currently, this API is only going to be used by re-send history events
 	// to remote cluster if kafka is lossy again, in the future, this API can be used
 	// by CLI and client, then empty runID (meaning the current workflow) should be allowed
-	if len(execution.GetRunID()) == 0 || uuid.Parse(execution.GetRunID()) == nil {
+	if _, err := uuid.Parse(execution.GetRunID()); err != nil {
 		return &types.BadRequestError{Message: "Invalid RunID."}
 	}
 
@@ -1615,7 +1572,7 @@ func (adh *adminHandlerImpl) GetDynamicConfig(ctx context.Context, request *type
 	defer sw.Stop()
 
 	if request == nil || request.ConfigName == "" {
-		return nil, adh.error(errRequestNotSet, scope)
+		return nil, adh.error(validate.ErrRequestNotSet, scope)
 	}
 
 	keyVal, err := dc.GetKeyFromKeyName(request.ConfigName)
@@ -1659,7 +1616,7 @@ func (adh *adminHandlerImpl) UpdateDynamicConfig(ctx context.Context, request *t
 	defer sw.Stop()
 
 	if request == nil || request.ConfigName == "" {
-		return adh.error(errRequestNotSet, scope)
+		return adh.error(validate.ErrRequestNotSet, scope)
 	}
 
 	keyVal, err := dc.GetKeyFromKeyName(request.ConfigName)
@@ -1676,7 +1633,7 @@ func (adh *adminHandlerImpl) RestoreDynamicConfig(ctx context.Context, request *
 	defer sw.Stop()
 
 	if request == nil || request.ConfigName == "" {
-		return adh.error(errRequestNotSet, scope)
+		return adh.error(validate.ErrRequestNotSet, scope)
 	}
 
 	keyVal, err := dc.GetKeyFromKeyName(request.ConfigName)
@@ -1691,7 +1648,7 @@ func (adh *adminHandlerImpl) RestoreDynamicConfig(ctx context.Context, request *
 	} else {
 		filters, err = convertFilterListToMap(request.Filters)
 		if err != nil {
-			return adh.error(errInvalidFilters, scope)
+			return adh.error(validate.ErrInvalidFilters, scope)
 		}
 	}
 	return adh.params.DynamicConfig.RestoreValue(keyVal, filters)
@@ -1703,7 +1660,7 @@ func (adh *adminHandlerImpl) ListDynamicConfig(ctx context.Context, request *typ
 	defer sw.Stop()
 
 	if request == nil {
-		return nil, adh.error(errRequestNotSet, scope)
+		return nil, adh.error(validate.ErrRequestNotSet, scope)
 	}
 
 	keyVal, err := dc.GetKeyFromKeyName(request.ConfigName)
@@ -1734,7 +1691,7 @@ func (adh *adminHandlerImpl) GetGlobalIsolationGroups(ctx context.Context, reque
 	defer sw.Stop()
 
 	if request == nil {
-		return nil, adh.error(errRequestNotSet, scope)
+		return nil, adh.error(validate.ErrRequestNotSet, scope)
 	}
 
 	resp, err := adh.isolationGroups.GetGlobalState(ctx)
@@ -1749,7 +1706,7 @@ func (adh *adminHandlerImpl) UpdateGlobalIsolationGroups(ctx context.Context, re
 	scope, sw := adh.startRequestProfile(ctx, metrics.UpdateGlobalIsolationGroups)
 	defer sw.Stop()
 	if request == nil {
-		return nil, adh.error(errRequestNotSet, scope)
+		return nil, adh.error(validate.ErrRequestNotSet, scope)
 	}
 	err := adh.isolationGroups.UpdateGlobalState(ctx, *request)
 	if err != nil {
@@ -1764,7 +1721,7 @@ func (adh *adminHandlerImpl) GetDomainIsolationGroups(ctx context.Context, reque
 	defer sw.Stop()
 
 	if request == nil {
-		return nil, adh.error(errRequestNotSet, scope)
+		return nil, adh.error(validate.ErrRequestNotSet, scope)
 	}
 
 	resp, err := adh.isolationGroups.GetDomainState(ctx, types.GetDomainIsolationGroupsRequest{Domain: request.Domain})
@@ -1779,7 +1736,7 @@ func (adh *adminHandlerImpl) UpdateDomainIsolationGroups(ctx context.Context, re
 	scope, sw := adh.startRequestProfile(ctx, metrics.UpdateDomainIsolationGroups)
 	defer sw.Stop()
 	if request == nil {
-		return nil, adh.error(errRequestNotSet, scope)
+		return nil, adh.error(validate.ErrRequestNotSet, scope)
 	}
 	err := adh.isolationGroups.UpdateDomainState(ctx, *request)
 	if err != nil {
