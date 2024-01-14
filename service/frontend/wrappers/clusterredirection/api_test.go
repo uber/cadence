@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package frontend
+package clusterredirection
 
 import (
 	"context"
@@ -61,7 +61,7 @@ type (
 		alternativeClusterName string
 		config                 *frontendcfg.Config
 
-		handler *ClusterRedirectionHandlerImpl
+		handler *clusterRedirectionHandler
 	}
 )
 
@@ -111,7 +111,7 @@ func (s *clusterRedirectionHandlerSuite) SetupTest() {
 	frontendHandler := api.NewWorkflowHandler(s.mockResource, s.config, client.NewVersionChecker(), dh)
 
 	s.mockFrontendHandler = api.NewMockHandler(s.controller)
-	s.handler = NewClusterRedirectionHandler(frontendHandler, s.mockResource, s.config, config.ClusterRedirectionPolicy{})
+	s.handler = NewAPIHandler(frontendHandler, s.mockResource, s.config, config.ClusterRedirectionPolicy{}).(*clusterRedirectionHandler)
 	s.handler.frontendHandler = s.mockFrontendHandler
 	s.handler.redirectionPolicy = s.mockClusterRedirectionPolicy
 }

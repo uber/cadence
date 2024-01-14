@@ -34,6 +34,7 @@ import (
 	"github.com/uber/cadence/service/frontend/api"
 	"github.com/uber/cadence/service/frontend/config"
 	"github.com/uber/cadence/service/frontend/wrappers/accesscontrolled"
+	"github.com/uber/cadence/service/frontend/wrappers/clusterredirection"
 )
 
 // Service represents the cadence-frontend service
@@ -130,7 +131,7 @@ func (s *Service) Start() {
 	// Additional decorations
 	var handler api.Handler = s.handler
 	if s.params.ClusterRedirectionPolicy != nil {
-		handler = NewClusterRedirectionHandler(handler, s, s.config, *s.params.ClusterRedirectionPolicy)
+		handler = clusterredirection.NewAPIHandler(handler, s, s.config, *s.params.ClusterRedirectionPolicy)
 	}
 	handler = accesscontrolled.NewAPIHandler(handler, s, s.params.Authorizer, s.params.AuthorizationConfig)
 
