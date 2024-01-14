@@ -149,17 +149,17 @@ func (g grpcClient) RespondCrossClusterTasksCompleted(ctx context.Context, reque
 }
 
 func (g grpcClient) GetDynamicConfig(ctx context.Context, request *types.GetDynamicConfigRequest, opts ...yarpc.CallOption) (*types.GetDynamicConfigResponse, error) {
-	response, err := g.c.GetDynamicConfig(ctx, proto.FromGetDynamicConfigRequest(request), opts...)
-	return proto.ToGetDynamicConfigResponse(response), proto.ToError(err)
+	response, err := g.c.GetDynamicConfig(ctx, proto.FromAdminGetDynamicConfigRequest(request), opts...)
+	return proto.ToAdminGetDynamicConfigResponse(response), proto.ToError(err)
 }
 
 func (g grpcClient) UpdateDynamicConfig(ctx context.Context, request *types.UpdateDynamicConfigRequest, opts ...yarpc.CallOption) error {
-	_, err := g.c.UpdateDynamicConfig(ctx, proto.FromUpdateDynamicConfigRequest(request), opts...)
+	_, err := g.c.UpdateDynamicConfig(ctx, proto.FromAdminUpdateDynamicConfigRequest(request), opts...)
 	return proto.ToError(err)
 }
 
 func (g grpcClient) RestoreDynamicConfig(ctx context.Context, request *types.RestoreDynamicConfigRequest, opts ...yarpc.CallOption) error {
-	_, err := g.c.RestoreDynamicConfig(ctx, proto.FromRestoreDynamicConfigRequest(request), opts...)
+	_, err := g.c.RestoreDynamicConfig(ctx, proto.FromAdminRestoreDynamicConfigRequest(request), opts...)
 	return proto.ToError(err)
 }
 
@@ -169,31 +169,31 @@ func (g grpcClient) DeleteWorkflow(ctx context.Context, request *types.AdminDele
 }
 
 func (g grpcClient) MaintainCorruptWorkflow(ctx context.Context, request *types.AdminMaintainWorkflowRequest, opts ...yarpc.CallOption) (*types.AdminMaintainWorkflowResponse, error) {
-	response, err := g.c.MaintainCorruptWorkflow(ctx, proto.FromAdminMaintainWorkflowRequest(request), opts...)
-	return proto.ToAdminMaintainWorkflowResponse(response), proto.ToError(err)
+	response, err := g.c.MaintainCorruptWorkflow(ctx, proto.FromAdminMaintainCorruptWorkflowRequest(request), opts...)
+	return proto.ToAdminMaintainCorruptWorkflowResponse(response), proto.ToError(err)
 }
 
 func (g grpcClient) ListDynamicConfig(ctx context.Context, request *types.ListDynamicConfigRequest, opts ...yarpc.CallOption) (*types.ListDynamicConfigResponse, error) {
-	response, err := g.c.ListDynamicConfig(ctx, proto.FromListDynamicConfigRequest(request), opts...)
-	return proto.ToListDynamicConfigResponse(response), proto.ToError(err)
+	response, err := g.c.ListDynamicConfig(ctx, proto.FromAdminListDynamicConfigRequest(request), opts...)
+	return proto.ToAdminListDynamicConfigResponse(response), proto.ToError(err)
 }
 
 func (g grpcClient) GetGlobalIsolationGroups(ctx context.Context, request *types.GetGlobalIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.GetGlobalIsolationGroupsResponse, error) {
-	response, err := g.c.GetGlobalIsolationGroups(ctx, proto.FromGetGlobalIsolationGroupsRequest(request), opts...)
-	return proto.ToGetGlobalIsolationGroupsResponse(response), proto.ToError(err)
+	response, err := g.c.GetGlobalIsolationGroups(ctx, proto.FromAdminGetGlobalIsolationGroupsRequest(request), opts...)
+	return proto.ToAdminGetGlobalIsolationGroupsResponse(response), proto.ToError(err)
 }
 
 func (g grpcClient) UpdateGlobalIsolationGroups(ctx context.Context, request *types.UpdateGlobalIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.UpdateGlobalIsolationGroupsResponse, error) {
-	response, err := g.c.UpdateGlobalIsolationGroups(ctx, proto.FromUpdateGlobalIsolationGroupsRequest(request), opts...)
-	return proto.ToUpdateGlobalIsolationGroupsResponse(response), proto.ToError(err)
+	response, err := g.c.UpdateGlobalIsolationGroups(ctx, proto.FromAdminUpdateGlobalIsolationGroupsRequest(request), opts...)
+	return proto.ToAdminUpdateGlobalIsolationGroupsResponse(response), proto.ToError(err)
 }
 
 func (g grpcClient) GetDomainIsolationGroups(ctx context.Context, request *types.GetDomainIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.GetDomainIsolationGroupsResponse, error) {
-	response, err := g.c.GetDomainIsolationGroups(ctx, proto.FromGetDomainIsolationGroupsRequest(request), opts...)
-	return proto.ToGetDomainIsolationGroupsResponse(response), proto.ToError(err)
+	response, err := g.c.GetDomainIsolationGroups(ctx, proto.FromAdminGetDomainIsolationGroupsRequest(request), opts...)
+	return proto.ToAdminGetDomainIsolationGroupsResponse(response), proto.ToError(err)
 }
 
 func (g grpcClient) UpdateDomainIsolationGroups(ctx context.Context, request *types.UpdateDomainIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.UpdateDomainIsolationGroupsResponse, error) {
-	response, err := g.c.UpdateDomainIsolationGroups(ctx, proto.FromUpdateDomainIsolationGroupsRequest(request), opts...)
-	return proto.ToUpdateDomainIsolationGroupsResponse(response), proto.ToError(err)
+	response, err := g.c.UpdateDomainIsolationGroups(ctx, proto.FromAdminUpdateDomainIsolationGroupsRequest(request), opts...)
+	return proto.ToAdminUpdateDomainIsolationGroupsResponse(response), proto.ToError(err)
 }

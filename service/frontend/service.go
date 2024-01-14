@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/service/frontend/config"
 	"github.com/uber/cadence/service/frontend/wrappers/accesscontrolled"
 	"github.com/uber/cadence/service/frontend/wrappers/clusterredirection"
+	"github.com/uber/cadence/service/frontend/wrappers/grpc"
 )
 
 // Service represents the cadence-frontend service
@@ -139,7 +140,7 @@ func (s *Service) Start() {
 	thriftHandler := api.NewThriftHandler(handler)
 	thriftHandler.Register(s.GetDispatcher())
 
-	grpcHandler := api.NewGrpcHandler(handler)
+	grpcHandler := grpc.NewAPIHandler(handler)
 	grpcHandler.Register(s.GetDispatcher())
 
 	s.adminHandler = admin.NewHandler(s, s.params, s.config, dh)
@@ -148,7 +149,7 @@ func (s *Service) Start() {
 	adminThriftHandler := admin.NewAdminThriftHandler(s.adminHandler)
 	adminThriftHandler.Register(s.GetDispatcher())
 
-	adminGRPCHandler := admin.NewAdminGRPCHandler(s.adminHandler)
+	adminGRPCHandler := grpc.NewAdminHandler(s.adminHandler)
 	adminGRPCHandler.Register(s.GetDispatcher())
 
 	// must start resource first

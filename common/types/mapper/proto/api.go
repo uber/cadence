@@ -5920,3 +5920,17 @@ func ToListOpenWorkflowExecutionsRequest(r *apiv1.ListOpenWorkflowExecutionsRequ
 	}
 	return &request
 }
+
+func FromResetStickyTaskListResponse(t *types.ResetStickyTaskListResponse) *apiv1.ResetStickyTaskListResponse {
+	if t == nil {
+		return nil
+	}
+	return &apiv1.ResetStickyTaskListResponse{}
+}
+
+func ToResetStickyTaskListResponse(t *apiv1.ResetStickyTaskListResponse) *types.ResetStickyTaskListResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.ResetStickyTaskListResponse{}
+}

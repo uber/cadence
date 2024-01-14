@@ -21,6 +21,7 @@
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interface_mock.go -self_package github.com/uber/cadence/service/frontend/api
 //go:generate gowrap gen -g -p . -i Handler -t ../templates/accesscontrolled.tmpl -o ../wrappers/accesscontrolled/api_generated.go -v handler=API
 //go:generate gowrap gen -g -p . -i Handler -t ../templates/clusterredirection.tmpl -o ../wrappers/clusterredirection/api_generated.go
+//go:generate gowrap gen -g -p . -i Handler -t ../../templates/grpc.tmpl -o ../wrappers/grpc/api_generated.go -v handler=API -v package=apiv1 -v path=github.com/uber/cadence-idl/go/proto/api/v1 -v prefix=
 
 package api
 
