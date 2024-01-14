@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package frontend
+package accesscontrolled
 
 import (
 	"context"
@@ -81,7 +81,7 @@ func TestIsAuthorized(t *testing.T) {
 			mockMetricsScope := &mocks.Scope{}
 			tc.mockSetup(mockAuthorizer, mockMetricsScope)
 
-			handler := &accesscontrolledHandler{authorizer: mockAuthorizer}
+			handler := &apiHandler{authorizer: mockAuthorizer}
 			got, err := handler.isAuthorized(context.Background(), &authorization.Attributes{}, mockMetricsScope)
 			if tc.wantErr {
 				assert.Error(t, err)

@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package frontend
+package admin
 
 import (
 	"context"
@@ -37,7 +37,7 @@ import (
 func TestAdminThriftHandler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	h := NewMockAdminHandler(ctrl)
+	h := NewMockHandler(ctrl)
 	th := NewAdminThriftHandler(h)
 	ctx := context.Background()
 	internalErr := &types.InternalServiceError{Message: "test"}

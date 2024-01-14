@@ -4,9 +4,9 @@ import (
 	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log/tag"
-    {{- if eq .Interface.Name "Handler"}}
-    "github.com/uber/cadence/common/metrics"
-    {{end}}
+	{{- if eq .Interface.Name "Handler"}}
+	"github.com/uber/cadence/common/metrics"
+	{{end}}
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/types"
 )
@@ -45,20 +45,21 @@ import (
 {{$workflowTypeAuthAPIs := list "SignalWithStartWorkflowExecution" "StartWorkflowExecution"}}
 
 {{$interfaceName := .Interface.Name}}
+{{$interfaceType := .Interface.Type}}
 {{$handlerName := (index .Vars "handler")}}
 {{ $decorator := (printf "%s%s" (down $handlerName) $interfaceName) }}
 {{ $Decorator := (printf "%s%s" $handlerName $interfaceName) }}
 
 // {{$decorator}} frontend handler wrapper for authentication and authorization
 type {{$decorator}} struct {
-    handler {{.Interface.Type}}
+	handler {{.Interface.Type}}
 	authorizer authorization.Authorizer
-    resource.Resource
+	resource.Resource
 }
 
 // New{{$Decorator}} creates frontend handler with authentication support
 func New{{$Decorator}}(handler {{$.Interface.Type}}, resource resource.Resource, authorizer authorization.Authorizer, cfg config.Authorization) {{.Interface.Type}} {
-    if authorizer == nil {
+	if authorizer == nil {
 		var err error
 		authorizer, err = authorization.NewAuthorizer(cfg, resource.GetLogger(), resource.GetDomainCache())
 		if err != nil {
@@ -68,67 +69,67 @@ func New{{$Decorator}}(handler {{$.Interface.Type}}, resource resource.Resource,
 	return &{{$decorator}}{
 		handler: handler,
 		authorizer: authorizer,
-        Resource: resource,
+		Resource: resource,
 	}
 }
 
 {{range $method := .Interface.Methods}}
 func (a *{{$decorator}}) {{$method.Declaration}} {
 {{- if or (eq $method.Name "Start") (eq $method.Name "Stop")}}
-    a.handler.{{$method.Call}}
+	a.handler.{{$method.Call}}
 }
 {{- else}}
-    {{- if or (eq $interfaceName "AdminHandler") (hasKey $permissionMap $method.Name) }}
-    {{- if and (eq $interfaceName "Handler") (ge (len $method.Params) 2)}}
-    {{- if has $method.Name $nonDomainAuthAPIs}}
-    scope := a.GetMetricsClient().Scope(metrics.Frontend{{$method.Name}}Scope)
-    {{- else}}
-    scope := a.getMetricsScopeWithDomain(metrics.Frontend{{$method.Name}}Scope, {{(index $method.Params 1).Name}})
-    {{- end}}
-    {{- end}}
-    attr := &authorization.Attributes{
-        APIName: "{{$method.Name}}",
-        {{- if eq $interfaceName "AdminHandler"}}
-        Permission:  authorization.PermissionAdmin,
-        {{- else if hasKey $permissionMap $method.Name}}
-        Permission: authorization.{{get $permissionMap $method.Name}},
-        {{- end}}
-        {{- if ge (len $method.Params) 2}}
-        RequestBody: {{(index $method.Params 1).Name}},
-        {{- if not (or (has $method.Name $nonDomainAuthAPIs) (eq $interfaceName "AdminHandler"))}}
-        DomainName: {{(index $method.Params 1).Name}}.GetDomain(),
-        {{- else if eq $method.Name "DescribeDomain"}}
-        DomainName: {{(index $method.Params 1).Name}}.GetName(),
-        {{- end}}
-        {{- if has $method.Name $taskListAuthAPIs}}
-        TaskList: {{(index $method.Params 1).Name}}.TaskList,
-        {{- end}}
-        {{- if has $method.Name $workflowTypeAuthAPIs}}
-        WorkflowType: {{(index $method.Params 1).Name}}.WorkflowType,
-        {{- end}}
-        {{- end}}
-    }
-    {{- if eq $interfaceName "AdminHandler"}}
+	{{- if or (eq $interfaceType "admin.Handler") (hasKey $permissionMap $method.Name) }}
+	{{- if and (eq $interfaceType "api.Handler") (ge (len $method.Params) 2)}}
+	{{- if has $method.Name $nonDomainAuthAPIs}}
+	scope := a.GetMetricsClient().Scope(metrics.Frontend{{$method.Name}}Scope)
+	{{- else}}
+	scope := a.getMetricsScopeWithDomain(metrics.Frontend{{$method.Name}}Scope, {{(index $method.Params 1).Name}}.GetDomain())
+	{{- end}}
+	{{- end}}
+	attr := &authorization.Attributes{
+		APIName: "{{$method.Name}}",
+		{{- if eq $interfaceType "admin.Handler"}}
+		Permission:  authorization.PermissionAdmin,
+		{{- else if hasKey $permissionMap $method.Name}}
+		Permission: authorization.{{get $permissionMap $method.Name}},
+		{{- end}}
+		{{- if ge (len $method.Params) 2}}
+		RequestBody: {{(index $method.Params 1).Name}},
+		{{- if not (or (has $method.Name $nonDomainAuthAPIs) (eq $interfaceType "admin.Handler"))}}
+		DomainName: {{(index $method.Params 1).Name}}.GetDomain(),
+		{{- else if eq $method.Name "DescribeDomain"}}
+		DomainName: {{(index $method.Params 1).Name}}.GetName(),
+		{{- end}}
+		{{- if has $method.Name $taskListAuthAPIs}}
+		TaskList: {{(index $method.Params 1).Name}}.TaskList,
+		{{- end}}
+		{{- if has $method.Name $workflowTypeAuthAPIs}}
+		WorkflowType: {{(index $method.Params 1).Name}}.WorkflowType,
+		{{- end}}
+		{{- end}}
+	}
+	{{- if eq $interfaceType "admin.Handler"}}
 	isAuthorized, err := a.isAuthorized(ctx, attr)
-    {{- else}}
+	{{- else}}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
-    {{- end}}
+	{{- end}}
 	if err != nil {
-        {{- if eq (len $method.Results) 1}}
+		{{- if eq (len $method.Results) 1}}
 		return err
-        {{- else}}
-        return nil, err
-        {{- end}}
+		{{- else}}
+		return nil, err
+		{{- end}}
 	}
 	if !isAuthorized {
-        {{- if eq (len $method.Results) 1}}
+		{{- if eq (len $method.Results) 1}}
 		return errUnauthorized
-        {{- else}}
+		{{- else}}
 		return nil, errUnauthorized
-        {{- end}}
+		{{- end}}
 	}
-    {{- end}}
-    return a.handler.{{$method.Call}}
+	{{- end}}
+	return a.handler.{{$method.Call}}
 }
 {{- end}}
 {{end}}

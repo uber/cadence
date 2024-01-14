@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package frontend
+package api
 
 import (
 	"context"
@@ -50,6 +50,8 @@ import (
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
+	frontendcfg "github.com/uber/cadence/service/frontend/config"
+	"github.com/uber/cadence/service/frontend/validate"
 )
 
 const (
@@ -124,7 +126,7 @@ func (s *workflowHandlerSuite) SetupTest() {
 	// these tests don't mock the domain handler
 	config := s.newConfig(dc.NewInMemoryClient())
 	s.domainHandler = domain.NewHandler(
-		config.domainConfig,
+		config.DomainConfig,
 		s.mockResource.GetLogger(),
 		s.mockResource.GetDomainManager(),
 		s.mockResource.GetClusterMetadata(),
@@ -147,7 +149,7 @@ func (s *workflowHandlerSuite) TearDownTest() {
 	s.mockVisibilityArchiver.AssertExpectations(s.T())
 }
 
-func (s *workflowHandlerSuite) getWorkflowHandler(config *Config) *WorkflowHandler {
+func (s *workflowHandlerSuite) getWorkflowHandler(config *frontendcfg.Config) *WorkflowHandler {
 	return NewWorkflowHandler(s.mockResource, config, s.mockVersionChecker, s.domainHandler)
 }
 
@@ -172,7 +174,7 @@ func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
 	}
 	_, err := wh.ListOpenWorkflowExecutions(context.Background(), listRequest)
 	s.Error(err)
-	s.Equal(errNoPermission, err)
+	s.Equal(validate.ErrNoPermission, err)
 
 	// test list open by workflow type
 	listRequest.ExecutionFilter = nil
@@ -181,7 +183,7 @@ func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
 	}
 	_, err = wh.ListOpenWorkflowExecutions(context.Background(), listRequest)
 	s.Error(err)
-	s.Equal(errNoPermission, err)
+	s.Equal(validate.ErrNoPermission, err)
 
 	// test list close by wid
 	listRequest2 := &types.ListClosedWorkflowExecutionsRequest{
@@ -196,7 +198,7 @@ func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
 	}
 	_, err = wh.ListClosedWorkflowExecutions(context.Background(), listRequest2)
 	s.Error(err)
-	s.Equal(errNoPermission, err)
+	s.Equal(validate.ErrNoPermission, err)
 
 	// test list close by workflow type
 	listRequest2.ExecutionFilter = nil
@@ -205,7 +207,7 @@ func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
 	}
 	_, err = wh.ListClosedWorkflowExecutions(context.Background(), listRequest2)
 	s.Error(err)
-	s.Equal(errNoPermission, err)
+	s.Equal(validate.ErrNoPermission, err)
 
 	// test list close by workflow status
 	listRequest2.TypeFilter = nil
@@ -213,7 +215,7 @@ func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
 	listRequest2.StatusFilter = &failedStatus
 	_, err = wh.ListClosedWorkflowExecutions(context.Background(), listRequest2)
 	s.Error(err)
-	s.Equal(errNoPermission, err)
+	s.Equal(validate.ErrNoPermission, err)
 }
 
 func (s *workflowHandlerSuite) TestPollForTask_Failed_ContextTimeoutTooShort() {
@@ -359,7 +361,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_BadDelayStartSe
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
 	s.Error(err)
-	s.Equal(errInvalidDelayStartSeconds, err)
+	s.Equal(validate.ErrInvalidDelayStartSeconds, err)
 }
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_StartRequestNotSet() {
@@ -369,7 +371,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_StartRequestNot
 
 	_, err := wh.StartWorkflowExecution(context.Background(), nil)
 	s.Error(err)
-	s.Equal(errRequestNotSet, err)
+	s.Equal(validate.ErrRequestNotSet, err)
 }
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_DomainNotSet() {
@@ -398,7 +400,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_DomainNotSet() 
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
 	s.Error(err)
-	s.Equal(errDomainNotSet, err)
+	s.Equal(validate.ErrDomainNotSet, err)
 }
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowIdNotSet() {
@@ -427,7 +429,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowIdNotSe
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
 	s.Error(err)
-	s.Equal(errWorkflowIDNotSet, err)
+	s.Equal(validate.ErrWorkflowIDNotSet, err)
 }
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowTypeNotSet() {
@@ -457,7 +459,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowTypeNot
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
 	s.Error(err)
-	s.Equal(errWorkflowTypeNotSet, err)
+	s.Equal(validate.ErrWorkflowTypeNotSet, err)
 }
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_TaskListNotSet() {
@@ -487,7 +489,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_TaskListNotSet(
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
 	s.Error(err)
-	s.Equal(errTaskListNotSet, err)
+	s.Equal(validate.ErrTaskListNotSet, err)
 }
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidExecutionStartToCloseTimeout() {
@@ -517,7 +519,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidExecutio
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
 	s.Error(err)
-	s.Equal(errInvalidExecutionStartToCloseTimeoutSeconds, err)
+	s.Equal(validate.ErrInvalidExecutionStartToCloseTimeoutSeconds, err)
 }
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidTaskStartToCloseTimeout() {
@@ -547,7 +549,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidTaskStar
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
 	s.Error(err)
-	s.Equal(errInvalidTaskStartToCloseTimeoutSeconds, err)
+	s.Equal(validate.ErrInvalidTaskStartToCloseTimeoutSeconds, err)
 }
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_IsolationGroupDrained() {
@@ -619,7 +621,7 @@ func (s *workflowHandlerSuite) TestRecordActivityTaskHeartbeat_RequestNotSet() {
 	result, err := wh.RecordActivityTaskHeartbeat(context.Background(), nil /*request is not set*/)
 
 	s.Error(err)
-	s.Equal(errRequestNotSet, err)
+	s.Equal(validate.ErrRequestNotSet, err)
 	s.Nil(result)
 }
 
@@ -632,7 +634,7 @@ func (s *workflowHandlerSuite) TestRecordActivityTaskHeartbeat_TaskTokenNotSet()
 	})
 
 	s.Error(err)
-	s.Equal(errTaskTokenNotSet, err)
+	s.Equal(validate.ErrTaskTokenNotSet, err)
 	s.Nil(result)
 }
 
@@ -659,7 +661,7 @@ func (s *workflowHandlerSuite) TestRecordActivityTaskHeartbeatByID_RequestNotSet
 	result, err := wh.RecordActivityTaskHeartbeatByID(context.Background(), nil /*request is not set*/)
 
 	s.Error(err)
-	s.Equal(errRequestNotSet, err)
+	s.Equal(validate.ErrRequestNotSet, err)
 	s.Nil(result)
 }
 
@@ -672,7 +674,7 @@ func (s *workflowHandlerSuite) TestRecordActivityTaskHeartbeatByID_DomainNotSet(
 		})
 
 	s.Error(err)
-	s.Equal(errDomainNotSet, err)
+	s.Equal(validate.ErrDomainNotSet, err)
 	s.Nil(result)
 }
 
@@ -863,7 +865,7 @@ func (s *workflowHandlerSuite) TestListDomains_RequestNotSet() {
 
 	result, err := wh.ListDomains(context.Background(), nil /* list request is not set */)
 	s.Error(err)
-	s.Equal(errRequestNotSet, err)
+	s.Equal(validate.ErrRequestNotSet, err)
 	s.Nil(result)
 }
 
@@ -1163,7 +1165,7 @@ func (s *workflowHandlerSuite) TestUpdateDomain_Success_FailOver() {
 	// Todo (David.Porter) consider refactoring these tests
 	// to be setup without mutation and without as long dependency chains
 	s.domainHandler = domain.NewHandler(
-		s.newConfig(dc.NewInMemoryClient()).domainConfig,
+		s.newConfig(dc.NewInMemoryClient()).DomainConfig,
 		s.mockResource.GetLogger(),
 		s.mockResource.GetDomainManager(),
 		s.mockResource.GetClusterMetadata(),
@@ -1531,7 +1533,7 @@ func (s *workflowHandlerSuite) TestRestartWorkflowExecution__Success() {
 	err := dynamicClient.UpdateValue(dc.SendRawWorkflowHistory, false)
 	s.NoError(err)
 	wh := s.getWorkflowHandler(
-		NewConfig(
+		frontendcfg.NewConfig(
 			dc.NewCollection(
 				dynamicClient,
 				s.mockResource.GetLogger()),
@@ -1583,7 +1585,7 @@ func (s *workflowHandlerSuite) getWorkflowExecutionHistory(nextEventID int64, tr
 	err := dynamicClient.UpdateValue(dc.SendRawWorkflowHistory, true)
 	s.NoError(err)
 	wh := s.getWorkflowHandler(
-		NewConfig(
+		frontendcfg.NewConfig(
 			dc.NewCollection(
 				dynamicClient,
 				s.mockResource.GetLogger()),
@@ -1879,8 +1881,8 @@ func (s *workflowHandlerSuite) TestSignalMetricHasSignalName() {
 	s.True(expectedMetrics["test.cadence_errors_bad_request"])
 }
 
-func (s *workflowHandlerSuite) newConfig(dynamicClient dc.Client) *Config {
-	config := NewConfig(
+func (s *workflowHandlerSuite) newConfig(dynamicClient dc.Client) *frontendcfg.Config {
+	config := frontendcfg.NewConfig(
 		dc.NewCollection(
 			dynamicClient,
 			s.mockResource.GetLogger(),

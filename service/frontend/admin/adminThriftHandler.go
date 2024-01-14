@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package frontend
+package admin
 
 import (
 	"context"
@@ -34,15 +34,15 @@ import (
 
 // AdminThriftHandler wrap underlying handler and handles Thrift related type conversions
 type AdminThriftHandler struct {
-	h AdminHandler
+	h Handler
 }
 
 // NewAdminThriftHandler creates Thrift handler on top of underlying handler
-func NewAdminThriftHandler(h AdminHandler) AdminThriftHandler {
+func NewAdminThriftHandler(h Handler) AdminThriftHandler {
 	return AdminThriftHandler{h}
 }
 
-func (t AdminThriftHandler) register(dispatcher *yarpc.Dispatcher) {
+func (t AdminThriftHandler) Register(dispatcher *yarpc.Dispatcher) {
 	dispatcher.Register(adminserviceserver.New(t))
 }
 
