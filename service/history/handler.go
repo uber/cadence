@@ -31,15 +31,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/service/history/workflow"
-
-	"golang.org/x/sync/errgroup"
-
-	"github.com/uber/cadence/service/history/workflowcache"
-
-	"github.com/uber/cadence/common/membership"
-	"github.com/uber/cadence/common/types/mapper/proto"
-
 	"github.com/pborman/uuid"
 	"go.uber.org/yarpc/yarpcerrors"
 	"golang.org/x/sync/errgroup"
@@ -136,7 +127,6 @@ type (
 		replicationTaskFetchers  replication.TaskFetchers
 		queueTaskProcessor       task.Processor
 		failoverCoordinator      failover.Coordinator
-		wfRateLimiter            workflowcache.WFCache
 	}
 )
 
@@ -166,11 +156,6 @@ func NewHandler(
 		config:          config,
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
 		rateLimiter:     quotas.NewDynamicRateLimiter(config.RPS.AsFloat64()),
-		wfRateLimiter: workflowcache.New(workflowcache.Params{
-			TTL:      10 * time.Minute,
-			MaxCount: 10_000,
-			MaxRPS: ,
-		}),
 	}
 
 	// prevent us from trying to serve requests before shard controller is started and ready
@@ -750,11 +735,6 @@ func (h *handlerImpl) StartWorkflowExecution(
 
 	startRequest := wrappedRequest.StartRequest
 	workflowID := startRequest.GetWorkflowID()
-	if ok := h.wfRateLimiter.Allow(domainID, workflowID); !ok {
-		h.GetLogger().Warn("Request for new execution is rejected due to wf rate limiting")
-		return nil, h.error(errHistoryHostThrottle, scope, domainID, workflowID, "")
-	}
-
 	engine, err1 := h.controller.GetEngine(workflowID)
 	if err1 != nil {
 		return nil, h.error(err1, scope, domainID, workflowID, "")

@@ -1178,13 +1178,6 @@ const (
 	// Allowed filters: ShardID
 	ReplicationTaskProcessorErrorRetryMaxAttempts
 
-	// MaxBufferedReplicationTasks is the max number of workflows for which we store in memory information
-	// Keyname: history.MaxWorkflowCacheSize
-	// Value type: Int
-	// Default value: 1000
-	// Allowed filters: N/A
-	MaxWorkflowCacheSize
-
 	// key for worker
 
 	// WorkerPersistenceMaxQPS is the max qps worker host can query DB
@@ -3484,11 +3477,6 @@ var IntKeys = map[IntKey]DynamicInt{
 		Filters:      []Filter{ShardID},
 		Description:  "ReplicationTaskProcessorErrorRetryMaxAttempts is the max retry attempts for applying replication tasks",
 		DefaultValue: 10,
-	},
-	MaxWorkflowCacheSize: DynamicInt{
-		KeyName:      "history.MaxWorkflowCacheSize",
-		Description:  "is the max number of workflows for which we store in memory information",
-		DefaultValue: 1000,
 	},
 	WorkerPersistenceMaxQPS: DynamicInt{
 		KeyName:      "worker.persistenceMaxQPS",

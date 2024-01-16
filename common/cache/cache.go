@@ -52,10 +52,6 @@ type Cache interface {
 
 	// Size returns the number of entries currently stored in the Cache
 	Size() int
-
-	// EvictItemsPastTimeToLive evicts all items in the cache which are expired
-	// This is not called automatically, but can be called periodically to evict expired items
-	EvictItemsPastTimeToLive()
 }
 
 // Options control the behavior of the cache
