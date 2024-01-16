@@ -76,12 +76,18 @@ func New(params Params) WFCache {
 
 // AllowExternal returns true if the rate limiter for this domains/workflow allows an external request
 func (c *wfCache) AllowExternal(domainID string, workflowID string) bool {
+	c.muc.Lock()
+	defer c.muc.Unlock()
+
 	value := c.getCacheItem(domainID, workflowID)
 	return value.externalRateLimiter.Allow()
 }
 
 // AllowInternal returns true if the rate limiter for this domains/workflow allows an internal request
 func (c *wfCache) AllowInternal(domainID string, workflowID string) bool {
+	c.muc.Lock()
+	defer c.muc.Unlock()
+
 	value := c.getCacheItem(domainID, workflowID)
 	return value.internalRateLimiter.Allow()
 }
@@ -91,9 +97,6 @@ func (c *wfCache) getCacheItem(domainID string, workflowID string) *cacheValue {
 		domainID:   domainID,
 		workflowID: workflowID,
 	}
-
-	c.muc.Lock()
-	defer c.muc.Unlock()
 
 	value, ok := c.lru.Get(key).(*cacheValue)
 	if !ok {
