@@ -52,10 +52,13 @@ func TestWfCache_AllowSingleWorkflow(t *testing.T) {
 // TestWfCache_AllowMultipleWorkflow tests that the cache will use the correct rate limiter for different workflows.
 func TestWfCache_AllowMultipleWorkflow(t *testing.T) {
 	ctrl := gomock.NewController(t)
+
+	// The external rate limiter for wf1 will allow the first request, but not the second.
 	externalLimiterWf1 := quotas.NewMockLimiter(ctrl)
 	externalLimiterWf1.EXPECT().Allow().Return(true).Times(1)
 	externalLimiterWf1.EXPECT().Allow().Return(false).Times(1)
 
+	// The external rate limiter for wf2 will allow the second request, but not the first.
 	externalLimiterWf2 := quotas.NewMockLimiter(ctrl)
 	externalLimiterWf2.EXPECT().Allow().Return(false).Times(1)
 	externalLimiterWf2.EXPECT().Allow().Return(true).Times(1)
@@ -64,6 +67,7 @@ func TestWfCache_AllowMultipleWorkflow(t *testing.T) {
 	externalLimiterFactory.EXPECT().GetLimiter(testDomainID).Return(externalLimiterWf1).Times(1)
 	externalLimiterFactory.EXPECT().GetLimiter(testDomainID).Return(externalLimiterWf2).Times(1)
 
+	// We do not expect calls to the internal rate limiters, but they will still be created.
 	internalLimiterWf1 := quotas.NewMockLimiter(ctrl)
 	internalLimiterWf2 := quotas.NewMockLimiter(ctrl)
 
