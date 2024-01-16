@@ -31,13 +31,15 @@ import (
 )
 
 type WFCache interface {
-	Allow(domainID string, workflowID string) bool
+	AllowExternal(domainID string, workflowID string) bool
+	AllowInternal(domainID string, workflowID string) bool
 }
 
 type wfCache struct {
-	muc            sync.Mutex
-	lru            cache.Cache
-	rateLimiterRPS func() float64
+	muc                    sync.Mutex
+	lru                    cache.Cache
+	externalRateLimiterRPS func() float64
+	internalRateLimiterRPS func() float64
 }
 
 type cacheKey struct {
@@ -46,13 +48,15 @@ type cacheKey struct {
 }
 
 type cacheValue struct {
-	rateLimiter *quotas.DynamicRateLimiter
+	externalRateLimiter *quotas.DynamicRateLimiter
+	internalRateLimiter *quotas.DynamicRateLimiter
 }
 
 type Params struct {
-	TTL      time.Duration
-	MaxCount int
-	MaxRPS   func() float64
+	TTL            time.Duration
+	MaxCount       int
+	MaxExternalRPS func() float64
+	MaxInternalRPS func() float64
 }
 
 func New(params Params) WFCache {
@@ -62,11 +66,22 @@ func New(params Params) WFCache {
 			Pin:      true,
 			MaxCount: params.MaxCount,
 		}),
-		rateLimiterRPS: params.MaxRPS,
+		externalRateLimiterRPS: params.MaxExternalRPS,
+		internalRateLimiterRPS: params.MaxInternalRPS,
 	}
 }
 
-func (c *wfCache) Allow(domainID string, workflowID string) bool {
+func (c *wfCache) AllowExternal(domainID string, workflowID string) bool {
+	value := c.getCacheItem(domainID, workflowID)
+	return value.externalRateLimiter.Allow()
+}
+
+func (c *wfCache) AllowInternal(domainID string, workflowID string) bool {
+	value := c.getCacheItem(domainID, workflowID)
+	return value.internalRateLimiter.Allow()
+}
+
+func (c *wfCache) getCacheItem(domainID string, workflowID string) *cacheValue {
 	key := cacheKey{
 		domainID:   domainID,
 		workflowID: workflowID,
@@ -78,10 +93,11 @@ func (c *wfCache) Allow(domainID string, workflowID string) bool {
 	value, ok := c.lru.Get(key).(*cacheValue)
 	if !ok {
 		value = &cacheValue{
-			rateLimiter: quotas.NewDynamicRateLimiter(c.rateLimiterRPS),
+			externalRateLimiter: quotas.NewDynamicRateLimiter(c.externalRateLimiterRPS),
+			internalRateLimiter: quotas.NewDynamicRateLimiter(c.internalRateLimiterRPS),
 		}
 		c.lru.PutIfNotExist(key, value)
 	}
 
-	return value.rateLimiter.Allow()
+	return value
 }
