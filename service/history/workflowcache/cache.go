@@ -30,6 +30,7 @@ import (
 	"github.com/uber/cadence/common/quotas"
 )
 
+// WFCache is a per workflow cache used for workflow specific in memory data
 type WFCache interface {
 	AllowExternal(domainID string, workflowID string) bool
 	AllowInternal(domainID string, workflowID string) bool
@@ -52,6 +53,7 @@ type cacheValue struct {
 	internalRateLimiter quotas.Limiter
 }
 
+// Params is the parameters for a new WFCache
 type Params struct {
 	TTL                    time.Duration
 	MaxCount               int
@@ -59,6 +61,7 @@ type Params struct {
 	InternalLimiterFactory quotas.LimiterFactory
 }
 
+// New creates a new WFCache
 func New(params Params) WFCache {
 	return &wfCache{
 		lru: cache.New(&cache.Options{
@@ -71,11 +74,13 @@ func New(params Params) WFCache {
 	}
 }
 
+// AllowExternal returns true if the rate limiter for this domains/workflow allows an external request
 func (c *wfCache) AllowExternal(domainID string, workflowID string) bool {
 	value := c.getCacheItem(domainID, workflowID)
 	return value.externalRateLimiter.Allow()
 }
 
+// AllowInternal returns true if the rate limiter for this domains/workflow allows an internal request
 func (c *wfCache) AllowInternal(domainID string, workflowID string) bool {
 	value := c.getCacheItem(domainID, workflowID)
 	return value.internalRateLimiter.Allow()
