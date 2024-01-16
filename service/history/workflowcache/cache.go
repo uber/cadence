@@ -38,8 +38,8 @@ type WFCache interface {
 type wfCache struct {
 	muc                    sync.Mutex
 	lru                    cache.Cache
-	externalRateLimiterRPS func() float64
-	internalRateLimiterRPS func() float64
+	externalLimiterFactory quotas.LimiterFactory
+	internalLimiterFactory quotas.LimiterFactory
 }
 
 type cacheKey struct {
@@ -48,15 +48,15 @@ type cacheKey struct {
 }
 
 type cacheValue struct {
-	externalRateLimiter *quotas.DynamicRateLimiter
-	internalRateLimiter *quotas.DynamicRateLimiter
+	externalRateLimiter quotas.Limiter
+	internalRateLimiter quotas.Limiter
 }
 
 type Params struct {
-	TTL            time.Duration
-	MaxCount       int
-	MaxExternalRPS func() float64
-	MaxInternalRPS func() float64
+	TTL                    time.Duration
+	MaxCount               int
+	ExternalLimiterFactory quotas.LimiterFactory
+	InternalLimiterFactory quotas.LimiterFactory
 }
 
 func New(params Params) WFCache {
@@ -66,8 +66,8 @@ func New(params Params) WFCache {
 			Pin:      true,
 			MaxCount: params.MaxCount,
 		}),
-		externalRateLimiterRPS: params.MaxExternalRPS,
-		internalRateLimiterRPS: params.MaxInternalRPS,
+		externalLimiterFactory: params.ExternalLimiterFactory,
+		internalLimiterFactory: params.InternalLimiterFactory,
 	}
 }
 
@@ -93,8 +93,8 @@ func (c *wfCache) getCacheItem(domainID string, workflowID string) *cacheValue {
 	value, ok := c.lru.Get(key).(*cacheValue)
 	if !ok {
 		value = &cacheValue{
-			externalRateLimiter: quotas.NewDynamicRateLimiter(c.externalRateLimiterRPS),
-			internalRateLimiter: quotas.NewDynamicRateLimiter(c.internalRateLimiterRPS),
+			externalRateLimiter: c.externalLimiterFactory.GetLimiter(domainID),
+			internalRateLimiter: c.internalLimiterFactory.GetLimiter(domainID),
 		}
 		c.lru.PutIfNotExist(key, value)
 	}
