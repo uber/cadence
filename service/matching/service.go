@@ -103,8 +103,8 @@ func (s *Service) Start() {
 	thriftHandler := NewThriftHandler(s.handler)
 	thriftHandler.register(s.GetDispatcher())
 
-	grpcHandler := newGRPCHandler(s.handler)
-	grpcHandler.register(s.GetDispatcher())
+	grpcHandler := NewGRPCHandler(s.handler)
+	grpcHandler.Register(s.GetDispatcher())
 
 	// must start base service first
 	s.Resource.Start()

@@ -663,6 +663,8 @@ const (
 	DCRedirectionGetTaskListsByDomainScope
 	// DCRedirectionRefreshWorkflowTasksScope tracks RPC calls for dc redirection
 	DCRedirectionRefreshWorkflowTasksScope
+	// DCRedirectionRestartWorkflowExecutionScope tracks RPC calls for dc redirection
+	DCRedirectionRestartWorkflowExecutionScope
 
 	// MessagingPublishScope tracks Publish calls made by service to messaging layer
 	MessagingClientPublishScope
@@ -1605,6 +1607,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		DCRedirectionListTaskListPartitionsScope:             {operation: "DCRedirectionListTaskListPartitions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionGetTaskListsByDomainScope:               {operation: "DCRedirectionGetTaskListsByDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionRefreshWorkflowTasksScope:               {operation: "DCRedirectionRefreshWorkflowTasks", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRestartWorkflowExecutionScope:           {operation: "DCRedirectionRestartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 
 		MessagingClientPublishScope:      {operation: "MessagingClientPublish"},
 		MessagingClientPublishBatchScope: {operation: "MessagingClientPublishBatch"},

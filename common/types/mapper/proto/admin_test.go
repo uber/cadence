@@ -209,7 +209,7 @@ func TestAdminRespondCrossClusterTasksCompletedResponse(t *testing.T) {
 	}
 }
 
-func TestFromGetGlobalIsolationGroupsResponse(t *testing.T) {
+func TestFromAdminGetGlobalIsolationGroupsResponse(t *testing.T) {
 	tests := map[string]struct {
 		in       *types.GetGlobalIsolationGroupsResponse
 		expected *adminv1.GetGlobalIsolationGroupsResponse
@@ -257,9 +257,9 @@ func TestFromGetGlobalIsolationGroupsResponse(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			res := FromGetGlobalIsolationGroupsResponse(td.in)
+			res := FromAdminGetGlobalIsolationGroupsResponse(td.in)
 			assert.Equal(t, td.expected, res, "mapping")
-			roundTrip := ToGetGlobalIsolationGroupsResponse(res)
+			roundTrip := ToAdminGetGlobalIsolationGroupsResponse(res)
 			if td.in != nil {
 				assert.Equal(t, td.in, roundTrip, "roundtrip")
 			}
@@ -267,7 +267,7 @@ func TestFromGetGlobalIsolationGroupsResponse(t *testing.T) {
 	}
 }
 
-func TestToGetGlobalIsolationGroupsRequest(t *testing.T) {
+func TestToAdminGetGlobalIsolationGroupsRequest(t *testing.T) {
 
 	tests := map[string]struct {
 		in       *adminv1.GetGlobalIsolationGroupsRequest
@@ -285,12 +285,12 @@ func TestToGetGlobalIsolationGroupsRequest(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, td.expected, ToGetGlobalIsolationGroupsRequest(td.in))
+			assert.Equal(t, td.expected, ToAdminGetGlobalIsolationGroupsRequest(td.in))
 		})
 	}
 }
 
-func TestFromGetDomainIsolationGroupsResponse(t *testing.T) {
+func TestFromAdminGetDomainIsolationGroupsResponse(t *testing.T) {
 	tests := map[string]struct {
 		in       *types.GetDomainIsolationGroupsResponse
 		expected *adminv1.GetDomainIsolationGroupsResponse
@@ -337,7 +337,7 @@ func TestFromGetDomainIsolationGroupsResponse(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			res := FromGetDomainIsolationGroupsResponse(td.in)
+			res := FromAdminGetDomainIsolationGroupsResponse(td.in)
 			// map iteration is nondeterministic
 			sort.Slice(res.IsolationGroups.IsolationGroups, func(i int, j int) bool {
 				return res.IsolationGroups.IsolationGroups[i].Name > res.IsolationGroups.IsolationGroups[j].Name
@@ -346,7 +346,7 @@ func TestFromGetDomainIsolationGroupsResponse(t *testing.T) {
 	}
 }
 
-func TestToGetDomainIsolationGroupsRequest(t *testing.T) {
+func TestToAdminGetDomainIsolationGroupsRequest(t *testing.T) {
 
 	tests := map[string]struct {
 		in       *adminv1.GetDomainIsolationGroupsRequest
@@ -372,12 +372,12 @@ func TestToGetDomainIsolationGroupsRequest(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, td.expected, ToGetDomainIsolationGroupsRequest(td.in))
+			assert.Equal(t, td.expected, ToAdminGetDomainIsolationGroupsRequest(td.in))
 		})
 	}
 }
 
-func TestFromUpdateGlobalIsolationGroupsResponse(t *testing.T) {
+func TestFromAdminUpdateGlobalIsolationGroupsResponse(t *testing.T) {
 
 	tests := map[string]struct {
 		in       *types.UpdateGlobalIsolationGroupsResponse
@@ -396,12 +396,12 @@ func TestFromUpdateGlobalIsolationGroupsResponse(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, td.expected, FromUpdateGlobalIsolationGroupsResponse(td.in))
+			assert.Equal(t, td.expected, FromAdminUpdateGlobalIsolationGroupsResponse(td.in))
 		})
 	}
 }
 
-func TestToUpdateGlobalIsolationGroupsRequest(t *testing.T) {
+func TestToAdminUpdateGlobalIsolationGroupsRequest(t *testing.T) {
 
 	tests := map[string]struct {
 		in       *adminv1.UpdateGlobalIsolationGroupsRequest
@@ -447,9 +447,9 @@ func TestToUpdateGlobalIsolationGroupsRequest(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			res := ToUpdateGlobalIsolationGroupsRequest(td.in)
+			res := ToAdminUpdateGlobalIsolationGroupsRequest(td.in)
 			assert.Equal(t, td.expected, res, "conversion")
-			roundTrip := FromUpdateGlobalIsolationGroupsRequest(res)
+			roundTrip := FromAdminUpdateGlobalIsolationGroupsRequest(res)
 			if td.in != nil {
 				assert.Equal(t, td.in, roundTrip, "roundtrip")
 			}
@@ -457,7 +457,7 @@ func TestToUpdateGlobalIsolationGroupsRequest(t *testing.T) {
 	}
 }
 
-func TestFromUpdateDomainIsolationGroupsResponse(t *testing.T) {
+func TestFromAdminUpdateDomainIsolationGroupsResponse(t *testing.T) {
 
 	tests := map[string]struct {
 		in       *types.UpdateDomainIsolationGroupsResponse
@@ -475,7 +475,7 @@ func TestFromUpdateDomainIsolationGroupsResponse(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, td.expected, FromUpdateDomainIsolationGroupsResponse(td.in))
+			assert.Equal(t, td.expected, FromAdminUpdateDomainIsolationGroupsResponse(td.in))
 		})
 	}
 }
@@ -524,7 +524,7 @@ func TestToUpdateDomainIsolationGroupsRequest(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, td.expected, ToUpdateDomainIsolationGroupsRequest(td.in))
+			assert.Equal(t, td.expected, ToAdminUpdateDomainIsolationGroupsRequest(td.in))
 		})
 	}
 }
