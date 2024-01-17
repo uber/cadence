@@ -523,9 +523,9 @@ type (
 	// config for a plugin as it is initialized.
 	//
 	// Config keys and structures expected in the main default binary include:
-	// - FilestoreConfig: [*FilestoreArchiver], used with provider scheme [github.com/uber/cadence/common/archiver/filestore.URIScheme]
-	// - S3storeConfig: [*S3Archiver], used with provider scheme [github.com/uber/cadence/common/archiver/s3store.URIScheme]
-	// - "gstorage" (not supported in this commit): [github.com/uber/cadence/common/archiver/gcloud.Config], used with provider scheme "gs" [github.com/uber/cadence/common/archiver/gcloud.URIScheme]
+	//  - FilestoreConfig: [*FilestoreArchiver], used with provider scheme [github.com/uber/cadence/common/archiver/filestore.URIScheme]
+	//  - S3storeConfig: [*S3Archiver], used with provider scheme [github.com/uber/cadence/common/archiver/s3store.URIScheme]
+	//  - "gstorage" (not supported in this commit): [github.com/uber/cadence/common/archiver/gcloud.Config], used with provider scheme "gs" [github.com/uber/cadence/common/archiver/gcloud.URIScheme]
 	//
 	// For handling hardcoded config, see ToYamlNode.
 	VisibilityArchiverProvider map[string]*yaml.Node
