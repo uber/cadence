@@ -30,6 +30,7 @@ import (
 	"github.com/uber-go/tally/m3"
 	"github.com/uber-go/tally/prometheus"
 	yarpctls "go.uber.org/yarpc/api/transport/tls"
+	"gopkg.in/yaml.v3"
 
 	"github.com/uber/cadence/common/dynamicconfig"
 	c "github.com/uber/cadence/common/dynamicconfig/configstore/config"
@@ -488,15 +489,20 @@ type (
 		// EnableRead whether history can be read from archival
 		EnableRead bool `yaml:"enableRead"`
 		// Provider contains the config for all history archivers
-		Provider *HistoryArchiverProvider `yaml:"provider"`
+		Provider HistoryArchiverProvider `yaml:"provider"`
 	}
 
-	// HistoryArchiverProvider contains the config for all history archivers
-	HistoryArchiverProvider struct {
-		Filestore *FilestoreArchiver `yaml:"filestore"`
-		Gstorage  *GstorageArchiver  `yaml:"gstorage"`
-		S3store   *S3Archiver        `yaml:"s3store"`
-	}
+	// HistoryArchiverProvider contains the config for all history archivers.
+	//
+	// Because archivers support external plugins, so there is no fundamental structure expected,
+	// but a top-level key per named store plugin is required, and will be used to select the
+	// config for a plugin as it is initialized.
+	//
+	// Configs and structures expected in the main default binary include:
+	// - filestore: [*FilestoreArchiver]
+	// - s3store: [*S3Archiver]
+	// - gstorage: [github.com/uber/cadence/common/archiver/gcloud.Config]
+	HistoryArchiverProvider map[string]*yaml.Node
 
 	// VisibilityArchival contains the config for visibility archival
 	VisibilityArchival struct {
@@ -505,25 +511,25 @@ type (
 		// EnableRead whether visibility can be read from archival
 		EnableRead bool `yaml:"enableRead"`
 		// Provider contains the config for all visibility archivers
-		Provider *VisibilityArchiverProvider `yaml:"provider"`
+		Provider VisibilityArchiverProvider `yaml:"provider"`
 	}
 
-	// VisibilityArchiverProvider contains the config for all visibility archivers
-	VisibilityArchiverProvider struct {
-		Filestore *FilestoreArchiver `yaml:"filestore"`
-		S3store   *S3Archiver        `yaml:"s3store"`
-		Gstorage  *GstorageArchiver  `yaml:"gstorage"`
-	}
+	// VisibilityArchiverProvider contains the config for all visibility archivers.
+	//
+	// Because archivers support external plugins, so there is no fundamental structure expected,
+	// but a top-level key per named store plugin is required, and will be used to select the
+	// config for a plugin as it is initialized.
+	//
+	// Configs and structures expected in the main default binary include:
+	// - filestore: [*FilestoreArchiver]
+	// - s3store: [*S3Archiver]
+	// - gstorage: [github.com/uber/cadence/common/archiver/gcloud.Config]
+	VisibilityArchiverProvider map[string]*yaml.Node
 
 	// FilestoreArchiver contain the config for filestore archiver
 	FilestoreArchiver struct {
 		FileMode string `yaml:"fileMode"`
 		DirMode  string `yaml:"dirMode"`
-	}
-
-	// GstorageArchiver contain the config for google storage archiver
-	GstorageArchiver struct {
-		CredentialsPath string `yaml:"credentialsPath"`
 	}
 
 	// S3Archiver contains the config for S3 archiver
@@ -582,6 +588,23 @@ const (
 	// NonShardedStoreName is the shard name used for singular (non-sharded) stores
 	NonShardedStoreName = "NonShardedStore"
 )
+
+// ToYamlNode is a bit of a hack to get a *yaml.Node for config-parsing compatibility purposes.
+// There is probably a better way to achieve this with yaml-loading compatibility, but this is at least fairly simple.
+func ToYamlNode(input any) (*yaml.Node, error) {
+	data, err := yaml.Marshal(input)
+	if err != nil {
+		// should be extremely unlikely, unless yaml marshaling is customized
+		return nil, fmt.Errorf("could not serialize data to yaml: %w", err)
+	}
+	var out *yaml.Node
+	err = yaml.Unmarshal(data, &out)
+	if err != nil {
+		// should not be possible
+		return nil, fmt.Errorf("could not deserialize to yaml node: %w", err)
+	}
+	return out, nil
+}
 
 func (n *NoSQL) ConvertToShardedNoSQLConfig() *ShardedNoSQL {
 	connections := make(map[string]DBShardConnection)

@@ -33,9 +33,16 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
-	"github.com/uber/cadence/common/archiver/gcloud/connector"
 	"github.com/uber/cadence/common/types"
+
+	"github.com/uber/cadence/common/archiver/gcloud/connector"
 )
+
+// Config structure used to parse from the storage-provider yaml nodes in [github.com/uber/cadence/common/config.HistoryArchiverProvider]
+// and [github.com/uber/cadence/common/config.VisibilityArchiverProvider] and
+type Config struct {
+	CredentialsPath string `yaml:"credentialsPath"`
+}
 
 func encode(v interface{}) ([]byte, error) {
 	return json.Marshal(v)
