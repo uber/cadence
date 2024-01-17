@@ -29,7 +29,6 @@ import (
 
 	"github.com/startreedata/pinot-client-go/pinot"
 	"github.com/uber-go/tally"
-	"gopkg.in/yaml.v3"
 
 	adminClient "github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common/archiver"
@@ -341,7 +340,10 @@ func newArchiverBase(enabled bool, logger log.Logger) *ArchiverBase {
 		logger.Fatal("Should be impossible: failed to convert filestore archiver config to a yaml node")
 	}
 
-	archiverProvider := provider.NewArchiverProvider(map[string]*yaml.Node{"file": node}, map[string]*yaml.Node{"file": node})
+	archiverProvider := provider.NewArchiverProvider(
+		config.HistoryArchiverProvider{config.FilestoreConfig: node},
+		config.VisibilityArchiverProvider{config.FilestoreConfig: node},
+	)
 	return &ArchiverBase{
 		metadata: archiver.NewArchivalMetadata(dcCollection, "enabled", true, "enabled", true, &config.ArchivalDomainDefaults{
 			History: config.HistoryArchivalDomainDefaults{

@@ -498,10 +498,12 @@ type (
 	// but a top-level key per named store plugin is required, and will be used to select the
 	// config for a plugin as it is initialized.
 	//
-	// Configs and structures expected in the main default binary include:
-	// - filestore: [*FilestoreArchiver]
-	// - s3store: [*S3Archiver]
-	// - gstorage: [github.com/uber/cadence/common/archiver/gcloud.Config]
+	// Config keys and structures expected in the main default binary include:
+	//  - FilestoreConfig: [*FilestoreArchiver], used with provider scheme [github.com/uber/cadence/common/archiver/filestore.URIScheme]
+	//  - S3storeConfig: [*S3Archiver], used with provider scheme [github.com/uber/cadence/common/archiver/s3store.URIScheme]
+	//  - "gstorage" (not supported in this commit): [github.com/uber/cadence/common/archiver/gcloud.Config], used with provider scheme "gs" [github.com/uber/cadence/common/archiver/gcloud.URIScheme]
+	//
+	// For handling hardcoded config, see ToYamlNode.
 	HistoryArchiverProvider map[string]*yaml.Node
 
 	// VisibilityArchival contains the config for visibility archival
@@ -520,10 +522,12 @@ type (
 	// but a top-level key per named store plugin is required, and will be used to select the
 	// config for a plugin as it is initialized.
 	//
-	// Configs and structures expected in the main default binary include:
-	// - filestore: [*FilestoreArchiver]
-	// - s3store: [*S3Archiver]
-	// - gstorage: [github.com/uber/cadence/common/archiver/gcloud.Config]
+	// Config keys and structures expected in the main default binary include:
+	// - FilestoreConfig: [*FilestoreArchiver], used with provider scheme [github.com/uber/cadence/common/archiver/filestore.URIScheme]
+	// - S3storeConfig: [*S3Archiver], used with provider scheme [github.com/uber/cadence/common/archiver/s3store.URIScheme]
+	// - "gstorage" (not supported in this commit): [github.com/uber/cadence/common/archiver/gcloud.Config], used with provider scheme "gs" [github.com/uber/cadence/common/archiver/gcloud.URIScheme]
+	//
+	// For handling hardcoded config, see ToYamlNode.
 	VisibilityArchiverProvider map[string]*yaml.Node
 
 	// FilestoreArchiver contain the config for filestore archiver
@@ -587,6 +591,8 @@ type (
 const (
 	// NonShardedStoreName is the shard name used for singular (non-sharded) stores
 	NonShardedStoreName = "NonShardedStore"
+	FilestoreConfig     = "filestore"
+	S3storeConfig       = "s3store"
 )
 
 // ToYamlNode is a bit of a hack to get a *yaml.Node for config-parsing compatibility purposes.

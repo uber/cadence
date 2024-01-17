@@ -27,6 +27,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/config"
 )
 
 func defaultFilestoreConfig(t *testing.T) *yaml.Node {
@@ -44,7 +45,7 @@ func TestValidEnabledHistoryArchivalConfig(t *testing.T) {
 		History: HistoryArchival{
 			Status: common.ArchivalEnabled,
 			Provider: HistoryArchiverProvider{
-				"file": defaultFilestoreConfig(t),
+				config.FilestoreConfig: defaultFilestoreConfig(t),
 			},
 		},
 	}
@@ -70,7 +71,7 @@ func TestValidDisabledHistoryArchivalConfig(t *testing.T) {
 	archival := Archival{
 		History: HistoryArchival{
 			Provider: HistoryArchiverProvider{
-				"file": defaultFilestoreConfig(t),
+				config.FilestoreConfig: defaultFilestoreConfig(t),
 			},
 		},
 	}
@@ -103,7 +104,7 @@ func TestValidEnabledVisibilityArchivalConfig(t *testing.T) {
 		Visibility: VisibilityArchival{
 			Status: common.ArchivalEnabled,
 			Provider: VisibilityArchiverProvider{
-				"file": defaultFilestoreConfig(t),
+				config.FilestoreConfig: defaultFilestoreConfig(t),
 			},
 		},
 	}
@@ -129,7 +130,7 @@ func TestValidDisabledVisibilityArchivalConfig(t *testing.T) {
 	archival := Archival{
 		Visibility: VisibilityArchival{
 			Provider: VisibilityArchiverProvider{
-				"file": defaultFilestoreConfig(t),
+				config.FilestoreConfig: defaultFilestoreConfig(t),
 			},
 		},
 	}
