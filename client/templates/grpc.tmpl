@@ -1,0 +1,42 @@
+{{$packagePath := (index .Vars "path")}}
+{{$package := (index .Vars "package")}}
+{{$prefix := (index .Vars "prefix")}}
+import (
+	"context"
+
+	"go.uber.org/yarpc"
+
+	{{$package}} "{{$packagePath}}"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/proto"
+)
+
+{{$interfaceName := .Interface.Name}}
+{{$clientName := (index .Vars "client")}}
+{{ $decorator := (printf "%s%s" (down $clientName) .Interface.Name) }}
+
+{{range $method := .Interface.Methods}}
+{{$Request := printf "%sRequest" $method.Name}}
+{{$Response := printf "%sResponse" $method.Name}}
+func (g {{$decorator}}) {{$method.Declaration}} {
+	{{- if eq (len $method.Params) 2}}
+	{{- if eq (len $method.Results) 1}}
+	_, {{(index $method.Results 0).Name}} = g.c.{{$method.Name}}({{(index $method.Params 0).Name}}, &{{$package}}.{{$method.Name}}Request{}, {{(index $method.Params 1).Pass}})
+	{{- else}}
+	response, {{(index $method.Results 1).Name}} := g.c.{{$method.Name}}({{(index $method.Params 0).Name}}, &{{$package}}.{{$method.Name}}Request{}, {{(index $method.Params 1).Pass}})
+	{{- end}}
+	{{- else}}
+	{{- if eq (len $method.Results) 1}}
+	_, {{(index $method.Results 0).Name}} = g.c.{{$method.Name}}({{(index $method.Params 0).Name}}, proto.From{{$prefix}}{{$Request}}({{(index $method.Params 1).Name}}), {{(index $method.Params 2).Pass}})
+	{{- else}}
+	response, {{(index $method.Results 1).Name}} := g.c.{{$method.Name}}({{(index $method.Params 0).Name}}, proto.From{{$prefix}}{{$Request}}({{(index $method.Params 1).Name}}), {{(index $method.Params 2).Pass}})
+	{{- end}}
+	{{- end}}
+
+	{{- if eq (len $method.Results) 1}}
+	return proto.ToError({{(index $method.Results 0).Name}})
+	{{- else}}
+	return proto.To{{$prefix}}{{$Response}}(response), proto.ToError({{(index $method.Results 1).Name}})
+	{{- end}}
+}
+{{end}}

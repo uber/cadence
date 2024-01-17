@@ -3634,7 +3634,7 @@ func FromRestartWorkflowExecutionRequest(t *types.RestartWorkflowExecutionReques
 	}
 }
 
-func ToRestartStartWorkflowExecutionResponse(t *apiv1.RestartWorkflowExecutionResponse) *types.RestartWorkflowExecutionResponse {
+func ToRestartWorkflowExecutionResponse(t *apiv1.RestartWorkflowExecutionResponse) *types.RestartWorkflowExecutionResponse {
 	if t == nil {
 		return nil
 	}

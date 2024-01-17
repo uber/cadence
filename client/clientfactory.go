@@ -38,6 +38,7 @@ import (
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/client/wrappers/errorinjectors"
+	"github.com/uber/cadence/client/wrappers/grpc"
 	"github.com/uber/cadence/client/wrappers/metered"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -107,7 +108,7 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 
 	outboundConfig := cf.rpcFactory.GetDispatcher().ClientConfig(service.History)
 	if rpc.IsGRPCOutbound(outboundConfig) {
-		rawClient = history.NewGRPCClient(historyv1.NewHistoryAPIYARPCClient(outboundConfig))
+		rawClient = grpc.NewHistoryClient(historyv1.NewHistoryAPIYARPCClient(outboundConfig))
 		namedPort = membership.PortGRPC
 	} else {
 		rawClient = history.NewThriftClient(historyserviceclient.New(outboundConfig))
@@ -141,7 +142,7 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 	var namedPort = membership.PortTchannel
 	outboundConfig := cf.rpcFactory.GetDispatcher().ClientConfig(service.Matching)
 	if rpc.IsGRPCOutbound(outboundConfig) {
-		rawClient = matching.NewGRPCClient(matchingv1.NewMatchingAPIYARPCClient(outboundConfig))
+		rawClient = grpc.NewMatchingClient(matchingv1.NewMatchingAPIYARPCClient(outboundConfig))
 		namedPort = membership.PortGRPC
 	} else {
 		rawClient = matching.NewThriftClient(matchingserviceclient.New(outboundConfig))
@@ -173,7 +174,7 @@ func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndConfig(
 ) (admin.Client, error) {
 	var client admin.Client
 	if rpc.IsGRPCOutbound(config) {
-		client = admin.NewGRPCClient(adminv1.NewAdminAPIYARPCClient(config))
+		client = grpc.NewAdminClient(adminv1.NewAdminAPIYARPCClient(config))
 	} else {
 		client = admin.NewThriftClient(adminserviceclient.New(config))
 	}
@@ -195,7 +196,7 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndConfig(
 ) (frontend.Client, error) {
 	var client frontend.Client
 	if rpc.IsGRPCOutbound(config) {
-		client = frontend.NewGRPCClient(
+		client = grpc.NewFrontendClient(
 			apiv1.NewDomainAPIYARPCClient(config),
 			apiv1.NewWorkflowAPIYARPCClient(config),
 			apiv1.NewWorkerAPIYARPCClient(config),
