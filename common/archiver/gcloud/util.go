@@ -33,9 +33,8 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
-	"github.com/uber/cadence/common/types"
-
 	"github.com/uber/cadence/common/archiver/gcloud/connector"
+	"github.com/uber/cadence/common/types"
 )
 
 // Config structure used to parse from the storage-provider yaml nodes in [github.com/uber/cadence/common/config.HistoryArchiverProvider]
