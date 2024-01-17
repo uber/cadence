@@ -591,8 +591,9 @@ type (
 const (
 	// NonShardedStoreName is the shard name used for singular (non-sharded) stores
 	NonShardedStoreName = "NonShardedStore"
-	FilestoreConfig     = "filestore"
-	S3storeConfig       = "s3store"
+
+	FilestoreConfig = "filestore"
+	S3storeConfig   = "s3store"
 )
 
 // ToYamlNode is a bit of a hack to get a *yaml.Node for config-parsing compatibility purposes.

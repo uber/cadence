@@ -102,14 +102,14 @@ func init() {
 		}
 	}
 
-	must(RegisterHistoryArchiver("file", "filestore", func(cfg *yaml.Node, container *archiver.HistoryBootstrapContainer) (archiver.HistoryArchiver, error) {
+	must(RegisterHistoryArchiver(filestore.URIScheme, config.FilestoreConfig, func(cfg *yaml.Node, container *archiver.HistoryBootstrapContainer) (archiver.HistoryArchiver, error) {
 		var out *config.FilestoreArchiver
 		if err := cfg.Decode(&out); err != nil {
 			return nil, fmt.Errorf("bad config: %w", err)
 		}
 		return filestore.NewHistoryArchiver(container, out)
 	}))
-	must(RegisterHistoryArchiver("s3", "s3store", func(cfg *yaml.Node, container *archiver.HistoryBootstrapContainer) (archiver.HistoryArchiver, error) {
+	must(RegisterHistoryArchiver(s3store.URIScheme, config.S3storeConfig, func(cfg *yaml.Node, container *archiver.HistoryBootstrapContainer) (archiver.HistoryArchiver, error) {
 		var out *config.S3Archiver
 		if err := cfg.Decode(&out); err != nil {
 			return nil, fmt.Errorf("bad config: %w", err)
@@ -117,14 +117,14 @@ func init() {
 		return s3store.NewHistoryArchiver(container, out)
 	}))
 
-	must(RegisterVisibilityArchiver("file", "filestore", func(cfg *yaml.Node, container *archiver.VisibilityBootstrapContainer) (archiver.VisibilityArchiver, error) {
+	must(RegisterVisibilityArchiver(filestore.URIScheme, config.FilestoreConfig, func(cfg *yaml.Node, container *archiver.VisibilityBootstrapContainer) (archiver.VisibilityArchiver, error) {
 		var out *config.FilestoreArchiver
 		if err := cfg.Decode(&out); err != nil {
 			return nil, fmt.Errorf("bad config: %w", err)
 		}
 		return filestore.NewVisibilityArchiver(container, out)
 	}))
-	must(RegisterVisibilityArchiver("s3", "s3store", func(cfg *yaml.Node, container *archiver.VisibilityBootstrapContainer) (archiver.VisibilityArchiver, error) {
+	must(RegisterVisibilityArchiver(s3store.URIScheme, config.S3storeConfig, func(cfg *yaml.Node, container *archiver.VisibilityBootstrapContainer) (archiver.VisibilityArchiver, error) {
 		var out *config.S3Archiver
 		if err := cfg.Decode(&out); err != nil {
 			return nil, fmt.Errorf("bad config: %w", err)
