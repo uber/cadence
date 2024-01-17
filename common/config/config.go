@@ -501,7 +501,7 @@ type (
 	// Config keys and structures expected in the main default binary include:
 	//  - FilestoreConfig: [*FilestoreArchiver], used with provider scheme [github.com/uber/cadence/common/archiver/filestore.URIScheme]
 	//  - S3storeConfig: [*S3Archiver], used with provider scheme [github.com/uber/cadence/common/archiver/s3store.URIScheme]
-	//  - GCloudConfig: [*GstorageArchiver], used with provider scheme [github.com/uber/cadence/common/archiver/gcloud.URIScheme]
+	//  - "gstorage" via [github.com/uber/cadence/common/archiver/gcloud.ConfigKey]: [github.com/uber/cadence/common/archiver/gcloud.Config], used with provider scheme "gs" [github.com/uber/cadence/common/archiver/gcloud.URIScheme]
 	//
 	// For handling hardcoded config, see ToYamlNode.
 	HistoryArchiverProvider map[string]*YamlNode
@@ -525,7 +525,7 @@ type (
 	// Config keys and structures expected in the main default binary include:
 	//  - FilestoreConfig: [*FilestoreArchiver], used with provider scheme [github.com/uber/cadence/common/archiver/filestore.URIScheme]
 	//  - S3storeConfig: [*S3Archiver], used with provider scheme [github.com/uber/cadence/common/archiver/s3store.URIScheme]
-	//  - GCloudConfig: [*GstorageArchiver], used with provider scheme [github.com/uber/cadence/common/archiver/gcloud.URIScheme]
+	//  - "gstorage" via [github.com/uber/cadence/common/archiver/gcloud.ConfigKey]: [github.com/uber/cadence/common/archiver/gcloud.Config], used with provider scheme "gs" [github.com/uber/cadence/common/archiver/gcloud.URIScheme]
 	//
 	// For handling hardcoded config, see ToYamlNode.
 	VisibilityArchiverProvider map[string]*YamlNode
@@ -534,11 +534,6 @@ type (
 	FilestoreArchiver struct {
 		FileMode string `yaml:"fileMode"`
 		DirMode  string `yaml:"dirMode"`
-	}
-
-	// GstorageArchiver contain the config for google storage archiver
-	GstorageArchiver struct {
-		CredentialsPath string `yaml:"credentialsPath"`
 	}
 
 	// S3Archiver contains the config for S3 archiver
@@ -605,7 +600,6 @@ const (
 
 	FilestoreConfig = "filestore"
 	S3storeConfig   = "s3store"
-	GCloudConfig    = "gstorage"
 )
 
 var _ yaml.Unmarshaler = (*YamlNode)(nil)
