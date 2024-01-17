@@ -23,7 +23,6 @@
 package workflowcache
 
 import (
-	"sync"
 	"time"
 
 	"github.com/uber/cadence/common/cache"
@@ -37,7 +36,6 @@ type WFCache interface {
 }
 
 type wfCache struct {
-	mu                     sync.Mutex
 	lru                    cache.Cache
 	externalLimiterFactory quotas.LimiterFactory
 	internalLimiterFactory quotas.LimiterFactory
@@ -76,29 +74,27 @@ func New(params Params) WFCache {
 
 // AllowExternal returns true if the rate limiter for this domain/workflow allows an external request
 func (c *wfCache) AllowExternal(domainID string, workflowID string) bool {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
+	// Locking is not needed because both getCacheItem and the rate limiter are thread safe
 	value := c.getCacheItem(domainID, workflowID)
 	return value.externalRateLimiter.Allow()
 }
 
 // AllowInternal returns true if the rate limiter for this domain/workflow allows an internal request
 func (c *wfCache) AllowInternal(domainID string, workflowID string) bool {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
+	// Locking is not needed because both getCacheItem and the rate limiter are thread safe
 	value := c.getCacheItem(domainID, workflowID)
 	return value.internalRateLimiter.Allow()
 }
 
 func (c *wfCache) getCacheItem(domainID string, workflowID string) *cacheValue {
+	// The underlying lru cache is thread safe, so there is no need to lock
 	key := cacheKey{
 		domainID:   domainID,
 		workflowID: workflowID,
 	}
 
 	value, ok := c.lru.Get(key).(*cacheValue)
+
 	if !ok {
 		value = &cacheValue{
 			externalRateLimiter: c.externalLimiterFactory.GetLimiter(domainID),
