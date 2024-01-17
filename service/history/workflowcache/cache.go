@@ -37,7 +37,7 @@ type WFCache interface {
 }
 
 type wfCache struct {
-	muc                    sync.Mutex
+	mu                     sync.Mutex
 	lru                    cache.Cache
 	externalLimiterFactory quotas.LimiterFactory
 	internalLimiterFactory quotas.LimiterFactory
@@ -76,8 +76,8 @@ func New(params Params) WFCache {
 
 // AllowExternal returns true if the rate limiter for this domain/workflow allows an external request
 func (c *wfCache) AllowExternal(domainID string, workflowID string) bool {
-	c.muc.Lock()
-	defer c.muc.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	value := c.getCacheItem(domainID, workflowID)
 	return value.externalRateLimiter.Allow()
@@ -85,8 +85,8 @@ func (c *wfCache) AllowExternal(domainID string, workflowID string) bool {
 
 // AllowInternal returns true if the rate limiter for this domain/workflow allows an internal request
 func (c *wfCache) AllowInternal(domainID string, workflowID string) bool {
-	c.muc.Lock()
-	defer c.muc.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	value := c.getCacheItem(domainID, workflowID)
 	return value.internalRateLimiter.Allow()
