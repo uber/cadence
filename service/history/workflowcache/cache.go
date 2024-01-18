@@ -43,6 +43,7 @@ type wfCache struct {
 	externalLimiterFactory quotas.LimiterFactory
 	internalLimiterFactory quotas.LimiterFactory
 	logger                 log.Logger
+	getCacheItemFn         func(domainID string, workflowID string) (*cacheValue, error)
 }
 
 type cacheKey struct {
@@ -66,7 +67,7 @@ type Params struct {
 
 // New creates a new WFCache
 func New(params Params) WFCache {
-	return &wfCache{
+	cache := &wfCache{
 		lru: cache.New(&cache.Options{
 			TTL:      params.TTL,
 			Pin:      false,
@@ -76,12 +77,16 @@ func New(params Params) WFCache {
 		internalLimiterFactory: params.InternalLimiterFactory,
 		logger:                 params.Logger,
 	}
+	// We set getCacheItemFn to cache.getCacheItem so that we can mock it in unit tests
+	cache.getCacheItemFn = cache.getCacheItem
+
+	return cache
 }
 
 // AllowExternal returns true if the rate limiter for this domain/workflow allows an external request
 func (c *wfCache) AllowExternal(domainID string, workflowID string) bool {
 	// Locking is not needed because both getCacheItem and the rate limiter are thread safe
-	value, err := c.getCacheItem(domainID, workflowID)
+	value, err := c.getCacheItemFn(domainID, workflowID)
 	if err != nil {
 		c.logError(domainID, workflowID, err)
 		// If we can't get the cache item, we should allow the request through
@@ -93,7 +98,7 @@ func (c *wfCache) AllowExternal(domainID string, workflowID string) bool {
 // AllowInternal returns true if the rate limiter for this domain/workflow allows an internal request
 func (c *wfCache) AllowInternal(domainID string, workflowID string) bool {
 	// Locking is not needed because both getCacheItem and the rate limiter are thread safe
-	value, err := c.getCacheItem(domainID, workflowID)
+	value, err := c.getCacheItemFn(domainID, workflowID)
 	if err != nil {
 		c.logError(domainID, workflowID, err)
 		// If we can't get the cache item, we should allow the request through
