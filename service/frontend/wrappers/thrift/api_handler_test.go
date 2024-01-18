@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package api
+package thrift
 
 import (
 	"context"
@@ -33,13 +33,14 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/frontend/api"
 )
 
 func TestThriftHandler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	h := NewMockHandler(ctrl)
-	th := NewThriftHandler(h)
+	h := api.NewMockHandler(ctrl)
+	th := NewAPIHandler(h)
 	ctx := context.Background()
 	internalErr := &types.InternalServiceError{Message: "test"}
 	expectedErr := &shared.InternalServiceError{Message: "test"}

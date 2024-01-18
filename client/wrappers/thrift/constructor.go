@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,47 +18,46 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package host
+package thrift
 
 import (
-	"go.uber.org/yarpc"
-
 	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/.gen/go/history/historyserviceclient"
+	"github.com/uber/cadence/.gen/go/matching/matchingserviceclient"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"
-	"github.com/uber/cadence/client/wrappers/thrift"
-	"github.com/uber/cadence/common/service"
+	"github.com/uber/cadence/client/matching"
 )
 
-// AdminClient is the interface exposed by admin service client
-type AdminClient interface {
-	admin.Client
+type (
+	adminClient struct {
+		c adminserviceclient.Interface
+	}
+	frontendClient struct {
+		c workflowserviceclient.Interface
+	}
+	historyClient struct {
+		c historyserviceclient.Interface
+	}
+	matchingClient struct {
+		c matchingserviceclient.Interface
+	}
+)
+
+func NewAdminClient(c adminserviceclient.Interface) admin.Client {
+	return adminClient{c}
 }
 
-// FrontendClient is the interface exposed by frontend service client
-type FrontendClient interface {
-	frontend.Client
+func NewFrontendClient(c workflowserviceclient.Interface) frontend.Client {
+	return frontendClient{c}
 }
 
-// HistoryClient is the interface exposed by history service client
-type HistoryClient interface {
-	history.Client
+func NewHistoryClient(c historyserviceclient.Interface) history.Client {
+	return historyClient{c}
 }
 
-// NewAdminClient creates a client to cadence admin client
-func NewAdminClient(d *yarpc.Dispatcher) AdminClient {
-	return thrift.NewAdminClient(adminserviceclient.New(d.ClientConfig(testOutboundName(service.Frontend))))
-}
-
-// NewFrontendClient creates a client to cadence frontend client
-func NewFrontendClient(d *yarpc.Dispatcher) FrontendClient {
-	return thrift.NewFrontendClient(workflowserviceclient.New(d.ClientConfig(testOutboundName(service.Frontend))))
-}
-
-// NewHistoryClient creates a client to cadence history service client
-func NewHistoryClient(d *yarpc.Dispatcher) HistoryClient {
-	return thrift.NewHistoryClient(historyserviceclient.New(d.ClientConfig(testOutboundName(service.History))))
+func NewMatchingClient(c matchingserviceclient.Interface) matching.Client {
+	return matchingClient{c}
 }
