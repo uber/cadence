@@ -566,8 +566,8 @@ func TestScheduleDecisionTaskRequestConversion(t *testing.T) {
 	}
 
 	for _, original := range testCases {
-		thriftObj := FromScheduleDecisionTaskRequest(original)
-		roundTripObj := ToScheduleDecisionTaskRequest(thriftObj)
+		thriftObj := FromHistoryScheduleDecisionTaskRequest(original)
+		roundTripObj := ToHistoryScheduleDecisionTaskRequest(thriftObj)
 		assert.Equal(t, original, roundTripObj)
 	}
 }
@@ -652,8 +652,8 @@ func TestSyncActivityRequestConversion(t *testing.T) {
 	}
 
 	for _, original := range testCases {
-		thriftObj := FromSyncActivityRequest(original)
-		roundTripObj := ToSyncActivityRequest(thriftObj)
+		thriftObj := FromHistorySyncActivityRequest(original)
+		roundTripObj := ToHistorySyncActivityRequest(thriftObj)
 		assert.Equal(t, original, roundTripObj)
 	}
 }
@@ -670,8 +670,8 @@ func TestSyncShardStatusRequestConversion(t *testing.T) {
 	}
 
 	for _, original := range testCases {
-		thriftObj := FromSyncShardStatusRequest(original)
-		roundTripObj := ToSyncShardStatusRequest(thriftObj)
+		thriftObj := FromHistorySyncShardStatusRequest(original)
+		roundTripObj := ToHistorySyncShardStatusRequest(thriftObj)
 		assert.Equal(t, original, roundTripObj)
 	}
 }

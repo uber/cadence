@@ -167,8 +167,8 @@ func ToFailoverMarkers(t *replicator.FailoverMarkers) *types.FailoverMarkers {
 	}
 }
 
-// FromGetDLQReplicationMessagesRequest converts internal GetDLQReplicationMessagesRequest type to thrift
-func FromGetDLQReplicationMessagesRequest(t *types.GetDLQReplicationMessagesRequest) *replicator.GetDLQReplicationMessagesRequest {
+// FromAdminGetDLQReplicationMessagesRequest converts internal GetDLQReplicationMessagesRequest type to thrift
+func FromAdminGetDLQReplicationMessagesRequest(t *types.GetDLQReplicationMessagesRequest) *replicator.GetDLQReplicationMessagesRequest {
 	if t == nil {
 		return nil
 	}
@@ -177,8 +177,8 @@ func FromGetDLQReplicationMessagesRequest(t *types.GetDLQReplicationMessagesRequ
 	}
 }
 
-// ToGetDLQReplicationMessagesRequest converts thrift GetDLQReplicationMessagesRequest type to internal
-func ToGetDLQReplicationMessagesRequest(t *replicator.GetDLQReplicationMessagesRequest) *types.GetDLQReplicationMessagesRequest {
+// ToAdminGetDLQReplicationMessagesRequest converts thrift GetDLQReplicationMessagesRequest type to internal
+func ToAdminGetDLQReplicationMessagesRequest(t *replicator.GetDLQReplicationMessagesRequest) *types.GetDLQReplicationMessagesRequest {
 	if t == nil {
 		return nil
 	}
@@ -187,8 +187,8 @@ func ToGetDLQReplicationMessagesRequest(t *replicator.GetDLQReplicationMessagesR
 	}
 }
 
-// FromGetDLQReplicationMessagesResponse converts internal GetDLQReplicationMessagesResponse type to thrift
-func FromGetDLQReplicationMessagesResponse(t *types.GetDLQReplicationMessagesResponse) *replicator.GetDLQReplicationMessagesResponse {
+// FromAdminGetDLQReplicationMessagesResponse converts internal GetDLQReplicationMessagesResponse type to thrift
+func FromAdminGetDLQReplicationMessagesResponse(t *types.GetDLQReplicationMessagesResponse) *replicator.GetDLQReplicationMessagesResponse {
 	if t == nil {
 		return nil
 	}
@@ -197,8 +197,8 @@ func FromGetDLQReplicationMessagesResponse(t *types.GetDLQReplicationMessagesRes
 	}
 }
 
-// ToGetDLQReplicationMessagesResponse converts thrift GetDLQReplicationMessagesResponse type to internal
-func ToGetDLQReplicationMessagesResponse(t *replicator.GetDLQReplicationMessagesResponse) *types.GetDLQReplicationMessagesResponse {
+// ToAdminGetDLQReplicationMessagesResponse converts thrift GetDLQReplicationMessagesResponse type to internal
+func ToAdminGetDLQReplicationMessagesResponse(t *replicator.GetDLQReplicationMessagesResponse) *types.GetDLQReplicationMessagesResponse {
 	if t == nil {
 		return nil
 	}
@@ -207,8 +207,8 @@ func ToGetDLQReplicationMessagesResponse(t *replicator.GetDLQReplicationMessages
 	}
 }
 
-// FromGetDomainReplicationMessagesRequest converts internal GetDomainReplicationMessagesRequest type to thrift
-func FromGetDomainReplicationMessagesRequest(t *types.GetDomainReplicationMessagesRequest) *replicator.GetDomainReplicationMessagesRequest {
+// FromAdminGetDomainReplicationMessagesRequest converts internal GetDomainReplicationMessagesRequest type to thrift
+func FromAdminGetDomainReplicationMessagesRequest(t *types.GetDomainReplicationMessagesRequest) *replicator.GetDomainReplicationMessagesRequest {
 	if t == nil {
 		return nil
 	}
@@ -219,8 +219,8 @@ func FromGetDomainReplicationMessagesRequest(t *types.GetDomainReplicationMessag
 	}
 }
 
-// ToGetDomainReplicationMessagesRequest converts thrift GetDomainReplicationMessagesRequest type to internal
-func ToGetDomainReplicationMessagesRequest(t *replicator.GetDomainReplicationMessagesRequest) *types.GetDomainReplicationMessagesRequest {
+// ToAdminGetDomainReplicationMessagesRequest converts thrift GetDomainReplicationMessagesRequest type to internal
+func ToAdminGetDomainReplicationMessagesRequest(t *replicator.GetDomainReplicationMessagesRequest) *types.GetDomainReplicationMessagesRequest {
 	if t == nil {
 		return nil
 	}
@@ -231,8 +231,8 @@ func ToGetDomainReplicationMessagesRequest(t *replicator.GetDomainReplicationMes
 	}
 }
 
-// FromGetDomainReplicationMessagesResponse converts internal GetDomainReplicationMessagesResponse type to thrift
-func FromGetDomainReplicationMessagesResponse(t *types.GetDomainReplicationMessagesResponse) *replicator.GetDomainReplicationMessagesResponse {
+// FromAdminGetDomainReplicationMessagesResponse converts internal GetDomainReplicationMessagesResponse type to thrift
+func FromAdminGetDomainReplicationMessagesResponse(t *types.GetDomainReplicationMessagesResponse) *replicator.GetDomainReplicationMessagesResponse {
 	if t == nil {
 		return nil
 	}
@@ -241,8 +241,8 @@ func FromGetDomainReplicationMessagesResponse(t *types.GetDomainReplicationMessa
 	}
 }
 
-// ToGetDomainReplicationMessagesResponse converts thrift GetDomainReplicationMessagesResponse type to internal
-func ToGetDomainReplicationMessagesResponse(t *replicator.GetDomainReplicationMessagesResponse) *types.GetDomainReplicationMessagesResponse {
+// ToAdminGetDomainReplicationMessagesResponse converts thrift GetDomainReplicationMessagesResponse type to internal
+func ToAdminGetDomainReplicationMessagesResponse(t *replicator.GetDomainReplicationMessagesResponse) *types.GetDomainReplicationMessagesResponse {
 	if t == nil {
 		return nil
 	}
@@ -251,8 +251,8 @@ func ToGetDomainReplicationMessagesResponse(t *replicator.GetDomainReplicationMe
 	}
 }
 
-// FromGetReplicationMessagesRequest converts internal GetReplicationMessagesRequest type to thrift
-func FromGetReplicationMessagesRequest(t *types.GetReplicationMessagesRequest) *replicator.GetReplicationMessagesRequest {
+// FromAdminGetReplicationMessagesRequest converts internal GetReplicationMessagesRequest type to thrift
+func FromAdminGetReplicationMessagesRequest(t *types.GetReplicationMessagesRequest) *replicator.GetReplicationMessagesRequest {
 	if t == nil {
 		return nil
 	}
@@ -262,8 +262,8 @@ func FromGetReplicationMessagesRequest(t *types.GetReplicationMessagesRequest) *
 	}
 }
 
-// ToGetReplicationMessagesRequest converts thrift GetReplicationMessagesRequest type to internal
-func ToGetReplicationMessagesRequest(t *replicator.GetReplicationMessagesRequest) *types.GetReplicationMessagesRequest {
+// ToAdminGetReplicationMessagesRequest converts thrift GetReplicationMessagesRequest type to internal
+func ToAdminGetReplicationMessagesRequest(t *replicator.GetReplicationMessagesRequest) *types.GetReplicationMessagesRequest {
 	if t == nil {
 		return nil
 	}
@@ -273,8 +273,8 @@ func ToGetReplicationMessagesRequest(t *replicator.GetReplicationMessagesRequest
 	}
 }
 
-// FromGetReplicationMessagesResponse converts internal GetReplicationMessagesResponse type to thrift
-func FromGetReplicationMessagesResponse(t *types.GetReplicationMessagesResponse) *replicator.GetReplicationMessagesResponse {
+// FromAdminGetReplicationMessagesResponse converts internal GetReplicationMessagesResponse type to thrift
+func FromAdminGetReplicationMessagesResponse(t *types.GetReplicationMessagesResponse) *replicator.GetReplicationMessagesResponse {
 	if t == nil {
 		return nil
 	}
@@ -283,8 +283,8 @@ func FromGetReplicationMessagesResponse(t *types.GetReplicationMessagesResponse)
 	}
 }
 
-// ToGetReplicationMessagesResponse converts thrift GetReplicationMessagesResponse type to internal
-func ToGetReplicationMessagesResponse(t *replicator.GetReplicationMessagesResponse) *types.GetReplicationMessagesResponse {
+// ToAdminGetReplicationMessagesResponse converts thrift GetReplicationMessagesResponse type to internal
+func ToAdminGetReplicationMessagesResponse(t *replicator.GetReplicationMessagesResponse) *types.GetReplicationMessagesResponse {
 	if t == nil {
 		return nil
 	}
@@ -323,8 +323,8 @@ func ToHistoryTaskV2Attributes(t *replicator.HistoryTaskV2Attributes) *types.His
 	}
 }
 
-// FromMergeDLQMessagesRequest converts internal MergeDLQMessagesRequest type to thrift
-func FromMergeDLQMessagesRequest(t *types.MergeDLQMessagesRequest) *replicator.MergeDLQMessagesRequest {
+// FromAdminMergeDLQMessagesRequest converts internal MergeDLQMessagesRequest type to thrift
+func FromAdminMergeDLQMessagesRequest(t *types.MergeDLQMessagesRequest) *replicator.MergeDLQMessagesRequest {
 	if t == nil {
 		return nil
 	}
@@ -338,8 +338,8 @@ func FromMergeDLQMessagesRequest(t *types.MergeDLQMessagesRequest) *replicator.M
 	}
 }
 
-// ToMergeDLQMessagesRequest converts thrift MergeDLQMessagesRequest type to internal
-func ToMergeDLQMessagesRequest(t *replicator.MergeDLQMessagesRequest) *types.MergeDLQMessagesRequest {
+// ToAdminMergeDLQMessagesRequest converts thrift MergeDLQMessagesRequest type to internal
+func ToAdminMergeDLQMessagesRequest(t *replicator.MergeDLQMessagesRequest) *types.MergeDLQMessagesRequest {
 	if t == nil {
 		return nil
 	}
@@ -353,8 +353,8 @@ func ToMergeDLQMessagesRequest(t *replicator.MergeDLQMessagesRequest) *types.Mer
 	}
 }
 
-// FromMergeDLQMessagesResponse converts internal MergeDLQMessagesResponse type to thrift
-func FromMergeDLQMessagesResponse(t *types.MergeDLQMessagesResponse) *replicator.MergeDLQMessagesResponse {
+// FromAdminMergeDLQMessagesResponse converts internal MergeDLQMessagesResponse type to thrift
+func FromAdminMergeDLQMessagesResponse(t *types.MergeDLQMessagesResponse) *replicator.MergeDLQMessagesResponse {
 	if t == nil {
 		return nil
 	}
@@ -363,8 +363,8 @@ func FromMergeDLQMessagesResponse(t *types.MergeDLQMessagesResponse) *replicator
 	}
 }
 
-// ToMergeDLQMessagesResponse converts thrift MergeDLQMessagesResponse type to internal
-func ToMergeDLQMessagesResponse(t *replicator.MergeDLQMessagesResponse) *types.MergeDLQMessagesResponse {
+// ToAdminMergeDLQMessagesResponse converts thrift MergeDLQMessagesResponse type to internal
+func ToAdminMergeDLQMessagesResponse(t *replicator.MergeDLQMessagesResponse) *types.MergeDLQMessagesResponse {
 	if t == nil {
 		return nil
 	}
@@ -373,8 +373,8 @@ func ToMergeDLQMessagesResponse(t *replicator.MergeDLQMessagesResponse) *types.M
 	}
 }
 
-// FromPurgeDLQMessagesRequest converts internal PurgeDLQMessagesRequest type to thrift
-func FromPurgeDLQMessagesRequest(t *types.PurgeDLQMessagesRequest) *replicator.PurgeDLQMessagesRequest {
+// FromAdminPurgeDLQMessagesRequest converts internal PurgeDLQMessagesRequest type to thrift
+func FromAdminPurgeDLQMessagesRequest(t *types.PurgeDLQMessagesRequest) *replicator.PurgeDLQMessagesRequest {
 	if t == nil {
 		return nil
 	}
@@ -386,8 +386,8 @@ func FromPurgeDLQMessagesRequest(t *types.PurgeDLQMessagesRequest) *replicator.P
 	}
 }
 
-// ToPurgeDLQMessagesRequest converts thrift PurgeDLQMessagesRequest type to internal
-func ToPurgeDLQMessagesRequest(t *replicator.PurgeDLQMessagesRequest) *types.PurgeDLQMessagesRequest {
+// ToAdminPurgeDLQMessagesRequest converts thrift PurgeDLQMessagesRequest type to internal
+func ToAdminPurgeDLQMessagesRequest(t *replicator.PurgeDLQMessagesRequest) *types.PurgeDLQMessagesRequest {
 	if t == nil {
 		return nil
 	}
@@ -399,8 +399,8 @@ func ToPurgeDLQMessagesRequest(t *replicator.PurgeDLQMessagesRequest) *types.Pur
 	}
 }
 
-// FromReadDLQMessagesRequest converts internal ReadDLQMessagesRequest type to thrift
-func FromReadDLQMessagesRequest(t *types.ReadDLQMessagesRequest) *replicator.ReadDLQMessagesRequest {
+// FromAdminReadDLQMessagesRequest converts internal ReadDLQMessagesRequest type to thrift
+func FromAdminReadDLQMessagesRequest(t *types.ReadDLQMessagesRequest) *replicator.ReadDLQMessagesRequest {
 	if t == nil {
 		return nil
 	}
@@ -414,8 +414,8 @@ func FromReadDLQMessagesRequest(t *types.ReadDLQMessagesRequest) *replicator.Rea
 	}
 }
 
-// ToReadDLQMessagesRequest converts thrift ReadDLQMessagesRequest type to internal
-func ToReadDLQMessagesRequest(t *replicator.ReadDLQMessagesRequest) *types.ReadDLQMessagesRequest {
+// ToAdminReadDLQMessagesRequest converts thrift ReadDLQMessagesRequest type to internal
+func ToAdminReadDLQMessagesRequest(t *replicator.ReadDLQMessagesRequest) *types.ReadDLQMessagesRequest {
 	if t == nil {
 		return nil
 	}
@@ -429,8 +429,8 @@ func ToReadDLQMessagesRequest(t *replicator.ReadDLQMessagesRequest) *types.ReadD
 	}
 }
 
-// FromReadDLQMessagesResponse converts internal ReadDLQMessagesResponse type to thrift
-func FromReadDLQMessagesResponse(t *types.ReadDLQMessagesResponse) *replicator.ReadDLQMessagesResponse {
+// FromAdminReadDLQMessagesResponse converts internal ReadDLQMessagesResponse type to thrift
+func FromAdminReadDLQMessagesResponse(t *types.ReadDLQMessagesResponse) *replicator.ReadDLQMessagesResponse {
 	if t == nil {
 		return nil
 	}
@@ -442,8 +442,8 @@ func FromReadDLQMessagesResponse(t *types.ReadDLQMessagesResponse) *replicator.R
 	}
 }
 
-// ToReadDLQMessagesResponse converts thrift ReadDLQMessagesResponse type to internal
-func ToReadDLQMessagesResponse(t *replicator.ReadDLQMessagesResponse) *types.ReadDLQMessagesResponse {
+// ToAdminReadDLQMessagesResponse converts thrift ReadDLQMessagesResponse type to internal
+func ToAdminReadDLQMessagesResponse(t *replicator.ReadDLQMessagesResponse) *types.ReadDLQMessagesResponse {
 	if t == nil {
 		return nil
 	}

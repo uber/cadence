@@ -88,7 +88,7 @@ func (t ThriftHandler) DescribeWorkflowExecution(ctx context.Context, request *s
 // GetClusterInfo forwards request to the underlying handler
 func (t ThriftHandler) GetClusterInfo(ctx context.Context) (*shared.ClusterInfo, error) {
 	response, err := t.h.GetClusterInfo(ctx)
-	return thrift.FromClusterInfo(response), thrift.FromError(err)
+	return thrift.FromGetClusterInfoResponse(response), thrift.FromError(err)
 }
 
 // GetSearchAttributes forwards request to the underlying handler

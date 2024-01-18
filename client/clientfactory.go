@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/client/wrappers/errorinjectors"
 	"github.com/uber/cadence/client/wrappers/grpc"
 	"github.com/uber/cadence/client/wrappers/metered"
+	"github.com/uber/cadence/client/wrappers/thrift"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
@@ -111,7 +112,7 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 		rawClient = grpc.NewHistoryClient(historyv1.NewHistoryAPIYARPCClient(outboundConfig))
 		namedPort = membership.PortGRPC
 	} else {
-		rawClient = history.NewThriftClient(historyserviceclient.New(outboundConfig))
+		rawClient = thrift.NewHistoryClient(historyserviceclient.New(outboundConfig))
 	}
 
 	peerResolver := history.NewPeerResolver(cf.numberOfHistoryShards, cf.resolver, namedPort)
@@ -145,7 +146,7 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 		rawClient = grpc.NewMatchingClient(matchingv1.NewMatchingAPIYARPCClient(outboundConfig))
 		namedPort = membership.PortGRPC
 	} else {
-		rawClient = matching.NewThriftClient(matchingserviceclient.New(outboundConfig))
+		rawClient = thrift.NewMatchingClient(matchingserviceclient.New(outboundConfig))
 	}
 
 	peerResolver := matching.NewPeerResolver(cf.resolver, namedPort)
@@ -176,7 +177,7 @@ func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndConfig(
 	if rpc.IsGRPCOutbound(config) {
 		client = grpc.NewAdminClient(adminv1.NewAdminAPIYARPCClient(config))
 	} else {
-		client = admin.NewThriftClient(adminserviceclient.New(config))
+		client = thrift.NewAdminClient(adminserviceclient.New(config))
 	}
 
 	client = admin.NewClient(timeout, largeTimeout, client)
@@ -203,7 +204,7 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndConfig(
 			apiv1.NewVisibilityAPIYARPCClient(config),
 		)
 	} else {
-		client = frontend.NewThriftClient(workflowserviceclient.New(config))
+		client = thrift.NewFrontendClient(workflowserviceclient.New(config))
 	}
 
 	client = frontend.NewClient(timeout, longPollTimeout, client)

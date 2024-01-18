@@ -56,19 +56,19 @@ func (t ThriftHandler) Health(ctx context.Context) (*health.HealthStatus, error)
 
 // AddActivityTask forwards request to the underlying handler
 func (t ThriftHandler) AddActivityTask(ctx context.Context, request *m.AddActivityTaskRequest) error {
-	err := t.h.AddActivityTask(ctx, thrift.ToAddActivityTaskRequest(request))
+	err := t.h.AddActivityTask(ctx, thrift.ToMatchingAddActivityTaskRequest(request))
 	return thrift.FromError(err)
 }
 
 // AddDecisionTask forwards request to the underlying handler
 func (t ThriftHandler) AddDecisionTask(ctx context.Context, request *m.AddDecisionTaskRequest) error {
-	err := t.h.AddDecisionTask(ctx, thrift.ToAddDecisionTaskRequest(request))
+	err := t.h.AddDecisionTask(ctx, thrift.ToMatchingAddDecisionTaskRequest(request))
 	return thrift.FromError(err)
 }
 
 // CancelOutstandingPoll forwards request to the underlying handler
 func (t ThriftHandler) CancelOutstandingPoll(ctx context.Context, request *m.CancelOutstandingPollRequest) error {
-	err := t.h.CancelOutstandingPoll(ctx, thrift.ToCancelOutstandingPollRequest(request))
+	err := t.h.CancelOutstandingPoll(ctx, thrift.ToMatchingCancelOutstandingPollRequest(request))
 	return thrift.FromError(err)
 }
 

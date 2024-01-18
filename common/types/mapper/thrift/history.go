@@ -25,6 +25,71 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
+var (
+	FromHistoryDescribeHistoryHostRequest                = FromAdminDescribeHistoryHostRequest
+	ToHistoryDescribeHistoryHostRequest                  = ToAdminDescribeHistoryHostRequest
+	FromHistoryDescribeHistoryHostResponse               = FromAdminDescribeHistoryHostResponse
+	ToHistoryDescribeHistoryHostResponse                 = ToAdminDescribeHistoryHostResponse
+	FromHistoryDescribeMutableStateRequest               = FromDescribeMutableStateRequest
+	ToHistoryDescribeMutableStateResponse                = ToDescribeMutableStateResponse
+	FromHistoryCloseShardRequest                         = FromAdminCloseShardRequest
+	ToHistoryCloseShardRequest                           = ToAdminCloseShardRequest
+	FromHistoryDescribeQueueRequest                      = FromAdminDescribeQueueRequest
+	ToHistoryDescribeQueueRequest                        = ToAdminDescribeQueueRequest
+	FromHistoryDescribeQueueResponse                     = FromAdminDescribeQueueResponse
+	ToHistoryDescribeQueueResponse                       = ToAdminDescribeQueueResponse
+	ToHistoryDescribeWorkflowExecutionResponse           = ToDescribeWorkflowExecutionResponse
+	FromHistoryGetCrossClusterTasksRequest               = FromAdminGetCrossClusterTasksRequest
+	ToHistoryGetCrossClusterTasksRequest                 = ToAdminGetCrossClusterTasksRequest
+	FromHistoryGetCrossClusterTasksResponse              = FromAdminGetCrossClusterTasksResponse
+	ToHistoryGetCrossClusterTasksResponse                = ToAdminGetCrossClusterTasksResponse
+	FromHistoryGetDLQReplicationMessagesRequest          = FromAdminGetDLQReplicationMessagesRequest
+	ToHistoryGetDLQReplicationMessagesRequest            = ToAdminGetDLQReplicationMessagesRequest
+	FromHistoryGetDLQReplicationMessagesResponse         = FromAdminGetDLQReplicationMessagesResponse
+	ToHistoryGetDLQReplicationMessagesResponse           = ToAdminGetDLQReplicationMessagesResponse
+	FromHistoryGetFailoverInfoRequest                    = FromGetFailoverInfoRequest
+	ToHistoryGetFailoverInfoResponse                     = ToGetFailoverInfoResponse
+	FromHistoryGetMutableStateRequest                    = FromGetMutableStateRequest
+	ToHistoryGetMutableStateResponse                     = ToGetMutableStateResponse
+	FromHistoryGetReplicationMessagesRequest             = FromAdminGetReplicationMessagesRequest
+	ToHistoryGetReplicationMessagesRequest               = ToAdminGetReplicationMessagesRequest
+	FromHistoryGetReplicationMessagesResponse            = FromAdminGetReplicationMessagesResponse
+	ToHistoryGetReplicationMessagesResponse              = ToAdminGetReplicationMessagesResponse
+	FromHistoryMergeDLQMessagesRequest                   = FromAdminMergeDLQMessagesRequest
+	ToHistoryMergeDLQMessagesRequest                     = ToAdminMergeDLQMessagesRequest
+	FromHistoryMergeDLQMessagesResponse                  = FromAdminMergeDLQMessagesResponse
+	ToHistoryMergeDLQMessagesResponse                    = ToAdminMergeDLQMessagesResponse
+	FromHistoryNotifyFailoverMarkersRequest              = FromNotifyFailoverMarkersRequest
+	FromHistoryPollMutableStateRequest                   = FromPollMutableStateRequest
+	ToHistoryPollMutableStateResponse                    = ToPollMutableStateResponse
+	FromHistoryPurgeDLQMessagesRequest                   = FromAdminPurgeDLQMessagesRequest
+	ToHistoryPurgeDLQMessagesRequest                     = ToAdminPurgeDLQMessagesRequest
+	FromHistoryReadDLQMessagesRequest                    = FromAdminReadDLQMessagesRequest
+	ToHistoryReadDLQMessagesRequest                      = ToAdminReadDLQMessagesRequest
+	FromHistoryReadDLQMessagesResponse                   = FromAdminReadDLQMessagesResponse
+	ToHistoryReadDLQMessagesResponse                     = ToAdminReadDLQMessagesResponse
+	ToHistoryRecordActivityTaskHeartbeatResponse         = ToRecordActivityTaskHeartbeatResponse
+	FromHistoryRecordActivityTaskStartedRequest          = FromRecordActivityTaskStartedRequest
+	ToHistoryRecordActivityTaskStartedResponse           = ToRecordActivityTaskStartedResponse
+	FromHistoryRecordChildExecutionCompletedRequest      = FromRecordChildExecutionCompletedRequest
+	FromHistoryRecordDecisionTaskStartedRequest          = FromRecordDecisionTaskStartedRequest
+	ToHistoryRecordDecisionTaskStartedResponse           = ToRecordDecisionTaskStartedResponse
+	FromHistoryRemoveSignalMutableStateRequest           = FromRemoveSignalMutableStateRequest
+	FromHistoryRemoveTaskRequest                         = FromAdminRemoveTaskRequest
+	ToHistoryRemoveTaskRequest                           = ToAdminRemoveTaskRequest
+	FromHistoryReplicateEventsV2Request                  = FromReplicateEventsV2Request
+	ToHistoryReplicateEventsV2Request                    = ToReplicateEventsV2Request
+	FromHistoryResetQueueRequest                         = FromAdminResetQueueRequest
+	ToHistoryResetQueueRequest                           = ToAdminResetQueueRequest
+	ToHistoryResetWorkflowExecutionResponse              = ToResetWorkflowExecutionResponse
+	FromHistoryRespondCrossClusterTasksCompletedRequest  = FromAdminRespondCrossClusterTasksCompletedRequest
+	ToHistoryRespondCrossClusterTasksCompletedRequest    = ToAdminRespondCrossClusterTasksCompletedRequest
+	FromHistoryRespondCrossClusterTasksCompletedResponse = FromAdminRespondCrossClusterTasksCompletedResponse
+	ToHistoryRespondCrossClusterTasksCompletedResponse   = ToAdminRespondCrossClusterTasksCompletedResponse
+	ToHistorySignalWithStartWorkflowExecutionResponse    = ToStartWorkflowExecutionResponse
+	ToHistoryStartWorkflowExecutionResponse              = ToStartWorkflowExecutionResponse
+)
+
 // FromDescribeMutableStateRequest converts internal DescribeMutableStateRequest type to thrift
 func FromDescribeMutableStateRequest(t *types.DescribeMutableStateRequest) *history.DescribeMutableStateRequest {
 	if t == nil {
@@ -452,7 +517,7 @@ func FromHistoryReapplyEventsRequest(t *types.HistoryReapplyEventsRequest) *hist
 	}
 	return &history.ReapplyEventsRequest{
 		DomainUUID: &t.DomainUUID,
-		Request:    FromReapplyEventsRequest(t.Request),
+		Request:    FromAdminReapplyEventsRequest(t.Request),
 	}
 }
 
@@ -463,7 +528,7 @@ func ToHistoryReapplyEventsRequest(t *history.ReapplyEventsRequest) *types.Histo
 	}
 	return &types.HistoryReapplyEventsRequest{
 		DomainUUID: t.GetDomainUUID(),
-		Request:    ToReapplyEventsRequest(t.Request),
+		Request:    ToAdminReapplyEventsRequest(t.Request),
 	}
 }
 
@@ -664,7 +729,7 @@ func FromHistoryRefreshWorkflowTasksRequest(t *types.HistoryRefreshWorkflowTasks
 	}
 	return &history.RefreshWorkflowTasksRequest{
 		DomainUIID: &t.DomainUIID,
-		Request:    FromRefreshWorkflowTasksRequest(t.Request),
+		Request:    FromAdminRefreshWorkflowTasksRequest(t.Request),
 	}
 }
 
@@ -675,7 +740,7 @@ func ToHistoryRefreshWorkflowTasksRequest(t *history.RefreshWorkflowTasksRequest
 	}
 	return &types.HistoryRefreshWorkflowTasksRequest{
 		DomainUIID: t.GetDomainUIID(),
-		Request:    ToRefreshWorkflowTasksRequest(t.Request),
+		Request:    ToAdminRefreshWorkflowTasksRequest(t.Request),
 	}
 }
 
@@ -951,8 +1016,8 @@ func ToHistoryRespondDecisionTaskFailedRequest(t *history.RespondDecisionTaskFai
 	}
 }
 
-// FromScheduleDecisionTaskRequest converts internal ScheduleDecisionTaskRequest type to thrift
-func FromScheduleDecisionTaskRequest(t *types.ScheduleDecisionTaskRequest) *history.ScheduleDecisionTaskRequest {
+// FromHistoryScheduleDecisionTaskRequest converts internal ScheduleDecisionTaskRequest type to thrift
+func FromHistoryScheduleDecisionTaskRequest(t *types.ScheduleDecisionTaskRequest) *history.ScheduleDecisionTaskRequest {
 	if t == nil {
 		return nil
 	}
@@ -963,8 +1028,8 @@ func FromScheduleDecisionTaskRequest(t *types.ScheduleDecisionTaskRequest) *hist
 	}
 }
 
-// ToScheduleDecisionTaskRequest converts thrift ScheduleDecisionTaskRequest type to internal
-func ToScheduleDecisionTaskRequest(t *history.ScheduleDecisionTaskRequest) *types.ScheduleDecisionTaskRequest {
+// ToHistoryScheduleDecisionTaskRequest converts thrift ScheduleDecisionTaskRequest type to internal
+func ToHistoryScheduleDecisionTaskRequest(t *history.ScheduleDecisionTaskRequest) *types.ScheduleDecisionTaskRequest {
 	if t == nil {
 		return nil
 	}
@@ -1087,8 +1152,8 @@ func ToHistoryStartWorkflowExecutionRequest(t *history.StartWorkflowExecutionReq
 	}
 }
 
-// FromSyncActivityRequest converts internal SyncActivityRequest type to thrift
-func FromSyncActivityRequest(t *types.SyncActivityRequest) *history.SyncActivityRequest {
+// FromHistorySyncActivityRequest converts internal SyncActivityRequest type to thrift
+func FromHistorySyncActivityRequest(t *types.SyncActivityRequest) *history.SyncActivityRequest {
 	if t == nil {
 		return nil
 	}
@@ -1111,8 +1176,8 @@ func FromSyncActivityRequest(t *types.SyncActivityRequest) *history.SyncActivity
 	}
 }
 
-// ToSyncActivityRequest converts thrift SyncActivityRequest type to internal
-func ToSyncActivityRequest(t *history.SyncActivityRequest) *types.SyncActivityRequest {
+// ToHistorySyncActivityRequest converts thrift SyncActivityRequest type to internal
+func ToHistorySyncActivityRequest(t *history.SyncActivityRequest) *types.SyncActivityRequest {
 	if t == nil {
 		return nil
 	}
@@ -1135,8 +1200,8 @@ func ToSyncActivityRequest(t *history.SyncActivityRequest) *types.SyncActivityRe
 	}
 }
 
-// FromSyncShardStatusRequest converts internal SyncShardStatusRequest type to thrift
-func FromSyncShardStatusRequest(t *types.SyncShardStatusRequest) *history.SyncShardStatusRequest {
+// FromHistorySyncShardStatusRequest converts internal SyncShardStatusRequest type to thrift
+func FromHistorySyncShardStatusRequest(t *types.SyncShardStatusRequest) *history.SyncShardStatusRequest {
 	if t == nil {
 		return nil
 	}
@@ -1147,8 +1212,8 @@ func FromSyncShardStatusRequest(t *types.SyncShardStatusRequest) *history.SyncSh
 	}
 }
 
-// ToSyncShardStatusRequest converts thrift SyncShardStatusRequest type to internal
-func ToSyncShardStatusRequest(t *history.SyncShardStatusRequest) *types.SyncShardStatusRequest {
+// ToHistorySyncShardStatusRequest converts thrift SyncShardStatusRequest type to internal
+func ToHistorySyncShardStatusRequest(t *history.SyncShardStatusRequest) *types.SyncShardStatusRequest {
 	if t == nil {
 		return nil
 	}
