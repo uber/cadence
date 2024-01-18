@@ -41,17 +41,24 @@ type Checker interface {
 	WorkflowCheckforValidation(ctx context.Context, workflowID string, domainID string, domainName string, runID string) error
 }
 
+// Define the staleChecker interface with the methodsgit s.
+type staleChecker interface {
+	CheckAge(response *persistence.GetWorkflowExecutionResponse) (bool, error)
+}
+
 type checkerImpl struct {
 	logger        log.Logger
 	metricsClient metrics.Client
 	dc            cache.DomainCache
 	pr            persistence.Retryer
-	staleCheck    *invariant.StaleWorkflowCheck
+	staleCheck    staleChecker
 }
 
 func NewWfChecker(logger log.Logger, metrics metrics.Client, domainCache cache.DomainCache, pr persistence.Retryer) Checker {
 	zapLogger, _ := zap.NewProduction()
-	staleCheck := invariant.NewStaleWorkflow(pr, domainCache, zapLogger).(*invariant.StaleWorkflowCheck) // Type assert to *StaleWorkflowCheck
+	staleCheckInstance := invariant.NewStaleWorkflow(pr, domainCache, zapLogger)
+
+	staleCheck, _ := staleCheckInstance.(staleChecker)
 	return &checkerImpl{
 		logger:        logger,
 		metricsClient: metrics,

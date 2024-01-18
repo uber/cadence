@@ -24,7 +24,7 @@ package taskvalidator
 
 import (
 	"context"
-	// ... other imports ...
+	"errors"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -37,14 +37,27 @@ import (
 	"github.com/uber/cadence/service/history/constants"
 )
 
+// MockStaleChecker is a manual mock for staleChecker
+type MockStaleChecker struct {
+	CheckAgeFunc func(response *persistence.GetWorkflowExecutionResponse) (bool, error)
+}
+
+func (m *MockStaleChecker) CheckAge(response *persistence.GetWorkflowExecutionResponse) (bool, error) {
+	return m.CheckAgeFunc(response)
+}
+
 func TestWorkflowCheckforValidation(t *testing.T) {
 	testCases := []struct {
-		name     string
-		domainID string
-		runID    string
+		name          string
+		workflowID    string
+		domainID      string
+		domainName    string
+		runID         string
+		isStale       bool
+		simulateError bool
 	}{
-		{"DomainFetchSuccess", "", "run-id-success"},
-		{"DomainFetchFailure", "", "run-id-failure"},
+		{"NonStaleWorkflow", "workflow-1", "domain-1", "domain-name-1", "run-1", false, false},
+		{"ErrorInGetWorkflowExecution", "workflow-3", "domain-3", "domain-name-3", "run-3", false, true},
 	}
 
 	for _, tc := range testCases {
@@ -52,31 +65,39 @@ func TestWorkflowCheckforValidation(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 
+			mockLogger := log.NewNoop()
+			mockMetricsClient := metrics.NewNoopMetricsClient()
 			mockDomainCache := cache.NewMockDomainCache(mockCtrl)
 			mockPersistenceRetryer := persistence.NewMockRetryer(mockCtrl)
-			logger := log.NewNoop()
-			metricsClient := metrics.NewNoopMetricsClient()
+			mockStaleChecker := &MockStaleChecker{
+				CheckAgeFunc: func(response *persistence.GetWorkflowExecutionResponse) (bool, error) {
+					return tc.isStale, nil
+				},
+			}
 
-			checker := NewWfChecker(logger, metricsClient, mockDomainCache, mockPersistenceRetryer)
-
-			// Set up the mock behavior for GetDomainByID
+			checker := NewWfChecker(mockLogger, mockMetricsClient, mockDomainCache, mockPersistenceRetryer)
+			checker.(*checkerImpl).staleCheck = mockStaleChecker
 			mockDomainCache.EXPECT().
 				GetDomainByID(tc.domainID).
-				Return(constants.TestGlobalDomainEntry, nil).
-				AnyTimes()
-
-			// Set up the expected behavior for GetWorkflowExecution
+				Return(constants.TestGlobalDomainEntry, nil).AnyTimes()
+			//TODO: Find a way to mock DeleteExecution to cover the staleworkflow scenario as well.
 			mockPersistenceRetryer.EXPECT().
 				GetWorkflowExecution(gomock.Any(), gomock.Any()).
-				Return(&persistence.GetWorkflowExecutionResponse{
-					State: &persistence.WorkflowMutableState{
-						ExecutionInfo: &persistence.WorkflowExecutionInfo{},
-					},
-				}, nil).
-				AnyTimes()
+				DoAndReturn(func(ctx context.Context, request *persistence.GetWorkflowExecutionRequest) (*persistence.GetWorkflowExecutionResponse, error) {
+					if tc.simulateError {
+						return nil, errors.New("database error")
+					}
+					return &persistence.GetWorkflowExecutionResponse{}, nil
+				}).AnyTimes()
 
-			err := checker.WorkflowCheckforValidation(context.Background(), "workflowID", tc.domainID, "domainName", tc.runID)
-			assert.NoError(t, err)
+			ctx := context.Background()
+			err := checker.WorkflowCheckforValidation(ctx, tc.workflowID, tc.domainID, tc.domainName, tc.runID)
+
+			if tc.simulateError {
+				assert.Error(t, err, "Expected error when GetWorkflowExecution fails")
+			} else {
+				assert.NoError(t, err, "Expected no error for valid workflow execution")
+			}
 		})
 	}
 }

@@ -38,10 +38,10 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-func setup(t *testing.T, retentionDays int) (pr *persistence.MockRetryer, impl *StaleWorkflowCheck) {
+func setup(t *testing.T, retentionDays int) (pr *persistence.MockRetryer, impl *staleWorkflowCheck) {
 	ctrl := gomock.NewController(t)
 	m := persistence.NewMockRetryer(ctrl)
-	impl = &StaleWorkflowCheck{
+	impl = &staleWorkflowCheck{
 		pr:       m,
 		dc:       nil, // not used by these tests
 		log:      zaptest.NewLogger(t),
@@ -376,7 +376,7 @@ func withOpenHistoryFallback(start time.Time, backoff time.Duration, pr *persist
 	withOpenHistory(start, backoff, pr)
 }
 
-func withDomain(retentionDays int, check *StaleWorkflowCheck) {
+func withDomain(retentionDays int, check *staleWorkflowCheck) {
 	check.testable.(*mocked).domaininfo = mockdomaininfo{
 		retention: int32(retentionDays),
 		name:      "test-domain",
