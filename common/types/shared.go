@@ -8131,6 +8131,13 @@ type RespondCrossClusterTasksCompletedRequest struct {
 	FetchNewTasks bool                        `json:"fetchNewTasks,omitempty"`
 }
 
+func (v *RespondCrossClusterTasksCompletedRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
+	return SerializeRequest(v)
+}
+
 // GetShardID is an internal getter (TBD...)
 func (v *RespondCrossClusterTasksCompletedRequest) GetShardID() (o int32) {
 	if v != nil {

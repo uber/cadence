@@ -29,6 +29,7 @@ import (
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"
+	"github.com/uber/cadence/client/wrappers/thrift"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -49,15 +50,15 @@ type HistoryClient interface {
 
 // NewAdminClient creates a client to cadence admin client
 func NewAdminClient(d *yarpc.Dispatcher) AdminClient {
-	return admin.NewThriftClient(adminserviceclient.New(d.ClientConfig(testOutboundName(service.Frontend))))
+	return thrift.NewAdminClient(adminserviceclient.New(d.ClientConfig(testOutboundName(service.Frontend))))
 }
 
 // NewFrontendClient creates a client to cadence frontend client
 func NewFrontendClient(d *yarpc.Dispatcher) FrontendClient {
-	return frontend.NewThriftClient(workflowserviceclient.New(d.ClientConfig(testOutboundName(service.Frontend))))
+	return thrift.NewFrontendClient(workflowserviceclient.New(d.ClientConfig(testOutboundName(service.Frontend))))
 }
 
 // NewHistoryClient creates a client to cadence history service client
 func NewHistoryClient(d *yarpc.Dispatcher) HistoryClient {
-	return history.NewThriftClient(historyserviceclient.New(d.ClientConfig(testOutboundName(service.History))))
+	return thrift.NewHistoryClient(historyserviceclient.New(d.ClientConfig(testOutboundName(service.History))))
 }

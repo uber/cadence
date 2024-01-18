@@ -422,6 +422,13 @@ func FromIsolationGroupPartitionList(in []IsolationGroupPartition) IsolationGrou
 
 type GetGlobalIsolationGroupsRequest struct{}
 
+func (v *GetGlobalIsolationGroupsRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
+	return SerializeRequest(v)
+}
+
 type GetGlobalIsolationGroupsResponse struct {
 	IsolationGroups IsolationGroupConfiguration
 }
@@ -430,10 +437,24 @@ type UpdateGlobalIsolationGroupsRequest struct {
 	IsolationGroups IsolationGroupConfiguration
 }
 
+func (v *UpdateGlobalIsolationGroupsRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
+	return SerializeRequest(v)
+}
+
 type UpdateGlobalIsolationGroupsResponse struct{}
 
 type GetDomainIsolationGroupsRequest struct {
 	Domain string
+}
+
+func (v *GetDomainIsolationGroupsRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
+	return SerializeRequest(v)
 }
 
 type GetDomainIsolationGroupsResponse struct {
@@ -443,6 +464,13 @@ type GetDomainIsolationGroupsResponse struct {
 type UpdateDomainIsolationGroupsRequest struct {
 	Domain          string
 	IsolationGroups IsolationGroupConfiguration
+}
+
+func (v *UpdateDomainIsolationGroupsRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
+	return SerializeRequest(v)
 }
 
 type UpdateDomainIsolationGroupsResponse struct{}

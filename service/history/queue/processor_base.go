@@ -156,7 +156,7 @@ func (p *processorBase) updateAckLevel() (bool, task.Key, error) {
 	}
 
 	if totalPengingTasks > warnPendingTasks {
-		p.logger.Warn("Too many pending tasks.")
+		p.logger.Warn("Too many pending tasks.", tag.Number(int64(totalPengingTasks)))
 	}
 	// TODO: consider move pendingTasksTime metrics from shardInfoScope to queue processor scope
 	p.metricsClient.RecordTimer(metrics.ShardInfoScope, getPendingTasksMetricIdx(p.options.MetricScope), time.Duration(totalPengingTasks))

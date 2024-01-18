@@ -1,0 +1,52 @@
+{{$packagePath := (index .Vars "path")}}
+{{$package := (index .Vars "package")}}
+{{$prefix := (index .Vars "prefix")}}
+import (
+	"context"
+
+	"go.uber.org/yarpc"
+
+	{{$package}} "{{$packagePath}}"
+	"github.com/uber/cadence/common/types/mapper/proto"
+)
+
+{{$interfaceName := .Interface.Name}}
+{{$handlerName := (index .Vars "handler")}}
+{{ $Decorator := (printf "%s%s" $handlerName $interfaceName) }}
+{{$denylist := list "Start" "Stop" "PrepareToStop" "Health"}}
+
+type {{$Decorator}} struct {
+	h {{.Interface.Type}}
+}
+
+func New{{$Decorator}}(h {{.Interface.Type}}) {{$Decorator}} {
+	return {{$Decorator}}{h}
+}
+
+{{range $method := .Interface.Methods}}
+{{if not (has $method.Name $denylist)}}
+{{$Request := printf "%sRequest" $method.Name}}
+{{$Response := printf "%sResponse" $method.Name}}
+func (g {{$Decorator}}) {{$method.Name}}(ctx context.Context, request *{{$package}}.{{$Request}}) (*{{$package}}.{{$Response}}, error) {
+	{{- if eq (len $method.Params) 1}}
+	{{- if eq (len $method.Results) 1}}
+	err := g.h.{{$method.Call}}
+	{{- else}}
+	response, err := g.h.{{$method.Name}}(ctx)
+	{{- end}}
+	{{- else}}
+	{{- if eq (len $method.Results) 1}}
+	err := g.h.{{$method.Name}}(ctx, proto.To{{$prefix}}{{$Request}}(request))
+	{{- else}}
+	response, err := g.h.{{$method.Name}}(ctx, proto.To{{$prefix}}{{$Request}}(request))
+	{{- end}}
+	{{- end}}
+
+	{{- if eq (len $method.Results) 1}}
+	return &{{$package}}.{{$Response}}{}, proto.FromError(err)
+	{{- else}}
+	return proto.From{{$prefix}}{{$Response}}(response), proto.FromError(err)
+	{{- end}}
+}
+{{end}}
+{{end}}

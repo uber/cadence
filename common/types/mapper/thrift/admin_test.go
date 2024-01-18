@@ -77,14 +77,14 @@ func TestFromGetGlobalIsolationGroupsResponse(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			res := FromGetGlobalIsolationGroupsResponse(td.in)
+			res := FromAdminGetGlobalIsolationGroupsResponse(td.in)
 			if res != nil && res.IsolationGroups != nil {
 				sort.Slice(res.IsolationGroups.IsolationGroups, func(i int, j int) bool {
 					return *res.IsolationGroups.IsolationGroups[i].Name < *res.IsolationGroups.IsolationGroups[j].Name
 				})
 			}
 			assert.Equal(t, td.expected, res, "expected value")
-			roundTrip := ToGetGlobalIsolationGroupsResponse(res)
+			roundTrip := ToAdminGetGlobalIsolationGroupsResponse(res)
 			assert.Equal(t, td.in, roundTrip, "roundtrip value")
 		})
 	}
@@ -108,7 +108,7 @@ func TestToGetGlobalIsolationGroupsRequest(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, td.expected, ToGetGlobalIsolationGroupsRequest(td.in))
+			assert.Equal(t, td.expected, ToAdminGetGlobalIsolationGroupsRequest(td.in))
 		})
 	}
 }
@@ -160,7 +160,7 @@ func TestFromGetDomainIsolationGroupsResponse(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			res := FromGetDomainIsolationGroupsResponse(td.in)
+			res := FromAdminGetDomainIsolationGroupsResponse(td.in)
 			// map iteration is nondeterministic
 			sort.Slice(res.IsolationGroups.IsolationGroups, func(i int, j int) bool {
 				return *res.IsolationGroups.IsolationGroups[i].Name > *res.IsolationGroups.IsolationGroups[j].Name
@@ -195,7 +195,7 @@ func TestToGetDomainIsolationGroupsRequest(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, td.expected, ToGetDomainIsolationGroupsRequest(td.in))
+			assert.Equal(t, td.expected, ToAdminGetDomainIsolationGroupsRequest(td.in))
 		})
 	}
 }
@@ -219,7 +219,7 @@ func TestFromUpdateGlobalIsolationGroupsResponse(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, td.expected, FromUpdateGlobalIsolationGroupsResponse(td.in))
+			assert.Equal(t, td.expected, FromAdminUpdateGlobalIsolationGroupsResponse(td.in))
 		})
 	}
 }
@@ -270,9 +270,9 @@ func TestToUpdateGlobalIsolationGroupsRequest(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			res := ToUpdateGlobalIsolationGroupsRequest(td.in)
+			res := ToAdminUpdateGlobalIsolationGroupsRequest(td.in)
 			assert.Equal(t, td.expected, res)
-			roundTrip := FromUpdateGlobalIsolationGroupsRequest(res)
+			roundTrip := FromAdminUpdateGlobalIsolationGroupsRequest(res)
 			if td.in != nil {
 				assert.Equal(t, td.in, roundTrip)
 			}
@@ -298,7 +298,7 @@ func TestFromUpdateDomainIsolationGroupsResponse(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, td.expected, FromUpdateDomainIsolationGroupsResponse(td.in))
+			assert.Equal(t, td.expected, FromAdminUpdateDomainIsolationGroupsResponse(td.in))
 		})
 	}
 }
@@ -347,7 +347,7 @@ func TestToUpdateDomainIsolationGroupsRequest(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, td.expected, ToUpdateDomainIsolationGroupsRequest(td.in))
+			assert.Equal(t, td.expected, ToAdminUpdateDomainIsolationGroupsRequest(td.in))
 		})
 	}
 }
@@ -394,7 +394,7 @@ func TestToGetGlobalIsolationGroupsResponse(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, td.expected, ToGetGlobalIsolationGroupsResponse(td.in))
+			assert.Equal(t, td.expected, ToAdminGetGlobalIsolationGroupsResponse(td.in))
 		})
 	}
 }

@@ -3634,7 +3634,7 @@ func FromRestartWorkflowExecutionRequest(t *types.RestartWorkflowExecutionReques
 	}
 }
 
-func ToRestartStartWorkflowExecutionResponse(t *apiv1.RestartWorkflowExecutionResponse) *types.RestartWorkflowExecutionResponse {
+func ToRestartWorkflowExecutionResponse(t *apiv1.RestartWorkflowExecutionResponse) *types.RestartWorkflowExecutionResponse {
 	if t == nil {
 		return nil
 	}
@@ -5919,4 +5919,18 @@ func ToListOpenWorkflowExecutionsRequest(r *apiv1.ListOpenWorkflowExecutionsRequ
 		request.TypeFilter = ToWorkflowTypeFilter(filters.TypeFilter)
 	}
 	return &request
+}
+
+func FromResetStickyTaskListResponse(t *types.ResetStickyTaskListResponse) *apiv1.ResetStickyTaskListResponse {
+	if t == nil {
+		return nil
+	}
+	return &apiv1.ResetStickyTaskListResponse{}
+}
+
+func ToResetStickyTaskListResponse(t *apiv1.ResetStickyTaskListResponse) *types.ResetStickyTaskListResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.ResetStickyTaskListResponse{}
 }
