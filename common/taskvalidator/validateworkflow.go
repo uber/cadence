@@ -24,62 +24,86 @@
 package taskvalidator
 
 import (
+	"context"
+
+	"go.uber.org/zap"
+
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/reconciliation/invariant"
+	"github.com/uber/cadence/common/types"
 )
 
-// Checker is an interface for initiating the validation process.
 type Checker interface {
-	WorkflowCheckforValidation(workflowID string, domainID string, domainName string, runID string) error
+	WorkflowCheckforValidation(workflowID string, domainID string, domainName string, runID string, ctx context.Context) error
 }
 
-// checkerImpl is the implementation of the Checker interface.
 type checkerImpl struct {
 	logger        log.Logger
 	metricsClient metrics.Client
 	dc            cache.DomainCache
+	pr            persistence.Retryer
+	staleCheck    *invariant.StaleWorkflowCheck
 }
 
-// NewWfChecker creates a new instance of Checker.
-func NewWfChecker(logger log.Logger, metrics metrics.Client, domainCache cache.DomainCache) Checker {
+func NewWfChecker(logger log.Logger, metrics metrics.Client, domainCache cache.DomainCache, pr persistence.Retryer) Checker {
+	zapLogger, _ := zap.NewProduction()
+	staleCheck := invariant.NewStaleWorkflow(pr, domainCache, zapLogger).(*invariant.StaleWorkflowCheck) // Type assert to *StaleWorkflowCheck
 	return &checkerImpl{
 		logger:        logger,
 		metricsClient: metrics,
 		dc:            domainCache,
+		pr:            pr,
+		staleCheck:    staleCheck,
 	}
 }
 
-// WorkflowCheckforValidation is a dummy implementation of workflow validation.
-func (w *checkerImpl) WorkflowCheckforValidation(workflowID string, domainID string, domainName string, runID string) error {
-	// Emitting just the log to ensure that the workflow is called for now.
-	// TODO: Add stale workflow check validation.
+func (w *checkerImpl) WorkflowCheckforValidation(workflowID string, domainID string, domainName string, runID string, ctx context.Context) error {
 	w.logger.Info("WorkflowCheckforValidation",
 		tag.WorkflowID(workflowID),
 		tag.WorkflowRunID(runID),
 		tag.WorkflowDomainID(domainID),
 		tag.WorkflowDomainName(domainName))
-	// Emit the number of workflows that have come in for the validation. Including the domain tag.
-	// The domain name will be useful when I introduce a flipr switch to turn on validation.
-	// TODO: Add this as a first validation before the stale workflow check. Add a deleteworkflow call if true.
-	err := w.deprecatedDomainCheck(domainID, domainName)
+
+	workflowResp, err := w.pr.GetWorkflowExecution(ctx, &persistence.GetWorkflowExecutionRequest{
+		DomainID: domainID,
+		Execution: types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
+		},
+	})
 	if err != nil {
+		w.logger.Error("Error getting workflow execution", tag.Error(err))
 		return err
 	}
+
+	if w.isDomainDeprecated(domainID) {
+		invariant.DeleteExecution(ctx, workflowResp.State.ExecutionInfo, w.pr, w.dc)
+		return nil
+	}
+
+	if w.staleWorkflowCheck(workflowResp) {
+		invariant.DeleteExecution(ctx, workflowResp.State.ExecutionInfo, w.pr, w.dc)
+		return nil
+	}
+
 	w.metricsClient.Scope(metrics.TaskValidatorScope, metrics.DomainTag(domainName)).IncCounter(metrics.ValidatedWorkflowCount)
 	return nil
 }
 
-func (w *checkerImpl) deprecatedDomainCheck(domainID string, domainName string) error {
+func (w *checkerImpl) isDomainDeprecated(domainID string) bool {
 	domain, err := w.dc.GetDomainByID(domainID)
 	if err != nil {
-		return err
+		w.logger.Error("Error getting domain by ID", tag.Error(err))
+		return false
 	}
-	status := domain.IsDeprecatedOrDeleted()
-	if status {
-		w.logger.Info("The workflow domain doesn't exist", tag.WorkflowDomainID(domainID),
-			tag.WorkflowDomainName(domainName))
-	}
-	return nil
+	return domain.IsDeprecatedOrDeleted()
+}
+
+func (w *checkerImpl) staleWorkflowCheck(workflowResp *persistence.GetWorkflowExecutionResponse) bool {
+	pastExpiration, _ := w.staleCheck.CheckAge(workflowResp)
+	return pastExpiration
 }

@@ -937,9 +937,9 @@ func GetActiveDomainByID(cache DomainCache, currentCluster string, domainID stri
 	return domain, nil
 }
 
-// This function checks the domain status to see if the domain has been deprecated or deleted.
+// IsDeprecatedOrDeleted This function checks the domain status to see if the domain has been deprecated or deleted.
 func (entry *DomainCacheEntry) IsDeprecatedOrDeleted() bool {
-	if entry.info.Status == common.DeprecatedDomainStatus || entry.info.Status == common.DeletedDomainStatus {
+	if entry.info.Status == persistence.DomainStatusDeprecated || entry.info.Status == persistence.DomainStatusDeleted {
 		return true
 	}
 	return false

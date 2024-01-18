@@ -77,7 +77,7 @@ var (
 func NewStaleWorkflow(
 	pr persistence.Retryer, dc cache.DomainCache, log *zap.Logger,
 ) Invariant {
-	return &staleWorkflowCheck{
+	return &StaleWorkflowCheck{
 		pr:       pr,
 		dc:       dc,
 		log:      log,
@@ -108,14 +108,14 @@ func (a actual) getDomainInfo(info *persistence.WorkflowExecutionInfo) (retentio
 	return retentionNum, domain.GetInfo().Name, nil
 }
 
-type staleWorkflowCheck struct {
+type StaleWorkflowCheck struct {
 	pr       persistence.Retryer
 	dc       cache.DomainCache
 	log      *zap.Logger
 	testable testable
 }
 
-func (c *staleWorkflowCheck) Check(
+func (c *StaleWorkflowCheck) Check(
 	ctx context.Context,
 	execution interface{},
 ) CheckResult {
@@ -123,7 +123,7 @@ func (c *staleWorkflowCheck) Check(
 	return result
 }
 
-func (c *staleWorkflowCheck) check(
+func (c *StaleWorkflowCheck) check(
 	ctx context.Context,
 	execution interface{},
 ) (deleteConcrete bool, result CheckResult) {
@@ -151,7 +151,7 @@ func (c *staleWorkflowCheck) check(
 		return false, c.failed("failed to get concrete execution record", err.Error())
 	}
 
-	pastExpiration, checkresult := c.checkAge(concreteWorkflow)
+	pastExpiration, checkresult := c.CheckAge(concreteWorkflow)
 	if pastExpiration {
 		if checkresult.CheckResultType == CheckResultTypeCorrupted {
 			return true, checkresult // delete the concrete execution, it's out of retention
@@ -163,7 +163,7 @@ func (c *staleWorkflowCheck) check(
 	// TODO: ^ similar check for current record?  Bad-current can sometimes block a different concrete.
 }
 
-func (c *staleWorkflowCheck) Fix(
+func (c *StaleWorkflowCheck) Fix(
 	ctx context.Context,
 	execution interface{},
 ) FixResult {
@@ -204,11 +204,11 @@ func (c *staleWorkflowCheck) Fix(
 	}
 }
 
-func (c *staleWorkflowCheck) Name() Name {
+func (c *StaleWorkflowCheck) Name() Name {
 	return StaleWorkflow
 }
 
-func (c *staleWorkflowCheck) checkAge(workflow *persistence.GetWorkflowExecutionResponse) (pastExpiration bool, result CheckResult) {
+func (c *StaleWorkflowCheck) CheckAge(workflow *persistence.GetWorkflowExecutionResponse) (pastExpiration bool, result CheckResult) {
 	info := workflow.State.ExecutionInfo
 	retentionNum, domainName, err := c.testable.getDomainInfo(info)
 	if err != nil {
@@ -282,7 +282,7 @@ func (c *staleWorkflowCheck) checkAge(workflow *persistence.GetWorkflowExecution
 		"info.State value: %d", info.State)
 }
 
-func (c *staleWorkflowCheck) checkRunningAge(workflow *persistence.GetWorkflowExecutionResponse, maxLifespan time.Duration, domainName string) (pastExpiration bool, expected time.Time, result CheckResult) {
+func (c *StaleWorkflowCheck) checkRunningAge(workflow *persistence.GetWorkflowExecutionResponse, maxLifespan time.Duration, domainName string) (pastExpiration bool, expected time.Time, result CheckResult) {
 	// workflow-expiration timer is calculated in GenerateWorkflowStartTasks, mimic it here for safety: https://github.com/uber/cadence/blob/master/service/history/execution/mutable_state_task_generator.go#L140-L163
 	/*
 		// running workflows might contain critical information in their first history record, so it must be retrieved.
@@ -348,7 +348,7 @@ func (c *staleWorkflowCheck) checkRunningAge(workflow *persistence.GetWorkflowEx
 //
 // these should not trigger in practice, and are intended to catch bugs or logical flaws while developing or changing
 // this fixer, or flawed/missing knowledge - if they occur, that's likely a scenario we should be handling explicitly.
-func (c *staleWorkflowCheck) checkTimeInSaneRange(t time.Time, kind string) (ok bool, result CheckResult) {
+func (c *StaleWorkflowCheck) checkTimeInSaneRange(t time.Time, kind string) (ok bool, result CheckResult) {
 	if t.IsZero() {
 		// will also be before-impossibly-old, but separated for clarity purposes
 		return false, c.failed(fmt.Sprintf("calculated %v is zero, failing", kind), "")
@@ -362,7 +362,7 @@ func (c *staleWorkflowCheck) checkTimeInSaneRange(t time.Time, kind string) (ok 
 	return true, result
 }
 
-func (c *staleWorkflowCheck) checkClosedAge(workflow *persistence.GetWorkflowExecutionResponse, maxLifespan time.Duration, domainName string) (pastExpiration bool, expected time.Time, result CheckResult) {
+func (c *StaleWorkflowCheck) checkClosedAge(workflow *persistence.GetWorkflowExecutionResponse, maxLifespan time.Duration, domainName string) (pastExpiration bool, expected time.Time, result CheckResult) {
 	closed, ok, result := c.closeEventTime(workflow, domainName)
 	if !ok {
 		// error of some kind, see if we can consider it stale from just the start info.
@@ -403,7 +403,7 @@ func (c *staleWorkflowCheck) checkClosedAge(workflow *persistence.GetWorkflowExe
 
 }
 
-func (c *staleWorkflowCheck) checkZombieAge(workflow *persistence.GetWorkflowExecutionResponse, maxLifespan time.Duration, domainName string) (pastExpiration bool, expected time.Time, result CheckResult) {
+func (c *StaleWorkflowCheck) checkZombieAge(workflow *persistence.GetWorkflowExecutionResponse, maxLifespan time.Duration, domainName string) (pastExpiration bool, expected time.Time, result CheckResult) {
 	// zombies may or may not have history, and may or may not be "running" depending on if enough history has replicated.
 	// they are not ever "current" though apparently.  despite there being a current execution record pointing to them.  wut.
 	/*
@@ -430,7 +430,7 @@ func (c *staleWorkflowCheck) checkZombieAge(workflow *persistence.GetWorkflowExe
 }
 
 // it's just quite verbose
-func (c *staleWorkflowCheck) failed(info string, details string, args ...interface{}) CheckResult {
+func (c *StaleWorkflowCheck) failed(info string, details string, args ...interface{}) CheckResult {
 	if details != "" {
 		return CheckResult{
 			CheckResultType: CheckResultTypeFailed,
@@ -446,7 +446,7 @@ func (c *staleWorkflowCheck) failed(info string, details string, args ...interfa
 	}
 }
 
-func (c *staleWorkflowCheck) firstEvent(workflow *persistence.GetWorkflowExecutionResponse, domainName string) (attrs types.WorkflowExecutionStartedEventAttributes, ok bool, result CheckResult) {
+func (c *StaleWorkflowCheck) firstEvent(workflow *persistence.GetWorkflowExecutionResponse, domainName string) (attrs types.WorkflowExecutionStartedEventAttributes, ok bool, result CheckResult) {
 	// see: func (e *mutableStateBuilder) GetStartEvent(
 	/*
 		currentBranchToken, err := e.GetCurrentBranchToken()
@@ -498,7 +498,7 @@ func (c *staleWorkflowCheck) firstEvent(workflow *persistence.GetWorkflowExecuti
 	return *first.WorkflowExecutionStartedEventAttributes, true, result
 }
 
-func (c *staleWorkflowCheck) getBranchToken(workflow *persistence.GetWorkflowExecutionResponse) (token []byte, ok bool, result CheckResult) {
+func (c *StaleWorkflowCheck) getBranchToken(workflow *persistence.GetWorkflowExecutionResponse) (token []byte, ok bool, result CheckResult) {
 	/*
 		func (e *mutableStateBuilder) GetCurrentBranchToken() ([]byte, error) {
 			if e.versionHistories != nil {
@@ -528,7 +528,7 @@ func (c *staleWorkflowCheck) getBranchToken(workflow *persistence.GetWorkflowExe
 	return currentBranchToken, true, result
 }
 
-func (c *staleWorkflowCheck) closeEventTime(workflow *persistence.GetWorkflowExecutionResponse, domainName string) (when time.Time, ok bool, result CheckResult) {
+func (c *StaleWorkflowCheck) closeEventTime(workflow *persistence.GetWorkflowExecutionResponse, domainName string) (when time.Time, ok bool, result CheckResult) {
 	// completion event is (sometimes?) nil, pull it from history instead.
 
 	// strangely, close-event-time is not part of the workflow execution response.
@@ -591,7 +591,7 @@ func anyPresent(items ...interface{}) bool {
 	return false
 }
 
-func (c *staleWorkflowCheck) getLastEvent(branchToken []byte, domainName string) (*types.HistoryEvent, error) {
+func (c *StaleWorkflowCheck) getLastEvent(branchToken []byte, domainName string) (*types.HistoryEvent, error) {
 	const (
 		maxHistoryLen = 250000 // our internal limits are much smaller, but it would be fine to raise this
 		pageSize      = 1000   // multiple 1000/page limits elsewhere, also fine to change

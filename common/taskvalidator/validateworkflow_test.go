@@ -23,6 +23,8 @@
 package taskvalidator
 
 import (
+	"context"
+	// ... other imports ...
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -31,6 +33,7 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/constants"
 )
 
@@ -40,8 +43,8 @@ func TestWorkflowCheckforValidation(t *testing.T) {
 		domainID string
 		runID    string
 	}{
-		{"DomainFetchSuccess", "domain-id-success", "run-id-success"},
-		{"DomainFetchFailure", "domain-id-failure", "run-id-failure"},
+		{"DomainFetchSuccess", "", "run-id-success"},
+		{"DomainFetchFailure", "", "run-id-failure"},
 	}
 
 	for _, tc := range testCases {
@@ -50,9 +53,11 @@ func TestWorkflowCheckforValidation(t *testing.T) {
 			defer mockCtrl.Finish()
 
 			mockDomainCache := cache.NewMockDomainCache(mockCtrl)
+			mockPersistenceRetryer := persistence.NewMockRetryer(mockCtrl)
 			logger := log.NewNoop()
 			metricsClient := metrics.NewNoopMetricsClient()
-			checker := NewWfChecker(logger, metricsClient, mockDomainCache)
+
+			checker := NewWfChecker(logger, metricsClient, mockDomainCache, mockPersistenceRetryer)
 
 			// Set up the mock behavior for GetDomainByID
 			mockDomainCache.EXPECT().
@@ -60,7 +65,17 @@ func TestWorkflowCheckforValidation(t *testing.T) {
 				Return(constants.TestGlobalDomainEntry, nil).
 				AnyTimes()
 
-			err := checker.WorkflowCheckforValidation("workflowID", tc.domainID, "domainName", tc.runID)
+			// Set up the expected behavior for GetWorkflowExecution
+			mockPersistenceRetryer.EXPECT().
+				GetWorkflowExecution(gomock.Any(), gomock.Any()).
+				Return(&persistence.GetWorkflowExecutionResponse{
+					State: &persistence.WorkflowMutableState{
+						ExecutionInfo: &persistence.WorkflowExecutionInfo{},
+					},
+				}, nil).
+				AnyTimes()
+
+			err := checker.WorkflowCheckforValidation("workflowID", tc.domainID, "domainName", tc.runID, context.Background())
 			assert.NoError(t, err)
 		})
 	}
