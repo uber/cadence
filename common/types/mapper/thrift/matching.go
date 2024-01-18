@@ -27,12 +27,18 @@ import (
 )
 
 var (
-	ToMatchingDescribeTaskListResponse       = ToDescribeTaskListResponse
-	FromMatchingGetTaskListsByDomainRequest  = FromGetTaskListsByDomainRequest
-	ToMatchingGetTaskListsByDomainResponse   = ToGetTaskListsByDomainResponse
-	ToMatchingListTaskListPartitionsResponse = ToListTaskListPartitionsResponse
-	ToMatchingPollForActivityTaskResponse    = ToPollForActivityTaskResponse
-	ToMatchingQueryWorkflowResponse          = ToQueryWorkflowResponse
+	FromMatchingDescribeTaskListResponse       = FromDescribeTaskListResponse
+	ToMatchingDescribeTaskListResponse         = ToDescribeTaskListResponse
+	FromMatchingGetTaskListsByDomainRequest    = FromGetTaskListsByDomainRequest
+	ToMatchingGetTaskListsByDomainRequest      = ToGetTaskListsByDomainRequest
+	FromMatchingGetTaskListsByDomainResponse   = FromGetTaskListsByDomainResponse
+	ToMatchingGetTaskListsByDomainResponse     = ToGetTaskListsByDomainResponse
+	FromMatchingListTaskListPartitionsResponse = FromListTaskListPartitionsResponse
+	ToMatchingListTaskListPartitionsResponse   = ToListTaskListPartitionsResponse
+	FromMatchingPollForActivityTaskResponse    = FromPollForActivityTaskResponse
+	ToMatchingPollForActivityTaskResponse      = ToPollForActivityTaskResponse
+	FromMatchingQueryWorkflowResponse          = FromQueryWorkflowResponse
+	ToMatchingQueryWorkflowResponse            = ToQueryWorkflowResponse
 )
 
 // FromMatchingAddActivityTaskRequest converts internal AddActivityTaskRequest type to thrift
