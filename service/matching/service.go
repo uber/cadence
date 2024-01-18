@@ -101,7 +101,7 @@ func (s *Service) Start() {
 	s.handler = NewHandler(engine, s.config, s.GetDomainCache(), s.GetMetricsClient(), s.GetLogger(), s.GetThrottledLogger())
 
 	thriftHandler := NewThriftHandler(s.handler)
-	thriftHandler.register(s.GetDispatcher())
+	thriftHandler.Register(s.GetDispatcher())
 
 	grpcHandler := NewGRPCHandler(s.handler)
 	grpcHandler.Register(s.GetDispatcher())

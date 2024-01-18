@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/service/frontend/wrappers/accesscontrolled"
 	"github.com/uber/cadence/service/frontend/wrappers/clusterredirection"
 	"github.com/uber/cadence/service/frontend/wrappers/grpc"
+	"github.com/uber/cadence/service/frontend/wrappers/thrift"
 )
 
 // Service represents the cadence-frontend service
@@ -137,7 +138,7 @@ func (s *Service) Start() {
 	handler = accesscontrolled.NewAPIHandler(handler, s, s.params.Authorizer, s.params.AuthorizationConfig)
 
 	// Register the latest (most decorated) handler
-	thriftHandler := api.NewThriftHandler(handler)
+	thriftHandler := thrift.NewAPIHandler(handler)
 	thriftHandler.Register(s.GetDispatcher())
 
 	grpcHandler := grpc.NewAPIHandler(handler)
@@ -146,7 +147,7 @@ func (s *Service) Start() {
 	s.adminHandler = admin.NewHandler(s, s.params, s.config, dh)
 	s.adminHandler = accesscontrolled.NewAdminHandler(s.adminHandler, s, s.params.Authorizer, s.params.AuthorizationConfig)
 
-	adminThriftHandler := admin.NewAdminThriftHandler(s.adminHandler)
+	adminThriftHandler := thrift.NewAdminHandler(s.adminHandler)
 	adminThriftHandler.Register(s.GetDispatcher())
 
 	adminGRPCHandler := grpc.NewAdminHandler(s.adminHandler)

@@ -26,10 +26,14 @@ import (
 )
 
 var (
-	FromScanWorkflowExecutionsRequest          = FromListWorkflowExecutionsRequest
-	ToRecordActivityTaskHeartbeatByIDResponse  = ToRecordActivityTaskHeartbeatResponse
-	ToScanWorkflowExecutionsResponse           = ToListWorkflowExecutionsResponse
-	ToSignalWithStartWorkflowExecutionResponse = ToStartWorkflowExecutionResponse
+	FromScanWorkflowExecutionsRequest            = FromListWorkflowExecutionsRequest
+	ToScanWorkflowExecutionsRequest              = ToListWorkflowExecutionsRequest
+	FromRecordActivityTaskHeartbeatByIDResponse  = FromRecordActivityTaskHeartbeatResponse
+	ToRecordActivityTaskHeartbeatByIDResponse    = ToRecordActivityTaskHeartbeatResponse
+	FromScanWorkflowExecutionsResponse           = FromListWorkflowExecutionsResponse
+	ToScanWorkflowExecutionsResponse             = ToListWorkflowExecutionsResponse
+	FromSignalWithStartWorkflowExecutionResponse = FromStartWorkflowExecutionResponse
+	ToSignalWithStartWorkflowExecutionResponse   = ToStartWorkflowExecutionResponse
 )
 
 // FromAccessDeniedError converts internal AccessDeniedError type to thrift
