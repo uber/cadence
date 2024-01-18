@@ -46,7 +46,6 @@ import (
 	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
-	"github.com/uber/cadence/common/taskvalidator"
 )
 
 type (
@@ -114,7 +113,5 @@ type (
 		GetIsolationGroupState() isolationgroup.State
 		GetPartitioner() partition.Partitioner
 		GetIsolationGroupStore() configstore.Client
-		//GetTaskValidator returns the taskValidator
-		GetTaskValidator() taskvalidator.Checker
 	}
 )

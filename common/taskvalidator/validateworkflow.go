@@ -38,7 +38,7 @@ import (
 )
 
 type Checker interface {
-	WorkflowCheckforValidation(workflowID string, domainID string, domainName string, runID string, ctx context.Context) error
+	WorkflowCheckforValidation(ctx context.Context, workflowID string, domainID string, domainName string, runID string) error
 }
 
 type checkerImpl struct {
@@ -61,7 +61,7 @@ func NewWfChecker(logger log.Logger, metrics metrics.Client, domainCache cache.D
 	}
 }
 
-func (w *checkerImpl) WorkflowCheckforValidation(workflowID string, domainID string, domainName string, runID string, ctx context.Context) error {
+func (w *checkerImpl) WorkflowCheckforValidation(ctx context.Context, workflowID string, domainID string, domainName string, runID string) error {
 	w.logger.Info("WorkflowCheckforValidation",
 		tag.WorkflowID(workflowID),
 		tag.WorkflowRunID(runID),

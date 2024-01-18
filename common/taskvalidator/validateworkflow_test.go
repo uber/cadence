@@ -75,7 +75,7 @@ func TestWorkflowCheckforValidation(t *testing.T) {
 				}, nil).
 				AnyTimes()
 
-			err := checker.WorkflowCheckforValidation("workflowID", tc.domainID, "domainName", tc.runID, context.Background())
+			err := checker.WorkflowCheckforValidation(context.Background(), "workflowID", tc.domainID, "domainName", tc.runID)
 			assert.NoError(t, err)
 		})
 	}
