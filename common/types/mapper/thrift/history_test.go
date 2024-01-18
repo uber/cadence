@@ -46,8 +46,8 @@ func TestDescribeMutableStateRequestConversion(t *testing.T) {
 	}
 
 	for _, original := range testCases {
-		thriftObj := FromDescribeMutableStateRequest(original)
-		roundTripObj := ToDescribeMutableStateRequest(thriftObj)
+		thriftObj := FromHistoryDescribeMutableStateRequest(original)
+		roundTripObj := ToHistoryDescribeMutableStateRequest(thriftObj)
 		assert.Equal(t, original, roundTripObj)
 	}
 }
@@ -60,8 +60,8 @@ func TestDescribeMutableStateResponseConversion(t *testing.T) {
 	}
 
 	for _, original := range testCases {
-		thriftObj := FromDescribeMutableStateResponse(original)
-		roundTripObj := ToDescribeMutableStateResponse(thriftObj)
+		thriftObj := FromHistoryDescribeMutableStateResponse(original)
+		roundTripObj := ToHistoryDescribeMutableStateResponse(thriftObj)
 		assert.Equal(t, original, roundTripObj)
 	}
 }
@@ -130,8 +130,8 @@ func TestGetMutableStateRequestConversion(t *testing.T) {
 	}
 
 	for _, original := range testCases {
-		thriftObj := FromGetMutableStateRequest(original)
-		roundTripObj := ToGetMutableStateRequest(thriftObj)
+		thriftObj := FromHistoryGetMutableStateRequest(original)
+		roundTripObj := ToHistoryGetMutableStateRequest(thriftObj)
 		assert.Equal(t, original, roundTripObj)
 	}
 }
@@ -144,8 +144,8 @@ func TestGetMutableStateResponseConversion(t *testing.T) {
 	}
 
 	for _, original := range testCases {
-		thriftObj := FromGetMutableStateResponse(original)
-		roundTripObj := ToGetMutableStateResponse(thriftObj)
+		thriftObj := FromHistoryGetMutableStateResponse(original)
+		roundTripObj := ToHistoryGetMutableStateResponse(thriftObj)
 		assert.Equal(t, original, roundTripObj)
 	}
 }
@@ -158,8 +158,8 @@ func TestNotifyFailoverMarkersRequestConversion(t *testing.T) {
 	}
 
 	for _, original := range testCases {
-		thriftObj := FromNotifyFailoverMarkersRequest(original)
-		roundTripObj := ToNotifyFailoverMarkersRequest(thriftObj)
+		thriftObj := FromHistoryNotifyFailoverMarkersRequest(original)
+		roundTripObj := ToHistoryNotifyFailoverMarkersRequest(thriftObj)
 		assert.Equal(t, original, roundTripObj)
 	}
 }
@@ -186,8 +186,8 @@ func TestPollMutableStateRequestConversion(t *testing.T) {
 	}
 
 	for _, original := range testCases {
-		thriftObj := FromPollMutableStateRequest(original)
-		roundTripObj := ToPollMutableStateRequest(thriftObj)
+		thriftObj := FromHistoryPollMutableStateRequest(original)
+		roundTripObj := ToHistoryPollMutableStateRequest(thriftObj)
 		assert.Equal(t, original, roundTripObj)
 	}
 }
@@ -200,8 +200,8 @@ func TestPollMutableStateResponseConversion(t *testing.T) {
 	}
 
 	for _, original := range testCases {
-		thriftObj := FromPollMutableStateResponse(original)
-		roundTripObj := ToPollMutableStateResponse(thriftObj)
+		thriftObj := FromHistoryPollMutableStateResponse(original)
+		roundTripObj := ToHistoryPollMutableStateResponse(thriftObj)
 		assert.Equal(t, original, roundTripObj)
 	}
 }
@@ -396,8 +396,8 @@ func TestRemoveSignalMutableStateRequestConversion(t *testing.T) {
 	}
 
 	for _, original := range testCases {
-		thriftObj := FromRemoveSignalMutableStateRequest(original)
-		roundTripObj := ToRemoveSignalMutableStateRequest(thriftObj)
+		thriftObj := FromHistoryRemoveSignalMutableStateRequest(original)
+		roundTripObj := ToHistoryRemoveSignalMutableStateRequest(thriftObj)
 		assert.Equal(t, original, roundTripObj)
 	}
 }
@@ -410,8 +410,8 @@ func TestReplicateEventsV2RequestConversion(t *testing.T) {
 	}
 
 	for _, original := range testCases {
-		thriftObj := FromReplicateEventsV2Request(original)
-		roundTripObj := ToReplicateEventsV2Request(thriftObj)
+		thriftObj := FromHistoryReplicateEventsV2Request(original)
+		roundTripObj := ToHistoryReplicateEventsV2Request(thriftObj)
 		assert.Equal(t, original, roundTripObj)
 	}
 }

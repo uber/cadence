@@ -30,14 +30,13 @@ var (
 	ToHistoryDescribeHistoryHostRequest                  = ToAdminDescribeHistoryHostRequest
 	FromHistoryDescribeHistoryHostResponse               = FromAdminDescribeHistoryHostResponse
 	ToHistoryDescribeHistoryHostResponse                 = ToAdminDescribeHistoryHostResponse
-	FromHistoryDescribeMutableStateRequest               = FromDescribeMutableStateRequest
-	ToHistoryDescribeMutableStateResponse                = ToDescribeMutableStateResponse
 	FromHistoryCloseShardRequest                         = FromAdminCloseShardRequest
 	ToHistoryCloseShardRequest                           = ToAdminCloseShardRequest
 	FromHistoryDescribeQueueRequest                      = FromAdminDescribeQueueRequest
 	ToHistoryDescribeQueueRequest                        = ToAdminDescribeQueueRequest
 	FromHistoryDescribeQueueResponse                     = FromAdminDescribeQueueResponse
 	ToHistoryDescribeQueueResponse                       = ToAdminDescribeQueueResponse
+	FromHistoryDescribeWorkflowExecutionResponse         = FromDescribeWorkflowExecutionResponse
 	ToHistoryDescribeWorkflowExecutionResponse           = ToDescribeWorkflowExecutionResponse
 	FromHistoryGetCrossClusterTasksRequest               = FromAdminGetCrossClusterTasksRequest
 	ToHistoryGetCrossClusterTasksRequest                 = ToAdminGetCrossClusterTasksRequest
@@ -48,9 +47,9 @@ var (
 	FromHistoryGetDLQReplicationMessagesResponse         = FromAdminGetDLQReplicationMessagesResponse
 	ToHistoryGetDLQReplicationMessagesResponse           = ToAdminGetDLQReplicationMessagesResponse
 	FromHistoryGetFailoverInfoRequest                    = FromGetFailoverInfoRequest
+	ToHistoryGetFailoverInfoRequest                      = ToGetFailoverInfoRequest
+	FromHistoryGetFailoverInfoResponse                   = FromGetFailoverInfoResponse
 	ToHistoryGetFailoverInfoResponse                     = ToGetFailoverInfoResponse
-	FromHistoryGetMutableStateRequest                    = FromGetMutableStateRequest
-	ToHistoryGetMutableStateResponse                     = ToGetMutableStateResponse
 	FromHistoryGetReplicationMessagesRequest             = FromAdminGetReplicationMessagesRequest
 	ToHistoryGetReplicationMessagesRequest               = ToAdminGetReplicationMessagesRequest
 	FromHistoryGetReplicationMessagesResponse            = FromAdminGetReplicationMessagesResponse
@@ -59,39 +58,42 @@ var (
 	ToHistoryMergeDLQMessagesRequest                     = ToAdminMergeDLQMessagesRequest
 	FromHistoryMergeDLQMessagesResponse                  = FromAdminMergeDLQMessagesResponse
 	ToHistoryMergeDLQMessagesResponse                    = ToAdminMergeDLQMessagesResponse
-	FromHistoryNotifyFailoverMarkersRequest              = FromNotifyFailoverMarkersRequest
-	FromHistoryPollMutableStateRequest                   = FromPollMutableStateRequest
-	ToHistoryPollMutableStateResponse                    = ToPollMutableStateResponse
 	FromHistoryPurgeDLQMessagesRequest                   = FromAdminPurgeDLQMessagesRequest
 	ToHistoryPurgeDLQMessagesRequest                     = ToAdminPurgeDLQMessagesRequest
 	FromHistoryReadDLQMessagesRequest                    = FromAdminReadDLQMessagesRequest
 	ToHistoryReadDLQMessagesRequest                      = ToAdminReadDLQMessagesRequest
 	FromHistoryReadDLQMessagesResponse                   = FromAdminReadDLQMessagesResponse
 	ToHistoryReadDLQMessagesResponse                     = ToAdminReadDLQMessagesResponse
+	FromHistoryRecordActivityTaskHeartbeatResponse       = FromRecordActivityTaskHeartbeatResponse
 	ToHistoryRecordActivityTaskHeartbeatResponse         = ToRecordActivityTaskHeartbeatResponse
 	FromHistoryRecordActivityTaskStartedRequest          = FromRecordActivityTaskStartedRequest
+	ToHistoryRecordActivityTaskStartedRequest            = ToRecordActivityTaskStartedRequest
+	FromHistoryRecordActivityTaskStartedResponse         = FromRecordActivityTaskStartedResponse
 	ToHistoryRecordActivityTaskStartedResponse           = ToRecordActivityTaskStartedResponse
 	FromHistoryRecordChildExecutionCompletedRequest      = FromRecordChildExecutionCompletedRequest
+	ToHistoryRecordChildExecutionCompletedRequest        = ToRecordChildExecutionCompletedRequest
 	FromHistoryRecordDecisionTaskStartedRequest          = FromRecordDecisionTaskStartedRequest
+	ToHistoryRecordDecisionTaskStartedRequest            = ToRecordDecisionTaskStartedRequest
+	FromHistoryRecordDecisionTaskStartedResponse         = FromRecordDecisionTaskStartedResponse
 	ToHistoryRecordDecisionTaskStartedResponse           = ToRecordDecisionTaskStartedResponse
-	FromHistoryRemoveSignalMutableStateRequest           = FromRemoveSignalMutableStateRequest
 	FromHistoryRemoveTaskRequest                         = FromAdminRemoveTaskRequest
 	ToHistoryRemoveTaskRequest                           = ToAdminRemoveTaskRequest
-	FromHistoryReplicateEventsV2Request                  = FromReplicateEventsV2Request
-	ToHistoryReplicateEventsV2Request                    = ToReplicateEventsV2Request
 	FromHistoryResetQueueRequest                         = FromAdminResetQueueRequest
 	ToHistoryResetQueueRequest                           = ToAdminResetQueueRequest
+	FromHistoryResetWorkflowExecutionResponse            = FromResetWorkflowExecutionResponse
 	ToHistoryResetWorkflowExecutionResponse              = ToResetWorkflowExecutionResponse
 	FromHistoryRespondCrossClusterTasksCompletedRequest  = FromAdminRespondCrossClusterTasksCompletedRequest
 	ToHistoryRespondCrossClusterTasksCompletedRequest    = ToAdminRespondCrossClusterTasksCompletedRequest
 	FromHistoryRespondCrossClusterTasksCompletedResponse = FromAdminRespondCrossClusterTasksCompletedResponse
 	ToHistoryRespondCrossClusterTasksCompletedResponse   = ToAdminRespondCrossClusterTasksCompletedResponse
+	FromHistorySignalWithStartWorkflowExecutionResponse  = FromStartWorkflowExecutionResponse
 	ToHistorySignalWithStartWorkflowExecutionResponse    = ToStartWorkflowExecutionResponse
+	FromHistoryStartWorkflowExecutionResponse            = FromStartWorkflowExecutionResponse
 	ToHistoryStartWorkflowExecutionResponse              = ToStartWorkflowExecutionResponse
 )
 
-// FromDescribeMutableStateRequest converts internal DescribeMutableStateRequest type to thrift
-func FromDescribeMutableStateRequest(t *types.DescribeMutableStateRequest) *history.DescribeMutableStateRequest {
+// FromHistoryDescribeMutableStateRequest converts internal DescribeMutableStateRequest type to thrift
+func FromHistoryDescribeMutableStateRequest(t *types.DescribeMutableStateRequest) *history.DescribeMutableStateRequest {
 	if t == nil {
 		return nil
 	}
@@ -101,8 +103,8 @@ func FromDescribeMutableStateRequest(t *types.DescribeMutableStateRequest) *hist
 	}
 }
 
-// ToDescribeMutableStateRequest converts thrift DescribeMutableStateRequest type to internal
-func ToDescribeMutableStateRequest(t *history.DescribeMutableStateRequest) *types.DescribeMutableStateRequest {
+// ToHistoryDescribeMutableStateRequest converts thrift DescribeMutableStateRequest type to internal
+func ToHistoryDescribeMutableStateRequest(t *history.DescribeMutableStateRequest) *types.DescribeMutableStateRequest {
 	if t == nil {
 		return nil
 	}
@@ -112,8 +114,8 @@ func ToDescribeMutableStateRequest(t *history.DescribeMutableStateRequest) *type
 	}
 }
 
-// FromDescribeMutableStateResponse converts internal DescribeMutableStateResponse type to thrift
-func FromDescribeMutableStateResponse(t *types.DescribeMutableStateResponse) *history.DescribeMutableStateResponse {
+// FromHistoryDescribeMutableStateResponse converts internal DescribeMutableStateResponse type to thrift
+func FromHistoryDescribeMutableStateResponse(t *types.DescribeMutableStateResponse) *history.DescribeMutableStateResponse {
 	if t == nil {
 		return nil
 	}
@@ -123,8 +125,8 @@ func FromDescribeMutableStateResponse(t *types.DescribeMutableStateResponse) *hi
 	}
 }
 
-// ToDescribeMutableStateResponse converts thrift DescribeMutableStateResponse type to internal
-func ToDescribeMutableStateResponse(t *history.DescribeMutableStateResponse) *types.DescribeMutableStateResponse {
+// ToHistoryDescribeMutableStateResponse converts thrift DescribeMutableStateResponse type to internal
+func ToHistoryDescribeMutableStateResponse(t *history.DescribeMutableStateResponse) *types.DescribeMutableStateResponse {
 	if t == nil {
 		return nil
 	}
@@ -220,8 +222,8 @@ func ToFailoverMarkerToken(t *history.FailoverMarkerToken) *types.FailoverMarker
 	}
 }
 
-// FromGetMutableStateRequest converts internal GetMutableStateRequest type to thrift
-func FromGetMutableStateRequest(t *types.GetMutableStateRequest) *history.GetMutableStateRequest {
+// FromHistoryGetMutableStateRequest converts internal GetMutableStateRequest type to thrift
+func FromHistoryGetMutableStateRequest(t *types.GetMutableStateRequest) *history.GetMutableStateRequest {
 	if t == nil {
 		return nil
 	}
@@ -233,8 +235,8 @@ func FromGetMutableStateRequest(t *types.GetMutableStateRequest) *history.GetMut
 	}
 }
 
-// ToGetMutableStateRequest converts thrift GetMutableStateRequest type to internal
-func ToGetMutableStateRequest(t *history.GetMutableStateRequest) *types.GetMutableStateRequest {
+// ToHistoryGetMutableStateRequest converts thrift GetMutableStateRequest type to internal
+func ToHistoryGetMutableStateRequest(t *history.GetMutableStateRequest) *types.GetMutableStateRequest {
 	if t == nil {
 		return nil
 	}
@@ -246,8 +248,8 @@ func ToGetMutableStateRequest(t *history.GetMutableStateRequest) *types.GetMutab
 	}
 }
 
-// FromGetMutableStateResponse converts internal GetMutableStateResponse type to thrift
-func FromGetMutableStateResponse(t *types.GetMutableStateResponse) *history.GetMutableStateResponse {
+// FromHistoryGetMutableStateResponse converts internal GetMutableStateResponse type to thrift
+func FromHistoryGetMutableStateResponse(t *types.GetMutableStateResponse) *history.GetMutableStateResponse {
 	if t == nil {
 		return nil
 	}
@@ -274,8 +276,8 @@ func FromGetMutableStateResponse(t *types.GetMutableStateResponse) *history.GetM
 	}
 }
 
-// ToGetMutableStateResponse converts thrift GetMutableStateResponse type to internal
-func ToGetMutableStateResponse(t *history.GetMutableStateResponse) *types.GetMutableStateResponse {
+// ToHistoryGetMutableStateResponse converts thrift GetMutableStateResponse type to internal
+func ToHistoryGetMutableStateResponse(t *history.GetMutableStateResponse) *types.GetMutableStateResponse {
 	if t == nil {
 		return nil
 	}
@@ -302,8 +304,8 @@ func ToGetMutableStateResponse(t *history.GetMutableStateResponse) *types.GetMut
 	}
 }
 
-// FromNotifyFailoverMarkersRequest converts internal NotifyFailoverMarkersRequest type to thrift
-func FromNotifyFailoverMarkersRequest(t *types.NotifyFailoverMarkersRequest) *history.NotifyFailoverMarkersRequest {
+// FromHistoryNotifyFailoverMarkersRequest converts internal NotifyFailoverMarkersRequest type to thrift
+func FromHistoryNotifyFailoverMarkersRequest(t *types.NotifyFailoverMarkersRequest) *history.NotifyFailoverMarkersRequest {
 	if t == nil {
 		return nil
 	}
@@ -312,8 +314,8 @@ func FromNotifyFailoverMarkersRequest(t *types.NotifyFailoverMarkersRequest) *hi
 	}
 }
 
-// ToNotifyFailoverMarkersRequest converts thrift NotifyFailoverMarkersRequest type to internal
-func ToNotifyFailoverMarkersRequest(t *history.NotifyFailoverMarkersRequest) *types.NotifyFailoverMarkersRequest {
+// ToHistoryNotifyFailoverMarkersRequest converts thrift NotifyFailoverMarkersRequest type to internal
+func ToHistoryNotifyFailoverMarkersRequest(t *history.NotifyFailoverMarkersRequest) *types.NotifyFailoverMarkersRequest {
 	if t == nil {
 		return nil
 	}
@@ -322,7 +324,7 @@ func ToNotifyFailoverMarkersRequest(t *history.NotifyFailoverMarkersRequest) *ty
 	}
 }
 
-// FromParentExecutionInfo converts internal ParentExecutionInfo type to thrift
+// FromHistoryParentExecutionInfo converts internal ParentExecutionInfo type to thrift
 func FromParentExecutionInfo(t *types.ParentExecutionInfo) *history.ParentExecutionInfo {
 	if t == nil {
 		return nil
@@ -348,8 +350,8 @@ func ToParentExecutionInfo(t *history.ParentExecutionInfo) *types.ParentExecutio
 	}
 }
 
-// FromPollMutableStateRequest converts internal PollMutableStateRequest type to thrift
-func FromPollMutableStateRequest(t *types.PollMutableStateRequest) *history.PollMutableStateRequest {
+// FromHistoryPollMutableStateRequest converts internal PollMutableStateRequest type to thrift
+func FromHistoryPollMutableStateRequest(t *types.PollMutableStateRequest) *history.PollMutableStateRequest {
 	if t == nil {
 		return nil
 	}
@@ -361,8 +363,8 @@ func FromPollMutableStateRequest(t *types.PollMutableStateRequest) *history.Poll
 	}
 }
 
-// ToPollMutableStateRequest converts thrift PollMutableStateRequest type to internal
-func ToPollMutableStateRequest(t *history.PollMutableStateRequest) *types.PollMutableStateRequest {
+// ToHistoryPollMutableStateRequest converts thrift PollMutableStateRequest type to internal
+func ToHistoryPollMutableStateRequest(t *history.PollMutableStateRequest) *types.PollMutableStateRequest {
 	if t == nil {
 		return nil
 	}
@@ -374,8 +376,8 @@ func ToPollMutableStateRequest(t *history.PollMutableStateRequest) *types.PollMu
 	}
 }
 
-// FromPollMutableStateResponse converts internal PollMutableStateResponse type to thrift
-func FromPollMutableStateResponse(t *types.PollMutableStateResponse) *history.PollMutableStateResponse {
+// FromHistoryPollMutableStateResponse converts internal PollMutableStateResponse type to thrift
+func FromHistoryPollMutableStateResponse(t *types.PollMutableStateResponse) *history.PollMutableStateResponse {
 	if t == nil {
 		return nil
 	}
@@ -398,8 +400,8 @@ func FromPollMutableStateResponse(t *types.PollMutableStateResponse) *history.Po
 	}
 }
 
-// ToPollMutableStateResponse converts thrift PollMutableStateResponse type to internal
-func ToPollMutableStateResponse(t *history.PollMutableStateResponse) *types.PollMutableStateResponse {
+// ToHistoryPollMutableStateResponse converts thrift PollMutableStateResponse type to internal
+func ToHistoryPollMutableStateResponse(t *history.PollMutableStateResponse) *types.PollMutableStateResponse {
 	if t == nil {
 		return nil
 	}
@@ -744,8 +746,8 @@ func ToHistoryRefreshWorkflowTasksRequest(t *history.RefreshWorkflowTasksRequest
 	}
 }
 
-// FromRemoveSignalMutableStateRequest converts internal RemoveSignalMutableStateRequest type to thrift
-func FromRemoveSignalMutableStateRequest(t *types.RemoveSignalMutableStateRequest) *history.RemoveSignalMutableStateRequest {
+// FromHistoryRemoveSignalMutableStateRequest converts internal RemoveSignalMutableStateRequest type to thrift
+func FromHistoryRemoveSignalMutableStateRequest(t *types.RemoveSignalMutableStateRequest) *history.RemoveSignalMutableStateRequest {
 	if t == nil {
 		return nil
 	}
@@ -756,8 +758,8 @@ func FromRemoveSignalMutableStateRequest(t *types.RemoveSignalMutableStateReques
 	}
 }
 
-// ToRemoveSignalMutableStateRequest converts thrift RemoveSignalMutableStateRequest type to internal
-func ToRemoveSignalMutableStateRequest(t *history.RemoveSignalMutableStateRequest) *types.RemoveSignalMutableStateRequest {
+// ToHistoryRemoveSignalMutableStateRequest converts thrift RemoveSignalMutableStateRequest type to internal
+func ToHistoryRemoveSignalMutableStateRequest(t *history.RemoveSignalMutableStateRequest) *types.RemoveSignalMutableStateRequest {
 	if t == nil {
 		return nil
 	}
@@ -768,8 +770,8 @@ func ToRemoveSignalMutableStateRequest(t *history.RemoveSignalMutableStateReques
 	}
 }
 
-// FromReplicateEventsV2Request converts internal ReplicateEventsV2Request type to thrift
-func FromReplicateEventsV2Request(t *types.ReplicateEventsV2Request) *history.ReplicateEventsV2Request {
+// FromHistoryReplicateEventsV2Request converts internal ReplicateEventsV2Request type to thrift
+func FromHistoryReplicateEventsV2Request(t *types.ReplicateEventsV2Request) *history.ReplicateEventsV2Request {
 	if t == nil {
 		return nil
 	}
@@ -782,8 +784,8 @@ func FromReplicateEventsV2Request(t *types.ReplicateEventsV2Request) *history.Re
 	}
 }
 
-// ToReplicateEventsV2Request converts thrift ReplicateEventsV2Request type to internal
-func ToReplicateEventsV2Request(t *history.ReplicateEventsV2Request) *types.ReplicateEventsV2Request {
+// ToHistoryReplicateEventsV2Request converts thrift ReplicateEventsV2Request type to internal
+func ToHistoryReplicateEventsV2Request(t *history.ReplicateEventsV2Request) *types.ReplicateEventsV2Request {
 	if t == nil {
 		return nil
 	}

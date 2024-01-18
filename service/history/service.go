@@ -93,7 +93,7 @@ func (s *Service) Start() {
 	s.handler = NewHandler(s.Resource, s.config)
 
 	thriftHandler := NewThriftHandler(s.handler)
-	thriftHandler.register(s.GetDispatcher())
+	thriftHandler.Register(s.GetDispatcher())
 
 	grpcHandler := NewGRPCHandler(s.handler)
 	grpcHandler.Register(s.GetDispatcher())
