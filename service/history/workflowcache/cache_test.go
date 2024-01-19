@@ -29,6 +29,8 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/quotas"
 )
 
@@ -63,6 +65,7 @@ func TestWfCache_AllowSingleWorkflow(t *testing.T) {
 		MaxCount:               1_000,
 		ExternalLimiterFactory: externalLimiterFactory,
 		InternalLimiterFactory: internalLimiterFactory,
+		Logger:                 log.NewNoop(),
 	})
 
 	assert.True(t, wfCache.AllowExternal(testDomainID, testWorkflowID))
@@ -103,6 +106,7 @@ func TestWfCache_AllowMultipleWorkflow(t *testing.T) {
 		MaxCount:               1_000,
 		ExternalLimiterFactory: externalLimiterFactory,
 		InternalLimiterFactory: internalLimiterFactory,
+		Logger:                 log.NewNoop(),
 	})
 
 	assert.True(t, wfCache.AllowExternal(testDomainID, testWorkflowID))
@@ -110,4 +114,42 @@ func TestWfCache_AllowMultipleWorkflow(t *testing.T) {
 
 	assert.False(t, wfCache.AllowExternal(testDomainID, testWorkflowID))
 	assert.True(t, wfCache.AllowExternal(testDomainID, testWorkflowID2))
+}
+
+// TestWfCache_AllowInternalError tests that the cache will allow internal requests through if there is an error getting the rate limiter.
+func TestWfCache_AllowError(t *testing.T) {
+	// Setup the mock logger
+	logger := new(log.MockLogger)
+
+	logger.On(
+		"Error",
+		"Unexpected error from workflow cache",
+		[]tag.Tag{
+			tag.Error(assert.AnError),
+			tag.WorkflowDomainID(testDomainID),
+			tag.WorkflowID(testWorkflowID),
+			tag.WorkflowIDCacheSize(0),
+		},
+	).Times(2)
+
+	// Setup the cache, we do not need the factories, as we will mock the getCacheItemFn
+	wfCache := New(Params{
+		TTL:                    time.Minute,
+		MaxCount:               1_000,
+		ExternalLimiterFactory: nil,
+		InternalLimiterFactory: nil,
+		Logger:                 logger,
+	}).(*wfCache)
+
+	// We set getCacheItemFn to a function that will return an error so that we can test the error logic
+	wfCache.getCacheItemFn = func(domainID string, workflowID string) (*cacheValue, error) {
+		return nil, assert.AnError
+	}
+
+	// We fail open
+	assert.True(t, wfCache.AllowExternal(testDomainID, testWorkflowID))
+	assert.True(t, wfCache.AllowInternal(testDomainID, testWorkflowID))
+
+	// We log the error
+	logger.AssertExpectations(t)
 }
