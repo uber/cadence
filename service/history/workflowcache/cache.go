@@ -23,9 +23,12 @@
 package workflowcache
 
 import (
+	"errors"
 	"time"
 
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/quotas"
 )
 
@@ -39,6 +42,8 @@ type wfCache struct {
 	lru                    cache.Cache
 	externalLimiterFactory quotas.LimiterFactory
 	internalLimiterFactory quotas.LimiterFactory
+	logger                 log.Logger
+	getCacheItemFn         func(domainID string, workflowID string) (*cacheValue, error)
 }
 
 type cacheKey struct {
@@ -57,36 +62,52 @@ type Params struct {
 	MaxCount               int
 	ExternalLimiterFactory quotas.LimiterFactory
 	InternalLimiterFactory quotas.LimiterFactory
+	Logger                 log.Logger
 }
 
 // New creates a new WFCache
 func New(params Params) WFCache {
-	return &wfCache{
+	cache := &wfCache{
 		lru: cache.New(&cache.Options{
 			TTL:      params.TTL,
-			Pin:      true,
+			Pin:      false,
 			MaxCount: params.MaxCount,
 		}),
 		externalLimiterFactory: params.ExternalLimiterFactory,
 		internalLimiterFactory: params.InternalLimiterFactory,
+		logger:                 params.Logger,
 	}
+	// We set getCacheItemFn to cache.getCacheItem so that we can mock it in unit tests
+	cache.getCacheItemFn = cache.getCacheItem
+
+	return cache
 }
 
 // AllowExternal returns true if the rate limiter for this domain/workflow allows an external request
 func (c *wfCache) AllowExternal(domainID string, workflowID string) bool {
 	// Locking is not needed because both getCacheItem and the rate limiter are thread safe
-	value := c.getCacheItem(domainID, workflowID)
+	value, err := c.getCacheItemFn(domainID, workflowID)
+	if err != nil {
+		c.logError(domainID, workflowID, err)
+		// If we can't get the cache item, we should allow the request through
+		return true
+	}
 	return value.externalRateLimiter.Allow()
 }
 
 // AllowInternal returns true if the rate limiter for this domain/workflow allows an internal request
 func (c *wfCache) AllowInternal(domainID string, workflowID string) bool {
 	// Locking is not needed because both getCacheItem and the rate limiter are thread safe
-	value := c.getCacheItem(domainID, workflowID)
+	value, err := c.getCacheItemFn(domainID, workflowID)
+	if err != nil {
+		c.logError(domainID, workflowID, err)
+		// If we can't get the cache item, we should allow the request through
+		return true
+	}
 	return value.internalRateLimiter.Allow()
 }
 
-func (c *wfCache) getCacheItem(domainID string, workflowID string) *cacheValue {
+func (c *wfCache) getCacheItem(domainID string, workflowID string) (*cacheValue, error) {
 	// The underlying lru cache is thread safe, so there is no need to lock
 	key := cacheKey{
 		domainID:   domainID,
@@ -95,13 +116,33 @@ func (c *wfCache) getCacheItem(domainID string, workflowID string) *cacheValue {
 
 	value, ok := c.lru.Get(key).(*cacheValue)
 
-	if !ok {
-		value = &cacheValue{
-			externalRateLimiter: c.externalLimiterFactory.GetLimiter(domainID),
-			internalRateLimiter: c.internalLimiterFactory.GetLimiter(domainID),
-		}
-		c.lru.PutIfNotExist(key, value)
+	if ok {
+		return value, nil
 	}
 
-	return value
+	value = &cacheValue{
+		externalRateLimiter: c.externalLimiterFactory.GetLimiter(domainID),
+		internalRateLimiter: c.internalLimiterFactory.GetLimiter(domainID),
+	}
+	// PutIfNotExist is thread safe, and will either return the value that was already in the cache or the value we just created
+	// another thread might have inserted a value between the Get and PutIfNotExist, but that is ok
+	// it should never return an error as we do not use Pin
+	valueInterface, err := c.lru.PutIfNotExist(key, value)
+	value, ok = valueInterface.(*cacheValue)
+
+	// This should never happen, either the value was already in the cache or we just inserted it
+	if !ok {
+		return nil, errors.New("Failed to insert new value into cache")
+	}
+
+	return value, err
+}
+
+func (c *wfCache) logError(domainID string, workflowID string, err error) {
+	c.logger.Error("Unexpected error from workflow cache",
+		tag.Error(err),
+		tag.WorkflowDomainID(domainID),
+		tag.WorkflowID(workflowID),
+		tag.WorkflowIDCacheSize(c.lru.Size()),
+	)
 }
