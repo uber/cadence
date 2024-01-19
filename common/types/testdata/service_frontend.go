@@ -324,7 +324,11 @@ var (
 	StartWorkflowExecutionResponse = types.StartWorkflowExecutionResponse{
 		RunID: RunID,
 	}
-	SignalWorkflowExecutionRequest = types.SignalWorkflowExecutionRequest{
+	StartWorkflowExecutionAsyncRequest = types.StartWorkflowExecutionAsyncRequest{
+		StartWorkflowExecutionRequest: &StartWorkflowExecutionRequest,
+	}
+	StartWorkflowExecutionAsyncResponse = types.StartWorkflowExecutionAsyncResponse{}
+	SignalWorkflowExecutionRequest      = types.SignalWorkflowExecutionRequest{
 		Domain:            DomainName,
 		WorkflowExecution: &WorkflowExecution,
 		SignalName:        SignalName,

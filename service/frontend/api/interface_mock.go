@@ -645,6 +645,21 @@ func (mr *MockHandlerMockRecorder) StartWorkflowExecution(arg0, arg1 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartWorkflowExecution", reflect.TypeOf((*MockHandler)(nil).StartWorkflowExecution), arg0, arg1)
 }
 
+// StartWorkflowExecutionAsync mocks base method.
+func (m *MockHandler) StartWorkflowExecutionAsync(arg0 context.Context, arg1 *types.StartWorkflowExecutionAsyncRequest) (*types.StartWorkflowExecutionAsyncResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StartWorkflowExecutionAsync", arg0, arg1)
+	ret0, _ := ret[0].(*types.StartWorkflowExecutionAsyncResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StartWorkflowExecutionAsync indicates an expected call of StartWorkflowExecutionAsync.
+func (mr *MockHandlerMockRecorder) StartWorkflowExecutionAsync(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartWorkflowExecutionAsync", reflect.TypeOf((*MockHandler)(nil).StartWorkflowExecutionAsync), arg0, arg1)
+}
+
 // TerminateWorkflowExecution mocks base method.
 func (m *MockHandler) TerminateWorkflowExecution(arg0 context.Context, arg1 *types.TerminateWorkflowExecutionRequest) error {
 	m.ctrl.T.Helper()

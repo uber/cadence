@@ -557,6 +557,19 @@ func (c *frontendClient) StartWorkflowExecution(ctx context.Context, sp1 *types.
 	return sp2, err
 }
 
+func (c *frontendClient) StartWorkflowExecutionAsync(ctx context.Context, sp1 *types.StartWorkflowExecutionAsyncRequest, p1 ...yarpc.CallOption) (sp2 *types.StartWorkflowExecutionAsyncResponse, err error) {
+	c.metricsClient.IncCounter(metrics.FrontendClientStartWorkflowExecutionAsyncScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientStartWorkflowExecutionAsyncScope, metrics.CadenceClientLatency)
+	sp2, err = c.client.StartWorkflowExecutionAsync(ctx, sp1, p1...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientStartWorkflowExecutionAsyncScope, metrics.CadenceClientFailures)
+	}
+	return sp2, err
+}
+
 func (c *frontendClient) TerminateWorkflowExecution(ctx context.Context, tp1 *types.TerminateWorkflowExecutionRequest, p1 ...yarpc.CallOption) (err error) {
 	c.metricsClient.IncCounter(metrics.FrontendClientTerminateWorkflowExecutionScope, metrics.CadenceClientRequests)
 
