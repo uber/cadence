@@ -213,7 +213,7 @@ func (p *archiverProvider) GetVisibilityArchiver(scheme, serviceName string) (ar
 		return nil, fmt.Errorf("no visibility archiver constructor for scheme %q", scheme)
 	}
 
-	cfg, ok := p.historyArchiverConfigs[constructor.configKey]
+	cfg, ok := p.visibilityArchiverConfigs[constructor.configKey]
 	if !ok {
 		return nil, fmt.Errorf("no visibility archiver config for scheme %q, config key %q", scheme, constructor.configKey)
 	}
