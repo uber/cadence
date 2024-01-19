@@ -392,6 +392,39 @@ func (mr *_MockClientRecorder) GetDLQReplicationMessages(
 	return mr.mock.ctrl.RecordCall(mr.mock, "GetDLQReplicationMessages", args...)
 }
 
+// GetDomainAsyncWorkflowConfiguraton responds to a GetDomainAsyncWorkflowConfiguraton call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+//	client.EXPECT().GetDomainAsyncWorkflowConfiguraton(gomock.Any(), ...).Return(...)
+//	... := client.GetDomainAsyncWorkflowConfiguraton(...)
+func (m *MockClient) GetDomainAsyncWorkflowConfiguraton(
+	ctx context.Context,
+	_Request *admin.GetDomainAsyncWorkflowConfiguratonRequest,
+	opts ...yarpc.CallOption,
+) (success *admin.GetDomainAsyncWorkflowConfiguratonResponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "GetDomainAsyncWorkflowConfiguraton", args...)
+	success, _ = ret[i].(*admin.GetDomainAsyncWorkflowConfiguratonResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) GetDomainAsyncWorkflowConfiguraton(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "GetDomainAsyncWorkflowConfiguraton", args...)
+}
+
 // GetDomainIsolationGroups responds to a GetDomainIsolationGroups call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
@@ -970,6 +1003,39 @@ func (mr *_MockClientRecorder) RestoreDynamicConfig(
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _Request}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "RestoreDynamicConfig", args...)
+}
+
+// UpdateDomainAsyncWorkflowConfiguraton responds to a UpdateDomainAsyncWorkflowConfiguraton call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+//	client.EXPECT().UpdateDomainAsyncWorkflowConfiguraton(gomock.Any(), ...).Return(...)
+//	... := client.UpdateDomainAsyncWorkflowConfiguraton(...)
+func (m *MockClient) UpdateDomainAsyncWorkflowConfiguraton(
+	ctx context.Context,
+	_Request *admin.UpdateDomainAsyncWorkflowConfiguratonRequest,
+	opts ...yarpc.CallOption,
+) (success *admin.UpdateDomainAsyncWorkflowConfiguratonResponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "UpdateDomainAsyncWorkflowConfiguraton", args...)
+	success, _ = ret[i].(*admin.UpdateDomainAsyncWorkflowConfiguratonResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) UpdateDomainAsyncWorkflowConfiguraton(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "UpdateDomainAsyncWorkflowConfiguraton", args...)
 }
 
 // UpdateDomainIsolationGroups responds to a UpdateDomainIsolationGroups call based on the mock expectations. This

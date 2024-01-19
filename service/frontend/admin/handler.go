@@ -1745,6 +1745,16 @@ func (adh *adminHandlerImpl) UpdateDomainIsolationGroups(ctx context.Context, re
 	return &types.UpdateDomainIsolationGroupsResponse{}, nil
 }
 
+func (adh *adminHandlerImpl) GetDomainAsyncWorkflowConfiguraton(context.Context, *types.GetDomainAsyncWorkflowConfiguratonRequest) (*types.GetDomainAsyncWorkflowConfiguratonResponse, error) {
+	// TODO(taylan): implement
+	return nil, errors.New("not implemented")
+}
+
+func (adh *adminHandlerImpl) UpdateDomainAsyncWorkflowConfiguraton(context.Context, *types.UpdateDomainAsyncWorkflowConfiguratonRequest) (*types.UpdateDomainAsyncWorkflowConfiguratonResponse, error) {
+	// TODO(taylan): implement
+	return nil, errors.New("not implemented")
+}
+
 func convertFromDataBlob(blob *types.DataBlob) (interface{}, error) {
 	switch *blob.EncodingType {
 	case types.EncodingTypeJSON:
