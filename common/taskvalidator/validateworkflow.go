@@ -25,7 +25,7 @@ package taskvalidator
 
 import (
 	"context"
-
+	"errors"
 	"go.uber.org/zap"
 
 	"github.com/uber/cadence/common/cache"
@@ -55,20 +55,10 @@ type checkerImpl struct {
 	staleCheck    staleChecker
 }
 
-// NewWfChecker creates a new instance of Checker.
-func NewWfChecker(logger *zap.Logger, metrics metrics.Client, domainCache cache.DomainCache, pr persistence.Retryer) Checker {
-	staleCheckInstance := invariant.NewStaleWorkflow(pr, domainCache, logger)
-	staleCheck, ok := staleCheckInstance.(staleChecker)
-	if !ok {
-		logger.Error("Failed to assert StaleWorkflow instance to staleChecker interface")
-		return &checkerImpl{
-			logger:        logger,
-			metricsClient: metrics,
-			dc:            domainCache,
-			pr:            pr,
-			staleCheck:    nil, // Stale check is not available
-		}
-	}
+// NewWfChecker creates a new instance of a workflow validation checker.
+// It requires a logger, metrics client, domain cache, persistence retryer,
+// and a stale checker implementation to function.
+func NewWfChecker(logger *zap.Logger, metrics metrics.Client, domainCache cache.DomainCache, pr persistence.Retryer, staleCheck staleChecker) Checker {
 	return &checkerImpl{
 		logger:        logger,
 		metricsClient: metrics,
@@ -115,7 +105,12 @@ func (w *checkerImpl) WorkflowCheckforValidation(ctx context.Context, workflowID
 	}
 
 	if w.staleCheck != nil {
-		if w.staleWorkflowCheck(workflowResp) {
+		stale, err := w.staleWorkflowCheck(workflowResp)
+		if err != nil {
+			w.logger.Error("Error checking if the execution is stale", zap.Error(err))
+			return err
+		}
+		if stale {
 			invariant.DeleteExecution(ctx, concreteExecution, w.pr, w.dc)
 			return nil
 		}
@@ -135,14 +130,16 @@ func (w *checkerImpl) isDomainDeprecated(domainID string) bool {
 	return domain.IsDeprecatedOrDeleted()
 }
 
-func (w *checkerImpl) staleWorkflowCheck(workflowResp *persistence.GetWorkflowExecutionResponse) bool {
-	// Check if workflowResp or its contents are nil
+// staleWorkflowCheck checks if a workflow is stale and returns any errors encountered.
+func (w *checkerImpl) staleWorkflowCheck(workflowResp *persistence.GetWorkflowExecutionResponse) (bool, error) {
 	if workflowResp == nil || workflowResp.State == nil || workflowResp.State.ExecutionInfo == nil {
 		w.logger.Error("Invalid workflow execution response received")
-		return false
+		return false, errors.New("invalid workflow execution response")
 	}
-
-	// Proceed with the stale check
-	pastExpiration, _ := w.staleCheck.CheckAge(workflowResp)
-	return pastExpiration
+	pastExpiration, err := w.staleCheck.CheckAge(workflowResp)
+	if err != nil {
+		w.logger.Error("Error during stale workflow check", zap.Error(err))
+		return false, err
+	}
+	return pastExpiration, nil
 }

@@ -74,8 +74,7 @@ func TestWorkflowCheckforValidation(t *testing.T) {
 					return tc.isStale, nil
 				},
 			}
-
-			checker := NewWfChecker(mockLogger, mockMetricsClient, mockDomainCache, mockPersistenceRetryer)
+			checker := NewWfChecker(mockLogger, mockMetricsClient, mockDomainCache, mockPersistenceRetryer, mockStaleChecker)
 			checker.(*checkerImpl).staleCheck = mockStaleChecker
 			mockDomainCache.EXPECT().
 				GetDomainByID(tc.domainID).
