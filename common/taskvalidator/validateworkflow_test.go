@@ -56,6 +56,7 @@ func TestWorkflowCheckforValidation(t *testing.T) {
 		simulateError bool
 	}{
 		{"NonStaleWorkflow", "workflow-1", "domain-1", "domain-name-1", "run-1", false, false},
+		{"StaleWorkflow", "workflow-2", "domain-2", "domain-name-2", "run-2", true, false},
 		{"ErrorInGetWorkflowExecution", "workflow-3", "domain-3", "domain-name-3", "run-3", false, true},
 	}
 
@@ -73,15 +74,24 @@ func TestWorkflowCheckforValidation(t *testing.T) {
 					return tc.isStale, nil
 				},
 			}
+
 			checker := NewWfChecker(mockLogger, mockMetricsClient, mockDomainCache, mockPersistenceRetryer)
 			checker.(*checkerImpl).staleCheck = mockStaleChecker
 			mockDomainCache.EXPECT().
 				GetDomainByID(tc.domainID).
 				Return(constants.TestGlobalDomainEntry, nil).AnyTimes()
+			// In each test case
+			mockDomainCache.EXPECT().
+				GetDomainName(gomock.Any()). // You can use gomock.Any() if the exact argument is not important
+				Return("test-domain-name", nil).AnyTimes()
 
+			// For test cases where deletion is expected
 			if tc.isStale {
 				mockPersistenceRetryer.EXPECT().
 					DeleteWorkflowExecution(gomock.Any(), gomock.Any()).
+					Return(nil).Times(1)
+				mockPersistenceRetryer.EXPECT().
+					DeleteCurrentWorkflowExecution(gomock.Any(), gomock.Any()).
 					Return(nil).Times(1)
 			}
 
