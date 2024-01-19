@@ -221,6 +221,21 @@ func (mr *MockHandlerMockRecorder) GetDLQReplicationMessages(arg0, arg1 interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDLQReplicationMessages", reflect.TypeOf((*MockHandler)(nil).GetDLQReplicationMessages), arg0, arg1)
 }
 
+// GetDomainAsyncWorkflowConfiguraton mocks base method.
+func (m *MockHandler) GetDomainAsyncWorkflowConfiguraton(arg0 context.Context, arg1 *types.GetDomainAsyncWorkflowConfiguratonRequest) (*types.GetDomainAsyncWorkflowConfiguratonResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDomainAsyncWorkflowConfiguraton", arg0, arg1)
+	ret0, _ := ret[0].(*types.GetDomainAsyncWorkflowConfiguratonResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDomainAsyncWorkflowConfiguraton indicates an expected call of GetDomainAsyncWorkflowConfiguraton.
+func (mr *MockHandlerMockRecorder) GetDomainAsyncWorkflowConfiguraton(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDomainAsyncWorkflowConfiguraton", reflect.TypeOf((*MockHandler)(nil).GetDomainAsyncWorkflowConfiguraton), arg0, arg1)
+}
+
 // GetDomainIsolationGroups mocks base method.
 func (m *MockHandler) GetDomainIsolationGroups(ctx context.Context, request *types.GetDomainIsolationGroupsRequest) (*types.GetDomainIsolationGroupsResponse, error) {
 	m.ctrl.T.Helper()
@@ -506,6 +521,21 @@ func (m *MockHandler) Stop() {
 func (mr *MockHandlerMockRecorder) Stop() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockHandler)(nil).Stop))
+}
+
+// UpdateDomainAsyncWorkflowConfiguraton mocks base method.
+func (m *MockHandler) UpdateDomainAsyncWorkflowConfiguraton(arg0 context.Context, arg1 *types.UpdateDomainAsyncWorkflowConfiguratonRequest) (*types.UpdateDomainAsyncWorkflowConfiguratonResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateDomainAsyncWorkflowConfiguraton", arg0, arg1)
+	ret0, _ := ret[0].(*types.UpdateDomainAsyncWorkflowConfiguratonResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateDomainAsyncWorkflowConfiguraton indicates an expected call of UpdateDomainAsyncWorkflowConfiguraton.
+func (mr *MockHandlerMockRecorder) UpdateDomainAsyncWorkflowConfiguraton(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDomainAsyncWorkflowConfiguraton", reflect.TypeOf((*MockHandler)(nil).UpdateDomainAsyncWorkflowConfiguraton), arg0, arg1)
 }
 
 // UpdateDomainIsolationGroups mocks base method.
