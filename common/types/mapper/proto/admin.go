@@ -1358,3 +1358,100 @@ func ToIsolationGroupConfig(in *apiv1.IsolationGroupConfiguration) *types.Isolat
 	}
 	return &out
 }
+
+func ToAdminGetDomainAsyncWorkflowConfiguratonRequest(in *adminv1.GetDomainAsyncWorkflowConfiguratonRequest) *types.GetDomainAsyncWorkflowConfiguratonRequest {
+	if in == nil {
+		return nil
+	}
+	return &types.GetDomainAsyncWorkflowConfiguratonRequest{
+		Domain: in.Domain,
+	}
+}
+
+func FromAdminGetDomainAsyncWorkflowConfiguratonResponse(in *types.GetDomainAsyncWorkflowConfiguratonResponse) *adminv1.GetDomainAsyncWorkflowConfiguratonResponse {
+	if in == nil {
+		return nil
+	}
+	return &adminv1.GetDomainAsyncWorkflowConfiguratonResponse{
+		Configuration: FromDomainAsyncWorkflowConfiguraton(in.Configuration),
+	}
+}
+
+func FromDomainAsyncWorkflowConfiguraton(in *types.AsyncWorkflowConfiguration) *apiv1.AsyncWorkflowConfiguration {
+	if in == nil {
+		return nil
+	}
+
+	out := &apiv1.AsyncWorkflowConfiguration{
+		PredefinedQueueName: in.PredefinedQueueName,
+		QueueType:           apiv1.AsyncWorkflowQueueType(in.QueueType),
+	}
+
+	if out.QueueType == apiv1.AsyncWorkflowQueueType_ASYNC_WORKFLOW_QUEUE_TYPE_KAFKA {
+		out.Attributes = FromAsyncWorkflowKafkaQueueConfig(in.KafkaConfig)
+	}
+
+	return out
+}
+
+func FromAsyncWorkflowKafkaQueueConfig(in *types.AsyncWorkflowKafkaQueueConfiguration) *apiv1.AsyncWorkflowConfiguration_KafkaConfig {
+	if in == nil {
+		return nil
+	}
+	return &apiv1.AsyncWorkflowConfiguration_KafkaConfig{
+		KafkaConfig: &apiv1.AsyncWorkflowKafkaQueueConfiguration{
+			Topic:         in.Topic,
+			DlqTopic:      in.DLQTopic,
+			ConsumerGroup: in.ConsumerGroup,
+			Brokers:       in.Brokers,
+			Properties:    in.Properties,
+		},
+	}
+}
+
+func ToAdminUpdateDomainAsyncWorkflowConfiguratonRequest(in *adminv1.UpdateDomainAsyncWorkflowConfiguratonRequest) *types.UpdateDomainAsyncWorkflowConfiguratonRequest {
+	if in == nil {
+		return nil
+	}
+	return &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
+		Domain:        in.Domain,
+		Configuration: ToDomainAsyncWorkflowConfiguraton(in.Configuration),
+	}
+}
+
+func ToDomainAsyncWorkflowConfiguraton(in *apiv1.AsyncWorkflowConfiguration) *types.AsyncWorkflowConfiguration {
+	if in == nil {
+		return nil
+	}
+
+	out := &types.AsyncWorkflowConfiguration{
+		PredefinedQueueName: in.PredefinedQueueName,
+		QueueType:           types.AsyncWorkflowQueueType(in.QueueType),
+	}
+
+	if out.QueueType == types.AsyncWorkflowQueueTypeKafka {
+		out.KafkaConfig = ToAsyncWorkflowKafkaQueueConfig(in.GetKafkaConfig())
+	}
+
+	return out
+}
+
+func ToAsyncWorkflowKafkaQueueConfig(in *apiv1.AsyncWorkflowKafkaQueueConfiguration) *types.AsyncWorkflowKafkaQueueConfiguration {
+	if in == nil {
+		return nil
+	}
+	return &types.AsyncWorkflowKafkaQueueConfiguration{
+		Topic:         in.Topic,
+		DLQTopic:      in.DlqTopic,
+		ConsumerGroup: in.ConsumerGroup,
+		Brokers:       in.Brokers,
+		Properties:    in.Properties,
+	}
+}
+
+func FromAdminUpdateDomainAsyncWorkflowConfiguratonResponse(in *types.UpdateDomainAsyncWorkflowConfiguratonResponse) *adminv1.UpdateDomainAsyncWorkflowConfiguratonResponse {
+	if in == nil {
+		return nil
+	}
+	return &adminv1.UpdateDomainAsyncWorkflowConfiguratonResponse{}
+}

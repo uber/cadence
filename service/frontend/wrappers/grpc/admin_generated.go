@@ -98,6 +98,11 @@ func (g AdminHandler) GetDLQReplicationMessages(ctx context.Context, request *ad
 	return proto.FromAdminGetDLQReplicationMessagesResponse(response), proto.FromError(err)
 }
 
+func (g AdminHandler) GetDomainAsyncWorkflowConfiguraton(ctx context.Context, request *adminv1.GetDomainAsyncWorkflowConfiguratonRequest) (*adminv1.GetDomainAsyncWorkflowConfiguratonResponse, error) {
+	response, err := g.h.GetDomainAsyncWorkflowConfiguraton(ctx, proto.ToAdminGetDomainAsyncWorkflowConfiguratonRequest(request))
+	return proto.FromAdminGetDomainAsyncWorkflowConfiguratonResponse(response), proto.FromError(err)
+}
+
 func (g AdminHandler) GetDomainIsolationGroups(ctx context.Context, request *adminv1.GetDomainIsolationGroupsRequest) (*adminv1.GetDomainIsolationGroupsResponse, error) {
 	response, err := g.h.GetDomainIsolationGroups(ctx, proto.ToAdminGetDomainIsolationGroupsRequest(request))
 	return proto.FromAdminGetDomainIsolationGroupsResponse(response), proto.FromError(err)
@@ -186,6 +191,11 @@ func (g AdminHandler) RespondCrossClusterTasksCompleted(ctx context.Context, req
 func (g AdminHandler) RestoreDynamicConfig(ctx context.Context, request *adminv1.RestoreDynamicConfigRequest) (*adminv1.RestoreDynamicConfigResponse, error) {
 	err := g.h.RestoreDynamicConfig(ctx, proto.ToAdminRestoreDynamicConfigRequest(request))
 	return &adminv1.RestoreDynamicConfigResponse{}, proto.FromError(err)
+}
+
+func (g AdminHandler) UpdateDomainAsyncWorkflowConfiguraton(ctx context.Context, request *adminv1.UpdateDomainAsyncWorkflowConfiguratonRequest) (*adminv1.UpdateDomainAsyncWorkflowConfiguratonResponse, error) {
+	response, err := g.h.UpdateDomainAsyncWorkflowConfiguraton(ctx, proto.ToAdminUpdateDomainAsyncWorkflowConfiguratonRequest(request))
+	return proto.FromAdminUpdateDomainAsyncWorkflowConfiguratonResponse(response), proto.FromError(err)
 }
 
 func (g AdminHandler) UpdateDomainIsolationGroups(ctx context.Context, request *adminv1.UpdateDomainIsolationGroupsRequest) (*adminv1.UpdateDomainIsolationGroupsResponse, error) {
