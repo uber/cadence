@@ -29,15 +29,14 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/constants"
 )
 
-// MockStaleChecker is a manual mock for staleChecker
 type MockStaleChecker struct {
 	CheckAgeFunc func(response *persistence.GetWorkflowExecutionResponse) (bool, error)
 }
@@ -65,7 +64,7 @@ func TestWorkflowCheckforValidation(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 
-			mockLogger := log.NewNoop()
+			mockLogger := zap.NewNop()
 			mockMetricsClient := metrics.NewNoopMetricsClient()
 			mockDomainCache := cache.NewMockDomainCache(mockCtrl)
 			mockPersistenceRetryer := persistence.NewMockRetryer(mockCtrl)
@@ -74,20 +73,33 @@ func TestWorkflowCheckforValidation(t *testing.T) {
 					return tc.isStale, nil
 				},
 			}
-
 			checker := NewWfChecker(mockLogger, mockMetricsClient, mockDomainCache, mockPersistenceRetryer)
 			checker.(*checkerImpl).staleCheck = mockStaleChecker
 			mockDomainCache.EXPECT().
 				GetDomainByID(tc.domainID).
 				Return(constants.TestGlobalDomainEntry, nil).AnyTimes()
-			//TODO: Find a way to mock DeleteExecution to cover the staleworkflow scenario as well.
+
+			if tc.isStale {
+				mockPersistenceRetryer.EXPECT().
+					DeleteWorkflowExecution(gomock.Any(), gomock.Any()).
+					Return(nil).Times(1)
+			}
+
 			mockPersistenceRetryer.EXPECT().
 				GetWorkflowExecution(gomock.Any(), gomock.Any()).
 				DoAndReturn(func(ctx context.Context, request *persistence.GetWorkflowExecutionRequest) (*persistence.GetWorkflowExecutionResponse, error) {
 					if tc.simulateError {
 						return nil, errors.New("database error")
 					}
-					return &persistence.GetWorkflowExecutionResponse{}, nil
+					// Return a valid response object to trigger the deletion calls
+					return &persistence.GetWorkflowExecutionResponse{
+						State: &persistence.WorkflowMutableState{
+							ExecutionInfo: &persistence.WorkflowExecutionInfo{
+								DomainID:   constants.TestDomainID,
+								WorkflowID: constants.TestWorkflowID,
+							},
+						},
+					}, nil
 				}).AnyTimes()
 
 			ctx := context.Background()

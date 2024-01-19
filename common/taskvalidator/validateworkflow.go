@@ -29,36 +29,46 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/types"
 )
 
+// Checker interface for initiating the validation process.
 type Checker interface {
 	WorkflowCheckforValidation(ctx context.Context, workflowID string, domainID string, domainName string, runID string) error
 }
 
-// Define the staleChecker interface with the methodsgit s.
+// staleChecker interface definition.
 type staleChecker interface {
 	CheckAge(response *persistence.GetWorkflowExecutionResponse) (bool, error)
 }
 
+// checkerImpl is the implementation of the Checker interface.
 type checkerImpl struct {
-	logger        log.Logger
+	logger        *zap.Logger
 	metricsClient metrics.Client
 	dc            cache.DomainCache
 	pr            persistence.Retryer
 	staleCheck    staleChecker
 }
 
-func NewWfChecker(logger log.Logger, metrics metrics.Client, domainCache cache.DomainCache, pr persistence.Retryer) Checker {
-	zapLogger, _ := zap.NewProduction()
-	staleCheckInstance := invariant.NewStaleWorkflow(pr, domainCache, zapLogger)
-
-	staleCheck, _ := staleCheckInstance.(staleChecker)
+// NewWfChecker creates a new instance of Checker.
+func NewWfChecker(logger *zap.Logger, metrics metrics.Client, domainCache cache.DomainCache, pr persistence.Retryer) Checker {
+	staleCheckInstance := invariant.NewStaleWorkflow(pr, domainCache, logger)
+	staleCheck, ok := staleCheckInstance.(staleChecker)
+	if !ok {
+		logger.Error("Failed to assert StaleWorkflow instance to staleChecker interface")
+		return &checkerImpl{
+			logger:        logger,
+			metricsClient: metrics,
+			dc:            domainCache,
+			pr:            pr,
+			staleCheck:    nil, // Stale check is not available
+		}
+	}
 	return &checkerImpl{
 		logger:        logger,
 		metricsClient: metrics,
@@ -68,49 +78,71 @@ func NewWfChecker(logger log.Logger, metrics metrics.Client, domainCache cache.D
 	}
 }
 
+// WorkflowCheckforValidation performs workflow validation.
 func (w *checkerImpl) WorkflowCheckforValidation(ctx context.Context, workflowID string, domainID string, domainName string, runID string) error {
 	w.logger.Info("WorkflowCheckforValidation",
-		tag.WorkflowID(workflowID),
-		tag.WorkflowRunID(runID),
-		tag.WorkflowDomainID(domainID),
-		tag.WorkflowDomainName(domainName))
+		zap.String("WorkflowID", workflowID),
+		zap.String("RunID", runID),
+		zap.String("DomainID", domainID),
+		zap.String("DomainName", domainName))
 
 	workflowResp, err := w.pr.GetWorkflowExecution(ctx, &persistence.GetWorkflowExecutionRequest{
-		DomainID: domainID,
+		DomainID:   domainID,
+		DomainName: domainName,
 		Execution: types.WorkflowExecution{
 			WorkflowID: workflowID,
 			RunID:      runID,
 		},
 	})
 	if err != nil {
-		w.logger.Error("Error getting workflow execution", tag.Error(err))
+		w.logger.Error("Error getting workflow execution", zap.Error(err))
 		return err
 	}
 
+	// Create an instance of ConcreteExecution
+	concreteExecution := &entity.ConcreteExecution{
+		Execution: entity.Execution{
+			DomainID:   workflowResp.State.ExecutionInfo.DomainID,
+			WorkflowID: workflowResp.State.ExecutionInfo.WorkflowID,
+			RunID:      workflowResp.State.ExecutionInfo.RunID,
+			State:      workflowResp.State.ExecutionInfo.State,
+		},
+	}
+
 	if w.isDomainDeprecated(domainID) {
-		invariant.DeleteExecution(ctx, workflowResp.State.ExecutionInfo, w.pr, w.dc)
+		invariant.DeleteExecution(ctx, concreteExecution, w.pr, w.dc)
 		return nil
 	}
 
-	if w.staleWorkflowCheck(workflowResp) {
-		invariant.DeleteExecution(ctx, workflowResp.State.ExecutionInfo, w.pr, w.dc)
-		return nil
+	if w.staleCheck != nil {
+		if w.staleWorkflowCheck(workflowResp) {
+			invariant.DeleteExecution(ctx, concreteExecution, w.pr, w.dc)
+			return nil
+		}
 	}
 
 	w.metricsClient.Scope(metrics.TaskValidatorScope, metrics.DomainTag(domainName)).IncCounter(metrics.ValidatedWorkflowCount)
 	return nil
 }
 
+// isDomainDeprecated checks if a domain is deprecated.
 func (w *checkerImpl) isDomainDeprecated(domainID string) bool {
 	domain, err := w.dc.GetDomainByID(domainID)
 	if err != nil {
-		w.logger.Error("Error getting domain by ID", tag.Error(err))
+		w.logger.Error("Error getting domain by ID", zap.Error(err))
 		return false
 	}
 	return domain.IsDeprecatedOrDeleted()
 }
 
 func (w *checkerImpl) staleWorkflowCheck(workflowResp *persistence.GetWorkflowExecutionResponse) bool {
+	// Check if workflowResp or its contents are nil
+	if workflowResp == nil || workflowResp.State == nil || workflowResp.State.ExecutionInfo == nil {
+		w.logger.Error("Invalid workflow execution response received")
+		return false
+	}
+
+	// Proceed with the stale check
 	pastExpiration, _ := w.staleCheck.CheckAge(workflowResp)
 	return pastExpiration
 }
