@@ -235,6 +235,22 @@ func (a *adminHandler) GetDLQReplicationMessages(ctx context.Context, gp1 *types
 	return a.handler.GetDLQReplicationMessages(ctx, gp1)
 }
 
+func (a *adminHandler) GetDomainAsyncWorkflowConfiguraton(ctx context.Context, gp1 *types.GetDomainAsyncWorkflowConfiguratonRequest) (gp2 *types.GetDomainAsyncWorkflowConfiguratonResponse, err error) {
+	attr := &authorization.Attributes{
+		APIName:     "GetDomainAsyncWorkflowConfiguraton",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: gp1,
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
+	if err != nil {
+		return nil, err
+	}
+	if !isAuthorized {
+		return nil, errUnauthorized
+	}
+	return a.handler.GetDomainAsyncWorkflowConfiguraton(ctx, gp1)
+}
+
 func (a *adminHandler) GetDomainIsolationGroups(ctx context.Context, request *types.GetDomainIsolationGroupsRequest) (gp1 *types.GetDomainIsolationGroupsResponse, err error) {
 	attr := &authorization.Attributes{
 		APIName:     "GetDomainIsolationGroups",
@@ -529,6 +545,22 @@ func (a *adminHandler) Start() {
 
 func (a *adminHandler) Stop() {
 	a.handler.Stop()
+}
+
+func (a *adminHandler) UpdateDomainAsyncWorkflowConfiguraton(ctx context.Context, up1 *types.UpdateDomainAsyncWorkflowConfiguratonRequest) (up2 *types.UpdateDomainAsyncWorkflowConfiguratonResponse, err error) {
+	attr := &authorization.Attributes{
+		APIName:     "UpdateDomainAsyncWorkflowConfiguraton",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: up1,
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
+	if err != nil {
+		return nil, err
+	}
+	if !isAuthorized {
+		return nil, errUnauthorized
+	}
+	return a.handler.UpdateDomainAsyncWorkflowConfiguraton(ctx, up1)
 }
 
 func (a *adminHandler) UpdateDomainIsolationGroups(ctx context.Context, request *types.UpdateDomainIsolationGroupsRequest) (up1 *types.UpdateDomainIsolationGroupsResponse, err error) {

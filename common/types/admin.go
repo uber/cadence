@@ -474,3 +474,54 @@ func (v *UpdateDomainIsolationGroupsRequest) SerializeForLogging() (string, erro
 }
 
 type UpdateDomainIsolationGroupsResponse struct{}
+
+type GetDomainAsyncWorkflowConfiguratonRequest struct {
+	Domain string
+}
+
+func (v *GetDomainAsyncWorkflowConfiguratonRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
+	return SerializeRequest(v)
+}
+
+type GetDomainAsyncWorkflowConfiguratonResponse struct {
+	Configuration *AsyncWorkflowConfiguration
+}
+
+type AsyncWorkflowConfiguration struct {
+	PredefinedQueueName string
+	QueueType           AsyncWorkflowQueueType
+	KafkaConfig         *AsyncWorkflowKafkaQueueConfiguration
+}
+
+type AsyncWorkflowQueueType int
+
+const (
+	AsyncWorkflowQueueTypeInvalid = iota
+	AsyncWorkflowQueueTypeKafka
+)
+
+type AsyncWorkflowKafkaQueueConfiguration struct {
+	Topic         string
+	DLQTopic      string
+	ConsumerGroup string
+	Brokers       []string
+	Properties    map[string]string
+}
+
+type UpdateDomainAsyncWorkflowConfiguratonRequest struct {
+	Domain        string
+	Configuration *AsyncWorkflowConfiguration
+}
+
+func (v *UpdateDomainAsyncWorkflowConfiguratonRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
+	return SerializeRequest(v)
+}
+
+type UpdateDomainAsyncWorkflowConfiguratonResponse struct {
+}
