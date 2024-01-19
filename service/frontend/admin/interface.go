@@ -68,4 +68,6 @@ type Handler interface {
 	UpdateGlobalIsolationGroups(ctx context.Context, request *types.UpdateGlobalIsolationGroupsRequest) (*types.UpdateGlobalIsolationGroupsResponse, error)
 	GetDomainIsolationGroups(ctx context.Context, request *types.GetDomainIsolationGroupsRequest) (*types.GetDomainIsolationGroupsResponse, error)
 	UpdateDomainIsolationGroups(ctx context.Context, request *types.UpdateDomainIsolationGroupsRequest) (*types.UpdateDomainIsolationGroupsResponse, error)
+	GetDomainAsyncWorkflowConfiguraton(context.Context, *types.GetDomainAsyncWorkflowConfiguratonRequest) (*types.GetDomainAsyncWorkflowConfiguratonResponse, error)
+	UpdateDomainAsyncWorkflowConfiguraton(context.Context, *types.UpdateDomainAsyncWorkflowConfiguratonRequest) (*types.UpdateDomainAsyncWorkflowConfiguratonResponse, error)
 }
