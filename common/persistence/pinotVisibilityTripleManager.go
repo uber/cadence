@@ -23,7 +23,6 @@ package persistence
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common/pinot"
 	"math/rand"
 
 	"github.com/uber/cadence/common"
@@ -49,8 +48,11 @@ type (
 const (
 	Primary    = "Primary"
 	Secondary  = "Secondary"
-	ContextKey = pinot.ContextKey("visibility-override")
+	ContextKey = ResponseComparatorContextKey("visibility-override")
 )
+
+// ContextKey is for Pinot/ES response comparator. This struct will be passed into ctx as a key.
+type ResponseComparatorContextKey string
 
 type OperationType string
 
