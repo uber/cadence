@@ -50,3 +50,6 @@ type (
 	// SearchResponse is a response to Search, SearchByQuery and ScanByQuery
 	SearchResponse = p.InternalListWorkflowExecutionsResponse
 )
+
+// ContextKey is for Pinot/ES response comparator. This struct will be passed into ctx as a key.
+type ContextKey string

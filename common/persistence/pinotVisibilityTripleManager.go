@@ -23,6 +23,7 @@ package persistence
 import (
 	"context"
 	"fmt"
+	"github.com/uber/cadence/common/pinot"
 	"math/rand"
 
 	"github.com/uber/cadence/common"
@@ -48,7 +49,7 @@ type (
 const (
 	Primary    = "Primary"
 	Secondary  = "Secondary"
-	ContextKey = types.ContextKey("visibility-override")
+	ContextKey = pinot.ContextKey("visibility-override")
 )
 
 type OperationType string
