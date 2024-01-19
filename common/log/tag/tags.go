@@ -947,3 +947,7 @@ func FallbackIsolationGroup(group string) Tag {
 func PollerGroupsConfiguration(pollers types.IsolationGroupConfiguration) Tag {
 	return newObjectTag("poller-isolation-groups", pollers.ToPartitionList())
 }
+
+func WorkflowIDCacheSize(size int) Tag {
+	return newInt("workflow-id-cache-size", size)
+}
