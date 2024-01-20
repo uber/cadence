@@ -335,13 +335,14 @@ func newArchiverBase(enabled bool, logger log.Logger) *ArchiverBase {
 		FileMode: "0666",
 		DirMode:  "0766",
 	}
-	provider := provider.NewArchiverProvider(
-		&config.HistoryArchiverProvider{
-			Filestore: cfg,
-		},
-		&config.VisibilityArchiverProvider{
-			Filestore: cfg,
-		},
+	node, err := config.ToYamlNode(cfg)
+	if err != nil {
+		logger.Fatal("Should be impossible: failed to convert filestore archiver config to a yaml node")
+	}
+
+	archiverProvider := provider.NewArchiverProvider(
+		config.HistoryArchiverProvider{config.FilestoreConfig: node},
+		config.VisibilityArchiverProvider{config.FilestoreConfig: node},
 	)
 	return &ArchiverBase{
 		metadata: archiver.NewArchivalMetadata(dcCollection, "enabled", true, "enabled", true, &config.ArchivalDomainDefaults{
@@ -354,7 +355,7 @@ func newArchiverBase(enabled bool, logger log.Logger) *ArchiverBase {
 				URI:    "testScheme://test/visibility/archive/path",
 			},
 		}),
-		provider:                 provider,
+		provider:                 archiverProvider,
 		historyStoreDirectory:    historyStoreDirectory,
 		visibilityStoreDirectory: visibilityStoreDirectory,
 		historyURI:               filestore.URIScheme + "://" + historyStoreDirectory,
