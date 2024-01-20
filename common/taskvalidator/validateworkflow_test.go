@@ -37,11 +37,11 @@ import (
 	"github.com/uber/cadence/service/history/constants"
 )
 
-type MockStaleChecker struct {
+type mockStaleChecker struct {
 	CheckAgeFunc func(response *persistence.GetWorkflowExecutionResponse) (bool, error)
 }
 
-func (m *MockStaleChecker) CheckAge(response *persistence.GetWorkflowExecutionResponse) (bool, error) {
+func (m *mockStaleChecker) CheckAge(response *persistence.GetWorkflowExecutionResponse) (bool, error) {
 	return m.CheckAgeFunc(response)
 }
 
@@ -69,13 +69,12 @@ func TestWorkflowCheckforValidation(t *testing.T) {
 			mockMetricsClient := metrics.NewNoopMetricsClient()
 			mockDomainCache := cache.NewMockDomainCache(mockCtrl)
 			mockPersistenceRetryer := persistence.NewMockRetryer(mockCtrl)
-			mockStaleChecker := &MockStaleChecker{
+			mockStaleChecker := &mockStaleChecker{
 				CheckAgeFunc: func(response *persistence.GetWorkflowExecutionResponse) (bool, error) {
 					return tc.isStale, nil
 				},
 			}
 			checker := NewWfChecker(mockLogger, mockMetricsClient, mockDomainCache, mockPersistenceRetryer, mockStaleChecker)
-			checker.(*checkerImpl).staleCheck = mockStaleChecker
 			mockDomainCache.EXPECT().
 				GetDomainByID(tc.domainID).
 				Return(constants.TestGlobalDomainEntry, nil).AnyTimes()
