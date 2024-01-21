@@ -207,8 +207,7 @@ func NewTest(
 
 		// logger
 
-		Logger:        logger,
-		taskvalidator: taskvalidator.NewWfChecker(logger, metrics.NewClient(scope, serviceMetricsIndex), cache.NewMockDomainCache(controller)),
+		Logger: logger,
 	}
 }
 

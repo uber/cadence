@@ -23,25 +23,41 @@
 package taskvalidator
 
 import (
+	"context"
+	"errors"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/constants"
 )
 
+type mockStaleChecker struct {
+	CheckAgeFunc func(response *persistence.GetWorkflowExecutionResponse) (bool, error)
+}
+
+func (m *mockStaleChecker) CheckAge(response *persistence.GetWorkflowExecutionResponse) (bool, error) {
+	return m.CheckAgeFunc(response)
+}
+
 func TestWorkflowCheckforValidation(t *testing.T) {
 	testCases := []struct {
-		name     string
-		domainID string
-		runID    string
+		name          string
+		workflowID    string
+		domainID      string
+		domainName    string
+		runID         string
+		isStale       bool
+		simulateError bool
 	}{
-		{"DomainFetchSuccess", "domain-id-success", "run-id-success"},
-		{"DomainFetchFailure", "domain-id-failure", "run-id-failure"},
+		{"NonStaleWorkflow", "workflow-1", "domain-1", "domain-name-1", "run-1", false, false},
+		{"StaleWorkflow", "workflow-2", "domain-2", "domain-name-2", "run-2", true, false},
+		{"ErrorInGetWorkflowExecution", "workflow-3", "domain-3", "domain-name-3", "run-3", false, true},
 	}
 
 	for _, tc := range testCases {
@@ -49,19 +65,59 @@ func TestWorkflowCheckforValidation(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 
+			mockLogger := zap.NewNop()
+			mockMetricsClient := metrics.NewNoopMetricsClient()
 			mockDomainCache := cache.NewMockDomainCache(mockCtrl)
-			logger := log.NewNoop()
-			metricsClient := metrics.NewNoopMetricsClient()
-			checker := NewWfChecker(logger, metricsClient, mockDomainCache)
-
-			// Set up the mock behavior for GetDomainByID
+			mockPersistenceRetryer := persistence.NewMockRetryer(mockCtrl)
+			mockStaleChecker := &mockStaleChecker{
+				CheckAgeFunc: func(response *persistence.GetWorkflowExecutionResponse) (bool, error) {
+					return tc.isStale, nil
+				},
+			}
+			checker := NewWfChecker(mockLogger, mockMetricsClient, mockDomainCache, mockPersistenceRetryer, mockStaleChecker)
 			mockDomainCache.EXPECT().
 				GetDomainByID(tc.domainID).
-				Return(constants.TestGlobalDomainEntry, nil).
-				AnyTimes()
+				Return(constants.TestGlobalDomainEntry, nil).AnyTimes()
+			// In each test case
+			mockDomainCache.EXPECT().
+				GetDomainName(gomock.Any()). // You can use gomock.Any() if the exact argument is not important
+				Return("test-domain-name", nil).AnyTimes()
 
-			err := checker.WorkflowCheckforValidation("workflowID", tc.domainID, "domainName", tc.runID)
-			assert.NoError(t, err)
+			// For test cases where deletion is expected
+			if tc.isStale {
+				mockPersistenceRetryer.EXPECT().
+					DeleteWorkflowExecution(gomock.Any(), gomock.Any()).
+					Return(nil).Times(1)
+				mockPersistenceRetryer.EXPECT().
+					DeleteCurrentWorkflowExecution(gomock.Any(), gomock.Any()).
+					Return(nil).Times(1)
+			}
+
+			mockPersistenceRetryer.EXPECT().
+				GetWorkflowExecution(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(ctx context.Context, request *persistence.GetWorkflowExecutionRequest) (*persistence.GetWorkflowExecutionResponse, error) {
+					if tc.simulateError {
+						return nil, errors.New("database error")
+					}
+					// Return a valid response object to trigger the deletion calls
+					return &persistence.GetWorkflowExecutionResponse{
+						State: &persistence.WorkflowMutableState{
+							ExecutionInfo: &persistence.WorkflowExecutionInfo{
+								DomainID:   constants.TestDomainID,
+								WorkflowID: constants.TestWorkflowID,
+							},
+						},
+					}, nil
+				}).AnyTimes()
+
+			ctx := context.Background()
+			err := checker.WorkflowCheckforValidation(ctx, tc.workflowID, tc.domainID, tc.domainName, tc.runID)
+
+			if tc.simulateError {
+				assert.Error(t, err, "Expected error when GetWorkflowExecution fails")
+			} else {
+				assert.NoError(t, err, "Expected no error for valid workflow execution")
+			}
 		})
 	}
 }

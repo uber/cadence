@@ -59,7 +59,6 @@ import (
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service"
-	"github.com/uber/cadence/common/taskvalidator"
 )
 
 type (
@@ -132,7 +131,6 @@ type (
 		isolationGroups           isolationgroup.State
 		isolationGroupConfigStore configstore.Client
 		partitioner               partition.Partitioner
-		taskvalidator             taskvalidator.Checker
 	}
 )
 
@@ -338,7 +336,6 @@ func New(
 		isolationGroups:           isolationGroupState,
 		isolationGroupConfigStore: isolationGroupStore, // can be nil where persistence is not available
 		partitioner:               partitioner,
-		taskvalidator:             taskvalidator.NewWfChecker(logger, params.MetricsClient, domainCache),
 	}
 	return impl, nil
 }
@@ -442,10 +439,6 @@ func (h *Impl) GetTimeSource() clock.TimeSource {
 // GetPayloadSerializer return binary payload serializer
 func (h *Impl) GetPayloadSerializer() persistence.PayloadSerializer {
 	return h.payloadSerializer
-}
-
-func (h *Impl) GetTaskValidator() taskvalidator.Checker {
-	return h.taskvalidator
 }
 
 // GetMetricsClient return metrics client
