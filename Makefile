@@ -342,9 +342,9 @@ $(BUILD)/proto-lint: $(PROTO_FILES) $(STABLE_BIN)/$(BUF_VERSION_BIN) | $(BUILD)
 # tool builds that need to be in sync with the parent are partially checked through go_mod_build_tool, but should probably be checked here too
 $(BUILD)/gomod-lint: go.mod internal/tools/go.mod common/archiver/gcloud/go.mod | $(BUILD)
 	$Q # this is likely impossible as it'd be a cycle
-	$Q grep github.com/uber/cadence/common/archiver/gcloud go.mod && echo "gcloud submodule cannot be imported by main module" || true
+	$Q if grep github.com/uber/cadence/common/archiver/gcloud go.mod; then echo "gcloud submodule cannot be imported by main module" >&2; exit 1; fi
 	$Q # intentionally kept separate so the server does not include tool-only dependencies
-	$Q grep github.com/uber/cadence/internal go.mod && echo "internal module cannot be imported by main module" || true
+	$Q if grep github.com/uber/cadence/internal go.mod; then echo "internal module cannot be imported by main module" >&2; exit 1; fi
 	$Q touch $@
 
 # note that LINT_SRC is fairly fake as a prerequisite.
