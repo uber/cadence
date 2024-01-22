@@ -30,6 +30,7 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/quotas"
 )
 
@@ -49,6 +50,7 @@ type wfCache struct {
 	internalLimiterFactory quotas.LimiterFactory
 	workflowIdCacheEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
 	domainCache            cache.DomainCache
+	metricsClient          metrics.Client
 	logger                 log.Logger
 	getCacheItemFn         func(domainID string, workflowID string) (*cacheValue, error)
 }
@@ -71,6 +73,7 @@ type Params struct {
 	InternalLimiterFactory quotas.LimiterFactory
 	WorkflowIDCacheEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
 	DomainCache            cache.DomainCache
+	MetricsClient          metrics.Client
 	Logger                 log.Logger
 }
 
@@ -86,6 +89,7 @@ func New(params Params) WFCache {
 		internalLimiterFactory: params.InternalLimiterFactory,
 		workflowIdCacheEnabled: params.WorkflowIDCacheEnabled,
 		domainCache:            params.DomainCache,
+		metricsClient:          params.MetricsClient,
 		logger:                 params.Logger,
 	}
 	// We set getCacheItemFn to cache.getCacheItem so that we can mock it in unit tests
@@ -111,6 +115,8 @@ func (c *wfCache) AllowExternal(domainID string, workflowID string) bool {
 		// The cache is not enabled if the domain does not exist or there is an error getting it (fail open)
 		return true
 	}
+	domainName, err := c.domainCache.GetDomainName(domainID)
+	c.metricsClient.Scope(metrics.HistoryClientWfIDCacheScope, metrics.DomainTag(domainName)).UpdateGauge(metrics.ActiveClusterGauge, float64(c.lru.Size()))
 
 	// Locking is not needed because both getCacheItem and the rate limiter are thread safe
 	value, err := c.getCacheItemFn(domainID, workflowID)
