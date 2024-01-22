@@ -188,7 +188,7 @@ func TestWfCache_AllowDomainCacheError(t *testing.T) {
 		"Error",
 		"Unexpected error from workflow cache",
 		[]tag.Tag{
-			tag.Error(domainNameError),
+			tag.Error(errDomainName),
 			tag.WorkflowDomainID(testDomainID),
 			tag.WorkflowID(""),
 			tag.WorkflowIDCacheSize(0),
