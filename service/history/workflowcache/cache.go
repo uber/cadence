@@ -33,6 +33,10 @@ import (
 	"github.com/uber/cadence/common/quotas"
 )
 
+var (
+	domainNameError = errors.New("failed to get domain name from domainID")
+)
+
 // WFCache is a per workflow cache used for workflow specific in memory data
 type WFCache interface {
 	AllowExternal(domainID string, workflowID string) bool
@@ -93,6 +97,7 @@ func New(params Params) WFCache {
 func (c *wfCache) workflowIdCacheEnabledCheck(domainID string) bool {
 	domainName, err := c.domainCache.GetDomainName(domainID)
 	if err != nil {
+		c.logError(domainID, "", domainNameError)
 		// The cache is not enabled if the domain does not exist or there is an error getting it (fail open)
 		return false
 	}
@@ -103,6 +108,7 @@ func (c *wfCache) workflowIdCacheEnabledCheck(domainID string) bool {
 // AllowExternal returns true if the rate limiter for this domain/workflow allows an external request
 func (c *wfCache) AllowExternal(domainID string, workflowID string) bool {
 	if !c.workflowIdCacheEnabledCheck(domainID) {
+		// The cache is not enabled if the domain does not exist or there is an error getting it (fail open)
 		return true
 	}
 

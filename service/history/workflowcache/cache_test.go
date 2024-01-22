@@ -173,3 +173,43 @@ func TestWfCache_AllowError(t *testing.T) {
 	// We log the error
 	logger.AssertExpectations(t)
 }
+
+// TestWfCache_AllowDomainCacheError tests that the cache will allow requests through if there is an error getting the domain name.
+func TestWfCache_AllowDomainCacheError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	domainCache := cache.NewMockDomainCache(ctrl)
+	domainCache.EXPECT().GetDomainName(testDomainID).Return("", assert.AnError).Times(2)
+
+	// Setup the mock logger
+	logger := new(log.MockLogger)
+
+	logger.On(
+		"Error",
+		"Unexpected error from workflow cache",
+		[]tag.Tag{
+			tag.Error(domainNameError),
+			tag.WorkflowDomainID(testDomainID),
+			tag.WorkflowID(""),
+			tag.WorkflowIDCacheSize(0),
+		},
+	).Times(2)
+
+	// Setup the cache, we do not need the factories, as we will mock the getCacheItemFn
+	wfCache := New(Params{
+		TTL:                    time.Minute,
+		MaxCount:               1_000,
+		ExternalLimiterFactory: nil,
+		InternalLimiterFactory: nil,
+		WorkflowIDCacheEnabled: func(domain string) bool { return true },
+		Logger:                 logger,
+		DomainCache:            domainCache,
+	})
+
+	// We fail open
+	assert.True(t, wfCache.AllowExternal(testDomainID, testWorkflowID))
+	assert.True(t, wfCache.AllowInternal(testDomainID, testWorkflowID))
+
+	// We log the error
+	logger.AssertExpectations(t)
+}
