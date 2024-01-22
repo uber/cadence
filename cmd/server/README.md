@@ -6,7 +6,8 @@ For the most part, this means that day-to-day library upgrades should:
 
 New submodules we want to include by default should:
 1. Add a replace in this `go.mod` like others
-2. `make tidy`
+2. Import and register it somehow
+3. `make tidy`
 
 And if you have problems tidying:
 1. Copy/paste all included modules into this `go.mod` (`/go.mod` + `/common/archiver/gcloud/go.mod` currently)
