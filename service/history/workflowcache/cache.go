@@ -27,9 +27,14 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/quotas"
+)
+
+var (
+	domainNameError = errors.New("failed to get domain name from domainID")
 )
 
 // WFCache is a per workflow cache used for workflow specific in memory data
@@ -42,6 +47,8 @@ type wfCache struct {
 	lru                    cache.Cache
 	externalLimiterFactory quotas.LimiterFactory
 	internalLimiterFactory quotas.LimiterFactory
+	workflowIdCacheEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
+	domainCache            cache.DomainCache
 	logger                 log.Logger
 	getCacheItemFn         func(domainID string, workflowID string) (*cacheValue, error)
 }
@@ -62,6 +69,8 @@ type Params struct {
 	MaxCount               int
 	ExternalLimiterFactory quotas.LimiterFactory
 	InternalLimiterFactory quotas.LimiterFactory
+	WorkflowIDCacheEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
+	DomainCache            cache.DomainCache
 	Logger                 log.Logger
 }
 
@@ -75,6 +84,8 @@ func New(params Params) WFCache {
 		}),
 		externalLimiterFactory: params.ExternalLimiterFactory,
 		internalLimiterFactory: params.InternalLimiterFactory,
+		workflowIdCacheEnabled: params.WorkflowIDCacheEnabled,
+		domainCache:            params.DomainCache,
 		logger:                 params.Logger,
 	}
 	// We set getCacheItemFn to cache.getCacheItem so that we can mock it in unit tests
@@ -83,8 +94,24 @@ func New(params Params) WFCache {
 	return cache
 }
 
+func (c *wfCache) workflowIdCacheEnabledCheck(domainID string) bool {
+	domainName, err := c.domainCache.GetDomainName(domainID)
+	if err != nil {
+		c.logError(domainID, "", domainNameError)
+		// The cache is not enabled if the domain does not exist or there is an error getting it (fail open)
+		return false
+	}
+
+	return c.workflowIdCacheEnabled(domainName)
+}
+
 // AllowExternal returns true if the rate limiter for this domain/workflow allows an external request
 func (c *wfCache) AllowExternal(domainID string, workflowID string) bool {
+	if !c.workflowIdCacheEnabledCheck(domainID) {
+		// The cache is not enabled if the domain does not exist or there is an error getting it (fail open)
+		return true
+	}
+
 	// Locking is not needed because both getCacheItem and the rate limiter are thread safe
 	value, err := c.getCacheItemFn(domainID, workflowID)
 	if err != nil {
@@ -97,6 +124,11 @@ func (c *wfCache) AllowExternal(domainID string, workflowID string) bool {
 
 // AllowInternal returns true if the rate limiter for this domain/workflow allows an internal request
 func (c *wfCache) AllowInternal(domainID string, workflowID string) bool {
+	if !c.workflowIdCacheEnabledCheck(domainID) {
+		// The cache is not enabled if the domain does not exist or there is an error getting it (fail open)
+		return true
+	}
+
 	// Locking is not needed because both getCacheItem and the rate limiter are thread safe
 	value, err := c.getCacheItemFn(domainID, workflowID)
 	if err != nil {
@@ -128,8 +160,11 @@ func (c *wfCache) getCacheItem(domainID string, workflowID string) (*cacheValue,
 	// another thread might have inserted a value between the Get and PutIfNotExist, but that is ok
 	// it should never return an error as we do not use Pin
 	valueInterface, err := c.lru.PutIfNotExist(key, value)
-	value, ok = valueInterface.(*cacheValue)
+	if err != nil {
+		return nil, err
+	}
 
+	value, ok = valueInterface.(*cacheValue)
 	// This should never happen, either the value was already in the cache or we just inserted it
 	if !ok {
 		return nil, errors.New("Failed to insert new value into cache")
