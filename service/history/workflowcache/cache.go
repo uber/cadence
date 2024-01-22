@@ -160,8 +160,11 @@ func (c *wfCache) getCacheItem(domainID string, workflowID string) (*cacheValue,
 	// another thread might have inserted a value between the Get and PutIfNotExist, but that is ok
 	// it should never return an error as we do not use Pin
 	valueInterface, err := c.lru.PutIfNotExist(key, value)
-	value, ok = valueInterface.(*cacheValue)
+	if err != nil {
+		return nil, err
+	}
 
+	value, ok = valueInterface.(*cacheValue)
 	// This should never happen, either the value was already in the cache or we just inserted it
 	if !ok {
 		return nil, errors.New("Failed to insert new value into cache")
