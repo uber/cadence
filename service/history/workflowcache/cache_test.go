@@ -29,6 +29,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/quotas"
@@ -36,14 +37,19 @@ import (
 
 const (
 	testDomainID    = "B59344B2-4166-462D-9CBD-22B25D2A7B1B"
+	testDomainName  = "testDomainName"
 	testWorkflowID  = "8ED9219B-36A2-4FD0-B9EA-6298A0F2ED1A"
 	testWorkflowID2 = "F6E31C3D-3E54-4530-BDBE-68AEBA475473"
 )
 
 // TestWfCache_AllowSingleWorkflow tests that the cache will use the correct rate limiter for internal and external requests.
 func TestWfCache_AllowSingleWorkflow(t *testing.T) {
-	// The external rate limiter will allow the first request, but not the second.
 	ctrl := gomock.NewController(t)
+
+	domainCache := cache.NewMockDomainCache(ctrl)
+	domainCache.EXPECT().GetDomainName(testDomainID).Return(testDomainName, nil).Times(4)
+
+	// The external rate limiter will allow the first request, but not the second.
 	externalLimiter := quotas.NewMockLimiter(ctrl)
 	externalLimiter.EXPECT().Allow().Return(true).Times(1)
 	externalLimiter.EXPECT().Allow().Return(false).Times(1)
@@ -65,7 +71,9 @@ func TestWfCache_AllowSingleWorkflow(t *testing.T) {
 		MaxCount:               1_000,
 		ExternalLimiterFactory: externalLimiterFactory,
 		InternalLimiterFactory: internalLimiterFactory,
+		WorkflowIDCacheEnabled: func(domain string) bool { return true },
 		Logger:                 log.NewNoop(),
+		DomainCache:            domainCache,
 	})
 
 	assert.True(t, wfCache.AllowExternal(testDomainID, testWorkflowID))
@@ -78,6 +86,9 @@ func TestWfCache_AllowSingleWorkflow(t *testing.T) {
 // TestWfCache_AllowMultipleWorkflow tests that the cache will use the correct rate limiter for different workflows.
 func TestWfCache_AllowMultipleWorkflow(t *testing.T) {
 	ctrl := gomock.NewController(t)
+
+	domainCache := cache.NewMockDomainCache(ctrl)
+	domainCache.EXPECT().GetDomainName(testDomainID).Return(testDomainName, nil).Times(4)
 
 	// The external rate limiter for wf1 will allow the first request, but not the second.
 	externalLimiterWf1 := quotas.NewMockLimiter(ctrl)
@@ -106,7 +117,9 @@ func TestWfCache_AllowMultipleWorkflow(t *testing.T) {
 		MaxCount:               1_000,
 		ExternalLimiterFactory: externalLimiterFactory,
 		InternalLimiterFactory: internalLimiterFactory,
+		WorkflowIDCacheEnabled: func(domain string) bool { return true },
 		Logger:                 log.NewNoop(),
+		DomainCache:            domainCache,
 	})
 
 	assert.True(t, wfCache.AllowExternal(testDomainID, testWorkflowID))
@@ -118,6 +131,11 @@ func TestWfCache_AllowMultipleWorkflow(t *testing.T) {
 
 // TestWfCache_AllowInternalError tests that the cache will allow internal requests through if there is an error getting the rate limiter.
 func TestWfCache_AllowError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	domainCache := cache.NewMockDomainCache(ctrl)
+	domainCache.EXPECT().GetDomainName(testDomainID).Return(testDomainName, nil).Times(2)
+
 	// Setup the mock logger
 	logger := new(log.MockLogger)
 
@@ -138,7 +156,9 @@ func TestWfCache_AllowError(t *testing.T) {
 		MaxCount:               1_000,
 		ExternalLimiterFactory: nil,
 		InternalLimiterFactory: nil,
+		WorkflowIDCacheEnabled: func(domain string) bool { return true },
 		Logger:                 logger,
+		DomainCache:            domainCache,
 	}).(*wfCache)
 
 	// We set getCacheItemFn to a function that will return an error so that we can test the error logic

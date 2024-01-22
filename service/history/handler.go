@@ -30,7 +30,6 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
-	"github.com/uber/cadence/service/history/workflowcache"
 	"go.uber.org/yarpc/yarpcerrors"
 	"golang.org/x/sync/errgroup"
 
@@ -54,6 +53,7 @@ import (
 	"github.com/uber/cadence/service/history/resource"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
+	"github.com/uber/cadence/service/history/workflowcache"
 )
 
 const shardOwnershipTransferDelay = 5 * time.Second
