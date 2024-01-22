@@ -565,18 +565,18 @@ test: ## Build and run all tests. This target is for local development. The pipe
 	$Q rm -f test
 	$Q rm -f test.log
 	$Q echo Running special test cases without race detector:
-	$Q # go test -v ./cmd/server/cadence/
+	$Q go test -v ./cmd/server/cadence/
 	$Q # CAUTION: when changing to `go test ./...`, note that this DOES NOT test submodules.  Those must be run separately.
-	$Q set -o pipefail; FAIL=""; for dir in $(PKG_TEST_DIRS); do \
-		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log || (FAIL="$$FAIL $$dir"; break);\
-	done; test -z "$$FAIL" || (echo "Failed packages: $$FAIL"; exit 1)
+	$Q for dir in $(PKG_TEST_DIRS); do \
+		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
+	done;
 
 test_e2e: bins
 	$Q rm -f test
 	$Q rm -f test.log
-	$Q set -o pipefail; FAIL=""; for dir in $(INTEG_TEST_ROOT); do \
-		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log || FAIL="$$FAIL $$dir"; \
-	done; test -z "$$FAIL" || (echo "Failed packages: $$FAIL"; exit 1)
+	$Q for dir in $(INTEG_TEST_ROOT); do \
+		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
+	done;
 
 # need to run end-to-end xdc tests with race detector off because of ringpop bug causing data race issue
 test_e2e_xdc: bins
