@@ -35,7 +35,7 @@ import (
 )
 
 var (
-	domainNameError = errors.New("failed to get domain name from domainID")
+	errDomainName = errors.New("failed to get domain name from domainID")
 )
 
 // WFCache is a per workflow cache used for workflow specific in memory data
@@ -48,7 +48,7 @@ type wfCache struct {
 	lru                    cache.Cache
 	externalLimiterFactory quotas.LimiterFactory
 	internalLimiterFactory quotas.LimiterFactory
-	workflowIdCacheEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
+	workflowIDCacheEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
 	domainCache            cache.DomainCache
 	metricsClient          metrics.Client
 	logger                 log.Logger
@@ -87,7 +87,7 @@ func New(params Params) WFCache {
 		}),
 		externalLimiterFactory: params.ExternalLimiterFactory,
 		internalLimiterFactory: params.InternalLimiterFactory,
-		workflowIdCacheEnabled: params.WorkflowIDCacheEnabled,
+		workflowIDCacheEnabled: params.WorkflowIDCacheEnabled,
 		domainCache:            params.DomainCache,
 		metricsClient:          params.MetricsClient,
 		logger:                 params.Logger,
@@ -98,20 +98,20 @@ func New(params Params) WFCache {
 	return cache
 }
 
-func (c *wfCache) workflowIdCacheEnabledCheck(domainID string) bool {
+func (c *wfCache) workflowIDCacheEnabledCheck(domainID string) bool {
 	domainName, err := c.domainCache.GetDomainName(domainID)
 	if err != nil {
-		c.logError(domainID, "", domainNameError)
+		c.logError(domainID, "", errDomainName)
 		// The cache is not enabled if the domain does not exist or there is an error getting it (fail open)
 		return false
 	}
 
-	return c.workflowIdCacheEnabled(domainName)
+	return c.workflowIDCacheEnabled(domainName)
 }
 
 // AllowExternal returns true if the rate limiter for this domain/workflow allows an external request
 func (c *wfCache) AllowExternal(domainID string, workflowID string) bool {
-	if !c.workflowIdCacheEnabledCheck(domainID) {
+	if !c.workflowIDCacheEnabledCheck(domainID) {
 		// The cache is not enabled if the domain does not exist or there is an error getting it (fail open)
 		return true
 	}
@@ -130,7 +130,7 @@ func (c *wfCache) AllowExternal(domainID string, workflowID string) bool {
 
 // AllowInternal returns true if the rate limiter for this domain/workflow allows an internal request
 func (c *wfCache) AllowInternal(domainID string, workflowID string) bool {
-	if !c.workflowIdCacheEnabledCheck(domainID) {
+	if !c.workflowIDCacheEnabledCheck(domainID) {
 		// If we can't get the cache item, we should allow the request through
 		return true
 	}
