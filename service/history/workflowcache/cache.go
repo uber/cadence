@@ -125,6 +125,7 @@ func (c *wfCache) AllowExternal(domainID string, workflowID string) bool {
 // AllowInternal returns true if the rate limiter for this domain/workflow allows an internal request
 func (c *wfCache) AllowInternal(domainID string, workflowID string) bool {
 	if !c.workflowIdCacheEnabledCheck(domainID) {
+		// If we can't get the cache item, we should allow the request through
 		return true
 	}
 

@@ -213,3 +213,32 @@ func TestWfCache_AllowDomainCacheError(t *testing.T) {
 	// We log the error
 	logger.AssertExpectations(t)
 }
+
+// TestWfCache_CacheDisabled tests that the cache will allow requests through if it is disabled
+func TestWfCache_CacheDisabled(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	domainCache := cache.NewMockDomainCache(ctrl)
+	domainCache.EXPECT().GetDomainName(testDomainID).Return(testDomainName, nil).Times(2)
+
+	// Setup the mock logger
+	logger := new(log.MockLogger)
+
+	// Setup the cache, we do not need the factories, as we will mock the getCacheItemFn
+	wfCache := New(Params{
+		TTL:                    time.Minute,
+		MaxCount:               1_000,
+		ExternalLimiterFactory: nil,
+		InternalLimiterFactory: nil,
+		WorkflowIDCacheEnabled: func(domain string) bool { return false },
+		Logger:                 logger,
+		DomainCache:            domainCache,
+	})
+
+	// We fail open
+	assert.True(t, wfCache.AllowExternal(testDomainID, testWorkflowID))
+	assert.True(t, wfCache.AllowInternal(testDomainID, testWorkflowID))
+
+	// We log the error
+	logger.AssertExpectations(t)
+}

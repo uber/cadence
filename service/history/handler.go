@@ -692,7 +692,7 @@ func (h *handlerImpl) StartWorkflowExecution(
 	workflowID := startRequest.GetWorkflowID()
 
 	if !h.workflowIDCache.AllowExternal(domainID, workflowID) {
-		// TODO, do the actual rate limiting in the future PR
+		// TODO, do the actual rate limiting in a future PR
 	}
 
 	engine, err1 := h.controller.GetEngine(workflowID)
