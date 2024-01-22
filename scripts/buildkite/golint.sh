@@ -2,6 +2,7 @@
 
 set -ex
 
+make tidy
 make go-generate
 make fmt 
 make lint 
