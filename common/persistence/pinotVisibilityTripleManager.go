@@ -51,7 +51,7 @@ const (
 	ContextKey = ResponseComparatorContextKey("visibility-override")
 )
 
-// ContextKey is for Pinot/ES response comparator. This struct will be passed into ctx as a key.
+// ResponseComparatorContextKey is for Pinot/ES response comparator. This struct will be passed into ctx as a key.
 type ResponseComparatorContextKey string
 
 type OperationType string
