@@ -81,9 +81,10 @@ type Params struct {
 func New(params Params) WFCache {
 	cache := &wfCache{
 		lru: cache.New(&cache.Options{
-			TTL:      params.TTL,
-			Pin:      false,
-			MaxCount: params.MaxCount,
+			TTL:           params.TTL,
+			Pin:           false,
+			MaxCount:      params.MaxCount,
+			ActivelyEvict: true,
 		}),
 		externalLimiterFactory: params.ExternalLimiterFactory,
 		internalLimiterFactory: params.InternalLimiterFactory,
@@ -116,7 +117,7 @@ func (c *wfCache) AllowExternal(domainID string, workflowID string) bool {
 		return true
 	}
 	domainName, err := c.domainCache.GetDomainName(domainID)
-	c.metricsClient.Scope(metrics.HistoryClientWfIDCacheScope, metrics.DomainTag(domainName)).UpdateGauge(metrics.ActiveClusterGauge, float64(c.lru.Size()))
+	c.metricsClient.Scope(metrics.HistoryClientWfIDCacheScope, metrics.DomainTag(domainName)).UpdateGauge(metrics.WorkflowIDCacheSizeGauge, float64(c.lru.Size()))
 
 	// Locking is not needed because both getCacheItem and the rate limiter are thread safe
 	value, err := c.getCacheItemFn(domainID, workflowID)
