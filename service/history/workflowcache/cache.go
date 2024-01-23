@@ -99,25 +99,23 @@ func New(params Params) WFCache {
 	return cache
 }
 
-func (c *wfCache) workflowIDCacheEnabledCheck(domainID string) bool {
-	domainName, err := c.domainCache.GetDomainName(domainID)
-	if err != nil {
-		c.logError(domainID, "", errDomainName)
-		// The cache is not enabled if the domain does not exist or there is an error getting it (fail open)
-		return false
-	}
-
-	return c.workflowIDCacheEnabled(domainName)
-}
-
 // AllowExternal returns true if the rate limiter for this domain/workflow allows an external request
 func (c *wfCache) AllowExternal(domainID string, workflowID string) bool {
-	if !c.workflowIDCacheEnabledCheck(domainID) {
+	domainName, err := c.domainCache.GetDomainName(domainID)
+	if err != nil {
+		c.logError(domainID, workflowID, errDomainName)
 		// The cache is not enabled if the domain does not exist or there is an error getting it (fail open)
 		return true
 	}
-	domainName, err := c.domainCache.GetDomainName(domainID)
-	c.metricsClient.Scope(metrics.HistoryClientWfIDCacheScope, metrics.DomainTag(domainName)).UpdateGauge(metrics.WorkflowIDCacheSizeGauge, float64(c.lru.Size()))
+
+	if !c.workflowIDCacheEnabled(domainName) {
+		// The cache is not enabled, so we allow the call through
+		return true
+	}
+
+	c.metricsClient.
+		Scope(metrics.HistoryClientWfIDCacheScope, metrics.DomainTag(domainName)).
+		UpdateGauge(metrics.WorkflowIDCacheSizeGauge, float64(c.lru.Size()))
 
 	// Locking is not needed because both getCacheItem and the rate limiter are thread safe
 	value, err := c.getCacheItemFn(domainID, workflowID)
@@ -131,10 +129,21 @@ func (c *wfCache) AllowExternal(domainID string, workflowID string) bool {
 
 // AllowInternal returns true if the rate limiter for this domain/workflow allows an internal request
 func (c *wfCache) AllowInternal(domainID string, workflowID string) bool {
-	if !c.workflowIDCacheEnabledCheck(domainID) {
-		// If we can't get the cache item, we should allow the request through
+	domainName, err := c.domainCache.GetDomainName(domainID)
+	if err != nil {
+		c.logError(domainID, workflowID, errDomainName)
+		// The cache is not enabled if the domain does not exist or there is an error getting it (fail open)
 		return true
 	}
+
+	if !c.workflowIDCacheEnabled(domainName) {
+		// The cache is not enabled, so we allow the call through
+		return true
+	}
+
+	c.metricsClient.
+		Scope(metrics.HistoryClientWfIDCacheScope, metrics.DomainTag(domainName)).
+		UpdateGauge(metrics.WorkflowIDCacheSizeGauge, float64(c.lru.Size()))
 
 	// Locking is not needed because both getCacheItem and the rate limiter are thread safe
 	value, err := c.getCacheItemFn(domainID, workflowID)
