@@ -231,6 +231,11 @@ func (g frontendClient) StartWorkflowExecution(ctx context.Context, sp1 *types.S
 	return proto.ToStartWorkflowExecutionResponse(response), proto.ToError(err)
 }
 
+func (g frontendClient) StartWorkflowExecutionAsync(ctx context.Context, sp1 *types.StartWorkflowExecutionAsyncRequest, p1 ...yarpc.CallOption) (sp2 *types.StartWorkflowExecutionAsyncResponse, err error) {
+	response, err := g.c.StartWorkflowExecutionAsync(ctx, proto.FromStartWorkflowExecutionAsyncRequest(sp1), p1...)
+	return proto.ToStartWorkflowExecutionAsyncResponse(response), proto.ToError(err)
+}
+
 func (g frontendClient) TerminateWorkflowExecution(ctx context.Context, tp1 *types.TerminateWorkflowExecutionRequest, p1 ...yarpc.CallOption) (err error) {
 	_, err = g.c.TerminateWorkflowExecution(ctx, proto.FromTerminateWorkflowExecutionRequest(tp1), p1...)
 	return proto.ToError(err)

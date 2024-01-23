@@ -430,6 +430,17 @@ func (c *frontendClient) StartWorkflowExecution(ctx context.Context, sp1 *types.
 	return resp, err
 }
 
+func (c *frontendClient) StartWorkflowExecutionAsync(ctx context.Context, sp1 *types.StartWorkflowExecutionAsyncRequest, p1 ...yarpc.CallOption) (sp2 *types.StartWorkflowExecutionAsyncResponse, err error) {
+	var resp *types.StartWorkflowExecutionAsyncResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.StartWorkflowExecutionAsync(ctx, sp1, p1...)
+		return err
+	}
+	err = c.throttleRetry.Do(ctx, op)
+	return resp, err
+}
+
 func (c *frontendClient) TerminateWorkflowExecution(ctx context.Context, tp1 *types.TerminateWorkflowExecutionRequest, p1 ...yarpc.CallOption) (err error) {
 	op := func() error {
 		return c.client.TerminateWorkflowExecution(ctx, tp1, p1...)

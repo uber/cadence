@@ -586,6 +586,10 @@ func (a *apiHandler) StartWorkflowExecution(ctx context.Context, sp1 *types.Star
 	return a.handler.StartWorkflowExecution(ctx, sp1)
 }
 
+func (a *apiHandler) StartWorkflowExecutionAsync(ctx context.Context, sp1 *types.StartWorkflowExecutionAsyncRequest) (sp2 *types.StartWorkflowExecutionAsyncResponse, err error) {
+	return a.handler.StartWorkflowExecutionAsync(ctx, sp1)
+}
+
 func (a *apiHandler) TerminateWorkflowExecution(ctx context.Context, tp1 *types.TerminateWorkflowExecutionRequest) (err error) {
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendTerminateWorkflowExecutionScope, tp1.GetDomain())
 	attr := &authorization.Attributes{

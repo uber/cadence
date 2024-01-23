@@ -6321,6 +6321,13 @@ func (v *StartWorkflowExecutionResponse) GetRunID() (o string) {
 	return
 }
 
+type StartWorkflowExecutionAsyncRequest struct {
+	*StartWorkflowExecutionRequest
+}
+
+type StartWorkflowExecutionAsyncResponse struct {
+}
+
 // RestartWorkflowExecutionResponse is an internal type (TBD...)
 type RestartWorkflowExecutionResponse struct {
 	RunID string `json:"runId,omitempty"`
