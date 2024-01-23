@@ -1982,7 +1982,7 @@ func (e *mutableStateBuilder) addBinaryCheckSumIfNotExists(
 		}
 	}
 
-	if len(currResetPoints) == maxResetPoints {
+	if len(currResetPoints) >= maxResetPoints {
 		// If exceeding the max limit, do rotation by taking the oldest one out.
 		currResetPoints = currResetPoints[1:]
 		recentBinaryChecksums = recentBinaryChecksums[1:]
