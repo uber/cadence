@@ -54,6 +54,7 @@ endif
 # note that vars that do not yet exist are empty, so any prerequisites defined below are ineffective here.
 $(BUILD)/lint: $(BUILD)/fmt # lint will fail if fmt fails, so fmt first
 $(BUILD)/proto-lint:
+$(BUILD)/gomod-lint:
 $(BUILD)/fmt: $(BUILD)/copyright # formatting must occur only after all other go-file-modifications are done
 $(BUILD)/copyright: $(BUILD)/codegen # must add copyright to generated code, sometimes needs re-formatting
 $(BUILD)/codegen: $(BUILD)/thrift $(BUILD)/protoc
@@ -139,9 +140,13 @@ LINT_SRC := $(filter-out %_test.go ./.gen/%, $(ALL_SRC))
 
 # downloads and builds a go-gettable tool, versioned by go.mod, and installs
 # it into the build folder, named the same as the last portion of the URL.
+#
+# unfortunately go.work and `go list -modfile=sub/module/go.mod` seem to interact badly,
+# and some versions complain about duplicates, while others simply block it outright.
+# the good news is that you can just drop that and `cd` to the folder and it works.
 define go_build_tool
 $Q echo "building $(or $(2), $(notdir $(1))) from internal/tools/go.mod..."
-$Q go build -mod=readonly -modfile=internal/tools/go.mod -o $(BIN)/$(or $(2), $(notdir $(1))) $(1)
+$Q cd internal/tools; go build -mod=readonly -o ../../$(BIN)/$(or $(2), $(notdir $(1))) $(1)
 endef
 
 # same as go_build_tool, but uses our main module file, not the tools one.
@@ -333,9 +338,18 @@ $(BUILD)/proto-lint: $(PROTO_FILES) $(STABLE_BIN)/$(BUF_VERSION_BIN) | $(BUILD)
 	$Q cd $(PROTO_ROOT) && ../$(STABLE_BIN)/$(BUF_VERSION_BIN) lint
 	$Q touch $@
 
+# lints that go modules are as expected, e.g. parent does not import submodule.
+# tool builds that need to be in sync with the parent are partially checked through go_mod_build_tool, but should probably be checked here too
+$(BUILD)/gomod-lint: go.mod internal/tools/go.mod common/archiver/gcloud/go.mod | $(BUILD)
+	$Q # this is likely impossible as it'd be a cycle
+	$Q if grep github.com/uber/cadence/common/archiver/gcloud go.mod; then echo "gcloud submodule cannot be imported by main module" >&2; exit 1; fi
+	$Q # intentionally kept separate so the server does not include tool-only dependencies
+	$Q if grep github.com/uber/cadence/internal go.mod; then echo "internal module cannot be imported by main module" >&2; exit 1; fi
+	$Q touch $@
+
 # note that LINT_SRC is fairly fake as a prerequisite.
 # it's a coarse "you probably don't need to re-lint" filter, nothing more.
-$(BUILD)/lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
+$(BUILD)/code-lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
 	$Q echo "lint..."
 	$Q $(BIN)/revive -config revive.toml -exclude './vendor/...' -exclude './.gen/...' -formatter stylish ./...
 	$Q touch $@
@@ -388,7 +402,7 @@ endef
 # useful to actually re-run to get output again.
 # reuse the intermediates for simplicity and consistency.
 lint: ## (re)run the linter
-	$(call remake,proto-lint lint)
+	$(call remake,proto-lint gomod-lint code-lint)
 
 # intentionally not re-making, it's a bit slow and it's clear when it's unnecessary
 fmt: $(BUILD)/fmt ## run gofmt / organize imports / etc
@@ -468,12 +482,22 @@ release: ## Re-generate generated code and run tests
 	$(MAKE) --no-print-directory test
 
 build: ## Build all packages and all tests (ensures everything compiles)
-	$Q echo 'Building all packages...'
+	$Q echo 'Building all packages and submodules...'
 	$Q go build ./...
+	$Q cd common/archiver/gcloud; go build ./...
+	$Q cd cmd/server; go build ./...
 	$Q # "tests" by building and then running `true`, and hides test-success output
 	$Q echo 'Building all tests (~5x slower)...'
 	$Q # intentionally not -race due to !race build tags
 	$Q go test -exec /usr/bin/true ./... >/dev/null
+	$Q cd common/archiver/gcloud; go test -exec /usr/bin/true ./... >/dev/null
+	$Q cd cmd/server; go test -exec /usr/bin/true ./... >/dev/null
+
+tidy: ## go mod tidy all packages
+	$Q # tidy in dependency order
+	$Q go mod tidy
+	$Q cd common/archiver/gcloud; go mod tidy || (echo "failed to tidy gcloud plugin, try manually copying go.mod contents into common/archiver/gcloud/go.mod and rerunning" >&2; exit 1)
+	$Q cd cmd/server; go mod tidy || (echo "failed to tidy main server module, try manually copying go.mod and common/archiver/gcloud/go.mod contents into cmd/server/go.mod and rerunning" >&2; exit 1)
 
 clean: ## Clean build products
 	rm -f $(BINS)
@@ -509,8 +533,9 @@ endif
 
 # all directories with *_test.go files in them (exclude host/xdc)
 TEST_DIRS := $(filter-out $(INTEG_TEST_XDC_ROOT)%, $(sort $(dir $(filter %_test.go,$(ALL_SRC)))))
-# all tests other than end-to-end integration test fall into the pkg_test category
-PKG_TEST_DIRS := $(filter-out $(INTEG_TEST_ROOT)% $(OPT_OUT_TEST), $(TEST_DIRS))
+# all tests other than end-to-end integration test fall into the pkg_test category.
+# ?= allows passing specific (space-separated) dirs for faster testing
+PKG_TEST_DIRS ?= $(filter-out $(INTEG_TEST_ROOT)% $(OPT_OUT_TEST), $(TEST_DIRS))
 
 # Code coverage output files
 COVER_ROOT                      := $(BUILD)/coverage
@@ -536,11 +561,12 @@ COVER_PKGS = client common host service tools
 # pkg -> pkg/... -> github.com/uber/cadence/pkg/... -> join with commas
 GOCOVERPKG_ARG := -coverpkg="$(subst $(SPACE),$(COMMA),$(addprefix $(PROJECT_ROOT)/,$(addsuffix /...,$(COVER_PKGS))))"
 
-test: bins ## Build and run all tests. This target is for local development. The pipeline is using cover_profile target
+test: ## Build and run all tests. This target is for local development. The pipeline is using cover_profile target
 	$Q rm -f test
 	$Q rm -f test.log
 	$Q echo Running special test cases without race detector:
 	$Q go test -v ./cmd/server/cadence/
+	$Q # CAUTION: when changing to `go test ./...`, note that this DOES NOT test submodules.  Those must be run separately.
 	$Q for dir in $(PKG_TEST_DIRS); do \
 		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
 	done;

@@ -27,7 +27,6 @@ import (
 
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/filestore"
-	"github.com/uber/cadence/common/archiver/gcloud"
 	"github.com/uber/cadence/common/archiver/s3store"
 	"github.com/uber/cadence/common/config"
 )
@@ -59,13 +58,6 @@ func init() {
 		}
 		return s3store.NewHistoryArchiver(container, out)
 	}))
-	must(RegisterHistoryArchiver(gcloud.URIScheme, config.GCloudConfig, func(cfg *config.YamlNode, container *archiver.HistoryBootstrapContainer) (archiver.HistoryArchiver, error) {
-		var out *config.GstorageArchiver
-		if err := cfg.Decode(&out); err != nil {
-			return nil, fmt.Errorf("bad config: %w", err)
-		}
-		return gcloud.NewHistoryArchiver(container, out)
-	}))
 
 	must(RegisterVisibilityArchiver(filestore.URIScheme, config.FilestoreConfig, func(cfg *config.YamlNode, container *archiver.VisibilityBootstrapContainer) (archiver.VisibilityArchiver, error) {
 		var out *config.FilestoreArchiver
@@ -80,12 +72,5 @@ func init() {
 			return nil, fmt.Errorf("bad config: %w", err)
 		}
 		return s3store.NewVisibilityArchiver(container, out)
-	}))
-	must(RegisterVisibilityArchiver(gcloud.URIScheme, config.GCloudConfig, func(cfg *config.YamlNode, container *archiver.VisibilityBootstrapContainer) (archiver.VisibilityArchiver, error) {
-		var out *config.GstorageArchiver
-		if err := cfg.Decode(&out); err != nil {
-			return nil, fmt.Errorf("bad config: %w", err)
-		}
-		return gcloud.NewVisibilityArchiver(container, out)
 	}))
 }
