@@ -142,11 +142,6 @@ func (a *oauthAuthority) keyFunc(token *jwt.Token) (interface{}, error) {
 }
 
 func (a *oauthAuthority) validateTTL(claims *JWTClaims) error {
-
-	if claims.IssuedAt == nil {
-		return errors.New("IssuedAt is not set")
-	}
-
 	// Fill ExpiresAt when TTL is passed
 	if claims.TTL > 0 {
 		claims.ExpiresAt = jwt.NewNumericDate(claims.IssuedAt.Time.Add(time.Second * time.Duration(claims.TTL)))

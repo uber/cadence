@@ -8,7 +8,6 @@ require (
 	github.com/aws/aws-sdk-go v1.44.180
 	github.com/cactus/go-statsd-client/statsd v0.0.0-20191106001114-12b4e2b38748
 	github.com/cch123/elasticsql v0.0.0-20190321073543-a1a440758eb9
-	github.com/cristalhq/jwt/v3 v3.1.0
 	github.com/dave/dst v0.26.2
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13
@@ -17,11 +16,14 @@ require (
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/gocql/gocql v0.0.0-20211015133455-b225f9b53fa1
 	github.com/gogo/protobuf v1.3.2
+	github.com/golang-jwt/jwt/v5 v5.2.0
 	github.com/golang/mock v1.6.0
+	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.5.0
 	github.com/hashicorp/go-version v1.2.0
 	github.com/iancoleman/strcase v0.2.0
 	github.com/jmoiron/sqlx v1.2.1-0.20200615141059-0794cb1f47ee
+	github.com/jonboulle/clockwork v0.4.0
 	github.com/lib/pq v1.2.0
 	github.com/m3db/prometheus_client_golang v0.8.1
 	github.com/olekukonko/tablewriter v0.0.4
@@ -52,6 +54,7 @@ require (
 	go.uber.org/thriftrw v1.29.2
 	go.uber.org/yarpc v1.70.3
 	go.uber.org/zap v1.13.0
+	golang.org/x/exp v0.0.0-20231226003508-02704c960a9b
 	golang.org/x/net v0.19.0
 	golang.org/x/sync v0.5.0
 	golang.org/x/time v0.3.0
@@ -63,12 +66,6 @@ require (
 )
 
 require (
-	github.com/google/go-cmp v0.6.0
-	github.com/jonboulle/clockwork v0.4.0
-	golang.org/x/exp v0.0.0-20231226003508-02704c960a9b
-)
-
-require (
 	github.com/BurntSushi/toml v0.4.1 // indirect
 	github.com/anmitsu/go-shlex v0.0.0-20161002113705-648efa622239 // indirect
 	github.com/apache/thrift v0.16.0 // indirect
@@ -76,6 +73,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
+	github.com/cristalhq/jwt/v3 v3.1.0 // indirect
 	github.com/eapache/go-resiliency v1.2.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
