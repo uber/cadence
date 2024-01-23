@@ -2,6 +2,11 @@ module github.com/uber/cadence/common/archiver/gcloud
 
 go 1.20
 
+// build against the current code in the "main" module, not a specific SHA.
+//
+// anyone outside this repo using this needs to ensure that both the "main" module and this module
+// are at the same SHA for consistency, but internally we can cheat by telling Go that it's at a
+// relative file path.
 replace github.com/uber/cadence => ../../..
 
 // ringpop-go and tchannel-go depends on older version of thrift, yarpc brings up newer version

@@ -2,7 +2,12 @@ module github.com/uber/cadence/cmd/server
 
 go 1.20
 
-replace github.com/uber/cadence => ../../
+// build against the current code in the "main" (and gcloud) module, not a specific SHA.
+//
+// anyone outside this repo using this needs to ensure that both the "main" module and this module
+// are at the same SHA for consistency, but internally we can cheat by telling Go that it's at a
+// relative file path.
+replace github.com/uber/cadence => ../..
 
 replace github.com/uber/cadence/common/archiver/gcloud => ../../common/archiver/gcloud
 
