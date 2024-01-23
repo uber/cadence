@@ -26,7 +26,6 @@ package execution
 
 import (
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/uber/cadence/common"
@@ -254,7 +253,8 @@ func (m *mutableStateDecisionTaskManagerImpl) ReplicateDecisionTaskCompletedEven
 	event *types.HistoryEvent,
 ) error {
 	m.beforeAddDecisionTaskCompletedEvent()
-	return m.afterAddDecisionTaskCompletedEvent(event, math.MaxInt32)
+	domainName := m.msb.GetDomainEntry().GetInfo().Name
+	return m.afterAddDecisionTaskCompletedEvent(event, m.msb.config.MaxAutoResetPoints(domainName))
 }
 
 func (m *mutableStateDecisionTaskManagerImpl) ReplicateDecisionTaskFailedEvent() error {
