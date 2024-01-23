@@ -2,7 +2,10 @@
 
 set -ex
 
-make go-generate && make fmt && make lint && make copyright
+make go-generate
+make fmt 
+make lint 
+make copyright
 
 # intentionally capture stderr, so status-errors are also PR-failing.
 # in particular this catches "dubious ownership" failures, which otherwise
