@@ -282,6 +282,26 @@ func (c *adminClient) GetDLQReplicationMessages(ctx context.Context, gp1 *types.
 	return
 }
 
+func (c *adminClient) GetDomainAsyncWorkflowConfiguraton(ctx context.Context, request *types.GetDomainAsyncWorkflowConfiguratonRequest, opts ...yarpc.CallOption) (gp1 *types.GetDomainAsyncWorkflowConfiguratonResponse, err error) {
+	fakeErr := c.fakeErrFn(c.errorRate)
+	var forwardCall bool
+	if forwardCall = c.forwardCallFn(fakeErr); forwardCall {
+		gp1, err = c.client.GetDomainAsyncWorkflowConfiguraton(ctx, request, opts...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgAdminInjectedFakeErr,
+			tag.AdminClientOperationGetDomainAsyncWorkflowConfiguraton,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(err),
+		)
+		err = fakeErr
+		return
+	}
+	return
+}
+
 func (c *adminClient) GetDomainIsolationGroups(ctx context.Context, request *types.GetDomainIsolationGroupsRequest, opts ...yarpc.CallOption) (gp1 *types.GetDomainIsolationGroupsResponse, err error) {
 	fakeErr := c.fakeErrFn(c.errorRate)
 	var forwardCall bool
@@ -632,6 +652,26 @@ func (c *adminClient) RestoreDynamicConfig(ctx context.Context, rp1 *types.Resto
 	if fakeErr != nil {
 		c.logger.Error(msgAdminInjectedFakeErr,
 			tag.AdminClientOperationRestoreDynamicConfig,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(err),
+		)
+		err = fakeErr
+		return
+	}
+	return
+}
+
+func (c *adminClient) UpdateDomainAsyncWorkflowConfiguraton(ctx context.Context, request *types.UpdateDomainAsyncWorkflowConfiguratonRequest, opts ...yarpc.CallOption) (up1 *types.UpdateDomainAsyncWorkflowConfiguratonResponse, err error) {
+	fakeErr := c.fakeErrFn(c.errorRate)
+	var forwardCall bool
+	if forwardCall = c.forwardCallFn(fakeErr); forwardCall {
+		up1, err = c.client.UpdateDomainAsyncWorkflowConfiguraton(ctx, request, opts...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgAdminInjectedFakeErr,
+			tag.AdminClientOperationUpdateDomainAsyncWorkflowConfiguraton,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
 			tag.ClientError(err),

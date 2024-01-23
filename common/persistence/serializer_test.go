@@ -58,8 +58,8 @@ func (s *cadenceSerializerSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 }
 
+// TODO: update tests to cover asyncworkflowconfig
 func (s *cadenceSerializerSuite) TestSerializer() {
-
 	concurrency := 1
 	startWG := sync.WaitGroup{}
 	doneWG := sync.WaitGroup{}

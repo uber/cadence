@@ -360,6 +360,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 				VisibilityArchivalURI:                  "",
 				BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
 				IsolationGroups:                        &types.IsolationGroupConfiguration{},
+				AsyncWorkflowConfig:                    &types.AsyncWorkflowConfiguration{},
 			},
 			ReplicationConfiguration: &types.DomainReplicationConfiguration{
 				ActiveClusterName: activeClusterName1,
@@ -386,6 +387,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 				VisibilityArchivalURI:                  "",
 				BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
 				IsolationGroups:                        &types.IsolationGroupConfiguration{},
+				AsyncWorkflowConfig:                    &types.AsyncWorkflowConfiguration{},
 			},
 			ReplicationConfiguration: &types.DomainReplicationConfiguration{
 				ActiveClusterName: activeClusterName2,
@@ -728,6 +730,114 @@ func TestHandlerImpl_UpdateIsolationGroups(t *testing.T) {
 			}
 
 			err := handler.UpdateIsolationGroups(context.TODO(), td.in)
+			assert.Equal(t, td.expectedErr, err)
+		})
+	}
+}
+
+func TestHandlerImpl_UpdateAsyncWorkflowConfiguraton(t *testing.T) {
+	t0 := int64(1565914445 * time.Second)
+	t1 := int64(1685914445 * time.Second)
+	clock := clock.NewMockedTimeSourceAt(time.Unix(0, t1))
+
+	info := persistence.DomainInfo{
+		ID:   "10CF5859-C5CC-4CCC-888E-631F84D53F57",
+		Name: "test",
+	}
+
+	config := persistence.DomainConfig{
+		Retention: 10,
+	}
+	replicationConfig := persistence.DomainReplicationConfig{
+		ActiveClusterName: "cluster-1",
+		Clusters: []*persistence.ClusterReplicationConfig{
+			{ClusterName: "cluster-1"},
+		},
+	}
+
+	asyncWFCfg := types.AsyncWorkflowConfiguration{
+		QueueType: types.AsyncWorkflowQueueTypeKafka,
+		KafkaConfig: &types.AsyncWorkflowKafkaQueueConfiguration{
+			Topic:         "test-topic",
+			DLQTopic:      "test-dlq-topic",
+			ConsumerGroup: "test-consumer-group",
+			Brokers:       []string{"broker1", "broker2"},
+		},
+	}
+
+	tests := map[string]struct {
+		in                types.UpdateDomainAsyncWorkflowConfiguratonRequest
+		managerAffordance func(m *persistence.MockDomainManager)
+		expectedErr       error
+	}{
+		"successful update": {
+			in: types.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain:        "test",
+				Configuration: &asyncWFCfg,
+			},
+			managerAffordance: func(m *persistence.MockDomainManager) {
+				m.EXPECT().GetMetadata(gomock.Any()).Return(&persistence.GetMetadataResponse{
+					NotificationVersion: 3,
+				}, nil).Times(1)
+
+				m.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: "test"}).Return(&persistence.GetDomainResponse{
+					Info:                        &info,
+					Config:                      &config,
+					ReplicationConfig:           &replicationConfig,
+					IsGlobalDomain:              false,
+					ConfigVersion:               1,
+					FailoverVersion:             1,
+					FailoverNotificationVersion: 1,
+					PreviousFailoverVersion:     1,
+					FailoverEndTime:             &t0,
+					LastUpdatedTime:             t0,
+					NotificationVersion:         1,
+				}, nil).Times(1)
+
+				m.EXPECT().UpdateDomain(gomock.Any(), &persistence.UpdateDomainRequest{
+					Info: &info,
+					Config: &persistence.DomainConfig{
+						Retention:           10,
+						AsyncWorkflowConfig: asyncWFCfg,
+					},
+					ReplicationConfig:           &replicationConfig,
+					ConfigVersion:               2,
+					FailoverVersion:             1,
+					FailoverNotificationVersion: 1,
+					PreviousFailoverVersion:     1,
+					FailoverEndTime:             &t0,
+					LastUpdatedTime:             t1,
+					NotificationVersion:         3,
+				}).Times(1)
+			},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+
+			ctrl := gomock.NewController(t)
+
+			domainMgrMock := persistence.NewMockDomainManager(ctrl)
+			td.managerAffordance(domainMgrMock)
+
+			producer := messaging.NewNoopProducer()
+			replicator := NewDomainReplicator(producer, testlogger.New(t))
+
+			handler := handlerImpl{
+				domainManager:    domainMgrMock,
+				clusterMetadata:  cluster.Metadata{},
+				domainReplicator: replicator,
+				timeSource:       clock,
+				config: Config{
+					MinRetentionDays:  func(opts ...dc.FilterOption) int { return 0 },
+					MaxBadBinaryCount: func(string) int { return 3 },
+					FailoverCoolDown:  func(string) time.Duration { return time.Second },
+				},
+				logger: testlogger.New(t),
+			}
+
+			err := handler.UpdateAsyncWorkflowConfiguraton(context.Background(), td.in)
 			assert.Equal(t, td.expectedErr, err)
 		})
 	}

@@ -789,6 +789,7 @@ type (
 		VisibilityArchivalURI    string
 		BadBinaries              *DataBlob
 		IsolationGroups          *DataBlob
+		AsyncWorkflowsConfig     *DataBlob
 	}
 
 	// InternalCreateDomainRequest is used to create the domain

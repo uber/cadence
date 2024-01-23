@@ -298,8 +298,8 @@ const (
 	FlagTransport                         = "transport"
 	FlagTransportWithAlias                = FlagTransport + ", t"
 	FlagFormat                            = "format"
+	FlagJSON                              = "json"
 	FlagIsolationGroupSetDrains           = "set-drains"
-	FlagIsolationGroupJSONConfigurations  = "json"
 	FlagIsolationGroupsRemoveAllDrains    = "remove-all-drains"
 	FlagSearchAttribute                   = "search_attr"
 )

@@ -587,3 +587,197 @@ func TestFromAdminGetDomainAsyncWorkflowConfiguratonResponse(t *testing.T) {
 		})
 	}
 }
+
+func TestFromAdminGetDomainAsyncWorkflowConfiguratonRequest(t *testing.T) {
+	tests := map[string]struct {
+		input *types.GetDomainAsyncWorkflowConfiguratonRequest
+		want  *admin.GetDomainAsyncWorkflowConfiguratonRequest
+	}{
+		"empty": {
+			input: &types.GetDomainAsyncWorkflowConfiguratonRequest{},
+			want: &admin.GetDomainAsyncWorkflowConfiguratonRequest{
+				Domain: strPtr(""),
+			},
+		},
+		"nil": {
+			input: nil,
+			want:  nil,
+		},
+		"valid": {
+			input: &types.GetDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+			},
+			want: &admin.GetDomainAsyncWorkflowConfiguratonRequest{
+				Domain: strPtr("test-domain"),
+			},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.want, FromAdminGetDomainAsyncWorkflowConfiguratonRequest(td.input))
+		})
+	}
+}
+
+func TestToAdminGetDomainAsyncWorkflowConfiguratonResponse(t *testing.T) {
+	kafkaQueueType := shared.AsyncWorkflowQueueTypeKafka
+	tests := map[string]struct {
+		input *admin.GetDomainAsyncWorkflowConfiguratonResponse
+		want  *types.GetDomainAsyncWorkflowConfiguratonResponse
+	}{
+		"empty": {
+			input: &admin.GetDomainAsyncWorkflowConfiguratonResponse{},
+			want:  &types.GetDomainAsyncWorkflowConfiguratonResponse{},
+		},
+		"nil": {
+			input: nil,
+			want:  nil,
+		},
+		"predefined queue": {
+			input: &admin.GetDomainAsyncWorkflowConfiguratonResponse{
+				Configuration: &shared.AsyncWorkflowConfiguration{
+					PredefinedQueueName: strPtr("test-queue"),
+				},
+			},
+			want: &types.GetDomainAsyncWorkflowConfiguratonResponse{
+				Configuration: &types.AsyncWorkflowConfiguration{
+					PredefinedQueueName: "test-queue",
+				},
+			},
+		},
+		"kafka inline queue": {
+			input: &admin.GetDomainAsyncWorkflowConfiguratonResponse{
+				Configuration: &shared.AsyncWorkflowConfiguration{
+					QueueType: &kafkaQueueType,
+					KafkaConfig: &shared.AsyncWorkflowKafkaQueueConfiguration{
+						Topic:         strPtr("test-topic"),
+						DlqTopic:      strPtr("test-dlq-topic"),
+						ConsumerGroup: strPtr("test-consumer-group"),
+						Brokers:       []string{"test-broker1", "test-broker2"},
+						Properties: map[string]string{
+							"test-key1": "test-value1",
+						},
+					},
+				},
+			},
+			want: &types.GetDomainAsyncWorkflowConfiguratonResponse{
+				Configuration: &types.AsyncWorkflowConfiguration{
+					QueueType: types.AsyncWorkflowQueueTypeKafka,
+					KafkaConfig: &types.AsyncWorkflowKafkaQueueConfiguration{
+						Topic:         "test-topic",
+						DLQTopic:      "test-dlq-topic",
+						ConsumerGroup: "test-consumer-group",
+						Brokers:       []string{"test-broker1", "test-broker2"},
+						Properties: map[string]string{
+							"test-key1": "test-value1",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.want, ToAdminGetDomainAsyncWorkflowConfiguratonResponse(td.input))
+		})
+	}
+}
+
+func TestFromAdminUpdateDomainAsyncWorkflowConfiguratonRequest(t *testing.T) {
+	kafkaQueueType := shared.AsyncWorkflowQueueTypeKafka
+	invalidQueueType := shared.AsyncWorkflowQueueTypeInvalid
+
+	tests := map[string]struct {
+		input *types.UpdateDomainAsyncWorkflowConfiguratonRequest
+		want  *admin.UpdateDomainAsyncWorkflowConfiguratonRequest
+	}{
+		"empty": {
+			input: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{},
+			want: &admin.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: strPtr(""),
+			},
+		},
+		"nil": {
+			input: nil,
+			want:  nil,
+		},
+		"predefined queue": {
+			input: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+				Configuration: &types.AsyncWorkflowConfiguration{
+					PredefinedQueueName: "test-queue",
+				},
+			},
+			want: &admin.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: strPtr("test-domain"),
+				Configuration: &shared.AsyncWorkflowConfiguration{
+					PredefinedQueueName: strPtr("test-queue"),
+					QueueType:           &invalidQueueType,
+				},
+			},
+		},
+		"kafka inline queue": {
+			input: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+				Configuration: &types.AsyncWorkflowConfiguration{
+					QueueType: types.AsyncWorkflowQueueTypeKafka,
+					KafkaConfig: &types.AsyncWorkflowKafkaQueueConfiguration{
+						Topic:         "test-topic",
+						DLQTopic:      "test-dlq-topic",
+						ConsumerGroup: "test-consumer-group",
+						Brokers:       []string{"test-broker1", "test-broker2"},
+						Properties: map[string]string{
+							"test-key1": "test-value1",
+						},
+					},
+				},
+			},
+			want: &admin.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: strPtr("test-domain"),
+				Configuration: &shared.AsyncWorkflowConfiguration{
+					PredefinedQueueName: strPtr(""),
+					QueueType:           &kafkaQueueType,
+					KafkaConfig: &shared.AsyncWorkflowKafkaQueueConfiguration{
+						Topic:         strPtr("test-topic"),
+						DlqTopic:      strPtr("test-dlq-topic"),
+						ConsumerGroup: strPtr("test-consumer-group"),
+						Brokers:       []string{"test-broker1", "test-broker2"},
+						Properties: map[string]string{
+							"test-key1": "test-value1",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.want, FromAdminUpdateDomainAsyncWorkflowConfiguratonRequest(td.input))
+		})
+	}
+}
+
+func TestToAdminUpdateDomainAsyncWorkflowConfiguratonResponse(t *testing.T) {
+	tests := map[string]struct {
+		input *admin.UpdateDomainAsyncWorkflowConfiguratonResponse
+		want  *types.UpdateDomainAsyncWorkflowConfiguratonResponse
+	}{
+		"empty": {
+			input: &admin.UpdateDomainAsyncWorkflowConfiguratonResponse{},
+			want:  &types.UpdateDomainAsyncWorkflowConfiguratonResponse{},
+		},
+		"nil": {
+			input: nil,
+			want:  nil,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.want, ToAdminUpdateDomainAsyncWorkflowConfiguratonResponse(td.input))
+		})
+	}
+}

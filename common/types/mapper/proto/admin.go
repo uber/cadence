@@ -1455,3 +1455,38 @@ func FromAdminUpdateDomainAsyncWorkflowConfiguratonResponse(in *types.UpdateDoma
 	}
 	return &adminv1.UpdateDomainAsyncWorkflowConfiguratonResponse{}
 }
+
+func FromAdminGetDomainAsyncWorkflowConfiguratonRequest(in *types.GetDomainAsyncWorkflowConfiguratonRequest) *adminv1.GetDomainAsyncWorkflowConfiguratonRequest {
+	if in == nil {
+		return nil
+	}
+	return &adminv1.GetDomainAsyncWorkflowConfiguratonRequest{
+		Domain: in.Domain,
+	}
+}
+
+func ToAdminGetDomainAsyncWorkflowConfiguratonResponse(in *adminv1.GetDomainAsyncWorkflowConfiguratonResponse) *types.GetDomainAsyncWorkflowConfiguratonResponse {
+	if in == nil {
+		return nil
+	}
+	return &types.GetDomainAsyncWorkflowConfiguratonResponse{
+		Configuration: ToDomainAsyncWorkflowConfiguraton(in.Configuration),
+	}
+}
+
+func FromAdminUpdateDomainAsyncWorkflowConfiguratonRequest(in *types.UpdateDomainAsyncWorkflowConfiguratonRequest) *adminv1.UpdateDomainAsyncWorkflowConfiguratonRequest {
+	if in == nil {
+		return nil
+	}
+	return &adminv1.UpdateDomainAsyncWorkflowConfiguratonRequest{
+		Domain:        in.Domain,
+		Configuration: FromDomainAsyncWorkflowConfiguraton(in.Configuration),
+	}
+}
+
+func ToAdminUpdateDomainAsyncWorkflowConfiguratonResponse(in *adminv1.UpdateDomainAsyncWorkflowConfiguratonResponse) *types.UpdateDomainAsyncWorkflowConfiguratonResponse {
+	if in == nil {
+		return nil
+	}
+	return &types.UpdateDomainAsyncWorkflowConfiguratonResponse{}
+}

@@ -33,6 +33,7 @@ import (
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/asyncworkflow/queueconfigapi"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/codec"
@@ -74,6 +75,7 @@ type (
 		esClient              elasticsearch.GenericClient
 		throttleRetry         *backoff.ThrottleRetry
 		isolationGroups       isolationgroupapi.Handler
+		asyncWFQueueConfigs   queueconfigapi.Handler
 	}
 
 	workflowQueryTemplate struct {
@@ -144,7 +146,8 @@ func NewHandler(
 			backoff.WithRetryPolicy(adminServiceRetryPolicy),
 			backoff.WithRetryableError(common.IsServiceTransientError),
 		),
-		isolationGroups: isolationgroupapi.New(resource.GetLogger(), resource.GetIsolationGroupStore(), domainHandler),
+		isolationGroups:     isolationgroupapi.New(resource.GetLogger(), resource.GetIsolationGroupStore(), domainHandler),
+		asyncWFQueueConfigs: queueconfigapi.New(resource.GetLogger(), domainHandler),
 	}
 }
 
@@ -1745,14 +1748,32 @@ func (adh *adminHandlerImpl) UpdateDomainIsolationGroups(ctx context.Context, re
 	return &types.UpdateDomainIsolationGroupsResponse{}, nil
 }
 
-func (adh *adminHandlerImpl) GetDomainAsyncWorkflowConfiguraton(context.Context, *types.GetDomainAsyncWorkflowConfiguratonRequest) (*types.GetDomainAsyncWorkflowConfiguratonResponse, error) {
-	// TODO(taylan): implement
-	return nil, errors.New("not implemented")
+func (adh *adminHandlerImpl) GetDomainAsyncWorkflowConfiguraton(ctx context.Context, request *types.GetDomainAsyncWorkflowConfiguratonRequest) (_ *types.GetDomainAsyncWorkflowConfiguratonResponse, retError error) {
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &retError) }()
+	scope, sw := adh.startRequestProfile(ctx, metrics.UpdateDomainAsyncWorkflowConfiguraton)
+	defer sw.Stop()
+	if request == nil {
+		return nil, adh.error(validate.ErrRequestNotSet, scope)
+	}
+	resp, err := adh.asyncWFQueueConfigs.GetConfiguraton(ctx, request)
+	if err != nil {
+		return nil, adh.error(err, scope)
+	}
+	return resp, nil
 }
 
-func (adh *adminHandlerImpl) UpdateDomainAsyncWorkflowConfiguraton(context.Context, *types.UpdateDomainAsyncWorkflowConfiguratonRequest) (*types.UpdateDomainAsyncWorkflowConfiguratonResponse, error) {
-	// TODO(taylan): implement
-	return nil, errors.New("not implemented")
+func (adh *adminHandlerImpl) UpdateDomainAsyncWorkflowConfiguraton(ctx context.Context, request *types.UpdateDomainAsyncWorkflowConfiguratonRequest) (_ *types.UpdateDomainAsyncWorkflowConfiguratonResponse, retError error) {
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &retError) }()
+	scope, sw := adh.startRequestProfile(ctx, metrics.UpdateDomainAsyncWorkflowConfiguraton)
+	defer sw.Stop()
+	if request == nil {
+		return nil, adh.error(validate.ErrRequestNotSet, scope)
+	}
+	resp, err := adh.asyncWFQueueConfigs.UpdateConfiguration(ctx, request)
+	if err != nil {
+		return nil, adh.error(err, scope)
+	}
+	return resp, nil
 }
 
 func convertFromDataBlob(blob *types.DataBlob) (interface{}, error) {

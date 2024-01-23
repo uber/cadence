@@ -77,6 +77,11 @@ type (
 		Authorization Authorization `yaml:"authorization"`
 		// HeaderForwardingRules defines which inbound headers to include or exclude on outbound calls
 		HeaderForwardingRules []HeaderRule `yaml:"headerForwardingRules"`
+		// Note: This is not implemented yet. It's coming in the next release.
+		// AsyncWorkflowQueues is the config for predefining async workflow queue(s)
+		// To use Async APIs for a domain first specify the queue using Admin API.
+		// Either refer to one of the predefined queues in this config or alternatively specify the queue details inline in the API call.
+		AsyncWorkflowQueues map[string]AsyncWorkflowQueueProvider `yaml:"asyncWorkflowQueues"`
 	}
 
 	HeaderRule struct {
@@ -591,6 +596,12 @@ type (
 	// and go.uber.org/config currently uses only v2.
 	YamlNode struct {
 		unmarshal func(out any) error
+	}
+
+	// AsyncWorkflowQueueProvider contains the config for an async workflow queue. Only one field must be set.
+	AsyncWorkflowQueueProvider struct {
+		Type                     string    `yaml:"type"`
+		AsyncWorkflowQueueConfig *YamlNode `yaml:"config"`
 	}
 )
 
