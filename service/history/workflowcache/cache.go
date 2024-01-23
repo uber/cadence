@@ -99,8 +99,14 @@ func New(params Params) WFCache {
 	return cache
 }
 
-// AllowExternal returns true if the rate limiter for this domain/workflow allows an external request
-func (c *wfCache) AllowExternal(domainID string, workflowID string) bool {
+type rateLimitType int
+
+const (
+	external rateLimitType = iota
+	internal
+)
+
+func (c *wfCache) allow(domainID string, workflowID string, rateLimitType rateLimitType) bool {
 	domainName, err := c.domainCache.GetDomainName(domainID)
 	if err != nil {
 		c.logError(domainID, workflowID, errDomainName)
@@ -124,35 +130,27 @@ func (c *wfCache) AllowExternal(domainID string, workflowID string) bool {
 		// If we can't get the cache item, we should allow the request through
 		return true
 	}
-	return value.externalRateLimiter.Allow()
+
+	switch rateLimitType {
+	case external:
+		return value.externalRateLimiter.Allow()
+	case internal:
+		return value.internalRateLimiter.Allow()
+	default:
+		// This should never happen, and we fail open
+		c.logError(domainID, workflowID, errors.New("unknown rate limit type"))
+		return true
+	}
+}
+
+// AllowExternal returns true if the rate limiter for this domain/workflow allows an external request
+func (c *wfCache) AllowExternal(domainID string, workflowID string) bool {
+	return c.allow(domainID, workflowID, external)
 }
 
 // AllowInternal returns true if the rate limiter for this domain/workflow allows an internal request
 func (c *wfCache) AllowInternal(domainID string, workflowID string) bool {
-	domainName, err := c.domainCache.GetDomainName(domainID)
-	if err != nil {
-		c.logError(domainID, workflowID, errDomainName)
-		// The cache is not enabled if the domain does not exist or there is an error getting it (fail open)
-		return true
-	}
-
-	if !c.workflowIDCacheEnabled(domainName) {
-		// The cache is not enabled, so we allow the call through
-		return true
-	}
-
-	c.metricsClient.
-		Scope(metrics.HistoryClientWfIDCacheScope, metrics.DomainTag(domainName)).
-		UpdateGauge(metrics.WorkflowIDCacheSizeGauge, float64(c.lru.Size()))
-
-	// Locking is not needed because both getCacheItem and the rate limiter are thread safe
-	value, err := c.getCacheItemFn(domainID, workflowID)
-	if err != nil {
-		c.logError(domainID, workflowID, err)
-		// If we can't get the cache item, we should allow the request through
-		return true
-	}
-	return value.internalRateLimiter.Allow()
+	return c.allow(domainID, workflowID, internal)
 }
 
 func (c *wfCache) getCacheItem(domainID string, workflowID string) (*cacheValue, error) {
