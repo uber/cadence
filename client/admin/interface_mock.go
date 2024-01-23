@@ -277,6 +277,26 @@ func (mr *MockClientMockRecorder) GetDLQReplicationMessages(arg0, arg1 interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDLQReplicationMessages", reflect.TypeOf((*MockClient)(nil).GetDLQReplicationMessages), varargs...)
 }
 
+// GetDomainAsyncWorkflowConfiguraton mocks base method.
+func (m *MockClient) GetDomainAsyncWorkflowConfiguraton(ctx context.Context, request *types.GetDomainAsyncWorkflowConfiguratonRequest, opts ...yarpc.CallOption) (*types.GetDomainAsyncWorkflowConfiguratonResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, request}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetDomainAsyncWorkflowConfiguraton", varargs...)
+	ret0, _ := ret[0].(*types.GetDomainAsyncWorkflowConfiguratonResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDomainAsyncWorkflowConfiguraton indicates an expected call of GetDomainAsyncWorkflowConfiguraton.
+func (mr *MockClientMockRecorder) GetDomainAsyncWorkflowConfiguraton(ctx, request interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, request}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDomainAsyncWorkflowConfiguraton", reflect.TypeOf((*MockClient)(nil).GetDomainAsyncWorkflowConfiguraton), varargs...)
+}
+
 // GetDomainIsolationGroups mocks base method.
 func (m *MockClient) GetDomainIsolationGroups(ctx context.Context, request *types.GetDomainIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.GetDomainIsolationGroupsResponse, error) {
 	m.ctrl.T.Helper()
@@ -628,6 +648,26 @@ func (mr *MockClientMockRecorder) RestoreDynamicConfig(arg0, arg1 interface{}, a
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestoreDynamicConfig", reflect.TypeOf((*MockClient)(nil).RestoreDynamicConfig), varargs...)
+}
+
+// UpdateDomainAsyncWorkflowConfiguraton mocks base method.
+func (m *MockClient) UpdateDomainAsyncWorkflowConfiguraton(ctx context.Context, request *types.UpdateDomainAsyncWorkflowConfiguratonRequest, opts ...yarpc.CallOption) (*types.UpdateDomainAsyncWorkflowConfiguratonResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, request}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateDomainAsyncWorkflowConfiguraton", varargs...)
+	ret0, _ := ret[0].(*types.UpdateDomainAsyncWorkflowConfiguratonResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateDomainAsyncWorkflowConfiguraton indicates an expected call of UpdateDomainAsyncWorkflowConfiguraton.
+func (mr *MockClientMockRecorder) UpdateDomainAsyncWorkflowConfiguraton(ctx, request interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, request}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDomainAsyncWorkflowConfiguraton", reflect.TypeOf((*MockClient)(nil).UpdateDomainAsyncWorkflowConfiguraton), varargs...)
 }
 
 // UpdateDomainIsolationGroups mocks base method.

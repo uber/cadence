@@ -1801,6 +1801,7 @@ type DomainConfiguration struct {
 	VisibilityArchivalStatus               *ArchivalStatus              `json:"visibilityArchivalStatus,omitempty"`
 	VisibilityArchivalURI                  string                       `json:"visibilityArchivalURI,omitempty"`
 	IsolationGroups                        *IsolationGroupConfiguration `json:"isolationGroupConfiguration,omitempty"`
+	AsyncWorkflowConfig                    *AsyncWorkflowConfiguration  `json:"asyncWorkflowConfiguration,omitempty"`
 }
 
 // GetWorkflowExecutionRetentionPeriodInDays is an internal getter (TBD...)
@@ -1865,6 +1866,13 @@ func (v *DomainConfiguration) GetIsolationGroupsConfiguration() IsolationGroupCo
 		return *v.IsolationGroups
 	}
 	return nil
+}
+
+func (v *DomainConfiguration) GetAsyncWorkflowConfiguration() AsyncWorkflowConfiguration {
+	if v.AsyncWorkflowConfig != nil {
+		return *v.AsyncWorkflowConfig
+	}
+	return AsyncWorkflowConfiguration{}
 }
 
 // DomainInfo is an internal type (TBD...)

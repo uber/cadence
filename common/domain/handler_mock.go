@@ -116,6 +116,20 @@ func (mr *MockHandlerMockRecorder) RegisterDomain(ctx, registerRequest interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterDomain", reflect.TypeOf((*MockHandler)(nil).RegisterDomain), ctx, registerRequest)
 }
 
+// UpdateAsyncWorkflowConfiguraton mocks base method.
+func (m *MockHandler) UpdateAsyncWorkflowConfiguraton(ctx context.Context, updateRequest types.UpdateDomainAsyncWorkflowConfiguratonRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateAsyncWorkflowConfiguraton", ctx, updateRequest)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateAsyncWorkflowConfiguraton indicates an expected call of UpdateAsyncWorkflowConfiguraton.
+func (mr *MockHandlerMockRecorder) UpdateAsyncWorkflowConfiguraton(ctx, updateRequest interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAsyncWorkflowConfiguraton", reflect.TypeOf((*MockHandler)(nil).UpdateAsyncWorkflowConfiguraton), ctx, updateRequest)
+}
+
 // UpdateDomain mocks base method.
 func (m *MockHandler) UpdateDomain(ctx context.Context, updateRequest *types.UpdateDomainRequest) (*types.UpdateDomainResponse, error) {
 	m.ctrl.T.Helper()

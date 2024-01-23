@@ -105,6 +105,7 @@ func (domainReplicator *domainReplicatorImpl) HandleTransmissionTask(
 			VisibilityArchivalURI:                  config.VisibilityArchivalURI,
 			BadBinaries:                            &config.BadBinaries,
 			IsolationGroups:                        &config.IsolationGroups,
+			AsyncWorkflowConfig:                    &config.AsyncWorkflowConfig,
 		},
 		ReplicationConfig: &types.DomainReplicationConfiguration{
 			ActiveClusterName: replicationConfig.ActiveClusterName,

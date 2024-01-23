@@ -75,6 +75,10 @@ type (
 			ctx context.Context,
 			updateRequest types.UpdateDomainIsolationGroupsRequest,
 		) error
+		UpdateAsyncWorkflowConfiguraton(
+			ctx context.Context,
+			updateRequest types.UpdateDomainAsyncWorkflowConfiguratonRequest,
+		) error
 	}
 
 	// handlerImpl is the domain operation handler implementation
@@ -763,6 +767,102 @@ func (d *handlerImpl) UpdateIsolationGroups(
 	return nil
 }
 
+func (d *handlerImpl) UpdateAsyncWorkflowConfiguraton(
+	ctx context.Context,
+	updateRequest types.UpdateDomainAsyncWorkflowConfiguratonRequest,
+) error {
+	// must get the metadata (notificationVersion) first
+	// this version can be regarded as the lock on the v2 domain table
+	// and since we do not know which table will return the domain afterwards
+	// this call has to be made
+	metadata, err := d.domainManager.GetMetadata(ctx)
+	if err != nil {
+		return err
+	}
+	notificationVersion := metadata.NotificationVersion
+
+	currentDomainConfig, err := d.domainManager.GetDomain(ctx, &persistence.GetDomainRequest{Name: updateRequest.Domain})
+	if err != nil {
+		return err
+	}
+	if currentDomainConfig.Config == nil {
+		return fmt.Errorf("unable to load config for domain as expected")
+	}
+
+	configVersion := currentDomainConfig.ConfigVersion
+	lastUpdatedTime := time.Unix(0, currentDomainConfig.LastUpdatedTime)
+
+	// Check the failover cool down time
+	if lastUpdatedTime.Add(d.config.FailoverCoolDown(currentDomainConfig.Info.Name)).After(d.timeSource.Now()) {
+		return errDomainUpdateTooFrequent
+	}
+
+	if !d.clusterMetadata.IsPrimaryCluster() && currentDomainConfig.IsGlobalDomain {
+		return errNotPrimaryCluster
+	}
+
+	configVersion++
+	lastUpdatedTime = d.timeSource.Now()
+
+	// Mutate the domain config to perform the async wf config update
+	if updateRequest.Configuration == nil {
+		// this is a delete request so empty all the fields
+		currentDomainConfig.Config.AsyncWorkflowConfig = types.AsyncWorkflowConfiguration{}
+	} else {
+		currentDomainConfig.Config.AsyncWorkflowConfig = *updateRequest.Configuration
+	}
+
+	updateReq := createUpdateRequest(
+		currentDomainConfig.Info,
+		currentDomainConfig.Config,
+		currentDomainConfig.ReplicationConfig,
+		configVersion,
+		currentDomainConfig.FailoverVersion,
+		currentDomainConfig.FailoverNotificationVersion,
+		currentDomainConfig.FailoverEndTime,
+		currentDomainConfig.PreviousFailoverVersion,
+		lastUpdatedTime,
+		notificationVersion,
+	)
+
+	err = d.domainManager.UpdateDomain(ctx, &updateReq)
+	if err != nil {
+		return err
+	}
+
+	if currentDomainConfig.IsGlobalDomain {
+		// One might reasonably wonder what value there is in replication of isolation-group information - info which is
+		// regional and therefore of no value to the other region?
+		// Probably not a lot, in and of itself, however, the isolation-group information is stored
+		// in the domain configuration fields in the domain tables. Access and updates to those records is
+		// done through a replicated mechanism with explicit versioning and conflict resolution.
+		// Therefore, in order to avoid making an already complex mechanisim much more difficult to understand,
+		// the data is replicated in the same way so as to try and make things less confusing when both codepaths
+		// are updating the table:
+		// - versions like the confiugration version are updated in the same manner
+		// - the last-updated timestamps are updated in the same manner
+		if err := d.domainReplicator.HandleTransmissionTask(
+			ctx,
+			types.DomainOperationUpdate,
+			currentDomainConfig.Info,
+			currentDomainConfig.Config,
+			currentDomainConfig.ReplicationConfig,
+			configVersion,
+			currentDomainConfig.FailoverVersion,
+			currentDomainConfig.PreviousFailoverVersion,
+			currentDomainConfig.IsGlobalDomain,
+		); err != nil {
+			return err
+		}
+	}
+
+	d.logger.Info("async workflow queue config update succeeded",
+		tag.WorkflowDomainName(currentDomainConfig.Info.Name),
+		tag.WorkflowDomainID(currentDomainConfig.Info.ID),
+	)
+	return nil
+}
+
 func (d *handlerImpl) createResponse(
 	info *persistence.DomainInfo,
 	config *persistence.DomainConfig,
@@ -787,6 +887,7 @@ func (d *handlerImpl) createResponse(
 		VisibilityArchivalURI:                  config.VisibilityArchivalURI,
 		BadBinaries:                            &config.BadBinaries,
 		IsolationGroups:                        &config.IsolationGroups,
+		AsyncWorkflowConfig:                    &config.AsyncWorkflowConfig,
 	}
 
 	clusters := []*types.ClusterReplicationConfiguration{}

@@ -88,6 +88,8 @@ type (
 		LastUpdatedTimestamp        time.Time
 		IsolationGroups             []byte
 		IsolationGroupsEncoding     string
+		AsyncWorkflowConfig         []byte
+		AsyncWorkflowConfigEncoding string
 	}
 
 	// HistoryBranchRange blob in a serialization agnostic format

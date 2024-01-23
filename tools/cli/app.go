@@ -182,6 +182,12 @@ func NewCliApp() *cli.App {
 					Subcommands: newAdminQueueCommands(),
 				},
 				{
+					Name:        "async-wf-queue",
+					Aliases:     []string{"aq"},
+					Usage:       "Run admin operations on async workflow queues",
+					Subcommands: newAdminAsyncQueueCommands(),
+				},
+				{
 					Name:        "config",
 					Aliases:     []string{"c"},
 					Usage:       "Run admin operation on config store",
