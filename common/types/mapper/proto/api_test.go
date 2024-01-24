@@ -625,6 +625,16 @@ func TestStartWorkflowExecutionResponse(t *testing.T) {
 		assert.Equal(t, item, ToStartWorkflowExecutionResponse(FromStartWorkflowExecutionResponse(item)))
 	}
 }
+func TestStartWorkflowExecutionAsyncRequest(t *testing.T) {
+	for _, item := range []*types.StartWorkflowExecutionAsyncRequest{nil, {}, &testdata.StartWorkflowExecutionAsyncRequest} {
+		assert.Equal(t, item, ToStartWorkflowExecutionAsyncRequest(FromStartWorkflowExecutionAsyncRequest(item)))
+	}
+}
+func TestStartWorkflowExecutionAsyncResponse(t *testing.T) {
+	for _, item := range []*types.StartWorkflowExecutionAsyncResponse{nil, {}, &testdata.StartWorkflowExecutionAsyncResponse} {
+		assert.Equal(t, item, ToStartWorkflowExecutionAsyncResponse(FromStartWorkflowExecutionAsyncResponse(item)))
+	}
+}
 func TestStatusFilter(t *testing.T) {
 	for _, item := range []*types.WorkflowExecutionCloseStatus{nil, &testdata.WorkflowExecutionCloseStatus} {
 		assert.Equal(t, item, ToStatusFilter(FromStatusFilter(item)))

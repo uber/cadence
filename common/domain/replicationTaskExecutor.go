@@ -250,6 +250,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ct
 			VisibilityArchivalStatus: task.Config.GetVisibilityArchivalStatus(),
 			VisibilityArchivalURI:    task.Config.GetVisibilityArchivalURI(),
 			IsolationGroups:          task.Config.GetIsolationGroupsConfiguration(),
+			AsyncWorkflowConfig:      task.Config.GetAsyncWorkflowConfiguration(),
 		}
 		if task.Config.GetBadBinaries() != nil {
 			request.Config.BadBinaries = *task.Config.GetBadBinaries()

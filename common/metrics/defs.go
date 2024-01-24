@@ -487,6 +487,8 @@ const (
 	FrontendClientSignalWorkflowExecutionScope
 	// FrontendClientStartWorkflowExecutionScope tracks RPC calls to frontend service
 	FrontendClientStartWorkflowExecutionScope
+	// FrontendClientStartWorkflowExecutionAsyncScope tracks RPC calls to frontend service
+	FrontendClientStartWorkflowExecutionAsyncScope
 	// FrontendClientRestartWorkflowExecutionScope tracks RPC calls to frontend service
 	FrontendClientRestartWorkflowExecutionScope
 	// FrontendClientTerminateWorkflowExecutionScope tracks RPC calls to frontend service
@@ -582,6 +584,10 @@ const (
 	AdminClientGetDomainReplicationMessagesScope
 	// AdminClientGetReplicationMessagesScope is the metric scope for admin.GetReplicationMessages
 	AdminClientGetReplicationMessagesScope
+	// AdminClientGetWorkflowExecutionRawHistoryScope is the metric scope for admin.GetDomainAsyncWorkflow
+	AdminClientGetDomainAsyncWorkflowConfiguratonScope
+	// AdminClientGetWorkflowExecutionRawHistoryScope is the metric scope for admin.UpdateDomainAsyncWorkflowConfiguration
+	AdminClientUpdateDomainAsyncWorkflowConfiguratonScope
 
 	// DCRedirectionDeprecateDomainScope tracks RPC calls for dc redirection
 	DCRedirectionDeprecateDomainScope
@@ -655,6 +661,8 @@ const (
 	DCRedirectionSignalWorkflowExecutionScope
 	// DCRedirectionStartWorkflowExecutionScope tracks RPC calls for dc redirection
 	DCRedirectionStartWorkflowExecutionScope
+	// DCRedirectionStartWorkflowExecutionAsyncScope tracks RPC calls for dc redirection
+	DCRedirectionStartWorkflowExecutionAsyncScope
 	// DCRedirectionTerminateWorkflowExecutionScope tracks RPC calls for dc redirection
 	DCRedirectionTerminateWorkflowExecutionScope
 	// DCRedirectionUpdateDomainScope tracks RPC calls for dc redirection
@@ -887,6 +895,10 @@ const (
 	GetDomainIsolationGroups
 	// UpdateDomainIsolationGroups is the scope for getting domain isolation groups
 	UpdateDomainIsolationGroups
+	// GetDomainAsyncWorkflowConfiguraton is the scope for getting domain async workflow configuration
+	GetDomainAsyncWorkflowConfiguraton
+	// UpdateDomainAsyncWorkflowConfiguraton is the scope for updating domain async workflow configuration
+	UpdateDomainAsyncWorkflowConfiguraton
 
 	NumAdminScopes
 )
@@ -1520,6 +1532,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendClientSignalWithStartWorkflowExecutionScope:   {operation: "FrontendClientSignalWithStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		FrontendClientSignalWorkflowExecutionScope:            {operation: "FrontendClientSignalWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		FrontendClientStartWorkflowExecutionScope:             {operation: "FrontendClientStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientStartWorkflowExecutionAsyncScope:        {operation: "FrontendClientStartWorkflowExecutionAsync", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		FrontendClientTerminateWorkflowExecutionScope:         {operation: "FrontendClientTerminateWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		FrontendClientUpdateDomainScope:                       {operation: "FrontendClientUpdateDomain", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		FrontendClientListWorkflowExecutionsScope:             {operation: "FrontendClientListWorkflowExecutions", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
@@ -1535,39 +1548,41 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendClientGetTaskListsByDomainScope:               {operation: "FrontendClientGetTaskListsByDomain", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		FrontendClientRestartWorkflowExecutionScope:           {operation: "FrontendClientRestartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 
-		AdminClientGetReplicationTasksScope:               {operation: "AdminClientGetReplicationTasks", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientAddSearchAttributeScope:                {operation: "AdminClientAddSearchAttribute", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientDescribeHistoryHostScope:               {operation: "AdminClientDescribeHistoryHost", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientDescribeShardDistributionScope:         {operation: "AdminClientDescribeShardDistribution", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientDescribeWorkflowExecutionScope:         {operation: "AdminClientDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientGetWorkflowExecutionRawHistoryV2Scope:  {operation: "AdminClientGetWorkflowExecutionRawHistoryV2", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientDescribeClusterScope:                   {operation: "AdminClientDescribeCluster", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientRefreshWorkflowTasksScope:              {operation: "AdminClientRefreshWorkflowTasks", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientResendReplicationTasksScope:            {operation: "AdminClientResendReplicationTasks", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientCloseShardScope:                        {operation: "AdminClientCloseShard", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientRemoveTaskScope:                        {operation: "AdminClientRemoveTask", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientResetQueueScope:                        {operation: "AdminClientResetQueue", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientDescribeQueueScope:                     {operation: "AdminClientDescribeQueue", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientCountDLQMessagesScope:                  {operation: "AdminClientCountDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientReadDLQMessagesScope:                   {operation: "AdminClientReadDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientPurgeDLQMessagesScope:                  {operation: "AdminClientPurgeDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientMergeDLQMessagesScope:                  {operation: "AdminClientMergeDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientGetCrossClusterTasksScope:              {operation: "AdminClientGetCrossClusterTasks", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientRespondCrossClusterTasksCompletedScope: {operation: "AdminClientRespondCrossClusterTasksCompleted", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientGetDynamicConfigScope:                  {operation: "AdminClientGetDynamicConfig", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientUpdateDynamicConfigScope:               {operation: "AdminClientUpdateDynamicConfig", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientRestoreDynamicConfigScope:              {operation: "AdminClientRestoreDynamicConfig", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientListDynamicConfigScope:                 {operation: "AdminClientListDynamicConfigScope", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientGetGlobalIsolationGroupsScope:          {operation: "AdminClientGetGlobalIsolationGroups", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientUpdateGlobalIsolationGroupsScope:       {operation: "AdminClientUpdateGlobalIsolationGroups", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientGetDomainIsolationGroupsScope:          {operation: "AdminClientGetDomainIsolationGroups", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientUpdateDomainIsolationGroupsScope:       {operation: "AdminClientUpdateDomainIsolationGroups", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientDeleteWorkflowScope:                    {operation: "AdminClientDeleteWorkflow", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientMaintainCorruptWorkflowScope:           {operation: "AdminClientMaintainCorruptWorkflow", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientReapplyEventsScope:                     {operation: "AdminClientReapplyEvents", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientGetDLQReplicationMessagesScope:         {operation: "AdminClientGetDLQReplicationMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientGetDomainReplicationMessagesScope:      {operation: "AdminClientGetDomainReplicationMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
-		AdminClientGetReplicationMessagesScope:            {operation: "AdminClientGetReplicationMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientGetReplicationTasksScope:                   {operation: "AdminClientGetReplicationTasks", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientAddSearchAttributeScope:                    {operation: "AdminClientAddSearchAttribute", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientDescribeHistoryHostScope:                   {operation: "AdminClientDescribeHistoryHost", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientDescribeShardDistributionScope:             {operation: "AdminClientDescribeShardDistribution", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientDescribeWorkflowExecutionScope:             {operation: "AdminClientDescribeWorkflowExecution", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientGetWorkflowExecutionRawHistoryV2Scope:      {operation: "AdminClientGetWorkflowExecutionRawHistoryV2", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientDescribeClusterScope:                       {operation: "AdminClientDescribeCluster", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientRefreshWorkflowTasksScope:                  {operation: "AdminClientRefreshWorkflowTasks", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientResendReplicationTasksScope:                {operation: "AdminClientResendReplicationTasks", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientCloseShardScope:                            {operation: "AdminClientCloseShard", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientRemoveTaskScope:                            {operation: "AdminClientRemoveTask", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientResetQueueScope:                            {operation: "AdminClientResetQueue", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientDescribeQueueScope:                         {operation: "AdminClientDescribeQueue", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientCountDLQMessagesScope:                      {operation: "AdminClientCountDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientReadDLQMessagesScope:                       {operation: "AdminClientReadDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientPurgeDLQMessagesScope:                      {operation: "AdminClientPurgeDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientMergeDLQMessagesScope:                      {operation: "AdminClientMergeDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientGetCrossClusterTasksScope:                  {operation: "AdminClientGetCrossClusterTasks", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientRespondCrossClusterTasksCompletedScope:     {operation: "AdminClientRespondCrossClusterTasksCompleted", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientGetDynamicConfigScope:                      {operation: "AdminClientGetDynamicConfig", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientUpdateDynamicConfigScope:                   {operation: "AdminClientUpdateDynamicConfig", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientRestoreDynamicConfigScope:                  {operation: "AdminClientRestoreDynamicConfig", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientListDynamicConfigScope:                     {operation: "AdminClientListDynamicConfigScope", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientGetGlobalIsolationGroupsScope:              {operation: "AdminClientGetGlobalIsolationGroups", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientUpdateGlobalIsolationGroupsScope:           {operation: "AdminClientUpdateGlobalIsolationGroups", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientGetDomainIsolationGroupsScope:              {operation: "AdminClientGetDomainIsolationGroups", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientUpdateDomainIsolationGroupsScope:           {operation: "AdminClientUpdateDomainIsolationGroups", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientDeleteWorkflowScope:                        {operation: "AdminClientDeleteWorkflow", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientMaintainCorruptWorkflowScope:               {operation: "AdminClientMaintainCorruptWorkflow", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientReapplyEventsScope:                         {operation: "AdminClientReapplyEvents", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientGetDLQReplicationMessagesScope:             {operation: "AdminClientGetDLQReplicationMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientGetDomainReplicationMessagesScope:          {operation: "AdminClientGetDomainReplicationMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientGetReplicationMessagesScope:                {operation: "AdminClientGetReplicationMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientGetDomainAsyncWorkflowConfiguratonScope:    {operation: "AdminClientGetDomainAsyncWorkflowConfiguraton", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientUpdateDomainAsyncWorkflowConfiguratonScope: {operation: "AdminClientUpdateDomainAsyncWorkflowConfiguraton", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 
 		DCRedirectionDeprecateDomainScope:                    {operation: "DCRedirectionDeprecateDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionDescribeDomainScope:                     {operation: "DCRedirectionDescribeDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
@@ -1605,6 +1620,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		DCRedirectionSignalWithStartWorkflowExecutionScope:   {operation: "DCRedirectionSignalWithStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionSignalWorkflowExecutionScope:            {operation: "DCRedirectionSignalWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionStartWorkflowExecutionScope:             {operation: "DCRedirectionStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionStartWorkflowExecutionAsyncScope:        {operation: "DCRedirectionStartWorkflowExecutionAsync", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionTerminateWorkflowExecutionScope:         {operation: "DCRedirectionTerminateWorkflowExecution", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionUpdateDomainScope:                       {operation: "DCRedirectionUpdateDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionListTaskListPartitionsScope:             {operation: "DCRedirectionListTaskListPartitions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
@@ -1713,6 +1729,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		UpdateGlobalIsolationGroups:                 {operation: "UpdateGlobalIsolationGroups"},
 		GetDomainIsolationGroups:                    {operation: "GetDomainIsolationGroups"},
 		UpdateDomainIsolationGroups:                 {operation: "UpdateDomainIsolationGroups"},
+		GetDomainAsyncWorkflowConfiguraton:          {operation: "GetDomainAsyncWorkflowConfiguraton"},
+		UpdateDomainAsyncWorkflowConfiguraton:       {operation: "UpdateDomainAsyncWorkflowConfiguraton"},
 
 		FrontendRestartWorkflowExecutionScope:           {operation: "RestartWorkflowExecution"},
 		FrontendStartWorkflowExecutionScope:             {operation: "StartWorkflowExecution"},

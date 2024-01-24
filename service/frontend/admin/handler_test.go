@@ -38,6 +38,7 @@ import (
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/asyncworkflow/queueconfigapi"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/domain"
@@ -1037,6 +1038,108 @@ func Test_UpdateDomainIsolationGroups(t *testing.T) {
 
 			assert.Equal(t, td.expectOut, res)
 			assert.Equal(t, td.expectedErr, err)
+		})
+	}
+}
+
+func Test_GetDomainAsyncWorkflowConfiguraton(t *testing.T) {
+	tests := map[string]struct {
+		queueCfgHandlerMockFn func(mock *queueconfigapi.MockHandler)
+		input                 *types.GetDomainAsyncWorkflowConfiguratonRequest
+		wantResp              *types.GetDomainAsyncWorkflowConfiguratonResponse
+		wantErr               error
+	}{
+		"success": {
+			input: &types.GetDomainAsyncWorkflowConfiguratonRequest{Domain: "test-domain"},
+			queueCfgHandlerMockFn: func(mock *queueconfigapi.MockHandler) {
+				mock.EXPECT().GetConfiguraton(gomock.Any(), gomock.Any()).Return(&types.GetDomainAsyncWorkflowConfiguratonResponse{}, nil).Times(1)
+			},
+			wantResp: &types.GetDomainAsyncWorkflowConfiguratonResponse{},
+		},
+		"nil request": {
+			input:   nil,
+			wantErr: validate.ErrRequestNotSet,
+		},
+		"queue config handler failed": {
+			input: &types.GetDomainAsyncWorkflowConfiguratonRequest{Domain: "test-domain"},
+			queueCfgHandlerMockFn: func(mock *queueconfigapi.MockHandler) {
+				mock.EXPECT().GetConfiguraton(gomock.Any(), gomock.Any()).Return(nil, errors.New("failed")).Times(1)
+			},
+			wantErr: &types.InternalServiceError{Message: "failed"},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			goMock := gomock.NewController(t)
+			queueCfgHandlerMock := queueconfigapi.NewMockHandler(goMock)
+			if td.queueCfgHandlerMockFn != nil {
+				td.queueCfgHandlerMockFn(queueCfgHandlerMock)
+			}
+
+			handler := adminHandlerImpl{
+				Resource: &resource.Test{
+					Logger:        testlogger.New(t),
+					MetricsClient: metrics.NewNoopMetricsClient(),
+				},
+				asyncWFQueueConfigs: queueCfgHandlerMock,
+			}
+
+			res, err := handler.GetDomainAsyncWorkflowConfiguraton(context.Background(), td.input)
+
+			assert.Equal(t, td.wantResp, res)
+			assert.Equal(t, td.wantErr, err)
+		})
+	}
+}
+
+func Test_UpdateDomainAsyncWorkflowConfiguraton(t *testing.T) {
+	tests := map[string]struct {
+		queueCfgHandlerMockFn func(mock *queueconfigapi.MockHandler)
+		input                 *types.UpdateDomainAsyncWorkflowConfiguratonRequest
+		wantResp              *types.UpdateDomainAsyncWorkflowConfiguratonResponse
+		wantErr               error
+	}{
+		"success": {
+			input: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{Domain: "test-domain"},
+			queueCfgHandlerMockFn: func(mock *queueconfigapi.MockHandler) {
+				mock.EXPECT().UpdateConfiguration(gomock.Any(), gomock.Any()).Return(&types.UpdateDomainAsyncWorkflowConfiguratonResponse{}, nil).Times(1)
+			},
+			wantResp: &types.UpdateDomainAsyncWorkflowConfiguratonResponse{},
+		},
+		"nil request": {
+			input:   nil,
+			wantErr: validate.ErrRequestNotSet,
+		},
+		"queue config handler failed": {
+			input: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{Domain: "test-domain"},
+			queueCfgHandlerMockFn: func(mock *queueconfigapi.MockHandler) {
+				mock.EXPECT().UpdateConfiguration(gomock.Any(), gomock.Any()).Return(nil, errors.New("failed")).Times(1)
+			},
+			wantErr: &types.InternalServiceError{Message: "failed"},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			goMock := gomock.NewController(t)
+			queueCfgHandlerMock := queueconfigapi.NewMockHandler(goMock)
+			if td.queueCfgHandlerMockFn != nil {
+				td.queueCfgHandlerMockFn(queueCfgHandlerMock)
+			}
+
+			handler := adminHandlerImpl{
+				Resource: &resource.Test{
+					Logger:        testlogger.New(t),
+					MetricsClient: metrics.NewNoopMetricsClient(),
+				},
+				asyncWFQueueConfigs: queueCfgHandlerMock,
+			}
+
+			res, err := handler.UpdateDomainAsyncWorkflowConfiguraton(context.Background(), td.input)
+
+			assert.Equal(t, td.wantResp, res)
+			assert.Equal(t, td.wantErr, err)
 		})
 	}
 }

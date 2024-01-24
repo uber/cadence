@@ -193,6 +193,19 @@ func (c *adminClient) GetDLQReplicationMessages(ctx context.Context, gp1 *types.
 	return gp2, err
 }
 
+func (c *adminClient) GetDomainAsyncWorkflowConfiguraton(ctx context.Context, request *types.GetDomainAsyncWorkflowConfiguratonRequest, opts ...yarpc.CallOption) (gp1 *types.GetDomainAsyncWorkflowConfiguratonResponse, err error) {
+	c.metricsClient.IncCounter(metrics.AdminClientGetDomainAsyncWorkflowConfiguratonScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.AdminClientGetDomainAsyncWorkflowConfiguratonScope, metrics.CadenceClientLatency)
+	gp1, err = c.client.GetDomainAsyncWorkflowConfiguraton(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.AdminClientGetDomainAsyncWorkflowConfiguratonScope, metrics.CadenceClientFailures)
+	}
+	return gp1, err
+}
+
 func (c *adminClient) GetDomainIsolationGroups(ctx context.Context, request *types.GetDomainIsolationGroupsRequest, opts ...yarpc.CallOption) (gp1 *types.GetDomainIsolationGroupsResponse, err error) {
 	c.metricsClient.IncCounter(metrics.AdminClientGetDomainIsolationGroupsScope, metrics.CadenceClientRequests)
 
@@ -425,6 +438,19 @@ func (c *adminClient) RestoreDynamicConfig(ctx context.Context, rp1 *types.Resto
 		c.metricsClient.IncCounter(metrics.AdminClientRestoreDynamicConfigScope, metrics.CadenceClientFailures)
 	}
 	return err
+}
+
+func (c *adminClient) UpdateDomainAsyncWorkflowConfiguraton(ctx context.Context, request *types.UpdateDomainAsyncWorkflowConfiguratonRequest, opts ...yarpc.CallOption) (up1 *types.UpdateDomainAsyncWorkflowConfiguratonResponse, err error) {
+	c.metricsClient.IncCounter(metrics.AdminClientUpdateDomainAsyncWorkflowConfiguratonScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.AdminClientUpdateDomainAsyncWorkflowConfiguratonScope, metrics.CadenceClientLatency)
+	up1, err = c.client.UpdateDomainAsyncWorkflowConfiguraton(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.AdminClientUpdateDomainAsyncWorkflowConfiguratonScope, metrics.CadenceClientFailures)
+	}
+	return up1, err
 }
 
 func (c *adminClient) UpdateDomainIsolationGroups(ctx context.Context, request *types.UpdateDomainIsolationGroupsRequest, opts ...yarpc.CallOption) (up1 *types.UpdateDomainIsolationGroupsResponse, err error) {

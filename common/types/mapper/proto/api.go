@@ -3643,6 +3643,38 @@ func ToRestartWorkflowExecutionResponse(t *apiv1.RestartWorkflowExecutionRespons
 	}
 }
 
+func FromStartWorkflowExecutionAsyncRequest(t *types.StartWorkflowExecutionAsyncRequest) *apiv1.StartWorkflowExecutionAsyncRequest {
+	if t == nil {
+		return nil
+	}
+	return &apiv1.StartWorkflowExecutionAsyncRequest{
+		Request: FromStartWorkflowExecutionRequest(t.StartWorkflowExecutionRequest),
+	}
+}
+
+func ToStartWorkflowExecutionAsyncRequest(t *apiv1.StartWorkflowExecutionAsyncRequest) *types.StartWorkflowExecutionAsyncRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.StartWorkflowExecutionAsyncRequest{
+		StartWorkflowExecutionRequest: ToStartWorkflowExecutionRequest(t.Request),
+	}
+}
+
+func FromStartWorkflowExecutionAsyncResponse(t *types.StartWorkflowExecutionAsyncResponse) *apiv1.StartWorkflowExecutionAsyncResponse {
+	if t == nil {
+		return nil
+	}
+	return &apiv1.StartWorkflowExecutionAsyncResponse{}
+}
+
+func ToStartWorkflowExecutionAsyncResponse(t *apiv1.StartWorkflowExecutionAsyncResponse) *types.StartWorkflowExecutionAsyncResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.StartWorkflowExecutionAsyncResponse{}
+}
+
 func FromStartWorkflowExecutionRequest(t *types.StartWorkflowExecutionRequest) *apiv1.StartWorkflowExecutionRequest {
 	if t == nil {
 		return nil

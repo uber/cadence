@@ -77,6 +77,11 @@ type (
 		Authorization Authorization `yaml:"authorization"`
 		// HeaderForwardingRules defines which inbound headers to include or exclude on outbound calls
 		HeaderForwardingRules []HeaderRule `yaml:"headerForwardingRules"`
+		// Note: This is not implemented yet. It's coming in the next release.
+		// AsyncWorkflowQueues is the config for predefining async workflow queue(s)
+		// To use Async APIs for a domain first specify the queue using Admin API.
+		// Either refer to one of the predefined queues in this config or alternatively specify the queue details inline in the API call.
+		AsyncWorkflowQueues map[string]AsyncWorkflowQueueProvider `yaml:"asyncWorkflowQueues"`
 	}
 
 	HeaderRule struct {
@@ -501,7 +506,7 @@ type (
 	// Config keys and structures expected in the main default binary include:
 	//  - FilestoreConfig: [*FilestoreArchiver], used with provider scheme [github.com/uber/cadence/common/archiver/filestore.URIScheme]
 	//  - S3storeConfig: [*S3Archiver], used with provider scheme [github.com/uber/cadence/common/archiver/s3store.URIScheme]
-	//  - GCloudConfig: [*GstorageArchiver], used with provider scheme [github.com/uber/cadence/common/archiver/gcloud.URIScheme]
+	//  - "gstorage" via [github.com/uber/cadence/common/archiver/gcloud.ConfigKey]: [github.com/uber/cadence/common/archiver/gcloud.Config], used with provider scheme "gs" [github.com/uber/cadence/common/archiver/gcloud.URIScheme]
 	//
 	// For handling hardcoded config, see ToYamlNode.
 	HistoryArchiverProvider map[string]*YamlNode
@@ -525,7 +530,7 @@ type (
 	// Config keys and structures expected in the main default binary include:
 	//  - FilestoreConfig: [*FilestoreArchiver], used with provider scheme [github.com/uber/cadence/common/archiver/filestore.URIScheme]
 	//  - S3storeConfig: [*S3Archiver], used with provider scheme [github.com/uber/cadence/common/archiver/s3store.URIScheme]
-	//  - GCloudConfig: [*GstorageArchiver], used with provider scheme [github.com/uber/cadence/common/archiver/gcloud.URIScheme]
+	//  - "gstorage" via [github.com/uber/cadence/common/archiver/gcloud.ConfigKey]: [github.com/uber/cadence/common/archiver/gcloud.Config], used with provider scheme "gs" [github.com/uber/cadence/common/archiver/gcloud.URIScheme]
 	//
 	// For handling hardcoded config, see ToYamlNode.
 	VisibilityArchiverProvider map[string]*YamlNode
@@ -534,11 +539,6 @@ type (
 	FilestoreArchiver struct {
 		FileMode string `yaml:"fileMode"`
 		DirMode  string `yaml:"dirMode"`
-	}
-
-	// GstorageArchiver contain the config for google storage archiver
-	GstorageArchiver struct {
-		CredentialsPath string `yaml:"credentialsPath"`
 	}
 
 	// S3Archiver contains the config for S3 archiver
@@ -597,6 +597,12 @@ type (
 	YamlNode struct {
 		unmarshal func(out any) error
 	}
+
+	// AsyncWorkflowQueueProvider contains the config for an async workflow queue. Only one field must be set.
+	AsyncWorkflowQueueProvider struct {
+		Type                     string    `yaml:"type"`
+		AsyncWorkflowQueueConfig *YamlNode `yaml:"config"`
+	}
 )
 
 const (
@@ -605,7 +611,6 @@ const (
 
 	FilestoreConfig = "filestore"
 	S3storeConfig   = "s3store"
-	GCloudConfig    = "gstorage"
 )
 
 var _ yaml.Unmarshaler = (*YamlNode)(nil)
