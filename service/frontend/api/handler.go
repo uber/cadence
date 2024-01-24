@@ -2014,6 +2014,13 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 	return nil
 }
 
+func (wh *WorkflowHandler) StartWorkflowExecutionAsync(
+	ctx context.Context,
+	startRequest *types.StartWorkflowExecutionAsyncRequest,
+) (resp *types.StartWorkflowExecutionAsyncResponse, retError error) {
+	return nil, &types.BadRequestError{Message: "not supported"}
+}
+
 // StartWorkflowExecution - Creates a new workflow execution
 func (wh *WorkflowHandler) StartWorkflowExecution(
 	ctx context.Context,

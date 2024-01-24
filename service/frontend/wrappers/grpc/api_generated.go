@@ -238,6 +238,11 @@ func (g APIHandler) StartWorkflowExecution(ctx context.Context, request *apiv1.S
 	return proto.FromStartWorkflowExecutionResponse(response), proto.FromError(err)
 }
 
+func (g APIHandler) StartWorkflowExecutionAsync(ctx context.Context, request *apiv1.StartWorkflowExecutionAsyncRequest) (*apiv1.StartWorkflowExecutionAsyncResponse, error) {
+	response, err := g.h.StartWorkflowExecutionAsync(ctx, proto.ToStartWorkflowExecutionAsyncRequest(request))
+	return proto.FromStartWorkflowExecutionAsyncResponse(response), proto.FromError(err)
+}
+
 func (g APIHandler) TerminateWorkflowExecution(ctx context.Context, request *apiv1.TerminateWorkflowExecutionRequest) (*apiv1.TerminateWorkflowExecutionResponse, error) {
 	err := g.h.TerminateWorkflowExecution(ctx, proto.ToTerminateWorkflowExecutionRequest(request))
 	return &apiv1.TerminateWorkflowExecutionResponse{}, proto.FromError(err)
