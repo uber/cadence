@@ -148,3 +148,62 @@ func TestFindAutoResetPoint(t *testing.T) {
 	})
 	assert.Equal(t, pt, pt5)
 }
+
+func TestTrimBinaryChecksums(t *testing.T) {
+	testCases := []struct {
+		name           string
+		maxResetPoints int
+		expected       []string
+	}{
+		{
+			name:           "not reach limit",
+			maxResetPoints: 6,
+			expected:       []string{"checksum1", "checksum2", "checksum3", "checksum4", "checksum5"},
+		},
+		{
+			name:           "reach at limit",
+			maxResetPoints: 5,
+			expected:       []string{"checksum2", "checksum3", "checksum4", "checksum5"},
+		},
+		{
+			name:           "exceeds limit",
+			maxResetPoints: 2,
+			expected:       []string{"checksum5"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			currResetPoints := []*types.ResetPointInfo{
+				{
+					BinaryChecksum: "checksum1",
+					RunID:          "run1",
+				},
+				{
+					BinaryChecksum: "checksum2",
+					RunID:          "run2",
+				},
+				{
+					BinaryChecksum: "checksum3",
+					RunID:          "run3",
+				},
+				{
+					BinaryChecksum: "checksum4",
+					RunID:          "run4",
+				},
+				{
+					BinaryChecksum: "checksum5",
+					RunID:          "run5",
+				},
+			}
+			var recentBinaryChecksums []string
+			for _, rp := range currResetPoints {
+				recentBinaryChecksums = append(recentBinaryChecksums, rp.GetBinaryChecksum())
+			}
+			recentBinaryChecksums, currResetPoints = trimBinaryChecksums(recentBinaryChecksums, currResetPoints, tc.maxResetPoints)
+			assert.Equal(t, tc.expected, recentBinaryChecksums)
+			assert.Equal(t, len(tc.expected), len(currResetPoints))
+		})
+	}
+
+}
