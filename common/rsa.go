@@ -25,7 +25,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 )
 
@@ -38,7 +38,7 @@ const (
 )
 
 func loadRSAKey(path string, keyType KeyType) (interface{}, error) {
-	keyString, err := ioutil.ReadFile(path)
+	keyString, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("invalid %s path %s", keyType, path)
 	}

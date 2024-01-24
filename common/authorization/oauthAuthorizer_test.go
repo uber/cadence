@@ -22,10 +22,13 @@ package authorization
 
 import (
 	"fmt"
+	"strings"
 	"testing"
+	"time"
 
-	"github.com/cristalhq/jwt/v3"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/yarpc/api/encoding"
@@ -64,7 +67,7 @@ func (s *oauthSuite) SetupTest() {
 	s.cfg = config.OAuthAuthorizer{
 		Enable: true,
 		JwtCredentials: config.JwtCredentials{
-			Algorithm: jwt.RS256.String(),
+			Algorithm: jwt.SigningMethodRS256.Name,
 			PublicKey: "../../config/credentials/keytest.pub",
 		},
 		MaxJwtTTL: 300000001,
@@ -167,15 +170,15 @@ func (s *oauthSuite) TestGetDomainError() {
 func (s *oauthSuite) TestIncorrectPublicKey() {
 	s.cfg.JwtCredentials.PublicKey = "incorrectPublicKey"
 	authorizer, err := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
-	s.Equal(authorizer, nil)
+	s.Equal(nil, authorizer)
 	s.EqualError(err, "loading RSA public key: invalid public key path incorrectPublicKey")
 }
 
 func (s *oauthSuite) TestIncorrectAlgorithm() {
 	s.cfg.JwtCredentials.Algorithm = "SHA256"
 	authorizer, err := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
-	s.Equal(authorizer, nil)
-	s.ErrorContains(err, "jwt: algorithm is not supported")
+	s.Equal(nil, authorizer)
+	s.ErrorContains(err, "algorithm \"SHA256\" is not supported")
 }
 
 func (s *oauthSuite) TestMaxTTLLargerInToken() {
@@ -183,7 +186,7 @@ func (s *oauthSuite) TestMaxTTLLargerInToken() {
 	authorizer, err := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	s.NoError(err)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
-		return fmt.Sprintf("%v", t[0].Field().Interface) == "token TTL: 300000000 is larger than MaxTTL allowed: 1"
+		return strings.HasPrefix(fmt.Sprintf("%v", t[0].Field().Interface), "token TTL:")
 	}))
 	result, _ := authorizer.Authorize(s.ctx, &s.att)
 	s.Equal(result.Decision, DecisionDeny)
@@ -199,7 +202,7 @@ func (s *oauthSuite) TestIncorrectToken() {
 	authorizer, err := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	s.NoError(err)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
-		return fmt.Sprintf("%v", t[0].Field().Interface) == "parse token: jwt: token format is not valid"
+		return fmt.Sprintf("%v", t[0].Field().Interface) == "token is malformed: token contains an invalid number of segments"
 	}))
 	result, _ := authorizer.Authorize(ctx, &s.att)
 	s.Equal(result.Decision, DecisionDeny)
@@ -217,7 +220,7 @@ func (s *oauthSuite) TestIatExpiredToken() {
 	authorizer, err := NewOAuthAuthorizer(s.cfg, s.logger, s.domainCache)
 	s.NoError(err)
 	s.logger.On("Debug", "request is not authorized", mock.MatchedBy(func(t []tag.Tag) bool {
-		return fmt.Sprintf("%v", t[0].Field().Interface) == "JWT has expired"
+		return fmt.Sprintf("%v", t[0].Field().Interface) == "token is expired"
 	}))
 	result, _ := authorizer.Authorize(ctx, &s.att)
 	s.Equal(result.Decision, DecisionDeny)
@@ -247,4 +250,51 @@ func (s *oauthSuite) TestIncorrectPermission() {
 	result, err := authorizer.Authorize(s.ctx, &s.att)
 	s.NoError(err)
 	s.Equal(result.Decision, DecisionDeny)
+}
+
+func Test_oauthAuthority_validateTTL(t *testing.T) {
+
+	tests := []struct {
+		name      string
+		claims    *JWTClaims
+		ttlConfig int64
+		wantErr   assert.ErrorAssertionFunc
+	}{
+		{
+			name:    "Empty claims will fail TTL validation",
+			claims:  &JWTClaims{},
+			wantErr: assert.Error,
+		},
+		{
+			name: "Claims with IAT and Claim TTL will pass",
+			claims: &JWTClaims{
+				TTL: 300,
+				RegisteredClaims: jwt.RegisteredClaims{
+					IssuedAt: jwt.NewNumericDate(time.Now()),
+				},
+			},
+			wantErr:   assert.NoError,
+			ttlConfig: 500,
+		},
+
+		{
+			name: "Claims with IAT but without TTL or ExpiresAT will fail TTL validation",
+			claims: &JWTClaims{
+				RegisteredClaims: jwt.RegisteredClaims{
+					IssuedAt: jwt.NewNumericDate(time.Now().Add(-time.Minute)),
+				},
+			},
+			ttlConfig: 1,
+			wantErr:   assert.Error,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			validator := &oauthAuthority{
+				authorizationCfg: config.OAuthAuthorizer{MaxJwtTTL: tt.ttlConfig},
+			}
+			tt.wantErr(t, validator.validateTTL(tt.claims), fmt.Sprintf("validateTTL(%v)", tt.claims))
+		})
+	}
 }
