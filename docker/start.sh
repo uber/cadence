@@ -130,11 +130,11 @@ wait_for_postgres() {
 wait_for_es() {
     server=`echo $ES_SEEDS | awk -F ',' '{print $1}'`
     URL="http://$server:$ES_PORT"
-    curl -s $URL 2>&1 > /dev/null
+    curl -s $URL > /dev/null 2>&1
     until [ $? -eq 0 ]; do
         echo 'waiting for elasticsearch to start up'
         sleep 1
-        curl -s $URL 2>&1 > /dev/null
+        curl -s $URL > /dev/null 2>&1
     done
     echo 'elasticsearch started'
 }

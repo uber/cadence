@@ -30,6 +30,10 @@ import (
 
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interface_mock.go -package admin github.com/uber/cadence/client/admin Client
 //go:generate gowrap gen -g -p . -i Client -t ../templates/retry.tmpl -o ../wrappers/retryable/admin_generated.go -v client=Admin
+//go:generate gowrap gen -g -p . -i Client -t ../templates/metered.tmpl -o ../wrappers/metered/admin_generated.go -v client=Admin
+//go:generate gowrap gen -g -p . -i Client -t ../templates/errorinjectors.tmpl -o ../wrappers/errorinjectors/admin_generated.go -v client=Admin
+//go:generate gowrap gen -g -p . -i Client -t ../templates/grpc.tmpl -o ../wrappers/grpc/admin_generated.go -v client=Admin -v package=adminv1 -v path=github.com/uber/cadence-idl/go/proto/admin/v1 -v prefix=Admin
+//go:generate gowrap gen -g -p . -i Client -t ../templates/thrift.tmpl -o ../wrappers/thrift/admin_generated.go -v client=Admin -v prefix=Admin
 
 // Client is the interface exposed by admin service client
 type Client interface {
@@ -65,4 +69,6 @@ type Client interface {
 	UpdateGlobalIsolationGroups(ctx context.Context, request *types.UpdateGlobalIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.UpdateGlobalIsolationGroupsResponse, error)
 	GetDomainIsolationGroups(ctx context.Context, request *types.GetDomainIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.GetDomainIsolationGroupsResponse, error)
 	UpdateDomainIsolationGroups(ctx context.Context, request *types.UpdateDomainIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.UpdateDomainIsolationGroupsResponse, error)
+	GetDomainAsyncWorkflowConfiguraton(ctx context.Context, request *types.GetDomainAsyncWorkflowConfiguratonRequest, opts ...yarpc.CallOption) (*types.GetDomainAsyncWorkflowConfiguratonResponse, error)
+	UpdateDomainAsyncWorkflowConfiguraton(ctx context.Context, request *types.UpdateDomainAsyncWorkflowConfiguratonRequest, opts ...yarpc.CallOption) (*types.UpdateDomainAsyncWorkflowConfiguratonResponse, error)
 }

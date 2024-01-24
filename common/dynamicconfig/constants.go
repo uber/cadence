@@ -1178,6 +1178,20 @@ const (
 	// Allowed filters: ShardID
 	ReplicationTaskProcessorErrorRetryMaxAttempts
 
+	// WorkflowIDExternalRPS is the rate limit per workflowID for external calls
+	// KeyName: history.workflowIDExternalRPS
+	// Value type: Int
+	// Default value: UnlimitedRPS
+	// Allowed filters: DomainName
+	WorkflowIDExternalRPS
+
+	// WorkflowIDInternalRPS is the rate limit per workflowID for internal calls
+	// KeyName: history.workflowIDInternalRPS
+	// Value type: Int
+	// Default value: UnlimitedRPS
+	// Allowed filters: DomainName
+	WorkflowIDInternalRPS
+
 	// key for worker
 
 	// WorkerPersistenceMaxQPS is the max qps worker host can query DB
@@ -1696,6 +1710,12 @@ const (
 	// Default value: true
 	// Allowed filters: DomainName
 	EnableRecordWorkflowExecutionUninitialized
+	// WorkflowIDCacheEnabled is the key to enable/disable caching of workflowID specific information
+	// KeyName: history.workflowIDCacheEnabled
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: DomainName
+	WorkflowIDCacheEnabled
 	// AllowArchivingIncompleteHistory will continue on when seeing some error like history mutated(usually caused by database consistency issues)
 	// KeyName: worker.AllowArchivingIncompleteHistory
 	// Value type: Bool
@@ -1919,6 +1939,9 @@ const (
 	// Value type: Bool
 	// Default value: true
 	EnableShardIDMetrics
+
+	EnableTimerDebugLogByDomainID
+
 	// LastBoolKey must be the last one in this const group
 	LastBoolKey
 )
@@ -3475,6 +3498,18 @@ var IntKeys = map[IntKey]DynamicInt{
 		Description:  "ReplicationTaskProcessorErrorRetryMaxAttempts is the max retry attempts for applying replication tasks",
 		DefaultValue: 10,
 	},
+	WorkflowIDExternalRPS: DynamicInt{
+		KeyName:      "history.workflowIDExternalRPS",
+		Filters:      []Filter{DomainName},
+		Description:  "WorkflowIDExternalRPS is the rate limit per workflowID for external calls",
+		DefaultValue: UnlimitedRPS,
+	},
+	WorkflowIDInternalRPS: DynamicInt{
+		KeyName:      "history.workflowIDInternalRPS",
+		Filters:      []Filter{DomainName},
+		Description:  "WorkflowIDInternalRPS is the rate limit per workflowID for internal calls",
+		DefaultValue: UnlimitedRPS,
+	},
 	WorkerPersistenceMaxQPS: DynamicInt{
 		KeyName:      "worker.persistenceMaxQPS",
 		Description:  "WorkerPersistenceMaxQPS is the max qps worker host can query DB",
@@ -4123,6 +4158,18 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		KeyName:      "system.enableShardIDMetrics",
 		Description:  "Enable shardId metrics in persistence client",
 		DefaultValue: true,
+	},
+	EnableTimerDebugLogByDomainID: DynamicBool{
+		KeyName:      "history.enableTimerDebugLogByDomainID",
+		Filters:      []Filter{DomainID},
+		Description:  "Enable log for debugging timer task issue by domain",
+		DefaultValue: false,
+	},
+	WorkflowIDCacheEnabled: DynamicBool{
+		KeyName:      "history.workflowIDCacheEnabled",
+		Filters:      []Filter{DomainName},
+		Description:  "WorkflowIDCacheEnabled is the key to enable/disable caching of workflowID specific information",
+		DefaultValue: false,
 	},
 }
 

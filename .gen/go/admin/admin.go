@@ -2921,6 +2921,434 @@ func (v *DescribeWorkflowExecutionResponse) IsSetMutableStateInDatabase() bool {
 	return v != nil && v.MutableStateInDatabase != nil
 }
 
+type GetDomainAsyncWorkflowConfiguratonRequest struct {
+	Domain *string `json:"domain,omitempty"`
+}
+
+// ToWire translates a GetDomainAsyncWorkflowConfiguratonRequest struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
+//
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
+func (v *GetDomainAsyncWorkflowConfiguratonRequest) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Domain != nil {
+		w, err = wire.NewValueString(*(v.Domain)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a GetDomainAsyncWorkflowConfiguratonRequest struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a GetDomainAsyncWorkflowConfiguratonRequest struct
+// from the provided intermediate representation.
+//
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
+//
+//	var v GetDomainAsyncWorkflowConfiguratonRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
+func (v *GetDomainAsyncWorkflowConfiguratonRequest) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Domain = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a GetDomainAsyncWorkflowConfiguratonRequest struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a GetDomainAsyncWorkflowConfiguratonRequest struct could not be encoded.
+func (v *GetDomainAsyncWorkflowConfiguratonRequest) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Domain != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 10, Type: wire.TBinary}); err != nil {
+			return err
+		}
+		if err := sw.WriteString(*(v.Domain)); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+// Decode deserializes a GetDomainAsyncWorkflowConfiguratonRequest struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a GetDomainAsyncWorkflowConfiguratonRequest struct could not be generated from the wire
+// representation.
+func (v *GetDomainAsyncWorkflowConfiguratonRequest) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 10 && fh.Type == wire.TBinary:
+			var x string
+			x, err = sr.ReadString()
+			v.Domain = &x
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a GetDomainAsyncWorkflowConfiguratonRequest
+// struct.
+func (v *GetDomainAsyncWorkflowConfiguratonRequest) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Domain != nil {
+		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
+		i++
+	}
+
+	return fmt.Sprintf("GetDomainAsyncWorkflowConfiguratonRequest{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this GetDomainAsyncWorkflowConfiguratonRequest match the
+// provided GetDomainAsyncWorkflowConfiguratonRequest.
+//
+// This function performs a deep comparison.
+func (v *GetDomainAsyncWorkflowConfiguratonRequest) Equals(rhs *GetDomainAsyncWorkflowConfiguratonRequest) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.Domain, rhs.Domain) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of GetDomainAsyncWorkflowConfiguratonRequest.
+func (v *GetDomainAsyncWorkflowConfiguratonRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Domain != nil {
+		enc.AddString("domain", *v.Domain)
+	}
+	return err
+}
+
+// GetDomain returns the value of Domain if it is set or its
+// zero value if it is unset.
+func (v *GetDomainAsyncWorkflowConfiguratonRequest) GetDomain() (o string) {
+	if v != nil && v.Domain != nil {
+		return *v.Domain
+	}
+
+	return
+}
+
+// IsSetDomain returns true if Domain is not nil.
+func (v *GetDomainAsyncWorkflowConfiguratonRequest) IsSetDomain() bool {
+	return v != nil && v.Domain != nil
+}
+
+type GetDomainAsyncWorkflowConfiguratonResponse struct {
+	Configuration *shared.AsyncWorkflowConfiguration `json:"configuration,omitempty"`
+}
+
+// ToWire translates a GetDomainAsyncWorkflowConfiguratonResponse struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
+//
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
+func (v *GetDomainAsyncWorkflowConfiguratonResponse) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Configuration != nil {
+		w, err = v.Configuration.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _AsyncWorkflowConfiguration_Read(w wire.Value) (*shared.AsyncWorkflowConfiguration, error) {
+	var v shared.AsyncWorkflowConfiguration
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a GetDomainAsyncWorkflowConfiguratonResponse struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a GetDomainAsyncWorkflowConfiguratonResponse struct
+// from the provided intermediate representation.
+//
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
+//
+//	var v GetDomainAsyncWorkflowConfiguratonResponse
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
+func (v *GetDomainAsyncWorkflowConfiguratonResponse) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TStruct {
+				v.Configuration, err = _AsyncWorkflowConfiguration_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a GetDomainAsyncWorkflowConfiguratonResponse struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a GetDomainAsyncWorkflowConfiguratonResponse struct could not be encoded.
+func (v *GetDomainAsyncWorkflowConfiguratonResponse) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Configuration != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 10, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.Configuration.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+func _AsyncWorkflowConfiguration_Decode(sr stream.Reader) (*shared.AsyncWorkflowConfiguration, error) {
+	var v shared.AsyncWorkflowConfiguration
+	err := v.Decode(sr)
+	return &v, err
+}
+
+// Decode deserializes a GetDomainAsyncWorkflowConfiguratonResponse struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a GetDomainAsyncWorkflowConfiguratonResponse struct could not be generated from the wire
+// representation.
+func (v *GetDomainAsyncWorkflowConfiguratonResponse) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 10 && fh.Type == wire.TStruct:
+			v.Configuration, err = _AsyncWorkflowConfiguration_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a GetDomainAsyncWorkflowConfiguratonResponse
+// struct.
+func (v *GetDomainAsyncWorkflowConfiguratonResponse) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Configuration != nil {
+		fields[i] = fmt.Sprintf("Configuration: %v", v.Configuration)
+		i++
+	}
+
+	return fmt.Sprintf("GetDomainAsyncWorkflowConfiguratonResponse{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this GetDomainAsyncWorkflowConfiguratonResponse match the
+// provided GetDomainAsyncWorkflowConfiguratonResponse.
+//
+// This function performs a deep comparison.
+func (v *GetDomainAsyncWorkflowConfiguratonResponse) Equals(rhs *GetDomainAsyncWorkflowConfiguratonResponse) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Configuration == nil && rhs.Configuration == nil) || (v.Configuration != nil && rhs.Configuration != nil && v.Configuration.Equals(rhs.Configuration))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of GetDomainAsyncWorkflowConfiguratonResponse.
+func (v *GetDomainAsyncWorkflowConfiguratonResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Configuration != nil {
+		err = multierr.Append(err, enc.AddObject("configuration", v.Configuration))
+	}
+	return err
+}
+
+// GetConfiguration returns the value of Configuration if it is set or its
+// zero value if it is unset.
+func (v *GetDomainAsyncWorkflowConfiguratonResponse) GetConfiguration() (o *shared.AsyncWorkflowConfiguration) {
+	if v != nil && v.Configuration != nil {
+		return v.Configuration
+	}
+
+	return
+}
+
+// IsSetConfiguration returns true if Configuration is not nil.
+func (v *GetDomainAsyncWorkflowConfiguratonResponse) IsSetConfiguration() bool {
+	return v != nil && v.Configuration != nil
+}
+
 type GetDomainIsolationGroupsRequest struct {
 	Domain *string `json:"domain,omitempty"`
 }
@@ -9345,6 +9773,418 @@ func (v *RingInfo) IsSetMembers() bool {
 	return v != nil && v.Members != nil
 }
 
+type UpdateDomainAsyncWorkflowConfiguratonRequest struct {
+	Domain        *string                            `json:"domain,omitempty"`
+	Configuration *shared.AsyncWorkflowConfiguration `json:"configuration,omitempty"`
+}
+
+// ToWire translates a UpdateDomainAsyncWorkflowConfiguratonRequest struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
+//
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
+func (v *UpdateDomainAsyncWorkflowConfiguratonRequest) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Domain != nil {
+		w, err = wire.NewValueString(*(v.Domain)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.Configuration != nil {
+		w, err = v.Configuration.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a UpdateDomainAsyncWorkflowConfiguratonRequest struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a UpdateDomainAsyncWorkflowConfiguratonRequest struct
+// from the provided intermediate representation.
+//
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
+//
+//	var v UpdateDomainAsyncWorkflowConfiguratonRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
+func (v *UpdateDomainAsyncWorkflowConfiguratonRequest) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Domain = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TStruct {
+				v.Configuration, err = _AsyncWorkflowConfiguration_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a UpdateDomainAsyncWorkflowConfiguratonRequest struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a UpdateDomainAsyncWorkflowConfiguratonRequest struct could not be encoded.
+func (v *UpdateDomainAsyncWorkflowConfiguratonRequest) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Domain != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 10, Type: wire.TBinary}); err != nil {
+			return err
+		}
+		if err := sw.WriteString(*(v.Domain)); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.Configuration != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 20, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.Configuration.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+// Decode deserializes a UpdateDomainAsyncWorkflowConfiguratonRequest struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a UpdateDomainAsyncWorkflowConfiguratonRequest struct could not be generated from the wire
+// representation.
+func (v *UpdateDomainAsyncWorkflowConfiguratonRequest) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 10 && fh.Type == wire.TBinary:
+			var x string
+			x, err = sr.ReadString()
+			v.Domain = &x
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 20 && fh.Type == wire.TStruct:
+			v.Configuration, err = _AsyncWorkflowConfiguration_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a UpdateDomainAsyncWorkflowConfiguratonRequest
+// struct.
+func (v *UpdateDomainAsyncWorkflowConfiguratonRequest) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.Domain != nil {
+		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
+		i++
+	}
+	if v.Configuration != nil {
+		fields[i] = fmt.Sprintf("Configuration: %v", v.Configuration)
+		i++
+	}
+
+	return fmt.Sprintf("UpdateDomainAsyncWorkflowConfiguratonRequest{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this UpdateDomainAsyncWorkflowConfiguratonRequest match the
+// provided UpdateDomainAsyncWorkflowConfiguratonRequest.
+//
+// This function performs a deep comparison.
+func (v *UpdateDomainAsyncWorkflowConfiguratonRequest) Equals(rhs *UpdateDomainAsyncWorkflowConfiguratonRequest) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.Domain, rhs.Domain) {
+		return false
+	}
+	if !((v.Configuration == nil && rhs.Configuration == nil) || (v.Configuration != nil && rhs.Configuration != nil && v.Configuration.Equals(rhs.Configuration))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of UpdateDomainAsyncWorkflowConfiguratonRequest.
+func (v *UpdateDomainAsyncWorkflowConfiguratonRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Domain != nil {
+		enc.AddString("domain", *v.Domain)
+	}
+	if v.Configuration != nil {
+		err = multierr.Append(err, enc.AddObject("configuration", v.Configuration))
+	}
+	return err
+}
+
+// GetDomain returns the value of Domain if it is set or its
+// zero value if it is unset.
+func (v *UpdateDomainAsyncWorkflowConfiguratonRequest) GetDomain() (o string) {
+	if v != nil && v.Domain != nil {
+		return *v.Domain
+	}
+
+	return
+}
+
+// IsSetDomain returns true if Domain is not nil.
+func (v *UpdateDomainAsyncWorkflowConfiguratonRequest) IsSetDomain() bool {
+	return v != nil && v.Domain != nil
+}
+
+// GetConfiguration returns the value of Configuration if it is set or its
+// zero value if it is unset.
+func (v *UpdateDomainAsyncWorkflowConfiguratonRequest) GetConfiguration() (o *shared.AsyncWorkflowConfiguration) {
+	if v != nil && v.Configuration != nil {
+		return v.Configuration
+	}
+
+	return
+}
+
+// IsSetConfiguration returns true if Configuration is not nil.
+func (v *UpdateDomainAsyncWorkflowConfiguratonRequest) IsSetConfiguration() bool {
+	return v != nil && v.Configuration != nil
+}
+
+type UpdateDomainAsyncWorkflowConfiguratonResponse struct {
+}
+
+// ToWire translates a UpdateDomainAsyncWorkflowConfiguratonResponse struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
+//
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
+func (v *UpdateDomainAsyncWorkflowConfiguratonResponse) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a UpdateDomainAsyncWorkflowConfiguratonResponse struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a UpdateDomainAsyncWorkflowConfiguratonResponse struct
+// from the provided intermediate representation.
+//
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
+//
+//	var v UpdateDomainAsyncWorkflowConfiguratonResponse
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
+func (v *UpdateDomainAsyncWorkflowConfiguratonResponse) FromWire(w wire.Value) error {
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a UpdateDomainAsyncWorkflowConfiguratonResponse struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a UpdateDomainAsyncWorkflowConfiguratonResponse struct could not be encoded.
+func (v *UpdateDomainAsyncWorkflowConfiguratonResponse) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	return sw.WriteStructEnd()
+}
+
+// Decode deserializes a UpdateDomainAsyncWorkflowConfiguratonResponse struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a UpdateDomainAsyncWorkflowConfiguratonResponse struct could not be generated from the wire
+// representation.
+func (v *UpdateDomainAsyncWorkflowConfiguratonResponse) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a UpdateDomainAsyncWorkflowConfiguratonResponse
+// struct.
+func (v *UpdateDomainAsyncWorkflowConfiguratonResponse) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [0]string
+	i := 0
+
+	return fmt.Sprintf("UpdateDomainAsyncWorkflowConfiguratonResponse{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this UpdateDomainAsyncWorkflowConfiguratonResponse match the
+// provided UpdateDomainAsyncWorkflowConfiguratonResponse.
+//
+// This function performs a deep comparison.
+func (v *UpdateDomainAsyncWorkflowConfiguratonResponse) Equals(rhs *UpdateDomainAsyncWorkflowConfiguratonResponse) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of UpdateDomainAsyncWorkflowConfiguratonResponse.
+func (v *UpdateDomainAsyncWorkflowConfiguratonResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	return err
+}
+
 type UpdateDomainIsolationGroupsRequest struct {
 	Domain          *string                             `json:"domain,omitempty"`
 	IsolationGroups *shared.IsolationGroupConfiguration `json:"isolationGroups,omitempty"`
@@ -10516,7 +11356,7 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "admin",
 	Package:  "github.com/uber/cadence/.gen/go/admin",
 	FilePath: "admin.thrift",
-	SHA1:     "476453da017894fbe5fcaa44ac30690658cbaf73",
+	SHA1:     "cd332257c2e6f1bcc07bdfaae63cb757ecf2cba3",
 	Includes: []*thriftreflect.ThriftModule{
 		config.ThriftModule,
 		replicator.ThriftModule,
@@ -10525,7 +11365,7 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Raw: rawIDL,
 }
 
-const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.admin\n\ninclude \"shared.thrift\"\ninclude \"replicator.thrift\"\ninclude \"config.thrift\"\n\n/**\n* AdminService provides advanced APIs for debugging and analysis with admin privilege\n**/\nservice AdminService {\n  /**\n  * DescribeWorkflowExecution returns information about the internal states of workflow execution.\n  **/\n  DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: DescribeWorkflowExecutionRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.InternalServiceError    internalServiceError,\n      3: shared.EntityNotExistsError    entityNotExistError,\n      4: shared.AccessDeniedError       accessDeniedError,\n    )\n\n  /**\n  * DescribeShardDistribution returns information about history shards within the cluster\n  **/\n  shared.DescribeShardDistributionResponse DescribeShardDistribution(1: shared.DescribeShardDistributionRequest request)\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n    )\n\n  /**\n  * DescribeHistoryHost returns information about the internal states of a history host\n  **/\n  shared.DescribeHistoryHostResponse DescribeHistoryHost(1: shared.DescribeHistoryHostRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void CloseShard(1: shared.CloseShardRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void RemoveTask(1: shared.RemoveTaskRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void ResetQueue(1: shared.ResetQueueRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  shared.DescribeQueueResponse DescribeQueue(1: shared.DescribeQueueRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  * StartEventId defines the beginning of the event to fetch. The first event is inclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\n  GetWorkflowExecutionRawHistoryV2Response GetWorkflowExecutionRawHistoryV2(1: GetWorkflowExecutionRawHistoryV2Request getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  replicator.GetReplicationMessagesResponse GetReplicationMessages(1: replicator.GetReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  replicator.GetDomainReplicationMessagesResponse GetDomainReplicationMessages(1: replicator.GetDomainReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  replicator.GetDLQReplicationMessagesResponse GetDLQReplicationMessages(1: replicator.GetDLQReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * ReapplyEvents applies stale events to the current workflow and current run\n  **/\n  void ReapplyEvents(1: shared.ReapplyEventsRequest reapplyEventsRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.DomainNotActiveError domainNotActiveError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * AddSearchAttribute whitelist search attribute in request.\n  **/\n  void AddSearchAttribute(1: AddSearchAttributeRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * DescribeCluster returns information about cadence cluster\n  **/\n  DescribeClusterResponse DescribeCluster()\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * ReadDLQMessages returns messages from DLQ\n  **/\n  replicator.ReadDLQMessagesResponse ReadDLQMessages(1: replicator.ReadDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * PurgeDLQMessages purges messages from DLQ\n  **/\n  void PurgeDLQMessages(1: replicator.PurgeDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * MergeDLQMessages merges messages from DLQ\n  **/\n  replicator.MergeDLQMessagesResponse MergeDLQMessages(1: replicator.MergeDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * RefreshWorkflowTasks refreshes all tasks of a workflow\n  **/\n  void RefreshWorkflowTasks(1: shared.RefreshWorkflowTasksRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.DomainNotActiveError domainNotActiveError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * ResendReplicationTasks requests replication tasks from remote cluster and apply tasks to current cluster\n  **/\n  void ResendReplicationTasks(1: ResendReplicationTasksRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.ServiceBusyError serviceBusyError,\n      3: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * GetCrossClusterTasks fetches cross cluster tasks\n  **/\n  shared.GetCrossClusterTasksResponse GetCrossClusterTasks(1: shared.GetCrossClusterTasksRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * RespondCrossClusterTasksCompleted responds the result of processing cross cluster tasks\n  **/\n  shared.RespondCrossClusterTasksCompletedResponse RespondCrossClusterTasksCompleted(1: shared.RespondCrossClusterTasksCompletedRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * GetDynamicConfig returns values associated with a specified dynamic config parameter.\n  **/\n  GetDynamicConfigResponse GetDynamicConfig(1: GetDynamicConfigRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n    )\n\n  void UpdateDynamicConfig(1: UpdateDynamicConfigRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n    )\n\n  void RestoreDynamicConfig(1: RestoreDynamicConfigRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n    )\n\n  ListDynamicConfigResponse ListDynamicConfig(1: ListDynamicConfigRequest request)\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n    )\n\n  AdminDeleteWorkflowResponse DeleteWorkflow(1: AdminDeleteWorkflowRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.EntityNotExistsError    entityNotExistError,\n      3: shared.InternalServiceError    internalServiceError,\n    )\n\n  AdminMaintainWorkflowResponse MaintainCorruptWorkflow(1: AdminMaintainWorkflowRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.EntityNotExistsError    entityNotExistError,\n      3: shared.InternalServiceError    internalServiceError,\n    )\n\n  GetGlobalIsolationGroupsResponse GetGlobalIsolationGroups(1: GetGlobalIsolationGroupsRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n    )\n\n  UpdateGlobalIsolationGroupsResponse UpdateGlobalIsolationGroups(1: UpdateGlobalIsolationGroupsRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n    )\n\n  GetDomainIsolationGroupsResponse GetDomainIsolationGroups(1: GetDomainIsolationGroupsRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n    )\n\n  UpdateDomainIsolationGroupsResponse UpdateDomainIsolationGroups(1: UpdateDomainIsolationGroupsRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n    )\n}\n\nstruct DescribeWorkflowExecutionRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct DescribeWorkflowExecutionResponse {\n  10: optional string shardId\n  20: optional string historyAddr\n  40: optional string mutableStateInCache\n  50: optional string mutableStateInDatabase\n}\n\n/**\n  * StartEventId defines the beginning of the event to fetch. The first event is exclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\nstruct GetWorkflowExecutionRawHistoryV2Request {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") startEventId\n  40: optional i64 (js.type = \"Long\") startEventVersion\n  50: optional i64 (js.type = \"Long\") endEventId\n  60: optional i64 (js.type = \"Long\") endEventVersion\n  70: optional i32 maximumPageSize\n  80: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryV2Response {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional shared.VersionHistory versionHistory\n}\n\nstruct AddSearchAttributeRequest {\n  10: optional map<string, shared.IndexedValueType> searchAttribute\n  20: optional string securityToken\n}\n\nstruct HostInfo {\n  10: optional string Identity\n}\n\nstruct RingInfo {\n  10: optional string role\n  20: optional i32 memberCount\n  30: optional list<HostInfo> members\n}\n\nstruct MembershipInfo {\n  10: optional HostInfo currentHost\n  20: optional list<string> reachableMembers\n  30: optional list<RingInfo> rings\n}\n\nstruct PersistenceSetting {\n  10: optional string key\n  20: optional string value\n}\n\nstruct PersistenceFeature {\n  10: optional string key\n  20: optional bool enabled\n}\n\nstruct PersistenceInfo {\n  10: optional string backend\n  20: optional list<PersistenceSetting> settings\n  30: optional list<PersistenceFeature> features\n}\n\nstruct DescribeClusterResponse {\n  10: optional shared.SupportedClientVersions supportedClientVersions\n  20: optional MembershipInfo membershipInfo\n  30: optional map<string,PersistenceInfo> persistenceInfo\n}\n\nstruct ResendReplicationTasksRequest {\n  10: optional string domainID\n  20: optional string workflowID\n  30: optional string runID\n  40: optional string remoteCluster\n  50: optional i64 (js.type = \"Long\") startEventID\n  60: optional i64 (js.type = \"Long\") startVersion\n  70: optional i64 (js.type = \"Long\") endEventID\n  80: optional i64 (js.type = \"Long\") endVersion\n}\n\nstruct GetDynamicConfigRequest {\n  10: optional string configName\n  20: optional list<config.DynamicConfigFilter> filters\n}\n\nstruct GetDynamicConfigResponse {\n  10: optional shared.DataBlob value\n}\n\nstruct UpdateDynamicConfigRequest {\n  10: optional string configName\n  20: optional list<config.DynamicConfigValue> configValues\n}\n\nstruct RestoreDynamicConfigRequest {\n  10: optional string configName\n  20: optional list<config.DynamicConfigFilter> filters\n}\n\nstruct AdminDeleteWorkflowRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct AdminDeleteWorkflowResponse {\n  10: optional bool historyDeleted\n  20: optional bool executionsDeleted\n  30: optional bool visibilityDeleted\n}\n\nstruct AdminMaintainWorkflowRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct AdminMaintainWorkflowResponse {\n  10: optional bool historyDeleted\n  20: optional bool executionsDeleted\n  30: optional bool visibilityDeleted\n}\n\n//Eventually remove configName and integrate this functionality into Get.\n//GetDynamicConfigResponse would need to change as well.\nstruct ListDynamicConfigRequest {\n  10: optional string configName\n}\n\nstruct ListDynamicConfigResponse {\n  10: optional list<config.DynamicConfigEntry> entries\n}\n\n// global\nstruct GetGlobalIsolationGroupsRequest{}\n\nstruct GetGlobalIsolationGroupsResponse{\n    10: optional shared.IsolationGroupConfiguration isolationGroups\n}\n\nstruct UpdateGlobalIsolationGroupsRequest{\n    10: optional shared.IsolationGroupConfiguration isolationGroups\n}\n\nstruct UpdateGlobalIsolationGroupsResponse{}\n\n\n// For domains\nstruct GetDomainIsolationGroupsRequest{\n    10: optional string domain\n}\n\nstruct GetDomainIsolationGroupsResponse{\n    10: optional shared.IsolationGroupConfiguration isolationGroups\n}\n\nstruct UpdateDomainIsolationGroupsRequest{\n    10: optional string domain\n    20: optional shared.IsolationGroupConfiguration isolationGroups\n}\n\nstruct UpdateDomainIsolationGroupsResponse{}\n"
+const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.admin\n\ninclude \"shared.thrift\"\ninclude \"replicator.thrift\"\ninclude \"config.thrift\"\n\n/**\n* AdminService provides advanced APIs for debugging and analysis with admin privilege\n**/\nservice AdminService {\n  /**\n  * DescribeWorkflowExecution returns information about the internal states of workflow execution.\n  **/\n  DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: DescribeWorkflowExecutionRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.InternalServiceError    internalServiceError,\n      3: shared.EntityNotExistsError    entityNotExistError,\n      4: shared.AccessDeniedError       accessDeniedError,\n    )\n\n  /**\n  * DescribeShardDistribution returns information about history shards within the cluster\n  **/\n  shared.DescribeShardDistributionResponse DescribeShardDistribution(1: shared.DescribeShardDistributionRequest request)\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n    )\n\n  /**\n  * DescribeHistoryHost returns information about the internal states of a history host\n  **/\n  shared.DescribeHistoryHostResponse DescribeHistoryHost(1: shared.DescribeHistoryHostRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void CloseShard(1: shared.CloseShardRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void RemoveTask(1: shared.RemoveTaskRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void ResetQueue(1: shared.ResetQueueRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  shared.DescribeQueueResponse DescribeQueue(1: shared.DescribeQueueRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  * StartEventId defines the beginning of the event to fetch. The first event is inclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\n  GetWorkflowExecutionRawHistoryV2Response GetWorkflowExecutionRawHistoryV2(1: GetWorkflowExecutionRawHistoryV2Request getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  replicator.GetReplicationMessagesResponse GetReplicationMessages(1: replicator.GetReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  replicator.GetDomainReplicationMessagesResponse GetDomainReplicationMessages(1: replicator.GetDomainReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  replicator.GetDLQReplicationMessagesResponse GetDLQReplicationMessages(1: replicator.GetDLQReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * ReapplyEvents applies stale events to the current workflow and current run\n  **/\n  void ReapplyEvents(1: shared.ReapplyEventsRequest reapplyEventsRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.DomainNotActiveError domainNotActiveError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * AddSearchAttribute whitelist search attribute in request.\n  **/\n  void AddSearchAttribute(1: AddSearchAttributeRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * DescribeCluster returns information about cadence cluster\n  **/\n  DescribeClusterResponse DescribeCluster()\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * ReadDLQMessages returns messages from DLQ\n  **/\n  replicator.ReadDLQMessagesResponse ReadDLQMessages(1: replicator.ReadDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * PurgeDLQMessages purges messages from DLQ\n  **/\n  void PurgeDLQMessages(1: replicator.PurgeDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * MergeDLQMessages merges messages from DLQ\n  **/\n  replicator.MergeDLQMessagesResponse MergeDLQMessages(1: replicator.MergeDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * RefreshWorkflowTasks refreshes all tasks of a workflow\n  **/\n  void RefreshWorkflowTasks(1: shared.RefreshWorkflowTasksRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.DomainNotActiveError domainNotActiveError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * ResendReplicationTasks requests replication tasks from remote cluster and apply tasks to current cluster\n  **/\n  void ResendReplicationTasks(1: ResendReplicationTasksRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.ServiceBusyError serviceBusyError,\n      3: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * GetCrossClusterTasks fetches cross cluster tasks\n  **/\n  shared.GetCrossClusterTasksResponse GetCrossClusterTasks(1: shared.GetCrossClusterTasksRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * RespondCrossClusterTasksCompleted responds the result of processing cross cluster tasks\n  **/\n  shared.RespondCrossClusterTasksCompletedResponse RespondCrossClusterTasksCompleted(1: shared.RespondCrossClusterTasksCompletedRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * GetDynamicConfig returns values associated with a specified dynamic config parameter.\n  **/\n  GetDynamicConfigResponse GetDynamicConfig(1: GetDynamicConfigRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n    )\n\n  void UpdateDynamicConfig(1: UpdateDynamicConfigRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n    )\n\n  void RestoreDynamicConfig(1: RestoreDynamicConfigRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n    )\n\n  ListDynamicConfigResponse ListDynamicConfig(1: ListDynamicConfigRequest request)\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n    )\n\n  AdminDeleteWorkflowResponse DeleteWorkflow(1: AdminDeleteWorkflowRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.EntityNotExistsError    entityNotExistError,\n      3: shared.InternalServiceError    internalServiceError,\n    )\n\n  AdminMaintainWorkflowResponse MaintainCorruptWorkflow(1: AdminMaintainWorkflowRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.EntityNotExistsError    entityNotExistError,\n      3: shared.InternalServiceError    internalServiceError,\n    )\n\n  GetGlobalIsolationGroupsResponse GetGlobalIsolationGroups(1: GetGlobalIsolationGroupsRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n    )\n\n  UpdateGlobalIsolationGroupsResponse UpdateGlobalIsolationGroups(1: UpdateGlobalIsolationGroupsRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n    )\n\n  GetDomainIsolationGroupsResponse GetDomainIsolationGroups(1: GetDomainIsolationGroupsRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n    )\n\n  UpdateDomainIsolationGroupsResponse UpdateDomainIsolationGroups(1: UpdateDomainIsolationGroupsRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n    )\n\n\n  GetDomainAsyncWorkflowConfiguratonResponse GetDomainAsyncWorkflowConfiguraton(1: GetDomainAsyncWorkflowConfiguratonRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n    )\n\n  UpdateDomainAsyncWorkflowConfiguratonResponse UpdateDomainAsyncWorkflowConfiguraton(1: UpdateDomainAsyncWorkflowConfiguratonRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n    )\n}\n\nstruct DescribeWorkflowExecutionRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct DescribeWorkflowExecutionResponse {\n  10: optional string shardId\n  20: optional string historyAddr\n  40: optional string mutableStateInCache\n  50: optional string mutableStateInDatabase\n}\n\n/**\n  * StartEventId defines the beginning of the event to fetch. The first event is exclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\nstruct GetWorkflowExecutionRawHistoryV2Request {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") startEventId\n  40: optional i64 (js.type = \"Long\") startEventVersion\n  50: optional i64 (js.type = \"Long\") endEventId\n  60: optional i64 (js.type = \"Long\") endEventVersion\n  70: optional i32 maximumPageSize\n  80: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryV2Response {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional shared.VersionHistory versionHistory\n}\n\nstruct AddSearchAttributeRequest {\n  10: optional map<string, shared.IndexedValueType> searchAttribute\n  20: optional string securityToken\n}\n\nstruct HostInfo {\n  10: optional string Identity\n}\n\nstruct RingInfo {\n  10: optional string role\n  20: optional i32 memberCount\n  30: optional list<HostInfo> members\n}\n\nstruct MembershipInfo {\n  10: optional HostInfo currentHost\n  20: optional list<string> reachableMembers\n  30: optional list<RingInfo> rings\n}\n\nstruct PersistenceSetting {\n  10: optional string key\n  20: optional string value\n}\n\nstruct PersistenceFeature {\n  10: optional string key\n  20: optional bool enabled\n}\n\nstruct PersistenceInfo {\n  10: optional string backend\n  20: optional list<PersistenceSetting> settings\n  30: optional list<PersistenceFeature> features\n}\n\nstruct DescribeClusterResponse {\n  10: optional shared.SupportedClientVersions supportedClientVersions\n  20: optional MembershipInfo membershipInfo\n  30: optional map<string,PersistenceInfo> persistenceInfo\n}\n\nstruct ResendReplicationTasksRequest {\n  10: optional string domainID\n  20: optional string workflowID\n  30: optional string runID\n  40: optional string remoteCluster\n  50: optional i64 (js.type = \"Long\") startEventID\n  60: optional i64 (js.type = \"Long\") startVersion\n  70: optional i64 (js.type = \"Long\") endEventID\n  80: optional i64 (js.type = \"Long\") endVersion\n}\n\nstruct GetDynamicConfigRequest {\n  10: optional string configName\n  20: optional list<config.DynamicConfigFilter> filters\n}\n\nstruct GetDynamicConfigResponse {\n  10: optional shared.DataBlob value\n}\n\nstruct UpdateDynamicConfigRequest {\n  10: optional string configName\n  20: optional list<config.DynamicConfigValue> configValues\n}\n\nstruct RestoreDynamicConfigRequest {\n  10: optional string configName\n  20: optional list<config.DynamicConfigFilter> filters\n}\n\nstruct AdminDeleteWorkflowRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct AdminDeleteWorkflowResponse {\n  10: optional bool historyDeleted\n  20: optional bool executionsDeleted\n  30: optional bool visibilityDeleted\n}\n\nstruct AdminMaintainWorkflowRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct AdminMaintainWorkflowResponse {\n  10: optional bool historyDeleted\n  20: optional bool executionsDeleted\n  30: optional bool visibilityDeleted\n}\n\n//Eventually remove configName and integrate this functionality into Get.\n//GetDynamicConfigResponse would need to change as well.\nstruct ListDynamicConfigRequest {\n  10: optional string configName\n}\n\nstruct ListDynamicConfigResponse {\n  10: optional list<config.DynamicConfigEntry> entries\n}\n\n// global\nstruct GetGlobalIsolationGroupsRequest{}\n\nstruct GetGlobalIsolationGroupsResponse{\n    10: optional shared.IsolationGroupConfiguration isolationGroups\n}\n\nstruct UpdateGlobalIsolationGroupsRequest{\n    10: optional shared.IsolationGroupConfiguration isolationGroups\n}\n\nstruct UpdateGlobalIsolationGroupsResponse{}\n\n\n// For domains\nstruct GetDomainIsolationGroupsRequest{\n    10: optional string domain\n}\n\nstruct GetDomainIsolationGroupsResponse{\n    10: optional shared.IsolationGroupConfiguration isolationGroups\n}\n\nstruct UpdateDomainIsolationGroupsRequest{\n    10: optional string domain\n    20: optional shared.IsolationGroupConfiguration isolationGroups\n}\n\nstruct UpdateDomainIsolationGroupsResponse{}\n\n// Async workflow configuration request/response payloads\nstruct GetDomainAsyncWorkflowConfiguratonRequest {\n    10: optional string domain\n}\n\nstruct GetDomainAsyncWorkflowConfiguratonResponse {\n    10: optional shared.AsyncWorkflowConfiguration configuration\n}\n\nstruct UpdateDomainAsyncWorkflowConfiguratonRequest {\n    10: optional string domain\n    20: optional shared.AsyncWorkflowConfiguration configuration\n}\n\nstruct UpdateDomainAsyncWorkflowConfiguratonResponse {}\n"
 
 // AdminService_AddSearchAttribute_Args represents the arguments for the AdminService.AddSearchAttribute function.
 //
@@ -18362,6 +19202,674 @@ func (v *AdminService_GetDLQReplicationMessages_Result) MethodName() string {
 //
 // This will always be Reply for this struct.
 func (v *AdminService_GetDLQReplicationMessages_Result) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
+}
+
+// AdminService_GetDomainAsyncWorkflowConfiguraton_Args represents the arguments for the AdminService.GetDomainAsyncWorkflowConfiguraton function.
+//
+// The arguments for GetDomainAsyncWorkflowConfiguraton are sent and received over the wire as this struct.
+type AdminService_GetDomainAsyncWorkflowConfiguraton_Args struct {
+	Request *GetDomainAsyncWorkflowConfiguratonRequest `json:"request,omitempty"`
+}
+
+// ToWire translates a AdminService_GetDomainAsyncWorkflowConfiguraton_Args struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
+//
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
+func (v *AdminService_GetDomainAsyncWorkflowConfiguraton_Args) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Request != nil {
+		w, err = v.Request.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _GetDomainAsyncWorkflowConfiguratonRequest_Read(w wire.Value) (*GetDomainAsyncWorkflowConfiguratonRequest, error) {
+	var v GetDomainAsyncWorkflowConfiguratonRequest
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a AdminService_GetDomainAsyncWorkflowConfiguraton_Args struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_GetDomainAsyncWorkflowConfiguraton_Args struct
+// from the provided intermediate representation.
+//
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
+//
+//	var v AdminService_GetDomainAsyncWorkflowConfiguraton_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
+func (v *AdminService_GetDomainAsyncWorkflowConfiguraton_Args) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.Request, err = _GetDomainAsyncWorkflowConfiguratonRequest_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a AdminService_GetDomainAsyncWorkflowConfiguraton_Args struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a AdminService_GetDomainAsyncWorkflowConfiguraton_Args struct could not be encoded.
+func (v *AdminService_GetDomainAsyncWorkflowConfiguraton_Args) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Request != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 1, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.Request.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+func _GetDomainAsyncWorkflowConfiguratonRequest_Decode(sr stream.Reader) (*GetDomainAsyncWorkflowConfiguratonRequest, error) {
+	var v GetDomainAsyncWorkflowConfiguratonRequest
+	err := v.Decode(sr)
+	return &v, err
+}
+
+// Decode deserializes a AdminService_GetDomainAsyncWorkflowConfiguraton_Args struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a AdminService_GetDomainAsyncWorkflowConfiguraton_Args struct could not be generated from the wire
+// representation.
+func (v *AdminService_GetDomainAsyncWorkflowConfiguraton_Args) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 1 && fh.Type == wire.TStruct:
+			v.Request, err = _GetDomainAsyncWorkflowConfiguratonRequest_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_GetDomainAsyncWorkflowConfiguraton_Args
+// struct.
+func (v *AdminService_GetDomainAsyncWorkflowConfiguraton_Args) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Request != nil {
+		fields[i] = fmt.Sprintf("Request: %v", v.Request)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_GetDomainAsyncWorkflowConfiguraton_Args{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_GetDomainAsyncWorkflowConfiguraton_Args match the
+// provided AdminService_GetDomainAsyncWorkflowConfiguraton_Args.
+//
+// This function performs a deep comparison.
+func (v *AdminService_GetDomainAsyncWorkflowConfiguraton_Args) Equals(rhs *AdminService_GetDomainAsyncWorkflowConfiguraton_Args) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Request == nil && rhs.Request == nil) || (v.Request != nil && rhs.Request != nil && v.Request.Equals(rhs.Request))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_GetDomainAsyncWorkflowConfiguraton_Args.
+func (v *AdminService_GetDomainAsyncWorkflowConfiguraton_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Request != nil {
+		err = multierr.Append(err, enc.AddObject("request", v.Request))
+	}
+	return err
+}
+
+// GetRequest returns the value of Request if it is set or its
+// zero value if it is unset.
+func (v *AdminService_GetDomainAsyncWorkflowConfiguraton_Args) GetRequest() (o *GetDomainAsyncWorkflowConfiguratonRequest) {
+	if v != nil && v.Request != nil {
+		return v.Request
+	}
+
+	return
+}
+
+// IsSetRequest returns true if Request is not nil.
+func (v *AdminService_GetDomainAsyncWorkflowConfiguraton_Args) IsSetRequest() bool {
+	return v != nil && v.Request != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the arguments.
+//
+// This will always be "GetDomainAsyncWorkflowConfiguraton" for this struct.
+func (v *AdminService_GetDomainAsyncWorkflowConfiguraton_Args) MethodName() string {
+	return "GetDomainAsyncWorkflowConfiguraton"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Call for this struct.
+func (v *AdminService_GetDomainAsyncWorkflowConfiguraton_Args) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
+// AdminService_GetDomainAsyncWorkflowConfiguraton_Helper provides functions that aid in handling the
+// parameters and return values of the AdminService.GetDomainAsyncWorkflowConfiguraton
+// function.
+var AdminService_GetDomainAsyncWorkflowConfiguraton_Helper = struct {
+	// Args accepts the parameters of GetDomainAsyncWorkflowConfiguraton in-order and returns
+	// the arguments struct for the function.
+	Args func(
+		request *GetDomainAsyncWorkflowConfiguratonRequest,
+	) *AdminService_GetDomainAsyncWorkflowConfiguraton_Args
+
+	// IsException returns true if the given error can be thrown
+	// by GetDomainAsyncWorkflowConfiguraton.
+	//
+	// An error can be thrown by GetDomainAsyncWorkflowConfiguraton only if the
+	// corresponding exception type was mentioned in the 'throws'
+	// section for it in the Thrift file.
+	IsException func(error) bool
+
+	// WrapResponse returns the result struct for GetDomainAsyncWorkflowConfiguraton
+	// given its return value and error.
+	//
+	// This allows mapping values and errors returned by
+	// GetDomainAsyncWorkflowConfiguraton into a serializable result struct.
+	// WrapResponse returns a non-nil error if the provided
+	// error cannot be thrown by GetDomainAsyncWorkflowConfiguraton
+	//
+	//   value, err := GetDomainAsyncWorkflowConfiguraton(args)
+	//   result, err := AdminService_GetDomainAsyncWorkflowConfiguraton_Helper.WrapResponse(value, err)
+	//   if err != nil {
+	//     return fmt.Errorf("unexpected error from GetDomainAsyncWorkflowConfiguraton: %v", err)
+	//   }
+	//   serialize(result)
+	WrapResponse func(*GetDomainAsyncWorkflowConfiguratonResponse, error) (*AdminService_GetDomainAsyncWorkflowConfiguraton_Result, error)
+
+	// UnwrapResponse takes the result struct for GetDomainAsyncWorkflowConfiguraton
+	// and returns the value or error returned by it.
+	//
+	// The error is non-nil only if GetDomainAsyncWorkflowConfiguraton threw an
+	// exception.
+	//
+	//   result := deserialize(bytes)
+	//   value, err := AdminService_GetDomainAsyncWorkflowConfiguraton_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*AdminService_GetDomainAsyncWorkflowConfiguraton_Result) (*GetDomainAsyncWorkflowConfiguratonResponse, error)
+}{}
+
+func init() {
+	AdminService_GetDomainAsyncWorkflowConfiguraton_Helper.Args = func(
+		request *GetDomainAsyncWorkflowConfiguratonRequest,
+	) *AdminService_GetDomainAsyncWorkflowConfiguraton_Args {
+		return &AdminService_GetDomainAsyncWorkflowConfiguraton_Args{
+			Request: request,
+		}
+	}
+
+	AdminService_GetDomainAsyncWorkflowConfiguraton_Helper.IsException = func(err error) bool {
+		switch err.(type) {
+		case *shared.BadRequestError:
+			return true
+		default:
+			return false
+		}
+	}
+
+	AdminService_GetDomainAsyncWorkflowConfiguraton_Helper.WrapResponse = func(success *GetDomainAsyncWorkflowConfiguratonResponse, err error) (*AdminService_GetDomainAsyncWorkflowConfiguraton_Result, error) {
+		if err == nil {
+			return &AdminService_GetDomainAsyncWorkflowConfiguraton_Result{Success: success}, nil
+		}
+
+		switch e := err.(type) {
+		case *shared.BadRequestError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_GetDomainAsyncWorkflowConfiguraton_Result.BadRequestError")
+			}
+			return &AdminService_GetDomainAsyncWorkflowConfiguraton_Result{BadRequestError: e}, nil
+		}
+
+		return nil, err
+	}
+	AdminService_GetDomainAsyncWorkflowConfiguraton_Helper.UnwrapResponse = func(result *AdminService_GetDomainAsyncWorkflowConfiguraton_Result) (success *GetDomainAsyncWorkflowConfiguratonResponse, err error) {
+		if result.BadRequestError != nil {
+			err = result.BadRequestError
+			return
+		}
+
+		if result.Success != nil {
+			success = result.Success
+			return
+		}
+
+		err = errors.New("expected a non-void result")
+		return
+	}
+
+}
+
+// AdminService_GetDomainAsyncWorkflowConfiguraton_Result represents the result of a AdminService.GetDomainAsyncWorkflowConfiguraton function call.
+//
+// The result of a GetDomainAsyncWorkflowConfiguraton execution is sent and received over the wire as this struct.
+//
+// Success is set only if the function did not throw an exception.
+type AdminService_GetDomainAsyncWorkflowConfiguraton_Result struct {
+	// Value returned by GetDomainAsyncWorkflowConfiguraton after a successful execution.
+	Success         *GetDomainAsyncWorkflowConfiguratonResponse `json:"success,omitempty"`
+	BadRequestError *shared.BadRequestError                     `json:"badRequestError,omitempty"`
+}
+
+// ToWire translates a AdminService_GetDomainAsyncWorkflowConfiguraton_Result struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
+//
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
+func (v *AdminService_GetDomainAsyncWorkflowConfiguraton_Result) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Success != nil {
+		w, err = v.Success.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
+		i++
+	}
+	if v.BadRequestError != nil {
+		w, err = v.BadRequestError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("AdminService_GetDomainAsyncWorkflowConfiguraton_Result should have exactly one field: got %v fields", i)
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _GetDomainAsyncWorkflowConfiguratonResponse_Read(w wire.Value) (*GetDomainAsyncWorkflowConfiguratonResponse, error) {
+	var v GetDomainAsyncWorkflowConfiguratonResponse
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a AdminService_GetDomainAsyncWorkflowConfiguraton_Result struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_GetDomainAsyncWorkflowConfiguraton_Result struct
+// from the provided intermediate representation.
+//
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
+//
+//	var v AdminService_GetDomainAsyncWorkflowConfiguraton_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
+func (v *AdminService_GetDomainAsyncWorkflowConfiguraton_Result) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 0:
+			if field.Value.Type() == wire.TStruct {
+				v.Success, err = _GetDomainAsyncWorkflowConfiguratonResponse_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.BadRequestError, err = _BadRequestError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("AdminService_GetDomainAsyncWorkflowConfiguraton_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// Encode serializes a AdminService_GetDomainAsyncWorkflowConfiguraton_Result struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a AdminService_GetDomainAsyncWorkflowConfiguraton_Result struct could not be encoded.
+func (v *AdminService_GetDomainAsyncWorkflowConfiguraton_Result) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Success != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 0, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.Success.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.BadRequestError != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 1, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.BadRequestError.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+
+	if count != 1 {
+		return fmt.Errorf("AdminService_GetDomainAsyncWorkflowConfiguraton_Result should have exactly one field: got %v fields", count)
+	}
+
+	return sw.WriteStructEnd()
+}
+
+func _GetDomainAsyncWorkflowConfiguratonResponse_Decode(sr stream.Reader) (*GetDomainAsyncWorkflowConfiguratonResponse, error) {
+	var v GetDomainAsyncWorkflowConfiguratonResponse
+	err := v.Decode(sr)
+	return &v, err
+}
+
+// Decode deserializes a AdminService_GetDomainAsyncWorkflowConfiguraton_Result struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a AdminService_GetDomainAsyncWorkflowConfiguraton_Result struct could not be generated from the wire
+// representation.
+func (v *AdminService_GetDomainAsyncWorkflowConfiguraton_Result) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 0 && fh.Type == wire.TStruct:
+			v.Success, err = _GetDomainAsyncWorkflowConfiguratonResponse_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 1 && fh.Type == wire.TStruct:
+			v.BadRequestError, err = _BadRequestError_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("AdminService_GetDomainAsyncWorkflowConfiguraton_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_GetDomainAsyncWorkflowConfiguraton_Result
+// struct.
+func (v *AdminService_GetDomainAsyncWorkflowConfiguraton_Result) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.Success != nil {
+		fields[i] = fmt.Sprintf("Success: %v", v.Success)
+		i++
+	}
+	if v.BadRequestError != nil {
+		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_GetDomainAsyncWorkflowConfiguraton_Result{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_GetDomainAsyncWorkflowConfiguraton_Result match the
+// provided AdminService_GetDomainAsyncWorkflowConfiguraton_Result.
+//
+// This function performs a deep comparison.
+func (v *AdminService_GetDomainAsyncWorkflowConfiguraton_Result) Equals(rhs *AdminService_GetDomainAsyncWorkflowConfiguraton_Result) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Success == nil && rhs.Success == nil) || (v.Success != nil && rhs.Success != nil && v.Success.Equals(rhs.Success))) {
+		return false
+	}
+	if !((v.BadRequestError == nil && rhs.BadRequestError == nil) || (v.BadRequestError != nil && rhs.BadRequestError != nil && v.BadRequestError.Equals(rhs.BadRequestError))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_GetDomainAsyncWorkflowConfiguraton_Result.
+func (v *AdminService_GetDomainAsyncWorkflowConfiguraton_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Success != nil {
+		err = multierr.Append(err, enc.AddObject("success", v.Success))
+	}
+	if v.BadRequestError != nil {
+		err = multierr.Append(err, enc.AddObject("badRequestError", v.BadRequestError))
+	}
+	return err
+}
+
+// GetSuccess returns the value of Success if it is set or its
+// zero value if it is unset.
+func (v *AdminService_GetDomainAsyncWorkflowConfiguraton_Result) GetSuccess() (o *GetDomainAsyncWorkflowConfiguratonResponse) {
+	if v != nil && v.Success != nil {
+		return v.Success
+	}
+
+	return
+}
+
+// IsSetSuccess returns true if Success is not nil.
+func (v *AdminService_GetDomainAsyncWorkflowConfiguraton_Result) IsSetSuccess() bool {
+	return v != nil && v.Success != nil
+}
+
+// GetBadRequestError returns the value of BadRequestError if it is set or its
+// zero value if it is unset.
+func (v *AdminService_GetDomainAsyncWorkflowConfiguraton_Result) GetBadRequestError() (o *shared.BadRequestError) {
+	if v != nil && v.BadRequestError != nil {
+		return v.BadRequestError
+	}
+
+	return
+}
+
+// IsSetBadRequestError returns true if BadRequestError is not nil.
+func (v *AdminService_GetDomainAsyncWorkflowConfiguraton_Result) IsSetBadRequestError() bool {
+	return v != nil && v.BadRequestError != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the result.
+//
+// This will always be "GetDomainAsyncWorkflowConfiguraton" for this struct.
+func (v *AdminService_GetDomainAsyncWorkflowConfiguraton_Result) MethodName() string {
+	return "GetDomainAsyncWorkflowConfiguraton"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Reply for this struct.
+func (v *AdminService_GetDomainAsyncWorkflowConfiguraton_Result) EnvelopeType() wire.EnvelopeType {
 	return wire.Reply
 }
 
@@ -32752,6 +34260,674 @@ func (v *AdminService_RestoreDynamicConfig_Result) MethodName() string {
 //
 // This will always be Reply for this struct.
 func (v *AdminService_RestoreDynamicConfig_Result) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
+}
+
+// AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args represents the arguments for the AdminService.UpdateDomainAsyncWorkflowConfiguraton function.
+//
+// The arguments for UpdateDomainAsyncWorkflowConfiguraton are sent and received over the wire as this struct.
+type AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args struct {
+	Request *UpdateDomainAsyncWorkflowConfiguratonRequest `json:"request,omitempty"`
+}
+
+// ToWire translates a AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
+//
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
+func (v *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Request != nil {
+		w, err = v.Request.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _UpdateDomainAsyncWorkflowConfiguratonRequest_Read(w wire.Value) (*UpdateDomainAsyncWorkflowConfiguratonRequest, error) {
+	var v UpdateDomainAsyncWorkflowConfiguratonRequest
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args struct
+// from the provided intermediate representation.
+//
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
+//
+//	var v AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
+func (v *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.Request, err = _UpdateDomainAsyncWorkflowConfiguratonRequest_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args struct could not be encoded.
+func (v *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Request != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 1, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.Request.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+func _UpdateDomainAsyncWorkflowConfiguratonRequest_Decode(sr stream.Reader) (*UpdateDomainAsyncWorkflowConfiguratonRequest, error) {
+	var v UpdateDomainAsyncWorkflowConfiguratonRequest
+	err := v.Decode(sr)
+	return &v, err
+}
+
+// Decode deserializes a AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args struct could not be generated from the wire
+// representation.
+func (v *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 1 && fh.Type == wire.TStruct:
+			v.Request, err = _UpdateDomainAsyncWorkflowConfiguratonRequest_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args
+// struct.
+func (v *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Request != nil {
+		fields[i] = fmt.Sprintf("Request: %v", v.Request)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args match the
+// provided AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args.
+//
+// This function performs a deep comparison.
+func (v *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args) Equals(rhs *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Request == nil && rhs.Request == nil) || (v.Request != nil && rhs.Request != nil && v.Request.Equals(rhs.Request))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args.
+func (v *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Request != nil {
+		err = multierr.Append(err, enc.AddObject("request", v.Request))
+	}
+	return err
+}
+
+// GetRequest returns the value of Request if it is set or its
+// zero value if it is unset.
+func (v *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args) GetRequest() (o *UpdateDomainAsyncWorkflowConfiguratonRequest) {
+	if v != nil && v.Request != nil {
+		return v.Request
+	}
+
+	return
+}
+
+// IsSetRequest returns true if Request is not nil.
+func (v *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args) IsSetRequest() bool {
+	return v != nil && v.Request != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the arguments.
+//
+// This will always be "UpdateDomainAsyncWorkflowConfiguraton" for this struct.
+func (v *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args) MethodName() string {
+	return "UpdateDomainAsyncWorkflowConfiguraton"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Call for this struct.
+func (v *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
+// AdminService_UpdateDomainAsyncWorkflowConfiguraton_Helper provides functions that aid in handling the
+// parameters and return values of the AdminService.UpdateDomainAsyncWorkflowConfiguraton
+// function.
+var AdminService_UpdateDomainAsyncWorkflowConfiguraton_Helper = struct {
+	// Args accepts the parameters of UpdateDomainAsyncWorkflowConfiguraton in-order and returns
+	// the arguments struct for the function.
+	Args func(
+		request *UpdateDomainAsyncWorkflowConfiguratonRequest,
+	) *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args
+
+	// IsException returns true if the given error can be thrown
+	// by UpdateDomainAsyncWorkflowConfiguraton.
+	//
+	// An error can be thrown by UpdateDomainAsyncWorkflowConfiguraton only if the
+	// corresponding exception type was mentioned in the 'throws'
+	// section for it in the Thrift file.
+	IsException func(error) bool
+
+	// WrapResponse returns the result struct for UpdateDomainAsyncWorkflowConfiguraton
+	// given its return value and error.
+	//
+	// This allows mapping values and errors returned by
+	// UpdateDomainAsyncWorkflowConfiguraton into a serializable result struct.
+	// WrapResponse returns a non-nil error if the provided
+	// error cannot be thrown by UpdateDomainAsyncWorkflowConfiguraton
+	//
+	//   value, err := UpdateDomainAsyncWorkflowConfiguraton(args)
+	//   result, err := AdminService_UpdateDomainAsyncWorkflowConfiguraton_Helper.WrapResponse(value, err)
+	//   if err != nil {
+	//     return fmt.Errorf("unexpected error from UpdateDomainAsyncWorkflowConfiguraton: %v", err)
+	//   }
+	//   serialize(result)
+	WrapResponse func(*UpdateDomainAsyncWorkflowConfiguratonResponse, error) (*AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result, error)
+
+	// UnwrapResponse takes the result struct for UpdateDomainAsyncWorkflowConfiguraton
+	// and returns the value or error returned by it.
+	//
+	// The error is non-nil only if UpdateDomainAsyncWorkflowConfiguraton threw an
+	// exception.
+	//
+	//   result := deserialize(bytes)
+	//   value, err := AdminService_UpdateDomainAsyncWorkflowConfiguraton_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result) (*UpdateDomainAsyncWorkflowConfiguratonResponse, error)
+}{}
+
+func init() {
+	AdminService_UpdateDomainAsyncWorkflowConfiguraton_Helper.Args = func(
+		request *UpdateDomainAsyncWorkflowConfiguratonRequest,
+	) *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args {
+		return &AdminService_UpdateDomainAsyncWorkflowConfiguraton_Args{
+			Request: request,
+		}
+	}
+
+	AdminService_UpdateDomainAsyncWorkflowConfiguraton_Helper.IsException = func(err error) bool {
+		switch err.(type) {
+		case *shared.BadRequestError:
+			return true
+		default:
+			return false
+		}
+	}
+
+	AdminService_UpdateDomainAsyncWorkflowConfiguraton_Helper.WrapResponse = func(success *UpdateDomainAsyncWorkflowConfiguratonResponse, err error) (*AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result, error) {
+		if err == nil {
+			return &AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result{Success: success}, nil
+		}
+
+		switch e := err.(type) {
+		case *shared.BadRequestError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result.BadRequestError")
+			}
+			return &AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result{BadRequestError: e}, nil
+		}
+
+		return nil, err
+	}
+	AdminService_UpdateDomainAsyncWorkflowConfiguraton_Helper.UnwrapResponse = func(result *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result) (success *UpdateDomainAsyncWorkflowConfiguratonResponse, err error) {
+		if result.BadRequestError != nil {
+			err = result.BadRequestError
+			return
+		}
+
+		if result.Success != nil {
+			success = result.Success
+			return
+		}
+
+		err = errors.New("expected a non-void result")
+		return
+	}
+
+}
+
+// AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result represents the result of a AdminService.UpdateDomainAsyncWorkflowConfiguraton function call.
+//
+// The result of a UpdateDomainAsyncWorkflowConfiguraton execution is sent and received over the wire as this struct.
+//
+// Success is set only if the function did not throw an exception.
+type AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result struct {
+	// Value returned by UpdateDomainAsyncWorkflowConfiguraton after a successful execution.
+	Success         *UpdateDomainAsyncWorkflowConfiguratonResponse `json:"success,omitempty"`
+	BadRequestError *shared.BadRequestError                        `json:"badRequestError,omitempty"`
+}
+
+// ToWire translates a AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
+//
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
+func (v *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Success != nil {
+		w, err = v.Success.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
+		i++
+	}
+	if v.BadRequestError != nil {
+		w, err = v.BadRequestError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result should have exactly one field: got %v fields", i)
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _UpdateDomainAsyncWorkflowConfiguratonResponse_Read(w wire.Value) (*UpdateDomainAsyncWorkflowConfiguratonResponse, error) {
+	var v UpdateDomainAsyncWorkflowConfiguratonResponse
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result struct
+// from the provided intermediate representation.
+//
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
+//
+//	var v AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
+func (v *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 0:
+			if field.Value.Type() == wire.TStruct {
+				v.Success, err = _UpdateDomainAsyncWorkflowConfiguratonResponse_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.BadRequestError, err = _BadRequestError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// Encode serializes a AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result struct could not be encoded.
+func (v *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Success != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 0, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.Success.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.BadRequestError != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 1, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.BadRequestError.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+
+	if count != 1 {
+		return fmt.Errorf("AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result should have exactly one field: got %v fields", count)
+	}
+
+	return sw.WriteStructEnd()
+}
+
+func _UpdateDomainAsyncWorkflowConfiguratonResponse_Decode(sr stream.Reader) (*UpdateDomainAsyncWorkflowConfiguratonResponse, error) {
+	var v UpdateDomainAsyncWorkflowConfiguratonResponse
+	err := v.Decode(sr)
+	return &v, err
+}
+
+// Decode deserializes a AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result struct could not be generated from the wire
+// representation.
+func (v *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 0 && fh.Type == wire.TStruct:
+			v.Success, err = _UpdateDomainAsyncWorkflowConfiguratonResponse_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 1 && fh.Type == wire.TStruct:
+			v.BadRequestError, err = _BadRequestError_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result
+// struct.
+func (v *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.Success != nil {
+		fields[i] = fmt.Sprintf("Success: %v", v.Success)
+		i++
+	}
+	if v.BadRequestError != nil {
+		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result match the
+// provided AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result.
+//
+// This function performs a deep comparison.
+func (v *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result) Equals(rhs *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Success == nil && rhs.Success == nil) || (v.Success != nil && rhs.Success != nil && v.Success.Equals(rhs.Success))) {
+		return false
+	}
+	if !((v.BadRequestError == nil && rhs.BadRequestError == nil) || (v.BadRequestError != nil && rhs.BadRequestError != nil && v.BadRequestError.Equals(rhs.BadRequestError))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result.
+func (v *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Success != nil {
+		err = multierr.Append(err, enc.AddObject("success", v.Success))
+	}
+	if v.BadRequestError != nil {
+		err = multierr.Append(err, enc.AddObject("badRequestError", v.BadRequestError))
+	}
+	return err
+}
+
+// GetSuccess returns the value of Success if it is set or its
+// zero value if it is unset.
+func (v *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result) GetSuccess() (o *UpdateDomainAsyncWorkflowConfiguratonResponse) {
+	if v != nil && v.Success != nil {
+		return v.Success
+	}
+
+	return
+}
+
+// IsSetSuccess returns true if Success is not nil.
+func (v *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result) IsSetSuccess() bool {
+	return v != nil && v.Success != nil
+}
+
+// GetBadRequestError returns the value of BadRequestError if it is set or its
+// zero value if it is unset.
+func (v *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result) GetBadRequestError() (o *shared.BadRequestError) {
+	if v != nil && v.BadRequestError != nil {
+		return v.BadRequestError
+	}
+
+	return
+}
+
+// IsSetBadRequestError returns true if BadRequestError is not nil.
+func (v *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result) IsSetBadRequestError() bool {
+	return v != nil && v.BadRequestError != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the result.
+//
+// This will always be "UpdateDomainAsyncWorkflowConfiguraton" for this struct.
+func (v *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result) MethodName() string {
+	return "UpdateDomainAsyncWorkflowConfiguraton"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Reply for this struct.
+func (v *AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result) EnvelopeType() wire.EnvelopeType {
 	return wire.Reply
 }
 

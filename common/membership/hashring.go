@@ -28,6 +28,7 @@ import (
 
 	"github.com/dgryski/go-farm"
 	"github.com/uber/ringpop-go/hashring"
+	"github.com/uber/ringpop-go/membership"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -239,9 +240,8 @@ func (r *ring) refresh() error {
 	}
 
 	ring := emptyHashring()
-	for _, member := range members {
-		ring.AddMembers(member)
-	}
+	ring.AddMembers(castToMembers(members)...)
+
 	r.members.keys = newMembersMap
 	r.members.refreshed = time.Now()
 	r.value.Store(ring)
@@ -291,4 +291,12 @@ func (r *ring) compareMembers(members []HostInfo) (map[string]HostInfo, bool) {
 		}
 	}
 	return newMembersMap, changed
+}
+
+func castToMembers[T membership.Member](members []T) []membership.Member {
+	result := make([]membership.Member, 0, len(members))
+	for _, h := range members {
+		result = append(result, h)
+	}
+	return result
 }

@@ -1,0 +1,165 @@
+import (
+	"context"
+	"time"
+
+	"go.uber.org/yarpc"
+
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/frontend/api"
+	frontendcfg "github.com/uber/cadence/service/frontend/config"
+)
+
+{{$nonFowradingAPIs := list "Health" "DeprecateDomain" "DescribeDomain" "ListDomains" "RegisterDomain" "UpdateDomain" "GetSearchAttributes" "GetClusterInfo"}}
+{{$domainIDAPIs := list "RecordActivityTaskHeartbeat" "RespondActivityTaskCanceled" "RespondActivityTaskCompleted" "RespondActivityTaskFailed" "RespondDecisionTaskCompleted" "RespondDecisionTaskFailed" "RespondQueryTaskCompleted"}}
+{{$queryTaskTokenAPIs := list "RespondQueryTaskCompleted"}}
+{{$specialCaseAPIs := list "QueryWorkflow"}}
+
+type (
+	// ClusterRedirectionHandlerImpl is simple wrapper over frontend service, doing redirection based on policy for global domains not being active in current cluster
+	clusterRedirectionHandler struct {
+		resource.Resource
+
+		currentClusterName string
+		redirectionPolicy  ClusterRedirectionPolicy
+		tokenSerializer    common.TaskTokenSerializer
+		frontendHandler    api.Handler
+		callOptions        []yarpc.CallOption
+	}
+)
+
+// NewAPIHandler creates a frontend handler to handle cluster redirection for global domains not being active in current cluster
+func NewAPIHandler(
+	wfHandler api.Handler,
+	resource resource.Resource,
+	config *frontendcfg.Config,
+	policy config.ClusterRedirectionPolicy,
+) api.Handler {
+	dcRedirectionPolicy := RedirectionPolicyGenerator(
+		resource.GetClusterMetadata(),
+		config,
+		resource.GetDomainCache(),
+		policy,
+	)
+
+	return &clusterRedirectionHandler{
+		Resource:           resource,
+		currentClusterName: resource.GetClusterMetadata().GetCurrentClusterName(),
+		redirectionPolicy:  dcRedirectionPolicy,
+		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
+		frontendHandler:    wfHandler,
+		callOptions:        []yarpc.CallOption{yarpc.WithHeader(common.AutoforwardingClusterHeaderName, resource.GetClusterMetadata().GetCurrentClusterName())},
+	}
+}
+
+{{range $method := .Interface.Methods}}
+{{- if not (has $method.Name $specialCaseAPIs)}}
+func (handler *clusterRedirectionHandler) {{$method.Declaration}} {
+	{{- if has $method.Name $nonFowradingAPIs}}
+	return handler.frontendHandler.{{$method.Call}}
+	{{- else}}
+	var apiName = "{{$method.Name}}"
+	var cluster string
+
+	scope, startTime := handler.beforeCall(metrics.DCRedirection{{$method.Name}}Scope)
+	defer func() {
+		handler.afterCall(recover(), scope, startTime, cluster, &err)
+	}()
+
+	{{$policyMethod := "WithDomainNameRedirect"}}
+	{{$domain := printf "%s.GetDomain()" (index $method.Params 1).Name}}
+	{{if has $method.Name $domainIDAPIs}}
+	{{$policyMethod = "WithDomainIDRedirect"}}
+	{{$domain = "token.DomainID"}}
+	{{if has $method.Name $queryTaskTokenAPIs}}
+	token, err := handler.tokenSerializer.DeserializeQueryTaskToken({{(index $method.Params 1).Name}}.TaskToken)
+	{{- else}}
+	token, err := handler.tokenSerializer.Deserialize({{(index $method.Params 1).Name}}.TaskToken)
+	{{- end}}
+	if err != nil {
+		{{- if eq (len $method.Results) 1}}
+		return err
+		{{- else}}
+		return nil, err
+		{{- end}}
+	}
+	{{- end}}
+
+	err = handler.redirectionPolicy.{{$policyMethod}}(ctx, {{$domain}}, apiName, func(targetDC string) error {
+		cluster = targetDC
+		switch {
+		case targetDC == handler.currentClusterName:
+			{{$method.ResultsNames}} = handler.frontendHandler.{{$method.Call}}
+		default:
+			remoteClient := handler.GetRemoteFrontendClient(targetDC)
+			{{$method.ResultsNames}} = remoteClient.{{$method.Name}}({{$method.Params.Pass}}, handler.callOptions...)
+		}
+		return err
+	})
+
+	return {{$method.ResultsNames}}
+	{{- end}}
+}
+{{end}}
+{{end}}
+
+func (handler *clusterRedirectionHandler) QueryWorkflow(
+	ctx context.Context,
+	request *types.QueryWorkflowRequest,
+) (resp *types.QueryWorkflowResponse, retError error) {
+	var apiName = "QueryWorkflow"
+	var err error
+	var cluster string
+
+	// Only autoforward strong consistent queries, this is done for two reasons:
+	// 1. Query is meant to be fast, autoforwarding all queries will increase latency.
+	// 2. If eventual consistency was requested then the results from running out of local dc will be fine.
+	if request.GetQueryConsistencyLevel() == types.QueryConsistencyLevelStrong {
+		apiName = "QueryWorkflowStrongConsistency"
+	}
+	scope, startTime := handler.beforeCall(metrics.DCRedirectionQueryWorkflowScope)
+	defer func() {
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
+	}()
+
+	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
+		cluster = targetDC
+		switch {
+		case targetDC == handler.currentClusterName:
+			resp, err = handler.frontendHandler.QueryWorkflow(ctx, request)
+		default:
+			remoteClient := handler.GetRemoteFrontendClient(targetDC)
+			resp, err = remoteClient.QueryWorkflow(ctx, request, handler.callOptions...)
+		}
+		return err
+	})
+
+	return resp, err
+}
+
+func (handler *clusterRedirectionHandler) beforeCall(
+	scope int,
+) (metrics.Scope, time.Time) {
+	return handler.GetMetricsClient().Scope(scope), handler.GetTimeSource().Now()
+}
+
+func (handler *clusterRedirectionHandler) afterCall(
+	recovered interface{},
+	scope metrics.Scope,
+	startTime time.Time,
+	cluster string,
+	retError *error,
+) {
+	log.CapturePanic(recovered, handler.GetLogger(), retError)
+
+	scope = scope.Tagged(metrics.TargetClusterTag(cluster))
+	scope.IncCounter(metrics.CadenceDcRedirectionClientRequests)
+	scope.RecordTimer(metrics.CadenceDcRedirectionClientLatency, handler.GetTimeSource().Now().Sub(startTime))
+	if *retError != nil {
+		scope.IncCounter(metrics.CadenceDcRedirectionClientFailures)
+	}
+}

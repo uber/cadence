@@ -499,6 +499,17 @@ func (c *clientImpl) StartWorkflowExecution(
 	return c.client.StartWorkflowExecution(ctx, request, opts...)
 }
 
+func (c *clientImpl) StartWorkflowExecutionAsync(
+	ctx context.Context,
+	request *types.StartWorkflowExecutionAsyncRequest,
+	opts ...yarpc.CallOption,
+) (*types.StartWorkflowExecutionAsyncResponse, error) {
+
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return c.client.StartWorkflowExecutionAsync(ctx, request, opts...)
+}
+
 func (c *clientImpl) TerminateWorkflowExecution(
 	ctx context.Context,
 	request *types.TerminateWorkflowExecutionRequest,

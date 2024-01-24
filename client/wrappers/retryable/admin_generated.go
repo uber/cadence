@@ -166,6 +166,17 @@ func (c *adminClient) GetDLQReplicationMessages(ctx context.Context, gp1 *types.
 	return resp, err
 }
 
+func (c *adminClient) GetDomainAsyncWorkflowConfiguraton(ctx context.Context, request *types.GetDomainAsyncWorkflowConfiguratonRequest, opts ...yarpc.CallOption) (gp1 *types.GetDomainAsyncWorkflowConfiguratonResponse, err error) {
+	var resp *types.GetDomainAsyncWorkflowConfiguratonResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.GetDomainAsyncWorkflowConfiguraton(ctx, request, opts...)
+		return err
+	}
+	err = c.throttleRetry.Do(ctx, op)
+	return resp, err
+}
+
 func (c *adminClient) GetDomainIsolationGroups(ctx context.Context, request *types.GetDomainIsolationGroupsRequest, opts ...yarpc.CallOption) (gp1 *types.GetDomainIsolationGroupsResponse, err error) {
 	var resp *types.GetDomainIsolationGroupsResponse
 	op := func() error {
@@ -334,6 +345,17 @@ func (c *adminClient) RestoreDynamicConfig(ctx context.Context, rp1 *types.Resto
 		return c.client.RestoreDynamicConfig(ctx, rp1, p1...)
 	}
 	return c.throttleRetry.Do(ctx, op)
+}
+
+func (c *adminClient) UpdateDomainAsyncWorkflowConfiguraton(ctx context.Context, request *types.UpdateDomainAsyncWorkflowConfiguratonRequest, opts ...yarpc.CallOption) (up1 *types.UpdateDomainAsyncWorkflowConfiguratonResponse, err error) {
+	var resp *types.UpdateDomainAsyncWorkflowConfiguratonResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.UpdateDomainAsyncWorkflowConfiguraton(ctx, request, opts...)
+		return err
+	}
+	err = c.throttleRetry.Do(ctx, op)
+	return resp, err
 }
 
 func (c *adminClient) UpdateDomainIsolationGroups(ctx context.Context, request *types.UpdateDomainIsolationGroupsRequest, opts ...yarpc.CallOption) (up1 *types.UpdateDomainIsolationGroupsResponse, err error) {

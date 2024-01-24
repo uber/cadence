@@ -390,6 +390,13 @@ type CountDLQMessagesRequest struct {
 	ForceFetch bool
 }
 
+func (v *CountDLQMessagesRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
+	return SerializeRequest(v)
+}
+
 type CountDLQMessagesResponse struct {
 	History map[HistoryDLQCountKey]int64
 	Domain  int64

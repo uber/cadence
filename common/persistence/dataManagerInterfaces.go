@@ -1361,6 +1361,7 @@ type (
 		VisibilityArchivalURI    string
 		BadBinaries              types.BadBinaries
 		IsolationGroups          types.IsolationGroupConfiguration
+		AsyncWorkflowConfig      types.AsyncWorkflowConfiguration
 	}
 
 	// DomainReplicationConfig describes the cross DC domain replication configuration

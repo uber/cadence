@@ -3634,13 +3634,45 @@ func FromRestartWorkflowExecutionRequest(t *types.RestartWorkflowExecutionReques
 	}
 }
 
-func ToRestartStartWorkflowExecutionResponse(t *apiv1.RestartWorkflowExecutionResponse) *types.RestartWorkflowExecutionResponse {
+func ToRestartWorkflowExecutionResponse(t *apiv1.RestartWorkflowExecutionResponse) *types.RestartWorkflowExecutionResponse {
 	if t == nil {
 		return nil
 	}
 	return &types.RestartWorkflowExecutionResponse{
 		RunID: t.RunId,
 	}
+}
+
+func FromStartWorkflowExecutionAsyncRequest(t *types.StartWorkflowExecutionAsyncRequest) *apiv1.StartWorkflowExecutionAsyncRequest {
+	if t == nil {
+		return nil
+	}
+	return &apiv1.StartWorkflowExecutionAsyncRequest{
+		Request: FromStartWorkflowExecutionRequest(t.StartWorkflowExecutionRequest),
+	}
+}
+
+func ToStartWorkflowExecutionAsyncRequest(t *apiv1.StartWorkflowExecutionAsyncRequest) *types.StartWorkflowExecutionAsyncRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.StartWorkflowExecutionAsyncRequest{
+		StartWorkflowExecutionRequest: ToStartWorkflowExecutionRequest(t.Request),
+	}
+}
+
+func FromStartWorkflowExecutionAsyncResponse(t *types.StartWorkflowExecutionAsyncResponse) *apiv1.StartWorkflowExecutionAsyncResponse {
+	if t == nil {
+		return nil
+	}
+	return &apiv1.StartWorkflowExecutionAsyncResponse{}
+}
+
+func ToStartWorkflowExecutionAsyncResponse(t *apiv1.StartWorkflowExecutionAsyncResponse) *types.StartWorkflowExecutionAsyncResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.StartWorkflowExecutionAsyncResponse{}
 }
 
 func FromStartWorkflowExecutionRequest(t *types.StartWorkflowExecutionRequest) *apiv1.StartWorkflowExecutionRequest {
@@ -5919,4 +5951,18 @@ func ToListOpenWorkflowExecutionsRequest(r *apiv1.ListOpenWorkflowExecutionsRequ
 		request.TypeFilter = ToWorkflowTypeFilter(filters.TypeFilter)
 	}
 	return &request
+}
+
+func FromResetStickyTaskListResponse(t *types.ResetStickyTaskListResponse) *apiv1.ResetStickyTaskListResponse {
+	if t == nil {
+		return nil
+	}
+	return &apiv1.ResetStickyTaskListResponse{}
+}
+
+func ToResetStickyTaskListResponse(t *apiv1.ResetStickyTaskListResponse) *types.ResetStickyTaskListResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.ResetStickyTaskListResponse{}
 }

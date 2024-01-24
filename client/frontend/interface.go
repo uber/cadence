@@ -30,6 +30,10 @@ import (
 
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interface_mock.go -self_package github.com/uber/cadence/client/frontend
 //go:generate gowrap gen -g -p . -i Client -t ../templates/retry.tmpl -o ../wrappers/retryable/frontend_generated.go -v client=Frontend
+//go:generate gowrap gen -g -p . -i Client -t ../templates/metered.tmpl -o ../wrappers/metered/frontend_generated.go -v client=Frontend
+//go:generate gowrap gen -g -p . -i Client -t ../templates/errorinjectors.tmpl -o ../wrappers/errorinjectors/frontend_generated.go -v client=Frontend
+//go:generate gowrap gen -g -p . -i Client -t ../templates/grpc.tmpl -o ../wrappers/grpc/frontend_generated.go -v client=Frontend -v package=apiv1 -v path=github.com/uber/cadence-idl/go/proto/api/v1 -v prefix=
+//go:generate gowrap gen -g -p . -i Client -t ../templates/thrift.tmpl -o ../wrappers/thrift/frontend_generated.go -v client=Frontend -v prefix=
 
 // Client is the interface exposed by frontend service client
 type Client interface {
@@ -72,6 +76,7 @@ type Client interface {
 	SignalWithStartWorkflowExecution(context.Context, *types.SignalWithStartWorkflowExecutionRequest, ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error)
 	SignalWorkflowExecution(context.Context, *types.SignalWorkflowExecutionRequest, ...yarpc.CallOption) error
 	StartWorkflowExecution(context.Context, *types.StartWorkflowExecutionRequest, ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error)
+	StartWorkflowExecutionAsync(context.Context, *types.StartWorkflowExecutionAsyncRequest, ...yarpc.CallOption) (*types.StartWorkflowExecutionAsyncResponse, error)
 	TerminateWorkflowExecution(context.Context, *types.TerminateWorkflowExecutionRequest, ...yarpc.CallOption) error
 	UpdateDomain(context.Context, *types.UpdateDomainRequest, ...yarpc.CallOption) (*types.UpdateDomainResponse, error)
 }

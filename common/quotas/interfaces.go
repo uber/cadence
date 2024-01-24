@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:generate mockgen -package=$GOPACKAGE -destination=limiter_mock.go github.com/uber/cadence/common/quotas Limiter
+
 package quotas
 
 import (

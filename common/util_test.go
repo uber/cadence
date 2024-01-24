@@ -36,6 +36,7 @@ import (
 
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/yarpcerrors"
 
@@ -46,23 +47,53 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-func TestIsServiceTransientError_ContextTimeout(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
-	defer cancel()
-	time.Sleep(100 * time.Millisecond)
+func TestIsServiceTransientError(t *testing.T) {
+	for name, c := range map[string]struct {
+		err  error
+		want bool
+	}{
+		"ContextTimeout": {
+			err:  context.DeadlineExceeded,
+			want: false,
+		},
+		"YARPCDeadlineExceeded": {
+			err:  yarpcerrors.DeadlineExceededErrorf("yarpc deadline exceeded"),
+			want: false,
+		},
+		"YARPCUnavailable": {
+			err:  yarpcerrors.UnavailableErrorf("yarpc unavailable"),
+			want: true,
+		},
+		"YARPCUnavailable wrapped": {
+			err:  fmt.Errorf("wrapped err: %w", yarpcerrors.UnavailableErrorf("yarpc unavailable")),
+			want: true,
+		},
+		"YARPCUnknown": {
+			err:  yarpcerrors.UnknownErrorf("yarpc unknown"),
+			want: true,
+		},
+		"YARPCInternal": {
+			err:  yarpcerrors.InternalErrorf("yarpc internal"),
+			want: true,
+		},
+		"ContextCancel": {
+			err:  context.Canceled,
+			want: false,
+		},
+		"ServiceBusyError": {
+			err:  &types.ServiceBusyError{},
+			want: true,
+		},
+		"ShardOwnershipLostError": {
+			err:  &types.ShardOwnershipLostError{},
+			want: true,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, c.want, IsServiceTransientError(c.err))
+		})
+	}
 
-	require.False(t, IsServiceTransientError(ctx.Err()))
-}
-
-func TestIsServiceTransientError_YARPCDeadlineExceeded(t *testing.T) {
-	yarpcErr := yarpcerrors.DeadlineExceededErrorf("yarpc deadline exceeded")
-	require.False(t, IsServiceTransientError(yarpcErr))
-}
-
-func TestIsServiceTransientError_ContextCancel(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-	require.False(t, IsServiceTransientError(ctx.Err()))
 }
 
 func TestIsContextTimeoutError(t *testing.T) {
@@ -1356,6 +1387,151 @@ func TestGetSizeOfHistoryEvent(t *testing.T) {
 
 			got := GetSizeOfHistoryEvent(c.event)
 			require.Equal(t, c.want, got)
+		})
+	}
+}
+
+func TestIsAdvancedVisibilityWritingEnabled(t *testing.T) {
+	for name, c := range map[string]struct {
+		advancedVisibilityWritingMode string
+		isAdvancedVisConfigExist      bool
+		want                          bool
+	}{
+		"mode is someMode, config exist": {
+			advancedVisibilityWritingMode: "someMode",
+			isAdvancedVisConfigExist:      true,
+			want:                          true,
+		},
+		"mode is someMode, config not exist": {
+			advancedVisibilityWritingMode: "someMode",
+			isAdvancedVisConfigExist:      false,
+			want:                          false,
+		},
+		"mode is off, config exist": {
+			advancedVisibilityWritingMode: "off",
+			isAdvancedVisConfigExist:      true,
+			want:                          false,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got := IsAdvancedVisibilityWritingEnabled(c.advancedVisibilityWritingMode, c.isAdvancedVisConfigExist)
+			require.Equal(t, c.want, got)
+		})
+	}
+}
+
+func TestValidateLongPollContextTimeout(t *testing.T) {
+	const handlerName = "testHandler"
+
+	t.Run("context timeout is not set", func(t *testing.T) {
+		logger := new(log.MockLogger)
+		logger.On(
+			"Error",
+			"Context timeout not set for long poll API.",
+			[]tag.Tag{
+				tag.WorkflowHandlerName(handlerName),
+				tag.Error(ErrContextTimeoutNotSet),
+			},
+		)
+
+		ctx := context.Background()
+		got := ValidateLongPollContextTimeout(ctx, handlerName, logger)
+		require.Error(t, got)
+		require.ErrorIs(t, got, ErrContextTimeoutNotSet)
+		logger.AssertExpectations(t)
+	})
+
+	t.Run("context timeout is set, but less than MinLongPollTimeout", func(t *testing.T) {
+		logger := new(log.MockLogger)
+		logger.On(
+			"Error",
+			"Context timeout is too short for long poll API.",
+			// we can't mock time between deadline and now, so we just check it as it is
+			mock.Anything,
+		)
+		ctx, _ := context.WithTimeout(context.Background(), time.Second)
+		got := ValidateLongPollContextTimeout(ctx, handlerName, logger)
+		require.Error(t, got)
+		require.ErrorIs(t, got, ErrContextTimeoutTooShort, "should return ErrContextTimeoutTooShort, because context timeout is less than MinLongPollTimeout")
+		logger.AssertExpectations(t)
+
+	})
+
+	t.Run("context timeout is set, but less than CriticalLongPollTimeout", func(t *testing.T) {
+		logger := new(log.MockLogger)
+		logger.On(
+			"Warn",
+			"Context timeout is lower than critical value for long poll API.",
+			// we can't mock time between deadline and now, so we just check it as it is
+			mock.Anything,
+		)
+		ctx, _ := context.WithTimeout(context.Background(), 15*time.Second)
+		got := ValidateLongPollContextTimeout(ctx, handlerName, logger)
+		require.NoError(t, got)
+		logger.AssertExpectations(t)
+
+	})
+
+	t.Run("context timeout is set, but greater than CriticalLongPollTimeout", func(t *testing.T) {
+		logger := new(log.MockLogger)
+		ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
+		got := ValidateLongPollContextTimeout(ctx, handlerName, logger)
+		require.NoError(t, got)
+		logger.AssertExpectations(t)
+	})
+}
+
+func TestDurationToDays(t *testing.T) {
+	for duration, want := range map[time.Duration]int32{
+		0:              0,
+		time.Hour:      0,
+		24 * time.Hour: 1,
+		25 * time.Hour: 1,
+		48 * time.Hour: 2,
+	} {
+		t.Run(duration.String(), func(t *testing.T) {
+			got := DurationToDays(duration)
+			require.Equal(t, want, got)
+		})
+	}
+}
+
+func TestDurationToSeconds(t *testing.T) {
+	for duration, want := range map[time.Duration]int64{
+		0:                           0,
+		time.Second:                 1,
+		time.Second + time.Second/2: 1,
+		2 * time.Second:             2,
+	} {
+		t.Run(duration.String(), func(t *testing.T) {
+			got := DurationToSeconds(duration)
+			require.Equal(t, want, got)
+		})
+	}
+}
+
+func TestDaysToDuration(t *testing.T) {
+	for days, want := range map[int32]time.Duration{
+		0: 0,
+		1: 24 * time.Hour,
+		2: 48 * time.Hour,
+	} {
+		t.Run(strconv.Itoa(int(days)), func(t *testing.T) {
+			got := DaysToDuration(days)
+			require.Equal(t, want, got)
+		})
+	}
+}
+
+func TestSecondsToDuration(t *testing.T) {
+	for seconds, want := range map[int64]time.Duration{
+		0: 0,
+		1: time.Second,
+		2: 2 * time.Second,
+	} {
+		t.Run(strconv.Itoa(int(seconds)), func(t *testing.T) {
+			got := SecondsToDuration(seconds)
+			require.Equal(t, want, got)
 		})
 	}
 }

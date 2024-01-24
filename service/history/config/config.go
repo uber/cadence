@@ -288,6 +288,11 @@ type Config struct {
 	EnableReplicationTaskGeneration                    dynamicconfig.BoolPropertyFnWithDomainIDAndWorkflowIDFilter
 	EnableRecordWorkflowExecutionUninitialized         dynamicconfig.BoolPropertyFnWithDomainFilter
 
+	// The following are used by the history workflowID cache
+	WorkflowIDCacheEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
+	WorkflowIDExternalRPS  dynamicconfig.IntPropertyFnWithDomainFilter
+	WorkflowIDInternalRPS  dynamicconfig.IntPropertyFnWithDomainFilter
+
 	// The following are used by consistent query
 	EnableConsistentQuery         dynamicconfig.BoolPropertyFn
 	EnableConsistentQueryByDomain dynamicconfig.BoolPropertyFnWithDomainFilter
@@ -317,8 +322,9 @@ type Config struct {
 	ActivityMaxScheduleToStartTimeoutForRetry dynamicconfig.DurationPropertyFnWithDomainFilter
 
 	// Debugging configurations
-	EnableDebugMode             bool // note that this value is initialized once on service start
-	EnableTaskInfoLogByDomainID dynamicconfig.BoolPropertyFnWithDomainIDFilter
+	EnableDebugMode               bool // note that this value is initialized once on service start
+	EnableTaskInfoLogByDomainID   dynamicconfig.BoolPropertyFnWithDomainIDFilter
+	EnableTimerDebugLogByDomainID dynamicconfig.BoolPropertyFnWithDomainIDFilter
 
 	// Hotshard stuff
 	SampleLoggingRate                     dynamicconfig.IntPropertyFn
@@ -546,6 +552,10 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, s
 		EnableReplicationTaskGeneration:                    dc.GetBoolPropertyFilteredByDomainIDAndWorkflowID(dynamicconfig.EnableReplicationTaskGeneration),
 		EnableRecordWorkflowExecutionUninitialized:         dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableRecordWorkflowExecutionUninitialized),
 
+		WorkflowIDCacheEnabled: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.WorkflowIDCacheEnabled),
+		WorkflowIDExternalRPS:  dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkflowIDExternalRPS),
+		WorkflowIDInternalRPS:  dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkflowIDInternalRPS),
+
 		EnableConsistentQuery:                 dc.GetBoolProperty(dynamicconfig.EnableConsistentQuery),
 		EnableConsistentQueryByDomain:         dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableConsistentQueryByDomain),
 		EnableCrossClusterEngine:              dc.GetBoolProperty(dynamicconfig.EnableCrossClusterEngine),
@@ -566,8 +576,9 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, s
 
 		ActivityMaxScheduleToStartTimeoutForRetry: dc.GetDurationPropertyFilteredByDomain(dynamicconfig.ActivityMaxScheduleToStartTimeoutForRetry),
 
-		EnableDebugMode:             dc.GetBoolProperty(dynamicconfig.EnableDebugMode)(),
-		EnableTaskInfoLogByDomainID: dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.HistoryEnableTaskInfoLogByDomainID),
+		EnableDebugMode:               dc.GetBoolProperty(dynamicconfig.EnableDebugMode)(),
+		EnableTaskInfoLogByDomainID:   dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.HistoryEnableTaskInfoLogByDomainID),
+		EnableTimerDebugLogByDomainID: dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.EnableTimerDebugLogByDomainID),
 
 		SampleLoggingRate:                     dc.GetIntProperty(dynamicconfig.SampleLoggingRate),
 		EnableShardIDMetrics:                  dc.GetBoolProperty(dynamicconfig.EnableShardIDMetrics),

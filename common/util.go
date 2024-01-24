@@ -23,6 +23,7 @@ package common
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -244,14 +245,22 @@ func ToServiceTransientError(err error) error {
 
 // IsServiceTransientError checks if the error is a transient error.
 func IsServiceTransientError(err error) bool {
-	switch err.(type) {
-	case *types.InternalServiceError:
+
+	var (
+		typesInternalServiceError    *types.InternalServiceError
+		typesServiceBusyError        *types.ServiceBusyError
+		typesShardOwnershipLostError *types.ShardOwnershipLostError
+		yarpcErrorsStatus            *yarpcerrors.Status
+	)
+
+	switch {
+	case errors.As(err, &typesInternalServiceError):
 		return true
-	case *types.ServiceBusyError:
+	case errors.As(err, &typesServiceBusyError):
 		return true
-	case *types.ShardOwnershipLostError:
+	case errors.As(err, &typesShardOwnershipLostError):
 		return true
-	case *yarpcerrors.Status:
+	case errors.As(err, &yarpcErrorsStatus):
 		// We only selectively retry the following yarpc errors client can safe retry with a backoff
 		if yarpcerrors.IsUnavailable(err) ||
 			yarpcerrors.IsUnknown(err) ||
@@ -924,34 +933,9 @@ func DurationToDays(d time.Duration) int32 {
 	return int32(d / (24 * time.Hour))
 }
 
-// DurationToHours converts time.Duration to number of hours
-func DurationToHours(d time.Duration) int64 {
-	return int64(d / time.Hour)
-}
-
-// DurationToMinutes converts time.Duration to number of minutes
-func DurationToMinutes(d time.Duration) int64 {
-	return int64(d / time.Minute)
-}
-
 // DurationToSeconds converts time.Duration to number of seconds
 func DurationToSeconds(d time.Duration) int64 {
 	return int64(d / time.Second)
-}
-
-// DurationToMilliseconds converts time.Duration to number of milliseconds
-func DurationToMilliseconds(d time.Duration) int64 {
-	return int64(d / time.Millisecond)
-}
-
-// DurationToMicroseconds converts time.Duration to number of microseconds
-func DurationToMicroseconds(d time.Duration) int64 {
-	return int64(d / time.Microsecond)
-}
-
-// DurationToNanoseconds converts time.Duration to number of nanoseconds
-func DurationToNanoseconds(d time.Duration) int64 {
-	return int64(d / time.Nanosecond)
 }
 
 // DaysToDuration converts number of 24 hour days to time.Duration
@@ -959,34 +943,9 @@ func DaysToDuration(d int32) time.Duration {
 	return time.Duration(d) * (24 * time.Hour)
 }
 
-// HoursToDuration converts number of hours to time.Duration
-func HoursToDuration(d int64) time.Duration {
-	return time.Duration(d) * time.Hour
-}
-
-// MinutesToDuration converts number of minutes to time.Duration
-func MinutesToDuration(d int64) time.Duration {
-	return time.Duration(d) * time.Minute
-}
-
 // SecondsToDuration converts number of seconds to time.Duration
 func SecondsToDuration(d int64) time.Duration {
 	return time.Duration(d) * time.Second
-}
-
-// MillisecondsToDuration converts number of milliseconds to time.Duration
-func MillisecondsToDuration(d int64) time.Duration {
-	return time.Duration(d) * time.Millisecond
-}
-
-// MicrosecondsToDuration converts number of microseconds to time.Duration
-func MicrosecondsToDuration(d int64) time.Duration {
-	return time.Duration(d) * time.Microsecond
-}
-
-// NanosecondsToDuration converts number of nanoseconds to time.Duration
-func NanosecondsToDuration(d int64) time.Duration {
-	return time.Duration(d) * time.Nanosecond
 }
 
 // SleepWithMinDuration sleeps for the minimum of desired and available duration

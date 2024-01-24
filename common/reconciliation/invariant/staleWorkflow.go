@@ -151,7 +151,7 @@ func (c *staleWorkflowCheck) check(
 		return false, c.failed("failed to get concrete execution record", err.Error())
 	}
 
-	pastExpiration, checkresult := c.checkAge(concreteWorkflow)
+	pastExpiration, checkresult := c.CheckAge(concreteWorkflow)
 	if pastExpiration {
 		if checkresult.CheckResultType == CheckResultTypeCorrupted {
 			return true, checkresult // delete the concrete execution, it's out of retention
@@ -208,7 +208,7 @@ func (c *staleWorkflowCheck) Name() Name {
 	return StaleWorkflow
 }
 
-func (c *staleWorkflowCheck) checkAge(workflow *persistence.GetWorkflowExecutionResponse) (pastExpiration bool, result CheckResult) {
+func (c *staleWorkflowCheck) CheckAge(workflow *persistence.GetWorkflowExecutionResponse) (pastExpiration bool, result CheckResult) {
 	info := workflow.State.ExecutionInfo
 	retentionNum, domainName, err := c.testable.getDomainInfo(info)
 	if err != nil {

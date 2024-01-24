@@ -195,6 +195,10 @@ func (m *domainManagerImpl) toInternalDomainConfig(c *DomainConfig) (InternalDom
 	if err != nil {
 		return InternalDomainConfig{}, err
 	}
+	asyncWFCfg, err := m.serializer.SerializeAsyncWorkflowsConfig(&c.AsyncWorkflowConfig, common.EncodingTypeThriftRW)
+	if err != nil {
+		return InternalDomainConfig{}, err
+	}
 	return InternalDomainConfig{
 		Retention:                common.DaysToDuration(c.Retention),
 		EmitMetric:               c.EmitMetric,
@@ -204,6 +208,7 @@ func (m *domainManagerImpl) toInternalDomainConfig(c *DomainConfig) (InternalDom
 		VisibilityArchivalURI:    c.VisibilityArchivalURI,
 		BadBinaries:              badBinaries,
 		IsolationGroups:          isolationGroups,
+		AsyncWorkflowsConfig:     asyncWFCfg,
 	}, nil
 }
 
@@ -216,12 +221,20 @@ func (m *domainManagerImpl) fromInternalDomainConfig(ic *InternalDomainConfig) (
 		return DomainConfig{}, err
 	}
 	var isolationGroups types.IsolationGroupConfiguration
-	igRes, err := m.serializer.DeserializeIsolationGroups(ic.IsolationGroups)
+	igDeserialized, err := m.serializer.DeserializeIsolationGroups(ic.IsolationGroups)
 	if err != nil {
 		return DomainConfig{}, err
 	}
-	if igRes != nil {
-		isolationGroups = *igRes
+	if igDeserialized != nil {
+		isolationGroups = *igDeserialized
+	}
+	var asyncWFCfg types.AsyncWorkflowConfiguration
+	asyncWFCfgDeserialied, err := m.serializer.DeserializeAsyncWorkflowsConfig(ic.AsyncWorkflowsConfig)
+	if err != nil {
+		return DomainConfig{}, err
+	}
+	if asyncWFCfgDeserialied != nil {
+		asyncWFCfg = *asyncWFCfgDeserialied
 	}
 
 	if badBinaries.Binaries == nil {
@@ -236,6 +249,7 @@ func (m *domainManagerImpl) fromInternalDomainConfig(ic *InternalDomainConfig) (
 		VisibilityArchivalURI:    ic.VisibilityArchivalURI,
 		BadBinaries:              *badBinaries,
 		IsolationGroups:          isolationGroups,
+		AsyncWorkflowConfig:      asyncWFCfg,
 	}, nil
 }
 

@@ -89,25 +89,25 @@ func TestGetTaskFailedCauseMapConversion(t *testing.T) {
 
 func TestGetCrossClusterTasksRequestConversion(t *testing.T) {
 	for _, item := range []*types.GetCrossClusterTasksRequest{nil, {}, &testdata.GetCrossClusterTasksRequest} {
-		assert.Equal(t, item, ToGetCrossClusterTasksRequest(FromGetCrossClusterTasksRequest(item)))
+		assert.Equal(t, item, ToAdminGetCrossClusterTasksRequest(FromAdminGetCrossClusterTasksRequest(item)))
 	}
 }
 
 func TestGetCrossClusterTasksResponseConversion(t *testing.T) {
 	for _, item := range []*types.GetCrossClusterTasksResponse{nil, {}, &testdata.GetCrossClusterTasksResponse} {
-		assert.Equal(t, item, ToGetCrossClusterTasksResponse(FromGetCrossClusterTasksResponse(item)))
+		assert.Equal(t, item, ToAdminGetCrossClusterTasksResponse(FromAdminGetCrossClusterTasksResponse(item)))
 	}
 }
 
 func TestRespondCrossClusterTasksCompletedRequestConversion(t *testing.T) {
 	for _, item := range []*types.RespondCrossClusterTasksCompletedRequest{nil, {}, &testdata.RespondCrossClusterTasksCompletedRequest} {
-		assert.Equal(t, item, ToRespondCrossClusterTasksCompletedRequest(FromRespondCrossClusterTasksCompletedRequest(item)))
+		assert.Equal(t, item, ToAdminRespondCrossClusterTasksCompletedRequest(FromAdminRespondCrossClusterTasksCompletedRequest(item)))
 	}
 }
 
 func TestRespondCrossClusterTasksCompletedResponseConversion(t *testing.T) {
 	for _, item := range []*types.RespondCrossClusterTasksCompletedResponse{nil, {}, &testdata.RespondCrossClusterTasksCompletedResponse} {
-		assert.Equal(t, item, ToRespondCrossClusterTasksCompletedResponse(FromRespondCrossClusterTasksCompletedResponse(item)))
+		assert.Equal(t, item, ToAdminRespondCrossClusterTasksCompletedResponse(FromAdminRespondCrossClusterTasksCompletedResponse(item)))
 	}
 }
 
@@ -654,8 +654,8 @@ func TestCloseShardRequestConversion(t *testing.T) {
 	}
 
 	for _, original := range testCases {
-		thriftObj := FromCloseShardRequest(original)
-		roundTripObj := ToCloseShardRequest(thriftObj)
+		thriftObj := FromAdminCloseShardRequest(original)
+		roundTripObj := ToAdminCloseShardRequest(thriftObj)
 		assert.Equal(t, original, roundTripObj)
 	}
 }
@@ -668,8 +668,8 @@ func TestClusterInfoConversion(t *testing.T) {
 	}
 
 	for _, original := range testCases {
-		thriftObj := FromClusterInfo(original)
-		roundTripObj := ToClusterInfo(thriftObj)
+		thriftObj := FromGetClusterInfoResponse(original)
+		roundTripObj := ToGetClusterInfoResponse(thriftObj)
 		assert.Equal(t, original, roundTripObj)
 	}
 }
@@ -998,8 +998,8 @@ func TestDecribeHistoryHostRequstConversion(t *testing.T) {
 	}
 
 	for _, original := range testCases {
-		thriftObj := FromDescribeHistoryHostRequest(original)
-		roundTripObj := ToDescribeHistoryHostRequest(thriftObj)
+		thriftObj := FromAdminDescribeHistoryHostRequest(original)
+		roundTripObj := ToAdminDescribeHistoryHostRequest(thriftObj)
 		assert.Equal(t, original, roundTripObj)
 	}
 }
@@ -1012,8 +1012,8 @@ func TestDescribeShardDistributionRequestConversion(t *testing.T) {
 	}
 
 	for _, original := range testCases {
-		thriftObj := FromDescribeShardDistributionRequest(original)
-		roundTripObj := ToDescribeShardDistributionRequest(thriftObj)
+		thriftObj := FromAdminDescribeShardDistributionRequest(original)
+		roundTripObj := ToAdminDescribeShardDistributionRequest(thriftObj)
 		assert.Equal(t, original, roundTripObj)
 	}
 }
@@ -1026,8 +1026,8 @@ func TestDescribeHistoryHostResponseConversion(t *testing.T) {
 	}
 
 	for _, original := range testCases {
-		thriftObj := FromDescribeHistoryHostResponse(original)
-		roundTripObj := ToDescribeHistoryHostResponse(thriftObj)
+		thriftObj := FromAdminDescribeHistoryHostResponse(original)
+		roundTripObj := ToAdminDescribeHistoryHostResponse(thriftObj)
 		assert.Equal(t, original, roundTripObj)
 	}
 }
@@ -1040,8 +1040,8 @@ func TestDescribeShardDistributionResponseConversion(t *testing.T) {
 	}
 
 	for _, original := range testCases {
-		thriftObj := FromDescribeShardDistributionResponse(original)
-		roundTripObj := ToDescribeShardDistributionResponse(thriftObj)
+		thriftObj := FromAdminDescribeShardDistributionResponse(original)
+		roundTripObj := ToAdminDescribeShardDistributionResponse(thriftObj)
 		assert.Equal(t, original, roundTripObj)
 	}
 }
@@ -1054,8 +1054,8 @@ func TestDescribeQueueRequestConversion(t *testing.T) {
 	}
 
 	for _, original := range testCases {
-		thriftObj := FromDescribeQueueRequest(original)
-		roundTripObj := ToDescribeQueueRequest(thriftObj)
+		thriftObj := FromAdminDescribeQueueRequest(original)
+		roundTripObj := ToAdminDescribeQueueRequest(thriftObj)
 		assert.Equal(t, original, roundTripObj)
 	}
 }
@@ -1068,8 +1068,8 @@ func TestDescribeQueueResponseConversion(t *testing.T) {
 	}
 
 	for _, original := range testCases {
-		thriftObj := FromDescribeQueueResponse(original)
-		roundTripObj := ToDescribeQueueResponse(thriftObj)
+		thriftObj := FromAdminDescribeQueueResponse(original)
+		roundTripObj := ToAdminDescribeQueueResponse(thriftObj)
 		assert.Equal(t, original, roundTripObj)
 	}
 }
@@ -2082,8 +2082,8 @@ func TestReapplyEventsRequestConversion(t *testing.T) {
 	}
 
 	for _, original := range testCases {
-		thriftObj := FromReapplyEventsRequest(original)
-		roundTripObj := ToReapplyEventsRequest(thriftObj)
+		thriftObj := FromAdminReapplyEventsRequest(original)
+		roundTripObj := ToAdminReapplyEventsRequest(thriftObj)
 		assert.Equal(t, original, roundTripObj)
 	}
 }
@@ -2194,8 +2194,8 @@ func TestRemoveTaskRequestConversion(t *testing.T) {
 	}
 
 	for _, original := range testCases {
-		thriftObj := FromRemoveTaskRequest(original)
-		roundTripObj := ToRemoveTaskRequest(thriftObj)
+		thriftObj := FromAdminRemoveTaskRequest(original)
+		roundTripObj := ToAdminRemoveTaskRequest(thriftObj)
 		assert.Equal(t, original, roundTripObj)
 	}
 }
@@ -2306,8 +2306,8 @@ func TestResetQueueRequestConversion(t *testing.T) {
 	}
 
 	for _, original := range testCases {
-		thriftObj := FromResetQueueRequest(original)
-		roundTripObj := ToResetQueueRequest(thriftObj)
+		thriftObj := FromAdminResetQueueRequest(original)
+		roundTripObj := ToAdminResetQueueRequest(thriftObj)
 		assert.Equal(t, original, roundTripObj)
 	}
 }
@@ -2745,6 +2745,20 @@ func TestStartWorkflowExecutionRequestConversion(t *testing.T) {
 	}
 }
 
+func TestStartWorkflowExecutionAsyncRequestConversion(t *testing.T) {
+	testCases := []*types.StartWorkflowExecutionAsyncRequest{
+		nil,
+		{},
+		&testdata.StartWorkflowExecutionAsyncRequest,
+	}
+
+	for _, original := range testCases {
+		thriftObj := FromStartWorkflowExecutionAsyncRequest(original)
+		roundTripObj := ToStartWorkflowExecutionAsyncRequest(thriftObj)
+		assert.Equal(t, original, roundTripObj)
+	}
+}
+
 func TestRestartWorkflowExecutionResponseConversion(t *testing.T) {
 	testCases := []*types.RestartWorkflowExecutionResponse{
 		nil,
@@ -2769,6 +2783,20 @@ func TestStartWorkflowExecutionResponseConversion(t *testing.T) {
 	for _, original := range testCases {
 		thriftObj := FromStartWorkflowExecutionResponse(original)
 		roundTripObj := ToStartWorkflowExecutionResponse(thriftObj)
+		assert.Equal(t, original, roundTripObj)
+	}
+}
+
+func TestStartWorkflowExecutionAsyncResponseConversion(t *testing.T) {
+	testCases := []*types.StartWorkflowExecutionAsyncResponse{
+		nil,
+		{},
+		&testdata.StartWorkflowExecutionAsyncResponse,
+	}
+
+	for _, original := range testCases {
+		thriftObj := FromStartWorkflowExecutionAsyncResponse(original)
+		roundTripObj := ToStartWorkflowExecutionAsyncResponse(thriftObj)
 		assert.Equal(t, original, roundTripObj)
 	}
 }

@@ -1,0 +1,11 @@
+go 1.20
+
+// this go.work file ensures that the root go.work DOES NOT
+// automatically include dependencies in tools, as otherwise it tries
+// to find minimum versions across it and all other modules.
+//
+// this isn't currently harmful, but it does risk preventing us from
+// upgrading our tools due to breaking changes in other dependencies
+// they might bring in.  keeping them separate is best.
+
+use .
