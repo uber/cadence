@@ -347,7 +347,17 @@ func (t *timerQueueProcessor) UnlockTaskProcessing() {
 }
 
 func (t *timerQueueProcessor) drain() {
-	if err := t.completeTimer(); err != nil {
+	if !t.shard.GetConfig().QueueProcessorEnableGracefulSyncShutdown() {
+		if err := t.completeTimer(context.Background()); err != nil {
+			t.logger.Error("Failed to complete timer task during shutdown", tag.Error(err))
+		}
+		return
+	}
+
+	// when graceful shutdown is enabled for queue processor, use a context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), gracefulShutdownTimeout)
+	defer cancel()
+	if err := t.completeTimer(ctx); err != nil {
 		t.logger.Error("Failed to complete timer task during shutdown", tag.Error(err))
 	}
 }
@@ -365,7 +375,7 @@ func (t *timerQueueProcessor) completeTimerLoop() {
 			return
 		case <-completeTimer.C:
 			for attempt := 0; attempt < t.config.TimerProcessorCompleteTimerFailureRetryCount(); attempt++ {
-				err := t.completeTimer()
+				err := t.completeTimer(context.Background())
 				if err == nil {
 					break
 				}
@@ -395,9 +405,9 @@ func (t *timerQueueProcessor) completeTimerLoop() {
 	}
 }
 
-func (t *timerQueueProcessor) completeTimer() error {
+func (t *timerQueueProcessor) completeTimer(ctx context.Context) error {
 	newAckLevel := maximumTimerTaskKey
-	actionResult, err := t.HandleAction(context.Background(), t.currentClusterName, NewGetStateAction())
+	actionResult, err := t.HandleAction(ctx, t.currentClusterName, NewGetStateAction())
 	if err != nil {
 		return err
 	}
@@ -406,7 +416,7 @@ func (t *timerQueueProcessor) completeTimer() error {
 	}
 
 	for standbyClusterName := range t.standbyQueueProcessors {
-		actionResult, err := t.HandleAction(context.Background(), standbyClusterName, NewGetStateAction())
+		actionResult, err := t.HandleAction(ctx, standbyClusterName, NewGetStateAction())
 		if err != nil {
 			return err
 		}
@@ -435,9 +445,10 @@ func (t *timerQueueProcessor) completeTimer() error {
 		Tagged(metrics.ShardIDTag(t.shard.GetShardID())).
 		IncCounter(metrics.TaskBatchCompleteCounter)
 
+	totalDeleted := 0
 	for {
 		pageSize := t.config.TimerTaskDeleteBatchSize()
-		resp, err := t.shard.GetExecutionManager().RangeCompleteTimerTask(context.Background(), &persistence.RangeCompleteTimerTaskRequest{
+		resp, err := t.shard.GetExecutionManager().RangeCompleteTimerTask(ctx, &persistence.RangeCompleteTimerTaskRequest{
 			InclusiveBeginTimestamp: t.ackLevel,
 			ExclusiveEndTimestamp:   newAckLevelTimestamp,
 			PageSize:                pageSize, // pageSize may or may not be honored
@@ -445,6 +456,9 @@ func (t *timerQueueProcessor) completeTimer() error {
 		if err != nil {
 			return err
 		}
+
+		totalDeleted += resp.TasksCompleted
+		t.logger.Debug("Timer task batch deletion", tag.Dynamic("page-size", pageSize), tag.Dynamic("total-deleted", totalDeleted))
 		if !persistence.HasMoreRowsToDelete(resp.TasksCompleted, pageSize) {
 			break
 		}
