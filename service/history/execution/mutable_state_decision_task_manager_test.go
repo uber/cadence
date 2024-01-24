@@ -23,14 +23,16 @@
 package execution
 
 import (
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/shard"
-	"testing"
 )
 
 func TestReplicateDecisionTaskCompletedEvent(t *testing.T) {
