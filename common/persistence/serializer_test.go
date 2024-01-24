@@ -33,18 +33,37 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
+type testDef struct {
+	name string
+	// payloads is a map of payload name to payload. "nil" is a special name for nil payload which expects to return nil with some exceptions
+	payloads      map[string]any
+	nilHandled    bool
+	serializeFn   func(any, common.EncodingType) (*DataBlob, error)
+	deserializeFn func(*DataBlob) (any, error)
+}
+
+// key is encoding type, value is whether the encoding type is supported
+var encodingTypes = map[common.EncodingType]bool{
+	common.EncodingTypeEmpty:    true,
+	common.EncodingTypeUnknown:  true,
+	common.EncodingTypeJSON:     true,
+	common.EncodingTypeThriftRW: true,
+	common.EncodingTypeGob:      false,
+}
+
+type runnableTest struct {
+	testDef
+	encoding    common.EncodingType
+	supported   bool
+	payloadName string
+	payload     any
+}
+
 func TestSerializers(t *testing.T) {
 	// create serializer once and reuse it for all test cases in parallel to catch concurrency issues
 	serializer := NewPayloadSerializer()
 
-	tests := []struct {
-		name string
-		// payloads is a map of payload name to payload. "nil" is a special name for nil payload which expects to return nil with some exceptions
-		payloads      map[string]any
-		nilHandled    bool
-		serializeFn   func(any, common.EncodingType) (*DataBlob, error)
-		deserializeFn func(*DataBlob) (any, error)
-	}{
+	tests := []testDef{
 		{
 			name: "history event",
 			payloads: map[string]any{
@@ -193,58 +212,56 @@ func TestSerializers(t *testing.T) {
 		},
 	}
 
-	// key is encoding type, value is whether the encoding type is supported
-	encodingTypes := map[common.EncodingType]bool{
-		common.EncodingTypeEmpty:    true,
-		common.EncodingTypeUnknown:  true,
-		common.EncodingTypeJSON:     true,
-		common.EncodingTypeThriftRW: true,
-		common.EncodingTypeGob:      false,
-	}
-
-	for _, tc := range tests {
-		tc := tc
+	// generate runnable test cases here so actual test body is not 3 level nested
+	var runnableTests []runnableTest
+	for _, td := range tests {
 		for encoding, supported := range encodingTypes {
-			encoding := encoding
-			supported := supported
-
-			for payloadName, payload := range tc.payloads {
-				payloadName := payloadName
-				payload := payload
-				t.Run(fmt.Sprintf("%s with encoding:%s,payload:%s", tc.name, encoding, payloadName), func(t *testing.T) {
-					t.Parallel()
-
-					serialized, err := tc.serializeFn(payload, encoding)
-					// expect error if the encoding type is not supported. special case is nil payloads.
-					// most of the serialization functions return early for nils but
-					// some of them call underlying helper function which checks encoding type and raises error.
-					wantErr := !supported && !(payloadName == "nil" && !tc.nilHandled)
-					if wantErr != (err != nil) {
-						t.Fatalf("Got serialization err: %v, want err?: %v", err, wantErr)
-					}
-					if err != nil {
-						return
-					}
-
-					deserialized, err := tc.deserializeFn(serialized)
-					if err != nil {
-						t.Fatalf("Got serialization err: %v", err)
-					}
-
-					if deserialized == nil {
-						t.Fatalf("Got nil deserialized payload")
-					}
-
-					if payloadName == "nil" {
-						return
-					}
-
-					if diff := cmp.Diff(payload, deserialized); diff != "" {
-						t.Fatalf("Mismatch (-payload +deserialized):\n%s", diff)
-					}
+			for payloadName, payload := range td.payloads {
+				runnableTests = append(runnableTests, runnableTest{
+					testDef:     td,
+					encoding:    encoding,
+					supported:   supported,
+					payloadName: payloadName,
+					payload:     payload,
 				})
 			}
 		}
+	}
+
+	for _, tc := range runnableTests {
+		tc := tc
+		t.Run(fmt.Sprintf("%s with encoding:%s,payload:%s", tc.name, tc.encoding, tc.payloadName), func(t *testing.T) {
+			t.Parallel()
+
+			serialized, err := tc.serializeFn(tc.payload, tc.encoding)
+			// expect error if the encoding type is not supported. special case is nil payloads.
+			// most of the serialization functions return early for nils but
+			// some of them call underlying helper function which checks encoding type and raises error.
+			wantErr := !tc.supported && !(tc.payloadName == "nil" && !tc.nilHandled)
+			if wantErr != (err != nil) {
+				t.Fatalf("Got serialization err: %v, want err?: %v", err, wantErr)
+			}
+			if err != nil {
+				return
+			}
+
+			deserialized, err := tc.deserializeFn(serialized)
+			if err != nil {
+				t.Fatalf("Got serialization err: %v", err)
+			}
+
+			if deserialized == nil {
+				t.Fatalf("Got nil deserialized payload")
+			}
+
+			if tc.payloadName == "nil" {
+				return
+			}
+
+			if diff := cmp.Diff(tc.payload, deserialized); diff != "" {
+				t.Fatalf("Mismatch (-payload +deserialized):\n%s", diff)
+			}
+		})
 	}
 }
 
