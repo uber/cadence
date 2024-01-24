@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/quotas"
 )
 
@@ -74,6 +75,7 @@ func TestWfCache_AllowSingleWorkflow(t *testing.T) {
 		WorkflowIDCacheEnabled: func(domain string) bool { return true },
 		Logger:                 log.NewNoop(),
 		DomainCache:            domainCache,
+		MetricsClient:          metrics.NewNoopMetricsClient(),
 	})
 
 	assert.True(t, wfCache.AllowExternal(testDomainID, testWorkflowID))
@@ -120,6 +122,7 @@ func TestWfCache_AllowMultipleWorkflow(t *testing.T) {
 		WorkflowIDCacheEnabled: func(domain string) bool { return true },
 		Logger:                 log.NewNoop(),
 		DomainCache:            domainCache,
+		MetricsClient:          metrics.NewNoopMetricsClient(),
 	})
 
 	assert.True(t, wfCache.AllowExternal(testDomainID, testWorkflowID))
@@ -159,6 +162,7 @@ func TestWfCache_AllowError(t *testing.T) {
 		WorkflowIDCacheEnabled: func(domain string) bool { return true },
 		Logger:                 logger,
 		DomainCache:            domainCache,
+		MetricsClient:          metrics.NewNoopMetricsClient(),
 	}).(*wfCache)
 
 	// We set getCacheItemFn to a function that will return an error so that we can test the error logic
@@ -190,7 +194,7 @@ func TestWfCache_AllowDomainCacheError(t *testing.T) {
 		[]tag.Tag{
 			tag.Error(errDomainName),
 			tag.WorkflowDomainID(testDomainID),
-			tag.WorkflowID(""),
+			tag.WorkflowID(testWorkflowID),
 			tag.WorkflowIDCacheSize(0),
 		},
 	).Times(2)
@@ -204,6 +208,7 @@ func TestWfCache_AllowDomainCacheError(t *testing.T) {
 		WorkflowIDCacheEnabled: func(domain string) bool { return true },
 		Logger:                 logger,
 		DomainCache:            domainCache,
+		MetricsClient:          metrics.NewNoopMetricsClient(),
 	})
 
 	// We fail open
@@ -233,6 +238,7 @@ func TestWfCache_CacheDisabled(t *testing.T) {
 		WorkflowIDCacheEnabled: func(domain string) bool { return false },
 		Logger:                 logger,
 		DomainCache:            domainCache,
+		MetricsClient:          metrics.NewNoopMetricsClient(),
 	})
 
 	// We fail open
