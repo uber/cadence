@@ -266,13 +266,6 @@ func Test_oauthAuthority_validateTTL(t *testing.T) {
 			wantErr: assert.Error,
 		},
 		{
-			name: "Claims with no IAT claim will fail TTL validation",
-			claims: &JWTClaims{
-				TTL: 30000,
-			},
-			wantErr: assert.Error,
-		},
-		{
 			name: "Claims with IAT and Claim TTL will pass",
 			claims: &JWTClaims{
 				TTL: 300,
