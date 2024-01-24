@@ -38,6 +38,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
+	"github.com/uber/cadence/common/asyncworkflow/queue"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
@@ -131,6 +132,8 @@ type (
 		isolationGroups           isolationgroup.State
 		isolationGroupConfigStore configstore.Client
 		partitioner               partition.Partitioner
+
+		asyncWorkflowQueueProvider queue.Provider
 	}
 )
 
@@ -336,6 +339,8 @@ func New(
 		isolationGroups:           isolationGroupState,
 		isolationGroupConfigStore: isolationGroupStore, // can be nil where persistence is not available
 		partitioner:               partitioner,
+
+		asyncWorkflowQueueProvider: params.AsyncWorkflowQueueProvider,
 	}
 	return impl, nil
 }
@@ -608,6 +613,11 @@ func (h *Impl) GetPartitioner() partition.Partitioner {
 // GetIsolationGroupStore returns the isolation group configuration store or nil
 func (h *Impl) GetIsolationGroupStore() configstore.Client {
 	return h.isolationGroupConfigStore
+}
+
+// GetAsyncWorkflowQueueProvider returns the async workflow queue provider
+func (h *Impl) GetAsyncWorkflowQueueProvider() queue.Provider {
+	return h.asyncWorkflowQueueProvider
 }
 
 // due to the config store being only available for some

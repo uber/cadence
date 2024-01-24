@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
+	"github.com/uber/cadence/common/asyncworkflow/queue"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
@@ -113,5 +114,7 @@ type (
 		GetIsolationGroupState() isolationgroup.State
 		GetPartitioner() partition.Partitioner
 		GetIsolationGroupStore() configstore.Client
+
+		GetAsyncWorkflowQueueProvider() queue.Provider
 	}
 )
