@@ -206,4 +206,18 @@ func TestTrimBinaryChecksums(t *testing.T) {
 		})
 	}
 
+	// test empty case
+	currResetPoints := make([]*types.ResetPointInfo, 0, 1)
+	var recentBinaryChecksums []string
+	for _, rp := range currResetPoints {
+		recentBinaryChecksums = append(recentBinaryChecksums, rp.GetBinaryChecksum())
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("The function panicked: %v", r)
+		}
+	}()
+	trimedBinaryChecksums, trimedResetPoints := trimBinaryChecksums(recentBinaryChecksums, currResetPoints, 2)
+	assert.Equal(t, recentBinaryChecksums, trimedBinaryChecksums)
+	assert.Equal(t, currResetPoints, trimedResetPoints)
 }
