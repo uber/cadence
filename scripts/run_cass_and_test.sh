@@ -17,8 +17,9 @@ docker-compose -f docker/docker-compose.yml up -d cassandra cadence;
 
 status=""
 while [[ "$status" != "running" ]]; do
-  echo "waiting for containers to be healthy. status: $health_status"
+  echo "waiting for containers to be healthy. status: $status"
   sleep 5
+  # checking cadence container is running is sufficient because it depends on health status of cassandra in docker-compose.yml
   status="$(docker inspect docker-cadence-1 -f '{{ .State.Status }}')"
 done;
 
