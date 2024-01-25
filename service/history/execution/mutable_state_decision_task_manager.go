@@ -26,7 +26,6 @@ package execution
 
 import (
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/uber/cadence/common"
@@ -254,7 +253,12 @@ func (m *mutableStateDecisionTaskManagerImpl) ReplicateDecisionTaskCompletedEven
 	event *types.HistoryEvent,
 ) error {
 	m.beforeAddDecisionTaskCompletedEvent()
-	return m.afterAddDecisionTaskCompletedEvent(event, math.MaxInt32)
+	maxResetPoints := common.DefaultHistoryMaxAutoResetPoints // use default when it is not set in the config
+	if m.msb.GetDomainEntry() != nil && m.msb.GetDomainEntry().GetInfo() != nil && m.msb.config != nil {
+		domainName := m.msb.GetDomainEntry().GetInfo().Name
+		maxResetPoints = m.msb.config.MaxAutoResetPoints(domainName)
+	}
+	return m.afterAddDecisionTaskCompletedEvent(event, maxResetPoints)
 }
 
 func (m *mutableStateDecisionTaskManagerImpl) ReplicateDecisionTaskFailedEvent() error {
