@@ -106,7 +106,7 @@ type (
 
 	OAuthAuthorizer struct {
 		Enable bool `yaml:"enable"`
-		// Credentials to verify/create the JWT
+		// Credentials to verify/create the JWT using public/private keys
 		JwtCredentials JwtCredentials `yaml:"jwtCredentials"`
 		// Max of TTL in the claim
 		MaxJwtTTL int64 `yaml:"maxJwtTTL"`
