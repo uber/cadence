@@ -346,13 +346,13 @@ func (v *pinotVisibilityTripleManager) logUserQueryParameters(userParam userPara
 
 func (v *pinotVisibilityTripleManager) chooseManagerByOverride(ctx context.Context, domain string) VisibilityManager {
 	if override := ctx.Value(ContextKey); override == Primary {
-		panic("primary was chosen")
+		v.logger.Debug("primary was chosen")
 		return v.esVisibilityManager
 	} else if override == Secondary {
-		panic("secondary was chosen")
+		v.logger.Debug("secondary was chosen")
 		return v.pinotVisibilityManager
 	}
-	panic("non was chosen")
+	v.logger.Debug("non was chosen")
 	return v.chooseVisibilityManagerForRead(domain)
 }
 
