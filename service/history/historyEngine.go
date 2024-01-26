@@ -503,7 +503,7 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 				previousFailoverVersion := nextDomain.GetPreviousFailoverVersion()
 				previousClusterName, err := e.clusterMetadata.ClusterNameForFailoverVersion(previousFailoverVersion)
 				if err != nil {
-					e.logger.Error("Failed to handle graceful failover", tag.WorkflowDomainID(nextDomain.GetInfo().ID))
+					e.logger.Error("Failed to handle graceful failover", tag.WorkflowDomainID(nextDomain.GetInfo().ID), tag.Error(err))
 					continue
 				}
 
