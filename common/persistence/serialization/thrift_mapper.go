@@ -128,6 +128,8 @@ func domainInfoToThrift(info *DomainInfo) *sqlblobs.DomainInfo {
 		LastUpdatedTime:                      timeToUnixNanoPtr(info.LastUpdatedTimestamp),
 		IsolationGroupsConfiguration:         info.IsolationGroups,
 		IsolationGroupsConfigurationEncoding: &info.IsolationGroupsEncoding,
+
+		// TODO(taylan): once idl changes are merged https://github.com/uber/cadence-idl/pull/158, add async workflows config here
 	}
 }
 
@@ -162,6 +164,8 @@ func domainInfoFromThrift(info *sqlblobs.DomainInfo) *DomainInfo {
 		LastUpdatedTimestamp:        timeFromUnixNano(info.GetLastUpdatedTime()),
 		IsolationGroups:             info.GetIsolationGroupsConfiguration(),
 		IsolationGroupsEncoding:     info.GetIsolationGroupsConfigurationEncoding(),
+
+		// TODO(taylan): once idl changes are merged https://github.com/uber/cadence-idl/pull/158, add async workflows config here
 	}
 }
 
