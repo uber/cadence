@@ -26,8 +26,8 @@ import (
 	"sync"
 
 	"github.com/uber/cadence/common/archiver"
-	"github.com/uber/cadence/common/archiver/provider/syncmap"
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/syncmap"
 )
 
 var (
