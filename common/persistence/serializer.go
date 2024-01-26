@@ -196,21 +196,14 @@ func (t *serializerImpl) DeserializeVersionHistories(data *DataBlob) (*types.Ver
 	return &histories, err
 }
 
-func (t *serializerImpl) SerializePendingFailoverMarkers(
-	markers []*types.FailoverMarkerAttributes,
-	encodingType common.EncodingType,
-) (*DataBlob, error) {
-
+func (t *serializerImpl) SerializePendingFailoverMarkers(markers []*types.FailoverMarkerAttributes, encodingType common.EncodingType) (*DataBlob, error) {
 	if markers == nil {
 		return nil, nil
 	}
 	return t.serialize(markers, encodingType)
 }
 
-func (t *serializerImpl) DeserializePendingFailoverMarkers(
-	data *DataBlob,
-) ([]*types.FailoverMarkerAttributes, error) {
-
+func (t *serializerImpl) DeserializePendingFailoverMarkers(data *DataBlob) ([]*types.FailoverMarkerAttributes, error) {
 	if data == nil {
 		return nil, nil
 	}
@@ -222,19 +215,14 @@ func (t *serializerImpl) DeserializePendingFailoverMarkers(
 	return markers, err
 }
 
-func (t *serializerImpl) SerializeProcessingQueueStates(
-	states *types.ProcessingQueueStates,
-	encodingType common.EncodingType,
-) (*DataBlob, error) {
+func (t *serializerImpl) SerializeProcessingQueueStates(states *types.ProcessingQueueStates, encodingType common.EncodingType) (*DataBlob, error) {
 	if states == nil {
 		return nil, nil
 	}
 	return t.serialize(states, encodingType)
 }
 
-func (t *serializerImpl) DeserializeProcessingQueueStates(
-	data *DataBlob,
-) (*types.ProcessingQueueStates, error) {
+func (t *serializerImpl) DeserializeProcessingQueueStates(data *DataBlob) (*types.ProcessingQueueStates, error) {
 	if data == nil {
 		return nil, nil
 	}

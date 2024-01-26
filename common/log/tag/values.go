@@ -353,6 +353,7 @@ var (
 	FrontendClientOperationSignalWithStartWorkflowExecution = clientOperation("frontend-signal-with-start-wf-execution")
 	FrontendClientOperationSignalWorkflowExecution          = clientOperation("frontend-signal-wf-execution")
 	FrontendClientOperationStartWorkflowExecution           = clientOperation("frontend-start-wf-execution")
+	FrontendClientOperationStartWorkflowExecutionAsync      = clientOperation("frontend-start-wf-execution-async")
 	FrontendClientOperationTerminateWorkflowExecution       = clientOperation("frontend-terminate-wf-execution")
 	FrontendClientOperationUpdateDomain                     = clientOperation("frontend-update-domain")
 	FrontendClientOperationGetClusterInfo                   = clientOperation("frontend-get-cluster-info")
