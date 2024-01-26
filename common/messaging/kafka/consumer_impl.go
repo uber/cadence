@@ -29,7 +29,6 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
-	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
@@ -78,17 +77,15 @@ type (
 var _ messaging.Message = (*messageImpl)(nil)
 var _ messaging.Consumer = (*consumerImpl)(nil)
 
-func newKafkaConsumer(
+func NewKafkaConsumer(
 	dlqProducer messaging.Producer,
-	kafkaConfig *config.KafkaConfig,
+	brokers []string,
 	topic string,
 	consumerName string,
 	saramaConfig *sarama.Config,
 	metricsClient metrics.Client,
 	logger log.Logger,
 ) (messaging.Consumer, error) {
-	clusterName := kafkaConfig.GetKafkaClusterForTopic(topic)
-	brokers := kafkaConfig.GetBrokersForKafkaCluster(clusterName)
 	consumerGroup, err := sarama.NewConsumerGroup(brokers, consumerName, saramaConfig)
 	if err != nil {
 		return nil, err
