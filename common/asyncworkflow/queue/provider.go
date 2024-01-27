@@ -35,8 +35,13 @@ type (
 	providerImpl struct {
 		domainCache cache.DomainCache
 
+		// predefined queues in static config
 		producers map[string]messaging.Producer
 		consumers map[string]messaging.Consumer
+
+		// cache for producers created on the fly for domains not using predefined queues
+		// key is the domain name
+		producerCache cache.Cache
 	}
 )
 
@@ -71,9 +76,40 @@ func NewAsyncQueueProvider(cfg map[string]config.AsyncWorkflowQueueProvider, par
 }
 
 func (p *providerImpl) GetAsyncQueueProducer(domain string) (messaging.Producer, error) {
+	domainEntry, err := p.domainCache.GetDomain(domain)
+	if err != nil {
+		return nil, err
+	}
+	queue := domainEntry.GetConfig().AsyncWorkflowConfig.PredefinedQueueName
+	if queue != "" {
+		producer, ok := p.producers[queue]
+		if !ok {
+			return nil, fmt.Errorf("queue %v not found", queue)
+		}
+		return producer, nil
+	}
+
+	val := p.producerCache.Get(domain)
+	if val != nil {
+		return val.(messaging.Producer), nil
+	}
+	// TODO: create producer on the fly and add to cache
 	return nil, fmt.Errorf("to be implemented")
 }
 
 func (p *providerImpl) GetAsyncQueueConsumer(domain string) (messaging.Consumer, error) {
+	domainEntry, err := p.domainCache.GetDomain(domain)
+	if err != nil {
+		return nil, err
+	}
+	queue := domainEntry.GetConfig().AsyncWorkflowConfig.PredefinedQueueName
+	if queue != "" {
+		consumer, ok := p.consumers[queue]
+		if !ok {
+			return nil, fmt.Errorf("queue %v not found", queue)
+		}
+		return consumer, nil
+	}
+	// TODO: create consumer on the fly, we don't need to cache it
 	return nil, fmt.Errorf("to be implemented")
 }
