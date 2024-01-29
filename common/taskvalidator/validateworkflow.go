@@ -26,6 +26,8 @@ package taskvalidator
 import (
 	"context"
 	"errors"
+	"github.com/uber/cadence/common/backoff"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -59,14 +61,23 @@ type checkerImpl struct {
 // NewWfChecker creates a new instance of a workflow validation checker.
 // It requires a logger, metrics client, domain cache, persistence retryer,
 // and a stale checker implementation to function.
-func NewWfChecker(logger *zap.Logger, metrics metrics.Client, domainCache cache.DomainCache, pr persistence.Retryer, staleCheck staleChecker) Checker {
+func NewWfChecker(logger *zap.Logger, metrics metrics.Client, domainCache cache.DomainCache, executionManager persistence.ExecutionManager, historymanager persistence.HistoryManager) (Checker, error) {
+	// Create the persistence retryer
+	retryPolicy := backoff.NewExponentialRetryPolicy(100 * time.Millisecond) // Adjust as needed
+	pr := persistence.NewPersistenceRetryer(executionManager, historymanager, retryPolicy)
+
+	// Create the stale check instance
+	staleCheckInstance := invariant.NewStaleWorkflow(pr, domainCache, logger)
+	staleCheck, _ := staleCheckInstance.(staleChecker)
+
+	// Return the checker implementation
 	return &checkerImpl{
 		logger:        logger,
 		metricsClient: metrics,
 		dc:            domainCache,
 		pr:            pr,
 		staleCheck:    staleCheck,
-	}
+	}, nil
 }
 
 // WorkflowCheckforValidation performs workflow validation.

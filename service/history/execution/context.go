@@ -27,6 +27,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/common/taskvalidator"
+	"go.uber.org/zap"
 	"testing"
 	"time"
 
@@ -1218,6 +1220,12 @@ func (c *contextImpl) updateWorkflowExecutionWithRetry(
 		resp, err = c.shard.UpdateWorkflowExecution(ctx, request)
 		return err
 	}
+	metricsClient := c.shard.GetMetricsClient()
+	domainCache := c.shard.GetDomainCache()
+	executionManager := c.shard.GetExecutionManager()
+	historymanager := c.shard.GetHistoryManager()
+	zapLogger, _ := zap.NewProduction()
+	checker, _ := taskvalidator.NewWfChecker(zapLogger, metricsClient, domainCache, executionManager, historymanager)
 
 	isRetryable := func(err error) bool {
 		if _, ok := err.(*persistence.TimeoutError); ok {
@@ -1247,6 +1255,16 @@ func (c *contextImpl) updateWorkflowExecutionWithRetry(
 			tag.Error(err),
 			tag.Number(c.updateCondition),
 		)
+		err1 := checker.WorkflowCheckforValidation(
+			ctx,
+			c.workflowExecution.GetWorkflowID(),
+			c.domainID,
+			c.GetDomainName(),
+			c.workflowExecution.GetRunID(),
+		)
+		if err1 != nil {
+			return nil, err1
+		}
 		return nil, err
 	}
 }
