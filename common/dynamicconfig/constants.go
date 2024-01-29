@@ -1942,6 +1942,13 @@ const (
 
 	EnableTimerDebugLogByDomainID
 
+	// EnableTaskVal is which allows the taskvalidation to be enabled.
+	// KeyName: system.enableTaskVal
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: DomainID
+	EnableTaskVal
+
 	// LastBoolKey must be the last one in this const group
 	LastBoolKey
 )
@@ -4163,6 +4170,11 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		KeyName:      "history.enableTimerDebugLogByDomainID",
 		Filters:      []Filter{DomainID},
 		Description:  "Enable log for debugging timer task issue by domain",
+		DefaultValue: false,
+	},
+	EnableTaskVal: DynamicBool{
+		KeyName:      "system.enableTaskVal",
+		Description:  "Enable TaskValidation",
 		DefaultValue: false,
 	},
 	WorkflowIDCacheEnabled: DynamicBool{
