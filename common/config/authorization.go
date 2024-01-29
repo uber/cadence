@@ -23,7 +23,7 @@ package config
 import (
 	"fmt"
 
-	"github.com/cristalhq/jwt/v3"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // Validate validates the persistence config
@@ -33,8 +33,8 @@ func (a *Authorization) Validate() error {
 	}
 
 	if a.OAuthAuthorizer.Enable {
-		if oauthError := a.validateOAuth(); oauthError != nil {
-			return oauthError
+		if err := a.validateOAuth(); err != nil {
+			return err
 		}
 	}
 
@@ -50,7 +50,7 @@ func (a *Authorization) validateOAuth() error {
 	if oauthConfig.JwtCredentials.PublicKey == "" {
 		return fmt.Errorf("[OAuthConfig] PublicKey can't be empty")
 	}
-	if oauthConfig.JwtCredentials.Algorithm != jwt.RS256.String() {
+	if oauthConfig.JwtCredentials.Algorithm != jwt.SigningMethodRS256.Name {
 		return fmt.Errorf("[OAuthConfig] The only supported Algorithm is RS256")
 	}
 	return nil

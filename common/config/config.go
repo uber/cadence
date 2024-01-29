@@ -106,7 +106,7 @@ type (
 
 	OAuthAuthorizer struct {
 		Enable bool `yaml:"enable"`
-		// Credentials to verify/create the JWT
+		// Credentials to verify/create the JWT using public/private keys
 		JwtCredentials JwtCredentials `yaml:"jwtCredentials"`
 		// Max of TTL in the claim
 		MaxJwtTTL int64 `yaml:"maxJwtTTL"`
@@ -598,10 +598,14 @@ type (
 		unmarshal func(out any) error
 	}
 
-	// AsyncWorkflowQueueProvider contains the config for an async workflow queue. Only one field must be set.
+	// AsyncWorkflowQueueProvider contains the config for an async workflow queue.
+	// Type is the implementation type of the queue provider.
+	// Config is the configuration for the queue provider.
+	// Config types and structures expected in the main default binary include:
+	// - type: "kafka", config: [*github.com/uber/cadence/common/asyncworkflow/queue/kafka.QueueConfig]]]
 	AsyncWorkflowQueueProvider struct {
-		Type                     string    `yaml:"type"`
-		AsyncWorkflowQueueConfig *YamlNode `yaml:"config"`
+		Type   string    `yaml:"type"`
+		Config *YamlNode `yaml:"config"`
 	}
 )
 

@@ -552,3 +552,16 @@ func GetChildExecutionDomainEntry(
 
 	return parentDomainEntry, nil
 }
+
+func trimBinaryChecksums(recentBinaryChecksums []string, currResetPoints []*types.ResetPointInfo, maxResetPoints int) ([]string, []*types.ResetPointInfo) {
+	numResetPoints := len(currResetPoints)
+	if numResetPoints >= maxResetPoints {
+		// If exceeding the max limit, do rotation by taking the oldest ones out.
+		// startIndex plus one here because it needs to make space for the new binary checksum for the current run
+		startIndex := numResetPoints - maxResetPoints + 1
+		currResetPoints = currResetPoints[startIndex:]
+		recentBinaryChecksums = recentBinaryChecksums[startIndex:]
+	}
+
+	return recentBinaryChecksums, currResetPoints
+}
