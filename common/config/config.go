@@ -89,34 +89,10 @@ type (
 		Match *regexp.Regexp
 	}
 
-	Authorization struct {
-		OAuthAuthorizer OAuthAuthorizer `yaml:"oauthAuthorizer"`
-		NoopAuthorizer  NoopAuthorizer  `yaml:"noopAuthorizer"`
-	}
-
 	DynamicConfig struct {
 		Client      string                              `yaml:"client"`
 		ConfigStore c.ClientConfig                      `yaml:"configstore"`
 		FileBased   dynamicconfig.FileBasedClientConfig `yaml:"filebased"`
-	}
-
-	NoopAuthorizer struct {
-		Enable bool `yaml:"enable"`
-	}
-
-	OAuthAuthorizer struct {
-		Enable bool `yaml:"enable"`
-		// Credentials to verify/create the JWT using public/private keys
-		JwtCredentials JwtCredentials `yaml:"jwtCredentials"`
-		// Max of TTL in the claim
-		MaxJwtTTL int64 `yaml:"maxJwtTTL"`
-	}
-
-	JwtCredentials struct {
-		// support: RS256 (RSA using SHA256)
-		Algorithm string `yaml:"algorithm"`
-		// Public Key Path for verifying JWT token passed in from external clients
-		PublicKey string `yaml:"publicKey"`
 	}
 
 	// Service contains the service specific config items

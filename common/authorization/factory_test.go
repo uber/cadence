@@ -62,7 +62,7 @@ func cfgOAuth() config.Authorization {
 	return config.Authorization{
 		OAuthAuthorizer: config.OAuthAuthorizer{
 			Enable: true,
-			JwtCredentials: config.JwtCredentials{
+			JwtCredentials: &config.JwtCredentials{
 				Algorithm: jwt.SigningMethodRS256.Name,
 				PublicKey: "../../config/credentials/keytest.pub",
 			},
@@ -83,10 +83,10 @@ func (s *factorySuite) TestFactoryNoopAuthorizer() {
 	}{
 		{cfgNoop(), &nopAuthority{}, nil},
 		{cfgOAuthVar, &oauthAuthority{
-			authorizationCfg: cfgOAuthVar.OAuthAuthorizer,
-			log:              s.logger,
-			publicKey:        publicKey,
-			parser:           jwt.NewParser(jwt.WithValidMethods([]string{cfgOAuthVar.OAuthAuthorizer.JwtCredentials.Algorithm}), jwt.WithIssuedAt()),
+			config:    cfgOAuthVar.OAuthAuthorizer,
+			log:       s.logger,
+			publicKey: publicKey,
+			parser:    jwt.NewParser(jwt.WithValidMethods([]string{cfgOAuthVar.OAuthAuthorizer.JwtCredentials.Algorithm}), jwt.WithIssuedAt()),
 		}, nil},
 	}
 
