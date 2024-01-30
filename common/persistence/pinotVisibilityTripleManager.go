@@ -46,9 +46,9 @@ type (
 )
 
 const (
-	Primary    = "Primary"
-	Secondary  = "Secondary"
-	ContextKey = ResponseComparatorContextKey("visibility-override")
+	VisibilityOverridePrimary   = "Primary"
+	VisibilityOverrideSecondary = "Secondary"
+	ContextKey                  = ResponseComparatorContextKey("visibility-override")
 )
 
 // ResponseComparatorContextKey is for Pinot/ES response comparator. This struct will be passed into ctx as a key.

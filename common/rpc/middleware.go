@@ -126,15 +126,15 @@ type PinotComparatorMiddleware struct{}
 func (m *PinotComparatorMiddleware) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
 	yarpcKey, _ := req.Headers.Get(ComparatorYarpcKey)
 	if yarpcKey == persistence.Primary {
-		ctx = ContextWithOverride(ctx, persistence.Primary)
+		ctx = contextWithVisibilityOverride(ctx, persistence.VisibilityOverridePrimary)
 	} else if yarpcKey == persistence.Secondary {
-		ctx = ContextWithOverride(ctx, persistence.Secondary)
+		ctx = contextWithVisibilityOverride(ctx, persistence.VisibilityOverrideSecondary)
 	}
 	return h.Handle(ctx, req, resw)
 }
 
 // ContextWithOverride adds a value in ctx
-func ContextWithOverride(ctx context.Context, value string) context.Context {
+func contextWithVisibilityOverride(ctx context.Context, value string) context.Context {
 	return context.WithValue(ctx, persistence.ContextKey, value)
 }
 
