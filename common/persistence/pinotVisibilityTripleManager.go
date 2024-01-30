@@ -497,10 +497,10 @@ func (v *pinotVisibilityTripleManager) CountWorkflowExecutions(
 
 func (v *pinotVisibilityTripleManager) chooseVisibilityManagerForRead(ctx context.Context, domain string) VisibilityManager {
 	// temporary code: for Pinot migration usage -->
-	if override := ctx.Value(ContextKey); override == Primary {
+	if override := ctx.Value(ContextKey); override == VisibilityOverridePrimary {
 		v.logger.Debug("Pinot Migration log: Primary visibility manager was chosen for read.")
 		return v.esVisibilityManager
-	} else if override == Secondary {
+	} else if override == VisibilityOverrideSecondary {
 		v.logger.Debug("Pinot Migration log: Secondary visibility manager was chosen for read.")
 		return v.pinotVisibilityManager
 	}
