@@ -575,7 +575,7 @@ GOCOVERPKG_ARG := -coverpkg="$(subst $(SPACE),$(COMMA),$(addprefix $(PROJECT_ROO
 # CAUTION: when changing to `go test ./...`, note that this DOES NOT test submodules.  Those must be run separately.
 define looptest
 $Q FAIL=""; for dir in $1; do \
-	go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log || FAIL="$$FAIL $$dir"; \
+	go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) 2>&1 | tee -a test.log || FAIL="$$FAIL $$dir"; \
 done; test -z "$$FAIL" || (echo "Failed packages; $$FAIL"; exit 1)
 endef
 
