@@ -2,6 +2,15 @@
 MAKEFLAGS += --no-builtin-rules
 .SUFFIXES:
 
+# pipefail is very easy to forget about, and sadly not the default.
+# this changes that, and makes our target scripts more strict.
+#
+# make sure to include all this if overriding on the CLI, e.g.:
+# 	DO:      make SHELL='bash -eoux pipefail'
+# 	DO NOT:  make SHELL='bash -x'
+# as otherwise you will ignore all errors.
+SHELL = /bin/bash -e -u -o pipefail
+
 default: help
 
 # ###########################################
@@ -561,30 +570,32 @@ COVER_PKGS = client common host service tools
 # pkg -> pkg/... -> github.com/uber/cadence/pkg/... -> join with commas
 GOCOVERPKG_ARG := -coverpkg="$(subst $(SPACE),$(COMMA),$(addprefix $(PROJECT_ROOT)/,$(addsuffix /...,$(COVER_PKGS))))"
 
+# iterates over a list of dirs and runs go test on each one, collecting errors as it runs.
+# this is primarily written because it's a verbose bit of boilerplate, until we switch to `go test ./...` where possible.
+# CAUTION: when changing to `go test ./...`, note that this DOES NOT test submodules.  Those must be run separately.
+define looptest
+$Q FAIL=""; for dir in $1; do \
+	go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) 2>&1 | tee -a test.log || FAIL="$$FAIL $$dir"; \
+done; test -z "$$FAIL" || (echo "Failed packages; $$FAIL"; exit 1)
+endef
+
 test: ## Build and run all tests. This target is for local development. The pipeline is using cover_profile target
 	$Q rm -f test
 	$Q rm -f test.log
 	$Q echo Running special test cases without race detector:
 	$Q go test -v ./cmd/server/cadence/
-	$Q # CAUTION: when changing to `go test ./...`, note that this DOES NOT test submodules.  Those must be run separately.
-	$Q for dir in $(PKG_TEST_DIRS); do \
-		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
-	done;
+	$Q $(call looptest,$(PKG_TEST_DIRS))
 
-test_e2e: bins
+test_e2e:
 	$Q rm -f test
 	$Q rm -f test.log
-	$Q for dir in $(INTEG_TEST_ROOT); do \
-		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
-	done;
+	$Q $(call looptest,$(INTEG_TEST_ROOT))
 
 # need to run end-to-end xdc tests with race detector off because of ringpop bug causing data race issue
-test_e2e_xdc: bins
+test_e2e_xdc:
 	$Q rm -f test
 	$Q rm -f test.log
-	$Q for dir in $(INTEG_TEST_XDC_ROOT); do \
-		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
-	done;
+	$Q $(call looptest,$(INTEG_TEST_XDC_ROOT))
 
 cover_profile:
 	$Q mkdir -p $(BUILD)
@@ -597,10 +608,10 @@ cover_profile:
 	$Q for dir in $(PKG_TEST_DIRS); do \
 		mkdir -p $(BUILD)/"$$dir"; \
 		go test "$$dir" $(TEST_ARG) -coverprofile=$(BUILD)/"$$dir"/coverage.out || exit 1; \
-		cat $(BUILD)/"$$dir"/coverage.out | grep -v "^mode: \w\+" >> $(UNIT_COVER_FILE); \
+		(cat $(BUILD)/"$$dir"/coverage.out | grep -v "^mode: \w\+" >> $(UNIT_COVER_FILE)) || true; \
 	done;
 
-cover_integration_profile: bins
+cover_integration_profile:
 	$Q mkdir -p $(BUILD)
 	$Q mkdir -p $(COVER_ROOT)
 	$Q echo "mode: atomic" > $(INTEG_COVER_FILE)
@@ -610,7 +621,7 @@ cover_integration_profile: bins
 	$Q time go test $(INTEG_TEST_ROOT) $(TEST_ARG) $(TEST_TAG) -persistenceType=$(PERSISTENCE_TYPE) -sqlPluginName=$(PERSISTENCE_PLUGIN) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_DIR)/coverage.out || exit 1;
 	$Q cat $(BUILD)/$(INTEG_TEST_DIR)/coverage.out | grep -v "^mode: \w\+" >> $(INTEG_COVER_FILE)
 
-cover_ndc_profile: bins
+cover_ndc_profile:
 	$Q mkdir -p $(BUILD)
 	$Q mkdir -p $(COVER_ROOT)
 	$Q echo "mode: atomic" > $(INTEG_NDC_COVER_FILE)
