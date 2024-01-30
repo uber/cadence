@@ -23,6 +23,7 @@ package rpc
 import (
 	"context"
 	"encoding/json"
+	"github.com/uber/cadence/common/persistence"
 	"io"
 
 	"go.uber.org/cadence/worker"
@@ -113,6 +114,28 @@ func (m *InboundMetricsMiddleware) Handle(ctx context.Context, req *transport.Re
 		metrics.TransportTag(req.Transport),
 	)
 	return h.Handle(ctx, req, resw)
+}
+
+// YarpcKey is the const for yarpc key
+const ComparatorYarpcKey = "cadence-visibility-override"
+
+// PinotComparatorMiddleware checks the header of a grpc request, and then override the context accordingly
+// note: for Pinot Migration only (Jan. 2024)
+type PinotComparatorMiddleware struct{}
+
+func (m *PinotComparatorMiddleware) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
+	yarpcKey, _ := req.Headers.Get(ComparatorYarpcKey)
+	if yarpcKey == persistence.Primary {
+		ctx = ContextWithOverride(ctx, persistence.Primary)
+	} else if yarpcKey == persistence.Secondary {
+		ctx = ContextWithOverride(ctx, persistence.Secondary)
+	}
+	return h.Handle(ctx, req, resw)
+}
+
+// ContextWithOverride adds a value in ctx
+func ContextWithOverride(ctx context.Context, value string) context.Context {
+	return context.WithValue(ctx, persistence.ContextKey, value)
 }
 
 type overrideCallerMiddleware struct {
