@@ -116,7 +116,7 @@ func (m *InboundMetricsMiddleware) Handle(ctx context.Context, req *transport.Re
 	return h.Handle(ctx, req, resw)
 }
 
-// YarpcKey is the const for yarpc key
+// ComparatorYarpcKey is the const for yarpc key
 const ComparatorYarpcKey = "cadence-visibility-override"
 
 // PinotComparatorMiddleware checks the header of a grpc request, and then override the context accordingly
