@@ -23,7 +23,6 @@ package rpc
 import (
 	"context"
 	"encoding/json"
-	"github.com/uber/cadence/common/persistence"
 	"io"
 
 	"go.uber.org/cadence/worker"
@@ -34,6 +33,7 @@ import (
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/partition"
+	"github.com/uber/cadence/common/persistence"
 )
 
 type authOutboundMiddleware struct {
