@@ -44,7 +44,7 @@ func TestTTLIsZero(t *testing.T) {
 	cfg := Authorization{
 		OAuthAuthorizer: OAuthAuthorizer{
 			Enable:         true,
-			JwtCredentials: JwtCredentials{},
+			JwtCredentials: &JwtCredentials{},
 			MaxJwtTTL:      0,
 		},
 		NoopAuthorizer: NoopAuthorizer{
@@ -60,7 +60,7 @@ func TestPublicKeyIsEmpty(t *testing.T) {
 	cfg := Authorization{
 		OAuthAuthorizer: OAuthAuthorizer{
 			Enable: true,
-			JwtCredentials: JwtCredentials{
+			JwtCredentials: &JwtCredentials{
 				Algorithm: "",
 				PublicKey: "",
 			},
@@ -79,7 +79,7 @@ func TestAlgorithmIsInvalid(t *testing.T) {
 	cfg := Authorization{
 		OAuthAuthorizer: OAuthAuthorizer{
 			Enable: true,
-			JwtCredentials: JwtCredentials{
+			JwtCredentials: &JwtCredentials{
 				Algorithm: "SHA256",
 				PublicKey: "public",
 			},
@@ -98,7 +98,7 @@ func TestCorrectValidation(t *testing.T) {
 	cfg := Authorization{
 		OAuthAuthorizer: OAuthAuthorizer{
 			Enable: true,
-			JwtCredentials: JwtCredentials{
+			JwtCredentials: &JwtCredentials{
 				Algorithm: "RS256",
 				PublicKey: "public",
 			},
