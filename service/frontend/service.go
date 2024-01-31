@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/service/frontend/wrappers/accesscontrolled"
 	"github.com/uber/cadence/service/frontend/wrappers/clusterredirection"
 	"github.com/uber/cadence/service/frontend/wrappers/grpc"
+	"github.com/uber/cadence/service/frontend/wrappers/metered"
 	"github.com/uber/cadence/service/frontend/wrappers/thrift"
 )
 
@@ -132,6 +133,7 @@ func (s *Service) Start() {
 
 	// Additional decorations
 	var handler api.Handler = s.handler
+	handler = metered.NewAPIHandler(handler, s.GetLogger(), s.GetMetricsClient(), s.GetDomainCache(), s.config)
 	if s.params.ClusterRedirectionPolicy != nil {
 		handler = clusterredirection.NewAPIHandler(handler, s, s.config, *s.params.ClusterRedirectionPolicy)
 	}
