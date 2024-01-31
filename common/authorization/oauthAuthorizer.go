@@ -130,7 +130,13 @@ func (a *oauthAuthority) Authorize(ctx context.Context, attributes *Attributes) 
 	}
 
 	if !isTokenInternal(parsedToken) {
-		if err := a.parseExternal(parsedToken.Raw, &claims); err != nil {
+		parsed, _, err := a.parser.ParseUnverified(token, jwt.MapClaims{})
+		if err != nil {
+			a.log.Debug("request is not authorized", tag.Error(err))
+			return Result{Decision: DecisionDeny}, nil
+		}
+
+		if err := a.parseExternal(parsed.Claims.(jwt.MapClaims), &claims); err != nil {
 			a.log.Debug("request is not authorized", tag.Error(err))
 			return Result{Decision: DecisionDeny}, nil
 		}
@@ -210,20 +216,11 @@ func isTokenInternal(token *jwt.Token) bool {
 	return issuer == jwtInternalIssuer
 }
 
-func extractClaim(claims map[string]interface{}, path string) (interface{}, error) {
-	return jmespath.Search(path, claims)
-}
-
-func (a *oauthAuthority) parseExternal(token string, claims *JWTClaims) error {
-	parsed, _, err := a.parser.ParseUnverified(token, jwt.MapClaims{})
-	if err != nil {
-		return fmt.Errorf("parsing custom fields: %w", err)
-	}
-
+func (a *oauthAuthority) parseExternal(rawClaims map[string]interface{}, claims *JWTClaims) error {
 	if a.config.Provider.GroupsAttributePath != "" {
-		userGroups, err := extractClaim(parsed.Claims.(jwt.MapClaims), a.config.Provider.GroupsAttributePath)
+		userGroups, err := jmespath.Search(a.config.Provider.GroupsAttributePath, rawClaims)
 		if err != nil {
-			return fmt.Errorf("extractClaim JWT Groups claim: %w", err)
+			return fmt.Errorf("extracting JWT Groups claim: %w", err)
 		}
 
 		if _, ok := userGroups.(string); !ok {
@@ -234,9 +231,9 @@ func (a *oauthAuthority) parseExternal(token string, claims *JWTClaims) error {
 	}
 
 	if a.config.Provider.AdminAttributePath != "" {
-		isAdmin, err := extractClaim(parsed.Claims.(jwt.MapClaims), a.config.Provider.AdminAttributePath)
+		isAdmin, err := jmespath.Search(a.config.Provider.AdminAttributePath, rawClaims)
 		if err != nil {
-			return fmt.Errorf("extractClaim JWT Admin claim: %w", err)
+			return fmt.Errorf("extracting JWT Admin claim: %w", err)
 		}
 		if _, ok := isAdmin.(bool); !ok {
 			return errors.New("cannot convert isAdmin to bool")

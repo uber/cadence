@@ -367,3 +367,109 @@ func TestIsTokenInternal(t *testing.T) {
 		})
 	}
 }
+
+func Test_oauthAuthority_parseExternal(t *testing.T) {
+	claim := map[string]interface{}{"cognito:groups": []interface{}{"domain2", "domain1", "group1"}}
+
+	tests := []struct {
+		name       string
+		config     config.OAuthAuthorizer
+		mapToken   map[string]interface{}
+		claims     *JWTClaims
+		wantGroups string
+		wantAdmin  bool
+		wantErr    assert.ErrorAssertionFunc
+	}{
+		{
+			name: "empty config will not alter token",
+			config: config.OAuthAuthorizer{
+				Provider: &config.OAuthProvider{
+					GroupsAttributePath: "",
+					AdminAttributePath:  "",
+				},
+			},
+			wantErr: assert.NoError,
+		},
+		{
+			name: "groups incorrect path will result into an error",
+			config: config.OAuthAuthorizer{
+				Provider: &config.OAuthProvider{
+					GroupsAttributePath: "/bad/path",
+					AdminAttributePath:  "",
+				},
+			},
+			wantErr: assert.Error,
+		},
+		{
+			name: "admin incorrect path will result into an error",
+			config: config.OAuthAuthorizer{
+				Provider: &config.OAuthProvider{
+					GroupsAttributePath: "",
+					AdminAttributePath:  "/bad/path",
+				},
+			},
+			wantErr: assert.Error,
+		},
+		{
+			name: "correct groups path will fill claims",
+			config: config.OAuthAuthorizer{
+				Provider: &config.OAuthProvider{
+					GroupsAttributePath: "\"cognito:groups\" | join(' ', @)",
+				},
+			},
+			mapToken:   claim,
+			wantErr:    assert.NoError,
+			wantGroups: "domain2 domain1 group1",
+			wantAdmin:  false,
+		},
+		{
+			name: "correct admin path will fill claims",
+			config: config.OAuthAuthorizer{
+				Provider: &config.OAuthProvider{
+					AdminAttributePath: "\"cognito:groups\" | contains(@, 'group1')",
+				},
+			},
+			mapToken:   claim,
+			wantErr:    assert.NoError,
+			wantGroups: "",
+			wantAdmin:  true,
+		},
+		{
+			name: "non bool result for admin will result in error",
+			config: config.OAuthAuthorizer{
+				Provider: &config.OAuthProvider{
+					AdminAttributePath: "\"cognito:groups\"",
+				},
+			},
+			mapToken:   claim,
+			wantErr:    assert.Error,
+			wantGroups: "",
+			wantAdmin:  false,
+		},
+		{
+			name: "non string result for groups will result in error",
+			config: config.OAuthAuthorizer{
+				Provider: &config.OAuthProvider{
+					GroupsAttributePath: "\"cognito:groups\" | contains(@, 'group1')",
+				},
+			},
+			mapToken:   claim,
+			wantErr:    assert.Error,
+			wantGroups: "",
+			wantAdmin:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := &oauthAuthority{
+				config: tt.config,
+			}
+			actualClaim := &JWTClaims{}
+			err := a.parseExternal(tt.mapToken, actualClaim)
+			tt.wantErr(t, err)
+			assert.Equal(t, tt.wantGroups, actualClaim.Groups)
+			assert.Equal(t, tt.wantAdmin, actualClaim.Admin)
+		})
+	}
+}
