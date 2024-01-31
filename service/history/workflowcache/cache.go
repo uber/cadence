@@ -133,14 +133,27 @@ func (c *wfCache) allow(domainID string, workflowID string, rateLimitType rateLi
 
 	switch rateLimitType {
 	case external:
-		return value.externalRateLimiter.Allow()
+		if !value.externalRateLimiter.Allow() {
+			c.emitMetrics(domainID, workflowID, domainName)
+			return false
+		}
+		return true
 	case internal:
-		return value.internalRateLimiter.Allow()
+		if !value.internalRateLimiter.Allow() {
+			c.emitMetrics(domainID, workflowID, domainName)
+			return false
+		}
+		return true
 	default:
 		// This should never happen, and we fail open
 		c.logError(domainID, workflowID, errors.New("unknown rate limit type"))
 		return true
 	}
+}
+
+func (c *wfCache) emitMetrics(domainID string, workflowID string, domainName string) {
+	c.metricsClient.Scope(metrics.HistoryClientWfIDCacheScope, metrics.DomainTag(domainName)).IncCounter(metrics.WorkflowIDCacheRequestsRatelimitedCounter)
+	c.logger.Info("Rate limiting workflowID", tag.WorkflowDomainName(domainName), tag.WorkflowID(workflowID))
 }
 
 // AllowExternal returns true if the rate limiter for this domain/workflow allows an external request
