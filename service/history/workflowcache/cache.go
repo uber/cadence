@@ -134,13 +134,13 @@ func (c *wfCache) allow(domainID string, workflowID string, rateLimitType rateLi
 	switch rateLimitType {
 	case external:
 		if !value.externalRateLimiter.Allow() {
-			c.emitMetrics(domainID, workflowID, domainName)
+			c.emitRateLimitMetrics(domainID, workflowID, domainName, "external", metrics.WorkflowIDCacheRequestsExternalRatelimitedCounter)
 			return false
 		}
 		return true
 	case internal:
 		if !value.internalRateLimiter.Allow() {
-			c.emitMetrics(domainID, workflowID, domainName)
+			c.emitRateLimitMetrics(domainID, workflowID, domainName, "internal", metrics.WorkflowIDCacheRequestsInternalRatelimitedCounter)
 			return false
 		}
 		return true
@@ -151,9 +151,15 @@ func (c *wfCache) allow(domainID string, workflowID string, rateLimitType rateLi
 	}
 }
 
-func (c *wfCache) emitMetrics(domainID string, workflowID string, domainName string) {
-	c.metricsClient.Scope(metrics.HistoryClientWfIDCacheScope, metrics.DomainTag(domainName)).IncCounter(metrics.WorkflowIDCacheRequestsRatelimitedCounter)
-	c.logger.Info("Rate limiting workflowID", tag.WorkflowDomainName(domainName), tag.WorkflowID(workflowID))
+func (c *wfCache) emitRateLimitMetrics(domainID string, workflowID string, domainName string, callType string, metric int) {
+	c.metricsClient.Scope(metrics.HistoryClientWfIDCacheScope, metrics.DomainTag(domainName)).IncCounter(metric)
+	c.logger.Info(
+		"Rate limiting workflowID",
+		tag.RequestType(callType),
+		tag.WorkflowDomainID(domainID),
+		tag.WorkflowDomainName(domainName),
+		tag.WorkflowID(workflowID),
+	)
 }
 
 // AllowExternal returns true if the rate limiter for this domain/workflow allows an external request

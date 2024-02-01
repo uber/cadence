@@ -2431,7 +2431,8 @@ const (
 	LargeHistorySizeCount
 	UpdateWorkflowExecutionCount
 	WorkflowIDCacheSizeGauge
-	WorkflowIDCacheRequestsRatelimitedCounter
+	WorkflowIDCacheRequestsExternalRatelimitedCounter
+	WorkflowIDCacheRequestsInternalRatelimitedCounter
 	NumHistoryMetrics
 )
 
@@ -3055,7 +3056,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		LargeHistorySizeCount:                                        {metricName: "large_history_size_count", metricType: Counter},
 		UpdateWorkflowExecutionCount:                                 {metricName: "update_workflow_execution_count", metricType: Counter},
 		WorkflowIDCacheSizeGauge:                                     {metricName: "workflow_id_cache_size", metricType: Gauge},
-		WorkflowIDCacheRequestsRatelimitedCounter:                    {metricName: "workflow_id_requests_ratelimited", metricType: Counter},
+		WorkflowIDCacheRequestsExternalRatelimitedCounter:            {metricName: "workflow_id_external_requests_ratelimited", metricType: Counter},
+		WorkflowIDCacheRequestsInternalRatelimitedCounter:            {metricName: "workflow_id_internal_requests_ratelimited", metricType: Counter},
 	},
 	Matching: {
 		PollSuccessPerTaskListCounter:               {metricName: "poll_success_per_tl", metricRollupName: "poll_success"},

@@ -511,6 +511,11 @@ func RequestBody(requestBody string) Tag {
 	return newStringTag("request-body", requestBody)
 }
 
+// RequestType return tag for the type of request (internal, external)
+func RequestType(requestType string) Tag {
+	return newStringTag("request-type", requestType)
+}
+
 // history engine shard
 
 // ShardID returns tag for ShardID
