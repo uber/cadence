@@ -26,11 +26,11 @@ package taskvalidator
 import (
 	"context"
 	"errors"
-	"github.com/uber/cadence/common/backoff"
 	"time"
 
 	"go.uber.org/zap"
 
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
