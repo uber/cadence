@@ -909,6 +909,8 @@ const (
 	FrontendRestartWorkflowExecutionScope = iota + NumAdminScopes
 	// FrontendStartWorkflowExecutionScope is the metric scope for frontend.StartWorkflowExecution
 	FrontendStartWorkflowExecutionScope
+	// FrontendStartWorkflowExecutionAsyncScope is the metric scope for frontend.StartWorkflowExecutionAsync
+	FrontendStartWorkflowExecutionAsyncScope
 	// PollForDecisionTaskScope is the metric scope for frontend.PollForDecisionTask
 	FrontendPollForDecisionTaskScope
 	// FrontendPollForActivityTaskScope is the metric scope for frontend.PollForActivityTask
@@ -989,6 +991,8 @@ const (
 	FrontendResetWorkflowExecutionScope
 	// FrontendGetSearchAttributesScope is the metric scope for frontend.GetSearchAttributes
 	FrontendGetSearchAttributesScope
+	// FrontendGetClusterInfoScope is the metric scope for frontend.GetClusterInfo
+	FrontendGetClusterInfoScope
 
 	NumFrontendScopes
 )
@@ -1734,6 +1738,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 
 		FrontendRestartWorkflowExecutionScope:           {operation: "RestartWorkflowExecution"},
 		FrontendStartWorkflowExecutionScope:             {operation: "StartWorkflowExecution"},
+		FrontendStartWorkflowExecutionAsyncScope:        {operation: "StartWorkflowExecutionAsync"},
 		FrontendPollForDecisionTaskScope:                {operation: "PollForDecisionTask"},
 		FrontendPollForActivityTaskScope:                {operation: "PollForActivityTask"},
 		FrontendRecordActivityTaskHeartbeatScope:        {operation: "RecordActivityTaskHeartbeat"},
@@ -1774,6 +1779,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendDescribeTaskListScope:                   {operation: "DescribeTaskList"},
 		FrontendResetStickyTaskListScope:                {operation: "ResetStickyTaskList"},
 		FrontendGetSearchAttributesScope:                {operation: "GetSearchAttributes"},
+		FrontendGetClusterInfoScope:                     {operation: "GetClusterInfo"},
 	},
 	// History Scope Names
 	History: {

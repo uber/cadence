@@ -3460,6 +3460,14 @@ func (v *ListTaskListPartitionsRequest) GetDomain() (o string) {
 	return
 }
 
+// GetTaskList is an internal getter (TBD...)
+func (v *ListTaskListPartitionsRequest) GetTaskList() (o *TaskList) {
+	if v != nil && v.TaskList != nil {
+		return v.TaskList
+	}
+	return
+}
+
 // ListTaskListPartitionsResponse is an internal type (TBD...)
 type ListTaskListPartitionsResponse struct {
 	ActivityTaskListPartitions []*TaskListPartitionMetadata `json:"activityTaskListPartitions,omitempty"`
