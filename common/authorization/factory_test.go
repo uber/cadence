@@ -23,7 +23,7 @@ package authorization
 import (
 	"testing"
 
-	"github.com/cristalhq/jwt/v3"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common"
@@ -63,7 +63,7 @@ func cfgOAuth() config.Authorization {
 		OAuthAuthorizer: config.OAuthAuthorizer{
 			Enable: true,
 			JwtCredentials: config.JwtCredentials{
-				Algorithm: jwt.RS256.String(),
+				Algorithm: jwt.SigningMethodRS256.Name,
 				PublicKey: "../../config/credentials/keytest.pub",
 			},
 			MaxJwtTTL: 12345,
@@ -76,17 +76,18 @@ func (s *factorySuite) TestFactoryNoopAuthorizer() {
 
 	publicKey, _ := common.LoadRSAPublicKey(cfgOAuthVar.OAuthAuthorizer.JwtCredentials.PublicKey)
 
-	verifier, _ := jwt.NewVerifierRS(
-		jwt.Algorithm(cfgOAuthVar.OAuthAuthorizer.JwtCredentials.Algorithm),
-		publicKey,
-	)
 	var tests = []struct {
 		cfg      config.Authorization
 		expected Authorizer
 		err      error
 	}{
 		{cfgNoop(), &nopAuthority{}, nil},
-		{cfgOAuthVar, &oauthAuthority{authorizationCfg: cfgOAuthVar.OAuthAuthorizer, log: s.logger, verifier: verifier}, nil},
+		{cfgOAuthVar, &oauthAuthority{
+			authorizationCfg: cfgOAuthVar.OAuthAuthorizer,
+			log:              s.logger,
+			publicKey:        publicKey,
+			parser:           jwt.NewParser(jwt.WithValidMethods([]string{cfgOAuthVar.OAuthAuthorizer.JwtCredentials.Algorithm}), jwt.WithIssuedAt()),
+		}, nil},
 	}
 
 	for _, test := range tests {

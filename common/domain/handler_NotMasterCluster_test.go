@@ -165,6 +165,7 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestRegisterGet
 		VisibilityArchivalURI:                  "",
 		BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
 		IsolationGroups:                        &types.IsolationGroupConfiguration{},
+		AsyncWorkflowConfig:                    &types.AsyncWorkflowConfiguration{},
 	}, resp.Configuration)
 	s.Equal(&types.DomainReplicationConfiguration{
 		ActiveClusterName: s.ClusterMetadata.GetCurrentClusterName(),
@@ -233,6 +234,7 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestRegisterGet
 		VisibilityArchivalURI:                  "",
 		BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
 		IsolationGroups:                        &types.IsolationGroupConfiguration{},
+		AsyncWorkflowConfig:                    &types.AsyncWorkflowConfiguration{},
 	}, resp.Configuration)
 	s.Equal(&types.DomainReplicationConfiguration{
 		ActiveClusterName: s.ClusterMetadata.GetCurrentClusterName(),
@@ -291,6 +293,7 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestUpdateGetDo
 			VisibilityArchivalURI:                  "",
 			BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
 			IsolationGroups:                        &types.IsolationGroupConfiguration{},
+			AsyncWorkflowConfig:                    &types.AsyncWorkflowConfiguration{},
 		}, config)
 		s.Equal(&types.DomainReplicationConfiguration{
 			ActiveClusterName: s.ClusterMetadata.GetCurrentClusterName(),
@@ -368,6 +371,7 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestUpdateGetDo
 			VisibilityArchivalURI:                  "",
 			BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
 			IsolationGroups:                        &types.IsolationGroupConfiguration{},
+			AsyncWorkflowConfig:                    &types.AsyncWorkflowConfiguration{},
 		}, config)
 		s.Equal(&types.DomainReplicationConfiguration{
 			ActiveClusterName: s.ClusterMetadata.GetCurrentClusterName(),
@@ -700,6 +704,7 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestUpdateGetDo
 			VisibilityArchivalURI:                  "",
 			BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
 			IsolationGroups:                        &types.IsolationGroupConfiguration{},
+			AsyncWorkflowConfig:                    &types.AsyncWorkflowConfiguration{},
 		}, config)
 		s.Equal(&types.DomainReplicationConfiguration{
 			ActiveClusterName: nextActiveClusterName,

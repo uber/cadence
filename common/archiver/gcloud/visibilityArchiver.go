@@ -29,7 +29,6 @@ import (
 
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/gcloud/connector"
-	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
@@ -76,7 +75,7 @@ func newVisibilityArchiver(container *archiver.VisibilityBootstrapContainer, sto
 }
 
 // NewVisibilityArchiver creates a new archiver.VisibilityArchiver based on filestore
-func NewVisibilityArchiver(container *archiver.VisibilityBootstrapContainer, config *config.GstorageArchiver) (archiver.VisibilityArchiver, error) {
+func NewVisibilityArchiver(container *archiver.VisibilityBootstrapContainer, config connector.Config) (archiver.VisibilityArchiver, error) {
 	storage, err := connector.NewClient(context.Background(), config)
 	return newVisibilityArchiver(container, storage), err
 }

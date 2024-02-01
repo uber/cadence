@@ -910,6 +910,30 @@ func (handler *clusterRedirectionHandler) StartWorkflowExecution(ctx context.Con
 	return sp2, err
 }
 
+func (handler *clusterRedirectionHandler) StartWorkflowExecutionAsync(ctx context.Context, sp1 *types.StartWorkflowExecutionAsyncRequest) (sp2 *types.StartWorkflowExecutionAsyncResponse, err error) {
+	var apiName = "StartWorkflowExecutionAsync"
+	var cluster string
+
+	scope, startTime := handler.beforeCall(metrics.DCRedirectionStartWorkflowExecutionAsyncScope)
+	defer func() {
+		handler.afterCall(recover(), scope, startTime, cluster, &err)
+	}()
+
+	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, sp1.GetDomain(), apiName, func(targetDC string) error {
+		cluster = targetDC
+		switch {
+		case targetDC == handler.currentClusterName:
+			sp2, err = handler.frontendHandler.StartWorkflowExecutionAsync(ctx, sp1)
+		default:
+			remoteClient := handler.GetRemoteFrontendClient(targetDC)
+			sp2, err = remoteClient.StartWorkflowExecutionAsync(ctx, sp1, handler.callOptions...)
+		}
+		return err
+	})
+
+	return sp2, err
+}
+
 func (handler *clusterRedirectionHandler) TerminateWorkflowExecution(ctx context.Context, tp1 *types.TerminateWorkflowExecutionRequest) (err error) {
 	var apiName = "TerminateWorkflowExecution"
 	var cluster string

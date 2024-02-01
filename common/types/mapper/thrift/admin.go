@@ -992,5 +992,40 @@ func FromAdminUpdateDomainAsyncWorkflowConfiguratonResponse(in *types.UpdateDoma
 	return &admin.UpdateDomainAsyncWorkflowConfiguratonResponse{}
 }
 
+func FromAdminGetDomainAsyncWorkflowConfiguratonRequest(in *types.GetDomainAsyncWorkflowConfiguratonRequest) *admin.GetDomainAsyncWorkflowConfiguratonRequest {
+	if in == nil {
+		return nil
+	}
+	return &admin.GetDomainAsyncWorkflowConfiguratonRequest{
+		Domain: strPtr(in.Domain),
+	}
+}
+
+func ToAdminGetDomainAsyncWorkflowConfiguratonResponse(in *admin.GetDomainAsyncWorkflowConfiguratonResponse) *types.GetDomainAsyncWorkflowConfiguratonResponse {
+	if in == nil {
+		return nil
+	}
+	return &types.GetDomainAsyncWorkflowConfiguratonResponse{
+		Configuration: ToDomainAsyncWorkflowConfiguraton(in.Configuration),
+	}
+}
+
+func FromAdminUpdateDomainAsyncWorkflowConfiguratonRequest(in *types.UpdateDomainAsyncWorkflowConfiguratonRequest) *admin.UpdateDomainAsyncWorkflowConfiguratonRequest {
+	if in == nil {
+		return nil
+	}
+	return &admin.UpdateDomainAsyncWorkflowConfiguratonRequest{
+		Domain:        strPtr(in.Domain),
+		Configuration: FromDomainAsyncWorkflowConfiguraton(in.Configuration),
+	}
+}
+
+func ToAdminUpdateDomainAsyncWorkflowConfiguratonResponse(in *admin.UpdateDomainAsyncWorkflowConfiguratonResponse) *types.UpdateDomainAsyncWorkflowConfiguratonResponse {
+	if in == nil {
+		return nil
+	}
+	return &types.UpdateDomainAsyncWorkflowConfiguratonResponse{}
+}
+
 func strPtr(s string) *string                                             { return &s }
 func igStatePtr(s shared.IsolationGroupState) *shared.IsolationGroupState { return &s }

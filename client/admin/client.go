@@ -389,6 +389,24 @@ func (c *clientImpl) UpdateDomainIsolationGroups(
 	return c.client.UpdateDomainIsolationGroups(ctx, request, opts...)
 }
 
+func (c *clientImpl) GetDomainAsyncWorkflowConfiguraton(
+	ctx context.Context,
+	request *types.GetDomainAsyncWorkflowConfiguratonRequest,
+	opts ...yarpc.CallOption) (*types.GetDomainAsyncWorkflowConfiguratonResponse, error) {
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return c.client.GetDomainAsyncWorkflowConfiguraton(ctx, request, opts...)
+}
+
+func (c *clientImpl) UpdateDomainAsyncWorkflowConfiguraton(
+	ctx context.Context,
+	request *types.UpdateDomainAsyncWorkflowConfiguratonRequest,
+	opts ...yarpc.CallOption) (*types.UpdateDomainAsyncWorkflowConfiguratonResponse, error) {
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return c.client.UpdateDomainAsyncWorkflowConfiguraton(ctx, request, opts...)
+}
+
 func (c *clientImpl) createContext(parent context.Context) (context.Context, context.CancelFunc) {
 	if parent == nil {
 		return context.WithTimeout(context.Background(), c.timeout)

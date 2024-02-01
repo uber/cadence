@@ -112,7 +112,9 @@ func (c *clientImpl) NewConsumer(app, consumerName string) (messaging.Consumer, 
 		return nil, err
 	}
 
-	return newKafkaConsumer(dlqProducer, c.config, topics.Topic, consumerName, saramaConfig, c.metricsClient, c.logger)
+	clusterName := c.config.GetKafkaClusterForTopic(topics.Topic)
+	brokers := c.config.GetBrokersForKafkaCluster(clusterName)
+	return NewKafkaConsumer(dlqProducer, brokers, topics.Topic, consumerName, saramaConfig, c.metricsClient, c.logger)
 }
 
 // NewProducer is used to create a Kafka producer

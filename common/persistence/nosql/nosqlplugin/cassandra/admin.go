@@ -124,7 +124,7 @@ func (db *cdb) dropCassandraKeyspace(s gocql.Session, keyspace string) (err erro
 		db.logger.Error(`drop keyspace error`, tag.Error(err))
 		return
 	}
-	db.logger.Debugf("dropped namespace %s with replication factor %d", keyspace)
+	db.logger.Debugf("dropped namespace %s", keyspace)
 	return
 }
 

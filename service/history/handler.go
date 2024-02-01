@@ -53,7 +53,6 @@ import (
 	"github.com/uber/cadence/service/history/resource"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
-	"github.com/uber/cadence/service/history/workflow"
 )
 
 const shardOwnershipTransferDelay = 5 * time.Second
@@ -2174,18 +2173,6 @@ func (h *handlerImpl) error(
 	err = h.convertError(err)
 
 	h.updateErrorMetric(scope, domainID, workflowID, runID, err)
-	if errors.Is(err, workflow.ErrMaxAttemptsExceeded) {
-		// Calling the dummy Workflow Check from task Validator. This is an ongoing project where we plan to do some validations on
-		// the following workflow. Based on the validations (is the workflow stale? does the workflow come from a deprecated domain?)
-		// We will delete the workflow or mark the workflow as corrupted.
-		// Placing a dummy call to the function to check the coherency of the design.
-		// The function returns nil error so removing error handling for now.
-		domainName, err := h.GetDomainCache().GetDomainName(domainID)
-		if err != nil {
-			return err
-		}
-		h.GetTaskValidator().WorkflowCheckforValidation(workflowID, domainID, domainName, "")
-	}
 	return err
 }
 

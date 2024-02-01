@@ -1265,7 +1265,7 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Failure_DomainCacheEntryEr
 
 	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
 
-	resp, err := wh.getArchivedHistory(context.Background(), getHistoryRequest(nil), s.testDomainID, metrics.NoopScope(metrics.Frontend))
+	resp, err := wh.getArchivedHistory(context.Background(), getHistoryRequest(nil), s.testDomainID)
 	s.Nil(resp)
 	s.Error(err)
 }
@@ -1285,7 +1285,7 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Failure_ArchivalURIEmpty()
 
 	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
 
-	resp, err := wh.getArchivedHistory(context.Background(), getHistoryRequest(nil), s.testDomainID, metrics.NoopScope(metrics.Frontend))
+	resp, err := wh.getArchivedHistory(context.Background(), getHistoryRequest(nil), s.testDomainID)
 	s.Nil(resp)
 	s.Error(err)
 }
@@ -1305,7 +1305,7 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Failure_InvalidURI() {
 
 	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
 
-	resp, err := wh.getArchivedHistory(context.Background(), getHistoryRequest(nil), s.testDomainID, metrics.NoopScope(metrics.Frontend))
+	resp, err := wh.getArchivedHistory(context.Background(), getHistoryRequest(nil), s.testDomainID)
 	s.Nil(resp)
 	s.Error(err)
 }
@@ -1348,7 +1348,7 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Success_GetFirstPage() {
 
 	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
 
-	resp, err := wh.getArchivedHistory(context.Background(), getHistoryRequest(nil), s.testDomainID, metrics.NoopScope(metrics.Frontend))
+	resp, err := wh.getArchivedHistory(context.Background(), getHistoryRequest(nil), s.testDomainID)
 	s.NoError(err)
 	s.NotNil(resp)
 	s.NotNil(resp.History)
@@ -1835,50 +1835,6 @@ func (s *workflowHandlerSuite) TestVerifyHistoryIsComplete() {
 			s.NoError(err, "testcase %v failed", i)
 		}
 	}
-}
-
-func (s *workflowHandlerSuite) TestContextMetricsTags() {
-	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
-
-	tag := metrics.TransportTag("grpc")
-	ctx := metrics.TagContext(context.Background(), tag)
-	wh.CountWorkflowExecutions(ctx, nil)
-
-	snapshot := s.mockResource.MetricsScope.Snapshot()
-	for _, counter := range snapshot.Counters() {
-		if counter.Name() == "test.cadence_requests" {
-			s.Equal(tag.Value(), counter.Tags()[tag.Key()])
-			return
-		}
-	}
-	s.Fail("counter not found")
-}
-
-func (s *workflowHandlerSuite) TestSignalMetricHasSignalName() {
-	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
-
-	signalRequest := &types.SignalWorkflowExecutionRequest{
-		SignalName: "test_signal",
-	}
-	wh.SignalWorkflowExecution(context.Background(), signalRequest)
-
-	expectedMetrics := make(map[string]bool)
-	expectedMetrics["test.cadence_requests"] = false
-	expectedMetrics["test.cadence_errors_bad_request"] = false
-
-	snapshot := s.mockResource.MetricsScope.Snapshot()
-	for _, counter := range snapshot.Counters() {
-		if _, ok := expectedMetrics[counter.Name()]; ok {
-			expectedMetrics[counter.Name()] = true
-		}
-		if val, ok := counter.Tags()["signalName"]; ok {
-			s.Equal(val, "test_signal")
-		} else {
-			s.Fail("Couldn't find signalName tag")
-		}
-	}
-	s.True(expectedMetrics["test.cadence_requests"])
-	s.True(expectedMetrics["test.cadence_errors_bad_request"])
 }
 
 func (s *workflowHandlerSuite) newConfig(dynamicClient dc.Client) *frontendcfg.Config {

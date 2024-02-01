@@ -228,6 +228,11 @@ func (g APIHandler) StartWorkflowExecution(ctx context.Context, StartRequest *sh
 	return thrift.FromStartWorkflowExecutionResponse(response), thrift.FromError(err)
 }
 
+func (g APIHandler) StartWorkflowExecutionAsync(ctx context.Context, StartRequest *shared.StartWorkflowExecutionAsyncRequest) (sp1 *shared.StartWorkflowExecutionAsyncResponse, err error) {
+	response, err := g.h.StartWorkflowExecutionAsync(ctx, thrift.ToStartWorkflowExecutionAsyncRequest(StartRequest))
+	return thrift.FromStartWorkflowExecutionAsyncResponse(response), thrift.FromError(err)
+}
+
 func (g APIHandler) TerminateWorkflowExecution(ctx context.Context, TerminateRequest *shared.TerminateWorkflowExecutionRequest) (err error) {
 	err = g.h.TerminateWorkflowExecution(ctx, thrift.ToTerminateWorkflowExecutionRequest(TerminateRequest))
 	return thrift.FromError(err)

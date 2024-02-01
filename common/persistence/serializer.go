@@ -74,8 +74,13 @@ type (
 		SerializeDynamicConfigBlob(blob *types.DynamicConfigBlob, encodingType common.EncodingType) (*DataBlob, error)
 		DeserializeDynamicConfigBlob(data *DataBlob) (*types.DynamicConfigBlob, error)
 
+		// serialize/deserialize IsolationGroupConfiguration
 		SerializeIsolationGroups(event *types.IsolationGroupConfiguration, encodingType common.EncodingType) (*DataBlob, error)
 		DeserializeIsolationGroups(data *DataBlob) (*types.IsolationGroupConfiguration, error)
+
+		// serialize/deserialize async workflow configuration
+		SerializeAsyncWorkflowsConfig(config *types.AsyncWorkflowConfiguration, encodingType common.EncodingType) (*DataBlob, error)
+		DeserializeAsyncWorkflowsConfig(data *DataBlob) (*types.AsyncWorkflowConfiguration, error)
 	}
 
 	// CadenceSerializationError is an error type for cadence serialization
@@ -191,21 +196,14 @@ func (t *serializerImpl) DeserializeVersionHistories(data *DataBlob) (*types.Ver
 	return &histories, err
 }
 
-func (t *serializerImpl) SerializePendingFailoverMarkers(
-	markers []*types.FailoverMarkerAttributes,
-	encodingType common.EncodingType,
-) (*DataBlob, error) {
-
+func (t *serializerImpl) SerializePendingFailoverMarkers(markers []*types.FailoverMarkerAttributes, encodingType common.EncodingType) (*DataBlob, error) {
 	if markers == nil {
 		return nil, nil
 	}
 	return t.serialize(markers, encodingType)
 }
 
-func (t *serializerImpl) DeserializePendingFailoverMarkers(
-	data *DataBlob,
-) ([]*types.FailoverMarkerAttributes, error) {
-
+func (t *serializerImpl) DeserializePendingFailoverMarkers(data *DataBlob) ([]*types.FailoverMarkerAttributes, error) {
 	if data == nil {
 		return nil, nil
 	}
@@ -217,19 +215,14 @@ func (t *serializerImpl) DeserializePendingFailoverMarkers(
 	return markers, err
 }
 
-func (t *serializerImpl) SerializeProcessingQueueStates(
-	states *types.ProcessingQueueStates,
-	encodingType common.EncodingType,
-) (*DataBlob, error) {
+func (t *serializerImpl) SerializeProcessingQueueStates(states *types.ProcessingQueueStates, encodingType common.EncodingType) (*DataBlob, error) {
 	if states == nil {
 		return nil, nil
 	}
 	return t.serialize(states, encodingType)
 }
 
-func (t *serializerImpl) DeserializeProcessingQueueStates(
-	data *DataBlob,
-) (*types.ProcessingQueueStates, error) {
+func (t *serializerImpl) DeserializeProcessingQueueStates(data *DataBlob) (*types.ProcessingQueueStates, error) {
 	if data == nil {
 		return nil, nil
 	}
@@ -276,6 +269,27 @@ func (t *serializerImpl) DeserializeIsolationGroups(data *DataBlob) (*types.Isol
 	}
 
 	var cfg types.IsolationGroupConfiguration
+	if len(data.Data) == 0 {
+		return &cfg, nil
+	}
+
+	err := t.deserialize(data, &cfg)
+	return &cfg, err
+}
+
+func (t *serializerImpl) SerializeAsyncWorkflowsConfig(c *types.AsyncWorkflowConfiguration, encodingType common.EncodingType) (*DataBlob, error) {
+	if c == nil {
+		return nil, nil
+	}
+	return t.serialize(c, encodingType)
+}
+
+func (t *serializerImpl) DeserializeAsyncWorkflowsConfig(data *DataBlob) (*types.AsyncWorkflowConfiguration, error) {
+	if data == nil {
+		return nil, nil
+	}
+
+	var cfg types.AsyncWorkflowConfiguration
 	if len(data.Data) == 0 {
 		return &cfg, nil
 	}
@@ -331,6 +345,8 @@ func (t *serializerImpl) thriftrwEncode(input interface{}) ([]byte, error) {
 		return t.thriftrwEncoder.Encode(thrift.FromDynamicConfigBlob(input))
 	case *types.IsolationGroupConfiguration:
 		return t.thriftrwEncoder.Encode(thrift.FromIsolationGroupConfig(input))
+	case *types.AsyncWorkflowConfiguration:
+		return t.thriftrwEncoder.Encode(thrift.FromDomainAsyncWorkflowConfiguraton(input))
 	default:
 		return nil, nil
 	}
@@ -431,6 +447,13 @@ func (t *serializerImpl) thriftrwDecode(data []byte, target interface{}) error {
 			return err
 		}
 		*target = *thrift.ToIsolationGroupConfig(&thriftTarget)
+		return nil
+	case *types.AsyncWorkflowConfiguration:
+		thriftTarget := workflow.AsyncWorkflowConfiguration{}
+		if err := t.thriftrwEncoder.Decode(data, &thriftTarget); err != nil {
+			return err
+		}
+		*target = *thrift.ToDomainAsyncWorkflowConfiguraton(&thriftTarget)
 		return nil
 	default:
 		return nil
