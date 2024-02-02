@@ -68,50 +68,36 @@ func TestWorkflowCheckforValidation(t *testing.T) {
 			mockLogger := zap.NewNop()
 			mockMetricsClient := metrics.NewNoopMetricsClient()
 			mockDomainCache := cache.NewMockDomainCache(mockCtrl)
-			mockPersistenceRetryer := persistence.NewMockRetryer(mockCtrl)
-			mockStaleChecker := &mockStaleChecker{
-				CheckAgeFunc: func(response *persistence.GetWorkflowExecutionResponse) (bool, error) {
-					return tc.isStale, nil
-				},
-			}
-			checker := NewWfChecker(mockLogger, mockMetricsClient, mockDomainCache, mockPersistenceRetryer, mockStaleChecker)
-			mockDomainCache.EXPECT().
-				GetDomainByID(tc.domainID).
-				Return(constants.TestGlobalDomainEntry, nil).AnyTimes()
-			// In each test case
-			mockDomainCache.EXPECT().
-				GetDomainName(gomock.Any()). // You can use gomock.Any() if the exact argument is not important
-				Return("test-domain-name", nil).AnyTimes()
+			mockExecutionManager := persistence.NewMockExecutionManager(mockCtrl)
+			mockHistoryManager := persistence.NewMockHistoryManager(mockCtrl)
 
-			// For test cases where deletion is expected
+			checker, err := NewWfChecker(mockLogger, mockMetricsClient, mockDomainCache, mockExecutionManager, mockHistoryManager)
+			assert.NoError(t, err, "Failed to create checker")
+
+			mockDomainCache.EXPECT().GetDomainByID(tc.domainID).Return(constants.TestGlobalDomainEntry, nil).AnyTimes()
+			mockDomainCache.EXPECT().GetDomainName(tc.domainID).Return(tc.domainName, nil).AnyTimes()
+
 			if tc.isStale {
-				mockPersistenceRetryer.EXPECT().
-					DeleteWorkflowExecution(gomock.Any(), gomock.Any()).
-					Return(nil).Times(1)
-				mockPersistenceRetryer.EXPECT().
-					DeleteCurrentWorkflowExecution(gomock.Any(), gomock.Any()).
-					Return(nil).Times(1)
+				mockExecutionManager.EXPECT().DeleteWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				mockExecutionManager.EXPECT().DeleteCurrentWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			}
 
-			mockPersistenceRetryer.EXPECT().
-				GetWorkflowExecution(gomock.Any(), gomock.Any()).
-				DoAndReturn(func(ctx context.Context, request *persistence.GetWorkflowExecutionRequest) (*persistence.GetWorkflowExecutionResponse, error) {
-					if tc.simulateError {
-						return nil, errors.New("database error")
-					}
-					// Return a valid response object to trigger the deletion calls
-					return &persistence.GetWorkflowExecutionResponse{
-						State: &persistence.WorkflowMutableState{
-							ExecutionInfo: &persistence.WorkflowExecutionInfo{
-								DomainID:   constants.TestDomainID,
-								WorkflowID: constants.TestWorkflowID,
-							},
+			mockExecutionManager.EXPECT().GetWorkflowExecution(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, request *persistence.GetWorkflowExecutionRequest) (*persistence.GetWorkflowExecutionResponse, error) {
+				if tc.simulateError {
+					return nil, errors.New("database error")
+				}
+				return &persistence.GetWorkflowExecutionResponse{
+					State: &persistence.WorkflowMutableState{
+						ExecutionInfo: &persistence.WorkflowExecutionInfo{
+							DomainID:   constants.TestDomainID,
+							WorkflowID: constants.TestWorkflowID,
 						},
-					}, nil
-				}).AnyTimes()
+					},
+				}, nil
+			}).AnyTimes()
 
 			ctx := context.Background()
-			err := checker.WorkflowCheckforValidation(ctx, tc.workflowID, tc.domainID, tc.domainName, tc.runID)
+			err = checker.WorkflowCheckforValidation(ctx, tc.workflowID, tc.domainID, tc.domainName, tc.runID)
 
 			if tc.simulateError {
 				assert.Error(t, err, "Expected error when GetWorkflowExecution fails")
