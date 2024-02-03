@@ -31,7 +31,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber/cadence/service/history/workflowcache"
 	"go.uber.org/yarpc/yarpcerrors"
 
 	"github.com/uber/cadence/common/cluster"
@@ -43,6 +42,7 @@ import (
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/resource"
 	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/workflowcache"
 )
 
 const (
