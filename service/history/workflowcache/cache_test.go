@@ -28,7 +28,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -272,14 +271,8 @@ func TestWfCache_RejectLog(t *testing.T) {
 	// Setup the mock logger
 	logger := new(log.MockLogger)
 
-	logger.On(
-		"Info",
-		"Rate limiting workflowID",
-		[]tag.Tag{
-			tag.WorkflowDomainName(testDomainName),
-			tag.WorkflowID(testWorkflowID),
-		},
-	).Times(2)
+	expectRatelimitLog(logger, "external")
+	expectRatelimitLog(logger, "internal")
 
 	wfCache := New(Params{
 		TTL:                    time.Minute,
@@ -296,4 +289,17 @@ func TestWfCache_RejectLog(t *testing.T) {
 	assert.False(t, wfCache.AllowInternal(testDomainID, testWorkflowID))
 
 	logger.AssertExpectations(t)
+}
+
+func expectRatelimitLog(logger *log.MockLogger, requestType string) {
+	logger.On(
+		"Info",
+		"Rate limiting workflowID",
+		[]tag.Tag{
+			tag.RequestType(requestType),
+			tag.WorkflowDomainID(testDomainID),
+			tag.WorkflowDomainName(testDomainName),
+			tag.WorkflowID(testWorkflowID),
+		},
+	).Times(1)
 }
