@@ -697,9 +697,9 @@ func (h *handlerImpl) StartWorkflowExecution(
 
 	startRequest := wrappedRequest.StartRequest
 	workflowID := startRequest.GetWorkflowID()
-	if !h.workflowIDCache.AllowExternal(domainID, workflowID) {
-		// TODO: actually rate limit
-	}
+
+	// TODO: actually rate limit
+	h.workflowIDCache.AllowExternal(domainID, workflowID)
 
 	engine, err1 := h.controller.GetEngine(workflowID)
 	if err1 != nil {
