@@ -248,3 +248,59 @@ func TestWfCache_CacheDisabled(t *testing.T) {
 	// We log the error
 	logger.AssertExpectations(t)
 }
+
+func TestWfCache_RejectLog(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	domainCache := cache.NewMockDomainCache(ctrl)
+	domainCache.EXPECT().GetDomainName(testDomainID).Return(testDomainName, nil).Times(2)
+
+	// The external rate limiter will reject
+	externalLimiter := quotas.NewMockLimiter(ctrl)
+	externalLimiter.EXPECT().Allow().Return(false).Times(1)
+
+	externalLimiterFactory := quotas.NewMockLimiterFactory(ctrl)
+	externalLimiterFactory.EXPECT().GetLimiter(testDomainID).Return(externalLimiter).Times(1)
+
+	// The internal rate limiter will reject
+	internalLimiter := quotas.NewMockLimiter(ctrl)
+	internalLimiter.EXPECT().Allow().Return(false).Times(1)
+
+	internalLimiterFactory := quotas.NewMockLimiterFactory(ctrl)
+	internalLimiterFactory.EXPECT().GetLimiter(testDomainID).Return(internalLimiter).Times(1)
+
+	// Setup the mock logger
+	logger := new(log.MockLogger)
+
+	expectRatelimitLog(logger, "external")
+	expectRatelimitLog(logger, "internal")
+
+	wfCache := New(Params{
+		TTL:                    time.Minute,
+		MaxCount:               1_000,
+		ExternalLimiterFactory: externalLimiterFactory,
+		InternalLimiterFactory: internalLimiterFactory,
+		WorkflowIDCacheEnabled: func(domain string) bool { return true },
+		Logger:                 logger,
+		DomainCache:            domainCache,
+		MetricsClient:          metrics.NewNoopMetricsClient(),
+	})
+
+	assert.False(t, wfCache.AllowExternal(testDomainID, testWorkflowID))
+	assert.False(t, wfCache.AllowInternal(testDomainID, testWorkflowID))
+
+	logger.AssertExpectations(t)
+}
+
+func expectRatelimitLog(logger *log.MockLogger, requestType string) {
+	logger.On(
+		"Info",
+		"Rate limiting workflowID",
+		[]tag.Tag{
+			tag.RequestType(requestType),
+			tag.WorkflowDomainID(testDomainID),
+			tag.WorkflowDomainName(testDomainName),
+			tag.WorkflowID(testWorkflowID),
+		},
+	).Times(1)
+}
