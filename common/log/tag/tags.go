@@ -110,6 +110,11 @@ func WorkflowType(wfType string) Tag {
 	return newStringTag("wf-type", wfType)
 }
 
+// WorkflowSignalName returns tag for WorkflowSignalName
+func WorkflowSignalName(signalName string) Tag {
+	return newStringTag("wf-signal-name", signalName)
+}
+
 // WorkflowState returns tag for WorkflowState
 func WorkflowState(s int) Tag {
 	return newInt("wf-state", s)
