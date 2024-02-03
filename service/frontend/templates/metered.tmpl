@@ -1,0 +1,101 @@
+import (
+	"context"
+
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/frontend/api"
+	"github.com/uber/cadence/service/frontend/config"
+)
+
+{{- $nonDomainSpecificAPIs := list "Health" "DeprecateDomain" "DescribeDomain" "ListDomains" "RegisterDomain" "UpdateDomain" "GetSearchAttributes" "GetClusterInfo"}}
+{{- $domainIDAPIs := list "RecordActivityTaskHeartbeat" "RespondActivityTaskCanceled" "RespondActivityTaskCompleted" "RespondActivityTaskFailed" "RespondDecisionTaskCompleted" "RespondDecisionTaskFailed" "RespondQueryTaskCompleted"}}
+{{- $queryTaskTokenAPIs := list "RespondQueryTaskCompleted"}}
+
+{{- $interfaceName := .Interface.Name}}
+{{- $interfaceType := .Interface.Type}}
+{{- $handlerName := (index .Vars "handler")}}
+{{- $decorator := (printf "%s%s" (down $handlerName) $interfaceName) }}
+{{- $Decorator := (printf "%s%s" $handlerName $interfaceName) }}
+
+// {{$decorator}} frontend handler wrapper for authentication and authorization
+type {{$decorator}} struct {
+	handler {{.Interface.Type}}
+	logger log.Logger
+	metricsClient metrics.Client
+	domainCache cache.DomainCache
+	cfg *config.Config
+	tokenSerializer common.TaskTokenSerializer
+
+}
+
+// New{{$Decorator}} creates frontend handler with metrics and logging
+func New{{$Decorator}}(handler {{$.Interface.Type}}, logger log.Logger, metricsClient metrics.Client, domainCache cache.DomainCache, cfg *config.Config) {{.Interface.Type}} {
+	return &{{$decorator}}{
+		handler: handler,
+		logger: logger,
+		metricsClient: metricsClient,
+		domainCache: domainCache,
+		cfg: cfg,
+		tokenSerializer: common.NewJSONTaskTokenSerializer(),
+	}
+}
+
+{{range $method := .Interface.Methods}}
+func (h *{{$decorator}}) {{$method.Declaration}} {
+	{{- if eq $method.Name "Health"}}
+	{{ $method.Pass "h.handler." }}
+	{{- else}}
+	defer func() { log.CapturePanic(recover(), h.logger, &err) }()
+
+	{{- if eq $method.Name "SignalWorkflowExecution"}}
+	ctx = h.withSignalName(ctx, {{(index $method.Params 1).Name}}.GetDomain(), {{(index $method.Params 1).Name}}.GetSignalName())
+	{{- end}}
+	tags := []tag.Tag{tag.WorkflowHandlerName("{{$method.Name}}")}
+	{{- $scope := printf "metrics.Frontend%sScope" $method.Name}}
+	{{- $domainMetricTag := "metrics.DomainUnknownTag()"}}
+	{{- if not (has $method.Name $nonDomainSpecificAPIs) }}
+	{{- $domain := printf "%s.GetDomain()" (index $method.Params 1).Name}}
+	{{- if has $method.Name $domainIDAPIs}}
+	{{- $domain = "domainName"}}
+	{{- if has $method.Name $queryTaskTokenAPIs}}
+	token, err := h.tokenSerializer.DeserializeQueryTaskToken({{(index $method.Params 1).Name}}.TaskToken)
+	{{- else}}
+	token, err := h.tokenSerializer.Deserialize({{(index $method.Params 1).Name}}.TaskToken)
+	{{- end}}
+	if err != nil {
+		return
+	}
+	domainName, err := h.domainCache.GetDomainName(token.DomainID)
+	if err != nil {
+		return
+	}
+	{{- if has $method.Name $queryTaskTokenAPIs}}
+	tags = append(tags, tag.WorkflowDomainName(domainName))
+	{{- else}}
+	tags = append(tags, tag.WorkflowDomainName(domainName), tag.WorkflowID(token.WorkflowID), tag.WorkflowRunID(token.RunID))
+	{{- end}}
+	{{- else}}
+	tags = append(tags, to{{printf "%sRequest" $method.Name}}Tags({{(index $method.Params 1).Name}})...)
+	{{- end}}
+	{{- $domainMetricTag = printf "metrics.DomainTag(%s)" $domain}}
+	{{- end}}
+	scope := h.metricsClient.Scope({{$scope}}).Tagged({{$domainMetricTag}}).Tagged(metrics.GetContextTags(ctx)...)
+	scope.IncCounter(metrics.CadenceRequests)
+	sw := scope.StartTimer(metrics.CadenceLatency)
+	defer sw.Stop()
+	logger := h.logger.WithTags(tags...)
+
+	{{$method.ResultsNames}} = h.handler.{{$method.Call}}
+	if err != nil {
+		{{- if eq (len $method.Results) 1}}
+		return h.handleErr(err, scope, logger)
+		{{- else}}
+		return nil, h.handleErr(err, scope, logger)
+		{{- end}}
+	}
+	return {{$method.ResultsNames}}
+	{{- end}}
+}
+{{- end}}

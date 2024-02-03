@@ -1,0 +1,135 @@
+import (
+    "context"
+
+    "github.com/uber/cadence/common/cache"
+    "github.com/uber/cadence/common/quotas"
+    "github.com/uber/cadence/common/types"
+    "github.com/uber/cadence/service/frontend/api"
+    "github.com/uber/cadence/service/frontend/validate"
+)
+
+{{$ratelimitTypeMap := dict "PollForActivityTask" "ratelimitTypeWorker"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "PollForDecisionTask" "ratelimitTypeWorker"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "RecordActivityTaskHeartbeat" "ratelimitTypeWorker"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "RecordActivityTaskHeartbeatByID" "ratelimitTypeWorker"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "ResetStickyTaskList" "ratelimitTypeWorker"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "RespondActivityTaskCanceled" "ratelimitTypeWorker"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "RespondActivityTaskCanceledByID" "ratelimitTypeWorker"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "RespondActivityTaskCompleted" "ratelimitTypeWorker"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "RespondActivityTaskCompletedByID" "ratelimitTypeWorker"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "RespondActivityTaskFailed" "ratelimitTypeWorker"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "RespondActivityTaskFailedByID" "ratelimitTypeWorker"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "RespondDecisionTaskCompleted" "ratelimitTypeWorker"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "RespondDecisionTaskFailed" "ratelimitTypeWorker"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "RespondQueryTaskCompleted" "ratelimitTypeWorker"}}
+
+{{$ratelimitTypeMap = set $ratelimitTypeMap "DescribeTaskList" "ratelimitTypeUser"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "DescribeWorkflowExecution" "ratelimitTypeUser"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "GetTaskListsByDomain" "ratelimitTypeUser"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "GetWorkflowExecutionHistory" "ratelimitTypeUser"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "ListTaskListPartitions" "ratelimitTypeUser"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "QueryWorkflow" "ratelimitTypeUser"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "RefreshWorkflowTasks" "ratelimitTypeUser"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "RequestCancelWorkflowExecution" "ratelimitTypeUser"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "ResetWorkflowExecution" "ratelimitTypeUser"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "RestartWorkflowExecution" "ratelimitTypeUser"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "SignalWorkflowExecution" "ratelimitTypeUser"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "SignalWithStartWorkflowExecution" "ratelimitTypeUser"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "StartWorkflowExecution" "ratelimitTypeUser"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "TerminateWorkflowExecution" "ratelimitTypeUser"}}
+
+{{$ratelimitTypeMap = set $ratelimitTypeMap "CountWorkflowExecutions" "ratelimitTypeVisibility"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "ListArchivedWorkflowExecutions" "ratelimitTypeVisibility"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "ListClosedWorkflowExecutions" "ratelimitTypeVisibility"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "ListOpenWorkflowExecutions" "ratelimitTypeVisibility"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "ListWorkflowExecutions" "ratelimitTypeVisibility"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "ScanWorkflowExecutions" "ratelimitTypeVisibility"}}
+
+{{$domainIDAPIs := list "RecordActivityTaskHeartbeat" "RespondActivityTaskCanceled" "RespondActivityTaskCompleted" "RespondActivityTaskFailed" "RespondDecisionTaskCompleted" "RespondDecisionTaskFailed" "RespondQueryTaskCompleted"}}
+{{$queryTaskTokenAPIs := list "RespondQueryTaskCompleted"}}
+{{$nonBlockingAPIs := list "RecordActivityTaskHeartbeat" "RecordActivityTaskHeartbeatByID" "RespondActivityTaskCompleted" "RespondActivityTaskCompletedByID" "RespondActivityTaskFailed" "RespondActivityTaskFailedByID" "RespondActivityTaskCanceled" "RespondActivityTaskCanceledByID" "RespondDecisionTaskCompleted" "RespondDecisionTaskFailed" "RespondQueryTaskCompleted" "ResetStickyTaskList"}}
+
+{{$interfaceName := .Interface.Name}}
+{{$handlerName := (index .Vars "handler")}}
+{{ $decorator := (printf "%s%s" (down $handlerName) $interfaceName) }}
+{{ $Decorator := (printf "%s%s" $handlerName $interfaceName) }}
+
+// {{$decorator}} implements {{.Interface.Type}} interface instrumented with rate limiter.
+type {{$decorator}} struct {
+    wrapped     {{.Interface.Type}}
+    tokenSerializer common.TaskTokenSerializer
+    domainCache cache.DomainCache
+    userRateLimiter quotas.Policy
+    workerRateLimiter quotas.Policy
+    visibilityRateLimiter quotas.Policy
+}
+
+// New{{$Decorator}} creates a new instance of {{$interfaceName}} with ratelimiter.
+func New{{$Decorator}}(
+    wrapped {{.Interface.Type}},
+    domainCache cache.DomainCache,
+    userRateLimiter quotas.Policy,
+    workerRateLimiter quotas.Policy,
+    visibilityRateLimiter quotas.Policy,
+) {{.Interface.Type}} {
+    return &{{$decorator}}{
+        wrapped: wrapped,
+        tokenSerializer: common.NewJSONTaskTokenSerializer(),
+        domainCache: domainCache,
+        userRateLimiter: userRateLimiter,
+        workerRateLimiter: workerRateLimiter,
+        visibilityRateLimiter: visibilityRateLimiter,
+    }
+}
+
+{{range $method := .Interface.Methods}}
+func (h *{{$decorator}}) {{$method.Declaration}} {
+    {{- if hasKey $ratelimitTypeMap $method.Name}}
+        if {{(index $method.Params 1).Name}} == nil {
+            err = validate.ErrRequestNotSet
+            return
+        }
+        {{- $ratelimitType := get $ratelimitTypeMap $method.Name}}
+        {{- $domain := printf "%s.GetDomain()" (index $method.Params 1).Name}}
+        {{- if has $method.Name $domainIDAPIs}}
+            {{- $domain = "domainName"}}
+            if {{(index $method.Params 1).Name}}.TaskToken == nil {
+                err = validate.ErrTaskTokenNotSet
+                return
+            }
+            {{- if has $method.Name $queryTaskTokenAPIs}}
+                token, err := h.tokenSerializer.DeserializeQueryTaskToken({{(index $method.Params 1).Name}}.TaskToken)
+            {{- else}}
+                token, err := h.tokenSerializer.Deserialize({{(index $method.Params 1).Name}}.TaskToken)
+            {{- end}}
+            if err != nil {
+                return
+            }
+            if token.DomainID == "" {
+                err = validate.ErrDomainNotSet
+                return
+            }
+            domainName, err := h.domainCache.GetDomainName(token.DomainID)
+            if err != nil {
+                return
+            }
+        {{- else}}
+            if {{$domain}} == "" {
+                err = validate.ErrDomainNotSet
+                return
+            }
+        {{- end}}
+        {{- if has $method.Name $nonBlockingAPIs}}
+            // Count the request in the host RPS,
+            // but we still accept it even if RPS is exceeded
+            h.allowDomain({{$ratelimitType}}, {{$domain}})
+        {{- else}}
+            if ok := h.allowDomain({{$ratelimitType}}, {{$domain}}); !ok {
+                err = &types.ServiceBusyError{Message: "Too many outstanding requests to the cadence service"}
+                return
+            }
+        {{- end}}
+    {{- end}}
+    {{$method.Pass "h.wrapped."}}
+}
+{{end}}
