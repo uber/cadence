@@ -24,6 +24,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"strings"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -341,7 +342,12 @@ func (v *pinotVisibilityTripleManager) logUserQueryParameters(userParam userPara
 		tag.WorkflowType(userParam.workflowType),
 		tag.WorkflowID(userParam.workflowID),
 		tag.WorkflowCloseStatus(userParam.closeStatus),
-		tag.VisibilityQuery(userParam.customQuery))
+		tag.VisibilityQuery(filterAttrPrefix(userParam.customQuery)))
+}
+
+func filterAttrPrefix(str string) string {
+	str = strings.Replace(str, "`Attr.", "", -1)
+	return strings.Replace(str, "`", "", -1)
 }
 
 func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutions(
