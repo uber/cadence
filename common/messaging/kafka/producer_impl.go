@@ -27,6 +27,7 @@ import (
 	"github.com/Shopify/sarama"
 
 	"github.com/uber/cadence/.gen/go/indexer"
+	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -116,6 +117,17 @@ func (p *producerImpl) getProducerMessage(message interface{}) (*sarama.Producer
 			Topic: p.topic,
 			Key:   sarama.StringEncoder(message.GetWorkflowID()),
 			Value: sarama.ByteEncoder(message.GetPayload()),
+		}
+		return msg, nil
+	case *sqlblobs.AsyncRequestMessage:
+		payload, err := p.serializeThrift(message)
+		if err != nil {
+			return nil, err
+		}
+		msg := &sarama.ProducerMessage{
+			Topic: p.topic,
+			Key:   sarama.StringEncoder(message.GetPartitionKey()),
+			Value: sarama.ByteEncoder(payload),
 		}
 		return msg, nil
 	default:
