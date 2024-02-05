@@ -20,6 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+//go:generate mockgen -package=$GOPACKAGE -destination=cache_mock.go github.com/uber/cadence/service/history/workflowcache WFCache
+
 package workflowcache
 
 import (
