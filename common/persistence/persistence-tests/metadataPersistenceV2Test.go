@@ -525,10 +525,8 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 		},
 	}
 	asyncWFCfg := types.AsyncWorkflowConfiguration{
-		QueueType: types.AsyncWorkflowQueueTypeKafka,
-		KafkaConfig: &types.AsyncWorkflowKafkaQueueConfiguration{
-			Topic: "topic1",
-		},
+		Enabled:             true,
+		PredefinedQueueName: "testQueue",
 	}
 
 	id := uuid.New()
