@@ -54,11 +54,11 @@ type wfCache struct {
 	domainCache            cache.DomainCache
 	metricsClient          metrics.Client
 	logger                 log.Logger
-	getCacheItemFn         func(domainName string, domainID string, workflowID string) (*cacheValue, error)
+	getCacheItemFn         func(domainName string, workflowID string) (*cacheValue, error)
 }
 
 type cacheKey struct {
-	domainID   string
+	domainName string
 	workflowID string
 }
 
@@ -126,7 +126,7 @@ func (c *wfCache) allow(domainID string, workflowID string, rateLimitType rateLi
 		UpdateGauge(metrics.WorkflowIDCacheSizeGauge, float64(c.lru.Size()))
 
 	// Locking is not needed because both getCacheItem and the rate limiter are thread safe
-	value, err := c.getCacheItemFn(domainName, domainID, workflowID)
+	value, err := c.getCacheItemFn(domainName, workflowID)
 	if err != nil {
 		c.logError(domainID, workflowID, err)
 		// If we can't get the cache item, we should allow the request through
@@ -174,10 +174,10 @@ func (c *wfCache) AllowInternal(domainID string, workflowID string) bool {
 	return c.allow(domainID, workflowID, internal)
 }
 
-func (c *wfCache) getCacheItem(domainName string, domainID string, workflowID string) (*cacheValue, error) {
+func (c *wfCache) getCacheItem(domainName string, workflowID string) (*cacheValue, error) {
 	// The underlying lru cache is thread safe, so there is no need to lock
 	key := cacheKey{
-		domainID:   domainID,
+		domainName: domainName,
 		workflowID: workflowID,
 	}
 

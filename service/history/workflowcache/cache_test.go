@@ -166,7 +166,7 @@ func TestWfCache_AllowError(t *testing.T) {
 	}).(*wfCache)
 
 	// We set getCacheItemFn to a function that will return an error so that we can test the error logic
-	wfCache.getCacheItemFn = func(domainName string, domainID string, workflowID string) (*cacheValue, error) {
+	wfCache.getCacheItemFn = func(domainName string, workflowID string) (*cacheValue, error) {
 		return nil, assert.AnError
 	}
 
