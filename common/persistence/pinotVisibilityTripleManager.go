@@ -345,6 +345,8 @@ func (v *pinotVisibilityTripleManager) logUserQueryParameters(userParam userPara
 		tag.VisibilityQuery(filterAttrPrefix(userParam.customQuery)))
 }
 
+// This is for only logUserQueryParameters (for Pinot Response comparator) usage.
+// Be careful because there's a low possibility that there'll be false positive cases (shown in unit tests)
 func filterAttrPrefix(str string) string {
 	str = strings.Replace(str, "`Attr.", "", -1)
 	return strings.Replace(str, "`", "", -1)

@@ -45,6 +45,10 @@ func TestFilterAttrPrefix(t *testing.T) {
 			expectedInput:  "WorkflowID = 'test-wf' and (`Attr.CustomIntField` = 12 or `Attr.CustomStringField` = 'a-b-c' and WorkflowType = 'wf-type')",
 			expectedOutput: "WorkflowID = 'test-wf' and (CustomIntField = 12 or CustomStringField = 'a-b-c' and WorkflowType = 'wf-type')",
 		},
+		"Case4: false positive case": {
+			expectedInput:  "`Attr.CustomStringField` = '`Attr.ABCtesting'",
+			expectedOutput: "CustomStringField = 'ABCtesting'", // this is supposed to be CustomStringField = '`Attr.ABCtesting'
+		},
 	}
 
 	for name, test := range tests {
