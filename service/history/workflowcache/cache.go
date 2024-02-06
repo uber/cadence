@@ -54,7 +54,7 @@ type wfCache struct {
 	domainCache            cache.DomainCache
 	metricsClient          metrics.Client
 	logger                 log.Logger
-	getCacheItemFn         func(domainID string, workflowID string) (*cacheValue, error)
+	getCacheItemFn         func(domainName string, domainID string, workflowID string) (*cacheValue, error)
 }
 
 type cacheKey struct {
@@ -126,7 +126,7 @@ func (c *wfCache) allow(domainID string, workflowID string, rateLimitType rateLi
 		UpdateGauge(metrics.WorkflowIDCacheSizeGauge, float64(c.lru.Size()))
 
 	// Locking is not needed because both getCacheItem and the rate limiter are thread safe
-	value, err := c.getCacheItemFn(domainID, workflowID)
+	value, err := c.getCacheItemFn(domainName, domainID, workflowID)
 	if err != nil {
 		c.logError(domainID, workflowID, err)
 		// If we can't get the cache item, we should allow the request through
@@ -174,7 +174,7 @@ func (c *wfCache) AllowInternal(domainID string, workflowID string) bool {
 	return c.allow(domainID, workflowID, internal)
 }
 
-func (c *wfCache) getCacheItem(domainID string, workflowID string) (*cacheValue, error) {
+func (c *wfCache) getCacheItem(domainName string, domainID string, workflowID string) (*cacheValue, error) {
 	// The underlying lru cache is thread safe, so there is no need to lock
 	key := cacheKey{
 		domainID:   domainID,
@@ -188,8 +188,8 @@ func (c *wfCache) getCacheItem(domainID string, workflowID string) (*cacheValue,
 	}
 
 	value = &cacheValue{
-		externalRateLimiter: c.externalLimiterFactory.GetLimiter(domainID),
-		internalRateLimiter: c.internalLimiterFactory.GetLimiter(domainID),
+		externalRateLimiter: c.externalLimiterFactory.GetLimiter(domainName),
+		internalRateLimiter: c.internalLimiterFactory.GetLimiter(domainName),
 	}
 	// PutIfNotExist is thread safe, and will either return the value that was already in the cache or the value we just created
 	// another thread might have inserted a value between the Get and PutIfNotExist, but that is ok
