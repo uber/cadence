@@ -128,6 +128,8 @@ func domainInfoToThrift(info *DomainInfo) *sqlblobs.DomainInfo {
 		LastUpdatedTime:                      timeToUnixNanoPtr(info.LastUpdatedTimestamp),
 		IsolationGroupsConfiguration:         info.IsolationGroups,
 		IsolationGroupsConfigurationEncoding: &info.IsolationGroupsEncoding,
+		AsyncWorkflowConfiguration:           info.AsyncWorkflowConfig,
+		AsyncWorkflowConfigurationEncoding:   &info.AsyncWorkflowConfigEncoding,
 	}
 }
 
@@ -162,6 +164,8 @@ func domainInfoFromThrift(info *sqlblobs.DomainInfo) *DomainInfo {
 		LastUpdatedTimestamp:        timeFromUnixNano(info.GetLastUpdatedTime()),
 		IsolationGroups:             info.GetIsolationGroupsConfiguration(),
 		IsolationGroupsEncoding:     info.GetIsolationGroupsConfigurationEncoding(),
+		AsyncWorkflowConfig:         info.AsyncWorkflowConfiguration,
+		AsyncWorkflowConfigEncoding: info.GetAsyncWorkflowConfigurationEncoding(),
 	}
 }
 
