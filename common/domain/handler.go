@@ -812,6 +812,8 @@ func (d *handlerImpl) UpdateAsyncWorkflowConfiguraton(
 		currentDomainConfig.Config.AsyncWorkflowConfig = *updateRequest.Configuration
 	}
 
+	d.logger.Debug("async workflow queue config update", tag.Dynamic("config", currentDomainConfig))
+
 	updateReq := createUpdateRequest(
 		currentDomainConfig.Info,
 		currentDomainConfig.Config,

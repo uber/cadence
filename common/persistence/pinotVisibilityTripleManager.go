@@ -24,6 +24,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"strings"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -341,7 +342,14 @@ func (v *pinotVisibilityTripleManager) logUserQueryParameters(userParam userPara
 		tag.WorkflowType(userParam.workflowType),
 		tag.WorkflowID(userParam.workflowID),
 		tag.WorkflowCloseStatus(userParam.closeStatus),
-		tag.VisibilityQuery(userParam.customQuery))
+		tag.VisibilityQuery(filterAttrPrefix(userParam.customQuery)))
+}
+
+// This is for only logUserQueryParameters (for Pinot Response comparator) usage.
+// Be careful because there's a low possibility that there'll be false positive cases (shown in unit tests)
+func filterAttrPrefix(str string) string {
+	str = strings.Replace(str, "`Attr.", "", -1)
+	return strings.Replace(str, "`", "", -1)
 }
 
 func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutions(

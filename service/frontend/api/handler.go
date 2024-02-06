@@ -31,6 +31,8 @@ import (
 	"go.uber.org/yarpc"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/backoff"
@@ -1737,7 +1739,46 @@ func (wh *WorkflowHandler) StartWorkflowExecutionAsync(
 	ctx context.Context,
 	startRequest *types.StartWorkflowExecutionAsyncRequest,
 ) (resp *types.StartWorkflowExecutionAsyncResponse, retError error) {
-	return nil, &types.BadRequestError{Message: "not supported"}
+	if wh.isShuttingDown() {
+		return nil, validate.ErrShuttingDown
+	}
+	scope := getMetricsScopeWithDomain(metrics.FrontendStartWorkflowExecutionAsyncScope, startRequest, wh.GetMetricsClient()).Tagged(metrics.GetContextTags(ctx)...)
+	// validate request before pushing to queue
+	err := wh.validateStartWorkflowExecutionRequest(ctx, startRequest.StartWorkflowExecutionRequest, scope)
+	if err != nil {
+		return nil, err
+	}
+
+	producer, err := wh.GetAsyncWorkflowQueueProvider().GetAsyncQueueProducer(startRequest.GetDomain())
+	if err != nil {
+		return nil, err
+	}
+	// serialize the message to be sent to the queue
+	payload, err := json.Marshal(startRequest)
+	if err != nil {
+		return nil, err
+	}
+	// propagate the headers from the context to the message
+	clientHeaders := common.GetClientHeaders(ctx)
+	header := &shared.Header{
+		Fields: map[string][]byte{},
+	}
+	for k, v := range clientHeaders {
+		header.Fields[k] = []byte(v)
+	}
+	messageType := sqlblobs.AsyncRequestTypeStartWorkflowExecutionAsyncRequest
+	message := &sqlblobs.AsyncRequestMessage{
+		PartitionKey: common.StringPtr(startRequest.GetWorkflowID()),
+		Type:         &messageType,
+		Header:       header,
+		Encoding:     common.StringPtr(string(common.EncodingTypeJSON)),
+		Payload:      payload,
+	}
+	err = producer.Publish(ctx, message)
+	if err != nil {
+		return nil, err
+	}
+	return &types.StartWorkflowExecutionAsyncResponse{}, nil
 }
 
 // StartWorkflowExecution - Creates a new workflow execution
@@ -1745,34 +1786,53 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	ctx context.Context,
 	startRequest *types.StartWorkflowExecutionRequest,
 ) (resp *types.StartWorkflowExecutionResponse, retError error) {
-	if startRequest == nil {
-		return nil, validate.ErrRequestNotSet
-	}
-
 	if wh.isShuttingDown() {
 		return nil, validate.ErrShuttingDown
 	}
-
-	domainName := startRequest.GetDomain()
-	if domainName == "" {
-		return nil, validate.ErrDomainNotSet
-	}
-
-	if startRequest.GetWorkflowID() == "" {
-		return nil, validate.ErrWorkflowIDNotSet
-	}
-
-	if _, err := uuid.Parse(startRequest.RequestID); err != nil {
-		return nil, &types.BadRequestError{Message: fmt.Sprintf("requestId %q is not a valid UUID", startRequest.RequestID)}
-	}
-	if startRequest.WorkflowType == nil || startRequest.WorkflowType.GetName() == "" {
-		return nil, validate.ErrWorkflowTypeNotSet
-	}
-
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
+	scope := getMetricsScopeWithDomain(metrics.FrontendStartWorkflowExecutionScope, startRequest, wh.GetMetricsClient()).Tagged(metrics.GetContextTags(ctx)...)
+	err := wh.validateStartWorkflowExecutionRequest(ctx, startRequest, scope)
+	if err != nil {
 		return nil, err
 	}
-	scope := getMetricsScopeWithDomain(metrics.FrontendStartWorkflowExecutionScope, startRequest, wh.GetMetricsClient()).Tagged(metrics.GetContextTags(ctx)...)
+	domainName := startRequest.GetDomain()
+	domainID, err := wh.GetDomainCache().GetDomainID(domainName)
+	if err != nil {
+		return nil, err
+	}
+	wh.GetLogger().Debug("Start workflow execution request domainID", tag.WorkflowDomainID(domainID))
+	historyRequest, err := common.CreateHistoryStartWorkflowRequest(
+		domainID, startRequest, time.Now(), wh.getPartitionConfig(ctx, domainName))
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err = wh.GetHistoryClient().StartWorkflowExecution(ctx, historyRequest)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+func (wh *WorkflowHandler) validateStartWorkflowExecutionRequest(ctx context.Context, startRequest *types.StartWorkflowExecutionRequest, scope metrics.Scope) error {
+	if startRequest == nil {
+		return validate.ErrRequestNotSet
+	}
+	domainName := startRequest.GetDomain()
+	if domainName == "" {
+		return validate.ErrDomainNotSet
+	}
+	if startRequest.GetWorkflowID() == "" {
+		return validate.ErrWorkflowIDNotSet
+	}
+	if _, err := uuid.Parse(startRequest.RequestID); err != nil {
+		return &types.BadRequestError{Message: fmt.Sprintf("requestId %q is not a valid UUID", startRequest.RequestID)}
+	}
+	if startRequest.WorkflowType == nil || startRequest.WorkflowType.GetName() == "" {
+		return validate.ErrWorkflowTypeNotSet
+	}
+	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
+		return err
+	}
 	idLengthWarnLimit := wh.config.MaxIDLengthWarnLimit()
 	if !common.IsValidIDLength(
 		domainName,
@@ -1783,9 +1843,8 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		domainName,
 		wh.GetLogger(),
 		tag.IDTypeDomainName) {
-		return nil, validate.ErrDomainTooLong
+		return validate.ErrDomainTooLong
 	}
-
 	if !common.IsValidIDLength(
 		startRequest.GetWorkflowID(),
 		scope,
@@ -1795,17 +1854,14 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		domainName,
 		wh.GetLogger(),
 		tag.IDTypeWorkflowID) {
-		return nil, validate.ErrWorkflowIDTooLong
+		return validate.ErrWorkflowIDTooLong
 	}
-
 	if err := common.ValidateRetryPolicy(startRequest.RetryPolicy); err != nil {
-		return nil, err
+		return err
 	}
-
 	wh.GetLogger().Debug(
 		"Received StartWorkflowExecution. WorkflowID",
 		tag.WorkflowID(startRequest.GetWorkflowID()))
-
 	if !common.IsValidIDLength(
 		startRequest.WorkflowType.GetName(),
 		scope,
@@ -1815,34 +1871,28 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		domainName,
 		wh.GetLogger(),
 		tag.IDTypeWorkflowType) {
-		return nil, validate.ErrWorkflowTypeTooLong
+		return validate.ErrWorkflowTypeTooLong
 	}
-
 	if err := wh.validateTaskList(startRequest.TaskList, scope, domainName); err != nil {
-		return nil, err
+		return err
 	}
-
 	if startRequest.GetExecutionStartToCloseTimeoutSeconds() <= 0 {
-		return nil, validate.ErrInvalidExecutionStartToCloseTimeoutSeconds
+		return validate.ErrInvalidExecutionStartToCloseTimeoutSeconds
 	}
-
 	if startRequest.GetTaskStartToCloseTimeoutSeconds() <= 0 {
-		return nil, validate.ErrInvalidTaskStartToCloseTimeoutSeconds
+		return validate.ErrInvalidTaskStartToCloseTimeoutSeconds
 	}
-
 	if startRequest.GetDelayStartSeconds() < 0 {
-		return nil, validate.ErrInvalidDelayStartSeconds
+		return validate.ErrInvalidDelayStartSeconds
 	}
-
 	if startRequest.GetJitterStartSeconds() < 0 {
-		return nil, validate.ErrInvalidJitterStartSeconds
+		return validate.ErrInvalidJitterStartSeconds
 	}
-
 	jitter := startRequest.GetJitterStartSeconds()
 	cron := startRequest.GetCronSchedule()
 	if cron != "" {
 		if _, err := backoff.ValidateSchedule(startRequest.GetCronSchedule()); err != nil {
-			return nil, err
+			return err
 		}
 	}
 	if jitter > 0 && cron != "" {
@@ -1853,13 +1903,12 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		// middle of a minute)
 		backoffSeconds, err := backoff.GetBackoffForNextScheduleInSeconds(cron, time.Time{}, time.Time{}, jitter)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if jitter > backoffSeconds {
-			return nil, validate.ErrInvalidJitterStartSeconds2
+			return validate.ErrInvalidJitterStartSeconds2
 		}
 	}
-
 	if !common.IsValidIDLength(
 		startRequest.GetRequestID(),
 		scope,
@@ -1869,19 +1918,16 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		domainName,
 		wh.GetLogger(),
 		tag.IDTypeRequestID) {
-		return nil, validate.ErrRequestIDTooLong
+		return validate.ErrRequestIDTooLong
 	}
-
 	if err := wh.searchAttributesValidator.ValidateSearchAttributes(startRequest.SearchAttributes, domainName); err != nil {
-		return nil, err
+		return err
 	}
-
 	wh.GetLogger().Debug("Start workflow execution request domain", tag.WorkflowDomainName(domainName))
 	domainID, err := wh.GetDomainCache().GetDomainID(domainName)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
 	sizeLimitError := wh.config.BlobSizeLimitError(domainName)
 	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainName)
 	actualSize := len(startRequest.Input)
@@ -1899,26 +1945,13 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		wh.GetThrottledLogger(),
 		tag.BlobSizeViolationOperation("StartWorkflowExecution"),
 	); err != nil {
-		return nil, err
+		return err
 	}
-
 	isolationGroup := wh.getIsolationGroup(ctx, domainName)
 	if !wh.isIsolationGroupHealthy(ctx, domainName, isolationGroup) {
-		return nil, &types.BadRequestError{fmt.Sprintf("Domain %s is drained from isolation group %s.", domainName, isolationGroup)}
+		return &types.BadRequestError{fmt.Sprintf("Domain %s is drained from isolation group %s.", domainName, isolationGroup)}
 	}
-
-	wh.GetLogger().Debug("Start workflow execution request domainID", tag.WorkflowDomainID(domainID))
-	historyRequest, err := common.CreateHistoryStartWorkflowRequest(
-		domainID, startRequest, time.Now(), wh.getPartitionConfig(ctx, domainName))
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err = wh.GetHistoryClient().StartWorkflowExecution(ctx, historyRequest)
-	if err != nil {
-		return nil, err
-	}
-	return resp, nil
+	return nil
 }
 
 // GetWorkflowExecutionHistory - retrieves the history of workflow execution

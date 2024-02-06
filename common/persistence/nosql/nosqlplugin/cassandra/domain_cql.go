@@ -43,7 +43,9 @@ const (
 		`bad_binaries: ?,` +
 		`bad_binaries_encoding: ?,` +
 		`isolation_groups: ?,` +
-		`isolation_groups_encoding: ?` +
+		`isolation_groups_encoding: ?,` +
+		`async_workflow_config: ?,` +
+		`async_workflow_config_encoding: ?` +
 		`}`
 
 	templateDomainReplicationConfigType = `{` +
@@ -75,6 +77,8 @@ const (
 		`replication_config.active_cluster_name, replication_config.clusters, ` +
 		`config.isolation_groups,` +
 		`config.isolation_groups_encoding,` +
+		`config.async_workflow_config,` +
+		`config.async_workflow_config_encoding,` +
 		`is_global_domain, ` +
 		`config_version, ` +
 		`failover_version, ` +
@@ -123,6 +127,7 @@ const (
 		`config.visibility_archival_status, config.visibility_archival_uri, ` +
 		`config.bad_binaries, config.bad_binaries_encoding, ` +
 		`config.isolation_groups, config.isolation_groups_encoding, ` +
+		`config.async_workflow_config, config.async_workflow_config_encoding, ` +
 		`replication_config.active_cluster_name, replication_config.clusters, ` +
 		`is_global_domain, ` +
 		`config_version, ` +
