@@ -85,13 +85,12 @@ func TestGetConfiguraton(t *testing.T) {
 				resp := &types.DescribeDomainResponse{
 					Configuration: &types.DomainConfiguration{
 						AsyncWorkflowConfig: &types.AsyncWorkflowConfiguration{
+							Enabled:             true,
 							PredefinedQueueName: "test-queue",
-							QueueType:           types.AsyncWorkflowQueueTypeKafka,
-							KafkaConfig: &types.AsyncWorkflowKafkaQueueConfiguration{
-								Topic:         "test-topic",
-								DLQTopic:      "test-dlq-topic",
-								ConsumerGroup: "test-consumer-group",
-								Brokers:       []string{"test-broker"},
+							QueueType:           "kafka",
+							QueueConfig: &types.DataBlob{
+								EncodingType: types.EncodingTypeJSON.Ptr(),
+								Data:         []byte(`{"topic":"test-topic","dlq_topic":"test-dlq-topic","consumer_group":"test-consumer-group","brokers":["test-broker"]}`),
 							},
 						},
 					},
@@ -100,13 +99,12 @@ func TestGetConfiguraton(t *testing.T) {
 			},
 			wantResp: &types.GetDomainAsyncWorkflowConfiguratonResponse{
 				Configuration: &types.AsyncWorkflowConfiguration{
+					Enabled:             true,
 					PredefinedQueueName: "test-queue",
-					QueueType:           types.AsyncWorkflowQueueTypeKafka,
-					KafkaConfig: &types.AsyncWorkflowKafkaQueueConfiguration{
-						Topic:         "test-topic",
-						DLQTopic:      "test-dlq-topic",
-						ConsumerGroup: "test-consumer-group",
-						Brokers:       []string{"test-broker"},
+					QueueType:           "kafka",
+					QueueConfig: &types.DataBlob{
+						EncodingType: types.EncodingTypeJSON.Ptr(),
+						Data:         []byte(`{"topic":"test-topic","dlq_topic":"test-dlq-topic","consumer_group":"test-consumer-group","brokers":["test-broker"]}`),
 					},
 				},
 			},

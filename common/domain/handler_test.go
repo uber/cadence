@@ -756,12 +756,12 @@ func TestHandlerImpl_UpdateAsyncWorkflowConfiguraton(t *testing.T) {
 	}
 
 	asyncWFCfg := types.AsyncWorkflowConfiguration{
-		QueueType: types.AsyncWorkflowQueueTypeKafka,
-		KafkaConfig: &types.AsyncWorkflowKafkaQueueConfiguration{
-			Topic:         "test-topic",
-			DLQTopic:      "test-dlq-topic",
-			ConsumerGroup: "test-consumer-group",
-			Brokers:       []string{"broker1", "broker2"},
+		Enabled:             true,
+		PredefinedQueueName: "queue-name",
+		QueueType:           "kafka",
+		QueueConfig: &types.DataBlob{
+			EncodingType: types.EncodingTypeJSON.Ptr(),
+			Data:         []byte(`{"key":"value"}`),
 		},
 	}
 
