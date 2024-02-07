@@ -491,24 +491,10 @@ type GetDomainAsyncWorkflowConfiguratonResponse struct {
 }
 
 type AsyncWorkflowConfiguration struct {
+	Enabled             bool
 	PredefinedQueueName string
-	QueueType           AsyncWorkflowQueueType
-	KafkaConfig         *AsyncWorkflowKafkaQueueConfiguration
-}
-
-type AsyncWorkflowQueueType int
-
-const (
-	AsyncWorkflowQueueTypeInvalid = iota
-	AsyncWorkflowQueueTypeKafka
-)
-
-type AsyncWorkflowKafkaQueueConfiguration struct {
-	Topic         string
-	DLQTopic      string
-	ConsumerGroup string
-	Brokers       []string
-	Properties    map[string]string
+	QueueType           string
+	QueueConfig         *DataBlob
 }
 
 type UpdateDomainAsyncWorkflowConfiguratonRequest struct {

@@ -459,15 +459,12 @@ func generateFailoverMarkerAttributes() []*types.FailoverMarkerAttributes {
 
 func generateAsyncWorkflowConfig() *types.AsyncWorkflowConfiguration {
 	return &types.AsyncWorkflowConfiguration{
-		QueueType: types.AsyncWorkflowQueueTypeKafka,
-		KafkaConfig: &types.AsyncWorkflowKafkaQueueConfiguration{
-			Topic:         "test-topic",
-			DLQTopic:      "test-dlq-topic",
-			ConsumerGroup: "test-consumer-group",
-			Brokers:       []string{"broker1", "broker2"},
-			Properties: map[string]string{
-				"test-key": "test-value",
-			},
+		Enabled:             true,
+		PredefinedQueueName: "test-queue",
+		QueueType:           "kafka",
+		QueueConfig: &types.DataBlob{
+			EncodingType: types.EncodingTypeJSON.Ptr(),
+			Data:         []byte(`{"key":"value"}`),
 		},
 	}
 }
