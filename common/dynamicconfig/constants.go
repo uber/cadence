@@ -1717,13 +1717,13 @@ const (
 	// Allowed filters: DomainName
 	WorkflowIDCacheEnabled
 	// WorkflowIDCacheExternalEnabled is the key to enable/disable caching of workflowID specific information for external requests
-	// KeyName: history.workflowIDCacheEnabled
+	// KeyName: history.workflowIDCacheExternalEnabled
 	// Value type: Bool
 	// Default value: false
 	// Allowed filters: DomainName
 	WorkflowIDCacheExternalEnabled
 	// WorkflowIDCacheInternalEnabled is the key to enable/disable caching of workflowID specific information for internal requests
-	// KeyName: history.workflowIDCacheEnabled
+	// KeyName: history.workflowIDCacheInternalEnabled
 	// Value type: Bool
 	// Default value: false
 	// Allowed filters: DomainName
@@ -4193,6 +4193,18 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		KeyName:      "history.workflowIDCacheEnabled",
 		Filters:      []Filter{DomainName},
 		Description:  "WorkflowIDCacheEnabled is the key to enable/disable caching of workflowID specific information",
+		DefaultValue: false,
+	},
+	WorkflowIDCacheExternalEnabled: DynamicBool{
+		KeyName:      "history.workflowIDCacheExternalEnabled",
+		Filters:      []Filter{DomainName},
+		Description:  "WorkflowIDCacheExternalEnabled is the key to enable/disable caching of workflowID specific information for external requests",
+		DefaultValue: false,
+	},
+	WorkflowIDCacheInternalEnabled: DynamicBool{
+		KeyName:      "history.workflowIDCacheInternalEnabled",
+		Filters:      []Filter{DomainName},
+		Description:  "WorkflowIDCacheInternalEnabled is the key to enable/disable caching of workflowID specific information for internal requests",
 		DefaultValue: false,
 	},
 }
