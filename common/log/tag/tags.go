@@ -51,6 +51,14 @@ func Timestamp(timestamp time.Time) Tag {
 	return newTimeTag("timestamp", timestamp)
 }
 
+func EarliestTime(time int64) Tag {
+	return newInt64("earliest-time", time)
+}
+
+func LatestTime(time int64) Tag {
+	return newInt64("latest-time", time)
+}
+
 ///////////////////  Workflow tags defined here: ( wf is short for workflow) ///////////////////
 
 // WorkflowAction returns tag for WorkflowAction
