@@ -339,7 +339,7 @@ func (v *pinotVisibilityTripleManager) logUserQueryParameters(userParam userPara
 		return
 	}
 
-	v.logger.Info("Logging user query parameters for Pinot/ES response comparator without custom query...",
+	v.logger.Info("Logging user query parameters for Pinot/ES response comparator...",
 		tag.OperationName(userParam.operation),
 		tag.WorkflowDomainName(userParam.domainName),
 		tag.WorkflowType(userParam.workflowType),
