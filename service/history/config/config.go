@@ -289,9 +289,11 @@ type Config struct {
 	EnableRecordWorkflowExecutionUninitialized         dynamicconfig.BoolPropertyFnWithDomainFilter
 
 	// The following are used by the history workflowID cache
-	WorkflowIDCacheEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
-	WorkflowIDExternalRPS  dynamicconfig.IntPropertyFnWithDomainFilter
-	WorkflowIDInternalRPS  dynamicconfig.IntPropertyFnWithDomainFilter
+	WorkflowIDCacheEnabled         dynamicconfig.BoolPropertyFnWithDomainFilter
+	WorkflowIDCacheExternalEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
+	WorkflowIDCacheInternalEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
+	WorkflowIDExternalRPS          dynamicconfig.IntPropertyFnWithDomainFilter
+	WorkflowIDInternalRPS          dynamicconfig.IntPropertyFnWithDomainFilter
 
 	// The following are used by consistent query
 	EnableConsistentQuery         dynamicconfig.BoolPropertyFn
@@ -552,9 +554,11 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, s
 		EnableReplicationTaskGeneration:                    dc.GetBoolPropertyFilteredByDomainIDAndWorkflowID(dynamicconfig.EnableReplicationTaskGeneration),
 		EnableRecordWorkflowExecutionUninitialized:         dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableRecordWorkflowExecutionUninitialized),
 
-		WorkflowIDCacheEnabled: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.WorkflowIDCacheEnabled),
-		WorkflowIDExternalRPS:  dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkflowIDExternalRPS),
-		WorkflowIDInternalRPS:  dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkflowIDInternalRPS),
+		WorkflowIDCacheEnabled:         dc.GetBoolPropertyFilteredByDomain(dynamicconfig.WorkflowIDCacheEnabled),
+		WorkflowIDCacheExternalEnabled: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.WorkflowIDCacheExternalEnabled),
+		WorkflowIDCacheInternalEnabled: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.WorkflowIDCacheInternalEnabled),
+		WorkflowIDExternalRPS:          dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkflowIDExternalRPS),
+		WorkflowIDInternalRPS:          dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkflowIDInternalRPS),
 
 		EnableConsistentQuery:                 dc.GetBoolProperty(dynamicconfig.EnableConsistentQuery),
 		EnableConsistentQueryByDomain:         dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableConsistentQueryByDomain),
