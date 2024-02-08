@@ -92,11 +92,6 @@ func (s *ExecutionManagerSuite) newRandomChecksum() checksum.Checksum {
 }
 
 func (s *ExecutionManagerSuite) assertChecksumsEqual(expected checksum.Checksum, actual checksum.Checksum) {
-	if !actual.Flavor.IsValid() {
-		// not all stores support checksum persistence today
-		// if its not supported, assert that everything is zero'd out
-		expected = checksum.Checksum{}
-	}
 	s.EqualValues(expected, actual)
 }
 

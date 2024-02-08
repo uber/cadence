@@ -169,6 +169,8 @@ type (
 		VersionHistoriesEncoding           string
 		FirstExecutionRunID                UUID
 		PartitionConfig                    map[string]string
+		Checksum                           []byte
+		ChecksumEncoding                   string
 	}
 
 	// ActivityInfo blob in a serialization agnostic format

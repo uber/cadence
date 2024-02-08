@@ -1446,6 +1446,13 @@ func (m *sqlExecutionStore) populateWorkflowMutableState(
 		)
 	}
 
+	if info.GetChecksum() != nil {
+		state.ChecksumData = p.NewDataBlob(
+			info.GetChecksum(),
+			common.EncodingType(info.GetChecksumEncoding()),
+		)
+	}
+
 	return state, nil
 }
 

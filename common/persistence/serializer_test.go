@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/checksum"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/types"
 )
@@ -210,6 +211,18 @@ func TestSerializers(t *testing.T) {
 				return serializer.DeserializeAsyncWorkflowsConfig(data)
 			},
 		},
+		{
+			name: "checksum",
+			payloads: map[string]any{
+				"normal": generateChecksum(),
+			},
+			serializeFn: func(payload any, encoding common.EncodingType) (*DataBlob, error) {
+				return serializer.SerializeChecksum(payload.(checksum.Checksum), encoding)
+			},
+			deserializeFn: func(data *DataBlob) (any, error) {
+				return serializer.DeserializeChecksum(data)
+			},
+		},
 	}
 
 	// generate runnable test cases here so actual test body is not 3 level nested
@@ -217,6 +230,11 @@ func TestSerializers(t *testing.T) {
 	for _, td := range tests {
 		for encoding, supported := range encodingTypes {
 			for payloadName, payload := range td.payloads {
+				if _, ok := payload.(checksum.Checksum); ok {
+					if encoding != common.EncodingTypeJSON {
+						continue
+					}
+				}
 				runnableTests = append(runnableTests, runnableTest{
 					testDef:     td,
 					encoding:    encoding,
@@ -466,5 +484,13 @@ func generateAsyncWorkflowConfig() *types.AsyncWorkflowConfiguration {
 			EncodingType: types.EncodingTypeJSON.Ptr(),
 			Data:         []byte(`{"key":"value"}`),
 		},
+	}
+}
+
+func generateChecksum() checksum.Checksum {
+	return checksum.Checksum{
+		Flavor:  checksum.FlavorIEEECRC32OverThriftBinary,
+		Version: 1,
+		Value:   []byte("test-checksum"),
 	}
 }

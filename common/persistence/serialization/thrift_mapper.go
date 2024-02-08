@@ -256,6 +256,8 @@ func workflowExecutionInfoToThrift(info *WorkflowExecutionInfo) *sqlblobs.Workfl
 		VersionHistoriesEncoding:                &info.VersionHistoriesEncoding,
 		FirstExecutionRunID:                     info.FirstExecutionRunID,
 		PartitionConfig:                         info.PartitionConfig,
+		Checksum:                                info.Checksum,
+		ChecksumEncoding:                        &info.ChecksumEncoding,
 	}
 }
 
@@ -325,6 +327,8 @@ func workflowExecutionInfoFromThrift(info *sqlblobs.WorkflowExecutionInfo) *Work
 		FirstExecutionRunID:                info.FirstExecutionRunID,
 		PartitionConfig:                    info.PartitionConfig,
 		IsCron:                             info.GetCronSchedule() != "",
+		Checksum:                           info.Checksum,
+		ChecksumEncoding:                   info.GetChecksumEncoding(),
 	}
 }
 
