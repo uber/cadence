@@ -109,14 +109,15 @@ func NewHandler(
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
 		rateLimiter:     quotas.NewDynamicRateLimiter(config.RPS.AsFloat64()),
 		workflowIDCache: workflowcache.New(workflowcache.Params{
-			TTL:                    workflowIDCacheTTL,
-			ExternalLimiterFactory: quotas.NewSimpleDynamicRateLimiterFactory(config.WorkflowIDExternalRPS),
-			InternalLimiterFactory: quotas.NewSimpleDynamicRateLimiterFactory(config.WorkflowIDInternalRPS),
-			WorkflowIDCacheEnabled: config.WorkflowIDCacheEnabled,
-			MaxCount:               workflowIDCacheMaxCount,
-			DomainCache:            resource.GetDomainCache(),
-			Logger:                 resource.GetLogger(),
-			MetricsClient:          resource.GetMetricsClient(),
+			TTL:                            workflowIDCacheTTL,
+			ExternalLimiterFactory:         quotas.NewSimpleDynamicRateLimiterFactory(config.WorkflowIDExternalRPS),
+			InternalLimiterFactory:         quotas.NewSimpleDynamicRateLimiterFactory(config.WorkflowIDInternalRPS),
+			WorkflowIDCacheExternalEnabled: config.WorkflowIDCacheExternalEnabled,
+			WorkflowIDCacheInternalEnabled: config.WorkflowIDCacheInternalEnabled,
+			MaxCount:                       workflowIDCacheMaxCount,
+			DomainCache:                    resource.GetDomainCache(),
+			Logger:                         resource.GetLogger(),
+			MetricsClient:                  resource.GetMetricsClient(),
 		}),
 	}
 
