@@ -281,11 +281,10 @@ func TestWfCache_CacheInternalDisabled(t *testing.T) {
 	externalLimiter := quotas.NewMockLimiter(ctrl)
 	externalLimiterFactory.EXPECT().GetLimiter(testDomainName).Return(externalLimiter).Times(1)
 	externalLimiter.EXPECT().Allow().Return(false).Times(1)
-
 	internalLimiter := quotas.NewMockLimiter(ctrl)
 	internalLimiterFactory := quotas.NewMockLimiterFactory(ctrl)
 	internalLimiterFactory.EXPECT().GetLimiter(testDomainName).Return(internalLimiter).Times(1)
-	
+
 	wfCache := New(Params{
 		TTL:                            time.Minute,
 		MaxCount:                       1_000,
