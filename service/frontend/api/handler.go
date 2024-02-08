@@ -78,6 +78,7 @@ type (
 		visibilityQueryValidator  *validator.VisibilityQueryValidator
 		searchAttributesValidator *validator.SearchAttributesValidator
 		throttleRetry             *backoff.ThrottleRetry
+		producerManager           ProducerManager
 	}
 
 	getHistoryContinuationToken struct {
@@ -131,6 +132,12 @@ func NewWorkflowHandler(
 		throttleRetry: backoff.NewThrottleRetry(
 			backoff.WithRetryPolicy(frontendServiceRetryPolicy),
 			backoff.WithRetryableError(common.IsServiceTransientError),
+		),
+		producerManager: NewProducerManager(
+			resource.GetDomainCache(),
+			resource.GetAsyncWorkflowQueueProvider(),
+			resource.GetLogger(),
+			resource.GetMetricsClient(),
 		),
 	}
 }
@@ -1749,7 +1756,7 @@ func (wh *WorkflowHandler) StartWorkflowExecutionAsync(
 		return nil, err
 	}
 
-	producer, err := wh.GetAsyncWorkflowQueueProvider().GetAsyncQueueProducer(startRequest.GetDomain())
+	producer, err := wh.producerManager.GetProducerByDomain(startRequest.GetDomain())
 	if err != nil {
 		return nil, err
 	}

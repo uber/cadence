@@ -27,11 +27,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/common/types"
 )
 
-func TestAsyncQueueProducerProvider(t *testing.T) {
+func TestQueueProvider(t *testing.T) {
 	testCases := []struct {
 		name      string
 		queueType string
@@ -47,7 +46,7 @@ func TestAsyncQueueProducerProvider(t *testing.T) {
 			name:      "Duplicate type",
 			queueType: "q2",
 			setup: func() {
-				RegisterAsyncQueueProducerProvider("q2", func(*config.YamlNode, *Params) (messaging.Producer, error) {
+				RegisterQueueProvider("q2", func(Decoder) (Queue, error) {
 					return nil, nil
 				})
 			},
@@ -57,14 +56,14 @@ func TestAsyncQueueProducerProvider(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			_, ok := GetAsyncQueueProducerProvider(tt.queueType)
+			_, ok := GetQueueProvider(tt.queueType)
 			assert.False(t, ok)
 
 			if tt.setup != nil {
 				tt.setup()
 			}
 
-			err := RegisterAsyncQueueProducerProvider(tt.queueType, func(*config.YamlNode, *Params) (messaging.Producer, error) {
+			err := RegisterQueueProvider(tt.queueType, func(Decoder) (Queue, error) {
 				return nil, nil
 			})
 			if tt.wantErr {
@@ -73,13 +72,13 @@ func TestAsyncQueueProducerProvider(t *testing.T) {
 				assert.NoError(t, err)
 			}
 
-			_, ok = GetAsyncQueueProducerProvider(tt.queueType)
+			_, ok = GetQueueProvider(tt.queueType)
 			assert.True(t, ok)
 		})
 	}
 }
 
-func TestAsyncQueueConsumerProvider(t *testing.T) {
+func TestDecoder(t *testing.T) {
 	testCases := []struct {
 		name      string
 		queueType string
@@ -95,8 +94,8 @@ func TestAsyncQueueConsumerProvider(t *testing.T) {
 			name:      "Duplicate type",
 			queueType: "q2",
 			setup: func() {
-				RegisterAsyncQueueConsumerProvider("q2", func(*config.YamlNode, *Params) (messaging.Consumer, error) {
-					return nil, nil
+				RegisterDecoder("q2", func(*types.DataBlob) Decoder {
+					return nil
 				})
 			},
 			wantErr: true,
@@ -105,15 +104,15 @@ func TestAsyncQueueConsumerProvider(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			_, ok := GetAsyncQueueConsumerProvider(tt.queueType)
+			_, ok := GetDecoder(tt.queueType)
 			assert.False(t, ok)
 
 			if tt.setup != nil {
 				tt.setup()
 			}
 
-			err := RegisterAsyncQueueConsumerProvider(tt.queueType, func(*config.YamlNode, *Params) (messaging.Consumer, error) {
-				return nil, nil
+			err := RegisterDecoder(tt.queueType, func(*types.DataBlob) Decoder {
+				return nil
 			})
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -121,7 +120,7 @@ func TestAsyncQueueConsumerProvider(t *testing.T) {
 				assert.NoError(t, err)
 			}
 
-			_, ok = GetAsyncQueueConsumerProvider(tt.queueType)
+			_, ok = GetDecoder(tt.queueType)
 			assert.True(t, ok)
 		})
 	}

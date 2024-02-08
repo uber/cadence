@@ -24,6 +24,7 @@ package kafka
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/Shopify/sarama"
 
@@ -32,17 +33,21 @@ import (
 )
 
 type (
-	QueueConfig struct {
-		Connection ConnectionConfig `yaml:"connection"`
+	queueConfig struct {
+		Connection connectionConfig `yaml:"connection"`
 		Topic      string           `yaml:"topic"`
 	}
 
-	ConnectionConfig struct {
+	connectionConfig struct {
 		Brokers []string    `yaml:"brokers"`
 		TLS     config.TLS  `yaml:"tls"`
 		SASL    config.SASL `yaml:"sasl"`
 	}
 )
+
+func (c *queueConfig) ID() string {
+	return fmt.Sprintf("kafka::%s/%s", c.Topic, strings.Join(c.Connection.Brokers, ","))
+}
 
 func newSaramaConfigWithAuth(tls *config.TLS, sasl *config.SASL) (*sarama.Config, error) {
 	saramaConfig := sarama.NewConfig()

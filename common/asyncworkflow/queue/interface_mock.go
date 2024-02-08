@@ -31,7 +31,8 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
-	messaging "github.com/uber/cadence/common/messaging"
+	provider "github.com/uber/cadence/common/asyncworkflow/queue/provider"
+	types "github.com/uber/cadence/common/types"
 )
 
 // MockProvider is a mock of Provider interface.
@@ -57,32 +58,32 @@ func (m *MockProvider) EXPECT() *MockProviderMockRecorder {
 	return m.recorder
 }
 
-// GetAsyncQueueConsumer mocks base method.
-func (m *MockProvider) GetAsyncQueueConsumer(domain string) (messaging.Consumer, error) {
+// GetPredefinedQueue mocks base method.
+func (m *MockProvider) GetPredefinedQueue(arg0 string) (provider.Queue, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAsyncQueueConsumer", domain)
-	ret0, _ := ret[0].(messaging.Consumer)
+	ret := m.ctrl.Call(m, "GetPredefinedQueue", arg0)
+	ret0, _ := ret[0].(provider.Queue)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetAsyncQueueConsumer indicates an expected call of GetAsyncQueueConsumer.
-func (mr *MockProviderMockRecorder) GetAsyncQueueConsumer(domain interface{}) *gomock.Call {
+// GetPredefinedQueue indicates an expected call of GetPredefinedQueue.
+func (mr *MockProviderMockRecorder) GetPredefinedQueue(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAsyncQueueConsumer", reflect.TypeOf((*MockProvider)(nil).GetAsyncQueueConsumer), domain)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPredefinedQueue", reflect.TypeOf((*MockProvider)(nil).GetPredefinedQueue), arg0)
 }
 
-// GetAsyncQueueProducer mocks base method.
-func (m *MockProvider) GetAsyncQueueProducer(domain string) (messaging.Producer, error) {
+// GetQueue mocks base method.
+func (m *MockProvider) GetQueue(arg0 string, arg1 *types.DataBlob) (provider.Queue, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAsyncQueueProducer", domain)
-	ret0, _ := ret[0].(messaging.Producer)
+	ret := m.ctrl.Call(m, "GetQueue", arg0, arg1)
+	ret0, _ := ret[0].(provider.Queue)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetAsyncQueueProducer indicates an expected call of GetAsyncQueueProducer.
-func (mr *MockProviderMockRecorder) GetAsyncQueueProducer(domain interface{}) *gomock.Call {
+// GetQueue indicates an expected call of GetQueue.
+func (mr *MockProviderMockRecorder) GetQueue(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAsyncQueueProducer", reflect.TypeOf((*MockProvider)(nil).GetAsyncQueueProducer), domain)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetQueue", reflect.TypeOf((*MockProvider)(nil).GetQueue), arg0, arg1)
 }

@@ -26,54 +26,52 @@ import (
 	"fmt"
 
 	"github.com/uber/cadence/common/asyncworkflow/queue/provider"
-	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
 	providerImpl struct {
-		domainCache cache.DomainCache
-
-		producers map[string]messaging.Producer
-		consumers map[string]messaging.Consumer
+		queues map[string]provider.Queue
 	}
 )
 
 // NewAsyncQueueProvider returns a new async queue provider
-func NewAsyncQueueProvider(cfg map[string]config.AsyncWorkflowQueueProvider, params *provider.Params) (Provider, error) {
+func NewAsyncQueueProvider(cfg map[string]config.AsyncWorkflowQueueProvider) (Provider, error) {
 	p := &providerImpl{
-		producers: make(map[string]messaging.Producer),
-		consumers: make(map[string]messaging.Consumer),
+		queues: make(map[string]provider.Queue),
 	}
 	for queueName, queueCfg := range cfg {
-		producerConstructor, ok := provider.GetAsyncQueueProducerProvider(queueCfg.Type)
+		queueConstructor, ok := provider.GetQueueProvider(queueCfg.Type)
 		if !ok {
 			return nil, fmt.Errorf("queue type %v not registered", queueCfg.Type)
 		}
-		producer, err := producerConstructor(queueCfg.Config, params)
+		queue, err := queueConstructor(queueCfg.Config)
 		if err != nil {
 			return nil, err
 		}
-		p.producers[queueName] = producer
-
-		consumerConstructor, ok := provider.GetAsyncQueueConsumerProvider(queueCfg.Type)
-		if !ok {
-			return nil, fmt.Errorf("queue type %v not registered", queueCfg.Type)
-		}
-		consumer, err := consumerConstructor(queueCfg.Config, params)
-		if err != nil {
-			return nil, err
-		}
-		p.consumers[queueName] = consumer
+		p.queues[queueName] = queue
 	}
 	return p, nil
 }
 
-func (p *providerImpl) GetAsyncQueueProducer(domain string) (messaging.Producer, error) {
-	return nil, fmt.Errorf("to be implemented")
+func (p *providerImpl) GetPredefinedQueue(name string) (provider.Queue, error) {
+	queue, ok := p.queues[name]
+	if !ok {
+		return nil, fmt.Errorf("queue %v not found", name)
+	}
+	return queue, nil
 }
 
-func (p *providerImpl) GetAsyncQueueConsumer(domain string) (messaging.Consumer, error) {
-	return nil, fmt.Errorf("to be implemented")
+func (p *providerImpl) GetQueue(queueType string, queueConfig *types.DataBlob) (provider.Queue, error) {
+	queueConfigDecoder, ok := provider.GetDecoder(queueType)
+	if !ok {
+		return nil, fmt.Errorf("queue type %v not registered", queueType)
+	}
+	decoder := queueConfigDecoder(queueConfig)
+	queueConstructor, ok := provider.GetQueueProvider(queueType)
+	if !ok {
+		return nil, fmt.Errorf("queue type %v not registered", queueType)
+	}
+	return queueConstructor(decoder)
 }
