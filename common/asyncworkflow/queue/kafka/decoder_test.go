@@ -23,17 +23,58 @@
 package kafka
 
 import (
-	"fmt"
+	"testing"
 
-	"github.com/uber/cadence/common/asyncworkflow/queue/provider"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/uber/cadence/common/types"
 )
 
-func init() {
-	must := func(err error) {
-		if err != nil {
-			panic(fmt.Errorf("failed to register default provider: %w", err))
-		}
+func TestDecode(t *testing.T) {
+	type testStruct struct {
+		Name string `json:"name"`
 	}
-	must(provider.RegisterQueueProvider("kafka", newQueue))
-	must(provider.RegisterDecoder("kafka", newDecoder))
+
+	tests := []struct {
+		name           string
+		blob           *types.DataBlob
+		want           *testStruct
+		wantErr        bool
+		expectedErrMsg string
+	}{
+		{
+			name: "valid JSON encoding",
+			blob: &types.DataBlob{
+				Data:         []byte(`{"name":"test"}`),
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+			},
+			want:    &testStruct{Name: "test"},
+			wantErr: false,
+		},
+		{
+			name: "unsupported encoding type",
+			blob: &types.DataBlob{
+				Data:         []byte("aa"),
+				EncodingType: types.EncodingTypeThriftRW.Ptr(),
+			},
+			want:           nil,
+			wantErr:        true,
+			expectedErrMsg: "unsupported encoding type",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			decoder := newDecoder(tt.blob)
+			var got testStruct
+			err := decoder.Decode(&got)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedErrMsg)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, &got)
+			}
+		})
+	}
 }

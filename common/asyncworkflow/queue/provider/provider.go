@@ -20,16 +20,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interface_mock.go -self_package github.com/uber/cadence/common/asyncworkflow/queue/provider
+
 package provider
 
 import (
 	"fmt"
 
-	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/syncmap"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -38,42 +40,51 @@ type (
 		MetricsClient metrics.Client
 	}
 
-	// ProducerConstructor is a function that constructs a queue producer
-	ProducerConstructor func(*config.YamlNode, *Params) (messaging.Producer, error)
+	Decoder interface {
+		Decode(any) error
+	}
 
-	// ConsumerConstructor is a function that constructs a queue consumer
-	ConsumerConstructor func(*config.YamlNode, *Params) (messaging.Consumer, error)
+	// Queue is an interface for async queue
+	Queue interface {
+		ID() string
+		CreateConsumer(*Params) (messaging.Consumer, error)
+		CreateProducer(*Params) (messaging.Producer, error)
+	}
+
+	QueueConstructor func(Decoder) (Queue, error)
+
+	DecoderConstructor func(*types.DataBlob) Decoder
 )
 
 var (
-	asyncQueueProducerConstructors = syncmap.New[string, ProducerConstructor]()
-	asyncQueueConsumerConstructors = syncmap.New[string, ConsumerConstructor]()
+	queueConstructors   = syncmap.New[string, QueueConstructor]()
+	decoderConstructors = syncmap.New[string, DecoderConstructor]()
 )
 
-// RegisterAsyncQueueProducerProvider registers a queue producer constructor for a given queue type
-func RegisterAsyncQueueProducerProvider(queueType string, producerConstructor ProducerConstructor) error {
-	inserted := asyncQueueProducerConstructors.Put(queueType, producerConstructor)
+// RegisterQueueProvider registers a queue constructor for a given queue type
+func RegisterQueueProvider(queueType string, queueConstructor QueueConstructor) error {
+	inserted := queueConstructors.Put(queueType, queueConstructor)
 	if !inserted {
 		return fmt.Errorf("queue type %v already registered", queueType)
 	}
 	return nil
 }
 
-// GetAsyncQueueProducerProvider returns a queue producer constructor for a given queue type
-func GetAsyncQueueProducerProvider(queueType string) (ProducerConstructor, bool) {
-	return asyncQueueProducerConstructors.Get(queueType)
+// GetQueueProvider returns a queue constructor for a given queue type
+func GetQueueProvider(queueType string) (QueueConstructor, bool) {
+	return queueConstructors.Get(queueType)
 }
 
-// RegisterAsyncQueueConsumerProvider registers a queue consumer constructor for a given queue type
-func RegisterAsyncQueueConsumerProvider(queueType string, consumerConstructor ConsumerConstructor) error {
-	inserted := asyncQueueConsumerConstructors.Put(queueType, consumerConstructor)
+// RegisterDecoder registers a decoder constructor for a given queue type
+func RegisterDecoder(queueType string, decoderConstructor DecoderConstructor) error {
+	inserted := decoderConstructors.Put(queueType, decoderConstructor)
 	if !inserted {
-		return fmt.Errorf("queue type %v already registered", queueType)
+		return fmt.Errorf("decoder type %v already registered", queueType)
 	}
 	return nil
 }
 
-// GetAsyncQueueConsumerProvider returns a queue consumer constructor for a given queue type
-func GetAsyncQueueConsumerProvider(queueType string) (ConsumerConstructor, bool) {
-	return asyncQueueConsumerConstructors.Get(queueType)
+// GetDecoder returns a decoder constructor for a given queue type
+func GetDecoder(queueType string) (DecoderConstructor, bool) {
+	return decoderConstructors.Get(queueType)
 }

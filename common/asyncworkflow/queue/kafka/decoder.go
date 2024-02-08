@@ -23,17 +23,28 @@
 package kafka
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/uber/cadence/common/asyncworkflow/queue/provider"
+	"github.com/uber/cadence/common/types"
 )
 
-func init() {
-	must := func(err error) {
-		if err != nil {
-			panic(fmt.Errorf("failed to register default provider: %w", err))
-		}
+type (
+	decoderImpl struct {
+		blob *types.DataBlob
 	}
-	must(provider.RegisterQueueProvider("kafka", newQueue))
-	must(provider.RegisterDecoder("kafka", newDecoder))
+)
+
+func newDecoder(blob *types.DataBlob) provider.Decoder {
+	return &decoderImpl{
+		blob: blob,
+	}
+}
+
+func (d *decoderImpl) Decode(out any) error {
+	if d.blob.GetEncodingType() != types.EncodingTypeJSON {
+		return fmt.Errorf("unsupported encoding type %v", d.blob.GetEncodingType())
+	}
+	return json.Unmarshal(d.blob.Data, out)
 }
