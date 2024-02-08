@@ -1715,12 +1715,6 @@ const (
 	// Value type: Bool
 	// Default value: false
 	// Allowed filters: DomainName
-	WorkflowIDCacheEnabled
-	// WorkflowIDCacheExternalEnabled is the key to enable/disable caching of workflowID specific information for external requests
-	// KeyName: history.workflowIDCacheExternalEnabled
-	// Value type: Bool
-	// Default value: false
-	// Allowed filters: DomainName
 	WorkflowIDCacheExternalEnabled
 	// WorkflowIDCacheInternalEnabled is the key to enable/disable caching of workflowID specific information for internal requests
 	// KeyName: history.workflowIDCacheInternalEnabled
@@ -4187,12 +4181,6 @@ var BoolKeys = map[BoolKey]DynamicBool{
 	EnableTaskVal: DynamicBool{
 		KeyName:      "system.enableTaskVal",
 		Description:  "Enable TaskValidation",
-		DefaultValue: false,
-	},
-	WorkflowIDCacheEnabled: DynamicBool{
-		KeyName:      "history.workflowIDCacheEnabled",
-		Filters:      []Filter{DomainName},
-		Description:  "WorkflowIDCacheEnabled is the key to enable/disable caching of workflowID specific information",
 		DefaultValue: false,
 	},
 	WorkflowIDCacheExternalEnabled: DynamicBool{

@@ -72,7 +72,6 @@ func TestWfCache_AllowSingleWorkflow(t *testing.T) {
 		MaxCount:                       1_000,
 		ExternalLimiterFactory:         externalLimiterFactory,
 		InternalLimiterFactory:         internalLimiterFactory,
-		WorkflowIDCacheEnabled:         func(domain string) bool { return false },
 		WorkflowIDCacheExternalEnabled: func(domain string) bool { return true },
 		WorkflowIDCacheInternalEnabled: func(domain string) bool { return true },
 		Logger:                         log.NewNoop(),
@@ -121,7 +120,6 @@ func TestWfCache_AllowMultipleWorkflow(t *testing.T) {
 		MaxCount:                       1_000,
 		ExternalLimiterFactory:         externalLimiterFactory,
 		InternalLimiterFactory:         internalLimiterFactory,
-		WorkflowIDCacheEnabled:         func(domain string) bool { return false },
 		WorkflowIDCacheExternalEnabled: func(domain string) bool { return true },
 		WorkflowIDCacheInternalEnabled: func(domain string) bool { return true },
 		Logger:                         log.NewNoop(),
@@ -163,7 +161,6 @@ func TestWfCache_AllowError(t *testing.T) {
 		MaxCount:                       1_000,
 		ExternalLimiterFactory:         nil,
 		InternalLimiterFactory:         nil,
-		WorkflowIDCacheEnabled:         func(domain string) bool { return false },
 		WorkflowIDCacheExternalEnabled: func(domain string) bool { return true },
 		WorkflowIDCacheInternalEnabled: func(domain string) bool { return true },
 		Logger:                         logger,
@@ -211,7 +208,6 @@ func TestWfCache_AllowDomainCacheError(t *testing.T) {
 		MaxCount:                       1_000,
 		ExternalLimiterFactory:         nil,
 		InternalLimiterFactory:         nil,
-		WorkflowIDCacheEnabled:         func(domain string) bool { return false },
 		WorkflowIDCacheExternalEnabled: func(domain string) bool { return true },
 		WorkflowIDCacheInternalEnabled: func(domain string) bool { return true },
 		Logger:                         logger,
@@ -227,8 +223,8 @@ func TestWfCache_AllowDomainCacheError(t *testing.T) {
 	logger.AssertExpectations(t)
 }
 
-// TestWfCache_CacheDisabled tests that the cache will allow requests through if it is disabled
-func TestWfCache_CacheDisabled(t *testing.T) {
+// TestWfCache_CacheExternalDisabled tests that the cache will allow requests only for the requests where it is enabled
+func TestWfCache_CacheExternalDisabled(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	domainCache := cache.NewMockDomainCache(ctrl)
@@ -236,16 +232,26 @@ func TestWfCache_CacheDisabled(t *testing.T) {
 
 	// Setup the mock logger
 	logger := new(log.MockLogger)
+	expectRatelimitLog(logger, "internal")
+
+	externalLimiterFactory := quotas.NewMockLimiterFactory(ctrl)
+	externalLimiter := quotas.NewMockLimiter(ctrl)
+	externalLimiterFactory.EXPECT().GetLimiter(testDomainName).Return(externalLimiter).Times(1)
+
+	internalLimiter := quotas.NewMockLimiter(ctrl)
+	internalLimiterFactory := quotas.NewMockLimiterFactory(ctrl)
+	internalLimiterFactory.EXPECT().GetLimiter(testDomainName).Return(internalLimiter).Times(1)
+
+	internalLimiter.EXPECT().Allow().Return(false).Times(1)
 
 	// Setup the cache, we do not need the factories, as we will mock the getCacheItemFn
 	wfCache := New(Params{
 		TTL:                            time.Minute,
 		MaxCount:                       1_000,
-		ExternalLimiterFactory:         nil,
-		InternalLimiterFactory:         nil,
-		WorkflowIDCacheEnabled:         func(domain string) bool { return false },
+		ExternalLimiterFactory:         externalLimiterFactory,
+		InternalLimiterFactory:         internalLimiterFactory,
 		WorkflowIDCacheExternalEnabled: func(domain string) bool { return false },
-		WorkflowIDCacheInternalEnabled: func(domain string) bool { return false },
+		WorkflowIDCacheInternalEnabled: func(domain string) bool { return true },
 		Logger:                         logger,
 		DomainCache:                    domainCache,
 		MetricsClient:                  metrics.NewNoopMetricsClient(),
@@ -253,6 +259,50 @@ func TestWfCache_CacheDisabled(t *testing.T) {
 
 	// We fail open
 	assert.True(t, wfCache.AllowExternal(testDomainID, testWorkflowID))
+
+	// We use cache
+	assert.False(t, wfCache.AllowInternal(testDomainID, testWorkflowID))
+
+	// We log the error
+	logger.AssertExpectations(t)
+}
+
+// TestWfCache_CacheInternalDisabled tests that the cache will allow requests only for the requests where it is enabled
+func TestWfCache_CacheInternalDisabled(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	domainCache := cache.NewMockDomainCache(ctrl)
+	domainCache.EXPECT().GetDomainName(testDomainID).Return(testDomainName, nil).Times(2)
+
+	// Setup the mock logger
+	logger := new(log.MockLogger)
+	expectRatelimitLog(logger, "external")
+
+	externalLimiterFactory := quotas.NewMockLimiterFactory(ctrl)
+	externalLimiter := quotas.NewMockLimiter(ctrl)
+	externalLimiterFactory.EXPECT().GetLimiter(testDomainName).Return(externalLimiter).Times(1)
+	externalLimiter.EXPECT().Allow().Return(false).Times(1)
+
+	internalLimiter := quotas.NewMockLimiter(ctrl)
+	internalLimiterFactory := quotas.NewMockLimiterFactory(ctrl)
+	internalLimiterFactory.EXPECT().GetLimiter(testDomainName).Return(internalLimiter).Times(1)
+
+	// Setup the cache, we do not need the factories, as we will mock the getCacheItemFn
+	wfCache := New(Params{
+		TTL:                            time.Minute,
+		MaxCount:                       1_000,
+		ExternalLimiterFactory:         externalLimiterFactory,
+		InternalLimiterFactory:         internalLimiterFactory,
+		WorkflowIDCacheExternalEnabled: func(domain string) bool { return true },
+		WorkflowIDCacheInternalEnabled: func(domain string) bool { return false },
+		Logger:                         logger,
+		DomainCache:                    domainCache,
+		MetricsClient:                  metrics.NewNoopMetricsClient(),
+	})
+
+	// We use cache
+	assert.False(t, wfCache.AllowExternal(testDomainID, testWorkflowID))
+	// We fail open
 	assert.True(t, wfCache.AllowInternal(testDomainID, testWorkflowID))
 
 	// We log the error
@@ -290,7 +340,6 @@ func TestWfCache_RejectLog(t *testing.T) {
 		MaxCount:                       1_000,
 		ExternalLimiterFactory:         externalLimiterFactory,
 		InternalLimiterFactory:         internalLimiterFactory,
-		WorkflowIDCacheEnabled:         func(domain string) bool { return false },
 		WorkflowIDCacheExternalEnabled: func(domain string) bool { return true },
 		WorkflowIDCacheInternalEnabled: func(domain string) bool { return true },
 		Logger:                         logger,

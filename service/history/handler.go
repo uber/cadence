@@ -112,7 +112,6 @@ func NewHandler(
 			TTL:                            workflowIDCacheTTL,
 			ExternalLimiterFactory:         quotas.NewSimpleDynamicRateLimiterFactory(config.WorkflowIDExternalRPS),
 			InternalLimiterFactory:         quotas.NewSimpleDynamicRateLimiterFactory(config.WorkflowIDInternalRPS),
-			WorkflowIDCacheEnabled:         config.WorkflowIDCacheEnabled,
 			WorkflowIDCacheExternalEnabled: config.WorkflowIDCacheExternalEnabled,
 			WorkflowIDCacheInternalEnabled: config.WorkflowIDCacheInternalEnabled,
 			MaxCount:                       workflowIDCacheMaxCount,
