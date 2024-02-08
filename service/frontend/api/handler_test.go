@@ -38,7 +38,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
-	"github.com/uber/cadence/common/asyncworkflow/queue"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/cluster"
@@ -2027,15 +2026,15 @@ var describeDomainResponseServer = &types.DescribeDomainResponse{
 func TestStartWorkflowExecutionAsync(t *testing.T) {
 	testCases := []struct {
 		name       string
-		setupMocks func(*queue.MockProvider)
+		setupMocks func(*MockProducerManager)
 		request    *types.StartWorkflowExecutionAsyncRequest
 		wantErr    bool
 	}{
 		{
 			name: "Success case",
-			setupMocks: func(mockQueue *queue.MockProvider) {
+			setupMocks: func(mockQueue *MockProducerManager) {
 				mockProducer := &mocks.KafkaProducer{}
-				mockQueue.EXPECT().GetAsyncQueueProducer(gomock.Any()).Return(mockProducer, nil)
+				mockQueue.EXPECT().GetProducerByDomain(gomock.Any()).Return(mockProducer, nil)
 				mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil)
 			},
 			request: &types.StartWorkflowExecutionAsyncRequest{
@@ -2059,8 +2058,8 @@ func TestStartWorkflowExecutionAsync(t *testing.T) {
 		},
 		{
 			name: "Error case - failed to get async queue producer",
-			setupMocks: func(mockQueue *queue.MockProvider) {
-				mockQueue.EXPECT().GetAsyncQueueProducer(gomock.Any()).Return(nil, errors.New("test-error"))
+			setupMocks: func(mockQueue *MockProducerManager) {
+				mockQueue.EXPECT().GetProducerByDomain(gomock.Any()).Return(nil, errors.New("test-error"))
 			},
 			request: &types.StartWorkflowExecutionAsyncRequest{
 				StartWorkflowExecutionRequest: &types.StartWorkflowExecutionRequest{
@@ -2083,9 +2082,9 @@ func TestStartWorkflowExecutionAsync(t *testing.T) {
 		},
 		{
 			name: "Error case - failed to publish message",
-			setupMocks: func(mockQueue *queue.MockProvider) {
+			setupMocks: func(mockQueue *MockProducerManager) {
 				mockProducer := &mocks.KafkaProducer{}
-				mockQueue.EXPECT().GetAsyncQueueProducer(gomock.Any()).Return(mockProducer, nil)
+				mockQueue.EXPECT().GetProducerByDomain(gomock.Any()).Return(mockProducer, nil)
 				mockProducer.On("Publish", mock.Anything, mock.Anything).Return(errors.New("test-error"))
 			},
 			request: &types.StartWorkflowExecutionAsyncRequest{
@@ -2116,6 +2115,7 @@ func TestStartWorkflowExecutionAsync(t *testing.T) {
 			mockResource.DomainCache.EXPECT().GetDomainID(gomock.Any()).Return("test-domain-id", nil)
 			mockVersionChecker := client.NewMockVersionChecker(mockCtrl)
 			mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil)
+			mockProducerManager := NewMockProducerManager(mockCtrl)
 
 			cfg := frontendcfg.NewConfig(
 				dc.NewCollection(
@@ -2127,8 +2127,9 @@ func TestStartWorkflowExecutionAsync(t *testing.T) {
 				"hostname",
 			)
 			wh := NewWorkflowHandler(mockResource, cfg, mockVersionChecker, nil)
+			wh.producerManager = mockProducerManager
 
-			tc.setupMocks(mockResource.AsyncWorkflowQueueProvider)
+			tc.setupMocks(mockProducerManager)
 
 			_, err := wh.StartWorkflowExecutionAsync(context.Background(), tc.request)
 			if tc.wantErr {

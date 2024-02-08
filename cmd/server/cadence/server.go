@@ -33,7 +33,6 @@ import (
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/asyncworkflow/queue"
-	asyncworkflowprovider "github.com/uber/cadence/common/asyncworkflow/queue/provider"
 	"github.com/uber/cadence/common/blobstore/filestore"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
@@ -286,7 +285,7 @@ func (s *server) startService() common.Daemon {
 		params.BlobstoreClient = nil
 	}
 
-	params.AsyncWorkflowQueueProvider, err = queue.NewAsyncQueueProvider(s.cfg.AsyncWorkflowQueues, &asyncworkflowprovider.Params{Logger: params.Logger, MetricsClient: params.MetricsClient})
+	params.AsyncWorkflowQueueProvider, err = queue.NewAsyncQueueProvider(s.cfg.AsyncWorkflowQueues)
 	if err != nil {
 		log.Fatalf("error creating async queue provider: %v", err)
 	}
