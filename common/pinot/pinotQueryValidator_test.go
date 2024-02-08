@@ -133,6 +133,22 @@ func TestValidateQuery(t *testing.T) {
 			query:     "StartTime >= 1697754674",
 			validated: "StartTime >= 1697754674",
 		},
+		"Case15-4: unix nano converts to milli seconds for equal statements": {
+			query:     "StartTime = 1707319950934000128",
+			validated: "StartTime = 1707319950934",
+		},
+		"Case15-5: unix nano converts to milli seconds for range query": {
+			query:     "StartTime = 1707319950934000128",
+			validated: "StartTime = 1707319950934",
+		},
+		"Case15-6: open workflows": {
+			query:     "CloseTime = -1",
+			validated: "CloseTime = -1",
+		},
+		"Case15-6: startTime for range query": {
+			query:     "StartTime BETWEEN 1707319950934000128 AND 1707319950935000128",
+			validated: "StartTime between 1707319950934 and 1707319950935",
+		},
 		"Case16-1: custom int attribute greater than or equal to": {
 			query:     "CustomIntField >= 0",
 			validated: "(JSON_MATCH(Attr, '\"$.CustomIntField\" is not null') AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomIntField') AS INT) >= 0)",

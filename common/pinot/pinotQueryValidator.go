@@ -25,6 +25,7 @@ package pinot
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/xwb1989/sqlparser"
@@ -38,6 +39,12 @@ import (
 // VisibilityQueryValidator for sql query validation
 type VisibilityQueryValidator struct {
 	validSearchAttributes map[string]interface{}
+}
+
+var timeSystemKeys = map[string]bool{
+	"StartTime":     true,
+	"CloseTime":     true,
+	"ExecutionTime": true,
 }
 
 // NewPinotQueryValidator create VisibilityQueryValidator
@@ -120,6 +127,14 @@ func (qv *VisibilityQueryValidator) validateRangeExpr(expr sqlparser.Expr) (stri
 	}
 
 	if definition.IsSystemIndexedKey(colNameStr) {
+		if _, ok = timeSystemKeys[colNameStr]; ok {
+			if lowerBound, ok := rangeCond.From.(*sqlparser.SQLVal); ok {
+				rangeCond.From, _ = trimTimefieldValueFromNanoToMilliSeconds(lowerBound)
+			}
+			if upperBound, ok := rangeCond.To.(*sqlparser.SQLVal); ok {
+				rangeCond.To, _ = trimTimefieldValueFromNanoToMilliSeconds(upperBound)
+			}
+		}
 		expr.Format(buf)
 		return buf.String(), nil
 	}
@@ -248,6 +263,11 @@ func (qv *VisibilityQueryValidator) processSystemKey(expr sqlparser.Expr) (strin
 			Name:      sqlparser.NewColIdent(newColVal),
 			Qualifier: colName.Qualifier,
 		}
+	} else {
+		if _, ok := timeSystemKeys[colNameStr]; ok {
+			sqlVal, _ := comparisonExpr.Right.(*sqlparser.SQLVal)
+			comparisonExpr.Right, _ = trimTimefieldValueFromNanoToMilliSeconds(sqlVal)
+		}
 	}
 
 	// For this branch, we still have a sqlExpr type. So need to use a buf to return the string
@@ -325,4 +345,27 @@ func processCustomString(comparisonExpr *sqlparser.ComparisonExpr, colNameStr st
 	}
 	return fmt.Sprintf("(JSON_MATCH(Attr, '\"$.%s\" is not null') "+
 		"AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.%s', 'string'), '%s*'))", colNameStr, colNameStr, colValStr)
+}
+
+func trimTimefieldValueFromNanoToMilliSeconds(original *sqlparser.SQLVal) (*sqlparser.SQLVal, error) {
+	// Convert the SQLVal to a string
+	valStr := string(original.Val)
+	// Convert to an integer
+	valInt, err := strconv.ParseInt(valStr, 10, 64)
+	if err != nil {
+		return original, fmt.Errorf("error: failed to parse int from SQLVal")
+	}
+
+	var newVal int64
+	if valInt < 0 { //exclude open workflow which time field will be -1
+		newVal = valInt
+	} else {
+		newVal = valInt / 1000000 // convert time to milliseconds
+	}
+
+	// Convert the new value back to SQLVal
+	return &sqlparser.SQLVal{
+		Type: sqlparser.IntVal,
+		Val:  []byte(strconv.FormatInt(newVal, 10)),
+	}, nil
 }
