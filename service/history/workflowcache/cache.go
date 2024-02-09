@@ -125,7 +125,7 @@ func (c *wfCache) allow(domainID string, workflowID string, rateLimitType rateLi
 	}
 
 	c.metricsClient.
-		Scope(metrics.HistoryClientWfIDCacheScope, metrics.DomainTag(domainName)).
+		Scope(metrics.HistoryClientWfIDCacheScope).
 		UpdateGauge(metrics.WorkflowIDCacheSizeGauge, float64(c.lru.Size()))
 
 	// Locking is not needed because both getCacheItem and the rate limiter are thread safe
