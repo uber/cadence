@@ -45,6 +45,7 @@ var timeSystemKeys = map[string]bool{
 	"StartTime":     true,
 	"CloseTime":     true,
 	"ExecutionTime": true,
+	"UpdateTime":    true,
 }
 
 // NewPinotQueryValidator create VisibilityQueryValidator
