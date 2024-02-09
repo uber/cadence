@@ -129,10 +129,18 @@ func (qv *VisibilityQueryValidator) validateRangeExpr(expr sqlparser.Expr) (stri
 	if definition.IsSystemIndexedKey(colNameStr) {
 		if _, ok = timeSystemKeys[colNameStr]; ok {
 			if lowerBound, ok := rangeCond.From.(*sqlparser.SQLVal); ok {
-				rangeCond.From, _ = trimTimefieldValueFromNanoToMilliSeconds(lowerBound)
+				trimmed, err := trimTimeFieldValueFromNanoToMilliSeconds(lowerBound)
+				if err != nil {
+					return "", err
+				}
+				rangeCond.From = trimmed
 			}
 			if upperBound, ok := rangeCond.To.(*sqlparser.SQLVal); ok {
-				rangeCond.To, _ = trimTimefieldValueFromNanoToMilliSeconds(upperBound)
+				trimmed, err := trimTimeFieldValueFromNanoToMilliSeconds(upperBound)
+				if err != nil {
+					return "", err
+				}
+				rangeCond.To = trimmed
 			}
 		}
 		expr.Format(buf)
@@ -265,8 +273,15 @@ func (qv *VisibilityQueryValidator) processSystemKey(expr sqlparser.Expr) (strin
 		}
 	} else {
 		if _, ok := timeSystemKeys[colNameStr]; ok {
-			sqlVal, _ := comparisonExpr.Right.(*sqlparser.SQLVal)
-			comparisonExpr.Right, _ = trimTimefieldValueFromNanoToMilliSeconds(sqlVal)
+			sqlVal, ok := comparisonExpr.Right.(*sqlparser.SQLVal)
+			if !ok {
+				return "", fmt.Errorf("error: Failed to convert val")
+			}
+			trimmed, err := trimTimeFieldValueFromNanoToMilliSeconds(sqlVal)
+			if err != nil {
+				return "", err
+			}
+			comparisonExpr.Right = trimmed
 		}
 	}
 
@@ -347,13 +362,13 @@ func processCustomString(comparisonExpr *sqlparser.ComparisonExpr, colNameStr st
 		"AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.%s', 'string'), '%s*'))", colNameStr, colNameStr, colValStr)
 }
 
-func trimTimefieldValueFromNanoToMilliSeconds(original *sqlparser.SQLVal) (*sqlparser.SQLVal, error) {
+func trimTimeFieldValueFromNanoToMilliSeconds(original *sqlparser.SQLVal) (*sqlparser.SQLVal, error) {
 	// Convert the SQLVal to a string
 	valStr := string(original.Val)
 	// Convert to an integer
 	valInt, err := strconv.ParseInt(valStr, 10, 64)
 	if err != nil {
-		return original, fmt.Errorf("error: failed to parse int from SQLVal")
+		return original, fmt.Errorf("error: failed to parse int from SQLVal %s", valStr)
 	}
 
 	var newVal int64
