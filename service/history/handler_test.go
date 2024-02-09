@@ -305,7 +305,7 @@ func TestCorrectUseOfErrorHandling(t *testing.T) {
 	}
 }
 
-func (s *handlerSuite) TestStartWorkflowExecution() {
+func (s *handlerSuite) TestStartWorkflowExecutionAllow() {
 
 	request := &types.HistoryStartWorkflowExecutionRequest{
 		DomainUUID: testDomainID,
@@ -318,22 +318,30 @@ func (s *handlerSuite) TestStartWorkflowExecution() {
 		RunID: testWorkflowRunID,
 	}
 
-	// We should _always_ see the startworkflowexecution call no matter if allow external is true or false
-	// as we are in shadow mode
-	tests := map[string]struct{ allowExternal bool }{
-		"allow external":    {allowExternal: true},
-		"disallow external": {allowExternal: false},
+	s.mockWFCache.EXPECT().AllowExternal(gomock.Any(), gomock.Any()).Return(true).Times(1)
+	s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).AnyTimes()
+	s.mockEngine.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(expectedResponse, nil).Times(1)
+
+	response, err := s.handler.StartWorkflowExecution(context.Background(), request)
+	s.Equal(expectedResponse, response)
+	s.Nil(err)
+}
+
+func (s *handlerSuite) TestStartWorkflowExecutionDisallow() {
+
+	request := &types.HistoryStartWorkflowExecutionRequest{
+		DomainUUID: testDomainID,
+		StartRequest: &types.StartWorkflowExecutionRequest{
+			WorkflowID: testWorkflowID,
+		},
 	}
 
-	for name, test := range tests {
-		s.Run(name, func() {
-			s.mockWFCache.EXPECT().AllowExternal(gomock.Any(), gomock.Any()).Return(test.allowExternal).Times(1)
-			s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).AnyTimes()
-			s.mockEngine.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(expectedResponse, nil).Times(1)
+	s.mockWFCache.EXPECT().AllowExternal(gomock.Any(), gomock.Any()).Return(false).Times(1)
 
-			response, err := s.handler.StartWorkflowExecution(context.Background(), request)
-			s.Equal(expectedResponse, response)
-			s.Nil(err)
-		})
-	}
+	response, err := s.handler.StartWorkflowExecution(context.Background(), request)
+	s.Nil(response)
+
+	var serviceBusy *types.ServiceBusyError
+	s.ErrorAs(err, &serviceBusy)
+	s.ErrorContains(err, "Too many outstanding requests to the cadence service for workflowID")
 }
