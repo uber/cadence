@@ -23,7 +23,6 @@ package task
 import (
 	"context"
 	"fmt"
-
 	"time"
 
 	"github.com/uber/cadence/common"
