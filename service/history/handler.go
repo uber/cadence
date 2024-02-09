@@ -245,6 +245,7 @@ func (h *handlerImpl) CreateEngine(
 		h.GetMatchingRawClient(),
 		h.queueTaskProcessor,
 		h.failoverCoordinator,
+		h.workflowIDCache,
 	)
 }
 

@@ -46,6 +46,7 @@ import (
 	"github.com/uber/cadence/service/history/reset"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
+	"github.com/uber/cadence/service/history/workflowcache"
 	"github.com/uber/cadence/service/worker/archiver"
 )
 
@@ -87,6 +88,7 @@ func NewTransferQueueProcessor(
 	workflowResetter reset.WorkflowResetter,
 	archivalClient archiver.Client,
 	executionCheck invariant.Invariant,
+	wfIDCache workflowcache.WFCache,
 ) Processor {
 	logger := shard.GetLogger().WithTags(tag.ComponentTransferQueue)
 	currentClusterName := shard.GetClusterMetadata().GetCurrentClusterName()
@@ -100,6 +102,7 @@ func NewTransferQueueProcessor(
 		workflowResetter,
 		logger,
 		config,
+		wfIDCache,
 	)
 
 	activeQueueProcessor := newTransferQueueActiveProcessor(
@@ -131,6 +134,7 @@ func NewTransferQueueProcessor(
 			logger,
 			clusterName,
 			config,
+			wfIDCache,
 		)
 		standbyQueueProcessors[clusterName] = newTransferQueueStandbyProcessor(
 			clusterName,
