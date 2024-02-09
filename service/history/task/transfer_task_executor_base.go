@@ -22,7 +22,6 @@ package task
 
 import (
 	"context"
-	"github.com/uber/cadence/service/history/workflowcache"
 	"time"
 
 	"github.com/uber/cadence/client/matching"
@@ -37,6 +36,7 @@ import (
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/workflowcache"
 	"github.com/uber/cadence/service/worker/archiver"
 )
 

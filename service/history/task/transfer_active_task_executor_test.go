@@ -22,7 +22,6 @@ package task
 
 import (
 	"context"
-	"github.com/uber/cadence/service/history/workflowcache"
 	"math/rand"
 	"strconv"
 	"testing"
@@ -54,6 +53,7 @@ import (
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 	test "github.com/uber/cadence/service/history/testing"
+	"github.com/uber/cadence/service/history/workflowcache"
 	warchiver "github.com/uber/cadence/service/worker/archiver"
 	"github.com/uber/cadence/service/worker/parentclosepolicy"
 )

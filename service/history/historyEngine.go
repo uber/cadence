@@ -27,7 +27,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/service/history/workflowcache"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -67,6 +66,7 @@ import (
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
 	"github.com/uber/cadence/service/history/workflow"
+	"github.com/uber/cadence/service/history/workflowcache"
 	warchiver "github.com/uber/cadence/service/worker/archiver"
 )
 
