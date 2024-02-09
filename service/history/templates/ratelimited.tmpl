@@ -1,0 +1,58 @@
+import (
+    "context"
+
+    "github.com/uber/cadence/common/cache"
+    "github.com/uber/cadence/common/quotas"
+    "github.com/uber/cadence/common/types"
+    "github.com/uber/cadence/service/history"
+)
+
+{{ $ratelimitTypeMap := dict "StartWorkflowExecution" "ratelimitTypeUserPerID" }}
+{{ $ratelimitTypeMap = set $ratelimitTypeMap "SignalWithStartWorkflowExecution" "ratelimitTypeUserPerID" }}
+
+{{ $interfaceName := .Interface.Name }}
+{{ $handlerName := (index .Vars "handler") }}
+{{ $decorator := (printf "%s%s" (down $handlerName) $interfaceName) }}
+{{ $Decorator := (printf "%s%s" $handlerName $interfaceName) }}
+
+// {{$decorator}} implements {{.Interface.Type}} interface instrumented with rate limiter.
+type {{$decorator}} struct {
+    wrapped         {{.Interface.Type}}
+    workflowIDCache workflowcache.WFCache
+}
+
+// New{{$Decorator}} creates a new instance of {{$interfaceName}} with ratelimiter.
+func New{{$Decorator}}(
+    wrapped {{.Interface.Type}},
+    workflowIDCache workflowcache.WFCache,
+) {{.Interface.Type}} {
+    return &{{$decorator}}{
+        wrapped: wrapped,
+        workflowIDCache: workflowIDCache,
+    }
+}
+
+{{range $method := .Interface.Methods}}
+func (h *{{$decorator}}) {{$method.Declaration}} {
+    {{- if hasKey $ratelimitTypeMap $method.Name}}
+        if {{(index $method.Params 1).Name}} == nil {
+            err = validate.ErrRequestNotSet
+            return
+        }
+        {{- $domainID := printf "%s.GetDomainUUID()" (index $method.Params 1).Name }}
+        {{- $request := printf "%s.%sRequest" (index $method.Params 1).Name ( replace $method.Name "WorkflowExecution" "") }}
+        {{- $workflowID := printf "%s.GetWorkflowID()" $request }}
+
+        if {{$domainID}} == "" {
+            err = validate.ErrDomainNotSet
+            return
+        }
+
+        if ok := h.workflowIDCache.AllowExternal({{$workflowID}}, {{$domainID}}); !ok {
+            err = &types.ServiceBusyError{Message: "Too many outstanding requests to the cadence service"}
+            return
+        }
+    {{- end}}
+    {{$method.Pass "h.wrapped."}}
+}
+{{end}}
