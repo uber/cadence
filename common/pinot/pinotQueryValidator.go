@@ -240,6 +240,18 @@ func (qv *VisibilityQueryValidator) processSystemKey(expr sqlparser.Expr) (strin
 	colNameStr := colName.Name.String()
 
 	if comparisonExpr.Operator != sqlparser.EqualStr {
+		if _, ok := timeSystemKeys[colNameStr]; ok {
+			sqlVal, ok := comparisonExpr.Right.(*sqlparser.SQLVal)
+			if !ok {
+				return "", fmt.Errorf("error: Failed to convert val")
+			}
+			trimmed, err := trimTimeFieldValueFromNanoToMilliSeconds(sqlVal)
+			if err != nil {
+				return "", err
+			}
+			comparisonExpr.Right = trimmed
+		}
+
 		expr.Format(buf)
 		return buf.String(), nil
 	}

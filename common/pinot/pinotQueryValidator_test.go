@@ -137,9 +137,9 @@ func TestValidateQuery(t *testing.T) {
 			query:     "StartTime = 1707319950934000128",
 			validated: "StartTime = 1707319950934",
 		},
-		"Case15-5: unix nano converts to milli seconds for range query": {
-			query:     "StartTime = 1707319950934000128",
-			validated: "StartTime = 1707319950934",
+		"Case15-5: unix nano converts to milli seconds for unequal statements query": {
+			query:     "StartTime > 1707319950934000128",
+			validated: "StartTime > 1707319950934",
 		},
 		"Case15-6: open workflows": {
 			query:     "CloseTime = -1",
