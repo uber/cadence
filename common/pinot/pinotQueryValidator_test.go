@@ -145,29 +145,33 @@ func TestValidateQuery(t *testing.T) {
 			query:     "CloseTime = -1",
 			validated: "CloseTime = -1",
 		},
-		"Case15-6: startTime for range query": {
+		"Case15-7: startTime for range query": {
 			query:     "StartTime BETWEEN 1707319950934000128 AND 1707319950935000128",
 			validated: "StartTime between 1707319950934 and 1707319950935",
 		},
-		"Case15-7: invalid time for trim": {
+		"Case15-8: invalid string for trim": {
 			query:     "CloseTime = abc",
 			validated: "",
 			err:       "error: failed to convert val",
 		},
-		"Case15-8: invalid time for trim": {
+		"Case15-9: invalid value for trim": {
 			query:     "CloseTime = 123.45",
 			validated: "",
 			err:       "error: failed to parse int from SQLVal 123.45",
 		},
-		"Case15-9: invalid from time for range query": {
+		"Case15-10: invalid from time for range query": {
 			query:     "StartTime BETWEEN 17.50 AND 1707319950935000128",
 			validated: "",
 			err:       "error: failed to parse int from SQLVal 17.50",
 		},
-		"Case15-10: invalid to time for range query": {
+		"Case15-11: invalid to time for range query": {
 			query:     "StartTime BETWEEN 1707319950934000128 AND 1707319950935000128.1",
 			validated: "",
 			err:       "error: failed to parse int from SQLVal 1707319950935000128.1",
+		},
+		"Case15-12: value already in milliseconds": {
+			query:     "StartTime = 170731995093",
+			validated: "StartTime = 170731995093",
 		},
 		"Case16-1: custom int attribute greater than or equal to": {
 			query:     "CustomIntField >= 0",

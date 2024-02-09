@@ -374,8 +374,10 @@ func trimTimeFieldValueFromNanoToMilliSeconds(original *sqlparser.SQLVal) (*sqlp
 	var newVal int64
 	if valInt < 0 { //exclude open workflow which time field will be -1
 		newVal = valInt
+	} else if len(valStr) > 13 { // Assuming nanoseconds if more than 13 digits
+		newVal = valInt / 1000000 // Convert time to milliseconds
 	} else {
-		newVal = valInt / 1000000 // convert time to milliseconds
+		newVal = valInt
 	}
 
 	// Convert the new value back to SQLVal
