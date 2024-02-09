@@ -8,7 +8,6 @@ You can find a list of previous releases on the [github releases](https://github
 
 ## [Unreleased]
 ### Added
-- Added a helper script to run cassandra and execute tests (#5620)
 - Scaffold StartWorkflowExecutionAsync API (#5621)
 - Add Workflow ID cache size metric (#5619)
 - Add retries into Scanner BlobWriter (#5471)
@@ -16,9 +15,10 @@ You can find a list of previous releases on the [github releases](https://github
 - Scaffold async workflow queue provider component (#5627)
 - Add debug logs in PinotTripleVisibilityManager for response comparator testing (#5631)
 - Add a middleware for comparator to use (#5637)
+- Get/Update DomainAsyncWorkflowConfiguraton methods in admin API and CLI (#5616)
+- Added a helper script to run cassandra and execute tests (#5620)
 
 ### Changed
-- Get/Update DomainAsyncWorkflowConfiguraton methods in admin API and CLI (#5616)
 - Refactor persistence serializer tests and add more cases (#5625)
 - Replace JWT validation library (#5592)
 - Put a timeout for timer task deletion loop during shutdown (#5626)
