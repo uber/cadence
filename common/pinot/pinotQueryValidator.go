@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/xwb1989/sqlparser"
 
@@ -378,19 +379,9 @@ func processCustomString(comparisonExpr *sqlparser.ComparisonExpr, colNameStr st
 func trimTimeFieldValueFromNanoToMilliSeconds(original *sqlparser.SQLVal) (*sqlparser.SQLVal, error) {
 	// Convert the SQLVal to a string
 	valStr := string(original.Val)
-	// Convert to an integer
-	valInt, err := strconv.ParseInt(valStr, 10, 64)
+	newVal, err := parseTime(valStr)
 	if err != nil {
 		return original, fmt.Errorf("error: failed to parse int from SQLVal %s", valStr)
-	}
-
-	var newVal int64
-	if valInt < 0 { //exclude open workflow which time field will be -1
-		newVal = valInt
-	} else if len(valStr) > 13 { // Assuming nanoseconds if more than 13 digits
-		newVal = valInt / 1000000 // Convert time to milliseconds
-	} else {
-		newVal = valInt
 	}
 
 	// Convert the new value back to SQLVal
@@ -398,4 +389,32 @@ func trimTimeFieldValueFromNanoToMilliSeconds(original *sqlparser.SQLVal) (*sqlp
 		Type: sqlparser.IntVal,
 		Val:  []byte(strconv.FormatInt(newVal, 10)),
 	}, nil
+}
+
+func parseTime(timeStr string) (int64, error) {
+	if len(timeStr) == 0 {
+		return 0, errors.New("invalid time string")
+	}
+
+	// try to parse
+	parsedTime, err := time.Parse(time.RFC3339, timeStr)
+	if err == nil {
+		return parsedTime.UnixMilli(), nil
+	}
+
+	// treat as raw time
+	valInt, err := strconv.ParseInt(timeStr, 10, 64)
+	if err == nil {
+		var newVal int64
+		if valInt < 0 { //exclude open workflow which time field will be -1
+			newVal = valInt
+		} else if len(timeStr) > 13 { // Assuming nanoseconds if more than 13 digits
+			newVal = valInt / 1000000 // Convert time to milliseconds
+		} else {
+			newVal = valInt
+		}
+		return newVal, nil
+	}
+
+	return 0, errors.New("invalid time string")
 }
