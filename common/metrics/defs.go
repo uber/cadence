@@ -1956,6 +1956,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		BatcherScope:                           {operation: "batcher"},
 		ParentClosePolicyProcessorScope:        {operation: "ParentClosePolicyProcessor"},
 		ESAnalyzerScope:                        {operation: "ESAnalyzer"},
+		AsyncWorkflowConsumerScope:             {operation: "AsyncWorkflowConsumer"},
 	},
 }
 

@@ -162,7 +162,7 @@ func (c *ConsumerManager) refreshConsumers() {
 		}
 
 		if !cfg.Enabled {
-			// lready running active consumers for such queues will be stopped in the next loop
+			// Already running active consumers for such queues will be stopped in the next loop
 			continue
 		}
 
