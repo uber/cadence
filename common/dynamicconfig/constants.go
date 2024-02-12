@@ -1825,6 +1825,12 @@ const (
 	// Default value: false
 	// Allowed filters: N/A
 	EnableESAnalyzer
+	// EnableAsyncWorkflowConsumption decides whether to enable system workers for processing async workflows
+	// KeyName: system.enableAsyncWorkflowConsumption
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: N/A
+	EnableAsyncWorkflowConsumption
 
 	// EnableStickyQuery indicates if sticky query should be enabled per domain
 	// KeyName: system.enableStickyQuery
@@ -4061,6 +4067,11 @@ var BoolKeys = map[BoolKey]DynamicBool{
 	EnableESAnalyzer: DynamicBool{
 		KeyName:      "system.enableESAnalyzer",
 		Description:  "EnableESAnalyzer decides whether to enable system workers for processing ElasticSearch Analyzer",
+		DefaultValue: false,
+	},
+	EnableAsyncWorkflowConsumption: DynamicBool{
+		KeyName:      "worker.enableAsyncWorkflowConsumption",
+		Description:  "EnableAsyncWorkflowConsumption decides whether to enable async workflows",
 		DefaultValue: false,
 	},
 	EnableStickyQuery: DynamicBool{
