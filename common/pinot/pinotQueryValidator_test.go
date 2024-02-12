@@ -173,6 +173,18 @@ func TestValidateQuery(t *testing.T) {
 			query:     "StartTime = 170731995093",
 			validated: "StartTime = 170731995093",
 		},
+		"Case15-13: value in raw string for equal statement": {
+			query:     "StartTime = '2024-02-07T15:32:30Z'",
+			validated: "StartTime = 1707319950000",
+		},
+		"Case15-14: value in raw string for not equal statement": {
+			query:     "StartTime > '2024-02-07T15:32:30Z'",
+			validated: "StartTime > 1707319950000",
+		},
+		"Case15-15: value in raw string for range statement": {
+			query:     "StartTime between '2024-02-07T15:32:30Z' and '2024-02-07T15:33:30Z'",
+			validated: "StartTime between 1707319950000 and 1707320010000",
+		},
 		"Case16-1: custom int attribute greater than or equal to": {
 			query:     "CustomIntField >= 0",
 			validated: "(JSON_MATCH(Attr, '\"$.CustomIntField\" is not null') AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomIntField') AS INT) >= 0)",
@@ -201,6 +213,31 @@ func TestValidateQuery(t *testing.T) {
 				assert.Equal(t, test.err, err.Error())
 			} else {
 				assert.Equal(t, test.validated, validated)
+			}
+		})
+	}
+}
+
+func TestParseTime(t *testing.T) {
+	var tests = []struct {
+		name     string
+		timeStr  string
+		expected int64
+		hasErr   bool
+	}{
+		{"empty string", "", 0, true},
+		{"valid RFC3339", "2024-02-07T15:32:30Z", 1707319950000, false},
+		{"valid unix milli string", "1707319950000", 1707319950000, false},
+		{"valid unix nano string", "1707319950000000000", 1707319950000, false},
+		{"invalid string", "invalid", 0, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parsed, err := parseTime(tt.timeStr)
+			assert.Equal(t, parsed, tt.expected)
+			if tt.hasErr {
+				assert.Error(t, err)
 			}
 		})
 	}
