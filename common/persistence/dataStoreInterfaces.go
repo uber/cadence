@@ -349,7 +349,10 @@ type (
 		SignalRequestedIDs  map[string]struct{}
 		BufferedEvents      []*DataBlob
 
-		Checksum checksum.Checksum
+		// Checksum field is used by Cassandra storage
+		// ChecksumData is used by All SQL storage
+		Checksum     checksum.Checksum
+		ChecksumData *DataBlob
 	}
 
 	// InternalActivityInfo details  for Persistence Interface
@@ -465,7 +468,8 @@ type (
 
 		Condition int64
 
-		Checksum checksum.Checksum
+		Checksum     checksum.Checksum
+		ChecksumData *DataBlob
 	}
 
 	// InternalWorkflowSnapshot is used as generic workflow execution state snapshot for Persistence Interface
@@ -489,7 +493,8 @@ type (
 
 		Condition int64
 
-		Checksum checksum.Checksum
+		Checksum     checksum.Checksum
+		ChecksumData *DataBlob
 	}
 
 	// InternalAppendHistoryEventsRequest is used to append new events to workflow execution history  for Persistence Interface

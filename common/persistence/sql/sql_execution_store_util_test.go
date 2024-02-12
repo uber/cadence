@@ -892,7 +892,7 @@ func TestCreateExecution(t *testing.T) {
 
 			tc.mockSetup(mockTx, mockParser)
 
-			err := createExecution(context.Background(), mockTx, tc.workflow.ExecutionInfo, tc.workflow.VersionHistories, tc.workflow.StartVersion, tc.workflow.LastWriteVersion, shardID, mockParser)
+			err := createExecution(context.Background(), mockTx, tc.workflow.ExecutionInfo, tc.workflow.VersionHistories, tc.workflow.ChecksumData, tc.workflow.StartVersion, tc.workflow.LastWriteVersion, shardID, mockParser)
 			if tc.wantErr {
 				assert.Error(t, err, "Expected an error for test case")
 			} else {
@@ -987,7 +987,7 @@ func TestUpdateExecution(t *testing.T) {
 
 			tc.mockSetup(mockTx, mockParser)
 
-			err := updateExecution(context.Background(), mockTx, tc.workflow.ExecutionInfo, tc.workflow.VersionHistories, tc.workflow.StartVersion, tc.workflow.LastWriteVersion, shardID, mockParser)
+			err := updateExecution(context.Background(), mockTx, tc.workflow.ExecutionInfo, tc.workflow.VersionHistories, tc.workflow.ChecksumData, tc.workflow.StartVersion, tc.workflow.LastWriteVersion, shardID, mockParser)
 			if tc.wantErr {
 				assert.Error(t, err, "Expected an error for test case")
 			} else {

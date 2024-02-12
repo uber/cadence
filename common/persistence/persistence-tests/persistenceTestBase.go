@@ -1256,6 +1256,7 @@ func (s *TestBase) UpdateWorkflowExecutionForBufferEvents(
 			Condition:           condition,
 			ClearBufferedEvents: clearBufferedEvents,
 			VersionHistories:    versionHistories,
+			Checksum:            testWorkflowChecksum,
 		},
 		RangeID:  s.ShardInfo.RangeID,
 		Encoding: pickRandomEncoding(),
@@ -1307,6 +1308,7 @@ func (s *TestBase) UpdateAllMutableState(ctx context.Context, updatedMutableStat
 			UpsertSignalInfos:         sInfos,
 			UpsertSignalRequestedIDs:  srIDs,
 			VersionHistories:          updatedMutableState.VersionHistories,
+			Checksum:                  updatedMutableState.Checksum,
 		},
 		Encoding: pickRandomEncoding(),
 	})

@@ -95,6 +95,8 @@ var expectedNil = map[string]map[string]any{
 		"GetVersionHistoriesEncoding":           "",
 		"GetWorkflowTimeout":                    time.Duration(0),
 		"GetWorkflowTypeName":                   "",
+		"GetChecksum":                           []uint8(nil),
+		"GetChecksumEncoding":                   "",
 	},
 	"*serialization.TimerTaskInfo": {
 		"GetDomainID":        []uint8(nil),
@@ -320,6 +322,8 @@ var expectedEmpty = map[string]map[string]any{
 		"GetVersionHistoriesEncoding":           "",
 		"GetWorkflowTimeout":                    time.Duration(0),
 		"GetWorkflowTypeName":                   "",
+		"GetChecksum":                           []uint8(nil),
+		"GetChecksumEncoding":                   "",
 	},
 	"*serialization.TimerTaskInfo": {
 		"GetDomainID":        []uint8(nil),
@@ -547,6 +551,8 @@ var expectedNonEmpty = map[string]map[string]any{
 		"GetVersionHistoriesEncoding":     "",
 		"GetWorkflowTimeout":              time.Duration(3),
 		"GetWorkflowTypeName":             "workflowTypeName",
+		"GetChecksum":                     []uint8(nil),
+		"GetChecksumEncoding":             "",
 	},
 	"*serialization.TimerTaskInfo": {
 		"GetDomainID":        []byte(taskDomainID),
