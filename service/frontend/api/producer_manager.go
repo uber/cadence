@@ -37,6 +37,8 @@ import (
 )
 
 type (
+	// ProducerManager is used to create a producer for a domain.
+	// Producer is used for Async APIs such as StartWorkflowExecutionAsync
 	ProducerManager interface {
 		GetProducerByDomain(domain string) (messaging.Producer, error)
 	}
