@@ -66,6 +66,7 @@ import (
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
 	"github.com/uber/cadence/service/history/workflow"
+	"github.com/uber/cadence/service/history/workflowcache"
 	warchiver "github.com/uber/cadence/service/worker/archiver"
 )
 
@@ -123,6 +124,7 @@ type (
 		clientChecker              client.VersionChecker
 		replicationDLQHandler      replication.DLQHandler
 		failoverMarkerNotifier     failover.MarkerNotifier
+		wfIDCache                  workflowcache.WFCache
 	}
 )
 
@@ -152,6 +154,7 @@ func NewEngineWithShardContext(
 	rawMatchingClient matching.Client,
 	queueTaskProcessor task.Processor,
 	failoverCoordinator failover.Coordinator,
+	wfIDCache workflowcache.WFCache,
 ) engine.Engine {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 
@@ -234,6 +237,7 @@ func NewEngineWithShardContext(
 		replicationTaskStore: replicationTaskStore,
 		replicationMetricsEmitter: replication.NewMetricsEmitter(
 			shard.GetShardID(), shard, replicationReader, shard.GetMetricsClient()),
+		wfIDCache: wfIDCache,
 	}
 	historyEngImpl.decisionHandler = decision.NewHandler(
 		shard,
@@ -255,6 +259,7 @@ func NewEngineWithShardContext(
 		historyEngImpl.workflowResetter,
 		historyEngImpl.archivalClient,
 		openExecutionCheck,
+		historyEngImpl.wfIDCache,
 	)
 
 	historyEngImpl.timerProcessor = queue.NewTimerQueueProcessor(
@@ -503,7 +508,7 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 				previousFailoverVersion := nextDomain.GetPreviousFailoverVersion()
 				previousClusterName, err := e.clusterMetadata.ClusterNameForFailoverVersion(previousFailoverVersion)
 				if err != nil {
-					e.logger.Error("Failed to handle graceful failover", tag.WorkflowDomainID(nextDomain.GetInfo().ID))
+					e.logger.Error("Failed to handle graceful failover", tag.WorkflowDomainID(nextDomain.GetInfo().ID), tag.Error(err))
 					continue
 				}
 

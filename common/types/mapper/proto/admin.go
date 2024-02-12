@@ -1382,30 +1382,11 @@ func FromDomainAsyncWorkflowConfiguraton(in *types.AsyncWorkflowConfiguration) *
 		return nil
 	}
 
-	out := &apiv1.AsyncWorkflowConfiguration{
+	return &apiv1.AsyncWorkflowConfiguration{
+		Enabled:             in.Enabled,
 		PredefinedQueueName: in.PredefinedQueueName,
-		QueueType:           apiv1.AsyncWorkflowQueueType(in.QueueType),
-	}
-
-	if out.QueueType == apiv1.AsyncWorkflowQueueType_ASYNC_WORKFLOW_QUEUE_TYPE_KAFKA {
-		out.Attributes = FromAsyncWorkflowKafkaQueueConfig(in.KafkaConfig)
-	}
-
-	return out
-}
-
-func FromAsyncWorkflowKafkaQueueConfig(in *types.AsyncWorkflowKafkaQueueConfiguration) *apiv1.AsyncWorkflowConfiguration_KafkaConfig {
-	if in == nil {
-		return nil
-	}
-	return &apiv1.AsyncWorkflowConfiguration_KafkaConfig{
-		KafkaConfig: &apiv1.AsyncWorkflowKafkaQueueConfiguration{
-			Topic:         in.Topic,
-			DlqTopic:      in.DLQTopic,
-			ConsumerGroup: in.ConsumerGroup,
-			Brokers:       in.Brokers,
-			Properties:    in.Properties,
-		},
+		QueueType:           in.QueueType,
+		QueueConfig:         FromDataBlob(in.QueueConfig),
 	}
 }
 
@@ -1424,28 +1405,11 @@ func ToDomainAsyncWorkflowConfiguraton(in *apiv1.AsyncWorkflowConfiguration) *ty
 		return nil
 	}
 
-	out := &types.AsyncWorkflowConfiguration{
+	return &types.AsyncWorkflowConfiguration{
+		Enabled:             in.Enabled,
 		PredefinedQueueName: in.PredefinedQueueName,
-		QueueType:           types.AsyncWorkflowQueueType(in.QueueType),
-	}
-
-	if out.QueueType == types.AsyncWorkflowQueueTypeKafka {
-		out.KafkaConfig = ToAsyncWorkflowKafkaQueueConfig(in.GetKafkaConfig())
-	}
-
-	return out
-}
-
-func ToAsyncWorkflowKafkaQueueConfig(in *apiv1.AsyncWorkflowKafkaQueueConfiguration) *types.AsyncWorkflowKafkaQueueConfiguration {
-	if in == nil {
-		return nil
-	}
-	return &types.AsyncWorkflowKafkaQueueConfiguration{
-		Topic:         in.Topic,
-		DLQTopic:      in.DlqTopic,
-		ConsumerGroup: in.ConsumerGroup,
-		Brokers:       in.Brokers,
-		Properties:    in.Properties,
+		QueueType:           in.QueueType,
+		QueueConfig:         ToDataBlob(in.QueueConfig),
 	}
 }
 

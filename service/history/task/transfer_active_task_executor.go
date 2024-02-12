@@ -43,6 +43,7 @@ import (
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/reset"
 	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/workflowcache"
 	"github.com/uber/cadence/service/worker/archiver"
 	"github.com/uber/cadence/service/worker/parentclosepolicy"
 )
@@ -84,6 +85,7 @@ func NewTransferActiveTaskExecutor(
 	workflowResetter reset.WorkflowResetter,
 	logger log.Logger,
 	config *config.Config,
+	wfIDCache workflowcache.WFCache,
 ) Executor {
 
 	return &transferActiveTaskExecutor{
@@ -93,6 +95,7 @@ func NewTransferActiveTaskExecutor(
 			executionCache,
 			logger,
 			config,
+			wfIDCache,
 		),
 		historyClient: shard.GetService().GetHistoryClient(),
 		parentClosePolicyClient: parentclosepolicy.NewClient(

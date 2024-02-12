@@ -66,6 +66,7 @@ func (db *cdb) InsertDomain(
 		failoverEndTime = row.FailoverEndTime.UnixNano()
 	}
 	isolationGroupData, isolationGroupEncoding := getIsolationGroupFields(row)
+	asyncWFConfigData, asyncWFConfigEncoding := getAsyncWFConfigFields(row)
 
 	batch.Query(templateCreateDomainByNameQueryWithinBatchV2,
 		constDomainPartition,
@@ -88,6 +89,8 @@ func (db *cdb) InsertDomain(
 		string(row.Config.BadBinaries.Encoding),
 		isolationGroupData,
 		isolationGroupEncoding,
+		asyncWFConfigData,
+		asyncWFConfigEncoding,
 		row.ReplicationConfig.ActiveClusterName,
 		persistence.SerializeClusterConfigs(row.ReplicationConfig.Clusters),
 		row.IsGlobalDomain,
@@ -171,6 +174,7 @@ func (db *cdb) UpdateDomain(
 	}
 
 	isolationGroupData, isolationGroupEncoding := getIsolationGroupFields(row)
+	asyncWFConfigData, asyncWFConfigEncoding := getAsyncWFConfigFields(row)
 
 	batch.Query(templateUpdateDomainByNameQueryWithinBatchV2,
 		row.Info.ID,
@@ -191,6 +195,8 @@ func (db *cdb) UpdateDomain(
 		string(row.Config.BadBinaries.Encoding),
 		isolationGroupData,
 		isolationGroupEncoding,
+		asyncWFConfigData,
+		asyncWFConfigEncoding,
 		row.ReplicationConfig.ActiveClusterName,
 		persistence.SerializeClusterConfigs(row.ReplicationConfig.Clusters),
 		row.ConfigVersion,
@@ -264,6 +270,8 @@ func (db *cdb) SelectDomain(
 	var retentionDays int32
 	var isolationGroupData []byte
 	var isolationGroupEncoding string
+	var asyncWFConfigData []byte
+	var asyncWFConfigEncoding string
 
 	query = db.session.Query(templateGetDomainByNameQueryV2, constDomainPartition, domainName).WithContext(ctx)
 	err = query.Scan(
@@ -287,6 +295,8 @@ func (db *cdb) SelectDomain(
 		&replicationClusters,
 		&isolationGroupData,
 		&isolationGroupEncoding,
+		&asyncWFConfigData,
+		&asyncWFConfigEncoding,
 		&isGlobalDomain,
 		&configVersion,
 		&failoverVersion,
@@ -302,6 +312,7 @@ func (db *cdb) SelectDomain(
 	}
 
 	config.IsolationGroups = persistence.NewDataBlob(isolationGroupData, common.EncodingType(isolationGroupEncoding))
+	config.AsyncWorkflowsConfig = persistence.NewDataBlob(asyncWFConfigData, common.EncodingType(asyncWFConfigEncoding))
 	config.BadBinaries = persistence.NewDataBlob(badBinariesData, common.EncodingType(badBinariesDataEncoding))
 	config.Retention = common.DaysToDuration(retentionDays)
 	replicationConfig.Clusters = persistence.DeserializeClusterConfigs(replicationClusters)
@@ -350,6 +361,8 @@ func (db *cdb) SelectAllDomains(
 	var badBinariesDataEncoding string
 	var isolationGroups []byte
 	var isolationGroupsEncoding string
+	var asyncWFConfigData []byte
+	var asyncWFConfigEncoding string
 	var retentionDays int32
 	var failoverEndTime int64
 	var lastUpdateTime int64
@@ -374,6 +387,8 @@ func (db *cdb) SelectAllDomains(
 		&badBinariesDataEncoding,
 		&isolationGroups,
 		&isolationGroupsEncoding,
+		&asyncWFConfigData,
+		&asyncWFConfigEncoding,
 		&domain.ReplicationConfig.ActiveClusterName,
 		&replicationClusters,
 		&domain.IsGlobalDomain,
@@ -391,6 +406,7 @@ func (db *cdb) SelectAllDomains(
 			domain.ReplicationConfig.Clusters = persistence.DeserializeClusterConfigs(replicationClusters)
 			domain.Config.Retention = common.DaysToDuration(retentionDays)
 			domain.Config.IsolationGroups = persistence.NewDataBlob(isolationGroups, common.EncodingType(isolationGroupsEncoding))
+			domain.Config.AsyncWorkflowsConfig = persistence.NewDataBlob(asyncWFConfigData, common.EncodingType(asyncWFConfigEncoding))
 			domain.LastUpdatedTime = time.Unix(0, lastUpdateTime)
 			if failoverEndTime > emptyFailoverEndTime {
 				domain.FailoverEndTime = common.TimePtr(time.Unix(0, failoverEndTime))
@@ -441,7 +457,7 @@ func (db *cdb) DeleteDomain(
 	} else {
 		var ID string
 		query := db.session.Query(templateGetDomainByNameQueryV2, constDomainPartition, *domainName).WithContext(ctx)
-		err := query.Scan(&ID, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+		err := query.Scan(&ID, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 		if err != nil {
 			if db.client.IsNotFoundError(err) {
 				return nil
@@ -491,6 +507,16 @@ func getIsolationGroupFields(row *nosqlplugin.DomainRow) ([]byte, string) {
 	if row != nil && row.Config != nil && row.Config.IsolationGroups != nil {
 		d = row.Config.IsolationGroups.GetData()
 		e = row.Config.IsolationGroups.GetEncodingString()
+	}
+	return d, e
+}
+
+func getAsyncWFConfigFields(row *nosqlplugin.DomainRow) ([]byte, string) {
+	var d []byte
+	var e string
+	if row != nil && row.Config != nil && row.Config.AsyncWorkflowsConfig != nil {
+		d = row.Config.AsyncWorkflowsConfig.GetData()
+		e = row.Config.AsyncWorkflowsConfig.GetEncodingString()
 	}
 	return d, e
 }

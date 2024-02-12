@@ -34,6 +34,6 @@ func init() {
 			panic(fmt.Errorf("failed to register default provider: %w", err))
 		}
 	}
-	must(provider.RegisterAsyncQueueProducerProvider("kafka", ProducerConstructor))
-	must(provider.RegisterAsyncQueueConsumerProvider("kafka", ConsumerConstructor))
+	must(provider.RegisterQueueProvider("kafka", newQueue))
+	must(provider.RegisterDecoder("kafka", newDecoder))
 }

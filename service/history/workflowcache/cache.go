@@ -20,6 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+//go:generate mockgen -package=$GOPACKAGE -destination=cache_mock.go github.com/uber/cadence/service/history/workflowcache WFCache
+
 package workflowcache
 
 import (
@@ -45,18 +47,19 @@ type WFCache interface {
 }
 
 type wfCache struct {
-	lru                    cache.Cache
-	externalLimiterFactory quotas.LimiterFactory
-	internalLimiterFactory quotas.LimiterFactory
-	workflowIDCacheEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
-	domainCache            cache.DomainCache
-	metricsClient          metrics.Client
-	logger                 log.Logger
-	getCacheItemFn         func(domainID string, workflowID string) (*cacheValue, error)
+	lru                            cache.Cache
+	externalLimiterFactory         quotas.LimiterFactory
+	internalLimiterFactory         quotas.LimiterFactory
+	workflowIDCacheExternalEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
+	workflowIDCacheInternalEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
+	domainCache                    cache.DomainCache
+	metricsClient                  metrics.Client
+	logger                         log.Logger
+	getCacheItemFn                 func(domainName string, workflowID string) (*cacheValue, error)
 }
 
 type cacheKey struct {
-	domainID   string
+	domainName string
 	workflowID string
 }
 
@@ -67,14 +70,15 @@ type cacheValue struct {
 
 // Params is the parameters for a new WFCache
 type Params struct {
-	TTL                    time.Duration
-	MaxCount               int
-	ExternalLimiterFactory quotas.LimiterFactory
-	InternalLimiterFactory quotas.LimiterFactory
-	WorkflowIDCacheEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
-	DomainCache            cache.DomainCache
-	MetricsClient          metrics.Client
-	Logger                 log.Logger
+	TTL                            time.Duration
+	MaxCount                       int
+	ExternalLimiterFactory         quotas.LimiterFactory
+	InternalLimiterFactory         quotas.LimiterFactory
+	WorkflowIDCacheExternalEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
+	WorkflowIDCacheInternalEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
+	DomainCache                    cache.DomainCache
+	MetricsClient                  metrics.Client
+	Logger                         log.Logger
 }
 
 // New creates a new WFCache
@@ -86,12 +90,13 @@ func New(params Params) WFCache {
 			MaxCount:      params.MaxCount,
 			ActivelyEvict: true,
 		}),
-		externalLimiterFactory: params.ExternalLimiterFactory,
-		internalLimiterFactory: params.InternalLimiterFactory,
-		workflowIDCacheEnabled: params.WorkflowIDCacheEnabled,
-		domainCache:            params.DomainCache,
-		metricsClient:          params.MetricsClient,
-		logger:                 params.Logger,
+		externalLimiterFactory:         params.ExternalLimiterFactory,
+		internalLimiterFactory:         params.InternalLimiterFactory,
+		workflowIDCacheExternalEnabled: params.WorkflowIDCacheExternalEnabled,
+		workflowIDCacheInternalEnabled: params.WorkflowIDCacheInternalEnabled,
+		domainCache:                    params.DomainCache,
+		metricsClient:                  params.MetricsClient,
+		logger:                         params.Logger,
 	}
 	// We set getCacheItemFn to cache.getCacheItem so that we can mock it in unit tests
 	cache.getCacheItemFn = cache.getCacheItem
@@ -114,17 +119,17 @@ func (c *wfCache) allow(domainID string, workflowID string, rateLimitType rateLi
 		return true
 	}
 
-	if !c.workflowIDCacheEnabled(domainName) {
+	if !c.isWfCacheEnabled(rateLimitType, domainName) {
 		// The cache is not enabled, so we allow the call through
 		return true
 	}
 
 	c.metricsClient.
-		Scope(metrics.HistoryClientWfIDCacheScope, metrics.DomainTag(domainName)).
+		Scope(metrics.HistoryClientWfIDCacheScope).
 		UpdateGauge(metrics.WorkflowIDCacheSizeGauge, float64(c.lru.Size()))
 
 	// Locking is not needed because both getCacheItem and the rate limiter are thread safe
-	value, err := c.getCacheItemFn(domainID, workflowID)
+	value, err := c.getCacheItemFn(domainName, workflowID)
 	if err != nil {
 		c.logError(domainID, workflowID, err)
 		// If we can't get the cache item, we should allow the request through
@@ -133,14 +138,38 @@ func (c *wfCache) allow(domainID string, workflowID string, rateLimitType rateLi
 
 	switch rateLimitType {
 	case external:
-		return value.externalRateLimiter.Allow()
+		if !value.externalRateLimiter.Allow() {
+			c.emitRateLimitMetrics(domainID, workflowID, domainName, "external", metrics.WorkflowIDCacheRequestsExternalRatelimitedCounter)
+			return false
+		}
+		return true
 	case internal:
-		return value.internalRateLimiter.Allow()
+		if !value.internalRateLimiter.Allow() {
+			c.emitRateLimitMetrics(domainID, workflowID, domainName, "internal", metrics.WorkflowIDCacheRequestsInternalRatelimitedCounter)
+			return false
+		}
+		return true
 	default:
 		// This should never happen, and we fail open
 		c.logError(domainID, workflowID, errors.New("unknown rate limit type"))
 		return true
 	}
+}
+
+func (c *wfCache) isWfCacheEnabled(rateLimitType rateLimitType, domainName string) bool {
+	return rateLimitType == external && c.workflowIDCacheExternalEnabled(domainName) ||
+		rateLimitType == internal && c.workflowIDCacheInternalEnabled(domainName)
+}
+
+func (c *wfCache) emitRateLimitMetrics(domainID string, workflowID string, domainName string, callType string, metric int) {
+	c.metricsClient.Scope(metrics.HistoryClientWfIDCacheScope, metrics.DomainTag(domainName)).IncCounter(metric)
+	c.logger.Info(
+		"Rate limiting workflowID",
+		tag.RequestType(callType),
+		tag.WorkflowDomainID(domainID),
+		tag.WorkflowDomainName(domainName),
+		tag.WorkflowID(workflowID),
+	)
 }
 
 // AllowExternal returns true if the rate limiter for this domain/workflow allows an external request
@@ -153,10 +182,10 @@ func (c *wfCache) AllowInternal(domainID string, workflowID string) bool {
 	return c.allow(domainID, workflowID, internal)
 }
 
-func (c *wfCache) getCacheItem(domainID string, workflowID string) (*cacheValue, error) {
+func (c *wfCache) getCacheItem(domainName string, workflowID string) (*cacheValue, error) {
 	// The underlying lru cache is thread safe, so there is no need to lock
 	key := cacheKey{
-		domainID:   domainID,
+		domainName: domainName,
 		workflowID: workflowID,
 	}
 
@@ -167,8 +196,8 @@ func (c *wfCache) getCacheItem(domainID string, workflowID string) (*cacheValue,
 	}
 
 	value = &cacheValue{
-		externalRateLimiter: c.externalLimiterFactory.GetLimiter(domainID),
-		internalRateLimiter: c.internalLimiterFactory.GetLimiter(domainID),
+		externalRateLimiter: c.externalLimiterFactory.GetLimiter(domainName),
+		internalRateLimiter: c.internalLimiterFactory.GetLimiter(domainName),
 	}
 	// PutIfNotExist is thread safe, and will either return the value that was already in the cache or the value we just created
 	// another thread might have inserted a value between the Get and PutIfNotExist, but that is ok

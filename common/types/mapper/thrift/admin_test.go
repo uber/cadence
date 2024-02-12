@@ -400,7 +400,7 @@ func TestToGetGlobalIsolationGroupsResponse(t *testing.T) {
 }
 
 func TestToAdminUpdateDomainAsyncWorkflowConfiguratonRequest(t *testing.T) {
-	kafkaQueueType := shared.AsyncWorkflowQueueTypeKafka
+	enabled := true
 	tests := map[string]struct {
 		input *admin.UpdateDomainAsyncWorkflowConfiguratonRequest
 		want  *types.UpdateDomainAsyncWorkflowConfiguratonRequest
@@ -417,44 +417,38 @@ func TestToAdminUpdateDomainAsyncWorkflowConfiguratonRequest(t *testing.T) {
 			input: &admin.UpdateDomainAsyncWorkflowConfiguratonRequest{
 				Domain: strPtr("test-domain"),
 				Configuration: &shared.AsyncWorkflowConfiguration{
+					Enabled:             &enabled,
 					PredefinedQueueName: strPtr("test-queue"),
 				},
 			},
 			want: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
 				Domain: "test-domain",
 				Configuration: &types.AsyncWorkflowConfiguration{
+					Enabled:             enabled,
 					PredefinedQueueName: "test-queue",
 				},
 			},
 		},
-		"kafka inline queue": {
+		"inline queue": {
 			input: &admin.UpdateDomainAsyncWorkflowConfiguratonRequest{
 				Domain: strPtr("test-domain"),
 				Configuration: &shared.AsyncWorkflowConfiguration{
-					QueueType: &kafkaQueueType,
-					KafkaConfig: &shared.AsyncWorkflowKafkaQueueConfiguration{
-						Topic:         strPtr("test-topic"),
-						DlqTopic:      strPtr("test-dlq-topic"),
-						ConsumerGroup: strPtr("test-consumer-group"),
-						Brokers:       []string{"test-broker1", "test-broker2"},
-						Properties: map[string]string{
-							"test-key1": "test-value1",
-						},
+					Enabled:   &enabled,
+					QueueType: strPtr("kafka"),
+					QueueConfig: &shared.DataBlob{
+						EncodingType: shared.EncodingTypeJSON.Ptr(),
+						Data:         []byte("test-data"),
 					},
 				},
 			},
 			want: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
 				Domain: "test-domain",
 				Configuration: &types.AsyncWorkflowConfiguration{
-					QueueType: types.AsyncWorkflowQueueTypeKafka,
-					KafkaConfig: &types.AsyncWorkflowKafkaQueueConfiguration{
-						Topic:         "test-topic",
-						DLQTopic:      "test-dlq-topic",
-						ConsumerGroup: "test-consumer-group",
-						Brokers:       []string{"test-broker1", "test-broker2"},
-						Properties: map[string]string{
-							"test-key1": "test-value1",
-						},
+					Enabled:   enabled,
+					QueueType: "kafka",
+					QueueConfig: &types.DataBlob{
+						EncodingType: types.EncodingTypeJSON.Ptr(),
+						Data:         []byte("test-data"),
 					},
 				},
 			},
@@ -521,8 +515,7 @@ func TestToAdminGetDomainAsyncWorkflowConfiguratonRequest(t *testing.T) {
 }
 
 func TestFromAdminGetDomainAsyncWorkflowConfiguratonResponse(t *testing.T) {
-	kafkaQueueType := shared.AsyncWorkflowQueueTypeKafka
-	invalidQueueType := shared.AsyncWorkflowQueueTypeInvalid
+	enabled := true
 	tests := map[string]struct {
 		input *types.GetDomainAsyncWorkflowConfiguratonResponse
 		want  *admin.GetDomainAsyncWorkflowConfiguratonResponse
@@ -538,43 +531,37 @@ func TestFromAdminGetDomainAsyncWorkflowConfiguratonResponse(t *testing.T) {
 		"predefined queue": {
 			input: &types.GetDomainAsyncWorkflowConfiguratonResponse{
 				Configuration: &types.AsyncWorkflowConfiguration{
+					Enabled:             enabled,
 					PredefinedQueueName: "test-queue",
 				},
 			},
 			want: &admin.GetDomainAsyncWorkflowConfiguratonResponse{
 				Configuration: &shared.AsyncWorkflowConfiguration{
+					Enabled:             &enabled,
 					PredefinedQueueName: strPtr("test-queue"),
-					QueueType:           &invalidQueueType,
+					QueueType:           strPtr(""),
 				},
 			},
 		},
-		"kafka inline queue": {
+		"inline queue": {
 			input: &types.GetDomainAsyncWorkflowConfiguratonResponse{
 				Configuration: &types.AsyncWorkflowConfiguration{
-					QueueType: types.AsyncWorkflowQueueTypeKafka,
-					KafkaConfig: &types.AsyncWorkflowKafkaQueueConfiguration{
-						Topic:         "test-topic",
-						DLQTopic:      "test-dlq-topic",
-						ConsumerGroup: "test-consumer-group",
-						Brokers:       []string{"test-broker1", "test-broker2"},
-						Properties: map[string]string{
-							"test-key1": "test-value1",
-						},
+					Enabled:   enabled,
+					QueueType: "kafka",
+					QueueConfig: &types.DataBlob{
+						EncodingType: types.EncodingTypeJSON.Ptr(),
+						Data:         []byte("test-data"),
 					},
 				},
 			},
 			want: &admin.GetDomainAsyncWorkflowConfiguratonResponse{
 				Configuration: &shared.AsyncWorkflowConfiguration{
-					QueueType:           &kafkaQueueType,
+					Enabled:             &enabled,
 					PredefinedQueueName: strPtr(""),
-					KafkaConfig: &shared.AsyncWorkflowKafkaQueueConfiguration{
-						Topic:         strPtr("test-topic"),
-						DlqTopic:      strPtr("test-dlq-topic"),
-						ConsumerGroup: strPtr("test-consumer-group"),
-						Brokers:       []string{"test-broker1", "test-broker2"},
-						Properties: map[string]string{
-							"test-key1": "test-value1",
-						},
+					QueueType:           strPtr("kafka"),
+					QueueConfig: &shared.DataBlob{
+						EncodingType: shared.EncodingTypeJSON.Ptr(),
+						Data:         []byte("test-data"),
 					},
 				},
 			},
@@ -621,7 +608,7 @@ func TestFromAdminGetDomainAsyncWorkflowConfiguratonRequest(t *testing.T) {
 }
 
 func TestToAdminGetDomainAsyncWorkflowConfiguratonResponse(t *testing.T) {
-	kafkaQueueType := shared.AsyncWorkflowQueueTypeKafka
+	enabled := true
 	tests := map[string]struct {
 		input *admin.GetDomainAsyncWorkflowConfiguratonResponse
 		want  *types.GetDomainAsyncWorkflowConfiguratonResponse
@@ -637,41 +624,35 @@ func TestToAdminGetDomainAsyncWorkflowConfiguratonResponse(t *testing.T) {
 		"predefined queue": {
 			input: &admin.GetDomainAsyncWorkflowConfiguratonResponse{
 				Configuration: &shared.AsyncWorkflowConfiguration{
+					Enabled:             &enabled,
 					PredefinedQueueName: strPtr("test-queue"),
 				},
 			},
 			want: &types.GetDomainAsyncWorkflowConfiguratonResponse{
 				Configuration: &types.AsyncWorkflowConfiguration{
+					Enabled:             enabled,
 					PredefinedQueueName: "test-queue",
 				},
 			},
 		},
-		"kafka inline queue": {
+		"inline queue": {
 			input: &admin.GetDomainAsyncWorkflowConfiguratonResponse{
 				Configuration: &shared.AsyncWorkflowConfiguration{
-					QueueType: &kafkaQueueType,
-					KafkaConfig: &shared.AsyncWorkflowKafkaQueueConfiguration{
-						Topic:         strPtr("test-topic"),
-						DlqTopic:      strPtr("test-dlq-topic"),
-						ConsumerGroup: strPtr("test-consumer-group"),
-						Brokers:       []string{"test-broker1", "test-broker2"},
-						Properties: map[string]string{
-							"test-key1": "test-value1",
-						},
+					Enabled:   &enabled,
+					QueueType: strPtr("kafka"),
+					QueueConfig: &shared.DataBlob{
+						EncodingType: shared.EncodingTypeJSON.Ptr(),
+						Data:         []byte("test-data"),
 					},
 				},
 			},
 			want: &types.GetDomainAsyncWorkflowConfiguratonResponse{
 				Configuration: &types.AsyncWorkflowConfiguration{
-					QueueType: types.AsyncWorkflowQueueTypeKafka,
-					KafkaConfig: &types.AsyncWorkflowKafkaQueueConfiguration{
-						Topic:         "test-topic",
-						DLQTopic:      "test-dlq-topic",
-						ConsumerGroup: "test-consumer-group",
-						Brokers:       []string{"test-broker1", "test-broker2"},
-						Properties: map[string]string{
-							"test-key1": "test-value1",
-						},
+					Enabled:   enabled,
+					QueueType: "kafka",
+					QueueConfig: &types.DataBlob{
+						EncodingType: types.EncodingTypeJSON.Ptr(),
+						Data:         []byte("test-data"),
 					},
 				},
 			},
@@ -686,9 +667,7 @@ func TestToAdminGetDomainAsyncWorkflowConfiguratonResponse(t *testing.T) {
 }
 
 func TestFromAdminUpdateDomainAsyncWorkflowConfiguratonRequest(t *testing.T) {
-	kafkaQueueType := shared.AsyncWorkflowQueueTypeKafka
-	invalidQueueType := shared.AsyncWorkflowQueueTypeInvalid
-
+	enabled := true
 	tests := map[string]struct {
 		input *types.UpdateDomainAsyncWorkflowConfiguratonRequest
 		want  *admin.UpdateDomainAsyncWorkflowConfiguratonRequest
@@ -707,46 +686,40 @@ func TestFromAdminUpdateDomainAsyncWorkflowConfiguratonRequest(t *testing.T) {
 			input: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
 				Domain: "test-domain",
 				Configuration: &types.AsyncWorkflowConfiguration{
+					Enabled:             enabled,
 					PredefinedQueueName: "test-queue",
 				},
 			},
 			want: &admin.UpdateDomainAsyncWorkflowConfiguratonRequest{
 				Domain: strPtr("test-domain"),
 				Configuration: &shared.AsyncWorkflowConfiguration{
+					Enabled:             &enabled,
 					PredefinedQueueName: strPtr("test-queue"),
-					QueueType:           &invalidQueueType,
+					QueueType:           strPtr(""),
 				},
 			},
 		},
-		"kafka inline queue": {
+		"inline queue": {
 			input: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
 				Domain: "test-domain",
 				Configuration: &types.AsyncWorkflowConfiguration{
-					QueueType: types.AsyncWorkflowQueueTypeKafka,
-					KafkaConfig: &types.AsyncWorkflowKafkaQueueConfiguration{
-						Topic:         "test-topic",
-						DLQTopic:      "test-dlq-topic",
-						ConsumerGroup: "test-consumer-group",
-						Brokers:       []string{"test-broker1", "test-broker2"},
-						Properties: map[string]string{
-							"test-key1": "test-value1",
-						},
+					Enabled:   enabled,
+					QueueType: "kafka",
+					QueueConfig: &types.DataBlob{
+						EncodingType: types.EncodingTypeJSON.Ptr(),
+						Data:         []byte("test-data"),
 					},
 				},
 			},
 			want: &admin.UpdateDomainAsyncWorkflowConfiguratonRequest{
 				Domain: strPtr("test-domain"),
 				Configuration: &shared.AsyncWorkflowConfiguration{
+					Enabled:             &enabled,
 					PredefinedQueueName: strPtr(""),
-					QueueType:           &kafkaQueueType,
-					KafkaConfig: &shared.AsyncWorkflowKafkaQueueConfiguration{
-						Topic:         strPtr("test-topic"),
-						DlqTopic:      strPtr("test-dlq-topic"),
-						ConsumerGroup: strPtr("test-consumer-group"),
-						Brokers:       []string{"test-broker1", "test-broker2"},
-						Properties: map[string]string{
-							"test-key1": "test-value1",
-						},
+					QueueType:           strPtr("kafka"),
+					QueueConfig: &shared.DataBlob{
+						EncodingType: shared.EncodingTypeJSON.Ptr(),
+						Data:         []byte("test-data"),
 					},
 				},
 			},

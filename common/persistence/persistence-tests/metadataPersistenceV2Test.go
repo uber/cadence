@@ -525,10 +525,8 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 		},
 	}
 	asyncWFCfg := types.AsyncWorkflowConfiguration{
-		QueueType: types.AsyncWorkflowQueueTypeKafka,
-		KafkaConfig: &types.AsyncWorkflowKafkaQueueConfiguration{
-			Topic: "topic1",
-		},
+		Enabled:             true,
+		PredefinedQueueName: "testQueue",
 	}
 
 	id := uuid.New()
@@ -717,16 +715,10 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	}
 
 	asyncWFCfg1 := types.AsyncWorkflowConfiguration{
-		QueueType: types.AsyncWorkflowQueueTypeKafka,
-		KafkaConfig: &types.AsyncWorkflowKafkaQueueConfiguration{
-			Topic: "topic1",
-		},
+		PredefinedQueueName: "queue1",
 	}
 	asyncWFCfg2 := types.AsyncWorkflowConfiguration{
-		QueueType: types.AsyncWorkflowQueueTypeKafka,
-		KafkaConfig: &types.AsyncWorkflowKafkaQueueConfiguration{
-			Topic: "topic2",
-		},
+		PredefinedQueueName: "queue2",
 	}
 
 	id := uuid.New()
@@ -899,9 +891,7 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	m.Equal(&failoverEndTime, resp4.FailoverEndTime)
 	m.Equal(lastUpdateTime, resp4.LastUpdatedTime)
 	m.Equal(isolationGroups2, resp4.Config.IsolationGroups)
-	// TODO(taylan): uncomment when persistent layer schema is updated
-	// m.Equal(asyncWFCfg2, resp4.Config.AsyncWorkflowConfig)
-	m.Equal(types.AsyncWorkflowConfiguration{}, resp4.Config.AsyncWorkflowConfig)
+	m.Equal(asyncWFCfg2, resp4.Config.AsyncWorkflowConfig)
 
 	resp5, err5 := m.GetDomain(ctx, id, "")
 	m.NoError(err5)
@@ -999,10 +989,7 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	m.Nil(resp6.FailoverEndTime)
 	m.Equal(lastUpdateTime, resp6.LastUpdatedTime)
 	m.Equal(isolationGroups1, resp6.Config.IsolationGroups)
-
-	// TODO(taylan): uncomment when persistent layer schema is updated
-	// m.Equal(asyncWFCfg1, resp6.Config.AsyncWorkflowConfig)
-	m.Equal(types.AsyncWorkflowConfiguration{}, resp6.Config.AsyncWorkflowConfig)
+	m.Equal(asyncWFCfg1, resp6.Config.AsyncWorkflowConfig)
 }
 
 // TestDeleteDomain test

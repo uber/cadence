@@ -29,6 +29,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -2020,4 +2021,122 @@ var describeDomainResponseServer = &types.DescribeDomainResponse{
 			},
 		},
 	},
+}
+
+func TestStartWorkflowExecutionAsync(t *testing.T) {
+	testCases := []struct {
+		name       string
+		setupMocks func(*MockProducerManager)
+		request    *types.StartWorkflowExecutionAsyncRequest
+		wantErr    bool
+	}{
+		{
+			name: "Success case",
+			setupMocks: func(mockQueue *MockProducerManager) {
+				mockProducer := &mocks.KafkaProducer{}
+				mockQueue.EXPECT().GetProducerByDomain(gomock.Any()).Return(mockProducer, nil)
+				mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil)
+			},
+			request: &types.StartWorkflowExecutionAsyncRequest{
+				StartWorkflowExecutionRequest: &types.StartWorkflowExecutionRequest{
+					Domain:     "test-domain",
+					WorkflowID: "test-workflow-id",
+					WorkflowType: &types.WorkflowType{
+						Name: "test-workflow-type",
+					},
+					TaskList: &types.TaskList{
+						Name: "test-task-list",
+					},
+					Input:                               nil,
+					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(60),
+					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+					Identity:                            "test-identity",
+					RequestID:                           uuid.New(),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Error case - failed to get async queue producer",
+			setupMocks: func(mockQueue *MockProducerManager) {
+				mockQueue.EXPECT().GetProducerByDomain(gomock.Any()).Return(nil, errors.New("test-error"))
+			},
+			request: &types.StartWorkflowExecutionAsyncRequest{
+				StartWorkflowExecutionRequest: &types.StartWorkflowExecutionRequest{
+					Domain:     "test-domain",
+					WorkflowID: "test-workflow-id",
+					WorkflowType: &types.WorkflowType{
+						Name: "test-workflow-type",
+					},
+					TaskList: &types.TaskList{
+						Name: "test-task-list",
+					},
+					Input:                               nil,
+					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(60),
+					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+					Identity:                            "test-identity",
+					RequestID:                           uuid.New(),
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error case - failed to publish message",
+			setupMocks: func(mockQueue *MockProducerManager) {
+				mockProducer := &mocks.KafkaProducer{}
+				mockQueue.EXPECT().GetProducerByDomain(gomock.Any()).Return(mockProducer, nil)
+				mockProducer.On("Publish", mock.Anything, mock.Anything).Return(errors.New("test-error"))
+			},
+			request: &types.StartWorkflowExecutionAsyncRequest{
+				StartWorkflowExecutionRequest: &types.StartWorkflowExecutionRequest{
+					Domain:     "test-domain",
+					WorkflowID: "test-workflow-id",
+					WorkflowType: &types.WorkflowType{
+						Name: "test-workflow-type",
+					},
+					TaskList: &types.TaskList{
+						Name: "test-task-list",
+					},
+					Input:                               nil,
+					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(60),
+					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+					Identity:                            "test-identity",
+					RequestID:                           uuid.New(),
+				},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockResource := resource.NewTest(t, mockCtrl, metrics.Frontend)
+			mockResource.DomainCache.EXPECT().GetDomainID(gomock.Any()).Return("test-domain-id", nil)
+			mockVersionChecker := client.NewMockVersionChecker(mockCtrl)
+			mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil)
+			mockProducerManager := NewMockProducerManager(mockCtrl)
+
+			cfg := frontendcfg.NewConfig(
+				dc.NewCollection(
+					dc.NewInMemoryClient(),
+					mockResource.GetLogger(),
+				),
+				numHistoryShards,
+				false,
+				"hostname",
+			)
+			wh := NewWorkflowHandler(mockResource, cfg, mockVersionChecker, nil)
+			wh.producerManager = mockProducerManager
+
+			tc.setupMocks(mockProducerManager)
+
+			_, err := wh.StartWorkflowExecutionAsync(context.Background(), tc.request)
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }

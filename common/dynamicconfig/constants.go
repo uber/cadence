@@ -1711,11 +1711,17 @@ const (
 	// Allowed filters: DomainName
 	EnableRecordWorkflowExecutionUninitialized
 	// WorkflowIDCacheEnabled is the key to enable/disable caching of workflowID specific information
-	// KeyName: history.workflowIDCacheEnabled
+	// KeyName: history.workflowIDCacheExternalEnabled
 	// Value type: Bool
 	// Default value: false
 	// Allowed filters: DomainName
-	WorkflowIDCacheEnabled
+	WorkflowIDCacheExternalEnabled
+	// WorkflowIDCacheInternalEnabled is the key to enable/disable caching of workflowID specific information for internal requests
+	// KeyName: history.workflowIDCacheInternalEnabled
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: DomainName
+	WorkflowIDCacheInternalEnabled
 	// AllowArchivingIncompleteHistory will continue on when seeing some error like history mutated(usually caused by database consistency issues)
 	// KeyName: worker.AllowArchivingIncompleteHistory
 	// Value type: Bool
@@ -4177,10 +4183,16 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		Description:  "Enable TaskValidation",
 		DefaultValue: false,
 	},
-	WorkflowIDCacheEnabled: DynamicBool{
-		KeyName:      "history.workflowIDCacheEnabled",
+	WorkflowIDCacheExternalEnabled: DynamicBool{
+		KeyName:      "history.workflowIDCacheExternalEnabled",
 		Filters:      []Filter{DomainName},
-		Description:  "WorkflowIDCacheEnabled is the key to enable/disable caching of workflowID specific information",
+		Description:  "WorkflowIDCacheExternalEnabled is the key to enable/disable caching of workflowID specific information for external requests",
+		DefaultValue: false,
+	},
+	WorkflowIDCacheInternalEnabled: DynamicBool{
+		KeyName:      "history.workflowIDCacheInternalEnabled",
+		Filters:      []Filter{DomainName},
+		Description:  "WorkflowIDCacheInternalEnabled is the key to enable/disable caching of workflowID specific information for internal requests",
 		DefaultValue: false,
 	},
 }

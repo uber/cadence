@@ -575,43 +575,35 @@ func TestFromAdminGetDomainAsyncWorkflowConfiguratonResponse(t *testing.T) {
 		"predefined queue": {
 			in: &types.GetDomainAsyncWorkflowConfiguratonResponse{
 				Configuration: &types.AsyncWorkflowConfiguration{
+					Enabled:             true,
 					PredefinedQueueName: "test-queue",
 				},
 			},
 			expected: &adminv1.GetDomainAsyncWorkflowConfiguratonResponse{
 				Configuration: &v1.AsyncWorkflowConfiguration{
+					Enabled:             true,
 					PredefinedQueueName: "test-queue",
 				},
 			},
 		},
-		"kafka inline queue": {
+		"inline queue": {
 			in: &types.GetDomainAsyncWorkflowConfiguratonResponse{
 				Configuration: &types.AsyncWorkflowConfiguration{
-					QueueType: types.AsyncWorkflowQueueTypeKafka,
-					KafkaConfig: &types.AsyncWorkflowKafkaQueueConfiguration{
-						Topic:         "test-topic",
-						DLQTopic:      "test-dlq-topic",
-						ConsumerGroup: "test-consumer-group",
-						Brokers:       []string{"test-broker-1", "test-broker-2"},
-						Properties: map[string]string{
-							"test-key-1": "test-value-1",
-						},
+					Enabled:   true,
+					QueueType: "kafka",
+					QueueConfig: &types.DataBlob{
+						EncodingType: types.EncodingTypeJSON.Ptr(),
+						Data:         []byte(`{"topic":"test-topic","dlq_topic":"test-dlq-topic","consumer_group":"test-consumer-group","brokers":["test-broker-1","test-broker-2"],"properties":{"test-key-1":"test-value-1"}}`),
 					},
 				},
 			},
 			expected: &adminv1.GetDomainAsyncWorkflowConfiguratonResponse{
 				Configuration: &v1.AsyncWorkflowConfiguration{
-					QueueType: v1.AsyncWorkflowQueueType_ASYNC_WORKFLOW_QUEUE_TYPE_KAFKA,
-					Attributes: &v1.AsyncWorkflowConfiguration_KafkaConfig{
-						KafkaConfig: &v1.AsyncWorkflowKafkaQueueConfiguration{
-							Topic:         "test-topic",
-							DlqTopic:      "test-dlq-topic",
-							ConsumerGroup: "test-consumer-group",
-							Brokers:       []string{"test-broker-1", "test-broker-2"},
-							Properties: map[string]string{
-								"test-key-1": "test-value-1",
-							},
-						},
+					Enabled:   true,
+					QueueType: "kafka",
+					QueueConfig: &v1.DataBlob{
+						EncodingType: v1.EncodingType_ENCODING_TYPE_JSON,
+						Data:         []byte(`{"topic":"test-topic","dlq_topic":"test-dlq-topic","consumer_group":"test-consumer-group","brokers":["test-broker-1","test-broker-2"],"properties":{"test-key-1":"test-value-1"}}`),
 					},
 				},
 			},
@@ -642,46 +634,38 @@ func TestToAdminUpdateDomainAsyncWorkflowConfiguratonRequest(t *testing.T) {
 			in: &adminv1.UpdateDomainAsyncWorkflowConfiguratonRequest{
 				Domain: "test-domain",
 				Configuration: &v1.AsyncWorkflowConfiguration{
+					Enabled:             true,
 					PredefinedQueueName: "test-queue",
 				},
 			},
 			expected: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
 				Domain: "test-domain",
 				Configuration: &types.AsyncWorkflowConfiguration{
+					Enabled:             true,
 					PredefinedQueueName: "test-queue",
 				},
 			},
 		},
-		"kafka inline queue": {
+		"inline queue": {
 			in: &adminv1.UpdateDomainAsyncWorkflowConfiguratonRequest{
 				Domain: "test-domain",
 				Configuration: &v1.AsyncWorkflowConfiguration{
-					QueueType: v1.AsyncWorkflowQueueType_ASYNC_WORKFLOW_QUEUE_TYPE_KAFKA,
-					Attributes: &v1.AsyncWorkflowConfiguration_KafkaConfig{
-						KafkaConfig: &v1.AsyncWorkflowKafkaQueueConfiguration{
-							Topic:         "test-topic",
-							DlqTopic:      "test-dlq-topic",
-							ConsumerGroup: "test-consumer-group",
-							Brokers:       []string{"test-broker-1", "test-broker-2"},
-							Properties: map[string]string{
-								"test-key-1": "test-value-1",
-							},
-						},
+					Enabled:   true,
+					QueueType: "kafka",
+					QueueConfig: &v1.DataBlob{
+						EncodingType: v1.EncodingType_ENCODING_TYPE_JSON,
+						Data:         []byte(`{"topic":"test-topic","dlq_topic":"test-dlq-topic","consumer_group":"test-consumer-group","brokers":["test-broker-1","test-broker-2"],"properties":{"test-key-1":"test-value-1"}}`),
 					},
 				},
 			},
 			expected: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
 				Domain: "test-domain",
 				Configuration: &types.AsyncWorkflowConfiguration{
-					QueueType: types.AsyncWorkflowQueueTypeKafka,
-					KafkaConfig: &types.AsyncWorkflowKafkaQueueConfiguration{
-						Topic:         "test-topic",
-						DLQTopic:      "test-dlq-topic",
-						ConsumerGroup: "test-consumer-group",
-						Brokers:       []string{"test-broker-1", "test-broker-2"},
-						Properties: map[string]string{
-							"test-key-1": "test-value-1",
-						},
+					Enabled:   true,
+					QueueType: "kafka",
+					QueueConfig: &types.DataBlob{
+						EncodingType: types.EncodingTypeJSON.Ptr(),
+						Data:         []byte(`{"topic":"test-topic","dlq_topic":"test-dlq-topic","consumer_group":"test-consumer-group","brokers":["test-broker-1","test-broker-2"],"properties":{"test-key-1":"test-value-1"}}`),
 					},
 				},
 			},
@@ -772,34 +756,24 @@ func TestToAdminGetDomainAsyncWorkflowConfiguratonResponse(t *testing.T) {
 				},
 			},
 		},
-		"kafka inline queue": {
+		"inline queue": {
 			in: &adminv1.GetDomainAsyncWorkflowConfiguratonResponse{
 				Configuration: &v1.AsyncWorkflowConfiguration{
-					QueueType: v1.AsyncWorkflowQueueType_ASYNC_WORKFLOW_QUEUE_TYPE_KAFKA,
-					Attributes: &v1.AsyncWorkflowConfiguration_KafkaConfig{
-						KafkaConfig: &v1.AsyncWorkflowKafkaQueueConfiguration{
-							Topic:         "test-topic",
-							DlqTopic:      "test-dlq-topic",
-							ConsumerGroup: "test-consumer-group",
-							Brokers:       []string{"test-broker-1", "test-broker-2"},
-							Properties: map[string]string{
-								"test-key-1": "test-value-1",
-							},
-						},
+					Enabled:   true,
+					QueueType: "kafka",
+					QueueConfig: &v1.DataBlob{
+						EncodingType: v1.EncodingType_ENCODING_TYPE_JSON,
+						Data:         []byte(`{"topic":"test-topic","dlq_topic":"test-dlq-topic","consumer_group":"test-consumer-group","brokers":["test-broker-1","test-broker-2"],"properties":{"test-key-1":"test-value-1"}}`),
 					},
 				},
 			},
 			expected: &types.GetDomainAsyncWorkflowConfiguratonResponse{
 				Configuration: &types.AsyncWorkflowConfiguration{
-					QueueType: types.AsyncWorkflowQueueTypeKafka,
-					KafkaConfig: &types.AsyncWorkflowKafkaQueueConfiguration{
-						Topic:         "test-topic",
-						DLQTopic:      "test-dlq-topic",
-						ConsumerGroup: "test-consumer-group",
-						Brokers:       []string{"test-broker-1", "test-broker-2"},
-						Properties: map[string]string{
-							"test-key-1": "test-value-1",
-						},
+					Enabled:   true,
+					QueueType: "kafka",
+					QueueConfig: &types.DataBlob{
+						EncodingType: types.EncodingTypeJSON.Ptr(),
+						Data:         []byte(`{"topic":"test-topic","dlq_topic":"test-dlq-topic","consumer_group":"test-consumer-group","brokers":["test-broker-1","test-broker-2"],"properties":{"test-key-1":"test-value-1"}}`),
 					},
 				},
 			},
@@ -844,32 +818,22 @@ func TestFromAdminUpdateDomainAsyncWorkflowConfiguratonRequest(t *testing.T) {
 			in: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
 				Domain: "test-domain",
 				Configuration: &types.AsyncWorkflowConfiguration{
-					QueueType: types.AsyncWorkflowQueueTypeKafka,
-					KafkaConfig: &types.AsyncWorkflowKafkaQueueConfiguration{
-						Topic:         "test-topic",
-						DLQTopic:      "test-dlq-topic",
-						ConsumerGroup: "test-consumer-group",
-						Brokers:       []string{"test-broker-1", "test-broker-2"},
-						Properties: map[string]string{
-							"test-key-1": "test-value-1",
-						},
+					Enabled:   true,
+					QueueType: "kafka",
+					QueueConfig: &types.DataBlob{
+						EncodingType: types.EncodingTypeJSON.Ptr(),
+						Data:         []byte(`{"topic":"test-topic","dlq_topic":"test-dlq-topic","consumer_group":"test-consumer-group","brokers":["test-broker-1","test-broker-2"],"properties":{"test-key-1":"test-value-1"}}`),
 					},
 				},
 			},
 			expected: &adminv1.UpdateDomainAsyncWorkflowConfiguratonRequest{
 				Domain: "test-domain",
 				Configuration: &v1.AsyncWorkflowConfiguration{
-					QueueType: v1.AsyncWorkflowQueueType_ASYNC_WORKFLOW_QUEUE_TYPE_KAFKA,
-					Attributes: &v1.AsyncWorkflowConfiguration_KafkaConfig{
-						KafkaConfig: &v1.AsyncWorkflowKafkaQueueConfiguration{
-							Topic:         "test-topic",
-							DlqTopic:      "test-dlq-topic",
-							ConsumerGroup: "test-consumer-group",
-							Brokers:       []string{"test-broker-1", "test-broker-2"},
-							Properties: map[string]string{
-								"test-key-1": "test-value-1",
-							},
-						},
+					Enabled:   true,
+					QueueType: "kafka",
+					QueueConfig: &v1.DataBlob{
+						EncodingType: v1.EncodingType_ENCODING_TYPE_JSON,
+						Data:         []byte(`{"topic":"test-topic","dlq_topic":"test-dlq-topic","consumer_group":"test-consumer-group","brokers":["test-broker-1","test-broker-2"],"properties":{"test-key-1":"test-value-1"}}`),
 					},
 				},
 			},

@@ -20,7 +20,11 @@
 
 package common
 
-import "go.uber.org/yarpc"
+import (
+	"context"
+
+	"go.uber.org/yarpc"
+)
 
 const (
 	// LibraryVersionHeaderName refers to the name of the
@@ -65,3 +69,31 @@ type (
 		GetMaxMessageSize() int
 	}
 )
+
+// GetClientHeaders returns the headers that should be sent from client to server
+func GetClientHeaders(ctx context.Context) map[string]string {
+	call := yarpc.CallFromContext(ctx)
+	headerNames := call.HeaderNames()
+	headerExists := map[string]struct{}{}
+	for _, h := range headerNames {
+		headerExists[h] = struct{}{}
+	}
+
+	headers := make(map[string]string)
+	if _, ok := headerExists[LibraryVersionHeaderName]; !ok {
+		headers[LibraryVersionHeaderName] = call.Header(LibraryVersionHeaderName)
+	}
+	if _, ok := headerExists[FeatureVersionHeaderName]; !ok {
+		headers[FeatureVersionHeaderName] = call.Header(FeatureVersionHeaderName)
+	}
+	if _, ok := headerExists[ClientImplHeaderName]; !ok {
+		headers[ClientImplHeaderName] = call.Header(ClientImplHeaderName)
+	}
+	if _, ok := headerExists[ClientFeatureFlagsHeaderName]; !ok {
+		headers[ClientFeatureFlagsHeaderName] = call.Header(ClientFeatureFlagsHeaderName)
+	}
+	if _, ok := headerExists[ClientIsolationGroupHeaderName]; !ok {
+		headers[ClientIsolationGroupHeaderName] = call.Header(ClientIsolationGroupHeaderName)
+	}
+	return headers
+}

@@ -51,6 +51,14 @@ func Timestamp(timestamp time.Time) Tag {
 	return newTimeTag("timestamp", timestamp)
 }
 
+func EarliestTime(time int64) Tag {
+	return newInt64("earliest-time", time)
+}
+
+func LatestTime(time int64) Tag {
+	return newInt64("latest-time", time)
+}
+
 ///////////////////  Workflow tags defined here: ( wf is short for workflow) ///////////////////
 
 // WorkflowAction returns tag for WorkflowAction
@@ -514,6 +522,11 @@ func HandlerCall(handlerCall string) Tag {
 // RequestBody returns the tag for the API request body
 func RequestBody(requestBody string) Tag {
 	return newStringTag("request-body", requestBody)
+}
+
+// RequestType return tag for the type of request (internal, external)
+func RequestType(requestType string) Tag {
+	return newStringTag("request-type", requestType)
 }
 
 // history engine shard
