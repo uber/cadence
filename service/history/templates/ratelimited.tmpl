@@ -19,6 +19,18 @@ import (
         "workflowID" "SignalWithStartRequest.GetWorkflowID()"
     )
 }}
+{{ $ratelimitTypeMap := set $ratelimitTypeMap "SignalWorkflowExecution" (
+    dict
+        "ratelimit" "ratelimitTypeUserPerID"
+        "workflowID" "SignalRequest.GetWorkflowExecution().GetWorkflowID()"
+    )
+}}
+{{ $ratelimitTypeMap := set $ratelimitTypeMap "DescribeWorkflowExecution" (
+    dict
+        "ratelimit" "ratelimitTypeUserPerID"
+        "workflowID" "Request.GetExecution().GetWorkflowID()"
+    )
+}}
 
 {{ $interfaceName := .Interface.Name }}
 {{ $handlerName := (index .Vars "handler") }}
@@ -44,26 +56,36 @@ func New{{$Decorator}}(
 
 {{range $method := .Interface.Methods}}
 func (h *{{$decorator}}) {{$method.Declaration}} {
-    {{- if hasKey $ratelimitTypeMap $method.Name}}
-        {{ $rateLimitType := ( get ( get $ratelimitTypeMap $method.Name ) "ratelimit" ) }}
-        {{ $workflowID := ( get ( get $ratelimitTypeMap $method.Name ) "workflowID" ) }}
+    {{- if hasKey $ratelimitTypeMap $method.Name }}
+        {{- if eq
+            ( get ( get $ratelimitTypeMap $method.Name ) "ratelimit" )
+            "ratelimitTypeUserPerID"
+        }}
 
-        if {{(index $method.Params 1).Name}} == nil {
-            err = validate.ErrRequestNotSet
-            return
-        }
-        {{- $domainID := printf "%s.GetDomainUUID()" (index $method.Params 1).Name }}
-        {{- $workflowID := printf "%s.%s" (index $method.Params 1).Name ( $workflowID ) }}
+            {{ $workflowID := ( get ( get $ratelimitTypeMap $method.Name ) "workflowID" ) }}
 
-        if {{$domainID}} == "" {
-            err = validate.ErrDomainNotSet
-            return
-        }
+            if {{(index $method.Params 1).Name}} == nil {
+                err = validate.ErrRequestNotSet
+                return
+            }
+            {{- $domainID := printf "%s.GetDomainUUID()" (index $method.Params 1).Name }}
+            {{- $workflowID := printf "%s.%s" (index $method.Params 1).Name ( $workflowID ) }}
 
-        if ok := h.workflowIDCache.AllowExternal({{$workflowID}}, {{$domainID}}); !ok {
-            err = &types.ServiceBusyError{Message: "Too many outstanding requests to the cadence service"}
-            return
-        }
+            if {{$domainID}} == "" {
+                err = validate.ErrDomainNotSet
+                return
+            }
+
+            if {{$workflowID}} == "" {
+                err = validate.ErrWorkflowIDNotSet
+                return
+            }
+
+            if ok := h.workflowIDCache.AllowExternal({{$workflowID}}, {{$domainID}}); !ok {
+                err = &types.ServiceBusyError{Message: "Too many outstanding requests to the cadence service"}
+                return
+            }
+        {{- end}}
     {{- end}}
     {{$method.Pass "h.wrapped."}}
 }

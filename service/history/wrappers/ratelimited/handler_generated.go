@@ -16,8 +16,6 @@ import (
 	"github.com/uber/cadence/service/history/workflowcache"
 )
 
-// map[ratelimit:ratelimitTypeUserPerID workflowID:StartRequest.GetWorkflowID()]
-
 // historyHandler implements history.Handler interface instrumented with rate limiter.
 type historyHandler struct {
 	wrapped         history.Handler
@@ -56,6 +54,26 @@ func (h *historyHandler) DescribeQueue(ctx context.Context, dp1 *types.DescribeQ
 }
 
 func (h *historyHandler) DescribeWorkflowExecution(ctx context.Context, hp1 *types.HistoryDescribeWorkflowExecutionRequest) (dp1 *types.DescribeWorkflowExecutionResponse, err error) {
+
+	if hp1 == nil {
+		err = validate.ErrRequestNotSet
+		return
+	}
+
+	if hp1.GetDomainUUID() == "" {
+		err = validate.ErrDomainNotSet
+		return
+	}
+
+	if hp1.Request.GetExecution().GetWorkflowID() == "" {
+		err = validate.ErrWorkflowIDNotSet
+		return
+	}
+
+	if ok := h.workflowIDCache.AllowExternal(hp1.Request.GetExecution().GetWorkflowID(), hp1.GetDomainUUID()); !ok {
+		err = &types.ServiceBusyError{Message: "Too many outstanding requests to the cadence service"}
+		return
+	}
 	return h.wrapped.DescribeWorkflowExecution(ctx, hp1)
 }
 
@@ -203,6 +221,11 @@ func (h *historyHandler) SignalWithStartWorkflowExecution(ctx context.Context, h
 		return
 	}
 
+	if hp1.SignalWithStartRequest.GetWorkflowID() == "" {
+		err = validate.ErrWorkflowIDNotSet
+		return
+	}
+
 	if ok := h.workflowIDCache.AllowExternal(hp1.SignalWithStartRequest.GetWorkflowID(), hp1.GetDomainUUID()); !ok {
 		err = &types.ServiceBusyError{Message: "Too many outstanding requests to the cadence service"}
 		return
@@ -211,6 +234,26 @@ func (h *historyHandler) SignalWithStartWorkflowExecution(ctx context.Context, h
 }
 
 func (h *historyHandler) SignalWorkflowExecution(ctx context.Context, hp1 *types.HistorySignalWorkflowExecutionRequest) (err error) {
+
+	if hp1 == nil {
+		err = validate.ErrRequestNotSet
+		return
+	}
+
+	if hp1.GetDomainUUID() == "" {
+		err = validate.ErrDomainNotSet
+		return
+	}
+
+	if hp1.SignalRequest.GetWorkflowExecution().GetWorkflowID() == "" {
+		err = validate.ErrWorkflowIDNotSet
+		return
+	}
+
+	if ok := h.workflowIDCache.AllowExternal(hp1.SignalRequest.GetWorkflowExecution().GetWorkflowID(), hp1.GetDomainUUID()); !ok {
+		err = &types.ServiceBusyError{Message: "Too many outstanding requests to the cadence service"}
+		return
+	}
 	return h.wrapped.SignalWorkflowExecution(ctx, hp1)
 }
 
@@ -228,6 +271,11 @@ func (h *historyHandler) StartWorkflowExecution(ctx context.Context, hp1 *types.
 
 	if hp1.GetDomainUUID() == "" {
 		err = validate.ErrDomainNotSet
+		return
+	}
+
+	if hp1.StartRequest.GetWorkflowID() == "" {
+		err = validate.ErrWorkflowIDNotSet
 		return
 	}
 
