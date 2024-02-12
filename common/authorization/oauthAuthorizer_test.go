@@ -49,6 +49,7 @@ type (
 		suite.Suite
 		logger      *log.MockLogger
 		cfg         config.OAuthAuthorizer
+		providerCfg config.OAuthAuthorizer
 		att         Attributes
 		token       string
 		controller  *gomock.Controller
@@ -66,11 +67,18 @@ func (s *oauthSuite) SetupTest() {
 	s.logger = &log.MockLogger{}
 	s.cfg = config.OAuthAuthorizer{
 		Enable: true,
-		JwtCredentials: config.JwtCredentials{
+		JwtCredentials: &config.JwtCredentials{
 			Algorithm: jwt.SigningMethodRS256.Name,
 			PublicKey: "../../config/credentials/keytest.pub",
 		},
 		MaxJwtTTL: 300000001,
+	}
+	s.providerCfg = config.OAuthAuthorizer{
+		Enable: true,
+		Provider: &config.OAuthProvider{
+			GroupsAttributePath: "tst_group",
+			AdminAttributePath:  "tst_admin",
+		},
 	}
 	// https://jwt.io/#debugger-io?token=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJTdWIiOiIxMjM0NTY3ODkwIiwiTmFtZSI6IkpvaG4gRG9lIiwiR3JvdXBzIjoiYSBiIGMiLCJBZG1pbiI6ZmFsc2UsIklhdCI6MTYyNzUzODcxMiwiVFRMIjozMDAwMDAwMDB9.bh4s8-l1bjG7-QFzuouPy9WPvkq3_9U2e815WFrN-M247NQROBii8ju_N21i6ixK0t-VZTgcJs2B4aN4w1uiCTCg6NyhdeeG8Xd8NcYw0Oq7fjSoFmOXzDzljY6oi9M1XXniNrDIMBLfKXx8tgseSBwOnWoT3vja3ioU6ReqD3Xsp-Wg_clDhb6vtA6pDtnaCVXJNStLSbgWyi-1Mxo9ar92zRDV5YsMaBdUjFUT2bW9QcFzMFAqpHin0QEIa6GPZezY-yn88k5S5cT6Yh7WA4C0Q6C3H1n3EOS05Phwpxt840w7zjh5XR0-rd8-kRX84pHMh0GwHfjV1K7jBQ2QnQ&publicKey=-----BEGIN%20PUBLIC%20KEY-----%0AMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAscukltHilaq%2Bo5gIVE4P%0AGwWl%2BesvJ2EaEpWw6ogr98Un11YJ4oKkwIkLw4iIo0tveCINA3cZmxaW1RejRWKE%0AqYFtQ1rYd6BsnFAHXWh2R3A1FtpG6ANUEGkE7OAJe2%2FL42E%2FImJ%2BGQxRvartInDM%0AyfiRfB7%2BL2n3wG%2BNi%2BhBNMtAaX4Wwbj2hup21Jjuo96TuhcGImBFBATGWaYR2wqe%0A%2F6by9wJexPHlY%2F1uDp3SnzF1dCLjp76SGCfyYqOGC%2FPxhQi7mDxeH9%2FtIC%2Blt%2FSz%0Awc1n8gZLtlRlZHinvYa8lhWXqVYw6WD8h4LTgALq9iY%2BbeD1PFQSY1GkQtt0RhRw%0AeQIDAQAB%0A-----END%20PUBLIC%20KEY-----
 	s.token = `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJTdWIiOiIxMjM0NTY3ODkwIiwiTmFtZSI6IkpvaG4gRG9lIiwiR3JvdXBzIjoiYSBiIGMiLCJBZG1pbiI6ZmFsc2UsIklhdCI6MTYyNzUzODcxMiwiVFRMIjozMDAwMDAwMDB9.bh4s8-l1bjG7-QFzuouPy9WPvkq3_9U2e815WFrN-M247NQROBii8ju_N21i6ixK0t-VZTgcJs2B4aN4w1uiCTCg6NyhdeeG8Xd8NcYw0Oq7fjSoFmOXzDzljY6oi9M1XXniNrDIMBLfKXx8tgseSBwOnWoT3vja3ioU6ReqD3Xsp-Wg_clDhb6vtA6pDtnaCVXJNStLSbgWyi-1Mxo9ar92zRDV5YsMaBdUjFUT2bW9QcFzMFAqpHin0QEIa6GPZezY-yn88k5S5cT6Yh7WA4C0Q6C3H1n3EOS05Phwpxt840w7zjh5XR0-rd8-kRX84pHMh0GwHfjV1K7jBQ2QnQ`
@@ -239,6 +247,13 @@ func (s *oauthSuite) TestDifferentGroup() {
 	s.Equal(result.Decision, DecisionDeny)
 }
 
+func (s *oauthSuite) TestExternalProviderWithoutJWKSWillFail() {
+	authorizer, err := NewOAuthAuthorizer(s.providerCfg, s.logger, s.domainCache)
+	s.Error(err)
+	s.Equal(nil, authorizer)
+
+}
+
 func (s *oauthSuite) TestIncorrectPermission() {
 	s.domainCache.EXPECT().GetDomain(s.att.DomainName).Return(s.domainEntry, nil).Times(1)
 	s.att.Permission = Permission(15)
@@ -292,9 +307,169 @@ func Test_oauthAuthority_validateTTL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			validator := &oauthAuthority{
-				authorizationCfg: config.OAuthAuthorizer{MaxJwtTTL: tt.ttlConfig},
+				config: config.OAuthAuthorizer{MaxJwtTTL: tt.ttlConfig},
 			}
 			tt.wantErr(t, validator.validateTTL(tt.claims), fmt.Sprintf("validateTTL(%v)", tt.claims))
+		})
+	}
+}
+
+func TestIsTokenInternal(t *testing.T) {
+	internalToken := &jwt.Token{
+		Header: map[string]interface{}{},
+	}
+	internalTokenWithKid := &jwt.Token{
+		Header: map[string]interface{}{
+			"kid": jwtInternalIssuer,
+		},
+		Claims: JWTClaims{
+			RegisteredClaims: jwt.RegisteredClaims{
+				Issuer: jwtInternalIssuer,
+			},
+		},
+	}
+	externalToken := &jwt.Token{
+		Header: map[string]interface{}{
+			"kid": "3lkj323jkj3",
+		},
+		Claims: JWTClaims{
+			RegisteredClaims: jwt.RegisteredClaims{
+				Issuer: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_hNqHxsxaM",
+			},
+		},
+	}
+
+	tests := []struct {
+		name  string
+		token *jwt.Token
+		want  bool
+	}{
+		{
+			name:  "internal token w/o kid",
+			token: internalToken,
+			want:  true,
+		},
+		{
+			name:  "internal token with kid",
+			token: internalTokenWithKid,
+			want:  true,
+		},
+		{
+			name:  "external token with kid",
+			token: externalToken,
+			want:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, isTokenInternal(tt.token), "isTokenInternal(%v)", tt.token)
+		})
+	}
+}
+
+func Test_oauthAuthority_parseExternal(t *testing.T) {
+	claim := map[string]interface{}{"cognito:groups": []interface{}{"domain2", "domain1", "group1"}}
+
+	tests := []struct {
+		name       string
+		config     config.OAuthAuthorizer
+		mapToken   map[string]interface{}
+		claims     *JWTClaims
+		wantGroups string
+		wantAdmin  bool
+		wantErr    assert.ErrorAssertionFunc
+	}{
+		{
+			name: "empty config will not alter token",
+			config: config.OAuthAuthorizer{
+				Provider: &config.OAuthProvider{
+					GroupsAttributePath: "",
+					AdminAttributePath:  "",
+				},
+			},
+			wantErr: assert.NoError,
+		},
+		{
+			name: "groups incorrect path will result into an error",
+			config: config.OAuthAuthorizer{
+				Provider: &config.OAuthProvider{
+					GroupsAttributePath: "/bad/path",
+					AdminAttributePath:  "",
+				},
+			},
+			wantErr: assert.Error,
+		},
+		{
+			name: "admin incorrect path will result into an error",
+			config: config.OAuthAuthorizer{
+				Provider: &config.OAuthProvider{
+					GroupsAttributePath: "",
+					AdminAttributePath:  "/bad/path",
+				},
+			},
+			wantErr: assert.Error,
+		},
+		{
+			name: "correct groups path will fill claims",
+			config: config.OAuthAuthorizer{
+				Provider: &config.OAuthProvider{
+					GroupsAttributePath: "\"cognito:groups\" | join(' ', @)",
+				},
+			},
+			mapToken:   claim,
+			wantErr:    assert.NoError,
+			wantGroups: "domain2 domain1 group1",
+			wantAdmin:  false,
+		},
+		{
+			name: "correct admin path will fill claims",
+			config: config.OAuthAuthorizer{
+				Provider: &config.OAuthProvider{
+					AdminAttributePath: "\"cognito:groups\" | contains(@, 'group1')",
+				},
+			},
+			mapToken:   claim,
+			wantErr:    assert.NoError,
+			wantGroups: "",
+			wantAdmin:  true,
+		},
+		{
+			name: "non bool result for admin will result in error",
+			config: config.OAuthAuthorizer{
+				Provider: &config.OAuthProvider{
+					AdminAttributePath: "\"cognito:groups\"",
+				},
+			},
+			mapToken:   claim,
+			wantErr:    assert.Error,
+			wantGroups: "",
+			wantAdmin:  false,
+		},
+		{
+			name: "non string result for groups will result in error",
+			config: config.OAuthAuthorizer{
+				Provider: &config.OAuthProvider{
+					GroupsAttributePath: "\"cognito:groups\" | contains(@, 'group1')",
+				},
+			},
+			mapToken:   claim,
+			wantErr:    assert.Error,
+			wantGroups: "",
+			wantAdmin:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := &oauthAuthority{
+				config: tt.config,
+			}
+			actualClaim := &JWTClaims{}
+			err := a.parseExternal(tt.mapToken, actualClaim)
+			tt.wantErr(t, err)
+			assert.Equal(t, tt.wantGroups, actualClaim.Groups)
+			assert.Equal(t, tt.wantAdmin, actualClaim.Admin)
 		})
 	}
 }

@@ -1,0 +1,62 @@
+persistence:
+  advancedVisibilityStore: es-visibility
+  datastores:
+    es-visibility:
+      elasticsearch:
+        version: "v7"
+        url:
+          scheme: "http"
+          host: "127.0.0.1:9200"
+        indices:
+          visibility: cadence-visibility-dev
+
+kafka:
+  tls:
+    enabled: false
+  clusters:
+    test:
+      brokers:
+        - 127.0.0.1:9092
+  topics:
+    cadence-visibility-dev:
+      cluster: test
+    cadence-visibility-dev-dlq:
+      cluster: test
+  applications:
+    visibility:
+      topic: cadence-visibility-dev
+      dlq-topic: cadence-visibility-dev-dlq
+
+dynamicconfig:
+  client: filebased
+  filebased:
+    filepath: "config/dynamicconfig/development_es.yaml"
+
+authorization:
+  oauthAuthorizer:
+    enable: true
+    maxJwtTTL: 600000000
+    jwtCredentials:
+      algorithm: "RS256"
+      publicKey: "config/credentials/keytest.pub"
+    # provider section can be used to validate token issued by 3rd party provider (Okta, AWS, Google, etc.)
+    provider:
+      jwksURL: # AWS cognito example: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_hNq90rT473/.well-known/jwks.json"
+      # Custom data is extracted from token using JMES Path query language: https://jmespath.org/tutorial.html
+      adminAttributePath: # AWS cognito example:  "permissions | contains(@, 'admin:true')"
+      groupsAttributePath: # AWS cognito example: "\"cognito:groups\" | join(', ', @)"
+
+clusterGroupMetadata:
+  failoverVersionIncrement: 10
+  masterClusterName: "cluster0"
+  currentClusterName: "cluster0"
+  clusterGroup:
+    cluster0:
+      enabled: true
+      initialFailoverVersion: 0
+      rpcAddress: "localhost:7833" # this is to let worker service and XDC replicator connected to the frontend service. In cluster setup, localhost will not work
+      rpcTransport: "grpc"
+      authorizationProvider:
+        enable: true
+        type: "OAuthAuthorization"
+        privateKey: "config/credentials/keytest"
