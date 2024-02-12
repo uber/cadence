@@ -162,7 +162,6 @@ func (s *transferStandbyTaskExecutorSuite) SetupTest() {
 		s.logger,
 		s.clusterName,
 		config,
-		s.mockWFCache,
 	).(*transferStandbyTaskExecutor)
 }
 
