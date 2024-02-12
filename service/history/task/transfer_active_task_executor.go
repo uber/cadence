@@ -96,7 +96,6 @@ func NewTransferActiveTaskExecutor(
 			executionCache,
 			logger,
 			config,
-			wfIDCache,
 		),
 		historyClient: shard.GetService().GetHistoryClient(),
 		parentClosePolicyClient: parentclosepolicy.NewClient(
@@ -106,6 +105,7 @@ func NewTransferActiveTaskExecutor(
 			config.NumParentClosePolicySystemWorkflows(),
 		),
 		workflowResetter: workflowResetter,
+		wfIDCache:        wfIDCache,
 	}
 }
 
