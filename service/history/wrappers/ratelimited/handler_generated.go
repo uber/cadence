@@ -16,6 +16,8 @@ import (
 	"github.com/uber/cadence/service/history/workflowcache"
 )
 
+// map[ratelimit:ratelimitTypeUserPerID workflowID:StartRequest.GetWorkflowID()]
+
 // historyHandler implements history.Handler interface instrumented with rate limiter.
 type historyHandler struct {
 	wrapped         history.Handler
@@ -190,6 +192,7 @@ func (h *historyHandler) ScheduleDecisionTask(ctx context.Context, sp1 *types.Sc
 }
 
 func (h *historyHandler) SignalWithStartWorkflowExecution(ctx context.Context, hp1 *types.HistorySignalWithStartWorkflowExecutionRequest) (sp1 *types.StartWorkflowExecutionResponse, err error) {
+
 	if hp1 == nil {
 		err = validate.ErrRequestNotSet
 		return
@@ -217,6 +220,7 @@ func (h *historyHandler) Start() {
 }
 
 func (h *historyHandler) StartWorkflowExecution(ctx context.Context, hp1 *types.HistoryStartWorkflowExecutionRequest) (sp1 *types.StartWorkflowExecutionResponse, err error) {
+
 	if hp1 == nil {
 		err = validate.ErrRequestNotSet
 		return

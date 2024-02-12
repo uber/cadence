@@ -7,8 +7,18 @@ import (
     "github.com/uber/cadence/service/history"
 )
 
-{{ $ratelimitTypeMap := dict "StartWorkflowExecution" "ratelimitTypeUserPerID" }}
-{{ $ratelimitTypeMap = set $ratelimitTypeMap "SignalWithStartWorkflowExecution" "ratelimitTypeUserPerID" }}
+{{ $ratelimitTypeMap := dict "StartWorkflowExecution" (
+    dict
+        "ratelimit" "ratelimitTypeUserPerID"
+        "workflowID" "StartRequest.GetWorkflowID()"
+    )
+}}
+{{ $ratelimitTypeMap := set $ratelimitTypeMap "SignalWithStartWorkflowExecution" (
+    dict
+        "ratelimit" "ratelimitTypeUserPerID"
+        "workflowID" "SignalWithStartRequest.GetWorkflowID()"
+    )
+}}
 
 {{ $interfaceName := .Interface.Name }}
 {{ $handlerName := (index .Vars "handler") }}
@@ -35,13 +45,15 @@ func New{{$Decorator}}(
 {{range $method := .Interface.Methods}}
 func (h *{{$decorator}}) {{$method.Declaration}} {
     {{- if hasKey $ratelimitTypeMap $method.Name}}
+        {{ $rateLimitType := ( get ( get $ratelimitTypeMap $method.Name ) "ratelimit" ) }}
+        {{ $workflowID := ( get ( get $ratelimitTypeMap $method.Name ) "workflowID" ) }}
+
         if {{(index $method.Params 1).Name}} == nil {
             err = validate.ErrRequestNotSet
             return
         }
         {{- $domainID := printf "%s.GetDomainUUID()" (index $method.Params 1).Name }}
-        {{- $request := printf "%s.%sRequest" (index $method.Params 1).Name ( replace $method.Name "WorkflowExecution" "") }}
-        {{- $workflowID := printf "%s.GetWorkflowID()" $request }}
+        {{- $workflowID := printf "%s.%s" (index $method.Params 1).Name ( $workflowID ) }}
 
         if {{$domainID}} == "" {
             err = validate.ErrDomainNotSet
