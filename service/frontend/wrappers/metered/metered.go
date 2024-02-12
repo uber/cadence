@@ -282,6 +282,15 @@ func toSignalWithStartWorkflowExecutionRequestTags(req *types.SignalWithStartWor
 	}
 }
 
+func toSignalWithStartWorkflowExecutionAsyncRequestTags(req *types.SignalWithStartWorkflowExecutionAsyncRequest) []tag.Tag {
+	return []tag.Tag{
+		tag.WorkflowDomainName(req.GetDomain()),
+		tag.WorkflowID(req.GetWorkflowID()),
+		tag.WorkflowType(req.WorkflowType.GetName()),
+		tag.WorkflowSignalName(req.GetSignalName()),
+	}
+}
+
 func toSignalWorkflowExecutionRequestTags(req *types.SignalWorkflowExecutionRequest) []tag.Tag {
 	return []tag.Tag{
 		tag.WorkflowDomainName(req.GetDomain()),

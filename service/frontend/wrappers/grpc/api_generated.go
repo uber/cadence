@@ -228,6 +228,11 @@ func (g APIHandler) SignalWithStartWorkflowExecution(ctx context.Context, reques
 	return proto.FromSignalWithStartWorkflowExecutionResponse(response), proto.FromError(err)
 }
 
+func (g APIHandler) SignalWithStartWorkflowExecutionAsync(ctx context.Context, request *apiv1.SignalWithStartWorkflowExecutionAsyncRequest) (*apiv1.SignalWithStartWorkflowExecutionAsyncResponse, error) {
+	response, err := g.h.SignalWithStartWorkflowExecutionAsync(ctx, proto.ToSignalWithStartWorkflowExecutionAsyncRequest(request))
+	return proto.FromSignalWithStartWorkflowExecutionAsyncResponse(response), proto.FromError(err)
+}
+
 func (g APIHandler) SignalWorkflowExecution(ctx context.Context, request *apiv1.SignalWorkflowExecutionRequest) (*apiv1.SignalWorkflowExecutionResponse, error) {
 	err := g.h.SignalWorkflowExecution(ctx, proto.ToSignalWorkflowExecutionRequest(request))
 	return &apiv1.SignalWorkflowExecutionResponse{}, proto.FromError(err)

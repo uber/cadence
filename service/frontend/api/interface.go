@@ -75,6 +75,7 @@ type (
 		RestartWorkflowExecution(context.Context, *types.RestartWorkflowExecutionRequest) (*types.RestartWorkflowExecutionResponse, error)
 		ScanWorkflowExecutions(context.Context, *types.ListWorkflowExecutionsRequest) (*types.ListWorkflowExecutionsResponse, error)
 		SignalWithStartWorkflowExecution(context.Context, *types.SignalWithStartWorkflowExecutionRequest) (*types.StartWorkflowExecutionResponse, error)
+		SignalWithStartWorkflowExecutionAsync(context.Context, *types.SignalWithStartWorkflowExecutionAsyncRequest) (*types.SignalWithStartWorkflowExecutionAsyncResponse, error)
 		SignalWorkflowExecution(context.Context, *types.SignalWorkflowExecutionRequest) error
 		StartWorkflowExecution(context.Context, *types.StartWorkflowExecutionRequest) (*types.StartWorkflowExecutionResponse, error)
 		StartWorkflowExecutionAsync(context.Context, *types.StartWorkflowExecutionAsyncRequest) (*types.StartWorkflowExecutionAsyncResponse, error)

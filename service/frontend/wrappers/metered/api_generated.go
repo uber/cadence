@@ -706,6 +706,22 @@ func (h *apiHandler) SignalWithStartWorkflowExecution(ctx context.Context, sp1 *
 	}
 	return sp2, err
 }
+func (h *apiHandler) SignalWithStartWorkflowExecutionAsync(ctx context.Context, sp1 *types.SignalWithStartWorkflowExecutionAsyncRequest) (sp2 *types.SignalWithStartWorkflowExecutionAsyncResponse, err error) {
+	defer func() { log.CapturePanic(recover(), h.logger, &err) }()
+	tags := []tag.Tag{tag.WorkflowHandlerName("SignalWithStartWorkflowExecutionAsync")}
+	tags = append(tags, toSignalWithStartWorkflowExecutionAsyncRequestTags(sp1)...)
+	scope := h.metricsClient.Scope(metrics.FrontendSignalWithStartWorkflowExecutionAsyncScope).Tagged(metrics.DomainTag(sp1.GetDomain())).Tagged(metrics.GetContextTags(ctx)...)
+	scope.IncCounter(metrics.CadenceRequests)
+	sw := scope.StartTimer(metrics.CadenceLatency)
+	defer sw.Stop()
+	logger := h.logger.WithTags(tags...)
+
+	sp2, err = h.handler.SignalWithStartWorkflowExecutionAsync(ctx, sp1)
+	if err != nil {
+		return nil, h.handleErr(err, scope, logger)
+	}
+	return sp2, err
+}
 func (h *apiHandler) SignalWorkflowExecution(ctx context.Context, sp1 *types.SignalWorkflowExecutionRequest) (err error) {
 	defer func() { log.CapturePanic(recover(), h.logger, &err) }()
 	ctx = h.withSignalName(ctx, sp1.GetDomain(), sp1.GetSignalName())

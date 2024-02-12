@@ -787,6 +787,26 @@ func (mr *MockClientMockRecorder) SignalWithStartWorkflowExecution(arg0, arg1 in
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SignalWithStartWorkflowExecution", reflect.TypeOf((*MockClient)(nil).SignalWithStartWorkflowExecution), varargs...)
 }
 
+// SignalWithStartWorkflowExecutionAsync mocks base method.
+func (m *MockClient) SignalWithStartWorkflowExecutionAsync(arg0 context.Context, arg1 *types.SignalWithStartWorkflowExecutionAsyncRequest, arg2 ...yarpc.CallOption) (*types.SignalWithStartWorkflowExecutionAsyncResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SignalWithStartWorkflowExecutionAsync", varargs...)
+	ret0, _ := ret[0].(*types.SignalWithStartWorkflowExecutionAsyncResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SignalWithStartWorkflowExecutionAsync indicates an expected call of SignalWithStartWorkflowExecutionAsync.
+func (mr *MockClientMockRecorder) SignalWithStartWorkflowExecutionAsync(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SignalWithStartWorkflowExecutionAsync", reflect.TypeOf((*MockClient)(nil).SignalWithStartWorkflowExecutionAsync), varargs...)
+}
+
 // SignalWorkflowExecution mocks base method.
 func (m *MockClient) SignalWorkflowExecution(arg0 context.Context, arg1 *types.SignalWorkflowExecutionRequest, arg2 ...yarpc.CallOption) error {
 	m.ctrl.T.Helper()

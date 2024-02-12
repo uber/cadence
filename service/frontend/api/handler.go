@@ -2321,6 +2321,51 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 	return nil
 }
 
+func (wh *WorkflowHandler) SignalWithStartWorkflowExecutionAsync(
+	ctx context.Context,
+	signalWithStartRequest *types.SignalWithStartWorkflowExecutionAsyncRequest,
+) (resp *types.SignalWithStartWorkflowExecutionAsyncResponse, retError error) {
+	if wh.isShuttingDown() {
+		return nil, validate.ErrShuttingDown
+	}
+	scope := getMetricsScopeWithDomain(metrics.FrontendSignalWithStartWorkflowExecutionAsyncScope, signalWithStartRequest, wh.GetMetricsClient()).Tagged(metrics.GetContextTags(ctx)...)
+	// validate request before pushing to queue
+	err := wh.validateSignalWithStartWorkflowExecutionRequest(ctx, signalWithStartRequest.SignalWithStartWorkflowExecutionRequest, scope)
+	if err != nil {
+		return nil, err
+	}
+	producer, err := wh.producerManager.GetProducerByDomain(signalWithStartRequest.GetDomain())
+	if err != nil {
+		return nil, err
+	}
+	// serialize the message to be sent to the queue
+	payload, err := json.Marshal(signalWithStartRequest)
+	if err != nil {
+		return nil, err
+	}
+	// propagate the headers from the context to the message
+	clientHeaders := common.GetClientHeaders(ctx)
+	header := &shared.Header{
+		Fields: map[string][]byte{},
+	}
+	for k, v := range clientHeaders {
+		header.Fields[k] = []byte(v)
+	}
+	messageType := sqlblobs.AsyncRequestTypeSignalWithStartWorkflowExecutionAsyncRequest
+	message := &sqlblobs.AsyncRequestMessage{
+		PartitionKey: common.StringPtr(signalWithStartRequest.GetWorkflowID()),
+		Type:         &messageType,
+		Header:       header,
+		Encoding:     common.StringPtr(string(common.EncodingTypeJSON)),
+		Payload:      payload,
+	}
+	err = producer.Publish(ctx, message)
+	if err != nil {
+		return nil, err
+	}
+	return &types.SignalWithStartWorkflowExecutionAsyncResponse{}, nil
+}
+
 // SignalWithStartWorkflowExecution is used to ensure sending a signal event to a workflow execution.
 // If workflow is running, this results in WorkflowExecutionSignaled event recorded in the history
 // and a decision task being created for the execution.
@@ -2334,23 +2379,46 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		return nil, validate.ErrShuttingDown
 	}
 
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
+	scope := getMetricsScopeWithDomain(metrics.FrontendSignalWithStartWorkflowExecutionScope, signalWithStartRequest, wh.GetMetricsClient()).Tagged(metrics.GetContextTags(ctx)...)
+	err := wh.validateSignalWithStartWorkflowExecutionRequest(ctx, signalWithStartRequest, scope)
+	if err != nil {
 		return nil, err
 	}
 
+	domainName := signalWithStartRequest.GetDomain()
+	domainID, err := wh.GetDomainCache().GetDomainID(domainName)
+	if err != nil {
+		return nil, err
+	}
+	resp, err = wh.GetHistoryClient().SignalWithStartWorkflowExecution(ctx, &types.HistorySignalWithStartWorkflowExecutionRequest{
+		DomainUUID:             domainID,
+		SignalWithStartRequest: signalWithStartRequest,
+		PartitionConfig:        wh.getPartitionConfig(ctx, domainName),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+func (wh *WorkflowHandler) validateSignalWithStartWorkflowExecutionRequest(ctx context.Context, signalWithStartRequest *types.SignalWithStartWorkflowExecutionRequest, scope metrics.Scope) error {
+	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
+		return err
+	}
+
 	if signalWithStartRequest == nil {
-		return nil, validate.ErrRequestNotSet
+		return validate.ErrRequestNotSet
 	}
 
 	domainName := signalWithStartRequest.GetDomain()
 	if domainName == "" {
-		return nil, validate.ErrDomainNotSet
+		return validate.ErrDomainNotSet
 	}
 	if signalWithStartRequest.GetWorkflowID() == "" {
-		return nil, validate.ErrWorkflowIDNotSet
+		return validate.ErrWorkflowIDNotSet
 	}
 
-	scope := getMetricsScopeWithDomain(metrics.FrontendSignalWithStartWorkflowExecutionScope, signalWithStartRequest, wh.GetMetricsClient()).Tagged(metrics.GetContextTags(ctx)...)
 	idLengthWarnLimit := wh.config.MaxIDLengthWarnLimit()
 	if !common.IsValidIDLength(
 		domainName,
@@ -2361,7 +2429,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		domainName,
 		wh.GetLogger(),
 		tag.IDTypeDomainName) {
-		return nil, validate.ErrDomainTooLong
+		return validate.ErrDomainTooLong
 	}
 
 	if !common.IsValidIDLength(
@@ -2373,11 +2441,11 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		domainName,
 		wh.GetLogger(),
 		tag.IDTypeWorkflowID) {
-		return nil, validate.ErrWorkflowIDTooLong
+		return validate.ErrWorkflowIDTooLong
 	}
 
 	if signalWithStartRequest.GetSignalName() == "" {
-		return nil, validate.ErrSignalNameNotSet
+		return validate.ErrSignalNameNotSet
 	}
 
 	if !common.IsValidIDLength(
@@ -2389,11 +2457,11 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		domainName,
 		wh.GetLogger(),
 		tag.IDTypeSignalName) {
-		return nil, validate.ErrSignalNameTooLong
+		return validate.ErrSignalNameTooLong
 	}
 
 	if signalWithStartRequest.WorkflowType == nil || signalWithStartRequest.WorkflowType.GetName() == "" {
-		return nil, validate.ErrWorkflowTypeNotSet
+		return validate.ErrWorkflowTypeNotSet
 	}
 
 	if !common.IsValidIDLength(
@@ -2405,11 +2473,11 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		domainName,
 		wh.GetLogger(),
 		tag.IDTypeWorkflowType) {
-		return nil, validate.ErrWorkflowTypeTooLong
+		return validate.ErrWorkflowTypeTooLong
 	}
 
 	if err := wh.validateTaskList(signalWithStartRequest.TaskList, scope, domainName); err != nil {
-		return nil, err
+		return err
 	}
 
 	if !common.IsValidIDLength(
@@ -2421,34 +2489,34 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		domainName,
 		wh.GetLogger(),
 		tag.IDTypeRequestID) {
-		return nil, validate.ErrRequestIDTooLong
+		return validate.ErrRequestIDTooLong
 	}
 
 	if signalWithStartRequest.GetExecutionStartToCloseTimeoutSeconds() <= 0 {
-		return nil, validate.ErrInvalidExecutionStartToCloseTimeoutSeconds
+		return validate.ErrInvalidExecutionStartToCloseTimeoutSeconds
 	}
 
 	if signalWithStartRequest.GetTaskStartToCloseTimeoutSeconds() <= 0 {
-		return nil, validate.ErrInvalidTaskStartToCloseTimeoutSeconds
+		return validate.ErrInvalidTaskStartToCloseTimeoutSeconds
 	}
 
 	if err := common.ValidateRetryPolicy(signalWithStartRequest.RetryPolicy); err != nil {
-		return nil, err
+		return err
 	}
 
 	if signalWithStartRequest.GetCronSchedule() != "" {
 		if _, err := backoff.ValidateSchedule(signalWithStartRequest.GetCronSchedule()); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
 	if err := wh.searchAttributesValidator.ValidateSearchAttributes(signalWithStartRequest.SearchAttributes, domainName); err != nil {
-		return nil, err
+		return err
 	}
 
 	domainID, err := wh.GetDomainCache().GetDomainID(domainName)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	sizeLimitError := wh.config.BlobSizeLimitError(domainName)
@@ -2464,7 +2532,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		wh.GetThrottledLogger(),
 		tag.BlobSizeViolationOperation("SignalWithStartWorkflowExecution"),
 	); err != nil {
-		return nil, err
+		return err
 	}
 	actualSize := len(signalWithStartRequest.Input) + common.GetSizeOfMapStringToByteArray(signalWithStartRequest.Memo.GetFields())
 	if err := common.CheckEventBlobSizeLimit(
@@ -2478,24 +2546,14 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		wh.GetThrottledLogger(),
 		tag.BlobSizeViolationOperation("SignalWithStartWorkflowExecution"),
 	); err != nil {
-		return nil, err
+		return err
 	}
 
 	isolationGroup := wh.getIsolationGroup(ctx, domainName)
 	if !wh.isIsolationGroupHealthy(ctx, domainName, isolationGroup) {
-		return nil, &types.BadRequestError{fmt.Sprintf("Domain %s is drained from isolation group %s.", domainName, isolationGroup)}
+		return &types.BadRequestError{fmt.Sprintf("Domain %s is drained from isolation group %s.", domainName, isolationGroup)}
 	}
-
-	resp, err = wh.GetHistoryClient().SignalWithStartWorkflowExecution(ctx, &types.HistorySignalWithStartWorkflowExecutionRequest{
-		DomainUUID:             domainID,
-		SignalWithStartRequest: signalWithStartRequest,
-		PartitionConfig:        wh.getPartitionConfig(ctx, domainName),
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return resp, nil
+	return nil
 }
 
 // TerminateWorkflowExecution terminates an existing workflow execution by recording WorkflowExecutionTerminated event
