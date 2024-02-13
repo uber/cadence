@@ -49,7 +49,6 @@ import (
 	"github.com/uber/cadence/service/worker/scanner/shardscanner"
 	"github.com/uber/cadence/service/worker/scanner/tasklist"
 	"github.com/uber/cadence/service/worker/scanner/timers"
-	"github.com/uber/cadence/service/worker/shadower"
 )
 
 type (
@@ -81,7 +80,6 @@ type (
 		EnableParentClosePolicyWorker       dynamicconfig.BoolPropertyFn
 		NumParentClosePolicySystemWorkflows dynamicconfig.IntPropertyFn
 		EnableFailoverManager               dynamicconfig.BoolPropertyFn
-		EnableWorkflowShadower              dynamicconfig.BoolPropertyFn
 		DomainReplicationMaxRetryDuration   dynamicconfig.DurationPropertyFn
 		EnableESAnalyzer                    dynamicconfig.BoolPropertyFn
 		EnableWatchDog                      dynamicconfig.BoolPropertyFn
@@ -177,7 +175,6 @@ func NewConfig(params *resource.Params) *Config {
 		NumParentClosePolicySystemWorkflows: dc.GetIntProperty(dynamicconfig.NumParentClosePolicySystemWorkflows),
 		EnableESAnalyzer:                    dc.GetBoolProperty(dynamicconfig.EnableESAnalyzer),
 		EnableFailoverManager:               dc.GetBoolProperty(dynamicconfig.EnableFailoverManager),
-		EnableWorkflowShadower:              dc.GetBoolProperty(dynamicconfig.EnableWorkflowShadower),
 		ThrottledLogRPS:                     dc.GetIntProperty(dynamicconfig.WorkerThrottledLogRPS),
 		PersistenceGlobalMaxQPS:             dc.GetIntProperty(dynamicconfig.WorkerPersistenceGlobalMaxQPS),
 		PersistenceMaxQPS:                   dc.GetIntProperty(dynamicconfig.WorkerPersistenceMaxQPS),
@@ -237,10 +234,6 @@ func (s *Service) Start() {
 	}
 	if s.config.EnableFailoverManager() {
 		s.startFailoverManager()
-	}
-	if s.config.EnableWorkflowShadower() {
-		s.ensureDomainExists(common.ShadowerLocalDomainName)
-		s.startWorkflowShadower()
 	}
 
 	if s.config.EnableAsyncWorkflowConsumption() {
@@ -404,18 +397,6 @@ func (s *Service) startFailoverManager() {
 	if err := failovermanager.New(params).Start(); err != nil {
 		s.Stop()
 		s.GetLogger().Fatal("error starting failoverManager", tag.Error(err))
-	}
-}
-
-func (s *Service) startWorkflowShadower() {
-	params := &shadower.BootstrapParams{
-		ServiceClient: s.params.PublicClient,
-		DomainCache:   s.GetDomainCache(),
-		TallyScope:    s.params.MetricScope,
-	}
-	if err := shadower.New(params).Start(); err != nil {
-		s.Stop()
-		s.GetLogger().Fatal("error starting workflow shadower", tag.Error(err))
 	}
 }
 

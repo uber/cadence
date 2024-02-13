@@ -1844,12 +1844,6 @@ const (
 	// Default value: true
 	// Allowed filters: N/A
 	EnableFailoverManager
-	// EnableWorkflowShadower indicates if workflow shadower is enabled
-	// KeyName: system.enableWorkflowShadower
-	// Value type: Bool
-	// Default value: true
-	// Allowed filters: N/A
-	EnableWorkflowShadower
 	// ConcreteExecutionFixerDomainAllow is which domains are allowed to be fixed by concrete fixer workflow
 	// KeyName: worker.concreteExecutionFixerDomainAllow
 	// Value type: Bool
@@ -4083,11 +4077,6 @@ var BoolKeys = map[BoolKey]DynamicBool{
 	EnableFailoverManager: DynamicBool{
 		KeyName:      "system.enableFailoverManager",
 		Description:  "EnableFailoverManager indicates if failover manager is enabled",
-		DefaultValue: true,
-	},
-	EnableWorkflowShadower: DynamicBool{
-		KeyName:      "system.enableWorkflowShadower",
-		Description:  "EnableWorkflowShadower indicates if workflow shadower is enabled",
 		DefaultValue: true,
 	},
 	ConcreteExecutionFixerDomainAllow: DynamicBool{
