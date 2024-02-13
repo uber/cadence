@@ -28,6 +28,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/client/frontend"
