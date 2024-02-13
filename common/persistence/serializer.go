@@ -29,6 +29,7 @@ import (
 	"github.com/uber/cadence/.gen/go/replicator"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/checksum"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
@@ -81,6 +82,10 @@ type (
 		// serialize/deserialize async workflow configuration
 		SerializeAsyncWorkflowsConfig(config *types.AsyncWorkflowConfiguration, encodingType common.EncodingType) (*DataBlob, error)
 		DeserializeAsyncWorkflowsConfig(data *DataBlob) (*types.AsyncWorkflowConfiguration, error)
+
+		// serialize/deserialize checksum
+		SerializeChecksum(sum checksum.Checksum, encodingType common.EncodingType) (*DataBlob, error)
+		DeserializeChecksum(data *DataBlob) (checksum.Checksum, error)
 	}
 
 	// CadenceSerializationError is an error type for cadence serialization
@@ -296,6 +301,27 @@ func (t *serializerImpl) DeserializeAsyncWorkflowsConfig(data *DataBlob) (*types
 
 	err := t.deserialize(data, &cfg)
 	return &cfg, err
+}
+
+func (t *serializerImpl) SerializeChecksum(sum checksum.Checksum, encodingType common.EncodingType) (*DataBlob, error) {
+	return t.serialize(sum, encodingType)
+}
+
+func (t *serializerImpl) DeserializeChecksum(data *DataBlob) (checksum.Checksum, error) {
+	if data == nil {
+		return checksum.Checksum{}, nil
+	}
+
+	var sum checksum.Checksum
+	if len(data.Data) == 0 {
+		return sum, nil
+	}
+
+	err := t.deserialize(data, &sum)
+	if err != nil {
+		return checksum.Checksum{}, err
+	}
+	return sum, err
 }
 
 func (t *serializerImpl) serialize(input interface{}, encodingType common.EncodingType) (*DataBlob, error) {

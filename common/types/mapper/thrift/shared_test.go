@@ -2759,6 +2759,20 @@ func TestStartWorkflowExecutionAsyncRequestConversion(t *testing.T) {
 	}
 }
 
+func TestSignalWithStartWorkflowExecutionAsyncRequestConversion(t *testing.T) {
+	testCases := []*types.SignalWithStartWorkflowExecutionAsyncRequest{
+		nil,
+		{},
+		&testdata.SignalWithStartWorkflowExecutionAsyncRequest,
+	}
+
+	for _, original := range testCases {
+		thriftObj := FromSignalWithStartWorkflowExecutionAsyncRequest(original)
+		roundTripObj := ToSignalWithStartWorkflowExecutionAsyncRequest(thriftObj)
+		assert.Equal(t, original, roundTripObj)
+	}
+}
+
 func TestRestartWorkflowExecutionResponseConversion(t *testing.T) {
 	testCases := []*types.RestartWorkflowExecutionResponse{
 		nil,
@@ -2797,6 +2811,20 @@ func TestStartWorkflowExecutionAsyncResponseConversion(t *testing.T) {
 	for _, original := range testCases {
 		thriftObj := FromStartWorkflowExecutionAsyncResponse(original)
 		roundTripObj := ToStartWorkflowExecutionAsyncResponse(thriftObj)
+		assert.Equal(t, original, roundTripObj)
+	}
+}
+
+func TestSignalWithStartWorkflowExecutionAsyncResponseConversion(t *testing.T) {
+	testCases := []*types.SignalWithStartWorkflowExecutionAsyncResponse{
+		nil,
+		{},
+		&testdata.SignalWithStartWorkflowExecutionAsyncResponse,
+	}
+
+	for _, original := range testCases {
+		thriftObj := FromSignalWithStartWorkflowExecutionAsyncResponse(original)
+		roundTripObj := ToSignalWithStartWorkflowExecutionAsyncResponse(thriftObj)
 		assert.Equal(t, original, roundTripObj)
 	}
 }

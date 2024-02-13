@@ -43,7 +43,7 @@ require (
 	github.com/startreedata/pinot-client-go v0.0.0-20230303070132-3b84c28a9e95 // latest release doesn't support pinot v0.12, so use master branch
 	github.com/stretchr/testify v1.8.3
 	github.com/uber-go/tally v3.3.15+incompatible // indirect
-	github.com/uber/cadence-idl v0.0.0-20240206193658-7cafd96fa80e
+	github.com/uber/cadence-idl v0.0.0-20240212223805-34b4519b2709
 	github.com/uber/ringpop-go v0.8.5 // indirect
 	github.com/uber/tchannel-go v1.22.2 // indirect
 	github.com/urfave/cli v1.22.4
@@ -60,7 +60,7 @@ require (
 	go.uber.org/zap v1.13.0 // indirect
 	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/sync v0.5.0 // indirect
-	golang.org/x/time v0.3.0 // indirect
+	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.16.0 // indirect
 	gonum.org/v1/gonum v0.7.0 // indirect
 	google.golang.org/grpc v1.59.0 // indirect
@@ -80,6 +80,7 @@ require (
 	cloud.google.com/go/iam v1.1.3 // indirect
 	cloud.google.com/go/storage v1.30.1 // indirect
 	github.com/BurntSushi/toml v0.4.1 // indirect
+	github.com/MicahParks/keyfunc/v2 v2.1.0 // indirect
 	github.com/anmitsu/go-shlex v0.0.0-20161002113705-648efa622239 // indirect
 	github.com/apache/thrift v0.16.0 // indirect
 	github.com/benbjohnson/clock v0.0.0-20161215174838-7dc76406b6d3 // indirect

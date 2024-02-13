@@ -260,6 +260,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*shared.StartWorkflowExecutionResponse, error)
 
+	SignalWithStartWorkflowExecutionAsync(
+		ctx context.Context,
+		SignalWithStartRequest *shared.SignalWithStartWorkflowExecutionAsyncRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.SignalWithStartWorkflowExecutionAsyncResponse, error)
+
 	SignalWorkflowExecution(
 		ctx context.Context,
 		SignalRequest *shared.SignalWorkflowExecutionRequest,
@@ -1351,6 +1357,34 @@ func (c client) SignalWithStartWorkflowExecution(
 	}
 
 	success, err = cadence.WorkflowService_SignalWithStartWorkflowExecution_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) SignalWithStartWorkflowExecutionAsync(
+	ctx context.Context,
+	_SignalWithStartRequest *shared.SignalWithStartWorkflowExecutionAsyncRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.SignalWithStartWorkflowExecutionAsyncResponse, err error) {
+
+	var result cadence.WorkflowService_SignalWithStartWorkflowExecutionAsync_Result
+	args := cadence.WorkflowService_SignalWithStartWorkflowExecutionAsync_Helper.Args(_SignalWithStartRequest)
+
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
+
+		if err = result.FromWire(body); err != nil {
+			return
+		}
+	}
+
+	success, err = cadence.WorkflowService_SignalWithStartWorkflowExecutionAsync_Helper.UnwrapResponse(&result)
 	return
 }
 

@@ -48,6 +48,7 @@ func applyWorkflowMutationTx(
 
 	executionInfo := workflowMutation.ExecutionInfo
 	versionHistories := workflowMutation.VersionHistories
+	workflowChecksum := workflowMutation.ChecksumData
 	startVersion := workflowMutation.StartVersion
 	lastWriteVersion := workflowMutation.LastWriteVersion
 	domainID := serialization.MustParseUUID(executionInfo.DomainID)
@@ -71,6 +72,7 @@ func applyWorkflowMutationTx(
 		tx,
 		executionInfo,
 		versionHistories,
+		workflowChecksum,
 		startVersion,
 		lastWriteVersion,
 		shardID,
@@ -211,6 +213,7 @@ func applyWorkflowSnapshotTxAsReset(
 
 	executionInfo := workflowSnapshot.ExecutionInfo
 	versionHistories := workflowSnapshot.VersionHistories
+	workflowChecksum := workflowSnapshot.ChecksumData
 	startVersion := workflowSnapshot.StartVersion
 	lastWriteVersion := workflowSnapshot.LastWriteVersion
 	domainID := serialization.MustParseUUID(executionInfo.DomainID)
@@ -234,6 +237,7 @@ func applyWorkflowSnapshotTxAsReset(
 		tx,
 		executionInfo,
 		versionHistories,
+		workflowChecksum,
 		startVersion,
 		lastWriteVersion,
 		shardID,
@@ -413,6 +417,7 @@ func applyWorkflowMutationAsyncTx(
 
 	executionInfo := workflowMutation.ExecutionInfo
 	versionHistories := workflowMutation.VersionHistories
+	workflowChecksum := workflowMutation.ChecksumData
 	startVersion := workflowMutation.StartVersion
 	lastWriteVersion := workflowMutation.LastWriteVersion
 	domainID := serialization.MustParseUUID(executionInfo.DomainID)
@@ -443,6 +448,7 @@ func applyWorkflowMutationAsyncTx(
 		tx,
 		executionInfo,
 		versionHistories,
+		workflowChecksum,
 		startVersion,
 		lastWriteVersion,
 		shardID,
@@ -641,6 +647,7 @@ func applyWorkflowSnapshotTxAsNew(
 
 	executionInfo := workflowSnapshot.ExecutionInfo
 	versionHistories := workflowSnapshot.VersionHistories
+	workflowChecksum := workflowSnapshot.ChecksumData
 	startVersion := workflowSnapshot.StartVersion
 	lastWriteVersion := workflowSnapshot.LastWriteVersion
 	domainID := serialization.MustParseUUID(executionInfo.DomainID)
@@ -652,6 +659,7 @@ func applyWorkflowSnapshotTxAsNew(
 		tx,
 		executionInfo,
 		versionHistories,
+		workflowChecksum,
 		startVersion,
 		lastWriteVersion,
 		shardID,
@@ -761,6 +769,7 @@ func (m *sqlExecutionStore) applyWorkflowSnapshotAsyncTxAsNew(
 
 	executionInfo := workflowSnapshot.ExecutionInfo
 	versionHistories := workflowSnapshot.VersionHistories
+	workflowChecksum := workflowSnapshot.ChecksumData
 	startVersion := workflowSnapshot.StartVersion
 	lastWriteVersion := workflowSnapshot.LastWriteVersion
 	domainID := serialization.MustParseUUID(executionInfo.DomainID)
@@ -781,6 +790,7 @@ func (m *sqlExecutionStore) applyWorkflowSnapshotAsyncTxAsNew(
 			tx,
 			executionInfo,
 			versionHistories,
+			workflowChecksum,
 			startVersion,
 			lastWriteVersion,
 			shardID,
@@ -1714,6 +1724,7 @@ func updateCurrentExecution(
 func buildExecutionRow(
 	executionInfo *p.InternalWorkflowExecutionInfo,
 	versionHistories *p.DataBlob,
+	workflowChecksum *p.DataBlob,
 	startVersion int64,
 	lastWriteVersion int64,
 	shardID int,
@@ -1728,6 +1739,10 @@ func buildExecutionRow(
 	} else {
 		info.VersionHistories = versionHistories.Data
 		info.VersionHistoriesEncoding = string(versionHistories.GetEncoding())
+	}
+	if workflowChecksum != nil {
+		info.Checksum = workflowChecksum.Data
+		info.ChecksumEncoding = string(workflowChecksum.GetEncoding())
 	}
 
 	blob, err := parser.WorkflowExecutionInfoToBlob(info)
@@ -1752,6 +1767,7 @@ func createExecution(
 	tx sqlplugin.Tx,
 	executionInfo *p.InternalWorkflowExecutionInfo,
 	versionHistories *p.DataBlob,
+	workflowChecksum *p.DataBlob,
 	startVersion int64,
 	lastWriteVersion int64,
 	shardID int,
@@ -1774,6 +1790,7 @@ func createExecution(
 	row, err := buildExecutionRow(
 		executionInfo,
 		versionHistories,
+		workflowChecksum,
 		startVersion,
 		lastWriteVersion,
 		shardID,
@@ -1816,6 +1833,7 @@ func updateExecution(
 	tx sqlplugin.Tx,
 	executionInfo *p.InternalWorkflowExecutionInfo,
 	versionHistories *p.DataBlob,
+	workflowChecksum *p.DataBlob,
 	startVersion int64,
 	lastWriteVersion int64,
 	shardID int,
@@ -1832,6 +1850,7 @@ func updateExecution(
 	row, err := buildExecutionRow(
 		executionInfo,
 		versionHistories,
+		workflowChecksum,
 		startVersion,
 		lastWriteVersion,
 		shardID,

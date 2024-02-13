@@ -74,6 +74,7 @@ type Client interface {
 	RestartWorkflowExecution(context.Context, *types.RestartWorkflowExecutionRequest, ...yarpc.CallOption) (*types.RestartWorkflowExecutionResponse, error)
 	ScanWorkflowExecutions(context.Context, *types.ListWorkflowExecutionsRequest, ...yarpc.CallOption) (*types.ListWorkflowExecutionsResponse, error)
 	SignalWithStartWorkflowExecution(context.Context, *types.SignalWithStartWorkflowExecutionRequest, ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error)
+	SignalWithStartWorkflowExecutionAsync(context.Context, *types.SignalWithStartWorkflowExecutionAsyncRequest, ...yarpc.CallOption) (*types.SignalWithStartWorkflowExecutionAsyncResponse, error)
 	SignalWorkflowExecution(context.Context, *types.SignalWorkflowExecutionRequest, ...yarpc.CallOption) error
 	StartWorkflowExecution(context.Context, *types.StartWorkflowExecutionRequest, ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error)
 	StartWorkflowExecutionAsync(context.Context, *types.StartWorkflowExecutionAsyncRequest, ...yarpc.CallOption) (*types.StartWorkflowExecutionAsyncResponse, error)

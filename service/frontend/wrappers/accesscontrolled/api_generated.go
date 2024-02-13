@@ -549,6 +549,24 @@ func (a *apiHandler) SignalWithStartWorkflowExecution(ctx context.Context, sp1 *
 	return a.handler.SignalWithStartWorkflowExecution(ctx, sp1)
 }
 
+func (a *apiHandler) SignalWithStartWorkflowExecutionAsync(ctx context.Context, sp1 *types.SignalWithStartWorkflowExecutionAsyncRequest) (sp2 *types.SignalWithStartWorkflowExecutionAsyncResponse, err error) {
+	scope := a.getMetricsScopeWithDomain(metrics.FrontendSignalWithStartWorkflowExecutionAsyncScope, sp1.GetDomain())
+	attr := &authorization.Attributes{
+		APIName:     "SignalWithStartWorkflowExecutionAsync",
+		Permission:  authorization.PermissionWrite,
+		RequestBody: sp1,
+		DomainName:  sp1.GetDomain(),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
+	if err != nil {
+		return nil, err
+	}
+	if !isAuthorized {
+		return nil, errUnauthorized
+	}
+	return a.handler.SignalWithStartWorkflowExecutionAsync(ctx, sp1)
+}
+
 func (a *apiHandler) SignalWorkflowExecution(ctx context.Context, sp1 *types.SignalWorkflowExecutionRequest) (err error) {
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendSignalWorkflowExecutionScope, sp1.GetDomain())
 	attr := &authorization.Attributes{
@@ -587,6 +605,20 @@ func (a *apiHandler) StartWorkflowExecution(ctx context.Context, sp1 *types.Star
 }
 
 func (a *apiHandler) StartWorkflowExecutionAsync(ctx context.Context, sp1 *types.StartWorkflowExecutionAsyncRequest) (sp2 *types.StartWorkflowExecutionAsyncResponse, err error) {
+	scope := a.getMetricsScopeWithDomain(metrics.FrontendStartWorkflowExecutionAsyncScope, sp1.GetDomain())
+	attr := &authorization.Attributes{
+		APIName:     "StartWorkflowExecutionAsync",
+		Permission:  authorization.PermissionWrite,
+		RequestBody: sp1,
+		DomainName:  sp1.GetDomain(),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
+	if err != nil {
+		return nil, err
+	}
+	if !isAuthorized {
+		return nil, errUnauthorized
+	}
 	return a.handler.StartWorkflowExecutionAsync(ctx, sp1)
 }
 

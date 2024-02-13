@@ -463,6 +463,17 @@ func (c *clientImpl) SignalWithStartWorkflowExecution(
 	return c.client.SignalWithStartWorkflowExecution(ctx, request, opts...)
 }
 
+func (c *clientImpl) SignalWithStartWorkflowExecutionAsync(
+	ctx context.Context,
+	request *types.SignalWithStartWorkflowExecutionAsyncRequest,
+	opts ...yarpc.CallOption,
+) (*types.SignalWithStartWorkflowExecutionAsyncResponse, error) {
+
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return c.client.SignalWithStartWorkflowExecutionAsync(ctx, request, opts...)
+}
+
 func (c *clientImpl) SignalWorkflowExecution(
 	ctx context.Context,
 	request *types.SignalWorkflowExecutionRequest,

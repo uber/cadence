@@ -218,6 +218,11 @@ func (g APIHandler) SignalWithStartWorkflowExecution(ctx context.Context, Signal
 	return thrift.FromSignalWithStartWorkflowExecutionResponse(response), thrift.FromError(err)
 }
 
+func (g APIHandler) SignalWithStartWorkflowExecutionAsync(ctx context.Context, SignalWithStartRequest *shared.SignalWithStartWorkflowExecutionAsyncRequest) (sp1 *shared.SignalWithStartWorkflowExecutionAsyncResponse, err error) {
+	response, err := g.h.SignalWithStartWorkflowExecutionAsync(ctx, thrift.ToSignalWithStartWorkflowExecutionAsyncRequest(SignalWithStartRequest))
+	return thrift.FromSignalWithStartWorkflowExecutionAsyncResponse(response), thrift.FromError(err)
+}
+
 func (g APIHandler) SignalWorkflowExecution(ctx context.Context, SignalRequest *shared.SignalWorkflowExecutionRequest) (err error) {
 	err = g.h.SignalWorkflowExecution(ctx, thrift.ToSignalWorkflowExecutionRequest(SignalRequest))
 	return thrift.FromError(err)

@@ -3,6 +3,7 @@ module github.com/uber/cadence
 go 1.20
 
 require (
+	github.com/MicahParks/keyfunc/v2 v2.1.0
 	github.com/Shopify/sarama v1.33.0
 	github.com/VividCortex/mysqlerr v1.0.0
 	github.com/aws/aws-sdk-go v1.44.180
@@ -22,6 +23,7 @@ require (
 	github.com/google/uuid v1.5.0
 	github.com/hashicorp/go-version v1.2.0
 	github.com/iancoleman/strcase v0.2.0
+	github.com/jmespath/go-jmespath v0.4.0
 	github.com/jmoiron/sqlx v1.2.1-0.20200615141059-0794cb1f47ee
 	github.com/jonboulle/clockwork v0.4.0
 	github.com/lib/pq v1.2.0
@@ -38,7 +40,7 @@ require (
 	github.com/startreedata/pinot-client-go v0.0.0-20230303070132-3b84c28a9e95 // latest release doesn't support pinot v0.12, so use master branch
 	github.com/stretchr/testify v1.8.3
 	github.com/uber-go/tally v3.3.15+incompatible
-	github.com/uber/cadence-idl v0.0.0-20240206193658-7cafd96fa80e
+	github.com/uber/cadence-idl v0.0.0-20240212223805-34b4519b2709
 	github.com/uber/ringpop-go v0.8.5
 	github.com/uber/tchannel-go v1.22.2
 	github.com/urfave/cli v1.22.4
@@ -57,7 +59,7 @@ require (
 	golang.org/x/exp v0.0.0-20231226003508-02704c960a9b
 	golang.org/x/net v0.19.0
 	golang.org/x/sync v0.5.0
-	golang.org/x/time v0.3.0
+	golang.org/x/time v0.5.0
 	golang.org/x/tools v0.16.0
 	gonum.org/v1/gonum v0.7.0
 	google.golang.org/grpc v1.59.0
@@ -94,7 +96,6 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.4.2 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/jessevdk/go-flags v1.4.0 // indirect
-	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/kisielk/errcheck v1.5.0 // indirect
 	github.com/klauspost/compress v1.15.9 // indirect

@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/worker/archiver"
+	"github.com/uber/cadence/service/worker/asyncworkflow"
 	"github.com/uber/cadence/service/worker/batcher"
 	"github.com/uber/cadence/service/worker/esanalyzer"
 	"github.com/uber/cadence/service/worker/failovermanager"
@@ -84,17 +85,14 @@ type (
 		DomainReplicationMaxRetryDuration   dynamicconfig.DurationPropertyFn
 		EnableESAnalyzer                    dynamicconfig.BoolPropertyFn
 		EnableWatchDog                      dynamicconfig.BoolPropertyFn
+		EnableAsyncWorkflowConsumption      dynamicconfig.BoolPropertyFn
 		HostName                            string
 	}
 )
 
 // NewService builds a new cadence-worker service
-func NewService(
-	params *resource.Params,
-) (resource.Resource, error) {
-
+func NewService(params *resource.Params) (resource.Resource, error) {
 	serviceConfig := NewConfig(params)
-
 	serviceResource, err := resource.New(
 		params,
 		service.Worker,
@@ -184,6 +182,7 @@ func NewConfig(params *resource.Params) *Config {
 		PersistenceGlobalMaxQPS:             dc.GetIntProperty(dynamicconfig.WorkerPersistenceGlobalMaxQPS),
 		PersistenceMaxQPS:                   dc.GetIntProperty(dynamicconfig.WorkerPersistenceMaxQPS),
 		DomainReplicationMaxRetryDuration:   dc.GetDurationProperty(dynamicconfig.WorkerReplicationTaskMaxRetryDuration),
+		EnableAsyncWorkflowConsumption:      dc.GetBoolProperty(dynamicconfig.EnableAsyncWorkflowConsumption),
 		HostName:                            params.HostName,
 	}
 	advancedVisWritingMode := dc.GetStringProperty(
@@ -244,6 +243,11 @@ func (s *Service) Start() {
 		s.startWorkflowShadower()
 	}
 
+	if s.config.EnableAsyncWorkflowConsumption() {
+		cm := s.startAsyncWorkflowConsumerManager()
+		defer cm.Stop()
+	}
+
 	logger.Info("worker started", tag.ComponentWorker)
 	<-s.stopC
 }
@@ -254,12 +258,14 @@ func (s *Service) Stop() {
 		return
 	}
 
+	s.GetLogger().Info("worker stopping", tag.ComponentWorker)
+
 	close(s.stopC)
 
 	s.Resource.Stop()
 	s.Resource.GetDomainReplicationQueue().Stop()
 
-	s.params.Logger.Info("worker stopped", tag.ComponentWorker)
+	s.GetLogger().Info("worker stopped", tag.ComponentWorker)
 }
 
 func (s *Service) startParentClosePolicyProcessor() {
@@ -411,6 +417,17 @@ func (s *Service) startWorkflowShadower() {
 		s.Stop()
 		s.GetLogger().Fatal("error starting workflow shadower", tag.Error(err))
 	}
+}
+
+func (s *Service) startAsyncWorkflowConsumerManager() common.Daemon {
+	cm := asyncworkflow.NewConsumerManager(
+		s.GetLogger(),
+		s.GetMetricsClient(),
+		s.GetDomainCache(),
+		s.Resource.GetAsyncWorkflowQueueProvider(),
+	)
+	cm.Start()
+	return cm
 }
 
 func (s *Service) ensureDomainExists(domain string) {
