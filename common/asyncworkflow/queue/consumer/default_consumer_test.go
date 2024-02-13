@@ -193,20 +193,22 @@ func TestDefaultConsumer(t *testing.T) {
 			}
 
 			mockFrontend := frontend.NewMockClient(gomock.NewController(t))
+			// we fake 2 headers and pass them manually to the mock because "..." extension doesn't work with mocked interface
+			opts := getYARPCOptions(fakeHeaders())
 			if tc.frontendFails {
 				mockFrontend.EXPECT().
-					StartWorkflowExecution(gomock.Any(), gomock.Any()).
+					StartWorkflowExecution(gomock.Any(), gomock.Any(), opts[0], opts[1]).
 					Return(nil, errors.New("failed")).AnyTimes()
 				mockFrontend.EXPECT().
-					SignalWithStartWorkflowExecution(gomock.Any(), gomock.Any()).
+					SignalWithStartWorkflowExecution(gomock.Any(), gomock.Any(), opts[0], opts[1]).
 					Return(nil, errors.New("failed")).AnyTimes()
 			} else {
 				resp := &types.StartWorkflowExecutionResponse{RunID: "test-run-id"}
 				mockFrontend.EXPECT().
-					StartWorkflowExecution(gomock.Any(), gomock.Any()).
+					StartWorkflowExecution(gomock.Any(), gomock.Any(), opts[0], opts[1]).
 					Return(resp, nil).AnyTimes()
 				mockFrontend.EXPECT().
-					SignalWithStartWorkflowExecution(gomock.Any(), gomock.Any()).
+					SignalWithStartWorkflowExecution(gomock.Any(), gomock.Any(), opts[0], opts[1]).
 					Return(resp, nil).AnyTimes()
 			}
 
@@ -265,7 +267,7 @@ func mustGenerateStartWorkflowExecutionRequestMsg(t *testing.T, encodingType com
 
 	msg := &sqlblobs.AsyncRequestMessage{
 		Type:     sqlblobs.AsyncRequestTypeStartWorkflowExecutionAsyncRequest.Ptr(),
-		Header:   &shared.Header{},
+		Header:   fakeHeaders(),
 		Encoding: common.StringPtr(string(encodingType)),
 		Payload:  payload,
 	}
@@ -300,7 +302,7 @@ func mustGenerateSignalWithStartWorkflowExecutionRequestMsg(t *testing.T, encodi
 
 	msg := &sqlblobs.AsyncRequestMessage{
 		Type:     sqlblobs.AsyncRequestTypeSignalWithStartWorkflowExecutionAsyncRequest.Ptr(),
-		Header:   &shared.Header{},
+		Header:   fakeHeaders(),
 		Encoding: common.StringPtr(string(encodingType)),
 		Payload:  payload,
 	}
@@ -342,4 +344,13 @@ func mustGenerateUnsupportedRequestMsg(t *testing.T) []byte {
 	}
 
 	return res
+}
+
+func fakeHeaders() *shared.Header {
+	return &shared.Header{
+		Fields: map[string][]byte{
+			"key1": []byte("val1"),
+			"key2": []byte("val2"),
+		},
+	}
 }

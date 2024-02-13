@@ -26,9 +26,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
+	"go.uber.org/yarpc"
+
+	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
@@ -147,7 +151,7 @@ func (c *DefaultConsumer) processMessage(msg messaging.Message) {
 	logger := c.logger.WithTags(tag.Dynamic("partition", msg.Partition()), tag.Dynamic("offset", msg.Offset()))
 	logger.Debug("Received message")
 
-	sw := c.scope.StartTimer(metrics.ESProcessorProcessMsgLatency)
+	sw := c.scope.StartTimer(metrics.AsyncWorkflowProcessMsgLatency)
 	defer sw.Stop()
 
 	var request sqlblobs.AsyncRequestMessage
@@ -175,19 +179,20 @@ func (c *DefaultConsumer) processMessage(msg messaging.Message) {
 }
 
 func (c *DefaultConsumer) processRequest(logger log.Logger, request *sqlblobs.AsyncRequestMessage) error {
+	scope := c.scope.Tagged(metrics.AsyncWFRequestTypeTag(request.GetType().String()))
 	switch request.GetType() {
 	case sqlblobs.AsyncRequestTypeStartWorkflowExecutionAsyncRequest:
 		startWFReq, err := decodeStartWorkflowRequest(request.GetPayload(), request.GetEncoding())
 		if err != nil {
-			c.scope.IncCounter(metrics.AsyncWorkflowFailureCorruptMsgCount)
+			scope.IncCounter(metrics.AsyncWorkflowFailureCorruptMsgCount)
 			return err
 		}
 
-		scope := c.scope.Tagged(metrics.DomainTag(startWFReq.GetDomain()))
-
+		yarpcCallOpts := getYARPCOptions(request.GetHeader())
+		scope := scope.Tagged(metrics.DomainTag(startWFReq.GetDomain()))
 		var resp *types.StartWorkflowExecutionResponse
 		op := func() error {
-			resp, err = c.frontendClient.StartWorkflowExecution(c.ctx, startWFReq)
+			resp, err = c.frontendClient.StartWorkflowExecution(c.ctx, startWFReq, yarpcCallOpts...)
 			return err
 		}
 
@@ -205,11 +210,11 @@ func (c *DefaultConsumer) processRequest(logger log.Logger, request *sqlblobs.As
 			return err
 		}
 
+		yarpcCallOpts := getYARPCOptions(request.GetHeader())
 		scope := c.scope.Tagged(metrics.DomainTag(startWFReq.GetDomain()))
-
 		var resp *types.StartWorkflowExecutionResponse
 		op := func() error {
-			resp, err = c.frontendClient.SignalWithStartWorkflowExecution(c.ctx, startWFReq)
+			resp, err = c.frontendClient.SignalWithStartWorkflowExecution(c.ctx, startWFReq, yarpcCallOpts...)
 			return err
 		}
 
@@ -221,7 +226,7 @@ func (c *DefaultConsumer) processRequest(logger log.Logger, request *sqlblobs.As
 		scope.IncCounter(metrics.AsyncWorkflowSuccessCount)
 		logger.Info("SignalWithStartWorkflowExecution succeeded", tag.WorkflowID(startWFReq.GetWorkflowID()), tag.WorkflowRunID(resp.GetRunID()))
 	default:
-		c.scope.IncCounter(metrics.AsyncWorkflowSuccessCount)
+		c.scope.IncCounter(metrics.AsyncWorkflowFailureCorruptMsgCount)
 		return &UnsupportedRequestType{Type: request.GetType()}
 	}
 
@@ -237,16 +242,36 @@ func callFrontendWithRetries(ctx context.Context, op func() error) error {
 	return throttleRetry.Do(ctx, op)
 }
 
+func getYARPCOptions(header *shared.Header) []yarpc.CallOption {
+	if header == nil || header.GetFields() == nil {
+		return nil
+	}
+
+	// sort the header fields to make the tests deterministic
+	fields := header.GetFields()
+	sortedKeys := make([]string, 0, len(fields))
+	for k := range fields {
+		sortedKeys = append(sortedKeys, k)
+	}
+	sort.Strings(sortedKeys)
+
+	var opts []yarpc.CallOption
+	for _, k := range sortedKeys {
+		opts = append(opts, yarpc.WithHeader(k, string(fields[k])))
+	}
+	return opts
+}
+
 func decodeStartWorkflowRequest(payload []byte, encoding string) (*types.StartWorkflowExecutionRequest, error) {
 	if encoding != string(common.EncodingTypeJSON) {
 		return nil, &UnsupportedEncoding{EncodingType: encoding}
 	}
 
-	var startRequest types.StartWorkflowExecutionRequest
+	var startRequest types.StartWorkflowExecutionAsyncRequest
 	if err := json.Unmarshal(payload, &startRequest); err != nil {
 		return nil, err
 	}
-	return &startRequest, nil
+	return startRequest.StartWorkflowExecutionRequest, nil
 }
 
 func decodeSignalWithStartWorkflowRequest(payload []byte, encoding string) (*types.SignalWithStartWorkflowExecutionRequest, error) {
@@ -254,9 +279,9 @@ func decodeSignalWithStartWorkflowRequest(payload []byte, encoding string) (*typ
 		return nil, &UnsupportedEncoding{EncodingType: encoding}
 	}
 
-	var startRequest types.SignalWithStartWorkflowExecutionRequest
+	var startRequest types.SignalWithStartWorkflowExecutionAsyncRequest
 	if err := json.Unmarshal(payload, &startRequest); err != nil {
 		return nil, err
 	}
-	return &startRequest, nil
+	return startRequest.SignalWithStartWorkflowExecutionRequest, nil
 }

@@ -56,6 +56,7 @@ const (
 	shardID                = "shard_id"
 	matchingHost           = "matching_host"
 	pollerIsolationGroup   = "poller_isolation_group"
+	asyncWFRequestType     = "async_wf_request_type"
 
 	allValue     = "all"
 	unknownValue = "_unknown_"
@@ -222,6 +223,11 @@ func MatchingHostTag(value string) Tag {
 // PollerIsolationGroupTag returns a new PollerIsolationGroup tag
 func PollerIsolationGroupTag(value string) Tag {
 	return metricWithUnknown(pollerIsolationGroup, value)
+}
+
+// AsyncWFRequestTypeTag returns a new AsyncWFRequestTypeTag tag
+func AsyncWFRequestTypeTag(value string) Tag {
+	return metricWithUnknown(asyncWFRequestType, value)
 }
 
 // PartitionConfigTags returns a list of partition config tags
