@@ -113,7 +113,7 @@ func (c *ConsumerManager) Stop() {
 
 	for qID, consumer := range c.activeConsumers {
 		consumer.Stop()
-		c.logger.Info("Stopped consumer", tag.Dynamic("queue-id", qID))
+		c.logger.Info("Stopped consumer", tag.AsyncWFQueueID(qID))
 	}
 
 	c.logger.Info("Stopped ConsumerManager")
@@ -171,30 +171,30 @@ func (c *ConsumerManager) refreshConsumers() {
 
 		// async workflow config is enabled. check if consumer is already running
 		if c.activeConsumers[queue.ID()] != nil {
-			c.logger.Debug("Consumer already running", tag.WorkflowDomainName(domain.GetInfo().Name), tag.Dynamic("queue-id", queue.ID()))
+			c.logger.Debug("Consumer already running", tag.WorkflowDomainName(domain.GetInfo().Name), tag.AsyncWFQueueID(queue.ID()))
 			refCounts[queue.ID()]++
 			continue
 		}
 
-		c.logger.Info("Starting consumer", tag.WorkflowDomainName(domain.GetInfo().Name), tag.Dynamic("queue-id", queue.ID()))
+		c.logger.Info("Starting consumer", tag.WorkflowDomainName(domain.GetInfo().Name), tag.AsyncWFQueueID(queue.ID()))
 		consumer, err := queue.CreateConsumer(&provider.Params{
 			Logger:         c.logger,
 			MetricsClient:  c.metricsClient,
 			FrontendClient: c.frontendClient,
 		})
 		if err != nil {
-			c.logger.Error("Failed to create consumer", tag.Error(err), tag.WorkflowDomainName(domain.GetInfo().Name), tag.Dynamic("queue-id", queue.ID()))
+			c.logger.Error("Failed to create consumer", tag.Error(err), tag.WorkflowDomainName(domain.GetInfo().Name), tag.AsyncWFQueueID(queue.ID()))
 			continue
 		}
 
 		if err := consumer.Start(); err != nil {
-			c.logger.Error("Failed to start consumer", tag.Error(err), tag.WorkflowDomainName(domain.GetInfo().Name), tag.Dynamic("queue-id", queue.ID()))
+			c.logger.Error("Failed to start consumer", tag.Error(err), tag.WorkflowDomainName(domain.GetInfo().Name), tag.AsyncWFQueueID(queue.ID()))
 			continue
 		}
 
 		c.activeConsumers[queue.ID()] = consumer
 		refCounts[queue.ID()]++
-		c.logger.Info("Created and started consumer", tag.WorkflowDomainName(domain.GetInfo().Name), tag.Dynamic("queue-id", queue.ID()))
+		c.logger.Info("Created and started consumer", tag.WorkflowDomainName(domain.GetInfo().Name), tag.AsyncWFQueueID(queue.ID()))
 	}
 
 	// stop consumers that are not needed
@@ -203,10 +203,10 @@ func (c *ConsumerManager) refreshConsumers() {
 			continue
 		}
 
-		c.logger.Info("Stopping consumer because it's not needed", tag.Dynamic("queue-id", qID))
+		c.logger.Info("Stopping consumer because it's not needed", tag.AsyncWFQueueID(qID))
 		consumer.Stop()
 		delete(c.activeConsumers, qID)
-		c.logger.Info("Stopped consumer", tag.Dynamic("queue-id", qID))
+		c.logger.Info("Stopped consumer", tag.AsyncWFQueueID(qID))
 	}
 
 	c.logger.Info("Refreshed consumers", tag.Dynamic("consumer-count", len(c.activeConsumers)))

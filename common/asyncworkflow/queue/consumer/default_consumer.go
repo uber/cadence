@@ -46,7 +46,7 @@ const (
 	defaultConcurrency     = 100
 )
 
-type defaultConsumer struct {
+type DefaultConsumer struct {
 	queueID         string
 	innerConsumer   messaging.Consumer
 	logger          log.Logger
@@ -60,10 +60,10 @@ type defaultConsumer struct {
 	concurrency     int
 }
 
-type Option func(*defaultConsumer)
+type Option func(*DefaultConsumer)
 
 func WithConcurrency(concurrency int) Option {
-	return func(c *defaultConsumer) {
+	return func(c *DefaultConsumer) {
 		c.concurrency = concurrency
 	}
 }
@@ -75,12 +75,12 @@ func New(
 	metricsClient metrics.Client,
 	frontendClient frontend.Client,
 	options ...Option,
-) *defaultConsumer {
+) *DefaultConsumer {
 	ctx, cancelFn := context.WithCancel(context.Background())
-	c := &defaultConsumer{
+	c := &DefaultConsumer{
 		queueID:         queueID,
 		innerConsumer:   innerConsumer,
-		logger:          logger.WithTags(tag.Dynamic("queue-id", queueID)),
+		logger:          logger.WithTags(tag.AsyncWFQueueID(queueID)),
 		scope:           metricsClient.Scope(metrics.AsyncWorkflowConsumerScope),
 		frontendClient:  frontendClient,
 		ctx:             ctx,
@@ -97,7 +97,7 @@ func New(
 	return c
 }
 
-func (c *defaultConsumer) Start() error {
+func (c *DefaultConsumer) Start() error {
 	if err := c.innerConsumer.Start(); err != nil {
 		return err
 	}
@@ -111,7 +111,7 @@ func (c *defaultConsumer) Start() error {
 	return nil
 }
 
-func (c *defaultConsumer) Stop() {
+func (c *DefaultConsumer) Stop() {
 	c.logger.Info("Stopping consumer")
 	c.cancelFn()
 	c.wg.Wait()
@@ -124,7 +124,7 @@ func (c *defaultConsumer) Stop() {
 	c.logger.Info("Stopped consumer")
 }
 
-func (c *defaultConsumer) runProcessLoop() {
+func (c *DefaultConsumer) runProcessLoop() {
 	defer c.wg.Done()
 
 	for {
@@ -143,7 +143,7 @@ func (c *defaultConsumer) runProcessLoop() {
 	}
 }
 
-func (c *defaultConsumer) processMessage(msg messaging.Message) {
+func (c *DefaultConsumer) processMessage(msg messaging.Message) {
 	logger := c.logger.WithTags(tag.Dynamic("partition", msg.Partition()), tag.Dynamic("offset", msg.Offset()))
 	logger.Debug("Received message")
 
@@ -174,7 +174,7 @@ func (c *defaultConsumer) processMessage(msg messaging.Message) {
 	logger.Debug("Processed message successfully")
 }
 
-func (c *defaultConsumer) processRequest(logger log.Logger, request *sqlblobs.AsyncRequestMessage) error {
+func (c *DefaultConsumer) processRequest(logger log.Logger, request *sqlblobs.AsyncRequestMessage) error {
 	switch request.GetType() {
 	case sqlblobs.AsyncRequestTypeStartWorkflowExecutionAsyncRequest:
 		startWFReq, err := decodeStartWorkflowRequest(request.GetPayload(), request.GetEncoding())
