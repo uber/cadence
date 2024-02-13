@@ -27,6 +27,7 @@ package provider
 import (
 	"fmt"
 
+	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
@@ -36,18 +37,24 @@ import (
 
 type (
 	Params struct {
-		Logger        log.Logger
-		MetricsClient metrics.Client
+		Logger         log.Logger
+		MetricsClient  metrics.Client
+		FrontendClient frontend.Client
 	}
 
 	Decoder interface {
 		Decode(any) error
 	}
 
+	Consumer interface {
+		Start() error
+		Stop()
+	}
+
 	// Queue is an interface for async queue
 	Queue interface {
 		ID() string
-		CreateConsumer(*Params) (messaging.Consumer, error)
+		CreateConsumer(*Params) (Consumer, error)
 		CreateProducer(*Params) (messaging.Producer, error)
 	}
 

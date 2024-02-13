@@ -71,6 +71,55 @@ func (mr *MockDecoderMockRecorder) Decode(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Decode", reflect.TypeOf((*MockDecoder)(nil).Decode), arg0)
 }
 
+// MockConsumer is a mock of Consumer interface.
+type MockConsumer struct {
+	ctrl     *gomock.Controller
+	recorder *MockConsumerMockRecorder
+}
+
+// MockConsumerMockRecorder is the mock recorder for MockConsumer.
+type MockConsumerMockRecorder struct {
+	mock *MockConsumer
+}
+
+// NewMockConsumer creates a new mock instance.
+func NewMockConsumer(ctrl *gomock.Controller) *MockConsumer {
+	mock := &MockConsumer{ctrl: ctrl}
+	mock.recorder = &MockConsumerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockConsumer) EXPECT() *MockConsumerMockRecorder {
+	return m.recorder
+}
+
+// Start mocks base method.
+func (m *MockConsumer) Start() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Start")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Start indicates an expected call of Start.
+func (mr *MockConsumerMockRecorder) Start() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockConsumer)(nil).Start))
+}
+
+// Stop mocks base method.
+func (m *MockConsumer) Stop() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Stop")
+}
+
+// Stop indicates an expected call of Stop.
+func (mr *MockConsumerMockRecorder) Stop() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockConsumer)(nil).Stop))
+}
+
 // MockQueue is a mock of Queue interface.
 type MockQueue struct {
 	ctrl     *gomock.Controller
@@ -95,10 +144,10 @@ func (m *MockQueue) EXPECT() *MockQueueMockRecorder {
 }
 
 // CreateConsumer mocks base method.
-func (m *MockQueue) CreateConsumer(arg0 *Params) (messaging.Consumer, error) {
+func (m *MockQueue) CreateConsumer(arg0 *Params) (Consumer, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateConsumer", arg0)
-	ret0, _ := ret[0].(messaging.Consumer)
+	ret0, _ := ret[0].(Consumer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

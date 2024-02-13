@@ -27,6 +27,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/asyncworkflow/queue"
 	"github.com/uber/cadence/common/asyncworkflow/queue/provider"
@@ -34,7 +35,6 @@ import (
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 )
@@ -57,6 +57,7 @@ func NewConsumerManager(
 	metricsClient metrics.Client,
 	domainCache cache.DomainCache,
 	queueProvider queue.Provider,
+	frontendClient frontend.Client,
 	options ...ConsumerManagerOptions,
 ) *ConsumerManager {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -65,11 +66,12 @@ func NewConsumerManager(
 		metricsClient:   metricsClient,
 		domainCache:     domainCache,
 		queueProvider:   queueProvider,
+		frontendClient:  frontendClient,
 		refreshInterval: defaultRefreshInterval,
 		shutdownTimeout: defaultShutdownTimeout,
 		ctx:             ctx,
 		cancelFn:        cancel,
-		activeConsumers: make(map[string]messaging.Consumer),
+		activeConsumers: make(map[string]provider.Consumer),
 		timeSrc:         clock.NewRealTimeSource(),
 	}
 
@@ -85,12 +87,13 @@ type ConsumerManager struct {
 	timeSrc         clock.TimeSource
 	domainCache     cache.DomainCache
 	queueProvider   queue.Provider
+	frontendClient  frontend.Client
 	refreshInterval time.Duration
 	shutdownTimeout time.Duration
 	ctx             context.Context
 	cancelFn        context.CancelFunc
 	wg              sync.WaitGroup
-	activeConsumers map[string]messaging.Consumer
+	activeConsumers map[string]provider.Consumer
 }
 
 func (c *ConsumerManager) Start() {
@@ -175,17 +178,23 @@ func (c *ConsumerManager) refreshConsumers() {
 
 		c.logger.Info("Starting consumer", tag.WorkflowDomainName(domain.GetInfo().Name), tag.Dynamic("queue-id", queue.ID()))
 		consumer, err := queue.CreateConsumer(&provider.Params{
-			Logger:        c.logger,
-			MetricsClient: c.metricsClient,
+			Logger:         c.logger,
+			MetricsClient:  c.metricsClient,
+			FrontendClient: c.frontendClient,
 		})
 		if err != nil {
 			c.logger.Error("Failed to create consumer", tag.Error(err), tag.WorkflowDomainName(domain.GetInfo().Name), tag.Dynamic("queue-id", queue.ID()))
 			continue
 		}
 
+		if err := consumer.Start(); err != nil {
+			c.logger.Error("Failed to start consumer", tag.Error(err), tag.WorkflowDomainName(domain.GetInfo().Name), tag.Dynamic("queue-id", queue.ID()))
+			continue
+		}
+
 		c.activeConsumers[queue.ID()] = consumer
 		refCounts[queue.ID()]++
-		c.logger.Info("Created consumer", tag.WorkflowDomainName(domain.GetInfo().Name), tag.Dynamic("queue-id", queue.ID()))
+		c.logger.Info("Created and started consumer", tag.WorkflowDomainName(domain.GetInfo().Name), tag.Dynamic("queue-id", queue.ID()))
 	}
 
 	// stop consumers that are not needed

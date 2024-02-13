@@ -2578,6 +2578,10 @@ const (
 	ESAnalyzerNumStuckWorkflowsFailedToRefresh
 	ESAnalyzerNumLongRunningWorkflows
 	AsyncWorkflowConsumerCount
+	AsyncWorkflowProcessMsgLatency
+	AsyncWorkflowFailureCorruptMsgCount
+	AsyncWorkflowFailureByFrontendCount
+	AsyncWorkflowSuccessCount
 
 	NumWorkerMetrics
 )
@@ -3197,6 +3201,10 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ESAnalyzerNumStuckWorkflowsFailedToRefresh:    {metricName: "es_analyzer_num_stuck_workflows_failed_to_refresh", metricType: Counter},
 		ESAnalyzerNumLongRunningWorkflows:             {metricName: "es_analyzer_num_long_running_workflows", metricType: Counter},
 		AsyncWorkflowConsumerCount:                    {metricName: "async_workflow_consumer_count", metricType: Gauge},
+		AsyncWorkflowProcessMsgLatency:                {metricName: "async_workflow_process_msg_latency", metricType: Timer},
+		AsyncWorkflowFailureCorruptMsgCount:           {metricName: "async_workflow_failure_corrupt_msg", metricType: Counter},
+		AsyncWorkflowFailureByFrontendCount:           {metricName: "async_workflow_failure_by_frontend", metricType: Counter},
+		AsyncWorkflowSuccessCount:                     {metricName: "async_workflow_success", metricType: Counter},
 	},
 }
 

@@ -37,7 +37,6 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log/testlogger"
-	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -48,6 +47,7 @@ type domainWithConfig struct {
 	asyncWFCfg           types.AsyncWorkflowConfiguration
 	failQueueCreation    bool
 	failConsumerCreation bool
+	failConsumerStart    bool
 }
 
 func TestConsumerManager(t *testing.T) {
@@ -99,6 +99,20 @@ func TestConsumerManager(t *testing.T) {
 						PredefinedQueueName: "queue1",
 					},
 					failConsumerCreation: true,
+				},
+			},
+			wantFirstRoundConsumers: []string{},
+		},
+		{
+			name: "consumer start fails",
+			firstRoundDomains: []domainWithConfig{
+				{
+					name: "domain1",
+					asyncWFCfg: types.AsyncWorkflowConfiguration{
+						Enabled:             true,
+						PredefinedQueueName: "queue1",
+					},
+					failConsumerStart: true,
 				},
 			},
 			wantFirstRoundConsumers: []string{},
@@ -258,8 +272,15 @@ func TestConsumerManager(t *testing.T) {
 							queueMock.EXPECT().CreateConsumer(gomock.Any()).
 								Return(nil, errors.New("consumer creation failed")).AnyTimes()
 						} else {
-							queueMock.EXPECT().CreateConsumer(gomock.Any()).
-								Return(messaging.NewNoopConsumer(), nil).AnyTimes()
+							mockConsumer := provider.NewMockConsumer(ctrl)
+							var startErr error
+							if dwc.failConsumerStart {
+								startErr = errors.New("consumer start failed")
+							}
+
+							mockConsumer.EXPECT().Start().Return(startErr).AnyTimes()
+							mockConsumer.EXPECT().Stop().AnyTimes()
+							queueMock.EXPECT().CreateConsumer(gomock.Any()).Return(mockConsumer, nil).AnyTimes()
 						}
 					}
 				}
@@ -271,6 +292,7 @@ func TestConsumerManager(t *testing.T) {
 				metrics.NewNoopMetricsClient(),
 				mockDomainCache,
 				mockQueueProvider,
+				nil,
 				WithTimeSource(mockTimeSrc),
 			)
 
@@ -326,7 +348,7 @@ func queueID(asyncWFCfg types.AsyncWorkflowConfiguration) string {
 	return fmt.Sprintf("queuetype:%s,queueconfig:%s", asyncWFCfg.QueueType, string(asyncWFCfg.QueueConfig.Data))
 }
 
-func cmpQueueIDs(activeConsumers map[string]messaging.Consumer, want []string) string {
+func cmpQueueIDs(activeConsumers map[string]provider.Consumer, want []string) string {
 	got := make([]string, 0, len(activeConsumers))
 	for qID := range activeConsumers {
 		got = append(got, qID)
