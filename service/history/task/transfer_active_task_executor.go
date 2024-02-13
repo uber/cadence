@@ -72,6 +72,7 @@ type (
 		historyClient           history.Client
 		parentClosePolicyClient parentclosepolicy.Client
 		workflowResetter        reset.WorkflowResetter
+		wfIDCache               workflowcache.WFCache
 	}
 
 	generatorF = func(taskGenerator execution.MutableStateTaskGenerator) error
@@ -95,7 +96,6 @@ func NewTransferActiveTaskExecutor(
 			executionCache,
 			logger,
 			config,
-			wfIDCache,
 		),
 		historyClient: shard.GetService().GetHistoryClient(),
 		parentClosePolicyClient: parentclosepolicy.NewClient(
@@ -105,6 +105,7 @@ func NewTransferActiveTaskExecutor(
 			config.NumParentClosePolicySystemWorkflows(),
 		),
 		workflowResetter: workflowResetter,
+		wfIDCache:        wfIDCache,
 	}
 }
 
@@ -195,6 +196,10 @@ func (t *transferActiveTaskExecutor) processActivityTask(
 	// release the context lock since we no longer need mutable state builder and
 	// the rest of logic is making RPC call, which takes time.
 	release(nil)
+
+	// Ratelimiting is not done. This is only to count the number of requests via metrics
+	t.wfIDCache.AllowInternal(task.DomainID, task.WorkflowID)
+
 	return t.pushActivity(ctx, task, timeout, mutableState.GetExecutionInfo().PartitionConfig)
 }
 

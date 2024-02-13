@@ -36,7 +36,6 @@ import (
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
-	"github.com/uber/cadence/service/history/workflowcache"
 	"github.com/uber/cadence/service/worker/archiver"
 )
 
@@ -60,7 +59,6 @@ type (
 		visibilityMgr  persistence.VisibilityManager
 		config         *config.Config
 		throttleRetry  *backoff.ThrottleRetry
-		wfIDCache      workflowcache.WFCache
 	}
 )
 
@@ -70,7 +68,6 @@ func newTransferTaskExecutorBase(
 	executionCache *execution.Cache,
 	logger log.Logger,
 	config *config.Config,
-	wfIDCache workflowcache.WFCache,
 ) *transferTaskExecutorBase {
 	return &transferTaskExecutorBase{
 		shard:          shard,
@@ -85,7 +82,6 @@ func newTransferTaskExecutorBase(
 			backoff.WithRetryPolicy(taskRetryPolicy),
 			backoff.WithRetryableError(common.IsServiceTransientError),
 		),
-		wfIDCache: wfIDCache,
 	}
 }
 
@@ -102,9 +98,6 @@ func (t *transferTaskExecutorBase) pushActivity(
 	if task.TaskType != persistence.TransferTaskTypeActivityTask {
 		t.logger.Fatal("Cannot process non activity task", tag.TaskType(task.GetTaskType()))
 	}
-
-	// Ratelimiting is not done. This is only to count the number of requests via metrics
-	t.wfIDCache.AllowInternal(task.DomainID, task.WorkflowID)
 
 	return t.matchingClient.AddActivityTask(ctx, &types.AddActivityTaskRequest{
 		DomainUUID:       task.TargetDomainID,

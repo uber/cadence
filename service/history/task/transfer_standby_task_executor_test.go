@@ -49,7 +49,6 @@ import (
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 	test "github.com/uber/cadence/service/history/testing"
-	"github.com/uber/cadence/service/history/workflowcache"
 	warchiver "github.com/uber/cadence/service/worker/archiver"
 )
 
@@ -61,7 +60,6 @@ type (
 		controller             *gomock.Controller
 		mockShard              *shard.TestContext
 		mockDomainCache        *cache.MockDomainCache
-		mockWFCache            *workflowcache.MockWFCache
 		mockNDCHistoryResender *ndc.MockHistoryResender
 		mockMatchingClient     *matching.MockClient
 
@@ -138,7 +136,6 @@ func (s *transferStandbyTaskExecutorSuite) SetupTest() {
 	s.mockArchivalMetadata = s.mockShard.Resource.ArchivalMetadata
 	s.mockArchiverProvider = s.mockShard.Resource.ArchiverProvider
 	s.mockDomainCache = s.mockShard.Resource.DomainCache
-	s.mockWFCache = workflowcache.NewMockWFCache(s.controller)
 	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(constants.TestGlobalDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainName(constants.TestDomainID).Return(constants.TestDomainName, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(constants.TestDomainName).Return(constants.TestGlobalDomainEntry, nil).AnyTimes()
@@ -162,7 +159,6 @@ func (s *transferStandbyTaskExecutorSuite) SetupTest() {
 		s.logger,
 		s.clusterName,
 		config,
-		s.mockWFCache,
 	).(*transferStandbyTaskExecutor)
 }
 
@@ -240,7 +236,6 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessActivityTask_Pending_PushT
 	s.NoError(err)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockMatchingClient.EXPECT().AddActivityTask(gomock.Any(), createAddActivityTaskRequest(transferTask, ai, mutableState.GetExecutionInfo().PartitionConfig)).Return(nil).Times(1)
-	s.mockWFCache.EXPECT().AllowInternal(constants.TestDomainID, constants.TestWorkflowID).Return(true).Times(1)
 	s.mockShard.SetCurrentTime(s.clusterName, now)
 	err = s.transferStandbyTaskExecutor.Execute(transferTask, true)
 	s.Nil(err)

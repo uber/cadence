@@ -134,7 +134,6 @@ func NewTransferQueueProcessor(
 			logger,
 			clusterName,
 			config,
-			wfIDCache,
 		)
 		standbyQueueProcessors[clusterName] = newTransferQueueStandbyProcessor(
 			clusterName,

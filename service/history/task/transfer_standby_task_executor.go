@@ -35,7 +35,6 @@ import (
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
-	"github.com/uber/cadence/service/history/workflowcache"
 	"github.com/uber/cadence/service/worker/archiver"
 )
 
@@ -57,7 +56,6 @@ func NewTransferStandbyTaskExecutor(
 	logger log.Logger,
 	clusterName string,
 	config *config.Config,
-	wfIDCache workflowcache.WFCache,
 ) Executor {
 	return &transferStandbyTaskExecutor{
 		transferTaskExecutorBase: newTransferTaskExecutorBase(
@@ -66,7 +64,6 @@ func NewTransferStandbyTaskExecutor(
 			executionCache,
 			logger,
 			config,
-			wfIDCache,
 		),
 		clusterName:     clusterName,
 		historyResender: historyResender,
