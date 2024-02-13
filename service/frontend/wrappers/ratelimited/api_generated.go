@@ -661,6 +661,10 @@ func (h *apiHandler) SignalWithStartWorkflowExecution(ctx context.Context, sp1 *
 	return h.wrapped.SignalWithStartWorkflowExecution(ctx, sp1)
 }
 
+func (h *apiHandler) SignalWithStartWorkflowExecutionAsync(ctx context.Context, sp1 *types.SignalWithStartWorkflowExecutionAsyncRequest) (sp2 *types.SignalWithStartWorkflowExecutionAsyncResponse, err error) {
+	return h.wrapped.SignalWithStartWorkflowExecutionAsync(ctx, sp1)
+}
+
 func (h *apiHandler) SignalWorkflowExecution(ctx context.Context, sp1 *types.SignalWorkflowExecutionRequest) (err error) {
 	if sp1 == nil {
 		err = validate.ErrRequestNotSet

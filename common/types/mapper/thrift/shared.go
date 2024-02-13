@@ -5262,6 +5262,38 @@ func ToStartTimerDecisionAttributes(t *shared.StartTimerDecisionAttributes) *typ
 	}
 }
 
+func FromSignalWithStartWorkflowExecutionAsyncRequest(t *types.SignalWithStartWorkflowExecutionAsyncRequest) *shared.SignalWithStartWorkflowExecutionAsyncRequest {
+	if t == nil {
+		return nil
+	}
+	return &shared.SignalWithStartWorkflowExecutionAsyncRequest{
+		Request: FromSignalWithStartWorkflowExecutionRequest(t.SignalWithStartWorkflowExecutionRequest),
+	}
+}
+
+func ToSignalWithStartWorkflowExecutionAsyncRequest(t *shared.SignalWithStartWorkflowExecutionAsyncRequest) *types.SignalWithStartWorkflowExecutionAsyncRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.SignalWithStartWorkflowExecutionAsyncRequest{
+		SignalWithStartWorkflowExecutionRequest: ToSignalWithStartWorkflowExecutionRequest(t.Request),
+	}
+}
+
+func FromSignalWithStartWorkflowExecutionAsyncResponse(t *types.SignalWithStartWorkflowExecutionAsyncResponse) *shared.SignalWithStartWorkflowExecutionAsyncResponse {
+	if t == nil {
+		return nil
+	}
+	return &shared.SignalWithStartWorkflowExecutionAsyncResponse{}
+}
+
+func ToSignalWithStartWorkflowExecutionAsyncResponse(t *shared.SignalWithStartWorkflowExecutionAsyncResponse) *types.SignalWithStartWorkflowExecutionAsyncResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.SignalWithStartWorkflowExecutionAsyncResponse{}
+}
+
 func FromStartWorkflowExecutionAsyncRequest(t *types.StartWorkflowExecutionAsyncRequest) *shared.StartWorkflowExecutionAsyncRequest {
 	if t == nil {
 		return nil

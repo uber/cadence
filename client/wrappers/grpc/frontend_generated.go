@@ -221,6 +221,11 @@ func (g frontendClient) SignalWithStartWorkflowExecution(ctx context.Context, sp
 	return proto.ToSignalWithStartWorkflowExecutionResponse(response), proto.ToError(err)
 }
 
+func (g frontendClient) SignalWithStartWorkflowExecutionAsync(ctx context.Context, sp1 *types.SignalWithStartWorkflowExecutionAsyncRequest, p1 ...yarpc.CallOption) (sp2 *types.SignalWithStartWorkflowExecutionAsyncResponse, err error) {
+	response, err := g.c.SignalWithStartWorkflowExecutionAsync(ctx, proto.FromSignalWithStartWorkflowExecutionAsyncRequest(sp1), p1...)
+	return proto.ToSignalWithStartWorkflowExecutionAsyncResponse(response), proto.ToError(err)
+}
+
 func (g frontendClient) SignalWorkflowExecution(ctx context.Context, sp1 *types.SignalWorkflowExecutionRequest, p1 ...yarpc.CallOption) (err error) {
 	_, err = g.c.SignalWorkflowExecution(ctx, proto.FromSignalWorkflowExecutionRequest(sp1), p1...)
 	return proto.ToError(err)

@@ -5929,6 +5929,15 @@ func (v *SignalWithStartWorkflowExecutionRequest) GetCronSchedule() (o string) {
 	return
 }
 
+// SignalWithStartWorkflowExecutionAsyncRequest is an internal type (TBD...)
+type SignalWithStartWorkflowExecutionAsyncRequest struct {
+	*SignalWithStartWorkflowExecutionRequest
+}
+
+// SignalWithStartWorkflowExecutionAsyncResponse is an internal type (TBD...)
+type SignalWithStartWorkflowExecutionAsyncResponse struct {
+}
+
 // SignalWorkflowExecutionRequest is an internal type (TBD...)
 type SignalWorkflowExecutionRequest struct {
 	Domain            string             `json:"domain,omitempty"`

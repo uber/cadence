@@ -802,6 +802,26 @@ func (c *frontendClient) SignalWithStartWorkflowExecution(ctx context.Context, s
 	return
 }
 
+func (c *frontendClient) SignalWithStartWorkflowExecutionAsync(ctx context.Context, sp1 *types.SignalWithStartWorkflowExecutionAsyncRequest, p1 ...yarpc.CallOption) (sp2 *types.SignalWithStartWorkflowExecutionAsyncResponse, err error) {
+	fakeErr := c.fakeErrFn(c.errorRate)
+	var forwardCall bool
+	if forwardCall = c.forwardCallFn(fakeErr); forwardCall {
+		sp2, err = c.client.SignalWithStartWorkflowExecutionAsync(ctx, sp1, p1...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgFrontendInjectedFakeErr,
+			tag.FrontendClientOperationSignalWithStartWorkflowExecutionAsync,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(err),
+		)
+		err = fakeErr
+		return
+	}
+	return
+}
+
 func (c *frontendClient) SignalWorkflowExecution(ctx context.Context, sp1 *types.SignalWorkflowExecutionRequest, p1 ...yarpc.CallOption) (err error) {
 	fakeErr := c.fakeErrFn(c.errorRate)
 	var forwardCall bool

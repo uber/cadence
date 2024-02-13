@@ -531,6 +531,19 @@ func (c *frontendClient) SignalWithStartWorkflowExecution(ctx context.Context, s
 	return sp2, err
 }
 
+func (c *frontendClient) SignalWithStartWorkflowExecutionAsync(ctx context.Context, sp1 *types.SignalWithStartWorkflowExecutionAsyncRequest, p1 ...yarpc.CallOption) (sp2 *types.SignalWithStartWorkflowExecutionAsyncResponse, err error) {
+	c.metricsClient.IncCounter(metrics.FrontendClientSignalWithStartWorkflowExecutionAsyncScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientSignalWithStartWorkflowExecutionAsyncScope, metrics.CadenceClientLatency)
+	sp2, err = c.client.SignalWithStartWorkflowExecutionAsync(ctx, sp1, p1...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientSignalWithStartWorkflowExecutionAsyncScope, metrics.CadenceClientFailures)
+	}
+	return sp2, err
+}
+
 func (c *frontendClient) SignalWorkflowExecution(ctx context.Context, sp1 *types.SignalWorkflowExecutionRequest, p1 ...yarpc.CallOption) (err error) {
 	c.metricsClient.IncCounter(metrics.FrontendClientSignalWorkflowExecutionScope, metrics.CadenceClientRequests)
 
