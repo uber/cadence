@@ -45,6 +45,7 @@ type apiHandler struct {
 	userRateLimiter       quotas.Policy
 	workerRateLimiter     quotas.Policy
 	visibilityRateLimiter quotas.Policy
+	asyncRateLimiter      quotas.Policy
 }
 
 // NewAPIHandler creates a new instance of Handler with ratelimiter.
@@ -54,6 +55,7 @@ func NewAPIHandler(
 	userRateLimiter quotas.Policy,
 	workerRateLimiter quotas.Policy,
 	visibilityRateLimiter quotas.Policy,
+	asyncRateLimiter quotas.Policy,
 ) api.Handler {
 	return &apiHandler{
 		wrapped:               wrapped,
@@ -62,6 +64,7 @@ func NewAPIHandler(
 		userRateLimiter:       userRateLimiter,
 		workerRateLimiter:     workerRateLimiter,
 		visibilityRateLimiter: visibilityRateLimiter,
+		asyncRateLimiter:      asyncRateLimiter,
 	}
 }
 
@@ -662,6 +665,18 @@ func (h *apiHandler) SignalWithStartWorkflowExecution(ctx context.Context, sp1 *
 }
 
 func (h *apiHandler) SignalWithStartWorkflowExecutionAsync(ctx context.Context, sp1 *types.SignalWithStartWorkflowExecutionAsyncRequest) (sp2 *types.SignalWithStartWorkflowExecutionAsyncResponse, err error) {
+	if sp1 == nil {
+		err = validate.ErrRequestNotSet
+		return
+	}
+	if sp1.GetDomain() == "" {
+		err = validate.ErrDomainNotSet
+		return
+	}
+	if ok := h.allowDomain(ratelimitTypeAsync, sp1.GetDomain()); !ok {
+		err = &types.ServiceBusyError{Message: "Too many outstanding requests to the cadence service"}
+		return
+	}
 	return h.wrapped.SignalWithStartWorkflowExecutionAsync(ctx, sp1)
 }
 
@@ -698,6 +713,18 @@ func (h *apiHandler) StartWorkflowExecution(ctx context.Context, sp1 *types.Star
 }
 
 func (h *apiHandler) StartWorkflowExecutionAsync(ctx context.Context, sp1 *types.StartWorkflowExecutionAsyncRequest) (sp2 *types.StartWorkflowExecutionAsyncResponse, err error) {
+	if sp1 == nil {
+		err = validate.ErrRequestNotSet
+		return
+	}
+	if sp1.GetDomain() == "" {
+		err = validate.ErrDomainNotSet
+		return
+	}
+	if ok := h.allowDomain(ratelimitTypeAsync, sp1.GetDomain()); !ok {
+		err = &types.ServiceBusyError{Message: "Too many outstanding requests to the cadence service"}
+		return
+	}
 	return h.wrapped.StartWorkflowExecutionAsync(ctx, sp1)
 }
 

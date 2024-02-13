@@ -21,9 +21,6 @@
 package config
 
 import (
-	"os"
-	"strings"
-
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/dynamicconfig"
 )
@@ -50,12 +47,15 @@ type Config struct {
 	UserRPS                           dynamicconfig.IntPropertyFn
 	WorkerRPS                         dynamicconfig.IntPropertyFn
 	VisibilityRPS                     dynamicconfig.IntPropertyFn
+	AsyncRPS                          dynamicconfig.IntPropertyFn
 	MaxDomainUserRPSPerInstance       dynamicconfig.IntPropertyFnWithDomainFilter
 	MaxDomainWorkerRPSPerInstance     dynamicconfig.IntPropertyFnWithDomainFilter
 	MaxDomainVisibilityRPSPerInstance dynamicconfig.IntPropertyFnWithDomainFilter
+	MaxDomainAsyncRPSPerInstance      dynamicconfig.IntPropertyFnWithDomainFilter
 	GlobalDomainUserRPS               dynamicconfig.IntPropertyFnWithDomainFilter
 	GlobalDomainWorkerRPS             dynamicconfig.IntPropertyFnWithDomainFilter
 	GlobalDomainVisibilityRPS         dynamicconfig.IntPropertyFnWithDomainFilter
+	GlobalDomainAsyncRPS              dynamicconfig.IntPropertyFnWithDomainFilter
 	EnableClientVersionCheck          dynamicconfig.BoolPropertyFn
 	EnableQueryAttributeValidation    dynamicconfig.BoolPropertyFn
 	DisallowQuery                     dynamicconfig.BoolPropertyFnWithDomainFilter
@@ -138,12 +138,15 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, isAdvancedVis
 		UserRPS:                                     dc.GetIntProperty(dynamicconfig.FrontendUserRPS),
 		WorkerRPS:                                   dc.GetIntProperty(dynamicconfig.FrontendWorkerRPS),
 		VisibilityRPS:                               dc.GetIntProperty(dynamicconfig.FrontendVisibilityRPS),
+		AsyncRPS:                                    dc.GetIntProperty(dynamicconfig.FrontendAsyncRPS),
 		MaxDomainUserRPSPerInstance:                 dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxDomainUserRPSPerInstance),
 		MaxDomainWorkerRPSPerInstance:               dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxDomainWorkerRPSPerInstance),
 		MaxDomainVisibilityRPSPerInstance:           dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxDomainVisibilityRPSPerInstance),
+		MaxDomainAsyncRPSPerInstance:                dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxDomainAsyncRPSPerInstance),
 		GlobalDomainUserRPS:                         dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendGlobalDomainUserRPS),
 		GlobalDomainWorkerRPS:                       dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendGlobalDomainWorkerRPS),
 		GlobalDomainVisibilityRPS:                   dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendGlobalDomainVisibilityRPS),
+		GlobalDomainAsyncRPS:                        dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendGlobalDomainAsyncRPS),
 		MaxIDLengthWarnLimit:                        dc.GetIntProperty(dynamicconfig.MaxIDLengthWarnLimit),
 		DomainNameMaxLength:                         dc.GetIntPropertyFilteredByDomain(dynamicconfig.DomainNameMaxLength),
 		IdentityMaxLength:                           dc.GetIntPropertyFilteredByDomain(dynamicconfig.IdentityMaxLength),
@@ -186,15 +189,4 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, isAdvancedVis
 		},
 		HostName: hostName,
 	}
-}
-
-// TODO remove this and return 10 always, after cadence-web improve the List requests with backoff retry
-// https://github.com/uber/cadence-web/issues/337
-func defaultVisibilityListMaxQPS() int {
-	cmd := strings.Join(os.Args, " ")
-	// NOTE: this is safe because only dev box should start cadence in a single box with 4 services, and only docker should use `--env docker`
-	if strings.Contains(cmd, "--root /etc/cadence --env docker start --services=history,matching,frontend,worker") {
-		return 10000
-	}
-	return 10
 }

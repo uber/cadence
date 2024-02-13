@@ -45,6 +45,18 @@ import (
 {{$ratelimitTypeMap = set $ratelimitTypeMap "ListWorkflowExecutions" "ratelimitTypeVisibility"}}
 {{$ratelimitTypeMap = set $ratelimitTypeMap "ScanWorkflowExecutions" "ratelimitTypeVisibility"}}
 
+{{$ratelimitTypeMap = set $ratelimitTypeMap "StartWorkflowExecutionAsync" "ratelimitTypeAsync"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "SignalWithStartWorkflowExecutionAsync" "ratelimitTypeAsync"}}
+
+{{$ratelimitTypeMap = set $ratelimitTypeMap "Health" "ratelimitTypeNoop"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "DeprecateDomain" "ratelimitTypeNoop"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "DescribeDomain" "ratelimitTypeNoop"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "GetClusterInfo" "ratelimitTypeNoop"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "GetSearchAttributes" "ratelimitTypeNoop"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "ListDomains" "ratelimitTypeNoop"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "RegisterDomain" "ratelimitTypeNoop"}}
+{{$ratelimitTypeMap = set $ratelimitTypeMap "UpdateDomain" "ratelimitTypeNoop"}}
+
 {{$domainIDAPIs := list "RecordActivityTaskHeartbeat" "RespondActivityTaskCanceled" "RespondActivityTaskCompleted" "RespondActivityTaskFailed" "RespondDecisionTaskCompleted" "RespondDecisionTaskFailed" "RespondQueryTaskCompleted"}}
 {{$queryTaskTokenAPIs := list "RespondQueryTaskCompleted"}}
 {{$nonBlockingAPIs := list "RecordActivityTaskHeartbeat" "RecordActivityTaskHeartbeatByID" "RespondActivityTaskCompleted" "RespondActivityTaskCompletedByID" "RespondActivityTaskFailed" "RespondActivityTaskFailedByID" "RespondActivityTaskCanceled" "RespondActivityTaskCanceledByID" "RespondDecisionTaskCompleted" "RespondDecisionTaskFailed" "RespondQueryTaskCompleted" "ResetStickyTaskList"}}
@@ -62,6 +74,7 @@ type {{$decorator}} struct {
     userRateLimiter quotas.Policy
     workerRateLimiter quotas.Policy
     visibilityRateLimiter quotas.Policy
+    asyncRateLimiter quotas.Policy
 }
 
 // New{{$Decorator}} creates a new instance of {{$interfaceName}} with ratelimiter.
@@ -71,6 +84,7 @@ func New{{$Decorator}}(
     userRateLimiter quotas.Policy,
     workerRateLimiter quotas.Policy,
     visibilityRateLimiter quotas.Policy,
+    asyncRateLimiter quotas.Policy,
 ) {{.Interface.Type}} {
     return &{{$decorator}}{
         wrapped: wrapped,
@@ -79,17 +93,18 @@ func New{{$Decorator}}(
         userRateLimiter: userRateLimiter,
         workerRateLimiter: workerRateLimiter,
         visibilityRateLimiter: visibilityRateLimiter,
+        asyncRateLimiter: asyncRateLimiter,
     }
 }
 
 {{range $method := .Interface.Methods}}
 func (h *{{$decorator}}) {{$method.Declaration}} {
-    {{- if hasKey $ratelimitTypeMap $method.Name}}
+    {{- $ratelimitType := get $ratelimitTypeMap $method.Name}}
+    {{- if not (eq $ratelimitType "ratelimitTypeNoop")}}
         if {{(index $method.Params 1).Name}} == nil {
             err = validate.ErrRequestNotSet
             return
         }
-        {{- $ratelimitType := get $ratelimitTypeMap $method.Name}}
         {{- $domain := printf "%s.GetDomain()" (index $method.Params 1).Name}}
         {{- if has $method.Name $domainIDAPIs}}
             {{- $domain = "domainName"}}

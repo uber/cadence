@@ -33,6 +33,7 @@ const (
 	ratelimitTypeUser ratelimitType = iota + 1
 	ratelimitTypeWorker
 	ratelimitTypeVisibility
+	ratelimitTypeAsync
 )
 
 func (h *apiHandler) allowDomain(requestType ratelimitType, domain string) bool {
@@ -43,6 +44,8 @@ func (h *apiHandler) allowDomain(requestType ratelimitType, domain string) bool 
 		return h.workerRateLimiter.Allow(quotas.Info{Domain: domain})
 	case ratelimitTypeVisibility:
 		return h.visibilityRateLimiter.Allow(quotas.Info{Domain: domain})
+	case ratelimitTypeAsync:
+		return h.asyncRateLimiter.Allow(quotas.Info{Domain: domain})
 	default:
 		panic("coding error, unrecognized request ratelimit type value")
 	}
