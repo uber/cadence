@@ -198,6 +198,28 @@ func (c *DefaultConsumer) processRequest(logger log.Logger, request *sqlblobs.As
 
 		scope.IncCounter(metrics.AsyncWorkflowSuccessCount)
 		logger.Info("StartWorkflowExecution succeeded", tag.WorkflowID(startWFReq.GetWorkflowID()), tag.WorkflowRunID(resp.GetRunID()))
+	case sqlblobs.AsyncRequestTypeSignalWithStartWorkflowExecutionAsyncRequest:
+		startWFReq, err := decodeSignalWithStartWorkflowRequest(request.GetPayload(), request.GetEncoding())
+		if err != nil {
+			c.scope.IncCounter(metrics.AsyncWorkflowFailureCorruptMsgCount)
+			return err
+		}
+
+		scope := c.scope.Tagged(metrics.DomainTag(startWFReq.GetDomain()))
+
+		var resp *types.StartWorkflowExecutionResponse
+		op := func() error {
+			resp, err = c.frontendClient.SignalWithStartWorkflowExecution(c.ctx, startWFReq)
+			return err
+		}
+
+		if err := callFrontendWithRetries(c.ctx, op); err != nil {
+			scope.IncCounter(metrics.AsyncWorkflowFailureByFrontendCount)
+			return fmt.Errorf("signal with start workflow execution failed after all attempts: %w", err)
+		}
+
+		scope.IncCounter(metrics.AsyncWorkflowSuccessCount)
+		logger.Info("SignalWithStartWorkflowExecution succeeded", tag.WorkflowID(startWFReq.GetWorkflowID()), tag.WorkflowRunID(resp.GetRunID()))
 	default:
 		c.scope.IncCounter(metrics.AsyncWorkflowSuccessCount)
 		return &UnsupportedRequestType{Type: request.GetType()}
@@ -221,6 +243,18 @@ func decodeStartWorkflowRequest(payload []byte, encoding string) (*types.StartWo
 	}
 
 	var startRequest types.StartWorkflowExecutionRequest
+	if err := json.Unmarshal(payload, &startRequest); err != nil {
+		return nil, err
+	}
+	return &startRequest, nil
+}
+
+func decodeSignalWithStartWorkflowRequest(payload []byte, encoding string) (*types.SignalWithStartWorkflowExecutionRequest, error) {
+	if encoding != string(common.EncodingTypeJSON) {
+		return nil, &UnsupportedEncoding{EncodingType: encoding}
+	}
+
+	var startRequest types.SignalWithStartWorkflowExecutionRequest
 	if err := json.Unmarshal(payload, &startRequest); err != nil {
 		return nil, err
 	}

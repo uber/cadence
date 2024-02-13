@@ -130,29 +130,56 @@ func TestDefaultConsumer(t *testing.T) {
 			},
 		},
 		{
-			name:          "frontend fails to respond",
+			name:          "startworkflowfrontend fails to respond",
 			frontendFails: true,
 			msgs: []*fakeMessage{
 				{val: mustGenerateStartWorkflowExecutionRequestMsg(t, common.EncodingTypeJSON, true), wantAck: false},
 			},
 		},
 		{
-			name: "unsupported encoding type",
+			name: "startworkflow unsupported encoding type",
 			msgs: []*fakeMessage{
 				{val: mustGenerateStartWorkflowExecutionRequestMsg(t, common.EncodingTypeProto, true), wantAck: false},
 			},
 		},
 		{
-			name: "ok",
+			name: "startworkflow ok",
 			msgs: []*fakeMessage{
 				{val: mustGenerateStartWorkflowExecutionRequestMsg(t, common.EncodingTypeJSON, true), wantAck: true},
 			},
 		},
 		{
-			name:                "ok with chan closed before stopping",
+			name:                "startworkflow ok with chan closed before stopping",
 			closeChanBeforeStop: true,
 			msgs: []*fakeMessage{
 				{val: mustGenerateStartWorkflowExecutionRequestMsg(t, common.EncodingTypeJSON, true), wantAck: true},
+			},
+		},
+		// signal with start test cases
+		{
+			name:          "signalwithstartworkflow request with invalid payload content",
+			frontendFails: true,
+			msgs: []*fakeMessage{
+				{val: mustGenerateSignalWithStartWorkflowExecutionRequestMsg(t, common.EncodingTypeJSON, false), wantAck: false},
+			},
+		},
+		{
+			name:          "signalwithstartworkflow frontend fails to respond",
+			frontendFails: true,
+			msgs: []*fakeMessage{
+				{val: mustGenerateSignalWithStartWorkflowExecutionRequestMsg(t, common.EncodingTypeJSON, true), wantAck: false},
+			},
+		},
+		{
+			name: "signalwithstartworkflow unsupported encoding type",
+			msgs: []*fakeMessage{
+				{val: mustGenerateSignalWithStartWorkflowExecutionRequestMsg(t, common.EncodingTypeProto, true), wantAck: false},
+			},
+		},
+		{
+			name: "signalwithstartworkflow ok",
+			msgs: []*fakeMessage{
+				{val: mustGenerateSignalWithStartWorkflowExecutionRequestMsg(t, common.EncodingTypeJSON, true), wantAck: true},
 			},
 		},
 	}
@@ -169,10 +196,16 @@ func TestDefaultConsumer(t *testing.T) {
 				mockFrontend.EXPECT().
 					StartWorkflowExecution(gomock.Any(), gomock.Any()).
 					Return(nil, errors.New("failed")).AnyTimes()
+				mockFrontend.EXPECT().
+					SignalWithStartWorkflowExecution(gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("failed")).AnyTimes()
 			} else {
 				resp := &types.StartWorkflowExecutionResponse{RunID: "test-run-id"}
 				mockFrontend.EXPECT().
 					StartWorkflowExecution(gomock.Any(), gomock.Any()).
+					Return(resp, nil).AnyTimes()
+				mockFrontend.EXPECT().
+					SignalWithStartWorkflowExecution(gomock.Any(), gomock.Any()).
 					Return(resp, nil).AnyTimes()
 			}
 
@@ -231,6 +264,41 @@ func mustGenerateStartWorkflowExecutionRequestMsg(t *testing.T, encodingType com
 
 	msg := &sqlblobs.AsyncRequestMessage{
 		Type:     sqlblobs.AsyncRequestTypeStartWorkflowExecutionAsyncRequest.Ptr(),
+		Header:   &shared.Header{},
+		Encoding: common.StringPtr(string(encodingType)),
+		Payload:  payload,
+	}
+
+	res, err := codec.NewThriftRWEncoder().Encode(msg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return res
+}
+
+func mustGenerateSignalWithStartWorkflowExecutionRequestMsg(t *testing.T, encodingType common.EncodingType, validPayload bool) []byte {
+	signalWithStartRequest := &types.SignalWithStartWorkflowExecutionAsyncRequest{
+		SignalWithStartWorkflowExecutionRequest: &types.SignalWithStartWorkflowExecutionRequest{
+			Domain:       "test-domain",
+			WorkflowID:   "test-workflow-id",
+			WorkflowType: &types.WorkflowType{Name: "test-workflow-type"},
+			Input:        []byte("test-input"),
+			SignalName:   "test-signal-name",
+		},
+	}
+
+	payload, err := json.Marshal(signalWithStartRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !validPayload {
+		payload = []byte("invalid payload")
+	}
+
+	msg := &sqlblobs.AsyncRequestMessage{
+		Type:     sqlblobs.AsyncRequestTypeSignalWithStartWorkflowExecutionAsyncRequest.Ptr(),
 		Header:   &shared.Header{},
 		Encoding: common.StringPtr(string(encodingType)),
 		Payload:  payload,
