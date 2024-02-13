@@ -82,7 +82,6 @@ type (
 		EnableFailoverManager               dynamicconfig.BoolPropertyFn
 		DomainReplicationMaxRetryDuration   dynamicconfig.DurationPropertyFn
 		EnableESAnalyzer                    dynamicconfig.BoolPropertyFn
-		EnableWatchDog                      dynamicconfig.BoolPropertyFn
 		EnableAsyncWorkflowConsumption      dynamicconfig.BoolPropertyFn
 		HostName                            string
 	}
