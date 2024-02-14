@@ -116,7 +116,9 @@ func (s *ElasticSearchIntegrationSuite) TestListOpenWorkflow() {
 	request.SearchAttributes = searchAttr
 
 	startTime := time.Now().UnixNano()
-	we, err := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel := createContext()
+	defer cancel()
+	we, err := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err)
 
 	startFilter := &types.StartTimeFilter{}
@@ -124,7 +126,8 @@ func (s *ElasticSearchIntegrationSuite) TestListOpenWorkflow() {
 	var openExecution *types.WorkflowExecutionInfo
 	for i := 0; i < numOfRetry; i++ {
 		startFilter.LatestTime = common.Int64Ptr(time.Now().UnixNano())
-		resp, err := s.engine.ListOpenWorkflowExecutions(createContext(), &types.ListOpenWorkflowExecutionsRequest{
+		ctx, cancel := createContext()
+		resp, err := s.engine.ListOpenWorkflowExecutions(ctx, &types.ListOpenWorkflowExecutionsRequest{
 			Domain:          s.domainName,
 			MaximumPageSize: defaultTestValueOfESIndexMaxResultWindow,
 			StartTimeFilter: startFilter,
@@ -138,6 +141,7 @@ func (s *ElasticSearchIntegrationSuite) TestListOpenWorkflow() {
 			break
 		}
 		time.Sleep(waitTimeInMs * time.Millisecond)
+		cancel()
 	}
 	s.NotNil(openExecution)
 	s.Equal(we.GetRunID(), openExecution.GetExecution().GetRunID())
@@ -150,7 +154,9 @@ func (s *ElasticSearchIntegrationSuite) TestListWorkflow() {
 	tl := "es-integration-list-workflow-test-tasklist"
 	request := s.createStartWorkflowExecutionRequest(id, wt, tl)
 
-	we, err := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel := createContext()
+	defer cancel()
+	we, err := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err)
 
 	query := fmt.Sprintf(`WorkflowID = "%s"`, id)
@@ -169,7 +175,9 @@ func (s *ElasticSearchIntegrationSuite) startWorkflow(
 		request.CronSchedule = "*/5 * * * *" // every 5 minutes
 	}
 
-	we, err := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel := createContext()
+	defer cancel()
+	we, err := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err)
 
 	query := fmt.Sprintf(`WorkflowID = "%s"`, id)
@@ -201,14 +209,18 @@ func (s *ElasticSearchIntegrationSuite) TestListWorkflow_ExecutionTime() {
 	tl := "es-integration-list-workflow-execution-time-test-tasklist"
 	request := s.createStartWorkflowExecutionRequest(id, wt, tl)
 
-	we, err := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel := createContext()
+	defer cancel()
+	we, err := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err)
 
 	cronID := id + "-cron"
 	request.CronSchedule = "@every 1m"
 	request.WorkflowID = cronID
 
-	weCron, err := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel = createContext()
+	defer cancel()
+	weCron, err := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err)
 
 	query := fmt.Sprintf(`(WorkflowID = "%s" or WorkflowID = "%s") and ExecutionTime < %v`, id, cronID, time.Now().UnixNano()+int64(time.Minute))
@@ -232,7 +244,9 @@ func (s *ElasticSearchIntegrationSuite) TestListWorkflow_SearchAttribute() {
 	}
 	request.SearchAttributes = searchAttr
 
-	we, err := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel := createContext()
+	defer cancel()
+	we, err := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err)
 	query := fmt.Sprintf(`WorkflowID = "%s" and %s = "%s"`, id, s.testSearchAttributeKey, s.testSearchAttributeVal)
 	s.testHelperForReadOnce(we.GetRunID(), query, false, false)
@@ -290,7 +304,9 @@ func (s *ElasticSearchIntegrationSuite) TestListWorkflow_SearchAttribute() {
 			WorkflowID: id,
 		},
 	}
-	descResp, err := s.engine.DescribeWorkflowExecution(createContext(), descRequest)
+	ctx, cancel = createContext()
+	defer cancel()
+	descResp, err := s.engine.DescribeWorkflowExecution(ctx, descRequest)
 	s.Nil(err)
 	expectedSearchAttributes := getUpsertSearchAttributes()
 	s.Equal(expectedSearchAttributes, descResp.WorkflowExecutionInfo.GetSearchAttributes())
@@ -335,21 +351,27 @@ func (s *ElasticSearchIntegrationSuite) TestListWorkflow_OrQuery() {
 		},
 	}
 	request.SearchAttributes = searchAttr
-	we1, err := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel := createContext()
+	defer cancel()
+	we1, err := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err)
 
 	request.RequestID = uuid.New()
 	request.WorkflowID = id + "-2"
 	attrValBytes, _ = json.Marshal(2)
 	searchAttr.IndexedFields[key] = attrValBytes
-	we2, err := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel = createContext()
+	defer cancel()
+	we2, err := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err)
 
 	request.RequestID = uuid.New()
 	request.WorkflowID = id + "-3"
 	attrValBytes, _ = json.Marshal(3)
 	searchAttr.IndexedFields[key] = attrValBytes
-	we3, err := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel = createContext()
+	defer cancel()
+	we3, err := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err)
 
 	time.Sleep(waitForESToSettle)
@@ -363,7 +385,9 @@ func (s *ElasticSearchIntegrationSuite) TestListWorkflow_OrQuery() {
 		Query:    query1,
 	}
 	for i := 0; i < numOfRetry; i++ {
-		resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
+		ctx, cancel := createContext()
+		resp, err := s.engine.ListWorkflowExecutions(ctx, listRequest)
+		cancel()
 		s.Nil(err)
 		if len(resp.GetExecutions()) == 1 {
 			openExecution = resp.GetExecutions()[0]
@@ -384,7 +408,9 @@ func (s *ElasticSearchIntegrationSuite) TestListWorkflow_OrQuery() {
 	listRequest.Query = query2
 	var openExecutions []*types.WorkflowExecutionInfo
 	for i := 0; i < numOfRetry; i++ {
-		resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
+		ctx, cancel := createContext()
+		resp, err := s.engine.ListWorkflowExecutions(ctx, listRequest)
+		cancel()
 		s.Nil(err)
 		if len(resp.GetExecutions()) == 2 {
 			openExecutions = resp.GetExecutions()
@@ -409,7 +435,9 @@ func (s *ElasticSearchIntegrationSuite) TestListWorkflow_OrQuery() {
 	query3 := fmt.Sprintf(`(CustomIntField = %d or CustomIntField = %d) and CloseTime = missing`, 2, 3)
 	listRequest.Query = query3
 	for i := 0; i < numOfRetry; i++ {
-		resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
+		ctx, cancel := createContext()
+		resp, err := s.engine.ListWorkflowExecutions(ctx, listRequest)
+		cancel()
 		s.Nil(err)
 		if len(resp.GetExecutions()) == 2 {
 			openExecutions = resp.GetExecutions()
@@ -437,7 +465,9 @@ func (s *ElasticSearchIntegrationSuite) TestListWorkflow_MaxWindowSize() {
 	for i := 0; i < defaultTestValueOfESIndexMaxResultWindow; i++ {
 		startRequest.RequestID = uuid.New()
 		startRequest.WorkflowID = id + strconv.Itoa(i)
-		_, err := s.engine.StartWorkflowExecution(createContext(), startRequest)
+		ctx, cancel := createContext()
+		_, err := s.engine.StartWorkflowExecution(ctx, startRequest)
+		cancel()
 		s.Nil(err)
 	}
 
@@ -454,7 +484,9 @@ func (s *ElasticSearchIntegrationSuite) TestListWorkflow_MaxWindowSize() {
 	}
 	// get first page
 	for i := 0; i < numOfRetry; i++ {
-		resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
+		ctx, cancel := createContext()
+		resp, err := s.engine.ListWorkflowExecutions(ctx, listRequest)
+		cancel()
 		s.Nil(err)
 		if len(resp.GetExecutions()) == defaultTestValueOfESIndexMaxResultWindow {
 			listResp = resp
@@ -467,7 +499,9 @@ func (s *ElasticSearchIntegrationSuite) TestListWorkflow_MaxWindowSize() {
 
 	// the last request
 	listRequest.NextPageToken = listResp.GetNextPageToken()
-	resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
+	ctx, cancel := createContext()
+	defer cancel()
+	resp, err := s.engine.ListWorkflowExecutions(ctx, listRequest)
 	s.Nil(err)
 	s.True(len(resp.GetExecutions()) == 0)
 	s.True(len(resp.GetNextPageToken()) == 0)
@@ -501,7 +535,9 @@ func (s *ElasticSearchIntegrationSuite) TestListWorkflow_OrderBy() {
 			startRequest.SearchAttributes = &types.SearchAttributes{}
 		}
 
-		_, err := s.engine.StartWorkflowExecution(createContext(), startRequest)
+		ctx, cancel := createContext()
+		_, err := s.engine.StartWorkflowExecution(ctx, startRequest)
+		cancel()
 		s.Nil(err)
 	}
 
@@ -521,7 +557,9 @@ func (s *ElasticSearchIntegrationSuite) TestListWorkflow_OrderBy() {
 		Query:    query1,
 	}
 	for i := 0; i < numOfRetry; i++ {
-		resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
+		ctx, cancel := createContext()
+		resp, err := s.engine.ListWorkflowExecutions(ctx, listRequest)
+		cancel()
 		s.Nil(err)
 		if int32(len(resp.GetExecutions())) == listRequest.GetPageSize() {
 			openExecutions = resp.GetExecutions()
@@ -538,7 +576,9 @@ func (s *ElasticSearchIntegrationSuite) TestListWorkflow_OrderBy() {
 	testHelper := func(query, searchAttrKey string, prevVal, currVal interface{}) {
 		listRequest.Query = query
 		listRequest.NextPageToken = []byte{}
-		resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
+		ctx, cancel := createContext()
+		defer cancel()
+		resp, err := s.engine.ListWorkflowExecutions(ctx, listRequest)
 		s.Nil(err)
 		openExecutions = resp.GetExecutions()
 		dec := json.NewDecoder(bytes.NewReader(openExecutions[0].GetSearchAttributes().GetIndexedFields()[searchAttrKey]))
@@ -576,7 +616,9 @@ func (s *ElasticSearchIntegrationSuite) TestListWorkflow_OrderBy() {
 			prevVal = currVal
 		}
 		listRequest.NextPageToken = resp.GetNextPageToken()
-		resp, err = s.engine.ListWorkflowExecutions(createContext(), listRequest) // last page
+		ctx, cancel = createContext()
+		defer cancel()
+		resp, err = s.engine.ListWorkflowExecutions(ctx, listRequest) // last page
 		s.Nil(err)
 		s.Equal(1, len(resp.GetExecutions()))
 	}
@@ -613,7 +655,9 @@ func (s *ElasticSearchIntegrationSuite) testListWorkflowHelper(numOfWorkflows, p
 	for i := 0; i < numOfWorkflows; i++ {
 		startRequest.RequestID = uuid.New()
 		startRequest.WorkflowID = wid + strconv.Itoa(i)
-		_, err := s.engine.StartWorkflowExecution(createContext(), startRequest)
+		ctx, cancel := createContext()
+		_, err := s.engine.StartWorkflowExecution(ctx, startRequest)
+		cancel()
 		s.Nil(err)
 	}
 
@@ -633,11 +677,13 @@ func (s *ElasticSearchIntegrationSuite) testListWorkflowHelper(numOfWorkflows, p
 		var resp *types.ListWorkflowExecutionsResponse
 		var err error
 
+		ctx, cancel := createContext()
 		if isScan {
-			resp, err = s.engine.ScanWorkflowExecutions(createContext(), listRequest)
+			resp, err = s.engine.ScanWorkflowExecutions(ctx, listRequest)
 		} else {
-			resp, err = s.engine.ListWorkflowExecutions(createContext(), listRequest)
+			resp, err = s.engine.ListWorkflowExecutions(ctx, listRequest)
 		}
+		cancel()
 		s.Nil(err)
 		if len(resp.GetExecutions()) == pageSize {
 			openExecutions = resp.GetExecutions()
@@ -657,11 +703,13 @@ func (s *ElasticSearchIntegrationSuite) testListWorkflowHelper(numOfWorkflows, p
 		var resp *types.ListWorkflowExecutionsResponse
 		var err error
 
+		ctx, cancel := createContext()
 		if isScan {
-			resp, err = s.engine.ScanWorkflowExecutions(createContext(), listRequest)
+			resp, err = s.engine.ScanWorkflowExecutions(ctx, listRequest)
 		} else {
-			resp, err = s.engine.ListWorkflowExecutions(createContext(), listRequest)
+			resp, err = s.engine.ListWorkflowExecutions(ctx, listRequest)
 		}
+		cancel()
 		s.Nil(err)
 		if len(resp.GetExecutions()) == numOfWorkflows-pageSize {
 			inIf = true
@@ -692,11 +740,13 @@ Retry:
 		var resp *types.ListWorkflowExecutionsResponse
 		var err error
 
+		ctx, cancel := createContext()
 		if isScan {
-			resp, err = s.engine.ScanWorkflowExecutions(createContext(), listRequest)
+			resp, err = s.engine.ScanWorkflowExecutions(ctx, listRequest)
 		} else {
-			resp, err = s.engine.ListWorkflowExecutions(createContext(), listRequest)
+			resp, err = s.engine.ListWorkflowExecutions(ctx, listRequest)
 		}
+		cancel()
 
 		s.Nil(err)
 		logStr := fmt.Sprintf("Results for query '%s' (desired runId: %s): \n", query, runID)
@@ -754,7 +804,9 @@ func (s *ElasticSearchIntegrationSuite) TestScanWorkflow() {
 		Identity:                            identity,
 	}
 
-	we, err := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel := createContext()
+	defer cancel()
+	we, err := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err)
 	query := fmt.Sprintf(`WorkflowID = "%s"`, id)
 	s.testHelperForReadOnce(we.GetRunID(), query, true, false)
@@ -774,7 +826,9 @@ func (s *ElasticSearchIntegrationSuite) TestScanWorkflow_SearchAttribute() {
 	}
 	request.SearchAttributes = searchAttr
 
-	we, err := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel := createContext()
+	defer cancel()
+	we, err := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err)
 	query := fmt.Sprintf(`WorkflowID = "%s" and %s = "%s"`, id, s.testSearchAttributeKey, s.testSearchAttributeVal)
 	s.testHelperForReadOnce(we.GetRunID(), query, true, false)
@@ -822,7 +876,9 @@ func (s *ElasticSearchIntegrationSuite) TestCountWorkflow() {
 	}
 	request.SearchAttributes = searchAttr
 
-	_, err := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel := createContext()
+	defer cancel()
+	_, err := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err)
 
 	query := fmt.Sprintf(`WorkflowID = "%s" and %s = "%s"`, id, s.testSearchAttributeKey, s.testSearchAttributeVal)
@@ -832,7 +888,9 @@ func (s *ElasticSearchIntegrationSuite) TestCountWorkflow() {
 	}
 	var resp *types.CountWorkflowExecutionsResponse
 	for i := 0; i < numOfRetry; i++ {
-		resp, err = s.engine.CountWorkflowExecutions(createContext(), countRequest)
+		ctx, cancel := createContext()
+		resp, err = s.engine.CountWorkflowExecutions(ctx, countRequest)
+		cancel()
 		s.Nil(err)
 		if resp.GetCount() == int64(1) {
 			break
@@ -843,7 +901,9 @@ func (s *ElasticSearchIntegrationSuite) TestCountWorkflow() {
 
 	query = fmt.Sprintf(`WorkflowID = "%s" and %s = "%s"`, id, s.testSearchAttributeKey, "noMatch")
 	countRequest.Query = query
-	resp, err = s.engine.CountWorkflowExecutions(createContext(), countRequest)
+	ctx, cancel = createContext()
+	defer cancel()
+	resp, err = s.engine.CountWorkflowExecutions(ctx, countRequest)
 	s.Nil(err)
 	s.Equal(int64(0), resp.GetCount())
 }
@@ -894,7 +954,9 @@ func (s *ElasticSearchIntegrationSuite) TestUpsertWorkflowExecution() {
 		Identity:                            identity,
 	}
 
-	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel := createContext()
+	defer cancel()
+	we, err0 := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err0)
 
 	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
@@ -977,7 +1039,9 @@ func (s *ElasticSearchIntegrationSuite) TestUpsertWorkflowExecution() {
 	}
 	verified := false
 	for i := 0; i < numOfRetry; i++ {
-		resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
+		ctx, cancel := createContext()
+		resp, err := s.engine.ListWorkflowExecutions(ctx, listRequest)
+		cancel()
 		s.Nil(err)
 		if len(resp.GetExecutions()) == 1 {
 			execution := resp.GetExecutions()[0]
@@ -1023,7 +1087,9 @@ func (s *ElasticSearchIntegrationSuite) TestUpsertWorkflowExecution() {
 func (s *ElasticSearchIntegrationSuite) testListResultForUpsertSearchAttributes(listRequest *types.ListWorkflowExecutionsRequest) {
 	verified := false
 	for i := 0; i < numOfRetry; i++ {
-		resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
+		ctx, cancel := createContext()
+		resp, err := s.engine.ListWorkflowExecutions(ctx, listRequest)
+		cancel()
 		s.Nil(err)
 		if len(resp.GetExecutions()) == 1 {
 			execution := resp.GetExecutions()[0]
@@ -1095,7 +1161,9 @@ func (s *ElasticSearchIntegrationSuite) TestUpsertWorkflowExecution_InvalidKey()
 		Identity:                            identity,
 	}
 
-	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel := createContext()
+	defer cancel()
+	we, err0 := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err0)
 
 	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
@@ -1129,7 +1197,9 @@ func (s *ElasticSearchIntegrationSuite) TestUpsertWorkflowExecution_InvalidKey()
 	_, err := poller.PollAndProcessDecisionTask(false, false)
 	s.Nil(err)
 
-	historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
+	ctx, cancel = createContext()
+	defer cancel()
+	historyResponse, err := s.engine.GetWorkflowExecutionHistory(ctx, &types.GetWorkflowExecutionHistoryRequest{
 		Domain: s.domainName,
 		Execution: &types.WorkflowExecution{
 			WorkflowID: id,

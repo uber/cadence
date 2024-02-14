@@ -59,7 +59,7 @@ func CreateESClient(t *testing.T, url string, version string) ESClient {
 	return client
 }
 
-func createContext() context.Context {
-	ctx, _ := context.WithTimeout(context.Background(), 90*time.Second)
-	return ctx
+func createContext() (context.Context, context.CancelFunc) {
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	return ctx, cancel
 }
