@@ -39,8 +39,8 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
@@ -103,6 +103,7 @@ func (s *engine2Suite) SetupTest() {
 	s.mockTimerProcessor.EXPECT().NotifyNewTask(gomock.Any(), gomock.Any()).AnyTimes()
 
 	s.mockShard = shard.NewTestContext(
+		s.T(),
 		s.controller,
 		&p.ShardInfo{
 			ShardID:          0,
@@ -167,7 +168,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyExpired() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.historyEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -239,7 +240,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.historyEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -760,9 +761,8 @@ func (s *engine2Suite) TestRecordActivityTaskStartedResurrected() {
 	identity := "testIdentity"
 	tl := "testTaskList"
 
-	timeSource := clock.NewEventTimeSource()
+	timeSource := clock.NewMockedTimeSource()
 	s.historyEngine.timeSource = timeSource
-	timeSource.Update(time.Now())
 
 	msBuilder := s.createExecutionStartedState(workflowExecution, tl, identity, true)
 	decisionCompletedEvent := test.AddDecisionTaskCompletedEvent(msBuilder, int64(2), int64(3), nil, identity)
@@ -786,7 +786,7 @@ func (s *engine2Suite) TestRecordActivityTaskStartedResurrected() {
 	})).Return(&p.UpdateWorkflowExecutionResponse{}, nil).Once()
 
 	// Ensure enough time passed
-	timeSource.Update(timeSource.Now().Add(time.Hour))
+	timeSource.Advance(time.Hour)
 
 	_, err := s.historyEngine.RecordActivityTaskStarted(context.Background(), &types.RecordActivityTaskStartedRequest{
 		DomainUUID:        domainID,
@@ -979,7 +979,7 @@ func (s *engine2Suite) TestRespondDecisionTaskCompletedRecordMarkerDecision() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.historyEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -1326,7 +1326,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.historyEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		runID,
 		constants.TestLocalDomainEntry,
 	)
@@ -1473,7 +1473,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotRunning()
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.historyEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		runID,
 		constants.TestLocalDomainEntry,
 	)
@@ -1525,7 +1525,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_Start_DuplicateReque
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.historyEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		runID,
 		constants.TestLocalDomainEntry,
 	)
@@ -1583,7 +1583,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_Start_WorkflowAlread
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.historyEngine.shard,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 		runID,
 		constants.TestLocalDomainEntry,
 	)

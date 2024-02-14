@@ -25,14 +25,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/common/dynamicconfig/configstore"
-	csc "github.com/uber/cadence/common/dynamicconfig/configstore/config"
-
-	"github.com/uber/cadence/common/isolationgroup/defaultisolationgroupstate"
-
-	"github.com/uber/cadence/common/isolationgroup"
-	"github.com/uber/cadence/common/partition"
-
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc"
@@ -42,21 +34,28 @@ import (
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
+	"github.com/uber/cadence/client/wrappers/retryable"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
+	"github.com/uber/cadence/common/asyncworkflow/queue"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/dynamicconfig/configstore"
+	csc "github.com/uber/cadence/common/dynamicconfig/configstore/config"
+	"github.com/uber/cadence/common/isolationgroup"
+	"github.com/uber/cadence/common/isolationgroup/defaultisolationgroupstate"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
 	"github.com/uber/cadence/common/quotas"
@@ -133,6 +132,8 @@ type (
 		isolationGroups           isolationgroup.State
 		isolationGroupConfigStore configstore.Client
 		partitioner               partition.Partitioner
+
+		asyncWorkflowQueueProvider queue.Provider
 	}
 )
 
@@ -177,12 +178,14 @@ func New(
 
 	persistenceBean, err := persistenceClient.NewBeanFromFactory(persistenceClient.NewFactory(
 		&params.PersistenceConfig,
-		quotas.PerMemberDynamic(
-			serviceName,
-			serviceConfig.PersistenceGlobalMaxQPS.AsFloat64(),
-			serviceConfig.PersistenceMaxQPS.AsFloat64(),
-			membershipResolver,
-		),
+		func() float64 {
+			return quotas.PerMember(
+				serviceName,
+				float64(serviceConfig.PersistenceGlobalMaxQPS()),
+				float64(serviceConfig.PersistenceMaxQPS()),
+				membershipResolver,
+			)
+		},
 		params.ClusterMetadata.GetCurrentClusterName(),
 		params.MetricsClient,
 		logger,
@@ -193,6 +196,8 @@ func New(
 		MessagingClient:   params.MessagingClient,
 		ESClient:          params.ESClient,
 		ESConfig:          params.ESConfig,
+		PinotConfig:       params.PinotConfig,
+		PinotClient:       params.PinotClient,
 	}, serviceConfig)
 	if err != nil {
 		return nil, err
@@ -214,7 +219,7 @@ func New(
 	)
 
 	frontendRawClient := clientBean.GetFrontendClient()
-	frontendClient := frontend.NewRetryableClient(
+	frontendClient := retryable.NewFrontendClient(
 		frontendRawClient,
 		common.CreateFrontendServiceRetryPolicy(),
 		common.IsServiceTransientError,
@@ -224,14 +229,14 @@ func New(
 	if err != nil {
 		return nil, err
 	}
-	matchingClient := matching.NewRetryableClient(
+	matchingClient := retryable.NewMatchingClient(
 		matchingRawClient,
 		common.CreateMatchingServiceRetryPolicy(),
 		common.IsServiceTransientError,
 	)
 
 	historyRawClient := clientBean.GetHistoryClient()
-	historyClient := history.NewRetryableClient(
+	historyClient := retryable.NewHistoryClient(
 		historyRawClient,
 		common.CreateHistoryServiceRetryPolicy(),
 		common.IsServiceTransientError,
@@ -333,12 +338,14 @@ func New(
 		rpcFactory:                params.RPCFactory,
 		isolationGroups:           isolationGroupState,
 		isolationGroupConfigStore: isolationGroupStore, // can be nil where persistence is not available
-		partitioner:               partitioner,         // can be nil where persistence is not available
+		partitioner:               partitioner,
+
+		asyncWorkflowQueueProvider: params.AsyncWorkflowQueueProvider,
 	}
 	return impl, nil
 }
 
-// Start start all resources
+// Start all resources
 func (h *Impl) Start() {
 
 	if !atomic.CompareAndSwapInt32(
@@ -606,6 +613,11 @@ func (h *Impl) GetPartitioner() partition.Partitioner {
 // GetIsolationGroupStore returns the isolation group configuration store or nil
 func (h *Impl) GetIsolationGroupStore() configstore.Client {
 	return h.isolationGroupConfigStore
+}
+
+// GetAsyncWorkflowQueueProvider returns the async workflow queue provider
+func (h *Impl) GetAsyncWorkflowQueueProvider() queue.Provider {
+	return h.asyncWorkflowQueueProvider
 }
 
 // due to the config store being only available for some

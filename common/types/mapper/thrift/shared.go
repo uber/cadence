@@ -25,6 +25,17 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
+var (
+	FromScanWorkflowExecutionsRequest            = FromListWorkflowExecutionsRequest
+	ToScanWorkflowExecutionsRequest              = ToListWorkflowExecutionsRequest
+	FromRecordActivityTaskHeartbeatByIDResponse  = FromRecordActivityTaskHeartbeatResponse
+	ToRecordActivityTaskHeartbeatByIDResponse    = ToRecordActivityTaskHeartbeatResponse
+	FromScanWorkflowExecutionsResponse           = FromListWorkflowExecutionsResponse
+	ToScanWorkflowExecutionsResponse             = ToListWorkflowExecutionsResponse
+	FromSignalWithStartWorkflowExecutionResponse = FromStartWorkflowExecutionResponse
+	ToSignalWithStartWorkflowExecutionResponse   = ToStartWorkflowExecutionResponse
+)
+
 // FromAccessDeniedError converts internal AccessDeniedError type to thrift
 func FromAccessDeniedError(t *types.AccessDeniedError) *shared.AccessDeniedError {
 	if t == nil {
@@ -755,8 +766,8 @@ func ToFeatureNotEnabledError(t *shared.FeatureNotEnabledError) *types.FeatureNo
 	}
 }
 
-// FromCloseShardRequest converts internal CloseShardRequest type to thrift
-func FromCloseShardRequest(t *types.CloseShardRequest) *shared.CloseShardRequest {
+// FromAdminCloseShardRequest converts internal CloseShardRequest type to thrift
+func FromAdminCloseShardRequest(t *types.CloseShardRequest) *shared.CloseShardRequest {
 	if t == nil {
 		return nil
 	}
@@ -765,8 +776,8 @@ func FromCloseShardRequest(t *types.CloseShardRequest) *shared.CloseShardRequest
 	}
 }
 
-// ToCloseShardRequest converts thrift CloseShardRequest type to internal
-func ToCloseShardRequest(t *shared.CloseShardRequest) *types.CloseShardRequest {
+// ToAdminCloseShardRequest converts thrift CloseShardRequest type to internal
+func ToAdminCloseShardRequest(t *shared.CloseShardRequest) *types.CloseShardRequest {
 	if t == nil {
 		return nil
 	}
@@ -775,8 +786,8 @@ func ToCloseShardRequest(t *shared.CloseShardRequest) *types.CloseShardRequest {
 	}
 }
 
-// FromClusterInfo converts internal ClusterInfo type to thrift
-func FromClusterInfo(t *types.ClusterInfo) *shared.ClusterInfo {
+// FromGetClusterInfoResponse converts internal ClusterInfo type to thrift
+func FromGetClusterInfoResponse(t *types.ClusterInfo) *shared.ClusterInfo {
 	if t == nil {
 		return nil
 	}
@@ -785,8 +796,8 @@ func FromClusterInfo(t *types.ClusterInfo) *shared.ClusterInfo {
 	}
 }
 
-// ToClusterInfo converts thrift ClusterInfo type to internal
-func ToClusterInfo(t *shared.ClusterInfo) *types.ClusterInfo {
+// ToGetClusterInfoResponse converts thrift ClusterInfo type to internal
+func ToGetClusterInfoResponse(t *shared.ClusterInfo) *types.ClusterInfo {
 	if t == nil {
 		return nil
 	}
@@ -894,6 +905,7 @@ func FromContinueAsNewWorkflowExecutionDecisionAttributes(t *types.ContinueAsNew
 		Header:                              FromHeader(t.Header),
 		Memo:                                FromMemo(t.Memo),
 		SearchAttributes:                    FromSearchAttributes(t.SearchAttributes),
+		JitterStartSeconds:                  t.JitterStartSeconds,
 	}
 }
 
@@ -918,6 +930,7 @@ func ToContinueAsNewWorkflowExecutionDecisionAttributes(t *shared.ContinueAsNewW
 		Header:                              ToHeader(t.Header),
 		Memo:                                ToMemo(t.Memo),
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
+		JitterStartSeconds:                  t.JitterStartSeconds,
 	}
 }
 
@@ -1563,8 +1576,8 @@ func ToDescribeDomainResponse(t *shared.DescribeDomainResponse) *types.DescribeD
 	}
 }
 
-// FromDescribeHistoryHostRequest converts internal DescribeHistoryHostRequest type to thrift
-func FromDescribeHistoryHostRequest(t *types.DescribeHistoryHostRequest) *shared.DescribeHistoryHostRequest {
+// FromAdminDescribeHistoryHostRequest converts internal DescribeHistoryHostRequest type to thrift
+func FromAdminDescribeHistoryHostRequest(t *types.DescribeHistoryHostRequest) *shared.DescribeHistoryHostRequest {
 	if t == nil {
 		return nil
 	}
@@ -1575,19 +1588,8 @@ func FromDescribeHistoryHostRequest(t *types.DescribeHistoryHostRequest) *shared
 	}
 }
 
-// FromDescribeShardDistributionRequest converts internal DescribeHistoryHostRequest type to thrift
-func FromDescribeShardDistributionRequest(t *types.DescribeShardDistributionRequest) *shared.DescribeShardDistributionRequest {
-	if t == nil {
-		return nil
-	}
-	return &shared.DescribeShardDistributionRequest{
-		PageSize: &t.PageSize,
-		PageID:   &t.PageID,
-	}
-}
-
-// ToDescribeHistoryHostRequest converts thrift DescribeHistoryHostRequest type to internal
-func ToDescribeHistoryHostRequest(t *shared.DescribeHistoryHostRequest) *types.DescribeHistoryHostRequest {
+// ToAdminDescribeHistoryHostRequest converts thrift DescribeHistoryHostRequest type to internal
+func ToAdminDescribeHistoryHostRequest(t *shared.DescribeHistoryHostRequest) *types.DescribeHistoryHostRequest {
 	if t == nil {
 		return nil
 	}
@@ -1598,8 +1600,19 @@ func ToDescribeHistoryHostRequest(t *shared.DescribeHistoryHostRequest) *types.D
 	}
 }
 
-// ToDescribeShardDistributionRequest converts thrift DescribeHistoryHostRequest type to internal
-func ToDescribeShardDistributionRequest(t *shared.DescribeShardDistributionRequest) *types.DescribeShardDistributionRequest {
+// FromAdminDescribeShardDistributionRequest converts internal DescribeHistoryHostRequest type to thrift
+func FromAdminDescribeShardDistributionRequest(t *types.DescribeShardDistributionRequest) *shared.DescribeShardDistributionRequest {
+	if t == nil {
+		return nil
+	}
+	return &shared.DescribeShardDistributionRequest{
+		PageSize: &t.PageSize,
+		PageID:   &t.PageID,
+	}
+}
+
+// ToAdminDescribeShardDistributionRequest converts thrift DescribeHistoryHostRequest type to internal
+func ToAdminDescribeShardDistributionRequest(t *shared.DescribeShardDistributionRequest) *types.DescribeShardDistributionRequest {
 	if t == nil {
 		return nil
 	}
@@ -1609,8 +1622,8 @@ func ToDescribeShardDistributionRequest(t *shared.DescribeShardDistributionReque
 	}
 }
 
-// FromDescribeHistoryHostResponse converts internal DescribeHistoryHostResponse type to thrift
-func FromDescribeHistoryHostResponse(t *types.DescribeHistoryHostResponse) *shared.DescribeHistoryHostResponse {
+// FromAdminDescribeHistoryHostResponse converts internal DescribeHistoryHostResponse type to thrift
+func FromAdminDescribeHistoryHostResponse(t *types.DescribeHistoryHostResponse) *shared.DescribeHistoryHostResponse {
 	if t == nil {
 		return nil
 	}
@@ -1623,19 +1636,8 @@ func FromDescribeHistoryHostResponse(t *types.DescribeHistoryHostResponse) *shar
 	}
 }
 
-// FromDescribeShardDistributionResponse converts internal DescribeHistoryHostResponse type to thrift
-func FromDescribeShardDistributionResponse(t *types.DescribeShardDistributionResponse) *shared.DescribeShardDistributionResponse {
-	if t == nil {
-		return nil
-	}
-	return &shared.DescribeShardDistributionResponse{
-		NumberOfShards: &t.NumberOfShards,
-		Shards:         t.Shards,
-	}
-}
-
-// ToDescribeHistoryHostResponse converts thrift DescribeHistoryHostResponse type to internal
-func ToDescribeHistoryHostResponse(t *shared.DescribeHistoryHostResponse) *types.DescribeHistoryHostResponse {
+// ToAdminDescribeHistoryHostResponse converts thrift DescribeHistoryHostResponse type to internal
+func ToAdminDescribeHistoryHostResponse(t *shared.DescribeHistoryHostResponse) *types.DescribeHistoryHostResponse {
 	if t == nil {
 		return nil
 	}
@@ -1648,8 +1650,19 @@ func ToDescribeHistoryHostResponse(t *shared.DescribeHistoryHostResponse) *types
 	}
 }
 
-// ToDescribeShardDistributionResponse converts thrift DescribeHistoryHostResponse type to internal
-func ToDescribeShardDistributionResponse(t *shared.DescribeShardDistributionResponse) *types.DescribeShardDistributionResponse {
+// FromAdminDescribeShardDistributionResponse converts internal DescribeHistoryHostResponse type to thrift
+func FromAdminDescribeShardDistributionResponse(t *types.DescribeShardDistributionResponse) *shared.DescribeShardDistributionResponse {
+	if t == nil {
+		return nil
+	}
+	return &shared.DescribeShardDistributionResponse{
+		NumberOfShards: &t.NumberOfShards,
+		Shards:         t.Shards,
+	}
+}
+
+// ToAdminDescribeShardDistributionResponse converts thrift DescribeHistoryHostResponse type to internal
+func ToAdminDescribeShardDistributionResponse(t *shared.DescribeShardDistributionResponse) *types.DescribeShardDistributionResponse {
 	if t == nil {
 		return nil
 	}
@@ -1659,8 +1672,8 @@ func ToDescribeShardDistributionResponse(t *shared.DescribeShardDistributionResp
 	}
 }
 
-// FromDescribeQueueRequest converts internal DescribeQueueRequest type to thrift
-func FromDescribeQueueRequest(t *types.DescribeQueueRequest) *shared.DescribeQueueRequest {
+// FromAdminDescribeQueueRequest converts internal DescribeQueueRequest type to thrift
+func FromAdminDescribeQueueRequest(t *types.DescribeQueueRequest) *shared.DescribeQueueRequest {
 	if t == nil {
 		return nil
 	}
@@ -1671,8 +1684,8 @@ func FromDescribeQueueRequest(t *types.DescribeQueueRequest) *shared.DescribeQue
 	}
 }
 
-// ToDescribeQueueRequest converts thrift DescribeQueueRequest type to internal
-func ToDescribeQueueRequest(t *shared.DescribeQueueRequest) *types.DescribeQueueRequest {
+// ToAdminDescribeQueueRequest converts thrift DescribeQueueRequest type to internal
+func ToAdminDescribeQueueRequest(t *shared.DescribeQueueRequest) *types.DescribeQueueRequest {
 	if t == nil {
 		return nil
 	}
@@ -1683,8 +1696,8 @@ func ToDescribeQueueRequest(t *shared.DescribeQueueRequest) *types.DescribeQueue
 	}
 }
 
-// FromDescribeQueueResponse converts internal DescribeQueueResponse type to thrift
-func FromDescribeQueueResponse(t *types.DescribeQueueResponse) *shared.DescribeQueueResponse {
+// FromAdminDescribeQueueResponse converts internal DescribeQueueResponse type to thrift
+func FromAdminDescribeQueueResponse(t *types.DescribeQueueResponse) *shared.DescribeQueueResponse {
 	if t == nil {
 		return nil
 	}
@@ -1693,8 +1706,8 @@ func FromDescribeQueueResponse(t *types.DescribeQueueResponse) *shared.DescribeQ
 	}
 }
 
-// ToDescribeQueueResponse converts thrift DescribeQueueResponse type to internal
-func ToDescribeQueueResponse(t *shared.DescribeQueueResponse) *types.DescribeQueueResponse {
+// ToAdminDescribeQueueResponse converts thrift DescribeQueueResponse type to internal
+func ToAdminDescribeQueueResponse(t *shared.DescribeQueueResponse) *types.DescribeQueueResponse {
 	if t == nil {
 		return nil
 	}
@@ -3590,6 +3603,7 @@ func FromPollForDecisionTaskResponse(t *types.PollForDecisionTaskResponse) *shar
 		StartedTimestamp:          t.StartedTimestamp,
 		Queries:                   FromWorkflowQueryMap(t.Queries),
 		NextEventId:               &t.NextEventID,
+		TotalHistoryBytes:         &t.TotalHistoryBytes,
 	}
 }
 
@@ -3614,6 +3628,7 @@ func ToPollForDecisionTaskResponse(t *shared.PollForDecisionTaskResponse) *types
 		StartedTimestamp:          t.StartedTimestamp,
 		Queries:                   ToWorkflowQueryMap(t.Queries),
 		NextEventID:               t.GetNextEventId(),
+		TotalHistoryBytes:         t.GetTotalHistoryBytes(),
 	}
 }
 
@@ -3859,8 +3874,8 @@ func ToQueryWorkflowResponse(t *shared.QueryWorkflowResponse) *types.QueryWorkfl
 	}
 }
 
-// FromReapplyEventsRequest converts internal ReapplyEventsRequest type to thrift
-func FromReapplyEventsRequest(t *types.ReapplyEventsRequest) *shared.ReapplyEventsRequest {
+// FromAdminReapplyEventsRequest converts internal ReapplyEventsRequest type to thrift
+func FromAdminReapplyEventsRequest(t *types.ReapplyEventsRequest) *shared.ReapplyEventsRequest {
 	if t == nil {
 		return nil
 	}
@@ -3871,8 +3886,8 @@ func FromReapplyEventsRequest(t *types.ReapplyEventsRequest) *shared.ReapplyEven
 	}
 }
 
-// ToReapplyEventsRequest converts thrift ReapplyEventsRequest type to internal
-func ToReapplyEventsRequest(t *shared.ReapplyEventsRequest) *types.ReapplyEventsRequest {
+// ToAdminReapplyEventsRequest converts thrift ReapplyEventsRequest type to internal
+func ToAdminReapplyEventsRequest(t *shared.ReapplyEventsRequest) *types.ReapplyEventsRequest {
 	if t == nil {
 		return nil
 	}
@@ -4069,8 +4084,8 @@ func ToRemoteSyncMatchedError(t *shared.RemoteSyncMatchedError) *types.RemoteSyn
 	}
 }
 
-// FromRemoveTaskRequest converts internal RemoveTaskRequest type to thrift
-func FromRemoveTaskRequest(t *types.RemoveTaskRequest) *shared.RemoveTaskRequest {
+// FromAdminRemoveTaskRequest converts internal RemoveTaskRequest type to thrift
+func FromAdminRemoveTaskRequest(t *types.RemoveTaskRequest) *shared.RemoveTaskRequest {
 	if t == nil {
 		return nil
 	}
@@ -4083,8 +4098,8 @@ func FromRemoveTaskRequest(t *types.RemoveTaskRequest) *shared.RemoveTaskRequest
 	}
 }
 
-// ToRemoveTaskRequest converts thrift RemoveTaskRequest type to internal
-func ToRemoveTaskRequest(t *shared.RemoveTaskRequest) *types.RemoveTaskRequest {
+// ToAdminRemoveTaskRequest converts thrift RemoveTaskRequest type to internal
+func ToAdminRemoveTaskRequest(t *shared.RemoveTaskRequest) *types.RemoveTaskRequest {
 	if t == nil {
 		return nil
 	}
@@ -4307,8 +4322,8 @@ func ToResetPoints(t *shared.ResetPoints) *types.ResetPoints {
 	}
 }
 
-// FromResetQueueRequest converts internal ResetQueueRequest type to thrift
-func FromResetQueueRequest(t *types.ResetQueueRequest) *shared.ResetQueueRequest {
+// FromAdminResetQueueRequest converts internal ResetQueueRequest type to thrift
+func FromAdminResetQueueRequest(t *types.ResetQueueRequest) *shared.ResetQueueRequest {
 	if t == nil {
 		return nil
 	}
@@ -4319,8 +4334,8 @@ func FromResetQueueRequest(t *types.ResetQueueRequest) *shared.ResetQueueRequest
 	}
 }
 
-// ToResetQueueRequest converts thrift ResetQueueRequest type to internal
-func ToResetQueueRequest(t *shared.ResetQueueRequest) *types.ResetQueueRequest {
+// ToAdminResetQueueRequest converts thrift ResetQueueRequest type to internal
+func ToAdminResetQueueRequest(t *shared.ResetQueueRequest) *types.ResetQueueRequest {
 	if t == nil {
 		return nil
 	}
@@ -4760,6 +4775,18 @@ func ToRetryTaskV2Error(t *shared.RetryTaskV2Error) *types.RetryTaskV2Error {
 		StartEventVersion: t.StartEventVersion,
 		EndEventID:        t.EndEventId,
 		EndEventVersion:   t.EndEventVersion,
+	}
+}
+
+// FromRestartWorkflowExecutionRequest converts internal RestartWorkflowExecutionRequest type to thrift
+func FromRestartWorkflowExecutionRequest(t *types.RestartWorkflowExecutionRequest) *shared.RestartWorkflowExecutionRequest {
+	if t == nil {
+		return nil
+	}
+	return &shared.RestartWorkflowExecutionRequest{
+		Domain:            &t.Domain,
+		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
+		Identity:          &t.Identity,
 	}
 }
 
@@ -5235,6 +5262,70 @@ func ToStartTimerDecisionAttributes(t *shared.StartTimerDecisionAttributes) *typ
 	}
 }
 
+func FromSignalWithStartWorkflowExecutionAsyncRequest(t *types.SignalWithStartWorkflowExecutionAsyncRequest) *shared.SignalWithStartWorkflowExecutionAsyncRequest {
+	if t == nil {
+		return nil
+	}
+	return &shared.SignalWithStartWorkflowExecutionAsyncRequest{
+		Request: FromSignalWithStartWorkflowExecutionRequest(t.SignalWithStartWorkflowExecutionRequest),
+	}
+}
+
+func ToSignalWithStartWorkflowExecutionAsyncRequest(t *shared.SignalWithStartWorkflowExecutionAsyncRequest) *types.SignalWithStartWorkflowExecutionAsyncRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.SignalWithStartWorkflowExecutionAsyncRequest{
+		SignalWithStartWorkflowExecutionRequest: ToSignalWithStartWorkflowExecutionRequest(t.Request),
+	}
+}
+
+func FromSignalWithStartWorkflowExecutionAsyncResponse(t *types.SignalWithStartWorkflowExecutionAsyncResponse) *shared.SignalWithStartWorkflowExecutionAsyncResponse {
+	if t == nil {
+		return nil
+	}
+	return &shared.SignalWithStartWorkflowExecutionAsyncResponse{}
+}
+
+func ToSignalWithStartWorkflowExecutionAsyncResponse(t *shared.SignalWithStartWorkflowExecutionAsyncResponse) *types.SignalWithStartWorkflowExecutionAsyncResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.SignalWithStartWorkflowExecutionAsyncResponse{}
+}
+
+func FromStartWorkflowExecutionAsyncRequest(t *types.StartWorkflowExecutionAsyncRequest) *shared.StartWorkflowExecutionAsyncRequest {
+	if t == nil {
+		return nil
+	}
+	return &shared.StartWorkflowExecutionAsyncRequest{
+		Request: FromStartWorkflowExecutionRequest(t.StartWorkflowExecutionRequest),
+	}
+}
+
+func ToStartWorkflowExecutionAsyncRequest(t *shared.StartWorkflowExecutionAsyncRequest) *types.StartWorkflowExecutionAsyncRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.StartWorkflowExecutionAsyncRequest{
+		StartWorkflowExecutionRequest: ToStartWorkflowExecutionRequest(t.Request),
+	}
+}
+
+func FromStartWorkflowExecutionAsyncResponse(t *types.StartWorkflowExecutionAsyncResponse) *shared.StartWorkflowExecutionAsyncResponse {
+	if t == nil {
+		return nil
+	}
+	return &shared.StartWorkflowExecutionAsyncResponse{}
+}
+
+func ToStartWorkflowExecutionAsyncResponse(t *shared.StartWorkflowExecutionAsyncResponse) *types.StartWorkflowExecutionAsyncResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.StartWorkflowExecutionAsyncResponse{}
+}
+
 // FromStartWorkflowExecutionRequest converts internal StartWorkflowExecutionRequest type to thrift
 func FromStartWorkflowExecutionRequest(t *types.StartWorkflowExecutionRequest) *shared.StartWorkflowExecutionRequest {
 	if t == nil {
@@ -5546,18 +5637,6 @@ func ToRestartWorkflowExecutionResponse(t *shared.RestartWorkflowExecutionRespon
 	}
 	return &types.RestartWorkflowExecutionResponse{
 		RunID: t.GetRunId(),
-	}
-}
-
-// FromRestartWorkflowExecutionRequest converts internal RestartWorkflowExecutionRequest type to thrift
-func FromRestartWorkflowExecutionRequest(t *types.RestartWorkflowExecutionRequest) *shared.RestartWorkflowExecutionRequest {
-	if t == nil {
-		return nil
-	}
-	return &shared.RestartWorkflowExecutionRequest{
-		Domain:            &t.Domain,
-		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
-		Identity:          &t.Identity,
 	}
 }
 
@@ -7739,8 +7818,8 @@ func ToCrossClusterTaskResponse(t *shared.CrossClusterTaskResponse) *types.Cross
 	}
 }
 
-// FromGetCrossClusterTasksRequest converts internal GetCrossClusterTasksRequest type to thrift
-func FromGetCrossClusterTasksRequest(t *types.GetCrossClusterTasksRequest) *shared.GetCrossClusterTasksRequest {
+// FromAdminGetCrossClusterTasksRequest converts internal GetCrossClusterTasksRequest type to thrift
+func FromAdminGetCrossClusterTasksRequest(t *types.GetCrossClusterTasksRequest) *shared.GetCrossClusterTasksRequest {
 	if t == nil {
 		return nil
 	}
@@ -7750,8 +7829,8 @@ func FromGetCrossClusterTasksRequest(t *types.GetCrossClusterTasksRequest) *shar
 	}
 }
 
-// ToGetCrossClusterTasksRequest converts thrift GetCrossClusterTasksRequest type to internal
-func ToGetCrossClusterTasksRequest(t *shared.GetCrossClusterTasksRequest) *types.GetCrossClusterTasksRequest {
+// ToAdminGetCrossClusterTasksRequest converts thrift GetCrossClusterTasksRequest type to internal
+func ToAdminGetCrossClusterTasksRequest(t *shared.GetCrossClusterTasksRequest) *types.GetCrossClusterTasksRequest {
 	if t == nil {
 		return nil
 	}
@@ -7833,8 +7912,8 @@ func ToGetTaskFailedCauseMap(t map[int32]shared.GetTaskFailedCause) map[int32]ty
 	return v
 }
 
-// FromGetCrossClusterTasksResponse converts internal GetCrossClusterTasksResponse type to thrift
-func FromGetCrossClusterTasksResponse(t *types.GetCrossClusterTasksResponse) *shared.GetCrossClusterTasksResponse {
+// FromAdminGetCrossClusterTasksResponse converts internal GetCrossClusterTasksResponse type to thrift
+func FromAdminGetCrossClusterTasksResponse(t *types.GetCrossClusterTasksResponse) *shared.GetCrossClusterTasksResponse {
 	if t == nil {
 		return nil
 	}
@@ -7844,8 +7923,8 @@ func FromGetCrossClusterTasksResponse(t *types.GetCrossClusterTasksResponse) *sh
 	}
 }
 
-// ToGetCrossClusterTasksResponse converts thrift GetCrossClusterTasksResponse type to internal
-func ToGetCrossClusterTasksResponse(t *shared.GetCrossClusterTasksResponse) *types.GetCrossClusterTasksResponse {
+// ToAdminGetCrossClusterTasksResponse converts thrift GetCrossClusterTasksResponse type to internal
+func ToAdminGetCrossClusterTasksResponse(t *shared.GetCrossClusterTasksResponse) *types.GetCrossClusterTasksResponse {
 	if t == nil {
 		return nil
 	}
@@ -7879,8 +7958,8 @@ func ToCrossClusterTaskResponseArray(t []*shared.CrossClusterTaskResponse) []*ty
 	return v
 }
 
-// FromRespondCrossClusterTasksCompletedRequest converts internal RespondCrossClusterTasksCompletedRequest type to thrift
-func FromRespondCrossClusterTasksCompletedRequest(t *types.RespondCrossClusterTasksCompletedRequest) *shared.RespondCrossClusterTasksCompletedRequest {
+// FromAdminRespondCrossClusterTasksCompletedRequest converts internal RespondCrossClusterTasksCompletedRequest type to thrift
+func FromAdminRespondCrossClusterTasksCompletedRequest(t *types.RespondCrossClusterTasksCompletedRequest) *shared.RespondCrossClusterTasksCompletedRequest {
 	if t == nil {
 		return nil
 	}
@@ -7892,8 +7971,8 @@ func FromRespondCrossClusterTasksCompletedRequest(t *types.RespondCrossClusterTa
 	}
 }
 
-// ToRespondCrossClusterTasksCompletedRequest converts thrift RespondCrossClusterTasksCompletedRequest type to internal
-func ToRespondCrossClusterTasksCompletedRequest(t *shared.RespondCrossClusterTasksCompletedRequest) *types.RespondCrossClusterTasksCompletedRequest {
+// ToAdminRespondCrossClusterTasksCompletedRequest converts thrift RespondCrossClusterTasksCompletedRequest type to internal
+func ToAdminRespondCrossClusterTasksCompletedRequest(t *shared.RespondCrossClusterTasksCompletedRequest) *types.RespondCrossClusterTasksCompletedRequest {
 	if t == nil {
 		return nil
 	}
@@ -7905,8 +7984,8 @@ func ToRespondCrossClusterTasksCompletedRequest(t *shared.RespondCrossClusterTas
 	}
 }
 
-// FromRespondCrossClusterTasksCompletedResponse converts internal RespondCrossClusterTasksCompletedResponse type to thrift
-func FromRespondCrossClusterTasksCompletedResponse(t *types.RespondCrossClusterTasksCompletedResponse) *shared.RespondCrossClusterTasksCompletedResponse {
+// FromAdminRespondCrossClusterTasksCompletedResponse converts internal RespondCrossClusterTasksCompletedResponse type to thrift
+func FromAdminRespondCrossClusterTasksCompletedResponse(t *types.RespondCrossClusterTasksCompletedResponse) *shared.RespondCrossClusterTasksCompletedResponse {
 	if t == nil {
 		return nil
 	}
@@ -7915,8 +7994,8 @@ func FromRespondCrossClusterTasksCompletedResponse(t *types.RespondCrossClusterT
 	}
 }
 
-// ToRespondCrossClusterTasksCompletedResponse converts thrift RespondCrossClusterTasksCompletedResponse type to internal
-func ToRespondCrossClusterTasksCompletedResponse(t *shared.RespondCrossClusterTasksCompletedResponse) *types.RespondCrossClusterTasksCompletedResponse {
+// ToAdminRespondCrossClusterTasksCompletedResponse converts thrift RespondCrossClusterTasksCompletedResponse type to internal
+func ToAdminRespondCrossClusterTasksCompletedResponse(t *shared.RespondCrossClusterTasksCompletedResponse) *types.RespondCrossClusterTasksCompletedResponse {
 	if t == nil {
 		return nil
 	}

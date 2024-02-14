@@ -69,14 +69,14 @@ type (
 		mockArchivalMetadata *archiver.MockArchivalMetadata
 		mockArchiverProvider *provider.MockArchiverProvider
 
-		logger               log.Logger
-		domainID             string
-		domainName           string
-		domainEntry          *cache.DomainCacheEntry
-		version              int64
-		clusterName          string
-		now                  time.Time
-		timeSource           *clock.EventTimeSource
+		logger      log.Logger
+		domainID    string
+		domainName  string
+		domainEntry *cache.DomainCacheEntry
+		version     int64
+		clusterName string
+
+		timeSource           clock.MockedTimeSource
 		fetchHistoryDuration time.Duration
 		discardDuration      time.Duration
 
@@ -101,8 +101,8 @@ func (s *transferStandbyTaskExecutorSuite) SetupTest() {
 	s.domainName = constants.TestDomainName
 	s.domainEntry = constants.TestGlobalDomainEntry
 	s.version = s.domainEntry.GetFailoverVersion()
-	s.now = time.Now()
-	s.timeSource = clock.NewEventTimeSource().Update(s.now)
+
+	s.timeSource = clock.NewMockedTimeSource()
 	s.fetchHistoryDuration = config.StandbyTaskMissingEventsResendDelay() +
 		(config.StandbyTaskMissingEventsDiscardDelay()-config.StandbyTaskMissingEventsResendDelay())/2
 	s.discardDuration = config.StandbyTaskMissingEventsDiscardDelay() * 2
@@ -111,6 +111,7 @@ func (s *transferStandbyTaskExecutorSuite) SetupTest() {
 	s.mockNDCHistoryResender = ndc.NewMockHistoryResender(s.controller)
 
 	s.mockShard = shard.NewTestContext(
+		s.T(),
 		s.controller,
 		&persistence.ShardInfo{
 			RangeID:          1,
@@ -235,7 +236,6 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessActivityTask_Pending_PushT
 	s.NoError(err)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockMatchingClient.EXPECT().AddActivityTask(gomock.Any(), createAddActivityTaskRequest(transferTask, ai, mutableState.GetExecutionInfo().PartitionConfig)).Return(nil).Times(1)
-
 	s.mockShard.SetCurrentTime(s.clusterName, now)
 	err = s.transferStandbyTaskExecutor.Execute(transferTask, true)
 	s.Nil(err)

@@ -21,129 +21,176 @@
 package loggerimpl
 
 import (
-	"bytes"
 	"fmt"
-	"io"
-	"os"
 	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 )
 
-func TestDefaultLogger(t *testing.T) {
-	old := os.Stdout // keep backup of the real stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-	outC := make(chan string)
-	// copy the output in a separate goroutine so logging can't block indefinitely
-	go func() {
-		var buf bytes.Buffer
-		_, err := io.Copy(&buf, r)
-		assert.NoError(t, err)
-		outC <- buf.String()
-	}()
+const anyNum = "[0-9]+"
 
-	zapLogger := zap.NewExample()
+func TestLoggers(t *testing.T) {
+	for _, tc := range []struct {
+		name          string
+		loggerFactory func(zapLogger *zap.Logger) log.Logger
+	}{
+		{
+			name: "normal",
+			loggerFactory: func(zapLogger *zap.Logger) log.Logger {
+				return NewLogger(zapLogger)
+			},
+		},
+		{
+			name: "throttled",
+			loggerFactory: func(zapLogger *zap.Logger) log.Logger {
+				return NewThrottledLogger(NewLogger(zapLogger), dynamicconfig.GetIntPropertyFn(1))
+			},
+		},
+		// Unfortunately, replay logger is impossible to test because it requires a workflow context, which is not exposed by go client.
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, scenario := range []struct {
+				name     string
+				fn       func(logger log.Logger)
+				expected string
+			}{
+				{
+					name: "debug",
+					fn: func(logger log.Logger) {
+						logger.Debug("test debug")
+					},
+					expected: `{"level":"debug","msg":"test debug","logging-call-at":"logger_test.go:%s"}`,
+				},
+				{
+					name: "info",
+					fn: func(logger log.Logger) {
+						logger.Info("test info")
+					},
+					expected: `{"level":"info","msg":"test info","logging-call-at":"logger_test.go:%s"}`,
+				},
+				{
+					name: "warn",
+					fn: func(logger log.Logger) {
+						logger.Warn("test warn")
+					},
+					expected: `{"level":"warn","msg":"test warn","logging-call-at":"logger_test.go:%s"}`,
+				},
+				{
+					name: "error",
+					fn: func(logger log.Logger) {
+						logger.Error("test error")
+					},
+					expected: `{"level":"error","msg":"test error","logging-call-at":"logger_test.go:%s"}`,
+				},
+				{
+					name: "debugf",
+					fn: func(logger log.Logger) {
+						logger.Debugf("test %v", "debug")
+					},
+					expected: `{"level":"debug","msg":"test debug","logging-call-at":"logger_test.go:%s"}`,
+				},
+				{
+					name: "with tags",
+					fn: func(logger log.Logger) {
+						logger.WithTags(tag.Error(fmt.Errorf("test error"))).Info("test info", tag.WorkflowActionWorkflowStarted)
+					},
+					expected: `{"level":"info","msg":"test info","error":"test error","wf-action":"add-workflow-started-event","logging-call-at":"logger_test.go:%s"}`,
+				},
+				{
+					name: "empty message",
+					fn: func(logger log.Logger) {
+						logger.Info("", tag.WorkflowActionWorkflowStarted)
+					},
+					expected: `{"level":"info","msg":"` + defaultMsgForEmpty + `","wf-action":"add-workflow-started-event","logging-call-at":"logger_test.go:%s"}`,
+				},
+				{
+					name: "error with details",
+					fn: func(logger log.Logger) {
+						logger.Error("oh no", tag.Error(&testError{"workflow123"}))
+					},
+					expected: `{"level":"error","msg":"oh no","error":"test error","error-details":{"workflow-id":"workflow123"},"logging-call-at":"logger_test.go:%s"}`,
+				},
+			} {
+				t.Run(scenario.name, func(t *testing.T) {
+					buf := &strings.Builder{}
+					zapLogger := zap.New(zapcore.NewCore(zapcore.NewJSONEncoder(zapcore.EncoderConfig{
+						MessageKey:     "msg",
+						LevelKey:       "level",
+						NameKey:        "logger",
+						EncodeLevel:    zapcore.LowercaseLevelEncoder,
+						EncodeTime:     zapcore.ISO8601TimeEncoder,
+						EncodeDuration: zapcore.StringDurationEncoder,
+					}), zapcore.AddSync(buf), zap.DebugLevel))
+					logger := tc.loggerFactory(zapLogger)
+					scenario.fn(logger)
+					out := strings.TrimRight(buf.String(), "\n")
+					expected := fmt.Sprintf(scenario.expected, anyNum)
+					assert.Regexp(t, expected, out)
+				})
+			}
+		})
+	}
+}
+
+func TestLoggerCallAt(t *testing.T) {
+	buf := &strings.Builder{}
+	zapLogger := zap.New(zapcore.NewCore(zapcore.NewJSONEncoder(zapcore.EncoderConfig{
+		MessageKey:     "msg",
+		LevelKey:       "level",
+		NameKey:        "logger",
+		EncodeLevel:    zapcore.LowercaseLevelEncoder,
+		EncodeTime:     zapcore.ISO8601TimeEncoder,
+		EncodeDuration: zapcore.StringDurationEncoder,
+	}), zapcore.AddSync(buf), zap.DebugLevel))
 
 	logger := NewLogger(zapLogger)
 	preCaller := caller(1)
 	logger.WithTags(tag.Error(fmt.Errorf("test error"))).Info("test info", tag.WorkflowActionWorkflowStarted)
 
-	// back to normal state
-	w.Close()
-	os.Stdout = old // restoring the real stdout
-	out := <-outC
+	out := strings.TrimRight(buf.String(), "\n")
 	sps := strings.Split(preCaller, ":")
 	par, err := strconv.Atoi(sps[1])
 	assert.Nil(t, err)
 	lineNum := fmt.Sprintf("%v", par+1)
-	fmt.Println(out, lineNum)
-	assert.Equal(t, out, `{"level":"info","msg":"test info","error":"test error","wf-action":"add-workflow-started-event","logging-call-at":"logger_test.go:`+lineNum+`"}`+"\n")
+	assert.Equal(t, `{"level":"info","msg":"test info","error":"test error","wf-action":"add-workflow-started-event","logging-call-at":"logger_test.go:`+lineNum+`"}`, out)
 
 }
 
-func TestThrottleLogger(t *testing.T) {
-	old := os.Stdout // keep backup of the real stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-	outC := make(chan string)
-	// copy the output in a separate goroutine so logging can't block indefinitely
-	go func() {
-		var buf bytes.Buffer
-		_, err := io.Copy(&buf, r)
-		assert.NoError(t, err)
-		outC <- buf.String()
-	}()
-
-	zapLogger := zap.NewExample()
-
-	dc := dynamicconfig.NewNopClient()
-	cln := dynamicconfig.NewCollection(dc, NewNopLogger())
-	logger := NewThrottledLogger(NewLogger(zapLogger), cln.GetIntProperty(dynamicconfig.FrontendUserRPS))
-	preCaller := caller(1)
-	logger.WithTags(tag.Error(fmt.Errorf("test error"))).WithTags(tag.ComponentShard).Info("test info", tag.WorkflowActionWorkflowStarted)
-
-	// back to normal state
-	w.Close()
-	os.Stdout = old // restoring the real stdout
-	out := <-outC
-	sps := strings.Split(preCaller, ":")
-	par, err := strconv.Atoi(sps[1])
-	assert.Nil(t, err)
-	lineNum := fmt.Sprintf("%v", par+1)
-	fmt.Println(out, lineNum)
-	assert.Equal(t, out, `{"level":"info","msg":"test info","error":"test error","component":"shard","wf-action":"add-workflow-started-event","logging-call-at":"logger_test.go:`+lineNum+`"}`+"\n")
+func TestDevelopment_sampleFn(t *testing.T) {
+	logger, err := NewDevelopment()
+	require.NoError(t, err)
+	impl := logger.(*loggerImpl)
+	assert.NotNil(t, impl.sampleLocalFn)
 }
 
-func TestEmptyMsg(t *testing.T) {
-	old := os.Stdout // keep backup of the real stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-	outC := make(chan string)
-	// copy the output in a separate goroutine so logging can't block indefinitely
-	go func() {
-		var buf bytes.Buffer
-		_, err := io.Copy(&buf, r)
-		assert.NoError(t, err)
-		outC <- buf.String()
-	}()
+func TestLogger_Sampled(t *testing.T) {
+	buf := &strings.Builder{}
+	zapLogger := zap.New(zapcore.NewCore(zapcore.NewJSONEncoder(zapcore.EncoderConfig{
+		MessageKey:     "msg",
+		LevelKey:       "level",
+		NameKey:        "logger",
+		EncodeLevel:    zapcore.LowercaseLevelEncoder,
+		EncodeTime:     zapcore.ISO8601TimeEncoder,
+		EncodeDuration: zapcore.StringDurationEncoder,
+	}), zapcore.AddSync(buf), zap.DebugLevel))
+	logger := NewLogger(zapLogger, WithSampleFunc(func(i int) bool {
+		return true
+	}))
 
-	zapLogger := zap.NewExample()
-
-	logger := NewLogger(zapLogger)
-	preCaller := caller(1)
-	logger.WithTags(tag.Error(fmt.Errorf("test error"))).Info("", tag.WorkflowActionWorkflowStarted)
-
-	// back to normal state
-	w.Close()
-	os.Stdout = old // restoring the real stdout
-	out := <-outC
-	sps := strings.Split(preCaller, ":")
-	par, err := strconv.Atoi(sps[1])
-	assert.Nil(t, err)
-	lineNum := fmt.Sprintf("%v", par+1)
-	fmt.Println(out, lineNum)
-	assert.Equal(t, out, `{"level":"info","msg":"`+defaultMsgForEmpty+`","error":"test error","wf-action":"add-workflow-started-event","logging-call-at":"logger_test.go:`+lineNum+`"}`+"\n")
-
-}
-
-func TestErrorWithDetails(t *testing.T) {
-	sb := &strings.Builder{}
-	zapLogger := zap.New(zapcore.NewCore(zapcore.NewJSONEncoder(zapcore.EncoderConfig{MessageKey: "msg"}), zapcore.AddSync(sb), zap.DebugLevel))
-	logger := NewLogger(zapLogger)
-
-	err := &testError{"workflow123"}
-	logger.Error("oh no", tag.Error(err))
-	zapLogger.Sync()
-
-	assert.Contains(t, sb.String(), `"msg":"oh no","error":"test error","error-details":{"workflow-id":"workflow123"}`)
+	// No Assertion here, since default logger uses random function.
+	// But we check that it is
+	logger.SampleInfo("test info", 1, tag.WorkflowActionWorkflowStarted)
+	out := strings.TrimRight(buf.String(), "\n")
+	assert.Regexp(t, `{"level":"info","msg":"test info","wf-action":"add-workflow-started-event","logging-call-at":"logger_test.go:`+anyNum+`"}`, out)
 }
 
 type testError struct {

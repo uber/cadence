@@ -19,6 +19,8 @@
 // THE SOFTWARE.
 
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination handler_mock.go -package matching github.com/uber/cadence/service/matching Handler
+//go:generate gowrap gen -g -p . -i Handler -t ../templates/grpc.tmpl -o ./grpc_handler_generated.go -v handler=GRPC -v package=matchingv1 -v path=github.com/uber/cadence/.gen/proto/matching/v1 -v prefix=Matching
+//go:generate gowrap gen -g -p ../../.gen/go/matching/matchingserviceserver -i Interface -t ../templates/thrift.tmpl -o ./thrift_handler_generated.go -v handler=Thrift -v prefix=Matching
 
 package matching
 
@@ -72,7 +74,7 @@ var (
 	errMatchingHostThrottle = &types.ServiceBusyError{Message: "Matching host rps exceeded"}
 )
 
-// NewHandler creates a thrift handler for the history service
+// NewHandler creates a thrift handler for the matching service
 func NewHandler(
 	engine Engine,
 	config *Config,
@@ -85,27 +87,17 @@ func NewHandler(
 		metricsClient: metricsClient,
 		userRateLimiter: quotas.NewMultiStageRateLimiter(
 			quotas.NewDynamicRateLimiter(config.UserRPS.AsFloat64()),
-			quotas.NewCollection(quotas.DynamicRateLimiterFactory(
-				func(domain string) float64 {
-					domainRPS := float64(config.DomainUserRPS(domain))
-					if domainRPS > 0 {
-						return domainRPS
-					}
-					// if domain rps not set, use host rps to keep the old behavior
-					return float64(config.UserRPS())
-				})),
+			quotas.NewCollection(quotas.NewFallbackDynamicRateLimiterFactory(
+				config.DomainUserRPS,
+				config.UserRPS,
+			)),
 		),
 		workerRateLimiter: quotas.NewMultiStageRateLimiter(
 			quotas.NewDynamicRateLimiter(config.WorkerRPS.AsFloat64()),
-			quotas.NewCollection(quotas.DynamicRateLimiterFactory(
-				func(domain string) float64 {
-					domainRPS := float64(config.DomainWorkerRPS(domain))
-					if domainRPS > 0 {
-						return domainRPS
-					}
-					// if domain rps not set, use host rps to keep the old behavior
-					return float64(config.WorkerRPS())
-				})),
+			quotas.NewCollection(quotas.NewFallbackDynamicRateLimiterFactory(
+				config.DomainWorkerRPS,
+				config.WorkerRPS,
+			)),
 		),
 		engine:          engine,
 		logger:          logger,

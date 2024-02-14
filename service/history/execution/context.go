@@ -237,6 +237,9 @@ func (c *contextImpl) GetHistorySize() int64 {
 
 func (c *contextImpl) SetHistorySize(size int64) {
 	c.stats.HistorySize = size
+	if c.mutableState != nil {
+		c.mutableState.SetHistorySize(size)
+	}
 }
 
 func (c *contextImpl) LoadExecutionStats(
@@ -313,6 +316,7 @@ func (c *contextImpl) LoadWorkflowExecutionWithTaskVersion(
 			Message: "workflowExecutionContext counter flushBeforeReady status after loading mutable state from DB",
 		}
 	}
+
 	return c.mutableState, nil
 }
 
@@ -1214,6 +1218,13 @@ func (c *contextImpl) updateWorkflowExecutionWithRetry(
 		resp, err = c.shard.UpdateWorkflowExecution(ctx, request)
 		return err
 	}
+	//Preparation for the task Validation.
+	//metricsClient := c.shard.GetMetricsClient()
+	//domainCache := c.shard.GetDomainCache()
+	//executionManager := c.shard.GetExecutionManager()
+	//historymanager := c.shard.GetHistoryManager()
+	//zapLogger, _ := zap.NewProduction()
+	//checker, _ := taskvalidator.NewWfChecker(zapLogger, metricsClient, domainCache, executionManager, historymanager)
 
 	isRetryable := func(err error) bool {
 		if _, ok := err.(*persistence.TimeoutError); ok {
@@ -1243,6 +1254,17 @@ func (c *contextImpl) updateWorkflowExecutionWithRetry(
 			tag.Error(err),
 			tag.Number(c.updateCondition),
 		)
+		//TODO: Call the Task Validation here so that it happens whenever an error happen during Update.
+		//err1 := checker.WorkflowCheckforValidation(
+		//	ctx,
+		//	c.workflowExecution.GetWorkflowID(),
+		//	c.domainID,
+		//	c.GetDomainName(),
+		//	c.workflowExecution.GetRunID(),
+		//)
+		//if err1 != nil {
+		//	return nil, err1
+		//}
 		return nil, err
 	}
 }

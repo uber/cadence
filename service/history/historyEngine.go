@@ -27,16 +27,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/pborman/uuid"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc/yarpcerrors"
 
-	"github.com/uber/cadence/client/admin"
-	hc "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
+	"github.com/uber/cadence/client/wrappers/retryable"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/client"
@@ -68,6 +66,7 @@ import (
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
 	"github.com/uber/cadence/service/history/workflow"
+	"github.com/uber/cadence/service/history/workflowcache"
 	warchiver "github.com/uber/cadence/service/worker/archiver"
 )
 
@@ -125,6 +124,7 @@ type (
 		clientChecker              client.VersionChecker
 		replicationDLQHandler      replication.DLQHandler
 		failoverMarkerNotifier     failover.MarkerNotifier
+		wfIDCache                  workflowcache.WFCache
 	}
 )
 
@@ -154,6 +154,7 @@ func NewEngineWithShardContext(
 	rawMatchingClient matching.Client,
 	queueTaskProcessor task.Processor,
 	failoverCoordinator failover.Coordinator,
+	wfIDCache workflowcache.WFCache,
 ) engine.Engine {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 
@@ -194,18 +195,22 @@ func NewEngineWithShardContext(
 			publicClient,
 			shard.GetConfig().NumArchiveSystemWorkflows,
 			quotas.NewDynamicRateLimiter(config.ArchiveRequestRPS.AsFloat64()),
-			quotas.NewDynamicRateLimiter(quotas.PerMemberDynamic(
-				service.History,
-				config.ArchiveInlineHistoryGlobalRPS.AsFloat64(),
-				config.ArchiveInlineHistoryRPS.AsFloat64(),
-				shard.GetService().GetMembershipResolver(),
-			)),
-			quotas.NewDynamicRateLimiter(quotas.PerMemberDynamic(
-				service.History,
-				config.ArchiveInlineVisibilityGlobalRPS.AsFloat64(),
-				config.ArchiveInlineVisibilityRPS.AsFloat64(),
-				shard.GetService().GetMembershipResolver(),
-			)),
+			quotas.NewDynamicRateLimiter(func() float64 {
+				return quotas.PerMember(
+					service.History,
+					float64(config.ArchiveInlineHistoryGlobalRPS()),
+					float64(config.ArchiveInlineHistoryRPS()),
+					shard.GetService().GetMembershipResolver(),
+				)
+			}),
+			quotas.NewDynamicRateLimiter(func() float64 {
+				return quotas.PerMember(
+					service.History,
+					float64(config.ArchiveInlineVisibilityGlobalRPS()),
+					float64(config.ArchiveInlineVisibilityRPS()),
+					shard.GetService().GetMembershipResolver(),
+				)
+			}),
 			shard.GetService().GetArchiverProvider(),
 			config.AllowArchivingIncompleteHistory,
 		),
@@ -232,6 +237,7 @@ func NewEngineWithShardContext(
 		replicationTaskStore: replicationTaskStore,
 		replicationMetricsEmitter: replication.NewMetricsEmitter(
 			shard.GetShardID(), shard, replicationReader, shard.GetMetricsClient()),
+		wfIDCache: wfIDCache,
 	}
 	historyEngImpl.decisionHandler = decision.NewHandler(
 		shard,
@@ -253,6 +259,7 @@ func NewEngineWithShardContext(
 		historyEngImpl.workflowResetter,
 		historyEngImpl.archivalClient,
 		openExecutionCheck,
+		historyEngImpl.wfIDCache,
 	)
 
 	historyEngImpl.timerProcessor = queue.NewTimerQueueProcessor(
@@ -290,6 +297,7 @@ func NewEngineWithShardContext(
 		queueTaskProcessor,
 		crossClusterTaskFetchers,
 		&task.CrossClusterTaskProcessorOptions{
+			Enabled:                    config.EnableCrossClusterEngine,
 			MaxPendingTasks:            config.CrossClusterTargetProcessorMaxPendingTasks,
 			TaskMaxRetryCount:          config.CrossClusterTargetProcessorMaxRetryCount,
 			TaskRedispatchInterval:     config.ActiveTaskRedispatchInterval,
@@ -303,7 +311,7 @@ func NewEngineWithShardContext(
 	replicationTaskExecutors := make(map[string]replication.TaskExecutor)
 	// Intentionally use the raw client to create its own retry policy
 	historyRawClient := shard.GetService().GetClientBean().GetHistoryClient()
-	historyRetryableClient := hc.NewRetryableClient(
+	historyRetryableClient := retryable.NewHistoryClient(
 		historyRawClient,
 		common.CreateReplicationServiceBusyRetryPolicy(),
 		common.IsServiceBusyError,
@@ -315,7 +323,7 @@ func NewEngineWithShardContext(
 		sourceCluster := replicationTaskFetcher.GetSourceCluster()
 		// Intentionally use the raw client to create its own retry policy
 		adminClient := shard.GetService().GetClientBean().GetRemoteAdminClient(sourceCluster)
-		adminRetryableClient := admin.NewRetryableClient(
+		adminRetryableClient := retryable.NewAdminClient(
 			adminClient,
 			common.CreateReplicationServiceBusyRetryPolicy(),
 			common.IsServiceBusyError,
@@ -500,7 +508,7 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 				previousFailoverVersion := nextDomain.GetPreviousFailoverVersion()
 				previousClusterName, err := e.clusterMetadata.ClusterNameForFailoverVersion(previousFailoverVersion)
 				if err != nil {
-					e.logger.Error("Failed to handle graceful failover", tag.WorkflowDomainID(nextDomain.GetInfo().ID))
+					e.logger.Error("Failed to handle graceful failover", tag.WorkflowDomainID(nextDomain.GetInfo().ID), tag.Error(err))
 					continue
 				}
 
@@ -1167,7 +1175,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 ) (retResp *types.HistoryQueryWorkflowResponse, retErr error) {
 
 	scope := e.metricsClient.Scope(metrics.HistoryQueryWorkflowScope).Tagged(metrics.DomainTag(request.GetRequest().GetDomain()))
-	shardMetricScope := e.metricsClient.Scope(metrics.HistoryQueryWorkflowScope, metrics.ShardIDTag(strconv.Itoa(e.shard.GetShardID())))
+	shardMetricScope := e.metricsClient.Scope(metrics.HistoryQueryWorkflowScope, metrics.ShardIDTag(e.shard.GetShardID()))
 
 	consistentQueryEnabled := e.config.EnableConsistentQuery() && e.config.EnableConsistentQueryByDomain(request.GetRequest().GetDomain())
 	if request.GetRequest().GetQueryConsistencyLevel() == types.QueryConsistencyLevelStrong {
@@ -1496,6 +1504,7 @@ func (e *historyEngineImpl) getMutableState(
 		WorkflowState:                        common.Int32Ptr(int32(workflowState)),
 		WorkflowCloseState:                   common.Int32Ptr(int32(workflowCloseState)),
 		IsStickyTaskListEnabled:              mutableState.IsStickyTaskListEnabled(),
+		HistorySize:                          mutableState.GetHistorySize(),
 	}
 	versionHistories := mutableState.GetVersionHistories()
 	if versionHistories != nil {
@@ -2994,42 +3003,35 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 	}, nil
 }
 
-func (e *historyEngineImpl) NotifyNewHistoryEvent(
-	event *events.Notification,
-) {
-
+func (e *historyEngineImpl) NotifyNewHistoryEvent(event *events.Notification) {
 	e.historyEventNotifier.NotifyNewHistoryEvent(event)
 }
 
-func (e *historyEngineImpl) NotifyNewTransferTasks(
-	info *hcommon.NotifyTaskInfo,
-) {
+func (e *historyEngineImpl) NotifyNewTransferTasks(info *hcommon.NotifyTaskInfo) {
+	if len(info.Tasks) == 0 {
+		return
+	}
 
-	if len(info.Tasks) > 0 {
-		task := info.Tasks[0]
-		clusterName, err := e.clusterMetadata.ClusterNameForFailoverVersion(task.GetVersion())
-		if err == nil {
-			e.txProcessor.NotifyNewTask(clusterName, info)
-		}
+	task := info.Tasks[0]
+	clusterName, err := e.clusterMetadata.ClusterNameForFailoverVersion(task.GetVersion())
+	if err == nil {
+		e.txProcessor.NotifyNewTask(clusterName, info)
 	}
 }
 
-func (e *historyEngineImpl) NotifyNewTimerTasks(
-	info *hcommon.NotifyTaskInfo,
-) {
+func (e *historyEngineImpl) NotifyNewTimerTasks(info *hcommon.NotifyTaskInfo) {
+	if len(info.Tasks) == 0 {
+		return
+	}
 
-	if len(info.Tasks) > 0 {
-		task := info.Tasks[0]
-		clusterName, err := e.clusterMetadata.ClusterNameForFailoverVersion(task.GetVersion())
-		if err == nil {
-			e.timerProcessor.NotifyNewTask(clusterName, info)
-		}
+	task := info.Tasks[0]
+	clusterName, err := e.clusterMetadata.ClusterNameForFailoverVersion(task.GetVersion())
+	if err == nil {
+		e.timerProcessor.NotifyNewTask(clusterName, info)
 	}
 }
 
-func (e *historyEngineImpl) NotifyNewCrossClusterTasks(
-	info *hcommon.NotifyTaskInfo,
-) {
+func (e *historyEngineImpl) NotifyNewCrossClusterTasks(info *hcommon.NotifyTaskInfo) {
 	taskByTargetCluster := make(map[string][]persistence.Task)
 	for _, task := range info.Tasks {
 		// TODO: consider defining a new interface in persistence package
@@ -3201,7 +3203,7 @@ func (e *historyEngineImpl) validateStartWorkflowExecutionRequest(
 		return &types.BadRequestError{Message: "Missing WorkflowType."}
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		request.GetDomain(),
 		e.metricsClient.Scope(metricsScope),
 		e.config.MaxIDLengthWarnLimit(),
@@ -3213,7 +3215,7 @@ func (e *historyEngineImpl) validateStartWorkflowExecutionRequest(
 		return &types.BadRequestError{Message: "Domain exceeds length limit."}
 	}
 
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		request.GetWorkflowID(),
 		e.metricsClient.Scope(metricsScope),
 		e.config.MaxIDLengthWarnLimit(),
@@ -3224,7 +3226,7 @@ func (e *historyEngineImpl) validateStartWorkflowExecutionRequest(
 		tag.IDTypeWorkflowID) {
 		return &types.BadRequestError{Message: "WorkflowId exceeds length limit."}
 	}
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		request.TaskList.GetName(),
 		e.metricsClient.Scope(metricsScope),
 		e.config.MaxIDLengthWarnLimit(),
@@ -3235,7 +3237,7 @@ func (e *historyEngineImpl) validateStartWorkflowExecutionRequest(
 		tag.IDTypeTaskListName) {
 		return &types.BadRequestError{Message: "TaskList exceeds length limit."}
 	}
-	if !common.ValidIDLength(
+	if !common.IsValidIDLength(
 		request.WorkflowType.GetName(),
 		e.metricsClient.Scope(metricsScope),
 		e.config.MaxIDLengthWarnLimit(),

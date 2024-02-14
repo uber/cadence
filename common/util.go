@@ -23,6 +23,7 @@ package common
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -113,7 +114,6 @@ var (
 // Returns true if the Wait() call succeeded before the timeout
 // Returns false if the Wait() did not return before the timeout
 func AwaitWaitGroup(wg *sync.WaitGroup, timeout time.Duration) bool {
-
 	doneC := make(chan struct{})
 
 	go func() {
@@ -129,35 +129,12 @@ func AwaitWaitGroup(wg *sync.WaitGroup, timeout time.Duration) bool {
 	}
 }
 
-// AddSecondsToBaseTime - Gets the UnixNano with given duration and base time.
-func AddSecondsToBaseTime(baseTimeInNanoSec int64, durationInSeconds int64) int64 {
-	timeOut := time.Duration(durationInSeconds) * time.Second
-	return time.Unix(0, baseTimeInNanoSec).Add(timeOut).UnixNano()
-}
-
 // CreatePersistenceRetryPolicy creates a retry policy for persistence layer operations
 func CreatePersistenceRetryPolicy() backoff.RetryPolicy {
 	policy := backoff.NewExponentialRetryPolicy(retryPersistenceOperationInitialInterval)
 	policy.SetMaximumInterval(retryPersistenceOperationMaxInterval)
 	policy.SetExpirationInterval(retryPersistenceOperationExpirationInterval)
 
-	return policy
-}
-
-// CreatePersistenceRetryPolicyWithContext create a retry policy for persistence layer operations
-// which has an expiration interval computed based on the context's deadline
-func CreatePersistenceRetryPolicyWithContext(ctx context.Context) backoff.RetryPolicy {
-	if ctx == nil {
-		return CreatePersistenceRetryPolicy()
-	}
-	deadline, ok := ctx.Deadline()
-	if !ok {
-		return CreatePersistenceRetryPolicy()
-	}
-
-	policy := backoff.NewExponentialRetryPolicy(retryPersistenceOperationInitialInterval)
-	policy.SetMaximumInterval(retryPersistenceOperationMaxInterval)
-	policy.SetExpirationInterval(time.Until(deadline))
 	return policy
 }
 
@@ -224,8 +201,8 @@ func CreateReplicationServiceBusyRetryPolicy() backoff.RetryPolicy {
 	return policy
 }
 
-// ValidIDLength checks if id is valid according to its length
-func ValidIDLength(
+// IsValidIDLength checks if id is valid according to its length
+func IsValidIDLength(
 	id string,
 	scope metrics.Scope,
 	warnLimit int,
@@ -235,18 +212,14 @@ func ValidIDLength(
 	logger log.Logger,
 	idTypeViolationTag tag.Tag,
 ) bool {
-	idLength := len(id)
-	valid := idLength <= errorLimit
-	if idLength > warnLimit {
+	if len(id) > warnLimit {
 		scope.IncCounter(metricsCounter)
-		if logger != nil {
-			logger.Warn("ID length exceeds limit.",
-				tag.WorkflowDomainName(domainName),
-				tag.Name(id),
-				idTypeViolationTag)
-		}
+		logger.Warn("ID length exceeds limit.",
+			tag.WorkflowDomainName(domainName),
+			tag.Name(id),
+			idTypeViolationTag)
 	}
-	return valid
+	return len(id) <= errorLimit
 }
 
 // CheckDecisionResultLimit checks if decision result count exceeds limits.
@@ -272,14 +245,22 @@ func ToServiceTransientError(err error) error {
 
 // IsServiceTransientError checks if the error is a transient error.
 func IsServiceTransientError(err error) bool {
-	switch err.(type) {
-	case *types.InternalServiceError:
+
+	var (
+		typesInternalServiceError    *types.InternalServiceError
+		typesServiceBusyError        *types.ServiceBusyError
+		typesShardOwnershipLostError *types.ShardOwnershipLostError
+		yarpcErrorsStatus            *yarpcerrors.Status
+	)
+
+	switch {
+	case errors.As(err, &typesInternalServiceError):
 		return true
-	case *types.ServiceBusyError:
+	case errors.As(err, &typesServiceBusyError):
 		return true
-	case *types.ShardOwnershipLostError:
+	case errors.As(err, &typesShardOwnershipLostError):
 		return true
-	case *yarpcerrors.Status:
+	case errors.As(err, &yarpcErrorsStatus):
 		// We only selectively retry the following yarpc errors client can safe retry with a backoff
 		if yarpcerrors.IsUnavailable(err) ||
 			yarpcerrors.IsUnknown(err) ||
@@ -351,9 +332,10 @@ func IsValidContext(ctx context.Context) error {
 		case <-ch:
 			return ctx.Err()
 		default:
-			return nil
+			// go to the next line
 		}
 	}
+
 	deadline, ok := ctx.Deadline()
 	if ok && time.Until(deadline) < contextExpireThreshold {
 		return context.DeadlineExceeded
@@ -361,25 +343,39 @@ func IsValidContext(ctx context.Context) error {
 	return nil
 }
 
+// emptyCancelFunc wraps an empty func by context.CancelFunc interface
+var emptyCancelFunc = context.CancelFunc(func() {})
+
 // CreateChildContext creates a child context which shorted context timeout
 // from the given parent context
 // tailroom must be in range [0, 1] and
 // (1-tailroom) * parent timeout will be the new child context timeout
+// if tailroom is less 0, tailroom will be considered as 0
+// if tailroom is greater than 1, tailroom wil be considered as 1
 func CreateChildContext(
 	parent context.Context,
 	tailroom float64,
 ) (context.Context, context.CancelFunc) {
 	if parent == nil {
-		return nil, func() {}
+		return nil, emptyCancelFunc
 	}
 	if parent.Err() != nil {
-		return parent, func() {}
+		return parent, emptyCancelFunc
 	}
 
 	now := time.Now()
 	deadline, ok := parent.Deadline()
 	if !ok || deadline.Before(now) {
-		return parent, func() {}
+		return parent, emptyCancelFunc
+	}
+
+	// if tailroom is about or less 0, then return a context with the same deadline as parent
+	if tailroom <= 0 {
+		return context.WithDeadline(parent, deadline)
+	}
+	// if tailroom is about or greater 1, then return a context with deadline of now
+	if tailroom >= 1 {
+		return context.WithDeadline(parent, now)
 	}
 
 	newDeadline := now.Add(time.Duration(math.Ceil(float64(deadline.Sub(now)) * (1.0 - tailroom))))
@@ -388,7 +384,10 @@ func CreateChildContext(
 
 // GenerateRandomString is used for generate test string
 func GenerateRandomString(n int) string {
-	rand.Seed(time.Now().UnixNano())
+	if n <= 0 {
+		return ""
+	}
+
 	letterRunes := []rune("random")
 	b := make([]rune, n)
 	for i := range b {
@@ -413,6 +412,7 @@ func CreateMatchingPollForDecisionTaskResponse(historyResponse *types.RecordDeci
 		ScheduledTimestamp:        historyResponse.ScheduledTimestamp,
 		StartedTimestamp:          historyResponse.StartedTimestamp,
 		Queries:                   historyResponse.Queries,
+		TotalHistoryBytes:         historyResponse.HistorySize,
 	}
 	if historyResponse.GetPreviousStartedEventID() != EmptyEventID {
 		matchingResp.PreviousStartedEventID = historyResponse.PreviousStartedEventID
@@ -664,7 +664,7 @@ func GetSizeOfMapStringToByteArray(input map[string][]byte) int {
 
 // GetSizeOfHistoryEvent returns approximate size in bytes of the history event taking into account byte arrays only now
 func GetSizeOfHistoryEvent(event *types.HistoryEvent) uint64 {
-	if event == nil {
+	if event == nil || event.EventType == nil {
 		return 0
 	}
 
@@ -757,10 +757,7 @@ func GetSizeOfHistoryEvent(event *types.HistoryEvent) uint64 {
 	case types.EventTypeStartChildWorkflowExecutionFailed:
 		res += len(event.StartChildWorkflowExecutionFailedEventAttributes.Control)
 	case types.EventTypeChildWorkflowExecutionStarted:
-		if event.ChildWorkflowExecutionStartedEventAttributes == nil {
-			return 0
-		}
-		if event.ChildWorkflowExecutionStartedEventAttributes.Header != nil {
+		if event.ChildWorkflowExecutionStartedEventAttributes != nil && event.ChildWorkflowExecutionStartedEventAttributes.Header != nil {
 			res += GetSizeOfMapStringToByteArray(event.ChildWorkflowExecutionStartedEventAttributes.Header.Fields)
 		}
 	case types.EventTypeChildWorkflowExecutionCompleted:
@@ -897,9 +894,7 @@ func ConvertIntMapToDynamicConfigMapProperty(
 
 // ConvertDynamicConfigMapPropertyToIntMap convert a map property from dynamic config to a map
 // whose type for both key and value are int
-func ConvertDynamicConfigMapPropertyToIntMap(
-	dcValue map[string]interface{},
-) (map[int]int, error) {
+func ConvertDynamicConfigMapPropertyToIntMap(dcValue map[string]interface{}) (map[int]int, error) {
 	intMap := make(map[int]int)
 	for key, value := range dcValue {
 		intKey, err := strconv.Atoi(strings.TrimSpace(key))
@@ -938,34 +933,9 @@ func DurationToDays(d time.Duration) int32 {
 	return int32(d / (24 * time.Hour))
 }
 
-// DurationToHours converts time.Duration to number of hours
-func DurationToHours(d time.Duration) int64 {
-	return int64(d / time.Hour)
-}
-
-// DurationToMinutes converts time.Duration to number of minutes
-func DurationToMinutes(d time.Duration) int64 {
-	return int64(d / time.Minute)
-}
-
 // DurationToSeconds converts time.Duration to number of seconds
 func DurationToSeconds(d time.Duration) int64 {
 	return int64(d / time.Second)
-}
-
-// DurationToMilliseconds converts time.Duration to number of milliseconds
-func DurationToMilliseconds(d time.Duration) int64 {
-	return int64(d / time.Millisecond)
-}
-
-// DurationToMicroseconds converts time.Duration to number of microseconds
-func DurationToMicroseconds(d time.Duration) int64 {
-	return int64(d / time.Microsecond)
-}
-
-// DurationToNanoseconds converts time.Duration to number of nanoseconds
-func DurationToNanoseconds(d time.Duration) int64 {
-	return int64(d / time.Nanosecond)
 }
 
 // DaysToDuration converts number of 24 hour days to time.Duration
@@ -973,34 +943,9 @@ func DaysToDuration(d int32) time.Duration {
 	return time.Duration(d) * (24 * time.Hour)
 }
 
-// HoursToDuration converts number of hours to time.Duration
-func HoursToDuration(d int64) time.Duration {
-	return time.Duration(d) * time.Hour
-}
-
-// MinutesToDuration converts number of minutes to time.Duration
-func MinutesToDuration(d int64) time.Duration {
-	return time.Duration(d) * time.Minute
-}
-
 // SecondsToDuration converts number of seconds to time.Duration
 func SecondsToDuration(d int64) time.Duration {
 	return time.Duration(d) * time.Second
-}
-
-// MillisecondsToDuration converts number of milliseconds to time.Duration
-func MillisecondsToDuration(d int64) time.Duration {
-	return time.Duration(d) * time.Millisecond
-}
-
-// MicrosecondsToDuration converts number of microseconds to time.Duration
-func MicrosecondsToDuration(d int64) time.Duration {
-	return time.Duration(d) * time.Microsecond
-}
-
-// NanosecondsToDuration converts number of nanoseconds to time.Duration
-func NanosecondsToDuration(d int64) time.Duration {
-	return time.Duration(d) * time.Nanosecond
 }
 
 // SleepWithMinDuration sleeps for the minimum of desired and available duration

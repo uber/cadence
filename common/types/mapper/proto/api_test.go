@@ -24,8 +24,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
 	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/testdata"
@@ -623,6 +623,26 @@ func TestStartWorkflowExecutionRequest(t *testing.T) {
 func TestStartWorkflowExecutionResponse(t *testing.T) {
 	for _, item := range []*types.StartWorkflowExecutionResponse{nil, {}, &testdata.StartWorkflowExecutionResponse} {
 		assert.Equal(t, item, ToStartWorkflowExecutionResponse(FromStartWorkflowExecutionResponse(item)))
+	}
+}
+func TestStartWorkflowExecutionAsyncRequest(t *testing.T) {
+	for _, item := range []*types.StartWorkflowExecutionAsyncRequest{nil, {}, &testdata.StartWorkflowExecutionAsyncRequest} {
+		assert.Equal(t, item, ToStartWorkflowExecutionAsyncRequest(FromStartWorkflowExecutionAsyncRequest(item)))
+	}
+}
+func TestStartWorkflowExecutionAsyncResponse(t *testing.T) {
+	for _, item := range []*types.StartWorkflowExecutionAsyncResponse{nil, {}, &testdata.StartWorkflowExecutionAsyncResponse} {
+		assert.Equal(t, item, ToStartWorkflowExecutionAsyncResponse(FromStartWorkflowExecutionAsyncResponse(item)))
+	}
+}
+func TestSignalWithStartWorkflowExecutionAsyncRequest(t *testing.T) {
+	for _, item := range []*types.SignalWithStartWorkflowExecutionAsyncRequest{nil, {}, &testdata.SignalWithStartWorkflowExecutionAsyncRequest} {
+		assert.Equal(t, item, ToSignalWithStartWorkflowExecutionAsyncRequest(FromSignalWithStartWorkflowExecutionAsyncRequest(item)))
+	}
+}
+func TestSignalWithStartWorkflowExecutionAsyncResponse(t *testing.T) {
+	for _, item := range []*types.SignalWithStartWorkflowExecutionAsyncResponse{nil, {}, &testdata.SignalWithStartWorkflowExecutionAsyncResponse} {
+		assert.Equal(t, item, ToSignalWithStartWorkflowExecutionAsyncResponse(FromSignalWithStartWorkflowExecutionAsyncResponse(item)))
 	}
 }
 func TestStatusFilter(t *testing.T) {

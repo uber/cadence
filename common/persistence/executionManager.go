@@ -112,6 +112,13 @@ func (m *executionManagerImpl) GetWorkflowExecution(
 	newResponse.State.VersionHistories = versionHistories
 	newResponse.MutableStateStats = m.statsComputer.computeMutableStateStats(response)
 
+	if len(newResponse.State.Checksum.Value) == 0 {
+		newResponse.State.Checksum, err = m.serializer.DeserializeChecksum(response.State.ChecksumData)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return newResponse, nil
 }
 
@@ -635,6 +642,10 @@ func (m *executionManagerImpl) SerializeWorkflowMutation(
 	if err != nil {
 		return nil, err
 	}
+	checksumData, err := m.serializer.SerializeChecksum(input.Checksum, common.EncodingTypeJSON)
+	if err != nil {
+		return nil, err
+	}
 
 	return &InternalWorkflowMutation{
 		ExecutionInfo:    serializedExecutionInfo,
@@ -662,8 +673,9 @@ func (m *executionManagerImpl) SerializeWorkflowMutation(
 		ReplicationTasks:  input.ReplicationTasks,
 		TimerTasks:        input.TimerTasks,
 
-		Condition: input.Condition,
-		Checksum:  input.Checksum,
+		Condition:    input.Condition,
+		Checksum:     input.Checksum,
+		ChecksumData: checksumData,
 	}, nil
 }
 
@@ -702,6 +714,11 @@ func (m *executionManagerImpl) SerializeWorkflowSnapshot(
 		return nil, err
 	}
 
+	checksumData, err := m.serializer.SerializeChecksum(input.Checksum, common.EncodingTypeJSON)
+	if err != nil {
+		return nil, err
+	}
+
 	return &InternalWorkflowSnapshot{
 		ExecutionInfo:    serializedExecutionInfo,
 		VersionHistories: serializedVersionHistories,
@@ -720,8 +737,9 @@ func (m *executionManagerImpl) SerializeWorkflowSnapshot(
 		ReplicationTasks:  input.ReplicationTasks,
 		TimerTasks:        input.TimerTasks,
 
-		Condition: input.Condition,
-		Checksum:  input.Checksum,
+		Condition:    input.Condition,
+		Checksum:     input.Checksum,
+		ChecksumData: checksumData,
 	}, nil
 }
 

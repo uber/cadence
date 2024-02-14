@@ -26,14 +26,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/common/log/loggerimpl"
-
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 )
@@ -45,7 +44,7 @@ var (
 )
 
 func TestMetricsEmitter(t *testing.T) {
-	timeSource := clock.NewEventTimeSource()
+	timeSource := clock.NewMockedTimeSource()
 	metadata := cluster.NewMetadata(0, cluster1, cluster1, map[string]config.ClusterInformation{
 		cluster1: {Enabled: true},
 		cluster2: {Enabled: true},
@@ -53,10 +52,9 @@ func TestMetricsEmitter(t *testing.T) {
 	},
 		func(d string) bool { return false },
 		metrics.NewNoopMetricsClient(),
-		loggerimpl.NewNopLogger(),
+		testlogger.New(t),
 	)
 	testShardData := newTestShardData(timeSource, metadata)
-	timeSource.Update(time.Unix(10000, 0))
 
 	task1 := persistence.ReplicationTaskInfo{TaskID: 1, CreationTime: timeSource.Now().Add(-time.Hour).UnixNano()}
 	task2 := persistence.ReplicationTaskInfo{TaskID: 2, CreationTime: timeSource.Now().Add(-time.Minute).UnixNano()}

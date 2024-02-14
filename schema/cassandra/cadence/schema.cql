@@ -291,6 +291,8 @@ CREATE TYPE domain_config (
   bad_binaries_encoding blob,
   isolation_groups blob,
   isolation_groups_encoding text,
+  async_workflow_config blob,
+  async_workflow_config_encoding text,
 );
 
 CREATE TYPE cluster_replication_config (

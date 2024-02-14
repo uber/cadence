@@ -324,7 +324,11 @@ var (
 	StartWorkflowExecutionResponse = types.StartWorkflowExecutionResponse{
 		RunID: RunID,
 	}
-	SignalWorkflowExecutionRequest = types.SignalWorkflowExecutionRequest{
+	StartWorkflowExecutionAsyncRequest = types.StartWorkflowExecutionAsyncRequest{
+		StartWorkflowExecutionRequest: &StartWorkflowExecutionRequest,
+	}
+	StartWorkflowExecutionAsyncResponse = types.StartWorkflowExecutionAsyncResponse{}
+	SignalWorkflowExecutionRequest      = types.SignalWorkflowExecutionRequest{
 		Domain:            DomainName,
 		WorkflowExecution: &WorkflowExecution,
 		SignalName:        SignalName,
@@ -353,7 +357,11 @@ var (
 		SearchAttributes:                    &SearchAttributes,
 		Header:                              &Header,
 	}
-	ResetWorkflowExecutionRequest = types.ResetWorkflowExecutionRequest{
+	SignalWithStartWorkflowExecutionAsyncRequest = types.SignalWithStartWorkflowExecutionAsyncRequest{
+		SignalWithStartWorkflowExecutionRequest: &SignalWithStartWorkflowExecutionRequest,
+	}
+	SignalWithStartWorkflowExecutionAsyncResponse = types.SignalWithStartWorkflowExecutionAsyncResponse{}
+	ResetWorkflowExecutionRequest                 = types.ResetWorkflowExecutionRequest{
 		Domain:                DomainName,
 		WorkflowExecution:     &WorkflowExecution,
 		Reason:                Reason,

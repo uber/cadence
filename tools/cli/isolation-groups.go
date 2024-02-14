@@ -26,9 +26,9 @@ import (
 	"fmt"
 	"text/tabwriter"
 
-	"github.com/uber/cadence/common/types"
-
 	"github.com/urfave/cli"
+
+	"github.com/uber/cadence/common/types"
 )
 
 func AdminGetGlobalIsolationGroups(c *cli.Context) {
@@ -62,7 +62,7 @@ func AdminUpdateGlobalIsolationGroups(c *cli.Context) {
 		c.String(FlagDomain),
 		c.GlobalString(FlagDomain),
 		c.StringSlice(FlagIsolationGroupSetDrains),
-		c.String(FlagIsolationGroupJSONConfigurations),
+		c.String(FlagJSON),
 		c.Bool(FlagIsolationGroupsRemoveAllDrains),
 		false,
 	)
@@ -72,7 +72,7 @@ func AdminUpdateGlobalIsolationGroups(c *cli.Context) {
 
 	cfg, err := parseIsolationGroupCliInputCfg(
 		c.StringSlice(FlagIsolationGroupSetDrains),
-		c.String(FlagIsolationGroupJSONConfigurations),
+		c.String(FlagJSON),
 		c.Bool(FlagIsolationGroupsRemoveAllDrains),
 	)
 	if err != nil {
@@ -119,7 +119,7 @@ func AdminUpdateDomainIsolationGroups(c *cli.Context) {
 		c.String(FlagDomain),
 		c.GlobalString(FlagDomain),
 		c.StringSlice(FlagIsolationGroupSetDrains),
-		c.String(FlagIsolationGroupJSONConfigurations),
+		c.String(FlagJSON),
 		c.Bool(FlagIsolationGroupsRemoveAllDrains),
 		true,
 	)
@@ -132,7 +132,7 @@ func AdminUpdateDomainIsolationGroups(c *cli.Context) {
 
 	cfg, err := parseIsolationGroupCliInputCfg(
 		c.StringSlice(FlagIsolationGroupSetDrains),
-		c.String(FlagIsolationGroupJSONConfigurations),
+		c.String(FlagJSON),
 		c.Bool(FlagIsolationGroupsRemoveAllDrains),
 	)
 	if err != nil {
@@ -172,7 +172,7 @@ func validateIsolationGroupUpdateArgs(
 		!removeAllDrainsArgs {
 		return fmt.Errorf("need to specify either %q, %q or %q flags",
 			FlagIsolationGroupSetDrains,
-			FlagIsolationGroupJSONConfigurations,
+			FlagJSON,
 			FlagIsolationGroupsRemoveAllDrains,
 		)
 	}
@@ -208,7 +208,7 @@ func parseIsolationGroupCliInputCfg(drains []string, jsonInput string, removeAll
 	if err != nil {
 		return nil, fmt.Errorf(`failed to marshal input. Trying to marshal []types.IsolationGroupPartition
 
-examples: 
+examples:
 - []                                    # will remove all isolation groups
 - [{"Name": "zone-123", "State": 2}]    # drain zone-123
 

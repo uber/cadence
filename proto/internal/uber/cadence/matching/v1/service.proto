@@ -111,6 +111,7 @@ message PollForDecisionTaskResponse {
   google.protobuf.Timestamp scheduled_time = 15;
   google.protobuf.Timestamp started_time = 16;
   map<string, api.v1.WorkflowQuery> queries = 17;
+  int64 total_history_bytes = 18;
 }
 
 message PollForActivityTaskRequest {

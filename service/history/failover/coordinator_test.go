@@ -33,7 +33,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/client/history"
@@ -69,7 +68,7 @@ func TestCoordinatorSuite(t *testing.T) {
 func (s *coordinatorSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 	s.controller = gomock.NewController(s.T())
-	s.mockResource = resource.NewTest(s.controller, metrics.History)
+	s.mockResource = resource.NewTest(s.T(), s.controller, metrics.History)
 	s.mockMetadataManager = s.mockResource.MetadataMgr
 	s.historyClient = s.mockResource.HistoryClient
 	s.config = config.NewForTest()

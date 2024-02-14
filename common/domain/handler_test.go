@@ -27,16 +27,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/testflags"
-
 	"github.com/golang/mock/gomock"
-
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-
-	"github.com/uber/cadence/common/messaging"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
@@ -45,18 +40,19 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
 	dc "github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
+	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/testflags"
 )
 
 type (
 	domainHandlerCommonSuite struct {
-		suite.Suite
-		persistencetests.TestBase
+		*persistencetests.TestBase
 
 		minRetentionDays     int
 		maxBadBinaryCount    int
@@ -74,27 +70,28 @@ var nowInt64 = time.Now().UnixNano()
 
 func TestDomainHandlerCommonSuite(t *testing.T) {
 	testflags.RequireCassandra(t)
-	s := new(domainHandlerCommonSuite)
-	suite.Run(t, s)
-}
 
-func (s *domainHandlerCommonSuite) SetupSuite() {
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
 	}
 
-	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{
+	s := new(domainHandlerCommonSuite)
+
+	s.TestBase = public.NewTestBaseWithPublicCassandra(t, &persistencetests.TestBaseOptions{
 		ClusterMetadata: cluster.GetTestClusterMetadata(true),
 	})
-	s.TestBase.Setup()
+
+	suite.Run(t, s)
 }
 
 func (s *domainHandlerCommonSuite) TearDownSuite() {
-	s.TestBase.TearDownWorkflowStore()
+	s.TearDownWorkflowStore()
 }
 
 func (s *domainHandlerCommonSuite) SetupTest() {
-	logger := loggerimpl.NewNopLogger()
+	s.Setup()
+
+	logger := s.Logger
 	dcCollection := dc.NewCollection(dc.NewNopClient(), logger)
 	s.minRetentionDays = 1
 	s.maxBadBinaryCount = 10
@@ -363,6 +360,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 				VisibilityArchivalURI:                  "",
 				BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
 				IsolationGroups:                        &types.IsolationGroupConfiguration{},
+				AsyncWorkflowConfig:                    &types.AsyncWorkflowConfiguration{},
 			},
 			ReplicationConfiguration: &types.DomainReplicationConfiguration{
 				ActiveClusterName: activeClusterName1,
@@ -389,6 +387,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 				VisibilityArchivalURI:                  "",
 				BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
 				IsolationGroups:                        &types.IsolationGroupConfiguration{},
+				AsyncWorkflowConfig:                    &types.AsyncWorkflowConfiguration{},
 			},
 			ReplicationConfiguration: &types.DomainReplicationConfiguration{
 				ActiveClusterName: activeClusterName2,
@@ -632,7 +631,7 @@ func TestHandlerImpl_UpdateIsolationGroups(t *testing.T) {
 
 	t0 := int64(1565914445 * time.Second)
 	t1 := int64(1685914445 * time.Second)
-	clock := clock.NewEventTimeSource().Update(time.Unix(0, t1))
+	clock := clock.NewMockedTimeSourceAt(time.Unix(0, t1))
 
 	info := persistence.DomainInfo{
 		ID:   "10CF5859-C5CC-4CCC-888E-631F84D53F57",
@@ -712,7 +711,7 @@ func TestHandlerImpl_UpdateIsolationGroups(t *testing.T) {
 			td.managerAffordance(domainMgrMock)
 
 			producer := messaging.NewNoopProducer()
-			replicator := NewDomainReplicator(producer, loggerimpl.NewNopLogger())
+			replicator := NewDomainReplicator(producer, testlogger.New(t))
 
 			handler := handlerImpl{
 				domainManager:       domainMgrMock,
@@ -727,10 +726,118 @@ func TestHandlerImpl_UpdateIsolationGroups(t *testing.T) {
 					MaxBadBinaryCount: func(string) int { return 3 },
 					FailoverCoolDown:  func(string) time.Duration { return time.Second },
 				},
-				logger: loggerimpl.NewNopLogger(),
+				logger: testlogger.New(t),
 			}
 
 			err := handler.UpdateIsolationGroups(context.TODO(), td.in)
+			assert.Equal(t, td.expectedErr, err)
+		})
+	}
+}
+
+func TestHandlerImpl_UpdateAsyncWorkflowConfiguraton(t *testing.T) {
+	t0 := int64(1565914445 * time.Second)
+	t1 := int64(1685914445 * time.Second)
+	clock := clock.NewMockedTimeSourceAt(time.Unix(0, t1))
+
+	info := persistence.DomainInfo{
+		ID:   "10CF5859-C5CC-4CCC-888E-631F84D53F57",
+		Name: "test",
+	}
+
+	config := persistence.DomainConfig{
+		Retention: 10,
+	}
+	replicationConfig := persistence.DomainReplicationConfig{
+		ActiveClusterName: "cluster-1",
+		Clusters: []*persistence.ClusterReplicationConfig{
+			{ClusterName: "cluster-1"},
+		},
+	}
+
+	asyncWFCfg := types.AsyncWorkflowConfiguration{
+		Enabled:             true,
+		PredefinedQueueName: "queue-name",
+		QueueType:           "kafka",
+		QueueConfig: &types.DataBlob{
+			EncodingType: types.EncodingTypeJSON.Ptr(),
+			Data:         []byte(`{"key":"value"}`),
+		},
+	}
+
+	tests := map[string]struct {
+		in                types.UpdateDomainAsyncWorkflowConfiguratonRequest
+		managerAffordance func(m *persistence.MockDomainManager)
+		expectedErr       error
+	}{
+		"successful update": {
+			in: types.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain:        "test",
+				Configuration: &asyncWFCfg,
+			},
+			managerAffordance: func(m *persistence.MockDomainManager) {
+				m.EXPECT().GetMetadata(gomock.Any()).Return(&persistence.GetMetadataResponse{
+					NotificationVersion: 3,
+				}, nil).Times(1)
+
+				m.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: "test"}).Return(&persistence.GetDomainResponse{
+					Info:                        &info,
+					Config:                      &config,
+					ReplicationConfig:           &replicationConfig,
+					IsGlobalDomain:              false,
+					ConfigVersion:               1,
+					FailoverVersion:             1,
+					FailoverNotificationVersion: 1,
+					PreviousFailoverVersion:     1,
+					FailoverEndTime:             &t0,
+					LastUpdatedTime:             t0,
+					NotificationVersion:         1,
+				}, nil).Times(1)
+
+				m.EXPECT().UpdateDomain(gomock.Any(), &persistence.UpdateDomainRequest{
+					Info: &info,
+					Config: &persistence.DomainConfig{
+						Retention:           10,
+						AsyncWorkflowConfig: asyncWFCfg,
+					},
+					ReplicationConfig:           &replicationConfig,
+					ConfigVersion:               2,
+					FailoverVersion:             1,
+					FailoverNotificationVersion: 1,
+					PreviousFailoverVersion:     1,
+					FailoverEndTime:             &t0,
+					LastUpdatedTime:             t1,
+					NotificationVersion:         3,
+				}).Times(1)
+			},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+
+			ctrl := gomock.NewController(t)
+
+			domainMgrMock := persistence.NewMockDomainManager(ctrl)
+			td.managerAffordance(domainMgrMock)
+
+			producer := messaging.NewNoopProducer()
+			replicator := NewDomainReplicator(producer, testlogger.New(t))
+
+			handler := handlerImpl{
+				domainManager:    domainMgrMock,
+				clusterMetadata:  cluster.Metadata{},
+				domainReplicator: replicator,
+				timeSource:       clock,
+				config: Config{
+					MinRetentionDays:  func(opts ...dc.FilterOption) int { return 0 },
+					MaxBadBinaryCount: func(string) int { return 3 },
+					FailoverCoolDown:  func(string) time.Duration { return time.Second },
+				},
+				logger: testlogger.New(t),
+			}
+
+			err := handler.UpdateAsyncWorkflowConfiguraton(context.Background(), td.in)
 			assert.Equal(t, td.expectedErr, err)
 		})
 	}

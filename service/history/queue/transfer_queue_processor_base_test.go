@@ -32,7 +32,7 @@ import (
 
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/config"
@@ -67,6 +67,7 @@ func (s *transferQueueProcessorBaseSuite) SetupTest() {
 
 	s.controller = gomock.NewController(s.T())
 	s.mockShard = shard.NewTestContext(
+		s.T(),
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID:          10,
@@ -79,7 +80,7 @@ func (s *transferQueueProcessorBaseSuite) SetupTest() {
 	s.mockQueueSplitPolicy = NewMockProcessingQueueSplitPolicy(s.controller)
 	s.mockTaskProcessor = task.NewMockProcessor(s.controller)
 
-	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
+	s.logger = testlogger.New(s.Suite.T())
 	s.metricsClient = metrics.NewClient(tally.NoopScope, metrics.History)
 	s.metricsScope = s.metricsClient.Scope(metrics.TransferQueueProcessorScope)
 }
@@ -422,6 +423,130 @@ func (s *transferQueueProcessorBaseSuite) TestReadTasks_WithNextPage() {
 	s.NoError(err)
 	s.Len(tasks, len(getTransferTaskResponse.Tasks))
 	s.True(more)
+}
+
+func (s *transferQueueProcessorBaseSuite) TestTransferProcessorPump_ProcessChHasItem() {
+	queueLevel := 0
+	ackLevel := newTransferTaskKey(0)
+	maxLevel := newTransferTaskKey(1000)
+	processingQueueStates := []ProcessingQueueState{
+		NewProcessingQueueState(
+			queueLevel,
+			ackLevel,
+			maxLevel,
+			NewDomainFilter(map[string]struct{}{"testDomain1": {}}, false),
+		),
+		NewProcessingQueueState(
+			queueLevel,
+			newTransferTaskKey(1000),
+			newTransferTaskKey(10000),
+			NewDomainFilter(map[string]struct{}{"testDomain1": {}}, false),
+		),
+	}
+	updateMaxReadLevel := func() task.Key {
+		return newTransferTaskKey(10000)
+	}
+
+	processorBase := s.newTestTransferQueueProcessorBase(processingQueueStates, updateMaxReadLevel, nil, nil, nil)
+	processedCh := make(chan struct{}, 1)
+	processorBase.processQueueCollectionsFn = func() {
+		processedCh <- struct{}{}
+	}
+
+	processorBase.Start()
+	defer processorBase.Stop()
+
+	processorBase.processCh <- struct{}{}
+
+	select {
+	case <-processedCh:
+		return
+	case <-time.After(100 * time.Millisecond):
+		s.Fail("processQueueCollectionsFn not called")
+	}
+}
+
+func (s *transferQueueProcessorBaseSuite) TestTransferProcessorPump_NotifyChHasItem() {
+	queueLevel := 0
+	ackLevel := newTransferTaskKey(0)
+	maxLevel := newTransferTaskKey(1000)
+	processingQueueStates := []ProcessingQueueState{
+		NewProcessingQueueState(
+			queueLevel,
+			ackLevel,
+			maxLevel,
+			NewDomainFilter(map[string]struct{}{"testDomain1": {}}, false),
+		),
+		NewProcessingQueueState(
+			queueLevel,
+			newTransferTaskKey(1000),
+			newTransferTaskKey(10000),
+			NewDomainFilter(map[string]struct{}{"testDomain1": {}}, false),
+		),
+	}
+	updateMaxReadLevel := func() task.Key {
+		return newTransferTaskKey(10000)
+	}
+
+	processorBase := s.newTestTransferQueueProcessorBase(processingQueueStates, updateMaxReadLevel, nil, nil, nil)
+	processedCh := make(chan struct{}, 1)
+	processorBase.processQueueCollectionsFn = func() {
+		processedCh <- struct{}{}
+	}
+
+	processorBase.Start()
+	defer processorBase.Stop()
+
+	processorBase.notifyCh <- struct{}{}
+
+	select {
+	case <-processedCh:
+		return
+	case <-time.After(100 * time.Millisecond):
+		s.Fail("processQueueCollectionsFn not called")
+	}
+}
+
+func (s *transferQueueProcessorBaseSuite) TestTransferProcessorPump_UpdateAckLevel() {
+	queueLevel := 0
+	ackLevel := newTransferTaskKey(0)
+	maxLevel := newTransferTaskKey(1000)
+	processingQueueStates := []ProcessingQueueState{
+		NewProcessingQueueState(
+			queueLevel,
+			ackLevel,
+			maxLevel,
+			NewDomainFilter(map[string]struct{}{"testDomain1": {}}, false),
+		),
+		NewProcessingQueueState(
+			queueLevel,
+			newTransferTaskKey(1000),
+			newTransferTaskKey(10000),
+			NewDomainFilter(map[string]struct{}{"testDomain1": {}}, false),
+		),
+	}
+	updateMaxReadLevel := func() task.Key {
+		return newTransferTaskKey(10000)
+	}
+
+	processorBase := s.newTestTransferQueueProcessorBase(processingQueueStates, updateMaxReadLevel, nil, nil, nil)
+	processorBase.options.UpdateAckInterval = dynamicconfig.GetDurationPropertyFn(1 * time.Millisecond)
+	updatedCh := make(chan struct{}, 1)
+	processorBase.processQueueCollectionsFn = func() {}
+	processorBase.updateAckLevelFn = func() (bool, task.Key, error) {
+		updatedCh <- struct{}{}
+		return false, nil, nil
+	}
+
+	processorBase.Start()
+	defer processorBase.Stop()
+
+	select {
+	case <-updatedCh:
+		return
+	case <-time.After(100 * time.Millisecond):
+		s.Fail("updateAckLevelFn not called")
+	}
 }
 
 func (s *transferQueueProcessorBaseSuite) newTestTransferQueueProcessorBase(

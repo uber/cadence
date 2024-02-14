@@ -24,16 +24,15 @@ import (
 	"log"
 	"time"
 
-	"github.com/uber/cadence/common/persistence"
-
+	"github.com/startreedata/pinot-client-go/pinot"
+	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/compatibility"
-
-	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
+	"github.com/uber/cadence/common/asyncworkflow/queue"
 	"github.com/uber/cadence/common/blobstore/filestore"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
@@ -46,6 +45,8 @@ import (
 	"github.com/uber/cadence/common/messaging/kafka"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/peerprovider/ringpopprovider"
+	"github.com/uber/cadence/common/persistence"
+	pnt "github.com/uber/cadence/common/pinot"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/rpc"
 	"github.com/uber/cadence/common/service"
@@ -182,6 +183,7 @@ func (s *server) startService() common.Daemon {
 	params.MembershipResolver, err = membership.NewResolver(
 		peerProvider,
 		params.Logger,
+		params.MetricsClient,
 	)
 	if err != nil {
 		log.Fatalf("error creating membership monitor: %v", err)
@@ -221,6 +223,23 @@ func (s *server) startService() common.Daemon {
 		}
 
 		params.ESConfig = advancedVisStore.ElasticSearch
+		if params.PersistenceConfig.AdvancedVisibilityStore == common.PinotVisibilityStoreName {
+			// components like ESAnalyzer is still using ElasticSearch
+			// The plan is to clean those after we switch to operate on Pinot
+			esVisibilityStore, ok := s.cfg.Persistence.DataStores[common.ESVisibilityStoreName]
+			if !ok {
+				log.Fatalf("Missing Elasticsearch config")
+			}
+			params.ESConfig = esVisibilityStore.ElasticSearch
+			params.PinotConfig = advancedVisStore.Pinot
+			pinotBroker := params.PinotConfig.Broker
+			pinotRawClient, err := pinot.NewFromBrokerList([]string{pinotBroker})
+			if err != nil || pinotRawClient == nil {
+				log.Fatalf("Creating Pinot visibility client failed: %v", err)
+			}
+			pinotClient := pnt.NewPinotClient(pinotRawClient, params.Logger, params.PinotConfig)
+			params.PinotClient = pinotClient
+		}
 		params.ESConfig.SetUsernamePassword()
 		esClient, err := elasticsearch.NewGenericClient(params.ESConfig, params.Logger)
 		if err != nil {
@@ -264,6 +283,11 @@ func (s *server) startService() common.Daemon {
 	if err != nil {
 		log.Printf("failed to create file blobstore client, will continue startup without it: %v", err)
 		params.BlobstoreClient = nil
+	}
+
+	params.AsyncWorkflowQueueProvider, err = queue.NewAsyncQueueProvider(s.cfg.AsyncWorkflowQueues)
+	if err != nil {
+		log.Fatalf("error creating async queue provider: %v", err)
 	}
 
 	params.Logger.Info("Starting service " + s.name)

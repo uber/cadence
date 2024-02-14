@@ -22,9 +22,7 @@
 
 package persistence
 
-import (
-	"context"
-)
+import "context"
 
 type (
 	queueManager struct {
@@ -51,7 +49,7 @@ func (q *queueManager) EnqueueMessage(ctx context.Context, messagePayload []byte
 	return q.persistence.EnqueueMessage(ctx, messagePayload)
 }
 
-func (q *queueManager) ReadMessages(ctx context.Context, lastMessageID int64, maxCount int) ([]*QueueMessage, error) {
+func (q *queueManager) ReadMessages(ctx context.Context, lastMessageID int64, maxCount int) (QueueMessageList, error) {
 	resp, err := q.persistence.ReadMessages(ctx, lastMessageID, maxCount)
 	if err != nil {
 		return nil, err

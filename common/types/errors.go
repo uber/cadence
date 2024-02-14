@@ -20,9 +20,12 @@
 
 package types
 
-import (
-	"go.uber.org/zap/zapcore"
-)
+import "go.uber.org/zap/zapcore"
+
+// EventAlreadyStartedError is an internal type (TBD...)
+type EventAlreadyStartedError struct {
+	Message string `json:"message,required"`
+}
 
 func (err AccessDeniedError) Error() string {
 	return err.Message

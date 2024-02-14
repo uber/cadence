@@ -28,11 +28,12 @@ import (
 	"regexp"
 	"strconv"
 
+	"go.uber.org/yarpc"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
+
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/service"
-
-	"go.uber.org/yarpc"
 )
 
 // Params allows to configure rpc.Factory
@@ -41,7 +42,7 @@ type Params struct {
 	TChannelAddress string
 	GRPCAddress     string
 	GRPCMaxMsgSize  int
-	HTTP            *HTTP
+	HTTP            *httpParams
 
 	InboundTLS  *tls.Config
 	OutboundTLS map[string]*tls.Config
@@ -52,9 +53,11 @@ type Params struct {
 	OutboundsBuilder OutboundsBuilder
 }
 
-type HTTP struct {
+type httpParams struct {
 	Address    string
 	Procedures map[string]struct{}
+	TLS        *tls.Config
+	Mode       yarpctls.Mode
 }
 
 // NewParams creates parameters for rpc.Factory from the given config
@@ -100,7 +103,7 @@ func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Coll
 		// not set, load from static config
 		forwardingRules = config.HeaderForwardingRules
 	}
-	var httpParams *HTTP
+	var http *httpParams
 
 	if serviceConfig.RPC.HTTP != nil {
 		if serviceConfig.RPC.HTTP.Port <= 0 {
@@ -112,15 +115,25 @@ func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Coll
 			procedureMap[v] = struct{}{}
 		}
 
-		httpParams = &HTTP{
+		http = &httpParams{
 			Address:    net.JoinHostPort(listenIP.String(), strconv.Itoa(int(serviceConfig.RPC.HTTP.Port))),
 			Procedures: procedureMap,
+		}
+
+		if serviceConfig.RPC.HTTP.TLS.Enabled {
+			httptls, err := serviceConfig.RPC.HTTP.TLS.ToTLSConfig()
+			if err != nil {
+				return Params{}, fmt.Errorf("creating TLS config for HTTP: %w", err)
+			}
+
+			http.TLS = httptls
+			http.Mode = serviceConfig.RPC.HTTP.TLSMode
 		}
 	}
 
 	return Params{
 		ServiceName:     serviceName,
-		HTTP:            httpParams,
+		HTTP:            http,
 		TChannelAddress: net.JoinHostPort(listenIP.String(), strconv.Itoa(int(serviceConfig.RPC.Port))),
 		GRPCAddress:     net.JoinHostPort(listenIP.String(), strconv.Itoa(int(serviceConfig.RPC.GRPCPort))),
 		GRPCMaxMsgSize:  serviceConfig.RPC.GRPCMaxMsgSize,
@@ -133,7 +146,7 @@ func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Coll
 		OutboundTLS: outboundTLS,
 		InboundMiddleware: yarpc.InboundMiddleware{
 			// order matters: ForwardPartitionConfigMiddleware must be applied after ClientPartitionConfigMiddleware
-			Unary: yarpc.UnaryInboundMiddleware(&InboundMetricsMiddleware{}, &ClientPartitionConfigMiddleware{}, &ForwardPartitionConfigMiddleware{}),
+			Unary: yarpc.UnaryInboundMiddleware(&PinotComparatorMiddleware{}, &InboundMetricsMiddleware{}, &ClientPartitionConfigMiddleware{}, &ForwardPartitionConfigMiddleware{}),
 		},
 		OutboundMiddleware: yarpc.OutboundMiddleware{
 			Unary: yarpc.UnaryOutboundMiddleware(&HeaderForwardingMiddleware{

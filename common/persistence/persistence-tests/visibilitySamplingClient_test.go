@@ -29,12 +29,14 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	mmocks "github.com/uber/cadence/common/metrics/mocks"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/wrappers/sampled"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -66,13 +68,19 @@ func (s *VisibilitySamplingSuite) SetupTest() {
 	s.Assertions = require.New(s.T()) // Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 
 	s.persistence = &mocks.VisibilityManager{}
-	config := &p.SamplingConfig{
+	config := &sampled.Config{
 		VisibilityOpenMaxQPS:   dynamicconfig.GetIntPropertyFilteredByDomain(1),
 		VisibilityClosedMaxQPS: dynamicconfig.GetIntPropertyFilteredByDomain(10),
 		VisibilityListMaxQPS:   dynamicconfig.GetIntPropertyFilteredByDomain(1),
 	}
 	s.metricClient = &mmocks.Client{}
-	s.client = p.NewVisibilitySamplingClient(s.persistence, config, s.metricClient, loggerimpl.NewNopLogger())
+	s.client = sampled.NewVisibilityManager(s.persistence, sampled.Params{
+		Config:                 config,
+		MetricClient:           s.metricClient,
+		Logger:                 testlogger.New(s.T()),
+		TimeSource:             clock.NewRealTimeSource(),
+		RateLimiterFactoryFunc: sampled.NewDomainToBucketMap,
+	})
 }
 
 func (s *VisibilitySamplingSuite) TearDownTest() {

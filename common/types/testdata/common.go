@@ -57,18 +57,19 @@ const (
 	ClientLibraryVersion = "ClientLibraryVersion"
 	SupportedVersions    = "SupportedVersions"
 
-	Attempt           = 2
-	PageSize          = 10
-	HistoryLength     = 20
-	BacklogCountHint  = 30
-	AckLevel          = 1001
-	ReadLevel         = 1002
-	RatePerSecond     = 3.14
-	TaskID            = 444
-	ShardID           = 12345
-	MessageID1        = 50001
-	MessageID2        = 50002
-	EventStoreVersion = 333
+	Attempt            = 2
+	PageSize           = 10
+	HistoryLength      = 20
+	BacklogCountHint   = 30
+	AckLevel           = 1001
+	ReadLevel          = 1002
+	RatePerSecond      = 3.14
+	TaskID             = 444
+	ShardID            = 12345
+	MessageID1         = 50001
+	MessageID2         = 50002
+	EventStoreVersion  = 333
+	HistorySizeInBytes = 77779
 
 	EventID1 = int64(1)
 	EventID2 = int64(2)

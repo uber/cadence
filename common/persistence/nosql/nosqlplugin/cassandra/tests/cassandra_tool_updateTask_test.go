@@ -83,7 +83,7 @@ func (s *UpdateSchemaTestSuite) TestShortcut() {
 	defer client.Close()
 	dir := rootRelativePath + "schema/cassandra/cadence/versioned"
 
-	cqlshArgs := []string{"--cqlversion=3.4.4", "-e", "DESC KEYSPACE %s;"}
+	cqlshArgs := []string{"--cqlversion=3.4.6", "-e", "DESC KEYSPACE %s;"}
 	if cassandraHost := os.Getenv("CASSANDRA_HOST"); cassandraHost != "" {
 		cqlshArgs = append(cqlshArgs, cassandraHost)
 	}

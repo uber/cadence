@@ -88,7 +88,7 @@ setup_schema() {
 
 wait_for_cassandra() {
     server=`echo $CASSANDRA_SEEDS | awk -F ',' '{print $1}'`
-    until cqlsh -u $CASSANDRA_USER -p $CASSANDRA_PASSWORD --cqlversion=3.4.4 --protocol-version=$CASSANDRA_PROTO_VERSION $server < /dev/null; do
+    until cqlsh -u $CASSANDRA_USER -p $CASSANDRA_PASSWORD --cqlversion=3.4.6 --protocol-version=$CASSANDRA_PROTO_VERSION $server < /dev/null; do
         echo 'waiting for cassandra to start up'
         sleep 1
     done
@@ -130,11 +130,11 @@ wait_for_postgres() {
 wait_for_es() {
     server=`echo $ES_SEEDS | awk -F ',' '{print $1}'`
     URL="http://$server:$ES_PORT"
-    curl -s $URL 2>&1 > /dev/null
+    curl -s $URL > /dev/null 2>&1
     until [ $? -eq 0 ]; do
         echo 'waiting for elasticsearch to start up'
         sleep 1
-        curl -s $URL 2>&1 > /dev/null
+        curl -s $URL > /dev/null 2>&1
     done
     echo 'elasticsearch started'
 }

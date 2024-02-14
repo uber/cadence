@@ -27,13 +27,12 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc"
-
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/yarpc"
 
 	hclient "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
@@ -54,6 +53,7 @@ import (
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 	test "github.com/uber/cadence/service/history/testing"
+	"github.com/uber/cadence/service/history/workflowcache"
 	warchiver "github.com/uber/cadence/service/worker/archiver"
 	"github.com/uber/cadence/service/worker/parentclosepolicy"
 )
@@ -67,6 +67,7 @@ type (
 		mockShard          *shard.TestContext
 		mockEngine         *engine.MockEngine
 		mockDomainCache    *cache.MockDomainCache
+		mockWFCache        *workflowcache.MockWFCache
 		mockHistoryClient  *hclient.MockClient
 		mockMatchingClient *matching.MockClient
 
@@ -92,8 +93,7 @@ type (
 		childDomainName            string
 		childDomainEntry           *cache.DomainCacheEntry
 		version                    int64
-		now                        time.Time
-		timeSource                 *clock.EventTimeSource
+		timeSource                 clock.MockedTimeSource
 		transferActiveTaskExecutor *transferActiveTaskExecutor
 	}
 )
@@ -127,13 +127,13 @@ func (s *transferActiveTaskExecutorSuite) SetupTest() {
 	s.childDomainName = constants.TestChildDomainName
 	s.childDomainEntry = constants.TestGlobalChildDomainEntry
 	s.version = s.domainEntry.GetFailoverVersion()
-	s.now = time.Now()
-	s.timeSource = clock.NewEventTimeSource().Update(s.now)
+	s.timeSource = clock.NewMockedTimeSource()
 
 	s.controller = gomock.NewController(s.T())
 
 	config := config.NewForTest()
 	s.mockShard = shard.NewTestContext(
+		s.T(),
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID:          0,
@@ -170,6 +170,7 @@ func (s *transferActiveTaskExecutorSuite) SetupTest() {
 	s.mockArchivalMetadata = s.mockShard.Resource.ArchivalMetadata
 	s.mockArchiverProvider = s.mockShard.Resource.ArchiverProvider
 	s.mockDomainCache = s.mockShard.Resource.DomainCache
+	s.mockWFCache = workflowcache.NewMockWFCache(s.controller)
 	s.mockDomainCache.EXPECT().GetDomainByID(s.domainID).Return(s.domainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainName(s.domainID).Return(s.domainName, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainID(s.domainName).Return(s.domainID, nil).AnyTimes()
@@ -199,6 +200,7 @@ func (s *transferActiveTaskExecutorSuite) SetupTest() {
 		nil,
 		s.logger,
 		config,
+		s.mockWFCache,
 	).(*transferActiveTaskExecutor)
 	s.transferActiveTaskExecutor.parentClosePolicyClient = s.mockParentClosePolicyClient
 }
@@ -241,7 +243,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessActivityTask_Success() {
 	s.NoError(err)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockMatchingClient.EXPECT().AddActivityTask(gomock.Any(), createAddActivityTaskRequest(transferTask, ai, mutableState.GetExecutionInfo().PartitionConfig)).Return(nil).Times(1)
-
+	s.mockWFCache.EXPECT().AllowInternal(constants.TestDomainID, constants.TestWorkflowID).Return(true).Times(1)
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
 	s.Nil(err)
 }

@@ -128,6 +128,8 @@ func domainInfoToThrift(info *DomainInfo) *sqlblobs.DomainInfo {
 		LastUpdatedTime:                      timeToUnixNanoPtr(info.LastUpdatedTimestamp),
 		IsolationGroupsConfiguration:         info.IsolationGroups,
 		IsolationGroupsConfigurationEncoding: &info.IsolationGroupsEncoding,
+		AsyncWorkflowConfiguration:           info.AsyncWorkflowConfig,
+		AsyncWorkflowConfigurationEncoding:   &info.AsyncWorkflowConfigEncoding,
 	}
 }
 
@@ -162,6 +164,8 @@ func domainInfoFromThrift(info *sqlblobs.DomainInfo) *DomainInfo {
 		LastUpdatedTimestamp:        timeFromUnixNano(info.GetLastUpdatedTime()),
 		IsolationGroups:             info.GetIsolationGroupsConfiguration(),
 		IsolationGroupsEncoding:     info.GetIsolationGroupsConfigurationEncoding(),
+		AsyncWorkflowConfig:         info.AsyncWorkflowConfiguration,
+		AsyncWorkflowConfigEncoding: info.GetAsyncWorkflowConfigurationEncoding(),
 	}
 }
 
@@ -252,6 +256,8 @@ func workflowExecutionInfoToThrift(info *WorkflowExecutionInfo) *sqlblobs.Workfl
 		VersionHistoriesEncoding:                &info.VersionHistoriesEncoding,
 		FirstExecutionRunID:                     info.FirstExecutionRunID,
 		PartitionConfig:                         info.PartitionConfig,
+		Checksum:                                info.Checksum,
+		ChecksumEncoding:                        &info.ChecksumEncoding,
 	}
 }
 
@@ -320,6 +326,9 @@ func workflowExecutionInfoFromThrift(info *sqlblobs.WorkflowExecutionInfo) *Work
 		VersionHistoriesEncoding:           info.GetVersionHistoriesEncoding(),
 		FirstExecutionRunID:                info.FirstExecutionRunID,
 		PartitionConfig:                    info.PartitionConfig,
+		IsCron:                             info.GetCronSchedule() != "",
+		Checksum:                           info.Checksum,
+		ChecksumEncoding:                   info.GetChecksumEncoding(),
 	}
 }
 

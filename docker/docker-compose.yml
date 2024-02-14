@@ -1,9 +1,17 @@
 version: '3'
 services:
   cassandra:
-    image: cassandra:3.11
+    image: cassandra:4.1.1
     ports:
       - "9042:9042"
+    environment:
+      - "MAX_HEAP_SIZE=256M"
+      - "HEAP_NEWSIZE=128M"
+    healthcheck:
+      test: ["CMD", "cqlsh", "-u cassandra", "-p cassandra" ,"-e describe keyspaces"]
+      interval: 15s
+      timeout: 30s
+      retries: 10
   prometheus:
     image: prom/prometheus:latest
     volumes:
@@ -35,9 +43,12 @@ services:
       - "PROMETHEUS_ENDPOINT_2=0.0.0.0:8002"
       - "PROMETHEUS_ENDPOINT_3=0.0.0.0:8003"
       - "DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development.yaml"
+      - "LOG_LEVEL=debug"
     depends_on:
-      - cassandra
-      - prometheus
+      cassandra:
+        condition: service_healthy
+      prometheus:
+        condition: service_started
   cadence-web:
     image: ubercadence/web:latest
     environment:

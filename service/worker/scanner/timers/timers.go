@@ -27,6 +27,9 @@ import (
 	"strconv"
 	"time"
 
+	"go.uber.org/cadence/client"
+	"go.uber.org/cadence/workflow"
+
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -37,9 +40,6 @@ import (
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/reconciliation/store"
 	"github.com/uber/cadence/service/worker/scanner/shardscanner"
-
-	"go.uber.org/cadence/client"
-	"go.uber.org/cadence/workflow"
 )
 
 const (
@@ -84,22 +84,32 @@ func FixerWorkflow(
 
 // ScannerHooks provides hooks for timers scanner.
 func ScannerHooks() *shardscanner.ScannerHooks {
-	h, err := shardscanner.NewScannerHooks(Manager, Iterator)
+	h, err := shardscanner.NewScannerHooks(Manager, Iterator, Config)
 	if err != nil {
 		return nil
 	}
-	h.SetConfig(Config)
 
 	return h
 }
 
 // FixerHooks provides hooks needed for timers fixer.
 func FixerHooks() *shardscanner.FixerHooks {
-	h, err := shardscanner.NewFixerHooks(FixerManager, FixerIterator)
+	h, err := shardscanner.NewFixerHooks(FixerManager, FixerIterator, timerCustomConfig)
 	if err != nil {
 		return nil
 	}
 	return h
+}
+
+func timerCustomConfig(_ shardscanner.FixerContext) shardscanner.CustomScannerConfig {
+	// must be non-empty to pass backwards-compat check,
+	// and this allows safely adding more invariants in the future.
+	//
+	// currently this is not read anywhere because "fixer enabled"
+	// means "run this one invariant's fixes".
+	return map[string]string{
+		invariant.TimerInvalidName: "true",
+	}
 }
 
 // Manager provides invariant manager for timers scanner.
@@ -155,7 +165,7 @@ func FixerManager(
 }
 
 // Config resolves dynamic config for timers scanner.
-func Config(ctx shardscanner.Context) shardscanner.CustomScannerConfig {
+func Config(ctx shardscanner.ScannerContext) shardscanner.CustomScannerConfig {
 	res := shardscanner.CustomScannerConfig{}
 	res[periodStartKey] = strconv.Itoa(ctx.Config.DynamicCollection.GetIntProperty(dynamicconfig.TimersScannerPeriodStart)())
 	res[periodEndKey] = strconv.Itoa(ctx.Config.DynamicCollection.GetIntProperty(dynamicconfig.TimersScannerPeriodEnd)())

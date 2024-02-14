@@ -24,6 +24,7 @@ import "github.com/urfave/cli"
 
 // Flags used to specify cli command line arguments
 const (
+	FlagVerbose                           = "verbose"
 	FlagUsername                          = "username"
 	FlagPassword                          = "password"
 	FlagKeyspace                          = "keyspace"
@@ -93,7 +94,8 @@ const (
 	FlagSignalInputFileWithAlias          = FlagSignalInputFile + ", sif"
 	FlagExcludeFile                       = "exclude_file"
 	FlagInputSeparator                    = "input_separator"
-	FlagParallism                         = "input_parallism"
+	FlagParallelism                       = "input_parallelism"
+	FlagParallismDeprecated               = "input_parallism" // typo, replaced by FlagParallelism
 	FlagScanType                          = "scan_type"
 	FlagInvariantCollection               = "invariant_collection"
 	FlagSkipCurrentOpen                   = "skip_current_open"
@@ -296,8 +298,8 @@ const (
 	FlagTransport                         = "transport"
 	FlagTransportWithAlias                = FlagTransport + ", t"
 	FlagFormat                            = "format"
+	FlagJSON                              = "json"
 	FlagIsolationGroupSetDrains           = "set-drains"
-	FlagIsolationGroupJSONConfigurations  = "json"
 	FlagIsolationGroupsRemoveAllDrains    = "remove-all-drains"
 	FlagSearchAttribute                   = "search_attr"
 )

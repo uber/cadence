@@ -33,7 +33,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
+	"github.com/emirpasic/gods/maps/treemap"
 	"github.com/golang/mock/gomock"
+	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/suite"
+	"github.com/uber-go/tally"
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/client/history"
@@ -43,20 +48,14 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/isolationgroup/defaultisolationgroupstate"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/types"
-
-	"github.com/davecgh/go-spew/spew"
-	"github.com/emirpasic/gods/maps/treemap"
-	"github.com/pborman/uuid"
-	"github.com/stretchr/testify/suite"
-	"github.com/uber-go/tally"
 )
 
 type (
@@ -89,7 +88,7 @@ func TestMatchingEngineSuite(t *testing.T) {
 }
 
 func (s *matchingEngineSuite) SetupSuite() {
-	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
+	s.logger = testlogger.New(s.Suite.T())
 	http.Handle("/test/tasks", http.HandlerFunc(s.TasksHandler))
 }
 
@@ -132,7 +131,7 @@ func (s *matchingEngineSuite) SetupTest() {
 		&types.TaskList{Name: matchingTestTaskList, Kind: &tlKindNormal},
 		metrics.NewClient(tally.NoopScope, metrics.Matching),
 		metrics.MatchingTaskListMgrScope,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		testlogger.New(s.Suite.T()),
 	)
 
 	s.matchingEngine = s.newMatchingEngine(defaultTestConfig(), s.taskManager)
@@ -1827,6 +1826,22 @@ func (m *testTaskManager) GetTasks(
 	}, nil
 }
 
+func (m *testTaskManager) GetTaskListSize(_ context.Context, request *persistence.GetTaskListSizeRequest) (*persistence.GetTaskListSizeResponse, error) {
+	tlm := m.getTaskListManager(newTestTaskListID(request.DomainID, request.TaskListName, request.TaskListType))
+	tlm.Lock()
+	defer tlm.Unlock()
+	count := int64(0)
+	it := tlm.tasks.Iterator()
+	for it.Next() {
+		taskID := it.Key().(int64)
+		if taskID <= request.AckLevel {
+			continue
+		}
+		count++
+	}
+	return &persistence.GetTaskListSizeResponse{Size: count}, nil
+}
+
 func (m *testTaskManager) GetOrphanTasks(_ context.Context, request *persistence.GetOrphanTasksRequest) (*persistence.GetOrphanTasksResponse, error) {
 	return &persistence.GetOrphanTasksResponse{}, nil
 }
@@ -1889,6 +1904,7 @@ func defaultTestConfig() *Config {
 	config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(100 * time.Millisecond)
 	config.MaxTaskDeleteBatchSize = dynamicconfig.GetIntPropertyFilteredByTaskListInfo(1)
 	config.AllIsolationGroups = []string{"datacenterA", "datacenterB"}
+	config.GetTasksBatchSize = dynamicconfig.GetIntPropertyFilteredByTaskListInfo(10)
 	config.AsyncTaskDispatchTimeout = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
 	return config
 }

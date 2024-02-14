@@ -32,7 +32,7 @@ import (
 	"github.com/uber/ringpop-go/discovery/statichosts"
 	"gopkg.in/yaml.v2"
 
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 )
 
 type RingpopSuite struct {
@@ -119,7 +119,7 @@ func (s *RingpopSuite) TestDNSMode() {
 	s.Equal("test", cfg.Name)
 	s.Equal(BootstrapModeDNS, cfg.BootstrapMode)
 	s.Nil(cfg.validate())
-	logger := loggerimpl.NewNopLogger()
+	logger := testlogger.New(s.T())
 
 	s.ElementsMatch(
 		[]string{
@@ -178,7 +178,7 @@ func (s *RingpopSuite) TestDNSSRVMode() {
 	s.Equal("test", cfg.Name)
 	s.Equal(BootstrapModeDNSSRV, cfg.BootstrapMode)
 	s.Nil(cfg.validate())
-	logger := loggerimpl.NewNopLogger()
+	logger := testlogger.New(s.T())
 
 	s.ElementsMatch(
 		[]string{

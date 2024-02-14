@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	gomock "github.com/golang/mock/gomock"
+	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -37,7 +37,7 @@ import (
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
@@ -53,7 +53,6 @@ type (
 
 		domainCache *domainCache
 		logger      log.Logger
-		now         time.Time
 	}
 )
 
@@ -72,13 +71,13 @@ func (s *domainCacheSuite) TearDownSuite() {
 func (s *domainCacheSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
-	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
+	s.logger = testlogger.New(s.Suite.T())
+
 	s.metadataMgr = &mocks.MetadataManager{}
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.domainCache = NewDomainCache(s.metadataMgr, cluster.GetTestClusterMetadata(true), metricsClient, s.logger).(*domainCache)
 
-	s.now = time.Now()
-	s.domainCache.timeSource = clock.NewEventTimeSource().Update(s.now)
+	s.domainCache.timeSource = clock.NewMockedTimeSource()
 }
 
 func (s *domainCacheSuite) TearDownTest() {
@@ -526,7 +525,7 @@ func (s *domainCacheSuite) TestUpdateCache_TriggerCallBack() {
 		NextPageToken: nil,
 	}, nil).Once()
 
-	s.domainCache.timeSource.(*clock.EventTimeSource).Update(s.now.Add(domainCacheMinRefreshInterval))
+	s.domainCache.timeSource.(clock.MockedTimeSource).Advance(domainCacheMinRefreshInterval)
 	s.Nil(s.domainCache.refreshDomains())
 
 	// the order matters here: the record 2 got updated first, thus with a lower notification version

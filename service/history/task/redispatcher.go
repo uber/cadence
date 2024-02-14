@@ -93,18 +93,17 @@ func NewRedispatcher(
 	backoffPolicy.SetExpirationInterval(backoff.NoInterval)
 
 	return &redispatcherImpl{
-		taskProcessor:   taskProcessor,
-		timeSource:      timeSource,
-		options:         options,
-		logger:          logger,
-		metricsScope:    metricsScope,
-		status:          common.DaemonStatusInitialized,
-		shutdownCh:      make(chan struct{}),
-		redispatchCh:    make(chan redispatchNotification, 1),
-		redispatchTimer: nil,
-		backoffPolicy:   backoffPolicy,
-		taskQueues:      make(map[int][]redispatchTask),
-		taskChFull:      make(map[int]bool),
+		taskProcessor: taskProcessor,
+		timeSource:    timeSource,
+		options:       options,
+		logger:        logger,
+		metricsScope:  metricsScope,
+		status:        common.DaemonStatusInitialized,
+		shutdownCh:    make(chan struct{}),
+		redispatchCh:  make(chan redispatchNotification, 1),
+		backoffPolicy: backoffPolicy,
+		taskQueues:    make(map[int][]redispatchTask),
+		taskChFull:    make(map[int]bool),
 	}
 }
 
@@ -140,9 +139,7 @@ func (r *redispatcherImpl) Stop() {
 	r.logger.Info("Task redispatcher stopped.", tag.LifeCycleStopped)
 }
 
-func (r *redispatcherImpl) AddTask(
-	task Task,
-) {
+func (r *redispatcherImpl) AddTask(task Task) {
 	priority := task.Priority()
 	attempt := task.GetAttempt()
 
@@ -160,22 +157,21 @@ func (r *redispatcherImpl) AddTask(
 	r.setupTimerLocked()
 }
 
-func (r *redispatcherImpl) Redispatch(
-	targetSize int,
-) {
+func (r *redispatcherImpl) Redispatch(targetSize int) {
 	doneCh := make(chan struct{})
-
-	select {
-	case r.redispatchCh <- redispatchNotification{
+	ntf := redispatchNotification{
 		targetSize: targetSize,
 		doneCh:     doneCh,
-	}:
-	case <-r.shutdownCh:
-		close(doneCh)
 	}
 
-	// block until the redispatch is done
-	<-doneCh
+	select {
+	case r.redispatchCh <- ntf:
+		// block until the redispatch is done
+		<-doneCh
+	case <-r.shutdownCh:
+		close(doneCh)
+		return
+	}
 }
 
 func (r *redispatcherImpl) Size() int {
@@ -198,9 +194,7 @@ func (r *redispatcherImpl) redispatchLoop() {
 	}
 }
 
-func (r *redispatcherImpl) redispatchTasks(
-	notification redispatchNotification,
-) {
+func (r *redispatcherImpl) redispatchTasks(notification redispatchNotification) {
 	r.Lock()
 	defer r.Unlock()
 
@@ -289,27 +283,29 @@ func (r *redispatcherImpl) redispatchTasks(
 }
 
 func (r *redispatcherImpl) setupTimerLocked() {
-	if r.redispatchTimer == nil && !r.isStopped() {
-		r.redispatchTimer = time.AfterFunc(
-			backoff.JitDuration(
-				r.options.TaskRedispatchInterval(),
-				r.options.TaskRedispatchIntervalJitterCoefficient(),
-			),
-			func() {
-				r.Lock()
-				defer r.Unlock()
-				r.redispatchTimer = nil
-
-				select {
-				case r.redispatchCh <- redispatchNotification{
-					targetSize: 0,
-					doneCh:     nil,
-				}:
-				default:
-				}
-			},
-		)
+	if r.redispatchTimer != nil || r.isStopped() {
+		return
 	}
+
+	r.redispatchTimer = time.AfterFunc(
+		backoff.JitDuration(
+			r.options.TaskRedispatchInterval(),
+			r.options.TaskRedispatchIntervalJitterCoefficient(),
+		),
+		func() {
+			r.Lock()
+			defer r.Unlock()
+			r.redispatchTimer = nil
+
+			select {
+			case r.redispatchCh <- redispatchNotification{
+				targetSize: 0,
+				doneCh:     nil,
+			}:
+			default:
+			}
+		},
+	)
 }
 
 func (r *redispatcherImpl) sizeLocked() int {

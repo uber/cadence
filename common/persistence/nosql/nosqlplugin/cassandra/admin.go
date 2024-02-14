@@ -27,9 +27,8 @@ import (
 	"os"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/tools/cassandra"
@@ -43,7 +42,7 @@ const (
 var _ nosqlplugin.AdminDB = (*cdb)(nil)
 
 func (db *cdb) SetupTestDatabase(schemaBaseDir string) error {
-	err := createCassandraKeyspace(db.session, db.cfg.Keyspace, 1, true)
+	err := db.createCassandraKeyspace(db.session, db.cfg.Keyspace, 1, true)
 	if err != nil {
 		return err
 	}
@@ -89,7 +88,7 @@ func (db *cdb) loadVisibilitySchema(fileNames []string, schemaBaseDir string) er
 }
 
 func (db *cdb) TeardownTestDatabase() error {
-	err := dropCassandraKeyspace(db.session, db.cfg.Keyspace)
+	err := db.dropCassandraKeyspace(db.session, db.cfg.Keyspace)
 	if err != nil {
 		return err
 	}
@@ -98,34 +97,34 @@ func (db *cdb) TeardownTestDatabase() error {
 }
 
 // createCassandraKeyspace creates the keyspace using this session for given replica count
-func createCassandraKeyspace(s gocql.Session, keyspace string, replicas int, overwrite bool) (err error) {
+func (db *cdb) createCassandraKeyspace(s gocql.Session, keyspace string, replicas int, overwrite bool) (err error) {
 	// if overwrite flag is set, drop the keyspace and create a new one
 	if overwrite {
-		err = dropCassandraKeyspace(s, keyspace)
+		err = db.dropCassandraKeyspace(s, keyspace)
 		if err != nil {
-			log.Error(`drop keyspace error`, err)
+			db.logger.Error(`drop keyspace error`, tag.Error(err))
 			return
 		}
 	}
 	err = s.Query(fmt.Sprintf(`CREATE KEYSPACE IF NOT EXISTS %s WITH replication = {
 		'class' : 'SimpleStrategy', 'replication_factor' : %d}`, keyspace, replicas)).Exec()
 	if err != nil {
-		log.Error(`create keyspace error`, err)
+		db.logger.Error(`create keyspace error`, tag.Error(err))
 		return
 	}
-	log.WithField(`keyspace`, keyspace).Debug(`created namespace`)
+	db.logger.Debugf("created namespace %s with replication factor %d", keyspace, replicas)
 
 	return
 }
 
 // dropCassandraKeyspace drops the given keyspace, if it exists
-func dropCassandraKeyspace(s gocql.Session, keyspace string) (err error) {
+func (db *cdb) dropCassandraKeyspace(s gocql.Session, keyspace string) (err error) {
 	err = s.Query(fmt.Sprintf("DROP KEYSPACE IF EXISTS %s", keyspace)).Exec()
 	if err != nil {
-		log.Error(`drop keyspace error`, err)
+		db.logger.Error(`drop keyspace error`, tag.Error(err))
 		return
 	}
-	log.WithField(`keyspace`, keyspace).Info(`dropped namespace`)
+	db.logger.Debugf("dropped namespace %s", keyspace)
 	return
 }
 

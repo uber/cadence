@@ -46,11 +46,8 @@ import (
 	"github.com/uber/cadence/service/history/reset"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
+	"github.com/uber/cadence/service/history/workflowcache"
 	"github.com/uber/cadence/service/worker/archiver"
-)
-
-const (
-	defaultProcessingQueueLevel = 0
 )
 
 var (
@@ -60,29 +57,27 @@ var (
 	maximumTransferTaskKey = newTransferTaskKey(math.MaxInt64)
 )
 
-type (
-	transferQueueProcessor struct {
-		shard         shard.Context
-		historyEngine engine.Engine
-		taskProcessor task.Processor
+type transferQueueProcessor struct {
+	shard         shard.Context
+	historyEngine engine.Engine
+	taskProcessor task.Processor
 
-		config             *config.Config
-		currentClusterName string
+	config             *config.Config
+	currentClusterName string
 
-		metricsClient metrics.Client
-		logger        log.Logger
+	metricsClient metrics.Client
+	logger        log.Logger
 
-		status       int32
-		shutdownChan chan struct{}
-		shutdownWG   sync.WaitGroup
+	status       int32
+	shutdownChan chan struct{}
+	shutdownWG   sync.WaitGroup
 
-		ackLevel               int64
-		taskAllocator          TaskAllocator
-		activeTaskExecutor     task.Executor
-		activeQueueProcessor   *transferQueueProcessorBase
-		standbyQueueProcessors map[string]*transferQueueProcessorBase
-	}
-)
+	ackLevel               int64
+	taskAllocator          TaskAllocator
+	activeTaskExecutor     task.Executor
+	activeQueueProcessor   *transferQueueProcessorBase
+	standbyQueueProcessors map[string]*transferQueueProcessorBase
+}
 
 // NewTransferQueueProcessor creates a new transfer QueueProcessor
 func NewTransferQueueProcessor(
@@ -93,6 +88,7 @@ func NewTransferQueueProcessor(
 	workflowResetter reset.WorkflowResetter,
 	archivalClient archiver.Client,
 	executionCheck invariant.Invariant,
+	wfIDCache workflowcache.WFCache,
 ) Processor {
 	logger := shard.GetLogger().WithTags(tag.ComponentTransferQueue)
 	currentClusterName := shard.GetClusterMetadata().GetCurrentClusterName()
@@ -106,6 +102,7 @@ func NewTransferQueueProcessor(
 		workflowResetter,
 		logger,
 		config,
+		wfIDCache,
 	)
 
 	activeQueueProcessor := newTransferQueueActiveProcessor(
@@ -150,19 +147,15 @@ func NewTransferQueueProcessor(
 	}
 
 	return &transferQueueProcessor{
-		shard:         shard,
-		historyEngine: historyEngine,
-		taskProcessor: taskProcessor,
-
-		config:             config,
-		currentClusterName: currentClusterName,
-
-		metricsClient: shard.GetMetricsClient(),
-		logger:        logger,
-
-		status:       common.DaemonStatusInitialized,
-		shutdownChan: make(chan struct{}),
-
+		shard:                  shard,
+		historyEngine:          historyEngine,
+		taskProcessor:          taskProcessor,
+		config:                 config,
+		currentClusterName:     currentClusterName,
+		metricsClient:          shard.GetMetricsClient(),
+		logger:                 logger,
+		status:                 common.DaemonStatusInitialized,
+		shutdownChan:           make(chan struct{}),
 		ackLevel:               shard.GetTransferAckLevel(),
 		taskAllocator:          taskAllocator,
 		activeTaskExecutor:     activeTaskExecutor,
@@ -190,19 +183,29 @@ func (t *transferQueueProcessor) Stop() {
 		return
 	}
 
+	if !t.shard.GetConfig().QueueProcessorEnableGracefulSyncShutdown() {
+		t.activeQueueProcessor.Stop()
+		for _, standbyQueueProcessor := range t.standbyQueueProcessors {
+			standbyQueueProcessor.Stop()
+		}
+
+		close(t.shutdownChan)
+		common.AwaitWaitGroup(&t.shutdownWG, time.Minute)
+		return
+	}
+
+	// close the shutdown channel so processor pump goroutine drains tasks and then stop the processors
+	close(t.shutdownChan)
+	if !common.AwaitWaitGroup(&t.shutdownWG, gracefulShutdownTimeout) {
+		t.logger.Warn("transferQueueProcessor timed out on shut down", tag.LifeCycleStopTimedout)
+	}
 	t.activeQueueProcessor.Stop()
 	for _, standbyQueueProcessor := range t.standbyQueueProcessors {
 		standbyQueueProcessor.Stop()
 	}
-
-	close(t.shutdownChan)
-	common.AwaitWaitGroup(&t.shutdownWG, time.Minute)
 }
 
-func (t *transferQueueProcessor) NotifyNewTask(
-	clusterName string,
-	info *hcommon.NotifyTaskInfo,
-) {
+func (t *transferQueueProcessor) NotifyNewTask(clusterName string, info *hcommon.NotifyTaskInfo) {
 	if len(info.Tasks) == 0 {
 		return
 	}
@@ -219,9 +222,7 @@ func (t *transferQueueProcessor) NotifyNewTask(
 	standbyQueueProcessor.notifyNewTask(info)
 }
 
-func (t *transferQueueProcessor) FailoverDomain(
-	domainIDs map[string]struct{},
-) {
+func (t *transferQueueProcessor) FailoverDomain(domainIDs map[string]struct{}) {
 	// Failover queue is used to scan all inflight tasks, if queue processor is not
 	// started, there's no inflight task and we don't need to create a failover processor.
 	// Also the HandleAction will be blocked if queue processor processing loop is not running.
@@ -335,6 +336,13 @@ func (t *transferQueueProcessor) UnlockTaskProcessing() {
 	t.taskAllocator.Unlock()
 }
 
+func (t *transferQueueProcessor) drain() {
+	// before shutdown, make sure the ack level is up to date
+	if err := t.completeTransfer(); err != nil {
+		t.logger.Error("Failed to complete transfer task during shutdown", tag.Error(err))
+	}
+}
+
 func (t *transferQueueProcessor) completeTransferLoop() {
 	defer t.shutdownWG.Done()
 
@@ -344,10 +352,7 @@ func (t *transferQueueProcessor) completeTransferLoop() {
 	for {
 		select {
 		case <-t.shutdownChan:
-			// before shutdown, make sure the ack level is up to date
-			if err := t.completeTransfer(); err != nil {
-				t.logger.Error("Error complete transfer task", tag.Error(err))
-			}
+			t.drain()
 			return
 		case <-completeTimer.C:
 			for attempt := 0; attempt < t.config.TransferProcessorCompleteTransferFailureRetryCount(); attempt++ {
@@ -359,17 +364,21 @@ func (t *transferQueueProcessor) completeTransferLoop() {
 				t.logger.Error("Failed to complete transfer task", tag.Error(err))
 				if err == shard.ErrShardClosed {
 					// shard closed, trigger shutdown and bail out
-					go t.Stop()
+					if !t.shard.GetConfig().QueueProcessorEnableGracefulSyncShutdown() {
+						go t.Stop()
+						return
+					}
+
+					t.Stop()
 					return
 				}
-				backoff := time.Duration(attempt * 100)
-				time.Sleep(backoff * time.Millisecond)
 
 				select {
 				case <-t.shutdownChan:
-					// break the retry loop if shutdown chan is closed
-					break
-				default:
+					t.drain()
+					return
+				case <-time.After(time.Duration(attempt*100) * time.Millisecond):
+					// do nothing. retry loop will continue
 				}
 			}
 
@@ -417,7 +426,9 @@ func (t *transferQueueProcessor) completeTransfer() error {
 		return nil
 	}
 
-	t.metricsClient.IncCounter(metrics.TransferQueueProcessorScope, metrics.TaskBatchCompleteCounter)
+	t.metricsClient.Scope(metrics.TransferQueueProcessorScope).
+		Tagged(metrics.ShardIDTag(t.shard.GetShardID())).
+		IncCounter(metrics.TaskBatchCompleteCounter)
 
 	for {
 		pageSize := t.config.TransferTaskDeleteBatchSize()

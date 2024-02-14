@@ -1328,6 +1328,14 @@ func (v *DecisionTaskTimedOutEventAttributes) GetForkEventVersion() (o int64) {
 	return
 }
 
+// GetCause is an internal getter (TBD...)
+func (v *DecisionTaskTimedOutEventAttributes) GetCause() (o DecisionTaskTimedOutCause) {
+	if v != nil && v.Cause != nil {
+		return *v.Cause
+	}
+	return
+}
+
 // DecisionType is an internal type (TBD...)
 type DecisionType int32
 
@@ -1793,6 +1801,7 @@ type DomainConfiguration struct {
 	VisibilityArchivalStatus               *ArchivalStatus              `json:"visibilityArchivalStatus,omitempty"`
 	VisibilityArchivalURI                  string                       `json:"visibilityArchivalURI,omitempty"`
 	IsolationGroups                        *IsolationGroupConfiguration `json:"isolationGroupConfiguration,omitempty"`
+	AsyncWorkflowConfig                    *AsyncWorkflowConfiguration  `json:"asyncWorkflowConfiguration,omitempty"`
 }
 
 // GetWorkflowExecutionRetentionPeriodInDays is an internal getter (TBD...)
@@ -1857,6 +1866,13 @@ func (v *DomainConfiguration) GetIsolationGroupsConfiguration() IsolationGroupCo
 		return *v.IsolationGroups
 	}
 	return nil
+}
+
+func (v *DomainConfiguration) GetAsyncWorkflowConfiguration() AsyncWorkflowConfiguration {
+	if v.AsyncWorkflowConfig != nil {
+		return *v.AsyncWorkflowConfig
+	}
+	return AsyncWorkflowConfiguration{}
 }
 
 // DomainInfo is an internal type (TBD...)
@@ -3444,6 +3460,14 @@ func (v *ListTaskListPartitionsRequest) GetDomain() (o string) {
 	return
 }
 
+// GetTaskList is an internal getter (TBD...)
+func (v *ListTaskListPartitionsRequest) GetTaskList() (o *TaskList) {
+	if v != nil && v.TaskList != nil {
+		return v.TaskList
+	}
+	return
+}
+
 // ListTaskListPartitionsResponse is an internal type (TBD...)
 type ListTaskListPartitionsResponse struct {
 	ActivityTaskListPartitions []*TaskListPartitionMetadata `json:"activityTaskListPartitions,omitempty"`
@@ -4029,6 +4053,7 @@ type PollForDecisionTaskResponse struct {
 	StartedTimestamp          *int64                    `json:"startedTimestamp,omitempty"`
 	Queries                   map[string]*WorkflowQuery `json:"queries,omitempty"`
 	NextEventID               int64                     `json:"nextEventId,omitempty"`
+	TotalHistoryBytes         int64                     `json:"historySize,omitempty"`
 }
 
 // GetTaskToken is an internal getter (TBD...)
@@ -4075,6 +4100,13 @@ func (v *PollForDecisionTaskResponse) GetQueries() (o map[string]*WorkflowQuery)
 func (v *PollForDecisionTaskResponse) GetNextEventID() (o int64) {
 	if v != nil {
 		return v.NextEventID
+	}
+	return
+}
+
+func (v *PollForDecisionTaskResponse) GetHistorySize() (o int64) {
+	if v != nil {
+		return v.TotalHistoryBytes
 	}
 	return
 }
@@ -5897,6 +5929,15 @@ func (v *SignalWithStartWorkflowExecutionRequest) GetCronSchedule() (o string) {
 	return
 }
 
+// SignalWithStartWorkflowExecutionAsyncRequest is an internal type (TBD...)
+type SignalWithStartWorkflowExecutionAsyncRequest struct {
+	*SignalWithStartWorkflowExecutionRequest
+}
+
+// SignalWithStartWorkflowExecutionAsyncResponse is an internal type (TBD...)
+type SignalWithStartWorkflowExecutionAsyncResponse struct {
+}
+
 // SignalWorkflowExecutionRequest is an internal type (TBD...)
 type SignalWorkflowExecutionRequest struct {
 	Domain            string             `json:"domain,omitempty"`
@@ -6295,6 +6336,13 @@ func (v *StartWorkflowExecutionResponse) GetRunID() (o string) {
 		return v.RunID
 	}
 	return
+}
+
+type StartWorkflowExecutionAsyncRequest struct {
+	*StartWorkflowExecutionRequest
+}
+
+type StartWorkflowExecutionAsyncResponse struct {
 }
 
 // RestartWorkflowExecutionResponse is an internal type (TBD...)
@@ -7163,7 +7211,7 @@ type WorkflowExecutionInfo struct {
 	StartTime         *int64                        `json:"startTime,omitempty"`
 	CloseTime         *int64                        `json:"closeTime,omitempty"`
 	CloseStatus       *WorkflowExecutionCloseStatus `json:"closeStatus,omitempty"`
-	HistoryLength     int64                         `json:"historyLength,omitempty"`
+	HistoryLength     int64                         `json:"historyLength,omitempty"` //should be history count
 	ParentDomainID    *string                       `json:"parentDomainId,omitempty"`
 	ParentDomain      *string                       `json:"parentDomain,omitempty"`
 	ParentExecution   *WorkflowExecution            `json:"parentExecution,omitempty"`
@@ -8113,6 +8161,13 @@ type RespondCrossClusterTasksCompletedRequest struct {
 	TargetCluster string                      `json:"targetCluster,omitempty"`
 	TaskResponses []*CrossClusterTaskResponse `json:"taskResponses,omitempty"`
 	FetchNewTasks bool                        `json:"fetchNewTasks,omitempty"`
+}
+
+func (v *RespondCrossClusterTasksCompletedRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
+	return SerializeRequest(v)
 }
 
 // GetShardID is an internal getter (TBD...)

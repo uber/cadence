@@ -18,6 +18,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:generate mockgen -package $GOPACKAGE -destination dataVisibilityManagerInterfaces_mock.go -self_package github.com/uber/cadence/common/persistence github.com/uber/cadence/common/persistence VisibilityManager
+// Generate rate limiter wrapper.
+//go:generate gowrap gen -g -p . -i VisibilityManager -t ./wrappers/templates/ratelimited.tmpl -o wrappers/ratelimited/visibility_generated.go
+
+// Generate error injection wrapper.
+//go:generate gowrap gen -g -p . -i VisibilityManager -t ./wrappers/templates/errorinjector.tmpl -o wrappers/errorinjectors/visibility_generated.go
+
+// Generate metered wrapper.
+//go:generate gowrap gen -g -p . -i VisibilityManager -t ./wrappers/templates/metered.tmpl -o wrappers/metered/visibility_generated.go
+
 package persistence
 
 import (

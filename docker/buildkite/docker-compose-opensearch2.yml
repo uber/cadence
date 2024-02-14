@@ -2,11 +2,19 @@ version: "3.5"
 
 services:
   cassandra:
-    image: cassandra:3.11
+    image: cassandra:4.1.1
+    environment:
+      - "MAX_HEAP_SIZE=256M"
+      - "HEAP_NEWSIZE=128M"
     networks:
       services-network:
         aliases:
           - cassandra
+    healthcheck:
+      test: ["CMD", "cqlsh", "-u cassandra", "-p cassandra" ,"-e describe keyspaces"]
+      interval: 15s
+      timeout: 30s
+      retries: 10
 
   zookeeper:
     image: wurstmeister/zookeeper:3.4.6
@@ -54,9 +62,12 @@ services:
       - BUILDKITE_BUILD_ID
       - BUILDKITE_BUILD_NUMBER
     depends_on:
-      - cassandra
-      - elasticsearch
-      - kafka
+      cassandra:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_started
+      kafka:
+        condition: service_started
     volumes:
       - ../../:/cadence
       - /usr/bin/buildkite-agent:/usr/bin/buildkite-agent

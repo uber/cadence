@@ -155,7 +155,6 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 	}
 	ctrl := gomock.NewController(s.T())
 	mockDomainCache := cache.NewMockDomainCache(ctrl)
-	defer ctrl.Finish()
 	for _, tc := range testCases {
 		execManager := &mocks.ExecutionManager{}
 		execManager.On("IsWorkflowExecutionExists", mock.Anything, mock.Anything).Return(tc.getConcreteResp, tc.getConcreteErr)

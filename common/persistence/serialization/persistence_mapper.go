@@ -74,6 +74,7 @@ func ToInternalWorkflowExecutionInfo(info *WorkflowExecutionInfo) *persistence.I
 		HistorySize:                        info.GetHistorySize(),
 		FirstExecutionRunID:                info.FirstExecutionRunID.String(),
 		PartitionConfig:                    info.PartitionConfig,
+		IsCron:                             info.IsCron,
 	}
 	if info.ParentDomainID != nil {
 		result.ParentDomainID = info.ParentDomainID.String()
@@ -147,7 +148,7 @@ func FromInternalWorkflowExecutionInfo(executionInfo *persistence.InternalWorkfl
 		RetryNonRetryableErrors:            executionInfo.NonRetriableErrors,
 		EventStoreVersion:                  persistence.EventStoreVersion,
 		EventBranchToken:                   executionInfo.BranchToken,
-		AutoResetPoints:                    executionInfo.AutoResetPoints.Data,
+		AutoResetPoints:                    executionInfo.AutoResetPoints.GetData(),
 		AutoResetPointsEncoding:            string(executionInfo.AutoResetPoints.GetEncoding()),
 		SearchAttributes:                   executionInfo.SearchAttributes,
 		Memo:                               executionInfo.Memo,
@@ -156,6 +157,7 @@ func FromInternalWorkflowExecutionInfo(executionInfo *persistence.InternalWorkfl
 		InitiatedID:                        common.EmptyEventID,
 		FirstExecutionRunID:                MustParseUUID(executionInfo.FirstExecutionRunID),
 		PartitionConfig:                    executionInfo.PartitionConfig,
+		IsCron:                             executionInfo.IsCron,
 	}
 
 	if executionInfo.CompletionEvent != nil {

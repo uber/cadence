@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -45,40 +44,6 @@ type (
 	updateClusterAckLevelFn       func(task.Key) error // TODO: deprecate this in favor of updateProcessingQueueStatesFn
 	updateProcessingQueueStatesFn func([]ProcessingQueueState) error
 	queueShutdownFn               func() error
-
-	queueProcessorOptions struct {
-		BatchSize                            dynamicconfig.IntPropertyFn
-		DeleteBatchSize                      dynamicconfig.IntPropertyFn
-		MaxPollRPS                           dynamicconfig.IntPropertyFn
-		MaxPollInterval                      dynamicconfig.DurationPropertyFn
-		MaxPollIntervalJitterCoefficient     dynamicconfig.FloatPropertyFn
-		UpdateAckInterval                    dynamicconfig.DurationPropertyFn
-		UpdateAckIntervalJitterCoefficient   dynamicconfig.FloatPropertyFn
-		RedispatchInterval                   dynamicconfig.DurationPropertyFn
-		RedispatchIntervalJitterCoefficient  dynamicconfig.FloatPropertyFn
-		MaxRedispatchQueueSize               dynamicconfig.IntPropertyFn
-		MaxStartJitterInterval               dynamicconfig.DurationPropertyFn
-		SplitQueueInterval                   dynamicconfig.DurationPropertyFn
-		SplitQueueIntervalJitterCoefficient  dynamicconfig.FloatPropertyFn
-		EnableSplit                          dynamicconfig.BoolPropertyFn
-		SplitMaxLevel                        dynamicconfig.IntPropertyFn
-		EnableRandomSplitByDomainID          dynamicconfig.BoolPropertyFnWithDomainIDFilter
-		RandomSplitProbability               dynamicconfig.FloatPropertyFn
-		EnablePendingTaskSplitByDomainID     dynamicconfig.BoolPropertyFnWithDomainIDFilter
-		PendingTaskSplitThreshold            dynamicconfig.MapPropertyFn
-		EnableStuckTaskSplitByDomainID       dynamicconfig.BoolPropertyFnWithDomainIDFilter
-		StuckTaskSplitThreshold              dynamicconfig.MapPropertyFn
-		SplitLookAheadDurationByDomainID     dynamicconfig.DurationPropertyFnWithDomainIDFilter
-		PollBackoffInterval                  dynamicconfig.DurationPropertyFn
-		PollBackoffIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
-		EnablePersistQueueStates             dynamicconfig.BoolPropertyFn
-		EnableLoadQueueStates                dynamicconfig.BoolPropertyFn
-		EnableValidator                      dynamicconfig.BoolPropertyFn
-		ValidationInterval                   dynamicconfig.DurationPropertyFn
-		// MaxPendingTaskSize is used in cross cluster queue to limit the pending task count
-		MaxPendingTaskSize dynamicconfig.IntPropertyFn
-		MetricScope        int
-	}
 
 	actionNotification struct {
 		ctx                  context.Context
@@ -129,7 +94,7 @@ func newProcessorBase(
 	logger log.Logger,
 	metricsClient metrics.Client,
 ) *processorBase {
-	metricsScope := metricsClient.Scope(options.MetricScope)
+	metricsScope := metricsClient.Scope(options.MetricScope).Tagged(metrics.ShardIDTag(shard.GetShardID()))
 	return &processorBase{
 		shard:         shard,
 		taskProcessor: taskProcessor,
@@ -143,28 +108,19 @@ func newProcessorBase(
 			logger,
 			metricsScope,
 		),
-
 		options:                     options,
 		updateMaxReadLevel:          updateMaxReadLevel,
 		updateClusterAckLevel:       updateClusterAckLevel,
 		updateProcessingQueueStates: updateProcessingQueueStates,
 		queueShutdown:               queueShutdown,
-
-		logger:        logger,
-		metricsClient: metricsClient,
-		metricsScope:  metricsScope,
-
-		rateLimiter: quotas.NewDynamicRateLimiter(options.MaxPollRPS.AsFloat64()),
-
-		status:         common.DaemonStatusInitialized,
-		shutdownCh:     make(chan struct{}),
-		actionNotifyCh: make(chan actionNotification),
-
-		processingQueueCollections: newProcessingQueueCollections(
-			processingQueueStates,
-			logger,
-			metricsClient,
-		),
+		logger:                      logger,
+		metricsClient:               metricsClient,
+		metricsScope:                metricsScope,
+		rateLimiter:                 quotas.NewDynamicRateLimiter(options.MaxPollRPS.AsFloat64()),
+		status:                      common.DaemonStatusInitialized,
+		shutdownCh:                  make(chan struct{}),
+		actionNotifyCh:              make(chan actionNotification),
+		processingQueueCollections:  newProcessingQueueCollections(processingQueueStates, logger, metricsClient),
 	}
 }
 
@@ -200,7 +156,7 @@ func (p *processorBase) updateAckLevel() (bool, task.Key, error) {
 	}
 
 	if totalPengingTasks > warnPendingTasks {
-		p.logger.Warn("Too many pending tasks.")
+		p.logger.Warn("Too many pending tasks.", tag.Number(int64(totalPengingTasks)))
 	}
 	// TODO: consider move pendingTasksTime metrics from shardInfoScope to queue processor scope
 	p.metricsClient.RecordTimer(metrics.ShardInfoScope, getPendingTasksMetricIdx(p.options.MetricScope), time.Duration(totalPengingTasks))
@@ -223,9 +179,7 @@ func (p *processorBase) updateAckLevel() (bool, task.Key, error) {
 	return false, minAckLevel, nil
 }
 
-func (p *processorBase) initializeSplitPolicy(
-	lookAheadFunc lookAheadFunc,
-) ProcessingQueueSplitPolicy {
+func (p *processorBase) initializeSplitPolicy(lookAheadFunc lookAheadFunc) ProcessingQueueSplitPolicy {
 	if !p.options.EnableSplit() {
 		return nil
 	}
@@ -280,10 +234,7 @@ func (p *processorBase) initializeSplitPolicy(
 	return NewAggregatedSplitPolicy(policies...)
 }
 
-func (p *processorBase) splitProcessingQueueCollection(
-	splitPolicy ProcessingQueueSplitPolicy,
-	upsertPollTimeFn func(int, time.Time),
-) {
+func (p *processorBase) splitProcessingQueueCollection(splitPolicy ProcessingQueueSplitPolicy, upsertPollTimeFn func(int, time.Time)) {
 	defer p.emitProcessingQueueMetrics()
 
 	if splitPolicy == nil {
@@ -366,10 +317,7 @@ func (p *processorBase) addAction(ctx context.Context, action *Action) (chan act
 	}
 }
 
-func (p *processorBase) handleActionNotification(
-	notification actionNotification,
-	postActionFn func(),
-) {
+func (p *processorBase) handleActionNotification(notification actionNotification, postActionFn func()) {
 	var result *ActionResult
 	var err error
 	switch notification.action.ActionType {
@@ -460,9 +408,7 @@ func (p *processorBase) getProcessingQueueStates() *ActionResult {
 	}
 }
 
-func (p *processorBase) submitTask(
-	task task.Task,
-) (bool, error) {
+func (p *processorBase) submitTask(task task.Task) (bool, error) {
 	submitted, err := p.taskProcessor.TrySubmit(task)
 	if err != nil {
 		select {
@@ -483,33 +429,7 @@ func (p *processorBase) submitTask(
 	return true, nil
 }
 
-func newProcessingQueueCollections(
-	processingQueueStates []ProcessingQueueState,
-	logger log.Logger,
-	metricsClient metrics.Client,
-) []ProcessingQueueCollection {
-	processingQueuesMap := make(map[int][]ProcessingQueue) // level -> state
-	for _, queueState := range processingQueueStates {
-		processingQueuesMap[queueState.Level()] = append(processingQueuesMap[queueState.Level()], NewProcessingQueue(
-			queueState,
-			logger,
-			metricsClient,
-		))
-	}
-	processingQueueCollections := make([]ProcessingQueueCollection, 0, len(processingQueuesMap))
-	for level, queues := range processingQueuesMap {
-		processingQueueCollections = append(processingQueueCollections, NewProcessingQueueCollection(
-			level,
-			queues,
-		))
-	}
-
-	return processingQueueCollections
-}
-
-func getPendingTasksMetricIdx(
-	scopeIdx int,
-) int {
+func getPendingTasksMetricIdx(scopeIdx int) int {
 	switch scopeIdx {
 	case metrics.TimerActiveQueueProcessorScope:
 		return metrics.ShardInfoTimerActivePendingTasksTimer

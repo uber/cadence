@@ -23,10 +23,10 @@ package rpc
 import (
 	"time"
 
-	"github.com/uber/cadence/common/log"
-
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/peer/roundrobin"
+
+	"github.com/uber/cadence/common/log"
 )
 
 const defaultDNSRefreshInterval = time.Second * 10

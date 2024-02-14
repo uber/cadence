@@ -29,6 +29,8 @@ import (
 
 	"github.com/uber-go/tally/m3"
 	"github.com/uber-go/tally/prometheus"
+	yarpctls "go.uber.org/yarpc/api/transport/tls"
+	"gopkg.in/yaml.v2" // CAUTION: go.uber.org/config does not support yaml.v3
 
 	"github.com/uber/cadence/common/dynamicconfig"
 	c "github.com/uber/cadence/common/dynamicconfig/configstore/config"
@@ -75,6 +77,11 @@ type (
 		Authorization Authorization `yaml:"authorization"`
 		// HeaderForwardingRules defines which inbound headers to include or exclude on outbound calls
 		HeaderForwardingRules []HeaderRule `yaml:"headerForwardingRules"`
+		// Note: This is not implemented yet. It's coming in the next release.
+		// AsyncWorkflowQueues is the config for predefining async workflow queue(s)
+		// To use Async APIs for a domain first specify the queue using Admin API.
+		// Either refer to one of the predefined queues in this config or alternatively specify the queue details inline in the API call.
+		AsyncWorkflowQueues map[string]AsyncWorkflowQueueProvider `yaml:"asyncWorkflowQueues"`
 	}
 
 	HeaderRule struct {
@@ -82,34 +89,10 @@ type (
 		Match *regexp.Regexp
 	}
 
-	Authorization struct {
-		OAuthAuthorizer OAuthAuthorizer `yaml:"oauthAuthorizer"`
-		NoopAuthorizer  NoopAuthorizer  `yaml:"noopAuthorizer"`
-	}
-
 	DynamicConfig struct {
 		Client      string                              `yaml:"client"`
 		ConfigStore c.ClientConfig                      `yaml:"configstore"`
 		FileBased   dynamicconfig.FileBasedClientConfig `yaml:"filebased"`
-	}
-
-	NoopAuthorizer struct {
-		Enable bool `yaml:"enable"`
-	}
-
-	OAuthAuthorizer struct {
-		Enable bool `yaml:"enable"`
-		// Credentials to verify/create the JWT
-		JwtCredentials JwtCredentials `yaml:"jwtCredentials"`
-		// Max of TTL in the claim
-		MaxJwtTTL int64 `yaml:"maxJwtTTL"`
-	}
-
-	JwtCredentials struct {
-		// support: RS256 (RSA using SHA256)
-		Algorithm string `yaml:"algorithm"`
-		// Public Key Path for verifying JWT token passed in from external clients
-		PublicKey string `yaml:"publicKey"`
 	}
 
 	// Service contains the service specific config items
@@ -158,6 +141,11 @@ type (
 		Port uint16 `yaml:"port"`
 		// List of RPC procedures available to call using HTTP
 		Procedures []string `yaml:"procedures"`
+		// TLS allows configuring TLS/SSL for HTTP requests
+		TLS TLS `yaml:"tls"`
+		// Mode represents the TLS mode of the transport.
+		// Available modes: disabled, permissive, enforced
+		TLSMode yarpctls.Mode `yaml:"TLSMode"`
 	}
 
 	// Blobstore contains the config for blobstore
@@ -212,6 +200,8 @@ type (
 		ShardedNoSQL *ShardedNoSQL `yaml:"shardedNosql"`
 		// ElasticSearch contains the config for a ElasticSearch datastore
 		ElasticSearch *ElasticSearchConfig `yaml:"elasticsearch"`
+		// Pinot contains the config for a Pinot datastore
+		Pinot *PinotVisibilityConfig `yaml:"pinot"`
 	}
 
 	// Cassandra contains configuration to connect to Cassandra cluster
@@ -480,15 +470,22 @@ type (
 		// EnableRead whether history can be read from archival
 		EnableRead bool `yaml:"enableRead"`
 		// Provider contains the config for all history archivers
-		Provider *HistoryArchiverProvider `yaml:"provider"`
+		Provider HistoryArchiverProvider `yaml:"provider"`
 	}
 
-	// HistoryArchiverProvider contains the config for all history archivers
-	HistoryArchiverProvider struct {
-		Filestore *FilestoreArchiver `yaml:"filestore"`
-		Gstorage  *GstorageArchiver  `yaml:"gstorage"`
-		S3store   *S3Archiver        `yaml:"s3store"`
-	}
+	// HistoryArchiverProvider contains the config for all history archivers.
+	//
+	// Because archivers support external plugins, so there is no fundamental structure expected,
+	// but a top-level key per named store plugin is required, and will be used to select the
+	// config for a plugin as it is initialized.
+	//
+	// Config keys and structures expected in the main default binary include:
+	//  - FilestoreConfig: [*FilestoreArchiver], used with provider scheme [github.com/uber/cadence/common/archiver/filestore.URIScheme]
+	//  - S3storeConfig: [*S3Archiver], used with provider scheme [github.com/uber/cadence/common/archiver/s3store.URIScheme]
+	//  - "gstorage" via [github.com/uber/cadence/common/archiver/gcloud.ConfigKey]: [github.com/uber/cadence/common/archiver/gcloud.Config], used with provider scheme "gs" [github.com/uber/cadence/common/archiver/gcloud.URIScheme]
+	//
+	// For handling hardcoded config, see ToYamlNode.
+	HistoryArchiverProvider map[string]*YamlNode
 
 	// VisibilityArchival contains the config for visibility archival
 	VisibilityArchival struct {
@@ -497,25 +494,27 @@ type (
 		// EnableRead whether visibility can be read from archival
 		EnableRead bool `yaml:"enableRead"`
 		// Provider contains the config for all visibility archivers
-		Provider *VisibilityArchiverProvider `yaml:"provider"`
+		Provider VisibilityArchiverProvider `yaml:"provider"`
 	}
 
-	// VisibilityArchiverProvider contains the config for all visibility archivers
-	VisibilityArchiverProvider struct {
-		Filestore *FilestoreArchiver `yaml:"filestore"`
-		S3store   *S3Archiver        `yaml:"s3store"`
-		Gstorage  *GstorageArchiver  `yaml:"gstorage"`
-	}
+	// VisibilityArchiverProvider contains the config for all visibility archivers.
+	//
+	// Because archivers support external plugins, so there is no fundamental structure expected,
+	// but a top-level key per named store plugin is required, and will be used to select the
+	// config for a plugin as it is initialized.
+	//
+	// Config keys and structures expected in the main default binary include:
+	//  - FilestoreConfig: [*FilestoreArchiver], used with provider scheme [github.com/uber/cadence/common/archiver/filestore.URIScheme]
+	//  - S3storeConfig: [*S3Archiver], used with provider scheme [github.com/uber/cadence/common/archiver/s3store.URIScheme]
+	//  - "gstorage" via [github.com/uber/cadence/common/archiver/gcloud.ConfigKey]: [github.com/uber/cadence/common/archiver/gcloud.Config], used with provider scheme "gs" [github.com/uber/cadence/common/archiver/gcloud.URIScheme]
+	//
+	// For handling hardcoded config, see ToYamlNode.
+	VisibilityArchiverProvider map[string]*YamlNode
 
 	// FilestoreArchiver contain the config for filestore archiver
 	FilestoreArchiver struct {
 		FileMode string `yaml:"fileMode"`
 		DirMode  string `yaml:"dirMode"`
-	}
-
-	// GstorageArchiver contain the config for google storage archiver
-	GstorageArchiver struct {
-		CredentialsPath string `yaml:"credentialsPath"`
 	}
 
 	// S3Archiver contains the config for S3 archiver
@@ -568,12 +567,59 @@ type (
 		// URI is the domain default URI for visibility archiver
 		URI string `yaml:"URI"`
 	}
+
+	// YamlNode is a lazy-unmarshaler, because *yaml.Node only exists in gopkg.in/yaml.v3, not v2,
+	// and go.uber.org/config currently uses only v2.
+	YamlNode struct {
+		unmarshal func(out any) error
+	}
+
+	// AsyncWorkflowQueueProvider contains the config for an async workflow queue.
+	// Type is the implementation type of the queue provider.
+	// Config is the configuration for the queue provider.
+	// Config types and structures expected in the main default binary include:
+	// - type: "kafka", config: [*github.com/uber/cadence/common/asyncworkflow/queue/kafka.QueueConfig]]]
+	AsyncWorkflowQueueProvider struct {
+		Type   string    `yaml:"type"`
+		Config *YamlNode `yaml:"config"`
+	}
 )
 
 const (
 	// NonShardedStoreName is the shard name used for singular (non-sharded) stores
 	NonShardedStoreName = "NonShardedStore"
+
+	FilestoreConfig = "filestore"
+	S3storeConfig   = "s3store"
 )
+
+var _ yaml.Unmarshaler = (*YamlNode)(nil)
+
+func (y *YamlNode) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	y.unmarshal = unmarshal
+	return nil
+}
+
+func (y *YamlNode) Decode(out any) error {
+	return y.unmarshal(out)
+}
+
+// ToYamlNode is a bit of a hack to get a *yaml.Node for config-parsing compatibility purposes.
+// There is probably a better way to achieve this with yaml-loading compatibility, but this is at least fairly simple.
+func ToYamlNode(input any) (*YamlNode, error) {
+	data, err := yaml.Marshal(input)
+	if err != nil {
+		// should be extremely unlikely, unless yaml marshaling is customized
+		return nil, fmt.Errorf("could not serialize data to yaml: %w", err)
+	}
+	var out *YamlNode
+	err = yaml.Unmarshal(data, &out)
+	if err != nil {
+		// should not be possible
+		return nil, fmt.Errorf("could not deserialize to yaml node: %w", err)
+	}
+	return out, nil
+}
 
 func (n *NoSQL) ConvertToShardedNoSQLConfig() *ShardedNoSQL {
 	connections := make(map[string]DBShardConnection)

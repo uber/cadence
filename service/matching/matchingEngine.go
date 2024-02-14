@@ -31,10 +31,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/partition"
-	"github.com/uber/cadence/common/service"
-
 	"github.com/pborman/uuid"
 
 	"github.com/uber/cadence/client/history"
@@ -43,11 +39,14 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/client"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -94,6 +93,12 @@ type (
 		membershipResolver   membership.Resolver
 		partitioner          partition.Partitioner
 	}
+
+	// HistoryInfo consists of two integer regarding the history size and history count
+	//HistoryInfo struct {
+	//	historySize  int64
+	//	historyCount int64
+	//}
 )
 
 var (
@@ -158,10 +163,10 @@ func (e *matchingEngineImpl) Stop() {
 	}
 }
 
-func (e *matchingEngineImpl) getTaskLists(maxCount int) (lists []taskListManager) {
+func (e *matchingEngineImpl) getTaskLists(maxCount int) []taskListManager {
 	e.taskListsLock.RLock()
 	defer e.taskListsLock.RUnlock()
-	lists = make([]taskListManager, 0, len(e.taskLists))
+	lists := make([]taskListManager, 0, len(e.taskLists))
 	count := 0
 	for _, tlMgr := range e.taskLists {
 		lists = append(lists, tlMgr)
@@ -170,7 +175,7 @@ func (e *matchingEngineImpl) getTaskLists(maxCount int) (lists []taskListManager
 			break
 		}
 	}
-	return
+	return lists
 }
 
 func (e *matchingEngineImpl) String() string {
@@ -184,11 +189,7 @@ func (e *matchingEngineImpl) String() string {
 
 // Returns taskListManager for a task list. If not already cached gets new range from DB and
 // if successful creates one.
-func (e *matchingEngineImpl) getTaskListManager(
-	taskList *taskListID,
-	taskListKind *types.TaskListKind,
-) (taskListManager, error) {
-
+func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID, taskListKind *types.TaskListKind) (taskListManager, error) {
 	// The first check is an optimization so almost all requests will have a task list manager
 	// and return avoiding the write lock
 	e.taskListsLock.RLock()
@@ -197,6 +198,7 @@ func (e *matchingEngineImpl) getTaskListManager(
 		return result, nil
 	}
 	e.taskListsLock.RUnlock()
+
 	// If it gets here, write lock and check again in case a task list is created between the two locks
 	e.taskListsLock.Lock()
 	if result, ok := e.taskLists[*taskList]; ok {
@@ -234,9 +236,7 @@ func (e *matchingEngineImpl) getTaskListManager(
 	return mgr, nil
 }
 
-func (e *matchingEngineImpl) getTaskListByDomainLocked(
-	domainID string,
-) *types.GetTaskListsByDomainResponse {
+func (e *matchingEngineImpl) getTaskListByDomainLocked(domainID string) *types.GetTaskListsByDomainResponse {
 	decisionTaskListMap := make(map[string]*types.DescribeTaskListResponse)
 	activityTaskListMap := make(map[string]*types.DescribeTaskListResponse)
 	for tl, tlm := range e.taskLists {
@@ -264,11 +264,12 @@ func (e *matchingEngineImpl) updateTaskList(taskList *taskListID, mgr taskListMa
 func (e *matchingEngineImpl) removeTaskListManager(tlMgr taskListManager) {
 	id := tlMgr.TaskListID()
 	e.taskListsLock.Lock()
+	defer e.taskListsLock.Unlock()
 	currentTlMgr, ok := e.taskLists[*id]
 	if ok && tlMgr == currentTlMgr {
 		delete(e.taskLists, *id)
 	}
-	e.taskListsLock.Unlock()
+
 	e.metricsClient.Scope(metrics.MatchingTaskListMgrScope).UpdateGauge(
 		metrics.TaskListManagersGauge,
 		float64(len(e.taskLists)),
@@ -437,7 +438,7 @@ pollLoop:
 
 		taskList, err := newTaskListID(domainID, taskListName, persistence.TaskListTypeDecision)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("couldn't create new decision tasklist %w", err)
 		}
 
 		// Add frontend generated pollerID to context so tasklistMgr can support cancellation of
@@ -448,17 +449,22 @@ pollLoop:
 		task, err := e.getTask(pollerCtx, taskList, nil, taskListKind)
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
-			if err == ErrNoTasks || err == errPumpClosed {
+			if errors.Is(err, ErrNoTasks) || errors.Is(err, errPumpClosed) {
+				e.logger.Debug("no decision tasks",
+					tag.WorkflowTaskListName(taskListName),
+					tag.WorkflowDomainID(domainID),
+					tag.Error(err),
+				)
 				return emptyPollForDecisionTaskResponse, nil
 			}
-			return nil, err
+			return nil, fmt.Errorf("couldn't get task: %w", err)
 		}
 
 		e.emitForwardedFromStats(hCtx.scope, task.isForwarded(), req.GetForwardedFrom())
 
 		if task.isStarted() {
-			// tasks received from remote are already started. So, simply forward the response
 			return task.pollForDecisionResponse(), nil
+			// TODO: Maybe add history expose here?
 		}
 
 		if task.isQuery() {
@@ -488,12 +494,14 @@ pollLoop:
 				StickyExecutionEnabled:    isStickyEnabled,
 				WorkflowExecutionTaskList: mutableStateResp.TaskList,
 				BranchToken:               mutableStateResp.CurrentBranchToken,
+				HistorySize:               mutableStateResp.HistorySize,
 			}
 			return e.createPollForDecisionTaskResponse(task, resp, hCtx.scope), nil
 		}
 
 		e.emitTaskIsolationMetrics(hCtx.scope, task.event.PartitionConfig, req.GetIsolationGroup())
 		resp, err := e.recordDecisionTaskStarted(hCtx.Context, request, task)
+
 		if err != nil {
 			switch err.(type) {
 			case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError, *types.EventAlreadyStartedError:
@@ -506,9 +514,17 @@ pollLoop:
 					tag.WorkflowTaskListName(taskListName),
 					tag.WorkflowScheduleID(task.event.ScheduleID),
 					tag.TaskID(task.event.TaskID),
+					tag.Error(err),
 				)
 				task.finish(nil)
 			default:
+				e.emitInfoOrDebugLog(
+					task.event.DomainID,
+					"unknown error recording task started",
+					tag.WorkflowDomainID(domainID),
+					tag.Error(err),
+					tag.WorkflowTaskListName(taskListName),
+				)
 				task.finish(err)
 			}
 
@@ -560,9 +576,14 @@ pollLoop:
 		task, err := e.getTask(pollerCtx, taskList, maxDispatch, taskListKind)
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
-			if err == ErrNoTasks || err == errPumpClosed {
+			if errors.Is(err, ErrNoTasks) || errors.Is(err, errPumpClosed) {
 				return emptyPollForActivityTaskResponse, nil
 			}
+			e.logger.Error("Received unexpected err while getting task",
+				tag.WorkflowTaskListName(taskListName),
+				tag.WorkflowDomainID(domainID),
+				tag.Error(err),
+			)
 			return nil, err
 		}
 
@@ -877,12 +898,10 @@ func (e *matchingEngineImpl) getAllPartitions(
 }
 
 // Loads a task from persistence and wraps it in a task context
-func (e *matchingEngineImpl) getTask(
-	ctx context.Context, taskList *taskListID, maxDispatchPerSecond *float64, taskListKind *types.TaskListKind,
-) (*InternalTask, error) {
+func (e *matchingEngineImpl) getTask(ctx context.Context, taskList *taskListID, maxDispatchPerSecond *float64, taskListKind *types.TaskListKind) (*InternalTask, error) {
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("couldn't load tasklist namanger: %w", err)
 	}
 	return tlMgr.GetTask(ctx, maxDispatchPerSecond)
 }

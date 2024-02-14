@@ -862,6 +862,44 @@ func newAdminQueueCommands() []cli.Command {
 	}
 }
 
+func newAdminAsyncQueueCommands() []cli.Command {
+	return []cli.Command{
+		{
+			Name:  "get",
+			Usage: "get async workflow queue configuration of a domain",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:     FlagDomain,
+					Usage:    `domain name`,
+					Required: true,
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminGetAsyncWFConfig(c)
+			},
+		},
+		{
+			Name:  "update",
+			Usage: "upsert async workflow queue configuration of a domain",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:     FlagDomain,
+					Usage:    `domain name`,
+					Required: true,
+				},
+				cli.StringFlag{
+					Name:     FlagJSON,
+					Usage:    `AsyncWorkflowConfiguration in json format. Schema can be found in https://github.com/uber/cadence/blob/master/common/types/admin.go`,
+					Required: true,
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminUpdateAsyncWFConfig(c)
+			},
+		},
+	}
+}
+
 func newDBCommands() []cli.Command {
 	var collections cli.StringSlice = invariant.CollectionStrings()
 
@@ -875,6 +913,12 @@ func newDBCommands() []cli.Command {
 		Name:  FlagInvariantCollection,
 		Usage: "Scan collection type to use: " + strings.Join(collections, ", "),
 		Value: &collections,
+	}
+
+	verboseFlag := cli.BoolFlag{
+		Name:     FlagVerbose,
+		Usage:    "verbose output",
+		Required: false,
 	}
 
 	return []cli.Command{
@@ -893,6 +937,7 @@ func newDBCommands() []cli.Command {
 					Name:  FlagInputFileWithAlias,
 					Usage: "Input file of executions to scan in JSON format {\"DomainID\":\"x\",\"WorkflowID\":\"x\",\"RunID\":\"x\"} separated by a newline",
 				},
+				verboseFlag,
 			),
 
 			Action: func(c *cli.Context) {
@@ -940,6 +985,7 @@ func newDBCommands() []cli.Command {
 					Name:  FlagInputFileWithAlias,
 					Usage: "Input file of execution to clean in JSON format. Use `scan` command to generate list of executions.",
 				},
+				verboseFlag,
 			),
 			Action: func(c *cli.Context) {
 				AdminDBClean(c)
@@ -1317,7 +1363,7 @@ func newAdminIsolationGroupCommands() []cli.Command {
 			Usage: "sets the global isolation groups",
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:     FlagIsolationGroupJSONConfigurations,
+					Name:     FlagJSON,
 					Usage:    `the configurations to upsert: eg: [{"Name": "zone-1": "State": 2}]. To remove groups, specify an empty configuration`,
 					Required: false,
 				},
@@ -1364,7 +1410,7 @@ func newAdminIsolationGroupCommands() []cli.Command {
 					Required: true,
 				},
 				cli.StringFlag{
-					Name:     FlagIsolationGroupJSONConfigurations,
+					Name:     FlagJSON,
 					Usage:    `the configurations to upsert: eg: [{"Name": "zone-1": "State": 2}]. To remove groups, specify an empty configuration`,
 					Required: false,
 				},

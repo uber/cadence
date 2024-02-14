@@ -38,7 +38,7 @@ type (
 		suite.Suite
 		*require.Assertions
 
-		timeSource   *clock.EventTimeSource
+		timeSource   clock.MockedTimeSource
 		ttl          time.Duration
 		shutdownFlag int32
 	}
@@ -59,8 +59,8 @@ func (s *livenessSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.ttl = 2 * time.Second
-	s.timeSource = clock.NewEventTimeSource()
-	s.timeSource.Update(time.Now())
+	s.timeSource = clock.NewMockedTimeSource()
+
 	s.shutdownFlag = 0
 }
 
@@ -70,14 +70,14 @@ func (s *livenessSuite) TearDownTest() {
 
 func (s *livenessSuite) TestIsAlive_No() {
 	liveness := newLiveness(s.timeSource, s.ttl, func() { atomic.CompareAndSwapInt32(&s.shutdownFlag, 0, 1) })
-	s.timeSource.Update(time.Now().Add(s.ttl * 2))
+	s.timeSource.Advance(s.ttl * 2)
 	alive := liveness.isAlive()
 	s.False(alive)
 }
 
 func (s *livenessSuite) TestIsAlive_Yes() {
 	liveness := newLiveness(s.timeSource, s.ttl, func() { atomic.CompareAndSwapInt32(&s.shutdownFlag, 0, 1) })
-	s.timeSource.Update(time.Now().Add(s.ttl / 2))
+	s.timeSource.Advance(s.ttl / 2)
 	alive := liveness.isAlive()
 	s.True(alive)
 }
@@ -101,9 +101,8 @@ func (s *livenessSuite) TestEventLoop_Noop() {
 	liveness := newLiveness(s.timeSource, s.ttl, func() { atomic.CompareAndSwapInt32(&s.shutdownFlag, 0, 1) })
 	liveness.Start()
 
-	now := time.Now().Add(s.ttl * 4)
-	s.timeSource.Update(now)
-	liveness.markAlive(now)
+	s.timeSource.Advance(s.ttl * 4)
+	liveness.markAlive(s.timeSource.Now())
 
 	timer := time.NewTimer(s.ttl * 2)
 	select {
@@ -118,7 +117,7 @@ func (s *livenessSuite) TestEventLoop_Shutdown() {
 	liveness := newLiveness(s.timeSource, s.ttl, func() { atomic.CompareAndSwapInt32(&s.shutdownFlag, 0, 1) })
 	liveness.Start()
 
-	s.timeSource.Update(time.Now().Add(s.ttl * 4))
+	s.timeSource.Advance(s.ttl * 4)
 	<-liveness.shutdownChan
 	s.Equal(int32(1), atomic.LoadInt32(&s.shutdownFlag))
 }

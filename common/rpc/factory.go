@@ -22,17 +22,18 @@ package rpc
 
 import (
 	"crypto/tls"
+	"fmt"
 	"net"
 	nethttp "net/http"
-
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/grpc"
 	yarpchttp "go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
 	"google.golang.org/grpc/credentials"
+
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 )
 
 const defaultGRPCSizeLimit = 4 * 1024 * 1024
@@ -99,8 +100,16 @@ func NewFactory(logger log.Logger, p Params) *Factory {
 			})
 		}
 
-		httpinbound := yarpchttp.NewTransport().
-			NewInbound(p.HTTP.Address, yarpchttp.Interceptor(interceptor))
+		inboundOptions := []yarpchttp.InboundOption{yarpchttp.Interceptor(interceptor)}
+
+		if p.HTTP.TLS != nil {
+			inboundOptions = append(inboundOptions,
+				yarpchttp.InboundTLSConfiguration(p.HTTP.TLS),
+				yarpchttp.InboundTLSMode(p.HTTP.Mode))
+			logger.Info(fmt.Sprintf("Enabling HTTP TLS with Mode %q", p.HTTP.Mode))
+		}
+
+		httpinbound := yarpchttp.NewTransport().NewInbound(p.HTTP.Address, inboundOptions...)
 
 		inbounds = append(inbounds, httpinbound)
 		logger.Info("Listening for HTTP requests", tag.Address(p.HTTP.Address))

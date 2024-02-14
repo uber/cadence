@@ -26,10 +26,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/uber/cadence/common/log/tag"
-
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -251,6 +250,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ct
 			VisibilityArchivalStatus: task.Config.GetVisibilityArchivalStatus(),
 			VisibilityArchivalURI:    task.Config.GetVisibilityArchivalURI(),
 			IsolationGroups:          task.Config.GetIsolationGroupsConfiguration(),
+			AsyncWorkflowConfig:      task.Config.GetAsyncWorkflowConfiguration(),
 		}
 		if task.Config.GetBadBinaries() != nil {
 			request.Config.BadBinaries = *task.Config.GetBadBinaries()

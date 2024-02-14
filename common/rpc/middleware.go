@@ -25,14 +25,15 @@ import (
 	"encoding/json"
 	"io"
 
+	"go.uber.org/cadence/worker"
+	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/partition"
-
-	"go.uber.org/cadence/worker"
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/transport"
+	"github.com/uber/cadence/common/persistence"
 )
 
 type authOutboundMiddleware struct {
@@ -113,6 +114,28 @@ func (m *InboundMetricsMiddleware) Handle(ctx context.Context, req *transport.Re
 		metrics.TransportTag(req.Transport),
 	)
 	return h.Handle(ctx, req, resw)
+}
+
+// ComparatorYarpcKey is the const for yarpc key
+const ComparatorYarpcKey = "cadence-visibility-override"
+
+// PinotComparatorMiddleware checks the header of a grpc request, and then override the context accordingly
+// note: for Pinot Migration only (Jan. 2024)
+type PinotComparatorMiddleware struct{}
+
+func (m *PinotComparatorMiddleware) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
+	yarpcKey, _ := req.Headers.Get(ComparatorYarpcKey)
+	if yarpcKey == persistence.VisibilityOverridePrimary {
+		ctx = contextWithVisibilityOverride(ctx, persistence.VisibilityOverridePrimary)
+	} else if yarpcKey == persistence.VisibilityOverrideSecondary {
+		ctx = contextWithVisibilityOverride(ctx, persistence.VisibilityOverrideSecondary)
+	}
+	return h.Handle(ctx, req, resw)
+}
+
+// ContextWithOverride adds a value in ctx
+func contextWithVisibilityOverride(ctx context.Context, value string) context.Context {
+	return context.WithValue(ctx, persistence.ContextKey, value)
 }
 
 type overrideCallerMiddleware struct {

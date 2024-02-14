@@ -2,6 +2,15 @@
 MAKEFLAGS += --no-builtin-rules
 .SUFFIXES:
 
+# pipefail is very easy to forget about, and sadly not the default.
+# this changes that, and makes our target scripts more strict.
+#
+# make sure to include all this if overriding on the CLI, e.g.:
+# 	DO:      make SHELL='bash -eoux pipefail'
+# 	DO NOT:  make SHELL='bash -x'
+# as otherwise you will ignore all errors.
+SHELL = /bin/bash -e -u -o pipefail
+
 default: help
 
 # ###########################################
@@ -54,6 +63,7 @@ endif
 # note that vars that do not yet exist are empty, so any prerequisites defined below are ineffective here.
 $(BUILD)/lint: $(BUILD)/fmt # lint will fail if fmt fails, so fmt first
 $(BUILD)/proto-lint:
+$(BUILD)/gomod-lint:
 $(BUILD)/fmt: $(BUILD)/copyright # formatting must occur only after all other go-file-modifications are done
 $(BUILD)/copyright: $(BUILD)/codegen # must add copyright to generated code, sometimes needs re-formatting
 $(BUILD)/codegen: $(BUILD)/thrift $(BUILD)/protoc
@@ -108,10 +118,6 @@ PROJECT_ROOT = github.com/uber/cadence
 # I'd recommend not exporting this in general, to reduce the chance of accidentally using non-versioned tools.
 BIN_PATH := PATH="$(abspath $(BIN)):$(abspath $(STABLE_BIN)):$$PATH"
 
-# version, git sha, etc flags.
-# reasonable to make a :=, but it's only used in one place, so just leave it lazy or do it inline.
-GO_BUILD_LDFLAGS = $(shell ./scripts/go-build-ldflags.sh LDFLAG)
-
 # automatically gather all source files that currently exist.
 # works by ignoring everything in the parens (and does not descend into matching folders) due to `-prune`,
 # and everything else goes to the other side of the `-o` branch, which is `-print`ed.
@@ -143,9 +149,13 @@ LINT_SRC := $(filter-out %_test.go ./.gen/%, $(ALL_SRC))
 
 # downloads and builds a go-gettable tool, versioned by go.mod, and installs
 # it into the build folder, named the same as the last portion of the URL.
+#
+# unfortunately go.work and `go list -modfile=sub/module/go.mod` seem to interact badly,
+# and some versions complain about duplicates, while others simply block it outright.
+# the good news is that you can just drop that and `cd` to the folder and it works.
 define go_build_tool
 $Q echo "building $(or $(2), $(notdir $(1))) from internal/tools/go.mod..."
-$Q go build -mod=readonly -modfile=internal/tools/go.mod -o $(BIN)/$(or $(2), $(notdir $(1))) $(1)
+$Q cd internal/tools; go build -mod=readonly -o ../../$(BIN)/$(or $(2), $(notdir $(1))) $(1)
 endef
 
 # same as go_build_tool, but uses our main module file, not the tools one.
@@ -180,6 +190,11 @@ $(BIN)/mockery: internal/tools/go.mod
 $(BIN)/enumer: internal/tools/go.mod
 	$(call go_build_tool,github.com/dmarkham/enumer)
 
+# organizes imports and reformats
+$(BIN)/gci: internal/tools/go.mod
+	$(call go_build_tool,github.com/daixiang0/gci)
+
+# removes unused imports and reformats
 $(BIN)/goimports: internal/tools/go.mod
 	$(call go_build_tool,golang.org/x/tools/cmd/goimports)
 
@@ -332,9 +347,18 @@ $(BUILD)/proto-lint: $(PROTO_FILES) $(STABLE_BIN)/$(BUF_VERSION_BIN) | $(BUILD)
 	$Q cd $(PROTO_ROOT) && ../$(STABLE_BIN)/$(BUF_VERSION_BIN) lint
 	$Q touch $@
 
+# lints that go modules are as expected, e.g. parent does not import submodule.
+# tool builds that need to be in sync with the parent are partially checked through go_mod_build_tool, but should probably be checked here too
+$(BUILD)/gomod-lint: go.mod internal/tools/go.mod common/archiver/gcloud/go.mod | $(BUILD)
+	$Q # this is likely impossible as it'd be a cycle
+	$Q if grep github.com/uber/cadence/common/archiver/gcloud go.mod; then echo "gcloud submodule cannot be imported by main module" >&2; exit 1; fi
+	$Q # intentionally kept separate so the server does not include tool-only dependencies
+	$Q if grep github.com/uber/cadence/internal go.mod; then echo "internal module cannot be imported by main module" >&2; exit 1; fi
+	$Q touch $@
+
 # note that LINT_SRC is fairly fake as a prerequisite.
 # it's a coarse "you probably don't need to re-lint" filter, nothing more.
-$(BUILD)/lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
+$(BUILD)/code-lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
 	$Q echo "lint..."
 	$Q $(BIN)/revive -config revive.toml -exclude './vendor/...' -exclude './.gen/...' -formatter stylish ./...
 	$Q touch $@
@@ -352,10 +376,13 @@ $(BUILD)/lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
 # if either changes, this will need to change.
 MAYBE_TOUCH_COPYRIGHT=
 
-$(BUILD)/fmt: $(ALL_SRC) $(BIN)/goimports | $(BUILD)
-	$Q echo "goimports..."
-	$Q # use FRESH_ALL_SRC so it won't miss any generated files produced earlier
-	$Q $(BIN)/goimports -local "github.com/uber/cadence" -w $(FRESH_ALL_SRC)
+# use FRESH_ALL_SRC so it won't miss any generated files produced earlier.
+$(BUILD)/fmt: $(ALL_SRC) $(BIN)/goimports $(BIN)/gci | $(BUILD)
+	$Q echo "removing unused imports..."
+	$Q # goimports thrashes on internal/tools, sadly.  just hide it.
+	$Q $(BIN)/goimports -w $(filter-out ./internal/tools/tools.go,$(FRESH_ALL_SRC))
+	$Q echo "grouping imports..."
+	$Q $(BIN)/gci write --section standard --section 'Prefix(github.com/uber/cadence/)' --section default --section blank $(FRESH_ALL_SRC)
 	$Q touch $@
 	$Q $(MAYBE_TOUCH_COPYRIGHT)
 
@@ -384,10 +411,10 @@ endef
 # useful to actually re-run to get output again.
 # reuse the intermediates for simplicity and consistency.
 lint: ## (re)run the linter
-	$(call remake,proto-lint lint)
+	$(call remake,proto-lint gomod-lint code-lint)
 
-# intentionally not re-making, goimports is slow and it's clear when it's unnecessary
-fmt: $(BUILD)/fmt ## run goimports
+# intentionally not re-making, it's a bit slow and it's clear when it's unnecessary
+fmt: $(BUILD)/fmt ## run gofmt / organize imports / etc
 
 # not identical to the intermediate target, but does provide the same codegen (or more).
 copyright: $(BIN)/copyright | $(BUILD) ## update copyright headers
@@ -416,34 +443,34 @@ BINS  += cadence-cassandra-tool
 TOOLS += cadence-cassandra-tool
 cadence-cassandra-tool: $(BINS_DEPEND_ON)
 	$Q echo "compiling cadence-cassandra-tool with OS: $(GOOS), ARCH: $(GOARCH)"
-	$Q go build -o $@ cmd/tools/cassandra/main.go
+	$Q ./scripts/build-with-ldflags.sh -o $@ cmd/tools/cassandra/main.go
 
 BINS  += cadence-sql-tool
 TOOLS += cadence-sql-tool
 cadence-sql-tool: $(BINS_DEPEND_ON)
 	$Q echo "compiling cadence-sql-tool with OS: $(GOOS), ARCH: $(GOARCH)"
-	$Q go build -o $@ cmd/tools/sql/main.go
+	$Q ./scripts/build-with-ldflags.sh -o $@ cmd/tools/sql/main.go
 
 BINS  += cadence
 TOOLS += cadence
 cadence: $(BINS_DEPEND_ON)
 	$Q echo "compiling cadence with OS: $(GOOS), ARCH: $(GOARCH)"
-	$Q go build -ldflags '$(GO_BUILD_LDFLAGS)' -o $@ cmd/tools/cli/main.go
+	$Q ./scripts/build-with-ldflags.sh -o $@ cmd/tools/cli/main.go
 
 BINS += cadence-server
 cadence-server: $(BINS_DEPEND_ON)
 	$Q echo "compiling cadence-server with OS: $(GOOS), ARCH: $(GOARCH)"
-	$Q go build -ldflags '$(GO_BUILD_LDFLAGS)' -o $@ cmd/server/main.go
+	$Q ./scripts/build-with-ldflags.sh -o $@ cmd/server/main.go
 
 BINS += cadence-canary
 cadence-canary: $(BINS_DEPEND_ON)
 	$Q echo "compiling cadence-canary with OS: $(GOOS), ARCH: $(GOARCH)"
-	$Q go build -o $@ cmd/canary/main.go
+	$Q ./scripts/build-with-ldflags.sh -o $@ cmd/canary/main.go
 
 BINS += cadence-bench
 cadence-bench: $(BINS_DEPEND_ON)
 	$Q echo "compiling cadence-bench with OS: $(GOOS), ARCH: $(GOARCH)"
-	$Q go build -o $@ cmd/bench/main.go
+	$Q ./scripts/build-with-ldflags.sh -o $@ cmd/bench/main.go
 
 .PHONY: go-generate bins tools release clean
 
@@ -463,6 +490,24 @@ release: ## Re-generate generated code and run tests
 	$(MAKE) --no-print-directory go-generate
 	$(MAKE) --no-print-directory test
 
+build: ## Build all packages and all tests (ensures everything compiles)
+	$Q echo 'Building all packages and submodules...'
+	$Q go build ./...
+	$Q cd common/archiver/gcloud; go build ./...
+	$Q cd cmd/server; go build ./...
+	$Q # "tests" by building and then running `true`, and hides test-success output
+	$Q echo 'Building all tests (~5x slower)...'
+	$Q # intentionally not -race due to !race build tags
+	$Q go test -exec /usr/bin/true ./... >/dev/null
+	$Q cd common/archiver/gcloud; go test -exec /usr/bin/true ./... >/dev/null
+	$Q cd cmd/server; go test -exec /usr/bin/true ./... >/dev/null
+
+tidy: ## go mod tidy all packages
+	$Q # tidy in dependency order
+	$Q go mod tidy
+	$Q cd common/archiver/gcloud; go mod tidy || (echo "failed to tidy gcloud plugin, try manually copying go.mod contents into common/archiver/gcloud/go.mod and rerunning" >&2; exit 1)
+	$Q cd cmd/server; go mod tidy || (echo "failed to tidy main server module, try manually copying go.mod and common/archiver/gcloud/go.mod contents into cmd/server/go.mod and rerunning" >&2; exit 1)
+
 clean: ## Clean build products
 	rm -f $(BINS)
 	rm -Rf $(BUILD)
@@ -472,7 +517,7 @@ clean: ## Clean build products
 
 # v----- not yet cleaned up -----v
 
-.PHONY: git-submodules test bins clean cover cover_ci help
+.PHONY: git-submodules test bins build clean cover cover_ci help
 
 TOOLS_CMD_ROOT=./cmd/tools
 INTEG_TEST_ROOT=./host
@@ -497,8 +542,9 @@ endif
 
 # all directories with *_test.go files in them (exclude host/xdc)
 TEST_DIRS := $(filter-out $(INTEG_TEST_XDC_ROOT)%, $(sort $(dir $(filter %_test.go,$(ALL_SRC)))))
-# all tests other than end-to-end integration test fall into the pkg_test category
-PKG_TEST_DIRS := $(filter-out $(INTEG_TEST_ROOT)% $(OPT_OUT_TEST), $(TEST_DIRS))
+# all tests other than end-to-end integration test fall into the pkg_test category.
+# ?= allows passing specific (space-separated) dirs for faster testing
+PKG_TEST_DIRS ?= $(filter-out $(INTEG_TEST_ROOT)% $(OPT_OUT_TEST), $(TEST_DIRS))
 
 # Code coverage output files
 COVER_ROOT                      := $(BUILD)/coverage
@@ -524,45 +570,48 @@ COVER_PKGS = client common host service tools
 # pkg -> pkg/... -> github.com/uber/cadence/pkg/... -> join with commas
 GOCOVERPKG_ARG := -coverpkg="$(subst $(SPACE),$(COMMA),$(addprefix $(PROJECT_ROOT)/,$(addsuffix /...,$(COVER_PKGS))))"
 
-test: bins ## Build and run all tests. This target is for local development. The pipeline is using cover_profile target
+# iterates over a list of dirs and runs go test on each one, collecting errors as it runs.
+# this is primarily written because it's a verbose bit of boilerplate, until we switch to `go test ./...` where possible.
+# CAUTION: when changing to `go test ./...`, note that this DOES NOT test submodules.  Those must be run separately.
+define looptest
+$Q FAIL=""; for dir in $1; do \
+	go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) 2>&1 | tee -a test.log || FAIL="$$FAIL $$dir"; \
+done; test -z "$$FAIL" || (echo "Failed packages; $$FAIL"; exit 1)
+endef
+
+test: ## Build and run all tests. This target is for local development. The pipeline is using cover_profile target
 	$Q rm -f test
 	$Q rm -f test.log
 	$Q echo Running special test cases without race detector:
 	$Q go test -v ./cmd/server/cadence/
-	$Q for dir in $(PKG_TEST_DIRS); do \
-		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
-	done;
+	$Q $(call looptest,$(PKG_TEST_DIRS))
 
-test_e2e: bins
+test_e2e:
 	$Q rm -f test
 	$Q rm -f test.log
-	$Q for dir in $(INTEG_TEST_ROOT); do \
-		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
-	done;
+	$Q $(call looptest,$(INTEG_TEST_ROOT))
 
 # need to run end-to-end xdc tests with race detector off because of ringpop bug causing data race issue
-test_e2e_xdc: bins
+test_e2e_xdc:
 	$Q rm -f test
 	$Q rm -f test.log
-	$Q for dir in $(INTEG_TEST_XDC_ROOT); do \
-		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
-	done;
+	$Q $(call looptest,$(INTEG_TEST_XDC_ROOT))
 
-cover_profile: bins
+cover_profile:
 	$Q mkdir -p $(BUILD)
 	$Q mkdir -p $(COVER_ROOT)
 	$Q echo "mode: atomic" > $(UNIT_COVER_FILE)
 
 	$Q echo Running special test cases without race detector:
-	$Q go test -v ./cmd/server/cadence/
+	$Q go test ./cmd/server/cadence/
 	$Q echo Running package tests:
 	$Q for dir in $(PKG_TEST_DIRS); do \
 		mkdir -p $(BUILD)/"$$dir"; \
 		go test "$$dir" $(TEST_ARG) -coverprofile=$(BUILD)/"$$dir"/coverage.out || exit 1; \
-		cat $(BUILD)/"$$dir"/coverage.out | grep -v "^mode: \w\+" >> $(UNIT_COVER_FILE); \
+		(cat $(BUILD)/"$$dir"/coverage.out | grep -v "^mode: \w\+" >> $(UNIT_COVER_FILE)) || true; \
 	done;
 
-cover_integration_profile: bins
+cover_integration_profile:
 	$Q mkdir -p $(BUILD)
 	$Q mkdir -p $(COVER_ROOT)
 	$Q echo "mode: atomic" > $(INTEG_COVER_FILE)
@@ -572,25 +621,25 @@ cover_integration_profile: bins
 	$Q time go test $(INTEG_TEST_ROOT) $(TEST_ARG) $(TEST_TAG) -persistenceType=$(PERSISTENCE_TYPE) -sqlPluginName=$(PERSISTENCE_PLUGIN) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_DIR)/coverage.out || exit 1;
 	$Q cat $(BUILD)/$(INTEG_TEST_DIR)/coverage.out | grep -v "^mode: \w\+" >> $(INTEG_COVER_FILE)
 
-cover_ndc_profile: bins
+cover_ndc_profile:
 	$Q mkdir -p $(BUILD)
 	$Q mkdir -p $(COVER_ROOT)
 	$Q echo "mode: atomic" > $(INTEG_NDC_COVER_FILE)
 
 	$Q echo Running integration test for 3+ dc with $(PERSISTENCE_TYPE) $(PERSISTENCE_PLUGIN)
 	$Q mkdir -p $(BUILD)/$(INTEG_TEST_NDC_DIR)
-	$Q time go test -v -timeout $(TEST_TIMEOUT) $(INTEG_TEST_NDC_ROOT) $(TEST_TAG) -persistenceType=$(PERSISTENCE_TYPE) -sqlPluginName=$(PERSISTENCE_PLUGIN) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_NDC_DIR)/coverage.out -count=$(TEST_RUN_COUNT) || exit 1;
+	$Q time go test -timeout $(TEST_TIMEOUT) $(INTEG_TEST_NDC_ROOT) $(TEST_TAG) -persistenceType=$(PERSISTENCE_TYPE) -sqlPluginName=$(PERSISTENCE_PLUGIN) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_NDC_DIR)/coverage.out -count=$(TEST_RUN_COUNT) || exit 1;
 	$Q cat $(BUILD)/$(INTEG_TEST_NDC_DIR)/coverage.out | grep -v "^mode: \w\+" | grep -v "mode: set" >> $(INTEG_NDC_COVER_FILE)
 
 $(COVER_ROOT)/cover.out: $(UNIT_COVER_FILE) $(INTEG_COVER_FILE_CASS) $(INTEG_COVER_FILE_MYSQL) $(INTEG_COVER_FILE_POSTGRES) $(INTEG_NDC_COVER_FILE_CASS) $(INTEG_NDC_COVER_FILE_MYSQL) $(INTEG_NDC_COVER_FILE_POSTGRES)
 	$Q echo "mode: atomic" > $(COVER_ROOT)/cover.out
-	cat $(UNIT_COVER_FILE) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
-	cat $(INTEG_COVER_FILE_CASS) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
-	cat $(INTEG_COVER_FILE_MYSQL) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
-	cat $(INTEG_COVER_FILE_POSTGRES) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
-	cat $(INTEG_NDC_COVER_FILE_CASS) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
-	cat $(INTEG_NDC_COVER_FILE_MYSQL) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
-	cat $(INTEG_NDC_COVER_FILE_POSTGRES) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
+	cat $(UNIT_COVER_FILE) | grep -v "^mode: \w\+" | grep -vP ".gen|_generated|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_COVER_FILE_CASS) | grep -v "^mode: \w\+" | grep -vP ".gen|_generated|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_COVER_FILE_MYSQL) | grep -v "^mode: \w\+" | grep -vP ".gen|_generated|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_COVER_FILE_POSTGRES) | grep -v "^mode: \w\+" | grep -vP ".gen|_generated|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_NDC_COVER_FILE_CASS) | grep -v "^mode: \w\+" | grep -vP ".gen|_generated|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_NDC_COVER_FILE_MYSQL) | grep -v "^mode: \w\+" | grep -vP ".gen|_generated|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_NDC_COVER_FILE_POSTGRES) | grep -v "^mode: \w\+" | grep -vP ".gen|_generated|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
 
 cover: $(COVER_ROOT)/cover.out
 	go tool cover -html=$(COVER_ROOT)/cover.out;
@@ -599,12 +648,14 @@ cover_ci: $(COVER_ROOT)/cover.out $(BIN)/goveralls
 	$(BIN)/goveralls -coverprofile=$(COVER_ROOT)/cover.out -service=buildkite || echo Coveralls failed;
 
 install-schema: cadence-cassandra-tool
+	$Q echo installing schema
 	./cadence-cassandra-tool create -k cadence --rf 1
 	./cadence-cassandra-tool -k cadence setup-schema -v 0.0
 	./cadence-cassandra-tool -k cadence update-schema -d ./schema/cassandra/cadence/versioned
 	./cadence-cassandra-tool create -k cadence_visibility --rf 1
 	./cadence-cassandra-tool -k cadence_visibility setup-schema -v 0.0
 	./cadence-cassandra-tool -k cadence_visibility update-schema -d ./schema/cassandra/visibility/versioned
+	$Q echo installed schema
 
 install-schema-mysql: cadence-sql-tool
 	./cadence-sql-tool --user root --pw cadence create --db cadence

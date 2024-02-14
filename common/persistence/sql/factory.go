@@ -24,11 +24,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/uber/cadence/common/persistence/serialization"
-
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )
 

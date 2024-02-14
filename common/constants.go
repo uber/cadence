@@ -85,7 +85,15 @@ const (
 
 const (
 	// VisibilityAppName is used to find kafka topics and ES indexName for visibility
-	VisibilityAppName = "visibility"
+	VisibilityAppName      = "visibility"
+	PinotVisibilityAppName = "pinot-visibility"
+)
+
+const (
+	// ESVisibilityStoreName is used to find es advanced visibility store
+	ESVisibilityStoreName = "es-visibility"
+	// PinotVisibilityStoreName is used to find pinot advanced visibility store
+	PinotVisibilityStoreName = "pinot-visibility"
 )
 
 // This was flagged by salus as potentially hardcoded credentials. This is a false positive by the scanner and should be
@@ -149,6 +157,8 @@ const (
 	AdvancedVisibilityWritingModeOn = "on"
 	// AdvancedVisibilityWritingModeDual means write to both normal visibility and advanced visibility store
 	AdvancedVisibilityWritingModeDual = "dual"
+	// AdvancedVisibilityWritingModeTriple means write to both normal visibility and advanced visibility store, includes ES and Pinot
+	AdvancedVisibilityWritingModeTriple = "triple"
 )
 
 const (
@@ -230,9 +240,6 @@ const (
 
 const (
 	numBitsPerLevel = 3
-
-	// NoPriority is the value returned if no priority is ever assigned to the task
-	NoPriority = -1
 )
 
 const (

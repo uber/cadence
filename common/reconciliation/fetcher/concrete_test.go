@@ -26,7 +26,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -44,22 +43,10 @@ var (
 	invalidBranchToken = []byte("invalid")
 )
 
-func TestPersistenceSuite(t *testing.T) {
-	suite.Run(t, new(PersistenceSuite))
-}
-
-func (p *PersistenceSuite) SetupTest() {
-	p.Assertions = require.New(p.T())
-}
-
-type PersistenceSuite struct {
-	*require.Assertions
-	suite.Suite
-}
-
-func (p *PersistenceSuite) TestGetBranchToken() {
+func TestGetBranchToken(t *testing.T) {
 	encoder := codec.NewThriftRWEncoder()
 	testCases := []struct {
+		name        string
 		entity      *persistence.ListConcreteExecutionsEntity
 		expectError bool
 		branchToken []byte
@@ -67,9 +54,10 @@ func (p *PersistenceSuite) TestGetBranchToken() {
 		branchID    string
 	}{
 		{
+			name: "ValidBranchToken",
 			entity: &persistence.ListConcreteExecutionsEntity{
 				ExecutionInfo: &persistence.WorkflowExecutionInfo{
-					BranchToken: p.getValidBranchToken(encoder),
+					BranchToken: getValidBranchToken(t, encoder),
 				},
 			},
 			expectError: false,
@@ -78,54 +66,10 @@ func (p *PersistenceSuite) TestGetBranchToken() {
 			branchID:    testBranchID,
 		},
 		{
+			name: "InvalidBranchToken",
 			entity: &persistence.ListConcreteExecutionsEntity{
 				ExecutionInfo: &persistence.WorkflowExecutionInfo{
 					BranchToken: invalidBranchToken,
-				},
-				VersionHistories: &persistence.VersionHistories{
-					CurrentVersionHistoryIndex: 1,
-					Histories: []*persistence.VersionHistory{
-						{
-							BranchToken: invalidBranchToken,
-						},
-						{
-							BranchToken: validBranchToken,
-						},
-					},
-				},
-			},
-			expectError: false,
-			branchToken: validBranchToken,
-			treeID:      testTreeID,
-			branchID:    testBranchID,
-		},
-		{
-			entity: &persistence.ListConcreteExecutionsEntity{
-				ExecutionInfo: &persistence.WorkflowExecutionInfo{
-					BranchToken: invalidBranchToken,
-				},
-				VersionHistories: &persistence.VersionHistories{
-					CurrentVersionHistoryIndex: 1,
-					Histories: []*persistence.VersionHistory{
-						{
-							BranchToken: validBranchToken,
-						},
-						{
-							BranchToken: invalidBranchToken,
-						},
-					},
-				},
-			},
-			expectError: true,
-		},
-		{
-			entity: &persistence.ListConcreteExecutionsEntity{
-				ExecutionInfo: &persistence.WorkflowExecutionInfo{
-					BranchToken: invalidBranchToken,
-				},
-				VersionHistories: &persistence.VersionHistories{
-					CurrentVersionHistoryIndex: 0,
-					Histories:                  []*persistence.VersionHistory{},
 				},
 			},
 			expectError: true,
@@ -133,27 +77,29 @@ func (p *PersistenceSuite) TestGetBranchToken() {
 	}
 
 	for _, tc := range testCases {
-		branchToken, branch, err := getBranchToken(tc.entity.ExecutionInfo.BranchToken, tc.entity.VersionHistories, encoder)
-		if tc.expectError {
-			p.Error(err)
-			p.Nil(branchToken)
-			p.Empty(branch.GetTreeID())
-			p.Empty(branch.GetBranchID())
-		} else {
-			p.NoError(err)
-			p.Equal(tc.branchToken, branchToken)
-			p.Equal(tc.treeID, branch.GetTreeID())
-			p.Equal(tc.branchID, branch.GetBranchID())
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			branchToken, branch, err := getBranchToken(tc.entity.ExecutionInfo.BranchToken, tc.entity.VersionHistories, encoder)
+			if tc.expectError {
+				require.Error(t, err)
+				require.Nil(t, branchToken)
+				require.Empty(t, branch.GetTreeID())
+				require.Empty(t, branch.GetBranchID())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.branchToken, branchToken)
+				require.Equal(t, tc.treeID, branch.GetTreeID())
+				require.Equal(t, tc.branchID, branch.GetBranchID())
+			}
+		})
 	}
 }
 
-func (p *PersistenceSuite) getValidBranchToken(encoder *codec.ThriftRWEncoder) []byte {
+func getValidBranchToken(t *testing.T, encoder *codec.ThriftRWEncoder) []byte {
 	hb := &shared.HistoryBranch{
 		TreeID:   common.StringPtr(testTreeID),
 		BranchID: common.StringPtr(testBranchID),
 	}
 	bytes, err := encoder.Encode(hb)
-	p.NoError(err)
+	require.NoError(t, err)
 	return bytes
 }

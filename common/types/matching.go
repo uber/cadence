@@ -329,6 +329,14 @@ func (v *MatchingPollForActivityTaskRequest) GetPollRequest() (o *PollForActivit
 	return
 }
 
+// GetTaskList is an internal getter.
+func (v *MatchingPollForActivityTaskRequest) GetTaskList() (o *TaskList) {
+	if v != nil && v.PollRequest != nil {
+		return v.PollRequest.TaskList
+	}
+	return
+}
+
 // GetForwardedFrom is an internal getter (TBD...)
 func (v *MatchingPollForActivityTaskRequest) GetForwardedFrom() (o string) {
 	if v != nil {
@@ -378,6 +386,14 @@ func (v *MatchingPollForDecisionTaskRequest) GetPollRequest() (o *PollForDecisio
 	return
 }
 
+// GetTaskList is an internal getter.
+func (v *MatchingPollForDecisionTaskRequest) GetTaskList() (o *TaskList) {
+	if v != nil && v.PollRequest != nil {
+		return v.PollRequest.TaskList
+	}
+	return
+}
+
 // GetForwardedFrom is an internal getter (TBD...)
 func (v *MatchingPollForDecisionTaskRequest) GetForwardedFrom() (o string) {
 	if v != nil {
@@ -413,6 +429,7 @@ type MatchingPollForDecisionTaskResponse struct {
 	ScheduledTimestamp        *int64                    `json:"scheduledTimestamp,omitempty"`
 	StartedTimestamp          *int64                    `json:"startedTimestamp,omitempty"`
 	Queries                   map[string]*WorkflowQuery `json:"queries,omitempty"`
+	TotalHistoryBytes         int64                     `json:"currentHistorySize,omitempty"`
 }
 
 // GetWorkflowExecution is an internal getter (TBD...)
@@ -451,6 +468,14 @@ func (v *MatchingPollForDecisionTaskResponse) GetStickyExecutionEnabled() (o boo
 func (v *MatchingPollForDecisionTaskResponse) GetBranchToken() (o []byte) {
 	if v != nil && v.BranchToken != nil {
 		return v.BranchToken
+	}
+	return
+}
+
+// GetTotalHistoryBytes is an internal getter of returning the history size in bytes
+func (v *MatchingPollForDecisionTaskResponse) GetTotalHistoryBytes() (o int64) {
+	if v != nil {
+		return v.TotalHistoryBytes
 	}
 	return
 }

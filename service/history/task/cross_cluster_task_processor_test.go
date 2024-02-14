@@ -27,11 +27,10 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cluster"
@@ -69,6 +68,7 @@ func (s *crossClusterTaskProcessorSuite) SetupTest() {
 
 	s.controller = gomock.NewController(s.T())
 	s.mockShard = shard.NewTestContext(
+		s.T(),
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID: 0,
@@ -80,6 +80,7 @@ func (s *crossClusterTaskProcessorSuite) SetupTest() {
 	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(constants.TestDomainID).Return(constants.TestDomainName, nil).AnyTimes()
 
 	s.processorOptions = &CrossClusterTaskProcessorOptions{
+		Enabled:                    dynamicconfig.GetBoolPropertyFn(true),
 		MaxPendingTasks:            dynamicconfig.GetIntPropertyFn(100),
 		TaskMaxRetryCount:          dynamicconfig.GetIntPropertyFn(100),
 		TaskRedispatchInterval:     dynamicconfig.GetDurationPropertyFn(time.Hour),

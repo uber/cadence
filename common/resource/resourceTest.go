@@ -21,15 +21,14 @@
 package resource
 
 import (
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	publicservicetest "go.uber.org/cadence/.gen/go/cadence/workflowservicetest"
 	"go.uber.org/yarpc"
-	"go.uber.org/zap"
-
-	"github.com/uber/cadence/common/dynamicconfig/configstore"
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
@@ -38,14 +37,16 @@ import (
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
+	"github.com/uber/cadence/common/asyncworkflow/queue"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/domain"
+	"github.com/uber/cadence/common/dynamicconfig/configstore"
 	"github.com/uber/cadence/common/isolationgroup"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
@@ -53,6 +54,7 @@ import (
 	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
+	"github.com/uber/cadence/common/taskvalidator"
 )
 
 type (
@@ -101,6 +103,9 @@ type (
 		Partitioner         *partition.MockPartitioner
 		HostName            string
 		Logger              log.Logger
+		taskvalidator       taskvalidator.Checker
+
+		AsyncWorkflowQueueProvider *queue.MockProvider
 	}
 )
 
@@ -116,15 +121,11 @@ var (
 
 // NewTest returns a new test resource instance
 func NewTest(
+	t *testing.T,
 	controller *gomock.Controller,
 	serviceMetricsIndex metrics.ServiceIdx,
 ) *Test {
-
-	zapLogger, err := zap.NewDevelopment()
-	if err != nil {
-		panic(err)
-	}
-	logger := loggerimpl.NewLogger(zapLogger)
+	logger := testlogger.New(t)
 
 	frontendClient := frontend.NewMockClient(controller)
 	matchingClient := matching.NewMockClient(controller)
@@ -163,6 +164,8 @@ func NewTest(
 	partitionMock.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(mockZone, nil)
 
 	scope := tally.NewTestScope("test", nil)
+
+	asyncWorkflowQueueProvider := queue.NewMockProvider(controller)
 
 	return &Test{
 		MetricsScope: scope,
@@ -210,6 +213,8 @@ func NewTest(
 		// logger
 
 		Logger: logger,
+
+		AsyncWorkflowQueueProvider: asyncWorkflowQueueProvider,
 	}
 }
 
@@ -266,6 +271,11 @@ func (s *Test) GetTimeSource() clock.TimeSource {
 // GetPayloadSerializer for testing
 func (s *Test) GetPayloadSerializer() persistence.PayloadSerializer {
 	return s.PayloadSerializer
+}
+
+// GetPayloadSerializer for testing
+func (s *Test) GetTaskValidator() taskvalidator.Checker {
+	return s.taskvalidator
 }
 
 // GetMetricsClient for testing
@@ -432,6 +442,10 @@ func (s *Test) GetPartitioner() partition.Partitioner {
 // isolation-group stores
 func (s *Test) GetIsolationGroupStore() configstore.Client {
 	return s.IsolationGroupStore
+}
+
+func (s *Test) GetAsyncWorkflowQueueProvider() queue.Provider {
+	return s.AsyncWorkflowQueueProvider
 }
 
 // Finish checks whether expectations are met

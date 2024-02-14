@@ -21,14 +21,28 @@
 package thrift
 
 import (
+	"github.com/uber/cadence/.gen/go/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
-
-	"github.com/uber/cadence/.gen/go/matching"
 )
 
-// FromAddActivityTaskRequest converts internal AddActivityTaskRequest type to thrift
-func FromAddActivityTaskRequest(t *types.AddActivityTaskRequest) *matching.AddActivityTaskRequest {
+var (
+	FromMatchingDescribeTaskListResponse       = FromDescribeTaskListResponse
+	ToMatchingDescribeTaskListResponse         = ToDescribeTaskListResponse
+	FromMatchingGetTaskListsByDomainRequest    = FromGetTaskListsByDomainRequest
+	ToMatchingGetTaskListsByDomainRequest      = ToGetTaskListsByDomainRequest
+	FromMatchingGetTaskListsByDomainResponse   = FromGetTaskListsByDomainResponse
+	ToMatchingGetTaskListsByDomainResponse     = ToGetTaskListsByDomainResponse
+	FromMatchingListTaskListPartitionsResponse = FromListTaskListPartitionsResponse
+	ToMatchingListTaskListPartitionsResponse   = ToListTaskListPartitionsResponse
+	FromMatchingPollForActivityTaskResponse    = FromPollForActivityTaskResponse
+	ToMatchingPollForActivityTaskResponse      = ToPollForActivityTaskResponse
+	FromMatchingQueryWorkflowResponse          = FromQueryWorkflowResponse
+	ToMatchingQueryWorkflowResponse            = ToQueryWorkflowResponse
+)
+
+// FromMatchingAddActivityTaskRequest converts internal AddActivityTaskRequest type to thrift
+func FromMatchingAddActivityTaskRequest(t *types.AddActivityTaskRequest) *matching.AddActivityTaskRequest {
 	if t == nil {
 		return nil
 	}
@@ -46,8 +60,8 @@ func FromAddActivityTaskRequest(t *types.AddActivityTaskRequest) *matching.AddAc
 	}
 }
 
-// ToAddActivityTaskRequest converts thrift AddActivityTaskRequest type to internal
-func ToAddActivityTaskRequest(t *matching.AddActivityTaskRequest) *types.AddActivityTaskRequest {
+// ToMatchingAddActivityTaskRequest converts thrift AddActivityTaskRequest type to internal
+func ToMatchingAddActivityTaskRequest(t *matching.AddActivityTaskRequest) *types.AddActivityTaskRequest {
 	if t == nil {
 		return nil
 	}
@@ -96,8 +110,8 @@ func ToActivityTaskDispatchInfo(t *matching.ActivityTaskDispatchInfo) *types.Act
 	}
 }
 
-// FromAddDecisionTaskRequest converts internal AddDecisionTaskRequest type to thrift
-func FromAddDecisionTaskRequest(t *types.AddDecisionTaskRequest) *matching.AddDecisionTaskRequest {
+// FromMatchingAddDecisionTaskRequest converts internal AddDecisionTaskRequest type to thrift
+func FromMatchingAddDecisionTaskRequest(t *types.AddDecisionTaskRequest) *matching.AddDecisionTaskRequest {
 	if t == nil {
 		return nil
 	}
@@ -113,8 +127,8 @@ func FromAddDecisionTaskRequest(t *types.AddDecisionTaskRequest) *matching.AddDe
 	}
 }
 
-// ToAddDecisionTaskRequest converts thrift AddDecisionTaskRequest type to internal
-func ToAddDecisionTaskRequest(t *matching.AddDecisionTaskRequest) *types.AddDecisionTaskRequest {
+// ToMatchingAddDecisionTaskRequest converts thrift AddDecisionTaskRequest type to internal
+func ToMatchingAddDecisionTaskRequest(t *matching.AddDecisionTaskRequest) *types.AddDecisionTaskRequest {
 	if t == nil {
 		return nil
 	}
@@ -130,8 +144,8 @@ func ToAddDecisionTaskRequest(t *matching.AddDecisionTaskRequest) *types.AddDeci
 	}
 }
 
-// FromCancelOutstandingPollRequest converts internal CancelOutstandingPollRequest type to thrift
-func FromCancelOutstandingPollRequest(t *types.CancelOutstandingPollRequest) *matching.CancelOutstandingPollRequest {
+// FromMatchingCancelOutstandingPollRequest converts internal CancelOutstandingPollRequest type to thrift
+func FromMatchingCancelOutstandingPollRequest(t *types.CancelOutstandingPollRequest) *matching.CancelOutstandingPollRequest {
 	if t == nil {
 		return nil
 	}
@@ -143,8 +157,8 @@ func FromCancelOutstandingPollRequest(t *types.CancelOutstandingPollRequest) *ma
 	}
 }
 
-// ToCancelOutstandingPollRequest converts thrift CancelOutstandingPollRequest type to internal
-func ToCancelOutstandingPollRequest(t *matching.CancelOutstandingPollRequest) *types.CancelOutstandingPollRequest {
+// ToMatchingCancelOutstandingPollRequest converts thrift CancelOutstandingPollRequest type to internal
+func ToMatchingCancelOutstandingPollRequest(t *matching.CancelOutstandingPollRequest) *types.CancelOutstandingPollRequest {
 	if t == nil {
 		return nil
 	}
@@ -279,6 +293,7 @@ func FromMatchingPollForDecisionTaskResponse(t *types.MatchingPollForDecisionTas
 		ScheduledTimestamp:        t.ScheduledTimestamp,
 		StartedTimestamp:          t.StartedTimestamp,
 		Queries:                   FromWorkflowQueryMap(t.Queries),
+		TotalHistoryBytes:         &t.TotalHistoryBytes,
 	}
 }
 
@@ -305,6 +320,7 @@ func ToMatchingPollForDecisionTaskResponse(t *matching.PollForDecisionTaskRespon
 		ScheduledTimestamp:        t.ScheduledTimestamp,
 		StartedTimestamp:          t.StartedTimestamp,
 		Queries:                   ToWorkflowQueryMap(t.Queries),
+		TotalHistoryBytes:         t.GetTotalHistoryBytes(),
 	}
 }
 

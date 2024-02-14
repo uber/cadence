@@ -108,7 +108,7 @@ func (s *UpdateTaskTestSuite) TestReadSchemaDirFromEmbeddings() {
 	s.NoError(err)
 	ans, err := readSchemaDir(fsys, "0.30", "")
 	s.NoError(err)
-	s.Equal([]string{"v0.31", "v0.32", "v0.33", "v0.34", "v0.35", "v0.36"}, ans)
+	s.Equal([]string{"v0.31", "v0.32", "v0.33", "v0.34", "v0.35", "v0.36", "v0.37"}, ans)
 
 	fsys, err = fs.Sub(cassandra.SchemaFS, "visibility/versioned")
 	s.NoError(err)
@@ -120,7 +120,7 @@ func (s *UpdateTaskTestSuite) TestReadSchemaDirFromEmbeddings() {
 	s.NoError(err)
 	ans, err = readSchemaDir(fsys, "0.3", "")
 	s.NoError(err)
-	s.Equal([]string{"v0.4", "v0.5"}, ans)
+	s.Equal([]string{"v0.4", "v0.5", "v0.6"}, ans)
 
 	fsys, err = fs.Sub(mysql.SchemaFS, "v8/visibility/versioned")
 	s.NoError(err)
@@ -132,7 +132,7 @@ func (s *UpdateTaskTestSuite) TestReadSchemaDirFromEmbeddings() {
 	s.NoError(err)
 	ans, err = readSchemaDir(fsys, "0.3", "")
 	s.NoError(err)
-	s.Equal([]string{"v0.4"}, ans)
+	s.Equal([]string{"v0.4", "v0.5"}, ans)
 
 	fsys, err = fs.Sub(postgres.SchemaFS, "visibility/versioned")
 	s.NoError(err)

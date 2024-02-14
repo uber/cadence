@@ -214,6 +214,9 @@ writerLoop:
 
 				taskIDs, err := w.allocTaskIDs(batchSize)
 				if err != nil {
+					w.logger.Error("error allocating task ids",
+						tag.Error(err),
+					)
 					w.sendWriteResponse(reqs, err, nil)
 					continue writerLoop
 				}

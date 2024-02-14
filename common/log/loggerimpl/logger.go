@@ -26,18 +26,17 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"go.uber.org/zap/zaptest"
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 )
 
 type loggerImpl struct {
-	zapLogger *zap.Logger
-	skip      int
+	zapLogger     *zap.Logger
+	skip          int
+	sampleLocalFn func(int) bool
 }
 
 const (
@@ -46,16 +45,11 @@ const (
 	defaultMsgForEmpty = "none"
 )
 
+var defaultSampleFn = func(i int) bool { return rand.Intn(i) == 0 }
+
 // NewNopLogger returns a no-op logger
 func NewNopLogger() log.Logger {
-	return &loggerImpl{
-		zapLogger: zap.NewNop(),
-	}
-}
-
-// NewLoggerForTest is a helper to create new development logger in unit test
-func NewLoggerForTest(s suite.Suite) log.Logger {
-	return NewLogger(zaptest.NewLogger(s.T()))
+	return NewLogger(zap.NewNop())
 }
 
 // NewDevelopment returns a logger at debug level and log into STDERR
@@ -68,11 +62,16 @@ func NewDevelopment() (log.Logger, error) {
 }
 
 // NewLogger returns a new logger
-func NewLogger(zapLogger *zap.Logger) log.Logger {
-	return &loggerImpl{
-		zapLogger: zapLogger,
-		skip:      skipForDefaultLogger,
+func NewLogger(zapLogger *zap.Logger, opts ...Option) log.Logger {
+	impl := &loggerImpl{
+		zapLogger:     zapLogger,
+		skip:          skipForDefaultLogger,
+		sampleLocalFn: defaultSampleFn,
 	}
+	for _, opt := range opts {
+		opt(impl)
+	}
+	return impl
 }
 
 func caller(skip int) string {
@@ -113,10 +112,24 @@ func setDefaultMsg(msg string) string {
 	return msg
 }
 
+func (lg *loggerImpl) Debugf(msg string, args ...any) {
+	ce := lg.zapLogger.Check(zap.DebugLevel, setDefaultMsg(fmt.Sprintf(msg, args...)))
+	if ce == nil {
+		return
+	}
+
+	fields := lg.buildFieldsWithCallat(nil)
+	ce.Write(fields...)
+}
+
 func (lg *loggerImpl) Debug(msg string, tags ...tag.Tag) {
-	msg = setDefaultMsg(msg)
+	ce := lg.zapLogger.Check(zap.DebugLevel, setDefaultMsg(msg))
+	if ce == nil {
+		return
+	}
+
 	fields := lg.buildFieldsWithCallat(tags)
-	lg.zapLogger.Debug(msg, fields...)
+	ce.Write(fields...)
 }
 
 func (lg *loggerImpl) Info(msg string, tags ...tag.Tag) {
@@ -147,13 +160,14 @@ func (lg *loggerImpl) WithTags(tags ...tag.Tag) log.Logger {
 	fields := lg.buildFields(tags)
 	zapLogger := lg.zapLogger.With(fields...)
 	return &loggerImpl{
-		zapLogger: zapLogger,
-		skip:      lg.skip,
+		zapLogger:     zapLogger,
+		skip:          lg.skip,
+		sampleLocalFn: lg.sampleLocalFn,
 	}
 }
 
 func (lg *loggerImpl) SampleInfo(msg string, sampleRate int, tags ...tag.Tag) {
-	if rand.Intn(sampleRate) == 0 {
+	if lg.sampleLocalFn(sampleRate) {
 		msg = setDefaultMsg(msg)
 		fields := lg.buildFieldsWithCallat(tags)
 		lg.zapLogger.Info(msg, fields...)

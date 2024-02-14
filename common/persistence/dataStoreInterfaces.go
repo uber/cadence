@@ -57,6 +57,7 @@ type (
 		UpdateTaskList(ctx context.Context, request *UpdateTaskListRequest) (*UpdateTaskListResponse, error)
 		ListTaskList(ctx context.Context, request *ListTaskListRequest) (*ListTaskListResponse, error)
 		DeleteTaskList(ctx context.Context, request *DeleteTaskListRequest) error
+		GetTaskListSize(ctx context.Context, request *GetTaskListSizeRequest) (*GetTaskListSizeResponse, error)
 		CreateTasks(ctx context.Context, request *InternalCreateTasksRequest) (*CreateTasksResponse, error)
 		GetTasks(ctx context.Context, request *GetTasksRequest) (*InternalGetTasksResponse, error)
 		CompleteTask(ctx context.Context, request *CompleteTaskRequest) error
@@ -331,6 +332,7 @@ type (
 
 		// attributes which are not related to mutable state at all
 		HistorySize int64
+		IsCron      bool
 	}
 
 	// InternalWorkflowMutableState indicates workflow related state for Persistence Interface
@@ -347,7 +349,10 @@ type (
 		SignalRequestedIDs  map[string]struct{}
 		BufferedEvents      []*DataBlob
 
-		Checksum checksum.Checksum
+		// Checksum field is used by Cassandra storage
+		// ChecksumData is used by All SQL storage
+		Checksum     checksum.Checksum
+		ChecksumData *DataBlob
 	}
 
 	// InternalActivityInfo details  for Persistence Interface
@@ -463,7 +468,8 @@ type (
 
 		Condition int64
 
-		Checksum checksum.Checksum
+		Checksum     checksum.Checksum
+		ChecksumData *DataBlob
 	}
 
 	// InternalWorkflowSnapshot is used as generic workflow execution state snapshot for Persistence Interface
@@ -487,7 +493,8 @@ type (
 
 		Condition int64
 
-		Checksum checksum.Checksum
+		Checksum     checksum.Checksum
+		ChecksumData *DataBlob
 	}
 
 	// InternalAppendHistoryEventsRequest is used to append new events to workflow execution history  for Persistence Interface
@@ -787,6 +794,7 @@ type (
 		VisibilityArchivalURI    string
 		BadBinaries              *DataBlob
 		IsolationGroups          *DataBlob
+		AsyncWorkflowsConfig     *DataBlob
 	}
 
 	// InternalCreateDomainRequest is used to create the domain
@@ -940,6 +948,9 @@ func (d *DataBlob) ToNilSafeDataBlob() *DataBlob {
 }
 
 func (d *DataBlob) GetEncodingString() string {
+	if d == nil {
+		return ""
+	}
 	return string(d.Encoding)
 }
 
@@ -953,7 +964,7 @@ func (d *DataBlob) GetData() []byte {
 
 // GetEncoding returns encoding type
 func (d *DataBlob) GetEncoding() common.EncodingType {
-	encodingStr := string(d.Encoding)
+	encodingStr := d.GetEncodingString()
 
 	switch common.EncodingType(encodingStr) {
 	case common.EncodingTypeGob:

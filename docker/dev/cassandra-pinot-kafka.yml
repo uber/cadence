@@ -1,9 +1,12 @@
 version: '3'
 services:
   cassandra:
-    image: cassandra:3.11
+    image: cassandra:4.1.1
     ports:
       - "9042:9042"
+    environment:
+      - "MAX_HEAP_SIZE=256M"
+      - "HEAP_NEWSIZE=128M"
   zookeeper:
     image: zookeeper:3.5.8
     container_name: zookeeper
@@ -13,7 +16,7 @@ services:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
   pinot-controller:
-    image: apachepinot/pinot:0.11.0
+    image: apachepinot/pinot:0.12.1
     command: "StartController -zkAddress zookeeper:2181"
     container_name: pinot-controller
     restart: unless-stopped
@@ -24,7 +27,7 @@ services:
     depends_on:
       - zookeeper
   pinot-broker:
-    image: apachepinot/pinot:0.11.0
+    image: apachepinot/pinot:0.12.1
     command: "StartBroker -zkAddress zookeeper:2181"
     restart: unless-stopped
     container_name: "pinot-broker"
@@ -35,7 +38,7 @@ services:
     depends_on:
       - pinot-controller
   pinot-server:
-    image: apachepinot/pinot:0.11.0
+    image: apachepinot/pinot:0.12.1
     command: "StartServer -zkAddress zookeeper:2181"
     restart: unless-stopped
     container_name: "pinot-server"
@@ -60,3 +63,9 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9093,OUTSIDE://localhost:9092
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9093,OUTSIDE://0.0.0.0:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,OUTSIDE:PLAINTEXT
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch-oss:7.9.3
+    ports:
+      - "9200:9200"
+    environment:
+      - discovery.type=single-node
