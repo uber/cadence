@@ -969,3 +969,7 @@ func PollerGroupsConfiguration(pollers types.IsolationGroupConfiguration) Tag {
 func WorkflowIDCacheSize(size int) Tag {
 	return newInt("workflow-id-cache-size", size)
 }
+
+func AsyncWFQueueID(queueID string) Tag {
+	return newStringTag("async-wf-queue-id", queueID)
+}

@@ -405,6 +405,7 @@ func (s *Service) startAsyncWorkflowConsumerManager() common.Daemon {
 		s.GetMetricsClient(),
 		s.GetDomainCache(),
 		s.Resource.GetAsyncWorkflowQueueProvider(),
+		s.GetFrontendClient(),
 	)
 	cm.Start()
 	return cm

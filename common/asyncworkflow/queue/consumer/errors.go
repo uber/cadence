@@ -1,7 +1,7 @@
 // The MIT License (MIT)
-//
+
 // Copyright (c) 2017-2020 Uber Technologies Inc.
-//
+
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -20,21 +20,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package messaging
+package consumer
 
-type noopConsumer struct{}
+import "github.com/uber/cadence/.gen/go/sqlblobs"
 
-// NewNoopProducer returns a no-op message consumer
-func NewNoopConsumer() Consumer {
-	return &noopConsumer{}
+type UnsupportedRequestType struct {
+	Type sqlblobs.AsyncRequestType
 }
 
-func (c *noopConsumer) Start() error {
-	return nil
+func (e *UnsupportedRequestType) Error() string {
+	return "unsupported request type: " + e.Type.String()
 }
 
-func (c *noopConsumer) Stop() {}
+type UnsupportedEncoding struct {
+	EncodingType string
+}
 
-func (c *noopConsumer) Messages() <-chan Message {
-	return nil
+func (e *UnsupportedEncoding) Error() string {
+	return "unsupported encoding: " + e.EncodingType
 }
