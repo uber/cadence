@@ -241,7 +241,7 @@ func (qv *VisibilityQueryValidator) processSystemKey(expr sqlparser.Expr) (strin
 	}
 	colNameStr := colName.Name.String()
 
-	if comparisonExpr.Operator != sqlparser.EqualStr {
+	if comparisonExpr.Operator != sqlparser.EqualStr && comparisonExpr.Operator != sqlparser.NotEqualStr {
 		if _, ok := timeSystemKeys[colNameStr]; ok {
 			sqlVal, ok := comparisonExpr.Right.(*sqlparser.SQLVal)
 			if !ok {
@@ -280,10 +280,9 @@ func (qv *VisibilityQueryValidator) processSystemKey(expr sqlparser.Expr) (strin
 		} else {
 			newColVal = "-1" // -1 is the default value for all Closed workflows related fields
 		}
-		comparisonExpr.Right = &sqlparser.ColName{
-			Metadata:  colName.Metadata,
-			Name:      sqlparser.NewColIdent(newColVal),
-			Qualifier: colName.Qualifier,
+		comparisonExpr.Right = &sqlparser.SQLVal{
+			Type: sqlparser.IntVal, // or sqlparser.StrVal if you need to assign a string
+			Val:  []byte(newColVal),
 		}
 	} else {
 		if _, ok := timeSystemKeys[colNameStr]; ok {
