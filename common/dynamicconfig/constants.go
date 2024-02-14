@@ -1728,7 +1728,7 @@ const (
 	// Default value: true
 	// Allowed filters: DomainName
 	EnableRecordWorkflowExecutionUninitialized
-	// WorkflowIDCacheEnabled is the key to enable/disable caching of workflowID specific information
+	// WorkflowIDCacheExternalEnabled is the key to enable/disable caching of workflowID specific information for external requests
 	// KeyName: history.workflowIDCacheExternalEnabled
 	// Value type: Bool
 	// Default value: false
