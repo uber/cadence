@@ -77,9 +77,13 @@ func TestValidateQuery(t *testing.T) {
 			query: "Invalid SQL",
 			err:   "Invalid query.",
 		},
-		"Case8: query with missing val": {
+		"Case8-1: query with missing val": {
 			query:     "CloseTime = missing",
-			validated: "CloseTime = `-1`",
+			validated: "CloseTime = -1",
+		},
+		"Case8-2: query with not missing case": {
+			query:     "CloseTime != missing",
+			validated: "CloseTime != -1",
 		},
 		"Case9: invalid where expression": {
 			query: "InvalidWhereExpr",
@@ -184,6 +188,10 @@ func TestValidateQuery(t *testing.T) {
 		"Case15-15: value in raw string for range statement": {
 			query:     "StartTime between '2024-02-07T15:32:30Z' and '2024-02-07T15:33:30Z'",
 			validated: "StartTime between 1707319950000 and 1707320010000",
+		},
+		"Case15-16: combined time and missing case": {
+			query:     "CloseTime != missing and StartTime >= 1707662555754408145",
+			validated: "CloseTime != -1 and StartTime >= 1707662555754",
 		},
 		"Case16-1: custom int attribute greater than or equal to": {
 			query:     "CustomIntField >= 0",
