@@ -269,6 +269,10 @@ func (t *transferActiveTaskExecutor) processDecisionTask(
 	// release the context lock since we no longer need mutable state builder and
 	// the rest of logic is making RPC call, which takes time.
 	release(nil)
+
+	// Ratelimiting is not done. This is only to count the number of requests via metrics
+	t.wfIDCache.AllowInternal(task.DomainID, task.WorkflowID)
+
 	err = t.pushDecision(ctx, task, taskList, decisionTimeout, mutableState.GetExecutionInfo().PartitionConfig)
 	if _, ok := err.(*types.StickyWorkerUnavailableError); ok {
 		// sticky worker is unavailable, switch to non-sticky task list
