@@ -85,7 +85,7 @@ ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD /start-cadence.sh
 
 
-# All-in-one Cadence server
+# All-in-one Cadence server (~450mb)
 FROM cadence-server AS cadence-auto-setup
 
 RUN apk add --update --no-cache ca-certificates py3-pip mysql-client
@@ -95,6 +95,14 @@ COPY docker/start.sh /start.sh
 
 CMD /start.sh
 
+# All-in-one Cadence server with Kafka (~550mb)
+FROM cadence-auto-setup AS cadence-auto-setup-with-kafka
+
+RUN apk add openjdk11
+RUN wget https://archive.apache.org/dist/kafka/2.1.1/kafka_2.12-2.1.1.tgz -O kafka.tgz
+RUN mkdir -p kafka
+RUN tar -xvzf kafka.tgz --strip 1 -C kafka
+ENV KAFKA_HOME /etc/cadence/kafka
 
 # Cadence CLI
 FROM alpine AS cadence-cli
