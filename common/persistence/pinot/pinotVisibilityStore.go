@@ -783,7 +783,7 @@ func (v *pinotVisibilityStore) getListWorkflowExecutionsByQueryQuery(tableName s
 
 	token, err := pnt.GetNextPageToken(request.NextPageToken)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("next page token: %w", err)
 	}
 
 	query := NewPinotQuery(tableName)
@@ -810,8 +810,7 @@ func (v *pinotVisibilityStore) getListWorkflowExecutionsByQueryQuery(tableName s
 	comparExpr, orderBy := parseOrderBy(requestQuery)
 	comparExpr, err = v.pinotQueryValidator.ValidateQuery(comparExpr)
 	if err != nil {
-		v.logger.Error(fmt.Sprintf("pinot query validator error: %s, query: %s", err, request.Query))
-		return "", err
+		return "", fmt.Errorf(fmt.Sprintf("pinot query validator error: %w, query: %s", err, request.Query))
 	}
 
 	comparExpr = filterPrefix(comparExpr)
@@ -942,7 +941,7 @@ func getListWorkflowExecutionsQuery(tableName string, request *p.InternalListWor
 
 	token, err := pnt.GetNextPageToken(request.NextPageToken)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("next page token: %w", err)
 	}
 
 	from := token.From
@@ -996,7 +995,7 @@ func getListWorkflowExecutionsByTypeQuery(tableName string, request *p.InternalL
 
 	token, err := pnt.GetNextPageToken(request.NextPageToken)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("next page token: %w", err)
 	}
 
 	from := token.From
@@ -1032,7 +1031,7 @@ func getListWorkflowExecutionsByWorkflowIDQuery(tableName string, request *p.Int
 
 	token, err := pnt.GetNextPageToken(request.NextPageToken)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("next page token: %w", err)
 	}
 
 	from := token.From
@@ -1075,7 +1074,7 @@ func getListWorkflowExecutionsByStatusQuery(tableName string, request *p.Interna
 
 	token, err := pnt.GetNextPageToken(request.NextPageToken)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("next page token: %w", err)
 	}
 
 	from := token.From
