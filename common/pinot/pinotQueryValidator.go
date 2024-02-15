@@ -133,14 +133,14 @@ func (qv *VisibilityQueryValidator) validateRangeExpr(expr sqlparser.Expr) (stri
 			if lowerBound, ok := rangeCond.From.(*sqlparser.SQLVal); ok {
 				trimmed, err := trimTimeFieldValueFromNanoToMilliSeconds(lowerBound)
 				if err != nil {
-					return "", err
+					return "", fmt.Errorf("trim time field %s got error: %w", colNameStr, err)
 				}
 				rangeCond.From = trimmed
 			}
 			if upperBound, ok := rangeCond.To.(*sqlparser.SQLVal); ok {
 				trimmed, err := trimTimeFieldValueFromNanoToMilliSeconds(upperBound)
 				if err != nil {
-					return "", err
+					return "", fmt.Errorf("trim time field %s got error: %w", colNameStr, err)
 				}
 				rangeCond.To = trimmed
 			}
@@ -237,7 +237,7 @@ func (qv *VisibilityQueryValidator) processSystemKey(expr sqlparser.Expr) (strin
 
 	colName, ok := comparisonExpr.Left.(*sqlparser.ColName)
 	if !ok {
-		return "", errors.New("invalid comparison expression, left")
+		return "", fmt.Errorf("left comparison is invalid: %v", comparisonExpr.Left)
 	}
 	colNameStr := colName.Name.String()
 
@@ -245,11 +245,11 @@ func (qv *VisibilityQueryValidator) processSystemKey(expr sqlparser.Expr) (strin
 		if _, ok := timeSystemKeys[colNameStr]; ok {
 			sqlVal, ok := comparisonExpr.Right.(*sqlparser.SQLVal)
 			if !ok {
-				return "", fmt.Errorf("error: Failed to convert val")
+				return "", fmt.Errorf("right comparison is invalid: %v", comparisonExpr.Right)
 			}
 			trimmed, err := trimTimeFieldValueFromNanoToMilliSeconds(sqlVal)
 			if err != nil {
-				return "", err
+				return "", fmt.Errorf("trim time field %s got error: %w", colNameStr, err)
 			}
 			comparisonExpr.Right = trimmed
 		}
@@ -265,13 +265,13 @@ func (qv *VisibilityQueryValidator) processSystemKey(expr sqlparser.Expr) (strin
 	if !ok { // this means, the value is a string, and not surrounded by single qoute, which means, val = missing
 		colVal, ok := comparisonExpr.Right.(*sqlparser.ColName)
 		if !ok {
-			return "", fmt.Errorf("error: Failed to convert val")
+			return "", fmt.Errorf("right comparison is invalid: %v", comparisonExpr.Right)
 		}
 		colValStr := colVal.Name.String()
 
 		// double check if val is not missing
 		if colValStr != "missing" {
-			return "", fmt.Errorf("error: failed to convert val")
+			return "", fmt.Errorf("right comparison is invalid string value: %s", colValStr)
 		}
 
 		var newColVal string
@@ -288,11 +288,11 @@ func (qv *VisibilityQueryValidator) processSystemKey(expr sqlparser.Expr) (strin
 		if _, ok := timeSystemKeys[colNameStr]; ok {
 			sqlVal, ok := comparisonExpr.Right.(*sqlparser.SQLVal)
 			if !ok {
-				return "", fmt.Errorf("error: Failed to convert val")
+				return "", fmt.Errorf("right comparison is invalid/missing. key %s, right expr %v", colNameStr, comparisonExpr.Right)
 			}
 			trimmed, err := trimTimeFieldValueFromNanoToMilliSeconds(sqlVal)
 			if err != nil {
-				return "", err
+				return "", fmt.Errorf("trim time field %s got error: %w", colNameStr, err)
 			}
 			comparisonExpr.Right = trimmed
 		}

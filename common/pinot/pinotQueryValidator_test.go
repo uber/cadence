@@ -156,22 +156,22 @@ func TestValidateQuery(t *testing.T) {
 		"Case15-8: invalid string for trim": {
 			query:     "CloseTime = abc",
 			validated: "",
-			err:       "error: failed to convert val",
+			err:       "right comparison is invalid string value: abc",
 		},
 		"Case15-9: invalid value for trim": {
 			query:     "CloseTime = 123.45",
 			validated: "",
-			err:       "error: failed to parse int from SQLVal 123.45",
+			err:       "trim time field CloseTime got error: error: failed to parse int from SQLVal 123.45",
 		},
 		"Case15-10: invalid from time for range query": {
 			query:     "StartTime BETWEEN 17.50 AND 1707319950935000128",
 			validated: "",
-			err:       "error: failed to parse int from SQLVal 17.50",
+			err:       "trim time field StartTime got error: error: failed to parse int from SQLVal 17.50",
 		},
 		"Case15-11: invalid to time for range query": {
 			query:     "StartTime BETWEEN 1707319950934000128 AND 1707319950935000128.1",
 			validated: "",
-			err:       "error: failed to parse int from SQLVal 1707319950935000128.1",
+			err:       "trim time field StartTime got error: error: failed to parse int from SQLVal 1707319950935000128.1",
 		},
 		"Case15-12: value already in milliseconds": {
 			query:     "StartTime = 170731995093",
