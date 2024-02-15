@@ -288,7 +288,7 @@ func (qv *VisibilityQueryValidator) processSystemKey(expr sqlparser.Expr) (strin
 		if _, ok := timeSystemKeys[colNameStr]; ok {
 			sqlVal, ok := comparisonExpr.Right.(*sqlparser.SQLVal)
 			if !ok {
-				return "", fmt.Errorf("error: Failed to convert val")
+				return "", fmt.Errorf("error: Failed to convert val %s", colNameStr)
 			}
 			trimmed, err := trimTimeFieldValueFromNanoToMilliSeconds(sqlVal)
 			if err != nil {
