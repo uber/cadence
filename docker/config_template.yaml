@@ -304,3 +304,14 @@ authorization:
         jwtCredentials:
             algorithm: "RS256"
             publicKey: {{ default .Env.OAUTH_PUBLIC_KEY "" }}
+
+{{- if .Env.ASYNC_WF_KAFKA_QUEUE_ENABLED }}
+asyncWorkflowQueues:
+  queue1:
+    type: "kafka"
+    config:
+      connection:
+        brokers:
+          - {{ default .Env.KAFKA_SEEDS "" }}:{{ default .Env.KAFKA_PORT "9092" }}
+      topic: {{ default .Env.ASYNC_WF_KAFKA_QUEUE_TOPIC "default-topic" }}
+{{- end }}
