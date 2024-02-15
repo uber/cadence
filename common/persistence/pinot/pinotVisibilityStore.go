@@ -284,6 +284,7 @@ func (v *pinotVisibilityStore) ListOpenWorkflowExecutions(
 	}
 	query, err := getListWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request, false)
 	if err != nil {
+		v.logger.Error(fmt.Sprintf("failed to build list workflow executions query %v", err))
 		return nil, err
 	}
 
@@ -307,6 +308,7 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutions(
 
 	query, err := getListWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request, true)
 	if err != nil {
+		v.logger.Error(fmt.Sprintf("failed to build list workflow executions query %v", err))
 		return nil, err
 	}
 
@@ -328,6 +330,7 @@ func (v *pinotVisibilityStore) ListOpenWorkflowExecutionsByType(ctx context.Cont
 
 	query, err := getListWorkflowExecutionsByTypeQuery(v.pinotClient.GetTableName(), request, false)
 	if err != nil {
+		v.logger.Error(fmt.Sprintf("failed to build list workflow executions by type query %v", err))
 		return nil, err
 	}
 
@@ -349,6 +352,7 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutionsByType(ctx context.Co
 
 	query, err := getListWorkflowExecutionsByTypeQuery(v.pinotClient.GetTableName(), request, true)
 	if err != nil {
+		v.logger.Error(fmt.Sprintf("failed to build list workflow executions by type query %v", err))
 		return nil, err
 	}
 
@@ -370,6 +374,7 @@ func (v *pinotVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(ctx contex
 
 	query, err := getListWorkflowExecutionsByWorkflowIDQuery(v.pinotClient.GetTableName(), request, false)
 	if err != nil {
+		v.logger.Error(fmt.Sprintf("failed to build list workflow executions by workflowID query %v", err))
 		return nil, err
 	}
 
@@ -391,6 +396,7 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(ctx cont
 
 	query, err := getListWorkflowExecutionsByWorkflowIDQuery(v.pinotClient.GetTableName(), request, true)
 	if err != nil {
+		v.logger.Error(fmt.Sprintf("failed to build list workflow executions by workflowID query %v", err))
 		return nil, err
 	}
 
@@ -412,6 +418,7 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutionsByStatus(ctx context.
 
 	query, err := getListWorkflowExecutionsByStatusQuery(v.pinotClient.GetTableName(), request)
 	if err != nil {
+		v.logger.Error(fmt.Sprintf("failed to build list workflow executions by status query %v", err))
 		return nil, err
 	}
 
@@ -462,6 +469,7 @@ func (v *pinotVisibilityStore) ListWorkflowExecutions(ctx context.Context, reque
 
 	query, err := v.getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request)
 	if err != nil {
+		v.logger.Error(fmt.Sprintf("failed to build list workflow executions query %v", err))
 		return nil, err
 	}
 
@@ -488,6 +496,7 @@ func (v *pinotVisibilityStore) ScanWorkflowExecutions(ctx context.Context, reque
 
 	query, err := v.getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request)
 	if err != nil {
+		v.logger.Error(fmt.Sprintf("failed to build scan workflow executions query %v", err))
 		return nil, err
 	}
 
