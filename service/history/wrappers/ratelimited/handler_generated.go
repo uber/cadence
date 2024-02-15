@@ -92,10 +92,7 @@ func (h *historyHandler) DescribeWorkflowExecution(ctx context.Context, hp1 *typ
 		return
 	}
 
-	if ok := h.workflowIDCache.AllowExternal(hp1.Request.GetExecution().GetWorkflowID(), hp1.GetDomainUUID()); !ok {
-		err = &types.ServiceBusyError{Message: "Too many outstanding requests to the cadence service"}
-		return
-	}
+	h.workflowIDCache.AllowExternal(hp1.Request.GetExecution().GetWorkflowID(), hp1.GetDomainUUID())
 	return h.wrapped.DescribeWorkflowExecution(ctx, hp1)
 }
 
@@ -248,10 +245,7 @@ func (h *historyHandler) SignalWithStartWorkflowExecution(ctx context.Context, h
 		return
 	}
 
-	if ok := h.workflowIDCache.AllowExternal(hp1.SignalWithStartRequest.GetWorkflowID(), hp1.GetDomainUUID()); !ok {
-		err = &types.ServiceBusyError{Message: "Too many outstanding requests to the cadence service"}
-		return
-	}
+	h.workflowIDCache.AllowExternal(hp1.SignalWithStartRequest.GetWorkflowID(), hp1.GetDomainUUID())
 	return h.wrapped.SignalWithStartWorkflowExecution(ctx, hp1)
 }
 
@@ -272,10 +266,7 @@ func (h *historyHandler) SignalWorkflowExecution(ctx context.Context, hp1 *types
 		return
 	}
 
-	if ok := h.workflowIDCache.AllowExternal(hp1.SignalRequest.GetWorkflowExecution().GetWorkflowID(), hp1.GetDomainUUID()); !ok {
-		err = &types.ServiceBusyError{Message: "Too many outstanding requests to the cadence service"}
-		return
-	}
+	h.workflowIDCache.AllowExternal(hp1.SignalRequest.GetWorkflowExecution().GetWorkflowID(), hp1.GetDomainUUID())
 	return h.wrapped.SignalWorkflowExecution(ctx, hp1)
 }
 
@@ -301,10 +292,7 @@ func (h *historyHandler) StartWorkflowExecution(ctx context.Context, hp1 *types.
 		return
 	}
 
-	if ok := h.workflowIDCache.AllowExternal(hp1.StartRequest.GetWorkflowID(), hp1.GetDomainUUID()); !ok {
-		err = &types.ServiceBusyError{Message: "Too many outstanding requests to the cadence service"}
-		return
-	}
+	h.workflowIDCache.AllowExternal(hp1.StartRequest.GetWorkflowID(), hp1.GetDomainUUID())
 	return h.wrapped.StartWorkflowExecution(ctx, hp1)
 }
 

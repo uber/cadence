@@ -81,10 +81,7 @@ func (h *{{$decorator}}) {{$method.Declaration}} {
                 return
             }
 
-            if ok := h.workflowIDCache.AllowExternal({{$workflowID}}, {{$domainID}}); !ok {
-                err = &types.ServiceBusyError{Message: "Too many outstanding requests to the cadence service"}
-                return
-            }
+            h.workflowIDCache.AllowExternal({{$workflowID}}, {{$domainID}})
         {{- end}}
     {{- end}}
     {{$method.Pass "h.wrapped."}}
