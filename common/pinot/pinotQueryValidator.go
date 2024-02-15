@@ -133,14 +133,14 @@ func (qv *VisibilityQueryValidator) validateRangeExpr(expr sqlparser.Expr) (stri
 			if lowerBound, ok := rangeCond.From.(*sqlparser.SQLVal); ok {
 				trimmed, err := trimTimeFieldValueFromNanoToMilliSeconds(lowerBound)
 				if err != nil {
-					return "", fmt.Errorf("trim time feild %s got error: %w", colNameStr, err)
+					return "", fmt.Errorf("trim time field %s got error: %w", colNameStr, err)
 				}
 				rangeCond.From = trimmed
 			}
 			if upperBound, ok := rangeCond.To.(*sqlparser.SQLVal); ok {
 				trimmed, err := trimTimeFieldValueFromNanoToMilliSeconds(upperBound)
 				if err != nil {
-					return "", fmt.Errorf("trim time feild %s got error: %w", colNameStr, err)
+					return "", fmt.Errorf("trim time field %s got error: %w", colNameStr, err)
 				}
 				rangeCond.To = trimmed
 			}
@@ -249,7 +249,7 @@ func (qv *VisibilityQueryValidator) processSystemKey(expr sqlparser.Expr) (strin
 			}
 			trimmed, err := trimTimeFieldValueFromNanoToMilliSeconds(sqlVal)
 			if err != nil {
-				return "", fmt.Errorf("trim time feild %s got error: %w", colNameStr, err)
+				return "", fmt.Errorf("trim time field %s got error: %w", colNameStr, err)
 			}
 			comparisonExpr.Right = trimmed
 		}
@@ -292,7 +292,7 @@ func (qv *VisibilityQueryValidator) processSystemKey(expr sqlparser.Expr) (strin
 			}
 			trimmed, err := trimTimeFieldValueFromNanoToMilliSeconds(sqlVal)
 			if err != nil {
-				return "", fmt.Errorf("trim time feild %s got error: %w", colNameStr, err)
+				return "", fmt.Errorf("trim time field %s got error: %w", colNameStr, err)
 			}
 			comparisonExpr.Right = trimmed
 		}
