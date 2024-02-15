@@ -93,6 +93,7 @@ type (
 		WorkerConfig          *WorkerConfig
 		MockAdminClient       map[string]adminClient.Client
 		PinotConfig           *config.PinotVisibilityConfig
+		AsyncWFQueues         map[string]config.AsyncWorkflowQueueProvider
 	}
 
 	// MessagingClientConfig is the config for messaging config
@@ -103,9 +104,10 @@ type (
 
 	// WorkerConfig is the config for enabling/disabling cadence worker
 	WorkerConfig struct {
-		EnableArchiver   bool
-		EnableIndexer    bool
-		EnableReplicator bool
+		EnableArchiver        bool
+		EnableIndexer         bool
+		EnableReplicator      bool
+		EnableAsyncWFConsumer bool
 	}
 )
 
@@ -161,6 +163,7 @@ func NewCluster(t *testing.T, options *TestClusterConfig, logger log.Logger, par
 		MockAdminClient:               options.MockAdminClient,
 		DomainReplicationTaskExecutor: domain.NewReplicationTaskExecutor(testBase.DomainManager, clock.NewRealTimeSource(), logger),
 		AuthorizationConfig:           aConfig,
+		AsyncWFQueues:                 options.AsyncWFQueues,
 	}
 	cluster := NewCadence(cadenceParams)
 	if err := cluster.Start(); err != nil {

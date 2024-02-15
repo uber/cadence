@@ -43,6 +43,7 @@ import (
 	"github.com/uber/cadence/common"
 	carchiver "github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
+	"github.com/uber/cadence/common/asyncworkflow/queue"
 	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/cache"
 	cc "github.com/uber/cadence/common/client"
@@ -67,6 +68,7 @@ import (
 	"github.com/uber/cadence/service/matching"
 	"github.com/uber/cadence/service/worker"
 	"github.com/uber/cadence/service/worker/archiver"
+	"github.com/uber/cadence/service/worker/asyncworkflow"
 	"github.com/uber/cadence/service/worker/indexer"
 	"github.com/uber/cadence/service/worker/replicator"
 )
@@ -116,6 +118,7 @@ type (
 		authorizationConfig           config.Authorization
 		pinotConfig                   *config.PinotVisibilityConfig
 		pinotClient                   pinot.GenericClient
+		asyncWFQueues                 map[string]config.AsyncWorkflowQueueProvider
 	}
 
 	// HistoryConfig contains configs for history service
@@ -149,6 +152,7 @@ type (
 		AuthorizationConfig           config.Authorization
 		PinotConfig                   *config.PinotVisibilityConfig
 		PinotClient                   pinot.GenericClient
+		AsyncWFQueues                 map[string]config.AsyncWorkflowQueueProvider
 	}
 )
 
@@ -457,6 +461,13 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]membership.HostInfo, star
 		}
 	}
 
+	if c.asyncWFQueues != nil {
+		params.AsyncWorkflowQueueProvider, err = queue.NewAsyncQueueProvider(c.asyncWFQueues)
+		if err != nil {
+			c.logger.Fatal("error creating async queue provider", tag.Error(err))
+		}
+	}
+
 	frontendService, err := frontend.NewService(params)
 	if err != nil {
 		params.Logger.Fatal("unable to start frontend service", tag.Error(err))
@@ -600,6 +611,8 @@ func (c *cadenceImpl) startMatching(hosts map[string][]membership.HostInfo, star
 }
 
 func (c *cadenceImpl) startWorker(hosts map[string][]membership.HostInfo, startWG *sync.WaitGroup) {
+	defer c.shutdownWG.Done()
+
 	params := new(resource.Params)
 	params.Name = service.Worker
 	params.Logger = c.logger
@@ -628,6 +641,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]membership.HostInfo, startW
 		metadataManager := persistence.NewDomainPersistenceMetricsClient(c.domainManager, service.GetMetricsClient(), c.logger, &c.persistenceConfig)
 		replicatorDomainCache = cache.NewDomainCache(metadataManager, c.clusterMetadata, service.GetMetricsClient(), service.GetLogger())
 		replicatorDomainCache.Start()
+		defer replicatorDomainCache.Stop()
 		c.startWorkerReplicator(service)
 	}
 
@@ -636,11 +650,34 @@ func (c *cadenceImpl) startWorker(hosts map[string][]membership.HostInfo, startW
 		metadataProxyManager := persistence.NewDomainPersistenceMetricsClient(c.domainManager, service.GetMetricsClient(), c.logger, &c.persistenceConfig)
 		clientWorkerDomainCache = cache.NewDomainCache(metadataProxyManager, c.clusterMetadata, service.GetMetricsClient(), service.GetLogger())
 		clientWorkerDomainCache.Start()
+		defer clientWorkerDomainCache.Stop()
 		c.startWorkerClientWorker(params, service, clientWorkerDomainCache)
 	}
 
 	if c.workerConfig.EnableIndexer {
 		c.startWorkerIndexer(params, service)
+	}
+
+	var asyncWFDomainCache cache.DomainCache
+	if c.workerConfig.EnableAsyncWFConsumer {
+		queueProvider, err := queue.NewAsyncQueueProvider(c.asyncWFQueues)
+		if err != nil {
+			c.logger.Fatal("error creating async queue provider", tag.Error(err))
+		}
+
+		metadataProxyManager := persistence.NewDomainPersistenceMetricsClient(c.domainManager, service.GetMetricsClient(), c.logger, &c.persistenceConfig)
+		asyncWFDomainCache = cache.NewDomainCache(metadataProxyManager, c.clusterMetadata, service.GetMetricsClient(), service.GetLogger())
+		asyncWFDomainCache.Start()
+		cm := asyncworkflow.NewConsumerManager(
+			service.GetLogger(),
+			service.GetMetricsClient(),
+			asyncWFDomainCache,
+			queueProvider,
+			c.frontendClient,
+		)
+		cm.Start()
+		defer cm.Stop()
+		defer asyncWFDomainCache.Stop()
 	}
 
 	startWG.Done()
@@ -651,7 +688,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]membership.HostInfo, startW
 	if c.workerConfig.EnableArchiver {
 		clientWorkerDomainCache.Stop()
 	}
-	c.shutdownWG.Done()
+
 }
 
 func (c *cadenceImpl) startWorkerReplicator(svc Service) {

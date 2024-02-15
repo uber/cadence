@@ -1,0 +1,14 @@
+clusterno: 1
+historyconfig:
+  numhistoryshards: 4
+  numhistoryhosts: 1
+workerconfig:
+  enableasyncwfconsumer: true
+asyncwfqueues:
+    queue1:
+      type: "kafka"
+      config:
+        connection:
+          brokers:
+            - "${KAFKA_SEEDS}:${KAFKA_PORT}"
+        topic: test-topic1
