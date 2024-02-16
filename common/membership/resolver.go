@@ -24,7 +24,6 @@
 package membership
 
 import (
-	"errors"
 	"fmt"
 	"sync/atomic"
 
@@ -214,7 +213,7 @@ func (rpo *MultiringResolver) LookupByAddress(service, address string) (HostInfo
 		}
 	}
 	rpo.metrics.Scope(metrics.ResolverHostNotFoundScope).IncCounter(1)
-	return HostInfo{}, errors.New("host not found")
+	return HostInfo{}, fmt.Errorf("host not found in service %s: %s", service, address)
 }
 
 func (rpo *MultiringResolver) MemberCount(service string) (int, error) {
