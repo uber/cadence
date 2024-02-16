@@ -29,6 +29,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -1265,7 +1266,7 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Failure_DomainCacheEntryEr
 
 	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
 
-	resp, err := wh.getArchivedHistory(context.Background(), getHistoryRequest(nil), s.testDomainID, metrics.NoopScope(metrics.Frontend))
+	resp, err := wh.getArchivedHistory(context.Background(), getHistoryRequest(nil), s.testDomainID)
 	s.Nil(resp)
 	s.Error(err)
 }
@@ -1285,7 +1286,7 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Failure_ArchivalURIEmpty()
 
 	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
 
-	resp, err := wh.getArchivedHistory(context.Background(), getHistoryRequest(nil), s.testDomainID, metrics.NoopScope(metrics.Frontend))
+	resp, err := wh.getArchivedHistory(context.Background(), getHistoryRequest(nil), s.testDomainID)
 	s.Nil(resp)
 	s.Error(err)
 }
@@ -1305,7 +1306,7 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Failure_InvalidURI() {
 
 	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
 
-	resp, err := wh.getArchivedHistory(context.Background(), getHistoryRequest(nil), s.testDomainID, metrics.NoopScope(metrics.Frontend))
+	resp, err := wh.getArchivedHistory(context.Background(), getHistoryRequest(nil), s.testDomainID)
 	s.Nil(resp)
 	s.Error(err)
 }
@@ -1348,7 +1349,7 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Success_GetFirstPage() {
 
 	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
 
-	resp, err := wh.getArchivedHistory(context.Background(), getHistoryRequest(nil), s.testDomainID, metrics.NoopScope(metrics.Frontend))
+	resp, err := wh.getArchivedHistory(context.Background(), getHistoryRequest(nil), s.testDomainID)
 	s.NoError(err)
 	s.NotNil(resp)
 	s.NotNil(resp.History)
@@ -1837,50 +1838,6 @@ func (s *workflowHandlerSuite) TestVerifyHistoryIsComplete() {
 	}
 }
 
-func (s *workflowHandlerSuite) TestContextMetricsTags() {
-	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
-
-	tag := metrics.TransportTag("grpc")
-	ctx := metrics.TagContext(context.Background(), tag)
-	wh.CountWorkflowExecutions(ctx, nil)
-
-	snapshot := s.mockResource.MetricsScope.Snapshot()
-	for _, counter := range snapshot.Counters() {
-		if counter.Name() == "test.cadence_requests" {
-			s.Equal(tag.Value(), counter.Tags()[tag.Key()])
-			return
-		}
-	}
-	s.Fail("counter not found")
-}
-
-func (s *workflowHandlerSuite) TestSignalMetricHasSignalName() {
-	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
-
-	signalRequest := &types.SignalWorkflowExecutionRequest{
-		SignalName: "test_signal",
-	}
-	wh.SignalWorkflowExecution(context.Background(), signalRequest)
-
-	expectedMetrics := make(map[string]bool)
-	expectedMetrics["test.cadence_requests"] = false
-	expectedMetrics["test.cadence_errors_bad_request"] = false
-
-	snapshot := s.mockResource.MetricsScope.Snapshot()
-	for _, counter := range snapshot.Counters() {
-		if _, ok := expectedMetrics[counter.Name()]; ok {
-			expectedMetrics[counter.Name()] = true
-		}
-		if val, ok := counter.Tags()["signalName"]; ok {
-			s.Equal(val, "test_signal")
-		} else {
-			s.Fail("Couldn't find signalName tag")
-		}
-	}
-	s.True(expectedMetrics["test.cadence_requests"])
-	s.True(expectedMetrics["test.cadence_errors_bad_request"])
-}
-
 func (s *workflowHandlerSuite) newConfig(dynamicClient dc.Client) *frontendcfg.Config {
 	config := frontendcfg.NewConfig(
 		dc.NewCollection(
@@ -2064,4 +2021,243 @@ var describeDomainResponseServer = &types.DescribeDomainResponse{
 			},
 		},
 	},
+}
+
+func TestStartWorkflowExecutionAsync(t *testing.T) {
+	testCases := []struct {
+		name       string
+		setupMocks func(*MockProducerManager)
+		request    *types.StartWorkflowExecutionAsyncRequest
+		wantErr    bool
+	}{
+		{
+			name: "Success case",
+			setupMocks: func(mockQueue *MockProducerManager) {
+				mockProducer := &mocks.KafkaProducer{}
+				mockQueue.EXPECT().GetProducerByDomain(gomock.Any()).Return(mockProducer, nil)
+				mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil)
+			},
+			request: &types.StartWorkflowExecutionAsyncRequest{
+				StartWorkflowExecutionRequest: &types.StartWorkflowExecutionRequest{
+					Domain:     "test-domain",
+					WorkflowID: "test-workflow-id",
+					WorkflowType: &types.WorkflowType{
+						Name: "test-workflow-type",
+					},
+					TaskList: &types.TaskList{
+						Name: "test-task-list",
+					},
+					Input:                               nil,
+					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(60),
+					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+					Identity:                            "test-identity",
+					RequestID:                           uuid.New(),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Error case - failed to get async queue producer",
+			setupMocks: func(mockQueue *MockProducerManager) {
+				mockQueue.EXPECT().GetProducerByDomain(gomock.Any()).Return(nil, errors.New("test-error"))
+			},
+			request: &types.StartWorkflowExecutionAsyncRequest{
+				StartWorkflowExecutionRequest: &types.StartWorkflowExecutionRequest{
+					Domain:     "test-domain",
+					WorkflowID: "test-workflow-id",
+					WorkflowType: &types.WorkflowType{
+						Name: "test-workflow-type",
+					},
+					TaskList: &types.TaskList{
+						Name: "test-task-list",
+					},
+					Input:                               nil,
+					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(60),
+					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+					Identity:                            "test-identity",
+					RequestID:                           uuid.New(),
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error case - failed to publish message",
+			setupMocks: func(mockQueue *MockProducerManager) {
+				mockProducer := &mocks.KafkaProducer{}
+				mockQueue.EXPECT().GetProducerByDomain(gomock.Any()).Return(mockProducer, nil)
+				mockProducer.On("Publish", mock.Anything, mock.Anything).Return(errors.New("test-error"))
+			},
+			request: &types.StartWorkflowExecutionAsyncRequest{
+				StartWorkflowExecutionRequest: &types.StartWorkflowExecutionRequest{
+					Domain:     "test-domain",
+					WorkflowID: "test-workflow-id",
+					WorkflowType: &types.WorkflowType{
+						Name: "test-workflow-type",
+					},
+					TaskList: &types.TaskList{
+						Name: "test-task-list",
+					},
+					Input:                               nil,
+					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(60),
+					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+					Identity:                            "test-identity",
+					RequestID:                           uuid.New(),
+				},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockResource := resource.NewTest(t, mockCtrl, metrics.Frontend)
+			mockResource.DomainCache.EXPECT().GetDomainID(gomock.Any()).Return("test-domain-id", nil)
+			mockVersionChecker := client.NewMockVersionChecker(mockCtrl)
+			mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil)
+			mockProducerManager := NewMockProducerManager(mockCtrl)
+
+			cfg := frontendcfg.NewConfig(
+				dc.NewCollection(
+					dc.NewInMemoryClient(),
+					mockResource.GetLogger(),
+				),
+				numHistoryShards,
+				false,
+				"hostname",
+			)
+			wh := NewWorkflowHandler(mockResource, cfg, mockVersionChecker, nil)
+			wh.producerManager = mockProducerManager
+
+			tc.setupMocks(mockProducerManager)
+
+			_, err := wh.StartWorkflowExecutionAsync(context.Background(), tc.request)
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestSignalWithStartWorkflowExecutionAsync(t *testing.T) {
+	testCases := []struct {
+		name       string
+		setupMocks func(*MockProducerManager)
+		request    *types.SignalWithStartWorkflowExecutionAsyncRequest
+		wantErr    bool
+	}{
+		{
+			name: "Success case",
+			setupMocks: func(mockQueue *MockProducerManager) {
+				mockProducer := &mocks.KafkaProducer{}
+				mockQueue.EXPECT().GetProducerByDomain(gomock.Any()).Return(mockProducer, nil)
+				mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil)
+			},
+			request: &types.SignalWithStartWorkflowExecutionAsyncRequest{
+				SignalWithStartWorkflowExecutionRequest: &types.SignalWithStartWorkflowExecutionRequest{
+					Domain:     "test-domain",
+					WorkflowID: "test-workflow-id",
+					WorkflowType: &types.WorkflowType{
+						Name: "test-workflow-type",
+					},
+					TaskList: &types.TaskList{
+						Name: "test-task-list",
+					},
+					Input:                               nil,
+					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(60),
+					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+					Identity:                            "test-identity",
+					RequestID:                           uuid.New(),
+					SignalName:                          "test-signal-name",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Error case - failed to get async queue producer",
+			setupMocks: func(mockQueue *MockProducerManager) {
+				mockQueue.EXPECT().GetProducerByDomain(gomock.Any()).Return(nil, errors.New("test-error"))
+			},
+			request: &types.SignalWithStartWorkflowExecutionAsyncRequest{
+				SignalWithStartWorkflowExecutionRequest: &types.SignalWithStartWorkflowExecutionRequest{
+					Domain:     "test-domain",
+					WorkflowID: "test-workflow-id",
+					WorkflowType: &types.WorkflowType{
+						Name: "test-workflow-type",
+					},
+					TaskList: &types.TaskList{
+						Name: "test-task-list",
+					},
+					Input:                               nil,
+					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(60),
+					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+					Identity:                            "test-identity",
+					RequestID:                           uuid.New(),
+					SignalName:                          "test-signal-name",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error case - failed to publish message",
+			setupMocks: func(mockQueue *MockProducerManager) {
+				mockProducer := &mocks.KafkaProducer{}
+				mockQueue.EXPECT().GetProducerByDomain(gomock.Any()).Return(mockProducer, nil)
+				mockProducer.On("Publish", mock.Anything, mock.Anything).Return(errors.New("test-error"))
+			},
+			request: &types.SignalWithStartWorkflowExecutionAsyncRequest{
+				SignalWithStartWorkflowExecutionRequest: &types.SignalWithStartWorkflowExecutionRequest{
+					Domain:     "test-domain",
+					WorkflowID: "test-workflow-id",
+					WorkflowType: &types.WorkflowType{
+						Name: "test-workflow-type",
+					},
+					TaskList: &types.TaskList{
+						Name: "test-task-list",
+					},
+					Input:                               nil,
+					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(60),
+					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+					Identity:                            "test-identity",
+					RequestID:                           uuid.New(),
+					SignalName:                          "test-signal-name",
+				},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockResource := resource.NewTest(t, mockCtrl, metrics.Frontend)
+			mockResource.DomainCache.EXPECT().GetDomainID(gomock.Any()).Return("test-domain-id", nil)
+			mockVersionChecker := client.NewMockVersionChecker(mockCtrl)
+			mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil)
+			mockProducerManager := NewMockProducerManager(mockCtrl)
+
+			cfg := frontendcfg.NewConfig(
+				dc.NewCollection(
+					dc.NewInMemoryClient(),
+					mockResource.GetLogger(),
+				),
+				numHistoryShards,
+				false,
+				"hostname",
+			)
+			wh := NewWorkflowHandler(mockResource, cfg, mockVersionChecker, nil)
+			wh.producerManager = mockProducerManager
+
+			tc.setupMocks(mockProducerManager)
+
+			_, err := wh.SignalWithStartWorkflowExecutionAsync(context.Background(), tc.request)
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }

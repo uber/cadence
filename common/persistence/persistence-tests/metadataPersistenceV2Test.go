@@ -106,7 +106,7 @@ func (m *MetadataPersistenceSuiteV2) TestCreateDomain() {
 	historyArchivalURI := "test://history/uri"
 	visibilityArchivalStatus := types.ArchivalStatusEnabled
 	visibilityArchivalURI := "test://visibility/uri"
-	badBinaries := types.BadBinaries{map[string]*types.BadBinaryInfo{}}
+	badBinaries := types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}}
 	isGlobalDomain := false
 	configVersion := int64(0)
 	failoverVersion := int64(0)
@@ -170,7 +170,6 @@ func (m *MetadataPersistenceSuiteV2) TestCreateDomain() {
 	m.Nil(resp1.FailoverEndTime)
 	m.Equal(lastUpdateTime, resp1.LastUpdatedTime)
 
-	var isolationgroups types.IsolationGroupConfiguration
 	resp2, err2 := m.CreateDomain(
 		ctx,
 		&p.DomainInfo{
@@ -188,7 +187,8 @@ func (m *MetadataPersistenceSuiteV2) TestCreateDomain() {
 			HistoryArchivalURI:       "",
 			VisibilityArchivalStatus: types.ArchivalStatusDisabled,
 			VisibilityArchivalURI:    "",
-			IsolationGroups:          isolationgroups,
+			IsolationGroups:          types.IsolationGroupConfiguration{},
+			AsyncWorkflowConfig:      types.AsyncWorkflowConfiguration{},
 		},
 		&p.DomainReplicationConfig{},
 		isGlobalDomain,
@@ -524,6 +524,10 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 			State: types.IsolationGroupStateHealthy,
 		},
 	}
+	asyncWFCfg := types.AsyncWorkflowConfiguration{
+		Enabled:             true,
+		PredefinedQueueName: "testQueue",
+	}
 
 	id := uuid.New()
 	name := "concurrent-update-domain-test-name"
@@ -537,7 +541,7 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 	historyArchivalURI := "test://history/uri"
 	visibilityArchivalStatus := types.ArchivalStatusEnabled
 	visibilityArchivalURI := "test://visibility/uri"
-	badBinaries := types.BadBinaries{map[string]*types.BadBinaryInfo{}}
+	badBinaries := types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}}
 
 	clusterActive := "some random active cluster name"
 	clusterStandby := "some random standby cluster name"
@@ -571,6 +575,7 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 			VisibilityArchivalURI:    visibilityArchivalURI,
 			BadBinaries:              badBinaries,
 			IsolationGroups:          isolationGroups,
+			AsyncWorkflowConfig:      asyncWFCfg,
 		},
 		&p.DomainReplicationConfig{
 			ActiveClusterName: clusterActive,
@@ -626,6 +631,7 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 					VisibilityArchivalURI:    resp2.Config.VisibilityArchivalURI,
 					BadBinaries:              testBinaries,
 					IsolationGroups:          isolationGroups,
+					AsyncWorkflowConfig:      asyncWFCfg,
 				},
 				&p.DomainReplicationConfig{
 					ActiveClusterName: resp2.ReplicationConfig.ActiveClusterName,
@@ -697,7 +703,6 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	defer cancel()
 
 	isolationGroups1 := types.IsolationGroupConfiguration{}
-
 	isolationGroups2 := types.IsolationGroupConfiguration{
 		"zone-1": types.IsolationGroupPartition{
 			Name:  "zone-1",
@@ -707,6 +712,13 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 			Name:  "zone-2",
 			State: types.IsolationGroupStateHealthy,
 		},
+	}
+
+	asyncWFCfg1 := types.AsyncWorkflowConfiguration{
+		PredefinedQueueName: "queue1",
+	}
+	asyncWFCfg2 := types.AsyncWorkflowConfiguration{
+		PredefinedQueueName: "queue2",
 	}
 
 	id := uuid.New()
@@ -756,6 +768,7 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 			VisibilityArchivalStatus: visibilityArchivalStatus,
 			VisibilityArchivalURI:    visibilityArchivalURI,
 			IsolationGroups:          isolationGroups1,
+			AsyncWorkflowConfig:      asyncWFCfg1,
 		},
 		&p.DomainReplicationConfig{
 			ActiveClusterName: clusterActive,
@@ -832,6 +845,7 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 			VisibilityArchivalURI:    updatedVisibilityArchivalURI,
 			BadBinaries:              testBinaries,
 			IsolationGroups:          isolationGroups2,
+			AsyncWorkflowConfig:      asyncWFCfg2,
 		},
 		&p.DomainReplicationConfig{
 			ActiveClusterName: updateClusterActive,
@@ -877,6 +891,7 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	m.Equal(&failoverEndTime, resp4.FailoverEndTime)
 	m.Equal(lastUpdateTime, resp4.LastUpdatedTime)
 	m.Equal(isolationGroups2, resp4.Config.IsolationGroups)
+	m.Equal(asyncWFCfg2, resp4.Config.AsyncWorkflowConfig)
 
 	resp5, err5 := m.GetDomain(ctx, id, "")
 	m.NoError(err5)
@@ -928,6 +943,7 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 			VisibilityArchivalURI:    updatedVisibilityArchivalURI,
 			BadBinaries:              testBinaries,
 			IsolationGroups:          isolationGroups1,
+			AsyncWorkflowConfig:      asyncWFCfg1,
 		},
 		&p.DomainReplicationConfig{
 			ActiveClusterName: updateClusterActive,
@@ -973,6 +989,7 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	m.Nil(resp6.FailoverEndTime)
 	m.Equal(lastUpdateTime, resp6.LastUpdatedTime)
 	m.Equal(isolationGroups1, resp6.Config.IsolationGroups)
+	m.Equal(asyncWFCfg1, resp6.Config.AsyncWorkflowConfig)
 }
 
 // TestDeleteDomain test
@@ -992,7 +1009,6 @@ func (m *MetadataPersistenceSuiteV2) TestDeleteDomain() {
 	historyArchivalURI := "test://history/uri"
 	visibilityArchivalStatus := types.ArchivalStatusEnabled
 	visibilityArchivalURI := "test://visibility/uri"
-	var isolationGroups types.IsolationGroupConfiguration
 
 	clusterActive := "some random active cluster name"
 	clusterStandby := "some random standby cluster name"
@@ -1025,7 +1041,8 @@ func (m *MetadataPersistenceSuiteV2) TestDeleteDomain() {
 			HistoryArchivalURI:       historyArchivalURI,
 			VisibilityArchivalStatus: visibilityArchivalStatus,
 			VisibilityArchivalURI:    visibilityArchivalURI,
-			IsolationGroups:          isolationGroups,
+			IsolationGroups:          types.IsolationGroupConfiguration{},
+			AsyncWorkflowConfig:      types.AsyncWorkflowConfiguration{},
 		},
 		&p.DomainReplicationConfig{
 			ActiveClusterName: clusterActive,
@@ -1147,7 +1164,6 @@ func (m *MetadataPersistenceSuiteV2) TestListDomains() {
 		},
 	}
 
-	isolationGroups := types.IsolationGroupConfiguration{}
 	inputDomains := []*p.GetDomainResponse{
 		{
 			Info: &p.DomainInfo{
@@ -1166,7 +1182,8 @@ func (m *MetadataPersistenceSuiteV2) TestListDomains() {
 				VisibilityArchivalStatus: types.ArchivalStatusEnabled,
 				VisibilityArchivalURI:    "test://visibility/uri",
 				BadBinaries:              testBinaries1,
-				IsolationGroups:          isolationGroups,
+				IsolationGroups:          types.IsolationGroupConfiguration{},
+				AsyncWorkflowConfig:      types.AsyncWorkflowConfiguration{},
 			},
 			ReplicationConfig: &p.DomainReplicationConfig{
 				ActiveClusterName: clusterActive1,
@@ -1194,7 +1211,8 @@ func (m *MetadataPersistenceSuiteV2) TestListDomains() {
 				VisibilityArchivalStatus: types.ArchivalStatusDisabled,
 				VisibilityArchivalURI:    "",
 				BadBinaries:              testBinaries2,
-				IsolationGroups:          isolationGroups,
+				IsolationGroups:          types.IsolationGroupConfiguration{},
+				AsyncWorkflowConfig:      types.AsyncWorkflowConfiguration{},
 			},
 			ReplicationConfig: &p.DomainReplicationConfig{
 				ActiveClusterName: clusterActive2,

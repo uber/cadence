@@ -53,10 +53,14 @@ import (
 	"github.com/uber/cadence/service/history/resource"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
-	"github.com/uber/cadence/service/history/workflow"
+	"github.com/uber/cadence/service/history/workflowcache"
 )
 
-const shardOwnershipTransferDelay = 5 * time.Second
+const (
+	shardOwnershipTransferDelay = 5 * time.Second
+	workflowIDCacheTTL          = 1 * time.Second
+	workflowIDCacheMaxCount     = 10_000
+)
 
 type (
 	// handlerImpl is an implementation for history service independent of wire protocol
@@ -74,6 +78,7 @@ type (
 		replicationTaskFetchers  replication.TaskFetchers
 		queueTaskProcessor       task.Processor
 		failoverCoordinator      failover.Coordinator
+		workflowIDCache          workflowcache.WFCache
 	}
 )
 
@@ -103,6 +108,17 @@ func NewHandler(
 		config:          config,
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
 		rateLimiter:     quotas.NewDynamicRateLimiter(config.RPS.AsFloat64()),
+		workflowIDCache: workflowcache.New(workflowcache.Params{
+			TTL:                            workflowIDCacheTTL,
+			ExternalLimiterFactory:         quotas.NewSimpleDynamicRateLimiterFactory(config.WorkflowIDExternalRPS),
+			InternalLimiterFactory:         quotas.NewSimpleDynamicRateLimiterFactory(config.WorkflowIDInternalRPS),
+			WorkflowIDCacheExternalEnabled: config.WorkflowIDCacheExternalEnabled,
+			WorkflowIDCacheInternalEnabled: config.WorkflowIDCacheInternalEnabled,
+			MaxCount:                       workflowIDCacheMaxCount,
+			DomainCache:                    resource.GetDomainCache(),
+			Logger:                         resource.GetLogger(),
+			MetricsClient:                  resource.GetMetricsClient(),
+		}),
 	}
 
 	// prevent us from trying to serve requests before shard controller is started and ready
@@ -229,6 +245,7 @@ func (h *handlerImpl) CreateEngine(
 		h.GetMatchingRawClient(),
 		h.queueTaskProcessor,
 		h.failoverCoordinator,
+		h.workflowIDCache,
 	)
 }
 
@@ -682,6 +699,9 @@ func (h *handlerImpl) StartWorkflowExecution(
 
 	startRequest := wrappedRequest.StartRequest
 	workflowID := startRequest.GetWorkflowID()
+
+	h.workflowIDCache.AllowExternal(domainID, workflowID)
+
 	engine, err1 := h.controller.GetEngine(workflowID)
 	if err1 != nil {
 		return nil, h.error(err1, scope, domainID, workflowID, "")
@@ -2174,18 +2194,6 @@ func (h *handlerImpl) error(
 	err = h.convertError(err)
 
 	h.updateErrorMetric(scope, domainID, workflowID, runID, err)
-	if errors.Is(err, workflow.ErrMaxAttemptsExceeded) {
-		// Calling the dummy Workflow Check from task Validator. This is an ongoing project where we plan to do some validations on
-		// the following workflow. Based on the validations (is the workflow stale? does the workflow come from a deprecated domain?)
-		// We will delete the workflow or mark the workflow as corrupted.
-		// Placing a dummy call to the function to check the coherency of the design.
-		// The function returns nil error so removing error handling for now.
-		domainName, err := h.GetDomainCache().GetDomainName(domainID)
-		if err != nil {
-			return err
-		}
-		h.GetTaskValidator().WorkflowCheckforValidation(workflowID, domainID, domainName, "")
-	}
 	return err
 }
 

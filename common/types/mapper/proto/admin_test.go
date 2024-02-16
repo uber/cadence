@@ -528,3 +528,343 @@ func TestToUpdateDomainIsolationGroupsRequest(t *testing.T) {
 		})
 	}
 }
+
+func TestToAdminGetDomainAsyncWorkflowConfiguratonRequest(t *testing.T) {
+	tests := map[string]struct {
+		in       *adminv1.GetDomainAsyncWorkflowConfiguratonRequest
+		expected *types.GetDomainAsyncWorkflowConfiguratonRequest
+	}{
+		"nil": {
+			in:       nil,
+			expected: nil,
+		},
+		"empty": {
+			in:       &adminv1.GetDomainAsyncWorkflowConfiguratonRequest{},
+			expected: &types.GetDomainAsyncWorkflowConfiguratonRequest{},
+		},
+		"valid": {
+			in: &adminv1.GetDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+			},
+			expected: &types.GetDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+			},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expected, ToAdminGetDomainAsyncWorkflowConfiguratonRequest(td.in))
+		})
+	}
+}
+
+func TestFromAdminGetDomainAsyncWorkflowConfiguratonResponse(t *testing.T) {
+	tests := map[string]struct {
+		in       *types.GetDomainAsyncWorkflowConfiguratonResponse
+		expected *adminv1.GetDomainAsyncWorkflowConfiguratonResponse
+	}{
+		"nil": {
+			in:       nil,
+			expected: nil,
+		},
+		"empty": {
+			in:       &types.GetDomainAsyncWorkflowConfiguratonResponse{},
+			expected: &adminv1.GetDomainAsyncWorkflowConfiguratonResponse{},
+		},
+		"predefined queue": {
+			in: &types.GetDomainAsyncWorkflowConfiguratonResponse{
+				Configuration: &types.AsyncWorkflowConfiguration{
+					Enabled:             true,
+					PredefinedQueueName: "test-queue",
+				},
+			},
+			expected: &adminv1.GetDomainAsyncWorkflowConfiguratonResponse{
+				Configuration: &v1.AsyncWorkflowConfiguration{
+					Enabled:             true,
+					PredefinedQueueName: "test-queue",
+				},
+			},
+		},
+		"inline queue": {
+			in: &types.GetDomainAsyncWorkflowConfiguratonResponse{
+				Configuration: &types.AsyncWorkflowConfiguration{
+					Enabled:   true,
+					QueueType: "kafka",
+					QueueConfig: &types.DataBlob{
+						EncodingType: types.EncodingTypeJSON.Ptr(),
+						Data:         []byte(`{"topic":"test-topic","dlq_topic":"test-dlq-topic","consumer_group":"test-consumer-group","brokers":["test-broker-1","test-broker-2"],"properties":{"test-key-1":"test-value-1"}}`),
+					},
+				},
+			},
+			expected: &adminv1.GetDomainAsyncWorkflowConfiguratonResponse{
+				Configuration: &v1.AsyncWorkflowConfiguration{
+					Enabled:   true,
+					QueueType: "kafka",
+					QueueConfig: &v1.DataBlob{
+						EncodingType: v1.EncodingType_ENCODING_TYPE_JSON,
+						Data:         []byte(`{"topic":"test-topic","dlq_topic":"test-dlq-topic","consumer_group":"test-consumer-group","brokers":["test-broker-1","test-broker-2"],"properties":{"test-key-1":"test-value-1"}}`),
+					},
+				},
+			},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expected, FromAdminGetDomainAsyncWorkflowConfiguratonResponse(td.in))
+		})
+	}
+}
+
+func TestToAdminUpdateDomainAsyncWorkflowConfiguratonRequest(t *testing.T) {
+	tests := map[string]struct {
+		in       *adminv1.UpdateDomainAsyncWorkflowConfiguratonRequest
+		expected *types.UpdateDomainAsyncWorkflowConfiguratonRequest
+	}{
+		"nil": {
+			in:       nil,
+			expected: nil,
+		},
+		"empty": {
+			in:       &adminv1.UpdateDomainAsyncWorkflowConfiguratonRequest{},
+			expected: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{},
+		},
+		"predefined queue": {
+			in: &adminv1.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+				Configuration: &v1.AsyncWorkflowConfiguration{
+					Enabled:             true,
+					PredefinedQueueName: "test-queue",
+				},
+			},
+			expected: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+				Configuration: &types.AsyncWorkflowConfiguration{
+					Enabled:             true,
+					PredefinedQueueName: "test-queue",
+				},
+			},
+		},
+		"inline queue": {
+			in: &adminv1.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+				Configuration: &v1.AsyncWorkflowConfiguration{
+					Enabled:   true,
+					QueueType: "kafka",
+					QueueConfig: &v1.DataBlob{
+						EncodingType: v1.EncodingType_ENCODING_TYPE_JSON,
+						Data:         []byte(`{"topic":"test-topic","dlq_topic":"test-dlq-topic","consumer_group":"test-consumer-group","brokers":["test-broker-1","test-broker-2"],"properties":{"test-key-1":"test-value-1"}}`),
+					},
+				},
+			},
+			expected: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+				Configuration: &types.AsyncWorkflowConfiguration{
+					Enabled:   true,
+					QueueType: "kafka",
+					QueueConfig: &types.DataBlob{
+						EncodingType: types.EncodingTypeJSON.Ptr(),
+						Data:         []byte(`{"topic":"test-topic","dlq_topic":"test-dlq-topic","consumer_group":"test-consumer-group","brokers":["test-broker-1","test-broker-2"],"properties":{"test-key-1":"test-value-1"}}`),
+					},
+				},
+			},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expected, ToAdminUpdateDomainAsyncWorkflowConfiguratonRequest(td.in))
+		})
+	}
+}
+
+func TestFromAdminUpdateDomainAsyncWorkflowConfiguratonResponse(t *testing.T) {
+	tests := map[string]struct {
+		in       *types.UpdateDomainAsyncWorkflowConfiguratonResponse
+		expected *adminv1.UpdateDomainAsyncWorkflowConfiguratonResponse
+	}{
+		"nil": {
+			in:       nil,
+			expected: nil,
+		},
+		"empty": {
+			in:       &types.UpdateDomainAsyncWorkflowConfiguratonResponse{},
+			expected: &adminv1.UpdateDomainAsyncWorkflowConfiguratonResponse{},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expected, FromAdminUpdateDomainAsyncWorkflowConfiguratonResponse(td.in))
+		})
+	}
+}
+
+func TestFromAdminGetDomainAsyncWorkflowConfiguratonRequest(t *testing.T) {
+	tests := map[string]struct {
+		in       *types.GetDomainAsyncWorkflowConfiguratonRequest
+		expected *adminv1.GetDomainAsyncWorkflowConfiguratonRequest
+	}{
+		"nil": {
+			in:       nil,
+			expected: nil,
+		},
+		"empty": {
+			in:       &types.GetDomainAsyncWorkflowConfiguratonRequest{},
+			expected: &adminv1.GetDomainAsyncWorkflowConfiguratonRequest{},
+		},
+		"valid": {
+			in: &types.GetDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+			},
+			expected: &adminv1.GetDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+			},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expected, FromAdminGetDomainAsyncWorkflowConfiguratonRequest(td.in))
+		})
+	}
+}
+
+func TestToAdminGetDomainAsyncWorkflowConfiguratonResponse(t *testing.T) {
+	tests := map[string]struct {
+		in       *adminv1.GetDomainAsyncWorkflowConfiguratonResponse
+		expected *types.GetDomainAsyncWorkflowConfiguratonResponse
+	}{
+		"nil": {
+			in:       nil,
+			expected: nil,
+		},
+		"empty": {
+			in:       &adminv1.GetDomainAsyncWorkflowConfiguratonResponse{},
+			expected: &types.GetDomainAsyncWorkflowConfiguratonResponse{},
+		},
+		"predefined queue": {
+			in: &adminv1.GetDomainAsyncWorkflowConfiguratonResponse{
+				Configuration: &v1.AsyncWorkflowConfiguration{
+					PredefinedQueueName: "test-queue",
+				},
+			},
+			expected: &types.GetDomainAsyncWorkflowConfiguratonResponse{
+				Configuration: &types.AsyncWorkflowConfiguration{
+					PredefinedQueueName: "test-queue",
+				},
+			},
+		},
+		"inline queue": {
+			in: &adminv1.GetDomainAsyncWorkflowConfiguratonResponse{
+				Configuration: &v1.AsyncWorkflowConfiguration{
+					Enabled:   true,
+					QueueType: "kafka",
+					QueueConfig: &v1.DataBlob{
+						EncodingType: v1.EncodingType_ENCODING_TYPE_JSON,
+						Data:         []byte(`{"topic":"test-topic","dlq_topic":"test-dlq-topic","consumer_group":"test-consumer-group","brokers":["test-broker-1","test-broker-2"],"properties":{"test-key-1":"test-value-1"}}`),
+					},
+				},
+			},
+			expected: &types.GetDomainAsyncWorkflowConfiguratonResponse{
+				Configuration: &types.AsyncWorkflowConfiguration{
+					Enabled:   true,
+					QueueType: "kafka",
+					QueueConfig: &types.DataBlob{
+						EncodingType: types.EncodingTypeJSON.Ptr(),
+						Data:         []byte(`{"topic":"test-topic","dlq_topic":"test-dlq-topic","consumer_group":"test-consumer-group","brokers":["test-broker-1","test-broker-2"],"properties":{"test-key-1":"test-value-1"}}`),
+					},
+				},
+			},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expected, ToAdminGetDomainAsyncWorkflowConfiguratonResponse(td.in))
+		})
+	}
+}
+
+func TestFromAdminUpdateDomainAsyncWorkflowConfiguratonRequest(t *testing.T) {
+	tests := map[string]struct {
+		in       *types.UpdateDomainAsyncWorkflowConfiguratonRequest
+		expected *adminv1.UpdateDomainAsyncWorkflowConfiguratonRequest
+	}{
+		"nil": {
+			in:       nil,
+			expected: nil,
+		},
+		"empty": {
+			in:       &types.UpdateDomainAsyncWorkflowConfiguratonRequest{},
+			expected: &adminv1.UpdateDomainAsyncWorkflowConfiguratonRequest{},
+		},
+		"predefined queue": {
+			in: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+				Configuration: &types.AsyncWorkflowConfiguration{
+					PredefinedQueueName: "test-queue",
+				},
+			},
+			expected: &adminv1.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+				Configuration: &v1.AsyncWorkflowConfiguration{
+					PredefinedQueueName: "test-queue",
+				},
+			},
+		},
+		"kafka inline queue": {
+			in: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+				Configuration: &types.AsyncWorkflowConfiguration{
+					Enabled:   true,
+					QueueType: "kafka",
+					QueueConfig: &types.DataBlob{
+						EncodingType: types.EncodingTypeJSON.Ptr(),
+						Data:         []byte(`{"topic":"test-topic","dlq_topic":"test-dlq-topic","consumer_group":"test-consumer-group","brokers":["test-broker-1","test-broker-2"],"properties":{"test-key-1":"test-value-1"}}`),
+					},
+				},
+			},
+			expected: &adminv1.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+				Configuration: &v1.AsyncWorkflowConfiguration{
+					Enabled:   true,
+					QueueType: "kafka",
+					QueueConfig: &v1.DataBlob{
+						EncodingType: v1.EncodingType_ENCODING_TYPE_JSON,
+						Data:         []byte(`{"topic":"test-topic","dlq_topic":"test-dlq-topic","consumer_group":"test-consumer-group","brokers":["test-broker-1","test-broker-2"],"properties":{"test-key-1":"test-value-1"}}`),
+					},
+				},
+			},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expected, FromAdminUpdateDomainAsyncWorkflowConfiguratonRequest(td.in))
+		})
+	}
+}
+
+func TestToAdminUpdateDomainAsyncWorkflowConfiguratonResponse(t *testing.T) {
+	tests := map[string]struct {
+		in       *adminv1.UpdateDomainAsyncWorkflowConfiguratonResponse
+		expected *types.UpdateDomainAsyncWorkflowConfiguratonResponse
+	}{
+		"nil": {
+			in:       nil,
+			expected: nil,
+		},
+		"empty": {
+			in:       &adminv1.UpdateDomainAsyncWorkflowConfiguratonResponse{},
+			expected: &types.UpdateDomainAsyncWorkflowConfiguratonResponse{},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expected, ToAdminUpdateDomainAsyncWorkflowConfiguratonResponse(td.in))
+		})
+	}
+}

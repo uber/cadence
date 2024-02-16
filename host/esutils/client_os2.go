@@ -67,7 +67,9 @@ func (os2 *os2Client) PutIndexTemplate(t *testing.T, templateConfigFile, templat
 		Name: templateName,
 	}
 
-	resp, err := req.Do(createContext(), os2.client)
+	ctx, cancel := createContext()
+	defer cancel()
+	resp, err := req.Do(ctx, os2.client)
 	require.NoError(t, err)
 	require.False(t, resp.IsError(), fmt.Sprintf("OS2 error: %s", resp.String()))
 	resp.Body.Close()
@@ -78,14 +80,18 @@ func (os2 *os2Client) CreateIndex(t *testing.T, indexName string) {
 	existsReq := opensearchapi.IndicesExistsRequest{
 		Index: []string{indexName},
 	}
-	resp, err := existsReq.Do(createContext(), os2.client)
+	ctx, cancel := createContext()
+	defer cancel()
+	resp, err := existsReq.Do(ctx, os2.client)
 	require.NoError(t, err)
 
 	if resp.StatusCode == http.StatusOK {
 		deleteReq := opensearchapi.IndicesDeleteRequest{
 			Index: []string{indexName},
 		}
-		resp, err := deleteReq.Do(createContext(), os2.client)
+		ctx, cancel := createContext()
+		defer cancel()
+		resp, err := deleteReq.Do(ctx, os2.client)
 		require.Nil(t, err)
 		require.False(t, resp.IsError(), fmt.Sprintf("OS2 error: %s", resp.String()))
 	}
@@ -96,7 +102,9 @@ func (os2 *os2Client) CreateIndex(t *testing.T, indexName string) {
 		Index: indexName,
 	}
 
-	resp, err = createReq.Do(createContext(), os2.client)
+	ctx, cancel = createContext()
+	defer cancel()
+	resp, err = createReq.Do(ctx, os2.client)
 	require.NoError(t, err)
 	require.False(t, resp.IsError(), fmt.Sprintf("OS2 error: %s", resp.String()))
 	resp.Body.Close()
@@ -106,7 +114,9 @@ func (os2 *os2Client) DeleteIndex(t *testing.T, indexName string) {
 	deleteReq := opensearchapi.IndicesDeleteRequest{
 		Index: []string{indexName},
 	}
-	resp, err := deleteReq.Do(createContext(), os2.client)
+	ctx, cancel := createContext()
+	defer cancel()
+	resp, err := deleteReq.Do(ctx, os2.client)
 	require.NoError(t, err)
 	require.False(t, resp.IsError(), fmt.Sprintf("OS2 error: %s", resp.String()))
 	resp.Body.Close()
@@ -120,7 +130,9 @@ func (os2 *os2Client) PutMaxResultWindow(t *testing.T, indexName string, maxResu
 		Index: []string{indexName},
 	}
 
-	res, err := req.Do(createContext(), os2.client)
+	ctx, cancel := createContext()
+	defer cancel()
+	res, err := req.Do(ctx, os2.client)
 	require.NoError(t, err)
 
 	res.Body.Close()
@@ -134,7 +146,9 @@ func (os2 *os2Client) GetMaxResultWindow(t *testing.T, indexName string) (string
 		Index: []string{indexName},
 	}
 
-	res, err := req.Do(createContext(), os2.client)
+	ctx, cancel := createContext()
+	defer cancel()
+	res, err := req.Do(ctx, os2.client)
 	require.NoError(t, err)
 	defer res.Body.Close()
 

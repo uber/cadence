@@ -531,6 +531,19 @@ func (c *frontendClient) SignalWithStartWorkflowExecution(ctx context.Context, s
 	return sp2, err
 }
 
+func (c *frontendClient) SignalWithStartWorkflowExecutionAsync(ctx context.Context, sp1 *types.SignalWithStartWorkflowExecutionAsyncRequest, p1 ...yarpc.CallOption) (sp2 *types.SignalWithStartWorkflowExecutionAsyncResponse, err error) {
+	c.metricsClient.IncCounter(metrics.FrontendClientSignalWithStartWorkflowExecutionAsyncScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientSignalWithStartWorkflowExecutionAsyncScope, metrics.CadenceClientLatency)
+	sp2, err = c.client.SignalWithStartWorkflowExecutionAsync(ctx, sp1, p1...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientSignalWithStartWorkflowExecutionAsyncScope, metrics.CadenceClientFailures)
+	}
+	return sp2, err
+}
+
 func (c *frontendClient) SignalWorkflowExecution(ctx context.Context, sp1 *types.SignalWorkflowExecutionRequest, p1 ...yarpc.CallOption) (err error) {
 	c.metricsClient.IncCounter(metrics.FrontendClientSignalWorkflowExecutionScope, metrics.CadenceClientRequests)
 
@@ -553,6 +566,19 @@ func (c *frontendClient) StartWorkflowExecution(ctx context.Context, sp1 *types.
 
 	if err != nil {
 		c.metricsClient.IncCounter(metrics.FrontendClientStartWorkflowExecutionScope, metrics.CadenceClientFailures)
+	}
+	return sp2, err
+}
+
+func (c *frontendClient) StartWorkflowExecutionAsync(ctx context.Context, sp1 *types.StartWorkflowExecutionAsyncRequest, p1 ...yarpc.CallOption) (sp2 *types.StartWorkflowExecutionAsyncResponse, err error) {
+	c.metricsClient.IncCounter(metrics.FrontendClientStartWorkflowExecutionAsyncScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientStartWorkflowExecutionAsyncScope, metrics.CadenceClientLatency)
+	sp2, err = c.client.StartWorkflowExecutionAsync(ctx, sp1, p1...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientStartWorkflowExecutionAsyncScope, metrics.CadenceClientFailures)
 	}
 	return sp2, err
 }

@@ -69,7 +69,9 @@ func TestNewConsumer(t *testing.T) {
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	logger := testlogger.New(t)
 	kafkaProducer := NewKafkaProducer(topic, mockProducer, logger)
-	consumer, err := newKafkaConsumer(kafkaProducer, kafkaConfig, topic, consumerName,
+	clusterName := kafkaConfig.GetKafkaClusterForTopic(topic)
+	brokers := kafkaConfig.GetBrokersForKafkaCluster(clusterName)
+	consumer, err := NewKafkaConsumer(kafkaProducer, brokers, topic, consumerName,
 		nil, metricsClient, logger)
 	assert.NoError(t, err, "An error was not expected but got %v", err)
 	assert.NotNil(t, consumer, "Expected consumer but got nil")

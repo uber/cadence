@@ -77,9 +77,13 @@ func TestValidateQuery(t *testing.T) {
 			query: "Invalid SQL",
 			err:   "Invalid query.",
 		},
-		"Case8: query with missing val": {
+		"Case8-1: query with missing val": {
 			query:     "CloseTime = missing",
-			validated: "CloseTime = `-1`",
+			validated: "CloseTime = -1",
+		},
+		"Case8-2: query with not missing case": {
+			query:     "CloseTime != missing",
+			validated: "CloseTime != -1",
 		},
 		"Case9: invalid where expression": {
 			query: "InvalidWhereExpr",
@@ -133,6 +137,62 @@ func TestValidateQuery(t *testing.T) {
 			query:     "StartTime >= 1697754674",
 			validated: "StartTime >= 1697754674",
 		},
+		"Case15-4: unix nano converts to milli seconds for equal statements": {
+			query:     "StartTime = 1707319950934000128",
+			validated: "StartTime = 1707319950934",
+		},
+		"Case15-5: unix nano converts to milli seconds for unequal statements query": {
+			query:     "StartTime > 1707319950934000128",
+			validated: "StartTime > 1707319950934",
+		},
+		"Case15-6: open workflows": {
+			query:     "CloseTime = -1",
+			validated: "CloseTime = -1",
+		},
+		"Case15-7: startTime for range query": {
+			query:     "StartTime BETWEEN 1707319950934000128 AND 1707319950935000128",
+			validated: "StartTime between 1707319950934 and 1707319950935",
+		},
+		"Case15-8: invalid string for trim": {
+			query:     "CloseTime = abc",
+			validated: "",
+			err:       "right comparison is invalid string value: abc",
+		},
+		"Case15-9: invalid value for trim": {
+			query:     "CloseTime = 123.45",
+			validated: "",
+			err:       "trim time field CloseTime got error: error: failed to parse int from SQLVal 123.45",
+		},
+		"Case15-10: invalid from time for range query": {
+			query:     "StartTime BETWEEN 17.50 AND 1707319950935000128",
+			validated: "",
+			err:       "trim time field StartTime got error: error: failed to parse int from SQLVal 17.50",
+		},
+		"Case15-11: invalid to time for range query": {
+			query:     "StartTime BETWEEN 1707319950934000128 AND 1707319950935000128.1",
+			validated: "",
+			err:       "trim time field StartTime got error: error: failed to parse int from SQLVal 1707319950935000128.1",
+		},
+		"Case15-12: value already in milliseconds": {
+			query:     "StartTime = 170731995093",
+			validated: "StartTime = 170731995093",
+		},
+		"Case15-13: value in raw string for equal statement": {
+			query:     "StartTime = '2024-02-07T15:32:30Z'",
+			validated: "StartTime = 1707319950000",
+		},
+		"Case15-14: value in raw string for not equal statement": {
+			query:     "StartTime > '2024-02-07T15:32:30Z'",
+			validated: "StartTime > 1707319950000",
+		},
+		"Case15-15: value in raw string for range statement": {
+			query:     "StartTime between '2024-02-07T15:32:30Z' and '2024-02-07T15:33:30Z'",
+			validated: "StartTime between 1707319950000 and 1707320010000",
+		},
+		"Case15-16: combined time and missing case": {
+			query:     "CloseTime != missing and StartTime >= 1707662555754408145",
+			validated: "CloseTime != -1 and StartTime >= 1707662555754",
+		},
 		"Case16-1: custom int attribute greater than or equal to": {
 			query:     "CustomIntField >= 0",
 			validated: "(JSON_MATCH(Attr, '\"$.CustomIntField\" is not null') AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomIntField') AS INT) >= 0)",
@@ -161,6 +221,31 @@ func TestValidateQuery(t *testing.T) {
 				assert.Equal(t, test.err, err.Error())
 			} else {
 				assert.Equal(t, test.validated, validated)
+			}
+		})
+	}
+}
+
+func TestParseTime(t *testing.T) {
+	var tests = []struct {
+		name     string
+		timeStr  string
+		expected int64
+		hasErr   bool
+	}{
+		{"empty string", "", 0, true},
+		{"valid RFC3339", "2024-02-07T15:32:30Z", 1707319950000, false},
+		{"valid unix milli string", "1707319950000", 1707319950000, false},
+		{"valid unix nano string", "1707319950000000000", 1707319950000, false},
+		{"invalid string", "invalid", 0, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parsed, err := parseTime(tt.timeStr)
+			assert.Equal(t, parsed, tt.expected)
+			if tt.hasErr {
+				assert.Error(t, err)
 			}
 		})
 	}

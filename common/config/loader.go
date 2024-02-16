@@ -73,7 +73,7 @@ func Load(env string, configDir string, zone string, config interface{}) error {
 
 	files, err := getConfigFiles(env, configDir, zone)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to get config files: %w", err)
 	}
 
 	log.Printf("Loading configFiles=%v\n", files)
@@ -88,15 +88,19 @@ func Load(env string, configDir string, zone string, config interface{}) error {
 
 	yaml, err := uconfig.NewYAML(options...)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to create yaml parser: %w", err)
 	}
 
 	err = yaml.Get(uconfig.Root).Populate(config)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to populate config: %w", err)
 	}
 
-	return validator.Validate(config)
+	err = validator.Validate(config)
+	if err != nil {
+		return fmt.Errorf("failed to validate config: %w", err)
+	}
+	return nil
 }
 
 // getConfigFiles returns the list of config files to

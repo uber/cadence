@@ -279,7 +279,9 @@ func (s *IntegrationBase) printWorkflowHistory(domain string, execution *types.W
 }
 
 func (s *IntegrationBase) getHistory(domain string, execution *types.WorkflowExecution) []*types.HistoryEvent {
-	historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
+	ctx, cancel := createContext()
+	defer cancel()
+	historyResponse, err := s.engine.GetWorkflowExecutionHistory(ctx, &types.GetWorkflowExecutionHistoryRequest{
 		Domain:          domain,
 		Execution:       execution,
 		MaximumPageSize: 5, // Use small page size to force pagination code path
@@ -288,11 +290,13 @@ func (s *IntegrationBase) getHistory(domain string, execution *types.WorkflowExe
 
 	events := historyResponse.History.Events
 	for historyResponse.NextPageToken != nil {
-		historyResponse, err = s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
+		ctx, cancel := createContext()
+		historyResponse, err = s.engine.GetWorkflowExecutionHistory(ctx, &types.GetWorkflowExecutionHistoryRequest{
 			Domain:        domain,
 			Execution:     execution,
 			NextPageToken: historyResponse.NextPageToken,
 		})
+		cancel()
 		s.Require().NoError(err)
 		events = append(events, historyResponse.History.Events...)
 	}

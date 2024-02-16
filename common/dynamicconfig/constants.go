@@ -526,6 +526,12 @@ const (
 	// Default value: UnlimitedRPS
 	// Allowed filters: N/A
 	FrontendVisibilityRPS
+	// FrontendAsync is the async workflow request rate limit per second
+	// KeyName: frontend.asyncrps
+	// Value type: Int
+	// Default value: 10000
+	// Allowed filters: N/A
+	FrontendAsyncRPS
 	// FrontendMaxDomainUserRPSPerInstance is workflow domain rate limit per second
 	// KeyName: frontend.domainrps
 	// Value type: Int
@@ -544,6 +550,12 @@ const (
 	// Default value: UnlimitedRPS
 	// Allowed filters: DomainName
 	FrontendMaxDomainVisibilityRPSPerInstance
+	// FrontendMaxDomainAsyncRPSPerInstance is the per-instance async workflow request rate limit per second
+	// KeyName: frontend.domainasyncrps
+	// Value type: Int
+	// Default value: 10000
+	// Allowed filters: DomainName
+	FrontendMaxDomainAsyncRPSPerInstance
 	// FrontendGlobalDomainUserRPS is workflow domain rate limit per second for the whole Cadence cluster
 	// KeyName: frontend.globalDomainrps
 	// Value type: Int
@@ -562,6 +574,12 @@ const (
 	// Default value: UnlimitedRPS
 	// Allowed filters: DomainName
 	FrontendGlobalDomainVisibilityRPS
+	// FrontendGlobalDomainAsyncRPS is the per-domain async workflow request rate limit per second
+	// KeyName: frontend.globalDomainAsyncrps
+	// Value type: Int
+	// Default value: 100000
+	// Allowed filters: DomainName
+	FrontendGlobalDomainAsyncRPS
 	// FrontendDecisionResultCountLimit is max number of decisions per RespondDecisionTaskCompleted request
 	// KeyName: frontend.decisionResultCountLimit
 	// Value type: Int
@@ -1178,6 +1196,20 @@ const (
 	// Allowed filters: ShardID
 	ReplicationTaskProcessorErrorRetryMaxAttempts
 
+	// WorkflowIDExternalRPS is the rate limit per workflowID for external calls
+	// KeyName: history.workflowIDExternalRPS
+	// Value type: Int
+	// Default value: UnlimitedRPS
+	// Allowed filters: DomainName
+	WorkflowIDExternalRPS
+
+	// WorkflowIDInternalRPS is the rate limit per workflowID for internal calls
+	// KeyName: history.workflowIDInternalRPS
+	// Value type: Int
+	// Default value: UnlimitedRPS
+	// Allowed filters: DomainName
+	WorkflowIDInternalRPS
+
 	// key for worker
 
 	// WorkerPersistenceMaxQPS is the max qps worker host can query DB
@@ -1696,6 +1728,18 @@ const (
 	// Default value: true
 	// Allowed filters: DomainName
 	EnableRecordWorkflowExecutionUninitialized
+	// WorkflowIDCacheExternalEnabled is the key to enable/disable caching of workflowID specific information for external requests
+	// KeyName: history.workflowIDCacheExternalEnabled
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: DomainName
+	WorkflowIDCacheExternalEnabled
+	// WorkflowIDCacheInternalEnabled is the key to enable/disable caching of workflowID specific information for internal requests
+	// KeyName: history.workflowIDCacheInternalEnabled
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: DomainName
+	WorkflowIDCacheInternalEnabled
 	// AllowArchivingIncompleteHistory will continue on when seeing some error like history mutated(usually caused by database consistency issues)
 	// KeyName: worker.AllowArchivingIncompleteHistory
 	// Value type: Bool
@@ -1799,6 +1843,12 @@ const (
 	// Default value: false
 	// Allowed filters: N/A
 	EnableESAnalyzer
+	// EnableAsyncWorkflowConsumption decides whether to enable system workers for processing async workflows
+	// KeyName: system.enableAsyncWorkflowConsumption
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: N/A
+	EnableAsyncWorkflowConsumption
 
 	// EnableStickyQuery indicates if sticky query should be enabled per domain
 	// KeyName: system.enableStickyQuery
@@ -1812,12 +1862,6 @@ const (
 	// Default value: true
 	// Allowed filters: N/A
 	EnableFailoverManager
-	// EnableWorkflowShadower indicates if workflow shadower is enabled
-	// KeyName: system.enableWorkflowShadower
-	// Value type: Bool
-	// Default value: true
-	// Allowed filters: N/A
-	EnableWorkflowShadower
 	// ConcreteExecutionFixerDomainAllow is which domains are allowed to be fixed by concrete fixer workflow
 	// KeyName: worker.concreteExecutionFixerDomainAllow
 	// Value type: Bool
@@ -1921,6 +1965,13 @@ const (
 	EnableShardIDMetrics
 
 	EnableTimerDebugLogByDomainID
+
+	// EnableTaskVal is which allows the taskvalidation to be enabled.
+	// KeyName: system.enableTaskVal
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: DomainID
+	EnableTaskVal
 
 	// LastBoolKey must be the last one in this const group
 	LastBoolKey
@@ -2919,6 +2970,11 @@ var IntKeys = map[IntKey]DynamicInt{
 		Description:  "FrontendVisibilityRPS is the global workflow List*WorkflowExecutions request rate limit per second",
 		DefaultValue: UnlimitedRPS,
 	},
+	FrontendAsyncRPS: DynamicInt{
+		KeyName:      "frontend.asyncrps",
+		Description:  "FrontendAsyncRPS is the async workflow request rate limit per second",
+		DefaultValue: 10000,
+	},
 	FrontendMaxDomainUserRPSPerInstance: DynamicInt{
 		KeyName:      "frontend.domainrps",
 		Filters:      []Filter{DomainName},
@@ -2937,6 +2993,12 @@ var IntKeys = map[IntKey]DynamicInt{
 		Description:  "FrontendMaxDomainVisibilityRPSPerInstance is the per-instance List*WorkflowExecutions request rate limit per second",
 		DefaultValue: UnlimitedRPS,
 	},
+	FrontendMaxDomainAsyncRPSPerInstance: DynamicInt{
+		KeyName:      "frontend.domainasyncrps",
+		Filters:      []Filter{DomainName},
+		Description:  "FrontendMaxDomainAsyncRPSPerInstance is the per-instance async workflow request rate limit per second",
+		DefaultValue: 10000,
+	},
 	FrontendGlobalDomainUserRPS: DynamicInt{
 		KeyName:      "frontend.globalDomainrps",
 		Filters:      []Filter{DomainName},
@@ -2954,6 +3016,12 @@ var IntKeys = map[IntKey]DynamicInt{
 		Filters:      []Filter{DomainName},
 		Description:  "FrontendGlobalDomainVisibilityRPS is the per-domain List*WorkflowExecutions request rate limit per second",
 		DefaultValue: UnlimitedRPS,
+	},
+	FrontendGlobalDomainAsyncRPS: DynamicInt{
+		KeyName:      "frontend.globalDomainAsyncrps",
+		Filters:      []Filter{DomainName},
+		Description:  "FrontendGlobalDomainAsyncRPS is the per-domain async workflow request rate limit per second",
+		DefaultValue: 100000,
 	},
 	FrontendDecisionResultCountLimit: DynamicInt{
 		KeyName:      "frontend.decisionResultCountLimit",
@@ -3477,6 +3545,18 @@ var IntKeys = map[IntKey]DynamicInt{
 		Filters:      []Filter{ShardID},
 		Description:  "ReplicationTaskProcessorErrorRetryMaxAttempts is the max retry attempts for applying replication tasks",
 		DefaultValue: 10,
+	},
+	WorkflowIDExternalRPS: DynamicInt{
+		KeyName:      "history.workflowIDExternalRPS",
+		Filters:      []Filter{DomainName},
+		Description:  "WorkflowIDExternalRPS is the rate limit per workflowID for external calls",
+		DefaultValue: UnlimitedRPS,
+	},
+	WorkflowIDInternalRPS: DynamicInt{
+		KeyName:      "history.workflowIDInternalRPS",
+		Filters:      []Filter{DomainName},
+		Description:  "WorkflowIDInternalRPS is the rate limit per workflowID for internal calls",
+		DefaultValue: UnlimitedRPS,
 	},
 	WorkerPersistenceMaxQPS: DynamicInt{
 		KeyName:      "worker.persistenceMaxQPS",
@@ -4018,6 +4098,11 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		Description:  "EnableESAnalyzer decides whether to enable system workers for processing ElasticSearch Analyzer",
 		DefaultValue: false,
 	},
+	EnableAsyncWorkflowConsumption: DynamicBool{
+		KeyName:      "worker.enableAsyncWorkflowConsumption",
+		Description:  "EnableAsyncWorkflowConsumption decides whether to enable async workflows",
+		DefaultValue: false,
+	},
 	EnableStickyQuery: DynamicBool{
 		KeyName:      "system.enableStickyQuery",
 		Filters:      []Filter{DomainName},
@@ -4027,11 +4112,6 @@ var BoolKeys = map[BoolKey]DynamicBool{
 	EnableFailoverManager: DynamicBool{
 		KeyName:      "system.enableFailoverManager",
 		Description:  "EnableFailoverManager indicates if failover manager is enabled",
-		DefaultValue: true,
-	},
-	EnableWorkflowShadower: DynamicBool{
-		KeyName:      "system.enableWorkflowShadower",
-		Description:  "EnableWorkflowShadower indicates if workflow shadower is enabled",
 		DefaultValue: true,
 	},
 	ConcreteExecutionFixerDomainAllow: DynamicBool{
@@ -4131,6 +4211,23 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		KeyName:      "history.enableTimerDebugLogByDomainID",
 		Filters:      []Filter{DomainID},
 		Description:  "Enable log for debugging timer task issue by domain",
+		DefaultValue: false,
+	},
+	EnableTaskVal: DynamicBool{
+		KeyName:      "system.enableTaskVal",
+		Description:  "Enable TaskValidation",
+		DefaultValue: false,
+	},
+	WorkflowIDCacheExternalEnabled: DynamicBool{
+		KeyName:      "history.workflowIDCacheExternalEnabled",
+		Filters:      []Filter{DomainName},
+		Description:  "WorkflowIDCacheExternalEnabled is the key to enable/disable caching of workflowID specific information for external requests",
+		DefaultValue: false,
+	},
+	WorkflowIDCacheInternalEnabled: DynamicBool{
+		KeyName:      "history.workflowIDCacheInternalEnabled",
+		Filters:      []Filter{DomainName},
+		Description:  "WorkflowIDCacheInternalEnabled is the key to enable/disable caching of workflowID specific information for internal requests",
 		DefaultValue: false,
 	},
 }

@@ -112,6 +112,13 @@ func (m *sqlDomainStore) CreateDomain(
 		isolationGroupsEncoding = request.Config.IsolationGroups.GetEncodingString()
 	}
 
+	var asyncWorkflowsCfg []byte
+	var asyncWorkflowsEncoding string
+	if request.Config != nil && request.Config.AsyncWorkflowsConfig != nil {
+		asyncWorkflowsCfg = request.Config.AsyncWorkflowsConfig.GetData()
+		asyncWorkflowsEncoding = request.Config.AsyncWorkflowsConfig.GetEncodingString()
+	}
+
 	domainInfo := &serialization.DomainInfo{
 		Name:                        request.Info.Name,
 		Status:                      int32(request.Info.Status),
@@ -138,6 +145,8 @@ func (m *sqlDomainStore) CreateDomain(
 		BadBinariesEncoding:         badBinariesEncoding,
 		IsolationGroups:             isolationGroups,
 		IsolationGroupsEncoding:     isolationGroupsEncoding,
+		AsyncWorkflowConfig:         asyncWorkflowsCfg,
+		AsyncWorkflowConfigEncoding: asyncWorkflowsEncoding,
 	}
 
 	blob, err := m.parser.DomainInfoToBlob(domainInfo)
@@ -240,6 +249,11 @@ func (m *sqlDomainStore) domainRowToGetDomainResponse(row *sqlplugin.DomainRow) 
 		isolationGroups = persistence.NewDataBlob(domainInfo.IsolationGroups, common.EncodingType(domainInfo.IsolationGroupsEncoding))
 	}
 
+	var asyncWorkflowsCfg *persistence.DataBlob
+	if domainInfo.AsyncWorkflowConfig != nil {
+		asyncWorkflowsCfg = persistence.NewDataBlob(domainInfo.AsyncWorkflowConfig, common.EncodingType(domainInfo.AsyncWorkflowConfigEncoding))
+	}
+
 	return &persistence.InternalGetDomainResponse{
 		Info: &persistence.DomainInfo{
 			ID:          row.ID.String(),
@@ -260,6 +274,7 @@ func (m *sqlDomainStore) domainRowToGetDomainResponse(row *sqlplugin.DomainRow) 
 			VisibilityArchivalURI:    domainInfo.GetVisibilityArchivalURI(),
 			BadBinaries:              badBinaries,
 			IsolationGroups:          isolationGroups,
+			AsyncWorkflowsConfig:     asyncWorkflowsCfg,
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
 			ActiveClusterName: cluster.GetOrUseDefaultActiveCluster(m.activeClusterName, domainInfo.GetActiveClusterName()),
@@ -300,6 +315,13 @@ func (m *sqlDomainStore) UpdateDomain(
 		isolationGroupsEncoding = request.Config.IsolationGroups.GetEncodingString()
 	}
 
+	var asyncWorkflowsCfg []byte
+	asyncWorkflowsEncoding := string(common.EncodingTypeEmpty)
+	if request.Config.AsyncWorkflowsConfig != nil {
+		asyncWorkflowsCfg = request.Config.AsyncWorkflowsConfig.Data
+		asyncWorkflowsEncoding = request.Config.AsyncWorkflowsConfig.GetEncodingString()
+	}
+
 	domainInfo := &serialization.DomainInfo{
 		Status:                      int32(request.Info.Status),
 		Description:                 request.Info.Description,
@@ -326,6 +348,8 @@ func (m *sqlDomainStore) UpdateDomain(
 		BadBinariesEncoding:         badBinariesEncoding,
 		IsolationGroups:             isolationGroups,
 		IsolationGroupsEncoding:     isolationGroupsEncoding,
+		AsyncWorkflowConfig:         asyncWorkflowsCfg,
+		AsyncWorkflowConfigEncoding: asyncWorkflowsEncoding,
 	}
 
 	blob, err := m.parser.DomainInfoToBlob(domainInfo)

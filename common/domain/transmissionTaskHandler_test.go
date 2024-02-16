@@ -112,6 +112,7 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_RegisterDomainTask_Is
 		VisibilityArchivalURI:    visibilityArchivalURI,
 		BadBinaries:              types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
 		IsolationGroups:          types.IsolationGroupConfiguration{},
+		AsyncWorkflowConfig:      types.AsyncWorkflowConfiguration{},
 	}
 	replicationConfig := &p.DomainReplicationConfig{
 		ActiveClusterName: clusterActive,
@@ -140,6 +141,7 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_RegisterDomainTask_Is
 				VisibilityArchivalURI:                  visibilityArchivalURI,
 				BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
 				IsolationGroups:                        &types.IsolationGroupConfiguration{},
+				AsyncWorkflowConfig:                    &types.AsyncWorkflowConfiguration{},
 			},
 			ReplicationConfig: &types.DomainReplicationConfiguration{
 				ActiveClusterName: clusterActive,
@@ -277,6 +279,15 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_UpdateDomainTask_IsGl
 		IsolationGroups: types.IsolationGroupConfiguration{
 			"zone-1": {Name: "zone-1", State: types.IsolationGroupStateDrained},
 		},
+		AsyncWorkflowConfig: types.AsyncWorkflowConfiguration{
+			Enabled:             true,
+			PredefinedQueueName: "queue1",
+			QueueType:           "kafka",
+			QueueConfig: &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         []byte(`{"cluster": "queue1"}`),
+			},
+		},
 	}
 	replicationConfig := &p.DomainReplicationConfig{
 		ActiveClusterName: clusterActive,
@@ -306,6 +317,15 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_UpdateDomainTask_IsGl
 				BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
 				IsolationGroups: &types.IsolationGroupConfiguration{
 					"zone-1": {Name: "zone-1", State: types.IsolationGroupStateDrained},
+				},
+				AsyncWorkflowConfig: &types.AsyncWorkflowConfiguration{
+					Enabled:             true,
+					PredefinedQueueName: "queue1",
+					QueueType:           "kafka",
+					QueueConfig: &types.DataBlob{
+						EncodingType: types.EncodingTypeJSON.Ptr(),
+						Data:         []byte(`{"cluster": "queue1"}`),
+					},
 				},
 			},
 			ReplicationConfig: &types.DomainReplicationConfiguration{

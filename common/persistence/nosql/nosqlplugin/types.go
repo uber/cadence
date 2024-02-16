@@ -219,6 +219,7 @@ type (
 		VisibilityArchivalURI    string
 		BadBinaries              *persistence.DataBlob
 		IsolationGroups          *persistence.DataBlob
+		AsyncWorkflowsConfig     *persistence.DataBlob
 	}
 
 	// SelectMessagesBetweenRequest is a request struct for SelectMessagesBetween

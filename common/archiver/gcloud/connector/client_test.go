@@ -39,7 +39,6 @@ import (
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/gcloud/connector"
 	"github.com/uber/cadence/common/archiver/gcloud/connector/mocks"
-	"github.com/uber/cadence/common/config"
 )
 
 func (s *clientSuite) SetupTest() {
@@ -220,8 +219,8 @@ func (s *clientSuite) TestGet() {
 
 func (s *clientSuite) TestWrongGoogleCredentialsPath() {
 	ctx := context.Background()
-	os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", "/Wrong/path")
-	_, err := connector.NewClient(ctx, &config.GstorageArchiver{})
+	s.T().Setenv("GOOGLE_APPLICATION_CREDENTIALS", "/Wrong/path")
+	_, err := connector.NewClient(ctx, connector.Config{}) // config is ignored, prefers env var
 	s.Require().Error(err)
 }
 

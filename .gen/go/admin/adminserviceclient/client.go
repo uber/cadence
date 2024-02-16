@@ -100,6 +100,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*replicator.GetDLQReplicationMessagesResponse, error)
 
+	GetDomainAsyncWorkflowConfiguraton(
+		ctx context.Context,
+		Request *admin.GetDomainAsyncWorkflowConfiguratonRequest,
+		opts ...yarpc.CallOption,
+	) (*admin.GetDomainAsyncWorkflowConfiguratonResponse, error)
+
 	GetDomainIsolationGroups(
 		ctx context.Context,
 		Request *admin.GetDomainIsolationGroupsRequest,
@@ -207,6 +213,12 @@ type Interface interface {
 		Request *admin.RestoreDynamicConfigRequest,
 		opts ...yarpc.CallOption,
 	) error
+
+	UpdateDomainAsyncWorkflowConfiguraton(
+		ctx context.Context,
+		Request *admin.UpdateDomainAsyncWorkflowConfiguratonRequest,
+		opts ...yarpc.CallOption,
+	) (*admin.UpdateDomainAsyncWorkflowConfiguratonResponse, error)
 
 	UpdateDomainIsolationGroups(
 		ctx context.Context,
@@ -532,6 +544,34 @@ func (c client) GetDLQReplicationMessages(
 	}
 
 	success, err = admin.AdminService_GetDLQReplicationMessages_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) GetDomainAsyncWorkflowConfiguraton(
+	ctx context.Context,
+	_Request *admin.GetDomainAsyncWorkflowConfiguratonRequest,
+	opts ...yarpc.CallOption,
+) (success *admin.GetDomainAsyncWorkflowConfiguratonResponse, err error) {
+
+	var result admin.AdminService_GetDomainAsyncWorkflowConfiguraton_Result
+	args := admin.AdminService_GetDomainAsyncWorkflowConfiguraton_Helper.Args(_Request)
+
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
+
+		if err = result.FromWire(body); err != nil {
+			return
+		}
+	}
+
+	success, err = admin.AdminService_GetDomainAsyncWorkflowConfiguraton_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -1036,6 +1076,34 @@ func (c client) RestoreDynamicConfig(
 	}
 
 	err = admin.AdminService_RestoreDynamicConfig_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) UpdateDomainAsyncWorkflowConfiguraton(
+	ctx context.Context,
+	_Request *admin.UpdateDomainAsyncWorkflowConfiguratonRequest,
+	opts ...yarpc.CallOption,
+) (success *admin.UpdateDomainAsyncWorkflowConfiguratonResponse, err error) {
+
+	var result admin.AdminService_UpdateDomainAsyncWorkflowConfiguraton_Result
+	args := admin.AdminService_UpdateDomainAsyncWorkflowConfiguraton_Helper.Args(_Request)
+
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
+
+		if err = result.FromWire(body); err != nil {
+			return
+		}
+	}
+
+	success, err = admin.AdminService_UpdateDomainAsyncWorkflowConfiguraton_Helper.UnwrapResponse(&result)
 	return
 }
 

@@ -1358,3 +1358,99 @@ func ToIsolationGroupConfig(in *apiv1.IsolationGroupConfiguration) *types.Isolat
 	}
 	return &out
 }
+
+func ToAdminGetDomainAsyncWorkflowConfiguratonRequest(in *adminv1.GetDomainAsyncWorkflowConfiguratonRequest) *types.GetDomainAsyncWorkflowConfiguratonRequest {
+	if in == nil {
+		return nil
+	}
+	return &types.GetDomainAsyncWorkflowConfiguratonRequest{
+		Domain: in.Domain,
+	}
+}
+
+func FromAdminGetDomainAsyncWorkflowConfiguratonResponse(in *types.GetDomainAsyncWorkflowConfiguratonResponse) *adminv1.GetDomainAsyncWorkflowConfiguratonResponse {
+	if in == nil {
+		return nil
+	}
+	return &adminv1.GetDomainAsyncWorkflowConfiguratonResponse{
+		Configuration: FromDomainAsyncWorkflowConfiguraton(in.Configuration),
+	}
+}
+
+func FromDomainAsyncWorkflowConfiguraton(in *types.AsyncWorkflowConfiguration) *apiv1.AsyncWorkflowConfiguration {
+	if in == nil {
+		return nil
+	}
+
+	return &apiv1.AsyncWorkflowConfiguration{
+		Enabled:             in.Enabled,
+		PredefinedQueueName: in.PredefinedQueueName,
+		QueueType:           in.QueueType,
+		QueueConfig:         FromDataBlob(in.QueueConfig),
+	}
+}
+
+func ToAdminUpdateDomainAsyncWorkflowConfiguratonRequest(in *adminv1.UpdateDomainAsyncWorkflowConfiguratonRequest) *types.UpdateDomainAsyncWorkflowConfiguratonRequest {
+	if in == nil {
+		return nil
+	}
+	return &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
+		Domain:        in.Domain,
+		Configuration: ToDomainAsyncWorkflowConfiguraton(in.Configuration),
+	}
+}
+
+func ToDomainAsyncWorkflowConfiguraton(in *apiv1.AsyncWorkflowConfiguration) *types.AsyncWorkflowConfiguration {
+	if in == nil {
+		return nil
+	}
+
+	return &types.AsyncWorkflowConfiguration{
+		Enabled:             in.Enabled,
+		PredefinedQueueName: in.PredefinedQueueName,
+		QueueType:           in.QueueType,
+		QueueConfig:         ToDataBlob(in.QueueConfig),
+	}
+}
+
+func FromAdminUpdateDomainAsyncWorkflowConfiguratonResponse(in *types.UpdateDomainAsyncWorkflowConfiguratonResponse) *adminv1.UpdateDomainAsyncWorkflowConfiguratonResponse {
+	if in == nil {
+		return nil
+	}
+	return &adminv1.UpdateDomainAsyncWorkflowConfiguratonResponse{}
+}
+
+func FromAdminGetDomainAsyncWorkflowConfiguratonRequest(in *types.GetDomainAsyncWorkflowConfiguratonRequest) *adminv1.GetDomainAsyncWorkflowConfiguratonRequest {
+	if in == nil {
+		return nil
+	}
+	return &adminv1.GetDomainAsyncWorkflowConfiguratonRequest{
+		Domain: in.Domain,
+	}
+}
+
+func ToAdminGetDomainAsyncWorkflowConfiguratonResponse(in *adminv1.GetDomainAsyncWorkflowConfiguratonResponse) *types.GetDomainAsyncWorkflowConfiguratonResponse {
+	if in == nil {
+		return nil
+	}
+	return &types.GetDomainAsyncWorkflowConfiguratonResponse{
+		Configuration: ToDomainAsyncWorkflowConfiguraton(in.Configuration),
+	}
+}
+
+func FromAdminUpdateDomainAsyncWorkflowConfiguratonRequest(in *types.UpdateDomainAsyncWorkflowConfiguratonRequest) *adminv1.UpdateDomainAsyncWorkflowConfiguratonRequest {
+	if in == nil {
+		return nil
+	}
+	return &adminv1.UpdateDomainAsyncWorkflowConfiguratonRequest{
+		Domain:        in.Domain,
+		Configuration: FromDomainAsyncWorkflowConfiguraton(in.Configuration),
+	}
+}
+
+func ToAdminUpdateDomainAsyncWorkflowConfiguratonResponse(in *adminv1.UpdateDomainAsyncWorkflowConfiguratonResponse) *types.UpdateDomainAsyncWorkflowConfiguratonResponse {
+	if in == nil {
+		return nil
+	}
+	return &types.UpdateDomainAsyncWorkflowConfiguratonResponse{}
+}

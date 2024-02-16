@@ -5262,6 +5262,70 @@ func ToStartTimerDecisionAttributes(t *shared.StartTimerDecisionAttributes) *typ
 	}
 }
 
+func FromSignalWithStartWorkflowExecutionAsyncRequest(t *types.SignalWithStartWorkflowExecutionAsyncRequest) *shared.SignalWithStartWorkflowExecutionAsyncRequest {
+	if t == nil {
+		return nil
+	}
+	return &shared.SignalWithStartWorkflowExecutionAsyncRequest{
+		Request: FromSignalWithStartWorkflowExecutionRequest(t.SignalWithStartWorkflowExecutionRequest),
+	}
+}
+
+func ToSignalWithStartWorkflowExecutionAsyncRequest(t *shared.SignalWithStartWorkflowExecutionAsyncRequest) *types.SignalWithStartWorkflowExecutionAsyncRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.SignalWithStartWorkflowExecutionAsyncRequest{
+		SignalWithStartWorkflowExecutionRequest: ToSignalWithStartWorkflowExecutionRequest(t.Request),
+	}
+}
+
+func FromSignalWithStartWorkflowExecutionAsyncResponse(t *types.SignalWithStartWorkflowExecutionAsyncResponse) *shared.SignalWithStartWorkflowExecutionAsyncResponse {
+	if t == nil {
+		return nil
+	}
+	return &shared.SignalWithStartWorkflowExecutionAsyncResponse{}
+}
+
+func ToSignalWithStartWorkflowExecutionAsyncResponse(t *shared.SignalWithStartWorkflowExecutionAsyncResponse) *types.SignalWithStartWorkflowExecutionAsyncResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.SignalWithStartWorkflowExecutionAsyncResponse{}
+}
+
+func FromStartWorkflowExecutionAsyncRequest(t *types.StartWorkflowExecutionAsyncRequest) *shared.StartWorkflowExecutionAsyncRequest {
+	if t == nil {
+		return nil
+	}
+	return &shared.StartWorkflowExecutionAsyncRequest{
+		Request: FromStartWorkflowExecutionRequest(t.StartWorkflowExecutionRequest),
+	}
+}
+
+func ToStartWorkflowExecutionAsyncRequest(t *shared.StartWorkflowExecutionAsyncRequest) *types.StartWorkflowExecutionAsyncRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.StartWorkflowExecutionAsyncRequest{
+		StartWorkflowExecutionRequest: ToStartWorkflowExecutionRequest(t.Request),
+	}
+}
+
+func FromStartWorkflowExecutionAsyncResponse(t *types.StartWorkflowExecutionAsyncResponse) *shared.StartWorkflowExecutionAsyncResponse {
+	if t == nil {
+		return nil
+	}
+	return &shared.StartWorkflowExecutionAsyncResponse{}
+}
+
+func ToStartWorkflowExecutionAsyncResponse(t *shared.StartWorkflowExecutionAsyncResponse) *types.StartWorkflowExecutionAsyncResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.StartWorkflowExecutionAsyncResponse{}
+}
+
 // FromStartWorkflowExecutionRequest converts internal StartWorkflowExecutionRequest type to thrift
 func FromStartWorkflowExecutionRequest(t *types.StartWorkflowExecutionRequest) *shared.StartWorkflowExecutionRequest {
 	if t == nil {

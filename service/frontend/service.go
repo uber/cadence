@@ -28,6 +28,7 @@ import (
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/service/frontend/admin"
@@ -36,6 +37,8 @@ import (
 	"github.com/uber/cadence/service/frontend/wrappers/accesscontrolled"
 	"github.com/uber/cadence/service/frontend/wrappers/clusterredirection"
 	"github.com/uber/cadence/service/frontend/wrappers/grpc"
+	"github.com/uber/cadence/service/frontend/wrappers/metered"
+	"github.com/uber/cadence/service/frontend/wrappers/ratelimited"
 	"github.com/uber/cadence/service/frontend/wrappers/thrift"
 )
 
@@ -130,8 +133,46 @@ func (s *Service) Start() {
 	// Base handler
 	s.handler = api.NewWorkflowHandler(s, s.config, client.NewVersionChecker(), dh)
 
+	userRateLimiter := quotas.NewMultiStageRateLimiter(
+		quotas.NewDynamicRateLimiter(s.config.UserRPS.AsFloat64()),
+		quotas.NewCollection(quotas.NewPerMemberDynamicRateLimiterFactory(
+			service.Frontend,
+			s.config.GlobalDomainUserRPS,
+			s.config.MaxDomainUserRPSPerInstance,
+			s.GetMembershipResolver(),
+		)),
+	)
+	workerRateLimiter := quotas.NewMultiStageRateLimiter(
+		quotas.NewDynamicRateLimiter(s.config.WorkerRPS.AsFloat64()),
+		quotas.NewCollection(quotas.NewPerMemberDynamicRateLimiterFactory(
+			service.Frontend,
+			s.config.GlobalDomainWorkerRPS,
+			s.config.MaxDomainWorkerRPSPerInstance,
+			s.GetMembershipResolver(),
+		)),
+	)
+	visibilityRateLimiter := quotas.NewMultiStageRateLimiter(
+		quotas.NewDynamicRateLimiter(s.config.VisibilityRPS.AsFloat64()),
+		quotas.NewCollection(quotas.NewPerMemberDynamicRateLimiterFactory(
+			service.Frontend,
+			s.config.GlobalDomainVisibilityRPS,
+			s.config.MaxDomainVisibilityRPSPerInstance,
+			s.GetMembershipResolver(),
+		)),
+	)
+	asyncRateLimiter := quotas.NewMultiStageRateLimiter(
+		quotas.NewDynamicRateLimiter(s.config.AsyncRPS.AsFloat64()),
+		quotas.NewCollection(quotas.NewPerMemberDynamicRateLimiterFactory(
+			service.Frontend,
+			s.config.GlobalDomainAsyncRPS,
+			s.config.MaxDomainAsyncRPSPerInstance,
+			s.GetMembershipResolver(),
+		)),
+	)
 	// Additional decorations
 	var handler api.Handler = s.handler
+	handler = ratelimited.NewAPIHandler(handler, s.GetDomainCache(), userRateLimiter, workerRateLimiter, visibilityRateLimiter, asyncRateLimiter)
+	handler = metered.NewAPIHandler(handler, s.GetLogger(), s.GetMetricsClient(), s.GetDomainCache(), s.config)
 	if s.params.ClusterRedirectionPolicy != nil {
 		handler = clusterredirection.NewAPIHandler(handler, s, s.config, *s.params.ClusterRedirectionPolicy)
 	}

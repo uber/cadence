@@ -89,6 +89,11 @@ func (g adminClient) GetDLQReplicationMessages(ctx context.Context, gp1 *types.G
 	return thrift.ToAdminGetDLQReplicationMessagesResponse(response), thrift.ToError(err)
 }
 
+func (g adminClient) GetDomainAsyncWorkflowConfiguraton(ctx context.Context, request *types.GetDomainAsyncWorkflowConfiguratonRequest, opts ...yarpc.CallOption) (gp1 *types.GetDomainAsyncWorkflowConfiguratonResponse, err error) {
+	response, err := g.c.GetDomainAsyncWorkflowConfiguraton(ctx, thrift.FromAdminGetDomainAsyncWorkflowConfiguratonRequest(request), opts...)
+	return thrift.ToAdminGetDomainAsyncWorkflowConfiguratonResponse(response), thrift.ToError(err)
+}
+
 func (g adminClient) GetDomainIsolationGroups(ctx context.Context, request *types.GetDomainIsolationGroupsRequest, opts ...yarpc.CallOption) (gp1 *types.GetDomainIsolationGroupsResponse, err error) {
 	response, err := g.c.GetDomainIsolationGroups(ctx, thrift.FromAdminGetDomainIsolationGroupsRequest(request), opts...)
 	return thrift.ToAdminGetDomainIsolationGroupsResponse(response), thrift.ToError(err)
@@ -177,6 +182,11 @@ func (g adminClient) RespondCrossClusterTasksCompleted(ctx context.Context, rp1 
 func (g adminClient) RestoreDynamicConfig(ctx context.Context, rp1 *types.RestoreDynamicConfigRequest, p1 ...yarpc.CallOption) (err error) {
 	err = g.c.RestoreDynamicConfig(ctx, thrift.FromAdminRestoreDynamicConfigRequest(rp1), p1...)
 	return thrift.ToError(err)
+}
+
+func (g adminClient) UpdateDomainAsyncWorkflowConfiguraton(ctx context.Context, request *types.UpdateDomainAsyncWorkflowConfiguratonRequest, opts ...yarpc.CallOption) (up1 *types.UpdateDomainAsyncWorkflowConfiguratonResponse, err error) {
+	response, err := g.c.UpdateDomainAsyncWorkflowConfiguraton(ctx, thrift.FromAdminUpdateDomainAsyncWorkflowConfiguratonRequest(request), opts...)
+	return thrift.ToAdminUpdateDomainAsyncWorkflowConfiguratonResponse(response), thrift.ToError(err)
 }
 
 func (g adminClient) UpdateDomainIsolationGroups(ctx context.Context, request *types.UpdateDomainIsolationGroupsRequest, opts ...yarpc.CallOption) (up1 *types.UpdateDomainIsolationGroupsResponse, err error) {

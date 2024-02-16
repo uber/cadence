@@ -1,0 +1,8 @@
+{
+  "CurrVersion": "0.37",
+  "MinCompatibleVersion": "0.37",
+  "Description": "Adding the domain configuration for async workflow config",
+  "SchemaUpdateCqlFiles": [
+    "async_workflow_config.cql"
+  ]
+}

@@ -220,6 +220,11 @@ func (g frontendClient) SignalWithStartWorkflowExecution(ctx context.Context, sp
 	return thrift.ToSignalWithStartWorkflowExecutionResponse(response), thrift.ToError(err)
 }
 
+func (g frontendClient) SignalWithStartWorkflowExecutionAsync(ctx context.Context, sp1 *types.SignalWithStartWorkflowExecutionAsyncRequest, p1 ...yarpc.CallOption) (sp2 *types.SignalWithStartWorkflowExecutionAsyncResponse, err error) {
+	response, err := g.c.SignalWithStartWorkflowExecutionAsync(ctx, thrift.FromSignalWithStartWorkflowExecutionAsyncRequest(sp1), p1...)
+	return thrift.ToSignalWithStartWorkflowExecutionAsyncResponse(response), thrift.ToError(err)
+}
+
 func (g frontendClient) SignalWorkflowExecution(ctx context.Context, sp1 *types.SignalWorkflowExecutionRequest, p1 ...yarpc.CallOption) (err error) {
 	err = g.c.SignalWorkflowExecution(ctx, thrift.FromSignalWorkflowExecutionRequest(sp1), p1...)
 	return thrift.ToError(err)
@@ -228,6 +233,11 @@ func (g frontendClient) SignalWorkflowExecution(ctx context.Context, sp1 *types.
 func (g frontendClient) StartWorkflowExecution(ctx context.Context, sp1 *types.StartWorkflowExecutionRequest, p1 ...yarpc.CallOption) (sp2 *types.StartWorkflowExecutionResponse, err error) {
 	response, err := g.c.StartWorkflowExecution(ctx, thrift.FromStartWorkflowExecutionRequest(sp1), p1...)
 	return thrift.ToStartWorkflowExecutionResponse(response), thrift.ToError(err)
+}
+
+func (g frontendClient) StartWorkflowExecutionAsync(ctx context.Context, sp1 *types.StartWorkflowExecutionAsyncRequest, p1 ...yarpc.CallOption) (sp2 *types.StartWorkflowExecutionAsyncResponse, err error) {
+	response, err := g.c.StartWorkflowExecutionAsync(ctx, thrift.FromStartWorkflowExecutionAsyncRequest(sp1), p1...)
+	return thrift.ToStartWorkflowExecutionAsyncResponse(response), thrift.ToError(err)
 }
 
 func (g frontendClient) TerminateWorkflowExecution(ctx context.Context, tp1 *types.TerminateWorkflowExecutionRequest, p1 ...yarpc.CallOption) (err error) {

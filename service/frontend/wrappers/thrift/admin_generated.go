@@ -85,6 +85,11 @@ func (g AdminHandler) GetDLQReplicationMessages(ctx context.Context, Request *re
 	return thrift.FromAdminGetDLQReplicationMessagesResponse(response), thrift.FromError(err)
 }
 
+func (g AdminHandler) GetDomainAsyncWorkflowConfiguraton(ctx context.Context, Request *admin.GetDomainAsyncWorkflowConfiguratonRequest) (gp1 *admin.GetDomainAsyncWorkflowConfiguratonResponse, err error) {
+	response, err := g.h.GetDomainAsyncWorkflowConfiguraton(ctx, thrift.ToAdminGetDomainAsyncWorkflowConfiguratonRequest(Request))
+	return thrift.FromAdminGetDomainAsyncWorkflowConfiguratonResponse(response), thrift.FromError(err)
+}
+
 func (g AdminHandler) GetDomainIsolationGroups(ctx context.Context, Request *admin.GetDomainIsolationGroupsRequest) (gp1 *admin.GetDomainIsolationGroupsResponse, err error) {
 	response, err := g.h.GetDomainIsolationGroups(ctx, thrift.ToAdminGetDomainIsolationGroupsRequest(Request))
 	return thrift.FromAdminGetDomainIsolationGroupsResponse(response), thrift.FromError(err)
@@ -173,6 +178,11 @@ func (g AdminHandler) RespondCrossClusterTasksCompleted(ctx context.Context, Req
 func (g AdminHandler) RestoreDynamicConfig(ctx context.Context, Request *admin.RestoreDynamicConfigRequest) (err error) {
 	err = g.h.RestoreDynamicConfig(ctx, thrift.ToAdminRestoreDynamicConfigRequest(Request))
 	return thrift.FromError(err)
+}
+
+func (g AdminHandler) UpdateDomainAsyncWorkflowConfiguraton(ctx context.Context, Request *admin.UpdateDomainAsyncWorkflowConfiguratonRequest) (up1 *admin.UpdateDomainAsyncWorkflowConfiguratonResponse, err error) {
+	response, err := g.h.UpdateDomainAsyncWorkflowConfiguraton(ctx, thrift.ToAdminUpdateDomainAsyncWorkflowConfiguratonRequest(Request))
+	return thrift.FromAdminUpdateDomainAsyncWorkflowConfiguratonResponse(response), thrift.FromError(err)
 }
 
 func (g AdminHandler) UpdateDomainIsolationGroups(ctx context.Context, Request *admin.UpdateDomainIsolationGroupsRequest) (up1 *admin.UpdateDomainIsolationGroupsResponse, err error) {

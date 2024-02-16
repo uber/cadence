@@ -884,6 +884,22 @@ func (w *WorkflowExecutionInfo) GetPartitionConfig() (o map[string]string) {
 	return
 }
 
+// GetCheckSum internal sql blob getter
+func (w *WorkflowExecutionInfo) GetChecksum() (o []byte) {
+	if w != nil {
+		return w.Checksum
+	}
+	return
+}
+
+// GetCheckSumEncoding internal sql blob getter
+func (w *WorkflowExecutionInfo) GetChecksumEncoding() (o string) {
+	if w != nil {
+		return w.ChecksumEncoding
+	}
+	return
+}
+
 // GetVersion internal sql blob getter
 func (a *ActivityInfo) GetVersion() (o int64) {
 	if a != nil {

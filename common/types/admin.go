@@ -474,3 +474,40 @@ func (v *UpdateDomainIsolationGroupsRequest) SerializeForLogging() (string, erro
 }
 
 type UpdateDomainIsolationGroupsResponse struct{}
+
+type GetDomainAsyncWorkflowConfiguratonRequest struct {
+	Domain string
+}
+
+func (v *GetDomainAsyncWorkflowConfiguratonRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
+	return SerializeRequest(v)
+}
+
+type GetDomainAsyncWorkflowConfiguratonResponse struct {
+	Configuration *AsyncWorkflowConfiguration
+}
+
+type AsyncWorkflowConfiguration struct {
+	Enabled             bool
+	PredefinedQueueName string
+	QueueType           string
+	QueueConfig         *DataBlob
+}
+
+type UpdateDomainAsyncWorkflowConfiguratonRequest struct {
+	Domain        string
+	Configuration *AsyncWorkflowConfiguration
+}
+
+func (v *UpdateDomainAsyncWorkflowConfiguratonRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
+	return SerializeRequest(v)
+}
+
+type UpdateDomainAsyncWorkflowConfiguratonResponse struct {
+}

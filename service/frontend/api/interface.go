@@ -21,6 +21,8 @@
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interface_mock.go -self_package github.com/uber/cadence/service/frontend/api
 //go:generate gowrap gen -g -p . -i Handler -t ../templates/accesscontrolled.tmpl -o ../wrappers/accesscontrolled/api_generated.go -v handler=API
 //go:generate gowrap gen -g -p . -i Handler -t ../templates/clusterredirection.tmpl -o ../wrappers/clusterredirection/api_generated.go
+//go:generate gowrap gen -g -p . -i Handler -t ../templates/metered.tmpl -o ../wrappers/metered/api_generated.go -v handler=API
+//go:generate gowrap gen -g -p . -i Handler -t ../templates/ratelimited.tmpl -o ../wrappers/ratelimited/api_generated.go -v handler=API
 //go:generate gowrap gen -g -p . -i Handler -t ../../templates/grpc.tmpl -o ../wrappers/grpc/api_generated.go -v handler=API -v package=apiv1 -v path=github.com/uber/cadence-idl/go/proto/api/v1 -v prefix=
 //go:generate gowrap gen -g -p ../../../.gen/go/cadence/workflowserviceserver -i Interface -t ../../templates/thrift.tmpl -o ../wrappers/thrift/api_generated.go -v handler=API -v prefix=
 
@@ -73,8 +75,10 @@ type (
 		RestartWorkflowExecution(context.Context, *types.RestartWorkflowExecutionRequest) (*types.RestartWorkflowExecutionResponse, error)
 		ScanWorkflowExecutions(context.Context, *types.ListWorkflowExecutionsRequest) (*types.ListWorkflowExecutionsResponse, error)
 		SignalWithStartWorkflowExecution(context.Context, *types.SignalWithStartWorkflowExecutionRequest) (*types.StartWorkflowExecutionResponse, error)
+		SignalWithStartWorkflowExecutionAsync(context.Context, *types.SignalWithStartWorkflowExecutionAsyncRequest) (*types.SignalWithStartWorkflowExecutionAsyncResponse, error)
 		SignalWorkflowExecution(context.Context, *types.SignalWorkflowExecutionRequest) error
 		StartWorkflowExecution(context.Context, *types.StartWorkflowExecutionRequest) (*types.StartWorkflowExecutionResponse, error)
+		StartWorkflowExecutionAsync(context.Context, *types.StartWorkflowExecutionAsyncRequest) (*types.StartWorkflowExecutionAsyncResponse, error)
 		TerminateWorkflowExecution(context.Context, *types.TerminateWorkflowExecutionRequest) error
 		UpdateDomain(context.Context, *types.UpdateDomainRequest) (*types.UpdateDomainResponse, error)
 	}

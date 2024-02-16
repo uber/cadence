@@ -38,6 +38,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
+	"github.com/uber/cadence/common/asyncworkflow/queue"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
@@ -59,7 +60,6 @@ import (
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service"
-	"github.com/uber/cadence/common/taskvalidator"
 )
 
 type (
@@ -132,7 +132,8 @@ type (
 		isolationGroups           isolationgroup.State
 		isolationGroupConfigStore configstore.Client
 		partitioner               partition.Partitioner
-		taskvalidator             taskvalidator.Checker
+
+		asyncWorkflowQueueProvider queue.Provider
 	}
 )
 
@@ -338,7 +339,8 @@ func New(
 		isolationGroups:           isolationGroupState,
 		isolationGroupConfigStore: isolationGroupStore, // can be nil where persistence is not available
 		partitioner:               partitioner,
-		taskvalidator:             taskvalidator.NewWfChecker(logger, params.MetricsClient, domainCache),
+
+		asyncWorkflowQueueProvider: params.AsyncWorkflowQueueProvider,
 	}
 	return impl, nil
 }
@@ -442,10 +444,6 @@ func (h *Impl) GetTimeSource() clock.TimeSource {
 // GetPayloadSerializer return binary payload serializer
 func (h *Impl) GetPayloadSerializer() persistence.PayloadSerializer {
 	return h.payloadSerializer
-}
-
-func (h *Impl) GetTaskValidator() taskvalidator.Checker {
-	return h.taskvalidator
 }
 
 // GetMetricsClient return metrics client
@@ -615,6 +613,11 @@ func (h *Impl) GetPartitioner() partition.Partitioner {
 // GetIsolationGroupStore returns the isolation group configuration store or nil
 func (h *Impl) GetIsolationGroupStore() configstore.Client {
 	return h.isolationGroupConfigStore
+}
+
+// GetAsyncWorkflowQueueProvider returns the async workflow queue provider
+func (h *Impl) GetAsyncWorkflowQueueProvider() queue.Provider {
+	return h.asyncWorkflowQueueProvider
 }
 
 // due to the config store being only available for some

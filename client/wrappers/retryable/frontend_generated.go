@@ -412,6 +412,17 @@ func (c *frontendClient) SignalWithStartWorkflowExecution(ctx context.Context, s
 	return resp, err
 }
 
+func (c *frontendClient) SignalWithStartWorkflowExecutionAsync(ctx context.Context, sp1 *types.SignalWithStartWorkflowExecutionAsyncRequest, p1 ...yarpc.CallOption) (sp2 *types.SignalWithStartWorkflowExecutionAsyncResponse, err error) {
+	var resp *types.SignalWithStartWorkflowExecutionAsyncResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.SignalWithStartWorkflowExecutionAsync(ctx, sp1, p1...)
+		return err
+	}
+	err = c.throttleRetry.Do(ctx, op)
+	return resp, err
+}
+
 func (c *frontendClient) SignalWorkflowExecution(ctx context.Context, sp1 *types.SignalWorkflowExecutionRequest, p1 ...yarpc.CallOption) (err error) {
 	op := func() error {
 		return c.client.SignalWorkflowExecution(ctx, sp1, p1...)
@@ -424,6 +435,17 @@ func (c *frontendClient) StartWorkflowExecution(ctx context.Context, sp1 *types.
 	op := func() error {
 		var err error
 		resp, err = c.client.StartWorkflowExecution(ctx, sp1, p1...)
+		return err
+	}
+	err = c.throttleRetry.Do(ctx, op)
+	return resp, err
+}
+
+func (c *frontendClient) StartWorkflowExecutionAsync(ctx context.Context, sp1 *types.StartWorkflowExecutionAsyncRequest, p1 ...yarpc.CallOption) (sp2 *types.StartWorkflowExecutionAsyncResponse, err error) {
+	var resp *types.StartWorkflowExecutionAsyncResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.StartWorkflowExecutionAsync(ctx, sp1, p1...)
 		return err
 	}
 	err = c.throttleRetry.Do(ctx, op)

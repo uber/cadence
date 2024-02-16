@@ -42,6 +42,13 @@ import (
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/resource"
 	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/workflowcache"
+)
+
+const (
+	testWorkflowID    = "test-workflow-id"
+	testWorkflowRunID = "test-workflow-run-id"
+	testDomainID      = "BF80C53A-ED56-4DD9-84EB-BE9AD4E45867"
 )
 
 type (
@@ -53,6 +60,7 @@ type (
 		mockResource        *resource.Test
 		mockShardController *shard.MockController
 		mockEngine          *engine.MockEngine
+		mockWFCache         *workflowcache.MockWFCache
 
 		handler *handlerImpl
 	}
@@ -72,9 +80,11 @@ func (s *handlerSuite) SetupTest() {
 	s.mockShardController = shard.NewMockController(s.controller)
 	s.mockEngine = engine.NewMockEngine(s.controller)
 	s.mockShardController.EXPECT().GetEngineForShard(gomock.Any()).Return(s.mockEngine, nil).AnyTimes()
+	s.mockWFCache = workflowcache.NewMockWFCache(s.controller)
 
 	s.handler = NewHandler(s.mockResource, config.NewForTest()).(*handlerImpl)
 	s.handler.controller = s.mockShardController
+	s.handler.workflowIDCache = s.mockWFCache
 	s.handler.startWG.Done()
 }
 
@@ -291,6 +301,39 @@ func TestCorrectUseOfErrorHandling(t *testing.T) {
 			// we're doing the args assertion in the On, so using mock.Anything to avoid having to duplicate this
 			// a wrong metric being emitted will fail the mock.On() expectation. This will catch missing calls
 			scope.Mock.AssertCalled(t, "IncCounter", mock.Anything)
+		})
+	}
+}
+
+func (s *handlerSuite) TestStartWorkflowExecution() {
+
+	request := &types.HistoryStartWorkflowExecutionRequest{
+		DomainUUID: testDomainID,
+		StartRequest: &types.StartWorkflowExecutionRequest{
+			WorkflowID: testWorkflowID,
+		},
+	}
+
+	expectedResponse := &types.StartWorkflowExecutionResponse{
+		RunID: testWorkflowRunID,
+	}
+
+	// We should _always_ see the startworkflowexecution call no matter if allow external is true or false
+	// as we are in shadow mode
+	tests := map[string]struct{ allowExternal bool }{
+		"allow external":    {allowExternal: true},
+		"disallow external": {allowExternal: false},
+	}
+
+	for name, test := range tests {
+		s.Run(name, func() {
+			s.mockWFCache.EXPECT().AllowExternal(gomock.Any(), gomock.Any()).Return(test.allowExternal).Times(1)
+			s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).AnyTimes()
+			s.mockEngine.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(expectedResponse, nil).Times(1)
+
+			response, err := s.handler.StartWorkflowExecution(context.Background(), request)
+			s.Equal(expectedResponse, response)
+			s.Nil(err)
 		})
 	}
 }
