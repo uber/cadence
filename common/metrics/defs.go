@@ -1709,6 +1709,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		TaskValidatorScope:          {operation: "TaskValidation"},
 		DomainReplicationQueueScope: {operation: "DomainReplicationQueue"},
 		ClusterMetadataScope:        {operation: "ClusterMetadata"},
+		HashringScope:               {operation: "Hashring"},
 	},
 	// Frontend Scope Names
 	Frontend: {
