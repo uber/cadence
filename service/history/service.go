@@ -32,6 +32,8 @@ import (
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/handler"
 	"github.com/uber/cadence/service/history/resource"
+	"github.com/uber/cadence/service/history/wrappers/grpc"
+	"github.com/uber/cadence/service/history/wrappers/thrift"
 )
 
 // Service represents the cadence-history service
@@ -93,10 +95,10 @@ func (s *Service) Start() {
 
 	s.handler = handler.NewHandler(s.Resource, s.config)
 
-	thriftHandler := handler.NewThriftHandler(s.handler)
+	thriftHandler := thrift.NewThriftHandler(s.handler)
 	thriftHandler.Register(s.GetDispatcher())
 
-	grpcHandler := handler.NewGRPCHandler(s.handler)
+	grpcHandler := grpc.NewGRPCHandler(s.handler)
 	grpcHandler.Register(s.GetDispatcher())
 
 	// must start resource first

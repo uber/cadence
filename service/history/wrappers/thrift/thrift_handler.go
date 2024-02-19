@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package handler
+package thrift
 
 import (
 	"context"
@@ -31,13 +31,14 @@ import (
 	"github.com/uber/cadence/.gen/go/health/metaserver"
 	"github.com/uber/cadence/.gen/go/history/historyserviceserver"
 	"github.com/uber/cadence/common/types/mapper/thrift"
+	"github.com/uber/cadence/service/history/handler"
 )
 
 type ThriftHandler struct {
-	h Handler
+	h handler.Handler
 }
 
-func NewThriftHandler(h Handler) ThriftHandler {
+func NewThriftHandler(h handler.Handler) ThriftHandler {
 	return ThriftHandler{h}
 }
 
