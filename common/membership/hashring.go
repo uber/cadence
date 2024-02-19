@@ -282,7 +282,7 @@ func (r *ring) ring() *hashring.HashRing {
 	return r.value.Load().(*hashring.HashRing)
 }
 
-func (r *ring) emitHashIdentifier() int64 {
+func (r *ring) emitHashIdentifier() float64 {
 	members, err := r.peerProvider.GetMembers(r.service)
 	if err != nil {
 		r.logger.Error("Observed a problem getting peer members", tag.Error(err))
@@ -309,11 +309,12 @@ func (r *ring) emitHashIdentifier() int64 {
 	// the reason for this trimming is that collision is pretty unlikely, and this metric
 	// has only value in emitting that it is different from other hosts, so keeping the
 	// hash space small here
-	trimmedForMetric := int64(hashedView % 100)
+	trimmedForMetric := float64(hashedView % 100)
+	r.logger.Debug("Hashring view", tag.Dynamic("hashring-view", sb.String()), tag.Dynamic("trimmed-hash-id", trimmedForMetric), tag.Service(r.service))
 	r.scope.Tagged(
 		metrics.ServiceTag(r.service),
 		metrics.HostTag(self.identity),
-	).AddCounter(metrics.HashringViewIdentifier, trimmedForMetric)
+	).UpdateGauge(metrics.HashringViewIdentifier, trimmedForMetric)
 	return trimmedForMetric
 }
 

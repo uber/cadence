@@ -242,7 +242,7 @@ func TestEmitHashringView(t *testing.T) {
 		lookuperr      error
 		selfInfo       HostInfo
 		selfErr        error
-		expectedResult int64
+		expectedResult float64
 	}{
 		"example one - sorted set 1 - the output should be some random hashed value": {
 			hosts: []HostInfo{
@@ -251,7 +251,7 @@ func TestEmitHashringView(t *testing.T) {
 				{addr: "10.0.0.3:1234", ip: "10.0.0.3", identity: "host3", portMap: nil},
 			},
 			selfInfo:       HostInfo{identity: "host123"},
-			expectedResult: 35, // the number here is meaningless
+			expectedResult: 35.0, // the number here is meaningless
 		},
 		"example one - unsorted set 1 - the order of the hosts should not matter": {
 			hosts: []HostInfo{
@@ -260,17 +260,17 @@ func TestEmitHashringView(t *testing.T) {
 				{addr: "10.0.0.2:1234", ip: "10.0.0.2", identity: "host2", portMap: nil},
 			},
 			selfInfo:       HostInfo{identity: "host123"},
-			expectedResult: 35, // the test here is that it's the same as test 1
+			expectedResult: 35.0, // the test here is that it's the same as test 1
 		},
 		"example 2 - empty set": {
 			hosts:          []HostInfo{},
 			selfInfo:       HostInfo{identity: "host123"},
-			expectedResult: 42, // meaningless hash value
+			expectedResult: 42.0, // meaningless hash value
 		},
 		"example 3 - nil set": {
 			hosts:          nil,
 			selfInfo:       HostInfo{identity: "host123"},
-			expectedResult: 42, // meaningless hash value
+			expectedResult: 42.0, // meaningless hash value
 		},
 	}
 
