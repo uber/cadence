@@ -305,11 +305,10 @@ func (r *ring) emitHashIdentifier() float64 {
 		sb.WriteString("\n")
 	}
 	hashedView := farm.Hash32([]byte(sb.String()))
-	// trimming here to 100 distinct values, since that should be enough
-	// the reason for this trimming is that collision is pretty unlikely, and this metric
-	// has only value in emitting that it is different from other hosts, so keeping the
-	// hash space small here
-	trimmedForMetric := float64(hashedView % 100)
+	// Trimming the metric because collisions are unlikely and I didn't want to use the full Float64 
+	// in-case it overflowed something. The number itself is meaningless, so additional precision
+	// doesn't really give any advantage, besides reducing the risk of collision
+	trimmedForMetric := float64(hashedView % 1000)
 	r.logger.Debug("Hashring view", tag.Dynamic("hashring-view", sb.String()), tag.Dynamic("trimmed-hash-id", trimmedForMetric), tag.Service(r.service))
 	r.scope.Tagged(
 		metrics.ServiceTag(r.service),
