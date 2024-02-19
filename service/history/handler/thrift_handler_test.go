@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package history
+package handler
 
 import (
 	"context"
@@ -26,7 +26,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"github.com/uber/cadence/service/history/handler"
 
 	"github.com/uber/cadence/.gen/go/health"
 	hist "github.com/uber/cadence/.gen/go/history"
@@ -39,7 +38,7 @@ import (
 func TestThriftHandler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	h := handler.NewMockHandler(ctrl)
+	h := NewMockHandler(ctrl)
 	th := NewThriftHandler(h)
 	ctx := context.Background()
 	internalErr := &types.InternalServiceError{Message: "test"}

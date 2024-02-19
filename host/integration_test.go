@@ -36,11 +36,11 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber/cadence/service/history/engine/engineimpl"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/history/engine/engineimpl"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/matching"
 )

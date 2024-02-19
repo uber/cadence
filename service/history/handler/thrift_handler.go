@@ -20,24 +20,33 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package history
+package handler
 
 import (
 	"context"
 
-	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	"go.uber.org/yarpc"
 
-	historyv1 "github.com/uber/cadence/.gen/proto/history/v1"
-	"github.com/uber/cadence/common/types/mapper/proto"
+	"github.com/uber/cadence/.gen/go/health"
+	"github.com/uber/cadence/.gen/go/health/metaserver"
+	"github.com/uber/cadence/.gen/go/history/historyserviceserver"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
-func (g GRPCHandler) Register(dispatcher *yarpc.Dispatcher) {
-	dispatcher.Register(historyv1.BuildHistoryAPIYARPCProcedures(g))
-	dispatcher.Register(apiv1.BuildMetaAPIYARPCProcedures(g))
+type ThriftHandler struct {
+	h Handler
 }
 
-func (g GRPCHandler) Health(ctx context.Context, _ *apiv1.HealthRequest) (*apiv1.HealthResponse, error) {
-	response, err := g.h.Health(ctx)
-	return proto.FromHealthResponse(response), proto.FromError(err)
+func NewThriftHandler(h Handler) ThriftHandler {
+	return ThriftHandler{h}
+}
+
+func (t ThriftHandler) Register(dispatcher *yarpc.Dispatcher) {
+	dispatcher.Register(historyserviceserver.New(&t))
+	dispatcher.Register(metaserver.New(&t))
+}
+
+func (t ThriftHandler) Health(ctx context.Context) (*health.HealthStatus, error) {
+	response, err := t.h.Health(ctx)
+	return thrift.FromHealthStatus(response), thrift.FromError(err)
 }

@@ -30,8 +30,6 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
-	"github.com/uber/cadence/service/history/constants"
-	"github.com/uber/cadence/service/history/engine/engineimpl"
 	"go.uber.org/yarpc/yarpcerrors"
 	"golang.org/x/sync/errgroup"
 
@@ -48,7 +46,9 @@ import (
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/proto"
 	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/engine"
+	"github.com/uber/cadence/service/history/engine/engineimpl"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/failover"
 	"github.com/uber/cadence/service/history/replication"

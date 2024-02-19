@@ -30,7 +30,6 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
-	"github.com/uber/cadence/service/history/engine/engineimpl"
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/.gen/go/shared"
@@ -38,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/history/engine/engineimpl"
 	"github.com/uber/cadence/service/history/execution"
 )
 
