@@ -308,6 +308,8 @@ const (
 
 	// ResolverHostNotFoundScope is a simple low level error indicating a lookup failed in the membership resolver
 	ResolverHostNotFoundScope
+	// HashringScope is a metrics scope for emitting events for the service hashrhing
+	HashringScope
 	// HistoryClientStartWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientStartWorkflowExecutionScope
 	// HistoryClientDescribeHistoryHostScope tracks RPC calls to history service
@@ -1707,6 +1709,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		TaskValidatorScope:          {operation: "TaskValidation"},
 		DomainReplicationQueueScope: {operation: "DomainReplicationQueue"},
 		ClusterMetadataScope:        {operation: "ClusterMetadata"},
+		HashringScope:               {operation: "Hashring"},
 	},
 	// Frontend Scope Names
 	Frontend: {
@@ -2173,6 +2176,8 @@ const (
 	IsolationGroupStateDrained
 	IsolationGroupStateHealthy
 	ValidatedWorkflowCount
+
+	HashringViewIdentifier
 
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
@@ -2812,6 +2817,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		IsolationGroupStateDrained:           {metricName: "isolation_group_drained", metricType: Counter},
 		IsolationGroupStateHealthy:           {metricName: "isolation_group_healthy", metricType: Counter},
 		ValidatedWorkflowCount:               {metricName: "task_validator_count", metricType: Counter},
+		HashringViewIdentifier:               {metricName: "hashring_view_identifier", metricType: Counter},
 	},
 	History: {
 		TaskRequests:             {metricName: "task_requests", metricType: Counter},

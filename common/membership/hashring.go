@@ -22,6 +22,8 @@ package membership
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -33,6 +35,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -64,6 +67,7 @@ type ring struct {
 	refreshChan  chan *ChangedEvent
 	shutdownCh   chan struct{}
 	shutdownWG   sync.WaitGroup
+	scope        metrics.Scope
 	logger       log.Logger
 
 	value atomic.Value // this stores the current hashring
@@ -84,21 +88,23 @@ func newHashring(
 	service string,
 	provider PeerProvider,
 	logger log.Logger,
+	scope metrics.Scope,
 ) *ring {
-	hashring := &ring{
+	ring := &ring{
 		status:       common.DaemonStatusInitialized,
 		service:      service,
 		peerProvider: provider,
 		shutdownCh:   make(chan struct{}),
 		logger:       logger,
 		refreshChan:  make(chan *ChangedEvent),
+		scope:        scope,
 	}
 
-	hashring.members.keys = make(map[string]HostInfo)
-	hashring.subscribers.keys = make(map[string]chan<- *ChangedEvent)
+	ring.members.keys = make(map[string]HostInfo)
+	ring.subscribers.keys = make(map[string]chan<- *ChangedEvent)
 
-	hashring.value.Store(emptyHashring())
-	return hashring
+	ring.value.Store(emptyHashring())
+	return ring
 }
 
 func emptyHashring() *hashring.HashRing {
@@ -264,6 +270,7 @@ func (r *ring) refreshRingWorker() {
 				r.logger.Error("refreshing ring", tag.Error(err))
 			}
 		case <-refreshTicker.C: // periodically refresh membership
+			r.emitHashIdentifier()
 			if err := r.refresh(); err != nil {
 				r.logger.Error("periodically refreshing ring", tag.Error(err))
 			}
@@ -273,6 +280,41 @@ func (r *ring) refreshRingWorker() {
 
 func (r *ring) ring() *hashring.HashRing {
 	return r.value.Load().(*hashring.HashRing)
+}
+
+func (r *ring) emitHashIdentifier() float64 {
+	members, err := r.peerProvider.GetMembers(r.service)
+	if err != nil {
+		r.logger.Error("Observed a problem getting peer members while emitting hash identifier metrics", tag.Error(err))
+		return -1
+	}
+	self, err := r.peerProvider.WhoAmI()
+	if err != nil {
+		r.logger.Error("Observed a problem looking up self from the membership provider while emitting hash identifier metrics", tag.Error(err))
+		self = HostInfo{
+			identity: "unknown",
+		}
+	}
+
+	sort.Slice(members, func(i int, j int) bool {
+		return members[i].addr > members[j].addr
+	})
+	var sb strings.Builder
+	for i := range members {
+		sb.WriteString(members[i].addr)
+		sb.WriteString("\n")
+	}
+	hashedView := farm.Hash32([]byte(sb.String()))
+	// Trimming the metric because collisions are unlikely and I didn't want to use the full Float64
+	// in-case it overflowed something. The number itself is meaningless, so additional precision
+	// doesn't really give any advantage, besides reducing the risk of collision
+	trimmedForMetric := float64(hashedView % 1000)
+	r.logger.Debug("Hashring view", tag.Dynamic("hashring-view", sb.String()), tag.Dynamic("trimmed-hash-id", trimmedForMetric), tag.Service(r.service))
+	r.scope.Tagged(
+		metrics.ServiceTag(r.service),
+		metrics.HostTag(self.identity),
+	).UpdateGauge(metrics.HashringViewIdentifier, trimmedForMetric)
+	return trimmedForMetric
 }
 
 func (r *ring) compareMembers(members []HostInfo) (map[string]HostInfo, bool) {
