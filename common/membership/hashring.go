@@ -305,7 +305,7 @@ func (r *ring) emitHashIdentifier() float64 {
 		sb.WriteString("\n")
 	}
 	hashedView := farm.Hash32([]byte(sb.String()))
-	// Trimming the metric because collisions are unlikely and I didn't want to use the full Float64 
+	// Trimming the metric because collisions are unlikely and I didn't want to use the full Float64
 	// in-case it overflowed something. The number itself is meaningless, so additional precision
 	// doesn't really give any advantage, besides reducing the risk of collision
 	trimmedForMetric := float64(hashedView % 1000)
