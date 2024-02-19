@@ -285,12 +285,12 @@ func (r *ring) ring() *hashring.HashRing {
 func (r *ring) emitHashIdentifier() float64 {
 	members, err := r.peerProvider.GetMembers(r.service)
 	if err != nil {
-		r.logger.Error("Observed a problem getting peer members", tag.Error(err))
+		r.logger.Error("Observed a problem getting peer members while emitting hash identifier metrics", tag.Error(err))
 		return -1
 	}
 	self, err := r.peerProvider.WhoAmI()
 	if err != nil {
-		r.logger.Error("Observed a problem self", tag.Error(err))
+		r.logger.Error("Observed a problem looking up self from the membership provider while emitting hash identifier metrics", tag.Error(err))
 		self = HostInfo{
 			identity: "unknown",
 		}
