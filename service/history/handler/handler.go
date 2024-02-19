@@ -689,12 +689,6 @@ func (h *handlerImpl) StartWorkflowExecution(
 	startRequest := wrappedRequest.StartRequest
 	workflowID := startRequest.GetWorkflowID()
 
-	if !h.workflowIDCache.AllowExternal(domainID, workflowID) {
-		return nil, &types.ServiceBusyError{
-			Message: "Too many outstanding requests to the cadence service for workflowID",
-		}
-	}
-
 	engine, err1 := h.controller.GetEngine(workflowID)
 	if err1 != nil {
 		return nil, h.error(err1, scope, domainID, workflowID, "")

@@ -305,7 +305,7 @@ func TestCorrectUseOfErrorHandling(t *testing.T) {
 	}
 }
 
-func (s *handlerSuite) TestStartWorkflowExecutionAllow() {
+func (s *handlerSuite) TestStartWorkflowExecution() {
 
 	request := &types.HistoryStartWorkflowExecutionRequest{
 		DomainUUID: testDomainID,
@@ -318,30 +318,10 @@ func (s *handlerSuite) TestStartWorkflowExecutionAllow() {
 		RunID: testWorkflowRunID,
 	}
 
-	s.mockWFCache.EXPECT().AllowExternal(gomock.Any(), gomock.Any()).Return(true).Times(1)
 	s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).AnyTimes()
 	s.mockEngine.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(expectedResponse, nil).Times(1)
 
 	response, err := s.handler.StartWorkflowExecution(context.Background(), request)
 	s.Equal(expectedResponse, response)
 	s.Nil(err)
-}
-
-func (s *handlerSuite) TestStartWorkflowExecutionDisallow() {
-
-	request := &types.HistoryStartWorkflowExecutionRequest{
-		DomainUUID: testDomainID,
-		StartRequest: &types.StartWorkflowExecutionRequest{
-			WorkflowID: testWorkflowID,
-		},
-	}
-
-	s.mockWFCache.EXPECT().AllowExternal(gomock.Any(), gomock.Any()).Return(false).Times(1)
-
-	response, err := s.handler.StartWorkflowExecution(context.Background(), request)
-	s.Nil(response)
-
-	var serviceBusy *types.ServiceBusyError
-	s.ErrorAs(err, &serviceBusy)
-	s.ErrorContains(err, "Too many outstanding requests to the cadence service for workflowID")
 }
