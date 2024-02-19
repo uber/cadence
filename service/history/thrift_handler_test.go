@@ -26,6 +26,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/uber/cadence/service/history/handler"
 
 	"github.com/uber/cadence/.gen/go/health"
 	hist "github.com/uber/cadence/.gen/go/history"
@@ -38,7 +39,7 @@ import (
 func TestThriftHandler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	h := NewMockHandler(ctrl)
+	h := handler.NewMockHandler(ctrl)
 	th := NewThriftHandler(h)
 	ctx := context.Background()
 	internalErr := &types.InternalServiceError{Message: "test"}

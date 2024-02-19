@@ -31,13 +31,14 @@ import (
 
 	historyv1 "github.com/uber/cadence/.gen/proto/history/v1"
 	"github.com/uber/cadence/common/types/mapper/proto"
+	"github.com/uber/cadence/service/history/handler"
 )
 
 type GRPCHandler struct {
-	h Handler
+	h handler.Handler
 }
 
-func NewGRPCHandler(h Handler) GRPCHandler {
+func NewGRPCHandler(h handler.Handler) GRPCHandler {
 	return GRPCHandler{h}
 }
 

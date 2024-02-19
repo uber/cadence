@@ -25,6 +25,7 @@ package history
 import (
 	"context"
 
+	"github.com/uber/cadence/service/history/handler"
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/.gen/go/health"
@@ -34,10 +35,10 @@ import (
 )
 
 type ThriftHandler struct {
-	h Handler
+	h handler.Handler
 }
 
-func NewThriftHandler(h Handler) ThriftHandler {
+func NewThriftHandler(h handler.Handler) ThriftHandler {
 	return ThriftHandler{h}
 }
 

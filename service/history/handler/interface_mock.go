@@ -24,7 +24,7 @@
 // Source: interface.go
 
 // Package history is a generated GoMock package.
-package history
+package handler
 
 import (
 	context "context"

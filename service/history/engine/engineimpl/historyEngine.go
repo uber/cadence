@@ -19,7 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package history
+package engineimpl
 
 import (
 	"bytes"
@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
+	"github.com/uber/cadence/service/history/engine"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc/yarpcerrors"
 
@@ -54,7 +55,6 @@ import (
 	hcommon "github.com/uber/cadence/service/history/common"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/decision"
-	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/failover"
