@@ -28,9 +28,9 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/uber/cadence/service/history/handler"
 
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/service/history"
 	"github.com/uber/cadence/service/history/workflowcache"
 )
 
@@ -43,7 +43,7 @@ func TestRatelimitedEndpoints_Table(t *testing.T) {
 	controller := gomock.NewController(t)
 
 	workflowIDCache := workflowcache.NewMockWFCache(controller)
-	handlerMock := history.NewMockHandler(controller)
+	handlerMock := handler.NewMockHandler(controller)
 
 	wrapper := NewHistoryHandler(handlerMock, workflowIDCache)
 

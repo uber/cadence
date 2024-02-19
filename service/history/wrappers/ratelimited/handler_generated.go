@@ -26,7 +26,7 @@ package ratelimited
 // template: ../../templates/ratelimited.tmpl
 // gowrap: http://github.com/hexdigest/gowrap
 
-//go:generate gowrap gen -p github.com/uber/cadence/service/history -i Handler -t ../../templates/ratelimited.tmpl -o handler_generated.go -v handler=History -l ""
+//go:generate gowrap gen -p github.com/uber/cadence/service/history/handler -i Handler -t ../../templates/ratelimited.tmpl -o handler_generated.go -v handler=History -l ""
 
 import (
 	"context"
@@ -34,21 +34,21 @@ import (
 
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/frontend/validate"
-	"github.com/uber/cadence/service/history"
+	"github.com/uber/cadence/service/history/handler"
 	"github.com/uber/cadence/service/history/workflowcache"
 )
 
-// historyHandler implements history.Handler interface instrumented with rate limiter.
+// historyHandler implements handler.Handler interface instrumented with rate limiter.
 type historyHandler struct {
-	wrapped         history.Handler
+	wrapped         handler.Handler
 	workflowIDCache workflowcache.WFCache
 }
 
 // NewHistoryHandler creates a new instance of Handler with ratelimiter.
 func NewHistoryHandler(
-	wrapped history.Handler,
+	wrapped handler.Handler,
 	workflowIDCache workflowcache.WFCache,
-) history.Handler {
+) handler.Handler {
 	return &historyHandler{
 		wrapped:         wrapped,
 		workflowIDCache: workflowIDCache,
