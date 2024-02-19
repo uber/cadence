@@ -266,11 +266,11 @@ func (r *ring) refreshRingWorker() {
 		case <-r.shutdownCh:
 			return
 		case <-r.refreshChan: // local signal or signal from provider
-			r.emitHashIdentifier()
 			if err := r.refresh(); err != nil {
 				r.logger.Error("refreshing ring", tag.Error(err))
 			}
 		case <-refreshTicker.C: // periodically refresh membership
+			r.emitHashIdentifier()
 			if err := r.refresh(); err != nil {
 				r.logger.Error("periodically refreshing ring", tag.Error(err))
 			}
