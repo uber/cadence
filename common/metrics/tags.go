@@ -51,10 +51,12 @@ const (
 	kafkaPartition         = "kafkaPartition"
 	transport              = "transport"
 	caller                 = "caller"
+	service                = "service"
 	signalName             = "signalName"
 	workflowVersion        = "workflow_version"
 	shardID                = "shard_id"
 	matchingHost           = "matching_host"
+	host                   = "host"
 	pollerIsolationGroup   = "poller_isolation_group"
 	asyncWFRequestType     = "async_wf_request_type"
 
@@ -199,6 +201,16 @@ func TransportTag(value string) Tag {
 // CallerTag returns a new RPC Caller type tag.
 func CallerTag(value string) Tag {
 	return simpleMetric{key: caller, value: value}
+}
+
+// CallerTag returns a new RPC Caller type tag.
+func ServiceTag(value string) Tag {
+	return simpleMetric{key: service, value: value}
+}
+
+// Hosttag emits the host identifier
+func HostTag(value string) Tag {
+	return metricWithUnknown(host, value)
 }
 
 // SignalNameTag returns a new SignalName tag

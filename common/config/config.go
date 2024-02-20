@@ -109,6 +109,8 @@ type (
 	PProf struct {
 		// Port is the port on which the PProf will bind to
 		Port int `yaml:"port"`
+		// Host is the host on which the PProf will bind to, default to `localhost`
+		Host string `yaml:"host"`
 	}
 
 	// RPC contains the rpc config items

@@ -311,10 +311,9 @@ LIMIT 0, 0
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.NotPanics(t, func() {
-				output := visibilityStore.getListWorkflowExecutionsByQueryQuery(testTableName, test.input)
-				assert.Equal(t, test.expectedOutput, output)
-			})
+			output, err := visibilityStore.getListWorkflowExecutionsByQueryQuery(testTableName, test.input)
+			assert.Equal(t, test.expectedOutput, output)
+			assert.NoError(t, err)
 		})
 	}
 }
@@ -329,9 +328,9 @@ func TestGetListWorkflowExecutionsQuery(t *testing.T) {
 		NextPageToken: nil,
 	}
 
-	closeResult := getListWorkflowExecutionsQuery(testTableName, request, true)
-	openResult := getListWorkflowExecutionsQuery(testTableName, request, false)
-	nilResult := getListWorkflowExecutionsQuery(testTableName, nil, true)
+	closeResult, err1 := getListWorkflowExecutionsQuery(testTableName, request, true)
+	openResult, err2 := getListWorkflowExecutionsQuery(testTableName, request, false)
+	nilResult, err3 := getListWorkflowExecutionsQuery(testTableName, nil, true)
 	expectCloseResult := fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
@@ -356,6 +355,9 @@ LIMIT 0, 10
 	assert.Equal(t, closeResult, expectCloseResult)
 	assert.Equal(t, openResult, expectOpenResult)
 	assert.Equal(t, nilResult, expectNilResult)
+	assert.NoError(t, err1)
+	assert.NoError(t, err2)
+	assert.NoError(t, err3)
 }
 
 func TestGetListWorkflowExecutionsByTypeQuery(t *testing.T) {
@@ -371,9 +373,9 @@ func TestGetListWorkflowExecutionsByTypeQuery(t *testing.T) {
 		WorkflowTypeName: testWorkflowType,
 	}
 
-	closeResult := getListWorkflowExecutionsByTypeQuery(testTableName, request, true)
-	openResult := getListWorkflowExecutionsByTypeQuery(testTableName, request, false)
-	nilResult := getListWorkflowExecutionsByTypeQuery(testTableName, nil, true)
+	closeResult, err1 := getListWorkflowExecutionsByTypeQuery(testTableName, request, true)
+	openResult, err2 := getListWorkflowExecutionsByTypeQuery(testTableName, request, false)
+	nilResult, err3 := getListWorkflowExecutionsByTypeQuery(testTableName, nil, true)
 	expectCloseResult := fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
@@ -400,6 +402,9 @@ LIMIT 0, 10
 	assert.Equal(t, closeResult, expectCloseResult)
 	assert.Equal(t, openResult, expectOpenResult)
 	assert.Equal(t, nilResult, expectNilResult)
+	assert.NoError(t, err1)
+	assert.NoError(t, err2)
+	assert.NoError(t, err3)
 }
 
 func TestGetListWorkflowExecutionsByWorkflowIDQuery(t *testing.T) {
@@ -415,9 +420,9 @@ func TestGetListWorkflowExecutionsByWorkflowIDQuery(t *testing.T) {
 		WorkflowID: testWorkflowID,
 	}
 
-	closeResult := getListWorkflowExecutionsByWorkflowIDQuery(testTableName, request, true)
-	openResult := getListWorkflowExecutionsByWorkflowIDQuery(testTableName, request, false)
-	nilResult := getListWorkflowExecutionsByWorkflowIDQuery(testTableName, nil, true)
+	closeResult, err1 := getListWorkflowExecutionsByWorkflowIDQuery(testTableName, request, true)
+	openResult, err2 := getListWorkflowExecutionsByWorkflowIDQuery(testTableName, request, false)
+	nilResult, err3 := getListWorkflowExecutionsByWorkflowIDQuery(testTableName, nil, true)
 	expectCloseResult := fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
@@ -444,6 +449,9 @@ LIMIT 0, 10
 	assert.Equal(t, closeResult, expectCloseResult)
 	assert.Equal(t, openResult, expectOpenResult)
 	assert.Equal(t, nilResult, expectNilResult)
+	assert.NoError(t, err1)
+	assert.NoError(t, err2)
+	assert.NoError(t, err3)
 }
 
 func TestGetListWorkflowExecutionsByStatusQuery(t *testing.T) {
@@ -459,8 +467,8 @@ func TestGetListWorkflowExecutionsByStatusQuery(t *testing.T) {
 		Status: types.WorkflowExecutionCloseStatus(0),
 	}
 
-	closeResult := getListWorkflowExecutionsByStatusQuery(testTableName, request)
-	nilResult := getListWorkflowExecutionsByStatusQuery(testTableName, nil)
+	closeResult, err1 := getListWorkflowExecutionsByStatusQuery(testTableName, request)
+	nilResult, err2 := getListWorkflowExecutionsByStatusQuery(testTableName, nil)
 	expectCloseResult := fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
@@ -474,6 +482,8 @@ LIMIT 0, 10
 
 	assert.Equal(t, expectCloseResult, closeResult)
 	assert.Equal(t, expectNilResult, nilResult)
+	assert.NoError(t, err1)
+	assert.NoError(t, err2)
 }
 
 func TestGetGetClosedWorkflowExecutionQuery(t *testing.T) {

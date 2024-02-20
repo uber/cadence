@@ -24,7 +24,6 @@
 package membership
 
 import (
-	"errors"
 	"fmt"
 	"sync/atomic"
 
@@ -104,17 +103,17 @@ func NewMultiringResolver(
 	services []string,
 	provider PeerProvider,
 	logger log.Logger,
-	metrics metrics.Client,
+	metricsClient metrics.Client,
 ) *MultiringResolver {
 	rpo := &MultiringResolver{
 		status:   common.DaemonStatusInitialized,
 		provider: provider,
 		rings:    make(map[string]*ring),
-		metrics:  metrics,
+		metrics:  metricsClient,
 	}
 
 	for _, s := range services {
-		rpo.rings[s] = newHashring(s, provider, logger)
+		rpo.rings[s] = newHashring(s, provider, logger, metricsClient.Scope(metrics.HashringScope))
 	}
 	return rpo
 }
@@ -214,7 +213,7 @@ func (rpo *MultiringResolver) LookupByAddress(service, address string) (HostInfo
 		}
 	}
 	rpo.metrics.Scope(metrics.ResolverHostNotFoundScope).IncCounter(1)
-	return HostInfo{}, errors.New("host not found")
+	return HostInfo{}, fmt.Errorf("host not found in service %s: %s", service, address)
 }
 
 func (rpo *MultiringResolver) MemberCount(service string) (int, error) {
