@@ -368,7 +368,7 @@ type (
 
 	// Logger contains the config items for logger
 	Logger struct {
-		// Stdout is true then the output`kak needs to goto standard out
+		// Stdout is true then the output needs to goto standard out
 		// By default this is false and output will go to standard error
 		Stdout bool `yaml:"stdout"`
 		// Level is the desired log level
