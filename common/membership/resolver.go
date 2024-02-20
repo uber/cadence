@@ -103,17 +103,17 @@ func NewMultiringResolver(
 	services []string,
 	provider PeerProvider,
 	logger log.Logger,
-	metrics metrics.Client,
+	metricsClient metrics.Client,
 ) *MultiringResolver {
 	rpo := &MultiringResolver{
 		status:   common.DaemonStatusInitialized,
 		provider: provider,
 		rings:    make(map[string]*ring),
-		metrics:  metrics,
+		metrics:  metricsClient,
 	}
 
 	for _, s := range services {
-		rpo.rings[s] = newHashring(s, provider, logger)
+		rpo.rings[s] = newHashring(s, provider, logger, metricsClient.Scope(metrics.HashringScope))
 	}
 	return rpo
 }

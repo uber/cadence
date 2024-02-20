@@ -34,6 +34,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/metrics"
 )
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyz")
@@ -103,7 +104,7 @@ func TestFailedLookupWillAskProvider(t *testing.T) {
 	pp.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(1)
 	pp.EXPECT().GetMembers("test-service").Times(1)
 
-	hr := newHashring("test-service", pp, log.NewNoop())
+	hr := newHashring("test-service", pp, log.NewNoop(), metrics.NoopScope(0))
 	hr.Start()
 	_, err := hr.Lookup("a")
 
@@ -117,7 +118,7 @@ func TestRefreshUpdatesRingOnlyWhenRingHasChanged(t *testing.T) {
 	pp.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(1)
 	pp.EXPECT().GetMembers("test-service").Times(3)
 
-	hr := newHashring("test-service", pp, log.NewNoop())
+	hr := newHashring("test-service", pp, log.NewNoop(), metrics.NoopScope(0))
 	hr.Start()
 
 	hr.refresh()
@@ -132,7 +133,7 @@ func TestSubscribeIgnoresDuplicates(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	pp := NewMockPeerProvider(ctrl)
 
-	hr := newHashring("test-service", pp, log.NewNoop())
+	hr := newHashring("test-service", pp, log.NewNoop(), metrics.NoopScope(0))
 
 	assert.NoError(t, hr.Subscribe("test-service", changeCh))
 	assert.Error(t, hr.Subscribe("test-service", changeCh))
@@ -143,7 +144,7 @@ func TestUnsubcribeIgnoresDeletionOnEmpty(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	pp := NewMockPeerProvider(ctrl)
 
-	hr := newHashring("test-service", pp, log.NewNoop())
+	hr := newHashring("test-service", pp, log.NewNoop(), metrics.NoopScope(0))
 	assert.Equal(t, 0, len(hr.subscribers.keys))
 	assert.NoError(t, hr.Unsubscribe("test-service"))
 	assert.NoError(t, hr.Unsubscribe("test-service"))
@@ -155,7 +156,7 @@ func TestUnsubcribeDeletes(t *testing.T) {
 	pp := NewMockPeerProvider(ctrl)
 	var changeCh = make(chan *ChangedEvent)
 
-	hr := newHashring("test-service", pp, log.NewNoop())
+	hr := newHashring("test-service", pp, log.NewNoop(), metrics.NoopScope(0))
 
 	assert.Equal(t, 0, len(hr.subscribers.keys))
 	assert.NoError(t, hr.Subscribe("testservice1", changeCh))
@@ -171,7 +172,7 @@ func TestMemberCountReturnsNumber(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	pp := NewMockPeerProvider(ctrl)
 
-	hr := newHashring("test-service", pp, log.NewNoop())
+	hr := newHashring("test-service", pp, log.NewNoop(), metrics.NoopScope(0))
 	assert.Equal(t, 0, hr.MemberCount())
 
 	ring := emptyHashring()
@@ -188,7 +189,7 @@ func TestErrorIsPropagatedWhenProviderFails(t *testing.T) {
 	pp := NewMockPeerProvider(ctrl)
 	pp.EXPECT().GetMembers(gomock.Any()).Return(nil, errors.New("error"))
 
-	hr := newHashring("test-service", pp, log.NewNoop())
+	hr := newHashring("test-service", pp, log.NewNoop(), metrics.NoopScope(0))
 	assert.Error(t, hr.refresh())
 }
 
@@ -198,7 +199,7 @@ func TestStopWillStopProvider(t *testing.T) {
 
 	pp.EXPECT().Stop().Times(1)
 
-	hr := newHashring("test-service", pp, log.NewNoop())
+	hr := newHashring("test-service", pp, log.NewNoop(), metrics.NoopScope(0))
 	hr.status = common.DaemonStatusStarted
 	hr.Stop()
 
@@ -213,7 +214,7 @@ func TestLookupAndRefreshRaceCondition(t *testing.T) {
 	pp.EXPECT().GetMembers("test-service").AnyTimes().DoAndReturn(func(service string) ([]HostInfo, error) {
 		return randomHostInfo(5), nil
 	})
-	hr := newHashring("test-service", pp, log.NewNoop())
+	hr := newHashring("test-service", pp, log.NewNoop(), metrics.NoopScope(0))
 	hr.Start()
 	wg.Add(2)
 	go func() {
@@ -232,4 +233,65 @@ func TestLookupAndRefreshRaceCondition(t *testing.T) {
 	}()
 
 	wg.Wait()
+}
+
+func TestEmitHashringView(t *testing.T) {
+
+	tests := map[string]struct {
+		hosts          []HostInfo
+		lookuperr      error
+		selfInfo       HostInfo
+		selfErr        error
+		expectedResult float64
+	}{
+		"example one - sorted set 1 - the output should be some random hashed value": {
+			hosts: []HostInfo{
+				{addr: "10.0.0.1:1234", ip: "10.0.0.1", identity: "host1", portMap: nil},
+				{addr: "10.0.0.2:1234", ip: "10.0.0.2", identity: "host2", portMap: nil},
+				{addr: "10.0.0.3:1234", ip: "10.0.0.3", identity: "host3", portMap: nil},
+			},
+			selfInfo:       HostInfo{identity: "host123"},
+			expectedResult: 835.0, // the number here is meaningless
+		},
+		"example one - unsorted set 1 - the order of the hosts should not matter": {
+			hosts: []HostInfo{
+				{addr: "10.0.0.1:1234", ip: "10.0.0.1", identity: "host1", portMap: nil},
+				{addr: "10.0.0.3:1234", ip: "10.0.0.3", identity: "host3", portMap: nil},
+				{addr: "10.0.0.2:1234", ip: "10.0.0.2", identity: "host2", portMap: nil},
+			},
+			selfInfo:       HostInfo{identity: "host123"},
+			expectedResult: 835.0, // the test here is that it's the same as test 1
+		},
+		"example 2 - empty set": {
+			hosts:          []HostInfo{},
+			selfInfo:       HostInfo{identity: "host123"},
+			expectedResult: 242.0, // meaningless hash value
+		},
+		"example 3 - nil set": {
+			hosts:          nil,
+			selfInfo:       HostInfo{identity: "host123"},
+			expectedResult: 242.0, // meaningless hash value
+		},
+	}
+
+	for name, td := range tests {
+
+		t.Run(name, func(t *testing.T) {
+
+			ctrl := gomock.NewController(t)
+			pp := NewMockPeerProvider(ctrl)
+
+			pp.EXPECT().GetMembers("test-service").DoAndReturn(func(service string) ([]HostInfo, error) {
+				return td.hosts, td.lookuperr
+			})
+
+			pp.EXPECT().WhoAmI().DoAndReturn(func() (HostInfo, error) {
+				return td.selfInfo, td.selfErr
+			})
+
+			hr := newHashring("test-service", pp, log.NewNoop(), metrics.NoopScope(0))
+
+			assert.Equal(t, td.expectedResult, hr.emitHashIdentifier())
+		})
+	}
 }

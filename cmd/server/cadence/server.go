@@ -180,6 +180,8 @@ func (s *server) startService() common.Daemon {
 		log.Fatalf("ringpop provider failed: %v", err)
 	}
 
+	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
+
 	params.MembershipResolver, err = membership.NewResolver(
 		peerProvider,
 		params.Logger,
@@ -191,8 +193,6 @@ func (s *server) startService() common.Daemon {
 	params.PProfInitializer = svcCfg.PProf.NewInitializer(params.Logger)
 
 	params.ClusterRedirectionPolicy = s.cfg.ClusterGroupMetadata.ClusterRedirectionPolicy
-
-	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 
 	params.ClusterMetadata = cluster.NewMetadata(
 		clusterGroupMetadata.FailoverVersionIncrement,

@@ -30,7 +30,10 @@ import (
 	commonResource "github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/handler"
 	"github.com/uber/cadence/service/history/resource"
+	"github.com/uber/cadence/service/history/wrappers/grpc"
+	"github.com/uber/cadence/service/history/wrappers/thrift"
 )
 
 // Service represents the cadence-history service
@@ -38,7 +41,7 @@ type Service struct {
 	resource.Resource
 
 	status  int32
-	handler Handler
+	handler handler.Handler
 	stopC   chan struct{}
 	params  *commonResource.Params
 	config  *config.Config
@@ -90,12 +93,12 @@ func (s *Service) Start() {
 	logger.Info("elastic search config", tag.ESConfig(s.params.ESConfig))
 	logger.Info("history starting")
 
-	s.handler = NewHandler(s.Resource, s.config)
+	s.handler = handler.NewHandler(s.Resource, s.config)
 
-	thriftHandler := NewThriftHandler(s.handler)
+	thriftHandler := thrift.NewThriftHandler(s.handler)
 	thriftHandler.Register(s.GetDispatcher())
 
-	grpcHandler := NewGRPCHandler(s.handler)
+	grpcHandler := grpc.NewGRPCHandler(s.handler)
 	grpcHandler.Register(s.GetDispatcher())
 
 	// must start resource first
