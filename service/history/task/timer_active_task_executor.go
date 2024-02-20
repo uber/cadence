@@ -435,12 +435,22 @@ func (t *timerActiveTaskExecutor) executeDecisionTimeoutTask(
 	}
 	defer func() { release(retError) }()
 
+	domainName, err := t.shard.GetDomainCache().GetDomainName(task.DomainID)
+	if err != nil {
+		return fmt.Errorf("unable to find domainID: %v, err: %v", task.DomainID, err)
+	}
+
 	mutableState, err := loadMutableStateForTimerTask(ctx, wfContext, task, t.metricsClient, t.logger)
 	if err != nil {
 		return err
 	}
 	if mutableState == nil || !mutableState.IsWorkflowExecutionRunning() {
 		return nil
+	}
+
+	wfType := mutableState.GetWorkflowType()
+	if wfType == nil {
+		return fmt.Errorf("unable to find workflow type, task %s", task)
 	}
 
 	scheduleID := task.EventID
@@ -464,13 +474,14 @@ func (t *timerActiveTaskExecutor) executeDecisionTimeoutTask(
 	if isStickyDecision {
 		decisionTypeTag = stickyDecisionTypeTag
 	}
+	tags := []metrics.Tag{metrics.WorkflowTypeTag(wfType.GetName()), decisionTypeTag}
 	switch execution.TimerTypeFromInternal(types.TimeoutType(task.TimeoutType)) {
 	case execution.TimerTypeStartToClose:
 		t.emitTimeoutMetricScopeWithDomainTag(
 			mutableState.GetExecutionInfo().DomainID,
 			metrics.TimerActiveTaskDecisionTimeoutScope,
 			execution.TimerTypeStartToClose,
-			decisionTypeTag,
+			tags...,
 		)
 		if _, err := mutableState.AddDecisionTaskTimedOutEvent(
 			decision.ScheduleID,
@@ -488,6 +499,7 @@ func (t *timerActiveTaskExecutor) executeDecisionTimeoutTask(
 
 		if !isStickyDecision {
 			t.logger.Warn("Potential lost normal decision task",
+				tag.WorkflowDomainName(domainName),
 				tag.WorkflowDomainID(task.GetDomainID()),
 				tag.WorkflowID(task.GetWorkflowID()),
 				tag.WorkflowRunID(task.GetRunID()),
@@ -501,7 +513,7 @@ func (t *timerActiveTaskExecutor) executeDecisionTimeoutTask(
 			mutableState.GetExecutionInfo().DomainID,
 			metrics.TimerActiveTaskDecisionTimeoutScope,
 			execution.TimerTypeScheduleToStart,
-			decisionTypeTag,
+			tags...,
 		)
 		_, err := mutableState.AddDecisionTaskScheduleToStartTimeoutEvent(scheduleID)
 		if err != nil {
