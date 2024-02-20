@@ -40,7 +40,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/types"
-	cadencehistory "github.com/uber/cadence/service/history"
+	"github.com/uber/cadence/service/history/engine/engineimpl"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/matching"
 )
@@ -309,8 +309,8 @@ GetHistoryLoop:
 		}
 
 		terminateEventAttributes := lastEvent.WorkflowExecutionTerminatedEventAttributes
-		s.Equal(cadencehistory.TerminateIfRunningReason, terminateEventAttributes.GetReason())
-		s.Equal(fmt.Sprintf(cadencehistory.TerminateIfRunningDetailsTemplate, we1.GetRunID()), string(terminateEventAttributes.Details))
+		s.Equal(engineimpl.TerminateIfRunningReason, terminateEventAttributes.GetReason())
+		s.Equal(fmt.Sprintf(engineimpl.TerminateIfRunningDetailsTemplate, we1.GetRunID()), string(terminateEventAttributes.Details))
 		s.Equal(execution.IdentityHistoryService, terminateEventAttributes.GetIdentity())
 		executionTerminated = true
 		break GetHistoryLoop

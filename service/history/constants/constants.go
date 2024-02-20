@@ -20,24 +20,19 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package history
+package constants
 
-import (
-	"context"
+import "github.com/uber/cadence/common/types"
 
-	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
-	"go.uber.org/yarpc"
-
-	historyv1 "github.com/uber/cadence/.gen/proto/history/v1"
-	"github.com/uber/cadence/common/types/mapper/proto"
+var (
+	ErrDomainNotSet            = &types.BadRequestError{Message: "Domain not set on request."}
+	ErrWorkflowExecutionNotSet = &types.BadRequestError{Message: "WorkflowExecution not set on request."}
+	ErrTaskListNotSet          = &types.BadRequestError{Message: "Tasklist not set."}
+	ErrRunIDNotValid           = &types.BadRequestError{Message: "RunID is not valid UUID."}
+	ErrWorkflowIDNotSet        = &types.BadRequestError{Message: "WorkflowId is not set on request."}
+	ErrSourceClusterNotSet     = &types.BadRequestError{Message: "Source Cluster not set on request."}
+	ErrTimestampNotSet         = &types.BadRequestError{Message: "Timestamp not set on request."}
+	ErrInvalidTaskType         = &types.BadRequestError{Message: "Invalid task type"}
+	ErrHistoryHostThrottle     = &types.ServiceBusyError{Message: "History host rps exceeded"}
+	ErrShuttingDown            = &types.InternalServiceError{Message: "Shutting down"}
 )
-
-func (g GRPCHandler) Register(dispatcher *yarpc.Dispatcher) {
-	dispatcher.Register(historyv1.BuildHistoryAPIYARPCProcedures(g))
-	dispatcher.Register(apiv1.BuildMetaAPIYARPCProcedures(g))
-}
-
-func (g GRPCHandler) Health(ctx context.Context, _ *apiv1.HealthRequest) (*apiv1.HealthResponse, error) {
-	response, err := g.h.Health(ctx)
-	return proto.FromHealthResponse(response), proto.FromError(err)
-}

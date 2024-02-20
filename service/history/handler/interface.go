@@ -18,11 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interface_mock.go -package history github.com/uber/cadence/service/history Handler
-//go:generate gowrap gen -g -p . -i Handler -t ../templates/grpc.tmpl -o ./grpc_handler_generated.go -v handler=GRPC -v package=historyv1 -v path=github.com/uber/cadence/.gen/proto/history/v1 -v prefix=History
-//go:generate gowrap gen -g -p ../../.gen/go/history/historyserviceserver -i Interface -t ../templates/thrift.tmpl -o ./thrift_handler_generated.go -v handler=Thrift -v prefix=History
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interface_mock.go -package handler github.com/uber/cadence/service/history/handler Handler
+//go:generate gowrap gen -g -p . -i Handler -t ../../templates/grpc.tmpl -o ../wrappers/grpc/grpc_handler_generated.go -v handler=GRPC -v package=historyv1 -v path=github.com/uber/cadence/.gen/proto/history/v1 -v prefix=History
+//go:generate gowrap gen -g -p ../../../.gen/go/history/historyserviceserver -i Interface -t ../../templates/thrift.tmpl -o ../wrappers/thrift/thrift_handler_generated.go -v handler=Thrift -v prefix=History
 
-package history
+package handler
 
 import (
 	"context"
