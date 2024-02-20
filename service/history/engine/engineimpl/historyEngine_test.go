@@ -19,7 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package history
+package engineimpl
 
 import (
 	"context"
@@ -228,7 +228,7 @@ func (s *engineSuite) TestGetMutableState_IntestRunID() {
 		DomainUUID: constants.TestDomainID,
 		Execution:  &execution,
 	})
-	s.Equal(errRunIDNotValid, err)
+	s.Equal(constants.ErrRunIDNotValid, err)
 }
 
 func (s *engineSuite) TestGetMutableState_EmptyRunID() {
