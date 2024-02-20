@@ -281,6 +281,11 @@ func (t *timerActiveTaskExecutor) executeActivityTimeoutTask(
 		return nil
 	}
 
+	wfType := mutableState.GetWorkflowType()
+	if wfType == nil {
+		return fmt.Errorf("unable to find workflow type, task %s", task)
+	}
+
 	timerSequence := execution.NewTimerSequence(mutableState)
 	referenceTime := t.shard.GetTimeSource().Now()
 	resurrectionCheckMinDelay := t.config.ResurrectionCheckMinDelay(mutableState.GetDomainEntry().GetInfo().Name)
@@ -398,6 +403,7 @@ Loop:
 			mutableState.GetExecutionInfo().DomainID,
 			metrics.TimerActiveTaskActivityTimeoutScope,
 			timerSequenceID.TimerType,
+			metrics.WorkflowTypeTag(wfType.GetName()),
 		)
 		if _, err := mutableState.AddActivityTaskTimedOutEvent(
 			activityInfo.ScheduleID,
