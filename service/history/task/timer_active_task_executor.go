@@ -273,6 +273,11 @@ func (t *timerActiveTaskExecutor) executeActivityTimeoutTask(
 	}
 	defer func() { release(retError) }()
 
+	domainName, err := t.shard.GetDomainCache().GetDomainName(task.DomainID)
+	if err != nil {
+		return fmt.Errorf("unable to find domainID: %v, err: %v", task.DomainID, err)
+	}
+
 	mutableState, err := loadMutableStateForTimerTask(ctx, wfContext, task, t.metricsClient, t.logger)
 	if err != nil {
 		return err
@@ -405,6 +410,16 @@ Loop:
 			timerSequenceID.TimerType,
 			metrics.WorkflowTypeTag(wfType.GetName()),
 		)
+
+		t.logger.Info("Activity timed out",
+			tag.WorkflowDomainName(domainName),
+			tag.WorkflowDomainID(task.GetDomainID()),
+			tag.WorkflowID(task.GetWorkflowID()),
+			tag.WorkflowRunID(task.GetRunID()),
+			tag.ScheduleAttempt(task.ScheduleAttempt),
+			tag.FailoverVersion(task.GetVersion()),
+		)
+
 		if _, err := mutableState.AddActivityTaskTimedOutEvent(
 			activityInfo.ScheduleID,
 			activityInfo.StartedID,
