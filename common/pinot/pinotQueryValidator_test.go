@@ -23,6 +23,7 @@
 package pinot
 
 import (
+	"github.com/xwb1989/sqlparser"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -210,6 +211,10 @@ func TestValidateQuery(t *testing.T) {
 			query:     "CustomIntField = 0 order by CustomIntField desc",
 			validated: "JSON_MATCH(Attr, '\"$.CustomIntField\"=''0''') order by CustomIntField desc",
 		},
+		"case 19: close status parse": {
+			query:     "CloseStatus = 'CONTINUED_AS_NEW'",
+			validated: "CloseStatus = 4",
+		},
 	}
 
 	for name, test := range tests {
@@ -246,6 +251,44 @@ func TestParseTime(t *testing.T) {
 			assert.Equal(t, parsed, tt.expected)
 			if tt.hasErr {
 				assert.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestParseCloseStatus(t *testing.T) {
+	tests := []struct {
+		input       string
+		expected    *sqlparser.SQLVal
+		expectedErr bool
+	}{
+		{
+			input:       "4",
+			expected:    &sqlparser.SQLVal{Type: sqlparser.IntVal, Val: []byte("4")},
+			expectedErr: false,
+		},
+		{
+			input:       "CANCELED",
+			expected:    &sqlparser.SQLVal{Type: sqlparser.IntVal, Val: []byte("2")},
+			expectedErr: false,
+		},
+		{
+			input:       "invalid",
+			expected:    nil,
+			expectedErr: true, // expected error,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+			original := &sqlparser.SQLVal{Type: sqlparser.IntVal, Val: []byte(test.input)}
+			result, err := parseCloseStatus(original)
+
+			assert.Equal(t, test.expected, result)
+			if test.expectedErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}
