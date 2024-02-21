@@ -210,36 +210,24 @@ func (s *AsyncWFIntegrationSuite) TestStartWorkflowExecutionAsync() {
 
 			// there's no worker or poller for async workflow, so we just validate whether it started.
 			// this is sufficient to verify the async workflow start path.
-			for i := 0; i < 1000; i++ {
-				timeFilter := &types.StartTimeFilter{
-					EarliestTime: common.Int64Ptr(time.Unix(0, 0).UnixNano()),
-					LatestTime:   common.Int64Ptr(s.testClusterConfig.TimeSource.Now().UnixNano()),
-				}
-				resp, err := s.engine.ListOpenWorkflowExecutions(ctx, &types.ListOpenWorkflowExecutionsRequest{
-					Domain:          s.domainName,
-					MaximumPageSize: 10,
-					StartTimeFilter: timeFilter,
-					ExecutionFilter: &types.WorkflowExecutionFilter{
+			for i := 0; i < 30; i++ {
+				resp, err := s.engine.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
+					Domain: s.domainName,
+					Execution: &types.WorkflowExecution{
 						WorkflowID: wfID,
 					},
 				})
+
 				if err != nil {
-					t.Fatalf("ListOpenWorkflowExecutions() failed: %v", err)
+					t.Logf("Workflow execution not found yet. DescribeWorkflowExecution() returned err: %v", err)
+					time.Sleep(time.Second)
+					s.testClusterConfig.TimeSource.Advance(time.Second)
+					continue
 				}
-
-				t.Logf("ListOpenWorkflowExecutions() returned %#v. from %v, to: %v", resp, *timeFilter.EarliestTime, *timeFilter.LatestTime)
-
-				if len(resp.GetExecutions()) > 0 {
-					t.Logf("len executions > 0")
-					execInfo := resp.GetExecutions()[0]
-					s.NotNil(execInfo)
-					t.Logf("Got execInfo: %#v", execInfo)
+				if resp.GetWorkflowExecutionInfo() != nil {
+					t.Logf("DescribeWorkflowExecution() found the execution: %#v", resp.GetWorkflowExecutionInfo())
 					return
 				}
-
-				t.Log("No open workflow yet")
-				time.Sleep(time.Second)
-				s.testClusterConfig.TimeSource.Advance(time.Second)
 			}
 
 			t.Fatal("Async started workflow not found")
