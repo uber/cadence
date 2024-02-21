@@ -699,8 +699,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]membership.HostInfo, startW
 			c.clusterMetadata,
 			service.GetMetricsClient(),
 			service.GetLogger(),
-			cache.WithTimeSource(params.TimeSource),
-			cache.WithOwner("test-worker"))
+			cache.WithTimeSource(params.TimeSource))
 		asyncWFDomainCache.Start()
 		defer asyncWFDomainCache.Stop()
 		cm := asyncworkflow.NewConsumerManager(

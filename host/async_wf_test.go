@@ -18,6 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:build !race && asyncwfintegration
+// +build !race,asyncwfintegration
+
 /*
 To run locally:
 
@@ -131,17 +134,17 @@ func (s *AsyncWFIntegrationSuite) TestStartWorkflowExecutionAsync() {
 		wantStartFailure bool
 		asyncWFCfg       *types.AsyncWorkflowConfiguration
 	}{
-		// {
-		// 	name:             "start workflow execution async fails because domain missing async queue",
-		// 	wantStartFailure: true,
-		// },
-		// {
-		// 	name: "start workflow execution async fails because async queue is disabled",
-		// 	asyncWFCfg: &types.AsyncWorkflowConfiguration{
-		// 		Enabled: false,
-		// 	},
-		// 	wantStartFailure: true,
-		// },
+		{
+			name:             "start workflow execution async fails because domain missing async queue",
+			wantStartFailure: true,
+		},
+		{
+			name: "start workflow execution async fails because async queue is disabled",
+			asyncWFCfg: &types.AsyncWorkflowConfiguration{
+				Enabled: false,
+			},
+			wantStartFailure: true,
+		},
 		{
 			name: "start workflow execution async succeeds and workflow starts",
 			asyncWFCfg: &types.AsyncWorkflowConfiguration{
@@ -154,6 +157,9 @@ func (s *AsyncWFIntegrationSuite) TestStartWorkflowExecutionAsync() {
 	for _, tc := range tests {
 		tc := tc
 		s.T().Run(tc.name, func(t *testing.T) {
+			// advance the time so each test has a unique start time
+			s.testClusterConfig.TimeSource.Advance(time.Second)
+
 			ctx, cancel := createContext()
 			defer cancel()
 

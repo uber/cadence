@@ -119,9 +119,6 @@ type (
 		callbackLock     sync.Mutex
 		prepareCallbacks map[int]PrepareCallbackFn
 		callbacks        map[int]CallbackFn
-
-		// TODO: remove this and the option func
-		owner string
 	}
 
 	// DomainCacheEntries is DomainCacheEntry slice
@@ -151,12 +148,6 @@ func WithTimeSource(timeSource clock.TimeSource) DomainCacheOption {
 		if timeSource != nil {
 			cache.timeSource = timeSource
 		}
-	}
-}
-
-func WithOwner(owner string) DomainCacheOption {
-	return func(cache *DefaultDomainCache) {
-		cache.owner = owner
 	}
 }
 
@@ -423,7 +414,7 @@ func (c *DefaultDomainCache) refreshLoop() {
 					c.timeSource.Sleep(DomainCacheRefreshFailureRetryInterval)
 				}
 			}
-			c.logger.Debug("Domain cache refreshed", tag.Dynamic("owner", c.owner))
+			c.logger.Debug("Domain cache refreshed")
 		}
 	}
 }
