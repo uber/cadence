@@ -407,6 +407,18 @@ func (i IsolationGroupConfiguration) ToPartitionList() []IsolationGroupPartition
 	return out
 }
 
+func (i IsolationGroupConfiguration) DeepCopy() IsolationGroupConfiguration {
+	if i == nil {
+		return nil
+	}
+
+	out := IsolationGroupConfiguration{}
+	for k, v := range i {
+		out[k] = v
+	}
+	return out
+}
+
 // FromIsolationGroupPartitionList maps a list of isolation to the internal IsolationGroup configuration type
 // whose map keys tend to be used more for set operations
 func FromIsolationGroupPartitionList(in []IsolationGroupPartition) IsolationGroupConfiguration {
