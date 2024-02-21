@@ -497,6 +497,17 @@ type AsyncWorkflowConfiguration struct {
 	QueueConfig         *DataBlob
 }
 
+func (c AsyncWorkflowConfiguration) DeepCopy() AsyncWorkflowConfiguration {
+	res := AsyncWorkflowConfiguration{
+		Enabled:             c.Enabled,
+		PredefinedQueueName: c.PredefinedQueueName,
+		QueueType:           c.QueueType,
+		QueueConfig:         c.QueueConfig.DeepCopy(),
+	}
+
+	return res
+}
+
 type UpdateDomainAsyncWorkflowConfiguratonRequest struct {
 	Domain        string
 	Configuration *AsyncWorkflowConfiguration

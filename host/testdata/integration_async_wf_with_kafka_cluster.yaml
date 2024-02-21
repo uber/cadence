@@ -1,0 +1,20 @@
+clusterno: 1
+asyncwfqueues:
+  # test-async-wf-queue is the name of the queue.
+  # it is used in async_wf_test.go
+  # topic must be created before running the tests. it's done automatically by wurstmeuster/kafka container
+  # in docker/docker-compose-async-wf-kafka.yml
+  test-async-wf-queue:
+    type: "kafka"
+    config:
+      connection:
+        brokers:
+          - "${KAFKA_SEEDS}:${KAFKA_PORT}"
+      topic: async-wf-topic1
+messagingclientconfig:
+  usemock: true
+historyconfig:
+  numhistoryshards: 4
+  numhistoryhosts: 1
+workerconfig:
+  enableasyncwfconsumer: true

@@ -30,6 +30,7 @@ import (
 	"github.com/uber/cadence/common/asyncworkflow/queue"
 	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -78,5 +79,6 @@ type (
 		PinotConfig                *config.PinotVisibilityConfig
 		PinotClient                pinot.GenericClient
 		AsyncWorkflowQueueProvider queue.Provider
+		TimeSource                 clock.TimeSource
 	}
 )

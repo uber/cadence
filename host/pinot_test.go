@@ -41,10 +41,14 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/definition"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/persistence"
+	pt "github.com/uber/cadence/common/persistence/persistence-tests"
 	pnt "github.com/uber/cadence/common/pinot"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/host/pinotutils"
@@ -85,7 +89,44 @@ func TestPinotIntegrationSuite(t *testing.T) {
 }
 
 func (s *PinotIntegrationSuite) SetupSuite() {
-	s.setupSuiteForPinotTest()
+	s.setupLogger()
+
+	s.Logger.Info("Running integration test against test cluster")
+	clusterMetadata := NewClusterMetadata(s.T(), s.testClusterConfig)
+	dc := persistence.DynamicConfiguration{
+		EnableSQLAsyncTransaction:                dynamicconfig.GetBoolPropertyFn(false),
+		EnableCassandraAllConsistencyLevelDelete: dynamicconfig.GetBoolPropertyFn(true),
+		PersistenceSampleLoggingRate:             dynamicconfig.GetIntPropertyFn(100),
+		EnableShardIDMetrics:                     dynamicconfig.GetBoolPropertyFn(true),
+	}
+	params := pt.TestBaseParams{
+		DefaultTestCluster:    s.defaultTestCluster,
+		VisibilityTestCluster: s.visibilityTestCluster,
+		ClusterMetadata:       clusterMetadata,
+		DynamicConfiguration:  dc,
+	}
+	cluster, err := NewPinotTestCluster(s.T(), s.testClusterConfig, s.Logger, params)
+	s.Require().NoError(err)
+	s.testCluster = cluster
+	s.engine = s.testCluster.GetFrontendClient()
+	s.adminClient = s.testCluster.GetAdminClient()
+
+	s.testRawHistoryDomainName = "TestRawHistoryDomain"
+	s.domainName = s.randomizeStr("integration-test-domain")
+	s.Require().NoError(
+		s.registerDomain(s.domainName, 1, types.ArchivalStatusDisabled, "", types.ArchivalStatusDisabled, ""))
+	s.Require().NoError(
+		s.registerDomain(s.testRawHistoryDomainName, 1, types.ArchivalStatusDisabled, "", types.ArchivalStatusDisabled, ""))
+	s.foreignDomainName = s.randomizeStr("integration-foreign-test-domain")
+	s.Require().NoError(
+		s.registerDomain(s.foreignDomainName, 1, types.ArchivalStatusDisabled, "", types.ArchivalStatusDisabled, ""))
+
+	s.Require().NoError(s.registerArchivalDomain())
+
+	// this sleep is necessary because domainv2 cache gets refreshed in the
+	// background only every domainCacheRefreshInterval period
+	time.Sleep(cache.DomainCacheRefreshInterval + time.Second)
+
 	tableName := "cadence_visibility_pinot" //cadence_visibility_pinot_integration_test
 	pinotConfig := &config.PinotVisibilityConfig{
 		Cluster:     "",
