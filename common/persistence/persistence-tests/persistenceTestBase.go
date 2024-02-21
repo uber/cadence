@@ -185,7 +185,7 @@ func NewTestBaseWithSQL(t *testing.T, options *TestBaseOptions) *TestBase {
 // Config returns the persistence configuration for this test
 func (s *TestBase) Config() config.Persistence {
 	cfg := s.DefaultTestCluster.Config()
-	if s.VisibilityTestCluster == nil || s.DefaultTestCluster == s.VisibilityTestCluster {
+	if s.DefaultTestCluster == s.VisibilityTestCluster {
 		return cfg
 	}
 	vCfg := s.VisibilityTestCluster.Config()
