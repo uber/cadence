@@ -60,11 +60,6 @@ import (
 	_ "github.com/uber/cadence/common/asyncworkflow/queue/kafka" // needed to load kafka asyncworkflow queue
 )
 
-type AsyncWFIntegrationSuite struct {
-	*require.Assertions
-	*IntegrationBase
-}
-
 func TestAsyncWFIntegrationSuite(t *testing.T) {
 	flag.Parse()
 
