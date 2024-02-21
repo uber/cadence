@@ -735,7 +735,7 @@ func (entry *DomainCacheEntry) duplicate() *DomainCacheEntry {
 		VisibilityArchivalURI:    entry.config.VisibilityArchivalURI,
 		BadBinaries:              copyResetBinary(entry.config.BadBinaries),
 		AsyncWorkflowConfig:      entry.config.AsyncWorkflowConfig.DeepCopy(),
-		// Q: Should we set IsolationGroups as well? Othewise domaincache will not be able to detect changes in isolation groups
+		IsolationGroups:          entry.config.IsolationGroups.DeepCopy(),
 	}
 	result.replicationConfig = &persistence.DomainReplicationConfig{
 		ActiveClusterName: entry.replicationConfig.ActiveClusterName,

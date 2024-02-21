@@ -98,6 +98,16 @@ func (s *domainCacheSuite) TestListDomain() {
 				Enabled:             true,
 				PredefinedQueueName: "test-async-wf-queue",
 			},
+			IsolationGroups: types.IsolationGroupConfiguration{
+				"zone-1": {
+					Name:  "zone-1",
+					State: types.IsolationGroupStateDrained,
+				},
+				"zone-2": {
+					Name:  "zone-2",
+					State: types.IsolationGroupStateHealthy,
+				},
+			},
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
 			ActiveClusterName: cluster.TestCurrentClusterName,
