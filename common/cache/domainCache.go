@@ -119,6 +119,9 @@ type (
 		callbackLock     sync.Mutex
 		prepareCallbacks map[int]PrepareCallbackFn
 		callbacks        map[int]CallbackFn
+
+		// TODO: remove this and the option func
+		owner string
 	}
 
 	// DomainCacheEntries is DomainCacheEntry slice
