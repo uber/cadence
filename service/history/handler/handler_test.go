@@ -82,9 +82,8 @@ func (s *handlerSuite) SetupTest() {
 	s.mockShardController.EXPECT().GetEngineForShard(gomock.Any()).Return(s.mockEngine, nil).AnyTimes()
 	s.mockWFCache = workflowcache.NewMockWFCache(s.controller)
 
-	s.handler = NewHandler(s.mockResource, config.NewForTest()).(*handlerImpl)
+	s.handler = NewHandler(s.mockResource, config.NewForTest(), s.mockWFCache).(*handlerImpl)
 	s.handler.controller = s.mockShardController
-	s.handler.workflowIDCache = s.mockWFCache
 	s.handler.startWG.Done()
 }
 

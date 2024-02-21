@@ -60,8 +60,6 @@ import (
 
 const (
 	shardOwnershipTransferDelay = 5 * time.Second
-	workflowIDCacheTTL          = 1 * time.Second
-	workflowIDCacheMaxCount     = 10_000
 )
 
 type (
@@ -91,23 +89,14 @@ var _ shard.EngineFactory = (*handlerImpl)(nil)
 func NewHandler(
 	resource resource.Resource,
 	config *config.Config,
+	wfCache workflowcache.WFCache,
 ) Handler {
 	handler := &handlerImpl{
 		Resource:        resource,
 		config:          config,
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
 		rateLimiter:     quotas.NewDynamicRateLimiter(config.RPS.AsFloat64()),
-		workflowIDCache: workflowcache.New(workflowcache.Params{
-			TTL:                            workflowIDCacheTTL,
-			ExternalLimiterFactory:         quotas.NewSimpleDynamicRateLimiterFactory(config.WorkflowIDExternalRPS),
-			InternalLimiterFactory:         quotas.NewSimpleDynamicRateLimiterFactory(config.WorkflowIDInternalRPS),
-			WorkflowIDCacheExternalEnabled: config.WorkflowIDCacheExternalEnabled,
-			WorkflowIDCacheInternalEnabled: config.WorkflowIDCacheInternalEnabled,
-			MaxCount:                       workflowIDCacheMaxCount,
-			DomainCache:                    resource.GetDomainCache(),
-			Logger:                         resource.GetLogger(),
-			MetricsClient:                  resource.GetMetricsClient(),
-		}),
+		workflowIDCache: wfCache,
 	}
 
 	// prevent us from trying to serve requests before shard controller is started and ready

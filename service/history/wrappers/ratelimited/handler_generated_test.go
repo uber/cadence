@@ -28,9 +28,9 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"github.com/uber/cadence/service/history/handler"
 
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/history/handler"
 	"github.com/uber/cadence/service/history/workflowcache"
 )
 
