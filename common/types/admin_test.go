@@ -70,3 +70,48 @@ func TestIsolationGroupConfiguration_ToPartitionList(t *testing.T) {
 		})
 	}
 }
+
+func TestAsyncWorkflowConfigurationDeepCopy(t *testing.T) {
+	tests := []struct {
+		name  string
+		input AsyncWorkflowConfiguration
+	}{
+		{
+			name:  "empty",
+			input: AsyncWorkflowConfiguration{},
+		},
+		{
+			name: "predefined queue",
+			input: AsyncWorkflowConfiguration{
+				Enabled:             true,
+				PredefinedQueueName: "test-async-wf-queue",
+			},
+		},
+		{
+			name: "custom queue",
+			input: AsyncWorkflowConfiguration{
+				Enabled:   true,
+				QueueType: "custom",
+				QueueConfig: &DataBlob{
+					EncodingType: EncodingTypeThriftRW.Ptr(),
+					Data:         []byte("test-async-wf-queue"),
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			got := tc.input.DeepCopy()
+			assert.Equal(t, tc.input, got)
+			if tc.input.QueueConfig != nil {
+				// assert that queue configs look the same but underlying slice is different
+				assert.Equal(t, tc.input.QueueConfig, got.QueueConfig)
+				if tc.input.QueueConfig.Data != nil && identicalByteArray(tc.input.QueueConfig.Data, got.QueueConfig.Data) {
+					t.Error("expected DeepCopy to return a new QueueConfig.Data")
+				}
+			}
+		})
+	}
+}

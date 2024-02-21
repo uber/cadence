@@ -18,16 +18,28 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// To run locally,
-// 1. Run Kafka and Cassandra
-// 	docker-compose -f docker-compose.yml up
-// 2. Run the test
-// 	CASSANDRA=1 go test -v ./host -run TestAsyncWFIntegrationSuite
+/*
+To run locally:
 
+1. Stop the previous run if any
+
+	docker-compose -f docker/buildkite/docker-compose-local-async-wf.yml down
+
+2. Build the integration-test-async-wf image
+
+	docker-compose -f docker/buildkite/docker-compose-local-async-wf.yml build integration-test-async-wf
+
+3. Run the test in the docker container
+
+	docker-compose -f docker/buildkite/docker-compose-local-async-wf.yml run --rm integration-test-async-wf
+
+4. Full test run logs can be found at test.log file
+*/
 package host
 
 import (
 	"flag"
+	"fmt"
 	"testing"
 	"time"
 
@@ -36,36 +48,73 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/persistence"
+	pt "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/types"
+
+	_ "github.com/uber/cadence/common/asyncworkflow/queue/kafka" // needed to load kafka asyncworkflow queue
 )
 
 type AsyncWFIntegrationSuite struct {
 	*require.Assertions
 	*IntegrationBase
-	logger log.Logger
 }
 
 func TestAsyncWFIntegrationSuite(t *testing.T) {
 	flag.Parse()
-	clusterConfig, err := GetTestClusterConfig("testdata/integration_async_wf_with_kafka_cluster.yaml")
+
+	confPath := "testdata/integration_async_wf_with_kafka_cluster.yaml"
+	clusterConfig, err := GetTestClusterConfig(confPath)
 	if err != nil {
-		panic(err)
+		t.Fatalf("failed creating cluster config from %s, err: %v", confPath, err)
 	}
+
+	clusterConfig.TimeSource = clock.NewMockedTimeSource()
+	clusterConfig.FrontendDynamicConfigOverrides = map[dynamicconfig.Key]interface{}{
+		dynamicconfig.FrontendFailoverCoolDown:        time.Duration(0),
+		dynamicconfig.EnableReadFromClosedExecutionV2: true,
+	}
+
 	testCluster := NewPersistenceTestCluster(t, clusterConfig)
 
 	s := new(AsyncWFIntegrationSuite)
 	params := IntegrationBaseParams{
-		DefaultTestCluster: testCluster,
-		TestClusterConfig:  clusterConfig,
+		DefaultTestCluster:    testCluster,
+		VisibilityTestCluster: testCluster,
+		TestClusterConfig:     clusterConfig,
 	}
 	s.IntegrationBase = NewIntegrationBase(params)
 	suite.Run(t, s)
 }
 
 func (s *AsyncWFIntegrationSuite) SetupSuite() {
-	s.setupSuite()
+	s.setupLogger()
+
+	s.Logger.Info("Running integration test against test cluster")
+	clusterMetadata := NewClusterMetadata(s.T(), s.testClusterConfig)
+	dc := persistence.DynamicConfiguration{
+		EnableCassandraAllConsistencyLevelDelete: dynamicconfig.GetBoolPropertyFn(true),
+		PersistenceSampleLoggingRate:             dynamicconfig.GetIntPropertyFn(100),
+		EnableShardIDMetrics:                     dynamicconfig.GetBoolPropertyFn(true),
+	}
+	params := pt.TestBaseParams{
+		DefaultTestCluster:    s.defaultTestCluster,
+		VisibilityTestCluster: s.visibilityTestCluster,
+		ClusterMetadata:       clusterMetadata,
+		DynamicConfiguration:  dc,
+	}
+	cluster, err := NewCluster(s.T(), s.testClusterConfig, s.Logger, params)
+	s.Require().NoError(err)
+	s.testCluster = cluster
+	s.engine = s.testCluster.GetFrontendClient()
+	s.adminClient = s.testCluster.GetAdminClient()
+
+	s.domainName = s.randomizeStr("integration-test-domain")
+	s.Require().NoError(s.registerDomain(s.domainName, 1, types.ArchivalStatusDisabled, "", types.ArchivalStatusDisabled, ""))
+
+	s.domainCacheRefresh()
 }
 
 func (s *AsyncWFIntegrationSuite) SetupTest() {
@@ -74,64 +123,120 @@ func (s *AsyncWFIntegrationSuite) SetupTest() {
 
 func (s *AsyncWFIntegrationSuite) TearDownSuite() {
 	s.tearDownSuite()
-
 }
 
 func (s *AsyncWFIntegrationSuite) TestStartWorkflowExecutionAsync() {
-	id := "async-wf-integration-start-workflow-test"
-	wt := "async-wf-integration-start-workflow-test-type"
-	tl := "async-wf-integration-start-workflow-test-tasklist"
-
-	identity := "worker1"
-	workflowType := &types.WorkflowType{
-		Name: wt,
-	}
-
-	taskList := &types.TaskList{}
-	taskList.Name = tl
-
-	asyncReq := &types.StartWorkflowExecutionAsyncRequest{
-		StartWorkflowExecutionRequest: &types.StartWorkflowExecutionRequest{
-			RequestID:                           uuid.New(),
-			Domain:                              s.domainName,
-			WorkflowID:                          id,
-			WorkflowType:                        workflowType,
-			TaskList:                            taskList,
-			Input:                               nil,
-			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-			Identity:                            identity,
+	tests := []struct {
+		name             string
+		wantStartFailure bool
+		asyncWFCfg       *types.AsyncWorkflowConfiguration
+	}{
+		// {
+		// 	name:             "start workflow execution async fails because domain missing async queue",
+		// 	wantStartFailure: true,
+		// },
+		// {
+		// 	name: "start workflow execution async fails because async queue is disabled",
+		// 	asyncWFCfg: &types.AsyncWorkflowConfiguration{
+		// 		Enabled: false,
+		// 	},
+		// 	wantStartFailure: true,
+		// },
+		{
+			name: "start workflow execution async succeeds and workflow starts",
+			asyncWFCfg: &types.AsyncWorkflowConfiguration{
+				Enabled:             true,
+				PredefinedQueueName: "test-async-wf-queue",
+			},
 		},
 	}
 
-	startTime := time.Now().UnixNano()
-	ctx, cancel := createContext()
-	defer cancel()
-	_, err := s.engine.StartWorkflowExecutionAsync(ctx, asyncReq)
-	s.Nil(err)
+	for _, tc := range tests {
+		tc := tc
+		s.T().Run(tc.name, func(t *testing.T) {
+			ctx, cancel := createContext()
+			defer cancel()
 
-	for i := 0; i < 10; i++ {
-		resp, err := s.engine.ListOpenWorkflowExecutions(ctx, &types.ListOpenWorkflowExecutionsRequest{
-			Domain:          s.domainName,
-			MaximumPageSize: 10,
-			StartTimeFilter: &types.StartTimeFilter{
-				EarliestTime: common.Int64Ptr(startTime),
-				LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
-			},
-			ExecutionFilter: &types.WorkflowExecutionFilter{
-				WorkflowID: id,
-			},
+			if tc.asyncWFCfg != nil {
+				_, err := s.adminClient.UpdateDomainAsyncWorkflowConfiguraton(ctx, &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
+					Domain:        s.domainName,
+					Configuration: tc.asyncWFCfg,
+				})
+				if err != nil {
+					t.Fatalf("UpdateDomainAsyncWorkflowConfiguraton() failed: %v", err)
+				}
+
+				s.domainCacheRefresh()
+			}
+
+			startTime := s.testClusterConfig.TimeSource.Now().UnixNano()
+			wfID := fmt.Sprintf("async-wf-integration-start-workflow-test-%d", startTime)
+			wfType := "async-wf-integration-start-workflow-test-type"
+			taskList := "async-wf-integration-start-workflow-test-tasklist"
+			identity := "worker1"
+
+			asyncReq := &types.StartWorkflowExecutionAsyncRequest{
+				StartWorkflowExecutionRequest: &types.StartWorkflowExecutionRequest{
+					RequestID:  uuid.New(),
+					Domain:     s.domainName,
+					WorkflowID: wfID,
+					WorkflowType: &types.WorkflowType{
+						Name: wfType,
+					},
+					TaskList: &types.TaskList{
+						Name: taskList,
+					},
+					Input:                               nil,
+					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+					Identity:                            identity,
+				},
+			}
+
+			_, err := s.engine.StartWorkflowExecutionAsync(ctx, asyncReq)
+			if tc.wantStartFailure != (err != nil) {
+				t.Errorf("StartWorkflowExecutionAsync() failed: %v, wantStartFailure: %v", err, tc.wantStartFailure)
+			}
+
+			if err != nil || tc.wantStartFailure {
+				return
+			}
+
+			// there's no worker or poller for async workflow, so we just validate whether it started.
+			// this is sufficient to verify the async workflow start path.
+			for i := 0; i < 1000; i++ {
+				timeFilter := &types.StartTimeFilter{
+					EarliestTime: common.Int64Ptr(time.Unix(0, 0).UnixNano()),
+					LatestTime:   common.Int64Ptr(s.testClusterConfig.TimeSource.Now().UnixNano()),
+				}
+				resp, err := s.engine.ListOpenWorkflowExecutions(ctx, &types.ListOpenWorkflowExecutionsRequest{
+					Domain:          s.domainName,
+					MaximumPageSize: 10,
+					StartTimeFilter: timeFilter,
+					ExecutionFilter: &types.WorkflowExecutionFilter{
+						WorkflowID: wfID,
+					},
+				})
+				if err != nil {
+					t.Fatalf("ListOpenWorkflowExecutions() failed: %v", err)
+				}
+
+				t.Logf("ListOpenWorkflowExecutions() returned %#v. from %v, to: %v", resp, *timeFilter.EarliestTime, *timeFilter.LatestTime)
+
+				if len(resp.GetExecutions()) > 0 {
+					t.Logf("len executions > 0")
+					execInfo := resp.GetExecutions()[0]
+					s.NotNil(execInfo)
+					t.Logf("Got execInfo: %#v", execInfo)
+					return
+				}
+
+				t.Log("No open workflow yet")
+				time.Sleep(time.Second)
+				s.testClusterConfig.TimeSource.Advance(time.Second)
+			}
+
+			t.Fatal("Async started workflow not found")
 		})
-		s.Nil(err)
-
-		if len(resp.GetExecutions()) > 0 {
-			execInfo := resp.GetExecutions()[0]
-			s.NotNil(execInfo)
-			s.logger.Info("Got execInfo", tag.Value(execInfo))
-			break
-		}
-
-		s.logger.Info("No open workflow yet", tag.WorkflowID(id))
-		time.Sleep(time.Second)
 	}
 }

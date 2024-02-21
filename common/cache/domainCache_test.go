@@ -51,7 +51,7 @@ type (
 
 		metadataMgr *mocks.MetadataManager
 
-		domainCache *domainCache
+		domainCache *DefaultDomainCache
 		logger      log.Logger
 	}
 )
@@ -75,7 +75,7 @@ func (s *domainCacheSuite) SetupTest() {
 
 	s.metadataMgr = &mocks.MetadataManager{}
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
-	s.domainCache = NewDomainCache(s.metadataMgr, cluster.GetTestClusterMetadata(true), metricsClient, s.logger).(*domainCache)
+	s.domainCache = NewDomainCache(s.metadataMgr, cluster.GetTestClusterMetadata(true), metricsClient, s.logger)
 
 	s.domainCache.timeSource = clock.NewMockedTimeSource()
 }
@@ -93,7 +93,12 @@ func (s *domainCacheSuite) TestListDomain() {
 			Retention: 1,
 			BadBinaries: types.BadBinaries{
 				Binaries: map[string]*types.BadBinaryInfo{},
-			}},
+			},
+			AsyncWorkflowConfig: types.AsyncWorkflowConfiguration{
+				Enabled:             true,
+				PredefinedQueueName: "test-async-wf-queue",
+			},
+		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
 			ActiveClusterName: cluster.TestCurrentClusterName,
 			Clusters: []*persistence.ClusterReplicationConfig{

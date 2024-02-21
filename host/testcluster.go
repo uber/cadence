@@ -94,6 +94,15 @@ type (
 		MockAdminClient       map[string]adminClient.Client
 		PinotConfig           *config.PinotVisibilityConfig
 		AsyncWFQueues         map[string]config.AsyncWorkflowQueueProvider
+
+		// TimeSource is used to override the time source of internal components.
+		// Note that most components don't respect this, and it's only used in a few places.
+		// e.g. async workflow test's consumer manager and domain manager
+		TimeSource                     clock.MockedTimeSource
+		FrontendDynamicConfigOverrides map[dynamicconfig.Key]interface{}
+		HistoryDynamicConfigOverrides  map[dynamicconfig.Key]interface{}
+		MatchingDynamicConfigOverrides map[dynamicconfig.Key]interface{}
+		WorkerDynamicConfigOverrides   map[dynamicconfig.Key]interface{}
 	}
 
 	// MessagingClientConfig is the config for messaging config
@@ -164,6 +173,11 @@ func NewCluster(t *testing.T, options *TestClusterConfig, logger log.Logger, par
 		DomainReplicationTaskExecutor: domain.NewReplicationTaskExecutor(testBase.DomainManager, clock.NewRealTimeSource(), logger),
 		AuthorizationConfig:           aConfig,
 		AsyncWFQueues:                 options.AsyncWFQueues,
+		TimeSource:                    options.TimeSource,
+		FrontendDynCfgOverrides:       options.FrontendDynamicConfigOverrides,
+		HistoryDynCfgOverrides:        options.HistoryDynamicConfigOverrides,
+		MatchingDynCfgOverrides:       options.MatchingDynamicConfigOverrides,
+		WorkerDynCfgOverrides:         options.WorkerDynamicConfigOverrides,
 	}
 	cluster := NewCadence(cadenceParams)
 	if err := cluster.Start(); err != nil {

@@ -208,6 +208,7 @@ func New(
 		params.ClusterMetadata,
 		params.MetricsClient,
 		logger,
+		cache.WithTimeSource(params.TimeSource),
 	)
 
 	domainMetricsScopeCache := cache.NewDomainMetricsScopeCache()

@@ -98,7 +98,7 @@ type (
 		GetCacheSize() (sizeOfCacheByName int64, sizeOfCacheByID int64)
 	}
 
-	domainCache struct {
+	DefaultDomainCache struct {
 		status        int32
 		shutdownChan  chan struct{}
 		clusterGroup  string
@@ -119,6 +119,9 @@ type (
 		callbackLock     sync.Mutex
 		prepareCallbacks map[int]PrepareCallbackFn
 		callbacks        map[int]CallbackFn
+
+		// TODO: remove this and the option func
+		owner string
 	}
 
 	// DomainCacheEntries is DomainCacheEntry slice
@@ -141,15 +144,32 @@ type (
 	}
 )
 
+type DomainCacheOption func(*DefaultDomainCache)
+
+func WithTimeSource(timeSource clock.TimeSource) DomainCacheOption {
+	return func(cache *DefaultDomainCache) {
+		if timeSource != nil {
+			cache.timeSource = timeSource
+		}
+	}
+}
+
+func WithOwner(owner string) DomainCacheOption {
+	return func(cache *DefaultDomainCache) {
+		cache.owner = owner
+	}
+}
+
 // NewDomainCache creates a new instance of cache for holding onto domain information to reduce the load on persistence
 func NewDomainCache(
 	domainManager persistence.DomainManager,
 	metadata cluster.Metadata,
 	metricsClient metrics.Client,
 	logger log.Logger,
-) DomainCache {
+	opts ...DomainCacheOption,
+) *DefaultDomainCache {
 
-	cache := &domainCache{
+	cache := &DefaultDomainCache{
 		status:           domainCacheInitialized,
 		shutdownChan:     make(chan struct{}),
 		clusterGroup:     getClusterGroupIdentifier(metadata),
@@ -164,6 +184,10 @@ func NewDomainCache(
 	}
 	cache.cacheNameToID.Store(newDomainCache())
 	cache.cacheByID.Store(newDomainCache())
+
+	for _, opt := range opts {
+		opt(cache)
+	}
 
 	return cache
 }
@@ -239,12 +263,12 @@ func NewDomainCacheEntryForTest(
 	}
 }
 
-func (c *domainCache) GetCacheSize() (sizeOfCacheByName int64, sizeOfCacheByID int64) {
+func (c *DefaultDomainCache) GetCacheSize() (sizeOfCacheByName int64, sizeOfCacheByID int64) {
 	return int64(c.cacheByID.Load().(Cache).Size()), int64(c.cacheNameToID.Load().(Cache).Size())
 }
 
 // Start starts the background refresh of domain
-func (c *domainCache) Start() {
+func (c *DefaultDomainCache) Start() {
 	if !atomic.CompareAndSwapInt32(&c.status, domainCacheInitialized, domainCacheStarted) {
 		return
 	}
@@ -258,14 +282,14 @@ func (c *domainCache) Start() {
 }
 
 // Stop stops background refresh of domain
-func (c *domainCache) Stop() {
+func (c *DefaultDomainCache) Stop() {
 	if !atomic.CompareAndSwapInt32(&c.status, domainCacheStarted, domainCacheStopped) {
 		return
 	}
 	close(c.shutdownChan)
 }
 
-func (c *domainCache) GetAllDomain() map[string]*DomainCacheEntry {
+func (c *DefaultDomainCache) GetAllDomain() map[string]*DomainCacheEntry {
 	result := make(map[string]*DomainCacheEntry)
 	ite := c.cacheByID.Load().(Cache).Iterator()
 	defer ite.Close()
@@ -286,7 +310,7 @@ func (c *domainCache) GetAllDomain() map[string]*DomainCacheEntry {
 // WARN: the beforeCallback function will be triggered by domain cache when holding the domain cache lock,
 // make sure the callback function will not call domain cache again in case of dead lock
 // afterCallback will be invoked when NOT holding the domain cache lock.
-func (c *domainCache) RegisterDomainChangeCallback(
+func (c *DefaultDomainCache) RegisterDomainChangeCallback(
 	shard int,
 	initialNotificationVersion int64,
 	prepareCallback PrepareCallbackFn,
@@ -321,7 +345,7 @@ func (c *domainCache) RegisterDomainChangeCallback(
 }
 
 // UnregisterDomainChangeCallback delete a domain failover callback
-func (c *domainCache) UnregisterDomainChangeCallback(
+func (c *DefaultDomainCache) UnregisterDomainChangeCallback(
 	shard int,
 ) {
 
@@ -334,7 +358,7 @@ func (c *domainCache) UnregisterDomainChangeCallback(
 
 // GetDomain retrieves the information from the cache if it exists, otherwise retrieves the information from metadata
 // store and writes it to the cache with an expiry before returning back
-func (c *domainCache) GetDomain(
+func (c *DefaultDomainCache) GetDomain(
 	name string,
 ) (*DomainCacheEntry, error) {
 
@@ -347,7 +371,7 @@ func (c *domainCache) GetDomain(
 
 // GetDomainByID retrieves the information from the cache if it exists, otherwise retrieves the information from metadata
 // store and writes it to the cache with an expiry before returning back
-func (c *domainCache) GetDomainByID(
+func (c *DefaultDomainCache) GetDomainByID(
 	id string,
 ) (*DomainCacheEntry, error) {
 
@@ -358,7 +382,7 @@ func (c *domainCache) GetDomainByID(
 }
 
 // GetDomainID retrieves domainID by using GetDomain
-func (c *domainCache) GetDomainID(
+func (c *DefaultDomainCache) GetDomainID(
 	name string,
 ) (string, error) {
 
@@ -370,7 +394,7 @@ func (c *domainCache) GetDomainID(
 }
 
 // GetDomainName returns domain name given the domain id
-func (c *domainCache) GetDomainName(
+func (c *DefaultDomainCache) GetDomainName(
 	id string,
 ) (string, error) {
 
@@ -381,29 +405,30 @@ func (c *domainCache) GetDomainName(
 	return entry.info.Name, nil
 }
 
-func (c *domainCache) refreshLoop() {
-	timer := time.NewTicker(DomainCacheRefreshInterval)
+func (c *DefaultDomainCache) refreshLoop() {
+	timer := c.timeSource.NewTicker(DomainCacheRefreshInterval)
 	defer timer.Stop()
 
 	for {
 		select {
 		case <-c.shutdownChan:
 			return
-		case <-timer.C:
+		case <-timer.Chan():
 			for err := c.refreshDomains(); err != nil; err = c.refreshDomains() {
 				select {
 				case <-c.shutdownChan:
 					return
 				default:
 					c.logger.Error("Error refreshing domain cache", tag.Error(err))
-					time.Sleep(DomainCacheRefreshFailureRetryInterval)
+					c.timeSource.Sleep(DomainCacheRefreshFailureRetryInterval)
 				}
 			}
+			c.logger.Debug("Domain cache refreshed", tag.Dynamic("owner", c.owner))
 		}
 	}
 }
 
-func (c *domainCache) refreshDomains() error {
+func (c *DefaultDomainCache) refreshDomains() error {
 	c.refreshLock.Lock()
 	defer c.refreshLock.Unlock()
 	return c.refreshDomainsLocked()
@@ -411,7 +436,7 @@ func (c *domainCache) refreshDomains() error {
 
 // this function only refresh the domains in the v2 table
 // the domains in the v1 table will be refreshed if cache is stale
-func (c *domainCache) refreshDomainsLocked() error {
+func (c *DefaultDomainCache) refreshDomainsLocked() error {
 	now := c.timeSource.Now()
 	if now.Sub(c.lastRefreshTime) < domainCacheMinRefreshInterval {
 		return nil
@@ -509,7 +534,7 @@ UpdateLoop:
 	return nil
 }
 
-func (c *domainCache) checkDomainExists(
+func (c *DefaultDomainCache) checkDomainExists(
 	name string,
 	id string,
 ) error {
@@ -520,7 +545,7 @@ func (c *domainCache) checkDomainExists(
 	return err
 }
 
-func (c *domainCache) updateNameToIDCache(
+func (c *DefaultDomainCache) updateNameToIDCache(
 	cacheNameToID Cache,
 	name string,
 	id string,
@@ -529,7 +554,7 @@ func (c *domainCache) updateNameToIDCache(
 	cacheNameToID.Put(name, id)
 }
 
-func (c *domainCache) updateIDToDomainCache(
+func (c *DefaultDomainCache) updateIDToDomainCache(
 	cacheByID Cache,
 	id string,
 	record *DomainCacheEntry,
@@ -562,7 +587,7 @@ func (c *domainCache) updateIDToDomainCache(
 
 // getDomain retrieves the information from the cache if it exists, otherwise retrieves the information from metadata
 // store and writes it to the cache with an expiry before returning back
-func (c *domainCache) getDomain(
+func (c *DefaultDomainCache) getDomain(
 	name string,
 ) (*DomainCacheEntry, error) {
 
@@ -589,12 +614,12 @@ func (c *domainCache) getDomain(
 		return c.getDomainByID(id, true)
 	}
 	// impossible case
-	return nil, &types.InternalServiceError{Message: "domainCache encounter case where domain exists but cannot be loaded"}
+	return nil, &types.InternalServiceError{Message: "DefaultDomainCache encounter case where domain exists but cannot be loaded"}
 }
 
 // getDomainByID retrieves the information from the cache if it exists, otherwise retrieves the information from metadata
 // store and writes it to the cache with an expiry before returning back
-func (c *domainCache) getDomainByID(
+func (c *DefaultDomainCache) getDomainByID(
 	id string,
 	deepCopy bool,
 ) (*DomainCacheEntry, error) {
@@ -641,10 +666,10 @@ func (c *domainCache) getDomainByID(
 		return result, nil
 	}
 	// impossible case
-	return nil, &types.InternalServiceError{Message: "domainCache encounter case where domain exists but cannot be loaded"}
+	return nil, &types.InternalServiceError{Message: "DefaultDomainCache encounter case where domain exists but cannot be loaded"}
 }
 
-func (c *domainCache) triggerDomainChangePrepareCallbackLocked() {
+func (c *DefaultDomainCache) triggerDomainChangePrepareCallbackLocked() {
 	sw := c.scope.StartTimer(metrics.DomainCachePrepareCallbacksLatency)
 	defer sw.Stop()
 
@@ -653,7 +678,7 @@ func (c *domainCache) triggerDomainChangePrepareCallbackLocked() {
 	}
 }
 
-func (c *domainCache) triggerDomainChangeCallbackLocked(
+func (c *DefaultDomainCache) triggerDomainChangeCallbackLocked(
 	nextDomains []*DomainCacheEntry,
 ) {
 
@@ -665,7 +690,7 @@ func (c *domainCache) triggerDomainChangeCallbackLocked(
 	}
 }
 
-func (c *domainCache) buildEntryFromRecord(
+func (c *DefaultDomainCache) buildEntryFromRecord(
 	record *persistence.GetDomainResponse,
 ) *DomainCacheEntry {
 
@@ -718,12 +743,14 @@ func (entry *DomainCacheEntry) duplicate() *DomainCacheEntry {
 		VisibilityArchivalStatus: entry.config.VisibilityArchivalStatus,
 		VisibilityArchivalURI:    entry.config.VisibilityArchivalURI,
 		BadBinaries:              copyResetBinary(entry.config.BadBinaries),
+		AsyncWorkflowConfig:      entry.config.AsyncWorkflowConfig,
+		// Q: Should we set IsolationGroups as well? Othewise domaincache will not be able to detect changes in isolation groups
 	}
 	result.replicationConfig = &persistence.DomainReplicationConfig{
 		ActiveClusterName: entry.replicationConfig.ActiveClusterName,
 	}
-	for _, clusterName := range entry.replicationConfig.Clusters {
-		result.replicationConfig.Clusters = append(result.replicationConfig.Clusters, &*clusterName)
+	for _, clusterCfg := range entry.replicationConfig.Clusters {
+		result.replicationConfig.Clusters = append(result.replicationConfig.Clusters, &*clusterCfg)
 	}
 	result.configVersion = entry.configVersion
 	result.failoverVersion = entry.failoverVersion

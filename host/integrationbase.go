@@ -227,6 +227,12 @@ func (s *IntegrationBase) registerDomain(
 	})
 }
 
+func (s *IntegrationBase) domainCacheRefresh() {
+	s.testClusterConfig.TimeSource.Advance(cache.DomainCacheRefreshInterval + time.Second)
+	// this sleep is necessary to yield execution to other goroutines. not 100% guaranteed to work
+	time.Sleep(2 * time.Second)
+}
+
 func (s *IntegrationBase) randomizeStr(id string) string {
 	return fmt.Sprintf("%v-%v", id, uuid.New())
 }
