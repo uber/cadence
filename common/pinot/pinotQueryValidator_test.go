@@ -23,10 +23,10 @@
 package pinot
 
 import (
-	"github.com/xwb1989/sqlparser"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/xwb1989/sqlparser"
 
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/dynamicconfig"
