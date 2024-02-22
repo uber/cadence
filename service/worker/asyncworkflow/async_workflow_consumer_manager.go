@@ -52,6 +52,12 @@ func WithTimeSource(timeSrc clock.TimeSource) ConsumerManagerOptions {
 	}
 }
 
+func WithRefreshInterval(interval time.Duration) ConsumerManagerOptions {
+	return func(c *ConsumerManager) {
+		c.refreshInterval = interval
+	}
+}
+
 func NewConsumerManager(
 	logger log.Logger,
 	metricsClient metrics.Client,
@@ -122,15 +128,15 @@ func (c *ConsumerManager) Stop() {
 func (c *ConsumerManager) run() {
 	defer c.wg.Done()
 
-	timer := c.timeSrc.NewTimer(c.refreshInterval)
-	defer timer.Stop()
+	ticker := c.timeSrc.NewTicker(c.refreshInterval)
+	defer ticker.Stop()
 	c.logger.Info("ConsumerManager background loop started", tag.Dynamic("refresh-interval", c.refreshInterval))
 
 	c.refreshConsumers()
 
 	for {
 		select {
-		case <-timer.Chan():
+		case <-ticker.Chan():
 			c.refreshConsumers()
 		case <-c.ctx.Done():
 			c.logger.Info("ConsumerManager background loop stopped because context is done")
@@ -151,6 +157,8 @@ func (c *ConsumerManager) refreshConsumers() {
 			c.logger.Info("refreshConsumers is terminating because context is done")
 			return
 		}
+
+		c.logger.Debug("Refreshing consumers for domain", tag.WorkflowDomainName(domain.GetInfo().Name), tag.Dynamic("domain-config", domain.GetConfig()))
 
 		// domain config is not set or async workflow config is not set
 		if domain.GetConfig() == nil || domain.GetConfig().AsyncWorkflowConfig == (types.AsyncWorkflowConfiguration{}) {

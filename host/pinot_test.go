@@ -41,19 +41,23 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/definition"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/persistence"
+	pt "github.com/uber/cadence/common/persistence/persistence-tests"
 	pnt "github.com/uber/cadence/common/pinot"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/host/pinotutils"
 )
 
 const (
-	numberOfRetry         = 50
-	waitTimeInMillisecond = 400 * time.Millisecond
-	waitForPinotToSettle  = 4 * time.Second // wait pinot shards for some time ensure data consistent
+	numberOfRetry        = 50
+	waitTimeBetweenRetry = 400 * time.Millisecond
+	waitForPinotToSettle = 4 * time.Second // wait pinot shards for some time ensure data consistent
 )
 
 type PinotIntegrationSuite struct {
@@ -85,7 +89,44 @@ func TestPinotIntegrationSuite(t *testing.T) {
 }
 
 func (s *PinotIntegrationSuite) SetupSuite() {
-	s.setupSuiteForPinotTest()
+	s.setupLogger()
+
+	s.Logger.Info("Running integration test against test cluster")
+	clusterMetadata := NewClusterMetadata(s.T(), s.testClusterConfig)
+	dc := persistence.DynamicConfiguration{
+		EnableSQLAsyncTransaction:                dynamicconfig.GetBoolPropertyFn(false),
+		EnableCassandraAllConsistencyLevelDelete: dynamicconfig.GetBoolPropertyFn(true),
+		PersistenceSampleLoggingRate:             dynamicconfig.GetIntPropertyFn(100),
+		EnableShardIDMetrics:                     dynamicconfig.GetBoolPropertyFn(true),
+	}
+	params := pt.TestBaseParams{
+		DefaultTestCluster:    s.defaultTestCluster,
+		VisibilityTestCluster: s.visibilityTestCluster,
+		ClusterMetadata:       clusterMetadata,
+		DynamicConfiguration:  dc,
+	}
+	cluster, err := NewPinotTestCluster(s.T(), s.testClusterConfig, s.Logger, params)
+	s.Require().NoError(err)
+	s.testCluster = cluster
+	s.engine = s.testCluster.GetFrontendClient()
+	s.adminClient = s.testCluster.GetAdminClient()
+
+	s.testRawHistoryDomainName = "TestRawHistoryDomain"
+	s.domainName = s.randomizeStr("integration-test-domain")
+	s.Require().NoError(
+		s.registerDomain(s.domainName, 1, types.ArchivalStatusDisabled, "", types.ArchivalStatusDisabled, ""))
+	s.Require().NoError(
+		s.registerDomain(s.testRawHistoryDomainName, 1, types.ArchivalStatusDisabled, "", types.ArchivalStatusDisabled, ""))
+	s.foreignDomainName = s.randomizeStr("integration-foreign-test-domain")
+	s.Require().NoError(
+		s.registerDomain(s.foreignDomainName, 1, types.ArchivalStatusDisabled, "", types.ArchivalStatusDisabled, ""))
+
+	s.Require().NoError(s.registerArchivalDomain())
+
+	// this sleep is necessary because domainv2 cache gets refreshed in the
+	// background only every domainCacheRefreshInterval period
+	time.Sleep(cache.DomainCacheRefreshInterval + time.Second)
+
 	tableName := "cadence_visibility_pinot" //cadence_visibility_pinot_integration_test
 	pinotConfig := &config.PinotVisibilityConfig{
 		Cluster:     "",
@@ -124,7 +165,9 @@ func (s *PinotIntegrationSuite) TestListOpenWorkflow() {
 	request.SearchAttributes = searchAttr
 
 	startTime := time.Now().UnixNano()
-	we, err := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel := createContext()
+	defer cancel()
+	we, err := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err)
 
 	startFilter := &types.StartTimeFilter{}
@@ -132,7 +175,7 @@ func (s *PinotIntegrationSuite) TestListOpenWorkflow() {
 	var openExecution *types.WorkflowExecutionInfo
 	for i := 0; i < numberOfRetry; i++ {
 		startFilter.LatestTime = common.Int64Ptr(time.Now().UnixNano())
-		resp, err := s.engine.ListOpenWorkflowExecutions(createContext(), &types.ListOpenWorkflowExecutionsRequest{
+		resp, err := s.engine.ListOpenWorkflowExecutions(ctx, &types.ListOpenWorkflowExecutionsRequest{
 			Domain:          s.domainName,
 			MaximumPageSize: defaultTestValueOfESIndexMaxResultWindow,
 			StartTimeFilter: startFilter,
@@ -146,7 +189,7 @@ func (s *PinotIntegrationSuite) TestListOpenWorkflow() {
 			openExecution = resp.GetExecutions()[0]
 			break
 		}
-		time.Sleep(waitTimeInMillisecond)
+		time.Sleep(waitTimeBetweenRetry)
 	}
 	s.NotNil(openExecution)
 	s.Equal(we.GetRunID(), openExecution.GetExecution().GetRunID())
@@ -158,8 +201,9 @@ func (s *PinotIntegrationSuite) TestListWorkflow() {
 	wt := "pinot-integration-list-workflow-test-type"
 	tl := "pinot-integration-list-workflow-test-tasklist"
 	request := s.createStartWorkflowExecutionRequest(id, wt, tl)
-
-	we, err := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel := createContext()
+	defer cancel()
+	we, err := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err)
 	query := fmt.Sprintf(`WorkflowID = "%s"`, id)
 	s.testHelperForReadOnce(we.GetRunID(), query, false, false)
@@ -198,15 +242,16 @@ func (s *PinotIntegrationSuite) testHelperForReadOnceWithDomain(domainName strin
 		PageSize: defaultTestValueOfESIndexMaxResultWindow,
 		Query:    query,
 	}
+	ctx, cancel := createContext()
+	defer cancel()
 Retry:
 	for i := 0; i < numberOfRetry; i++ {
 		var resp *types.ListWorkflowExecutionsResponse
 		var err error
-
 		if isScan {
-			resp, err = s.engine.ScanWorkflowExecutions(createContext(), listRequest)
+			resp, err = s.engine.ScanWorkflowExecutions(ctx, listRequest)
 		} else {
-			resp, err = s.engine.ListWorkflowExecutions(createContext(), listRequest)
+			resp, err = s.engine.ListWorkflowExecutions(ctx, listRequest)
 		}
 
 		s.Nil(err)
@@ -228,7 +273,7 @@ Retry:
 				}
 			}
 		}
-		time.Sleep(waitTimeInMillisecond)
+		time.Sleep(waitTimeBetweenRetry)
 	}
 	s.NotNil(openExecution)
 	s.Equal(runID, openExecution.GetExecution().GetRunID())
@@ -246,17 +291,18 @@ Retry:
 
 func (s *PinotIntegrationSuite) startWorkflow(
 	prefix string,
-	is_cron bool,
+	isCron bool,
 ) *types.StartWorkflowExecutionResponse {
 	id := "pinot-integration-list-workflow-" + prefix + "-test"
 	wt := "pinot-integration-list-workflow-" + prefix + "test-type"
 	tl := "pinot-integration-list-workflow-" + prefix + "test-tasklist"
 	request := s.createStartWorkflowExecutionRequest(id, wt, tl)
-	if is_cron {
+	if isCron {
 		request.CronSchedule = "*/5 * * * *" // every 5 minutes
 	}
-
-	we, err := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel := createContext()
+	defer cancel()
+	we, err := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err)
 
 	query := fmt.Sprintf(`WorkflowID = "%s"`, id)
@@ -287,15 +333,16 @@ func (s *PinotIntegrationSuite) TestListWorkflow_ExecutionTime() {
 	wt := "pinot-integration-list-workflow-execution-time-test-type"
 	tl := "pinot-integration-list-workflow-execution-time-test-tasklist"
 	request := s.createStartWorkflowExecutionRequest(id, wt, tl)
-
-	we, err := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel := createContext()
+	defer cancel()
+	we, err := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err)
 
 	cronID := id + "-cron"
 	request.CronSchedule = "@every 1m"
 	request.WorkflowID = cronID
 
-	weCron, err := s.engine.StartWorkflowExecution(createContext(), request)
+	weCron, err := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err)
 
 	query := fmt.Sprintf(`(WorkflowID = '%s' or WorkflowID = '%s') and ExecutionTime < %v and ExecutionTime > 0`, id, cronID, time.Now().UnixNano()+int64(time.Minute))
@@ -318,8 +365,9 @@ func (s *PinotIntegrationSuite) TestListWorkflow_SearchAttribute() {
 		},
 	}
 	request.SearchAttributes = searchAttr
-
-	we, err := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel := createContext()
+	defer cancel()
+	we, err := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err)
 	query := fmt.Sprintf(`WorkflowID = "%s" and %s = "%s"`, id, s.testSearchAttributeKey, s.testSearchAttributeVal)
 	s.testHelperForReadOnce(we.GetRunID(), query, false, false)
@@ -377,7 +425,8 @@ func (s *PinotIntegrationSuite) TestListWorkflow_SearchAttribute() {
 			WorkflowID: id,
 		},
 	}
-	descResp, err := s.engine.DescribeWorkflowExecution(createContext(), descRequest)
+
+	descResp, err := s.engine.DescribeWorkflowExecution(ctx, descRequest)
 	s.Nil(err)
 	expectedSearchAttributes := getPinotUpsertSearchAttributes()
 	s.Equal(expectedSearchAttributes, descResp.WorkflowExecutionInfo.GetSearchAttributes())
@@ -412,7 +461,8 @@ func (s *PinotIntegrationSuite) TestListWorkflow_OrQuery() {
 	wt := "pinot-integration-list-workflow-or-query-test-type"
 	tl := "pinot-integration-list-workflow-or-query-test-tasklist"
 	request := s.createStartWorkflowExecutionRequest(id, wt, tl)
-
+	ctx, cancel := createContext()
+	defer cancel()
 	// start 3 workflows
 	key := definition.CustomIntField
 	attrValBytes, _ := json.Marshal(1)
@@ -422,21 +472,21 @@ func (s *PinotIntegrationSuite) TestListWorkflow_OrQuery() {
 		},
 	}
 	request.SearchAttributes = searchAttr
-	we1, err := s.engine.StartWorkflowExecution(createContext(), request)
+	we1, err := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err)
 
 	request.RequestID = uuid.New()
 	request.WorkflowID = id + "-2"
 	attrValBytes, _ = json.Marshal(2)
 	searchAttr.IndexedFields[key] = attrValBytes
-	we2, err := s.engine.StartWorkflowExecution(createContext(), request)
+	we2, err := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err)
 
 	request.RequestID = uuid.New()
 	request.WorkflowID = id + "-3"
 	attrValBytes, _ = json.Marshal(3)
 	searchAttr.IndexedFields[key] = attrValBytes
-	we3, err := s.engine.StartWorkflowExecution(createContext(), request)
+	we3, err := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err)
 
 	time.Sleep(waitForPinotToSettle)
@@ -450,13 +500,13 @@ func (s *PinotIntegrationSuite) TestListWorkflow_OrQuery() {
 		Query:    query1,
 	}
 	for i := 0; i < numberOfRetry; i++ {
-		resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
+		resp, err := s.engine.ListWorkflowExecutions(ctx, listRequest)
 		s.Nil(err)
 		if len(resp.GetExecutions()) == 1 {
 			openExecution = resp.GetExecutions()[0]
 			break
 		}
-		time.Sleep(waitTimeInMillisecond)
+		time.Sleep(waitTimeBetweenRetry)
 	}
 	s.NotNil(openExecution)
 	s.Equal(we1.GetRunID(), openExecution.GetExecution().GetRunID())
@@ -471,13 +521,13 @@ func (s *PinotIntegrationSuite) TestListWorkflow_OrQuery() {
 	listRequest.Query = query2
 	var openExecutions []*types.WorkflowExecutionInfo
 	for i := 0; i < numberOfRetry; i++ {
-		resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
+		resp, err := s.engine.ListWorkflowExecutions(ctx, listRequest)
 		s.Nil(err)
 		if len(resp.GetExecutions()) == 2 {
 			openExecutions = resp.GetExecutions()
 			break
 		}
-		time.Sleep(waitTimeInMillisecond)
+		time.Sleep(waitTimeBetweenRetry)
 	}
 	// TODO: need to clean up or every time we run, we have to delete the table.
 	s.Equal(2, len(openExecutions))
@@ -498,13 +548,13 @@ func (s *PinotIntegrationSuite) TestListWorkflow_OrQuery() {
 	query3 := fmt.Sprintf(`(CustomIntField = %d or CustomIntField = %d) and CloseTime = missing`, 2, 3)
 	listRequest.Query = query3
 	for i := 0; i < numberOfRetry; i++ {
-		resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
+		resp, err := s.engine.ListWorkflowExecutions(ctx, listRequest)
 		s.Nil(err)
 		if len(resp.GetExecutions()) == 2 {
 			openExecutions = resp.GetExecutions()
 			break
 		}
-		time.Sleep(waitTimeInMillisecond)
+		time.Sleep(waitTimeBetweenRetry)
 	}
 	s.Equal(2, len(openExecutions))
 	e1 = openExecutions[0]
@@ -522,11 +572,12 @@ func (s *PinotIntegrationSuite) TestListWorkflow_MaxWindowSize() {
 	wt := "pinot-integration-list-workflow-max-window-size-test-type"
 	tl := "pinot-integration-list-workflow-max-window-size-test-tasklist"
 	startRequest := s.createStartWorkflowExecutionRequest(id, wt, tl)
-
+	ctx, cancel := createContext()
+	defer cancel()
 	for i := 0; i < defaultTestValueOfESIndexMaxResultWindow; i++ {
 		startRequest.RequestID = uuid.New()
 		startRequest.WorkflowID = id + strconv.Itoa(i)
-		_, err := s.engine.StartWorkflowExecution(createContext(), startRequest)
+		_, err := s.engine.StartWorkflowExecution(ctx, startRequest)
 		s.Nil(err)
 	}
 
@@ -543,20 +594,20 @@ func (s *PinotIntegrationSuite) TestListWorkflow_MaxWindowSize() {
 	}
 	// get first page
 	for i := 0; i < numberOfRetry; i++ {
-		resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
+		resp, err := s.engine.ListWorkflowExecutions(ctx, listRequest)
 		s.Nil(err)
 		if len(resp.GetExecutions()) == defaultTestValueOfESIndexMaxResultWindow {
 			listResp = resp
 			break
 		}
-		time.Sleep(waitTimeInMillisecond)
+		time.Sleep(waitTimeBetweenRetry)
 	}
 	s.NotNil(listResp)
 	s.True(len(listResp.GetNextPageToken()) != 0)
 
 	// the last request
 	listRequest.NextPageToken = listResp.GetNextPageToken()
-	resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
+	resp, err := s.engine.ListWorkflowExecutions(ctx, listRequest)
 	s.Nil(err)
 	s.True(len(resp.GetExecutions()) == 0)
 	s.True(len(resp.GetNextPageToken()) == 0)
@@ -567,7 +618,8 @@ func (s *PinotIntegrationSuite) TestListWorkflow_OrderBy() {
 	wt := "pinot-integration-list-workflow-order-by-test-type"
 	tl := "pinot-integration-list-workflow-order-by-test-tasklist"
 	startRequest := s.createStartWorkflowExecutionRequest(id, wt, tl)
-
+	ctx, cancel := createContext()
+	defer cancel()
 	for i := 0; i < defaultTestValueOfESIndexMaxResultWindow+1; i++ { // start 6
 		startRequest.RequestID = uuid.New()
 		startRequest.WorkflowID = id + strconv.Itoa(i)
@@ -590,7 +642,7 @@ func (s *PinotIntegrationSuite) TestListWorkflow_OrderBy() {
 			startRequest.SearchAttributes = &types.SearchAttributes{}
 		}
 
-		_, err := s.engine.StartWorkflowExecution(createContext(), startRequest)
+		_, err := s.engine.StartWorkflowExecution(ctx, startRequest)
 		s.Nil(err)
 	}
 
@@ -610,13 +662,13 @@ func (s *PinotIntegrationSuite) TestListWorkflow_OrderBy() {
 		Query:    query1,
 	}
 	for i := 0; i < numberOfRetry; i++ {
-		resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
+		resp, err := s.engine.ListWorkflowExecutions(ctx, listRequest)
 		s.Nil(err)
 		if int32(len(resp.GetExecutions())) == listRequest.GetPageSize() {
 			openExecutions = resp.GetExecutions()
 			break
 		}
-		time.Sleep(waitTimeInMillisecond)
+		time.Sleep(waitTimeBetweenRetry)
 	}
 	s.NotNil(openExecutions)
 	for i := int32(1); i < pageSize; i++ {
@@ -699,12 +751,13 @@ func (s *PinotIntegrationSuite) TestListWorkflow_OrderBy() {
 
 func (s *PinotIntegrationSuite) testListWorkflowHelper(numOfWorkflows, pageSize int,
 	startRequest *types.StartWorkflowExecutionRequest, wid, wType string, isScan bool) {
-
+	ctx, cancel := createContext()
+	defer cancel()
 	// start enough number of workflows
 	for i := 0; i < numOfWorkflows; i++ {
 		startRequest.RequestID = uuid.New()
 		startRequest.WorkflowID = wid + strconv.Itoa(i)
-		_, err := s.engine.StartWorkflowExecution(createContext(), startRequest)
+		_, err := s.engine.StartWorkflowExecution(ctx, startRequest)
 		s.Nil(err)
 	}
 
@@ -725,9 +778,9 @@ func (s *PinotIntegrationSuite) testListWorkflowHelper(numOfWorkflows, pageSize 
 		var err error
 
 		if isScan {
-			resp, err = s.engine.ScanWorkflowExecutions(createContext(), listRequest)
+			resp, err = s.engine.ScanWorkflowExecutions(ctx, listRequest)
 		} else {
-			resp, err = s.engine.ListWorkflowExecutions(createContext(), listRequest)
+			resp, err = s.engine.ListWorkflowExecutions(ctx, listRequest)
 		}
 		s.Nil(err)
 		if len(resp.GetExecutions()) == pageSize {
@@ -735,7 +788,7 @@ func (s *PinotIntegrationSuite) testListWorkflowHelper(numOfWorkflows, pageSize 
 			nextPageToken = resp.GetNextPageToken()
 			break
 		}
-		time.Sleep(waitTimeInMillisecond)
+		time.Sleep(waitTimeBetweenRetry)
 	}
 
 	s.NotNil(openExecutions)
@@ -750,9 +803,9 @@ func (s *PinotIntegrationSuite) testListWorkflowHelper(numOfWorkflows, pageSize 
 		var err error
 
 		if isScan {
-			resp, err = s.engine.ScanWorkflowExecutions(createContext(), listRequest)
+			resp, err = s.engine.ScanWorkflowExecutions(ctx, listRequest)
 		} else {
-			resp, err = s.engine.ListWorkflowExecutions(createContext(), listRequest)
+			resp, err = s.engine.ListWorkflowExecutions(ctx, listRequest)
 		}
 		s.Nil(err)
 
@@ -765,7 +818,7 @@ func (s *PinotIntegrationSuite) testListWorkflowHelper(numOfWorkflows, pageSize 
 			nextPageToken = resp.GetNextPageToken()
 			break
 		}
-		time.Sleep(waitTimeInMillisecond)
+		time.Sleep(waitTimeBetweenRetry)
 	}
 	s.True(inIf)
 	s.NotNil(openExecutions)
@@ -795,8 +848,9 @@ func (s *PinotIntegrationSuite) TestScanWorkflow() {
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            identity,
 	}
-
-	we, err := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel := createContext()
+	defer cancel()
+	we, err := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err)
 	query := fmt.Sprintf(`WorkflowID = "%s"`, id)
 	s.testHelperForReadOnce(we.GetRunID(), query, true, false)
@@ -815,8 +869,9 @@ func (s *PinotIntegrationSuite) TestScanWorkflow_SearchAttribute() {
 		},
 	}
 	request.SearchAttributes = searchAttr
-
-	we, err := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel := createContext()
+	defer cancel()
+	we, err := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err)
 	query := fmt.Sprintf(`WorkflowID = "%s" and %s = "%s"`, id, s.testSearchAttributeKey, s.testSearchAttributeVal)
 	s.testHelperForReadOnce(we.GetRunID(), query, true, false)
@@ -863,8 +918,9 @@ func (s *PinotIntegrationSuite) TestCountWorkflow() {
 		},
 	}
 	request.SearchAttributes = searchAttr
-
-	_, err := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel := createContext()
+	defer cancel()
+	_, err := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err)
 
 	query := fmt.Sprintf(`WorkflowID = "%s" and %s = "%s"`, id, s.testSearchAttributeKey, s.testSearchAttributeVal)
@@ -874,18 +930,18 @@ func (s *PinotIntegrationSuite) TestCountWorkflow() {
 	}
 	var resp *types.CountWorkflowExecutionsResponse
 	for i := 0; i < numberOfRetry; i++ {
-		resp, err = s.engine.CountWorkflowExecutions(createContext(), countRequest)
+		resp, err = s.engine.CountWorkflowExecutions(ctx, countRequest)
 		s.Nil(err)
 		if resp.GetCount() == int64(1) {
 			break
 		}
-		time.Sleep(waitTimeInMillisecond)
+		time.Sleep(waitTimeBetweenRetry)
 	}
 	s.Equal(int64(1), resp.GetCount())
 
 	query = fmt.Sprintf(`WorkflowID = "%s" and %s = "%s"`, id, s.testSearchAttributeKey, "noMatch")
 	countRequest.Query = query
-	resp, err = s.engine.CountWorkflowExecutions(createContext(), countRequest)
+	resp, err = s.engine.CountWorkflowExecutions(ctx, countRequest)
 	s.Nil(err)
 	s.Equal(int64(0), resp.GetCount())
 }
@@ -913,8 +969,9 @@ func (s *PinotIntegrationSuite) TestUpsertWorkflowExecution() {
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            identity,
 	}
-
-	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel := createContext()
+	defer cancel()
+	we, err0 := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err0)
 
 	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
@@ -998,7 +1055,7 @@ func (s *PinotIntegrationSuite) TestUpsertWorkflowExecution() {
 	}
 	verified := false
 	for i := 0; i < numberOfRetry; i++ {
-		resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
+		resp, err := s.engine.ListWorkflowExecutions(ctx, listRequest)
 		s.Nil(err)
 		if len(resp.GetExecutions()) == 1 {
 			execution := resp.GetExecutions()[0]
@@ -1012,7 +1069,7 @@ func (s *PinotIntegrationSuite) TestUpsertWorkflowExecution() {
 				break
 			}
 		}
-		time.Sleep(waitTimeInMillisecond)
+		time.Sleep(waitTimeBetweenRetry)
 	}
 	s.True(verified)
 
@@ -1043,8 +1100,10 @@ func (s *PinotIntegrationSuite) TestUpsertWorkflowExecution() {
 
 func (s *PinotIntegrationSuite) testListResultForUpsertSearchAttributes(listRequest *types.ListWorkflowExecutionsRequest) {
 	verified := false
+	ctx, cancel := createContext()
+	defer cancel()
 	for i := 0; i < numberOfRetry; i++ {
-		resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
+		resp, err := s.engine.ListWorkflowExecutions(ctx, listRequest)
 		s.Nil(err)
 
 		//res2B, _ := json.Marshal(resp.GetExecutions())
@@ -1078,7 +1137,7 @@ func (s *PinotIntegrationSuite) testListResultForUpsertSearchAttributes(listRequ
 				break
 			}
 		}
-		time.Sleep(waitTimeInMillisecond)
+		time.Sleep(waitTimeBetweenRetry)
 	}
 	s.True(verified)
 }
@@ -1120,8 +1179,9 @@ func (s *PinotIntegrationSuite) TestUpsertWorkflowExecution_InvalidKey() {
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            identity,
 	}
-
-	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel := createContext()
+	defer cancel()
+	we, err0 := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err0)
 
 	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
@@ -1154,8 +1214,8 @@ func (s *PinotIntegrationSuite) TestUpsertWorkflowExecution_InvalidKey() {
 
 	_, err := poller.PollAndProcessDecisionTask(false, false)
 	s.Nil(err)
-
-	historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
+	defer cancel()
+	historyResponse, err := s.engine.GetWorkflowExecutionHistory(ctx, &types.GetWorkflowExecutionHistoryRequest{
 		Domain: s.domainName,
 		Execution: &types.WorkflowExecution{
 			WorkflowID: id,

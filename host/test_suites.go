@@ -55,4 +55,9 @@ type (
 		worker    worker.Worker
 		taskList  string
 	}
+
+	AsyncWFIntegrationSuite struct {
+		*require.Assertions
+		*IntegrationBase
+	}
 )

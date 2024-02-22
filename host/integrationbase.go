@@ -141,46 +141,6 @@ func (s *IntegrationBase) setupSuite() {
 	time.Sleep(cache.DomainCacheRefreshInterval + time.Second)
 }
 
-func (s *IntegrationBase) setupSuiteForPinotTest() {
-	s.setupLogger()
-
-	s.Logger.Info("Running integration test against test cluster")
-	clusterMetadata := NewClusterMetadata(s.T(), s.testClusterConfig)
-	dc := persistence.DynamicConfiguration{
-		EnableSQLAsyncTransaction:                dynamicconfig.GetBoolPropertyFn(false),
-		EnableCassandraAllConsistencyLevelDelete: dynamicconfig.GetBoolPropertyFn(true),
-		PersistenceSampleLoggingRate:             dynamicconfig.GetIntPropertyFn(100),
-		EnableShardIDMetrics:                     dynamicconfig.GetBoolPropertyFn(true),
-	}
-	params := pt.TestBaseParams{
-		DefaultTestCluster:    s.defaultTestCluster,
-		VisibilityTestCluster: s.visibilityTestCluster,
-		ClusterMetadata:       clusterMetadata,
-		DynamicConfiguration:  dc,
-	}
-	cluster, err := NewPinotTestCluster(s.T(), s.testClusterConfig, s.Logger, params)
-	s.Require().NoError(err)
-	s.testCluster = cluster
-	s.engine = s.testCluster.GetFrontendClient()
-	s.adminClient = s.testCluster.GetAdminClient()
-
-	s.testRawHistoryDomainName = "TestRawHistoryDomain"
-	s.domainName = s.randomizeStr("integration-test-domain")
-	s.Require().NoError(
-		s.registerDomain(s.domainName, 1, types.ArchivalStatusDisabled, "", types.ArchivalStatusDisabled, ""))
-	s.Require().NoError(
-		s.registerDomain(s.testRawHistoryDomainName, 1, types.ArchivalStatusDisabled, "", types.ArchivalStatusDisabled, ""))
-	s.foreignDomainName = s.randomizeStr("integration-foreign-test-domain")
-	s.Require().NoError(
-		s.registerDomain(s.foreignDomainName, 1, types.ArchivalStatusDisabled, "", types.ArchivalStatusDisabled, ""))
-
-	s.Require().NoError(s.registerArchivalDomain())
-
-	// this sleep is necessary because domainv2 cache gets refreshed in the
-	// background only every domainCacheRefreshInterval period
-	time.Sleep(cache.DomainCacheRefreshInterval + time.Second)
-}
-
 func (s *IntegrationBase) setupLogger() {
 	s.Logger = testlogger.New(s.T())
 }
@@ -265,6 +225,12 @@ func (s *IntegrationBase) registerDomain(
 		VisibilityArchivalStatus:               &visibilityArchivalStatus,
 		VisibilityArchivalURI:                  visibilityArchivalURI,
 	})
+}
+
+func (s *IntegrationBase) domainCacheRefresh() {
+	s.testClusterConfig.TimeSource.Advance(cache.DomainCacheRefreshInterval + time.Second)
+	// this sleep is necessary to yield execution to other goroutines. not 100% guaranteed to work
+	time.Sleep(2 * time.Second)
 }
 
 func (s *IntegrationBase) randomizeStr(id string) string {

@@ -868,6 +868,23 @@ func (v *DataBlob) GetData() (o []byte) {
 	return
 }
 
+func (v *DataBlob) DeepCopy() *DataBlob {
+	if v == nil {
+		return nil
+	}
+
+	res := &DataBlob{
+		EncodingType: v.EncodingType,
+	}
+
+	if v.Data != nil {
+		res.Data = make([]byte, len(v.Data))
+		copy(res.Data, v.Data)
+	}
+
+	return res
+}
+
 // Decision is an internal type (TBD...)
 type Decision struct {
 	DecisionType                                             *DecisionType                                             `json:"decisionType,omitempty"`
