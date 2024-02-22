@@ -40,15 +40,38 @@ type cdb struct {
 
 var _ nosqlplugin.DB = (*cdb)(nil)
 
+type cassandraDBOption func(*cdb)
+
+func dbWithClient(client gocql.Client) cassandraDBOption {
+	return func(db *cdb) {
+		db.client = client
+	}
+}
+
 // newCassandraDBFromSession returns a DB from a session
-func newCassandraDBFromSession(cfg *config.NoSQL, session gocql.Session, logger log.Logger, dc *persistence.DynamicConfiguration) *cdb {
-	return &cdb{
-		client:  gocql.GetRegisteredClient(),
+func newCassandraDBFromSession(
+	cfg *config.NoSQL,
+	session gocql.Session,
+	logger log.Logger,
+	dc *persistence.DynamicConfiguration,
+	opts ...cassandraDBOption,
+) *cdb {
+	res := &cdb{
 		session: session,
 		logger:  logger,
 		cfg:     cfg,
 		dc:      dc,
 	}
+
+	for _, opt := range opts {
+		opt(res)
+	}
+
+	if res.client == nil {
+		res.client = gocql.GetRegisteredClient()
+	}
+
+	return res
 }
 
 func (db *cdb) Close() {
