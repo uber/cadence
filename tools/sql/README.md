@@ -44,7 +44,7 @@ You can only upgrade to a new version after the initial setup done above.
 ./cadence-sql-tool --ep $SQL_HOST_ADDR -p $port --plugin mysql --db cadence update-schema -d ./schema/mysql/v8/cadence/versioned -v x.x --dryrun -- executes a dryrun of upgrade to version x.x
 ./cadence-sql-tool --ep $SQL_HOST_ADDR -p $port --plugin mysql --db cadence update-schema -d ./schema/mysql/v8/cadence/versioned -v x.x    -- actually executes the upgrade to version x.x
 
-./cadence-sql-tool --ep $SQL_HOST_ADDR -p $port --plugin mysql --db cadence_visibility update-schema -d ./schema/mysql/v8/cadence/versioned -v x.x --dryrun -- executes a dryrun of upgrade to version x.x
-./cadence-sql-tool --ep $SQL_HOST_ADDR -p $port --plugin mysql --db cadence_visibility update-schema -d ./schema/mysql/v8/cadence/versioned -v x.x    -- actually executes the upgrade to version x.x
+./cadence-sql-tool --ep $SQL_HOST_ADDR -p $port --plugin mysql --db cadence_visibility update-schema -d ./schema/mysql/v8/visibility/versioned -v x.x --dryrun -- executes a dryrun of upgrade to version x.x
+./cadence-sql-tool --ep $SQL_HOST_ADDR -p $port --plugin mysql --db cadence_visibility update-schema -d ./schema/mysql/v8/visibility/versioned -v x.x    -- actually executes the upgrade to version x.x
 ```
 

@@ -295,6 +295,16 @@ func (qv *VisibilityQueryValidator) processSystemKey(expr sqlparser.Expr) (strin
 				return "", fmt.Errorf("trim time field %s got error: %w", colNameStr, err)
 			}
 			comparisonExpr.Right = trimmed
+		} else if colNameStr == "CloseStatus" {
+			sqlVal, ok := comparisonExpr.Right.(*sqlparser.SQLVal)
+			if !ok {
+				return "", fmt.Errorf("right comparison is invalid: %v", comparisonExpr.Right)
+			}
+			closeStatus, err := parseCloseStatus(sqlVal)
+			if err != nil {
+				return "", fmt.Errorf("parse CloseStatus field got error: %w", err)
+			}
+			comparisonExpr.Right = closeStatus
 		}
 	}
 
@@ -416,4 +426,25 @@ func parseTime(timeStr string) (int64, error) {
 	}
 
 	return 0, errors.New("invalid time string")
+}
+
+func parseCloseStatus(original *sqlparser.SQLVal) (*sqlparser.SQLVal, error) {
+	statusStr := string(original.Val)
+
+	// first check if already in int64 format
+	if _, err := strconv.ParseInt(statusStr, 10, 64); err == nil {
+		return original, nil
+	}
+
+	// try to parse close status string
+	var parsedStatus types.WorkflowExecutionCloseStatus
+	err := parsedStatus.UnmarshalText([]byte(statusStr))
+	if err != nil {
+		return nil, err
+	}
+
+	return &sqlparser.SQLVal{
+		Type: sqlparser.IntVal,
+		Val:  []byte(strconv.FormatInt(int64(parsedStatus), 10)),
+	}, nil
 }

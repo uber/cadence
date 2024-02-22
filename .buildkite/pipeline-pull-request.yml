@@ -68,6 +68,7 @@ steps:
       - docker-compose#v3.0.0:
           run: integration-test-cassandra
           config: docker/buildkite/docker-compose-es7.yml
+
   - label: ":golang: integration test with cassandra with OpenSearch v2"
     agents:
       queue: "workers"
@@ -84,6 +85,7 @@ steps:
       - docker-compose#v3.0.0:
           run: integration-test-cassandra
           config: docker/buildkite/docker-compose-opensearch2.yml
+
   - label: ":golang: integration ndc test with cassandra"
     agents:
       queue: "workers"
@@ -167,6 +169,21 @@ steps:
     plugins:
       - docker-compose#v3.0.0:
           run: integration-test-ndc-postgres
+          config: docker/buildkite/docker-compose.yml
+
+  - label: ":golang: async wf integration test with kafka"
+    agents:
+      queue: "workers"
+      docker: "*"
+    commands:
+      - "make .just-build" # ensure that we are not rebuilding binaries and not regenerating code
+      - "go test -timeout 60s -run ^TestAsyncWFIntegrationSuite -tags asyncwfintegration -count 1 -v github.com/uber/cadence/host"
+    retry:
+      automatic:
+        limit: 1
+    plugins:
+      - docker-compose#v3.0.0:
+          run: integration-test-async-wf
           config: docker/buildkite/docker-compose.yml
 
   - wait
