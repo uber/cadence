@@ -52,9 +52,9 @@ import (
 )
 
 const (
-	numberOfRetry         = 50
-	waitTimeInMillisecond = 400 * time.Millisecond
-	waitForPinotToSettle  = 4 * time.Second // wait pinot shards for some time ensure data consistent
+	numberOfRetry        = 50
+	waitTimeBetweenRetry = 400 * time.Millisecond
+	waitForPinotToSettle = 4 * time.Second // wait pinot shards for some time ensure data consistent
 )
 
 type PinotIntegrationSuite struct {
@@ -186,7 +186,7 @@ func (s *PinotIntegrationSuite) TestListOpenWorkflow() {
 			openExecution = resp.GetExecutions()[0]
 			break
 		}
-		time.Sleep(waitTimeInMillisecond)
+		time.Sleep(waitTimeBetweenRetry)
 	}
 	s.NotNil(openExecution)
 	s.Equal(we.GetRunID(), openExecution.GetExecution().GetRunID())
@@ -270,7 +270,7 @@ Retry:
 				}
 			}
 		}
-		time.Sleep(waitTimeInMillisecond)
+		time.Sleep(waitTimeBetweenRetry)
 	}
 	s.NotNil(openExecution)
 	s.Equal(runID, openExecution.GetExecution().GetRunID())
@@ -288,13 +288,13 @@ Retry:
 
 func (s *PinotIntegrationSuite) startWorkflow(
 	prefix string,
-	is_cron bool,
+	isCron bool,
 ) *types.StartWorkflowExecutionResponse {
 	id := "pinot-integration-list-workflow-" + prefix + "-test"
 	wt := "pinot-integration-list-workflow-" + prefix + "test-type"
 	tl := "pinot-integration-list-workflow-" + prefix + "test-tasklist"
 	request := s.createStartWorkflowExecutionRequest(id, wt, tl)
-	if is_cron {
+	if isCron {
 		request.CronSchedule = "*/5 * * * *" // every 5 minutes
 	}
 	ctx, cancel := createContext()
@@ -503,7 +503,7 @@ func (s *PinotIntegrationSuite) TestListWorkflow_OrQuery() {
 			openExecution = resp.GetExecutions()[0]
 			break
 		}
-		time.Sleep(waitTimeInMillisecond)
+		time.Sleep(waitTimeBetweenRetry)
 	}
 	s.NotNil(openExecution)
 	s.Equal(we1.GetRunID(), openExecution.GetExecution().GetRunID())
@@ -524,7 +524,7 @@ func (s *PinotIntegrationSuite) TestListWorkflow_OrQuery() {
 			openExecutions = resp.GetExecutions()
 			break
 		}
-		time.Sleep(waitTimeInMillisecond)
+		time.Sleep(waitTimeBetweenRetry)
 	}
 	// TODO: need to clean up or every time we run, we have to delete the table.
 	s.Equal(2, len(openExecutions))
@@ -551,7 +551,7 @@ func (s *PinotIntegrationSuite) TestListWorkflow_OrQuery() {
 			openExecutions = resp.GetExecutions()
 			break
 		}
-		time.Sleep(waitTimeInMillisecond)
+		time.Sleep(waitTimeBetweenRetry)
 	}
 	s.Equal(2, len(openExecutions))
 	e1 = openExecutions[0]
@@ -597,7 +597,7 @@ func (s *PinotIntegrationSuite) TestListWorkflow_MaxWindowSize() {
 			listResp = resp
 			break
 		}
-		time.Sleep(waitTimeInMillisecond)
+		time.Sleep(waitTimeBetweenRetry)
 	}
 	s.NotNil(listResp)
 	s.True(len(listResp.GetNextPageToken()) != 0)
@@ -665,7 +665,7 @@ func (s *PinotIntegrationSuite) TestListWorkflow_OrderBy() {
 			openExecutions = resp.GetExecutions()
 			break
 		}
-		time.Sleep(waitTimeInMillisecond)
+		time.Sleep(waitTimeBetweenRetry)
 	}
 	s.NotNil(openExecutions)
 	for i := int32(1); i < pageSize; i++ {
@@ -785,7 +785,7 @@ func (s *PinotIntegrationSuite) testListWorkflowHelper(numOfWorkflows, pageSize 
 			nextPageToken = resp.GetNextPageToken()
 			break
 		}
-		time.Sleep(waitTimeInMillisecond)
+		time.Sleep(waitTimeBetweenRetry)
 	}
 
 	s.NotNil(openExecutions)
@@ -815,7 +815,7 @@ func (s *PinotIntegrationSuite) testListWorkflowHelper(numOfWorkflows, pageSize 
 			nextPageToken = resp.GetNextPageToken()
 			break
 		}
-		time.Sleep(waitTimeInMillisecond)
+		time.Sleep(waitTimeBetweenRetry)
 	}
 	s.True(inIf)
 	s.NotNil(openExecutions)
@@ -932,7 +932,7 @@ func (s *PinotIntegrationSuite) TestCountWorkflow() {
 		if resp.GetCount() == int64(1) {
 			break
 		}
-		time.Sleep(waitTimeInMillisecond)
+		time.Sleep(waitTimeBetweenRetry)
 	}
 	s.Equal(int64(1), resp.GetCount())
 
@@ -1066,7 +1066,7 @@ func (s *PinotIntegrationSuite) TestUpsertWorkflowExecution() {
 				break
 			}
 		}
-		time.Sleep(waitTimeInMillisecond)
+		time.Sleep(waitTimeBetweenRetry)
 	}
 	s.True(verified)
 
@@ -1134,7 +1134,7 @@ func (s *PinotIntegrationSuite) testListResultForUpsertSearchAttributes(listRequ
 				break
 			}
 		}
-		time.Sleep(waitTimeInMillisecond)
+		time.Sleep(waitTimeBetweenRetry)
 	}
 	s.True(verified)
 }
