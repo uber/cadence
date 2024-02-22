@@ -406,7 +406,7 @@ $Q rm -f $(addprefix $(BUILD)/,$(1))
 $Q +$(MAKE) --no-print-directory $(addprefix $(BUILD)/,$(1))
 endef
 
-.PHONY: lint fmt copyright
+.PHONY: lint fmt copyright pr
 
 # useful to actually re-run to get output again.
 # reuse the intermediates for simplicity and consistency.
@@ -420,6 +420,20 @@ fmt: $(BUILD)/fmt ## run gofmt / organize imports / etc
 copyright: $(BIN)/copyright | $(BUILD) ## update copyright headers
 	$(BIN)/copyright
 	$Q touch $(BUILD)/copyright
+
+define make_quietly
+$Q echo "make $1..."
+$Q output=$$(mktemp); $(MAKE) $1 > $$output 2>&1 || ( cat $$output; echo -e '\nfailed `make $1`, check output above' >&2; exit 1)
+endef
+
+# pre-PR target to build and refresh everything
+# this is ##-documented directly in the help target, to keep it more visible.
+pr:
+	$Q $(if $(verbose),$(MAKE) tidy,$(call make_quietly,tidy))
+	$Q $(if $(verbose),$(MAKE) go-generate,$(call make_quietly,go-generate))
+	$Q $(if $(verbose),$(MAKE) copyright,$(call make_quietly,copyright))
+	$Q $(if $(verbose),$(MAKE) fmt,$(call make_quietly,fmt))
+	$Q $(if $(verbose),$(MAKE) lint,$(call make_quietly,lint))
 
 # ====================================
 # binaries to build
@@ -778,7 +792,9 @@ deps-all: ## Check for all dependency updates
 		| sort -n
 
 help:
-	$Q # print help first, so it's visible
+	$Q # print help and PR first, so they're highly visible
 	$Q printf "\033[36m%-20s\033[0m %s\n" 'help' 'Prints a help message showing any specially-commented targets'
+	$Q printf "\033[36m%-20s\033[0m %s\n" 'pr' 'Refresh all code, to ensure your PR can reach tests.  Recommended before opening a github PR.'
+	$Q echo '-----------------------------------'
 	$Q # then everything matching "target: ## magic comments"
 	$Q cat $(MAKEFILE_LIST) | grep -e "^[a-zA-Z_\-]*:.* ## .*" | awk 'BEGIN {FS = ":.*? ## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}' | sort

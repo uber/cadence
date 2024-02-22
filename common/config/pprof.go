@@ -22,6 +22,7 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"sync/atomic"
 
@@ -65,10 +66,15 @@ func (initializer *PProfInitializerImpl) Start() error {
 		return nil
 	}
 
+	host := initializer.PProf.Host
+	if host == "" {
+		host = "localhost"
+	}
+
 	if atomic.CompareAndSwapInt32(&pprofStatus, pprofNotInitialized, pprofInitialized) {
 		go func() {
-			initializer.Logger.Info("PProf listen on ", tag.Port(port))
-			err := http.ListenAndServe(fmt.Sprintf("localhost:%d", port), nil)
+			initializer.Logger.Info("PProf listen on ", tag.Dynamic("pprof-host", host), tag.Port(port))
+			err := http.ListenAndServe(net.JoinHostPort(host, fmt.Sprint(port)), nil)
 			if err != nil {
 				initializer.Logger.Error("listen and serve err", tag.Error(err))
 			}

@@ -155,9 +155,48 @@ wait_for_db() {
     fi
 }
 
+wait_for_async_wf_queue_kafka() {
+    ready="false"
+    while [ "$ready" != "true" ]; do
+        brokers=$(echo dump | nc "$ZOOKEEPER_SEEDS" "$ZOOKEEPER_PORT" | grep brokers | wc -l)
+        if [ "$brokers" -gt 0 ]; then
+            ready="true"
+        else
+            echo 'waiting for kafka broker to show up in zookeeper'
+            sleep 3
+        fi
+    done
+
+    echo 'kafka broker started'
+}
+
+setup_async_wf_queue() {
+    if [ "$ASYNC_WF_KAFKA_QUEUE_ENABLED" != "true" ]; then
+        return
+    fi
+
+    wait_for_async_wf_queue_kafka
+
+    sh $KAFKA_HOME/bin/kafka-topics.sh --create --if-not-exists \
+            --zookeeper "$ZOOKEEPER_SEEDS:$ZOOKEEPER_PORT"  \
+            --topic "$ASYNC_WF_KAFKA_QUEUE_TOPIC" \
+            --partitions 10 \
+            --replication-factor 1
+
+    created=$(sh $KAFKA_HOME/bin/kafka-topics.sh --describe --topic $ASYNC_WF_KAFKA_QUEUE_TOPIC --zookeeper zookeeper:2181 | grep "Topic:$ASYNC_WF_KAFKA_QUEUE_TOPIC")
+    if [ -z "$created" ]; then
+        echo 'kafka topic is not created'
+        exit 1
+    fi
+
+    echo "Kafka topic $ASYNC_WF_KAFKA_QUEUE_TOPIC for async workflows created"
+}
+
 wait_for_db
 if [ "$SKIP_SCHEMA_SETUP" != true ]; then
     setup_schema
 fi
+
+setup_async_wf_queue
 
 exec /start-cadence.sh
