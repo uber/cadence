@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/testlogger"
@@ -222,6 +223,7 @@ func TestExecuteBatchWithConsistencyAll(t *testing.T) {
 			},
 			batchMockPrep: func(batch *gocql.MockBatch) {
 				batch.EXPECT().Consistency(cassandraAllConslevel).Return(batch).Times(1)
+				batch.EXPECT().Consistency(cassandraDefaultConsLevel).Return(batch).Times(1)
 			},
 			wantErr: false,
 		},
@@ -237,7 +239,7 @@ func TestExecuteBatchWithConsistencyAll(t *testing.T) {
 			batchMockPrep: func(batch *gocql.MockBatch) {
 				batch.EXPECT().Consistency(cassandraAllConslevel).Return(batch).Times(1)
 			},
-			wantErr: false,
+			wantErr: true,
 		},
 	}
 
