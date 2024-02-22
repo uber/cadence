@@ -2584,6 +2584,10 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 				return nil, workflow.ErrSignalsLimitExceeded
 			}
 
+			if requestID := sRequest.GetRequestID(); requestID != "" {
+				mutableState.AddSignalRequested(requestID)
+			}
+
 			if _, err := mutableState.AddWorkflowExecutionSignaled(
 				sRequest.GetSignalName(),
 				sRequest.GetSignalInput(),
