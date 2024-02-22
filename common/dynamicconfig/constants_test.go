@@ -1,10 +1,12 @@
 package dynamicconfig
 
 import (
-	"github.com/stretchr/testify/suite"
-	"github.com/uber/cadence/common"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/suite"
+
+	"github.com/uber/cadence/common"
 )
 
 type constantSuite struct {
