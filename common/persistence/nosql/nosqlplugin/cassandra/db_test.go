@@ -47,20 +47,30 @@ func TestCDBBasics(t *testing.T) {
 		t.Errorf("got plugin name: %v but want %v", db.PluginName(), PluginName)
 	}
 
-	client.EXPECT().IsNotFoundError(nil).Times(1)
-	db.IsNotFoundError(nil)
+	client.EXPECT().IsNotFoundError(nil).Return(true).Times(1)
+	if db.IsNotFoundError(nil) != true {
+		t.Errorf("IsNotFoundError returned false but want true")
+	}
 
-	client.EXPECT().IsTimeoutError(nil).Times(1)
-	db.IsTimeoutError(nil)
+	client.EXPECT().IsTimeoutError(nil).Return(true).Times(1)
+	if db.IsTimeoutError(nil) != true {
+		t.Errorf("IsTimeoutError returned false but want true")
+	}
 
-	client.EXPECT().IsThrottlingError(nil).Times(1)
-	db.IsThrottlingError(nil)
+	client.EXPECT().IsThrottlingError(nil).Return(true).Times(1)
+	if db.IsThrottlingError(nil) != true {
+		t.Errorf("IsNotFoundError returned false but want true")
+	}
 
-	client.EXPECT().IsDBUnavailableError(nil).Times(1)
-	db.IsDBUnavailableError(nil)
+	client.EXPECT().IsDBUnavailableError(nil).Return(true).Times(1)
+	if db.IsDBUnavailableError(nil) != true {
+		t.Errorf("IsDBUnavailableError returned false but want true")
+	}
 
-	client.EXPECT().IsCassandraConsistencyError(nil).Times(1)
-	db.isCassandraConsistencyError(nil)
+	client.EXPECT().IsCassandraConsistencyError(nil).Return(true).Times(1)
+	if db.isCassandraConsistencyError(nil) != true {
+		t.Errorf("IsNotFoundError returned false but want true")
+	}
 
 	session.EXPECT().Close().Times(1)
 	db.Close()
