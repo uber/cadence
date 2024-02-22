@@ -10,7 +10,7 @@ asyncwfqueues:
       connection:
         brokers:
           - "${KAFKA_SEEDS}:${KAFKA_PORT}"
-      topic: async-wf-topic1
+      topic: "${ASYNC_WF_KAFKA_QUEUE_TOPIC}"
 messagingclientconfig:
   usemock: true
 historyconfig:
