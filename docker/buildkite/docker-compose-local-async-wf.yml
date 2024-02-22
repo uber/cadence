@@ -67,6 +67,7 @@ services:
       - "7935:7935"
       - "7939:7939"
     environment:
+      - "ASYNC_WF_KAFKA_QUEUE_TOPIC=async-wf-topic1"
       - "CASSANDRA=1"
       - "CASSANDRA_SEEDS=cassandra"
       - "ES_SEEDS=elasticsearch"
