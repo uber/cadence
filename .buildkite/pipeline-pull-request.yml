@@ -177,7 +177,7 @@ steps:
       docker: "*"
     commands:
       - "make .just-build" # ensure that we are not rebuilding binaries and not regenerating code
-      - "go test -timeout 60s -run ^TestAsyncWFIntegrationSuite$ -tags asyncwfintegration -count 1 -v github.com/uber/cadence/host"
+      - "go test -timeout 60s -run ^TestAsyncWFIntegrationSuite -tags asyncwfintegration -count 1 -v github.com/uber/cadence/host"
     retry:
       automatic:
         limit: 1
