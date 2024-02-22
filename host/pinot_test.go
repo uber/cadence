@@ -18,6 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:build pinotintegration
+// +build pinotintegration
+
 // to run locally, make sure kafka and pinot is running,
 // then run cmd `go test -v ./host -run TestPinotIntegrationSuite -tags pinotintegration`
 // currently we have to manually add test table and delete the table for cleaning
