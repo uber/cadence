@@ -138,6 +138,27 @@ steps:
           run: integration-test-ndc-postgres
           config: docker/buildkite/docker-compose.yml
 
+  - label: ":golang: async wf integration test with kafka"
+    agents:
+      queue: "workers"
+      docker: "*"
+    commands:
+      - "make .just-build" # ensure that we are not rebuilding binaries and not regenerating code
+      - >
+        go test -timeout 60s
+        -run ^TestAsyncWFIntegrationSuite$
+        -tags asyncwfintegration
+        -count 1
+        -v
+        github.com/uber/cadence/host
+    retry:
+      automatic:
+        limit: 1
+    plugins:
+      - docker-compose#v3.0.0:
+          run: integration-test-async-wf
+          config: docker/buildkite/docker-compose.yml
+
   - wait
 
   - label: ":golang: code-coverage"
