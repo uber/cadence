@@ -22,7 +22,7 @@ package nosql
 
 import (
 	"context"
-	"errors"
+	"github.com/uber/cadence/common/types"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -31,7 +31,6 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
-	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/constants"
 )
 
@@ -48,75 +47,102 @@ func TestCreateWorkflowExecution(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	newWorkflowSnapshot := persistence.InternalWorkflowSnapshot{
+	request := &persistence.InternalCreateWorkflowExecutionRequest{
+		RangeID:                  123,
+		Mode:                     persistence.CreateWorkflowModeBrandNew,
+		PreviousRunID:            "previous-run-id",
+		PreviousLastWriteVersion: 456,
+		NewWorkflowSnapshot:      getNewWorkflowSnapshot(),
+	}
+	testCases := []struct {
+		name          string
+		setupMock     func()
+		request       *persistence.InternalCreateWorkflowExecutionRequest
+		expectedError error
+	}{
+		{
+			name: "success",
+			setupMock: func() {
+				mockDB.EXPECT().
+					InsertWorkflowExecutionWithTasks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil).Times(1)
+			},
+			request:       request,
+			expectedError: nil,
+		},
+		{
+			name: "failure - workflow already exists",
+			setupMock: func() {
+				mockDB.EXPECT().
+					InsertWorkflowExecutionWithTasks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&persistence.WorkflowExecutionAlreadyStartedError{}).Times(1)
+				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(false).AnyTimes() // Assuming the error is not a "not found" error
+				mockDB.EXPECT().IsTimeoutError(gomock.Any()).Return(false).AnyTimes()
+				mockDB.EXPECT().IsThrottlingError(gomock.Any()).Return(false).AnyTimes()
+				mockDB.EXPECT().IsDBUnavailableError(gomock.Any()).Return(false).AnyTimes()
+			},
+			request:       request,
+			expectedError: &persistence.WorkflowExecutionAlreadyStartedError{},
+		},
+		{
+			name: "shard ownership lost",
+			setupMock: func() {
+				mockDB.EXPECT().
+					InsertWorkflowExecutionWithTasks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&persistence.ShardOwnershipLostError{ShardID: store.shardID, Msg: "shard ownership lost"}).
+					Times(1)
+			},
+			request:       request,
+			expectedError: &persistence.ShardOwnershipLostError{},
+		},
+		{
+			name: "current workflow condition failed",
+			setupMock: func() {
+				mockDB.EXPECT().
+					InsertWorkflowExecutionWithTasks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&persistence.CurrentWorkflowConditionFailedError{Msg: "current workflow condition failed"}).
+					Times(1)
+			},
+			request:       request,
+			expectedError: &persistence.CurrentWorkflowConditionFailedError{},
+		},
+		{
+			name: "generic internal service error",
+			setupMock: func() {
+				mockDB.EXPECT().
+					InsertWorkflowExecutionWithTasks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&types.InternalServiceError{Message: "generic internal service error"}).
+					Times(1)
+			},
+			request:       request,
+			expectedError: &types.InternalServiceError{},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.setupMock != nil {
+				tc.setupMock()
+			}
+
+			_, err := store.CreateWorkflowExecution(ctx, tc.request)
+
+			if tc.expectedError != nil {
+				require.ErrorAs(t, err, &tc.expectedError)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func getNewWorkflowSnapshot() persistence.InternalWorkflowSnapshot {
+	return persistence.InternalWorkflowSnapshot{
 		VersionHistories: &persistence.DataBlob{},
 		ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
 			DomainID:   constants.TestDomainID,
 			WorkflowID: constants.TestWorkflowID,
 			RunID:      constants.TestRunID,
 		},
-	}
-
-	testCases := []struct {
-		name             string
-		request          *persistence.InternalCreateWorkflowExecutionRequest
-		mockReturnError  error
-		expectedResponse *persistence.CreateWorkflowExecutionResponse
-		expectedError    error
-	}{
-		{
-			name: "success",
-			request: &persistence.InternalCreateWorkflowExecutionRequest{
-				RangeID:                  123,
-				Mode:                     persistence.CreateWorkflowModeBrandNew,
-				PreviousRunID:            "previous-run-id",
-				PreviousLastWriteVersion: 456,
-				NewWorkflowSnapshot:      newWorkflowSnapshot,
-			},
-			mockReturnError:  nil,
-			expectedResponse: &persistence.CreateWorkflowExecutionResponse{},
-			expectedError:    nil,
-		},
-		{
-			name: "failure - workflow already exists",
-			request: &persistence.InternalCreateWorkflowExecutionRequest{
-				RangeID:                  123,
-				Mode:                     persistence.CreateWorkflowModeBrandNew,
-				PreviousRunID:            "previous-run-id",
-				PreviousLastWriteVersion: 456,
-				NewWorkflowSnapshot:      newWorkflowSnapshot,
-			},
-			mockReturnError:  &persistence.WorkflowExecutionAlreadyStartedError{},
-			expectedResponse: nil,
-			expectedError:    &persistence.WorkflowExecutionAlreadyStartedError{},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			mockDB.EXPECT().
-				InsertWorkflowExecutionWithTasks(
-					ctx,
-					gomock.Any(),
-					gomock.Any(),
-					gomock.Any(),
-					gomock.Any(),
-					gomock.Any(),
-					gomock.Any(),
-					gomock.Any(),
-				).Return(tc.mockReturnError).Times(1)
-			if tc.mockReturnError != nil {
-				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(errors.Is(tc.mockReturnError, &persistence.WorkflowExecutionAlreadyStartedError{})).AnyTimes()
-				mockDB.EXPECT().IsTimeoutError(gomock.Any()).Return(errors.Is(tc.mockReturnError, &persistence.WorkflowExecutionAlreadyStartedError{})).AnyTimes()
-				mockDB.EXPECT().IsThrottlingError(gomock.Any()).Return(errors.Is(tc.mockReturnError, &persistence.WorkflowExecutionAlreadyStartedError{})).AnyTimes()
-				mockDB.EXPECT().IsDBUnavailableError(gomock.Any()).Return(errors.Is(tc.mockReturnError, &persistence.WorkflowExecutionAlreadyStartedError{})).AnyTimes()
-			}
-
-			_, err := store.CreateWorkflowExecution(ctx, tc.request)
-			var internalServiceErr *types.InternalServiceError
-			if errors.As(err, &internalServiceErr) {
-				require.Equal(t, "CreateWorkflowExecution operation failed. Error: ", internalServiceErr.Message)
-			}
-		})
 	}
 }
