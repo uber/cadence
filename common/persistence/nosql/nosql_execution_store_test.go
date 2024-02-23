@@ -23,14 +23,15 @@ package nosql
 import (
 	"context"
 	"errors"
-	"github.com/uber/cadence/common/types"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
+
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/constants"
 )
 
