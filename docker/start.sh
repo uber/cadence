@@ -177,19 +177,8 @@ setup_async_wf_queue() {
 
     wait_for_async_wf_queue_kafka
 
-    sh $KAFKA_HOME/bin/kafka-topics.sh --create --if-not-exists \
-            --zookeeper "$ZOOKEEPER_SEEDS:$ZOOKEEPER_PORT"  \
-            --topic "$ASYNC_WF_KAFKA_QUEUE_TOPIC" \
-            --partitions 10 \
-            --replication-factor 1
-
-    created=$(sh $KAFKA_HOME/bin/kafka-topics.sh --describe --topic $ASYNC_WF_KAFKA_QUEUE_TOPIC --zookeeper zookeeper:2181 | grep "Topic:$ASYNC_WF_KAFKA_QUEUE_TOPIC")
-    if [ -z "$created" ]; then
-        echo 'kafka topic is not created'
-        exit 1
-    fi
-
-    echo "Kafka topic $ASYNC_WF_KAFKA_QUEUE_TOPIC for async workflows created"
+    # For now we are using wurstmeister/kafka image which has a default topic auto creation via KAFKA_CREATE_TOPICS environment variable
+    # So no additional setup needed here.
 }
 
 wait_for_db

@@ -47,6 +47,7 @@ import (
 
 const (
 	defaultShutdownTimeout = 5 * time.Second
+	defaultStartWFTimeout  = 3 * time.Second
 	defaultConcurrency     = 100
 )
 
@@ -60,6 +61,7 @@ type DefaultConsumer struct {
 	cancelFn        context.CancelFunc
 	wg              sync.WaitGroup
 	shutdownTimeout time.Duration
+	startWFTimeout  time.Duration
 	msgDecoder      codec.BinaryEncoder
 	concurrency     int
 }
@@ -90,6 +92,7 @@ func New(
 		ctx:             ctx,
 		cancelFn:        cancelFn,
 		shutdownTimeout: defaultShutdownTimeout,
+		startWFTimeout:  defaultStartWFTimeout,
 		msgDecoder:      codec.NewThriftRWEncoder(),
 		concurrency:     defaultConcurrency,
 	}
@@ -190,9 +193,12 @@ func (c *DefaultConsumer) processRequest(logger log.Logger, request *sqlblobs.As
 
 		yarpcCallOpts := getYARPCOptions(request.GetHeader())
 		scope := scope.Tagged(metrics.DomainTag(startWFReq.GetDomain()))
+
 		var resp *types.StartWorkflowExecutionResponse
 		op := func() error {
-			resp, err = c.frontendClient.StartWorkflowExecution(c.ctx, startWFReq, yarpcCallOpts...)
+			ctx, cancel := context.WithTimeout(c.ctx, c.startWFTimeout)
+			defer cancel()
+			resp, err = c.frontendClient.StartWorkflowExecution(ctx, startWFReq, yarpcCallOpts...)
 			return err
 		}
 
@@ -214,7 +220,9 @@ func (c *DefaultConsumer) processRequest(logger log.Logger, request *sqlblobs.As
 		scope := c.scope.Tagged(metrics.DomainTag(startWFReq.GetDomain()))
 		var resp *types.StartWorkflowExecutionResponse
 		op := func() error {
-			resp, err = c.frontendClient.SignalWithStartWorkflowExecution(c.ctx, startWFReq, yarpcCallOpts...)
+			ctx, cancel := context.WithTimeout(c.ctx, c.startWFTimeout)
+			defer cancel()
+			resp, err = c.frontendClient.SignalWithStartWorkflowExecution(ctx, startWFReq, yarpcCallOpts...)
 			return err
 		}
 

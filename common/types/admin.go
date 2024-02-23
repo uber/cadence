@@ -407,6 +407,18 @@ func (i IsolationGroupConfiguration) ToPartitionList() []IsolationGroupPartition
 	return out
 }
 
+func (i IsolationGroupConfiguration) DeepCopy() IsolationGroupConfiguration {
+	if i == nil {
+		return nil
+	}
+
+	out := IsolationGroupConfiguration{}
+	for k, v := range i {
+		out[k] = v
+	}
+	return out
+}
+
 // FromIsolationGroupPartitionList maps a list of isolation to the internal IsolationGroup configuration type
 // whose map keys tend to be used more for set operations
 func FromIsolationGroupPartitionList(in []IsolationGroupPartition) IsolationGroupConfiguration {
@@ -495,6 +507,17 @@ type AsyncWorkflowConfiguration struct {
 	PredefinedQueueName string
 	QueueType           string
 	QueueConfig         *DataBlob
+}
+
+func (c AsyncWorkflowConfiguration) DeepCopy() AsyncWorkflowConfiguration {
+	res := AsyncWorkflowConfiguration{
+		Enabled:             c.Enabled,
+		PredefinedQueueName: c.PredefinedQueueName,
+		QueueType:           c.QueueType,
+		QueueConfig:         c.QueueConfig.DeepCopy(),
+	}
+
+	return res
 }
 
 type UpdateDomainAsyncWorkflowConfiguratonRequest struct {

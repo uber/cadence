@@ -70,3 +70,104 @@ func TestIsolationGroupConfiguration_ToPartitionList(t *testing.T) {
 		})
 	}
 }
+
+func TestIsolationGroupConfigurationDeepCopy(t *testing.T) {
+	tests := []struct {
+		name  string
+		input IsolationGroupConfiguration
+	}{
+		{
+			name:  "nil",
+			input: nil,
+		},
+		{
+			name:  "empty",
+			input: IsolationGroupConfiguration{},
+		},
+		{
+			name: "single group",
+			input: IsolationGroupConfiguration{
+				"zone-1": {
+					Name:  "zone-1",
+					State: IsolationGroupStateDrained,
+				},
+			},
+		},
+		{
+			name: "multiple groups",
+			input: IsolationGroupConfiguration{
+				"zone-1": {
+					Name:  "zone-1",
+					State: IsolationGroupStateDrained,
+				},
+				"zone-2": {
+					Name:  "zone-2",
+					State: IsolationGroupStateHealthy,
+				},
+				"zone-3": {
+					Name:  "zone-3",
+					State: IsolationGroupStateDrained,
+				},
+			},
+		},
+	}
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			got := tc.input.DeepCopy()
+			assert.Equal(t, tc.input, got)
+
+			if tc.input == nil {
+				return
+			}
+
+			tc.input["new"] = IsolationGroupPartition{Name: "new", State: IsolationGroupStateHealthy}
+			assert.NotEqual(t, tc.input, got)
+		})
+	}
+}
+
+func TestAsyncWorkflowConfigurationDeepCopy(t *testing.T) {
+	tests := []struct {
+		name  string
+		input AsyncWorkflowConfiguration
+	}{
+		{
+			name:  "empty",
+			input: AsyncWorkflowConfiguration{},
+		},
+		{
+			name: "predefined queue",
+			input: AsyncWorkflowConfiguration{
+				Enabled:             true,
+				PredefinedQueueName: "test-async-wf-queue",
+			},
+		},
+		{
+			name: "custom queue",
+			input: AsyncWorkflowConfiguration{
+				Enabled:   true,
+				QueueType: "custom",
+				QueueConfig: &DataBlob{
+					EncodingType: EncodingTypeThriftRW.Ptr(),
+					Data:         []byte("test-async-wf-queue"),
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			got := tc.input.DeepCopy()
+			assert.Equal(t, tc.input, got)
+			if tc.input.QueueConfig != nil {
+				// assert that queue configs look the same but underlying slice is different
+				assert.Equal(t, tc.input.QueueConfig, got.QueueConfig)
+				if tc.input.QueueConfig.Data != nil && identicalByteArray(tc.input.QueueConfig.Data, got.QueueConfig.Data) {
+					t.Error("expected DeepCopy to return a new QueueConfig.Data")
+				}
+			}
+		})
+	}
+}
