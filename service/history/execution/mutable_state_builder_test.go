@@ -91,6 +91,7 @@ func (s *mutableStateSuite) SetupTest() {
 	// set the checksum probabilities to 100% for exercising during test
 	s.mockShard.GetConfig().MutableStateChecksumGenProbability = func(domain string) int { return 100 }
 	s.mockShard.GetConfig().MutableStateChecksumVerifyProbability = func(domain string) int { return 100 }
+	s.mockShard.GetConfig().EnableRetryForChecksumFailure = func(domain string) bool { return true }
 
 	s.mockEventsCache = s.mockShard.GetEventsCache().(*events.MockCache)
 
@@ -412,7 +413,8 @@ func (s *mutableStateSuite) TestChecksum() {
 
 			// verify checksum is verified on Load
 			dbState.Checksum = csum
-			s.msBuilder.Load(dbState)
+			err = s.msBuilder.Load(dbState)
+			s.NoError(err)
 			s.Equal(loadErrors, loadErrorsFunc())
 
 			// generate checksum again and verify its the same
@@ -423,7 +425,8 @@ func (s *mutableStateSuite) TestChecksum() {
 
 			// modify checksum and verify Load fails
 			dbState.Checksum.Value[0]++
-			s.msBuilder.Load(dbState)
+			err = s.msBuilder.Load(dbState)
+			s.Error(err)
 			s.Equal(loadErrors+1, loadErrorsFunc())
 			s.EqualValues(dbState.Checksum, s.msBuilder.checksum)
 
@@ -432,7 +435,8 @@ func (s *mutableStateSuite) TestChecksum() {
 			s.mockShard.GetConfig().MutableStateChecksumInvalidateBefore = func(...dynamicconfig.FilterOption) float64 {
 				return float64((s.msBuilder.executionInfo.LastUpdatedTimestamp.UnixNano() / int64(time.Second)) + 1)
 			}
-			s.msBuilder.Load(dbState)
+			err = s.msBuilder.Load(dbState)
+			s.NoError(err)
 			s.Equal(loadErrors, loadErrorsFunc())
 			s.EqualValues(checksum.Checksum{}, s.msBuilder.checksum)
 
