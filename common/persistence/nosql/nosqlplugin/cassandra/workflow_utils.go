@@ -292,7 +292,7 @@ func newUnknownConditionFailureReason(
 	}
 }
 
-func assertShardRangeID(batch gocql.Batch, shardID int, rangeID int64) error {
+func assertShardRangeID(batch gocql.Batch, shardID int, rangeID int64) {
 	batch.Query(templateUpdateLeaseQuery,
 		rangeID,
 		shardID,
@@ -304,7 +304,6 @@ func assertShardRangeID(batch gocql.Batch, shardID int, rangeID int64) error {
 		rowTypeShardTaskID,
 		rangeID,
 	)
-	return nil
 }
 
 func createTimerTasks(
@@ -346,7 +345,7 @@ func createReplicationTasks(
 	domainID string,
 	workflowID string,
 	replicationTasks []*nosqlplugin.ReplicationTask,
-) error {
+) {
 	for _, task := range replicationTasks {
 		batch.Query(templateCreateReplicationTaskQuery,
 			shardID,
@@ -372,7 +371,6 @@ func createReplicationTasks(
 			defaultVisibilityTimestamp,
 			task.TaskID)
 	}
-	return nil
 }
 
 func createTransferTasks(
@@ -381,7 +379,7 @@ func createTransferTasks(
 	domainID string,
 	workflowID string,
 	transferTasks []*nosqlplugin.TransferTask,
-) error {
+) {
 	for _, task := range transferTasks {
 		batch.Query(templateCreateTransferTaskQuery,
 			shardID,
@@ -408,7 +406,6 @@ func createTransferTasks(
 			defaultVisibilityTimestamp,
 			task.TaskID)
 	}
-	return nil
 }
 
 func createCrossClusterTasks(
@@ -417,7 +414,7 @@ func createCrossClusterTasks(
 	domainID string,
 	workflowID string,
 	xClusterTasks []*nosqlplugin.CrossClusterTask,
-) error {
+) {
 	for _, task := range xClusterTasks {
 		batch.Query(templateCreateCrossClusterTaskQuery,
 			shardID,
@@ -445,7 +442,6 @@ func createCrossClusterTasks(
 			task.TaskID,
 		)
 	}
-	return nil
 }
 
 func resetSignalsRequested(
