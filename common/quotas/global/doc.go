@@ -21,7 +21,9 @@
 // SOFTWARE.
 
 /*
-Package global will contain a global-load-balance-aware ratelimiter.
+Package global contains a global-load-balance-aware ratelimiter (when complete).
+
+# High level overview
 
 At a very high level, this will:
   - collect usage metrics in-memory in "limiting" hosts (which use an in-memory ratelimiter)
@@ -41,5 +43,116 @@ to allow shadowing and experimenting with different algorithms at runtime, or di
 the global logic altogether.
 
 See sub-packages for implementation details.
+
+# Data flow in the system
+
+The overall planned system's data-flow looks roughly like this:
+
+	┌───────┐
+	│users  │
+	└┬─┬─┬─┬┘
+	 a b c c
+	 │ │ │ │
+	┌▽─▽─▽─▽───┐
+	│frontend  │        (rejects based on previous or fallback limits, collects call counts)
+	│(limiting)│
+	└───┬──────┘
+	    │
+	 [a1,b1,c2]         (sends aggregated usage data to agg hosts, split by ring on keys)
+	    │
+	┌───▽─────────┐
+	│ring         │     (ringpop `Lookup(key)` to find agg host per key)
+	└┬─────┬─────┬┘
+	 │     │     │
+	 a1    b1    c2     (each subset of keys is sent to its owning agg host)
+	 │     │     │
+	 │     │     │  ┌─────── other "c" usage from other frontends, etc
+	┌▽───┐┌▽───┐┌▽──▽┐
+	│agg1││agg2││agg3│  (aggs compare frontend's usage per key with others, decide on RPS to allow)
+	└┬───┘└┬───┘└┬───┘
+	 │     │     │
+	a/2   b/4   c3/4    (aggs return weighted RPS to allow)
+	 │     │     │
+	┌▽─────▽─────▽┐
+	│frontend     │     (updates RPS, limits future calls, cycle continues)
+	└─────────────┘
+
+This package as a whole is only concerned with the high level request pattern in use:
+  - limiters enforce limits and collect data
+  - limiters asynchronously submit that data to all relevant aggregators, sharded by key
+  - aggregators decide per-limiter-and-key limits based on global data, and return it to limiters
+
+Currently:
+  - limiters are Frontends, but can trivially be any Cadence service as they only send outbound requests
+  - aggregators are arbitrarily in History service because it already has a ring implemented (Frontend does not)
+  - neither of these are fundamentally required, and they may change or be in multiple services later
+
+The actual contents of the requests and responses and how limits are decided is
+intentionally flexible and not defined here - see individual implementations / sub-packages.
+These will likely evolve as needs change, and will ideally be pluggable and
+dynamicconfig-selectable and shadow-able at runtime without changing this overall structure.
+
+# Planned use
+
+The first use of this is intentionally focused on addressing imbalanced usage
+of per-domain user/worker/ES ratelimits across different frontend hosts, e.g.
+due to unfair load balancing or per-datacenter affinity or other
+occasionally-changing-else-mostly-stable routing decisions.
+
+These frontend limits are generally configured up-front and are used to protect
+the cluster (especially the database) from noisy neighbors and un-planned major
+usage changes.  True precision is not necessary (accepting 110 instead of 100 will
+not collapse the cluster, but allowing *unlimited* could), but users plan around the
+numbers we have given them, and significant or sustained differences in reality can
+cause problems for them.  Particularly if it significantly decreases due to a change
+in how our network decides to distribute their requests.
+
+By detecting this imbalanced load we can fairly allow "hot" hosts more RPS than our
+"limit / N hosts" limiters allow (essentially stealing unused quota from low-usage
+hosts), and ultimately allow request rates closer to the intended limits as the
+balance changes over time.  It's better for our users (they get what we told them
+they get), and better for us (no need to artificially raise the limit to work around
+the load imbalance, nor keep changing it as load changes).
+
+Weight-data loss is expected due to frontend or agg process losses, and allowed-limits
+naturally trail real-time use due to the asynchronous nature - this is not *ideal* but
+is expected to be acceptable, as it will adjust / self-repair "soon" as normal updates
+occur.
+
+More concretely, our planned target is something like:
+  - frontends (the limiting hosts) submit usage data every 3s
+  - history's aggregating algorithms "quickly" account for new load, and return allowed
+    limits to frontends
+  - within about 10s of a change, we want things to be ~90% accurate or better
+    compared to the "ground truth" (this implies ~0.5 weight per 3s update)
+  - with stable traffic, >99% accuracy at allowing the intended RPS of a limit key,
+    regardless of how requests are distributed
+  - briefly going over or under the intended limit during changes or partial data
+    is allowed, but generally requests should be incorrectly rejected over
+    incorrectly allowed
+
+Future uses (with minor changes) may include things like:
+  - limiting cluster-wide database RPS across all hosts (one key, 50k+ RPS) despite
+    significantly-different load depending on server role and shard distribution
+  - different load-deciding algorithms, e.g. TCP Vegas or some other more sophisticated
+    weight-deciding algorithm (this first one is intentionally simple, and might prove
+    good enough)
+  - closed-source pluggable algorithms that share the same intent and request-flow
+    but little else (i.e. extendable by operators without new RPC definitions.
+    routing and usage patterns are often unique, no one approach can be ideal everywhere)
+
+# Out of scope
+
+Uses explicitly out of scope for this whole structure includes things like:
+  - perfect accuracy on RPS targets (requires synchronous decisions)
+  - rapid and significant usage changes, like a domain sending all requests to one
+    frontend host one second, then a different the next, etc.
+  - brief spikes (e.g. sub-10-seconds.  these are broadly undesirable and can
+    behave worse than RPS/hosts would allow)
+  - guaranteed limiting below intended RPS (partial data may lead to split-brain-like
+    behavior, leading to over-allowing)
+  - fully automated target-RPS adjusting (e.g. system-load detecting, not pre-configured RPS.
+    this may be *possible* to implement in this system, but it is not *planned* and
+    may require significant changes)
 */
 package global

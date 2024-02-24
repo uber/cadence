@@ -25,15 +25,95 @@ Package algorithm contains a running-weighted-average calculator for ratelimits,
 and some associated types to prevent accidental confusion between the various
 floats/ints/etc involved.
 
----
-
-This package is intentionally unaware of RPC or any desired limits, it just tracks
-the observed rates of requests and returns proportions, so other code can
+This package is intentionally unaware of RPC or any desired RPS limits, it just
+tracks the observed rates of requests and returns proportions, so other code can
 determine RPS values.
 
 This is both to simplify testing and to keep its internals as fast as possible, as
 it is relatively CPU heavy and needs to be quick to prevent a snowballing backlog
 of concurrent updates and requests for aggregated data.
+
+# How this fits in the global ratelimiting system
+
+Going back to the [github.com/uber/cadence/common/quotas/global] package diagram:
+each aggregating host will have one or more instances of this weight-calculator,
+and it will receive a shard worth of request data.
+
+Though this package has no direct connection to RPC structures, the request data is
+expected to closely match the argument to RequestWeighted.Update, and the response
+data like the return value of RequestWeighted.HostWeights.
+
+This makes aggregating hosts intentionally very simple outside of this package:
+they essentially just forward the request and response, multiplying by dynamicconfig
+intended-ratelimit values (which occurs outside the mutex, to minimize contention).
+
+# Expected use
+
+Limiting hosts collect metrics and submit it to an aggregating host via
+RequestWeighted.Update, through [some kind of RPC setup].
+
+Once updated, the aggregating host can get the RequestWeighted.HostWeights for
+that host's ratelimits (== the updated limits), multiply those 0..1 weights by
+the dynamicconfig configured RPS, and return them to the limiting host that
+triggered the request.
+
+If there are unused RPS remaining, the aggregating host *may* increase the RPS
+it returns by [some amount], to allow the limiting host to pre-emptively allow
+more requests than is "fair" before the next update.  Even if it does not, an
+increase in attempted usage will increase that limiter's weight on the next
+update cycle, so this is mostly intended as a tool for reducing incorrectly-rejected
+requests when a ratelimit's usage is well below its allowed limit.
+
+# Dealing with expired data
+
+As user calls change, or the aggregating-host ring changes, Limit keys may become
+effectively unused in an instance.  During normal use, any accessed Limit will
+clean up "expired" data if it is found, and there is essentially no ongoing
+"upkeep" cost for an un-accessed Limit (aside from memory).
+
+Hopefully this will be sufficient to keep memory use and performance reasonable.
+
+If it is not, a trivial goroutine to periodically call RequestWeighted.GC will
+clear *all* old data.  Every minute or so should be more than sufficient.
+This method returns some simple metrics about how much data exists / was removed,
+so it can be reported to help us estimate how necessary it is in practice.
+
+# Dealing with excessive contention
+
+In large clusters, there will be likely be many update-requests, many Limit keys,
+and more data to process to return responses (more hosts per limit).  At some point
+this could become a bottleneck, preventing timely updates.
+
+On even our largest internal clusters, I do not believe we will run that risk.
+At least, not with the planned frontend-only limits.  `pprof` should be able
+to easily validate this and let us better estimate headroom for adding more in
+the future.
+
+If too much contention does occur, there are 3 relatively simple mitigations:
+ 1. turn it completely off, go back to host-local limits
+ 2. use N instances and shard keys across them
+ 3. slow down the update frequency
+
+1 is pretty obvious and has clear behavior, though it means degrading behavior
+for our imbalanced-load clusters.
+
+2 is a relatively simple mitigation: create N instances instead of 1, and shard
+the Limit keys to each instance.  Since this is mostly CPU bound and each one
+would be fully independent, making GOMAXPROCS instances is an obvious first choice,
+and this does not need to be dynamically reconfigured at runtime so there should
+be no need to build a "smart" re-balancing / re-sharding system of any kind.
+
+Otherwise, 3 (changing the limiter-update-rate to be slower) is essentially the only
+other short-term and dynamically-apply-able option.  This will impact how quickly the
+algorithm converges, so you may also want to adjust the new-data weight to be higher,
+though "how much" depends on what kind of behavior you want.
+
+Tests contain a single-threaded benchmark and laptop-local results for estimating
+contention, and for judging if changes will help or hinder, but real-world use and
+different CPUs will of course be somewhat different.
+Personally I expect "few mutexes, GOMAXPROCS instances" is roughly ideal for CPU
+throughput with the current setup, but an entirely different internal structure
+might exceed it.
 */
 package algorithm
 
