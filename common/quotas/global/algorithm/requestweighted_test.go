@@ -38,8 +38,6 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 )
 
-// TODO: needs some smaller / simpler tests too
-
 // just simplifies newForTest usage as most tests only care about rate
 func defaultConfig(rate time.Duration) configSnapshot {
 	return configSnapshot{

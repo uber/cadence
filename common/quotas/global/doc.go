@@ -38,7 +38,7 @@ At a very high level, this will:
 The exact logic that the "aggregating" hosts use is intentionally hidden from the
 "limiting" hosts, so it can be changed without changing how they enforce limits.
 
-The weight-calculation algorithm will (eventually) be controlled by a dynamic config value,
+The weight-calculation algorithm will (eventually) be controlled by a dynamicconfig value,
 to allow shadowing and experimenting with different algorithms at runtime, or disabling
 the global logic altogether.
 
@@ -98,6 +98,9 @@ The first use of this is intentionally focused on addressing imbalanced usage
 of per-domain user/worker/ES ratelimits across different frontend hosts, e.g.
 due to unfair load balancing or per-datacenter affinity or other
 occasionally-changing-else-mostly-stable routing decisions.
+This will essentially imply 3 keys per domain, and will look something like
+`domain-user-request` / `domain-worker-request` / etc - they just have to be
+unique per conceptual thing-with-a-configured-limit.
 
 These frontend limits are generally configured up-front and are used to protect
 the cluster (especially the database) from noisy neighbors and un-planned major
