@@ -145,6 +145,8 @@ type (
 	HostWeight float64
 
 	impl struct {
+		// intentionally value-typed so caller cannot mutate the fields.
+		// manually copy data if this changes.
 		cfg Config
 
 		// mut protects usage, as it is the only mutable data
