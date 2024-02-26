@@ -1973,6 +1973,13 @@ const (
 	// Allowed filters: DomainID
 	EnableTaskVal
 
+	// EnableRetryForChecksumFailure enables retry if mutable state checksum verification fails
+	// KeyName: history.enableMutableStateChecksumFailureRetry
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: DomainName
+	EnableRetryForChecksumFailure
+
 	// LastBoolKey must be the last one in this const group
 	LastBoolKey
 )
@@ -4228,6 +4235,12 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		KeyName:      "history.workflowIDCacheInternalEnabled",
 		Filters:      []Filter{DomainName},
 		Description:  "WorkflowIDCacheInternalEnabled is the key to enable/disable caching of workflowID specific information for internal requests",
+		DefaultValue: false,
+	},
+	EnableRetryForChecksumFailure: DynamicBool{
+		KeyName:      "history.enableMutableStateChecksumFailureRetry",
+		Filters:      []Filter{DomainName},
+		Description:  "EnableRetryForChecksumFailure enables retry if mutable state checksum verification fails",
 		DefaultValue: false,
 	},
 }
