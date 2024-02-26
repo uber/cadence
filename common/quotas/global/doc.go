@@ -50,8 +50,8 @@ The overall planned system's data-flow is driven entirely by limiting hosts repe
 calling an "update(request, data)" API on aggregating hosts, and using the return value.
 Aggregating hosts make no outbound requests at all:
 
-	lim: Frontend host limiting e.g. user RPS for domain ASDF
-	agg: History host aggregating this data, to compute fair RPS allowances
+	lim: a host limiting e.g. user RPS for domain ASDF
+	agg: a host aggregating this data, to compute fair RPS allowances
 	┌───┐              ┌────┐┌────┐┌────┐              ┌────┐
 	│lim│              │ring││agg1││agg2│              │lim2│
 	└─┬─┘              └─┬──┘└─┬──┘└─┬──┘              └─┬──┘
