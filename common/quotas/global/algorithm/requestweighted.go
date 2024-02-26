@@ -280,12 +280,21 @@ func (a *impl) Update(id Identity, load map[Limit]Requests, elapsed time.Duratio
 		} else {
 			// account for missed updates.
 			// ignoring gc as we are updating, and a very-low reduce just means similar results to zero data.
-			reduce, _ := missedUpdateScalar(snap.now.Sub(prev.lastUpdate), snap)
-
-			next = history{
-				lastUpdate: snap.now,
-				accepted:   weighted(aps, prev.accepted*reduce, snap.weight),
-				rejected:   weighted(rps, prev.rejected*reduce, snap.weight),
+			reduce, gc := missedUpdateScalar(snap.now.Sub(prev.lastUpdate), snap)
+			if gc {
+				// would have GC'd if we had seen it earlier, so it's the same as the zero state
+				next = history{
+					lastUpdate: snap.now,
+					accepted:   aps, // no history == 100% weight
+					rejected:   rps, // no history == 100% weight
+				}
+			} else {
+				// compute the next rolling average step (`*reduce` simulates skipped 0 value updates)
+				next = history{
+					lastUpdate: snap.now,
+					accepted:   weighted(aps, prev.accepted*reduce, snap.weight),
+					rejected:   weighted(rps, prev.rejected*reduce, snap.weight),
+				}
 			}
 		}
 
@@ -404,7 +413,7 @@ func missedUpdateScalar(elapsed time.Duration, cfg configSnapshot) (scalar PerSe
 	}
 	// fast path: check the bounds for "old enough to prune"
 	if elapsed >= cfg.rate*time.Duration(cfg.gcAfter) {
-		return reduce, true
+		return 0, true
 	}
 
 	// slow path: account for missed updates by simulating 0-value updates.
@@ -417,7 +426,7 @@ func missedUpdateScalar(elapsed time.Duration, cfg configSnapshot) (scalar PerSe
 		// - precision isn't important
 		// - tests are a bit easier (more stable / less crazy-looking values)
 		// - as a bonus freebie: integer exponents are typically faster to compute
-		reduce = PerSecond(math.Pow(cfg.weight, math.Floor(missed)))
+		reduce = PerSecond(math.Pow(1-cfg.weight, math.Floor(missed)))
 	}
 
 	return reduce, false

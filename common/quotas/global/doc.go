@@ -46,36 +46,36 @@ See sub-packages for implementation details.
 
 # Data flow in the system
 
-The overall planned system's data-flow looks roughly like this:
+The overall planned system's data-flow is driven entirely by limiting hosts repeatedly
+calling an "update(request, data)" API on aggregating hosts, and using the return value.
+Aggregating hosts make no outbound requests at all:
 
-	┌───────┐
-	│users  │
-	└┬─┬─┬─┬┘
-	 a b c c
-	 │ │ │ │
-	┌▽─▽─▽─▽───┐
-	│frontend  │        (rejects based on previous or fallback limits, collects call counts)
-	│(limiting)│
-	└───┬──────┘
-	    │
-	 [a1,b1,c2]         (sends aggregated usage data to agg hosts, split by ring on keys)
-	    │
-	┌───▽─────────┐
-	│ring         │     (ringpop `Lookup(key)` to find agg host per key)
-	└┬─────┬─────┬┘
-	 │     │     │
-	 a1    b1    c2     (each subset of keys is sent to its owning agg host)
-	 │     │     │
-	 │     │     │  ┌─────── other "c" usage from other frontends, etc
-	┌▽───┐┌▽───┐┌▽──▽┐
-	│agg1││agg2││agg3│  (aggs compare frontend's usage per key with others, decide on RPS to allow)
-	└┬───┘└┬───┘└┬───┘
-	 │     │     │
-	a/2   b/4   c3/4    (aggs return weighted RPS to allow)
-	 │     │     │
-	┌▽─────▽─────▽┐
-	│frontend     │     (updates RPS, limits future calls, cycle continues)
-	└─────────────┘
+	lim: Frontend host limiting e.g. user RPS for domain ASDF
+	agg: History host aggregating this data, to compute fair RPS allowances
+	┌───┐              ┌────┐┌────┐┌────┐              ┌────┐
+	│lim│              │ring││agg1││agg2│              │lim2│
+	└─┬─┘              └─┬──┘└─┬──┘└─┬──┘              └─┬──┘
+	  │                  │     │     │                   │
+	  │ shard(a,b,c)     │     │     │    update(a1,d37) │
+	  │────────────────>┌┴┐   ┌┴┐<───────────────────────│
+	  │    [[a], [b,c]] │ │   └┬┘───────────────────────>│
+	  │<────────────────└┬┘    │     │                  ...
+	  │                  │     │     │
+	  │ update(a1)       │     │     │
+	  │──────────────────────>┌┴┐    │
+	  │                  │    │ │    │
+	  │ update(b1,c2)    │    │ │    │
+	  │────────────────────────────>┌┴┐
+	  │                  │    │ │   │ │
+	  │      [b/4, c3/4] │    │ │   │ │
+	  │<────────────────────────────└┬┘
+	  │                  │    │ │    │
+	  │            [a/2] │    │ │    │
+	  │<──────────────────────└┬┘    │
+	  │                  │     │     │
+	┌─┴─┐              ┌─┴──┐┌─┴──┐┌─┴──┐
+	│lim│              │ring││agg1││agg2│
+	└───┘              └────┘└────┘└────┘
 
 This package as a whole is only concerned with the high level request pattern in use:
   - limiters enforce limits and collect data

@@ -34,6 +34,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/maps"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/dynamicconfig"
 )
@@ -42,7 +43,13 @@ import (
 func defaultConfig(rate time.Duration) configSnapshot {
 	return configSnapshot{
 		// now:    , ignored
-		weight:    0.5,
+
+		// intentionally avoiding 0.5 because it cannot tell if the code uses
+		// `weight` or `1-weight`, which is usually relevant.
+		//
+		// 0.1 is relatively human-math-friendly for a single step,
+		// but is otherwise arbitrary.
+		weight:    0.1,
 		rate:      rate,
 		maxMissed: 2.0,
 		gcAfter:   10,
@@ -106,8 +113,8 @@ func TestMissedUpdateHandling(t *testing.T) {
 	// as if it was tracking 0s all along, because we're assuming it has been inactive for some reason.
 	tick.Advance(time.Second)
 	weights, used = agg.HostWeights(h1, []Limit{key})
-	assert.Len(t, weights, 1)                   // 1 key
-	assert.Equal(t, used[key], PerSecond(0.25)) // 2 * (0.5 * 0.5 * 0.5) for 3 missed updates
+	assert.Len(t, weights, 1)                            // still tracking the key / not GC'd
+	assert.InDelta(t, float64(used[key]), 1.458, 0.0001) // 3 simulated zero-updates: 2 -> 1.8 -> 1.62 -> 1.458
 }
 
 func TestGC(t *testing.T) {
@@ -121,8 +128,8 @@ func TestGC(t *testing.T) {
 			rate:    time.Second,
 			gcAfter: 10,
 
-			// irrelevant for these tests:
-			weight:    0.5,
+			// irrelevant for these tests but must be non-zero:
+			weight:    0.1,
 			maxMissed: 2,
 		})
 
@@ -137,7 +144,7 @@ func TestGC(t *testing.T) {
 		tick.Advance(9 * time.Second)
 		weights, used = agg.HostWeights(h1, []Limit{key})
 		require.Len(t, weights, 1, "sanity check: should have inserted limit's data after 9s")
-		require.Equal(t, used[key], PerSecond(2*math.Pow(0.5, 9)), "sanity check: should have inserted usage data, reduced after 9s")
+		require.Equal(t, used[key], PerSecond(2*math.Pow(0.9, 9)), "sanity check: should have inserted usage data, reduced after 9s")
 
 		return agg, tick
 	}
@@ -205,13 +212,23 @@ func TestRapidlyCoalesces(t *testing.T) {
 	// This test ensures that, regardless of starting weights, the algorithm
 	// "rapidly" achieves near-actual weight distribution after a small number of rounds.
 	//
-	// the exact numbers here don't really matter, it's just handy to show the behavior
-	// in semi-extreme scenarios.  logs show a quick adjustment which is what we want.
-	// if making changes, check with like 10k rounds to make sure it's stable.
+	// Otherwise, the exact numbers here don't really matter, it's just handy to show the
+	// behavior in semi-extreme scenarios.  Logs show a quick adjustment which is what we want.
+	// If you're making changes, check with like 10k rounds to make sure it's stable.
 	//
-	// time is also not advanced because it doesn't actually need to be advanced.
-	// an update is an update, and the caller's elapsed time is assumed to be correct.
-	agg, _ := newForTest(t, defaultConfig(time.Second))
+	// Time is also not advanced because it doesn't actually need to be advanced.
+	// An update is an update, and the caller's elapsed time is assumed to be correct.
+	agg, _ := newForTest(t, configSnapshot{
+		// Using 0.5 weight because that's what we expect to use IRL, and this test is
+		// ensuring that weight is good enough for the behavior we want.
+		// Weight-math-correctness is ensured by other tests.
+		weight: 0.5,
+
+		// irrelevant / ignored
+		rate:      time.Second,
+		maxMissed: 2.0,
+		gcAfter:   10,
+	})
 
 	key := Limit("start workflow")
 	h1, h2, h3 := Identity("one"), Identity("two"), Identity("three")
@@ -275,8 +292,10 @@ func TestConcurrent(t *testing.T) {
 	// values aren't checked, but it shouldn't panic / shouldn't race / etc.
 	// low timeout + real time clock to also have wall-clock changes race with logic.
 	//
-	// this test occasionally covers every line all on its own (currently),
-	// though it's not guaranteed.
+	// this test frequently reaches 100% coverage all on its own (currently),
+	// though it's not guaranteed and that is not the intent.
+	// other tests should cover sufficiently even if this test is skipped:
+	// t.Skip("skipped to check coverage")
 
 	// should be "much" longer than expected update rate
 	const (
@@ -288,10 +307,11 @@ func TestConcurrent(t *testing.T) {
 	)
 
 	agg, _ := newForTest(t, configSnapshot{
-		weight:    0.5,
 		rate:      updateRate,
 		maxMissed: 2,
 		gcAfter:   3, // relatively low to trigger implicit gc, check coverage if changing the values
+
+		weight: 0.1, // irrelevant but must be non-zero
 	})
 	agg.clock = clock.NewRealTimeSource()
 
@@ -305,13 +325,13 @@ func TestConcurrent(t *testing.T) {
 	}
 
 	do := make(chan struct{}, numUpdaters)
-	var done sync.WaitGroup
+	var wg sync.WaitGroup
 
 	// run some goroutines to update/read in batches
 	for i := 0; i < numUpdaters; i++ {
-		done.Add(1)
+		wg.Add(1)
 		go func() {
-			defer done.Done()
+			defer wg.Done()
 
 			for {
 				_, ok := <-do
@@ -340,10 +360,10 @@ func TestConcurrent(t *testing.T) {
 	}
 
 	// run a "trigger some work occasionally" goroutine
-	done.Add(1)
+	wg.Add(1)
 	start := time.Now()
 	go func() {
-		defer done.Done()
+		defer wg.Done()
 
 		for {
 			if time.Since(start) > targetDuration {
@@ -360,19 +380,28 @@ func TestConcurrent(t *testing.T) {
 		}
 	}()
 
-	done.Wait()
+	assert.True(t,
+		common.AwaitWaitGroup(&wg, 5*targetDuration),
+		"blocked test? still waiting after %v", 5*targetDuration)
+	// non-racy even if waiting failed
 	t.Logf("%#v", agg.GC()) // should (usually) not be "full" + should (usually) remove some data
 }
 
 func TestSimulate(t *testing.T) {
-	// Full fuzzy check with fully computed values, exercising most behaviors.
+	// Semi-fuzzy simulated sequence with fully computed values, exercising most behaviors.
 	//
 	// Everything about this test is sensitive to changes in behavior,
-	// so if that occurs, just update the values after ensuring they're reasonable.
+	// so if that occurs just update the values after ensuring they're reasonable.
 	// Exact matches after changes are not at all important.
 
 	updateRate := 3 * time.Second // both expected and duration fed to update
-	agg, tick := newForTest(t, defaultConfig(updateRate))
+	agg, tick := newForTest(t, configSnapshot{
+		// now:    , ignored
+		weight:    0.75, // fairly fast adjustment, and semi-human-friendly math
+		rate:      updateRate,
+		maxMissed: 2.0,
+		gcAfter:   10,
+	})
 
 	// keeping var == string simplifies copy/paste
 	start, query := Limit("start"), Limit("query")
@@ -408,70 +437,86 @@ func TestSimulate(t *testing.T) {
 	push(h3, start, 1, 1)
 	tick.Advance(time.Second)
 
+	// changing new-data-weight does not affect this test because
+	// zero -> nonzero keeps 100% to jump-start the initial state,
+	// rather than gradually growing from zero (which would be biased
+	// towards lower values during movement - not bad, but not intended).
 	t.Run("initial weights at 3s", func(t *testing.T) {
 		// 3s elapsed, all fresh.  h1 is "old" but within max-missed-updates so it's assumed valid still
 		myweights, rps := agg.HostWeights(h1, all)
 
-		// h1 has most of the weight
+		// h1 has most of the weight.
 		expectSimilar(t,
 			query, 0.83,
 			start, 0.71, // h3 uses more start than query, so h1 has less weight
 			myweights)
 		expectSimilar(t,
-			query, 6,
-			start, 7,
+			query, 6.0,
+			start, 7.0,
 			rps)
+
+		myweights, rps = agg.HostWeights(h2, all)
+		expectSimilar(t,
+			query, 0.17, // only h1 and h2 called this, so (0.83 + 0.17)==1
+			start, 0.14, // h3 also had a small use, so less than query
+			myweights)
+
+		myweights, rps = agg.HostWeights(h3, all)
+		expectSimilar(t,
+			query, 0, // no query at all
+			start, 0.14, // same num of starts as h2
+			myweights)
 	})
 	if t.Failed() {
-		return
+		return // later tests likely invalid, verify each step before moving to the next
 	}
 
 	// advance to second h2 update, skip the others.
 	// no data has expired yet, but h1 is now at 5s old
 	tick.Advance(2 * time.Second)
-	push(h2, start, 3, 3)
 	push(h2, query, 1, 2)
+	push(h2, start, 3, 3)
 
 	// 4.5s
 	t.Run("increased h2 weight at 5s", func(t *testing.T) {
 		myweights, rps := agg.HostWeights(h1, all)
 		// h1's weight reduces due to increased h2 usage
 		expectSimilar(t,
-			query, 0.80,
-			start, 0.62,
+			query, 0.78,
+			start, 0.59,
 			myweights)
 		// overall usage increased
 		expectSimilar(t,
 			query, 6.00, // accepted query requests did not change (1 before, 1 after)
-			start, 8.00, // but start increased by 2 -> half weight means +1 from before
+			start, 8.5, // but start calls from h2 increased by 2 -> 0.75 weight -> +1.5 total
 			rps)
 
 		myweights, rps = agg.HostWeights(h2, all)
-		// h2 gets most of the weight that h1 did not use, as h3 is almost idle
+		//
 		expectSimilar(t,
-			query, 0.20, // h3 has no query, so h1+h2=1.0
-			start, 0.25, // h3 has some start, so 0.25 + 0.62 < 1
+			query, 0.22, // h3 has no query, so h1+h2=1.0 but the balance has shifted a bit towards h2
+			start, 0.29, // increased over last round due to more calls
 			myweights)
-		// same rps as h1 saw
+		// sanity check: same rps as h1 saw
 		expectSimilar(t,
 			query, 6.00,
-			start, 8.00,
+			start, 8.5,
 			rps)
 
 		myweights, rps = agg.HostWeights(h3, all)
-		// h2 gets most of the weight that h1 did not use, as h3 is almost idle
+		// h3 is almost idle but 0.1 weight changes slowly
 		expectSimilar(t,
 			query, 0, // never sent any query requests
-			start, 0.12, // quite small comparatively
+			start, 0.12, // decreased since last round, as relative usage is lower
 			myweights)
-		// same rps as h1 saw
+		// sanity check: same rps as h1 saw
 		expectSimilar(t,
 			query, 6.00,
-			start, 8.00,
+			start, 8.5,
 			rps)
 	})
 	if t.Failed() {
-		return
+		return // later tests likely invalid, verify each step before moving to the next
 	}
 
 	// advance to 10s.
@@ -484,27 +529,37 @@ func TestSimulate(t *testing.T) {
 
 	t.Run("h1 degraded at 10s", func(t *testing.T) {
 		myweights, rps := agg.HostWeights(h1, all)
-		// h1's weight reduces due to increased h2 usage
+		// h1's weight reduces a ton due to a long period of no updates -> retroactively treat
+		// as if we got zeros, plus increased use in others
 		expectSimilar(t,
-			query, 0.10, // most-recent values of all are 5, but h1 has degraded 3x and is well below 1/3rd weight
-			start, 0.09, // similar but slightly more start calls since test began
+			query, 0.01,
+			start, 0.01,
 			myweights)
 		expectSimilar(t,
-			query, 6.12, // 10 accepted in last round, but only 0.5 weight
-			start, 6.75,
+			query, 7.83, // 10 accepted in last round, but only 0.75 weight, 6.0 -> 7.8 due to older data
+			start, 8.22, // similar
 			rps)
 		myweights, _ = agg.HostWeights(h2, all)
+		// h2 has slightly over half weight due to greater historical use
 		expectSimilar(t,
-			query, 0.50,
-			start, 0.52,
+			query, 0.52,
+			start, 0.53, // still more starts than queries
 			myweights)
 		myweights, _ = agg.HostWeights(h3, all)
-		// h3 is more than h1 due to its degradation, but less than h2 due to h3's historically-lower weight
+		// h2 slightly less, due to low historical + some used by h1
 		expectSimilar(t,
-			query, 0.40,
-			start, 0.39,
+			// this looks odd, but it's higher due to lower historical *total* queries,
+			// leading to a somewhat counter-intuitive:
+			// - smaller numerator (lower calls by this host)
+			// - smaller denominator (lower total calls)
+			// - higher final value (smaller denominator has greater influence)
+			query, 0.47,
+			start, 0.46,
 			myweights)
 	})
+	if t.Failed() {
+		return // later tests likely invalid, verify each step before moving to the next
+	}
 
 	// update everything, should flatten compared to previous round
 	tick.Advance(1 * time.Second)
@@ -517,21 +572,24 @@ func TestSimulate(t *testing.T) {
 
 	t.Run("all equal at 11s is relatively flatter than before", func(t *testing.T) {
 		myweights, rps := agg.HostWeights(h1, all)
-		// historically lower weight = current lower weight, but big jump from 0.1 before
+		// historically lower weight = current lower weight, but a big jump from 0.01 before.
+		//
+		// this is likely a faster shift than we want in practice, as it'll make allowed-request
+		// behavior quite jumpy, which is why the initial weight is likely to be around 0.5.
 		expectSimilar(t,
-			query, 0.26,
-			start, 0.26,
+			query, 0.29,
+			start, 0.28,
 			myweights)
 		// used is adjusting towards 15
 		expectSimilar(t,
-			query, 10.56,
-			start, 10.88,
+			query, 13.21,
+			start, 13.31,
 			rps)
 		// else flattening towards 0.33
 		myweights, _ = agg.HostWeights(h2, all)
 		expectSimilar(t,
-			query, 0.38,
-			start, 0.39,
+			query, 0.36,
+			start, 0.36,
 			myweights)
 		myweights, _ = agg.HostWeights(h3, all)
 		expectSimilar(t,
@@ -539,6 +597,9 @@ func TestSimulate(t *testing.T) {
 			start, 0.35,
 			myweights)
 	})
+	if t.Failed() {
+		return // later tests likely invalid, verify each step before moving to the next
+	}
 
 	// do that again, should flatten further
 	tick.Advance(1 * time.Second)
@@ -551,28 +612,67 @@ func TestSimulate(t *testing.T) {
 
 	t.Run("all equal at 12s is even flatter", func(t *testing.T) {
 		myweights, rps := agg.HostWeights(h1, all)
+		// still slightly below the others but it hardly matters now
 		expectSimilar(t,
-			query, 0.30,
-			start, 0.30,
+			query, 0.32,
+			start, 0.32,
 			myweights)
-		// even closer to 15
+		// quite close to 15
 		expectSimilar(t,
-			query, 12.78,
-			start, 12.94,
+			query, 14.55,
+			start, 14.58,
 			rps)
 		// else flattening towards 0.33
 		myweights, _ = agg.HostWeights(h2, all)
 		expectSimilar(t,
-			query, 0.35,
-			start, 0.36,
+			query, 0.34,
+			start, 0.34,
 			myweights)
 		myweights, _ = agg.HostWeights(h3, all)
 		expectSimilar(t,
-			query, 0.35,
-			start, 0.35,
+			query, 0.34,
+			start, 0.34,
 			myweights)
 	})
+	if t.Failed() {
+		return // later tests likely invalid, verify each step before moving to the next
+	}
 
+	// make everything fully expired so the "from expired data" branch is exercised too
+	tick.Advance(time.Hour)
+	// push anything (need all keys to get same HostWeight keys for `expectSimilar`)
+	push(h1, query, 5, 5)
+	push(h1, start, 5, 5)
+	push(h2, query, 5, 5)
+	push(h2, start, 5, 5)
+	push(h3, query, 5, 5)
+	push(h3, start, 5, 5)
+
+	t.Run("updating expired data acts like deleted data", func(t *testing.T) {
+		// should leap to exact values, not weighted-from-zero.
+		myweights, rps := agg.HostWeights(h1, all)
+		// still slightly below the others but it hardly matters now
+		expectSimilar(t,
+			query, 0.333,
+			start, 0.333,
+			myweights)
+		// note: exactly 15. if weighting from or very near zero, would be: (0*0.25 + 15*0.75) == 11.25
+		expectSimilar(t,
+			query, 15,
+			start, 15,
+			rps)
+		// else flattening towards 0.33
+		myweights, _ = agg.HostWeights(h2, all)
+		expectSimilar(t,
+			query, 0.333,
+			start, 0.333,
+			myweights)
+		myweights, _ = agg.HostWeights(h3, all)
+		expectSimilar(t,
+			query, 0.333,
+			start, 0.333,
+			myweights)
+	})
 }
 
 func expectSimilar[V ~float64](
@@ -592,6 +692,30 @@ func expectSimilar[V ~float64](
 	}
 }
 
+// fairly fuzzy but somewhat representative of expected use:
+// benchmark "update a bunch of keys and get my load" requests, and accumulate data across all iterations.
+// this is roughly what a server update operation will look like.
+// there are intentionally overlaps in both hosts and keys to get multiple hosts per key and updates to existing data.
+//
+// while this obviously has major caveats and fake costs, the benchmark regularly runs several thousand iterations
+// before it settles, filling a moderate amount of data along the way (e.g. consistently all 10k keys, and >200k records in memory).
+//
+// general results imply:
+//   - host-weight reading takes a few times longer than updating, but on my laptop the
+//     bench takes about 3-4ms per loop for the current 100/1000/10000 values, without mutexes.
+//   - this is relatively CPU costly, but even if our largest cluster checks in every 3s to a *single*
+//     host, this should work out with some room to spare... and it will be far more spread
+//     out in practice due to the number of history hosts involved.
+//   - an attempt to cache weight calculations per key until invalidated saved about 1/2 the cpu
+//     with a perfect cache.
+//   - seems not worth the complexity, but it'd be fairly easy to add if we change our minds
+//
+// since there is only a coarse mutex in the implementation itself, the whole aggregator forces itself
+// to be processed serially.  if this turns out to be too costly, the easy fix is probably
+// to shard the keys to e.g. 8 separate aggregators that can be processed concurrently.
+//
+// mutexes could be added to each Limit, but that could end up costing more in memory delays
+// than the fine-grained locking gains us in concurrency flexibility.  benchmark first!
 func BenchmarkNormalUse(b *testing.B) {
 	updateRate := 3 * time.Second
 	agg, _ := newForTest(b, defaultConfig(updateRate))
@@ -601,35 +725,10 @@ func BenchmarkNormalUse(b *testing.B) {
 	// aiming for vaguely realistic-ish values
 	const (
 		hosts       = 100   // num of hosts in pool, if rounds > hosts there will be duplicates (intentional)
-		keysPerHost = 1000  // more domains than hosts, multiple limits per domain
+		keysPerHost = 1000  // more domains than hosts, multiple limits per domain.
 		globalKeys  = 10000 // each host gets ~10% of requests (not consistent across calls tho)
 		requests    = 1000  // accept/reject counts
 	)
-
-	// fairly fuzzy but somewhat representative of expected use:
-	// benchmark "update a bunch of keys and get my load" requests, and accumulate data across all iterations.
-	// this is roughly what a server update operation will look like.
-	// there are intentionally overlaps in both hosts and keys to get multiple hosts per key and updates to existing data.
-	//
-	// while this obviously has major caveats and fake costs, the benchmark regularly runs several thousand iterations
-	// before it settles, filling a moderate amount of data along the way (e.g. consistently all 10k keys, and >200k records in memory).
-	//
-	// general results imply:
-	// - host-weight reading takes a few times longer than updating, but on my laptop the
-	//   bench takes about 3-4ms per loop for the current 100/1000/10000 values, without mutexes.
-	// - this is relatively CPU costly, but even if our largest cluster checks in every 3s to a *single*
-	//   host, this should work out with some room to spare... and it will be far more spread
-	//   out in practice due to the number of history hosts involved.
-	// - an attempt to cache weight calculations per key until invalidated saved about 1/2 the cpu
-	//   with a perfect cache.
-	//   - seems not worth the complexity, but it'd be fairly easy to add if we change our minds
-	//
-	// since there is only a coarse mutex in the implementation itself, the whole aggregator forces itself
-	// to be processed serially.  if this turns out to be too costly, the easy fix is probably
-	// to shard the keys to e.g. 8 separate aggregators that can be processed concurrently.
-	//
-	// mutexes could be added to each Limit, but that could end up costing more in memory delays
-	// than the fine-grained locking gains us in concurrency flexibility.  benchmark first!
 
 	// rand and string-formatting is a non-trivial amount of load,
 	// so this is prepared up-front so it can be excluded.
