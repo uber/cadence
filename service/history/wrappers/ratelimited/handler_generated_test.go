@@ -116,12 +116,12 @@ func TestRatelimitedEndpoints_Table(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// For now true and false needs to do the same as we are only shadowing
-			workflowIDCache.EXPECT().AllowExternal(testWorkflowID, testDomainID).Return(true).Times(1)
+			workflowIDCache.EXPECT().AllowExternal(testDomainID, testWorkflowID).Return(true).Times(1)
 			tt.mock()
 			_, err := tt.call()
 			assert.NoError(t, err)
 
-			workflowIDCache.EXPECT().AllowExternal(testWorkflowID, testDomainID).Return(false).Times(1)
+			workflowIDCache.EXPECT().AllowExternal(testDomainID, testWorkflowID).Return(false).Times(1)
 			tt.mock()
 			_, err = tt.call()
 			assert.NoError(t, err)

@@ -81,7 +81,7 @@ func (h *{{$decorator}}) {{$method.Declaration}} {
                 return
             }
 
-            h.workflowIDCache.AllowExternal({{$workflowID}}, {{$domainID}})
+            h.workflowIDCache.AllowExternal({{$domainID}}, {{$workflowID}})
         {{- end}}
     {{- end}}
     {{$method.Pass "h.wrapped."}}

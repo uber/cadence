@@ -92,7 +92,7 @@ func (h *historyHandler) DescribeWorkflowExecution(ctx context.Context, hp1 *typ
 		return
 	}
 
-	h.workflowIDCache.AllowExternal(hp1.Request.GetExecution().GetWorkflowID(), hp1.GetDomainUUID())
+	h.workflowIDCache.AllowExternal(hp1.GetDomainUUID(), hp1.Request.GetExecution().GetWorkflowID())
 	return h.wrapped.DescribeWorkflowExecution(ctx, hp1)
 }
 
@@ -245,7 +245,7 @@ func (h *historyHandler) SignalWithStartWorkflowExecution(ctx context.Context, h
 		return
 	}
 
-	h.workflowIDCache.AllowExternal(hp1.SignalWithStartRequest.GetWorkflowID(), hp1.GetDomainUUID())
+	h.workflowIDCache.AllowExternal(hp1.GetDomainUUID(), hp1.SignalWithStartRequest.GetWorkflowID())
 	return h.wrapped.SignalWithStartWorkflowExecution(ctx, hp1)
 }
 
@@ -266,7 +266,7 @@ func (h *historyHandler) SignalWorkflowExecution(ctx context.Context, hp1 *types
 		return
 	}
 
-	h.workflowIDCache.AllowExternal(hp1.SignalRequest.GetWorkflowExecution().GetWorkflowID(), hp1.GetDomainUUID())
+	h.workflowIDCache.AllowExternal(hp1.GetDomainUUID(), hp1.SignalRequest.GetWorkflowExecution().GetWorkflowID())
 	return h.wrapped.SignalWorkflowExecution(ctx, hp1)
 }
 
@@ -292,7 +292,7 @@ func (h *historyHandler) StartWorkflowExecution(ctx context.Context, hp1 *types.
 		return
 	}
 
-	h.workflowIDCache.AllowExternal(hp1.StartRequest.GetWorkflowID(), hp1.GetDomainUUID())
+	h.workflowIDCache.AllowExternal(hp1.GetDomainUUID(), hp1.StartRequest.GetWorkflowID())
 	return h.wrapped.StartWorkflowExecution(ctx, hp1)
 }
 
