@@ -63,13 +63,14 @@ func (h *{{$decorator}}) {{$method.Declaration}} {
         }}
 
             {{ $workflowID := ( get ( get $ratelimitTypeMap $method.Name ) "workflowID" ) }}
+            {{ $req := (index $method.Params 1).Name }}
 
-            if {{(index $method.Params 1).Name}} == nil {
+            if {{ $req }} == nil {
                 err = validate.ErrRequestNotSet
                 return
             }
-            {{- $domainID := printf "%s.GetDomainUUID()" (index $method.Params 1).Name }}
-            {{- $workflowID := printf "%s.%s" (index $method.Params 1).Name ( $workflowID ) }}
+            {{- $domainID := printf "%s.GetDomainUUID()" $req }}
+            {{- $workflowID := printf "%s.%s" $req ( $workflowID ) }}
 
             if {{$domainID}} == "" {
                 err = validate.ErrDomainNotSet
