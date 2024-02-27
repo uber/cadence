@@ -35,28 +35,24 @@ import (
 )
 
 func TestNosqlExecutionStore(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockDB := nosqlplugin.NewMockDB(ctrl)
-	logger := log.NewNoop()
-	store := newTestNosqlExecutionStore(mockDB, logger)
-
 	ctx := context.Background()
+	shardID := 1
 	testCases := []struct {
 		name          string
-		setupMock     func()
-		testFunc      func() error // Use a function to encapsulate test execution
-		expectedError interface{}
+		setupMock     func(*gomock.Controller) *nosqlExecutionStore
+		testFunc      func(*nosqlExecutionStore) error
+		expectedError error
 	}{
 		{
 			name: "CreateWorkflowExecution success",
-			setupMock: func() {
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
 				mockDB.EXPECT().
 					InsertWorkflowExecutionWithTasks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(nil).Times(1)
+					Return(nil)
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
 			},
-			testFunc: func() error {
+			testFunc: func(store *nosqlExecutionStore) error {
 				_, err := store.CreateWorkflowExecution(ctx, newCreateWorkflowExecutionRequest())
 				return err
 			},
@@ -64,7 +60,8 @@ func TestNosqlExecutionStore(t *testing.T) {
 		},
 		{
 			name: "CreateWorkflowExecution failure - workflow already exists",
-			testFunc: func() error {
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
 				mockDB.EXPECT().
 					InsertWorkflowExecutionWithTasks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&persistence.WorkflowExecutionAlreadyStartedError{}).Times(1)
@@ -72,6 +69,9 @@ func TestNosqlExecutionStore(t *testing.T) {
 				mockDB.EXPECT().IsTimeoutError(gomock.Any()).Return(false).AnyTimes()
 				mockDB.EXPECT().IsThrottlingError(gomock.Any()).Return(false).AnyTimes()
 				mockDB.EXPECT().IsDBUnavailableError(gomock.Any()).Return(false).AnyTimes()
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
 				_, err := store.CreateWorkflowExecution(ctx, newCreateWorkflowExecutionRequest())
 				return err
 			},
@@ -79,10 +79,18 @@ func TestNosqlExecutionStore(t *testing.T) {
 		},
 		{
 			name: "CreateWorkflowExecution failure - shard ownership lost",
-			testFunc: func() error {
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
 				mockDB.EXPECT().
 					InsertWorkflowExecutionWithTasks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(&persistence.ShardOwnershipLostError{ShardID: store.shardID, Msg: "shard ownership lost"}).Times(1)
+					Return(&persistence.ShardOwnershipLostError{ShardID: shardID, Msg: "shard ownership lost"}).Times(1)
+				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(false).AnyTimes() // Assuming the error is not a "not found" error
+				mockDB.EXPECT().IsTimeoutError(gomock.Any()).Return(false).AnyTimes()
+				mockDB.EXPECT().IsThrottlingError(gomock.Any()).Return(false).AnyTimes()
+				mockDB.EXPECT().IsDBUnavailableError(gomock.Any()).Return(false).AnyTimes()
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
 				_, err := store.CreateWorkflowExecution(ctx, newCreateWorkflowExecutionRequest())
 				return err
 			},
@@ -90,10 +98,18 @@ func TestNosqlExecutionStore(t *testing.T) {
 		},
 		{
 			name: "CreateWorkflowExecution failure - current workflow condition failed",
-			testFunc: func() error {
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
 				mockDB.EXPECT().
 					InsertWorkflowExecutionWithTasks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&persistence.CurrentWorkflowConditionFailedError{Msg: "current workflow condition failed"}).Times(1)
+				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(false).AnyTimes() // Assuming the error is not a "not found" error
+				mockDB.EXPECT().IsTimeoutError(gomock.Any()).Return(false).AnyTimes()
+				mockDB.EXPECT().IsThrottlingError(gomock.Any()).Return(false).AnyTimes()
+				mockDB.EXPECT().IsDBUnavailableError(gomock.Any()).Return(false).AnyTimes()
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
 				_, err := store.CreateWorkflowExecution(ctx, newCreateWorkflowExecutionRequest())
 				return err
 			},
@@ -101,10 +117,18 @@ func TestNosqlExecutionStore(t *testing.T) {
 		},
 		{
 			name: "CreateWorkflowExecution failure - generic internal service error",
-			testFunc: func() error {
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
 				mockDB.EXPECT().
 					InsertWorkflowExecutionWithTasks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&types.InternalServiceError{Message: "generic internal service error"}).Times(1)
+				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(false).AnyTimes() // Assuming the error is not a "not found" error
+				mockDB.EXPECT().IsTimeoutError(gomock.Any()).Return(false).AnyTimes()
+				mockDB.EXPECT().IsThrottlingError(gomock.Any()).Return(false).AnyTimes()
+				mockDB.EXPECT().IsDBUnavailableError(gomock.Any()).Return(false).AnyTimes()
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
 				_, err := store.CreateWorkflowExecution(ctx, newCreateWorkflowExecutionRequest())
 				return err
 			},
@@ -112,12 +136,14 @@ func TestNosqlExecutionStore(t *testing.T) {
 		},
 		{
 			name: "GetWorkflowExecution success",
-			setupMock: func() {
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
 				mockDB.EXPECT().
-					SelectWorkflowExecution(ctx, store.shardID, gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectWorkflowExecution(ctx, shardID, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&nosqlplugin.WorkflowExecution{}, nil).Times(1)
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
 			},
-			testFunc: func() error {
+			testFunc: func(store *nosqlExecutionStore) error {
 				_, err := store.GetWorkflowExecution(ctx, newGetWorkflowExecutionRequest())
 				return err
 			},
@@ -125,10 +151,18 @@ func TestNosqlExecutionStore(t *testing.T) {
 		},
 		{
 			name: "GetWorkflowExecution failure - not found",
-			testFunc: func() error {
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
 				mockDB.EXPECT().
-					SelectWorkflowExecution(ctx, store.shardID, gomock.Any(), gomock.Any(), gomock.Any()).
+					SelectWorkflowExecution(ctx, shardID, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil, &types.EntityNotExistsError{}).Times(1)
+				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(false).AnyTimes() // Assuming the error is not a "not found" error
+				mockDB.EXPECT().IsTimeoutError(gomock.Any()).Return(false).AnyTimes()
+				mockDB.EXPECT().IsThrottlingError(gomock.Any()).Return(false).AnyTimes()
+				mockDB.EXPECT().IsDBUnavailableError(gomock.Any()).Return(false).AnyTimes()
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
 				_, err := store.GetWorkflowExecution(ctx, newGetWorkflowExecutionRequest())
 				return err
 			},
@@ -137,25 +171,19 @@ func TestNosqlExecutionStore(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if tc.setupMock != nil {
-				tc.setupMock()
-			}
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
-			err := tc.testFunc()
+			store := tc.setupMock(ctrl)
+			err := tc.testFunc(store)
 
 			if tc.expectedError != nil {
-				require.ErrorAs(t, err, &tc.expectedError)
+				var expectedErrType error
+				require.ErrorAs(t, err, &expectedErrType, "Expected error type does not match.")
 			} else {
 				require.NoError(t, err)
 			}
 		})
-	}
-}
-
-func newTestNosqlExecutionStore(db nosqlplugin.DB, logger log.Logger) *nosqlExecutionStore {
-	return &nosqlExecutionStore{
-		shardID:    1,
-		nosqlStore: nosqlStore{logger: logger, db: db},
 	}
 }
 
@@ -187,5 +215,11 @@ func getNewWorkflowSnapshot() persistence.InternalWorkflowSnapshot {
 			WorkflowID: constants.TestWorkflowID,
 			RunID:      constants.TestRunID,
 		},
+	}
+}
+func newTestNosqlExecutionStore(db nosqlplugin.DB, logger log.Logger) *nosqlExecutionStore {
+	return &nosqlExecutionStore{
+		shardID:    1,
+		nosqlStore: nosqlStore{logger: logger, db: db},
 	}
 }
