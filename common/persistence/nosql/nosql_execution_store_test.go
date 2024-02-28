@@ -156,7 +156,7 @@ func TestNosqlExecutionStore(t *testing.T) {
 				mockDB.EXPECT().
 					SelectWorkflowExecution(ctx, shardID, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil, &types.EntityNotExistsError{}).Times(1)
-				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(false).AnyTimes()
+				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(true).AnyTimes()
 				mockDB.EXPECT().IsTimeoutError(gomock.Any()).Return(false).AnyTimes()
 				mockDB.EXPECT().IsThrottlingError(gomock.Any()).Return(false).AnyTimes()
 				mockDB.EXPECT().IsDBUnavailableError(gomock.Any()).Return(false).AnyTimes()
