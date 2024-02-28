@@ -708,7 +708,7 @@ func expectSimilar[V ~float64](
 //     out in practice due to the number of history hosts involved.
 //   - an attempt to cache weight calculations per key until invalidated saved about 1/2 the cpu
 //     with a perfect cache.
-//   - seems not worth the complexity, but it'd be fairly easy to add if we change our minds
+//   - ^ the cache seems not worth the complexity, but it'd be fairly easy to add if we change our minds
 //
 // since there is only a coarse mutex in the implementation itself, the whole aggregator forces itself
 // to be processed serially.  if this turns out to be too costly, the easy fix is probably

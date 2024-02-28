@@ -91,22 +91,23 @@ the future.
 
 If too much contention does occur, there are 3 relatively simple mitigations:
  1. turn it completely off, go back to host-local limits
- 2. use N instances and shard keys across them
- 3. slow down the update frequency
+ 2. slow down the update frequency
+ 3. use N instances and shard keys across them
 
 1 is pretty obvious and has clear behavior, though it means degrading behavior
 for our imbalanced-load clusters.
 
-2 is a relatively simple mitigation: create N instances instead of 1, and shard
-the Limit keys to each instance.  Since this is mostly CPU bound and each one
-would be fully independent, making GOMAXPROCS instances is an obvious first choice,
-and this does not need to be dynamically reconfigured at runtime so there should
-be no need to build a "smart" re-balancing / re-sharding system of any kind.
+2 is essentially the only short-term and dynamically-apply-able option that retains
+any of the behavior we want.  This will impact how quickly the algorithm converges,
+so you may also want to adjust the new-data weight to be higher, though "how much"
+depends on what kind of behavior you want / can tolerate.
 
-Otherwise, 3 (changing the limiter-update-rate to be slower) is essentially the only
-other short-term and dynamically-apply-able option.  This will impact how quickly the
-algorithm converges, so you may also want to adjust the new-data weight to be higher,
-though "how much" depends on what kind of behavior you want.
+3 offers a linear contention improvement and should be basically trivial to build:
+create N instances instead of 1, and shard the Limit keys to each instance.
+Since this is mostly CPU bound and each one would be fully independent, making
+`GOMAXPROCS` instances is an obvious first choice, and this does not need to be
+dynamically reconfigured at runtime so there should be no need to build a "smart"
+re-balancing / re-sharding system of any kind.
 
 Tests contain a single-threaded benchmark and laptop-local results for estimating
 contention, and for judging if changes will help or hinder, but real-world use and
