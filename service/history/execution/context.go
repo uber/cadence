@@ -27,6 +27,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -45,6 +46,7 @@ import (
 
 const (
 	defaultRemoteCallTimeout = 30 * time.Second
+	checksumErrorRetryCount  = 3
 )
 
 type conflictError struct {
@@ -252,6 +254,10 @@ func (c *contextImpl) LoadExecutionStats(
 	return c.stats, nil
 }
 
+func isChecksumError(err error) bool {
+	return strings.Contains(err.Error(), "checksum mismatch error")
+}
+
 func (c *contextImpl) LoadWorkflowExecutionWithTaskVersion(
 	ctx context.Context,
 	incomingVersion int64,
@@ -263,22 +269,31 @@ func (c *contextImpl) LoadWorkflowExecutionWithTaskVersion(
 	}
 
 	if c.mutableState == nil {
-		response, err := c.getWorkflowExecutionWithRetry(ctx, &persistence.GetWorkflowExecutionRequest{
-			DomainID:   c.domainID,
-			Execution:  c.workflowExecution,
-			DomainName: domainEntry.GetInfo().Name,
-		})
-		if err != nil {
-			return nil, err
+		var response *persistence.GetWorkflowExecutionResponse
+		for i := 0; i < checksumErrorRetryCount; i++ {
+			response, err = c.getWorkflowExecutionWithRetry(ctx, &persistence.GetWorkflowExecutionRequest{
+				DomainID:   c.domainID,
+				Execution:  c.workflowExecution,
+				DomainName: domainEntry.GetInfo().Name,
+			})
+			if err != nil {
+				return nil, err
+			}
+
+			c.mutableState = NewMutableStateBuilder(
+				c.shard,
+				c.logger,
+				domainEntry,
+			)
+
+			err = c.mutableState.Load(response.State)
+			if err == nil {
+				break
+			} else if !isChecksumError(err) {
+				c.logger.Error("failed to load mutable state", tag.Error(err))
+				break
+			}
 		}
-
-		c.mutableState = NewMutableStateBuilder(
-			c.shard,
-			c.logger,
-			domainEntry,
-		)
-
-		c.mutableState.Load(response.State)
 
 		c.stats = response.State.ExecutionStats
 		c.updateCondition = response.State.ExecutionInfo.NextEventID

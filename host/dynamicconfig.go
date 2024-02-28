@@ -192,13 +192,17 @@ func (d *dynamicClient) RestoreValue(name dynamicconfig.Key, filters map[dynamic
 var _ dynamicconfig.Client = (*dynamicClient)(nil)
 
 // newIntegrationConfigClient - returns a dynamic config client for integration testing
-func newIntegrationConfigClient(client dynamicconfig.Client) *dynamicClient {
+func newIntegrationConfigClient(client dynamicconfig.Client, overrides map[dynamicconfig.Key]interface{}) *dynamicClient {
 	integrationClient := &dynamicClient{
 		overrides: make(map[dynamicconfig.Key]interface{}),
 		client:    client,
 	}
 
 	for key, value := range staticOverrides {
+		integrationClient.OverrideValue(key, value)
+	}
+
+	for key, value := range overrides {
 		integrationClient.OverrideValue(key, value)
 	}
 	return integrationClient

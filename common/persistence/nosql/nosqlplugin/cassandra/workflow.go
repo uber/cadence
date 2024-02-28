@@ -62,27 +62,11 @@ func (db *cdb) InsertWorkflowExecutionWithTasks(
 		return err
 	}
 
-	err = createTransferTasks(batch, shardID, domainID, workflowID, transferTasks)
-	if err != nil {
-		return err
-	}
-	err = createReplicationTasks(batch, shardID, domainID, workflowID, replicationTasks)
-	if err != nil {
-		return err
-	}
-	err = createCrossClusterTasks(batch, shardID, domainID, workflowID, crossClusterTasks)
-	if err != nil {
-		return err
-	}
-	err = createTimerTasks(batch, shardID, domainID, workflowID, timerTasks)
-	if err != nil {
-		return err
-	}
-
-	err = assertShardRangeID(batch, shardID, shardCondition.RangeID)
-	if err != nil {
-		return err
-	}
+	createTransferTasks(batch, shardID, domainID, workflowID, transferTasks)
+	createReplicationTasks(batch, shardID, domainID, workflowID, replicationTasks)
+	createCrossClusterTasks(batch, shardID, domainID, workflowID, crossClusterTasks)
+	createTimerTasks(batch, shardID, domainID, workflowID, timerTasks)
+	assertShardRangeID(batch, shardID, shardCondition.RangeID)
 
 	return executeCreateWorkflowBatchTransaction(db.session, batch, currentWorkflowRequest, execution, shardCondition)
 }
@@ -179,27 +163,11 @@ func (db *cdb) UpdateWorkflowExecutionWithTasks(
 		}
 	}
 
-	err = createTransferTasks(batch, shardID, domainID, workflowID, transferTasks)
-	if err != nil {
-		return err
-	}
-	err = createReplicationTasks(batch, shardID, domainID, workflowID, replicationTasks)
-	if err != nil {
-		return err
-	}
-	err = createCrossClusterTasks(batch, shardID, domainID, workflowID, crossClusterTasks)
-	if err != nil {
-		return err
-	}
-	err = createTimerTasks(batch, shardID, domainID, workflowID, timerTasks)
-	if err != nil {
-		return err
-	}
-
-	err = assertShardRangeID(batch, shardID, shardCondition.RangeID)
-	if err != nil {
-		return err
-	}
+	createTransferTasks(batch, shardID, domainID, workflowID, transferTasks)
+	createReplicationTasks(batch, shardID, domainID, workflowID, replicationTasks)
+	createCrossClusterTasks(batch, shardID, domainID, workflowID, crossClusterTasks)
+	createTimerTasks(batch, shardID, domainID, workflowID, timerTasks)
+	assertShardRangeID(batch, shardID, shardCondition.RangeID)
 
 	return executeUpdateWorkflowBatchTransaction(db.session, batch, currentWorkflowRequest, previousNextEventIDCondition, shardCondition)
 }
@@ -751,16 +719,10 @@ func (db *cdb) InsertReplicationTask(ctx context.Context, tasks []*nosqlplugin.R
 	shardID := shardCondition.ShardID
 	batch := db.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
 	for _, task := range tasks {
-		err := createReplicationTasks(batch, shardID, task.DomainID, task.WorkflowID, []*nosqlplugin.ReplicationTask{task})
-		if err != nil {
-			return err
-		}
+		createReplicationTasks(batch, shardID, task.DomainID, task.WorkflowID, []*nosqlplugin.ReplicationTask{task})
 	}
 
-	err := assertShardRangeID(batch, shardID, shardCondition.RangeID)
-	if err != nil {
-		return err
-	}
+	assertShardRangeID(batch, shardID, shardCondition.RangeID)
 
 	previous := make(map[string]interface{})
 	applied, iter, err := db.session.MapExecuteBatchCAS(batch, previous)

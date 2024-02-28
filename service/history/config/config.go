@@ -306,6 +306,7 @@ type Config struct {
 	MutableStateChecksumGenProbability    dynamicconfig.IntPropertyFnWithDomainFilter
 	MutableStateChecksumVerifyProbability dynamicconfig.IntPropertyFnWithDomainFilter
 	MutableStateChecksumInvalidateBefore  dynamicconfig.FloatPropertyFn
+	EnableRetryForChecksumFailure         dynamicconfig.BoolPropertyFnWithDomainFilter
 
 	// History check for corruptions
 	EnableHistoryCorruptionCheck dynamicconfig.BoolPropertyFnWithDomainFilter
@@ -566,6 +567,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, s
 		MutableStateChecksumGenProbability:    dc.GetIntPropertyFilteredByDomain(dynamicconfig.MutableStateChecksumGenProbability),
 		MutableStateChecksumVerifyProbability: dc.GetIntPropertyFilteredByDomain(dynamicconfig.MutableStateChecksumVerifyProbability),
 		MutableStateChecksumInvalidateBefore:  dc.GetFloat64Property(dynamicconfig.MutableStateChecksumInvalidateBefore),
+		EnableRetryForChecksumFailure:         dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableRetryForChecksumFailure),
 
 		EnableHistoryCorruptionCheck: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableHistoryCorruptionCheck),
 

@@ -1663,3 +1663,223 @@ func TestRangeCompleteTimerTask(t *testing.T) {
 		})
 	}
 }
+
+func TestPutReplicationTaskToDLQ(t *testing.T) {
+	shardID := 100
+	testCases := []struct {
+		name      string
+		req       *persistence.InternalPutReplicationTaskToDLQRequest
+		mockSetup func(*sqlplugin.MockDB, *serialization.MockParser)
+		wantErr   bool
+	}{
+		{
+			name: "Success case",
+			req: &persistence.InternalPutReplicationTaskToDLQRequest{
+				SourceClusterName: "source",
+				TaskInfo: &persistence.InternalReplicationTaskInfo{
+					DomainID:          "abdcea69-61d5-44c3-9d55-afe23505a542",
+					WorkflowID:        "test",
+					RunID:             "abdcea69-61d5-44c3-9d55-afe23505a54a",
+					TaskType:          1,
+					TaskID:            101,
+					Version:           202,
+					FirstEventID:      10,
+					NextEventID:       101,
+					ScheduledID:       19,
+					BranchToken:       []byte(`bt`),
+					NewRunBranchToken: []byte(`nbt`),
+					CreationTime:      time.Unix(1, 1),
+				},
+			},
+			mockSetup: func(mockDB *sqlplugin.MockDB, mockParser *serialization.MockParser) {
+				mockParser.EXPECT().ReplicationTaskInfoToBlob(&serialization.ReplicationTaskInfo{
+					DomainID:                serialization.MustParseUUID("abdcea69-61d5-44c3-9d55-afe23505a542"),
+					WorkflowID:              "test",
+					RunID:                   serialization.MustParseUUID("abdcea69-61d5-44c3-9d55-afe23505a54a"),
+					TaskType:                1,
+					Version:                 202,
+					FirstEventID:            10,
+					NextEventID:             101,
+					ScheduledID:             19,
+					EventStoreVersion:       persistence.EventStoreVersion,
+					NewRunEventStoreVersion: persistence.EventStoreVersion,
+					BranchToken:             []byte(`bt`),
+					NewRunBranchToken:       []byte(`nbt`),
+					CreationTimestamp:       time.Unix(1, 1),
+				}).Return(persistence.DataBlob{Data: []byte(`replication`), Encoding: "replication"}, nil)
+				mockDB.EXPECT().InsertIntoReplicationTasksDLQ(gomock.Any(), &sqlplugin.ReplicationTaskDLQRow{
+					SourceClusterName: "source",
+					ShardID:           shardID,
+					TaskID:            101,
+					Data:              []byte(`replication`),
+					DataEncoding:      "replication",
+				}).Return(nil, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "Error case - failed to encode data",
+			req: &persistence.InternalPutReplicationTaskToDLQRequest{
+				SourceClusterName: "source",
+				TaskInfo: &persistence.InternalReplicationTaskInfo{
+					DomainID:          "abdcea69-61d5-44c3-9d55-afe23505a542",
+					WorkflowID:        "test",
+					RunID:             "abdcea69-61d5-44c3-9d55-afe23505a54a",
+					TaskType:          1,
+					TaskID:            101,
+					Version:           202,
+					FirstEventID:      10,
+					NextEventID:       101,
+					ScheduledID:       19,
+					BranchToken:       []byte(`bt`),
+					NewRunBranchToken: []byte(`nbt`),
+					CreationTime:      time.Unix(1, 1),
+				},
+			},
+			mockSetup: func(mockDB *sqlplugin.MockDB, mockParser *serialization.MockParser) {
+				mockParser.EXPECT().ReplicationTaskInfoToBlob(gomock.Any()).Return(persistence.DataBlob{}, errors.New("some error"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error case - failed to insert into database",
+			req: &persistence.InternalPutReplicationTaskToDLQRequest{
+				SourceClusterName: "source",
+				TaskInfo: &persistence.InternalReplicationTaskInfo{
+					DomainID:          "abdcea69-61d5-44c3-9d55-afe23505a542",
+					WorkflowID:        "test",
+					RunID:             "abdcea69-61d5-44c3-9d55-afe23505a54a",
+					TaskType:          1,
+					TaskID:            101,
+					Version:           202,
+					FirstEventID:      10,
+					NextEventID:       101,
+					ScheduledID:       19,
+					BranchToken:       []byte(`bt`),
+					NewRunBranchToken: []byte(`nbt`),
+					CreationTime:      time.Unix(1, 1),
+				},
+			},
+			mockSetup: func(mockDB *sqlplugin.MockDB, mockParser *serialization.MockParser) {
+				mockParser.EXPECT().ReplicationTaskInfoToBlob(gomock.Any()).Return(persistence.DataBlob{Data: []byte(`replication`), Encoding: "replication"}, nil)
+				err := errors.New("some error")
+				mockDB.EXPECT().InsertIntoReplicationTasksDLQ(gomock.Any(), gomock.Any()).Return(nil, err)
+				mockDB.EXPECT().IsDupEntryError(err).Return(false)
+				mockDB.EXPECT().IsNotFoundError(err).Return(true)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockDB := sqlplugin.NewMockDB(ctrl)
+			mockParser := serialization.NewMockParser(ctrl)
+			store, err := NewSQLExecutionStore(mockDB, nil, int(shardID), mockParser, nil)
+			require.NoError(t, err, "failed to create execution store")
+
+			tc.mockSetup(mockDB, mockParser)
+
+			err = store.PutReplicationTaskToDLQ(context.Background(), tc.req)
+			if tc.wantErr {
+				assert.Error(t, err, "Expected an error for test case")
+			} else {
+				assert.NoError(t, err, "Did not expect an error for test case")
+			}
+		})
+	}
+}
+
+func TestDeleteWorkflowExecution(t *testing.T) {
+	shardID := int64(100)
+	testCases := []struct {
+		name      string
+		req       *persistence.DeleteWorkflowExecutionRequest
+		mockSetup func(*sqlplugin.MockDB)
+		wantErr   bool
+	}{
+		{
+			name: "Success case",
+			req: &persistence.DeleteWorkflowExecutionRequest{
+				DomainID:   "abdcea69-61d5-44c3-9d55-afe23505a542",
+				WorkflowID: "wid",
+				RunID:      "bbdcea69-61d5-44c3-9d55-afe23505a542",
+			},
+			mockSetup: func(mockDB *sqlplugin.MockDB) {
+				mockDB.EXPECT().DeleteFromExecutions(gomock.Any(), &sqlplugin.ExecutionsFilter{
+					ShardID:    int(shardID),
+					DomainID:   serialization.MustParseUUID("abdcea69-61d5-44c3-9d55-afe23505a542"),
+					WorkflowID: "wid",
+					RunID:      serialization.MustParseUUID("bbdcea69-61d5-44c3-9d55-afe23505a542"),
+				}).Return(nil, nil)
+				mockDB.EXPECT().DeleteFromActivityInfoMaps(gomock.Any(), &sqlplugin.ActivityInfoMapsFilter{
+					ShardID:    shardID,
+					DomainID:   serialization.MustParseUUID("abdcea69-61d5-44c3-9d55-afe23505a542"),
+					WorkflowID: "wid",
+					RunID:      serialization.MustParseUUID("bbdcea69-61d5-44c3-9d55-afe23505a542"),
+				}).Return(nil, nil)
+				mockDB.EXPECT().DeleteFromTimerInfoMaps(gomock.Any(), &sqlplugin.TimerInfoMapsFilter{
+					ShardID:    shardID,
+					DomainID:   serialization.MustParseUUID("abdcea69-61d5-44c3-9d55-afe23505a542"),
+					WorkflowID: "wid",
+					RunID:      serialization.MustParseUUID("bbdcea69-61d5-44c3-9d55-afe23505a542"),
+				}).Return(nil, nil)
+				mockDB.EXPECT().DeleteFromChildExecutionInfoMaps(gomock.Any(), &sqlplugin.ChildExecutionInfoMapsFilter{
+					ShardID:    shardID,
+					DomainID:   serialization.MustParseUUID("abdcea69-61d5-44c3-9d55-afe23505a542"),
+					WorkflowID: "wid",
+					RunID:      serialization.MustParseUUID("bbdcea69-61d5-44c3-9d55-afe23505a542"),
+				}).Return(nil, nil)
+				mockDB.EXPECT().DeleteFromRequestCancelInfoMaps(gomock.Any(), &sqlplugin.RequestCancelInfoMapsFilter{
+					ShardID:    shardID,
+					DomainID:   serialization.MustParseUUID("abdcea69-61d5-44c3-9d55-afe23505a542"),
+					WorkflowID: "wid",
+					RunID:      serialization.MustParseUUID("bbdcea69-61d5-44c3-9d55-afe23505a542"),
+				}).Return(nil, nil)
+				mockDB.EXPECT().DeleteFromSignalInfoMaps(gomock.Any(), &sqlplugin.SignalInfoMapsFilter{
+					ShardID:    shardID,
+					DomainID:   serialization.MustParseUUID("abdcea69-61d5-44c3-9d55-afe23505a542"),
+					WorkflowID: "wid",
+					RunID:      serialization.MustParseUUID("bbdcea69-61d5-44c3-9d55-afe23505a542"),
+				}).Return(nil, nil)
+				mockDB.EXPECT().DeleteFromBufferedEvents(gomock.Any(), &sqlplugin.BufferedEventsFilter{
+					ShardID:    int(shardID),
+					DomainID:   serialization.MustParseUUID("abdcea69-61d5-44c3-9d55-afe23505a542"),
+					WorkflowID: "wid",
+					RunID:      serialization.MustParseUUID("bbdcea69-61d5-44c3-9d55-afe23505a542"),
+				}).Return(nil, nil)
+				mockDB.EXPECT().DeleteFromSignalsRequestedSets(gomock.Any(), &sqlplugin.SignalsRequestedSetsFilter{
+					ShardID:    shardID,
+					DomainID:   serialization.MustParseUUID("abdcea69-61d5-44c3-9d55-afe23505a542"),
+					WorkflowID: "wid",
+					RunID:      serialization.MustParseUUID("bbdcea69-61d5-44c3-9d55-afe23505a542"),
+				}).Return(nil, nil)
+
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockDB := sqlplugin.NewMockDB(ctrl)
+			store, err := NewSQLExecutionStore(mockDB, nil, int(shardID), nil, nil)
+			require.NoError(t, err, "failed to create execution store")
+
+			tc.mockSetup(mockDB)
+
+			err = store.DeleteWorkflowExecution(context.Background(), tc.req)
+			if tc.wantErr {
+				assert.Error(t, err, "Expected an error for test case")
+			} else {
+				assert.NoError(t, err, "Did not expect an error for test case")
+			}
+		})
+	}
+}

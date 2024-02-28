@@ -25,7 +25,7 @@ services:
     ports:
       - '9100:9100'
   cadence:
-    image: ubercadence/server:master-auto-setup-with-kafka
+    image: ubercadence/server:master-auto-setup
     ports:
      - "8000:8000"
      - "8001:8001"
@@ -38,7 +38,7 @@ services:
      - "7833:7833"
     environment:
       - "ASYNC_WF_KAFKA_QUEUE_ENABLED=true"
-      - "ASYNC_WF_KAFKA_QUEUE_TOPIC=async-wf-topic1" # this should match the topic name in the config yml
+      - "ASYNC_WF_KAFKA_QUEUE_TOPIC=async-wf-topic1"
       - "KAFKA_SEEDS=kafka"
       - "KAFKA_PORT=9092"
       - "ZOOKEEPER_SEEDS=zookeeper"
@@ -88,3 +88,6 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # create a topic with 10 partitions and 1 replica
+      # topic name must match ASYNC_WF_KAFKA_QUEUE_TOPIC specified in cadence container above
+      KAFKA_CREATE_TOPICS: "async-wf-topic1:10:1"
