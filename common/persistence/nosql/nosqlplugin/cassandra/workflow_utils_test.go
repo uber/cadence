@@ -48,13 +48,14 @@ type fakeSession struct {
 	mapExecuteBatchCASApplied bool
 	mapExecuteBatchCASPrev    map[string]any
 	mapExecuteBatchCASErr     error
+	query                     gocql.Query
 
 	// outputs
 	batches []*fakeBatch
 }
 
 func (s *fakeSession) Query(string, ...interface{}) gocql.Query {
-	return nil
+	return s.query
 }
 
 func (s *fakeSession) NewBatch(gocql.BatchType) gocql.Batch {
