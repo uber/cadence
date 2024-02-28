@@ -27,13 +27,21 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/quotas"
 	commonResource "github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/handler"
 	"github.com/uber/cadence/service/history/resource"
+	"github.com/uber/cadence/service/history/workflowcache"
 	"github.com/uber/cadence/service/history/wrappers/grpc"
+	"github.com/uber/cadence/service/history/wrappers/ratelimited"
 	"github.com/uber/cadence/service/history/wrappers/thrift"
+)
+
+const (
+	workflowIDCacheTTL      = 1 * time.Second
+	workflowIDCacheMaxCount = 10_000
 )
 
 // Service represents the cadence-history service
@@ -93,7 +101,20 @@ func (s *Service) Start() {
 	logger.Info("elastic search config", tag.ESConfig(s.params.ESConfig))
 	logger.Info("history starting")
 
-	s.handler = handler.NewHandler(s.Resource, s.config)
+	wfIDCache := workflowcache.New(workflowcache.Params{
+		TTL:                            workflowIDCacheTTL,
+		ExternalLimiterFactory:         quotas.NewSimpleDynamicRateLimiterFactory(s.config.WorkflowIDExternalRPS),
+		InternalLimiterFactory:         quotas.NewSimpleDynamicRateLimiterFactory(s.config.WorkflowIDInternalRPS),
+		WorkflowIDCacheExternalEnabled: s.config.WorkflowIDCacheExternalEnabled,
+		WorkflowIDCacheInternalEnabled: s.config.WorkflowIDCacheInternalEnabled,
+		MaxCount:                       workflowIDCacheMaxCount,
+		DomainCache:                    s.Resource.GetDomainCache(),
+		Logger:                         s.Resource.GetLogger(),
+		MetricsClient:                  s.Resource.GetMetricsClient(),
+	})
+
+	rawHandler := handler.NewHandler(s.Resource, s.config, wfIDCache)
+	s.handler = ratelimited.NewHistoryHandler(rawHandler, wfIDCache)
 
 	thriftHandler := thrift.NewThriftHandler(s.handler)
 	thriftHandler.Register(s.GetDispatcher())

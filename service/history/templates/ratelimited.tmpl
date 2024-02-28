@@ -1,0 +1,90 @@
+import (
+    "context"
+
+    "github.com/uber/cadence/common/cache"
+    "github.com/uber/cadence/common/quotas"
+    "github.com/uber/cadence/common/types"
+    "github.com/uber/cadence/service/history"
+)
+
+{{ $ratelimitTypeMap := dict "StartWorkflowExecution" (
+    dict
+        "ratelimit" "ratelimitTypeUserPerID"
+        "workflowID" "StartRequest.GetWorkflowID()"
+    )
+}}
+{{ $ratelimitTypeMap := set $ratelimitTypeMap "SignalWithStartWorkflowExecution" (
+    dict
+        "ratelimit" "ratelimitTypeUserPerID"
+        "workflowID" "SignalWithStartRequest.GetWorkflowID()"
+    )
+}}
+{{ $ratelimitTypeMap := set $ratelimitTypeMap "SignalWorkflowExecution" (
+    dict
+        "ratelimit" "ratelimitTypeUserPerID"
+        "workflowID" "SignalRequest.GetWorkflowExecution().GetWorkflowID()"
+    )
+}}
+{{ $ratelimitTypeMap := set $ratelimitTypeMap "DescribeWorkflowExecution" (
+    dict
+        "ratelimit" "ratelimitTypeUserPerID"
+        "workflowID" "Request.GetExecution().GetWorkflowID()"
+    )
+}}
+
+{{ $interfaceName := .Interface.Name }}
+{{ $handlerName := (index .Vars "handler") }}
+{{ $decorator := (printf "%s%s" (down $handlerName) $interfaceName) }}
+{{ $Decorator := (printf "%s%s" $handlerName $interfaceName) }}
+
+// {{$decorator}} implements {{.Interface.Type}} interface instrumented with rate limiter.
+type {{$decorator}} struct {
+    wrapped         {{.Interface.Type}}
+    workflowIDCache workflowcache.WFCache
+}
+
+// New{{$Decorator}} creates a new instance of {{$interfaceName}} with ratelimiter.
+func New{{$Decorator}}(
+    wrapped {{.Interface.Type}},
+    workflowIDCache workflowcache.WFCache,
+) {{.Interface.Type}} {
+    return &{{$decorator}}{
+        wrapped: wrapped,
+        workflowIDCache: workflowIDCache,
+    }
+}
+
+{{range $method := .Interface.Methods}}
+func (h *{{$decorator}}) {{$method.Declaration}} {
+    {{- if hasKey $ratelimitTypeMap $method.Name }}
+        {{- if eq
+            ( get ( get $ratelimitTypeMap $method.Name ) "ratelimit" )
+            "ratelimitTypeUserPerID"
+        }}
+
+            {{ $workflowID := ( get ( get $ratelimitTypeMap $method.Name ) "workflowID" ) }}
+            {{ $req := (index $method.Params 1).Name }}
+
+            if {{ $req }} == nil {
+                err = validate.ErrRequestNotSet
+                return
+            }
+            {{- $domainID := printf "%s.GetDomainUUID()" $req }}
+            {{- $workflowID := printf "%s.%s" $req ( $workflowID ) }}
+
+            if {{$domainID}} == "" {
+                err = validate.ErrDomainNotSet
+                return
+            }
+
+            if {{$workflowID}} == "" {
+                err = validate.ErrWorkflowIDNotSet
+                return
+            }
+
+            h.workflowIDCache.AllowExternal({{$domainID}}, {{$workflowID}})
+        {{- end}}
+    {{- end}}
+    {{$method.Pass "h.wrapped."}}
+}
+{{end}}

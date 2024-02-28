@@ -82,9 +82,8 @@ func (s *handlerSuite) SetupTest() {
 	s.mockShardController.EXPECT().GetEngineForShard(gomock.Any()).Return(s.mockEngine, nil).AnyTimes()
 	s.mockWFCache = workflowcache.NewMockWFCache(s.controller)
 
-	s.handler = NewHandler(s.mockResource, config.NewForTest()).(*handlerImpl)
+	s.handler = NewHandler(s.mockResource, config.NewForTest(), s.mockWFCache).(*handlerImpl)
 	s.handler.controller = s.mockShardController
-	s.handler.workflowIDCache = s.mockWFCache
 	s.handler.startWG.Done()
 }
 
@@ -318,22 +317,10 @@ func (s *handlerSuite) TestStartWorkflowExecution() {
 		RunID: testWorkflowRunID,
 	}
 
-	// We should _always_ see the startworkflowexecution call no matter if allow external is true or false
-	// as we are in shadow mode
-	tests := map[string]struct{ allowExternal bool }{
-		"allow external":    {allowExternal: true},
-		"disallow external": {allowExternal: false},
-	}
+	s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).AnyTimes()
+	s.mockEngine.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(expectedResponse, nil).Times(1)
 
-	for name, test := range tests {
-		s.Run(name, func() {
-			s.mockWFCache.EXPECT().AllowExternal(gomock.Any(), gomock.Any()).Return(test.allowExternal).Times(1)
-			s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).AnyTimes()
-			s.mockEngine.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(expectedResponse, nil).Times(1)
-
-			response, err := s.handler.StartWorkflowExecution(context.Background(), request)
-			s.Equal(expectedResponse, response)
-			s.Nil(err)
-		})
-	}
+	response, err := s.handler.StartWorkflowExecution(context.Background(), request)
+	s.Equal(expectedResponse, response)
+	s.Nil(err)
 }
