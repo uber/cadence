@@ -65,7 +65,7 @@ func TestNosqlExecutionStore(t *testing.T) {
 				mockDB.EXPECT().
 					InsertWorkflowExecutionWithTasks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&persistence.WorkflowExecutionAlreadyStartedError{}).Times(1)
-				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(false).AnyTimes() // Assuming the error is not a "not found" error
+				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(false).AnyTimes()
 				mockDB.EXPECT().IsTimeoutError(gomock.Any()).Return(false).AnyTimes()
 				mockDB.EXPECT().IsThrottlingError(gomock.Any()).Return(false).AnyTimes()
 				mockDB.EXPECT().IsDBUnavailableError(gomock.Any()).Return(false).AnyTimes()
@@ -84,7 +84,7 @@ func TestNosqlExecutionStore(t *testing.T) {
 				mockDB.EXPECT().
 					InsertWorkflowExecutionWithTasks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&persistence.ShardOwnershipLostError{ShardID: shardID, Msg: "shard ownership lost"}).Times(1)
-				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(false).AnyTimes() // Assuming the error is not a "not found" error
+				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(false).AnyTimes()
 				mockDB.EXPECT().IsTimeoutError(gomock.Any()).Return(false).AnyTimes()
 				mockDB.EXPECT().IsThrottlingError(gomock.Any()).Return(false).AnyTimes()
 				mockDB.EXPECT().IsDBUnavailableError(gomock.Any()).Return(false).AnyTimes()
@@ -103,7 +103,7 @@ func TestNosqlExecutionStore(t *testing.T) {
 				mockDB.EXPECT().
 					InsertWorkflowExecutionWithTasks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&persistence.CurrentWorkflowConditionFailedError{Msg: "current workflow condition failed"}).Times(1)
-				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(false).AnyTimes() // Assuming the error is not a "not found" error
+				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(false).AnyTimes()
 				mockDB.EXPECT().IsTimeoutError(gomock.Any()).Return(false).AnyTimes()
 				mockDB.EXPECT().IsThrottlingError(gomock.Any()).Return(false).AnyTimes()
 				mockDB.EXPECT().IsDBUnavailableError(gomock.Any()).Return(false).AnyTimes()
@@ -122,7 +122,7 @@ func TestNosqlExecutionStore(t *testing.T) {
 				mockDB.EXPECT().
 					InsertWorkflowExecutionWithTasks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&types.InternalServiceError{Message: "generic internal service error"}).Times(1)
-				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(false).AnyTimes() // Assuming the error is not a "not found" error
+				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(false).AnyTimes()
 				mockDB.EXPECT().IsTimeoutError(gomock.Any()).Return(false).AnyTimes()
 				mockDB.EXPECT().IsThrottlingError(gomock.Any()).Return(false).AnyTimes()
 				mockDB.EXPECT().IsDBUnavailableError(gomock.Any()).Return(false).AnyTimes()
@@ -156,7 +156,7 @@ func TestNosqlExecutionStore(t *testing.T) {
 				mockDB.EXPECT().
 					SelectWorkflowExecution(ctx, shardID, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil, &types.EntityNotExistsError{}).Times(1)
-				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(false).AnyTimes() // Assuming the error is not a "not found" error
+				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(false).AnyTimes()
 				mockDB.EXPECT().IsTimeoutError(gomock.Any()).Return(false).AnyTimes()
 				mockDB.EXPECT().IsThrottlingError(gomock.Any()).Return(false).AnyTimes()
 				mockDB.EXPECT().IsDBUnavailableError(gomock.Any()).Return(false).AnyTimes()
