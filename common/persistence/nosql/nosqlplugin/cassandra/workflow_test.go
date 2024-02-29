@@ -27,6 +27,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/google/go-cmp/cmp"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
@@ -214,6 +215,131 @@ func TestInsertWorkflowExecutionWithTasks(t *testing.T) {
 
 			if (err != nil) != tc.wantErr {
 				t.Errorf("InsertWorkflowExecutionWithTasks() error = %v, wantErr %v", err, tc.wantErr)
+			}
+		})
+	}
+}
+
+func TestSelectCurrentWorkflow(t *testing.T) {
+	tests := []struct {
+		name             string
+		shardID          int
+		domainID         string
+		workflowID       string
+		currentRunID     string
+		lastWriteVersion int64
+		createReqID      string
+		wantErr          bool
+		wantRow          *nosqlplugin.CurrentWorkflowRow
+	}{
+		{
+			name:         "success",
+			shardID:      1,
+			domainID:     "test-domain-id",
+			workflowID:   "test-workflow-id",
+			currentRunID: "test-run-id",
+			wantErr:      false,
+			wantRow: &nosqlplugin.CurrentWorkflowRow{
+				ShardID:          1,
+				DomainID:         "test-domain-id",
+				WorkflowID:       "test-workflow-id",
+				RunID:            "test-run-id",
+				LastWriteVersion: -24,
+			},
+		},
+		{
+			name:         "mapscan failure",
+			shardID:      1,
+			domainID:     "test-domain-id",
+			workflowID:   "test-workflow-id",
+			currentRunID: "test-run-id",
+			wantErr:      true,
+		},
+		{
+			name:             "lastwriteversion populated",
+			shardID:          1,
+			domainID:         "test-domain-id",
+			workflowID:       "test-workflow-id",
+			currentRunID:     "test-run-id",
+			lastWriteVersion: 123,
+			wantErr:          false,
+			wantRow: &nosqlplugin.CurrentWorkflowRow{
+				ShardID:          1,
+				DomainID:         "test-domain-id",
+				WorkflowID:       "test-workflow-id",
+				RunID:            "test-run-id",
+				LastWriteVersion: 123,
+			},
+		},
+		{
+			name:         "create request id populated",
+			shardID:      1,
+			domainID:     "test-domain-id",
+			workflowID:   "test-workflow-id",
+			currentRunID: "test-run-id",
+			createReqID:  "test-create-request-id",
+			wantErr:      false,
+			wantRow: &nosqlplugin.CurrentWorkflowRow{
+				ShardID:          1,
+				DomainID:         "test-domain-id",
+				WorkflowID:       "test-workflow-id",
+				RunID:            "test-run-id",
+				LastWriteVersion: -24,
+				CreateRequestID:  "test-create-request-id",
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+
+			query := gocql.NewMockQuery(ctrl)
+			query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+			query.EXPECT().MapScan(gomock.Any()).DoAndReturn(func(m map[string]interface{}) error {
+				mockCurrentRunID := gocql.NewMockUUID(ctrl)
+				m["current_run_id"] = mockCurrentRunID
+				if !tc.wantErr {
+					mockCurrentRunID.EXPECT().String().Return(tc.currentRunID).Times(1)
+				}
+
+				execMap := map[string]interface{}{}
+				if tc.createReqID != "" {
+					mockReqID := gocql.NewMockUUID(ctrl)
+					mockReqID.EXPECT().String().Return(tc.createReqID).Times(1)
+					execMap["create_request_id"] = mockReqID
+				}
+				m["execution"] = execMap
+
+				if tc.lastWriteVersion != 0 {
+					m["workflow_last_write_version"] = tc.lastWriteVersion
+				}
+
+				if tc.wantErr {
+					return errors.New("some random error")
+				}
+
+				return nil
+			}).Times(1)
+
+			session := &fakeSession{
+				query: query,
+			}
+			logger := testlogger.New(t)
+			db := newCassandraDBFromSession(nil, session, logger, nil, dbWithClient(gocql.NewMockClient(ctrl)))
+
+			row, err := db.SelectCurrentWorkflow(context.Background(), tc.shardID, tc.domainID, tc.workflowID)
+
+			if (err != nil) != tc.wantErr {
+				t.Errorf("SelectCurrentWorkflow() error: %v, wantErr?: %v", err, tc.wantErr)
+			}
+
+			if err != nil {
+				return
+			}
+
+			if diff := cmp.Diff(tc.wantRow, row); diff != "" {
+				t.Fatalf("Row mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
