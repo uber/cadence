@@ -1193,7 +1193,7 @@ func (c *contextImpl) getWorkflowExecutionWithRetry(
 	var resp *persistence.GetWorkflowExecutionResponse
 	op := func() error {
 		var err error
-		resp, err = c.executionManager.GetWorkflowExecution(ctx, request)
+		resp, err = c.shard.GetWorkflowExecution(ctx, request)
 
 		return err
 	}
