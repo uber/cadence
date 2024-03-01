@@ -22,7 +22,7 @@ services:
     image: mysql:8.0
     environment:
       MYSQL_DATABASE: db
-      MYSQL_ROOT_PASSWORD: uber
+      MYSQL_ROOT_PASSWORD: cadence
     volumes:
       - ./mysql-init:/docker-entrypoint-initdb.d
     expose:
@@ -163,6 +163,7 @@ services:
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
       - "PERSISTENCE_TYPE=sql"
+      - "PERSISTENCE_PLUGIN=mysql"
       - "TEST_TAG=esintegration"
     depends_on:
       - mysql
@@ -270,6 +271,7 @@ services:
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
       - "PERSISTENCE_TYPE=sql"
+      - "PERSISTENCE_PLUGIN=mysql"
       - "TEST_TAG=esintegration"
     depends_on:
       - mysql
