@@ -5,6 +5,7 @@ import (
     "github.com/uber/cadence/common/quotas"
     "github.com/uber/cadence/common/types"
     "github.com/uber/cadence/service/history"
+    "github.com/uber/cadence/common/log"
 )
 
 {{ $ratelimitTypeMap := dict "StartWorkflowExecution" (
@@ -42,6 +43,8 @@ type {{$decorator}} struct {
     wrapped                        {{.Interface.Type}}
     workflowIDCache                workflowcache.WFCache
     ratelimitExternalPerWorkflowID dynamicconfig.BoolPropertyFnWithDomainFilter
+    domainCache                    cache.DomainCache
+    logger                         log.Logger
 }
 
 // New{{$Decorator}} creates a new instance of {{$interfaceName}} with ratelimiter.
@@ -49,11 +52,15 @@ func New{{$Decorator}}(
     wrapped {{.Interface.Type}},
     workflowIDCache workflowcache.WFCache,
     ratelimitExternalPerWorkflowID dynamicconfig.BoolPropertyFnWithDomainFilter,
+    domainCache cache.DomainCache,
+    logger log.Logger,
 ) {{.Interface.Type}} {
     return &{{$decorator}}{
         wrapped: wrapped,
         workflowIDCache: workflowIDCache,
         ratelimitExternalPerWorkflowID: ratelimitExternalPerWorkflowID,
+        domainCache: domainCache,
+        logger: logger,
     }
 }
 
@@ -85,12 +92,8 @@ func (h *{{$decorator}}) {{$method.Declaration}} {
                 return
             }
 
-            allow := h.workflowIDCache.AllowExternal({{$domainID}}, {{$workflowID}})
-            enabled := h.ratelimitExternalPerWorkflowID({{$domainID}})
-            if !allow && enabled {
-                err = types.ServiceBusyError{
-                    Message: "Too many requests for the workflow ID",
-                }
+            if !h.allowWfID({{$domainID}}, {{$workflowID}}) {
+                err = types.ServiceBusyError{"Too many requests for the workflow ID"}
                 return
             }
 

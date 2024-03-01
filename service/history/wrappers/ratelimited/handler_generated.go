@@ -10,7 +10,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/frontend/validate"
 	"github.com/uber/cadence/service/history/handler"
@@ -22,6 +24,8 @@ type historyHandler struct {
 	wrapped                        handler.Handler
 	workflowIDCache                workflowcache.WFCache
 	ratelimitExternalPerWorkflowID dynamicconfig.BoolPropertyFnWithDomainFilter
+	domainCache                    cache.DomainCache
+	logger                         log.Logger
 }
 
 // NewHistoryHandler creates a new instance of Handler with ratelimiter.
@@ -29,11 +33,15 @@ func NewHistoryHandler(
 	wrapped handler.Handler,
 	workflowIDCache workflowcache.WFCache,
 	ratelimitExternalPerWorkflowID dynamicconfig.BoolPropertyFnWithDomainFilter,
+	domainCache cache.DomainCache,
+	logger log.Logger,
 ) handler.Handler {
 	return &historyHandler{
 		wrapped:                        wrapped,
 		workflowIDCache:                workflowIDCache,
 		ratelimitExternalPerWorkflowID: ratelimitExternalPerWorkflowID,
+		domainCache:                    domainCache,
+		logger:                         logger,
 	}
 }
 
@@ -74,12 +82,8 @@ func (h *historyHandler) DescribeWorkflowExecution(ctx context.Context, hp1 *typ
 		return
 	}
 
-	allow := h.workflowIDCache.AllowExternal(hp1.GetDomainUUID(), hp1.Request.GetExecution().GetWorkflowID())
-	enabled := h.ratelimitExternalPerWorkflowID(hp1.GetDomainUUID())
-	if !allow && enabled {
-		err = types.ServiceBusyError{
-			Message: "Too many requests for the workflow ID",
-		}
+	if !h.allowWfID(hp1.GetDomainUUID(), hp1.Request.GetExecution().GetWorkflowID()) {
+		err = types.ServiceBusyError{"Too many requests for the workflow ID"}
 		return
 	}
 	return h.wrapped.DescribeWorkflowExecution(ctx, hp1)
@@ -234,12 +238,8 @@ func (h *historyHandler) SignalWithStartWorkflowExecution(ctx context.Context, h
 		return
 	}
 
-	allow := h.workflowIDCache.AllowExternal(hp1.GetDomainUUID(), hp1.SignalWithStartRequest.GetWorkflowID())
-	enabled := h.ratelimitExternalPerWorkflowID(hp1.GetDomainUUID())
-	if !allow && enabled {
-		err = types.ServiceBusyError{
-			Message: "Too many requests for the workflow ID",
-		}
+	if !h.allowWfID(hp1.GetDomainUUID(), hp1.SignalWithStartRequest.GetWorkflowID()) {
+		err = types.ServiceBusyError{"Too many requests for the workflow ID"}
 		return
 	}
 	return h.wrapped.SignalWithStartWorkflowExecution(ctx, hp1)
@@ -262,12 +262,8 @@ func (h *historyHandler) SignalWorkflowExecution(ctx context.Context, hp1 *types
 		return
 	}
 
-	allow := h.workflowIDCache.AllowExternal(hp1.GetDomainUUID(), hp1.SignalRequest.GetWorkflowExecution().GetWorkflowID())
-	enabled := h.ratelimitExternalPerWorkflowID(hp1.GetDomainUUID())
-	if !allow && enabled {
-		err = types.ServiceBusyError{
-			Message: "Too many requests for the workflow ID",
-		}
+	if !h.allowWfID(hp1.GetDomainUUID(), hp1.SignalRequest.GetWorkflowExecution().GetWorkflowID()) {
+		err = types.ServiceBusyError{"Too many requests for the workflow ID"}
 		return
 	}
 	return h.wrapped.SignalWorkflowExecution(ctx, hp1)
@@ -295,12 +291,8 @@ func (h *historyHandler) StartWorkflowExecution(ctx context.Context, hp1 *types.
 		return
 	}
 
-	allow := h.workflowIDCache.AllowExternal(hp1.GetDomainUUID(), hp1.StartRequest.GetWorkflowID())
-	enabled := h.ratelimitExternalPerWorkflowID(hp1.GetDomainUUID())
-	if !allow && enabled {
-		err = types.ServiceBusyError{
-			Message: "Too many requests for the workflow ID",
-		}
+	if !h.allowWfID(hp1.GetDomainUUID(), hp1.StartRequest.GetWorkflowID()) {
+		err = types.ServiceBusyError{"Too many requests for the workflow ID"}
 		return
 	}
 	return h.wrapped.StartWorkflowExecution(ctx, hp1)
