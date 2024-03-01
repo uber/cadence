@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -228,4 +229,82 @@ func (s *contextTestSuite) TestGetAndUpdateProcessingQueueStates() {
 	// check if cluster ack level for transfer and timer is backfilled for backward compatibility
 	s.Equal(updatedTransferQueueStates[0].GetAckLevel(), s.context.GetTransferClusterAckLevel(clusterName))
 	s.Equal(time.Unix(0, updatedTimerQueueStates[0].GetAckLevel()), s.context.GetTimerClusterAckLevel(clusterName))
+}
+
+func TestGetWorkflowExecution(t *testing.T) {
+	testCases := []struct {
+		name           string
+		isClosed       bool
+		request        *persistence.GetWorkflowExecutionRequest
+		mockSetup      func(*mocks.ExecutionManager)
+		expectedResult *persistence.GetWorkflowExecutionResponse
+		expectedError  error
+	}{
+		{
+			name: "Success",
+			request: &persistence.GetWorkflowExecutionRequest{
+				DomainID:  "testDomain",
+				Execution: types.WorkflowExecution{WorkflowID: "testWorkflowID", RunID: "testRunID"},
+			},
+			mockSetup: func(mgr *mocks.ExecutionManager) {
+				mgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{
+					State: &persistence.WorkflowMutableState{
+						ExecutionInfo: &persistence.WorkflowExecutionInfo{
+							DomainID:   "testDomain",
+							WorkflowID: "testWorkflowID",
+							RunID:      "testRunID",
+						},
+					},
+				}, nil)
+			},
+			expectedResult: &persistence.GetWorkflowExecutionResponse{
+				State: &persistence.WorkflowMutableState{
+					ExecutionInfo: &persistence.WorkflowExecutionInfo{
+						DomainID:   "testDomain",
+						WorkflowID: "testWorkflowID",
+						RunID:      "testRunID",
+					},
+				},
+			},
+			expectedError: nil,
+		},
+		{
+			name: "Error",
+			request: &persistence.GetWorkflowExecutionRequest{
+				DomainID:  "testDomain",
+				Execution: types.WorkflowExecution{WorkflowID: "testWorkflowID", RunID: "testRunID"},
+			},
+			mockSetup: func(mgr *mocks.ExecutionManager) {
+				mgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(nil, errors.New("some random error"))
+			},
+			expectedResult: nil,
+			expectedError:  errors.New("some random error"),
+		},
+		{
+			name:     "Shard closed",
+			isClosed: true,
+			request: &persistence.GetWorkflowExecutionRequest{
+				DomainID:  "testDomain",
+				Execution: types.WorkflowExecution{WorkflowID: "testWorkflowID", RunID: "testRunID"},
+			},
+			mockSetup:      func(mgr *mocks.ExecutionManager) {},
+			expectedResult: nil,
+			expectedError:  ErrShardClosed,
+		},
+	}
+
+	for _, tc := range testCases {
+		mockExecutionMgr := &mocks.ExecutionManager{}
+		shardContext := &contextImpl{
+			executionManager: mockExecutionMgr,
+		}
+		if tc.isClosed {
+			shardContext.closed = 1
+		}
+		tc.mockSetup(mockExecutionMgr)
+
+		result, err := shardContext.GetWorkflowExecution(context.Background(), tc.request)
+		assert.Equal(t, tc.expectedResult, result)
+		assert.Equal(t, tc.expectedError, err)
+	}
 }
