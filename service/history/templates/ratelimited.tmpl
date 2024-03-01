@@ -39,18 +39,21 @@ import (
 
 // {{$decorator}} implements {{.Interface.Type}} interface instrumented with rate limiter.
 type {{$decorator}} struct {
-    wrapped         {{.Interface.Type}}
-    workflowIDCache workflowcache.WFCache
+    wrapped                        {{.Interface.Type}}
+    workflowIDCache                workflowcache.WFCache
+    ratelimitExternalPerWorkflowID dynamicconfig.BoolPropertyFnWithDomainFilter
 }
 
 // New{{$Decorator}} creates a new instance of {{$interfaceName}} with ratelimiter.
 func New{{$Decorator}}(
     wrapped {{.Interface.Type}},
     workflowIDCache workflowcache.WFCache,
+    ratelimitExternalPerWorkflowID dynamicconfig.BoolPropertyFnWithDomainFilter,
 ) {{.Interface.Type}} {
     return &{{$decorator}}{
         wrapped: wrapped,
         workflowIDCache: workflowIDCache,
+        ratelimitExternalPerWorkflowID: ratelimitExternalPerWorkflowID,
     }
 }
 
@@ -82,7 +85,15 @@ func (h *{{$decorator}}) {{$method.Declaration}} {
                 return
             }
 
-            h.workflowIDCache.AllowExternal({{$domainID}}, {{$workflowID}})
+            allow := h.workflowIDCache.AllowExternal({{$domainID}}, {{$workflowID}})
+            enabled := h.ratelimitExternalPerWorkflowID({{$domainID}})
+            if !allow && enabled {
+                err = types.ServiceBusyError{
+                    Message: "Too many requests for the workflow ID",
+                }
+                return
+            }
+
         {{- end}}
     {{- end}}
     {{$method.Pass "h.wrapped."}}
