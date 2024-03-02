@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
+	"github.com/uber/cadence/client/wrappers/tchannel"
 	"github.com/uber/cadence/common/cluster"
 )
 
@@ -73,8 +74,8 @@ func NewClientBean(factory Factory, dispatcher *yarpc.Dispatcher, clusterMetadat
 
 		adminClient, err := factory.NewAdminClientWithTimeoutAndConfig(
 			clientConfig,
-			admin.DefaultTimeout,
-			admin.DefaultLargeTimeout,
+			tchannel.AdminDefaultTimeout,
+			tchannel.AdminDefaultLargeTimeout,
 		)
 		if err != nil {
 			return nil, err
