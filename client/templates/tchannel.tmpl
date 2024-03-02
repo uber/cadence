@@ -52,10 +52,20 @@ func New{{$Decorator}}(
 
 {{range $method := .Interface.Methods}}
 func (c * {{$decorator}}) {{$method.Declaration}} {
-    {{- if or (eq $method.Name "GetCrossClusterTasks") (eq $method.Name "GetReplicationMessages") }}
-    ctx, cancel := c.createContextWithLargeTimeout(ctx)
-    {{- else }}
-    ctx, cancel := c.createContext({{(index $method.Params 0).Name}})
+    {{- if eq $ClientName "Admin" -}}
+        {{- if or (eq $method.Name "GetCrossClusterTasks") (eq $method.Name "GetReplicationMessages") -}}
+            ctx, cancel := c.createContextWithLargeTimeout({{(index $method.Params 0).Name}})
+        {{- else -}}
+            ctx, cancel := c.createContext({{(index $method.Params 0).Name}})
+        {{- end -}}
+    {{- else if eq $ClientName "Frontend" -}}
+        {{- if or (eq $method.Name "ListArchivedWorkflowExecutions")
+                  (eq $method.Name "PollForActivityTask")
+                  (eq $method.Name "PollForDecisionTask") -}}
+            ctx, cancel := c.createLongPollContext({{(index $method.Params 0).Name}})
+        {{- else -}}
+            ctx, cancel := c.createContext({{(index $method.Params 0).Name}})
+        {{- end }}
     {{- end }}
     defer cancel()
     return c.client.{{$method.Name}}(

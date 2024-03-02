@@ -83,8 +83,8 @@ func NewClientBean(factory Factory, dispatcher *yarpc.Dispatcher, clusterMetadat
 
 		frontendClient, err := factory.NewFrontendClientWithTimeoutAndConfig(
 			clientConfig,
-			frontend.DefaultTimeout,
-			frontend.DefaultLongPollTimeout,
+			tchannel.FrontendDefaultTimeout,
+			tchannel.FrontendDefaultLongPollTimeout,
 		)
 		if err != nil {
 			return nil, err

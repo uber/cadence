@@ -209,7 +209,7 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndConfig(
 		client = thrift.NewFrontendClient(workflowserviceclient.New(config))
 	}
 
-	client = frontend.NewClient(timeout, longPollTimeout, client)
+	client = tchannel.NewFrontendClient(client, longPollTimeout, timeout)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.FrontendErrorInjectionRate)(); errorRate != 0 {
 		client = errorinjectors.NewFrontendClient(client, errorRate, cf.logger)
 	}

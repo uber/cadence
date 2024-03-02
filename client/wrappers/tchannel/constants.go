@@ -29,4 +29,8 @@ const (
 	AdminDefaultTimeout = 10 * time.Second
 	// AdminDefaultLargeTimeout is the admin service large default timeout used to make calls
 	AdminDefaultLargeTimeout = time.Minute
+	// FrontendDefaultTimeout is the frontend service default timeout used to make calls
+	FrontendDefaultTimeout = 10 * time.Second
+	// FrontendDefaultLongPollTimeout is the frontend service long poll default timeout used to make calls
+	FrontendDefaultLongPollTimeout = time.Minute * 3
 )
