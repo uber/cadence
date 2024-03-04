@@ -36,7 +36,6 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-// TODO: Rename all SQL Managers to Stores
 type sqlStore struct {
 	db     sqlplugin.DB
 	logger log.Logger
@@ -134,7 +133,7 @@ func convertCommonErrors(
 	}
 	if errChecker.IsNotFoundError(err) {
 		return &types.EntityNotExistsError{
-			Message: fmt.Sprintf("%v failed. %s Error: %v ", operation, message, err),
+			Message: fmt.Sprintf("%v failed. %s Error: %v", operation, message, err),
 		}
 	}
 
