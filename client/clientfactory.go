@@ -40,7 +40,6 @@ import (
 	"github.com/uber/cadence/client/wrappers/errorinjectors"
 	"github.com/uber/cadence/client/wrappers/grpc"
 	"github.com/uber/cadence/client/wrappers/metered"
-	"github.com/uber/cadence/client/wrappers/tchannel"
 	"github.com/uber/cadence/client/wrappers/thrift"
 	timeoutwrapper "github.com/uber/cadence/client/wrappers/timeout"
 	"github.com/uber/cadence/common"
@@ -182,7 +181,7 @@ func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndConfig(
 		client = thrift.NewAdminClient(adminserviceclient.New(config))
 	}
 
-	client = tchannel.NewAdminClient(client, largeTimeout, timeout)
+	client = timeoutwrapper.NewAdminClient(client, largeTimeout, timeout)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.AdminErrorInjectionRate)(); errorRate != 0 {
 		client = errorinjectors.NewAdminClient(client, errorRate, cf.logger)
 	}
@@ -209,7 +208,7 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndConfig(
 		client = thrift.NewFrontendClient(workflowserviceclient.New(config))
 	}
 
-	client = tchannel.NewFrontendClient(client, longPollTimeout, timeout)
+	client = timeoutwrapper.NewFrontendClient(client, longPollTimeout, timeout)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.FrontendErrorInjectionRate)(); errorRate != 0 {
 		client = errorinjectors.NewFrontendClient(client, errorRate, cf.logger)
 	}
