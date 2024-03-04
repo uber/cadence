@@ -31,13 +31,14 @@ import (
 
 var _ {{.Interface.Type}} = (*{{$decorator}})(nil)
 
+// {{$decorator}} implements the {{.Interface.Type}} interface with timeout
 type {{$decorator}} struct {
     {{ range $key, $value := $fieldMap -}}
            {{$key}} {{$value}}
     {{ end }}
 }
 
-// New{{$Decorator}} creates a new {{$clientName}} service TChannel client
+// New{{$Decorator}} creates a new {{$decorator}} instance
 func New{{$Decorator}}(
 	{{- range $key, $value := $fieldMap}}
                {{$key}} {{$value}},
