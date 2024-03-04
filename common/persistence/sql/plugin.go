@@ -22,6 +22,7 @@ package sql
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
@@ -56,6 +57,7 @@ func GetRegisteredPluginNames() []string {
 	for k := range supportedPlugins {
 		plugins = append(plugins, k)
 	}
+	sort.Strings(plugins)
 	return plugins
 }
 

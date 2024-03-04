@@ -1068,22 +1068,8 @@ func createOrUpdateCurrentExecution(
 	}
 
 	switch createMode {
-	case p.CreateWorkflowModeContinueAsNew:
-		if err := updateCurrentExecution(
-			ctx,
-			tx,
-			shardID,
-			domainID,
-			workflowID,
-			runID,
-			createRequestID,
-			state,
-			closeStatus,
-			row.StartVersion,
-			row.LastWriteVersion); err != nil {
-			return err
-		}
-	case p.CreateWorkflowModeWorkflowIDReuse:
+	case p.CreateWorkflowModeContinueAsNew,
+		p.CreateWorkflowModeWorkflowIDReuse:
 		if err := updateCurrentExecution(
 			ctx,
 			tx,
