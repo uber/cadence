@@ -87,7 +87,7 @@ func (h *historyHandler) DescribeWorkflowExecution(ctx context.Context, hp1 *typ
 	}
 
 	if !h.allowFunc(hp1.GetDomainUUID(), hp1.Request.GetExecution().GetWorkflowID()) {
-		err = types.ServiceBusyError{"Too many requests for the workflow ID"}
+		err = &types.ServiceBusyError{"Too many requests for the workflow ID"}
 		return
 	}
 	return h.wrapped.DescribeWorkflowExecution(ctx, hp1)
@@ -243,7 +243,7 @@ func (h *historyHandler) SignalWithStartWorkflowExecution(ctx context.Context, h
 	}
 
 	if !h.allowFunc(hp1.GetDomainUUID(), hp1.SignalWithStartRequest.GetWorkflowID()) {
-		err = types.ServiceBusyError{"Too many requests for the workflow ID"}
+		err = &types.ServiceBusyError{"Too many requests for the workflow ID"}
 		return
 	}
 	return h.wrapped.SignalWithStartWorkflowExecution(ctx, hp1)
@@ -267,7 +267,7 @@ func (h *historyHandler) SignalWorkflowExecution(ctx context.Context, hp1 *types
 	}
 
 	if !h.allowFunc(hp1.GetDomainUUID(), hp1.SignalRequest.GetWorkflowExecution().GetWorkflowID()) {
-		err = types.ServiceBusyError{"Too many requests for the workflow ID"}
+		err = &types.ServiceBusyError{"Too many requests for the workflow ID"}
 		return
 	}
 	return h.wrapped.SignalWorkflowExecution(ctx, hp1)
@@ -296,7 +296,7 @@ func (h *historyHandler) StartWorkflowExecution(ctx context.Context, hp1 *types.
 	}
 
 	if !h.allowFunc(hp1.GetDomainUUID(), hp1.StartRequest.GetWorkflowID()) {
-		err = types.ServiceBusyError{"Too many requests for the workflow ID"}
+		err = &types.ServiceBusyError{"Too many requests for the workflow ID"}
 		return
 	}
 	return h.wrapped.StartWorkflowExecution(ctx, hp1)
