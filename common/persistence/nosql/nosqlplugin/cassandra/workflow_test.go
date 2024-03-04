@@ -344,3 +344,364 @@ func TestSelectCurrentWorkflow(t *testing.T) {
 		})
 	}
 }
+
+func TestUpdateWorkflowExecutionWithTasks(t *testing.T) {
+	tests := []struct {
+		name                  string
+		request               *nosqlplugin.CurrentWorkflowWriteRequest
+		mutatedExecution      *nosqlplugin.WorkflowExecutionRequest
+		insertedExecution     *nosqlplugin.WorkflowExecutionRequest
+		resetExecution        *nosqlplugin.WorkflowExecutionRequest
+		transferTasks         []*nosqlplugin.TransferTask
+		crossClusterTasks     []*nosqlplugin.CrossClusterTask
+		replicationTasks      []*nosqlplugin.ReplicationTask
+		timerTasks            []*nosqlplugin.TimerTask
+		shardCondition        *nosqlplugin.ShardCondition
+		mapExecuteBatchCASErr error
+		wantErr               bool
+	}{
+		{
+			name: "both mutatedExecution and resetExecution not provided",
+			request: &nosqlplugin.CurrentWorkflowWriteRequest{
+				WriteMode: nosqlplugin.CurrentWorkflowWriteModeUpdate,
+			},
+			shardCondition: &nosqlplugin.ShardCondition{
+				ShardID: 1,
+			},
+			wantErr: true,
+		},
+		{
+			name: "mutatedExecution provided - success",
+			request: &nosqlplugin.CurrentWorkflowWriteRequest{
+				WriteMode: nosqlplugin.CurrentWorkflowWriteModeNoop,
+			},
+			shardCondition: &nosqlplugin.ShardCondition{
+				ShardID: 1,
+			},
+			mutatedExecution: &nosqlplugin.WorkflowExecutionRequest{
+				MapsWriteMode: nosqlplugin.WorkflowExecutionMapsWriteModeUpdate,
+				InternalWorkflowExecutionInfo: persistence.InternalWorkflowExecutionInfo{
+					DomainID:   "test-domain-id",
+					WorkflowID: "test-workflow-id",
+					CompletionEvent: &persistence.DataBlob{
+						Encoding: common.EncodingTypeThriftRW,
+						Data:     []byte("test-completion-event"),
+					},
+					AutoResetPoints: &persistence.DataBlob{
+						Encoding: common.EncodingTypeThriftRW,
+						Data:     []byte("test-auto-reset-points"),
+					},
+				},
+				VersionHistories: &persistence.DataBlob{
+					Encoding: common.EncodingTypeThriftRW,
+					Data:     []byte("test-version-histories"),
+				},
+				Checksums: &checksum.Checksum{
+					Version: 1,
+					Flavor:  checksum.FlavorIEEECRC32OverThriftBinary,
+					Value:   []byte("test-checksum"),
+				},
+				PreviousNextEventIDCondition: common.Int64Ptr(123),
+			},
+		},
+		{
+			name:    "mutatedExecution provided - update fails",
+			wantErr: true,
+			request: &nosqlplugin.CurrentWorkflowWriteRequest{
+				WriteMode: nosqlplugin.CurrentWorkflowWriteModeNoop,
+			},
+			shardCondition: &nosqlplugin.ShardCondition{
+				ShardID: 1,
+			},
+			mutatedExecution: &nosqlplugin.WorkflowExecutionRequest{
+				MapsWriteMode: nosqlplugin.WorkflowExecutionMapsWriteModeCreate, // this will cause failure
+				InternalWorkflowExecutionInfo: persistence.InternalWorkflowExecutionInfo{
+					DomainID:   "test-domain-id",
+					WorkflowID: "test-workflow-id",
+					CompletionEvent: &persistence.DataBlob{
+						Encoding: common.EncodingTypeThriftRW,
+						Data:     []byte("test-completion-event"),
+					},
+					AutoResetPoints: &persistence.DataBlob{
+						Encoding: common.EncodingTypeThriftRW,
+						Data:     []byte("test-auto-reset-points"),
+					},
+				},
+				VersionHistories: &persistence.DataBlob{
+					Encoding: common.EncodingTypeThriftRW,
+					Data:     []byte("test-version-histories"),
+				},
+				Checksums: &checksum.Checksum{
+					Version: 1,
+					Flavor:  checksum.FlavorIEEECRC32OverThriftBinary,
+					Value:   []byte("test-checksum"),
+				},
+				PreviousNextEventIDCondition: common.Int64Ptr(123),
+			},
+		},
+		{
+			name: "resetExecution provided - success",
+			request: &nosqlplugin.CurrentWorkflowWriteRequest{
+				WriteMode: nosqlplugin.CurrentWorkflowWriteModeNoop,
+			},
+			shardCondition: &nosqlplugin.ShardCondition{
+				ShardID: 1,
+			},
+			resetExecution: &nosqlplugin.WorkflowExecutionRequest{
+				EventBufferWriteMode: nosqlplugin.EventBufferWriteModeClear,
+				MapsWriteMode:        nosqlplugin.WorkflowExecutionMapsWriteModeReset,
+				InternalWorkflowExecutionInfo: persistence.InternalWorkflowExecutionInfo{
+					DomainID:   "test-domain-id",
+					WorkflowID: "test-workflow-id",
+					CompletionEvent: &persistence.DataBlob{
+						Encoding: common.EncodingTypeThriftRW,
+						Data:     []byte("test-completion-event"),
+					},
+					AutoResetPoints: &persistence.DataBlob{
+						Encoding: common.EncodingTypeThriftRW,
+						Data:     []byte("test-auto-reset-points"),
+					},
+				},
+				VersionHistories: &persistence.DataBlob{
+					Encoding: common.EncodingTypeThriftRW,
+					Data:     []byte("test-version-histories"),
+				},
+				Checksums: &checksum.Checksum{
+					Version: 1,
+					Flavor:  checksum.FlavorIEEECRC32OverThriftBinary,
+					Value:   []byte("test-checksum"),
+				},
+				PreviousNextEventIDCondition: common.Int64Ptr(123),
+			},
+		},
+		{
+			name:    "resetExecution provided - reset fails",
+			wantErr: true,
+			request: &nosqlplugin.CurrentWorkflowWriteRequest{
+				WriteMode: nosqlplugin.CurrentWorkflowWriteModeNoop,
+			},
+			shardCondition: &nosqlplugin.ShardCondition{
+				ShardID: 1,
+			},
+			resetExecution: &nosqlplugin.WorkflowExecutionRequest{
+				EventBufferWriteMode: nosqlplugin.EventBufferWriteModeNone, // this will cause failure
+				MapsWriteMode:        nosqlplugin.WorkflowExecutionMapsWriteModeReset,
+				InternalWorkflowExecutionInfo: persistence.InternalWorkflowExecutionInfo{
+					DomainID:   "test-domain-id",
+					WorkflowID: "test-workflow-id",
+					CompletionEvent: &persistence.DataBlob{
+						Encoding: common.EncodingTypeThriftRW,
+						Data:     []byte("test-completion-event"),
+					},
+					AutoResetPoints: &persistence.DataBlob{
+						Encoding: common.EncodingTypeThriftRW,
+						Data:     []byte("test-auto-reset-points"),
+					},
+				},
+				VersionHistories: &persistence.DataBlob{
+					Encoding: common.EncodingTypeThriftRW,
+					Data:     []byte("test-version-histories"),
+				},
+				Checksums: &checksum.Checksum{
+					Version: 1,
+					Flavor:  checksum.FlavorIEEECRC32OverThriftBinary,
+					Value:   []byte("test-checksum"),
+				},
+				PreviousNextEventIDCondition: common.Int64Ptr(123),
+			},
+		},
+		{
+			name: "resetExecution and insertedExecution provided - success",
+			request: &nosqlplugin.CurrentWorkflowWriteRequest{
+				WriteMode: nosqlplugin.CurrentWorkflowWriteModeNoop,
+			},
+			shardCondition: &nosqlplugin.ShardCondition{
+				ShardID: 1,
+			},
+			resetExecution: &nosqlplugin.WorkflowExecutionRequest{
+				EventBufferWriteMode: nosqlplugin.EventBufferWriteModeClear,
+				MapsWriteMode:        nosqlplugin.WorkflowExecutionMapsWriteModeReset,
+				InternalWorkflowExecutionInfo: persistence.InternalWorkflowExecutionInfo{
+					DomainID:   "test-domain-id",
+					WorkflowID: "test-workflow-id",
+					CompletionEvent: &persistence.DataBlob{
+						Encoding: common.EncodingTypeThriftRW,
+						Data:     []byte("test-completion-event"),
+					},
+					AutoResetPoints: &persistence.DataBlob{
+						Encoding: common.EncodingTypeThriftRW,
+						Data:     []byte("test-auto-reset-points"),
+					},
+				},
+				VersionHistories: &persistence.DataBlob{
+					Encoding: common.EncodingTypeThriftRW,
+					Data:     []byte("test-version-histories"),
+				},
+				Checksums: &checksum.Checksum{
+					Version: 1,
+					Flavor:  checksum.FlavorIEEECRC32OverThriftBinary,
+					Value:   []byte("test-checksum"),
+				},
+				PreviousNextEventIDCondition: common.Int64Ptr(123),
+			},
+			insertedExecution: &nosqlplugin.WorkflowExecutionRequest{
+				EventBufferWriteMode: nosqlplugin.EventBufferWriteModeNone,
+				MapsWriteMode:        nosqlplugin.WorkflowExecutionMapsWriteModeCreate,
+				InternalWorkflowExecutionInfo: persistence.InternalWorkflowExecutionInfo{
+					DomainID:   "test-domain-id",
+					WorkflowID: "test-workflow-id",
+					CompletionEvent: &persistence.DataBlob{
+						Encoding: common.EncodingTypeThriftRW,
+						Data:     []byte("test-completion-event"),
+					},
+					AutoResetPoints: &persistence.DataBlob{
+						Encoding: common.EncodingTypeThriftRW,
+						Data:     []byte("test-auto-reset-points"),
+					},
+				},
+				VersionHistories: &persistence.DataBlob{
+					Encoding: common.EncodingTypeThriftRW,
+					Data:     []byte("test-version-histories"),
+				},
+				Checksums: &checksum.Checksum{
+					Version: 1,
+					Flavor:  checksum.FlavorIEEECRC32OverThriftBinary,
+					Value:   []byte("test-checksum"),
+				},
+				PreviousNextEventIDCondition: common.Int64Ptr(123),
+			},
+		},
+		{
+			name:    "resetExecution and insertedExecution provided - insert fails",
+			wantErr: true,
+			request: &nosqlplugin.CurrentWorkflowWriteRequest{
+				WriteMode: nosqlplugin.CurrentWorkflowWriteModeNoop,
+			},
+			shardCondition: &nosqlplugin.ShardCondition{
+				ShardID: 1,
+			},
+			resetExecution: &nosqlplugin.WorkflowExecutionRequest{
+				EventBufferWriteMode: nosqlplugin.EventBufferWriteModeClear,
+				MapsWriteMode:        nosqlplugin.WorkflowExecutionMapsWriteModeReset,
+				InternalWorkflowExecutionInfo: persistence.InternalWorkflowExecutionInfo{
+					DomainID:   "test-domain-id",
+					WorkflowID: "test-workflow-id",
+					CompletionEvent: &persistence.DataBlob{
+						Encoding: common.EncodingTypeThriftRW,
+						Data:     []byte("test-completion-event"),
+					},
+					AutoResetPoints: &persistence.DataBlob{
+						Encoding: common.EncodingTypeThriftRW,
+						Data:     []byte("test-auto-reset-points"),
+					},
+				},
+				VersionHistories: &persistence.DataBlob{
+					Encoding: common.EncodingTypeThriftRW,
+					Data:     []byte("test-version-histories"),
+				},
+				Checksums: &checksum.Checksum{
+					Version: 1,
+					Flavor:  checksum.FlavorIEEECRC32OverThriftBinary,
+					Value:   []byte("test-checksum"),
+				},
+				PreviousNextEventIDCondition: common.Int64Ptr(123),
+			},
+			insertedExecution: &nosqlplugin.WorkflowExecutionRequest{
+				EventBufferWriteMode: nosqlplugin.EventBufferWriteModeClear, // this will cause failure
+				MapsWriteMode:        nosqlplugin.WorkflowExecutionMapsWriteModeCreate,
+				InternalWorkflowExecutionInfo: persistence.InternalWorkflowExecutionInfo{
+					DomainID:   "test-domain-id",
+					WorkflowID: "test-workflow-id",
+					CompletionEvent: &persistence.DataBlob{
+						Encoding: common.EncodingTypeThriftRW,
+						Data:     []byte("test-completion-event"),
+					},
+					AutoResetPoints: &persistence.DataBlob{
+						Encoding: common.EncodingTypeThriftRW,
+						Data:     []byte("test-auto-reset-points"),
+					},
+				},
+				VersionHistories: &persistence.DataBlob{
+					Encoding: common.EncodingTypeThriftRW,
+					Data:     []byte("test-version-histories"),
+				},
+				Checksums: &checksum.Checksum{
+					Version: 1,
+					Flavor:  checksum.FlavorIEEECRC32OverThriftBinary,
+					Value:   []byte("test-checksum"),
+				},
+				PreviousNextEventIDCondition: common.Int64Ptr(123),
+			},
+		},
+		{
+			name:    "createOrUpdateCurrentWorkflow step fails",
+			wantErr: true,
+			request: &nosqlplugin.CurrentWorkflowWriteRequest{
+				WriteMode: nosqlplugin.CurrentWorkflowWriteModeUpdate,
+				Condition: nil, // this will cause failure because Condition must be non-nil for update mode
+			},
+			shardCondition: &nosqlplugin.ShardCondition{
+				ShardID: 1,
+			},
+			resetExecution: &nosqlplugin.WorkflowExecutionRequest{
+				EventBufferWriteMode: nosqlplugin.EventBufferWriteModeClear,
+				MapsWriteMode:        nosqlplugin.WorkflowExecutionMapsWriteModeReset,
+				InternalWorkflowExecutionInfo: persistence.InternalWorkflowExecutionInfo{
+					DomainID:   "test-domain-id",
+					WorkflowID: "test-workflow-id",
+					CompletionEvent: &persistence.DataBlob{
+						Encoding: common.EncodingTypeThriftRW,
+						Data:     []byte("test-completion-event"),
+					},
+					AutoResetPoints: &persistence.DataBlob{
+						Encoding: common.EncodingTypeThriftRW,
+						Data:     []byte("test-auto-reset-points"),
+					},
+				},
+				VersionHistories: &persistence.DataBlob{
+					Encoding: common.EncodingTypeThriftRW,
+					Data:     []byte("test-version-histories"),
+				},
+				Checksums: &checksum.Checksum{
+					Version: 1,
+					Flavor:  checksum.FlavorIEEECRC32OverThriftBinary,
+					Value:   []byte("test-checksum"),
+				},
+				PreviousNextEventIDCondition: common.Int64Ptr(123),
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			session := &fakeSession{
+				iter:                      &fakeIter{},
+				mapExecuteBatchCASApplied: true,
+			}
+			client := gocql.NewMockClient(ctrl)
+			cfg := &config.NoSQL{}
+			logger := testlogger.New(t)
+			dc := &persistence.DynamicConfiguration{}
+
+			db := newCassandraDBFromSession(cfg, session, logger, dc, dbWithClient(client))
+
+			err := db.UpdateWorkflowExecutionWithTasks(
+				context.Background(),
+				tc.request,
+				tc.mutatedExecution,
+				tc.insertedExecution,
+				tc.resetExecution,
+				tc.transferTasks,
+				tc.crossClusterTasks,
+				tc.replicationTasks,
+				tc.timerTasks,
+				tc.shardCondition,
+			)
+
+			if (err != nil) != tc.wantErr {
+				t.Errorf("UpdateWorkflowExecutionWithTasks() error: %v, wantErr %v", err, tc.wantErr)
+			}
+		})
+	}
+}
