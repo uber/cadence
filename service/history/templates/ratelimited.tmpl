@@ -45,6 +45,7 @@ type {{$decorator}} struct {
     ratelimitExternalPerWorkflowID dynamicconfig.BoolPropertyFnWithDomainFilter
     domainCache                    cache.DomainCache
     logger                         log.Logger
+    allowFunc                      func (domainID string, workflowID string) bool
 }
 
 // New{{$Decorator}} creates a new instance of {{$interfaceName}} with ratelimiter.
@@ -55,13 +56,16 @@ func New{{$Decorator}}(
     domainCache cache.DomainCache,
     logger log.Logger,
 ) {{.Interface.Type}} {
-    return &{{$decorator}}{
+    wrapper := &{{$decorator}}{
         wrapped: wrapped,
         workflowIDCache: workflowIDCache,
         ratelimitExternalPerWorkflowID: ratelimitExternalPerWorkflowID,
         domainCache: domainCache,
         logger: logger,
     }
+    wrapper.allowFunc = wrapper.allowWfID
+
+    return wrapper
 }
 
 {{range $method := .Interface.Methods}}
@@ -92,7 +96,7 @@ func (h *{{$decorator}}) {{$method.Declaration}} {
                 return
             }
 
-            if !h.allowWfID({{$domainID}}, {{$workflowID}}) {
+            if !h.allowFunc({{$domainID}}, {{$workflowID}}) {
                 err = types.ServiceBusyError{"Too many requests for the workflow ID"}
                 return
             }

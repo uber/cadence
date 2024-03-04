@@ -29,12 +29,10 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/handler"
-	"github.com/uber/cadence/service/history/workflowcache"
 )
 
 const (
@@ -46,16 +44,14 @@ const (
 func TestRatelimitedEndpoints_Table(t *testing.T) {
 	controller := gomock.NewController(t)
 
-	workflowIDCache := workflowcache.NewMockWFCache(controller)
 	handlerMock := handler.NewMockHandler(controller)
-	domainCacheMock := cache.NewMockDomainCache(controller)
 	var rateLimitingEnabled bool
 
 	wrapper := NewHistoryHandler(
 		handlerMock,
-		workflowIDCache,
+		nil,
 		func(domainName string) bool { return rateLimitingEnabled },
-		domainCacheMock,
+		nil,
 		log.NewNoop(),
 	)
 
@@ -128,58 +124,20 @@ func TestRatelimitedEndpoints_Table(t *testing.T) {
 		},
 	}
 
-	// List of cases, each case is a combination of the limitingEnabled flag and the cacheAllowsCall flag
-	tests := []struct {
-		name              string
-		limitingEnabled   bool
-		cacheAllowsCall   bool
-		callIsSuccessFull bool
-	}{
-		{
-			name:              "limitingEnabled: true, cacheAllowsCall: true",
-			limitingEnabled:   true,
-			cacheAllowsCall:   true,
-			callIsSuccessFull: true,
-		},
-		{
-			name:              "limitingEnabled: true, cacheAllowsCall: false",
-			limitingEnabled:   true,
-			cacheAllowsCall:   false,
-			callIsSuccessFull: false,
-		},
-		{
-			name:              "limitingEnabled: false, cacheAllowsCall: true",
-			limitingEnabled:   false,
-			cacheAllowsCall:   true,
-			callIsSuccessFull: true,
-		},
-		{
-			name:              "limitingEnabled: false, cacheAllowsCall: false",
-			limitingEnabled:   false,
-			cacheAllowsCall:   false,
-			callIsSuccessFull: true,
-		},
-	}
-
 	for _, endpoint := range limitedCalls {
-		for _, tt := range tests {
-			t.Run(fmt.Sprintf("%s, %s", endpoint.name, tt.name), func(t *testing.T) {
-				rateLimitingEnabled = tt.limitingEnabled
+		t.Run(fmt.Sprintf("%s, %s", endpoint.name, "not limited"), func(t *testing.T) {
+			wrapper.(*historyHandler).allowFunc = func(string, string) bool { return true }
+			endpoint.expectCallToEndpoint()
+			_, err := endpoint.callWrapper()
+			assert.NoError(t, err)
+		})
 
-				domainCacheMock.EXPECT().GetDomainName(testDomainID).Return(testDomainName, nil).Times(1)
-				workflowIDCache.EXPECT().AllowExternal(testDomainID, testWorkflowID).Return(tt.cacheAllowsCall).Times(1)
-
-				if tt.callIsSuccessFull {
-					endpoint.expectCallToEndpoint()
-					_, err := endpoint.callWrapper()
-					assert.NoError(t, err)
-				} else {
-					_, err := endpoint.callWrapper()
-					var sbErr types.ServiceBusyError
-					assert.ErrorAs(t, err, &sbErr)
-					assert.ErrorContains(t, err, "Too many requests for the workflow ID")
-				}
-			})
-		}
+		t.Run(fmt.Sprintf("%s, %s", endpoint.name, "limited"), func(t *testing.T) {
+			wrapper.(*historyHandler).allowFunc = func(string, string) bool { return false }
+			_, err := endpoint.callWrapper()
+			var sbErr types.ServiceBusyError
+			assert.ErrorAs(t, err, &sbErr)
+			assert.ErrorContains(t, err, "Too many requests for the workflow ID")
+		})
 	}
 }
