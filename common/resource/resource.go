@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
+	"github.com/uber/cadence/common/asyncworkflow/queue"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
@@ -46,7 +47,6 @@ import (
 	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
-	"github.com/uber/cadence/common/taskvalidator"
 )
 
 type (
@@ -114,7 +114,7 @@ type (
 		GetIsolationGroupState() isolationgroup.State
 		GetPartitioner() partition.Partitioner
 		GetIsolationGroupStore() configstore.Client
-		//GetTaskValidator returns the taskValidator
-		GetTaskValidator() taskvalidator.Checker
+
+		GetAsyncWorkflowQueueProvider() queue.Provider
 	}
 )

@@ -25,7 +25,9 @@ package pinot
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/xwb1989/sqlparser"
 
@@ -38,6 +40,13 @@ import (
 // VisibilityQueryValidator for sql query validation
 type VisibilityQueryValidator struct {
 	validSearchAttributes map[string]interface{}
+}
+
+var timeSystemKeys = map[string]bool{
+	"StartTime":     true,
+	"CloseTime":     true,
+	"ExecutionTime": true,
+	"UpdateTime":    true,
 }
 
 // NewPinotQueryValidator create VisibilityQueryValidator
@@ -120,6 +129,22 @@ func (qv *VisibilityQueryValidator) validateRangeExpr(expr sqlparser.Expr) (stri
 	}
 
 	if definition.IsSystemIndexedKey(colNameStr) {
+		if _, ok = timeSystemKeys[colNameStr]; ok {
+			if lowerBound, ok := rangeCond.From.(*sqlparser.SQLVal); ok {
+				trimmed, err := trimTimeFieldValueFromNanoToMilliSeconds(lowerBound)
+				if err != nil {
+					return "", fmt.Errorf("trim time field %s got error: %w", colNameStr, err)
+				}
+				rangeCond.From = trimmed
+			}
+			if upperBound, ok := rangeCond.To.(*sqlparser.SQLVal); ok {
+				trimmed, err := trimTimeFieldValueFromNanoToMilliSeconds(upperBound)
+				if err != nil {
+					return "", fmt.Errorf("trim time field %s got error: %w", colNameStr, err)
+				}
+				rangeCond.To = trimmed
+			}
+		}
 		expr.Format(buf)
 		return buf.String(), nil
 	}
@@ -212,11 +237,23 @@ func (qv *VisibilityQueryValidator) processSystemKey(expr sqlparser.Expr) (strin
 
 	colName, ok := comparisonExpr.Left.(*sqlparser.ColName)
 	if !ok {
-		return "", errors.New("invalid comparison expression, left")
+		return "", fmt.Errorf("left comparison is invalid: %v", comparisonExpr.Left)
 	}
 	colNameStr := colName.Name.String()
 
-	if comparisonExpr.Operator != sqlparser.EqualStr {
+	if comparisonExpr.Operator != sqlparser.EqualStr && comparisonExpr.Operator != sqlparser.NotEqualStr {
+		if _, ok := timeSystemKeys[colNameStr]; ok {
+			sqlVal, ok := comparisonExpr.Right.(*sqlparser.SQLVal)
+			if !ok {
+				return "", fmt.Errorf("right comparison is invalid: %v", comparisonExpr.Right)
+			}
+			trimmed, err := trimTimeFieldValueFromNanoToMilliSeconds(sqlVal)
+			if err != nil {
+				return "", fmt.Errorf("trim time field %s got error: %w", colNameStr, err)
+			}
+			comparisonExpr.Right = trimmed
+		}
+
 		expr.Format(buf)
 		return buf.String(), nil
 	}
@@ -228,13 +265,13 @@ func (qv *VisibilityQueryValidator) processSystemKey(expr sqlparser.Expr) (strin
 	if !ok { // this means, the value is a string, and not surrounded by single qoute, which means, val = missing
 		colVal, ok := comparisonExpr.Right.(*sqlparser.ColName)
 		if !ok {
-			return "", fmt.Errorf("error: Failed to convert val")
+			return "", fmt.Errorf("right comparison is invalid: %v", comparisonExpr.Right)
 		}
 		colValStr := colVal.Name.String()
 
 		// double check if val is not missing
 		if colValStr != "missing" {
-			return "", fmt.Errorf("error: failed to convert val")
+			return "", fmt.Errorf("right comparison is invalid string value: %s", colValStr)
 		}
 
 		var newColVal string
@@ -243,10 +280,31 @@ func (qv *VisibilityQueryValidator) processSystemKey(expr sqlparser.Expr) (strin
 		} else {
 			newColVal = "-1" // -1 is the default value for all Closed workflows related fields
 		}
-		comparisonExpr.Right = &sqlparser.ColName{
-			Metadata:  colName.Metadata,
-			Name:      sqlparser.NewColIdent(newColVal),
-			Qualifier: colName.Qualifier,
+		comparisonExpr.Right = &sqlparser.SQLVal{
+			Type: sqlparser.IntVal, // or sqlparser.StrVal if you need to assign a string
+			Val:  []byte(newColVal),
+		}
+	} else {
+		if _, ok := timeSystemKeys[colNameStr]; ok {
+			sqlVal, ok := comparisonExpr.Right.(*sqlparser.SQLVal)
+			if !ok {
+				return "", fmt.Errorf("right comparison is invalid/missing. key %s, right expr %v", colNameStr, comparisonExpr.Right)
+			}
+			trimmed, err := trimTimeFieldValueFromNanoToMilliSeconds(sqlVal)
+			if err != nil {
+				return "", fmt.Errorf("trim time field %s got error: %w", colNameStr, err)
+			}
+			comparisonExpr.Right = trimmed
+		} else if colNameStr == "CloseStatus" {
+			sqlVal, ok := comparisonExpr.Right.(*sqlparser.SQLVal)
+			if !ok {
+				return "", fmt.Errorf("right comparison is invalid: %v", comparisonExpr.Right)
+			}
+			closeStatus, err := parseCloseStatus(sqlVal)
+			if err != nil {
+				return "", fmt.Errorf("parse CloseStatus field got error: %w", err)
+			}
+			comparisonExpr.Right = closeStatus
 		}
 	}
 
@@ -325,4 +383,68 @@ func processCustomString(comparisonExpr *sqlparser.ComparisonExpr, colNameStr st
 	}
 	return fmt.Sprintf("(JSON_MATCH(Attr, '\"$.%s\" is not null') "+
 		"AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.%s', 'string'), '%s*'))", colNameStr, colNameStr, colValStr)
+}
+
+func trimTimeFieldValueFromNanoToMilliSeconds(original *sqlparser.SQLVal) (*sqlparser.SQLVal, error) {
+	// Convert the SQLVal to a string
+	valStr := string(original.Val)
+	newVal, err := parseTime(valStr)
+	if err != nil {
+		return original, fmt.Errorf("error: failed to parse int from SQLVal %s", valStr)
+	}
+
+	// Convert the new value back to SQLVal
+	return &sqlparser.SQLVal{
+		Type: sqlparser.IntVal,
+		Val:  []byte(strconv.FormatInt(newVal, 10)),
+	}, nil
+}
+
+func parseTime(timeStr string) (int64, error) {
+	if len(timeStr) == 0 {
+		return 0, errors.New("invalid time string")
+	}
+
+	// try to parse
+	parsedTime, err := time.Parse(time.RFC3339, timeStr)
+	if err == nil {
+		return parsedTime.UnixMilli(), nil
+	}
+
+	// treat as raw time
+	valInt, err := strconv.ParseInt(timeStr, 10, 64)
+	if err == nil {
+		var newVal int64
+		if valInt < 0 { //exclude open workflow which time field will be -1
+			newVal = valInt
+		} else if len(timeStr) > 13 { // Assuming nanoseconds if more than 13 digits
+			newVal = valInt / 1000000 // Convert time to milliseconds
+		} else {
+			newVal = valInt
+		}
+		return newVal, nil
+	}
+
+	return 0, errors.New("invalid time string")
+}
+
+func parseCloseStatus(original *sqlparser.SQLVal) (*sqlparser.SQLVal, error) {
+	statusStr := string(original.Val)
+
+	// first check if already in int64 format
+	if _, err := strconv.ParseInt(statusStr, 10, 64); err == nil {
+		return original, nil
+	}
+
+	// try to parse close status string
+	var parsedStatus types.WorkflowExecutionCloseStatus
+	err := parsedStatus.UnmarshalText([]byte(statusStr))
+	if err != nil {
+		return nil, err
+	}
+
+	return &sqlparser.SQLVal{
+		Type: sqlparser.IntVal,
+		Val:  []byte(strconv.FormatInt(int64(parsedStatus), 10)),
+	}, nil
 }

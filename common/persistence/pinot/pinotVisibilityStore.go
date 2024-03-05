@@ -282,7 +282,11 @@ func (v *pinotVisibilityStore) ListOpenWorkflowExecutions(
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
 		return !request.EarliestTime.After(rec.StartTime) && !rec.StartTime.After(request.LatestTime)
 	}
-	query := getListWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request, false)
+	query, err := getListWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request, false)
+	if err != nil {
+		v.logger.Error(fmt.Sprintf("failed to build list workflow executions query %v", err))
+		return nil, err
+	}
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -302,7 +306,11 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutions(
 		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
 
-	query := getListWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request, true)
+	query, err := getListWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request, true)
+	if err != nil {
+		v.logger.Error(fmt.Sprintf("failed to build list workflow executions query %v", err))
+		return nil, err
+	}
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -320,7 +328,11 @@ func (v *pinotVisibilityStore) ListOpenWorkflowExecutionsByType(ctx context.Cont
 		return !request.EarliestTime.After(rec.StartTime) && !rec.StartTime.After(request.LatestTime)
 	}
 
-	query := getListWorkflowExecutionsByTypeQuery(v.pinotClient.GetTableName(), request, false)
+	query, err := getListWorkflowExecutionsByTypeQuery(v.pinotClient.GetTableName(), request, false)
+	if err != nil {
+		v.logger.Error(fmt.Sprintf("failed to build list workflow executions by type query %v", err))
+		return nil, err
+	}
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -338,7 +350,11 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutionsByType(ctx context.Co
 		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
 
-	query := getListWorkflowExecutionsByTypeQuery(v.pinotClient.GetTableName(), request, true)
+	query, err := getListWorkflowExecutionsByTypeQuery(v.pinotClient.GetTableName(), request, true)
+	if err != nil {
+		v.logger.Error(fmt.Sprintf("failed to build list workflow executions by type query %v", err))
+		return nil, err
+	}
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -356,7 +372,11 @@ func (v *pinotVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(ctx contex
 		return !request.EarliestTime.After(rec.StartTime) && !rec.StartTime.After(request.LatestTime)
 	}
 
-	query := getListWorkflowExecutionsByWorkflowIDQuery(v.pinotClient.GetTableName(), request, false)
+	query, err := getListWorkflowExecutionsByWorkflowIDQuery(v.pinotClient.GetTableName(), request, false)
+	if err != nil {
+		v.logger.Error(fmt.Sprintf("failed to build list workflow executions by workflowID query %v", err))
+		return nil, err
+	}
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -374,7 +394,11 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(ctx cont
 		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
 
-	query := getListWorkflowExecutionsByWorkflowIDQuery(v.pinotClient.GetTableName(), request, true)
+	query, err := getListWorkflowExecutionsByWorkflowIDQuery(v.pinotClient.GetTableName(), request, true)
+	if err != nil {
+		v.logger.Error(fmt.Sprintf("failed to build list workflow executions by workflowID query %v", err))
+		return nil, err
+	}
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -392,7 +416,11 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutionsByStatus(ctx context.
 		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
 
-	query := getListWorkflowExecutionsByStatusQuery(v.pinotClient.GetTableName(), request)
+	query, err := getListWorkflowExecutionsByStatusQuery(v.pinotClient.GetTableName(), request)
+	if err != nil {
+		v.logger.Error(fmt.Sprintf("failed to build list workflow executions by status query %v", err))
+		return nil, err
+	}
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -439,7 +467,11 @@ func (v *pinotVisibilityStore) GetClosedWorkflowExecution(ctx context.Context, r
 func (v *pinotVisibilityStore) ListWorkflowExecutions(ctx context.Context, request *p.ListWorkflowExecutionsByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	checkPageSize(request)
 
-	query := v.getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request)
+	query, err := v.getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request)
+	if err != nil {
+		v.logger.Error(fmt.Sprintf("failed to build list workflow executions query %v", err))
+		return nil, err
+	}
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -462,7 +494,11 @@ func (v *pinotVisibilityStore) ListWorkflowExecutions(ctx context.Context, reque
 func (v *pinotVisibilityStore) ScanWorkflowExecutions(ctx context.Context, request *p.ListWorkflowExecutionsByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	checkPageSize(request)
 
-	query := v.getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request)
+	query, err := v.getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request)
+	if err != nil {
+		v.logger.Error(fmt.Sprintf("failed to build scan workflow executions query %v", err))
+		return nil, err
+	}
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -749,14 +785,14 @@ func (v *pinotVisibilityStore) getCountWorkflowExecutionsQuery(tableName string,
 	return query.String()
 }
 
-func (v *pinotVisibilityStore) getListWorkflowExecutionsByQueryQuery(tableName string, request *p.ListWorkflowExecutionsByQueryRequest) string {
+func (v *pinotVisibilityStore) getListWorkflowExecutionsByQueryQuery(tableName string, request *p.ListWorkflowExecutionsByQueryRequest) (string, error) {
 	if request == nil {
-		return ""
+		return "", nil
 	}
 
 	token, err := pnt.GetNextPageToken(request.NextPageToken)
 	if err != nil {
-		panic(fmt.Sprintf("deserialize next page token error: %s", err))
+		return "", fmt.Errorf("next page token: %w", err)
 	}
 
 	query := NewPinotQuery(tableName)
@@ -770,20 +806,20 @@ func (v *pinotVisibilityStore) getListWorkflowExecutionsByQueryQuery(tableName s
 	// if customized query is empty, directly return
 	if requestQuery == "" {
 		query.addOffsetAndLimits(token.From, request.PageSize)
-		return query.String()
+		return query.String(), nil
 	}
 
 	requestQuery = filterPrefix(requestQuery)
 	if common.IsJustOrderByClause(requestQuery) {
 		query.concatSorter(requestQuery)
 		query.addOffsetAndLimits(token.From, request.PageSize)
-		return query.String()
+		return query.String(), nil
 	}
 
 	comparExpr, orderBy := parseOrderBy(requestQuery)
 	comparExpr, err = v.pinotQueryValidator.ValidateQuery(comparExpr)
 	if err != nil {
-		v.logger.Error(fmt.Sprintf("pinot query validator error: %s", err))
+		return "", fmt.Errorf("pinot query validator error: %w, query: %s", err, request.Query)
 	}
 
 	comparExpr = filterPrefix(comparExpr)
@@ -800,7 +836,7 @@ func (v *pinotVisibilityStore) getListWorkflowExecutionsByQueryQuery(tableName s
 	}
 
 	query.addOffsetAndLimits(token.From, request.PageSize)
-	return query.String()
+	return query.String(), nil
 }
 
 func filterPrefix(query string) string {
@@ -907,14 +943,14 @@ func findLastOrderBy(list []string) int {
 	return 0
 }
 
-func getListWorkflowExecutionsQuery(tableName string, request *p.InternalListWorkflowExecutionsRequest, isClosed bool) string {
+func getListWorkflowExecutionsQuery(tableName string, request *p.InternalListWorkflowExecutionsRequest, isClosed bool) (string, error) {
 	if request == nil {
-		return ""
+		return "", nil
 	}
 
 	token, err := pnt.GetNextPageToken(request.NextPageToken)
 	if err != nil {
-		panic(fmt.Sprintf("deserialize next page token error: %s", err))
+		return "", fmt.Errorf("next page token: %w", err)
 	}
 
 	from := token.From
@@ -939,12 +975,12 @@ func getListWorkflowExecutionsQuery(tableName string, request *p.InternalListWor
 	query.addPinotSorter(StartTime, DescendingOrder)
 	query.addOffsetAndLimits(from, pageSize)
 
-	return query.String()
+	return query.String(), nil
 }
 
-func getListWorkflowExecutionsByTypeQuery(tableName string, request *p.InternalListWorkflowExecutionsByTypeRequest, isClosed bool) string {
+func getListWorkflowExecutionsByTypeQuery(tableName string, request *p.InternalListWorkflowExecutionsByTypeRequest, isClosed bool) (string, error) {
 	if request == nil {
-		return ""
+		return "", nil
 	}
 
 	query := NewPinotQuery(tableName)
@@ -968,19 +1004,19 @@ func getListWorkflowExecutionsByTypeQuery(tableName string, request *p.InternalL
 
 	token, err := pnt.GetNextPageToken(request.NextPageToken)
 	if err != nil {
-		panic(fmt.Sprintf("deserialize next page token error: %s", err))
+		return "", fmt.Errorf("next page token: %w", err)
 	}
 
 	from := token.From
 	pageSize := request.PageSize
 	query.addOffsetAndLimits(from, pageSize)
 
-	return query.String()
+	return query.String(), nil
 }
 
-func getListWorkflowExecutionsByWorkflowIDQuery(tableName string, request *p.InternalListWorkflowExecutionsByWorkflowIDRequest, isClosed bool) string {
+func getListWorkflowExecutionsByWorkflowIDQuery(tableName string, request *p.InternalListWorkflowExecutionsByWorkflowIDRequest, isClosed bool) (string, error) {
 	if request == nil {
-		return ""
+		return "", nil
 	}
 
 	query := NewPinotQuery(tableName)
@@ -1004,19 +1040,19 @@ func getListWorkflowExecutionsByWorkflowIDQuery(tableName string, request *p.Int
 
 	token, err := pnt.GetNextPageToken(request.NextPageToken)
 	if err != nil {
-		panic(fmt.Sprintf("deserialize next page token error: %s", err))
+		return "", fmt.Errorf("next page token: %w", err)
 	}
 
 	from := token.From
 	pageSize := request.PageSize
 	query.addOffsetAndLimits(from, pageSize)
 
-	return query.String()
+	return query.String(), nil
 }
 
-func getListWorkflowExecutionsByStatusQuery(tableName string, request *p.InternalListClosedWorkflowExecutionsByStatusRequest) string {
+func getListWorkflowExecutionsByStatusQuery(tableName string, request *p.InternalListClosedWorkflowExecutionsByStatusRequest) (string, error) {
 	if request == nil {
-		return ""
+		return "", nil
 	}
 
 	query := NewPinotQuery(tableName)
@@ -1047,14 +1083,14 @@ func getListWorkflowExecutionsByStatusQuery(tableName string, request *p.Interna
 
 	token, err := pnt.GetNextPageToken(request.NextPageToken)
 	if err != nil {
-		panic(fmt.Sprintf("deserialize next page token error: %s", err))
+		return "", fmt.Errorf("next page token: %w", err)
 	}
 
 	from := token.From
 	pageSize := request.PageSize
 	query.addOffsetAndLimits(from, pageSize)
 
-	return query.String()
+	return query.String(), nil
 }
 
 func getGetClosedWorkflowExecutionQuery(tableName string, request *p.InternalGetClosedWorkflowExecutionRequest) string {

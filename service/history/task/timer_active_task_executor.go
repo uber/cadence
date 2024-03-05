@@ -114,7 +114,12 @@ func (t *timerActiveTaskExecutor) executeUserTimerTimeoutTask(
 	ctx context.Context,
 	task *persistence.TimerTaskInfo,
 ) (retError error) {
-
+	t.logger.Debug("Processing user timer",
+		tag.WorkflowDomainID(task.DomainID),
+		tag.WorkflowID(task.WorkflowID),
+		tag.WorkflowRunID(task.RunID),
+		tag.TaskID(task.TaskID),
+	)
 	wfContext, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
 		task.DomainID,
 		getWorkflowExecution(task),
@@ -140,6 +145,10 @@ func (t *timerActiveTaskExecutor) executeUserTimerTimeoutTask(
 	referenceTime := t.shard.GetTimeSource().Now()
 	resurrectionCheckMinDelay := t.config.ResurrectionCheckMinDelay(mutableState.GetDomainEntry().GetInfo().Name)
 	updateMutableState := false
+	debugLog := t.logger.Debug
+	if t.config.EnableDebugMode && t.config.EnableTimerDebugLogByDomainID(task.DomainID) {
+		debugLog = t.logger.Info
+	}
 
 	// initialized when a timer with delay >= resurrectionCheckMinDelay
 	// is encountered, so that we don't need to scan history multiple times
@@ -148,8 +157,16 @@ func (t *timerActiveTaskExecutor) executeUserTimerTimeoutTask(
 	scanWorkflowCtx, cancel := context.WithTimeout(context.Background(), scanWorkflowTimeout)
 	defer cancel()
 
+	sortedUserTimers := timerSequence.LoadAndSortUserTimers()
+	debugLog("Sorted user timers",
+		tag.WorkflowDomainID(task.DomainID),
+		tag.WorkflowID(task.WorkflowID),
+		tag.WorkflowRunID(task.RunID),
+		tag.Counter(len(sortedUserTimers)),
+	)
+
 Loop:
-	for _, timerSequenceID := range timerSequence.LoadAndSortUserTimers() {
+	for _, timerSequenceID := range sortedUserTimers {
 		timerInfo, ok := mutableState.GetUserTimerInfoByEventID(timerSequenceID.EventID)
 		if !ok {
 			errString := fmt.Sprintf("failed to find in user timer event ID: %v", timerSequenceID.EventID)
@@ -158,6 +175,20 @@ Loop:
 		}
 
 		delay, expired := timerSequence.IsExpired(referenceTime, timerSequenceID)
+		debugLog("Processing user timer sequence id",
+			tag.WorkflowDomainID(task.DomainID),
+			tag.WorkflowID(task.WorkflowID),
+			tag.WorkflowRunID(task.RunID),
+			tag.TaskType(task.TaskType),
+			tag.TaskID(task.TaskID),
+			tag.WorkflowTimerID(timerInfo.TimerID),
+			tag.WorkflowScheduleID(timerInfo.StartedID),
+			tag.Dynamic("timer-sequence-id", timerSequenceID),
+			tag.Dynamic("timer-info", timerInfo),
+			tag.Dynamic("delay", delay),
+			tag.Dynamic("expired", expired),
+		)
+
 		if !expired {
 			// timer sequence IDs are sorted, once there is one timer
 			// sequence ID not expired, all after that wil not expired
@@ -203,6 +234,18 @@ Loop:
 			return err
 		}
 		updateMutableState = true
+
+		debugLog("User timer fired",
+			tag.WorkflowDomainID(task.DomainID),
+			tag.WorkflowID(task.WorkflowID),
+			tag.WorkflowRunID(task.RunID),
+			tag.TaskType(task.TaskType),
+			tag.TaskID(task.TaskID),
+			tag.WorkflowTimerID(timerInfo.TimerID),
+			tag.WorkflowScheduleID(timerInfo.StartedID),
+			tag.WorkflowNextEventID(mutableState.GetNextEventID()),
+		)
+
 	}
 
 	if !updateMutableState {
@@ -230,12 +273,22 @@ func (t *timerActiveTaskExecutor) executeActivityTimeoutTask(
 	}
 	defer func() { release(retError) }()
 
+	domainName, err := t.shard.GetDomainCache().GetDomainName(task.DomainID)
+	if err != nil {
+		return fmt.Errorf("unable to find domainID: %v, err: %v", task.DomainID, err)
+	}
+
 	mutableState, err := loadMutableStateForTimerTask(ctx, wfContext, task, t.metricsClient, t.logger)
 	if err != nil {
 		return err
 	}
 	if mutableState == nil || !mutableState.IsWorkflowExecutionRunning() {
 		return nil
+	}
+
+	wfType := mutableState.GetWorkflowType()
+	if wfType == nil {
+		return fmt.Errorf("unable to find workflow type, task %s", task)
 	}
 
 	timerSequence := execution.NewTimerSequence(mutableState)
@@ -355,7 +408,18 @@ Loop:
 			mutableState.GetExecutionInfo().DomainID,
 			metrics.TimerActiveTaskActivityTimeoutScope,
 			timerSequenceID.TimerType,
+			metrics.WorkflowTypeTag(wfType.GetName()),
 		)
+
+		t.logger.Info("Activity timed out",
+			tag.WorkflowDomainName(domainName),
+			tag.WorkflowDomainID(task.GetDomainID()),
+			tag.WorkflowID(task.GetWorkflowID()),
+			tag.WorkflowRunID(task.GetRunID()),
+			tag.ScheduleAttempt(task.ScheduleAttempt),
+			tag.FailoverVersion(task.GetVersion()),
+		)
+
 		if _, err := mutableState.AddActivityTaskTimedOutEvent(
 			activityInfo.ScheduleID,
 			activityInfo.StartedID,
@@ -392,12 +456,22 @@ func (t *timerActiveTaskExecutor) executeDecisionTimeoutTask(
 	}
 	defer func() { release(retError) }()
 
+	domainName, err := t.shard.GetDomainCache().GetDomainName(task.DomainID)
+	if err != nil {
+		return fmt.Errorf("unable to find domainID: %v, err: %v", task.DomainID, err)
+	}
+
 	mutableState, err := loadMutableStateForTimerTask(ctx, wfContext, task, t.metricsClient, t.logger)
 	if err != nil {
 		return err
 	}
 	if mutableState == nil || !mutableState.IsWorkflowExecutionRunning() {
 		return nil
+	}
+
+	wfType := mutableState.GetWorkflowType()
+	if wfType == nil {
+		return fmt.Errorf("unable to find workflow type, task %s", task)
 	}
 
 	scheduleID := task.EventID
@@ -421,13 +495,14 @@ func (t *timerActiveTaskExecutor) executeDecisionTimeoutTask(
 	if isStickyDecision {
 		decisionTypeTag = stickyDecisionTypeTag
 	}
+	tags := []metrics.Tag{metrics.WorkflowTypeTag(wfType.GetName()), decisionTypeTag}
 	switch execution.TimerTypeFromInternal(types.TimeoutType(task.TimeoutType)) {
 	case execution.TimerTypeStartToClose:
 		t.emitTimeoutMetricScopeWithDomainTag(
 			mutableState.GetExecutionInfo().DomainID,
 			metrics.TimerActiveTaskDecisionTimeoutScope,
 			execution.TimerTypeStartToClose,
-			decisionTypeTag,
+			tags...,
 		)
 		if _, err := mutableState.AddDecisionTaskTimedOutEvent(
 			decision.ScheduleID,
@@ -445,6 +520,7 @@ func (t *timerActiveTaskExecutor) executeDecisionTimeoutTask(
 
 		if !isStickyDecision {
 			t.logger.Warn("Potential lost normal decision task",
+				tag.WorkflowDomainName(domainName),
 				tag.WorkflowDomainID(task.GetDomainID()),
 				tag.WorkflowID(task.GetWorkflowID()),
 				tag.WorkflowRunID(task.GetRunID()),
@@ -458,7 +534,7 @@ func (t *timerActiveTaskExecutor) executeDecisionTimeoutTask(
 			mutableState.GetExecutionInfo().DomainID,
 			metrics.TimerActiveTaskDecisionTimeoutScope,
 			execution.TimerTypeScheduleToStart,
-			decisionTypeTag,
+			tags...,
 		)
 		_, err := mutableState.AddDecisionTaskScheduleToStartTimeoutEvent(scheduleID)
 		if err != nil {

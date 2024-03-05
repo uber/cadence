@@ -28,16 +28,22 @@ import (
 	"github.com/uber/cadence/common"
 )
 
+func defaultFilestoreConfig(t *testing.T) *YamlNode {
+	node, err := ToYamlNode(&FilestoreArchiver{
+		FileMode: "044",
+	})
+	require.NoError(t, err)
+	return node
+}
+
 // History archival
 
 func TestValidEnabledHistoryArchivalConfig(t *testing.T) {
 	archival := Archival{
 		History: HistoryArchival{
 			Status: common.ArchivalEnabled,
-			Provider: &HistoryArchiverProvider{
-				Filestore: &FilestoreArchiver{
-					FileMode: "044",
-				},
+			Provider: HistoryArchiverProvider{
+				FilestoreConfig: defaultFilestoreConfig(t),
 			},
 		},
 	}
@@ -62,10 +68,8 @@ func TestInvalidHEnabledHistoryArchivalConfig(t *testing.T) {
 func TestValidDisabledHistoryArchivalConfig(t *testing.T) {
 	archival := Archival{
 		History: HistoryArchival{
-			Provider: &HistoryArchiverProvider{
-				Filestore: &FilestoreArchiver{
-					FileMode: "044",
-				},
+			Provider: HistoryArchiverProvider{
+				FilestoreConfig: defaultFilestoreConfig(t),
 			},
 		},
 	}
@@ -97,10 +101,8 @@ func TestValidEnabledVisibilityArchivalConfig(t *testing.T) {
 	archival := Archival{
 		Visibility: VisibilityArchival{
 			Status: common.ArchivalEnabled,
-			Provider: &VisibilityArchiverProvider{
-				Filestore: &FilestoreArchiver{
-					FileMode: "044",
-				},
+			Provider: VisibilityArchiverProvider{
+				FilestoreConfig: defaultFilestoreConfig(t),
 			},
 		},
 	}
@@ -125,10 +127,8 @@ func TestInvalidHEnabledVisibilityArchivalConfig(t *testing.T) {
 func TestValidDisabledVisibilityArchivalConfig(t *testing.T) {
 	archival := Archival{
 		Visibility: VisibilityArchival{
-			Provider: &VisibilityArchiverProvider{
-				Filestore: &FilestoreArchiver{
-					FileMode: "044",
-				},
+			Provider: VisibilityArchiverProvider{
+				FilestoreConfig: defaultFilestoreConfig(t),
 			},
 		},
 	}

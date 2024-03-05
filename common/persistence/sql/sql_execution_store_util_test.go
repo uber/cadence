@@ -499,6 +499,7 @@ func TestApplyWorkflowMutationTx(t *testing.T) {
 				DeleteSignalInfos:        []int64{1, 2},
 				UpsertSignalRequestedIDs: []string{"a", "b"},
 				DeleteSignalRequestedIDs: []string{"c", "d"},
+				ClearBufferedEvents:      true,
 			},
 			mockSetup: func(mockTx *sqlplugin.MockTx, mockParser *serialization.MockParser) {
 				mockSetupLockAndCheckNextEventID(mockTx, shardID, serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"), "abc", serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47603"), 9, false)
@@ -510,6 +511,7 @@ func TestApplyWorkflowMutationTx(t *testing.T) {
 				mockUpdateRequestCancelInfos(mockTx, mockParser, 1, 2, false)
 				mockUpdateSignalInfos(mockTx, mockParser, 1, 2, false)
 				mockUpdateSignalRequested(mockTx, mockParser, 1, 2, false)
+				mockDeleteBufferedEvents(mockTx, shardID, serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"), "abc", serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47603"), false)
 			},
 			wantErr: false,
 		},
@@ -892,7 +894,7 @@ func TestCreateExecution(t *testing.T) {
 
 			tc.mockSetup(mockTx, mockParser)
 
-			err := createExecution(context.Background(), mockTx, tc.workflow.ExecutionInfo, tc.workflow.VersionHistories, tc.workflow.StartVersion, tc.workflow.LastWriteVersion, shardID, mockParser)
+			err := createExecution(context.Background(), mockTx, tc.workflow.ExecutionInfo, tc.workflow.VersionHistories, tc.workflow.ChecksumData, tc.workflow.StartVersion, tc.workflow.LastWriteVersion, shardID, mockParser)
 			if tc.wantErr {
 				assert.Error(t, err, "Expected an error for test case")
 			} else {
@@ -987,7 +989,7 @@ func TestUpdateExecution(t *testing.T) {
 
 			tc.mockSetup(mockTx, mockParser)
 
-			err := updateExecution(context.Background(), mockTx, tc.workflow.ExecutionInfo, tc.workflow.VersionHistories, tc.workflow.StartVersion, tc.workflow.LastWriteVersion, shardID, mockParser)
+			err := updateExecution(context.Background(), mockTx, tc.workflow.ExecutionInfo, tc.workflow.VersionHistories, tc.workflow.ChecksumData, tc.workflow.StartVersion, tc.workflow.LastWriteVersion, shardID, mockParser)
 			if tc.wantErr {
 				assert.Error(t, err, "Expected an error for test case")
 			} else {
@@ -1299,6 +1301,1000 @@ func TestCreateTransferTasks(t *testing.T) {
 				if tc.assertErr != nil {
 					tc.assertErr(t, err)
 				}
+			} else {
+				assert.NoError(t, err, "Did not expect an error for test case")
+			}
+		})
+	}
+}
+
+func TestCreateTimerTasks(t *testing.T) {
+	shardID := 1
+	domainID := serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602")
+	workflowID := "abc"
+	runID := serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47603")
+	testCases := []struct {
+		name      string
+		tasks     []persistence.Task
+		mockSetup func(*sqlplugin.MockTx, *serialization.MockParser)
+		wantErr   bool
+		assertErr func(*testing.T, error)
+	}{
+		{
+			name: "Success case",
+			tasks: []persistence.Task{
+				&persistence.DecisionTimeoutTask{
+					VisibilityTimestamp: time.Unix(1, 1),
+					TaskID:              1,
+					EventID:             1,
+					ScheduleAttempt:     1,
+					TimeoutType:         1,
+					Version:             1,
+				},
+				&persistence.ActivityTimeoutTask{
+					VisibilityTimestamp: time.Unix(2, 2),
+					TaskID:              2,
+					EventID:             2,
+					Attempt:             2,
+					TimeoutType:         2,
+					Version:             2,
+				},
+				&persistence.UserTimerTask{
+					VisibilityTimestamp: time.Unix(3, 3),
+					TaskID:              3,
+					EventID:             3,
+					Version:             3,
+				},
+				&persistence.ActivityRetryTimerTask{
+					VisibilityTimestamp: time.Unix(4, 4),
+					TaskID:              4,
+					EventID:             4,
+					Attempt:             4,
+					Version:             4,
+				},
+				&persistence.WorkflowBackoffTimerTask{
+					VisibilityTimestamp: time.Unix(5, 5),
+					TaskID:              5,
+					EventID:             5,
+					TimeoutType:         5,
+					Version:             5,
+				},
+				&persistence.WorkflowTimeoutTask{
+					Version:             6,
+					VisibilityTimestamp: time.Unix(6, 6),
+					TaskID:              6,
+				},
+				&persistence.DeleteHistoryEventTask{
+					Version:             7,
+					VisibilityTimestamp: time.Unix(7, 7),
+					TaskID:              7,
+				},
+			},
+			mockSetup: func(mockTx *sqlplugin.MockTx, mockParser *serialization.MockParser) {
+				mockParser.EXPECT().TimerTaskInfoToBlob(&serialization.TimerTaskInfo{
+					DomainID:        domainID,
+					WorkflowID:      workflowID,
+					RunID:           runID,
+					TaskType:        int16(persistence.TaskTypeDecisionTimeout),
+					Version:         1,
+					EventID:         1,
+					ScheduleAttempt: 1,
+					TimeoutType:     common.Int16Ptr(1),
+				}).Return(persistence.DataBlob{
+					Data:     []byte(`1`),
+					Encoding: common.EncodingType("1"),
+				}, nil)
+				mockParser.EXPECT().TimerTaskInfoToBlob(&serialization.TimerTaskInfo{
+					DomainID:        domainID,
+					WorkflowID:      workflowID,
+					RunID:           runID,
+					TaskType:        int16(persistence.TaskTypeActivityTimeout),
+					Version:         2,
+					EventID:         2,
+					ScheduleAttempt: 2,
+					TimeoutType:     common.Int16Ptr(2),
+				}).Return(persistence.DataBlob{
+					Data:     []byte(`2`),
+					Encoding: common.EncodingType("2"),
+				}, nil)
+				mockParser.EXPECT().TimerTaskInfoToBlob(&serialization.TimerTaskInfo{
+					DomainID:        domainID,
+					WorkflowID:      workflowID,
+					RunID:           runID,
+					TaskType:        int16(persistence.TaskTypeUserTimer),
+					Version:         3,
+					EventID:         3,
+					ScheduleAttempt: 0,
+				}).Return(persistence.DataBlob{
+					Data:     []byte(`3`),
+					Encoding: common.EncodingType("3"),
+				}, nil)
+				mockParser.EXPECT().TimerTaskInfoToBlob(&serialization.TimerTaskInfo{
+					DomainID:        domainID,
+					WorkflowID:      workflowID,
+					RunID:           runID,
+					TaskType:        int16(persistence.TaskTypeActivityRetryTimer),
+					Version:         4,
+					EventID:         4,
+					ScheduleAttempt: 4,
+				}).Return(persistence.DataBlob{
+					Data:     []byte(`4`),
+					Encoding: common.EncodingType("4"),
+				}, nil)
+				mockParser.EXPECT().TimerTaskInfoToBlob(&serialization.TimerTaskInfo{
+					DomainID:        domainID,
+					WorkflowID:      workflowID,
+					RunID:           runID,
+					TaskType:        int16(persistence.TaskTypeWorkflowBackoffTimer),
+					Version:         5,
+					EventID:         5,
+					ScheduleAttempt: 0,
+					TimeoutType:     common.Int16Ptr(5),
+				}).Return(persistence.DataBlob{
+					Data:     []byte(`5`),
+					Encoding: common.EncodingType("5"),
+				}, nil)
+				mockParser.EXPECT().TimerTaskInfoToBlob(&serialization.TimerTaskInfo{
+					DomainID:        domainID,
+					WorkflowID:      workflowID,
+					RunID:           runID,
+					TaskType:        int16(persistence.TaskTypeWorkflowTimeout),
+					Version:         6,
+					EventID:         common.EmptyEventID,
+					ScheduleAttempt: 0,
+				}).Return(persistence.DataBlob{
+					Data:     []byte(`6`),
+					Encoding: common.EncodingType("6"),
+				}, nil)
+				mockParser.EXPECT().TimerTaskInfoToBlob(&serialization.TimerTaskInfo{
+					DomainID:        domainID,
+					WorkflowID:      workflowID,
+					RunID:           runID,
+					TaskType:        int16(persistence.TaskTypeDeleteHistoryEvent),
+					Version:         7,
+					EventID:         common.EmptyEventID,
+					ScheduleAttempt: 0,
+				}).Return(persistence.DataBlob{
+					Data:     []byte(`7`),
+					Encoding: common.EncodingType("7"),
+				}, nil)
+				mockTx.EXPECT().InsertIntoTimerTasks(gomock.Any(), []sqlplugin.TimerTasksRow{
+					{
+						ShardID:             shardID,
+						TaskID:              1,
+						VisibilityTimestamp: time.Unix(1, 1),
+						Data:                []byte(`1`),
+						DataEncoding:        "1",
+					},
+					{
+						ShardID:             shardID,
+						TaskID:              2,
+						VisibilityTimestamp: time.Unix(2, 2),
+						Data:                []byte(`2`),
+						DataEncoding:        "2",
+					},
+					{
+						ShardID:             shardID,
+						TaskID:              3,
+						VisibilityTimestamp: time.Unix(3, 3),
+						Data:                []byte(`3`),
+						DataEncoding:        "3",
+					},
+					{
+						ShardID:             shardID,
+						TaskID:              4,
+						VisibilityTimestamp: time.Unix(4, 4),
+						Data:                []byte(`4`),
+						DataEncoding:        "4",
+					},
+					{
+						ShardID:             shardID,
+						TaskID:              5,
+						VisibilityTimestamp: time.Unix(5, 5),
+						Data:                []byte(`5`),
+						DataEncoding:        "5",
+					},
+					{
+						ShardID:             shardID,
+						TaskID:              6,
+						VisibilityTimestamp: time.Unix(6, 6),
+						Data:                []byte(`6`),
+						DataEncoding:        "6",
+					},
+					{
+						ShardID:             shardID,
+						TaskID:              7,
+						VisibilityTimestamp: time.Unix(7, 7),
+						Data:                []byte(`7`),
+						DataEncoding:        "7",
+					},
+				}).Return(&sqlResult{rowsAffected: 7}, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "Error case",
+			tasks: []persistence.Task{
+				&persistence.DecisionTimeoutTask{
+					VisibilityTimestamp: time.Unix(1, 1),
+					TaskID:              1,
+					EventID:             1,
+					ScheduleAttempt:     1,
+					TimeoutType:         1,
+					Version:             1,
+				},
+			},
+			mockSetup: func(mockTx *sqlplugin.MockTx, mockParser *serialization.MockParser) {
+				mockParser.EXPECT().TimerTaskInfoToBlob(&serialization.TimerTaskInfo{
+					DomainID:        domainID,
+					WorkflowID:      workflowID,
+					RunID:           runID,
+					TaskType:        int16(persistence.TaskTypeDecisionTimeout),
+					Version:         1,
+					EventID:         1,
+					ScheduleAttempt: 1,
+					TimeoutType:     common.Int16Ptr(1),
+				}).Return(persistence.DataBlob{
+					Data:     []byte(`1`),
+					Encoding: common.EncodingType("1"),
+				}, nil)
+				err := errors.New("some error")
+				mockTx.EXPECT().InsertIntoTimerTasks(gomock.Any(), gomock.Any()).Return(nil, err)
+				mockTx.EXPECT().IsNotFoundError(err).Return(true)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockTx := sqlplugin.NewMockTx(ctrl)
+			mockParser := serialization.NewMockParser(ctrl)
+
+			tc.mockSetup(mockTx, mockParser)
+
+			err := createTimerTasks(context.Background(), mockTx, tc.tasks, shardID, domainID, workflowID, runID, mockParser)
+			if tc.wantErr {
+				assert.Error(t, err, "Expected an error for test case")
+				if tc.assertErr != nil {
+					tc.assertErr(t, err)
+				}
+			} else {
+				assert.NoError(t, err, "Did not expect an error for test case")
+			}
+		})
+	}
+}
+
+func TestCreateCrossClusterTasks(t *testing.T) {
+	shardID := 1
+	domainID := serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602")
+	workflowID := "abc"
+	runID := serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47603")
+	testCases := []struct {
+		name      string
+		tasks     []persistence.Task
+		mockSetup func(*sqlplugin.MockTx, *serialization.MockParser)
+		wantErr   bool
+		assertErr func(*testing.T, error)
+	}{
+		{
+			name: "Success case",
+			tasks: []persistence.Task{
+				&persistence.CrossClusterStartChildExecutionTask{
+					TargetCluster: "1",
+					StartChildExecutionTask: persistence.StartChildExecutionTask{
+						TargetDomainID:      "2be8a310-7d20-483e-a5d2-48659dc47609",
+						TargetWorkflowID:    "xcd",
+						InitiatedID:         111,
+						Version:             1,
+						VisibilityTimestamp: time.Unix(1, 1),
+						TaskID:              1,
+					},
+				},
+				&persistence.CrossClusterCancelExecutionTask{
+					TargetCluster: "2",
+					CancelExecutionTask: persistence.CancelExecutionTask{
+						TargetDomainID:          "6be8a310-7d20-483e-a5d2-48659dc47609",
+						TargetWorkflowID:        "acd",
+						TargetRunID:             "3be8a310-7d20-483e-a5d2-48659dc47609",
+						TargetChildWorkflowOnly: true,
+						InitiatedID:             222,
+						Version:                 2,
+						VisibilityTimestamp:     time.Unix(2, 2),
+						TaskID:                  2,
+					},
+				},
+				&persistence.CrossClusterSignalExecutionTask{
+					TargetCluster: "3",
+					SignalExecutionTask: persistence.SignalExecutionTask{
+						TargetDomainID:          "5be8a310-7d20-483e-a5d2-48659dc47609",
+						TargetWorkflowID:        "zcd",
+						TargetRunID:             "4be8a310-7d20-483e-a5d2-48659dc47609",
+						TargetChildWorkflowOnly: true,
+						InitiatedID:             333,
+						Version:                 3,
+						VisibilityTimestamp:     time.Unix(3, 3),
+						TaskID:                  3,
+					},
+				},
+				&persistence.CrossClusterRecordChildExecutionCompletedTask{
+					TargetCluster: "4",
+					RecordChildExecutionCompletedTask: persistence.RecordChildExecutionCompletedTask{
+						TargetDomainID:      "1be8a310-7d20-483e-a5d2-48659dc47609",
+						TargetWorkflowID:    "ddd",
+						TargetRunID:         "0be8a310-7d20-483e-a5d2-48659dc47609",
+						Version:             4,
+						VisibilityTimestamp: time.Unix(4, 4),
+						TaskID:              4,
+					},
+				},
+				&persistence.CrossClusterApplyParentClosePolicyTask{
+					TargetCluster: "5",
+					ApplyParentClosePolicyTask: persistence.ApplyParentClosePolicyTask{
+						TargetDomainIDs:     map[string]struct{}{"abe8a310-7d20-483e-a5d2-48659dc47609": struct{}{}},
+						Version:             5,
+						VisibilityTimestamp: time.Unix(5, 5),
+						TaskID:              5,
+					},
+				},
+			},
+			mockSetup: func(mockTx *sqlplugin.MockTx, mockParser *serialization.MockParser) {
+				mockParser.EXPECT().CrossClusterTaskInfoToBlob(&serialization.CrossClusterTaskInfo{
+					DomainID:            domainID,
+					WorkflowID:          workflowID,
+					RunID:               runID,
+					TaskType:            int16(persistence.CrossClusterTaskTypeStartChildExecution),
+					TargetDomainID:      serialization.MustParseUUID("2be8a310-7d20-483e-a5d2-48659dc47609"),
+					TargetWorkflowID:    "xcd",
+					TargetRunID:         serialization.UUID(persistence.CrossClusterTaskDefaultTargetRunID),
+					ScheduleID:          111,
+					Version:             1,
+					VisibilityTimestamp: time.Unix(1, 1),
+				}).Return(persistence.DataBlob{
+					Data:     []byte(`1`),
+					Encoding: common.EncodingType("1"),
+				}, nil)
+				mockParser.EXPECT().CrossClusterTaskInfoToBlob(&serialization.CrossClusterTaskInfo{
+					DomainID:                domainID,
+					WorkflowID:              workflowID,
+					RunID:                   runID,
+					TaskType:                int16(persistence.CrossClusterTaskTypeCancelExecution),
+					TargetDomainID:          serialization.MustParseUUID("6be8a310-7d20-483e-a5d2-48659dc47609"),
+					TargetWorkflowID:        "acd",
+					TargetRunID:             serialization.MustParseUUID("3be8a310-7d20-483e-a5d2-48659dc47609"),
+					ScheduleID:              222,
+					Version:                 2,
+					VisibilityTimestamp:     time.Unix(2, 2),
+					TargetChildWorkflowOnly: true,
+				}).Return(persistence.DataBlob{
+					Data:     []byte(`2`),
+					Encoding: common.EncodingType("2"),
+				}, nil)
+				mockParser.EXPECT().CrossClusterTaskInfoToBlob(&serialization.CrossClusterTaskInfo{
+					DomainID:                domainID,
+					WorkflowID:              workflowID,
+					RunID:                   runID,
+					TaskType:                int16(persistence.CrossClusterTaskTypeSignalExecution),
+					TargetDomainID:          serialization.MustParseUUID("5be8a310-7d20-483e-a5d2-48659dc47609"),
+					TargetWorkflowID:        "zcd",
+					TargetRunID:             serialization.MustParseUUID("4be8a310-7d20-483e-a5d2-48659dc47609"),
+					ScheduleID:              333,
+					Version:                 3,
+					VisibilityTimestamp:     time.Unix(3, 3),
+					TargetChildWorkflowOnly: true,
+				}).Return(persistence.DataBlob{
+					Data:     []byte(`3`),
+					Encoding: common.EncodingType("3"),
+				}, nil)
+				mockParser.EXPECT().CrossClusterTaskInfoToBlob(&serialization.CrossClusterTaskInfo{
+					DomainID:            domainID,
+					WorkflowID:          workflowID,
+					RunID:               runID,
+					TaskType:            int16(persistence.CrossClusterTaskTypeRecordChildExeuctionCompleted),
+					TargetDomainID:      serialization.MustParseUUID("1be8a310-7d20-483e-a5d2-48659dc47609"),
+					TargetWorkflowID:    "ddd",
+					TargetRunID:         serialization.MustParseUUID("0be8a310-7d20-483e-a5d2-48659dc47609"),
+					Version:             4,
+					VisibilityTimestamp: time.Unix(4, 4),
+				}).Return(persistence.DataBlob{
+					Data:     []byte(`4`),
+					Encoding: common.EncodingType("4"),
+				}, nil)
+				mockParser.EXPECT().CrossClusterTaskInfoToBlob(&serialization.CrossClusterTaskInfo{
+					DomainID:            domainID,
+					WorkflowID:          workflowID,
+					RunID:               runID,
+					TaskType:            int16(persistence.CrossClusterTaskTypeApplyParentClosePolicy),
+					TargetDomainID:      domainID,
+					TargetDomainIDs:     []serialization.UUID{serialization.MustParseUUID("abe8a310-7d20-483e-a5d2-48659dc47609")},
+					TargetWorkflowID:    persistence.TransferTaskTransferTargetWorkflowID,
+					TargetRunID:         serialization.UUID(persistence.CrossClusterTaskDefaultTargetRunID),
+					Version:             5,
+					VisibilityTimestamp: time.Unix(5, 5),
+				}).Return(persistence.DataBlob{
+					Data:     []byte(`5`),
+					Encoding: common.EncodingType("5"),
+				}, nil)
+				mockTx.EXPECT().InsertIntoCrossClusterTasks(gomock.Any(), []sqlplugin.CrossClusterTasksRow{
+					{
+						ShardID:       shardID,
+						TaskID:        1,
+						TargetCluster: "1",
+						Data:          []byte(`1`),
+						DataEncoding:  "1",
+					},
+					{
+						ShardID:       shardID,
+						TaskID:        2,
+						TargetCluster: "2",
+						Data:          []byte(`2`),
+						DataEncoding:  "2",
+					},
+					{
+						ShardID:       shardID,
+						TaskID:        3,
+						TargetCluster: "3",
+						Data:          []byte(`3`),
+						DataEncoding:  "3",
+					},
+					{
+						ShardID:       shardID,
+						TaskID:        4,
+						TargetCluster: "4",
+						Data:          []byte(`4`),
+						DataEncoding:  "4",
+					},
+					{
+						ShardID:       shardID,
+						TaskID:        5,
+						TargetCluster: "5",
+						Data:          []byte(`5`),
+						DataEncoding:  "5",
+					},
+				}).Return(&sqlResult{rowsAffected: 5}, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "Error case",
+			tasks: []persistence.Task{
+				&persistence.CrossClusterStartChildExecutionTask{
+					TargetCluster: "1",
+					StartChildExecutionTask: persistence.StartChildExecutionTask{
+						TargetDomainID:      "2be8a310-7d20-483e-a5d2-48659dc47609",
+						TargetWorkflowID:    "xcd",
+						InitiatedID:         111,
+						Version:             1,
+						VisibilityTimestamp: time.Unix(1, 1),
+						TaskID:              1,
+					},
+				},
+			},
+			mockSetup: func(mockTx *sqlplugin.MockTx, mockParser *serialization.MockParser) {
+				mockParser.EXPECT().CrossClusterTaskInfoToBlob(&serialization.CrossClusterTaskInfo{
+					DomainID:            domainID,
+					WorkflowID:          workflowID,
+					RunID:               runID,
+					TaskType:            int16(persistence.CrossClusterTaskTypeStartChildExecution),
+					TargetDomainID:      serialization.MustParseUUID("2be8a310-7d20-483e-a5d2-48659dc47609"),
+					TargetWorkflowID:    "xcd",
+					TargetRunID:         serialization.UUID(persistence.CrossClusterTaskDefaultTargetRunID),
+					ScheduleID:          111,
+					Version:             1,
+					VisibilityTimestamp: time.Unix(1, 1),
+				}).Return(persistence.DataBlob{
+					Data:     []byte(`1`),
+					Encoding: common.EncodingType("1"),
+				}, nil)
+				err := errors.New("some error")
+				mockTx.EXPECT().InsertIntoCrossClusterTasks(gomock.Any(), gomock.Any()).Return(nil, err)
+				mockTx.EXPECT().IsNotFoundError(err).Return(true)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockTx := sqlplugin.NewMockTx(ctrl)
+			mockParser := serialization.NewMockParser(ctrl)
+
+			tc.mockSetup(mockTx, mockParser)
+
+			err := createCrossClusterTasks(context.Background(), mockTx, tc.tasks, shardID, domainID, workflowID, runID, mockParser)
+			if tc.wantErr {
+				assert.Error(t, err, "Expected an error for test case")
+				if tc.assertErr != nil {
+					tc.assertErr(t, err)
+				}
+			} else {
+				assert.NoError(t, err, "Did not expect an error for test case")
+			}
+		})
+	}
+}
+
+func TestCreateReplicationTasks(t *testing.T) {
+	shardID := 1
+	domainID := serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602")
+	workflowID := "abc"
+	runID := serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47603")
+	testCases := []struct {
+		name      string
+		tasks     []persistence.Task
+		mockSetup func(*sqlplugin.MockTx, *serialization.MockParser)
+		wantErr   bool
+		assertErr func(*testing.T, error)
+	}{
+		{
+			name: "Success case",
+			tasks: []persistence.Task{
+				&persistence.HistoryReplicationTask{
+					TaskID:              1,
+					VisibilityTimestamp: time.Unix(1, 1),
+					Version:             1,
+					FirstEventID:        1,
+					NextEventID:         2,
+					BranchToken:         []byte{1},
+					NewRunBranchToken:   []byte{2},
+				},
+				&persistence.SyncActivityTask{
+					TaskID:              2,
+					VisibilityTimestamp: time.Unix(2, 2),
+					Version:             2,
+					ScheduledID:         2,
+				},
+				&persistence.FailoverMarkerTask{
+					TaskID:              3,
+					VisibilityTimestamp: time.Unix(3, 3),
+					Version:             3,
+					DomainID:            "ddd",
+				},
+			},
+			mockSetup: func(mockTx *sqlplugin.MockTx, mockParser *serialization.MockParser) {
+				mockParser.EXPECT().ReplicationTaskInfoToBlob(&serialization.ReplicationTaskInfo{
+					DomainID:                domainID,
+					WorkflowID:              workflowID,
+					RunID:                   runID,
+					TaskType:                int16(persistence.ReplicationTaskTypeHistory),
+					FirstEventID:            1,
+					NextEventID:             2,
+					Version:                 1,
+					ScheduledID:             common.EmptyEventID,
+					EventStoreVersion:       persistence.EventStoreVersion,
+					NewRunEventStoreVersion: persistence.EventStoreVersion,
+					CreationTimestamp:       time.Unix(1, 1),
+					BranchToken:             []byte{1},
+					NewRunBranchToken:       []byte{2},
+				}).Return(persistence.DataBlob{
+					Data:     []byte(`1`),
+					Encoding: common.EncodingType("1"),
+				}, nil)
+				mockParser.EXPECT().ReplicationTaskInfoToBlob(&serialization.ReplicationTaskInfo{
+					DomainID:                domainID,
+					WorkflowID:              workflowID,
+					RunID:                   runID,
+					TaskType:                int16(persistence.ReplicationTaskTypeSyncActivity),
+					FirstEventID:            common.EmptyEventID,
+					NextEventID:             common.EmptyEventID,
+					Version:                 2,
+					ScheduledID:             2,
+					EventStoreVersion:       persistence.EventStoreVersion,
+					NewRunEventStoreVersion: persistence.EventStoreVersion,
+					CreationTimestamp:       time.Unix(2, 2),
+				}).Return(persistence.DataBlob{
+					Data:     []byte(`2`),
+					Encoding: common.EncodingType("2"),
+				}, nil)
+				mockParser.EXPECT().ReplicationTaskInfoToBlob(&serialization.ReplicationTaskInfo{
+					DomainID:                domainID,
+					WorkflowID:              workflowID,
+					RunID:                   runID,
+					TaskType:                int16(persistence.ReplicationTaskTypeFailoverMarker),
+					FirstEventID:            common.EmptyEventID,
+					NextEventID:             common.EmptyEventID,
+					Version:                 3,
+					ScheduledID:             common.EmptyEventID,
+					EventStoreVersion:       persistence.EventStoreVersion,
+					NewRunEventStoreVersion: persistence.EventStoreVersion,
+					CreationTimestamp:       time.Unix(3, 3),
+				}).Return(persistence.DataBlob{
+					Data:     []byte(`3`),
+					Encoding: common.EncodingType("3"),
+				}, nil)
+				mockTx.EXPECT().InsertIntoReplicationTasks(gomock.Any(), []sqlplugin.ReplicationTasksRow{
+					{
+						ShardID:      shardID,
+						TaskID:       1,
+						Data:         []byte(`1`),
+						DataEncoding: "1",
+					},
+					{
+						ShardID:      shardID,
+						TaskID:       2,
+						Data:         []byte(`2`),
+						DataEncoding: "2",
+					},
+					{
+						ShardID:      shardID,
+						TaskID:       3,
+						Data:         []byte(`3`),
+						DataEncoding: "3",
+					},
+				}).Return(&sqlResult{rowsAffected: 3}, nil)
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockTx := sqlplugin.NewMockTx(ctrl)
+			mockParser := serialization.NewMockParser(ctrl)
+
+			tc.mockSetup(mockTx, mockParser)
+
+			err := createReplicationTasks(context.Background(), mockTx, tc.tasks, shardID, domainID, workflowID, runID, mockParser)
+			if tc.wantErr {
+				assert.Error(t, err, "Expected an error for test case")
+				if tc.assertErr != nil {
+					tc.assertErr(t, err)
+				}
+			} else {
+				assert.NoError(t, err, "Did not expect an error for test case")
+			}
+		})
+	}
+}
+
+func TestLockCurrentExecutionIfExists(t *testing.T) {
+	testCases := []struct {
+		name      string
+		mockSetup func(*sqlplugin.MockTx)
+		wantErr   bool
+		want      *sqlplugin.CurrentExecutionsRow
+	}{
+		{
+			name: "Success case",
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				mockTx.EXPECT().LockCurrentExecutionsJoinExecutions(gomock.Any(), gomock.Any()).Return([]sqlplugin.CurrentExecutionsRow{
+					{
+						ShardID:    1,
+						DomainID:   serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"),
+						WorkflowID: "abc",
+						RunID:      serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47603"),
+					},
+				}, nil)
+			},
+			wantErr: false,
+			want: &sqlplugin.CurrentExecutionsRow{
+				ShardID:    1,
+				DomainID:   serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"),
+				WorkflowID: "abc",
+				RunID:      serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47603"),
+			},
+		},
+		{
+			name: "Error case",
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				err := errors.New("some error")
+				mockTx.EXPECT().LockCurrentExecutionsJoinExecutions(gomock.Any(), gomock.Any()).Return(nil, err)
+				mockTx.EXPECT().IsNotFoundError(err).Return(true)
+			},
+			wantErr: true,
+		},
+		{
+			name: "Empty result",
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				mockTx.EXPECT().LockCurrentExecutionsJoinExecutions(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+			},
+			wantErr: false,
+		},
+		{
+			name: "Multiple rows",
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				mockTx.EXPECT().LockCurrentExecutionsJoinExecutions(gomock.Any(), gomock.Any()).Return([]sqlplugin.CurrentExecutionsRow{
+					{
+						ShardID:    1,
+						DomainID:   serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"),
+						WorkflowID: "abc",
+						RunID:      serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47603"),
+					},
+					{
+						ShardID:    1,
+						DomainID:   serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"),
+						WorkflowID: "def",
+						RunID:      serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47604"),
+					},
+				}, nil)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockTx := sqlplugin.NewMockTx(ctrl)
+
+			tc.mockSetup(mockTx)
+
+			got, err := lockCurrentExecutionIfExists(context.Background(), mockTx, 1, serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"), "abc")
+			if tc.wantErr {
+				assert.Error(t, err, "Expected an error for test case")
+			} else {
+				assert.NoError(t, err, "Did not expect an error for test case")
+				assert.Equal(t, tc.want, got, "Expected result to match")
+			}
+		})
+	}
+}
+
+func TestCreateOrUpdateCurrentExecution(t *testing.T) {
+	testCases := []struct {
+		name       string
+		createMode persistence.CreateWorkflowMode
+		mockSetup  func(*sqlplugin.MockTx)
+		wantErr    bool
+	}{
+		{
+			name:       "Brand new workflow - success",
+			createMode: persistence.CreateWorkflowModeBrandNew,
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				mockTx.EXPECT().InsertIntoCurrentExecutions(gomock.Any(), gomock.Any()).Return(nil, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name:       "Brand new workflow - error",
+			createMode: persistence.CreateWorkflowModeBrandNew,
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				err := errors.New("some error")
+				mockTx.EXPECT().InsertIntoCurrentExecutions(gomock.Any(), gomock.Any()).Return(nil, err)
+				mockTx.EXPECT().IsNotFoundError(err).Return(true)
+			},
+			wantErr: true,
+		},
+		{
+			name:       "Update current execution - success",
+			createMode: persistence.CreateWorkflowModeWorkflowIDReuse,
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				mockTx.EXPECT().UpdateCurrentExecutions(gomock.Any(), gomock.Any()).Return(&sqlResult{rowsAffected: 1}, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name:       "Update current execution - error",
+			createMode: persistence.CreateWorkflowModeWorkflowIDReuse,
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				err := errors.New("some error")
+				mockTx.EXPECT().UpdateCurrentExecutions(gomock.Any(), gomock.Any()).Return(nil, err)
+				mockTx.EXPECT().IsNotFoundError(err).Return(true)
+			},
+			wantErr: true,
+		},
+		{
+			name:       "Update current execution - no rows affected",
+			createMode: persistence.CreateWorkflowModeContinueAsNew,
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				mockTx.EXPECT().UpdateCurrentExecutions(gomock.Any(), gomock.Any()).Return(&sqlResult{rowsAffected: 0}, nil)
+			},
+			wantErr: true,
+		},
+		{
+			name:       "Zombie workflow - success",
+			createMode: persistence.CreateWorkflowModeZombie,
+			mockSetup:  func(mockTx *sqlplugin.MockTx) {},
+			wantErr:    false,
+		},
+		{
+			name:       "Unknown create mode",
+			createMode: persistence.CreateWorkflowMode(100),
+			mockSetup:  func(mockTx *sqlplugin.MockTx) {},
+			wantErr:    true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockTx := sqlplugin.NewMockTx(ctrl)
+
+			tc.mockSetup(mockTx)
+
+			err := createOrUpdateCurrentExecution(
+				context.Background(),
+				mockTx,
+				tc.createMode,
+				1,
+				serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"),
+				"abc",
+				serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47603"),
+				0,
+				1,
+				"request-id",
+				11,
+				12,
+			)
+			if tc.wantErr {
+				assert.Error(t, err, "Expected an error for test case")
+			} else {
+				assert.NoError(t, err, "Did not expect an error for test case")
+			}
+		})
+	}
+}
+
+func TestAssertNotCurrentExecution(t *testing.T) {
+	testCases := []struct {
+		name      string
+		mockSetup func(*sqlplugin.MockTx)
+		wantErr   bool
+	}{
+		{
+			name: "Success case",
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				mockTx.EXPECT().LockCurrentExecutions(gomock.Any(), gomock.Any()).Return(&sqlplugin.CurrentExecutionsRow{
+					ShardID:    1,
+					DomainID:   serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"),
+					WorkflowID: "abc",
+					RunID:      serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"),
+				}, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "Error case",
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				err := errors.New("some error")
+				mockTx.EXPECT().LockCurrentExecutions(gomock.Any(), gomock.Any()).Return(nil, err)
+				mockTx.EXPECT().IsNotFoundError(err).Return(true)
+			},
+			wantErr: true,
+		},
+		{
+			name: "Success case - No rows",
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				mockTx.EXPECT().LockCurrentExecutions(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+			},
+			wantErr: false,
+		},
+		{
+			name: "Error case - run ID match",
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				mockTx.EXPECT().LockCurrentExecutions(gomock.Any(), gomock.Any()).Return(&sqlplugin.CurrentExecutionsRow{
+					ShardID:    1,
+					DomainID:   serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"),
+					WorkflowID: "abc",
+					RunID:      serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47603"),
+				}, nil)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockTx := sqlplugin.NewMockTx(ctrl)
+
+			tc.mockSetup(mockTx)
+
+			err := assertNotCurrentExecution(
+				context.Background(),
+				mockTx,
+				1,
+				serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"),
+				"abc",
+				serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47603"),
+			)
+			if tc.wantErr {
+				assert.Error(t, err, "Expected an error for test case")
+			} else {
+				assert.NoError(t, err, "Did not expect an error for test case")
+			}
+		})
+	}
+}
+
+func TestAssertRunIDAndUpdateCurrentExecution(t *testing.T) {
+	testCases := []struct {
+		name      string
+		mockSetup func(*sqlplugin.MockTx)
+		wantErr   bool
+	}{
+		{
+			name: "Success case",
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				mockTx.EXPECT().LockCurrentExecutions(gomock.Any(), gomock.Any()).Return(&sqlplugin.CurrentExecutionsRow{
+					ShardID:    1,
+					DomainID:   serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"),
+					WorkflowID: "abc",
+					RunID:      serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47604"),
+				}, nil)
+				mockTx.EXPECT().UpdateCurrentExecutions(gomock.Any(), gomock.Any()).Return(&sqlResult{rowsAffected: 1}, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "Error case - update current execution",
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				mockTx.EXPECT().LockCurrentExecutions(gomock.Any(), gomock.Any()).Return(&sqlplugin.CurrentExecutionsRow{
+					ShardID:    1,
+					DomainID:   serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"),
+					WorkflowID: "abc",
+					RunID:      serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47604"),
+				}, nil)
+				err := errors.New("some error")
+				mockTx.EXPECT().UpdateCurrentExecutions(gomock.Any(), gomock.Any()).Return(nil, err)
+				mockTx.EXPECT().IsNotFoundError(err).Return(true)
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error case - run ID mismatch",
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				mockTx.EXPECT().LockCurrentExecutions(gomock.Any(), gomock.Any()).Return(&sqlplugin.CurrentExecutionsRow{
+					ShardID:    1,
+					DomainID:   serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"),
+					WorkflowID: "abc",
+					RunID:      serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47603"),
+				}, nil)
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error case - unknown error",
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				err := errors.New("some error")
+				mockTx.EXPECT().LockCurrentExecutions(gomock.Any(), gomock.Any()).Return(nil, err)
+				mockTx.EXPECT().IsNotFoundError(err).Return(true)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockTx := sqlplugin.NewMockTx(ctrl)
+
+			tc.mockSetup(mockTx)
+
+			err := assertRunIDAndUpdateCurrentExecution(
+				context.Background(),
+				mockTx,
+				1,
+				serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"),
+				"abc",
+				serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47603"),
+				serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47604"),
+				"request-id",
+				1,
+				11,
+				12,
+				13,
+			)
+			if tc.wantErr {
+				assert.Error(t, err, "Expected an error for test case")
 			} else {
 				assert.NoError(t, err, "Did not expect an error for test case")
 			}

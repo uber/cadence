@@ -463,6 +463,17 @@ func (c *clientImpl) SignalWithStartWorkflowExecution(
 	return c.client.SignalWithStartWorkflowExecution(ctx, request, opts...)
 }
 
+func (c *clientImpl) SignalWithStartWorkflowExecutionAsync(
+	ctx context.Context,
+	request *types.SignalWithStartWorkflowExecutionAsyncRequest,
+	opts ...yarpc.CallOption,
+) (*types.SignalWithStartWorkflowExecutionAsyncResponse, error) {
+
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return c.client.SignalWithStartWorkflowExecutionAsync(ctx, request, opts...)
+}
+
 func (c *clientImpl) SignalWorkflowExecution(
 	ctx context.Context,
 	request *types.SignalWorkflowExecutionRequest,
@@ -497,6 +508,17 @@ func (c *clientImpl) StartWorkflowExecution(
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.StartWorkflowExecution(ctx, request, opts...)
+}
+
+func (c *clientImpl) StartWorkflowExecutionAsync(
+	ctx context.Context,
+	request *types.StartWorkflowExecutionAsyncRequest,
+	opts ...yarpc.CallOption,
+) (*types.StartWorkflowExecutionAsyncResponse, error) {
+
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return c.client.StartWorkflowExecutionAsync(ctx, request, opts...)
 }
 
 func (c *clientImpl) TerminateWorkflowExecution(

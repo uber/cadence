@@ -85,7 +85,7 @@ func TestStillRunning(t *testing.T) {
 			timeout,
 			nil,
 		)
-		return impl.checkAge(wf)
+		return impl.CheckAge(wf)
 	}
 	assertHealthy := func(t *testing.T, result CheckResult, isPastExpiration bool) {
 		t.Logf("result: %#v", result)
@@ -210,7 +210,7 @@ func TestComplete(t *testing.T) {
 
 		wf := execution(uuid.New().String(), closed, created, timeout, maybeCompleted)
 
-		return impl.checkAge(wf)
+		return impl.CheckAge(wf)
 	}
 	assertHealthy := func(t *testing.T, result CheckResult, isPastExpiration bool) {
 		t.Logf("result: %#v", result)
@@ -284,7 +284,7 @@ func TestCompleteWithRunningFallback(t *testing.T) {
 		time.Hour, // would have timed out 1 hour after starting, outside retention
 		nil,       // no completed time value
 	)
-	pastExpiration, result := impl.checkAge(wf)
+	pastExpiration, result := impl.CheckAge(wf)
 
 	t.Logf("result: %#v", result)
 	assert.Equal(t, CheckResultTypeCorrupted, result.CheckResultType, "result should be corrupted, as it has expired")

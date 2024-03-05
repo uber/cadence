@@ -407,6 +407,18 @@ func (i IsolationGroupConfiguration) ToPartitionList() []IsolationGroupPartition
 	return out
 }
 
+func (i IsolationGroupConfiguration) DeepCopy() IsolationGroupConfiguration {
+	if i == nil {
+		return nil
+	}
+
+	out := IsolationGroupConfiguration{}
+	for k, v := range i {
+		out[k] = v
+	}
+	return out
+}
+
 // FromIsolationGroupPartitionList maps a list of isolation to the internal IsolationGroup configuration type
 // whose map keys tend to be used more for set operations
 func FromIsolationGroupPartitionList(in []IsolationGroupPartition) IsolationGroupConfiguration {
@@ -422,6 +434,13 @@ func FromIsolationGroupPartitionList(in []IsolationGroupPartition) IsolationGrou
 
 type GetGlobalIsolationGroupsRequest struct{}
 
+func (v *GetGlobalIsolationGroupsRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
+	return SerializeRequest(v)
+}
+
 type GetGlobalIsolationGroupsResponse struct {
 	IsolationGroups IsolationGroupConfiguration
 }
@@ -430,10 +449,24 @@ type UpdateGlobalIsolationGroupsRequest struct {
 	IsolationGroups IsolationGroupConfiguration
 }
 
+func (v *UpdateGlobalIsolationGroupsRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
+	return SerializeRequest(v)
+}
+
 type UpdateGlobalIsolationGroupsResponse struct{}
 
 type GetDomainIsolationGroupsRequest struct {
 	Domain string
+}
+
+func (v *GetDomainIsolationGroupsRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
+	return SerializeRequest(v)
 }
 
 type GetDomainIsolationGroupsResponse struct {
@@ -445,4 +478,59 @@ type UpdateDomainIsolationGroupsRequest struct {
 	IsolationGroups IsolationGroupConfiguration
 }
 
+func (v *UpdateDomainIsolationGroupsRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
+	return SerializeRequest(v)
+}
+
 type UpdateDomainIsolationGroupsResponse struct{}
+
+type GetDomainAsyncWorkflowConfiguratonRequest struct {
+	Domain string
+}
+
+func (v *GetDomainAsyncWorkflowConfiguratonRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
+	return SerializeRequest(v)
+}
+
+type GetDomainAsyncWorkflowConfiguratonResponse struct {
+	Configuration *AsyncWorkflowConfiguration
+}
+
+type AsyncWorkflowConfiguration struct {
+	Enabled             bool
+	PredefinedQueueName string
+	QueueType           string
+	QueueConfig         *DataBlob
+}
+
+func (c AsyncWorkflowConfiguration) DeepCopy() AsyncWorkflowConfiguration {
+	res := AsyncWorkflowConfiguration{
+		Enabled:             c.Enabled,
+		PredefinedQueueName: c.PredefinedQueueName,
+		QueueType:           c.QueueType,
+		QueueConfig:         c.QueueConfig.DeepCopy(),
+	}
+
+	return res
+}
+
+type UpdateDomainAsyncWorkflowConfiguratonRequest struct {
+	Domain        string
+	Configuration *AsyncWorkflowConfiguration
+}
+
+func (v *UpdateDomainAsyncWorkflowConfiguratonRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
+	return SerializeRequest(v)
+}
+
+type UpdateDomainAsyncWorkflowConfiguratonResponse struct {
+}

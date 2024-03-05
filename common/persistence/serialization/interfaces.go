@@ -88,6 +88,8 @@ type (
 		LastUpdatedTimestamp        time.Time
 		IsolationGroups             []byte
 		IsolationGroupsEncoding     string
+		AsyncWorkflowConfig         []byte
+		AsyncWorkflowConfigEncoding string
 	}
 
 	// HistoryBranchRange blob in a serialization agnostic format
@@ -167,6 +169,8 @@ type (
 		VersionHistoriesEncoding           string
 		FirstExecutionRunID                UUID
 		PartitionConfig                    map[string]string
+		Checksum                           []byte
+		ChecksumEncoding                   string
 	}
 
 	// ActivityInfo blob in a serialization agnostic format

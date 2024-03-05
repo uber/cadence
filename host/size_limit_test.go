@@ -95,7 +95,9 @@ func (s *SizeLimitIntegrationSuite) TestTerminateWorkflowCausedBySizeLimit() {
 		Identity:                            identity,
 	}
 
-	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel := createContext()
+	defer cancel()
+	we, err0 := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err0)
 
 	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
@@ -164,8 +166,10 @@ func (s *SizeLimitIntegrationSuite) TestTerminateWorkflowCausedBySizeLimit() {
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 
+	ctx, cancel = createContext()
+	defer cancel()
 	// verify last event is terminated event
-	historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
+	historyResponse, err := s.engine.GetWorkflowExecutionHistory(ctx, &types.GetWorkflowExecutionHistoryRequest{
 		Domain: s.domainName,
 		Execution: &types.WorkflowExecution{
 			WorkflowID: id,
@@ -182,7 +186,8 @@ func (s *SizeLimitIntegrationSuite) TestTerminateWorkflowCausedBySizeLimit() {
 	// verify visibility is correctly processed from open to close
 	isCloseCorrect := false
 	for i := 0; i < 10; i++ {
-		resp, err1 := s.engine.ListClosedWorkflowExecutions(createContext(), &types.ListClosedWorkflowExecutionsRequest{
+		ctx, cancel := createContext()
+		resp, err1 := s.engine.ListClosedWorkflowExecutions(ctx, &types.ListClosedWorkflowExecutionsRequest{
 			Domain:          s.domainName,
 			MaximumPageSize: 100,
 			StartTimeFilter: &types.StartTimeFilter{
@@ -193,6 +198,7 @@ func (s *SizeLimitIntegrationSuite) TestTerminateWorkflowCausedBySizeLimit() {
 				WorkflowID: id,
 			},
 		})
+		cancel()
 		s.Nil(err1)
 		if len(resp.Executions) == 1 {
 			isCloseCorrect = true

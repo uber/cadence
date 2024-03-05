@@ -131,11 +131,13 @@ Loop:
 		if pollStickyTaskList {
 			taskList = p.StickyTaskList
 		}
-		response, err1 := p.Engine.PollForDecisionTask(createContext(), &types.PollForDecisionTaskRequest{
+		ctx, cancel := createContext()
+		response, err1 := p.Engine.PollForDecisionTask(ctx, &types.PollForDecisionTaskRequest{
 			Domain:   p.Domain,
 			TaskList: taskList,
 			Identity: p.Identity,
 		})
+		cancel()
 
 		if err1 != nil {
 			return false, nil, err1
@@ -166,11 +168,13 @@ Loop:
 
 			nextPageToken := response.NextPageToken
 			for nextPageToken != nil {
-				resp, err2 := p.Engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
+				ctx, cancel := createContext()
+				resp, err2 := p.Engine.GetWorkflowExecutionHistory(ctx, &types.GetWorkflowExecutionHistoryRequest{
 					Domain:        p.Domain,
 					Execution:     response.WorkflowExecution,
 					NextPageToken: nextPageToken,
 				})
+				cancel()
 
 				if err2 != nil {
 					return false, nil, err2
@@ -214,7 +218,10 @@ Loop:
 				completeRequest.QueryResult = blob
 			}
 
-			return true, nil, p.Engine.RespondQueryTaskCompleted(createContext(), completeRequest)
+			ctx, cancel := createContext()
+			taskErr := p.Engine.RespondQueryTaskCompleted(ctx, completeRequest)
+			cancel()
+			return true, nil, taskErr
 		}
 
 		// handle normal decision task / non query task response
@@ -232,18 +239,22 @@ Loop:
 			common.Int64Default(response.PreviousStartedEventID), response.StartedEventID, response.History)
 		if err != nil {
 			p.Logger.Info("Failing Decision. Decision handler failed with error", tag.Error(err))
-			return isQueryTask, nil, p.Engine.RespondDecisionTaskFailed(createContext(), &types.RespondDecisionTaskFailedRequest{
+			ctx, cancel := createContext()
+			taskErr := p.Engine.RespondDecisionTaskFailed(ctx, &types.RespondDecisionTaskFailedRequest{
 				TaskToken: response.TaskToken,
 				Cause:     types.DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure.Ptr(),
 				Details:   []byte(err.Error()),
 				Identity:  p.Identity,
 			})
+			cancel()
+			return isQueryTask, nil, taskErr
 		}
 
 		p.Logger.Info("Completing Decision.  Decisions", tag.Value(decisions))
 		if !respondStickyTaskList {
 			// non sticky tasklist
-			newTask, err := p.Engine.RespondDecisionTaskCompleted(createContext(), &types.RespondDecisionTaskCompletedRequest{
+			ctx, cancel := createContext()
+			newTask, err := p.Engine.RespondDecisionTaskCompleted(ctx, &types.RespondDecisionTaskCompletedRequest{
 				TaskToken:                  response.TaskToken,
 				Identity:                   p.Identity,
 				ExecutionContext:           executionCtx,
@@ -252,11 +263,13 @@ Loop:
 				ForceCreateNewDecisionTask: forceCreateNewDecision,
 				QueryResults:               getQueryResults(response.GetQueries(), queryResult),
 			})
+			cancel()
 			return false, newTask, err
 		}
 		// sticky tasklist
+		ctx, cancel = createContext()
 		newTask, err := p.Engine.RespondDecisionTaskCompleted(
-			createContext(),
+			ctx,
 			&types.RespondDecisionTaskCompletedRequest{
 				TaskToken:        response.TaskToken,
 				Identity:         p.Identity,
@@ -271,6 +284,7 @@ Loop:
 				QueryResults:               getQueryResults(response.GetQueries(), queryResult),
 			},
 		)
+		cancel()
 
 		return false, newTask, err
 	}
@@ -301,7 +315,9 @@ func (p *TaskPoller) HandlePartialDecision(response *types.PollForDecisionTaskRe
 		common.Int64Default(response.PreviousStartedEventID), response.StartedEventID, response.History)
 	if err != nil {
 		p.Logger.Info("Failing Decision. Decision handler failed with error: %v", tag.Error(err))
-		return nil, p.Engine.RespondDecisionTaskFailed(createContext(), &types.RespondDecisionTaskFailedRequest{
+		ctx, cancel := createContext()
+		defer cancel()
+		return nil, p.Engine.RespondDecisionTaskFailed(ctx, &types.RespondDecisionTaskFailedRequest{
 			TaskToken: response.TaskToken,
 			Cause:     types.DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure.Ptr(),
 			Details:   []byte(err.Error()),
@@ -312,8 +328,10 @@ func (p *TaskPoller) HandlePartialDecision(response *types.PollForDecisionTaskRe
 	p.Logger.Info("Completing Decision.  Decisions: %v", tag.Value(decisions))
 
 	// sticky tasklist
+	ctx, cancel := createContext()
+	defer cancel()
 	newTask, err := p.Engine.RespondDecisionTaskCompleted(
-		createContext(),
+		ctx,
 		&types.RespondDecisionTaskCompletedRequest{
 			TaskToken:        response.TaskToken,
 			Identity:         p.Identity,
@@ -334,11 +352,13 @@ func (p *TaskPoller) HandlePartialDecision(response *types.PollForDecisionTaskRe
 // PollAndProcessActivityTask for activity tasks
 func (p *TaskPoller) PollAndProcessActivityTask(dropTask bool) error {
 	for attempt := 0; attempt < 5; attempt++ {
-		response, err1 := p.Engine.PollForActivityTask(createContext(), &types.PollForActivityTaskRequest{
+		ctx, ctxCancel := createContext()
+		response, err1 := p.Engine.PollForActivityTask(ctx, &types.PollForActivityTaskRequest{
 			Domain:   p.Domain,
 			TaskList: p.TaskList,
 			Identity: p.Identity,
 		})
+		ctxCancel()
 
 		if err1 != nil {
 			return err1
@@ -359,27 +379,36 @@ func (p *TaskPoller) PollAndProcessActivityTask(dropTask bool) error {
 			response.Input, response.TaskToken)
 		if cancel {
 			p.Logger.Info("Executing RespondActivityTaskCanceled")
-			return p.Engine.RespondActivityTaskCanceled(createContext(), &types.RespondActivityTaskCanceledRequest{
+			ctx, ctxCancel := createContext()
+			taskErr := p.Engine.RespondActivityTaskCanceled(ctx, &types.RespondActivityTaskCanceledRequest{
 				TaskToken: response.TaskToken,
 				Details:   []byte("details"),
 				Identity:  p.Identity,
 			})
+			ctxCancel()
+			return taskErr
 		}
 
 		if err2 != nil {
-			return p.Engine.RespondActivityTaskFailed(createContext(), &types.RespondActivityTaskFailedRequest{
+			ctx, ctxCancel := createContext()
+			taskErr := p.Engine.RespondActivityTaskFailed(ctx, &types.RespondActivityTaskFailedRequest{
 				TaskToken: response.TaskToken,
 				Reason:    common.StringPtr(err2.Error()),
 				Details:   []byte(err2.Error()),
 				Identity:  p.Identity,
 			})
+			ctxCancel()
+			return taskErr
 		}
 
-		return p.Engine.RespondActivityTaskCompleted(createContext(), &types.RespondActivityTaskCompletedRequest{
+		ctx, ctxCancel = createContext()
+		taskErr := p.Engine.RespondActivityTaskCompleted(ctx, &types.RespondActivityTaskCompletedRequest{
 			TaskToken: response.TaskToken,
 			Identity:  p.Identity,
 			Result:    result,
 		})
+		ctxCancel()
+		return taskErr
 	}
 
 	return matching.ErrNoTasks
@@ -388,11 +417,13 @@ func (p *TaskPoller) PollAndProcessActivityTask(dropTask bool) error {
 // PollAndProcessActivityTaskWithID is similar to PollAndProcessActivityTask but using RespondActivityTask...ByID
 func (p *TaskPoller) PollAndProcessActivityTaskWithID(dropTask bool) error {
 	for attempt := 0; attempt < 5; attempt++ {
-		response, err1 := p.Engine.PollForActivityTask(createContext(), &types.PollForActivityTaskRequest{
+		ctx, ctxCancel := createContext()
+		response, err1 := p.Engine.PollForActivityTask(ctx, &types.PollForActivityTaskRequest{
 			Domain:   p.Domain,
 			TaskList: p.TaskList,
 			Identity: p.Identity,
 		})
+		ctxCancel()
 
 		if err1 != nil {
 			return err1
@@ -418,7 +449,8 @@ func (p *TaskPoller) PollAndProcessActivityTaskWithID(dropTask bool) error {
 			response.Input, response.TaskToken)
 		if cancel {
 			p.Logger.Info("Executing RespondActivityTaskCanceled")
-			return p.Engine.RespondActivityTaskCanceledByID(createContext(), &types.RespondActivityTaskCanceledByIDRequest{
+			ctx, ctxCancel := createContext()
+			taskErr := p.Engine.RespondActivityTaskCanceledByID(ctx, &types.RespondActivityTaskCanceledByIDRequest{
 				Domain:     p.Domain,
 				WorkflowID: response.WorkflowExecution.GetWorkflowID(),
 				RunID:      response.WorkflowExecution.GetRunID(),
@@ -426,10 +458,13 @@ func (p *TaskPoller) PollAndProcessActivityTaskWithID(dropTask bool) error {
 				Details:    []byte("details"),
 				Identity:   p.Identity,
 			})
+			ctxCancel()
+			return taskErr
 		}
 
 		if err2 != nil {
-			return p.Engine.RespondActivityTaskFailedByID(createContext(), &types.RespondActivityTaskFailedByIDRequest{
+			ctx, ctxCancel := createContext()
+			taskErr := p.Engine.RespondActivityTaskFailedByID(ctx, &types.RespondActivityTaskFailedByIDRequest{
 				Domain:     p.Domain,
 				WorkflowID: response.WorkflowExecution.GetWorkflowID(),
 				RunID:      response.WorkflowExecution.GetRunID(),
@@ -438,9 +473,12 @@ func (p *TaskPoller) PollAndProcessActivityTaskWithID(dropTask bool) error {
 				Details:    []byte(err2.Error()),
 				Identity:   p.Identity,
 			})
+			ctxCancel()
+			return taskErr
 		}
 
-		return p.Engine.RespondActivityTaskCompletedByID(createContext(), &types.RespondActivityTaskCompletedByIDRequest{
+		ctx, ctxCancel = createContext()
+		taskErr := p.Engine.RespondActivityTaskCompletedByID(ctx, &types.RespondActivityTaskCompletedByIDRequest{
 			Domain:     p.Domain,
 			WorkflowID: response.WorkflowExecution.GetWorkflowID(),
 			RunID:      response.WorkflowExecution.GetRunID(),
@@ -448,14 +486,16 @@ func (p *TaskPoller) PollAndProcessActivityTaskWithID(dropTask bool) error {
 			Identity:   p.Identity,
 			Result:     result,
 		})
+		ctxCancel()
+		return taskErr
 	}
 
 	return matching.ErrNoTasks
 }
 
-func createContext() context.Context {
-	ctx, _ := context.WithTimeout(context.Background(), 90*time.Second)
-	return ctx
+func createContext() (context.Context, context.CancelFunc) {
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	return ctx, cancel
 }
 
 func getQueryResults(queries map[string]*types.WorkflowQuery, queryResult *types.WorkflowQueryResult) map[string]*types.WorkflowQueryResult {

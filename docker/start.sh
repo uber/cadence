@@ -130,11 +130,11 @@ wait_for_postgres() {
 wait_for_es() {
     server=`echo $ES_SEEDS | awk -F ',' '{print $1}'`
     URL="http://$server:$ES_PORT"
-    curl -s $URL 2>&1 > /dev/null
+    curl -s $URL > /dev/null 2>&1
     until [ $? -eq 0 ]; do
         echo 'waiting for elasticsearch to start up'
         sleep 1
-        curl -s $URL 2>&1 > /dev/null
+        curl -s $URL > /dev/null 2>&1
     done
     echo 'elasticsearch started'
 }
@@ -155,9 +155,37 @@ wait_for_db() {
     fi
 }
 
+wait_for_async_wf_queue_kafka() {
+    ready="false"
+    while [ "$ready" != "true" ]; do
+        brokers=$(echo dump | nc "$ZOOKEEPER_SEEDS" "$ZOOKEEPER_PORT" | grep brokers | wc -l)
+        if [ "$brokers" -gt 0 ]; then
+            ready="true"
+        else
+            echo 'waiting for kafka broker to show up in zookeeper'
+            sleep 3
+        fi
+    done
+
+    echo 'kafka broker started'
+}
+
+setup_async_wf_queue() {
+    if [ "$ASYNC_WF_KAFKA_QUEUE_ENABLED" != "true" ]; then
+        return
+    fi
+
+    wait_for_async_wf_queue_kafka
+
+    # For now we are using wurstmeister/kafka image which has a default topic auto creation via KAFKA_CREATE_TOPICS environment variable
+    # So no additional setup needed here.
+}
+
 wait_for_db
 if [ "$SKIP_SCHEMA_SETUP" != true ]; then
     setup_schema
 fi
+
+setup_async_wf_queue
 
 exec /start-cadence.sh

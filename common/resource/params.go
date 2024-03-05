@@ -27,8 +27,10 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
+	"github.com/uber/cadence/common/asyncworkflow/queue"
 	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -52,29 +54,31 @@ type (
 		ThrottledLogger log.Logger
 		HostName        string
 
-		MetricScope              tally.Scope
-		MembershipResolver       membership.Resolver
-		RPCFactory               common.RPCFactory
-		PProfInitializer         common.PProfInitializer
-		PersistenceConfig        config.Persistence
-		ClusterMetadata          cluster.Metadata
-		ReplicatorConfig         config.Replicator
-		MetricsClient            metrics.Client
-		MessagingClient          messaging.Client
-		BlobstoreClient          blobstore.Client
-		ESClient                 es.GenericClient
-		ESConfig                 *config.ElasticSearchConfig
-		DynamicConfig            dynamicconfig.Client
-		ClusterRedirectionPolicy *config.ClusterRedirectionPolicy
-		PublicClient             workflowserviceclient.Interface
-		ArchivalMetadata         archiver.ArchivalMetadata
-		ArchiverProvider         provider.ArchiverProvider
-		Authorizer               authorization.Authorizer // NOTE: this can be nil. If nil, AccessControlledHandlerImpl will initiate one with config.Authorization
-		AuthorizationConfig      config.Authorization     // NOTE: empty(default) struct will get a authorization.NoopAuthorizer
-		IsolationGroupStore      configstore.Client       // This can be nil, the default config store will be created if so
-		IsolationGroupState      isolationgroup.State     // This can be nil, the default state store will be chosen if so
-		Partitioner              partition.Partitioner
-		PinotConfig              *config.PinotVisibilityConfig
-		PinotClient              pinot.GenericClient
+		MetricScope                tally.Scope
+		MembershipResolver         membership.Resolver
+		RPCFactory                 common.RPCFactory
+		PProfInitializer           common.PProfInitializer
+		PersistenceConfig          config.Persistence
+		ClusterMetadata            cluster.Metadata
+		ReplicatorConfig           config.Replicator
+		MetricsClient              metrics.Client
+		MessagingClient            messaging.Client
+		BlobstoreClient            blobstore.Client
+		ESClient                   es.GenericClient
+		ESConfig                   *config.ElasticSearchConfig
+		DynamicConfig              dynamicconfig.Client
+		ClusterRedirectionPolicy   *config.ClusterRedirectionPolicy
+		PublicClient               workflowserviceclient.Interface
+		ArchivalMetadata           archiver.ArchivalMetadata
+		ArchiverProvider           provider.ArchiverProvider
+		Authorizer                 authorization.Authorizer // NOTE: this can be nil. If nil, AccessControlledHandlerImpl will initiate one with config.Authorization
+		AuthorizationConfig        config.Authorization     // NOTE: empty(default) struct will get a authorization.NoopAuthorizer
+		IsolationGroupStore        configstore.Client       // This can be nil, the default config store will be created if so
+		IsolationGroupState        isolationgroup.State     // This can be nil, the default state store will be chosen if so
+		Partitioner                partition.Partitioner
+		PinotConfig                *config.PinotVisibilityConfig
+		PinotClient                pinot.GenericClient
+		AsyncWorkflowQueueProvider queue.Provider
+		TimeSource                 clock.TimeSource
 	}
 )

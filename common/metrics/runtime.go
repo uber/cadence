@@ -35,7 +35,7 @@ var (
 	// Revision is the VCS revision associated with this build. Overridden using ldflags
 	// at compile time. Example:
 	// $ go build -ldflags "-X github.com/uber/cadence/common/metrics.Revision=abcdef" ...
-	// see go-build-ldflags.sh for GIT_REVISION
+	// see get-ldflags.sh for GIT_REVISION
 	Revision = "unknown"
 
 	// Branch is the VCS branch associated with this build.

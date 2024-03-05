@@ -93,6 +93,16 @@ type (
 		WorkerConfig          *WorkerConfig
 		MockAdminClient       map[string]adminClient.Client
 		PinotConfig           *config.PinotVisibilityConfig
+		AsyncWFQueues         map[string]config.AsyncWorkflowQueueProvider
+
+		// TimeSource is used to override the time source of internal components.
+		// Note that most components don't respect this, and it's only used in a few places.
+		// e.g. async workflow test's consumer manager and domain manager
+		TimeSource                     clock.MockedTimeSource
+		FrontendDynamicConfigOverrides map[dynamicconfig.Key]interface{}
+		HistoryDynamicConfigOverrides  map[dynamicconfig.Key]interface{}
+		MatchingDynamicConfigOverrides map[dynamicconfig.Key]interface{}
+		WorkerDynamicConfigOverrides   map[dynamicconfig.Key]interface{}
 	}
 
 	// MessagingClientConfig is the config for messaging config
@@ -103,9 +113,10 @@ type (
 
 	// WorkerConfig is the config for enabling/disabling cadence worker
 	WorkerConfig struct {
-		EnableArchiver   bool
-		EnableIndexer    bool
-		EnableReplicator bool
+		EnableArchiver        bool
+		EnableIndexer         bool
+		EnableReplicator      bool
+		EnableAsyncWFConsumer bool
 	}
 )
 
@@ -161,6 +172,12 @@ func NewCluster(t *testing.T, options *TestClusterConfig, logger log.Logger, par
 		MockAdminClient:               options.MockAdminClient,
 		DomainReplicationTaskExecutor: domain.NewReplicationTaskExecutor(testBase.DomainManager, clock.NewRealTimeSource(), logger),
 		AuthorizationConfig:           aConfig,
+		AsyncWFQueues:                 options.AsyncWFQueues,
+		TimeSource:                    options.TimeSource,
+		FrontendDynCfgOverrides:       options.FrontendDynamicConfigOverrides,
+		HistoryDynCfgOverrides:        options.HistoryDynamicConfigOverrides,
+		MatchingDynCfgOverrides:       options.MatchingDynamicConfigOverrides,
+		WorkerDynCfgOverrides:         options.WorkerDynamicConfigOverrides,
 	}
 	cluster := NewCadence(cadenceParams)
 	if err := cluster.Start(); err != nil {
@@ -335,13 +352,14 @@ func newArchiverBase(enabled bool, logger log.Logger) *ArchiverBase {
 		FileMode: "0666",
 		DirMode:  "0766",
 	}
-	provider := provider.NewArchiverProvider(
-		&config.HistoryArchiverProvider{
-			Filestore: cfg,
-		},
-		&config.VisibilityArchiverProvider{
-			Filestore: cfg,
-		},
+	node, err := config.ToYamlNode(cfg)
+	if err != nil {
+		logger.Fatal("Should be impossible: failed to convert filestore archiver config to a yaml node")
+	}
+
+	archiverProvider := provider.NewArchiverProvider(
+		config.HistoryArchiverProvider{config.FilestoreConfig: node},
+		config.VisibilityArchiverProvider{config.FilestoreConfig: node},
 	)
 	return &ArchiverBase{
 		metadata: archiver.NewArchivalMetadata(dcCollection, "enabled", true, "enabled", true, &config.ArchivalDomainDefaults{
@@ -354,7 +372,7 @@ func newArchiverBase(enabled bool, logger log.Logger) *ArchiverBase {
 				URI:    "testScheme://test/visibility/archive/path",
 			},
 		}),
-		provider:                 provider,
+		provider:                 archiverProvider,
 		historyStoreDirectory:    historyStoreDirectory,
 		visibilityStoreDirectory: visibilityStoreDirectory,
 		historyURI:               filestore.URIScheme + "://" + historyStoreDirectory,

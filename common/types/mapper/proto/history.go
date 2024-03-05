@@ -1569,3 +1569,17 @@ func ToHistoryRespondCrossClusterTasksCompletedResponse(t *historyv1.RespondCros
 		Tasks: ToCrossClusterTaskRequestArray(t.Tasks),
 	}
 }
+
+func FromHistoryResetStickyTaskListResponse(t *types.HistoryResetStickyTaskListResponse) *historyv1.ResetStickyTaskListResponse {
+	if t == nil {
+		return nil
+	}
+	return &historyv1.ResetStickyTaskListResponse{}
+}
+
+func ToHistoryResetStickyTaskListResponse(t *historyv1.ResetStickyTaskListResponse) *types.HistoryResetStickyTaskListResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.HistoryResetStickyTaskListResponse{}
+}

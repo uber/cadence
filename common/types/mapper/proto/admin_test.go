@@ -209,7 +209,7 @@ func TestAdminRespondCrossClusterTasksCompletedResponse(t *testing.T) {
 	}
 }
 
-func TestFromGetGlobalIsolationGroupsResponse(t *testing.T) {
+func TestFromAdminGetGlobalIsolationGroupsResponse(t *testing.T) {
 	tests := map[string]struct {
 		in       *types.GetGlobalIsolationGroupsResponse
 		expected *adminv1.GetGlobalIsolationGroupsResponse
@@ -257,9 +257,9 @@ func TestFromGetGlobalIsolationGroupsResponse(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			res := FromGetGlobalIsolationGroupsResponse(td.in)
+			res := FromAdminGetGlobalIsolationGroupsResponse(td.in)
 			assert.Equal(t, td.expected, res, "mapping")
-			roundTrip := ToGetGlobalIsolationGroupsResponse(res)
+			roundTrip := ToAdminGetGlobalIsolationGroupsResponse(res)
 			if td.in != nil {
 				assert.Equal(t, td.in, roundTrip, "roundtrip")
 			}
@@ -267,7 +267,7 @@ func TestFromGetGlobalIsolationGroupsResponse(t *testing.T) {
 	}
 }
 
-func TestToGetGlobalIsolationGroupsRequest(t *testing.T) {
+func TestToAdminGetGlobalIsolationGroupsRequest(t *testing.T) {
 
 	tests := map[string]struct {
 		in       *adminv1.GetGlobalIsolationGroupsRequest
@@ -285,12 +285,12 @@ func TestToGetGlobalIsolationGroupsRequest(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, td.expected, ToGetGlobalIsolationGroupsRequest(td.in))
+			assert.Equal(t, td.expected, ToAdminGetGlobalIsolationGroupsRequest(td.in))
 		})
 	}
 }
 
-func TestFromGetDomainIsolationGroupsResponse(t *testing.T) {
+func TestFromAdminGetDomainIsolationGroupsResponse(t *testing.T) {
 	tests := map[string]struct {
 		in       *types.GetDomainIsolationGroupsResponse
 		expected *adminv1.GetDomainIsolationGroupsResponse
@@ -337,7 +337,7 @@ func TestFromGetDomainIsolationGroupsResponse(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			res := FromGetDomainIsolationGroupsResponse(td.in)
+			res := FromAdminGetDomainIsolationGroupsResponse(td.in)
 			// map iteration is nondeterministic
 			sort.Slice(res.IsolationGroups.IsolationGroups, func(i int, j int) bool {
 				return res.IsolationGroups.IsolationGroups[i].Name > res.IsolationGroups.IsolationGroups[j].Name
@@ -346,7 +346,7 @@ func TestFromGetDomainIsolationGroupsResponse(t *testing.T) {
 	}
 }
 
-func TestToGetDomainIsolationGroupsRequest(t *testing.T) {
+func TestToAdminGetDomainIsolationGroupsRequest(t *testing.T) {
 
 	tests := map[string]struct {
 		in       *adminv1.GetDomainIsolationGroupsRequest
@@ -372,12 +372,12 @@ func TestToGetDomainIsolationGroupsRequest(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, td.expected, ToGetDomainIsolationGroupsRequest(td.in))
+			assert.Equal(t, td.expected, ToAdminGetDomainIsolationGroupsRequest(td.in))
 		})
 	}
 }
 
-func TestFromUpdateGlobalIsolationGroupsResponse(t *testing.T) {
+func TestFromAdminUpdateGlobalIsolationGroupsResponse(t *testing.T) {
 
 	tests := map[string]struct {
 		in       *types.UpdateGlobalIsolationGroupsResponse
@@ -396,12 +396,12 @@ func TestFromUpdateGlobalIsolationGroupsResponse(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, td.expected, FromUpdateGlobalIsolationGroupsResponse(td.in))
+			assert.Equal(t, td.expected, FromAdminUpdateGlobalIsolationGroupsResponse(td.in))
 		})
 	}
 }
 
-func TestToUpdateGlobalIsolationGroupsRequest(t *testing.T) {
+func TestToAdminUpdateGlobalIsolationGroupsRequest(t *testing.T) {
 
 	tests := map[string]struct {
 		in       *adminv1.UpdateGlobalIsolationGroupsRequest
@@ -447,9 +447,9 @@ func TestToUpdateGlobalIsolationGroupsRequest(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			res := ToUpdateGlobalIsolationGroupsRequest(td.in)
+			res := ToAdminUpdateGlobalIsolationGroupsRequest(td.in)
 			assert.Equal(t, td.expected, res, "conversion")
-			roundTrip := FromUpdateGlobalIsolationGroupsRequest(res)
+			roundTrip := FromAdminUpdateGlobalIsolationGroupsRequest(res)
 			if td.in != nil {
 				assert.Equal(t, td.in, roundTrip, "roundtrip")
 			}
@@ -457,7 +457,7 @@ func TestToUpdateGlobalIsolationGroupsRequest(t *testing.T) {
 	}
 }
 
-func TestFromUpdateDomainIsolationGroupsResponse(t *testing.T) {
+func TestFromAdminUpdateDomainIsolationGroupsResponse(t *testing.T) {
 
 	tests := map[string]struct {
 		in       *types.UpdateDomainIsolationGroupsResponse
@@ -475,7 +475,7 @@ func TestFromUpdateDomainIsolationGroupsResponse(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, td.expected, FromUpdateDomainIsolationGroupsResponse(td.in))
+			assert.Equal(t, td.expected, FromAdminUpdateDomainIsolationGroupsResponse(td.in))
 		})
 	}
 }
@@ -524,7 +524,347 @@ func TestToUpdateDomainIsolationGroupsRequest(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, td.expected, ToUpdateDomainIsolationGroupsRequest(td.in))
+			assert.Equal(t, td.expected, ToAdminUpdateDomainIsolationGroupsRequest(td.in))
+		})
+	}
+}
+
+func TestToAdminGetDomainAsyncWorkflowConfiguratonRequest(t *testing.T) {
+	tests := map[string]struct {
+		in       *adminv1.GetDomainAsyncWorkflowConfiguratonRequest
+		expected *types.GetDomainAsyncWorkflowConfiguratonRequest
+	}{
+		"nil": {
+			in:       nil,
+			expected: nil,
+		},
+		"empty": {
+			in:       &adminv1.GetDomainAsyncWorkflowConfiguratonRequest{},
+			expected: &types.GetDomainAsyncWorkflowConfiguratonRequest{},
+		},
+		"valid": {
+			in: &adminv1.GetDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+			},
+			expected: &types.GetDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+			},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expected, ToAdminGetDomainAsyncWorkflowConfiguratonRequest(td.in))
+		})
+	}
+}
+
+func TestFromAdminGetDomainAsyncWorkflowConfiguratonResponse(t *testing.T) {
+	tests := map[string]struct {
+		in       *types.GetDomainAsyncWorkflowConfiguratonResponse
+		expected *adminv1.GetDomainAsyncWorkflowConfiguratonResponse
+	}{
+		"nil": {
+			in:       nil,
+			expected: nil,
+		},
+		"empty": {
+			in:       &types.GetDomainAsyncWorkflowConfiguratonResponse{},
+			expected: &adminv1.GetDomainAsyncWorkflowConfiguratonResponse{},
+		},
+		"predefined queue": {
+			in: &types.GetDomainAsyncWorkflowConfiguratonResponse{
+				Configuration: &types.AsyncWorkflowConfiguration{
+					Enabled:             true,
+					PredefinedQueueName: "test-queue",
+				},
+			},
+			expected: &adminv1.GetDomainAsyncWorkflowConfiguratonResponse{
+				Configuration: &v1.AsyncWorkflowConfiguration{
+					Enabled:             true,
+					PredefinedQueueName: "test-queue",
+				},
+			},
+		},
+		"inline queue": {
+			in: &types.GetDomainAsyncWorkflowConfiguratonResponse{
+				Configuration: &types.AsyncWorkflowConfiguration{
+					Enabled:   true,
+					QueueType: "kafka",
+					QueueConfig: &types.DataBlob{
+						EncodingType: types.EncodingTypeJSON.Ptr(),
+						Data:         []byte(`{"topic":"test-topic","dlq_topic":"test-dlq-topic","consumer_group":"test-consumer-group","brokers":["test-broker-1","test-broker-2"],"properties":{"test-key-1":"test-value-1"}}`),
+					},
+				},
+			},
+			expected: &adminv1.GetDomainAsyncWorkflowConfiguratonResponse{
+				Configuration: &v1.AsyncWorkflowConfiguration{
+					Enabled:   true,
+					QueueType: "kafka",
+					QueueConfig: &v1.DataBlob{
+						EncodingType: v1.EncodingType_ENCODING_TYPE_JSON,
+						Data:         []byte(`{"topic":"test-topic","dlq_topic":"test-dlq-topic","consumer_group":"test-consumer-group","brokers":["test-broker-1","test-broker-2"],"properties":{"test-key-1":"test-value-1"}}`),
+					},
+				},
+			},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expected, FromAdminGetDomainAsyncWorkflowConfiguratonResponse(td.in))
+		})
+	}
+}
+
+func TestToAdminUpdateDomainAsyncWorkflowConfiguratonRequest(t *testing.T) {
+	tests := map[string]struct {
+		in       *adminv1.UpdateDomainAsyncWorkflowConfiguratonRequest
+		expected *types.UpdateDomainAsyncWorkflowConfiguratonRequest
+	}{
+		"nil": {
+			in:       nil,
+			expected: nil,
+		},
+		"empty": {
+			in:       &adminv1.UpdateDomainAsyncWorkflowConfiguratonRequest{},
+			expected: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{},
+		},
+		"predefined queue": {
+			in: &adminv1.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+				Configuration: &v1.AsyncWorkflowConfiguration{
+					Enabled:             true,
+					PredefinedQueueName: "test-queue",
+				},
+			},
+			expected: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+				Configuration: &types.AsyncWorkflowConfiguration{
+					Enabled:             true,
+					PredefinedQueueName: "test-queue",
+				},
+			},
+		},
+		"inline queue": {
+			in: &adminv1.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+				Configuration: &v1.AsyncWorkflowConfiguration{
+					Enabled:   true,
+					QueueType: "kafka",
+					QueueConfig: &v1.DataBlob{
+						EncodingType: v1.EncodingType_ENCODING_TYPE_JSON,
+						Data:         []byte(`{"topic":"test-topic","dlq_topic":"test-dlq-topic","consumer_group":"test-consumer-group","brokers":["test-broker-1","test-broker-2"],"properties":{"test-key-1":"test-value-1"}}`),
+					},
+				},
+			},
+			expected: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+				Configuration: &types.AsyncWorkflowConfiguration{
+					Enabled:   true,
+					QueueType: "kafka",
+					QueueConfig: &types.DataBlob{
+						EncodingType: types.EncodingTypeJSON.Ptr(),
+						Data:         []byte(`{"topic":"test-topic","dlq_topic":"test-dlq-topic","consumer_group":"test-consumer-group","brokers":["test-broker-1","test-broker-2"],"properties":{"test-key-1":"test-value-1"}}`),
+					},
+				},
+			},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expected, ToAdminUpdateDomainAsyncWorkflowConfiguratonRequest(td.in))
+		})
+	}
+}
+
+func TestFromAdminUpdateDomainAsyncWorkflowConfiguratonResponse(t *testing.T) {
+	tests := map[string]struct {
+		in       *types.UpdateDomainAsyncWorkflowConfiguratonResponse
+		expected *adminv1.UpdateDomainAsyncWorkflowConfiguratonResponse
+	}{
+		"nil": {
+			in:       nil,
+			expected: nil,
+		},
+		"empty": {
+			in:       &types.UpdateDomainAsyncWorkflowConfiguratonResponse{},
+			expected: &adminv1.UpdateDomainAsyncWorkflowConfiguratonResponse{},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expected, FromAdminUpdateDomainAsyncWorkflowConfiguratonResponse(td.in))
+		})
+	}
+}
+
+func TestFromAdminGetDomainAsyncWorkflowConfiguratonRequest(t *testing.T) {
+	tests := map[string]struct {
+		in       *types.GetDomainAsyncWorkflowConfiguratonRequest
+		expected *adminv1.GetDomainAsyncWorkflowConfiguratonRequest
+	}{
+		"nil": {
+			in:       nil,
+			expected: nil,
+		},
+		"empty": {
+			in:       &types.GetDomainAsyncWorkflowConfiguratonRequest{},
+			expected: &adminv1.GetDomainAsyncWorkflowConfiguratonRequest{},
+		},
+		"valid": {
+			in: &types.GetDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+			},
+			expected: &adminv1.GetDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+			},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expected, FromAdminGetDomainAsyncWorkflowConfiguratonRequest(td.in))
+		})
+	}
+}
+
+func TestToAdminGetDomainAsyncWorkflowConfiguratonResponse(t *testing.T) {
+	tests := map[string]struct {
+		in       *adminv1.GetDomainAsyncWorkflowConfiguratonResponse
+		expected *types.GetDomainAsyncWorkflowConfiguratonResponse
+	}{
+		"nil": {
+			in:       nil,
+			expected: nil,
+		},
+		"empty": {
+			in:       &adminv1.GetDomainAsyncWorkflowConfiguratonResponse{},
+			expected: &types.GetDomainAsyncWorkflowConfiguratonResponse{},
+		},
+		"predefined queue": {
+			in: &adminv1.GetDomainAsyncWorkflowConfiguratonResponse{
+				Configuration: &v1.AsyncWorkflowConfiguration{
+					PredefinedQueueName: "test-queue",
+				},
+			},
+			expected: &types.GetDomainAsyncWorkflowConfiguratonResponse{
+				Configuration: &types.AsyncWorkflowConfiguration{
+					PredefinedQueueName: "test-queue",
+				},
+			},
+		},
+		"inline queue": {
+			in: &adminv1.GetDomainAsyncWorkflowConfiguratonResponse{
+				Configuration: &v1.AsyncWorkflowConfiguration{
+					Enabled:   true,
+					QueueType: "kafka",
+					QueueConfig: &v1.DataBlob{
+						EncodingType: v1.EncodingType_ENCODING_TYPE_JSON,
+						Data:         []byte(`{"topic":"test-topic","dlq_topic":"test-dlq-topic","consumer_group":"test-consumer-group","brokers":["test-broker-1","test-broker-2"],"properties":{"test-key-1":"test-value-1"}}`),
+					},
+				},
+			},
+			expected: &types.GetDomainAsyncWorkflowConfiguratonResponse{
+				Configuration: &types.AsyncWorkflowConfiguration{
+					Enabled:   true,
+					QueueType: "kafka",
+					QueueConfig: &types.DataBlob{
+						EncodingType: types.EncodingTypeJSON.Ptr(),
+						Data:         []byte(`{"topic":"test-topic","dlq_topic":"test-dlq-topic","consumer_group":"test-consumer-group","brokers":["test-broker-1","test-broker-2"],"properties":{"test-key-1":"test-value-1"}}`),
+					},
+				},
+			},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expected, ToAdminGetDomainAsyncWorkflowConfiguratonResponse(td.in))
+		})
+	}
+}
+
+func TestFromAdminUpdateDomainAsyncWorkflowConfiguratonRequest(t *testing.T) {
+	tests := map[string]struct {
+		in       *types.UpdateDomainAsyncWorkflowConfiguratonRequest
+		expected *adminv1.UpdateDomainAsyncWorkflowConfiguratonRequest
+	}{
+		"nil": {
+			in:       nil,
+			expected: nil,
+		},
+		"empty": {
+			in:       &types.UpdateDomainAsyncWorkflowConfiguratonRequest{},
+			expected: &adminv1.UpdateDomainAsyncWorkflowConfiguratonRequest{},
+		},
+		"predefined queue": {
+			in: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+				Configuration: &types.AsyncWorkflowConfiguration{
+					PredefinedQueueName: "test-queue",
+				},
+			},
+			expected: &adminv1.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+				Configuration: &v1.AsyncWorkflowConfiguration{
+					PredefinedQueueName: "test-queue",
+				},
+			},
+		},
+		"kafka inline queue": {
+			in: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+				Configuration: &types.AsyncWorkflowConfiguration{
+					Enabled:   true,
+					QueueType: "kafka",
+					QueueConfig: &types.DataBlob{
+						EncodingType: types.EncodingTypeJSON.Ptr(),
+						Data:         []byte(`{"topic":"test-topic","dlq_topic":"test-dlq-topic","consumer_group":"test-consumer-group","brokers":["test-broker-1","test-broker-2"],"properties":{"test-key-1":"test-value-1"}}`),
+					},
+				},
+			},
+			expected: &adminv1.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+				Configuration: &v1.AsyncWorkflowConfiguration{
+					Enabled:   true,
+					QueueType: "kafka",
+					QueueConfig: &v1.DataBlob{
+						EncodingType: v1.EncodingType_ENCODING_TYPE_JSON,
+						Data:         []byte(`{"topic":"test-topic","dlq_topic":"test-dlq-topic","consumer_group":"test-consumer-group","brokers":["test-broker-1","test-broker-2"],"properties":{"test-key-1":"test-value-1"}}`),
+					},
+				},
+			},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expected, FromAdminUpdateDomainAsyncWorkflowConfiguratonRequest(td.in))
+		})
+	}
+}
+
+func TestToAdminUpdateDomainAsyncWorkflowConfiguratonResponse(t *testing.T) {
+	tests := map[string]struct {
+		in       *adminv1.UpdateDomainAsyncWorkflowConfiguratonResponse
+		expected *types.UpdateDomainAsyncWorkflowConfiguratonResponse
+	}{
+		"nil": {
+			in:       nil,
+			expected: nil,
+		},
+		"empty": {
+			in:       &adminv1.UpdateDomainAsyncWorkflowConfiguratonResponse{},
+			expected: &types.UpdateDomainAsyncWorkflowConfiguratonResponse{},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expected, ToAdminUpdateDomainAsyncWorkflowConfiguratonResponse(td.in))
 		})
 	}
 }

@@ -23,6 +23,7 @@ package execution
 
 import (
 	"encoding/json"
+	"golang.org/x/exp/slices"
 
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
@@ -383,11 +384,7 @@ func CopyWorkflowExecutionInfo(sourceInfo *persistence.WorkflowExecutionInfo) *p
 
 // CopyActivityInfo copies ActivityInfo
 func CopyActivityInfo(sourceInfo *persistence.ActivityInfo) *persistence.ActivityInfo {
-	var details []byte
-	if sourceInfo.Details != nil {
-		details = make([]byte, len(sourceInfo.Details))
-		copy(details, sourceInfo.Details)
-	}
+	details := slices.Clone(sourceInfo.Details)
 
 	return &persistence.ActivityInfo{
 		Version:                  sourceInfo.Version,
@@ -458,14 +455,8 @@ func CopySignalInfo(sourceInfo *persistence.SignalInfo) *persistence.SignalInfo 
 		SignalRequestID:       sourceInfo.SignalRequestID,
 		SignalName:            sourceInfo.SignalName,
 	}
-	if sourceInfo.Input != nil {
-		result.Input = make([]byte, len(sourceInfo.Input))
-		copy(result.Input, sourceInfo.Input)
-	}
-	if sourceInfo.Control != nil {
-		result.Control = make([]byte, len(sourceInfo.Control))
-		copy(result.Control, sourceInfo.Control)
-	}
+	result.Input = slices.Clone(sourceInfo.Input)
+	result.Control = slices.Clone(sourceInfo.Control)
 	return result
 }
 
@@ -562,4 +553,17 @@ func GetChildExecutionDomainEntry(
 	}
 
 	return parentDomainEntry, nil
+}
+
+func trimBinaryChecksums(recentBinaryChecksums []string, currResetPoints []*types.ResetPointInfo, maxResetPoints int) ([]string, []*types.ResetPointInfo) {
+	numResetPoints := len(currResetPoints)
+	if numResetPoints >= maxResetPoints {
+		// If exceeding the max limit, do rotation by taking the oldest ones out.
+		// startIndex plus one here because it needs to make space for the new binary checksum for the current run
+		startIndex := numResetPoints - maxResetPoints + 1
+		currResetPoints = currResetPoints[startIndex:]
+		recentBinaryChecksums = recentBinaryChecksums[startIndex:]
+	}
+
+	return recentBinaryChecksums, currResetPoints
 }

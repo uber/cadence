@@ -868,6 +868,23 @@ func (v *DataBlob) GetData() (o []byte) {
 	return
 }
 
+func (v *DataBlob) DeepCopy() *DataBlob {
+	if v == nil {
+		return nil
+	}
+
+	res := &DataBlob{
+		EncodingType: v.EncodingType,
+	}
+
+	if v.Data != nil {
+		res.Data = make([]byte, len(v.Data))
+		copy(res.Data, v.Data)
+	}
+
+	return res
+}
+
 // Decision is an internal type (TBD...)
 type Decision struct {
 	DecisionType                                             *DecisionType                                             `json:"decisionType,omitempty"`
@@ -1801,6 +1818,7 @@ type DomainConfiguration struct {
 	VisibilityArchivalStatus               *ArchivalStatus              `json:"visibilityArchivalStatus,omitempty"`
 	VisibilityArchivalURI                  string                       `json:"visibilityArchivalURI,omitempty"`
 	IsolationGroups                        *IsolationGroupConfiguration `json:"isolationGroupConfiguration,omitempty"`
+	AsyncWorkflowConfig                    *AsyncWorkflowConfiguration  `json:"asyncWorkflowConfiguration,omitempty"`
 }
 
 // GetWorkflowExecutionRetentionPeriodInDays is an internal getter (TBD...)
@@ -1865,6 +1883,13 @@ func (v *DomainConfiguration) GetIsolationGroupsConfiguration() IsolationGroupCo
 		return *v.IsolationGroups
 	}
 	return nil
+}
+
+func (v *DomainConfiguration) GetAsyncWorkflowConfiguration() AsyncWorkflowConfiguration {
+	if v.AsyncWorkflowConfig != nil {
+		return *v.AsyncWorkflowConfig
+	}
+	return AsyncWorkflowConfiguration{}
 }
 
 // DomainInfo is an internal type (TBD...)
@@ -3448,6 +3473,14 @@ func (v *ListTaskListPartitionsRequest) SerializeForLogging() (string, error) {
 func (v *ListTaskListPartitionsRequest) GetDomain() (o string) {
 	if v != nil {
 		return v.Domain
+	}
+	return
+}
+
+// GetTaskList is an internal getter (TBD...)
+func (v *ListTaskListPartitionsRequest) GetTaskList() (o *TaskList) {
+	if v != nil && v.TaskList != nil {
+		return v.TaskList
 	}
 	return
 }
@@ -5913,6 +5946,15 @@ func (v *SignalWithStartWorkflowExecutionRequest) GetCronSchedule() (o string) {
 	return
 }
 
+// SignalWithStartWorkflowExecutionAsyncRequest is an internal type (TBD...)
+type SignalWithStartWorkflowExecutionAsyncRequest struct {
+	*SignalWithStartWorkflowExecutionRequest
+}
+
+// SignalWithStartWorkflowExecutionAsyncResponse is an internal type (TBD...)
+type SignalWithStartWorkflowExecutionAsyncResponse struct {
+}
+
 // SignalWorkflowExecutionRequest is an internal type (TBD...)
 type SignalWorkflowExecutionRequest struct {
 	Domain            string             `json:"domain,omitempty"`
@@ -6311,6 +6353,13 @@ func (v *StartWorkflowExecutionResponse) GetRunID() (o string) {
 		return v.RunID
 	}
 	return
+}
+
+type StartWorkflowExecutionAsyncRequest struct {
+	*StartWorkflowExecutionRequest
+}
+
+type StartWorkflowExecutionAsyncResponse struct {
 }
 
 // RestartWorkflowExecutionResponse is an internal type (TBD...)
@@ -8129,6 +8178,13 @@ type RespondCrossClusterTasksCompletedRequest struct {
 	TargetCluster string                      `json:"targetCluster,omitempty"`
 	TaskResponses []*CrossClusterTaskResponse `json:"taskResponses,omitempty"`
 	FetchNewTasks bool                        `json:"fetchNewTasks,omitempty"`
+}
+
+func (v *RespondCrossClusterTasksCompletedRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
+	return SerializeRequest(v)
 }
 
 // GetShardID is an internal getter (TBD...)

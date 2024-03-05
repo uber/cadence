@@ -43,9 +43,11 @@ import (
 	"github.com/uber/cadence/common"
 	carchiver "github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
+	"github.com/uber/cadence/common/asyncworkflow/queue"
 	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/cache"
 	cc "github.com/uber/cadence/common/client"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/domain"
@@ -57,6 +59,7 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/wrappers/metered"
 	"github.com/uber/cadence/common/pinot"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/rpc"
@@ -67,6 +70,7 @@ import (
 	"github.com/uber/cadence/service/matching"
 	"github.com/uber/cadence/service/worker"
 	"github.com/uber/cadence/service/worker/archiver"
+	"github.com/uber/cadence/service/worker/asyncworkflow"
 	"github.com/uber/cadence/service/worker/indexer"
 	"github.com/uber/cadence/service/worker/replicator"
 )
@@ -116,6 +120,14 @@ type (
 		authorizationConfig           config.Authorization
 		pinotConfig                   *config.PinotVisibilityConfig
 		pinotClient                   pinot.GenericClient
+		asyncWFQueues                 map[string]config.AsyncWorkflowQueueProvider
+		timeSource                    clock.TimeSource
+
+		// dynamicconfig overrides per service
+		frontendDynCfgOverrides map[dynamicconfig.Key]interface{}
+		historyDynCfgOverrides  map[dynamicconfig.Key]interface{}
+		matchingDynCfgOverrides map[dynamicconfig.Key]interface{}
+		workerDynCfgOverrides   map[dynamicconfig.Key]interface{}
 	}
 
 	// HistoryConfig contains configs for history service
@@ -149,6 +161,13 @@ type (
 		AuthorizationConfig           config.Authorization
 		PinotConfig                   *config.PinotVisibilityConfig
 		PinotClient                   pinot.GenericClient
+		AsyncWFQueues                 map[string]config.AsyncWorkflowQueueProvider
+		TimeSource                    clock.TimeSource
+
+		FrontendDynCfgOverrides map[dynamicconfig.Key]interface{}
+		HistoryDynCfgOverrides  map[dynamicconfig.Key]interface{}
+		MatchingDynCfgOverrides map[dynamicconfig.Key]interface{}
+		WorkerDynCfgOverrides   map[dynamicconfig.Key]interface{}
 	}
 )
 
@@ -176,11 +195,17 @@ func NewCadence(params *CadenceParams) Cadence {
 		authorizationConfig:           params.AuthorizationConfig,
 		pinotConfig:                   params.PinotConfig,
 		pinotClient:                   params.PinotClient,
+		asyncWFQueues:                 params.AsyncWFQueues,
+		timeSource:                    params.TimeSource,
+		frontendDynCfgOverrides:       params.FrontendDynCfgOverrides,
+		historyDynCfgOverrides:        params.HistoryDynCfgOverrides,
+		matchingDynCfgOverrides:       params.MatchingDynCfgOverrides,
+		workerDynCfgOverrides:         params.WorkerDynCfgOverrides,
 	}
 }
 
 func (c *cadenceImpl) enableWorker() bool {
-	return c.workerConfig.EnableArchiver || c.workerConfig.EnableIndexer || c.workerConfig.EnableReplicator
+	return c.workerConfig.EnableArchiver || c.workerConfig.EnableIndexer || c.workerConfig.EnableReplicator || c.workerConfig.EnableAsyncWFConsumer
 }
 
 func (c *cadenceImpl) Start() error {
@@ -417,6 +442,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]membership.HostInfo, star
 	params.Name = service.Frontend
 	params.Logger = c.logger
 	params.ThrottledLogger = c.logger
+	params.TimeSource = c.timeSource
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.FrontendPProfPort())
 	params.RPCFactory = c.newRPCFactory(service.Frontend, c.FrontendHost())
 	params.MetricScope = tally.NewTestScope(service.Frontend, make(map[string]string))
@@ -424,7 +450,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]membership.HostInfo, star
 	params.ClusterMetadata = c.clusterMetadata
 	params.MessagingClient = c.messagingClient
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
-	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient())
+	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient(), c.frontendDynCfgOverrides)
 	params.ArchivalMetadata = c.archiverMetadata
 	params.ArchiverProvider = c.archiverProvider
 	params.ESConfig = c.esConfig
@@ -454,6 +480,13 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]membership.HostInfo, star
 		params.PersistenceConfig.AdvancedVisibilityStore = esDataStoreName
 		params.PersistenceConfig.DataStores[esDataStoreName] = config.DataStore{
 			ElasticSearch: c.esConfig,
+		}
+	}
+
+	if c.asyncWFQueues != nil {
+		params.AsyncWorkflowQueueProvider, err = queue.NewAsyncQueueProvider(c.asyncWFQueues)
+		if err != nil {
+			c.logger.Fatal("error creating async queue provider", tag.Error(err))
 		}
 	}
 
@@ -491,6 +524,7 @@ func (c *cadenceImpl) startHistory(
 		params.Name = service.History
 		params.Logger = c.logger
 		params.ThrottledLogger = c.logger
+		params.TimeSource = c.timeSource
 		params.PProfInitializer = newPProfInitializerImpl(c.logger, pprofPorts[i])
 		params.RPCFactory = c.newRPCFactory(service.History, hostport)
 		params.MetricScope = tally.NewTestScope(service.History, make(map[string]string))
@@ -498,7 +532,7 @@ func (c *cadenceImpl) startHistory(
 		params.ClusterMetadata = c.clusterMetadata
 		params.MessagingClient = c.messagingClient
 		params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
-		integrationClient := newIntegrationConfigClient(dynamicconfig.NewNopClient())
+		integrationClient := newIntegrationConfigClient(dynamicconfig.NewNopClient(), c.historyDynCfgOverrides)
 		c.overrideHistoryDynamicConfig(integrationClient)
 		params.DynamicConfig = integrationClient
 		params.PublicClient = newPublicClient(params.RPCFactory.GetDispatcher())
@@ -563,13 +597,14 @@ func (c *cadenceImpl) startMatching(hosts map[string][]membership.HostInfo, star
 	params.Name = service.Matching
 	params.Logger = c.logger
 	params.ThrottledLogger = c.logger
+	params.TimeSource = c.timeSource
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.MatchingPProfPort())
 	params.RPCFactory = c.newRPCFactory(service.Matching, c.MatchingServiceHost())
 	params.MetricScope = tally.NewTestScope(service.Matching, make(map[string]string))
 	params.MembershipResolver = newMembershipResolver(params.Name, hosts)
 	params.ClusterMetadata = c.clusterMetadata
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
-	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient())
+	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient(), c.matchingDynCfgOverrides)
 	params.ArchivalMetadata = c.archiverMetadata
 	params.ArchiverProvider = c.archiverProvider
 
@@ -600,17 +635,20 @@ func (c *cadenceImpl) startMatching(hosts map[string][]membership.HostInfo, star
 }
 
 func (c *cadenceImpl) startWorker(hosts map[string][]membership.HostInfo, startWG *sync.WaitGroup) {
+	defer c.shutdownWG.Done()
+
 	params := new(resource.Params)
 	params.Name = service.Worker
 	params.Logger = c.logger
 	params.ThrottledLogger = c.logger
+	params.TimeSource = c.timeSource
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.WorkerPProfPort())
 	params.RPCFactory = c.newRPCFactory(service.Worker, c.WorkerServiceHost())
 	params.MetricScope = tally.NewTestScope(service.Worker, make(map[string]string))
 	params.MembershipResolver = newMembershipResolver(params.Name, hosts)
 	params.ClusterMetadata = c.clusterMetadata
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
-	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient())
+	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient(), c.workerDynCfgOverrides)
 	params.ArchivalMetadata = c.archiverMetadata
 	params.ArchiverProvider = c.archiverProvider
 
@@ -625,22 +663,57 @@ func (c *cadenceImpl) startWorker(hosts map[string][]membership.HostInfo, startW
 
 	var replicatorDomainCache cache.DomainCache
 	if c.workerConfig.EnableReplicator {
-		metadataManager := persistence.NewDomainPersistenceMetricsClient(c.domainManager, service.GetMetricsClient(), c.logger, &c.persistenceConfig)
+		metadataManager := metered.NewDomainManager(c.domainManager, service.GetMetricsClient(), c.logger, &c.persistenceConfig)
 		replicatorDomainCache = cache.NewDomainCache(metadataManager, c.clusterMetadata, service.GetMetricsClient(), service.GetLogger())
 		replicatorDomainCache.Start()
+		defer replicatorDomainCache.Stop()
 		c.startWorkerReplicator(service)
 	}
 
 	var clientWorkerDomainCache cache.DomainCache
 	if c.workerConfig.EnableArchiver {
-		metadataProxyManager := persistence.NewDomainPersistenceMetricsClient(c.domainManager, service.GetMetricsClient(), c.logger, &c.persistenceConfig)
+		metadataProxyManager := metered.NewDomainManager(c.domainManager, service.GetMetricsClient(), c.logger, &c.persistenceConfig)
 		clientWorkerDomainCache = cache.NewDomainCache(metadataProxyManager, c.clusterMetadata, service.GetMetricsClient(), service.GetLogger())
 		clientWorkerDomainCache.Start()
+		defer clientWorkerDomainCache.Stop()
 		c.startWorkerClientWorker(params, service, clientWorkerDomainCache)
 	}
 
 	if c.workerConfig.EnableIndexer {
 		c.startWorkerIndexer(params, service)
+	}
+
+	var asyncWFDomainCache cache.DomainCache
+	if c.workerConfig.EnableAsyncWFConsumer {
+		queueProvider, err := queue.NewAsyncQueueProvider(c.asyncWFQueues)
+		if err != nil {
+			c.logger.Fatal("error creating async queue provider", tag.Error(err))
+		}
+
+		metadataProxyManager := metered.NewDomainManager(
+			c.domainManager,
+			service.GetMetricsClient(),
+			c.logger,
+			&c.persistenceConfig)
+		asyncWFDomainCache = cache.NewDomainCache(
+			metadataProxyManager,
+			c.clusterMetadata,
+			service.GetMetricsClient(),
+			service.GetLogger(),
+			cache.WithTimeSource(params.TimeSource))
+		asyncWFDomainCache.Start()
+		defer asyncWFDomainCache.Stop()
+		cm := asyncworkflow.NewConsumerManager(
+			service.GetLogger(),
+			service.GetMetricsClient(),
+			asyncWFDomainCache,
+			queueProvider,
+			c.frontendClient,
+			asyncworkflow.WithTimeSource(params.TimeSource),
+			asyncworkflow.WithRefreshInterval(time.Second),
+		)
+		cm.Start()
+		defer cm.Stop()
 	}
 
 	startWG.Done()
@@ -651,7 +724,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]membership.HostInfo, startW
 	if c.workerConfig.EnableArchiver {
 		clientWorkerDomainCache.Stop()
 	}
-	c.shutdownWG.Done()
+
 }
 
 func (c *cadenceImpl) startWorkerReplicator(svc Service) {

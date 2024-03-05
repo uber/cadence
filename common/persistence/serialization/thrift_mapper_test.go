@@ -232,6 +232,8 @@ func TestWorkflowExecutionInfo(t *testing.T) {
 		VersionHistoriesEncoding:           "VersionHistoriesEncoding",
 		FirstExecutionRunID:                UUID(uuid.New()),
 		PartitionConfig:                    map[string]string{"zone": "dca1"},
+		Checksum:                           []byte("Checksum"),
+		ChecksumEncoding:                   "ChecksumEncoding",
 	}
 	actual := workflowExecutionInfoFromThrift(workflowExecutionInfoToThrift(expected))
 	assert.Equal(t, expected.ParentDomainID, actual.ParentDomainID)
@@ -293,6 +295,8 @@ func TestWorkflowExecutionInfo(t *testing.T) {
 	assert.True(t, (expected.RetryExpiration-actual.RetryExpiration) < time.Second)
 	assert.Equal(t, expected.FirstExecutionRunID, actual.FirstExecutionRunID)
 	assert.Equal(t, expected.PartitionConfig, actual.PartitionConfig)
+	assert.Equal(t, expected.Checksum, actual.Checksum)
+	assert.Equal(t, expected.ChecksumEncoding, actual.ChecksumEncoding)
 }
 
 func TestActivityInfo(t *testing.T) {

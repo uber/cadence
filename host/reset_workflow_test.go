@@ -56,7 +56,9 @@ func (s *IntegrationSuite) TestResetWorkflow() {
 		Identity:                            identity,
 	}
 
-	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel := createContext()
+	defer cancel()
+	we, err0 := s.engine.StartWorkflowExecution(ctx, request)
 	s.NoError(err0)
 
 	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.GetRunID()))
@@ -162,8 +164,10 @@ func (s *IntegrationSuite) TestResetWorkflow() {
 		}
 	}
 
+	ctx, cancel = createContext()
+	defer cancel()
 	// FIRST reset: Reset workflow execution, current is open
-	resp, err := s.engine.ResetWorkflowExecution(createContext(), &types.ResetWorkflowExecutionRequest{
+	resp, err := s.engine.ResetWorkflowExecution(ctx, &types.ResetWorkflowExecutionRequest{
 		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: id,
@@ -207,7 +211,9 @@ func (s *IntegrationSuite) TestResetWorkflow() {
 
 	// check the start time of mutable state for the second run,
 	// it should be reset time although the start event is reused
-	descResp, err := s.engine.DescribeWorkflowExecution(createContext(), &types.DescribeWorkflowExecutionRequest{
+	ctx, cancel = createContext()
+	defer cancel()
+	descResp, err := s.engine.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
 		Domain: s.domainName,
 		Execution: &types.WorkflowExecution{
 			WorkflowID: id,
@@ -217,8 +223,10 @@ func (s *IntegrationSuite) TestResetWorkflow() {
 	s.NoError(err)
 	s.True(descResp.WorkflowExecutionInfo.GetStartTime() > firstRunStartTimestamp)
 
+	ctx, cancel = createContext()
+	defer cancel()
 	// SECOND reset: reset the first run again, to exercise the code path of resetting closed workflow
-	resp, err = s.engine.ResetWorkflowExecution(createContext(), &types.ResetWorkflowExecutionRequest{
+	resp, err = s.engine.ResetWorkflowExecution(ctx, &types.ResetWorkflowExecutionRequest{
 		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: id,
@@ -250,8 +258,10 @@ func (s *IntegrationSuite) TestResetWorkflow() {
 	// assert the new run is closed, completed by decision task
 	s.Equal(types.EventTypeWorkflowExecutionCompleted, lastEvent.GetEventType())
 
+	ctx, cancel = createContext()
+	defer cancel()
 	// THIRD reset: reset the workflow run that is after a reset
-	_, err = s.engine.ResetWorkflowExecution(createContext(), &types.ResetWorkflowExecutionRequest{
+	_, err = s.engine.ResetWorkflowExecution(ctx, &types.ResetWorkflowExecutionRequest{
 		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: id,
@@ -287,7 +297,9 @@ func (s *IntegrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 		Identity:                            identity,
 	}
 
-	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel := createContext()
+	defer cancel()
+	we, err0 := s.engine.StartWorkflowExecution(ctx, request)
 	s.NoError(err0)
 
 	// Find reset point (last completed decision task)
@@ -302,8 +314,10 @@ func (s *IntegrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 		}
 	}
 
+	ctx, cancel = createContext()
+	defer cancel()
 	// FIRST reset: Reset workflow execution, current is open
-	_, err := s.engine.ResetWorkflowExecution(createContext(), &types.ResetWorkflowExecutionRequest{
+	_, err := s.engine.ResetWorkflowExecution(ctx, &types.ResetWorkflowExecutionRequest{
 		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: id,
@@ -327,8 +341,10 @@ func (s *IntegrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 	// assert the first run is closed, terminated by the previous reset
 	s.Equal(types.EventTypeWorkflowExecutionTerminated, lastEvent.GetEventType())
 
+	ctx, cancel = createContext()
+	defer cancel()
 	// SECOND reset: reset the first run again, to exercise the code path of resetting closed workflow
-	resp, err := s.engine.ResetWorkflowExecution(createContext(), &types.ResetWorkflowExecutionRequest{
+	resp, err := s.engine.ResetWorkflowExecution(ctx, &types.ResetWorkflowExecutionRequest{
 		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: id,

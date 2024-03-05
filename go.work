@@ -1,0 +1,24 @@
+go 1.20
+
+// This file is primarily for gopls and IDEs it supports, as it does not
+// understand submodules correctly without it.
+//
+// It also slightly improves `go run` and `go test` behavior, as they work from
+// the top level regardless of the target's submodule, but it isn't quite
+// sufficient as things like `go build ./...` still do not recurse into submodules.
+//
+// Hence the Makefile's `make build` and `make tidy`, and changes to `make test`-alikes.
+// Maybe we can remove those some day, but not currently at least.
+//
+// Anyway, add any new submodules to here, and make sure they're all using
+// similar `replace repo => ../relative/path` replaces so it all stays compatible
+// at all times during development time.
+
+use (
+	.
+	./cmd/server
+	./common/archiver/gcloud
+
+	// DO NOT include, tools dependencies are intentionally separate.
+	// ./internal/tools
+)

@@ -64,13 +64,17 @@ func (s *IntegrationSuite) TestWorkflowRetryPolicyTimeout() {
 		RetryPolicy:                         retryPolicy,
 	}
 	now := time.Now()
-	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel := createContext()
+	defer cancel()
+	we, err0 := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err0)
 
 	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 	time.Sleep(3 * time.Second) // wait 1 second for timeout
 
-	historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
+	ctx, cancel = createContext()
+	defer cancel()
+	historyResponse, err := s.engine.GetWorkflowExecutionHistory(ctx, &types.GetWorkflowExecutionHistoryRequest{
 		Domain: s.domainName,
 		Execution: &types.WorkflowExecution{
 			WorkflowID: id,
@@ -126,7 +130,9 @@ func (s *IntegrationSuite) TestWorkflowRetryPolicyContinueAsNewAsRetry() {
 		RetryPolicy:                         retryPolicy,
 	}
 	now := time.Now()
-	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	ctx, cancel := createContext()
+	defer cancel()
+	we, err0 := s.engine.StartWorkflowExecution(ctx, request)
 	s.Nil(err0)
 
 	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
@@ -160,12 +166,14 @@ func (s *IntegrationSuite) TestWorkflowRetryPolicyContinueAsNewAsRetry() {
 
 GetHistoryLoop:
 	for i := 0; i < 20; i++ {
-		historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
+		ctx, cancel := createContext()
+		historyResponse, err := s.engine.GetWorkflowExecutionHistory(ctx, &types.GetWorkflowExecutionHistoryRequest{
 			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
 				WorkflowID: id,
 			},
 		})
+		cancel()
 		s.Nil(err)
 		history = historyResponse.History
 

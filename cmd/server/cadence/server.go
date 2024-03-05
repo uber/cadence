@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
+	"github.com/uber/cadence/common/asyncworkflow/queue"
 	"github.com/uber/cadence/common/blobstore/filestore"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
@@ -179,6 +180,8 @@ func (s *server) startService() common.Daemon {
 		log.Fatalf("ringpop provider failed: %v", err)
 	}
 
+	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
+
 	params.MembershipResolver, err = membership.NewResolver(
 		peerProvider,
 		params.Logger,
@@ -190,8 +193,6 @@ func (s *server) startService() common.Daemon {
 	params.PProfInitializer = svcCfg.PProf.NewInitializer(params.Logger)
 
 	params.ClusterRedirectionPolicy = s.cfg.ClusterGroupMetadata.ClusterRedirectionPolicy
-
-	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 
 	params.ClusterMetadata = cluster.NewMetadata(
 		clusterGroupMetadata.FailoverVersionIncrement,
@@ -282,6 +283,11 @@ func (s *server) startService() common.Daemon {
 	if err != nil {
 		log.Printf("failed to create file blobstore client, will continue startup without it: %v", err)
 		params.BlobstoreClient = nil
+	}
+
+	params.AsyncWorkflowQueueProvider, err = queue.NewAsyncQueueProvider(s.cfg.AsyncWorkflowQueues)
+	if err != nil {
+		log.Fatalf("error creating async queue provider: %v", err)
 	}
 
 	params.Logger.Info("Starting service " + s.name)

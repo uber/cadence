@@ -30,7 +30,6 @@ import (
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/gcloud/connector"
 	"github.com/uber/cadence/common/backoff"
-	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
@@ -44,6 +43,7 @@ var (
 const (
 	// URIScheme is the scheme for the gcloud storage implementation
 	URIScheme = "gs"
+	ConfigKey = "gstorage"
 
 	targetHistoryBlobSize = 2 * 1024 * 1024 // 2MB
 	errEncodeHistory      = "failed to encode history batches"
@@ -74,7 +74,7 @@ type getHistoryToken struct {
 // NewHistoryArchiver creates a new gcloud storage HistoryArchiver
 func NewHistoryArchiver(
 	container *archiver.HistoryBootstrapContainer,
-	config *config.GstorageArchiver,
+	config connector.Config,
 ) (archiver.HistoryArchiver, error) {
 	storage, err := connector.NewClient(context.Background(), config)
 	if err == nil {

@@ -2,7 +2,7 @@ version: "3.5"
 
 services:
   cassandra:
-    image: cassandra:4.1.3
+    image: cassandra:4.1.1
     environment:
       - "MAX_HEAP_SIZE=256M"
       - "HEAP_NEWSIZE=128M"
@@ -55,6 +55,9 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # for async wf tests, create a topic with 10 partitions and 1 replica
+      # topic name must match ASYNC_WF_KAFKA_QUEUE_TOPIC
+      KAFKA_CREATE_TOPICS: "async-wf-topic1:10:1"
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.8.22
@@ -280,6 +283,34 @@ services:
       services-network:
         aliases:
           - integration-test-ndc
+
+  integration-test-async-wf:
+    build:
+      context: ../../
+      dockerfile: ./docker/buildkite/Dockerfile
+    environment:
+      - "ASYNC_WF_KAFKA_QUEUE_TOPIC=async-wf-topic1"
+      - "CASSANDRA=1"
+      - "CASSANDRA_SEEDS=cassandra"
+      - "ES_SEEDS=elasticsearch"
+      - "KAFKA_SEEDS=kafka"
+      - "KAFKA_PORT=9092"
+      - BUILDKITE_AGENT_ACCESS_TOKEN
+      - BUILDKITE_JOB_ID
+      - BUILDKITE_BUILD_ID
+      - BUILDKITE_BUILD_NUMBER
+    depends_on:
+      cassandra:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    volumes:
+      - ../../:/cadence
+      - /usr/bin/buildkite-agent:/usr/bin/buildkite-agent
+    networks:
+      services-network:
+        aliases:
+          - integration-test-async-wf
 
   coverage-report:
     build:

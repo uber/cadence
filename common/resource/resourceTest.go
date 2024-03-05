@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
+	"github.com/uber/cadence/common/asyncworkflow/queue"
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
@@ -103,6 +104,8 @@ type (
 		HostName            string
 		Logger              log.Logger
 		taskvalidator       taskvalidator.Checker
+
+		AsyncWorkflowQueueProvider *queue.MockProvider
 	}
 )
 
@@ -162,6 +165,8 @@ func NewTest(
 
 	scope := tally.NewTestScope("test", nil)
 
+	asyncWorkflowQueueProvider := queue.NewMockProvider(controller)
+
 	return &Test{
 		MetricsScope: scope,
 
@@ -207,8 +212,9 @@ func NewTest(
 
 		// logger
 
-		Logger:        logger,
-		taskvalidator: taskvalidator.NewWfChecker(logger, metrics.NewClient(scope, serviceMetricsIndex)),
+		Logger: logger,
+
+		AsyncWorkflowQueueProvider: asyncWorkflowQueueProvider,
 	}
 }
 
@@ -436,6 +442,10 @@ func (s *Test) GetPartitioner() partition.Partitioner {
 // isolation-group stores
 func (s *Test) GetIsolationGroupStore() configstore.Client {
 	return s.IsolationGroupStore
+}
+
+func (s *Test) GetAsyncWorkflowQueueProvider() queue.Provider {
+	return s.AsyncWorkflowQueueProvider
 }
 
 // Finish checks whether expectations are met

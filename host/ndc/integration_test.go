@@ -226,8 +226,10 @@ func (s *NDCIntegrationTestSuite) verifyEventHistory(
 ) error {
 	// get replicated history events from passive side
 	passiveClient := s.active.GetFrontendClient()
+	ctx, cancel := s.createContext()
+	defer cancel()
 	replicatedHistory, err := passiveClient.GetWorkflowExecutionHistory(
-		s.createContext(),
+		ctx,
 		&types.GetWorkflowExecutionHistoryRequest{
 			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
@@ -1732,7 +1734,9 @@ func (s *NDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
 			WorkflowID: workflowID,
 			RunID:      runID,
 		}
-		return adminClient.GetWorkflowExecutionRawHistoryV2(s.createContext(), &types.GetWorkflowExecutionRawHistoryV2Request{
+		ctx, cancel := s.createContext()
+		defer cancel()
+		return adminClient.GetWorkflowExecutionRawHistoryV2(ctx, &types.GetWorkflowExecutionRawHistoryV2Request{
 			Domain:            domain,
 			Execution:         execution,
 			StartEventID:      startEventID,
@@ -2216,8 +2220,10 @@ func (s *NDCIntegrationTestSuite) TestWorkflowStartTime() {
 
 	// we are replicating to the `active` cluster, check the comments in
 	// registerDomain() method below
+	ctx, cancel := s.createContext()
+	defer cancel()
 	descResp, err := s.active.GetFrontendClient().DescribeWorkflowExecution(
-		s.createContext(),
+		ctx,
 		&types.DescribeWorkflowExecutionRequest{
 			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
@@ -2237,7 +2243,9 @@ func (s *NDCIntegrationTestSuite) TestWorkflowStartTime() {
 func (s *NDCIntegrationTestSuite) registerDomain() {
 	s.domainName = "test-simple-workflow-ndc-" + common.GenerateRandomString(5)
 	client1 := s.active.GetFrontendClient() // active
-	err := client1.RegisterDomain(s.createContext(), &types.RegisterDomainRequest{
+	ctx, cancel := s.createContext()
+	defer cancel()
+	err := client1.RegisterDomain(ctx, &types.RegisterDomainRequest{
 		Name:           s.domainName,
 		IsGlobalDomain: true,
 		Clusters:       clusterReplicationConfig,
@@ -2250,7 +2258,9 @@ func (s *NDCIntegrationTestSuite) registerDomain() {
 	descReq := &types.DescribeDomainRequest{
 		Name: common.StringPtr(s.domainName),
 	}
-	resp, err := client1.DescribeDomain(s.createContext(), descReq)
+	ctx, cancel = s.createContext()
+	defer cancel()
+	resp, err := client1.DescribeDomain(ctx, descReq)
 	s.Require().NoError(err)
 	s.Require().NotNil(resp)
 	s.domainID = resp.GetDomainInfo().GetUUID()
@@ -2386,9 +2396,13 @@ func (s *NDCIntegrationTestSuite) applyEvents(
 			NewRunEvents:        s.toInternalDataBlob(newRunEventBlob),
 		}
 
-		err := historyClient.ReplicateEventsV2(s.createContext(), req)
+		ctx, cancel := s.createContext()
+		err := historyClient.ReplicateEventsV2(ctx, req)
+		cancel()
 		s.Nil(err, "Failed to replicate history event")
-		err = historyClient.ReplicateEventsV2(s.createContext(), req)
+		ctx, cancel = s.createContext()
+		err = historyClient.ReplicateEventsV2(ctx, req)
+		cancel()
 		s.Nil(err, "Failed to dedup replicate history event")
 	}
 }
@@ -2458,9 +2472,9 @@ func (s *NDCIntegrationTestSuite) toInternalVersionHistoryItems(
 	return versionHistory.ToInternalType().Items
 }
 
-func (s *NDCIntegrationTestSuite) createContext() context.Context {
-	ctx, _ := context.WithTimeout(context.Background(), 90*time.Second)
-	return ctx
+func (s *NDCIntegrationTestSuite) createContext() (context.Context, context.CancelFunc) {
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	return ctx, cancel
 }
 
 func (s *NDCIntegrationTestSuite) setupRemoteFrontendClients() {

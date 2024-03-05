@@ -27,10 +27,21 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/quotas"
 	commonResource "github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/handler"
 	"github.com/uber/cadence/service/history/resource"
+	"github.com/uber/cadence/service/history/workflowcache"
+	"github.com/uber/cadence/service/history/wrappers/grpc"
+	"github.com/uber/cadence/service/history/wrappers/ratelimited"
+	"github.com/uber/cadence/service/history/wrappers/thrift"
+)
+
+const (
+	workflowIDCacheTTL      = 1 * time.Second
+	workflowIDCacheMaxCount = 10_000
 )
 
 // Service represents the cadence-history service
@@ -38,7 +49,7 @@ type Service struct {
 	resource.Resource
 
 	status  int32
-	handler Handler
+	handler handler.Handler
 	stopC   chan struct{}
 	params  *commonResource.Params
 	config  *config.Config
@@ -90,13 +101,32 @@ func (s *Service) Start() {
 	logger.Info("elastic search config", tag.ESConfig(s.params.ESConfig))
 	logger.Info("history starting")
 
-	s.handler = NewHandler(s.Resource, s.config)
+	wfIDCache := workflowcache.New(workflowcache.Params{
+		TTL:                            workflowIDCacheTTL,
+		ExternalLimiterFactory:         quotas.NewSimpleDynamicRateLimiterFactory(s.config.WorkflowIDExternalRPS),
+		InternalLimiterFactory:         quotas.NewSimpleDynamicRateLimiterFactory(s.config.WorkflowIDInternalRPS),
+		WorkflowIDCacheExternalEnabled: s.config.WorkflowIDCacheExternalEnabled,
+		WorkflowIDCacheInternalEnabled: s.config.WorkflowIDCacheInternalEnabled,
+		MaxCount:                       workflowIDCacheMaxCount,
+		DomainCache:                    s.Resource.GetDomainCache(),
+		Logger:                         s.Resource.GetLogger(),
+		MetricsClient:                  s.Resource.GetMetricsClient(),
+	})
 
-	thriftHandler := NewThriftHandler(s.handler)
-	thriftHandler.register(s.GetDispatcher())
+	rawHandler := handler.NewHandler(s.Resource, s.config, wfIDCache)
+	s.handler = ratelimited.NewHistoryHandler(
+		rawHandler,
+		wfIDCache,
+		s.config.WorkflowIDExternalRateLimitEnabled,
+		s.Resource.GetDomainCache(),
+		s.Resource.GetLogger(),
+	)
 
-	grpcHandler := newGRPCHandler(s.handler)
-	grpcHandler.register(s.GetDispatcher())
+	thriftHandler := thrift.NewThriftHandler(s.handler)
+	thriftHandler.Register(s.GetDispatcher())
+
+	grpcHandler := grpc.NewGRPCHandler(s.handler)
+	grpcHandler.Register(s.GetDispatcher())
 
 	// must start resource first
 	s.Resource.Start()

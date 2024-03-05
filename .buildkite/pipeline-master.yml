@@ -8,9 +8,12 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    command: "CASSANDRA_HOST=cassandra make install-schema && make cover_profile" # make install-schema is needed for a server startup test. See main_test.go
+    commands:
+      - "CASSANDRA_HOST=cassandra make install-schema && make cover_profile" # make install-schema is needed for a server startup test. See main_test.go
+      - "./scripts/buildkite/gen_coverage_metadata.sh .build/coverage/metadata.txt"
     artifact_paths:
       - ".build/coverage/*.out"
+      - ".build/coverage/metadata.txt"
     retry:
       automatic:
         limit: 1
@@ -136,6 +139,21 @@ steps:
     plugins:
       - docker-compose#v3.0.0:
           run: integration-test-ndc-postgres
+          config: docker/buildkite/docker-compose.yml
+
+  - label: ":golang: async wf integration test with kafka"
+    agents:
+      queue: "workers"
+      docker: "*"
+    commands:
+      - "make .just-build" # ensure that we are not rebuilding binaries and not regenerating code
+      - "go test -timeout 60s -run ^TestAsyncWFIntegrationSuite -tags asyncwfintegration -count 1 -v github.com/uber/cadence/host"
+    retry:
+      automatic:
+        limit: 1
+    plugins:
+      - docker-compose#v3.0.0:
+          run: integration-test-async-wf
           config: docker/buildkite/docker-compose.yml
 
   - wait

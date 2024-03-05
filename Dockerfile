@@ -15,8 +15,11 @@ WORKDIR /cadence
 # Making sure that dependency is not touched
 ENV GOFLAGS="-mod=readonly"
 
-# Copy go mod dependencies and build cache
+# Copy go mod dependencies and try to share the module download cache
 COPY go.* ./
+COPY cmd/server/go.* ./cmd/server/
+COPY common/archiver/gcloud/go.* ./common/archiver/gcloud/
+# go.work means this downloads everything, not just the top module
 RUN go mod download
 
 COPY . .
@@ -82,7 +85,7 @@ ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD /start-cadence.sh
 
 
-# All-in-one Cadence server
+# All-in-one Cadence server (~450mb)
 FROM cadence-server AS cadence-auto-setup
 
 RUN apk add --update --no-cache ca-certificates py3-pip mysql-client
@@ -91,7 +94,6 @@ RUN pip3 install cqlsh && cqlsh --version
 COPY docker/start.sh /start.sh
 
 CMD /start.sh
-
 
 # Cadence CLI
 FROM alpine AS cadence-cli

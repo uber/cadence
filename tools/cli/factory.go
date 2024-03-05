@@ -44,6 +44,8 @@ import (
 	serverFrontend "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
+	grpcClient "github.com/uber/cadence/client/wrappers/grpc"
+	"github.com/uber/cadence/client/wrappers/thrift"
 	"github.com/uber/cadence/common"
 	cc "github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/config"
@@ -112,14 +114,14 @@ func (b *clientFactory) ServerFrontendClient(c *cli.Context) frontend.Client {
 	b.ensureDispatcher(c)
 	clientConfig := b.dispatcher.ClientConfig(cadenceFrontendService)
 	if c.GlobalString(FlagTransport) == grpcTransport {
-		return frontend.NewGRPCClient(
+		return grpcClient.NewFrontendClient(
 			apiv1.NewDomainAPIYARPCClient(clientConfig),
 			apiv1.NewWorkflowAPIYARPCClient(clientConfig),
 			apiv1.NewWorkerAPIYARPCClient(clientConfig),
 			apiv1.NewVisibilityAPIYARPCClient(clientConfig),
 		)
 	}
-	return frontend.NewThriftClient(serverFrontend.New(clientConfig))
+	return thrift.NewFrontendClient(serverFrontend.New(clientConfig))
 }
 
 // ServerAdminClient builds an admin client (based on server side thrift interface)
@@ -127,9 +129,9 @@ func (b *clientFactory) ServerAdminClient(c *cli.Context) admin.Client {
 	b.ensureDispatcher(c)
 	clientConfig := b.dispatcher.ClientConfig(cadenceFrontendService)
 	if c.GlobalString(FlagTransport) == grpcTransport {
-		return admin.NewGRPCClient(adminv1.NewAdminAPIYARPCClient(clientConfig))
+		return grpcClient.NewAdminClient(adminv1.NewAdminAPIYARPCClient(clientConfig))
 	}
-	return admin.NewThriftClient(serverAdmin.New(clientConfig))
+	return thrift.NewAdminClient(serverAdmin.New(clientConfig))
 }
 
 // ServerFrontendClientForMigration builds a frontend client (based on server side thrift interface)
@@ -137,14 +139,14 @@ func (b *clientFactory) ServerFrontendClientForMigration(c *cli.Context) fronten
 	b.ensureDispatcherForMigration(c)
 	clientConfig := b.dispatcherMigration.ClientConfig(cadenceFrontendService)
 	if c.GlobalString(FlagTransport) == grpcTransport {
-		return frontend.NewGRPCClient(
+		return grpcClient.NewFrontendClient(
 			apiv1.NewDomainAPIYARPCClient(clientConfig),
 			apiv1.NewWorkflowAPIYARPCClient(clientConfig),
 			apiv1.NewWorkerAPIYARPCClient(clientConfig),
 			apiv1.NewVisibilityAPIYARPCClient(clientConfig),
 		)
 	}
-	return frontend.NewThriftClient(serverFrontend.New(clientConfig))
+	return thrift.NewFrontendClient(serverFrontend.New(clientConfig))
 }
 
 // ServerAdminClientForMigration builds an admin client (based on server side thrift interface)
@@ -152,9 +154,9 @@ func (b *clientFactory) ServerAdminClientForMigration(c *cli.Context) admin.Clie
 	b.ensureDispatcherForMigration(c)
 	clientConfig := b.dispatcherMigration.ClientConfig(cadenceFrontendService)
 	if c.GlobalString(FlagTransport) == grpcTransport {
-		return admin.NewGRPCClient(adminv1.NewAdminAPIYARPCClient(clientConfig))
+		return grpcClient.NewAdminClient(adminv1.NewAdminAPIYARPCClient(clientConfig))
 	}
-	return admin.NewThriftClient(serverAdmin.New(clientConfig))
+	return thrift.NewAdminClient(serverAdmin.New(clientConfig))
 }
 
 // ElasticSearchClient builds an ElasticSearch client

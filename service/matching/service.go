@@ -101,10 +101,10 @@ func (s *Service) Start() {
 	s.handler = NewHandler(engine, s.config, s.GetDomainCache(), s.GetMetricsClient(), s.GetLogger(), s.GetThrottledLogger())
 
 	thriftHandler := NewThriftHandler(s.handler)
-	thriftHandler.register(s.GetDispatcher())
+	thriftHandler.Register(s.GetDispatcher())
 
-	grpcHandler := newGRPCHandler(s.handler)
-	grpcHandler.register(s.GetDispatcher())
+	grpcHandler := NewGRPCHandler(s.handler)
+	grpcHandler.Register(s.GetDispatcher())
 
 	// must start base service first
 	s.Resource.Start()

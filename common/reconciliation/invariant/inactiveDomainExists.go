@@ -30,11 +30,6 @@ import (
 	"github.com/uber/cadence/common/reconciliation/entity"
 )
 
-const (
-	deprecatedDomainStatus = 1
-	deletedDomainStatus    = 2
-)
-
 type (
 	inactiveDomainExists struct {
 		pr persistence.Retryer
@@ -77,7 +72,7 @@ func (idc *inactiveDomainExists) Check(
 			InfoDetails:     err.Error(),
 		}
 	}
-	if domain.GetInfo().Status == deprecatedDomainStatus || domain.GetInfo().Status == deletedDomainStatus {
+	if domain.GetInfo().Status == persistence.DomainStatusDeprecated || domain.GetInfo().Status == persistence.DomainStatusDeleted {
 		return CheckResult{
 			CheckResultType: CheckResultTypeCorrupted,
 			InvariantName:   idc.Name(),

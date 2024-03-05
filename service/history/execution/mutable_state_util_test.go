@@ -21,101 +21,88 @@
 package execution
 
 import (
+	"github.com/uber/cadence/common/testing/testdatagen/idl-types-gen"
 	"testing"
 	"time"
 
-	fuzz "github.com/google/gofuzz"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/testing/testdatagen"
 	"github.com/uber/cadence/common/types"
 )
 
 func TestCopyActivityInfo(t *testing.T) {
-	for i := 0; i < 100; i++ {
-		t.Run("test CopyActivityInfo Mapping", func(t *testing.T) {
-			f := fuzz.New().Funcs(testdatagen.GenHistoryEvent).NilChance(0.2)
+	t.Run("test CopyActivityInfo Mapping", func(t *testing.T) {
+		f := idl_types_gen.NewFuzzerWithIDLTypes(t)
 
-			d1 := persistence.ActivityInfo{}
-			f.Fuzz(&d1)
-			d2 := CopyActivityInfo(&d1)
+		d1 := persistence.ActivityInfo{}
+		f.Fuzz(&d1)
+		d2 := CopyActivityInfo(&d1)
 
-			assert.Equal(t, &d1, d2)
-		})
-	}
+		assert.Equal(t, &d1, d2)
+	})
 }
 
 func TestCopyWorkflowExecutionInfo(t *testing.T) {
-	for i := 0; i < 100; i++ {
-		t.Run("test ExecutionInfo Mapping", func(t *testing.T) {
-			f := fuzz.New().Funcs(testdatagen.GenHistoryEvent).NilChance(0.2)
+	t.Run("test ExecutionInfo Mapping", func(t *testing.T) {
+		f := idl_types_gen.NewFuzzerWithIDLTypes(t)
 
-			d1 := persistence.WorkflowExecutionInfo{}
-			f.Fuzz(&d1)
-			d2 := CopyWorkflowExecutionInfo(&d1)
+		d1 := persistence.WorkflowExecutionInfo{}
+		f.Fuzz(&d1)
+		d2 := CopyWorkflowExecutionInfo(&d1)
 
-			assert.Equal(t, &d1, d2)
-		})
-	}
+		assert.Equal(t, &d1, d2)
+	})
 }
 
 func TestCopyTimerInfoMapping(t *testing.T) {
-	for i := 0; i < 100; i++ {
-		t.Run("test Timer info Mapping", func(t *testing.T) {
-			f := fuzz.New().NilChance(0.2)
+	t.Run("test Timer info Mapping", func(t *testing.T) {
+		f := idl_types_gen.NewFuzzerWithIDLTypes(t)
 
-			d1 := persistence.TimerInfo{}
-			f.Fuzz(&d1)
-			d2 := CopyTimerInfo(&d1)
+		d1 := persistence.TimerInfo{}
+		f.Fuzz(&d1)
+		d2 := CopyTimerInfo(&d1)
 
-			assert.Equal(t, &d1, d2)
-		})
-	}
+		assert.Equal(t, &d1, d2)
+	})
 }
 
 func TestChildWorkflowMapping(t *testing.T) {
-	for i := 0; i < 100; i++ {
-		t.Run("test child workflwo info Mapping", func(t *testing.T) {
-			f := fuzz.New().Funcs(testdatagen.GenHistoryEvent).NilChance(0.2)
+	t.Run("test child workflwo info Mapping", func(t *testing.T) {
+		f := idl_types_gen.NewFuzzerWithIDLTypes(t)
 
-			d1 := persistence.ChildExecutionInfo{}
-			f.Fuzz(&d1)
-			d2 := CopyChildInfo(&d1)
+		d1 := persistence.ChildExecutionInfo{}
+		f.Fuzz(&d1)
+		d2 := CopyChildInfo(&d1)
 
-			assert.Equal(t, &d1, d2)
-		})
-	}
+		assert.Equal(t, &d1, d2)
+	})
 }
 
 func TestCopySignalInfo(t *testing.T) {
-	for i := 0; i < 100; i++ {
-		t.Run("test signal info Mapping", func(t *testing.T) {
-			f := fuzz.New().NilChance(0.2)
+	t.Run("test signal info Mapping", func(t *testing.T) {
+		f := idl_types_gen.NewFuzzerWithIDLTypes(t)
 
-			d1 := persistence.SignalInfo{}
-			f.Fuzz(&d1)
-			d2 := CopySignalInfo(&d1)
+		d1 := persistence.SignalInfo{}
+		f.Fuzz(&d1)
+		d2 := CopySignalInfo(&d1)
 
-			assert.Equal(t, &d1, d2)
-		})
-	}
+		assert.Equal(t, &d1, d2)
+	})
 }
 
 func TestCopyCancellationInfo(t *testing.T) {
-	for i := 0; i < 100; i++ {
-		t.Run("test signal info Mapping", func(t *testing.T) {
-			f := fuzz.New().NilChance(0.2)
+	t.Run("test signal info Mapping", func(t *testing.T) {
+		f := idl_types_gen.NewFuzzerWithIDLTypes(t)
 
-			d1 := persistence.RequestCancelInfo{}
-			f.Fuzz(&d1)
-			d2 := CopyCancellationInfo(&d1)
+		d1 := persistence.RequestCancelInfo{}
+		f.Fuzz(&d1)
+		d2 := CopyCancellationInfo(&d1)
 
-			assert.Equal(t, &d1, d2)
-		})
-	}
+		assert.Equal(t, &d1, d2)
+	})
 }
 
 func TestFindAutoResetPoint(t *testing.T) {
@@ -234,4 +221,77 @@ func TestFindAutoResetPoint(t *testing.T) {
 		},
 	})
 	assert.Equal(t, pt, pt5)
+}
+
+func TestTrimBinaryChecksums(t *testing.T) {
+	testCases := []struct {
+		name           string
+		maxResetPoints int
+		expected       []string
+	}{
+		{
+			name:           "not reach limit",
+			maxResetPoints: 6,
+			expected:       []string{"checksum1", "checksum2", "checksum3", "checksum4", "checksum5"},
+		},
+		{
+			name:           "reach at limit",
+			maxResetPoints: 5,
+			expected:       []string{"checksum2", "checksum3", "checksum4", "checksum5"},
+		},
+		{
+			name:           "exceeds limit",
+			maxResetPoints: 2,
+			expected:       []string{"checksum5"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			currResetPoints := []*types.ResetPointInfo{
+				{
+					BinaryChecksum: "checksum1",
+					RunID:          "run1",
+				},
+				{
+					BinaryChecksum: "checksum2",
+					RunID:          "run2",
+				},
+				{
+					BinaryChecksum: "checksum3",
+					RunID:          "run3",
+				},
+				{
+					BinaryChecksum: "checksum4",
+					RunID:          "run4",
+				},
+				{
+					BinaryChecksum: "checksum5",
+					RunID:          "run5",
+				},
+			}
+			var recentBinaryChecksums []string
+			for _, rp := range currResetPoints {
+				recentBinaryChecksums = append(recentBinaryChecksums, rp.GetBinaryChecksum())
+			}
+			recentBinaryChecksums, currResetPoints = trimBinaryChecksums(recentBinaryChecksums, currResetPoints, tc.maxResetPoints)
+			assert.Equal(t, tc.expected, recentBinaryChecksums)
+			assert.Equal(t, len(tc.expected), len(currResetPoints))
+		})
+	}
+
+	// test empty case
+	currResetPoints := make([]*types.ResetPointInfo, 0, 1)
+	var recentBinaryChecksums []string
+	for _, rp := range currResetPoints {
+		recentBinaryChecksums = append(recentBinaryChecksums, rp.GetBinaryChecksum())
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("The function panicked: %v", r)
+		}
+	}()
+	trimedBinaryChecksums, trimedResetPoints := trimBinaryChecksums(recentBinaryChecksums, currResetPoints, 2)
+	assert.Equal(t, recentBinaryChecksums, trimedBinaryChecksums)
+	assert.Equal(t, currResetPoints, trimedResetPoints)
 }

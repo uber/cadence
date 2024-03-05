@@ -37,6 +37,10 @@ import (
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
+	"github.com/uber/cadence/client/wrappers/errorinjectors"
+	"github.com/uber/cadence/client/wrappers/grpc"
+	"github.com/uber/cadence/client/wrappers/metered"
+	"github.com/uber/cadence/client/wrappers/thrift"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
@@ -105,10 +109,10 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 
 	outboundConfig := cf.rpcFactory.GetDispatcher().ClientConfig(service.History)
 	if rpc.IsGRPCOutbound(outboundConfig) {
-		rawClient = history.NewGRPCClient(historyv1.NewHistoryAPIYARPCClient(outboundConfig))
+		rawClient = grpc.NewHistoryClient(historyv1.NewHistoryAPIYARPCClient(outboundConfig))
 		namedPort = membership.PortGRPC
 	} else {
-		rawClient = history.NewThriftClient(historyserviceclient.New(outboundConfig))
+		rawClient = thrift.NewHistoryClient(historyserviceclient.New(outboundConfig))
 	}
 
 	peerResolver := history.NewPeerResolver(cf.numberOfHistoryShards, cf.resolver, namedPort)
@@ -122,10 +126,10 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 		cf.logger,
 	)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.HistoryErrorInjectionRate)(); errorRate != 0 {
-		client = history.NewErrorInjectionClient(client, errorRate, cf.logger)
+		client = errorinjectors.NewHistoryClient(client, errorRate, cf.logger)
 	}
 	if cf.metricsClient != nil {
-		client = history.NewMetricClient(client, cf.metricsClient)
+		client = metered.NewHistoryClient(client, cf.metricsClient)
 	}
 	return client, nil
 }
@@ -139,10 +143,10 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 	var namedPort = membership.PortTchannel
 	outboundConfig := cf.rpcFactory.GetDispatcher().ClientConfig(service.Matching)
 	if rpc.IsGRPCOutbound(outboundConfig) {
-		rawClient = matching.NewGRPCClient(matchingv1.NewMatchingAPIYARPCClient(outboundConfig))
+		rawClient = grpc.NewMatchingClient(matchingv1.NewMatchingAPIYARPCClient(outboundConfig))
 		namedPort = membership.PortGRPC
 	} else {
-		rawClient = matching.NewThriftClient(matchingserviceclient.New(outboundConfig))
+		rawClient = thrift.NewMatchingClient(matchingserviceclient.New(outboundConfig))
 	}
 
 	peerResolver := matching.NewPeerResolver(cf.resolver, namedPort)
@@ -155,10 +159,10 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 		matching.NewLoadBalancer(domainIDToName, cf.dynConfig),
 	)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.MatchingErrorInjectionRate)(); errorRate != 0 {
-		client = matching.NewErrorInjectionClient(client, errorRate, cf.logger)
+		client = errorinjectors.NewMatchingClient(client, errorRate, cf.logger)
 	}
 	if cf.metricsClient != nil {
-		client = matching.NewMetricClient(client, cf.metricsClient)
+		client = metered.NewMatchingClient(client, cf.metricsClient)
 	}
 	return client, nil
 
@@ -171,17 +175,17 @@ func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndConfig(
 ) (admin.Client, error) {
 	var client admin.Client
 	if rpc.IsGRPCOutbound(config) {
-		client = admin.NewGRPCClient(adminv1.NewAdminAPIYARPCClient(config))
+		client = grpc.NewAdminClient(adminv1.NewAdminAPIYARPCClient(config))
 	} else {
-		client = admin.NewThriftClient(adminserviceclient.New(config))
+		client = thrift.NewAdminClient(adminserviceclient.New(config))
 	}
 
 	client = admin.NewClient(timeout, largeTimeout, client)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.AdminErrorInjectionRate)(); errorRate != 0 {
-		client = admin.NewErrorInjectionClient(client, errorRate, cf.logger)
+		client = errorinjectors.NewAdminClient(client, errorRate, cf.logger)
 	}
 	if cf.metricsClient != nil {
-		client = admin.NewMetricClient(client, cf.metricsClient)
+		client = metered.NewAdminClient(client, cf.metricsClient)
 	}
 	return client, nil
 }
@@ -193,22 +197,22 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndConfig(
 ) (frontend.Client, error) {
 	var client frontend.Client
 	if rpc.IsGRPCOutbound(config) {
-		client = frontend.NewGRPCClient(
+		client = grpc.NewFrontendClient(
 			apiv1.NewDomainAPIYARPCClient(config),
 			apiv1.NewWorkflowAPIYARPCClient(config),
 			apiv1.NewWorkerAPIYARPCClient(config),
 			apiv1.NewVisibilityAPIYARPCClient(config),
 		)
 	} else {
-		client = frontend.NewThriftClient(workflowserviceclient.New(config))
+		client = thrift.NewFrontendClient(workflowserviceclient.New(config))
 	}
 
 	client = frontend.NewClient(timeout, longPollTimeout, client)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.FrontendErrorInjectionRate)(); errorRate != 0 {
-		client = frontend.NewErrorInjectionClient(client, errorRate, cf.logger)
+		client = errorinjectors.NewFrontendClient(client, errorRate, cf.logger)
 	}
 	if cf.metricsClient != nil {
-		client = frontend.NewMetricClient(client, cf.metricsClient)
+		client = metered.NewFrontendClient(client, cf.metricsClient)
 	}
 	return client, nil
 }
