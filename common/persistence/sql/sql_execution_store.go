@@ -35,7 +35,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
@@ -1241,25 +1240,42 @@ func (m *sqlExecutionStore) CreateFailoverMarkerTasks(
 	request *p.CreateFailoverMarkersRequest,
 ) error {
 	dbShardID := sqlplugin.GetDBShardIDFromHistoryShardID(m.shardID, m.db.GetTotalNumDBShards())
-	return m.txExecuteShardLocked(ctx, dbShardID, "CreateFailoverMarkerTasks", request.RangeID, func(tx sqlplugin.Tx) error {
-		for _, task := range request.Markers {
-			t := []p.Task{task}
-			if err := createReplicationTasks(
-				ctx,
-				tx,
-				t,
-				m.shardID,
-				serialization.MustParseUUID(task.DomainID),
-				emptyWorkflowID,
-				serialization.MustParseUUID(emptyReplicationRunID),
-				m.parser,
-			); err != nil {
-				rollBackErr := tx.Rollback()
-				if rollBackErr != nil {
-					m.logger.Error("transaction rollback error", tag.Error(rollBackErr))
-				}
+	return m.txExecuteShardLockedFn(ctx, dbShardID, "CreateFailoverMarkerTasks", request.RangeID, func(tx sqlplugin.Tx) error {
+		replicationTasksRows := make([]sqlplugin.ReplicationTasksRow, len(request.Markers))
+		for i, task := range request.Markers {
+			blob, err := m.parser.ReplicationTaskInfoToBlob(&serialization.ReplicationTaskInfo{
+				DomainID:                serialization.MustParseUUID(task.DomainID),
+				WorkflowID:              emptyWorkflowID,
+				RunID:                   serialization.MustParseUUID(emptyReplicationRunID),
+				TaskType:                int16(task.GetType()),
+				FirstEventID:            common.EmptyEventID,
+				NextEventID:             common.EmptyEventID,
+				Version:                 task.GetVersion(),
+				ScheduledID:             common.EmptyEventID,
+				EventStoreVersion:       p.EventStoreVersion,
+				NewRunEventStoreVersion: p.EventStoreVersion,
+				BranchToken:             nil,
+				NewRunBranchToken:       nil,
+				CreationTimestamp:       task.GetVisibilityTimestamp(),
+			})
+			if err != nil {
 				return err
 			}
+			replicationTasksRows[i].ShardID = m.shardID
+			replicationTasksRows[i].TaskID = task.GetTaskID()
+			replicationTasksRows[i].Data = blob.Data
+			replicationTasksRows[i].DataEncoding = string(blob.Encoding)
+		}
+		result, err := tx.InsertIntoReplicationTasks(ctx, replicationTasksRows)
+		if err != nil {
+			return convertCommonErrors(tx, "CreateFailoverMarkerTasks", "", err)
+		}
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			return &types.InternalServiceError{Message: fmt.Sprintf("CreateFailoverMarkerTasks failed. Could not verify number of rows inserted. Error: %v", err)}
+		}
+		if int(rowsAffected) != len(replicationTasksRows) {
+			return &types.InternalServiceError{Message: fmt.Sprintf("CreateFailoverMarkerTasks failed. Inserted %v instead of %v rows into replication_tasks.", rowsAffected, len(replicationTasksRows))}
 		}
 		return nil
 	})
