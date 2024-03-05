@@ -11,6 +11,7 @@ coverage:
   status:
     project:                   # measuring the overall project coverage
       default:                 # context, you can create multiple ones with custom titles
+        informational: true
         target: 85%           # specify the target coverage for each commit status
                                #   option: "auto" (compare against parent commit or pull request base)
                                #   option: "X%" a static target percentage to hit
@@ -19,6 +20,9 @@ coverage:
     patch:
       default:
         informational: true
+comment:
+  layout: "header, files, footer"
+  hide_project_coverage: false
 codecov:
   require_ci_to_pass: false
 ignore:
