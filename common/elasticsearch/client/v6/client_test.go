@@ -71,39 +71,60 @@ func TestNewV6Client(t *testing.T) {
 }
 
 func TestCreateIndex(t *testing.T) {
-	testServer := getTestServer(t)
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/testIndex" && r.Method == "PUT" {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"acknowledged": true}`))
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	})
+	elasticV6, testServer := getMockClient(t, handler)
 	defer testServer.Close()
-	// Create a new MockESClient
-	mockClient, err := elastic.NewClient(
-		elastic.SetURL(testServer.URL),
-		elastic.SetSniff(false),
-		elastic.SetHealthcheck(false),
-		elastic.SetHttpClient(testServer.Client()),
-	)
-	assert.NoError(t, err)
-
-	elasticV6 := ElasticV6{
-		client: mockClient,
-	}
-	err = elasticV6.CreateIndex(context.Background(), "testIndex")
+	err := elasticV6.CreateIndex(context.Background(), "testIndex")
 	assert.NoError(t, err)
 }
 
 func TestPutMapping(t *testing.T) {
-	testServer := getTestServer(t)
-	defer testServer.Close()
-	// Create a new MockESClient
-	mockClient, err := elastic.NewClient(
-		elastic.SetURL(testServer.URL),
-		elastic.SetSniff(false),
-		elastic.SetHealthcheck(false),
-		elastic.SetHttpClient(testServer.Client()))
-	assert.NoError(t, err)
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/testIndex/_mapping/_doc" && r.Method == "PUT" {
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				t.Fatalf("Failed to read request body: %v", err)
+			}
+			defer r.Body.Close()
+			var receivedMapping map[string]interface{}
+			if err := json.Unmarshal(body, &receivedMapping); err != nil {
+				t.Fatalf("Failed to unmarshal request body: %v", err)
+			}
 
-	elasticV6 := ElasticV6{
-		client: mockClient,
-	}
-	err = elasticV6.PutMapping(context.Background(), "testIndex", `{
+			// Define expected mapping structurally
+			expectedMapping := map[string]interface{}{
+				"properties": map[string]interface{}{
+					"title": map[string]interface{}{
+						"type": "text",
+					},
+					"publish_date": map[string]interface{}{
+						"type": "date",
+					},
+				},
+			}
+
+			// Compare structurally
+			if !assert.Equal(t, expectedMapping, receivedMapping) {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"acknowledged": true}`))
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	})
+	elasticV6, testServer := getMockClient(t, handler)
+	defer testServer.Close()
+	err := elasticV6.PutMapping(context.Background(), "testIndex", `{
         "properties": {
             "title": {
                 "type": "text"
@@ -117,45 +138,40 @@ func TestPutMapping(t *testing.T) {
 }
 
 func TestCount(t *testing.T) {
-	testServer := getTestServer(t)
-	defer testServer.Close()
-	// Create a new MockESClient
-	mockClient, err := elastic.NewClient(
-		elastic.SetURL(testServer.URL),
-		elastic.SetSniff(false),
-		elastic.SetHealthcheck(false),
-		elastic.SetHttpClient(testServer.Client()))
-	assert.NoError(t, err)
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/testIndex/_count" && r.Method == "POST" {
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				t.Fatalf("Failed to read request body: %v", err)
+			}
+			defer r.Body.Close()
+			expectedQuery := `{"query":{"match":{"WorkflowID":"test-workflow-id"}}}`
+			if string(body) != expectedQuery {
+				t.Fatalf("Expected query %s, got %s", expectedQuery, body)
+			}
 
-	elasticV6 := ElasticV6{
-		client: mockClient,
-	}
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"count": 42}`))
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	})
+	elasticV6, testServer := getMockClient(t, handler)
+	defer testServer.Close()
 	count, err := elasticV6.Count(context.Background(), "testIndex", `{"query":{"match":{"WorkflowID":"test-workflow-id"}}}`)
 	assert.NoError(t, err)
 	assert.Equal(t, int64(42), count)
 }
 
 func TestSearch(t *testing.T) {
-	testServer := getTestServer(t)
-	defer testServer.Close()
-	// Create a new MockESClient
-	mockClient, err := elastic.NewClient(
-		elastic.SetURL(testServer.URL),
-		elastic.SetSniff(false),
-		elastic.SetHealthcheck(false),
-		elastic.SetHttpClient(testServer.Client()))
-	assert.NoError(t, err)
-	elasticV6 := ElasticV6{
-		client: mockClient,
-	}
-
 	testCases := []struct {
 		name      string
 		query     string
-		index     string
 		expected  map[string]interface{}
 		expectErr bool
 		expectAgg bool
+		index     string
+		handler   http.HandlerFunc
 	}{
 		{
 			name:  "normal case",
@@ -164,40 +180,136 @@ func TestSearch(t *testing.T) {
 			expected: map[string]interface{}{
 				"WorkflowID": "test-workflow-id",
 			},
+			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/testIndex/_search" {
+					w.WriteHeader(http.StatusOK)
+					w.Write([]byte(`{
+						"took": 5,
+						"timed_out": false,
+						"hits": {
+							"total": 1,
+							"hits": [{
+								"_source": {
+									"WorkflowID": "test-workflow-id"
+								},
+								"sort": [1]
+							}]
+						}
+					}`))
+				} else {
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}),
 			expectErr: false,
 		},
 		{
-			name:      "elasticsearch error",
-			query:     `{"query":{"bool":{"must":{"match":{"WorkflowID":"test-workflow-id"}}}}}`,
-			index:     "testErrIndex",
+			name:  "elasticsearch error",
+			query: `{"query":{"bool":{"must":{"match":{"WorkflowID":"test-workflow-id"}}}}}`,
+			index: "testIndex",
+			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/testIndex/_search" {
+					w.WriteHeader(http.StatusOK)
+					w.Write([]byte(`{
+						"error": {
+							"root_cause": [
+								{
+									"type": "index_not_found_exception",
+									"reason": "no such index",
+									"resource.type": "index_or_alias",
+									"resource.id": "testIndex",
+									"index_uuid": "_na_",
+									"index": "testIndex"
+								}
+							],
+							"type": "index_not_found_exception",
+							"reason": "no such index",
+							"resource.type": "index_or_alias",
+							"resource.id": "testIndex",
+							"index_uuid": "_na_",
+							"index": "testIndex"
+						},
+						"status": 404
+					}`))
+				} else {
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}),
 			expectErr: true,
 		},
 		{
 			name:      "elasticsearch timeout",
 			query:     `{"query":{"bool":{"must":{"match":{"WorkflowID":"test-workflow-id"}}}}}`,
-			index:     "testTimeoutIndex",
+			index:     "testIndex",
 			expectErr: true,
+			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/testIndex/_search" {
+					w.WriteHeader(http.StatusOK) // Assuming Elasticsearch returns HTTP 200 for timeouts with an indication in the body
+					w.Write([]byte(`{
+						"took": 30,
+						"timed_out": true,
+						"hits": {
+							"total": 0,
+							"hits": []
+						}
+					}`))
+				} else {
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}),
 		},
 		{
 			name:  "elasticsearch aggregations",
 			query: `{"query":{"bool":{"must":{"match":{"WorkflowID":"test-workflow-id"}}}}}`,
-			index: "testAggIndex",
+			index: "testIndex",
 			expected: map[string]interface{}{
 				"WorkflowID": "test-workflow-id",
 			},
 			expectErr: false,
 			expectAgg: true,
+			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/testIndex/_search" {
+					w.WriteHeader(http.StatusOK)
+					w.Write([]byte(`{
+						"took": 5,
+						"timed_out": false,
+						"hits": {
+							"total": 1,
+							"hits": [{
+								"_source": {
+									"WorkflowID": "test-workflow-id"
+								}
+							}]
+						},
+						"aggregations": {
+							"sample_agg": {
+								"value": 42
+							}
+						}
+					}`))
+				} else {
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}),
 		},
 		{
 			name:      "elasticsearch non exist index",
 			query:     `{"query":{"bool":{"must":{"match":{"WorkflowID":"test-workflow-id"}}}}}`,
 			index:     "test_failure",
 			expectErr: true,
+			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/testIndex/_search" {
+					w.WriteHeader(http.StatusOK)
+				} else {
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}),
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			elasticV6, testServer := getMockClient(t, tc.handler)
+			defer testServer.Close()
 			resp, err := elasticV6.Search(context.Background(), tc.index, tc.query)
 			if !tc.expectErr {
 				assert.NoError(t, err)
@@ -233,127 +345,15 @@ func TestSearch(t *testing.T) {
 	}
 }
 
-func getTestServer(t *testing.T) *httptest.Server {
-	return httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Read the request body
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			t.Fatalf("Failed to read request body: %v", err)
-		}
-		defer r.Body.Close()
-
-		switch r.URL.Path {
-		case "/testIndex":
-			if r.Method == "PUT" {
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"acknowledged": true}`))
-			}
-		case "/testIndex/_mapping/_doc":
-			if r.Method == "PUT" {
-				var receivedMapping map[string]interface{}
-				if err := json.Unmarshal(body, &receivedMapping); err != nil {
-					t.Fatalf("Failed to unmarshal request body: %v", err)
-				}
-
-				// Define expected mapping structurally
-				expectedMapping := map[string]interface{}{
-					"properties": map[string]interface{}{
-						"title": map[string]interface{}{
-							"type": "text",
-						},
-						"publish_date": map[string]interface{}{
-							"type": "date",
-						},
-					},
-				}
-
-				// Compare structurally
-				if !assert.Equal(t, expectedMapping, receivedMapping) {
-					w.WriteHeader(http.StatusBadRequest)
-					return
-				}
-
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"acknowledged": true}`))
-			}
-		case "/testIndex/_count":
-			expectedQuery := `{"query":{"match":{"WorkflowID":"test-workflow-id"}}}`
-			if string(body) != expectedQuery {
-				t.Fatalf("Expected query %s, got %s", expectedQuery, body)
-			}
-
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"count": 42}`))
-		case "/testIndex/_search":
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{
-                "took": 5,
-                "timed_out": false,
-                "hits": {
-                    "total": 1,
-                    "hits": [{
-                        "_source": {
-                            "WorkflowID": "test-workflow-id"
-                        },
-                        "sort": [1]
-                    }]
-                }
-            }`))
-		case "/testErrIndex/_search":
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{
-                "error": {
-					"root_cause": [
-						{
-							"type": "index_not_found_exception",
-							"reason": "no such index",
-							"resource.type": "index_or_alias",
-							"resource.id": "testIndex",
-							"index_uuid": "_na_",
-							"index": "testIndex"
-						}
-					],
-					"type": "index_not_found_exception",
-					"reason": "no such index",
-					"resource.type": "index_or_alias",
-					"resource.id": "testIndex",
-					"index_uuid": "_na_",
-					"index": "testIndex"
-				},
-				"status": 404
-            }`))
-		case "/testTimeoutIndex/_search":
-			// Simulate a timeout response
-			w.WriteHeader(http.StatusOK) // Assuming Elasticsearch returns HTTP 200 for timeouts with an indication in the body
-			w.Write([]byte(`{
-				"took": 30,
-				"timed_out": true,
-				"hits": {
-					"total": 0,
-					"hits": []
-				}
-			}`))
-		case "/testAggIndex/_search":
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{
-				"took": 5,
-				"timed_out": false,
-				"hits": {
-					"total": 1,
-					"hits": [{
-						"_source": {
-							"WorkflowID": "test-workflow-id"
-						}
-					}]
-				},
-				"aggregations": {
-					"sample_agg": {
-						"value": 42
-					}
-				}
-			}`))
-		default:
-			w.WriteHeader(http.StatusNotFound)
-		}
-	}))
+func getMockClient(t *testing.T, handler http.HandlerFunc) (ElasticV6, *httptest.Server) {
+	testServer := httptest.NewTLSServer(handler)
+	mockClient, err := elastic.NewClient(
+		elastic.SetURL(testServer.URL),
+		elastic.SetSniff(false),
+		elastic.SetHealthcheck(false),
+		elastic.SetHttpClient(testServer.Client()))
+	assert.NoError(t, err)
+	return ElasticV6{
+		client: mockClient,
+	}, testServer
 }
