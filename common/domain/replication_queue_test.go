@@ -33,12 +33,6 @@ import (
 )
 
 func TestReplicationQueueImpl_Publish(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockQueue := persistence.NewMockQueueManager(ctrl)
-	rq := NewReplicationQueue(mockQueue, "testCluster", nil, nil) // Mock other dependencies as needed
-
 	tests := []struct {
 		name      string
 		task      *types.ReplicationTask
@@ -65,6 +59,9 @@ func TestReplicationQueueImpl_Publish(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockQueue := persistence.NewMockQueueManager(ctrl)
+			rq := NewReplicationQueue(mockQueue, "testCluster", nil, nil)
 			tt.setupMock(mockQueue)
 			err := rq.Publish(context.Background(), tt.task)
 			if tt.wantErr {
@@ -72,17 +69,12 @@ func TestReplicationQueueImpl_Publish(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
+			ctrl.Finish()
 		})
 	}
 }
 
 func TestReplicationQueueImpl_PublishToDLQ(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockQueue := persistence.NewMockQueueManager(ctrl)
-	rq := NewReplicationQueue(mockQueue, "testCluster", nil, nil) // Mock other dependencies as needed
-
 	tests := []struct {
 		name      string
 		task      *types.ReplicationTask
@@ -109,6 +101,9 @@ func TestReplicationQueueImpl_PublishToDLQ(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockQueue := persistence.NewMockQueueManager(ctrl)
+			rq := NewReplicationQueue(mockQueue, "testCluster", nil, nil)
 			tt.setupMock(mockQueue)
 			err := rq.PublishToDLQ(context.Background(), tt.task)
 			if tt.wantErr {
@@ -116,6 +111,7 @@ func TestReplicationQueueImpl_PublishToDLQ(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
+			ctrl.Finish()
 		})
 	}
 }
