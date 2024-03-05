@@ -26,21 +26,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/uber/cadence/common/log/testlogger"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
-
 	"github.com/uber/cadence/.gen/go/indexer"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
 	pnt "github.com/uber/cadence/common/pinot"
@@ -63,142 +60,255 @@ var (
 	testContextTimeout = 5 * time.Second
 
 	validSearchAttr = definition.GetDefaultIndexedKeys()
-
-	visibilityStore = pinotVisibilityStore{
-		pinotClient:         nil,
-		producer:            nil,
-		logger:              log.NewNoop(),
-		config:              nil,
-		pinotQueryValidator: pnt.NewPinotQueryValidator(validSearchAttr),
-	}
 )
 
-type PinotVisibilitySuite struct {
-	suite.Suite
-	// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
-	// not merely log an error
-	*require.Assertions
-	visibilityStore *pinotVisibilityStore
-	mockPinotClient *pnt.MockGenericClient
-	mockProducer    *mocks.KafkaProducer
-}
-
-func TestPinotVisibilitySuite(t *testing.T) {
-	suite.Run(t, new(PinotVisibilitySuite))
-}
-
-func (s *PinotVisibilitySuite) SetupTest() {
-	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
-	s.Assertions = require.New(s.T())
-	ctrl := gomock.NewController(s.Suite.T())
-	s.mockPinotClient = pnt.NewMockGenericClient(ctrl)
-	s.mockPinotClient.EXPECT().GetTableName().Return("TestTable").AnyTimes()
-
-	s.mockProducer = &mocks.KafkaProducer{}
-	mgr := NewPinotVisibilityStore(s.mockPinotClient, &service.Config{
+func TestRecordWorkflowExecutionStarted(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockPinotClient := pnt.NewMockGenericClient(ctrl)
+	mockProducer := &mocks.KafkaProducer{}
+	mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-	}, s.mockProducer, testlogger.New(s.Suite.T()))
-	s.visibilityStore = mgr.(*pinotVisibilityStore)
-}
+	}, mockProducer, testlogger.New(t))
+	visibilityStore := mgr.(*pinotVisibilityStore)
 
-func (s *PinotVisibilitySuite) TearDownTest() {
-	//s.mockPinotClient.AssertExpectations(s.T())
-	s.mockProducer.AssertExpectations(s.T())
-}
-
-func (s *PinotVisibilitySuite) TestRecordWorkflowExecutionStarted() {
 	// test non-empty request fields match
 	request := &p.InternalRecordWorkflowExecutionStartedRequest{}
 	request.WorkflowID = "wid"
 	memoBytes := []byte(`test bytes`)
 	request.Memo = p.NewDataBlob(memoBytes, common.EncodingTypeThriftRW)
 
-	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
-		s.Equal(request.WorkflowID, input.GetWorkflowID())
-		return true
-	})).Return(nil).Once()
+	tests := map[string]struct {
+		request       *p.InternalRecordWorkflowExecutionStartedRequest
+		expectedError error
+	}{
+		"Case1: normal case": {
+			request:       request,
+			expectedError: nil,
+		},
+		"Case2: error case": {
+			request:       request,
+			expectedError: fmt.Errorf("error"),
+		},
+	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
-	defer cancel()
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).AnyTimes()
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
+					return true
+				})).Return(nil).Once()
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
+					return true
+				})).Return(fmt.Errorf("error")).Once()
 
-	err := s.visibilityStore.RecordWorkflowExecutionStarted(ctx, request)
-	s.NoError(err)
+				err := visibilityStore.RecordWorkflowExecutionStarted(context.Background(), test.request)
+				assert.Equal(t, test.expectedError, err)
+			})
+		})
+	}
 }
 
-func (s *PinotVisibilitySuite) TestRecordWorkflowExecutionClosed() {
+func TestRecordWorkflowExecutionClosed(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockPinotClient := pnt.NewMockGenericClient(ctrl)
+	mockProducer := &mocks.KafkaProducer{}
+	mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
+		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
+	}, mockProducer, testlogger.New(t))
+	visibilityStore := mgr.(*pinotVisibilityStore)
+
 	// test non-empty request fields match
 	request := &p.InternalRecordWorkflowExecutionClosedRequest{}
 	request.WorkflowID = "wid"
 	memoBytes := []byte(`test bytes`)
 	request.Memo = p.NewDataBlob(memoBytes, common.EncodingTypeThriftRW)
 
-	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
-		s.Equal(request.WorkflowID, input.GetWorkflowID())
-		return true
-	})).Return(nil).Once()
+	tests := map[string]struct {
+		request       *p.InternalRecordWorkflowExecutionClosedRequest
+		expectedError error
+	}{
+		"Case1: normal case": {
+			request:       request,
+			expectedError: nil,
+		},
+		"Case2: error case": {
+			request:       request,
+			expectedError: fmt.Errorf("error"),
+		},
+	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
-	defer cancel()
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).AnyTimes()
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
+					return true
+				})).Return(nil).Once()
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
+					return true
+				})).Return(fmt.Errorf("error")).Once()
 
-	err := s.visibilityStore.RecordWorkflowExecutionClosed(ctx, request)
-	s.NoError(err)
+				err := visibilityStore.RecordWorkflowExecutionClosed(context.Background(), test.request)
+				assert.Equal(t, test.expectedError, err)
+			})
+		})
+	}
 }
 
-func (s *PinotVisibilitySuite) TestRecordWorkflowExecutionUninitialized() {
+func TestRecordWorkflowExecutionUninitialized(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockPinotClient := pnt.NewMockGenericClient(ctrl)
+	mockProducer := &mocks.KafkaProducer{}
+	mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
+		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
+	}, mockProducer, testlogger.New(t))
+	visibilityStore := mgr.(*pinotVisibilityStore)
+
 	// test non-empty request fields match
 	request := &p.InternalRecordWorkflowExecutionUninitializedRequest{}
 	request.WorkflowID = "wid"
 
-	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
-		s.Equal(request.WorkflowID, input.GetWorkflowID())
-		return true
-	})).Return(nil).Once()
+	tests := map[string]struct {
+		request       *p.InternalRecordWorkflowExecutionUninitializedRequest
+		expectedError error
+	}{
+		"Case1: normal case": {
+			request:       request,
+			expectedError: nil,
+		},
+		"Case2: error case": {
+			request:       request,
+			expectedError: fmt.Errorf("error"),
+		},
+	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
-	defer cancel()
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).AnyTimes()
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
+					return true
+				})).Return(nil).Once()
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
+					return true
+				})).Return(fmt.Errorf("error")).Once()
 
-	err := s.visibilityStore.RecordWorkflowExecutionUninitialized(ctx, request)
-	s.NoError(err)
+				err := visibilityStore.RecordWorkflowExecutionUninitialized(context.Background(), test.request)
+				assert.Equal(t, test.expectedError, err)
+			})
+		})
+	}
 }
 
-func (s *PinotVisibilitySuite) TestUpsertWorkflowExecution() {
+func TestUpsertWorkflowExecution(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockPinotClient := pnt.NewMockGenericClient(ctrl)
+	mockProducer := &mocks.KafkaProducer{}
+	mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
+		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
+	}, mockProducer, testlogger.New(t))
+	visibilityStore := mgr.(*pinotVisibilityStore)
+
 	// test non-empty request fields match
 	request := &p.InternalUpsertWorkflowExecutionRequest{}
 	request.WorkflowID = "wid"
 	memoBytes := []byte(`test bytes`)
 	request.Memo = p.NewDataBlob(memoBytes, common.EncodingTypeThriftRW)
 
-	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
-		s.Equal(request.WorkflowID, input.GetWorkflowID())
-		return true
-	})).Return(nil).Once()
+	tests := map[string]struct {
+		request       *p.InternalUpsertWorkflowExecutionRequest
+		expectedError error
+	}{
+		"Case1: normal case": {
+			request:       request,
+			expectedError: nil,
+		},
+		"Case2: error case": {
+			request:       request,
+			expectedError: fmt.Errorf("error"),
+		},
+	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
-	defer cancel()
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).AnyTimes()
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
+					return true
+				})).Return(nil).Once()
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
+					return true
+				})).Return(fmt.Errorf("error")).Once()
 
-	err := s.visibilityStore.UpsertWorkflowExecution(ctx, request)
-	s.NoError(err)
+				err := visibilityStore.UpsertWorkflowExecution(context.Background(), test.request)
+				assert.Equal(t, test.expectedError, err)
+			})
+		})
+	}
 }
 
-func (s *PinotVisibilitySuite) TestDeleteWorkflowExecution() {
+func TestDeleteWorkflowExecution(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockPinotClient := pnt.NewMockGenericClient(ctrl)
+	mockProducer := &mocks.KafkaProducer{}
+	mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
+		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
+	}, mockProducer, testlogger.New(t))
+	visibilityStore := mgr.(*pinotVisibilityStore)
+
 	// test non-empty request fields match
 	request := &p.VisibilityDeleteWorkflowExecutionRequest{}
 	request.WorkflowID = "wid"
 
-	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
-		s.Equal(request.WorkflowID, input.GetWorkflowID())
-		return true
-	})).Return(nil).Once()
+	tests := map[string]struct {
+		request       *p.VisibilityDeleteWorkflowExecutionRequest
+		expectedError error
+	}{
+		"Case1: normal case": {
+			request:       request,
+			expectedError: nil,
+		},
+		"Case2: error case": {
+			request:       request,
+			expectedError: fmt.Errorf("error"),
+		},
+	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
-	defer cancel()
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).AnyTimes()
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
+					return true
+				})).Return(nil).Once()
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
+					return true
+				})).Return(fmt.Errorf("error")).Once()
 
-	err := s.visibilityStore.DeleteWorkflowExecution(ctx, request)
-	s.NoError(err)
+				err := visibilityStore.DeleteWorkflowExecution(context.Background(), test.request)
+				assert.Equal(t, test.expectedError, err)
+			})
+		})
+	}
 }
 
-func (s *PinotVisibilitySuite) TestDeleteUninitializedWorkflowExecution() {
+func TestDeleteUninitializedWorkflowExecution(t *testing.T) {
 	// test non-empty request fields match
 	request := &p.VisibilityDeleteWorkflowExecutionRequest{}
 	request.DomainID = "domainID"
@@ -206,142 +316,439 @@ func (s *PinotVisibilitySuite) TestDeleteUninitializedWorkflowExecution() {
 	request.RunID = "rid"
 	request.TaskID = int64(111)
 
-	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
-		s.Equal(request.WorkflowID, input.GetWorkflowID())
-		return true
-	})).Return(nil).Once()
+	ctrl := gomock.NewController(t)
+	mockPinotClient := pnt.NewMockGenericClient(ctrl)
+	mockProducer := &mocks.KafkaProducer{}
+	mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
+		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
+	}, mockProducer, testlogger.New(t))
+	visibilityStore := mgr.(*pinotVisibilityStore)
 
-	s.mockPinotClient.EXPECT().CountByQuery(gomock.Any()).Return(int64(1), nil).AnyTimes()
+	tests := map[string]struct {
+		request       *p.VisibilityDeleteWorkflowExecutionRequest
+		expectedError error
+	}{
+		"Case1: normal case": {
+			request:       request,
+			expectedError: nil,
+		},
+		"Case2: error case": {
+			request:       request,
+			expectedError: fmt.Errorf("error"),
+		},
+	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
-	defer cancel()
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).AnyTimes()
+				mockPinotClient.EXPECT().CountByQuery(gomock.Any()).Return(int64(1), nil).AnyTimes()
 
-	err := s.visibilityStore.DeleteUninitializedWorkflowExecution(ctx, request)
-	s.NoError(err)
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
+					return true
+				})).Return(nil).Once()
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
+					return true
+				})).Return(fmt.Errorf("error")).Once()
+
+				err := visibilityStore.DeleteUninitializedWorkflowExecution(context.Background(), test.request)
+				assert.Equal(t, test.expectedError, err)
+			})
+		})
+	}
 }
 
-func (s *PinotVisibilitySuite) TestListOpenWorkflowExecutions() {
+func TestListOpenWorkflowExecutions(t *testing.T) {
 	request := &p.InternalListWorkflowExecutionsRequest{
 		Domain: DomainID,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
-	defer cancel()
+	ctrl := gomock.NewController(t)
+	mockPinotClient := pnt.NewMockGenericClient(ctrl)
+	mockProducer := &mocks.KafkaProducer{}
+	mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
+		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
+	}, mockProducer, testlogger.New(t))
+	visibilityStore := mgr.(*pinotVisibilityStore)
 
-	s.mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).AnyTimes()
-	_, err := s.visibilityStore.ListOpenWorkflowExecutions(ctx, request)
-	s.NoError(err)
+	tests := map[string]struct {
+		request       *p.InternalListWorkflowExecutionsRequest
+		expectedResp  *p.InternalListWorkflowExecutionsResponse
+		expectedError error
+	}{
+		"Case1: normal case with nil response": {
+			request:       request,
+			expectedResp:  nil,
+			expectedError: nil,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).AnyTimes()
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+				resp, err := visibilityStore.ListOpenWorkflowExecutions(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.Equal(t, test.expectedError, err)
+			})
+		})
+	}
 }
 
-func (s *PinotVisibilitySuite) TestListClosedWorkflowExecutions() {
+func TestListClosedWorkflowExecutions(t *testing.T) {
 	request := &p.InternalListWorkflowExecutionsRequest{
 		Domain: DomainID,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
-	defer cancel()
+	ctrl := gomock.NewController(t)
+	mockPinotClient := pnt.NewMockGenericClient(ctrl)
+	mockProducer := &mocks.KafkaProducer{}
+	mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
+		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
+	}, mockProducer, testlogger.New(t))
+	visibilityStore := mgr.(*pinotVisibilityStore)
 
-	s.mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).AnyTimes()
-	_, err := s.visibilityStore.ListClosedWorkflowExecutions(ctx, request)
-	s.NoError(err)
+	tests := map[string]struct {
+		request       *p.InternalListWorkflowExecutionsRequest
+		expectedResp  *p.InternalListWorkflowExecutionsResponse
+		expectedError error
+	}{
+		"Case1: normal case with nil response": {
+			request:       request,
+			expectedResp:  nil,
+			expectedError: nil,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).AnyTimes()
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+				resp, err := visibilityStore.ListClosedWorkflowExecutions(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.Equal(t, test.expectedError, err)
+			})
+		})
+	}
 }
 
-func (s *PinotVisibilitySuite) TestListOpenWorkflowExecutionsByType() {
+func TestListOpenWorkflowExecutionsByType(t *testing.T) {
 	request := &p.InternalListWorkflowExecutionsByTypeRequest{}
 
-	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
-	defer cancel()
+	ctrl := gomock.NewController(t)
+	mockPinotClient := pnt.NewMockGenericClient(ctrl)
+	mockProducer := &mocks.KafkaProducer{}
+	mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
+		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
+	}, mockProducer, testlogger.New(t))
+	visibilityStore := mgr.(*pinotVisibilityStore)
 
-	s.mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).AnyTimes()
-	_, err := s.visibilityStore.ListOpenWorkflowExecutionsByType(ctx, request)
-	s.NoError(err)
+	tests := map[string]struct {
+		request       *p.InternalListWorkflowExecutionsByTypeRequest
+		expectedResp  *p.InternalListWorkflowExecutionsResponse
+		expectedError error
+	}{
+		"Case1: normal case with nil response": {
+			request:       request,
+			expectedResp:  nil,
+			expectedError: nil,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).AnyTimes()
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+				resp, err := visibilityStore.ListOpenWorkflowExecutionsByType(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.Equal(t, test.expectedError, err)
+			})
+		})
+	}
 }
 
-func (s *PinotVisibilitySuite) TestListClosedWorkflowExecutionsByType() {
+func TestListClosedWorkflowExecutionsByType(t *testing.T) {
 	request := &p.InternalListWorkflowExecutionsByTypeRequest{}
 
-	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
-	defer cancel()
+	ctrl := gomock.NewController(t)
+	mockPinotClient := pnt.NewMockGenericClient(ctrl)
+	mockProducer := &mocks.KafkaProducer{}
+	mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
+		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
+	}, mockProducer, testlogger.New(t))
+	visibilityStore := mgr.(*pinotVisibilityStore)
 
-	s.mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).AnyTimes()
-	_, err := s.visibilityStore.ListClosedWorkflowExecutionsByType(ctx, request)
-	s.NoError(err)
+	tests := map[string]struct {
+		request       *p.InternalListWorkflowExecutionsByTypeRequest
+		expectedResp  *p.InternalListWorkflowExecutionsResponse
+		expectedError error
+	}{
+		"Case1: normal case with nil response": {
+			request:       request,
+			expectedResp:  nil,
+			expectedError: nil,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).AnyTimes()
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+				resp, err := visibilityStore.ListClosedWorkflowExecutionsByType(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.Equal(t, test.expectedError, err)
+			})
+		})
+	}
 }
 
-func (s *PinotVisibilitySuite) TestListOpenWorkflowExecutionsByWorkflowID() {
+func TestListOpenWorkflowExecutionsByWorkflowID(t *testing.T) {
 	request := &p.InternalListWorkflowExecutionsByWorkflowIDRequest{}
 
-	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
-	defer cancel()
+	ctrl := gomock.NewController(t)
+	mockPinotClient := pnt.NewMockGenericClient(ctrl)
+	mockProducer := &mocks.KafkaProducer{}
+	mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
+		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
+	}, mockProducer, testlogger.New(t))
+	visibilityStore := mgr.(*pinotVisibilityStore)
 
-	s.mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).AnyTimes()
-	_, err := s.visibilityStore.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
-	s.NoError(err)
+	tests := map[string]struct {
+		request       *p.InternalListWorkflowExecutionsByWorkflowIDRequest
+		expectedResp  *p.InternalListWorkflowExecutionsResponse
+		expectedError error
+	}{
+		"Case1: normal case with nil response": {
+			request:       request,
+			expectedResp:  nil,
+			expectedError: nil,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).AnyTimes()
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+				resp, err := visibilityStore.ListOpenWorkflowExecutionsByWorkflowID(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.Equal(t, test.expectedError, err)
+			})
+		})
+	}
 }
 
-func (s *PinotVisibilitySuite) TestListClosedWorkflowExecutionsByWorkflowID() {
+func TestListClosedWorkflowExecutionsByWorkflowID(t *testing.T) {
 	request := &p.InternalListWorkflowExecutionsByWorkflowIDRequest{}
 
-	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
-	defer cancel()
+	ctrl := gomock.NewController(t)
+	mockPinotClient := pnt.NewMockGenericClient(ctrl)
+	mockProducer := &mocks.KafkaProducer{}
+	mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
+		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
+	}, mockProducer, testlogger.New(t))
+	visibilityStore := mgr.(*pinotVisibilityStore)
 
-	s.mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).AnyTimes()
-	_, err := s.visibilityStore.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
-	s.NoError(err)
+	tests := map[string]struct {
+		request       *p.InternalListWorkflowExecutionsByWorkflowIDRequest
+		expectedResp  *p.InternalListWorkflowExecutionsResponse
+		expectedError error
+	}{
+		"Case1: normal case with nil response": {
+			request:       request,
+			expectedResp:  nil,
+			expectedError: nil,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).AnyTimes()
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+				resp, err := visibilityStore.ListClosedWorkflowExecutionsByWorkflowID(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.Equal(t, test.expectedError, err)
+			})
+		})
+	}
 }
 
-func (s *PinotVisibilitySuite) TestListClosedWorkflowExecutionsByStatus() {
+func TestListClosedWorkflowExecutionsByStatus(t *testing.T) {
 	request := &p.InternalListClosedWorkflowExecutionsByStatusRequest{}
 
-	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
-	defer cancel()
+	ctrl := gomock.NewController(t)
+	mockPinotClient := pnt.NewMockGenericClient(ctrl)
+	mockProducer := &mocks.KafkaProducer{}
+	mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
+		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
+	}, mockProducer, testlogger.New(t))
+	visibilityStore := mgr.(*pinotVisibilityStore)
 
-	s.mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).AnyTimes()
-	_, err := s.visibilityStore.ListClosedWorkflowExecutionsByStatus(ctx, request)
-	s.NoError(err)
+	tests := map[string]struct {
+		request       *p.InternalListClosedWorkflowExecutionsByStatusRequest
+		expectedResp  *p.InternalListWorkflowExecutionsResponse
+		expectedError error
+	}{
+		"Case1: normal case with nil response": {
+			request:       request,
+			expectedResp:  nil,
+			expectedError: nil,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).AnyTimes()
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+				resp, err := visibilityStore.ListClosedWorkflowExecutionsByStatus(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.Equal(t, test.expectedError, err)
+			})
+		})
+	}
 }
 
-func (s *PinotVisibilitySuite) TestGetClosedWorkflowExecution() {
+func TestGetClosedWorkflowExecution(t *testing.T) {
 	request := &p.InternalGetClosedWorkflowExecutionRequest{}
 
-	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
-	defer cancel()
+	ctrl := gomock.NewController(t)
+	mockPinotClient := pnt.NewMockGenericClient(ctrl)
+	mockProducer := &mocks.KafkaProducer{}
+	mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
+		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
+	}, mockProducer, testlogger.New(t))
+	visibilityStore := mgr.(*pinotVisibilityStore)
 
-	s.mockPinotClient.EXPECT().Search(gomock.Any()).Return(&pnt.SearchResponse{
-		Executions: []*p.InternalVisibilityWorkflowExecutionInfo{
-			{
-				DomainID: DomainID,
-			},
+	tests := map[string]struct {
+		request       *p.InternalGetClosedWorkflowExecutionRequest
+		expectedResp  *p.InternalGetClosedWorkflowExecutionRequest
+		expectedError error
+	}{
+		"Case1: normal case with nil response": {
+			request:       request,
+			expectedError: nil,
 		},
-	}, nil).AnyTimes()
-	_, err := s.visibilityStore.GetClosedWorkflowExecution(ctx, request)
-	s.NoError(err)
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).AnyTimes()
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(&pnt.SearchResponse{
+					Executions: []*p.InternalVisibilityWorkflowExecutionInfo{
+						{
+							DomainID: DomainID,
+						},
+					},
+				}, nil).AnyTimes()
+				_, err := visibilityStore.GetClosedWorkflowExecution(context.Background(), test.request)
+				assert.Equal(t, test.expectedError, err)
+			})
+		})
+	}
 }
 
-func (s *PinotVisibilitySuite) TestListWorkflowExecutions() {
+func TestListWorkflowExecutions(t *testing.T) {
 	request := &p.ListWorkflowExecutionsByQueryRequest{}
 
-	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
-	defer cancel()
+	ctrl := gomock.NewController(t)
+	mockPinotClient := pnt.NewMockGenericClient(ctrl)
+	mockProducer := &mocks.KafkaProducer{}
+	mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
+		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
+	}, mockProducer, testlogger.New(t))
+	visibilityStore := mgr.(*pinotVisibilityStore)
 
-	s.mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).AnyTimes()
-	_, err := s.visibilityStore.ListWorkflowExecutions(ctx, request)
-	s.NoError(err)
+	tests := map[string]struct {
+		request       *p.ListWorkflowExecutionsByQueryRequest
+		expectedResp  *p.InternalListWorkflowExecutionsResponse
+		expectedError error
+	}{
+		"Case1: normal case with nil response": {
+			request:       request,
+			expectedResp:  nil,
+			expectedError: nil,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).AnyTimes()
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+				resp, err := visibilityStore.ListWorkflowExecutions(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.Equal(t, test.expectedError, err)
+			})
+		})
+	}
 }
 
-func (s *PinotVisibilitySuite) TestScanWorkflowExecutions() {
+func TestScanWorkflowExecutions(t *testing.T) {
 	request := &p.ListWorkflowExecutionsByQueryRequest{}
 
-	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
-	defer cancel()
+	ctrl := gomock.NewController(t)
+	mockPinotClient := pnt.NewMockGenericClient(ctrl)
+	mockProducer := &mocks.KafkaProducer{}
+	mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
+		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
+	}, mockProducer, testlogger.New(t))
+	visibilityStore := mgr.(*pinotVisibilityStore)
 
-	s.mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).AnyTimes()
-	_, err := s.visibilityStore.ScanWorkflowExecutions(ctx, request)
-	s.NoError(err)
+	tests := map[string]struct {
+		request       *p.ListWorkflowExecutionsByQueryRequest
+		expectedResp  *p.InternalListWorkflowExecutionsResponse
+		expectedError error
+	}{
+		"Case1: normal case with nil response": {
+			request:       request,
+			expectedResp:  nil,
+			expectedError: nil,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).AnyTimes()
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+				resp, err := visibilityStore.ScanWorkflowExecutions(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.Equal(t, test.expectedError, err)
+			})
+		})
+	}
 }
 
-func (s *PinotVisibilitySuite) TestGetName() {
-	s.NotEmpty(s.visibilityStore.GetName())
+func TestGetName(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockPinotClient := pnt.NewMockGenericClient(ctrl)
+	mockProducer := &mocks.KafkaProducer{}
+	mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
+		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
+	}, mockProducer, testlogger.New(t))
+	visibilityStore := mgr.(*pinotVisibilityStore)
+	assert.NotEmpty(t, visibilityStore.GetName())
 }
 
 func TestNewPinotVisibilityStore(t *testing.T) {
@@ -354,6 +761,15 @@ func TestNewPinotVisibilityStore(t *testing.T) {
 }
 
 func TestGetCountWorkflowExecutionsQuery(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockPinotClient := pnt.NewMockGenericClient(ctrl)
+	mockProducer := &mocks.KafkaProducer{}
+	mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
+		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
+	}, mockProducer, testlogger.New(t))
+	visibilityStore := mgr.(*pinotVisibilityStore)
+
 	request := &p.CountWorkflowExecutionsRequest{
 		DomainUUID: testDomainID,
 		Domain:     testDomain,
@@ -375,6 +791,14 @@ AND WorkflowID = 'wfid'
 }
 
 func TestGetListWorkflowExecutionQuery(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockPinotClient := pnt.NewMockGenericClient(ctrl)
+	mockProducer := &mocks.KafkaProducer{}
+	mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
+		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
+	}, mockProducer, testlogger.New(t))
+	visibilityStore := mgr.(*pinotVisibilityStore)
 
 	token := pnt.PinotVisibilityPageToken{
 		From: 11,
