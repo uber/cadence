@@ -2763,3 +2763,183 @@ func TestConflictResolveWorkflowExecution(t *testing.T) {
 		})
 	}
 }
+
+func TestCreateFailoverMarkerTasks(t *testing.T) {
+	testCases := []struct {
+		name      string
+		req       *persistence.CreateFailoverMarkersRequest
+		mockSetup func(*sqlplugin.MockTx, *serialization.MockParser)
+		wantErr   bool
+	}{
+		{
+			name: "Success case",
+			req: &persistence.CreateFailoverMarkersRequest{
+				RangeID: 1,
+				Markers: []*persistence.FailoverMarkerTask{
+					{
+						TaskID:              1,
+						VisibilityTimestamp: time.Unix(11, 12),
+						Version:             101,
+						DomainID:            "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+					},
+				},
+			},
+			mockSetup: func(tx *sqlplugin.MockTx, parser *serialization.MockParser) {
+				parser.EXPECT().ReplicationTaskInfoToBlob(gomock.Any()).Return(persistence.DataBlob{
+					Encoding: common.EncodingTypeThriftRW,
+					Data:     []byte("test data"),
+				}, nil)
+				tx.EXPECT().InsertIntoReplicationTasks(gomock.Any(), []sqlplugin.ReplicationTasksRow{
+					{
+						ShardID:      0,
+						TaskID:       1,
+						Data:         []byte("test data"),
+						DataEncoding: "thriftrw",
+					},
+				}).Return(&sqlResult{
+					rowsAffected: 1,
+				}, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "Error - ReplicationTaskInfoToBlob failed",
+			req: &persistence.CreateFailoverMarkersRequest{
+				RangeID: 1,
+				Markers: []*persistence.FailoverMarkerTask{
+					{
+						TaskID:              1,
+						VisibilityTimestamp: time.Unix(11, 12),
+						Version:             101,
+						DomainID:            "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+					},
+				},
+			},
+			mockSetup: func(tx *sqlplugin.MockTx, parser *serialization.MockParser) {
+				parser.EXPECT().ReplicationTaskInfoToBlob(gomock.Any()).Return(persistence.DataBlob{}, errors.New("some random error"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - InsertIntoReplicationTasks failed",
+			req: &persistence.CreateFailoverMarkersRequest{
+				RangeID: 1,
+				Markers: []*persistence.FailoverMarkerTask{
+					{
+						TaskID:              1,
+						VisibilityTimestamp: time.Unix(11, 12),
+						Version:             101,
+						DomainID:            "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+					},
+				},
+			},
+			mockSetup: func(tx *sqlplugin.MockTx, parser *serialization.MockParser) {
+				parser.EXPECT().ReplicationTaskInfoToBlob(gomock.Any()).Return(persistence.DataBlob{
+					Encoding: common.EncodingTypeThriftRW,
+					Data:     []byte("test data"),
+				}, nil)
+				tx.EXPECT().InsertIntoReplicationTasks(gomock.Any(), []sqlplugin.ReplicationTasksRow{
+					{
+						ShardID:      0,
+						TaskID:       1,
+						Data:         []byte("test data"),
+						DataEncoding: "thriftrw",
+					},
+				}).Return(nil, errors.New("some random error"))
+				tx.EXPECT().IsNotFoundError(gomock.Any()).Return(true)
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - row affected error",
+			req: &persistence.CreateFailoverMarkersRequest{
+				RangeID: 1,
+				Markers: []*persistence.FailoverMarkerTask{
+					{
+						TaskID:              1,
+						VisibilityTimestamp: time.Unix(11, 12),
+						Version:             101,
+						DomainID:            "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+					},
+				},
+			},
+			mockSetup: func(tx *sqlplugin.MockTx, parser *serialization.MockParser) {
+				parser.EXPECT().ReplicationTaskInfoToBlob(gomock.Any()).Return(persistence.DataBlob{
+					Encoding: common.EncodingTypeThriftRW,
+					Data:     []byte("test data"),
+				}, nil)
+				tx.EXPECT().InsertIntoReplicationTasks(gomock.Any(), []sqlplugin.ReplicationTasksRow{
+					{
+						ShardID:      0,
+						TaskID:       1,
+						Data:         []byte("test data"),
+						DataEncoding: "thriftrw",
+					},
+				}).Return(&sqlResult{
+					err: errors.New("some error"),
+				}, nil)
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - row affected number mismatch",
+			req: &persistence.CreateFailoverMarkersRequest{
+				RangeID: 1,
+				Markers: []*persistence.FailoverMarkerTask{
+					{
+						TaskID:              1,
+						VisibilityTimestamp: time.Unix(11, 12),
+						Version:             101,
+						DomainID:            "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+					},
+				},
+			},
+			mockSetup: func(tx *sqlplugin.MockTx, parser *serialization.MockParser) {
+				parser.EXPECT().ReplicationTaskInfoToBlob(gomock.Any()).Return(persistence.DataBlob{
+					Encoding: common.EncodingTypeThriftRW,
+					Data:     []byte("test data"),
+				}, nil)
+				tx.EXPECT().InsertIntoReplicationTasks(gomock.Any(), []sqlplugin.ReplicationTasksRow{
+					{
+						ShardID:      0,
+						TaskID:       1,
+						Data:         []byte("test data"),
+						DataEncoding: "thriftrw",
+					},
+				}).Return(&sqlResult{
+					rowsAffected: 0,
+				}, nil)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			db := sqlplugin.NewMockDB(ctrl)
+			db.EXPECT().GetTotalNumDBShards().Return(1)
+			tx := sqlplugin.NewMockTx(ctrl)
+			parser := serialization.NewMockParser(ctrl)
+			tc.mockSetup(tx, parser)
+			s := &sqlExecutionStore{
+				shardID: 0,
+				sqlStore: sqlStore{
+					db:     db,
+					logger: testlogger.New(t),
+					parser: parser,
+				},
+				txExecuteShardLockedFn: func(_ context.Context, _ int, _ string, _ int64, fn func(sqlplugin.Tx) error) error {
+					return fn(tx)
+				},
+			}
+
+			err := s.CreateFailoverMarkerTasks(context.Background(), tc.req)
+			if tc.wantErr {
+				assert.Error(t, err, "Expected an error for test case")
+			} else {
+				assert.NoError(t, err, "Did not expect an error for test case")
+			}
+		})
+	}
+}
