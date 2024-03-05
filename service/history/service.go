@@ -114,7 +114,13 @@ func (s *Service) Start() {
 	})
 
 	rawHandler := handler.NewHandler(s.Resource, s.config, wfIDCache)
-	s.handler = ratelimited.NewHistoryHandler(rawHandler, wfIDCache)
+	s.handler = ratelimited.NewHistoryHandler(
+		rawHandler,
+		wfIDCache,
+		s.config.WorkflowIDExternalRateLimitEnabled,
+		s.Resource.GetDomainCache(),
+		s.Resource.GetLogger(),
+	)
 
 	thriftHandler := thrift.NewThriftHandler(s.handler)
 	thriftHandler.Register(s.GetDispatcher())

@@ -5,6 +5,7 @@ import (
     "github.com/uber/cadence/common/quotas"
     "github.com/uber/cadence/common/types"
     "github.com/uber/cadence/service/history"
+    "github.com/uber/cadence/common/log"
 )
 
 {{ $ratelimitTypeMap := dict "StartWorkflowExecution" (
@@ -39,19 +40,32 @@ import (
 
 // {{$decorator}} implements {{.Interface.Type}} interface instrumented with rate limiter.
 type {{$decorator}} struct {
-    wrapped         {{.Interface.Type}}
-    workflowIDCache workflowcache.WFCache
+    wrapped                        {{.Interface.Type}}
+    workflowIDCache                workflowcache.WFCache
+    ratelimitExternalPerWorkflowID dynamicconfig.BoolPropertyFnWithDomainFilter
+    domainCache                    cache.DomainCache
+    logger                         log.Logger
+    allowFunc                      func (domainID string, workflowID string) bool
 }
 
 // New{{$Decorator}} creates a new instance of {{$interfaceName}} with ratelimiter.
 func New{{$Decorator}}(
     wrapped {{.Interface.Type}},
     workflowIDCache workflowcache.WFCache,
+    ratelimitExternalPerWorkflowID dynamicconfig.BoolPropertyFnWithDomainFilter,
+    domainCache cache.DomainCache,
+    logger log.Logger,
 ) {{.Interface.Type}} {
-    return &{{$decorator}}{
+    wrapper := &{{$decorator}}{
         wrapped: wrapped,
         workflowIDCache: workflowIDCache,
+        ratelimitExternalPerWorkflowID: ratelimitExternalPerWorkflowID,
+        domainCache: domainCache,
+        logger: logger,
     }
+    wrapper.allowFunc = wrapper.allowWfID
+
+    return wrapper
 }
 
 {{range $method := .Interface.Methods}}
@@ -82,7 +96,11 @@ func (h *{{$decorator}}) {{$method.Declaration}} {
                 return
             }
 
-            h.workflowIDCache.AllowExternal({{$domainID}}, {{$workflowID}})
+            if !h.allowFunc({{$domainID}}, {{$workflowID}}) {
+                err = &types.ServiceBusyError{"Too many requests for the workflow ID"}
+                return
+            }
+
         {{- end}}
     {{- end}}
     {{$method.Pass "h.wrapped."}}
