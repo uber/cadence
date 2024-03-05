@@ -107,6 +107,7 @@ type (
 		GetDomainNotificationVersion() int64
 		UpdateDomainNotificationVersion(domainNotificationVersion int64) error
 
+		GetWorkflowExecution(ctx context.Context, request *persistence.GetWorkflowExecutionRequest) (*persistence.GetWorkflowExecutionResponse, error)
 		CreateWorkflowExecution(ctx context.Context, request *persistence.CreateWorkflowExecutionRequest) (*persistence.CreateWorkflowExecutionResponse, error)
 		UpdateWorkflowExecution(ctx context.Context, request *persistence.UpdateWorkflowExecutionRequest) (*persistence.UpdateWorkflowExecutionResponse, error)
 		ConflictResolveWorkflowExecution(ctx context.Context, request *persistence.ConflictResolveWorkflowExecutionRequest) (*persistence.ConflictResolveWorkflowExecutionResponse, error)
@@ -576,6 +577,16 @@ func (s *contextImpl) UpdateTimerMaxReadLevel(cluster string) time.Time {
 
 	s.timerMaxReadLevelMap[cluster] = currentTime.Add(s.config.TimerProcessorMaxTimeShift()).Truncate(time.Millisecond)
 	return s.timerMaxReadLevelMap[cluster]
+}
+
+func (s *contextImpl) GetWorkflowExecution(
+	ctx context.Context,
+	request *persistence.GetWorkflowExecutionRequest,
+) (*persistence.GetWorkflowExecutionResponse, error) {
+	if s.isClosed() {
+		return nil, ErrShardClosed
+	}
+	return s.executionManager.GetWorkflowExecution(ctx, request)
 }
 
 func (s *contextImpl) CreateWorkflowExecution(

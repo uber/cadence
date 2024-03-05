@@ -389,7 +389,7 @@ func (r *transactionManagerImpl) checkWorkflowExists(
 	if errorDomainName != nil {
 		return false, errorDomainName
 	}
-	_, err := r.shard.GetExecutionManager().GetWorkflowExecution(
+	_, err := r.shard.GetWorkflowExecution(
 		ctx,
 		&persistence.GetWorkflowExecutionRequest{
 			DomainID: domainID,
