@@ -499,6 +499,7 @@ func TestApplyWorkflowMutationTx(t *testing.T) {
 				DeleteSignalInfos:        []int64{1, 2},
 				UpsertSignalRequestedIDs: []string{"a", "b"},
 				DeleteSignalRequestedIDs: []string{"c", "d"},
+				ClearBufferedEvents:      true,
 			},
 			mockSetup: func(mockTx *sqlplugin.MockTx, mockParser *serialization.MockParser) {
 				mockSetupLockAndCheckNextEventID(mockTx, shardID, serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"), "abc", serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47603"), 9, false)
@@ -510,6 +511,7 @@ func TestApplyWorkflowMutationTx(t *testing.T) {
 				mockUpdateRequestCancelInfos(mockTx, mockParser, 1, 2, false)
 				mockUpdateSignalInfos(mockTx, mockParser, 1, 2, false)
 				mockUpdateSignalRequested(mockTx, mockParser, 1, 2, false)
+				mockDeleteBufferedEvents(mockTx, shardID, serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"), "abc", serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47603"), false)
 			},
 			wantErr: false,
 		},

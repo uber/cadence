@@ -49,7 +49,11 @@ const (
 
 type sqlExecutionStore struct {
 	sqlStore
-	shardID int
+	shardID                          int
+	txExecuteShardLockedFn           func(context.Context, int, string, int64, func(sqlplugin.Tx) error) error
+	lockCurrentExecutionIfExistsFn   func(context.Context, sqlplugin.Tx, int, serialization.UUID, string) (*sqlplugin.CurrentExecutionsRow, error)
+	createOrUpdateCurrentExecutionFn func(context.Context, sqlplugin.Tx, p.CreateWorkflowMode, int, serialization.UUID, string, serialization.UUID, int, int, string, int64, int64) error
+	applyWorkflowSnapshotTxAsNewFn   func(context.Context, sqlplugin.Tx, int, *p.InternalWorkflowSnapshot, serialization.Parser) error
 }
 
 var _ p.ExecutionStore = (*sqlExecutionStore)(nil)
@@ -63,15 +67,20 @@ func NewSQLExecutionStore(
 	dc *p.DynamicConfiguration,
 ) (p.ExecutionStore, error) {
 
-	return &sqlExecutionStore{
-		shardID: shardID,
+	store := &sqlExecutionStore{
+		shardID:                          shardID,
+		lockCurrentExecutionIfExistsFn:   lockCurrentExecutionIfExists,
+		createOrUpdateCurrentExecutionFn: createOrUpdateCurrentExecution,
+		applyWorkflowSnapshotTxAsNewFn:   applyWorkflowSnapshotTxAsNew,
 		sqlStore: sqlStore{
 			db:     db,
 			logger: logger,
 			parser: parser,
 			dc:     dc,
 		},
-	}, nil
+	}
+	store.txExecuteShardLockedFn = store.txExecuteShardLocked
+	return store, nil
 }
 
 // txExecuteShardLocked executes f under transaction and with read lock on shard row
@@ -105,7 +114,7 @@ func (m *sqlExecutionStore) CreateWorkflowExecution(
 ) (response *p.CreateWorkflowExecutionResponse, err error) {
 	dbShardID := sqlplugin.GetDBShardIDFromHistoryShardID(m.shardID, m.db.GetTotalNumDBShards())
 
-	err = m.txExecuteShardLocked(ctx, dbShardID, "CreateWorkflowExecution", request.RangeID, func(tx sqlplugin.Tx) error {
+	err = m.txExecuteShardLockedFn(ctx, dbShardID, "CreateWorkflowExecution", request.RangeID, func(tx sqlplugin.Tx) error {
 		response, err = m.createWorkflowExecutionTx(ctx, tx, request)
 		return err
 	})
@@ -136,7 +145,7 @@ func (m *sqlExecutionStore) createWorkflowExecutionTx(
 
 	var err error
 	var row *sqlplugin.CurrentExecutionsRow
-	if row, err = lockCurrentExecutionIfExists(ctx, tx, m.shardID, domainID, workflowID); err != nil {
+	if row, err = m.lockCurrentExecutionIfExistsFn(ctx, tx, m.shardID, domainID, workflowID); err != nil {
 		return nil, err
 	}
 
@@ -204,7 +213,7 @@ func (m *sqlExecutionStore) createWorkflowExecutionTx(
 		}
 	}
 
-	if err := createOrUpdateCurrentExecution(
+	if err := m.createOrUpdateCurrentExecutionFn(
 		ctx,
 		tx,
 		request.Mode,
@@ -220,7 +229,7 @@ func (m *sqlExecutionStore) createWorkflowExecutionTx(
 		return nil, err
 	}
 
-	if err := applyWorkflowSnapshotTxAsNew(ctx, tx, shardID, &request.NewWorkflowSnapshot, m.parser); err != nil {
+	if err := m.applyWorkflowSnapshotTxAsNewFn(ctx, tx, shardID, &request.NewWorkflowSnapshot, m.parser); err != nil {
 		return nil, err
 	}
 
