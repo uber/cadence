@@ -31,14 +31,15 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/uber-go/tally"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
+
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zaptest/observer"
 )
 
 var _staticMethods = map[string]bool{
