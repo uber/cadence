@@ -23,8 +23,19 @@
 package pinotvisibility
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+	"github.com/uber/cadence/.gen/go/indexer"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/log/testlogger"
+	"github.com/uber/cadence/common/mocks"
+	"github.com/uber/cadence/common/service"
 	"testing"
 	"time"
 
@@ -49,6 +60,8 @@ var (
 	testCloseStatus  = int32(1)
 	testTableName    = "test-table-name"
 
+	testContextTimeout = 5 * time.Second
+
 	validSearchAttr = definition.GetDefaultIndexedKeys()
 
 	visibilityStore = pinotVisibilityStore{
@@ -59,6 +72,286 @@ var (
 		pinotQueryValidator: pnt.NewPinotQueryValidator(validSearchAttr),
 	}
 )
+
+type PinotVisibilitySuite struct {
+	suite.Suite
+	// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
+	// not merely log an error
+	*require.Assertions
+	visibilityStore *pinotVisibilityStore
+	mockPinotClient *pnt.MockGenericClient
+	mockProducer    *mocks.KafkaProducer
+}
+
+func TestPinotVisibilitySuite(t *testing.T) {
+	suite.Run(t, new(PinotVisibilitySuite))
+}
+
+func (s *PinotVisibilitySuite) SetupTest() {
+	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
+	s.Assertions = require.New(s.T())
+	ctrl := gomock.NewController(s.Suite.T())
+	s.mockPinotClient = pnt.NewMockGenericClient(ctrl)
+	s.mockPinotClient.EXPECT().GetTableName().Return("TestTable").AnyTimes()
+
+	s.mockProducer = &mocks.KafkaProducer{}
+	mgr := NewPinotVisibilityStore(s.mockPinotClient, &service.Config{
+		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
+	}, s.mockProducer, testlogger.New(s.Suite.T()))
+	s.visibilityStore = mgr.(*pinotVisibilityStore)
+}
+
+func (s *PinotVisibilitySuite) TearDownTest() {
+	//s.mockPinotClient.AssertExpectations(s.T())
+	s.mockProducer.AssertExpectations(s.T())
+}
+
+func (s *PinotVisibilitySuite) TestRecordWorkflowExecutionStarted() {
+	// test non-empty request fields match
+	request := &p.InternalRecordWorkflowExecutionStartedRequest{}
+	request.WorkflowID = "wid"
+	memoBytes := []byte(`test bytes`)
+	request.Memo = p.NewDataBlob(memoBytes, common.EncodingTypeThriftRW)
+
+	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+		s.Equal(request.WorkflowID, input.GetWorkflowID())
+		return true
+	})).Return(nil).Once()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	err := s.visibilityStore.RecordWorkflowExecutionStarted(ctx, request)
+	s.NoError(err)
+}
+
+func (s *PinotVisibilitySuite) TestRecordWorkflowExecutionClosed() {
+	// test non-empty request fields match
+	request := &p.InternalRecordWorkflowExecutionClosedRequest{}
+	request.WorkflowID = "wid"
+	memoBytes := []byte(`test bytes`)
+	request.Memo = p.NewDataBlob(memoBytes, common.EncodingTypeThriftRW)
+
+	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+		s.Equal(request.WorkflowID, input.GetWorkflowID())
+		return true
+	})).Return(nil).Once()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	err := s.visibilityStore.RecordWorkflowExecutionClosed(ctx, request)
+	s.NoError(err)
+}
+
+func (s *PinotVisibilitySuite) TestRecordWorkflowExecutionUninitialized() {
+	// test non-empty request fields match
+	request := &p.InternalRecordWorkflowExecutionUninitializedRequest{}
+	request.WorkflowID = "wid"
+
+	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+		s.Equal(request.WorkflowID, input.GetWorkflowID())
+		return true
+	})).Return(nil).Once()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	err := s.visibilityStore.RecordWorkflowExecutionUninitialized(ctx, request)
+	s.NoError(err)
+}
+
+func (s *PinotVisibilitySuite) TestUpsertWorkflowExecution() {
+	// test non-empty request fields match
+	request := &p.InternalUpsertWorkflowExecutionRequest{}
+	request.WorkflowID = "wid"
+	memoBytes := []byte(`test bytes`)
+	request.Memo = p.NewDataBlob(memoBytes, common.EncodingTypeThriftRW)
+
+	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+		s.Equal(request.WorkflowID, input.GetWorkflowID())
+		return true
+	})).Return(nil).Once()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	err := s.visibilityStore.UpsertWorkflowExecution(ctx, request)
+	s.NoError(err)
+}
+
+func (s *PinotVisibilitySuite) TestDeleteWorkflowExecution() {
+	// test non-empty request fields match
+	request := &p.VisibilityDeleteWorkflowExecutionRequest{}
+	request.WorkflowID = "wid"
+
+	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+		s.Equal(request.WorkflowID, input.GetWorkflowID())
+		return true
+	})).Return(nil).Once()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	err := s.visibilityStore.DeleteWorkflowExecution(ctx, request)
+	s.NoError(err)
+}
+
+func (s *PinotVisibilitySuite) TestDeleteUninitializedWorkflowExecution() {
+	// test non-empty request fields match
+	request := &p.VisibilityDeleteWorkflowExecutionRequest{}
+	request.DomainID = "domainID"
+	request.WorkflowID = "wid"
+	request.RunID = "rid"
+	request.TaskID = int64(111)
+
+	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+		s.Equal(request.WorkflowID, input.GetWorkflowID())
+		return true
+	})).Return(nil).Once()
+
+	s.mockPinotClient.EXPECT().CountByQuery(gomock.Any()).Return(int64(1), nil).AnyTimes()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	err := s.visibilityStore.DeleteUninitializedWorkflowExecution(ctx, request)
+	s.NoError(err)
+}
+
+func (s *PinotVisibilitySuite) TestListOpenWorkflowExecutions() {
+	request := &p.InternalListWorkflowExecutionsRequest{
+		Domain: DomainID,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	s.mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).AnyTimes()
+	_, err := s.visibilityStore.ListOpenWorkflowExecutions(ctx, request)
+	s.NoError(err)
+}
+
+func (s *PinotVisibilitySuite) TestListClosedWorkflowExecutions() {
+	request := &p.InternalListWorkflowExecutionsRequest{
+		Domain: DomainID,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	s.mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).AnyTimes()
+	_, err := s.visibilityStore.ListClosedWorkflowExecutions(ctx, request)
+	s.NoError(err)
+}
+
+func (s *PinotVisibilitySuite) TestListOpenWorkflowExecutionsByType() {
+	request := &p.InternalListWorkflowExecutionsByTypeRequest{}
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	s.mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).AnyTimes()
+	_, err := s.visibilityStore.ListOpenWorkflowExecutionsByType(ctx, request)
+	s.NoError(err)
+}
+
+func (s *PinotVisibilitySuite) TestListClosedWorkflowExecutionsByType() {
+	request := &p.InternalListWorkflowExecutionsByTypeRequest{}
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	s.mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).AnyTimes()
+	_, err := s.visibilityStore.ListClosedWorkflowExecutionsByType(ctx, request)
+	s.NoError(err)
+}
+
+func (s *PinotVisibilitySuite) TestListOpenWorkflowExecutionsByWorkflowID() {
+	request := &p.InternalListWorkflowExecutionsByWorkflowIDRequest{}
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	s.mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).AnyTimes()
+	_, err := s.visibilityStore.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
+	s.NoError(err)
+}
+
+func (s *PinotVisibilitySuite) TestListClosedWorkflowExecutionsByWorkflowID() {
+	request := &p.InternalListWorkflowExecutionsByWorkflowIDRequest{}
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	s.mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).AnyTimes()
+	_, err := s.visibilityStore.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
+	s.NoError(err)
+}
+
+func (s *PinotVisibilitySuite) TestListClosedWorkflowExecutionsByStatus() {
+	request := &p.InternalListClosedWorkflowExecutionsByStatusRequest{}
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	s.mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).AnyTimes()
+	_, err := s.visibilityStore.ListClosedWorkflowExecutionsByStatus(ctx, request)
+	s.NoError(err)
+}
+
+func (s *PinotVisibilitySuite) TestGetClosedWorkflowExecution() {
+	request := &p.InternalGetClosedWorkflowExecutionRequest{}
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	s.mockPinotClient.EXPECT().Search(gomock.Any()).Return(&pnt.SearchResponse{
+		Executions: []*p.InternalVisibilityWorkflowExecutionInfo{
+			{
+				DomainID: DomainID,
+			},
+		},
+	}, nil).AnyTimes()
+	_, err := s.visibilityStore.GetClosedWorkflowExecution(ctx, request)
+	s.NoError(err)
+}
+
+func (s *PinotVisibilitySuite) TestListWorkflowExecutions() {
+	request := &p.ListWorkflowExecutionsByQueryRequest{}
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	s.mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).AnyTimes()
+	_, err := s.visibilityStore.ListWorkflowExecutions(ctx, request)
+	s.NoError(err)
+}
+
+func (s *PinotVisibilitySuite) TestScanWorkflowExecutions() {
+	request := &p.ListWorkflowExecutionsByQueryRequest{}
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	s.mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).AnyTimes()
+	_, err := s.visibilityStore.ScanWorkflowExecutions(ctx, request)
+	s.NoError(err)
+}
+
+func (s *PinotVisibilitySuite) TestGetName() {
+	s.NotEmpty(s.visibilityStore.GetName())
+}
+
+func TestNewPinotVisibilityStore(t *testing.T) {
+	mockPinotClient := &pnt.MockGenericClient{}
+	assert.NotPanics(t, func() {
+		NewPinotVisibilityStore(mockPinotClient, &service.Config{
+			ValidSearchAttributes: dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+		}, nil, log.NewNoop())
+	})
+}
 
 func TestGetCountWorkflowExecutionsQuery(t *testing.T) {
 	request := &p.CountWorkflowExecutionsRequest{
@@ -455,21 +748,29 @@ LIMIT 0, 10
 }
 
 func TestGetListWorkflowExecutionsByStatusQuery(t *testing.T) {
-	request := &p.InternalListClosedWorkflowExecutionsByStatusRequest{
-		InternalListWorkflowExecutionsRequest: p.InternalListWorkflowExecutionsRequest{
-			DomainUUID:    testDomainID,
-			Domain:        testDomain,
-			EarliestTime:  time.Unix(0, testEarliestTime),
-			LatestTime:    time.Unix(0, testLatestTime),
-			PageSize:      testPageSize,
-			NextPageToken: nil,
+	tests := map[string]struct {
+		inputRequest *p.InternalListClosedWorkflowExecutionsByStatusRequest
+		expectResult string
+		expectError  error
+	}{
+		"Case1: normal case": {
+			inputRequest: nil,
+			expectResult: "",
+			expectError:  nil,
 		},
-		Status: types.WorkflowExecutionCloseStatus(0),
-	}
-
-	closeResult, err1 := getListWorkflowExecutionsByStatusQuery(testTableName, request)
-	nilResult, err2 := getListWorkflowExecutionsByStatusQuery(testTableName, nil)
-	expectCloseResult := fmt.Sprintf(`SELECT *
+		"Case2-0: normal case with close status is 0": {
+			inputRequest: &p.InternalListClosedWorkflowExecutionsByStatusRequest{
+				InternalListWorkflowExecutionsRequest: p.InternalListWorkflowExecutionsRequest{
+					DomainUUID:    testDomainID,
+					Domain:        testDomain,
+					EarliestTime:  time.Unix(0, testEarliestTime),
+					LatestTime:    time.Unix(0, testLatestTime),
+					PageSize:      testPageSize,
+					NextPageToken: nil,
+				},
+				Status: types.WorkflowExecutionCloseStatus(0),
+			},
+			expectResult: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND IsDeleted = false
@@ -477,13 +778,135 @@ AND CloseStatus = '0'
 AND CloseTime BETWEEN 1547596872371 AND 2547596872371
 Order BY StartTime DESC
 LIMIT 0, 10
-`, testTableName)
-	expectNilResult := ""
+`, testTableName),
+			expectError: nil,
+		},
+		"Case2-1: normal case with close status is 1": {
+			inputRequest: &p.InternalListClosedWorkflowExecutionsByStatusRequest{
+				InternalListWorkflowExecutionsRequest: p.InternalListWorkflowExecutionsRequest{
+					DomainUUID:    testDomainID,
+					Domain:        testDomain,
+					EarliestTime:  time.Unix(0, testEarliestTime),
+					LatestTime:    time.Unix(0, testLatestTime),
+					PageSize:      testPageSize,
+					NextPageToken: nil,
+				},
+				Status: types.WorkflowExecutionCloseStatus(1),
+			},
+			expectResult: fmt.Sprintf(`SELECT *
+FROM %s
+WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
+AND IsDeleted = false
+AND CloseStatus = '1'
+AND CloseTime BETWEEN 1547596872371 AND 2547596872371
+Order BY StartTime DESC
+LIMIT 0, 10
+`, testTableName),
+			expectError: nil,
+		},
+		"Case2-2: normal case with close status is 2": {
+			inputRequest: &p.InternalListClosedWorkflowExecutionsByStatusRequest{
+				InternalListWorkflowExecutionsRequest: p.InternalListWorkflowExecutionsRequest{
+					DomainUUID:    testDomainID,
+					Domain:        testDomain,
+					EarliestTime:  time.Unix(0, testEarliestTime),
+					LatestTime:    time.Unix(0, testLatestTime),
+					PageSize:      testPageSize,
+					NextPageToken: nil,
+				},
+				Status: types.WorkflowExecutionCloseStatus(2),
+			},
+			expectResult: fmt.Sprintf(`SELECT *
+FROM %s
+WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
+AND IsDeleted = false
+AND CloseStatus = '2'
+AND CloseTime BETWEEN 1547596872371 AND 2547596872371
+Order BY StartTime DESC
+LIMIT 0, 10
+`, testTableName),
+			expectError: nil,
+		},
+		"Case2-3: normal case with close status is 3": {
+			inputRequest: &p.InternalListClosedWorkflowExecutionsByStatusRequest{
+				InternalListWorkflowExecutionsRequest: p.InternalListWorkflowExecutionsRequest{
+					DomainUUID:    testDomainID,
+					Domain:        testDomain,
+					EarliestTime:  time.Unix(0, testEarliestTime),
+					LatestTime:    time.Unix(0, testLatestTime),
+					PageSize:      testPageSize,
+					NextPageToken: nil,
+				},
+				Status: types.WorkflowExecutionCloseStatus(3),
+			},
+			expectResult: fmt.Sprintf(`SELECT *
+FROM %s
+WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
+AND IsDeleted = false
+AND CloseStatus = '3'
+AND CloseTime BETWEEN 1547596872371 AND 2547596872371
+Order BY StartTime DESC
+LIMIT 0, 10
+`, testTableName),
+			expectError: nil,
+		},
+		"Case2-4: normal case with close status is 4": {
+			inputRequest: &p.InternalListClosedWorkflowExecutionsByStatusRequest{
+				InternalListWorkflowExecutionsRequest: p.InternalListWorkflowExecutionsRequest{
+					DomainUUID:    testDomainID,
+					Domain:        testDomain,
+					EarliestTime:  time.Unix(0, testEarliestTime),
+					LatestTime:    time.Unix(0, testLatestTime),
+					PageSize:      testPageSize,
+					NextPageToken: nil,
+				},
+				Status: types.WorkflowExecutionCloseStatus(4),
+			},
+			expectResult: fmt.Sprintf(`SELECT *
+FROM %s
+WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
+AND IsDeleted = false
+AND CloseStatus = '4'
+AND CloseTime BETWEEN 1547596872371 AND 2547596872371
+Order BY StartTime DESC
+LIMIT 0, 10
+`, testTableName),
+			expectError: nil,
+		},
+		"Case2-5: normal case with close status is 5": {
+			inputRequest: &p.InternalListClosedWorkflowExecutionsByStatusRequest{
+				InternalListWorkflowExecutionsRequest: p.InternalListWorkflowExecutionsRequest{
+					DomainUUID:    testDomainID,
+					Domain:        testDomain,
+					EarliestTime:  time.Unix(0, testEarliestTime),
+					LatestTime:    time.Unix(0, testLatestTime),
+					PageSize:      testPageSize,
+					NextPageToken: nil,
+				},
+				Status: types.WorkflowExecutionCloseStatus(5),
+			},
+			expectResult: fmt.Sprintf(`SELECT *
+FROM %s
+WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
+AND IsDeleted = false
+AND CloseStatus = '5'
+AND CloseTime BETWEEN 1547596872371 AND 2547596872371
+Order BY StartTime DESC
+LIMIT 0, 10
+`, testTableName),
+			expectError: nil,
+		},
+	}
 
-	assert.Equal(t, expectCloseResult, closeResult)
-	assert.Equal(t, expectNilResult, nilResult)
-	assert.NoError(t, err1)
-	assert.NoError(t, err2)
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				actualResult, actualError := getListWorkflowExecutionsByStatusQuery(testTableName, test.inputRequest)
+				assert.Equal(t, test.expectResult, actualResult)
+				assert.NoError(t, actualError)
+			})
+		})
+	}
 }
 
 func TestGetGetClosedWorkflowExecutionQuery(t *testing.T) {
@@ -553,13 +976,6 @@ AND WorkflowID = ''
 			})
 		})
 	}
-}
-
-func TestStringFormatting(t *testing.T) {
-	key := "CustomizedStringField"
-	val := "When query; select * from users_secret_table;"
-
-	assert.Equal(t, `CustomizedStringField LIKE '%When query; select * from users_secret_table;%'`, getPartialFormatString(key, val))
 }
 
 func TestParseLastElement(t *testing.T) {
@@ -666,6 +1082,24 @@ func TestSplitElement(t *testing.T) {
 			expectedVal: "Test",
 			expectedOp:  ">=",
 		},
+		"Case7: A > B": {
+			input:       "CustomizedTestField > Test",
+			expectedKey: "CustomizedTestField",
+			expectedVal: "Test",
+			expectedOp:  ">",
+		},
+		"Case8: A < B": {
+			input:       "CustomizedTestField < Test",
+			expectedKey: "CustomizedTestField",
+			expectedVal: "Test",
+			expectedOp:  "<",
+		},
+		"Case9: empty": {
+			input:       "",
+			expectedKey: "",
+			expectedVal: "",
+			expectedOp:  "",
+		},
 	}
 
 	for name, test := range tests {
@@ -675,6 +1109,55 @@ func TestSplitElement(t *testing.T) {
 				assert.Equal(t, test.expectedKey, key)
 				assert.Equal(t, test.expectedVal, val)
 				assert.Equal(t, test.expectedOp, op)
+			})
+		})
+	}
+}
+
+func TestIsTimeStruct(t *testing.T) {
+	var emptyInput []byte
+	numberInput := []byte("1709601210000000000")
+	errorInput := []byte("Not a timeStamp")
+	testTime := time.UnixMilli(1709601210000)
+	var legitInput []byte
+	legitInput, err := json.Marshal(testTime)
+	assert.NoError(t, err)
+	legitOutput := testTime.UnixMilli()
+	legitOutputJson, _ := json.Marshal(legitOutput)
+
+	tests := map[string]struct {
+		input          []byte
+		expectedOutput []byte
+		expectedError  error
+	}{
+		"Case1: empty input": {
+			input:          emptyInput,
+			expectedOutput: nil,
+			expectedError:  nil,
+		},
+		"Case2: error input": {
+			input:          errorInput,
+			expectedOutput: errorInput,
+			expectedError:  nil,
+		},
+		"Case3: number input": {
+			input:          numberInput,
+			expectedOutput: numberInput,
+			expectedError:  nil,
+		},
+		"Case4: legit input": {
+			input:          legitInput,
+			expectedOutput: legitOutputJson,
+			expectedError:  nil,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				actualOutput, actualError := isTimeStruct(test.input)
+				assert.Equal(t, test.expectedOutput, actualOutput)
+				assert.Equal(t, test.expectedError, actualError)
 			})
 		})
 	}

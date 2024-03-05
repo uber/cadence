@@ -59,8 +59,6 @@ const (
 	CloseTime            = "CloseTime"
 	UpdateTime           = "UpdateTime"
 	ExecutionTime        = "ExecutionTime"
-	Encoding             = "Encoding"
-	LikeStatement        = "%s LIKE '%%%s%%'"
 	IsDeleted            = "IsDeleted"   // used for Pinot deletion/rolling upsert only, not visible to user
 	EventTimeMs          = "EventTimeMs" // used for Pinot deletion/rolling upsert only, not visible to user
 
@@ -741,15 +739,6 @@ func (f *PinotQueryFilter) addLt(obj string, val interface{}) {
 func (f *PinotQueryFilter) addTimeRange(obj string, earliest interface{}, latest interface{}) {
 	f.checkFirstFilter()
 	f.string += fmt.Sprintf("%s BETWEEN %v AND %v\n", obj, earliest, latest)
-}
-
-func (f *PinotQueryFilter) addPartialMatch(key string, val string) {
-	f.checkFirstFilter()
-	f.string += fmt.Sprintf("%s\n", getPartialFormatString(key, val))
-}
-
-func getPartialFormatString(key string, val string) string {
-	return fmt.Sprintf(LikeStatement, key, val)
 }
 
 func (v *pinotVisibilityStore) getCountWorkflowExecutionsQuery(tableName string, request *p.CountWorkflowExecutionsRequest) string {
