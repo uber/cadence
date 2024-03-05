@@ -62,10 +62,7 @@ func TestNewV6Client(t *testing.T) {
 }
 
 func TestCreateIndex(t *testing.T) {
-	testServer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"acknowledged": true}`))
-	}))
+	testServer := getTestServer()
 	defer testServer.Close()
 	// Create a new MockESClient
 	mockClient, err := elastic.NewClient(
@@ -76,21 +73,15 @@ func TestCreateIndex(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	// Create an instance of ElasticV6 with the mock ES client
 	elasticV6 := ElasticV6{
 		client: mockClient,
 	}
-
-	// Call the method under test
-	err = elasticV6.CreateIndex(context.Background(), "testindex")
+	err = elasticV6.CreateIndex(context.Background(), "testIndex")
 	assert.NoError(t, err)
 }
 
 func TestPutMapping(t *testing.T) {
-	testServer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"acknowledged": true}`))
-	}))
+	testServer := getTestServer()
 	defer testServer.Close()
 	// Create a new MockESClient
 	mockClient, err := elastic.NewClient(
@@ -100,12 +91,10 @@ func TestPutMapping(t *testing.T) {
 		elastic.SetHttpClient(testServer.Client()))
 	assert.NoError(t, err)
 
-	// Create an instance of ElasticV6 with the mock ES client
 	elasticV6 := ElasticV6{
 		client: mockClient,
 	}
-
-	err = elasticV6.PutMapping(context.Background(), "testindex", `{
+	err = elasticV6.PutMapping(context.Background(), "testIndex", `{
         "properties": {
             "title": {
                 "type": "text"
@@ -119,15 +108,7 @@ func TestPutMapping(t *testing.T) {
 }
 
 func TestCount(t *testing.T) {
-	testServer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/testIndex/_count" {
-			// Simulate a response with a count of 42 documents
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"count": 42}`))
-		} else {
-			w.WriteHeader(http.StatusNotFound)
-		}
-	}))
+	testServer := getTestServer()
 	defer testServer.Close()
 	// Create a new MockESClient
 	mockClient, err := elastic.NewClient(
@@ -137,12 +118,32 @@ func TestCount(t *testing.T) {
 		elastic.SetHttpClient(testServer.Client()))
 	assert.NoError(t, err)
 
-	// Create an instance of ElasticV6 with the mock ES client
 	elasticV6 := ElasticV6{
 		client: mockClient,
 	}
-
 	count, err := elasticV6.Count(context.Background(), "testIndex", "")
 	assert.NoError(t, err)
 	assert.Equal(t, int64(42), count)
+}
+
+func getTestServer() *httptest.Server {
+	return httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/testIndex":
+			if r.Method == "PUT" {
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(`{"acknowledged": true}`))
+			}
+		case "/testIndex/_mapping/_doc":
+			if r.Method == "PUT" {
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(`{"acknowledged": true}`))
+			}
+		case "/testIndex/_count":
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"count": 42}`))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
 }
