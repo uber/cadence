@@ -57,6 +57,7 @@ type sqlExecutionStore struct {
 	assertRunIDAndUpdateCurrentExecutionFn func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID, serialization.UUID, string, int, int, int64, int64) error
 	applyWorkflowSnapshotTxAsNewFn         func(context.Context, sqlplugin.Tx, int, *p.InternalWorkflowSnapshot, serialization.Parser) error
 	applyWorkflowMutationTxFn              func(context.Context, sqlplugin.Tx, int, *p.InternalWorkflowMutation, serialization.Parser) error
+	applyWorkflowSnapshotTxAsResetFn       func(context.Context, sqlplugin.Tx, int, *p.InternalWorkflowSnapshot, serialization.Parser) error
 }
 
 var _ p.ExecutionStore = (*sqlExecutionStore)(nil)
@@ -78,6 +79,7 @@ func NewSQLExecutionStore(
 		assertRunIDAndUpdateCurrentExecutionFn: assertRunIDAndUpdateCurrentExecution,
 		applyWorkflowSnapshotTxAsNewFn:         applyWorkflowSnapshotTxAsNew,
 		applyWorkflowMutationTxFn:              applyWorkflowMutationTx,
+		applyWorkflowSnapshotTxAsResetFn:       applyWorkflowSnapshotTxAsReset,
 		sqlStore: sqlStore{
 			db:     db,
 			logger: logger,
@@ -504,7 +506,7 @@ func (m *sqlExecutionStore) ConflictResolveWorkflowExecution(
 	request *p.InternalConflictResolveWorkflowExecutionRequest,
 ) error {
 	dbShardID := sqlplugin.GetDBShardIDFromHistoryShardID(m.shardID, m.db.GetTotalNumDBShards())
-	return m.txExecuteShardLocked(ctx, dbShardID, "ConflictResolveWorkflowExecution", request.RangeID, func(tx sqlplugin.Tx) error {
+	return m.txExecuteShardLockedFn(ctx, dbShardID, "ConflictResolveWorkflowExecution", request.RangeID, func(tx sqlplugin.Tx) error {
 		return m.conflictResolveWorkflowExecutionTx(ctx, tx, request)
 	})
 }
@@ -535,7 +537,7 @@ func (m *sqlExecutionStore) conflictResolveWorkflowExecutionTx(
 
 	switch request.Mode {
 	case p.ConflictResolveWorkflowModeBypassCurrent:
-		if err := assertNotCurrentExecution(
+		if err := m.assertNotCurrentExecutionFn(
 			ctx,
 			tx,
 			shardID,
@@ -562,7 +564,7 @@ func (m *sqlExecutionStore) conflictResolveWorkflowExecutionTx(
 		if currentWorkflow != nil {
 			prevRunID := serialization.MustParseUUID(currentWorkflow.ExecutionInfo.RunID)
 
-			if err := assertRunIDAndUpdateCurrentExecution(
+			if err := m.assertRunIDAndUpdateCurrentExecutionFn(
 				ctx,
 				tx,
 				m.shardID,
@@ -581,7 +583,7 @@ func (m *sqlExecutionStore) conflictResolveWorkflowExecutionTx(
 			// reset workflow is current
 			prevRunID := serialization.MustParseUUID(resetWorkflow.ExecutionInfo.RunID)
 
-			if err := assertRunIDAndUpdateCurrentExecution(
+			if err := m.assertRunIDAndUpdateCurrentExecutionFn(
 				ctx,
 				tx,
 				m.shardID,
@@ -604,16 +606,16 @@ func (m *sqlExecutionStore) conflictResolveWorkflowExecutionTx(
 		}
 	}
 
-	if err := applyWorkflowSnapshotTxAsReset(ctx, tx, shardID, &resetWorkflow, m.parser); err != nil {
+	if err := m.applyWorkflowSnapshotTxAsResetFn(ctx, tx, shardID, &resetWorkflow, m.parser); err != nil {
 		return err
 	}
 	if currentWorkflow != nil {
-		if err := applyWorkflowMutationTx(ctx, tx, shardID, currentWorkflow, m.parser); err != nil {
+		if err := m.applyWorkflowMutationTxFn(ctx, tx, shardID, currentWorkflow, m.parser); err != nil {
 			return err
 		}
 	}
 	if newWorkflow != nil {
-		if err := applyWorkflowSnapshotTxAsNew(ctx, tx, shardID, newWorkflow, m.parser); err != nil {
+		if err := m.applyWorkflowSnapshotTxAsNewFn(ctx, tx, shardID, newWorkflow, m.parser); err != nil {
 			return err
 		}
 	}
