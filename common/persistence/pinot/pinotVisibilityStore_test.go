@@ -1123,7 +1123,7 @@ func TestIsTimeStruct(t *testing.T) {
 	legitInput, err := json.Marshal(testTime)
 	assert.NoError(t, err)
 	legitOutput := testTime.UnixMilli()
-	legitOutputJson, _ := json.Marshal(legitOutput)
+	legitOutputJSON, _ := json.Marshal(legitOutput)
 
 	tests := map[string]struct {
 		input          []byte
@@ -1147,7 +1147,7 @@ func TestIsTimeStruct(t *testing.T) {
 		},
 		"Case4: legit input": {
 			input:          legitInput,
-			expectedOutput: legitOutputJson,
+			expectedOutput: legitOutputJSON,
 			expectedError:  nil,
 		},
 	}
