@@ -135,6 +135,104 @@ func TestCount(t *testing.T) {
 	assert.Equal(t, int64(42), count)
 }
 
+func TestSearch(t *testing.T) {
+	testServer := getTestServer(t)
+	defer testServer.Close()
+	// Create a new MockESClient
+	mockClient, err := elastic.NewClient(
+		elastic.SetURL(testServer.URL),
+		elastic.SetSniff(false),
+		elastic.SetHealthcheck(false),
+		elastic.SetHttpClient(testServer.Client()))
+	assert.NoError(t, err)
+	elasticV6 := ElasticV6{
+		client: mockClient,
+	}
+
+	testCases := []struct {
+		name      string
+		query     string
+		index     string
+		expected  map[string]interface{}
+		expectErr bool
+		expectAgg bool
+	}{
+		{
+			name:  "normal case",
+			query: `{"query":{"bool":{"must":{"match":{"WorkflowID":"test-workflow-id"}}}}}`,
+			index: "testIndex",
+			expected: map[string]interface{}{
+				"WorkflowID": "test-workflow-id",
+			},
+			expectErr: false,
+		},
+		{
+			name:      "elasticsearch error",
+			query:     `{"query":{"bool":{"must":{"match":{"WorkflowID":"test-workflow-id"}}}}}`,
+			index:     "testErrIndex",
+			expectErr: true,
+		},
+		{
+			name:      "elasticsearch timeout",
+			query:     `{"query":{"bool":{"must":{"match":{"WorkflowID":"test-workflow-id"}}}}}`,
+			index:     "testTimeoutIndex",
+			expectErr: true,
+		},
+		{
+			name:  "elasticsearch aggregations",
+			query: `{"query":{"bool":{"must":{"match":{"WorkflowID":"test-workflow-id"}}}}}`,
+			index: "testAggIndex",
+			expected: map[string]interface{}{
+				"WorkflowID": "test-workflow-id",
+			},
+			expectErr: false,
+			expectAgg: true,
+		},
+		{
+			name:      "elasticsearch non exist index",
+			query:     `{"query":{"bool":{"must":{"match":{"WorkflowID":"test-workflow-id"}}}}}`,
+			index:     "test_failure",
+			expectErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			resp, err := elasticV6.Search(context.Background(), tc.index, tc.query)
+			if !tc.expectErr {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+				// Verify the response details
+				assert.Equal(t, int64(5), resp.TookInMillis)
+				assert.Equal(t, int64(1), resp.TotalHits)
+				assert.NotNil(t, resp.Hits)
+				assert.Len(t, resp.Hits.Hits, 1)
+
+				var actual map[string]interface{}
+				if err := json.Unmarshal([]byte(string(resp.Hits.Hits[0].Source)), &actual); err != nil {
+					t.Fatalf("Failed to unmarshal actual JSON: %v", err)
+				}
+				assert.Equal(t, tc.expected, actual)
+
+				if tc.expectAgg {
+					// Verify the response includes the expected aggregations
+					assert.NotNil(t, resp.Aggregations, "Aggregations should not be nil")
+					assert.Contains(t, resp.Aggregations, "sample_agg", "Aggregations should contain 'sample_agg'")
+
+					// Additional assertions can be made to verify the contents of the aggregation
+					sampleAgg := resp.Aggregations["sample_agg"]
+					var aggResult map[string]interface{}
+					err = json.Unmarshal(sampleAgg, &aggResult)
+					assert.NoError(t, err)
+					assert.Equal(t, float64(42), aggResult["value"], "Aggregation 'sample_agg' should have a value of 42")
+				}
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
+}
+
 func getTestServer(t *testing.T) *httptest.Server {
 	return httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Read the request body
@@ -186,6 +284,74 @@ func getTestServer(t *testing.T) *httptest.Server {
 
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"count": 42}`))
+		case "/testIndex/_search":
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{
+                "took": 5,
+                "timed_out": false,
+                "hits": {
+                    "total": 1,
+                    "hits": [{
+                        "_source": {
+                            "WorkflowID": "test-workflow-id"
+                        },
+                        "sort": [1]
+                    }]
+                }
+            }`))
+		case "/testErrIndex/_search":
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{
+                "error": {
+					"root_cause": [
+						{
+							"type": "index_not_found_exception",
+							"reason": "no such index",
+							"resource.type": "index_or_alias",
+							"resource.id": "testIndex",
+							"index_uuid": "_na_",
+							"index": "testIndex"
+						}
+					],
+					"type": "index_not_found_exception",
+					"reason": "no such index",
+					"resource.type": "index_or_alias",
+					"resource.id": "testIndex",
+					"index_uuid": "_na_",
+					"index": "testIndex"
+				},
+				"status": 404
+            }`))
+		case "/testTimeoutIndex/_search":
+			// Simulate a timeout response
+			w.WriteHeader(http.StatusOK) // Assuming Elasticsearch returns HTTP 200 for timeouts with an indication in the body
+			w.Write([]byte(`{
+				"took": 30,
+				"timed_out": true,
+				"hits": {
+					"total": 0,
+					"hits": []
+				}
+			}`))
+		case "/testAggIndex/_search":
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{
+				"took": 5,
+				"timed_out": false,
+				"hits": {
+					"total": 1,
+					"hits": [{
+						"_source": {
+							"WorkflowID": "test-workflow-id"
+						}
+					}]
+				},
+				"aggregations": {
+					"sample_agg": {
+						"value": 42
+					}
+				}
+			}`))
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
