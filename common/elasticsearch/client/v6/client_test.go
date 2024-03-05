@@ -24,6 +24,8 @@ package v6
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -42,7 +44,11 @@ func TestNewV6Client(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer testServer.Close()
-	url, _ := url.Parse(testServer.URL)
+	url, err := url.Parse(testServer.URL)
+	if err != nil {
+		t.Fatalf("Failed to parse bad URL: %v", err)
+	}
+
 	connectionConfig := &config.ElasticSearchConfig{
 		URL:                *url,
 		DisableSniff:       true,
@@ -54,7 +60,10 @@ func TestNewV6Client(t *testing.T) {
 	assert.NotNil(t, client)
 
 	// failed case due to an unreachable Elasticsearch server
-	badURL, _ := url.Parse("http://nonexistent.elasticsearch.server:9200")
+	badURL, err := url.Parse("http://nonexistent.elasticsearch.server:9200")
+	if err != nil {
+		t.Fatalf("Failed to parse bad URL: %v", err)
+	}
 	connectionConfig.DisableHealthCheck = false
 	connectionConfig.URL = *badURL
 	_, err = NewV6Client(connectionConfig, logger, nil, nil)
@@ -62,7 +71,7 @@ func TestNewV6Client(t *testing.T) {
 }
 
 func TestCreateIndex(t *testing.T) {
-	testServer := getTestServer()
+	testServer := getTestServer(t)
 	defer testServer.Close()
 	// Create a new MockESClient
 	mockClient, err := elastic.NewClient(
@@ -81,7 +90,7 @@ func TestCreateIndex(t *testing.T) {
 }
 
 func TestPutMapping(t *testing.T) {
-	testServer := getTestServer()
+	testServer := getTestServer(t)
 	defer testServer.Close()
 	// Create a new MockESClient
 	mockClient, err := elastic.NewClient(
@@ -108,7 +117,7 @@ func TestPutMapping(t *testing.T) {
 }
 
 func TestCount(t *testing.T) {
-	testServer := getTestServer()
+	testServer := getTestServer(t)
 	defer testServer.Close()
 	// Create a new MockESClient
 	mockClient, err := elastic.NewClient(
@@ -121,13 +130,20 @@ func TestCount(t *testing.T) {
 	elasticV6 := ElasticV6{
 		client: mockClient,
 	}
-	count, err := elasticV6.Count(context.Background(), "testIndex", "")
+	count, err := elasticV6.Count(context.Background(), "testIndex", `{"query":{"match":{"WorkflowID":"test-workflow-id"}}}`)
 	assert.NoError(t, err)
 	assert.Equal(t, int64(42), count)
 }
 
-func getTestServer() *httptest.Server {
+func getTestServer(t *testing.T) *httptest.Server {
 	return httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Read the request body
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("Failed to read request body: %v", err)
+		}
+		defer r.Body.Close()
+
 		switch r.URL.Path {
 		case "/testIndex":
 			if r.Method == "PUT" {
@@ -136,10 +152,38 @@ func getTestServer() *httptest.Server {
 			}
 		case "/testIndex/_mapping/_doc":
 			if r.Method == "PUT" {
+				var receivedMapping map[string]interface{}
+				if err := json.Unmarshal(body, &receivedMapping); err != nil {
+					t.Fatalf("Failed to unmarshal request body: %v", err)
+				}
+
+				// Define expected mapping structurally
+				expectedMapping := map[string]interface{}{
+					"properties": map[string]interface{}{
+						"title": map[string]interface{}{
+							"type": "text",
+						},
+						"publish_date": map[string]interface{}{
+							"type": "date",
+						},
+					},
+				}
+
+				// Compare structurally
+				if !assert.Equal(t, expectedMapping, receivedMapping) {
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte(`{"acknowledged": true}`))
 			}
 		case "/testIndex/_count":
+			expectedQuery := `{"query":{"match":{"WorkflowID":"test-workflow-id"}}}`
+			if string(body) != expectedQuery {
+				t.Fatalf("Expected query %s, got %s", expectedQuery, body)
+			}
+
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"count": 42}`))
 		default:
