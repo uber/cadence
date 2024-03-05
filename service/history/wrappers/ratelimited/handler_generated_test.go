@@ -24,50 +24,61 @@ package ratelimited
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/handler"
-	"github.com/uber/cadence/service/history/workflowcache"
 )
 
 const (
 	testDomainID   = "test-domain-id"
 	testWorkflowID = "test-workflow-id"
+	testDomainName = "test-domain-name"
 )
 
 func TestRatelimitedEndpoints_Table(t *testing.T) {
 	controller := gomock.NewController(t)
 
-	workflowIDCache := workflowcache.NewMockWFCache(controller)
 	handlerMock := handler.NewMockHandler(controller)
+	var rateLimitingEnabled bool
 
-	wrapper := NewHistoryHandler(handlerMock, workflowIDCache)
+	wrapper := NewHistoryHandler(
+		handlerMock,
+		nil,
+		func(domainName string) bool { return rateLimitingEnabled },
+		nil,
+		log.NewNoop(),
+	)
 
-	tests := []struct {
+	// We define the calls that should be ratelimited
+	limitedCalls := []struct {
 		name string
-		call func() (interface{}, error)
-		mock func()
+		// Defines how to call the wrapper function (correct request type, and call)
+		callWrapper func() (interface{}, error)
+		// Defines the expected call to the wrapped handler (what to call if the call is not ratelimited)
+		expectCallToEndpoint func()
 	}{
 		{
 			name: "StartWorkflowExecution",
-			call: func() (interface{}, error) {
+			callWrapper: func() (interface{}, error) {
 				startRequest := &types.HistoryStartWorkflowExecutionRequest{
 					DomainUUID:   testDomainID,
 					StartRequest: &types.StartWorkflowExecutionRequest{WorkflowID: testWorkflowID},
 				}
 				return wrapper.StartWorkflowExecution(context.Background(), startRequest)
 			},
-			mock: func() {
+			expectCallToEndpoint: func() {
 				handlerMock.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
 			},
 		},
 		{
 			name: "SignalWithStartWorkflowExecution",
-			call: func() (interface{}, error) {
+			callWrapper: func() (interface{}, error) {
 				signalWithStartRequest := &types.HistorySignalWithStartWorkflowExecutionRequest{
 					DomainUUID:             testDomainID,
 					SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{WorkflowID: testWorkflowID},
@@ -75,13 +86,13 @@ func TestRatelimitedEndpoints_Table(t *testing.T) {
 
 				return wrapper.SignalWithStartWorkflowExecution(context.Background(), signalWithStartRequest)
 			},
-			mock: func() {
+			expectCallToEndpoint: func() {
 				handlerMock.EXPECT().SignalWithStartWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
 			},
 		},
 		{
 			name: "SignalWorkflowExecution",
-			call: func() (interface{}, error) {
+			callWrapper: func() (interface{}, error) {
 				signalRequest := &types.HistorySignalWorkflowExecutionRequest{
 					DomainUUID: testDomainID,
 					SignalRequest: &types.SignalWorkflowExecutionRequest{
@@ -91,13 +102,13 @@ func TestRatelimitedEndpoints_Table(t *testing.T) {
 
 				return nil, wrapper.SignalWorkflowExecution(context.Background(), signalRequest)
 			},
-			mock: func() {
+			expectCallToEndpoint: func() {
 				handlerMock.EXPECT().SignalWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 			},
 		},
 		{
 			name: "DescribeWorkflowExecution",
-			call: func() (interface{}, error) {
+			callWrapper: func() (interface{}, error) {
 				describeRequest := &types.HistoryDescribeWorkflowExecutionRequest{
 					DomainUUID: testDomainID,
 					Request: &types.DescribeWorkflowExecutionRequest{
@@ -107,24 +118,26 @@ func TestRatelimitedEndpoints_Table(t *testing.T) {
 
 				return wrapper.DescribeWorkflowExecution(context.Background(), describeRequest)
 			},
-			mock: func() {
+			expectCallToEndpoint: func() {
 				handlerMock.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
 			},
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// For now true and false needs to do the same as we are only shadowing
-			workflowIDCache.EXPECT().AllowExternal(testDomainID, testWorkflowID).Return(true).Times(1)
-			tt.mock()
-			_, err := tt.call()
+	for _, endpoint := range limitedCalls {
+		t.Run(fmt.Sprintf("%s, %s", endpoint.name, "not limited"), func(t *testing.T) {
+			wrapper.(*historyHandler).allowFunc = func(string, string) bool { return true }
+			endpoint.expectCallToEndpoint()
+			_, err := endpoint.callWrapper()
 			assert.NoError(t, err)
+		})
 
-			workflowIDCache.EXPECT().AllowExternal(testDomainID, testWorkflowID).Return(false).Times(1)
-			tt.mock()
-			_, err = tt.call()
-			assert.NoError(t, err)
+		t.Run(fmt.Sprintf("%s, %s", endpoint.name, "limited"), func(t *testing.T) {
+			wrapper.(*historyHandler).allowFunc = func(string, string) bool { return false }
+			_, err := endpoint.callWrapper()
+			var sbErr *types.ServiceBusyError
+			assert.ErrorAs(t, err, &sbErr)
+			assert.ErrorContains(t, err, "Too many requests for the workflow ID")
 		})
 	}
 }
