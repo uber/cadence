@@ -11,8 +11,10 @@ steps:
     commands:
       - "make .just-build" # ensure that we are not rebuilding binaries and not regenerating code
       - "CASSANDRA_HOST=cassandra make install-schema && make cover_profile" # make install-schema is needed for a server startup test. See main_test.go
+      - "./scripts/buildkite/gen_coverage_metadata.sh .build/coverage/metadata.txt"
     artifact_paths:
       - ".build/coverage/*.out"
+      - ".build/coverage/metadata.txt"
     retry:
       automatic:
         limit: 1

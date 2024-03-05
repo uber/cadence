@@ -48,14 +48,20 @@ type fakeSession struct {
 	mapExecuteBatchCASApplied bool
 	mapExecuteBatchCASPrev    map[string]any
 	mapExecuteBatchCASErr     error
+	query                     gocql.Query
+
+	// outputs
+	batches []*fakeBatch
 }
 
 func (s *fakeSession) Query(string, ...interface{}) gocql.Query {
-	return nil
+	return s.query
 }
 
 func (s *fakeSession) NewBatch(gocql.BatchType) gocql.Batch {
-	return nil
+	b := &fakeBatch{}
+	s.batches = append(s.batches, b)
+	return b
 }
 
 func (s *fakeSession) ExecuteBatch(gocql.Batch) error {
@@ -98,17 +104,17 @@ func (b *fakeBatch) Query(queryTmpl string, args ...interface{}) {
 
 // WithContext is fake implementation of gocql.Batch.WithContext
 func (b *fakeBatch) WithContext(context.Context) gocql.Batch {
-	return nil
+	return b
 }
 
 // WithTimestamp is fake implementation of gocql.Batch.WithTimestamp
 func (b *fakeBatch) WithTimestamp(int64) gocql.Batch {
-	return nil
+	return b
 }
 
 // Consistency is fake implementation of gocql.Batch.Consistency
 func (b *fakeBatch) Consistency(gocql.Consistency) gocql.Batch {
-	return nil
+	return b
 }
 
 // fakeQuery is fake implementation of gocql.Query
@@ -673,11 +679,7 @@ func TestReplicationTasks(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
 			batch := &fakeBatch{}
-			err := createReplicationTasks(batch, tc.shardID, tc.domainID, tc.workflowID, tc.replTasks)
-			if err != nil {
-				t.Fatalf("createReplicationTasks failed: %v", err)
-			}
-
+			createReplicationTasks(batch, tc.shardID, tc.domainID, tc.workflowID, tc.replTasks)
 			if diff := cmp.Diff(tc.wantQueries, batch.queries); diff != "" {
 				t.Fatalf("Query mismatch (-want +got):\n%s", diff)
 			}
@@ -755,11 +757,7 @@ func TestTransferTasks(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
 			batch := &fakeBatch{}
-			err := createTransferTasks(batch, tc.shardID, tc.domainID, tc.workflowID, tc.transferTasks)
-			if err != nil {
-				t.Fatalf("createTransferTasks failed: %v", err)
-			}
-
+			createTransferTasks(batch, tc.shardID, tc.domainID, tc.workflowID, tc.transferTasks)
 			if diff := cmp.Diff(tc.wantQueries, batch.queries); diff != "" {
 				t.Fatalf("Query mismatch (-want +got):\n%s", diff)
 			}
@@ -819,11 +817,7 @@ func TestCrossClusterTasks(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
 			batch := &fakeBatch{}
-			err := createCrossClusterTasks(batch, tc.shardID, tc.domainID, tc.workflowID, tc.xClusterTasks)
-			if err != nil {
-				t.Fatalf("createCrossClusterTasks failed: %v", err)
-			}
-
+			createCrossClusterTasks(batch, tc.shardID, tc.domainID, tc.workflowID, tc.xClusterTasks)
 			if diff := cmp.Diff(tc.wantQueries, batch.queries); diff != "" {
 				t.Fatalf("Query mismatch (-want +got):\n%s", diff)
 			}
@@ -2365,6 +2359,7 @@ func TestCreateOrUpdateWorkflowExecution(t *testing.T) {
 				Condition: &nosqlplugin.CurrentWorkflowWriteCondition{
 					CurrentRunID:     common.StringPtr("runid1"),
 					LastWriteVersion: common.Int64Ptr(1),
+					State:            common.IntPtr(persistence.WorkflowStateCreated),
 				},
 				Row: nosqlplugin.CurrentWorkflowRow{
 					RunID:           "runid1",
@@ -2381,7 +2376,7 @@ func TestCreateOrUpdateWorkflowExecution(t *testing.T) {
 					`WHERE ` +
 					`shard_id = 1000 and type = 1 and domain_id = domain1 and workflow_id = workflow1 and ` +
 					`run_id = 30000000-0000-f000-f000-000000000001 and visibility_ts = 946684800000 and task_id = -10 ` +
-					`IF current_run_id = runid1 `,
+					`IF current_run_id = runid1 and workflow_last_write_version = 1 and workflow_state = 0 `,
 			},
 		},
 		{

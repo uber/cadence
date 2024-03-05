@@ -21,10 +21,13 @@
 package matching
 
 import (
+	"fmt"
 	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/uber/cadence/common/persistence"
 )
 
 func TestValidTaskListNames(t *testing.T) {
@@ -54,6 +57,10 @@ func TestValidTaskListNames(t *testing.T) {
 			require.Equal(t, tc.baseName, tn.baseName)
 			require.Equal(t, tc.baseName, tn.GetRoot())
 			require.Equal(t, tc.input, tn.name)
+
+			// newTaskListID should validate taskListName as well
+			_, err = newTaskListID("domain-name", tc.input, persistence.TaskListTypeActivity)
+			require.NoError(t, err)
 		})
 	}
 }
@@ -112,6 +119,20 @@ func TestInvalidTasklistNames(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			_, err := newTaskListName(name)
 			require.Error(t, err)
+
+			// newTaskListID should validate taskListName as well
+			_, err = newTaskListID("domain-name", name, persistence.TaskListTypeActivity)
+			require.Error(t, err)
 		})
 	}
+}
+
+func TestTaskListIDToString(t *testing.T) {
+	id, err := newTaskListID("test-domain", "/tasklist/", persistence.TaskListTypeActivity)
+	require.NoError(t, err)
+	require.Equal(t, "[name=/tasklist/type=activity]", fmt.Sprint(id))
+
+	id, err = newTaskListID("test-domain", "/tasklist/", persistence.TaskListTypeDecision)
+	require.NoError(t, err)
+	require.Equal(t, "[name=/tasklist/type=decision]", fmt.Sprint(id))
 }
