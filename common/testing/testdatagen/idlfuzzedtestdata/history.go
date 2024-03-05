@@ -20,14 +20,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package idl_types_gen
+package idlfuzzedtestdata
 
 import (
+	"testing"
+
 	fuzz "github.com/google/gofuzz"
+
 	"github.com/uber/cadence/common/testing/testdatagen"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/testdata"
-	"testing"
 )
 
 // NewFuzzerWithIDLTypes creates a new fuzzer, notes down the deterministic seed
@@ -35,7 +37,21 @@ import (
 // correctly without generating completely invalid data (which, while good to test for
 // in the context of an application is too wide a search to be useful)
 func NewFuzzerWithIDLTypes(t *testing.T) *fuzz.Fuzzer {
-	return testdatagen.NewFuzzer(t, GenHistoryEvent)
+	return testdatagen.New(t,
+		// USE THESE VERY SPARINGLY, ONLY WHEN YOU MUST!
+		//
+		// The goal of providing these generators for specific types should be
+		// to use them as little as possible, as they are fixed test data
+		// which will not evolve with the idl or functions, therefore
+		// the main benefit of fuzzing - evolving tests to handle all new fields in place -
+		// will be defeated.
+		//
+		// for example, for mappers, if you add a new field that needs to be
+		// mapped from protobuf to a native-go type (from the types folder)
+		// and the testdata is fixed here *and not updated*, then the issue
+		// will not be caught by any roundtrip tests.
+		GenHistoryEvent,
+	)
 }
 
 // GenHistoryEvent is a function to use with gofuzz which

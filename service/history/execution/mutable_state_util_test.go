@@ -21,7 +21,6 @@
 package execution
 
 import (
-	"github.com/uber/cadence/common/testing/testdatagen/idl-types-gen"
 	"testing"
 	"time"
 
@@ -30,12 +29,13 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/testing/testdatagen/idlfuzzedtestdata"
 	"github.com/uber/cadence/common/types"
 )
 
 func TestCopyActivityInfo(t *testing.T) {
 	t.Run("test CopyActivityInfo Mapping", func(t *testing.T) {
-		f := idl_types_gen.NewFuzzerWithIDLTypes(t)
+		f := idlfuzzedtestdata.NewFuzzerWithIDLTypes(t)
 
 		d1 := persistence.ActivityInfo{}
 		f.Fuzz(&d1)
@@ -47,7 +47,7 @@ func TestCopyActivityInfo(t *testing.T) {
 
 func TestCopyWorkflowExecutionInfo(t *testing.T) {
 	t.Run("test ExecutionInfo Mapping", func(t *testing.T) {
-		f := idl_types_gen.NewFuzzerWithIDLTypes(t)
+		f := idlfuzzedtestdata.NewFuzzerWithIDLTypes(t)
 
 		d1 := persistence.WorkflowExecutionInfo{}
 		f.Fuzz(&d1)
@@ -59,7 +59,7 @@ func TestCopyWorkflowExecutionInfo(t *testing.T) {
 
 func TestCopyTimerInfoMapping(t *testing.T) {
 	t.Run("test Timer info Mapping", func(t *testing.T) {
-		f := idl_types_gen.NewFuzzerWithIDLTypes(t)
+		f := idlfuzzedtestdata.NewFuzzerWithIDLTypes(t)
 
 		d1 := persistence.TimerInfo{}
 		f.Fuzz(&d1)
@@ -71,7 +71,7 @@ func TestCopyTimerInfoMapping(t *testing.T) {
 
 func TestChildWorkflowMapping(t *testing.T) {
 	t.Run("test child workflwo info Mapping", func(t *testing.T) {
-		f := idl_types_gen.NewFuzzerWithIDLTypes(t)
+		f := idlfuzzedtestdata.NewFuzzerWithIDLTypes(t)
 
 		d1 := persistence.ChildExecutionInfo{}
 		f.Fuzz(&d1)
@@ -83,7 +83,7 @@ func TestChildWorkflowMapping(t *testing.T) {
 
 func TestCopySignalInfo(t *testing.T) {
 	t.Run("test signal info Mapping", func(t *testing.T) {
-		f := idl_types_gen.NewFuzzerWithIDLTypes(t)
+		f := idlfuzzedtestdata.NewFuzzerWithIDLTypes(t)
 
 		d1 := persistence.SignalInfo{}
 		f.Fuzz(&d1)
@@ -95,7 +95,7 @@ func TestCopySignalInfo(t *testing.T) {
 
 func TestCopyCancellationInfo(t *testing.T) {
 	t.Run("test signal info Mapping", func(t *testing.T) {
-		f := idl_types_gen.NewFuzzerWithIDLTypes(t)
+		f := idlfuzzedtestdata.NewFuzzerWithIDLTypes(t)
 
 		d1 := persistence.RequestCancelInfo{}
 		f.Fuzz(&d1)
