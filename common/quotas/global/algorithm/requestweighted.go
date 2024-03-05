@@ -119,10 +119,13 @@ might exceed it.
 package algorithm
 
 import (
+	"errors"
+	"fmt"
 	"math"
 	"sync"
 	"time"
 
+	"go.uber.org/multierr"
 	"golang.org/x/exp/constraints"
 
 	"github.com/uber/cadence/common/clock"
@@ -189,17 +192,17 @@ type (
 		// Update load-data for this host's requests, given a known elapsed time spent accumulating this load info.
 		//
 		// Elapsed time must be non-zero, but is not otherwise constrained.
-		Update(host Identity, load map[Limit]Requests, elapsed time.Duration)
+		Update(host Identity, load map[Limit]Requests, elapsed time.Duration) error
 
 		// HostWeights returns the per-[Limit] weights for all requested + known keys for this Identity,
 		// as well as the Limit's overall used RPS (to decide RPS to allow for new hosts).
-		HostWeights(host Identity, limits []Limit) (weights map[Limit]HostWeight, usedRPS map[Limit]PerSecond)
+		HostWeights(host Identity, limits []Limit) (weights map[Limit]HostWeight, usedRPS map[Limit]PerSecond, err error)
 
 		// GC can be called periodically to pre-emptively prune old ratelimits.
 		//
 		// Limit keys that are accessed normally will automatically garbage-collect themselves and old host data,
 		// and an unused limit only costs memory, so this may prove to be unnecessary.
-		GC() Metrics
+		GC() (Metrics, error)
 	}
 
 	Config struct {
@@ -207,33 +210,38 @@ type (
 		// Must be between 0 and 1, recommend starting with 0.5 (4 updates until data has <10% influence)
 		NewDataWeight dynamicconfig.FloatPropertyFn
 
-		// Expected rate of updates.  Should match the cluster's config for how often limiters check in.
+		// Expected rate of updates.  Should match the cluster's config for how often limiters check in,
+		// i.e. this should probably be the same dynamic config value, updated at / near the same time.
 		UpdateRate dynamicconfig.DurationPropertyFn
 
-		// How many UpdateRate periods can pass without new information before considering a host-limit's
-		// RPS "probably inactive", rather than simply delayed.
+		// How long to wait before considering a host-limit's RPS usage "probably inactive", rather than
+		// simply delayed.
 		//
-		// Should always be 1 or larger.  Unsure about a good default (try 2+?), but larger numbers mean smoother
-		// behavior but longer delays on adjusting to hosts that have disappeared or stopped receiving requests.
-		MaxMissedUpdates dynamicconfig.FloatPropertyFn
+		// Should always be larger than UpdateRate, as less is meaningless.  Values are reduced based on
+		// missed UpdateRate multiples, not DecayAfter.
+		// Unsure about a good default (try 2x UpdateRate?), but larger numbers mean smoother behavior
+		// but longer delays on adjusting to hosts that have disappeared or stopped receiving requests.
+		DecayAfter dynamicconfig.DurationPropertyFn
 
-		// How many UpdateRate periods can pass without receiving an update before completely deleting data.
+		// How much time can pass without receiving any update before completely deleting data.
 		//
-		// Due to ever-reducing weight after MaxMissedUpdates, this is intended to reduce calculation costs,
-		// not influence behavior / weights returned.  Even extremely-low weighted hosts will still be retained
-		// as long as they keep reporting "in use".
+		// Due to ever-reducing weight after DecayAfter, this is intended to reduce calculation costs,
+		// not influence behavior / weights returned.  Even extremely-low-weighted hosts will still be retained
+		// as long as they keep reporting "in use" (e.g. 1 rps used out of >100,000 is fine and will be tracked).
 		//
-		// E.g. with 0.5 NewDataWeight and 2.0 MaxMissedUpdates, after 10 missed updates the most-recent data
-		// will be reduced to ~0.1% and may not be worth keeping.
-		// "Good" values depend on a lot of details, but >=10 seems reasonably safe.
-		GcAfter dynamicconfig.IntPropertyFn
+		// "Good" values depend on a lot of details, but >=10*UpdateRate seems reasonably safe for a
+		// NewDataWeight of 0.5, as the latest data will be reduced to only 0.1% and may not be worth keeping.
+		GcAfter dynamicconfig.DurationPropertyFn
 	}
+
+	// configSnapshot holds a non-changing snapshot of the dynamic config values,
+	// and also provides a validate() method to make sure they're sane.
 	configSnapshot struct {
-		now       time.Time
-		weight    float64
-		rate      time.Duration
-		maxMissed float64
-		gcAfter   int
+		now        time.Time
+		weight     float64
+		rate       time.Duration
+		decayAfter time.Duration
+		gcAfter    time.Duration
 	}
 )
 
@@ -242,6 +250,80 @@ const (
 	guessNumKeys   = 1024 // guesstimate at num of ratelimit keys in a cluster
 	guessHostCount = 32   // guesstimate at num of frontend hosts in a cluster that receive traffic for each key
 )
+
+func (c configSnapshot) validate() error {
+	// errors are untyped because they should not generally be "handled", only returned.
+	// in principle, they're all "bad server config" / 5XX and if sustained will eventually lead to
+	// the limiting hosts using their fallback limiters.
+
+	var err error
+	if c.weight < 0 {
+		// nonsensical
+		err = multierr.Append(err, fmt.Errorf("new data weight cannot be negative: %f", c.weight))
+	}
+	if c.rate <= 0 {
+		// rate is used in division, absolutely must not be zero.
+		// and negatives would just be weird enough to consider an error too.
+		err = multierr.Append(err, fmt.Errorf("update rate must be positive: %v", c.rate))
+	}
+
+	// decayAfter and gcAfter should always be larger than rate, but currently no logic misbehaves
+	// if this is not true, so it is not checked.  this allows e.g. temporary weird mid-rollout combinations
+	// without breaking.
+	// negative values cannot ever be correct though, so block them.
+	if c.decayAfter < 0 {
+		err = multierr.Append(err, fmt.Errorf("decay-after cannot be negative: %v", c.decayAfter))
+	}
+	if c.gcAfter < 0 {
+		err = multierr.Append(err, fmt.Errorf("gc-after cannot be negative: %v", c.decayAfter))
+	}
+
+	if err != nil {
+		return multierr.Append(errors.New("bad ratelimiter config"), err)
+	}
+
+	return nil
+}
+
+// shouldGC returns true if data should be garbage collected
+func (c configSnapshot) shouldGC(dataAge time.Duration) bool {
+	return dataAge >= c.gcAfter
+}
+
+// missedUpdateScalar returns an amount to multiply old RPS data by, to account for missed updates outside SLA.
+func (c configSnapshot) missedUpdateScalar(dataAge time.Duration) PerSecond {
+	if dataAge < c.decayAfter {
+		// new enough to not decay old data
+		return 1
+	}
+	// fast check as exponents are slow and computing past this is unnecessary.
+	// normally, a `c.shouldGC(dataAge)` check should make this unused.
+	if dataAge >= c.gcAfter {
+		// old enough to treat old data as nonexistent
+		return 0
+	}
+
+	// somewhere in the middle: account for missed updates by simulating 0-value updates.
+	// this intentionally floors rather than allowing fractions because:
+	// - precision isn't important
+	// - tests are a bit easier (more stable / less crazy-looking values)
+	// - as a bonus freebie: int division and int exponents are typically faster to compute
+	missed := dataAge / c.rate
+	if missed < 1 {
+		// note: this path should never be used, it's effectively error handling.
+		//
+		// this can only be true if cfg.decayAfter is smaller than cfg.rate, which
+		// should not occur in practice as that would be a nonsensical config combination.
+		//
+		// the types cannot *prevent* it though, so it must be handled, and there's a
+		// reasonable response if it does occur:
+		// don't reduce old data.
+		return 1
+	}
+
+	// missed at least one full update period, calculate an exponential decay multiplier for the old values.
+	return PerSecond(math.Pow(1-c.weight, math.Floor(float64(missed))))
+}
 
 // New returns a concurrency-safe host-weight aggregator.
 //
@@ -257,11 +339,14 @@ func New(cfg Config) (RequestWeighted, error) {
 }
 
 // Update performs a weighted update to the running RPS for this host's per-key request data
-func (a *impl) Update(id Identity, load map[Limit]Requests, elapsed time.Duration) {
+func (a *impl) Update(id Identity, load map[Limit]Requests, elapsed time.Duration) error {
 	a.mut.Lock()
 	defer a.mut.Unlock()
 
-	snap := a.snapshot()
+	snap, err := a.snapshot()
+	if err != nil {
+		return err
+	}
 	for key, req := range load {
 		ih := a.usage[key]
 		if ih == nil {
@@ -279,10 +364,8 @@ func (a *impl) Update(id Identity, load map[Limit]Requests, elapsed time.Duratio
 				rejected:   rps, // no history == 100% weight
 			}
 		} else {
-			// account for missed updates.
-			// ignoring gc as we are updating, and a very-low reduce just means similar results to zero data.
-			reduce, gc := missedUpdateScalar(snap.now.Sub(prev.lastUpdate), snap)
-			if gc {
+			age := snap.now.Sub(prev.lastUpdate)
+			if snap.shouldGC(age) {
 				// would have GC'd if we had seen it earlier, so it's the same as the zero state
 				next = history{
 					lastUpdate: snap.now,
@@ -290,7 +373,8 @@ func (a *impl) Update(id Identity, load map[Limit]Requests, elapsed time.Duratio
 					rejected:   rps, // no history == 100% weight
 				}
 			} else {
-				// compute the next rolling average step (`*reduce` simulates skipped 0 value updates)
+				// compute the next rolling average step (`*reduce` simulates skipped updates)
+				reduce := snap.missedUpdateScalar(age)
 				next = history{
 					lastUpdate: snap.now,
 					accepted:   weighted(aps, prev.accepted*reduce, snap.weight),
@@ -302,26 +386,29 @@ func (a *impl) Update(id Identity, load map[Limit]Requests, elapsed time.Duratio
 		ih[id] = next
 		a.usage[key] = ih
 	}
+
+	return nil
 }
 
 // getWeightsLocked returns the weights of observed hosts (based on ALL requests), and the total number of requests accepted per second.
 func (a *impl) getWeightsLocked(key Limit, snap configSnapshot) (weights map[Identity]HostWeight, usedRPS PerSecond) {
 	ih := a.usage[key]
 	if len(ih) == 0 {
-		return
+		return nil, 0
 	}
 
 	weights = make(map[Identity]HostWeight, len(ih))
 	total := HostWeight(0.0)
 	for id, history := range ih {
 		// account for missed updates
-		reduce, gc := missedUpdateScalar(snap.now.Sub(history.lastUpdate), snap)
-		if gc {
+		age := snap.now.Sub(history.lastUpdate)
+		if snap.shouldGC(age) {
 			// old, clean up
 			delete(ih, id)
 			continue
 		}
 
+		reduce := snap.missedUpdateScalar(age)
 		actual := HostWeight((history.accepted + history.rejected) * reduce)
 
 		weights[id] = actual // populate with the reduced values so it doesn't have to be calculated again
@@ -343,13 +430,16 @@ func (a *impl) getWeightsLocked(key Limit, snap configSnapshot) (weights map[Ide
 	return weights, usedRPS
 }
 
-func (a *impl) HostWeights(host Identity, limits []Limit) (weights map[Limit]HostWeight, usedRPS map[Limit]PerSecond) {
+func (a *impl) HostWeights(host Identity, limits []Limit) (weights map[Limit]HostWeight, usedRPS map[Limit]PerSecond, err error) {
 	a.mut.Lock()
 	defer a.mut.Unlock()
 
 	weights = make(map[Limit]HostWeight, len(limits))
 	usedRPS = make(map[Limit]PerSecond, len(limits))
-	snap := a.snapshot()
+	snap, err := a.snapshot()
+	if err != nil {
+		return nil, nil, err
+	}
 	for _, lim := range limits {
 		hosts, used := a.getWeightsLocked(lim, snap)
 		if len(hosts) > 0 {
@@ -359,19 +449,23 @@ func (a *impl) HostWeights(host Identity, limits []Limit) (weights map[Limit]Hos
 			}
 		}
 	}
-	return weights, usedRPS
+	return weights, usedRPS, nil
 }
 
-func (a *impl) GC() Metrics {
+func (a *impl) GC() (Metrics, error) {
 	a.mut.Lock()
 	defer a.mut.Unlock()
 
 	m := Metrics{}
-	snap := a.snapshot()
+	snap, err := a.snapshot()
+	if err != nil {
+		return Metrics{}, err
+	}
 	// TODO: too costly? can check the first-N% each time and it'll eventually visit all keys, demonstrated in tests.
 	for lim, dat := range a.usage {
 		for host, hist := range dat {
-			if _, gc := missedUpdateScalar(snap.now.Sub(hist.lastUpdate), snap); gc {
+			age := snap.now.Sub(hist.lastUpdate)
+			if snap.shouldGC(age) {
 				// clean up stale host data within limits
 				delete(dat, host)
 				m.RemovedHostLimits++
@@ -389,48 +483,20 @@ func (a *impl) GC() Metrics {
 		}
 	}
 
-	return m
+	return m, nil
 }
 
 // returns a snapshot of config and "now" for easier chaining through calls, and reducing calls to
 // non-trivial field types like dynamic config.
-func (a *impl) snapshot() configSnapshot {
-	return configSnapshot{
-		now:       a.clock.Now(),
-		weight:    a.cfg.NewDataWeight(),
-		rate:      a.cfg.UpdateRate(),
-		maxMissed: a.cfg.MaxMissedUpdates(),
-		gcAfter:   a.cfg.GcAfter(),
+func (a *impl) snapshot() (configSnapshot, error) {
+	snap := configSnapshot{
+		now:        a.clock.Now(),
+		weight:     a.cfg.NewDataWeight(),
+		rate:       a.cfg.UpdateRate(),
+		decayAfter: a.cfg.DecayAfter(),
+		gcAfter:    a.cfg.GcAfter(),
 	}
-}
-
-// missedUpdateScalar returns an amount to multiply old RPS data by, to account for missed updates outside SLA.
-func missedUpdateScalar(elapsed time.Duration, cfg configSnapshot) (scalar PerSecond, gc bool) {
-	reduce := PerSecond(1.0)
-
-	// fast path: check the bounds for "new enough to ignore"
-	if elapsed <= time.Duration(float64(cfg.rate)*cfg.maxMissed) {
-		return reduce, false // within SLA, no changes
-	}
-	// fast path: check the bounds for "old enough to prune"
-	if elapsed >= cfg.rate*time.Duration(cfg.gcAfter) {
-		return 0, true
-	}
-
-	// slow path: account for missed updates by simulating 0-value updates.
-
-	// calculate missed updates, and compute an exponential decay as if we had kept track along the way
-	missed := float64(elapsed) / float64(cfg.rate) // how many missed updates (fractional, 1 == one full duration passed, 2.5 == 2.5 durations passed, etc)
-	if missed >= cfg.maxMissed {
-		// missed at least one update period beyond decay-after, calculate an exponential decay to the old values.
-		// floor to an int when doing so because:
-		// - precision isn't important
-		// - tests are a bit easier (more stable / less crazy-looking values)
-		// - as a bonus freebie: integer exponents are typically faster to compute
-		reduce = PerSecond(math.Pow(1-cfg.weight, math.Floor(missed)))
-	}
-
-	return reduce, false
+	return snap, snap.validate()
 }
 
 func weighted[T numeric](newer, older T, weight float64) T {

@@ -32,6 +32,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/multierr"
 	"golang.org/x/exp/maps"
 
 	"github.com/uber/cadence/common"
@@ -49,25 +50,25 @@ func defaultConfig(rate time.Duration) configSnapshot {
 		//
 		// 0.1 is relatively human-math-friendly for a single step,
 		// but is otherwise arbitrary.
-		weight:    0.1,
-		rate:      rate,
-		maxMissed: 2.0,
-		gcAfter:   10,
+		weight:     0.1,
+		rate:       rate,
+		decayAfter: 2 * rate,
+		gcAfter:    10 * rate,
 	}
 }
 
 func newForTest(t require.TestingT, snap configSnapshot) (*impl, clock.MockedTimeSource) {
 	cfg := Config{
-		NewDataWeight: func(opts ...dynamicconfig.FilterOption) float64 {
+		NewDataWeight: func(_ ...dynamicconfig.FilterOption) float64 {
 			return snap.weight
 		},
-		UpdateRate: func(opts ...dynamicconfig.FilterOption) time.Duration {
+		UpdateRate: func(_ ...dynamicconfig.FilterOption) time.Duration {
 			return snap.rate
 		},
-		MaxMissedUpdates: func(opts ...dynamicconfig.FilterOption) float64 {
-			return snap.maxMissed
+		DecayAfter: func(_ ...dynamicconfig.FilterOption) time.Duration {
+			return snap.decayAfter
 		},
-		GcAfter: func(opts ...dynamicconfig.FilterOption) int {
+		GcAfter: func(_ ...dynamicconfig.FilterOption) time.Duration {
 			return snap.gcAfter
 		},
 	}
@@ -86,35 +87,60 @@ func newForTest(t require.TestingT, snap configSnapshot) (*impl, clock.MockedTim
 }
 
 func TestMissedUpdateHandling(t *testing.T) {
-	agg, tick := newForTest(t, defaultConfig(time.Second))
+	agg, tick := newForTest(t, configSnapshot{
+		weight:     0.1,
+		rate:       time.Second,
+		decayAfter: 2 * time.Second,
+		gcAfter:    10 * time.Second,
+	})
 
 	h1, h2 := Identity("host 1"), Identity("host 2")
 	key := Limit("key")
-	agg.Update(h1, map[Limit]Requests{key: {1, 1}}, time.Second)
-	agg.Update(h2, map[Limit]Requests{key: {1, 1}}, time.Second)
-	weights, used := agg.HostWeights(h1, []Limit{key})
-	assert.Len(t, weights, 1)                // 1 key
-	assert.Equal(t, used[key], PerSecond(2)) // only 2 accepted
+	err := agg.Update(h1, map[Limit]Requests{key: {1, 1}}, time.Second)
+	require.NoError(t, err)
+	err = agg.Update(h2, map[Limit]Requests{key: {1, 1}}, time.Second)
+	require.NoError(t, err)
 
-	// advance 1 second, should not change anything
-	tick.Advance(time.Second)
-	weights, used = agg.HostWeights(h1, []Limit{key})
-	assert.Len(t, weights, 1)                // 1 key
-	assert.Equal(t, used[key], PerSecond(2)) // only 2 accepted
+	// sanity-check the initial values
+	weights, used, err := agg.HostWeights(h1, []Limit{key})
+	require.NoError(t, err)
+	assert.Len(t, weights, 1)                // 1 key known, should always be true
+	assert.Equal(t, PerSecond(2), used[key]) // only 2 accepted requests
 
-	// advance to 2 seconds, this is still within "2 missed updates" so no changes
+	// move to 1 second later == expected update rate.
+	// should still match the original values as it's not excessively delayed.
 	tick.Advance(time.Second)
-	weights, used = agg.HostWeights(h1, []Limit{key})
-	assert.Len(t, weights, 1)                // 1 key
-	assert.Equal(t, used[key], PerSecond(2)) // only 2 accepted
+	weights, used, err = agg.HostWeights(h1, []Limit{key})
+	assert.Len(t, weights, 1)
+	assert.Equal(t, PerSecond(2), used[key]) // still 2 allowed
 
-	// advance to 3 seconds, just crossing the threshold.
-	// should retroactively count missed updates, immediately freeing up RPS
-	// as if it was tracking 0s all along, because we're assuming it has been inactive for some reason.
+	// advance to 1.5 seconds: over the expected rate but not beyond decay-after,
+	// which should still not change anything.
+	tick.Advance(time.Second / 2)
+	weights, used, err = agg.HostWeights(h1, []Limit{key})
+	assert.Len(t, weights, 1)
+	assert.Equal(t, PerSecond(2), used[key]) // still 2 allowed
+
+	// advance another second, to 2.5s total.
+	// exactly 2s and 3s are being avoided because nanosecond-equal times are highly unlikely,
+	// and the behavior at that time doesn't actually matter, so it doesn't matter if it changes.
+	//
+	// 2.5s is beyond decayAfter (2s) so it should retroactively count missed updates,
+	// immediately freeing up RPS as if it was tracking 0s all along, because we're assuming
+	// it has been inactive for some reason.
+	//
+	// 2 full updates have been missed, so: 2 => 1.8 => 1.62
 	tick.Advance(time.Second)
-	weights, used = agg.HostWeights(h1, []Limit{key})
+	weights, used, err = agg.HostWeights(h1, []Limit{key})
+	assert.Len(t, weights, 1)
+	assert.Equal(t, PerSecond(1.62), used[key]) // reduced from 2
+
+	// advance to 3.5 seconds, for 3 total missed updates:
+	// 2 => 1.8 => 1.62 => 1.4580000000000002
+	tick.Advance(time.Second)
+	weights, used, err = agg.HostWeights(h1, []Limit{key})
 	assert.Len(t, weights, 1)                            // still tracking the key / not GC'd
-	assert.InDelta(t, float64(used[key]), 1.458, 0.0001) // 3 simulated zero-updates: 2 -> 1.8 -> 1.62 -> 1.458
+	assert.InDelta(t, float64(used[key]), 1.458, 0.0001) // further reduced
 }
 
 func TestGC(t *testing.T) {
@@ -123,26 +149,30 @@ func TestGC(t *testing.T) {
 
 	// creates an aggregator and advances time 9 seconds, ensuring that data still exists.
 	// advance 1 more second to trigger garbage collection.
+	// this moves slightly beyond 9s to avoid testing the precise boundary time, as it's not relevant.
 	setup := func(t *testing.T) (*impl, clock.MockedTimeSource) {
 		agg, tick := newForTest(t, configSnapshot{
 			rate:    time.Second,
-			gcAfter: 10,
+			gcAfter: 10 * time.Second,
 
 			// irrelevant for these tests but must be non-zero:
-			weight:    0.1,
-			maxMissed: 2,
+			weight:     0.1,
+			decayAfter: 2 * time.Second,
 		})
 
-		agg.Update(h1, map[Limit]Requests{key: {1, 1}}, time.Second)
-		agg.Update(h2, map[Limit]Requests{key: {1, 1}}, time.Second)
-		weights, used := agg.HostWeights(h1, []Limit{key})
+		err := agg.Update(h1, map[Limit]Requests{key: {1, 1}}, time.Second)
+		require.NoError(t, err)
+		err = agg.Update(h2, map[Limit]Requests{key: {1, 1}}, time.Second)
+		require.NoError(t, err)
+		weights, used, err := agg.HostWeights(h1, []Limit{key})
+		require.NoError(t, err)
 		// sanity check that we have data
 		require.Len(t, weights, 1, "sanity check: should have inserted limit's data")
 		require.Equal(t, used[key], PerSecond(2), "sanity check: should have inserted usage data")
 
-		// partially advance, sanity check
-		tick.Advance(9 * time.Second)
-		weights, used = agg.HostWeights(h1, []Limit{key})
+		// partially advance, sanity check.
+		tick.Advance(9*time.Second + (time.Second / 10))
+		weights, used, err = agg.HostWeights(h1, []Limit{key})
 		require.Len(t, weights, 1, "sanity check: should have inserted limit's data after 9s")
 		require.Equal(t, used[key], PerSecond(2*math.Pow(0.9, 9)), "sanity check: should have inserted usage data, reduced after 9s")
 
@@ -151,7 +181,8 @@ func TestGC(t *testing.T) {
 
 	t.Run("no cleanup before expiration", func(t *testing.T) {
 		agg, _ := setup(t)
-		met := agg.GC()
+		met, err := agg.GC()
+		require.NoError(t, err)
 		require.Equal(t, Metrics{
 			HostLimits:        2,
 			Limits:            1,
@@ -165,7 +196,8 @@ func TestGC(t *testing.T) {
 
 		tick.Advance(time.Second) // advance to 10th second
 		// read it out, should detect out-of-date data and clean it up
-		weights, used := agg.HostWeights(h1, []Limit{key})
+		weights, used, err := agg.HostWeights(h1, []Limit{key})
+		require.NoError(t, err)
 		require.Len(t, weights, 0, "should be no weights for h1")
 		require.Len(t, used, 0, "should be no usage data at all")
 
@@ -176,14 +208,16 @@ func TestGC(t *testing.T) {
 		agg, tick := setup(t)
 
 		// refresh data for one host
-		agg.Update(h1, map[Limit]Requests{key: {1, 1}}, time.Second)
+		err := agg.Update(h1, map[Limit]Requests{key: {1, 1}}, time.Second)
+		require.NoError(t, err)
 		tick.Advance(time.Second) // advance to 10th second
 
 		// read both hosts.  h1 should exist, h2 should not
-		weights, used := agg.HostWeights(h1, []Limit{key})
+		weights, used, err := agg.HostWeights(h1, []Limit{key})
+		require.NoError(t, err)
 		require.Len(t, weights, 1, "h1 was refreshed and should remain")
 		require.Len(t, used, 1, "h1 was refreshed and usage data should remain")
-		weights, used = agg.HostWeights(h2, []Limit{key})
+		weights, used, err = agg.HostWeights(h2, []Limit{key})
 		require.Len(t, weights, 0, "h2 should have no weight at all")
 		require.Len(t, used, 1, "h1 was refreshed and usage data should remain")
 
@@ -194,7 +228,8 @@ func TestGC(t *testing.T) {
 	t.Run("cleans up by explicit gc", func(t *testing.T) {
 		agg, tick := setup(t)
 		tick.Advance(time.Second)
-		met := agg.GC()
+		met, err := agg.GC()
+		require.NoError(t, err)
 		require.Equal(t, Metrics{
 			HostLimits: 0, // none remain
 			Limits:     0, // none remain
@@ -205,6 +240,74 @@ func TestGC(t *testing.T) {
 
 		// internals should also be empty
 		require.Len(t, agg.usage, 0)
+	})
+}
+
+func TestMinorCoverage(t *testing.T) {
+	// not overly useful tests, but coverage++
+	t.Run("gc", func(t *testing.T) {
+		// invalid config
+		agg, _ := newForTest(t, configSnapshot{})
+		m, err := agg.GC()
+		assert.Zero(t, m)
+		assert.ErrorContains(t, err, "bad ratelimiter config")
+	})
+	t.Run("update", func(t *testing.T) {
+		// invalid config
+		agg, _ := newForTest(t, configSnapshot{})
+		err := agg.Update("ignored", nil, time.Second)
+		assert.ErrorContains(t, err, "bad ratelimiter config")
+	})
+	t.Run("get-weights", func(t *testing.T) {
+		// invalid config
+		agg, _ := newForTest(t, configSnapshot{})
+		weights, rps, err := agg.HostWeights("ignored", nil)
+		assert.Zero(t, weights)
+		assert.Zero(t, rps)
+		assert.ErrorContains(t, err, "bad ratelimiter config")
+	})
+
+	// a bit more useful
+	t.Run("config validation", func(t *testing.T) {
+		err := configSnapshot{
+			weight:     -1,
+			rate:       time.Duration(0),
+			decayAfter: -time.Second,
+			gcAfter:    -time.Second,
+
+			now: time.Time{}, // ignored
+		}.validate()
+		// should have the shared error string
+		assert.ErrorContains(t, err, "bad ratelimiter config")
+		// should have each sub-error
+		assert.ErrorContains(t, err, "weight cannot be negative")
+		assert.ErrorContains(t, err, "rate must be positive")
+		assert.ErrorContains(t, err, "decay-after cannot be negative")
+		assert.ErrorContains(t, err, "gc-after cannot be negative")
+		assert.Len(t, multierr.Errors(err), 5, "should have 5 errors, 4 details and one general")
+	})
+	t.Run("fast scalar path", func(t *testing.T) {
+		cfg := configSnapshot{
+			gcAfter: time.Second,
+		}
+		assert.Zero(t, cfg.missedUpdateScalar(2*time.Second), "should multiply old data by exactly zero when beyond gc age")
+	})
+
+	// weird config coverage
+	t.Run("irrational decayAfter", func(t *testing.T) {
+		// specifically: exercises the "less than one missed update" branch
+		now := time.Now().Round(time.Second)
+		cfg := configSnapshot{
+			now:        now,
+			rate:       time.Second,
+			decayAfter: time.Second / 4, // irrational but allowed: decay faster than expected update rate
+
+			// effectively ignored
+			weight:  0.1,
+			gcAfter: time.Second * 2,
+		}
+		scale := cfg.missedUpdateScalar(time.Second / 2) // between update and decay periods
+		assert.Equal(t, PerSecond(1), scale, "should not have decayed yet")
 	})
 }
 
@@ -225,25 +328,31 @@ func TestRapidlyCoalesces(t *testing.T) {
 		weight: 0.5,
 
 		// irrelevant / ignored
-		rate:      time.Second,
-		maxMissed: 2.0,
-		gcAfter:   10,
+		rate:       time.Second,
+		decayAfter: 2 * time.Second,
+		gcAfter:    10 * time.Second,
 	})
+	snapshot := func() configSnapshot {
+		snap, err := agg.snapshot()
+		require.NoError(t, err)
+		return snap
+	}
 
 	key := Limit("start workflow")
 	h1, h2, h3 := Identity("one"), Identity("two"), Identity("three")
 
-	weights, used := agg.getWeightsLocked(key, agg.snapshot())
+	weights, used := agg.getWeightsLocked(key, snapshot())
 	assert.Zero(t, weights, "should have no weights")
 	assert.Zero(t, used, "should have no used RPS")
 
 	push := func(host Identity, accept, reject int) {
-		agg.Update(host, map[Limit]Requests{
+		err := agg.Update(host, map[Limit]Requests{
 			key: {
 				Accepted: accept,
 				Rejected: reject,
 			},
 		}, time.Second) // 1s just to make rps in == rps out
+		require.NoError(t, err)
 	}
 
 	// init with anything <~1000, too large and even a small fraction of the original value can be too big.
@@ -257,14 +366,14 @@ func TestRapidlyCoalesces(t *testing.T) {
 	// which feels pretty reasonable: after ~10 seconds (3s updates), the oldest data only has ~10% weight.
 	const target = 10 + 200 + 999
 	for i := 0; i < 4; i++ {
-		weights, used = agg.getWeightsLocked(key, agg.snapshot())
+		weights, used = agg.getWeightsLocked(key, snapshot())
 		t.Log("used:", used, "of actual:", target)
 		t.Log("weights so far:", weights)
 		push(h1, 10, 10)
 		push(h2, 200, 200)
 		push(h3, 999, 999)
 	}
-	weights, used = agg.getWeightsLocked(key, agg.snapshot())
+	weights, used = agg.getWeightsLocked(key, snapshot())
 	t.Log("used:", used, "of actual:", target)
 	t.Log("weights so far:", weights)
 
@@ -297,7 +406,6 @@ func TestConcurrent(t *testing.T) {
 	// other tests should cover sufficiently even if this test is skipped:
 	// t.Skip("skipped to check coverage")
 
-	// should be "much" longer than expected update rate
 	const (
 		updateRate      = time.Millisecond // fairly arbitrary, max gap between updates
 		targetDuration  = 100 * updateRate // also minimum number of updates
@@ -307,9 +415,9 @@ func TestConcurrent(t *testing.T) {
 	)
 
 	agg, _ := newForTest(t, configSnapshot{
-		rate:      updateRate,
-		maxMissed: 2,
-		gcAfter:   3, // relatively low to trigger implicit gc, check coverage if changing the values
+		rate:       updateRate,
+		decayAfter: 2 * updateRate,
+		gcAfter:    3 * updateRate, // relatively low to trigger implicit gc, check coverage if changing the values
 
 		weight: 0.1, // irrelevant but must be non-zero
 	})
@@ -351,9 +459,11 @@ func TestConcurrent(t *testing.T) {
 
 				// randomly update or read
 				if rand.Intn(2) == 0 {
-					agg.Update(host, updates, updateRate)
+					err := agg.Update(host, updates, updateRate)
+					require.NoError(t, err)
 				} else {
-					agg.HostWeights(host, maps.Keys(updates))
+					_, _, err := agg.HostWeights(host, maps.Keys(updates))
+					require.NoError(t, err)
 				}
 			}
 		}()
@@ -384,7 +494,9 @@ func TestConcurrent(t *testing.T) {
 		common.AwaitWaitGroup(&wg, 5*targetDuration),
 		"blocked test? still waiting after %v", 5*targetDuration)
 	// non-racy even if waiting failed
-	t.Logf("%#v", agg.GC()) // should (usually) not be "full" + should (usually) remove some data
+	m, err := agg.GC()
+	require.NoError(t, err)
+	t.Logf("%#v", m) // should (usually) not be "full" + should (usually) remove some data
 }
 
 func TestSimulate(t *testing.T) {
@@ -397,29 +509,32 @@ func TestSimulate(t *testing.T) {
 	updateRate := 3 * time.Second // both expected and duration fed to update
 	agg, tick := newForTest(t, configSnapshot{
 		// now:    , ignored
-		weight:    0.75, // fairly fast adjustment, and semi-human-friendly math
-		rate:      updateRate,
-		maxMissed: 2.0,
-		gcAfter:   10,
+		weight:     0.75, // fairly fast adjustment, and semi-human-friendly math
+		rate:       updateRate,
+		decayAfter: 2 * updateRate,
+		gcAfter:    10 * updateRate,
 	})
 
-	// keeping var == string simplifies copy/paste
+	// keeping var == string simplifies copy/paste as we cannot log the var name
 	start, query := Limit("start"), Limit("query")
 	all := []Limit{start, query}
 	h1, h2, h3 := Identity("one"), Identity("two"), Identity("three")
 
-	weights, used := agg.getWeightsLocked(start, agg.snapshot())
+	snap, err := agg.snapshot()
+	require.NoError(t, err)
+	weights, used := agg.getWeightsLocked(start, snap)
 	assert.Zero(t, weights, "should have no weights")
 	assert.Zero(t, used, "should have no used RPS")
 
 	// just simplifies arg-construction
 	push := func(host Identity, key Limit, accept, reject int) {
-		agg.Update(host, map[Limit]Requests{
+		err := agg.Update(host, map[Limit]Requests{
 			key: {
 				Accepted: accept,
 				Rejected: reject,
 			},
 		}, time.Second)
+		require.NoError(t, err)
 	}
 
 	// these tests intentionally share data and run sequentially,
@@ -442,8 +557,9 @@ func TestSimulate(t *testing.T) {
 	// rather than gradually growing from zero (which would be biased
 	// towards lower values during movement - not bad, but not intended).
 	t.Run("initial weights at 3s", func(t *testing.T) {
-		// 3s elapsed, all fresh.  h1 is "old" but within max-missed-updates so it's assumed valid still
-		myweights, rps := agg.HostWeights(h1, all)
+		// 3s elapsed, all fresh.  h1 is "old" but within decayAfter so it's assumed still valid
+		myweights, rps, err := agg.HostWeights(h1, all)
+		require.NoError(t, err)
 
 		// h1 has most of the weight.
 		expectSimilar(t,
@@ -455,13 +571,13 @@ func TestSimulate(t *testing.T) {
 			start, 7.0,
 			rps)
 
-		myweights, rps = agg.HostWeights(h2, all)
+		myweights, rps, err = agg.HostWeights(h2, all)
 		expectSimilar(t,
 			query, 0.17, // only h1 and h2 called this, so (0.83 + 0.17)==1
 			start, 0.14, // h3 also had a small use, so less than query
 			myweights)
 
-		myweights, rps = agg.HostWeights(h3, all)
+		myweights, rps, err = agg.HostWeights(h3, all)
 		expectSimilar(t,
 			query, 0, // no query at all
 			start, 0.14, // same num of starts as h2
@@ -472,14 +588,14 @@ func TestSimulate(t *testing.T) {
 	}
 
 	// advance to second h2 update, skip the others.
-	// no data has expired yet, but h1 is now at 5s old
+	// no data has expired yet, but h1 is now at 5s old (closing in on decayAfter)
 	tick.Advance(2 * time.Second)
 	push(h2, query, 1, 2)
 	push(h2, start, 3, 3)
 
-	// 4.5s
 	t.Run("increased h2 weight at 5s", func(t *testing.T) {
-		myweights, rps := agg.HostWeights(h1, all)
+		myweights, rps, err := agg.HostWeights(h1, all)
+		require.NoError(t, err)
 		// h1's weight reduces due to increased h2 usage
 		expectSimilar(t,
 			query, 0.78,
@@ -491,8 +607,8 @@ func TestSimulate(t *testing.T) {
 			start, 8.5, // but start calls from h2 increased by 2 -> 0.75 weight -> +1.5 total
 			rps)
 
-		myweights, rps = agg.HostWeights(h2, all)
-		//
+		myweights, rps, err = agg.HostWeights(h2, all)
+		require.NoError(t, err)
 		expectSimilar(t,
 			query, 0.22, // h3 has no query, so h1+h2=1.0 but the balance has shifted a bit towards h2
 			start, 0.29, // increased over last round due to more calls
@@ -503,7 +619,8 @@ func TestSimulate(t *testing.T) {
 			start, 8.5,
 			rps)
 
-		myweights, rps = agg.HostWeights(h3, all)
+		myweights, rps, err = agg.HostWeights(h3, all)
+		require.NoError(t, err)
 		// h3 is almost idle but 0.1 weight changes slowly
 		expectSimilar(t,
 			query, 0, // never sent any query requests
@@ -520,17 +637,17 @@ func TestSimulate(t *testing.T) {
 	}
 
 	// advance to 10s.
-	// this puts h1's original data beyond max-updates, so it will get degraded
+	// this puts h1's original data beyond decayAfter, so it will act as if it
+	// had received 0-valued updates, to reduce its weight.
 	tick.Advance(5 * time.Second)
 	push(h2, query, 5, 5)
 	push(h2, start, 5, 5)
 	push(h3, query, 5, 5)
 	push(h3, start, 5, 5)
 
-	t.Run("h1 degraded at 10s", func(t *testing.T) {
-		myweights, rps := agg.HostWeights(h1, all)
-		// h1's weight reduces a ton due to a long period of no updates -> retroactively treat
-		// as if we got zeros, plus increased use in others
+	t.Run("h1 decayed at 10s", func(t *testing.T) {
+		myweights, rps, err := agg.HostWeights(h1, all)
+		require.NoError(t, err)
 		expectSimilar(t,
 			query, 0.01,
 			start, 0.01,
@@ -539,13 +656,15 @@ func TestSimulate(t *testing.T) {
 			query, 7.83, // 10 accepted in last round, but only 0.75 weight, 6.0 -> 7.8 due to older data
 			start, 8.22, // similar
 			rps)
-		myweights, _ = agg.HostWeights(h2, all)
+		myweights, _, err = agg.HostWeights(h2, all)
+		require.NoError(t, err)
 		// h2 has slightly over half weight due to greater historical use
 		expectSimilar(t,
 			query, 0.52,
 			start, 0.53, // still more starts than queries
 			myweights)
-		myweights, _ = agg.HostWeights(h3, all)
+		myweights, _, err = agg.HostWeights(h3, all)
+		require.NoError(t, err)
 		// h2 slightly less, due to low historical + some used by h1
 		expectSimilar(t,
 			// this looks odd, but it's higher due to lower historical *total* queries,
@@ -571,7 +690,8 @@ func TestSimulate(t *testing.T) {
 	push(h3, start, 5, 5)
 
 	t.Run("all equal at 11s is relatively flatter than before", func(t *testing.T) {
-		myweights, rps := agg.HostWeights(h1, all)
+		myweights, rps, err := agg.HostWeights(h1, all)
+		require.NoError(t, err)
 		// historically lower weight = current lower weight, but a big jump from 0.01 before.
 		//
 		// this is likely a faster shift than we want in practice, as it'll make allowed-request
@@ -586,12 +706,14 @@ func TestSimulate(t *testing.T) {
 			start, 13.31,
 			rps)
 		// else flattening towards 0.33
-		myweights, _ = agg.HostWeights(h2, all)
+		myweights, _, err = agg.HostWeights(h2, all)
+		require.NoError(t, err)
 		expectSimilar(t,
 			query, 0.36,
 			start, 0.36,
 			myweights)
-		myweights, _ = agg.HostWeights(h3, all)
+		myweights, _, err = agg.HostWeights(h3, all)
+		require.NoError(t, err)
 		expectSimilar(t,
 			query, 0.35,
 			start, 0.35,
@@ -611,7 +733,8 @@ func TestSimulate(t *testing.T) {
 	push(h3, start, 5, 5)
 
 	t.Run("all equal at 12s is even flatter", func(t *testing.T) {
-		myweights, rps := agg.HostWeights(h1, all)
+		myweights, rps, err := agg.HostWeights(h1, all)
+		require.NoError(t, err)
 		// still slightly below the others but it hardly matters now
 		expectSimilar(t,
 			query, 0.32,
@@ -623,12 +746,14 @@ func TestSimulate(t *testing.T) {
 			start, 14.58,
 			rps)
 		// else flattening towards 0.33
-		myweights, _ = agg.HostWeights(h2, all)
+		myweights, _, err = agg.HostWeights(h2, all)
+		require.NoError(t, err)
 		expectSimilar(t,
 			query, 0.34,
 			start, 0.34,
 			myweights)
-		myweights, _ = agg.HostWeights(h3, all)
+		myweights, _, err = agg.HostWeights(h3, all)
+		require.NoError(t, err)
 		expectSimilar(t,
 			query, 0.34,
 			start, 0.34,
@@ -638,9 +763,10 @@ func TestSimulate(t *testing.T) {
 		return // later tests likely invalid, verify each step before moving to the next
 	}
 
-	// make everything fully expired so the "from expired data" branch is exercised too
+	// make everything fully expired so the "from expired data" branch is exercised too.
+	// specifically this just needs to be beyond gcAfter for all data.
 	tick.Advance(time.Hour)
-	// push anything (need all keys to get same HostWeight keys for `expectSimilar`)
+	// push anything (need all keys to get same HostWeight map keys for `expectSimilar`)
 	push(h1, query, 5, 5)
 	push(h1, start, 5, 5)
 	push(h2, query, 5, 5)
@@ -650,24 +776,28 @@ func TestSimulate(t *testing.T) {
 
 	t.Run("updating expired data acts like deleted data", func(t *testing.T) {
 		// should leap to exact values, not weighted-from-zero.
-		myweights, rps := agg.HostWeights(h1, all)
+		myweights, rps, err := agg.HostWeights(h1, all)
+		require.NoError(t, err)
 		// still slightly below the others but it hardly matters now
 		expectSimilar(t,
 			query, 0.333,
 			start, 0.333,
 			myweights)
-		// note: exactly 15. if weighting from or very near zero, would be: (0*0.25 + 15*0.75) == 11.25
+		// note: exactly 15. if weighting from or very near zero, rather than tossing
+		// old data entirely, this would be: (0*0.25 + 15*0.75) == 11.25
 		expectSimilar(t,
 			query, 15,
 			start, 15,
 			rps)
 		// else flattening towards 0.33
-		myweights, _ = agg.HostWeights(h2, all)
+		myweights, _, err = agg.HostWeights(h2, all)
+		require.NoError(t, err)
 		expectSimilar(t,
 			query, 0.333,
 			start, 0.333,
 			myweights)
-		myweights, _ = agg.HostWeights(h3, all)
+		myweights, _, err = agg.HostWeights(h3, all)
+		require.NoError(t, err)
 		expectSimilar(t,
 			query, 0.333,
 			start, 0.333,
@@ -771,9 +901,11 @@ func BenchmarkNormalUse(b *testing.B) {
 
 	sawnonzero := 0
 	for _, r := range rounds { // == b.N times
-		agg.Update(r.host, r.load, r.elapsed)
+		err := agg.Update(r.host, r.load, r.elapsed)
+		require.NoError(b, err)
 		var unused map[Limit]PerSecond // ensure non-error second return for test safety
-		weights, unused := agg.HostWeights(r.host, r.keys)
+		weights, unused, err := agg.HostWeights(r.host, r.keys)
+		require.NoError(b, err)
 		_ = unused // ignore unused rps
 		if len(weights) > 0 {
 			// 	wrote data and later read it out, benchmark is likely functional
@@ -783,7 +915,9 @@ func BenchmarkNormalUse(b *testing.B) {
 	b.StopTimer() // not benchmarking gc, just using it to show sanity-check metrics
 
 	b.Log("N was:", b.N)
-	b.Log("gc metrics:", agg.GC()) // shows how many keys / hosts / etc we stored for manual validation
+	m, err := agg.GC()
+	require.NoError(b, err)
+	b.Log("gc metrics:", m) // shows how many keys / hosts / etc we stored for manual validation
 
 	// sanity check, as "all zero" should mean something like "always looking at nonexistent keys" / bad benchmark code.
 	b.Log("nonzero results:", sawnonzero)
