@@ -22,7 +22,9 @@ package persistence
 
 import (
 	"errors"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -56,5 +58,67 @@ func TestIsTransientError(t *testing.T) {
 	}
 	for _, err := range nonRetryableErrors {
 		require.False(t, IsTransientError(err))
+	}
+}
+
+func TestIsTimeoutError(t *testing.T) {
+	notTimeoutError := fmt.Errorf("not timeout error")
+	assert.False(t, IsTimeoutError(notTimeoutError))
+	assert.True(t, IsTimeoutError(&TimeoutError{}))
+}
+
+func TestTaskCommonMethods(t *testing.T) {
+	timeNow := time.Now()
+	tasks := []interface{}{
+		&ActivityTask{Version: 1, TaskID: 1, VisibilityTimestamp: timeNow},
+		&DecisionTask{Version: 1, TaskID: 1, VisibilityTimestamp: timeNow},
+		&RecordWorkflowStartedTask{Version: 1, TaskID: 1, VisibilityTimestamp: timeNow},
+		&ResetWorkflowTask{Version: 1, TaskID: 1, VisibilityTimestamp: timeNow},
+		&CloseExecutionTask{Version: 1, TaskID: 1, VisibilityTimestamp: timeNow},
+		&DeleteHistoryEventTask{Version: 1, TaskID: 1, VisibilityTimestamp: timeNow},
+		&DecisionTimeoutTask{Version: 1, TaskID: 1, VisibilityTimestamp: timeNow},
+		&ActivityTimeoutTask{Version: 1, TaskID: 1, VisibilityTimestamp: timeNow},
+		&UserTimerTask{Version: 1, TaskID: 1, VisibilityTimestamp: timeNow},
+	}
+
+	for _, task := range tasks {
+		switch ty := task.(type) {
+		case *ActivityTask:
+			assert.Equal(t, TransferTaskTypeActivityTask, ty.GetType())
+		case *DecisionTask:
+			assert.Equal(t, TransferTaskTypeDecisionTask, ty.GetType())
+		case *RecordWorkflowStartedTask:
+			assert.Equal(t, TransferTaskTypeRecordWorkflowStarted, ty.GetType())
+		case *ResetWorkflowTask:
+			assert.Equal(t, TransferTaskTypeResetWorkflow, ty.GetType())
+		case *CloseExecutionTask:
+			assert.Equal(t, TransferTaskTypeCloseExecution, ty.GetType())
+		case *DeleteHistoryEventTask:
+			assert.Equal(t, TaskTypeDeleteHistoryEvent, ty.GetType())
+		case *DecisionTimeoutTask:
+			assert.Equal(t, TaskTypeDecisionTimeout, ty.GetType())
+		case *ActivityTimeoutTask:
+			assert.Equal(t, TaskTypeActivityTimeout, ty.GetType())
+		case *UserTimerTask:
+			assert.Equal(t, TaskTypeUserTimer, ty.GetType())
+		default:
+			t.Fatalf("Unhandled task type: %T", t)
+		}
+
+		// Test version methods
+		assert.Equal(t, int64(1), task.(Task).GetVersion())
+		task.(Task).SetVersion(2)
+		assert.Equal(t, int64(2), task.(Task).GetVersion())
+
+		// Test TaskID methods
+		assert.Equal(t, int64(1), task.(Task).GetTaskID())
+		task.(Task).SetTaskID(2)
+		assert.Equal(t, int64(2), task.(Task).GetTaskID())
+
+		// Test VisibilityTimestamp methods
+		assert.Equal(t, timeNow, task.(Task).GetVisibilityTimestamp())
+		newTime := timeNow.Add(time.Second)
+		task.(Task).SetVisibilityTimestamp(newTime)
+		assert.Equal(t, newTime, task.(Task).GetVisibilityTimestamp())
 	}
 }
