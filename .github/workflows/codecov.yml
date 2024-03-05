@@ -1,7 +1,7 @@
 name: Workflow for Codecov integration
 on: [push, pull_request]
 jobs:
-  run:
+  codecov:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

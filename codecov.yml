@@ -12,11 +12,11 @@ coverage:
     project:                   # measuring the overall project coverage
       default:                 # context, you can create multiple ones with custom titles
         informational: true
-        target: 85%           # specify the target coverage for each commit status
+        target: 85%            # specify the target coverage for each commit status
                                #   option: "auto" (compare against parent commit or pull request base)
                                #   option: "X%" a static target percentage to hit
-        threshold: 1%          # allow the coverage drop by 1% before marking as failure (to allow some flakiness)
-        if_ci_failed: ignore # require the CI to pass before setting the status
+        threshold: 0%          # allow the coverage drop by x% before marking as failure
+        if_ci_failed: ignore   # require the CI to pass before setting the status
     patch:
       default:
         informational: true
