@@ -133,8 +133,9 @@ import (
 )
 
 type (
-	// history holds the running per-second running average for a single key from a single host, and the last time it was updated.
-	history struct {
+	// requests holds the running per-second running average request data for a single key from a single host,
+	// and the last time it was updated.
+	requests struct {
 		lastUpdate         time.Time // only so we know if elapsed times are exceeded, not used to compute per-second rates
 		accepted, rejected PerSecond // requests received, per second (conceptually divided by update rate)
 	}
@@ -159,7 +160,7 @@ type (
 		//
 		// data is first keyed on the limit and then on the host, as it's assumed that there will be
 		// many times more limit keys than limiting hosts, and this will reduce cardinality more rapidly.
-		usage map[Limit]map[Identity]history
+		usage map[Limit]map[Identity]requests
 
 		clock clock.TimeSource
 	}
@@ -332,7 +333,7 @@ func (c configSnapshot) missedUpdateScalar(dataAge time.Duration) PerSecond {
 func New(cfg Config) (RequestWeighted, error) {
 	return &impl{
 		cfg:   cfg,
-		usage: make(map[Limit]map[Identity]history, guessNumKeys), // start out relatively large
+		usage: make(map[Limit]map[Identity]requests, guessNumKeys), // start out relatively large
 
 		clock: clock.NewRealTimeSource(),
 	}, nil
@@ -350,32 +351,32 @@ func (a *impl) Update(id Identity, load map[Limit]Requests, elapsed time.Duratio
 	for key, req := range load {
 		ih := a.usage[key]
 		if ih == nil {
-			ih = make(map[Identity]history, guessHostCount)
+			ih = make(map[Identity]requests, guessHostCount)
 		}
 
-		var next history
+		var next requests
 		prev := ih[id]
 		aps := PerSecond(float64(req.Accepted) / float64(elapsed/time.Second))
 		rps := PerSecond(float64(req.Rejected) / float64(elapsed/time.Second))
 		if prev.lastUpdate.IsZero() {
-			next = history{
+			next = requests{
 				lastUpdate: snap.now,
-				accepted:   aps, // no history == 100% weight
-				rejected:   rps, // no history == 100% weight
+				accepted:   aps, // no requests == 100% weight
+				rejected:   rps, // no requests == 100% weight
 			}
 		} else {
 			age := snap.now.Sub(prev.lastUpdate)
 			if snap.shouldGC(age) {
 				// would have GC'd if we had seen it earlier, so it's the same as the zero state
-				next = history{
+				next = requests{
 					lastUpdate: snap.now,
-					accepted:   aps, // no history == 100% weight
-					rejected:   rps, // no history == 100% weight
+					accepted:   aps, // no requests == 100% weight
+					rejected:   rps, // no requests == 100% weight
 				}
 			} else {
 				// compute the next rolling average step (`*reduce` simulates skipped updates)
 				reduce := snap.missedUpdateScalar(age)
-				next = history{
+				next = requests{
 					lastUpdate: snap.now,
 					accepted:   weighted(aps, prev.accepted*reduce, snap.weight),
 					rejected:   weighted(rps, prev.rejected*reduce, snap.weight),
@@ -392,37 +393,37 @@ func (a *impl) Update(id Identity, load map[Limit]Requests, elapsed time.Duratio
 
 // getWeightsLocked returns the weights of observed hosts (based on ALL requests), and the total number of requests accepted per second.
 func (a *impl) getWeightsLocked(key Limit, snap configSnapshot) (weights map[Identity]HostWeight, usedRPS PerSecond) {
-	ih := a.usage[key]
-	if len(ih) == 0 {
+	ir := a.usage[key]
+	if len(ir) == 0 {
 		return nil, 0
 	}
 
-	weights = make(map[Identity]HostWeight, len(ih))
+	weights = make(map[Identity]HostWeight, len(ir))
 	total := HostWeight(0.0)
-	for id, history := range ih {
+	for id, reqs := range ir {
 		// account for missed updates
-		age := snap.now.Sub(history.lastUpdate)
+		age := snap.now.Sub(reqs.lastUpdate)
 		if snap.shouldGC(age) {
 			// old, clean up
-			delete(ih, id)
+			delete(ir, id)
 			continue
 		}
 
 		reduce := snap.missedUpdateScalar(age)
-		actual := HostWeight((history.accepted + history.rejected) * reduce)
+		actual := HostWeight((reqs.accepted + reqs.rejected) * reduce)
 
 		weights[id] = actual // populate with the reduced values so it doesn't have to be calculated again
 		total += actual      // keep a running total to scale all values when done
-		usedRPS += history.accepted * reduce
+		usedRPS += reqs.accepted * reduce
 	}
 
-	if len(ih) == 0 {
+	if len(ir) == 0 {
 		// completely empty Limit, gc it as well
 		delete(a.usage, key)
 		return nil, 0
 	}
 
-	for id := range ih {
+	for id := range ir {
 		// scale by the total.
 		// this also ensures all values are between 0 and 1 (inclusive)
 		weights[id] = weights[id] / total
@@ -463,8 +464,8 @@ func (a *impl) GC() (Metrics, error) {
 	}
 	// TODO: too costly? can check the first-N% each time and it'll eventually visit all keys, demonstrated in tests.
 	for lim, dat := range a.usage {
-		for host, hist := range dat {
-			age := snap.now.Sub(hist.lastUpdate)
+		for host, reqs := range dat {
+			age := snap.now.Sub(reqs.lastUpdate)
 			if snap.shouldGC(age) {
 				// clean up stale host data within limits
 				delete(dat, host)
