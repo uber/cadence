@@ -1955,3 +1955,302 @@ func TestTxExecuteShardLocked(t *testing.T) {
 		})
 	}
 }
+
+func TestCreateWorkflowExecution(t *testing.T) {
+	testCases := []struct {
+		name                             string
+		req                              *persistence.InternalCreateWorkflowExecutionRequest
+		lockCurrentExecutionIfExistsFn   func(context.Context, sqlplugin.Tx, int, serialization.UUID, string) (*sqlplugin.CurrentExecutionsRow, error)
+		createOrUpdateCurrentExecutionFn func(context.Context, sqlplugin.Tx, persistence.CreateWorkflowMode, int, serialization.UUID, string, serialization.UUID, int, int, string, int64, int64) error
+		applyWorkflowSnapshotTxAsNewFn   func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error
+		wantErr                          bool
+		want                             *persistence.CreateWorkflowExecutionResponse
+		assertErr                        func(t *testing.T, err error)
+	}{
+		{
+			name: "Success - mode brand new",
+			req: &persistence.InternalCreateWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.CreateWorkflowModeBrandNew,
+				NewWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{},
+				},
+			},
+			lockCurrentExecutionIfExistsFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string) (*sqlplugin.CurrentExecutionsRow, error) {
+				return nil, nil
+			},
+			createOrUpdateCurrentExecutionFn: func(context.Context, sqlplugin.Tx, persistence.CreateWorkflowMode, int, serialization.UUID, string, serialization.UUID, int, int, string, int64, int64) error {
+				return nil
+			},
+			applyWorkflowSnapshotTxAsNewFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error {
+				return nil
+			},
+			want: &persistence.CreateWorkflowExecutionResponse{},
+		},
+		{
+			name: "Success - mode workflow ID reuse",
+			req: &persistence.InternalCreateWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.CreateWorkflowModeWorkflowIDReuse,
+				NewWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{},
+				},
+			},
+			lockCurrentExecutionIfExistsFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string) (*sqlplugin.CurrentExecutionsRow, error) {
+				return &sqlplugin.CurrentExecutionsRow{
+					State: persistence.WorkflowStateCompleted,
+				}, nil
+			},
+			createOrUpdateCurrentExecutionFn: func(context.Context, sqlplugin.Tx, persistence.CreateWorkflowMode, int, serialization.UUID, string, serialization.UUID, int, int, string, int64, int64) error {
+				return nil
+			},
+			applyWorkflowSnapshotTxAsNewFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error {
+				return nil
+			},
+			want: &persistence.CreateWorkflowExecutionResponse{},
+		},
+		{
+			name: "Success - mode zombie",
+			req: &persistence.InternalCreateWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.CreateWorkflowModeZombie,
+				NewWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateZombie,
+					},
+				},
+			},
+			lockCurrentExecutionIfExistsFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string) (*sqlplugin.CurrentExecutionsRow, error) {
+				return &sqlplugin.CurrentExecutionsRow{
+					RunID: serialization.MustParseUUID("abdcea69-61d5-44c3-9d55-afe23505a54a"),
+				}, nil
+			},
+			createOrUpdateCurrentExecutionFn: func(context.Context, sqlplugin.Tx, persistence.CreateWorkflowMode, int, serialization.UUID, string, serialization.UUID, int, int, string, int64, int64) error {
+				return nil
+			},
+			applyWorkflowSnapshotTxAsNewFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error {
+				return nil
+			},
+			want: &persistence.CreateWorkflowExecutionResponse{},
+		},
+		{
+			name: "Error - mode state validation failed",
+			req: &persistence.InternalCreateWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.CreateWorkflowModeZombie,
+				NewWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCreated,
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - lockCurrentExecutionIfExists failed",
+			req: &persistence.InternalCreateWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.CreateWorkflowModeBrandNew,
+				NewWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{},
+				},
+			},
+			lockCurrentExecutionIfExistsFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string) (*sqlplugin.CurrentExecutionsRow, error) {
+				return nil, errors.New("some random error")
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - mode brand new",
+			req: &persistence.InternalCreateWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.CreateWorkflowModeBrandNew,
+				NewWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{},
+				},
+			},
+			lockCurrentExecutionIfExistsFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string) (*sqlplugin.CurrentExecutionsRow, error) {
+				return &sqlplugin.CurrentExecutionsRow{
+					CreateRequestID:  "test",
+					WorkflowID:       "test",
+					RunID:            serialization.MustParseUUID("abdcea69-61d5-44c3-9d55-afe23505a54a"),
+					State:            persistence.WorkflowStateCreated,
+					CloseStatus:      persistence.WorkflowCloseStatusNone,
+					LastWriteVersion: 10,
+				}, nil
+			},
+			wantErr: true,
+			assertErr: func(t *testing.T, err error) {
+				assert.Equal(t, &persistence.WorkflowExecutionAlreadyStartedError{
+					Msg:              "Workflow execution already running. WorkflowId: test",
+					StartRequestID:   "test",
+					RunID:            "abdcea69-61d5-44c3-9d55-afe23505a54a",
+					State:            persistence.WorkflowStateCreated,
+					CloseStatus:      persistence.WorkflowCloseStatusNone,
+					LastWriteVersion: 10,
+				}, err)
+			},
+		},
+		{
+			name: "Error - mode workflow ID reuse, version mismatch",
+			req: &persistence.InternalCreateWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.CreateWorkflowModeWorkflowIDReuse,
+				NewWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{},
+				},
+			},
+			lockCurrentExecutionIfExistsFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string) (*sqlplugin.CurrentExecutionsRow, error) {
+				return &sqlplugin.CurrentExecutionsRow{
+					State:            persistence.WorkflowStateCompleted,
+					LastWriteVersion: 10,
+				}, nil
+			},
+			wantErr: true,
+			assertErr: func(t *testing.T, err error) {
+				assert.Equal(t, &persistence.CurrentWorkflowConditionFailedError{
+					Msg: "Workflow execution creation condition failed. WorkflowId: , LastWriteVersion: 10, PreviousLastWriteVersion: 0",
+				}, err)
+			},
+		},
+		{
+			name: "Error - mode workflow ID reuse, state mismatch",
+			req: &persistence.InternalCreateWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.CreateWorkflowModeWorkflowIDReuse,
+				NewWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{},
+				},
+			},
+			lockCurrentExecutionIfExistsFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string) (*sqlplugin.CurrentExecutionsRow, error) {
+				return &sqlplugin.CurrentExecutionsRow{
+					State: persistence.WorkflowStateCreated,
+				}, nil
+			},
+			wantErr: true,
+			assertErr: func(t *testing.T, err error) {
+				assert.Equal(t, &persistence.CurrentWorkflowConditionFailedError{
+					Msg: "Workflow execution creation condition failed. WorkflowId: , State: 0, Expected: 2",
+				}, err)
+			},
+		},
+		{
+			name: "Error - mode workflow ID reuse, run ID mismatch",
+			req: &persistence.InternalCreateWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.CreateWorkflowModeWorkflowIDReuse,
+				NewWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{},
+				},
+			},
+			lockCurrentExecutionIfExistsFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string) (*sqlplugin.CurrentExecutionsRow, error) {
+				return &sqlplugin.CurrentExecutionsRow{
+					State: persistence.WorkflowStateCompleted,
+					RunID: serialization.MustParseUUID("abdcea69-61d5-44c3-9d55-afe23505a54a"),
+				}, nil
+			},
+			wantErr: true,
+			assertErr: func(t *testing.T, err error) {
+				assert.Equal(t, &persistence.CurrentWorkflowConditionFailedError{
+					Msg: "Workflow execution creation condition failed. WorkflowId: , RunID: abdcea69-61d5-44c3-9d55-afe23505a54a, PreviousRunID: ",
+				}, err)
+			},
+		},
+		{
+			name: "Error - mode zombie, run ID match",
+			req: &persistence.InternalCreateWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.CreateWorkflowModeZombie,
+				NewWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateZombie,
+					},
+				},
+			},
+			lockCurrentExecutionIfExistsFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string) (*sqlplugin.CurrentExecutionsRow, error) {
+				return &sqlplugin.CurrentExecutionsRow{}, nil
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - unknown mode",
+			req: &persistence.InternalCreateWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.CreateWorkflowMode(100),
+				NewWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - createOrUpdateCurrentExecution failed",
+			req: &persistence.InternalCreateWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.CreateWorkflowModeBrandNew,
+				NewWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{},
+				},
+			},
+			lockCurrentExecutionIfExistsFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string) (*sqlplugin.CurrentExecutionsRow, error) {
+				return nil, nil
+			},
+			createOrUpdateCurrentExecutionFn: func(context.Context, sqlplugin.Tx, persistence.CreateWorkflowMode, int, serialization.UUID, string, serialization.UUID, int, int, string, int64, int64) error {
+				return errors.New("some random error")
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - applyWorkflowSnapshotTxAsNew failed",
+			req: &persistence.InternalCreateWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.CreateWorkflowModeBrandNew,
+				NewWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{},
+				},
+			},
+			lockCurrentExecutionIfExistsFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string) (*sqlplugin.CurrentExecutionsRow, error) {
+				return nil, nil
+			},
+			createOrUpdateCurrentExecutionFn: func(context.Context, sqlplugin.Tx, persistence.CreateWorkflowMode, int, serialization.UUID, string, serialization.UUID, int, int, string, int64, int64) error {
+				return nil
+			},
+			applyWorkflowSnapshotTxAsNewFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error {
+				return errors.New("some random error")
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockDB := sqlplugin.NewMockDB(ctrl)
+			mockDB.EXPECT().GetTotalNumDBShards().Return(1)
+			s := &sqlExecutionStore{
+				shardID: 0,
+				sqlStore: sqlStore{
+					db:     mockDB,
+					logger: testlogger.New(t),
+				},
+				txExecuteShardLockedFn: func(_ context.Context, _ int, _ string, _ int64, fn func(sqlplugin.Tx) error) error {
+					return fn(nil)
+				},
+				lockCurrentExecutionIfExistsFn:   tc.lockCurrentExecutionIfExistsFn,
+				createOrUpdateCurrentExecutionFn: tc.createOrUpdateCurrentExecutionFn,
+				applyWorkflowSnapshotTxAsNewFn:   tc.applyWorkflowSnapshotTxAsNewFn,
+			}
+
+			got, err := s.CreateWorkflowExecution(context.Background(), tc.req)
+			if tc.wantErr {
+				assert.Error(t, err, "Expected an error for test case")
+				if tc.assertErr != nil {
+					tc.assertErr(t, err)
+				}
+			} else {
+				assert.NoError(t, err, "Did not expect an error for test case")
+				assert.Equal(t, tc.want, got, "Unexpected result for test case")
+			}
+		})
+	}
+}
