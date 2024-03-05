@@ -213,6 +213,8 @@ func initMockBroker(t *testing.T, group string) *sarama.MockBroker {
 			SetBroker(mockBroker.Addr(), mockBroker.BrokerID()).
 			SetLeader(topics[0], 0, mockBroker.BrokerID()).
 			SetController(mockBroker.BrokerID()),
+		"FindCoordinatorRequest": sarama.NewMockFindCoordinatorResponse(t).
+			SetCoordinator(sarama.CoordinatorGroup, group, mockBroker),
 	})
 	return mockBroker
 }
