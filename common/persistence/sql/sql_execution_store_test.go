@@ -2493,3 +2493,273 @@ func TestUpdateWorkflowExecution(t *testing.T) {
 		})
 	}
 }
+
+func TestConflictResolveWorkflowExecution(t *testing.T) {
+	testCases := []struct {
+		name                                   string
+		req                                    *persistence.InternalConflictResolveWorkflowExecutionRequest
+		assertRunIDAndUpdateCurrentExecutionFn func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID, serialization.UUID, string, int, int, int64, int64) error
+		assertNotCurrentExecutionFn            func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID) error
+		applyWorkflowMutationTxFn              func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowMutation, serialization.Parser) error
+		applyWorkflowSnapshotTxAsResetFn       func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error
+		applyWorkflowSnapshotTxAsNewFn         func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error
+		wantErr                                bool
+		assertErr                              func(t *testing.T, err error)
+	}{
+		{
+			name: "Success - mode bypass current",
+			req: &persistence.InternalConflictResolveWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.ConflictResolveWorkflowModeBypassCurrent,
+				ResetWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+			},
+			assertNotCurrentExecutionFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID) error {
+				return nil
+			},
+			applyWorkflowSnapshotTxAsResetFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error {
+				return nil
+			},
+			wantErr: false,
+		},
+		{
+			name: "Success - mode update current, current workflow exists",
+			req: &persistence.InternalConflictResolveWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.ConflictResolveWorkflowModeUpdateCurrent,
+				ResetWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+				NewWorkflowSnapshot: &persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCreated,
+					},
+				},
+				CurrentWorkflowMutation: &persistence.InternalWorkflowMutation{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+			},
+			assertRunIDAndUpdateCurrentExecutionFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID, serialization.UUID, string, int, int, int64, int64) error {
+				return nil
+			},
+			applyWorkflowSnapshotTxAsResetFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error {
+				return nil
+			},
+			applyWorkflowMutationTxFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowMutation, serialization.Parser) error {
+				return nil
+			},
+			applyWorkflowSnapshotTxAsNewFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error {
+				return nil
+			},
+			wantErr: false,
+		},
+		{
+			name: "Success - mode update current, no current workflow",
+			req: &persistence.InternalConflictResolveWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.ConflictResolveWorkflowModeUpdateCurrent,
+				ResetWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+				NewWorkflowSnapshot: &persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCreated,
+					},
+				},
+			},
+			assertRunIDAndUpdateCurrentExecutionFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID, serialization.UUID, string, int, int, int64, int64) error {
+				return nil
+			},
+			applyWorkflowSnapshotTxAsResetFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error {
+				return nil
+			},
+			applyWorkflowSnapshotTxAsNewFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error {
+				return nil
+			},
+			wantErr: false,
+		},
+		{
+			name: "Error - mode state validation failed",
+			req: &persistence.InternalConflictResolveWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.ConflictResolveWorkflowModeUpdateCurrent,
+				ResetWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateZombie,
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - assertNotCurrentExecution failed",
+			req: &persistence.InternalConflictResolveWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.ConflictResolveWorkflowModeBypassCurrent,
+				ResetWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+			},
+			assertNotCurrentExecutionFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID) error {
+				return errors.New("some random error")
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - assertRunIDAndUpdateCurrentExecution failed",
+			req: &persistence.InternalConflictResolveWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.ConflictResolveWorkflowModeUpdateCurrent,
+				ResetWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+				NewWorkflowSnapshot: &persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCreated,
+					},
+				},
+				CurrentWorkflowMutation: &persistence.InternalWorkflowMutation{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+			},
+			assertRunIDAndUpdateCurrentExecutionFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID, serialization.UUID, string, int, int, int64, int64) error {
+				return errors.New("some random error")
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - applyWorkflowResetSnapshotTx failed",
+			req: &persistence.InternalConflictResolveWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.ConflictResolveWorkflowModeBypassCurrent,
+				ResetWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+			},
+			assertNotCurrentExecutionFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID) error {
+				return nil
+			},
+			applyWorkflowSnapshotTxAsResetFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error {
+				return errors.New("some random error")
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - applyWorkflowMutationTxFn failed",
+			req: &persistence.InternalConflictResolveWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.ConflictResolveWorkflowModeUpdateCurrent,
+				ResetWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+				NewWorkflowSnapshot: &persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCreated,
+					},
+				},
+				CurrentWorkflowMutation: &persistence.InternalWorkflowMutation{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+			},
+			assertRunIDAndUpdateCurrentExecutionFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID, serialization.UUID, string, int, int, int64, int64) error {
+				return nil
+			},
+			applyWorkflowSnapshotTxAsResetFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error {
+				return nil
+			},
+			applyWorkflowMutationTxFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowMutation, serialization.Parser) error {
+				return errors.New("some random error")
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - applyWorkflowSnapshotTxAsNew failed",
+			req: &persistence.InternalConflictResolveWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.ConflictResolveWorkflowModeUpdateCurrent,
+				ResetWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+				NewWorkflowSnapshot: &persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCreated,
+					},
+				},
+				CurrentWorkflowMutation: &persistence.InternalWorkflowMutation{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+			},
+			assertRunIDAndUpdateCurrentExecutionFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID, serialization.UUID, string, int, int, int64, int64) error {
+				return nil
+			},
+			applyWorkflowSnapshotTxAsResetFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error {
+				return nil
+			},
+			applyWorkflowMutationTxFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowMutation, serialization.Parser) error {
+				return nil
+			},
+			applyWorkflowSnapshotTxAsNewFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error {
+				return errors.New("some random error")
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockDB := sqlplugin.NewMockDB(ctrl)
+			mockDB.EXPECT().GetTotalNumDBShards().Return(1)
+			s := &sqlExecutionStore{
+				shardID: 0,
+				sqlStore: sqlStore{
+					db:     mockDB,
+					logger: testlogger.New(t),
+				},
+				txExecuteShardLockedFn: func(_ context.Context, _ int, _ string, _ int64, fn func(sqlplugin.Tx) error) error {
+					return fn(nil)
+				},
+				assertNotCurrentExecutionFn:            tc.assertNotCurrentExecutionFn,
+				assertRunIDAndUpdateCurrentExecutionFn: tc.assertRunIDAndUpdateCurrentExecutionFn,
+				applyWorkflowMutationTxFn:              tc.applyWorkflowMutationTxFn,
+				applyWorkflowSnapshotTxAsResetFn:       tc.applyWorkflowSnapshotTxAsResetFn,
+				applyWorkflowSnapshotTxAsNewFn:         tc.applyWorkflowSnapshotTxAsNewFn,
+			}
+
+			err := s.ConflictResolveWorkflowExecution(context.Background(), tc.req)
+			if tc.wantErr {
+				assert.Error(t, err, "Expected an error for test case")
+				if tc.assertErr != nil {
+					tc.assertErr(t, err)
+				}
+			} else {
+				assert.NoError(t, err, "Did not expect an error for test case")
+			}
+		})
+	}
+}
