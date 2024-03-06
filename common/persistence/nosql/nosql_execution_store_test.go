@@ -159,9 +159,6 @@ func TestNosqlExecutionStore(t *testing.T) {
 					SelectWorkflowExecution(ctx, shardID, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil, &types.EntityNotExistsError{}).Times(1)
 				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(true).AnyTimes()
-				mockDB.EXPECT().IsTimeoutError(gomock.Any()).Return(false).AnyTimes()
-				mockDB.EXPECT().IsThrottlingError(gomock.Any()).Return(false).AnyTimes()
-				mockDB.EXPECT().IsDBUnavailableError(gomock.Any()).Return(false).AnyTimes()
 				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
 			},
 			testFunc: func(store *nosqlExecutionStore) error {
@@ -224,15 +221,117 @@ func TestNosqlExecutionStore(t *testing.T) {
 					UpdateWorkflowExecutionWithTasks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(errors.New("database is unavailable")).Times(1)
 				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(true).AnyTimes()
-				mockDB.EXPECT().IsTimeoutError(gomock.Any()).Return(false).AnyTimes()
-				mockDB.EXPECT().IsThrottlingError(gomock.Any()).Return(false).AnyTimes()
-				mockDB.EXPECT().IsDBUnavailableError(gomock.Any()).Return(false).AnyTimes()
 				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
 			},
 			testFunc: func(store *nosqlExecutionStore) error {
 				return store.UpdateWorkflowExecution(ctx, newUpdateWorkflowExecutionRequest())
 			},
 			expectedError: &types.InternalServiceError{Message: "database is unavailable"},
+		},
+		{
+			name: "DeleteWorkflowExecution success",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				mockDB.EXPECT().
+					DeleteWorkflowExecution(ctx, shardID, gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				return store.DeleteWorkflowExecution(ctx, &persistence.DeleteWorkflowExecutionRequest{
+					DomainID:   "domainID",
+					WorkflowID: "workflowID",
+					RunID:      "runID",
+				})
+			},
+			expectedError: nil,
+		},
+		{
+			name: "DeleteWorkflowExecution failure - workflow does not exist",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				mockDB.EXPECT().
+					DeleteWorkflowExecution(ctx, shardID, gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&types.EntityNotExistsError{Message: "workflow does not exist"})
+				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(true).AnyTimes()
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				return store.DeleteWorkflowExecution(ctx, &persistence.DeleteWorkflowExecutionRequest{
+					DomainID:   "domainID",
+					WorkflowID: "workflowID",
+					RunID:      "runID",
+				})
+			},
+			expectedError: &types.EntityNotExistsError{Message: "workflow does not exist"},
+		},
+		{
+			name: "DeleteCurrentWorkflowExecution success",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				mockDB.EXPECT().
+					DeleteCurrentWorkflow(ctx, shardID, gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				return store.DeleteCurrentWorkflowExecution(ctx, &persistence.DeleteCurrentWorkflowExecutionRequest{
+					DomainID:   "domainID",
+					WorkflowID: "workflowID",
+					RunID:      "runID",
+				})
+			},
+			expectedError: nil,
+		},
+		{
+			name: "DeleteCurrentWorkflowExecution failure - current workflow does not exist",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				mockDB.EXPECT().
+					DeleteCurrentWorkflow(ctx, shardID, gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&types.EntityNotExistsError{Message: "current workflow does not exist"})
+				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(true).AnyTimes()
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				return store.DeleteCurrentWorkflowExecution(ctx, &persistence.DeleteCurrentWorkflowExecutionRequest{
+					DomainID:   "domainID",
+					WorkflowID: "workflowID",
+					RunID:      "runID",
+				})
+			},
+			expectedError: &types.EntityNotExistsError{Message: "current workflow does not exist"},
+		},
+		{
+			name: "ListCurrentExecutions success",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				mockDB.EXPECT().
+					SelectAllCurrentWorkflows(ctx, shardID, gomock.Any(), gomock.Any()).
+					Return([]*persistence.CurrentWorkflowExecution{}, nil, nil)
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				_, err := store.ListCurrentExecutions(ctx, &persistence.ListCurrentExecutionsRequest{})
+				return err
+			},
+			expectedError: nil,
+		},
+		{
+			name: "ListCurrentExecutions failure - database error",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				mockDB.EXPECT().
+					SelectAllCurrentWorkflows(ctx, shardID, gomock.Any(), gomock.Any()).
+					Return(nil, nil, errors.New("database error"))
+				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(true).AnyTimes()
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				_, err := store.ListCurrentExecutions(ctx, &persistence.ListCurrentExecutionsRequest{})
+				return err
+			},
+			expectedError: &types.InternalServiceError{Message: "database error"},
 		},
 	}
 	for _, tc := range testCases {
