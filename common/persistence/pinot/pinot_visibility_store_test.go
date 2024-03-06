@@ -64,7 +64,17 @@ var (
 )
 
 func TestRecordWorkflowExecutionStarted(t *testing.T) {
+
 	// test non-empty request fields match
+	errorRequest := &p.InternalRecordWorkflowExecutionStartedRequest{
+		WorkflowID: "wid",
+		Memo:       p.NewDataBlob([]byte(`test bytes`), common.EncodingTypeThriftRW),
+		SearchAttributes: map[string][]byte{
+			"CustomStringField": []byte("test string"),
+			"CustomTimeField":   []byte("2020-01-01T00:00:00Z"),
+		},
+	}
+
 	request := &p.InternalRecordWorkflowExecutionStartedRequest{
 		WorkflowID: "wid",
 		Memo:       p.NewDataBlob([]byte(`test bytes`), common.EncodingTypeThriftRW),
@@ -74,7 +84,11 @@ func TestRecordWorkflowExecutionStarted(t *testing.T) {
 		request       *p.InternalRecordWorkflowExecutionStartedRequest
 		expectedError error
 	}{
-		"Case1: normal case": {
+		"Case1: error case": {
+			request:       errorRequest,
+			expectedError: fmt.Errorf("error"),
+		},
+		"Case2: normal case": {
 			request:       request,
 			expectedError: nil,
 		},
@@ -97,23 +111,39 @@ func TestRecordWorkflowExecutionStarted(t *testing.T) {
 			})).Return(nil).Once()
 
 			err := visibilityStore.RecordWorkflowExecutionStarted(context.Background(), test.request)
-			assert.Equal(t, test.expectedError, err)
+			if test.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
 
 func TestRecordWorkflowExecutionClosed(t *testing.T) {
 	// test non-empty request fields match
-	request := &p.InternalRecordWorkflowExecutionClosedRequest{}
-	request.WorkflowID = "wid"
-	memoBytes := []byte(`test bytes`)
-	request.Memo = p.NewDataBlob(memoBytes, common.EncodingTypeThriftRW)
+	errorRequest := &p.InternalRecordWorkflowExecutionClosedRequest{
+		WorkflowID: "wid",
+		Memo:       p.NewDataBlob([]byte(`test bytes`), common.EncodingTypeThriftRW),
+		SearchAttributes: map[string][]byte{
+			"CustomStringField": []byte("test string"),
+			"CustomTimeField":   []byte("2020-01-01T00:00:00Z"),
+		},
+	}
+	request := &p.InternalRecordWorkflowExecutionClosedRequest{
+		WorkflowID: "wid",
+		Memo:       p.NewDataBlob([]byte(`test bytes`), common.EncodingTypeThriftRW),
+	}
 
 	tests := map[string]struct {
 		request       *p.InternalRecordWorkflowExecutionClosedRequest
 		expectedError error
 	}{
-		"Case1: normal case": {
+		"Case1: error case": {
+			request:       errorRequest,
+			expectedError: fmt.Errorf("error"),
+		},
+		"Case2: normal case": {
 			request:       request,
 			expectedError: nil,
 		},
@@ -136,15 +166,20 @@ func TestRecordWorkflowExecutionClosed(t *testing.T) {
 			})).Return(nil).Once()
 
 			err := visibilityStore.RecordWorkflowExecutionClosed(context.Background(), test.request)
-			assert.Equal(t, test.expectedError, err)
+			if test.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
 
 func TestRecordWorkflowExecutionUninitialized(t *testing.T) {
 	// test non-empty request fields match
-	request := &p.InternalRecordWorkflowExecutionUninitializedRequest{}
-	request.WorkflowID = "wid"
+	request := &p.InternalRecordWorkflowExecutionUninitializedRequest{
+		WorkflowID: "wid",
+	}
 
 	tests := map[string]struct {
 		request       *p.InternalRecordWorkflowExecutionUninitializedRequest
@@ -256,11 +291,13 @@ func TestDeleteWorkflowExecution(t *testing.T) {
 
 func TestDeleteUninitializedWorkflowExecution(t *testing.T) {
 	// test non-empty request fields match
-	request := &p.VisibilityDeleteWorkflowExecutionRequest{}
-	request.DomainID = "domainID"
-	request.WorkflowID = "wid"
-	request.RunID = "rid"
-	request.TaskID = int64(111)
+	request := &p.VisibilityDeleteWorkflowExecutionRequest{
+		Domain:     "domain",
+		DomainID:   "domainID",
+		WorkflowID: "wid",
+		RunID:      "rid",
+		TaskID:     int64(111),
+	}
 
 	tests := map[string]struct {
 		request       *p.VisibilityDeleteWorkflowExecutionRequest
@@ -1491,4 +1528,19 @@ func TestIsTimeStruct(t *testing.T) {
 			assert.Equal(t, test.expectedError, actualError)
 		})
 	}
+}
+
+func TestClose(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockPinotClient := pnt.NewMockGenericClient(ctrl)
+	mockProducer := &mocks.KafkaProducer{}
+	mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
+		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
+	}, mockProducer, testlogger.New(t))
+	visibilityStore := mgr.(*pinotVisibilityStore)
+
+	assert.NotPanics(t, func() {
+		visibilityStore.Close()
+	})
 }
