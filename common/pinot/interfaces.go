@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination GenericClient_mock.go -self_package github.com/uber/cadence/common/pinot
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination generic_client_mock.go -self_package github.com/uber/cadence/common/pinot
 
 package pinot
 
