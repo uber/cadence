@@ -91,7 +91,6 @@ func TestRecordWorkflowExecutionStarted(t *testing.T) {
 			}, mockProducer, testlogger.New(t))
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
-			mockPinotClient.EXPECT().GetTableName().Return(testTableName).AnyTimes()
 			mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
 				assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
 				return true
@@ -131,7 +130,6 @@ func TestRecordWorkflowExecutionClosed(t *testing.T) {
 			}, mockProducer, testlogger.New(t))
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
-			mockPinotClient.EXPECT().GetTableName().Return(testTableName).AnyTimes()
 			mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
 				assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
 				return true
@@ -169,7 +167,6 @@ func TestRecordWorkflowExecutionUninitialized(t *testing.T) {
 			}, mockProducer, testlogger.New(t))
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
-			mockPinotClient.EXPECT().GetTableName().Return(testTableName).AnyTimes()
 			mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
 				assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
 				return true
@@ -209,7 +206,6 @@ func TestUpsertWorkflowExecution(t *testing.T) {
 			}, mockProducer, testlogger.New(t))
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
-			mockPinotClient.EXPECT().GetTableName().Return(testTableName).AnyTimes()
 			mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
 				assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
 				return true
@@ -247,7 +243,6 @@ func TestDeleteWorkflowExecution(t *testing.T) {
 			}, mockProducer, testlogger.New(t))
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
-			mockPinotClient.EXPECT().GetTableName().Return(testTableName).AnyTimes()
 			mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
 				assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
 				return true
@@ -288,7 +283,7 @@ func TestDeleteUninitializedWorkflowExecution(t *testing.T) {
 			}, mockProducer, testlogger.New(t))
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
-			mockPinotClient.EXPECT().GetTableName().Return(testTableName).AnyTimes()
+			mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
 			mockPinotClient.EXPECT().CountByQuery(gomock.Any()).Return(int64(1), nil).Times(1)
 
 			mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
