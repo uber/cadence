@@ -1,39 +1,69 @@
+{{$ClientName := (index .Vars "client")}}
+{{$clientName := (down $ClientName)}}
+{{$interfaceName := .Interface.Name}}
+{{ $decorator := (printf "%s%s" (down $clientName) .Interface.Name) }}
+{{ $Decorator := (printf "%s%s" $ClientName .Interface.Name) }}
+{{$largeTimeoutAPIs := list "adminClient.GetCrossClusterTasks" "adminClient.GetReplicationMessages"}}
+{{$longPollTimeoutAPIs := list "frontendClient.ListArchivedWorkflowExecutions" "frontendClient.PollForActivityTask" "frontendClient.PollForDecisionTask"}}
+{{/*
+ $fieldMap defines a map of the decorator struct fields
+ with field name as the key and field type as the value
+ */}}
+{{$fieldMap := dict }}
+{{ if eq $ClientName "History" }}
+    {{$fieldMap = merge $fieldMap (dict  "timeout" "time.Duration" "client" .Interface.Type) }}
+{{ else if eq $ClientName "Admin" }}
+    {{$fieldMap = merge $fieldMap (dict  "timeout" "time.Duration" "client" .Interface.Type "largeTimeout" "time.Duration") }}
+{{ else if eq $ClientName "Frontend" }}
+    {{$fieldMap = merge $fieldMap (dict "timeout" "time.Duration" "client" .Interface.Type "longPollTimeout" "time.Duration") }}
+{{ else if eq $ClientName "Matching" }}
+    {{$fieldMap = merge $fieldMap (dict "timeout" "time.Duration" "client" .Interface.Type "longPollTimeout" "time.Duration" "peerResolver" "matching.PeerResolver" "loadBalancer" "matching.LoadBalancer") }}
+{{ end }}
+
 import (
-  "context"
-  "time"
+    "context"
+    "time"
+
+    "go.uber.org/yarpc"
+
+    "github.com/uber/cadence/client/{{$clientName}}"
+    "github.com/uber/cadence/common/future"
+    "github.com/uber/cadence/common/persistence"
+    "github.com/uber/cadence/common/types"
 )
 
-{{$exclude := splitList "|" (index .Vars "exclude")}}
-{{$clientName := (index .Vars "client")}}
-{{ $decorator := (printf "%s%s" (down $clientName) .Interface.Name) }}
-{{ $Decorator := (printf "%s%s" $clientName .Interface.Name) }}
+var _ {{.Interface.Type}} = (*{{$decorator}})(nil)
 
-// {{$decorator}} implements {{.Interface.Type}} interface with timeouts
+// {{$decorator}} implements the {{.Interface.Type}} interface instrumented with timeouts
 type {{$decorator}} struct {
-  client {{.Interface.Type}}
-  timeout time.Duration
+    {{ range $fieldName, $fieldType := $fieldMap -}}
+           {{$fieldName}} {{$fieldType}}
+    {{ end }}
 }
 
-// New{{$Decorator}} creates a new instance of {{$decorator}} with retry policy
-func New{{$Decorator}}(client {{.Interface.Type}}, timeout time.Duration) {{.Interface.Type}} {
-    return &{{$decorator}}{
-       client: client,
-       timeout: timeout,
+// New{{$Decorator}} creates a new {{$decorator}} instance
+func New{{$Decorator}}(
+   {{- range $fieldName, $fieldType := $fieldMap}}
+               {{$fieldName}} {{$fieldType}},
+    {{- end }}
+) {{.Interface.Type}} {
+   return &{{$decorator}}{
+      {{- range $fieldName, $fieldType := $fieldMap}}
+            {{$fieldName}}: {{$fieldName}},
+        {{- end }}
    }
 }
 
 {{range $method := .Interface.Methods}}
-  func (c *{{$decorator}}) {{$method.Declaration}} {
-    {{- if and $method.AcceptsContext (not (has $method.Name $exclude)) }}
-      if ctx == nil {
-        ctx = context.Background()
-      }
-      var cancelFunc func()
-      if c.timeout > 0 {
-        ctx, cancelFunc = context.WithTimeout(ctx, c.timeout)
-        defer cancelFunc()
-      }
-    {{- end}}
+func (c * {{$decorator}}) {{$method.Declaration}} {
+    {{- if has (printf "%s.%s" $decorator $method.Name) $largeTimeoutAPIs -}}
+            ctx, cancel := createContext(ctx, c.largeTimeout)
+    {{- else if has (printf "%s.%s" $decorator $method.Name) $longPollTimeoutAPIs -}}
+            ctx, cancel := createContext(ctx, c.longPollTimeout)
+    {{- else -}}
+            ctx, cancel := createContext(ctx, c.timeout)
+    {{- end }}
+    defer cancel()
     {{$method.Pass ("c.client.") }}
-  }
+}
 {{end}}

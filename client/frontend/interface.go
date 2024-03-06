@@ -34,7 +34,7 @@ import (
 //go:generate gowrap gen -g -p . -i Client -t ../templates/errorinjectors.tmpl -o ../wrappers/errorinjectors/frontend_generated.go -v client=Frontend
 //go:generate gowrap gen -g -p . -i Client -t ../templates/grpc.tmpl -o ../wrappers/grpc/frontend_generated.go -v client=Frontend -v package=apiv1 -v path=github.com/uber/cadence-idl/go/proto/api/v1 -v prefix=
 //go:generate gowrap gen -g -p . -i Client -t ../templates/thrift.tmpl -o ../wrappers/thrift/frontend_generated.go -v client=Frontend -v prefix=
-//go:generate gowrap gen -g -p . -i Client -t ../templates/timed.tmpl -o ../wrappers/timed/frontend_generated.go -v client=Frontend
+//go:generate gowrap gen -g -p . -i Client -t ../templates/timeout.tmpl -o ../wrappers/timeout/frontend_generated.go -v client=Frontend
 
 // Client is the interface exposed by frontend service client
 type Client interface {

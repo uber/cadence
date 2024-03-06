@@ -20,9 +20,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package timed
+package timeout
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 const (
 	// AdminDefaultTimeout is the admin service default timeout used to make calls
@@ -34,3 +37,10 @@ const (
 	// FrontendDefaultLongPollTimeout is the frontend service long poll default timeout used to make calls
 	FrontendDefaultLongPollTimeout = time.Minute * 3
 )
+
+func createContext(parent context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
+	if parent == nil {
+		return context.WithTimeout(context.Background(), timeout)
+	}
+	return context.WithTimeout(parent, timeout)
+}
