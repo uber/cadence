@@ -1,0 +1,38 @@
+import (
+  "context"
+  "time"
+)
+
+{{$clientName := (index .Vars "client")}}
+{{ $decorator := (printf "%s%s" (down $clientName) .Interface.Name) }}
+{{ $Decorator := (printf "%s%s" $clientName .Interface.Name) }}
+
+// {{$decorator}} implements {{.Interface.Type}} interface with timeouts
+type {{$decorator}} struct {
+  client {{.Interface.Type}}
+  timeout time.Duration
+}
+
+// New{{$Decorator}} creates a new instance of {{$decorator}} with retry policy
+func New{{$Decorator}}(client {{.Interface.Type}}, timeout time.Duration) {{.Interface.Type}} {
+    return &{{$decorator}}{
+       client: client,
+       timeout: timeout,
+   }
+}
+
+{{range $method := .Interface.Methods}}
+  {{if $method.AcceptsContext  }}
+    func (c *{{$decorator}}) {{$method.Declaration}} {
+      if ctx == nil {
+        ctx = context.Background()
+      }
+      var cancelFunc func()
+      if c.timeout > 0 {
+        ctx, cancelFunc = context.WithTimeout(ctx, c.timeout)
+        defer cancelFunc()
+      }
+      {{$method.Pass ("c.client.") }}
+    }
+  {{end}}
+{{end}}
