@@ -41,7 +41,7 @@ import (
 	"github.com/uber/cadence/client/wrappers/grpc"
 	"github.com/uber/cadence/client/wrappers/metered"
 	"github.com/uber/cadence/client/wrappers/thrift"
-	timoutwrapper "github.com/uber/cadence/client/wrappers/timeout"
+	timeoutwrapper "github.com/uber/cadence/client/wrappers/timeout"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
@@ -131,7 +131,7 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 	if cf.metricsClient != nil {
 		client = metered.NewHistoryClient(client, cf.metricsClient)
 	}
-	client = timoutwrapper.NewHistoryClient(client, timeout)
+	client = timeoutwrapper.NewHistoryClient(client, timeout)
 	return client, nil
 }
 
