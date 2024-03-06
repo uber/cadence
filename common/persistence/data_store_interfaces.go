@@ -922,7 +922,7 @@ func NewDataBlob(data []byte, encodingType common.EncodingType) *DataBlob {
 	if len(data) == 0 {
 		return nil
 	}
-	if encodingType != "thriftrw" && data[0] == 'Y' {
+	if encodingType != common.EncodingTypeThriftRW && data[0] == 'Y' {
 		// original reason for this is not written down, but maybe for handling data prior to an encoding type?
 		panic(fmt.Sprintf("Invalid data blob encoding: \"%v\"", encodingType))
 	}
