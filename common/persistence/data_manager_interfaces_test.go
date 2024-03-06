@@ -67,6 +67,17 @@ func TestIsTimeoutError(t *testing.T) {
 	assert.True(t, IsTimeoutError(&TimeoutError{}))
 }
 
+func TestIsBackgroundTransientError(t *testing.T) {
+	transientErrors := map[error]bool{
+		&types.ServiceBusyError{}:     false,
+		&types.InternalServiceError{}: true,
+		&TimeoutError{}:               true,
+	}
+	for error, result := range transientErrors {
+		assert.Equal(t, result, IsBackgroundTransientError(error))
+	}
+}
+
 func TestTaskCommonMethods(t *testing.T) {
 	timeNow := time.Now()
 	tasks := []Task{
@@ -187,4 +198,50 @@ func TestOnlyGetTypeTask(t *testing.T) {
 			t.Fatalf("Unhandled task type: %T", t)
 		}
 	}
+}
+
+func TestNewHistoryBranch(t *testing.T) {
+	newTreeID := "newTreeID"
+	generalToken, err := NewHistoryBranchToken(newTreeID)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, generalToken)
+
+	newBranchID := "newBranchID"
+	branchToken, err := NewHistoryBranchTokenByBranchID(newTreeID, newBranchID)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, branchToken)
+
+	anotherBranchToken, err := NewHistoryBranchTokenFromAnother(newBranchID, generalToken)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, anotherBranchToken)
+}
+
+func TestHistoryGarbageCleanupInfo(t *testing.T) {
+	testDomainID := "testDomainID"
+	testWorkflowID := "testWorkflowID"
+	testRunID := "testRunID"
+	actualInfo := BuildHistoryGarbageCleanupInfo(testDomainID, testWorkflowID, testRunID)
+	splitDomainID, splitWorkflowID, splitRunID, splitError := SplitHistoryGarbageCleanupInfo(actualInfo)
+	assert.Equal(t, testDomainID, splitDomainID)
+	assert.Equal(t, testWorkflowID, splitWorkflowID)
+	assert.Equal(t, testRunID, splitRunID)
+	assert.NoError(t, splitError)
+	_, _, _, splitError = SplitHistoryGarbageCleanupInfo("invalidInfo")
+	assert.Error(t, splitError)
+}
+
+func TestNewGetReplicationTasksFromDLQRequest(t *testing.T) {
+	sourceCluster := "testSourceCluster"
+	readLevel := int64(1)
+	maxReadLevel := int64(2)
+	batchSize := 10
+	tasksRequest := NewGetReplicationTasksFromDLQRequest(sourceCluster, readLevel, maxReadLevel, batchSize, nil)
+	assert.Equal(t, sourceCluster, tasksRequest.SourceClusterName)
+}
+
+func TestHasMoreRowsToDelete(t *testing.T) {
+	assert.True(t, HasMoreRowsToDelete(10, 10))
+	assert.False(t, HasMoreRowsToDelete(11, 10))
+	assert.False(t, HasMoreRowsToDelete(9, 10))
+	assert.False(t, HasMoreRowsToDelete(-1, 10))
 }
