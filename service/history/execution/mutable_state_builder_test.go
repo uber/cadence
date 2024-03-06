@@ -21,6 +21,8 @@
 package execution
 
 import (
+	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -37,12 +39,14 @@ import (
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/shard"
+	shardCtx "github.com/uber/cadence/service/history/shard"
 )
 
 type (
@@ -988,5 +992,276 @@ func (s *mutableStateSuite) buildWorkflowMutableState() *persistence.WorkflowMut
 		SignalRequestedIDs:  signalRequestIDs,
 		BufferedEvents:      bufferedEvents,
 		VersionHistories:    versionHistories,
+	}
+}
+
+func TestNewMutableStateBuilderWithEventV2(t *testing.T) {
+
+	ctrl := gomock.NewController(t)
+	mockShard := shard.NewTestContext(
+		t,
+		ctrl,
+		&persistence.ShardInfo{
+			ShardID:          0,
+			RangeID:          1,
+			TransferAckLevel: 0,
+		},
+		config.NewForTest(),
+	)
+	domainCache := cache.NewDomainCacheEntryForTest(
+		&persistence.DomainInfo{Name: "mutableStateTest"},
+		&persistence.DomainConfig{},
+		true,
+		&persistence.DomainReplicationConfig{},
+		1,
+		nil,
+	)
+
+	NewMutableStateBuilderWithEventV2(mockShard, log.NewNoop(), "A82146B5-7A5C-4660-9195-E80E5161EC56", domainCache)
+}
+
+var (
+	domainID = "A6338800-D143-4FEF-8A49-9BBB31386C5F"
+	wfID     = "879A361B-B435-491D-8A3B-ACF3BAD30F4B"
+	runID    = "81DFCB6B-ACD4-46D1-89C2-804388203880"
+	ts1      = int64(1234)
+	shardID  = 123
+)
+
+// Guiding real data example: ie:
+// `select execution from executions where run_id = <run-id> ALLOW FILTERING;`
+//
+// executions.execution {
+// domainID: "A6338800-D143-4FEF-8A49-9BBB31386C5F",
+// wfID: "879A361B-B435-491D-8A3B-ACF3BAD30F4B",
+// runID: "81DFCB6B-ACD4-46D1-89C2-804388203880",
+// initiated_id: -7,
+// completion_event: null,
+// state: 2,
+// close_status: 1,
+// next_event_id: 12,
+// last_processed_event: 9,
+// decision_schedule_id: -23,
+// decision_started_id: -23,
+// last_first_event_id: 10,
+// decision_version: -24,
+// completion_event_batch_id: 10,
+// last_event_task_id: 4194328,
+// }
+var exampleMutableStateForClosedWF = &mutableStateBuilder{
+	executionInfo: &persistence.WorkflowExecutionInfo{
+		WorkflowID:             wfID,
+		DomainID:               domainID,
+		RunID:                  runID,
+		NextEventID:            12,
+		State:                  persistence.WorkflowStateCompleted,
+		CompletionEventBatchID: 10,
+		BranchToken:            []byte("branch-token"),
+	},
+}
+
+var exampleCompletionEvent = &types.HistoryEvent{
+	ID:        11,
+	TaskID:    4194328,
+	Version:   1,
+	Timestamp: &ts1,
+	WorkflowExecutionCompletedEventAttributes: &types.WorkflowExecutionCompletedEventAttributes{
+		Result:                       []byte("some random workflow completion result"),
+		DecisionTaskCompletedEventID: 10,
+	},
+}
+
+var exampleStartEvent = &types.HistoryEvent{
+	ID:        1,
+	TaskID:    4194328,
+	Version:   1,
+	Timestamp: &ts1,
+	WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
+		WorkflowType:                        &types.WorkflowType{Name: "workflow-type"},
+		TaskList:                            &types.TaskList{Name: "tasklist"},
+		Input:                               []byte("some random workflow input"),
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(60),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+		OriginalExecutionRunID:              runID,
+		Identity:                            "123@some-hostname@@uuid",
+	},
+}
+
+func TestGetCompletionEvent(t *testing.T) {
+
+	tests := map[string]struct {
+		currentState *mutableStateBuilder
+
+		historyManagerAffordance func(historyManager *persistence.MockHistoryManager)
+
+		expectedResult *types.HistoryEvent
+		expectedErr    error
+	}{
+		"Getting a completed event from a normal, completed workflow - taken from a real example": {
+			currentState: exampleMutableStateForClosedWF,
+			historyManagerAffordance: func(historyManager *persistence.MockHistoryManager) {
+
+				historyManager.EXPECT().ReadHistoryBranch(gomock.Any(),
+					&persistence.ReadHistoryBranchRequest{
+						BranchToken:   []byte("branch-token"),
+						MinEventID:    10,
+						MaxEventID:    12, // nextEventID +1
+						PageSize:      1,
+						NextPageToken: nil,
+						ShardID:       common.IntPtr(shardID),
+						DomainName:    "domain",
+					}).Return(&persistence.ReadHistoryBranchResponse{
+					HistoryEvents: []*types.HistoryEvent{
+						exampleCompletionEvent,
+					},
+				}, nil)
+
+			},
+
+			expectedResult: exampleCompletionEvent,
+		},
+		"An unexpected error while fetchhing history, such as not found err": {
+			currentState: &mutableStateBuilder{
+				executionInfo: &persistence.WorkflowExecutionInfo{
+					WorkflowID:             wfID,
+					DomainID:               domainID,
+					RunID:                  runID,
+					NextEventID:            12,
+					State:                  persistence.WorkflowStateCompleted,
+					CompletionEventBatchID: 10,
+					BranchToken:            []byte("branch-token"),
+				},
+			},
+			historyManagerAffordance: func(historyManager *persistence.MockHistoryManager) {
+				historyManager.EXPECT().ReadHistoryBranch(gomock.Any(), gomock.Any()).Return(nil, errors.New("a transient random error"))
+			},
+
+			expectedResult: nil,
+			expectedErr:    &types.InternalServiceError{Message: "unable to get workflow completion event"},
+		},
+		"A 'transient' internal service error, this should be returned to the caller": {
+			currentState: &mutableStateBuilder{
+				executionInfo: &persistence.WorkflowExecutionInfo{
+					WorkflowID:             wfID,
+					DomainID:               domainID,
+					RunID:                  runID,
+					NextEventID:            12,
+					State:                  persistence.WorkflowStateCompleted,
+					CompletionEventBatchID: 10,
+					BranchToken:            []byte("branch-token"),
+				},
+			},
+			historyManagerAffordance: func(historyManager *persistence.MockHistoryManager) {
+				historyManager.EXPECT().ReadHistoryBranch(gomock.Any(), gomock.Any()).
+					Return(nil, &types.InternalServiceError{Message: "an err"})
+			},
+
+			expectedResult: nil,
+			expectedErr:    &types.InternalServiceError{Message: "an err"},
+		},
+		"initial validation: An invalid starting mutable state should return an error": {
+			currentState: &mutableStateBuilder{
+				executionInfo: &persistence.WorkflowExecutionInfo{},
+			},
+			historyManagerAffordance: func(historyManager *persistence.MockHistoryManager) {},
+			expectedResult:           nil,
+			expectedErr:              &types.InternalServiceError{Message: "unable to get workflow completion event"},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+
+			ctrl := gomock.NewController(t)
+
+			shardContext := shardCtx.NewMockContext(ctrl)
+			shardContext.EXPECT().GetShardID().Return(123).AnyTimes() // this isn't called on a few of the validation failures
+			historyManager := persistence.NewMockHistoryManager(ctrl)
+			td.historyManagerAffordance(historyManager)
+
+			domainCache := cache.NewMockDomainCache(ctrl)
+			domainCache.EXPECT().GetDomainName(gomock.Any()).Return("domain", nil).AnyTimes() // this isn't called on validation
+
+			td.currentState.eventsCache = events.NewCache(shardID, historyManager, config.NewForTest(), log.NewNoop(), metrics.NewNoopMetricsClient(), domainCache)
+			td.currentState.shard = shardContext
+
+			res, err := td.currentState.GetCompletionEvent(context.Background())
+
+			assert.Equal(t, td.expectedResult, res)
+			assert.Equal(t, td.expectedErr, err)
+		})
+	}
+}
+
+func TestGetStartEvent(t *testing.T) {
+
+	tests := map[string]struct {
+		currentState *mutableStateBuilder
+
+		historyManagerAffordance func(historyManager *persistence.MockHistoryManager)
+
+		expectedResult *types.HistoryEvent
+		expectedErr    error
+	}{
+		"Getting a start event from a normal, completed workflow - taken from a real example": {
+			currentState: exampleMutableStateForClosedWF,
+			historyManagerAffordance: func(historyManager *persistence.MockHistoryManager) {
+
+				historyManager.EXPECT().ReadHistoryBranch(gomock.Any(),
+					&persistence.ReadHistoryBranchRequest{
+						BranchToken:   []byte("branch-token"),
+						MinEventID:    1,
+						MaxEventID:    2,
+						PageSize:      1,
+						NextPageToken: nil,
+						ShardID:       common.IntPtr(shardID),
+						DomainName:    "domain",
+					}).Return(&persistence.ReadHistoryBranchResponse{
+					HistoryEvents: []*types.HistoryEvent{
+						exampleStartEvent,
+					},
+				}, nil)
+
+			},
+
+			expectedResult: exampleStartEvent,
+		},
+		"Getting a start event but hitting an error when reaching into history": {
+			currentState: exampleMutableStateForClosedWF,
+			historyManagerAffordance: func(historyManager *persistence.MockHistoryManager) {
+				historyManager.EXPECT().ReadHistoryBranch(gomock.Any(), gomock.Any()).Return(nil, errors.New("an error"))
+			},
+			expectedErr: &types.InternalServiceError{Message: "unable to get workflow start event"},
+		},
+		"Getting a start event but hitting a 'transient' error when reaching into history. This should be passed back up the call stack": {
+			currentState: exampleMutableStateForClosedWF,
+			historyManagerAffordance: func(historyManager *persistence.MockHistoryManager) {
+				historyManager.EXPECT().ReadHistoryBranch(gomock.Any(), gomock.Any()).Return(nil, &types.InternalServiceError{Message: "an error"})
+			},
+			expectedErr: &types.InternalServiceError{Message: "an error"},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+
+			ctrl := gomock.NewController(t)
+
+			shardContext := shardCtx.NewMockContext(ctrl)
+			shardContext.EXPECT().GetShardID().Return(123).AnyTimes() // this isn't called on a few of the validation failures
+			historyManager := persistence.NewMockHistoryManager(ctrl)
+			td.historyManagerAffordance(historyManager)
+
+			domainCache := cache.NewMockDomainCache(ctrl)
+			domainCache.EXPECT().GetDomainName(gomock.Any()).Return("domain", nil).AnyTimes() // this isn't called on validation
+
+			td.currentState.eventsCache = events.NewCache(shardID, historyManager, config.NewForTest(), log.NewNoop(), metrics.NewNoopMetricsClient(), domainCache)
+			td.currentState.shard = shardContext
+
+			res, err := td.currentState.GetStartEvent(context.Background())
+
+			assert.Equal(t, td.expectedResult, res)
+			assert.Equal(t, td.expectedErr, err)
+		})
 	}
 }
