@@ -168,6 +168,35 @@ func TestNosqlExecutionStore(t *testing.T) {
 			},
 			expectedError: &types.EntityNotExistsError{},
 		},
+		{
+			name: "UpdateWorkflowExecution success",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				mockDB.EXPECT().
+					UpdateWorkflowExecutionWithTasks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil).Times(1)
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				err := store.UpdateWorkflowExecution(ctx, newUpdateWorkflowExecutionRequest())
+				return err
+			},
+			expectedError: nil,
+		},
+		{
+			name: "UpdateWorkflowExecution failure - invalid update mode",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				// No operation expected on the DB due to invalid mode
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				request := newUpdateWorkflowExecutionRequest()
+				request.Mode = persistence.UpdateWorkflowMode(-1) // Invalid mode
+				return store.UpdateWorkflowExecution(ctx, request)
+			},
+			expectedError: &types.InternalServiceError{},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -203,6 +232,21 @@ func newGetWorkflowExecutionRequest() *persistence.InternalGetWorkflowExecutionR
 		Execution: types.WorkflowExecution{
 			WorkflowID: constants.TestWorkflowID,
 			RunID:      constants.TestRunID,
+		},
+	}
+}
+
+func newUpdateWorkflowExecutionRequest() *persistence.InternalUpdateWorkflowExecutionRequest {
+	return &persistence.InternalUpdateWorkflowExecutionRequest{
+		RangeID: 123,
+		UpdateWorkflowMutation: persistence.InternalWorkflowMutation{
+			ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+				DomainID:    constants.TestDomainID,
+				WorkflowID:  constants.TestWorkflowID,
+				RunID:       constants.TestRunID,
+				State:       persistence.WorkflowStateCreated,
+				CloseStatus: persistence.WorkflowCloseStatusNone,
+			},
 		},
 	}
 }
