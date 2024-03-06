@@ -71,7 +71,9 @@ func TestNewV6Client(t *testing.T) {
 }
 
 func TestCreateIndex(t *testing.T) {
+	var handlerCalled bool
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handlerCalled = true
 		if r.URL.Path == "/testIndex" && r.Method == "PUT" {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"acknowledged": true}`))
@@ -82,6 +84,7 @@ func TestCreateIndex(t *testing.T) {
 	elasticV6, testServer := getMockClient(t, handler)
 	defer testServer.Close()
 	err := elasticV6.CreateIndex(context.Background(), "testIndex")
+	assert.True(t, handlerCalled, "Expected handler to be called")
 	assert.NoError(t, err)
 }
 
