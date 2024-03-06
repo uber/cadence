@@ -33,12 +33,12 @@ import (
 )
 
 type (
-	//////////////////////////////////////////////////////////////////////
+	// ////////////////////////////////////////////////////////////////////
 	// Persistence interface is a lower layer of dataInterface.
 	// The intention is to let different persistence implementation(SQL,Cassandra/etc) share some common logic
 	// Right now the only common part is serialization/deserialization, and only ExecutionManager/HistoryManager need it.
 	// TaskManager are the same.
-	//////////////////////////////////////////////////////////////////////
+	// ////////////////////////////////////////////////////////////////////
 
 	// ShardStore is the lower level of ShardManager
 	ShardStore interface {
@@ -95,7 +95,7 @@ type (
 		Closeable
 		GetName() string
 		GetShardID() int
-		//The below three APIs are related to serialization/deserialization
+		// The below three APIs are related to serialization/deserialization
 		GetWorkflowExecution(ctx context.Context, request *InternalGetWorkflowExecutionRequest) (*InternalGetWorkflowExecutionResponse, error)
 		UpdateWorkflowExecution(ctx context.Context, request *InternalUpdateWorkflowExecutionRequest) error
 		ConflictResolveWorkflowExecution(ctx context.Context, request *InternalConflictResolveWorkflowExecutionRequest) error
@@ -923,7 +923,8 @@ func NewDataBlob(data []byte, encodingType common.EncodingType) *DataBlob {
 		return nil
 	}
 	if encodingType != "thriftrw" && data[0] == 'Y' {
-		panic(fmt.Sprintf("Invalid incoding: \"%v\"", encodingType))
+		// original reason for this is not written down, but maybe for handling data prior to an encoding type?
+		panic(fmt.Sprintf("Invalid data blob encoding: \"%v\"", encodingType))
 	}
 	return &DataBlob{
 		Data:     data,
@@ -994,7 +995,7 @@ func (d *DataBlob) ToInternal() *types.DataBlob {
 			Data:         d.Data,
 		}
 	default:
-		panic(fmt.Sprintf("DataBlob seeing unsupported enconding type: %v", d.Encoding))
+		panic(fmt.Sprintf("DataBlob.ToInternal() with unsupported encoding type: %v", d.Encoding))
 	}
 }
 
@@ -1012,6 +1013,6 @@ func NewDataBlobFromInternal(blob *types.DataBlob) *DataBlob {
 			Data:     blob.Data,
 		}
 	default:
-		panic(fmt.Sprintf("NewDataBlobFromInternal seeing unsupported enconding type: %v", blob.GetEncodingType()))
+		panic(fmt.Sprintf("NewDataBlobFromInternal with unsupported encoding type: %v", blob.GetEncodingType()))
 	}
 }
