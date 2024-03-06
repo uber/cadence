@@ -22,11 +22,13 @@ package nosql
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
@@ -192,10 +194,45 @@ func TestNosqlExecutionStore(t *testing.T) {
 			},
 			testFunc: func(store *nosqlExecutionStore) error {
 				request := newUpdateWorkflowExecutionRequest()
-				request.Mode = persistence.UpdateWorkflowMode(-1) // Invalid mode
+				request.Mode = persistence.UpdateWorkflowMode(-1)
 				return store.UpdateWorkflowExecution(ctx, request)
 			},
 			expectedError: &types.InternalServiceError{},
+		},
+		{
+			name: "UpdateWorkflowExecution failure - condition not met",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				conditionFailure := &nosqlplugin.WorkflowOperationConditionFailure{
+					UnknownConditionFailureDetails: common.StringPtr("condition not met"),
+				}
+				mockDB.EXPECT().
+					UpdateWorkflowExecutionWithTasks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(conditionFailure).Times(1)
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				return store.UpdateWorkflowExecution(ctx, newUpdateWorkflowExecutionRequest())
+			},
+			expectedError: &persistence.ConditionFailedError{},
+		},
+		{
+			name: "UpdateWorkflowExecution failure - operational error",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				mockDB.EXPECT().
+					UpdateWorkflowExecutionWithTasks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(errors.New("database is unavailable")).Times(1)
+				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(true).AnyTimes()
+				mockDB.EXPECT().IsTimeoutError(gomock.Any()).Return(false).AnyTimes()
+				mockDB.EXPECT().IsThrottlingError(gomock.Any()).Return(false).AnyTimes()
+				mockDB.EXPECT().IsDBUnavailableError(gomock.Any()).Return(false).AnyTimes()
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				return store.UpdateWorkflowExecution(ctx, newUpdateWorkflowExecutionRequest())
+			},
+			expectedError: &types.InternalServiceError{Message: "database is unavailable"},
 		},
 	}
 	for _, tc := range testCases {
