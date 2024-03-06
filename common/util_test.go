@@ -1460,7 +1460,7 @@ func TestValidateLongPollContextTimeout(t *testing.T) {
 	t.Run("context timeout is set, but less than CriticalLongPollTimeout", func(t *testing.T) {
 		logger := new(log.MockLogger)
 		logger.On(
-			"Warn",
+			"Debug",
 			"Context timeout is lower than critical value for long poll API.",
 			// we can't mock time between deadline and now, so we just check it as it is
 			mock.Anything,

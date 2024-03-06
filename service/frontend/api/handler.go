@@ -430,7 +430,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 	if err := common.ValidateLongPollContextTimeout(
 		ctx,
 		"PollForActivityTask",
-		wh.GetThrottledLogger(),
+		wh.GetThrottledLogger().WithTags(tag.WorkflowDomainName(domainName), tag.WorkflowTaskListName(pollRequest.GetTaskList().GetName())),
 	); err != nil {
 		return nil, err
 	}
@@ -478,7 +478,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 	if err := common.ValidateLongPollContextTimeout(
 		ctx,
 		"PollForActivityTask",
-		wh.GetThrottledLogger(),
+		wh.GetThrottledLogger().WithTags(tag.WorkflowDomainName(domainName), tag.WorkflowTaskListName(pollRequest.GetTaskList().GetName())),
 	); err != nil {
 		return &types.PollForActivityTaskResponse{}, nil
 	}
@@ -544,7 +544,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	if err := common.ValidateLongPollContextTimeout(
 		ctx,
 		"PollForDecisionTask",
-		wh.GetThrottledLogger(),
+		wh.GetThrottledLogger().WithTags(tag.WorkflowDomainName(domainName), tag.WorkflowTaskListName(pollRequest.GetTaskList().GetName())),
 	); err != nil {
 		return nil, err
 	}
@@ -598,7 +598,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	if err := common.ValidateLongPollContextTimeout(
 		ctx,
 		"PollForDecisionTask",
-		wh.GetThrottledLogger(),
+		wh.GetThrottledLogger().WithTags(tag.WorkflowDomainName(domainName), tag.WorkflowTaskListName(pollRequest.GetTaskList().GetName())),
 	); err != nil {
 		return &types.PollForDecisionTaskResponse{}, nil
 	}

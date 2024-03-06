@@ -613,7 +613,7 @@ func ValidateLongPollContextTimeout(
 		return err
 	}
 	if timeout < CriticalLongPollTimeout {
-		logger.Warn("Context timeout is lower than critical value for long poll API.",
+		logger.Debug("Context timeout is lower than critical value for long poll API.",
 			tag.WorkflowHandlerName(handlerName), tag.WorkflowPollContextTimeout(timeout))
 	}
 	return nil
