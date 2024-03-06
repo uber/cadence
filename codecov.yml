@@ -36,6 +36,7 @@ ignore:
   - "bench/**"
   - "canary/**"
   - "common/persistence/persistence-tests/**"
+  - "common/domain/errors.go"
   - "common/log/**"
   - "common/metrics/**"
   - "common/persistence/nosql/nosqlplugin/dynamodb/**"
