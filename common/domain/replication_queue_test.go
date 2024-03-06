@@ -143,7 +143,6 @@ func TestGetReplicationMessages(t *testing.T) {
 			wantErr:  true,
 			setupMock: func(q *persistence.MockQueueManager) {
 				q.EXPECT().ReadMessages(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("read error"))
-				// No need to setup mock for encoder as it should not be called due to ReadMessages failure
 			},
 		},
 	}
