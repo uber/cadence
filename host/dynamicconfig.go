@@ -47,6 +47,9 @@ var (
 		dynamicconfig.EnableConsistentQueryByDomain:                 true,
 		dynamicconfig.MinRetentionDays:                              0,
 		dynamicconfig.WorkflowDeletionJitterRange:                   1,
+		dynamicconfig.WorkflowIDCacheExternalEnabled:                true,
+		dynamicconfig.WorkflowIDExternalRateLimitEnabled:            true,
+		dynamicconfig.WorkflowIDExternalRPS:                         5,
 	}
 )
 
