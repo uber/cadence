@@ -75,7 +75,6 @@ func TestReplicationQueueImpl_Publish(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
-			ctrl.Finish()
 		})
 	}
 }
@@ -117,7 +116,6 @@ func TestReplicationQueueImpl_PublishToDLQ(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
-			ctrl.Finish()
 		})
 	}
 }
@@ -164,7 +162,6 @@ func TestGetReplicationMessages(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
-			ctrl.Finish()
 		})
 	}
 }
@@ -210,7 +207,6 @@ func TestUpdateAckLevel(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
-			ctrl.Finish()
 		})
 	}
 }
@@ -252,7 +248,6 @@ func TestReplicationQueueImpl_GetAckLevels(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.want, got)
 			}
-			ctrl.Finish()
 		})
 	}
 }
@@ -265,7 +260,6 @@ func mockEncodeReplicationTask(sourceTaskID int64) ([]byte, error) {
 }
 
 func TestGetMessagesFromDLQ(t *testing.T) {
-
 	tests := []struct {
 		name      string
 		firstID   int64
@@ -318,7 +312,6 @@ func TestGetMessagesFromDLQ(t *testing.T) {
 				assert.Len(t, replicationTasks, 1, "Expected one replication task to be returned")
 				assert.Equal(t, []byte("nextToken"), token, "Expected token to match 'nextToken'")
 			}
-			ctrl.Finish()
 		})
 	}
 }
