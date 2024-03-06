@@ -522,7 +522,6 @@ func TestGetDLQSize(t *testing.T) {
 			tt.setupMock(mockQueueManager)
 			q := &replicationQueueImpl{queue: mockQueueManager}
 			size, err := q.GetDLQSize(context.Background())
-
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
