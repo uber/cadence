@@ -28,8 +28,82 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/testing/testdatagen/idlfuzzedtestdata"
 	"github.com/uber/cadence/common/types"
 )
+
+func TestCopyActivityInfo(t *testing.T) {
+	t.Run("test CopyActivityInfo Mapping", func(t *testing.T) {
+		f := idlfuzzedtestdata.NewFuzzerWithIDLTypes(t)
+
+		d1 := persistence.ActivityInfo{}
+		f.Fuzz(&d1)
+		d2 := CopyActivityInfo(&d1)
+
+		assert.Equal(t, &d1, d2)
+	})
+}
+
+func TestCopyWorkflowExecutionInfo(t *testing.T) {
+	t.Run("test ExecutionInfo Mapping", func(t *testing.T) {
+		f := idlfuzzedtestdata.NewFuzzerWithIDLTypes(t)
+
+		d1 := persistence.WorkflowExecutionInfo{}
+		f.Fuzz(&d1)
+		d2 := CopyWorkflowExecutionInfo(&d1)
+
+		assert.Equal(t, &d1, d2)
+	})
+}
+
+func TestCopyTimerInfoMapping(t *testing.T) {
+	t.Run("test Timer info Mapping", func(t *testing.T) {
+		f := idlfuzzedtestdata.NewFuzzerWithIDLTypes(t)
+
+		d1 := persistence.TimerInfo{}
+		f.Fuzz(&d1)
+		d2 := CopyTimerInfo(&d1)
+
+		assert.Equal(t, &d1, d2)
+	})
+}
+
+func TestChildWorkflowMapping(t *testing.T) {
+	t.Run("test child workflwo info Mapping", func(t *testing.T) {
+		f := idlfuzzedtestdata.NewFuzzerWithIDLTypes(t)
+
+		d1 := persistence.ChildExecutionInfo{}
+		f.Fuzz(&d1)
+		d2 := CopyChildInfo(&d1)
+
+		assert.Equal(t, &d1, d2)
+	})
+}
+
+func TestCopySignalInfo(t *testing.T) {
+	t.Run("test signal info Mapping", func(t *testing.T) {
+		f := idlfuzzedtestdata.NewFuzzerWithIDLTypes(t)
+
+		d1 := persistence.SignalInfo{}
+		f.Fuzz(&d1)
+		d2 := CopySignalInfo(&d1)
+
+		assert.Equal(t, &d1, d2)
+	})
+}
+
+func TestCopyCancellationInfo(t *testing.T) {
+	t.Run("test signal info Mapping", func(t *testing.T) {
+		f := idlfuzzedtestdata.NewFuzzerWithIDLTypes(t)
+
+		d1 := persistence.RequestCancelInfo{}
+		f.Fuzz(&d1)
+		d2 := CopyCancellationInfo(&d1)
+
+		assert.Equal(t, &d1, d2)
+	})
+}
 
 func TestFindAutoResetPoint(t *testing.T) {
 	timeSource := clock.NewRealTimeSource()
