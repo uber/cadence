@@ -59,8 +59,6 @@ const (
 	CloseTime            = "CloseTime"
 	UpdateTime           = "UpdateTime"
 	ExecutionTime        = "ExecutionTime"
-	Encoding             = "Encoding"
-	LikeStatement        = "%s LIKE '%%%s%%'"
 	IsDeleted            = "IsDeleted"   // used for Pinot deletion/rolling upsert only, not visible to user
 	EventTimeMs          = "EventTimeMs" // used for Pinot deletion/rolling upsert only, not visible to user
 
@@ -258,7 +256,8 @@ func (v *pinotVisibilityStore) DeleteUninitializedWorkflowExecution(
 ) error {
 	// verify if it is uninitialized workflow execution record
 	// if it is, then call the existing delete method to delete
-	query := fmt.Sprintf("StartTime = missing and DomainID = %s and RunID = %s", request.DomainID, request.RunID)
+	query := fmt.Sprintf("StartTime = missing and DomainID = '%s' and RunID = '%s'", request.DomainID, request.RunID)
+
 	queryRequest := &p.CountWorkflowExecutionsRequest{
 		Domain: request.Domain,
 		Query:  query,
@@ -693,10 +692,6 @@ func (q *PinotQuery) addPinotSorter(orderBy string, order string) {
 	q.sorters += fmt.Sprintf("%s %s\n", orderBy, order)
 }
 
-func (q *PinotQuery) addLimits(limit int) {
-	q.limits += fmt.Sprintf("LIMIT %d\n", limit)
-}
-
 func (q *PinotQuery) addOffsetAndLimits(offset int, limit int) {
 	q.limits += fmt.Sprintf("LIMIT %d, %d\n", offset, limit)
 }
@@ -716,6 +711,7 @@ func (f *PinotQueryFilter) addEqual(obj string, val interface{}) {
 	} else {
 		val = fmt.Sprintf("%v", val)
 	}
+
 	quotedVal := fmt.Sprintf("%s", val)
 	f.string += fmt.Sprintf("%s = %s\n", obj, quotedVal)
 }
@@ -743,15 +739,6 @@ func (f *PinotQueryFilter) addTimeRange(obj string, earliest interface{}, latest
 	f.string += fmt.Sprintf("%s BETWEEN %v AND %v\n", obj, earliest, latest)
 }
 
-func (f *PinotQueryFilter) addPartialMatch(key string, val string) {
-	f.checkFirstFilter()
-	f.string += fmt.Sprintf("%s\n", getPartialFormatString(key, val))
-}
-
-func getPartialFormatString(key string, val string) string {
-	return fmt.Sprintf(LikeStatement, key, val)
-}
-
 func (v *pinotVisibilityStore) getCountWorkflowExecutionsQuery(tableName string, request *p.CountWorkflowExecutionsRequest) string {
 	if request == nil {
 		return ""
@@ -771,6 +758,7 @@ func (v *pinotVisibilityStore) getCountWorkflowExecutionsQuery(tableName string,
 	}
 
 	requestQuery = filterPrefix(requestQuery)
+
 	comparExpr, _ := parseOrderBy(requestQuery)
 	comparExpr, err := v.pinotQueryValidator.ValidateQuery(comparExpr)
 	if err != nil {
