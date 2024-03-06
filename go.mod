@@ -67,6 +67,8 @@ require (
 	gopkg.in/yaml.v2 v2.3.0
 )
 
+require github.com/google/gofuzz v1.0.0
+
 require (
 	github.com/BurntSushi/toml v0.4.1 // indirect
 	github.com/anmitsu/go-shlex v0.0.0-20161002113705-648efa622239 // indirect
