@@ -1088,7 +1088,6 @@ var exampleStartEvent = &types.HistoryEvent{
 }
 
 func TestGetCompletionEvent(t *testing.T) {
-
 	tests := map[string]struct {
 		currentState *mutableStateBuilder
 
@@ -1188,13 +1187,14 @@ func TestGetCompletionEvent(t *testing.T) {
 			res, err := td.currentState.GetCompletionEvent(context.Background())
 
 			assert.Equal(t, td.expectedResult, res)
-			assert.Equal(t, td.expectedErr, err)
+			if td.expectedErr != nil {
+				assert.ErrorAs(t, td.expectedErr, &err)
+			}
 		})
 	}
 }
 
 func TestGetStartEvent(t *testing.T) {
-
 	tests := map[string]struct {
 		currentState *mutableStateBuilder
 
@@ -1231,14 +1231,14 @@ func TestGetStartEvent(t *testing.T) {
 			historyManagerAffordance: func(historyManager *persistence.MockHistoryManager) {
 				historyManager.EXPECT().ReadHistoryBranch(gomock.Any(), gomock.Any()).Return(nil, errors.New("an error"))
 			},
-			expectedErr: &types.InternalServiceError{Message: "unable to get workflow start event"},
+			expectedErr: types.InternalServiceError{Message: "unable to get workflow start event"},
 		},
 		"Getting a start event but hitting a 'transient' error when reaching into history. This should be passed back up the call stack": {
 			currentState: exampleMutableStateForClosedWF,
 			historyManagerAffordance: func(historyManager *persistence.MockHistoryManager) {
 				historyManager.EXPECT().ReadHistoryBranch(gomock.Any(), gomock.Any()).Return(nil, &types.InternalServiceError{Message: "an error"})
 			},
-			expectedErr: &types.InternalServiceError{Message: "an error"},
+			expectedErr: types.InternalServiceError{Message: "an error"},
 		},
 	}
 
@@ -1261,7 +1261,9 @@ func TestGetStartEvent(t *testing.T) {
 			res, err := td.currentState.GetStartEvent(context.Background())
 
 			assert.Equal(t, td.expectedResult, res)
-			assert.Equal(t, td.expectedErr, err)
+			if td.expectedErr != nil {
+				assert.ErrorAs(t, err, &td.expectedErr)
+			}
 		})
 	}
 }
