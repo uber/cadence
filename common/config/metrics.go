@@ -126,7 +126,7 @@ func (c *Metrics) newStatsdScope(logger log.Logger) tally.Scope {
 	if err != nil {
 		logger.Fatal("error creating statsd client", tag.Error(err))
 	}
-	//NOTE: according to ( https://github.com/uber-go/tally )Tally's statsd implementation doesn't support tagging.
+	// NOTE: according to ( https://github.com/uber-go/tally )Tally's statsd implementation doesn't support tagging.
 	// Therefore, we implement Tally interface to have a statsd reporter that can support tagging
 	reporter := statsdreporter.NewReporter(statter, tallystatsdreporter.Options{})
 	scopeOpts := tally.ScopeOptions{

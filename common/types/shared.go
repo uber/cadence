@@ -7228,7 +7228,7 @@ type WorkflowExecutionInfo struct {
 	StartTime         *int64                        `json:"startTime,omitempty"`
 	CloseTime         *int64                        `json:"closeTime,omitempty"`
 	CloseStatus       *WorkflowExecutionCloseStatus `json:"closeStatus,omitempty"`
-	HistoryLength     int64                         `json:"historyLength,omitempty"` //should be history count
+	HistoryLength     int64                         `json:"historyLength,omitempty"` // should be history count
 	ParentDomainID    *string                       `json:"parentDomainId,omitempty"`
 	ParentDomain      *string                       `json:"parentDomain,omitempty"`
 	ParentExecution   *WorkflowExecution            `json:"parentExecution,omitempty"`
@@ -7839,7 +7839,7 @@ const (
 	CrossClusterTaskFailedCauseWorkflowAlreadyRunning
 	// CrossClusterTaskFailedCauseWorkflowNotExists is an option for CrossClusterTaskFailedCause
 	CrossClusterTaskFailedCauseWorkflowNotExists
-	//CrossClusterTaskFailedCauseWorkflowAlreadyCompleted is an option for CrossClusterTaskFailedCause
+	// CrossClusterTaskFailedCauseWorkflowAlreadyCompleted is an option for CrossClusterTaskFailedCause
 	CrossClusterTaskFailedCauseWorkflowAlreadyCompleted
 	// CrossClusterTaskFailedCauseUncategorized is an option for CrossClusterTaskFailedCause
 	CrossClusterTaskFailedCauseUncategorized

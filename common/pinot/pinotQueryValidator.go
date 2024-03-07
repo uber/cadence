@@ -149,7 +149,7 @@ func (qv *VisibilityQueryValidator) validateRangeExpr(expr sqlparser.Expr) (stri
 		return buf.String(), nil
 	}
 
-	//lowerBound, ok := rangeCond.From.(*sqlparser.ColName)
+	// lowerBound, ok := rangeCond.From.(*sqlparser.ColName)
 	lowerBound, ok := rangeCond.From.(*sqlparser.SQLVal)
 	if !ok {
 		return "", errors.New("invalid range expression: fail to get lowerbound")
@@ -415,7 +415,7 @@ func parseTime(timeStr string) (int64, error) {
 	valInt, err := strconv.ParseInt(timeStr, 10, 64)
 	if err == nil {
 		var newVal int64
-		if valInt < 0 { //exclude open workflow which time field will be -1
+		if valInt < 0 { // exclude open workflow which time field will be -1
 			newVal = valInt
 		} else if len(timeStr) > 13 { // Assuming nanoseconds if more than 13 digits
 			newVal = valInt / 1000000 // Convert time to milliseconds

@@ -31,7 +31,7 @@ import (
 
 type (
 	// Driver interface is an abstraction to query SQL.
-	//The layer is added so that we can have a adapter to support multiple SQL databases behind a single Cadence cluster
+	// The layer is added so that we can have a adapter to support multiple SQL databases behind a single Cadence cluster
 	Driver interface {
 
 		// shared methods are for both non-transactional (using sqlx.DB) and transactional (using sqlx.Tx) operation --

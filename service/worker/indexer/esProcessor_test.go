@@ -238,7 +238,7 @@ func (s *esProcessorSuite) TestBulkAfterAction_Nack() {
 	s.esProcessor.mapToKafkaMsg.Put(testKey, mapVal)
 	mockKafkaMsg.On("Nack").Return(nil).Once()
 	mockKafkaMsg.On("Value").Return(payload).Once()
-	//s.mockBulkProcessor.On("RetrieveKafkaKey", request, mock.Anything, mock.Anything).Return(testKey)
+	// s.mockBulkProcessor.On("RetrieveKafkaKey", request, mock.Anything, mock.Anything).Return(testKey)
 	s.esProcessor.bulkAfterAction(0, requests, response, nil)
 	mockKafkaMsg.AssertExpectations(s.T())
 }

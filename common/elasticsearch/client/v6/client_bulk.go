@@ -80,8 +80,8 @@ func (v *v6BulkProcessor) Add(request *bulk.GenericBulkableAddRequest) {
 			Version(request.Version).
 			Doc(request.Doc)
 	case bulk.BulkableCreateRequest:
-		//for bulk create request still calls the bulk index method
-		//with providing operation type
+		// for bulk create request still calls the bulk index method
+		// with providing operation type
 		req = elastic.NewBulkIndexRequest().
 			OpType("create").
 			Index(request.Index).

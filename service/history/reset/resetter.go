@@ -663,7 +663,7 @@ func (r *workflowResetterImpl) closePendingDecisionTask(
 		}
 	} else if decision, ok := resetMutableState.GetPendingDecision(); ok {
 		if ok {
-			//reset workflow has decision task schedule
+			// reset workflow has decision task schedule
 			_, err := resetMutableState.AddDecisionTaskResetTimeoutEvent(
 				decision.ScheduleID,
 				baseRunID,
