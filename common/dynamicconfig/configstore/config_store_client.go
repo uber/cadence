@@ -296,8 +296,8 @@ func (csc *configStoreClient) UpdateValue(name dc.Key, value interface{}) error 
 }
 
 func (csc *configStoreClient) RestoreValue(name dc.Key, filters map[dc.Filter]interface{}) error {
-	//if empty filter provided, update fallback value.
-	//if u want to remove entire entry, just do update value with empty
+	// if empty filter provided, update fallback value.
+	// if u want to remove entire entry, just do update value with empty
 	loaded := csc.values.Load()
 	if loaded == nil {
 		return dc.NotFoundError
@@ -345,20 +345,20 @@ func (csc *configStoreClient) ListValue(name dc.Key) ([]*types.DynamicConfigEntr
 	}
 	listAll := false
 	if name == nil {
-		//if key is not specified, return all entries
+		// if key is not specified, return all entries
 		listAll = true
 	} else if _, ok := currentCached.dcEntries[name.String()]; !ok {
-		//if key is not known, return all entries
+		// if key is not known, return all entries
 		listAll = true
 	}
 	if listAll {
-		//if key is not known/specified, return all entries
+		// if key is not known/specified, return all entries
 		resList = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries))
 		for _, entry := range currentCached.dcEntries {
 			resList = append(resList, copyDynamicConfigEntry(entry))
 		}
 	} else {
-		//if key is known, return just that specific entry
+		// if key is known, return just that specific entry
 		resList = make([]*types.DynamicConfigEntry, 0, 1)
 		resList = append(resList, currentCached.dcEntries[name.String()])
 	}
@@ -385,9 +385,9 @@ func (csc *configStoreClient) Start() {
 }
 
 func (csc *configStoreClient) updateValue(name dc.Key, dcValues []*types.DynamicConfigValue, retryAttempts int) error {
-	//since values are not unique, no way to know if you are trying to update a specific value
-	//or if you want to add another of the same value with different filters.
-	//UpdateValue will replace everything associated with dc key.
+	// since values are not unique, no way to know if you are trying to update a specific value
+	// or if you want to add another of the same value with different filters.
+	// UpdateValue will replace everything associated with dc key.
 	for _, dcValue := range dcValues {
 		if err := validateKeyDataBlobPair(name, dcValue.Value); err != nil {
 			return err
@@ -410,7 +410,7 @@ func (csc *configStoreClient) updateValue(name dc.Key, dcValues []*types.Dynamic
 
 	existingEntry, entryExists := currentCached.dcEntries[keyName]
 
-	if dcValues == nil || len(dcValues) == 0 {
+	if len(dcValues) == 0 {
 		newEntries = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries))
 
 		for _, entry := range currentCached.dcEntries {
@@ -465,12 +465,12 @@ func (csc *configStoreClient) updateValue(name dc.Key, dcValues []*types.Dynamic
 
 	select {
 	case <-ctx.Done():
-		//potentially we can retry on timeout
+		// potentially we can retry on timeout
 		return errors.New("timeout error on update")
 	default:
 		if err != nil {
 			if _, ok := err.(*persistence.ConditionFailedError); ok && retryAttempts > 0 {
-				//fetch new config and retry
+				// fetch new config and retry
 				err := csc.update()
 				if err != nil {
 					return err
@@ -575,7 +575,7 @@ func (csc *configStoreClient) update() error {
 }
 
 func (csc *configStoreClient) storeValues(snapshot *persistence.DynamicConfigSnapshot) error {
-	//Converting the list of dynamic config entries into a map for better lookup performance
+	// Converting the list of dynamic config entries into a map for better lookup performance
 	var dcEntryMap map[string]*types.DynamicConfigEntry
 	if snapshot.Values.Entries == nil {
 		dcEntryMap = nil
