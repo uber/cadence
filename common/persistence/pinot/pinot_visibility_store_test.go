@@ -80,6 +80,16 @@ func TestRecordWorkflowExecutionStarted(t *testing.T) {
 		Memo:       p.NewDataBlob([]byte(`test bytes`), common.EncodingTypeThriftRW),
 	}
 
+	customStringField, err := json.Marshal("test string")
+	assert.NoError(t, err)
+	requestWithSearchAttributes := &p.InternalRecordWorkflowExecutionStartedRequest{
+		WorkflowID: "wid",
+		Memo:       p.NewDataBlob([]byte(`test bytes`), common.EncodingTypeThriftRW),
+		SearchAttributes: map[string][]byte{
+			"CustomStringField": customStringField,
+		},
+	}
+
 	tests := map[string]struct {
 		request       *p.InternalRecordWorkflowExecutionStartedRequest
 		expectedError error
@@ -90,6 +100,10 @@ func TestRecordWorkflowExecutionStarted(t *testing.T) {
 		},
 		"Case2: normal case": {
 			request:       request,
+			expectedError: nil,
+		},
+		"Case3: normal case with search attributes": {
+			request:       requestWithSearchAttributes,
 			expectedError: nil,
 		},
 	}
@@ -215,6 +229,14 @@ func TestRecordWorkflowExecutionUninitialized(t *testing.T) {
 
 func TestUpsertWorkflowExecution(t *testing.T) {
 	// test non-empty request fields match
+	errorRequest := &p.InternalUpsertWorkflowExecutionRequest{
+		WorkflowID: "wid",
+		Memo:       p.NewDataBlob([]byte(`test bytes`), common.EncodingTypeThriftRW),
+		SearchAttributes: map[string][]byte{
+			"CustomStringField": []byte("test string"),
+			"CustomTimeField":   []byte("2020-01-01T00:00:00Z"),
+		},
+	}
 	request := &p.InternalUpsertWorkflowExecutionRequest{}
 	request.WorkflowID = "wid"
 	memoBytes := []byte(`test bytes`)
@@ -224,7 +246,11 @@ func TestUpsertWorkflowExecution(t *testing.T) {
 		request       *p.InternalUpsertWorkflowExecutionRequest
 		expectedError error
 	}{
-		"Case1: normal case": {
+		"Case1: error case": {
+			request:       errorRequest,
+			expectedError: fmt.Errorf("error"),
+		},
+		"Case2: normal case": {
 			request:       request,
 			expectedError: nil,
 		},
@@ -247,7 +273,11 @@ func TestUpsertWorkflowExecution(t *testing.T) {
 			})).Return(nil).Once()
 
 			err := visibilityStore.UpsertWorkflowExecution(context.Background(), test.request)
-			assert.Equal(t, test.expectedError, err)
+			if test.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
@@ -335,6 +365,11 @@ func TestDeleteUninitializedWorkflowExecution(t *testing.T) {
 }
 
 func TestListOpenWorkflowExecutions(t *testing.T) {
+	errorRequest := &p.InternalListWorkflowExecutionsRequest{
+		Domain:        DomainID,
+		NextPageToken: []byte("error"),
+	}
+
 	request := &p.InternalListWorkflowExecutionsRequest{
 		Domain: DomainID,
 	}
@@ -344,7 +379,12 @@ func TestListOpenWorkflowExecutions(t *testing.T) {
 		expectedResp  *p.InternalListWorkflowExecutionsResponse
 		expectedError error
 	}{
-		"Case1: normal case with nil response": {
+		"Case1: error case": {
+			request:       errorRequest,
+			expectedResp:  nil,
+			expectedError: fmt.Errorf("error"),
+		},
+		"Case2: normal case with nil response": {
 			request:       request,
 			expectedResp:  nil,
 			expectedError: nil,
@@ -362,16 +402,28 @@ func TestListOpenWorkflowExecutions(t *testing.T) {
 			}, mockProducer, testlogger.New(t))
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
-			mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-			mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
-			resp, err := visibilityStore.ListOpenWorkflowExecutions(context.Background(), test.request)
-			assert.Equal(t, test.expectedResp, resp)
-			assert.Equal(t, test.expectedError, err)
+			if test.expectedError != nil {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				resp, err := visibilityStore.ListOpenWorkflowExecutions(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.Error(t, err)
+			} else {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+				resp, err := visibilityStore.ListOpenWorkflowExecutions(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
 
 func TestListClosedWorkflowExecutions(t *testing.T) {
+	errorRequest := &p.InternalListWorkflowExecutionsRequest{
+		Domain:        DomainID,
+		NextPageToken: []byte("error"),
+	}
+
 	request := &p.InternalListWorkflowExecutionsRequest{
 		Domain: DomainID,
 	}
@@ -381,7 +433,12 @@ func TestListClosedWorkflowExecutions(t *testing.T) {
 		expectedResp  *p.InternalListWorkflowExecutionsResponse
 		expectedError error
 	}{
-		"Case1: normal case with nil response": {
+		"Case1: error case": {
+			request:       errorRequest,
+			expectedResp:  nil,
+			expectedError: fmt.Errorf("error"),
+		},
+		"Case2: normal case with nil response": {
 			request:       request,
 			expectedResp:  nil,
 			expectedError: nil,
@@ -399,16 +456,31 @@ func TestListClosedWorkflowExecutions(t *testing.T) {
 			}, mockProducer, testlogger.New(t))
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
-			mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-			mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
-			resp, err := visibilityStore.ListClosedWorkflowExecutions(context.Background(), test.request)
-			assert.Equal(t, test.expectedResp, resp)
-			assert.Equal(t, test.expectedError, err)
+			if test.expectedError != nil {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				resp, err := visibilityStore.ListClosedWorkflowExecutions(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.Error(t, err)
+			} else {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+				resp, err := visibilityStore.ListClosedWorkflowExecutions(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
 
 func TestListOpenWorkflowExecutionsByType(t *testing.T) {
+	errorRequest := &p.InternalListWorkflowExecutionsByTypeRequest{
+		InternalListWorkflowExecutionsRequest: p.InternalListWorkflowExecutionsRequest{
+			Domain:        DomainID,
+			NextPageToken: []byte("error"),
+		},
+		WorkflowTypeName: "",
+	}
+
 	request := &p.InternalListWorkflowExecutionsByTypeRequest{}
 
 	tests := map[string]struct {
@@ -416,7 +488,12 @@ func TestListOpenWorkflowExecutionsByType(t *testing.T) {
 		expectedResp  *p.InternalListWorkflowExecutionsResponse
 		expectedError error
 	}{
-		"Case1: normal case with nil response": {
+		"Case1: error case": {
+			request:       errorRequest,
+			expectedResp:  nil,
+			expectedError: fmt.Errorf("error"),
+		},
+		"Case2: normal case with nil response": {
 			request:       request,
 			expectedResp:  nil,
 			expectedError: nil,
@@ -434,16 +511,30 @@ func TestListOpenWorkflowExecutionsByType(t *testing.T) {
 			}, mockProducer, testlogger.New(t))
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
-			mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-			mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
-			resp, err := visibilityStore.ListOpenWorkflowExecutionsByType(context.Background(), test.request)
-			assert.Equal(t, test.expectedResp, resp)
-			assert.Equal(t, test.expectedError, err)
+			if test.expectedError != nil {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				resp, err := visibilityStore.ListOpenWorkflowExecutionsByType(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.Error(t, err)
+			} else {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+				resp, err := visibilityStore.ListOpenWorkflowExecutionsByType(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
 
 func TestListClosedWorkflowExecutionsByType(t *testing.T) {
+	errorRequest := &p.InternalListWorkflowExecutionsByTypeRequest{
+		InternalListWorkflowExecutionsRequest: p.InternalListWorkflowExecutionsRequest{
+			Domain:        DomainID,
+			NextPageToken: []byte("error"),
+		},
+		WorkflowTypeName: "",
+	}
 	request := &p.InternalListWorkflowExecutionsByTypeRequest{}
 
 	tests := map[string]struct {
@@ -451,7 +542,12 @@ func TestListClosedWorkflowExecutionsByType(t *testing.T) {
 		expectedResp  *p.InternalListWorkflowExecutionsResponse
 		expectedError error
 	}{
-		"Case1: normal case with nil response": {
+		"Case1: error case": {
+			request:       errorRequest,
+			expectedResp:  nil,
+			expectedError: fmt.Errorf("error"),
+		},
+		"Case2: normal case with nil response": {
 			request:       request,
 			expectedResp:  nil,
 			expectedError: nil,
@@ -469,16 +565,29 @@ func TestListClosedWorkflowExecutionsByType(t *testing.T) {
 			}, mockProducer, testlogger.New(t))
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
-			mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-			mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
-			resp, err := visibilityStore.ListClosedWorkflowExecutionsByType(context.Background(), test.request)
-			assert.Equal(t, test.expectedResp, resp)
-			assert.Equal(t, test.expectedError, err)
+			if test.expectedError != nil {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				resp, err := visibilityStore.ListClosedWorkflowExecutionsByType(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.Error(t, err)
+			} else {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+				resp, err := visibilityStore.ListClosedWorkflowExecutionsByType(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
 
 func TestListOpenWorkflowExecutionsByWorkflowID(t *testing.T) {
+	errorRequest := &p.InternalListWorkflowExecutionsByWorkflowIDRequest{
+		InternalListWorkflowExecutionsRequest: p.InternalListWorkflowExecutionsRequest{
+			Domain:        DomainID,
+			NextPageToken: []byte("error"),
+		},
+	}
 	request := &p.InternalListWorkflowExecutionsByWorkflowIDRequest{}
 
 	tests := map[string]struct {
@@ -486,7 +595,12 @@ func TestListOpenWorkflowExecutionsByWorkflowID(t *testing.T) {
 		expectedResp  *p.InternalListWorkflowExecutionsResponse
 		expectedError error
 	}{
-		"Case1: normal case with nil response": {
+		"Case1: error case": {
+			request:       errorRequest,
+			expectedResp:  nil,
+			expectedError: fmt.Errorf("error"),
+		},
+		"Case2: normal case with nil response": {
 			request:       request,
 			expectedResp:  nil,
 			expectedError: nil,
@@ -504,16 +618,29 @@ func TestListOpenWorkflowExecutionsByWorkflowID(t *testing.T) {
 			}, mockProducer, testlogger.New(t))
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
-			mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-			mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
-			resp, err := visibilityStore.ListOpenWorkflowExecutionsByWorkflowID(context.Background(), test.request)
-			assert.Equal(t, test.expectedResp, resp)
-			assert.Equal(t, test.expectedError, err)
+			if test.expectedError != nil {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				resp, err := visibilityStore.ListOpenWorkflowExecutionsByWorkflowID(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.Error(t, err)
+			} else {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+				resp, err := visibilityStore.ListOpenWorkflowExecutionsByWorkflowID(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
 
 func TestListClosedWorkflowExecutionsByWorkflowID(t *testing.T) {
+	errorRequest := &p.InternalListWorkflowExecutionsByWorkflowIDRequest{
+		InternalListWorkflowExecutionsRequest: p.InternalListWorkflowExecutionsRequest{
+			Domain:        DomainID,
+			NextPageToken: []byte("error"),
+		},
+	}
 	request := &p.InternalListWorkflowExecutionsByWorkflowIDRequest{}
 
 	tests := map[string]struct {
@@ -521,7 +648,12 @@ func TestListClosedWorkflowExecutionsByWorkflowID(t *testing.T) {
 		expectedResp  *p.InternalListWorkflowExecutionsResponse
 		expectedError error
 	}{
-		"Case1: normal case with nil response": {
+		"Case1: error case": {
+			request:       errorRequest,
+			expectedResp:  nil,
+			expectedError: fmt.Errorf("error"),
+		},
+		"Case2: normal case with nil response": {
 			request:       request,
 			expectedResp:  nil,
 			expectedError: nil,
@@ -539,16 +671,29 @@ func TestListClosedWorkflowExecutionsByWorkflowID(t *testing.T) {
 			}, mockProducer, testlogger.New(t))
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
-			mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-			mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
-			resp, err := visibilityStore.ListClosedWorkflowExecutionsByWorkflowID(context.Background(), test.request)
-			assert.Equal(t, test.expectedResp, resp)
-			assert.Equal(t, test.expectedError, err)
+			if test.expectedError != nil {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				resp, err := visibilityStore.ListClosedWorkflowExecutionsByWorkflowID(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.Error(t, err)
+			} else {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+				resp, err := visibilityStore.ListClosedWorkflowExecutionsByWorkflowID(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
 
 func TestListClosedWorkflowExecutionsByStatus(t *testing.T) {
+	errorRequest := &p.InternalListClosedWorkflowExecutionsByStatusRequest{
+		InternalListWorkflowExecutionsRequest: p.InternalListWorkflowExecutionsRequest{
+			Domain:        DomainID,
+			NextPageToken: []byte("error"),
+		},
+	}
 	request := &p.InternalListClosedWorkflowExecutionsByStatusRequest{}
 
 	tests := map[string]struct {
@@ -556,7 +701,12 @@ func TestListClosedWorkflowExecutionsByStatus(t *testing.T) {
 		expectedResp  *p.InternalListWorkflowExecutionsResponse
 		expectedError error
 	}{
-		"Case1: normal case with nil response": {
+		"Case1: error case": {
+			request:       errorRequest,
+			expectedResp:  nil,
+			expectedError: fmt.Errorf("error"),
+		},
+		"Case2: normal case with nil response": {
 			request:       request,
 			expectedResp:  nil,
 			expectedError: nil,
@@ -574,16 +724,24 @@ func TestListClosedWorkflowExecutionsByStatus(t *testing.T) {
 			}, mockProducer, testlogger.New(t))
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
-			mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-			mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
-			resp, err := visibilityStore.ListClosedWorkflowExecutionsByStatus(context.Background(), test.request)
-			assert.Equal(t, test.expectedResp, resp)
-			assert.Equal(t, test.expectedError, err)
+			if test.expectedError != nil {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				resp, err := visibilityStore.ListClosedWorkflowExecutionsByStatus(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.Error(t, err)
+			} else {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+				resp, err := visibilityStore.ListClosedWorkflowExecutionsByStatus(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
 
 func TestGetClosedWorkflowExecution(t *testing.T) {
+	errorRequest := &p.InternalGetClosedWorkflowExecutionRequest{}
 	request := &p.InternalGetClosedWorkflowExecutionRequest{}
 
 	tests := map[string]struct {
@@ -591,7 +749,12 @@ func TestGetClosedWorkflowExecution(t *testing.T) {
 		expectedResp  *p.InternalGetClosedWorkflowExecutionRequest
 		expectedError error
 	}{
-		"Case1: normal case with nil response": {
+		"Case1: error case": {
+			request:       errorRequest,
+			expectedResp:  nil,
+			expectedError: fmt.Errorf("error"),
+		},
+		"Case2: normal case with nil response": {
 			request:       request,
 			expectedError: nil,
 		},
@@ -608,21 +771,37 @@ func TestGetClosedWorkflowExecution(t *testing.T) {
 			}, mockProducer, testlogger.New(t))
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
-			mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-			mockPinotClient.EXPECT().Search(gomock.Any()).Return(&pnt.SearchResponse{
-				Executions: []*p.InternalVisibilityWorkflowExecutionInfo{
-					{
-						DomainID: DomainID,
+			if test.expectedError != nil {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(&pnt.SearchResponse{
+					Executions: []*p.InternalVisibilityWorkflowExecutionInfo{
+						{
+							DomainID: DomainID,
+						},
 					},
-				},
-			}, nil).Times(1)
-			_, err := visibilityStore.GetClosedWorkflowExecution(context.Background(), test.request)
-			assert.Equal(t, test.expectedError, err)
+				}, fmt.Errorf("error")).Times(1)
+				_, err := visibilityStore.GetClosedWorkflowExecution(context.Background(), test.request)
+				assert.Error(t, err)
+			} else {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(&pnt.SearchResponse{
+					Executions: []*p.InternalVisibilityWorkflowExecutionInfo{
+						{
+							DomainID: DomainID,
+						},
+					},
+				}, nil).Times(1)
+				_, err := visibilityStore.GetClosedWorkflowExecution(context.Background(), test.request)
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
 
 func TestListWorkflowExecutions(t *testing.T) {
+	errorRequest := &p.ListWorkflowExecutionsByQueryRequest{
+		NextPageToken: []byte("error"),
+	}
 	request := &p.ListWorkflowExecutionsByQueryRequest{}
 
 	tests := map[string]struct {
@@ -630,7 +809,12 @@ func TestListWorkflowExecutions(t *testing.T) {
 		expectedResp  *p.InternalListWorkflowExecutionsResponse
 		expectedError error
 	}{
-		"Case1: normal case with nil response": {
+		"Case1: error case": {
+			request:       errorRequest,
+			expectedResp:  nil,
+			expectedError: fmt.Errorf("error"),
+		},
+		"Case2: normal case with nil response": {
 			request:       request,
 			expectedResp:  nil,
 			expectedError: nil,
@@ -648,16 +832,26 @@ func TestListWorkflowExecutions(t *testing.T) {
 			}, mockProducer, testlogger.New(t))
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
-			mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-			mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
-			resp, err := visibilityStore.ListWorkflowExecutions(context.Background(), test.request)
-			assert.Equal(t, test.expectedResp, resp)
-			assert.Equal(t, test.expectedError, err)
+			if test.expectedError != nil {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				resp, err := visibilityStore.ListWorkflowExecutions(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.Error(t, err)
+			} else {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+				resp, err := visibilityStore.ListWorkflowExecutions(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
 
 func TestScanWorkflowExecutions(t *testing.T) {
+	errorRequest := &p.ListWorkflowExecutionsByQueryRequest{
+		NextPageToken: []byte("error"),
+	}
 	request := &p.ListWorkflowExecutionsByQueryRequest{}
 
 	tests := map[string]struct {
@@ -665,7 +859,12 @@ func TestScanWorkflowExecutions(t *testing.T) {
 		expectedResp  *p.InternalListWorkflowExecutionsResponse
 		expectedError error
 	}{
-		"Case1: normal case with nil response": {
+		"Case1: error case": {
+			request:       errorRequest,
+			expectedResp:  nil,
+			expectedError: fmt.Errorf("error"),
+		},
+		"Case2: normal case with nil response": {
 			request:       request,
 			expectedResp:  nil,
 			expectedError: nil,
@@ -683,11 +882,67 @@ func TestScanWorkflowExecutions(t *testing.T) {
 			}, mockProducer, testlogger.New(t))
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
-			mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-			mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
-			resp, err := visibilityStore.ScanWorkflowExecutions(context.Background(), test.request)
-			assert.Equal(t, test.expectedResp, resp)
-			assert.Equal(t, test.expectedError, err)
+			if test.expectedError != nil {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				resp, err := visibilityStore.ScanWorkflowExecutions(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.Error(t, err)
+			} else {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+				resp, err := visibilityStore.ScanWorkflowExecutions(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestCountWorkflowExecutions(t *testing.T) {
+	errorRequest := &p.CountWorkflowExecutionsRequest{}
+	request := &p.CountWorkflowExecutionsRequest{}
+
+	tests := map[string]struct {
+		request       *p.CountWorkflowExecutionsRequest
+		expectedResp  *p.CountWorkflowExecutionsResponse
+		expectedError error
+	}{
+		"Case1: error case": {
+			request:       errorRequest,
+			expectedResp:  nil,
+			expectedError: fmt.Errorf("error"),
+		},
+		"Case2: normal case with nil response": {
+			request:       request,
+			expectedResp:  &p.CountWorkflowExecutionsResponse{Count: 1},
+			expectedError: nil,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockPinotClient := pnt.NewMockGenericClient(ctrl)
+			mockProducer := &mocks.KafkaProducer{}
+			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
+				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
+			}, mockProducer, testlogger.New(t))
+			visibilityStore := mgr.(*pinotVisibilityStore)
+
+			if test.expectedError != nil {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().CountByQuery(gomock.Any()).Return(int64(0), fmt.Errorf("error")).Times(1)
+				resp, err := visibilityStore.CountWorkflowExecutions(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.Error(t, err)
+			} else {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().CountByQuery(gomock.Any()).Return(int64(1), nil).Times(1)
+				resp, err := visibilityStore.CountWorkflowExecutions(context.Background(), test.request)
+				assert.Equal(t, test.expectedResp, resp)
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
@@ -714,14 +969,17 @@ func TestNewPinotVisibilityStore(t *testing.T) {
 }
 
 func TestGetCountWorkflowExecutionsQuery(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockPinotClient := pnt.NewMockGenericClient(ctrl)
-	mockProducer := &mocks.KafkaProducer{}
-	mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
-		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
-		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-	}, mockProducer, testlogger.New(t))
-	visibilityStore := mgr.(*pinotVisibilityStore)
+	emptyQueryRequest := &p.CountWorkflowExecutionsRequest{
+		DomainUUID: testDomainID,
+		Domain:     testDomain,
+		Query:      "",
+	}
+
+	expectEmptyQueryResult := fmt.Sprintf(`SELECT COUNT(*)
+FROM test-table-name
+WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
+AND IsDeleted = false
+`)
 
 	request := &p.CountWorkflowExecutionsRequest{
 		DomainUUID: testDomainID,
@@ -729,7 +987,6 @@ func TestGetCountWorkflowExecutionsQuery(t *testing.T) {
 		Query:      "WorkflowID = 'wfid'",
 	}
 
-	result := visibilityStore.getCountWorkflowExecutionsQuery(testTableName, request)
 	expectResult := fmt.Sprintf(`SELECT COUNT(*)
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
@@ -737,10 +994,38 @@ AND IsDeleted = false
 AND WorkflowID = 'wfid'
 `, testTableName)
 
-	assert.Equal(t, result, expectResult)
+	tests := map[string]struct {
+		request       *p.CountWorkflowExecutionsRequest
+		expectedRes   string
+		expectedError error
+	}{
+		"Case1: normal case with nil response": {
+			request:       request,
+			expectedRes:   expectResult,
+			expectedError: nil,
+		},
+		"Case2: normal case with empty query": {
+			request:       emptyQueryRequest,
+			expectedRes:   expectEmptyQueryResult,
+			expectedError: nil,
+		},
+	}
 
-	nilResult := visibilityStore.getCountWorkflowExecutionsQuery(testTableName, nil)
-	assert.Equal(t, nilResult, "")
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockPinotClient := pnt.NewMockGenericClient(ctrl)
+			mockProducer := &mocks.KafkaProducer{}
+			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
+				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
+			}, mockProducer, testlogger.New(t))
+			visibilityStore := mgr.(*pinotVisibilityStore)
+
+			res := visibilityStore.getCountWorkflowExecutionsQuery(testTableName, test.request)
+			assert.Equal(t, test.expectedRes, res)
+		})
+	}
 }
 
 func TestGetListWorkflowExecutionQuery(t *testing.T) {

@@ -348,6 +348,136 @@ func TestSearch(t *testing.T) {
 	}
 }
 
+func TestScroll(t *testing.T) {
+	testCases := []struct {
+		name      string
+		query     string
+		expected  map[string]interface{}
+		expectErr bool
+		index     string
+		handler   http.HandlerFunc
+		scrollID  string
+	}{
+		{
+			name:  "normal case",
+			query: `{"query":{"bool":{"must":{"match":{"WorkflowID":"test-workflow-id"}}}}}`,
+			expected: map[string]interface{}{
+				"WorkflowID": "test-workflow-id",
+			},
+			index: "testIndex",
+			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/testIndex/_search" {
+					w.WriteHeader(http.StatusOK)
+					w.Write([]byte(`{
+						"took": 5,
+						"timed_out": false,
+						"hits": {
+							"total": 1,
+							"hits": [{
+								"_source": {
+									"WorkflowID": "test-workflow-id"
+								}
+							}]
+						},
+						"aggregations": {
+							"sample_agg": {
+								"value": 42
+							}
+						}
+					}`))
+				} else {
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}),
+			expectErr: false,
+		},
+		{
+			name:  "error case",
+			query: `{"query":{"bool":{"must":{"match":{"WorkflowID":"test-workflow-id"}}}}}`,
+			index: "testIndex",
+			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusInternalServerError)
+			}),
+			expectErr: true,
+			scrollID:  "1",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			elasticV6, testServer := getMockClient(t, tc.handler)
+			defer testServer.Close()
+			resp, err := elasticV6.Scroll(context.Background(), tc.index, tc.query, tc.scrollID)
+			if !tc.expectErr {
+				assert.NoError(t, err)
+				var actualSource map[string]interface{}
+				err := json.Unmarshal(resp.Hits.Hits[0].Source, &actualSource)
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expected, actualSource)
+			} else {
+				assert.Error(t, err)
+				assert.Nil(t, resp)
+			}
+		})
+	}
+}
+
+func TestClearScroll(t *testing.T) {
+	var handlerCalled bool
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handlerCalled = true
+		if r.Method == "DELETE" && r.URL.Path == "/_search/scroll" {
+			// Simulate a successful clear scroll response
+			w.WriteHeader(http.StatusOK)
+			response := `{
+				"succeeded": true,
+				"num_freed": 1
+			}`
+			w.Write([]byte(response))
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	})
+	elasticV6, testServer := getMockClient(t, handler)
+	defer testServer.Close()
+	err := elasticV6.ClearScroll(context.Background(), "scrollID")
+	assert.True(t, handlerCalled, "Expected handler to be called")
+	assert.NoError(t, err)
+}
+
+func TestIsNotFoundError(t *testing.T) {
+	testCases := []struct {
+		name     string
+		handler  http.HandlerFunc
+		expected bool
+	}{
+		{
+			name: "NotFound error",
+			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				http.NotFound(w, r)
+			}),
+			expected: true,
+		},
+		{
+			name: "Other error",
+			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+			}),
+			expected: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			elasticV6, testServer := getMockClient(t, tc.handler)
+			defer testServer.Close()
+			err := elasticV6.CreateIndex(context.Background(), "testIndex")
+			res := elasticV6.IsNotFoundError(err)
+			assert.Equal(t, tc.expected, res)
+		})
+	}
+}
+
 func getMockClient(t *testing.T, handler http.HandlerFunc) (ElasticV6, *httptest.Server) {
 	testServer := httptest.NewTLSServer(handler)
 	mockClient, err := elastic.NewClient(
