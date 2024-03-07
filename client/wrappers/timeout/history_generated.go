@@ -123,14 +123,6 @@ func (c *historyClient) GetDLQReplicationMessages(ctx context.Context, gp1 *type
 }
 
 func (c *historyClient) GetFailoverInfo(ctx context.Context, gp1 *types.GetFailoverInfoRequest, p1 ...yarpc.CallOption) (gp2 *types.GetFailoverInfoResponse, err error) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	var cancelFunc func()
-	if c.timeout > 0 {
-		ctx, cancelFunc = context.WithTimeout(ctx, c.timeout)
-		defer cancelFunc()
-	}
 	return c.client.GetFailoverInfo(ctx, gp1, p1...)
 }
 
@@ -147,14 +139,6 @@ func (c *historyClient) GetMutableState(ctx context.Context, gp1 *types.GetMutab
 }
 
 func (c *historyClient) GetReplicationMessages(ctx context.Context, gp1 *types.GetReplicationMessagesRequest, p1 ...yarpc.CallOption) (gp2 *types.GetReplicationMessagesResponse, err error) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	var cancelFunc func()
-	if c.timeout > 0 {
-		ctx, cancelFunc = context.WithTimeout(ctx, c.timeout)
-		defer cancelFunc()
-	}
 	return c.client.GetReplicationMessages(ctx, gp1, p1...)
 }
 

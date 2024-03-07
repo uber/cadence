@@ -28,11 +28,11 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common/types"
-	"github.com/stretchr/testify/assert"
 )
 
 func Test_historyClient_CloseShard(t *testing.T) {
