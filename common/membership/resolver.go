@@ -54,7 +54,7 @@ type (
 		// EvictSelf evicts this member from the membership ring. After this method is
 		// called, other members should discover that this node is no longer part of the
 		// ring.
-		//This primitive is useful to carry out graceful host shutdown during deployments.
+		// This primitive is useful to carry out graceful host shutdown during deployments.
 		EvictSelf() error
 
 		// Lookup will return host which is an owner for provided key.

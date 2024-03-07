@@ -114,7 +114,7 @@ func (s *esCrossDCTestSuite) SetupSuite() {
 	s.cluster2 = c
 
 	s.esClient = esutils.CreateESClient(s.Suite, s.clusterConfigs[0].ESConfig.URL.String(), "v6")
-	//TODO Do we also want to run v7 test here?
+	// TODO Do we also want to run v7 test here?
 	s.esClient.PutIndexTemplate(s.Suite, "../testdata/es_index_v6_template.json", "test-visibility-template")
 	s.esClient.CreateIndex(s.Suite, s.clusterConfigs[0].ESConfig.Indices[common.VisibilityAppName])
 	s.esClient.CreateIndex(s.Suite, s.clusterConfigs[1].ESConfig.Indices[common.VisibilityAppName])

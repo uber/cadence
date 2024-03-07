@@ -251,7 +251,7 @@ func (s *Scavenger) startTaskProcessor(
 
 			if err != nil {
 				if _, ok := err.(*types.EntityNotExistsError); ok {
-					//deleting history branch
+					// deleting history branch
 					var branchToken []byte
 					branchToken, err = p.NewHistoryBranchTokenByBranchID(task.treeID, task.branchID)
 					if err != nil {

@@ -88,7 +88,7 @@ func (d *nosqlExecutionStore) prepareResetWorkflowExecutionRequestWithMapsAndEve
 	if err != nil {
 		return nil, err
 	}
-	//reset 6 maps
+	// reset 6 maps
 	executionRequest.ActivityInfos, err = d.prepareActivityInfosForWorkflowTxn(resetWorkflow.ActivityInfos)
 	if err != nil {
 		return nil, err

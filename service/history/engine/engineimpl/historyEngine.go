@@ -726,8 +726,8 @@ func (e *historyEngineImpl) startWorkflowHelper(
 	)
 	if err != nil {
 		if e.shard.GetConfig().EnableRecordWorkflowExecutionUninitialized(domainEntry.GetInfo().Name) && e.visibilityMgr != nil {
-			//delete the uninitialized workflow execution record since it failed to start the workflow
-			//uninitialized record is used to find wfs that didn't make a progress or stuck during the start process
+			// delete the uninitialized workflow execution record since it failed to start the workflow
+			// uninitialized record is used to find wfs that didn't make a progress or stuck during the start process
 			if errVisibility := e.visibilityMgr.DeleteWorkflowExecution(ctx, &persistence.VisibilityDeleteWorkflowExecutionRequest{
 				DomainID:   domainID,
 				Domain:     domain,
@@ -3416,7 +3416,7 @@ func (e *historyEngineImpl) GetReplicationMessages(
 		return nil, err
 	}
 
-	//Set cluster status for sync shard info
+	// Set cluster status for sync shard info
 	replicationMessages.SyncShardStatus = &types.SyncShardStatus{
 		Timestamp: common.Int64Ptr(e.timeSource.Now().UnixNano()),
 	}
