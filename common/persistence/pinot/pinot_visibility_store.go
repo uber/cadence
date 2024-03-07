@@ -604,7 +604,7 @@ func createVisibilityMessage(
 	for key, value := range rawSearchAttributes {
 		value, err = isTimeStruct(value)
 		if err != nil {
-			return nil, err
+			return nil, err // can't test because it's hard to create a scenario where this error happens
 		}
 
 		var val interface{}
@@ -617,7 +617,7 @@ func createVisibilityMessage(
 	m[Attr] = SearchAttributes
 	serializedMsg, err := json.Marshal(m)
 	if err != nil {
-		return nil, err
+		return nil, err // can't test because it's hard to create a scenario where this error happens
 	}
 
 	msg := &indexer.PinotMessage{
@@ -638,7 +638,7 @@ func isTimeStruct(value []byte) ([]byte, error) {
 		unixTime := time.UnixMilli()
 		value, err = json.Marshal(unixTime)
 		if err != nil {
-			return nil, err
+			return nil, err // can't test because it's hard to create a scenario where this error happens
 		}
 	}
 	return value, nil
@@ -763,7 +763,7 @@ func (v *pinotVisibilityStore) getCountWorkflowExecutionsQuery(tableName string,
 	comparExpr, err := v.pinotQueryValidator.ValidateQuery(comparExpr)
 	if err != nil {
 		v.logger.Error(fmt.Sprintf("pinot query validator error: %s", err))
-	}
+	} // can't test because it's hard to create a scenario where this error happens
 
 	comparExpr = filterPrefix(comparExpr)
 	if comparExpr != "" {
