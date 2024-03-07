@@ -29,6 +29,7 @@ package domain
 import (
 	context "context"
 	reflect "reflect"
+	"time"
 
 	gomock "github.com/golang/mock/gomock"
 
@@ -44,6 +45,30 @@ type MockReplicationQueue struct {
 // MockReplicationQueueMockRecorder is the mock recorder for MockReplicationQueue.
 type MockReplicationQueueMockRecorder struct {
 	mock *MockReplicationQueue
+}
+
+type MockTicker struct {
+	tickChannel chan time.Time
+}
+
+func NewMockTicker() *MockTicker {
+	return &MockTicker{
+		tickChannel: make(chan time.Time, 1), // Buffered to simulate tick without blocking
+	}
+}
+
+// C provides access to the tick channel.
+func (m *MockTicker) C() <-chan time.Time {
+	return m.tickChannel
+}
+
+func (m *MockTicker) Stop() {
+	close(m.tickChannel)
+}
+
+// SendTick allows tests to simulate a tick event.
+func (m *MockTicker) SendTick(t time.Time) {
+	m.tickChannel <- t
 }
 
 // NewMockReplicationQueue creates a new mock instance.
