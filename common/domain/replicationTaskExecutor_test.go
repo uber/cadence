@@ -92,7 +92,7 @@ func TestDomainReplicationTaskExecutor_Execute(t *testing.T) {
 		{
 			name: "Handle Create Domain Task - Name UUID Collision",
 			setupMock: func(mockDomainManager persistence.MockDomainManager) {
-				//call to GetDomain simulates a name collision by returning a different domain ID
+				// call to GetDomain simulates a name collision by returning a different domain ID
 				mockDomainManager.EXPECT().
 					GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: "collisionDomain"}).
 					Return(&persistence.GetDomainResponse{Info: &persistence.DomainInfo{ID: uuid.New()}}, nil).
