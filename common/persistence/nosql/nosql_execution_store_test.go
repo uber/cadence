@@ -333,6 +333,96 @@ func TestNosqlExecutionStore(t *testing.T) {
 			},
 			expectedError: &types.InternalServiceError{Message: "database error"},
 		},
+		{
+			name: "ListConcreteExecutions success - has executions",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				// Corrected return value type to match expected method signature
+				executions := []*persistence.InternalListConcreteExecutionsEntity{
+					{
+						ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+							WorkflowID: "workflowID",
+							RunID:      "runID",
+						},
+					},
+				}
+				mockDB.EXPECT().
+					SelectAllWorkflowExecutions(ctx, shardID, gomock.Any(), gomock.Any()).
+					Return(executions, nil, nil)
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				resp, err := store.ListConcreteExecutions(ctx, &persistence.ListConcreteExecutionsRequest{})
+				if err != nil {
+					return err
+				}
+				if len(resp.Executions) == 0 {
+					return errors.New("expected to find executions")
+				}
+				return nil
+			},
+			expectedError: nil,
+		},
+		{
+			name: "ListConcreteExecutions failure - database error",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				mockDB.EXPECT().
+					SelectAllWorkflowExecutions(ctx, shardID, gomock.Any(), gomock.Any()).
+					Return(nil, nil, errors.New("database error"))
+				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(true).AnyTimes()
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				_, err := store.ListConcreteExecutions(ctx, &persistence.ListConcreteExecutionsRequest{})
+				return err
+			},
+			expectedError: &types.InternalServiceError{Message: "database error"},
+		},
+		{
+			name: "GetTransferTasks success - has tasks",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				tasks := []*nosqlplugin.TransferTask{{TaskID: 1}}
+				mockDB.EXPECT().
+					SelectTransferTasksOrderByTaskID(ctx, shardID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(tasks, nil, nil)
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				resp, err := store.GetTransferTasks(ctx, &persistence.GetTransferTasksRequest{})
+				if err != nil {
+					return err
+				}
+				if len(resp.Tasks) == 0 {
+					return errors.New("expected to find transfer tasks")
+				}
+				return nil
+			},
+			expectedError: nil,
+		},
+		{
+			name: "GetCrossClusterTasks success - has tasks",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				tasks := []*nosqlplugin.CrossClusterTask{{TransferTask: persistence.CrossClusterTaskInfo{TaskID: 1}}}
+				mockDB.EXPECT().
+					SelectCrossClusterTasksOrderByTaskID(ctx, shardID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(tasks, nil, nil)
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				resp, err := store.GetCrossClusterTasks(ctx, &persistence.GetCrossClusterTasksRequest{})
+				if err != nil {
+					return err
+				}
+				if len(resp.Tasks) == 0 {
+					return errors.New("expected to find cross cluster tasks")
+				}
+				return nil
+			},
+			expectedError: nil,
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
