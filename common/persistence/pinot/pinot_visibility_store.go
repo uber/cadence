@@ -558,7 +558,7 @@ func createDeleteVisibilityMessage(domainID string,
 }
 
 func createVisibilityMessage(
-	// common parameters
+// common parameters
 	domainID string,
 	wid,
 	rid string,
@@ -571,11 +571,11 @@ func createVisibilityMessage(
 	encoding common.EncodingType,
 	isCron bool,
 	numClusters int16,
-	// specific to certain status
-	closeTimeUnixMilli int64, // close execution
+// specific to certain status
+	closeTimeUnixMilli int64,                          // close execution
 	closeStatus workflow.WorkflowExecutionCloseStatus, // close execution
-	historyLength int64, // close execution
-	updateTimeUnixMilli int64, // update execution,
+	historyLength int64,                               // close execution
+	updateTimeUnixMilli int64,                         // update execution,
 	shardID int64,
 	rawSearchAttributes map[string][]byte,
 	isDeleted bool,
@@ -604,7 +604,7 @@ func createVisibilityMessage(
 	for key, value := range rawSearchAttributes {
 		value, err = isTimeStruct(value)
 		if err != nil {
-			return nil, err // can't test because it's hard to create a scenario where this error happens
+			return nil, err
 		}
 
 		var val interface{}
@@ -617,7 +617,7 @@ func createVisibilityMessage(
 	m[Attr] = SearchAttributes
 	serializedMsg, err := json.Marshal(m)
 	if err != nil {
-		return nil, err // can't test because it's hard to create a scenario where this error happens
+		return nil, err
 	}
 
 	msg := &indexer.PinotMessage{
@@ -638,7 +638,7 @@ func isTimeStruct(value []byte) ([]byte, error) {
 		unixTime := time.UnixMilli()
 		value, err = json.Marshal(unixTime)
 		if err != nil {
-			return nil, err // can't test because it's hard to create a scenario where this error happens
+			return nil, err
 		}
 	}
 	return value, nil
@@ -763,7 +763,7 @@ func (v *pinotVisibilityStore) getCountWorkflowExecutionsQuery(tableName string,
 	comparExpr, err := v.pinotQueryValidator.ValidateQuery(comparExpr)
 	if err != nil {
 		v.logger.Error(fmt.Sprintf("pinot query validator error: %s", err))
-	} // can't test because it's hard to create a scenario where this error happens
+	}
 
 	comparExpr = filterPrefix(comparExpr)
 	if comparExpr != "" {
