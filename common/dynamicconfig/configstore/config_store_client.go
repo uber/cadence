@@ -410,7 +410,7 @@ func (csc *configStoreClient) updateValue(name dc.Key, dcValues []*types.Dynamic
 
 	existingEntry, entryExists := currentCached.dcEntries[keyName]
 
-	if dcValues == nil || len(dcValues) == 0 {
+	if len(dcValues) == 0 {
 		newEntries = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries))
 
 		for _, entry := range currentCached.dcEntries {
