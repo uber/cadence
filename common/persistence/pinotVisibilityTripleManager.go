@@ -251,8 +251,8 @@ func (v *pinotVisibilityTripleManager) chooseVisibilityManagerForWrite(ctx conte
 	}
 
 	switch writeMode {
-	//only perform as triple manager during migration by setting write mode to triple,
-	//other time perform as a dual visibility manager of pinot and db
+	// only perform as triple manager during migration by setting write mode to triple,
+	// other time perform as a dual visibility manager of pinot and db
 	case common.AdvancedVisibilityWritingModeOff:
 		if v.dbVisibilityManager != nil {
 			return dbVisFunc()

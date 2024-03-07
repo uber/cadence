@@ -34,7 +34,7 @@ import (
 //   1. Workflow: these tags are information that are useful to our customer, like workflow-id/run-id/task-list/...
 //   2. System : these tags are internal information which usually cannot be understood by our customers,
 
-///////////////////  Common tags defined here ///////////////////
+// /////////////////  Common tags defined here ///////////////////
 
 // Error returns tag for Error
 func Error(err error) Tag {
@@ -59,7 +59,7 @@ func LatestTime(time int64) Tag {
 	return newInt64("latest-time", time)
 }
 
-///////////////////  Workflow tags defined here: ( wf is short for workflow) ///////////////////
+// /////////////////  Workflow tags defined here: ( wf is short for workflow) ///////////////////
 
 // WorkflowAction returns tag for WorkflowAction
 func workflowAction(action string) Tag {
@@ -342,7 +342,7 @@ func WorkflowEventType(eventType string) Tag {
 	return newStringTag("wf-event-type", eventType)
 }
 
-///////////////////  System tags defined here:  ///////////////////
+// /////////////////  System tags defined here:  ///////////////////
 // Tags with pre-define values
 
 // component returns tag for component
@@ -753,7 +753,7 @@ func TokenLastEventID(id int64) Tag {
 	return newInt64("token-last-event-id", id)
 }
 
-///////////////////  XDC tags defined here: xdc- ///////////////////
+// /////////////////  XDC tags defined here: xdc- ///////////////////
 
 // SourceCluster returns tag for SourceCluster
 func SourceCluster(sourceCluster string) Tag {
@@ -824,7 +824,7 @@ func ResponseMaxSize(size int) Tag {
 	return newInt("response-max-size", size)
 }
 
-///////////////////  Archival tags defined here: archival- ///////////////////
+// /////////////////  Archival tags defined here: archival- ///////////////////
 // archival request tags
 
 // ArchivalCallerServiceName returns tag for the service name calling archival client

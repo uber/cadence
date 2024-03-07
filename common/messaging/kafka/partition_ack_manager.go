@@ -34,7 +34,7 @@ import (
 // assuming reading messages is in order and continuous(no skipping)
 type partitionAckManager struct {
 	sync.RWMutex
-	ackMgrs map[int32]messaging.AckManager //map from partition to its ackManager
+	ackMgrs map[int32]messaging.AckManager // map from partition to its ackManager
 	scopes  map[int32]metrics.Scope        // map from partition to its Scope
 
 	metricsClient metrics.Client

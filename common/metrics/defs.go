@@ -36,7 +36,6 @@ type (
 
 	// metricDefinition contains the definition for a metric
 	metricDefinition struct {
-		//nolint
 		metricType       MetricType    // metric type
 		metricName       MetricName    // metric name
 		metricRollupName MetricName    // optional. if non-empty, this name must be used for rolled-up version of this metric

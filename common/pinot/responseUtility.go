@@ -88,7 +88,7 @@ func ConvertSearchResultToVisibilityRecord(hit []interface{}, columnNames []stri
 	err = json.Unmarshal(jsonSystemKeyMap, &source)
 	if err != nil {
 		logger.Error("Unable to Unmarshal systemKeyMap",
-			tag.Error(err), //tag.ESDocID(fmt.Sprintf(columnNameToValue["DocID"]))
+			tag.Error(err), // tag.ESDocID(fmt.Sprintf(columnNameToValue["DocID"]))
 		)
 		return nil
 	}

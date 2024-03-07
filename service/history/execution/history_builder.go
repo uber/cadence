@@ -71,7 +71,7 @@ func (b *HistoryBuilder) AddWorkflowExecutionStartedEvent(startRequest *types.Hi
 
 	var scheduledTime *time.Time
 	if request.CronSchedule != "" {
-		//first scheduled time is only necessary for cron workflows.
+		// first scheduled time is only necessary for cron workflows.
 		scheduledTime = &firstScheduledTime
 	}
 	attributes := &types.WorkflowExecutionStartedEventAttributes{
