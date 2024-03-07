@@ -42,7 +42,7 @@ type (
 		CertFile string `yaml:"certFile"`
 		KeyFile  string `yaml:"keyFile"`
 
-		CaFile  string   `yaml:"caFile"` //optional depending on server config
+		CaFile  string   `yaml:"caFile"` // optional depending on server config
 		CaFiles []string `yaml:"caFiles"`
 		// If you want to verify the hostname and server cert (like a wildcard for cass cluster) then you should turn this on
 		// This option is basically the inverse of InSecureSkipVerify

@@ -127,7 +127,7 @@ func (s *esanalyzerWorkflowTestSuite) SetupTest() {
 	s.mockESClient = &esMocks.GenericClient{}
 
 	//
-	//s.mockDomainCache.EXPECT().GetDomainByID(s.DomainID).Return(activeDomainCache, nil).AnyTimes()
+	// s.mockDomainCache.EXPECT().GetDomainByID(s.DomainID).Return(activeDomainCache, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(s.DomainName).Return(activeDomainCache, nil).AnyTimes()
 
 	// SET UP ANALYZER

@@ -507,7 +507,7 @@ func TestHistoryLoader_GetEventBlob(t *testing.T) {
 			domains: fakeDomainCache{testDomainID: testDomain},
 			mockHistory: func(hm *mocks.HistoryV2Manager) {
 				hm.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(&persistence.ReadRawHistoryBranchResponse{
-					HistoryEventBlobs: []*persistence.DataBlob{{}, {}}, //two blobs
+					HistoryEventBlobs: []*persistence.DataBlob{{}, {}}, // two blobs
 				}, nil)
 			},
 			expectErr: "replication hydrator encountered more than 1 NDC raw event batch",

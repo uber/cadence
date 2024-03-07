@@ -142,7 +142,7 @@ func hydrateSyncActivityTask(task persistence.ReplicationTaskInfo, ms mutableSta
 		startedTime = timeToUnixNano(activityInfo.StartedTime)
 	}
 
-	//Version history uses when replicate the sync activity task
+	// Version history uses when replicate the sync activity task
 	var versionHistory *types.VersionHistory
 	if versionHistories := ms.GetVersionHistories(); versionHistories != nil {
 		currentVersionHistory, err := versionHistories.GetCurrentVersionHistory()
