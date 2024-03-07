@@ -40,7 +40,10 @@ const (
 
 func createContext(parent context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
 	if parent == nil {
-		return context.WithTimeout(context.Background(), timeout)
+		parent = context.Background()
 	}
-	return context.WithTimeout(parent, timeout)
+	if timeout > 0 {
+		return context.WithTimeout(parent, timeout)
+	}
+	return context.WithCancel(parent)
 }
