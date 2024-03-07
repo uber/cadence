@@ -126,7 +126,7 @@ func (c *ElasticV6) RunBulkProcessor(ctx context.Context, parameters *bulk.BulkP
 		parameters.AfterFunc(
 			executionId,
 			fromV6ToGenericBulkableRequests(requests),
-			fromV6toGenericBulkResponse(response),
+			fromV6ToGenericBulkResponse(response),
 			gerr)
 	}
 
@@ -157,7 +157,7 @@ func convertV6ErrorToGenericError(err error) *bulk.GenericError {
 	}
 }
 
-func fromV6toGenericBulkResponse(response *elastic.BulkResponse) *bulk.GenericBulkResponse {
+func fromV6ToGenericBulkResponse(response *elastic.BulkResponse) *bulk.GenericBulkResponse {
 	if response == nil {
 		return &bulk.GenericBulkResponse{}
 	}
