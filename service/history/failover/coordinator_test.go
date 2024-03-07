@@ -424,7 +424,7 @@ func (s *coordinatorSuite) TestHandleFailoverMarkers_CleanPendingActiveState_Err
 func (s *coordinatorSuite) TestGetFailoverInfo_Success() {
 	domainID := uuid.New()
 
-	//Add failover marker
+	// Add failover marker
 	attributes := &types.FailoverMarkerAttributes{
 		DomainID:        domainID,
 		FailoverVersion: 2,

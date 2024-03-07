@@ -187,7 +187,7 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionUninitialized(ctx context.
 		0,
 		-1, // represent invalid close time, means open workflow execution
 		-1, // represent invalid close status, means open workflow execution
-		0,  //will be updated when workflow execution updates
+		0,  // will be updated when workflow execution updates
 		request.UpdateTimestamp.UnixMilli(),
 		request.ShardID,
 		nil,
@@ -581,7 +581,7 @@ func createVisibilityMessage(
 	isDeleted bool,
 ) (*indexer.PinotMessage, error) {
 	m := make(map[string]interface{})
-	//loop through all input parameters
+	// loop through all input parameters
 	m[DomainID] = domainID
 	m[WorkflowID] = wid
 	m[RunID] = rid
@@ -952,10 +952,10 @@ func getListWorkflowExecutionsQuery(tableName string, request *p.InternalListWor
 	latest := request.LatestTime.UnixMilli() + oneMicroSecondInNano
 
 	if isClosed {
-		query.filters.addTimeRange(CloseTime, earliest, latest) //convert Unix Time to miliseconds
+		query.filters.addTimeRange(CloseTime, earliest, latest) // convert Unix Time to miliseconds
 		query.filters.addGte(CloseStatus, 0)
 	} else {
-		query.filters.addTimeRange(StartTime, earliest, latest) //convert Unix Time to miliseconds
+		query.filters.addTimeRange(StartTime, earliest, latest) // convert Unix Time to miliseconds
 		query.filters.addLt(CloseStatus, 0)
 		query.filters.addEqual(CloseTime, -1)
 	}
@@ -980,10 +980,10 @@ func getListWorkflowExecutionsByTypeQuery(tableName string, request *p.InternalL
 	latest := request.LatestTime.UnixMilli() + oneMicroSecondInNano
 
 	if isClosed {
-		query.filters.addTimeRange(CloseTime, earliest, latest) //convert Unix Time to miliseconds
+		query.filters.addTimeRange(CloseTime, earliest, latest) // convert Unix Time to miliseconds
 		query.filters.addGte(CloseStatus, 0)
 	} else {
-		query.filters.addTimeRange(StartTime, earliest, latest) //convert Unix Time to miliseconds
+		query.filters.addTimeRange(StartTime, earliest, latest) // convert Unix Time to miliseconds
 		query.filters.addLt(CloseStatus, 0)
 		query.filters.addEqual(CloseTime, -1)
 	}
@@ -1016,10 +1016,10 @@ func getListWorkflowExecutionsByWorkflowIDQuery(tableName string, request *p.Int
 	latest := request.LatestTime.UnixMilli() + oneMicroSecondInNano
 
 	if isClosed {
-		query.filters.addTimeRange(CloseTime, earliest, latest) //convert Unix Time to miliseconds
+		query.filters.addTimeRange(CloseTime, earliest, latest) // convert Unix Time to miliseconds
 		query.filters.addGte(CloseStatus, 0)
 	} else {
-		query.filters.addTimeRange(StartTime, earliest, latest) //convert Unix Time to miliseconds
+		query.filters.addTimeRange(StartTime, earliest, latest) // convert Unix Time to miliseconds
 		query.filters.addLt(CloseStatus, 0)
 		query.filters.addEqual(CloseTime, -1)
 	}
@@ -1065,7 +1065,7 @@ func getListWorkflowExecutionsByStatusQuery(tableName string, request *p.Interna
 	}
 
 	query.filters.addEqual(CloseStatus, status)
-	query.filters.addTimeRange(CloseTime, request.EarliestTime.UnixMilli(), request.LatestTime.UnixMilli()) //convert Unix Time to miliseconds
+	query.filters.addTimeRange(CloseTime, request.EarliestTime.UnixMilli(), request.LatestTime.UnixMilli()) // convert Unix Time to miliseconds
 
 	query.addPinotSorter(StartTime, DescendingOrder)
 

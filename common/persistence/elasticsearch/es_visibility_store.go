@@ -503,7 +503,7 @@ const (
 	jsonRangeOnExecutionTime = `{"range":{"ExecutionTime":`
 	jsonSortForOpen          = `[{"StartTime":"desc"},{"RunID":"desc"}]`
 	jsonSortWithTieBreaker   = `{"RunID":"desc"}`
-	jsonMissingStartTime     = `{"missing":{"field":"StartTime"}}` //used to identify uninitialized workflow execution records
+	jsonMissingStartTime     = `{"missing":{"field":"StartTime"}}` // used to identify uninitialized workflow execution records
 
 	dslFieldSort        = "sort"
 	dslFieldSearchAfter = "search_after"

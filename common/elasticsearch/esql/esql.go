@@ -136,7 +136,7 @@ func (e *ESql) Convert(sql string, pagination ...interface{}) (dsl string, sortF
 		return "", nil, err
 	}
 
-	//sql valid, start to handle
+	// sql valid, start to handle
 	switch stmt := stmt.(type) {
 	case *sqlparser.Select:
 		dsl, sortField, err = e.convertSelect(*(stmt), "", pagination...)

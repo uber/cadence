@@ -34,29 +34,29 @@ func TestDynamoDBNoopStruct(t *testing.T) {
 }
 
 func TestDynamoDBHistoryPersistence(t *testing.T) {
-	//s := new(persistencetests.HistoryV2PersistenceSuite)
-	//s.TestBase = public.NewTestBaseWithDynamoDB(&persistencetests.TestBaseOptions{})
-	//s.TestBase.Setup()
-	//suite.Run(t, s)
+	// s := new(persistencetests.HistoryV2PersistenceSuite)
+	// s.TestBase = public.NewTestBaseWithDynamoDB(&persistencetests.TestBaseOptions{})
+	// s.TestBase.Setup()
+	// suite.Run(t, s)
 }
 
 func TestDynamoDBMatchingPersistence(t *testing.T) {
-	//s := new(persistencetests.MatchingPersistenceSuite)
-	//s.TestBase = public.NewTestBaseWithDynamoDB(&persistencetests.TestBaseOptions{})
-	//s.TestBase.Setup()
-	//suite.Run(t, s)
+	// s := new(persistencetests.MatchingPersistenceSuite)
+	// s.TestBase = public.NewTestBaseWithDynamoDB(&persistencetests.TestBaseOptions{})
+	// s.TestBase.Setup()
+	// suite.Run(t, s)
 }
 
 func TestDynamoDBDomainPersistence(t *testing.T) {
-	//s := new(persistencetests.MetadataPersistenceSuiteV2)
-	//s.TestBase = public.NewTestBaseWithDynamoDB(&persistencetests.TestBaseOptions{})
-	//s.TestBase.Setup()
-	//suite.Run(t, s)
+	// s := new(persistencetests.MetadataPersistenceSuiteV2)
+	// s.TestBase = public.NewTestBaseWithDynamoDB(&persistencetests.TestBaseOptions{})
+	// s.TestBase.Setup()
+	// suite.Run(t, s)
 }
 
 func TestDynamoDBQueuePersistence(t *testing.T) {
-	//s := new(persistencetests.QueuePersistenceSuite)
-	//s.TestBase = public.NewTestBaseWithDynamoDB(&persistencetests.TestBaseOptions{})
-	//s.TestBase.Setup()
-	//suite.Run(t, s)
+	// s := new(persistencetests.QueuePersistenceSuite)
+	// s.TestBase = public.NewTestBaseWithDynamoDB(&persistencetests.TestBaseOptions{})
+	// s.TestBase.Setup()
+	// suite.Run(t, s)
 }

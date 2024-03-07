@@ -657,8 +657,8 @@ func (s *historyArchiverSuite) TestArchiveAndGet() {
 }
 
 func (s *historyArchiverSuite) newTestHistoryArchiver(historyIterator archiver.HistoryIterator) *historyArchiver {
-	//config := &config.S3Archiver{}
-	//archiver, err := newHistoryArchiver(s.container, config, historyIterator)
+	// config := &config.S3Archiver{}
+	// archiver, err := newHistoryArchiver(s.container, config, historyIterator)
 	archiver := &historyArchiver{
 		container:       s.container,
 		s3cli:           s.s3cli,

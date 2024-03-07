@@ -112,7 +112,7 @@ func (d *plugin) createSingleDBConn(cfg *config.SQL) (*sqlx.DB, error) {
 
 func buildDSN(cfg *config.SQL, host string, port string, params url.Values) string {
 	dbName := cfg.DatabaseName
-	//NOTE: postgres doesn't allow to connect with empty dbName, the admin dbName is "postgres"
+	// NOTE: postgres doesn't allow to connect with empty dbName, the admin dbName is "postgres"
 	if dbName == "" {
 		dbName = "postgres"
 	}

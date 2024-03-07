@@ -389,7 +389,7 @@ func (p *taskProcessorImpl) processSingleTask(replicationTask *types.Replication
 		})
 	}
 
-	//Handle service busy error
+	// Handle service busy error
 	throttleRetry := backoff.NewThrottleRetry(
 		backoff.WithRetryPolicy(common.CreateReplicationServiceBusyRetryPolicy()),
 		backoff.WithRetryableError(common.IsServiceBusyError),
@@ -406,7 +406,7 @@ func (p *taskProcessorImpl) processSingleTask(replicationTask *types.Replication
 		p.logger.Warn("Encounter workflow withour version histories")
 		return nil
 	default:
-		//handle error
+		// handle error
 	}
 
 	// handle error to DLQ
@@ -429,11 +429,11 @@ func (p *taskProcessorImpl) processSingleTask(replicationTask *types.Replication
 			tag.TaskType(request.TaskInfo.GetTaskType()),
 			tag.Error(err),
 		)
-		//TODO: uncomment this when the execution fixer workflow is ready
-		//if err = p.triggerDataInconsistencyScan(replicationTask); err != nil {
+		// TODO: uncomment this when the execution fixer workflow is ready
+		// if err = p.triggerDataInconsistencyScan(replicationTask); err != nil {
 		//	p.logger.Warn("Failed to trigger data scan", tag.Error(err))
 		//	p.metricsClient.IncCounter(metrics.ReplicationDLQStatsScope, metrics.ReplicationDLQValidationFailed)
-		//}
+		// }
 		return p.putReplicationTaskToDLQ(request)
 	}
 }

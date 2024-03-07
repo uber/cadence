@@ -1162,7 +1162,7 @@ type (
 		TaskID            int64
 	}
 
-	//RangeDeleteReplicationTaskFromDLQRequest is used to delete replication tasks from DLQ
+	// RangeDeleteReplicationTaskFromDLQRequest is used to delete replication tasks from DLQ
 	RangeDeleteReplicationTaskFromDLQRequest struct {
 		SourceClusterName    string
 		ExclusiveBeginTaskID int64
@@ -1170,7 +1170,7 @@ type (
 		PageSize             int
 	}
 
-	//RangeDeleteReplicationTaskFromDLQResponse is the response of RangeDeleteReplicationTaskFromDLQ
+	// RangeDeleteReplicationTaskFromDLQResponse is the response of RangeDeleteReplicationTaskFromDLQ
 	RangeDeleteReplicationTaskFromDLQResponse struct {
 		TasksCompleted int
 	}
@@ -1535,7 +1535,7 @@ type (
 		// The shard to get history node data
 		ShardID *int
 
-		//DomainName to get metrics created with the domain
+		// DomainName to get metrics created with the domain
 		DomainName string
 	}
 
@@ -1616,7 +1616,7 @@ type (
 		Info string
 		// The shard to get history branch data
 		ShardID *int
-		//DomainName to create metrics for Domain Cost Attribution
+		// DomainName to create metrics for Domain Cost Attribution
 		DomainName string
 	}
 
@@ -1642,7 +1642,7 @@ type (
 		BranchToken []byte
 		// The shard to delete history branch data
 		ShardID *int
-		//DomainName to generate metrics for Domain Cost Attribution
+		// DomainName to generate metrics for Domain Cost Attribution
 		DomainName string
 	}
 
@@ -1654,7 +1654,7 @@ type (
 		ShardID *int
 		// optional: can provide treeID via branchToken if treeID is empty
 		BranchToken []byte
-		//DomainName to create metrics
+		// DomainName to create metrics
 		DomainName string
 	}
 
@@ -1863,7 +1863,7 @@ type (
 		Closeable
 		FetchDynamicConfig(ctx context.Context, cfgType ConfigType) (*FetchDynamicConfigResponse, error)
 		UpdateDynamicConfig(ctx context.Context, request *UpdateDynamicConfigRequest, cfgType ConfigType) error
-		//can add functions for config types other than dynamic config
+		// can add functions for config types other than dynamic config
 	}
 )
 

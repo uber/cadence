@@ -40,7 +40,7 @@ func TestConstantSuite(t *testing.T) {
 }
 
 func (s *constantSuite) TestListAllProductionKeys() {
-	//check if we given enough capacity
+	// check if we given enough capacity
 	testResult := ListAllProductionKeys()
 	s.GreaterOrEqual(len(IntKeys)+len(BoolKeys)+len(FloatKeys)+len(StringKeys)+len(DurationKeys)+len(MapKeys), len(testResult))
 	s.Equal(TestGetIntPropertyFilteredByTaskListInfoKey+1, testResult[0])
