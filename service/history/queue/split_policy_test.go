@@ -91,7 +91,7 @@ func (s *splitPolicySuite) TestPendingTaskSplitPolicy() {
 
 	testCases := []struct {
 		currentState             ProcessingQueueState
-		numPendingTasksPerDomain map[string]int //domainID -> number of pending tasks
+		numPendingTasksPerDomain map[string]int // domainID -> number of pending tasks
 		expectedNewStates        []ProcessingQueueState
 	}{
 		{
@@ -565,7 +565,7 @@ func (s *splitPolicySuite) TestRandomSplitPolicy() {
 	testCases := []struct {
 		currentState             ProcessingQueueState
 		splitProbability         float64
-		numPendingTasksPerDomain map[string]int //domainID -> number of pending tasks
+		numPendingTasksPerDomain map[string]int // domainID -> number of pending tasks
 		expectedNewStates        []ProcessingQueueState
 	}{
 		{

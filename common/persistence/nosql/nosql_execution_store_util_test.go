@@ -24,6 +24,7 @@ package nosql
 
 import (
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -164,8 +165,40 @@ func TestNosqlExecutionStoreUtils(t *testing.T) {
 				assert.NotNil(t, req)
 			},
 		},
+		{
+			name: "PrepareUpdateWorkflowExecutionRequestWithMapsAndEventBuffer - Successful Update Request Preparation",
+			setupStore: func(store *nosqlExecutionStore) (*nosqlplugin.WorkflowExecutionRequest, error) {
+				workflowMutation := &persistence.InternalWorkflowMutation{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						DomainID:   "domainID-success",
+						WorkflowID: "workflowID-success",
+						RunID:      "runID-success",
+					},
+				}
+				return store.prepareUpdateWorkflowExecutionRequestWithMapsAndEventBuffer(workflowMutation)
+			},
+			validate: func(t *testing.T, req *nosqlplugin.WorkflowExecutionRequest, err error) {
+				assert.NoError(t, err)
+				assert.NotNil(t, req)
+			},
+		},
+		{
+			name: "PrepareUpdateWorkflowExecutionRequestWithMapsAndEventBuffer - Incomplete WorkflowMutation",
+			setupStore: func(store *nosqlExecutionStore) (*nosqlplugin.WorkflowExecutionRequest, error) {
+				workflowMutation := &persistence.InternalWorkflowMutation{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{ // Partially populated for the test
+						DomainID: "domainID-incomplete",
+					},
+				}
+				return store.prepareUpdateWorkflowExecutionRequestWithMapsAndEventBuffer(workflowMutation)
+			},
+			validate: func(t *testing.T, req *nosqlplugin.WorkflowExecutionRequest, err error) {
+				assert.NoError(t, err)
+				assert.NotNil(t, req)
+				assert.Equal(t, "domainID-incomplete", req.DomainID) // Example assertion
+			},
+		},
 	}
-
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
@@ -179,3 +212,69 @@ func TestNosqlExecutionStoreUtils(t *testing.T) {
 		})
 	}
 }
+
+func TestPrepareTasksForWorkflowTxn(t *testing.T) {
+	testCases := []struct {
+		name       string
+		setupStore func(*nosqlExecutionStore) ([]*nosqlplugin.TimerTask, error)
+		validate   func(*testing.T, []*nosqlplugin.TimerTask, error)
+	}{{
+		name: "PrepareTimerTasksForWorkflowTxn - Successful Timer Tasks Preparation",
+		setupStore: func(store *nosqlExecutionStore) ([]*nosqlplugin.TimerTask, error) {
+			timerTasks := []persistence.Task{
+				&persistence.DecisionTimeoutTask{VisibilityTimestamp: time.Now(), TaskID: 1, EventID: 2, TimeoutType: 1, ScheduleAttempt: 1},
+				// Add more tasks as needed to fully test functionality
+			}
+			tasks, err := store.prepareTimerTasksForWorkflowTxn("domainID", "workflowID", "runID", timerTasks)
+			assert.NoError(t, err)
+			assert.NotEmpty(t, tasks)
+			return nil, err
+		},
+		validate: func(t *testing.T, tasks []*nosqlplugin.TimerTask, err error) {},
+	},
+		{
+			name: "PrepareTimerTasksForWorkflowTxn - Unsupported Timer Task Type",
+			setupStore: func(store *nosqlExecutionStore) ([]*nosqlplugin.TimerTask, error) {
+				timerTasks := []persistence.Task{
+					&dummyTaskType{ // Using the dummy task type
+						VisibilityTimestamp: time.Now(),
+						TaskID:              1,
+					},
+				}
+				return store.prepareTimerTasksForWorkflowTxn("domainID-unsupported", "workflowID-unsupported", "runID-unsupported", timerTasks)
+			},
+			validate: func(t *testing.T, tasks []*nosqlplugin.TimerTask, err error) {
+				assert.Error(t, err) // Expecting an error due to unsupported timer task type
+				assert.Nil(t, tasks) // No tasks should be returned due to the error
+			},
+		}}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			mockDB := nosqlplugin.NewMockDB(mockCtrl)
+			store := newTestNosqlExecutionStore(mockDB, log.NewNoop())
+
+			tasks, err := tc.setupStore(store)
+			tc.validate(t, tasks, err)
+		})
+	}
+}
+
+type dummyTaskType struct {
+	persistence.Task
+	VisibilityTimestamp time.Time
+	TaskID              int64
+}
+
+func (d *dummyTaskType) GetType() int {
+	return 999 // Using a type that is not expected by switch statement
+}
+
+func (d *dummyTaskType) GetVersion() int64 {
+	return 1
+}
+
+func (d *dummyTaskType) SetVersion(version int64) {}

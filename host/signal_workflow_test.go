@@ -570,7 +570,7 @@ CheckHistoryLoopForSignalSent:
 		cancel()
 		s.Nil(err)
 		history := historyResponse.History
-		//common.PrettyPrintHistory(history, s.Logger)
+		// common.PrettyPrintHistory(history, s.Logger)
 
 		signalRequestedEvent := history.Events[len(history.Events)-2]
 		if *signalRequestedEvent.EventType != types.EventTypeExternalWorkflowExecutionSignaled {

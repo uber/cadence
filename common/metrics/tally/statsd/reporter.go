@@ -31,7 +31,7 @@ import (
 )
 
 type cadenceTallyStatsdReporter struct {
-	//Wrapper on top of "github.com/uber-go/tally/statsd"
+	// Wrapper on top of "github.com/uber-go/tally/statsd"
 	tallystatsd tally.StatsReporter
 }
 
