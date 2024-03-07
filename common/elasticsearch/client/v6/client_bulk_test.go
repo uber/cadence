@@ -23,13 +23,17 @@
 package v6
 
 import (
+	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/olivere/elastic"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common/elasticsearch/bulk"
+
+	"github.com/uber/cadence/common/log/testlogger"
 )
 
 func TestConvertV6ErrorToGenericError(t *testing.T) {
@@ -287,4 +291,138 @@ func TestFromV6ToGenericBulkableRequests(t *testing.T) {
 
 	genericRequests := fromV6ToGenericBulkableRequests(mockRequests)
 	assert.Len(t, genericRequests, len(mockRequests))
+}
+
+func getV6BulkProcessor(t *testing.T) *v6BulkProcessor {
+	return &v6BulkProcessor{
+		processor: &elastic.BulkProcessor{},
+		logger:    testlogger.New(t),
+	}
+}
+
+func TestProcessorFunc(t *testing.T) {
+	processor := getV6BulkProcessor(t)
+	err := processor.Start(context.Background())
+	assert.NoError(t, err)
+
+	err = processor.Flush()
+	assert.NoError(t, err)
+
+	err = processor.Stop()
+	assert.NoError(t, err)
+
+	err = processor.Close()
+	assert.NoError(t, err)
+}
+
+func TestProcessorAdd(t *testing.T) {
+	tests := []struct {
+		name      string
+		request   *bulk.GenericBulkableAddRequest
+		expectErr bool
+	}{
+		{
+			name:      "bulk add nil case",
+			request:   nil,
+			expectErr: true,
+		},
+		{
+			name: "bulk add normal case",
+			request: &bulk.GenericBulkableAddRequest{
+				Index:       "test-index",
+				RequestType: bulk.BulkableIndexRequest,
+				ID:          "test-id",
+				VersionType: "internal",
+				Type:        "test-type",
+				Version:     int64(1),
+				Doc:         "",
+			},
+			expectErr: false,
+		},
+		{
+			name: "bulk create normal case",
+			request: &bulk.GenericBulkableAddRequest{
+				Index:       "test-index",
+				RequestType: bulk.BulkableCreateRequest,
+				ID:          "test-id",
+				VersionType: "internal",
+				Type:        "test-type",
+				Version:     int64(1),
+				Doc:         "",
+			},
+			expectErr: false,
+		},
+		{
+			name: "bulk add normal case",
+			request: &bulk.GenericBulkableAddRequest{
+				Index:       "test-index",
+				RequestType: bulk.BulkableDeleteRequest,
+				ID:          "test-id",
+				VersionType: "internal",
+				Type:        "test-type",
+				Version:     int64(1),
+				Doc:         "",
+			},
+			expectErr: false,
+		},
+	}
+
+	elasticV6, testServer := getMockClient(t, nil)
+	defer testServer.Close()
+	svc := elasticV6.client.BulkProcessor().
+		Name("FlushInterval-1").
+		Workers(2).
+		BulkActions(-1).
+		BulkSize(-1)
+
+	p, err := svc.Do(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	processor := v6BulkProcessor{
+		processor: p,
+		logger:    testlogger.New(t),
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.expectErr {
+				assert.Panics(t, func() { processor.Add(tt.request) }, "The method should panic")
+			} else {
+				assert.NotPanics(t, func() { processor.Add(tt.request) }, "The method should not panic")
+			}
+		})
+	}
+}
+
+func TestRunBulkProcessor(t *testing.T) {
+	tests := []struct {
+		name   string
+		params *bulk.BulkProcessorParameters
+	}{
+		{
+			name: "successful initialization",
+			params: &bulk.BulkProcessorParameters{
+				Name:          "test-processor",
+				NumOfWorkers:  5,
+				BulkActions:   1000,
+				BulkSize:      2 * 1024 * 1024, // 2MB
+				FlushInterval: 30 * time.Second,
+				Backoff:       elastic.NewExponentialBackoff(10*time.Millisecond, 8*time.Second),
+				BeforeFunc: func(executionId int64, requests []bulk.GenericBulkableRequest) {
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			elasticV6, testServer := getMockClient(t, nil)
+			defer testServer.Close()
+			result, err := elasticV6.RunBulkProcessor(context.Background(), tt.params)
+			assert.NoError(t, err)
+			assert.NotNil(t, result)
+		})
+	}
 }
