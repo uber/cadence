@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/client/history"
@@ -53,7 +54,7 @@ func Test_historyClient_CloseShard(t *testing.T) {
 		{
 			name: "nil context success",
 			fields: fields{
-				timeout: time.Millisecond * 100,
+				timeout: time.Millisecond * 150,
 			},
 			args: args{
 				ctx: nil,
@@ -106,4 +107,26 @@ func Test_historyClient_CloseShard(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_historyClient_GetReplicationMessages(t *testing.T) {
+	t.Run("no timeout", func(t *testing.T) {
+		m := history.NewMockClient(gomock.NewController(t))
+		m.EXPECT().GetReplicationMessages(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, r *types.GetReplicationMessagesRequest, opt ...yarpc.CallOption) (*types.GetReplicationMessagesResponse, error) {
+			for {
+				select {
+				case <-ctx.Done():
+					return nil, ctx.Err()
+				case <-time.After(time.Millisecond * 100):
+					return &types.GetReplicationMessagesResponse{}, nil
+				}
+			}
+		})
+		c := historyClient{
+			client:  m,
+			timeout: time.Millisecond * 10,
+		}
+		_, err := c.GetReplicationMessages(context.Background(), &types.GetReplicationMessagesRequest{})
+		assert.NoError(t, err)
+	})
 }
