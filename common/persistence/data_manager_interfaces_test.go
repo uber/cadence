@@ -200,7 +200,6 @@ func TestOnlyGetTypeTask(t *testing.T) {
 	}
 }
 
-
 func TestNewHistoryBranch(t *testing.T) {
 	newTreeID := "newTreeID"
 	generalToken, err := NewHistoryBranchToken(newTreeID)
@@ -246,6 +245,7 @@ func TestHasMoreRowsToDelete(t *testing.T) {
 	assert.False(t, HasMoreRowsToDelete(9, 10))
 	assert.False(t, HasMoreRowsToDelete(-1, 10))
 
+}
 func TestTransferTaskInfo(t *testing.T) {
 	timeNow := time.Now()
 	task := &TransferTaskInfo{
