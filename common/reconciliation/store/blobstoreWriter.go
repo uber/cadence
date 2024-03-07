@@ -145,7 +145,7 @@ func getBlobstoreWriteFn(
 			}),
 		)
 
-		//The Do method of throttleRetry is used to execute the operation with retries according to the policy.
+		// The Do method of throttleRetry is used to execute the operation with retries according to the policy.
 		err := throttleRetry.Do(context.Background(), operation)
 		if err != nil {
 			return nil, err

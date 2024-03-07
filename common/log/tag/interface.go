@@ -69,7 +69,7 @@ func newBoolTag(key string, value bool) Tag {
 }
 
 func newErrorTag(key string, value error) Tag {
-	//NOTE zap already chosen "error" as key
+	// NOTE zap already chosen "error" as key
 	return Tag{
 		field: zap.Error(value),
 	}

@@ -449,12 +449,12 @@ func (he *HistoryEventVertex) SetName(
 }
 
 // Equals compares two vertex
-//func (he *HistoryEventVertex) Equals(
+// func (he *HistoryEventVertex) Equals(
 //	v Vertex,
-//) bool {
+// ) bool {
 //
 //	return strings.EqualFold(he.name, v.GetName()) && he.data == v.GetData()
-//}
+// }
 
 // SetIsStrictOnNextVertex sets if a vertex can be added between the current vertex and its child Vertices
 func (he *HistoryEventVertex) SetIsStrictOnNextVertex(
