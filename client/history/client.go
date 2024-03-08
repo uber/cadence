@@ -22,6 +22,7 @@ package history
 
 import (
 	"context"
+	"github.com/uber/cadence/common/peerresolver"
 	"math/rand"
 	"sync"
 	"time"
@@ -50,7 +51,7 @@ type (
 		rpcMaxSizeInBytes int // This value currently only used in GetReplicationMessage API
 		tokenSerializer   common.TaskTokenSerializer
 		client            Client
-		peerResolver      PeerResolver
+		peerResolver      peerresolver.PeerResolver
 		logger            log.Logger
 	}
 
@@ -66,7 +67,7 @@ func NewClient(
 	numberOfShards int,
 	rpcMaxSizeInBytes int,
 	client Client,
-	peerResolver PeerResolver,
+	peerResolver peerresolver.PeerResolver,
 	logger log.Logger,
 ) Client {
 	return &clientImpl{
@@ -84,7 +85,7 @@ func (c *clientImpl) StartWorkflowExecution(
 	request *types.HistoryStartWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) (*types.StartWorkflowExecutionResponse, error) {
-	peer, err := c.peerResolver.FromWorkflowID(request.StartRequest.WorkflowID)
+	peer, err := c.peerResolver.FromRedirectKey(request.ToRedirectKey())
 	if err != nil {
 		return nil, err
 	}

@@ -21,6 +21,7 @@
 package client
 
 import (
+	"github.com/uber/cadence/common/peerresolver"
 	"time"
 
 	adminv1 "github.com/uber/cadence-idl/go/proto/admin/v1"
@@ -116,7 +117,7 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 		rawClient = thrift.NewHistoryClient(historyserviceclient.New(outboundConfig))
 	}
 
-	peerResolver := history.NewPeerResolver(cf.numberOfHistoryShards, cf.resolver, namedPort)
+	peerResolver := peerresolver.NewPeerResolver(cf.numberOfHistoryShards, cf.resolver, namedPort)
 
 	client := history.NewClient(
 		cf.numberOfHistoryShards,

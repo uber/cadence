@@ -18,12 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package history
+package peerresolver
 
 import (
+	"fmt"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/service"
+	"github.com/uber/cadence/common/types"
 )
 
 // PeerResolver is used to resolve history peers.
@@ -99,4 +101,21 @@ func (pr PeerResolver) GetAllPeers() ([]string, error) {
 		peers = append(peers, peer)
 	}
 	return peers, nil
+}
+
+// FromRedirectKey resolve the peer from types.RedirectKey by a specific order
+func (pr PeerResolver) FromRedirectKey(key types.RedirectKey) (string, error) {
+	if key.ShardID != nil {
+		return pr.FromShardID(*key.ShardID)
+	}
+	if key.WorkflowID != "" {
+		return pr.FromWorkflowID(key.WorkflowID)
+	}
+	if key.DomainID != "" {
+		return pr.FromDomainID(key.DomainID)
+	}
+	if key.HostAddress != "" {
+		return pr.FromHostAddress(key.HostAddress)
+	}
+	return "", fmt.Errorf("RedirectKey is not valid: %v", key)
 }
