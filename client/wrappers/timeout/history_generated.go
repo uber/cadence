@@ -62,11 +62,6 @@ func (c *historyClient) CloseShard(ctx context.Context, cp1 *types.CloseShardReq
 }
 
 func (c *historyClient) CountDLQMessages(ctx context.Context, cp1 *types.CountDLQMessagesRequest, p1 ...yarpc.CallOption) (hp1 *types.HistoryCountDLQMessagesResponse, err error) {
-<<<<<<< HEAD
-=======
-	ctx, cancel := createContext(ctx, c.timeout)
-	defer cancel()
->>>>>>> ca7cbd736 (fix merge conflict with histoy client changes and seperate createContext logic)
 	return c.client.CountDLQMessages(ctx, cp1, p1...)
 }
 
@@ -95,29 +90,14 @@ func (c *historyClient) DescribeWorkflowExecution(ctx context.Context, hp1 *type
 }
 
 func (c *historyClient) GetCrossClusterTasks(ctx context.Context, gp1 *types.GetCrossClusterTasksRequest, p1 ...yarpc.CallOption) (gp2 *types.GetCrossClusterTasksResponse, err error) {
-<<<<<<< HEAD
-=======
-	ctx, cancel := createContext(ctx, c.timeout)
-	defer cancel()
->>>>>>> ca7cbd736 (fix merge conflict with histoy client changes and seperate createContext logic)
 	return c.client.GetCrossClusterTasks(ctx, gp1, p1...)
 }
 
 func (c *historyClient) GetDLQReplicationMessages(ctx context.Context, gp1 *types.GetDLQReplicationMessagesRequest, p1 ...yarpc.CallOption) (gp2 *types.GetDLQReplicationMessagesResponse, err error) {
-<<<<<<< HEAD
-=======
-	ctx, cancel := createContext(ctx, c.timeout)
-	defer cancel()
->>>>>>> ca7cbd736 (fix merge conflict with histoy client changes and seperate createContext logic)
 	return c.client.GetDLQReplicationMessages(ctx, gp1, p1...)
 }
 
 func (c *historyClient) GetFailoverInfo(ctx context.Context, gp1 *types.GetFailoverInfoRequest, p1 ...yarpc.CallOption) (gp2 *types.GetFailoverInfoResponse, err error) {
-<<<<<<< HEAD
-=======
-	ctx, cancel := createContext(ctx, c.timeout)
-	defer cancel()
->>>>>>> ca7cbd736 (fix merge conflict with histoy client changes and seperate createContext logic)
 	return c.client.GetFailoverInfo(ctx, gp1, p1...)
 }
 
@@ -128,20 +108,10 @@ func (c *historyClient) GetMutableState(ctx context.Context, gp1 *types.GetMutab
 }
 
 func (c *historyClient) GetReplicationMessages(ctx context.Context, gp1 *types.GetReplicationMessagesRequest, p1 ...yarpc.CallOption) (gp2 *types.GetReplicationMessagesResponse, err error) {
-<<<<<<< HEAD
-=======
-	ctx, cancel := createContext(ctx, c.timeout)
-	defer cancel()
->>>>>>> ca7cbd736 (fix merge conflict with histoy client changes and seperate createContext logic)
 	return c.client.GetReplicationMessages(ctx, gp1, p1...)
 }
 
 func (c *historyClient) MergeDLQMessages(ctx context.Context, mp1 *types.MergeDLQMessagesRequest, p1 ...yarpc.CallOption) (mp2 *types.MergeDLQMessagesResponse, err error) {
-<<<<<<< HEAD
-=======
-	ctx, cancel := createContext(ctx, c.timeout)
-	defer cancel()
->>>>>>> ca7cbd736 (fix merge conflict with histoy client changes and seperate createContext logic)
 	return c.client.MergeDLQMessages(ctx, mp1, p1...)
 }
 
@@ -158,11 +128,6 @@ func (c *historyClient) PollMutableState(ctx context.Context, pp1 *types.PollMut
 }
 
 func (c *historyClient) PurgeDLQMessages(ctx context.Context, pp1 *types.PurgeDLQMessagesRequest, p1 ...yarpc.CallOption) (err error) {
-<<<<<<< HEAD
-=======
-	ctx, cancel := createContext(ctx, c.timeout)
-	defer cancel()
->>>>>>> ca7cbd736 (fix merge conflict with histoy client changes and seperate createContext logic)
 	return c.client.PurgeDLQMessages(ctx, pp1, p1...)
 }
 
@@ -173,11 +138,6 @@ func (c *historyClient) QueryWorkflow(ctx context.Context, hp1 *types.HistoryQue
 }
 
 func (c *historyClient) ReadDLQMessages(ctx context.Context, rp1 *types.ReadDLQMessagesRequest, p1 ...yarpc.CallOption) (rp2 *types.ReadDLQMessagesResponse, err error) {
-<<<<<<< HEAD
-=======
-	ctx, cancel := createContext(ctx, c.timeout)
-	defer cancel()
->>>>>>> ca7cbd736 (fix merge conflict with histoy client changes and seperate createContext logic)
 	return c.client.ReadDLQMessages(ctx, rp1, p1...)
 }
 

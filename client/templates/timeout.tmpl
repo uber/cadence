@@ -5,6 +5,7 @@
 {{ $Decorator := (printf "%s%s" $ClientName .Interface.Name) }}
 {{$largeTimeoutAPIs := list "adminClient.GetCrossClusterTasks" "adminClient.GetReplicationMessages"}}
 {{$longPollTimeoutAPIs := list "frontendClient.ListArchivedWorkflowExecutions" "frontendClient.PollForActivityTask" "frontendClient.PollForDecisionTask"}}
+{{$noTimeoutAPIs := list "historyClient.GetReplicationMessages" "historyClient.GetDLQReplicationMessages" "historyClient.CountDLQMessages" "historyClient.ReadDLQMessages" "historyClient.PurgeDLQMessages" "historyClient.MergeDLQMessages" "historyClient.GetCrossClusterTasks" "historyClient.GetFailoverInfo"}}
 {{/*
  $fieldMap defines a map of the decorator struct fields
  with field name as the key and field type as the value
@@ -58,12 +59,14 @@ func New{{$Decorator}}(
 func (c * {{$decorator}}) {{$method.Declaration}} {
     {{- if has (printf "%s.%s" $decorator $method.Name) $largeTimeoutAPIs -}}
             ctx, cancel := createContext(ctx, c.largeTimeout)
+            defer cancel()
     {{- else if has (printf "%s.%s" $decorator $method.Name) $longPollTimeoutAPIs -}}
             ctx, cancel := createContext(ctx, c.longPollTimeout)
-    {{- else -}}
+            defer cancel()
+    {{- else if not (has (printf "%s.%s" $decorator $method.Name) $noTimeoutAPIs) -}}
             ctx, cancel := createContext(ctx, c.timeout)
+            defer cancel()
     {{- end }}
-    defer cancel()
     {{$method.Pass ("c.client.") }}
 }
 {{end}}
