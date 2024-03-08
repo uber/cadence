@@ -25,6 +25,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/go-cmp/cmp"
@@ -701,6 +702,619 @@ func TestUpdateWorkflowExecutionWithTasks(t *testing.T) {
 
 			if (err != nil) != tc.wantErr {
 				t.Errorf("UpdateWorkflowExecutionWithTasks() error: %v, wantErr %v", err, tc.wantErr)
+			}
+		})
+	}
+}
+
+func TestDeleteCurrentWorkflow(t *testing.T) {
+	tests := []struct {
+		name                  string
+		shardID               int
+		domainID              string
+		workflowID            string
+		currentRunIDCondition string
+		queryMockFn           func(query *gocql.MockQuery)
+		wantErr               bool
+	}{
+		{
+			name:                  "success",
+			shardID:               1,
+			domainID:              "test-domain-id",
+			workflowID:            "test-workflow-id",
+			currentRunIDCondition: "test-run-id",
+			queryMockFn: func(query *gocql.MockQuery) {
+				query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+				query.EXPECT().Exec().Return(nil).Times(1)
+			},
+			wantErr: false,
+		},
+		{
+			name:                  "query exec fails",
+			shardID:               1,
+			domainID:              "test-domain-id",
+			workflowID:            "test-workflow-id",
+			currentRunIDCondition: "test-run-id",
+			queryMockFn: func(query *gocql.MockQuery) {
+				query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+				query.EXPECT().Exec().Return(errors.New("failed to exec")).Times(1)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+
+			query := gocql.NewMockQuery(ctrl)
+			tc.queryMockFn(query)
+
+			session := &fakeSession{
+				query: query,
+			}
+			logger := testlogger.New(t)
+			db := newCassandraDBFromSession(nil, session, logger, nil, dbWithClient(gocql.NewMockClient(ctrl)))
+
+			err := db.DeleteCurrentWorkflow(context.Background(), tc.shardID, tc.domainID, tc.workflowID, tc.currentRunIDCondition)
+
+			if (err != nil) != tc.wantErr {
+				t.Errorf("DeleteCurrentWorkflow() error: %v, wantErr: %v", err, tc.wantErr)
+			}
+		})
+	}
+}
+
+func TestDeleteWorkflowExecution(t *testing.T) {
+	tests := []struct {
+		name        string
+		shardID     int
+		domainID    string
+		workflowID  string
+		runID       string
+		queryMockFn func(query *gocql.MockQuery)
+		wantErr     bool
+	}{
+		{
+			name:       "success",
+			shardID:    1,
+			domainID:   "test-domain-id",
+			workflowID: "test-workflow-id",
+			runID:      "test-run-id",
+			queryMockFn: func(query *gocql.MockQuery) {
+				query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+				query.EXPECT().Exec().Return(nil).Times(1)
+			},
+			wantErr: false,
+		},
+		{
+			name:       "query exec fails",
+			shardID:    1,
+			domainID:   "test-domain-id",
+			workflowID: "test-workflow-id",
+			runID:      "test-run-id",
+			queryMockFn: func(query *gocql.MockQuery) {
+				query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+				query.EXPECT().Exec().Return(errors.New("failed to exec")).Times(1)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+
+			query := gocql.NewMockQuery(ctrl)
+			tc.queryMockFn(query)
+
+			session := &fakeSession{
+				query: query,
+			}
+			logger := testlogger.New(t)
+			db := newCassandraDBFromSession(nil, session, logger, nil, dbWithClient(gocql.NewMockClient(ctrl)))
+
+			err := db.DeleteWorkflowExecution(context.Background(), tc.shardID, tc.domainID, tc.workflowID, tc.runID)
+
+			if (err != nil) != tc.wantErr {
+				t.Errorf("DeleteWorkflowExecution() error: %v, wantErr: %v", err, tc.wantErr)
+			}
+		})
+	}
+}
+
+func TestDeleteTransferTask(t *testing.T) {
+	tests := []struct {
+		name        string
+		shardID     int
+		taskID      int64
+		queryMockFn func(query *gocql.MockQuery)
+		wantErr     bool
+	}{
+		{
+			name:    "success",
+			shardID: 1,
+			taskID:  123,
+			queryMockFn: func(query *gocql.MockQuery) {
+				query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+				query.EXPECT().Exec().Return(nil).Times(1)
+			},
+			wantErr: false,
+		},
+		{
+			name:    "query exec fails",
+			shardID: 1,
+			taskID:  123,
+			queryMockFn: func(query *gocql.MockQuery) {
+				query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+				query.EXPECT().Exec().Return(errors.New("failed to exec")).Times(1)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+
+			query := gocql.NewMockQuery(ctrl)
+			tc.queryMockFn(query)
+
+			session := &fakeSession{
+				query: query,
+			}
+			logger := testlogger.New(t)
+			db := newCassandraDBFromSession(nil, session, logger, nil, dbWithClient(gocql.NewMockClient(ctrl)))
+
+			err := db.DeleteTransferTask(context.Background(), tc.shardID, tc.taskID)
+
+			if (err != nil) != tc.wantErr {
+				t.Errorf("DeleteTransferTask() error: %v, wantErr: %v", err, tc.wantErr)
+			}
+		})
+	}
+}
+
+func TestRangeDeleteTransferTasks(t *testing.T) {
+	tests := []struct {
+		name                 string
+		shardID              int
+		exclusiveBeginTaskID int64
+		inclusiveEndTaskID   int64
+		queryMockFn          func(query *gocql.MockQuery)
+		wantErr              bool
+	}{
+		{
+			name:                 "success",
+			shardID:              1,
+			exclusiveBeginTaskID: 123,
+			inclusiveEndTaskID:   456,
+			queryMockFn: func(query *gocql.MockQuery) {
+				query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+				query.EXPECT().Exec().Return(nil).Times(1)
+			},
+			wantErr: false,
+		},
+		{
+			name:                 "query exec fails",
+			shardID:              1,
+			exclusiveBeginTaskID: 123,
+			inclusiveEndTaskID:   456,
+			queryMockFn: func(query *gocql.MockQuery) {
+				query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+				query.EXPECT().Exec().Return(errors.New("failed to exec")).Times(1)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+
+			query := gocql.NewMockQuery(ctrl)
+			tc.queryMockFn(query)
+
+			session := &fakeSession{
+				query: query,
+			}
+			logger := testlogger.New(t)
+			db := newCassandraDBFromSession(nil, session, logger, nil, dbWithClient(gocql.NewMockClient(ctrl)))
+
+			err := db.RangeDeleteTransferTasks(context.Background(), tc.shardID, tc.exclusiveBeginTaskID, tc.inclusiveEndTaskID)
+
+			if (err != nil) != tc.wantErr {
+				t.Errorf("RangeDeleteTransferTasks() error: %v, wantErr: %v", err, tc.wantErr)
+			}
+		})
+	}
+}
+
+func TestDeleteTimerTask(t *testing.T) {
+	now := time.Now()
+	tests := []struct {
+		name                string
+		shardID             int
+		taskID              int64
+		visibilityTimestamp time.Time
+		queryMockFn         func(query *gocql.MockQuery)
+		wantErr             bool
+	}{
+		{
+			name:                "success",
+			shardID:             1,
+			taskID:              123,
+			visibilityTimestamp: now,
+			queryMockFn: func(query *gocql.MockQuery) {
+				query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+				query.EXPECT().Exec().Return(nil).Times(1)
+			},
+			wantErr: false,
+		},
+		{
+			name:                "query exec fails",
+			shardID:             1,
+			taskID:              123,
+			visibilityTimestamp: now,
+			queryMockFn: func(query *gocql.MockQuery) {
+				query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+				query.EXPECT().Exec().Return(errors.New("failed to exec")).Times(1)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+
+			query := gocql.NewMockQuery(ctrl)
+			tc.queryMockFn(query)
+
+			session := &fakeSession{
+				query: query,
+			}
+			logger := testlogger.New(t)
+			db := newCassandraDBFromSession(nil, session, logger, nil, dbWithClient(gocql.NewMockClient(ctrl)))
+
+			err := db.DeleteTimerTask(context.Background(), tc.shardID, tc.taskID, tc.visibilityTimestamp)
+
+			if (err != nil) != tc.wantErr {
+				t.Errorf("DeleteTimerTask() error: %v, wantErr: %v", err, tc.wantErr)
+			}
+		})
+	}
+}
+
+func TestRangeDeleteTimerTasks(t *testing.T) {
+	now := time.Now()
+	tests := []struct {
+		name             string
+		shardID          int
+		inclusiveMinTime time.Time
+		exclusiveMaxTime time.Time
+		queryMockFn      func(query *gocql.MockQuery)
+		wantErr          bool
+	}{
+		{
+			name:             "success",
+			shardID:          1,
+			inclusiveMinTime: now,
+			exclusiveMaxTime: now.Add(time.Hour),
+			queryMockFn: func(query *gocql.MockQuery) {
+				query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+				query.EXPECT().Exec().Return(nil).Times(1)
+			},
+			wantErr: false,
+		},
+		{
+			name:             "query exec fails",
+			shardID:          1,
+			inclusiveMinTime: now,
+			exclusiveMaxTime: now.Add(time.Hour),
+			queryMockFn: func(query *gocql.MockQuery) {
+				query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+				query.EXPECT().Exec().Return(errors.New("failed to exec")).Times(1)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+
+			query := gocql.NewMockQuery(ctrl)
+			tc.queryMockFn(query)
+
+			session := &fakeSession{
+				query: query,
+			}
+			logger := testlogger.New(t)
+			db := newCassandraDBFromSession(nil, session, logger, nil, dbWithClient(gocql.NewMockClient(ctrl)))
+
+			err := db.RangeDeleteTimerTasks(context.Background(), tc.shardID, tc.inclusiveMinTime, tc.exclusiveMaxTime)
+
+			if (err != nil) != tc.wantErr {
+				t.Errorf("RangeDeleteTimerTasks() error: %v, wantErr: %v", err, tc.wantErr)
+			}
+		})
+	}
+}
+
+func TestDeleteReplicationTask(t *testing.T) {
+	tests := []struct {
+		name        string
+		shardID     int
+		taskID      int64
+		queryMockFn func(query *gocql.MockQuery)
+		wantErr     bool
+	}{
+		{
+			name:    "success",
+			shardID: 1,
+			taskID:  123,
+			queryMockFn: func(query *gocql.MockQuery) {
+				query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+				query.EXPECT().Exec().Return(nil).Times(1)
+			},
+			wantErr: false,
+		},
+		{
+			name:    "query exec fails",
+			shardID: 1,
+			taskID:  123,
+			queryMockFn: func(query *gocql.MockQuery) {
+				query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+				query.EXPECT().Exec().Return(errors.New("failed to exec")).Times(1)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+
+			query := gocql.NewMockQuery(ctrl)
+			tc.queryMockFn(query)
+
+			session := &fakeSession{
+				query: query,
+			}
+			logger := testlogger.New(t)
+			db := newCassandraDBFromSession(nil, session, logger, nil, dbWithClient(gocql.NewMockClient(ctrl)))
+
+			err := db.DeleteReplicationTask(context.Background(), tc.shardID, tc.taskID)
+
+			if (err != nil) != tc.wantErr {
+				t.Errorf("DeleteReplicationTask() error: %v, wantErr: %v", err, tc.wantErr)
+			}
+		})
+	}
+}
+
+func TestRangeDeleteReplicationTasks(t *testing.T) {
+	tests := []struct {
+		name               string
+		shardID            int
+		inclusiveEndTaskID int64
+		queryMockFn        func(query *gocql.MockQuery)
+		wantErr            bool
+	}{
+		{
+			name:               "success",
+			shardID:            1,
+			inclusiveEndTaskID: 123,
+			queryMockFn: func(query *gocql.MockQuery) {
+				query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+				query.EXPECT().Exec().Return(nil).Times(1)
+			},
+			wantErr: false,
+		},
+		{
+			name:               "query exec fails",
+			shardID:            1,
+			inclusiveEndTaskID: 123,
+			queryMockFn: func(query *gocql.MockQuery) {
+				query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+				query.EXPECT().Exec().Return(errors.New("failed to exec")).Times(1)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+
+			query := gocql.NewMockQuery(ctrl)
+			tc.queryMockFn(query)
+
+			session := &fakeSession{
+				query: query,
+			}
+			logger := testlogger.New(t)
+			db := newCassandraDBFromSession(nil, session, logger, nil, dbWithClient(gocql.NewMockClient(ctrl)))
+
+			err := db.RangeDeleteReplicationTasks(context.Background(), tc.shardID, tc.inclusiveEndTaskID)
+
+			if (err != nil) != tc.wantErr {
+				t.Errorf("RangeDeleteReplicationTasks() error: %v, wantErr: %v", err, tc.wantErr)
+			}
+		})
+	}
+}
+
+func TestDeleteCrossClusterTask(t *testing.T) {
+	tests := []struct {
+		name          string
+		shardID       int
+		targetCluster string
+		taskID        int64
+		queryMockFn   func(query *gocql.MockQuery)
+		wantErr       bool
+	}{
+		{
+			name:          "success",
+			shardID:       1,
+			targetCluster: "test-target-cluster",
+			taskID:        123,
+			queryMockFn: func(query *gocql.MockQuery) {
+				query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+				query.EXPECT().Exec().Return(nil).Times(1)
+			},
+			wantErr: false,
+		},
+		{
+			name:          "query exec fails",
+			shardID:       1,
+			targetCluster: "test-target-cluster",
+			taskID:        123,
+			queryMockFn: func(query *gocql.MockQuery) {
+				query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+				query.EXPECT().Exec().Return(errors.New("failed to exec")).Times(1)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+
+			query := gocql.NewMockQuery(ctrl)
+			tc.queryMockFn(query)
+
+			session := &fakeSession{
+				query: query,
+			}
+			logger := testlogger.New(t)
+			db := newCassandraDBFromSession(nil, session, logger, nil, dbWithClient(gocql.NewMockClient(ctrl)))
+
+			err := db.DeleteCrossClusterTask(context.Background(), tc.shardID, tc.targetCluster, tc.taskID)
+
+			if (err != nil) != tc.wantErr {
+				t.Errorf("DeleteCrossClusterTask() error: %v, wantErr: %v", err, tc.wantErr)
+			}
+		})
+	}
+}
+
+func TestRangeDeleteCrossClusterTasks(t *testing.T) {
+	tests := []struct {
+		name                 string
+		shardID              int
+		targetCluster        string
+		exclusiveBeginTaskID int64
+		inclusiveEndTaskID   int64
+		queryMockFn          func(query *gocql.MockQuery)
+		wantErr              bool
+	}{
+		{
+			name:                 "success",
+			shardID:              1,
+			targetCluster:        "test-target-cluster",
+			exclusiveBeginTaskID: 123,
+			inclusiveEndTaskID:   456,
+			queryMockFn: func(query *gocql.MockQuery) {
+				query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+				query.EXPECT().Exec().Return(nil).Times(1)
+			},
+			wantErr: false,
+		},
+		{
+			name:                 "query exec fails",
+			shardID:              1,
+			targetCluster:        "test-target-cluster",
+			exclusiveBeginTaskID: 123,
+			inclusiveEndTaskID:   456,
+			queryMockFn: func(query *gocql.MockQuery) {
+				query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+				query.EXPECT().Exec().Return(errors.New("failed to exec")).Times(1)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+
+			query := gocql.NewMockQuery(ctrl)
+			tc.queryMockFn(query)
+
+			session := &fakeSession{
+				query: query,
+			}
+			logger := testlogger.New(t)
+			db := newCassandraDBFromSession(nil, session, logger, nil, dbWithClient(gocql.NewMockClient(ctrl)))
+
+			err := db.RangeDeleteCrossClusterTasks(context.Background(), tc.shardID, tc.targetCluster, tc.exclusiveBeginTaskID, tc.inclusiveEndTaskID)
+
+			if (err != nil) != tc.wantErr {
+				t.Errorf("RangeDeleteCrossClusterTasks() error: %v, wantErr: %v", err, tc.wantErr)
+			}
+		})
+	}
+}
+
+func TestInsertReplicationDLQTask(t *testing.T) {
+	tests := []struct {
+		name          string
+		shardID       int
+		sourceCluster string
+		taskID        int64
+		task          nosqlplugin.ReplicationTask
+		queryMockFn   func(query *gocql.MockQuery)
+		wantErr       bool
+	}{
+		{
+			name:          "success",
+			shardID:       1,
+			sourceCluster: "test-source-cluster",
+			taskID:        123,
+			task: nosqlplugin.ReplicationTask{
+				TaskID: 123,
+			},
+			queryMockFn: func(query *gocql.MockQuery) {
+				query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+				query.EXPECT().Exec().Return(nil).Times(1)
+			},
+			wantErr: false,
+		},
+		{
+			name:          "query exec fails",
+			shardID:       1,
+			sourceCluster: "test-source-cluster",
+			taskID:        123,
+			task: nosqlplugin.ReplicationTask{
+				TaskID: 123,
+			},
+			queryMockFn: func(query *gocql.MockQuery) {
+				query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+				query.EXPECT().Exec().Return(errors.New("failed to exec")).Times(1)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			query := gocql.NewMockQuery(ctrl)
+			tc.queryMockFn(query)
+
+			session := &fakeSession{
+				query: query,
+			}
+			logger := testlogger.New(t)
+			db := newCassandraDBFromSession(nil, session, logger, nil, dbWithClient(gocql.NewMockClient(ctrl)))
+
+			err := db.InsertReplicationDLQTask(context.Background(), tc.shardID, tc.sourceCluster, tc.task)
+
+			if (err != nil) != tc.wantErr {
+				t.Errorf("RangeDeleteCrossClusterTasks() error: %v, wantErr: %v", err, tc.wantErr)
 			}
 		})
 	}

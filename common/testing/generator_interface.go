@@ -67,7 +67,7 @@ type (
 		// The name of the vertex. Usually, this will be the Cadence event type
 		SetName(string)
 		GetName() string
-		//Equals(Vertex) bool
+		// Equals(Vertex) bool
 		// IsStrictOnNextVertex means if the vertex must be followed by its children
 		// When IsStrictOnNextVertex set to true, it means this event can only follow by its neighbors
 		SetIsStrictOnNextVertex(bool)

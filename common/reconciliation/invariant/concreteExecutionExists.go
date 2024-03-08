@@ -99,7 +99,7 @@ func (c *concreteExecutionExists) Check(
 		}
 	}
 	if !concreteExecResp.Exists {
-		//verify if the current execution exists
+		// verify if the current execution exists
 		_, checkResult := c.validateCurrentRunID(ctx, currentExecution)
 		if checkResult != nil {
 			return *checkResult

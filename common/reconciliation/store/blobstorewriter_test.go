@@ -60,7 +60,7 @@ func TestBlobstoreWriter(t *testing.T) {
 			cfg := &config.FileBlobstore{
 				OutputDirectory: outputDir,
 			}
-			//Reusing the FilestoreClient from the other sister test in the same package.
+			// Reusing the FilestoreClient from the other sister test in the same package.
 			blobstoreClient, err := filestore.NewFilestoreClient(cfg)
 			require.NoError(t, err)
 
