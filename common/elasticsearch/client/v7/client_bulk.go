@@ -111,7 +111,7 @@ func (c *ElasticV7) runBulkProcessor(ctx context.Context, p *bulkProcessorParame
 	}, nil
 }
 
-func fromV7toGenericBulkResponse(response *elastic.BulkResponse) *bulk.GenericBulkResponse {
+func fromV7ToGenericBulkResponse(response *elastic.BulkResponse) *bulk.GenericBulkResponse {
 	if response == nil {
 		return &bulk.GenericBulkResponse{}
 	}
@@ -166,12 +166,11 @@ func (c *ElasticV7) RunBulkProcessor(ctx context.Context, parameters *bulk.BulkP
 	}
 
 	afterFunc := func(executionId int64, requests []elastic.BulkableRequest, response *elastic.BulkResponse, err error) {
-		gerr := errorToGenericError(err)
 		parameters.AfterFunc(
 			executionId,
 			fromV7ToGenericBulkableRequests(requests),
-			fromV7toGenericBulkResponse(response),
-			gerr)
+			fromV7ToGenericBulkResponse(response),
+			convertV7ErrorToGenericError(err))
 	}
 
 	return c.runBulkProcessor(ctx, &bulkProcessorParametersV7{
@@ -185,7 +184,7 @@ func (c *ElasticV7) RunBulkProcessor(ctx context.Context, parameters *bulk.BulkP
 		AfterFunc:     afterFunc,
 	})
 }
-func errorToGenericError(err error) *bulk.GenericError {
+func convertV7ErrorToGenericError(err error) *bulk.GenericError {
 	if err == nil {
 		return nil
 	}
