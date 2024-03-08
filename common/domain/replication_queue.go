@@ -208,7 +208,7 @@ func (q *replicationQueueImpl) GetMessagesFromDLQ(
 			return nil, nil, fmt.Errorf("failed to decode dlq task: %v", err)
 		}
 
-		//Overwrite to local cluster message id
+		// Overwrite to local cluster message id
 		replicationTask.SourceTaskId = common.Int64Ptr(int64(message.ID))
 		replicationTasks = append(replicationTasks, thrift.ToReplicationTask(&replicationTask))
 	}

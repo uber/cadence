@@ -556,7 +556,7 @@ func (s *ESVisibilitySuite) TestSerializePageToken() {
 }
 
 // Move to client_v6_test
-//func (s *ESVisibilitySuite) TestConvertSearchResultToVisibilityRecord() {
+// func (s *ESVisibilitySuite) TestConvertSearchResultToVisibilityRecord() {
 //	data := []byte(`{"CloseStatus": 0,
 //          "CloseTime": 1547596872817380000,
 //          "DomainID": "bfd5c907-f899-4baf-a7b2-2ab85e623ebd",
@@ -598,7 +598,7 @@ func (s *ESVisibilitySuite) TestSerializePageToken() {
 //	}
 //	info = s.visibilityStore.convertSearchResultToVisibilityRecord(searchHit)
 //	s.Nil(info)
-//}
+// }
 
 func (s *ESVisibilitySuite) TestShouldSearchAfter() {
 	token := &es.ElasticVisibilityPageToken{}

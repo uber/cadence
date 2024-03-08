@@ -21,7 +21,7 @@
 package cassandra
 
 const (
-	///////////////// Open Executions /////////////////
+	// /////////////// Open Executions /////////////////
 	openExecutionsColumnsForSelect = " workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding, task_list, is_cron, num_clusters, update_time, shard_id "
 
 	openExecutionsColumnsForInsert = "(domain_id, domain_partition, " + openExecutionsColumnsForSelect + ")"
@@ -78,7 +78,7 @@ const (
 		`and start_time = ? ` +
 		`and run_id = ? `
 
-	///////////////// Closed Executions /////////////////
+	// /////////////// Closed Executions /////////////////
 	closedExecutionColumnsForSelect = " workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo, encoding, task_list, is_cron, num_clusters, update_time, shard_id "
 
 	closedExecutionColumnsForInsert = "(domain_id, domain_partition, " + closedExecutionColumnsForSelect + ")"

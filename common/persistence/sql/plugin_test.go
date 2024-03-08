@@ -64,7 +64,7 @@ func TestPluginRegistration(t *testing.T) {
 	assert.True(t, PluginRegistered("fake2"), "PluginRegistered failed to return true for a registered plugin")
 	assert.False(t, PluginRegistered("fake3"), "PluginRegistered failed to return false for an unregistered plugin")
 
-	assert.Equal(t, []string{"fake", "fake2"}, GetRegisteredPluginNames(), "GetRegisteredPluginNames failed to return the correct list of registered plugins")
+	assert.Equal(t, []string{"fake", "fake2", "shared"}, GetRegisteredPluginNames(), "GetRegisteredPluginNames failed to return the correct list of registered plugins")
 
 	_, err := NewSQLDB(&config.SQL{PluginName: "fake"})
 	assert.NoError(t, err, "NewSQLDB failed to create a DB with a registered plugin")

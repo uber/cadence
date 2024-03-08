@@ -80,8 +80,8 @@ func (v *v6BulkProcessor) Add(request *bulk.GenericBulkableAddRequest) {
 			Version(request.Version).
 			Doc(request.Doc)
 	case bulk.BulkableCreateRequest:
-		//for bulk create request still calls the bulk index method
-		//with providing operation type
+		// for bulk create request still calls the bulk index method
+		// with providing operation type
 		req = elastic.NewBulkIndexRequest().
 			OpType("create").
 			Index(request.Index).
@@ -122,12 +122,11 @@ func (c *ElasticV6) RunBulkProcessor(ctx context.Context, parameters *bulk.BulkP
 	}
 
 	afterFunc := func(executionId int64, requests []elastic.BulkableRequest, response *elastic.BulkResponse, err error) {
-		gerr := convertV6ErrorToGenericError(err)
 		parameters.AfterFunc(
 			executionId,
 			fromV6ToGenericBulkableRequests(requests),
 			fromV6ToGenericBulkResponse(response),
-			gerr)
+			convertV6ErrorToGenericError(err))
 	}
 
 	return c.runBulkProcessor(ctx, &bulkProcessorParametersV6{
