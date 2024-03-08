@@ -3369,6 +3369,13 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 	attributes *types.ContinueAsNewWorkflowExecutionDecisionAttributes,
 ) (*types.HistoryEvent, MutableState, error) {
 
+	// fmt.Println("------")
+	// fmt.Println("starting state - return value - execution info")
+	// fmt.Println(valast.String(e.executionInfo))
+	// fmt.Println("starting state - return value - history info")
+	// fmt.Println(valast.String(e.hBuilder.history))
+	// fmt.Println("------")
+
 	opTag := tag.WorkflowActionWorkflowContinueAsNew
 	if err := e.checkMutability(opTag); err != nil {
 		return nil, nil, err
@@ -3433,6 +3440,16 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 	); err != nil {
 		return nil, nil, err
 	}
+
+	// fmt.Println("------")
+	// fmt.Println("e existing state builder - execution info", valast.String(e.executionInfo))
+	// fmt.Println("e existing state builder - execution info", valast.String(e.hBuilder.history))
+	// fmt.Println("------")
+	// fmt.Println("newStateBuilder - return value - execution info")
+	// fmt.Println(valast.String(newStateBuilder.executionInfo))
+	// fmt.Println("newStateBuilder - return value - history info")
+	// fmt.Println(valast.String(newStateBuilder.hBuilder.history))
+	// fmt.Println("------")
 
 	return continueAsNewEvent, newStateBuilder, nil
 }
