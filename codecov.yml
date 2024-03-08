@@ -21,7 +21,7 @@ coverage:
       default:
         informational: true
 comment:
-  layout: "header, files, footer"
+  layout: "condensed_header, condensed_files, condensed_footer"
   hide_project_coverage: false
 codecov:
   require_ci_to_pass: false
