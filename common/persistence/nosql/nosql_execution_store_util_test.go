@@ -212,6 +212,7 @@ func TestNosqlExecutionStoreUtils(t *testing.T) {
 			tc.validate(t, req, err)
 		})
 	}
+
 }
 
 func TestPrepareTasksForWorkflowTxn(t *testing.T) {
@@ -410,6 +411,60 @@ func TestPrepareNoSQLTasksForWorkflowTxn(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			transferTasks, crossClusterTasks, replicationTasks, timerTasks, err := tc.setupStore(store)
 			tc.validate(t, transferTasks, crossClusterTasks, replicationTasks, timerTasks, err)
+		})
+	}
+}
+
+func TestPrepareTransferTasksForWorkflowTxn(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDB := nosqlplugin.NewMockDB(mockCtrl)
+	store := newTestNosqlExecutionStore(mockDB, log.NewNoop())
+
+	testCases := []struct {
+		name       string
+		setupStore func(*nosqlExecutionStore) ([]*nosqlplugin.TransferTask, error)
+		validate   func(*testing.T, []*nosqlplugin.TransferTask, error)
+	}{
+		{
+			name: "Success - Prepare Transfer Tasks",
+			setupStore: func(store *nosqlExecutionStore) ([]*nosqlplugin.TransferTask, error) {
+				transferTasks := []persistence.Task{
+					&persistence.ActivityTask{
+						DomainID: "domainID",
+						TaskID:   1,
+					},
+				}
+				return store.prepareTransferTasksForWorkflowTxn("domainID", "workflowID", "runID", transferTasks)
+			},
+			validate: func(t *testing.T, tasks []*nosqlplugin.TransferTask, err error) {
+				assert.NoError(t, err)
+				assert.NotEmpty(t, tasks)
+			},
+		},
+		{
+			name: "Failure - Unsupported Task Type",
+			setupStore: func(store *nosqlExecutionStore) ([]*nosqlplugin.TransferTask, error) {
+				transferTasks := []persistence.Task{
+					&dummyTaskType{
+						VisibilityTimestamp: time.Now(),
+						TaskID:              -1, // Using -1 to denote dummy/unsupported task
+					},
+				}
+				return store.prepareTransferTasksForWorkflowTxn("domainID", "workflowID", "runID", transferTasks)
+			},
+			validate: func(t *testing.T, tasks []*nosqlplugin.TransferTask, err error) {
+				assert.Error(t, err)
+				assert.Nil(t, tasks)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tasks, err := tc.setupStore(store)
+			tc.validate(t, tasks, err)
 		})
 	}
 }
