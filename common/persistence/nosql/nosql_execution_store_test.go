@@ -423,6 +423,148 @@ func TestNosqlExecutionStore(t *testing.T) {
 			},
 			expectedError: nil,
 		},
+		{
+			name: "GetReplicationTasks success",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				tasks := []*nosqlplugin.ReplicationTask{{TaskID: 1}}
+				mockDB.EXPECT().
+					SelectReplicationTasksOrderByTaskID(ctx, shardID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(tasks, nil, nil)
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				resp, err := store.GetReplicationTasks(ctx, &persistence.GetReplicationTasksRequest{})
+				if err != nil {
+					return err
+				}
+				if len(resp.Tasks) == 0 {
+					return errors.New("expected to find replication tasks")
+				}
+				return nil
+			},
+			expectedError: nil,
+		},
+		{
+			name: "GetReplicationTasks success - empty task list",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				mockDB.EXPECT().
+					SelectReplicationTasksOrderByTaskID(ctx, shardID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return([]*nosqlplugin.ReplicationTask{}, nil, nil)
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				resp, err := store.GetReplicationTasks(ctx, &persistence.GetReplicationTasksRequest{})
+				if err != nil {
+					return err
+				}
+				if len(resp.Tasks) != 0 {
+					return errors.New("expected no replication tasks")
+				}
+				return nil
+			},
+			expectedError: nil,
+		},
+		{
+			name: "CompleteTransferTask success",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				mockDB.EXPECT().
+					DeleteTransferTask(ctx, shardID, gomock.Any()).
+					Return(nil)
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				return store.CompleteTransferTask(ctx, &persistence.CompleteTransferTaskRequest{TaskID: 1})
+			},
+			expectedError: nil,
+		},
+		{
+			name: "CompleteTransferTask with zero TaskID",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+
+				mockDB.EXPECT().
+					DeleteTransferTask(ctx, shardID, int64(0)).
+					Return(nil)
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				return store.CompleteTransferTask(ctx, &persistence.CompleteTransferTaskRequest{TaskID: 0})
+			},
+			expectedError: nil,
+		},
+		{
+			name: "RangeCompleteTransferTask success",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				mockDB.EXPECT().
+					RangeDeleteTransferTasks(ctx, shardID, gomock.Any(), gomock.Any()).
+					Return(nil)
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				_, err := store.RangeCompleteTransferTask(ctx, &persistence.RangeCompleteTransferTaskRequest{
+					ExclusiveBeginTaskID: 1,
+					InclusiveEndTaskID:   10,
+				})
+				return err
+			},
+			expectedError: nil,
+		},
+		{
+			name: "RangeCompleteTransferTask with inverted TaskID range proceeds",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				mockDB.EXPECT().
+					RangeDeleteTransferTasks(ctx, shardID, int64(10), int64(1)).
+					Return(nil)
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				_, err := store.RangeCompleteTransferTask(ctx, &persistence.RangeCompleteTransferTaskRequest{
+					ExclusiveBeginTaskID: 10,
+					InclusiveEndTaskID:   1,
+				})
+				return err
+			},
+			expectedError: nil,
+		},
+		{
+			name: "CompleteCrossClusterTask success",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				mockDB.EXPECT().
+					DeleteCrossClusterTask(ctx, shardID, gomock.Any(), gomock.Any()).
+					Return(nil)
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				return store.CompleteCrossClusterTask(ctx, &persistence.CompleteCrossClusterTaskRequest{
+					TargetCluster: "targetCluster",
+					TaskID:        1,
+				})
+			},
+			expectedError: nil,
+		},
+		{
+			name: "CompleteCrossClusterTask with missing TargetCluster proceeds",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				mockDB.EXPECT().
+					DeleteCrossClusterTask(ctx, shardID, "", int64(1)).
+					Return(nil)
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				return store.CompleteCrossClusterTask(ctx, &persistence.CompleteCrossClusterTaskRequest{
+					TargetCluster: "",
+					TaskID:        1,
+				})
+			},
+			expectedError: nil,
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
