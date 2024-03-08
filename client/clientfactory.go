@@ -181,7 +181,7 @@ func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndConfig(
 		client = thrift.NewAdminClient(adminserviceclient.New(config))
 	}
 
-	client = admin.NewClient(timeout, largeTimeout, client)
+	client = timeoutwrapper.NewAdminClient(client, largeTimeout, timeout)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.AdminErrorInjectionRate)(); errorRate != 0 {
 		client = errorinjectors.NewAdminClient(client, errorRate, cf.logger)
 	}
@@ -208,7 +208,7 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndConfig(
 		client = thrift.NewFrontendClient(workflowserviceclient.New(config))
 	}
 
-	client = frontend.NewClient(timeout, longPollTimeout, client)
+	client = timeoutwrapper.NewFrontendClient(client, longPollTimeout, timeout)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.FrontendErrorInjectionRate)(); errorRate != 0 {
 		client = errorinjectors.NewFrontendClient(client, errorRate, cf.logger)
 	}

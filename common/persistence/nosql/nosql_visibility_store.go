@@ -112,7 +112,7 @@ func (v *nosqlVisibilityStore) RecordWorkflowExecutionClosed(
 			TaskList:      request.TaskList,
 			IsCron:        request.IsCron,
 			NumClusters:   request.NumClusters,
-			//closed workflow attributes
+			// closed workflow attributes
 			Status:        &request.Status,
 			CloseTime:     request.CloseTimestamp,
 			HistoryLength: request.HistoryLength,

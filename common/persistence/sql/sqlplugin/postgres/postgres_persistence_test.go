@@ -96,12 +96,12 @@ FAIL: TestPostgresSQLQueuePersistence/TestDomainReplicationQueue (0.26s)
             	            	actual  : 98
             	Test:       	TestPostgresSQLQueuePersistence/TestDomainReplicationQueue
 */
-//func TestPostgresSQLQueuePersistence(t *testing.T) {
+// func TestPostgresSQLQueuePersistence(t *testing.T) {
 //	s := new(pt.QueuePersistenceSuite)
 //	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
 //	s.TestBase.Setup()
 //	suite.Run(t, s)
-//}
+// }
 
 func TestPostgresSQLConfigPersistence(t *testing.T) {
 	testflags.RequirePostgres(t)
