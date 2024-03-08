@@ -3,6 +3,7 @@ import (
   "time"
 )
 
+{{$exclude := splitList "|" (index .Vars "exclude")}}
 {{$clientName := (index .Vars "client")}}
 {{ $decorator := (printf "%s%s" (down $clientName) .Interface.Name) }}
 {{ $Decorator := (printf "%s%s" $clientName .Interface.Name) }}
@@ -22,8 +23,8 @@ func New{{$Decorator}}(client {{.Interface.Type}}, timeout time.Duration) {{.Int
 }
 
 {{range $method := .Interface.Methods}}
-  {{if $method.AcceptsContext  }}
-    func (c *{{$decorator}}) {{$method.Declaration}} {
+  func (c *{{$decorator}}) {{$method.Declaration}} {
+    {{- if and $method.AcceptsContext (not (has $method.Name $exclude)) }}
       if ctx == nil {
         ctx = context.Background()
       }
@@ -32,7 +33,7 @@ func New{{$Decorator}}(client {{.Interface.Type}}, timeout time.Duration) {{.Int
         ctx, cancelFunc = context.WithTimeout(ctx, c.timeout)
         defer cancelFunc()
       }
-      {{$method.Pass ("c.client.") }}
-    }
-  {{end}}
+    {{- end}}
+    {{$method.Pass ("c.client.") }}
+  }
 {{end}}
