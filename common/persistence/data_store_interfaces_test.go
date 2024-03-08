@@ -26,14 +26,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 )
 
 func TestDataBlob(t *testing.T) {
-	t.Run("new", func(t *testing.T) {
+	t.Run("NewDataBlob", func(t *testing.T) {
 		assert.Nil(t, NewDataBlob(nil, "anything"), "nil data should become nil blob")
 		data, encoding := []byte("something"), common.EncodingTypeJSON
 		assert.EqualValues(t, &DataBlob{
@@ -56,6 +55,7 @@ func TestDataBlob(t *testing.T) {
 		assert.NotPanics(t, func() {
 			NewDataBlob([]byte(problematic), common.EncodingTypeThriftRW)
 		}, "only thriftrw data can start with Y without panicking")
+
 		// all others panic
 		for _, encoding := range allEncodings {
 			if encoding == common.EncodingTypeThriftRW {
@@ -75,7 +75,7 @@ func TestDataBlob(t *testing.T) {
 			}
 		}
 	})
-	t.Run("from", func(t *testing.T) {
+	t.Run("FromDataBlob", func(t *testing.T) {
 		assertEmpty := func(b []byte, s string) {
 			assert.Nil(t, b, "should have nil bytes")
 			assert.Empty(t, s, "should have empty string")
@@ -128,50 +128,70 @@ func TestDataBlob(t *testing.T) {
 		unknown(common.EncodingTypeUnknown)
 		unknown("any other value")
 	})
-	t.Run("To and FromInternal", func(t *testing.T) {
+	t.Run("to and from internal", func(t *testing.T) {
 		data := []byte("some data")
-		// safe
-		internal := &types.DataBlob{
-			EncodingType: types.EncodingTypeJSON.Ptr(),
-			Data:         data,
-		}
-		blob := &DataBlob{
-			Encoding: common.EncodingTypeJSON,
-			Data:     data,
-		}
-		assert.EqualValues(t, internal, blob.ToInternal(), "json should encode to internal type")
-		assert.Equal(t, blob, NewDataBlobFromInternal(internal), "json should decode from internal type")
-		// safe
-		internal.EncodingType = types.EncodingTypeThriftRW.Ptr()
-		blob.Encoding = common.EncodingTypeThriftRW
-		assert.EqualValues(t, internal, blob.ToInternal(), "thriftrw should encode to internal type")
-		assert.Equal(t, blob, NewDataBlobFromInternal(internal), "thriftrw should decode from internal type")
-
-		// all these panic
-		for _, encoding := range []common.EncodingType{
-			common.EncodingTypeUnknown,
-			common.EncodingTypeProto,
-			common.EncodingTypeGob,
-			common.EncodingTypeEmpty,
-			"any other value",
-		} {
-			assert.Panicsf(t, func() {
-				(&DataBlob{
-					Encoding: encoding,
+		t.Run("supported types", func(t *testing.T) {
+			check := func(t *testing.T, encodingType types.EncodingType, encodingCommon common.EncodingType) {
+				internal := &types.DataBlob{
+					EncodingType: encodingType.Ptr(),
+					Data:         data,
+				}
+				blob := &DataBlob{
+					Encoding: encodingCommon,
 					Data:     data,
-				}).ToInternal()
-			}, "should panic when encoding to unhandled encoding %q", encoding)
-		}
+				}
+				assert.Equalf(t, internal, blob.ToInternal(), "%v should encode to internal type %v", encodingCommon, encodingType)
+				assert.Equalf(t, blob, NewDataBlobFromInternal(internal), "%v should decode from internal type %v", encodingCommon, encodingType)
+				// likely proven by above, but to be explicit: this type should round-trip without losing data.
+				assert.Equalf(t, blob, NewDataBlobFromInternal(blob.ToInternal()), "%v should round trip from blob %v", encodingCommon, encodingType)
+				assert.Equalf(t, internal, NewDataBlobFromInternal(internal).ToInternal(), "%v should round trip from internal %v", encodingCommon, encodingType)
+			}
 
-		unknownType := types.EncodingType(1234)
-		// sanity check that the value actually is unknown
-		require.NotEqual(t, types.EncodingTypeJSON, unknownType)
-		require.NotEqual(t, types.EncodingTypeThriftRW, unknownType)
-		assert.Panicsf(t, func() {
-			NewDataBlobFromInternal(&types.DataBlob{
-				EncodingType: &unknownType,
-				Data:         data,
-			}).ToInternal()
-		}, "should panic when decoding from unhandled encoding %q", unknownType)
+			t.Run("json", func(t *testing.T) {
+				check(t, types.EncodingTypeJSON, common.EncodingTypeJSON)
+			})
+			t.Run("thriftrw", func(t *testing.T) {
+				check(t, types.EncodingTypeThriftRW, common.EncodingTypeThriftRW)
+			})
+		})
+
+		t.Run("other known encodings panic to internal", func(t *testing.T) {
+			for _, encoding := range []common.EncodingType{
+				common.EncodingTypeUnknown,
+				common.EncodingTypeProto,
+				common.EncodingTypeGob,
+				common.EncodingTypeEmpty,
+				"any other value",
+			} {
+				assert.Panicsf(t, func() {
+					(&DataBlob{
+						Encoding: encoding,
+						Data:     data,
+					}).ToInternal()
+				}, "should panic when encoding to unhandled encoding %q", encoding)
+			}
+		})
+
+		t.Run("unknown encodings panic from internal", func(t *testing.T) {
+			// these two are known, any other value should panic.
+			//
+			// the easy and most-likely-to-catch-changes strategy is to just add 1,
+			// so a new supported type will automatically fail here until both
+			// the code and tests are updated.
+			unknownType := 1 + max(types.EncodingTypeJSON, types.EncodingTypeThriftRW)
+			assert.Panicsf(t, func() {
+				NewDataBlobFromInternal(&types.DataBlob{
+					EncodingType: &unknownType,
+					Data:         data,
+				})
+			}, "should panic when decoding from unhandled encoding %q", unknownType)
+		})
 	})
+}
+
+func max[T ~int32](a, b T) T {
+	if a > b {
+		return a
+	}
+	return b
 }
