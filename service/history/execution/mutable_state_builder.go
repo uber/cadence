@@ -3434,16 +3434,6 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 		return nil, nil, err
 	}
 
-	// fmt.Println("------")
-	// fmt.Println("e existing state builder - execution info", valast.String(e.executionInfo))
-	// fmt.Println("e existing state builder - execution info", valast.String(e.hBuilder.history))
-	// fmt.Println("------")
-	// fmt.Println("newStateBuilder - return value - execution info")
-	// fmt.Println(valast.String(newStateBuilder.executionInfo))
-	// fmt.Println("newStateBuilder - return value - history info")
-	// fmt.Println(valast.String(newStateBuilder.hBuilder.history))
-	// fmt.Println("------")
-
 	return continueAsNewEvent, newStateBuilder, nil
 }
 

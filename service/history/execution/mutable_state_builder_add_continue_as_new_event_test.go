@@ -387,15 +387,20 @@ func TestAddContinueAsNewEvent(t *testing.T) {
 
 			msb.taskGenerator = taskGenerator
 
-			_, returnedBuilder, err := msb.AddContinueAsNewEvent(context.Background(), firstEventID, decisionCompletedEventID, "", &types.ContinueAsNewWorkflowExecutionDecisionAttributes{
-				WorkflowType: &types.WorkflowType{
-					Name: "helloWorldWorkflow",
-				},
-				TaskList: &types.TaskList{
-					Name: "helloWorldGroup",
-				},
-				Input: []uint8{110, 117, 108, 108, 10},
-			})
+			_, returnedBuilder, err := msb.AddContinueAsNewEvent(context.Background(),
+				firstEventID,
+				decisionCompletedEventID,
+				"",
+				&types.ContinueAsNewWorkflowExecutionDecisionAttributes{
+					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(60),
+					WorkflowType: &types.WorkflowType{
+						Name: "helloWorldWorkflow",
+					},
+					TaskList: &types.TaskList{
+						Name: "helloWorldGroup",
+					},
+					Input: []uint8{110, 117, 108, 108, 10},
+				})
 
 			resultExecutionInfo := returnedBuilder.GetExecutionInfo()
 
