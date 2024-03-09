@@ -174,7 +174,7 @@ func TestAddContinueAsNewEvent(t *testing.T) {
 			Version:   1,
 			TaskID:    -1234,
 			WorkflowExecutionContinuedAsNewEventAttributes: &types.WorkflowExecutionContinuedAsNewEventAttributes{
-				NewExecutionRunID: "db647c4b-8759-47f1-8db3-57baff104b76",
+				NewExecutionRunID: "a run id",
 				WorkflowType: &types.WorkflowType{
 					Name: "helloWorldWorkflow",
 				},
@@ -193,7 +193,7 @@ func TestAddContinueAsNewEvent(t *testing.T) {
 	expectedEndingReturnExecutionState := &persistence.WorkflowExecutionInfo{
 		DomainID:                           "5391dbea-5b30-4323-82ca-e1c95339bb3e",
 		WorkflowID:                         "helloworld_b4db8bd0-74b7-4250-ade7-ac72a1efb171",
-		RunID:                              "db647c4b-8759-47f1-8db3-57baff104b76",
+		RunID:                              "a run id",
 		FirstExecutionRunID:                "5adce5c5-b7b2-4418-9bf0-4207303f6343",
 		InitiatedID:                        -23,
 		TaskList:                           "helloWorldGroup",
@@ -227,7 +227,7 @@ func TestAddContinueAsNewEvent(t *testing.T) {
 	expectedEndingReturnHistoryState := []*types.HistoryEvent{
 		{
 			ID:        1,
-			Timestamp: common.Ptr(int64(1709872131923540000)),
+			Timestamp: common.Ptr(int64(ts1)),
 			EventType: common.Ptr(types.EventTypeWorkflowExecutionStarted),
 			Version:   1,
 			TaskID:    -1234,
@@ -240,17 +240,17 @@ func TestAddContinueAsNewEvent(t *testing.T) {
 				ExecutionStartToCloseTimeoutSeconds: common.Ptr(int32(60)),
 				TaskStartToCloseTimeoutSeconds:      common.Ptr(int32(60)),
 				ContinuedExecutionRunID:             "5adce5c5-b7b2-4418-9bf0-4207303f6343",
-				OriginalExecutionRunID:              "db647c4b-8759-47f1-8db3-57baff104b76",
+				OriginalExecutionRunID:              "a run id",
 				FirstExecutionRunID:                 "5adce5c5-b7b2-4418-9bf0-4207303f6343",
 				PrevAutoResetPoints: &types.ResetPoints{Points: []*types.ResetPointInfo{{
 					BinaryChecksum:           "6df03bf5110d681667852a8456519536",
 					RunID:                    "5adce5c5-b7b2-4418-9bf0-4207303f6343",
 					FirstDecisionCompletedID: 4,
 					CreatedTimeNano:          common.Ptr(int64(1709872121495904000)),
-					ExpiringTimeNano:         common.Ptr(int64(1709937512898751000)),
+					ExpiringTimeNano:         common.Ptr(int64(ts1)),
 					Resettable:               true,
 				}}},
-				Header: &types.Header{},
+				Header: nil,
 			},
 		},
 		{
@@ -418,8 +418,14 @@ func TestAddContinueAsNewEvent(t *testing.T) {
 			resultExecutionInfo.RunID = "a run id"
 			td.expectedReturnedState.CreateRequestID = "a request id"
 			resultExecutionInfo.CreateRequestID = "a request id"
+			for _, historyEvent := range returnedBuilder.GetHistoryBuilder().history {
+				if historyEvent.WorkflowExecutionStartedEventAttributes != nil {
+					historyEvent.WorkflowExecutionStartedEventAttributes.OriginalExecutionRunID = "a run id"
+				}
+			}
 
 			assert.Equal(t, td.expectedReturnedState, resultExecutionInfo)
+			assert.Equal(t, td.expectedReturnedHistory, returnedBuilder.GetHistoryBuilder().history)
 		})
 	}
 }
