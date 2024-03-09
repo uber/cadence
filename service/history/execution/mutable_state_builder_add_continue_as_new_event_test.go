@@ -22,32 +22,22 @@ package execution
 
 import (
 	"context"
-	// "errors"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
-	// "github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
-	// "github.com/stretchr/testify/require"
-	// "github.com/stretchr/testify/suite"
-	// "github.com/uber-go/tally"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
-	// "github.com/uber/cadence/common/checksum"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
-	// "github.com/uber/cadence/common/definition"
-	// "github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
-	// "github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/events"
-	// "github.com/uber/cadence/service/history/shard"
 	shardCtx "github.com/uber/cadence/service/history/shard"
 )
 
