@@ -218,8 +218,8 @@ func TestAddContinueAsNewEvent(t *testing.T) {
 
 		// expectations
 		historyManagerAffordance func(historyManager *persistence.MockHistoryManager)
-		shardManagerAffordance func( shardContext *shardCtx.MockContext, msb *mutableStateBuilder, domainCache cache.DomainCache)
-		domainCacheAffordance func(domainCache *cache.MockDomainCache)
+		shardManagerAffordance   func(shardContext *shardCtx.MockContext, msb *mutableStateBuilder, domainCache cache.DomainCache)
+		domainCacheAffordance    func(domainCache *cache.MockDomainCache)
 		taskgeneratorAffordance  func(taskGenerator *MockMutableStateTaskGenerator, msb *mutableStateBuilder)
 
 		expectedReturnedState   *persistence.WorkflowExecutionInfo // this is returned
