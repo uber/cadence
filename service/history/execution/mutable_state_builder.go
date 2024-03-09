@@ -3369,13 +3369,6 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 	attributes *types.ContinueAsNewWorkflowExecutionDecisionAttributes,
 ) (*types.HistoryEvent, MutableState, error) {
 
-	// fmt.Println("------")
-	// fmt.Println("starting state - return value - execution info")
-	// fmt.Println(valast.String(e.executionInfo))
-	// fmt.Println("starting state - return value - history info")
-	// fmt.Println(valast.String(e.hBuilder.history))
-	// fmt.Println("------")
-
 	opTag := tag.WorkflowActionWorkflowContinueAsNew
 	if err := e.checkMutability(opTag); err != nil {
 		return nil, nil, err

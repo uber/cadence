@@ -35,7 +35,7 @@ func SetRequiredDomainDataKeys(keys []string) {
 }
 
 func checkRequiredDomainDataKVs(domainData map[string]string) error {
-	//check requiredDomainDataKeys
+	// check requiredDomainDataKeys
 	for _, k := range requiredDomainDataKeys {
 		_, ok := domainData[k]
 		if !ok {

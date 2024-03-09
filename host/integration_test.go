@@ -1086,7 +1086,7 @@ func (s *IntegrationSuite) TestWorkflowRetryFailures() {
 				{
 					DecisionType: types.DecisionTypeFailWorkflowExecution.Ptr(),
 					FailWorkflowExecutionDecisionAttributes: &types.FailWorkflowExecutionDecisionAttributes{
-						//Reason:  common.StringPtr("retryable-error"),
+						// Reason:  common.StringPtr("retryable-error"),
 						Reason:  common.StringPtr(errorReason),
 						Details: nil,
 					},
@@ -1235,7 +1235,7 @@ func (s *IntegrationSuite) TestCronWorkflow() {
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            identity,
-		CronSchedule:                        cronSchedule, //minimum interval by standard spec is 1m (* * * * *), use non-standard descriptor for short interval for test
+		CronSchedule:                        cronSchedule, // minimum interval by standard spec is 1m (* * * * *), use non-standard descriptor for short interval for test
 		Memo:                                memo,
 		SearchAttributes:                    searchAttr,
 	}
@@ -1468,7 +1468,7 @@ func (s *IntegrationSuite) TestCronWorkflowTimeout() {
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1), // set workflow timeout to 1s
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            identity,
-		CronSchedule:                        cronSchedule, //minimum interval by standard spec is 1m (* * * * *), use non-standard descriptor for short interval for test
+		CronSchedule:                        cronSchedule, // minimum interval by standard spec is 1m (* * * * *), use non-standard descriptor for short interval for test
 		Memo:                                memo,
 		SearchAttributes:                    searchAttr,
 		RetryPolicy:                         retryPolicy,
@@ -2554,7 +2554,7 @@ func (s *IntegrationSuite) TestCronChildWorkflowExecution() {
 	sort.Slice(closedExecutions, func(i, j int) bool {
 		return closedExecutions[i].GetStartTime() < closedExecutions[j].GetStartTime()
 	})
-	//The first parent is not the cron workflow, only verify child workflow with cron schedule
+	// The first parent is not the cron workflow, only verify child workflow with cron schedule
 	lastExecution := closedExecutions[1]
 	for i := 2; i != 4; i++ {
 		executionInfo := closedExecutions[i]
@@ -2705,7 +2705,7 @@ func (s *IntegrationSuite) TestDecisionTaskFailed() {
 	signalCount := 0
 	sendSignal := false
 	lastDecisionTimestamp := int64(0)
-	//var signalEvent *types.HistoryEvent
+	// var signalEvent *types.HistoryEvent
 	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
 		// Count signals
@@ -3035,7 +3035,7 @@ func (s *IntegrationSuite) TestTransientDecisionTimeout() {
 	workflowComplete := false
 	failDecision := true
 	signalCount := 0
-	//var signalEvent *types.HistoryEvent
+	// var signalEvent *types.HistoryEvent
 	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
 		if failDecision {
@@ -3698,7 +3698,7 @@ func (s *IntegrationSuite) TestStickyTasklistResetThenTimeout() {
 
 	ctx, cancel = createContext()
 	defer cancel()
-	//Reset sticky tasklist before sticky decision task starts
+	// Reset sticky tasklist before sticky decision task starts
 	s.engine.ResetStickyTaskList(ctx, &types.ResetStickyTaskListRequest{
 		Domain:    s.domainName,
 		Execution: workflowExecution,

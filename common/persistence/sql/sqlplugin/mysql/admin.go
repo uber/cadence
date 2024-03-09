@@ -50,7 +50,7 @@ const (
 		`old_version VARCHAR(64), ` +
 		`PRIMARY KEY (year, month, update_time));`
 
-	//NOTE we have to use %v because somehow mysql doesn't work with ? here
+	// NOTE we have to use %v because somehow mysql doesn't work with ? here
 	createDatabaseQuery = "CREATE database %v CHARACTER SET UTF8"
 
 	dropDatabaseQuery = "Drop database %v"

@@ -95,10 +95,10 @@ type (
 	}
 
 	// HistoryInfo consists of two integer regarding the history size and history count
-	//HistoryInfo struct {
+	// HistoryInfo struct {
 	//	historySize  int64
 	//	historyCount int64
-	//}
+	// }
 )
 
 var (

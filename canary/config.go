@@ -76,7 +76,7 @@ type (
 	// Cron contains configuration for the cron workflow for canary
 	Cron struct {
 		CronSchedule         string        `yaml:"cronSchedule"`         // default to "@every 30s"
-		CronExecutionTimeout time.Duration `yaml:"cronExecutionTimeout"` //default to 18 minutes
+		CronExecutionTimeout time.Duration `yaml:"cronExecutionTimeout"` // default to 18 minutes
 		StartJobTimeout      time.Duration `yaml:"startJobTimeout"`      // default to 9 minutes
 	}
 
