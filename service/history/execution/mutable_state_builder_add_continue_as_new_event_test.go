@@ -115,81 +115,6 @@ func TestAddContinueAsNewEvent(t *testing.T) {
 		},
 	}}
 
-	expectedEndingBuilderExecutionInfo := &persistence.WorkflowExecutionInfo{
-		DomainID:                           "5391dbea-5b30-4323-82ca-e1c95339bb3e",
-		WorkflowID:                         "helloworld_b4db8bd0-74b7-4250-ade7-ac72a1efb171",
-		RunID:                              "5adce5c5-b7b2-4418-9bf0-4207303f6343",
-		FirstExecutionRunID:                "5adce5c5-b7b2-4418-9bf0-4207303f6343",
-		InitiatedID:                        -7,
-		CompletionEventBatchID:             15,
-		TaskList:                           "helloWorldGroup",
-		WorkflowTypeName:                   "helloWorldWorkflow",
-		WorkflowTimeout:                    60,
-		DecisionStartToCloseTimeout:        60,
-		State:                              2,
-		CloseStatus:                        5,
-		LastFirstEventID:                   14,
-		LastEventTaskID:                    15728673,
-		NextEventID:                        17,
-		LastProcessedEvent:                 14,
-		StartTimestamp:                     time.Date(2024, 3, 8, 4, 28, 41, 415000000, time.UTC),
-		LastUpdatedTimestamp:               time.Date(2024, 3, 7, 20, 28, 51, 563480000, time.Local),
-		CreateRequestID:                    "b086d62c-dd2b-4bbc-9143-5940516acbfe",
-		DecisionVersion:                    -24,
-		DecisionScheduleID:                 -23,
-		DecisionStartedID:                  -23,
-		DecisionRequestID:                  "emptyUuid",
-		DecisionOriginalScheduledTimestamp: 1709872131542474000,
-		AutoResetPoints: &types.ResetPoints{
-			Points: []*types.ResetPointInfo{{
-				BinaryChecksum:           "6df03bf5110d681667852a8456519536",
-				RunID:                    "5adce5c5-b7b2-4418-9bf0-4207303f6343",
-				FirstDecisionCompletedID: 4,
-				CreatedTimeNano:          common.Ptr(int64(1709872121495904000)),
-				ExpiringTimeNano:         common.Ptr(int64(ts1)),
-				Resettable:               true,
-			}},
-		},
-		SearchAttributes: map[string][]uint8{"BinaryChecksums": {91, 34, 54, 100, 102, 48, 51, 98, 102, 53, 49, 49, 48, 100, 54, 56, 49, 54, 54, 55, 56, 53, 50, 97, 56, 52, 53, 54, 53, 49, 57, 53, 51, 54, 34, 93}},
-	}
-
-	expectedEndingBuilderHistoryState := []*types.HistoryEvent{
-		{
-			ID:        15,
-			Timestamp: common.Ptr(int64(1709872131580456000)),
-			EventType: common.Ptr(types.EventTypeDecisionTaskCompleted),
-			Version:   1,
-			TaskID:    -1234,
-			DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
-				ScheduledEventID: 13,
-				StartedEventID:   14,
-				Identity:         "27368@david-porter-DVFG73D710@helloWorldGroup@6027e9ee-048e-4f67-8d88-27883c496901",
-				BinaryChecksum:   "6df03bf5110d681667852a8456519536",
-			},
-		},
-		{
-			ID:        16,
-			Timestamp: common.Ptr(int64(1709872131923473000)),
-			EventType: common.Ptr(types.EventTypeWorkflowExecutionContinuedAsNew),
-			Version:   1,
-			TaskID:    -1234,
-			WorkflowExecutionContinuedAsNewEventAttributes: &types.WorkflowExecutionContinuedAsNewEventAttributes{
-				NewExecutionRunID: "a run id",
-				WorkflowType: &types.WorkflowType{
-					Name: "helloWorldWorkflow",
-				},
-				TaskList:                            &types.TaskList{Name: "helloWorldGroup"},
-				Input:                               []uint8{110, 117, 108, 108, 10},
-				ExecutionStartToCloseTimeoutSeconds: common.Ptr(int32(60)),
-				TaskStartToCloseTimeoutSeconds:      common.Ptr(int32(60)),
-				DecisionTaskCompletedEventID:        15,
-				BackoffStartIntervalInSeconds:       common.Ptr(int32(0)),
-				Initiator:                           common.Ptr(types.ContinueAsNewInitiatorDecider),
-				Header:                              &types.Header{},
-			},
-		},
-	}
-
 	expectedEndingReturnExecutionState := &persistence.WorkflowExecutionInfo{
 		DomainID:                           "5391dbea-5b30-4323-82ca-e1c95339bb3e",
 		WorkflowID:                         "helloworld_b4db8bd0-74b7-4250-ade7-ac72a1efb171",
@@ -224,6 +149,7 @@ func TestAddContinueAsNewEvent(t *testing.T) {
 			}},
 		},
 	}
+
 	expectedEndingReturnHistoryState := []*types.HistoryEvent{
 		{
 			ID:        1,
@@ -302,12 +228,11 @@ func TestAddContinueAsNewEvent(t *testing.T) {
 
 		// expectations
 		historyManagerAffordance func(historyManager *persistence.MockHistoryManager)
+		shardManagerAffordance func( shardContext *shardCtx.MockContext, msb *mutableStateBuilder, domainCache cache.DomainCache)
+		domainCacheAffordance func(domainCache *cache.MockDomainCache)
+		taskgeneratorAffordance  func(taskGenerator *MockMutableStateTaskGenerator, msb *mutableStateBuilder)
 
-		// this is a somewhat confusing API, both returning a new cloned state and mutating the existing
-		// current state so this will be comparing both
-		expectedBuilderEndState *persistence.WorkflowExecutionInfo // this is what the MSB should end up as
 		expectedReturnedState   *persistence.WorkflowExecutionInfo // this is returned
-		expectedBuilderHistory  []*types.HistoryEvent
 		expectedReturnedHistory []*types.HistoryEvent
 		expectedErr             error
 	}{
@@ -323,9 +248,21 @@ func TestAddContinueAsNewEvent(t *testing.T) {
 					},
 				}, nil)
 			},
-
-			expectedBuilderEndState: expectedEndingBuilderExecutionInfo,
-			expectedBuilderHistory:  expectedEndingBuilderHistoryState,
+			shardManagerAffordance: func(shardContext *shardCtx.MockContext, msb *mutableStateBuilder, domainCache cache.DomainCache) {
+				shardContext.EXPECT().GetShardID().Return(123)
+				shardContext.EXPECT().GetClusterMetadata().Return(cluster.Metadata{}).Times(2)
+				shardContext.EXPECT().GetEventsCache().Return(msb.eventsCache)
+				shardContext.EXPECT().GetConfig().Return(msb.config)
+				shardContext.EXPECT().GetTimeSource().Return(msb.timeSource)
+				shardContext.EXPECT().GetMetricsClient().Return(metrics.NewNoopMetricsClient())
+				shardContext.EXPECT().GetDomainCache().Return(domainCache)
+			},
+			domainCacheAffordance: func(domainCache *cache.MockDomainCache) {
+				domainCache.EXPECT().GetDomainName(gomock.Any()).Return("domain", nil)
+			},
+			taskgeneratorAffordance: func(taskGenerator *MockMutableStateTaskGenerator, msb *mutableStateBuilder) {
+				taskGenerator.EXPECT().GenerateWorkflowCloseTasks(gomock.Any(), msb.config.WorkflowDeletionJitterRange("domain"))
+			},
 
 			expectedReturnedState:   expectedEndingReturnExecutionState,
 			expectedReturnedHistory: expectedEndingReturnHistoryState,
@@ -334,14 +271,7 @@ func TestAddContinueAsNewEvent(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-
 			ctrl := gomock.NewController(t)
-
-			historyManager := persistence.NewMockHistoryManager(ctrl)
-			td.historyManagerAffordance(historyManager)
-
-			domainCache := cache.NewMockDomainCache(ctrl)
-			domainCache.EXPECT().GetDomainName(gomock.Any()).Return("domain", nil)
 
 			msb := &mutableStateBuilder{
 				domainEntry: cache.NewDomainCacheEntryForTest(
@@ -356,36 +286,31 @@ func TestAddContinueAsNewEvent(t *testing.T) {
 				logger:        log.NewNoop(),
 				config:        config.NewForTest(),
 			}
-			msb.timeSource = clock.NewMockedTimeSourceAt(time.Unix(0, ts1))
 
+			shardContext := shardCtx.NewMockContext(ctrl)
+			historyManager := persistence.NewMockHistoryManager(ctrl)
+			domainCache := cache.NewMockDomainCache(ctrl)
+			taskGenerator := NewMockMutableStateTaskGenerator(ctrl)
+
+			msb.timeSource = clock.NewMockedTimeSourceAt(time.Unix(0, ts1))
 			msb.eventsCache = events.NewCache(shardID,
 				historyManager,
 				config.NewForTest(),
 				log.NewNoop(),
 				metrics.NewNoopMetricsClient(),
 				domainCache)
-
-			shardContext := shardCtx.NewMockContext(ctrl)
-			shardContext.EXPECT().GetShardID().Return(123)
-			shardContext.EXPECT().GetClusterMetadata().Return(cluster.Metadata{}).Times(2)
-			shardContext.EXPECT().GetEventsCache().Return(msb.eventsCache)
-			shardContext.EXPECT().GetConfig().Return(msb.config)
-			shardContext.EXPECT().GetTimeSource().Return(msb.timeSource)
-			shardContext.EXPECT().GetMetricsClient().Return(metrics.NewNoopMetricsClient())
-			shardContext.EXPECT().GetDomainCache().Return(domainCache)
-
-			taskGenerator := NewMockMutableStateTaskGenerator(ctrl)
-
-			taskGenerator.EXPECT().GenerateWorkflowCloseTasks(gomock.Any(), msb.config.WorkflowDeletionJitterRange("domain"))
-
 			msb.shard = shardContext
 			msb.executionInfo = td.startingState
 			msb.hBuilder = &HistoryBuilder{
 				history:   td.startingHistory,
 				msBuilder: msb,
 			}
-
 			msb.taskGenerator = taskGenerator
+
+			td.historyManagerAffordance(historyManager)
+			td.domainCacheAffordance(domainCache)
+			td.taskgeneratorAffordance(taskGenerator, msb)
+			td.shardManagerAffordance(shardContext, msb, domainCache)
 
 			_, returnedBuilder, err := msb.AddContinueAsNewEvent(context.Background(),
 				firstEventID,
@@ -401,13 +326,8 @@ func TestAddContinueAsNewEvent(t *testing.T) {
 					},
 					Input: []uint8{110, 117, 108, 108, 10},
 				})
-
 			resultExecutionInfo := returnedBuilder.GetExecutionInfo()
 
-			// assert.Equal(t, td.expectedBuilderEndState, msb.executionInfo)
-			// assert.Equal(t, td.expectedReturnedState, returnedBuilder.GetExecutionInfo())
-
-			// assert.Equal(t, td.expectedBuilderHistory, msb.hBuilder.history)
 			if td.expectedErr != nil {
 				assert.ErrorAs(t, err, &td.expectedErr)
 			}
@@ -429,119 +349,3 @@ func TestAddContinueAsNewEvent(t *testing.T) {
 		})
 	}
 }
-
-// startExecutionInfo := &persistence.WorkflowExecutionInfo{
-// 	DomainID:                           "5391dbea-5b30-4323-82ca-e1c95339bb3e",
-// 	WorkflowID:                         "helloworld_bfa410d9-9f49-4bcb-a943-0f3ceb252da2",
-// 	RunID:                              "c6702a46-a1f0-42d2-9de7-8aca6ed6795f",
-// 	FirstExecutionRunID:                "c6702a46-a1f0-42d2-9de7-8aca6ed6795f",
-// 	InitiatedID:                        -7,
-// 	CompletionEventBatchID:             0,
-// 	TaskList:                           "tasklist-name",
-// 	WorkflowTypeName:                   "test-workflow",
-// 	WorkflowTimeout:                    60,
-// 	DecisionStartToCloseTimeout:        60,
-// 	State:                              1,
-// 	CloseStatus:                        0,
-// 	LastFirstEventID:                   14,
-// 	LastEventTaskID:                    11534369,
-// 	NextEventID:                        16,
-// 	LastProcessedEvent:                 14,
-// 	CreateRequestID:                    "5c0be655-1efc-4dfe-8f69-1f59e59c13ef",
-// 	DecisionVersion:                    -24,
-// 	DecisionScheduleID:                 -23,
-// 	DecisionStartedID:                  -23,
-// 	DecisionRequestID:                  "emptyUuid",
-// 	DecisionTimeout:                    0,
-// 	DecisionAttempt:                    0,
-// 	DecisionStartedTimestamp:           0,
-// 	DecisionScheduledTimestamp:         0,
-// 	DecisionOriginalScheduledTimestamp: 1709790036041553000,
-// 	CancelRequested:                    false,
-// 	StickyTaskList:                     "david-porter-DVFG73D710:04be47fa-2381-469f-b2ea-1253271ad116",
-// 	StickyScheduleToStartTimeout:       5,
-// 	ClientLibraryVersion:               "0.18.4",
-// 	ClientFeatureVersion:               "1.7.0",
-// 	ClientImpl:                         "uber-go",
-// 	Attempt:                            0,
-// }
-
-// endExecutionInfo := &persistence.WorkflowExecutionInfo{
-// 	DomainID:                           "5391dbea-5b30-4323-82ca-e1c95339bb3e",
-// 	WorkflowID:                         "helloworld_bfa410d9-9f49-4bcb-a943-0f3ceb252da2",
-// 	RunID:                              "c6702a46-a1f0-42d2-9de7-8aca6ed6795f",
-// 	FirstExecutionRunID:                "c6702a46-a1f0-42d2-9de7-8aca6ed6795f",
-// 	InitiatedID:                        -7,
-// 	CompletionEventBatchID:             15,
-// 	TaskList:                           "tasklist-name",
-// 	WorkflowTypeName:                   "test-workflow",
-// 	WorkflowTimeout:                    60,
-// 	DecisionStartToCloseTimeout:        60,
-// 	State:                              2,
-// 	CloseStatus:                        5,
-// 	LastFirstEventID:                   14,
-// 	LastEventTaskID:                    11534369,
-// 	NextEventID:                        17,
-// 	LastProcessedEvent:                 14,
-// 	CreateRequestID:                    "5c0be655-1efc-4dfe-8f69-1f59e59c13ef",
-// 	DecisionVersion:                    -24,
-// 	DecisionScheduleID:                 -23,
-// 	DecisionStartedID:                  -23,
-// 	DecisionRequestID:                  "emptyUuid",
-// 	DecisionTimeout:                    0,
-// 	DecisionAttempt:                    0,
-// 	DecisionOriginalScheduledTimestamp: 1709790036041553000,
-// }
-
-// startHistory := []*types.HistoryEvent{
-// 	{
-// 		ID:        15,
-// 		Timestamp: common.Ptr(int64(1709791556528026000)),
-// 		EventType: types.EventTypeDecisionTaskCompleted.Ptr(),
-// 		Version:   1,
-// 		TaskID:    -1234,
-// 		DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
-// 			ScheduledEventID: 13,
-// 			StartedEventID:   14,
-// 			Identity:         "27368@david-porter-DVFG73D710@helloWorldGroup@6027e9ee-048e-4f67-8d88-27883c496901",
-// 			BinaryChecksum:   "6df03bf5110d681667852a8456519536",
-// 		},
-// 	},
-// }
-
-// endHistory := []*types.HistoryEvent{
-// 	{
-// 		ID:        15,
-// 		Timestamp: common.Ptr(int64(1709791556528026000)),
-// 		EventType: types.EventTypeDecisionTaskCompleted.Ptr(),
-// 		Version:   1,
-// 		TaskID:    -1234,
-// 		DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
-// 			ScheduledEventID: 13,
-// 			StartedEventID:   14,
-// 			Identity:         "27368@david-porter-DVFG73D710@helloWorldGroup@6027e9ee-048e-4f67-8d88-27883c496901",
-// 			BinaryChecksum:   "6df03bf5110d681667852a8456519536",
-// 		},
-// 	},
-// 	{
-// 		ID:        16,
-// 		Timestamp: common.Ptr(int64(1709791556529788000)),
-// 		EventType: common.Ptr(types.EventTypeWorkflowExecutionContinuedAsNew),
-// 		Version:   1,
-// 		TaskID:    -1234,
-// 		WorkflowExecutionContinuedAsNewEventAttributes: &types.WorkflowExecutionContinuedAsNewEventAttributes{
-// 			NewExecutionRunID: "1b094f71-9c23-4177-8cf9-7f723cc52955",
-// 			WorkflowType: &types.WorkflowType{
-// 				Name: "helloWorldWorkflow",
-// 			},
-// 			TaskList: &types.TaskList{
-// 				Name: "helloWorldGroup",
-// 			},
-// 			Input:                               []byte("some-input"),
-// 			ExecutionStartToCloseTimeoutSeconds: common.Ptr(int32(60)),
-// 			TaskStartToCloseTimeoutSeconds:      common.Ptr(int32(60)),
-// 			DecisionTaskCompletedEventID:        15,
-// 			Initiator:                           common.Ptr(types.ContinueAsNewInitiatorDecider),
-// 		},
-// 	},
-// }
