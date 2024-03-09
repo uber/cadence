@@ -64,7 +64,6 @@ var (
 )
 
 func TestRecordWorkflowExecutionStarted(t *testing.T) {
-
 	// test non-empty request fields match
 	errorRequest := &p.InternalRecordWorkflowExecutionStartedRequest{
 		WorkflowID: "wid",
