@@ -39,8 +39,10 @@ import (
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/testing/testdatagen"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
@@ -1264,6 +1266,63 @@ func TestGetStartEvent(t *testing.T) {
 			if td.expectedErr != nil {
 				assert.ErrorAs(t, err, &td.expectedErr)
 			}
+		})
+	}
+}
+
+func TestLoggingNilAndInvalidHandling(t *testing.T) {
+	gen := testdatagen.New(t)
+
+	executionInfo := persistence.WorkflowExecutionInfo{}
+
+	gen.Fuzz(&executionInfo)
+	msb := mutableStateBuilder{
+		executionInfo: &executionInfo,
+		logger: 	  log.NewNoop(),
+		metricsClient: metrics.NewNoopMetricsClient(),
+	}
+
+	msbInvalid := mutableStateBuilder{ logger: log.NewNoop() }
+
+	assert.NotPanics(t, func() {
+		msbInvalid.logWarn("test", tag.WorkflowDomainID("test"))
+		msbInvalid.logError("test", tag.WorkflowDomainID("test"))
+		msbInvalid.logInfo("test", tag.WorkflowDomainID("test"))
+		msb.logWarn("test", tag.WorkflowDomainID("test"))
+		msb.logError("test", tag.WorkflowDomainID("test"))
+		msb.logInfo("test", tag.WorkflowDomainID("test"))
+		msb.logDataInconsistency()
+	})
+}
+
+func TestAssignEventIDToBufferedEvents(t *testing.T) {
+
+	tests := map[string]struct {
+		startingHistoryEntries []*types.HistoryEvent
+		expectedEndingHistoryEntries []*types.HistoryEvent
+	} {
+		"EventTypeActivityTaskCompleted": {
+			startingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeActivityTaskCompleted.Ptr(),
+					ActivityTaskCompletedEventAttributes: &types.ActivityTaskCompletedEventAttributes{
+					},
+				},
+			},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			msb := &mutableStateBuilder{
+				hBuilder: &HistoryBuilder{
+					history: td.startingHistoryEntries,
+				},
+			}
+
+			msb.assignEventIDToBufferedEvents()
+
+			assert.Equal(t, td.expectedEndingHistoryEntries, msb.hBuilder.history)
 		})
 	}
 }

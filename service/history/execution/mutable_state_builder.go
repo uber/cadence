@@ -299,6 +299,7 @@ func NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 	return msBuilder
 }
 
+// todo (david.porter)
 func (e *mutableStateBuilder) CopyToPersistence() *persistence.WorkflowMutableState {
 	state := &persistence.WorkflowMutableState{}
 
@@ -4811,24 +4812,30 @@ func (e *mutableStateBuilder) unixNanoToTime(
 }
 
 func (e *mutableStateBuilder) logInfo(msg string, tags ...tag.Tag) {
-	tags = append(tags, tag.WorkflowID(e.executionInfo.WorkflowID))
-	tags = append(tags, tag.WorkflowRunID(e.executionInfo.RunID))
-	tags = append(tags, tag.WorkflowDomainID(e.executionInfo.DomainID))
-	e.logger.Info(msg, tags...)
+	if e != nil && e.executionInfo != nil {
+		tags = append(tags, tag.WorkflowID(e.executionInfo.WorkflowID))
+		tags = append(tags, tag.WorkflowRunID(e.executionInfo.RunID))
+		tags = append(tags, tag.WorkflowDomainID(e.executionInfo.DomainID))
+		e.logger.Info(msg, tags...)
+	}
 }
 
 func (e *mutableStateBuilder) logWarn(msg string, tags ...tag.Tag) {
-	tags = append(tags, tag.WorkflowID(e.executionInfo.WorkflowID))
-	tags = append(tags, tag.WorkflowRunID(e.executionInfo.RunID))
-	tags = append(tags, tag.WorkflowDomainID(e.executionInfo.DomainID))
-	e.logger.Warn(msg, tags...)
+	if e != nil && e.executionInfo != nil {
+		tags = append(tags, tag.WorkflowID(e.executionInfo.WorkflowID))
+		tags = append(tags, tag.WorkflowRunID(e.executionInfo.RunID))
+		tags = append(tags, tag.WorkflowDomainID(e.executionInfo.DomainID))
+		e.logger.Warn(msg, tags...)
+	}
 }
 
 func (e *mutableStateBuilder) logError(msg string, tags ...tag.Tag) {
-	tags = append(tags, tag.WorkflowID(e.executionInfo.WorkflowID))
-	tags = append(tags, tag.WorkflowRunID(e.executionInfo.RunID))
-	tags = append(tags, tag.WorkflowDomainID(e.executionInfo.DomainID))
-	e.logger.Error(msg, tags...)
+	if e != nil && e.executionInfo != nil {
+		tags = append(tags, tag.WorkflowID(e.executionInfo.WorkflowID))
+		tags = append(tags, tag.WorkflowRunID(e.executionInfo.RunID))
+		tags = append(tags, tag.WorkflowDomainID(e.executionInfo.DomainID))
+		e.logger.Error(msg, tags...)
+	}
 }
 
 func (e *mutableStateBuilder) logDataInconsistency() {
