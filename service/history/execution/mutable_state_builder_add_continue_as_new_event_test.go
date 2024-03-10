@@ -48,7 +48,10 @@ func TestAddContinueAsNewEvent(t *testing.T) {
 
 	var (
 		domainID = "5391dbea-5b30-4323-82ca-e1c95339bb3e"
-		ts1      = int64(1709872131923568000)
+		ts0      = int64(123450)
+		ts1      = int64(123451)
+		ts2      = int64(123452)
+		ts3      = int64(123453)
 		shardID  = 123
 	)
 
@@ -67,8 +70,8 @@ func TestAddContinueAsNewEvent(t *testing.T) {
 		LastEventTaskID:                    15728673,
 		NextEventID:                        16,
 		LastProcessedEvent:                 14,
-		StartTimestamp:                     time.Date(2024, 3, 8, 4, 28, 41, 415000000, time.UTC),
-		LastUpdatedTimestamp:               time.Date(2024, 3, 7, 20, 28, 51, 563480000, time.Local),
+		StartTimestamp:                     time.Unix(0, ts0),
+		LastUpdatedTimestamp:               time.Unix(0, ts2),
 		CreateRequestID:                    "b086d62c-dd2b-4bbc-9143-5940516acbfe",
 		DecisionVersion:                    -24,
 		DecisionScheduleID:                 -23,
@@ -85,7 +88,7 @@ func TestAddContinueAsNewEvent(t *testing.T) {
 				BinaryChecksum:           "6df03bf5110d681667852a8456519536",
 				RunID:                    "5adce5c5-b7b2-4418-9bf0-4207303f6343",
 				FirstDecisionCompletedID: 4,
-				CreatedTimeNano:          common.Ptr(int64(1709872121495904000)),
+				CreatedTimeNano:          common.Ptr(int64(ts1)),
 				Resettable:               true,
 			}},
 		},
@@ -119,22 +122,22 @@ func TestAddContinueAsNewEvent(t *testing.T) {
 		LastFirstEventID:                   1,
 		NextEventID:                        3,
 		LastProcessedEvent:                 -23,
-		StartTimestamp:                     time.Date(2024, 3, 7, 20, 28, 51, 923568000, time.Local),
+		StartTimestamp:                     time.Unix(0, ts3),
 		CreateRequestID:                    "4630bf04-5c64-41bf-92d9-576db2d535cb",
 		DecisionVersion:                    1,
 		DecisionScheduleID:                 2,
 		DecisionStartedID:                  -23,
 		DecisionRequestID:                  "emptyUuid",
 		DecisionTimeout:                    60,
-		DecisionScheduledTimestamp:         ts1,
-		DecisionOriginalScheduledTimestamp: ts1,
+		DecisionScheduledTimestamp:         ts3,
+		DecisionOriginalScheduledTimestamp: ts3,
 		AutoResetPoints: &types.ResetPoints{
 			Points: []*types.ResetPointInfo{{
 				BinaryChecksum:           "6df03bf5110d681667852a8456519536",
 				RunID:                    "5adce5c5-b7b2-4418-9bf0-4207303f6343",
 				FirstDecisionCompletedID: 4,
-				CreatedTimeNano:          common.Ptr(int64(1709872121495904000)),
-				ExpiringTimeNano:         common.Ptr(int64(ts1)),
+				CreatedTimeNano:          common.Ptr(int64(ts1)),
+				ExpiringTimeNano:         common.Ptr(int64(ts3)),
 				Resettable:               true,
 			}},
 		},
@@ -143,7 +146,7 @@ func TestAddContinueAsNewEvent(t *testing.T) {
 	expectedEndingReturnHistoryState := []*types.HistoryEvent{
 		{
 			ID:        1,
-			Timestamp: common.Ptr(int64(ts1)),
+			Timestamp: common.Ptr(int64(ts3)),
 			EventType: common.Ptr(types.EventTypeWorkflowExecutionStarted),
 			Version:   1,
 			TaskID:    -1234,
@@ -162,8 +165,8 @@ func TestAddContinueAsNewEvent(t *testing.T) {
 					BinaryChecksum:           "6df03bf5110d681667852a8456519536",
 					RunID:                    "5adce5c5-b7b2-4418-9bf0-4207303f6343",
 					FirstDecisionCompletedID: 4,
-					CreatedTimeNano:          common.Ptr(int64(1709872121495904000)),
-					ExpiringTimeNano:         common.Ptr(int64(ts1)),
+					CreatedTimeNano:          common.Ptr(int64(ts1)),
+					ExpiringTimeNano:         common.Ptr(int64(ts3)),
 					Resettable:               true,
 				}}},
 				Header: nil,
@@ -171,7 +174,7 @@ func TestAddContinueAsNewEvent(t *testing.T) {
 		},
 		{
 			ID:        2,
-			Timestamp: common.Ptr(int64(ts1)),
+			Timestamp: common.Ptr(int64(ts3)),
 			EventType: common.Ptr(types.EventTypeDecisionTaskScheduled),
 			Version:   1,
 			TaskID:    -1234,
@@ -282,7 +285,7 @@ func TestAddContinueAsNewEvent(t *testing.T) {
 			domainCache := cache.NewMockDomainCache(ctrl)
 			taskGenerator := NewMockMutableStateTaskGenerator(ctrl)
 
-			msb.timeSource = clock.NewMockedTimeSourceAt(time.Unix(0, ts1))
+			msb.timeSource = clock.NewMockedTimeSourceAt(time.Unix(0, ts3))
 			msb.eventsCache = events.NewCache(shardID,
 				historyManager,
 				config.NewForTest(),
