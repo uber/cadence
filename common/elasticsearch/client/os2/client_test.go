@@ -1,6 +1,10 @@
 package os2
 
 import (
+	"bytes"
+	"context"
+	"crypto/tls"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -10,6 +14,9 @@ import (
 
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log/testlogger"
+
+	"github.com/opensearch-project/opensearch-go/v2"
+	osapi "github.com/opensearch-project/opensearch-go/v2/opensearchapi"
 )
 
 func TestNewClient(t *testing.T) {
@@ -17,7 +24,6 @@ func TestNewClient(t *testing.T) {
 	testServer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
 			w.WriteHeader(http.StatusOK)
-			// You might need to return a valid OpenSearch ping response JSON here
 			w.Write([]byte(`{ "status": "green" }`))
 		} else {
 			w.WriteHeader(http.StatusNotFound)
@@ -75,8 +81,7 @@ func TestNewClient(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sharedClient := testServer.Client()
-			client, err := NewClient(tt.config, logger, sharedClient)
+			client, err := NewClient(tt.config, logger, testServer.Client())
 
 			if !tt.expectedErr {
 				assert.NoError(t, err)
@@ -86,4 +91,193 @@ func TestNewClient(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCreateIndex(t *testing.T) {
+	tests := []struct {
+		name      string
+		handler   http.HandlerFunc
+		expectErr bool
+		secure    bool
+	}{
+		{
+			name: "normal case",
+			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method == "PUT" && r.URL.Path == "/test-index" {
+					w.WriteHeader(http.StatusOK)
+					w.Write([]byte(`{"acknowledged": true, "shards_acknowledged": true, "index": "test-index"}`))
+				} else {
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}),
+			expectErr: false,
+			secure:    true,
+		},
+		{
+			name: "error case",
+			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				http.NotFound(w, r)
+			}),
+			expectErr: true,
+			secure:    true,
+		},
+		{
+			name: "not valid config",
+			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				http.NotFound(w, r)
+			}),
+			expectErr: true,
+			secure:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			os2Client, testServer := getSecureMockOS2Client(t, tt.handler, tt.secure)
+			defer testServer.Close()
+
+			err := os2Client.CreateIndex(context.Background(), "test-index")
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestOSError(t *testing.T) {
+	tests := []struct {
+		name          string
+		givenError    osError
+		expectedError string
+	}{
+		{
+			name: "document missing error",
+			givenError: osError{
+				Status: 404,
+				Details: &errorDetails{
+					Type:   "document_missing_exception",
+					Reason: "document missing [doc-id]",
+				},
+			},
+			expectedError: "Status code: 404, Type: document_missing_exception, Reason: document missing [doc-id]",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actualError := tt.givenError.Error()
+			assert.Equal(t, tt.expectedError, actualError, "The formatted error message did not match the expected value")
+		})
+	}
+}
+
+func TestParseError(t *testing.T) {
+	tests := []struct {
+		name           string
+		responseBody   string
+		expectError    bool
+		expectedErrMsg string
+	}{
+		{
+			name:           "Invalid decoder",
+			responseBody:   `{"error": "index_not_found_exception"}`,
+			expectError:    true,
+			expectedErrMsg: "index_not_found_exception",
+		},
+		{
+			name: "valid error response",
+			responseBody: `{
+				"status": 404,
+				"error": {
+					"type": "index_not_found_exception",
+					"reason": "index_not_found_exception: no such index",
+					"index": "test-index"
+				}
+			}`,
+			expectError:    false,
+			expectedErrMsg: "index_not_found_exception: no such index",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			response := osapi.Response{
+				StatusCode: 400,
+				Body:       io.NopCloser(bytes.NewBufferString(tt.responseBody)),
+			}
+
+			os2Client, testServer := getSecureMockOS2Client(t, nil, false)
+			defer testServer.Close()
+
+			err := os2Client.parseError(&response)
+
+			if !tt.expectError {
+				if parsedErr, ok := err.(*osError); ok && parsedErr.Details != nil {
+					assert.Equal(t, tt.expectedErrMsg, parsedErr.Details.Reason, "Error message mismatch for case: %s", tt.name)
+				} else {
+					t.Errorf("Failed to assert error reason for case: %s", tt.name)
+				}
+			} else {
+				assert.Error(t, err, "Expected an error for case: %s", tt.name)
+			}
+		})
+	}
+}
+
+func getSecureMockOS2Client(t *testing.T, handler http.HandlerFunc, secure bool) (*OS2, *httptest.Server) {
+	testServer := httptest.NewTLSServer(handler)
+	osConfig := opensearch.Config{
+		Addresses: []string{testServer.URL},
+	}
+
+	if secure {
+		osConfig.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+	}
+
+	client, err := opensearch.NewClient(osConfig)
+	if err != nil {
+		t.Fatalf("Failed to create open search client: %v", err)
+	}
+	mockClient := &OS2{
+		client:  client,
+		logger:  testlogger.New(t),
+		decoder: &NumberDecoder{},
+	}
+	assert.NoError(t, err)
+	return mockClient, testServer
+}
+
+func TestCloseBody(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Test response body"))
+	}))
+	defer server.Close()
+
+	resp, err := http.Get(server.URL)
+	if err != nil {
+		t.Fatalf("Failed to make request to test server: %v", err)
+	}
+
+	osResponse := &osapi.Response{
+		StatusCode: resp.StatusCode,
+		Body:       resp.Body,
+		Header:     resp.Header,
+	}
+
+	// Assert that the response body is open before calling closeBody
+	_, err = osResponse.Body.Read(make([]byte, 1))
+	assert.NoError(t, err, "Expected response body to be open before calling closeBody")
+
+	closeBody(osResponse)
+
+	// Attempt to read from the body again should result in an error because it's closed
+	_, err = osResponse.Body.Read(make([]byte, 1))
+	assert.Error(t, err, "Expected response body to be closed after calling closeBody")
 }
