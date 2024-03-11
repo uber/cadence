@@ -25,7 +25,6 @@ package pinotvisibility
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common/log"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -35,6 +34,7 @@ import (
 	"github.com/uber/cadence/.gen/go/indexer"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	metricsClientMocks "github.com/uber/cadence/common/metrics/mocks"
