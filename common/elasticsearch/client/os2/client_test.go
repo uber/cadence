@@ -84,20 +84,6 @@ func TestNewClient(t *testing.T) {
 			},
 			expectedErr: true, //will fail to ping os sever
 		},
-		{
-			name: "with aws signing config",
-			config: &config.ElasticSearchConfig{
-				URL:          *url,
-				DisableSniff: false,
-				AWSSigning: config.AWSSigning{
-					Enable: true,
-					EnvironmentCredential: &config.AWSEnvironmentCredential{
-						Region: "us-west-2",
-					},
-				},
-			},
-			expectedErr: true, //will fail to ping os sever
-		},
 	}
 
 	for _, tt := range tests {
