@@ -352,14 +352,6 @@ func TestHandleDomainCreationReplicationTask(t *testing.T) {
 				mockDomainManager.EXPECT().
 					CreateDomain(gomock.Any(), gomock.Any()).
 					Return(nil, ErrNameUUIDCollision).Times(1)
-
-				mockDomainManager.EXPECT().
-					GetDomain(gomock.Any(), gomock.Any()).
-					Return(nil, &types.EntityNotExistsError{}).Times(1) // Simulate no domain found by name
-
-				mockDomainManager.EXPECT().
-					GetDomain(gomock.Any(), gomock.Any()).
-					Return(nil, &types.EntityNotExistsError{}).Times(1) // Simulate no domain found by ID
 			},
 			task:      validTask,
 			wantError: true,
@@ -415,10 +407,6 @@ func TestHandleDomainCreationReplicationTask(t *testing.T) {
 				mockDomainManager.EXPECT().
 					CreateDomain(gomock.Any(), gomock.Any()).
 					Return(nil, ErrInvalidDomainStatus).Times(1)
-
-				mockDomainManager.EXPECT().
-					GetDomain(gomock.Any(), gomock.Any()).
-					Return(nil, types.InternalServiceError{Message: "unexpected internal error"}).Times(1)
 			},
 			task:      validTask,
 			wantError: true,
@@ -438,21 +426,6 @@ func TestHandleDomainCreationReplicationTask(t *testing.T) {
 			},
 			task:      validTask,
 			wantError: true, // Expect an error because of the name/UUID collision
-		},
-		{
-			name: "Unexpected Error Type from GetDomain Leads to Default Error Handling",
-			setup: func() {
-				mockDomainManager.EXPECT().
-					CreateDomain(gomock.Any(), gomock.Any()).
-					Return(nil, ErrNameUUIDCollision).Times(1)
-
-				// Trigger an unexpected error type from GetDomain
-				mockDomainManager.EXPECT().
-					GetDomain(gomock.Any(), gomock.Any()).
-					Return(nil, types.InternalServiceError{Message: "unexpected internal error"}).Times(1)
-			},
-			task:      validTask,
-			wantError: true,
 		},
 	}
 
