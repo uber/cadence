@@ -25,6 +25,7 @@ package pinotvisibility
 import (
 	"context"
 	"fmt"
+	"github.com/uber/cadence/common/log"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -69,15 +70,33 @@ func TestMetricClientRecordWorkflowExecutionStarted(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		request       *p.RecordWorkflowExecutionStartedRequest
-		expectedError error
+		request                *p.RecordWorkflowExecutionStartedRequest
+		producerMockAffordance func(mockProducer *mocks.KafkaProducer)
+		scopeMockAffordance    func(mockScope *metricsClientMocks.Scope)
+		expectedError          error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
+			request: errorRequest,
+			producerMockAffordance: func(mockProducer *mocks.KafkaProducer) {
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					return true
+				})).Return(&types.BadRequestError{}).Once()
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
+			},
 			expectedError: &types.BadRequestError{},
 		},
 		"Case2: normal case": {
-			request:       request,
+			request: request,
+			producerMockAffordance: func(mockProducer *mocks.KafkaProducer) {
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					return true
+				})).Return(nil).Once()
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
+			},
 			expectedError: nil,
 		},
 	}
@@ -92,7 +111,7 @@ func TestMetricClientRecordWorkflowExecutionStarted(t *testing.T) {
 			mockScope := &metricsClientMocks.Scope{}
 
 			// create metricClient
-			logger := testlogger.New(t)
+			logger := log.NewNoop()
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
@@ -105,22 +124,11 @@ func TestMetricClientRecordWorkflowExecutionStarted(t *testing.T) {
 			// mock behaviors
 			mockMetricClient.On("Scope", mock.Anything, mock.Anything).Return(mockScope).Once()
 			mockScope.On("StartTimer", mock.Anything, mock.Anything).Return(testStopwatch).Once()
+			test.producerMockAffordance(mockProducer)
+			test.scopeMockAffordance(mockScope)
 
-			if test.expectedError != nil {
-				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
-					return true
-				})).Return(&types.BadRequestError{}).Once()
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
-				err := metricsClient.RecordWorkflowExecutionStarted(context.Background(), test.request)
-				assert.Equal(t, err, test.expectedError)
-			} else {
-				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
-					return true
-				})).Return(nil).Once()
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
-				err := metricsClient.RecordWorkflowExecutionStarted(context.Background(), test.request)
-				assert.NoError(t, err)
-			}
+			err := metricsClient.RecordWorkflowExecutionStarted(context.Background(), test.request)
+			assert.Equal(t, err, test.expectedError)
 		})
 	}
 }
@@ -146,15 +154,33 @@ func TestMetricClientRecordWorkflowExecutionClosed(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		request       *p.RecordWorkflowExecutionClosedRequest
-		expectedError error
+		request                *p.RecordWorkflowExecutionClosedRequest
+		producerMockAffordance func(mockProducer *mocks.KafkaProducer)
+		scopeMockAffordance    func(mockScope *metricsClientMocks.Scope)
+		expectedError          error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
+			request: errorRequest,
+			producerMockAffordance: func(mockProducer *mocks.KafkaProducer) {
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					return true
+				})).Return(&types.ServiceBusyError{}).Once()
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
+			},
 			expectedError: &types.ServiceBusyError{},
 		},
 		"Case2: normal case": {
-			request:       request,
+			request: request,
+			producerMockAffordance: func(mockProducer *mocks.KafkaProducer) {
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					return true
+				})).Return(nil).Once()
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
+			},
 			expectedError: nil,
 		},
 	}
@@ -169,7 +195,7 @@ func TestMetricClientRecordWorkflowExecutionClosed(t *testing.T) {
 			mockScope := &metricsClientMocks.Scope{}
 
 			// create metricClient
-			logger := testlogger.New(t)
+			logger := log.NewNoop()
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
@@ -182,22 +208,11 @@ func TestMetricClientRecordWorkflowExecutionClosed(t *testing.T) {
 			// mock behaviors
 			mockMetricClient.On("Scope", mock.Anything, mock.Anything).Return(mockScope).Once()
 			mockScope.On("StartTimer", mock.Anything, mock.Anything).Return(testStopwatch).Once()
+			test.producerMockAffordance(mockProducer)
+			test.scopeMockAffordance(mockScope)
 
-			if test.expectedError != nil {
-				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
-					return true
-				})).Return(&types.ServiceBusyError{}).Once()
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
-				err := metricsClient.RecordWorkflowExecutionClosed(context.Background(), test.request)
-				assert.Equal(t, err, test.expectedError)
-			} else {
-				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
-					return true
-				})).Return(nil).Once()
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
-				err := metricsClient.RecordWorkflowExecutionClosed(context.Background(), test.request)
-				assert.NoError(t, err)
-			}
+			err := metricsClient.RecordWorkflowExecutionClosed(context.Background(), test.request)
+			assert.Equal(t, err, test.expectedError)
 		})
 	}
 }
@@ -213,15 +228,33 @@ func TestMetricClientRecordWorkflowExecutionUninitialized(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		request       *p.RecordWorkflowExecutionUninitializedRequest
-		expectedError error
+		request                *p.RecordWorkflowExecutionUninitializedRequest
+		producerMockAffordance func(mockProducer *mocks.KafkaProducer)
+		scopeMockAffordance    func(mockScope *metricsClientMocks.Scope)
+		expectedError          error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
+			request: errorRequest,
+			producerMockAffordance: func(mockProducer *mocks.KafkaProducer) {
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					return true
+				})).Return(fmt.Errorf("error")).Once()
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
+			},
 			expectedError: fmt.Errorf("error"),
 		},
 		"Case2: normal case": {
-			request:       request,
+			request: request,
+			producerMockAffordance: func(mockProducer *mocks.KafkaProducer) {
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					return true
+				})).Return(nil).Once()
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
+			},
 			expectedError: nil,
 		},
 	}
@@ -236,7 +269,7 @@ func TestMetricClientRecordWorkflowExecutionUninitialized(t *testing.T) {
 			mockScope := &metricsClientMocks.Scope{}
 
 			// create metricClient
-			logger := testlogger.New(t)
+			logger := log.NewNoop()
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
@@ -249,22 +282,11 @@ func TestMetricClientRecordWorkflowExecutionUninitialized(t *testing.T) {
 			// mock behaviors
 			mockMetricClient.On("Scope", mock.Anything, mock.Anything).Return(mockScope).Once()
 			mockScope.On("StartTimer", mock.Anything, mock.Anything).Return(testStopwatch).Once()
+			test.producerMockAffordance(mockProducer)
+			test.scopeMockAffordance(mockScope)
 
-			if test.expectedError != nil {
-				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
-					return true
-				})).Return(fmt.Errorf("error")).Once()
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
-				err := metricsClient.RecordWorkflowExecutionUninitialized(context.Background(), test.request)
-				assert.Equal(t, err, test.expectedError)
-			} else {
-				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
-					return true
-				})).Return(nil).Once()
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
-				err := metricsClient.RecordWorkflowExecutionUninitialized(context.Background(), test.request)
-				assert.NoError(t, err)
-			}
+			err := metricsClient.RecordWorkflowExecutionUninitialized(context.Background(), test.request)
+			assert.Equal(t, err, test.expectedError)
 		})
 	}
 }
@@ -280,15 +302,33 @@ func TestMetricClientUpsertWorkflowExecution(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		request       *p.UpsertWorkflowExecutionRequest
-		expectedError error
+		request                *p.UpsertWorkflowExecutionRequest
+		producerMockAffordance func(mockProducer *mocks.KafkaProducer)
+		scopeMockAffordance    func(mockScope *metricsClientMocks.Scope)
+		expectedError          error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
+			request: errorRequest,
+			producerMockAffordance: func(mockProducer *mocks.KafkaProducer) {
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					return true
+				})).Return(fmt.Errorf("error")).Once()
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
+			},
 			expectedError: fmt.Errorf("error"),
 		},
 		"Case2: normal case": {
-			request:       request,
+			request: request,
+			producerMockAffordance: func(mockProducer *mocks.KafkaProducer) {
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					return true
+				})).Return(nil).Once()
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
+			},
 			expectedError: nil,
 		},
 	}
@@ -303,7 +343,7 @@ func TestMetricClientUpsertWorkflowExecution(t *testing.T) {
 			mockScope := &metricsClientMocks.Scope{}
 
 			// create metricClient
-			logger := testlogger.New(t)
+			logger := log.NewNoop()
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
@@ -316,22 +356,11 @@ func TestMetricClientUpsertWorkflowExecution(t *testing.T) {
 			// mock behaviors
 			mockMetricClient.On("Scope", mock.Anything, mock.Anything).Return(mockScope).Once()
 			mockScope.On("StartTimer", mock.Anything, mock.Anything).Return(testStopwatch).Once()
+			test.producerMockAffordance(mockProducer)
+			test.scopeMockAffordance(mockScope)
 
-			if test.expectedError != nil {
-				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
-					return true
-				})).Return(fmt.Errorf("error")).Once()
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
-				err := metricsClient.UpsertWorkflowExecution(context.Background(), test.request)
-				assert.Equal(t, err, test.expectedError)
-			} else {
-				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
-					return true
-				})).Return(nil).Once()
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
-				err := metricsClient.UpsertWorkflowExecution(context.Background(), test.request)
-				assert.NoError(t, err)
-			}
+			err := metricsClient.UpsertWorkflowExecution(context.Background(), test.request)
+			assert.Equal(t, err, test.expectedError)
 		})
 	}
 }
@@ -339,8 +368,7 @@ func TestMetricClientUpsertWorkflowExecution(t *testing.T) {
 func TestMetricClientListOpenWorkflowExecutions(t *testing.T) {
 	// test non-empty request fields match
 	errorRequest := &p.ListWorkflowExecutionsRequest{
-		Domain:        DomainID,
-		NextPageToken: []byte("error"),
+		Domain: "badDomainID",
 	}
 
 	request := &p.ListWorkflowExecutionsRequest{
@@ -348,15 +376,31 @@ func TestMetricClientListOpenWorkflowExecutions(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		request       *p.ListWorkflowExecutionsRequest
-		expectedError error
+		request                   *p.ListWorkflowExecutionsRequest
+		pinotClientMockAffordance func(mockPinotClient *pnt.MockGenericClient)
+		scopeMockAffordance       func(mockScope *metricsClientMocks.Scope)
+		expectedError             error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
+			request: errorRequest,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, fmt.Errorf("error")).Times(1)
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
+			},
 			expectedError: fmt.Errorf("error"),
 		},
 		"Case2: normal case": {
-			request:       request,
+			request: request,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
+			},
 			expectedError: nil,
 		},
 	}
@@ -371,7 +415,7 @@ func TestMetricClientListOpenWorkflowExecutions(t *testing.T) {
 			mockScope := &metricsClientMocks.Scope{}
 
 			// create metricClient
-			logger := testlogger.New(t)
+			logger := log.NewNoop()
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
@@ -384,19 +428,11 @@ func TestMetricClientListOpenWorkflowExecutions(t *testing.T) {
 			// mock behaviors
 			mockMetricClient.On("Scope", mock.Anything, mock.Anything).Return(mockScope).Once()
 			mockScope.On("StartTimer", mock.Anything, mock.Anything).Return(testStopwatch).Once()
+			test.pinotClientMockAffordance(mockPinotClient)
+			test.scopeMockAffordance(mockScope)
 
-			if test.expectedError != nil {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
-				_, err := metricsClient.ListOpenWorkflowExecutions(context.Background(), test.request)
-				assert.Error(t, err)
-			} else {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
-				_, err := metricsClient.ListOpenWorkflowExecutions(context.Background(), test.request)
-				assert.NoError(t, err)
-			}
+			_, err := metricsClient.ListOpenWorkflowExecutions(context.Background(), test.request)
+			assert.Equal(t, test.expectedError, err)
 		})
 	}
 }
@@ -404,8 +440,7 @@ func TestMetricClientListOpenWorkflowExecutions(t *testing.T) {
 func TestMetricClientListClosedWorkflowExecutions(t *testing.T) {
 	// test non-empty request fields match
 	errorRequest := &p.ListWorkflowExecutionsRequest{
-		Domain:        DomainID,
-		NextPageToken: []byte("error"),
+		Domain: "badDomainId",
 	}
 
 	request := &p.ListWorkflowExecutionsRequest{
@@ -413,15 +448,31 @@ func TestMetricClientListClosedWorkflowExecutions(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		request       *p.ListWorkflowExecutionsRequest
-		expectedError error
+		request                   *p.ListWorkflowExecutionsRequest
+		pinotClientMockAffordance func(mockPinotClient *pnt.MockGenericClient)
+		scopeMockAffordance       func(mockScope *metricsClientMocks.Scope)
+		expectedError             error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
+			request: errorRequest,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, fmt.Errorf("error")).Times(1)
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
+			},
 			expectedError: fmt.Errorf("error"),
 		},
 		"Case2: normal case": {
-			request:       request,
+			request: request,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
+			},
 			expectedError: nil,
 		},
 	}
@@ -436,7 +487,7 @@ func TestMetricClientListClosedWorkflowExecutions(t *testing.T) {
 			mockScope := &metricsClientMocks.Scope{}
 
 			// create metricClient
-			logger := testlogger.New(t)
+			logger := log.NewNoop()
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
@@ -449,19 +500,11 @@ func TestMetricClientListClosedWorkflowExecutions(t *testing.T) {
 			// mock behaviors
 			mockMetricClient.On("Scope", mock.Anything, mock.Anything).Return(mockScope).Once()
 			mockScope.On("StartTimer", mock.Anything, mock.Anything).Return(testStopwatch).Once()
+			test.pinotClientMockAffordance(mockPinotClient)
+			test.scopeMockAffordance(mockScope)
 
-			if test.expectedError != nil {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
-				_, err := metricsClient.ListClosedWorkflowExecutions(context.Background(), test.request)
-				assert.Error(t, err)
-			} else {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
-				_, err := metricsClient.ListClosedWorkflowExecutions(context.Background(), test.request)
-				assert.NoError(t, err)
-			}
+			_, err := metricsClient.ListClosedWorkflowExecutions(context.Background(), test.request)
+			assert.Equal(t, test.expectedError, err)
 		})
 	}
 }
@@ -470,8 +513,7 @@ func TestMetricClientListOpenWorkflowExecutionsByType(t *testing.T) {
 	// test non-empty request fields match
 	errorRequest := &p.ListWorkflowExecutionsByTypeRequest{
 		ListWorkflowExecutionsRequest: p.ListWorkflowExecutionsRequest{
-			Domain:        DomainID,
-			NextPageToken: []byte("error"),
+			Domain: "badDomainID",
 		},
 		WorkflowTypeName: "",
 	}
@@ -479,15 +521,31 @@ func TestMetricClientListOpenWorkflowExecutionsByType(t *testing.T) {
 	request := &p.ListWorkflowExecutionsByTypeRequest{}
 
 	tests := map[string]struct {
-		request       *p.ListWorkflowExecutionsByTypeRequest
-		expectedError error
+		request                   *p.ListWorkflowExecutionsByTypeRequest
+		pinotClientMockAffordance func(mockPinotClient *pnt.MockGenericClient)
+		scopeMockAffordance       func(mockScope *metricsClientMocks.Scope)
+		expectedError             error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
+			request: errorRequest,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, fmt.Errorf("error")).Times(1)
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
+			},
 			expectedError: fmt.Errorf("error"),
 		},
 		"Case2: normal case": {
-			request:       request,
+			request: request,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
+			},
 			expectedError: nil,
 		},
 	}
@@ -502,7 +560,7 @@ func TestMetricClientListOpenWorkflowExecutionsByType(t *testing.T) {
 			mockScope := &metricsClientMocks.Scope{}
 
 			// create metricClient
-			logger := testlogger.New(t)
+			logger := log.NewNoop()
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
@@ -515,19 +573,11 @@ func TestMetricClientListOpenWorkflowExecutionsByType(t *testing.T) {
 			// mock behaviors
 			mockMetricClient.On("Scope", mock.Anything, mock.Anything).Return(mockScope).Once()
 			mockScope.On("StartTimer", mock.Anything, mock.Anything).Return(testStopwatch).Once()
+			test.pinotClientMockAffordance(mockPinotClient)
+			test.scopeMockAffordance(mockScope)
 
-			if test.expectedError != nil {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
-				_, err := metricsClient.ListOpenWorkflowExecutionsByType(context.Background(), test.request)
-				assert.Error(t, err)
-			} else {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
-				_, err := metricsClient.ListOpenWorkflowExecutionsByType(context.Background(), test.request)
-				assert.NoError(t, err)
-			}
+			_, err := metricsClient.ListOpenWorkflowExecutionsByType(context.Background(), test.request)
+			assert.Equal(t, test.expectedError, err)
 		})
 	}
 }
@@ -536,8 +586,7 @@ func TestMetricClientListClosedWorkflowExecutionsByType(t *testing.T) {
 	// test non-empty request fields match
 	errorRequest := &p.ListWorkflowExecutionsByTypeRequest{
 		ListWorkflowExecutionsRequest: p.ListWorkflowExecutionsRequest{
-			Domain:        DomainID,
-			NextPageToken: []byte("error"),
+			Domain: "badDomainID",
 		},
 		WorkflowTypeName: "",
 	}
@@ -545,15 +594,31 @@ func TestMetricClientListClosedWorkflowExecutionsByType(t *testing.T) {
 	request := &p.ListWorkflowExecutionsByTypeRequest{}
 
 	tests := map[string]struct {
-		request       *p.ListWorkflowExecutionsByTypeRequest
-		expectedError error
+		request                   *p.ListWorkflowExecutionsByTypeRequest
+		pinotClientMockAffordance func(mockPinotClient *pnt.MockGenericClient)
+		scopeMockAffordance       func(mockScope *metricsClientMocks.Scope)
+		expectedError             error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
+			request: errorRequest,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, fmt.Errorf("error")).Times(1)
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
+			},
 			expectedError: fmt.Errorf("error"),
 		},
 		"Case2: normal case": {
-			request:       request,
+			request: request,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
+			},
 			expectedError: nil,
 		},
 	}
@@ -568,7 +633,7 @@ func TestMetricClientListClosedWorkflowExecutionsByType(t *testing.T) {
 			mockScope := &metricsClientMocks.Scope{}
 
 			// create metricClient
-			logger := testlogger.New(t)
+			logger := log.NewNoop()
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
@@ -581,19 +646,11 @@ func TestMetricClientListClosedWorkflowExecutionsByType(t *testing.T) {
 			// mock behaviors
 			mockMetricClient.On("Scope", mock.Anything, mock.Anything).Return(mockScope).Once()
 			mockScope.On("StartTimer", mock.Anything, mock.Anything).Return(testStopwatch).Once()
+			test.pinotClientMockAffordance(mockPinotClient)
+			test.scopeMockAffordance(mockScope)
 
-			if test.expectedError != nil {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
-				_, err := metricsClient.ListClosedWorkflowExecutionsByType(context.Background(), test.request)
-				assert.Error(t, err)
-			} else {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
-				_, err := metricsClient.ListClosedWorkflowExecutionsByType(context.Background(), test.request)
-				assert.NoError(t, err)
-			}
+			_, err := metricsClient.ListClosedWorkflowExecutionsByType(context.Background(), test.request)
+			assert.Equal(t, test.expectedError, err)
 		})
 	}
 }
@@ -602,23 +659,38 @@ func TestMetricClientListOpenWorkflowExecutionsByWorkflowID(t *testing.T) {
 	// test non-empty request fields match
 	errorRequest := &p.ListWorkflowExecutionsByWorkflowIDRequest{
 		ListWorkflowExecutionsRequest: p.ListWorkflowExecutionsRequest{
-			Domain:        DomainID,
-			NextPageToken: []byte("error"),
+			Domain: "badDomainID",
 		},
 	}
 
 	request := &p.ListWorkflowExecutionsByWorkflowIDRequest{}
 
 	tests := map[string]struct {
-		request       *p.ListWorkflowExecutionsByWorkflowIDRequest
-		expectedError error
+		request                   *p.ListWorkflowExecutionsByWorkflowIDRequest
+		pinotClientMockAffordance func(mockPinotClient *pnt.MockGenericClient)
+		scopeMockAffordance       func(mockScope *metricsClientMocks.Scope)
+		expectedError             error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
+			request: errorRequest,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, fmt.Errorf("error")).Times(1)
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
+			},
 			expectedError: fmt.Errorf("error"),
 		},
 		"Case2: normal case": {
-			request:       request,
+			request: request,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
+			},
 			expectedError: nil,
 		},
 	}
@@ -633,7 +705,7 @@ func TestMetricClientListOpenWorkflowExecutionsByWorkflowID(t *testing.T) {
 			mockScope := &metricsClientMocks.Scope{}
 
 			// create metricClient
-			logger := testlogger.New(t)
+			logger := log.NewNoop()
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
@@ -646,19 +718,11 @@ func TestMetricClientListOpenWorkflowExecutionsByWorkflowID(t *testing.T) {
 			// mock behaviors
 			mockMetricClient.On("Scope", mock.Anything, mock.Anything).Return(mockScope).Once()
 			mockScope.On("StartTimer", mock.Anything, mock.Anything).Return(testStopwatch).Once()
+			test.pinotClientMockAffordance(mockPinotClient)
+			test.scopeMockAffordance(mockScope)
 
-			if test.expectedError != nil {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
-				_, err := metricsClient.ListOpenWorkflowExecutionsByWorkflowID(context.Background(), test.request)
-				assert.Error(t, err)
-			} else {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
-				_, err := metricsClient.ListOpenWorkflowExecutionsByWorkflowID(context.Background(), test.request)
-				assert.NoError(t, err)
-			}
+			_, err := metricsClient.ListOpenWorkflowExecutionsByWorkflowID(context.Background(), test.request)
+			assert.Equal(t, test.expectedError, err)
 		})
 	}
 }
@@ -667,23 +731,38 @@ func TestMetricClientListClosedWorkflowExecutionsByWorkflowID(t *testing.T) {
 	// test non-empty request fields match
 	errorRequest := &p.ListWorkflowExecutionsByWorkflowIDRequest{
 		ListWorkflowExecutionsRequest: p.ListWorkflowExecutionsRequest{
-			Domain:        DomainID,
-			NextPageToken: []byte("error"),
+			Domain: "badDomainID",
 		},
 	}
 
 	request := &p.ListWorkflowExecutionsByWorkflowIDRequest{}
 
 	tests := map[string]struct {
-		request       *p.ListWorkflowExecutionsByWorkflowIDRequest
-		expectedError error
+		request                   *p.ListWorkflowExecutionsByWorkflowIDRequest
+		pinotClientMockAffordance func(mockPinotClient *pnt.MockGenericClient)
+		scopeMockAffordance       func(mockScope *metricsClientMocks.Scope)
+		expectedError             error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
+			request: errorRequest,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, fmt.Errorf("error")).Times(1)
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
+			},
 			expectedError: fmt.Errorf("error"),
 		},
 		"Case2: normal case": {
-			request:       request,
+			request: request,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
+			},
 			expectedError: nil,
 		},
 	}
@@ -698,7 +777,7 @@ func TestMetricClientListClosedWorkflowExecutionsByWorkflowID(t *testing.T) {
 			mockScope := &metricsClientMocks.Scope{}
 
 			// create metricClient
-			logger := testlogger.New(t)
+			logger := log.NewNoop()
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
@@ -711,17 +790,13 @@ func TestMetricClientListClosedWorkflowExecutionsByWorkflowID(t *testing.T) {
 			// mock behaviors
 			mockMetricClient.On("Scope", mock.Anything, mock.Anything).Return(mockScope).Once()
 			mockScope.On("StartTimer", mock.Anything, mock.Anything).Return(testStopwatch).Once()
+			test.pinotClientMockAffordance(mockPinotClient)
+			test.scopeMockAffordance(mockScope)
 
+			_, err := metricsClient.ListClosedWorkflowExecutionsByWorkflowID(context.Background(), test.request)
 			if test.expectedError != nil {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
-				_, err := metricsClient.ListClosedWorkflowExecutionsByWorkflowID(context.Background(), test.request)
-				assert.Error(t, err)
+				assert.Equal(t, test.expectedError.Error(), err.Error())
 			} else {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
-				_, err := metricsClient.ListClosedWorkflowExecutionsByWorkflowID(context.Background(), test.request)
 				assert.NoError(t, err)
 			}
 		})
@@ -732,23 +807,38 @@ func TestMetricClientListClosedWorkflowExecutionsByStatus(t *testing.T) {
 	// test non-empty request fields match
 	errorRequest := &p.ListClosedWorkflowExecutionsByStatusRequest{
 		ListWorkflowExecutionsRequest: p.ListWorkflowExecutionsRequest{
-			Domain:        DomainID,
-			NextPageToken: []byte("error"),
+			Domain: "badDomainID",
 		},
 	}
 
 	request := &p.ListClosedWorkflowExecutionsByStatusRequest{}
 
 	tests := map[string]struct {
-		request       *p.ListClosedWorkflowExecutionsByStatusRequest
-		expectedError error
+		request                   *p.ListClosedWorkflowExecutionsByStatusRequest
+		pinotClientMockAffordance func(mockPinotClient *pnt.MockGenericClient)
+		scopeMockAffordance       func(mockScope *metricsClientMocks.Scope)
+		expectedError             error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
+			request: errorRequest,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, fmt.Errorf("error")).Times(1)
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
+			},
 			expectedError: fmt.Errorf("error"),
 		},
 		"Case2: normal case": {
-			request:       request,
+			request: request,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
+			},
 			expectedError: nil,
 		},
 	}
@@ -763,7 +853,7 @@ func TestMetricClientListClosedWorkflowExecutionsByStatus(t *testing.T) {
 			mockScope := &metricsClientMocks.Scope{}
 
 			// create metricClient
-			logger := testlogger.New(t)
+			logger := log.NewNoop()
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
@@ -776,19 +866,11 @@ func TestMetricClientListClosedWorkflowExecutionsByStatus(t *testing.T) {
 			// mock behaviors
 			mockMetricClient.On("Scope", mock.Anything, mock.Anything).Return(mockScope).Once()
 			mockScope.On("StartTimer", mock.Anything, mock.Anything).Return(testStopwatch).Once()
+			test.pinotClientMockAffordance(mockPinotClient)
+			test.scopeMockAffordance(mockScope)
 
-			if test.expectedError != nil {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
-				_, err := metricsClient.ListClosedWorkflowExecutionsByStatus(context.Background(), test.request)
-				assert.Error(t, err)
-			} else {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
-				_, err := metricsClient.ListClosedWorkflowExecutionsByStatus(context.Background(), test.request)
-				assert.NoError(t, err)
-			}
+			_, err := metricsClient.ListClosedWorkflowExecutionsByStatus(context.Background(), test.request)
+			assert.Equal(t, test.expectedError, err)
 		})
 	}
 }
@@ -800,56 +882,25 @@ func TestMetricClientGetClosedWorkflowExecution(t *testing.T) {
 	request := &p.GetClosedWorkflowExecutionRequest{}
 
 	tests := map[string]struct {
-		request       *p.GetClosedWorkflowExecutionRequest
-		expectedError error
+		request                   *p.GetClosedWorkflowExecutionRequest
+		pinotClientMockAffordance func(mockPinotClient *pnt.MockGenericClient)
+		scopeMockAffordance       func(mockScope *metricsClientMocks.Scope)
+		expectedError             error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
-			expectedError: fmt.Errorf("error"),
+			request: errorRequest,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, fmt.Errorf("error")).Times(1)
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
+			},
+			expectedError: fmt.Errorf("Pinot GetClosedWorkflowExecution failed, error"),
 		},
 		"Case2: normal case": {
-			request:       request,
-			expectedError: nil,
-		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			// create mock clients
-			ctrl := gomock.NewController(t)
-			mockPinotClient := pnt.NewMockGenericClient(ctrl)
-			mockProducer := &mocks.KafkaProducer{}
-			mockMetricClient := &metricsClientMocks.Client{}
-			mockScope := &metricsClientMocks.Scope{}
-
-			// create metricClient
-			logger := testlogger.New(t)
-			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
-				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
-				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
-			visibilityStore := mgr.(*pinotVisibilityStore)
-			pinotVisibilityManager := p.NewVisibilityManagerImpl(visibilityStore, logger)
-			visibilityMgr := NewPinotVisibilityMetricsClient(pinotVisibilityManager, mockMetricClient, logger)
-			metricsClient := visibilityMgr.(*pinotVisibilityMetricsClient)
-
-			// mock behaviors
-			mockMetricClient.On("Scope", mock.Anything, mock.Anything).Return(mockScope).Once()
-			mockScope.On("StartTimer", mock.Anything, mock.Anything).Return(testStopwatch).Once()
-
-			if test.expectedError != nil {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockPinotClient.EXPECT().Search(gomock.Any()).Return(&pnt.SearchResponse{
-					Executions: []*p.InternalVisibilityWorkflowExecutionInfo{
-						{
-							DomainID: DomainID,
-						},
-					},
-				}, fmt.Errorf("error")).Times(1)
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
-				_, err := metricsClient.GetClosedWorkflowExecution(context.Background(), test.request)
-				assert.Error(t, err)
-			} else {
+			request: request,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
 				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
 				mockPinotClient.EXPECT().Search(gomock.Any()).Return(&pnt.SearchResponse{
 					Executions: []*p.InternalVisibilityWorkflowExecutionInfo{
@@ -858,8 +909,44 @@ func TestMetricClientGetClosedWorkflowExecution(t *testing.T) {
 						},
 					},
 				}, nil).Times(1)
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
 				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
-				_, err := metricsClient.GetClosedWorkflowExecution(context.Background(), test.request)
+			},
+			expectedError: nil,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			// create mock clients
+			ctrl := gomock.NewController(t)
+			mockPinotClient := pnt.NewMockGenericClient(ctrl)
+			mockProducer := &mocks.KafkaProducer{}
+			mockMetricClient := &metricsClientMocks.Client{}
+			mockScope := &metricsClientMocks.Scope{}
+
+			// create metricClient
+			logger := log.NewNoop()
+			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
+				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
+			}, mockProducer, testlogger.New(t))
+			visibilityStore := mgr.(*pinotVisibilityStore)
+			pinotVisibilityManager := p.NewVisibilityManagerImpl(visibilityStore, logger)
+			visibilityMgr := NewPinotVisibilityMetricsClient(pinotVisibilityManager, mockMetricClient, logger)
+			metricsClient := visibilityMgr.(*pinotVisibilityMetricsClient)
+
+			// mock behaviors
+			mockMetricClient.On("Scope", mock.Anything, mock.Anything).Return(mockScope).Once()
+			mockScope.On("StartTimer", mock.Anything, mock.Anything).Return(testStopwatch).Once()
+			test.pinotClientMockAffordance(mockPinotClient)
+			test.scopeMockAffordance(mockScope)
+
+			_, err := metricsClient.GetClosedWorkflowExecution(context.Background(), test.request)
+			if test.expectedError != nil {
+				assert.Equal(t, test.expectedError.Error(), err.Error())
+			} else {
 				assert.NoError(t, err)
 			}
 		})
@@ -867,21 +954,35 @@ func TestMetricClientGetClosedWorkflowExecution(t *testing.T) {
 }
 
 func TestMetricClientListWorkflowExecutions(t *testing.T) {
-	errorRequest := &p.ListWorkflowExecutionsByQueryRequest{
-		NextPageToken: []byte("error"),
-	}
+	errorRequest := &p.ListWorkflowExecutionsByQueryRequest{}
 	request := &p.ListWorkflowExecutionsByQueryRequest{}
 
 	tests := map[string]struct {
-		request       *p.ListWorkflowExecutionsByQueryRequest
-		expectedError error
+		request                   *p.ListWorkflowExecutionsByQueryRequest
+		pinotClientMockAffordance func(mockPinotClient *pnt.MockGenericClient)
+		scopeMockAffordance       func(mockScope *metricsClientMocks.Scope)
+		expectedError             error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
+			request: errorRequest,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, fmt.Errorf("error")).Times(1)
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
+			},
 			expectedError: fmt.Errorf("error"),
 		},
 		"Case2: normal case": {
-			request:       request,
+			request: request,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
+			},
 			expectedError: nil,
 		},
 	}
@@ -896,7 +997,7 @@ func TestMetricClientListWorkflowExecutions(t *testing.T) {
 			mockScope := &metricsClientMocks.Scope{}
 
 			// create metricClient
-			logger := testlogger.New(t)
+			logger := log.NewNoop()
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
@@ -909,39 +1010,45 @@ func TestMetricClientListWorkflowExecutions(t *testing.T) {
 			// mock behaviors
 			mockMetricClient.On("Scope", mock.Anything, mock.Anything).Return(mockScope).Once()
 			mockScope.On("StartTimer", mock.Anything, mock.Anything).Return(testStopwatch).Once()
+			test.pinotClientMockAffordance(mockPinotClient)
+			test.scopeMockAffordance(mockScope)
 
-			if test.expectedError != nil {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
-				_, err := metricsClient.ListWorkflowExecutions(context.Background(), test.request)
-				assert.Error(t, err)
-			} else {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
-				_, err := metricsClient.ListWorkflowExecutions(context.Background(), test.request)
-				assert.NoError(t, err)
-			}
+			_, err := metricsClient.ListWorkflowExecutions(context.Background(), test.request)
+			assert.Equal(t, test.expectedError, err)
 		})
 	}
 }
 
 func TestMetricClientScanWorkflowExecutions(t *testing.T) {
-	errorRequest := &p.ListWorkflowExecutionsByQueryRequest{
-		NextPageToken: []byte("error"),
-	}
+	errorRequest := &p.ListWorkflowExecutionsByQueryRequest{}
 	request := &p.ListWorkflowExecutionsByQueryRequest{}
 
 	tests := map[string]struct {
-		request       *p.ListWorkflowExecutionsByQueryRequest
-		expectedError error
+		request                   *p.ListWorkflowExecutionsByQueryRequest
+		pinotClientMockAffordance func(mockPinotClient *pnt.MockGenericClient)
+		scopeMockAffordance       func(mockScope *metricsClientMocks.Scope)
+		expectedError             error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
+			request: errorRequest,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, fmt.Errorf("error")).Times(1)
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
+			},
 			expectedError: fmt.Errorf("error"),
 		},
 		"Case2: normal case": {
-			request:       request,
+			request: request,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
+			},
 			expectedError: nil,
 		},
 	}
@@ -956,7 +1063,7 @@ func TestMetricClientScanWorkflowExecutions(t *testing.T) {
 			mockScope := &metricsClientMocks.Scope{}
 
 			// create metricClient
-			logger := testlogger.New(t)
+			logger := log.NewNoop()
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
@@ -969,19 +1076,11 @@ func TestMetricClientScanWorkflowExecutions(t *testing.T) {
 			// mock behaviors
 			mockMetricClient.On("Scope", mock.Anything, mock.Anything).Return(mockScope).Once()
 			mockScope.On("StartTimer", mock.Anything, mock.Anything).Return(testStopwatch).Once()
+			test.pinotClientMockAffordance(mockPinotClient)
+			test.scopeMockAffordance(mockScope)
 
-			if test.expectedError != nil {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
-				_, err := metricsClient.ScanWorkflowExecutions(context.Background(), test.request)
-				assert.Error(t, err)
-			} else {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
-				_, err := metricsClient.ScanWorkflowExecutions(context.Background(), test.request)
-				assert.NoError(t, err)
-			}
+			_, err := metricsClient.ScanWorkflowExecutions(context.Background(), test.request)
+			assert.Equal(t, test.expectedError, err)
 		})
 	}
 }
@@ -991,15 +1090,31 @@ func TestMetricClientCountWorkflowExecutions(t *testing.T) {
 	request := &p.CountWorkflowExecutionsRequest{}
 
 	tests := map[string]struct {
-		request       *p.CountWorkflowExecutionsRequest
-		expectedError error
+		request                   *p.CountWorkflowExecutionsRequest
+		pinotClientMockAffordance func(mockPinotClient *pnt.MockGenericClient)
+		scopeMockAffordance       func(mockScope *metricsClientMocks.Scope)
+		expectedError             error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
-			expectedError: fmt.Errorf("error"),
+			request: errorRequest,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().CountByQuery(gomock.Any()).Return(int64(0), fmt.Errorf("error")).Times(1)
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
+			},
+			expectedError: fmt.Errorf("CountClosedWorkflowExecutions failed, error"),
 		},
 		"Case2: normal case": {
-			request:       request,
+			request: request,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().CountByQuery(gomock.Any()).Return(int64(1), nil).Times(1)
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
+			},
 			expectedError: nil,
 		},
 	}
@@ -1014,7 +1129,7 @@ func TestMetricClientCountWorkflowExecutions(t *testing.T) {
 			mockScope := &metricsClientMocks.Scope{}
 
 			// create metricClient
-			logger := testlogger.New(t)
+			logger := log.NewNoop()
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
@@ -1027,18 +1142,13 @@ func TestMetricClientCountWorkflowExecutions(t *testing.T) {
 			// mock behaviors
 			mockMetricClient.On("Scope", mock.Anything, mock.Anything).Return(mockScope).Once()
 			mockScope.On("StartTimer", mock.Anything, mock.Anything).Return(testStopwatch).Once()
+			test.pinotClientMockAffordance(mockPinotClient)
+			test.scopeMockAffordance(mockScope)
 
+			_, err := metricsClient.CountWorkflowExecutions(context.Background(), test.request)
 			if test.expectedError != nil {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockPinotClient.EXPECT().CountByQuery(gomock.Any()).Return(int64(0), fmt.Errorf("error")).Times(1)
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
-				_, err := metricsClient.CountWorkflowExecutions(context.Background(), test.request)
-				assert.Error(t, err)
+				assert.Equal(t, test.expectedError.Error(), err.Error())
 			} else {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockPinotClient.EXPECT().CountByQuery(gomock.Any()).Return(int64(1), nil).Times(1)
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
-				_, err := metricsClient.CountWorkflowExecutions(context.Background(), test.request)
 				assert.NoError(t, err)
 			}
 		})
@@ -1052,15 +1162,33 @@ func TestMetricClientDeleteWorkflowExecution(t *testing.T) {
 	request := &p.VisibilityDeleteWorkflowExecutionRequest{}
 
 	tests := map[string]struct {
-		request       *p.VisibilityDeleteWorkflowExecutionRequest
-		expectedError error
+		request                *p.VisibilityDeleteWorkflowExecutionRequest
+		producerMockAffordance func(mockProducer *mocks.KafkaProducer)
+		scopeMockAffordance    func(mockScope *metricsClientMocks.Scope)
+		expectedError          error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
+			request: errorRequest,
+			producerMockAffordance: func(mockProducer *mocks.KafkaProducer) {
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					return true
+				})).Return(fmt.Errorf("error")).Once()
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
+			},
 			expectedError: fmt.Errorf("error"),
 		},
 		"Case2: normal case": {
-			request:       request,
+			request: request,
+			producerMockAffordance: func(mockProducer *mocks.KafkaProducer) {
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					return true
+				})).Return(nil).Once()
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
+			},
 			expectedError: nil,
 		},
 	}
@@ -1075,7 +1203,7 @@ func TestMetricClientDeleteWorkflowExecution(t *testing.T) {
 			mockScope := &metricsClientMocks.Scope{}
 
 			// create metricClient
-			logger := testlogger.New(t)
+			logger := log.NewNoop()
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
@@ -1088,22 +1216,11 @@ func TestMetricClientDeleteWorkflowExecution(t *testing.T) {
 			// mock behaviors
 			mockMetricClient.On("Scope", mock.Anything, mock.Anything).Return(mockScope).Once()
 			mockScope.On("StartTimer", mock.Anything, mock.Anything).Return(testStopwatch).Once()
+			test.producerMockAffordance(mockProducer)
+			test.scopeMockAffordance(mockScope)
 
-			if test.expectedError != nil {
-				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
-					return true
-				})).Return(fmt.Errorf("error")).Once()
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
-				err := metricsClient.DeleteWorkflowExecution(context.Background(), test.request)
-				assert.Equal(t, err, test.expectedError)
-			} else {
-				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
-					return true
-				})).Return(nil).Once()
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
-				err := metricsClient.DeleteWorkflowExecution(context.Background(), test.request)
-				assert.NoError(t, err)
-			}
+			err := metricsClient.DeleteWorkflowExecution(context.Background(), test.request)
+			assert.Equal(t, err, test.expectedError)
 		})
 	}
 }
@@ -1115,15 +1232,33 @@ func TestMetricClientDeleteUninitializedWorkflowExecution(t *testing.T) {
 	request := &p.VisibilityDeleteWorkflowExecutionRequest{}
 
 	tests := map[string]struct {
-		request       *p.VisibilityDeleteWorkflowExecutionRequest
-		expectedError error
+		request                *p.VisibilityDeleteWorkflowExecutionRequest
+		producerMockAffordance func(mockProducer *mocks.KafkaProducer)
+		scopeMockAffordance    func(mockScope *metricsClientMocks.Scope)
+		expectedError          error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
+			request: errorRequest,
+			producerMockAffordance: func(mockProducer *mocks.KafkaProducer) {
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					return true
+				})).Return(fmt.Errorf("error")).Once()
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
+			},
 			expectedError: fmt.Errorf("error"),
 		},
 		"Case2: normal case": {
-			request:       request,
+			request: request,
+			producerMockAffordance: func(mockProducer *mocks.KafkaProducer) {
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					return true
+				})).Return(nil).Once()
+			},
+			scopeMockAffordance: func(mockScope *metricsClientMocks.Scope) {
+				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
+			},
 			expectedError: nil,
 		},
 	}
@@ -1138,7 +1273,7 @@ func TestMetricClientDeleteUninitializedWorkflowExecution(t *testing.T) {
 			mockScope := &metricsClientMocks.Scope{}
 
 			// create metricClient
-			logger := testlogger.New(t)
+			logger := log.NewNoop()
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
@@ -1151,22 +1286,11 @@ func TestMetricClientDeleteUninitializedWorkflowExecution(t *testing.T) {
 			// mock behaviors
 			mockMetricClient.On("Scope", mock.Anything, mock.Anything).Return(mockScope).Once()
 			mockScope.On("StartTimer", mock.Anything, mock.Anything).Return(testStopwatch).Once()
+			test.producerMockAffordance(mockProducer)
+			test.scopeMockAffordance(mockScope)
 
-			if test.expectedError != nil {
-				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
-					return true
-				})).Return(fmt.Errorf("error")).Once()
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Times(3)
-				err := metricsClient.DeleteUninitializedWorkflowExecution(context.Background(), test.request)
-				assert.Equal(t, err, test.expectedError)
-			} else {
-				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
-					return true
-				})).Return(nil).Once()
-				mockScope.On("IncCounter", mock.Anything, mock.Anything, mock.Anything).Return().Once()
-				err := metricsClient.DeleteUninitializedWorkflowExecution(context.Background(), test.request)
-				assert.NoError(t, err)
-			}
+			err := metricsClient.DeleteUninitializedWorkflowExecution(context.Background(), test.request)
+			assert.Equal(t, err, test.expectedError)
 		})
 	}
 }
@@ -1179,7 +1303,7 @@ func TestMetricClientClose(t *testing.T) {
 	mockMetricClient := &metricsClientMocks.Client{}
 
 	// create metricClient
-	logger := testlogger.New(t)
+	logger := log.NewNoop()
 	mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
@@ -1203,7 +1327,7 @@ func TestMetricClientGetName(t *testing.T) {
 	mockMetricClient := &metricsClientMocks.Client{}
 
 	// create metricClient
-	logger := testlogger.New(t)
+	logger := log.NewNoop()
 	mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
