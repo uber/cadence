@@ -21,6 +21,7 @@
 package domain
 
 import (
+	"context"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -242,6 +243,225 @@ func TestDomainReplicationTaskExecutor_Execute(t *testing.T) {
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.IsType(t, tt.errType, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestHandleDomainCreationReplicationTask(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockDomainManager := persistence.NewMockDomainManager(ctrl)
+	mockLogger := log.NewNoop()
+	mockTimeSource := clock.NewRealTimeSource()
+
+	executor := &domainReplicationTaskExecutorImpl{
+		domainManager: mockDomainManager,
+		logger:        mockLogger,
+		timeSource:    mockTimeSource,
+	}
+
+	var (
+		validTask = &types.DomainTaskAttributes{
+			DomainOperation: types.DomainOperationCreate.Ptr(),
+			ID:              "testDomainID",
+			Info: &types.DomainInfo{
+				Name:        "testDomain",
+				Status:      types.DomainStatusRegistered.Ptr(),
+				Description: "This is a test domain",
+				OwnerEmail:  "owner@test.com",
+				Data:        map[string]string{"key1": "value1"}, // Arbitrary domain metadata
+			},
+			Config: &types.DomainConfiguration{
+				WorkflowExecutionRetentionPeriodInDays: 10,
+				EmitMetric:                             true,
+				HistoryArchivalStatus:                  types.ArchivalStatusEnabled.Ptr(),
+				HistoryArchivalURI:                     "test://history/archival",
+				VisibilityArchivalStatus:               types.ArchivalStatusEnabled.Ptr(),
+				VisibilityArchivalURI:                  "test://visibility/archival",
+			},
+			ReplicationConfig: &types.DomainReplicationConfiguration{
+				ActiveClusterName: "activeClusterName",
+				Clusters: []*types.ClusterReplicationConfiguration{
+					{
+						ClusterName: "activeClusterName",
+					},
+					{
+						ClusterName: "standbyClusterName",
+					},
+				},
+			},
+			ConfigVersion:           1,
+			FailoverVersion:         1,
+			PreviousFailoverVersion: 0,
+		}
+	)
+
+	tests := []struct {
+		name      string
+		task      *types.DomainTaskAttributes
+		setup     func()
+		wantError bool
+	}{
+		{
+			name: "Successful Domain Creation",
+			task: validTask,
+			setup: func() {
+				mockDomainManager.EXPECT().
+					CreateDomain(gomock.Any(), gomock.Any()).
+					Return(&persistence.CreateDomainResponse{ID: "testDomainID"}, nil)
+			},
+			wantError: false,
+		},
+		{
+			name: "Generic Error During Domain Creation",
+			task: validTask,
+			setup: func() {
+				mockDomainManager.EXPECT().
+					CreateDomain(gomock.Any(), gomock.Any()).
+					Return(nil, types.InternalServiceError{Message: "an internal error"}).
+					Times(1)
+
+				// Since CreateDomain failed, handleDomainCreationReplicationTask might check for domain existence by name and ID
+				mockDomainManager.EXPECT().
+					GetDomain(gomock.Any(), gomock.Any()).
+					Return(nil, &types.EntityNotExistsError{}). // Simulate that no domain exists with the given name/ID
+					AnyTimes()
+			},
+			wantError: true,
+		},
+		{
+			name: "Handle Name/UUID Collision - EntityNotExistsError",
+			setup: func() {
+				mockDomainManager.EXPECT().
+					CreateDomain(gomock.Any(), gomock.Any()).
+					Return(nil, ErrNameUUIDCollision).Times(1)
+
+				mockDomainManager.EXPECT().
+					GetDomain(gomock.Any(), gomock.Any()).Return(nil, &types.EntityNotExistsError{}).AnyTimes()
+			},
+			task:      validTask,
+			wantError: true,
+		},
+		{
+			name: "Handle Name/UUID Collision - Correct Collision Handling",
+			setup: func() {
+				mockDomainManager.EXPECT().
+					CreateDomain(gomock.Any(), gomock.Any()).
+					Return(nil, ErrNameUUIDCollision).Times(1)
+
+				mockDomainManager.EXPECT().
+					GetDomain(gomock.Any(), gomock.Any()).
+					Return(nil, &types.EntityNotExistsError{}).Times(1) // Simulate no domain found by name
+
+				mockDomainManager.EXPECT().
+					GetDomain(gomock.Any(), gomock.Any()).
+					Return(nil, &types.EntityNotExistsError{}).Times(1) // Simulate no domain found by ID
+			},
+			task:      validTask,
+			wantError: true,
+		},
+		{
+			name: "Immediate Error Return from CreateDomain",
+			setup: func() {
+				mockDomainManager.EXPECT().
+					CreateDomain(gomock.Any(), gomock.Any()).
+					Return(nil, types.InternalServiceError{Message: "internal error"}).
+					Times(1)
+				mockDomainManager.EXPECT().
+					GetDomain(gomock.Any(), gomock.Any()).
+					Return(nil, ErrInvalidDomainStatus).
+					AnyTimes()
+			},
+			task:      validTask,
+			wantError: true,
+		},
+		{
+			name: "Domain Creation with Nil Status",
+			setup: func() {
+				// No need to set up a mock for CreateDomain as the call should not reach this point
+			},
+			task: &types.DomainTaskAttributes{
+				DomainOperation: types.DomainOperationCreate.Ptr(),
+				ID:              "testDomainID",
+				Info: &types.DomainInfo{
+					Name: "testDomain",
+					// Status is intentionally left as nil to trigger the error
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "Domain Creation with Unrecognized Status",
+			setup: func() {
+				// As before, no need for mock setup for CreateDomain
+			},
+			task: &types.DomainTaskAttributes{
+				DomainOperation: types.DomainOperationCreate.Ptr(),
+				ID:              "testDomainID",
+				Info: &types.DomainInfo{
+					Name:   "testDomain",
+					Status: types.DomainStatus(999).Ptr(), // Assuming 999 is an unrecognized status
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "Unexpected Error Type from GetDomain Leads to Default Error Handling",
+			setup: func() {
+				mockDomainManager.EXPECT().
+					CreateDomain(gomock.Any(), gomock.Any()).
+					Return(nil, ErrInvalidDomainStatus).Times(1)
+
+				mockDomainManager.EXPECT().
+					GetDomain(gomock.Any(), gomock.Any()).
+					Return(nil, types.InternalServiceError{Message: "unexpected internal error"}).Times(1)
+			},
+			task:      validTask,
+			wantError: true,
+		},
+		{
+			name: "Successful GetDomain with Name/UUID Mismatch",
+			setup: func() {
+				mockDomainManager.EXPECT().
+					CreateDomain(gomock.Any(), gomock.Any()).
+					Return(nil, ErrNameUUIDCollision).AnyTimes()
+
+				mockDomainManager.EXPECT().
+					GetDomain(gomock.Any(), gomock.Any()).
+					Return(&persistence.GetDomainResponse{
+						Info: &persistence.DomainInfo{ID: "testDomainID", Name: "mismatchName"},
+					}, nil).AnyTimes() // Successfully finds a domain but with a different name
+			},
+			task:      validTask,
+			wantError: true, // Expect an error because of the name/UUID collision
+		},
+		{
+			name: "Unexpected Error Type from GetDomain Leads to Default Error Handling",
+			setup: func() {
+				mockDomainManager.EXPECT().
+					CreateDomain(gomock.Any(), gomock.Any()).
+					Return(nil, ErrNameUUIDCollision).Times(1)
+
+				// Trigger an unexpected error type from GetDomain
+				mockDomainManager.EXPECT().
+					GetDomain(gomock.Any(), gomock.Any()).
+					Return(nil, types.InternalServiceError{Message: "unexpected internal error"}).Times(1)
+			},
+			task:      validTask,
+			wantError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setup()
+			err := executor.handleDomainCreationReplicationTask(context.Background(), tt.task)
+			if tt.wantError {
+				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
