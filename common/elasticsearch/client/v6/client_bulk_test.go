@@ -198,20 +198,7 @@ func TestFromV6ToGenericBulkResponseItemMaps(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			genericItems := fromV6ToGenericBulkResponseItemMaps(tt.v6items)
 			assert.Len(t, genericItems, len(tt.expected), "The lengths of actual and expected slices should match.")
-			for i, expectedMap := range tt.expected {
-				actualMap := genericItems[i]
-
-				for key, expectedItem := range expectedMap {
-					actualItem, exists := actualMap[key]
-					assert.True(t, exists, "Key should exist in actual map: "+key)
-
-					if expectedItem != nil && actualItem != nil {
-						assert.Equal(t, expectedItem.Status, actualItem.Status, "Status should match for key: "+key)
-					} else {
-						assert.Equal(t, expectedItem, actualItem, "Both expected and actual items should be nil for key: "+key)
-					}
-				}
-			}
+			assert.Equal(t, tt.expected, genericItems)
 		})
 	}
 }
