@@ -2,10 +2,6 @@ package host
 
 import (
 	"errors"
-	"fmt"
-	"sync"
-	"sync/atomic"
-	"time"
 
 	"github.com/pborman/uuid"
 	"github.com/uber/cadence/common"
@@ -13,7 +9,6 @@ import (
 )
 
 func (s *IntegrationSuite) TestWorkflowIDSpecificRateLimits() {
-	time.Sleep(1 * time.Minute) // wait for the rate limit to be updated
 	const (
 		testWorkflowID   = "integration-workflow-specific-rate-limit-test"
 		testWorkflowType = "integration-workflow-specific-rate-limit-test-type"
@@ -35,27 +30,21 @@ func (s *IntegrationSuite) TestWorkflowIDSpecificRateLimits() {
 		WorkflowIDReusePolicy: types.WorkflowIDReusePolicyTerminateIfRunning.Ptr(),
 	}
 
-	wg := sync.WaitGroup{}
-	var busyErrCount atomic.Int32
-	for i := 0; i < 100; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			ctx, cancel := createContext()
-			defer cancel()
-			start := time.Now()
-			_, err := s.engine.StartWorkflowExecution(ctx, request)
-			end := time.Now()
-			fmt.Println("StartWorkflowExecution time: ", end.Sub(start), start, end)
+	busyErrCount := 0
+	for i := 0; i < 10; i++ {
+		ctx, cancel := createContext()
+		defer cancel()
 
-			var busyErr *types.ServiceBusyError
-			if errors.As(err, &busyErr) {
-				busyErrCount.Add(1)
-			}
-		}()
+		_, err := s.engine.StartWorkflowExecution(ctx, request)
+
+		var busyErr *types.ServiceBusyError
+		if errors.As(err, &busyErr) {
+			busyErrCount += 1
+		} else {
+			s.NoError(err)
+		}
 	}
 
-	wg.Wait()
-
-	s.GreaterOrEqual(busyErrCount.Load(), int32(50))
+	// The per workflow rate limit is 5, so we should see 5 busy errors
+	s.Equal(5, busyErrCount)
 }
