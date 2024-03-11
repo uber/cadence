@@ -100,6 +100,8 @@ func FromError(err error) error {
 		return protobuf.NewError(yarpcerrors.CodeResourceExhausted, e.Message, protobuf.WithErrorDetails(&apiv1.LimitExceededError{}))
 	case *types.ServiceBusyError:
 		return protobuf.NewError(yarpcerrors.CodeResourceExhausted, e.Message, protobuf.WithErrorDetails(&apiv1.ServiceBusyError{}))
+	case *types.UserServiceBusyError:
+		return protobuf.NewError(yarpcerrors.CodeResourceExhausted, e.Message, protobuf.WithErrorDetails(&apiv1.UserServiceBusyError{}))
 	case *types.RemoteSyncMatchedError:
 		return protobuf.NewError(yarpcerrors.CodeUnavailable, e.Message, protobuf.WithErrorDetails(&sharedv1.RemoteSyncMatchedError{}))
 	case *types.StickyWorkerUnavailableError:
@@ -225,6 +227,10 @@ func ToError(err error) error {
 			}
 		case *apiv1.ServiceBusyError:
 			return &types.ServiceBusyError{
+				Message: status.Message(),
+			}
+		case *apiv1.UserServiceBusyError:
+			return &types.UserServiceBusyError{
 				Message: status.Message(),
 			}
 		}

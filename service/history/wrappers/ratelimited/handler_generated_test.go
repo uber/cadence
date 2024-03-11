@@ -135,7 +135,7 @@ func TestRatelimitedEndpoints_Table(t *testing.T) {
 		t.Run(fmt.Sprintf("%s, %s", endpoint.name, "limited"), func(t *testing.T) {
 			wrapper.(*historyHandler).allowFunc = func(string, string) bool { return false }
 			_, err := endpoint.callWrapper()
-			var sbErr *types.ServiceBusyError
+			var sbErr *types.UserServiceBusyError
 			assert.ErrorAs(t, err, &sbErr)
 			assert.ErrorContains(t, err, "Too many requests for the workflow ID")
 		})

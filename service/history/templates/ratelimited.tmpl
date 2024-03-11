@@ -97,7 +97,7 @@ func (h *{{$decorator}}) {{$method.Declaration}} {
             }
 
             if !h.allowFunc({{$domainID}}, {{$workflowID}}) {
-                err = &types.ServiceBusyError{"Too many requests for the workflow ID"}
+                err = &types.UserServiceBusyError{"Too many requests for the workflow ID"}
                 return
             }
 

@@ -50,6 +50,9 @@ func (h *apiHandler) handleErr(err error, scope metrics.Scope, logger log.Logger
 	case *types.ServiceBusyError:
 		scope.IncCounter(metrics.CadenceErrServiceBusyCounter)
 		return err
+	case *types.UserServiceBusyError:
+		scope.IncCounter(metrics.CadenceErrServiceBusyCounter)
+		return &types.ServiceBusyError{Message: err.Message}
 	case *types.EntityNotExistsError:
 		scope.IncCounter(metrics.CadenceErrEntityNotExistsCounter)
 		return err

@@ -138,6 +138,10 @@ func (err ServiceBusyError) Error() string {
 	return err.Message
 }
 
+func (err UserServiceBusyError) Error() string {
+	return err.Message
+}
+
 func (err WorkflowExecutionAlreadyStartedError) Error() string {
 	return err.Message
 }

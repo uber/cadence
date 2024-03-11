@@ -4884,6 +4884,26 @@ func ToServiceBusyError(t *shared.ServiceBusyError) *types.ServiceBusyError {
 	}
 }
 
+// FromUserServiceBusyError converts internal UserServiceBusyError type to thrift
+func FromUserServiceBusyError(t *types.UserServiceBusyError) *shared.UserServiceBusyError {
+	if t == nil {
+		return nil
+	}
+	return &shared.UserServiceBusyError{
+		Message: t.Message,
+	}
+}
+
+// ToUserServiceBusyError converts thrift UserServiceBusyError type to internal
+func ToUserServiceBusyError(t *shared.UserServiceBusyError) *types.UserServiceBusyError {
+	if t == nil {
+		return nil
+	}
+	return &types.UserServiceBusyError{
+		Message: t.Message,
+	}
+}
+
 // FromSignalExternalWorkflowExecutionDecisionAttributes converts internal SignalExternalWorkflowExecutionDecisionAttributes type to thrift
 func FromSignalExternalWorkflowExecutionDecisionAttributes(t *types.SignalExternalWorkflowExecutionDecisionAttributes) *shared.SignalExternalWorkflowExecutionDecisionAttributes {
 	if t == nil {

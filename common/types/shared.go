@@ -5680,6 +5680,11 @@ type ServiceBusyError struct {
 	Message string `json:"message,required"`
 }
 
+// UserServiceBusyError is an internal type (TBD...)
+type UserServiceBusyError struct {
+	Message string `json:"message,required"`
+}
+
 // SignalExternalWorkflowExecutionDecisionAttributes is an internal type (TBD...)
 type SignalExternalWorkflowExecutionDecisionAttributes struct {
 	Domain            string             `json:"domain,omitempty"`
