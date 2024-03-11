@@ -4,8 +4,24 @@
 {{ $decorator := (printf "%s%s" (down $clientName) .Interface.Name) }}
 {{ $Decorator := (printf "%s%s" $ClientName .Interface.Name) }}
 {{$largeTimeoutAPIs := list "adminClient.GetCrossClusterTasks" "adminClient.GetReplicationMessages"}}
-{{$longPollTimeoutAPIs := list "frontendClient.ListArchivedWorkflowExecutions" "frontendClient.PollForActivityTask" "frontendClient.PollForDecisionTask"}}
+{{$longPollTimeoutAPIs := list "frontendClient.ListArchivedWorkflowExecutions" "frontendClient.PollForActivityTask" "frontendClient.PollForDecisionTask" "matchingClient.PollForActivityTask" "matchingClient.PollForDecisionTask"}}
 {{$noTimeoutAPIs := list "historyClient.GetReplicationMessages" "historyClient.GetDLQReplicationMessages" "historyClient.CountDLQMessages" "historyClient.ReadDLQMessages" "historyClient.PurgeDLQMessages" "historyClient.MergeDLQMessages" "historyClient.GetCrossClusterTasks" "historyClient.GetFailoverInfo"}}
+{{$needPartitionAPIs := list "AddActivityTask" "AddDecisionTask" "PollForActivityTask" "PollForDecisionTask" "QueryWorkflow"}}
+{{$specialCaseAPIs := list "matchingClient.GetTaskListsByDomain"}}
+{{$writePartitionAPIs := list "AddActivityTask" "AddDecisionTask"}}
+{{$activityTaskAPIs := list "AddActivityTask" "PollForActivityTask"}}
+{{ $matchingRequestType := dict
+    "PollForActivityTask" "PollRequest."
+    "PollForDecisionTask" "PollRequest."
+    "DescribeTaskList" "DescRequest."
+    "AddActivityTask" ""
+    "AddDecisionTask" ""
+    "QueryWorkflow" ""
+    "CancelOutstandingPoll" ""
+    "ListTaskListPartitions" ""
+    "GetTaskListsByDomain" ""
+    "RespondQueryTaskCompleted" ""
+}}
 {{/*
  $fieldMap defines a map of the decorator struct fields
  with field name as the key and field type as the value
@@ -56,7 +72,39 @@ func New{{$Decorator}}(
 }
 
 {{range $method := .Interface.Methods}}
+{{- if not (has (printf "%s.%s" $decorator $method.Name) $specialCaseAPIs) -}}
 func (c * {{$decorator}}) {{$method.Declaration}} {
+    {{- if eq $ClientName "Matching" -}}
+        {{$request := (index $method.Params 1).Name}}
+        {{$partitionType := "ReadPartition"}}
+        {{- if has (printf "%s" $method.Name) $writePartitionAPIs -}}
+            {{$partitionType = "WritePartition"}}
+        {{- end -}}
+        {{$taskType := "Decision"}}
+        {{- if has (printf "%s" $method.Name) $activityTaskAPIs -}}
+            {{$taskType = "Activity"}}
+        {{- end -}}
+
+        {{- if has (printf "%s" $method.Name) $needPartitionAPIs -}}
+            partition := c.loadBalancer.Pick{{$partitionType}}(
+                {{$request}}.GetDomainUUID(),
+                *{{$request}}.{{- (index $matchingRequestType $method.Name) -}}GetTaskList(),
+                persistence.TaskListType{{$taskType}},
+                {{$request}}.GetForwardedFrom(),
+            )
+            {{$request}}.{{- (index $matchingRequestType $method.Name) -}}TaskList.Name = partition
+        {{- end }}
+            peer, err := c.peerResolver.FromTaskList({{$request}}.{{- (index $matchingRequestType $method.Name) -}}TaskList.GetName())
+            if err != nil {
+                return
+                   {{- $lastIndex := sub (len $method.Results) 1 -}}
+                   {{- range $index, $result := $method.Results -}}
+                       {{- if ne $index $lastIndex }} nil, {{- else }} err {{- end -}}
+                   {{- end }}
+            }
+            {{$opts := (index $method.Params 2).Name -}}
+            {{$opts}} = append({{$opts}}, yarpc.WithShardKey(peer))
+    {{ end }}
     {{- if has (printf "%s.%s" $decorator $method.Name) $largeTimeoutAPIs -}}
             ctx, cancel := createContext(ctx, c.largeTimeout)
             defer cancel()
@@ -68,5 +116,56 @@ func (c * {{$decorator}}) {{$method.Declaration}} {
             defer cancel()
     {{- end }}
     {{$method.Pass ("c.client.") }}
+}
+{{end}}
+{{end}}
+
+{{/* ↓↓↓ Special Case APIs ↓↓↓ */}}
+
+{{- if eq $ClientName "Matching" -}}
+func (c *matchingClient) GetTaskListsByDomain(
+	ctx context.Context,
+	request *types.GetTaskListsByDomainRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetTaskListsByDomainResponse, error) {
+	peers, err := c.peerResolver.GetAllPeers()
+	if err != nil {
+		return nil, err
+	}
+
+	var futures []future.Future
+	for _, peer := range peers {
+		future, settable := future.NewFuture()
+		settable.Set(c.client.GetTaskListsByDomain(ctx, request, append(opts, yarpc.WithShardKey(peer))...))
+		futures = append(futures, future)
+	}
+
+	decisionTaskListMap := make(map[string]*types.DescribeTaskListResponse)
+	activityTaskListMap := make(map[string]*types.DescribeTaskListResponse)
+	for _, future := range futures {
+		var resp *types.GetTaskListsByDomainResponse
+		if err = future.Get(ctx, &resp); err != nil {
+			return nil, err
+		}
+		for name, tl := range resp.GetDecisionTaskListMap() {
+			if _, ok := decisionTaskListMap[name]; !ok {
+				decisionTaskListMap[name] = tl
+			} else {
+				decisionTaskListMap[name].Pollers = append(decisionTaskListMap[name].Pollers, tl.GetPollers()...)
+			}
+		}
+		for name, tl := range resp.GetActivityTaskListMap() {
+			if _, ok := activityTaskListMap[name]; !ok {
+				activityTaskListMap[name] = tl
+			} else {
+				activityTaskListMap[name].Pollers = append(activityTaskListMap[name].Pollers, tl.GetPollers()...)
+			}
+		}
+	}
+
+	return &types.GetTaskListsByDomainResponse{
+		DecisionTaskListMap: decisionTaskListMap,
+		ActivityTaskListMap: activityTaskListMap,
+	}, nil
 }
 {{end}}
