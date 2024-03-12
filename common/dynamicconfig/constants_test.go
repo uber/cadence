@@ -40,9 +40,66 @@ func TestConstantSuite(t *testing.T) {
 }
 
 func (s *constantSuite) TestListAllProductionKeys() {
-	//check if we given enough capacity
-	s.GreaterOrEqual(len(IntKeys)+len(BoolKeys)+len(FloatKeys)+len(StringKeys)+len(DurationKeys)+len(MapKeys), len(ListAllProductionKeys()))
+	// check if we given enough capacity
+	testResult := ListAllProductionKeys()
+	s.GreaterOrEqual(len(IntKeys)+len(BoolKeys)+len(FloatKeys)+len(StringKeys)+len(DurationKeys)+len(MapKeys), len(testResult))
+	s.Equal(TestGetIntPropertyFilteredByTaskListInfoKey+1, testResult[0])
+}
 
+func (s *constantSuite) TestGetKeyFromKeyName() {
+	okKeyName := "system.transactionSizeLimit"
+	okResult, err := GetKeyFromKeyName(okKeyName)
+	s.NoError(err)
+	s.Equal(TransactionSizeLimit, okResult)
+
+	notOkKeyName := "system.transactionSizeLimit1"
+	notOkResult, err := GetKeyFromKeyName(notOkKeyName)
+	s.Error(err)
+	s.Nil(notOkResult)
+}
+
+func (s *constantSuite) TestGetAllKeys() {
+	testResult := GetAllKeys()
+	s.Equal(len(IntKeys)+len(BoolKeys)+len(FloatKeys)+len(StringKeys)+len(DurationKeys)+len(MapKeys)+len(ListKeys), len(testResult))
+	s.Equal(_keyNames["testGetIntPropertyKey"], testResult["testGetIntPropertyKey"])
+	s.NotEqual(_keyNames["testGetIntPropertyKey"], testResult["testGetIntPropertyFilteredByTaskListInfoKey"])
+}
+
+type NewKey int
+
+func (k NewKey) String() string {
+	return "NewKey"
+}
+
+func (k NewKey) Description() string {
+	return "NewKey is a new key"
+}
+
+func (k NewKey) DefaultValue() interface{} {
+	return 0
+}
+
+func (k NewKey) Filters() []Filter {
+	return nil
+}
+
+func (s *constantSuite) TestValidateKeyValuePair() {
+	newKeyError := ValidateKeyValuePair(NewKey(0), 0)
+	s.Error(newKeyError)
+	intKeyError := ValidateKeyValuePair(TestGetIntPropertyKey, "0")
+	s.Error(intKeyError)
+	boolKeyError := ValidateKeyValuePair(TestGetBoolPropertyKey, 0)
+	s.Error(boolKeyError)
+	floatKeyError := ValidateKeyValuePair(TestGetFloat64PropertyKey, 0)
+	s.Error(floatKeyError)
+	stringKeyError := ValidateKeyValuePair(TestGetStringPropertyKey, 0)
+	s.Error(stringKeyError)
+	durationKeyError := ValidateKeyValuePair(TestGetDurationPropertyKey, 0)
+	s.Error(durationKeyError)
+	mapKeyError := ValidateKeyValuePair(TestGetMapPropertyKey, 0)
+	s.Error(mapKeyError)
+	listKeyError := ValidateKeyValuePair(TestGetListPropertyKey, 0)
+	s.Error(listKeyError)
 }
 
 func (s *constantSuite) TestIntKey() {

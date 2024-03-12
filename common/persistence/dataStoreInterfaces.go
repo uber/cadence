@@ -33,12 +33,12 @@ import (
 )
 
 type (
-	//////////////////////////////////////////////////////////////////////
+	// ////////////////////////////////////////////////////////////////////
 	// Persistence interface is a lower layer of dataInterface.
 	// The intention is to let different persistence implementation(SQL,Cassandra/etc) share some common logic
 	// Right now the only common part is serialization/deserialization, and only ExecutionManager/HistoryManager need it.
 	// TaskManager are the same.
-	//////////////////////////////////////////////////////////////////////
+	// ////////////////////////////////////////////////////////////////////
 
 	// ShardStore is the lower level of ShardManager
 	ShardStore interface {
@@ -95,7 +95,7 @@ type (
 		Closeable
 		GetName() string
 		GetShardID() int
-		//The below three APIs are related to serialization/deserialization
+		// The below three APIs are related to serialization/deserialization
 		GetWorkflowExecution(ctx context.Context, request *InternalGetWorkflowExecutionRequest) (*InternalGetWorkflowExecutionResponse, error)
 		UpdateWorkflowExecution(ctx context.Context, request *InternalUpdateWorkflowExecutionRequest) error
 		ConflictResolveWorkflowExecution(ctx context.Context, request *InternalConflictResolveWorkflowExecutionRequest) error

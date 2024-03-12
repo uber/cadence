@@ -499,6 +499,7 @@ func TestApplyWorkflowMutationTx(t *testing.T) {
 				DeleteSignalInfos:        []int64{1, 2},
 				UpsertSignalRequestedIDs: []string{"a", "b"},
 				DeleteSignalRequestedIDs: []string{"c", "d"},
+				ClearBufferedEvents:      true,
 			},
 			mockSetup: func(mockTx *sqlplugin.MockTx, mockParser *serialization.MockParser) {
 				mockSetupLockAndCheckNextEventID(mockTx, shardID, serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"), "abc", serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47603"), 9, false)
@@ -510,6 +511,7 @@ func TestApplyWorkflowMutationTx(t *testing.T) {
 				mockUpdateRequestCancelInfos(mockTx, mockParser, 1, 2, false)
 				mockUpdateSignalInfos(mockTx, mockParser, 1, 2, false)
 				mockUpdateSignalRequested(mockTx, mockParser, 1, 2, false)
+				mockDeleteBufferedEvents(mockTx, shardID, serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"), "abc", serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47603"), false)
 			},
 			wantErr: false,
 		},
@@ -1948,6 +1950,351 @@ func TestCreateReplicationTasks(t *testing.T) {
 				if tc.assertErr != nil {
 					tc.assertErr(t, err)
 				}
+			} else {
+				assert.NoError(t, err, "Did not expect an error for test case")
+			}
+		})
+	}
+}
+
+func TestLockCurrentExecutionIfExists(t *testing.T) {
+	testCases := []struct {
+		name      string
+		mockSetup func(*sqlplugin.MockTx)
+		wantErr   bool
+		want      *sqlplugin.CurrentExecutionsRow
+	}{
+		{
+			name: "Success case",
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				mockTx.EXPECT().LockCurrentExecutionsJoinExecutions(gomock.Any(), gomock.Any()).Return([]sqlplugin.CurrentExecutionsRow{
+					{
+						ShardID:    1,
+						DomainID:   serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"),
+						WorkflowID: "abc",
+						RunID:      serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47603"),
+					},
+				}, nil)
+			},
+			wantErr: false,
+			want: &sqlplugin.CurrentExecutionsRow{
+				ShardID:    1,
+				DomainID:   serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"),
+				WorkflowID: "abc",
+				RunID:      serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47603"),
+			},
+		},
+		{
+			name: "Error case",
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				err := errors.New("some error")
+				mockTx.EXPECT().LockCurrentExecutionsJoinExecutions(gomock.Any(), gomock.Any()).Return(nil, err)
+				mockTx.EXPECT().IsNotFoundError(err).Return(true)
+			},
+			wantErr: true,
+		},
+		{
+			name: "Empty result",
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				mockTx.EXPECT().LockCurrentExecutionsJoinExecutions(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+			},
+			wantErr: false,
+		},
+		{
+			name: "Multiple rows",
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				mockTx.EXPECT().LockCurrentExecutionsJoinExecutions(gomock.Any(), gomock.Any()).Return([]sqlplugin.CurrentExecutionsRow{
+					{
+						ShardID:    1,
+						DomainID:   serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"),
+						WorkflowID: "abc",
+						RunID:      serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47603"),
+					},
+					{
+						ShardID:    1,
+						DomainID:   serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"),
+						WorkflowID: "def",
+						RunID:      serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47604"),
+					},
+				}, nil)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockTx := sqlplugin.NewMockTx(ctrl)
+
+			tc.mockSetup(mockTx)
+
+			got, err := lockCurrentExecutionIfExists(context.Background(), mockTx, 1, serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"), "abc")
+			if tc.wantErr {
+				assert.Error(t, err, "Expected an error for test case")
+			} else {
+				assert.NoError(t, err, "Did not expect an error for test case")
+				assert.Equal(t, tc.want, got, "Expected result to match")
+			}
+		})
+	}
+}
+
+func TestCreateOrUpdateCurrentExecution(t *testing.T) {
+	testCases := []struct {
+		name       string
+		createMode persistence.CreateWorkflowMode
+		mockSetup  func(*sqlplugin.MockTx)
+		wantErr    bool
+	}{
+		{
+			name:       "Brand new workflow - success",
+			createMode: persistence.CreateWorkflowModeBrandNew,
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				mockTx.EXPECT().InsertIntoCurrentExecutions(gomock.Any(), gomock.Any()).Return(nil, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name:       "Brand new workflow - error",
+			createMode: persistence.CreateWorkflowModeBrandNew,
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				err := errors.New("some error")
+				mockTx.EXPECT().InsertIntoCurrentExecutions(gomock.Any(), gomock.Any()).Return(nil, err)
+				mockTx.EXPECT().IsNotFoundError(err).Return(true)
+			},
+			wantErr: true,
+		},
+		{
+			name:       "Update current execution - success",
+			createMode: persistence.CreateWorkflowModeWorkflowIDReuse,
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				mockTx.EXPECT().UpdateCurrentExecutions(gomock.Any(), gomock.Any()).Return(&sqlResult{rowsAffected: 1}, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name:       "Update current execution - error",
+			createMode: persistence.CreateWorkflowModeWorkflowIDReuse,
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				err := errors.New("some error")
+				mockTx.EXPECT().UpdateCurrentExecutions(gomock.Any(), gomock.Any()).Return(nil, err)
+				mockTx.EXPECT().IsNotFoundError(err).Return(true)
+			},
+			wantErr: true,
+		},
+		{
+			name:       "Update current execution - no rows affected",
+			createMode: persistence.CreateWorkflowModeContinueAsNew,
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				mockTx.EXPECT().UpdateCurrentExecutions(gomock.Any(), gomock.Any()).Return(&sqlResult{rowsAffected: 0}, nil)
+			},
+			wantErr: true,
+		},
+		{
+			name:       "Zombie workflow - success",
+			createMode: persistence.CreateWorkflowModeZombie,
+			mockSetup:  func(mockTx *sqlplugin.MockTx) {},
+			wantErr:    false,
+		},
+		{
+			name:       "Unknown create mode",
+			createMode: persistence.CreateWorkflowMode(100),
+			mockSetup:  func(mockTx *sqlplugin.MockTx) {},
+			wantErr:    true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockTx := sqlplugin.NewMockTx(ctrl)
+
+			tc.mockSetup(mockTx)
+
+			err := createOrUpdateCurrentExecution(
+				context.Background(),
+				mockTx,
+				tc.createMode,
+				1,
+				serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"),
+				"abc",
+				serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47603"),
+				0,
+				1,
+				"request-id",
+				11,
+				12,
+			)
+			if tc.wantErr {
+				assert.Error(t, err, "Expected an error for test case")
+			} else {
+				assert.NoError(t, err, "Did not expect an error for test case")
+			}
+		})
+	}
+}
+
+func TestAssertNotCurrentExecution(t *testing.T) {
+	testCases := []struct {
+		name      string
+		mockSetup func(*sqlplugin.MockTx)
+		wantErr   bool
+	}{
+		{
+			name: "Success case",
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				mockTx.EXPECT().LockCurrentExecutions(gomock.Any(), gomock.Any()).Return(&sqlplugin.CurrentExecutionsRow{
+					ShardID:    1,
+					DomainID:   serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"),
+					WorkflowID: "abc",
+					RunID:      serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"),
+				}, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "Error case",
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				err := errors.New("some error")
+				mockTx.EXPECT().LockCurrentExecutions(gomock.Any(), gomock.Any()).Return(nil, err)
+				mockTx.EXPECT().IsNotFoundError(err).Return(true)
+			},
+			wantErr: true,
+		},
+		{
+			name: "Success case - No rows",
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				mockTx.EXPECT().LockCurrentExecutions(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+			},
+			wantErr: false,
+		},
+		{
+			name: "Error case - run ID match",
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				mockTx.EXPECT().LockCurrentExecutions(gomock.Any(), gomock.Any()).Return(&sqlplugin.CurrentExecutionsRow{
+					ShardID:    1,
+					DomainID:   serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"),
+					WorkflowID: "abc",
+					RunID:      serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47603"),
+				}, nil)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockTx := sqlplugin.NewMockTx(ctrl)
+
+			tc.mockSetup(mockTx)
+
+			err := assertNotCurrentExecution(
+				context.Background(),
+				mockTx,
+				1,
+				serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"),
+				"abc",
+				serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47603"),
+			)
+			if tc.wantErr {
+				assert.Error(t, err, "Expected an error for test case")
+			} else {
+				assert.NoError(t, err, "Did not expect an error for test case")
+			}
+		})
+	}
+}
+
+func TestAssertRunIDAndUpdateCurrentExecution(t *testing.T) {
+	testCases := []struct {
+		name      string
+		mockSetup func(*sqlplugin.MockTx)
+		wantErr   bool
+	}{
+		{
+			name: "Success case",
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				mockTx.EXPECT().LockCurrentExecutions(gomock.Any(), gomock.Any()).Return(&sqlplugin.CurrentExecutionsRow{
+					ShardID:    1,
+					DomainID:   serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"),
+					WorkflowID: "abc",
+					RunID:      serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47604"),
+				}, nil)
+				mockTx.EXPECT().UpdateCurrentExecutions(gomock.Any(), gomock.Any()).Return(&sqlResult{rowsAffected: 1}, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "Error case - update current execution",
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				mockTx.EXPECT().LockCurrentExecutions(gomock.Any(), gomock.Any()).Return(&sqlplugin.CurrentExecutionsRow{
+					ShardID:    1,
+					DomainID:   serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"),
+					WorkflowID: "abc",
+					RunID:      serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47604"),
+				}, nil)
+				err := errors.New("some error")
+				mockTx.EXPECT().UpdateCurrentExecutions(gomock.Any(), gomock.Any()).Return(nil, err)
+				mockTx.EXPECT().IsNotFoundError(err).Return(true)
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error case - run ID mismatch",
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				mockTx.EXPECT().LockCurrentExecutions(gomock.Any(), gomock.Any()).Return(&sqlplugin.CurrentExecutionsRow{
+					ShardID:    1,
+					DomainID:   serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"),
+					WorkflowID: "abc",
+					RunID:      serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47603"),
+				}, nil)
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error case - unknown error",
+			mockSetup: func(mockTx *sqlplugin.MockTx) {
+				err := errors.New("some error")
+				mockTx.EXPECT().LockCurrentExecutions(gomock.Any(), gomock.Any()).Return(nil, err)
+				mockTx.EXPECT().IsNotFoundError(err).Return(true)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockTx := sqlplugin.NewMockTx(ctrl)
+
+			tc.mockSetup(mockTx)
+
+			err := assertRunIDAndUpdateCurrentExecution(
+				context.Background(),
+				mockTx,
+				1,
+				serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47602"),
+				"abc",
+				serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47603"),
+				serialization.MustParseUUID("8be8a310-7d20-483e-a5d2-48659dc47604"),
+				"request-id",
+				1,
+				11,
+				12,
+				13,
+			)
+			if tc.wantErr {
+				assert.Error(t, err, "Expected an error for test case")
 			} else {
 				assert.NoError(t, err, "Did not expect an error for test case")
 			}

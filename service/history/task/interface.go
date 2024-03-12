@@ -111,7 +111,7 @@ type (
 		Fetch(shardID int, fetchParams ...interface{}) future.Future
 	}
 
-	//Fetchers is a group of Fetchers, one for each source cluster
+	// Fetchers is a group of Fetchers, one for each source cluster
 	Fetchers []Fetcher
 
 	// QueueType is the type of task queue

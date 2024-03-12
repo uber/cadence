@@ -45,6 +45,7 @@ type (
 		consumerHandler *consumerHandlerImpl
 		consumerGroup   sarama.ConsumerGroup
 		msgChan         <-chan messaging.Message
+		wg              sync.WaitGroup
 		cancelFunc      context.CancelFunc
 
 		logger log.Logger
@@ -95,23 +96,22 @@ func NewKafkaConsumer(
 	consumerHandler := newConsumerHandlerImpl(dlqProducer, topic, msgChan, metricsClient, logger)
 
 	return &consumerImpl{
-		topic: topic,
-
+		topic:           topic,
 		consumerHandler: consumerHandler,
 		consumerGroup:   consumerGroup,
 		msgChan:         msgChan,
-
-		logger: logger,
+		logger:          logger,
 	}, nil
 }
 
 func (c *consumerImpl) Start() error {
-
 	ctx, cancel := context.WithCancel(context.Background())
 	c.cancelFunc = cancel
+	c.wg.Add(1)
 
 	// consumer loop
 	go func() {
+		defer c.wg.Done()
 		for {
 			// `Consume` should be called inside an infinite loop, when a
 			// server-side rebalance happens, the consumer session will need to be
@@ -133,7 +133,12 @@ func (c *consumerImpl) Start() error {
 func (c *consumerImpl) Stop() {
 	c.logger.Info("Stopping consumer")
 	c.cancelFunc()
+	c.logger.Info("Waiting consumer goroutines to complete")
+	c.wg.Wait()
+	c.logger.Info("Stopping consumer handler and group")
 	c.consumerHandler.stop()
+	c.consumerGroup.Close()
+	c.logger.Info("Stopped consumer")
 }
 
 // Messages return the message channel for this consumer
