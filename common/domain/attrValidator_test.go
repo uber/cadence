@@ -58,6 +58,62 @@ func (s *attrValidatorSuite) SetupTest() {
 func (s *attrValidatorSuite) TearDownTest() {
 }
 
+func (s *attrValidatorSuite) TestValidateDomainConfig() {
+	testCases := []struct {
+		testDesc           string
+		retention          int32
+		historyArchival    types.ArchivalStatus
+		historyURI         string
+		visibilityArchival types.ArchivalStatus
+		visibilityURI      string
+		expectedErr        error
+	}{
+		{
+			testDesc:           "valid retention and archival settings",
+			retention:          int32(s.minRetentionDays + 1),
+			historyArchival:    types.ArchivalStatusEnabled,
+			historyURI:         "testScheme://history",
+			visibilityArchival: types.ArchivalStatusEnabled,
+			visibilityURI:      "testScheme://visibility",
+			expectedErr:        nil,
+		},
+		{
+			testDesc:    "invalid retention period",
+			retention:   int32(s.minRetentionDays - 1),
+			expectedErr: errInvalidRetentionPeriod,
+		},
+		{
+			testDesc:        "enabled history archival without URI",
+			retention:       int32(s.minRetentionDays + 1),
+			historyArchival: types.ArchivalStatusEnabled,
+			expectedErr:     errInvalidArchivalConfig,
+		},
+		{
+			testDesc:           "enabled visibility archival without URI",
+			retention:          int32(s.minRetentionDays + 1),
+			visibilityArchival: types.ArchivalStatusEnabled,
+			expectedErr:        errInvalidArchivalConfig,
+		},
+	}
+
+	for _, tc := range testCases {
+		s.Run(tc.testDesc, func() {
+			err := s.validator.validateDomainConfig(&persistence.DomainConfig{
+				Retention:                tc.retention,
+				HistoryArchivalStatus:    tc.historyArchival,
+				HistoryArchivalURI:       tc.historyURI,
+				VisibilityArchivalStatus: tc.visibilityArchival,
+				VisibilityArchivalURI:    tc.visibilityURI,
+			})
+			if tc.expectedErr != nil {
+				s.ErrorIs(err, tc.expectedErr)
+			} else {
+				s.NoError(err)
+			}
+		})
+	}
+}
+
 func (s *attrValidatorSuite) TestValidateConfigRetentionPeriod() {
 	testCases := []struct {
 		retentionPeriod int32
