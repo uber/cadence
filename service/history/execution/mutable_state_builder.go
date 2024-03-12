@@ -4812,30 +4812,39 @@ func (e *mutableStateBuilder) unixNanoToTime(
 }
 
 func (e *mutableStateBuilder) logInfo(msg string, tags ...tag.Tag) {
-	if e != nil && e.executionInfo != nil {
+	if e != nil {
+		return
+	}
+	if e.executionInfo != nil {
 		tags = append(tags, tag.WorkflowID(e.executionInfo.WorkflowID))
 		tags = append(tags, tag.WorkflowRunID(e.executionInfo.RunID))
 		tags = append(tags, tag.WorkflowDomainID(e.executionInfo.DomainID))
-		e.logger.Info(msg, tags...)
 	}
+	e.logger.Info(msg, tags...)
 }
 
 func (e *mutableStateBuilder) logWarn(msg string, tags ...tag.Tag) {
-	if e != nil && e.executionInfo != nil {
+	if e != nil {
+		return
+	}
+	if e.executionInfo != nil {
 		tags = append(tags, tag.WorkflowID(e.executionInfo.WorkflowID))
 		tags = append(tags, tag.WorkflowRunID(e.executionInfo.RunID))
 		tags = append(tags, tag.WorkflowDomainID(e.executionInfo.DomainID))
-		e.logger.Warn(msg, tags...)
 	}
+	e.logger.Warn(msg, tags...)
 }
 
 func (e *mutableStateBuilder) logError(msg string, tags ...tag.Tag) {
-	if e != nil && e.executionInfo != nil {
+	if e != nil {
+		return
+	}
+	if e.executionInfo != nil {
 		tags = append(tags, tag.WorkflowID(e.executionInfo.WorkflowID))
 		tags = append(tags, tag.WorkflowRunID(e.executionInfo.RunID))
 		tags = append(tags, tag.WorkflowDomainID(e.executionInfo.DomainID))
-		e.logger.Error(msg, tags...)
 	}
+	e.logger.Error(msg, tags...)
 }
 
 func (e *mutableStateBuilder) logDataInconsistency() {

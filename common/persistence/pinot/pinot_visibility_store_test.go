@@ -38,7 +38,6 @@ import (
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
 	pnt "github.com/uber/cadence/common/pinot"
@@ -115,7 +114,7 @@ func TestRecordWorkflowExecutionStarted(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
 			mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
@@ -170,7 +169,7 @@ func TestRecordWorkflowExecutionClosed(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
 			mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
@@ -212,7 +211,7 @@ func TestRecordWorkflowExecutionUninitialized(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
 			mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
@@ -263,7 +262,7 @@ func TestUpsertWorkflowExecution(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
 			mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
@@ -304,7 +303,7 @@ func TestDeleteWorkflowExecution(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
 			mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
@@ -346,7 +345,7 @@ func TestDeleteUninitializedWorkflowExecution(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
 			mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
@@ -398,7 +397,7 @@ func TestListOpenWorkflowExecutions(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
 			if test.expectedError != nil {
@@ -452,7 +451,7 @@ func TestListClosedWorkflowExecutions(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
 			if test.expectedError != nil {
@@ -507,7 +506,7 @@ func TestListOpenWorkflowExecutionsByType(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
 			if test.expectedError != nil {
@@ -561,7 +560,7 @@ func TestListClosedWorkflowExecutionsByType(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
 			if test.expectedError != nil {
@@ -614,7 +613,7 @@ func TestListOpenWorkflowExecutionsByWorkflowID(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
 			if test.expectedError != nil {
@@ -667,7 +666,7 @@ func TestListClosedWorkflowExecutionsByWorkflowID(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
 			if test.expectedError != nil {
@@ -720,7 +719,7 @@ func TestListClosedWorkflowExecutionsByStatus(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
 			if test.expectedError != nil {
@@ -767,7 +766,7 @@ func TestGetClosedWorkflowExecution(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
 			if test.expectedError != nil {
@@ -828,7 +827,7 @@ func TestListWorkflowExecutions(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
 			if test.expectedError != nil {
@@ -878,7 +877,7 @@ func TestScanWorkflowExecutions(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
 			if test.expectedError != nil {
@@ -926,7 +925,7 @@ func TestCountWorkflowExecutions(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
 			if test.expectedError != nil {
@@ -953,7 +952,7 @@ func TestGetName(t *testing.T) {
 	mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-	}, mockProducer, testlogger.New(t))
+	}, mockProducer, log.NewNoop())
 	visibilityStore := mgr.(*pinotVisibilityStore)
 	assert.NotEmpty(t, visibilityStore.GetName())
 }
@@ -1018,7 +1017,7 @@ AND WorkflowID = 'wfid'
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
 			res := visibilityStore.getCountWorkflowExecutionsQuery(testTableName, test.request)
@@ -1262,7 +1261,7 @@ LIMIT 0, 0
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
 			output, err := visibilityStore.getListWorkflowExecutionsByQueryQuery(testTableName, test.input)
@@ -1821,7 +1820,7 @@ func TestClose(t *testing.T) {
 	mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-	}, mockProducer, testlogger.New(t))
+	}, mockProducer, log.NewNoop())
 	visibilityStore := mgr.(*pinotVisibilityStore)
 
 	assert.NotPanics(t, func() {
