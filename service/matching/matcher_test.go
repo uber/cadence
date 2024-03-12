@@ -642,6 +642,7 @@ func ensureAsyncAfterReady(ctxTimeout time.Duration, cb func(ctx context.Context
 
 // Try to ensure a blocking callback is actively blocked in a goroutine before returning, so tests can
 // ensure that the callback contents happen first.
+// Do NOT access shared variables in the callback without mutex, as it may cause data races.
 //
 // This is a best-effort technique, as there is no way to reliably synchronize this kind of thing
 // without exposing internal latches or having a more sophisticated locking library than Go offers.
