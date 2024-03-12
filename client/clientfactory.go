@@ -157,15 +157,14 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 		peerResolver,
 		matching.NewLoadBalancer(domainIDToName, cf.dynConfig),
 	)
+	client = timeoutwrapper.NewMatchingClient(client, longPollTimeout, timeout)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.MatchingErrorInjectionRate)(); errorRate != 0 {
 		client = errorinjectors.NewMatchingClient(client, errorRate, cf.logger)
 	}
 	if cf.metricsClient != nil {
 		client = metered.NewMatchingClient(client, cf.metricsClient)
 	}
-	client = timeoutwrapper.NewMatchingClient(client, longPollTimeout, timeout)
 	return client, nil
-
 }
 
 func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndConfig(
