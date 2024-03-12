@@ -101,7 +101,7 @@ func (cf *rpcClientFactory) NewHistoryClient() (history.Client, error) {
 }
 
 func (cf *rpcClientFactory) NewMatchingClient(domainIDToName DomainIDToNameFunc) (matching.Client, error) {
-	return cf.NewMatchingClientWithTimeout(domainIDToName, timeoutwrapper.MatchingDefaultTimeout, timeoutwrapper.MatchingDefaultLongPollTimeout)
+	return cf.NewMatchingClientWithTimeout(domainIDToName, matching.DefaultTimeout, matching.DefaultLongPollTimeout)
 }
 
 func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (history.Client, error) {
@@ -152,12 +152,12 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 
 	peerResolver := matching.NewPeerResolver(cf.resolver, namedPort)
 
-	client := timeoutwrapper.NewMatchingClient(
-		rawClient,
-		matching.NewLoadBalancer(domainIDToName, cf.dynConfig),
-		longPollTimeout,
-		peerResolver,
+	client := matching.NewClient(
 		timeout,
+		longPollTimeout,
+		rawClient,
+		peerResolver,
+		matching.NewLoadBalancer(domainIDToName, cf.dynConfig),
 	)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.MatchingErrorInjectionRate)(); errorRate != 0 {
 		client = errorinjectors.NewMatchingClient(client, errorRate, cf.logger)
