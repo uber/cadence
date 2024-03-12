@@ -22,8 +22,6 @@ package matching
 
 import (
 	"context"
-	"time"
-
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/common/future"
@@ -32,13 +30,6 @@ import (
 )
 
 var _ Client = (*clientImpl)(nil)
-
-const (
-	// DefaultTimeout is the default timeout used to make calls
-	DefaultTimeout = time.Minute
-	// DefaultLongPollTimeout is the long poll default timeout used to make calls
-	DefaultLongPollTimeout = time.Minute * 2
-)
 
 type clientImpl struct {
 	client       Client
