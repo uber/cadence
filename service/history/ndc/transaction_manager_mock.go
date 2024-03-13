@@ -32,7 +32,6 @@ import (
 	time "time"
 
 	gomock "github.com/golang/mock/gomock"
-
 	persistence "github.com/uber/cadence/common/persistence"
 	execution "github.com/uber/cadence/service/history/execution"
 )

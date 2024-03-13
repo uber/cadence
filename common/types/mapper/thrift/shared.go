@@ -4871,6 +4871,7 @@ func FromServiceBusyError(t *types.ServiceBusyError) *shared.ServiceBusyError {
 	}
 	return &shared.ServiceBusyError{
 		Message: t.Message,
+		Reason:  &t.Reason,
 	}
 }
 
@@ -4881,26 +4882,7 @@ func ToServiceBusyError(t *shared.ServiceBusyError) *types.ServiceBusyError {
 	}
 	return &types.ServiceBusyError{
 		Message: t.Message,
-	}
-}
-
-// FromUserServiceBusyError converts internal UserServiceBusyError type to thrift
-func FromUserServiceBusyError(t *types.UserServiceBusyError) *shared.UserServiceBusyError {
-	if t == nil {
-		return nil
-	}
-	return &shared.UserServiceBusyError{
-		Message: t.Message,
-	}
-}
-
-// ToUserServiceBusyError converts thrift UserServiceBusyError type to internal
-func ToUserServiceBusyError(t *shared.UserServiceBusyError) *types.UserServiceBusyError {
-	if t == nil {
-		return nil
-	}
-	return &types.UserServiceBusyError{
-		Message: t.Message,
+		Reason:  t.GetReason(),
 	}
 }
 

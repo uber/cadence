@@ -31,7 +31,6 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-
 	common "github.com/uber/cadence/service/history/common"
 	task "github.com/uber/cadence/service/history/task"
 )

@@ -31,7 +31,6 @@ import (
 	time "time"
 
 	gomock "github.com/golang/mock/gomock"
-
 	dynamicconfig "github.com/uber/cadence/common/dynamicconfig"
 	types "github.com/uber/cadence/common/types"
 )

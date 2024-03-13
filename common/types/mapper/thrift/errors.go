@@ -67,8 +67,6 @@ func FromError(err error) error {
 		return FromRetryTaskV2Error(e)
 	case *types.ServiceBusyError:
 		return FromServiceBusyError(e)
-	case *types.UserServiceBusyError:
-		return FromUserServiceBusyError(e)
 	case *types.WorkflowExecutionAlreadyStartedError:
 		return FromWorkflowExecutionAlreadyStartedError(e)
 	case *types.ShardOwnershipLostError:
@@ -123,8 +121,6 @@ func ToError(err error) error {
 		return ToRetryTaskV2Error(e)
 	case *shared.ServiceBusyError:
 		return ToServiceBusyError(e)
-	case *shared.UserServiceBusyError:
-		return ToUserServiceBusyError(e)
 	case *shared.WorkflowExecutionAlreadyStartedError:
 		return ToWorkflowExecutionAlreadyStartedError(e)
 	case *history.ShardOwnershipLostError:

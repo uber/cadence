@@ -30,11 +30,10 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	stream "go.uber.org/thriftrw/protocol/stream"
-	wire "go.uber.org/thriftrw/wire"
-
 	common "github.com/uber/cadence/common"
 	persistence "github.com/uber/cadence/common/persistence"
+	stream "go.uber.org/thriftrw/protocol/stream"
+	wire "go.uber.org/thriftrw/wire"
 )
 
 // MockParser is a mock of Parser interface.

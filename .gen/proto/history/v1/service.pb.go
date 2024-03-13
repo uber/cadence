@@ -35,7 +35,6 @@ import (
 	types "github.com/gogo/protobuf/types"
 	v12 "github.com/uber/cadence-idl/go/proto/admin/v1"
 	v1 "github.com/uber/cadence-idl/go/proto/api/v1"
-
 	v11 "github.com/uber/cadence/.gen/proto/shared/v1"
 )
 

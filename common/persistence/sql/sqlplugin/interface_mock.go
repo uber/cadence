@@ -33,7 +33,6 @@ import (
 	time "time"
 
 	gomock "github.com/golang/mock/gomock"
-
 	config "github.com/uber/cadence/common/config"
 	persistence "github.com/uber/cadence/common/persistence"
 )

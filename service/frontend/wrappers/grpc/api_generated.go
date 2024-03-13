@@ -30,7 +30,6 @@ import (
 	"context"
 
 	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
-
 	"github.com/uber/cadence/common/types/mapper/proto"
 	"github.com/uber/cadence/service/frontend/api"
 )
