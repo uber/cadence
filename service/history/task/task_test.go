@@ -299,6 +299,8 @@ func (s *taskSuite) TestRetryErr() {
 	s.Equal(false, taskBase.RetryErr(ErrTaskPendingActive))
 	s.Equal(false, taskBase.RetryErr(context.DeadlineExceeded))
 	s.Equal(false, taskBase.RetryErr(&redispatchError{Reason: "random-reason"}))
+	
+	// rate limited errors are retried
 	s.Equal(true, taskBase.RetryErr(errWorkflowRateLimited))
 }
 
