@@ -31,6 +31,7 @@ import (
 	time "time"
 
 	gomock "github.com/golang/mock/gomock"
+
 	future "github.com/uber/cadence/common/future"
 	task "github.com/uber/cadence/common/task"
 	types "github.com/uber/cadence/common/types"

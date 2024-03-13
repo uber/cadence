@@ -29,11 +29,12 @@ import (
 	context "context"
 	reflect "reflect"
 
-	health "github.com/uber/cadence/.gen/go/health"
 	wire "go.uber.org/thriftrw/wire"
 	yarpc "go.uber.org/yarpc"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
+
+	health "github.com/uber/cadence/.gen/go/health"
 )
 
 // Interface is a client for the Meta service.

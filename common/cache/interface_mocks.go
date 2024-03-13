@@ -31,6 +31,7 @@ import (
 	time "time"
 
 	gomock "github.com/golang/mock/gomock"
+
 	metrics "github.com/uber/cadence/common/metrics"
 )
 

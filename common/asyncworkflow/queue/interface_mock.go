@@ -30,6 +30,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+
 	provider "github.com/uber/cadence/common/asyncworkflow/queue/provider"
 	types "github.com/uber/cadence/common/types"
 )
