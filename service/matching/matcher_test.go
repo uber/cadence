@@ -654,8 +654,12 @@ func ensureAsyncReady(ctxTimeout time.Duration, cb func(ctx context.Context)) (w
 	closed := make(chan struct{})
 	ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
 	go func() {
-		defer cancel()
+		// Defers are stacked. The last one added is the first one to run.
+		// We want to cancel the context which will make the callback return because it's a Poll,
+		// and then close the closed channel.
+		// This way the returned wait function will block until the callback has returned.
 		defer close(closed)
+		defer cancel()
 
 		close(running)
 		cb(ctx)
