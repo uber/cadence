@@ -63,6 +63,7 @@ var (
 	errUnknownTransferTask   = errors.New("unknown transfer task")
 	errWorkflowBusy          = errors.New("unable to get workflow execution lock within specified timeout")
 	errTargetDomainNotActive = errors.New("target domain not active")
+	errWorkflowRateLimited   = errors.New("workflow is being rate limited for making too many requests")
 )
 
 type (
