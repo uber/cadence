@@ -331,11 +331,8 @@ type userParameters struct {
 // logUserQueryParameters will log user queries' parameters so that a comparator workflow can consume
 func (v *pinotVisibilityTripleManager) logUserQueryParameters(userParam userParameters, domain string, override bool) {
 	// Don't log if it is not enabled
-	if !v.logCustomerQueryParameter(domain) {
-		return
-	}
-	// Don't log if it is a call from Pinot Response Comparator workflow
-	if override {
+	// don't log if it is a call from Pinot Response Comparator workflow
+	if !v.logCustomerQueryParameter(domain) || override {
 		return
 	}
 
