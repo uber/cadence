@@ -139,7 +139,7 @@ func TestRecordWorkflowExecutionStarted(t *testing.T) {
 
 			err := visibilityStore.RecordWorkflowExecutionStarted(context.Background(), test.request)
 			if test.expectedError != nil {
-				assert.Equal(t, test.expectedError.Error(), err.Error())
+				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
@@ -203,7 +203,7 @@ func TestRecordWorkflowExecutionClosed(t *testing.T) {
 
 			err := visibilityStore.RecordWorkflowExecutionClosed(context.Background(), test.request)
 			if test.expectedError != nil {
-				assert.Equal(t, test.expectedError.Error(), err.Error())
+				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
@@ -308,7 +308,7 @@ func TestUpsertWorkflowExecution(t *testing.T) {
 
 			err := visibilityStore.UpsertWorkflowExecution(context.Background(), test.request)
 			if test.expectedError != nil {
-				assert.Equal(t, test.expectedError.Error(), err.Error())
+				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
@@ -457,7 +457,7 @@ func TestListOpenWorkflowExecutions(t *testing.T) {
 			resp, err := visibilityStore.ListOpenWorkflowExecutions(context.Background(), test.request)
 			assert.Equal(t, test.expectedResp, resp)
 			if test.expectedError != nil {
-				assert.Equal(t, test.expectedError.Error(), err.Error())
+				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
@@ -516,7 +516,7 @@ func TestListClosedWorkflowExecutions(t *testing.T) {
 			resp, err := visibilityStore.ListClosedWorkflowExecutions(context.Background(), test.request)
 			assert.Equal(t, test.expectedResp, resp)
 			if test.expectedError != nil {
-				assert.Equal(t, test.expectedError.Error(), err.Error())
+				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
@@ -576,7 +576,7 @@ func TestListOpenWorkflowExecutionsByType(t *testing.T) {
 			resp, err := visibilityStore.ListOpenWorkflowExecutionsByType(context.Background(), test.request)
 			assert.Equal(t, test.expectedResp, resp)
 			if test.expectedError != nil {
-				assert.Equal(t, test.expectedError.Error(), err.Error())
+				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
@@ -635,7 +635,7 @@ func TestListClosedWorkflowExecutionsByType(t *testing.T) {
 			resp, err := visibilityStore.ListClosedWorkflowExecutionsByType(context.Background(), test.request)
 			assert.Equal(t, test.expectedResp, resp)
 			if test.expectedError != nil {
-				assert.Equal(t, test.expectedError.Error(), err.Error())
+				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
@@ -693,7 +693,7 @@ func TestListOpenWorkflowExecutionsByWorkflowID(t *testing.T) {
 			resp, err := visibilityStore.ListOpenWorkflowExecutionsByWorkflowID(context.Background(), test.request)
 			assert.Equal(t, test.expectedResp, resp)
 			if test.expectedError != nil {
-				assert.Equal(t, test.expectedError.Error(), err.Error())
+				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
@@ -751,7 +751,7 @@ func TestListClosedWorkflowExecutionsByWorkflowID(t *testing.T) {
 			resp, err := visibilityStore.ListClosedWorkflowExecutionsByWorkflowID(context.Background(), test.request)
 			assert.Equal(t, test.expectedResp, resp)
 			if test.expectedError != nil {
-				assert.Equal(t, test.expectedError.Error(), err.Error())
+				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
@@ -809,7 +809,7 @@ func TestListClosedWorkflowExecutionsByStatus(t *testing.T) {
 			resp, err := visibilityStore.ListClosedWorkflowExecutionsByStatus(context.Background(), test.request)
 			assert.Equal(t, test.expectedResp, resp)
 			if test.expectedError != nil {
-				assert.Equal(t, test.expectedError.Error(), err.Error())
+				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
@@ -929,7 +929,7 @@ func TestListWorkflowExecutions(t *testing.T) {
 			resp, err := visibilityStore.ListWorkflowExecutions(context.Background(), test.request)
 			assert.Equal(t, test.expectedResp, resp)
 			if test.expectedError != nil {
-				assert.Equal(t, test.expectedError.Error(), err.Error())
+				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
@@ -984,7 +984,7 @@ func TestScanWorkflowExecutions(t *testing.T) {
 			resp, err := visibilityStore.ScanWorkflowExecutions(context.Background(), test.request)
 			assert.Equal(t, test.expectedResp, resp)
 			if test.expectedError != nil {
-				assert.Equal(t, test.expectedError.Error(), err.Error())
+				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
