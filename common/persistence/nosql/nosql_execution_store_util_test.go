@@ -212,6 +212,7 @@ func TestNosqlExecutionStoreUtils(t *testing.T) {
 			tc.validate(t, req, err)
 		})
 	}
+
 }
 
 func TestPrepareTasksForWorkflowTxn(t *testing.T) {
@@ -414,6 +415,61 @@ func TestPrepareNoSQLTasksForWorkflowTxn(t *testing.T) {
 	}
 }
 
+func TestPrepareTransferTasksForWorkflowTxn(t *testing.T) {
+	testCases := []struct {
+		name       string
+		tasks      []persistence.Task
+		expectFunc func(*nosqlplugin.MockDB)
+		validate   func(*testing.T, []*nosqlplugin.TransferTask, error)
+	}{
+		{
+			name: "Success - Prepare Transfer Tasks",
+			tasks: []persistence.Task{
+				&persistence.ActivityTask{
+					DomainID: "domainID",
+					TaskID:   1,
+				},
+			},
+			expectFunc: func(mockDB *nosqlplugin.MockDB) {},
+			validate: func(t *testing.T, tasks []*nosqlplugin.TransferTask, err error) {
+				assert.NoError(t, err)
+				assert.NotEmpty(t, tasks)
+			},
+		},
+		{
+			name: "Failure - Unsupported Task Type",
+			tasks: []persistence.Task{
+				&dummyTaskType{
+					VisibilityTimestamp: time.Now(),
+					TaskID:              -1,
+				},
+			},
+			expectFunc: func(mockDB *nosqlplugin.MockDB) {},
+			validate: func(t *testing.T, tasks []*nosqlplugin.TransferTask, err error) {
+				assert.Error(t, err)
+				assert.Nil(t, tasks)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			mockDB := nosqlplugin.NewMockDB(mockCtrl)
+			store := newTestNosqlExecutionStore(mockDB, log.NewNoop())
+
+			if tc.expectFunc != nil {
+				tc.expectFunc(mockDB) // Set up any expectations on the mockDB
+			}
+
+			tasks, err := store.prepareTransferTasksForWorkflowTxn("domainID", "workflowID", "runID", tc.tasks)
+			tc.validate(t, tasks, err) // Validate the output
+		})
+	}
+}
+
 type dummyTaskType struct {
 	persistence.Task
 	VisibilityTimestamp time.Time
@@ -421,7 +477,7 @@ type dummyTaskType struct {
 }
 
 func (d *dummyTaskType) GetType() int {
-	return 999 // Using a type that is not expected by switch statement
+	return 999 // Using a type that is not expected by the switch statement
 }
 
 func (d *dummyTaskType) GetVersion() int64 {
