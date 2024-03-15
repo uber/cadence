@@ -329,11 +329,13 @@ type userParameters struct {
 
 // For Pinot Migration uses. It will be a temporary usage
 // logUserQueryParameters will log user queries' parameters so that a comparator workflow can consume
-func (v *pinotVisibilityTripleManager) logUserQueryParameters(userParam userParameters, domain string) {
+func (v *pinotVisibilityTripleManager) logUserQueryParameters(userParam userParameters, domain string, override bool) {
 	// Don't log if it is not enabled
-	if !v.logCustomerQueryParameter(domain) {
+	// don't log if it is a call from Pinot Response Comparator workflow
+	if !v.logCustomerQueryParameter(domain) || override {
 		return
 	}
+
 	randNum := rand.Intn(10)
 	if randNum != 5 { // Intentionally to have 1/10 chance to log custom query parameters
 		return
@@ -362,13 +364,14 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutions(
 	ctx context.Context,
 	request *ListWorkflowExecutionsRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
+	override := ctx.Value(ContextKey)
 	v.logUserQueryParameters(userParameters{
 		operation:    string(Operation.LIST),
 		domainName:   request.Domain,
 		closeStatus:  -1, // is open. Will have --open flag in comparator workflow
 		earliestTime: request.EarliestTime,
 		latestTime:   request.LatestTime,
-	}, request.Domain)
+	}, request.Domain, override != nil)
 
 	manager := v.chooseVisibilityManagerForRead(ctx, request.Domain)
 	return manager.ListOpenWorkflowExecutions(ctx, request)
@@ -378,13 +381,14 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutions(
 	ctx context.Context,
 	request *ListWorkflowExecutionsRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
+	override := ctx.Value(ContextKey)
 	v.logUserQueryParameters(userParameters{
 		operation:    string(Operation.LIST),
 		domainName:   request.Domain,
 		closeStatus:  6, // 6 means not set closeStatus.
 		earliestTime: request.EarliestTime,
 		latestTime:   request.LatestTime,
-	}, request.Domain)
+	}, request.Domain, override != nil)
 	manager := v.chooseVisibilityManagerForRead(ctx, request.Domain)
 	return manager.ListClosedWorkflowExecutions(ctx, request)
 }
@@ -393,6 +397,7 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutionsByType(
 	ctx context.Context,
 	request *ListWorkflowExecutionsByTypeRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
+	override := ctx.Value(ContextKey)
 	v.logUserQueryParameters(userParameters{
 		operation:    string(Operation.LIST),
 		domainName:   request.Domain,
@@ -400,7 +405,7 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutionsByType(
 		closeStatus:  -1, // is open. Will have --open flag in comparator workflow
 		earliestTime: request.EarliestTime,
 		latestTime:   request.LatestTime,
-	}, request.Domain)
+	}, request.Domain, override != nil)
 	manager := v.chooseVisibilityManagerForRead(ctx, request.Domain)
 	return manager.ListOpenWorkflowExecutionsByType(ctx, request)
 }
@@ -409,6 +414,7 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByType(
 	ctx context.Context,
 	request *ListWorkflowExecutionsByTypeRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
+	override := ctx.Value(ContextKey)
 	v.logUserQueryParameters(userParameters{
 		operation:    string(Operation.LIST),
 		domainName:   request.Domain,
@@ -416,7 +422,7 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByType(
 		closeStatus:  6, // 6 means not set closeStatus.
 		earliestTime: request.EarliestTime,
 		latestTime:   request.LatestTime,
-	}, request.Domain)
+	}, request.Domain, override != nil)
 	manager := v.chooseVisibilityManagerForRead(ctx, request.Domain)
 	return manager.ListClosedWorkflowExecutionsByType(ctx, request)
 }
@@ -425,6 +431,7 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutionsByWorkflowID(
 	ctx context.Context,
 	request *ListWorkflowExecutionsByWorkflowIDRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
+	override := ctx.Value(ContextKey)
 	v.logUserQueryParameters(userParameters{
 		operation:    string(Operation.LIST),
 		domainName:   request.Domain,
@@ -432,7 +439,7 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutionsByWorkflowID(
 		closeStatus:  -1,
 		earliestTime: request.EarliestTime,
 		latestTime:   request.LatestTime,
-	}, request.Domain)
+	}, request.Domain, override != nil)
 	manager := v.chooseVisibilityManagerForRead(ctx, request.Domain)
 	return manager.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
 }
@@ -441,6 +448,7 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByWorkflowID(
 	ctx context.Context,
 	request *ListWorkflowExecutionsByWorkflowIDRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
+	override := ctx.Value(ContextKey)
 	v.logUserQueryParameters(userParameters{
 		operation:    string(Operation.LIST),
 		domainName:   request.Domain,
@@ -448,7 +456,7 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByWorkflowID(
 		closeStatus:  6, // 6 means not set closeStatus.
 		earliestTime: request.EarliestTime,
 		latestTime:   request.LatestTime,
-	}, request.Domain)
+	}, request.Domain, override != nil)
 	manager := v.chooseVisibilityManagerForRead(ctx, request.Domain)
 	return manager.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
 }
@@ -457,13 +465,14 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByStatus(
 	ctx context.Context,
 	request *ListClosedWorkflowExecutionsByStatusRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
+	override := ctx.Value(ContextKey)
 	v.logUserQueryParameters(userParameters{
 		operation:    string(Operation.LIST),
 		domainName:   request.Domain,
 		closeStatus:  int(request.Status),
 		earliestTime: request.EarliestTime,
 		latestTime:   request.LatestTime,
-	}, request.Domain)
+	}, request.Domain, override != nil)
 	manager := v.chooseVisibilityManagerForRead(ctx, request.Domain)
 	return manager.ListClosedWorkflowExecutionsByStatus(ctx, request)
 }
@@ -475,13 +484,14 @@ func (v *pinotVisibilityTripleManager) GetClosedWorkflowExecution(
 	earlistTime := int64(0) // this is to get all closed workflow execution
 	latestTime := time.Now().UnixNano()
 
+	override := ctx.Value(ContextKey)
 	v.logUserQueryParameters(userParameters{
 		operation:    string(Operation.LIST),
 		domainName:   request.Domain,
 		closeStatus:  6, // 6 means not set closeStatus.
 		earliestTime: earlistTime,
 		latestTime:   latestTime,
-	}, request.Domain)
+	}, request.Domain, override != nil)
 	manager := v.chooseVisibilityManagerForRead(ctx, request.Domain)
 	return manager.GetClosedWorkflowExecution(ctx, request)
 }
@@ -490,6 +500,7 @@ func (v *pinotVisibilityTripleManager) ListWorkflowExecutions(
 	ctx context.Context,
 	request *ListWorkflowExecutionsByQueryRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
+	override := ctx.Value(ContextKey)
 	v.logUserQueryParameters(userParameters{
 		operation:    string(Operation.LIST),
 		domainName:   request.Domain,
@@ -497,7 +508,7 @@ func (v *pinotVisibilityTripleManager) ListWorkflowExecutions(
 		customQuery:  request.Query,
 		earliestTime: -1,
 		latestTime:   -1,
-	}, request.Domain)
+	}, request.Domain, override != nil)
 	manager := v.chooseVisibilityManagerForRead(ctx, request.Domain)
 	return manager.ListWorkflowExecutions(ctx, request)
 }
@@ -506,6 +517,7 @@ func (v *pinotVisibilityTripleManager) ScanWorkflowExecutions(
 	ctx context.Context,
 	request *ListWorkflowExecutionsByQueryRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
+	override := ctx.Value(ContextKey)
 	v.logUserQueryParameters(userParameters{
 		operation:    string(Operation.LIST),
 		domainName:   request.Domain,
@@ -513,7 +525,7 @@ func (v *pinotVisibilityTripleManager) ScanWorkflowExecutions(
 		customQuery:  request.Query,
 		earliestTime: -1,
 		latestTime:   -1,
-	}, request.Domain)
+	}, request.Domain, override != nil)
 	manager := v.chooseVisibilityManagerForRead(ctx, request.Domain)
 	return manager.ScanWorkflowExecutions(ctx, request)
 }
@@ -522,6 +534,7 @@ func (v *pinotVisibilityTripleManager) CountWorkflowExecutions(
 	ctx context.Context,
 	request *CountWorkflowExecutionsRequest,
 ) (*CountWorkflowExecutionsResponse, error) {
+	override := ctx.Value(ContextKey)
 	v.logUserQueryParameters(userParameters{
 		operation:    string(Operation.COUNT),
 		domainName:   request.Domain,
@@ -529,7 +542,7 @@ func (v *pinotVisibilityTripleManager) CountWorkflowExecutions(
 		customQuery:  request.Query,
 		earliestTime: -1,
 		latestTime:   -1,
-	}, request.Domain)
+	}, request.Domain, override != nil)
 	manager := v.chooseVisibilityManagerForRead(ctx, request.Domain)
 	return manager.CountWorkflowExecutions(ctx, request)
 }
