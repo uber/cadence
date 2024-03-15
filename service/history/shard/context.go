@@ -588,6 +588,8 @@ func (s *contextImpl) GetWorkflowExecution(
 	if s.isClosed() {
 		return nil, ErrShardClosed
 	}
+	currentRangeID := s.getRangeID()
+	request.RangeID = currentRangeID
 	return s.executionManager.GetWorkflowExecution(ctx, request)
 }
 

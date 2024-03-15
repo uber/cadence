@@ -2975,6 +2975,7 @@ func TestGetWorkflowExecution(t *testing.T) {
 		mockSetup func(*sqlplugin.MockDB, *serialization.MockParser)
 		want      *persistence.InternalGetWorkflowExecutionResponse
 		wantErr   bool
+		assertErr func(t *testing.T, err error)
 	}{
 		{
 			name: "Success case",
@@ -2984,6 +2985,7 @@ func TestGetWorkflowExecution(t *testing.T) {
 					WorkflowID: "test-workflow-id",
 					RunID:      "ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f",
 				},
+				RangeID: 1,
 			},
 			mockSetup: func(db *sqlplugin.MockDB, parser *serialization.MockParser) {
 				db.EXPECT().SelectFromExecutions(gomock.Any(), gomock.Any()).Return([]sqlplugin.ExecutionsRow{
@@ -3204,6 +3206,9 @@ func TestGetWorkflowExecution(t *testing.T) {
 					Control:               []byte("test control"),
 					RequestID:             "test-signal-request-id",
 				}, nil)
+				db.EXPECT().SelectFromShards(gomock.Any(), gomock.Any()).Return(&sqlplugin.ShardsRow{
+					RangeID: 1,
+				}, nil)
 			},
 			want: &persistence.InternalGetWorkflowExecutionResponse{
 				State: &persistence.InternalWorkflowMutableState{
@@ -3365,6 +3370,110 @@ func TestGetWorkflowExecution(t *testing.T) {
 				},
 			},
 			wantErr: false,
+		},
+		{
+			name: "Error - Shard owner changed",
+			req: &persistence.InternalGetWorkflowExecutionRequest{
+				DomainID: "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+				Execution: types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f",
+				},
+			},
+			mockSetup: func(db *sqlplugin.MockDB, parser *serialization.MockParser) {
+				db.EXPECT().SelectFromExecutions(gomock.Any(), gomock.Any()).Return([]sqlplugin.ExecutionsRow{
+					{
+						ShardID:          0,
+						DomainID:         serialization.MustParseUUID("ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d"),
+						WorkflowID:       "test-workflow-id",
+						RunID:            serialization.MustParseUUID("ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f"),
+						NextEventID:      101,
+						LastWriteVersion: 11,
+						Data:             []byte("test data"),
+						DataEncoding:     "thriftrw",
+					},
+				}, nil)
+				db.EXPECT().SelectFromActivityInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromTimerInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromChildExecutionInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromRequestCancelInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromSignalInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromSignalsRequestedSets(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromBufferedEvents(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				parser.EXPECT().WorkflowExecutionInfoFromBlob(gomock.Any(), gomock.Any()).Return(&serialization.WorkflowExecutionInfo{
+					Checksum:         []byte("test-checksum"),
+					ChecksumEncoding: "test-checksum-encoding",
+				}, nil)
+				db.EXPECT().SelectFromShards(gomock.Any(), gomock.Any()).Return(&sqlplugin.ShardsRow{
+					RangeID: 1,
+				}, nil)
+			},
+			wantErr: true,
+			assertErr: func(t *testing.T, err error) {
+				assert.IsType(t, &persistence.ShardOwnershipLostError{}, err)
+			},
+		},
+		{
+			name: "Error - failed to get shard",
+			req: &persistence.InternalGetWorkflowExecutionRequest{
+				DomainID: "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+				Execution: types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f",
+				},
+			},
+			mockSetup: func(db *sqlplugin.MockDB, parser *serialization.MockParser) {
+				db.EXPECT().SelectFromExecutions(gomock.Any(), gomock.Any()).Return([]sqlplugin.ExecutionsRow{
+					{
+						ShardID:          0,
+						DomainID:         serialization.MustParseUUID("ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d"),
+						WorkflowID:       "test-workflow-id",
+						RunID:            serialization.MustParseUUID("ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f"),
+						NextEventID:      101,
+						LastWriteVersion: 11,
+						Data:             []byte("test data"),
+						DataEncoding:     "thriftrw",
+					},
+				}, nil)
+				db.EXPECT().SelectFromActivityInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromTimerInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromChildExecutionInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromRequestCancelInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromSignalInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromSignalsRequestedSets(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromBufferedEvents(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				parser.EXPECT().WorkflowExecutionInfoFromBlob(gomock.Any(), gomock.Any()).Return(&serialization.WorkflowExecutionInfo{
+					Checksum:         []byte("test-checksum"),
+					ChecksumEncoding: "test-checksum-encoding",
+				}, nil)
+				db.EXPECT().SelectFromShards(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().IsNotFoundError(gomock.Any()).Return(true).AnyTimes()
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - SelectFromExecutions no row",
+			req: &persistence.InternalGetWorkflowExecutionRequest{
+				DomainID: "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+				Execution: types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f",
+				},
+			},
+			mockSetup: func(db *sqlplugin.MockDB, parser *serialization.MockParser) {
+				db.EXPECT().SelectFromExecutions(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromActivityInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromTimerInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromChildExecutionInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromRequestCancelInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromSignalInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromSignalsRequestedSets(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromBufferedEvents(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+			},
+			wantErr: true,
+			assertErr: func(t *testing.T, err error) {
+				assert.IsType(t, &types.EntityNotExistsError{}, err)
+			},
 		},
 		{
 			name: "Error - SelectFromExecutions failed",
@@ -3562,6 +3671,9 @@ func TestGetWorkflowExecution(t *testing.T) {
 			resp, err := s.GetWorkflowExecution(context.Background(), tc.req)
 			if tc.wantErr {
 				assert.Error(t, err, "Expected an error for test case")
+				if tc.assertErr != nil {
+					tc.assertErr(t, err)
+				}
 			} else {
 				assert.NoError(t, err, "Did not expect an error for test case")
 				assert.Equal(t, tc.want, resp, "Response mismatch")

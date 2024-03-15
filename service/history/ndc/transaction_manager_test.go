@@ -443,6 +443,7 @@ func (s *transactionManagerSuite) TestCheckWorkflowExists_DoesNotExists() {
 			RunID:      runID,
 		},
 		DomainName: domainName,
+		RangeID:    1,
 	}).Return(nil, &types.EntityNotExistsError{}).Once()
 
 	exists, err := s.transactionManager.checkWorkflowExists(ctx, domainID, workflowID, runID)
@@ -465,6 +466,7 @@ func (s *transactionManagerSuite) TestCheckWorkflowExists_DoesExists() {
 			RunID:      runID,
 		},
 		DomainName: domainName,
+		RangeID:    1,
 	}).Return(&persistence.GetWorkflowExecutionResponse{}, nil).Once()
 
 	exists, err := s.transactionManager.checkWorkflowExists(ctx, domainID, workflowID, runID)

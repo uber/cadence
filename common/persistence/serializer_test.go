@@ -214,6 +214,7 @@ func TestSerializers(t *testing.T) {
 		{
 			name: "checksum",
 			payloads: map[string]any{
+				"empty":  checksum.Checksum{},
 				"normal": generateChecksum(),
 			},
 			serializeFn: func(payload any, encoding common.EncodingType) (*DataBlob, error) {
