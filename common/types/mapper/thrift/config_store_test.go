@@ -39,6 +39,10 @@ func TestDynamicConfigBlob(t *testing.T) {
 			input: &testdata.DynamicConfigBlob,
 		},
 		{
+			desc:  "empty input test",
+			input: &types.DynamicConfigBlob{},
+		},
+		{
 			desc:  "nil input test",
 			input: nil,
 		},
@@ -58,6 +62,10 @@ func TestDynamicConfigEntryArray(t *testing.T) {
 		{
 			desc:  "non-nil input test",
 			input: []*types.DynamicConfigEntry{&testdata.DynamicConfigEntry},
+		},
+		{
+			desc:  "empty input test",
+			input: []*types.DynamicConfigEntry{},
 		},
 		{
 			desc:  "nil input test",
@@ -81,6 +89,10 @@ func TestDynamicConfigEntry(t *testing.T) {
 			input: &testdata.DynamicConfigEntry,
 		},
 		{
+			desc:  "empty input test",
+			input: &types.DynamicConfigEntry{},
+		},
+		{
 			desc:  "nil input test",
 			input: nil,
 		},
@@ -100,6 +112,10 @@ func TestDynamicConfigValueArray(t *testing.T) {
 		{
 			desc:  "non-nil input test",
 			input: []*types.DynamicConfigValue{&testdata.DynamicConfigValue},
+		},
+		{
+			desc:  "empty input test",
+			input: []*types.DynamicConfigValue{},
 		},
 		{
 			desc:  "nil input test",
@@ -123,6 +139,10 @@ func TestDynamicConfigValue(t *testing.T) {
 			input: &testdata.DynamicConfigValue,
 		},
 		{
+			desc:  "empty input test",
+			input: &types.DynamicConfigValue{},
+		},
+		{
 			desc:  "nil input test",
 			input: nil,
 		},
@@ -144,6 +164,10 @@ func TestDynamicConfigFilterArray(t *testing.T) {
 			input: []*types.DynamicConfigFilter{&testdata.DynamicConfigFilter},
 		},
 		{
+			desc:  "empty input test",
+			input: []*types.DynamicConfigFilter{},
+		},
+		{
 			desc:  "nil input test",
 			input: nil,
 		},
@@ -163,6 +187,10 @@ func TestDynamicConfigFilter(t *testing.T) {
 		{
 			desc:  "non-nil input test",
 			input: &testdata.DynamicConfigFilter,
+		},
+		{
+			desc:  "empty input test",
+			input: &types.DynamicConfigFilter{},
 		},
 		{
 			desc:  "nil input test",
