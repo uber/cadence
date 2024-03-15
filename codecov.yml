@@ -33,6 +33,7 @@ ignore:
   - "**/main.go"
   - "**/mocks/**"
   - "**/testing/**"
+  - "**/testdata/**"
   - "bench/**"
   - "canary/**"
   - "common/persistence/persistence-tests/**"
@@ -42,7 +43,6 @@ ignore:
   - "common/persistence/nosql/nosqlplugin/dynamodb/**"
   - "common/persistence/nosql/nosqlplugin/mongodb/**"
   - "common/types/shared.go" # 8k lines of getters. Not worth testing manually but consider switching to generated code.
-  - "common/types/testdata/**"
   - "idls/**"
   - "host/**"
   - "testflags/**"

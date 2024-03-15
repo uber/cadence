@@ -38,9 +38,6 @@ import (
 )
 
 func TestNewConsumer(t *testing.T) {
-	// TODO: remove skip after PR #5712 is merged
-	t.Skip()
-
 	mockProducer := mocks.NewSyncProducer(t, nil)
 	group := "tests"
 	mockBroker := initMockBroker(t, group)

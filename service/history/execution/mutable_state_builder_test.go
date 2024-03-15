@@ -39,8 +39,10 @@ import (
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/testing/testdatagen"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
@@ -1264,6 +1266,601 @@ func TestGetStartEvent(t *testing.T) {
 			if td.expectedErr != nil {
 				assert.ErrorAs(t, err, &td.expectedErr)
 			}
+		})
+	}
+}
+
+func TestLoggingNilAndInvalidHandling(t *testing.T) {
+	gen := testdatagen.New(t)
+
+	executionInfo := persistence.WorkflowExecutionInfo{}
+
+	gen.Fuzz(&executionInfo)
+	msb := mutableStateBuilder{
+		executionInfo: &executionInfo,
+		logger:        log.NewNoop(),
+		metricsClient: metrics.NewNoopMetricsClient(),
+	}
+
+	msbInvalid := mutableStateBuilder{logger: log.NewNoop()}
+
+	assert.NotPanics(t, func() {
+		msbInvalid.logWarn("test", tag.WorkflowDomainID("test"))
+		msbInvalid.logError("test", tag.WorkflowDomainID("test"))
+		msbInvalid.logInfo("test", tag.WorkflowDomainID("test"))
+		msb.logWarn("test", tag.WorkflowDomainID("test"))
+		msb.logError("test", tag.WorkflowDomainID("test"))
+		msb.logInfo("test", tag.WorkflowDomainID("test"))
+		msb.logDataInconsistency()
+	})
+}
+
+func TestAssignEventIDToBufferedEvents(t *testing.T) {
+
+	tests := map[string]struct {
+		startingEventID                   int64
+		pendingActivityInfo               map[int64]*persistence.ActivityInfo
+		pendingChildExecutionInfoIDs      map[int64]*persistence.ChildExecutionInfo
+		startingHistoryEntries            []*types.HistoryEvent
+		expectedUpdateActivityInfos       map[int64]*persistence.ActivityInfo
+		expectedEndingHistoryEntries      []*types.HistoryEvent
+		expectedNextEventID               int64
+		expectedUpdateChildExecutionInfos map[int64]*persistence.ChildExecutionInfo
+	}{
+		"Timer Fired - this should increment the nextevent ID counter": {
+			startingEventID: 12,
+			startingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeTimerFired.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					TimerFiredEventAttributes: &types.TimerFiredEventAttributes{
+						TimerID:        "1",
+						StartedEventID: 11,
+					},
+				},
+			},
+			expectedEndingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeTimerFired.Ptr(),
+					ID:        12,
+					TaskID:    common.EmptyEventTaskID,
+					TimerFiredEventAttributes: &types.TimerFiredEventAttributes{
+						TimerID:        "1",
+						StartedEventID: 11,
+					},
+				},
+			},
+			expectedNextEventID:               13,
+			expectedUpdateActivityInfos:       map[int64]*persistence.ActivityInfo{},
+			expectedUpdateChildExecutionInfos: map[int64]*persistence.ChildExecutionInfo{},
+		},
+		"Activity completed and started - this should update any buffered activities": {
+			startingEventID: 6,
+			startingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeDecisionTaskCompleted.Ptr(),
+					ID:        4,
+					TaskID:    common.EmptyEventTaskID,
+					DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
+						ScheduledEventID: 2,
+						StartedEventID:   3,
+					},
+				},
+				{
+					EventType: types.EventTypeActivityTaskScheduled.Ptr(),
+					ID:        5,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{
+						ActivityID: "0",
+					},
+				},
+				{
+					EventType: types.EventTypeActivityTaskStarted.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+						ScheduledEventID: 5,
+					},
+				},
+			},
+			expectedEndingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeDecisionTaskCompleted.Ptr(),
+					ID:        4,
+					TaskID:    common.EmptyEventTaskID,
+					DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
+						ScheduledEventID: 2,
+						StartedEventID:   3,
+					},
+				},
+				{
+					EventType: types.EventTypeActivityTaskScheduled.Ptr(),
+					ID:        5,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{
+						ActivityID: "0",
+					},
+				},
+				{
+					EventType: types.EventTypeActivityTaskStarted.Ptr(),
+					ID:        6,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+						ScheduledEventID: 5,
+					},
+				},
+			},
+			expectedNextEventID:               7,
+			expectedUpdateActivityInfos:       map[int64]*persistence.ActivityInfo{},
+			expectedUpdateChildExecutionInfos: map[int64]*persistence.ChildExecutionInfo{},
+		},
+		"Activity task started and a pending activity is updated - this should be put to the updatedActivityInfos map with all the other counters incremented": {
+			startingEventID: 6,
+			pendingActivityInfo: map[int64]*persistence.ActivityInfo{
+				5: {
+					ScheduleID: 5,
+					StartedID:  6,
+				},
+			},
+			startingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeActivityTaskStarted.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+						ScheduledEventID: 5,
+					},
+				},
+			},
+			expectedEndingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeActivityTaskStarted.Ptr(),
+					ID:        6,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+						ScheduledEventID: 5,
+					},
+				},
+			},
+			expectedNextEventID: 7,
+			expectedUpdateActivityInfos: map[int64]*persistence.ActivityInfo{
+				5: {
+					ScheduleID: 5,
+					StartedID:  6,
+				},
+			},
+			expectedUpdateChildExecutionInfos: map[int64]*persistence.ChildExecutionInfo{},
+		},
+		"Activity task started and then completed": {
+			startingEventID: 6,
+			startingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeActivityTaskStarted.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+						ScheduledEventID: 3456,
+					},
+				},
+				{
+					EventType: types.EventTypeActivityTaskCompleted.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskCompletedEventAttributes: &types.ActivityTaskCompletedEventAttributes{
+						StartedEventID:   4567,
+						ScheduledEventID: 3456,
+					},
+				},
+			},
+			expectedEndingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeActivityTaskStarted.Ptr(),
+					ID:        6,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+						ScheduledEventID: 3456,
+					},
+				},
+				{
+					EventType: types.EventTypeActivityTaskCompleted.Ptr(),
+					ID:        7,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskCompletedEventAttributes: &types.ActivityTaskCompletedEventAttributes{
+						StartedEventID:   6,
+						ScheduledEventID: 3456,
+					},
+				},
+			},
+			expectedNextEventID:               8,
+			expectedUpdateActivityInfos:       map[int64]*persistence.ActivityInfo{},
+			expectedUpdateChildExecutionInfos: map[int64]*persistence.ChildExecutionInfo{},
+		},
+		"Activity task started and then Cancelled": {
+			startingEventID: 6,
+			startingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeActivityTaskStarted.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+						ScheduledEventID: 3456,
+					},
+				},
+				{
+					EventType: types.EventTypeActivityTaskCanceled.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskCanceledEventAttributes: &types.ActivityTaskCanceledEventAttributes{
+						StartedEventID:   123,
+						ScheduledEventID: 3456,
+					},
+				},
+			},
+			expectedEndingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeActivityTaskStarted.Ptr(),
+					ID:        6,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+						ScheduledEventID: 3456,
+					},
+				},
+				{
+					EventType: types.EventTypeActivityTaskCanceled.Ptr(),
+					ID:        7,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskCanceledEventAttributes: &types.ActivityTaskCanceledEventAttributes{
+						StartedEventID:   6,
+						ScheduledEventID: 3456,
+					},
+				},
+			},
+			expectedNextEventID:               8,
+			expectedUpdateActivityInfos:       map[int64]*persistence.ActivityInfo{},
+			expectedUpdateChildExecutionInfos: map[int64]*persistence.ChildExecutionInfo{},
+		},
+		"Activity task started and then failed": {
+			startingEventID: 6,
+			startingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeActivityTaskStarted.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+						ScheduledEventID: 3456,
+					},
+				},
+				{
+					EventType: types.EventTypeActivityTaskFailed.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskFailedEventAttributes: &types.ActivityTaskFailedEventAttributes{
+						StartedEventID:   123,
+						ScheduledEventID: 3456,
+					},
+				},
+			},
+			expectedEndingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeActivityTaskStarted.Ptr(),
+					ID:        6,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+						ScheduledEventID: 3456,
+					},
+				},
+				{
+					EventType: types.EventTypeActivityTaskFailed.Ptr(),
+					ID:        7,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskFailedEventAttributes: &types.ActivityTaskFailedEventAttributes{
+						StartedEventID:   6,
+						ScheduledEventID: 3456,
+					},
+				},
+			},
+			expectedNextEventID:               8,
+			expectedUpdateActivityInfos:       map[int64]*persistence.ActivityInfo{},
+			expectedUpdateChildExecutionInfos: map[int64]*persistence.ChildExecutionInfo{},
+		},
+		"Activity task started and then timed out": {
+			startingEventID: 6,
+			startingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeActivityTaskStarted.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+						ScheduledEventID: 3456,
+					},
+				},
+				{
+					EventType: types.EventTypeActivityTaskTimedOut.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskTimedOutEventAttributes: &types.ActivityTaskTimedOutEventAttributes{
+						StartedEventID:   123,
+						ScheduledEventID: 3456,
+					},
+				},
+			},
+			expectedEndingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeActivityTaskStarted.Ptr(),
+					ID:        6,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+						ScheduledEventID: 3456,
+					},
+				},
+				{
+					EventType: types.EventTypeActivityTaskTimedOut.Ptr(),
+					ID:        7,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskTimedOutEventAttributes: &types.ActivityTaskTimedOutEventAttributes{
+						StartedEventID:   6,
+						ScheduledEventID: 3456,
+					},
+				},
+			},
+			expectedNextEventID:               8,
+			expectedUpdateActivityInfos:       map[int64]*persistence.ActivityInfo{},
+			expectedUpdateChildExecutionInfos: map[int64]*persistence.ChildExecutionInfo{},
+		},
+		"Child workflow scheduled and then completed": {
+			startingEventID: 6,
+			startingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeChildWorkflowExecutionStarted.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionStartedEventAttributes: &types.ChildWorkflowExecutionStartedEventAttributes{
+						InitiatedEventID: 123,
+					},
+				},
+				{
+					EventType: types.EventTypeChildWorkflowExecutionCompleted.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionCompletedEventAttributes: &types.ChildWorkflowExecutionCompletedEventAttributes{
+						StartedEventID:   123,
+						InitiatedEventID: 2345,
+					},
+				},
+			},
+			expectedEndingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeChildWorkflowExecutionStarted.Ptr(),
+					ID:        6,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionStartedEventAttributes: &types.ChildWorkflowExecutionStartedEventAttributes{
+						InitiatedEventID: 123,
+					},
+				},
+				{
+					EventType: types.EventTypeChildWorkflowExecutionCompleted.Ptr(),
+					ID:        7,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionCompletedEventAttributes: &types.ChildWorkflowExecutionCompletedEventAttributes{
+						StartedEventID:   123,
+						InitiatedEventID: 2345,
+					},
+				},
+			},
+			expectedNextEventID:               8,
+			expectedUpdateActivityInfos:       map[int64]*persistence.ActivityInfo{},
+			expectedUpdateChildExecutionInfos: map[int64]*persistence.ChildExecutionInfo{},
+		},
+		"Child workflow scheduled and then Cancelled - where there is a pending execution that requires an update": {
+			startingEventID: 6,
+			pendingChildExecutionInfoIDs: map[int64]*persistence.ChildExecutionInfo{
+				123: {
+					InitiatedID: 321,
+				},
+			},
+			startingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeChildWorkflowExecutionStarted.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionStartedEventAttributes: &types.ChildWorkflowExecutionStartedEventAttributes{
+						InitiatedEventID: 123,
+					},
+				},
+				{
+					EventType: types.EventTypeChildWorkflowExecutionCanceled.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionCanceledEventAttributes: &types.ChildWorkflowExecutionCanceledEventAttributes{
+						StartedEventID:   321,
+						InitiatedEventID: 123,
+					},
+				},
+			},
+			expectedEndingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeChildWorkflowExecutionStarted.Ptr(),
+					ID:        6,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionStartedEventAttributes: &types.ChildWorkflowExecutionStartedEventAttributes{
+						InitiatedEventID: 123,
+					},
+				},
+				{
+					EventType: types.EventTypeChildWorkflowExecutionCanceled.Ptr(),
+					ID:        7,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionCanceledEventAttributes: &types.ChildWorkflowExecutionCanceledEventAttributes{
+						StartedEventID:   6,
+						InitiatedEventID: 123,
+					},
+				},
+			},
+			expectedNextEventID:         8,
+			expectedUpdateActivityInfos: map[int64]*persistence.ActivityInfo{},
+			expectedUpdateChildExecutionInfos: map[int64]*persistence.ChildExecutionInfo{
+				321: {
+					InitiatedID: 321,
+					StartedID:   6,
+				},
+			},
+		},
+		"Child workflow scheduled and then Failed": {
+			startingEventID: 6,
+			startingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeChildWorkflowExecutionStarted.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionStartedEventAttributes: &types.ChildWorkflowExecutionStartedEventAttributes{
+						InitiatedEventID: 123,
+					},
+				},
+				{
+					EventType: types.EventTypeChildWorkflowExecutionFailed.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionFailedEventAttributes: &types.ChildWorkflowExecutionFailedEventAttributes{
+						StartedEventID:   123,
+						InitiatedEventID: 2345,
+					},
+				},
+			},
+			expectedEndingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeChildWorkflowExecutionStarted.Ptr(),
+					ID:        6,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionStartedEventAttributes: &types.ChildWorkflowExecutionStartedEventAttributes{
+						InitiatedEventID: 123,
+					},
+				},
+				{
+					EventType: types.EventTypeChildWorkflowExecutionFailed.Ptr().Ptr(),
+					ID:        7,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionFailedEventAttributes: &types.ChildWorkflowExecutionFailedEventAttributes{
+						StartedEventID:   123,
+						InitiatedEventID: 2345,
+					},
+				},
+			},
+			expectedNextEventID:               8,
+			expectedUpdateActivityInfos:       map[int64]*persistence.ActivityInfo{},
+			expectedUpdateChildExecutionInfos: map[int64]*persistence.ChildExecutionInfo{},
+		},
+		"Child workflow scheduled and then Timed out": {
+			startingEventID: 6,
+			startingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeChildWorkflowExecutionStarted.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionStartedEventAttributes: &types.ChildWorkflowExecutionStartedEventAttributes{
+						InitiatedEventID: 123,
+					},
+				},
+				{
+					EventType: types.EventTypeChildWorkflowExecutionTimedOut.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionTimedOutEventAttributes: &types.ChildWorkflowExecutionTimedOutEventAttributes{
+						StartedEventID:   123,
+						InitiatedEventID: 2345,
+					},
+				},
+			},
+			expectedEndingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeChildWorkflowExecutionStarted.Ptr(),
+					ID:        6,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionStartedEventAttributes: &types.ChildWorkflowExecutionStartedEventAttributes{
+						InitiatedEventID: 123,
+					},
+				},
+				{
+					EventType: types.EventTypeChildWorkflowExecutionTimedOut.Ptr(),
+					ID:        7,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionTimedOutEventAttributes: &types.ChildWorkflowExecutionTimedOutEventAttributes{
+						StartedEventID:   123,
+						InitiatedEventID: 2345,
+					},
+				},
+			},
+			expectedNextEventID:               8,
+			expectedUpdateActivityInfos:       map[int64]*persistence.ActivityInfo{},
+			expectedUpdateChildExecutionInfos: map[int64]*persistence.ChildExecutionInfo{},
+		},
+		"Child workflow scheduled and then Terminated": {
+			startingEventID: 6,
+			startingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeChildWorkflowExecutionStarted.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionStartedEventAttributes: &types.ChildWorkflowExecutionStartedEventAttributes{
+						InitiatedEventID: 123,
+					},
+				},
+				{
+					EventType: types.EventTypeChildWorkflowExecutionTerminated.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionTerminatedEventAttributes: &types.ChildWorkflowExecutionTerminatedEventAttributes{
+						StartedEventID:   123,
+						InitiatedEventID: 2345,
+					},
+				},
+			},
+			expectedEndingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeChildWorkflowExecutionStarted.Ptr(),
+					ID:        6,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionStartedEventAttributes: &types.ChildWorkflowExecutionStartedEventAttributes{
+						InitiatedEventID: 123,
+					},
+				},
+				{
+					EventType: types.EventTypeChildWorkflowExecutionTerminated.Ptr(),
+					ID:        7,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionTerminatedEventAttributes: &types.ChildWorkflowExecutionTerminatedEventAttributes{
+						StartedEventID:   123,
+						InitiatedEventID: 2345,
+					},
+				},
+			},
+			expectedNextEventID:               8,
+			expectedUpdateActivityInfos:       map[int64]*persistence.ActivityInfo{},
+			expectedUpdateChildExecutionInfos: map[int64]*persistence.ChildExecutionInfo{},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			msb := &mutableStateBuilder{
+				pendingChildExecutionInfoIDs: td.pendingChildExecutionInfoIDs,
+				pendingActivityInfoIDs:       td.pendingActivityInfo,
+				executionInfo: &persistence.WorkflowExecutionInfo{
+					NextEventID: td.startingEventID,
+				},
+				hBuilder: &HistoryBuilder{
+					history: td.startingHistoryEntries,
+				},
+				updateActivityInfos:       make(map[int64]*persistence.ActivityInfo),
+				updateChildExecutionInfos: make(map[int64]*persistence.ChildExecutionInfo),
+			}
+
+			msb.assignEventIDToBufferedEvents()
+
+			assert.Equal(t, td.expectedEndingHistoryEntries, msb.hBuilder.history)
+			assert.Equal(t, td.expectedNextEventID, msb.executionInfo.NextEventID)
+			assert.Equal(t, td.expectedUpdateActivityInfos, msb.updateActivityInfos)
+			assert.Equal(t, td.expectedUpdateChildExecutionInfos, msb.updateChildExecutionInfos)
 		})
 	}
 }
