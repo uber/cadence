@@ -41,6 +41,7 @@ import (
 	"github.com/uber/cadence/client/wrappers/grpc"
 	"github.com/uber/cadence/client/wrappers/metered"
 	"github.com/uber/cadence/client/wrappers/thrift"
+	timeoutwrapper "github.com/uber/cadence/client/wrappers/timeout"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
@@ -96,11 +97,11 @@ func NewRPCClientFactory(
 }
 
 func (cf *rpcClientFactory) NewHistoryClient() (history.Client, error) {
-	return cf.NewHistoryClientWithTimeout(history.DefaultTimeout)
+	return cf.NewHistoryClientWithTimeout(timeoutwrapper.HistoryDefaultTimeout)
 }
 
 func (cf *rpcClientFactory) NewMatchingClient(domainIDToName DomainIDToNameFunc) (matching.Client, error) {
-	return cf.NewMatchingClientWithTimeout(domainIDToName, matching.DefaultTimeout, matching.DefaultLongPollTimeout)
+	return cf.NewMatchingClientWithTimeout(domainIDToName, timeoutwrapper.MatchingDefaultTimeout, timeoutwrapper.MatchingDefaultLongPollTimeout)
 }
 
 func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (history.Client, error) {
@@ -120,7 +121,6 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 	client := history.NewClient(
 		cf.numberOfHistoryShards,
 		cf.rpcFactory.GetMaxMessageSize(),
-		timeout,
 		rawClient,
 		peerResolver,
 		cf.logger,
@@ -131,6 +131,7 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 	if cf.metricsClient != nil {
 		client = metered.NewHistoryClient(client, cf.metricsClient)
 	}
+	client = timeoutwrapper.NewHistoryClient(client, timeout)
 	return client, nil
 }
 
@@ -152,12 +153,11 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 	peerResolver := matching.NewPeerResolver(cf.resolver, namedPort)
 
 	client := matching.NewClient(
-		timeout,
-		longPollTimeout,
 		rawClient,
 		peerResolver,
 		matching.NewLoadBalancer(domainIDToName, cf.dynConfig),
 	)
+	client = timeoutwrapper.NewMatchingClient(client, longPollTimeout, timeout)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.MatchingErrorInjectionRate)(); errorRate != 0 {
 		client = errorinjectors.NewMatchingClient(client, errorRate, cf.logger)
 	}
@@ -165,7 +165,6 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 		client = metered.NewMatchingClient(client, cf.metricsClient)
 	}
 	return client, nil
-
 }
 
 func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndConfig(
@@ -180,7 +179,7 @@ func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndConfig(
 		client = thrift.NewAdminClient(adminserviceclient.New(config))
 	}
 
-	client = admin.NewClient(timeout, largeTimeout, client)
+	client = timeoutwrapper.NewAdminClient(client, largeTimeout, timeout)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.AdminErrorInjectionRate)(); errorRate != 0 {
 		client = errorinjectors.NewAdminClient(client, errorRate, cf.logger)
 	}
@@ -207,7 +206,7 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndConfig(
 		client = thrift.NewFrontendClient(workflowserviceclient.New(config))
 	}
 
-	client = frontend.NewClient(timeout, longPollTimeout, client)
+	client = timeoutwrapper.NewFrontendClient(client, longPollTimeout, timeout)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.FrontendErrorInjectionRate)(); errorRate != 0 {
 		client = errorinjectors.NewFrontendClient(client, errorRate, cf.logger)
 	}

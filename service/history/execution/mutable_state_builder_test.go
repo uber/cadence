@@ -21,6 +21,8 @@
 package execution
 
 import (
+	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -37,12 +39,16 @@ import (
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/testing/testdatagen"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/shard"
+	shardCtx "github.com/uber/cadence/service/history/shard"
 )
 
 type (
@@ -988,5 +994,873 @@ func (s *mutableStateSuite) buildWorkflowMutableState() *persistence.WorkflowMut
 		SignalRequestedIDs:  signalRequestIDs,
 		BufferedEvents:      bufferedEvents,
 		VersionHistories:    versionHistories,
+	}
+}
+
+func TestNewMutableStateBuilderWithEventV2(t *testing.T) {
+
+	ctrl := gomock.NewController(t)
+	mockShard := shard.NewTestContext(
+		t,
+		ctrl,
+		&persistence.ShardInfo{
+			ShardID:          0,
+			RangeID:          1,
+			TransferAckLevel: 0,
+		},
+		config.NewForTest(),
+	)
+	domainCache := cache.NewDomainCacheEntryForTest(
+		&persistence.DomainInfo{Name: "mutableStateTest"},
+		&persistence.DomainConfig{},
+		true,
+		&persistence.DomainReplicationConfig{},
+		1,
+		nil,
+	)
+
+	NewMutableStateBuilderWithEventV2(mockShard, log.NewNoop(), "A82146B5-7A5C-4660-9195-E80E5161EC56", domainCache)
+}
+
+var (
+	domainID = "A6338800-D143-4FEF-8A49-9BBB31386C5F"
+	wfID     = "879A361B-B435-491D-8A3B-ACF3BAD30F4B"
+	runID    = "81DFCB6B-ACD4-46D1-89C2-804388203880"
+	ts1      = int64(1234)
+	shardID  = 123
+)
+
+// Guiding real data example: ie:
+// `select execution from executions where run_id = <run-id> ALLOW FILTERING;`
+//
+// executions.execution {
+// domainID: "A6338800-D143-4FEF-8A49-9BBB31386C5F",
+// wfID: "879A361B-B435-491D-8A3B-ACF3BAD30F4B",
+// runID: "81DFCB6B-ACD4-46D1-89C2-804388203880",
+// initiated_id: -7,
+// completion_event: null,
+// state: 2,
+// close_status: 1,
+// next_event_id: 12,
+// last_processed_event: 9,
+// decision_schedule_id: -23,
+// decision_started_id: -23,
+// last_first_event_id: 10,
+// decision_version: -24,
+// completion_event_batch_id: 10,
+// last_event_task_id: 4194328,
+// }
+var exampleMutableStateForClosedWF = &mutableStateBuilder{
+	executionInfo: &persistence.WorkflowExecutionInfo{
+		WorkflowID:             wfID,
+		DomainID:               domainID,
+		RunID:                  runID,
+		NextEventID:            12,
+		State:                  persistence.WorkflowStateCompleted,
+		CompletionEventBatchID: 10,
+		BranchToken:            []byte("branch-token"),
+	},
+}
+
+var exampleCompletionEvent = &types.HistoryEvent{
+	ID:        11,
+	TaskID:    4194328,
+	Version:   1,
+	Timestamp: &ts1,
+	WorkflowExecutionCompletedEventAttributes: &types.WorkflowExecutionCompletedEventAttributes{
+		Result:                       []byte("some random workflow completion result"),
+		DecisionTaskCompletedEventID: 10,
+	},
+}
+
+var exampleStartEvent = &types.HistoryEvent{
+	ID:        1,
+	TaskID:    4194328,
+	Version:   1,
+	Timestamp: &ts1,
+	WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
+		WorkflowType:                        &types.WorkflowType{Name: "workflow-type"},
+		TaskList:                            &types.TaskList{Name: "tasklist"},
+		Input:                               []byte("some random workflow input"),
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(60),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+		OriginalExecutionRunID:              runID,
+		Identity:                            "123@some-hostname@@uuid",
+	},
+}
+
+func TestGetCompletionEvent(t *testing.T) {
+	tests := map[string]struct {
+		currentState *mutableStateBuilder
+
+		historyManagerAffordance func(historyManager *persistence.MockHistoryManager)
+
+		expectedResult *types.HistoryEvent
+		expectedErr    error
+	}{
+		"Getting a completed event from a normal, completed workflow - taken from a real example": {
+			currentState: exampleMutableStateForClosedWF,
+			historyManagerAffordance: func(historyManager *persistence.MockHistoryManager) {
+
+				historyManager.EXPECT().ReadHistoryBranch(gomock.Any(),
+					&persistence.ReadHistoryBranchRequest{
+						BranchToken:   []byte("branch-token"),
+						MinEventID:    10,
+						MaxEventID:    12, // nextEventID +1
+						PageSize:      1,
+						NextPageToken: nil,
+						ShardID:       common.IntPtr(shardID),
+						DomainName:    "domain",
+					}).Return(&persistence.ReadHistoryBranchResponse{
+					HistoryEvents: []*types.HistoryEvent{
+						exampleCompletionEvent,
+					},
+				}, nil)
+
+			},
+
+			expectedResult: exampleCompletionEvent,
+		},
+		"An unexpected error while fetchhing history, such as not found err": {
+			currentState: &mutableStateBuilder{
+				executionInfo: &persistence.WorkflowExecutionInfo{
+					WorkflowID:             wfID,
+					DomainID:               domainID,
+					RunID:                  runID,
+					NextEventID:            12,
+					State:                  persistence.WorkflowStateCompleted,
+					CompletionEventBatchID: 10,
+					BranchToken:            []byte("branch-token"),
+				},
+			},
+			historyManagerAffordance: func(historyManager *persistence.MockHistoryManager) {
+				historyManager.EXPECT().ReadHistoryBranch(gomock.Any(), gomock.Any()).Return(nil, errors.New("a transient random error"))
+			},
+
+			expectedResult: nil,
+			expectedErr:    &types.InternalServiceError{Message: "unable to get workflow completion event"},
+		},
+		"A 'transient' internal service error, this should be returned to the caller": {
+			currentState: &mutableStateBuilder{
+				executionInfo: &persistence.WorkflowExecutionInfo{
+					WorkflowID:             wfID,
+					DomainID:               domainID,
+					RunID:                  runID,
+					NextEventID:            12,
+					State:                  persistence.WorkflowStateCompleted,
+					CompletionEventBatchID: 10,
+					BranchToken:            []byte("branch-token"),
+				},
+			},
+			historyManagerAffordance: func(historyManager *persistence.MockHistoryManager) {
+				historyManager.EXPECT().ReadHistoryBranch(gomock.Any(), gomock.Any()).
+					Return(nil, &types.InternalServiceError{Message: "an err"})
+			},
+
+			expectedResult: nil,
+			expectedErr:    &types.InternalServiceError{Message: "an err"},
+		},
+		"initial validation: An invalid starting mutable state should return an error": {
+			currentState: &mutableStateBuilder{
+				executionInfo: &persistence.WorkflowExecutionInfo{},
+			},
+			historyManagerAffordance: func(historyManager *persistence.MockHistoryManager) {},
+			expectedResult:           nil,
+			expectedErr:              &types.InternalServiceError{Message: "unable to get workflow completion event"},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+
+			ctrl := gomock.NewController(t)
+
+			shardContext := shardCtx.NewMockContext(ctrl)
+			shardContext.EXPECT().GetShardID().Return(123).AnyTimes() // this isn't called on a few of the validation failures
+			historyManager := persistence.NewMockHistoryManager(ctrl)
+			td.historyManagerAffordance(historyManager)
+
+			domainCache := cache.NewMockDomainCache(ctrl)
+			domainCache.EXPECT().GetDomainName(gomock.Any()).Return("domain", nil).AnyTimes() // this isn't called on validation
+
+			td.currentState.eventsCache = events.NewCache(shardID, historyManager, config.NewForTest(), log.NewNoop(), metrics.NewNoopMetricsClient(), domainCache)
+			td.currentState.shard = shardContext
+
+			res, err := td.currentState.GetCompletionEvent(context.Background())
+
+			assert.Equal(t, td.expectedResult, res)
+			if td.expectedErr != nil {
+				assert.ErrorAs(t, td.expectedErr, &err)
+			}
+		})
+	}
+}
+
+func TestGetStartEvent(t *testing.T) {
+	tests := map[string]struct {
+		currentState *mutableStateBuilder
+
+		historyManagerAffordance func(historyManager *persistence.MockHistoryManager)
+
+		expectedResult *types.HistoryEvent
+		expectedErr    error
+	}{
+		"Getting a start event from a normal, completed workflow - taken from a real example": {
+			currentState: exampleMutableStateForClosedWF,
+			historyManagerAffordance: func(historyManager *persistence.MockHistoryManager) {
+
+				historyManager.EXPECT().ReadHistoryBranch(gomock.Any(),
+					&persistence.ReadHistoryBranchRequest{
+						BranchToken:   []byte("branch-token"),
+						MinEventID:    1,
+						MaxEventID:    2,
+						PageSize:      1,
+						NextPageToken: nil,
+						ShardID:       common.IntPtr(shardID),
+						DomainName:    "domain",
+					}).Return(&persistence.ReadHistoryBranchResponse{
+					HistoryEvents: []*types.HistoryEvent{
+						exampleStartEvent,
+					},
+				}, nil)
+
+			},
+
+			expectedResult: exampleStartEvent,
+		},
+		"Getting a start event but hitting an error when reaching into history": {
+			currentState: exampleMutableStateForClosedWF,
+			historyManagerAffordance: func(historyManager *persistence.MockHistoryManager) {
+				historyManager.EXPECT().ReadHistoryBranch(gomock.Any(), gomock.Any()).Return(nil, errors.New("an error"))
+			},
+			expectedErr: types.InternalServiceError{Message: "unable to get workflow start event"},
+		},
+		"Getting a start event but hitting a 'transient' error when reaching into history. This should be passed back up the call stack": {
+			currentState: exampleMutableStateForClosedWF,
+			historyManagerAffordance: func(historyManager *persistence.MockHistoryManager) {
+				historyManager.EXPECT().ReadHistoryBranch(gomock.Any(), gomock.Any()).Return(nil, &types.InternalServiceError{Message: "an error"})
+			},
+			expectedErr: types.InternalServiceError{Message: "an error"},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+
+			ctrl := gomock.NewController(t)
+
+			shardContext := shardCtx.NewMockContext(ctrl)
+			shardContext.EXPECT().GetShardID().Return(123).AnyTimes() // this isn't called on a few of the validation failures
+			historyManager := persistence.NewMockHistoryManager(ctrl)
+			td.historyManagerAffordance(historyManager)
+
+			domainCache := cache.NewMockDomainCache(ctrl)
+			domainCache.EXPECT().GetDomainName(gomock.Any()).Return("domain", nil).AnyTimes() // this isn't called on validation
+
+			td.currentState.eventsCache = events.NewCache(shardID, historyManager, config.NewForTest(), log.NewNoop(), metrics.NewNoopMetricsClient(), domainCache)
+			td.currentState.shard = shardContext
+
+			res, err := td.currentState.GetStartEvent(context.Background())
+
+			assert.Equal(t, td.expectedResult, res)
+			if td.expectedErr != nil {
+				assert.ErrorAs(t, err, &td.expectedErr)
+			}
+		})
+	}
+}
+
+func TestLoggingNilAndInvalidHandling(t *testing.T) {
+	gen := testdatagen.New(t)
+
+	executionInfo := persistence.WorkflowExecutionInfo{}
+
+	gen.Fuzz(&executionInfo)
+	msb := mutableStateBuilder{
+		executionInfo: &executionInfo,
+		logger:        log.NewNoop(),
+		metricsClient: metrics.NewNoopMetricsClient(),
+	}
+
+	msbInvalid := mutableStateBuilder{logger: log.NewNoop()}
+
+	assert.NotPanics(t, func() {
+		msbInvalid.logWarn("test", tag.WorkflowDomainID("test"))
+		msbInvalid.logError("test", tag.WorkflowDomainID("test"))
+		msbInvalid.logInfo("test", tag.WorkflowDomainID("test"))
+		msb.logWarn("test", tag.WorkflowDomainID("test"))
+		msb.logError("test", tag.WorkflowDomainID("test"))
+		msb.logInfo("test", tag.WorkflowDomainID("test"))
+		msb.logDataInconsistency()
+	})
+}
+
+func TestAssignEventIDToBufferedEvents(t *testing.T) {
+
+	tests := map[string]struct {
+		startingEventID                   int64
+		pendingActivityInfo               map[int64]*persistence.ActivityInfo
+		pendingChildExecutionInfoIDs      map[int64]*persistence.ChildExecutionInfo
+		startingHistoryEntries            []*types.HistoryEvent
+		expectedUpdateActivityInfos       map[int64]*persistence.ActivityInfo
+		expectedEndingHistoryEntries      []*types.HistoryEvent
+		expectedNextEventID               int64
+		expectedUpdateChildExecutionInfos map[int64]*persistence.ChildExecutionInfo
+	}{
+		"Timer Fired - this should increment the nextevent ID counter": {
+			startingEventID: 12,
+			startingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeTimerFired.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					TimerFiredEventAttributes: &types.TimerFiredEventAttributes{
+						TimerID:        "1",
+						StartedEventID: 11,
+					},
+				},
+			},
+			expectedEndingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeTimerFired.Ptr(),
+					ID:        12,
+					TaskID:    common.EmptyEventTaskID,
+					TimerFiredEventAttributes: &types.TimerFiredEventAttributes{
+						TimerID:        "1",
+						StartedEventID: 11,
+					},
+				},
+			},
+			expectedNextEventID:               13,
+			expectedUpdateActivityInfos:       map[int64]*persistence.ActivityInfo{},
+			expectedUpdateChildExecutionInfos: map[int64]*persistence.ChildExecutionInfo{},
+		},
+		"Activity completed and started - this should update any buffered activities": {
+			startingEventID: 6,
+			startingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeDecisionTaskCompleted.Ptr(),
+					ID:        4,
+					TaskID:    common.EmptyEventTaskID,
+					DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
+						ScheduledEventID: 2,
+						StartedEventID:   3,
+					},
+				},
+				{
+					EventType: types.EventTypeActivityTaskScheduled.Ptr(),
+					ID:        5,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{
+						ActivityID: "0",
+					},
+				},
+				{
+					EventType: types.EventTypeActivityTaskStarted.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+						ScheduledEventID: 5,
+					},
+				},
+			},
+			expectedEndingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeDecisionTaskCompleted.Ptr(),
+					ID:        4,
+					TaskID:    common.EmptyEventTaskID,
+					DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
+						ScheduledEventID: 2,
+						StartedEventID:   3,
+					},
+				},
+				{
+					EventType: types.EventTypeActivityTaskScheduled.Ptr(),
+					ID:        5,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{
+						ActivityID: "0",
+					},
+				},
+				{
+					EventType: types.EventTypeActivityTaskStarted.Ptr(),
+					ID:        6,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+						ScheduledEventID: 5,
+					},
+				},
+			},
+			expectedNextEventID:               7,
+			expectedUpdateActivityInfos:       map[int64]*persistence.ActivityInfo{},
+			expectedUpdateChildExecutionInfos: map[int64]*persistence.ChildExecutionInfo{},
+		},
+		"Activity task started and a pending activity is updated - this should be put to the updatedActivityInfos map with all the other counters incremented": {
+			startingEventID: 6,
+			pendingActivityInfo: map[int64]*persistence.ActivityInfo{
+				5: {
+					ScheduleID: 5,
+					StartedID:  6,
+				},
+			},
+			startingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeActivityTaskStarted.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+						ScheduledEventID: 5,
+					},
+				},
+			},
+			expectedEndingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeActivityTaskStarted.Ptr(),
+					ID:        6,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+						ScheduledEventID: 5,
+					},
+				},
+			},
+			expectedNextEventID: 7,
+			expectedUpdateActivityInfos: map[int64]*persistence.ActivityInfo{
+				5: {
+					ScheduleID: 5,
+					StartedID:  6,
+				},
+			},
+			expectedUpdateChildExecutionInfos: map[int64]*persistence.ChildExecutionInfo{},
+		},
+		"Activity task started and then completed": {
+			startingEventID: 6,
+			startingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeActivityTaskStarted.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+						ScheduledEventID: 3456,
+					},
+				},
+				{
+					EventType: types.EventTypeActivityTaskCompleted.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskCompletedEventAttributes: &types.ActivityTaskCompletedEventAttributes{
+						StartedEventID:   4567,
+						ScheduledEventID: 3456,
+					},
+				},
+			},
+			expectedEndingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeActivityTaskStarted.Ptr(),
+					ID:        6,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+						ScheduledEventID: 3456,
+					},
+				},
+				{
+					EventType: types.EventTypeActivityTaskCompleted.Ptr(),
+					ID:        7,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskCompletedEventAttributes: &types.ActivityTaskCompletedEventAttributes{
+						StartedEventID:   6,
+						ScheduledEventID: 3456,
+					},
+				},
+			},
+			expectedNextEventID:               8,
+			expectedUpdateActivityInfos:       map[int64]*persistence.ActivityInfo{},
+			expectedUpdateChildExecutionInfos: map[int64]*persistence.ChildExecutionInfo{},
+		},
+		"Activity task started and then Cancelled": {
+			startingEventID: 6,
+			startingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeActivityTaskStarted.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+						ScheduledEventID: 3456,
+					},
+				},
+				{
+					EventType: types.EventTypeActivityTaskCanceled.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskCanceledEventAttributes: &types.ActivityTaskCanceledEventAttributes{
+						StartedEventID:   123,
+						ScheduledEventID: 3456,
+					},
+				},
+			},
+			expectedEndingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeActivityTaskStarted.Ptr(),
+					ID:        6,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+						ScheduledEventID: 3456,
+					},
+				},
+				{
+					EventType: types.EventTypeActivityTaskCanceled.Ptr(),
+					ID:        7,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskCanceledEventAttributes: &types.ActivityTaskCanceledEventAttributes{
+						StartedEventID:   6,
+						ScheduledEventID: 3456,
+					},
+				},
+			},
+			expectedNextEventID:               8,
+			expectedUpdateActivityInfos:       map[int64]*persistence.ActivityInfo{},
+			expectedUpdateChildExecutionInfos: map[int64]*persistence.ChildExecutionInfo{},
+		},
+		"Activity task started and then failed": {
+			startingEventID: 6,
+			startingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeActivityTaskStarted.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+						ScheduledEventID: 3456,
+					},
+				},
+				{
+					EventType: types.EventTypeActivityTaskFailed.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskFailedEventAttributes: &types.ActivityTaskFailedEventAttributes{
+						StartedEventID:   123,
+						ScheduledEventID: 3456,
+					},
+				},
+			},
+			expectedEndingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeActivityTaskStarted.Ptr(),
+					ID:        6,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+						ScheduledEventID: 3456,
+					},
+				},
+				{
+					EventType: types.EventTypeActivityTaskFailed.Ptr(),
+					ID:        7,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskFailedEventAttributes: &types.ActivityTaskFailedEventAttributes{
+						StartedEventID:   6,
+						ScheduledEventID: 3456,
+					},
+				},
+			},
+			expectedNextEventID:               8,
+			expectedUpdateActivityInfos:       map[int64]*persistence.ActivityInfo{},
+			expectedUpdateChildExecutionInfos: map[int64]*persistence.ChildExecutionInfo{},
+		},
+		"Activity task started and then timed out": {
+			startingEventID: 6,
+			startingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeActivityTaskStarted.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+						ScheduledEventID: 3456,
+					},
+				},
+				{
+					EventType: types.EventTypeActivityTaskTimedOut.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskTimedOutEventAttributes: &types.ActivityTaskTimedOutEventAttributes{
+						StartedEventID:   123,
+						ScheduledEventID: 3456,
+					},
+				},
+			},
+			expectedEndingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeActivityTaskStarted.Ptr(),
+					ID:        6,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+						ScheduledEventID: 3456,
+					},
+				},
+				{
+					EventType: types.EventTypeActivityTaskTimedOut.Ptr(),
+					ID:        7,
+					TaskID:    common.EmptyEventTaskID,
+					ActivityTaskTimedOutEventAttributes: &types.ActivityTaskTimedOutEventAttributes{
+						StartedEventID:   6,
+						ScheduledEventID: 3456,
+					},
+				},
+			},
+			expectedNextEventID:               8,
+			expectedUpdateActivityInfos:       map[int64]*persistence.ActivityInfo{},
+			expectedUpdateChildExecutionInfos: map[int64]*persistence.ChildExecutionInfo{},
+		},
+		"Child workflow scheduled and then completed": {
+			startingEventID: 6,
+			startingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeChildWorkflowExecutionStarted.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionStartedEventAttributes: &types.ChildWorkflowExecutionStartedEventAttributes{
+						InitiatedEventID: 123,
+					},
+				},
+				{
+					EventType: types.EventTypeChildWorkflowExecutionCompleted.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionCompletedEventAttributes: &types.ChildWorkflowExecutionCompletedEventAttributes{
+						StartedEventID:   123,
+						InitiatedEventID: 2345,
+					},
+				},
+			},
+			expectedEndingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeChildWorkflowExecutionStarted.Ptr(),
+					ID:        6,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionStartedEventAttributes: &types.ChildWorkflowExecutionStartedEventAttributes{
+						InitiatedEventID: 123,
+					},
+				},
+				{
+					EventType: types.EventTypeChildWorkflowExecutionCompleted.Ptr(),
+					ID:        7,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionCompletedEventAttributes: &types.ChildWorkflowExecutionCompletedEventAttributes{
+						StartedEventID:   123,
+						InitiatedEventID: 2345,
+					},
+				},
+			},
+			expectedNextEventID:               8,
+			expectedUpdateActivityInfos:       map[int64]*persistence.ActivityInfo{},
+			expectedUpdateChildExecutionInfos: map[int64]*persistence.ChildExecutionInfo{},
+		},
+		"Child workflow scheduled and then Cancelled - where there is a pending execution that requires an update": {
+			startingEventID: 6,
+			pendingChildExecutionInfoIDs: map[int64]*persistence.ChildExecutionInfo{
+				123: {
+					InitiatedID: 321,
+				},
+			},
+			startingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeChildWorkflowExecutionStarted.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionStartedEventAttributes: &types.ChildWorkflowExecutionStartedEventAttributes{
+						InitiatedEventID: 123,
+					},
+				},
+				{
+					EventType: types.EventTypeChildWorkflowExecutionCanceled.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionCanceledEventAttributes: &types.ChildWorkflowExecutionCanceledEventAttributes{
+						StartedEventID:   321,
+						InitiatedEventID: 123,
+					},
+				},
+			},
+			expectedEndingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeChildWorkflowExecutionStarted.Ptr(),
+					ID:        6,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionStartedEventAttributes: &types.ChildWorkflowExecutionStartedEventAttributes{
+						InitiatedEventID: 123,
+					},
+				},
+				{
+					EventType: types.EventTypeChildWorkflowExecutionCanceled.Ptr(),
+					ID:        7,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionCanceledEventAttributes: &types.ChildWorkflowExecutionCanceledEventAttributes{
+						StartedEventID:   6,
+						InitiatedEventID: 123,
+					},
+				},
+			},
+			expectedNextEventID:         8,
+			expectedUpdateActivityInfos: map[int64]*persistence.ActivityInfo{},
+			expectedUpdateChildExecutionInfos: map[int64]*persistence.ChildExecutionInfo{
+				321: {
+					InitiatedID: 321,
+					StartedID:   6,
+				},
+			},
+		},
+		"Child workflow scheduled and then Failed": {
+			startingEventID: 6,
+			startingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeChildWorkflowExecutionStarted.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionStartedEventAttributes: &types.ChildWorkflowExecutionStartedEventAttributes{
+						InitiatedEventID: 123,
+					},
+				},
+				{
+					EventType: types.EventTypeChildWorkflowExecutionFailed.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionFailedEventAttributes: &types.ChildWorkflowExecutionFailedEventAttributes{
+						StartedEventID:   123,
+						InitiatedEventID: 2345,
+					},
+				},
+			},
+			expectedEndingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeChildWorkflowExecutionStarted.Ptr(),
+					ID:        6,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionStartedEventAttributes: &types.ChildWorkflowExecutionStartedEventAttributes{
+						InitiatedEventID: 123,
+					},
+				},
+				{
+					EventType: types.EventTypeChildWorkflowExecutionFailed.Ptr().Ptr(),
+					ID:        7,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionFailedEventAttributes: &types.ChildWorkflowExecutionFailedEventAttributes{
+						StartedEventID:   123,
+						InitiatedEventID: 2345,
+					},
+				},
+			},
+			expectedNextEventID:               8,
+			expectedUpdateActivityInfos:       map[int64]*persistence.ActivityInfo{},
+			expectedUpdateChildExecutionInfos: map[int64]*persistence.ChildExecutionInfo{},
+		},
+		"Child workflow scheduled and then Timed out": {
+			startingEventID: 6,
+			startingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeChildWorkflowExecutionStarted.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionStartedEventAttributes: &types.ChildWorkflowExecutionStartedEventAttributes{
+						InitiatedEventID: 123,
+					},
+				},
+				{
+					EventType: types.EventTypeChildWorkflowExecutionTimedOut.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionTimedOutEventAttributes: &types.ChildWorkflowExecutionTimedOutEventAttributes{
+						StartedEventID:   123,
+						InitiatedEventID: 2345,
+					},
+				},
+			},
+			expectedEndingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeChildWorkflowExecutionStarted.Ptr(),
+					ID:        6,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionStartedEventAttributes: &types.ChildWorkflowExecutionStartedEventAttributes{
+						InitiatedEventID: 123,
+					},
+				},
+				{
+					EventType: types.EventTypeChildWorkflowExecutionTimedOut.Ptr(),
+					ID:        7,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionTimedOutEventAttributes: &types.ChildWorkflowExecutionTimedOutEventAttributes{
+						StartedEventID:   123,
+						InitiatedEventID: 2345,
+					},
+				},
+			},
+			expectedNextEventID:               8,
+			expectedUpdateActivityInfos:       map[int64]*persistence.ActivityInfo{},
+			expectedUpdateChildExecutionInfos: map[int64]*persistence.ChildExecutionInfo{},
+		},
+		"Child workflow scheduled and then Terminated": {
+			startingEventID: 6,
+			startingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeChildWorkflowExecutionStarted.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionStartedEventAttributes: &types.ChildWorkflowExecutionStartedEventAttributes{
+						InitiatedEventID: 123,
+					},
+				},
+				{
+					EventType: types.EventTypeChildWorkflowExecutionTerminated.Ptr(),
+					ID:        common.BufferedEventID,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionTerminatedEventAttributes: &types.ChildWorkflowExecutionTerminatedEventAttributes{
+						StartedEventID:   123,
+						InitiatedEventID: 2345,
+					},
+				},
+			},
+			expectedEndingHistoryEntries: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeChildWorkflowExecutionStarted.Ptr(),
+					ID:        6,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionStartedEventAttributes: &types.ChildWorkflowExecutionStartedEventAttributes{
+						InitiatedEventID: 123,
+					},
+				},
+				{
+					EventType: types.EventTypeChildWorkflowExecutionTerminated.Ptr(),
+					ID:        7,
+					TaskID:    common.EmptyEventTaskID,
+					ChildWorkflowExecutionTerminatedEventAttributes: &types.ChildWorkflowExecutionTerminatedEventAttributes{
+						StartedEventID:   123,
+						InitiatedEventID: 2345,
+					},
+				},
+			},
+			expectedNextEventID:               8,
+			expectedUpdateActivityInfos:       map[int64]*persistence.ActivityInfo{},
+			expectedUpdateChildExecutionInfos: map[int64]*persistence.ChildExecutionInfo{},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			msb := &mutableStateBuilder{
+				pendingChildExecutionInfoIDs: td.pendingChildExecutionInfoIDs,
+				pendingActivityInfoIDs:       td.pendingActivityInfo,
+				executionInfo: &persistence.WorkflowExecutionInfo{
+					NextEventID: td.startingEventID,
+				},
+				hBuilder: &HistoryBuilder{
+					history: td.startingHistoryEntries,
+				},
+				updateActivityInfos:       make(map[int64]*persistence.ActivityInfo),
+				updateChildExecutionInfos: make(map[int64]*persistence.ChildExecutionInfo),
+			}
+
+			msb.assignEventIDToBufferedEvents()
+
+			assert.Equal(t, td.expectedEndingHistoryEntries, msb.hBuilder.history)
+			assert.Equal(t, td.expectedNextEventID, msb.executionInfo.NextEventID)
+			assert.Equal(t, td.expectedUpdateActivityInfos, msb.updateActivityInfos)
+			assert.Equal(t, td.expectedUpdateChildExecutionInfos, msb.updateChildExecutionInfos)
+		})
 	}
 }

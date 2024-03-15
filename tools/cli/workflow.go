@@ -514,7 +514,7 @@ func newBatchCommands() []cli.Command {
 					Name:  FlagBatchTypeWithAlias,
 					Usage: "Types supported: " + strings.Join(batcher.AllBatchTypes, ","),
 				},
-				//below are optional
+				// below are optional
 				cli.StringFlag{
 					Name:  FlagSignalNameWithAlias,
 					Usage: "Required for batch signal",

@@ -28,7 +28,7 @@ import (
 
 // ClientImpl is used for reporting metrics by various Cadence services
 type ClientImpl struct {
-	//parentReporter is the parent scope for the metrics
+	// parentReporter is the parent scope for the metrics
 	parentScope tally.Scope
 	childScopes map[int]tally.Scope
 	metricDefs  map[int]metricDefinition

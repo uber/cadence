@@ -532,8 +532,8 @@ func InitializeHistoryEventGenerator(
 	activityCancelToDecisionSchedule.SetCondition(notPendingDecisionTask)
 
 	// TODO: bypass activity cancel request event. Support this event later.
-	//activityScheduleToActivityCancelRequest := NewHistoryEventEdge(activitySchedule, activityCancelRequest)
-	//activityScheduleToActivityCancelRequest.SetCondition(hasPendingActivity)
+	// activityScheduleToActivityCancelRequest := NewHistoryEventEdge(activitySchedule, activityCancelRequest)
+	// activityScheduleToActivityCancelRequest.SetCondition(hasPendingActivity)
 	activityCancelReqToCancel := NewHistoryEventEdge(activityCancelRequest, activityCancel)
 	activityCancelReqToCancel.SetCondition(hasPendingActivity)
 

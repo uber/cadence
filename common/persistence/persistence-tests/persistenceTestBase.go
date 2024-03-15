@@ -582,8 +582,8 @@ func (s *TestBase) ContinueAsNewExecution(
 		},
 		RangeID:  s.ShardInfo.RangeID,
 		Encoding: pickRandomEncoding(),
-		//To DO: next PR for UpdateWorkflowExecution
-		//DomainName: s.DomainManager.GetName(),
+		// To DO: next PR for UpdateWorkflowExecution
+		// DomainName: s.DomainManager.GetName(),
 	}
 	req.UpdateWorkflowMutation.ExecutionInfo.State = persistence.WorkflowStateCompleted
 	req.UpdateWorkflowMutation.ExecutionInfo.CloseStatus = persistence.WorkflowCloseStatusContinuedAsNew
@@ -656,8 +656,8 @@ func (s *TestBase) UpdateWorkflowExecutionAndFinish(
 			VersionHistories:    versionHistories,
 		},
 		Encoding: pickRandomEncoding(),
-		//To DO: next PR for UpdateWorkflowExecution
-		//DomainName: s.DomainManager.GetName(),
+		// To DO: next PR for UpdateWorkflowExecution
+		// DomainName: s.DomainManager.GetName(),
 	})
 	return err
 }

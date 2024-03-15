@@ -2254,3 +2254,1294 @@ func TestCreateWorkflowExecution(t *testing.T) {
 		})
 	}
 }
+
+func TestUpdateWorkflowExecution(t *testing.T) {
+	testCases := []struct {
+		name                                   string
+		req                                    *persistence.InternalUpdateWorkflowExecutionRequest
+		assertNotCurrentExecutionFn            func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID) error
+		assertRunIDAndUpdateCurrentExecutionFn func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID, serialization.UUID, string, int, int, int64, int64) error
+		applyWorkflowSnapshotTxAsNewFn         func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error
+		applyWorkflowMutationTxFn              func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowMutation, serialization.Parser) error
+		wantErr                                bool
+		assertErr                              func(t *testing.T, err error)
+	}{
+		{
+			name: "Success - mode ignore current",
+			req: &persistence.InternalUpdateWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.UpdateWorkflowModeIgnoreCurrent,
+				UpdateWorkflowMutation: persistence.InternalWorkflowMutation{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{},
+				},
+			},
+			applyWorkflowMutationTxFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowMutation, serialization.Parser) error {
+				return nil
+			},
+			wantErr: false,
+		},
+		{
+			name: "Success - mode bypass current",
+			req: &persistence.InternalUpdateWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.UpdateWorkflowModeBypassCurrent,
+				UpdateWorkflowMutation: persistence.InternalWorkflowMutation{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+			},
+			assertNotCurrentExecutionFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID) error {
+				return nil
+			},
+			applyWorkflowMutationTxFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowMutation, serialization.Parser) error {
+				return nil
+			},
+			wantErr: false,
+		},
+		{
+			name: "Success - mode update current, new workflow",
+			req: &persistence.InternalUpdateWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.UpdateWorkflowModeUpdateCurrent,
+				UpdateWorkflowMutation: persistence.InternalWorkflowMutation{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+				NewWorkflowSnapshot: &persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCreated,
+					},
+				},
+			},
+			assertRunIDAndUpdateCurrentExecutionFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID, serialization.UUID, string, int, int, int64, int64) error {
+				return nil
+			},
+			applyWorkflowMutationTxFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowMutation, serialization.Parser) error {
+				return nil
+			},
+			applyWorkflowSnapshotTxAsNewFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error {
+				return nil
+			},
+			wantErr: false,
+		},
+		{
+			name: "Success - mode update current, no new workflow",
+			req: &persistence.InternalUpdateWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.UpdateWorkflowModeUpdateCurrent,
+				UpdateWorkflowMutation: persistence.InternalWorkflowMutation{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateRunning,
+					},
+				},
+			},
+			assertRunIDAndUpdateCurrentExecutionFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID, serialization.UUID, string, int, int, int64, int64) error {
+				return nil
+			},
+			applyWorkflowMutationTxFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowMutation, serialization.Parser) error {
+				return nil
+			},
+			wantErr: false,
+		},
+		{
+			name: "Error - mode state validation failed",
+			req: &persistence.InternalUpdateWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.UpdateWorkflowModeUpdateCurrent,
+				UpdateWorkflowMutation: persistence.InternalWorkflowMutation{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateZombie,
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - assertNotCurrentExecution failed",
+			req: &persistence.InternalUpdateWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.UpdateWorkflowModeBypassCurrent,
+				UpdateWorkflowMutation: persistence.InternalWorkflowMutation{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+			},
+			assertNotCurrentExecutionFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID) error {
+				return errors.New("some random error")
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - domain ID mismatch",
+			req: &persistence.InternalUpdateWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.UpdateWorkflowModeUpdateCurrent,
+				UpdateWorkflowMutation: persistence.InternalWorkflowMutation{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						DomainID: "a8ead65c-9d0d-43a2-a6ad-dd17c99509af",
+						State:    persistence.WorkflowStateCompleted,
+					},
+				},
+				NewWorkflowSnapshot: &persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						DomainID: "c3fab112-5175-4044-a096-a32e7badd4a8",
+					},
+				},
+			},
+			wantErr: true,
+			assertErr: func(t *testing.T, err error) {
+				assert.Equal(t, &types.InternalServiceError{
+					Message: "UpdateWorkflowExecution: cannot continue as new to another domain",
+				}, err)
+			},
+		},
+		{
+			name: "Error - assertRunIDAndUpdateCurrentExecution failed",
+			req: &persistence.InternalUpdateWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.UpdateWorkflowModeUpdateCurrent,
+				UpdateWorkflowMutation: persistence.InternalWorkflowMutation{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+			},
+			assertRunIDAndUpdateCurrentExecutionFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID, serialization.UUID, string, int, int, int64, int64) error {
+				return errors.New("some random error")
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - applyWorkflowMutationTxFn failed",
+			req: &persistence.InternalUpdateWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.UpdateWorkflowModeUpdateCurrent,
+				UpdateWorkflowMutation: persistence.InternalWorkflowMutation{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+			},
+			assertRunIDAndUpdateCurrentExecutionFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID, serialization.UUID, string, int, int, int64, int64) error {
+				return nil
+			},
+			applyWorkflowMutationTxFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowMutation, serialization.Parser) error {
+				return errors.New("some random error")
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - applyWorkflowSnapshotTxAsNew failed",
+			req: &persistence.InternalUpdateWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.UpdateWorkflowModeUpdateCurrent,
+				UpdateWorkflowMutation: persistence.InternalWorkflowMutation{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+				NewWorkflowSnapshot: &persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCreated,
+					},
+				},
+			},
+			assertRunIDAndUpdateCurrentExecutionFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID, serialization.UUID, string, int, int, int64, int64) error {
+				return nil
+			},
+			applyWorkflowMutationTxFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowMutation, serialization.Parser) error {
+				return nil
+			},
+			applyWorkflowSnapshotTxAsNewFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error {
+				return errors.New("some random error")
+			},
+			wantErr: true,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockDB := sqlplugin.NewMockDB(ctrl)
+			mockDB.EXPECT().GetTotalNumDBShards().Return(1)
+			s := &sqlExecutionStore{
+				shardID: 0,
+				sqlStore: sqlStore{
+					db:     mockDB,
+					logger: testlogger.New(t),
+				},
+				txExecuteShardLockedFn: func(_ context.Context, _ int, _ string, _ int64, fn func(sqlplugin.Tx) error) error {
+					return fn(nil)
+				},
+				assertNotCurrentExecutionFn:            tc.assertNotCurrentExecutionFn,
+				assertRunIDAndUpdateCurrentExecutionFn: tc.assertRunIDAndUpdateCurrentExecutionFn,
+				applyWorkflowMutationTxFn:              tc.applyWorkflowMutationTxFn,
+				applyWorkflowSnapshotTxAsNewFn:         tc.applyWorkflowSnapshotTxAsNewFn,
+			}
+
+			err := s.UpdateWorkflowExecution(context.Background(), tc.req)
+			if tc.wantErr {
+				assert.Error(t, err, "Expected an error for test case")
+				if tc.assertErr != nil {
+					tc.assertErr(t, err)
+				}
+			} else {
+				assert.NoError(t, err, "Did not expect an error for test case")
+			}
+		})
+	}
+}
+
+func TestConflictResolveWorkflowExecution(t *testing.T) {
+	testCases := []struct {
+		name                                   string
+		req                                    *persistence.InternalConflictResolveWorkflowExecutionRequest
+		assertRunIDAndUpdateCurrentExecutionFn func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID, serialization.UUID, string, int, int, int64, int64) error
+		assertNotCurrentExecutionFn            func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID) error
+		applyWorkflowMutationTxFn              func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowMutation, serialization.Parser) error
+		applyWorkflowSnapshotTxAsResetFn       func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error
+		applyWorkflowSnapshotTxAsNewFn         func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error
+		wantErr                                bool
+		assertErr                              func(t *testing.T, err error)
+	}{
+		{
+			name: "Success - mode bypass current",
+			req: &persistence.InternalConflictResolveWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.ConflictResolveWorkflowModeBypassCurrent,
+				ResetWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+			},
+			assertNotCurrentExecutionFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID) error {
+				return nil
+			},
+			applyWorkflowSnapshotTxAsResetFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error {
+				return nil
+			},
+			wantErr: false,
+		},
+		{
+			name: "Success - mode update current, current workflow exists",
+			req: &persistence.InternalConflictResolveWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.ConflictResolveWorkflowModeUpdateCurrent,
+				ResetWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+				NewWorkflowSnapshot: &persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCreated,
+					},
+				},
+				CurrentWorkflowMutation: &persistence.InternalWorkflowMutation{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+			},
+			assertRunIDAndUpdateCurrentExecutionFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID, serialization.UUID, string, int, int, int64, int64) error {
+				return nil
+			},
+			applyWorkflowSnapshotTxAsResetFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error {
+				return nil
+			},
+			applyWorkflowMutationTxFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowMutation, serialization.Parser) error {
+				return nil
+			},
+			applyWorkflowSnapshotTxAsNewFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error {
+				return nil
+			},
+			wantErr: false,
+		},
+		{
+			name: "Success - mode update current, no current workflow",
+			req: &persistence.InternalConflictResolveWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.ConflictResolveWorkflowModeUpdateCurrent,
+				ResetWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+				NewWorkflowSnapshot: &persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCreated,
+					},
+				},
+			},
+			assertRunIDAndUpdateCurrentExecutionFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID, serialization.UUID, string, int, int, int64, int64) error {
+				return nil
+			},
+			applyWorkflowSnapshotTxAsResetFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error {
+				return nil
+			},
+			applyWorkflowSnapshotTxAsNewFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error {
+				return nil
+			},
+			wantErr: false,
+		},
+		{
+			name: "Error - mode state validation failed",
+			req: &persistence.InternalConflictResolveWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.ConflictResolveWorkflowModeUpdateCurrent,
+				ResetWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateZombie,
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - assertNotCurrentExecution failed",
+			req: &persistence.InternalConflictResolveWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.ConflictResolveWorkflowModeBypassCurrent,
+				ResetWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+			},
+			assertNotCurrentExecutionFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID) error {
+				return errors.New("some random error")
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - assertRunIDAndUpdateCurrentExecution failed",
+			req: &persistence.InternalConflictResolveWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.ConflictResolveWorkflowModeUpdateCurrent,
+				ResetWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+				NewWorkflowSnapshot: &persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCreated,
+					},
+				},
+				CurrentWorkflowMutation: &persistence.InternalWorkflowMutation{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+			},
+			assertRunIDAndUpdateCurrentExecutionFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID, serialization.UUID, string, int, int, int64, int64) error {
+				return errors.New("some random error")
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - applyWorkflowResetSnapshotTx failed",
+			req: &persistence.InternalConflictResolveWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.ConflictResolveWorkflowModeBypassCurrent,
+				ResetWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+			},
+			assertNotCurrentExecutionFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID) error {
+				return nil
+			},
+			applyWorkflowSnapshotTxAsResetFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error {
+				return errors.New("some random error")
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - applyWorkflowMutationTxFn failed",
+			req: &persistence.InternalConflictResolveWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.ConflictResolveWorkflowModeUpdateCurrent,
+				ResetWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+				NewWorkflowSnapshot: &persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCreated,
+					},
+				},
+				CurrentWorkflowMutation: &persistence.InternalWorkflowMutation{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+			},
+			assertRunIDAndUpdateCurrentExecutionFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID, serialization.UUID, string, int, int, int64, int64) error {
+				return nil
+			},
+			applyWorkflowSnapshotTxAsResetFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error {
+				return nil
+			},
+			applyWorkflowMutationTxFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowMutation, serialization.Parser) error {
+				return errors.New("some random error")
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - applyWorkflowSnapshotTxAsNew failed",
+			req: &persistence.InternalConflictResolveWorkflowExecutionRequest{
+				RangeID: 1,
+				Mode:    persistence.ConflictResolveWorkflowModeUpdateCurrent,
+				ResetWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+				NewWorkflowSnapshot: &persistence.InternalWorkflowSnapshot{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCreated,
+					},
+				},
+				CurrentWorkflowMutation: &persistence.InternalWorkflowMutation{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						State: persistence.WorkflowStateCompleted,
+					},
+				},
+			},
+			assertRunIDAndUpdateCurrentExecutionFn: func(context.Context, sqlplugin.Tx, int, serialization.UUID, string, serialization.UUID, serialization.UUID, string, int, int, int64, int64) error {
+				return nil
+			},
+			applyWorkflowSnapshotTxAsResetFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error {
+				return nil
+			},
+			applyWorkflowMutationTxFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowMutation, serialization.Parser) error {
+				return nil
+			},
+			applyWorkflowSnapshotTxAsNewFn: func(context.Context, sqlplugin.Tx, int, *persistence.InternalWorkflowSnapshot, serialization.Parser) error {
+				return errors.New("some random error")
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockDB := sqlplugin.NewMockDB(ctrl)
+			mockDB.EXPECT().GetTotalNumDBShards().Return(1)
+			s := &sqlExecutionStore{
+				shardID: 0,
+				sqlStore: sqlStore{
+					db:     mockDB,
+					logger: testlogger.New(t),
+				},
+				txExecuteShardLockedFn: func(_ context.Context, _ int, _ string, _ int64, fn func(sqlplugin.Tx) error) error {
+					return fn(nil)
+				},
+				assertNotCurrentExecutionFn:            tc.assertNotCurrentExecutionFn,
+				assertRunIDAndUpdateCurrentExecutionFn: tc.assertRunIDAndUpdateCurrentExecutionFn,
+				applyWorkflowMutationTxFn:              tc.applyWorkflowMutationTxFn,
+				applyWorkflowSnapshotTxAsResetFn:       tc.applyWorkflowSnapshotTxAsResetFn,
+				applyWorkflowSnapshotTxAsNewFn:         tc.applyWorkflowSnapshotTxAsNewFn,
+			}
+
+			err := s.ConflictResolveWorkflowExecution(context.Background(), tc.req)
+			if tc.wantErr {
+				assert.Error(t, err, "Expected an error for test case")
+				if tc.assertErr != nil {
+					tc.assertErr(t, err)
+				}
+			} else {
+				assert.NoError(t, err, "Did not expect an error for test case")
+			}
+		})
+	}
+}
+
+func TestCreateFailoverMarkerTasks(t *testing.T) {
+	testCases := []struct {
+		name      string
+		req       *persistence.CreateFailoverMarkersRequest
+		mockSetup func(*sqlplugin.MockTx, *serialization.MockParser)
+		wantErr   bool
+	}{
+		{
+			name: "Success case",
+			req: &persistence.CreateFailoverMarkersRequest{
+				RangeID: 1,
+				Markers: []*persistence.FailoverMarkerTask{
+					{
+						TaskID:              1,
+						VisibilityTimestamp: time.Unix(11, 12),
+						Version:             101,
+						DomainID:            "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+					},
+				},
+			},
+			mockSetup: func(tx *sqlplugin.MockTx, parser *serialization.MockParser) {
+				parser.EXPECT().ReplicationTaskInfoToBlob(gomock.Any()).Return(persistence.DataBlob{
+					Encoding: common.EncodingTypeThriftRW,
+					Data:     []byte("test data"),
+				}, nil)
+				tx.EXPECT().InsertIntoReplicationTasks(gomock.Any(), []sqlplugin.ReplicationTasksRow{
+					{
+						ShardID:      0,
+						TaskID:       1,
+						Data:         []byte("test data"),
+						DataEncoding: "thriftrw",
+					},
+				}).Return(&sqlResult{
+					rowsAffected: 1,
+				}, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "Error - ReplicationTaskInfoToBlob failed",
+			req: &persistence.CreateFailoverMarkersRequest{
+				RangeID: 1,
+				Markers: []*persistence.FailoverMarkerTask{
+					{
+						TaskID:              1,
+						VisibilityTimestamp: time.Unix(11, 12),
+						Version:             101,
+						DomainID:            "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+					},
+				},
+			},
+			mockSetup: func(tx *sqlplugin.MockTx, parser *serialization.MockParser) {
+				parser.EXPECT().ReplicationTaskInfoToBlob(gomock.Any()).Return(persistence.DataBlob{}, errors.New("some random error"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - InsertIntoReplicationTasks failed",
+			req: &persistence.CreateFailoverMarkersRequest{
+				RangeID: 1,
+				Markers: []*persistence.FailoverMarkerTask{
+					{
+						TaskID:              1,
+						VisibilityTimestamp: time.Unix(11, 12),
+						Version:             101,
+						DomainID:            "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+					},
+				},
+			},
+			mockSetup: func(tx *sqlplugin.MockTx, parser *serialization.MockParser) {
+				parser.EXPECT().ReplicationTaskInfoToBlob(gomock.Any()).Return(persistence.DataBlob{
+					Encoding: common.EncodingTypeThriftRW,
+					Data:     []byte("test data"),
+				}, nil)
+				tx.EXPECT().InsertIntoReplicationTasks(gomock.Any(), []sqlplugin.ReplicationTasksRow{
+					{
+						ShardID:      0,
+						TaskID:       1,
+						Data:         []byte("test data"),
+						DataEncoding: "thriftrw",
+					},
+				}).Return(nil, errors.New("some random error"))
+				tx.EXPECT().IsNotFoundError(gomock.Any()).Return(true)
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - row affected error",
+			req: &persistence.CreateFailoverMarkersRequest{
+				RangeID: 1,
+				Markers: []*persistence.FailoverMarkerTask{
+					{
+						TaskID:              1,
+						VisibilityTimestamp: time.Unix(11, 12),
+						Version:             101,
+						DomainID:            "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+					},
+				},
+			},
+			mockSetup: func(tx *sqlplugin.MockTx, parser *serialization.MockParser) {
+				parser.EXPECT().ReplicationTaskInfoToBlob(gomock.Any()).Return(persistence.DataBlob{
+					Encoding: common.EncodingTypeThriftRW,
+					Data:     []byte("test data"),
+				}, nil)
+				tx.EXPECT().InsertIntoReplicationTasks(gomock.Any(), []sqlplugin.ReplicationTasksRow{
+					{
+						ShardID:      0,
+						TaskID:       1,
+						Data:         []byte("test data"),
+						DataEncoding: "thriftrw",
+					},
+				}).Return(&sqlResult{
+					err: errors.New("some error"),
+				}, nil)
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - row affected number mismatch",
+			req: &persistence.CreateFailoverMarkersRequest{
+				RangeID: 1,
+				Markers: []*persistence.FailoverMarkerTask{
+					{
+						TaskID:              1,
+						VisibilityTimestamp: time.Unix(11, 12),
+						Version:             101,
+						DomainID:            "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+					},
+				},
+			},
+			mockSetup: func(tx *sqlplugin.MockTx, parser *serialization.MockParser) {
+				parser.EXPECT().ReplicationTaskInfoToBlob(gomock.Any()).Return(persistence.DataBlob{
+					Encoding: common.EncodingTypeThriftRW,
+					Data:     []byte("test data"),
+				}, nil)
+				tx.EXPECT().InsertIntoReplicationTasks(gomock.Any(), []sqlplugin.ReplicationTasksRow{
+					{
+						ShardID:      0,
+						TaskID:       1,
+						Data:         []byte("test data"),
+						DataEncoding: "thriftrw",
+					},
+				}).Return(&sqlResult{
+					rowsAffected: 0,
+				}, nil)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			db := sqlplugin.NewMockDB(ctrl)
+			db.EXPECT().GetTotalNumDBShards().Return(1)
+			tx := sqlplugin.NewMockTx(ctrl)
+			parser := serialization.NewMockParser(ctrl)
+			tc.mockSetup(tx, parser)
+			s := &sqlExecutionStore{
+				shardID: 0,
+				sqlStore: sqlStore{
+					db:     db,
+					logger: testlogger.New(t),
+					parser: parser,
+				},
+				txExecuteShardLockedFn: func(_ context.Context, _ int, _ string, _ int64, fn func(sqlplugin.Tx) error) error {
+					return fn(tx)
+				},
+			}
+
+			err := s.CreateFailoverMarkerTasks(context.Background(), tc.req)
+			if tc.wantErr {
+				assert.Error(t, err, "Expected an error for test case")
+			} else {
+				assert.NoError(t, err, "Did not expect an error for test case")
+			}
+		})
+	}
+}
+
+func TestGetWorkflowExecution(t *testing.T) {
+	testCases := []struct {
+		name      string
+		req       *persistence.InternalGetWorkflowExecutionRequest
+		mockSetup func(*sqlplugin.MockDB, *serialization.MockParser)
+		want      *persistence.InternalGetWorkflowExecutionResponse
+		wantErr   bool
+	}{
+		{
+			name: "Success case",
+			req: &persistence.InternalGetWorkflowExecutionRequest{
+				DomainID: "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+				Execution: types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f",
+				},
+			},
+			mockSetup: func(db *sqlplugin.MockDB, parser *serialization.MockParser) {
+				db.EXPECT().SelectFromExecutions(gomock.Any(), gomock.Any()).Return([]sqlplugin.ExecutionsRow{
+					{
+						ShardID:          0,
+						DomainID:         serialization.MustParseUUID("ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d"),
+						WorkflowID:       "test-workflow-id",
+						RunID:            serialization.MustParseUUID("ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f"),
+						NextEventID:      101,
+						LastWriteVersion: 11,
+						Data:             []byte("test data"),
+						DataEncoding:     "thriftrw",
+					},
+				}, nil)
+				db.EXPECT().SelectFromActivityInfoMaps(gomock.Any(), gomock.Any()).Return([]sqlplugin.ActivityInfoMapsRow{
+					{
+						ShardID:      0,
+						DomainID:     serialization.MustParseUUID("ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d"),
+						WorkflowID:   "test-workflow-id",
+						RunID:        serialization.MustParseUUID("ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f"),
+						ScheduleID:   101,
+						Data:         []byte("test data"),
+						DataEncoding: "thriftrw",
+					},
+				}, nil)
+				db.EXPECT().SelectFromTimerInfoMaps(gomock.Any(), gomock.Any()).Return([]sqlplugin.TimerInfoMapsRow{
+					{
+						ShardID:      0,
+						DomainID:     serialization.MustParseUUID("ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d"),
+						WorkflowID:   "test-workflow-id",
+						RunID:        serialization.MustParseUUID("ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f"),
+						TimerID:      "101",
+						Data:         []byte("test data"),
+						DataEncoding: "thriftrw",
+					},
+				}, nil)
+				db.EXPECT().SelectFromChildExecutionInfoMaps(gomock.Any(), gomock.Any()).Return([]sqlplugin.ChildExecutionInfoMapsRow{
+					{
+						ShardID:      0,
+						DomainID:     serialization.MustParseUUID("ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d"),
+						WorkflowID:   "test-workflow-id",
+						RunID:        serialization.MustParseUUID("ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f"),
+						InitiatedID:  101,
+						Data:         []byte("test data"),
+						DataEncoding: "thriftrw",
+					},
+				}, nil)
+				db.EXPECT().SelectFromRequestCancelInfoMaps(gomock.Any(), gomock.Any()).Return([]sqlplugin.RequestCancelInfoMapsRow{
+					{
+						ShardID:      0,
+						DomainID:     serialization.MustParseUUID("ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d"),
+						WorkflowID:   "test-workflow-id",
+						RunID:        serialization.MustParseUUID("ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f"),
+						InitiatedID:  101,
+						Data:         []byte("test data"),
+						DataEncoding: "thriftrw",
+					},
+				}, nil)
+				db.EXPECT().SelectFromSignalInfoMaps(gomock.Any(), gomock.Any()).Return([]sqlplugin.SignalInfoMapsRow{
+					{
+						ShardID:      0,
+						DomainID:     serialization.MustParseUUID("ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d"),
+						WorkflowID:   "test-workflow-id",
+						RunID:        serialization.MustParseUUID("ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f"),
+						InitiatedID:  101,
+						Data:         []byte("test data"),
+						DataEncoding: "thriftrw",
+					},
+				}, nil)
+				db.EXPECT().SelectFromSignalsRequestedSets(gomock.Any(), gomock.Any()).Return([]sqlplugin.SignalsRequestedSetsRow{
+					{
+						ShardID:    0,
+						DomainID:   serialization.MustParseUUID("ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d"),
+						WorkflowID: "test-workflow-id",
+						RunID:      serialization.MustParseUUID("ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f"),
+						SignalID:   "test-signal-id",
+					},
+				}, nil)
+				db.EXPECT().SelectFromBufferedEvents(gomock.Any(), gomock.Any()).Return([]sqlplugin.BufferedEventsRow{
+					{
+						ShardID:      0,
+						DomainID:     serialization.MustParseUUID("ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d"),
+						WorkflowID:   "test-workflow-id",
+						RunID:        serialization.MustParseUUID("ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f"),
+						Data:         []byte("test data"),
+						DataEncoding: "thriftrw",
+					},
+				}, nil)
+				parser.EXPECT().WorkflowExecutionInfoFromBlob(gomock.Any(), gomock.Any()).Return(&serialization.WorkflowExecutionInfo{
+					ParentDomainID:                     serialization.MustParseUUID("ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d"),
+					ParentWorkflowID:                   "test-parent-workflow-id",
+					ParentRunID:                        serialization.MustParseUUID("ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f"),
+					InitiatedID:                        101,
+					CompletionEventBatchID:             common.Int64Ptr(11),
+					CompletionEvent:                    []byte("test completion event"),
+					CompletionEventEncoding:            "json",
+					TaskList:                           "test-task-list",
+					IsCron:                             true,
+					WorkflowTypeName:                   "test-workflow-type",
+					WorkflowTimeout:                    time.Duration(101),
+					DecisionTaskTimeout:                time.Duration(102),
+					ExecutionContext:                   []byte("test execution context"),
+					State:                              persistence.WorkflowStateCompleted,
+					CloseStatus:                        persistence.WorkflowCloseStatusCompleted,
+					StartVersion:                       111,
+					LastWriteEventID:                   common.Int64Ptr(11),
+					LastEventTaskID:                    12,
+					LastFirstEventID:                   13,
+					LastProcessedEvent:                 14,
+					StartTimestamp:                     time.Unix(11, 12),
+					LastUpdatedTimestamp:               time.Unix(13, 14),
+					DecisionVersion:                    101,
+					DecisionScheduleID:                 102,
+					DecisionStartedID:                  103,
+					DecisionTimeout:                    time.Duration(104),
+					DecisionAttempt:                    105,
+					DecisionStartedTimestamp:           time.Unix(15, 16),
+					DecisionScheduledTimestamp:         time.Unix(17, 18),
+					CancelRequested:                    true,
+					DecisionOriginalScheduledTimestamp: time.Unix(19, 20),
+					CreateRequestID:                    "test-create-request-id",
+					DecisionRequestID:                  "test-decision-request-id",
+					CancelRequestID:                    "test-cancel-request-id",
+					StickyTaskList:                     "test-sticky-task-list",
+					StickyScheduleToStartTimeout:       time.Duration(106),
+					RetryAttempt:                       107,
+					RetryInitialInterval:               time.Duration(108),
+					RetryMaximumInterval:               time.Duration(109),
+					RetryMaximumAttempts:               110,
+					RetryExpiration:                    time.Duration(111),
+					RetryBackoffCoefficient:            111,
+					RetryExpirationTimestamp:           time.Unix(23, 24),
+					RetryNonRetryableErrors:            []string{"error1", "error2"},
+					HasRetryPolicy:                     true,
+					CronSchedule:                       "test-cron-schedule",
+					EventStoreVersion:                  112,
+					EventBranchToken:                   []byte("test-event-branch-token"),
+					SignalCount:                        113,
+					HistorySize:                        114,
+					ClientLibraryVersion:               "test-client-library-version",
+					ClientFeatureVersion:               "test-client-feature-version",
+					ClientImpl:                         "test-client-impl",
+					AutoResetPoints:                    []byte("test-auto-reset-points"),
+					AutoResetPointsEncoding:            "json",
+					SearchAttributes:                   map[string][]byte{"test-key": []byte("test-value")},
+					Memo:                               map[string][]byte{"test-key": []byte("test-value")},
+					VersionHistories:                   []byte("test-version-histories"),
+					VersionHistoriesEncoding:           "json",
+					FirstExecutionRunID:                serialization.MustParseUUID("ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f"),
+					PartitionConfig:                    map[string]string{"test-key": "test-value"},
+					Checksum:                           []byte("test-checksum"),
+					ChecksumEncoding:                   "test-checksum-encoding",
+				}, nil)
+				parser.EXPECT().ActivityInfoFromBlob(gomock.Any(), gomock.Any()).Return(&serialization.ActivityInfo{
+					Version:                  101,
+					ScheduledEventBatchID:    102,
+					ScheduledEvent:           []byte("test scheduled event"),
+					ScheduledEventEncoding:   "json",
+					ScheduledTimestamp:       time.Unix(11, 12),
+					StartedID:                103,
+					StartedEvent:             []byte("test started event"),
+					StartedEventEncoding:     "json",
+					StartedTimestamp:         time.Unix(13, 14),
+					ActivityID:               "test-activity-id",
+					RequestID:                "test-request-id",
+					ScheduleToStartTimeout:   time.Duration(101),
+					ScheduleToCloseTimeout:   time.Duration(102),
+					StartToCloseTimeout:      time.Duration(103),
+					HeartbeatTimeout:         time.Duration(104),
+					CancelRequested:          true,
+					CancelRequestID:          105,
+					TimerTaskStatus:          105,
+					Attempt:                  106,
+					TaskList:                 "test-task-list",
+					StartedIdentity:          "test-started-identity",
+					HasRetryPolicy:           true,
+					RetryInitialInterval:     time.Duration(107),
+					RetryMaximumInterval:     time.Duration(108),
+					RetryMaximumAttempts:     109,
+					RetryExpirationTimestamp: time.Unix(15, 16),
+					RetryBackoffCoefficient:  110,
+					RetryNonRetryableErrors:  []string{"error1", "error2"},
+					RetryLastFailureReason:   "test-retry-last-failure-reason",
+					RetryLastWorkerIdentity:  "test-retry-last-worker-identity",
+					RetryLastFailureDetails:  []byte("test-retry-last-failure-details"),
+				}, nil)
+				parser.EXPECT().TimerInfoFromBlob(gomock.Any(), gomock.Any()).Return(&serialization.TimerInfo{
+					Version:         101,
+					StartedID:       102,
+					ExpiryTimestamp: time.Unix(11, 12),
+					TaskID:          103,
+				}, nil)
+				parser.EXPECT().ChildExecutionInfoFromBlob(gomock.Any(), gomock.Any()).Return(&serialization.ChildExecutionInfo{
+					Version:                101,
+					InitiatedEventBatchID:  102,
+					InitiatedEvent:         []byte("test initiated event"),
+					InitiatedEventEncoding: "json",
+					StartedID:              103,
+					StartedWorkflowID:      "test-started-workflow-id",
+					StartedRunID:           serialization.MustParseUUID("ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f"),
+					CreateRequestID:        "test-create-request-id",
+					StartedEvent:           []byte("test started event"),
+					StartedEventEncoding:   "json",
+					DomainID:               "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+					WorkflowTypeName:       "test-workflow-type",
+					ParentClosePolicy:      101,
+				}, nil)
+				parser.EXPECT().RequestCancelInfoFromBlob(gomock.Any(), gomock.Any()).Return(&serialization.RequestCancelInfo{
+					Version:               101,
+					InitiatedEventBatchID: 102,
+					CancelRequestID:       "test-cancel-request-id",
+				}, nil)
+				parser.EXPECT().SignalInfoFromBlob(gomock.Any(), gomock.Any()).Return(&serialization.SignalInfo{
+					Version:               101,
+					InitiatedEventBatchID: 102,
+					Name:                  "test-signal-name",
+					Input:                 []byte("test input"),
+					Control:               []byte("test control"),
+					RequestID:             "test-signal-request-id",
+				}, nil)
+			},
+			want: &persistence.InternalGetWorkflowExecutionResponse{
+				State: &persistence.InternalWorkflowMutableState{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						DomainID:                           "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+						WorkflowID:                         "test-workflow-id",
+						RunID:                              "ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f",
+						ParentDomainID:                     "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+						ParentWorkflowID:                   "test-parent-workflow-id",
+						ParentRunID:                        "ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f",
+						InitiatedID:                        101,
+						CompletionEventBatchID:             11,
+						CompletionEvent:                    persistence.NewDataBlob([]byte("test completion event"), common.EncodingTypeJSON),
+						TaskList:                           "test-task-list",
+						IsCron:                             true,
+						WorkflowTypeName:                   "test-workflow-type",
+						WorkflowTimeout:                    time.Duration(101),
+						DecisionStartToCloseTimeout:        time.Duration(102),
+						DecisionTimeout:                    time.Duration(104),
+						ExecutionContext:                   []byte("test execution context"),
+						State:                              persistence.WorkflowStateCompleted,
+						CloseStatus:                        persistence.WorkflowCloseStatusCompleted,
+						NextEventID:                        101,
+						LastEventTaskID:                    12,
+						LastFirstEventID:                   13,
+						LastProcessedEvent:                 14,
+						StartTimestamp:                     time.Unix(11, 12),
+						LastUpdatedTimestamp:               time.Unix(13, 14),
+						DecisionVersion:                    101,
+						DecisionScheduleID:                 102,
+						DecisionStartedID:                  103,
+						DecisionAttempt:                    105,
+						DecisionStartedTimestamp:           time.Unix(15, 16),
+						DecisionScheduledTimestamp:         time.Unix(17, 18),
+						CancelRequested:                    true,
+						DecisionOriginalScheduledTimestamp: time.Unix(19, 20),
+						CreateRequestID:                    "test-create-request-id",
+						DecisionRequestID:                  "test-decision-request-id",
+						CancelRequestID:                    "test-cancel-request-id",
+						StickyTaskList:                     "test-sticky-task-list",
+						StickyScheduleToStartTimeout:       time.Duration(106),
+						HasRetryPolicy:                     true,
+						CronSchedule:                       "test-cron-schedule",
+						SignalCount:                        113,
+						HistorySize:                        114,
+						ClientLibraryVersion:               "test-client-library-version",
+						ClientFeatureVersion:               "test-client-feature-version",
+						ClientImpl:                         "test-client-impl",
+						FirstExecutionRunID:                "ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f",
+						PartitionConfig:                    map[string]string{"test-key": "test-value"},
+						AutoResetPoints:                    persistence.NewDataBlob([]byte("test-auto-reset-points"), common.EncodingTypeJSON),
+						Attempt:                            107,
+						InitialInterval:                    time.Duration(108),
+						BackoffCoefficient:                 111,
+						MaximumInterval:                    time.Duration(109),
+						ExpirationTime:                     time.Unix(23, 24),
+						MaximumAttempts:                    110,
+						NonRetriableErrors:                 []string{"error1", "error2"},
+						BranchToken:                        []byte("test-event-branch-token"),
+						SearchAttributes:                   map[string][]byte{"test-key": []byte("test-value")},
+						Memo:                               map[string][]byte{"test-key": []byte("test-value")},
+						ExpirationInterval:                 time.Duration(111),
+					},
+					VersionHistories: persistence.NewDataBlob([]byte("test-version-histories"), common.EncodingTypeJSON),
+					ReplicationState: &persistence.ReplicationState{
+						StartVersion:     111,
+						LastWriteVersion: 11,
+						LastWriteEventID: 11,
+					},
+					ActivityInfos: map[int64]*persistence.InternalActivityInfo{
+						101: {
+							Version:                101,
+							ScheduleID:             101,
+							ScheduledEventBatchID:  102,
+							ScheduledEvent:         persistence.NewDataBlob([]byte("test scheduled event"), common.EncodingTypeJSON),
+							ScheduledTime:          time.Unix(11, 12),
+							StartedID:              103,
+							StartedTime:            time.Unix(13, 14),
+							StartedEvent:           persistence.NewDataBlob([]byte("test started event"), common.EncodingTypeJSON),
+							ActivityID:             "test-activity-id",
+							RequestID:              "test-request-id",
+							ScheduleToStartTimeout: time.Duration(101),
+							ScheduleToCloseTimeout: time.Duration(102),
+							StartToCloseTimeout:    time.Duration(103),
+							HeartbeatTimeout:       time.Duration(104),
+							CancelRequested:        true,
+							CancelRequestID:        105,
+							TimerTaskStatus:        105,
+							Attempt:                106,
+							TaskList:               "test-task-list",
+							StartedIdentity:        "test-started-identity",
+							HasRetryPolicy:         true,
+							DomainID:               "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+							InitialInterval:        time.Duration(107),
+							MaximumInterval:        time.Duration(108),
+							MaximumAttempts:        109,
+							ExpirationTime:         time.Unix(15, 16),
+							BackoffCoefficient:     110,
+							NonRetriableErrors:     []string{"error1", "error2"},
+							LastFailureReason:      "test-retry-last-failure-reason",
+							LastWorkerIdentity:     "test-retry-last-worker-identity",
+							LastFailureDetails:     []byte("test-retry-last-failure-details"),
+						},
+					},
+					TimerInfos: map[string]*persistence.TimerInfo{
+						"101": {
+							Version:    101,
+							StartedID:  102,
+							ExpiryTime: time.Unix(11, 12),
+							TaskStatus: 103,
+							TimerID:    "101",
+						},
+					},
+					ChildExecutionInfos: map[int64]*persistence.InternalChildExecutionInfo{
+						101: {
+							Version:               101,
+							InitiatedID:           101,
+							InitiatedEvent:        persistence.NewDataBlob([]byte("test initiated event"), common.EncodingTypeJSON),
+							InitiatedEventBatchID: 102,
+							StartedID:             103,
+							StartedEvent:          persistence.NewDataBlob([]byte("test started event"), common.EncodingTypeJSON),
+							StartedWorkflowID:     "test-started-workflow-id",
+							StartedRunID:          "ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f",
+							CreateRequestID:       "test-create-request-id",
+							DomainID:              "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+							WorkflowTypeName:      "test-workflow-type",
+							ParentClosePolicy:     101,
+						},
+					},
+					RequestCancelInfos: map[int64]*persistence.RequestCancelInfo{
+						101: {
+							Version:               101,
+							InitiatedID:           101,
+							InitiatedEventBatchID: 102,
+							CancelRequestID:       "test-cancel-request-id",
+						},
+					},
+					SignalInfos: map[int64]*persistence.SignalInfo{
+						101: {
+							Version:               101,
+							InitiatedID:           101,
+							InitiatedEventBatchID: 102,
+							SignalName:            "test-signal-name",
+							Input:                 []byte("test input"),
+							Control:               []byte("test control"),
+							SignalRequestID:       "test-signal-request-id",
+						},
+					},
+					SignalRequestedIDs: map[string]struct{}{
+						"test-signal-id": {},
+					},
+					BufferedEvents: []*persistence.DataBlob{
+						{
+							Encoding: common.EncodingTypeThriftRW,
+							Data:     []byte("test data"),
+						},
+					},
+					ChecksumData: persistence.NewDataBlob([]byte("test-checksum"), "test-checksum-encoding"),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Error - SelectFromExecutions failed",
+			req: &persistence.InternalGetWorkflowExecutionRequest{
+				DomainID: "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+				Execution: types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f",
+				},
+			},
+			mockSetup: func(db *sqlplugin.MockDB, parser *serialization.MockParser) {
+				db.EXPECT().SelectFromExecutions(gomock.Any(), gomock.Any()).Return(nil, errors.New("some random error"))
+				db.EXPECT().SelectFromActivityInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromTimerInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromChildExecutionInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromRequestCancelInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromSignalInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromSignalsRequestedSets(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromBufferedEvents(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().IsNotFoundError(gomock.Any()).Return(true).AnyTimes()
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - SelectFromActivityInfoMaps failed",
+			req: &persistence.InternalGetWorkflowExecutionRequest{
+				DomainID: "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+				Execution: types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f",
+				},
+			},
+			mockSetup: func(db *sqlplugin.MockDB, parser *serialization.MockParser) {
+				db.EXPECT().SelectFromExecutions(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromActivityInfoMaps(gomock.Any(), gomock.Any()).Return(nil, errors.New("some random error"))
+				db.EXPECT().SelectFromTimerInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromChildExecutionInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromRequestCancelInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromSignalInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromSignalsRequestedSets(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromBufferedEvents(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().IsNotFoundError(gomock.Any()).Return(true).AnyTimes()
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - SelectFromTimerInfoMaps failed",
+			req: &persistence.InternalGetWorkflowExecutionRequest{
+				DomainID: "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+				Execution: types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f",
+				},
+			},
+			mockSetup: func(db *sqlplugin.MockDB, parser *serialization.MockParser) {
+				db.EXPECT().SelectFromExecutions(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromActivityInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromTimerInfoMaps(gomock.Any(), gomock.Any()).Return(nil, errors.New("some random error"))
+				db.EXPECT().SelectFromChildExecutionInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromRequestCancelInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromSignalInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromSignalsRequestedSets(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromBufferedEvents(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().IsNotFoundError(gomock.Any()).Return(true).AnyTimes()
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - SelectFromChildExecutionInfoMaps failed",
+			req: &persistence.InternalGetWorkflowExecutionRequest{
+				DomainID: "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+				Execution: types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f",
+				},
+			},
+			mockSetup: func(db *sqlplugin.MockDB, parser *serialization.MockParser) {
+				db.EXPECT().SelectFromExecutions(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromActivityInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromTimerInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromChildExecutionInfoMaps(gomock.Any(), gomock.Any()).Return(nil, errors.New("some random error"))
+				db.EXPECT().SelectFromRequestCancelInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromSignalInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromSignalsRequestedSets(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromBufferedEvents(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().IsNotFoundError(gomock.Any()).Return(true).AnyTimes()
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - SelectFromRequestCancelInfoMaps failed",
+			req: &persistence.InternalGetWorkflowExecutionRequest{
+				DomainID: "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+				Execution: types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f",
+				},
+			},
+			mockSetup: func(db *sqlplugin.MockDB, parser *serialization.MockParser) {
+				db.EXPECT().SelectFromExecutions(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromActivityInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromTimerInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromChildExecutionInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromRequestCancelInfoMaps(gomock.Any(), gomock.Any()).Return(nil, errors.New("some random error"))
+				db.EXPECT().SelectFromSignalInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromSignalsRequestedSets(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromBufferedEvents(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().IsNotFoundError(gomock.Any()).Return(true).AnyTimes()
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - SelectFromSignalInfoMaps failed",
+			req: &persistence.InternalGetWorkflowExecutionRequest{
+				DomainID: "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+				Execution: types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f",
+				},
+			},
+			mockSetup: func(db *sqlplugin.MockDB, parser *serialization.MockParser) {
+				db.EXPECT().SelectFromExecutions(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromActivityInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromTimerInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromChildExecutionInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromRequestCancelInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromSignalInfoMaps(gomock.Any(), gomock.Any()).Return(nil, errors.New("some random error"))
+				db.EXPECT().SelectFromSignalsRequestedSets(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromBufferedEvents(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().IsNotFoundError(gomock.Any()).Return(true).AnyTimes()
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - SelectFromSignalsRequestedSets failed",
+			req: &persistence.InternalGetWorkflowExecutionRequest{
+				DomainID: "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+				Execution: types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f",
+				},
+			},
+			mockSetup: func(db *sqlplugin.MockDB, parser *serialization.MockParser) {
+				db.EXPECT().SelectFromExecutions(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromActivityInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromTimerInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromChildExecutionInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromRequestCancelInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromSignalInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromSignalsRequestedSets(gomock.Any(), gomock.Any()).Return(nil, errors.New("some random error"))
+				db.EXPECT().SelectFromBufferedEvents(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().IsNotFoundError(gomock.Any()).Return(true).AnyTimes()
+			},
+			wantErr: true,
+		},
+		{
+			name: "Error - SelectFromBufferedEvents failed",
+			req: &persistence.InternalGetWorkflowExecutionRequest{
+				DomainID: "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+				Execution: types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f",
+				},
+			},
+			mockSetup: func(db *sqlplugin.MockDB, parser *serialization.MockParser) {
+				db.EXPECT().SelectFromExecutions(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromActivityInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromTimerInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromChildExecutionInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromRequestCancelInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromSignalInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromSignalsRequestedSets(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
+				db.EXPECT().SelectFromBufferedEvents(gomock.Any(), gomock.Any()).Return(nil, errors.New("some random error"))
+				db.EXPECT().IsNotFoundError(gomock.Any()).Return(true).AnyTimes()
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			db := sqlplugin.NewMockDB(ctrl)
+			parser := serialization.NewMockParser(ctrl)
+			tc.mockSetup(db, parser)
+			s := &sqlExecutionStore{
+				shardID: 0,
+				sqlStore: sqlStore{
+					db:     db,
+					logger: testlogger.New(t),
+					parser: parser,
+				},
+			}
+
+			resp, err := s.GetWorkflowExecution(context.Background(), tc.req)
+			if tc.wantErr {
+				assert.Error(t, err, "Expected an error for test case")
+			} else {
+				assert.NoError(t, err, "Did not expect an error for test case")
+				assert.Equal(t, tc.want, resp, "Response mismatch")
+			}
+		})
+	}
+}

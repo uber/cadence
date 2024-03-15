@@ -156,7 +156,7 @@ func ProcessorActivity(ctx context.Context, request Request) error {
 
 		switch execution.Policy {
 		case types.ParentClosePolicyAbandon:
-			//no-op
+			// no-op
 			continue
 		case types.ParentClosePolicyTerminate:
 			terminateReq := &types.HistoryTerminateWorkflowExecutionRequest{

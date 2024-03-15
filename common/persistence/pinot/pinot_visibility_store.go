@@ -59,8 +59,6 @@ const (
 	CloseTime            = "CloseTime"
 	UpdateTime           = "UpdateTime"
 	ExecutionTime        = "ExecutionTime"
-	Encoding             = "Encoding"
-	LikeStatement        = "%s LIKE '%%%s%%'"
 	IsDeleted            = "IsDeleted"   // used for Pinot deletion/rolling upsert only, not visible to user
 	EventTimeMs          = "EventTimeMs" // used for Pinot deletion/rolling upsert only, not visible to user
 
@@ -189,7 +187,7 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionUninitialized(ctx context.
 		0,
 		-1, // represent invalid close time, means open workflow execution
 		-1, // represent invalid close status, means open workflow execution
-		0,  //will be updated when workflow execution updates
+		0,  // will be updated when workflow execution updates
 		request.UpdateTimestamp.UnixMilli(),
 		request.ShardID,
 		nil,
@@ -258,7 +256,8 @@ func (v *pinotVisibilityStore) DeleteUninitializedWorkflowExecution(
 ) error {
 	// verify if it is uninitialized workflow execution record
 	// if it is, then call the existing delete method to delete
-	query := fmt.Sprintf("StartTime = missing and DomainID = %s and RunID = %s", request.DomainID, request.RunID)
+	query := fmt.Sprintf("StartTime = missing and DomainID = '%s' and RunID = '%s'", request.DomainID, request.RunID)
+
 	queryRequest := &p.CountWorkflowExecutionsRequest{
 		Domain: request.Domain,
 		Query:  query,
@@ -582,7 +581,7 @@ func createVisibilityMessage(
 	isDeleted bool,
 ) (*indexer.PinotMessage, error) {
 	m := make(map[string]interface{})
-	//loop through all input parameters
+	// loop through all input parameters
 	m[DomainID] = domainID
 	m[WorkflowID] = wid
 	m[RunID] = rid
@@ -693,10 +692,6 @@ func (q *PinotQuery) addPinotSorter(orderBy string, order string) {
 	q.sorters += fmt.Sprintf("%s %s\n", orderBy, order)
 }
 
-func (q *PinotQuery) addLimits(limit int) {
-	q.limits += fmt.Sprintf("LIMIT %d\n", limit)
-}
-
 func (q *PinotQuery) addOffsetAndLimits(offset int, limit int) {
 	q.limits += fmt.Sprintf("LIMIT %d, %d\n", offset, limit)
 }
@@ -716,6 +711,7 @@ func (f *PinotQueryFilter) addEqual(obj string, val interface{}) {
 	} else {
 		val = fmt.Sprintf("%v", val)
 	}
+
 	quotedVal := fmt.Sprintf("%s", val)
 	f.string += fmt.Sprintf("%s = %s\n", obj, quotedVal)
 }
@@ -743,15 +739,6 @@ func (f *PinotQueryFilter) addTimeRange(obj string, earliest interface{}, latest
 	f.string += fmt.Sprintf("%s BETWEEN %v AND %v\n", obj, earliest, latest)
 }
 
-func (f *PinotQueryFilter) addPartialMatch(key string, val string) {
-	f.checkFirstFilter()
-	f.string += fmt.Sprintf("%s\n", getPartialFormatString(key, val))
-}
-
-func getPartialFormatString(key string, val string) string {
-	return fmt.Sprintf(LikeStatement, key, val)
-}
-
 func (v *pinotVisibilityStore) getCountWorkflowExecutionsQuery(tableName string, request *p.CountWorkflowExecutionsRequest) string {
 	if request == nil {
 		return ""
@@ -771,6 +758,7 @@ func (v *pinotVisibilityStore) getCountWorkflowExecutionsQuery(tableName string,
 	}
 
 	requestQuery = filterPrefix(requestQuery)
+
 	comparExpr, _ := parseOrderBy(requestQuery)
 	comparExpr, err := v.pinotQueryValidator.ValidateQuery(comparExpr)
 	if err != nil {
@@ -964,10 +952,10 @@ func getListWorkflowExecutionsQuery(tableName string, request *p.InternalListWor
 	latest := request.LatestTime.UnixMilli() + oneMicroSecondInNano
 
 	if isClosed {
-		query.filters.addTimeRange(CloseTime, earliest, latest) //convert Unix Time to miliseconds
+		query.filters.addTimeRange(CloseTime, earliest, latest) // convert Unix Time to miliseconds
 		query.filters.addGte(CloseStatus, 0)
 	} else {
-		query.filters.addTimeRange(StartTime, earliest, latest) //convert Unix Time to miliseconds
+		query.filters.addTimeRange(StartTime, earliest, latest) // convert Unix Time to miliseconds
 		query.filters.addLt(CloseStatus, 0)
 		query.filters.addEqual(CloseTime, -1)
 	}
@@ -992,10 +980,10 @@ func getListWorkflowExecutionsByTypeQuery(tableName string, request *p.InternalL
 	latest := request.LatestTime.UnixMilli() + oneMicroSecondInNano
 
 	if isClosed {
-		query.filters.addTimeRange(CloseTime, earliest, latest) //convert Unix Time to miliseconds
+		query.filters.addTimeRange(CloseTime, earliest, latest) // convert Unix Time to miliseconds
 		query.filters.addGte(CloseStatus, 0)
 	} else {
-		query.filters.addTimeRange(StartTime, earliest, latest) //convert Unix Time to miliseconds
+		query.filters.addTimeRange(StartTime, earliest, latest) // convert Unix Time to miliseconds
 		query.filters.addLt(CloseStatus, 0)
 		query.filters.addEqual(CloseTime, -1)
 	}
@@ -1028,10 +1016,10 @@ func getListWorkflowExecutionsByWorkflowIDQuery(tableName string, request *p.Int
 	latest := request.LatestTime.UnixMilli() + oneMicroSecondInNano
 
 	if isClosed {
-		query.filters.addTimeRange(CloseTime, earliest, latest) //convert Unix Time to miliseconds
+		query.filters.addTimeRange(CloseTime, earliest, latest) // convert Unix Time to miliseconds
 		query.filters.addGte(CloseStatus, 0)
 	} else {
-		query.filters.addTimeRange(StartTime, earliest, latest) //convert Unix Time to miliseconds
+		query.filters.addTimeRange(StartTime, earliest, latest) // convert Unix Time to miliseconds
 		query.filters.addLt(CloseStatus, 0)
 		query.filters.addEqual(CloseTime, -1)
 	}
@@ -1077,7 +1065,7 @@ func getListWorkflowExecutionsByStatusQuery(tableName string, request *p.Interna
 	}
 
 	query.filters.addEqual(CloseStatus, status)
-	query.filters.addTimeRange(CloseTime, request.EarliestTime.UnixMilli(), request.LatestTime.UnixMilli()) //convert Unix Time to miliseconds
+	query.filters.addTimeRange(CloseTime, request.EarliestTime.UnixMilli(), request.LatestTime.UnixMilli()) // convert Unix Time to miliseconds
 
 	query.addPinotSorter(StartTime, DescendingOrder)
 

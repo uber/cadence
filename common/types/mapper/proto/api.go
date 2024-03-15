@@ -4179,7 +4179,7 @@ func FromUpdateDomainRequest(t *types.UpdateDomainRequest) *apiv1.UpdateDomainRe
 		request.WorkflowExecutionRetentionPeriod = daysToDuration(t.WorkflowExecutionRetentionPeriodInDays)
 		fields = append(fields, DomainUpdateRetentionPeriodField)
 	}
-	//if t.EmitMetric != nil {} - DEPRECATED
+	// if t.EmitMetric != nil {} - DEPRECATED
 	if t.BadBinaries != nil {
 		request.BadBinaries = FromBadBinaries(t.BadBinaries)
 		fields = append(fields, DomainUpdateBadBinariesField)

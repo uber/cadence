@@ -127,7 +127,7 @@ func Load(
 	return nil, &types.InternalServiceError{Message: "unable to locate current workflow execution"}
 }
 
-///////////////////  Util function for updating workflows ///////////////////
+// /////////////////  Util function for updating workflows ///////////////////
 
 // UpdateWithActionFunc updates the given workflow execution.
 // If runID is empty, it only tries to load the current workflow once.
