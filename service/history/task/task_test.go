@@ -21,6 +21,7 @@
 package task
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -182,6 +183,15 @@ func (s *taskSuite) TestHandleErr_ErrDomainNotActive() {
 	s.Equal(err, taskBase.HandleErr(err))
 }
 
+func (s *taskSuite) TestHandleErr_ErrWorkflowRateLimited() {
+	taskBase := s.newTestTask(func(task Info) (bool, error) {
+		return true, nil
+	}, nil)
+
+	taskBase.submitTime = time.Now()
+	s.Equal(errWorkflowRateLimited, taskBase.HandleErr(errWorkflowRateLimited))
+}
+
 func (s *taskSuite) TestHandleErr_ErrCurrentWorkflowConditionFailed() {
 	taskBase := s.newTestTask(func(task Info) (bool, error) {
 		return true, nil
@@ -278,6 +288,19 @@ func (s *taskSuite) TestHandleErr_ErrMaxAttempts() {
 	assert.NotPanics(s.T(), func() {
 		taskBase.HandleErr(errors.New("err"))
 	})
+}
+
+func (s *taskSuite) TestRetryErr() {
+	taskBase := s.newTestTask(func(task Info) (bool, error) {
+		return true, nil
+	}, nil)
+
+	s.Equal(false, taskBase.RetryErr(errWorkflowBusy))
+	s.Equal(false, taskBase.RetryErr(ErrTaskPendingActive))
+	s.Equal(false, taskBase.RetryErr(context.DeadlineExceeded))
+	s.Equal(false, taskBase.RetryErr(&redispatchError{Reason: "random-reason"}))
+	// rate limited errors are retried
+	s.Equal(true, taskBase.RetryErr(errWorkflowRateLimited))
 }
 
 func (s *taskSuite) newTestTask(
