@@ -1740,6 +1740,18 @@ const (
 	// Default value: false
 	// Allowed filters: DomainName
 	WorkflowIDCacheInternalEnabled
+	// WorkflowIDExternalRateLimitEnabled is the key to enable/disable rate limiting for workflowID specific information for external requests
+	// KeyName: history.workflowIDExternalRateLimitEnabled
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: DomainName
+	WorkflowIDExternalRateLimitEnabled
+	// WorkflowIDInternalRateLimitEnabled is the key to enable/disable rate limiting for workflowID specific information for internal requests
+	// KeyName: history.workflowIDInternalRateLimitEnabled
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: DomainName
+	WorkflowIDInternalRateLimitEnabled
 	// AllowArchivingIncompleteHistory will continue on when seeing some error like history mutated(usually caused by database consistency issues)
 	// KeyName: worker.AllowArchivingIncompleteHistory
 	// Value type: Bool
@@ -1972,6 +1984,13 @@ const (
 	// Default value: false
 	// Allowed filters: DomainID
 	EnableTaskVal
+
+	// EnableRetryForChecksumFailure enables retry if mutable state checksum verification fails
+	// KeyName: history.enableMutableStateChecksumFailureRetry
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: DomainName
+	EnableRetryForChecksumFailure
 
 	// LastBoolKey must be the last one in this const group
 	LastBoolKey
@@ -4228,6 +4247,24 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		KeyName:      "history.workflowIDCacheInternalEnabled",
 		Filters:      []Filter{DomainName},
 		Description:  "WorkflowIDCacheInternalEnabled is the key to enable/disable caching of workflowID specific information for internal requests",
+		DefaultValue: false,
+	},
+	WorkflowIDExternalRateLimitEnabled: DynamicBool{
+		KeyName:      "history.workflowIDExternalRateLimitEnabled",
+		Filters:      []Filter{DomainName},
+		Description:  "WorkflowIDExternalRateLimitEnabled is the key to enable/disable rate limiting of specific workflowIDs for external requests",
+		DefaultValue: false,
+	},
+	WorkflowIDInternalRateLimitEnabled: DynamicBool{
+		KeyName:      "history.workflowIDInternalRateLimitEnabled",
+		Filters:      []Filter{DomainName},
+		Description:  "WorkflowIDInternalRateLimitEnabled is the key to enable/disable rate limiting of specific workflowIDs for internal requests",
+		DefaultValue: false,
+	},
+	EnableRetryForChecksumFailure: DynamicBool{
+		KeyName:      "history.enableMutableStateChecksumFailureRetry",
+		Filters:      []Filter{DomainName},
+		Description:  "EnableRetryForChecksumFailure enables retry if mutable state checksum verification fails",
 		DefaultValue: false,
 	},
 }

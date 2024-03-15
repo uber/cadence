@@ -30,7 +30,7 @@ type (
 	// go types to postgres datatypes
 	// TODO https://github.com/uber/cadence/issues/2892
 	// There are some reasons:
-	//r application layer is not consistent with timezone: for example,
+	// r application layer is not consistent with timezone: for example,
 	// in some case we write timestamp with local timezone but when the time.Time
 	// is converted from "JSON"(from paging token), the timezone is missing
 	DataConverter interface {

@@ -188,7 +188,7 @@ func (s *RetryPolicySuite) TestNoMaxAttempts() {
 	r, clock := createRetrier(policy)
 	for i := 0; i < 100; i++ {
 		next := r.NextBackOff()
-		//print("Iter: ", i, ", Next Backoff: ", next.String(), "\n")
+		// print("Iter: ", i, ", Next Backoff: ", next.String(), "\n")
 		s.True(next > 0 || next == done, "Unexpected value for next retry duration: %v", next)
 		clock.moveClock(next)
 	}
@@ -200,7 +200,7 @@ func (s *RetryPolicySuite) TestUnbounded() {
 	r, clock := createRetrier(policy)
 	for i := 0; i < 100; i++ {
 		next := r.NextBackOff()
-		//print("Iter: ", i, ", Next Backoff: ", next.String(), "\n")
+		// print("Iter: ", i, ", Next Backoff: ", next.String(), "\n")
 		s.True(next > 0 || next == done, "Unexpected value for next retry duration: %v", next)
 		clock.moveClock(next)
 	}

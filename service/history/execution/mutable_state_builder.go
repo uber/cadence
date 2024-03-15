@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
+	"golang.org/x/exp/maps"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -298,6 +299,7 @@ func NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 	return msBuilder
 }
 
+// todo (david.porter)
 func (e *mutableStateBuilder) CopyToPersistence() *persistence.WorkflowMutableState {
 	state := &persistence.WorkflowMutableState{}
 
@@ -317,7 +319,7 @@ func (e *mutableStateBuilder) CopyToPersistence() *persistence.WorkflowMutableSt
 
 func (e *mutableStateBuilder) Load(
 	state *persistence.WorkflowMutableState,
-) {
+) error {
 
 	e.pendingActivityInfoIDs = state.ActivityInfos
 	for _, activityInfo := range state.ActivityInfos {
@@ -357,10 +359,23 @@ func (e *mutableStateBuilder) Load(
 				// feature is tested and/or we have mechanisms in place to deal
 				// with these types of errors
 				e.metricsClient.IncCounter(metrics.WorkflowContextScope, metrics.MutableStateChecksumMismatch)
-				e.logError("mutable state checksum mismatch", tag.Error(err))
+				e.logError("mutable state checksum mismatch",
+					tag.WorkflowNextEventID(e.executionInfo.NextEventID),
+					tag.WorkflowScheduleID(e.executionInfo.DecisionScheduleID),
+					tag.WorkflowStartedID(e.executionInfo.DecisionStartedID),
+					tag.Dynamic("timerIDs", maps.Keys(e.pendingTimerInfoIDs)),
+					tag.Dynamic("activityIDs", maps.Keys(e.pendingActivityInfoIDs)),
+					tag.Dynamic("childIDs", maps.Keys(e.pendingChildExecutionInfoIDs)),
+					tag.Dynamic("signalIDs", maps.Keys(e.pendingSignalInfoIDs)),
+					tag.Dynamic("cancelIDs", maps.Keys(e.pendingRequestCancelInfoIDs)),
+					tag.Error(err))
+				if e.enableChecksumFailureRetry() {
+					return err
+				}
 			}
 		}
 	}
+	return nil
 }
 
 func (e *mutableStateBuilder) fillForBackwardsCompatibility() {
@@ -4757,6 +4772,13 @@ func (e *mutableStateBuilder) shouldVerifyChecksum() bool {
 	return rand.Intn(100) < e.config.MutableStateChecksumVerifyProbability(e.domainEntry.GetInfo().Name)
 }
 
+func (e *mutableStateBuilder) enableChecksumFailureRetry() bool {
+	if e.domainEntry == nil {
+		return false
+	}
+	return e.config.EnableRetryForChecksumFailure(e.domainEntry.GetInfo().Name)
+}
+
 func (e *mutableStateBuilder) shouldInvalidateChecksum() bool {
 	invalidateBeforeEpochSecs := int64(e.config.MutableStateChecksumInvalidateBefore())
 	if invalidateBeforeEpochSecs > 0 {
@@ -4790,23 +4812,38 @@ func (e *mutableStateBuilder) unixNanoToTime(
 }
 
 func (e *mutableStateBuilder) logInfo(msg string, tags ...tag.Tag) {
-	tags = append(tags, tag.WorkflowID(e.executionInfo.WorkflowID))
-	tags = append(tags, tag.WorkflowRunID(e.executionInfo.RunID))
-	tags = append(tags, tag.WorkflowDomainID(e.executionInfo.DomainID))
+	if e != nil {
+		return
+	}
+	if e.executionInfo != nil {
+		tags = append(tags, tag.WorkflowID(e.executionInfo.WorkflowID))
+		tags = append(tags, tag.WorkflowRunID(e.executionInfo.RunID))
+		tags = append(tags, tag.WorkflowDomainID(e.executionInfo.DomainID))
+	}
 	e.logger.Info(msg, tags...)
 }
 
 func (e *mutableStateBuilder) logWarn(msg string, tags ...tag.Tag) {
-	tags = append(tags, tag.WorkflowID(e.executionInfo.WorkflowID))
-	tags = append(tags, tag.WorkflowRunID(e.executionInfo.RunID))
-	tags = append(tags, tag.WorkflowDomainID(e.executionInfo.DomainID))
+	if e != nil {
+		return
+	}
+	if e.executionInfo != nil {
+		tags = append(tags, tag.WorkflowID(e.executionInfo.WorkflowID))
+		tags = append(tags, tag.WorkflowRunID(e.executionInfo.RunID))
+		tags = append(tags, tag.WorkflowDomainID(e.executionInfo.DomainID))
+	}
 	e.logger.Warn(msg, tags...)
 }
 
 func (e *mutableStateBuilder) logError(msg string, tags ...tag.Tag) {
-	tags = append(tags, tag.WorkflowID(e.executionInfo.WorkflowID))
-	tags = append(tags, tag.WorkflowRunID(e.executionInfo.RunID))
-	tags = append(tags, tag.WorkflowDomainID(e.executionInfo.DomainID))
+	if e != nil {
+		return
+	}
+	if e.executionInfo != nil {
+		tags = append(tags, tag.WorkflowID(e.executionInfo.WorkflowID))
+		tags = append(tags, tag.WorkflowRunID(e.executionInfo.RunID))
+		tags = append(tags, tag.WorkflowDomainID(e.executionInfo.DomainID))
+	}
 	e.logger.Error(msg, tags...)
 }
 

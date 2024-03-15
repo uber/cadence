@@ -1,0 +1,70 @@
+{{$ClientName := (index .Vars "client")}}
+{{$clientName := (down $ClientName)}}
+{{$interfaceName := .Interface.Name}}
+{{ $decorator := (printf "%s%s" (down $clientName) .Interface.Name) }}
+{{ $Decorator := (printf "%s%s" $ClientName .Interface.Name) }}
+{{$largeTimeoutAPIs := list "adminClient.GetCrossClusterTasks" "adminClient.GetReplicationMessages"}}
+{{$longPollTimeoutAPIs := list "frontendClient.ListArchivedWorkflowExecutions" "frontendClient.PollForActivityTask" "frontendClient.PollForDecisionTask" "matchingClient.PollForActivityTask" "matchingClient.PollForDecisionTask"}}
+{{$noTimeoutAPIs := list "historyClient.GetReplicationMessages" "historyClient.GetDLQReplicationMessages" "historyClient.CountDLQMessages" "historyClient.ReadDLQMessages" "historyClient.PurgeDLQMessages" "historyClient.MergeDLQMessages" "historyClient.GetCrossClusterTasks" "historyClient.GetFailoverInfo" "matchingClient.GetTaskListsByDomain"}}
+{{/*
+ $fieldMap defines a map of the decorator struct fields
+ with field name as the key and field type as the value
+ */}}
+{{$fieldMap := dict }}
+{{ if eq $ClientName "History" }}
+    {{$fieldMap = merge $fieldMap (dict  "timeout" "time.Duration" "client" .Interface.Type) }}
+{{ else if eq $ClientName "Admin" }}
+    {{$fieldMap = merge $fieldMap (dict  "timeout" "time.Duration" "client" .Interface.Type "largeTimeout" "time.Duration") }}
+{{ else }}
+    {{$fieldMap = merge $fieldMap (dict "timeout" "time.Duration" "client" .Interface.Type "longPollTimeout" "time.Duration") }}
+{{ end }}
+
+import (
+    "context"
+    "time"
+
+    "go.uber.org/yarpc"
+
+    "github.com/uber/cadence/client/{{$clientName}}"
+    "github.com/uber/cadence/common/future"
+    "github.com/uber/cadence/common/persistence"
+    "github.com/uber/cadence/common/types"
+)
+
+var _ {{.Interface.Type}} = (*{{$decorator}})(nil)
+
+// {{$decorator}} implements the {{.Interface.Type}} interface instrumented with timeouts
+type {{$decorator}} struct {
+    {{ range $fieldName, $fieldType := $fieldMap -}}
+           {{$fieldName}} {{$fieldType}}
+    {{ end }}
+}
+
+// New{{$Decorator}} creates a new {{$decorator}} instance
+func New{{$Decorator}}(
+   {{- range $fieldName, $fieldType := $fieldMap}}
+               {{$fieldName}} {{$fieldType}},
+    {{- end }}
+) {{.Interface.Type}} {
+   return &{{$decorator}}{
+      {{- range $fieldName, $fieldType := $fieldMap}}
+            {{$fieldName}}: {{$fieldName}},
+        {{- end }}
+   }
+}
+
+{{range $method := .Interface.Methods}}
+func (c * {{$decorator}}) {{$method.Declaration}} {
+    {{- if has (printf "%s.%s" $decorator $method.Name) $largeTimeoutAPIs -}}
+            ctx, cancel := createContext(ctx, c.largeTimeout)
+            defer cancel()
+    {{- else if has (printf "%s.%s" $decorator $method.Name) $longPollTimeoutAPIs -}}
+            ctx, cancel := createContext(ctx, c.longPollTimeout)
+            defer cancel()
+    {{- else if not (has (printf "%s.%s" $decorator $method.Name) $noTimeoutAPIs) -}}
+            ctx, cancel := createContext(ctx, c.timeout)
+            defer cancel()
+    {{- end }}
+    {{$method.Pass ("c.client.") }}
+}
+{{end}}

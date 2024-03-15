@@ -629,7 +629,7 @@ func (s *workflowHandlerSuite) TestRecordActivityTaskHeartbeat_RequestNotSet() {
 func (s *workflowHandlerSuite) TestRecordActivityTaskHeartbeat_TaskTokenNotSet() {
 	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
 	result, err := wh.RecordActivityTaskHeartbeat(context.Background(), &types.RecordActivityTaskHeartbeatRequest{
-		TaskToken: nil, //task token is not set
+		TaskToken: nil, // task token is not set
 		Details:   nil,
 		Identity:  "",
 	})

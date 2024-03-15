@@ -1639,7 +1639,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 
 	s.T().Logf("Workflow execution last updated: %v\n", info3.LastUpdatedTimestamp)
 
-	//update with incorrect rangeID and condition(next_event_id)
+	// update with incorrect rangeID and condition(next_event_id)
 	err7 := s.UpdateWorkflowExecutionWithRangeID(ctx, failedUpdateInfo, failedUpdateStats, versionHistories, []int64{int64(5)}, nil, int64(12345), int64(3), nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	s.Error(err7, "expected non nil error.")
 	s.IsType(&p.ShardOwnershipLostError{}, err7)
@@ -1744,7 +1744,7 @@ func (s *ExecutionManagerSuite) TestDeleteCurrentWorkflow() {
 	defer cancel()
 
 	if s.ExecutionManager.GetName() != "cassandra" {
-		//"this test is only applicable for cassandra (uses TTL based deletes)"
+		// "this test is only applicable for cassandra (uses TTL based deletes)"
 		return
 	}
 	domainID := "54d15308-e20e-4b91-a00f-a518a3892790"
@@ -1930,7 +1930,7 @@ func (s *ExecutionManagerSuite) TestCleanupCorruptedWorkflow() {
 	info2.ExecutionInfo.LastUpdatedTimestamp = info1.ExecutionInfo.LastUpdatedTimestamp
 	s.Equal(info2, info1)
 
-	//delete the run
+	// delete the run
 	err8 := s.DeleteWorkflowExecution(ctx, info0.ExecutionInfo)
 	s.NoError(err8)
 

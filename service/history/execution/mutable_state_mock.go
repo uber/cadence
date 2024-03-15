@@ -1815,9 +1815,11 @@ func (mr *MockMutableStateMockRecorder) IsWorkflowExecutionRunning() *gomock.Cal
 }
 
 // Load mocks base method.
-func (m *MockMutableState) Load(arg0 *persistence.WorkflowMutableState) {
+func (m *MockMutableState) Load(arg0 *persistence.WorkflowMutableState) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Load", arg0)
+	ret := m.ctrl.Call(m, "Load", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // Load indicates an expected call of Load.

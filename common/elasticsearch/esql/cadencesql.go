@@ -63,7 +63,7 @@ func (e *ESql) ConvertCadence(sql string, domainID string, pagination ...interfa
 		return "", nil, err
 	}
 
-	//sql valid, start to handle
+	// sql valid, start to handle
 	switch stmt := stmt.(type) {
 	case *sqlparser.Select:
 		dsl, sortFields, err = e.convertSelect(*(stmt), domainID, pagination...)
