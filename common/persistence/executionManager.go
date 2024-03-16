@@ -73,6 +73,7 @@ func (m *executionManagerImpl) GetWorkflowExecution(
 	internalRequest := &InternalGetWorkflowExecutionRequest{
 		DomainID:  request.DomainID,
 		Execution: request.Execution,
+		RangeID:   request.RangeID,
 	}
 	response, err := m.persistence.GetWorkflowExecution(ctx, internalRequest)
 	if err != nil {
@@ -642,12 +643,9 @@ func (m *executionManagerImpl) SerializeWorkflowMutation(
 	if err != nil {
 		return nil, err
 	}
-	var checksumData *DataBlob
-	if len(input.Checksum.Value) > 0 {
-		checksumData, err = m.serializer.SerializeChecksum(input.Checksum, common.EncodingTypeJSON)
-		if err != nil {
-			return nil, err
-		}
+	checksumData, err := m.serializer.SerializeChecksum(input.Checksum, common.EncodingTypeJSON)
+	if err != nil {
+		return nil, err
 	}
 
 	return &InternalWorkflowMutation{

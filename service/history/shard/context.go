@@ -590,7 +590,24 @@ func (s *contextImpl) GetWorkflowExecution(
 	}
 	currentRangeID := s.getRangeID()
 	request.RangeID = currentRangeID
-	return s.executionManager.GetWorkflowExecution(ctx, request)
+	response, err := s.executionManager.GetWorkflowExecution(ctx, request)
+	switch err.(type) {
+	case nil:
+		return response, nil
+	case *persistence.ShardOwnershipLostError:
+		{
+			// Shard is stolen, trigger shutdown of history engine
+			s.logger.Warn(
+				"Closing shard: GetWorkflowExecution failed due to stolen shard.",
+				tag.Error(err),
+				tag.ShardRangeID(currentRangeID),
+			)
+			s.closeShard()
+			return nil, err
+		}
+	default:
+		return nil, err
+	}
 }
 
 func (s *contextImpl) CreateWorkflowExecution(

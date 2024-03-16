@@ -1209,9 +1209,6 @@ func (c *contextImpl) getWorkflowExecutionWithRetry(
 	case *types.EntityNotExistsError:
 		// it is possible that workflow does not exists
 		return nil, err
-	case *persistence.ShardOwnershipLostError:
-		// shard is stolen, should stop processing the workflow
-		return nil, err
 	default:
 		c.logger.Error(
 			"Persistent fetch operation failure",

@@ -379,7 +379,7 @@ func (m *sqlExecutionStore) GetWorkflowExecution(
 	// if we have checksum, we need to make sure the rangeID did not change
 	// if the rangeID changed, it means the shard ownership might have changed
 	// and the workflow might have been updated when we read the data, so the data
-	// we read might not from a consistent view, the checksum validation might fail
+	// we read might not be from a consistent view, the checksum validation might fail
 	// in that case, we need to return an error
 	if state.ChecksumData != nil {
 		row, err := m.db.SelectFromShards(ctx, &sqlplugin.ShardsFilter{ShardID: int64(m.shardID)})
