@@ -307,60 +307,60 @@ func (m *sqlExecutionStore) GetWorkflowExecution(
 	var bufferedEvents []*p.DataBlob
 	var signalsRequested map[string]struct{}
 
-	g, ctx := errgroup.WithContext(ctx)
+	g, childCtx := errgroup.WithContext(ctx)
 
 	g.Go(func() (e error) {
 		defer func() { recoverPanic(recover(), &e) }()
-		executions, e = m.getExecutions(ctx, request, domainID, wfID, runID)
+		executions, e = m.getExecutions(childCtx, request, domainID, wfID, runID)
 		return e
 	})
 
 	g.Go(func() (e error) {
 		defer func() { recoverPanic(recover(), &e) }()
 		activityInfos, e = getActivityInfoMap(
-			ctx, m.db, m.shardID, domainID, wfID, runID, m.parser)
+			childCtx, m.db, m.shardID, domainID, wfID, runID, m.parser)
 		return e
 	})
 
 	g.Go(func() (e error) {
 		defer func() { recoverPanic(recover(), &e) }()
 		timerInfos, e = getTimerInfoMap(
-			ctx, m.db, m.shardID, domainID, wfID, runID, m.parser)
+			childCtx, m.db, m.shardID, domainID, wfID, runID, m.parser)
 		return e
 	})
 
 	g.Go(func() (e error) {
 		defer func() { recoverPanic(recover(), &e) }()
 		childExecutionInfos, e = getChildExecutionInfoMap(
-			ctx, m.db, m.shardID, domainID, wfID, runID, m.parser)
+			childCtx, m.db, m.shardID, domainID, wfID, runID, m.parser)
 		return e
 	})
 
 	g.Go(func() (e error) {
 		defer func() { recoverPanic(recover(), &e) }()
 		requestCancelInfos, e = getRequestCancelInfoMap(
-			ctx, m.db, m.shardID, domainID, wfID, runID, m.parser)
+			childCtx, m.db, m.shardID, domainID, wfID, runID, m.parser)
 		return e
 	})
 
 	g.Go(func() (e error) {
 		defer func() { recoverPanic(recover(), &e) }()
 		signalInfos, e = getSignalInfoMap(
-			ctx, m.db, m.shardID, domainID, wfID, runID, m.parser)
+			childCtx, m.db, m.shardID, domainID, wfID, runID, m.parser)
 		return e
 	})
 
 	g.Go(func() (e error) {
 		defer func() { recoverPanic(recover(), &e) }()
 		bufferedEvents, e = getBufferedEvents(
-			ctx, m.db, m.shardID, domainID, wfID, runID)
+			childCtx, m.db, m.shardID, domainID, wfID, runID)
 		return e
 	})
 
 	g.Go(func() (e error) {
 		defer func() { recoverPanic(recover(), &e) }()
 		signalsRequested, e = getSignalsRequested(
-			ctx, m.db, m.shardID, domainID, wfID, runID)
+			childCtx, m.db, m.shardID, domainID, wfID, runID)
 		return e
 	})
 
@@ -375,6 +375,23 @@ func (m *sqlExecutionStore) GetWorkflowExecution(
 			Message: fmt.Sprintf("GetWorkflowExecution: failed. Error: %v", err),
 		}
 	}
+	// if we have checksum, we need to make sure the rangeID did not change
+	// if the rangeID changed, it means the shard ownership might have changed
+	// and the workflow might have been updated when we read the data, so the data
+	// we read might not be from a consistent view, the checksum validation might fail
+	// in that case, we clear the checksum data so that we will not perform the validation
+	if state.ChecksumData != nil {
+		row, err := m.db.SelectFromShards(ctx, &sqlplugin.ShardsFilter{ShardID: int64(m.shardID)})
+		if err != nil {
+			return nil, convertCommonErrors(m.db, "GetWorkflowExecution", "", err)
+		}
+		if row.RangeID != request.RangeID {
+			// The GetWorkflowExecution operation will not be impacted by this. ChecksumData is purely for validation purposes.
+			m.logger.Warn("GetWorkflowExecution's checksum is discarded. The shard might have changed owner.")
+			state.ChecksumData = nil
+		}
+	}
+
 	state.ActivityInfos = activityInfos
 	state.TimerInfos = timerInfos
 	state.ChildExecutionInfos = childExecutionInfos

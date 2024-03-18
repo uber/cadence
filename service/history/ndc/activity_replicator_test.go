@@ -141,6 +141,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_WorkflowNotFound() {
 			RunID:      runID,
 		},
 		DomainName: domainName,
+		RangeID:    1,
 	}).Return(nil, &types.EntityNotExistsError{})
 	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(
 		cache.NewGlobalDomainCacheEntryForTest(

@@ -531,6 +531,7 @@ type (
 	InternalGetWorkflowExecutionRequest struct {
 		DomainID  string
 		Execution types.WorkflowExecution
+		RangeID   int64
 	}
 
 	// InternalGetWorkflowExecutionResponse is the response to GetWorkflowExecution for Persistence Interface
