@@ -625,104 +625,77 @@ func (m *sqlExecutionStore) DeleteWorkflowExecution(
 	ctx context.Context,
 	request *p.DeleteWorkflowExecutionRequest,
 ) error {
-	recoverPanic := func(recovered interface{}, err *error) {
-		if recovered != nil {
-			*err = fmt.Errorf("DB operation panicked: %v %s", recovered, debug.Stack())
-		}
-	}
+	dbShardID := sqlplugin.GetDBShardIDFromHistoryShardID(m.shardID, m.db.GetTotalNumDBShards())
 	domainID := serialization.MustParseUUID(request.DomainID)
 	runID := serialization.MustParseUUID(request.RunID)
 	wfID := request.WorkflowID
-	g, ctx := errgroup.WithContext(ctx)
-
-	g.Go(func() (e error) {
-		defer func() { recoverPanic(recover(), &e) }()
-		_, e = m.db.DeleteFromExecutions(ctx, &sqlplugin.ExecutionsFilter{
+	return m.txExecute(ctx, dbShardID, "DeleteWorkflowExecution", func(tx sqlplugin.Tx) error {
+		if _, err := tx.DeleteFromExecutions(ctx, &sqlplugin.ExecutionsFilter{
 			ShardID:    m.shardID,
 			DomainID:   domainID,
 			WorkflowID: wfID,
 			RunID:      runID,
-		})
-		return e
-	})
-
-	g.Go(func() (e error) {
-		defer func() { recoverPanic(recover(), &e) }()
-		_, e = m.db.DeleteFromActivityInfoMaps(ctx, &sqlplugin.ActivityInfoMapsFilter{
+		}); err != nil {
+			return convertCommonErrors(tx, "DeleteWorkflowExecution", "", err)
+		}
+		if _, err := tx.DeleteFromActivityInfoMaps(ctx, &sqlplugin.ActivityInfoMapsFilter{
 			ShardID:    int64(m.shardID),
 			DomainID:   domainID,
 			WorkflowID: wfID,
 			RunID:      runID,
-		})
-		return e
-	})
-
-	g.Go(func() (e error) {
-		defer func() { recoverPanic(recover(), &e) }()
-		_, e = m.db.DeleteFromTimerInfoMaps(ctx, &sqlplugin.TimerInfoMapsFilter{
+		}); err != nil {
+			return convertCommonErrors(tx, "DeleteFromActivityInfoMaps", "", err)
+		}
+		if _, err := tx.DeleteFromTimerInfoMaps(ctx, &sqlplugin.TimerInfoMapsFilter{
 			ShardID:    int64(m.shardID),
 			DomainID:   domainID,
 			WorkflowID: wfID,
 			RunID:      runID,
-		})
-		return e
-	})
-
-	g.Go(func() (e error) {
-		defer func() { recoverPanic(recover(), &e) }()
-		_, e = m.db.DeleteFromChildExecutionInfoMaps(ctx, &sqlplugin.ChildExecutionInfoMapsFilter{
+		}); err != nil {
+			return convertCommonErrors(tx, "DeleteFromTimerInfoMaps", "", err)
+		}
+		if _, err := tx.DeleteFromChildExecutionInfoMaps(ctx, &sqlplugin.ChildExecutionInfoMapsFilter{
 			ShardID:    int64(m.shardID),
 			DomainID:   domainID,
 			WorkflowID: wfID,
 			RunID:      runID,
-		})
-		return e
-	})
-
-	g.Go(func() (e error) {
-		defer func() { recoverPanic(recover(), &e) }()
-		_, e = m.db.DeleteFromRequestCancelInfoMaps(ctx, &sqlplugin.RequestCancelInfoMapsFilter{
+		}); err != nil {
+			return convertCommonErrors(tx, "DeleteFromChildExecutionInfoMaps", "", err)
+		}
+		if _, err := tx.DeleteFromRequestCancelInfoMaps(ctx, &sqlplugin.RequestCancelInfoMapsFilter{
 			ShardID:    int64(m.shardID),
 			DomainID:   domainID,
 			WorkflowID: wfID,
 			RunID:      runID,
-		})
-		return e
-	})
-
-	g.Go(func() (e error) {
-		defer func() { recoverPanic(recover(), &e) }()
-		_, e = m.db.DeleteFromSignalInfoMaps(ctx, &sqlplugin.SignalInfoMapsFilter{
+		}); err != nil {
+			return convertCommonErrors(tx, "DeleteFromRequestCancelInfoMaps", "", err)
+		}
+		if _, err := tx.DeleteFromSignalInfoMaps(ctx, &sqlplugin.SignalInfoMapsFilter{
 			ShardID:    int64(m.shardID),
 			DomainID:   domainID,
 			WorkflowID: wfID,
 			RunID:      runID,
-		})
-		return e
-	})
-
-	g.Go(func() (e error) {
-		defer func() { recoverPanic(recover(), &e) }()
-		_, e = m.db.DeleteFromBufferedEvents(ctx, &sqlplugin.BufferedEventsFilter{
+		}); err != nil {
+			return convertCommonErrors(tx, "DeleteFromSignalInfoMaps", "", err)
+		}
+		if _, err := tx.DeleteFromBufferedEvents(ctx, &sqlplugin.BufferedEventsFilter{
 			ShardID:    m.shardID,
 			DomainID:   domainID,
 			WorkflowID: wfID,
 			RunID:      runID,
-		})
-		return e
-	})
-
-	g.Go(func() (e error) {
-		defer func() { recoverPanic(recover(), &e) }()
-		_, e = m.db.DeleteFromSignalsRequestedSets(ctx, &sqlplugin.SignalsRequestedSetsFilter{
+		}); err != nil {
+			return convertCommonErrors(tx, "DeleteFromBufferedEvents", "", err)
+		}
+		if _, err := tx.DeleteFromSignalsRequestedSets(ctx, &sqlplugin.SignalsRequestedSetsFilter{
 			ShardID:    int64(m.shardID),
 			DomainID:   domainID,
 			WorkflowID: wfID,
 			RunID:      runID,
-		})
-		return e
+		}); err != nil {
+			return convertCommonErrors(tx, "DeleteFromSignalsRequestedSets", "", err)
+		}
+		return nil
 	})
-	return g.Wait()
 }
 
 // its possible for a new run of the same workflow to have started after the run we are deleting
