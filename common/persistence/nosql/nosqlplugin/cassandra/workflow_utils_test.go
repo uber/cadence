@@ -148,6 +148,14 @@ func (i *fakeIter) Close() error {
 	return nil
 }
 
+type fakeUUID struct {
+	uuid string
+}
+
+func (u *fakeUUID) String() string {
+	return u.uuid
+}
+
 func TestExecuteCreateWorkflowBatchTransaction(t *testing.T) {
 	tests := []struct {
 		// fake setup parameters

@@ -73,6 +73,7 @@ func (m *executionManagerImpl) GetWorkflowExecution(
 	internalRequest := &InternalGetWorkflowExecutionRequest{
 		DomainID:  request.DomainID,
 		Execution: request.Execution,
+		RangeID:   request.RangeID,
 	}
 	response, err := m.persistence.GetWorkflowExecution(ctx, internalRequest)
 	if err != nil {

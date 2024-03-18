@@ -297,6 +297,9 @@ func TestGetWorkflowExecution(t *testing.T) {
 		mockExecutionMgr := &mocks.ExecutionManager{}
 		shardContext := &contextImpl{
 			executionManager: mockExecutionMgr,
+			shardInfo: &persistence.ShardInfo{
+				RangeID: 12,
+			},
 		}
 		if tc.isClosed {
 			shardContext.closed = 1
