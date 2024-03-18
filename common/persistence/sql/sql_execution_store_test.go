@@ -3408,10 +3408,25 @@ func TestGetWorkflowExecution(t *testing.T) {
 					RangeID: 1,
 				}, nil)
 			},
-			wantErr: true,
-			assertErr: func(t *testing.T, err error) {
-				assert.IsType(t, &persistence.ShardOwnershipLostError{}, err)
+			want: &persistence.InternalGetWorkflowExecutionResponse{
+				State: &persistence.InternalWorkflowMutableState{
+					ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+						DomainID:               "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+						WorkflowID:             "test-workflow-id",
+						RunID:                  "ee8d7b6e-876c-4b1e-9b6e-5e3e3c6b6b3f",
+						NextEventID:            101,
+						CompletionEventBatchID: -23,
+					},
+					ActivityInfos:       map[int64]*persistence.InternalActivityInfo{},
+					TimerInfos:          map[string]*persistence.TimerInfo{},
+					ChildExecutionInfos: map[int64]*persistence.InternalChildExecutionInfo{},
+					RequestCancelInfos:  map[int64]*persistence.RequestCancelInfo{},
+					SignalInfos:         map[int64]*persistence.SignalInfo{},
+					SignalRequestedIDs:  map[string]struct{}{},
+					ChecksumData:        nil,
+				},
 			},
+			wantErr: false,
 		},
 		{
 			name: "Error - failed to get shard",

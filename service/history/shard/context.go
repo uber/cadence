@@ -585,29 +585,11 @@ func (s *contextImpl) GetWorkflowExecution(
 	ctx context.Context,
 	request *persistence.GetWorkflowExecutionRequest,
 ) (*persistence.GetWorkflowExecutionResponse, error) {
+	request.RangeID = atomic.LoadInt64(&s.rangeID) // This is to make sure read is not blocked by write, s.rangeID is synced with s.shardInfo.RangeID
 	if s.isClosed() {
 		return nil, ErrShardClosed
 	}
-	currentRangeID := s.getRangeID()
-	request.RangeID = currentRangeID
-	response, err := s.executionManager.GetWorkflowExecution(ctx, request)
-	switch err.(type) {
-	case nil:
-		return response, nil
-	case *persistence.ShardOwnershipLostError:
-		{
-			// Shard is stolen, trigger shutdown of history engine
-			s.logger.Warn(
-				"Closing shard: GetWorkflowExecution failed due to stolen shard.",
-				tag.Error(err),
-				tag.ShardRangeID(currentRangeID),
-			)
-			s.closeShard()
-			return nil, err
-		}
-	default:
-		return nil, err
-	}
+	return s.executionManager.GetWorkflowExecution(ctx, request)
 }
 
 func (s *contextImpl) CreateWorkflowExecution(

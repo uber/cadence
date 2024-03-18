@@ -35,7 +35,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/persistence"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
@@ -380,17 +379,16 @@ func (m *sqlExecutionStore) GetWorkflowExecution(
 	// if the rangeID changed, it means the shard ownership might have changed
 	// and the workflow might have been updated when we read the data, so the data
 	// we read might not be from a consistent view, the checksum validation might fail
-	// in that case, we need to return an error
+	// in that case, we clear the checksum data so that we will not perform the validation
 	if state.ChecksumData != nil {
 		row, err := m.db.SelectFromShards(ctx, &sqlplugin.ShardsFilter{ShardID: int64(m.shardID)})
 		if err != nil {
 			return nil, convertCommonErrors(m.db, "GetWorkflowExecution", "", err)
 		}
 		if row.RangeID != request.RangeID {
-			return nil, &persistence.ShardOwnershipLostError{
-				ShardID: m.shardID,
-				Msg:     fmt.Sprintf("GetWorkflowExecution failed. Previous rangeID: %v, new rangeID: %v", request.RangeID, row.RangeID),
-			}
+			// The GetWorkflowExecution operation will not be impacted by this. ChecksumData is purely for validation purposes.
+			m.logger.Warn("GetWorkflowExecution's checksum is discarded. The shard might have changed owner.")
+			state.ChecksumData = nil
 		}
 	}
 
