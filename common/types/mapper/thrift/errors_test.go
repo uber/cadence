@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package proto
+package thrift
 
 import (
 	"errors"
@@ -41,21 +41,17 @@ func TestErrors(t *testing.T) {
 	}
 }
 
-func TestNilMapsToOK(t *testing.T) {
-	protoNoError := FromError(nil)
-	assert.Equal(t, yarpcerrors.CodeOK, yarpcerrors.FromError(protoNoError).Code())
-	assert.Nil(t, ToError(protoNoError))
+func TestNilMapsToNil(t *testing.T) {
+	assert.Nil(t, FromError(nil))
+	assert.Nil(t, ToError(nil))
 }
 
-func TestFromUnknownErrorMapsToUnknownError(t *testing.T) {
+func TestFromUnknownErrorMapsToItself(t *testing.T) {
 	err := errors.New("unknown error")
-	protobufErr := FromError(err)
-	assert.True(t, yarpcerrors.IsUnknown(protobufErr))
-
-	assert.Equal(t, err, ToError(protobufErr))
+	assert.Equal(t, err, FromError(err))
 }
 
 func TestToUnknownErrorMapsToItself(t *testing.T) {
-	timeout := yarpcerrors.DeadlineExceededErrorf("timeout")
-	assert.Equal(t, timeout, ToError(timeout))
+	err := yarpcerrors.DeadlineExceededErrorf("timeout")
+	assert.Equal(t, err, ToError(err))
 }

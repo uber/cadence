@@ -18,44 +18,34 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package proto
+package testdata
 
 import (
-	"errors"
-	"reflect"
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"go.uber.org/yarpc/yarpcerrors"
-
-	"github.com/uber/cadence/common/types/testdata"
+	"github.com/uber/cadence/common/types"
 )
 
-func TestErrors(t *testing.T) {
-	for _, err := range testdata.Errors {
-		name := reflect.TypeOf(err).Elem().Name()
-		t.Run(name, func(t *testing.T) {
-			// Test that the mappings does not lose information
-			assert.Equal(t, err, ToError(FromError(err)))
-		})
+const (
+	DynamicConfigValueName         = "test_config"
+	DynamicConfigFilterName        = "test_filter"
+	DynamicConfigEntryName         = "test_entry"
+	DynamicConfigBlobSchemaVersion = int64(1)
+)
+
+var (
+	DynamicConfigFilter = types.DynamicConfigFilter{
+		Name:  DynamicConfigFilterName,
+		Value: &DataBlob,
 	}
-}
-
-func TestNilMapsToOK(t *testing.T) {
-	protoNoError := FromError(nil)
-	assert.Equal(t, yarpcerrors.CodeOK, yarpcerrors.FromError(protoNoError).Code())
-	assert.Nil(t, ToError(protoNoError))
-}
-
-func TestFromUnknownErrorMapsToUnknownError(t *testing.T) {
-	err := errors.New("unknown error")
-	protobufErr := FromError(err)
-	assert.True(t, yarpcerrors.IsUnknown(protobufErr))
-
-	assert.Equal(t, err, ToError(protobufErr))
-}
-
-func TestToUnknownErrorMapsToItself(t *testing.T) {
-	timeout := yarpcerrors.DeadlineExceededErrorf("timeout")
-	assert.Equal(t, timeout, ToError(timeout))
-}
+	DynamicConfigValue = types.DynamicConfigValue{
+		Value:   &DataBlob,
+		Filters: []*types.DynamicConfigFilter{&DynamicConfigFilter},
+	}
+	DynamicConfigEntry = types.DynamicConfigEntry{
+		Name:   DynamicConfigEntryName,
+		Values: []*types.DynamicConfigValue{&DynamicConfigValue},
+	}
+	DynamicConfigBlob = types.DynamicConfigBlob{
+		SchemaVersion: DynamicConfigBlobSchemaVersion,
+		Entries:       []*types.DynamicConfigEntry{&DynamicConfigEntry},
+	}
+)
