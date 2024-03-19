@@ -20,17 +20,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package testdata
+package testdata_test
 
 import (
 	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/uber/cadence/common/types/testdata"
 )
 
 func TestAllFieldsSetInTestErrors(t *testing.T) {
-	for _, err := range Errors {
+	for _, err := range testdata.Errors {
 		name := reflect.TypeOf(err).Elem().Name()
 		t.Run(name, func(t *testing.T) {
 			// Test all fields are set in the error
