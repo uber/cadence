@@ -1,6 +1,7 @@
 # Flow of tasks
 
-Below diagram explains (to certain level of detail) how a workflow is processed by Cadence workers and backend components.
+Below diagram demonstrates how a workflow is processed by Cadence workers and backend components.
+Note that this is a partial diagram that only highlights selected components and their interactions. There is more happening behind the scenes.
 
 [comment]: <> (To visualize mermaid flowchart below, install Mermaid plugin for your IDE. Works in github out of the box)
 
