@@ -864,6 +864,7 @@ type (
 		DomainID   string
 		Execution  types.WorkflowExecution
 		DomainName string
+		RangeID    int64
 	}
 
 	// GetWorkflowExecutionResponse is the response to GetworkflowExecutionRequest

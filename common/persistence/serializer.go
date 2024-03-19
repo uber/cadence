@@ -304,6 +304,9 @@ func (t *serializerImpl) DeserializeAsyncWorkflowsConfig(data *DataBlob) (*types
 }
 
 func (t *serializerImpl) SerializeChecksum(sum checksum.Checksum, encodingType common.EncodingType) (*DataBlob, error) {
+	if len(sum.Value) == 0 {
+		return nil, nil
+	}
 	return t.serialize(sum, encodingType)
 }
 
