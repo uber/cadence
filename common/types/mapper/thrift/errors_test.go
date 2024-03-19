@@ -43,6 +43,7 @@ func TestErrors(t *testing.T) {
 
 func TestNilMapsToNil(t *testing.T) {
 	assert.Nil(t, FromError(nil))
+	assert.Nil(t, ToError(nil))
 }
 
 func TestFromUnknownErrorMapsToItself(t *testing.T) {
