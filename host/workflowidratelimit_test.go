@@ -1,9 +1,8 @@
 package host
 
 import (
-	"errors"
-
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 )
@@ -30,21 +29,20 @@ func (s *IntegrationSuite) TestWorkflowIDSpecificRateLimits() {
 		WorkflowIDReusePolicy: types.WorkflowIDReusePolicyTerminateIfRunning.Ptr(),
 	}
 
-	busyErrCount := 0
-	for i := 0; i < 10; i++ {
-		ctx, cancel := createContext()
-		defer cancel()
+	ctx, cancel := createContext()
+	defer cancel()
 
+	// The ratelimit is 5 per second, so we should be able to start 5 workflows without any error
+	for i := 0; i < 5; i++ {
 		_, err := s.engine.StartWorkflowExecution(ctx, request)
-
-		var busyErr *types.ServiceBusyError
-		if errors.As(err, &busyErr) {
-			busyErrCount += 1
-		} else {
-			s.NoError(err)
-		}
+		assert.NoError(s.T(), err)
 	}
 
-	// The per workflow rate limit is 5, so we should see 5 busy errors
-	s.Equal(5, busyErrCount)
+	// Now we should get a rate limit error
+	for i := 0; i < 5; i++ {
+		_, err := s.engine.StartWorkflowExecution(ctx, request)
+		var busyErr *types.ServiceBusyError
+		assert.ErrorAs(s.T(), err, &busyErr)
+		assert.Equal(s.T(), common.WorkflowIDRateLimitReason, busyErr.Reason)
+	}
 }
