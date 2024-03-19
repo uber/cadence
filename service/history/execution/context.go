@@ -255,6 +255,9 @@ func (c *contextImpl) LoadExecutionStats(
 }
 
 func isChecksumError(err error) bool {
+	if err == nil {
+		return false
+	}
 	return strings.Contains(err.Error(), "checksum mismatch error")
 }
 
@@ -293,6 +296,12 @@ func (c *contextImpl) LoadWorkflowExecutionWithTaskVersion(
 				c.logger.Error("failed to load mutable state", tag.Error(err))
 				break
 			}
+			// backoff before retry
+			c.shard.GetTimeSource().Sleep(time.Millisecond * 100)
+		}
+		if isChecksumError(err) {
+			c.metricsClient.IncCounter(metrics.WorkflowContextScope, metrics.StaleMutableStateCounter)
+			c.logger.Error("encounter stale mutable state after retry", tag.Error(err))
 		}
 
 		c.stats = response.State.ExecutionStats
