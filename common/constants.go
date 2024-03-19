@@ -267,5 +267,5 @@ const (
 
 const (
 	// WorkflowIDRateLimitReason is the reason set in ServiceBusyError when workflow ID rate limit is exceeded
-	WorkflowIDRateLimitReason = "workflow-id-rate-limit"
+	WorkflowIDRateLimitReason = "external-workflow-id-rate-limit"
 )
