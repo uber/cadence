@@ -268,8 +268,7 @@ func IsServiceTransientError(err error) bool {
 	case errors.As(err, &typesInternalServiceError):
 		return true
 	case errors.As(err, &typesServiceBusyError):
-		// If the service busy error is due to workflow id rate limiting, then it is not transient
-		return typesServiceBusyError.Reason != WorkflowIDRateLimitReason
+		return true
 	case errors.As(err, &typesShardOwnershipLostError):
 		return true
 	case errors.As(err, &yarpcErrorsStatus):
