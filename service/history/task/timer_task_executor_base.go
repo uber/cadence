@@ -132,14 +132,6 @@ func (t *timerTaskExecutorBase) deleteWorkflow(
 	msBuilder execution.MutableState,
 ) error {
 
-	if err := t.deleteCurrentWorkflowExecution(ctx, task); err != nil {
-		return err
-	}
-
-	if err := t.deleteWorkflowExecution(ctx, task); err != nil {
-		return err
-	}
-
 	if err := t.deleteWorkflowHistory(ctx, task, msBuilder); err != nil {
 		return err
 	}
@@ -147,6 +139,16 @@ func (t *timerTaskExecutorBase) deleteWorkflow(
 	if err := t.deleteWorkflowVisibility(ctx, task); err != nil {
 		return err
 	}
+
+	if err := t.deleteCurrentWorkflowExecution(ctx, task); err != nil {
+		return err
+	}
+
+	// it must be the last one due to the nature of workflow execution deletion
+	if err := t.deleteWorkflowExecution(ctx, task); err != nil {
+		return err
+	}
+
 	// calling clear here to force accesses of mutable state to read database
 	// if this is not called then callers will get mutable state even though its been removed from database
 	context.Clear()
@@ -197,12 +199,6 @@ func (t *timerTaskExecutorBase) archiveWorkflow(
 		return err
 	}
 
-	if err := t.deleteCurrentWorkflowExecution(ctx, task); err != nil {
-		return err
-	}
-	if err := t.deleteWorkflowExecution(ctx, task); err != nil {
-		return err
-	}
 	// delete workflow history if history archival is not needed or history as been archived inline
 	if resp.HistoryArchivedInline {
 		t.metricsClient.IncCounter(metrics.HistoryProcessDeleteHistoryEventScope, metrics.WorkflowCleanupDeleteHistoryInlineCount)
@@ -213,6 +209,13 @@ func (t *timerTaskExecutorBase) archiveWorkflow(
 	// delete visibility record here regardless if it's been archived inline or not
 	// since the entire record is included as part of the archive request.
 	if err := t.deleteWorkflowVisibility(ctx, task); err != nil {
+		return err
+	}
+
+	if err := t.deleteCurrentWorkflowExecution(ctx, task); err != nil {
+		return err
+	}
+	if err := t.deleteWorkflowExecution(ctx, task); err != nil {
 		return err
 	}
 	// calling clear here to force accesses of mutable state to read database

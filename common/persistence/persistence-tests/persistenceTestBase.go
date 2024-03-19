@@ -476,6 +476,7 @@ func (s *TestBase) GetWorkflowExecutionInfoWithStats(ctx context.Context, domain
 	response, err := s.ExecutionManager.GetWorkflowExecution(ctx, &persistence.GetWorkflowExecutionRequest{
 		DomainID:  domainID,
 		Execution: workflowExecution,
+		RangeID:   s.ShardInfo.RangeID,
 	})
 	if err != nil {
 		return nil, nil, err
@@ -490,6 +491,7 @@ func (s *TestBase) GetWorkflowExecutionInfo(ctx context.Context, domainID string
 	response, err := s.ExecutionManager.GetWorkflowExecution(ctx, &persistence.GetWorkflowExecutionRequest{
 		DomainID:  domainID,
 		Execution: workflowExecution,
+		RangeID:   s.ShardInfo.RangeID,
 	})
 	if err != nil {
 		return nil, err

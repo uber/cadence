@@ -44,6 +44,9 @@ var (
 		ClientImpl:        ClientImpl,
 		SupportedVersions: SupportedVersions,
 	}
+	FeatureNotEnabledError = types.FeatureNotEnabledError{
+		FeatureFlag: FeatureFlag,
+	}
 	CurrentBranchChangedError = types.CurrentBranchChangedError{
 		Message:            ErrorMessage,
 		CurrentBranchToken: BranchToken,
@@ -109,3 +112,27 @@ var (
 		Message: ErrorMessage,
 	}
 )
+
+var Errors = []error{
+	&AccessDeniedError,
+	&BadRequestError,
+	&CancellationAlreadyRequestedError,
+	&ClientVersionNotSupportedError,
+	&FeatureNotEnabledError,
+	&CurrentBranchChangedError,
+	&DomainAlreadyExistsError,
+	&DomainNotActiveError,
+	&EntityNotExistsError,
+	&WorkflowExecutionAlreadyCompletedError,
+	&EventAlreadyStartedError,
+	&InternalDataInconsistencyError,
+	&InternalServiceError,
+	&LimitExceededError,
+	&QueryFailedError,
+	&RemoteSyncMatchedError,
+	&RetryTaskV2Error,
+	&ServiceBusyError,
+	&ShardOwnershipLostError,
+	&WorkflowExecutionAlreadyStartedError,
+	&StickyWorkerUnavailableError,
+}
