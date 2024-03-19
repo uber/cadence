@@ -56,6 +56,7 @@ const (
 	ClientImpl           = "ClientImpl"
 	ClientLibraryVersion = "ClientLibraryVersion"
 	SupportedVersions    = "SupportedVersions"
+	FeatureFlag          = "FeatureFlag"
 
 	Attempt            = 2
 	PageSize           = 10
