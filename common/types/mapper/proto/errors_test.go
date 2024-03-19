@@ -33,7 +33,6 @@ import (
 
 func TestErrors(t *testing.T) {
 	for _, err := range []error{
-		nil, // OK - no error
 		&testdata.AccessDeniedError,
 		&testdata.BadRequestError,
 		&testdata.CancellationAlreadyRequestedError,
@@ -54,17 +53,49 @@ func TestErrors(t *testing.T) {
 		&testdata.ShardOwnershipLostError,
 		&testdata.WorkflowExecutionAlreadyStartedError,
 		&testdata.StickyWorkerUnavailableError,
-		errors.New("unknown error"),
 	} {
-		name := "OK"
-		if err != nil {
-			name = reflect.TypeOf(err).Elem().Name()
-		}
+		name := reflect.TypeOf(err).Elem().Name()
 		t.Run(name, func(t *testing.T) {
+			// Check that all the fields are set in the test error
+			assert.True(t, checkAllIsSet(err))
+
+			// Test that the mappings does not lose information
 			assert.Equal(t, err, ToError(FromError(err)))
 		})
 	}
+}
 
+func checkAllIsSet(err error) bool {
+	// All the errors are pointers, so we get the value with .Elem
+	errValue := reflect.ValueOf(err).Elem()
+
+	for i := 0; i < errValue.NumField(); i++ {
+		field := errValue.Field(i)
+
+		// IsZero checks if the value is the default value (e.g. nil, "", 0 etc)
+		if field.IsZero() {
+			return false
+		}
+	}
+
+	return true
+}
+
+func TestNilMapping(t *testing.T) {
+	protobufNoError := FromError(nil)
+	assert.Equal(t, yarpcerrors.CodeOK, yarpcerrors.FromError(protobufNoError).Code())
+	assert.Nil(t, ToError(protobufNoError))
+}
+
+func TestUnknownError(t *testing.T) {
+	err := errors.New("unknown error")
+	protobufErr := FromError(err)
+	assert.True(t, yarpcerrors.IsUnknown(protobufErr))
+	assert.Equal(t, err, ToError(protobufErr))
+}
+
+func TestTimeoutError(t *testing.T) {
+	// For unknown errors we return the raw yarpc error
 	timeout := yarpcerrors.DeadlineExceededErrorf("timeout")
 	assert.Equal(t, timeout, ToError(timeout))
 }

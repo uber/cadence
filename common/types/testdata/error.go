@@ -95,6 +95,7 @@ var (
 	}
 	ServiceBusyError = types.ServiceBusyError{
 		Message: ErrorMessage,
+		Reason:  "TestReason",
 	}
 	ShardOwnershipLostError = types.ShardOwnershipLostError{
 		Message: ErrorMessage,
