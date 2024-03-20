@@ -123,8 +123,13 @@ func (s *fakeSession) Close() {
 
 // fakeIter is fake implementation of gocql.Iter
 type fakeIter struct {
+	// input parametrs
+	mapScanInputs []map[string]interface{}
+	pageState     []byte
+
 	// output parameters
-	closed bool
+	mapScanCalls int
+	closed       bool
 }
 
 // Scan is fake implementation of gocql.Iter.Scan
@@ -133,13 +138,21 @@ func (i *fakeIter) Scan(...interface{}) bool {
 }
 
 // MapScan is fake implementation of gocql.Iter.MapScan
-func (i *fakeIter) MapScan(map[string]interface{}) bool {
-	return false
+func (i *fakeIter) MapScan(res map[string]interface{}) bool {
+	if i.mapScanCalls >= len(i.mapScanInputs) {
+		return false
+	}
+
+	for k, v := range i.mapScanInputs[i.mapScanCalls] {
+		res[k] = v
+	}
+	i.mapScanCalls++
+	return true
 }
 
 // PageState is fake implementation of gocql.Iter.PageState
 func (i *fakeIter) PageState() []byte {
-	return nil
+	return i.pageState
 }
 
 // Close is fake implementation of gocql.Iter.Close
