@@ -1,6 +1,7 @@
 import (
     "context"
 
+    "github.com/uber/cadence/common"
     "github.com/uber/cadence/common/cache"
     "github.com/uber/cadence/common/quotas"
     "github.com/uber/cadence/common/types"
@@ -97,7 +98,10 @@ func (h *{{$decorator}}) {{$method.Declaration}} {
             }
 
             if !h.allowFunc({{$domainID}}, {{$workflowID}}) {
-                err = &types.ServiceBusyError{"Too many requests for the workflow ID"}
+                err = &types.ServiceBusyError{
+                    Message: "Too many requests for the workflow ID",
+                    Reason: common.WorkflowIDRateLimitReason,
+                }
                 return
             }
 

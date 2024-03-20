@@ -243,6 +243,17 @@ func ToServiceTransientError(err error) error {
 	return yarpcerrors.Newf(yarpcerrors.CodeUnavailable, err.Error())
 }
 
+// HistoryRetryFuncFrontendExceptions checks if an error should be retried
+// in a call from frontend
+func FrontendRetry(err error) bool {
+	var sbErr *types.ServiceBusyError
+	if errors.As(err, &sbErr) {
+		// If the service busy error is due to workflow id rate limiting, proxy it to the caller
+		return sbErr.Reason != WorkflowIDRateLimitReason
+	}
+	return IsServiceTransientError(err)
+}
+
 // IsServiceTransientError checks if the error is a transient error.
 func IsServiceTransientError(err error) bool {
 

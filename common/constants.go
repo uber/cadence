@@ -264,3 +264,8 @@ const (
 	// DefaultHistoryMaxAutoResetPoints is the default maximum number for auto reset points
 	DefaultHistoryMaxAutoResetPoints = 20
 )
+
+const (
+	// WorkflowIDRateLimitReason is the reason set in ServiceBusyError when workflow ID rate limit is exceeded
+	WorkflowIDRateLimitReason = "external-workflow-id-rate-limit"
+)

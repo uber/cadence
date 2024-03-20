@@ -5678,6 +5678,7 @@ func (v *SearchAttributes) GetIndexedFields() (o map[string][]byte) {
 // ServiceBusyError is an internal type (TBD...)
 type ServiceBusyError struct {
 	Message string `json:"message,required"`
+	Reason  string `json:"reason,omitempty"`
 }
 
 // SignalExternalWorkflowExecutionDecisionAttributes is an internal type (TBD...)
