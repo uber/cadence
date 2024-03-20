@@ -153,7 +153,7 @@ var (
 	DescribeTaskListResponseMap = map[string]*types.DescribeTaskListResponse{DomainName: &MatchingDescribeTaskListResponse}
 
 	MatchingActivityTaskDispatchInfo = types.ActivityTaskDispatchInfo{
-		ScheduledEvent:                  &HistoryEvent_WorkflowExecutionSignaled,
+		ScheduledEvent:                  &HistoryEvent_WorkflowExecutionStarted,
 		StartedTimestamp:                &Timestamp1,
 		Attempt:                         &Attempt2,
 		ScheduledTimestampOfThisAttempt: &Timestamp1,

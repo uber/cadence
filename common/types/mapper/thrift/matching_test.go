@@ -23,6 +23,8 @@ package thrift
 import (
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common/types"
@@ -75,7 +77,10 @@ func TestActivityTaskDispatchInfo(t *testing.T) {
 	for _, tc := range testCases {
 		thriftObj := FromActivityTaskDispatchInfo(tc.input)
 		roundTripObj := ToActivityTaskDispatchInfo(thriftObj)
-		assert.Equal(t, tc.input, roundTripObj)
+		opts := cmpopts.IgnoreFields(types.WorkflowExecutionStartedEventAttributes{}, "ParentWorkflowDomainID")
+		if diff := cmp.Diff(tc.input, roundTripObj, opts); diff != "" {
+			t.Fatalf("Mismatch (-want +got):\n%s", diff)
+		}
 	}
 }
 
@@ -229,32 +234,33 @@ func TestMatchingPollForDecisionRequest(t *testing.T) {
 	}
 }
 
-// TODO: fix issue of ParentExecutionWorkflowDomainID not getting populated issue
-// https://uber-cadence.slack.com/archives/CLS1SM941/p1710939637636519
-// func TestMatchingPollForDecisionResponse(t *testing.T) {
-// 	testCases := []struct {
-// 		desc  string
-// 		input *types.MatchingPollForDecisionTaskResponse
-// 	}{
-// 		{
-// 			desc:  "non-nil input test",
-// 			input: &testdata.MatchingPollForDecisionTaskResponse,
-// 		},
-// 		{
-// 			desc:  "empty input test",
-// 			input: &types.MatchingPollForDecisionTaskResponse{},
-// 		},
-// 		{
-// 			desc:  "nil input test",
-// 			input: nil,
-// 		},
-// 	}
-// 	for _, tc := range testCases {
-// 		thriftObj := FromMatchingPollForDecisionTaskResponse(tc.input)
-// 		roundTripObj := ToMatchingPollForDecisionTaskResponse(thriftObj)
-// 		assert.Equal(t, tc.input, roundTripObj)
-// 	}
-// }
+func TestMatchingPollForDecisionResponse(t *testing.T) {
+	testCases := []struct {
+		desc  string
+		input *types.MatchingPollForDecisionTaskResponse
+	}{
+		{
+			desc:  "non-nil input test",
+			input: &testdata.MatchingPollForDecisionTaskResponse,
+		},
+		{
+			desc:  "empty input test",
+			input: &types.MatchingPollForDecisionTaskResponse{},
+		},
+		{
+			desc:  "nil input test",
+			input: nil,
+		},
+	}
+	for _, tc := range testCases {
+		thriftObj := FromMatchingPollForDecisionTaskResponse(tc.input)
+		roundTripObj := ToMatchingPollForDecisionTaskResponse(thriftObj)
+		opt := cmpopts.IgnoreFields(types.WorkflowExecutionStartedEventAttributes{}, "ParentWorkflowDomainID")
+		if diff := cmp.Diff(tc.input, roundTripObj, opt); diff != "" {
+			t.Fatalf("Mismatch (-want +got):\n%s", diff)
+		}
+	}
+}
 
 func TestMatchingQueryWorkflowRequest(t *testing.T) {
 	testCases := []struct {
