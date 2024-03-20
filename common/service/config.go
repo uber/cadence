@@ -20,7 +20,10 @@
 
 package service
 
-import "github.com/uber/cadence/common/dynamicconfig"
+import (
+	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/dynamicconfig"
+)
 
 type (
 	// Config is a subset of the service dynamic config for single service
@@ -50,5 +53,7 @@ type (
 		ValidSearchAttributes  dynamicconfig.MapPropertyFn `yaml:"-" json:"-"`
 		// deprecated: never read from, all ES reads and writes erroneously use PersistenceMaxQPS
 		ESVisibilityListMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
+
+		IsErrorRetryableFunction backoff.IsRetryable
 	}
 )

@@ -4871,6 +4871,7 @@ func FromServiceBusyError(t *types.ServiceBusyError) *shared.ServiceBusyError {
 	}
 	return &shared.ServiceBusyError{
 		Message: t.Message,
+		Reason:  &t.Reason,
 	}
 }
 
@@ -4881,6 +4882,7 @@ func ToServiceBusyError(t *shared.ServiceBusyError) *types.ServiceBusyError {
 	}
 	return &types.ServiceBusyError{
 		Message: t.Message,
+		Reason:  t.GetReason(),
 	}
 }
 

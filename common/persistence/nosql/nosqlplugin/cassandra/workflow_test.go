@@ -670,6 +670,252 @@ func TestDeleteWorkflowExecution(t *testing.T) {
 	}
 }
 
+func TestSelectAllCurrentWorkflows(t *testing.T) {
+	tests := []struct {
+		name           string
+		shardID        int
+		pageToken      []byte
+		pageSize       int
+		iter           *fakeIter
+		wantExecutions []*persistence.CurrentWorkflowExecution
+		wantErr        bool
+	}{
+		{
+			name:      "nil iter returned",
+			shardID:   1,
+			pageToken: []byte("test-page-token"),
+			pageSize:  10,
+			wantErr:   true,
+		},
+		{
+			name:      "run_id is not permanentRunID so excluded from result",
+			shardID:   1,
+			pageToken: []byte("test-page-token"),
+			pageSize:  10,
+			iter: &fakeIter{
+				mapScanInputs: []map[string]interface{}{
+					{
+						"run_id": &fakeUUID{uuid: "17C305FA-79BB-479E-8AC7-360E956AC01A"},
+					},
+				},
+				pageState: []byte("test-page-token-2"),
+			},
+			wantExecutions: nil,
+		},
+		{
+			name:      "multiple executions",
+			shardID:   1,
+			pageToken: []byte("test-page-token"),
+			pageSize:  10,
+			iter: &fakeIter{
+				mapScanInputs: []map[string]interface{}{
+					{
+						"run_id":         &fakeUUID{uuid: permanentRunID},
+						"domain_id":      &fakeUUID{uuid: "domain1"},
+						"current_run_id": &fakeUUID{uuid: "runid1"},
+						"workflow_id":    "wfid1",
+						"workflow_state": 1,
+					},
+					{
+						"run_id":         &fakeUUID{uuid: permanentRunID},
+						"domain_id":      &fakeUUID{uuid: "domain1"},
+						"current_run_id": &fakeUUID{uuid: "runid2"},
+						"workflow_id":    "wfid2",
+						"workflow_state": 1,
+					},
+				},
+				pageState: []byte("test-page-token-2"),
+			},
+			wantExecutions: []*persistence.CurrentWorkflowExecution{
+				{
+					DomainID:     "domain1",
+					WorkflowID:   "wfid1",
+					RunID:        "30000000-0000-f000-f000-000000000001",
+					State:        1,
+					CurrentRunID: "runid1",
+				},
+				{
+					DomainID:     "domain1",
+					WorkflowID:   "wfid2",
+					RunID:        "30000000-0000-f000-f000-000000000001",
+					State:        1,
+					CurrentRunID: "runid2",
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+
+			query := gocql.NewMockQuery(ctrl)
+			query.EXPECT().PageSize(tc.pageSize).Return(query).Times(1)
+			query.EXPECT().PageState(tc.pageToken).Return(query).Times(1)
+			query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+			if tc.iter != nil {
+				query.EXPECT().Iter().Return(tc.iter).Times(1)
+			} else {
+				// Passing tc.iter to Return() doesn't work even though tc.iter is nil due to Go's typed nils.
+				// So, we have to call Return(nil) directly.
+				query.EXPECT().Iter().Return(nil).Times(1)
+			}
+
+			session := &fakeSession{
+				query: query,
+			}
+			client := gocql.NewMockClient(ctrl)
+			cfg := &config.NoSQL{}
+			logger := testlogger.New(t)
+			dc := &persistence.DynamicConfiguration{}
+			db := newCassandraDBFromSession(cfg, session, logger, dc, dbWithClient(client))
+
+			gotExecutions, gotPageToken, err := db.SelectAllCurrentWorkflows(context.Background(), tc.shardID, tc.pageToken, tc.pageSize)
+			if (err != nil) != tc.wantErr {
+				t.Errorf("SelectAllCurrentWorkflows() error: %v, wantErr %v", err, tc.wantErr)
+			}
+
+			if err != nil || tc.wantErr {
+				return
+			}
+
+			if diff := cmp.Diff(tc.wantExecutions, gotExecutions); diff != "" {
+				t.Fatalf("Executions mismatch (-want +got):\n%s", diff)
+			}
+
+			if diff := cmp.Diff(tc.iter.pageState, gotPageToken); diff != "" {
+				t.Fatalf("Page token mismatch (-want +got):\n%s", diff)
+			}
+
+			if !tc.iter.closed {
+				t.Error("iter was not closed")
+			}
+		})
+	}
+}
+
+func TestSelectAllWorkflowExecutions(t *testing.T) {
+	tests := []struct {
+		name           string
+		shardID        int
+		pageToken      []byte
+		pageSize       int
+		iter           *fakeIter
+		wantExecutions []*persistence.InternalListConcreteExecutionsEntity
+		wantErr        bool
+	}{
+		{
+			name:      "nil iter returned",
+			shardID:   1,
+			pageToken: []byte("test-page-token"),
+			pageSize:  10,
+			wantErr:   true,
+		},
+		{
+			name:      "run_id is permanentRunID so excluded from result",
+			shardID:   1,
+			pageToken: []byte("test-page-token"),
+			pageSize:  10,
+			iter: &fakeIter{
+				mapScanInputs: []map[string]interface{}{
+					{
+						"run_id": &fakeUUID{uuid: "30000000-0000-f000-f000-000000000001"},
+					},
+				},
+				pageState: []byte("test-page-token-2"),
+			},
+			wantExecutions: nil,
+		},
+		{
+			name:      "multiple executions",
+			shardID:   1,
+			pageToken: []byte("test-page-token"),
+			pageSize:  10,
+			iter: &fakeIter{
+				mapScanInputs: []map[string]interface{}{
+					{
+						"run_id": &fakeUUID{uuid: "runid1"},
+						"execution": map[string]interface{}{
+							"domain_id":   &fakeUUID{uuid: "domain1"},
+							"workflow_id": "wfid1",
+						},
+						"version_histories":          []byte("test-version-histories-1"),
+						"version_histories_encoding": "thriftrw",
+					},
+					{
+						"run_id": &fakeUUID{uuid: "runid2"},
+						"execution": map[string]interface{}{
+							"domain_id":   &fakeUUID{uuid: "domain1"},
+							"workflow_id": "wfid2",
+						},
+						"version_histories":          []byte("test-version-histories-1"),
+						"version_histories_encoding": "thriftrw",
+					},
+				},
+				pageState: []byte("test-page-token-2"),
+			},
+			wantExecutions: []*persistence.InternalListConcreteExecutionsEntity{
+				{
+					ExecutionInfo:    &persistence.InternalWorkflowExecutionInfo{DomainID: "domain1", WorkflowID: "wfid1"},
+					VersionHistories: &persistence.DataBlob{Encoding: "thriftrw", Data: []uint8("test-version-histories-1")},
+				},
+				{
+					ExecutionInfo:    &persistence.InternalWorkflowExecutionInfo{DomainID: "domain1", WorkflowID: "wfid2"},
+					VersionHistories: &persistence.DataBlob{Encoding: "thriftrw", Data: []uint8("test-version-histories-1")},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+
+			query := gocql.NewMockQuery(ctrl)
+			query.EXPECT().PageSize(tc.pageSize).Return(query).Times(1)
+			query.EXPECT().PageState(tc.pageToken).Return(query).Times(1)
+			query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+			if tc.iter != nil {
+				query.EXPECT().Iter().Return(tc.iter).Times(1)
+			} else {
+				// Passing tc.iter to Return() doesn't work even though tc.iter is nil due to Go's typed nils.
+				// So, we have to call Return(nil) directly.
+				query.EXPECT().Iter().Return(nil).Times(1)
+			}
+
+			session := &fakeSession{
+				query: query,
+			}
+			client := gocql.NewMockClient(ctrl)
+			cfg := &config.NoSQL{}
+			logger := testlogger.New(t)
+			dc := &persistence.DynamicConfiguration{}
+			db := newCassandraDBFromSession(cfg, session, logger, dc, dbWithClient(client))
+
+			gotExecutions, gotPageToken, err := db.SelectAllWorkflowExecutions(context.Background(), tc.shardID, tc.pageToken, tc.pageSize)
+			if (err != nil) != tc.wantErr {
+				t.Errorf("SelectAllWorkflowExecutions() error: %v, wantErr %v", err, tc.wantErr)
+			}
+
+			if err != nil || tc.wantErr {
+				return
+			}
+
+			if diff := cmp.Diff(tc.wantExecutions, gotExecutions); diff != "" {
+				t.Fatalf("Executions mismatch (-want +got):\n%s", diff)
+			}
+
+			if diff := cmp.Diff(tc.iter.pageState, gotPageToken); diff != "" {
+				t.Fatalf("Page token mismatch (-want +got):\n%s", diff)
+			}
+
+			if !tc.iter.closed {
+				t.Error("iter was not closed")
+			}
+		})
+	}
+}
+
 func TestDeleteTransferTask(t *testing.T) {
 	tests := []struct {
 		name        string
