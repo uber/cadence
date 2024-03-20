@@ -35,7 +35,6 @@ func TestExecutionManager_ProxyStoreMethods(t *testing.T) {
 	for _, tc := range []struct {
 		method       string
 		prepareMocks func(*MockExecutionStore)
-		verifyRes    func(t *testing.T, resValues []reflect.Value)
 	}{
 		{
 			method: "GetShardID",
@@ -178,33 +177,6 @@ func TestExecutionManager_ProxyStoreMethods(t *testing.T) {
 				mockedStore.EXPECT().GetReplicationDLQSize(gomock.Any(), gomock.Any()).Return(nil, nil)
 			},
 		},
-		{
-			method: "GetReplicationTasks",
-			prepareMocks: func(mockedStore *MockExecutionStore) {
-				mockedStore.EXPECT().GetReplicationTasks(gomock.Any(), gomock.Any()).Return(&InternalGetReplicationTasksResponse{
-					Tasks: []*InternalReplicationTaskInfo{
-						{
-							DomainID: "test",
-							TaskID:   1,
-						},
-						{
-							DomainID: "test",
-							TaskID:   2,
-						},
-					},
-					NextPageToken: nil,
-				}, nil)
-			},
-			verifyRes: func(t *testing.T, resValues []reflect.Value) {
-				assert.Len(t, resValues, 2)
-				res := resValues[0].Interface().(*GetReplicationTasksResponse)
-				assert.Len(t, res.Tasks, 2)
-				assert.Equal(t, int64(1), res.Tasks[0].TaskID)
-				assert.Equal(t, int64(2), res.Tasks[1].TaskID)
-				assert.Nil(t, res.NextPageToken)
-				assert.Nil(t, resValues[1].Interface())
-			},
-		},
 	} {
 		t.Run(tc.method, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
@@ -216,6 +188,9 @@ func TestExecutionManager_ProxyStoreMethods(t *testing.T) {
 			methodType := method.Type()
 			args := methodType.NumIn()
 			var vals []reflect.Value
+			// If a method requires arguments, we expect the first argument to be a context
+			// and the rest to be zero values of the correct type.
+			// For methods like Close and GetShardID, we don't expect any arguments.
 			if args > 0 {
 				vals = append(vals, reflect.ValueOf(context.Background()))
 				for i := 1; i < args; i++ {
@@ -224,11 +199,6 @@ func TestExecutionManager_ProxyStoreMethods(t *testing.T) {
 			}
 
 			callRes := method.Call(vals)
-			if tc.verifyRes != nil {
-				tc.verifyRes(t, callRes)
-				return
-			}
-
 			if callRes == nil {
 				return
 			}
@@ -239,4 +209,32 @@ func TestExecutionManager_ProxyStoreMethods(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetReplicationTasks(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockedStore := NewMockExecutionStore(ctrl)
+	mockedStore.EXPECT().GetReplicationTasks(gomock.Any(), gomock.Any()).Return(&InternalGetReplicationTasksResponse{
+		Tasks: []*InternalReplicationTaskInfo{
+			{
+				DomainID: "test",
+				TaskID:   1,
+			},
+			{
+				DomainID: "test",
+				TaskID:   2,
+			},
+		},
+		NextPageToken: nil,
+	}, nil)
+
+	manager := NewExecutionManagerImpl(mockedStore, testlogger.New(t), nil)
+	res, err := manager.GetReplicationTasks(context.Background(), &GetReplicationTasksRequest{})
+	assert.NoError(t, err)
+	assert.Len(t, res.Tasks, 2)
+	assert.Equal(t, int64(1), res.Tasks[0].TaskID)
+	assert.Equal(t, int64(2), res.Tasks[1].TaskID)
+	assert.Nil(t, res.NextPageToken)
 }
