@@ -223,7 +223,7 @@ func New(
 	frontendClient := retryable.NewFrontendClient(
 		frontendRawClient,
 		common.CreateFrontendServiceRetryPolicy(),
-		common.IsServiceTransientError,
+		serviceConfig.IsErrorRetryableFunction,
 	)
 
 	matchingRawClient, err := clientBean.GetMatchingClient(domainCache.GetDomainName)
@@ -233,14 +233,14 @@ func New(
 	matchingClient := retryable.NewMatchingClient(
 		matchingRawClient,
 		common.CreateMatchingServiceRetryPolicy(),
-		common.IsServiceTransientError,
+		serviceConfig.IsErrorRetryableFunction,
 	)
 
 	historyRawClient := clientBean.GetHistoryClient()
 	historyClient := retryable.NewHistoryClient(
 		historyRawClient,
 		common.CreateHistoryServiceRetryPolicy(),
-		common.IsServiceTransientError,
+		serviceConfig.IsErrorRetryableFunction,
 	)
 
 	historyArchiverBootstrapContainer := &archiver.HistoryBootstrapContainer{

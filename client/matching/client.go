@@ -22,7 +22,6 @@ package matching
 
 import (
 	"context"
-	"time"
 
 	"go.uber.org/yarpc"
 
@@ -33,35 +32,22 @@ import (
 
 var _ Client = (*clientImpl)(nil)
 
-const (
-	// DefaultTimeout is the default timeout used to make calls
-	DefaultTimeout = time.Minute
-	// DefaultLongPollTimeout is the long poll default timeout used to make calls
-	DefaultLongPollTimeout = time.Minute * 2
-)
-
 type clientImpl struct {
-	timeout         time.Duration
-	longPollTimeout time.Duration
-	client          Client
-	peerResolver    PeerResolver
-	loadBalancer    LoadBalancer
+	client       Client
+	peerResolver PeerResolver
+	loadBalancer LoadBalancer
 }
 
 // NewClient creates a new history service TChannel client
 func NewClient(
-	timeout time.Duration,
-	longPollTimeout time.Duration,
 	client Client,
 	peerResolver PeerResolver,
 	lb LoadBalancer,
 ) Client {
 	return &clientImpl{
-		timeout:         timeout,
-		longPollTimeout: longPollTimeout,
-		client:          client,
-		peerResolver:    peerResolver,
-		loadBalancer:    lb,
+		client:       client,
+		peerResolver: peerResolver,
+		loadBalancer: lb,
 	}
 }
 
@@ -81,8 +67,6 @@ func (c *clientImpl) AddActivityTask(
 	if err != nil {
 		return err
 	}
-	ctx, cancel := c.createContext(ctx)
-	defer cancel()
 	return c.client.AddActivityTask(ctx, request, append(opts, yarpc.WithShardKey(peer))...)
 }
 
@@ -102,8 +86,6 @@ func (c *clientImpl) AddDecisionTask(
 	if err != nil {
 		return err
 	}
-	ctx, cancel := c.createContext(ctx)
-	defer cancel()
 	return c.client.AddDecisionTask(ctx, request, append(opts, yarpc.WithShardKey(peer))...)
 }
 
@@ -123,8 +105,6 @@ func (c *clientImpl) PollForActivityTask(
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := c.createLongPollContext(ctx)
-	defer cancel()
 	return c.client.PollForActivityTask(ctx, request, append(opts, yarpc.WithShardKey(peer))...)
 }
 
@@ -144,8 +124,6 @@ func (c *clientImpl) PollForDecisionTask(
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := c.createLongPollContext(ctx)
-	defer cancel()
 	return c.client.PollForDecisionTask(ctx, request, append(opts, yarpc.WithShardKey(peer))...)
 }
 
@@ -165,8 +143,6 @@ func (c *clientImpl) QueryWorkflow(
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := c.createContext(ctx)
-	defer cancel()
 	return c.client.QueryWorkflow(ctx, request, append(opts, yarpc.WithShardKey(peer))...)
 }
 
@@ -179,8 +155,6 @@ func (c *clientImpl) RespondQueryTaskCompleted(
 	if err != nil {
 		return err
 	}
-	ctx, cancel := c.createContext(ctx)
-	defer cancel()
 	return c.client.RespondQueryTaskCompleted(ctx, request, append(opts, yarpc.WithShardKey(peer))...)
 }
 
@@ -193,8 +167,6 @@ func (c *clientImpl) CancelOutstandingPoll(
 	if err != nil {
 		return err
 	}
-	ctx, cancel := c.createContext(ctx)
-	defer cancel()
 	return c.client.CancelOutstandingPoll(ctx, request, append(opts, yarpc.WithShardKey(peer))...)
 }
 
@@ -207,8 +179,6 @@ func (c *clientImpl) DescribeTaskList(
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := c.createContext(ctx)
-	defer cancel()
 	return c.client.DescribeTaskList(ctx, request, append(opts, yarpc.WithShardKey(peer))...)
 }
 
@@ -221,8 +191,6 @@ func (c *clientImpl) ListTaskListPartitions(
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := c.createContext(ctx)
-	defer cancel()
 	return c.client.ListTaskListPartitions(ctx, request, append(opts, yarpc.WithShardKey(peer))...)
 }
 
@@ -270,22 +238,4 @@ func (c *clientImpl) GetTaskListsByDomain(
 		DecisionTaskListMap: decisionTaskListMap,
 		ActivityTaskListMap: activityTaskListMap,
 	}, nil
-}
-
-func (c *clientImpl) createContext(
-	parent context.Context,
-) (context.Context, context.CancelFunc) {
-	if parent == nil {
-		return context.WithTimeout(context.Background(), c.timeout)
-	}
-	return context.WithTimeout(parent, c.timeout)
-}
-
-func (c *clientImpl) createLongPollContext(
-	parent context.Context,
-) (context.Context, context.CancelFunc) {
-	if parent == nil {
-		return context.WithTimeout(context.Background(), c.longPollTimeout)
-	}
-	return context.WithTimeout(parent, c.longPollTimeout)
 }

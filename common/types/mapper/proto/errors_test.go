@@ -32,39 +32,30 @@ import (
 )
 
 func TestErrors(t *testing.T) {
-	for _, err := range []error{
-		nil, // OK - no error
-		&testdata.AccessDeniedError,
-		&testdata.BadRequestError,
-		&testdata.CancellationAlreadyRequestedError,
-		&testdata.ClientVersionNotSupportedError,
-		&testdata.CurrentBranchChangedError,
-		&testdata.DomainAlreadyExistsError,
-		&testdata.DomainNotActiveError,
-		&testdata.EntityNotExistsError,
-		&testdata.WorkflowExecutionAlreadyCompletedError,
-		&testdata.EventAlreadyStartedError,
-		&testdata.InternalDataInconsistencyError,
-		&testdata.InternalServiceError,
-		&testdata.LimitExceededError,
-		&testdata.QueryFailedError,
-		&testdata.RemoteSyncMatchedError,
-		&testdata.RetryTaskV2Error,
-		&testdata.ServiceBusyError,
-		&testdata.ShardOwnershipLostError,
-		&testdata.WorkflowExecutionAlreadyStartedError,
-		&testdata.StickyWorkerUnavailableError,
-		errors.New("unknown error"),
-	} {
-		name := "OK"
-		if err != nil {
-			name = reflect.TypeOf(err).Elem().Name()
-		}
+	for _, err := range testdata.Errors {
+		name := reflect.TypeOf(err).Elem().Name()
 		t.Run(name, func(t *testing.T) {
+			// Test that the mappings does not lose information
 			assert.Equal(t, err, ToError(FromError(err)))
 		})
 	}
+}
 
+func TestNilMapsToOK(t *testing.T) {
+	protoNoError := FromError(nil)
+	assert.Equal(t, yarpcerrors.CodeOK, yarpcerrors.FromError(protoNoError).Code())
+	assert.Nil(t, ToError(protoNoError))
+}
+
+func TestFromUnknownErrorMapsToUnknownError(t *testing.T) {
+	err := errors.New("unknown error")
+	protobufErr := FromError(err)
+	assert.True(t, yarpcerrors.IsUnknown(protobufErr))
+
+	assert.Equal(t, err, ToError(protobufErr))
+}
+
+func TestToUnknownErrorMapsToItself(t *testing.T) {
 	timeout := yarpcerrors.DeadlineExceededErrorf("timeout")
 	assert.Equal(t, timeout, ToError(timeout))
 }

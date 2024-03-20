@@ -1,7 +1,5 @@
-// The MIT License (MIT)
-
-// Copyright (c) 2017-2020 Uber Technologies Inc.
-
+// Copyright (c) 2021 Uber Technologies Inc.
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -20,14 +18,40 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package sql
+package thrift
 
 import (
-	"os"
+	"errors"
+	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/yarpc/yarpcerrors"
+
+	"github.com/uber/cadence/common/types/testdata"
 )
 
-func TestMain(m *testing.M) {
-	RegisterPlugin("shared", &fakePlugin{})
-	os.Exit(m.Run())
+func TestErrors(t *testing.T) {
+	for _, err := range testdata.Errors {
+		name := reflect.TypeOf(err).Elem().Name()
+		t.Run(name, func(t *testing.T) {
+			// Test that the mappings does not lose information
+			assert.Equal(t, err, ToError(FromError(err)))
+		})
+	}
+}
+
+func TestNilMapsToNil(t *testing.T) {
+	assert.Nil(t, FromError(nil))
+	assert.Nil(t, ToError(nil))
+}
+
+func TestFromUnknownErrorMapsToItself(t *testing.T) {
+	err := errors.New("unknown error")
+	assert.Equal(t, err, FromError(err))
+}
+
+func TestToUnknownErrorMapsToItself(t *testing.T) {
+	err := yarpcerrors.DeadlineExceededErrorf("timeout")
+	assert.Equal(t, err, ToError(err))
 }
