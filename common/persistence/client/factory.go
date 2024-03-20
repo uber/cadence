@@ -250,7 +250,7 @@ func (f *factoryImpl) NewExecutionManager(shardID int) (p.ExecutionManager, erro
 	if err != nil {
 		return nil, err
 	}
-	result := p.NewExecutionManagerImpl(store, f.logger)
+	result := p.NewExecutionManagerImpl(store, f.logger, p.NewPayloadSerializer())
 	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
 		result = errorinjectors.NewExecutionManager(result, errorRate, f.logger)
 	}
