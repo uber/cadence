@@ -24,8 +24,13 @@ package persistence
 
 import (
 	"context"
+	"fmt"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/checksum"
+	"github.com/uber/cadence/common/types"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -261,5 +266,279 @@ func TestGetReplicationTasks(t *testing.T) {
 			res, err := manager.GetReplicationTasks(context.Background(), &GetReplicationTasksRequest{})
 			tc.checkRes(t, res, err)
 		})
+	}
+}
+
+func TestExecutionManager_GetWorkflowExecution(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockedStore := NewMockExecutionStore(ctrl)
+	mockedSerializer := NewMockPayloadSerializer(ctrl)
+
+	manager := NewExecutionManagerImpl(mockedStore, testlogger.New(t), mockedSerializer)
+
+	request := &GetWorkflowExecutionRequest{
+		DomainID: testDomainID,
+		Execution: types.WorkflowExecution{
+			WorkflowID: testWorkflowID,
+			RunID:      testRunID,
+		},
+		RangeID: 1,
+	}
+
+	activityOne := sampleInternalActivityInfo("activity1")
+	activityTwo := sampleInternalActivityInfo("activity2")
+
+	wfCompletionEvent := NewDataBlob([]byte("wf-event"), common.EncodingTypeThriftRW)
+	wfCompletionEventData := generateTestHistoryEvent(99)
+
+	wfInfo := sampleInternalWorkflowExecutionInfo()
+	wfInfo.CompletionEvent = wfCompletionEvent
+	wfInfo.AutoResetPoints = NewDataBlob([]byte("test-reset-points"), common.EncodingTypeThriftRW)
+
+	mockedStore.EXPECT().GetWorkflowExecution(gomock.Any(), gomock.Any()).Return(&InternalGetWorkflowExecutionResponse{
+		State: &InternalWorkflowMutableState{
+			ExecutionInfo: wfInfo,
+			ActivityInfos: map[int64]*InternalActivityInfo{
+				1: activityOne,
+				2: activityTwo,
+			},
+			TimerInfos: map[string]*TimerInfo{
+				"test-timer": {
+					Version: 1,
+				},
+			},
+		},
+	}, nil)
+
+	mockedSerializer.EXPECT().DeserializeEvent(activityOne.ScheduledEvent).Return(&types.HistoryEvent{
+		ID: 1,
+	}, nil).Times(1)
+	mockedSerializer.EXPECT().DeserializeEvent(activityOne.StartedEvent).Return(&types.HistoryEvent{
+		ID: 1,
+	}, nil).Times(1)
+
+	mockedSerializer.EXPECT().DeserializeEvent(activityTwo.ScheduledEvent).Return(&types.HistoryEvent{
+		ID: 2,
+	}, nil).Times(1)
+	mockedSerializer.EXPECT().DeserializeEvent(activityTwo.StartedEvent).Return(&types.HistoryEvent{
+		ID: 2,
+	}, nil).Times(1)
+
+	mockedSerializer.EXPECT().DeserializeEvent(wfCompletionEvent).Return(wfCompletionEventData, nil).Times(1)
+	mockedSerializer.EXPECT().DeserializeResetPoints(gomock.Any()).Return(&types.ResetPoints{}, nil).Times(1)
+	mockedSerializer.EXPECT().DeserializeChecksum(gomock.Any()).Return(checksum.Checksum{}, nil).Times(1)
+
+	res, err := manager.GetWorkflowExecution(context.Background(), request)
+	assert.NoError(t, err)
+
+	expectedExecutionInfo := sampleWorkflowExecutionInfo()
+	expectedExecutionInfo.CompletionEvent = wfCompletionEventData
+	expectedExecutionInfo.AutoResetPoints = &types.ResetPoints{}
+
+	assert.Equal(t, &WorkflowMutableState{
+		ExecutionInfo:       expectedExecutionInfo,
+		ChildExecutionInfos: make(map[int64]*ChildExecutionInfo),
+		ActivityInfos: map[int64]*ActivityInfo{
+			1: sampleActivityInfo("activity1", 1),
+			2: sampleActivityInfo("activity2", 2),
+		},
+		TimerInfos: map[string]*TimerInfo{
+			"test-timer": {
+				Version: 1,
+			},
+		},
+		ExecutionStats: &ExecutionStats{
+			HistorySize: 0,
+		},
+		BufferedEvents: make([]*types.HistoryEvent, 0),
+	}, res.State)
+	// Expectations for the deserialization of activity events.
+	assert.Equal(t, &MutableStateStats{MutableStateSize: 170, ExecutionInfoSize: 20, ActivityInfoSize: 150, TimerInfoSize: 0, ChildInfoSize: 0, SignalInfoSize: 0, BufferedEventsSize: 0, ActivityInfoCount: 2, TimerInfoCount: 1, ChildInfoCount: 0, SignalInfoCount: 0, RequestCancelInfoCount: 0, BufferedEventsCount: 0}, res.MutableStateStats)
+}
+
+func TestExecutionManager_GetWorkflowExecution_NoWorkflow(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockedStore := NewMockExecutionStore(ctrl)
+	mockedSerializer := NewMockPayloadSerializer(ctrl)
+
+	manager := NewExecutionManagerImpl(mockedStore, testlogger.New(t), mockedSerializer)
+
+	request := &GetWorkflowExecutionRequest{
+		DomainID: "testDomain",
+		Execution: types.WorkflowExecution{
+			WorkflowID: "nonexistentWorkflow",
+			RunID:      "nonexistentRunID",
+		},
+		RangeID: 1,
+	}
+
+	mockedStore.EXPECT().GetWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, &types.EntityNotExistsError{})
+
+	_, err := manager.GetWorkflowExecution(context.Background(), request)
+	assert.Error(t, err)
+	assert.IsType(t, &types.EntityNotExistsError{}, err)
+}
+
+func TestExecutionManager_UpdateWorkflowExecution(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockedStore := NewMockExecutionStore(ctrl)
+	mockedSerializer := NewMockPayloadSerializer(ctrl)
+
+	manager := NewExecutionManagerImpl(mockedStore, testlogger.New(t), mockedSerializer)
+
+	info := sampleWorkflowExecutionInfo()
+	info.CompletionEvent = &types.HistoryEvent{
+		ID:        1,
+		EventType: types.EventTypeWorkflowExecutionCompleted.Ptr(),
+	}
+	info.AutoResetPoints = &types.ResetPoints{
+		Points: []*types.ResetPointInfo{
+			{
+				BinaryChecksum: "test-checksum",
+			},
+		},
+	}
+
+	expectedInfo := sampleInternalWorkflowMutation()
+	expectedInfo.ExecutionInfo.AutoResetPoints = &DataBlob{
+		Encoding: common.EncodingTypeThriftRW,
+		Data:     []byte("test-reset-points"),
+	}
+	expectedInfo.ExecutionInfo.CompletionEvent = &DataBlob{
+		Encoding: common.EncodingTypeThriftRW,
+		Data:     []byte("test-event"),
+	}
+	expectedInfo.ChecksumData = &DataBlob{
+		Encoding: common.EncodingTypeThriftRW,
+		Data:     []byte("test-checksum"),
+	}
+	expectedInfo.StartVersion = common.EmptyVersion
+	expectedInfo.LastWriteVersion = common.EmptyVersion
+	expectedInfo.UpsertActivityInfos = []*InternalActivityInfo{}
+	expectedInfo.UpsertChildExecutionInfos = []*InternalChildExecutionInfo{}
+
+	mockedSerializer.EXPECT().SerializeEvent(info.CompletionEvent, common.EncodingTypeThriftRW).Return(expectedInfo.ExecutionInfo.CompletionEvent, nil).Times(2)
+	mockedSerializer.EXPECT().SerializeResetPoints(info.AutoResetPoints, common.EncodingTypeThriftRW).Return(expectedInfo.ExecutionInfo.AutoResetPoints, nil).Times(2)
+
+	request := &UpdateWorkflowExecutionRequest{
+		RangeID: 1,
+		Mode:    UpdateWorkflowModeBypassCurrent,
+		UpdateWorkflowMutation: WorkflowMutation{
+			ExecutionInfo:  info,
+			ExecutionStats: &ExecutionStats{},
+			Checksum:       generateChecksum(),
+		},
+		Encoding: common.EncodingTypeThriftRW,
+		NewWorkflowSnapshot: &WorkflowSnapshot{
+			ExecutionInfo: info,
+			ExecutionStats: &ExecutionStats{
+				HistorySize: 1024,
+			},
+			Checksum: generateChecksum(),
+		},
+	}
+
+	expectedInfo.Checksum = request.UpdateWorkflowMutation.Checksum
+	mockedSerializer.EXPECT().SerializeChecksum(request.UpdateWorkflowMutation.Checksum, common.EncodingTypeJSON).Return(expectedInfo.ChecksumData, nil).Times(2)
+
+	expectedRequest := &InternalUpdateWorkflowExecutionRequest{
+		RangeID:                1,
+		Mode:                   UpdateWorkflowModeBypassCurrent,
+		UpdateWorkflowMutation: *expectedInfo,
+		NewWorkflowSnapshot: &InternalWorkflowSnapshot{
+			ExecutionInfo: expectedInfo.ExecutionInfo,
+		},
+	}
+	mockedStore.EXPECT().UpdateWorkflowExecution(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, req *InternalUpdateWorkflowExecutionRequest) error {
+		assert.Equal(t, expectedRequest.UpdateWorkflowMutation, req.UpdateWorkflowMutation)
+		return nil
+	})
+
+	res, err := manager.UpdateWorkflowExecution(context.Background(), request)
+	assert.NoError(t, err)
+	stats := &MutableStateUpdateSessionStats{
+		MutableStateSize:  40,
+		ExecutionInfoSize: 40,
+	}
+	assert.Equal(t, stats, res.MutableStateUpdateSessionStats)
+}
+
+func sampleInternalActivityInfo(name string) *InternalActivityInfo {
+	return &InternalActivityInfo{
+		Version:        1,
+		ScheduleID:     1,
+		ActivityID:     name,
+		ScheduledEvent: NewDataBlob([]byte(fmt.Sprintf("%s-activity-scheduled-event", name)), common.EncodingTypeThriftRW),
+		StartedEvent:   NewDataBlob([]byte(fmt.Sprintf("%s-activity-started-event", name)), common.EncodingTypeThriftRW),
+	}
+}
+
+func sampleActivityInfo(name string, id int64) *ActivityInfo {
+	return &ActivityInfo{
+		Version:    1,
+		ScheduleID: 1,
+		ActivityID: name,
+		ScheduledEvent: &types.HistoryEvent{
+			ID: id,
+		},
+		StartedEvent: &types.HistoryEvent{
+			ID: id,
+		},
+	}
+}
+
+var (
+	startedTimestamp           = time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+	scheduledTimestamp         = time.Date(2020, 2, 1, 0, 0, 0, 0, time.UTC)
+	originalScheduledTimestamp = time.Date(2020, 3, 1, 0, 0, 0, 0, time.UTC)
+
+	wfTimeout       = 10 * time.Second
+	decisionTimeout = 5 * time.Second
+)
+
+func sampleInternalWorkflowExecutionInfo() *InternalWorkflowExecutionInfo {
+	return &InternalWorkflowExecutionInfo{
+		DomainID:                           testDomain,
+		WorkflowTimeout:                    wfTimeout,
+		DecisionStartToCloseTimeout:        decisionTimeout,
+		DecisionStartedTimestamp:           startedTimestamp,
+		DecisionScheduledTimestamp:         scheduledTimestamp,
+		DecisionOriginalScheduledTimestamp: originalScheduledTimestamp,
+		WorkflowID:                         testWorkflowID,
+		RunID:                              testRunID,
+		WorkflowTypeName:                   testWorkflowType,
+		NextEventID:                        10,
+	}
+}
+
+func sampleWorkflowExecutionInfo() *WorkflowExecutionInfo {
+	return &WorkflowExecutionInfo{
+		DomainID:                           testDomain,
+		WorkflowTimeout:                    int32(wfTimeout.Seconds()),
+		DecisionStartToCloseTimeout:        int32(decisionTimeout.Seconds()),
+		DecisionScheduledTimestamp:         scheduledTimestamp.UnixNano(),
+		DecisionStartedTimestamp:           startedTimestamp.UnixNano(),
+		DecisionOriginalScheduledTimestamp: originalScheduledTimestamp.UnixNano(),
+		WorkflowID:                         testWorkflowID,
+		RunID:                              testRunID,
+		WorkflowTypeName:                   testWorkflowType,
+		NextEventID:                        10,
+	}
+}
+
+func sampleInternalWorkflowMutation() *InternalWorkflowMutation {
+	return &InternalWorkflowMutation{
+		ExecutionInfo: &InternalWorkflowExecutionInfo{
+			DomainID:                           testDomain,
+			WorkflowTimeout:                    wfTimeout,
+			DecisionStartToCloseTimeout:        decisionTimeout,
+			DecisionStartedTimestamp:           startedTimestamp,
+			DecisionScheduledTimestamp:         scheduledTimestamp,
+			DecisionOriginalScheduledTimestamp: originalScheduledTimestamp,
+			WorkflowID:                         testWorkflowID,
+			RunID:                              testRunID,
+			WorkflowTypeName:                   testWorkflowType,
+			NextEventID:                        10,
+		},
 	}
 }
