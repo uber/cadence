@@ -26,11 +26,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
+	"github.com/uber/cadence/common/log/testlogger"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/uber/cadence/common/log/testlogger"
 )
 
 func TestConvertSearchResultToVisibilityRecord(t *testing.T) {
