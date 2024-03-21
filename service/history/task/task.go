@@ -467,9 +467,15 @@ func someFuncToTryNewLineCoverage(a, b int) {
 	_ = a * b
 	_ = a / b
 	_ = a % b
+	if a == b {
+		return
+	}
 	_ = a & b
 	_ = a | b
 	_ = a ^ b
 	_ = a << b
+	_ = a >> b
+	_ = a >> b
+	_ = a >> b
 	_ = a >> b
 }

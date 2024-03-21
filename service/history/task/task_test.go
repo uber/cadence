@@ -327,3 +327,7 @@ func (s *taskSuite) newTestTask(
 	taskBase.scope = s.mockShard.GetMetricsClient().Scope(0)
 	return taskBase
 }
+
+func TestCoverage(t *testing.T) {
+	someFuncToTryNewLineCoverage(5, 5)
+}
