@@ -459,23 +459,3 @@ func getDomainTagByID(
 	}
 	return metrics.DomainTag(domainName), nil
 }
-
-// TODO: remove before merge
-func someFuncToTryNewLineCoverage(a, b int) {
-	_ = a + b
-	_ = a - b
-	_ = a * b
-	_ = a / b
-	_ = a % b
-	if a == b {
-		return
-	}
-	_ = a & b
-	_ = a | b
-	_ = a ^ b
-	_ = a << b
-	_ = a >> b
-	_ = a >> b
-	_ = a >> b
-	_ = a >> b
-}
