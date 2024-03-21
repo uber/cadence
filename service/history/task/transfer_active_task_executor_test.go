@@ -172,9 +172,12 @@ func (s *transferActiveTaskExecutorSuite) SetupTest() {
 	s.mockDomainCache = s.mockShard.Resource.DomainCache
 	s.mockWFCache = workflowcache.NewMockWFCache(s.controller)
 	s.mockDomainCache.EXPECT().GetDomainByID(s.domainID).Return(s.domainEntry, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestRateLimitedDomainID).Return(constants.TestRateLimitedDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainName(s.domainID).Return(s.domainName, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainName(constants.TestRateLimitedDomainID).Return(constants.TestRateLimitedDomainName, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainID(s.domainName).Return(s.domainID, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(s.domainName).Return(s.domainEntry, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomain(constants.TestRateLimitedDomainName).Return(constants.TestRateLimitedDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainByID(s.targetDomainID).Return(s.targetDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainName(s.targetDomainID).Return(s.targetDomainName, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainID(s.targetDomainName).Return(s.targetDomainID, nil).AnyTimes()
@@ -201,6 +204,12 @@ func (s *transferActiveTaskExecutorSuite) SetupTest() {
 		s.logger,
 		config,
 		s.mockWFCache,
+		func(domainName string) bool {
+			if domainName == constants.TestRateLimitedDomainName {
+				return true
+			}
+			return false
+		},
 	).(*transferActiveTaskExecutor)
 	s.transferActiveTaskExecutor.parentClosePolicyClient = s.mockParentClosePolicyClient
 }
@@ -244,6 +253,74 @@ func (s *transferActiveTaskExecutorSuite) TestProcessActivityTask_Success() {
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockMatchingClient.EXPECT().AddActivityTask(gomock.Any(), createAddActivityTaskRequest(transferTask, ai, mutableState.GetExecutionInfo().PartitionConfig)).Return(nil).Times(1)
 	s.mockWFCache.EXPECT().AllowInternal(constants.TestDomainID, constants.TestWorkflowID).Return(true).Times(1)
+	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
+	s.Nil(err)
+}
+
+func (s *transferActiveTaskExecutorSuite) TestProcessActivityTask_Ratelimits() {
+	workflowExecution, mutableState, decisionCompletionID, err := test.SetupWorkflowWithCompletedDecision(s.mockShard, s.domainID)
+	s.NoError(err)
+
+	event, ai := test.AddActivityTaskScheduledEvent(
+		mutableState,
+		decisionCompletionID,
+		"activity-1",
+		"some random activity type",
+		mutableState.GetExecutionInfo().TaskList,
+		[]byte{}, 1, 1, 1, 1,
+	)
+	mutableState.FlushBufferedEvents()
+
+	transferTaskInRatelimitedDomain := s.newTransferTaskFromInfo(&persistence.TransferTaskInfo{
+		Version:        s.version,
+		DomainID:       constants.TestRateLimitedDomainID,
+		TargetDomainID: s.targetDomainID,
+		WorkflowID:     workflowExecution.GetWorkflowID(),
+		RunID:          workflowExecution.GetRunID(),
+		TaskID:         int64(59),
+		TaskList:       mutableState.GetExecutionInfo().TaskList,
+		TaskType:       persistence.TransferTaskTypeActivityTask,
+		ScheduleID:     event.ID,
+	})
+
+	transferTask := s.newTransferTaskFromInfo(&persistence.TransferTaskInfo{
+		Version:        s.version,
+		DomainID:       s.domainID,
+		TargetDomainID: s.targetDomainID,
+		WorkflowID:     workflowExecution.GetWorkflowID(),
+		RunID:          workflowExecution.GetRunID(),
+		TaskID:         int64(59),
+		TaskList:       mutableState.GetExecutionInfo().TaskList,
+		TaskType:       persistence.TransferTaskTypeActivityTask,
+		ScheduleID:     event.ID,
+	})
+
+	persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, event.ID, event.Version)
+	s.NoError(err)
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
+
+	// expected calls to matching if task processing is allowed
+	s.mockMatchingClient.EXPECT().AddActivityTask(gomock.Any(), createAddActivityTaskRequest(transferTaskInRatelimitedDomain, ai, mutableState.GetExecutionInfo().PartitionConfig)).Return(nil).Times(1)
+	s.mockMatchingClient.EXPECT().AddActivityTask(gomock.Any(), createAddActivityTaskRequest(transferTask, ai, mutableState.GetExecutionInfo().PartitionConfig)).Return(nil).Times(2)
+
+	// ratelimiter enabled for _rateLimitedDomain and RPS still below allowed value so the task can be executed
+	s.mockWFCache.EXPECT().AllowInternal(constants.TestRateLimitedDomainID, constants.TestWorkflowID).Return(true).Times(1)
+	err = s.transferActiveTaskExecutor.Execute(transferTaskInRatelimitedDomain, true)
+	s.Nil(err)
+
+	// ratelimiter enabled for _rateLimitedDomain and RPS more than allowed limit so the task cannot be executed
+	s.mockWFCache.EXPECT().AllowInternal(constants.TestRateLimitedDomainID, constants.TestWorkflowID).Return(false).Times(1)
+	err = s.transferActiveTaskExecutor.Execute(transferTaskInRatelimitedDomain, true)
+	s.Error(err)
+	s.Equal("workflow is being rate limited for making too many requests", err.Error())
+
+	// ratelimiter not enabled for test domain and RPS still below allowed value so the task can be executed
+	s.mockWFCache.EXPECT().AllowInternal(constants.TestDomainID, constants.TestWorkflowID).Return(true).Times(1)
+	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
+	s.Nil(err)
+
+	// ratelimiter not enabled for test domain  and RPS more than allowed limit still the task can be executed
+	s.mockWFCache.EXPECT().AllowInternal(constants.TestDomainID, constants.TestWorkflowID).Return(false).Times(1)
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
 	s.Nil(err)
 }
@@ -340,6 +417,66 @@ func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_NonFirstDecisi
 	s.mockWFCache.EXPECT().AllowInternal(constants.TestDomainID, constants.TestWorkflowID).Return(true).Times(1)
 	s.mockMatchingClient.EXPECT().AddDecisionTask(gomock.Any(), createAddDecisionTaskRequest(transferTask, mutableState)).Return(nil).Times(1)
 
+	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
+	s.Nil(err)
+}
+
+func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_Ratelimits() {
+
+	workflowExecution, mutableState, _, err := test.SetupWorkflowWithCompletedDecision(s.mockShard, s.domainID)
+	s.NoError(err)
+
+	// make another round of decision
+	di := test.AddDecisionTaskScheduledEvent(mutableState)
+
+	transferTask := s.newTransferTaskFromInfo(&persistence.TransferTaskInfo{
+		Version:    s.version,
+		DomainID:   s.domainID,
+		WorkflowID: workflowExecution.GetWorkflowID(),
+		RunID:      workflowExecution.GetRunID(),
+		TaskID:     int64(59),
+		TaskList:   mutableState.GetExecutionInfo().TaskList,
+		TaskType:   persistence.TransferTaskTypeDecisionTask,
+		ScheduleID: di.ScheduleID,
+	})
+
+	rateLimitedTransferTask := s.newTransferTaskFromInfo(&persistence.TransferTaskInfo{
+		Version:    s.version,
+		DomainID:   constants.TestRateLimitedDomainID,
+		WorkflowID: workflowExecution.GetWorkflowID(),
+		RunID:      workflowExecution.GetRunID(),
+		TaskID:     int64(59),
+		TaskList:   mutableState.GetExecutionInfo().TaskList,
+		TaskType:   persistence.TransferTaskTypeDecisionTask,
+		ScheduleID: di.ScheduleID,
+	})
+
+	persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, di.ScheduleID, di.Version)
+	s.NoError(err)
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
+
+	// expected calls to matching if task processing is allowed
+	s.mockMatchingClient.EXPECT().AddDecisionTask(gomock.Any(), createAddDecisionTaskRequest(transferTask, mutableState)).Return(nil).Times(2)
+	s.mockMatchingClient.EXPECT().AddDecisionTask(gomock.Any(), createAddDecisionTaskRequest(rateLimitedTransferTask, mutableState)).Return(nil).Times(1)
+
+	// ratelimiter enabled for _rateLimitedDomain and RPS still below allowed value so the task can be executed
+	s.mockWFCache.EXPECT().AllowInternal(constants.TestRateLimitedDomainID, constants.TestWorkflowID).Return(true).Times(1)
+	err = s.transferActiveTaskExecutor.Execute(rateLimitedTransferTask, true)
+	s.Nil(err)
+
+	// ratelimiter enabled for _rateLimitedDomain and RPS more than allowed limit so the task cannot be executed
+	s.mockWFCache.EXPECT().AllowInternal(constants.TestRateLimitedDomainID, constants.TestWorkflowID).Return(false).Times(1)
+	err = s.transferActiveTaskExecutor.Execute(rateLimitedTransferTask, true)
+	s.Error(err)
+	s.Equal("workflow is being rate limited for making too many requests", err.Error())
+
+	// ratelimiter not enabled for test domain and RPS still below allowed value so the task can be executed
+	s.mockWFCache.EXPECT().AllowInternal(constants.TestDomainID, constants.TestWorkflowID).Return(true).Times(1)
+	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
+	s.Nil(err)
+
+	// ratelimiter not enabled for test domain  and RPS more than allowed limit still the task can be executed
+	s.mockWFCache.EXPECT().AllowInternal(constants.TestDomainID, constants.TestWorkflowID).Return(false).Times(1)
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
 	s.Nil(err)
 }

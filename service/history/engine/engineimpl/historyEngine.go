@@ -27,6 +27,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -88,43 +89,44 @@ var (
 
 type (
 	historyEngineImpl struct {
-		currentClusterName         string
-		shard                      shard.Context
-		timeSource                 clock.TimeSource
-		decisionHandler            decision.Handler
-		clusterMetadata            cluster.Metadata
-		historyV2Mgr               persistence.HistoryManager
-		executionManager           persistence.ExecutionManager
-		visibilityMgr              persistence.VisibilityManager
-		txProcessor                queue.Processor
-		timerProcessor             queue.Processor
-		crossClusterProcessor      queue.Processor
-		nDCReplicator              ndc.HistoryReplicator
-		nDCActivityReplicator      ndc.ActivityReplicator
-		historyEventNotifier       events.Notifier
-		tokenSerializer            common.TaskTokenSerializer
-		executionCache             *execution.Cache
-		metricsClient              metrics.Client
-		logger                     log.Logger
-		throttledLogger            log.Logger
-		config                     *config.Config
-		archivalClient             warchiver.Client
-		workflowResetter           reset.WorkflowResetter
-		queueTaskProcessor         task.Processor
-		crossClusterTaskProcessors common.Daemon
-		replicationTaskProcessors  []replication.TaskProcessor
-		replicationAckManager      replication.TaskAckManager
-		replicationTaskStore       *replication.TaskStore
-		replicationHydrator        replication.TaskHydrator
-		replicationMetricsEmitter  *replication.MetricsEmitterImpl
-		publicClient               workflowserviceclient.Interface
-		eventsReapplier            ndc.EventsReapplier
-		matchingClient             matching.Client
-		rawMatchingClient          matching.Client
-		clientChecker              client.VersionChecker
-		replicationDLQHandler      replication.DLQHandler
-		failoverMarkerNotifier     failover.MarkerNotifier
-		wfIDCache                  workflowcache.WFCache
+		currentClusterName             string
+		shard                          shard.Context
+		timeSource                     clock.TimeSource
+		decisionHandler                decision.Handler
+		clusterMetadata                cluster.Metadata
+		historyV2Mgr                   persistence.HistoryManager
+		executionManager               persistence.ExecutionManager
+		visibilityMgr                  persistence.VisibilityManager
+		txProcessor                    queue.Processor
+		timerProcessor                 queue.Processor
+		crossClusterProcessor          queue.Processor
+		nDCReplicator                  ndc.HistoryReplicator
+		nDCActivityReplicator          ndc.ActivityReplicator
+		historyEventNotifier           events.Notifier
+		tokenSerializer                common.TaskTokenSerializer
+		executionCache                 *execution.Cache
+		metricsClient                  metrics.Client
+		logger                         log.Logger
+		throttledLogger                log.Logger
+		config                         *config.Config
+		archivalClient                 warchiver.Client
+		workflowResetter               reset.WorkflowResetter
+		queueTaskProcessor             task.Processor
+		crossClusterTaskProcessors     common.Daemon
+		replicationTaskProcessors      []replication.TaskProcessor
+		replicationAckManager          replication.TaskAckManager
+		replicationTaskStore           *replication.TaskStore
+		replicationHydrator            replication.TaskHydrator
+		replicationMetricsEmitter      *replication.MetricsEmitterImpl
+		publicClient                   workflowserviceclient.Interface
+		eventsReapplier                ndc.EventsReapplier
+		matchingClient                 matching.Client
+		rawMatchingClient              matching.Client
+		clientChecker                  client.VersionChecker
+		replicationDLQHandler          replication.DLQHandler
+		failoverMarkerNotifier         failover.MarkerNotifier
+		wfIDCache                      workflowcache.WFCache
+		ratelimitInternalPerWorkflowID dynamicconfig.BoolPropertyFnWithDomainFilter
 	}
 )
 
@@ -155,6 +157,7 @@ func NewEngineWithShardContext(
 	queueTaskProcessor task.Processor,
 	failoverCoordinator failover.Coordinator,
 	wfIDCache workflowcache.WFCache,
+	ratelimitInternalPerWorkflowID dynamicconfig.BoolPropertyFnWithDomainFilter,
 ) engine.Engine {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 
@@ -237,7 +240,8 @@ func NewEngineWithShardContext(
 		replicationTaskStore: replicationTaskStore,
 		replicationMetricsEmitter: replication.NewMetricsEmitter(
 			shard.GetShardID(), shard, replicationReader, shard.GetMetricsClient()),
-		wfIDCache: wfIDCache,
+		wfIDCache:                      wfIDCache,
+		ratelimitInternalPerWorkflowID: ratelimitInternalPerWorkflowID,
 	}
 	historyEngImpl.decisionHandler = decision.NewHandler(
 		shard,
@@ -260,6 +264,7 @@ func NewEngineWithShardContext(
 		historyEngImpl.archivalClient,
 		openExecutionCheck,
 		historyEngImpl.wfIDCache,
+		historyEngImpl.ratelimitInternalPerWorkflowID,
 	)
 
 	historyEngImpl.timerProcessor = queue.NewTimerQueueProcessor(

@@ -34,6 +34,10 @@ var (
 	TestDomainID = "deadbeef-0123-4567-890a-bcdef0123456"
 	// TestDomainName is the domainName for test
 	TestDomainName = "some random domain name"
+	// TestRateLimitedDomainName is the domain name for testing task processing rate limits
+	TestRateLimitedDomainName = "rate-limited-domain-0123-4567-890a-bcdef0123456"
+	// TestRateLimitedDomainID is the domain ID for testing task processing rate limits
+	TestRateLimitedDomainID = "rate-limited-domain"
 	// TestParentDomainID is the parentDomainID for test
 	TestParentDomainID = "deadbeef-0123-4567-890a-bcdef0123457"
 	// TestParentDomainName is the parentDomainName for test
@@ -68,6 +72,24 @@ var (
 	// TestGlobalDomainEntry is the global domain cache entry for test
 	TestGlobalDomainEntry = cache.NewGlobalDomainCacheEntryForTest(
 		&persistence.DomainInfo{ID: TestDomainID, Name: TestDomainName},
+		&persistence.DomainConfig{
+			Retention:                1,
+			VisibilityArchivalStatus: types.ArchivalStatusEnabled,
+			VisibilityArchivalURI:    "test:///visibility/archival",
+		},
+		&persistence.DomainReplicationConfig{
+			ActiveClusterName: cluster.TestCurrentClusterName,
+			Clusters: []*persistence.ClusterReplicationConfig{
+				{ClusterName: cluster.TestCurrentClusterName},
+				{ClusterName: cluster.TestAlternativeClusterName},
+			},
+		},
+		TestVersion,
+	)
+
+	// TestRateLimitedDomainEntry is the global domain cache entry for test
+	TestRateLimitedDomainEntry = cache.NewGlobalDomainCacheEntryForTest(
+		&persistence.DomainInfo{ID: TestRateLimitedDomainID, Name: TestRateLimitedDomainName},
 		&persistence.DomainConfig{
 			Retention:                1,
 			VisibilityArchivalStatus: types.ArchivalStatusEnabled,
