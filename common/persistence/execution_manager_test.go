@@ -24,11 +24,13 @@ package persistence
 
 import (
 	"context"
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
-	"github.com/uber/cadence/common/log/testlogger"
 	"reflect"
 	"testing"
+
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/uber/cadence/common/log/testlogger"
 )
 
 func TestExecutionManager_ProxyStoreMethods(t *testing.T) {
@@ -212,29 +214,55 @@ func TestExecutionManager_ProxyStoreMethods(t *testing.T) {
 }
 
 func TestGetReplicationTasks(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockedStore := NewMockExecutionStore(ctrl)
-	mockedStore.EXPECT().GetReplicationTasks(gomock.Any(), gomock.Any()).Return(&InternalGetReplicationTasksResponse{
-		Tasks: []*InternalReplicationTaskInfo{
-			{
-				DomainID: "test",
-				TaskID:   1,
+	for _, tc := range []struct {
+		name         string
+		prepareMocks func(*MockExecutionStore)
+		checkRes     func(*testing.T, *GetReplicationTasksResponse, error)
+	}{
+		{
+			name: "success",
+			prepareMocks: func(mockedStore *MockExecutionStore) {
+				mockedStore.EXPECT().GetReplicationTasks(gomock.Any(), gomock.Any()).Return(&InternalGetReplicationTasksResponse{
+					Tasks: []*InternalReplicationTaskInfo{
+						{
+							DomainID: "test",
+							TaskID:   1,
+						},
+						{
+							DomainID: "test",
+							TaskID:   2,
+						},
+					},
+					NextPageToken: nil,
+				}, nil)
 			},
-			{
-				DomainID: "test",
-				TaskID:   2,
+			checkRes: func(t *testing.T, res *GetReplicationTasksResponse, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, res.Tasks, 2)
+				assert.Equal(t, int64(1), res.Tasks[0].TaskID)
+				assert.Equal(t, int64(2), res.Tasks[1].TaskID)
+				assert.Nil(t, res.NextPageToken)
 			},
 		},
-		NextPageToken: nil,
-	}, nil)
+		{
+			name: "error",
+			prepareMocks: func(mockedStore *MockExecutionStore) {
+				mockedStore.EXPECT().GetReplicationTasks(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+			},
+			checkRes: func(t *testing.T, res *GetReplicationTasksResponse, err error) {
+				assert.Error(t, err)
+				assert.Nil(t, res)
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
 
-	manager := NewExecutionManagerImpl(mockedStore, testlogger.New(t), nil)
-	res, err := manager.GetReplicationTasks(context.Background(), &GetReplicationTasksRequest{})
-	assert.NoError(t, err)
-	assert.Len(t, res.Tasks, 2)
-	assert.Equal(t, int64(1), res.Tasks[0].TaskID)
-	assert.Equal(t, int64(2), res.Tasks[1].TaskID)
-	assert.Nil(t, res.NextPageToken)
+			mockedStore := NewMockExecutionStore(ctrl)
+			tc.prepareMocks(mockedStore)
+			manager := NewExecutionManagerImpl(mockedStore, testlogger.New(t), nil)
+			res, err := manager.GetReplicationTasks(context.Background(), &GetReplicationTasksRequest{})
+			tc.checkRes(t, res, err)
+		})
+	}
 }
