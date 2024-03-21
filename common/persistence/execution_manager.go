@@ -46,10 +46,10 @@ var _ ExecutionManager = (*executionManagerImpl)(nil)
 func NewExecutionManagerImpl(
 	persistence ExecutionStore,
 	logger log.Logger,
+	serializer PayloadSerializer,
 ) ExecutionManager {
-
 	return &executionManagerImpl{
-		serializer:    NewPayloadSerializer(),
+		serializer:    serializer,
 		persistence:   persistence,
 		statsComputer: statsComputer{},
 		logger:        logger,
@@ -65,6 +65,7 @@ func (m *executionManagerImpl) GetShardID() int {
 }
 
 // The below three APIs are related to serialization/deserialization
+
 func (m *executionManagerImpl) GetWorkflowExecution(
 	ctx context.Context,
 	request *GetWorkflowExecutionRequest,
