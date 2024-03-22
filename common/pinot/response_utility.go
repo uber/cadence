@@ -107,10 +107,10 @@ func ConvertSearchResultToVisibilityRecord(hit []interface{}, columnNames []stri
 		ShardID:          source.ShardID,
 		SearchAttributes: attributeMap,
 	}
-	if source.UpdateTime != 0 {
+	if source.UpdateTime > 0 {
 		record.UpdateTime = time.UnixMilli(source.UpdateTime)
 	}
-	if source.CloseTime != 0 {
+	if source.CloseTime > 0 {
 		record.CloseTime = time.UnixMilli(source.CloseTime)
 		record.Status = toWorkflowExecutionCloseStatus(source.CloseStatus)
 		record.HistoryLength = source.HistoryLength

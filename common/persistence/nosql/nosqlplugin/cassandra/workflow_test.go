@@ -916,6 +916,193 @@ func TestSelectAllWorkflowExecutions(t *testing.T) {
 	}
 }
 
+func TestIsWorkflowExecutionExists(t *testing.T) {
+	tests := []struct {
+		name         string
+		queryMockFn  func(query *gocql.MockQuery)
+		clientMockFn func(client *gocql.MockClient)
+		want         bool
+		wantErr      bool
+	}{
+		{
+			name: "success",
+			queryMockFn: func(query *gocql.MockQuery) {
+				query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+				query.EXPECT().MapScan(gomock.Any()).Return(nil).Times(1)
+			},
+			want:    true,
+			wantErr: false,
+		},
+		{
+			name: "not found case returns false but no error",
+			queryMockFn: func(query *gocql.MockQuery) {
+				query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+				query.EXPECT().MapScan(gomock.Any()).Return(errors.New("an error that will be considered as not found err by client mock")).Times(1)
+			},
+			clientMockFn: func(client *gocql.MockClient) {
+				client.EXPECT().IsNotFoundError(gomock.Any()).Return(true).Times(1)
+			},
+			want:    false,
+			wantErr: false,
+		},
+		{
+			name: "arbitrary error case",
+			queryMockFn: func(query *gocql.MockQuery) {
+				query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+				query.EXPECT().MapScan(gomock.Any()).Return(errors.New("some error")).Times(1)
+			},
+			clientMockFn: func(client *gocql.MockClient) {
+				client.EXPECT().IsNotFoundError(gomock.Any()).Return(false).Times(1)
+			},
+			want:    false,
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+
+			query := gocql.NewMockQuery(ctrl)
+			tc.queryMockFn(query)
+
+			session := &fakeSession{
+				query: query,
+			}
+			client := gocql.NewMockClient(ctrl)
+			if tc.clientMockFn != nil {
+				tc.clientMockFn(client)
+			}
+
+			cfg := &config.NoSQL{}
+			logger := testlogger.New(t)
+			dc := &persistence.DynamicConfiguration{}
+			db := newCassandraDBFromSession(cfg, session, logger, dc, dbWithClient(client))
+
+			got, err := db.IsWorkflowExecutionExists(context.Background(), 1, "domain1", "wfi", "run1")
+			if (err != nil) != tc.wantErr {
+				t.Errorf("IsWorkflowExecutionExists() error: %v, wantErr %v", err, tc.wantErr)
+			}
+
+			if err != nil || tc.wantErr {
+				return
+			}
+
+			if got != tc.want {
+				t.Errorf("IsWorkflowExecutionExists() got: %v, want: %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestSelectTransferTasksOrderByTaskID(t *testing.T) {
+	tests := []struct {
+		name               string
+		shardID            int
+		pageToken          []byte
+		pageSize           int
+		exclusiveMinTaskID int64
+		inclusiveMaxTaskID int64
+		iter               *fakeIter
+		wantTasks          []*nosqlplugin.TransferTask
+		wantNextPageToken  []byte
+		wantErr            bool
+	}{
+		{
+			name:      "nil iter returned",
+			shardID:   1,
+			pageToken: []byte("test-page-token"),
+			pageSize:  10,
+			wantErr:   true,
+		},
+		{
+			name:      "success",
+			shardID:   1,
+			pageToken: []byte("test-page-token"),
+			pageSize:  10,
+			iter: &fakeIter{
+				mapScanInputs: []map[string]interface{}{
+					{
+						"transfer": map[string]interface{}{
+							"domain_id":   &fakeUUID{uuid: "domain1"},
+							"workflow_id": "wfid1",
+							"task_id":     int64(1),
+						},
+					},
+					{
+						"transfer": map[string]interface{}{
+							"domain_id":   &fakeUUID{uuid: "domain2"},
+							"workflow_id": "wfid2",
+							"task_id":     int64(5),
+						},
+					},
+				},
+				pageState: []byte("test-page-token-2"),
+			},
+			wantTasks: []*persistence.TransferTaskInfo{
+				{
+					DomainID:   "domain1",
+					WorkflowID: "wfid1",
+					TaskID:     1,
+				},
+				{
+					DomainID:   "domain2",
+					WorkflowID: "wfid2",
+					TaskID:     5,
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+
+			query := gocql.NewMockQuery(ctrl)
+			query.EXPECT().PageSize(tc.pageSize).Return(query).Times(1)
+			query.EXPECT().PageState(tc.pageToken).Return(query).Times(1)
+			query.EXPECT().WithContext(gomock.Any()).Return(query).Times(1)
+			if tc.iter != nil {
+				query.EXPECT().Iter().Return(tc.iter).Times(1)
+			} else {
+				// Passing tc.iter to Return() doesn't work even though tc.iter is nil due to Go's typed nils.
+				// So, we have to call Return(nil) directly.
+				query.EXPECT().Iter().Return(nil).Times(1)
+			}
+
+			session := &fakeSession{
+				query: query,
+			}
+			client := gocql.NewMockClient(ctrl)
+			cfg := &config.NoSQL{}
+			logger := testlogger.New(t)
+			dc := &persistence.DynamicConfiguration{}
+			db := newCassandraDBFromSession(cfg, session, logger, dc, dbWithClient(client))
+
+			gotTasks, gotPageToken, err := db.SelectTransferTasksOrderByTaskID(context.Background(), tc.shardID, tc.pageSize, tc.pageToken, tc.exclusiveMinTaskID, tc.inclusiveMaxTaskID)
+			if (err != nil) != tc.wantErr {
+				t.Errorf("SelectAllWorkflowExecutions() error: %v, wantErr %v", err, tc.wantErr)
+			}
+
+			if err != nil || tc.wantErr {
+				return
+			}
+
+			if diff := cmp.Diff(tc.wantTasks, gotTasks); diff != "" {
+				t.Fatalf("Executions mismatch (-want +got):\n%s", diff)
+			}
+
+			if diff := cmp.Diff(tc.iter.pageState, gotPageToken); diff != "" {
+				t.Fatalf("Page token mismatch (-want +got):\n%s", diff)
+			}
+
+			if !tc.iter.closed {
+				t.Error("iter was not closed")
+			}
+		})
+	}
+}
+
 func TestDeleteTransferTask(t *testing.T) {
 	tests := []struct {
 		name        string
