@@ -494,7 +494,7 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 				// the fake tasks will not be actually used, we just need to make sure
 				// its length > 0 and has correct timestamp, to trigger a db scan
 				fakeDecisionTask := []persistence.Task{&persistence.DecisionTask{}}
-				fakeDecisionTimeoutTask := []persistence.Task{&persistence.DecisionTimeoutTask{VisibilityTimestamp: now}}
+				fakeDecisionTimeoutTask := []persistence.Task{&persistence.DecisionTimeoutTask{TaskData: persistence.TaskData{VisibilityTimestamp: now}}}
 				e.txProcessor.NotifyNewTask(e.currentClusterName, &hcommon.NotifyTaskInfo{Tasks: fakeDecisionTask})
 				e.timerProcessor.NotifyNewTask(e.currentClusterName, &hcommon.NotifyTaskInfo{Tasks: fakeDecisionTimeoutTask})
 			}
@@ -519,7 +519,9 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 					previousClusterName == e.currentClusterName {
 					// the visibility timestamp will be set in shard context
 					failoverMarkerTasks = append(failoverMarkerTasks, &persistence.FailoverMarkerTask{
-						Version:  nextDomain.GetFailoverVersion(),
+						TaskData: persistence.TaskData{
+							Version: nextDomain.GetFailoverVersion(),
+						},
 						DomainID: nextDomain.GetInfo().ID,
 					})
 					// This is a debug metric
