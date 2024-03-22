@@ -81,8 +81,8 @@ func (s *handlerSuite) SetupTest() {
 	s.mockEngine = engine.NewMockEngine(s.controller)
 	s.mockShardController.EXPECT().GetEngineForShard(gomock.Any()).Return(s.mockEngine, nil).AnyTimes()
 	s.mockWFCache = workflowcache.NewMockWFCache(s.controller)
-
-	s.handler = NewHandler(s.mockResource, config.NewForTest(), s.mockWFCache).(*handlerImpl)
+	internalRequestRateLimitingEnabledConfig := func(domainName string) bool { return false }
+	s.handler = NewHandler(s.mockResource, config.NewForTest(), s.mockWFCache, internalRequestRateLimitingEnabledConfig).(*handlerImpl)
 	s.handler.controller = s.mockShardController
 	s.handler.startWG.Done()
 }
