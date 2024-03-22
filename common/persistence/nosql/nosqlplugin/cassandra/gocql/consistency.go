@@ -138,20 +138,21 @@ func (c Consistency) String() string {
 	}
 }
 
-func ParseConsistency(s string) Consistency {
+func ParseConsistency(s string) (Consistency, error) {
 	var c Consistency
 	if err := c.UnmarshalText([]byte(strings.ToUpper(s))); err != nil {
-		panic(err)
+		return c, fmt.Errorf("parse consistency: %w", err)
 	}
-	return c
+	return c, nil
 }
 
-func ParseSerialConsistency(s string) SerialConsistency {
+func ParseSerialConsistency(s string) (SerialConsistency, error) {
 	var sc SerialConsistency
 	if err := sc.UnmarshalText([]byte(strings.ToUpper(s))); err != nil {
-		panic(err)
+		return sc, fmt.Errorf("parse serial consistency: %w", err)
+
 	}
-	return sc
+	return sc, nil
 }
 
 func (s SerialConsistency) String() string {
