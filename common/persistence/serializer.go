@@ -35,6 +35,8 @@ import (
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
+//go:generate mockgen -package $GOPACKAGE -destination serializer_mock.go -self_package github.com/uber/cadence/common/persistence github.com/uber/cadence/common/persistence PayloadSerializer
+
 type (
 	// PayloadSerializer is used by persistence to serialize/deserialize history event(s) and others
 	// It will only be used inside persistence, so that serialize/deserialize is transparent for application

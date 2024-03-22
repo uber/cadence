@@ -3,6 +3,13 @@
 [![Coverage Status](https://coveralls.io/repos/github/uber/cadence/badge.svg)](https://coveralls.io/github/uber/cadence)
 [![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](http://t.uber.com/cadence-slack)
 
+[![Github release](https://img.shields.io/github/v/release/uber/cadence.svg)](https://GitHub.com/uber/cadence/releases)
+[![License](https://img.shields.io/github/license/uber/cadence.svg)](http://www.apache.org/licenses/LICENSE-2.0)
+
+[![GitHub stars](https://img.shields.io/github/stars/uber/cadence.svg?style=social&label=Star&maxAge=2592000)](https://GitHub.com/uber/cadence/stargazers/)
+[![GitHub forks](https://img.shields.io/github/forks/uber/cadence.svg?style=social&label=Fork&maxAge=2592000)](https://GitHub.com/uber/cadence/network/)
+
+
 This repo contains the source code of the Cadence server and other tooling including CLI, schema tools, bench and canary. 
 
 You can implement your workflows with one of our client libraries. 
@@ -87,6 +94,10 @@ The easiest way to get the schema tool is via homebrew.
  * Follow the [instructions](https://github.com/uber/cadence/discussions/4457) if you need to install older versions of schema tools via homebrew. 
  However, easier way is to use new versions of schema tools with old versions of schemas. 
  All you need is to check out the older version of schemas from this repo. Run `git checkout v0.21.3` to get the v0.21.3 schemas in [the schema folder](/schema). 
+
+
+## Stargazers over time
+[![Stargazers over time](https://starchart.cc/uber/cadence.svg?variant=adaptive)](https://starchart.cc/uber/cadence)
  
    
 ## License
