@@ -25,9 +25,6 @@ package persistence
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/checksum"
-	"github.com/uber/cadence/common/types"
 	"reflect"
 	"testing"
 	"time"
@@ -35,7 +32,10 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/checksum"
 	"github.com/uber/cadence/common/log/testlogger"
+	"github.com/uber/cadence/common/types"
 )
 
 func TestExecutionManager_ProxyStoreMethods(t *testing.T) {
