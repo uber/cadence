@@ -307,7 +307,11 @@ func NewPersistenceTestCluster(t *testing.T, clusterConfig *TestClusterConfig) t
 			ops = mysql.GetTestClusterOption()
 		} else if TestFlags.SQLPluginName == postgres.PluginName {
 			testflags.RequirePostgres(t)
-			ops = postgres.GetTestClusterOption()
+			var err error
+			ops, err = postgres.GetTestClusterOption()
+			if err != nil {
+				t.Fatal(err)
+			}
 		} else {
 			panic("not supported plugin " + TestFlags.SQLPluginName)
 		}

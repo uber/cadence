@@ -147,7 +147,10 @@ func (s *IntegrationBase) setupLogger() {
 
 // GetTestClusterConfig return test cluster config
 func GetTestClusterConfig(configFile string) (*TestClusterConfig, error) {
-	environment.SetupEnv()
+
+	if err := environment.SetupEnv(); err != nil {
+		return nil, err
+	}
 
 	configLocation := configFile
 	if TestFlags.TestClusterConfigFile != "" {
@@ -177,7 +180,9 @@ func GetTestClusterConfig(configFile string) (*TestClusterConfig, error) {
 
 // GetTestClusterConfigs return test cluster configs
 func GetTestClusterConfigs(configFile string) ([]*TestClusterConfig, error) {
-	environment.SetupEnv()
+	if err := environment.SetupEnv(); err != nil {
+		return nil, err
+	}
 
 	fileName := configFile
 	if TestFlags.TestClusterConfigFile != "" {

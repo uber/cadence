@@ -32,7 +32,9 @@ import (
 func TestPostgresSQLHistoryV2PersistenceSuite(t *testing.T) {
 	testflags.RequirePostgres(t)
 	s := new(pt.HistoryV2PersistenceSuite)
-	s.TestBase = pt.NewTestBaseWithSQL(t, GetTestClusterOption())
+	options, err := GetTestClusterOption()
+	s.NoError(err)
+	s.TestBase = pt.NewTestBaseWithSQL(t, options)
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
@@ -40,7 +42,9 @@ func TestPostgresSQLHistoryV2PersistenceSuite(t *testing.T) {
 func TestPostgresSQLMatchingPersistenceSuite(t *testing.T) {
 	testflags.RequirePostgres(t)
 	s := new(pt.MatchingPersistenceSuite)
-	s.TestBase = pt.NewTestBaseWithSQL(t, GetTestClusterOption())
+	options, err := GetTestClusterOption()
+	s.NoError(err)
+	s.TestBase = pt.NewTestBaseWithSQL(t, options)
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
@@ -48,7 +52,9 @@ func TestPostgresSQLMatchingPersistenceSuite(t *testing.T) {
 func TestPostgresSQLMetadataPersistenceSuiteV2(t *testing.T) {
 	testflags.RequirePostgres(t)
 	s := new(pt.MetadataPersistenceSuiteV2)
-	s.TestBase = pt.NewTestBaseWithSQL(t, GetTestClusterOption())
+	options, err := GetTestClusterOption()
+	s.NoError(err)
+	s.TestBase = pt.NewTestBaseWithSQL(t, options)
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
@@ -56,7 +62,9 @@ func TestPostgresSQLMetadataPersistenceSuiteV2(t *testing.T) {
 func TestPostgresSQLShardPersistenceSuite(t *testing.T) {
 	testflags.RequirePostgres(t)
 	s := new(pt.ShardPersistenceSuite)
-	s.TestBase = pt.NewTestBaseWithSQL(t, GetTestClusterOption())
+	options, err := GetTestClusterOption()
+	s.NoError(err)
+	s.TestBase = pt.NewTestBaseWithSQL(t, options)
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
@@ -64,7 +72,9 @@ func TestPostgresSQLShardPersistenceSuite(t *testing.T) {
 func TestPostgresSQLExecutionManagerSuite(t *testing.T) {
 	testflags.RequirePostgres(t)
 	s := new(pt.ExecutionManagerSuite)
-	s.TestBase = pt.NewTestBaseWithSQL(t, GetTestClusterOption())
+	options, err := GetTestClusterOption()
+	s.NoError(err)
+	s.TestBase = pt.NewTestBaseWithSQL(t, options)
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
@@ -72,7 +82,9 @@ func TestPostgresSQLExecutionManagerSuite(t *testing.T) {
 func TestPostgresSQLExecutionManagerWithEventsV2(t *testing.T) {
 	testflags.RequirePostgres(t)
 	s := new(pt.ExecutionManagerSuiteForEventsV2)
-	s.TestBase = pt.NewTestBaseWithSQL(t, GetTestClusterOption())
+	options, err := GetTestClusterOption()
+	s.NoError(err)
+	s.TestBase = pt.NewTestBaseWithSQL(t, options)
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
@@ -80,7 +92,9 @@ func TestPostgresSQLExecutionManagerWithEventsV2(t *testing.T) {
 func TestPostgresSQLVisibilityPersistenceSuite(t *testing.T) {
 	testflags.RequirePostgres(t)
 	s := new(pt.DBVisibilityPersistenceSuite)
-	s.TestBase = pt.NewTestBaseWithSQL(t, GetTestClusterOption())
+	options, err := GetTestClusterOption()
+	s.NoError(err)
+	s.TestBase = pt.NewTestBaseWithSQL(t, options)
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
@@ -106,7 +120,9 @@ FAIL: TestPostgresSQLQueuePersistence/TestDomainReplicationQueue (0.26s)
 func TestPostgresSQLConfigPersistence(t *testing.T) {
 	testflags.RequirePostgres(t)
 	s := new(pt.ConfigStorePersistenceSuite)
-	s.TestBase = pt.NewTestBaseWithSQL(t, GetTestClusterOption())
+	options, err := GetTestClusterOption()
+	s.NoError(err)
+	s.TestBase = pt.NewTestBaseWithSQL(t, options)
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
