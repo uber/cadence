@@ -53,6 +53,7 @@ const (
 	SecurityToken        = "SecurityToken"
 	VisibilityQuery      = "VisibilityQuery"
 	FeatureVersion       = "FeatureVersion"
+	FeatureFlag          = "SampleFeature"
 	ClientImpl           = "ClientImpl"
 	ClientLibraryVersion = "ClientLibraryVersion"
 	SupportedVersions    = "SupportedVersions"

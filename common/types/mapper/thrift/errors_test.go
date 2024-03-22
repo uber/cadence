@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Copyright (c) 2021 Uber Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -18,6 +19,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+=======
+>>>>>>> 793dcea0 (added units test cases for functions in common/types/mapper/thrift/errors.go file)
 package thrift
 
 import (
@@ -26,6 +29,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+<<<<<<< HEAD
 	"go.uber.org/yarpc/yarpcerrors"
 
 	"github.com/uber/cadence/common/types/testdata"
@@ -55,3 +59,46 @@ func TestToUnknownErrorMapsToItself(t *testing.T) {
 	err := yarpcerrors.DeadlineExceededErrorf("timeout")
 	assert.Equal(t, err, ToError(err))
 }
+=======
+	"github.com/uber/cadence/common/types/testdata"
+)
+
+func TestError(t *testing.T) {
+	testCases := []error{
+		nil,
+		&testdata.AccessDeniedError,
+		&testdata.BadRequestError,
+		&testdata.CancellationAlreadyRequestedError,
+		&testdata.ClientVersionNotSupportedError,
+		&testdata.FeatureNotEnabledError,
+		&testdata.CurrentBranchChangedError,
+		&testdata.DomainAlreadyExistsError,
+		&testdata.DomainNotActiveError,
+		&testdata.EntityNotExistsError,
+		&testdata.WorkflowExecutionAlreadyCompletedError,
+		&testdata.InternalDataInconsistencyError,
+		&testdata.InternalServiceError,
+		&testdata.LimitExceededError,
+		&testdata.QueryFailedError,
+		&testdata.RemoteSyncMatchedError,
+		&testdata.RetryTaskV2Error,
+		&testdata.ServiceBusyError,
+		&testdata.WorkflowExecutionAlreadyStartedError,
+		&testdata.ShardOwnershipLostError,
+		&testdata.EventAlreadyStartedError,
+		&testdata.StickyWorkerUnavailableError,
+		errors.New("unknow error"),
+	}
+	for _, err := range testCases {
+		name := "unknown error"
+		if err != nil {
+			name = reflect.TypeOf(err).Name()
+		}
+		t.Run(name, func(t *testing.T) {
+			thriftErr := FromError(err)
+			roundTripErr := ToError(thriftErr)
+			assert.Equal(t, err, roundTripErr)
+		})
+	}
+}
+>>>>>>> 793dcea0 (added units test cases for functions in common/types/mapper/thrift/errors.go file)

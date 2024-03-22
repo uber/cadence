@@ -112,6 +112,9 @@ var (
 	StickyWorkerUnavailableError = types.StickyWorkerUnavailableError{
 		Message: ErrorMessage,
 	}
+	FeatureNotEnabledError = types.FeatureNotEnabledError{
+		FeatureFlag: FeatureFlag,
+	}
 )
 
 var Errors = []error{
