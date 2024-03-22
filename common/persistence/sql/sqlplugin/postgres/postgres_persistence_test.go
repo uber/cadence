@@ -23,6 +23,7 @@ package postgres
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
 	pt "github.com/uber/cadence/common/persistence/persistence-tests"
@@ -33,7 +34,7 @@ func TestPostgresSQLHistoryV2PersistenceSuite(t *testing.T) {
 	testflags.RequirePostgres(t)
 	s := new(pt.HistoryV2PersistenceSuite)
 	options, err := GetTestClusterOption()
-	s.NoError(err)
+	assert.NoError(t, err)
 	s.TestBase = pt.NewTestBaseWithSQL(t, options)
 	s.TestBase.Setup()
 	suite.Run(t, s)
@@ -63,7 +64,7 @@ func TestPostgresSQLShardPersistenceSuite(t *testing.T) {
 	testflags.RequirePostgres(t)
 	s := new(pt.ShardPersistenceSuite)
 	options, err := GetTestClusterOption()
-	s.NoError(err)
+	assert.NoError(t, err)
 	s.TestBase = pt.NewTestBaseWithSQL(t, options)
 	s.TestBase.Setup()
 	suite.Run(t, s)
@@ -73,7 +74,7 @@ func TestPostgresSQLExecutionManagerSuite(t *testing.T) {
 	testflags.RequirePostgres(t)
 	s := new(pt.ExecutionManagerSuite)
 	options, err := GetTestClusterOption()
-	s.NoError(err)
+	assert.NoError(t, err)
 	s.TestBase = pt.NewTestBaseWithSQL(t, options)
 	s.TestBase.Setup()
 	suite.Run(t, s)
@@ -83,7 +84,7 @@ func TestPostgresSQLExecutionManagerWithEventsV2(t *testing.T) {
 	testflags.RequirePostgres(t)
 	s := new(pt.ExecutionManagerSuiteForEventsV2)
 	option, err := GetTestClusterOption()
-	s.NoError(err)
+	assert.NoError(t, err)
 	s.TestBase = pt.NewTestBaseWithSQL(t, option)
 	s.TestBase.Setup()
 	suite.Run(t, s)
@@ -93,7 +94,7 @@ func TestPostgresSQLVisibilityPersistenceSuite(t *testing.T) {
 	testflags.RequirePostgres(t)
 	s := new(pt.DBVisibilityPersistenceSuite)
 	options, err := GetTestClusterOption()
-	s.NoError(err)
+	assert.NoError(t, err)
 	s.TestBase = pt.NewTestBaseWithSQL(t, options)
 	s.TestBase.Setup()
 	suite.Run(t, s)
@@ -121,7 +122,7 @@ func TestPostgresSQLConfigPersistence(t *testing.T) {
 	testflags.RequirePostgres(t)
 	s := new(pt.ConfigStorePersistenceSuite)
 	options, err := GetTestClusterOption()
-	s.NoError(err)
+	assert.NoError(t, err)
 	s.TestBase = pt.NewTestBaseWithSQL(t, options)
 	s.TestBase.Setup()
 	suite.Run(t, s)
