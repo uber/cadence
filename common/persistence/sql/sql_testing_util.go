@@ -49,16 +49,17 @@ var _ testcluster.PersistenceTestCluster = (*testCluster)(nil)
 func NewTestCluster(pluginName, dbName, username, password, host string, port int, schemaDir string) (testcluster.PersistenceTestCluster, error) {
 	var result testCluster
 	var err error
-	result.dbName = dbName
 	if port == 0 {
 		port, err = environment.GetMySQLPort()
 		if err != nil {
 			return nil, err
 		}
 	}
+
 	if schemaDir == "" {
-		return nil, errors.New("Schema dir is empty")
+		return nil, errors.New("schemaDir is empty")
 	}
+	result.dbName = dbName
 	result.schemaDir = schemaDir
 	result.cfg = config.SQL{
 		User:            username,

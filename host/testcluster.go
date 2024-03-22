@@ -303,24 +303,26 @@ func NewPersistenceTestCluster(t *testing.T, clusterConfig *TestClusterConfig) t
 		})
 	} else if TestFlags.PersistenceType == config.StoreTypeSQL {
 		var ops *persistencetests.TestBaseOptions
-		if TestFlags.SQLPluginName == mysql.PluginName {
+		switch TestFlags.SQLPluginName {
+		case mysql.PluginName:
 			testflags.RequireMySQL(t)
-			ops = mysql.GetTestClusterOption()
-		} else if TestFlags.SQLPluginName == postgres.PluginName {
+			ops, err = mysql.GetTestClusterOption()
+		case postgres.PluginName:
 			testflags.RequirePostgres(t)
 			ops, err = postgres.GetTestClusterOption()
-			if err != nil {
-				t.Fatal(err)
-			}
-		} else {
-			panic("not supported plugin " + TestFlags.SQLPluginName)
+		default:
+			t.Fatal("not supported plugin " + TestFlags.SQLPluginName)
+		}
+
+		if err != nil {
+			t.Fatal(err)
 		}
 		testCluster, err = sql.NewTestCluster(TestFlags.SQLPluginName, clusterConfig.Persistence.DBName, ops.DBUsername, ops.DBPassword, ops.DBHost, ops.DBPort, ops.SchemaDir)
 		if err != nil {
 			t.Fatal(err)
 		}
 	} else {
-		panic("not supported storage type" + TestFlags.PersistenceType)
+		t.Fatal("not supported storage type" + TestFlags.PersistenceType)
 	}
 	return testCluster
 }
