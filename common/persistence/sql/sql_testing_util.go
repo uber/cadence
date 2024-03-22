@@ -22,6 +22,7 @@ package sql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -45,14 +46,18 @@ type testCluster struct {
 var _ testcluster.PersistenceTestCluster = (*testCluster)(nil)
 
 // NewTestCluster returns a new SQL test cluster
-func NewTestCluster(pluginName, dbName, username, password, host string, port int, schemaDir string) testcluster.PersistenceTestCluster {
+func NewTestCluster(pluginName, dbName, username, password, host string, port int, schemaDir string) (testcluster.PersistenceTestCluster, error) {
 	var result testCluster
+	var err error
 	result.dbName = dbName
 	if port == 0 {
-		port = environment.GetMySQLPort()
+		port, err = environment.GetMySQLPort()
+		if err != nil {
+			return nil, err
+		}
 	}
 	if schemaDir == "" {
-		panic("must provide schema dir")
+		return nil, errors.New("Schema dir is empty")
 	}
 	result.schemaDir = schemaDir
 	result.cfg = config.SQL{
@@ -66,7 +71,7 @@ func NewTestCluster(pluginName, dbName, username, password, host string, port in
 		EncodingType:    "thriftrw",
 		DecodingTypes:   []string{"thriftrw"},
 	}
-	return &result
+	return &result, nil
 }
 
 // DatabaseName from PersistenceTestCluster interface
