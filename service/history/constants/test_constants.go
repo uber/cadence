@@ -38,6 +38,8 @@ var (
 	TestRateLimitedDomainName = "rate-limited-domain-0123-4567-890a-bcdef0123456"
 	// TestRateLimitedDomainID is the domain ID for testing task processing rate limits
 	TestRateLimitedDomainID = "rate-limited-domain"
+	// TestUnknownDomainID is the domain ID for testing unknown domains
+	TestUnknownDomainID = "unknown-domain-id"
 	// TestParentDomainID is the parentDomainID for test
 	TestParentDomainID = "deadbeef-0123-4567-890a-bcdef0123457"
 	// TestParentDomainName is the parentDomainName for test

@@ -1748,6 +1748,25 @@ func (s *transferActiveTaskExecutorSuite) TestCopySearchAttributes() {
 	s.Equal(byte('1'), val[0])
 }
 
+func (s *transferActiveTaskExecutorSuite) TestAllowTask() {
+	s.mockDomainCache.EXPECT().GetDomainName(constants.TestUnknownDomainID).Return("", errDomainNotExists).Times(1)
+	task := &persistence.TransferTaskInfo{
+		Version:        s.version,
+		DomainID:       constants.TestUnknownDomainID,
+		TargetDomainID: s.targetDomainID,
+		WorkflowID:     "wid",
+		RunID:          "rid",
+		TaskID:         int64(59),
+		TaskList:       "test-tasklist",
+		TaskType:       persistence.TransferTaskTypeActivityTask,
+		ScheduleID:     1,
+	}
+
+	result := s.transferActiveTaskExecutor.allowTask(task)
+	// fail open to allow task processing when domain not found. no calls made to check RPS
+	s.True(result)
+}
+
 func (s *transferActiveTaskExecutorSuite) newTransferTaskFromInfo(
 	info *persistence.TransferTaskInfo,
 ) Task {
