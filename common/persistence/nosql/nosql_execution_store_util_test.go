@@ -224,7 +224,11 @@ func TestPrepareTasksForWorkflowTxn(t *testing.T) {
 		name: "PrepareTimerTasksForWorkflowTxn - Successful Timer Tasks Preparation",
 		setupStore: func(store *nosqlExecutionStore) ([]*nosqlplugin.TimerTask, error) {
 			timerTasks := []persistence.Task{
-				&persistence.DecisionTimeoutTask{VisibilityTimestamp: time.Now(), TaskID: 1, EventID: 2, TimeoutType: 1, ScheduleAttempt: 1},
+				&persistence.DecisionTimeoutTask{
+					TaskData: persistence.TaskData{
+						VisibilityTimestamp: time.Now(), TaskID: 1,
+					},
+					EventID: 2, TimeoutType: 1, ScheduleAttempt: 1},
 			}
 			tasks, err := store.prepareTimerTasksForWorkflowTxn("domainID", "workflowID", "runID", timerTasks)
 			assert.NoError(t, err)
@@ -282,7 +286,9 @@ func TestPrepareReplicationTasksForWorkflowTxn(t *testing.T) {
 			setupStore: func(store *nosqlExecutionStore) ([]*nosqlplugin.ReplicationTask, error) {
 				replicationTasks := []persistence.Task{
 					&persistence.HistoryReplicationTask{
-						Version: 1,
+						TaskData: persistence.TaskData{
+							Version: 1,
+						},
 					},
 				}
 				return store.prepareReplicationTasksForWorkflowTxn("domainID", "workflowID", "runID", replicationTasks)
@@ -426,8 +432,10 @@ func TestPrepareTransferTasksForWorkflowTxn(t *testing.T) {
 			name: "Success - Prepare Transfer Tasks",
 			tasks: []persistence.Task{
 				&persistence.ActivityTask{
+					TaskData: persistence.TaskData{
+						Version: 1,
+					},
 					DomainID: "domainID",
-					TaskID:   1,
 				},
 			},
 			expectFunc: func(mockDB *nosqlplugin.MockDB) {},
