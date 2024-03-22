@@ -82,9 +82,9 @@ func TestPostgresSQLExecutionManagerSuite(t *testing.T) {
 func TestPostgresSQLExecutionManagerWithEventsV2(t *testing.T) {
 	testflags.RequirePostgres(t)
 	s := new(pt.ExecutionManagerSuiteForEventsV2)
-	options, err := GetTestClusterOption()
+	option, err := GetTestClusterOption()
 	s.NoError(err)
-	s.TestBase = pt.NewTestBaseWithSQL(t, options)
+	s.TestBase = pt.NewTestBaseWithSQL(t, option)
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
