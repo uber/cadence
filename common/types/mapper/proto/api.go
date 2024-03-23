@@ -911,6 +911,7 @@ func FromDecisionTaskFailedEventAttributes(t *types.DecisionTaskFailedEventAttri
 		NewRunId:         t.NewRunID,
 		ForkEventVersion: t.ForkEventVersion,
 		BinaryChecksum:   t.BinaryChecksum,
+		RequestId:        t.RequestID,
 	}
 }
 
@@ -929,6 +930,7 @@ func ToDecisionTaskFailedEventAttributes(t *apiv1.DecisionTaskFailedEventAttribu
 		NewRunID:         t.NewRunId,
 		ForkEventVersion: t.ForkEventVersion,
 		BinaryChecksum:   t.BinaryChecksum,
+		RequestID:        t.RequestId,
 	}
 }
 
@@ -4472,6 +4474,7 @@ func FromWorkflowExecutionCancelRequestedEventAttributes(t *types.WorkflowExecut
 		Cause:                 t.Cause,
 		ExternalExecutionInfo: FromExternalExecutionInfoFields(t.ExternalWorkflowExecution, t.ExternalInitiatedEventID),
 		Identity:              t.Identity,
+		RequestId:             t.RequestID,
 	}
 }
 
@@ -4484,6 +4487,7 @@ func ToWorkflowExecutionCancelRequestedEventAttributes(t *apiv1.WorkflowExecutio
 		ExternalInitiatedEventID:  ToExternalInitiatedID(t.ExternalExecutionInfo),
 		ExternalWorkflowExecution: ToExternalWorkflowExecution(t.ExternalExecutionInfo),
 		Identity:                  t.Identity,
+		RequestID:                 t.RequestId,
 	}
 }
 
@@ -4801,6 +4805,7 @@ func FromWorkflowExecutionSignaledEventAttributes(t *types.WorkflowExecutionSign
 		SignalName: t.SignalName,
 		Input:      FromPayload(t.Input),
 		Identity:   t.Identity,
+		RequestId:  t.RequestID,
 	}
 }
 
@@ -4812,6 +4817,7 @@ func ToWorkflowExecutionSignaledEventAttributes(t *apiv1.WorkflowExecutionSignal
 		SignalName: t.SignalName,
 		Input:      ToPayload(t.Input),
 		Identity:   t.Identity,
+		RequestID:  t.RequestId,
 	}
 }
 
@@ -4845,6 +4851,7 @@ func FromWorkflowExecutionStartedEventAttributes(t *types.WorkflowExecutionStart
 		PrevAutoResetPoints:          FromResetPoints(t.PrevAutoResetPoints),
 		Header:                       FromHeader(t.Header),
 		PartitionConfig:              t.PartitionConfig,
+		RequestId:                    t.RequestID,
 	}
 }
 
@@ -4881,6 +4888,7 @@ func ToWorkflowExecutionStartedEventAttributes(t *apiv1.WorkflowExecutionStarted
 		PrevAutoResetPoints:                 ToResetPoints(t.PrevAutoResetPoints),
 		Header:                              ToHeader(t.Header),
 		PartitionConfig:                     t.PartitionConfig,
+		RequestID:                           t.RequestId,
 	}
 }
 
