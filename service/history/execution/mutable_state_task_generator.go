@@ -154,9 +154,11 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowStartTasks(
 		workflowTimeoutTimestamp = executionInfo.ExpirationTime
 	}
 	r.mutableState.AddTimerTasks(&persistence.WorkflowTimeoutTask{
-		// TaskID is set by shard
-		VisibilityTimestamp: workflowTimeoutTimestamp,
-		Version:             startVersion,
+		TaskData: persistence.TaskData{
+			// TaskID is set by shard
+			VisibilityTimestamp: workflowTimeoutTimestamp,
+			Version:             startVersion,
+		},
 	})
 
 	return nil
@@ -178,8 +180,10 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowCloseTasks(
 	if !isActive {
 		// source domain passive, generate only one close execution task
 		transferTasks = append(transferTasks, &persistence.CloseExecutionTask{
-			// TaskID and VisibilityTimestamp are set by shard context
-			Version: closeEvent.Version,
+			TaskData: persistence.TaskData{
+				// TaskID and VisibilityTimestamp are set by shard context
+				Version: closeEvent.Version,
+			},
 		})
 	} else {
 		// 1. check if parent is cross cluster
@@ -190,10 +194,12 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowCloseTasks(
 
 		if parentTargetCluster != "" {
 			recordChildCompletionTask := &persistence.RecordChildExecutionCompletedTask{
+				TaskData: persistence.TaskData{
+					Version: closeEvent.Version,
+				},
 				TargetDomainID:   executionInfo.ParentDomainID,
 				TargetWorkflowID: executionInfo.ParentWorkflowID,
 				TargetRunID:      executionInfo.ParentRunID,
-				Version:          closeEvent.Version,
 			}
 
 			if !isActive {
@@ -219,12 +225,16 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowCloseTasks(
 		// 3. add record workflow closed task
 		if len(crossClusterTasks) != 0 {
 			transferTasks = append(transferTasks, &persistence.RecordWorkflowClosedTask{
-				Version: closeEvent.Version,
+				TaskData: persistence.TaskData{
+					Version: closeEvent.Version,
+				},
 			})
 		} else {
 			transferTasks = []persistence.Task{
 				&persistence.CloseExecutionTask{
-					Version: closeEvent.Version,
+					TaskData: persistence.TaskData{
+						Version: closeEvent.Version,
+					},
 				},
 			}
 		}
@@ -251,9 +261,11 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowCloseTasks(
 	}
 
 	r.mutableState.AddTimerTasks(&persistence.DeleteHistoryEventTask{
-		// TaskID is set by shard
-		VisibilityTimestamp: closeTimestamp.Add(retentionDuration),
-		Version:             closeEvent.Version,
+		TaskData: persistence.TaskData{
+			// TaskID is set by shard
+			VisibilityTimestamp: closeTimestamp.Add(retentionDuration),
+			Version:             closeEvent.Version,
+		},
 	})
 
 	return nil
@@ -290,11 +302,13 @@ func (r *mutableStateTaskGeneratorImpl) GenerateDelayedDecisionTasks(
 	}
 
 	r.mutableState.AddTimerTasks(&persistence.WorkflowBackoffTimerTask{
-		// TaskID is set by shard
+		TaskData: persistence.TaskData{
+			// TaskID is set by shard
+			VisibilityTimestamp: executionTimestamp,
+			Version:             startVersion,
+		},
 		// TODO EventID seems not used at all
-		VisibilityTimestamp: executionTimestamp,
-		TimeoutType:         firstDecisionDelayType,
-		Version:             startVersion,
+		TimeoutType: firstDecisionDelayType,
 	})
 
 	return nil
@@ -307,8 +321,10 @@ func (r *mutableStateTaskGeneratorImpl) GenerateRecordWorkflowStartedTasks(
 	startVersion := startEvent.Version
 
 	r.mutableState.AddTransferTasks(&persistence.RecordWorkflowStartedTask{
-		// TaskID and VisibilityTimestamp are set by shard context
-		Version: startVersion,
+		TaskData: persistence.TaskData{
+			// TaskID and VisibilityTimestamp are set by shard context
+			Version: startVersion,
+		},
 	})
 
 	return nil
@@ -329,22 +345,26 @@ func (r *mutableStateTaskGeneratorImpl) GenerateDecisionScheduleTasks(
 	}
 
 	r.mutableState.AddTransferTasks(&persistence.DecisionTask{
-		// TaskID and VisibilityTimestamp are set by shard context
+		TaskData: persistence.TaskData{
+			// TaskID and VisibilityTimestamp are set by shard context
+			Version: decision.Version,
+		},
 		DomainID:   executionInfo.DomainID,
 		TaskList:   decision.TaskList,
 		ScheduleID: decision.ScheduleID,
-		Version:    decision.Version,
 	})
 
 	if scheduleToStartTimeout := r.mutableState.GetDecisionScheduleToStartTimeout(); scheduleToStartTimeout != 0 {
 		scheduledTime := time.Unix(0, decision.ScheduledTimestamp)
 		r.mutableState.AddTimerTasks(&persistence.DecisionTimeoutTask{
-			// TaskID is set by shard
-			VisibilityTimestamp: scheduledTime.Add(scheduleToStartTimeout),
-			TimeoutType:         int(TimerTypeScheduleToStart),
-			EventID:             decision.ScheduleID,
-			ScheduleAttempt:     decision.Attempt,
-			Version:             decision.Version,
+			TaskData: persistence.TaskData{
+				// TaskID is set by shard
+				VisibilityTimestamp: scheduledTime.Add(scheduleToStartTimeout),
+				Version:             decision.Version,
+			},
+			TimeoutType:     int(TimerTypeScheduleToStart),
+			EventID:         decision.ScheduleID,
+			ScheduleAttempt: decision.Attempt,
 		})
 	}
 
@@ -378,12 +398,14 @@ func (r *mutableStateTaskGeneratorImpl) GenerateDecisionStartTasks(
 	}
 
 	r.mutableState.AddTimerTasks(&persistence.DecisionTimeoutTask{
-		// TaskID is set by shard
-		VisibilityTimestamp: startedTime.Add(startToCloseTimeout),
-		TimeoutType:         int(TimerTypeStartToClose),
-		EventID:             decision.ScheduleID,
-		ScheduleAttempt:     decision.Attempt,
-		Version:             decision.Version,
+		TaskData: persistence.TaskData{
+			// TaskID is set by shard
+			VisibilityTimestamp: startedTime.Add(startToCloseTimeout),
+			Version:             decision.Version,
+		},
+		TimeoutType:     int(TimerTypeStartToClose),
+		EventID:         decision.ScheduleID,
+		ScheduleAttempt: decision.Attempt,
 	})
 
 	return nil
@@ -419,11 +441,13 @@ func (r *mutableStateTaskGeneratorImpl) GenerateActivityTransferTasks(
 	}
 
 	r.mutableState.AddTransferTasks(&persistence.ActivityTask{
-		// TaskID and VisibilityTimestamp are set by shard context
+		TaskData: persistence.TaskData{
+			// TaskID and VisibilityTimestamp are set by shard context
+			Version: activityInfo.Version,
+		},
 		DomainID:   targetDomainID,
 		TaskList:   activityInfo.TaskList,
 		ScheduleID: activityInfo.ScheduleID,
-		Version:    activityInfo.Version,
 	})
 
 	return nil
@@ -441,11 +465,13 @@ func (r *mutableStateTaskGeneratorImpl) GenerateActivityRetryTasks(
 	}
 
 	r.mutableState.AddTimerTasks(&persistence.ActivityRetryTimerTask{
-		// TaskID is set by shard
-		Version:             ai.Version,
-		VisibilityTimestamp: ai.ScheduledTime,
-		EventID:             ai.ScheduleID,
-		Attempt:             ai.Attempt,
+		TaskData: persistence.TaskData{
+			// TaskID is set by shard
+			Version:             ai.Version,
+			VisibilityTimestamp: ai.ScheduledTime,
+		},
+		EventID: ai.ScheduleID,
+		Attempt: ai.Attempt,
 	})
 	return nil
 }
@@ -480,11 +506,13 @@ func (r *mutableStateTaskGeneratorImpl) GenerateChildWorkflowTasks(
 	}
 
 	startChildExecutionTask := &persistence.StartChildExecutionTask{
-		// TaskID and VisibilityTimestamp are set by shard context
+		TaskData: persistence.TaskData{
+			// TaskID and VisibilityTimestamp are set by shard context
+			Version: childWorkflowInfo.Version,
+		},
 		TargetDomainID:   targetDomainID,
 		TargetWorkflowID: childWorkflowInfo.StartedWorkflowID,
 		InitiatedID:      childWorkflowInfo.InitiatedID,
-		Version:          childWorkflowInfo.Version,
 	}
 
 	if !isCrossClusterTask {
@@ -529,13 +557,15 @@ func (r *mutableStateTaskGeneratorImpl) GenerateRequestCancelExternalTasks(
 	}
 
 	cancelExecutionTask := &persistence.CancelExecutionTask{
-		// TaskID and VisibilityTimestamp are set by shard context
+		TaskData: persistence.TaskData{
+			// TaskID and VisibilityTimestamp are set by shard context
+			Version: version,
+		},
 		TargetDomainID:          targetDomainID,
 		TargetWorkflowID:        targetWorkflowID,
 		TargetRunID:             targetRunID,
 		TargetChildWorkflowOnly: targetChildOnly,
 		InitiatedID:             scheduleID,
-		Version:                 version,
 	}
 
 	if !isCrossClusterTask {
@@ -580,13 +610,15 @@ func (r *mutableStateTaskGeneratorImpl) GenerateSignalExternalTasks(
 	}
 
 	signalExecutionTask := &persistence.SignalExecutionTask{
-		// TaskID and VisibilityTimestamp are set by shard context
+		TaskData: persistence.TaskData{
+			// TaskID and VisibilityTimestamp are set by shard context
+			Version: version,
+		},
 		TargetDomainID:          targetDomainID,
 		TargetWorkflowID:        targetWorkflowID,
 		TargetRunID:             targetRunID,
 		TargetChildWorkflowOnly: targetChildOnly,
 		InitiatedID:             scheduleID,
-		Version:                 version,
 	}
 
 	if !isCrossClusterTask {
@@ -606,8 +638,10 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowSearchAttrTasks() error 
 	currentVersion := r.mutableState.GetCurrentVersion()
 
 	r.mutableState.AddTransferTasks(&persistence.UpsertWorkflowSearchAttributesTask{
-		// TaskID and VisibilityTimestamp are set by shard context
-		Version: currentVersion, // task processing does not check this version
+		TaskData: persistence.TaskData{
+			// TaskID and VisibilityTimestamp are set by shard context
+			Version: currentVersion, // task processing does not check this version
+		},
 	})
 
 	return nil
@@ -618,8 +652,10 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowResetTasks() error {
 	currentVersion := r.mutableState.GetCurrentVersion()
 
 	r.mutableState.AddTransferTasks(&persistence.ResetWorkflowTask{
-		// TaskID and VisibilityTimestamp are set by shard context
-		Version: currentVersion,
+		TaskData: persistence.TaskData{
+			// TaskID and VisibilityTimestamp are set by shard context
+			Version: currentVersion,
+		},
 	})
 
 	return nil
@@ -639,11 +675,14 @@ func (r *mutableStateTaskGeneratorImpl) GenerateCrossClusterRecordChildCompleted
 		r.mutableState.AddCrossClusterTasks(&persistence.CrossClusterRecordChildExecutionCompletedTask{
 			TargetCluster: targetCluster,
 			RecordChildExecutionCompletedTask: persistence.RecordChildExecutionCompletedTask{
-				VisibilityTimestamp: task.VisibilityTimestamp,
-				TargetDomainID:      parentInfo.DomainUUID,
-				TargetWorkflowID:    parentInfo.GetExecution().GetWorkflowID(),
-				TargetRunID:         parentInfo.GetExecution().GetRunID(),
-				Version:             task.Version,
+				TaskData: persistence.TaskData{
+					// TaskID is set by shard context
+					VisibilityTimestamp: task.VisibilityTimestamp,
+					Version:             task.Version,
+				},
+				TargetDomainID:   parentInfo.DomainUUID,
+				TargetWorkflowID: parentInfo.GetExecution().GetWorkflowID(),
+				TargetRunID:      parentInfo.GetExecution().GetRunID(),
 			},
 		})
 	}
@@ -665,12 +704,14 @@ func (r *mutableStateTaskGeneratorImpl) GenerateCrossClusterApplyParentClosePoli
 		r.mutableState.AddCrossClusterTasks(&persistence.CrossClusterApplyParentClosePolicyTask{
 			TargetCluster: targetCluster,
 			ApplyParentClosePolicyTask: persistence.ApplyParentClosePolicyTask{
+				TaskData: persistence.TaskData{
+					// TaskID is set by shard context
+					Version:             task.Version,
+					VisibilityTimestamp: task.VisibilityTimestamp,
+				},
 				TargetDomainIDs: childDomainIDs,
-				// TaskID is set by shard context
 				// Domain, workflow and run ids will be collected from mutableState
 				// when processing the apply parent policy tasks.
-				Version:             task.Version,
-				VisibilityTimestamp: task.VisibilityTimestamp,
 			},
 		})
 	}
@@ -693,37 +734,43 @@ func (r *mutableStateTaskGeneratorImpl) GenerateFromTransferTask(
 		crossClusterTask = &persistence.CrossClusterCancelExecutionTask{
 			TargetCluster: targetCluster,
 			CancelExecutionTask: persistence.CancelExecutionTask{
-				// TaskID is set by shard context
+				TaskData: persistence.TaskData{
+					// TaskID is set by shard context
+					Version: task.Version,
+				},
 				TargetDomainID:          task.TargetDomainID,
 				TargetWorkflowID:        task.TargetWorkflowID,
 				TargetRunID:             task.TargetRunID,
 				TargetChildWorkflowOnly: task.TargetChildWorkflowOnly,
 				InitiatedID:             task.ScheduleID,
-				Version:                 task.Version,
 			},
 		}
 	case persistence.TransferTaskTypeSignalExecution:
 		crossClusterTask = &persistence.CrossClusterSignalExecutionTask{
 			TargetCluster: targetCluster,
 			SignalExecutionTask: persistence.SignalExecutionTask{
-				// TaskID is set by shard context
+				TaskData: persistence.TaskData{
+					// TaskID is set by shard context
+					Version: task.Version,
+				},
 				TargetDomainID:          task.TargetDomainID,
 				TargetWorkflowID:        task.TargetWorkflowID,
 				TargetRunID:             task.TargetRunID,
 				TargetChildWorkflowOnly: task.TargetChildWorkflowOnly,
 				InitiatedID:             task.ScheduleID,
-				Version:                 task.Version,
 			},
 		}
 	case persistence.TransferTaskTypeStartChildExecution:
 		crossClusterTask = &persistence.CrossClusterStartChildExecutionTask{
 			TargetCluster: targetCluster,
 			StartChildExecutionTask: persistence.StartChildExecutionTask{
-				// TaskID is set by shard context
+				TaskData: persistence.TaskData{
+					// TaskID is set by shard context
+					Version: task.Version,
+				},
 				TargetDomainID:   task.TargetDomainID,
 				TargetWorkflowID: task.TargetWorkflowID,
 				InitiatedID:      task.ScheduleID,
-				Version:          task.Version,
 			},
 		}
 	// TransferTaskTypeCloseExecution,
@@ -753,10 +800,12 @@ func (r *mutableStateTaskGeneratorImpl) generateApplyParentCloseTasks(
 	if isPassive {
 		transferTasks = []persistence.Task{
 			&persistence.ApplyParentClosePolicyTask{
-				// TaskID is set by shard context
-				VisibilityTimestamp: visibilityTimestamp,
-				TargetDomainIDs:     childDomainIDs,
-				Version:             version,
+				TaskData: persistence.TaskData{
+					// TaskID is set by shard context
+					VisibilityTimestamp: visibilityTimestamp,
+					Version:             version,
+				},
+				TargetDomainIDs: childDomainIDs,
 			},
 		}
 		return transferTasks, crossClusterTasks, nil
@@ -769,18 +818,24 @@ func (r *mutableStateTaskGeneratorImpl) generateApplyParentCloseTasks(
 
 	if len(sameClusterDomainIDs) != 0 {
 		transferTasks = append(transferTasks, &persistence.ApplyParentClosePolicyTask{
-			VisibilityTimestamp: visibilityTimestamp,
-			TargetDomainIDs:     sameClusterDomainIDs,
-			Version:             version,
+			TaskData: persistence.TaskData{
+				// TaskID is set by shard context
+				VisibilityTimestamp: visibilityTimestamp,
+				Version:             version,
+			},
+			TargetDomainIDs: sameClusterDomainIDs,
 		})
 	}
 	for remoteCluster, domainIDs := range remoteClusterDomainIDs {
 		crossClusterTasks = append(crossClusterTasks, &persistence.CrossClusterApplyParentClosePolicyTask{
 			TargetCluster: remoteCluster,
 			ApplyParentClosePolicyTask: persistence.ApplyParentClosePolicyTask{
-				VisibilityTimestamp: visibilityTimestamp,
-				TargetDomainIDs:     domainIDs,
-				Version:             version,
+				TaskData: persistence.TaskData{
+					// TaskID is set by shard context
+					VisibilityTimestamp: visibilityTimestamp,
+					Version:             version,
+				},
+				TargetDomainIDs: domainIDs,
 			},
 		})
 	}
@@ -827,13 +882,15 @@ func (r *mutableStateTaskGeneratorImpl) GenerateFromCrossClusterTask(
 	switch task.GetTaskType() {
 	case persistence.CrossClusterTaskTypeCancelExecution:
 		cancelExecutionTask := &persistence.CancelExecutionTask{
-			// TaskID is set by shard context
+			TaskData: persistence.TaskData{
+				// TaskID is set by shard context
+				Version: task.Version,
+			},
 			TargetDomainID:          task.TargetDomainID,
 			TargetWorkflowID:        task.TargetWorkflowID,
 			TargetRunID:             task.TargetRunID,
 			TargetChildWorkflowOnly: task.TargetChildWorkflowOnly,
 			InitiatedID:             task.ScheduleID,
-			Version:                 task.Version,
 		}
 		if generateTransferTask {
 			newTask = cancelExecutionTask
@@ -845,13 +902,15 @@ func (r *mutableStateTaskGeneratorImpl) GenerateFromCrossClusterTask(
 		}
 	case persistence.CrossClusterTaskTypeSignalExecution:
 		signalExecutionTask := &persistence.SignalExecutionTask{
-			// TaskID is set by shard context
+			TaskData: persistence.TaskData{
+				// TaskID is set by shard context
+				Version: task.Version,
+			},
 			TargetDomainID:          task.TargetDomainID,
 			TargetWorkflowID:        task.TargetWorkflowID,
 			TargetRunID:             task.TargetRunID,
 			TargetChildWorkflowOnly: task.TargetChildWorkflowOnly,
 			InitiatedID:             task.ScheduleID,
-			Version:                 task.Version,
 		}
 		if generateTransferTask {
 			newTask = signalExecutionTask
@@ -863,11 +922,13 @@ func (r *mutableStateTaskGeneratorImpl) GenerateFromCrossClusterTask(
 		}
 	case persistence.CrossClusterTaskTypeStartChildExecution:
 		startChildExecutionTask := &persistence.StartChildExecutionTask{
-			// TaskID is set by shard context
+			TaskData: persistence.TaskData{
+				// TaskID is set by shard context
+				Version: task.Version,
+			},
 			TargetDomainID:   task.TargetDomainID,
 			TargetWorkflowID: task.TargetWorkflowID,
 			InitiatedID:      task.ScheduleID,
-			Version:          task.Version,
 		}
 		if generateTransferTask {
 			newTask = startChildExecutionTask
@@ -879,8 +940,10 @@ func (r *mutableStateTaskGeneratorImpl) GenerateFromCrossClusterTask(
 		}
 	case persistence.CrossClusterTaskTypeRecordChildExeuctionCompleted:
 		recordChildExecutionCompletedTask := &persistence.RecordChildExecutionCompletedTask{
-			// TaskID is set by shard context
-			Version:          task.Version,
+			TaskData: persistence.TaskData{
+				// TaskID is set by shard context
+				Version: task.Version,
+			},
 			TargetDomainID:   task.TargetDomainID,
 			TargetWorkflowID: task.TargetWorkflowID,
 			TargetRunID:      task.TargetRunID,
