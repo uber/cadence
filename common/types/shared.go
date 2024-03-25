@@ -1146,6 +1146,7 @@ type DecisionTaskFailedEventAttributes struct {
 	NewRunID         string                   `json:"newRunId,omitempty"`
 	ForkEventVersion int64                    `json:"forkEventVersion,omitempty"`
 	BinaryChecksum   string                   `json:"binaryChecksum,omitempty"`
+	RequestID        string                   `json:"requestId,omitempty"`
 }
 
 // GetCause is an internal getter (TBD...)
@@ -1184,6 +1185,14 @@ func (v *DecisionTaskFailedEventAttributes) GetNewRunID() (o string) {
 func (v *DecisionTaskFailedEventAttributes) GetForkEventVersion() (o int64) {
 	if v != nil {
 		return v.ForkEventVersion
+	}
+	return
+}
+
+// GetRequestID is an internal getter (TBD...)
+func (v *DecisionTaskFailedEventAttributes) GetRequestID() (o string) {
+	if v != nil {
+		return v.RequestID
 	}
 	return
 }
@@ -7041,6 +7050,7 @@ type WorkflowExecutionCancelRequestedEventAttributes struct {
 	ExternalInitiatedEventID  *int64             `json:"externalInitiatedEventId,omitempty"`
 	ExternalWorkflowExecution *WorkflowExecution `json:"externalWorkflowExecution,omitempty"`
 	Identity                  string             `json:"identity,omitempty"`
+	RequestID                 string             `json:"requestId,omitempty"`
 }
 
 // WorkflowExecutionCanceledEventAttributes is an internal type (TBD...)
@@ -7321,6 +7331,7 @@ type WorkflowExecutionSignaledEventAttributes struct {
 	SignalName string `json:"signalName,omitempty"`
 	Input      []byte `json:"input,omitempty"`
 	Identity   string `json:"identity,omitempty"`
+	RequestID  string `json:"requestId,omitempty"`
 }
 
 // GetSignalName is an internal getter (TBD...)
@@ -7343,6 +7354,14 @@ func (v *WorkflowExecutionSignaledEventAttributes) GetInput() (o []byte) {
 func (v *WorkflowExecutionSignaledEventAttributes) GetIdentity() (o string) {
 	if v != nil {
 		return v.Identity
+	}
+	return
+}
+
+// GetRequestID is an internal getter (TBD...)
+func (v *WorkflowExecutionSignaledEventAttributes) GetRequestID() (o string) {
+	if v != nil {
+		return v.RequestID
 	}
 	return
 }
@@ -7378,6 +7397,7 @@ type WorkflowExecutionStartedEventAttributes struct {
 	Header                              *Header                 `json:"header,omitempty"`
 	JitterStartSeconds                  *int32                  `json:"jitterStartSeconds,omitempty"`
 	PartitionConfig                     map[string]string
+	RequestID                           string `json:"requestId,omitempty"`
 }
 
 // GetParentWorkflowDomain is an internal getter (TBD...)
@@ -7511,6 +7531,14 @@ func (v *WorkflowExecutionStartedEventAttributes) GetPrevAutoResetPoints() (o *R
 func (v *WorkflowExecutionStartedEventAttributes) GetPartitionConfig() (o map[string]string) {
 	if v != nil && v.PartitionConfig != nil {
 		return v.PartitionConfig
+	}
+	return
+}
+
+// GetRequestID is an internal getter (TBD...)
+func (v *WorkflowExecutionStartedEventAttributes) GetRequestID() (o string) {
+	if v != nil {
+		return v.RequestID
 	}
 	return
 }
