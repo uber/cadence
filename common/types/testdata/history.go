@@ -314,6 +314,7 @@ var (
 		ForkEventVersion: Version1,
 		Reason:           Reason,
 		Cause:            &DecisionTaskTimedOutCause,
+		RequestID:        RequestID,
 	}
 	DecisionTaskFailedEventAttributes = types.DecisionTaskFailedEventAttributes{
 		ScheduledEventID: EventID1,

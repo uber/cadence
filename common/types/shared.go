@@ -1312,6 +1312,7 @@ type DecisionTaskTimedOutEventAttributes struct {
 	ForkEventVersion int64                      `json:"forkEventVersion,omitempty"`
 	Reason           string                     `json:"reason,omitempty"`
 	Cause            *DecisionTaskTimedOutCause `json:"cause,omitempty"`
+	RequestID        string                     `json:"requestId,omitempty"`
 }
 
 // GetScheduledEventID is an internal getter (TBD...)
@@ -1358,6 +1359,14 @@ func (v *DecisionTaskTimedOutEventAttributes) GetForkEventVersion() (o int64) {
 func (v *DecisionTaskTimedOutEventAttributes) GetCause() (o DecisionTaskTimedOutCause) {
 	if v != nil && v.Cause != nil {
 		return *v.Cause
+	}
+	return
+}
+
+// GetRequestID is an internal getter (TBD...)
+func (v *DecisionTaskTimedOutEventAttributes) GetRequestID() (o string) {
+	if v != nil {
+		return v.RequestID
 	}
 	return
 }

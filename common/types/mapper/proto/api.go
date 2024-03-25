@@ -991,6 +991,7 @@ func FromDecisionTaskTimedOutEventAttributes(t *types.DecisionTaskTimedOutEventA
 		ForkEventVersion: t.ForkEventVersion,
 		Reason:           t.Reason,
 		Cause:            FromDecisionTaskTimedOutCause(t.Cause),
+		RequestId:        t.RequestID,
 	}
 }
 
@@ -1007,6 +1008,7 @@ func ToDecisionTaskTimedOutEventAttributes(t *apiv1.DecisionTaskTimedOutEventAtt
 		ForkEventVersion: t.ForkEventVersion,
 		Reason:           t.Reason,
 		Cause:            ToDecisionTaskTimedOutCause(t.Cause),
+		RequestID:        t.RequestId,
 	}
 }
 
