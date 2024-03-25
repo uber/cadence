@@ -107,10 +107,12 @@ func (s *timerSequenceSuite) TestCreateNextUserTimer_NotCreated() {
 	s.mockMutableState.EXPECT().UpdateUserTimer(&timerInfoUpdated).Return(nil).Times(1)
 	s.mockMutableState.EXPECT().GetCurrentVersion().Return(currentVersion).Times(1)
 	s.mockMutableState.EXPECT().AddTimerTasks(&persistence.UserTimerTask{
-		// TaskID is set by shard
-		VisibilityTimestamp: timerInfo.ExpiryTime,
-		EventID:             timerInfo.StartedID,
-		Version:             currentVersion,
+		TaskData: persistence.TaskData{
+			// TaskID is set by shard
+			VisibilityTimestamp: timerInfo.ExpiryTime,
+			Version:             currentVersion,
+		},
+		EventID: timerInfo.StartedID,
 	}).Times(1)
 
 	modified, err := s.timerSequence.CreateNextUserTimer()
@@ -170,14 +172,16 @@ func (s *timerSequenceSuite) TestCreateNextActivityTimer_NotCreated() {
 	s.mockMutableState.EXPECT().UpdateActivity(&activityInfoUpdated).Return(nil).Times(1)
 	s.mockMutableState.EXPECT().GetCurrentVersion().Return(currentVersion).Times(1)
 	s.mockMutableState.EXPECT().AddTimerTasks(&persistence.ActivityTimeoutTask{
-		// TaskID is set by shard
-		VisibilityTimestamp: activityInfo.ScheduledTime.Add(
-			time.Duration(activityInfo.ScheduleToStartTimeout) * time.Second,
-		),
+		TaskData: persistence.TaskData{
+			// TaskID is set by shard
+			VisibilityTimestamp: activityInfo.ScheduledTime.Add(
+				time.Duration(activityInfo.ScheduleToStartTimeout) * time.Second,
+			),
+			Version: currentVersion,
+		},
 		TimeoutType: int(types.TimeoutTypeScheduleToStart),
 		EventID:     activityInfo.ScheduleID,
 		Attempt:     int64(activityInfo.Attempt),
-		Version:     currentVersion,
 	}).Times(1)
 
 	modified, err := s.timerSequence.CreateNextActivityTimer()
@@ -217,12 +221,14 @@ func (s *timerSequenceSuite) TestCreateNextActivityTimer_HeartbeatTimer() {
 	s.mockMutableState.EXPECT().UpdateActivity(&activityInfoUpdated).Return(nil).Times(1)
 	s.mockMutableState.EXPECT().GetCurrentVersion().Return(currentVersion).Times(1)
 	s.mockMutableState.EXPECT().AddTimerTasks(&persistence.ActivityTimeoutTask{
-		// TaskID is set by shard
-		VisibilityTimestamp: taskVisibilityTimestamp,
-		TimeoutType:         int(types.TimeoutTypeHeartbeat),
-		EventID:             activityInfo.ScheduleID,
-		Attempt:             int64(activityInfo.Attempt),
-		Version:             currentVersion,
+		TaskData: persistence.TaskData{
+			// TaskID is set by shard
+			VisibilityTimestamp: taskVisibilityTimestamp,
+			Version:             currentVersion,
+		},
+		TimeoutType: int(types.TimeoutTypeHeartbeat),
+		EventID:     activityInfo.ScheduleID,
+		Attempt:     int64(activityInfo.Attempt),
 	}).Times(1)
 
 	modified, err := s.timerSequence.CreateNextActivityTimer()

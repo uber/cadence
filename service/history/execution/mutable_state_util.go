@@ -96,7 +96,9 @@ func convertSyncActivityInfos(
 		if ok {
 			// the visibility timestamp will be set in shard context
 			outputs = append(outputs, &persistence.SyncActivityTask{
-				Version:     activityInfo.Version,
+				TaskData: persistence.TaskData{
+					Version: activityInfo.Version,
+				},
 				ScheduledID: activityInfo.ScheduleID,
 			})
 		}

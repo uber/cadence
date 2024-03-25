@@ -2801,10 +2801,12 @@ func TestCreateFailoverMarkerTasks(t *testing.T) {
 				RangeID: 1,
 				Markers: []*persistence.FailoverMarkerTask{
 					{
-						TaskID:              1,
-						VisibilityTimestamp: time.Unix(11, 12),
-						Version:             101,
-						DomainID:            "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+						TaskData: persistence.TaskData{
+							TaskID:              1,
+							VisibilityTimestamp: time.Unix(11, 12),
+							Version:             101,
+						},
+						DomainID: "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
 					},
 				},
 			},
@@ -2832,10 +2834,12 @@ func TestCreateFailoverMarkerTasks(t *testing.T) {
 				RangeID: 1,
 				Markers: []*persistence.FailoverMarkerTask{
 					{
-						TaskID:              1,
-						VisibilityTimestamp: time.Unix(11, 12),
-						Version:             101,
-						DomainID:            "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+						TaskData: persistence.TaskData{
+							TaskID:              1,
+							VisibilityTimestamp: time.Unix(11, 12),
+							Version:             101,
+						},
+						DomainID: "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
 					},
 				},
 			},
@@ -2850,10 +2854,12 @@ func TestCreateFailoverMarkerTasks(t *testing.T) {
 				RangeID: 1,
 				Markers: []*persistence.FailoverMarkerTask{
 					{
-						TaskID:              1,
-						VisibilityTimestamp: time.Unix(11, 12),
-						Version:             101,
-						DomainID:            "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+						TaskData: persistence.TaskData{
+							TaskID:              1,
+							VisibilityTimestamp: time.Unix(11, 12),
+							Version:             101,
+						},
+						DomainID: "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
 					},
 				},
 			},
@@ -2880,10 +2886,12 @@ func TestCreateFailoverMarkerTasks(t *testing.T) {
 				RangeID: 1,
 				Markers: []*persistence.FailoverMarkerTask{
 					{
-						TaskID:              1,
-						VisibilityTimestamp: time.Unix(11, 12),
-						Version:             101,
-						DomainID:            "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+						TaskData: persistence.TaskData{
+							TaskID:              1,
+							VisibilityTimestamp: time.Unix(11, 12),
+							Version:             101,
+						},
+						DomainID: "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
 					},
 				},
 			},
@@ -2911,10 +2919,12 @@ func TestCreateFailoverMarkerTasks(t *testing.T) {
 				RangeID: 1,
 				Markers: []*persistence.FailoverMarkerTask{
 					{
-						TaskID:              1,
-						VisibilityTimestamp: time.Unix(11, 12),
-						Version:             101,
-						DomainID:            "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
+						TaskData: persistence.TaskData{
+							TaskID:              1,
+							VisibilityTimestamp: time.Unix(11, 12),
+							Version:             101,
+						},
+						DomainID: "ff9c8a3f-0e4f-4d3e-a4d2-6f5f8f3f7d9d",
 					},
 				},
 			},

@@ -151,10 +151,12 @@ func (t *timerSequenceImpl) CreateNextUserTimer() (bool, error) {
 		return false, err
 	}
 	t.mutableState.AddTimerTasks(&persistence.UserTimerTask{
-		// TaskID is set by shard
-		VisibilityTimestamp: firstTimerTask.Timestamp,
-		EventID:             firstTimerTask.EventID,
-		Version:             t.mutableState.GetCurrentVersion(),
+		TaskData: persistence.TaskData{
+			// TaskID is set by shard
+			VisibilityTimestamp: firstTimerTask.Timestamp,
+			Version:             t.mutableState.GetCurrentVersion(),
+		},
+		EventID: firstTimerTask.EventID,
 	})
 	return true, nil
 }
@@ -188,12 +190,14 @@ func (t *timerSequenceImpl) CreateNextActivityTimer() (bool, error) {
 		return false, err
 	}
 	t.mutableState.AddTimerTasks(&persistence.ActivityTimeoutTask{
-		// TaskID is set by shard
-		VisibilityTimestamp: firstTimerTask.Timestamp,
-		TimeoutType:         int(firstTimerTask.TimerType),
-		EventID:             firstTimerTask.EventID,
-		Attempt:             int64(firstTimerTask.Attempt),
-		Version:             t.mutableState.GetCurrentVersion(),
+		TaskData: persistence.TaskData{
+			// TaskID is set by shard
+			VisibilityTimestamp: firstTimerTask.Timestamp,
+			Version:             t.mutableState.GetCurrentVersion(),
+		},
+		TimeoutType: int(firstTimerTask.TimerType),
+		EventID:     firstTimerTask.EventID,
+		Attempt:     int64(firstTimerTask.Attempt),
 	})
 	return true, nil
 }
