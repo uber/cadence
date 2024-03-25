@@ -139,11 +139,13 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreation() {
 			ExecutionStats: &p.ExecutionStats{},
 			TransferTasks: []p.Task{
 				&p.DecisionTask{
-					TaskID:              s.GetNextSequenceNumber(),
-					DomainID:            domainID,
-					TaskList:            "taskList",
-					ScheduleID:          2,
-					VisibilityTimestamp: time.Now(),
+					TaskData: p.TaskData{
+						TaskID:              s.GetNextSequenceNumber(),
+						VisibilityTimestamp: time.Now(),
+					},
+					DomainID:   domainID,
+					TaskList:   "taskList",
+					ScheduleID: 2,
 				},
 			},
 			TimerTasks:       nil,
@@ -251,11 +253,13 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreationWithVersionHistor
 			VersionHistories: versionHistories,
 			TransferTasks: []p.Task{
 				&p.DecisionTask{
-					TaskID:              s.GetNextSequenceNumber(),
-					DomainID:            domainID,
-					TaskList:            "taskList",
-					ScheduleID:          2,
-					VisibilityTimestamp: time.Now(),
+					TaskData: p.TaskData{
+						TaskID:              s.GetNextSequenceNumber(),
+						VisibilityTimestamp: time.Now(),
+					},
+					DomainID:   domainID,
+					TaskList:   "taskList",
+					ScheduleID: 2,
 				},
 			},
 			TimerTasks: nil,
@@ -343,7 +347,9 @@ func (s *ExecutionManagerSuiteForEventsV2) TestContinueAsNew() {
 	}
 
 	newdecisionTask := &p.DecisionTask{
-		TaskID:     s.GetNextSequenceNumber(),
+		TaskData: p.TaskData{
+			TaskID: s.GetNextSequenceNumber(),
+		},
 		DomainID:   updatedInfo.DomainID,
 		TaskList:   updatedInfo.TaskList,
 		ScheduleID: int64(2),

@@ -781,28 +781,34 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTasks() {
 	remoteClusterName := "remote-cluster"
 	transferTasks := []p.Task{
 		&p.ActivityTask{
-			VisibilityTimestamp: now,
-			TaskID:              s.GetNextSequenceNumber(),
-			DomainID:            domainID,
-			TaskList:            "some randome tasklist name",
-			ScheduleID:          123,
-			Version:             common.EmptyVersion,
+			TaskData: p.TaskData{
+				VisibilityTimestamp: now,
+				TaskID:              s.GetNextSequenceNumber(),
+				Version:             common.EmptyVersion,
+			},
+			DomainID:   domainID,
+			TaskList:   "some randome tasklist name",
+			ScheduleID: 123,
 		},
 	}
 	timerTasks := []p.Task{
 		&p.UserTimerTask{
-			VisibilityTimestamp: now.Add(time.Minute),
-			TaskID:              s.GetNextSequenceNumber(),
-			EventID:             124,
-			Version:             common.EmptyVersion,
+			TaskData: p.TaskData{
+				VisibilityTimestamp: now.Add(time.Minute),
+				TaskID:              s.GetNextSequenceNumber(),
+				Version:             common.EmptyVersion,
+			},
+			EventID: 124,
 		},
 	}
 	crossClusterTasks := []p.Task{
 		&p.CrossClusterApplyParentClosePolicyTask{
 			ApplyParentClosePolicyTask: p.ApplyParentClosePolicyTask{
-				VisibilityTimestamp: now,
-				TaskID:              s.GetNextSequenceNumber(),
-				Version:             common.EmptyVersion,
+				TaskData: p.TaskData{
+					VisibilityTimestamp: now,
+					TaskID:              s.GetNextSequenceNumber(),
+					Version:             common.EmptyVersion,
+				},
 			},
 			TargetCluster: remoteClusterName,
 		},
@@ -1209,7 +1215,9 @@ func (s *ExecutionManagerSuite) TestPersistenceStartWorkflow() {
 			ExecutionStats: &p.ExecutionStats{},
 			TransferTasks: []p.Task{
 				&p.DecisionTask{
-					TaskID:     s.GetNextSequenceNumber(),
+					TaskData: p.TaskData{
+						TaskID: s.GetNextSequenceNumber(),
+					},
 					DomainID:   domainID,
 					TaskList:   "queue1",
 					ScheduleID: int64(2),
@@ -2130,7 +2138,9 @@ func (s *ExecutionManagerSuite) TestCancelTransferTaskTasks() {
 	targetRunID := "0d00698f-08e1-4d36-a3e2-3bf109f5d2d6"
 	targetChildWorkflowOnly := false
 	transferTasks := []p.Task{&p.CancelExecutionTask{
-		TaskID:                  s.GetNextSequenceNumber(),
+		TaskData: p.TaskData{
+			TaskID: s.GetNextSequenceNumber(),
+		},
 		TargetDomainID:          targetDomainID,
 		TargetWorkflowID:        targetWorkflowID,
 		TargetRunID:             targetRunID,
@@ -2169,7 +2179,9 @@ func (s *ExecutionManagerSuite) TestCancelTransferTaskTasks() {
 	targetRunID = ""
 	targetChildWorkflowOnly = true
 	transferTasks = []p.Task{&p.CancelExecutionTask{
-		TaskID:                  s.GetNextSequenceNumber(),
+		TaskData: p.TaskData{
+			TaskID: s.GetNextSequenceNumber(),
+		},
 		TargetDomainID:          targetDomainID,
 		TargetWorkflowID:        targetWorkflowID,
 		TargetRunID:             targetRunID,
@@ -2238,7 +2250,9 @@ func (s *ExecutionManagerSuite) TestSignalTransferTaskTasks() {
 	targetRunID := "0d00698f-08e1-4d36-a3e2-3bf109f5d2d6"
 	targetChildWorkflowOnly := false
 	transferTasks := []p.Task{&p.SignalExecutionTask{
-		TaskID:                  s.GetNextSequenceNumber(),
+		TaskData: p.TaskData{
+			TaskID: s.GetNextSequenceNumber(),
+		},
 		TargetDomainID:          targetDomainID,
 		TargetWorkflowID:        targetWorkflowID,
 		TargetRunID:             targetRunID,
@@ -2277,7 +2291,9 @@ func (s *ExecutionManagerSuite) TestSignalTransferTaskTasks() {
 	targetRunID = ""
 	targetChildWorkflowOnly = true
 	transferTasks = []p.Task{&p.SignalExecutionTask{
-		TaskID:                  s.GetNextSequenceNumber(),
+		TaskData: p.TaskData{
+			TaskID: s.GetNextSequenceNumber(),
+		},
 		TargetDomainID:          targetDomainID,
 		TargetWorkflowID:        targetWorkflowID,
 		TargetRunID:             targetRunID,
@@ -2342,20 +2358,26 @@ func (s *ExecutionManagerSuite) TestReplicationTasks() {
 
 	replicationTasks := []p.Task{
 		&p.HistoryReplicationTask{
-			TaskID:       s.GetNextSequenceNumber(),
+			TaskData: p.TaskData{
+				TaskID:  s.GetNextSequenceNumber(),
+				Version: 123,
+			},
 			FirstEventID: int64(1),
 			NextEventID:  int64(3),
-			Version:      123,
 		},
 		&p.HistoryReplicationTask{
-			TaskID:       s.GetNextSequenceNumber(),
+			TaskData: p.TaskData{
+				TaskID:  s.GetNextSequenceNumber(),
+				Version: 456,
+			},
 			FirstEventID: int64(1),
 			NextEventID:  int64(3),
-			Version:      456,
 		},
 		&p.SyncActivityTask{
-			TaskID:      s.GetNextSequenceNumber(),
-			Version:     789,
+			TaskData: p.TaskData{
+				TaskID:  s.GetNextSequenceNumber(),
+				Version: 789,
+			},
 			ScheduledID: 99,
 		},
 	}
@@ -2422,25 +2444,29 @@ func (s *ExecutionManagerSuite) TestCrossClusterTasks() {
 		&p.CrossClusterStartChildExecutionTask{
 			TargetCluster: remoteClusterName1,
 			StartChildExecutionTask: p.StartChildExecutionTask{
-				VisibilityTimestamp: now,
-				TaskID:              s.GetNextSequenceNumber(),
-				TargetDomainID:      uuid.New(),
-				TargetWorkflowID:    "target workflow 1",
-				InitiatedID:         5,
-				Version:             123,
+				TaskData: p.TaskData{
+					VisibilityTimestamp: now,
+					TaskID:              s.GetNextSequenceNumber(),
+					Version:             123,
+				},
+				TargetDomainID:   uuid.New(),
+				TargetWorkflowID: "target workflow 1",
+				InitiatedID:      5,
 			},
 		},
 		&p.CrossClusterSignalExecutionTask{
 			TargetCluster: remoteClusterName1,
 			SignalExecutionTask: p.SignalExecutionTask{
-				VisibilityTimestamp:     now,
-				TaskID:                  s.GetNextSequenceNumber(),
+				TaskData: p.TaskData{
+					VisibilityTimestamp: now,
+					TaskID:              s.GetNextSequenceNumber(),
+					Version:             123,
+				},
 				TargetDomainID:          uuid.New(),
 				TargetWorkflowID:        "target workflowID 2",
 				TargetRunID:             uuid.New(),
 				TargetChildWorkflowOnly: true,
 				InitiatedID:             6,
-				Version:                 123,
 			},
 		},
 	}
@@ -2448,34 +2474,40 @@ func (s *ExecutionManagerSuite) TestCrossClusterTasks() {
 		&p.CrossClusterCancelExecutionTask{
 			TargetCluster: remoteClusterName2,
 			CancelExecutionTask: p.CancelExecutionTask{
-				VisibilityTimestamp:     now,
-				TaskID:                  s.GetNextSequenceNumber(),
+				TaskData: p.TaskData{
+					VisibilityTimestamp: now,
+					TaskID:              s.GetNextSequenceNumber(),
+					Version:             123,
+				},
 				TargetDomainID:          uuid.New(),
 				TargetWorkflowID:        "target workflowID 3",
 				TargetRunID:             uuid.New(),
 				TargetChildWorkflowOnly: true,
 				InitiatedID:             6,
-				Version:                 123,
 			},
 		},
 		&p.CrossClusterRecordChildExecutionCompletedTask{
 			TargetCluster: remoteClusterName2,
 			RecordChildExecutionCompletedTask: p.RecordChildExecutionCompletedTask{
-				VisibilityTimestamp: now,
-				TaskID:              s.GetNextSequenceNumber(),
-				TargetDomainID:      uuid.New(),
-				TargetWorkflowID:    "target workflowID 4",
-				TargetRunID:         uuid.New(),
-				Version:             123,
+				TaskData: p.TaskData{
+					VisibilityTimestamp: now,
+					TaskID:              s.GetNextSequenceNumber(),
+					Version:             123,
+				},
+				TargetDomainID:   uuid.New(),
+				TargetWorkflowID: "target workflowID 4",
+				TargetRunID:      uuid.New(),
 			},
 		},
 		&p.CrossClusterApplyParentClosePolicyTask{
 			TargetCluster: remoteClusterName2,
 			ApplyParentClosePolicyTask: p.ApplyParentClosePolicyTask{
-				VisibilityTimestamp: now,
-				TaskID:              s.GetNextSequenceNumber(),
-				TargetDomainIDs:     map[string]struct{}{uuid.New(): {}, uuid.New(): {}},
-				Version:             123,
+				TaskData: p.TaskData{
+					VisibilityTimestamp: now,
+					TaskID:              s.GetNextSequenceNumber(),
+					Version:             123,
+				},
+				TargetDomainIDs: map[string]struct{}{uuid.New(): {}, uuid.New(): {}},
 			},
 		},
 	}
@@ -2605,15 +2637,92 @@ func (s *ExecutionManagerSuite) TestTransferTasksComplete() {
 	currentTransferID := task1.TaskID
 	now := time.Now()
 	tasks := []p.Task{
-		&p.ActivityTask{now, currentTransferID + 10001, domainID, tasklist, scheduleID, 111},
-		&p.DecisionTask{now, currentTransferID + 10002, domainID, tasklist, scheduleID, 222, false},
-		&p.CloseExecutionTask{now, currentTransferID + 10003, 333},
-		&p.CancelExecutionTask{now, currentTransferID + 10004, targetDomainID, targetWorkflowID, targetRunID, true, scheduleID, 444},
-		&p.SignalExecutionTask{now, currentTransferID + 10005, targetDomainID, targetWorkflowID, targetRunID, true, scheduleID, 555},
-		&p.StartChildExecutionTask{now, currentTransferID + 10006, targetDomainID, targetWorkflowID, scheduleID, 666},
-		&p.RecordWorkflowClosedTask{now, currentTransferID + 10007, 777},
-		&p.RecordChildExecutionCompletedTask{now, currentTransferID + 10008, targetDomainID, targetWorkflowID, targetRunID, 888},
-		&p.ApplyParentClosePolicyTask{now, currentTransferID + 10009, map[string]struct{}{targetDomainID: {}}, 999},
+		&p.ActivityTask{
+			TaskData: p.TaskData{
+				VisibilityTimestamp: now,
+				TaskID:              currentTransferID + 10000,
+				Version:             111,
+			},
+			DomainID:   domainID,
+			TaskList:   tasklist,
+			ScheduleID: scheduleID,
+		},
+		&p.DecisionTask{
+			TaskData: p.TaskData{
+				VisibilityTimestamp: now,
+				TaskID:              currentTransferID + 10002,
+				Version:             222,
+			},
+			DomainID:         domainID,
+			TaskList:         tasklist,
+			ScheduleID:       scheduleID,
+			RecordVisibility: false,
+		},
+		&p.CloseExecutionTask{
+			TaskData: p.TaskData{
+				VisibilityTimestamp: now,
+				TaskID:              currentTransferID + 10003,
+				Version:             333,
+			}},
+		&p.CancelExecutionTask{
+			TaskData: p.TaskData{
+				VisibilityTimestamp: now,
+				TaskID:              currentTransferID + 10004,
+				Version:             444,
+			},
+			TargetDomainID:          targetDomainID,
+			TargetWorkflowID:        targetWorkflowID,
+			TargetRunID:             targetRunID,
+			TargetChildWorkflowOnly: true,
+			InitiatedID:             scheduleID,
+		},
+		&p.SignalExecutionTask{
+			TaskData: p.TaskData{
+				VisibilityTimestamp: now,
+				TaskID:              currentTransferID + 10005,
+				Version:             555,
+			},
+			TargetDomainID:          targetDomainID,
+			TargetWorkflowID:        targetWorkflowID,
+			TargetRunID:             targetRunID,
+			TargetChildWorkflowOnly: true,
+			InitiatedID:             scheduleID,
+		},
+		&p.StartChildExecutionTask{
+			TaskData: p.TaskData{
+				VisibilityTimestamp: now,
+				TaskID:              currentTransferID + 10006,
+				Version:             666,
+			},
+			TargetDomainID:   targetDomainID,
+			TargetWorkflowID: targetWorkflowID,
+			InitiatedID:      scheduleID,
+		},
+		&p.RecordWorkflowClosedTask{
+			TaskData: p.TaskData{
+				VisibilityTimestamp: now,
+				TaskID:              currentTransferID + 10007,
+				Version:             777,
+			},
+		},
+		&p.RecordChildExecutionCompletedTask{
+			TaskData: p.TaskData{
+				VisibilityTimestamp: now,
+				TaskID:              currentTransferID + 10008,
+				Version:             888,
+			},
+			TargetDomainID:   targetDomainID,
+			TargetWorkflowID: targetWorkflowID,
+			TargetRunID:      targetRunID,
+		},
+		&p.ApplyParentClosePolicyTask{
+			TaskData: p.TaskData{
+				VisibilityTimestamp: now,
+				TaskID:              currentTransferID + 10009,
+				Version:             999,
+			},
+			TargetDomainIDs: map[string]struct{}{targetDomainID: {}},
+		},
 	}
 	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
 		{
@@ -2702,12 +2811,68 @@ func (s *ExecutionManagerSuite) TestTransferTasksRangeComplete() {
 	currentTransferID := task1.TaskID
 	now := time.Now()
 	tasks := []p.Task{
-		&p.ActivityTask{now, currentTransferID + 10001, domainID, tasklist, scheduleID, 111},
-		&p.DecisionTask{now, currentTransferID + 10002, domainID, tasklist, scheduleID, 222, false},
-		&p.CloseExecutionTask{now, currentTransferID + 10003, 333},
-		&p.CancelExecutionTask{now, currentTransferID + 10004, targetDomainID, targetWorkflowID, targetRunID, true, scheduleID, 444},
-		&p.SignalExecutionTask{now, currentTransferID + 10005, targetDomainID, targetWorkflowID, targetRunID, true, scheduleID, 555},
-		&p.StartChildExecutionTask{now, currentTransferID + 10006, targetDomainID, targetWorkflowID, scheduleID, 666},
+		&p.ActivityTask{
+			TaskData: p.TaskData{
+				VisibilityTimestamp: now,
+				TaskID:              currentTransferID + 10001,
+				Version:             111,
+			},
+			DomainID:   domainID,
+			TaskList:   tasklist,
+			ScheduleID: scheduleID,
+		},
+		&p.DecisionTask{
+			TaskData: p.TaskData{
+				VisibilityTimestamp: now,
+				TaskID:              currentTransferID + 10002,
+				Version:             222,
+			},
+			DomainID:         domainID,
+			TaskList:         tasklist,
+			ScheduleID:       scheduleID,
+			RecordVisibility: false,
+		},
+		&p.CloseExecutionTask{
+			TaskData: p.TaskData{
+				VisibilityTimestamp: now,
+				TaskID:              currentTransferID + 10003,
+				Version:             333,
+			},
+		},
+		&p.CancelExecutionTask{
+			TaskData: p.TaskData{
+				VisibilityTimestamp: now,
+				TaskID:              currentTransferID + 10004,
+				Version:             444,
+			},
+			TargetDomainID:          targetDomainID,
+			TargetWorkflowID:        targetWorkflowID,
+			TargetRunID:             targetRunID,
+			TargetChildWorkflowOnly: true,
+			InitiatedID:             scheduleID,
+		},
+		&p.SignalExecutionTask{
+			TaskData: p.TaskData{
+				VisibilityTimestamp: now,
+				TaskID:              currentTransferID + 10005,
+				Version:             555,
+			},
+			TargetDomainID:          targetDomainID,
+			TargetWorkflowID:        targetWorkflowID,
+			TargetRunID:             targetRunID,
+			TargetChildWorkflowOnly: true,
+			InitiatedID:             scheduleID,
+		},
+		&p.StartChildExecutionTask{
+			TaskData: p.TaskData{
+				VisibilityTimestamp: now,
+				TaskID:              currentTransferID + 10006,
+				Version:             666,
+			},
+			TargetDomainID:   targetDomainID,
+			TargetWorkflowID: targetWorkflowID,
+			InitiatedID:      scheduleID,
+		},
 	}
 	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
 		{
@@ -2765,7 +2930,16 @@ func (s *ExecutionManagerSuite) TestTimerTasksComplete() {
 	}
 
 	now := time.Now()
-	initialTasks := []p.Task{&p.DecisionTimeoutTask{now.Add(1 * time.Second), 1, 2, 3, int(types.TimeoutTypeStartToClose), 11}}
+	initialTasks := []p.Task{&p.DecisionTimeoutTask{
+		TaskData: p.TaskData{
+			VisibilityTimestamp: now.Add(1 * time.Second),
+			TaskID:              1,
+			Version:             11,
+		},
+		EventID:         2,
+		ScheduleAttempt: 3,
+		TimeoutType:     int(types.TimeoutTypeStartToClose)},
+	}
 
 	task0, err0 := s.CreateWorkflowExecution(ctx, domainID, workflowExecution, "taskList", "wType", 20, 13, nil, 3, 0, 2, initialTasks, nil)
 	s.NoError(err0)
@@ -2781,10 +2955,38 @@ func (s *ExecutionManagerSuite) TestTimerTasksComplete() {
 	updatedInfo.NextEventID = int64(5)
 	updatedInfo.LastProcessedEvent = int64(2)
 	tasks := []p.Task{
-		&p.WorkflowTimeoutTask{now.Add(2 * time.Second), 2, 12},
-		&p.DeleteHistoryEventTask{now.Add(2 * time.Second), 3, 13},
-		&p.ActivityTimeoutTask{now.Add(3 * time.Second), 4, int(types.TimeoutTypeStartToClose), 7, 0, 14},
-		&p.UserTimerTask{now.Add(3 * time.Second), 5, 7, 15},
+		&p.WorkflowTimeoutTask{
+			TaskData: p.TaskData{
+				Version:             12,
+				TaskID:              2,
+				VisibilityTimestamp: now.Add(2 * time.Second),
+			},
+		},
+		&p.DeleteHistoryEventTask{
+			TaskData: p.TaskData{
+				Version:             13,
+				TaskID:              3,
+				VisibilityTimestamp: now.Add(2 * time.Second),
+			},
+		},
+		&p.ActivityTimeoutTask{
+			TaskData: p.TaskData{
+				Version:             14,
+				TaskID:              4,
+				VisibilityTimestamp: now.Add(3 * time.Second),
+			},
+			TimeoutType: int(types.TimeoutTypeStartToClose),
+			EventID:     7,
+			Attempt:     0,
+		},
+		&p.UserTimerTask{
+			TaskData: p.TaskData{
+				Version:             15,
+				TaskID:              5,
+				VisibilityTimestamp: now.Add(3 * time.Second),
+			},
+			EventID: 7,
+		},
 	}
 	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
 		{
@@ -2850,12 +3052,50 @@ func (s *ExecutionManagerSuite) TestTimerTasksRangeComplete() {
 		},
 	})
 	versionHistories := p.NewVersionHistories(versionHistory)
+	now := time.Now().UTC()
 	tasks := []p.Task{
-		&p.DecisionTimeoutTask{time.Now(), 1, 2, 3, int(types.TimeoutTypeStartToClose), 11},
-		&p.WorkflowTimeoutTask{time.Now(), 2, 12},
-		&p.DeleteHistoryEventTask{time.Now(), 3, 13},
-		&p.ActivityTimeoutTask{time.Now(), 4, int(types.TimeoutTypeStartToClose), 7, 0, 14},
-		&p.UserTimerTask{time.Now(), 5, 7, 15},
+		&p.DecisionTimeoutTask{
+			TaskData: p.TaskData{
+				VisibilityTimestamp: now,
+				TaskID:              1,
+				Version:             11,
+			},
+			EventID:         2,
+			ScheduleAttempt: 3,
+			TimeoutType:     int(types.TimeoutTypeStartToClose),
+		},
+		&p.WorkflowTimeoutTask{
+			TaskData: p.TaskData{
+				VisibilityTimestamp: now,
+				TaskID:              2,
+				Version:             12,
+			},
+		},
+		&p.DeleteHistoryEventTask{
+			TaskData: p.TaskData{
+				VisibilityTimestamp: now,
+				TaskID:              3,
+				Version:             13,
+			},
+		},
+		&p.ActivityTimeoutTask{
+			TaskData: p.TaskData{
+				VisibilityTimestamp: now,
+				TaskID:              4,
+				Version:             14,
+			},
+			TimeoutType: int(types.TimeoutTypeStartToClose),
+			EventID:     7,
+			Attempt:     0,
+		},
+		&p.UserTimerTask{
+			TaskData: p.TaskData{
+				VisibilityTimestamp: now,
+				TaskID:              5,
+				Version:             15,
+			},
+			EventID: 7,
+		},
 	}
 	err2 := s.UpdateWorkflowExecution(ctx, updatedInfo, updatedStats, versionHistories, []int64{int64(4)}, nil, int64(3), tasks, nil, nil, nil, nil)
 	s.NoError(err2)
@@ -3479,10 +3719,12 @@ func (s *ExecutionManagerSuite) TestReplicationTransferTaskTasks() {
 	updatedStats1 := copyExecutionStats(state1.ExecutionStats)
 
 	replicationTasks := []p.Task{&p.HistoryReplicationTask{
-		TaskID:       s.GetNextSequenceNumber(),
-		FirstEventID: int64(1),
-		NextEventID:  int64(3),
-		Version:      int64(9),
+		TaskData: p.TaskData{
+			TaskID:  s.GetNextSequenceNumber(),
+			Version: 9,
+		},
+		FirstEventID: 1,
+		NextEventID:  3,
 	}}
 	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
 		{
@@ -3544,16 +3786,20 @@ func (s *ExecutionManagerSuite) TestReplicationTransferTaskRangeComplete() {
 
 	replicationTasks := []p.Task{
 		&p.HistoryReplicationTask{
-			TaskID:       s.GetNextSequenceNumber(),
-			FirstEventID: int64(1),
-			NextEventID:  int64(3),
-			Version:      int64(9),
+			TaskData: p.TaskData{
+				TaskID:  s.GetNextSequenceNumber(),
+				Version: 9,
+			},
+			FirstEventID: 1,
+			NextEventID:  3,
 		},
 		&p.HistoryReplicationTask{
-			TaskID:       s.GetNextSequenceNumber(),
-			FirstEventID: int64(4),
-			NextEventID:  int64(5),
-			Version:      int64(9),
+			TaskData: p.TaskData{
+				TaskID:  s.GetNextSequenceNumber(),
+				Version: 9,
+			},
+			FirstEventID: 4,
+			NextEventID:  5,
 		},
 	}
 	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
@@ -5397,10 +5643,12 @@ func (s *ExecutionManagerSuite) TestCreateFailoverMarkerTasks() {
 	domainID := uuid.New()
 	markers := []*p.FailoverMarkerTask{
 		{
-			TaskID:              1,
-			VisibilityTimestamp: time.Now(),
-			DomainID:            domainID,
-			Version:             1,
+			TaskData: p.TaskData{
+				TaskID:              1,
+				VisibilityTimestamp: time.Now(),
+				Version:             1,
+			},
+			DomainID: domainID,
 		},
 	}
 	err := s.CreateFailoverMarkers(ctx, markers)

@@ -371,11 +371,13 @@ func (s *TestBase) CreateWorkflowExecutionWithBranchToken(
 			ExecutionStats: &persistence.ExecutionStats{},
 			TransferTasks: []persistence.Task{
 				&persistence.DecisionTask{
-					TaskID:              s.GetNextSequenceNumber(),
-					DomainID:            domainID,
-					TaskList:            taskList,
-					ScheduleID:          decisionScheduleID,
-					VisibilityTimestamp: time.Now(),
+					TaskData: persistence.TaskData{
+						TaskID:              s.GetNextSequenceNumber(),
+						VisibilityTimestamp: time.Now(),
+					},
+					DomainID:   domainID,
+					TaskList:   taskList,
+					ScheduleID: decisionScheduleID,
 				},
 			},
 			TimerTasks:       timerTasks,
@@ -454,7 +456,9 @@ func (s *TestBase) CreateChildWorkflowExecution(ctx context.Context, domainID st
 			ExecutionStats: &persistence.ExecutionStats{},
 			TransferTasks: []persistence.Task{
 				&persistence.DecisionTask{
-					TaskID:     s.GetNextSequenceNumber(),
+					TaskData: persistence.TaskData{
+						TaskID: s.GetNextSequenceNumber(),
+					},
 					DomainID:   domainID,
 					TaskList:   taskList,
 					ScheduleID: decisionScheduleID,
@@ -526,7 +530,9 @@ func (s *TestBase) ContinueAsNewExecution(
 
 	now := time.Now()
 	newdecisionTask := &persistence.DecisionTask{
-		TaskID:     s.GetNextSequenceNumber(),
+		TaskData: persistence.TaskData{
+			TaskID: s.GetNextSequenceNumber(),
+		},
 		DomainID:   updatedInfo.DomainID,
 		TaskList:   updatedInfo.TaskList,
 		ScheduleID: int64(decisionScheduleID),
@@ -642,7 +648,7 @@ func (s *TestBase) UpdateWorkflowExecutionAndFinish(
 	versionHistories *persistence.VersionHistories,
 ) error {
 	transferTasks := []persistence.Task{}
-	transferTasks = append(transferTasks, &persistence.CloseExecutionTask{TaskID: s.GetNextSequenceNumber()})
+	transferTasks = append(transferTasks, &persistence.CloseExecutionTask{TaskData: persistence.TaskData{TaskID: s.GetNextSequenceNumber()}})
 	_, err := s.ExecutionManager.UpdateWorkflowExecution(ctx, &persistence.UpdateWorkflowExecutionRequest{
 		RangeID: s.ShardInfo.RangeID,
 		UpdateWorkflowMutation: persistence.WorkflowMutation{
@@ -1084,7 +1090,9 @@ func (s *TestBase) UpdateWorkflowExecutionWithReplication(
 	}
 	for _, decisionScheduleID := range decisionScheduleIDs {
 		transferTasks = append(transferTasks, &persistence.DecisionTask{
-			TaskID:     s.GetNextSequenceNumber(),
+			TaskData: persistence.TaskData{
+				TaskID: s.GetNextSequenceNumber(),
+			},
 			DomainID:   updatedInfo.DomainID,
 			TaskList:   updatedInfo.TaskList,
 			ScheduleID: int64(decisionScheduleID)})
@@ -1092,7 +1100,9 @@ func (s *TestBase) UpdateWorkflowExecutionWithReplication(
 
 	for _, activityScheduleID := range activityScheduleIDs {
 		transferTasks = append(transferTasks, &persistence.ActivityTask{
-			TaskID:     s.GetNextSequenceNumber(),
+			TaskData: persistence.TaskData{
+				TaskID: s.GetNextSequenceNumber(),
+			},
 			DomainID:   updatedInfo.DomainID,
 			TaskList:   updatedInfo.TaskList,
 			ScheduleID: int64(activityScheduleID)})

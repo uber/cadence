@@ -114,9 +114,9 @@ func (s *transferQueueValidatorSuite) TearDownTest() {
 func (s *transferQueueValidatorSuite) TestAddTasks_NoTaskDropped() {
 	executionInfo := &persistence.WorkflowExecutionInfo{}
 	tasks := []persistence.Task{
-		&persistence.DecisionTask{TaskID: 0},
-		&persistence.DecisionTask{TaskID: 1},
-		&persistence.DecisionTask{TaskID: 2},
+		&persistence.DecisionTask{TaskData: persistence.TaskData{TaskID: 0}},
+		&persistence.DecisionTask{TaskData: persistence.TaskData{TaskID: 1}},
+		&persistence.DecisionTask{TaskData: persistence.TaskData{TaskID: 2}},
 	}
 	expectedPendingTasksLen := len(tasks)
 
@@ -124,8 +124,8 @@ func (s *transferQueueValidatorSuite) TestAddTasks_NoTaskDropped() {
 	s.Len(s.validator.pendingTaskInfos, expectedPendingTasksLen)
 
 	tasks = []persistence.Task{
-		&persistence.DecisionTask{TaskID: 4},
-		&persistence.DecisionTask{TaskID: 5},
+		&persistence.DecisionTask{TaskData: persistence.TaskData{TaskID: 4}},
+		&persistence.DecisionTask{TaskData: persistence.TaskData{TaskID: 5}},
 	}
 	expectedPendingTasksLen += len(tasks)
 
@@ -136,9 +136,9 @@ func (s *transferQueueValidatorSuite) TestAddTasks_NoTaskDropped() {
 func (s *transferQueueValidatorSuite) TestAddTasks_TaskDropped() {
 	executionInfo := &persistence.WorkflowExecutionInfo{}
 	tasks := []persistence.Task{
-		&persistence.DecisionTask{TaskID: 0},
-		&persistence.DecisionTask{TaskID: 1},
-		&persistence.DecisionTask{TaskID: 2},
+		&persistence.DecisionTask{TaskData: persistence.TaskData{TaskID: 0}},
+		&persistence.DecisionTask{TaskData: persistence.TaskData{TaskID: 1}},
+		&persistence.DecisionTask{TaskData: persistence.TaskData{TaskID: 2}},
 	}
 	expectedPendingTasksLen := len(tasks)
 
@@ -147,7 +147,7 @@ func (s *transferQueueValidatorSuite) TestAddTasks_TaskDropped() {
 
 	tasks = []persistence.Task{}
 	for i := 0; i != defaultMaxPendingTasksSize; i++ {
-		tasks = append(tasks, &persistence.DecisionTask{TaskID: int64(i + expectedPendingTasksLen)})
+		tasks = append(tasks, &persistence.DecisionTask{TaskData: persistence.TaskData{TaskID: int64(i + expectedPendingTasksLen)}})
 	}
 
 	numDroppedTasks := expectedPendingTasksLen + len(tasks) - defaultMaxPendingTasksSize
@@ -161,10 +161,10 @@ func (s *transferQueueValidatorSuite) TestAddTasks_TaskDropped() {
 func (s *transferQueueValidatorSuite) TestAckTasks_NoTaskLost() {
 	executionInfo := &persistence.WorkflowExecutionInfo{}
 	pendingTasks := []persistence.Task{
-		&persistence.DecisionTask{TaskID: 0},
-		&persistence.DecisionTask{TaskID: 1},
-		&persistence.DecisionTask{TaskID: 2},
-		&persistence.DecisionTask{TaskID: 100},
+		&persistence.DecisionTask{TaskData: persistence.TaskData{TaskID: 0}},
+		&persistence.DecisionTask{TaskData: persistence.TaskData{TaskID: 1}},
+		&persistence.DecisionTask{TaskData: persistence.TaskData{TaskID: 2}},
+		&persistence.DecisionTask{TaskData: persistence.TaskData{TaskID: 100}},
 	}
 	s.validator.addTasks(&hcommon.NotifyTaskInfo{ExecutionInfo: executionInfo, Tasks: pendingTasks, PersistenceError: false})
 
@@ -193,9 +193,9 @@ func (s *transferQueueValidatorSuite) TestAckTasks_NoTaskLost() {
 func (s *transferQueueValidatorSuite) TestAckTasks_TaskLost() {
 	executionInfo := &persistence.WorkflowExecutionInfo{}
 	pendingTasks := []persistence.Task{
-		&persistence.DecisionTask{TaskID: 0},
-		&persistence.DecisionTask{TaskID: 1},
-		&persistence.DecisionTask{TaskID: 2},
+		&persistence.DecisionTask{TaskData: persistence.TaskData{TaskID: 0}},
+		&persistence.DecisionTask{TaskData: persistence.TaskData{TaskID: 1}},
+		&persistence.DecisionTask{TaskData: persistence.TaskData{TaskID: 2}},
 	}
 	s.validator.addTasks(&hcommon.NotifyTaskInfo{ExecutionInfo: executionInfo, Tasks: pendingTasks, PersistenceError: false})
 
