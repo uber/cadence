@@ -23,9 +23,10 @@
 package gocql
 
 import (
+	"testing"
+
 	"github.com/gocql/gocql"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestConsistency_MarshalText(t *testing.T) {
