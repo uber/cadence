@@ -1386,6 +1386,7 @@ func FromDecisionTaskTimedOutEventAttributes(t *types.DecisionTaskTimedOutEventA
 		ForkEventVersion: &t.ForkEventVersion,
 		Reason:           &t.Reason,
 		Cause:            FromDecisionTaskTimedOutCause(t.Cause),
+		RequestId:        &t.RequestID,
 	}
 }
 
@@ -1403,6 +1404,7 @@ func ToDecisionTaskTimedOutEventAttributes(t *shared.DecisionTaskTimedOutEventAt
 		ForkEventVersion: t.GetForkEventVersion(),
 		Reason:           t.GetReason(),
 		Cause:            ToDecisionTaskTimedOutCause(t.Cause),
+		RequestID:        t.GetRequestId(),
 	}
 }
 
