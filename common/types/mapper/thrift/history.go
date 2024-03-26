@@ -1365,3 +1365,20 @@ func ToGetFailoverInfoResponse(t *history.GetFailoverInfoResponse) *types.GetFai
 		PendingShards:       t.GetPendingShards(),
 	}
 }
+
+func ToHistoryRatelimitUpdateRequest(t *history.RatelimitUpdateRequest) *types.RatelimitUpdateRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.RatelimitUpdateRequest{
+		Any: ToAny(t.Data),
+	}
+}
+func FromHistoryRatelimitUpdateResponse(t *types.RatelimitUpdateResponse) *history.RatelimitUpdateResponse {
+	if t == nil {
+		return nil
+	}
+	return &history.RatelimitUpdateResponse{
+		Data: FromAny(t.Any),
+	}
+}

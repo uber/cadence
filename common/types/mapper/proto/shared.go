@@ -1810,3 +1810,25 @@ func ToHistoryDLQCountEntryMap(t []*adminv1.HistoryDLQCountEntry) map[types.Hist
 	}
 	return entries
 }
+
+// ToAny converts thrift Any type to internal
+func ToAny(t *sharedv1.Any) *types.Any {
+	if t == nil {
+		return nil
+	}
+	return &types.Any{
+		TypeID: t.GetTypeId(),
+		Value:  t.Value,
+	}
+}
+
+// FromAny converts internal Any type to thrift
+func FromAny(t *types.Any) *sharedv1.Any {
+	if t == nil {
+		return nil
+	}
+	return &sharedv1.Any{
+		TypeId: t.TypeID,
+		Value:  t.Value,
+	}
+}

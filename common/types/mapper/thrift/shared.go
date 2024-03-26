@@ -8035,3 +8035,26 @@ func ToStickyWorkerUnavailableError(t *shared.StickyWorkerUnavailableError) *typ
 		Message: t.Message,
 	}
 }
+
+// ToAny converts thrift Any type to internal
+func ToAny(t *shared.Any) *types.Any {
+	if t == nil {
+		return nil
+	}
+	return &types.Any{
+		TypeID: t.GetTypeID(),
+		Value:  t.Value,
+	}
+}
+
+// FromAny converts internal Any type to thrift
+func FromAny(t *types.Any) *shared.Any {
+	if t == nil {
+		return nil
+	}
+	dup := t.TypeID
+	return &shared.Any{
+		TypeID: &dup,
+		Value:  t.Value,
+	}
+}
