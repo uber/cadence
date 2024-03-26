@@ -351,6 +351,7 @@ func (s *workflowResetterSuite) TestTerminateWorkflow() {
 		"",
 		"",
 		int64(0),
+		"",
 	).Return(&types.HistoryEvent{}, nil).Times(1)
 	mutableState.EXPECT().FlushBufferedEvents().Return(nil).Times(1)
 	mutableState.EXPECT().AddWorkflowExecutionTerminatedEvent(
@@ -547,6 +548,7 @@ func (s *workflowResetterSuite) TestClosePendingDecisionTask() {
 	reason := "test"
 	decisionScheduleEventID := int64(2)
 	decisionStartEventID := decisionScheduleEventID + 1
+	resetRequestID := "fe4a2833-f761-4cfe-91f2-6cd34c5e987a"
 
 	// The workflow has decision schedule and decision start
 	sourceMutableState.EXPECT().GetInFlightDecision().Return(&execution.DecisionInfo{
@@ -565,6 +567,7 @@ func (s *workflowResetterSuite) TestClosePendingDecisionTask() {
 		baseRunID,
 		newRunID,
 		baseForkEventVerison,
+		resetRequestID,
 	).Return(nil, nil).Times(1)
 
 	_, err := s.workflowResetter.closePendingDecisionTask(
@@ -573,6 +576,7 @@ func (s *workflowResetterSuite) TestClosePendingDecisionTask() {
 		newRunID,
 		baseForkEventVerison,
 		reason,
+		resetRequestID,
 	)
 	s.NoError(err)
 
@@ -586,6 +590,7 @@ func (s *workflowResetterSuite) TestClosePendingDecisionTask() {
 		newRunID,
 		baseForkEventVerison,
 		reason,
+		resetRequestID,
 	).Return(nil, nil).Times(1)
 	_, err = s.workflowResetter.closePendingDecisionTask(
 		sourceMutableState,
@@ -593,6 +598,7 @@ func (s *workflowResetterSuite) TestClosePendingDecisionTask() {
 		newRunID,
 		baseForkEventVerison,
 		reason,
+		resetRequestID,
 	)
 	s.NoError(err)
 }
@@ -606,6 +612,7 @@ func (s *workflowResetterSuite) TestReapplyEvents() {
 			SignalName: "some random signal name",
 			Input:      []byte("some random signal input"),
 			Identity:   "some random signal identity",
+			RequestID:  "a255a38a-1e5b-47a1-a7fc-243566eed78e",
 		},
 	}
 	event2 := &types.HistoryEvent{
@@ -620,6 +627,7 @@ func (s *workflowResetterSuite) TestReapplyEvents() {
 			SignalName: "another random signal name",
 			Input:      []byte("another random signal input"),
 			Identity:   "another random signal identity",
+			RequestID:  "b4d446a7-c277-4cf7-93b4-0dc304f05346",
 		},
 	}
 	events := []*types.HistoryEvent{event1, event2, event3}
@@ -633,6 +641,7 @@ func (s *workflowResetterSuite) TestReapplyEvents() {
 				attr.GetSignalName(),
 				attr.GetInput(),
 				attr.GetIdentity(),
+				attr.GetRequestID(),
 			).Return(&types.HistoryEvent{}, nil).Times(1)
 		}
 	}
