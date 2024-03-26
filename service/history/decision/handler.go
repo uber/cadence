@@ -277,7 +277,7 @@ func (handler *handlerImpl) HandleDecisionTaskFailed(
 			}
 
 			_, err := mutableState.AddDecisionTaskFailedEvent(decision.ScheduleID, decision.StartedID, request.GetCause(), request.Details,
-				request.GetIdentity(), "", request.GetBinaryChecksum(), "", "", 0)
+				request.GetIdentity(), "", request.GetBinaryChecksum(), "", "", 0, "")
 			return err
 		})
 }
@@ -858,7 +858,7 @@ func (handler *handlerImpl) failDecisionHelper(
 	}
 
 	if _, err = mutableState.AddDecisionTaskFailedEvent(
-		scheduleID, startedID, cause, details, request.GetIdentity(), "", request.GetBinaryChecksum(), "", "", 0,
+		scheduleID, startedID, cause, details, request.GetIdentity(), "", request.GetBinaryChecksum(), "", "", 0, "",
 	); err != nil {
 		return nil, err
 	}

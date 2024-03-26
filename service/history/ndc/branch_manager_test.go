@@ -200,6 +200,7 @@ func (s *branchManagerSuite) TestFlushBufferedEvents() {
 		"",
 		"",
 		int64(0),
+		"",
 	).Return(&types.HistoryEvent{}, nil).Times(1)
 	s.mockMutableState.EXPECT().FlushBufferedEvents().Return(nil).Times(1)
 	s.mockMutableState.EXPECT().HasPendingDecision().Return(false).Times(1)
