@@ -35,13 +35,18 @@ option go_package = "github.com/uber/cadence/.gen/proto/shared/v1;sharedv1";
 // design (as the underlying data may be transported over proto or thrift), and
 // the data-bytes may or may not be proto-encoded.
 //
-// See type_id to interpret the contents.
+// This is intentionally different from DataBlob, which supports only a handful
+// of known encodings so it can be interpreted everywhere.  Any supports literally
+// any contents, and needs to be considered opaque until it is given to something
+// that is expecting it.
+//
+// See value_type to interpret the contents.
 message Any {
   // Type-string describing value's contents, and intentionally avoiding the
   // name "type" as it is often a special term.
-  // This should be a hard-coded string of some kind.
-  string type_id = 1;
+  // This should usually be a hard-coded string of some kind.
+  string value_type = 1;
   // Arbitrarily-encoded bytes, to be deserialized by a runtime implementation.
-  // The contents are described by type_id.
+  // The contents are described by value_type.
   bytes value = 2;
 }

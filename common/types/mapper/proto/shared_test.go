@@ -304,12 +304,12 @@ func TestCrossClusterApplyParentClosePolicyResponse(t *testing.T) {
 func TestAny(t *testing.T) {
 	t.Run("sanity check", func(t *testing.T) {
 		internal := types.Any{
-			TypeID: "testing",
-			Value:  []byte(`test`),
+			ValueType: "testing",
+			Value:     []byte(`test`),
 		}
 		rpc := sharedv1.Any{
-			TypeId: "testing",
-			Value:  []byte(`test`),
+			ValueType: "testing",
+			Value:     []byte(`test`),
 		}
 		require.Equal(t, &rpc, FromAny(&internal))
 		require.Equal(t, &internal, ToAny(&rpc))
@@ -346,7 +346,7 @@ func TestAny(t *testing.T) {
 			// - it populates the XXX_ fields and these can be hard to clear
 			// so this is fuzz-filled by hand with specific fields rather than as a whole.
 			var orig sharedv1.Any
-			f.Fuzz(&orig.TypeId)
+			f.Fuzz(&orig.ValueType)
 			f.Fuzz(&orig.Value)
 			out := FromAny(ToAny(&orig))
 			assert.Equal(t, &orig, out, "did not survive round-tripping")

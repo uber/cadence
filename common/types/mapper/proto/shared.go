@@ -1817,8 +1817,8 @@ func ToAny(t *sharedv1.Any) *types.Any {
 		return nil
 	}
 	return &types.Any{
-		TypeID: t.GetTypeId(),
-		Value:  t.Value,
+		ValueType: t.GetValueType(),
+		Value:     t.Value,
 	}
 }
 
@@ -1828,7 +1828,7 @@ func FromAny(t *types.Any) *sharedv1.Any {
 		return nil
 	}
 	return &sharedv1.Any{
-		TypeId: t.TypeID,
-		Value:  t.Value,
+		ValueType: t.ValueType,
+		Value:     t.Value,
 	}
 }

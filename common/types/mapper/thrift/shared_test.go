@@ -3317,12 +3317,12 @@ func TestStickyWorkerUnavailableErrorConversion(t *testing.T) {
 func TestAny(t *testing.T) {
 	t.Run("sanity check", func(t *testing.T) {
 		internal := types.Any{
-			TypeID: "testing",
-			Value:  []byte(`test`),
+			ValueType: "testing",
+			Value:     []byte(`test`),
 		}
 		rpc := shared.Any{
-			TypeID: common.StringPtr("testing"),
-			Value:  []byte(`test`),
+			ValueType: common.StringPtr("testing"),
+			Value:     []byte(`test`),
 		}
 		require.Equal(t, &rpc, FromAny(&internal))
 		require.Equal(t, &internal, ToAny(&rpc))
@@ -3356,13 +3356,13 @@ func TestAny(t *testing.T) {
 			var orig shared.Any
 			f.Fuzz(&orig)
 			out := FromAny(ToAny(&orig))
-			if orig.TypeID == nil {
+			if orig.ValueType == nil {
 				// internal type does not support nil strings, so it will be transformed to an empty string
-				assert.Equal(t, "", *out.TypeID, "empty typeID did not survive round-tripping")
+				assert.Equal(t, "", *out.ValueType, "empty value type did not survive round-tripping")
 				assert.Equal(t, orig.Value, out.Value, "value did not survive round-tripping")
 				return "nil id"
 			}
-			// non-nil type ID should be retained
+			// non-nil value-type should retain everything
 			assert.Equal(t, &orig, out, "did not survive round-tripping")
 			if len(orig.Value) == 0 {
 				return "empty data" // ignoring nil vs empty difference

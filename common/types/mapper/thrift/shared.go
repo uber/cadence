@@ -8042,8 +8042,8 @@ func ToAny(t *shared.Any) *types.Any {
 		return nil
 	}
 	return &types.Any{
-		TypeID: t.GetTypeID(),
-		Value:  t.Value,
+		ValueType: t.GetValueType(),
+		Value:     t.Value,
 	}
 }
 
@@ -8052,9 +8052,9 @@ func FromAny(t *types.Any) *shared.Any {
 	if t == nil {
 		return nil
 	}
-	dup := t.TypeID
+	dup := t.ValueType
 	return &shared.Any{
-		TypeID: &dup,
-		Value:  t.Value,
+		ValueType: &dup,
+		Value:     t.Value,
 	}
 }
