@@ -303,6 +303,7 @@ func (r *workflowResetterImpl) persistToDB(
 		persistence.CreateWorkflowModeContinueAsNew,
 		currentRunID,
 		currentLastWriteVersion,
+		persistence.CreateWorkflowRequestModeNew,
 	)
 }
 

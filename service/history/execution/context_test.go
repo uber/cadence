@@ -1089,6 +1089,7 @@ func TestCreateWorkflowExecution(t *testing.T) {
 		createMode                            persistence.CreateWorkflowMode
 		prevRunID                             string
 		prevLastWriteVersion                  int64
+		createWorkflowRequestMode             persistence.CreateWorkflowRequestMode
 		mockCreateWorkflowExecutionFn         func(context.Context, *persistence.CreateWorkflowExecutionRequest) (*persistence.CreateWorkflowExecutionResponse, error)
 		mockNotifyTasksFromWorkflowSnapshotFn func(*persistence.WorkflowSnapshot, events.PersistedBlobs, bool)
 		mockEmitSessionUpdateStatsFn          func(string, *persistence.MutableStateUpdateSessionStats)
@@ -1110,9 +1111,10 @@ func TestCreateWorkflowExecution(t *testing.T) {
 				BranchToken:  []byte{1, 2, 3},
 				FirstEventID: 1,
 			},
-			createMode:           persistence.CreateWorkflowModeContinueAsNew,
-			prevRunID:            "test-prev-run-id",
-			prevLastWriteVersion: 123,
+			createMode:                persistence.CreateWorkflowModeContinueAsNew,
+			prevRunID:                 "test-prev-run-id",
+			prevLastWriteVersion:      123,
+			createWorkflowRequestMode: persistence.CreateWorkflowRequestModeReplicated,
 			mockCreateWorkflowExecutionFn: func(context.Context, *persistence.CreateWorkflowExecutionRequest) (*persistence.CreateWorkflowExecutionResponse, error) {
 				return nil, &types.InternalServiceError{}
 			},
@@ -1137,9 +1139,10 @@ func TestCreateWorkflowExecution(t *testing.T) {
 				BranchToken:  []byte{1, 2, 3},
 				FirstEventID: 1,
 			},
-			createMode:           persistence.CreateWorkflowModeContinueAsNew,
-			prevRunID:            "test-prev-run-id",
-			prevLastWriteVersion: 123,
+			createMode:                persistence.CreateWorkflowModeContinueAsNew,
+			prevRunID:                 "test-prev-run-id",
+			prevLastWriteVersion:      123,
+			createWorkflowRequestMode: persistence.CreateWorkflowRequestModeReplicated,
 			mockCreateWorkflowExecutionFn: func(ctx context.Context, req *persistence.CreateWorkflowExecutionRequest) (*persistence.CreateWorkflowExecutionResponse, error) {
 				assert.Equal(t, &persistence.CreateWorkflowExecutionRequest{
 					Mode:                     persistence.CreateWorkflowModeContinueAsNew,
@@ -1155,7 +1158,8 @@ func TestCreateWorkflowExecution(t *testing.T) {
 							HistorySize: 3,
 						},
 					},
-					DomainName: "test-domain",
+					WorkflowRequestMode: persistence.CreateWorkflowRequestModeReplicated,
+					DomainName:          "test-domain",
 				}, req)
 				return &persistence.CreateWorkflowExecutionResponse{
 					MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{
@@ -1213,7 +1217,7 @@ func TestCreateWorkflowExecution(t *testing.T) {
 			if tc.mockEmitSessionUpdateStatsFn != nil {
 				ctx.emitSessionUpdateStatsFn = tc.mockEmitSessionUpdateStatsFn
 			}
-			err := ctx.CreateWorkflowExecution(context.Background(), tc.newWorkflow, tc.history, tc.createMode, tc.prevRunID, tc.prevLastWriteVersion)
+			err := ctx.CreateWorkflowExecution(context.Background(), tc.newWorkflow, tc.history, tc.createMode, tc.prevRunID, tc.prevLastWriteVersion, tc.createWorkflowRequestMode)
 			if tc.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -1381,6 +1385,7 @@ func TestUpdateWorkflowExecutionWithNew(t *testing.T) {
 		newContext                                Context
 		currentWorkflowTransactionPolicy          TransactionPolicy
 		newWorkflowTransactionPolicy              *TransactionPolicy
+		workflowRequestMode                       persistence.CreateWorkflowRequestMode
 		mockSetup                                 func(*shard.MockContext, *cache.MockDomainCache, *MockMutableState, *MockMutableState, *engine.MockEngine)
 		mockPersistNonStartWorkflowBatchEventsFn  func(context.Context, *persistence.WorkflowEvents) (events.PersistedBlob, error)
 		mockPersistStartWorkflowBatchEventsFn     func(context.Context, *persistence.WorkflowEvents) (events.PersistedBlob, error)
@@ -1626,6 +1631,7 @@ func TestUpdateWorkflowExecutionWithNew(t *testing.T) {
 			updateMode:                       persistence.UpdateWorkflowModeUpdateCurrent,
 			currentWorkflowTransactionPolicy: TransactionPolicyActive,
 			newWorkflowTransactionPolicy:     TransactionPolicyActive.Ptr(),
+			workflowRequestMode:              persistence.CreateWorkflowRequestModeReplicated,
 			mockSetup: func(mockShard *shard.MockContext, mockDomainCache *cache.MockDomainCache, mockMutableState *MockMutableState, mockNewMutableState *MockMutableState, mockEngine *engine.MockEngine) {
 				mockMutableState.EXPECT().CloseTransactionAsMutation(gomock.Any(), TransactionPolicyActive).Return(&persistence.WorkflowMutation{
 					ExecutionInfo: &persistence.WorkflowExecutionInfo{
@@ -1779,7 +1785,8 @@ func TestUpdateWorkflowExecutionWithNew(t *testing.T) {
 							HistorySize: 2,
 						},
 					},
-					DomainName: "test-domain",
+					WorkflowRequestMode: persistence.CreateWorkflowRequestModeReplicated,
+					DomainName:          "test-domain",
 				}, req, "case: success")
 				return &persistence.UpdateWorkflowExecutionResponse{
 					MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{
@@ -1889,7 +1896,7 @@ func TestUpdateWorkflowExecutionWithNew(t *testing.T) {
 				emitLargeWorkflowShardIDStatsFn:       tc.mockEmitLargeWorkflowShardIDStatsFn,
 				emitWorkflowCompletionStatsFn:         tc.mockEmitWorkflowCompletionStatsFn,
 			}
-			err := ctx.UpdateWorkflowExecutionWithNew(context.Background(), time.Unix(0, 0), tc.updateMode, tc.newContext, mockNewMutableState, tc.currentWorkflowTransactionPolicy, tc.newWorkflowTransactionPolicy)
+			err := ctx.UpdateWorkflowExecutionWithNew(context.Background(), time.Unix(0, 0), tc.updateMode, tc.newContext, mockNewMutableState, tc.currentWorkflowTransactionPolicy, tc.newWorkflowTransactionPolicy, tc.workflowRequestMode)
 			if tc.wantErr {
 				assert.Error(t, err)
 				if tc.assertErr != nil {
@@ -2782,7 +2789,7 @@ func TestLoadWorkflowExecutionWithTaskVersion(t *testing.T) {
 		mockSetup                            func(*shard.MockContext, *MockMutableState, *cache.MockDomainCache)
 		mockGetWorkflowExecutionFn           func(context.Context, *persistence.GetWorkflowExecutionRequest) (*persistence.GetWorkflowExecutionResponse, error)
 		mockEmitWorkflowExecutionStatsFn     func(string, *persistence.MutableStateStats, int64)
-		mockUpdateWorkflowExecutionWithNewFn func(context.Context, time.Time, persistence.UpdateWorkflowMode, Context, MutableState, TransactionPolicy, *TransactionPolicy) error
+		mockUpdateWorkflowExecutionWithNewFn func(context.Context, time.Time, persistence.UpdateWorkflowMode, Context, MutableState, TransactionPolicy, *TransactionPolicy, persistence.CreateWorkflowRequestMode) error
 		wantErr                              bool
 	}{
 		{
@@ -2896,7 +2903,7 @@ func TestLoadWorkflowExecutionWithTaskVersion(t *testing.T) {
 				assert.Equal(t, "test-domain", domainName)
 				assert.Equal(t, int64(123), size)
 			},
-			mockUpdateWorkflowExecutionWithNewFn: func(context.Context, time.Time, persistence.UpdateWorkflowMode, Context, MutableState, TransactionPolicy, *TransactionPolicy) error {
+			mockUpdateWorkflowExecutionWithNewFn: func(context.Context, time.Time, persistence.UpdateWorkflowMode, Context, MutableState, TransactionPolicy, *TransactionPolicy, persistence.CreateWorkflowRequestMode) error {
 				return nil
 			},
 			wantErr: false,
@@ -2937,24 +2944,25 @@ func TestLoadWorkflowExecutionWithTaskVersion(t *testing.T) {
 func TestUpdateWorkflowExecutionAsActive(t *testing.T) {
 	testCases := []struct {
 		name                                 string
-		mockUpdateWorkflowExecutionWithNewFn func(context.Context, time.Time, persistence.UpdateWorkflowMode, Context, MutableState, TransactionPolicy, *TransactionPolicy) error
+		mockUpdateWorkflowExecutionWithNewFn func(context.Context, time.Time, persistence.UpdateWorkflowMode, Context, MutableState, TransactionPolicy, *TransactionPolicy, persistence.CreateWorkflowRequestMode) error
 		wantErr                              bool
 	}{
 		{
 			name: "success",
-			mockUpdateWorkflowExecutionWithNewFn: func(_ context.Context, _ time.Time, updateMode persistence.UpdateWorkflowMode, newContext Context, newMutableState MutableState, currentPolicy TransactionPolicy, newPolicy *TransactionPolicy) error {
+			mockUpdateWorkflowExecutionWithNewFn: func(_ context.Context, _ time.Time, updateMode persistence.UpdateWorkflowMode, newContext Context, newMutableState MutableState, currentPolicy TransactionPolicy, newPolicy *TransactionPolicy, workflowRequestMode persistence.CreateWorkflowRequestMode) error {
 				assert.Equal(t, persistence.UpdateWorkflowModeUpdateCurrent, updateMode)
 				assert.Nil(t, newContext)
 				assert.Nil(t, newMutableState)
 				assert.Equal(t, TransactionPolicyActive, currentPolicy)
 				assert.Nil(t, newPolicy)
+				assert.Equal(t, persistence.CreateWorkflowRequestModeNew, workflowRequestMode)
 				return nil
 			},
 			wantErr: false,
 		},
 		{
 			name: "error case",
-			mockUpdateWorkflowExecutionWithNewFn: func(_ context.Context, _ time.Time, updateMode persistence.UpdateWorkflowMode, newContext Context, newMutableState MutableState, currentPolicy TransactionPolicy, newPolicy *TransactionPolicy) error {
+			mockUpdateWorkflowExecutionWithNewFn: func(_ context.Context, _ time.Time, updateMode persistence.UpdateWorkflowMode, newContext Context, newMutableState MutableState, currentPolicy TransactionPolicy, newPolicy *TransactionPolicy, _ persistence.CreateWorkflowRequestMode) error {
 				return errors.New("some error")
 			},
 			wantErr: true,
@@ -2979,24 +2987,25 @@ func TestUpdateWorkflowExecutionAsActive(t *testing.T) {
 func TestUpdateWorkflowExecutionWithNewAsActive(t *testing.T) {
 	testCases := []struct {
 		name                                 string
-		mockUpdateWorkflowExecutionWithNewFn func(context.Context, time.Time, persistence.UpdateWorkflowMode, Context, MutableState, TransactionPolicy, *TransactionPolicy) error
+		mockUpdateWorkflowExecutionWithNewFn func(context.Context, time.Time, persistence.UpdateWorkflowMode, Context, MutableState, TransactionPolicy, *TransactionPolicy, persistence.CreateWorkflowRequestMode) error
 		wantErr                              bool
 	}{
 		{
 			name: "success",
-			mockUpdateWorkflowExecutionWithNewFn: func(_ context.Context, _ time.Time, updateMode persistence.UpdateWorkflowMode, newContext Context, newMutableState MutableState, currentPolicy TransactionPolicy, newPolicy *TransactionPolicy) error {
+			mockUpdateWorkflowExecutionWithNewFn: func(_ context.Context, _ time.Time, updateMode persistence.UpdateWorkflowMode, newContext Context, newMutableState MutableState, currentPolicy TransactionPolicy, newPolicy *TransactionPolicy, workflowRequestMode persistence.CreateWorkflowRequestMode) error {
 				assert.Equal(t, persistence.UpdateWorkflowModeUpdateCurrent, updateMode)
 				assert.NotNil(t, newContext)
 				assert.NotNil(t, newMutableState)
 				assert.Equal(t, TransactionPolicyActive, currentPolicy)
 				assert.Equal(t, TransactionPolicyActive.Ptr(), newPolicy)
+				assert.Equal(t, persistence.CreateWorkflowRequestModeNew, workflowRequestMode)
 				return nil
 			},
 			wantErr: false,
 		},
 		{
 			name: "error case",
-			mockUpdateWorkflowExecutionWithNewFn: func(_ context.Context, _ time.Time, updateMode persistence.UpdateWorkflowMode, newContext Context, newMutableState MutableState, currentPolicy TransactionPolicy, newPolicy *TransactionPolicy) error {
+			mockUpdateWorkflowExecutionWithNewFn: func(_ context.Context, _ time.Time, updateMode persistence.UpdateWorkflowMode, newContext Context, newMutableState MutableState, currentPolicy TransactionPolicy, newPolicy *TransactionPolicy, _ persistence.CreateWorkflowRequestMode) error {
 				return errors.New("some error")
 			},
 			wantErr: true,
@@ -3021,24 +3030,25 @@ func TestUpdateWorkflowExecutionWithNewAsActive(t *testing.T) {
 func TestUpdateWorkflowExecutionAsPassive(t *testing.T) {
 	testCases := []struct {
 		name                                 string
-		mockUpdateWorkflowExecutionWithNewFn func(context.Context, time.Time, persistence.UpdateWorkflowMode, Context, MutableState, TransactionPolicy, *TransactionPolicy) error
+		mockUpdateWorkflowExecutionWithNewFn func(context.Context, time.Time, persistence.UpdateWorkflowMode, Context, MutableState, TransactionPolicy, *TransactionPolicy, persistence.CreateWorkflowRequestMode) error
 		wantErr                              bool
 	}{
 		{
 			name: "success",
-			mockUpdateWorkflowExecutionWithNewFn: func(_ context.Context, _ time.Time, updateMode persistence.UpdateWorkflowMode, newContext Context, newMutableState MutableState, currentPolicy TransactionPolicy, newPolicy *TransactionPolicy) error {
+			mockUpdateWorkflowExecutionWithNewFn: func(_ context.Context, _ time.Time, updateMode persistence.UpdateWorkflowMode, newContext Context, newMutableState MutableState, currentPolicy TransactionPolicy, newPolicy *TransactionPolicy, workflowRequestMode persistence.CreateWorkflowRequestMode) error {
 				assert.Equal(t, persistence.UpdateWorkflowModeUpdateCurrent, updateMode)
 				assert.Nil(t, newContext)
 				assert.Nil(t, newMutableState)
 				assert.Equal(t, TransactionPolicyPassive, currentPolicy)
 				assert.Nil(t, newPolicy)
+				assert.Equal(t, persistence.CreateWorkflowRequestModeReplicated, workflowRequestMode)
 				return nil
 			},
 			wantErr: false,
 		},
 		{
 			name: "error case",
-			mockUpdateWorkflowExecutionWithNewFn: func(_ context.Context, _ time.Time, updateMode persistence.UpdateWorkflowMode, newContext Context, newMutableState MutableState, currentPolicy TransactionPolicy, newPolicy *TransactionPolicy) error {
+			mockUpdateWorkflowExecutionWithNewFn: func(_ context.Context, _ time.Time, updateMode persistence.UpdateWorkflowMode, newContext Context, newMutableState MutableState, currentPolicy TransactionPolicy, newPolicy *TransactionPolicy, _ persistence.CreateWorkflowRequestMode) error {
 				return errors.New("some error")
 			},
 			wantErr: true,
@@ -3063,24 +3073,25 @@ func TestUpdateWorkflowExecutionAsPassive(t *testing.T) {
 func TestUpdateWorkflowExecutionWithNewAsPassive(t *testing.T) {
 	testCases := []struct {
 		name                                 string
-		mockUpdateWorkflowExecutionWithNewFn func(context.Context, time.Time, persistence.UpdateWorkflowMode, Context, MutableState, TransactionPolicy, *TransactionPolicy) error
+		mockUpdateWorkflowExecutionWithNewFn func(context.Context, time.Time, persistence.UpdateWorkflowMode, Context, MutableState, TransactionPolicy, *TransactionPolicy, persistence.CreateWorkflowRequestMode) error
 		wantErr                              bool
 	}{
 		{
 			name: "success",
-			mockUpdateWorkflowExecutionWithNewFn: func(_ context.Context, _ time.Time, updateMode persistence.UpdateWorkflowMode, newContext Context, newMutableState MutableState, currentPolicy TransactionPolicy, newPolicy *TransactionPolicy) error {
+			mockUpdateWorkflowExecutionWithNewFn: func(_ context.Context, _ time.Time, updateMode persistence.UpdateWorkflowMode, newContext Context, newMutableState MutableState, currentPolicy TransactionPolicy, newPolicy *TransactionPolicy, workflowRequestMode persistence.CreateWorkflowRequestMode) error {
 				assert.Equal(t, persistence.UpdateWorkflowModeUpdateCurrent, updateMode)
 				assert.NotNil(t, newContext)
 				assert.NotNil(t, newMutableState)
 				assert.Equal(t, TransactionPolicyPassive, currentPolicy)
 				assert.Equal(t, TransactionPolicyPassive.Ptr(), newPolicy)
+				assert.Equal(t, persistence.CreateWorkflowRequestModeReplicated, workflowRequestMode)
 				return nil
 			},
 			wantErr: false,
 		},
 		{
 			name: "error case",
-			mockUpdateWorkflowExecutionWithNewFn: func(_ context.Context, _ time.Time, updateMode persistence.UpdateWorkflowMode, newContext Context, newMutableState MutableState, currentPolicy TransactionPolicy, newPolicy *TransactionPolicy) error {
+			mockUpdateWorkflowExecutionWithNewFn: func(_ context.Context, _ time.Time, updateMode persistence.UpdateWorkflowMode, newContext Context, newMutableState MutableState, currentPolicy TransactionPolicy, newPolicy *TransactionPolicy, _ persistence.CreateWorkflowRequestMode) error {
 				return errors.New("some error")
 			},
 			wantErr: true,

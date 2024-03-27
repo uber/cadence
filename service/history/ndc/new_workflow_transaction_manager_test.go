@@ -145,6 +145,7 @@ func (s *transactionManagerForNewWorkflowSuite) TestDispatchForNewWorkflow_Brand
 		persistence.CreateWorkflowModeBrandNew,
 		"",
 		int64(0),
+		persistence.CreateWorkflowRequestModeReplicated,
 	).Return(nil).Times(1)
 
 	err := s.createManager.dispatchForNewWorkflow(ctx, now, workflow)
@@ -223,6 +224,7 @@ func (s *transactionManagerForNewWorkflowSuite) TestDispatchForNewWorkflow_Creat
 		persistence.CreateWorkflowModeWorkflowIDReuse,
 		currentRunID,
 		currentLastWriteVersion,
+		persistence.CreateWorkflowRequestModeReplicated,
 	).Return(nil).Times(1)
 
 	err := s.createManager.dispatchForNewWorkflow(ctx, now, targetWorkflow)
@@ -298,6 +300,7 @@ func (s *transactionManagerForNewWorkflowSuite) TestDispatchForNewWorkflow_Creat
 		persistence.CreateWorkflowModeZombie,
 		"",
 		int64(0),
+		persistence.CreateWorkflowRequestModeReplicated,
 	).Return(nil).Times(1)
 	targetContext.EXPECT().ReapplyEvents(targetWorkflowEventsSeq).Return(nil).Times(1)
 
@@ -374,6 +377,7 @@ func (s *transactionManagerForNewWorkflowSuite) TestDispatchForNewWorkflow_Creat
 		persistence.CreateWorkflowModeZombie,
 		"",
 		int64(0),
+		persistence.CreateWorkflowRequestModeReplicated,
 	).Return(&persistence.WorkflowExecutionAlreadyStartedError{}).Times(1)
 	targetContext.EXPECT().ReapplyEvents(targetWorkflowEventsSeq).Return(nil).Times(1)
 
@@ -434,6 +438,7 @@ func (s *transactionManagerForNewWorkflowSuite) TestDispatchForNewWorkflow_Suppr
 		targetMutableState,
 		currentWorkflowPolicy,
 		execution.TransactionPolicyPassive.Ptr(),
+		persistence.CreateWorkflowRequestModeReplicated,
 	).Return(nil).Times(1)
 
 	err := s.createManager.dispatchForNewWorkflow(ctx, now, targetWorkflow)

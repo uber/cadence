@@ -1066,6 +1066,12 @@ func (s *historyBuilderSuite) TestHistoryBuilderWorkflowExternalCancellationRequ
 	s.Nil(s.msBuilder.FlushBufferedEvents())
 	s.validateWorkflowExecutionCancelRequestedEvent(cancellationEvent, 5, "cancel workflow", "identity", nil, types.WorkflowExecution{}, "b071cbe8-3a95-4223-a8ac-f308a42db383")
 	s.Equal(int64(6), s.getNextEventID())
+	_, exists := s.msBuilder.(*mutableStateBuilder).workflowRequests[persistence.WorkflowRequest{
+		RequestID:   "b071cbe8-3a95-4223-a8ac-f308a42db383",
+		RequestType: persistence.WorkflowRequestTypeCancel,
+		Version:     s.msBuilder.GetCurrentVersion(),
+	}]
+	s.True(exists)
 }
 
 func (s *historyBuilderSuite) TestHistoryBuilderWorkflowExternalSignaled() {
@@ -1126,6 +1132,12 @@ func (s *historyBuilderSuite) TestHistoryBuilderWorkflowExternalSignaled() {
 	s.Nil(s.msBuilder.FlushBufferedEvents())
 	s.validateWorkflowExecutionSignaledEvent(signalEvent, 5, "test-signal", []byte("input"), "id", "3b8d0ec2-e1ff-4f61-915b-1ffca831361e")
 	s.Equal(int64(6), s.getNextEventID())
+	_, exists := s.msBuilder.(*mutableStateBuilder).workflowRequests[persistence.WorkflowRequest{
+		RequestID:   "3b8d0ec2-e1ff-4f61-915b-1ffca831361e",
+		RequestType: persistence.WorkflowRequestTypeSignal,
+		Version:     s.msBuilder.GetCurrentVersion(),
+	}]
+	s.True(exists)
 }
 func (s *historyBuilderSuite) getNextEventID() int64 {
 	return s.msBuilder.GetExecutionInfo().NextEventID
