@@ -338,6 +338,7 @@ func (qv *VisibilityQueryValidator) processCustomKey(expr sqlparser.Expr) (strin
 	// get the value type
 	indexValType := common.ConvertIndexedValueTypeToInternalType(valType, log.NewNoop())
 	operator := comparisonExpr.Operator
+	colValStr := string(colVal.Val)
 
 	switch indexValType {
 	case types.IndexedValueTypeString:
