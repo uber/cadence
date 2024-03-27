@@ -328,16 +328,23 @@ func (qv *VisibilityQueryValidator) processCustomKey(expr sqlparser.Expr) (strin
 	if !ok {
 		return "", fmt.Errorf("invalid search attribute")
 	}
+	// get the value type
+	indexValType := common.ConvertIndexedValueTypeToInternalType(valType, log.NewNoop())
 
 	// get the column value
 	colVal, ok := comparisonExpr.Right.(*sqlparser.SQLVal)
 	if !ok {
 		return "", errors.New("invalid comparison expression, right")
 	}
+	// if it is dataTime, then check if it is time.Time() type
+	if indexValType == types.IndexedValueTypeDatetime {
+		var err error
+		colVal, err = trimTimeFieldValueFromNanoToMilliSeconds(colVal)
+		if err != nil {
+			return "", fmt.Errorf("trim time field %s got error: %w", colNameStr, err)
+		}
+	}
 	colValStr := string(colVal.Val)
-
-	// get the value type
-	indexValType := common.ConvertIndexedValueTypeToInternalType(valType, log.NewNoop())
 
 	operator := comparisonExpr.Operator
 
