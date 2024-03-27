@@ -86,5 +86,5 @@ type Handler interface {
 	SyncShardStatus(context.Context, *types.SyncShardStatusRequest) error
 	TerminateWorkflowExecution(context.Context, *types.HistoryTerminateWorkflowExecutionRequest) error
 	GetFailoverInfo(context.Context, *types.GetFailoverInfoRequest) (*types.GetFailoverInfoResponse, error)
-	RatelimitUpdate(ctx context.Context, Request *types.RatelimitUpdateRequest) (*types.RatelimitUpdateResponse, error)
+	RatelimitUpdate(context.Context, *types.RatelimitUpdateRequest) (*types.RatelimitUpdateResponse, error)
 }
