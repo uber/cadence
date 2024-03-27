@@ -523,8 +523,9 @@ func CancelWorkflow(c *cli.Context) {
 				WorkflowID: wid,
 				RunID:      rid,
 			},
-			Identity: getCliIdentity(),
-			Cause:    reason,
+			Identity:  getCliIdentity(),
+			Cause:     reason,
+			RequestID: uuid.New(),
 		},
 	)
 	if err != nil {
