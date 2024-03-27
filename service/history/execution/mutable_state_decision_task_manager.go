@@ -58,8 +58,8 @@ type (
 			timestamp int64,
 		) (*DecisionInfo, error)
 		ReplicateDecisionTaskCompletedEvent(event *types.HistoryEvent) error
-		ReplicateDecisionTaskFailedEvent() error
-		ReplicateDecisionTaskTimedOutEvent(timeoutType types.TimeoutType) error
+		ReplicateDecisionTaskFailedEvent(*types.HistoryEvent) error
+		ReplicateDecisionTaskTimedOutEvent(*types.HistoryEvent) error
 
 		AddDecisionTaskScheduleToStartTimeoutEvent(scheduleEventID int64) (*types.HistoryEvent, error)
 		AddDecisionTaskScheduledEventAsHeartbeat(
@@ -263,14 +263,18 @@ func (m *mutableStateDecisionTaskManagerImpl) ReplicateDecisionTaskCompletedEven
 	return m.afterAddDecisionTaskCompletedEvent(event, maxResetPoints)
 }
 
-func (m *mutableStateDecisionTaskManagerImpl) ReplicateDecisionTaskFailedEvent() error {
+func (m *mutableStateDecisionTaskManagerImpl) ReplicateDecisionTaskFailedEvent(event *types.HistoryEvent) error {
+	if event != nil && event.DecisionTaskFailedEventAttributes.GetCause() == types.DecisionTaskFailedCauseResetWorkflow {
+		m.msb.insertRequestID(event.DecisionTaskFailedEventAttributes.RequestID, event.ID == m.msb.GetCurrentVersion())
+	}
 	m.FailDecision(true)
 	return nil
 }
 
 func (m *mutableStateDecisionTaskManagerImpl) ReplicateDecisionTaskTimedOutEvent(
-	timeoutType types.TimeoutType,
+	event *types.HistoryEvent,
 ) error {
+	timeoutType := event.DecisionTaskTimedOutEventAttributes.GetTimeoutType()
 	incrementAttempt := true
 	// Do not increment decision attempt in the case of sticky scheduleToStart timeout to
 	// prevent creating next decision as transient
@@ -280,6 +284,9 @@ func (m *mutableStateDecisionTaskManagerImpl) ReplicateDecisionTaskTimedOutEvent
 	if timeoutType == types.TimeoutTypeScheduleToStart &&
 		m.msb.executionInfo.StickyTaskList != "" {
 		incrementAttempt = false
+	}
+	if event.DecisionTaskTimedOutEventAttributes.GetCause() == types.DecisionTaskTimedOutCauseReset {
+		m.msb.insertRequestID(event.DecisionTaskTimedOutEventAttributes.GetRequestID(), event.ID == m.msb.GetCurrentVersion())
 	}
 	m.FailDecision(incrementAttempt)
 	return nil
@@ -313,11 +320,19 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskScheduleToStartTime
 			types.DecisionTaskTimedOutCauseTimeout,
 			"",
 		)
+		if err := m.ReplicateDecisionTaskTimedOutEvent(event); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := m.ReplicateDecisionTaskTimedOutEvent(&types.HistoryEvent{
+			DecisionTaskTimedOutEventAttributes: &types.DecisionTaskTimedOutEventAttributes{
+				TimeoutType: types.TimeoutTypeScheduleToStart.Ptr(),
+			},
+		}); err != nil {
+			return nil, err
+		}
 	}
 
-	if err := m.ReplicateDecisionTaskTimedOutEvent(types.TimeoutTypeScheduleToStart); err != nil {
-		return nil, err
-	}
 	return event, nil
 }
 
@@ -351,7 +366,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskResetTimeoutEvent(
 		resetRequestID,
 	)
 
-	if err := m.ReplicateDecisionTaskTimedOutEvent(types.TimeoutTypeScheduleToStart); err != nil {
+	if err := m.ReplicateDecisionTaskTimedOutEvent(event); err != nil {
 		return nil, err
 	}
 
@@ -593,7 +608,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskFailedEvent(
 		event = m.msb.hBuilder.AddDecisionTaskFailedEvent(attr)
 	}
 
-	if err := m.ReplicateDecisionTaskFailedEvent(); err != nil {
+	if err := m.ReplicateDecisionTaskFailedEvent(event); err != nil {
 		return nil, err
 	}
 
@@ -620,7 +635,11 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskTimedOutEvent(
 		return nil, m.msb.createInternalServerError(opTag)
 	}
 
-	var event *types.HistoryEvent
+	event := &types.HistoryEvent{
+		DecisionTaskTimedOutEventAttributes: &types.DecisionTaskTimedOutEventAttributes{
+			TimeoutType: types.TimeoutTypeStartToClose.Ptr(),
+		},
+	}
 	// Avoid creating new history events when decisions are continuously timing out
 	if dt.Attempt == 0 {
 		event = m.msb.hBuilder.AddDecisionTaskTimedOutEvent(
@@ -636,7 +655,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskTimedOutEvent(
 		)
 	}
 
-	if err := m.ReplicateDecisionTaskTimedOutEvent(types.TimeoutTypeStartToClose); err != nil {
+	if err := m.ReplicateDecisionTaskTimedOutEvent(event); err != nil {
 		return nil, err
 	}
 	return event, nil

@@ -149,6 +149,9 @@ type (
 		insertReplicationTasks  []persistence.Task
 		insertTimerTasks        []persistence.Task
 
+		externalRequestIDs  map[string]struct{}
+		replicateRequestIDs map[string]struct{}
+
 		// do not rely on this, this is only updated on
 		// Load() and closeTransactionXXX methods. So when
 		// a transaction is in progress, this value will be
@@ -232,6 +235,9 @@ func newMutableStateBuilder(
 		timeSource:      shard.GetTimeSource(),
 		logger:          logger,
 		metricsClient:   shard.GetMetricsClient(),
+
+		externalRequestIDs:  make(map[string]struct{}),
+		replicateRequestIDs: make(map[string]struct{}),
 	}
 	s.executionInfo = &persistence.WorkflowExecutionInfo{
 		DecisionVersion:    common.EmptyVersion,
@@ -1800,7 +1806,11 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(
 ) error {
 
 	event := startEvent.WorkflowExecutionStartedEventAttributes
+	if event.GetRequestID() != "" {
+		requestID = event.GetRequestID()
+	}
 	e.executionInfo.CreateRequestID = requestID
+	e.insertRequestID(requestID, startEvent.ID == e.GetCurrentVersion())
 	e.executionInfo.DomainID = e.domainEntry.GetInfo().ID
 	e.executionInfo.WorkflowID = execution.GetWorkflowID()
 	e.executionInfo.RunID = execution.GetRunID()
@@ -2083,9 +2093,9 @@ func (e *mutableStateBuilder) AddDecisionTaskTimedOutEvent(
 }
 
 func (e *mutableStateBuilder) ReplicateDecisionTaskTimedOutEvent(
-	timeoutType types.TimeoutType,
+	event *types.HistoryEvent,
 ) error {
-	return e.decisionTaskManager.ReplicateDecisionTaskTimedOutEvent(timeoutType)
+	return e.decisionTaskManager.ReplicateDecisionTaskTimedOutEvent(event)
 }
 
 func (e *mutableStateBuilder) AddDecisionTaskScheduleToStartTimeoutEvent(
@@ -2152,8 +2162,8 @@ func (e *mutableStateBuilder) AddDecisionTaskFailedEvent(
 	)
 }
 
-func (e *mutableStateBuilder) ReplicateDecisionTaskFailedEvent() error {
-	return e.decisionTaskManager.ReplicateDecisionTaskFailedEvent()
+func (e *mutableStateBuilder) ReplicateDecisionTaskFailedEvent(event *types.HistoryEvent) error {
+	return e.decisionTaskManager.ReplicateDecisionTaskFailedEvent(event)
 }
 
 func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
@@ -2800,9 +2810,6 @@ func (e *mutableStateBuilder) AddWorkflowExecutionCancelRequestedEvent(
 	if err := e.ReplicateWorkflowExecutionCancelRequestedEvent(event); err != nil {
 		return nil, err
 	}
-
-	// Set the CancelRequestID on the active cluster.  This information is not part of the history event.
-	e.executionInfo.CancelRequestID = request.CancelRequest.GetRequestID()
 	return event, nil
 }
 
@@ -2811,6 +2818,9 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionCancelRequestedEvent(
 ) error {
 
 	e.executionInfo.CancelRequested = true
+	requestID := event.WorkflowExecutionCancelRequestedEventAttributes.RequestID
+	e.executionInfo.CancelRequestID = requestID
+	e.insertRequestID(requestID, event.ID == e.GetCurrentVersion())
 	return nil
 }
 
@@ -3364,6 +3374,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionSignaled(
 
 	// Increment signal count in mutable state for this workflow execution
 	e.executionInfo.SignalCount++
+	e.insertRequestID(event.WorkflowExecutionSignaledEventAttributes.RequestID, event.ID == e.GetCurrentVersion())
 	return nil
 }
 
@@ -4304,6 +4315,8 @@ func (e *mutableStateBuilder) cleanupTransaction() error {
 	e.insertReplicationTasks = nil
 	e.insertTimerTasks = nil
 
+	e.externalRequestIDs = map[string]struct{}{}
+	e.replicateRequestIDs = map[string]struct{}{}
 	return nil
 }
 
@@ -4751,6 +4764,22 @@ func (e *mutableStateBuilder) checkMutability(
 		return ErrWorkflowFinished
 	}
 	return nil
+}
+
+func (e *mutableStateBuilder) insertRequestID(requestID string, isExternalRequest bool) {
+	if e.domainEntry == nil {
+		return
+	}
+	if !e.config.EnableStrongIdempotency(e.domainEntry.GetInfo().Name) {
+		return
+	}
+	if requestID != "" {
+		if isExternalRequest {
+			e.externalRequestIDs[requestID] = struct{}{}
+		} else {
+			e.replicateRequestIDs[requestID] = struct{}{}
+		}
+	}
 }
 
 func (e *mutableStateBuilder) generateChecksum() checksum.Checksum {
