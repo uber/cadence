@@ -202,6 +202,11 @@ func TestValidateQuery(t *testing.T) {
 			query:     "CustomDatetimeField = '2024-02-07T15:32:30Z'",
 			validated: "JSON_MATCH(Attr, '\"$.CustomDatetimeField\"=''1707319950000''')",
 		},
+		"Case15-19: CustomDatetimeField with error case": {
+			query:     "CustomDatetimeField = 'test'",
+			validated: "",
+			err:       "trim time field CustomDatetimeField got error: error: failed to parse int from SQLVal test",
+		},
 		"Case16-1: custom int attribute greater than or equal to": {
 			query:     "CustomIntField >= 0",
 			validated: "(JSON_MATCH(Attr, '\"$.CustomIntField\" is not null') AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomIntField') AS INT) >= 0)",

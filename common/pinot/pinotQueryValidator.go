@@ -328,7 +328,7 @@ func (qv *VisibilityQueryValidator) processCustomKey(expr sqlparser.Expr) (strin
 	if !ok {
 		return "", fmt.Errorf("invalid search attribute")
 	}
-	
+
 	// get the column value
 	colVal, ok := comparisonExpr.Right.(*sqlparser.SQLVal)
 	if !ok {
