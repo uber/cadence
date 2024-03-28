@@ -20,6 +20,10 @@
 
 package types
 
+var (
+	_ RedirectRequest = (*HistoryStartWorkflowExecutionRequest)(nil)
+)
+
 // DescribeMutableStateRequest is an internal type (TBD...)
 type DescribeMutableStateRequest struct {
 	DomainUUID string             `json:"domainUUID,omitempty"`
@@ -948,6 +952,11 @@ func (v *HistoryStartWorkflowExecutionRequest) GetPartitionConfig() (o map[strin
 		return v.PartitionConfig
 	}
 	return
+}
+
+// ToRedirectKey convert request to redirect key
+func (v *HistoryStartWorkflowExecutionRequest) ToRedirectKey() RedirectKey {
+	return RedirectKey{WorkflowID: v.StartRequest.WorkflowID}
 }
 
 // SyncActivityRequest is an internal type (TBD...)
