@@ -30,6 +30,11 @@ type (
 		ShardRangeIDNotMatch             *int64  // return the previous shardRangeID
 		WorkflowExecutionAlreadyExists   *WorkflowExecutionAlreadyExists
 		CurrentWorkflowConditionFailInfo *string // return the logging info if fail on condition of CurrentWorkflow
+		DuplicateRequest                 *DuplicateRequest
+	}
+
+	DuplicateRequest struct {
+		RunID string
 	}
 
 	WorkflowExecutionAlreadyExists struct {
