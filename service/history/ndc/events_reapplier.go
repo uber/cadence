@@ -100,6 +100,7 @@ func (r *eventsReapplierImpl) ReapplyEvents(
 			signal.GetSignalName(),
 			signal.GetInput(),
 			signal.GetIdentity(),
+			signal.GetRequestID(),
 		); err != nil {
 			return nil, err
 		}

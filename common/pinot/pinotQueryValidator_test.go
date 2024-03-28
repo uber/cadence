@@ -194,6 +194,19 @@ func TestValidateQuery(t *testing.T) {
 			query:     "CloseTime != missing and StartTime >= 1707662555754408145",
 			validated: "CloseTime != -1 and StartTime >= 1707662555754",
 		},
+		"Case15-17: CustomDatetimeField with big int type case": {
+			query:     "CustomDatetimeField = 1707319950000",
+			validated: "JSON_MATCH(Attr, '\"$.CustomDatetimeField\"=''1707319950000''')",
+		},
+		"Case15-18: CustomDatetimeField with time.Time() type case": {
+			query:     "CustomDatetimeField = '2024-02-07T15:32:30Z'",
+			validated: "JSON_MATCH(Attr, '\"$.CustomDatetimeField\"=''1707319950000''')",
+		},
+		"Case15-19: CustomDatetimeField with error case": {
+			query:     "CustomDatetimeField = 'test'",
+			validated: "",
+			err:       "trim time field CustomDatetimeField got error: error: failed to parse int from SQLVal test",
+		},
 		"Case16-1: custom int attribute greater than or equal to": {
 			query:     "CustomIntField >= 0",
 			validated: "(JSON_MATCH(Attr, '\"$.CustomIntField\" is not null') AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomIntField') AS INT) >= 0)",

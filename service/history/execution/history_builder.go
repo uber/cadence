@@ -100,6 +100,7 @@ func (b *HistoryBuilder) AddWorkflowExecutionStartedEvent(startRequest *types.Hi
 		SearchAttributes:                    request.SearchAttributes,
 		JitterStartSeconds:                  request.JitterStartSeconds,
 		PartitionConfig:                     startRequest.PartitionConfig,
+		RequestID:                           request.RequestID,
 	}
 	if parentInfo := startRequest.ParentExecutionInfo; parentInfo != nil {
 		attributes.ParentWorkflowDomainID = &parentInfo.DomainUUID
@@ -173,6 +174,7 @@ func (b *HistoryBuilder) AddDecisionTaskTimedOutEvent(
 	forkEventVersion int64,
 	reason string,
 	cause types.DecisionTaskTimedOutCause,
+	resetRequestID string,
 ) *types.HistoryEvent {
 
 	event := b.msBuilder.CreateNewHistoryEvent(types.EventTypeDecisionTaskTimedOut)
@@ -185,6 +187,7 @@ func (b *HistoryBuilder) AddDecisionTaskTimedOutEvent(
 		ForkEventVersion: forkEventVersion,
 		Reason:           reason,
 		Cause:            cause.Ptr(),
+		RequestID:        resetRequestID,
 	}
 
 	return b.addEventToHistory(event)
@@ -487,14 +490,17 @@ func (b *HistoryBuilder) AddCancelTimerFailedEvent(timerID string, decisionTaskC
 }
 
 // AddWorkflowExecutionCancelRequestedEvent adds WorkflowExecutionCancelRequested event to history
-func (b *HistoryBuilder) AddWorkflowExecutionCancelRequestedEvent(cause string,
-	request *types.HistoryRequestCancelWorkflowExecutionRequest) *types.HistoryEvent {
+func (b *HistoryBuilder) AddWorkflowExecutionCancelRequestedEvent(
+	cause string,
+	request *types.HistoryRequestCancelWorkflowExecutionRequest,
+) *types.HistoryEvent {
 	event := b.msBuilder.CreateNewHistoryEvent(types.EventTypeWorkflowExecutionCancelRequested)
 	event.WorkflowExecutionCancelRequestedEventAttributes = &types.WorkflowExecutionCancelRequestedEventAttributes{
 		Cause:                     cause,
 		Identity:                  request.CancelRequest.Identity,
 		ExternalInitiatedEventID:  request.ExternalInitiatedEventID,
 		ExternalWorkflowExecution: request.ExternalWorkflowExecution,
+		RequestID:                 request.CancelRequest.RequestID,
 	}
 
 	return b.addEventToHistory(event)
@@ -650,12 +656,17 @@ func (b *HistoryBuilder) AddMarkerRecordedEvent(decisionCompletedEventID int64,
 
 // AddWorkflowExecutionSignaledEvent adds WorkflowExecutionSignaled event to history
 func (b *HistoryBuilder) AddWorkflowExecutionSignaledEvent(
-	signalName string, input []byte, identity string) *types.HistoryEvent {
+	signalName string,
+	input []byte,
+	identity string,
+	requestID string,
+) *types.HistoryEvent {
 	event := b.msBuilder.CreateNewHistoryEvent(types.EventTypeWorkflowExecutionSignaled)
 	event.WorkflowExecutionSignaledEventAttributes = &types.WorkflowExecutionSignaledEventAttributes{
 		SignalName: signalName,
 		Input:      input,
 		Identity:   identity,
+		RequestID:  requestID,
 	}
 
 	return b.addEventToHistory(event)

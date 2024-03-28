@@ -84,6 +84,7 @@ func (s *eventReapplicationSuite) TestReapplyEvents_AppliedEvent() {
 			Identity:   "test",
 			SignalName: "signal",
 			Input:      []byte{},
+			RequestID:  "b90794a5-e9f4-4f41-9ebf-38aeedefd4ef",
 		},
 	}
 	attr := event.WorkflowExecutionSignaledEventAttributes
@@ -96,6 +97,7 @@ func (s *eventReapplicationSuite) TestReapplyEvents_AppliedEvent() {
 		attr.GetSignalName(),
 		attr.GetInput(),
 		attr.GetIdentity(),
+		attr.GetRequestID(),
 	).Return(event, nil).Times(1)
 	dedupResource := definition.NewEventReappliedID(runID, event.ID, event.Version)
 	msBuilderCurrent.EXPECT().IsResourceDuplicated(dedupResource).Return(false).Times(1)
@@ -145,6 +147,7 @@ func (s *eventReapplicationSuite) TestReapplyEvents_PartialAppliedEvent() {
 			Identity:   "test",
 			SignalName: "signal",
 			Input:      []byte{},
+			RequestID:  "3eb0594e-82dd-4335-8284-855c99d61c74",
 		},
 	}
 	event2 := &types.HistoryEvent{
@@ -154,6 +157,7 @@ func (s *eventReapplicationSuite) TestReapplyEvents_PartialAppliedEvent() {
 			Identity:   "test",
 			SignalName: "signal",
 			Input:      []byte{},
+			RequestID:  "2d2cae90-1ae4-4bcb-99a8-30b1cce64e3e",
 		},
 	}
 	attr1 := event1.WorkflowExecutionSignaledEventAttributes
@@ -166,6 +170,7 @@ func (s *eventReapplicationSuite) TestReapplyEvents_PartialAppliedEvent() {
 		attr1.GetSignalName(),
 		attr1.GetInput(),
 		attr1.GetIdentity(),
+		attr1.GetRequestID(),
 	).Return(event1, nil).Times(1)
 	dedupResource1 := definition.NewEventReappliedID(runID, event1.ID, event1.Version)
 	msBuilderCurrent.EXPECT().IsResourceDuplicated(dedupResource1).Return(false).Times(1)
@@ -194,6 +199,7 @@ func (s *eventReapplicationSuite) TestReapplyEvents_Error() {
 			Identity:   "test",
 			SignalName: "signal",
 			Input:      []byte{},
+			RequestID:  "1ece6551-27ac-4a9f-a086-5a780dea10f7",
 		},
 	}
 	attr := event.WorkflowExecutionSignaledEventAttributes
@@ -206,6 +212,7 @@ func (s *eventReapplicationSuite) TestReapplyEvents_Error() {
 		attr.GetSignalName(),
 		attr.GetInput(),
 		attr.GetIdentity(),
+		attr.GetRequestID(),
 	).Return(nil, fmt.Errorf("test")).Times(1)
 	dedupResource := definition.NewEventReappliedID(runID, event.ID, event.Version)
 	msBuilderCurrent.EXPECT().IsResourceDuplicated(dedupResource).Return(false).Times(1)

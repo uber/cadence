@@ -211,6 +211,7 @@ func (r *workflowResetterImpl) prepareResetWorkflow(
 		resetRunID,
 		baseLastEventVersion,
 		resetReason,
+		resetRequestID,
 	)
 	if err != nil {
 		return nil, err
@@ -585,6 +586,7 @@ func (r *workflowResetterImpl) reapplyEvents(
 				attr.GetSignalName(),
 				attr.GetInput(),
 				attr.GetIdentity(),
+				attr.GetRequestID(),
 			); err != nil {
 				return err
 			}
@@ -636,6 +638,7 @@ func (r *workflowResetterImpl) closePendingDecisionTask(
 	resetRunID string,
 	baseLastEventVersion int64,
 	resetReason string,
+	resetRequestID string,
 ) (execution.MutableState, error) {
 
 	if len(resetMutableState.GetPendingChildExecutionInfos()) > 0 {
@@ -657,6 +660,7 @@ func (r *workflowResetterImpl) closePendingDecisionTask(
 			baseRunID,
 			resetRunID,
 			baseLastEventVersion,
+			resetRequestID,
 		)
 		if err != nil {
 			return nil, err
@@ -670,6 +674,7 @@ func (r *workflowResetterImpl) closePendingDecisionTask(
 				resetRunID,
 				baseLastEventVersion,
 				resetReason,
+				resetRequestID,
 			)
 			if err != nil {
 				return nil, err

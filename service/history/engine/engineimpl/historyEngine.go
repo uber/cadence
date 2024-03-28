@@ -986,7 +986,9 @@ func (e *historyEngineImpl) addStartEventsAndTasks(
 		_, err := mutableState.AddWorkflowExecutionSignaled(
 			sRequest.GetSignalName(),
 			sRequest.GetSignalInput(),
-			sRequest.GetIdentity())
+			sRequest.GetIdentity(),
+			sRequest.GetRequestID(),
+		)
 		if err != nil {
 			return &types.InternalServiceError{Message: "Failed to add workflow execution signaled event."}
 		}
@@ -2495,7 +2497,9 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 			if _, err := mutableState.AddWorkflowExecutionSignaled(
 				request.GetSignalName(),
 				request.GetInput(),
-				request.GetIdentity()); err != nil {
+				request.GetIdentity(),
+				request.GetRequestID(),
+			); err != nil {
 				return nil, &types.InternalServiceError{Message: "Unable to signal workflow execution."}
 			}
 
@@ -2591,14 +2595,17 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 				return nil, workflow.ErrSignalsLimitExceeded
 			}
 
-			if requestID := sRequest.GetRequestID(); requestID != "" {
+			requestID := sRequest.GetRequestID()
+			if requestID != "" {
 				mutableState.AddSignalRequested(requestID)
 			}
 
 			if _, err := mutableState.AddWorkflowExecutionSignaled(
 				sRequest.GetSignalName(),
 				sRequest.GetSignalInput(),
-				sRequest.GetIdentity()); err != nil {
+				sRequest.GetIdentity(),
+				sRequest.GetRequestID(),
+			); err != nil {
 				return nil, &types.InternalServiceError{Message: "Unable to signal workflow execution."}
 			}
 

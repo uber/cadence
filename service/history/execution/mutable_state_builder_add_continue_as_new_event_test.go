@@ -395,7 +395,8 @@ func TestAddContinueAsNewEvent(t *testing.T) {
 			))
 
 			assert.Empty(t, cmp.Diff(td.expectedReturnedHistory, returnedBuilder.GetHistoryBuilder().history,
-				cmpopts.IgnoreFields(types.WorkflowExecutionStartedEventAttributes{}, "OriginalExecutionRunID")),
+				cmpopts.IgnoreFields(types.WorkflowExecutionStartedEventAttributes{}, "OriginalExecutionRunID"),
+				cmpopts.IgnoreFields(types.WorkflowExecutionStartedEventAttributes{}, "RequestID")),
 			)
 		})
 	}

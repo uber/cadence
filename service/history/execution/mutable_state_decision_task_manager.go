@@ -90,6 +90,7 @@ type (
 			baseRunID string,
 			newRunID string,
 			forkEventVersion int64,
+			resetRequestID string,
 		) (*types.HistoryEvent, error)
 		AddDecisionTaskTimedOutEvent(scheduleEventID int64, startedEventID int64) (*types.HistoryEvent, error)
 		AddDecisionTaskResetTimeoutEvent(
@@ -98,6 +99,7 @@ type (
 			newRunID string,
 			forkEventVersion int64,
 			reason string,
+			resetRequestID string,
 		) (*types.HistoryEvent, error)
 
 		FailDecision(incrementAttempt bool)
@@ -309,6 +311,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskScheduleToStartTime
 			common.EmptyVersion,
 			"",
 			types.DecisionTaskTimedOutCauseTimeout,
+			"",
 		)
 	}
 
@@ -324,6 +327,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskResetTimeoutEvent(
 	newRunID string,
 	forkEventVersion int64,
 	reason string,
+	resetRequestID string,
 ) (*types.HistoryEvent, error) {
 	opTag := tag.WorkflowActionDecisionTaskTimedOut
 	if m.msb.executionInfo.DecisionScheduleID != scheduleEventID {
@@ -344,6 +348,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskResetTimeoutEvent(
 		forkEventVersion,
 		reason,
 		types.DecisionTaskTimedOutCauseReset,
+		resetRequestID,
 	)
 
 	if err := m.ReplicateDecisionTaskTimedOutEvent(types.TimeoutTypeScheduleToStart); err != nil {
@@ -555,6 +560,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskFailedEvent(
 	baseRunID string,
 	newRunID string,
 	forkEventVersion int64,
+	resetRequestID string,
 ) (*types.HistoryEvent, error) {
 	opTag := tag.WorkflowActionDecisionTaskFailed
 	attr := types.DecisionTaskFailedEventAttributes{
@@ -568,6 +574,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskFailedEvent(
 		BaseRunID:        baseRunID,
 		NewRunID:         newRunID,
 		ForkEventVersion: forkEventVersion,
+		RequestID:        resetRequestID,
 	}
 
 	dt, ok := m.GetDecisionInfo(scheduleEventID)
@@ -625,6 +632,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskTimedOutEvent(
 			common.EmptyVersion,
 			"",
 			types.DecisionTaskTimedOutCauseTimeout,
+			"",
 		)
 	}
 
