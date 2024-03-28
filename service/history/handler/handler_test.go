@@ -324,3 +324,15 @@ func (s *handlerSuite) TestStartWorkflowExecution() {
 	s.Equal(expectedResponse, response)
 	s.Nil(err)
 }
+
+func (s *handlerSuite) TestRatelimitUpdate() {
+	response, err := s.handler.RatelimitUpdate(context.Background(), &types.RatelimitUpdateRequest{
+		Any: &types.Any{
+			ValueType: "test",
+			Value:     []byte(`test data`),
+		},
+	})
+	// placeholder while not implemented
+	s.Nil(response)
+	s.Nil(err)
+}

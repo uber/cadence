@@ -8261,3 +8261,27 @@ func SerializeRequest(request interface{}) (string, error) {
 
 	return string(res), nil
 }
+
+// Any is an internal mirror of google.protobuf.Any, serving the same purposes, but
+// intentionally breaking direct compatibility because it may hold data that is not
+// actually protobuf encoded.
+//
+// All uses of Any must either:
+//   - check that ValueType is a recognized type, and deserialize based on its contents
+//   - or just pass it along as an opaque type for something else to use
+//
+// Contents are intentionally undefined to allow external definitions, e.g. from
+// third-party plugins that are not part of this source repository.
+type Any struct {
+	// ValueType describes the type of encoded data in Value.
+	//
+	// No structure or allowed values are defined, but you are strongly encouraged
+	// to use hard-coded strings (or unambiguous prefixes) or URLs when possible.
+	//
+	// For more concise encoding of exclusively known types, use e.g. DataBlob instead.
+	ValueType string `json:"value_type"`
+	// Value holds arbitrary bytes, and is described by ValueType.
+	//
+	// To interpret, you MUST check ValueType.
+	Value []byte `json:"value"`
+}

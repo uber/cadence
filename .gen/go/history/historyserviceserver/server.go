@@ -116,6 +116,11 @@ type Interface interface {
 		QueryRequest *history.QueryWorkflowRequest,
 	) (*history.QueryWorkflowResponse, error)
 
+	RatelimitUpdate(
+		ctx context.Context,
+		Request *history.RatelimitUpdateRequest,
+	) (*history.RatelimitUpdateResponse, error)
+
 	ReadDLQMessages(
 		ctx context.Context,
 		Request *replicator.ReadDLQMessagesRequest,
@@ -440,6 +445,18 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: queryworkflow_NoWireHandler{impl},
 				},
 				Signature:    "QueryWorkflow(QueryRequest *history.QueryWorkflowRequest) (*history.QueryWorkflowResponse)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "RatelimitUpdate",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.RatelimitUpdate),
+					NoWire: ratelimitupdate_NoWireHandler{impl},
+				},
+				Signature:    "RatelimitUpdate(Request *history.RatelimitUpdateRequest) (*history.RatelimitUpdateResponse)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -769,7 +786,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 42)
+	procedures := make([]transport.Procedure, 0, 43)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -1211,6 +1228,36 @@ func (h handler) QueryWorkflow(ctx context.Context, body wire.Value) (thrift.Res
 
 	hadError := appErr != nil
 	result, err := history.HistoryService_QueryWorkflow_Helper.WrapResponse(success, appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
+	return response, err
+}
+
+func (h handler) RatelimitUpdate(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_RatelimitUpdate_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'RatelimitUpdate': %w", err)
+	}
+
+	success, appErr := h.impl.RatelimitUpdate(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_RatelimitUpdate_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
@@ -2577,6 +2624,43 @@ func (h queryworkflow_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thri
 
 	hadError := appErr != nil
 	result, err := history.HistoryService_QueryWorkflow_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type ratelimitupdate_NoWireHandler struct{ impl Interface }
+
+func (h ratelimitupdate_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_RatelimitUpdate_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'RatelimitUpdate': %w", err)
+	}
+
+	success, appErr := h.impl.RatelimitUpdate(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_RatelimitUpdate_Helper.WrapResponse(success, appErr)
 	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError

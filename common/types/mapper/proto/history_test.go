@@ -25,6 +25,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	historyv1 "github.com/uber/cadence/.gen/proto/history/v1"
+	sharedv1 "github.com/uber/cadence/.gen/proto/shared/v1"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/testdata"
 )
@@ -362,4 +364,23 @@ func TestHistoryGetTaskInfoResponse(t *testing.T) {
 	for _, item := range []*types.GetFailoverInfoResponse{nil, {}, &testdata.GetFailoverInfoResponse} {
 		assert.Equal(t, item, ToHistoryGetFailoverInfoResponse(FromHistoryGetFailoverInfoResponse(item)))
 	}
+}
+
+func TestRatelimitUpdate(t *testing.T) {
+	t.Run("nil", func(t *testing.T) {
+		assert.Nil(t, ToHistoryRatelimitUpdateRequest(nil), "request to internal")
+		assert.Nil(t, FromHistoryRatelimitUpdateResponse(nil), "response from internal")
+	})
+
+	t.Run("nil Any contents", func(t *testing.T) {
+		assert.Equal(t, &types.RatelimitUpdateRequest{Any: nil}, ToHistoryRatelimitUpdateRequest(&historyv1.RatelimitUpdateRequest{Data: nil}), "request to internal")
+		assert.Equal(t, &historyv1.RatelimitUpdateResponse{Data: nil}, FromHistoryRatelimitUpdateResponse(&types.RatelimitUpdateResponse{Any: nil}), "response from internal")
+	})
+
+	t.Run("with Any contents", func(t *testing.T) {
+		internal := &types.Any{ValueType: "test", Value: []byte(`test data`)}
+		proto := &sharedv1.Any{ValueType: "test", Value: []byte(`test data`)}
+		assert.Equal(t, &types.RatelimitUpdateRequest{Any: internal}, ToHistoryRatelimitUpdateRequest(&historyv1.RatelimitUpdateRequest{Data: proto}), "request to internal")
+		assert.Equal(t, &historyv1.RatelimitUpdateResponse{Data: proto}, FromHistoryRatelimitUpdateResponse(&types.RatelimitUpdateResponse{Any: internal}), "response from internal")
+	})
 }

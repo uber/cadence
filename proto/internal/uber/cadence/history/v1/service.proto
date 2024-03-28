@@ -38,6 +38,7 @@ import "uber/cadence/admin/v1/cluster.proto";
 import "uber/cadence/admin/v1/history.proto";
 import "uber/cadence/admin/v1/queue.proto";
 import "uber/cadence/admin/v1/replication.proto";
+import "uber/cadence/shared/v1/any.proto";
 import "uber/cadence/shared/v1/history.proto";
 import "uber/cadence/shared/v1/workflow.proto";
 
@@ -228,6 +229,15 @@ service HistoryAPI {
 
   // GetFailoverInfo returns information about on-going failover.
   rpc GetFailoverInfo(GetFailoverInfoRequest) returns(GetFailoverInfoResponse);
+
+  // RatelimitUpdate pushes global-ratelimiting data to aggregating hosts,
+  // and returns data describing how to update the caller's ratelimits.
+  //
+  // For more details, see github.com/uber/cadence/common/quotas/global documentation.
+  //
+  // Request and response structures are intentionally loosely defined, to allow plugging
+  // in externally-defined algorithms without changing protocol-level details.
+  rpc RatelimitUpdate(RatelimitUpdateRequest) returns(RatelimitUpdateResponse);
 }
 
 
@@ -739,4 +749,29 @@ message GetFailoverInfoRequest {
 message GetFailoverInfoResponse {
     int32 completed_shard_count = 1;
     repeated int32 pending_shards = 2;
+}
+
+message RatelimitUpdateRequest {
+  // impl-specific data.
+  // likely some simple top-level keys and then either:
+  // - map<ratelimit-key-string, something>
+  // - list<something>
+  //
+  // this is a single blob rather than a collection to save on
+  // repeated serialization of the type name, and to allow impls
+  // to choose whatever structures are most-convenient for them.
+  shared.v1.Any data = 1;
+}
+
+message RatelimitUpdateResponse {
+  // impl-specific data.
+  //
+  // likely some simple top-level keys and then either:
+  // - map<ratelimit-key-string, something>
+  // - list<something>
+  //
+  // this is a single blob rather than a collection to save on
+  // repeated serialization of the type name, and to allow impls
+  // to choose whatever structures are most-convenient for them.
+  shared.v1.Any data = 1;
 }

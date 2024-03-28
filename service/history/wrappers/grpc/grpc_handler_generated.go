@@ -122,6 +122,11 @@ func (g GRPCHandler) QueryWorkflow(ctx context.Context, request *historyv1.Query
 	return proto.FromHistoryQueryWorkflowResponse(response), proto.FromError(err)
 }
 
+func (g GRPCHandler) RatelimitUpdate(ctx context.Context, request *historyv1.RatelimitUpdateRequest) (*historyv1.RatelimitUpdateResponse, error) {
+	response, err := g.h.RatelimitUpdate(ctx, proto.ToHistoryRatelimitUpdateRequest(request))
+	return proto.FromHistoryRatelimitUpdateResponse(response), proto.FromError(err)
+}
+
 func (g GRPCHandler) ReadDLQMessages(ctx context.Context, request *historyv1.ReadDLQMessagesRequest) (*historyv1.ReadDLQMessagesResponse, error) {
 	response, err := g.h.ReadDLQMessages(ctx, proto.ToHistoryReadDLQMessagesRequest(request))
 	return proto.FromHistoryReadDLQMessagesResponse(response), proto.FromError(err)

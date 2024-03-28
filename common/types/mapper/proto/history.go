@@ -1583,3 +1583,21 @@ func ToHistoryResetStickyTaskListResponse(t *historyv1.ResetStickyTaskListRespon
 	}
 	return &types.HistoryResetStickyTaskListResponse{}
 }
+
+func ToHistoryRatelimitUpdateRequest(t *historyv1.RatelimitUpdateRequest) *types.RatelimitUpdateRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.RatelimitUpdateRequest{
+		Any: ToAny(t.Data),
+	}
+}
+
+func FromHistoryRatelimitUpdateResponse(t *types.RatelimitUpdateResponse) *historyv1.RatelimitUpdateResponse {
+	if t == nil {
+		return nil
+	}
+	return &historyv1.RatelimitUpdateResponse{
+		Data: FromAny(t.Any),
+	}
+}
