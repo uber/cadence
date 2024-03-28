@@ -183,10 +183,10 @@ type (
 		ReplicateChildWorkflowExecutionTerminatedEvent(*types.HistoryEvent) error
 		ReplicateChildWorkflowExecutionTimedOutEvent(*types.HistoryEvent) error
 		ReplicateDecisionTaskCompletedEvent(*types.HistoryEvent) error
-		ReplicateDecisionTaskFailedEvent() error
+		ReplicateDecisionTaskFailedEvent(*types.HistoryEvent) error
 		ReplicateDecisionTaskScheduledEvent(int64, int64, string, int32, int64, int64, int64, bool) (*DecisionInfo, error)
 		ReplicateDecisionTaskStartedEvent(*DecisionInfo, int64, int64, int64, string, int64) (*DecisionInfo, error)
-		ReplicateDecisionTaskTimedOutEvent(types.TimeoutType) error
+		ReplicateDecisionTaskTimedOutEvent(*types.HistoryEvent) error
 		ReplicateExternalWorkflowExecutionCancelRequested(*types.HistoryEvent) error
 		ReplicateExternalWorkflowExecutionSignaled(*types.HistoryEvent) error
 		ReplicateRequestCancelExternalWorkflowExecutionFailedEvent(*types.HistoryEvent) error
