@@ -22,6 +22,7 @@ package gocql
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/gocql/gocql"
 )
@@ -79,4 +80,105 @@ func mustConvertSerialConsistency(c SerialConsistency) gocql.SerialConsistency {
 	default:
 		panic(fmt.Sprintf("Unknown gocql SerialConsistency level: %v", c))
 	}
+}
+
+func (c Consistency) MarshalText() (text []byte, err error) {
+	return []byte(c.String()), nil
+}
+
+func (c *Consistency) UnmarshalText(text []byte) error {
+	switch string(text) {
+	case "ANY":
+		*c = Any
+	case "ONE":
+		*c = One
+	case "TWO":
+		*c = Two
+	case "THREE":
+		*c = Three
+	case "QUORUM":
+		*c = Quorum
+	case "ALL":
+		*c = All
+	case "LOCAL_QUORUM":
+		*c = LocalQuorum
+	case "EACH_QUORUM":
+		*c = EachQuorum
+	case "LOCAL_ONE":
+		*c = LocalOne
+	default:
+		return fmt.Errorf("invalid consistency %q", string(text))
+	}
+
+	return nil
+}
+
+func (c Consistency) String() string {
+	switch c {
+	case Any:
+		return "ANY"
+	case One:
+		return "ONE"
+	case Two:
+		return "TWO"
+	case Three:
+		return "THREE"
+	case Quorum:
+		return "QUORUM"
+	case All:
+		return "ALL"
+	case LocalQuorum:
+		return "LOCAL_QUORUM"
+	case EachQuorum:
+		return "EACH_QUORUM"
+	case LocalOne:
+		return "LOCAL_ONE"
+	default:
+		return fmt.Sprintf("invalid consistency: %d", uint16(c))
+	}
+}
+
+func ParseConsistency(s string) (Consistency, error) {
+	var c Consistency
+	if err := c.UnmarshalText([]byte(strings.ToUpper(s))); err != nil {
+		return c, fmt.Errorf("parse consistency: %w", err)
+	}
+	return c, nil
+}
+
+func ParseSerialConsistency(s string) (SerialConsistency, error) {
+	var sc SerialConsistency
+	if err := sc.UnmarshalText([]byte(strings.ToUpper(s))); err != nil {
+		return sc, fmt.Errorf("parse serial consistency: %w", err)
+
+	}
+	return sc, nil
+}
+
+func (s SerialConsistency) String() string {
+	switch s {
+	case Serial:
+		return "SERIAL"
+	case LocalSerial:
+		return "LOCAL_SERIAL"
+	default:
+		return fmt.Sprintf("invalid serial consistency %d", uint16(s))
+	}
+}
+
+func (s SerialConsistency) MarshalText() (text []byte, err error) {
+	return []byte(s.String()), nil
+}
+
+func (s *SerialConsistency) UnmarshalText(text []byte) error {
+	switch string(text) {
+	case "SERIAL":
+		*s = Serial
+	case "LOCAL_SERIAL":
+		*s = LocalSerial
+	default:
+		return fmt.Errorf("invalid serial consistency %q", string(text))
+	}
+
+	return nil
 }

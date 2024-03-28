@@ -66,7 +66,13 @@ func (p *plugin) CreateAdminDB(cfg *config.NoSQL, logger log.Logger, dc *persist
 }
 
 func (p *plugin) doCreateDB(cfg *config.NoSQL, logger log.Logger, dc *persistence.DynamicConfiguration) (*cdb, error) {
-	session, err := gocql.GetRegisteredClient().CreateSession(toGoCqlConfig(cfg))
+
+	gocqlConfig, err := toGoCqlConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	session, err := gocql.GetRegisteredClient().CreateSession(gocqlConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +80,7 @@ func (p *plugin) doCreateDB(cfg *config.NoSQL, logger log.Logger, dc *persistenc
 	return db, nil
 }
 
-func toGoCqlConfig(cfg *config.NoSQL) gocql.ClusterConfig {
+func toGoCqlConfig(cfg *config.NoSQL) (gocql.ClusterConfig, error) {
 	if cfg.Port == 0 {
 		cfg.Port = environment.GetCassandraPort()
 	}
@@ -84,6 +90,33 @@ func toGoCqlConfig(cfg *config.NoSQL) gocql.ClusterConfig {
 	if cfg.ProtoVersion == 0 {
 		cfg.ProtoVersion = environment.GetCassandraProtoVersion()
 	}
+
+	if cfg.Timeout == 0 {
+		cfg.Timeout = defaultSessionTimeout
+	}
+
+	if cfg.ConnectTimeout == 0 {
+		cfg.ConnectTimeout = defaultConnectTimeout
+	}
+
+	if cfg.Consistency == "" {
+		cfg.Consistency = cassandraDefaultConsLevel.String()
+	}
+
+	if cfg.SerialConsistency == "" {
+		cfg.SerialConsistency = cassandraDefaultSerialConsLevel.String()
+	}
+
+	consistency, err := gocql.ParseConsistency(cfg.Consistency)
+	if err != nil {
+		return gocql.ClusterConfig{}, err
+	}
+	serialConsistency, err := gocql.ParseSerialConsistency(cfg.SerialConsistency)
+
+	if err != nil {
+		return gocql.ClusterConfig{}, err
+	}
+
 	return gocql.ClusterConfig{
 		Hosts:                 cfg.Hosts,
 		Port:                  cfg.Port,
@@ -96,9 +129,9 @@ func toGoCqlConfig(cfg *config.NoSQL) gocql.ClusterConfig {
 		MaxConns:              cfg.MaxConns,
 		TLS:                   cfg.TLS,
 		ProtoVersion:          cfg.ProtoVersion,
-		Consistency:           cassandraDefaultConsLevel,
-		SerialConsistency:     cassandraDefaultSerialConsLevel,
-		Timeout:               defaultSessionTimeout,
-		ConnectTimeout:        defaultConnectTimeout,
-	}
+		Consistency:           consistency,
+		SerialConsistency:     serialConsistency,
+		Timeout:               cfg.Timeout,
+		ConnectTimeout:        cfg.ConnectTimeout,
+	}, nil
 }
