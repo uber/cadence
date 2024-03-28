@@ -114,13 +114,16 @@ func (s *VersionTestSuite) TestCheckCompatibleVersion() {
 }
 
 func (s *VersionTestSuite) createKeyspace(keyspace string) func() {
+
+	protoVersion, err := environment.GetCassandraProtoVersion()
+	s.NoError(err)
 	cfg := &cassandra.CQLClientConfig{
 		Hosts:        environment.GetCassandraAddress(),
 		Port:         cassandra.DefaultCassandraPort,
 		Keyspace:     "system",
 		Timeout:      cassandra.DefaultTimeout,
 		NumReplicas:  1,
-		ProtoVersion: environment.GetCassandraProtoVersion(),
+		ProtoVersion: protoVersion,
 	}
 	client, err := cassandra.NewCQLClient(cfg, gocql.All)
 	s.NoError(err)
