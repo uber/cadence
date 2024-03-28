@@ -8,23 +8,11 @@ You can find a list of previous releases on the [github releases](https://github
 
 ## [Unreleased]
 ### Added
-- Scaffold StartWorkflowExecutionAsync API (#5621)
-- Add Workflow ID cache size metric (#5619)
-- Add retries into Scanner BlobWriter (#5471)
-- Added a unit test for the BlobStoreWriter (#5472)
-- Scaffold async workflow queue provider component (#5627)
-- Add debug logs in PinotTripleVisibilityManager for response comparator testing (#5631)
-- Add a middleware for comparator to use (#5637)
-- Get/Update DomainAsyncWorkflowConfiguraton methods in admin API and CLI (#5616)
-- Added a helper script to run cassandra and execute tests (#5620)
+- Added codecov integration to report unit test coverage numbers
+- Added more unit tests to improve test coverage
 
-### Changed
-- Refactor persistence serializer tests and add more cases (#5625)
-- Replace JWT validation library (#5592)
-- Put a timeout for timer task deletion loop during shutdown (#5626)
-- Set proper max reset points (#5623)
-- Update run_cass_and_test.sh script to setup cassandra schemas (#5628)
-- Catch unit test failures in `make test` (#5635)
+## [1.2.8] - 2024-03-26
+See [Release Note](https://github.com/uber/cadence/releases/tag/v1.2.8) for details
 
 ## [1.2.7] - 2024-02-09
 See [Release Note](https://github.com/uber/cadence/releases/tag/v1.2.7) for details
