@@ -30,6 +30,10 @@ import (
 const rootRelativePath = "../../../../../../"
 
 func NewTestCQLClient(keyspace string) (cassandra.CqlClient, error) {
+	protoVersion, err := environment.GetCassandraProtoVersion()
+	if err != nil {
+		return nil, err
+	}
 	return cassandra.NewCQLClient(&cassandra.CQLClientConfig{
 		Hosts:                 environment.GetCassandraAddress(),
 		Port:                  cassandra.DefaultCassandraPort,
@@ -39,7 +43,7 @@ func NewTestCQLClient(keyspace string) (cassandra.CqlClient, error) {
 		Password:              environment.GetCassandraPassword(),
 		AllowedAuthenticators: environment.GetCassandraAllowedAuthenticators(),
 		NumReplicas:           1,
-		ProtoVersion:          environment.GetCassandraProtoVersion(),
+		ProtoVersion:          protoVersion,
 	}, gocql.All)
 }
 

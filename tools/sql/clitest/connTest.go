@@ -80,10 +80,12 @@ func (s *SQLConnTestSuite) TestParseCQLFile() {
 // TODO refactor the whole package to support testing against Postgres
 // https://github.com/uber/cadence/issues/2856
 func (s *SQLConnTestSuite) TestSQLConn() {
+	port, err := environment.GetMySQLPort()
+	s.Nil(err)
 	conn, err := sql.NewConnection(&config.SQL{
 		ConnectAddr: net.JoinHostPort(
 			environment.GetMySQLAddress(),
-			strconv.Itoa(environment.GetMySQLPort()),
+			strconv.Itoa(port),
 		),
 		User:          environment.GetMySQLUser(),
 		Password:      environment.GetMySQLPassword(),
@@ -100,10 +102,15 @@ func (s *SQLConnTestSuite) TestSQLConn() {
 }
 
 func newTestConn(database, pluginName string) (*sql.Connection, error) {
+	port, err := environment.GetMySQLPort()
+	if err != nil {
+		return nil, err
+	}
+
 	return sql.NewConnection(&config.SQL{
 		ConnectAddr: net.JoinHostPort(
 			environment.GetMySQLAddress(),
-			strconv.Itoa(environment.GetMySQLPort()),
+			strconv.Itoa(port),
 		),
 		User:          environment.GetMySQLUser(),
 		Password:      environment.GetMySQLPassword(),

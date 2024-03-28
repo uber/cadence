@@ -66,7 +66,11 @@ func (p *plugin) CreateAdminDB(cfg *config.NoSQL, logger log.Logger, dc *persist
 }
 
 func (p *plugin) doCreateDB(cfg *config.NoSQL, logger log.Logger, dc *persistence.DynamicConfiguration) (*cdb, error) {
-	session, err := gocql.GetRegisteredClient().CreateSession(toGoCqlConfig(cfg))
+	gocqlConfig, err := toGoCqlConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+	session, err := gocql.GetRegisteredClient().CreateSession(gocqlConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -74,15 +78,22 @@ func (p *plugin) doCreateDB(cfg *config.NoSQL, logger log.Logger, dc *persistenc
 	return db, nil
 }
 
-func toGoCqlConfig(cfg *config.NoSQL) gocql.ClusterConfig {
+func toGoCqlConfig(cfg *config.NoSQL) (gocql.ClusterConfig, error) {
+	var err error
 	if cfg.Port == 0 {
-		cfg.Port = environment.GetCassandraPort()
+		cfg.Port, err = environment.GetCassandraPort()
+		if err != nil {
+			return gocql.ClusterConfig{}, err
+		}
 	}
 	if cfg.Hosts == "" {
 		cfg.Hosts = environment.GetCassandraAddress()
 	}
 	if cfg.ProtoVersion == 0 {
-		cfg.ProtoVersion = environment.GetCassandraProtoVersion()
+		cfg.ProtoVersion, err = environment.GetCassandraProtoVersion()
+		if err != nil {
+			return gocql.ClusterConfig{}, err
+		}
 	}
 	return gocql.ClusterConfig{
 		Hosts:                 cfg.Hosts,
@@ -100,5 +111,5 @@ func toGoCqlConfig(cfg *config.NoSQL) gocql.ClusterConfig {
 		SerialConsistency:     cassandraDefaultSerialConsLevel,
 		Timeout:               defaultSessionTimeout,
 		ConnectTimeout:        defaultConnectTimeout,
-	}
+	}, nil
 }
