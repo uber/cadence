@@ -70,8 +70,7 @@ type (
 )
 
 func TestDeadlock(t *testing.T) {
-
-	useFix := true
+	useFix := false
 	/*
 		`try` is essentially what acquireShards() does:
 
