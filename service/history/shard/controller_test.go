@@ -70,9 +70,12 @@ type (
 )
 
 func TestDeadlock(t *testing.T) {
+
+	useFix := true
 	/*
 		`try` is essentially what acquireShards() does:
 
+			c := make(chan, buffer) // "small" without fix, == len(shards) with fix
 			for range some {
 			  go func() {
 				for range c {
@@ -83,7 +86,7 @@ func TestDeadlock(t *testing.T) {
 			}
 			for range shards {
 				c <- ...
-				if stop { return }
+				if stop { return } // removed with fix
 			}
 
 		plus some logging, and triggering a "stop" in the middle.
@@ -91,7 +94,14 @@ func TestDeadlock(t *testing.T) {
 	try := func(logfn func(...interface{})) {
 		var wg sync.WaitGroup
 		wg.Add(10)
-		c := make(chan struct{}, 10)
+		var c chan struct{}
+		numShards := 16000
+		if useFix {
+			c = make(chan struct{}, numShards)
+		} else {
+			// original flawed code
+			c = make(chan struct{}, 10)
+		}
 		stop := &atomic.Bool{}
 
 		for i := 0; i < 10; i++ {
@@ -109,19 +119,22 @@ func TestDeadlock(t *testing.T) {
 		}
 
 		// using realistic values.  occurs at lower values too, but perf is fine.
-		for i := 0; i < 16000; i++ {
+		for i := 0; i < numShards; i++ {
 			logfn("pushing", i)
 			c <- struct{}{}
-			if i == 8000 {
+			if i == numShards/2 {
 				logfn("stopping")
 				go func() {
 					time.Sleep(time.Microsecond)
 					stop.Store(true)
 				}()
 			}
-			if stop.Load() {
-				logfn("breaking")
-				break
+			// unnecessary with fixed job-publishing
+			if !useFix {
+				if stop.Load() {
+					logfn("breaking")
+					break
+				}
 			}
 		}
 		logfn("closing")

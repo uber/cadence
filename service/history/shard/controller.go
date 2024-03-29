@@ -384,7 +384,8 @@ func (c *controller) acquireShards() {
 	defer sw.Stop()
 
 	concurrency := common.MaxInt(c.config.AcquireShardConcurrency(), 1)
-	shardActionCh := make(chan int, concurrency) // TODO: wildly wrong, can lead to deadlock
+	numShards := c.config.NumberOfShards
+	shardActionCh := make(chan int, numShards)
 	var wg sync.WaitGroup
 	wg.Add(concurrency)
 	// Spawn workers that would lookup and add/remove shards concurrently.
@@ -411,15 +412,11 @@ func (c *controller) acquireShards() {
 		}()
 	}
 	// Submit tasks to the channel.
-	// TODO: can deadlock if shutting down
-	for shardID := 0; shardID < c.config.NumberOfShards; shardID++ {
-		shardActionCh <- shardID
-		if c.isShuttingDown() {
-			return
-		}
+	for shardID := 0; shardID < numShards; shardID++ {
+		shardActionCh <- shardID // must be non-blocking
 	}
 	close(shardActionCh)
-	// Wait until all shards are processed.
+	// Wait until all shards are processed or have shut down
 	wg.Wait()
 
 	c.metricsScope.UpdateGauge(metrics.NumShardsGauge, float64(c.NumShards()))
