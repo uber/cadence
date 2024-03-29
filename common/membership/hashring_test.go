@@ -131,12 +131,8 @@ func TestRefreshUpdatesRingOnlyWhenRingHasChanged(t *testing.T) {
 func TestRefreshWillNotifySubscribers(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	pp := NewMockPeerProvider(ctrl)
-	//
 	pp.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(1)
 	pp.EXPECT().GetMembers("test-service").AnyTimes()
-	//pp.EXPECT().WhoAmI().DoAndReturn(func() (HostInfo, error) {
-	//	return td.selfInfo, td.selfErr
-	//})
 
 	changed := &ChangedEvent{
 		HostsAdded:   []string{"a"},
