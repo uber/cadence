@@ -209,6 +209,7 @@ func TestDeadlock(t *testing.T) {
 		}
 		if time.Until(dead) < 10*time.Second {
 			t.Log("giving up early")
+			break
 		}
 	}
 }
