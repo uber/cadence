@@ -128,15 +128,44 @@ func TestRefreshUpdatesRingOnlyWhenRingHasChanged(t *testing.T) {
 
 }
 
+func TestRefreshWillNotifySubscribers(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	pp := NewMockPeerProvider(ctrl)
+	//
+	pp.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(1)
+	pp.EXPECT().GetMembers("test-service").AnyTimes()
+	//pp.EXPECT().WhoAmI().DoAndReturn(func() (HostInfo, error) {
+	//	return td.selfInfo, td.selfErr
+	//})
+
+	changed := &ChangedEvent{
+		HostsAdded:   []string{"a"},
+		HostsUpdated: []string{"b"},
+		HostsRemoved: []string{"c"},
+	}
+
+	hr := newHashring("test-service", pp, log.NewNoop(), metrics.NoopScope(0))
+	hr.Start()
+	var changeCh = make(chan *ChangedEvent)
+
+	err := hr.Subscribe("notifyMe", changeCh)
+	assert.NoError(t, err)
+
+	go func() { hr.refreshChan <- changed }()
+	changedEvent := <-changeCh
+	assert.Equal(t, changed, changedEvent)
+
+}
+
 func TestSubscribeIgnoresDuplicates(t *testing.T) {
 	var changeCh = make(chan *ChangedEvent)
 	ctrl := gomock.NewController(t)
 	pp := NewMockPeerProvider(ctrl)
 
-	hr := newHashring("test-service", pp, log.NewNoop(), metrics.NoopScope(0))
+	hr := newHashring("test-watcher", pp, log.NewNoop(), metrics.NoopScope(0))
 
-	assert.NoError(t, hr.Subscribe("test-service", changeCh))
-	assert.Error(t, hr.Subscribe("test-service", changeCh))
+	assert.NoError(t, hr.Subscribe("test-watcher", changeCh))
+	assert.Error(t, hr.Subscribe("test-watcher", changeCh))
 	assert.Equal(t, 1, len(hr.subscribers.keys))
 }
 

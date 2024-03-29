@@ -90,7 +90,7 @@ func newHashring(
 	logger log.Logger,
 	scope metrics.Scope,
 ) *ring {
-	ring := &ring{
+	r := &ring{
 		status:       common.DaemonStatusInitialized,
 		service:      service,
 		peerProvider: provider,
@@ -100,11 +100,11 @@ func newHashring(
 		scope:        scope,
 	}
 
-	ring.members.keys = make(map[string]HostInfo)
-	ring.subscribers.keys = make(map[string]chan<- *ChangedEvent)
+	r.members.keys = make(map[string]HostInfo)
+	r.subscribers.keys = make(map[string]chan<- *ChangedEvent)
 
-	ring.value.Store(emptyHashring())
-	return ring
+	r.value.Store(emptyHashring())
+	return r
 }
 
 func emptyHashring() *hashring.HashRing {
@@ -176,22 +176,30 @@ func (r *ring) Lookup(
 	return host, nil
 }
 
-// Subscribe registers callback watcher.
-// All subscribers are notified about ring change.
-func (r *ring) Subscribe(
-	service string,
-	notifyChannel chan<- *ChangedEvent,
-) error {
+// Subscribe registers callback watcher. Services can use this to be informed about membership changes
+func (r *ring) Subscribe(watcher string, notifyChannel chan<- *ChangedEvent) error {
 	r.subscribers.Lock()
 	defer r.subscribers.Unlock()
 
-	_, ok := r.subscribers.keys[service]
+	_, ok := r.subscribers.keys[watcher]
 	if ok {
-		return fmt.Errorf("service %q already subscribed", service)
+		return fmt.Errorf("watcher %q is already subscribed", watcher)
 	}
 
-	r.subscribers.keys[service] = notifyChannel
+	r.subscribers.keys[watcher] = notifyChannel
 	return nil
+}
+
+func (r *ring) notifySubscribers(msg *ChangedEvent) {
+	r.subscribers.Lock()
+	defer r.subscribers.Unlock()
+	for name, ch := range r.subscribers.keys {
+		select {
+		case ch <- msg:
+		default:
+			r.logger.Error("subscriber notification failed", tag.Name(name))
+		}
+	}
 }
 
 // Unsubscribe removes subscriber
@@ -265,7 +273,8 @@ func (r *ring) refreshRingWorker() {
 		select {
 		case <-r.shutdownCh:
 			return
-		case <-r.refreshChan: // local signal or signal from provider
+		case event := <-r.refreshChan: // local signal or signal from provider
+			r.notifySubscribers(event)
 			if err := r.refresh(); err != nil {
 				r.logger.Error("refreshing ring", tag.Error(err))
 			}
