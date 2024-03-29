@@ -150,6 +150,7 @@ func (r *ring) Stop() {
 	r.subscribers.keys = make(map[string]chan<- *ChangedEvent)
 	close(r.shutdownCh)
 
+	// TODO: this can deadlock for 1m
 	if success := common.AwaitWaitGroup(&r.shutdownWG, time.Minute); !success {
 		r.logger.Warn("service resolver timed out on shutdown.")
 	}

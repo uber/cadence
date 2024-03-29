@@ -23,7 +23,9 @@ package shard
 import (
 	"errors"
 	"fmt"
+	"runtime"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -66,6 +68,137 @@ type (
 		shardController *controller
 	}
 )
+
+func TestDeadlock(t *testing.T) {
+	/*
+		`try` is essentially what acquireShards() does:
+
+			for range some {
+			  go func() {
+				for range c {
+				  if stop { return }
+				  process()
+				}
+			  }()
+			}
+			for range shards {
+				c <- ...
+				if stop { return }
+			}
+
+		plus some logging, and triggering a "stop" in the middle.
+	*/
+	try := func(logfn func(...interface{})) {
+		var wg sync.WaitGroup
+		wg.Add(10)
+		c := make(chan struct{}, 10)
+		stop := &atomic.Bool{}
+
+		for i := 0; i < 10; i++ {
+			go func() {
+				defer wg.Done()
+				for range c {
+					if stop.Load() {
+						logfn("worker returning")
+						return
+					}
+					logfn("processed")
+					runtime.Gosched()
+				}
+			}()
+		}
+
+		// using realistic values.  occurs at lower values too, but perf is fine.
+		for i := 0; i < 16000; i++ {
+			logfn("pushing", i)
+			c <- struct{}{}
+			if i == 8000 {
+				logfn("stopping")
+				go func() {
+					time.Sleep(time.Microsecond)
+					stop.Store(true)
+				}()
+			}
+			if stop.Load() {
+				logfn("breaking")
+				break
+			}
+		}
+		logfn("closing")
+		close(c)
+
+		wg.Wait()
+	}
+
+	// this runs `try` and watches for deadlocks, up to some duration.
+	run := func(logfn func(...interface{}), timeout time.Duration) time.Duration {
+		done := make(chan struct{})
+		start := time.Now()
+		go func() {
+			defer close(done)
+			try(logfn)
+		}()
+
+		select {
+		case <-done:
+			logfn("done")
+			return time.Since(start)
+		case <-time.After(timeout):
+			t.Errorf("took too long")
+			return 0
+		}
+	}
+
+	logfn := func(...interface{}) {} // noop by default
+	// logfn = t.Log // if desired, but probably only run one attempt to avoid extreme logspam
+
+	if _, ok := t.Deadline(); !ok {
+		t.Fatal("no deadline, skipping")
+	}
+
+	// keep trying batches until fail or timeout
+	for {
+		attempts := 100
+		timeout := 10 * time.Second // needs to be higher for more concurrent attempts
+		var wg sync.WaitGroup
+		wg.Add(attempts)
+		var avg, count float64
+		var successes, fails int
+		var longest time.Duration
+		var mut sync.Mutex
+
+		// run some tests in parallel to increase the odds of triggering the issue,
+		// and keep track of avg/max runtime to make sure the timeout is reasonably
+		// larger than random latency could exceed.
+		for i := 0; i < attempts; i++ {
+			go func() {
+				defer wg.Done()
+				result := run(logfn, timeout)
+				mut.Lock()
+				if result > 0 {
+					if result > longest {
+						longest = result
+					}
+					avg = (avg*count + float64(result)) / (count + 1)
+					count++
+					successes++
+				} else {
+					fails++
+				}
+				mut.Unlock()
+			}()
+		}
+		wg.Wait()
+		dead, _ := t.Deadline()
+		t.Logf("time remaining: %v, avg runtime: %v, longest: %v, successes: %v, fails: %v", time.Until(dead), time.Duration(avg), longest, successes, fails)
+		if t.Failed() {
+			break
+		}
+		if time.Until(dead) < 10*time.Second {
+			t.Log("giving up early")
+		}
+	}
+}
 
 func TestControllerSuite(t *testing.T) {
 	s := new(controllerSuite)
