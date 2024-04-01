@@ -23,10 +23,10 @@
 package persistence
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common/log"
 )
@@ -95,88 +95,3 @@ func TestGetName(t *testing.T) {
 		})
 	}
 }
-
-//func TestRecordWorkflowExecutionStarted(t *testing.T) {
-//	// test non-empty request fields match
-//	errorRequest := &p.InternalRecordWorkflowExecutionStartedRequest{
-//		WorkflowID: "wid",
-//		Memo:       p.NewDataBlob([]byte(`test bytes`), common.EncodingTypeThriftRW),
-//		SearchAttributes: map[string][]byte{
-//			"CustomStringField": []byte("test string"),
-//			"CustomTimeField":   []byte("2020-01-01T00:00:00Z"),
-//		},
-//	}
-//
-//	request := &p.InternalRecordWorkflowExecutionStartedRequest{
-//		WorkflowID: "wid",
-//		Memo:       p.NewDataBlob([]byte(`test bytes`), common.EncodingTypeThriftRW),
-//	}
-//
-//	customStringField, err := json.Marshal("test string")
-//	assert.NoError(t, err)
-//	requestWithSearchAttributes := &p.InternalRecordWorkflowExecutionStartedRequest{
-//		WorkflowID: "wid",
-//		Memo:       p.NewDataBlob([]byte(`test bytes`), common.EncodingTypeThriftRW),
-//		SearchAttributes: map[string][]byte{
-//			"CustomStringField": customStringField,
-//		},
-//	}
-//
-//	tests := map[string]struct {
-//		request                *p.InternalRecordWorkflowExecutionStartedRequest
-//		producerMockAffordance func(mockProducer *mocks.KafkaProducer)
-//		expectedError          error
-//	}{
-//		"Case1: error case": {
-//			request: errorRequest,
-//			producerMockAffordance: func(mockProducer *mocks.KafkaProducer) {
-//				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
-//					return true
-//				})).Return(&types.BadRequestError{}).Once()
-//			},
-//			expectedError: fmt.Errorf("invalid character 'e' in literal true (expecting 'r')"),
-//		},
-//		"Case2: normal case": {
-//			request: request,
-//			producerMockAffordance: func(mockProducer *mocks.KafkaProducer) {
-//				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
-//					assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
-//					return true
-//				})).Return(nil).Once()
-//			},
-//			expectedError: nil,
-//		},
-//		"Case3: normal case with search attributes": {
-//			request: requestWithSearchAttributes,
-//			producerMockAffordance: func(mockProducer *mocks.KafkaProducer) {
-//				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
-//					assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
-//					return true
-//				})).Return(nil).Once()
-//			},
-//			expectedError: nil,
-//		},
-//	}
-//
-//	for name, test := range tests {
-//		t.Run(name, func(t *testing.T) {
-//			ctrl := gomock.NewController(t)
-//			mockPinotClient := pnt.NewMockGenericClient(ctrl)
-//			mockProducer := &mocks.KafkaProducer{}
-//			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
-//				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
-//				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-//			}, mockProducer, log.NewNoop())
-//			visibilityStore := mgr.(*pinotVisibilityStore)
-//
-//			test.producerMockAffordance(mockProducer)
-//
-//			err := visibilityStore.RecordWorkflowExecutionStarted(context.Background(), test.request)
-//			if test.expectedError != nil {
-//				assert.Error(t, err)
-//			} else {
-//				assert.NoError(t, err)
-//			}
-//		})
-//	}
-//}
