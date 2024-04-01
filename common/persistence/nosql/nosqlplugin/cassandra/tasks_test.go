@@ -870,7 +870,7 @@ func TestSelectTasks(t *testing.T) {
 					TaskListName: "tasklist1",
 					TaskListType: 1,
 				},
-				MinTaskID: 1,
+				MinTaskID: 0,
 				MaxTaskID: 100,
 				BatchSize: 3,
 			},
@@ -952,7 +952,7 @@ func TestSelectTasks(t *testing.T) {
 				},
 			},
 			wantQueries: []string{
-				`SELECT task_id, task FROM tasks WHERE domain_id = domain1 and task_list_name = tasklist1 and task_list_type = 1 and type = 0 and task_id > 1 and task_id <= 100`,
+				`SELECT task_id, task FROM tasks WHERE domain_id = domain1 and task_list_name = tasklist1 and task_list_type = 1 and type = 0 and task_id > 0 and task_id <= 100`,
 			},
 		},
 	}
