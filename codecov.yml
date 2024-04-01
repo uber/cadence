@@ -29,14 +29,21 @@ comment:
 codecov:
   require_ci_to_pass: false
 ignore:
+  - "**/*_cql.go"
   - "**/*_generated.go"
   - "**/*_mock.go"
   - "**/*_test.go"
   - "**/*_test_utils.go"
+  - "**/constants.go"
+  - "**/interface.go"
+  - "**/interfaces.go"
   - "**/main.go"
+  - "**/mocks.go"
   - "**/mocks/**"
-  - "**/testing/**"
   - "**/testdata/**"
+  - "**/testing/**"
+  - "**/types.go"
+  - "**/version.go"
   - "bench/**"
   - "canary/**"
   - "common/persistence/persistence-tests/**"
@@ -46,7 +53,8 @@ ignore:
   - "common/persistence/nosql/nosqlplugin/dynamodb/**"
   - "common/persistence/nosql/nosqlplugin/mongodb/**"
   - "common/types/shared.go" # 8k lines of getters. Not worth testing manually but consider switching to generated code.
-  - "idls/**"
   - "host/**"
+  - "idls/**"
+  - "service/history/workflow/errors.go"
   - "testflags/**"
   - "tools/linter/**"
