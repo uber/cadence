@@ -446,7 +446,6 @@ func TestUpdateTaskListWithTTL(t *testing.T) {
 				return
 			}
 
-			t.Log(session.batches[0].queries[1])
 			if diff := cmp.Diff(tc.wantQueries, session.batches[0].queries); diff != "" {
 				t.Fatalf("Query mismatch (-want +got):\n%s", diff)
 			}
@@ -616,7 +615,6 @@ func TestDeleteTaskList(t *testing.T) {
 				return
 			}
 
-			t.Log(session.queries[0])
 			if diff := cmp.Diff(tc.wantQueries, session.queries); diff != "" {
 				t.Fatalf("Query mismatch (-want +got):\n%s", diff)
 			}
@@ -726,7 +724,6 @@ func TestInsertTasks(t *testing.T) {
 				return
 			}
 
-			t.Log(session.batches[0].queries[1])
 			if diff := cmp.Diff(tc.wantQueries, session.batches[0].queries); diff != "" {
 				t.Fatalf("Query mismatch (-want +got):\n%s", diff)
 			}
