@@ -649,6 +649,7 @@ func TestInsertTasks(t *testing.T) {
 						WorkflowID:  "wid1",
 						RunID:       "rid1",
 						ScheduledID: 42,
+						CreatedTime: ts,
 					},
 				},
 				{
@@ -658,6 +659,7 @@ func TestInsertTasks(t *testing.T) {
 						WorkflowID:  "wid1",
 						RunID:       "rid1",
 						ScheduledID: 43,
+						CreatedTime: ts.Add(time.Second),
 					},
 				},
 			},
@@ -669,8 +671,8 @@ func TestInsertTasks(t *testing.T) {
 			},
 			mapExecuteBatchCASApplied: true,
 			wantQueries: []string{
-				`INSERT INTO tasks (domain_id, task_list_name, task_list_type, type, task_id, task) VALUES(domain1, tasklist1, 1, 0, 3, {domain_id: domain1, workflow_id: wid1, run_id: rid1, schedule_id: 42,created_time: 0001-01-01T00:00:00Z, partition_config: map[] })`,
-				`INSERT INTO tasks (domain_id, task_list_name, task_list_type, type, task_id, task) VALUES(domain1, tasklist1, 1, 0, 4, {domain_id: domain1, workflow_id: wid1, run_id: rid1, schedule_id: 43,created_time: 0001-01-01T00:00:00Z, partition_config: map[] }) USING TTL 157680000`,
+				`INSERT INTO tasks (domain_id, task_list_name, task_list_type, type, task_id, task) VALUES(domain1, tasklist1, 1, 0, 3, {domain_id: domain1, workflow_id: wid1, run_id: rid1, schedule_id: 42,created_time: 2024-04-01T22:08:41Z, partition_config: map[] })`,
+				`INSERT INTO tasks (domain_id, task_list_name, task_list_type, type, task_id, task) VALUES(domain1, tasklist1, 1, 0, 4, {domain_id: domain1, workflow_id: wid1, run_id: rid1, schedule_id: 43,created_time: 2024-04-01T22:08:42Z, partition_config: map[] }) USING TTL 157680000`,
 				`UPDATE tasks SET range_id = 25 WHERE domain_id = domain1 and task_list_name = tasklist1 and task_list_type = 1 and type = 1 and task_id = -12345 IF range_id = 25`,
 			},
 		},
