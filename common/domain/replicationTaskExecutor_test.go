@@ -22,7 +22,6 @@ package domain
 
 import (
 	"context"
-	"github.com/uber/cadence/common/log/testlogger"
 	"testing"
 	"time"
 
@@ -33,6 +32,7 @@ import (
 
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
