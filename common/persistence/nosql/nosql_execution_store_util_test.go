@@ -469,11 +469,181 @@ func TestPrepareTransferTasksForWorkflowTxn(t *testing.T) {
 			store := newTestNosqlExecutionStore(mockDB, log.NewNoop())
 
 			if tc.expectFunc != nil {
-				tc.expectFunc(mockDB) // Set up any expectations on the mockDB
+				tc.expectFunc(mockDB)
 			}
 
 			tasks, err := store.prepareTransferTasksForWorkflowTxn("domainID", "workflowID", "runID", tc.tasks)
-			tc.validate(t, tasks, err) // Validate the output
+			tc.validate(t, tasks, err)
+		})
+	}
+}
+
+func TestNosqlExecutionStoreUtilsExtended(t *testing.T) {
+	testCases := []struct {
+		name       string
+		setupStore func(store *nosqlExecutionStore) (interface{}, error)
+		validate   func(t *testing.T, result interface{}, err error)
+	}{
+		{
+			name: "PrepareActivityInfosForWorkflowTxn - Success",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				activityInfos := []*persistence.InternalActivityInfo{
+					{
+						ScheduleID:     1,
+						ScheduledEvent: persistence.NewDataBlob([]byte("scheduled event data"), common.EncodingTypeThriftRW),
+						StartedEvent:   persistence.NewDataBlob([]byte("started event data"), common.EncodingTypeThriftRW),
+					},
+				}
+				return store.prepareActivityInfosForWorkflowTxn(activityInfos)
+			},
+			validate: func(t *testing.T, result interface{}, err error) {
+				assert.NoError(t, err)
+				infos, ok := result.(map[int64]*persistence.InternalActivityInfo)
+				assert.True(t, ok)
+				assert.Len(t, infos, 1)
+				for _, info := range infos {
+					assert.NotNil(t, info.ScheduledEvent)
+					assert.NotNil(t, info.StartedEvent)
+				}
+			},
+		},
+		{
+			name: "PrepareTimerInfosForWorkflowTxn - Success",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				timerInfos := []*persistence.TimerInfo{
+					{
+						TimerID: "timer1",
+					},
+				}
+				return store.prepareTimerInfosForWorkflowTxn(timerInfos)
+			},
+			validate: func(t *testing.T, result interface{}, err error) {
+				assert.NoError(t, err)
+				infos, ok := result.(map[string]*persistence.TimerInfo)
+				assert.True(t, ok)
+				assert.Len(t, infos, 1)
+				assert.NotNil(t, infos["timer1"])
+			},
+		},
+		{
+			name: "PrepareChildWFInfosForWorkflowTxn - Success",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				childWFInfos := []*persistence.InternalChildExecutionInfo{
+					{
+						InitiatedID:    1,
+						InitiatedEvent: persistence.NewDataBlob([]byte("initiated event data"), common.EncodingTypeThriftRW),
+						StartedEvent:   persistence.NewDataBlob([]byte("started event data"), common.EncodingTypeThriftRW),
+					},
+				}
+				return store.prepareChildWFInfosForWorkflowTxn(childWFInfos)
+			},
+			validate: func(t *testing.T, result interface{}, err error) {
+				assert.NoError(t, err)
+				infos, ok := result.(map[int64]*persistence.InternalChildExecutionInfo)
+				assert.True(t, ok)
+				assert.Len(t, infos, 1)
+				for _, info := range infos {
+					assert.NotNil(t, info.InitiatedEvent)
+					assert.NotNil(t, info.StartedEvent)
+				}
+			},
+		},
+		{
+			name: "PrepareTimerInfosForWorkflowTxn - Nil Timer Info",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				return store.prepareTimerInfosForWorkflowTxn(nil)
+			},
+			validate: func(t *testing.T, result interface{}, err error) {
+				assert.NoError(t, err)
+				assert.Empty(t, result)
+			},
+		},
+		{
+			name: "PrepareChildWFInfosForWorkflowTxn - Nil Child Execution Info",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				return store.prepareChildWFInfosForWorkflowTxn(nil)
+			},
+			validate: func(t *testing.T, result interface{}, err error) {
+				assert.NoError(t, err)
+				assert.Empty(t, result)
+			},
+		},
+		{
+			name: "PrepareChildWFInfosForWorkflowTxn - Encoding Mismatch Error",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				childWFInfos := []*persistence.InternalChildExecutionInfo{
+					{
+						InitiatedID:    1,
+						InitiatedEvent: persistence.NewDataBlob([]byte("initiated"), common.EncodingTypeThriftRW),
+						StartedEvent:   persistence.NewDataBlob([]byte("started"), common.EncodingTypeJSON), // Encoding mismatch
+					},
+				}
+				return store.prepareChildWFInfosForWorkflowTxn(childWFInfos)
+			},
+			validate: func(t *testing.T, result interface{}, err error) {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "PrepareRequestCancelsForWorkflowTxn - Success",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				requestCancels := []*persistence.RequestCancelInfo{
+					{
+						InitiatedID:     1,
+						CancelRequestID: "cancel-1",
+					},
+					{
+						InitiatedID:     2,
+						CancelRequestID: "cancel-2",
+					},
+				}
+				cancels, err := store.prepareRequestCancelsForWorkflowTxn(requestCancels)
+				return cancels, err
+			},
+			validate: func(t *testing.T, result interface{}, err error) {
+				assert.NoError(t, err)
+				cancels := result.(map[int64]*persistence.RequestCancelInfo)
+				assert.Equal(t, 2, len(cancels))
+				assert.Contains(t, cancels, int64(1))
+				assert.Contains(t, cancels, int64(2))
+			},
+		},
+		{
+			name: "PrepareRequestCancelsForWorkflowTxn - Duplicate Initiated IDs",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				requestCancels := []*persistence.RequestCancelInfo{
+					{
+						InitiatedID:     1,
+						CancelRequestID: "cancel-1",
+					},
+					{
+						InitiatedID:     1, // Duplicate InitiatedID
+						CancelRequestID: "cancel-1-duplicate",
+					},
+				}
+				cancels, err := store.prepareRequestCancelsForWorkflowTxn(requestCancels)
+				return cancels, err
+			},
+			validate: func(t *testing.T, result interface{}, err error) {
+				assert.NoError(t, err)
+				cancels := result.(map[int64]*persistence.RequestCancelInfo)
+				assert.Equal(t, 1, len(cancels))
+				assert.Equal(t, "cancel-1-duplicate", cancels[1].CancelRequestID)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			mockDB := nosqlplugin.NewMockDB(mockCtrl)
+			store := newTestNosqlExecutionStore(mockDB, log.NewNoop())
+
+			result, err := tc.setupStore(store)
+			tc.validate(t, result, err)
 		})
 	}
 }
