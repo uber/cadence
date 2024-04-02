@@ -60,7 +60,7 @@ func Test_RegisterClientNotNil(t *testing.T) {
 
 func Test_newCassandraCluster(t *testing.T) {
 	testFullConfig := ClusterConfig{
-		Hosts:      "testHost",
+		Hosts:      "testHost1,testHost2,testHost3,testHost4",
 		Port:       123,
 		User:       "testUser",
 		Password:   "testPassword",
@@ -75,6 +75,7 @@ func Test_newCassandraCluster(t *testing.T) {
 		MaxConns: 10,
 	}
 	clusterConfig := newCassandraCluster(testFullConfig)
+	assert.Equal(t, []string{"testHost1", "testHost2", "testHost3", "testHost4"}, clusterConfig.Hosts)
 	assert.Equal(t, testFullConfig.Port, clusterConfig.Port)
 	assert.Equal(t, testFullConfig.User, clusterConfig.Authenticator.(gocql.PasswordAuthenticator).Username)
 	assert.Equal(t, testFullConfig.Password, clusterConfig.Authenticator.(gocql.PasswordAuthenticator).Password)
