@@ -21,7 +21,10 @@
 package domain
 
 import (
+	"context"
+	"errors"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
@@ -30,6 +33,7 @@ import (
 
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -242,6 +246,243 @@ func TestDomainReplicationTaskExecutor_Execute(t *testing.T) {
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.IsType(t, tt.errType, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func domainCreationTask() *types.DomainTaskAttributes {
+	return &types.DomainTaskAttributes{
+		DomainOperation: types.DomainOperationCreate.Ptr(),
+		ID:              "testDomainID",
+		Info: &types.DomainInfo{
+			Name:        "testDomain",
+			Status:      types.DomainStatusRegistered.Ptr(),
+			Description: "This is a test domain",
+			OwnerEmail:  "owner@test.com",
+			Data:        map[string]string{"key1": "value1"}, // Arbitrary domain metadata
+		},
+		Config: &types.DomainConfiguration{
+			WorkflowExecutionRetentionPeriodInDays: 10,
+			EmitMetric:                             true,
+			HistoryArchivalStatus:                  types.ArchivalStatusEnabled.Ptr(),
+			HistoryArchivalURI:                     "test://history/archival",
+			VisibilityArchivalStatus:               types.ArchivalStatusEnabled.Ptr(),
+			VisibilityArchivalURI:                  "test://visibility/archival",
+		},
+		ReplicationConfig: &types.DomainReplicationConfiguration{
+			ActiveClusterName: "activeClusterName",
+			Clusters: []*types.ClusterReplicationConfiguration{
+				{
+					ClusterName: "activeClusterName",
+				},
+				{
+					ClusterName: "standbyClusterName",
+				},
+			},
+		},
+		ConfigVersion:           1,
+		FailoverVersion:         1,
+		PreviousFailoverVersion: 0,
+	}
+}
+
+func TestHandleDomainCreationReplicationTask(t *testing.T) {
+	tests := []struct {
+		name      string
+		task      *types.DomainTaskAttributes
+		setup     func(mockDomainManager *persistence.MockDomainManager)
+		wantError bool
+	}{
+		{
+			name: "Successful Domain Creation",
+			task: domainCreationTask(),
+			setup: func(mockDomainManager *persistence.MockDomainManager) {
+				mockDomainManager.EXPECT().
+					CreateDomain(gomock.Any(), gomock.Any()).
+					Return(&persistence.CreateDomainResponse{ID: "testDomainID"}, nil)
+			},
+			wantError: false,
+		},
+		{
+			name: "Generic Error During Domain Creation",
+			task: domainCreationTask(),
+			setup: func(mockDomainManager *persistence.MockDomainManager) {
+				mockDomainManager.EXPECT().
+					CreateDomain(gomock.Any(), gomock.Any()).
+					Return(nil, types.InternalServiceError{Message: "an internal error"}).
+					Times(1)
+
+				// Since CreateDomain failed, handleDomainCreationReplicationTask check for domain existence by name and ID
+				mockDomainManager.EXPECT().
+					GetDomain(gomock.Any(), gomock.Any()).
+					Return(nil, &types.EntityNotExistsError{}). // Simulate that no domain exists with the given name/ID
+					AnyTimes()
+			},
+			wantError: true,
+		},
+		{
+			name: "Handle Name/UUID Collision - EntityNotExistsError",
+			task: domainCreationTask(),
+			setup: func(mockDomainManager *persistence.MockDomainManager) {
+				mockDomainManager.EXPECT().
+					CreateDomain(gomock.Any(), gomock.Any()).
+					Return(nil, ErrNameUUIDCollision).Times(1)
+
+				mockDomainManager.EXPECT().
+					GetDomain(gomock.Any(), gomock.Any()).Return(nil, &types.EntityNotExistsError{}).AnyTimes()
+			},
+			wantError: true,
+		},
+		{
+			name: "Immediate Error Return from CreateDomain",
+			setup: func(mockDomainManager *persistence.MockDomainManager) {
+				mockDomainManager.EXPECT().
+					CreateDomain(gomock.Any(), gomock.Any()).
+					Return(nil, types.InternalServiceError{Message: "internal error"}).
+					Times(1)
+				mockDomainManager.EXPECT().
+					GetDomain(gomock.Any(), gomock.Any()).
+					Return(nil, ErrInvalidDomainStatus).
+					AnyTimes()
+			},
+			task:      domainCreationTask(),
+			wantError: true,
+		},
+		{
+			name: "Domain Creation with Nil Status",
+			task: &types.DomainTaskAttributes{
+				DomainOperation: types.DomainOperationCreate.Ptr(),
+				ID:              "testDomainID",
+				Info: &types.DomainInfo{
+					Name: "testDomain",
+					// Status is intentionally left as nil to trigger the error
+				},
+			},
+			setup: func(mockDomainManager *persistence.MockDomainManager) {
+				// No need to set up a mock for CreateDomain as the call should not reach this point
+			},
+			wantError: true,
+		},
+		{
+			name: "Domain Creation with Unrecognized Status",
+			task: &types.DomainTaskAttributes{
+				DomainOperation: types.DomainOperationCreate.Ptr(),
+				ID:              "testDomainID",
+				Info: &types.DomainInfo{
+					Name:   "testDomain",
+					Status: types.DomainStatus(999).Ptr(), // Assuming 999 is an unrecognized status
+				},
+			},
+			setup: func(mockDomainManager *persistence.MockDomainManager) {
+				// As before, no need for mock setup for CreateDomain
+			},
+			wantError: true,
+		},
+		{
+			name: "Unexpected Error Type from GetDomain Leads to Default Error Handling",
+			task: domainCreationTask(),
+			setup: func(mockDomainManager *persistence.MockDomainManager) {
+				mockDomainManager.EXPECT().
+					CreateDomain(gomock.Any(), gomock.Any()).
+					Return(nil, ErrInvalidDomainStatus).Times(1)
+
+				mockDomainManager.EXPECT().
+					GetDomain(gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("unexpected error")).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "Successful GetDomain with Name/UUID Mismatch",
+			task: domainCreationTask(),
+			setup: func(mockDomainManager *persistence.MockDomainManager) {
+				mockDomainManager.EXPECT().
+					CreateDomain(gomock.Any(), gomock.Any()).
+					Return(nil, ErrNameUUIDCollision).AnyTimes()
+
+				mockDomainManager.EXPECT().
+					GetDomain(gomock.Any(), gomock.Any()).
+					Return(&persistence.GetDomainResponse{
+						Info: &persistence.DomainInfo{ID: "testDomainID", Name: "mismatchName"},
+					}, nil).AnyTimes()
+			},
+			wantError: true,
+		},
+		{
+			name: "Handle Domain Creation with Unhandled Error",
+			task: domainCreationTask(),
+			setup: func(mockDomainManager *persistence.MockDomainManager) {
+				mockDomainManager.EXPECT().
+					GetDomain(gomock.Any(), gomock.Any()).
+					Return(nil, &types.EntityNotExistsError{}).
+					AnyTimes()
+
+				mockDomainManager.EXPECT().
+					CreateDomain(gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("unhandled error")).
+					Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "Handle Domain Creation - Unexpected Error from GetDomain",
+			task: domainCreationTask(),
+			setup: func(mockDomainManager *persistence.MockDomainManager) {
+				mockDomainManager.EXPECT().
+					CreateDomain(gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("test error")).Times(1)
+
+				mockDomainManager.EXPECT().
+					GetDomain(gomock.Any(), gomock.Any()).
+					Return(nil, &types.EntityNotExistsError{}).Times(1)
+
+				mockDomainManager.EXPECT().
+					GetDomain(gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("unexpected error")).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "Duplicate Domain Creation With Same ID and Name",
+			task: domainCreationTask(),
+			setup: func(mockDomainManager *persistence.MockDomainManager) {
+				mockDomainManager.EXPECT().
+					CreateDomain(gomock.Any(), gomock.Any()).
+					Return(nil, ErrNameUUIDCollision).Times(1)
+
+				// Setup GetDomain to return matching ID and Name, indicating no actual conflict
+				// This setup ensures that recordExists becomes true
+				mockDomainManager.EXPECT().
+					GetDomain(gomock.Any(), gomock.Any()).
+					Return(&persistence.GetDomainResponse{
+						Info: &persistence.DomainInfo{ID: "testDomainID", Name: "testDomain"},
+					}, nil).Times(2)
+			},
+			wantError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+
+			mockDomainManager := persistence.NewMockDomainManager(ctrl)
+			mockLogger := testlogger.New(t)
+			mockTimeSource := clock.NewMockedTimeSourceAt(time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)) // Fixed time
+
+			executor := &domainReplicationTaskExecutorImpl{
+				domainManager: mockDomainManager,
+				logger:        mockLogger,
+				timeSource:    mockTimeSource,
+			}
+
+			tt.setup(mockDomainManager)
+			err := executor.handleDomainCreationReplicationTask(context.Background(), tt.task)
+			if tt.wantError {
+				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
