@@ -25,7 +25,6 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/mongodb"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/environment"
@@ -105,22 +104,17 @@ func TestMongoDBConfigStorePersistence(t *testing.T) {
 // }
 
 func NewTestBaseWithMongo(t *testing.T) *persistencetests.TestBase {
+	port, err := environment.GetMongoPort()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	options := &persistencetests.TestBaseOptions{
 		DBPluginName: mongodb.PluginName,
-		DBHost:       getTestConfig().Hosts,
-		DBUsername:   getTestConfig().User,
-		DBPassword:   getTestConfig().Password,
-		DBPort:       getTestConfig().Port,
+		DBHost:       environment.GetMongoAddress(),
+		DBUsername:   "root",
+		DBPassword:   "cadence",
+		DBPort:       port,
 	}
 	return persistencetests.NewTestBaseWithNoSQL(t, options)
-}
-
-func getTestConfig() *config.NoSQL {
-	return &config.NoSQL{
-		PluginName: mongodb.PluginName,
-		User:       "root",
-		Password:   "cadence",
-		Hosts:      environment.GetMongoAddress(),
-		Port:       environment.GetMongoPort(),
-	}
 }

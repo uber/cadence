@@ -260,6 +260,11 @@ func (t *taskImpl) HandleErr(err error) (retErr error) {
 		return err
 	}
 
+	if err == errWorkflowRateLimited {
+		// metrics are emitted within the rate limiter
+		return err
+	}
+
 	// this is a transient error
 	if isRedispatchErr(err) {
 		t.scope.IncCounter(metrics.TaskStandbyRetryCounterPerDomain)

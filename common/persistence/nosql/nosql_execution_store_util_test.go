@@ -212,6 +212,7 @@ func TestNosqlExecutionStoreUtils(t *testing.T) {
 			tc.validate(t, req, err)
 		})
 	}
+
 }
 
 func TestPrepareTasksForWorkflowTxn(t *testing.T) {
@@ -223,7 +224,11 @@ func TestPrepareTasksForWorkflowTxn(t *testing.T) {
 		name: "PrepareTimerTasksForWorkflowTxn - Successful Timer Tasks Preparation",
 		setupStore: func(store *nosqlExecutionStore) ([]*nosqlplugin.TimerTask, error) {
 			timerTasks := []persistence.Task{
-				&persistence.DecisionTimeoutTask{VisibilityTimestamp: time.Now(), TaskID: 1, EventID: 2, TimeoutType: 1, ScheduleAttempt: 1},
+				&persistence.DecisionTimeoutTask{
+					TaskData: persistence.TaskData{
+						VisibilityTimestamp: time.Now(), TaskID: 1,
+					},
+					EventID: 2, TimeoutType: 1, ScheduleAttempt: 1},
 			}
 			tasks, err := store.prepareTimerTasksForWorkflowTxn("domainID", "workflowID", "runID", timerTasks)
 			assert.NoError(t, err)
@@ -281,7 +286,9 @@ func TestPrepareReplicationTasksForWorkflowTxn(t *testing.T) {
 			setupStore: func(store *nosqlExecutionStore) ([]*nosqlplugin.ReplicationTask, error) {
 				replicationTasks := []persistence.Task{
 					&persistence.HistoryReplicationTask{
-						Version: 1,
+						TaskData: persistence.TaskData{
+							Version: 1,
+						},
 					},
 				}
 				return store.prepareReplicationTasksForWorkflowTxn("domainID", "workflowID", "runID", replicationTasks)
@@ -414,6 +421,63 @@ func TestPrepareNoSQLTasksForWorkflowTxn(t *testing.T) {
 	}
 }
 
+func TestPrepareTransferTasksForWorkflowTxn(t *testing.T) {
+	testCases := []struct {
+		name       string
+		tasks      []persistence.Task
+		expectFunc func(*nosqlplugin.MockDB)
+		validate   func(*testing.T, []*nosqlplugin.TransferTask, error)
+	}{
+		{
+			name: "Success - Prepare Transfer Tasks",
+			tasks: []persistence.Task{
+				&persistence.ActivityTask{
+					TaskData: persistence.TaskData{
+						Version: 1,
+					},
+					DomainID: "domainID",
+				},
+			},
+			expectFunc: func(mockDB *nosqlplugin.MockDB) {},
+			validate: func(t *testing.T, tasks []*nosqlplugin.TransferTask, err error) {
+				assert.NoError(t, err)
+				assert.NotEmpty(t, tasks)
+			},
+		},
+		{
+			name: "Failure - Unsupported Task Type",
+			tasks: []persistence.Task{
+				&dummyTaskType{
+					VisibilityTimestamp: time.Now(),
+					TaskID:              -1,
+				},
+			},
+			expectFunc: func(mockDB *nosqlplugin.MockDB) {},
+			validate: func(t *testing.T, tasks []*nosqlplugin.TransferTask, err error) {
+				assert.Error(t, err)
+				assert.Nil(t, tasks)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			mockDB := nosqlplugin.NewMockDB(mockCtrl)
+			store := newTestNosqlExecutionStore(mockDB, log.NewNoop())
+
+			if tc.expectFunc != nil {
+				tc.expectFunc(mockDB) // Set up any expectations on the mockDB
+			}
+
+			tasks, err := store.prepareTransferTasksForWorkflowTxn("domainID", "workflowID", "runID", tc.tasks)
+			tc.validate(t, tasks, err) // Validate the output
+		})
+	}
+}
+
 type dummyTaskType struct {
 	persistence.Task
 	VisibilityTimestamp time.Time
@@ -421,7 +485,7 @@ type dummyTaskType struct {
 }
 
 func (d *dummyTaskType) GetType() int {
-	return 999 // Using a type that is not expected by switch statement
+	return 999 // Using a type that is not expected by the switch statement
 }
 
 func (d *dummyTaskType) GetVersion() int64 {

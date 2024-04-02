@@ -34,6 +34,7 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -63,16 +64,18 @@ var (
 	errUnknownTransferTask   = errors.New("unknown transfer task")
 	errWorkflowBusy          = errors.New("unable to get workflow execution lock within specified timeout")
 	errTargetDomainNotActive = errors.New("target domain not active")
+	errWorkflowRateLimited   = errors.New("workflow is being rate limited for making too many requests")
 )
 
 type (
 	transferActiveTaskExecutor struct {
 		*transferTaskExecutorBase
 
-		historyClient           history.Client
-		parentClosePolicyClient parentclosepolicy.Client
-		workflowResetter        reset.WorkflowResetter
-		wfIDCache               workflowcache.WFCache
+		historyClient                  history.Client
+		parentClosePolicyClient        parentclosepolicy.Client
+		workflowResetter               reset.WorkflowResetter
+		wfIDCache                      workflowcache.WFCache
+		ratelimitInternalPerWorkflowID dynamicconfig.BoolPropertyFnWithDomainFilter
 	}
 
 	generatorF = func(taskGenerator execution.MutableStateTaskGenerator) error
@@ -87,6 +90,7 @@ func NewTransferActiveTaskExecutor(
 	logger log.Logger,
 	config *config.Config,
 	wfIDCache workflowcache.WFCache,
+	ratelimitInternalPerWorkflowID dynamicconfig.BoolPropertyFnWithDomainFilter,
 ) Executor {
 
 	return &transferActiveTaskExecutor{
@@ -104,8 +108,9 @@ func NewTransferActiveTaskExecutor(
 			shard.GetService().GetSDKClient(),
 			config.NumParentClosePolicySystemWorkflows(),
 		),
-		workflowResetter: workflowResetter,
-		wfIDCache:        wfIDCache,
+		workflowResetter:               workflowResetter,
+		wfIDCache:                      wfIDCache,
+		ratelimitInternalPerWorkflowID: ratelimitInternalPerWorkflowID,
 	}
 }
 
@@ -197,8 +202,10 @@ func (t *transferActiveTaskExecutor) processActivityTask(
 	// the rest of logic is making RPC call, which takes time.
 	release(nil)
 
-	// Ratelimiting is not done. This is only to count the number of requests via metrics
-	t.wfIDCache.AllowInternal(task.DomainID, task.WorkflowID)
+	// Rate limiting task processing requests
+	if !t.allowTask(task) {
+		return errWorkflowRateLimited
+	}
 
 	return t.pushActivity(ctx, task, timeout, mutableState.GetExecutionInfo().PartitionConfig)
 }
@@ -270,8 +277,10 @@ func (t *transferActiveTaskExecutor) processDecisionTask(
 	// the rest of logic is making RPC call, which takes time.
 	release(nil)
 
-	// Ratelimiting is not done. This is only to count the number of requests via metrics
-	t.wfIDCache.AllowInternal(task.DomainID, task.WorkflowID)
+	// Rate limiting task processing requests
+	if !t.allowTask(task) {
+		return errWorkflowRateLimited
+	}
 
 	err = t.pushDecision(ctx, task, taskList, decisionTimeout, mutableState.GetExecutionInfo().PartitionConfig)
 	if _, ok := err.(*types.StickyWorkerUnavailableError); ok {
@@ -288,6 +297,23 @@ func (t *transferActiveTaskExecutor) processDecisionTask(
 		err = t.pushDecision(ctx, task, taskList, decisionTimeout, mutableState.GetExecutionInfo().PartitionConfig)
 	}
 	return err
+}
+
+func (t *transferActiveTaskExecutor) allowTask(task *persistence.TransferTaskInfo) bool {
+	domainName, err := t.shard.GetDomainCache().GetDomainName(task.DomainID)
+	if err != nil {
+		t.logger.Error("Error when getting domain name",
+			tag.WorkflowDomainID(task.DomainID),
+			tag.WorkflowID(task.WorkflowID),
+			tag.WorkflowRunID(task.RunID),
+			tag.Error(err))
+		// Fail open
+		return true
+	}
+	enabled := t.ratelimitInternalPerWorkflowID(domainName)
+	allow := t.wfIDCache.AllowInternal(task.DomainID, task.WorkflowID)
+
+	return allow || !enabled
 }
 
 func (t *transferActiveTaskExecutor) processCloseExecution(

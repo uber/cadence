@@ -32,6 +32,9 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
+//go:generate mockgen -package $GOPACKAGE -destination data_store_interfaces_mock.go -self_package github.com/uber/cadence/common/persistence github.com/uber/cadence/common/persistence ExecutionStore
+//go:generate mockgen -package $GOPACKAGE -destination visibility_store_mock.go -self_package github.com/uber/cadence/common/persistence github.com/uber/cadence/common/persistence VisibilityStore
+
 type (
 	// ////////////////////////////////////////////////////////////////////
 	// Persistence interface is a lower layer of dataInterface.
@@ -531,6 +534,7 @@ type (
 	InternalGetWorkflowExecutionRequest struct {
 		DomainID  string
 		Execution types.WorkflowExecution
+		RangeID   int64
 	}
 
 	// InternalGetWorkflowExecutionResponse is the response to GetWorkflowExecution for Persistence Interface
@@ -922,8 +926,9 @@ func NewDataBlob(data []byte, encodingType common.EncodingType) *DataBlob {
 	if len(data) == 0 {
 		return nil
 	}
-	if encodingType != "thriftrw" && data[0] == 'Y' {
-		panic(fmt.Sprintf("Invalid incoding: \"%v\"", encodingType))
+	if encodingType != common.EncodingTypeThriftRW && data[0] == 'Y' {
+		// original reason for this is not written down, but maybe for handling data prior to an encoding type?
+		panic(fmt.Sprintf("Invalid data blob encoding: \"%v\"", encodingType))
 	}
 	return &DataBlob{
 		Data:     data,
@@ -994,7 +999,7 @@ func (d *DataBlob) ToInternal() *types.DataBlob {
 			Data:         d.Data,
 		}
 	default:
-		panic(fmt.Sprintf("DataBlob seeing unsupported enconding type: %v", d.Encoding))
+		panic(fmt.Sprintf("DataBlob.ToInternal() with unsupported encoding type: %v", d.Encoding))
 	}
 }
 
@@ -1012,6 +1017,6 @@ func NewDataBlobFromInternal(blob *types.DataBlob) *DataBlob {
 			Data:     blob.Data,
 		}
 	default:
-		panic(fmt.Sprintf("NewDataBlobFromInternal seeing unsupported enconding type: %v", blob.GetEncodingType()))
+		panic(fmt.Sprintf("NewDataBlobFromInternal with unsupported encoding type: %v", blob.GetEncodingType()))
 	}
 }

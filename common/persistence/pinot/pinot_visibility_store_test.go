@@ -38,7 +38,6 @@ import (
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
 	pnt "github.com/uber/cadence/common/pinot"
@@ -64,7 +63,6 @@ var (
 )
 
 func TestRecordWorkflowExecutionStarted(t *testing.T) {
-
 	// test non-empty request fields match
 	errorRequest := &p.InternalRecordWorkflowExecutionStartedRequest{
 		WorkflowID: "wid",
@@ -91,19 +89,37 @@ func TestRecordWorkflowExecutionStarted(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		request       *p.InternalRecordWorkflowExecutionStartedRequest
-		expectedError error
+		request                *p.InternalRecordWorkflowExecutionStartedRequest
+		producerMockAffordance func(mockProducer *mocks.KafkaProducer)
+		expectedError          error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
-			expectedError: fmt.Errorf("error"),
+			request: errorRequest,
+			producerMockAffordance: func(mockProducer *mocks.KafkaProducer) {
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					return true
+				})).Return(&types.BadRequestError{}).Once()
+			},
+			expectedError: fmt.Errorf("invalid character 'e' in literal true (expecting 'r')"),
 		},
 		"Case2: normal case": {
-			request:       request,
+			request: request,
+			producerMockAffordance: func(mockProducer *mocks.KafkaProducer) {
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
+					return true
+				})).Return(nil).Once()
+			},
 			expectedError: nil,
 		},
 		"Case3: normal case with search attributes": {
-			request:       requestWithSearchAttributes,
+			request: requestWithSearchAttributes,
+			producerMockAffordance: func(mockProducer *mocks.KafkaProducer) {
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
+					return true
+				})).Return(nil).Once()
+			},
 			expectedError: nil,
 		},
 	}
@@ -116,13 +132,10 @@ func TestRecordWorkflowExecutionStarted(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
-			mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
-				assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
-				return true
-			})).Return(nil).Once()
+			test.producerMockAffordance(mockProducer)
 
 			err := visibilityStore.RecordWorkflowExecutionStarted(context.Background(), test.request)
 			if test.expectedError != nil {
@@ -137,7 +150,7 @@ func TestRecordWorkflowExecutionStarted(t *testing.T) {
 func TestRecordWorkflowExecutionClosed(t *testing.T) {
 	// test non-empty request fields match
 	errorRequest := &p.InternalRecordWorkflowExecutionClosedRequest{
-		WorkflowID: "wid",
+		WorkflowID: "error-wid",
 		Memo:       p.NewDataBlob([]byte(`test bytes`), common.EncodingTypeThriftRW),
 		SearchAttributes: map[string][]byte{
 			"CustomStringField": []byte("test string"),
@@ -150,15 +163,27 @@ func TestRecordWorkflowExecutionClosed(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		request       *p.InternalRecordWorkflowExecutionClosedRequest
-		expectedError error
+		request                *p.InternalRecordWorkflowExecutionClosedRequest
+		producerMockAffordance func(mockProducer *mocks.KafkaProducer)
+		expectedError          error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
-			expectedError: fmt.Errorf("error"),
+			request: errorRequest,
+			producerMockAffordance: func(mockProducer *mocks.KafkaProducer) {
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					return true
+				})).Return(&types.BadRequestError{}).Once()
+			},
+			expectedError: fmt.Errorf("invalid character 'e' in literal true (expecting 'r')"),
 		},
 		"Case2: normal case": {
-			request:       request,
+			request: request,
+			producerMockAffordance: func(mockProducer *mocks.KafkaProducer) {
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
+					return true
+				})).Return(nil).Once()
+			},
 			expectedError: nil,
 		},
 	}
@@ -171,13 +196,10 @@ func TestRecordWorkflowExecutionClosed(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
-			mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
-				assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
-				return true
-			})).Return(nil).Once()
+			test.producerMockAffordance(mockProducer)
 
 			err := visibilityStore.RecordWorkflowExecutionClosed(context.Background(), test.request)
 			if test.expectedError != nil {
@@ -190,17 +212,23 @@ func TestRecordWorkflowExecutionClosed(t *testing.T) {
 }
 
 func TestRecordWorkflowExecutionUninitialized(t *testing.T) {
-	// test non-empty request fields match
 	request := &p.InternalRecordWorkflowExecutionUninitializedRequest{
 		WorkflowID: "wid",
 	}
 
 	tests := map[string]struct {
-		request       *p.InternalRecordWorkflowExecutionUninitializedRequest
-		expectedError error
+		request                *p.InternalRecordWorkflowExecutionUninitializedRequest
+		producerMockAffordance func(mockProducer *mocks.KafkaProducer)
+		expectedError          error
 	}{
 		"Case1: normal case": {
-			request:       request,
+			request: request,
+			producerMockAffordance: func(mockProducer *mocks.KafkaProducer) {
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
+					return true
+				})).Return(nil).Once()
+			},
 			expectedError: nil,
 		},
 	}
@@ -213,13 +241,10 @@ func TestRecordWorkflowExecutionUninitialized(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
-			mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
-				assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
-				return true
-			})).Return(nil).Once()
+			test.producerMockAffordance(mockProducer)
 
 			err := visibilityStore.RecordWorkflowExecutionUninitialized(context.Background(), test.request)
 			assert.Equal(t, test.expectedError, err)
@@ -230,7 +255,7 @@ func TestRecordWorkflowExecutionUninitialized(t *testing.T) {
 func TestUpsertWorkflowExecution(t *testing.T) {
 	// test non-empty request fields match
 	errorRequest := &p.InternalUpsertWorkflowExecutionRequest{
-		WorkflowID: "wid",
+		WorkflowID: "error-wid",
 		Memo:       p.NewDataBlob([]byte(`test bytes`), common.EncodingTypeThriftRW),
 		SearchAttributes: map[string][]byte{
 			"CustomStringField": []byte("test string"),
@@ -243,15 +268,27 @@ func TestUpsertWorkflowExecution(t *testing.T) {
 	request.Memo = p.NewDataBlob(memoBytes, common.EncodingTypeThriftRW)
 
 	tests := map[string]struct {
-		request       *p.InternalUpsertWorkflowExecutionRequest
-		expectedError error
+		request                *p.InternalUpsertWorkflowExecutionRequest
+		producerMockAffordance func(mockProducer *mocks.KafkaProducer)
+		expectedError          error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
-			expectedError: fmt.Errorf("error"),
+			request: errorRequest,
+			producerMockAffordance: func(mockProducer *mocks.KafkaProducer) {
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					return true
+				})).Return(fmt.Errorf("error")).Once()
+			},
+			expectedError: fmt.Errorf("invalid character 'e' in literal true (expecting 'r')"),
 		},
 		"Case2: normal case": {
-			request:       request,
+			request: request,
+			producerMockAffordance: func(mockProducer *mocks.KafkaProducer) {
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
+					return true
+				})).Return(nil).Once()
+			},
 			expectedError: nil,
 		},
 	}
@@ -264,13 +301,10 @@ func TestUpsertWorkflowExecution(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
-			mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
-				assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
-				return true
-			})).Return(nil).Once()
+			test.producerMockAffordance(mockProducer)
 
 			err := visibilityStore.UpsertWorkflowExecution(context.Background(), test.request)
 			if test.expectedError != nil {
@@ -288,11 +322,18 @@ func TestDeleteWorkflowExecution(t *testing.T) {
 	request.WorkflowID = "wid"
 
 	tests := map[string]struct {
-		request       *p.VisibilityDeleteWorkflowExecutionRequest
-		expectedError error
+		request                *p.VisibilityDeleteWorkflowExecutionRequest
+		producerMockAffordance func(mockProducer *mocks.KafkaProducer)
+		expectedError          error
 	}{
 		"Case1: normal case": {
-			request:       request,
+			request: request,
+			producerMockAffordance: func(mockProducer *mocks.KafkaProducer) {
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
+					return true
+				})).Return(nil).Once()
+			},
 			expectedError: nil,
 		},
 	}
@@ -305,13 +346,10 @@ func TestDeleteWorkflowExecution(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
-			mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
-				assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
-				return true
-			})).Return(nil).Once()
+			test.producerMockAffordance(mockProducer)
 
 			err := visibilityStore.DeleteWorkflowExecution(context.Background(), test.request)
 			assert.Equal(t, test.expectedError, err)
@@ -330,11 +368,18 @@ func TestDeleteUninitializedWorkflowExecution(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		request       *p.VisibilityDeleteWorkflowExecutionRequest
-		expectedError error
+		request                *p.VisibilityDeleteWorkflowExecutionRequest
+		producerMockAffordance func(mockProducer *mocks.KafkaProducer)
+		expectedError          error
 	}{
 		"Case1: normal case": {
-			request:       request,
+			request: request,
+			producerMockAffordance: func(mockProducer *mocks.KafkaProducer) {
+				mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
+					assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
+					return true
+				})).Return(nil).Once()
+			},
 			expectedError: nil,
 		},
 	}
@@ -347,16 +392,13 @@ func TestDeleteUninitializedWorkflowExecution(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
 			mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
 			mockPinotClient.EXPECT().CountByQuery(gomock.Any()).Return(int64(1), nil).Times(1)
 
-			mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.PinotMessage) bool {
-				assert.Equal(t, request.WorkflowID, input.GetWorkflowID())
-				return true
-			})).Return(nil).Once()
+			test.producerMockAffordance(mockProducer)
 
 			err := visibilityStore.DeleteUninitializedWorkflowExecution(context.Background(), test.request)
 			assert.Equal(t, test.expectedError, err)
@@ -375,18 +417,26 @@ func TestListOpenWorkflowExecutions(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		request       *p.InternalListWorkflowExecutionsRequest
-		expectedResp  *p.InternalListWorkflowExecutionsResponse
-		expectedError error
+		request                   *p.InternalListWorkflowExecutionsRequest
+		expectedResp              *p.InternalListWorkflowExecutionsResponse
+		pinotClientMockAffordance func(mockPinotClient *pnt.MockGenericClient)
+		expectedError             error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
-			expectedResp:  nil,
-			expectedError: fmt.Errorf("error"),
+			request:      errorRequest,
+			expectedResp: nil,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+			},
+			expectedError: fmt.Errorf("next page token: unable to deserialize page token. err: invalid character 'e' looking for beginning of value"),
 		},
 		"Case2: normal case with nil response": {
-			request:       request,
-			expectedResp:  nil,
+			request:      request,
+			expectedResp: nil,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+			},
 			expectedError: nil,
 		},
 	}
@@ -399,19 +449,16 @@ func TestListOpenWorkflowExecutions(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
+			test.pinotClientMockAffordance(mockPinotClient)
+
+			resp, err := visibilityStore.ListOpenWorkflowExecutions(context.Background(), test.request)
+			assert.Equal(t, test.expectedResp, resp)
 			if test.expectedError != nil {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				resp, err := visibilityStore.ListOpenWorkflowExecutions(context.Background(), test.request)
-				assert.Equal(t, test.expectedResp, resp)
 				assert.Error(t, err)
 			} else {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
-				resp, err := visibilityStore.ListOpenWorkflowExecutions(context.Background(), test.request)
-				assert.Equal(t, test.expectedResp, resp)
 				assert.NoError(t, err)
 			}
 		})
@@ -429,18 +476,26 @@ func TestListClosedWorkflowExecutions(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		request       *p.InternalListWorkflowExecutionsRequest
-		expectedResp  *p.InternalListWorkflowExecutionsResponse
-		expectedError error
+		request                   *p.InternalListWorkflowExecutionsRequest
+		expectedResp              *p.InternalListWorkflowExecutionsResponse
+		pinotClientMockAffordance func(mockPinotClient *pnt.MockGenericClient)
+		expectedError             error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
-			expectedResp:  nil,
-			expectedError: fmt.Errorf("error"),
+			request:      errorRequest,
+			expectedResp: nil,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+			},
+			expectedError: fmt.Errorf("next page token: unable to deserialize page token. err: invalid character 'e' looking for beginning of value"),
 		},
 		"Case2: normal case with nil response": {
-			request:       request,
-			expectedResp:  nil,
+			request:      request,
+			expectedResp: nil,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+			},
 			expectedError: nil,
 		},
 	}
@@ -453,19 +508,16 @@ func TestListClosedWorkflowExecutions(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
+			test.pinotClientMockAffordance(mockPinotClient)
+
+			resp, err := visibilityStore.ListClosedWorkflowExecutions(context.Background(), test.request)
+			assert.Equal(t, test.expectedResp, resp)
 			if test.expectedError != nil {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				resp, err := visibilityStore.ListClosedWorkflowExecutions(context.Background(), test.request)
-				assert.Equal(t, test.expectedResp, resp)
 				assert.Error(t, err)
 			} else {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
-				resp, err := visibilityStore.ListClosedWorkflowExecutions(context.Background(), test.request)
-				assert.Equal(t, test.expectedResp, resp)
 				assert.NoError(t, err)
 			}
 		})
@@ -484,18 +536,26 @@ func TestListOpenWorkflowExecutionsByType(t *testing.T) {
 	request := &p.InternalListWorkflowExecutionsByTypeRequest{}
 
 	tests := map[string]struct {
-		request       *p.InternalListWorkflowExecutionsByTypeRequest
-		expectedResp  *p.InternalListWorkflowExecutionsResponse
-		expectedError error
+		request                   *p.InternalListWorkflowExecutionsByTypeRequest
+		expectedResp              *p.InternalListWorkflowExecutionsResponse
+		pinotClientMockAffordance func(mockPinotClient *pnt.MockGenericClient)
+		expectedError             error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
-			expectedResp:  nil,
-			expectedError: fmt.Errorf("error"),
+			request:      errorRequest,
+			expectedResp: nil,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+			},
+			expectedError: fmt.Errorf("next page token: unable to deserialize page token. err: invalid character 'e' looking for beginning of value"),
 		},
 		"Case2: normal case with nil response": {
-			request:       request,
-			expectedResp:  nil,
+			request:      request,
+			expectedResp: nil,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+			},
 			expectedError: nil,
 		},
 	}
@@ -508,19 +568,16 @@ func TestListOpenWorkflowExecutionsByType(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
+			test.pinotClientMockAffordance(mockPinotClient)
+
+			resp, err := visibilityStore.ListOpenWorkflowExecutionsByType(context.Background(), test.request)
+			assert.Equal(t, test.expectedResp, resp)
 			if test.expectedError != nil {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				resp, err := visibilityStore.ListOpenWorkflowExecutionsByType(context.Background(), test.request)
-				assert.Equal(t, test.expectedResp, resp)
 				assert.Error(t, err)
 			} else {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
-				resp, err := visibilityStore.ListOpenWorkflowExecutionsByType(context.Background(), test.request)
-				assert.Equal(t, test.expectedResp, resp)
 				assert.NoError(t, err)
 			}
 		})
@@ -538,18 +595,26 @@ func TestListClosedWorkflowExecutionsByType(t *testing.T) {
 	request := &p.InternalListWorkflowExecutionsByTypeRequest{}
 
 	tests := map[string]struct {
-		request       *p.InternalListWorkflowExecutionsByTypeRequest
-		expectedResp  *p.InternalListWorkflowExecutionsResponse
-		expectedError error
+		request                   *p.InternalListWorkflowExecutionsByTypeRequest
+		expectedResp              *p.InternalListWorkflowExecutionsResponse
+		pinotClientMockAffordance func(mockPinotClient *pnt.MockGenericClient)
+		expectedError             error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
-			expectedResp:  nil,
-			expectedError: fmt.Errorf("error"),
+			request:      errorRequest,
+			expectedResp: nil,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+			},
+			expectedError: fmt.Errorf("next page token: unable to deserialize page token. err: invalid character 'e' looking for beginning of value"),
 		},
 		"Case2: normal case with nil response": {
-			request:       request,
-			expectedResp:  nil,
+			request:      request,
+			expectedResp: nil,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+			},
 			expectedError: nil,
 		},
 	}
@@ -562,19 +627,16 @@ func TestListClosedWorkflowExecutionsByType(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
+			test.pinotClientMockAffordance(mockPinotClient)
+
+			resp, err := visibilityStore.ListClosedWorkflowExecutionsByType(context.Background(), test.request)
+			assert.Equal(t, test.expectedResp, resp)
 			if test.expectedError != nil {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				resp, err := visibilityStore.ListClosedWorkflowExecutionsByType(context.Background(), test.request)
-				assert.Equal(t, test.expectedResp, resp)
 				assert.Error(t, err)
 			} else {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
-				resp, err := visibilityStore.ListClosedWorkflowExecutionsByType(context.Background(), test.request)
-				assert.Equal(t, test.expectedResp, resp)
 				assert.NoError(t, err)
 			}
 		})
@@ -591,18 +653,26 @@ func TestListOpenWorkflowExecutionsByWorkflowID(t *testing.T) {
 	request := &p.InternalListWorkflowExecutionsByWorkflowIDRequest{}
 
 	tests := map[string]struct {
-		request       *p.InternalListWorkflowExecutionsByWorkflowIDRequest
-		expectedResp  *p.InternalListWorkflowExecutionsResponse
-		expectedError error
+		request                   *p.InternalListWorkflowExecutionsByWorkflowIDRequest
+		expectedResp              *p.InternalListWorkflowExecutionsResponse
+		pinotClientMockAffordance func(mockPinotClient *pnt.MockGenericClient)
+		expectedError             error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
-			expectedResp:  nil,
-			expectedError: fmt.Errorf("error"),
+			request:      errorRequest,
+			expectedResp: nil,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+			},
+			expectedError: fmt.Errorf("next page token: unable to deserialize page token. err: invalid character 'e' looking for beginning of value"),
 		},
 		"Case2: normal case with nil response": {
-			request:       request,
-			expectedResp:  nil,
+			request:      request,
+			expectedResp: nil,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+			},
 			expectedError: nil,
 		},
 	}
@@ -615,19 +685,16 @@ func TestListOpenWorkflowExecutionsByWorkflowID(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
+			test.pinotClientMockAffordance(mockPinotClient)
+
+			resp, err := visibilityStore.ListOpenWorkflowExecutionsByWorkflowID(context.Background(), test.request)
+			assert.Equal(t, test.expectedResp, resp)
 			if test.expectedError != nil {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				resp, err := visibilityStore.ListOpenWorkflowExecutionsByWorkflowID(context.Background(), test.request)
-				assert.Equal(t, test.expectedResp, resp)
 				assert.Error(t, err)
 			} else {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
-				resp, err := visibilityStore.ListOpenWorkflowExecutionsByWorkflowID(context.Background(), test.request)
-				assert.Equal(t, test.expectedResp, resp)
 				assert.NoError(t, err)
 			}
 		})
@@ -644,18 +711,26 @@ func TestListClosedWorkflowExecutionsByWorkflowID(t *testing.T) {
 	request := &p.InternalListWorkflowExecutionsByWorkflowIDRequest{}
 
 	tests := map[string]struct {
-		request       *p.InternalListWorkflowExecutionsByWorkflowIDRequest
-		expectedResp  *p.InternalListWorkflowExecutionsResponse
-		expectedError error
+		request                   *p.InternalListWorkflowExecutionsByWorkflowIDRequest
+		expectedResp              *p.InternalListWorkflowExecutionsResponse
+		pinotClientMockAffordance func(mockPinotClient *pnt.MockGenericClient)
+		expectedError             error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
-			expectedResp:  nil,
-			expectedError: fmt.Errorf("error"),
+			request:      errorRequest,
+			expectedResp: nil,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+			},
+			expectedError: fmt.Errorf("next page token: unable to deserialize page token. err: invalid character 'e' looking for beginning of value"),
 		},
 		"Case2: normal case with nil response": {
-			request:       request,
-			expectedResp:  nil,
+			request:      request,
+			expectedResp: nil,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+			},
 			expectedError: nil,
 		},
 	}
@@ -668,19 +743,16 @@ func TestListClosedWorkflowExecutionsByWorkflowID(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
+			test.pinotClientMockAffordance(mockPinotClient)
+
+			resp, err := visibilityStore.ListClosedWorkflowExecutionsByWorkflowID(context.Background(), test.request)
+			assert.Equal(t, test.expectedResp, resp)
 			if test.expectedError != nil {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				resp, err := visibilityStore.ListClosedWorkflowExecutionsByWorkflowID(context.Background(), test.request)
-				assert.Equal(t, test.expectedResp, resp)
 				assert.Error(t, err)
 			} else {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
-				resp, err := visibilityStore.ListClosedWorkflowExecutionsByWorkflowID(context.Background(), test.request)
-				assert.Equal(t, test.expectedResp, resp)
 				assert.NoError(t, err)
 			}
 		})
@@ -697,18 +769,26 @@ func TestListClosedWorkflowExecutionsByStatus(t *testing.T) {
 	request := &p.InternalListClosedWorkflowExecutionsByStatusRequest{}
 
 	tests := map[string]struct {
-		request       *p.InternalListClosedWorkflowExecutionsByStatusRequest
-		expectedResp  *p.InternalListWorkflowExecutionsResponse
-		expectedError error
+		request                   *p.InternalListClosedWorkflowExecutionsByStatusRequest
+		expectedResp              *p.InternalListWorkflowExecutionsResponse
+		pinotClientMockAffordance func(mockPinotClient *pnt.MockGenericClient)
+		expectedError             error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
-			expectedResp:  nil,
-			expectedError: fmt.Errorf("error"),
+			request:      errorRequest,
+			expectedResp: nil,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+			},
+			expectedError: fmt.Errorf("next page token: unable to deserialize page token. err: invalid character 'e' looking for beginning of value"),
 		},
 		"Case2: normal case with nil response": {
-			request:       request,
-			expectedResp:  nil,
+			request:      request,
+			expectedResp: nil,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+			},
 			expectedError: nil,
 		},
 	}
@@ -721,19 +801,16 @@ func TestListClosedWorkflowExecutionsByStatus(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
+			test.pinotClientMockAffordance(mockPinotClient)
+
+			resp, err := visibilityStore.ListClosedWorkflowExecutionsByStatus(context.Background(), test.request)
+			assert.Equal(t, test.expectedResp, resp)
 			if test.expectedError != nil {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				resp, err := visibilityStore.ListClosedWorkflowExecutionsByStatus(context.Background(), test.request)
-				assert.Equal(t, test.expectedResp, resp)
 				assert.Error(t, err)
 			} else {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
-				resp, err := visibilityStore.ListClosedWorkflowExecutionsByStatus(context.Background(), test.request)
-				assert.Equal(t, test.expectedResp, resp)
 				assert.NoError(t, err)
 			}
 		})
@@ -745,17 +822,39 @@ func TestGetClosedWorkflowExecution(t *testing.T) {
 	request := &p.InternalGetClosedWorkflowExecutionRequest{}
 
 	tests := map[string]struct {
-		request       *p.InternalGetClosedWorkflowExecutionRequest
-		expectedResp  *p.InternalGetClosedWorkflowExecutionRequest
-		expectedError error
+		request                   *p.InternalGetClosedWorkflowExecutionRequest
+		expectedResp              *p.InternalGetClosedWorkflowExecutionRequest
+		pinotClientMockAffordance func(mockPinotClient *pnt.MockGenericClient)
+		expectedError             error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
-			expectedResp:  nil,
-			expectedError: fmt.Errorf("error"),
+			request:      errorRequest,
+			expectedResp: nil,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(&pnt.SearchResponse{
+					Executions: []*p.InternalVisibilityWorkflowExecutionInfo{
+						{
+							DomainID: DomainID,
+						},
+					},
+				}, fmt.Errorf("error")).Times(1)
+			},
+			expectedError: fmt.Errorf("Pinot GetClosedWorkflowExecution failed, error"),
 		},
 		"Case2: normal case with nil response": {
-			request:       request,
+			request:      request,
+			expectedResp: nil,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(&pnt.SearchResponse{
+					Executions: []*p.InternalVisibilityWorkflowExecutionInfo{
+						{
+							DomainID: DomainID,
+						},
+					},
+				}, nil).Times(1)
+			},
 			expectedError: nil,
 		},
 	}
@@ -768,30 +867,15 @@ func TestGetClosedWorkflowExecution(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
+			test.pinotClientMockAffordance(mockPinotClient)
+
+			_, err := visibilityStore.GetClosedWorkflowExecution(context.Background(), test.request)
 			if test.expectedError != nil {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockPinotClient.EXPECT().Search(gomock.Any()).Return(&pnt.SearchResponse{
-					Executions: []*p.InternalVisibilityWorkflowExecutionInfo{
-						{
-							DomainID: DomainID,
-						},
-					},
-				}, fmt.Errorf("error")).Times(1)
-				_, err := visibilityStore.GetClosedWorkflowExecution(context.Background(), test.request)
-				assert.Error(t, err)
+				assert.Equal(t, test.expectedError.Error(), err.Error())
 			} else {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockPinotClient.EXPECT().Search(gomock.Any()).Return(&pnt.SearchResponse{
-					Executions: []*p.InternalVisibilityWorkflowExecutionInfo{
-						{
-							DomainID: DomainID,
-						},
-					},
-				}, nil).Times(1)
-				_, err := visibilityStore.GetClosedWorkflowExecution(context.Background(), test.request)
 				assert.NoError(t, err)
 			}
 		})
@@ -805,18 +889,26 @@ func TestListWorkflowExecutions(t *testing.T) {
 	request := &p.ListWorkflowExecutionsByQueryRequest{}
 
 	tests := map[string]struct {
-		request       *p.ListWorkflowExecutionsByQueryRequest
-		expectedResp  *p.InternalListWorkflowExecutionsResponse
-		expectedError error
+		request                   *p.ListWorkflowExecutionsByQueryRequest
+		expectedResp              *p.InternalListWorkflowExecutionsResponse
+		pinotClientMockAffordance func(mockPinotClient *pnt.MockGenericClient)
+		expectedError             error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
-			expectedResp:  nil,
-			expectedError: fmt.Errorf("error"),
+			request:      errorRequest,
+			expectedResp: nil,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+			},
+			expectedError: fmt.Errorf("next page token: unable to deserialize page token. err: invalid character 'e' looking for beginning of value"),
 		},
 		"Case2: normal case with nil response": {
-			request:       request,
-			expectedResp:  nil,
+			request:      request,
+			expectedResp: nil,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+			},
 			expectedError: nil,
 		},
 	}
@@ -829,19 +921,16 @@ func TestListWorkflowExecutions(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
+			test.pinotClientMockAffordance(mockPinotClient)
+
+			resp, err := visibilityStore.ListWorkflowExecutions(context.Background(), test.request)
+			assert.Equal(t, test.expectedResp, resp)
 			if test.expectedError != nil {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				resp, err := visibilityStore.ListWorkflowExecutions(context.Background(), test.request)
-				assert.Equal(t, test.expectedResp, resp)
 				assert.Error(t, err)
 			} else {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
-				resp, err := visibilityStore.ListWorkflowExecutions(context.Background(), test.request)
-				assert.Equal(t, test.expectedResp, resp)
 				assert.NoError(t, err)
 			}
 		})
@@ -855,18 +944,26 @@ func TestScanWorkflowExecutions(t *testing.T) {
 	request := &p.ListWorkflowExecutionsByQueryRequest{}
 
 	tests := map[string]struct {
-		request       *p.ListWorkflowExecutionsByQueryRequest
-		expectedResp  *p.InternalListWorkflowExecutionsResponse
-		expectedError error
+		request                   *p.ListWorkflowExecutionsByQueryRequest
+		expectedResp              *p.InternalListWorkflowExecutionsResponse
+		pinotClientMockAffordance func(mockPinotClient *pnt.MockGenericClient)
+		expectedError             error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
-			expectedResp:  nil,
-			expectedError: fmt.Errorf("error"),
+			request:      errorRequest,
+			expectedResp: nil,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+			},
+			expectedError: fmt.Errorf("next page token: unable to deserialize page token. err: invalid character 'e' looking for beginning of value"),
 		},
 		"Case2: normal case with nil response": {
-			request:       request,
-			expectedResp:  nil,
+			request:      request,
+			expectedResp: nil,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
+			},
 			expectedError: nil,
 		},
 	}
@@ -879,19 +976,16 @@ func TestScanWorkflowExecutions(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
+			test.pinotClientMockAffordance(mockPinotClient)
+
+			resp, err := visibilityStore.ScanWorkflowExecutions(context.Background(), test.request)
+			assert.Equal(t, test.expectedResp, resp)
 			if test.expectedError != nil {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				resp, err := visibilityStore.ScanWorkflowExecutions(context.Background(), test.request)
-				assert.Equal(t, test.expectedResp, resp)
 				assert.Error(t, err)
 			} else {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockPinotClient.EXPECT().Search(gomock.Any()).Return(nil, nil).Times(1)
-				resp, err := visibilityStore.ScanWorkflowExecutions(context.Background(), test.request)
-				assert.Equal(t, test.expectedResp, resp)
 				assert.NoError(t, err)
 			}
 		})
@@ -903,18 +997,27 @@ func TestCountWorkflowExecutions(t *testing.T) {
 	request := &p.CountWorkflowExecutionsRequest{}
 
 	tests := map[string]struct {
-		request       *p.CountWorkflowExecutionsRequest
-		expectedResp  *p.CountWorkflowExecutionsResponse
-		expectedError error
+		request                   *p.CountWorkflowExecutionsRequest
+		expectedResp              *p.CountWorkflowExecutionsResponse
+		pinotClientMockAffordance func(mockPinotClient *pnt.MockGenericClient)
+		expectedError             error
 	}{
 		"Case1: error case": {
-			request:       errorRequest,
-			expectedResp:  nil,
-			expectedError: fmt.Errorf("error"),
+			request:      errorRequest,
+			expectedResp: nil,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().CountByQuery(gomock.Any()).Return(int64(0), fmt.Errorf("error")).Times(1)
+			},
+			expectedError: fmt.Errorf("CountClosedWorkflowExecutions failed, error"),
 		},
 		"Case2: normal case with nil response": {
-			request:       request,
-			expectedResp:  &p.CountWorkflowExecutionsResponse{Count: 1},
+			request:      request,
+			expectedResp: &p.CountWorkflowExecutionsResponse{Count: 1},
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().CountByQuery(gomock.Any()).Return(int64(1), nil).Times(1)
+			},
 			expectedError: nil,
 		},
 	}
@@ -927,20 +1030,16 @@ func TestCountWorkflowExecutions(t *testing.T) {
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
+			test.pinotClientMockAffordance(mockPinotClient)
+
+			resp, err := visibilityStore.CountWorkflowExecutions(context.Background(), test.request)
+			assert.Equal(t, test.expectedResp, resp)
 			if test.expectedError != nil {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockPinotClient.EXPECT().CountByQuery(gomock.Any()).Return(int64(0), fmt.Errorf("error")).Times(1)
-				resp, err := visibilityStore.CountWorkflowExecutions(context.Background(), test.request)
-				assert.Equal(t, test.expectedResp, resp)
-				assert.Error(t, err)
+				assert.Equal(t, test.expectedError.Error(), err.Error())
 			} else {
-				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
-				mockPinotClient.EXPECT().CountByQuery(gomock.Any()).Return(int64(1), nil).Times(1)
-				resp, err := visibilityStore.CountWorkflowExecutions(context.Background(), test.request)
-				assert.Equal(t, test.expectedResp, resp)
 				assert.NoError(t, err)
 			}
 		})
@@ -954,7 +1053,7 @@ func TestGetName(t *testing.T) {
 	mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-	}, mockProducer, testlogger.New(t))
+	}, mockProducer, log.NewNoop())
 	visibilityStore := mgr.(*pinotVisibilityStore)
 	assert.NotEmpty(t, visibilityStore.GetName())
 }
@@ -1019,7 +1118,7 @@ AND WorkflowID = 'wfid'
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
 			res := visibilityStore.getCountWorkflowExecutionsQuery(testTableName, test.request)
@@ -1263,7 +1362,7 @@ LIMIT 0, 0
 			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-			}, mockProducer, testlogger.New(t))
+			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
 			output, err := visibilityStore.getListWorkflowExecutionsByQueryQuery(testTableName, test.input)
@@ -1822,7 +1921,7 @@ func TestClose(t *testing.T) {
 	mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
 		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
-	}, mockProducer, testlogger.New(t))
+	}, mockProducer, log.NewNoop())
 	visibilityStore := mgr.(*pinotVisibilityStore)
 
 	assert.NotPanics(t, func() {

@@ -565,6 +565,129 @@ func TestNosqlExecutionStore(t *testing.T) {
 			},
 			expectedError: nil,
 		},
+		{
+			name: "RangeCompleteCrossClusterTask success",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				mockDB.EXPECT().
+					RangeDeleteCrossClusterTasks(ctx, shardID, "targetCluster", int64(1), int64(10)).
+					Return(nil)
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				resp, err := store.RangeCompleteCrossClusterTask(ctx, &persistence.RangeCompleteCrossClusterTaskRequest{
+					TargetCluster:        "targetCluster",
+					ExclusiveBeginTaskID: 1,
+					InclusiveEndTaskID:   10,
+				})
+				require.Nil(t, err)
+				require.Equal(t, persistence.UnknownNumRowsAffected, resp.TasksCompleted)
+				return nil
+			},
+			expectedError: nil,
+		},
+		{
+			name: "RangeCompleteCrossClusterTask failure - database error",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(true).AnyTimes()
+				mockDB.EXPECT().
+					RangeDeleteCrossClusterTasks(ctx, shardID, "targetCluster", int64(1), int64(10)).
+					Return(errors.New("database error"))
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				_, err := store.RangeCompleteCrossClusterTask(ctx, &persistence.RangeCompleteCrossClusterTaskRequest{
+					TargetCluster:        "targetCluster",
+					ExclusiveBeginTaskID: 1,
+					InclusiveEndTaskID:   10,
+				})
+				return err
+			},
+			expectedError: &types.InternalServiceError{Message: "database error"},
+		},
+		{
+			name: "RangeCompleteCrossClusterTask with inverted TaskID range proceeds",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				mockDB.EXPECT().
+					RangeDeleteCrossClusterTasks(ctx, shardID, "targetCluster", int64(10), int64(1)).
+					Return(nil)
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				_, err := store.RangeCompleteCrossClusterTask(ctx, &persistence.RangeCompleteCrossClusterTaskRequest{
+					TargetCluster:        "targetCluster",
+					ExclusiveBeginTaskID: 10,
+					InclusiveEndTaskID:   1,
+				})
+				return err
+			},
+			expectedError: nil,
+		},
+		{
+			name: "RangeCompleteCrossClusterTask with no tasks in range",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				mockDB.EXPECT().
+					RangeDeleteCrossClusterTasks(ctx, shardID, "targetCluster", int64(100), int64(200)).
+					Return(nil) // Simulate no tasks found within the range but operation succeeds
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				_, err := store.RangeCompleteCrossClusterTask(ctx, &persistence.RangeCompleteCrossClusterTaskRequest{
+					TargetCluster:        "targetCluster",
+					ExclusiveBeginTaskID: 100,
+					InclusiveEndTaskID:   200,
+				})
+				return err
+			},
+			expectedError: nil, // No error expected, successful operation even if no tasks are found
+		},
+		{
+			name: "CompleteReplicationTask success",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				mockDB.EXPECT().
+					DeleteReplicationTask(ctx, shardID, int64(1)).
+					Return(nil)
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				return store.CompleteReplicationTask(ctx, &persistence.CompleteReplicationTaskRequest{TaskID: 1})
+			},
+			expectedError: nil,
+		},
+		{
+			name: "CompleteReplicationTask failure - database error",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				mockDB.EXPECT().
+					DeleteReplicationTask(ctx, shardID, int64(1)).
+					Return(errors.New("database error"))
+				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(true).AnyTimes()
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				return store.CompleteReplicationTask(ctx, &persistence.CompleteReplicationTaskRequest{TaskID: 1})
+			},
+			expectedError: &types.InternalServiceError{Message: "database error"},
+		},
+		{
+			name: "CompleteReplicationTask with non-existent task ID",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(true).AnyTimes()
+				mockDB.EXPECT().
+					DeleteReplicationTask(ctx, shardID, int64(9999)).
+					Return(&types.EntityNotExistsError{Message: "replication task does not exist"}) // Simulate task not found
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				return store.CompleteReplicationTask(ctx, &persistence.CompleteReplicationTaskRequest{TaskID: 9999})
+			},
+			expectedError: &types.EntityNotExistsError{Message: "replication task does not exist"},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

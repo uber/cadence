@@ -383,8 +383,15 @@ func (c *controller) acquireShards() {
 	sw := c.metricsScope.StartTimer(metrics.AcquireShardsLatency)
 	defer sw.Stop()
 
+	numShards := c.config.NumberOfShards
+	shardActionCh := make(chan int, numShards)
+	// Submit all tasks to the channel.
+	for shardID := 0; shardID < numShards; shardID++ {
+		shardActionCh <- shardID // must be non-blocking as there is no other coordination with shutdown
+	}
+	close(shardActionCh)
+
 	concurrency := common.MaxInt(c.config.AcquireShardConcurrency(), 1)
-	shardActionCh := make(chan int, concurrency)
 	var wg sync.WaitGroup
 	wg.Add(concurrency)
 	// Spawn workers that would lookup and add/remove shards concurrently.
@@ -410,14 +417,6 @@ func (c *controller) acquireShards() {
 			}
 		}()
 	}
-	// Submit tasks to the channel.
-	for shardID := 0; shardID < c.config.NumberOfShards; shardID++ {
-		shardActionCh <- shardID
-		if c.isShuttingDown() {
-			return
-		}
-	}
-	close(shardActionCh)
 	// Wait until all shards are processed.
 	wg.Wait()
 

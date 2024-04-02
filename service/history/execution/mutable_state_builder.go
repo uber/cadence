@@ -299,6 +299,7 @@ func NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 	return msBuilder
 }
 
+// todo (david.porter)
 func (e *mutableStateBuilder) CopyToPersistence() *persistence.WorkflowMutableState {
 	state := &persistence.WorkflowMutableState{}
 
@@ -2103,6 +2104,7 @@ func (e *mutableStateBuilder) AddDecisionTaskResetTimeoutEvent(
 	newRunID string,
 	forkEventVersion int64,
 	reason string,
+	resetRequestID string,
 ) (*types.HistoryEvent, error) {
 	opTag := tag.WorkflowActionDecisionTaskTimedOut
 	if err := e.checkMutability(opTag); err != nil {
@@ -2114,6 +2116,7 @@ func (e *mutableStateBuilder) AddDecisionTaskResetTimeoutEvent(
 		newRunID,
 		forkEventVersion,
 		reason,
+		resetRequestID,
 	)
 }
 
@@ -2128,6 +2131,7 @@ func (e *mutableStateBuilder) AddDecisionTaskFailedEvent(
 	baseRunID string,
 	newRunID string,
 	forkEventVersion int64,
+	resetRequestID string,
 ) (*types.HistoryEvent, error) {
 	opTag := tag.WorkflowActionDecisionTaskFailed
 	if err := e.checkMutability(opTag); err != nil {
@@ -2144,6 +2148,7 @@ func (e *mutableStateBuilder) AddDecisionTaskFailedEvent(
 		baseRunID,
 		newRunID,
 		forkEventVersion,
+		resetRequestID,
 	)
 }
 
@@ -3338,6 +3343,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionSignaled(
 	signalName string,
 	input []byte,
 	identity string,
+	requestID string,
 ) (*types.HistoryEvent, error) {
 
 	opTag := tag.WorkflowActionWorkflowSignaled
@@ -3345,7 +3351,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionSignaled(
 		return nil, err
 	}
 
-	event := e.hBuilder.AddWorkflowExecutionSignaledEvent(signalName, input, identity)
+	event := e.hBuilder.AddWorkflowExecutionSignaledEvent(signalName, input, identity, requestID)
 	if err := e.ReplicateWorkflowExecutionSignaled(event); err != nil {
 		return nil, err
 	}
@@ -4395,9 +4401,11 @@ func (e *mutableStateBuilder) eventsToReplicationTask(
 
 	// the visibility timestamp will be set in shard context
 	replicationTask := &persistence.HistoryReplicationTask{
+		TaskData: persistence.TaskData{
+			Version: firstEvent.Version,
+		},
 		FirstEventID:      firstEvent.ID,
 		NextEventID:       lastEvent.ID + 1,
-		Version:           firstEvent.Version,
 		BranchToken:       currentBranchToken,
 		NewRunBranchToken: nil,
 	}
@@ -4811,23 +4819,38 @@ func (e *mutableStateBuilder) unixNanoToTime(
 }
 
 func (e *mutableStateBuilder) logInfo(msg string, tags ...tag.Tag) {
-	tags = append(tags, tag.WorkflowID(e.executionInfo.WorkflowID))
-	tags = append(tags, tag.WorkflowRunID(e.executionInfo.RunID))
-	tags = append(tags, tag.WorkflowDomainID(e.executionInfo.DomainID))
+	if e != nil {
+		return
+	}
+	if e.executionInfo != nil {
+		tags = append(tags, tag.WorkflowID(e.executionInfo.WorkflowID))
+		tags = append(tags, tag.WorkflowRunID(e.executionInfo.RunID))
+		tags = append(tags, tag.WorkflowDomainID(e.executionInfo.DomainID))
+	}
 	e.logger.Info(msg, tags...)
 }
 
 func (e *mutableStateBuilder) logWarn(msg string, tags ...tag.Tag) {
-	tags = append(tags, tag.WorkflowID(e.executionInfo.WorkflowID))
-	tags = append(tags, tag.WorkflowRunID(e.executionInfo.RunID))
-	tags = append(tags, tag.WorkflowDomainID(e.executionInfo.DomainID))
+	if e != nil {
+		return
+	}
+	if e.executionInfo != nil {
+		tags = append(tags, tag.WorkflowID(e.executionInfo.WorkflowID))
+		tags = append(tags, tag.WorkflowRunID(e.executionInfo.RunID))
+		tags = append(tags, tag.WorkflowDomainID(e.executionInfo.DomainID))
+	}
 	e.logger.Warn(msg, tags...)
 }
 
 func (e *mutableStateBuilder) logError(msg string, tags ...tag.Tag) {
-	tags = append(tags, tag.WorkflowID(e.executionInfo.WorkflowID))
-	tags = append(tags, tag.WorkflowRunID(e.executionInfo.RunID))
-	tags = append(tags, tag.WorkflowDomainID(e.executionInfo.DomainID))
+	if e != nil {
+		return
+	}
+	if e.executionInfo != nil {
+		tags = append(tags, tag.WorkflowID(e.executionInfo.WorkflowID))
+		tags = append(tags, tag.WorkflowRunID(e.executionInfo.RunID))
+		tags = append(tags, tag.WorkflowDomainID(e.executionInfo.DomainID))
+	}
 	e.logger.Error(msg, tags...)
 }
 

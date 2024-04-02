@@ -585,6 +585,7 @@ func (s *contextImpl) GetWorkflowExecution(
 	ctx context.Context,
 	request *persistence.GetWorkflowExecutionRequest,
 ) (*persistence.GetWorkflowExecutionResponse, error) {
+	request.RangeID = atomic.LoadInt64(&s.rangeID) // This is to make sure read is not blocked by write, s.rangeID is synced with s.shardInfo.RangeID
 	if s.isClosed() {
 		return nil, ErrShardClosed
 	}

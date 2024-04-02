@@ -52,9 +52,11 @@ type fakeSession struct {
 
 	// outputs
 	batches []*fakeBatch
+	queries []string
 }
 
-func (s *fakeSession) Query(string, ...interface{}) gocql.Query {
+func (s *fakeSession) Query(queryTmpl string, args ...interface{}) gocql.Query {
+	s.queries = append(s.queries, sanitizedRenderedQuery(queryTmpl, args...))
 	return s.query
 }
 
@@ -83,23 +85,7 @@ type fakeBatch struct {
 
 // Query is fake implementation of gocql.Batch.Query
 func (b *fakeBatch) Query(queryTmpl string, args ...interface{}) {
-	argsSanitized := make([]interface{}, len(args))
-	for i, arg := range args {
-		// use values instead of pointer so that we can compare them in tests
-		if reflect.ValueOf(arg).Kind() == reflect.Ptr && !reflect.ValueOf(arg).IsZero() {
-			argsSanitized[i] = reflect.ValueOf(arg).Elem().Interface()
-		} else {
-			argsSanitized[i] = arg
-		}
-
-		if t, ok := argsSanitized[i].(time.Time); ok {
-			// use fixed time format to avoid flakiness
-			argsSanitized[i] = t.UTC().Format(time.RFC3339)
-		}
-
-	}
-	queryTmpl = strings.ReplaceAll(queryTmpl, "?", "%v")
-	b.queries = append(b.queries, fmt.Sprintf(queryTmpl, argsSanitized...))
+	b.queries = append(b.queries, sanitizedRenderedQuery(queryTmpl, args...))
 }
 
 // WithContext is fake implementation of gocql.Batch.WithContext
@@ -121,10 +107,36 @@ func (b *fakeBatch) Consistency(gocql.Consistency) gocql.Batch {
 func (s *fakeSession) Close() {
 }
 
+func sanitizedRenderedQuery(queryTmpl string, args ...interface{}) string {
+	argsSanitized := make([]interface{}, len(args))
+	for i, arg := range args {
+		// use values instead of pointer so that we can compare them in tests
+		if reflect.ValueOf(arg).Kind() == reflect.Ptr && !reflect.ValueOf(arg).IsZero() {
+			argsSanitized[i] = reflect.ValueOf(arg).Elem().Interface()
+		} else {
+			argsSanitized[i] = arg
+		}
+
+		if t, ok := argsSanitized[i].(time.Time); ok {
+			// use fixed time format to avoid flakiness
+			argsSanitized[i] = t.UTC().Format(time.RFC3339)
+		}
+
+	}
+	queryTmpl = strings.ReplaceAll(queryTmpl, "?", "%v")
+	return fmt.Sprintf(queryTmpl, argsSanitized...)
+}
+
 // fakeIter is fake implementation of gocql.Iter
 type fakeIter struct {
+	// input parametrs
+	mapScanInputs []map[string]interface{}
+	pageState     []byte
+	closeErr      error
+
 	// output parameters
-	closed bool
+	mapScanCalls int
+	closed       bool
 }
 
 // Scan is fake implementation of gocql.Iter.Scan
@@ -133,19 +145,35 @@ func (i *fakeIter) Scan(...interface{}) bool {
 }
 
 // MapScan is fake implementation of gocql.Iter.MapScan
-func (i *fakeIter) MapScan(map[string]interface{}) bool {
-	return false
+func (i *fakeIter) MapScan(res map[string]interface{}) bool {
+	if i.mapScanCalls >= len(i.mapScanInputs) {
+		return false
+	}
+
+	for k, v := range i.mapScanInputs[i.mapScanCalls] {
+		res[k] = v
+	}
+	i.mapScanCalls++
+	return true
 }
 
 // PageState is fake implementation of gocql.Iter.PageState
 func (i *fakeIter) PageState() []byte {
-	return nil
+	return i.pageState
 }
 
 // Close is fake implementation of gocql.Iter.Close
 func (i *fakeIter) Close() error {
 	i.closed = true
-	return nil
+	return i.closeErr
+}
+
+type fakeUUID struct {
+	uuid string
+}
+
+func (u *fakeUUID) String() string {
+	return u.uuid
 }
 
 func TestExecuteCreateWorkflowBatchTransaction(t *testing.T) {

@@ -36,6 +36,12 @@ const (
 	FrontendDefaultTimeout = 10 * time.Second
 	// FrontendDefaultLongPollTimeout is the frontend service long poll default timeout used to make calls
 	FrontendDefaultLongPollTimeout = time.Minute * 3
+	// MatchingDefaultTimeout is the default timeout used to make calls
+	MatchingDefaultTimeout = time.Minute
+	// MatchingDefaultLongPollTimeout is the long poll default timeout used to make calls
+	MatchingDefaultLongPollTimeout = time.Minute * 2
+	// HistoryDefaultTimeout is the default timeout used to make calls
+	HistoryDefaultTimeout = time.Second * 30
 )
 
 func createContext(parent context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {

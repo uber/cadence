@@ -45,6 +45,8 @@ const (
 
 	FailoverVersion1 = 301
 	FailoverVersion2 = 302
+
+	ErrorReason = "ErrorReason"
 )
 
 var (
