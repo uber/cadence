@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	hcommon "github.com/uber/cadence/service/history/common"
+	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -174,6 +175,11 @@ type (
 		mutableState    MutableState
 		stats           *persistence.ExecutionStats
 		updateCondition int64
+
+		appendHistoryNodesFn              func(context.Context, string, types.WorkflowExecution, *persistence.AppendHistoryNodesRequest) (*persistence.AppendHistoryNodesResponse, error)
+		createWorkflowExecutionFn         func(context.Context, *persistence.CreateWorkflowExecutionRequest) (*persistence.CreateWorkflowExecutionResponse, error)
+		notifyTasksFromWorkflowSnapshotFn func(*persistence.WorkflowSnapshot, events.PersistedBlobs, bool)
+		emitSessionUpdateStatsFn          func(string, *persistence.MutableStateUpdateSessionStats)
 	}
 )
 
@@ -187,6 +193,7 @@ func NewContext(
 	executionManager persistence.ExecutionManager,
 	logger log.Logger,
 ) Context {
+	logger = logger.WithTags(tag.WorkflowDomainID(domainID), tag.WorkflowID(execution.GetWorkflowID()), tag.WorkflowRunID(execution.GetRunID()))
 	return &contextImpl{
 		domainID:          domainID,
 		workflowExecution: execution,
@@ -197,6 +204,19 @@ func NewContext(
 		mutex:             locks.NewMutex(),
 		stats: &persistence.ExecutionStats{
 			HistorySize: 0,
+		},
+
+		appendHistoryNodesFn: func(ctx context.Context, domainID string, workflowExecution types.WorkflowExecution, request *persistence.AppendHistoryNodesRequest) (*persistence.AppendHistoryNodesResponse, error) {
+			return appendHistoryV2EventsWithRetry(ctx, shard, common.CreatePersistenceRetryPolicy(), domainID, workflowExecution, request)
+		},
+		createWorkflowExecutionFn: func(ctx context.Context, request *persistence.CreateWorkflowExecutionRequest) (*persistence.CreateWorkflowExecutionResponse, error) {
+			return createWorkflowExecutionWithRetry(ctx, shard, logger, common.CreatePersistenceRetryPolicy(), request)
+		},
+		notifyTasksFromWorkflowSnapshotFn: func(snapshot *persistence.WorkflowSnapshot, blobs events.PersistedBlobs, persistentError bool) {
+			notifyTasksFromWorkflowSnapshot(shard.GetEngine(), snapshot, blobs, persistentError)
+		},
+		emitSessionUpdateStatsFn: func(domainName string, stats *persistence.MutableStateUpdateSessionStats) {
+			emitSessionUpdateStats(shard.GetMetricsClient(), domainName, stats)
 		},
 	}
 }
@@ -394,22 +414,18 @@ func (c *contextImpl) CreateWorkflowExecution(
 		HistorySize: historySize,
 	}
 
-	resp, err := c.createWorkflowExecutionWithRetry(ctx, createRequest)
+	resp, err := c.createWorkflowExecutionFn(ctx, createRequest)
 	if err != nil {
-		if c.isPersistenceTimeoutError(err) {
-			c.notifyTasksFromWorkflowSnapshot(newWorkflow, events.PersistedBlobs{persistedHistory}, true)
+		if isOperationPossiblySuccessfulError(err) {
+			c.notifyTasksFromWorkflowSnapshotFn(newWorkflow, events.PersistedBlobs{persistedHistory}, true)
 		}
 		return err
 	}
 
-	c.notifyTasksFromWorkflowSnapshot(newWorkflow, events.PersistedBlobs{persistedHistory}, false)
+	c.notifyTasksFromWorkflowSnapshotFn(newWorkflow, events.PersistedBlobs{persistedHistory}, false)
 
 	// finally emit session stats
-	emitSessionUpdateStats(
-		c.metricsClient,
-		domainName,
-		resp.MutableStateUpdateSessionStats,
-	)
+	c.emitSessionUpdateStatsFn(domainName, resp.MutableStateUpdateSessionStats)
 
 	return nil
 }
@@ -540,10 +556,10 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 		DomainName: domain,
 	})
 	if err != nil {
-		if c.isPersistenceTimeoutError(err) {
-			c.notifyTasksFromWorkflowSnapshot(resetWorkflow, persistedBlobs, true)
-			c.notifyTasksFromWorkflowSnapshot(newWorkflow, persistedBlobs, true)
-			c.notifyTasksFromWorkflowMutation(currentWorkflow, persistedBlobs, true)
+		if isOperationPossiblySuccessfulError(err) {
+			notifyTasksFromWorkflowSnapshot(c.shard.GetEngine(), resetWorkflow, persistedBlobs, true)
+			notifyTasksFromWorkflowSnapshot(c.shard.GetEngine(), newWorkflow, persistedBlobs, true)
+			notifyTasksFromWorkflowMutation(c.shard.GetEngine(), currentWorkflow, persistedBlobs, true)
 		}
 		return err
 	}
@@ -566,9 +582,9 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 		workflowCloseState,
 	))
 
-	c.notifyTasksFromWorkflowSnapshot(resetWorkflow, persistedBlobs, false)
-	c.notifyTasksFromWorkflowSnapshot(newWorkflow, persistedBlobs, false)
-	c.notifyTasksFromWorkflowMutation(currentWorkflow, persistedBlobs, false)
+	notifyTasksFromWorkflowSnapshot(c.shard.GetEngine(), resetWorkflow, persistedBlobs, false)
+	notifyTasksFromWorkflowSnapshot(c.shard.GetEngine(), newWorkflow, persistedBlobs, false)
+	notifyTasksFromWorkflowMutation(c.shard.GetEngine(), currentWorkflow, persistedBlobs, false)
 
 	// finally emit session stats
 	domainName := c.GetDomainName()
@@ -704,8 +720,8 @@ func (c *contextImpl) UpdateWorkflowExecutionTasks(
 		DomainName: domainName,
 	})
 	if err != nil {
-		if c.isPersistenceTimeoutError(err) {
-			c.notifyTasksFromWorkflowMutation(currentWorkflow, nil, true)
+		if isOperationPossiblySuccessfulError(err) {
+			notifyTasksFromWorkflowMutation(c.shard.GetEngine(), currentWorkflow, nil, true)
 		}
 		return err
 	}
@@ -714,7 +730,7 @@ func (c *contextImpl) UpdateWorkflowExecutionTasks(
 	c.updateCondition = currentWorkflow.ExecutionInfo.NextEventID
 
 	// notify current workflow tasks
-	c.notifyTasksFromWorkflowMutation(currentWorkflow, nil, false)
+	notifyTasksFromWorkflowMutation(c.shard.GetEngine(), currentWorkflow, nil, false)
 
 	emitSessionUpdateStats(
 		c.metricsClient,
@@ -808,7 +824,7 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 		}
 	}
 
-	if err := c.mergeContinueAsNewReplicationTasks(
+	if err := mergeContinueAsNewReplicationTasks(
 		updateMode,
 		currentWorkflow,
 		newWorkflow,
@@ -836,9 +852,9 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 		DomainName: domain,
 	})
 	if err != nil {
-		if c.isPersistenceTimeoutError(err) {
-			c.notifyTasksFromWorkflowMutation(currentWorkflow, persistedBlobs, true)
-			c.notifyTasksFromWorkflowSnapshot(newWorkflow, persistedBlobs, true)
+		if isOperationPossiblySuccessfulError(err) {
+			notifyTasksFromWorkflowMutation(c.shard.GetEngine(), currentWorkflow, persistedBlobs, true)
+			notifyTasksFromWorkflowSnapshot(c.shard.GetEngine(), newWorkflow, persistedBlobs, true)
 		}
 		return err
 	}
@@ -864,10 +880,10 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 	))
 
 	// notify current workflow tasks
-	c.notifyTasksFromWorkflowMutation(currentWorkflow, persistedBlobs, false)
+	notifyTasksFromWorkflowMutation(c.shard.GetEngine(), currentWorkflow, persistedBlobs, false)
 
 	// notify new workflow tasks
-	c.notifyTasksFromWorkflowSnapshot(newWorkflow, persistedBlobs, false)
+	notifyTasksFromWorkflowSnapshot(c.shard.GetEngine(), newWorkflow, persistedBlobs, false)
 
 	// finally emit session stats
 	domainName := c.GetDomainName()
@@ -897,7 +913,8 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 	return nil
 }
 
-func (c *contextImpl) notifyTasksFromWorkflowSnapshot(
+func notifyTasksFromWorkflowSnapshot(
+	engine engine.Engine,
 	workflowSnapShot *persistence.WorkflowSnapshot,
 	history events.PersistedBlobs,
 	persistenceError bool,
@@ -906,10 +923,11 @@ func (c *contextImpl) notifyTasksFromWorkflowSnapshot(
 		return
 	}
 
-	c.notifyTasks(
+	notifyTasks(
+		engine,
 		workflowSnapShot.ExecutionInfo,
 		workflowSnapShot.VersionHistories,
-		activityInfosToMap(workflowSnapShot.ActivityInfos),
+		workflowSnapShot.ActivityInfos,
 		workflowSnapShot.TransferTasks,
 		workflowSnapShot.TimerTasks,
 		workflowSnapShot.CrossClusterTasks,
@@ -919,7 +937,8 @@ func (c *contextImpl) notifyTasksFromWorkflowSnapshot(
 	)
 }
 
-func (c *contextImpl) notifyTasksFromWorkflowMutation(
+func notifyTasksFromWorkflowMutation(
+	engine engine.Engine,
 	workflowMutation *persistence.WorkflowMutation,
 	history events.PersistedBlobs,
 	persistenceError bool,
@@ -928,10 +947,11 @@ func (c *contextImpl) notifyTasksFromWorkflowMutation(
 		return
 	}
 
-	c.notifyTasks(
+	notifyTasks(
+		engine,
 		workflowMutation.ExecutionInfo,
 		workflowMutation.VersionHistories,
-		activityInfosToMap(workflowMutation.UpsertActivityInfos),
+		workflowMutation.UpsertActivityInfos,
 		workflowMutation.TransferTasks,
 		workflowMutation.TimerTasks,
 		workflowMutation.CrossClusterTasks,
@@ -949,10 +969,11 @@ func activityInfosToMap(ais []*persistence.ActivityInfo) map[int64]*persistence.
 	return m
 }
 
-func (c *contextImpl) notifyTasks(
+func notifyTasks(
+	engine engine.Engine,
 	executionInfo *persistence.WorkflowExecutionInfo,
 	versionHistories *persistence.VersionHistories,
-	activities map[int64]*persistence.ActivityInfo,
+	activities []*persistence.ActivityInfo,
 	transferTasks []persistence.Task,
 	timerTasks []persistence.Task,
 	crossClusterTasks []persistence.Task,
@@ -979,18 +1000,18 @@ func (c *contextImpl) notifyTasks(
 		ExecutionInfo:    executionInfo,
 		Tasks:            replicationTasks,
 		VersionHistories: versionHistories,
-		Activities:       activities,
+		Activities:       activityInfosToMap(activities),
 		History:          history,
 		PersistenceError: persistenceError,
 	}
 
-	c.shard.GetEngine().NotifyNewTransferTasks(transferTaskInfo)
-	c.shard.GetEngine().NotifyNewTimerTasks(timerTaskInfo)
-	c.shard.GetEngine().NotifyNewCrossClusterTasks(crossClusterTaskInfo)
-	c.shard.GetEngine().NotifyNewReplicationTasks(replicationTaskInfo)
+	engine.NotifyNewTransferTasks(transferTaskInfo)
+	engine.NotifyNewTimerTasks(timerTaskInfo)
+	engine.NotifyNewCrossClusterTasks(crossClusterTaskInfo)
+	engine.NotifyNewReplicationTasks(replicationTaskInfo)
 }
 
-func (c *contextImpl) mergeContinueAsNewReplicationTasks(
+func mergeContinueAsNewReplicationTasks(
 	updateMode persistence.UpdateWorkflowMode,
 	currentWorkflowMutation *persistence.WorkflowMutation,
 	newWorkflowSnapshot *persistence.WorkflowSnapshot,
@@ -1061,7 +1082,7 @@ func (c *contextImpl) PersistStartWorkflowBatchEvents(
 		RunID:      workflowEvents.RunID,
 	}
 
-	resp, err := c.appendHistoryV2EventsWithRetry(
+	resp, err := c.appendHistoryNodesFn(
 		ctx,
 		domainID,
 		execution,
@@ -1103,7 +1124,7 @@ func (c *contextImpl) PersistNonStartWorkflowBatchEvents(
 		RunID:      workflowEvents.RunID,
 	}
 
-	resp, err := c.appendHistoryV2EventsWithRetry(
+	resp, err := c.appendHistoryNodesFn(
 		ctx,
 		domainID,
 		execution,
@@ -1125,8 +1146,10 @@ func (c *contextImpl) PersistNonStartWorkflowBatchEvents(
 	}, nil
 }
 
-func (c *contextImpl) appendHistoryV2EventsWithRetry(
+func appendHistoryV2EventsWithRetry(
 	ctx context.Context,
+	shardContext shard.Context,
+	retryPolicy backoff.RetryPolicy,
 	domainID string,
 	execution types.WorkflowExecution,
 	request *persistence.AppendHistoryNodesRequest,
@@ -1135,30 +1158,32 @@ func (c *contextImpl) appendHistoryV2EventsWithRetry(
 	var resp *persistence.AppendHistoryNodesResponse
 	op := func() error {
 		var err error
-		resp, err = c.shard.AppendHistoryV2Events(ctx, request, domainID, execution)
+		resp, err = shardContext.AppendHistoryV2Events(ctx, request, domainID, execution)
 		return err
 	}
-
 	throttleRetry := backoff.NewThrottleRetry(
-		backoff.WithRetryPolicy(common.CreatePersistenceRetryPolicy()),
+		backoff.WithRetryPolicy(retryPolicy),
 		backoff.WithRetryableError(persistence.IsTransientError),
 	)
 	err := throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
-func (c *contextImpl) createWorkflowExecutionWithRetry(
+func createWorkflowExecutionWithRetry(
 	ctx context.Context,
+	shardContext shard.Context,
+	logger log.Logger,
+	retryPolicy backoff.RetryPolicy,
 	request *persistence.CreateWorkflowExecutionRequest,
 ) (*persistence.CreateWorkflowExecutionResponse, error) {
 
 	var resp *persistence.CreateWorkflowExecutionResponse
 	op := func() error {
 		var err error
-		resp, err = c.shard.CreateWorkflowExecution(ctx, request)
+		resp, err = shardContext.CreateWorkflowExecution(ctx, request)
+		fmt.Println(err)
 		return err
 	}
-
 	isRetryable := func(err error) bool {
 		if _, ok := err.(*persistence.TimeoutError); ok {
 			// TODO: is timeout error retryable for create workflow?
@@ -1168,11 +1193,11 @@ func (c *contextImpl) createWorkflowExecutionWithRetry(
 		}
 		return persistence.IsTransientError(err)
 	}
-
 	throttleRetry := backoff.NewThrottleRetry(
-		backoff.WithRetryPolicy(common.CreatePersistenceRetryPolicy()),
+		backoff.WithRetryPolicy(retryPolicy),
 		backoff.WithRetryableError(isRetryable),
 	)
+
 	err := throttleRetry.Do(ctx, op)
 	switch err.(type) {
 	case nil:
@@ -1182,11 +1207,8 @@ func (c *contextImpl) createWorkflowExecutionWithRetry(
 		// workflow ID reuse policy
 		return nil, err
 	default:
-		c.logger.Error(
+		logger.Error(
 			"Persistent store operation failure",
-			tag.WorkflowID(c.workflowExecution.GetWorkflowID()),
-			tag.WorkflowRunID(c.workflowExecution.GetRunID()),
-			tag.WorkflowDomainID(c.domainID),
 			tag.StoreOperationCreateWorkflowExecution,
 			tag.Error(err),
 		)
@@ -1203,7 +1225,6 @@ func (c *contextImpl) getWorkflowExecutionWithRetry(
 	op := func() error {
 		var err error
 		resp, err = c.shard.GetWorkflowExecution(ctx, request)
-
 		return err
 	}
 
@@ -1221,9 +1242,6 @@ func (c *contextImpl) getWorkflowExecutionWithRetry(
 	default:
 		c.logger.Error(
 			"Persistent fetch operation failure",
-			tag.WorkflowID(c.workflowExecution.GetWorkflowID()),
-			tag.WorkflowRunID(c.workflowExecution.GetRunID()),
-			tag.WorkflowDomainID(c.domainID),
 			tag.StoreOperationGetWorkflowExecution,
 			tag.Error(err),
 		)
@@ -1271,9 +1289,6 @@ func (c *contextImpl) updateWorkflowExecutionWithRetry(
 	default:
 		c.logger.Error(
 			"Persistent store operation failure",
-			tag.WorkflowID(c.workflowExecution.GetWorkflowID()),
-			tag.WorkflowRunID(c.workflowExecution.GetRunID()),
-			tag.WorkflowDomainID(c.domainID),
 			tag.StoreOperationUpdateWorkflowExecution,
 			tag.Error(err),
 			tag.Number(c.updateCondition),
@@ -1417,12 +1432,7 @@ func (c *contextImpl) ReapplyEvents(
 	)
 }
 
-func (c *contextImpl) isPersistenceTimeoutError(
-	err error,
-) bool {
-	// TODO: ideally we only need to check if err has type *persistence.Timeout,
-	// but currently only cassandra will return timeout error of that type.
-	// so currently this method will return false positives
+func isOperationPossiblySuccessfulError(err error) bool {
 	switch err.(type) {
 	case nil:
 		return false
