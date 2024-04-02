@@ -23,6 +23,7 @@
 package gocql
 
 import (
+	"github.com/gocql/gocql"
 	"testing"
 
 	gomock "github.com/golang/mock/gomock"
@@ -31,18 +32,13 @@ import (
 )
 
 func Test_GetRegisteredClient(t *testing.T) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("The code did not panic")
-		}
-	}()
-	GetRegisteredClient()
+	assert.Panics(t, func() { GetRegisteredClient() })
 }
 
 func Test_GetRegisteredClientNotNil(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	registered = NewMockClient(mockCtrl)
-	assert.NotNil(t, GetRegisteredClient())
+	assert.Equal(t, registered, GetRegisteredClient())
 }
 
 func Test_RegisterClient(t *testing.T) {
@@ -59,6 +55,7 @@ func Test_RegisterClientNotNil(t *testing.T) {
 	newClient := NewMockClient(mockCtrl)
 	registered = nil
 	RegisterClient(newClient)
+	assert.Equal(t, newClient, registered)
 }
 
 func Test_newCassandraCluster(t *testing.T) {
@@ -71,16 +68,20 @@ func Test_newCassandraCluster(t *testing.T) {
 		Datacenter: "testDatacenter",
 		Region:     "testRegion",
 		TLS: &config.TLS{
-			Enabled: true,
+			Enabled:  true,
+			CertFile: "testCertFile",
+			KeyFile:  "testKeyFile",
 		},
 		MaxConns: 10,
 	}
 	clusterConfig := newCassandraCluster(testFullConfig)
-	assert.NotNil(t, clusterConfig)
-}
+	assert.Equal(t, testFullConfig.Port, clusterConfig.Port)
+	assert.Equal(t, testFullConfig.User, clusterConfig.Authenticator.(gocql.PasswordAuthenticator).Username)
+	assert.Equal(t, testFullConfig.Password, clusterConfig.Authenticator.(gocql.PasswordAuthenticator).Password)
+	assert.Equal(t, testFullConfig.Keyspace, clusterConfig.Keyspace)
+	assert.Equal(t, testFullConfig.TLS.CertFile, clusterConfig.SslOpts.CertPath)
+	assert.Equal(t, testFullConfig.TLS.KeyFile, clusterConfig.SslOpts.KeyPath)
+	assert.Equal(t, testFullConfig.MaxConns, clusterConfig.NumConns)
 
-func Test_regionHostFilter(t *testing.T) {
-	region := "testRegion"
-	cluster := regionHostFilter(region)
-	assert.NotNil(t, cluster)
+	assert.False(t, clusterConfig.HostFilter.Accept(&gocql.HostInfo{}))
 }
