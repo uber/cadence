@@ -113,7 +113,7 @@ func (s *Service) Start() {
 		MetricsClient:                  s.Resource.GetMetricsClient(),
 	})
 
-	rawHandler := handler.NewHandler(s.Resource, s.config, wfIDCache)
+	rawHandler := handler.NewHandler(s.Resource, s.config, wfIDCache, s.config.WorkflowIDInternalRateLimitEnabled)
 	s.handler = ratelimited.NewHistoryHandler(
 		rawHandler,
 		wfIDCache,

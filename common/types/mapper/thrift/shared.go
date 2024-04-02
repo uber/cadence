@@ -1268,6 +1268,7 @@ func FromDecisionTaskFailedEventAttributes(t *types.DecisionTaskFailedEventAttri
 		NewRunId:         &t.NewRunID,
 		ForkEventVersion: &t.ForkEventVersion,
 		BinaryChecksum:   &t.BinaryChecksum,
+		RequestId:        &t.RequestID,
 	}
 }
 
@@ -1287,6 +1288,7 @@ func ToDecisionTaskFailedEventAttributes(t *shared.DecisionTaskFailedEventAttrib
 		NewRunID:         t.GetNewRunId(),
 		ForkEventVersion: t.GetForkEventVersion(),
 		BinaryChecksum:   t.GetBinaryChecksum(),
+		RequestID:        t.GetRequestId(),
 	}
 }
 
@@ -1384,6 +1386,7 @@ func FromDecisionTaskTimedOutEventAttributes(t *types.DecisionTaskTimedOutEventA
 		ForkEventVersion: &t.ForkEventVersion,
 		Reason:           &t.Reason,
 		Cause:            FromDecisionTaskTimedOutCause(t.Cause),
+		RequestId:        &t.RequestID,
 	}
 }
 
@@ -1401,6 +1404,7 @@ func ToDecisionTaskTimedOutEventAttributes(t *shared.DecisionTaskTimedOutEventAt
 		ForkEventVersion: t.GetForkEventVersion(),
 		Reason:           t.GetReason(),
 		Cause:            ToDecisionTaskTimedOutCause(t.Cause),
+		RequestID:        t.GetRequestId(),
 	}
 }
 
@@ -6100,6 +6104,7 @@ func FromWorkflowExecutionCancelRequestedEventAttributes(t *types.WorkflowExecut
 		ExternalInitiatedEventId:  t.ExternalInitiatedEventID,
 		ExternalWorkflowExecution: FromWorkflowExecution(t.ExternalWorkflowExecution),
 		Identity:                  &t.Identity,
+		RequestId:                 &t.RequestID,
 	}
 }
 
@@ -6113,6 +6118,7 @@ func ToWorkflowExecutionCancelRequestedEventAttributes(t *shared.WorkflowExecuti
 		ExternalInitiatedEventID:  t.ExternalInitiatedEventId,
 		ExternalWorkflowExecution: ToWorkflowExecution(t.ExternalWorkflowExecution),
 		Identity:                  t.GetIdentity(),
+		RequestID:                 t.GetRequestId(),
 	}
 }
 
@@ -6397,6 +6403,7 @@ func FromWorkflowExecutionSignaledEventAttributes(t *types.WorkflowExecutionSign
 		SignalName: &t.SignalName,
 		Input:      t.Input,
 		Identity:   &t.Identity,
+		RequestId:  &t.RequestID,
 	}
 }
 
@@ -6409,6 +6416,7 @@ func ToWorkflowExecutionSignaledEventAttributes(t *shared.WorkflowExecutionSigna
 		SignalName: t.GetSignalName(),
 		Input:      t.Input,
 		Identity:   t.GetIdentity(),
+		RequestID:  t.GetRequestId(),
 	}
 }
 
@@ -6446,6 +6454,7 @@ func FromWorkflowExecutionStartedEventAttributes(t *types.WorkflowExecutionStart
 		PrevAutoResetPoints:                 FromResetPoints(t.PrevAutoResetPoints),
 		Header:                              FromHeader(t.Header),
 		PartitionConfig:                     t.PartitionConfig,
+		RequestId:                           &t.RequestID,
 	}
 }
 
@@ -6483,6 +6492,7 @@ func ToWorkflowExecutionStartedEventAttributes(t *shared.WorkflowExecutionStarte
 		PrevAutoResetPoints:                 ToResetPoints(t.PrevAutoResetPoints),
 		Header:                              ToHeader(t.Header),
 		PartitionConfig:                     t.PartitionConfig,
+		RequestID:                           t.GetRequestId(),
 	}
 }
 

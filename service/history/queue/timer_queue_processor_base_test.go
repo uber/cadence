@@ -483,14 +483,18 @@ func (s *timerQueueProcessorBaseSuite) TestNotifyNewTimes() {
 	now := time.Now()
 	timerQueueProcessBase.notifyNewTimers([]persistence.Task{
 		&persistence.UserTimerTask{
-			VisibilityTimestamp: now.Add(5 * time.Second),
-			TaskID:              int64(59),
-			EventID:             int64(28),
+			TaskData: persistence.TaskData{
+				VisibilityTimestamp: now.Add(5 * time.Second),
+				TaskID:              int64(59),
+			},
+			EventID: int64(28),
 		},
 		&persistence.UserTimerTask{
-			VisibilityTimestamp: now.Add(1 * time.Second),
-			TaskID:              int64(59),
-			EventID:             int64(28),
+			TaskData: persistence.TaskData{
+				VisibilityTimestamp: now.Add(1 * time.Second),
+				TaskID:              int64(59),
+			},
+			EventID: int64(28),
 		},
 	})
 	select {
@@ -502,9 +506,11 @@ func (s *timerQueueProcessorBaseSuite) TestNotifyNewTimes() {
 
 	timerQueueProcessBase.notifyNewTimers([]persistence.Task{
 		&persistence.UserTimerTask{
-			VisibilityTimestamp: now.Add(10 * time.Second),
-			TaskID:              int64(59),
-			EventID:             int64(28),
+			TaskData: persistence.TaskData{
+				VisibilityTimestamp: now.Add(10 * time.Second),
+				TaskID:              int64(59),
+			},
+			EventID: int64(28),
 		},
 	})
 	select {

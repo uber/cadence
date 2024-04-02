@@ -46,10 +46,10 @@ var _ ExecutionManager = (*executionManagerImpl)(nil)
 func NewExecutionManagerImpl(
 	persistence ExecutionStore,
 	logger log.Logger,
+	serializer PayloadSerializer,
 ) ExecutionManager {
-
 	return &executionManagerImpl{
-		serializer:    NewPayloadSerializer(),
+		serializer:    serializer,
 		persistence:   persistence,
 		statsComputer: statsComputer{},
 		logger:        logger,
@@ -65,6 +65,7 @@ func (m *executionManagerImpl) GetShardID() int {
 }
 
 // The below three APIs are related to serialization/deserialization
+
 func (m *executionManagerImpl) GetWorkflowExecution(
 	ctx context.Context,
 	request *GetWorkflowExecutionRequest,
@@ -497,9 +498,9 @@ func (m *executionManagerImpl) SerializeExecutionInfo(
 		DecisionRequestID:                  info.DecisionRequestID,
 		DecisionTimeout:                    common.SecondsToDuration(int64(info.DecisionTimeout)),
 		DecisionAttempt:                    info.DecisionAttempt,
-		DecisionStartedTimestamp:           time.Unix(0, info.DecisionStartedTimestamp),
-		DecisionScheduledTimestamp:         time.Unix(0, info.DecisionScheduledTimestamp),
-		DecisionOriginalScheduledTimestamp: time.Unix(0, info.DecisionOriginalScheduledTimestamp),
+		DecisionStartedTimestamp:           time.Unix(0, info.DecisionStartedTimestamp).UTC(),
+		DecisionScheduledTimestamp:         time.Unix(0, info.DecisionScheduledTimestamp).UTC(),
+		DecisionOriginalScheduledTimestamp: time.Unix(0, info.DecisionOriginalScheduledTimestamp).UTC(),
 		CancelRequested:                    info.CancelRequested,
 		CancelRequestID:                    info.CancelRequestID,
 		StickyTaskList:                     info.StickyTaskList,
