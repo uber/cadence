@@ -22,6 +22,7 @@ package domain
 
 import (
 	"context"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/testdata"
 	"log"
 	"os"
 	"testing"
@@ -32,7 +33,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/testflags"
@@ -54,7 +54,7 @@ func TestDomainReplicationTaskExecutorSuite(t *testing.T) {
 
 	s := new(domainReplicationTaskExecutorSuite)
 
-	s.TestBase = public.NewTestBaseWithPublicCassandra(t, &persistencetests.TestBaseOptions{})
+	s.TestBase = testdata.NewTestBaseWithPublicCassandra(t, &persistencetests.TestBaseOptions{})
 
 	suite.Run(t, s)
 }

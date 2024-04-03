@@ -27,13 +27,13 @@ import (
 	"fmt"
 	"testing"
 
-	gogocql "github.com/gocql/gocql"
+	"github.com/gocql/gocql"
 	"github.com/stretchr/testify/assert"
 )
 
 // MockError to simulate gocql.Error behavior
 type MockError struct {
-	gogocql.RequestError
+	gocql.RequestError
 	code    int
 	message string
 }
@@ -49,12 +49,12 @@ func (m MockError) Message() string {
 func TestClient_IsTimeoutError(t *testing.T) {
 	client := client{}
 	errorMap := map[error]bool{
-		nil:                               false,
-		context.DeadlineExceeded:          true,
-		gogocql.ErrTimeoutNoResponse:      true,
-		gogocql.ErrConnectionClosed:       true,
-		&gogocql.RequestErrWriteTimeout{}: true,
-		gogocql.ErrFrameTooBig:            false,
+		nil:                             false,
+		context.DeadlineExceeded:        true,
+		gocql.ErrTimeoutNoResponse:      true,
+		gocql.ErrConnectionClosed:       true,
+		&gocql.RequestErrWriteTimeout{}: true,
+		gocql.ErrFrameTooBig:            false,
 	}
 	for err, expected := range errorMap {
 		assert.Equal(t, expected, client.IsTimeoutError(err))
@@ -64,9 +64,9 @@ func TestClient_IsTimeoutError(t *testing.T) {
 func TestClient_IsNotFoundError(t *testing.T) {
 	client := client{}
 	errorMap := map[error]bool{
-		nil:                    false,
-		gogocql.ErrNotFound:    true,
-		gogocql.ErrFrameTooBig: false,
+		nil:                  false,
+		gocql.ErrNotFound:    true,
+		gocql.ErrFrameTooBig: false,
 	}
 	for err, expected := range errorMap {
 		assert.Equal(t, expected, client.IsNotFoundError(err))
