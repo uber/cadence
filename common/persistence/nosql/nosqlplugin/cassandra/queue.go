@@ -252,16 +252,10 @@ func (db *cdb) GetQueueSize(
 	return result["count"].(int64), nil
 }
 
-func getMessagePayload(
-	message map[string]interface{},
-) []byte {
-
+func getMessagePayload(message map[string]interface{}) []byte {
 	return message["message_payload"].([]byte)
 }
 
-func getMessageID(
-	message map[string]interface{},
-) int64 {
-
+func getMessageID(message map[string]interface{}) int64 {
 	return message["message_id"].(int64)
 }

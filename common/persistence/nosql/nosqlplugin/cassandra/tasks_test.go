@@ -83,7 +83,7 @@ func TestSelectTaskList(t *testing.T) {
 			},
 		},
 		{
-			name: "scal failure",
+			name: "scan failure",
 			filter: &nosqlplugin.TaskListFilter{
 				DomainID:     "domain1",
 				TaskListName: "tasklist1",
