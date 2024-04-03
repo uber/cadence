@@ -22,6 +22,7 @@ package domain
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -403,6 +404,184 @@ func TestHandleDomainCreationReplicationTask(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
+		})
+	}
+}
+
+func TestHandleDomainUpdateReplicationTask(t *testing.T) {
+	tests := []struct {
+		name    string
+		task    *types.DomainTaskAttributes
+		wantErr bool
+		setup   func(mockDomainManager *persistence.MockDomainManager)
+	}{
+		{
+			name: "Convert Status Error",
+			task: &types.DomainTaskAttributes{
+				Info: &types.DomainInfo{
+					Status: func() *types.DomainStatus { var ds types.DomainStatus = 999; return &ds }(), // Invalid status to trigger conversion error
+				},
+			},
+			wantErr: true,
+			setup:   func(dm *persistence.MockDomainManager) {},
+		},
+		{
+			name:    "Error Fetching Metadata",
+			task:    domainCreationTask(),
+			wantErr: true,
+			setup: func(mockDomainManager *persistence.MockDomainManager) {
+				mockDomainManager.EXPECT().
+					GetMetadata(gomock.Any()).
+					Return(nil, errors.New("Error getting metadata while handling replication task")).
+					AnyTimes()
+			},
+		},
+		{
+			name: "GetDomain Returns General Error",
+			task: &types.DomainTaskAttributes{
+				Info: &types.DomainInfo{
+					Name: "someDomain",
+				},
+			},
+			wantErr: true,
+			setup: func(mockDomainManager *persistence.MockDomainManager) {
+				mockDomainManager.EXPECT().
+					GetDomain(gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("general error")).AnyTimes()
+
+				mockDomainManager.EXPECT().
+					GetMetadata(gomock.Any()).
+					Return(&persistence.GetMetadataResponse{}, nil).AnyTimes()
+
+			},
+		},
+		{
+			name: "GetDomain Returns EntityNotExistsError - Triggers Domain Creation",
+			task: &types.DomainTaskAttributes{
+				Info: &types.DomainInfo{
+					Name: "nonexistentDomain",
+				},
+			},
+			wantErr: true,
+			setup: func(mockDomainManager *persistence.MockDomainManager) {
+				mockDomainManager.EXPECT().
+					GetDomain(gomock.Any(), &persistence.GetDomainRequest{
+						Name: "nonexistentDomain",
+					}).
+					Return(nil, &types.EntityNotExistsError{}).AnyTimes()
+
+				mockDomainManager.EXPECT().
+					GetMetadata(gomock.Any()).
+					Return(&persistence.GetMetadataResponse{NotificationVersion: 1}, nil).
+					AnyTimes()
+
+				mockDomainManager.EXPECT().
+					CreateDomain(gomock.Any(), &types.DomainTaskAttributes{
+						Info: &types.DomainInfo{
+							Name: "nonexistentDomain",
+						},
+					}).
+					Return(&persistence.CreateDomainResponse{
+						ID: "nonexistentDomain",
+					}, nil).
+					AnyTimes()
+			},
+		},
+		{
+			name: "Record Not Updated then return nil",
+			task: &types.DomainTaskAttributes{
+				Info: &types.DomainInfo{
+					Name:   "testDomain",
+					Status: types.DomainStatusRegistered.Ptr(),
+				},
+				Config: &types.DomainConfiguration{
+					BadBinaries: &types.BadBinaries{
+						Binaries: map[string]*types.BadBinaryInfo{
+							"checksum1": {
+								Reason:          "reasontest",
+								Operator:        "operatortest",
+								CreatedTimeNano: func() *int64 { var ct int64 = 12345; return &ct }(),
+							},
+						},
+					},
+				},
+			},
+			wantErr: false,
+			setup: func(mockDomainManager *persistence.MockDomainManager) {
+				mockDomainManager.EXPECT().
+					GetMetadata(gomock.Any()).
+					Return(&persistence.GetMetadataResponse{NotificationVersion: 1}, nil).AnyTimes()
+
+				mockDomainManager.EXPECT().
+					GetDomain(gomock.Any(), gomock.Any()).
+					Return(&persistence.GetDomainResponse{
+						Info:              &persistence.DomainInfo{ID: "testDomainID", Name: "testDomain"},
+						Config:            &persistence.DomainConfig{},
+						ReplicationConfig: &persistence.DomainReplicationConfig{},
+					}, nil).
+					AnyTimes()
+
+				mockDomainManager.EXPECT().
+					UpdateDomain(gomock.Any(), gomock.Any()).
+					Return(nil).
+					AnyTimes()
+
+			},
+		},
+		{
+			name: "Update Domain with BadBinaries Set",
+			task: &types.DomainTaskAttributes{
+				Info: &types.DomainInfo{
+					Name: "existingDomainName",
+				},
+				Config: &types.DomainConfiguration{
+					BadBinaries: &types.BadBinaries{
+						Binaries: map[string]*types.BadBinaryInfo{},
+					},
+				},
+			},
+			wantErr: true,
+			setup: func(mockDomainManager *persistence.MockDomainManager) {
+				mockDomainManager.EXPECT().
+					GetMetadata(gomock.Any()).
+					Return(&persistence.GetMetadataResponse{NotificationVersion: 1}, nil).
+					AnyTimes()
+
+				mockDomainManager.EXPECT().
+					GetDomain(gomock.Any(), gomock.Any()).
+					Return(&persistence.GetDomainResponse{}, nil).
+					AnyTimes()
+
+				mockDomainManager.EXPECT().
+					UpdateDomain(gomock.Any(), gomock.Any()).
+					Return(nil).
+					AnyTimes()
+			},
+		},
+	}
+	assert := assert.New(t)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+
+			mockDomainManager := persistence.NewMockDomainManager(mockCtrl)
+			mockLogger := testlogger.New(t)
+			mockTimeSource := clock.NewMockedTimeSourceAt(time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)) // Fixed time
+
+			executor := &domainReplicationTaskExecutorImpl{
+				domainManager: mockDomainManager,
+				logger:        mockLogger,
+				timeSource:    mockTimeSource,
+			}
+			tt.setup(mockDomainManager)
+
+			err := executor.handleDomainUpdateReplicationTask(context.Background(), tt.task)
+			if tt.wantErr {
+				assert.Error(err, "Expected an error for test case: %s", tt.name)
+			} else {
+				assert.NoError(err, "Expected no error for test case: %s", tt.name)
+			}
+
 		})
 	}
 }
