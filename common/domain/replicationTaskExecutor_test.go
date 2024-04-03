@@ -381,6 +381,88 @@ func TestHandleDomainCreationReplicationTask(t *testing.T) {
 			},
 			wantError: true,
 		},
+		{
+			name: "Unexpected Error Type from GetDomain Leads to Default Error Handling",
+			task: domainCreationTask(),
+			setup: func(mockDomainManager *persistence.MockDomainManager) {
+				mockDomainManager.EXPECT().
+					CreateDomain(gomock.Any(), gomock.Any()).
+					Return(nil, ErrInvalidDomainStatus).Times(1)
+
+				mockDomainManager.EXPECT().
+					GetDomain(gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("unexpected error")).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "Successful GetDomain with Name/UUID Mismatch",
+			task: domainCreationTask(),
+			setup: func(mockDomainManager *persistence.MockDomainManager) {
+				mockDomainManager.EXPECT().
+					CreateDomain(gomock.Any(), gomock.Any()).
+					Return(nil, ErrNameUUIDCollision).AnyTimes()
+
+				mockDomainManager.EXPECT().
+					GetDomain(gomock.Any(), gomock.Any()).
+					Return(&persistence.GetDomainResponse{
+						Info: &persistence.DomainInfo{ID: "testDomainID", Name: "mismatchName"},
+					}, nil).AnyTimes()
+			},
+			wantError: true,
+		},
+		{
+			name: "Handle Domain Creation with Unhandled Error",
+			task: domainCreationTask(),
+			setup: func(mockDomainManager *persistence.MockDomainManager) {
+				mockDomainManager.EXPECT().
+					GetDomain(gomock.Any(), gomock.Any()).
+					Return(nil, &types.EntityNotExistsError{}).
+					AnyTimes()
+
+				mockDomainManager.EXPECT().
+					CreateDomain(gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("unhandled error")).
+					Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "Handle Domain Creation - Unexpected Error from GetDomain",
+			task: domainCreationTask(),
+			setup: func(mockDomainManager *persistence.MockDomainManager) {
+				mockDomainManager.EXPECT().
+					CreateDomain(gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("test error")).Times(1)
+
+				mockDomainManager.EXPECT().
+					GetDomain(gomock.Any(), gomock.Any()).
+					Return(nil, &types.EntityNotExistsError{}).Times(1)
+
+				mockDomainManager.EXPECT().
+					GetDomain(gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("unexpected error")).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "Duplicate Domain Creation With Same ID and Name",
+			task: domainCreationTask(),
+			setup: func(mockDomainManager *persistence.MockDomainManager) {
+				mockDomainManager.EXPECT().
+					CreateDomain(gomock.Any(), gomock.Any()).
+					Return(nil, ErrNameUUIDCollision).Times(1)
+
+				// Setup GetDomain to return matching ID and Name, indicating no actual conflict
+				// This setup ensures that recordExists becomes true
+				mockDomainManager.EXPECT().
+					GetDomain(gomock.Any(), gomock.Any()).
+					Return(&persistence.GetDomainResponse{
+						Info: &persistence.DomainInfo{ID: "testDomainID", Name: "testDomain"},
+					}, nil).Times(2)
+			},
+			wantError: false,
+		},
 	}
 
 	for _, tt := range tests {
