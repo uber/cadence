@@ -718,7 +718,9 @@ func (d *nosqlExecutionStore) PutReplicationTaskToDLQ(
 	ctx context.Context,
 	request *persistence.InternalPutReplicationTaskToDLQRequest,
 ) error {
-
+	if request.TaskInfo == nil || request.TaskInfo.TaskID == 0 {
+		return &types.BadRequestError{Message: "Invalid replication task info: TaskID is required"}
+	}
 	err := d.db.InsertReplicationDLQTask(ctx, d.shardID, request.SourceClusterName, *request.TaskInfo)
 	if err != nil {
 		return convertCommonErrors(d.db, "PutReplicationTaskToDLQ", err)
@@ -731,6 +733,9 @@ func (d *nosqlExecutionStore) GetReplicationTasksFromDLQ(
 	ctx context.Context,
 	request *persistence.GetReplicationTasksFromDLQRequest,
 ) (*persistence.InternalGetReplicationTasksFromDLQResponse, error) {
+	if request.ReadLevel > request.MaxReadLevel {
+		return nil, &types.BadRequestError{Message: "ReadLevel cannot be higher than MaxReadLevel"}
+	}
 	tasks, nextPageToken, err := d.db.SelectReplicationDLQTasksOrderByTaskID(ctx, d.shardID, request.SourceClusterName, request.BatchSize, request.NextPageToken, request.ReadLevel, request.MaxReadLevel)
 	if err != nil {
 		return nil, convertCommonErrors(d.db, "GetReplicationTasksFromDLQ", err)
