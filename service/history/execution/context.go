@@ -1181,7 +1181,6 @@ func createWorkflowExecutionWithRetry(
 	op := func() error {
 		var err error
 		resp, err = shardContext.CreateWorkflowExecution(ctx, request)
-		fmt.Println(err)
 		return err
 	}
 	isRetryable := func(err error) bool {
@@ -1355,8 +1354,6 @@ func (c *contextImpl) ReapplyEvents(
 	workflowID := eventBatches[0].WorkflowID
 	runID := eventBatches[0].RunID
 	domainCache := c.shard.GetDomainCache()
-	clientBean := c.shard.GetService().GetClientBean()
-	serializer := c.shard.GetService().GetPayloadSerializer()
 	domainEntry, err := domainCache.GetDomainByID(domainID)
 	if err != nil {
 		return err
@@ -1384,12 +1381,6 @@ func (c *contextImpl) ReapplyEvents(
 		return nil
 	}
 
-	// Reapply events only reapply to the current run.
-	// The run id is only used for reapply event de-duplication
-	execution := &types.WorkflowExecution{
-		WorkflowID: workflowID,
-		RunID:      runID,
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), defaultRemoteCallTimeout)
 	defer cancel()
 
@@ -1404,6 +1395,14 @@ func (c *contextImpl) ReapplyEvents(
 		)
 	}
 
+	// Reapply events only reapply to the current run.
+	// The run id is only used for reapply event de-duplication
+	execution := &types.WorkflowExecution{
+		WorkflowID: workflowID,
+		RunID:      runID,
+	}
+	clientBean := c.shard.GetService().GetClientBean()
+	serializer := c.shard.GetService().GetPayloadSerializer()
 	// The active cluster of the domain is the same as current cluster.
 	// Use the history from the same cluster to reapply events
 	reapplyEventsDataBlob, err := serializer.SerializeBatchEvents(
