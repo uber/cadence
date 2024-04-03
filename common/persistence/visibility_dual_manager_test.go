@@ -582,3 +582,647 @@ func TestDualDeleteUninitializedWorkflowExecution(t *testing.T) {
 		})
 	}
 }
+
+func TestDualListOpenWorkflowExecutions(t *testing.T) {
+	request := &ListWorkflowExecutionsRequest{
+		Domain: "test-domain",
+	}
+
+	ctrl := gomock.NewController(t)
+
+	tests := map[string]struct {
+		request                           *ListWorkflowExecutionsRequest
+		mockDBVisibilityManager           VisibilityManager
+		mockESVisibilityManager           VisibilityManager
+		mockDBVisibilityManagerAccordance func(mockDBVisibilityManager *MockVisibilityManager)
+		mockESVisibilityManagerAccordance func(mockESVisibilityManager *MockVisibilityManager)
+		readModeIsFromES                  dynamicconfig.BoolPropertyFnWithDomainFilter
+		expectedError                     error
+	}{
+		"Case1-1: success case with DB visibility is not nil": {
+			request:                 request,
+			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockDBVisibilityManagerAccordance: func(mockDBVisibilityManager *MockVisibilityManager) {
+				mockDBVisibilityManager.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+		"Case1-2: success case with ES visibility is not nil": {
+			request:                 request,
+			mockESVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockESVisibilityManagerAccordance: func(mockESVisibilityManager *MockVisibilityManager) {
+				mockESVisibilityManager.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			if test.mockDBVisibilityManager != nil {
+				test.mockDBVisibilityManagerAccordance(test.mockDBVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockESVisibilityManager != nil {
+				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
+			}
+			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+				test.mockESVisibilityManager, test.readModeIsFromES, nil, log.NewNoop())
+
+			_, err := visibilityManager.ListOpenWorkflowExecutions(context.Background(), test.request)
+			if test.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestDualListClosedWorkflowExecutions(t *testing.T) {
+	request := &ListWorkflowExecutionsRequest{
+		Domain: "test-domain",
+	}
+
+	ctrl := gomock.NewController(t)
+
+	tests := map[string]struct {
+		request                           *ListWorkflowExecutionsRequest
+		mockDBVisibilityManager           VisibilityManager
+		mockESVisibilityManager           VisibilityManager
+		mockDBVisibilityManagerAccordance func(mockDBVisibilityManager *MockVisibilityManager)
+		mockESVisibilityManagerAccordance func(mockESVisibilityManager *MockVisibilityManager)
+		readModeIsFromES                  dynamicconfig.BoolPropertyFnWithDomainFilter
+		expectedError                     error
+	}{
+		"Case1-1: success case with DB visibility is not nil": {
+			request:                 request,
+			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockDBVisibilityManagerAccordance: func(mockDBVisibilityManager *MockVisibilityManager) {
+				mockDBVisibilityManager.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+		"Case1-2: success case with ES visibility is not nil": {
+			request:                 request,
+			mockESVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockESVisibilityManagerAccordance: func(mockESVisibilityManager *MockVisibilityManager) {
+				mockESVisibilityManager.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+		"Case2-1: success case with DB visibility is not nil and read mod is false": {
+			request:                 request,
+			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockDBVisibilityManagerAccordance: func(mockDBVisibilityManager *MockVisibilityManager) {
+				mockDBVisibilityManager.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(false),
+			expectedError:    nil,
+		},
+		"Case2-2: success case with ES visibility is not nil and read mod is false": {
+			request:                 request,
+			mockESVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockESVisibilityManagerAccordance: func(mockESVisibilityManager *MockVisibilityManager) {
+				mockESVisibilityManager.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(false),
+			expectedError:    nil,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			if test.mockDBVisibilityManager != nil {
+				test.mockDBVisibilityManagerAccordance(test.mockDBVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockESVisibilityManager != nil {
+				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
+			}
+			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+				test.mockESVisibilityManager, test.readModeIsFromES, nil, log.NewNoop())
+
+			_, err := visibilityManager.ListClosedWorkflowExecutions(context.Background(), test.request)
+			if test.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestDualListOpenWorkflowExecutionsByType(t *testing.T) {
+	request := &ListWorkflowExecutionsByTypeRequest{
+		ListWorkflowExecutionsRequest: ListWorkflowExecutionsRequest{
+			Domain: "test-domain",
+		},
+	}
+
+	ctrl := gomock.NewController(t)
+
+	tests := map[string]struct {
+		request                           *ListWorkflowExecutionsByTypeRequest
+		mockDBVisibilityManager           VisibilityManager
+		mockESVisibilityManager           VisibilityManager
+		mockDBVisibilityManagerAccordance func(mockDBVisibilityManager *MockVisibilityManager)
+		mockESVisibilityManagerAccordance func(mockESVisibilityManager *MockVisibilityManager)
+		readModeIsFromES                  dynamicconfig.BoolPropertyFnWithDomainFilter
+		expectedError                     error
+	}{
+		"Case1-1: success case with DB visibility is not nil": {
+			request:                 request,
+			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockDBVisibilityManagerAccordance: func(mockDBVisibilityManager *MockVisibilityManager) {
+				mockDBVisibilityManager.EXPECT().ListOpenWorkflowExecutionsByType(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+		"Case1-2: success case with ES visibility is not nil": {
+			request:                 request,
+			mockESVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockESVisibilityManagerAccordance: func(mockESVisibilityManager *MockVisibilityManager) {
+				mockESVisibilityManager.EXPECT().ListOpenWorkflowExecutionsByType(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			if test.mockDBVisibilityManager != nil {
+				test.mockDBVisibilityManagerAccordance(test.mockDBVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockESVisibilityManager != nil {
+				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
+			}
+			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+				test.mockESVisibilityManager, test.readModeIsFromES, nil, log.NewNoop())
+
+			_, err := visibilityManager.ListOpenWorkflowExecutionsByType(context.Background(), test.request)
+			if test.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestDualListClosedWorkflowExecutionsByType(t *testing.T) {
+	request := &ListWorkflowExecutionsByTypeRequest{
+		ListWorkflowExecutionsRequest: ListWorkflowExecutionsRequest{
+			Domain: "test-domain",
+		},
+	}
+
+	ctrl := gomock.NewController(t)
+
+	tests := map[string]struct {
+		request                           *ListWorkflowExecutionsByTypeRequest
+		mockDBVisibilityManager           VisibilityManager
+		mockESVisibilityManager           VisibilityManager
+		mockDBVisibilityManagerAccordance func(mockDBVisibilityManager *MockVisibilityManager)
+		mockESVisibilityManagerAccordance func(mockESVisibilityManager *MockVisibilityManager)
+		readModeIsFromES                  dynamicconfig.BoolPropertyFnWithDomainFilter
+		expectedError                     error
+	}{
+		"Case1-1: success case with DB visibility is not nil": {
+			request:                 request,
+			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockDBVisibilityManagerAccordance: func(mockDBVisibilityManager *MockVisibilityManager) {
+				mockDBVisibilityManager.EXPECT().ListClosedWorkflowExecutionsByType(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+		"Case1-2: success case with ES visibility is not nil": {
+			request:                 request,
+			mockESVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockESVisibilityManagerAccordance: func(mockESVisibilityManager *MockVisibilityManager) {
+				mockESVisibilityManager.EXPECT().ListClosedWorkflowExecutionsByType(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			if test.mockDBVisibilityManager != nil {
+				test.mockDBVisibilityManagerAccordance(test.mockDBVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockESVisibilityManager != nil {
+				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
+			}
+			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+				test.mockESVisibilityManager, test.readModeIsFromES, nil, log.NewNoop())
+
+			_, err := visibilityManager.ListClosedWorkflowExecutionsByType(context.Background(), test.request)
+			if test.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestDualListOpenWorkflowExecutionsByWorkflowID(t *testing.T) {
+	request := &ListWorkflowExecutionsByWorkflowIDRequest{
+		ListWorkflowExecutionsRequest: ListWorkflowExecutionsRequest{
+			Domain: "test-domain",
+		},
+	}
+
+	ctrl := gomock.NewController(t)
+
+	tests := map[string]struct {
+		request                           *ListWorkflowExecutionsByWorkflowIDRequest
+		mockDBVisibilityManager           VisibilityManager
+		mockESVisibilityManager           VisibilityManager
+		mockDBVisibilityManagerAccordance func(mockDBVisibilityManager *MockVisibilityManager)
+		mockESVisibilityManagerAccordance func(mockESVisibilityManager *MockVisibilityManager)
+		readModeIsFromES                  dynamicconfig.BoolPropertyFnWithDomainFilter
+		expectedError                     error
+	}{
+		"Case1-1: success case with DB visibility is not nil": {
+			request:                 request,
+			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockDBVisibilityManagerAccordance: func(mockDBVisibilityManager *MockVisibilityManager) {
+				mockDBVisibilityManager.EXPECT().ListOpenWorkflowExecutionsByWorkflowID(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+		"Case1-2: success case with ES visibility is not nil": {
+			request:                 request,
+			mockESVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockESVisibilityManagerAccordance: func(mockESVisibilityManager *MockVisibilityManager) {
+				mockESVisibilityManager.EXPECT().ListOpenWorkflowExecutionsByWorkflowID(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			if test.mockDBVisibilityManager != nil {
+				test.mockDBVisibilityManagerAccordance(test.mockDBVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockESVisibilityManager != nil {
+				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
+			}
+			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+				test.mockESVisibilityManager, test.readModeIsFromES, nil, log.NewNoop())
+
+			_, err := visibilityManager.ListOpenWorkflowExecutionsByWorkflowID(context.Background(), test.request)
+			if test.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestDualListClosedWorkflowExecutionsByWorkflowID(t *testing.T) {
+	request := &ListWorkflowExecutionsByWorkflowIDRequest{
+		ListWorkflowExecutionsRequest: ListWorkflowExecutionsRequest{
+			Domain: "test-domain",
+		},
+	}
+
+	ctrl := gomock.NewController(t)
+
+	tests := map[string]struct {
+		request                           *ListWorkflowExecutionsByWorkflowIDRequest
+		mockDBVisibilityManager           VisibilityManager
+		mockESVisibilityManager           VisibilityManager
+		mockDBVisibilityManagerAccordance func(mockDBVisibilityManager *MockVisibilityManager)
+		mockESVisibilityManagerAccordance func(mockESVisibilityManager *MockVisibilityManager)
+		readModeIsFromES                  dynamicconfig.BoolPropertyFnWithDomainFilter
+		expectedError                     error
+	}{
+		"Case1-1: success case with DB visibility is not nil": {
+			request:                 request,
+			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockDBVisibilityManagerAccordance: func(mockDBVisibilityManager *MockVisibilityManager) {
+				mockDBVisibilityManager.EXPECT().ListClosedWorkflowExecutionsByWorkflowID(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+		"Case1-2: success case with ES visibility is not nil": {
+			request:                 request,
+			mockESVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockESVisibilityManagerAccordance: func(mockESVisibilityManager *MockVisibilityManager) {
+				mockESVisibilityManager.EXPECT().ListClosedWorkflowExecutionsByWorkflowID(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			if test.mockDBVisibilityManager != nil {
+				test.mockDBVisibilityManagerAccordance(test.mockDBVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockESVisibilityManager != nil {
+				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
+			}
+			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+				test.mockESVisibilityManager, test.readModeIsFromES, nil, log.NewNoop())
+
+			_, err := visibilityManager.ListClosedWorkflowExecutionsByWorkflowID(context.Background(), test.request)
+			if test.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestDualListClosedWorkflowExecutionsByStatus(t *testing.T) {
+	request := &ListClosedWorkflowExecutionsByStatusRequest{
+		ListWorkflowExecutionsRequest: ListWorkflowExecutionsRequest{
+			Domain: "test-domain",
+		},
+	}
+
+	ctrl := gomock.NewController(t)
+
+	tests := map[string]struct {
+		request                           *ListClosedWorkflowExecutionsByStatusRequest
+		mockDBVisibilityManager           VisibilityManager
+		mockESVisibilityManager           VisibilityManager
+		mockDBVisibilityManagerAccordance func(mockDBVisibilityManager *MockVisibilityManager)
+		mockESVisibilityManagerAccordance func(mockESVisibilityManager *MockVisibilityManager)
+		readModeIsFromES                  dynamicconfig.BoolPropertyFnWithDomainFilter
+		expectedError                     error
+	}{
+		"Case1-1: success case with DB visibility is not nil": {
+			request:                 request,
+			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockDBVisibilityManagerAccordance: func(mockDBVisibilityManager *MockVisibilityManager) {
+				mockDBVisibilityManager.EXPECT().ListClosedWorkflowExecutionsByStatus(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+		"Case1-2: success case with ES visibility is not nil": {
+			request:                 request,
+			mockESVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockESVisibilityManagerAccordance: func(mockESVisibilityManager *MockVisibilityManager) {
+				mockESVisibilityManager.EXPECT().ListClosedWorkflowExecutionsByStatus(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			if test.mockDBVisibilityManager != nil {
+				test.mockDBVisibilityManagerAccordance(test.mockDBVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockESVisibilityManager != nil {
+				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
+			}
+			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+				test.mockESVisibilityManager, test.readModeIsFromES, nil, log.NewNoop())
+
+			_, err := visibilityManager.ListClosedWorkflowExecutionsByStatus(context.Background(), test.request)
+			if test.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestDualGetClosedWorkflowExecution(t *testing.T) {
+	request := &GetClosedWorkflowExecutionRequest{
+		Domain: "test-domain",
+	}
+
+	ctrl := gomock.NewController(t)
+
+	tests := map[string]struct {
+		request                           *GetClosedWorkflowExecutionRequest
+		mockDBVisibilityManager           VisibilityManager
+		mockESVisibilityManager           VisibilityManager
+		mockDBVisibilityManagerAccordance func(mockDBVisibilityManager *MockVisibilityManager)
+		mockESVisibilityManagerAccordance func(mockESVisibilityManager *MockVisibilityManager)
+		readModeIsFromES                  dynamicconfig.BoolPropertyFnWithDomainFilter
+		expectedError                     error
+	}{
+		"Case1-1: success case with DB visibility is not nil": {
+			request:                 request,
+			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockDBVisibilityManagerAccordance: func(mockDBVisibilityManager *MockVisibilityManager) {
+				mockDBVisibilityManager.EXPECT().GetClosedWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+		"Case1-2: success case with ES visibility is not nil": {
+			request:                 request,
+			mockESVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockESVisibilityManagerAccordance: func(mockESVisibilityManager *MockVisibilityManager) {
+				mockESVisibilityManager.EXPECT().GetClosedWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			if test.mockDBVisibilityManager != nil {
+				test.mockDBVisibilityManagerAccordance(test.mockDBVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockESVisibilityManager != nil {
+				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
+			}
+			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+				test.mockESVisibilityManager, test.readModeIsFromES, nil, log.NewNoop())
+
+			_, err := visibilityManager.GetClosedWorkflowExecution(context.Background(), test.request)
+			if test.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestDualListWorkflowExecutions(t *testing.T) {
+	request := &ListWorkflowExecutionsByQueryRequest{
+		Domain: "test-domain",
+	}
+
+	ctrl := gomock.NewController(t)
+
+	tests := map[string]struct {
+		request                           *ListWorkflowExecutionsByQueryRequest
+		mockDBVisibilityManager           VisibilityManager
+		mockESVisibilityManager           VisibilityManager
+		mockDBVisibilityManagerAccordance func(mockDBVisibilityManager *MockVisibilityManager)
+		mockESVisibilityManagerAccordance func(mockESVisibilityManager *MockVisibilityManager)
+		readModeIsFromES                  dynamicconfig.BoolPropertyFnWithDomainFilter
+		expectedError                     error
+	}{
+		"Case1-1: success case with DB visibility is not nil": {
+			request:                 request,
+			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockDBVisibilityManagerAccordance: func(mockDBVisibilityManager *MockVisibilityManager) {
+				mockDBVisibilityManager.EXPECT().ListWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+		"Case1-2: success case with ES visibility is not nil": {
+			request:                 request,
+			mockESVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockESVisibilityManagerAccordance: func(mockESVisibilityManager *MockVisibilityManager) {
+				mockESVisibilityManager.EXPECT().ListWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			if test.mockDBVisibilityManager != nil {
+				test.mockDBVisibilityManagerAccordance(test.mockDBVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockESVisibilityManager != nil {
+				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
+			}
+			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+				test.mockESVisibilityManager, test.readModeIsFromES, nil, log.NewNoop())
+
+			_, err := visibilityManager.ListWorkflowExecutions(context.Background(), test.request)
+			if test.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestDualScanWorkflowExecutions(t *testing.T) {
+	request := &ListWorkflowExecutionsByQueryRequest{
+		Domain: "test-domain",
+	}
+
+	ctrl := gomock.NewController(t)
+
+	tests := map[string]struct {
+		request                           *ListWorkflowExecutionsByQueryRequest
+		mockDBVisibilityManager           VisibilityManager
+		mockESVisibilityManager           VisibilityManager
+		mockDBVisibilityManagerAccordance func(mockDBVisibilityManager *MockVisibilityManager)
+		mockESVisibilityManagerAccordance func(mockESVisibilityManager *MockVisibilityManager)
+		readModeIsFromES                  dynamicconfig.BoolPropertyFnWithDomainFilter
+		expectedError                     error
+	}{
+		"Case1-1: success case with DB visibility is not nil": {
+			request:                 request,
+			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockDBVisibilityManagerAccordance: func(mockDBVisibilityManager *MockVisibilityManager) {
+				mockDBVisibilityManager.EXPECT().ScanWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+		"Case1-2: success case with ES visibility is not nil": {
+			request:                 request,
+			mockESVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockESVisibilityManagerAccordance: func(mockESVisibilityManager *MockVisibilityManager) {
+				mockESVisibilityManager.EXPECT().ScanWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			if test.mockDBVisibilityManager != nil {
+				test.mockDBVisibilityManagerAccordance(test.mockDBVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockESVisibilityManager != nil {
+				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
+			}
+			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+				test.mockESVisibilityManager, test.readModeIsFromES, nil, log.NewNoop())
+
+			_, err := visibilityManager.ScanWorkflowExecutions(context.Background(), test.request)
+			if test.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestDualCountWorkflowExecutions(t *testing.T) {
+	request := &CountWorkflowExecutionsRequest{
+		Domain: "test-domain",
+	}
+
+	ctrl := gomock.NewController(t)
+
+	tests := map[string]struct {
+		request                           *CountWorkflowExecutionsRequest
+		mockDBVisibilityManager           VisibilityManager
+		mockESVisibilityManager           VisibilityManager
+		mockDBVisibilityManagerAccordance func(mockDBVisibilityManager *MockVisibilityManager)
+		mockESVisibilityManagerAccordance func(mockESVisibilityManager *MockVisibilityManager)
+		readModeIsFromES                  dynamicconfig.BoolPropertyFnWithDomainFilter
+		expectedError                     error
+	}{
+		"Case1-1: success case with DB visibility is not nil": {
+			request:                 request,
+			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockDBVisibilityManagerAccordance: func(mockDBVisibilityManager *MockVisibilityManager) {
+				mockDBVisibilityManager.EXPECT().CountWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+		"Case1-2: success case with ES visibility is not nil": {
+			request:                 request,
+			mockESVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockESVisibilityManagerAccordance: func(mockESVisibilityManager *MockVisibilityManager) {
+				mockESVisibilityManager.EXPECT().CountWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			if test.mockDBVisibilityManager != nil {
+				test.mockDBVisibilityManagerAccordance(test.mockDBVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockESVisibilityManager != nil {
+				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
+			}
+			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+				test.mockESVisibilityManager, test.readModeIsFromES, nil, log.NewNoop())
+
+			_, err := visibilityManager.CountWorkflowExecutions(context.Background(), test.request)
+			if test.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
