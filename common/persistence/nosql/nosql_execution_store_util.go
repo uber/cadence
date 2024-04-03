@@ -568,6 +568,10 @@ func (d *nosqlExecutionStore) prepareRequestCancelsForWorkflowTxn(requestCancels
 func (d *nosqlExecutionStore) prepareSignalInfosForWorkflowTxn(signalInfos []*persistence.SignalInfo) (map[int64]*persistence.SignalInfo, error) {
 	m := map[int64]*persistence.SignalInfo{}
 	for _, c := range signalInfos {
+		if _, exists := m[c.InitiatedID]; exists {
+			// Duplicate InitiatedID found, return an error
+			return nil, fmt.Errorf("duplicate signal ID detected: %d", c.InitiatedID)
+		}
 		m[c.InitiatedID] = c
 	}
 	return m, nil
