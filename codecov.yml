@@ -46,6 +46,7 @@ ignore:
   - "**/version.go"
   - "bench/**"
   - "canary/**"
+  - "cmd/**"
   - "common/persistence/persistence-tests/**"
   - "common/domain/errors.go"
   - "common/log/**"
@@ -57,4 +58,5 @@ ignore:
   - "idls/**"
   - "service/history/workflow/errors.go"
   - "testflags/**"
+  - "tools/common/schema/test/**"
   - "tools/linter/**"
