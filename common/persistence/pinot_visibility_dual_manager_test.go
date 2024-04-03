@@ -1195,7 +1195,6 @@ func TestPinotDualCountWorkflowExecutions(t *testing.T) {
 		Domain: "test-domain",
 	}
 
-	// put this outside because need to use it as an input of the table tests
 	ctrl := gomock.NewController(t)
 
 	tests := map[string]struct {
