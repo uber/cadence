@@ -354,21 +354,24 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) TestGetTargetDataCenter_G
 			panic(fmt.Sprintf("unknown cluster name %v", targetCluster))
 		}
 	}
-	s.mockDomainCache.EXPECT().GetDomainByID(s.domainID).Return(nil, fmt.Errorf("some random error")).Times(1)
-	s.mockDomainCache.EXPECT().GetDomain(s.domainName).Return(nil, fmt.Errorf("some random error")).Times(1)
+
+	expectedErr := fmt.Errorf("some random error")
+	s.mockDomainCache.EXPECT().GetDomainByID(s.domainID).Return(nil, expectedErr).Times(len(selectedAPIsForwardingRedirectionPolicyAPIAllowlist))
+	s.mockDomainCache.EXPECT().GetDomain(s.domainName).Return(nil, expectedErr).Times(len(selectedAPIsForwardingRedirectionPolicyAPIAllowlist))
 
 	for apiName := range selectedAPIsForwardingRedirectionPolicyAPIAllowlist {
 		err := s.policy.WithDomainIDRedirect(context.Background(), s.domainID, apiName, callFn)
 		s.Error(err)
-		s.Equal(fmt.Errorf("some random error").Error, err.Error())
+		s.Equal(expectedErr.Error(), err.Error())
 
 		err = s.policy.WithDomainNameRedirect(context.Background(), s.domainName, apiName, callFn)
-		s.Nil(err)
-		s.Equal(fmt.Errorf("some random error").Error(), err.Error())
+		s.Error(err)
+		s.Equal(expectedErr.Error(), err.Error())
 	}
 
-	s.Equal(2*len(selectedAPIsForwardingRedirectionPolicyAPIAllowlist), currentClustercallCount)
-	s.Equal(2*len(selectedAPIsForwardingRedirectionPolicyAPIAllowlist), alternativeClustercallCount)
+	// Ensure there were no calls to the target clusters
+	s.Equal(0, currentClustercallCount)
+	s.Equal(0, alternativeClustercallCount)
 }
 
 func (s *selectedAPIsForwardingRedirectionPolicySuite) TestGetTargetDataCenter_GlobalDomain_Forwarding_DeprecatedDomain() {
@@ -402,8 +405,8 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) TestGetTargetDataCenter_G
 		s.Equal(fmt.Sprintf("domain %v is deprecated or deleted", s.domainName), err.Error())
 	}
 
-	s.Equal(2*len(selectedAPIsForwardingRedirectionPolicyAPIAllowlist), currentClustercallCount)
-	s.Equal(2*len(selectedAPIsForwardingRedirectionPolicyAPIAllowlist), alternativeClustercallCount)
+	s.Equal(0, currentClustercallCount)
+	s.Equal(0, alternativeClustercallCount)
 }
 
 func (s *selectedAPIsForwardingRedirectionPolicySuite) setupLocalDomain() {
