@@ -434,11 +434,7 @@ func (db *cdb) SelectAllDomains(
 }
 
 // Delete a domain, either by domainID or domainName
-func (db *cdb) DeleteDomain(
-	ctx context.Context,
-	domainID *string,
-	domainName *string,
-) error {
+func (db *cdb) DeleteDomain(ctx context.Context, domainID *string, domainName *string) error {
 	if domainName == nil && domainID == nil {
 		return fmt.Errorf("must provide either domainID or domainName")
 	}
@@ -455,26 +451,24 @@ func (db *cdb) DeleteDomain(
 		}
 		domainName = common.StringPtr(name)
 	} else {
-		var ID string
+		var id string
 		query := db.session.Query(templateGetDomainByNameQueryV2, constDomainPartition, *domainName).WithContext(ctx)
-		err := query.Scan(&ID, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+		err := query.Scan(&id, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 		if err != nil {
 			if db.client.IsNotFoundError(err) {
 				return nil
 			}
 			return err
 		}
-		domainID = common.StringPtr(ID)
+		domainID = common.StringPtr(id)
 	}
 
 	return db.deleteDomain(ctx, *domainName, *domainID)
 }
 
-func (db *cdb) SelectDomainMetadata(
-	ctx context.Context,
-) (int64, error) {
+func (db *cdb) SelectDomainMetadata(ctx context.Context) (int64, error) {
 	var notificationVersion int64
-	query := db.session.Query(templateGetMetadataQueryV2, constDomainPartition, domainMetadataRecordName)
+	query := db.session.Query(templateGetMetadataQueryV2, constDomainPartition, domainMetadataRecordName).WithContext(ctx)
 	err := query.Scan(&notificationVersion)
 	if err != nil {
 		if db.client.IsNotFoundError(err) {
@@ -488,10 +482,7 @@ func (db *cdb) SelectDomainMetadata(
 	return notificationVersion, nil
 }
 
-func (db *cdb) deleteDomain(
-	ctx context.Context,
-	name, ID string,
-) error {
+func (db *cdb) deleteDomain(ctx context.Context, name, ID string) error {
 	query := db.session.Query(templateDeleteDomainByNameQueryV2, constDomainPartition, name).WithContext(ctx)
 	if err := db.executeWithConsistencyAll(query); err != nil {
 		return err
