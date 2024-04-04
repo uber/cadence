@@ -23,7 +23,6 @@
 package cassandra
 
 import (
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"testing"
 	"time"
 
@@ -32,6 +31,8 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
+  "github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+
 )
 
 type mockUUID struct {
