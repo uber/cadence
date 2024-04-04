@@ -21,7 +21,7 @@
 package tests
 
 import (
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/testdata"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public/testdata"
 	"testing"
 
 	"github.com/stretchr/testify/suite"

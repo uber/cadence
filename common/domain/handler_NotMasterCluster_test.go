@@ -22,7 +22,7 @@ package domain
 
 import (
 	"context"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/testdata"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public/testdata"
 	"log"
 	"os"
 	"testing"
