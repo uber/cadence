@@ -174,12 +174,12 @@ func (t *timerQueueProcessorBase) Start() {
 	go t.processorPump()
 }
 
+// Edge Case: Stop doesn't stop TimerGate if timerQueueProcessorBase is only initiliazed without starting
+// As a result, TimerGate needs to be stopped separately
+// One way to fix this is to make sure TimerGate doesn't start daemon loop on initilization and requires explicit Start
 func (t *timerQueueProcessorBase) Stop() {
 	if !atomic.CompareAndSwapInt32(&t.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
-		// initialized should also be stopped to stop TimerGate
-		if !atomic.CompareAndSwapInt32(&t.status, common.DaemonStatusInitialized, common.DaemonStatusStopped) {
-			return
-		}
+		return
 	}
 
 	t.logger.Info("Timer queue processor state changed", tag.LifeCycleStopping)
