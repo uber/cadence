@@ -955,23 +955,6 @@ func TestNosqlExecutionStore(t *testing.T) {
 			expectedError: &types.InternalServiceError{Message: "database error"},
 		},
 		{
-			name: "PutReplicationTaskToDLQ failure - invalid task info",
-			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
-				// No need to set up a mock call to InsertReplicationDLQTask
-				// as the operation should not proceed due to validation failure
-				return newTestNosqlExecutionStore(nosqlplugin.NewMockDB(ctrl), log.NewNoop())
-			},
-			testFunc: func(store *nosqlExecutionStore) error {
-				taskInfo := persistence.InternalReplicationTaskInfo{} // Intentionally invalid/incomplete task info
-				return store.PutReplicationTaskToDLQ(ctx, &persistence.InternalPutReplicationTaskToDLQRequest{
-					SourceClusterName: "sourceCluster",
-					TaskInfo:          &taskInfo,
-				})
-			},
-			expectedError: &types.BadRequestError{Message: "Invalid replication task info: TaskID is required"},
-		},
-
-		{
 			name: "GetReplicationTasksFromDLQ success",
 			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
 				mockDB := nosqlplugin.NewMockDB(ctrl)

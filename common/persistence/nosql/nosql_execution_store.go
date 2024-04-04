@@ -718,9 +718,6 @@ func (d *nosqlExecutionStore) PutReplicationTaskToDLQ(
 	ctx context.Context,
 	request *persistence.InternalPutReplicationTaskToDLQRequest,
 ) error {
-	if request.TaskInfo == nil || request.TaskInfo.TaskID == 0 {
-		return &types.BadRequestError{Message: "Invalid replication task info: TaskID is required"}
-	}
 	err := d.db.InsertReplicationDLQTask(ctx, d.shardID, request.SourceClusterName, *request.TaskInfo)
 	if err != nil {
 		return convertCommonErrors(d.db, "PutReplicationTaskToDLQ", err)
