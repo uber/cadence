@@ -1052,7 +1052,6 @@ func TestNosqlExecutionStore(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			store := tc.setupMock(ctrl)
 			err := tc.testFunc(store)
@@ -1106,7 +1105,6 @@ func TestDeleteReplicationTaskFromDLQ(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockDB := nosqlplugin.NewMockDB(controller)
 			store := newTestNosqlExecutionStore(mockDB, log.NewNoop())
@@ -1169,7 +1167,6 @@ func TestRangeDeleteReplicationTaskFromDLQ(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockDB := nosqlplugin.NewMockDB(controller)
 			store := newTestNosqlExecutionStore(mockDB, log.NewNoop())
@@ -1222,7 +1219,6 @@ func TestCreateFailoverMarkerTasks(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockDB := nosqlplugin.NewMockDB(controller)
 			store := newTestNosqlExecutionStore(mockDB, log.NewNoop())
