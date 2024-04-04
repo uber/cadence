@@ -235,3 +235,130 @@ func Test_parseWorkflowExecutionInfo(t *testing.T) {
 		assert.Equal(t, result.ParentDomainID, tt.want.ParentDomainID)
 	}
 }
+
+func Test_parseReplicationState(t *testing.T) {
+	tests := []struct {
+		args map[string]interface{}
+		want *persistence.ReplicationState
+	}{
+		{
+			args: map[string]interface{}{
+				"current_version":     int64(1),
+				"start_version":       int64(2),
+				"last_write_version":  int64(3),
+				"last_write_event_id": int64(4),
+				"last_replication_info": map[string]map[string]interface{}{
+					"map1": {
+						"version":       int64(5),
+						"last_event_id": int64(6),
+					},
+					"map2": {
+						"version":       int64(7),
+						"last_event_id": int64(8),
+					},
+				},
+			},
+			want: &persistence.ReplicationState{
+				CurrentVersion:   int64(1),
+				StartVersion:     int64(2),
+				LastWriteVersion: int64(3),
+				LastWriteEventID: int64(4),
+				LastReplicationInfo: map[string]*persistence.ReplicationInfo{
+					"map1": {
+						Version:     int64(5),
+						LastEventID: int64(6),
+					},
+					"map2": {
+						Version:     int64(7),
+						LastEventID: int64(8),
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		result := parseReplicationState(tt.args)
+		assert.Equal(t, result.CurrentVersion, tt.want.CurrentVersion)
+		assert.Equal(t, result.StartVersion, tt.want.StartVersion)
+		assert.Equal(t, result.LastWriteVersion, tt.want.LastWriteVersion)
+		assert.Equal(t, result.LastWriteEventID, tt.want.LastWriteEventID)
+		assert.Equal(t, result.LastReplicationInfo, tt.want.LastReplicationInfo)
+	}
+}
+
+func Test_parseActivityInfo(t *testing.T) {
+	timeNow := time.Now()
+	testInput := map[string]interface{}{
+		"version":                   int64(1),
+		"schedule_id":               int64(2),
+		"scheduled_event_batch_id":  int64(3),
+		"scheduled_event":           []byte("scheduled_event"),
+		"scheduled_time":            timeNow,
+		"started_id":                int64(4),
+		"started_event":             []byte("started_event"),
+		"started_time":              timeNow,
+		"activity_id":               "activity_id",
+		"request_id":                "request_id",
+		"details":                   []byte("details"),
+		"schedule_to_start_timeout": 5,
+		"schedule_to_close_timeout": 6,
+		"start_to_close_timeout":    7,
+		"heart_beat_timeout":        8,
+		"cancel_requested":          true,
+		"cancel_request_id":         int64(9),
+		"last_hb_updated_time":      timeNow,
+		"timer_task_status":         9,
+		"attempt":                   10,
+		"task_list":                 "task_list",
+		"started_identity":          "started_identity",
+		"has_retry_policy":          true,
+		"init_interval":             11,
+		"backoff_coefficient":       1.5,
+		"max_interval":              12,
+		"max_attempts":              13,
+		"expiration_time":           timeNow,
+		"non_retriable_errors":      []string{"error1", "error2"},
+		"last_failure_reason":       "last_failure_reason",
+		"last_worker_identity":      "last_worker_identity",
+		"last_failure_details":      []byte("last_failure_details"),
+		"event_data_encoding":       "Proto3",
+	}
+
+	expected := &persistence.InternalActivityInfo{
+		Version:                  int64(1),
+		ScheduleID:               int64(2),
+		ScheduledEventBatchID:    int64(3),
+		ScheduledEvent:           persistence.NewDataBlob([]byte("scheduled_event"), "Proto3"),
+		ScheduledTime:            timeNow,
+		StartedID:                int64(4),
+		StartedEvent:             persistence.NewDataBlob([]byte("started_event"), "Proto3"),
+		StartedTime:              timeNow,
+		ActivityID:               "activity_id",
+		RequestID:                "request_id",
+		Details:                  []byte("details"),
+		ScheduleToStartTimeout:   common.SecondsToDuration(int64(5)),
+		ScheduleToCloseTimeout:   common.SecondsToDuration(int64(6)),
+		StartToCloseTimeout:      common.SecondsToDuration(int64(7)),
+		HeartbeatTimeout:         common.SecondsToDuration(int64(8)),
+		CancelRequested:          true,
+		CancelRequestID:          int64(9),
+		LastHeartBeatUpdatedTime: timeNow,
+		TimerTaskStatus:          int32(9),
+		Attempt:                  int32(10),
+		TaskList:                 "task_list",
+		StartedIdentity:          "started_identity",
+		HasRetryPolicy:           true,
+		InitialInterval:          common.SecondsToDuration(int64(11)),
+		BackoffCoefficient:       1.5,
+		MaximumInterval:          common.SecondsToDuration(int64(12)),
+		MaximumAttempts:          int32(13),
+		ExpirationTime:           timeNow,
+		NonRetriableErrors:       []string{"error1", "error2"},
+		LastFailureReason:        "last_failure_reason",
+		LastWorkerIdentity:       "last_worker_identity",
+		LastFailureDetails:       []byte("last_failure_details"),
+		DomainID:                 "domain_id",
+	}
+
+	assert.Equal(t, expected, parseActivityInfo("domain_id", testInput))
+}
