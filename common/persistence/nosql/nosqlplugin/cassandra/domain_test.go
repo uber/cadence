@@ -424,7 +424,7 @@ func TestSelectDomain(t *testing.T) {
 			wantErr:    true,
 		},
 		{
-			name:       "both domainName and domainID not provided",
+			name:       "both domainName and domainID provided",
 			domainID:   common.StringPtr("domain_id_1"),
 			domainName: common.StringPtr("domain_name_1"),
 			wantErr:    true,
