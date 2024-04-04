@@ -632,6 +632,137 @@ func TestNosqlExecutionStoreUtilsExtended(t *testing.T) {
 				assert.Equal(t, "cancel-1-duplicate", cancels[1].CancelRequestID)
 			},
 		},
+		{
+			name: "PrepareSignalInfosForWorkflowTxn - Success",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				signalInfos := []*persistence.SignalInfo{
+					{InitiatedID: 1, SignalRequestID: "signal-1"},
+					{InitiatedID: 2, SignalRequestID: "signal-2"},
+				}
+				return store.prepareSignalInfosForWorkflowTxn(signalInfos)
+			},
+			validate: func(t *testing.T, result interface{}, err error) {
+				assert.NoError(t, err)
+				infos := result.(map[int64]*persistence.SignalInfo)
+				assert.Equal(t, 2, len(infos))
+				assert.Equal(t, "signal-1", infos[1].SignalRequestID)
+				assert.Equal(t, "signal-2", infos[2].SignalRequestID)
+			},
+		},
+		{
+			name: "PrepareUpdateWorkflowExecutionTxn - Success",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				executionInfo := &persistence.InternalWorkflowExecutionInfo{
+					DomainID:    "test-domain-id",
+					WorkflowID:  "test-workflow-id",
+					RunID:       "test-run-id",
+					State:       persistence.WorkflowStateRunning,
+					CloseStatus: persistence.WorkflowCloseStatusNone,
+				}
+				versionHistories := &persistence.DataBlob{
+					Encoding: common.EncodingTypeJSON,
+					Data:     []byte(`[{"Branches":[{"BranchID":"test-branch-id","BeginNodeID":1,"EndNodeID":2}]}]`),
+				}
+				checksum := checksum.Checksum{Version: 1,
+					Value: []byte("create-checksum")}
+				return store.prepareUpdateWorkflowExecutionTxn(executionInfo, versionHistories, checksum, time.Now(), 123)
+			},
+			validate: func(t *testing.T, result interface{}, err error) {
+				assert.NoError(t, err)
+				req := result.(*nosqlplugin.WorkflowExecutionRequest)
+				assert.Equal(t, "test-domain-id", req.DomainID)
+				assert.Equal(t, int64(123), req.LastWriteVersion)
+			},
+		},
+		{
+			name: "PrepareUpdateWorkflowExecutionTxn - Emptyvalues",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				executionInfo := &persistence.InternalWorkflowExecutionInfo{
+					DomainID:   "",
+					WorkflowID: "",
+					State:      persistence.WorkflowStateCompleted,
+				}
+				versionHistories := &persistence.DataBlob{
+					Encoding: common.EncodingTypeJSON,
+					Data:     []byte(`[{"Branches":[{"BranchID":"branch-id","BeginNodeID":1,"EndNodeID":2}]}]`),
+				}
+				checksum := checksum.Checksum{Version: 1, Value: []byte("checksum")}
+				// This should result in an error due to invalid executionInfo state for the creation scenario
+				return store.prepareUpdateWorkflowExecutionTxn(executionInfo, versionHistories, checksum, time.Now(), 123)
+			},
+			validate: func(t *testing.T, result interface{}, err error) {
+				assert.Error(t, err) // Expect an error due to invalid state
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "PrepareUpdateWorkflowExecutionTxn - Invalid Workflow State",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				executionInfo := &persistence.InternalWorkflowExecutionInfo{
+					DomainID:    "domainID-invalid-state",
+					WorkflowID:  "workflowID-invalid-state",
+					RunID:       "runID-invalid-state",
+					State:       343, // Invalid state
+					CloseStatus: persistence.WorkflowCloseStatusNone,
+				}
+				versionHistories := &persistence.DataBlob{
+					Encoding: common.EncodingTypeJSON,
+					Data:     []byte(`[{"Branches":[{"BranchID":"branch-id","BeginNodeID":1,"EndNodeID":2}]}]`),
+				}
+				checksum := checksum.Checksum{Version: 1, Value: []byte("checksum")}
+				return store.prepareUpdateWorkflowExecutionTxn(executionInfo, versionHistories, checksum, time.Now(), 123)
+			},
+			validate: func(t *testing.T, result interface{}, err error) {
+				assert.Error(t, err)  // Expect an error due to invalid workflow state
+				assert.Nil(t, result) // No WorkflowExecutionRequest should be returned
+			},
+		},
+		{
+			name: "PrepareCreateWorkflowExecutionTxn - Success",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				executionInfo := &persistence.InternalWorkflowExecutionInfo{
+					DomainID:    "create-domain-id",
+					WorkflowID:  "create-workflow-id",
+					RunID:       "create-run-id",
+					State:       persistence.WorkflowStateCreated,
+					CloseStatus: persistence.WorkflowCloseStatusNone,
+				}
+				versionHistories := &persistence.DataBlob{
+					Encoding: common.EncodingTypeJSON,
+					Data:     []byte(`[{"Branches":[{"BranchID":"create-branch-id","BeginNodeID":1,"EndNodeID":2}]}]`),
+				}
+				checksum := checksum.Checksum{Version: 1, Value: []byte("create-checksum")}
+				return store.prepareCreateWorkflowExecutionTxn(executionInfo, versionHistories, checksum, time.Now(), 123)
+			},
+			validate: func(t *testing.T, result interface{}, err error) {
+				assert.NoError(t, err)
+				req := result.(*nosqlplugin.WorkflowExecutionRequest)
+				assert.Equal(t, "create-domain-id", req.DomainID)
+				assert.Equal(t, int64(123), req.LastWriteVersion)
+			},
+		},
+		{
+			name: "PrepareCreateWorkflowExecutionTxn - Invalid State",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				executionInfo := &persistence.InternalWorkflowExecutionInfo{
+					DomainID:    "create-domain-id",
+					WorkflowID:  "create-workflow-id",
+					RunID:       "create-run-id",
+					State:       232, // Invalid state for creating a workflow execution
+					CloseStatus: persistence.WorkflowCloseStatusNone,
+				}
+				versionHistories := &persistence.DataBlob{
+					Encoding: common.EncodingTypeJSON,
+					Data:     []byte(`[{"Branches":[{"BranchID":"create-branch-id","BeginNodeID":1,"EndNodeID":2}]}]`),
+				}
+				checksum := checksum.Checksum{Version: 1, Value: []byte("create-checksum")}
+				return store.prepareCreateWorkflowExecutionTxn(executionInfo, versionHistories, checksum, time.Now(), 123)
+			},
+			validate: func(t *testing.T, result interface{}, err error) {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
