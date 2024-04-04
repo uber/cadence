@@ -124,7 +124,7 @@ func (r *ring) Start() {
 		r.logger.Fatal("subscribing to peer provider", tag.Error(err))
 	}
 
-	if err := r.refresh(); err != nil {
+	if _, err := r.refresh(); err != nil {
 		r.logger.Fatal("failed to start service resolver", tag.Error(err))
 	}
 
@@ -235,22 +235,22 @@ func (r *ring) Members() []HostInfo {
 	return hosts
 }
 
-func (r *ring) refresh() error {
+func (r *ring) refresh() (refreshed bool, err error) {
 	if r.members.refreshed.After(time.Now().Add(-minRefreshInternal)) {
 		// refreshed too frequently
-		return nil
+		return false, nil
 	}
 
 	members, err := r.peerProvider.GetMembers(r.service)
 	if err != nil {
-		return fmt.Errorf("getting members from peer provider: %w", err)
+		return false, fmt.Errorf("getting members from peer provider: %w", err)
 	}
 
 	r.members.Lock()
 	defer r.members.Unlock()
 	newMembersMap, changed := r.compareMembers(members)
 	if !changed {
-		return nil
+		return false, nil
 	}
 
 	ring := emptyHashring()
@@ -261,7 +261,7 @@ func (r *ring) refresh() error {
 	r.value.Store(ring)
 	r.logger.Info("refreshed ring members", tag.Value(members))
 
-	return nil
+	return true, nil
 }
 
 func (r *ring) refreshRingWorker() {
@@ -274,13 +274,16 @@ func (r *ring) refreshRingWorker() {
 		case <-r.shutdownCh:
 			return
 		case event := <-r.refreshChan: // local signal or signal from provider
-			if err := r.refresh(); err != nil {
+			refreshed, err := r.refresh()
+			if err != nil {
 				r.logger.Error("refreshing ring", tag.Error(err))
 			}
-			r.notifySubscribers(event)
+			if refreshed {
+				r.notifySubscribers(event)
+			}
 		case <-refreshTicker.C: // periodically refresh membership
 			r.emitHashIdentifier()
-			if err := r.refresh(); err != nil {
+			if _, err := r.refresh(); err != nil {
 				r.logger.Error("periodically refreshing ring", tag.Error(err))
 			}
 		}

@@ -48,9 +48,9 @@ func randSeq(n int) string {
 }
 
 func randomHostInfo(n int) []HostInfo {
-	res := make([]HostInfo, n)
+	res := make([]HostInfo, 0, n)
 	for i := 0; i < n; i++ {
-		res = append(res, NewHostInfo(randSeq(5)))
+		res = append(res, NewDetailedHostInfo(randSeq(5), randSeq(12), PortMap{randSeq(3): 666}))
 	}
 	return res
 }
@@ -116,14 +116,17 @@ func TestRefreshUpdatesRingOnlyWhenRingHasChanged(t *testing.T) {
 	pp := NewMockPeerProvider(ctrl)
 
 	pp.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(1)
-	pp.EXPECT().GetMembers("test-service").Times(3)
+	pp.EXPECT().GetMembers("test-service").Times(1).Return(randomHostInfo(3), nil)
 
 	hr := newHashring("test-service", pp, log.NewNoop(), metrics.NoopScope(0))
+	// Start will also call .refresh()
 	hr.Start()
-
-	hr.refresh()
 	updatedAt := hr.members.refreshed
 	hr.refresh()
+	refreshed, err := hr.refresh()
+
+	assert.NoError(t, err)
+	assert.False(t, refreshed)
 	assert.Equal(t, updatedAt, hr.members.refreshed)
 
 }
@@ -131,8 +134,13 @@ func TestRefreshUpdatesRingOnlyWhenRingHasChanged(t *testing.T) {
 func TestRefreshWillNotifySubscribers(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	pp := NewMockPeerProvider(ctrl)
+	var hostsToReturn []HostInfo
 	pp.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(1)
-	pp.EXPECT().GetMembers("test-service").AnyTimes()
+	pp.EXPECT().GetMembers("test-service").Times(2).DoAndReturn(func(service string) ([]HostInfo, error) {
+		hostsToReturn = randomHostInfo(5)
+		time.Sleep(time.Millisecond * 70)
+		return hostsToReturn, nil
+	})
 
 	changed := &ChangedEvent{
 		HostsAdded:   []string{"a"},
@@ -142,14 +150,35 @@ func TestRefreshWillNotifySubscribers(t *testing.T) {
 
 	hr := newHashring("test-service", pp, log.NewNoop(), metrics.NoopScope(0))
 	hr.Start()
-	var changeCh = make(chan *ChangedEvent)
 
-	err := hr.Subscribe("notifyMe", changeCh)
-	assert.NoError(t, err)
+	var changeCh1 = make(chan *ChangedEvent)
+	var changeCh2 = make(chan *ChangedEvent)
 
-	go func() { hr.refreshChan <- changed }()
-	changedEvent := <-changeCh
-	assert.Equal(t, changed, changedEvent)
+	assert.NoError(t, hr.Subscribe("notifyMe1", changeCh1))
+	assert.NoError(t, hr.Subscribe("notifyMe2", changeCh2))
+
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		changedEvent := <-changeCh1
+		close(changeCh1)
+		assert.Equal(t, changed, changedEvent)
+	}()
+
+	go func() {
+		defer wg.Done()
+		changedEvent2 := <-changeCh2
+		close(changeCh2)
+		assert.Equal(t, changed, changedEvent2)
+	}()
+	// to bypass internal check
+	hr.members.refreshed = time.Now().AddDate(0, 0, -1)
+	hr.refreshChan <- changed
+	// Test if internal members are updated
+	_, ok := hr.members.keys[hostsToReturn[0].addr]
+	assert.True(t, ok, "members should contain just-added node")
+	wg.Wait() // wait until both subscribers will get notification
 
 }
 
@@ -215,7 +244,8 @@ func TestErrorIsPropagatedWhenProviderFails(t *testing.T) {
 	pp.EXPECT().GetMembers(gomock.Any()).Return(nil, errors.New("error"))
 
 	hr := newHashring("test-service", pp, log.NewNoop(), metrics.NoopScope(0))
-	assert.Error(t, hr.refresh())
+	_, err := hr.refresh()
+	assert.Error(t, err)
 }
 
 func TestStopWillStopProvider(t *testing.T) {
@@ -252,7 +282,8 @@ func TestLookupAndRefreshRaceCondition(t *testing.T) {
 		for i := 0; i < 50; i++ {
 			// to bypass internal check
 			hr.members.refreshed = time.Now().AddDate(0, 0, -1)
-			assert.NoError(t, hr.refresh())
+			_, err := hr.refresh()
+			assert.NoError(t, err)
 		}
 		wg.Done()
 	}()
