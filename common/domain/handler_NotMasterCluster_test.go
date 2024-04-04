@@ -22,7 +22,6 @@ package domain
 
 import (
 	"context"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public/testdata"
 	"log"
 	"os"
 	"testing"
@@ -41,6 +40,7 @@ import (
 	dc "github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/testflags"
@@ -71,7 +71,7 @@ func TestDomainHandlerGlobalDomainEnabledNotPrimaryClusterSuite(t *testing.T) {
 
 	s := new(domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite)
 
-	s.TestBase = testdata.NewTestBaseWithPublicCassandra(t, &persistencetests.TestBaseOptions{
+	s.TestBase = public.NewTestBaseWithPublicCassandra(t, &persistencetests.TestBaseOptions{
 		ClusterMetadata: cluster.GetTestClusterMetadata(false),
 	})
 
