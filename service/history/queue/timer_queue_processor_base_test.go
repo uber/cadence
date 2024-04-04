@@ -31,6 +31,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
+	"go.uber.org/goleak"
 
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -93,6 +94,7 @@ func (s *timerQueueProcessorBaseSuite) SetupTest() {
 func (s *timerQueueProcessorBaseSuite) TearDownTest() {
 	s.controller.Finish()
 	s.mockShard.Finish(s.T())
+	goleak.VerifyNone(s.T())
 }
 
 func (s *timerQueueProcessorBaseSuite) TestIsProcessNow() {
@@ -107,6 +109,8 @@ func (s *timerQueueProcessorBaseSuite) TestIsProcessNow() {
 
 	timeAfter := now.Add(10 * time.Second)
 	s.False(timerQueueProcessBase.isProcessNow(timeAfter))
+
+	timerQueueProcessBase.Stop()
 }
 
 func (s *timerQueueProcessorBaseSuite) TestGetTimerTasks_More() {
@@ -146,6 +150,7 @@ func (s *timerQueueProcessorBaseSuite) TestGetTimerTasks_More() {
 	s.Nil(err)
 	s.Equal(response.Timers, got.Timers)
 	s.Equal(response.NextPageToken, got.NextPageToken)
+	timerQueueProcessBase.Stop()
 }
 
 func (s *timerQueueProcessorBaseSuite) TestGetTimerTasks_NoMore() {
@@ -185,6 +190,7 @@ func (s *timerQueueProcessorBaseSuite) TestGetTimerTasks_NoMore() {
 	s.Nil(err)
 	s.Equal(response.Timers, got.Timers)
 	s.Empty(got.NextPageToken)
+	timerQueueProcessBase.Stop()
 }
 
 func (s *timerQueueProcessorBaseSuite) TestReadLookAheadTask() {
@@ -224,6 +230,7 @@ func (s *timerQueueProcessorBaseSuite) TestReadLookAheadTask() {
 	lookAheadTask, err := timerQueueProcessBase.readLookAheadTask(readLevel, maxReadLevel)
 	s.Nil(err)
 	s.Equal(response.Timers[0], lookAheadTask)
+	timerQueueProcessBase.Stop()
 }
 
 func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_NoLookAhead_NoNextPage() {
@@ -271,6 +278,7 @@ func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_NoLookAhead_NoNext
 	s.Equal(response.Timers, got.timerTasks)
 	s.Nil(got.lookAheadTask)
 	s.Nil(got.nextPageToken)
+	timerQueueProcessBase.Stop()
 }
 
 func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_NoLookAhead_HasNextPage() {
@@ -310,6 +318,7 @@ func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_NoLookAhead_HasNex
 	s.Equal(response.Timers, got.timerTasks)
 	s.Nil(got.lookAheadTask)
 	s.Equal(response.NextPageToken, got.nextPageToken)
+	timerQueueProcessBase.Stop()
 }
 
 func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_HasLookAhead_NoNextPage() {
@@ -360,6 +369,7 @@ func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_HasLookAhead_NoNex
 	s.Equal([]*persistence.TimerTaskInfo{response.Timers[0]}, got.timerTasks)
 	s.Equal(response.Timers[1], got.lookAheadTask)
 	s.Nil(got.nextPageToken)
+	timerQueueProcessBase.Stop()
 }
 
 func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_HasLookAhead_HasNextPage() {
@@ -410,6 +420,7 @@ func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_HasLookAhead_HasNe
 	s.Equal([]*persistence.TimerTaskInfo{response.Timers[0]}, got.timerTasks)
 	s.Equal(response.Timers[1], got.lookAheadTask)
 	s.Nil(got.nextPageToken)
+	timerQueueProcessBase.Stop()
 }
 
 func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_LookAheadFailed_NoNextPage() {
@@ -468,6 +479,7 @@ func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_LookAheadFailed_No
 	s.Equal(response.Timers, got.timerTasks)
 	s.Equal(maxReadLevel.(timerTaskKey).visibilityTimestamp, got.lookAheadTask.VisibilityTimestamp)
 	s.Nil(got.nextPageToken)
+	timerQueueProcessBase.Stop()
 }
 
 func (s *timerQueueProcessorBaseSuite) TestNotifyNewTimes() {
@@ -519,6 +531,7 @@ func (s *timerQueueProcessorBaseSuite) TestNotifyNewTimes() {
 	default:
 		s.Equal(now.Add(1*time.Second), timerQueueProcessBase.newTime)
 	}
+	timerQueueProcessBase.Stop()
 }
 
 func (s *timerQueueProcessorBaseSuite) TestProcessQueueCollections_SkipRead() {
@@ -560,6 +573,7 @@ func (s *timerQueueProcessorBaseSuite) TestProcessQueueCollections_SkipRead() {
 	default:
 		s.Fail("timer gate should fire")
 	}
+	timerQueueProcessBase.Stop()
 }
 
 func (s *timerQueueProcessorBaseSuite) TestProcessBatch_HasNextPage() {
@@ -648,6 +662,7 @@ func (s *timerQueueProcessorBaseSuite) TestProcessBatch_HasNextPage() {
 	default:
 		s.Fail("timer gate should fire")
 	}
+	timerQueueProcessBase.Stop()
 }
 
 func (s *timerQueueProcessorBaseSuite) TestProcessBatch_NoNextPage_HasLookAhead() {
@@ -738,6 +753,7 @@ func (s *timerQueueProcessorBaseSuite) TestProcessBatch_NoNextPage_HasLookAhead(
 	default:
 		s.Fail("timer gate should fire")
 	}
+	timerQueueProcessBase.Stop()
 }
 
 func (s *timerQueueProcessorBaseSuite) TestProcessBatch_NoNextPage_NoLookAhead() {
@@ -835,6 +851,7 @@ func (s *timerQueueProcessorBaseSuite) TestProcessBatch_NoNextPage_NoLookAhead()
 		s.Fail("timer gate should not fire")
 	default:
 	}
+	timerQueueProcessBase.Stop()
 }
 
 func (s *timerQueueProcessorBaseSuite) TestTimerProcessorPump_HandleAckLevelUpdate() {
@@ -870,6 +887,7 @@ func (s *timerQueueProcessorBaseSuite) TestTimerProcessorPump_HandleAckLevelUpda
 	case <-time.After(100 * time.Millisecond):
 		s.Fail("Ack level update not called")
 	}
+	timerQueueProcessBase.Stop()
 }
 
 func (s *timerQueueProcessorBaseSuite) TestTimerProcessorPump_SplitQueue() {
@@ -904,6 +922,7 @@ func (s *timerQueueProcessorBaseSuite) TestTimerProcessorPump_SplitQueue() {
 	case <-time.After(100 * time.Millisecond):
 		s.Fail("splitProcessingQueueCollectionFn not called")
 	}
+	timerQueueProcessBase.Stop()
 }
 
 func (s *timerQueueProcessorBaseSuite) newTestTimerQueueProcessorBase(

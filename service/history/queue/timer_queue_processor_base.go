@@ -176,7 +176,10 @@ func (t *timerQueueProcessorBase) Start() {
 
 func (t *timerQueueProcessorBase) Stop() {
 	if !atomic.CompareAndSwapInt32(&t.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
-		return
+		// initialized should also be stopped to stop TimerGate
+		if !atomic.CompareAndSwapInt32(&t.status, common.DaemonStatusInitialized, common.DaemonStatusStopped) {
+			return
+		}
 	}
 
 	t.logger.Info("Timer queue processor state changed", tag.LifeCycleStopping)
