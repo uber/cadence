@@ -23,11 +23,12 @@
 package persistence
 
 import (
-	"github.com/golang/mock/gomock"
-	"github.com/uber/cadence/common/log"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/uber/cadence/common/log"
 )
 
 func TestNewPinotVisibilityTripleManager(t *testing.T) {
