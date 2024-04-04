@@ -135,9 +135,12 @@ func TestRefreshWillNotifySubscribers(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	pp := NewMockPeerProvider(ctrl)
 	var hostsToReturn []HostInfo
+	hostLock := &sync.RWMutex{}
 	pp.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(1)
 	pp.EXPECT().GetMembers("test-service").Times(2).DoAndReturn(func(service string) ([]HostInfo, error) {
+		hostLock.Lock()
 		hostsToReturn = randomHostInfo(5)
+		hostLock.Unlock()
 		time.Sleep(time.Millisecond * 70)
 		return hostsToReturn, nil
 	})
@@ -176,8 +179,7 @@ func TestRefreshWillNotifySubscribers(t *testing.T) {
 	hr.members.refreshed = time.Now().AddDate(0, 0, -1)
 	hr.refreshChan <- changed
 	// Test if internal members are updated
-	_, ok := hr.members.keys[hostsToReturn[0].addr]
-	assert.True(t, ok, "members should contain just-added node")
+	assert.ElementsMatch(t, hr.Members(), hostsToReturn, "members should contain just-added nodes")
 	wg.Wait() // wait until both subscribers will get notification
 
 }
