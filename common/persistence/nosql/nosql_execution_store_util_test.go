@@ -23,6 +23,7 @@
 package nosql
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -35,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+	"github.com/uber/cadence/common/types"
 )
 
 func TestNosqlExecutionStoreUtils(t *testing.T) {
@@ -761,6 +763,124 @@ func TestNosqlExecutionStoreUtilsExtended(t *testing.T) {
 			validate: func(t *testing.T, result interface{}, err error) {
 				assert.Error(t, err)
 				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "prepareCurrentWorkflowRequestForCreateWorkflowTxn - BrandNew mode",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				executionInfo := &persistence.InternalWorkflowExecutionInfo{
+					State:           persistence.WorkflowStateCreated,
+					CloseStatus:     persistence.WorkflowCloseStatusNone,
+					CreateRequestID: "test-create-request-id",
+				}
+				request := &persistence.InternalCreateWorkflowExecutionRequest{
+					Mode: persistence.CreateWorkflowModeBrandNew,
+				}
+				return store.prepareCurrentWorkflowRequestForCreateWorkflowTxn(
+					"test-domain-id", "test-workflow-id", "test-run-id", executionInfo, 123, request)
+			},
+			validate: func(t *testing.T, result interface{}, err error) {
+				assert.NoError(t, err)
+				currentWorkflowReq, ok := result.(*nosqlplugin.CurrentWorkflowWriteRequest)
+				assert.True(t, ok)
+				assert.NotNil(t, currentWorkflowReq)
+				assert.Equal(t, nosqlplugin.CurrentWorkflowWriteModeInsert, currentWorkflowReq.WriteMode)
+			},
+		},
+		{
+			name: "processUpdateWorkflowResult - CurrentWorkflowConditionFailInfo error",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				err := &nosqlplugin.WorkflowOperationConditionFailure{
+					CurrentWorkflowConditionFailInfo: common.StringPtr("current workflow condition failed"),
+				}
+				return nil, store.processUpdateWorkflowResult(err, 99)
+			},
+			validate: func(t *testing.T, _ interface{}, err error) {
+				assert.Error(t, err)
+				_, ok := err.(*persistence.CurrentWorkflowConditionFailedError)
+				assert.True(t, ok)
+			},
+		},
+		{
+			name: "processUpdateWorkflowResult - Success",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				return nil, store.processUpdateWorkflowResult(nil, 99)
+			},
+			validate: func(t *testing.T, _ interface{}, err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name: "processUpdateWorkflowResult - ShardRangeIDNotMatch error",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				err := &nosqlplugin.WorkflowOperationConditionFailure{
+					ShardRangeIDNotMatch: common.Int64Ptr(100),
+				}
+				return nil, store.processUpdateWorkflowResult(err, 99)
+			},
+			validate: func(t *testing.T, _ interface{}, err error) {
+				assert.Error(t, err)
+				_, ok := err.(*persistence.ShardOwnershipLostError)
+				assert.True(t, ok)
+			},
+		},
+		{
+			name: "prepareCurrentWorkflowRequestForCreateWorkflowTxn - WorkflowIDReuse mode with non-completed state",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				executionInfo := &persistence.InternalWorkflowExecutionInfo{
+					State:           persistence.WorkflowStateRunning, // Simulate a running state
+					CloseStatus:     persistence.WorkflowCloseStatusNone,
+					CreateRequestID: "test-create-request-id",
+				}
+				request := &persistence.InternalCreateWorkflowExecutionRequest{
+					Mode:                     persistence.CreateWorkflowModeWorkflowIDReuse,
+					PreviousRunID:            "test-run-id",
+					PreviousLastWriteVersion: 123, // Simulating a non-completed state with a valid version
+				}
+				return store.prepareCurrentWorkflowRequestForCreateWorkflowTxn(
+					"test-domain-id", "test-workflow-id", "test-run-id", executionInfo, 123, request)
+			},
+			validate: func(t *testing.T, result interface{}, err error) {
+				_, ok := err.(*persistence.CurrentWorkflowConditionFailedError)
+				assert.False(t, ok)
+			},
+		},
+		{
+			name: "assertNotCurrentExecution - Success with different RunID",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				ctx := context.Background()
+				mockDB := store.db.(*nosqlplugin.MockDB)
+				mockDB.EXPECT().SelectCurrentWorkflow(
+					gomock.Any(),
+					store.shardID,
+					"test-domain-id",
+					"test-workflow-id",
+				).Return(&nosqlplugin.CurrentWorkflowRow{
+					RunID: "different-run-id",
+				}, nil)
+				return nil, store.assertNotCurrentExecution(ctx, "test-domain-id", "test-workflow-id", "expected-run-id")
+			},
+			validate: func(t *testing.T, _ interface{}, err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name: "assertNotCurrentExecution - No current workflow",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				ctx := context.Background()
+				mockDB := store.db.(*nosqlplugin.MockDB)
+
+				mockDB.EXPECT().SelectCurrentWorkflow(
+					gomock.Any(),
+					store.shardID,
+					"test-domain-id",
+					"test-workflow-id",
+				).Return(nil, &types.EntityNotExistsError{})
+				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(true).AnyTimes()
+				return nil, store.assertNotCurrentExecution(ctx, "test-domain-id", "test-workflow-id", "expected-run-id")
+			},
+			validate: func(t *testing.T, _ interface{}, err error) {
+				assert.NoError(t, err)
 			},
 		},
 	}
