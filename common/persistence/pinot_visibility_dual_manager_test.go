@@ -35,7 +35,8 @@ import (
 	"github.com/uber/cadence/common/log"
 )
 
-func TestNewVisibilityDualManager(t *testing.T) {
+func TestNewPinotVisibilityDualManager(t *testing.T) {
+	// put this outside because need to use it as an input of the table tests
 	ctrl := gomock.NewController(t)
 
 	tests := map[string]struct {
@@ -55,13 +56,14 @@ func TestNewVisibilityDualManager(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			assert.NotPanics(t, func() {
-				NewVisibilityDualManager(test.mockDBVisibilityManager, test.mockESVisibilityManager, nil, nil, log.NewNoop())
+				NewPinotVisibilityDualManager(test.mockDBVisibilityManager, test.mockESVisibilityManager, nil, nil, log.NewNoop())
 			})
 		})
 	}
 }
 
-func TestDualManagerClose(t *testing.T) {
+func TestPinotDualManagerClose(t *testing.T) {
+	// put this outside because need to use it as an input of the table tests
 	ctrl := gomock.NewController(t)
 
 	tests := map[string]struct {
@@ -91,7 +93,7 @@ func TestDualManagerClose(t *testing.T) {
 			if test.mockESVisibilityManager != nil {
 				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
-			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager, test.mockESVisibilityManager, nil, nil, log.NewNoop())
+			visibilityManager := NewPinotVisibilityDualManager(test.mockDBVisibilityManager, test.mockESVisibilityManager, nil, nil, log.NewNoop())
 			assert.NotPanics(t, func() {
 				visibilityManager.Close()
 			})
@@ -99,7 +101,8 @@ func TestDualManagerClose(t *testing.T) {
 	}
 }
 
-func TestDualManagerGetName(t *testing.T) {
+func TestPinotDualManagerGetName(t *testing.T) {
+	// put this outside because need to use it as an input of the table tests
 	ctrl := gomock.NewController(t)
 
 	tests := map[string]struct {
@@ -130,7 +133,7 @@ func TestDualManagerGetName(t *testing.T) {
 			if test.mockESVisibilityManager != nil {
 				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
-			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager, test.mockESVisibilityManager, nil, nil, log.NewNoop())
+			visibilityManager := NewPinotVisibilityDualManager(test.mockDBVisibilityManager, test.mockESVisibilityManager, nil, nil, log.NewNoop())
 
 			assert.NotPanics(t, func() {
 				visibilityManager.GetName()
@@ -139,9 +142,10 @@ func TestDualManagerGetName(t *testing.T) {
 	}
 }
 
-func TestDualRecordWorkflowExecutionStarted(t *testing.T) {
+func TestPinotDualRecordWorkflowExecutionStarted(t *testing.T) {
 	request := &RecordWorkflowExecutionStartedRequest{}
 
+	// put this outside because need to use it as an input of the table tests
 	ctrl := gomock.NewController(t)
 
 	tests := map[string]struct {
@@ -180,7 +184,7 @@ func TestDualRecordWorkflowExecutionStarted(t *testing.T) {
 			if test.mockESVisibilityManager != nil {
 				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
-			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+			visibilityManager := NewPinotVisibilityDualManager(test.mockDBVisibilityManager,
 				test.mockESVisibilityManager, nil, test.advancedVisibilityWritingMode, log.NewNoop())
 
 			err := visibilityManager.RecordWorkflowExecutionStarted(context.Background(), test.request)
@@ -193,9 +197,10 @@ func TestDualRecordWorkflowExecutionStarted(t *testing.T) {
 	}
 }
 
-func TestDualRecordWorkflowExecutionClosed(t *testing.T) {
+func TestPinotDualRecordWorkflowExecutionClosed(t *testing.T) {
 	request := &RecordWorkflowExecutionClosedRequest{}
 
+	// put this outside because need to use it as an input of the table tests
 	ctrl := gomock.NewController(t)
 
 	tests := map[string]struct {
@@ -342,7 +347,7 @@ func TestDualRecordWorkflowExecutionClosed(t *testing.T) {
 			if test.mockESVisibilityManager != nil {
 				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
-			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+			visibilityManager := NewPinotVisibilityDualManager(test.mockDBVisibilityManager,
 				test.mockESVisibilityManager, nil, test.advancedVisibilityWritingMode, log.NewNoop())
 
 			err := visibilityManager.RecordWorkflowExecutionClosed(test.context, test.request)
@@ -356,20 +361,21 @@ func TestDualRecordWorkflowExecutionClosed(t *testing.T) {
 }
 
 // test an edge case
-func TestChooseVisibilityModeForAdmin(t *testing.T) {
+func TestPinotChooseVisibilityModeForAdmin(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	dbManager := NewMockVisibilityManager(ctrl)
 	esManager := NewMockVisibilityManager(ctrl)
-	mgr := NewVisibilityDualManager(dbManager, esManager, nil, nil, log.NewNoop())
-	dualManager := mgr.(*visibilityDualManager)
+	mgr := NewPinotVisibilityDualManager(dbManager, esManager, nil, nil, log.NewNoop())
+	dualManager := mgr.(*pinotVisibilityDualManager)
 	dualManager.dbVisibilityManager = nil
-	dualManager.esVisibilityManager = nil
+	dualManager.pinotVisibilityManager = nil
 	assert.Equal(t, "INVALID_ADMIN_MODE", dualManager.chooseVisibilityModeForAdmin())
 }
 
-func TestDualRecordWorkflowExecutionUninitialized(t *testing.T) {
+func TestPinotDualRecordWorkflowExecutionUninitialized(t *testing.T) {
 	request := &RecordWorkflowExecutionUninitializedRequest{}
 
+	// put this outside because need to use it as an input of the table tests
 	ctrl := gomock.NewController(t)
 
 	tests := map[string]struct {
@@ -408,7 +414,7 @@ func TestDualRecordWorkflowExecutionUninitialized(t *testing.T) {
 			if test.mockESVisibilityManager != nil {
 				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
-			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+			visibilityManager := NewPinotVisibilityDualManager(test.mockDBVisibilityManager,
 				test.mockESVisibilityManager, nil, test.advancedVisibilityWritingMode, log.NewNoop())
 
 			err := visibilityManager.RecordWorkflowExecutionUninitialized(context.Background(), test.request)
@@ -421,9 +427,10 @@ func TestDualRecordWorkflowExecutionUninitialized(t *testing.T) {
 	}
 }
 
-func TestDualUpsertWorkflowExecution(t *testing.T) {
+func TestPinotDualUpsertWorkflowExecution(t *testing.T) {
 	request := &UpsertWorkflowExecutionRequest{}
 
+	// put this outside because need to use it as an input of the table tests
 	ctrl := gomock.NewController(t)
 
 	tests := map[string]struct {
@@ -462,7 +469,7 @@ func TestDualUpsertWorkflowExecution(t *testing.T) {
 			if test.mockESVisibilityManager != nil {
 				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
-			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+			visibilityManager := NewPinotVisibilityDualManager(test.mockDBVisibilityManager,
 				test.mockESVisibilityManager, nil, test.advancedVisibilityWritingMode, log.NewNoop())
 
 			err := visibilityManager.UpsertWorkflowExecution(context.Background(), test.request)
@@ -475,9 +482,10 @@ func TestDualUpsertWorkflowExecution(t *testing.T) {
 	}
 }
 
-func TestDualDeleteWorkflowExecution(t *testing.T) {
+func TestPinotDualDeleteWorkflowExecution(t *testing.T) {
 	request := &VisibilityDeleteWorkflowExecutionRequest{}
 
+	// put this outside because need to use it as an input of the table tests
 	ctrl := gomock.NewController(t)
 
 	tests := map[string]struct {
@@ -516,7 +524,7 @@ func TestDualDeleteWorkflowExecution(t *testing.T) {
 			if test.mockESVisibilityManager != nil {
 				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
-			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+			visibilityManager := NewPinotVisibilityDualManager(test.mockDBVisibilityManager,
 				test.mockESVisibilityManager, nil, test.advancedVisibilityWritingMode, log.NewNoop())
 
 			err := visibilityManager.DeleteWorkflowExecution(context.Background(), test.request)
@@ -529,9 +537,10 @@ func TestDualDeleteWorkflowExecution(t *testing.T) {
 	}
 }
 
-func TestDualDeleteUninitializedWorkflowExecution(t *testing.T) {
+func TestPinotDualDeleteUninitializedWorkflowExecution(t *testing.T) {
 	request := &VisibilityDeleteWorkflowExecutionRequest{}
 
+	// put this outside because need to use it as an input of the table tests
 	ctrl := gomock.NewController(t)
 
 	tests := map[string]struct {
@@ -570,7 +579,7 @@ func TestDualDeleteUninitializedWorkflowExecution(t *testing.T) {
 			if test.mockESVisibilityManager != nil {
 				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
-			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+			visibilityManager := NewPinotVisibilityDualManager(test.mockDBVisibilityManager,
 				test.mockESVisibilityManager, nil, test.advancedVisibilityWritingMode, log.NewNoop())
 
 			err := visibilityManager.DeleteUninitializedWorkflowExecution(context.Background(), test.request)
@@ -583,11 +592,12 @@ func TestDualDeleteUninitializedWorkflowExecution(t *testing.T) {
 	}
 }
 
-func TestDualListOpenWorkflowExecutions(t *testing.T) {
+func TestPinotDualListOpenWorkflowExecutions(t *testing.T) {
 	request := &ListWorkflowExecutionsRequest{
 		Domain: "test-domain",
 	}
 
+	// put this outside because need to use it as an input of the table tests
 	ctrl := gomock.NewController(t)
 
 	tests := map[string]struct {
@@ -626,7 +636,7 @@ func TestDualListOpenWorkflowExecutions(t *testing.T) {
 			if test.mockESVisibilityManager != nil {
 				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
-			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+			visibilityManager := NewPinotVisibilityDualManager(test.mockDBVisibilityManager,
 				test.mockESVisibilityManager, test.readModeIsFromES, nil, log.NewNoop())
 
 			_, err := visibilityManager.ListOpenWorkflowExecutions(context.Background(), test.request)
@@ -639,11 +649,12 @@ func TestDualListOpenWorkflowExecutions(t *testing.T) {
 	}
 }
 
-func TestDualListClosedWorkflowExecutions(t *testing.T) {
+func TestPinotDualListClosedWorkflowExecutions(t *testing.T) {
 	request := &ListWorkflowExecutionsRequest{
 		Domain: "test-domain",
 	}
 
+	// put this outside because need to use it as an input of the table tests
 	ctrl := gomock.NewController(t)
 
 	tests := map[string]struct {
@@ -700,7 +711,7 @@ func TestDualListClosedWorkflowExecutions(t *testing.T) {
 			if test.mockESVisibilityManager != nil {
 				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
-			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+			visibilityManager := NewPinotVisibilityDualManager(test.mockDBVisibilityManager,
 				test.mockESVisibilityManager, test.readModeIsFromES, nil, log.NewNoop())
 
 			_, err := visibilityManager.ListClosedWorkflowExecutions(context.Background(), test.request)
@@ -713,13 +724,14 @@ func TestDualListClosedWorkflowExecutions(t *testing.T) {
 	}
 }
 
-func TestDualListOpenWorkflowExecutionsByType(t *testing.T) {
+func TestPinotDualListOpenWorkflowExecutionsByType(t *testing.T) {
 	request := &ListWorkflowExecutionsByTypeRequest{
 		ListWorkflowExecutionsRequest: ListWorkflowExecutionsRequest{
 			Domain: "test-domain",
 		},
 	}
 
+	// put this outside because need to use it as an input of the table tests
 	ctrl := gomock.NewController(t)
 
 	tests := map[string]struct {
@@ -758,7 +770,7 @@ func TestDualListOpenWorkflowExecutionsByType(t *testing.T) {
 			if test.mockESVisibilityManager != nil {
 				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
-			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+			visibilityManager := NewPinotVisibilityDualManager(test.mockDBVisibilityManager,
 				test.mockESVisibilityManager, test.readModeIsFromES, nil, log.NewNoop())
 
 			_, err := visibilityManager.ListOpenWorkflowExecutionsByType(context.Background(), test.request)
@@ -771,13 +783,14 @@ func TestDualListOpenWorkflowExecutionsByType(t *testing.T) {
 	}
 }
 
-func TestDualListClosedWorkflowExecutionsByType(t *testing.T) {
+func TestPinotDualListClosedWorkflowExecutionsByType(t *testing.T) {
 	request := &ListWorkflowExecutionsByTypeRequest{
 		ListWorkflowExecutionsRequest: ListWorkflowExecutionsRequest{
 			Domain: "test-domain",
 		},
 	}
 
+	// put this outside because need to use it as an input of the table tests
 	ctrl := gomock.NewController(t)
 
 	tests := map[string]struct {
@@ -816,7 +829,7 @@ func TestDualListClosedWorkflowExecutionsByType(t *testing.T) {
 			if test.mockESVisibilityManager != nil {
 				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
-			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+			visibilityManager := NewPinotVisibilityDualManager(test.mockDBVisibilityManager,
 				test.mockESVisibilityManager, test.readModeIsFromES, nil, log.NewNoop())
 
 			_, err := visibilityManager.ListClosedWorkflowExecutionsByType(context.Background(), test.request)
@@ -829,13 +842,14 @@ func TestDualListClosedWorkflowExecutionsByType(t *testing.T) {
 	}
 }
 
-func TestDualListOpenWorkflowExecutionsByWorkflowID(t *testing.T) {
+func TestPinotDualListOpenWorkflowExecutionsByWorkflowID(t *testing.T) {
 	request := &ListWorkflowExecutionsByWorkflowIDRequest{
 		ListWorkflowExecutionsRequest: ListWorkflowExecutionsRequest{
 			Domain: "test-domain",
 		},
 	}
 
+	// put this outside because need to use it as an input of the table tests
 	ctrl := gomock.NewController(t)
 
 	tests := map[string]struct {
@@ -874,7 +888,7 @@ func TestDualListOpenWorkflowExecutionsByWorkflowID(t *testing.T) {
 			if test.mockESVisibilityManager != nil {
 				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
-			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+			visibilityManager := NewPinotVisibilityDualManager(test.mockDBVisibilityManager,
 				test.mockESVisibilityManager, test.readModeIsFromES, nil, log.NewNoop())
 
 			_, err := visibilityManager.ListOpenWorkflowExecutionsByWorkflowID(context.Background(), test.request)
@@ -887,13 +901,14 @@ func TestDualListOpenWorkflowExecutionsByWorkflowID(t *testing.T) {
 	}
 }
 
-func TestDualListClosedWorkflowExecutionsByWorkflowID(t *testing.T) {
+func TestPinotDualListClosedWorkflowExecutionsByWorkflowID(t *testing.T) {
 	request := &ListWorkflowExecutionsByWorkflowIDRequest{
 		ListWorkflowExecutionsRequest: ListWorkflowExecutionsRequest{
 			Domain: "test-domain",
 		},
 	}
 
+	// put this outside because need to use it as an input of the table tests
 	ctrl := gomock.NewController(t)
 
 	tests := map[string]struct {
@@ -932,7 +947,7 @@ func TestDualListClosedWorkflowExecutionsByWorkflowID(t *testing.T) {
 			if test.mockESVisibilityManager != nil {
 				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
-			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+			visibilityManager := NewPinotVisibilityDualManager(test.mockDBVisibilityManager,
 				test.mockESVisibilityManager, test.readModeIsFromES, nil, log.NewNoop())
 
 			_, err := visibilityManager.ListClosedWorkflowExecutionsByWorkflowID(context.Background(), test.request)
@@ -945,13 +960,14 @@ func TestDualListClosedWorkflowExecutionsByWorkflowID(t *testing.T) {
 	}
 }
 
-func TestDualListClosedWorkflowExecutionsByStatus(t *testing.T) {
+func TestPinotDualListClosedWorkflowExecutionsByStatus(t *testing.T) {
 	request := &ListClosedWorkflowExecutionsByStatusRequest{
 		ListWorkflowExecutionsRequest: ListWorkflowExecutionsRequest{
 			Domain: "test-domain",
 		},
 	}
 
+	// put this outside because need to use it as an input of the table tests
 	ctrl := gomock.NewController(t)
 
 	tests := map[string]struct {
@@ -990,7 +1006,7 @@ func TestDualListClosedWorkflowExecutionsByStatus(t *testing.T) {
 			if test.mockESVisibilityManager != nil {
 				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
-			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+			visibilityManager := NewPinotVisibilityDualManager(test.mockDBVisibilityManager,
 				test.mockESVisibilityManager, test.readModeIsFromES, nil, log.NewNoop())
 
 			_, err := visibilityManager.ListClosedWorkflowExecutionsByStatus(context.Background(), test.request)
@@ -1003,11 +1019,12 @@ func TestDualListClosedWorkflowExecutionsByStatus(t *testing.T) {
 	}
 }
 
-func TestDualGetClosedWorkflowExecution(t *testing.T) {
+func TestPinotDualGetClosedWorkflowExecution(t *testing.T) {
 	request := &GetClosedWorkflowExecutionRequest{
 		Domain: "test-domain",
 	}
 
+	// put this outside because need to use it as an input of the table tests
 	ctrl := gomock.NewController(t)
 
 	tests := map[string]struct {
@@ -1046,7 +1063,7 @@ func TestDualGetClosedWorkflowExecution(t *testing.T) {
 			if test.mockESVisibilityManager != nil {
 				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
-			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+			visibilityManager := NewPinotVisibilityDualManager(test.mockDBVisibilityManager,
 				test.mockESVisibilityManager, test.readModeIsFromES, nil, log.NewNoop())
 
 			_, err := visibilityManager.GetClosedWorkflowExecution(context.Background(), test.request)
@@ -1059,11 +1076,12 @@ func TestDualGetClosedWorkflowExecution(t *testing.T) {
 	}
 }
 
-func TestDualListWorkflowExecutions(t *testing.T) {
+func TestPinotDualListWorkflowExecutions(t *testing.T) {
 	request := &ListWorkflowExecutionsByQueryRequest{
 		Domain: "test-domain",
 	}
 
+	// put this outside because need to use it as an input of the table tests
 	ctrl := gomock.NewController(t)
 
 	tests := map[string]struct {
@@ -1102,7 +1120,7 @@ func TestDualListWorkflowExecutions(t *testing.T) {
 			if test.mockESVisibilityManager != nil {
 				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
-			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+			visibilityManager := NewPinotVisibilityDualManager(test.mockDBVisibilityManager,
 				test.mockESVisibilityManager, test.readModeIsFromES, nil, log.NewNoop())
 
 			_, err := visibilityManager.ListWorkflowExecutions(context.Background(), test.request)
@@ -1115,11 +1133,12 @@ func TestDualListWorkflowExecutions(t *testing.T) {
 	}
 }
 
-func TestDualScanWorkflowExecutions(t *testing.T) {
+func TestPinotDualScanWorkflowExecutions(t *testing.T) {
 	request := &ListWorkflowExecutionsByQueryRequest{
 		Domain: "test-domain",
 	}
 
+	// put this outside because need to use it as an input of the table tests
 	ctrl := gomock.NewController(t)
 
 	tests := map[string]struct {
@@ -1158,7 +1177,7 @@ func TestDualScanWorkflowExecutions(t *testing.T) {
 			if test.mockESVisibilityManager != nil {
 				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
-			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+			visibilityManager := NewPinotVisibilityDualManager(test.mockDBVisibilityManager,
 				test.mockESVisibilityManager, test.readModeIsFromES, nil, log.NewNoop())
 
 			_, err := visibilityManager.ScanWorkflowExecutions(context.Background(), test.request)
@@ -1171,7 +1190,7 @@ func TestDualScanWorkflowExecutions(t *testing.T) {
 	}
 }
 
-func TestDualCountWorkflowExecutions(t *testing.T) {
+func TestPinotDualCountWorkflowExecutions(t *testing.T) {
 	request := &CountWorkflowExecutionsRequest{
 		Domain: "test-domain",
 	}
@@ -1214,7 +1233,7 @@ func TestDualCountWorkflowExecutions(t *testing.T) {
 			if test.mockESVisibilityManager != nil {
 				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
-			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+			visibilityManager := NewPinotVisibilityDualManager(test.mockDBVisibilityManager,
 				test.mockESVisibilityManager, test.readModeIsFromES, nil, log.NewNoop())
 
 			_, err := visibilityManager.CountWorkflowExecutions(context.Background(), test.request)
