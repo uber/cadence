@@ -253,6 +253,7 @@ func (s *failoverWatcherSuite) TestStart() {
 	// Verify that calling Start again does not change the status
 	s.watcher.Start()
 	s.Assertions.Equal(common.DaemonStatusStarted, s.watcher.status)
+	s.watcher.Stop()
 }
 
 func (s *failoverWatcherSuite) TestIsUpdateDomainRetryable() {
