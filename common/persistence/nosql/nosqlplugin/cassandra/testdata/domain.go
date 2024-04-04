@@ -61,10 +61,11 @@ func NewDomainRow(ts time.Time) *nosqlplugin.DomainRow {
 				},
 			},
 		},
-		IsGlobalDomain:  true,
-		ConfigVersion:   3,
-		FailoverVersion: 4,
-		FailoverEndTime: &ts,
-		LastUpdatedTime: ts,
+		IsGlobalDomain:      true,
+		ConfigVersion:       3,
+		FailoverVersion:     4,
+		FailoverEndTime:     &ts,
+		LastUpdatedTime:     ts,
+		NotificationVersion: 5,
 	}
 }
