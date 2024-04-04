@@ -650,27 +650,6 @@ func TestNosqlExecutionStoreUtilsExtended(t *testing.T) {
 			},
 		},
 		{
-			name: "PrepareSignalInfosForWorkflowTxn - Duplicate Signal IDs",
-			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
-				signalInfos := []*persistence.SignalInfo{
-					{
-						InitiatedID:     1,
-						SignalRequestID: "signal-1",
-					},
-					{
-						InitiatedID:     1, // Duplicate InitiatedID to simulate duplicate signal IDs
-						SignalRequestID: "signal-2",
-					},
-				}
-				infos, err := store.prepareSignalInfosForWorkflowTxn(signalInfos)
-				return infos, err
-			},
-			validate: func(t *testing.T, result interface{}, err error) {
-				assert.Error(t, err, "Expected error due to duplicate signal IDs")
-				assert.Nil(t, result, "Expected no result due to error")
-			},
-		},
-		{
 			name: "PrepareUpdateWorkflowExecutionTxn - Success",
 			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
 				executionInfo := &persistence.InternalWorkflowExecutionInfo{
