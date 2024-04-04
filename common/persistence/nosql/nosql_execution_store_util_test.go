@@ -23,6 +23,7 @@
 package nosql
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -35,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+	"github.com/uber/cadence/common/types"
 )
 
 func TestNosqlExecutionStoreUtils(t *testing.T) {
@@ -630,6 +632,255 @@ func TestNosqlExecutionStoreUtilsExtended(t *testing.T) {
 				cancels := result.(map[int64]*persistence.RequestCancelInfo)
 				assert.Equal(t, 1, len(cancels))
 				assert.Equal(t, "cancel-1-duplicate", cancels[1].CancelRequestID)
+			},
+		},
+		{
+			name: "PrepareSignalInfosForWorkflowTxn - Success",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				signalInfos := []*persistence.SignalInfo{
+					{InitiatedID: 1, SignalRequestID: "signal-1"},
+					{InitiatedID: 2, SignalRequestID: "signal-2"},
+				}
+				return store.prepareSignalInfosForWorkflowTxn(signalInfos)
+			},
+			validate: func(t *testing.T, result interface{}, err error) {
+				assert.NoError(t, err)
+				infos := result.(map[int64]*persistence.SignalInfo)
+				assert.Equal(t, 2, len(infos))
+				assert.Equal(t, "signal-1", infos[1].SignalRequestID)
+				assert.Equal(t, "signal-2", infos[2].SignalRequestID)
+			},
+		},
+		{
+			name: "PrepareUpdateWorkflowExecutionTxn - Success",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				executionInfo := &persistence.InternalWorkflowExecutionInfo{
+					DomainID:    "test-domain-id",
+					WorkflowID:  "test-workflow-id",
+					RunID:       "test-run-id",
+					State:       persistence.WorkflowStateRunning,
+					CloseStatus: persistence.WorkflowCloseStatusNone,
+				}
+				versionHistories := &persistence.DataBlob{
+					Encoding: common.EncodingTypeJSON,
+					Data:     []byte(`[{"Branches":[{"BranchID":"test-branch-id","BeginNodeID":1,"EndNodeID":2}]}]`),
+				}
+				checksum := checksum.Checksum{Version: 1,
+					Value: []byte("create-checksum")}
+				return store.prepareUpdateWorkflowExecutionTxn(executionInfo, versionHistories, checksum, time.Now(), 123)
+			},
+			validate: func(t *testing.T, result interface{}, err error) {
+				assert.NoError(t, err)
+				req := result.(*nosqlplugin.WorkflowExecutionRequest)
+				assert.Equal(t, "test-domain-id", req.DomainID)
+				assert.Equal(t, int64(123), req.LastWriteVersion)
+			},
+		},
+		{
+			name: "PrepareUpdateWorkflowExecutionTxn - Emptyvalues",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				executionInfo := &persistence.InternalWorkflowExecutionInfo{
+					DomainID:   "",
+					WorkflowID: "",
+					State:      persistence.WorkflowStateCompleted,
+				}
+				versionHistories := &persistence.DataBlob{
+					Encoding: common.EncodingTypeJSON,
+					Data:     []byte(`[{"Branches":[{"BranchID":"branch-id","BeginNodeID":1,"EndNodeID":2}]}]`),
+				}
+				checksum := checksum.Checksum{Version: 1, Value: []byte("checksum")}
+				// This should result in an error due to invalid executionInfo state for the creation scenario
+				return store.prepareUpdateWorkflowExecutionTxn(executionInfo, versionHistories, checksum, time.Now(), 123)
+			},
+			validate: func(t *testing.T, result interface{}, err error) {
+				assert.Error(t, err) // Expect an error due to invalid state
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "PrepareUpdateWorkflowExecutionTxn - Invalid Workflow State",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				executionInfo := &persistence.InternalWorkflowExecutionInfo{
+					DomainID:    "domainID-invalid-state",
+					WorkflowID:  "workflowID-invalid-state",
+					RunID:       "runID-invalid-state",
+					State:       343, // Invalid state
+					CloseStatus: persistence.WorkflowCloseStatusNone,
+				}
+				versionHistories := &persistence.DataBlob{
+					Encoding: common.EncodingTypeJSON,
+					Data:     []byte(`[{"Branches":[{"BranchID":"branch-id","BeginNodeID":1,"EndNodeID":2}]}]`),
+				}
+				checksum := checksum.Checksum{Version: 1, Value: []byte("checksum")}
+				return store.prepareUpdateWorkflowExecutionTxn(executionInfo, versionHistories, checksum, time.Now(), 123)
+			},
+			validate: func(t *testing.T, result interface{}, err error) {
+				assert.Error(t, err)  // Expect an error due to invalid workflow state
+				assert.Nil(t, result) // No WorkflowExecutionRequest should be returned
+			},
+		},
+		{
+			name: "PrepareCreateWorkflowExecutionTxn - Success",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				executionInfo := &persistence.InternalWorkflowExecutionInfo{
+					DomainID:    "create-domain-id",
+					WorkflowID:  "create-workflow-id",
+					RunID:       "create-run-id",
+					State:       persistence.WorkflowStateCreated,
+					CloseStatus: persistence.WorkflowCloseStatusNone,
+				}
+				versionHistories := &persistence.DataBlob{
+					Encoding: common.EncodingTypeJSON,
+					Data:     []byte(`[{"Branches":[{"BranchID":"create-branch-id","BeginNodeID":1,"EndNodeID":2}]}]`),
+				}
+				checksum := checksum.Checksum{Version: 1, Value: []byte("create-checksum")}
+				return store.prepareCreateWorkflowExecutionTxn(executionInfo, versionHistories, checksum, time.Now(), 123)
+			},
+			validate: func(t *testing.T, result interface{}, err error) {
+				assert.NoError(t, err)
+				req := result.(*nosqlplugin.WorkflowExecutionRequest)
+				assert.Equal(t, "create-domain-id", req.DomainID)
+				assert.Equal(t, int64(123), req.LastWriteVersion)
+			},
+		},
+		{
+			name: "PrepareCreateWorkflowExecutionTxn - Invalid State",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				executionInfo := &persistence.InternalWorkflowExecutionInfo{
+					DomainID:    "create-domain-id",
+					WorkflowID:  "create-workflow-id",
+					RunID:       "create-run-id",
+					State:       232, // Invalid state for creating a workflow execution
+					CloseStatus: persistence.WorkflowCloseStatusNone,
+				}
+				versionHistories := &persistence.DataBlob{
+					Encoding: common.EncodingTypeJSON,
+					Data:     []byte(`[{"Branches":[{"BranchID":"create-branch-id","BeginNodeID":1,"EndNodeID":2}]}]`),
+				}
+				checksum := checksum.Checksum{Version: 1, Value: []byte("create-checksum")}
+				return store.prepareCreateWorkflowExecutionTxn(executionInfo, versionHistories, checksum, time.Now(), 123)
+			},
+			validate: func(t *testing.T, result interface{}, err error) {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "prepareCurrentWorkflowRequestForCreateWorkflowTxn - BrandNew mode",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				executionInfo := &persistence.InternalWorkflowExecutionInfo{
+					State:           persistence.WorkflowStateCreated,
+					CloseStatus:     persistence.WorkflowCloseStatusNone,
+					CreateRequestID: "test-create-request-id",
+				}
+				request := &persistence.InternalCreateWorkflowExecutionRequest{
+					Mode: persistence.CreateWorkflowModeBrandNew,
+				}
+				return store.prepareCurrentWorkflowRequestForCreateWorkflowTxn(
+					"test-domain-id", "test-workflow-id", "test-run-id", executionInfo, 123, request)
+			},
+			validate: func(t *testing.T, result interface{}, err error) {
+				assert.NoError(t, err)
+				currentWorkflowReq, ok := result.(*nosqlplugin.CurrentWorkflowWriteRequest)
+				assert.True(t, ok)
+				assert.NotNil(t, currentWorkflowReq)
+				assert.Equal(t, nosqlplugin.CurrentWorkflowWriteModeInsert, currentWorkflowReq.WriteMode)
+			},
+		},
+		{
+			name: "processUpdateWorkflowResult - CurrentWorkflowConditionFailInfo error",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				err := &nosqlplugin.WorkflowOperationConditionFailure{
+					CurrentWorkflowConditionFailInfo: common.StringPtr("current workflow condition failed"),
+				}
+				return nil, store.processUpdateWorkflowResult(err, 99)
+			},
+			validate: func(t *testing.T, _ interface{}, err error) {
+				assert.Error(t, err)
+				_, ok := err.(*persistence.CurrentWorkflowConditionFailedError)
+				assert.True(t, ok)
+			},
+		},
+		{
+			name: "processUpdateWorkflowResult - Success",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				return nil, store.processUpdateWorkflowResult(nil, 99)
+			},
+			validate: func(t *testing.T, _ interface{}, err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name: "processUpdateWorkflowResult - ShardRangeIDNotMatch error",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				err := &nosqlplugin.WorkflowOperationConditionFailure{
+					ShardRangeIDNotMatch: common.Int64Ptr(100),
+				}
+				return nil, store.processUpdateWorkflowResult(err, 99)
+			},
+			validate: func(t *testing.T, _ interface{}, err error) {
+				assert.Error(t, err)
+				_, ok := err.(*persistence.ShardOwnershipLostError)
+				assert.True(t, ok)
+			},
+		},
+		{
+			name: "prepareCurrentWorkflowRequestForCreateWorkflowTxn - WorkflowIDReuse mode with non-completed state",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				executionInfo := &persistence.InternalWorkflowExecutionInfo{
+					State:           persistence.WorkflowStateRunning, // Simulate a running state
+					CloseStatus:     persistence.WorkflowCloseStatusNone,
+					CreateRequestID: "test-create-request-id",
+				}
+				request := &persistence.InternalCreateWorkflowExecutionRequest{
+					Mode:                     persistence.CreateWorkflowModeWorkflowIDReuse,
+					PreviousRunID:            "test-run-id",
+					PreviousLastWriteVersion: 123, // Simulating a non-completed state with a valid version
+				}
+				return store.prepareCurrentWorkflowRequestForCreateWorkflowTxn(
+					"test-domain-id", "test-workflow-id", "test-run-id", executionInfo, 123, request)
+			},
+			validate: func(t *testing.T, result interface{}, err error) {
+				_, ok := err.(*persistence.CurrentWorkflowConditionFailedError)
+				assert.False(t, ok)
+			},
+		},
+		{
+			name: "assertNotCurrentExecution - Success with different RunID",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				ctx := context.Background()
+				mockDB := store.db.(*nosqlplugin.MockDB)
+				mockDB.EXPECT().SelectCurrentWorkflow(
+					gomock.Any(),
+					store.shardID,
+					"test-domain-id",
+					"test-workflow-id",
+				).Return(&nosqlplugin.CurrentWorkflowRow{
+					RunID: "different-run-id",
+				}, nil)
+				return nil, store.assertNotCurrentExecution(ctx, "test-domain-id", "test-workflow-id", "expected-run-id")
+			},
+			validate: func(t *testing.T, _ interface{}, err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name: "assertNotCurrentExecution - No current workflow",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				ctx := context.Background()
+				mockDB := store.db.(*nosqlplugin.MockDB)
+
+				mockDB.EXPECT().SelectCurrentWorkflow(
+					gomock.Any(),
+					store.shardID,
+					"test-domain-id",
+					"test-workflow-id",
+				).Return(nil, &types.EntityNotExistsError{})
+				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(true).AnyTimes()
+				return nil, store.assertNotCurrentExecution(ctx, "test-domain-id", "test-workflow-id", "expected-run-id")
+			},
+			validate: func(t *testing.T, _ interface{}, err error) {
+				assert.NoError(t, err)
 			},
 		},
 	}
