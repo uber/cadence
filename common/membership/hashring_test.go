@@ -179,7 +179,9 @@ func TestRefreshWillNotifySubscribers(t *testing.T) {
 	hr.members.refreshed = time.Now().AddDate(0, 0, -1)
 	hr.refreshChan <- changed
 	// Test if internal members are updated
+	hostLock.RLock()
 	assert.ElementsMatch(t, hr.Members(), hostsToReturn, "members should contain just-added nodes")
+	hostLock.RUnlock()
 	wg.Wait() // wait until both subscribers will get notification
 
 }
