@@ -77,7 +77,7 @@ func (s *failoverWatcherSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
 
 	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
-	s.timeSource = clock.NewRealTimeSource()
+	s.timeSource = clock.NewMockedTimeSource()
 	s.mockMetadataMgr = &mocks.MetadataManager{}
 
 	s.mockMetadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{
@@ -279,6 +279,7 @@ func (s *failoverWatcherSuite) TestRefreshDomainLoop() {
 	domainName := "testDomain"
 	domainID := uuid.New()
 	failoverEndTime := common.Int64Ptr(time.Now().Add(-time.Hour).UnixNano()) // 1 hour in the past
+	mockTimeSource, _ := s.timeSource.(clock.MockedTimeSource)
 
 	domainInfo := &persistence.DomainInfo{ID: domainID, Name: domainName}
 	domainConfig := &persistence.DomainConfig{Retention: 1, EmitMetric: true}
@@ -307,13 +308,13 @@ func (s *failoverWatcherSuite) TestRefreshDomainLoop() {
 	s.watcher.Start()
 
 	// Delay to allow loop to start
-	time.Sleep(12 * time.Second)
-
+	time.Sleep(1 * time.Second)
+	mockTimeSource.Advance(12 * time.Second)
 	// Now stop the watcher, which should trigger the shutdown case in refreshDomainLoop
 	s.watcher.Stop()
 
 	// Enough time for shutdown process to complete
-	time.Sleep(2 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	s.mockMetadataMgr.AssertExpectations(s.T())
 }
