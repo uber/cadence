@@ -274,6 +274,7 @@ var (
 		PrevAutoResetPoints:                 &ResetPoints,
 		Header:                              &Header,
 		PartitionConfig:                     PartitionConfig,
+		RequestID:                           RequestID,
 	}
 	WorkflowExecutionCompletedEventAttributes = types.WorkflowExecutionCompletedEventAttributes{
 		Result:                       Payload1,
@@ -313,6 +314,7 @@ var (
 		ForkEventVersion: Version1,
 		Reason:           Reason,
 		Cause:            &DecisionTaskTimedOutCause,
+		RequestID:        RequestID,
 	}
 	DecisionTaskFailedEventAttributes = types.DecisionTaskFailedEventAttributes{
 		ScheduledEventID: EventID1,
@@ -325,6 +327,7 @@ var (
 		NewRunID:         RunID2,
 		ForkEventVersion: Version1,
 		BinaryChecksum:   Checksum,
+		RequestID:        RequestID,
 	}
 	ActivityTaskScheduledEventAttributes = types.ActivityTaskScheduledEventAttributes{
 		ActivityID:                    ActivityID,
@@ -416,6 +419,7 @@ var (
 		SignalName: SignalName,
 		Input:      Payload1,
 		Identity:   Identity,
+		RequestID:  RequestID,
 	}
 	WorkflowExecutionTerminatedEventAttributes = types.WorkflowExecutionTerminatedEventAttributes{
 		Reason:   Reason,
@@ -427,6 +431,7 @@ var (
 		ExternalInitiatedEventID:  common.Int64Ptr(EventID1),
 		ExternalWorkflowExecution: &WorkflowExecution,
 		Identity:                  Identity,
+		RequestID:                 RequestID,
 	}
 	WorkflowExecutionCanceledEventAttributes = types.WorkflowExecutionCanceledEventAttributes{
 		DecisionTaskCompletedEventID: EventID1,

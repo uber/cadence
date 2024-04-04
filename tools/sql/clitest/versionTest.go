@@ -73,10 +73,13 @@ func (s *VersionTestSuite) TestVerifyCompatibleVersion() {
 
 	defer s.createDatabase(database)()
 	defer s.createDatabase(visDatabase)()
-	err := sql.RunTool([]string{
+	mysqlPort, err := environment.GetMySQLPort()
+	s.NoError(err)
+	port := strconv.Itoa(mysqlPort)
+	err = sql.RunTool([]string{
 		"./tool",
 		"-ep", environment.GetMySQLAddress(),
-		"-p", strconv.Itoa(environment.GetMySQLPort()),
+		"-p", port,
 		"-u", environment.GetMySQLUser(),
 		"-pw", environment.GetMySQLPassword(),
 		"-db", database,
@@ -91,7 +94,7 @@ func (s *VersionTestSuite) TestVerifyCompatibleVersion() {
 	err = sql.RunTool([]string{
 		"./tool",
 		"-ep", environment.GetMySQLAddress(),
-		"-p", strconv.Itoa(environment.GetMySQLPort()),
+		"-p", port,
 		"-u", environment.GetMySQLUser(),
 		"-pw", environment.GetMySQLPassword(),
 		"-db", visDatabase,
@@ -105,7 +108,7 @@ func (s *VersionTestSuite) TestVerifyCompatibleVersion() {
 	s.NoError(err)
 
 	defaultCfg := config.SQL{
-		ConnectAddr:   fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), environment.GetMySQLPort()),
+		ConnectAddr:   fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), port),
 		User:          environment.GetMySQLUser(),
 		Password:      environment.GetMySQLPassword(),
 		PluginName:    s.pluginName,
@@ -178,10 +181,14 @@ func (s *VersionTestSuite) runCheckCompatibleVersion(
 	}
 
 	sqlFile := subdir + "/v" + actual + "/tmp.sql"
+	mysqlPort, err := environment.GetMySQLPort()
+	s.NoError(err)
+	port := strconv.Itoa(mysqlPort)
+
 	s.NoError(sql.RunTool([]string{
 		"./tool",
 		"-ep", environment.GetMySQLAddress(),
-		"-p", strconv.Itoa(environment.GetMySQLPort()),
+		"-p", port,
 		"-u", environment.GetMySQLUser(),
 		"-pw", environment.GetMySQLPassword(),
 		"-db", database,
@@ -197,7 +204,7 @@ func (s *VersionTestSuite) runCheckCompatibleVersion(
 	}
 
 	cfg := config.SQL{
-		ConnectAddr:   fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), environment.GetMySQLPort()),
+		ConnectAddr:   fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), port),
 		User:          environment.GetMySQLUser(),
 		Password:      environment.GetMySQLPassword(),
 		PluginName:    s.pluginName,
@@ -240,11 +247,13 @@ func (s *VersionTestSuite) TestMultipleDatabaseVersionInCompatible() {
 	s.createSchemaForVersion(subdir, "0.1")
 	s.createSchemaForVersion(subdir, "0.2")
 	s.createSchemaForVersion(subdir, "0.3")
-
+	mysqlPort, err := environment.GetMySQLPort()
+	s.NoError(err)
+	port := strconv.Itoa(mysqlPort)
 	s.NoError(sql.RunTool([]string{
 		"./tool",
 		"-ep", environment.GetMySQLAddress(),
-		"-p", strconv.Itoa(environment.GetMySQLPort()),
+		"-p", port,
 		"-u", environment.GetMySQLUser(),
 		"-pw", environment.GetMySQLPassword(),
 		"-db", database1,
@@ -258,7 +267,7 @@ func (s *VersionTestSuite) TestMultipleDatabaseVersionInCompatible() {
 	s.NoError(sql.RunTool([]string{
 		"./tool",
 		"-ep", environment.GetMySQLAddress(),
-		"-p", strconv.Itoa(environment.GetMySQLPort()),
+		"-p", port,
 		"-u", environment.GetMySQLUser(),
 		"-pw", environment.GetMySQLPassword(),
 		"-db", database2,
@@ -277,13 +286,13 @@ func (s *VersionTestSuite) TestMultipleDatabaseVersionInCompatible() {
 		NumShards:            2,
 		MultipleDatabasesConfig: []config.MultipleDatabasesConfigEntry{
 			{
-				ConnectAddr:  fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), environment.GetMySQLPort()),
+				ConnectAddr:  fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), port),
 				User:         environment.GetMySQLUser(),
 				Password:     environment.GetMySQLPassword(),
 				DatabaseName: database1,
 			},
 			{
-				ConnectAddr:  fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), environment.GetMySQLPort()),
+				ConnectAddr:  fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), port),
 				User:         environment.GetMySQLUser(),
 				Password:     environment.GetMySQLPassword(),
 				DatabaseName: database2,
@@ -314,11 +323,13 @@ func (s *VersionTestSuite) TestMultipleDatabaseVersionAllLowerCompatible() {
 	s.createSchemaForVersion(subdir, "0.1")
 	s.createSchemaForVersion(subdir, "0.2")
 	s.createSchemaForVersion(subdir, "0.3")
-
+	mysqlPort, err := environment.GetMySQLPort()
+	s.NoError(err)
+	port := strconv.Itoa(mysqlPort)
 	s.NoError(sql.RunTool([]string{
 		"./tool",
 		"-ep", environment.GetMySQLAddress(),
-		"-p", strconv.Itoa(environment.GetMySQLPort()),
+		"-p", port,
 		"-u", environment.GetMySQLUser(),
 		"-pw", environment.GetMySQLPassword(),
 		"-db", database1,
@@ -332,7 +343,7 @@ func (s *VersionTestSuite) TestMultipleDatabaseVersionAllLowerCompatible() {
 	s.NoError(sql.RunTool([]string{
 		"./tool",
 		"-ep", environment.GetMySQLAddress(),
-		"-p", strconv.Itoa(environment.GetMySQLPort()),
+		"-p", port,
 		"-u", environment.GetMySQLUser(),
 		"-pw", environment.GetMySQLPassword(),
 		"-db", database2,
@@ -351,13 +362,13 @@ func (s *VersionTestSuite) TestMultipleDatabaseVersionAllLowerCompatible() {
 		NumShards:            2,
 		MultipleDatabasesConfig: []config.MultipleDatabasesConfigEntry{
 			{
-				ConnectAddr:  fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), environment.GetMySQLPort()),
+				ConnectAddr:  fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), port),
 				User:         environment.GetMySQLUser(),
 				Password:     environment.GetMySQLPassword(),
 				DatabaseName: database1,
 			},
 			{
-				ConnectAddr:  fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), environment.GetMySQLPort()),
+				ConnectAddr:  fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), port),
 				User:         environment.GetMySQLUser(),
 				Password:     environment.GetMySQLPassword(),
 				DatabaseName: database2,
@@ -387,11 +398,13 @@ func (s *VersionTestSuite) TestMultipleDatabaseVersionPartialLowerCompatible() {
 	s.createSchemaForVersion(subdir, "0.1")
 	s.createSchemaForVersion(subdir, "0.2")
 	s.createSchemaForVersion(subdir, "0.3")
-
+	mysqlPort, err := environment.GetMySQLPort()
+	s.NoError(err)
+	port := strconv.Itoa(mysqlPort)
 	s.NoError(sql.RunTool([]string{
 		"./tool",
 		"-ep", environment.GetMySQLAddress(),
-		"-p", strconv.Itoa(environment.GetMySQLPort()),
+		"-p", port,
 		"-u", environment.GetMySQLUser(),
 		"-pw", environment.GetMySQLPassword(),
 		"-db", database1,
@@ -405,7 +418,7 @@ func (s *VersionTestSuite) TestMultipleDatabaseVersionPartialLowerCompatible() {
 	s.NoError(sql.RunTool([]string{
 		"./tool",
 		"-ep", environment.GetMySQLAddress(),
-		"-p", strconv.Itoa(environment.GetMySQLPort()),
+		"-p", port,
 		"-u", environment.GetMySQLUser(),
 		"-pw", environment.GetMySQLPassword(),
 		"-db", database2,
@@ -424,13 +437,13 @@ func (s *VersionTestSuite) TestMultipleDatabaseVersionPartialLowerCompatible() {
 		NumShards:            2,
 		MultipleDatabasesConfig: []config.MultipleDatabasesConfigEntry{
 			{
-				ConnectAddr:  fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), environment.GetMySQLPort()),
+				ConnectAddr:  fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), port),
 				User:         environment.GetMySQLUser(),
 				Password:     environment.GetMySQLPassword(),
 				DatabaseName: database1,
 			},
 			{
-				ConnectAddr:  fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), environment.GetMySQLPort()),
+				ConnectAddr:  fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), port),
 				User:         environment.GetMySQLUser(),
 				Password:     environment.GetMySQLPassword(),
 				DatabaseName: database2,
@@ -460,11 +473,13 @@ func (s *VersionTestSuite) TestMultipleDatabaseVersionExactlyMatchCompatible() {
 	s.createSchemaForVersion(subdir, "0.1")
 	s.createSchemaForVersion(subdir, "0.2")
 	s.createSchemaForVersion(subdir, "0.3")
-
+	mysqlPort, err := environment.GetMySQLPort()
+	s.NoError(err)
+	port := strconv.Itoa(mysqlPort)
 	s.NoError(sql.RunTool([]string{
 		"./tool",
 		"-ep", environment.GetMySQLAddress(),
-		"-p", strconv.Itoa(environment.GetMySQLPort()),
+		"-p", port,
 		"-u", environment.GetMySQLUser(),
 		"-pw", environment.GetMySQLPassword(),
 		"-db", database1,
@@ -478,7 +493,7 @@ func (s *VersionTestSuite) TestMultipleDatabaseVersionExactlyMatchCompatible() {
 	s.NoError(sql.RunTool([]string{
 		"./tool",
 		"-ep", environment.GetMySQLAddress(),
-		"-p", strconv.Itoa(environment.GetMySQLPort()),
+		"-p", port,
 		"-u", environment.GetMySQLUser(),
 		"-pw", environment.GetMySQLPassword(),
 		"-db", database2,
@@ -497,13 +512,13 @@ func (s *VersionTestSuite) TestMultipleDatabaseVersionExactlyMatchCompatible() {
 		NumShards:            2,
 		MultipleDatabasesConfig: []config.MultipleDatabasesConfigEntry{
 			{
-				ConnectAddr:  fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), environment.GetMySQLPort()),
+				ConnectAddr:  fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), port),
 				User:         environment.GetMySQLUser(),
 				Password:     environment.GetMySQLPassword(),
 				DatabaseName: database1,
 			},
 			{
-				ConnectAddr:  fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), environment.GetMySQLPort()),
+				ConnectAddr:  fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), port),
 				User:         environment.GetMySQLUser(),
 				Password:     environment.GetMySQLPassword(),
 				DatabaseName: database2,

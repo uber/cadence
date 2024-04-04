@@ -181,7 +181,7 @@ func (db *cdb) UpdateTaskListWithTTL(
 		row.TaskListType,
 		row.AckLevel,
 		row.TaskListKind,
-		time.Now(),
+		db.timeSrc.Now(),
 		row.DomainID,
 		row.TaskListName,
 		row.TaskListType,

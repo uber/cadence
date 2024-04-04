@@ -162,7 +162,10 @@ func NewTestBaseWithSQL(t *testing.T, options *TestBaseOptions) *TestBase {
 	if options.DBName == "" {
 		options.DBName = "test_" + GenerateRandomDBName(10)
 	}
-	testCluster := sql.NewTestCluster(options.DBPluginName, options.DBName, options.DBUsername, options.DBPassword, options.DBHost, options.DBPort, options.SchemaDir)
+	testCluster, err := sql.NewTestCluster(options.DBPluginName, options.DBName, options.DBUsername, options.DBPassword, options.DBHost, options.DBPort, options.SchemaDir)
+	if err != nil {
+		t.Fatal(err)
+	}
 	metadata := options.ClusterMetadata
 	if metadata.GetCurrentClusterName() == "" {
 		metadata = cluster.GetTestClusterMetadata(false)

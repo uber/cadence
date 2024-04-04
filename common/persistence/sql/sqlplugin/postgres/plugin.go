@@ -156,7 +156,7 @@ const (
 )
 
 // GetTestClusterOption return test options
-func GetTestClusterOption() *pt.TestBaseOptions {
+func GetTestClusterOption() (*pt.TestBaseOptions, error) {
 	testUser := "postgres"
 	testPassword := "cadence"
 
@@ -172,13 +172,17 @@ func GetTestClusterOption() *pt.TestBaseOptions {
 	if os.Getenv("POSTGRES_PASSWORD") != "" {
 		testPassword = os.Getenv("POSTGRES_PASSWORD")
 	}
+	dbPort, err := environment.GetPostgresPort()
+	if err != nil {
+		return nil, err
+	}
 
 	return &pt.TestBaseOptions{
 		DBPluginName: PluginName,
 		DBUsername:   testUser,
 		DBPassword:   testPassword,
 		DBHost:       environment.GetPostgresAddress(),
-		DBPort:       environment.GetPostgresPort(),
+		DBPort:       dbPort,
 		SchemaDir:    testSchemaDir,
-	}
+	}, nil
 }
