@@ -543,17 +543,16 @@ func parseCrossClusterTaskInfo(
 	result map[string]interface{},
 ) *persistence.CrossClusterTaskInfo {
 	info := (*persistence.CrossClusterTaskInfo)(parseTransferTaskInfo(result))
-	if persistence.CrossClusterTaskDefaultTargetRunID == persistence.TransferTaskTransferTargetRunID {
-		return info
-	}
 
-	// incase CrossClusterTaskDefaultTargetRunID is updated and not equal to TransferTaskTransferTargetRunID
-	if v, ok := result["target_run_id"]; ok {
-		info.TargetRunID = v.(gocql.UUID).String()
-		if info.TargetRunID == persistence.CrossClusterTaskDefaultTargetRunID {
-			info.TargetRunID = ""
-		}
-	}
+	// in case CrossClusterTaskDefaultTargetRunID is updated and not equal to TransferTaskTransferTargetRunID
+	// if v, ok := result["target_run_id"]; ok {
+	// 	info.TargetRunID = v.(gocql.UUID).String()
+	// 	if info.TargetRunID == persistence.CrossClusterTaskDefaultTargetRunID {
+	// 		info.TargetRunID = ""
+	// 	}
+	// }
+	// return info
+
 	return info
 }
 
