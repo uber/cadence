@@ -78,12 +78,6 @@ func TestClusterRedirectionHandlerSuite(t *testing.T) {
 	suite.Run(t, s)
 }
 
-func (s *clusterRedirectionHandlerSuite) SetupSuite() {
-}
-
-func (s *clusterRedirectionHandlerSuite) TearDownSuite() {
-}
-
 func (s *clusterRedirectionHandlerSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
