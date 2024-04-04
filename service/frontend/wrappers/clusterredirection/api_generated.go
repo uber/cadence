@@ -51,10 +51,6 @@ type (
 		frontendHandler    api.Handler
 		callOptions        []yarpc.CallOption
 	}
-
-	domainIDGetter interface {
-		GetDomainID() string
-	}
 )
 
 // NewAPIHandler creates a frontend handler to handle cluster redirection for global domains not being active in current cluster
@@ -397,7 +393,7 @@ func (handler *clusterRedirectionHandler) RecordActivityTaskHeartbeat(ctx contex
 	var apiName = "RecordActivityTaskHeartbeat"
 	var cluster string
 
-	var token domainIDGetter
+	token := domainIDGetter(noopdomainIDGetter{})
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionRecordActivityTaskHeartbeatScope)
 	defer func() {
 		handler.afterCall(recover(), scope, startTime, "", token.GetDomainID(), cluster, &err)
@@ -551,7 +547,7 @@ func (handler *clusterRedirectionHandler) RespondActivityTaskCanceled(ctx contex
 	var apiName = "RespondActivityTaskCanceled"
 	var cluster string
 
-	var token domainIDGetter
+	token := domainIDGetter(noopdomainIDGetter{})
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionRespondActivityTaskCanceledScope)
 	defer func() {
 		handler.afterCall(recover(), scope, startTime, "", token.GetDomainID(), cluster, &err)
@@ -605,7 +601,7 @@ func (handler *clusterRedirectionHandler) RespondActivityTaskCompleted(ctx conte
 	var apiName = "RespondActivityTaskCompleted"
 	var cluster string
 
-	var token domainIDGetter
+	token := domainIDGetter(noopdomainIDGetter{})
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionRespondActivityTaskCompletedScope)
 	defer func() {
 		handler.afterCall(recover(), scope, startTime, "", token.GetDomainID(), cluster, &err)
@@ -659,7 +655,7 @@ func (handler *clusterRedirectionHandler) RespondActivityTaskFailed(ctx context.
 	var apiName = "RespondActivityTaskFailed"
 	var cluster string
 
-	var token domainIDGetter
+	token := domainIDGetter(noopdomainIDGetter{})
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionRespondActivityTaskFailedScope)
 	defer func() {
 		handler.afterCall(recover(), scope, startTime, "", token.GetDomainID(), cluster, &err)
@@ -713,7 +709,7 @@ func (handler *clusterRedirectionHandler) RespondDecisionTaskCompleted(ctx conte
 	var apiName = "RespondDecisionTaskCompleted"
 	var cluster string
 
-	var token domainIDGetter
+	token := domainIDGetter(noopdomainIDGetter{})
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionRespondDecisionTaskCompletedScope)
 	defer func() {
 		handler.afterCall(recover(), scope, startTime, "", token.GetDomainID(), cluster, &err)
@@ -743,7 +739,7 @@ func (handler *clusterRedirectionHandler) RespondDecisionTaskFailed(ctx context.
 	var apiName = "RespondDecisionTaskFailed"
 	var cluster string
 
-	var token domainIDGetter
+	token := domainIDGetter(noopdomainIDGetter{})
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionRespondDecisionTaskFailedScope)
 	defer func() {
 		handler.afterCall(recover(), scope, startTime, "", token.GetDomainID(), cluster, &err)
@@ -773,7 +769,7 @@ func (handler *clusterRedirectionHandler) RespondQueryTaskCompleted(ctx context.
 	var apiName = "RespondQueryTaskCompleted"
 	var cluster string
 
-	var token domainIDGetter
+	token := domainIDGetter(noopdomainIDGetter{})
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionRespondQueryTaskCompletedScope)
 	defer func() {
 		handler.afterCall(recover(), scope, startTime, "", token.GetDomainID(), cluster, &err)

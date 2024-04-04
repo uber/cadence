@@ -28,10 +28,6 @@ type (
 		frontendHandler    api.Handler
 		callOptions        []yarpc.CallOption
 	}
-
-	domainIDGetter interface {
-        GetDomainID() string
-    }
 )
 
 // NewAPIHandler creates a frontend handler to handle cluster redirection for global domains not being active in current cluster
@@ -70,7 +66,7 @@ func (handler *clusterRedirectionHandler) {{$method.Declaration}} {
     {{$policyMethod := "WithDomainNameRedirect"}}
     {{$domain := printf "%s.GetDomain()" (index $method.Params 1).Name}}
     {{- if has $method.Name $domainIDAPIs}}
-    var token domainIDGetter
+    token := domainIDGetter(noopdomainIDGetter{})
     {{- end}}
 	scope, startTime := handler.beforeCall(metrics.DCRedirection{{$method.Name}}Scope)
 	defer func() {
