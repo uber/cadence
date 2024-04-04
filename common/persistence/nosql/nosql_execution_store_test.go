@@ -1052,7 +1052,6 @@ func TestNosqlExecutionStore(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			store := tc.setupMock(ctrl)
 			err := tc.testFunc(store)
@@ -1060,6 +1059,179 @@ func TestNosqlExecutionStore(t *testing.T) {
 			if tc.expectedError != nil {
 				var expectedErrType error
 				require.ErrorAs(t, err, &expectedErrType, "Expected error type does not match.")
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestDeleteReplicationTaskFromDLQ(t *testing.T) {
+	ctx := context.Background()
+	shardID := 1
+
+	tests := []struct {
+		name          string
+		sourceCluster string
+		taskID        int64
+		setupMock     func(*nosqlplugin.MockDB)
+		expectedError error
+	}{
+		{
+			name:          "success",
+			sourceCluster: "sourceCluster",
+			taskID:        1,
+			setupMock: func(mockDB *nosqlplugin.MockDB) {
+				mockDB.EXPECT().
+					DeleteReplicationDLQTask(ctx, shardID, "sourceCluster", int64(1)).
+					Return(nil)
+			},
+			expectedError: nil,
+		},
+		{
+			name:          "database error",
+			sourceCluster: "sourceCluster",
+			taskID:        1,
+			setupMock: func(mockDB *nosqlplugin.MockDB) {
+				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(true).AnyTimes()
+				mockDB.EXPECT().
+					DeleteReplicationDLQTask(ctx, shardID, "sourceCluster", int64(1)).
+					Return(errors.New("database error"))
+			},
+			expectedError: &types.InternalServiceError{Message: "database error"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+
+			mockDB := nosqlplugin.NewMockDB(controller)
+			store := newTestNosqlExecutionStore(mockDB, log.NewNoop())
+
+			tc.setupMock(mockDB)
+
+			err := store.DeleteReplicationTaskFromDLQ(ctx, &persistence.DeleteReplicationTaskFromDLQRequest{
+				SourceClusterName: tc.sourceCluster,
+				TaskID:            tc.taskID,
+			})
+
+			if tc.expectedError != nil {
+				require.ErrorAs(t, err, &tc.expectedError)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestRangeDeleteReplicationTaskFromDLQ(t *testing.T) {
+	ctx := context.Background()
+	shardID := 1
+
+	tests := []struct {
+		name             string
+		sourceCluster    string
+		exclusiveBeginID int64
+		inclusiveEndID   int64
+		setupMock        func(*nosqlplugin.MockDB)
+		expectedError    error
+	}{
+		{
+			name:             "success",
+			sourceCluster:    "sourceCluster",
+			exclusiveBeginID: 1,
+			inclusiveEndID:   100,
+			setupMock: func(mockDB *nosqlplugin.MockDB) {
+				mockDB.EXPECT().
+					RangeDeleteReplicationDLQTasks(ctx, shardID, "sourceCluster", int64(1), int64(100)).
+					Return(nil)
+			},
+			expectedError: nil,
+		},
+		{
+			name:             "database error",
+			sourceCluster:    "sourceCluster",
+			exclusiveBeginID: 1,
+			inclusiveEndID:   100,
+			setupMock: func(mockDB *nosqlplugin.MockDB) {
+				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(true).AnyTimes()
+				mockDB.EXPECT().
+					RangeDeleteReplicationDLQTasks(ctx, shardID, "sourceCluster", int64(1), int64(100)).
+					Return(errors.New("database error"))
+			},
+			expectedError: &types.InternalServiceError{Message: "database error"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+
+			mockDB := nosqlplugin.NewMockDB(controller)
+			store := newTestNosqlExecutionStore(mockDB, log.NewNoop())
+
+			tc.setupMock(mockDB)
+
+			_, err := store.RangeDeleteReplicationTaskFromDLQ(ctx, &persistence.RangeDeleteReplicationTaskFromDLQRequest{
+				SourceClusterName:    tc.sourceCluster,
+				ExclusiveBeginTaskID: tc.exclusiveBeginID,
+				InclusiveEndTaskID:   tc.inclusiveEndID,
+			})
+
+			if tc.expectedError != nil {
+				require.ErrorAs(t, err, &tc.expectedError)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestCreateFailoverMarkerTasks(t *testing.T) {
+	ctx := context.Background()
+	shardID := 1
+
+	tests := []struct {
+		name          string
+		rangeID       int64
+		markers       []*persistence.FailoverMarkerTask
+		setupMock     func(*nosqlplugin.MockDB)
+		expectedError error
+	}{
+		{
+			name:    "success",
+			rangeID: 123,
+			markers: []*persistence.FailoverMarkerTask{
+				{
+					TaskData: persistence.TaskData{},
+					DomainID: "testDomainID",
+				},
+			},
+			setupMock: func(mockDB *nosqlplugin.MockDB) {
+				mockDB.EXPECT().
+					InsertReplicationTask(ctx, gomock.Any(), nosqlplugin.ShardCondition{ShardID: shardID, RangeID: 123}).
+					Return(nil)
+			},
+			expectedError: nil,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+
+			mockDB := nosqlplugin.NewMockDB(controller)
+			store := newTestNosqlExecutionStore(mockDB, log.NewNoop())
+
+			tc.setupMock(mockDB)
+
+			err := store.CreateFailoverMarkerTasks(ctx, &persistence.CreateFailoverMarkersRequest{
+				RangeID: tc.rangeID,
+				Markers: tc.markers,
+			})
+
+			if tc.expectedError != nil {
+				require.ErrorAs(t, err, &tc.expectedError)
 			} else {
 				require.NoError(t, err)
 			}
