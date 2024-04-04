@@ -860,6 +860,194 @@ func TestNosqlExecutionStore(t *testing.T) {
 			},
 			expectedError: nil,
 		},
+		{
+			name: "GetTimerIndexTasks success",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				mockDB.EXPECT().
+					SelectTimerTasksOrderByVisibilityTime(
+						ctx,
+						shardID,
+						10,
+						gomock.Nil(),
+						gomock.Any(),
+						gomock.Any(),
+					).Return([]*persistence.TimerTaskInfo{}, nil, nil)
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				_, err := store.GetTimerIndexTasks(ctx, &persistence.GetTimerIndexTasksRequest{
+					BatchSize:    10,
+					MinTimestamp: time.Now().Add(-time.Hour),
+					MaxTimestamp: time.Now(),
+				})
+				return err
+			},
+			expectedError: nil,
+		},
+		{
+			name: "GetTimerIndexTasks success - empty result",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				mockDB.EXPECT().
+					SelectTimerTasksOrderByVisibilityTime(ctx, shardID, 10, gomock.Nil(), gomock.Any(), gomock.Any()).
+					Return([]*persistence.TimerTaskInfo{}, []byte{}, nil) // Return an empty list
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				resp, err := store.GetTimerIndexTasks(ctx, &persistence.GetTimerIndexTasksRequest{
+					BatchSize:    10,
+					MinTimestamp: time.Now().Add(-time.Hour),
+					MaxTimestamp: time.Now(),
+				})
+				if err != nil {
+					return err
+				}
+				if len(resp.Timers) != 0 {
+					return errors.New("expected empty result set for timers")
+				}
+				return nil
+			},
+			expectedError: nil,
+		},
+		{
+			name: "PutReplicationTaskToDLQ success",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				replicationTaskInfo := newInternalReplicationTaskInfo()
+
+				mockDB.EXPECT().
+					InsertReplicationDLQTask(ctx, shardID, "sourceCluster", gomock.Any()).
+					DoAndReturn(func(_ context.Context, _ int, _ string, taskInfo persistence.InternalReplicationTaskInfo) error {
+						require.Equal(t, replicationTaskInfo, taskInfo)
+						return nil
+					})
+
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				taskInfo := newInternalReplicationTaskInfo()
+				return store.PutReplicationTaskToDLQ(ctx, &persistence.InternalPutReplicationTaskToDLQRequest{
+					SourceClusterName: "sourceCluster",
+					TaskInfo:          &taskInfo,
+				})
+			},
+			expectedError: nil,
+		},
+		{
+			name: "GetTimerIndexTasks failure - database error",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(true).AnyTimes()
+				mockDB.EXPECT().
+					SelectTimerTasksOrderByVisibilityTime(ctx, shardID, 10, gomock.Nil(), gomock.Any(), gomock.Any()).
+					Return(nil, nil, errors.New("database error"))
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				_, err := store.GetTimerIndexTasks(ctx, &persistence.GetTimerIndexTasksRequest{
+					BatchSize:    10,
+					MinTimestamp: time.Now().Add(-time.Hour),
+					MaxTimestamp: time.Now(),
+				})
+				return err
+			},
+			expectedError: &types.InternalServiceError{Message: "database error"},
+		},
+		{
+			name: "GetReplicationTasksFromDLQ success",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+
+				nextPageToken := []byte("next-page-token")
+				replicationTasks := []*persistence.InternalReplicationTaskInfo{}
+				mockDB.EXPECT().
+					SelectReplicationDLQTasksOrderByTaskID(
+						ctx,
+						shardID,
+						"sourceCluster",
+						10,
+						gomock.Any(),
+						int64(0),
+						int64(100),
+					).Return(replicationTasks, nextPageToken, nil)
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				initialNextPageToken := []byte{}
+				_, err := store.GetReplicationTasksFromDLQ(ctx, &persistence.GetReplicationTasksFromDLQRequest{
+					SourceClusterName: "sourceCluster",
+					GetReplicationTasksRequest: persistence.GetReplicationTasksRequest{
+						BatchSize:     10,
+						NextPageToken: initialNextPageToken,
+						ReadLevel:     0,
+						MaxReadLevel:  100,
+					},
+				})
+
+				return err
+			},
+			expectedError: nil,
+		},
+		{
+			name: "GetReplicationTasksFromDLQ failure - invalid read levels",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				return newTestNosqlExecutionStore(nosqlplugin.NewMockDB(ctrl), log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				_, err := store.GetReplicationTasksFromDLQ(ctx, &persistence.GetReplicationTasksFromDLQRequest{
+					SourceClusterName: "sourceCluster",
+					GetReplicationTasksRequest: persistence.GetReplicationTasksRequest{
+						ReadLevel:     100,
+						MaxReadLevel:  50,
+						BatchSize:     10,
+						NextPageToken: []byte{},
+					},
+				})
+				return err
+			},
+			expectedError: &types.BadRequestError{Message: "ReadLevel cannot be higher than MaxReadLevel"},
+		},
+		{
+			name: "GetReplicationDLQSize success",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				mockDB.EXPECT().
+					SelectReplicationDLQTasksCount(ctx, shardID, "sourceCluster").
+					Return(int64(42), nil)
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				resp, err := store.GetReplicationDLQSize(ctx, &persistence.GetReplicationDLQSizeRequest{
+					SourceClusterName: "sourceCluster",
+				})
+				if err != nil {
+					return err
+				}
+				if resp.Size != 42 {
+					return errors.New("unexpected DLQ size")
+				}
+				return nil
+			},
+			expectedError: nil,
+		},
+		{
+			name: "GetReplicationDLQSize failure - invalid source cluster name",
+			setupMock: func(ctrl *gomock.Controller) *nosqlExecutionStore {
+				mockDB := nosqlplugin.NewMockDB(ctrl)
+				mockDB.EXPECT().
+					SelectReplicationDLQTasksCount(ctx, shardID, "").
+					Return(int64(0), nil)
+				return newTestNosqlExecutionStore(mockDB, log.NewNoop())
+			},
+			testFunc: func(store *nosqlExecutionStore) error {
+				_, err := store.GetReplicationDLQSize(ctx, &persistence.GetReplicationDLQSizeRequest{
+					SourceClusterName: "",
+				})
+				return err
+			},
+			expectedError: nil,
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -928,5 +1116,23 @@ func newTestNosqlExecutionStore(db nosqlplugin.DB, logger log.Logger) *nosqlExec
 	return &nosqlExecutionStore{
 		shardID:    1,
 		nosqlStore: nosqlStore{logger: logger, db: db},
+	}
+}
+
+func newInternalReplicationTaskInfo() persistence.InternalReplicationTaskInfo {
+	var fixedCreationTime = time.Date(2024, time.April, 3, 14, 35, 44, 0, time.UTC)
+	return persistence.InternalReplicationTaskInfo{
+		DomainID:          "testDomainID",
+		WorkflowID:        "testWorkflowID",
+		RunID:             "testRunID",
+		TaskID:            123,
+		TaskType:          persistence.ReplicationTaskTypeHistory,
+		FirstEventID:      1,
+		NextEventID:       2,
+		Version:           1,
+		ScheduledID:       3,
+		BranchToken:       []byte("branchToken"),
+		NewRunBranchToken: []byte("newRunBranchToken"),
+		CreationTime:      fixedCreationTime,
 	}
 }
