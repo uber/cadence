@@ -41,6 +41,10 @@ func (m mockUUID) String() string {
 	return m.uuid
 }
 
+func newMockUUID(s string) mockUUID {
+	return mockUUID{s}
+}
+
 func Test_parseWorkflowExecutionInfo(t *testing.T) {
 
 	completionEventData := []byte("completion event data")
@@ -56,9 +60,9 @@ func Test_parseWorkflowExecutionInfo(t *testing.T) {
 	}{
 		{
 			args: map[string]interface{}{
-				"domain_id":                             mockUUID{"domain_id"},
+				"domain_id":                             newMockUUID("domain_id"),
 				"workflow_id":                           "workflow_id",
-				"run_id":                                mockUUID{"run_id"},
+				"run_id":                                newMockUUID("run_id"),
 				"parent_workflow_id":                    "parent_workflow_id",
 				"initiated_id":                          int64(1),
 				"completion_event_batch_id":             int64(2),
@@ -75,7 +79,7 @@ func Test_parseWorkflowExecutionInfo(t *testing.T) {
 				"last_processed_event":                  int64(6),
 				"start_time":                            timeNow,
 				"last_updated_time":                     timeNow,
-				"create_request_id":                     mockUUID{"create_request_id"},
+				"create_request_id":                     newMockUUID("create_request_id"),
 				"signal_count":                          7,
 				"history_size":                          int64(8),
 				"decision_version":                      int64(9),
@@ -166,9 +170,9 @@ func Test_parseWorkflowExecutionInfo(t *testing.T) {
 		},
 		{
 			args: map[string]interface{}{
-				"first_run_id":     mockUUID{"first_run_id"},
-				"parent_domain_id": mockUUID{"parent_domain_id"},
-				"parent_run_id":    mockUUID{"parent_run_id"},
+				"first_run_id":     newMockUUID("first_run_id"),
+				"parent_domain_id": newMockUUID("parent_domain_id"),
+				"parent_run_id":    newMockUUID("parent_run_id"),
 			},
 			want: &persistence.InternalWorkflowExecutionInfo{
 				FirstExecutionRunID: "first_run_id",
@@ -178,15 +182,15 @@ func Test_parseWorkflowExecutionInfo(t *testing.T) {
 		},
 		{
 			args: map[string]interface{}{
-				"first_run_id":     mockUUID{emptyRunID},
-				"parent_domain_id": mockUUID{emptyDomainID},
-				"parent_run_id":    mockUUID{emptyRunID},
+				"first_run_id":     newMockUUID(emptyRunID),
+				"parent_domain_id": newMockUUID(emptyDomainID),
+				"parent_run_id":    newMockUUID(emptyRunID),
 			},
 			want: &persistence.InternalWorkflowExecutionInfo{},
 		},
 		{
 			args: map[string]interface{}{
-				"first_run_id": mockUUID{cql.UUID{}.String()},
+				"first_run_id": newMockUUID(cql.UUID{}.String()),
 			},
 			want: &persistence.InternalWorkflowExecutionInfo{
 				FirstExecutionRunID: "",
