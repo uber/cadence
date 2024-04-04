@@ -1157,6 +1157,7 @@ func TestRangeDeleteReplicationTaskFromDLQ(t *testing.T) {
 			exclusiveBeginID: 1,
 			inclusiveEndID:   100,
 			setupMock: func(mockDB *nosqlplugin.MockDB) {
+				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(true).AnyTimes()
 				mockDB.EXPECT().
 					RangeDeleteReplicationDLQTasks(ctx, shardID, "sourceCluster", int64(1), int64(100)).
 					Return(errors.New("database error"))
