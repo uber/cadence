@@ -23,7 +23,6 @@
 package cassandra
 
 import (
-	"github.com/uber/cadence/common/checksum"
 	"testing"
 	"time"
 
@@ -31,6 +30,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/checksum"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
