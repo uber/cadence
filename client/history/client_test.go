@@ -24,6 +24,7 @@ package history
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -505,6 +506,494 @@ func TestClient_withResponse(t *testing.T) {
 					Return(&types.StartWorkflowExecutionResponse{}, nil).Times(1)
 			},
 			want: &types.StartWorkflowExecutionResponse{},
+		},
+		{
+			name: "StartWorkflowExecution peer resolve failure",
+			op: func(c Client) (any, error) {
+				return c.StartWorkflowExecution(context.Background(), &types.HistoryStartWorkflowExecutionRequest{
+					StartRequest: &types.StartWorkflowExecutionRequest{
+						WorkflowID: "test-workflow",
+					},
+				})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				p.EXPECT().FromWorkflowID("test-workflow").Return("", fmt.Errorf("some error")).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "StartWorkflowExecution failure",
+			op: func(c Client) (any, error) {
+				return c.StartWorkflowExecution(context.Background(), &types.HistoryStartWorkflowExecutionRequest{
+					StartRequest: &types.StartWorkflowExecutionRequest{
+						WorkflowID: "test-workflow",
+					},
+				})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				p.EXPECT().FromWorkflowID("test-workflow").Return("test-peer", nil).Times(1)
+				c.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer")}).
+					Return(nil, fmt.Errorf("StartWorkflowExecution failed")).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "StartWorkflowExecution redirected success with host lost error",
+			op: func(c Client) (any, error) {
+				return c.StartWorkflowExecution(context.Background(), &types.HistoryStartWorkflowExecutionRequest{
+					StartRequest: &types.StartWorkflowExecutionRequest{
+						WorkflowID: "test-workflow",
+					},
+				})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				p.EXPECT().FromWorkflowID("test-workflow").Return("test-peer-1", nil).Times(1)
+				p.EXPECT().FromHostAddress("host-test-peer-2").Return("test-peer-2", nil).Times(1)
+				c.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer-1")}).
+					Return(nil, &types.ShardOwnershipLostError{
+						Message: "test-peer-1 lost the shard",
+						Owner:   "host-test-peer-2",
+					}).Times(1)
+				c.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer-2")}).
+					Return(&types.StartWorkflowExecutionResponse{}, nil).Times(1)
+			},
+			want: &types.StartWorkflowExecutionResponse{},
+		},
+		{
+			name: "StartWorkflowExecution redirected failed again with peer resolve",
+			op: func(c Client) (any, error) {
+				return c.StartWorkflowExecution(context.Background(), &types.HistoryStartWorkflowExecutionRequest{
+					StartRequest: &types.StartWorkflowExecutionRequest{
+						WorkflowID: "test-workflow",
+					},
+				})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				p.EXPECT().FromWorkflowID("test-workflow").Return("test-peer-1", nil).Times(1)
+				p.EXPECT().FromHostAddress("host-test-peer-2").Return("", fmt.Errorf("not found")).Times(1)
+				c.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer-1")}).
+					Return(nil, &types.ShardOwnershipLostError{
+						Message: "test-peer-1 lost the shard",
+						Owner:   "host-test-peer-2",
+					}).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "StartWorkflowExecution redirected failed again with error",
+			op: func(c Client) (any, error) {
+				return c.StartWorkflowExecution(context.Background(), &types.HistoryStartWorkflowExecutionRequest{
+					StartRequest: &types.StartWorkflowExecutionRequest{
+						WorkflowID: "test-workflow",
+					},
+				})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				p.EXPECT().FromWorkflowID("test-workflow").Return("test-peer-1", nil).Times(1)
+				p.EXPECT().FromHostAddress("host-test-peer-2").Return("test-peer-2", nil).Times(1)
+				c.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer-1")}).
+					Return(nil, &types.ShardOwnershipLostError{
+						Message: "test-peer-1 lost the shard",
+						Owner:   "host-test-peer-2",
+					}).Times(1)
+				c.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer-2")}).
+					Return(nil, fmt.Errorf("some error")).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "GetMutableState fail",
+			op: func(c Client) (any, error) {
+				return c.GetMutableState(context.Background(), &types.GetMutableStateRequest{
+					Execution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
+				})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				// Add your mock expectations here
+				p.EXPECT().FromWorkflowID("test-workflow").Return("test-peer", nil).Times(1)
+				c.EXPECT().GetMutableState(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer")}).
+					Return(nil, fmt.Errorf("GetMutableState failed")).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "PollMutableState fail",
+			op: func(c Client) (any, error) {
+				return c.PollMutableState(context.Background(), &types.PollMutableStateRequest{
+					Execution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
+				})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				// Add your mock expectations here
+				p.EXPECT().FromWorkflowID("test-workflow").Return("test-peer", nil).Times(1)
+				c.EXPECT().PollMutableState(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer")}).
+					Return(nil, fmt.Errorf("PollMutableState failed")).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "ResetWorkflowExecution fail",
+			op: func(c Client) (any, error) {
+				return c.ResetWorkflowExecution(context.Background(), &types.HistoryResetWorkflowExecutionRequest{
+					ResetRequest: &types.ResetWorkflowExecutionRequest{
+						WorkflowExecution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
+					},
+				})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				// Add your mock expectations here
+				p.EXPECT().FromWorkflowID("test-workflow").Return("test-peer", nil).Times(1)
+				c.EXPECT().ResetWorkflowExecution(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer")}).
+					Return(nil, fmt.Errorf("ResetWorkflowExecution failed")).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "DescribeWorkflowExecution fail",
+			op: func(c Client) (any, error) {
+				return c.DescribeWorkflowExecution(context.Background(), &types.HistoryDescribeWorkflowExecutionRequest{
+					Request: &types.DescribeWorkflowExecutionRequest{
+						Execution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
+					},
+				})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				// Add your mock expectations here
+				p.EXPECT().FromWorkflowID("test-workflow").Return("test-peer", nil).Times(1)
+				c.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer")}).
+					Return(nil, fmt.Errorf("DescribeWorkflowExecution failed")).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "RecordActivityTaskHeartbeat fail",
+			op: func(c Client) (any, error) {
+				return c.RecordActivityTaskHeartbeat(context.Background(), &types.HistoryRecordActivityTaskHeartbeatRequest{
+					HeartbeatRequest: &types.RecordActivityTaskHeartbeatRequest{
+						TaskToken: []byte(`{"workflowId": "test-workflow"}`),
+					},
+				})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				// Add your mock expectations here
+				p.EXPECT().FromWorkflowID("test-workflow").Return("test-peer", nil).Times(1)
+				c.EXPECT().RecordActivityTaskHeartbeat(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer")}).
+					Return(nil, fmt.Errorf("RecordActivityTaskHeartbeat failed")).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "RecordActivityTaskStarted fail",
+			op: func(c Client) (any, error) {
+				return c.RecordActivityTaskStarted(context.Background(), &types.RecordActivityTaskStartedRequest{
+					WorkflowExecution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
+				})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				// Add your mock expectations here
+				p.EXPECT().FromWorkflowID("test-workflow").Return("test-peer", nil).Times(1)
+				c.EXPECT().RecordActivityTaskStarted(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer")}).
+					Return(nil, fmt.Errorf("RecordActivityTaskStarted failed")).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "RecordDecisionTaskStarted fail",
+			op: func(c Client) (any, error) {
+				return c.RecordDecisionTaskStarted(context.Background(), &types.RecordDecisionTaskStartedRequest{
+					WorkflowExecution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
+				})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				// Add your mock expectations here
+				p.EXPECT().FromWorkflowID("test-workflow").Return("test-peer", nil).Times(1)
+				c.EXPECT().RecordDecisionTaskStarted(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer")}).
+					Return(nil, fmt.Errorf("RecordDecisionTaskStarted failed")).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "GetReplicationMessages fail open on unknow error",
+			op: func(c Client) (any, error) {
+				return c.GetReplicationMessages(context.Background(), &types.GetReplicationMessagesRequest{
+					Tokens: []*types.ReplicationToken{
+						{
+							ShardID: 100,
+						},
+						{
+							ShardID: 101,
+						},
+					},
+				})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				// Add your mock expectations here
+				p.EXPECT().FromShardID(100).Return("test-peer-0", nil).Times(1)
+				p.EXPECT().FromShardID(101).Return("test-peer-1", nil).Times(1)
+				c.EXPECT().GetReplicationMessages(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer-0")}).
+					Return(&types.GetReplicationMessagesResponse{
+						MessagesByShard: map[int32]*types.ReplicationMessages{100: {}},
+					}, nil).Times(1)
+				c.EXPECT().GetReplicationMessages(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer-1")}).
+					Return(nil, fmt.Errorf("GetReplicationMessages failed")).Times(1)
+			},
+			want: &types.GetReplicationMessagesResponse{
+				MessagesByShard: map[int32]*types.ReplicationMessages{
+					100: {},
+				},
+			},
+			wantError: false,
+		},
+		{
+			name: "GetReplicationMessages fail open on unknow error",
+			op: func(c Client) (any, error) {
+				return c.GetReplicationMessages(context.Background(), &types.GetReplicationMessagesRequest{
+					Tokens: []*types.ReplicationToken{
+						{
+							ShardID: 100,
+						},
+						{
+							ShardID: 101,
+						},
+					},
+				})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				// Add your mock expectations here
+				p.EXPECT().FromShardID(100).Return("test-peer-0", nil).Times(1)
+				p.EXPECT().FromShardID(101).Return("test-peer-1", nil).Times(1)
+				c.EXPECT().GetReplicationMessages(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer-0")}).
+					Return(&types.GetReplicationMessagesResponse{
+						MessagesByShard: map[int32]*types.ReplicationMessages{100: {}},
+					}, nil).Times(1)
+				c.EXPECT().GetReplicationMessages(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer-1")}).
+					Return(nil, &types.ServiceBusyError{}).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "GetDLQReplicationMessages fail",
+			op: func(c Client) (any, error) {
+				return c.GetDLQReplicationMessages(context.Background(), &types.GetDLQReplicationMessagesRequest{
+					TaskInfos: []*types.ReplicationTaskInfo{
+						{WorkflowID: "test-workflow"},
+					},
+				})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				// Add your mock expectations here
+				p.EXPECT().FromWorkflowID("test-workflow").Return("test-peer", nil).Times(1)
+				c.EXPECT().GetDLQReplicationMessages(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer")}).
+					Return(nil, fmt.Errorf("GetDLQReplicationMessages failed")).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "ReadDLQMessages fail",
+			op: func(c Client) (any, error) {
+				return c.ReadDLQMessages(context.Background(), &types.ReadDLQMessagesRequest{
+					ShardID: 123,
+				})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				// Add your mock expectations here
+				p.EXPECT().FromShardID(123).Return("test-peer", nil).Times(1)
+				c.EXPECT().ReadDLQMessages(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer")}).
+					Return(nil, fmt.Errorf("ReadDLQMessages failed")).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "MergeDLQMessages fail",
+			op: func(c Client) (any, error) {
+				return c.MergeDLQMessages(context.Background(), &types.MergeDLQMessagesRequest{
+					ShardID: 123,
+				})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				// Add your mock expectations here
+				p.EXPECT().FromShardID(123).Return("test-peer", nil).Times(1)
+				c.EXPECT().MergeDLQMessages(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer")}).
+					Return(nil, fmt.Errorf("MergeDLQMessages failed")).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "GetCrossClusterTasks fail open",
+			op: func(c Client) (any, error) {
+				return c.GetCrossClusterTasks(context.Background(), &types.GetCrossClusterTasksRequest{
+					ShardIDs: []int32{100},
+				})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				// Add your mock expectations here
+				p.EXPECT().FromShardID(100).Return("test-peer", nil).Times(1)
+				c.EXPECT().GetCrossClusterTasks(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer")}).
+					Return(nil, fmt.Errorf("GetCrossClusterTasks failed")).Times(1)
+			},
+			want: &types.GetCrossClusterTasksResponse{
+				TasksByShard:       make(map[int32][]*types.CrossClusterTaskRequest),
+				FailedCauseByShard: map[int32]types.GetTaskFailedCause{
+					100: types.GetTaskFailedCauseUncategorized,
+				},
+			},
+			wantError: false,
+		},
+		{
+			name: "RespondCrossClusterTasksCompleted fail",
+			op: func(c Client) (any, error) {
+				return c.RespondCrossClusterTasksCompleted(context.Background(), &types.RespondCrossClusterTasksCompletedRequest{
+					ShardID: 123,
+				})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				// Add your mock expectations here
+				p.EXPECT().FromShardID(123).Return("test-peer", nil).Times(1)
+				c.EXPECT().RespondCrossClusterTasksCompleted(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer")}).
+					Return(nil, fmt.Errorf("RespondCrossClusterTasksCompleted failed")).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "GetFailoverInfo fail",
+			op: func(c Client) (any, error) {
+				return c.GetFailoverInfo(context.Background(), &types.GetFailoverInfoRequest{
+					DomainID: "test-domain",
+				})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				// Add your mock expectations here
+				p.EXPECT().FromDomainID("test-domain").Return("test-peer", nil).Times(1)
+				c.EXPECT().GetFailoverInfo(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer")}).
+					Return(nil, fmt.Errorf("GetFailoverInfo failed")).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "DescribeMutableState fail",
+			op: func(c Client) (any, error) {
+				return c.DescribeMutableState(context.Background(), &types.DescribeMutableStateRequest{
+					Execution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
+				})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				// Add your mock expectations here
+				p.EXPECT().FromWorkflowID(gomock.Any()).Return("test-peer", nil).Times(1)
+				c.EXPECT().DescribeMutableState(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer")}).
+					Return(nil, fmt.Errorf("DescribeMutableState failed")).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "DescribeQueue fail",
+			op: func(c Client) (any, error) {
+				return c.DescribeQueue(context.Background(), &types.DescribeQueueRequest{
+					ShardID: 123,
+				})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				// Add your mock expectations here
+				p.EXPECT().FromShardID(123).Return("test-peer", nil).Times(1)
+				c.EXPECT().DescribeQueue(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer")}).
+					Return(nil, fmt.Errorf("DescribeQueue failed")).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "CountDLQMessages fail",
+			op: func(c Client) (any, error) {
+				return c.CountDLQMessages(context.Background(), &types.CountDLQMessagesRequest{})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				// Add your mock expectations here
+				p.EXPECT().GetAllPeers().Return([]string{"test-peer"}, nil).Times(1)
+				c.EXPECT().CountDLQMessages(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer")}).
+					Return(nil, fmt.Errorf("CountDLQMessages failed")).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "QueryWorkflow fail",
+			op: func(c Client) (any, error) {
+				return c.QueryWorkflow(context.Background(), &types.HistoryQueryWorkflowRequest{
+					Request: &types.QueryWorkflowRequest{
+						Execution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
+					},
+				})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				// Add your mock expectations here
+				p.EXPECT().FromWorkflowID(gomock.Any()).Return("test-peer", nil).Times(1)
+				c.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer")}).
+					Return(nil, fmt.Errorf("QueryWorkflow failed")).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "ResetStickyTaskList fail",
+			op: func(c Client) (any, error) {
+				return c.ResetStickyTaskList(context.Background(), &types.HistoryResetStickyTaskListRequest{
+					Execution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
+				})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				// Add your mock expectations here
+				p.EXPECT().FromWorkflowID("test-workflow").Return("test-peer", nil).Times(1)
+				c.EXPECT().ResetStickyTaskList(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer")}).
+					Return(nil, fmt.Errorf("ResetStickyTaskList failed")).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "RespondDecisionTaskCompleted fail",
+			op: func(c Client) (any, error) {
+				return c.RespondDecisionTaskCompleted(context.Background(), &types.HistoryRespondDecisionTaskCompletedRequest{
+					CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+						TaskToken: []byte(`{"workflowId": "test-workflow"}`),
+					},
+				})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				// Add your mock expectations here
+				p.EXPECT().FromWorkflowID("test-workflow").Return("test-peer", nil).Times(1)
+				c.EXPECT().RespondDecisionTaskCompleted(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer")}).
+					Return(nil, fmt.Errorf("RespondDecisionTaskCompleted failed")).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "RespondDecisionTaskCompleted fail",
+			op: func(c Client) (any, error) {
+				return c.RespondDecisionTaskCompleted(context.Background(), &types.HistoryRespondDecisionTaskCompletedRequest{
+					CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+						TaskToken: []byte(`{"workflowId": "test-workflow"}`),
+					},
+				})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				// Add your mock expectations here
+				p.EXPECT().FromWorkflowID("test-workflow").Return("test-peer", nil).Times(1)
+				c.EXPECT().RespondDecisionTaskCompleted(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer")}).
+					Return(nil, fmt.Errorf("RespondDecisionTaskCompleted failed")).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "SignalWithStartWorkflowExecution fail",
+			op: func(c Client) (any, error) {
+				return c.SignalWithStartWorkflowExecution(context.Background(), &types.HistorySignalWithStartWorkflowExecutionRequest{
+					SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
+						WorkflowID: "test-workflow",
+					},
+				})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				// Add your mock expectations here
+				p.EXPECT().FromWorkflowID("test-workflow").Return("test-peer", nil).Times(1)
+				c.EXPECT().SignalWithStartWorkflowExecution(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer")}).
+					Return(nil, fmt.Errorf("SignalWithStartWorkflowExecution failed")).Times(1)
+			},
+			wantError: true,
 		},
 	}
 
