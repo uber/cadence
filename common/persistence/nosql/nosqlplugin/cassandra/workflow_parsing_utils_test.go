@@ -31,8 +31,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
-  "github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
-
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
 
 type mockUUID struct {
