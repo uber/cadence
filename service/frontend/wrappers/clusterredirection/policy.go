@@ -194,6 +194,9 @@ func (policy *selectedOrAllAPIsForwardingRedirectionPolicy) WithDomainIDRedirect
 	if err != nil {
 		return err
 	}
+	if domainEntry.IsDeprecatedOrDeleted() {
+		return fmt.Errorf("domain %v is deprecated or deleted", domainEntry.GetInfo().Name)
+	}
 	return policy.withRedirect(ctx, domainEntry, apiName, call)
 }
 
@@ -202,6 +205,9 @@ func (policy *selectedOrAllAPIsForwardingRedirectionPolicy) WithDomainNameRedire
 	domainEntry, err := policy.domainCache.GetDomain(domainName)
 	if err != nil {
 		return err
+	}
+	if domainEntry.IsDeprecatedOrDeleted() {
+		return fmt.Errorf("domain %v is deprecated or deleted", domainName)
 	}
 	return policy.withRedirect(ctx, domainEntry, apiName, call)
 }

@@ -20,43 +20,48 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package persistence
+package gocql
 
 import (
 	"testing"
 
+	"github.com/gocql/gocql"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFilterAttrPrefix(t *testing.T) {
-	tests := map[string]struct {
-		expectedInput  string
-		expectedOutput string
+func Test_mustConvertConsistency(t *testing.T) {
+	tests := []struct {
+		input  Consistency
+		output gocql.Consistency
 	}{
-		"Case1: empty input": {
-			expectedInput:  "",
-			expectedOutput: "",
-		},
-		"Case2: filtered input": {
-			expectedInput:  "`Attr.CustomIntField` = 12",
-			expectedOutput: "CustomIntField = 12",
-		},
-		"Case3: complex input": {
-			expectedInput:  "WorkflowID = 'test-wf' and (`Attr.CustomIntField` = 12 or `Attr.CustomStringField` = 'a-b-c' and WorkflowType = 'wf-type')",
-			expectedOutput: "WorkflowID = 'test-wf' and (CustomIntField = 12 or CustomStringField = 'a-b-c' and WorkflowType = 'wf-type')",
-		},
-		"Case4: false positive case": {
-			expectedInput:  "`Attr.CustomStringField` = '`Attr.ABCtesting'",
-			expectedOutput: "CustomStringField = 'ABCtesting'", // this is supposed to be CustomStringField = '`Attr.ABCtesting'
-		},
+		{Any, gocql.Any},
+		{One, gocql.One},
+		{Two, gocql.Two},
+		{Three, gocql.Three},
+		{Quorum, gocql.Quorum},
+		{All, gocql.All},
+		{LocalQuorum, gocql.LocalQuorum},
+		{EachQuorum, gocql.EachQuorum},
+		{LocalOne, gocql.LocalOne},
 	}
 
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			assert.NotPanics(t, func() {
-				actualOutput := filterAttrPrefix(test.expectedInput)
-				assert.Equal(t, test.expectedOutput, actualOutput)
-			})
-		})
+	for _, tt := range tests {
+		assert.Equal(t, tt.output, mustConvertConsistency(tt.input))
 	}
+	assert.Panics(t, func() { mustConvertConsistency(Consistency(9999)) })
+}
+
+func Test_mustConvertSerialConsistency(t *testing.T) {
+	tests := []struct {
+		input  SerialConsistency
+		output gocql.SerialConsistency
+	}{
+		{Serial, gocql.Serial},
+		{LocalSerial, gocql.LocalSerial},
+	}
+
+	for _, tt := range tests {
+		assert.Equal(t, tt.output, mustConvertSerialConsistency(tt.input))
+	}
+	assert.Panics(t, func() { mustConvertSerialConsistency(SerialConsistency(9999)) })
 }
