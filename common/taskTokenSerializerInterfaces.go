@@ -50,3 +50,11 @@ type (
 		TaskID   string `json:"taskId"`
 	}
 )
+
+func (t TaskToken) GetDomainID() string {
+	return t.DomainID
+}
+
+func (t QueryTaskToken) GetDomainID() string {
+	return t.DomainID
+}
