@@ -25,6 +25,7 @@ package host
 import (
 	"flag"
 	"testing"
+	"time"
 
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
@@ -139,4 +140,9 @@ func (s *WorkflowIDRateLimitIntegrationSuite) TestWorkflowIDSpecificRateLimits()
 		assert.ErrorAs(s.T(), err, &busyErr)
 		assert.Equal(s.T(), common.WorkflowIDRateLimitReason, busyErr.Reason)
 	}
+
+	// After 1 second we should be able to start another workflow
+	time.Sleep(1 * time.Second)
+	_, err := s.engine.StartWorkflowExecution(ctx, request)
+	assert.NoError(s.T(), err)
 }
