@@ -23,25 +23,29 @@ package handler
 import (
 	"context"
 	"errors"
+	"github.com/stretchr/testify/mock"
+	"github.com/uber/cadence/common/metrics/mocks"
+	"github.com/uber/cadence/service/history/constants"
+	"go.uber.org/yarpc/yarpcerrors"
 	"math/rand"
 	"sync/atomic"
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"go.uber.org/yarpc/yarpcerrors"
-
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/metrics/mocks"
+	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
+	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/resource"
 	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/task"
 	"github.com/uber/cadence/service/history/workflowcache"
 )
 
@@ -49,6 +53,7 @@ const (
 	testWorkflowID    = "test-workflow-id"
 	testWorkflowRunID = "test-workflow-run-id"
 	testDomainID      = "BF80C53A-ED56-4DD9-84EB-BE9AD4E45867"
+	testValidUUID     = "FCD00931-EBD4-4028-B67E-4DE624641255"
 )
 
 type (
@@ -56,11 +61,15 @@ type (
 		suite.Suite
 		*require.Assertions
 
-		controller          *gomock.Controller
-		mockResource        *resource.Test
-		mockShardController *shard.MockController
-		mockEngine          *engine.MockEngine
-		mockWFCache         *workflowcache.MockWFCache
+		controller                   *gomock.Controller
+		mockResource                 *resource.Test
+		mockShardController          *shard.MockController
+		mockEngine                   *engine.MockEngine
+		mockWFCache                  *workflowcache.MockWFCache
+		mockTokenSerializer          *common.MockTaskTokenSerializer
+		mockHistoryEventNotifier     *events.MockNotifier
+		mockRatelimiter              *quotas.MockLimiter
+		mockCrossClusterTaskFetchers *task.MockFetcher
 
 		handler *handlerImpl
 	}
@@ -84,11 +93,151 @@ func (s *handlerSuite) SetupTest() {
 	internalRequestRateLimitingEnabledConfig := func(domainName string) bool { return false }
 	s.handler = NewHandler(s.mockResource, config.NewForTest(), s.mockWFCache, internalRequestRateLimitingEnabledConfig).(*handlerImpl)
 	s.handler.controller = s.mockShardController
+	s.mockTokenSerializer = common.NewMockTaskTokenSerializer(s.controller)
+	s.mockRatelimiter = quotas.NewMockLimiter(s.controller)
+	s.handler.rateLimiter = s.mockRatelimiter
+	s.handler.tokenSerializer = s.mockTokenSerializer
 	s.handler.startWG.Done()
 }
 
 func (s *handlerSuite) TearDownTest() {
 	s.controller.Finish()
+}
+
+func (s *handlerSuite) TestHealth() {
+	hs, err := s.handler.Health(context.Background())
+	s.NoError(err)
+	s.Equal(&types.HealthStatus{Ok: true, Msg: "OK"}, hs)
+}
+
+func (s *handlerSuite) TestRecordActivityTaskHeartbeat() {
+	testInput := map[string]struct {
+		caseName      string
+		input         *types.HistoryRecordActivityTaskHeartbeatRequest
+		expected      *types.RecordActivityTaskHeartbeatResponse
+		expectedError bool
+	}{
+		"valid input": {
+			caseName: "valid input",
+			input: &types.HistoryRecordActivityTaskHeartbeatRequest{
+				DomainUUID: testDomainID,
+				HeartbeatRequest: &types.RecordActivityTaskHeartbeatRequest{
+					TaskToken: []byte("task-token"),
+				},
+			},
+			expected:      &types.RecordActivityTaskHeartbeatResponse{CancelRequested: false},
+			expectedError: false,
+		},
+		"empty domainID": {
+			caseName: "empty domainID",
+			input: &types.HistoryRecordActivityTaskHeartbeatRequest{
+				DomainUUID: "",
+			},
+			expected:      nil,
+			expectedError: true,
+		},
+		"ratelimit exceeded": {
+			caseName: "ratelimit exceeded",
+			input: &types.HistoryRecordActivityTaskHeartbeatRequest{
+				DomainUUID: testDomainID,
+			},
+			expected:      nil,
+			expectedError: true,
+		},
+		"token deserialization error": {
+			caseName: "token deserialization error",
+			input: &types.HistoryRecordActivityTaskHeartbeatRequest{
+				DomainUUID: testDomainID,
+				HeartbeatRequest: &types.RecordActivityTaskHeartbeatRequest{
+					TaskToken: []byte("task-token"),
+				},
+			},
+			expected:      nil,
+			expectedError: true,
+		},
+		"invalid task token": {
+			caseName: "invalid task token",
+			input: &types.HistoryRecordActivityTaskHeartbeatRequest{
+				DomainUUID: testDomainID,
+				HeartbeatRequest: &types.RecordActivityTaskHeartbeatRequest{
+					TaskToken: []byte("task-token"),
+				},
+			},
+			expected:      nil,
+			expectedError: true,
+		},
+		"get engine error": {
+			caseName: "get engine error",
+			input: &types.HistoryRecordActivityTaskHeartbeatRequest{
+				DomainUUID: testDomainID,
+				HeartbeatRequest: &types.RecordActivityTaskHeartbeatRequest{
+					TaskToken: []byte("task-token"),
+				},
+			},
+			expected:      nil,
+			expectedError: true,
+		},
+		"engine error": {
+			caseName: "engine error",
+			input: &types.HistoryRecordActivityTaskHeartbeatRequest{
+				DomainUUID: testDomainID,
+				HeartbeatRequest: &types.RecordActivityTaskHeartbeatRequest{
+					TaskToken: []byte("task-token"),
+				},
+			},
+			expected:      nil,
+			expectedError: true,
+		},
+	}
+
+	for name, input := range testInput {
+		s.Run(name, func() {
+			switch input.caseName {
+			case "valid input":
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				}, nil).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().RecordActivityTaskHeartbeat(gomock.Any(), input.input).Return(input.expected, nil).Times(1)
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+			case "empty domainID":
+			case "ratelimit exceeded":
+				s.mockRatelimiter.EXPECT().Allow().Return(false).Times(1)
+			case "token deserialization error":
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(nil, errors.New("some random error")).Times(1)
+			case "invalid task token":
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{
+					WorkflowID: "",
+					RunID:      "",
+				}, nil).Times(1)
+			case "get engine error":
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				}, nil).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(nil, errors.New("error")).Times(1)
+			case "engine error":
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				}, nil).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().RecordActivityTaskHeartbeat(gomock.Any(), input.input).Return(nil, errors.New("error")).Times(1)
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+			}
+			response, err := s.handler.RecordActivityTaskHeartbeat(context.Background(), input.input)
+			s.Equal(input.expected, response)
+			if input.expectedError {
+				s.Error(err)
+			} else {
+				s.NoError(err)
+			}
+		})
+	}
 }
 
 func (s *handlerSuite) TestGetCrossClusterTasks() {
@@ -161,7 +310,70 @@ func (s *handlerSuite) testRespondCrossClusterTaskCompleted(
 	}
 }
 
-func TestCorrectUseOfErrorHandling(t *testing.T) {
+func (s *handlerSuite) TestStartWorkflowExecution() {
+
+	request := &types.HistoryStartWorkflowExecutionRequest{
+		DomainUUID: testDomainID,
+		StartRequest: &types.StartWorkflowExecutionRequest{
+			WorkflowID: testWorkflowID,
+		},
+	}
+
+	expectedResponse := &types.StartWorkflowExecutionResponse{
+		RunID: testWorkflowRunID,
+	}
+
+	s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).AnyTimes()
+	s.mockRatelimiter.EXPECT().Allow().Return(true).AnyTimes()
+	s.mockEngine.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(expectedResponse, nil).AnyTimes()
+
+	response, err := s.handler.StartWorkflowExecution(context.Background(), request)
+	s.Equal(expectedResponse, response)
+	s.Nil(err)
+}
+
+func (s *handlerSuite) TestEmitInfoOrDebugLog() {
+	// test emitInfoOrDebugLog
+	s.mockResource.Logger = testlogger.New(s.Suite.T())
+	s.handler.emitInfoOrDebugLog("domain1", "test log")
+}
+
+func (s *handlerSuite) TestValidateTaskToken() {
+	testInput := map[string]struct {
+		taskToken     *common.TaskToken
+		expectedError error
+	}{
+		"valid task token": {
+			taskToken: &common.TaskToken{
+				WorkflowID: testWorkflowID,
+				RunID:      testValidUUID,
+			},
+			expectedError: nil,
+		},
+		"empty workflow id": {
+			taskToken: &common.TaskToken{
+				WorkflowID: "",
+			},
+			expectedError: constants.ErrWorkflowIDNotSet,
+		},
+		"invalid run id": {
+			taskToken: &common.TaskToken{
+				WorkflowID: testWorkflowID,
+				RunID:      "invalid",
+			},
+			expectedError: constants.ErrRunIDNotValid,
+		},
+	}
+
+	for name, input := range testInput {
+		s.Run(name, func() {
+			err := validateTaskToken(input.taskToken)
+			s.Equal(input.expectedError, err)
+		})
+	}
+}
+
+func (s *handlerSuite) TestCorrectUseOfErrorHandling() {
 
 	tests := map[string]struct {
 		input       error
@@ -290,37 +502,16 @@ func TestCorrectUseOfErrorHandling(t *testing.T) {
 	}
 
 	for name, td := range tests {
-		t.Run(name, func(t *testing.T) {
+		s.Run(name, func() {
 			scope := mocks.Scope{}
 			td.expectation(&scope)
 			h := handlerImpl{
-				Resource: resource.NewTest(t, gomock.NewController(t), 0),
+				Resource: resource.NewTest(s.T(), gomock.NewController(s.T()), 0),
 			}
 			h.error(td.input, &scope, "some-domain", "some-wf", "some-run")
 			// we're doing the args assertion in the On, so using mock.Anything to avoid having to duplicate this
 			// a wrong metric being emitted will fail the mock.On() expectation. This will catch missing calls
-			scope.Mock.AssertCalled(t, "IncCounter", mock.Anything)
+			scope.Mock.AssertCalled(s.T(), "IncCounter", mock.Anything)
 		})
 	}
-}
-
-func (s *handlerSuite) TestStartWorkflowExecution() {
-
-	request := &types.HistoryStartWorkflowExecutionRequest{
-		DomainUUID: testDomainID,
-		StartRequest: &types.StartWorkflowExecutionRequest{
-			WorkflowID: testWorkflowID,
-		},
-	}
-
-	expectedResponse := &types.StartWorkflowExecutionResponse{
-		RunID: testWorkflowRunID,
-	}
-
-	s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).AnyTimes()
-	s.mockEngine.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(expectedResponse, nil).Times(1)
-
-	response, err := s.handler.StartWorkflowExecution(context.Background(), request)
-	s.Equal(expectedResponse, response)
-	s.Nil(err)
 }

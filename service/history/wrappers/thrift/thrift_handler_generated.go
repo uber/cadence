@@ -110,6 +110,11 @@ func (g ThriftHandler) QueryWorkflow(ctx context.Context, QueryRequest *history.
 	return thrift.FromHistoryQueryWorkflowResponse(response), thrift.FromError(err)
 }
 
+func (g ThriftHandler) RatelimitUpdate(ctx context.Context, Request *history.RatelimitUpdateRequest) (rp1 *history.RatelimitUpdateResponse, err error) {
+	response, err := g.h.RatelimitUpdate(ctx, thrift.ToHistoryRatelimitUpdateRequest(Request))
+	return thrift.FromHistoryRatelimitUpdateResponse(response), thrift.FromError(err)
+}
+
 func (g ThriftHandler) ReadDLQMessages(ctx context.Context, Request *replicator.ReadDLQMessagesRequest) (rp1 *replicator.ReadDLQMessagesResponse, err error) {
 	response, err := g.h.ReadDLQMessages(ctx, thrift.ToHistoryReadDLQMessagesRequest(Request))
 	return thrift.FromHistoryReadDLQMessagesResponse(response), thrift.FromError(err)
