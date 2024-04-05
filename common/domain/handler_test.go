@@ -188,7 +188,7 @@ func TestRegisterDomain(t *testing.T) {
 			},
 			wantErr:     true,
 			expectedErr: &types.BadRequestError{},
-		},
+    },
 	}
 
 	for _, tc := range tests {
