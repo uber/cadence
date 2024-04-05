@@ -23,6 +23,7 @@
 package cassandra
 
 import (
+	"github.com/uber/cadence/common/checksum"
 	"testing"
 	"time"
 
@@ -520,4 +521,66 @@ func Test_parseReplicationTaskInfo(t *testing.T) {
 		CreationTime:      time.Unix(0, 7),
 	}
 	assert.Equal(t, expected, parseReplicationTaskInfo(testInput))
+}
+
+func Test_parseTransferTaskInfo(t *testing.T) {
+	timeNow := time.Now()
+	testInput := map[string]interface{}{
+		"domain_id":                  newMockUUID("domain_id"),
+		"workflow_id":                "workflow_id",
+		"run_id":                     newMockUUID("run_id"),
+		"visibility_ts":              timeNow,
+		"task_id":                    int64(1),
+		"target_domain_id":           newMockUUID("target_domain_id"),
+		"target_domain_ids":          []interface{}{newMockUUID("target_domain_id")},
+		"target_workflow_id":         "target_workflow_id",
+		"target_run_id":              newMockUUID("target_run_id"),
+		"target_child_workflow_only": true,
+		"task_list":                  "task_list",
+		"type":                       2,
+		"schedule_id":                int64(3),
+		"record_visibility":          true,
+		"version":                    int64(4),
+	}
+	expected := &persistence.TransferTaskInfo{
+		DomainID:                "domain_id",
+		WorkflowID:              "workflow_id",
+		RunID:                   "run_id",
+		VisibilityTimestamp:     timeNow,
+		TaskID:                  int64(1),
+		TargetDomainID:          "target_domain_id",
+		TargetDomainIDs:         map[string]struct{}{"target_domain_id": {}},
+		TargetWorkflowID:        "target_workflow_id",
+		TargetRunID:             "target_run_id",
+		TargetChildWorkflowOnly: true,
+		TaskList:                "task_list",
+		TaskType:                2,
+		ScheduleID:              int64(3),
+		RecordVisibility:        true,
+		Version:                 int64(4),
+	}
+	assert.Equal(t, expected, parseTransferTaskInfo(testInput))
+
+	// edge case
+	testInput = map[string]interface{}{
+		"target_run_id": newMockUUID(persistence.TransferTaskTransferTargetRunID),
+	}
+	expected = &persistence.TransferTaskInfo{
+		TargetRunID: "",
+	}
+	assert.Equal(t, expected, parseTransferTaskInfo(testInput))
+}
+
+func Test_parseChecksum(t *testing.T) {
+	testInput := map[string]interface{}{
+		"version": 1,
+		"flavor":  2,
+		"value":   []byte("value"),
+	}
+	expected := checksum.Checksum{
+		Version: 1,
+		Flavor:  2,
+		Value:   []byte("value"),
+	}
+	assert.Equal(t, expected, parseChecksum(testInput))
 }
