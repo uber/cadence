@@ -25,13 +25,13 @@ package persistence
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/dynamicconfig"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 )
 
