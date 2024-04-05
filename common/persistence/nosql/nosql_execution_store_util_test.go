@@ -205,7 +205,6 @@ func TestNosqlExecutionStoreUtils(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
-			defer mockCtrl.Finish()
 
 			mockDB := nosqlplugin.NewMockDB(mockCtrl)
 			store := newTestNosqlExecutionStore(mockDB, log.NewNoop())
@@ -255,12 +254,109 @@ func TestPrepareTasksForWorkflowTxn(t *testing.T) {
 				assert.Nil(t, tasks)
 			},
 		},
+		{
+			name: "PrepareTimerTasksForWorkflowTxn - Zero Tasks",
+			setupStore: func(store *nosqlExecutionStore) ([]*nosqlplugin.TimerTask, error) {
+				return store.prepareTimerTasksForWorkflowTxn("domainID", "workflowID", "runID", []persistence.Task{})
+			},
+			validate: func(t *testing.T, tasks []*nosqlplugin.TimerTask, err error) {
+				assert.NoError(t, err)
+				assert.Empty(t, tasks)
+			},
+		},
+		{
+			name: "PrepareTimerTasksForWorkflowTxn - ActivityTimeoutTask",
+			setupStore: func(store *nosqlExecutionStore) ([]*nosqlplugin.TimerTask, error) {
+				timerTasks := []persistence.Task{
+					&persistence.ActivityTimeoutTask{
+						TaskData: persistence.TaskData{
+							Version:             1,
+							TaskID:              2,
+							VisibilityTimestamp: time.Now(),
+						},
+						EventID: 3,
+						Attempt: 2,
+					},
+				}
+				return store.prepareTimerTasksForWorkflowTxn("domainID", "workflowID", "runID", timerTasks)
+			},
+			validate: func(t *testing.T, tasks []*nosqlplugin.TimerTask, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, tasks, 1)
+				assert.Equal(t, int64(3), tasks[0].EventID)
+				assert.Equal(t, int64(2), tasks[0].ScheduleAttempt)
+			},
+		},
+		{
+			name: "PrepareTimerTasksForWorkflowTxn - UserTimerTask",
+			setupStore: func(store *nosqlExecutionStore) ([]*nosqlplugin.TimerTask, error) {
+				timerTasks := []persistence.Task{
+					&persistence.UserTimerTask{
+						TaskData: persistence.TaskData{
+							Version:             1,
+							TaskID:              3,
+							VisibilityTimestamp: time.Now(),
+						},
+						EventID: 4,
+					},
+				}
+				return store.prepareTimerTasksForWorkflowTxn("domainID", "workflowID", "runID", timerTasks)
+			},
+			validate: func(t *testing.T, tasks []*nosqlplugin.TimerTask, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, tasks, 1)
+				assert.Equal(t, int64(4), tasks[0].EventID)
+			},
+		},
+		{
+			name: "PrepareTimerTasksForWorkflowTxn - ActivityRetryTimerTask",
+			setupStore: func(store *nosqlExecutionStore) ([]*nosqlplugin.TimerTask, error) {
+				timerTasks := []persistence.Task{
+					&persistence.ActivityRetryTimerTask{
+						TaskData: persistence.TaskData{
+							Version:             1,
+							TaskID:              4,
+							VisibilityTimestamp: time.Now(),
+						},
+						EventID: 5,
+						Attempt: 3,
+					},
+				}
+				return store.prepareTimerTasksForWorkflowTxn("domainID", "workflowID", "runID", timerTasks)
+			},
+			validate: func(t *testing.T, tasks []*nosqlplugin.TimerTask, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, tasks, 1)
+				assert.Equal(t, int64(5), tasks[0].EventID)
+				assert.Equal(t, int64(3), tasks[0].ScheduleAttempt)
+			},
+		},
+		{
+			name: "PrepareTimerTasksForWorkflowTxn - WorkflowBackoffTimerTask",
+			setupStore: func(store *nosqlExecutionStore) ([]*nosqlplugin.TimerTask, error) {
+				timerTasks := []persistence.Task{
+					&persistence.WorkflowBackoffTimerTask{
+						TaskData: persistence.TaskData{
+							Version:             1,
+							TaskID:              5,
+							VisibilityTimestamp: time.Now(),
+						},
+						EventID: 6,
+					},
+				}
+				return store.prepareTimerTasksForWorkflowTxn("domainID", "workflowID", "runID", timerTasks)
+			},
+			validate: func(t *testing.T, tasks []*nosqlplugin.TimerTask, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, tasks, 1)
+				assert.Equal(t, int64(6), tasks[0].EventID)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
-			defer mockCtrl.Finish()
 
 			mockDB := nosqlplugin.NewMockDB(mockCtrl)
 			store := newTestNosqlExecutionStore(mockDB, log.NewNoop())
@@ -273,7 +369,6 @@ func TestPrepareTasksForWorkflowTxn(t *testing.T) {
 
 func TestPrepareReplicationTasksForWorkflowTxn(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
 
 	mockDB := nosqlplugin.NewMockDB(mockCtrl)
 	store := newTestNosqlExecutionStore(mockDB, log.NewNoop())
@@ -316,6 +411,52 @@ func TestPrepareReplicationTasksForWorkflowTxn(t *testing.T) {
 				assert.Nil(t, tasks)
 			},
 		},
+		{
+			name: "PrepareReplicationTasksForWorkflowTxn - SyncActivityTask",
+			setupStore: func(store *nosqlExecutionStore) ([]*nosqlplugin.ReplicationTask, error) {
+				replicationTasks := []persistence.Task{
+					&persistence.SyncActivityTask{
+						TaskData: persistence.TaskData{
+							Version:             2,
+							VisibilityTimestamp: time.Now(),
+							TaskID:              2,
+						},
+						ScheduledID: 123,
+					},
+				}
+				return store.prepareReplicationTasksForWorkflowTxn("domainID", "workflowID", "runID", replicationTasks)
+			},
+			validate: func(t *testing.T, tasks []*nosqlplugin.ReplicationTask, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, tasks, 1)
+				task := tasks[0]
+				assert.Equal(t, persistence.ReplicationTaskTypeSyncActivity, task.TaskType)
+				assert.Equal(t, int64(123), task.ScheduledID)
+			},
+		},
+		{
+			name: "PrepareReplicationTasksForWorkflowTxn - FailoverMarkerTask",
+			setupStore: func(store *nosqlExecutionStore) ([]*nosqlplugin.ReplicationTask, error) {
+				replicationTasks := []persistence.Task{
+					&persistence.FailoverMarkerTask{
+						TaskData: persistence.TaskData{
+							Version:             3,
+							VisibilityTimestamp: time.Now(),
+							TaskID:              3,
+						},
+						DomainID: "domainID",
+					},
+				}
+				return store.prepareReplicationTasksForWorkflowTxn("domainID", "workflowID", "runID", replicationTasks)
+			},
+			validate: func(t *testing.T, tasks []*nosqlplugin.ReplicationTask, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, tasks, 1)
+				task := tasks[0]
+				assert.Equal(t, persistence.ReplicationTaskTypeFailoverMarker, task.TaskType)
+				assert.Equal(t, "domainID", task.DomainID)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -328,7 +469,6 @@ func TestPrepareReplicationTasksForWorkflowTxn(t *testing.T) {
 
 func TestPrepareCrossClusterTasksForWorkflowTxn(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
 
 	mockDB := nosqlplugin.NewMockDB(mockCtrl)
 	store := newTestNosqlExecutionStore(mockDB, log.NewNoop())
@@ -369,6 +509,112 @@ func TestPrepareCrossClusterTasksForWorkflowTxn(t *testing.T) {
 				assert.Nil(t, tasks)
 			},
 		},
+		{
+			name: "CrossClusterCancelExecutionTask - Success",
+			setupStore: func(store *nosqlExecutionStore) ([]*nosqlplugin.CrossClusterTask, error) {
+				crossClusterTasks := []persistence.Task{
+					&persistence.CrossClusterCancelExecutionTask{
+						CancelExecutionTask: persistence.CancelExecutionTask{
+							TaskData: persistence.TaskData{
+								TaskID: 1001,
+							},
+							TargetDomainID:          "targetDomainID-cancel",
+							TargetWorkflowID:        "targetWorkflowID-cancel",
+							TargetRunID:             "targetRunID-cancel",
+							TargetChildWorkflowOnly: true,
+							InitiatedID:             1001,
+						},
+						TargetCluster: "targetCluster-cancel",
+					},
+				}
+				return store.prepareCrossClusterTasksForWorkflowTxn("domainID", "workflowID", "runID", crossClusterTasks)
+			},
+			validate: func(t *testing.T, tasks []*nosqlplugin.CrossClusterTask, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, tasks, 1)
+				task := tasks[0]
+				assert.Equal(t, "targetCluster-cancel", task.TargetCluster)
+				assert.Equal(t, int64(1001), task.TransferTask.ScheduleID)
+			},
+		},
+		{
+			name: "CrossClusterSignalExecutionTask - Success",
+			setupStore: func(store *nosqlExecutionStore) ([]*nosqlplugin.CrossClusterTask, error) {
+				crossClusterTasks := []persistence.Task{
+					&persistence.CrossClusterSignalExecutionTask{
+						SignalExecutionTask: persistence.SignalExecutionTask{
+							TaskData: persistence.TaskData{
+								TaskID: 1002,
+							},
+							TargetDomainID:          "targetDomainID-signal",
+							TargetWorkflowID:        "targetWorkflowID-signal",
+							TargetRunID:             "targetRunID-signal",
+							TargetChildWorkflowOnly: true,
+							InitiatedID:             1002,
+						},
+						TargetCluster: "targetCluster-signal",
+					},
+				}
+				return store.prepareCrossClusterTasksForWorkflowTxn("domainID", "workflowID", "runID", crossClusterTasks)
+			},
+			validate: func(t *testing.T, tasks []*nosqlplugin.CrossClusterTask, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, tasks, 1)
+				task := tasks[0]
+				assert.Equal(t, "targetCluster-signal", task.TargetCluster)
+				assert.Equal(t, int64(1002), task.TransferTask.ScheduleID)
+			},
+		},
+		{
+			name: "CrossClusterRecordChildExecutionCompletedTask - Success",
+			setupStore: func(store *nosqlExecutionStore) ([]*nosqlplugin.CrossClusterTask, error) {
+				crossClusterTasks := []persistence.Task{
+					&persistence.CrossClusterRecordChildExecutionCompletedTask{
+						RecordChildExecutionCompletedTask: persistence.RecordChildExecutionCompletedTask{
+							TaskData: persistence.TaskData{
+								TaskID: 1003,
+							},
+							TargetDomainID:   "targetDomainID-record",
+							TargetWorkflowID: "targetWorkflowID-record",
+							TargetRunID:      "targetRunID-record",
+						},
+						TargetCluster: "targetCluster-record",
+					},
+				}
+				return store.prepareCrossClusterTasksForWorkflowTxn("domainID", "workflowID", "runID", crossClusterTasks)
+			},
+			validate: func(t *testing.T, tasks []*nosqlplugin.CrossClusterTask, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, tasks, 1)
+				task := tasks[0]
+				assert.Equal(t, "targetCluster-record", task.TargetCluster)
+			},
+		},
+		{
+			name: "CrossClusterApplyParentClosePolicyTask - Success",
+			setupStore: func(store *nosqlExecutionStore) ([]*nosqlplugin.CrossClusterTask, error) {
+				crossClusterTasks := []persistence.Task{
+					&persistence.CrossClusterApplyParentClosePolicyTask{
+						ApplyParentClosePolicyTask: persistence.ApplyParentClosePolicyTask{
+							TaskData: persistence.TaskData{
+								TaskID: 1004,
+							},
+							TargetDomainIDs: map[string]struct{}{"targetDomainID-apply-close": {}},
+						},
+						TargetCluster: "targetCluster-apply-close",
+					},
+				}
+				return store.prepareCrossClusterTasksForWorkflowTxn("domainID", "workflowID", "runID", crossClusterTasks)
+			},
+			validate: func(t *testing.T, tasks []*nosqlplugin.CrossClusterTask, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, tasks, 1)
+				task := tasks[0]
+				assert.Equal(t, "targetCluster-apply-close", task.TargetCluster)
+				_, exists := task.TransferTask.TargetDomainIDs["targetDomainID-apply-close"]
+				assert.True(t, exists)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -381,7 +627,6 @@ func TestPrepareCrossClusterTasksForWorkflowTxn(t *testing.T) {
 
 func TestPrepareNoSQLTasksForWorkflowTxn(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
 
 	mockDB := nosqlplugin.NewMockDB(mockCtrl)
 	store := newTestNosqlExecutionStore(mockDB, log.NewNoop())
@@ -427,54 +672,267 @@ func TestPrepareTransferTasksForWorkflowTxn(t *testing.T) {
 	testCases := []struct {
 		name       string
 		tasks      []persistence.Task
-		expectFunc func(*nosqlplugin.MockDB)
+		domainID   string
+		workflowID string
+		runID      string
 		validate   func(*testing.T, []*nosqlplugin.TransferTask, error)
 	}{
 		{
-			name: "Success - Prepare Transfer Tasks",
+			name:       "CancelExecutionTask - Success",
+			domainID:   "domainID-cancel",
+			workflowID: "workflowID-cancel",
+			runID:      "runID-cancel",
 			tasks: []persistence.Task{
-				&persistence.ActivityTask{
+				&persistence.CancelExecutionTask{
 					TaskData: persistence.TaskData{
-						Version: 1,
+						VisibilityTimestamp: time.Now(),
+						TaskID:              1002,
+						Version:             1,
 					},
-					DomainID: "domainID",
+					TargetDomainID:          "targetDomainID-cancel",
+					TargetWorkflowID:        "targetWorkflowID-cancel",
+					TargetRunID:             "targetRunID-cancel",
+					TargetChildWorkflowOnly: true,
+					InitiatedID:             1002,
 				},
 			},
-			expectFunc: func(mockDB *nosqlplugin.MockDB) {},
 			validate: func(t *testing.T, tasks []*nosqlplugin.TransferTask, err error) {
 				assert.NoError(t, err)
-				assert.NotEmpty(t, tasks)
+				assert.Len(t, tasks, 1)
+				task := tasks[0]
+				assert.Equal(t, "targetDomainID-cancel", task.TargetDomainID)
+				assert.Equal(t, true, task.TargetChildWorkflowOnly)
+				assert.Equal(t, int64(1002), task.TaskID)
+				assert.Equal(t, int64(1), task.Version)
 			},
 		},
 		{
-			name: "Failure - Unsupported Task Type",
+			name:       "ActivityTask - Success",
+			domainID:   "domainID-activity",
+			workflowID: "workflowID-activity",
+			runID:      "runID-activity",
+			tasks: []persistence.Task{
+				&persistence.ActivityTask{
+					TaskData: persistence.TaskData{
+						VisibilityTimestamp: time.Now(),
+						TaskID:              1001,
+						Version:             1,
+					},
+					DomainID:   "targetDomainID-activity",
+					TaskList:   "taskList-activity",
+					ScheduleID: 1001,
+				},
+			},
+			validate: func(t *testing.T, tasks []*nosqlplugin.TransferTask, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, tasks, 1)
+				task := tasks[0]
+				assert.Equal(t, persistence.TransferTaskTypeActivityTask, task.TaskType)
+				assert.Equal(t, "targetDomainID-activity", task.TargetDomainID)
+				assert.Equal(t, "taskList-activity", task.TaskList)
+				assert.Equal(t, int64(1001), task.ScheduleID)
+				assert.Equal(t, int64(1), task.Version)
+			},
+		},
+		{
+			name:       "DefaultTargetRunID - When Empty",
+			domainID:   "domainID-default-runid",
+			workflowID: "workflowID-default-runid",
+			runID:      "runID-default-runid",
+			tasks: []persistence.Task{
+				&persistence.CancelExecutionTask{
+					TaskData: persistence.TaskData{
+						VisibilityTimestamp: time.Now(),
+						TaskID:              2001,
+						Version:             1,
+					},
+					TargetDomainID:          "targetDomainID-cancel",
+					TargetWorkflowID:        "targetWorkflowID-cancel",
+					TargetRunID:             "", // Intentionally left empty to trigger the defaulting logic
+					TargetChildWorkflowOnly: true,
+					InitiatedID:             2001,
+				},
+				&persistence.SignalExecutionTask{
+					TaskData: persistence.TaskData{
+						VisibilityTimestamp: time.Now(),
+						TaskID:              2002,
+						Version:             1,
+					},
+					TargetDomainID:          "targetDomainID-signal",
+					TargetWorkflowID:        "targetWorkflowID-signal",
+					TargetRunID:             "", // Intentionally left empty to trigger the defaulting logic
+					TargetChildWorkflowOnly: false,
+					InitiatedID:             2002,
+				},
+			},
+			validate: func(t *testing.T, tasks []*nosqlplugin.TransferTask, err error) {
+				assert.NoError(t, err)
+				for _, task := range tasks {
+					assert.Equal(t, persistence.TransferTaskTransferTargetRunID, task.TargetRunID, "TargetRunID should default to TransferTaskTransferTargetRunID")
+
+				}
+			},
+		},
+		{
+			name:       "SignalExecutionTask - Success",
+			domainID:   "domainID-signal",
+			workflowID: "workflowID-signal",
+			runID:      "runID-signal",
+			tasks: []persistence.Task{
+				&persistence.SignalExecutionTask{
+					TaskData: persistence.TaskData{
+						VisibilityTimestamp: time.Now(),
+						TaskID:              1003,
+						Version:             1,
+					},
+					TargetDomainID:          "targetDomainID-signal",
+					TargetWorkflowID:        "targetWorkflowID-signal",
+					TargetRunID:             "targetRunID-signal",
+					TargetChildWorkflowOnly: true,
+					InitiatedID:             1003,
+				},
+			},
+			validate: func(t *testing.T, tasks []*nosqlplugin.TransferTask, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, tasks, 1)
+				task := tasks[0]
+				assert.Equal(t, "targetDomainID-signal", task.TargetDomainID)
+				assert.Equal(t, true, task.TargetChildWorkflowOnly)
+				assert.Equal(t, int64(1003), task.TaskID)
+				assert.Equal(t, int64(1), task.Version)
+			},
+		},
+		{
+			name:       "StartChildExecutionTask - Success",
+			domainID:   "domainID-start-child",
+			workflowID: "workflowID-start-child",
+			runID:      "runID-start-child",
+			tasks: []persistence.Task{
+				&persistence.StartChildExecutionTask{
+					TaskData: persistence.TaskData{
+						VisibilityTimestamp: time.Now(),
+						TaskID:              1004,
+						Version:             1,
+					},
+					TargetDomainID:   "child-execution-domain-id",
+					TargetWorkflowID: "child-workflow-id",
+					InitiatedID:      1004,
+				},
+			},
+			validate: func(t *testing.T, tasks []*nosqlplugin.TransferTask, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, tasks, 1)
+				task := tasks[0]
+				assert.Equal(t, "child-execution-domain-id", task.TargetDomainID)
+				assert.Equal(t, "child-workflow-id", task.TargetWorkflowID)
+				assert.Equal(t, int64(1004), task.TaskID)
+				assert.Equal(t, int64(1), task.Version)
+			},
+		},
+		{
+			name:       "RecordChildExecutionCompletedTask - Success",
+			domainID:   "domainID-record-child",
+			workflowID: "workflowID-record-child",
+			runID:      "runID-record-child",
+			tasks: []persistence.Task{
+				&persistence.RecordChildExecutionCompletedTask{
+					TaskData: persistence.TaskData{
+						VisibilityTimestamp: time.Now(),
+						TaskID:              1005,
+						Version:             1,
+					},
+					TargetDomainID:   "completed-child-domain-id",
+					TargetWorkflowID: "completed-child-workflow-id",
+					TargetRunID:      "completed-child-run-id",
+				},
+			},
+			validate: func(t *testing.T, tasks []*nosqlplugin.TransferTask, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, tasks, 1)
+				task := tasks[0]
+				assert.Equal(t, "completed-child-domain-id", task.TargetDomainID)
+				assert.Equal(t, "completed-child-workflow-id", task.TargetWorkflowID)
+				assert.Equal(t, "completed-child-run-id", task.TargetRunID)
+				assert.Equal(t, int64(1005), task.TaskID)
+				assert.Equal(t, int64(1), task.Version)
+			},
+		},
+		{
+			name:       "ApplyParentClosePolicyTask - Success",
+			domainID:   "domainID-apply-parent",
+			workflowID: "workflowID-apply-parent",
+			runID:      "runID-apply-parent",
+			tasks: []persistence.Task{
+				&persistence.ApplyParentClosePolicyTask{
+					TaskData: persistence.TaskData{
+						VisibilityTimestamp: time.Now(),
+						TaskID:              1006,
+						Version:             1,
+					},
+					TargetDomainIDs: map[string]struct{}{"target-domain-id-1": {}, "target-domain-id-2": {}},
+				},
+			},
+			validate: func(t *testing.T, tasks []*nosqlplugin.TransferTask, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, tasks, 1)
+				task := tasks[0]
+				assert.Equal(t, map[string]struct{}{"target-domain-id-1": {}, "target-domain-id-2": {}}, task.TargetDomainIDs)
+				assert.Equal(t, int64(1006), task.TaskID)
+				assert.Equal(t, int64(1), task.Version)
+			},
+		},
+		{
+			name:       "DecisionTask - Success",
+			domainID:   "domainID-decision",
+			workflowID: "workflowID-decision",
+			runID:      "runID-decision",
+			tasks: []persistence.Task{
+				&persistence.DecisionTask{
+					TaskData: persistence.TaskData{
+						VisibilityTimestamp: time.Now(),
+						TaskID:              1001,
+						Version:             1,
+					},
+					DomainID:         "targetDomainID-decision",
+					TaskList:         "taskList-decision",
+					ScheduleID:       1001,
+					RecordVisibility: true,
+				},
+			},
+			validate: func(t *testing.T, tasks []*nosqlplugin.TransferTask, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, tasks, 1)
+				task := tasks[0]
+				assert.Equal(t, int64(1001), task.TaskID)
+				assert.Equal(t, "targetDomainID-decision", task.TargetDomainID)
+				assert.Equal(t, true, task.RecordVisibility)
+			},
+		},
+		{
+			name:       "Unsupported Task Type",
+			domainID:   "domainID-unsupported",
+			workflowID: "workflowID-unsupported",
+			runID:      "runID-unsupported",
 			tasks: []persistence.Task{
 				&dummyTaskType{
 					VisibilityTimestamp: time.Now(),
-					TaskID:              -1,
+					TaskID:              9999,
 				},
 			},
-			expectFunc: func(mockDB *nosqlplugin.MockDB) {},
 			validate: func(t *testing.T, tasks []*nosqlplugin.TransferTask, err error) {
 				assert.Error(t, err)
 				assert.Nil(t, tasks)
 			},
 		},
 	}
-
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
-			defer mockCtrl.Finish()
 
 			mockDB := nosqlplugin.NewMockDB(mockCtrl)
 			store := newTestNosqlExecutionStore(mockDB, log.NewNoop())
 
-			if tc.expectFunc != nil {
-				tc.expectFunc(mockDB)
-			}
-
-			tasks, err := store.prepareTransferTasksForWorkflowTxn("domainID", "workflowID", "runID", tc.tasks)
+			tasks, err := store.prepareTransferTasksForWorkflowTxn(tc.domainID, tc.workflowID, tc.runID, tc.tasks)
 			tc.validate(t, tasks, err)
 		})
 	}
@@ -846,6 +1304,52 @@ func TestNosqlExecutionStoreUtilsExtended(t *testing.T) {
 			},
 		},
 		{
+			name: "CurrentWorkflowRequestForCreateWorkflowTxn - Zombie mode",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				executionInfo := &persistence.InternalWorkflowExecutionInfo{
+					State:           persistence.WorkflowStateCreated,
+					CloseStatus:     persistence.WorkflowCloseStatusNone,
+					CreateRequestID: "create-request-id-zombie",
+				}
+				request := &persistence.InternalCreateWorkflowExecutionRequest{
+					Mode:          persistence.CreateWorkflowModeZombie,
+					PreviousRunID: "previous-run-id-zombie",
+				}
+				return store.prepareCurrentWorkflowRequestForCreateWorkflowTxn(
+					"domain-id-zombie", "workflow-id-zombie", "run-id-zombie", executionInfo, 123, request)
+			},
+			validate: func(t *testing.T, result interface{}, err error) {
+				assert.NoError(t, err)
+				currentWorkflowReq := result.(*nosqlplugin.CurrentWorkflowWriteRequest)
+				assert.Equal(t, nosqlplugin.CurrentWorkflowWriteModeNoop, currentWorkflowReq.WriteMode)
+				assert.Equal(t, "create-request-id-zombie", currentWorkflowReq.Row.CreateRequestID)
+			},
+		},
+		{
+			name: "CurrentWorkflowRequestForCreateWorkflowTxn - ContinueAsNew mode",
+			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
+				executionInfo := &persistence.InternalWorkflowExecutionInfo{
+					State:           persistence.WorkflowStateRunning,
+					CloseStatus:     persistence.WorkflowCloseStatusNone,
+					CreateRequestID: "create-request-id-continueasnew",
+				}
+				request := &persistence.InternalCreateWorkflowExecutionRequest{
+					Mode:          persistence.CreateWorkflowModeContinueAsNew,
+					PreviousRunID: "previous-run-id-continueasnew",
+				}
+				return store.prepareCurrentWorkflowRequestForCreateWorkflowTxn(
+					"domain-id-continueasnew", "workflow-id-continueasnew", "run-id-continueasnew", executionInfo, 123, request)
+			},
+			validate: func(t *testing.T, result interface{}, err error) {
+				assert.NoError(t, err)
+				currentWorkflowReq := result.(*nosqlplugin.CurrentWorkflowWriteRequest)
+				assert.Equal(t, nosqlplugin.CurrentWorkflowWriteModeUpdate, currentWorkflowReq.WriteMode)
+				assert.Equal(t, "create-request-id-continueasnew", currentWorkflowReq.Row.CreateRequestID)
+				assert.NotNil(t, currentWorkflowReq.Condition)
+				assert.Equal(t, "previous-run-id-continueasnew", *currentWorkflowReq.Condition.CurrentRunID)
+			},
+		},
+		{
 			name: "assertNotCurrentExecution - Success with different RunID",
 			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
 				ctx := context.Background()
@@ -888,7 +1392,6 @@ func TestNosqlExecutionStoreUtilsExtended(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
-			defer mockCtrl.Finish()
 
 			mockDB := nosqlplugin.NewMockDB(mockCtrl)
 			store := newTestNosqlExecutionStore(mockDB, log.NewNoop())
