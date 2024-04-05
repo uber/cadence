@@ -78,7 +78,7 @@ func TestPinotDualManagerClose(t *testing.T) {
 				mockDBVisibilityManager.EXPECT().Close().Return().Times(1)
 			},
 		},
-		"Case1-2: success case with ES visibility is not nil": {
+		"Case1-2: success case with Pinot visibility is not nil": {
 			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
 			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
 				mockPinotVisibilityManager.EXPECT().Close().Return().Times(1)
@@ -118,7 +118,7 @@ func TestPinotDualManagerGetName(t *testing.T) {
 
 			},
 		},
-		"Case1-2: success case with ES visibility is not nil": {
+		"Case1-2: success case with Pinot visibility is not nil": {
 			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
 			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
 				mockPinotVisibilityManager.EXPECT().GetName().Return(testTableName).Times(1)
@@ -166,7 +166,7 @@ func TestPinotDualRecordWorkflowExecutionStarted(t *testing.T) {
 			advancedVisibilityWritingMode: dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeOff),
 			expectedError:                 nil,
 		},
-		"Case1-2: success case with ES visibility is not nil": {
+		"Case1-2: success case with Pinot visibility is not nil": {
 			request:                    request,
 			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
 			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
@@ -226,7 +226,7 @@ func TestPinotDualRecordWorkflowExecutionClosed(t *testing.T) {
 			},
 			expectedError: fmt.Errorf("error"),
 		},
-		"Case0-2: error case with ES has errors in dual mode": {
+		"Case0-2: error case with Pinot has errors in dual mode": {
 			context:                 context.Background(),
 			request:                 request,
 			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
@@ -250,7 +250,7 @@ func TestPinotDualRecordWorkflowExecutionClosed(t *testing.T) {
 			advancedVisibilityWritingMode: dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeOff),
 			expectedError:                 nil,
 		},
-		"Case1-2: success case with ES visibility is not nil": {
+		"Case1-2: success case with Pinot visibility is not nil": {
 			context:                    context.Background(),
 			request:                    request,
 			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
@@ -283,7 +283,7 @@ func TestPinotDualRecordWorkflowExecutionClosed(t *testing.T) {
 			},
 			advancedVisibilityWritingMode: dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeOff),
 		},
-		"Case2-2: choose ES visibility manager when it is nil": {
+		"Case2-2: choose Pinot visibility manager when it is nil": {
 			context:                 context.Background(),
 			request:                 request,
 			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
@@ -292,7 +292,7 @@ func TestPinotDualRecordWorkflowExecutionClosed(t *testing.T) {
 			},
 			advancedVisibilityWritingMode: dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeOn),
 		},
-		"Case2-3: choose both when ES is nil": {
+		"Case2-3: choose both when Pinot is nil": {
 			context:                 context.Background(),
 			request:                 request,
 			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
@@ -310,7 +310,7 @@ func TestPinotDualRecordWorkflowExecutionClosed(t *testing.T) {
 			},
 			advancedVisibilityWritingMode: dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeDual),
 		},
-		"Case3-1: chooseVisibilityModeForAdmin when ES is nil": {
+		"Case3-1: chooseVisibilityModeForAdmin when Pinot is nil": {
 			context:                 context.WithValue(context.Background(), VisibilityAdminDeletionKey("visibilityAdminDelete"), true),
 			request:                 request,
 			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
@@ -396,7 +396,7 @@ func TestPinotDualRecordWorkflowExecutionUninitialized(t *testing.T) {
 			advancedVisibilityWritingMode: dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeOff),
 			expectedError:                 nil,
 		},
-		"Case1-2: success case with ES visibility is not nil": {
+		"Case1-2: success case with Pinot visibility is not nil": {
 			request:                    request,
 			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
 			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
@@ -451,7 +451,7 @@ func TestPinotDualUpsertWorkflowExecution(t *testing.T) {
 			advancedVisibilityWritingMode: dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeOff),
 			expectedError:                 nil,
 		},
-		"Case1-2: success case with ES visibility is not nil": {
+		"Case1-2: success case with Pinot visibility is not nil": {
 			request:                    request,
 			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
 			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
@@ -506,7 +506,7 @@ func TestPinotDualDeleteWorkflowExecution(t *testing.T) {
 			advancedVisibilityWritingMode: dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeOff),
 			expectedError:                 nil,
 		},
-		"Case1-2: success case with ES visibility is not nil": {
+		"Case1-2: success case with Pinot visibility is not nil": {
 			request:                    request,
 			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
 			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
@@ -561,7 +561,7 @@ func TestPinotDualDeleteUninitializedWorkflowExecution(t *testing.T) {
 			advancedVisibilityWritingMode: dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeOff),
 			expectedError:                 nil,
 		},
-		"Case1-2: success case with ES visibility is not nil": {
+		"Case1-2: success case with Pinot visibility is not nil": {
 			request:                    request,
 			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
 			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
@@ -618,7 +618,7 @@ func TestPinotDualListOpenWorkflowExecutions(t *testing.T) {
 			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
 			expectedError:    nil,
 		},
-		"Case1-2: success case with ES visibility is not nil": {
+		"Case1-2: success case with Pinot visibility is not nil": {
 			request:                    request,
 			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
 			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
@@ -675,7 +675,7 @@ func TestPinotDualListClosedWorkflowExecutions(t *testing.T) {
 			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
 			expectedError:    nil,
 		},
-		"Case1-2: success case with ES visibility is not nil": {
+		"Case1-2: success case with Pinot visibility is not nil": {
 			request:                    request,
 			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
 			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
@@ -693,7 +693,7 @@ func TestPinotDualListClosedWorkflowExecutions(t *testing.T) {
 			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(false),
 			expectedError:    nil,
 		},
-		"Case2-2: success case with ES visibility is not nil and read mod is false": {
+		"Case2-2: success case with Pinot visibility is not nil and read mod is false": {
 			request:                    request,
 			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
 			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
@@ -752,7 +752,7 @@ func TestPinotDualListOpenWorkflowExecutionsByType(t *testing.T) {
 			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
 			expectedError:    nil,
 		},
-		"Case1-2: success case with ES visibility is not nil": {
+		"Case1-2: success case with Pinot visibility is not nil": {
 			request:                    request,
 			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
 			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
@@ -811,7 +811,7 @@ func TestPinotDualListClosedWorkflowExecutionsByType(t *testing.T) {
 			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
 			expectedError:    nil,
 		},
-		"Case1-2: success case with ES visibility is not nil": {
+		"Case1-2: success case with Pinot visibility is not nil": {
 			request:                    request,
 			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
 			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
@@ -870,7 +870,7 @@ func TestPinotDualListOpenWorkflowExecutionsByWorkflowID(t *testing.T) {
 			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
 			expectedError:    nil,
 		},
-		"Case1-2: success case with ES visibility is not nil": {
+		"Case1-2: success case with Pinot visibility is not nil": {
 			request:                    request,
 			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
 			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
@@ -929,7 +929,7 @@ func TestPinotDualListClosedWorkflowExecutionsByWorkflowID(t *testing.T) {
 			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
 			expectedError:    nil,
 		},
-		"Case1-2: success case with ES visibility is not nil": {
+		"Case1-2: success case with Pinot visibility is not nil": {
 			request:                    request,
 			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
 			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
@@ -988,7 +988,7 @@ func TestPinotDualListClosedWorkflowExecutionsByStatus(t *testing.T) {
 			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
 			expectedError:    nil,
 		},
-		"Case1-2: success case with ES visibility is not nil": {
+		"Case1-2: success case with Pinot visibility is not nil": {
 			request:                    request,
 			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
 			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
@@ -1045,7 +1045,7 @@ func TestPinotDualGetClosedWorkflowExecution(t *testing.T) {
 			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
 			expectedError:    nil,
 		},
-		"Case1-2: success case with ES visibility is not nil": {
+		"Case1-2: success case with Pinot visibility is not nil": {
 			request:                    request,
 			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
 			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
@@ -1102,7 +1102,7 @@ func TestPinotDualListWorkflowExecutions(t *testing.T) {
 			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
 			expectedError:    nil,
 		},
-		"Case1-2: success case with ES visibility is not nil": {
+		"Case1-2: success case with Pinot visibility is not nil": {
 			request:                    request,
 			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
 			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
@@ -1159,7 +1159,7 @@ func TestPinotDualScanWorkflowExecutions(t *testing.T) {
 			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
 			expectedError:    nil,
 		},
-		"Case1-2: success case with ES visibility is not nil": {
+		"Case1-2: success case with Pinot visibility is not nil": {
 			request:                    request,
 			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
 			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
@@ -1215,7 +1215,7 @@ func TestPinotDualCountWorkflowExecutions(t *testing.T) {
 			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
 			expectedError:    nil,
 		},
-		"Case1-2: success case with ES visibility is not nil": {
+		"Case1-2: success case with Pinot visibility is not nil": {
 			request:                    request,
 			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
 			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
