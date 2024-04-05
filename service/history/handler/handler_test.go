@@ -241,6 +241,241 @@ func (s *handlerSuite) TestRecordActivityTaskHeartbeat() {
 	}
 }
 
+func (s *handlerSuite) TestRecordActivityTaskStarted() {
+	testInput := map[string]struct {
+		caseName      string
+		input         *types.RecordActivityTaskStartedRequest
+		expected      *types.RecordActivityTaskStartedResponse
+		expectedError bool
+	}{
+		"valid input": {
+			caseName: "valid input",
+			input: &types.RecordActivityTaskStartedRequest{
+				DomainUUID: testDomainID,
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				},
+			},
+			expected:      &types.RecordActivityTaskStartedResponse{Attempt: 1},
+			expectedError: false,
+		},
+		"empty domainID": {
+			caseName: "empty domainID",
+			input: &types.RecordActivityTaskStartedRequest{
+				DomainUUID: "",
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				},
+			},
+			expected:      nil,
+			expectedError: true,
+		},
+		"ratelimit exceeded": {
+			caseName: "ratelimit exceeded",
+			input: &types.RecordActivityTaskStartedRequest{
+				DomainUUID: testDomainID,
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				},
+			},
+			expected:      nil,
+			expectedError: true,
+		},
+		"get engine error": {
+			caseName: "get engine error",
+			input: &types.RecordActivityTaskStartedRequest{
+				DomainUUID: testDomainID,
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				},
+			},
+			expected:      nil,
+			expectedError: true,
+		},
+		"engine error": {
+			caseName: "engine error",
+			input: &types.RecordActivityTaskStartedRequest{
+				DomainUUID: testDomainID,
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				},
+			},
+			expected:      nil,
+			expectedError: true,
+		},
+	}
+
+	for name, input := range testInput {
+		s.Run(name, func() {
+			switch input.caseName {
+			case "valid input":
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().RecordActivityTaskStarted(gomock.Any(), input.input).Return(input.expected, nil).Times(1)
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+			case "empty domainID":
+			case "ratelimit exceeded":
+				s.mockRatelimiter.EXPECT().Allow().Return(false).Times(1)
+			case "get engine error":
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(nil, errors.New("error")).Times(1)
+			case "engine error":
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().RecordActivityTaskStarted(gomock.Any(), input.input).Return(nil, errors.New("error")).Times(1)
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+			}
+			response, err := s.handler.RecordActivityTaskStarted(context.Background(), input.input)
+			s.Equal(input.expected, response)
+			if input.expectedError {
+				s.Error(err)
+			} else {
+				s.NoError(err)
+			}
+		})
+	}
+}
+
+func (s *handlerSuite) TestRecordDecisionTaskStarted() {
+	testInput := map[string]struct {
+		caseName      string
+		input         *types.RecordDecisionTaskStartedRequest
+		expected      *types.RecordDecisionTaskStartedResponse
+		expectedError bool
+	}{
+		"valid input": {
+			caseName: "valid input",
+			input: &types.RecordDecisionTaskStartedRequest{
+				DomainUUID: testDomainID,
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				},
+				PollRequest: &types.PollForDecisionTaskRequest{
+					TaskList: &types.TaskList{
+						Name: "test-task-list",
+					},
+				},
+			},
+			expected: &types.RecordDecisionTaskStartedResponse{
+				WorkflowType: &types.WorkflowType{
+					Name: "test-workflow-type",
+				},
+				Attempt: 1,
+			},
+			expectedError: false,
+		},
+		"empty domainID": {
+			caseName: "empty domainID",
+			input: &types.RecordDecisionTaskStartedRequest{
+				DomainUUID: "",
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				},
+			},
+			expected:      nil,
+			expectedError: true,
+		},
+		"ratelimit exceeded": {
+			caseName: "ratelimit exceeded",
+			input: &types.RecordDecisionTaskStartedRequest{
+				DomainUUID: testDomainID,
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				},
+				PollRequest: &types.PollForDecisionTaskRequest{
+					TaskList: &types.TaskList{
+						Name: "test-task-list",
+					},
+				},
+			},
+			expected:      nil,
+			expectedError: true,
+		},
+		"get engine error": {
+			caseName: "get engine error",
+			input: &types.RecordDecisionTaskStartedRequest{
+				DomainUUID: testDomainID,
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				},
+				PollRequest: &types.PollForDecisionTaskRequest{
+					TaskList: &types.TaskList{
+						Name: "test-task-list",
+					},
+				},
+			},
+			expected:      nil,
+			expectedError: true,
+		},
+		"engine error": {
+			caseName: "engine error",
+			input: &types.RecordDecisionTaskStartedRequest{
+				DomainUUID: testDomainID,
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				},
+				PollRequest: &types.PollForDecisionTaskRequest{
+					TaskList: &types.TaskList{
+						Name: "test-task-list",
+					},
+				},
+			},
+			expected:      nil,
+			expectedError: true,
+		},
+		"empty poll request": {
+			caseName: "empty poll request",
+			input: &types.RecordDecisionTaskStartedRequest{
+				DomainUUID: testDomainID,
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				},
+			},
+			expected:      nil,
+			expectedError: true,
+		},
+	}
+
+	for name, input := range testInput {
+		s.Run(name, func() {
+			switch input.caseName {
+			case "valid input":
+				s.mockShardController.EXPECT().GetEngine(gomock.Any()).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().RecordDecisionTaskStarted(gomock.Any(), input.input).Return(input.expected, nil).Times(1)
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+			case "empty domainID":
+			case "ratelimit exceeded":
+				s.mockRatelimiter.EXPECT().Allow().Return(false).Times(1)
+			case "get engine error":
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(nil, errors.New("error")).Times(1)
+			case "engine error":
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().RecordDecisionTaskStarted(gomock.Any(), input.input).Return(nil, errors.New("error")).Times(1)
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+			case "empty poll request":
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+			}
+			response, err := s.handler.RecordDecisionTaskStarted(context.Background(), input.input)
+			s.Equal(input.expected, response)
+			if input.expectedError {
+				s.Error(err)
+			} else {
+				s.NoError(err)
+			}
+		})
+	}
+}
+
 func (s *handlerSuite) TestGetCrossClusterTasks() {
 	numShards := 10
 	targetCluster := cluster.TestAlternativeClusterName
