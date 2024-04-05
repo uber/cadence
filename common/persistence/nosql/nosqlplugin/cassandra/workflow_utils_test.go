@@ -131,17 +131,47 @@ func sanitizedRenderedQuery(queryTmpl string, args ...interface{}) string {
 type fakeIter struct {
 	// input parametrs
 	mapScanInputs []map[string]interface{}
+	scanInputs    [][]interface{}
 	pageState     []byte
 	closeErr      error
 
 	// output parameters
 	mapScanCalls int
+	scanCalls    int
 	closed       bool
 }
 
 // Scan is fake implementation of gocql.Iter.Scan
-func (i *fakeIter) Scan(...interface{}) bool {
-	return false
+func (i *fakeIter) Scan(outArgs ...interface{}) bool {
+	if i.scanCalls >= len(i.scanInputs) {
+		return false
+	}
+
+	for j, v := range i.scanInputs[i.scanCalls] {
+		if len(outArgs) <= j {
+			panic(fmt.Sprintf("outArgs length: %d is less than expected: %d", len(outArgs), len(i.scanInputs[i.scanCalls])))
+		}
+
+		if v == nil {
+			continue
+		}
+
+		dst := outArgs[j]
+		dstPtrValue := reflect.ValueOf(dst)
+		dstValue := reflect.Indirect(dstPtrValue)
+
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					panic(fmt.Sprintf("failed to set %dth value: %v to %v, inner panic: %s", j, v, dst, r))
+				}
+			}()
+			dstValue.Set(reflect.ValueOf(v))
+		}()
+	}
+
+	i.scanCalls++
+	return true
 }
 
 // MapScan is fake implementation of gocql.Iter.MapScan
