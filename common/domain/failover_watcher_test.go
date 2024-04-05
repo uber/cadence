@@ -21,6 +21,7 @@
 package domain
 
 import (
+	"errors"
 	"log"
 	"os"
 	"testing"
@@ -76,7 +77,7 @@ func (s *failoverWatcherSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
 
 	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
-	s.timeSource = clock.NewRealTimeSource()
+	s.timeSource = clock.NewMockedTimeSource()
 	s.mockMetadataMgr = &mocks.MetadataManager{}
 
 	s.mockMetadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{
@@ -242,4 +243,78 @@ func (s *failoverWatcherSuite) TestHandleFailoverTimeout() {
 		endtime,
 	)
 	s.watcher.handleFailoverTimeout(domainEntry)
+}
+
+func (s *failoverWatcherSuite) TestStart() {
+	s.Assertions.Equal(common.DaemonStatusInitialized, s.watcher.status)
+	s.watcher.Start()
+	s.Assertions.Equal(common.DaemonStatusStarted, s.watcher.status)
+
+	// Verify that calling Start again does not change the status
+	s.watcher.Start()
+	s.Assertions.Equal(common.DaemonStatusStarted, s.watcher.status)
+	s.watcher.Stop()
+}
+
+func (s *failoverWatcherSuite) TestIsUpdateDomainRetryable() {
+	testCases := []struct {
+		name      string
+		inputErr  error
+		wantRetry bool
+	}{
+		{"nil error", nil, true},
+		{"non-nil error", errors.New("some error"), true},
+	}
+
+	for _, tc := range testCases {
+		s.Run(tc.name, func() {
+			retry := isUpdateDomainRetryable(tc.inputErr)
+			s.Equal(tc.wantRetry, retry)
+		})
+	}
+}
+
+func (s *failoverWatcherSuite) TestRefreshDomainLoop() {
+
+	domainName := "testDomain"
+	domainID := uuid.New()
+	failoverEndTime := common.Int64Ptr(time.Now().Add(-time.Hour).UnixNano()) // 1 hour in the past
+	mockTimeSource, _ := s.timeSource.(clock.MockedTimeSource)
+
+	domainInfo := &persistence.DomainInfo{ID: domainID, Name: domainName}
+	domainConfig := &persistence.DomainConfig{Retention: 1, EmitMetric: true}
+	replicationConfig := &persistence.DomainReplicationConfig{ActiveClusterName: "active", Clusters: []*persistence.ClusterReplicationConfig{{ClusterName: "active"}}}
+	domainEntry := cache.NewDomainCacheEntryForTest(domainInfo, domainConfig, true, replicationConfig, 1, failoverEndTime)
+
+	domainsMap := map[string]*cache.DomainCacheEntry{domainID: domainEntry}
+	s.mockDomainCache.EXPECT().GetAllDomain().Return(domainsMap).AnyTimes()
+
+	s.mockMetadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{NotificationVersion: 1}, nil).Maybe()
+
+	s.mockMetadataMgr.On("GetDomain", mock.Anything, mock.AnythingOfType("*persistence.GetDomainRequest")).Return(&persistence.GetDomainResponse{
+		Info:                        domainInfo,
+		Config:                      domainConfig,
+		ReplicationConfig:           replicationConfig,
+		IsGlobalDomain:              true,
+		ConfigVersion:               1,
+		FailoverVersion:             1,
+		FailoverNotificationVersion: 1,
+		FailoverEndTime:             failoverEndTime,
+		NotificationVersion:         1,
+	}, nil).Once()
+
+	s.mockMetadataMgr.On("UpdateDomain", mock.Anything, mock.Anything).Return(nil).Once()
+
+	s.watcher.Start()
+
+	// Delay to allow loop to start
+	time.Sleep(1 * time.Second)
+	mockTimeSource.Advance(12 * time.Second)
+	// Now stop the watcher, which should trigger the shutdown case in refreshDomainLoop
+	s.watcher.Stop()
+
+	// Enough time for shutdown process to complete
+	time.Sleep(1 * time.Second)
+
+	s.mockMetadataMgr.AssertExpectations(s.T())
 }

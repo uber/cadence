@@ -30,19 +30,19 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/persistence"
 	pt "github.com/uber/cadence/common/persistence/persistence-tests"
-
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 )
 
 func TestWorkflowIDRateLimitIntegrationSuite(t *testing.T) {
 	flag.Parse()
 
-	clusterConfig, err := GetTestClusterConfig("integration_wfidratelimit_cluster.yaml")
+	clusterConfig, err := GetTestClusterConfig("testdata/integration_wfidratelimit_cluster.yaml")
 	if err != nil {
 		panic(err)
 	}
@@ -129,14 +129,12 @@ func (s *WorkflowIDRateLimitIntegrationSuite) TestWorkflowIDSpecificRateLimits()
 
 	// The ratelimit is 5 per second, so we should be able to start 5 workflows without any error
 	for i := 0; i < 5; i++ {
-		s.Require().NotNil(s.engine)
 		_, err := s.engine.StartWorkflowExecution(ctx, request)
 		assert.NoError(s.T(), err)
 	}
 
 	// Now we should get a rate limit error
 	for i := 0; i < 5; i++ {
-		s.Require().NotNil(s.engine)
 		_, err := s.engine.StartWorkflowExecution(ctx, request)
 		var busyErr *types.ServiceBusyError
 		assert.ErrorAs(s.T(), err, &busyErr)
