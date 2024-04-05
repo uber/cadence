@@ -40,12 +40,11 @@ import (
 )
 
 func TestWorkflowIDRateLimitIntegrationSuite(t *testing.T) {
+	// Loads the flags for persistence etc., if none are given they are set in ./flag.go
 	flag.Parse()
 
 	clusterConfig, err := GetTestClusterConfig("testdata/integration_wfidratelimit_cluster.yaml")
-	if err != nil {
-		panic(err)
-	}
+	require.NoError(t, err)
 
 	clusterConfig.TimeSource = clock.NewMockedTimeSource()
 	clusterConfig.HistoryDynamicConfigOverrides = map[dynamicconfig.Key]interface{}{
