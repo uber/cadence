@@ -91,9 +91,10 @@ func NewService(
 			WriteDBVisibilityOpenMaxQPS:                 nil, // frontend service never write
 			WriteDBVisibilityClosedMaxQPS:               nil, // frontend service never write
 
-			ESVisibilityListMaxQPS: serviceConfig.ESVisibilityListMaxQPS,
-			ESIndexMaxResultWindow: serviceConfig.ESIndexMaxResultWindow,
-			ValidSearchAttributes:  serviceConfig.ValidSearchAttributes,
+			ESVisibilityListMaxQPS:   serviceConfig.ESVisibilityListMaxQPS,
+			ESIndexMaxResultWindow:   serviceConfig.ESIndexMaxResultWindow,
+			ValidSearchAttributes:    serviceConfig.ValidSearchAttributes,
+			IsErrorRetryableFunction: common.FrontendRetry,
 		},
 	)
 	if err != nil {

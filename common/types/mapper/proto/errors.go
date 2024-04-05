@@ -99,7 +99,9 @@ func FromError(err error) error {
 	case *types.LimitExceededError:
 		return protobuf.NewError(yarpcerrors.CodeResourceExhausted, e.Message, protobuf.WithErrorDetails(&apiv1.LimitExceededError{}))
 	case *types.ServiceBusyError:
-		return protobuf.NewError(yarpcerrors.CodeResourceExhausted, e.Message, protobuf.WithErrorDetails(&apiv1.ServiceBusyError{}))
+		return protobuf.NewError(yarpcerrors.CodeResourceExhausted, e.Message, protobuf.WithErrorDetails(&apiv1.ServiceBusyError{
+			Reason: e.Reason,
+		}))
 	case *types.RemoteSyncMatchedError:
 		return protobuf.NewError(yarpcerrors.CodeUnavailable, e.Message, protobuf.WithErrorDetails(&sharedv1.RemoteSyncMatchedError{}))
 	case *types.StickyWorkerUnavailableError:
@@ -218,7 +220,7 @@ func ToError(err error) error {
 			}
 		}
 	case yarpcerrors.CodeResourceExhausted:
-		switch getErrorDetails(err).(type) {
+		switch details := getErrorDetails(err).(type) {
 		case *apiv1.LimitExceededError:
 			return &types.LimitExceededError{
 				Message: status.Message(),
@@ -226,6 +228,7 @@ func ToError(err error) error {
 		case *apiv1.ServiceBusyError:
 			return &types.ServiceBusyError{
 				Message: status.Message(),
+				Reason:  details.Reason,
 			}
 		}
 	case yarpcerrors.CodeUnavailable:

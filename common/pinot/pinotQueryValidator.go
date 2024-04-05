@@ -334,12 +334,11 @@ func (qv *VisibilityQueryValidator) processCustomKey(expr sqlparser.Expr) (strin
 	if !ok {
 		return "", errors.New("invalid comparison expression, right")
 	}
-	colValStr := string(colVal.Val)
 
 	// get the value type
 	indexValType := common.ConvertIndexedValueTypeToInternalType(valType, log.NewNoop())
-
 	operator := comparisonExpr.Operator
+	colValStr := string(colVal.Val)
 
 	switch indexValType {
 	case types.IndexedValueTypeString:
@@ -347,6 +346,12 @@ func (qv *VisibilityQueryValidator) processCustomKey(expr sqlparser.Expr) (strin
 	case types.IndexedValueTypeKeyword:
 		return processCustomKeyword(operator, colNameStr, colValStr), nil
 	case types.IndexedValueTypeDatetime:
+		var err error
+		colVal, err = trimTimeFieldValueFromNanoToMilliSeconds(colVal)
+		if err != nil {
+			return "", fmt.Errorf("trim time field %s got error: %w", colNameStr, err)
+		}
+		colValStr := string(colVal.Val)
 		return processCustomNum(operator, colNameStr, colValStr, "BIGINT"), nil
 	case types.IndexedValueTypeDouble:
 		return processCustomNum(operator, colNameStr, colValStr, "DOUBLE"), nil

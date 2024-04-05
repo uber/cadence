@@ -112,6 +112,8 @@ var (
 	Payload3 = []byte{30, 0}
 )
 
+var Attempt2 = int64(2)
+
 var (
 	ExecutionContext = []byte{110, 0}
 	Control          = []byte{120, 0}
@@ -126,11 +128,9 @@ var (
 	FailureDetails = []byte{190, 0}
 )
 
-var (
-	PartitionConfig = map[string]string{
-		"zone": IsolationGroup,
-	}
-)
+var PartitionConfig = map[string]string{
+	"zone": IsolationGroup,
+}
 
 var (
 	HealthStatus = types.HealthStatus{

@@ -95,8 +95,7 @@ func (s *esCrossDCTestSuite) SetupSuite() {
 	if host.TestFlags.TestClusterConfigFile != "" {
 		fileName = host.TestFlags.TestClusterConfigFile
 	}
-	environment.SetupEnv()
-
+	s.Require().NoError(environment.SetupEnv())
 	confContent, err := ioutil.ReadFile(fileName)
 	s.Require().NoError(err)
 	confContent = []byte(os.ExpandEnv(string(confContent)))

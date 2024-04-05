@@ -96,6 +96,41 @@ func TestIsServiceTransientError(t *testing.T) {
 
 }
 
+func TestFrontendRetry(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "ServiceBusyError due to workflow id rate limiting",
+			err:  &types.ServiceBusyError{Reason: WorkflowIDRateLimitReason},
+			want: false,
+		},
+		{
+			name: "ServiceBusyError not due to workflow id rate limiting",
+			err:  &types.ServiceBusyError{Reason: "some other reason"},
+			want: true,
+		},
+		{
+			name: "ServiceBusyError empty reason",
+			err:  &types.ServiceBusyError{Reason: ""},
+			want: true,
+		},
+		{
+			name: "Non-ServiceBusyError",
+			err:  errors.New("some random error"),
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, FrontendRetry(tt.err))
+		})
+	}
+}
+
 func TestIsContextTimeoutError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
 	defer cancel()

@@ -47,7 +47,7 @@ const (
 		`}`
 
 	templateCreateShardQuery = `INSERT INTO executions (` +
-		`shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id, shard, range_id)` +
+		`shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id, shard, range_id) ` +
 		`VALUES(?, ?, ?, ?, ?, ?, ?, ` + templateShardType + `, ?) IF NOT EXISTS`
 
 	templateGetShardQuery = `SELECT shard, range_id ` +

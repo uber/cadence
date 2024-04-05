@@ -29,7 +29,17 @@ import (
 // PeerResolver is used to resolve history peers.
 // Those are deployed instances of Cadence history services that participate in the cluster ring.
 // The resulting peer is simply an address of form ip:port where RPC calls can be routed to.
-type PeerResolver struct {
+//
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination peerResolver_mock.go -package history github.com/uber/cadence/client/history PeerResolver
+type PeerResolver interface {
+	FromWorkflowID(workflowID string) (string, error)
+	FromDomainID(domainID string) (string, error)
+	FromShardID(shardID int) (string, error)
+	FromHostAddress(hostAddress string) (string, error)
+	GetAllPeers() ([]string, error)
+}
+
+type peerResolver struct {
 	numberOfShards int
 	resolver       membership.Resolver
 	namedPort      string // grpc or tchannel, depends on yarpc configuration
@@ -37,7 +47,7 @@ type PeerResolver struct {
 
 // NewPeerResolver creates a new history peer resolver.
 func NewPeerResolver(numberOfShards int, resolver membership.Resolver, namedPort string) PeerResolver {
-	return PeerResolver{
+	return peerResolver{
 		numberOfShards: numberOfShards,
 		resolver:       resolver,
 		namedPort:      namedPort,
@@ -47,7 +57,7 @@ func NewPeerResolver(numberOfShards int, resolver membership.Resolver, namedPort
 // FromWorkflowID resolves the history peer responsible for a given workflowID.
 // WorkflowID is converted to logical shardID using a consistent hash function.
 // FromShardID is used for further resolving.
-func (pr PeerResolver) FromWorkflowID(workflowID string) (string, error) {
+func (pr peerResolver) FromWorkflowID(workflowID string) (string, error) {
 	shardID := common.WorkflowIDToHistoryShard(workflowID, pr.numberOfShards)
 	return pr.FromShardID(shardID)
 }
@@ -55,7 +65,7 @@ func (pr PeerResolver) FromWorkflowID(workflowID string) (string, error) {
 // FromDomainID resolves the history peer responsible for a given domainID.
 // DomainID is converted to logical shardID using a consistent hash function.
 // FromShardID is used for further resolving.
-func (pr PeerResolver) FromDomainID(domainID string) (string, error) {
+func (pr peerResolver) FromDomainID(domainID string) (string, error) {
 	shardID := common.DomainIDToHistoryShard(domainID, pr.numberOfShards)
 	return pr.FromShardID(shardID)
 }
@@ -63,7 +73,7 @@ func (pr PeerResolver) FromDomainID(domainID string) (string, error) {
 // FromShardID resolves the history peer responsible for a given logical shardID.
 // It uses our membership provider to lookup which instance currently owns the given shard.
 // FromHostAddress is used for further resolving.
-func (pr PeerResolver) FromShardID(shardID int) (string, error) {
+func (pr peerResolver) FromShardID(shardID int) (string, error) {
 	shardIDString := string(rune(shardID))
 	host, err := pr.resolver.Lookup(service.History, shardIDString)
 	if err != nil {
@@ -75,7 +85,7 @@ func (pr PeerResolver) FromShardID(shardID int) (string, error) {
 
 // FromHostAddress resolves the final history peer responsible for the given host address.
 // The address is formed by adding port for specified transport
-func (pr PeerResolver) FromHostAddress(hostAddress string) (string, error) {
+func (pr peerResolver) FromHostAddress(hostAddress string) (string, error) {
 	host, err := pr.resolver.LookupByAddress(service.History, hostAddress)
 	if err != nil {
 		return "", common.ToServiceTransientError(err)
@@ -85,7 +95,7 @@ func (pr PeerResolver) FromHostAddress(hostAddress string) (string, error) {
 }
 
 // GetAllPeers returns all history service peers in the cluster ring.
-func (pr PeerResolver) GetAllPeers() ([]string, error) {
+func (pr peerResolver) GetAllPeers() ([]string, error) {
 	hosts, err := pr.resolver.Members(service.History)
 	if err != nil {
 		return nil, common.ToServiceTransientError(err)

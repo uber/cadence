@@ -41,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/definition"
+	"github.com/uber/cadence/common/dynamicconfig"
 	ce "github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -88,43 +89,44 @@ var (
 
 type (
 	historyEngineImpl struct {
-		currentClusterName         string
-		shard                      shard.Context
-		timeSource                 clock.TimeSource
-		decisionHandler            decision.Handler
-		clusterMetadata            cluster.Metadata
-		historyV2Mgr               persistence.HistoryManager
-		executionManager           persistence.ExecutionManager
-		visibilityMgr              persistence.VisibilityManager
-		txProcessor                queue.Processor
-		timerProcessor             queue.Processor
-		crossClusterProcessor      queue.Processor
-		nDCReplicator              ndc.HistoryReplicator
-		nDCActivityReplicator      ndc.ActivityReplicator
-		historyEventNotifier       events.Notifier
-		tokenSerializer            common.TaskTokenSerializer
-		executionCache             *execution.Cache
-		metricsClient              metrics.Client
-		logger                     log.Logger
-		throttledLogger            log.Logger
-		config                     *config.Config
-		archivalClient             warchiver.Client
-		workflowResetter           reset.WorkflowResetter
-		queueTaskProcessor         task.Processor
-		crossClusterTaskProcessors common.Daemon
-		replicationTaskProcessors  []replication.TaskProcessor
-		replicationAckManager      replication.TaskAckManager
-		replicationTaskStore       *replication.TaskStore
-		replicationHydrator        replication.TaskHydrator
-		replicationMetricsEmitter  *replication.MetricsEmitterImpl
-		publicClient               workflowserviceclient.Interface
-		eventsReapplier            ndc.EventsReapplier
-		matchingClient             matching.Client
-		rawMatchingClient          matching.Client
-		clientChecker              client.VersionChecker
-		replicationDLQHandler      replication.DLQHandler
-		failoverMarkerNotifier     failover.MarkerNotifier
-		wfIDCache                  workflowcache.WFCache
+		currentClusterName             string
+		shard                          shard.Context
+		timeSource                     clock.TimeSource
+		decisionHandler                decision.Handler
+		clusterMetadata                cluster.Metadata
+		historyV2Mgr                   persistence.HistoryManager
+		executionManager               persistence.ExecutionManager
+		visibilityMgr                  persistence.VisibilityManager
+		txProcessor                    queue.Processor
+		timerProcessor                 queue.Processor
+		crossClusterProcessor          queue.Processor
+		nDCReplicator                  ndc.HistoryReplicator
+		nDCActivityReplicator          ndc.ActivityReplicator
+		historyEventNotifier           events.Notifier
+		tokenSerializer                common.TaskTokenSerializer
+		executionCache                 *execution.Cache
+		metricsClient                  metrics.Client
+		logger                         log.Logger
+		throttledLogger                log.Logger
+		config                         *config.Config
+		archivalClient                 warchiver.Client
+		workflowResetter               reset.WorkflowResetter
+		queueTaskProcessor             task.Processor
+		crossClusterTaskProcessors     common.Daemon
+		replicationTaskProcessors      []replication.TaskProcessor
+		replicationAckManager          replication.TaskAckManager
+		replicationTaskStore           *replication.TaskStore
+		replicationHydrator            replication.TaskHydrator
+		replicationMetricsEmitter      *replication.MetricsEmitterImpl
+		publicClient                   workflowserviceclient.Interface
+		eventsReapplier                ndc.EventsReapplier
+		matchingClient                 matching.Client
+		rawMatchingClient              matching.Client
+		clientChecker                  client.VersionChecker
+		replicationDLQHandler          replication.DLQHandler
+		failoverMarkerNotifier         failover.MarkerNotifier
+		wfIDCache                      workflowcache.WFCache
+		ratelimitInternalPerWorkflowID dynamicconfig.BoolPropertyFnWithDomainFilter
 	}
 )
 
@@ -155,6 +157,7 @@ func NewEngineWithShardContext(
 	queueTaskProcessor task.Processor,
 	failoverCoordinator failover.Coordinator,
 	wfIDCache workflowcache.WFCache,
+	ratelimitInternalPerWorkflowID dynamicconfig.BoolPropertyFnWithDomainFilter,
 ) engine.Engine {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 
@@ -237,7 +240,8 @@ func NewEngineWithShardContext(
 		replicationTaskStore: replicationTaskStore,
 		replicationMetricsEmitter: replication.NewMetricsEmitter(
 			shard.GetShardID(), shard, replicationReader, shard.GetMetricsClient()),
-		wfIDCache: wfIDCache,
+		wfIDCache:                      wfIDCache,
+		ratelimitInternalPerWorkflowID: ratelimitInternalPerWorkflowID,
 	}
 	historyEngImpl.decisionHandler = decision.NewHandler(
 		shard,
@@ -260,6 +264,7 @@ func NewEngineWithShardContext(
 		historyEngImpl.archivalClient,
 		openExecutionCheck,
 		historyEngImpl.wfIDCache,
+		historyEngImpl.ratelimitInternalPerWorkflowID,
 	)
 
 	historyEngImpl.timerProcessor = queue.NewTimerQueueProcessor(
@@ -494,7 +499,7 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 				// the fake tasks will not be actually used, we just need to make sure
 				// its length > 0 and has correct timestamp, to trigger a db scan
 				fakeDecisionTask := []persistence.Task{&persistence.DecisionTask{}}
-				fakeDecisionTimeoutTask := []persistence.Task{&persistence.DecisionTimeoutTask{VisibilityTimestamp: now}}
+				fakeDecisionTimeoutTask := []persistence.Task{&persistence.DecisionTimeoutTask{TaskData: persistence.TaskData{VisibilityTimestamp: now}}}
 				e.txProcessor.NotifyNewTask(e.currentClusterName, &hcommon.NotifyTaskInfo{Tasks: fakeDecisionTask})
 				e.timerProcessor.NotifyNewTask(e.currentClusterName, &hcommon.NotifyTaskInfo{Tasks: fakeDecisionTimeoutTask})
 			}
@@ -519,7 +524,9 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 					previousClusterName == e.currentClusterName {
 					// the visibility timestamp will be set in shard context
 					failoverMarkerTasks = append(failoverMarkerTasks, &persistence.FailoverMarkerTask{
-						Version:  nextDomain.GetFailoverVersion(),
+						TaskData: persistence.TaskData{
+							Version: nextDomain.GetFailoverVersion(),
+						},
 						DomainID: nextDomain.GetInfo().ID,
 					})
 					// This is a debug metric
@@ -979,7 +986,9 @@ func (e *historyEngineImpl) addStartEventsAndTasks(
 		_, err := mutableState.AddWorkflowExecutionSignaled(
 			sRequest.GetSignalName(),
 			sRequest.GetSignalInput(),
-			sRequest.GetIdentity())
+			sRequest.GetIdentity(),
+			sRequest.GetRequestID(),
+		)
 		if err != nil {
 			return &types.InternalServiceError{Message: "Failed to add workflow execution signaled event."}
 		}
@@ -2488,7 +2497,9 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 			if _, err := mutableState.AddWorkflowExecutionSignaled(
 				request.GetSignalName(),
 				request.GetInput(),
-				request.GetIdentity()); err != nil {
+				request.GetIdentity(),
+				request.GetRequestID(),
+			); err != nil {
 				return nil, &types.InternalServiceError{Message: "Unable to signal workflow execution."}
 			}
 
@@ -2584,14 +2595,17 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 				return nil, workflow.ErrSignalsLimitExceeded
 			}
 
-			if requestID := sRequest.GetRequestID(); requestID != "" {
+			requestID := sRequest.GetRequestID()
+			if requestID != "" {
 				mutableState.AddSignalRequested(requestID)
 			}
 
 			if _, err := mutableState.AddWorkflowExecutionSignaled(
 				sRequest.GetSignalName(),
 				sRequest.GetSignalInput(),
-				sRequest.GetIdentity()); err != nil {
+				sRequest.GetIdentity(),
+				sRequest.GetRequestID(),
+			); err != nil {
 				return nil, &types.InternalServiceError{Message: "Unable to signal workflow execution."}
 			}
 

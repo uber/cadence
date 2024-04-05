@@ -58,10 +58,11 @@ func (s *HandlerTestSuite) TestValidateConnectConfig() {
 	cfg := new(config.SQL)
 
 	s.NotNil(sql.ValidateConnectConfig(cfg))
-
+	port, err := environment.GetMySQLPort()
+	s.NoError(err)
 	cfg.ConnectAddr = net.JoinHostPort(
 		environment.GetMySQLAddress(),
-		strconv.Itoa(environment.GetMySQLPort()),
+		strconv.Itoa(port),
 	)
 	s.NotNil(sql.ValidateConnectConfig(cfg))
 

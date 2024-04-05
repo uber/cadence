@@ -356,11 +356,13 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateCrossClusterRecordChildComp
 	expectedTask := &persistence.CrossClusterRecordChildExecutionCompletedTask{
 		TargetCluster: targetCluster,
 		RecordChildExecutionCompletedTask: persistence.RecordChildExecutionCompletedTask{
-			VisibilityTimestamp: transferTask.GetVisibilityTimestamp(),
-			TargetDomainID:      constants.TestParentDomainID,
-			TargetWorkflowID:    constants.TestWorkflowID,
-			TargetRunID:         constants.TestRunID,
-			Version:             101,
+			TaskData: persistence.TaskData{
+				VisibilityTimestamp: transferTask.GetVisibilityTimestamp(),
+				Version:             101,
+			},
+			TargetDomainID:   constants.TestParentDomainID,
+			TargetWorkflowID: constants.TestWorkflowID,
+			TargetRunID:      constants.TestRunID,
 		},
 	}
 
@@ -392,9 +394,11 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateCrossClusterApplyParentClos
 	expectedTask := &persistence.CrossClusterApplyParentClosePolicyTask{
 		TargetCluster: targetCluster,
 		ApplyParentClosePolicyTask: persistence.ApplyParentClosePolicyTask{
-			VisibilityTimestamp: transferTask.GetVisibilityTimestamp(),
-			TargetDomainIDs:     map[string]struct{}{constants.TestRemoteTargetDomainID: {}},
-			Version:             101,
+			TaskData: persistence.TaskData{
+				VisibilityTimestamp: transferTask.GetVisibilityTimestamp(),
+				Version:             101,
+			},
+			TargetDomainIDs: map[string]struct{}{constants.TestRemoteTargetDomainID: {}},
 		},
 	}
 
@@ -690,12 +694,16 @@ func GenerateWorkflowCloseTasksTestCases(retention time.Duration, closeEvent *ty
 			},
 			generatedTasks: []persistence.Task{
 				&persistence.CloseExecutionTask{
-					VisibilityTimestamp: now,
-					Version:             version,
+					TaskData: persistence.TaskData{
+						VisibilityTimestamp: now,
+						Version:             version,
+					},
 				},
 				&persistence.DeleteHistoryEventTask{
-					VisibilityTimestamp: time.Unix(0, closeEvent.GetTimestamp()).Add(retention),
-					Version:             version,
+					TaskData: persistence.TaskData{
+						VisibilityTimestamp: time.Unix(0, closeEvent.GetTimestamp()).Add(retention),
+						Version:             version,
+					},
 				},
 			},
 		},
@@ -720,12 +728,16 @@ func GenerateWorkflowCloseTasksTestCases(retention time.Duration, closeEvent *ty
 			},
 			generatedTasks: []persistence.Task{
 				&persistence.CloseExecutionTask{
-					VisibilityTimestamp: now,
-					Version:             version,
+					TaskData: persistence.TaskData{
+						VisibilityTimestamp: now,
+						Version:             version,
+					},
 				},
 				&persistence.DeleteHistoryEventTask{
-					VisibilityTimestamp: time.Unix(0, closeEvent.GetTimestamp()).Add(retention),
-					Version:             version,
+					TaskData: persistence.TaskData{
+						VisibilityTimestamp: time.Unix(0, closeEvent.GetTimestamp()).Add(retention),
+						Version:             version,
+					},
 				},
 			},
 		},
@@ -751,32 +763,42 @@ func GenerateWorkflowCloseTasksTestCases(retention time.Duration, closeEvent *ty
 			},
 			generatedTasks: []persistence.Task{
 				&persistence.RecordChildExecutionCompletedTask{
-					VisibilityTimestamp: now,
-					TargetDomainID:      constants.TestParentDomainID,
-					TargetWorkflowID:    "parent workflowID",
-					TargetRunID:         "parent runID",
-					Version:             version,
+					TaskData: persistence.TaskData{
+						VisibilityTimestamp: now,
+						Version:             version,
+					},
+					TargetDomainID:   constants.TestParentDomainID,
+					TargetWorkflowID: "parent workflowID",
+					TargetRunID:      "parent runID",
 				},
 				&persistence.ApplyParentClosePolicyTask{
-					VisibilityTimestamp: now,
-					TargetDomainIDs:     map[string]struct{}{constants.TestTargetDomainID: {}},
-					Version:             version,
+					TaskData: persistence.TaskData{
+						VisibilityTimestamp: now,
+						Version:             version,
+					},
+					TargetDomainIDs: map[string]struct{}{constants.TestTargetDomainID: {}},
 				},
 				&persistence.RecordWorkflowClosedTask{
-					VisibilityTimestamp: now,
-					Version:             version,
+					TaskData: persistence.TaskData{
+						VisibilityTimestamp: now,
+						Version:             version,
+					},
 				},
 				&persistence.CrossClusterApplyParentClosePolicyTask{
 					TargetCluster: cluster.TestAlternativeClusterName,
 					ApplyParentClosePolicyTask: persistence.ApplyParentClosePolicyTask{
-						VisibilityTimestamp: now,
-						TargetDomainIDs:     map[string]struct{}{constants.TestRemoteTargetDomainID: {}},
-						Version:             version,
+						TaskData: persistence.TaskData{
+							VisibilityTimestamp: now,
+							Version:             version,
+						},
+						TargetDomainIDs: map[string]struct{}{constants.TestRemoteTargetDomainID: {}},
 					},
 				},
 				&persistence.DeleteHistoryEventTask{
-					VisibilityTimestamp: time.Unix(0, closeEvent.GetTimestamp()).Add(retention),
-					Version:             version,
+					TaskData: persistence.TaskData{
+						VisibilityTimestamp: time.Unix(0, closeEvent.GetTimestamp()).Add(retention),
+						Version:             version,
+					},
 				},
 			},
 		},
@@ -801,27 +823,35 @@ func GenerateWorkflowCloseTasksTestCases(retention time.Duration, closeEvent *ty
 			},
 			generatedTasks: []persistence.Task{
 				&persistence.ApplyParentClosePolicyTask{
-					VisibilityTimestamp: now,
-					TargetDomainIDs:     map[string]struct{}{constants.TestTargetDomainID: {}, constants.TestChildDomainID: {}},
-					Version:             version,
+					TaskData: persistence.TaskData{
+						VisibilityTimestamp: now,
+						Version:             version,
+					},
+					TargetDomainIDs: map[string]struct{}{constants.TestTargetDomainID: {}, constants.TestChildDomainID: {}},
 				},
 				&persistence.RecordWorkflowClosedTask{
-					VisibilityTimestamp: now,
-					Version:             version,
+					TaskData: persistence.TaskData{
+						VisibilityTimestamp: now,
+						Version:             version,
+					},
 				},
 				&persistence.CrossClusterRecordChildExecutionCompletedTask{
 					TargetCluster: cluster.TestAlternativeClusterName,
 					RecordChildExecutionCompletedTask: persistence.RecordChildExecutionCompletedTask{
-						VisibilityTimestamp: now,
-						TargetDomainID:      constants.TestRemoteTargetDomainID,
-						TargetWorkflowID:    "parent workflowID",
-						TargetRunID:         "parent runID",
-						Version:             version,
+						TaskData: persistence.TaskData{
+							VisibilityTimestamp: now,
+							Version:             version,
+						},
+						TargetDomainID:   constants.TestRemoteTargetDomainID,
+						TargetWorkflowID: "parent workflowID",
+						TargetRunID:      "parent runID",
 					},
 				},
 				&persistence.DeleteHistoryEventTask{
-					VisibilityTimestamp: time.Unix(0, closeEvent.GetTimestamp()).Add(retention),
-					Version:             version,
+					TaskData: persistence.TaskData{
+						VisibilityTimestamp: time.Unix(0, closeEvent.GetTimestamp()).Add(retention),
+						Version:             version,
+					},
 				},
 			},
 		},
@@ -848,35 +878,45 @@ func GenerateWorkflowCloseTasksTestCases(retention time.Duration, closeEvent *ty
 			},
 			generatedTasks: []persistence.Task{
 				&persistence.ApplyParentClosePolicyTask{
-					VisibilityTimestamp: now,
-					TargetDomainIDs:     map[string]struct{}{constants.TestTargetDomainID: {}, constants.TestChildDomainID: {}},
-					Version:             version,
+					TaskData: persistence.TaskData{
+						VisibilityTimestamp: now,
+						Version:             version,
+					},
+					TargetDomainIDs: map[string]struct{}{constants.TestTargetDomainID: {}, constants.TestChildDomainID: {}},
 				},
 				&persistence.RecordWorkflowClosedTask{
-					VisibilityTimestamp: now,
-					Version:             version,
+					TaskData: persistence.TaskData{
+						VisibilityTimestamp: now,
+						Version:             version,
+					},
 				},
 				&persistence.CrossClusterRecordChildExecutionCompletedTask{
 					TargetCluster: cluster.TestAlternativeClusterName,
 					RecordChildExecutionCompletedTask: persistence.RecordChildExecutionCompletedTask{
-						VisibilityTimestamp: now,
-						TargetDomainID:      constants.TestRemoteTargetDomainID,
-						TargetWorkflowID:    "parent workflowID",
-						TargetRunID:         "parent runID",
-						Version:             version,
+						TaskData: persistence.TaskData{
+							VisibilityTimestamp: now,
+							Version:             version,
+						},
+						TargetDomainID:   constants.TestRemoteTargetDomainID,
+						TargetWorkflowID: "parent workflowID",
+						TargetRunID:      "parent runID",
 					},
 				},
 				&persistence.CrossClusterApplyParentClosePolicyTask{
 					TargetCluster: cluster.TestAlternativeClusterName,
 					ApplyParentClosePolicyTask: persistence.ApplyParentClosePolicyTask{
-						VisibilityTimestamp: now,
-						TargetDomainIDs:     map[string]struct{}{constants.TestRemoteTargetDomainID: {}},
-						Version:             version,
+						TaskData: persistence.TaskData{
+							VisibilityTimestamp: now,
+							Version:             version,
+						},
+						TargetDomainIDs: map[string]struct{}{constants.TestRemoteTargetDomainID: {}},
 					},
 				},
 				&persistence.DeleteHistoryEventTask{
-					VisibilityTimestamp: time.Unix(0, closeEvent.GetTimestamp()).Add(retention),
-					Version:             version,
+					TaskData: persistence.TaskData{
+						VisibilityTimestamp: time.Unix(0, closeEvent.GetTimestamp()).Add(retention),
+						Version:             version,
+					},
 				},
 			},
 		},

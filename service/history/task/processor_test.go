@@ -104,9 +104,11 @@ func (s *queueTaskProcessorSuite) TestGetOrCreateShardTaskScheduler_ProcessorNot
 
 func (s *queueTaskProcessorSuite) TestGetOrCreateShardTaskScheduler_ShardProcessorAlreadyExists() {
 	mockScheduler := task.NewMockScheduler(s.controller)
+	mockScheduler.EXPECT().Stop().Times(1)
 	s.processor.shardSchedulers[s.mockShard] = mockScheduler
 
 	s.processor.Start()
+	defer s.processor.Stop()
 	scheduler, err := s.processor.getOrCreateShardTaskScheduler(s.mockShard)
 	s.NoError(err)
 	s.Equal(mockScheduler, scheduler)
@@ -116,6 +118,7 @@ func (s *queueTaskProcessorSuite) TestGetOrCreateShardTaskScheduler_ShardProcess
 	s.Empty(s.processor.shardSchedulers)
 
 	s.processor.Start()
+	defer s.processor.Stop()
 	scheduler, err := s.processor.getOrCreateShardTaskScheduler(s.mockShard)
 	s.NoError(err)
 
