@@ -38,8 +38,6 @@ const (
 	eventsChanSize = 1000
 )
 
-//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination notifier_mock.go -self_package github.com/uber/cadence/service/history/events
-
 type (
 	// Notifier is a pub-sub for sending and receiving notifications on new history events
 	Notifier interface {
