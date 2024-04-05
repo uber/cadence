@@ -119,7 +119,7 @@ func (p *failoverWatcherImpl) Stop() {
 
 func (p *failoverWatcherImpl) refreshDomainLoop() {
 
-	timer := time.NewTimer(backoff.JitDuration(
+	timer := p.timeSource.NewTimer(backoff.JitDuration(
 		p.refreshInterval(),
 		p.refreshJitter(),
 	))
@@ -129,7 +129,7 @@ func (p *failoverWatcherImpl) refreshDomainLoop() {
 		select {
 		case <-p.shutdownChan:
 			return
-		case <-timer.C:
+		case <-timer.Chan():
 			domains := p.domainCache.GetAllDomain()
 			for _, domain := range domains {
 				p.handleFailoverTimeout(domain)
