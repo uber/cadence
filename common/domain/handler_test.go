@@ -22,10 +22,11 @@ package domain
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/suite"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
@@ -38,36 +39,9 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-type HandlerSuite struct {
-	suite.Suite
-	controller           *gomock.Controller
-	mockDomainMgr        *persistence.MockDomainManager
-	mockClusterMetadata  cluster.Metadata
-	mockArchiverProvider provider.ArchiverProvider
-	handler              Handler
-	context              context.Context
-}
-
-func TestHandlerSuite(t *testing.T) {
-	suite.Run(t, new(HandlerSuite))
-}
-
-func (s *HandlerSuite) SetupTest() {
-	s.controller = gomock.NewController(s.T())
-	s.context = context.Background()
-	s.mockDomainMgr = persistence.NewMockDomainManager(s.controller)
-
-	s.mockClusterMetadata = cluster.GetTestClusterMetadata(true)
-
+// newTestHandler creates a new instance of the handler with mocked dependencies for testing.
+func newTestHandler(domainManager persistence.DomainManager, primaryCluster bool) Handler {
 	mockDC := dynamicconfig.NewCollection(dynamicconfig.NewNopClient(), log.NewNoop())
-	testConfig := Config{
-		MinRetentionDays:       dynamicconfig.GetIntPropertyFn(1),
-		MaxRetentionDays:       dynamicconfig.GetIntPropertyFn(5),
-		RequiredDomainDataKeys: nil,
-		MaxBadBinaryCount:      nil,
-		FailoverCoolDown:       nil,
-	}
-
 	domainDefaults := &config.ArchivalDomainDefaults{
 		History: config.HistoryArchivalDomainDefaults{
 			Status: "Disabled",
@@ -78,82 +52,164 @@ func (s *HandlerSuite) SetupTest() {
 			URI:    "https://visibility.example.com",
 		},
 	}
+	archivalMetadata := archiver.NewArchivalMetadata(mockDC, "Disabled", false, "Disabled", false, domainDefaults)
 
-	archivalMetadata := archiver.NewArchivalMetadata(
-		mockDC,
-		"Disabled", // historyStatus
-		false,      // historyReadEnabled
-		"Disabled", // visibilityStatus
-		false,      // visibilityReadEnabled
-		domainDefaults,
-	)
+	testConfig := Config{
+		MinRetentionDays:       dynamicconfig.GetIntPropertyFn(1),
+		MaxRetentionDays:       dynamicconfig.GetIntPropertyFn(5),
+		RequiredDomainDataKeys: nil,
+		MaxBadBinaryCount:      nil,
+		FailoverCoolDown:       nil,
+	}
 
-	s.mockClusterMetadata = cluster.GetTestClusterMetadata(true)
-	s.mockArchiverProvider = provider.NewArchiverProvider(nil, nil)
-
-	s.handler = NewHandler(
+	return NewHandler(
 		testConfig,
 		log.NewNoop(),
-		s.mockDomainMgr,
-		s.mockClusterMetadata,
-		nil,
+		domainManager,
+		cluster.GetTestClusterMetadata(primaryCluster),
+		nil, // Replicator
 		archivalMetadata,
-		s.mockArchiverProvider,
+		provider.NewArchiverProvider(nil, nil),
 		clock.NewMockedTimeSource(),
 	)
 }
 
-func (s *HandlerSuite) TestRegisterDomain() {
+func TestRegisterDomain(t *testing.T) {
 	tests := []struct {
-		name          string
-		request       *types.RegisterDomainRequest
-		setupMocks    func(t *testing.T, request *types.RegisterDomainRequest)
-		expectedError bool
+		name             string
+		request          *types.RegisterDomainRequest
+		isPrimaryCluster bool
+		mockSetup        func(*persistence.MockDomainManager, *types.RegisterDomainRequest)
+		wantErr          bool
+		expectedErr      error
 	}{
 		{
-			name: "register new domain successfully",
+			name:             "success",
+			isPrimaryCluster: true,
 			request: &types.RegisterDomainRequest{
 				Name:                                   "test-domain",
 				WorkflowExecutionRetentionPeriodInDays: 3,
 			},
-			setupMocks: func(t *testing.T, request *types.RegisterDomainRequest) {
-				// Mocking the behavior when the domain does not exist yet.
-				s.mockDomainMgr.EXPECT().
-					GetDomain(s.context, &persistence.GetDomainRequest{Name: request.GetName()}).
-					Return(nil, &types.EntityNotExistsError{})
-
-				// Mocking successful domain creation.
-				s.mockDomainMgr.EXPECT().
-					CreateDomain(s.context, gomock.Any()).
-					Return(&persistence.CreateDomainResponse{ID: "test-domain-id"}, nil)
+			mockSetup: func(mockDomainMgr *persistence.MockDomainManager, request *types.RegisterDomainRequest) {
+				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: request.Name}).Return(nil, &types.EntityNotExistsError{})
+				mockDomainMgr.EXPECT().CreateDomain(gomock.Any(), gomock.Any()).Return(&persistence.CreateDomainResponse{ID: "test-domain-id"}, nil)
 			},
-			expectedError: false,
+			wantErr: false,
 		},
 		{
-			name: "domain already exists",
+			name:             "domain already exists",
+			isPrimaryCluster: true,
 			request: &types.RegisterDomainRequest{
 				Name:                                   "existing-domain",
 				WorkflowExecutionRetentionPeriodInDays: 3,
 			},
-			setupMocks: func(t *testing.T, request *types.RegisterDomainRequest) {
-				s.mockDomainMgr.EXPECT().
-					GetDomain(s.context, &persistence.GetDomainRequest{Name: request.GetName()}).
-					Return(&persistence.GetDomainResponse{}, nil)
+			mockSetup: func(mockDomainMgr *persistence.MockDomainManager, request *types.RegisterDomainRequest) {
+				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: request.Name}).Return(&persistence.GetDomainResponse{}, nil)
 			},
-			expectedError: true,
+			wantErr: true,
+		},
+		{
+			name:             "global domain registration on non-primary cluster",
+			isPrimaryCluster: false,
+			request: &types.RegisterDomainRequest{
+				Name:           "global-test-domain",
+				IsGlobalDomain: true,
+			},
+			mockSetup: func(mockDomainMgr *persistence.MockDomainManager, request *types.RegisterDomainRequest) {
+				mockDomainMgr.EXPECT().
+					GetDomain(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, req *persistence.GetDomainRequest) (*persistence.GetDomainResponse, error) {
+						if req.Name == "global-test-domain" {
+							return nil, &types.EntityNotExistsError{}
+						}
+						return nil, errors.New("unexpected domain name")
+					}).AnyTimes()
+
+			},
+			wantErr:     true,
+			expectedErr: errNotPrimaryCluster,
+		},
+		{
+			name: "unexpected error on domain lookup",
+			request: &types.RegisterDomainRequest{
+				Name:                                   "test-domain-with-lookup-error",
+				WorkflowExecutionRetentionPeriodInDays: 3,
+			},
+			mockSetup: func(mockDomainMgr *persistence.MockDomainManager, request *types.RegisterDomainRequest) {
+				unexpectedErr := &types.InternalServiceError{Message: "Internal server error."}
+				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: request.Name}).Return(nil, unexpectedErr)
+			},
+			wantErr:     true,
+			expectedErr: &types.InternalServiceError{},
+		},
+		{
+			name: "domain name does not match regex",
+			request: &types.RegisterDomainRequest{
+				Name:                                   "invalid_domain!",
+				WorkflowExecutionRetentionPeriodInDays: 3,
+			},
+			mockSetup: func(mockDomainMgr *persistence.MockDomainManager, request *types.RegisterDomainRequest) {
+				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: request.Name}).Return(nil, &types.EntityNotExistsError{})
+			},
+			wantErr:     true,
+			expectedErr: errInvalidDomainName,
+		},
+		{
+			name: "specify active cluster name",
+			request: &types.RegisterDomainRequest{
+				Name:                                   "test-domain-with-active-cluster",
+				WorkflowExecutionRetentionPeriodInDays: 3,
+				ActiveClusterName:                      "active",
+			},
+			isPrimaryCluster: true,
+			mockSetup: func(mockDomainMgr *persistence.MockDomainManager, request *types.RegisterDomainRequest) {
+				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: request.Name}).Return(nil, &types.EntityNotExistsError{})
+
+				mockDomainMgr.EXPECT().CreateDomain(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, req *persistence.CreateDomainRequest) (*persistence.CreateDomainResponse, error) {
+						return &persistence.CreateDomainResponse{ID: "test-domain-id"}, nil
+					})
+			},
+			wantErr: false,
+		},
+		{
+			name: "specify clusters including an invalid one",
+			request: &types.RegisterDomainRequest{
+				Name: "test-domain-with-clusters",
+				Clusters: []*types.ClusterReplicationConfiguration{
+					{ClusterName: "valid-cluster-1"},
+					{ClusterName: "invalid-cluster"},
+				},
+				IsGlobalDomain: true,
+			},
+			isPrimaryCluster: true,
+			mockSetup: func(mockDomainMgr *persistence.MockDomainManager, request *types.RegisterDomainRequest) {
+				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: request.Name}).Return(nil, &types.EntityNotExistsError{})
+			},
+			wantErr:     true,
+			expectedErr: &types.BadRequestError{},
 		},
 	}
 
 	for _, tc := range tests {
-		s.T().Run(tc.name, func(t *testing.T) {
-			tc.setupMocks(t, tc.request)
+		t.Run(tc.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
 
-			err := s.handler.RegisterDomain(s.context, tc.request)
+			mockDomainMgr := persistence.NewMockDomainManager(controller)
+			handler := newTestHandler(mockDomainMgr, tc.isPrimaryCluster)
 
-			if tc.expectedError {
-				s.NotNil(err, "Expected an error but got none")
+			tc.mockSetup(mockDomainMgr, tc.request)
+
+			err := handler.RegisterDomain(context.Background(), tc.request)
+
+			if tc.wantErr {
+				assert.Error(t, err)
+
+				if tc.expectedErr != nil {
+					assert.IsType(t, tc.expectedErr, err)
+				}
 			} else {
-				s.Nil(err, "Expected no error but got one")
+				assert.NoError(t, err)
 			}
 		})
 	}
