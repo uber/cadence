@@ -189,6 +189,36 @@ func TestRegisterDomain(t *testing.T) {
 			wantErr:     true,
 			expectedErr: &types.BadRequestError{},
 		},
+		{
+			name: "invalid history archival configuration",
+			request: &types.RegisterDomainRequest{
+				Name:                  "test-domain-invalid-archival-config",
+				HistoryArchivalStatus: types.ArchivalStatusEnabled.Ptr(),
+				HistoryArchivalURI:    "invalid-uri",
+				IsGlobalDomain:        true,
+			},
+			isPrimaryCluster: true,
+			mockSetup: func(mockDomainMgr *persistence.MockDomainManager, request *types.RegisterDomainRequest) {
+				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: request.Name}).Return(nil, &types.EntityNotExistsError{})
+			},
+			wantErr:     true,
+			expectedErr: errInvalidArchivalConfig,
+		},
+		{
+			name: "error during domain creation",
+			request: &types.RegisterDomainRequest{
+				Name:                                   "domain-creation-error",
+				WorkflowExecutionRetentionPeriodInDays: 2,
+				IsGlobalDomain:                         false,
+			},
+			isPrimaryCluster: true,
+			mockSetup: func(mockDomainMgr *persistence.MockDomainManager, request *types.RegisterDomainRequest) {
+				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: request.Name}).Return(nil, &types.EntityNotExistsError{})
+
+				mockDomainMgr.EXPECT().CreateDomain(gomock.Any(), gomock.Any()).Return(nil, errors.New("creation failed"))
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tc := range tests {
