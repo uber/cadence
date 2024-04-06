@@ -832,7 +832,7 @@ func TestClient_withResponse(t *testing.T) {
 					Return(nil, fmt.Errorf("GetCrossClusterTasks failed")).Times(1)
 			},
 			want: &types.GetCrossClusterTasksResponse{
-				TasksByShard:       make(map[int32][]*types.CrossClusterTaskRequest),
+				TasksByShard: make(map[int32][]*types.CrossClusterTaskRequest),
 				FailedCauseByShard: map[int32]types.GetTaskFailedCause{
 					100: types.GetTaskFailedCauseUncategorized,
 				},
