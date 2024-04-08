@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package testdata
+package testing
 
 import (
 	"reflect"
@@ -29,17 +29,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestAllFieldsSetInTestErrors(t *testing.T) {
-	for _, err := range Errors {
-		name := reflect.TypeOf(err).Elem().Name()
-		t.Run(name, func(t *testing.T) {
-			// Test all fields are set in the error
-			assert.True(t, checkAllIsSet(err))
-		})
-	}
-}
-
-func checkAllIsSet(err error) bool {
+func allIsSet(t *testing.T, err error) {
 	// All the errors are pointers, so we get the value with .Elem
 	errValue := reflect.ValueOf(err).Elem()
 
@@ -47,10 +37,6 @@ func checkAllIsSet(err error) bool {
 		field := errValue.Field(i)
 
 		// IsZero checks if the value is the default value (e.g. nil, "", 0 etc)
-		if field.IsZero() {
-			return false
-		}
+		assert.True(t, !field.IsZero(), "Field %s is not set", errValue.Type().Field(i).Name)
 	}
-
-	return true
 }
