@@ -29,6 +29,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/uber/cadence/common"
@@ -150,7 +151,6 @@ func TestCreateWorkflowExecution(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			defer controller.Finish()
 
 			mockDB := nosqlplugin.NewMockDB(controller)
 			store := newTestNosqlExecutionStore(mockDB, log.NewNoop())
@@ -1336,6 +1336,151 @@ func TestCreateFailoverMarkerTasks(t *testing.T) {
 	}
 }
 
+func TestIsWorkflowExecutionExists(t *testing.T) {
+	ctx := context.Background()
+	gomockController := gomock.NewController(t)
+
+	mockDB := nosqlplugin.NewMockDB(gomockController)
+	store := &nosqlExecutionStore{
+		shardID:    1,
+		nosqlStore: nosqlStore{db: mockDB},
+	}
+
+	domainID := "testDomainID"
+	workflowID := "testWorkflowID"
+	runID := "testRunID"
+
+	tests := []struct {
+		name           string
+		setupMock      func()
+		request        *persistence.IsWorkflowExecutionExistsRequest
+		expectedExists bool
+		expectedError  error
+	}{
+		{
+			name: "Workflow Execution Exists",
+			setupMock: func() {
+				mockDB.EXPECT().IsWorkflowExecutionExists(ctx, store.shardID, domainID, workflowID, runID).Return(true, nil)
+			},
+			request: &persistence.IsWorkflowExecutionExistsRequest{
+				DomainID:   domainID,
+				WorkflowID: workflowID,
+				RunID:      runID,
+			},
+			expectedExists: true,
+			expectedError:  nil,
+		},
+		{
+			name: "Workflow Execution Does Not Exist",
+			setupMock: func() {
+				mockDB.EXPECT().IsWorkflowExecutionExists(ctx, store.shardID, domainID, workflowID, runID).Return(false, nil)
+			},
+			request: &persistence.IsWorkflowExecutionExistsRequest{
+				DomainID:   domainID,
+				WorkflowID: workflowID,
+				RunID:      runID,
+			},
+			expectedExists: false,
+			expectedError:  nil,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.setupMock()
+
+			response, err := store.IsWorkflowExecutionExists(ctx, tc.request)
+
+			if tc.expectedError != nil {
+				require.Error(t, err)
+				// Optionally, further validate the error type or message
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.expectedExists, response.Exists)
+			}
+		})
+	}
+}
+
+func TestConflictResolveWorkflowExecution(t *testing.T) {
+	ctx := context.Background()
+	gomockController := gomock.NewController(t)
+
+	mockDB := nosqlplugin.NewMockDB(gomockController)
+	store, err := NewExecutionStore(1, mockDB, log.NewNoop())
+	require.NoError(t, err)
+
+	tests := []struct {
+		name          string
+		setupMocks    func()
+		getRequest    func() *persistence.InternalConflictResolveWorkflowExecutionRequest
+		expectedError error
+	}{
+		{
+			name: "DB Error on Reset Execution Insertion",
+			setupMocks: func() {
+				mockDB.EXPECT().UpdateWorkflowExecutionWithTasks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("DB error")).Times(1)
+				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(false).AnyTimes()
+				mockDB.EXPECT().IsTimeoutError(gomock.Any()).Return(false).AnyTimes()
+				mockDB.EXPECT().IsThrottlingError(gomock.Any()).Return(false).AnyTimes()
+				mockDB.EXPECT().IsDBUnavailableError(gomock.Any()).Return(false).AnyTimes()
+			},
+			getRequest: func() *persistence.InternalConflictResolveWorkflowExecutionRequest {
+				return newConflictResolveRequest(persistence.ConflictResolveWorkflowModeUpdateCurrent)
+			},
+			expectedError: &types.InternalServiceError{Message: "DB error"},
+		},
+		{
+			name: "Unknown Conflict Resolution Mode",
+			setupMocks: func() {
+			},
+			getRequest: func() *persistence.InternalConflictResolveWorkflowExecutionRequest {
+				req := newConflictResolveRequest(-1) // Intentionally using an invalid mode
+				return req
+			},
+			expectedError: &types.InternalServiceError{Message: "ConflictResolveWorkflowExecution: unknown mode: -1"},
+		},
+		{
+			name: "Error on Shard Condition Mismatch",
+			setupMocks: func() {
+				// Simulate shard condition mismatch error by returning a ShardOperationConditionFailure error from the mock
+				conditionFailure := &nosqlplugin.ShardOperationConditionFailure{
+					RangeID: 124, // Example mismatched RangeID to trigger the condition failure
+				}
+				mockDB.EXPECT().UpdateWorkflowExecutionWithTasks(
+					gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
+				).Return(conditionFailure).Times(1)
+				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(false).AnyTimes()
+				mockDB.EXPECT().IsTimeoutError(gomock.Any()).Return(false).AnyTimes()
+				mockDB.EXPECT().IsThrottlingError(gomock.Any()).Return(false).AnyTimes()
+				mockDB.EXPECT().IsDBUnavailableError(gomock.Any()).Return(false).AnyTimes() // Ensure this call returns the simulated condition failure once
+			},
+			getRequest: func() *persistence.InternalConflictResolveWorkflowExecutionRequest {
+				req := newConflictResolveRequest(persistence.ConflictResolveWorkflowModeUpdateCurrent)
+				req.RangeID = 123 // Intentionally set to simulate the condition leading to a shard condition mismatch.
+				return req
+			},
+			expectedError: &types.InternalServiceError{Message: "Shard error"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.setupMocks()
+
+			req := tc.getRequest()
+			err := store.ConflictResolveWorkflowExecution(ctx, req)
+
+			if tc.expectedError != nil {
+				require.Error(t, err)
+				assert.IsType(t, tc.expectedError, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func newCreateWorkflowExecutionRequest() *persistence.InternalCreateWorkflowExecutionRequest {
 	return &persistence.InternalCreateWorkflowExecutionRequest{
 		RangeID:                  123,
@@ -1403,5 +1548,31 @@ func newInternalReplicationTaskInfo() persistence.InternalReplicationTaskInfo {
 		BranchToken:       []byte("branchToken"),
 		NewRunBranchToken: []byte("newRunBranchToken"),
 		CreationTime:      fixedCreationTime,
+	}
+}
+
+func newConflictResolveRequest(mode persistence.ConflictResolveWorkflowMode) *persistence.InternalConflictResolveWorkflowExecutionRequest {
+	return &persistence.InternalConflictResolveWorkflowExecutionRequest{
+		Mode:    mode,
+		RangeID: 123,
+		CurrentWorkflowMutation: &persistence.InternalWorkflowMutation{
+			ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+				DomainID:    "testDomainID",
+				WorkflowID:  "testWorkflowID",
+				RunID:       "currentRunID",
+				State:       persistence.WorkflowStateCompleted,
+				CloseStatus: persistence.WorkflowCloseStatusCompleted,
+			},
+		},
+		ResetWorkflowSnapshot: persistence.InternalWorkflowSnapshot{
+			ExecutionInfo: &persistence.InternalWorkflowExecutionInfo{
+				DomainID:    "testDomainID",
+				WorkflowID:  "testWorkflowID",
+				RunID:       "resetRunID",
+				State:       persistence.WorkflowStateRunning,
+				CloseStatus: persistence.WorkflowCloseStatusNone,
+			},
+		},
+		NewWorkflowSnapshot: nil,
 	}
 }
