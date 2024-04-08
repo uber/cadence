@@ -40,12 +40,12 @@ import (
 )
 
 const (
-	taskDefaultTimeout             = 3 * time.Second
-	taskGetExecutionContextTimeout = 500 * time.Millisecond
-	taskRPCCallTimeout             = 2 * time.Second
-
-	secondsInDay      = int32(24 * time.Hour / time.Second)
-	defaultDomainName = "defaultDomainName"
+	taskDefaultTimeout                   = 3 * time.Second
+	taskGetExecutionContextTimeout       = 500 * time.Millisecond
+	taskRPCCallTimeout                   = 2 * time.Second
+	taskDeleteHistoryEventContextTimeout = 60 * time.Second
+	secondsInDay                         = int32(24 * time.Hour / time.Second)
+	defaultDomainName                    = "defaultDomainName"
 )
 
 type (
