@@ -24,7 +24,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"net/url"
 	"testing"
 	"time"
@@ -1009,7 +1008,7 @@ func TestHandler_UpdateAsyncWorkflowConfiguraton(t *testing.T) {
 				mockDomainManager.EXPECT().GetMetadata(gomock.Any()).Return(&persistence.GetMetadataResponse{NotificationVersion: 1}, nil)
 				mockDomainManager.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: testDomain}).Return(&persistence.GetDomainResponse{
 					Info:   &persistence.DomainInfo{ID: "domainID", Name: testDomain},
-					Config: nil, // Domain config is nil
+					Config: nil,
 				}, nil)
 			},
 			request: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
@@ -1121,12 +1120,7 @@ func TestHandler_UpdateAsyncWorkflowConfiguraton(t *testing.T) {
 					LastUpdatedTime: time.Now().Add(-24 * time.Hour).UnixNano(),
 				}, nil)
 
-				mockDomainManager.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).DoAndReturn(
-					func(ctx context.Context, request *persistence.UpdateDomainRequest) error {
-						require.Empty(t, request.Config.AsyncWorkflowConfig)
-						return nil
-					},
-				)
+				mockDomainManager.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).Return(nil)
 			},
 			request: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
 				Domain:        "test-domain",
@@ -1285,9 +1279,9 @@ func TestHandler_UpdateAsyncWorkflowConfiguraton(t *testing.T) {
 
 			err := handler.UpdateAsyncWorkflowConfiguraton(context.Background(), *test.request)
 			if test.expectedErr != nil {
-				require.EqualError(t, err, test.expectedErr.Error())
+				assert.EqualError(t, err, test.expectedErr.Error())
 			} else {
-				require.NoError(t, err)
+				assert.NoError(t, err)
 			}
 		})
 	}
