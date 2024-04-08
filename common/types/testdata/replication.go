@@ -20,9 +20,15 @@
 
 package testdata
 
-import "github.com/uber/cadence/common/types"
+import (
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
+)
 
-const TaskType = int16(1)
+const (
+	TaskType        = int16(1)
+	MaxiumuPageSize = int32(5)
+)
 
 var (
 	ReplicationMessages = types.ReplicationMessages{
@@ -140,5 +146,41 @@ var (
 		DomainID:        DomainID,
 		FailoverVersion: FailoverVersion1,
 		CreationTime:    &Timestamp1,
+	}
+	FailoverMarkerAttributesArray = []*types.FailoverMarkerAttributes{
+		&FailoverMarkerAttributes,
+	}
+	GetDomainReplicationMessagesRequest = types.GetDomainReplicationMessagesRequest{
+		LastRetrievedMessageID: common.Int64Ptr(MessageID1),
+		LastProcessedMessageID: common.Int64Ptr(MessageID2),
+		ClusterName:            ClusterName1,
+	}
+	MergeDLQMessagesRequest = types.MergeDLQMessagesRequest{
+		Type:                  types.DLQTypeDomain.Ptr(),
+		ShardID:               ShardID,
+		SourceCluster:         ClusterName1,
+		InclusiveEndMessageID: common.Int64Ptr(MessageID1),
+		MaximumPageSize:       MaxiumuPageSize,
+		NextPageToken:         Token1,
+	}
+	PurgeDLQMessagesRequest = types.PurgeDLQMessagesRequest{
+		Type:                  types.DLQTypeDomain.Ptr(),
+		ShardID:               ShardID,
+		SourceCluster:         ClusterName1,
+		InclusiveEndMessageID: common.Int64Ptr(MessageID1),
+	}
+	ReadDLQMessagesRequest = types.ReadDLQMessagesRequest{
+		Type:                  types.DLQTypeDomain.Ptr(),
+		ShardID:               ShardID,
+		SourceCluster:         ClusterName1,
+		InclusiveEndMessageID: common.Int64Ptr(MessageID1),
+		MaximumPageSize:       MaxiumuPageSize,
+		NextPageToken:         Token1,
+	}
+	ReadDLQMessagesResponse = types.ReadDLQMessagesResponse{
+		Type:                 types.DLQTypeDomain.Ptr(),
+		ReplicationTasks:     ReplicationTaskArray,
+		ReplicationTasksInfo: ReplicationTaskInfoArray,
+		NextPageToken:        Token1,
 	}
 )

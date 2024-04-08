@@ -889,3 +889,801 @@ func TestFilterAttrPrefix(t *testing.T) {
 		})
 	}
 }
+
+func TestPinotTripleListOpenWorkflowExecutions(t *testing.T) {
+	request := &ListWorkflowExecutionsRequest{
+		Domain: "test-domain",
+	}
+
+	// put this outside because need to use it as an input of the table tests
+	ctrl := gomock.NewController(t)
+
+	tests := map[string]struct {
+		request                              *ListWorkflowExecutionsRequest
+		mockDBVisibilityManager              VisibilityManager
+		mockESVisibilityManager              VisibilityManager
+		mockPinotVisibilityManager           VisibilityManager
+		mockDBVisibilityManagerAccordance    func(mockDBVisibilityManager *MockVisibilityManager)
+		mockPinotVisibilityManagerAccordance func(mockPinotVisibilityManager *MockVisibilityManager)
+		mockESVisibilityManagerAccordance    func(mockESVisibilityManager *MockVisibilityManager)
+		readModeIsFromES                     dynamicconfig.BoolPropertyFnWithDomainFilter
+		readModeIsFromPinot                  dynamicconfig.BoolPropertyFnWithDomainFilter
+		expectedError                        error
+	}{
+		"Case1-1: success case with DB visibility is not nil": {
+			request:                 request,
+			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockDBVisibilityManagerAccordance: func(mockDBVisibilityManager *MockVisibilityManager) {
+				mockDBVisibilityManager.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+		"Case1-2: success case with Pinot visibility is not nil": {
+			request:                    request,
+			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
+				mockPinotVisibilityManager.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES:    dynamicconfig.GetBoolPropertyFnFilteredByDomain(false),
+			readModeIsFromPinot: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:       nil,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			if test.mockDBVisibilityManager != nil {
+				test.mockDBVisibilityManagerAccordance(test.mockDBVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockPinotVisibilityManager != nil {
+				test.mockPinotVisibilityManagerAccordance(test.mockPinotVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockESVisibilityManager != nil {
+				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
+			}
+
+			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+				test.mockESVisibilityManager, test.readModeIsFromPinot, test.readModeIsFromES,
+				nil, dynamicconfig.GetBoolPropertyFnFilteredByDomain(true), log.NewNoop())
+
+			_, err := visibilityManager.ListOpenWorkflowExecutions(context.Background(), test.request)
+			if test.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestPinotTripleListClosedWorkflowExecutions(t *testing.T) {
+	request := &ListWorkflowExecutionsRequest{
+		Domain: "test-domain",
+	}
+
+	// put this outside because need to use it as an input of the table tests
+	ctrl := gomock.NewController(t)
+
+	tests := map[string]struct {
+		context                              context.Context
+		request                              *ListWorkflowExecutionsRequest
+		mockDBVisibilityManager              VisibilityManager
+		mockESVisibilityManager              VisibilityManager
+		mockPinotVisibilityManager           VisibilityManager
+		mockDBVisibilityManagerAccordance    func(mockDBVisibilityManager *MockVisibilityManager)
+		mockPinotVisibilityManagerAccordance func(mockPinotVisibilityManager *MockVisibilityManager)
+		mockESVisibilityManagerAccordance    func(mockESVisibilityManager *MockVisibilityManager)
+		readModeIsFromES                     dynamicconfig.BoolPropertyFnWithDomainFilter
+		readModeIsFromPinot                  dynamicconfig.BoolPropertyFnWithDomainFilter
+		expectedError                        error
+	}{
+		"Case1-1: success case with DB visibility is not nil": {
+			context:                 context.Background(),
+			request:                 request,
+			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockDBVisibilityManagerAccordance: func(mockDBVisibilityManager *MockVisibilityManager) {
+				mockDBVisibilityManager.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+		"Case1-2: success case with Pinot visibility is not nil": {
+			context:                    context.Background(),
+			request:                    request,
+			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
+				mockPinotVisibilityManager.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES:    dynamicconfig.GetBoolPropertyFnFilteredByDomain(false),
+			readModeIsFromPinot: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:       nil,
+		},
+		"Case1-3: success case with ES visibility is not nil": {
+			context:                 context.Background(),
+			request:                 request,
+			mockESVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockESVisibilityManagerAccordance: func(mockESVisibilityManager *MockVisibilityManager) {
+				mockESVisibilityManager.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES:    dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			readModeIsFromPinot: dynamicconfig.GetBoolPropertyFnFilteredByDomain(false),
+			expectedError:       nil,
+		},
+		"Case2-1: success case with DB visibility is not nil and read Pinot is true": {
+			context:                 context.Background(),
+			request:                 request,
+			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockDBVisibilityManagerAccordance: func(mockDBVisibilityManager *MockVisibilityManager) {
+				mockDBVisibilityManager.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES:    dynamicconfig.GetBoolPropertyFnFilteredByDomain(false),
+			readModeIsFromPinot: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:       nil,
+		},
+		"Case2-2: success case with Pinot visibility is not nil and read mod is false": {
+			context:                    context.Background(),
+			request:                    request,
+			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
+				mockPinotVisibilityManager.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES:    dynamicconfig.GetBoolPropertyFnFilteredByDomain(false),
+			readModeIsFromPinot: dynamicconfig.GetBoolPropertyFnFilteredByDomain(false),
+			expectedError:       nil,
+		},
+		"Case2-3: success case with DB visibility is not nil and read modes are false": {
+			context:                 context.Background(),
+			request:                 request,
+			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockDBVisibilityManagerAccordance: func(mockDBVisibilityManager *MockVisibilityManager) {
+				mockDBVisibilityManager.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES:    dynamicconfig.GetBoolPropertyFnFilteredByDomain(false),
+			readModeIsFromPinot: dynamicconfig.GetBoolPropertyFnFilteredByDomain(false),
+			expectedError:       nil,
+		},
+		"Case3-1: read from ES with context key": {
+			context:                 context.WithValue(context.Background(), ContextKey, VisibilityOverridePrimary),
+			request:                 request,
+			mockESVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockESVisibilityManagerAccordance: func(mockESVisibilityManager *MockVisibilityManager) {
+				mockESVisibilityManager.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+		},
+		"Case3-2: read from Pinot with context key": {
+			context:                    context.WithValue(context.Background(), ContextKey, VisibilityOverrideSecondary),
+			request:                    request,
+			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
+				mockPinotVisibilityManager.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			if test.mockDBVisibilityManager != nil {
+				test.mockDBVisibilityManagerAccordance(test.mockDBVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockPinotVisibilityManager != nil {
+				test.mockPinotVisibilityManagerAccordance(test.mockPinotVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockESVisibilityManager != nil {
+				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
+			}
+
+			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+				test.mockESVisibilityManager, test.readModeIsFromPinot, test.readModeIsFromES,
+				nil, dynamicconfig.GetBoolPropertyFnFilteredByDomain(true), log.NewNoop())
+
+			_, err := visibilityManager.ListClosedWorkflowExecutions(test.context, test.request)
+			if test.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestPinotTripleListOpenWorkflowExecutionsByType(t *testing.T) {
+	request := &ListWorkflowExecutionsByTypeRequest{
+		ListWorkflowExecutionsRequest: ListWorkflowExecutionsRequest{
+			Domain: "test-domain",
+		},
+	}
+
+	// put this outside because need to use it as an input of the table tests
+	ctrl := gomock.NewController(t)
+
+	tests := map[string]struct {
+		request                              *ListWorkflowExecutionsByTypeRequest
+		mockDBVisibilityManager              VisibilityManager
+		mockESVisibilityManager              VisibilityManager
+		mockPinotVisibilityManager           VisibilityManager
+		mockDBVisibilityManagerAccordance    func(mockDBVisibilityManager *MockVisibilityManager)
+		mockPinotVisibilityManagerAccordance func(mockPinotVisibilityManager *MockVisibilityManager)
+		mockESVisibilityManagerAccordance    func(mockESVisibilityManager *MockVisibilityManager)
+		readModeIsFromES                     dynamicconfig.BoolPropertyFnWithDomainFilter
+		readModeIsFromPinot                  dynamicconfig.BoolPropertyFnWithDomainFilter
+		expectedError                        error
+	}{
+		"Case1-1: success case with DB visibility is not nil": {
+			request:                 request,
+			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockDBVisibilityManagerAccordance: func(mockDBVisibilityManager *MockVisibilityManager) {
+				mockDBVisibilityManager.EXPECT().ListOpenWorkflowExecutionsByType(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+		"Case1-2: success case with Pinot visibility is not nil": {
+			request:                    request,
+			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
+				mockPinotVisibilityManager.EXPECT().ListOpenWorkflowExecutionsByType(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES:    dynamicconfig.GetBoolPropertyFnFilteredByDomain(false),
+			readModeIsFromPinot: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:       nil,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			if test.mockDBVisibilityManager != nil {
+				test.mockDBVisibilityManagerAccordance(test.mockDBVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockPinotVisibilityManager != nil {
+				test.mockPinotVisibilityManagerAccordance(test.mockPinotVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockESVisibilityManager != nil {
+				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
+			}
+
+			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+				test.mockESVisibilityManager, test.readModeIsFromPinot, test.readModeIsFromES,
+				nil, dynamicconfig.GetBoolPropertyFnFilteredByDomain(true), log.NewNoop())
+
+			_, err := visibilityManager.ListOpenWorkflowExecutionsByType(context.Background(), test.request)
+			if test.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestPinotTripleListClosedWorkflowExecutionsByType(t *testing.T) {
+	request := &ListWorkflowExecutionsByTypeRequest{
+		ListWorkflowExecutionsRequest: ListWorkflowExecutionsRequest{
+			Domain: "test-domain",
+		},
+	}
+
+	// put this outside because need to use it as an input of the table tests
+	ctrl := gomock.NewController(t)
+
+	tests := map[string]struct {
+		request                              *ListWorkflowExecutionsByTypeRequest
+		mockDBVisibilityManager              VisibilityManager
+		mockESVisibilityManager              VisibilityManager
+		mockPinotVisibilityManager           VisibilityManager
+		mockDBVisibilityManagerAccordance    func(mockDBVisibilityManager *MockVisibilityManager)
+		mockPinotVisibilityManagerAccordance func(mockPinotVisibilityManager *MockVisibilityManager)
+		mockESVisibilityManagerAccordance    func(mockESVisibilityManager *MockVisibilityManager)
+		readModeIsFromES                     dynamicconfig.BoolPropertyFnWithDomainFilter
+		readModeIsFromPinot                  dynamicconfig.BoolPropertyFnWithDomainFilter
+		expectedError                        error
+	}{
+		"Case1-1: success case with DB visibility is not nil": {
+			request:                 request,
+			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockDBVisibilityManagerAccordance: func(mockDBVisibilityManager *MockVisibilityManager) {
+				mockDBVisibilityManager.EXPECT().ListClosedWorkflowExecutionsByType(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+		"Case1-2: success case with Pinot visibility is not nil": {
+			request:                    request,
+			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
+				mockPinotVisibilityManager.EXPECT().ListClosedWorkflowExecutionsByType(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES:    dynamicconfig.GetBoolPropertyFnFilteredByDomain(false),
+			readModeIsFromPinot: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:       nil,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			if test.mockDBVisibilityManager != nil {
+				test.mockDBVisibilityManagerAccordance(test.mockDBVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockPinotVisibilityManager != nil {
+				test.mockPinotVisibilityManagerAccordance(test.mockPinotVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockESVisibilityManager != nil {
+				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
+			}
+
+			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+				test.mockESVisibilityManager, test.readModeIsFromPinot, test.readModeIsFromES,
+				nil, dynamicconfig.GetBoolPropertyFnFilteredByDomain(true), log.NewNoop())
+
+			_, err := visibilityManager.ListClosedWorkflowExecutionsByType(context.Background(), test.request)
+			if test.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestPinotTripleListOpenWorkflowExecutionsByWorkflowID(t *testing.T) {
+	request := &ListWorkflowExecutionsByWorkflowIDRequest{
+		ListWorkflowExecutionsRequest: ListWorkflowExecutionsRequest{
+			Domain: "test-domain",
+		},
+	}
+
+	// put this outside because need to use it as an input of the table tests
+	ctrl := gomock.NewController(t)
+
+	tests := map[string]struct {
+		request                              *ListWorkflowExecutionsByWorkflowIDRequest
+		mockDBVisibilityManager              VisibilityManager
+		mockESVisibilityManager              VisibilityManager
+		mockPinotVisibilityManager           VisibilityManager
+		mockDBVisibilityManagerAccordance    func(mockDBVisibilityManager *MockVisibilityManager)
+		mockPinotVisibilityManagerAccordance func(mockPinotVisibilityManager *MockVisibilityManager)
+		mockESVisibilityManagerAccordance    func(mockESVisibilityManager *MockVisibilityManager)
+		readModeIsFromES                     dynamicconfig.BoolPropertyFnWithDomainFilter
+		readModeIsFromPinot                  dynamicconfig.BoolPropertyFnWithDomainFilter
+		expectedError                        error
+	}{
+		"Case1-1: success case with DB visibility is not nil": {
+			request:                 request,
+			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockDBVisibilityManagerAccordance: func(mockDBVisibilityManager *MockVisibilityManager) {
+				mockDBVisibilityManager.EXPECT().ListOpenWorkflowExecutionsByWorkflowID(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+		"Case1-2: success case with Pinot visibility is not nil": {
+			request:                    request,
+			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
+				mockPinotVisibilityManager.EXPECT().ListOpenWorkflowExecutionsByWorkflowID(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES:    dynamicconfig.GetBoolPropertyFnFilteredByDomain(false),
+			readModeIsFromPinot: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:       nil,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			if test.mockDBVisibilityManager != nil {
+				test.mockDBVisibilityManagerAccordance(test.mockDBVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockPinotVisibilityManager != nil {
+				test.mockPinotVisibilityManagerAccordance(test.mockPinotVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockESVisibilityManager != nil {
+				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
+			}
+
+			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+				test.mockESVisibilityManager, test.readModeIsFromPinot, test.readModeIsFromES,
+				nil, dynamicconfig.GetBoolPropertyFnFilteredByDomain(true), log.NewNoop())
+
+			_, err := visibilityManager.ListOpenWorkflowExecutionsByWorkflowID(context.Background(), test.request)
+			if test.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestPinotTripleListClosedWorkflowExecutionsByWorkflowID(t *testing.T) {
+	request := &ListWorkflowExecutionsByWorkflowIDRequest{
+		ListWorkflowExecutionsRequest: ListWorkflowExecutionsRequest{
+			Domain: "test-domain",
+		},
+	}
+
+	// put this outside because need to use it as an input of the table tests
+	ctrl := gomock.NewController(t)
+
+	tests := map[string]struct {
+		request                              *ListWorkflowExecutionsByWorkflowIDRequest
+		mockDBVisibilityManager              VisibilityManager
+		mockESVisibilityManager              VisibilityManager
+		mockPinotVisibilityManager           VisibilityManager
+		mockDBVisibilityManagerAccordance    func(mockDBVisibilityManager *MockVisibilityManager)
+		mockPinotVisibilityManagerAccordance func(mockPinotVisibilityManager *MockVisibilityManager)
+		mockESVisibilityManagerAccordance    func(mockESVisibilityManager *MockVisibilityManager)
+		readModeIsFromES                     dynamicconfig.BoolPropertyFnWithDomainFilter
+		readModeIsFromPinot                  dynamicconfig.BoolPropertyFnWithDomainFilter
+		expectedError                        error
+	}{
+		"Case1-1: success case with DB visibility is not nil": {
+			request:                 request,
+			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockDBVisibilityManagerAccordance: func(mockDBVisibilityManager *MockVisibilityManager) {
+				mockDBVisibilityManager.EXPECT().ListClosedWorkflowExecutionsByWorkflowID(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+		"Case1-2: success case with Pinot visibility is not nil": {
+			request:                    request,
+			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
+				mockPinotVisibilityManager.EXPECT().ListClosedWorkflowExecutionsByWorkflowID(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES:    dynamicconfig.GetBoolPropertyFnFilteredByDomain(false),
+			readModeIsFromPinot: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:       nil,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			if test.mockDBVisibilityManager != nil {
+				test.mockDBVisibilityManagerAccordance(test.mockDBVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockPinotVisibilityManager != nil {
+				test.mockPinotVisibilityManagerAccordance(test.mockPinotVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockESVisibilityManager != nil {
+				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
+			}
+
+			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+				test.mockESVisibilityManager, test.readModeIsFromPinot, test.readModeIsFromES,
+				nil, dynamicconfig.GetBoolPropertyFnFilteredByDomain(false), log.NewNoop())
+
+			_, err := visibilityManager.ListClosedWorkflowExecutionsByWorkflowID(context.Background(), test.request)
+			if test.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestPinotTripleListClosedWorkflowExecutionsByStatus(t *testing.T) {
+	request := &ListClosedWorkflowExecutionsByStatusRequest{
+		ListWorkflowExecutionsRequest: ListWorkflowExecutionsRequest{
+			Domain: "test-domain",
+		},
+	}
+
+	// put this outside because need to use it as an input of the table tests
+	ctrl := gomock.NewController(t)
+
+	tests := map[string]struct {
+		request                              *ListClosedWorkflowExecutionsByStatusRequest
+		mockDBVisibilityManager              VisibilityManager
+		mockESVisibilityManager              VisibilityManager
+		mockPinotVisibilityManager           VisibilityManager
+		mockDBVisibilityManagerAccordance    func(mockDBVisibilityManager *MockVisibilityManager)
+		mockPinotVisibilityManagerAccordance func(mockPinotVisibilityManager *MockVisibilityManager)
+		mockESVisibilityManagerAccordance    func(mockESVisibilityManager *MockVisibilityManager)
+		readModeIsFromES                     dynamicconfig.BoolPropertyFnWithDomainFilter
+		readModeIsFromPinot                  dynamicconfig.BoolPropertyFnWithDomainFilter
+		expectedError                        error
+	}{
+		"Case1-1: success case with DB visibility is not nil": {
+			request:                 request,
+			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockDBVisibilityManagerAccordance: func(mockDBVisibilityManager *MockVisibilityManager) {
+				mockDBVisibilityManager.EXPECT().ListClosedWorkflowExecutionsByStatus(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+		"Case1-2: success case with Pinot visibility is not nil": {
+			request:                    request,
+			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
+				mockPinotVisibilityManager.EXPECT().ListClosedWorkflowExecutionsByStatus(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES:    dynamicconfig.GetBoolPropertyFnFilteredByDomain(false),
+			readModeIsFromPinot: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:       nil,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			if test.mockDBVisibilityManager != nil {
+				test.mockDBVisibilityManagerAccordance(test.mockDBVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockPinotVisibilityManager != nil {
+				test.mockPinotVisibilityManagerAccordance(test.mockPinotVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockESVisibilityManager != nil {
+				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
+			}
+
+			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+				test.mockESVisibilityManager, test.readModeIsFromPinot, test.readModeIsFromES,
+				nil, dynamicconfig.GetBoolPropertyFnFilteredByDomain(true), log.NewNoop())
+
+			_, err := visibilityManager.ListClosedWorkflowExecutionsByStatus(context.Background(), test.request)
+			if test.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestPinotTripleGetClosedWorkflowExecution(t *testing.T) {
+	request := &GetClosedWorkflowExecutionRequest{
+		Domain: "test-domain",
+	}
+
+	// put this outside because need to use it as an input of the table tests
+	ctrl := gomock.NewController(t)
+
+	tests := map[string]struct {
+		request                              *GetClosedWorkflowExecutionRequest
+		mockDBVisibilityManager              VisibilityManager
+		mockESVisibilityManager              VisibilityManager
+		mockPinotVisibilityManager           VisibilityManager
+		mockDBVisibilityManagerAccordance    func(mockDBVisibilityManager *MockVisibilityManager)
+		mockPinotVisibilityManagerAccordance func(mockPinotVisibilityManager *MockVisibilityManager)
+		mockESVisibilityManagerAccordance    func(mockESVisibilityManager *MockVisibilityManager)
+		readModeIsFromES                     dynamicconfig.BoolPropertyFnWithDomainFilter
+		readModeIsFromPinot                  dynamicconfig.BoolPropertyFnWithDomainFilter
+		expectedError                        error
+	}{
+		"Case1-1: success case with DB visibility is not nil": {
+			request:                 request,
+			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockDBVisibilityManagerAccordance: func(mockDBVisibilityManager *MockVisibilityManager) {
+				mockDBVisibilityManager.EXPECT().GetClosedWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+		"Case1-2: success case with Pinot visibility is not nil": {
+			request:                    request,
+			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
+				mockPinotVisibilityManager.EXPECT().GetClosedWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES:    dynamicconfig.GetBoolPropertyFnFilteredByDomain(false),
+			readModeIsFromPinot: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:       nil,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			if test.mockDBVisibilityManager != nil {
+				test.mockDBVisibilityManagerAccordance(test.mockDBVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockPinotVisibilityManager != nil {
+				test.mockPinotVisibilityManagerAccordance(test.mockPinotVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockESVisibilityManager != nil {
+				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
+			}
+
+			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+				test.mockESVisibilityManager, test.readModeIsFromPinot, test.readModeIsFromES,
+				nil, dynamicconfig.GetBoolPropertyFnFilteredByDomain(true), log.NewNoop())
+
+			_, err := visibilityManager.GetClosedWorkflowExecution(context.Background(), test.request)
+			if test.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestPinotTripleListWorkflowExecutions(t *testing.T) {
+	request := &ListWorkflowExecutionsByQueryRequest{
+		Domain: "test-domain",
+	}
+
+	// put this outside because need to use it as an input of the table tests
+	ctrl := gomock.NewController(t)
+
+	tests := map[string]struct {
+		request                              *ListWorkflowExecutionsByQueryRequest
+		mockDBVisibilityManager              VisibilityManager
+		mockESVisibilityManager              VisibilityManager
+		mockPinotVisibilityManager           VisibilityManager
+		mockDBVisibilityManagerAccordance    func(mockDBVisibilityManager *MockVisibilityManager)
+		mockPinotVisibilityManagerAccordance func(mockPinotVisibilityManager *MockVisibilityManager)
+		mockESVisibilityManagerAccordance    func(mockESVisibilityManager *MockVisibilityManager)
+		readModeIsFromES                     dynamicconfig.BoolPropertyFnWithDomainFilter
+		readModeIsFromPinot                  dynamicconfig.BoolPropertyFnWithDomainFilter
+		expectedError                        error
+	}{
+		"Case1-1: success case with DB visibility is not nil": {
+			request:                 request,
+			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockDBVisibilityManagerAccordance: func(mockDBVisibilityManager *MockVisibilityManager) {
+				mockDBVisibilityManager.EXPECT().ListWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+		"Case1-2: success case with Pinot visibility is not nil": {
+			request:                    request,
+			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
+				mockPinotVisibilityManager.EXPECT().ListWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES:    dynamicconfig.GetBoolPropertyFnFilteredByDomain(false),
+			readModeIsFromPinot: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:       nil,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			if test.mockDBVisibilityManager != nil {
+				test.mockDBVisibilityManagerAccordance(test.mockDBVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockPinotVisibilityManager != nil {
+				test.mockPinotVisibilityManagerAccordance(test.mockPinotVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockESVisibilityManager != nil {
+				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
+			}
+
+			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+				test.mockESVisibilityManager, test.readModeIsFromPinot, test.readModeIsFromES,
+				nil, dynamicconfig.GetBoolPropertyFnFilteredByDomain(true), log.NewNoop())
+
+			_, err := visibilityManager.ListWorkflowExecutions(context.Background(), test.request)
+			if test.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestPinotTripleScanWorkflowExecutions(t *testing.T) {
+	request := &ListWorkflowExecutionsByQueryRequest{
+		Domain: "test-domain",
+	}
+
+	// put this outside because need to use it as an input of the table tests
+	ctrl := gomock.NewController(t)
+
+	tests := map[string]struct {
+		request                              *ListWorkflowExecutionsByQueryRequest
+		mockDBVisibilityManager              VisibilityManager
+		mockESVisibilityManager              VisibilityManager
+		mockPinotVisibilityManager           VisibilityManager
+		mockDBVisibilityManagerAccordance    func(mockDBVisibilityManager *MockVisibilityManager)
+		mockPinotVisibilityManagerAccordance func(mockPinotVisibilityManager *MockVisibilityManager)
+		mockESVisibilityManagerAccordance    func(mockESVisibilityManager *MockVisibilityManager)
+		readModeIsFromES                     dynamicconfig.BoolPropertyFnWithDomainFilter
+		readModeIsFromPinot                  dynamicconfig.BoolPropertyFnWithDomainFilter
+		expectedError                        error
+	}{
+		"Case1-1: success case with DB visibility is not nil": {
+			request:                 request,
+			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockDBVisibilityManagerAccordance: func(mockDBVisibilityManager *MockVisibilityManager) {
+				mockDBVisibilityManager.EXPECT().ScanWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+		"Case1-2: success case with Pinot visibility is not nil": {
+			request:                    request,
+			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
+				mockPinotVisibilityManager.EXPECT().ScanWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES:    dynamicconfig.GetBoolPropertyFnFilteredByDomain(false),
+			readModeIsFromPinot: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:       nil,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			if test.mockDBVisibilityManager != nil {
+				test.mockDBVisibilityManagerAccordance(test.mockDBVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockPinotVisibilityManager != nil {
+				test.mockPinotVisibilityManagerAccordance(test.mockPinotVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockESVisibilityManager != nil {
+				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
+			}
+
+			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+				test.mockESVisibilityManager, test.readModeIsFromPinot, test.readModeIsFromES,
+				nil, dynamicconfig.GetBoolPropertyFnFilteredByDomain(true), log.NewNoop())
+
+			_, err := visibilityManager.ScanWorkflowExecutions(context.Background(), test.request)
+			if test.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestPinotTripleCountWorkflowExecutions(t *testing.T) {
+	request := &CountWorkflowExecutionsRequest{
+		Domain: "test-domain",
+	}
+
+	ctrl := gomock.NewController(t)
+
+	tests := map[string]struct {
+		request                              *CountWorkflowExecutionsRequest
+		mockDBVisibilityManager              VisibilityManager
+		mockESVisibilityManager              VisibilityManager
+		mockPinotVisibilityManager           VisibilityManager
+		mockDBVisibilityManagerAccordance    func(mockDBVisibilityManager *MockVisibilityManager)
+		mockPinotVisibilityManagerAccordance func(mockPinotVisibilityManager *MockVisibilityManager)
+		mockESVisibilityManagerAccordance    func(mockESVisibilityManager *MockVisibilityManager)
+		readModeIsFromES                     dynamicconfig.BoolPropertyFnWithDomainFilter
+		readModeIsFromPinot                  dynamicconfig.BoolPropertyFnWithDomainFilter
+		expectedError                        error
+	}{
+		"Case1-1: success case with DB visibility is not nil": {
+			request:                 request,
+			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockDBVisibilityManagerAccordance: func(mockDBVisibilityManager *MockVisibilityManager) {
+				mockDBVisibilityManager.EXPECT().CountWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+		"Case1-2: success case with Pinot visibility is not nil": {
+			request:                    request,
+			mockPinotVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockPinotVisibilityManagerAccordance: func(mockPinotVisibilityManager *MockVisibilityManager) {
+				mockPinotVisibilityManager.EXPECT().CountWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES:    dynamicconfig.GetBoolPropertyFnFilteredByDomain(false),
+			readModeIsFromPinot: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:       nil,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			if test.mockDBVisibilityManager != nil {
+				test.mockDBVisibilityManagerAccordance(test.mockDBVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockPinotVisibilityManager != nil {
+				test.mockPinotVisibilityManagerAccordance(test.mockPinotVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockESVisibilityManager != nil {
+				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
+			}
+
+			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+				test.mockESVisibilityManager, test.readModeIsFromPinot, test.readModeIsFromES,
+				nil, dynamicconfig.GetBoolPropertyFnFilteredByDomain(true), log.NewNoop())
+
+			_, err := visibilityManager.CountWorkflowExecutions(context.Background(), test.request)
+			if test.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}

@@ -38,6 +38,23 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
+var (
+	testIndex             = "test-index"
+	testDomain            = "test-domain"
+	testDomainID          = "bfd5c907-f899-4baf-a7b2-2ab85e623ebd"
+	testPageSize          = 10
+	testEarliestTime      = int64(1547596872371000000)
+	testLatestTime        = int64(2547596872371000000)
+	testWorkflowType      = "test-wf-type"
+	testWorkflowID        = "test-wid"
+	testCloseStatus       = int32(1)
+	testTableName         = "test-table-name"
+	testRunID             = "test-run-id"
+	testSearchAttributes1 = map[string]interface{}{"TestAttr1": "val1", "TestAttr2": 2, "TestAttr3": false}
+	testSearchAttributes2 = map[string]interface{}{"TestAttr1": "val2", "TestAttr2": 2, "TestAttr3": false}
+	testSearchAttributes3 = map[string]interface{}{"TestAttr2": 2, "TestAttr3": false}
+)
+
 func TestExecutionManager_ProxyStoreMethods(t *testing.T) {
 	for _, tc := range []struct {
 		method       string
