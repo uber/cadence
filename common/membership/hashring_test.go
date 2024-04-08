@@ -135,12 +135,9 @@ func TestRefreshWillNotifySubscribers(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	pp := NewMockPeerProvider(ctrl)
 	var hostsToReturn []HostInfo
-	hostLock := &sync.RWMutex{}
 	pp.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(1)
 	pp.EXPECT().GetMembers("test-service").Times(2).DoAndReturn(func(service string) ([]HostInfo, error) {
-		hostLock.Lock()
 		hostsToReturn = randomHostInfo(5)
-		hostLock.Unlock()
 		time.Sleep(time.Millisecond * 70)
 		return hostsToReturn, nil
 	})
@@ -154,36 +151,27 @@ func TestRefreshWillNotifySubscribers(t *testing.T) {
 	hr := newHashring("test-service", pp, log.NewNoop(), metrics.NoopScope(0))
 	hr.Start()
 
-	var changeCh1 = make(chan *ChangedEvent)
-	var changeCh2 = make(chan *ChangedEvent)
-
-	assert.NoError(t, hr.Subscribe("notifyMe1", changeCh1))
-	assert.NoError(t, hr.Subscribe("notifyMe2", changeCh2))
+	var changeCh = make(chan *ChangedEvent, 2)
+	// Check if multiple subscribers will get notified
+	assert.NoError(t, hr.Subscribe("subscriber1", changeCh))
+	assert.NoError(t, hr.Subscribe("subscriber2", changeCh))
 
 	wg := sync.WaitGroup{}
-	wg.Add(2)
+	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		changedEvent := <-changeCh1
-		close(changeCh1)
+		changedEvent := <-changeCh
+		changedEvent2 := <-changeCh
 		assert.Equal(t, changed, changedEvent)
-	}()
-
-	go func() {
-		defer wg.Done()
-		changedEvent2 := <-changeCh2
-		close(changeCh2)
 		assert.Equal(t, changed, changedEvent2)
 	}()
+
 	// to bypass internal check
 	hr.members.refreshed = time.Now().AddDate(0, 0, -1)
 	hr.refreshChan <- changed
-	// Test if internal members are updated
-	hostLock.RLock()
-	assert.ElementsMatch(t, hr.Members(), hostsToReturn, "members should contain just-added nodes")
-	hostLock.RUnlock()
 	wg.Wait() // wait until both subscribers will get notification
-
+	// Test if internal members are updated
+	assert.ElementsMatch(t, hr.Members(), hostsToReturn, "members should contain just-added nodes")
 }
 
 func TestSubscribeIgnoresDuplicates(t *testing.T) {
