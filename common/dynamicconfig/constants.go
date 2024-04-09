@@ -1441,7 +1441,7 @@ const (
 
 	LargeShardHistoryBlobMetricThreshold
 
-	// DeleteHistoryEventContextTimeout
+	// DeleteHistoryEventContextTimeout in seconds
 	// KeyName: system.deleteHistoryEventContextTimeout
 	// Value type: Int
 	// Default value: 30
