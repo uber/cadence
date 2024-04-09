@@ -31,35 +31,36 @@ import (
 
 // Config represents configuration for cadence-history service
 type Config struct {
-	NumberOfShards                  int
-	IsAdvancedVisConfigExist        bool
-	RPS                             dynamicconfig.IntPropertyFn
-	MaxIDLengthWarnLimit            dynamicconfig.IntPropertyFn
-	DomainNameMaxLength             dynamicconfig.IntPropertyFnWithDomainFilter
-	IdentityMaxLength               dynamicconfig.IntPropertyFnWithDomainFilter
-	WorkflowIDMaxLength             dynamicconfig.IntPropertyFnWithDomainFilter
-	SignalNameMaxLength             dynamicconfig.IntPropertyFnWithDomainFilter
-	WorkflowTypeMaxLength           dynamicconfig.IntPropertyFnWithDomainFilter
-	RequestIDMaxLength              dynamicconfig.IntPropertyFnWithDomainFilter
-	TaskListNameMaxLength           dynamicconfig.IntPropertyFnWithDomainFilter
-	ActivityIDMaxLength             dynamicconfig.IntPropertyFnWithDomainFilter
-	ActivityTypeMaxLength           dynamicconfig.IntPropertyFnWithDomainFilter
-	MarkerNameMaxLength             dynamicconfig.IntPropertyFnWithDomainFilter
-	TimerIDMaxLength                dynamicconfig.IntPropertyFnWithDomainFilter
-	PersistenceMaxQPS               dynamicconfig.IntPropertyFn
-	PersistenceGlobalMaxQPS         dynamicconfig.IntPropertyFn
-	EnableVisibilitySampling        dynamicconfig.BoolPropertyFn
-	EnableReadFromClosedExecutionV2 dynamicconfig.BoolPropertyFn
-	VisibilityOpenMaxQPS            dynamicconfig.IntPropertyFnWithDomainFilter
-	VisibilityClosedMaxQPS          dynamicconfig.IntPropertyFnWithDomainFilter
-	AdvancedVisibilityWritingMode   dynamicconfig.StringPropertyFn
-	EmitShardDiffLog                dynamicconfig.BoolPropertyFn
-	MaxAutoResetPoints              dynamicconfig.IntPropertyFnWithDomainFilter
-	ThrottledLogRPS                 dynamicconfig.IntPropertyFn
-	EnableStickyQuery               dynamicconfig.BoolPropertyFnWithDomainFilter
-	ShutdownDrainDuration           dynamicconfig.DurationPropertyFn
-	WorkflowDeletionJitterRange     dynamicconfig.IntPropertyFnWithDomainFilter
-	MaxResponseSize                 int
+	NumberOfShards                   int
+	IsAdvancedVisConfigExist         bool
+	RPS                              dynamicconfig.IntPropertyFn
+	MaxIDLengthWarnLimit             dynamicconfig.IntPropertyFn
+	DomainNameMaxLength              dynamicconfig.IntPropertyFnWithDomainFilter
+	IdentityMaxLength                dynamicconfig.IntPropertyFnWithDomainFilter
+	WorkflowIDMaxLength              dynamicconfig.IntPropertyFnWithDomainFilter
+	SignalNameMaxLength              dynamicconfig.IntPropertyFnWithDomainFilter
+	WorkflowTypeMaxLength            dynamicconfig.IntPropertyFnWithDomainFilter
+	RequestIDMaxLength               dynamicconfig.IntPropertyFnWithDomainFilter
+	TaskListNameMaxLength            dynamicconfig.IntPropertyFnWithDomainFilter
+	ActivityIDMaxLength              dynamicconfig.IntPropertyFnWithDomainFilter
+	ActivityTypeMaxLength            dynamicconfig.IntPropertyFnWithDomainFilter
+	MarkerNameMaxLength              dynamicconfig.IntPropertyFnWithDomainFilter
+	TimerIDMaxLength                 dynamicconfig.IntPropertyFnWithDomainFilter
+	PersistenceMaxQPS                dynamicconfig.IntPropertyFn
+	PersistenceGlobalMaxQPS          dynamicconfig.IntPropertyFn
+	EnableVisibilitySampling         dynamicconfig.BoolPropertyFn
+	EnableReadFromClosedExecutionV2  dynamicconfig.BoolPropertyFn
+	VisibilityOpenMaxQPS             dynamicconfig.IntPropertyFnWithDomainFilter
+	VisibilityClosedMaxQPS           dynamicconfig.IntPropertyFnWithDomainFilter
+	AdvancedVisibilityWritingMode    dynamicconfig.StringPropertyFn
+	EmitShardDiffLog                 dynamicconfig.BoolPropertyFn
+	MaxAutoResetPoints               dynamicconfig.IntPropertyFnWithDomainFilter
+	ThrottledLogRPS                  dynamicconfig.IntPropertyFn
+	EnableStickyQuery                dynamicconfig.BoolPropertyFnWithDomainFilter
+	ShutdownDrainDuration            dynamicconfig.DurationPropertyFn
+	WorkflowDeletionJitterRange      dynamicconfig.IntPropertyFnWithDomainFilter
+	DeleteHistoryEventContextTimeout dynamicconfig.IntPropertyFn
+	MaxResponseSize                  int
 
 	// HistoryCache settings
 	// Change of these configs require shard restart
@@ -387,6 +388,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, s
 		StandbyTaskMissingEventsResendDelay:  dc.GetDurationProperty(dynamicconfig.StandbyTaskMissingEventsResendDelay),
 		StandbyTaskMissingEventsDiscardDelay: dc.GetDurationProperty(dynamicconfig.StandbyTaskMissingEventsDiscardDelay),
 		WorkflowDeletionJitterRange:          dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkflowDeletionJitterRange),
+		DeleteHistoryEventContextTimeout:     dc.GetIntProperty(dynamicconfig.DeleteHistoryEventContextTimeout),
 		MaxResponseSize:                      maxMessageSize,
 
 		TaskProcessRPS:                          dc.GetIntPropertyFilteredByDomain(dynamicconfig.TaskProcessRPS),

@@ -1440,6 +1440,13 @@ const (
 	IsolationGroupStateUpdateRetryAttempts
 
 	LargeShardHistoryBlobMetricThreshold
+
+	// DeleteHistoryEventContextTimeout in seconds
+	// KeyName: system.deleteHistoryEventContextTimeout
+	// Value type: Int
+	// Default value: 30
+	DeleteHistoryEventContextTimeout
+
 	// LastIntKey must be the last one in this const group
 	LastIntKey
 )
@@ -3790,6 +3797,11 @@ var IntKeys = map[IntKey]DynamicInt{
 		KeyName:      "system.isolationGroupStateUpdateRetryAttempts",
 		Description:  "The number of attempts to push Isolation group configuration to the config store",
 		DefaultValue: 2,
+	},
+	DeleteHistoryEventContextTimeout: DynamicInt{
+		KeyName:      "system.deleteHistoryEventContextTimeout",
+		Description:  "This is the number of seconds allowed for a deleteHistoryEvent task to the database",
+		DefaultValue: 30,
 	},
 }
 

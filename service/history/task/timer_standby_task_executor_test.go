@@ -808,3 +808,14 @@ func (s *timerStandbyTaskExecutorSuite) newTimerTaskFromInfo(
 ) Task {
 	return NewTimerTask(s.mockShard, info, QueueTypeStandbyTimer, s.logger, nil, nil, nil, nil, nil)
 }
+
+func (s *timerStandbyTaskExecutorSuite) TestTransferTaskTimeout() {
+	deleteHistoryEventTask := s.newTimerTaskFromInfo(&persistence.TimerTaskInfo{
+		Version:     s.version,
+		DomainID:    s.domainID,
+		TaskID:      int64(100),
+		TaskType:    persistence.TaskTypeDeleteHistoryEvent,
+		TimeoutType: int(types.TimeoutTypeStartToClose),
+	})
+	s.timerStandbyTaskExecutor.Execute(deleteHistoryEventTask, true)
+}

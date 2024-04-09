@@ -43,9 +43,8 @@ const (
 	taskDefaultTimeout             = 3 * time.Second
 	taskGetExecutionContextTimeout = 500 * time.Millisecond
 	taskRPCCallTimeout             = 2 * time.Second
-
-	secondsInDay      = int32(24 * time.Hour / time.Second)
-	defaultDomainName = "defaultDomainName"
+	secondsInDay                   = int32(24 * time.Hour / time.Second)
+	defaultDomainName              = "defaultDomainName"
 )
 
 type (
