@@ -19,7 +19,7 @@ coverage:
         if_ci_failed: ignore   # require the CI to pass before setting the status
     patch:
       default:
-        target: 20%            # specify the target coverage for each commit status
+        target: 85%            # specify the target coverage for each commit status
                                #   option: "auto" (compare against parent commit or pull request base)
                                #   option: "X%" a static target percentage to hit
         threshold: 0%          # allow the coverage drop by x% before marking as failure
