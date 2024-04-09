@@ -68,8 +68,10 @@ func TestShardedNosqlStoreTestSuite(t *testing.T) {
 func (s *shardedNosqlStoreTestSuite) TestValidConfiguration() {
 	cfg := getValidShardedNoSQLConfig()
 
-	store, err := newShardedNosqlStore(cfg, log.NewNoop(), nil)
+	storeInterface, err := newShardedNosqlStore(cfg, log.NewNoop(), nil)
 	s.NoError(err)
+	store := storeInterface.(*shardedNosqlStoreImpl)
+
 	s.Equal(1, len(store.connectedShards))
 	s.Contains(store.connectedShards, "shard-1")
 	s.Equal(store.GetDefaultShard(), store.defaultShard)
@@ -97,8 +99,10 @@ func (s *shardedNosqlStoreTestSuite) TestStoreSelectionForHistoryShard() {
 
 	cfg := getValidShardedNoSQLConfig()
 
-	store, err := newShardedNosqlStore(cfg, log.NewNoop(), nil)
+	storeInterface, err := newShardedNosqlStore(cfg, log.NewNoop(), nil)
 	s.NoError(err)
+	store := storeInterface.(*shardedNosqlStoreImpl)
+
 	s.Equal(1, len(store.connectedShards))
 	s.True(mockDB1 == store.defaultShard.db)
 
@@ -160,8 +164,10 @@ func (s *shardedNosqlStoreTestSuite) TestStoreSelectionForTasklist() {
 
 	cfg := getValidShardedNoSQLConfig()
 
-	store, err := newShardedNosqlStore(cfg, log.NewNoop(), nil)
+	storeInterface, err := newShardedNosqlStore(cfg, log.NewNoop(), nil)
 	s.NoError(err)
+	store := storeInterface.(*shardedNosqlStoreImpl)
+
 	s.Equal(1, len(store.connectedShards))
 	s.True(mockDB1 == store.defaultShard.db)
 
