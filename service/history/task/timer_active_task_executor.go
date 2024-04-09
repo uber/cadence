@@ -105,7 +105,7 @@ func (t *timerActiveTaskExecutor) Execute(
 		return t.executeWorkflowBackoffTimerTask(ctx, timerTask)
 	case persistence.TaskTypeDeleteHistoryEvent:
 		// special timeout for delete history event
-		deleteHistoryEventContext, deleteHistoryEventCancel := context.WithTimeout(context.Background(), taskDeleteHistoryEventContextTimeout)
+		deleteHistoryEventContext, deleteHistoryEventCancel := context.WithTimeout(context.Background(), time.Duration(t.config.DeleteHistoryEventContextTimeout())*time.Second)
 		defer deleteHistoryEventCancel()
 		return t.executeDeleteHistoryEventTask(deleteHistoryEventContext, timerTask)
 	default:
