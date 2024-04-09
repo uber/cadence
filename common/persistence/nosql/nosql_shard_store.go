@@ -34,7 +34,7 @@ import (
 
 // Implements ShardStore
 type nosqlShardStore struct {
-	*shardedNosqlStore
+	shardedNosqlStore
 	currentClusterName string
 }
 
@@ -109,7 +109,7 @@ func (sh *nosqlShardStore) GetShard(
 		// 2. if we still return rangeID, CAS will work but rangeID will move backward which
 		// result in lost tasks, corrupted workflow history, etc.
 
-		sh.logger.Warn("Corrupted shard rangeID", tag.ShardID(shardID), tag.ShardRangeID(shardInfoRangeID), tag.PreviousShardRangeID(rangeID))
+		sh.GetLogger().Warn("Corrupted shard rangeID", tag.ShardID(shardID), tag.ShardRangeID(shardInfoRangeID), tag.PreviousShardRangeID(rangeID))
 		if err := sh.updateRangeID(ctx, shardID, shardInfoRangeID, rangeID); err != nil {
 			return nil, err
 		}
