@@ -325,3 +325,134 @@ func TestReadHistoryBranch_ErrorIfSameNodeID(t *testing.T) {
 	assert.ErrorAs(t, err, &dataError)
 	assert.ErrorContains(t, err, "corrupted data, same nodeID must have smaller txnID")
 }
+
+func validInternalForkHistoryBranchRequest(forkNodeID int64) *persistence.InternalForkHistoryBranchRequest {
+	return &persistence.InternalForkHistoryBranchRequest{
+		ForkBranchInfo: types.HistoryBranch{
+			TreeID:   "TestTreeID",
+			BranchID: "TestBranchID",
+			Ancestors: []*types.HistoryBranchRange{
+				{
+					BranchID:    "TestAncestorBranchID",
+					BeginNodeID: 0,
+					EndNodeID:   5,
+				},
+				{
+					BranchID:    "TestAncestorBranchID",
+					BeginNodeID: 6,
+					EndNodeID:   10,
+				},
+			},
+		},
+		ForkNodeID:  forkNodeID,
+		NewBranchID: "TestNewBranchID",
+		Info:        "TestInfo",
+		ShardID:     testShardID,
+	}
+}
+
+func expectedInternalForkHistoryBranchResponse() *persistence.InternalForkHistoryBranchResponse {
+	return &persistence.InternalForkHistoryBranchResponse{
+		NewBranchInfo: types.HistoryBranch{
+			TreeID:   "TestTreeID",
+			BranchID: "TestNewBranchID",
+			Ancestors: []*types.HistoryBranchRange{
+				{
+					BranchID:    "TestAncestorBranchID",
+					BeginNodeID: 0,
+					EndNodeID:   5,
+				},
+				{
+					BranchID:    "TestAncestorBranchID",
+					BeginNodeID: 6,
+					EndNodeID:   10,
+				},
+			},
+		},
+	}
+}
+
+func expectedTreeRow() *nosqlplugin.HistoryTreeRow {
+	return &nosqlplugin.HistoryTreeRow{
+		ShardID:  testShardID,
+		TreeID:   "TestTreeID",
+		BranchID: "TestNewBranchID",
+		Ancestors: []*types.HistoryBranchRange{
+			{
+				BranchID:  "TestAncestorBranchID",
+				EndNodeID: 5,
+			},
+			{
+				BranchID:  "TestAncestorBranchID",
+				EndNodeID: 10,
+			},
+		},
+		CreateTimestamp: time.Now(),
+		Info:            "TestInfo",
+	}
+}
+
+func treeRowEqual(t *testing.T, expected, actual *nosqlplugin.HistoryTreeRow) {
+	assert.Equal(t, expected.ShardID, actual.ShardID)
+	assert.Equal(t, expected.TreeID, actual.TreeID)
+	assert.Equal(t, expected.BranchID, actual.BranchID)
+	assert.Equal(t, expected.Ancestors, actual.Ancestors)
+	assert.Equal(t, expected.Info, actual.Info)
+
+	assert.WithinDuration(t, time.Now(), actual.CreateTimestamp, time.Second)
+}
+
+func TestForkHistoryBranch_NotAllAncestors(t *testing.T) {
+	request := validInternalForkHistoryBranchRequest(8)
+	expecedResp := expectedInternalForkHistoryBranchResponse()
+	expTreeRow := expectedTreeRow()
+
+	// The new branch ends at the fork node
+	expecedResp.NewBranchInfo.Ancestors[1].EndNodeID = 8
+	expTreeRow.Ancestors[1].EndNodeID = 8
+
+	store, dbMock := setUpMocks(t)
+
+	// Expect to insert the new branch into the history tree
+	dbMock.EXPECT().InsertIntoHistoryTreeAndNode(gomock.Any(), gomock.Any(), nil).
+		DoAndReturn(func(ctx ctx.Context, treeRow *nosqlplugin.HistoryTreeRow, nodeRow *nosqlplugin.HistoryNodeRow) error {
+			// Assert that the treeRow is as expected, we have to check this here because the treeRow has time.Now() in it
+			treeRowEqual(t, expTreeRow, treeRow)
+			return nil
+		}).Times(1)
+
+	resp, err := store.ForkHistoryBranch(ctx.Background(), request)
+	assert.NoError(t, err)
+	assert.Equal(t, expecedResp, resp)
+}
+
+func TestForkHistoryBranch_AllAncestors(t *testing.T) {
+	request := validInternalForkHistoryBranchRequest(14)
+	expecedResp := expectedInternalForkHistoryBranchResponse()
+	expTreeRow := expectedTreeRow()
+
+	// The new branch inherits the ancestors from the fork node, and adds a new ancestor
+	expecedResp.NewBranchInfo.Ancestors = append(expecedResp.NewBranchInfo.Ancestors, &types.HistoryBranchRange{
+		BranchID:    "TestBranchID",
+		BeginNodeID: 10, // The last in the fork node's ancestors
+		EndNodeID:   14, // The fork node
+	})
+	expTreeRow.Ancestors = append(expTreeRow.Ancestors, &types.HistoryBranchRange{
+		BranchID:  "TestBranchID",
+		EndNodeID: 14,
+	})
+
+	store, dbMock := setUpMocks(t)
+
+	// Expect to insert the new branch into the history tree
+	dbMock.EXPECT().InsertIntoHistoryTreeAndNode(gomock.Any(), gomock.Any(), nil).
+		DoAndReturn(func(ctx ctx.Context, treeRow *nosqlplugin.HistoryTreeRow, nodeRow *nosqlplugin.HistoryNodeRow) error {
+			// Assert that the treeRow is as expected, we have to check this here because the treeRow has time.Now() in it
+			treeRowEqual(t, expTreeRow, treeRow)
+			return nil
+		}).Times(1)
+
+	resp, err := store.ForkHistoryBranch(ctx.Background(), request)
+	assert.NoError(t, err)
+	assert.Equal(t, expecedResp, resp)
+}
