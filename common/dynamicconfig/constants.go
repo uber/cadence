@@ -4983,6 +4983,12 @@ var MapKeys = map[MapKey]DynamicMap{
 }
 
 var ListKeys = map[ListKey]DynamicList{
+	TestGetListPropertyKey: {
+		KeyName:      "testGetListPropertyKey",
+		Description:  "",
+		DefaultValue: nil,
+		Filters:      []Filter{},
+	},
 	AllIsolationGroups: {
 		KeyName:     "system.allIsolationGroups",
 		Description: "A list of all the isolation groups in a system",

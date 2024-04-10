@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -288,6 +289,39 @@ func (s *configStoreClientSuite) SetupTest() {
 									Value: &types.DataBlob{
 										EncodingType: types.EncodingTypeJSON.Ptr(),
 										Data:         jsonMarshalHelper("samples-domain"),
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					Name: dc.TestGetListPropertyKey.String(),
+					Values: []*types.DynamicConfigValue{
+						{
+							Value:   &types.DataBlob{EncodingType: types.EncodingTypeJSON.Ptr(), Data: jsonMarshalHelper([]interface{}{1, 2, 3})},
+							Filters: nil,
+						},
+						{
+							Value: &types.DataBlob{EncodingType: types.EncodingTypeJSON.Ptr(), Data: jsonMarshalHelper([]interface{}{"a", "b", "c"})},
+							Filters: []*types.DynamicConfigFilter{
+								{
+									Name: "domainName",
+									Value: &types.DataBlob{
+										EncodingType: types.EncodingTypeJSON.Ptr(),
+										Data:         jsonMarshalHelper("sample-domain"),
+									},
+								},
+							},
+						},
+						{
+							Value: &types.DataBlob{EncodingType: types.EncodingTypeJSON.Ptr(), Data: jsonMarshalHelper("text")},
+							Filters: []*types.DynamicConfigFilter{
+								{
+									Name: "domainName",
+									Value: &types.DataBlob{
+										EncodingType: types.EncodingTypeJSON.Ptr(),
+										Data:         jsonMarshalHelper("wrong-type-domain"),
 									},
 								},
 							},
@@ -905,6 +939,64 @@ func (s *configStoreClientSuite) TestListValues() {
 	}
 }
 
+func (s *configStoreClientSuite) TestGetListValue() {
+	tests := []struct {
+		desc    string
+		key     dc.ListKey
+		filters map[dc.Filter]interface{}
+		res     interface{}
+		err     error
+	}{
+		{
+			desc:    "return error for non-existing key",
+			key:     dc.UnknownListKey,
+			filters: nil,
+			res:     *(new([]interface{})),
+			err:     dc.NotFoundError,
+		},
+		{
+			desc:    "return correct value for existing key",
+			key:     dc.TestGetListPropertyKey,
+			filters: nil,
+			res:     []interface{}{float64(1), float64(2), float64(3)},
+			err:     nil,
+		},
+		{
+			desc: "return empty filter value for existing key with no matching filter",
+			key:  dc.TestGetListPropertyKey,
+			filters: map[dc.Filter]interface{}{
+				dc.DomainName: "no-match-domain",
+			},
+			res: []interface{}{float64(1), float64(2), float64(3)},
+			err: nil,
+		},
+		{
+			desc: "return correct value for existing key with matching filter",
+			key:  dc.TestGetListPropertyKey,
+			filters: map[dc.Filter]interface{}{
+				dc.DomainName: "sample-domain",
+			},
+			res: []interface{}{"a", "b", "c"},
+			err: nil,
+		},
+		{
+			desc: "return error on wrong type of value",
+			key:  dc.TestGetListPropertyKey,
+			filters: map[dc.Filter]interface{}{
+				dc.DomainName: "wrong-type-domain",
+			},
+			res: *(new([]interface{})),
+			err: errors.New("value type is not list"),
+		},
+	}
+	for _, test := range tests {
+		defaultTestSetup(s)
+		val, err := s.client.GetListValue(test.key, test.filters)
+		s.Equal(test.err, err)
+		s.Equal(test.res, val)
+	}
+}
+
 func (s *configStoreClientSuite) TestListValues_EmptyCache() {
 	s.mockManager.EXPECT().
 		FetchDynamicConfig(gomock.Any(), p.DynamicConfig).
@@ -949,4 +1041,262 @@ func (e eqSnapshotVersionMatcher) String() string {
 
 func EqSnapshotVersion(version int64) gomock.Matcher {
 	return eqSnapshotVersionMatcher{version}
+}
+
+func TestValidateClientConfig(t *testing.T) {
+	tests := []struct {
+		desc          string
+		input         *c.ClientConfig
+		checkForError bool
+	}{
+		{
+			desc:          "return error for nil config",
+			input:         nil,
+			checkForError: true,
+		},
+		{
+			desc: "return error for minimum PollInterval",
+			input: &c.ClientConfig{
+				PollInterval: 1 * time.Second,
+			},
+			checkForError: true,
+		},
+		{
+			desc: "return error for invalid UpdateRetryAttempts",
+			input: &c.ClientConfig{
+				PollInterval:        3 * time.Second,
+				UpdateRetryAttempts: -1,
+			},
+			checkForError: true,
+		},
+		{
+			desc: "return error for invalid FetchTimeout",
+			input: &c.ClientConfig{
+				PollInterval:        3 * time.Second,
+				UpdateRetryAttempts: 1,
+				FetchTimeout:        -1 * time.Second,
+			},
+			checkForError: true,
+		},
+		{
+			desc: "return error for invalid UpdateTimeout",
+			input: &c.ClientConfig{
+				PollInterval:        3 * time.Second,
+				UpdateRetryAttempts: 1,
+				FetchTimeout:        1 * time.Second,
+				UpdateTimeout:       -1 * time.Second,
+			},
+			checkForError: true,
+		},
+		{
+			desc: "no error for valid config",
+			input: &c.ClientConfig{
+				PollInterval:        3 * time.Second,
+				UpdateRetryAttempts: 1,
+				FetchTimeout:        1 * time.Second,
+				UpdateTimeout:       1 * time.Second,
+			},
+			checkForError: false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			err := validateClientConfig(test.input)
+			if !test.checkForError {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestConvertFromDataBlob(t *testing.T) {
+	tests := []struct {
+		desc       string
+		blob       *types.DataBlob
+		checkError bool
+	}{
+		{
+			desc: "return error for unsupported encoding type",
+			blob: &types.DataBlob{
+				EncodingType: types.EncodingTypeThriftRW.Ptr(),
+				Data:         nil,
+			},
+			checkError: true,
+		},
+		{
+			desc: "no error for valid json",
+			blob: &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         jsonMarshalHelper("test"),
+			},
+			checkError: false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			_, err := convertFromDataBlob(test.blob)
+			if test.checkError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateKeyDataBlobPair(t *testing.T) {
+	tests := []struct {
+		desc       string
+		key        dc.Key
+		blob       *types.DataBlob
+		checkError bool
+	}{
+		{
+			desc: "return error for unsupported encoding type",
+			key:  dc.TestGetIntPropertyKey,
+			blob: &types.DataBlob{
+				EncodingType: types.EncodingTypeThriftRW.Ptr(),
+				Data:         jsonMarshalHelper(1),
+			},
+			checkError: true,
+		},
+		{
+			desc: "return error for invalid value type for int key",
+			key:  dc.TestGetIntPropertyKey,
+			blob: &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         jsonMarshalHelper("text"),
+			},
+			checkError: true,
+		},
+		{
+			desc: "return no error for valid value type for int key",
+			key:  dc.TestGetIntPropertyKey,
+			blob: &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         jsonMarshalHelper(1),
+			},
+			checkError: false,
+		},
+		{
+			desc: "return error for invalid value type for bool key",
+			key:  dc.TestGetBoolPropertyKey,
+			blob: &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         jsonMarshalHelper(1),
+			},
+			checkError: true,
+		},
+		{
+			desc: "return no error for valid value type for bool key",
+			key:  dc.TestGetBoolPropertyKey,
+			blob: &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         jsonMarshalHelper(true),
+			},
+			checkError: false,
+		},
+		{
+			desc: "return error for invalid value type for float key",
+			key:  dc.TestGetFloat64PropertyKey,
+			blob: &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         jsonMarshalHelper("text"),
+			},
+			checkError: true,
+		},
+		{
+			desc: "return no error for valid value type for float key",
+			key:  dc.TestGetFloat64PropertyKey,
+			blob: &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         jsonMarshalHelper(2.5),
+			},
+			checkError: false,
+		},
+		{
+			desc: "return error for invalid value type for string key",
+			key:  dc.TestGetStringPropertyKey,
+			blob: &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         jsonMarshalHelper(false),
+			},
+			checkError: true,
+		},
+		{
+			desc: "return no error for valid value type for string key",
+			key:  dc.TestGetStringPropertyKey,
+			blob: &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         jsonMarshalHelper("text"),
+			},
+			checkError: false,
+		},
+		{
+			desc: "return error for invalid value type for duration key",
+			key:  dc.TestGetDurationPropertyKey,
+			blob: &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         jsonMarshalHelper("text"),
+			},
+			checkError: true,
+		},
+		{
+			desc: "return no error for valid value type for duration key",
+			key:  dc.TestGetDurationPropertyKey,
+			blob: &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         jsonMarshalHelper("1m"),
+			},
+			checkError: false,
+		},
+		{
+			desc: "return error for invalid value type for map key",
+			key:  dc.TestGetMapPropertyKey,
+			blob: &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         jsonMarshalHelper("text"),
+			},
+			checkError: true,
+		},
+		{
+			desc: "return no error for valid value type for map key",
+			key:  dc.TestGetMapPropertyKey,
+			blob: &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         jsonMarshalHelper(map[string]interface{}{"key": 1}),
+			},
+			checkError: false,
+		},
+		{
+			desc: "return error for invalid value type for list key",
+			key:  dc.TestGetListPropertyKey,
+			blob: &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         jsonMarshalHelper("text"),
+			},
+			checkError: true,
+		},
+		{
+			desc: "return no error for valid value type for list key",
+			key:  dc.TestGetListPropertyKey,
+			blob: &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         jsonMarshalHelper([]interface{}{1, 2, 3}),
+			},
+			checkError: false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			err := validateKeyDataBlobPair(test.key, test.blob)
+			if test.checkError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
