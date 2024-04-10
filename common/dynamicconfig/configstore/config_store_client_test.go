@@ -989,8 +989,8 @@ func (s *configStoreClientSuite) TestGetListValue() {
 			err: errors.New("value type is not list"),
 		},
 	}
+	defaultTestSetup(s)
 	for _, test := range tests {
-		defaultTestSetup(s)
 		val, err := s.client.GetListValue(test.key, test.filters)
 		s.Equal(test.err, err)
 		s.Equal(test.res, val)
