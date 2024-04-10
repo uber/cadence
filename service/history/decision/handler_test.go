@@ -23,10 +23,14 @@ package decision
 import (
 	"context"
 	"errors"
+	"reflect"
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/client"
@@ -43,8 +47,6 @@ import (
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/query"
 	"github.com/uber/cadence/service/history/shard"
-	"reflect"
-	"testing"
 )
 
 const (
@@ -326,12 +328,7 @@ func (s *DecisionHandlerSuite) assertQueryCounts(queryRegistry query.Registry, b
 
 func (s *DecisionHandlerSuite) expectHandleDecisionTaskScheduledCalls(domainID string, state *persistence.WorkflowMutableState, shardContex *shard.MockContext) {
 	workflowExecutionResponse := &persistence.GetWorkflowExecutionResponse{
-		State: state,
-		//&persistence.WorkflowMutableState{
-		//ExecutionInfo:  info,
-		//	ExecutionStats: &persistence.ExecutionStats{},
-		//	BufferedEvents: append([]*types.HistoryEvent{}, &types.HistoryEvent{}),
-		//},
+		State:             state,
 		MutableStateStats: &persistence.MutableStateStats{},
 	}
 	workflowExecutionResponse.State.ExecutionStats = &persistence.ExecutionStats{}
