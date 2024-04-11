@@ -61,7 +61,8 @@ const (
 	ExecutionTime        = "ExecutionTime"
 	IsDeleted            = "IsDeleted"   // used for Pinot deletion/rolling upsert only, not visible to user
 	EventTimeMs          = "EventTimeMs" // used for Pinot deletion/rolling upsert only, not visible to user
-	Memo                 = "Memo"
+	MemoData             = "Memo_Data"
+	MemoEncoding         = "Memo_Encoding"
 
 	// used to be micro second
 	oneMicroSecondInNano = int64(time.Microsecond / time.Nanosecond)
@@ -555,7 +556,7 @@ func createDeleteVisibilityMessage(domainID string,
 }
 
 func createVisibilityMessage(
-// common parameters
+	// common parameters
 	domainID string,
 	wid,
 	rid string,
@@ -566,11 +567,11 @@ func createVisibilityMessage(
 	taskID int64,
 	isCron bool,
 	numClusters int16,
-// specific to certain status
-	closeTimeUnixMilli int64,                          // close execution
+	// specific to certain status
+	closeTimeUnixMilli int64, // close execution
 	closeStatus workflow.WorkflowExecutionCloseStatus, // close execution
-	historyLength int64,                               // close execution
-	updateTimeUnixMilli int64,                         // update execution,
+	historyLength int64, // close execution
+	updateTimeUnixMilli int64, // update execution,
 	shardID int64,
 	rawSearchAttributes map[string][]byte,
 	isDeleted bool,
@@ -612,11 +613,12 @@ func createVisibilityMessage(
 	}
 
 	// add memo into search attr
-	searchAttributesMemo, err := memo.GetVisibilityStoreInfo()
+	memoData, memoEncoding, err := memo.GetVisibilityStoreInfo()
 	if err != nil {
 		return nil, err
 	}
-	SearchAttributes[Memo] = searchAttributesMemo
+	SearchAttributes[MemoData] = memoData
+	SearchAttributes[MemoEncoding] = memoEncoding
 
 	m[Attr] = SearchAttributes
 	serializedMsg, err := json.Marshal(m)

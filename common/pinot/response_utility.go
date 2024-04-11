@@ -23,14 +23,21 @@
 package pinot
 
 import (
+	b64 "encoding/base64"
 	"encoding/json"
 	"fmt"
 	"time"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
+)
+
+const (
+	MemoData     = "Memo_Data"
+	MemoEncoding = "Memo_Encoding"
 )
 
 func buildMap(hit []interface{}, columnNames []string) map[string]interface{} {
@@ -79,21 +86,18 @@ func ConvertSearchResultToVisibilityRecord(hit []interface{}, columnNames []stri
 	}
 
 	attributeMap := make(map[string]interface{})
-	err = json.Unmarshal([]byte(fmt.Sprintf("%s", systemKeyMap["Attr"])), &attributeMap)
+	err = json.Unmarshal([]byte(fmt.Sprint(systemKeyMap["Attr"])), &attributeMap)
 	if err != nil {
 		logger.Error("Unable to Unmarshal searchAttribute map", tag.Error(err))
+		return nil
 	}
+
 	var memo *p.DataBlob
-	if attributeMap["Memo"] != nil {
-		err = json.Unmarshal([]byte(fmt.Sprintf("%s", attributeMap["Memo"])), &memo)
-		if err != nil {
-			logger.Error("Unable to Unmarshal memo",
-				tag.Error(err),
-			)
-			return nil
-		}
+	if attributeMap[MemoData] != nil {
+		memo, err = convertMemo(attributeMap[MemoData], attributeMap[MemoEncoding])
 	}
-	delete(attributeMap, "Memo") // cleanup after we get memo from search attribute
+	delete(attributeMap, MemoData)     // cleanup after we get memo from search attribute
+	delete(attributeMap, MemoEncoding) // cleanup after we get memo from search attribute
 
 	var source *VisibilityRecord
 	err = json.Unmarshal(jsonSystemKeyMap, &source)
@@ -129,6 +133,17 @@ func ConvertSearchResultToVisibilityRecord(hit []interface{}, columnNames []stri
 	}
 
 	return record
+}
+
+func convertMemo(data interface{}, encoding interface{}) (*p.DataBlob, error) {
+	res, err := b64.StdEncoding.DecodeString(fmt.Sprintf("%s", data))
+
+	if err != nil {
+		panic(err)
+		return nil, err
+	}
+
+	return p.NewDataBlob([]byte(res), common.EncodingType(fmt.Sprint(encoding))), nil
 }
 
 func toWorkflowExecutionCloseStatus(status int) *types.WorkflowExecutionCloseStatus {

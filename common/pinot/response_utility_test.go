@@ -23,14 +23,13 @@
 package pinot
 
 import (
-	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/uber/cadence/common/log/testlogger"
+	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -38,14 +37,16 @@ import (
 func TestConvertSearchResultToVisibilityRecord(t *testing.T) {
 	columnName := []string{"WorkflowID", "RunID", "WorkflowType", "DomainID", "StartTime", "ExecutionTime", "CloseTime", "CloseStatus", "HistoryLength", "TaskList", "IsCron", "NumClusters", "UpdateTime", "Attr"}
 	closeStatus := types.WorkflowExecutionCloseStatusFailed
-	testMemo := p.NewDataBlob([]byte{}, p.VisibilityEncoding)
-	marshalMemo, err := json.Marshal(testMemo)
+
+	testMemo := p.NewDataBlob([]byte("test memo"), p.VisibilityEncoding)
+	testMemoData, testMemoEncoding, err := testMemo.GetVisibilityStoreInfo()
 	assert.NoError(t, err)
 
 	tests := map[string]struct {
 		inputColumnNames         []string
 		inputHit                 []interface{}
 		expectedVisibilityRecord *p.InternalVisibilityWorkflowExecutionInfo
+		memoCheck                bool
 	}{
 		"Case1: nil result": {
 			inputColumnNames:         nil,
@@ -110,7 +111,8 @@ func TestConvertSearchResultToVisibilityRecord(t *testing.T) {
 		},
 		"Case4: open wf with everything": {
 			inputColumnNames: columnName,
-			inputHit:         []interface{}{"wfid", "rid", "wftype", "domainid", testEarliestTime, testEarliestTime, -1, -1, -1, "tsklst", true, 1, testEarliestTime, fmt.Sprintf("{\"CustomStringField\": \"customA and customB or customC\", \"CustomDoubleField\": 3.14, \"Memo\": %s}", marshalMemo)},
+			inputHit: []interface{}{"wfid", "rid", "wftype", "domainid", testEarliestTime, testEarliestTime, -1, -1, -1,
+				"tsklst", true, 1, testEarliestTime, fmt.Sprintf(`{"Memo_Data": %s, "Memo_Encoding": %s}`, testMemoData, testMemoEncoding)},
 			expectedVisibilityRecord: &p.InternalVisibilityWorkflowExecutionInfo{
 				DomainID:         "domainid",
 				WorkflowType:     "wftype",
@@ -127,14 +129,21 @@ func TestConvertSearchResultToVisibilityRecord(t *testing.T) {
 				SearchAttributes: map[string]interface{}{"CustomStringField": "customA and customB or customC", "CustomDoubleField": 3.14},
 				ShardID:          0,
 			},
+			memoCheck: true,
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			assert.NotPanics(t, func() {
-				visibilityRecord := ConvertSearchResultToVisibilityRecord(test.inputHit, test.inputColumnNames, testlogger.New(t))
-				assert.Equal(t, test.expectedVisibilityRecord, visibilityRecord)
+				visibilityRecord := ConvertSearchResultToVisibilityRecord(test.inputHit, test.inputColumnNames, log.NewNoop())
+				if test.memoCheck {
+					assert.Equal(t, test.expectedVisibilityRecord.Memo.Data, visibilityRecord.Memo.Data)
+					assert.Equal(t, test.expectedVisibilityRecord.Memo.Encoding, visibilityRecord.Memo.Encoding)
+				} else {
+					assert.Equal(t, test.expectedVisibilityRecord, visibilityRecord)
+
+				}
 			})
 		})
 	}
