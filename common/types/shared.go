@@ -21,12 +21,19 @@
 package types
 
 import (
+	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 )
+
+func init() {
+	// Register types for gob serialization. This is needed for request types to be serialized/deserialized for async workflow queues.
+	gob.Register(&StartWorkflowExecutionAsyncRequest{})
+	gob.Register(&SignalWithStartWorkflowExecutionAsyncRequest{})
+}
 
 // AccessDeniedError is an internal type (TBD...)
 type AccessDeniedError struct {

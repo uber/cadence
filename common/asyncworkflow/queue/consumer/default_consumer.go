@@ -23,8 +23,9 @@
 package consumer
 
 import (
+	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/gob"
 	"fmt"
 	"sort"
 	"sync"
@@ -271,24 +272,26 @@ func getYARPCOptions(header *shared.Header) []yarpc.CallOption {
 }
 
 func decodeStartWorkflowRequest(payload []byte, encoding string) (*types.StartWorkflowExecutionRequest, error) {
-	if encoding != string(common.EncodingTypeJSON) {
+	if encoding != string(common.EncodingTypeGob) {
 		return nil, &UnsupportedEncoding{EncodingType: encoding}
 	}
 
 	var startRequest types.StartWorkflowExecutionAsyncRequest
-	if err := json.Unmarshal(payload, &startRequest); err != nil {
+	reader := bytes.NewReader(payload)
+	if err := gob.NewDecoder(reader).Decode(&startRequest); err != nil {
 		return nil, err
 	}
 	return startRequest.StartWorkflowExecutionRequest, nil
 }
 
 func decodeSignalWithStartWorkflowRequest(payload []byte, encoding string) (*types.SignalWithStartWorkflowExecutionRequest, error) {
-	if encoding != string(common.EncodingTypeJSON) {
+	if encoding != string(common.EncodingTypeGob) {
 		return nil, &UnsupportedEncoding{EncodingType: encoding}
 	}
 
 	var startRequest types.SignalWithStartWorkflowExecutionAsyncRequest
-	if err := json.Unmarshal(payload, &startRequest); err != nil {
+	reader := bytes.NewReader(payload)
+	if err := gob.NewDecoder(reader).Decode(&startRequest); err != nil {
 		return nil, err
 	}
 	return startRequest.SignalWithStartWorkflowExecutionRequest, nil

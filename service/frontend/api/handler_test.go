@@ -2047,7 +2047,7 @@ func TestStartWorkflowExecutionAsync(t *testing.T) {
 					TaskList: &types.TaskList{
 						Name: "test-task-list",
 					},
-					Input:                               nil,
+					Input:                               []byte("test-input"),
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(60),
 					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 					Identity:                            "test-identity",
@@ -2071,7 +2071,7 @@ func TestStartWorkflowExecutionAsync(t *testing.T) {
 					TaskList: &types.TaskList{
 						Name: "test-task-list",
 					},
-					Input:                               nil,
+					Input:                               []byte("test-input"),
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(60),
 					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 					Identity:                            "test-identity",
@@ -2097,7 +2097,7 @@ func TestStartWorkflowExecutionAsync(t *testing.T) {
 					TaskList: &types.TaskList{
 						Name: "test-task-list",
 					},
-					Input:                               nil,
+					Input:                               []byte("test-input"),
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(60),
 					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 					Identity:                            "test-identity",
@@ -2165,7 +2165,7 @@ func TestSignalWithStartWorkflowExecutionAsync(t *testing.T) {
 					TaskList: &types.TaskList{
 						Name: "test-task-list",
 					},
-					Input:                               nil,
+					Input:                               []byte("test-input"),
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(60),
 					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 					Identity:                            "test-identity",
@@ -2190,7 +2190,7 @@ func TestSignalWithStartWorkflowExecutionAsync(t *testing.T) {
 					TaskList: &types.TaskList{
 						Name: "test-task-list",
 					},
-					Input:                               nil,
+					Input:                               []byte("test-input"),
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(60),
 					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 					Identity:                            "test-identity",
@@ -2217,7 +2217,7 @@ func TestSignalWithStartWorkflowExecutionAsync(t *testing.T) {
 					TaskList: &types.TaskList{
 						Name: "test-task-list",
 					},
-					Input:                               nil,
+					Input:                               []byte("test-input"),
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(60),
 					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 					Identity:                            "test-identity",

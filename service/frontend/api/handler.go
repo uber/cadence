@@ -21,7 +21,9 @@
 package api
 
 import (
+	"bytes"
 	"context"
+	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"sync/atomic"
@@ -1760,17 +1762,20 @@ func (wh *WorkflowHandler) StartWorkflowExecutionAsync(
 	if err != nil {
 		return nil, err
 	}
-	// serialize the message to be sent to the queue
-	payload, err := json.Marshal(startRequest)
+
+	// Serialize the message to be sent to the queue.
+	// We use gob encoding because json encoding of requests excludes PII fields such as input. JSON encoded request are logged by acccess controlled api layer for audit purposes.
+	var buf bytes.Buffer
+	err = gob.NewEncoder(&buf).Encode(startRequest)
 	if err != nil {
 		return nil, err
 	}
+
 	// propagate the headers from the context to the message
-	clientHeaders := common.GetClientHeaders(ctx)
 	header := &shared.Header{
-		Fields: map[string][]byte{},
+		Fields: make(map[string][]byte),
 	}
-	for k, v := range clientHeaders {
+	for k, v := range yarpc.CallFromContext(ctx).OriginalHeaders() {
 		header.Fields[k] = []byte(v)
 	}
 	messageType := sqlblobs.AsyncRequestTypeStartWorkflowExecutionAsyncRequest
@@ -1778,8 +1783,8 @@ func (wh *WorkflowHandler) StartWorkflowExecutionAsync(
 		PartitionKey: common.StringPtr(startRequest.GetWorkflowID()),
 		Type:         &messageType,
 		Header:       header,
-		Encoding:     common.StringPtr(string(common.EncodingTypeJSON)),
-		Payload:      payload,
+		Encoding:     common.StringPtr(string(common.EncodingTypeGob)),
+		Payload:      buf.Bytes(),
 	}
 	err = producer.Publish(ctx, message)
 	if err != nil {
@@ -2338,17 +2343,20 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecutionAsync(
 	if err != nil {
 		return nil, err
 	}
-	// serialize the message to be sent to the queue
-	payload, err := json.Marshal(signalWithStartRequest)
+
+	// Serialize the message to be sent to the queue.
+	// We use gob encoding because json encoding of requests excludes PII fields such as input. JSON encoded request are logged by acccess controlled api layer for audit purposes.
+	var buf bytes.Buffer
+	err = gob.NewEncoder(&buf).Encode(signalWithStartRequest)
 	if err != nil {
 		return nil, err
 	}
+
 	// propagate the headers from the context to the message
-	clientHeaders := common.GetClientHeaders(ctx)
 	header := &shared.Header{
 		Fields: map[string][]byte{},
 	}
-	for k, v := range clientHeaders {
+	for k, v := range yarpc.CallFromContext(ctx).OriginalHeaders() {
 		header.Fields[k] = []byte(v)
 	}
 	messageType := sqlblobs.AsyncRequestTypeSignalWithStartWorkflowExecutionAsyncRequest
@@ -2356,8 +2364,8 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecutionAsync(
 		PartitionKey: common.StringPtr(signalWithStartRequest.GetWorkflowID()),
 		Type:         &messageType,
 		Header:       header,
-		Encoding:     common.StringPtr(string(common.EncodingTypeJSON)),
-		Payload:      payload,
+		Encoding:     common.StringPtr(string(common.EncodingTypeGob)),
+		Payload:      buf.Bytes(),
 	}
 	err = producer.Publish(ctx, message)
 	if err != nil {
