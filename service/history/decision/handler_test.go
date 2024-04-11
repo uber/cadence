@@ -23,7 +23,6 @@ package decision
 import (
 	"context"
 	"errors"
-	"github.com/uber/cadence/service/history/engine"
 	"reflect"
 	"testing"
 
@@ -44,6 +43,7 @@ import (
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
+	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/query"
