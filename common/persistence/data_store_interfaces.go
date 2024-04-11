@@ -960,16 +960,13 @@ func (d *DataBlob) GetEncodingString() string {
 	return string(d.Encoding)
 }
 
-func (d *DataBlob) GetVisibilityStoreInfo() ([]byte, []byte, error) {
-	data, err := json.Marshal(d.Data)
+func (d *DataBlob) GetVisibilityStoreInfo() ([]byte, common.EncodingType, error) {
+	data, err := json.Marshal(d)
 	if err != nil {
-		return nil, nil, err
+		return nil, common.EncodingTypeEmpty, err
 	}
-	encoding, err := json.Marshal(d.Encoding)
-	if err != nil {
-		return nil, nil, err
-	}
-	return data, encoding, nil
+
+	return data, common.EncodingTypeJSON, nil // for visibility, we use Json encode to keep it safe
 }
 
 // GetData is a safe way to get the byte array or nil

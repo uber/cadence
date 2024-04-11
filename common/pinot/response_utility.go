@@ -23,7 +23,6 @@
 package pinot
 
 import (
-	b64 "encoding/base64"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -136,14 +135,31 @@ func ConvertSearchResultToVisibilityRecord(hit []interface{}, columnNames []stri
 }
 
 func convertMemo(data interface{}, encoding interface{}) (*p.DataBlob, error) {
-	res, err := b64.StdEncoding.DecodeString(fmt.Sprintf("%s", data))
+	memoData, ok := data.([]byte)
+	if !ok {
+		return nil, fmt.Errorf("couldn't convert data to byte array. %T", data)
+	}
+	if memoData == nil || len(memoData) == 0 || string(memoData) == "null" {
+		return nil, nil
+	}
+
+	memoEncoding, ok := encoding.(common.EncodingType)
+	if !ok {
+		return nil, fmt.Errorf("couldn't convert encoding to string. %T", encoding)
+	}
+
+	if memoEncoding != common.EncodingTypeJSON {
+		return nil, fmt.Errorf("encoding type doesn't support. Looking for EncodingTypeJSON, but found %v", encoding)
+	}
+
+	var res p.DataBlob
+	err := json.Unmarshal(memoData, &res)
 
 	if err != nil {
-		panic(err)
 		return nil, err
 	}
 
-	return p.NewDataBlob([]byte(res), common.EncodingType(fmt.Sprint(encoding))), nil
+	return &res, nil
 }
 
 func toWorkflowExecutionCloseStatus(status int) *types.WorkflowExecutionCloseStatus {

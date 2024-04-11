@@ -29,6 +29,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -38,7 +39,7 @@ func TestConvertSearchResultToVisibilityRecord(t *testing.T) {
 	columnName := []string{"WorkflowID", "RunID", "WorkflowType", "DomainID", "StartTime", "ExecutionTime", "CloseTime", "CloseStatus", "HistoryLength", "TaskList", "IsCron", "NumClusters", "UpdateTime", "Attr"}
 	closeStatus := types.WorkflowExecutionCloseStatusFailed
 
-	testMemo := p.NewDataBlob([]byte("test memo"), p.VisibilityEncoding)
+	testMemo := p.NewDataBlob([]byte("test memo"), common.EncodingTypeJSON)
 	testMemoData, testMemoEncoding, err := testMemo.GetVisibilityStoreInfo()
 	assert.NoError(t, err)
 
@@ -147,4 +148,34 @@ func TestConvertSearchResultToVisibilityRecord(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestConvertMemo_easeCase(t *testing.T) {
+	testMemo := p.NewDataBlob([]byte("test memo"), common.EncodingTypeJSON)
+	testMemoData, testMemoEncoding, err := testMemo.GetVisibilityStoreInfo()
+	assert.NoError(t, err)
+
+	res, err := convertMemo(testMemoData, testMemoEncoding)
+	assert.NoError(t, err)
+	assert.Equal(t, testMemo, res)
+}
+
+func TestConvertMemo_complicatedCase(t *testing.T) {
+	testMemo := p.NewDataBlob([]byte{0, 0, 0, 0}, common.EncodingTypeJSON)
+	testMemoData, testMemoEncoding, err := testMemo.GetVisibilityStoreInfo()
+	assert.NoError(t, err)
+
+	res, err := convertMemo(testMemoData, testMemoEncoding)
+	assert.NoError(t, err)
+	assert.Equal(t, testMemo, res)
+}
+
+func TestConvertMemo_nilCase(t *testing.T) {
+	testMemo := p.NewDataBlob(nil, common.EncodingTypeJSON)
+	testMemoData, testMemoEncoding, err := testMemo.GetVisibilityStoreInfo()
+	assert.NoError(t, err)
+
+	res, err := convertMemo(testMemoData, testMemoEncoding)
+	assert.NoError(t, err)
+	assert.Equal(t, testMemo, res)
 }
