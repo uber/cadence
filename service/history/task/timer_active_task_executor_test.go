@@ -1246,3 +1246,14 @@ func (s *timerActiveTaskExecutorSuite) newTimerTaskFromInfo(
 ) Task {
 	return NewTimerTask(s.mockShard, info, QueueTypeActiveTimer, s.logger, nil, nil, nil, nil, nil)
 }
+
+func (s *timerActiveTaskExecutorSuite) TestActiveTaskTimeout() {
+	deleteHistoryEventTask := s.newTimerTaskFromInfo(&persistence.TimerTaskInfo{
+		Version:     s.version,
+		DomainID:    s.domainID,
+		TaskID:      int64(100),
+		TaskType:    persistence.TaskTypeDeleteHistoryEvent,
+		TimeoutType: int(types.TimeoutTypeStartToClose),
+	})
+	s.timerActiveTaskExecutor.Execute(deleteHistoryEventTask, true)
+}

@@ -41,7 +41,7 @@ type (
 
 	executionStoreFactory struct {
 		logger            log.Logger
-		shardedNosqlStore *shardedNosqlStore
+		shardedNosqlStore shardedNosqlStore
 	}
 )
 

@@ -72,6 +72,25 @@ func (s *configSuite) TestGetIntPropertyFilteredByDomain() {
 	s.Equal(50, value(domain))
 }
 
+func (s *configSuite) TestGetIntPropertyFilteredByWorkflowType() {
+	key := TestGetIntPropertyFilteredByWorkflowTypeKey
+	domain := "testDomain"
+	workflowType := "testWorkflowType"
+	value := s.cln.GetIntPropertyFilteredByWorkflowType(key)
+	s.Equal(key.DefaultInt(), value(domain, workflowType))
+	s.client.SetValue(key, 50)
+	s.Equal(50, value(domain, workflowType))
+}
+
+func (s *configSuite) TestGetIntPropertyFilteredByShardID() {
+	key := TestGetIntPropertyFilteredByShardIDKey
+	shardID := 1
+	value := s.cln.GetIntPropertyFilteredByShardID(key)
+	s.Equal(key.DefaultInt(), value(shardID))
+	s.client.SetValue(key, 10)
+	s.Equal(10, value(shardID))
+}
+
 func (s *configSuite) TestGetStringPropertyFnWithDomainFilter() {
 	key := DefaultEventEncoding
 	domain := "testDomain"
@@ -100,6 +119,15 @@ func (s *configSuite) TestGetFloat64Property() {
 	s.Equal(0.01, value())
 }
 
+func (s *configSuite) TestGetFloat64PropertyFilteredByShardID() {
+	key := TestGetFloat64PropertyFilteredByShardIDKey
+	shardID := 1
+	value := s.cln.GetFloat64PropertyFilteredByShardID(key)
+	s.Equal(key.DefaultFloat(), value(shardID))
+	s.client.SetValue(key, 0.01)
+	s.Equal(0.01, value(shardID))
+}
+
 func (s *configSuite) TestGetBoolProperty() {
 	key := TestGetBoolPropertyKey
 	value := s.cln.GetBoolProperty(key)
@@ -115,6 +143,25 @@ func (s *configSuite) TestGetBoolPropertyFilteredByDomainID() {
 	s.Equal(key.DefaultBool(), value(domainID))
 	s.client.SetValue(key, false)
 	s.Equal(false, value(domainID))
+}
+
+func (s *configSuite) TestGetBoolPropertyFilteredByDomain() {
+	key := TestGetBoolPropertyFilteredByDomainKey
+	domain := "testDomain"
+	value := s.cln.GetBoolPropertyFilteredByDomain(key)
+	s.Equal(key.DefaultBool(), value(domain))
+	s.client.SetValue(key, true)
+	s.Equal(true, value(domain))
+}
+
+func (s *configSuite) TestGetBoolPropertyFilteredByDomainIDAndWorkflowID() {
+	key := TestGetBoolPropertyFilteredByDomainIDAndWorkflowIDKey
+	domainID := "testDomainID"
+	workflowID := "testWorkflowID"
+	value := s.cln.GetBoolPropertyFilteredByDomainIDAndWorkflowID(key)
+	s.Equal(key.DefaultBool(), value(domainID, workflowID))
+	s.client.SetValue(key, true)
+	s.Equal(true, value(domainID, workflowID))
 }
 
 func (s *configSuite) TestGetBoolPropertyFilteredByTaskListInfo() {
@@ -145,6 +192,24 @@ func (s *configSuite) TestGetDurationPropertyFilteredByDomain() {
 	s.Equal(time.Minute, value(domain))
 }
 
+func (s *configSuite) TestGetDurationPropertyFilteredByDomainID() {
+	key := TestGetDurationPropertyFilteredByDomainIDKey
+	domain := "testDomainID"
+	value := s.cln.GetDurationPropertyFilteredByDomainID(key)
+	s.Equal(key.DefaultDuration(), value(domain))
+	s.client.SetValue(key, time.Minute)
+	s.Equal(time.Minute, value(domain))
+}
+
+func (s *configSuite) TestGetDurationPropertyFilteredByShardID() {
+	key := TestGetDurationPropertyFilteredByShardID
+	shardID := 1
+	value := s.cln.GetDurationPropertyFilteredByShardID(key)
+	s.Equal(key.DefaultDuration(), value(shardID))
+	s.client.SetValue(key, time.Minute)
+	s.Equal(time.Minute, value(shardID))
+}
+
 func (s *configSuite) TestGetDurationPropertyFilteredByTaskListInfo() {
 	key := TestGetDurationPropertyFilteredByTaskListInfoKey
 	domain := "testDomain"
@@ -154,6 +219,16 @@ func (s *configSuite) TestGetDurationPropertyFilteredByTaskListInfo() {
 	s.Equal(key.DefaultDuration(), value(domain, taskList, taskType))
 	s.client.SetValue(key, time.Minute)
 	s.Equal(time.Minute, value(domain, taskList, taskType))
+}
+
+func (s *configSuite) TestGetDurationPropertyFilteredByWorkflowType() {
+	key := TestGetDurationPropertyFilteredByWorkflowTypeKey
+	domain := "testDomain"
+	workflowType := "testWorkflowType"
+	value := s.cln.GetDurationPropertyFilteredByWorkflowType(key)
+	s.Equal(key.DefaultDuration(), value(domain, workflowType))
+	s.client.SetValue(key, time.Minute)
+	s.Equal(time.Minute, value(domain, workflowType))
 }
 
 func (s *configSuite) TestGetMapProperty() {
@@ -167,6 +242,17 @@ func (s *configSuite) TestGetMapProperty() {
 	s.client.SetValue(key, val)
 	s.Equal(val, value())
 	s.Equal("321", value()["testKey"])
+}
+
+func (s *configSuite) TestGetListProperty() {
+	key := TestGetListPropertyKey
+	arr := []interface{}{}
+	value := s.cln.GetListProperty(key)
+	s.Equal(key.DefaultList(), value())
+	arr = append(arr, 1)
+	s.client.SetValue(key, arr)
+	s.Equal(1, len(value()))
+	s.Equal(1, value()[0])
 }
 
 func (s *configSuite) TestUpdateConfig() {

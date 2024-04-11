@@ -42,10 +42,7 @@ const (
 // Insert a new record to domain
 // return types.DomainAlreadyExistsError error if failed or already exists
 // Must return ConditionFailure error if other condition doesn't match
-func (db *cdb) InsertDomain(
-	ctx context.Context,
-	row *nosqlplugin.DomainRow,
-) error {
+func (db *cdb) InsertDomain(ctx context.Context, row *nosqlplugin.DomainRow) error {
 	query := db.session.Query(templateCreateDomainQuery, row.Info.ID, row.Info.Name).WithContext(ctx)
 	applied, err := query.MapScanCAS(make(map[string]interface{}))
 	if err != nil {
@@ -163,10 +160,7 @@ func (db *cdb) updateMetadataBatch(
 }
 
 // Update domain
-func (db *cdb) UpdateDomain(
-	ctx context.Context,
-	row *nosqlplugin.DomainRow,
-) error {
+func (db *cdb) UpdateDomain(ctx context.Context, row *nosqlplugin.DomainRow) error {
 	batch := db.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
 	failoverEndTime := emptyFailoverEndTime
 	if row.FailoverEndTime != nil {

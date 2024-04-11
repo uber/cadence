@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination sharded_nosql_store_mock.go
+
 package nosql
 
 import (
@@ -30,8 +32,18 @@ import (
 	"github.com/uber/cadence/common/persistence"
 )
 
+type shardedNosqlStore interface {
+	GetStoreShardByHistoryShard(shardID int) (*nosqlStore, error)
+	GetStoreShardByTaskList(domainID string, taskListName string, taskType int) (*nosqlStore, error)
+	GetDefaultShard() nosqlStore
+	Close()
+	GetName() string
+	GetShardingPolicy() shardingPolicy
+	GetLogger() log.Logger
+}
+
 // shardedNosqlStore is a store that may have one or more shards
-type shardedNosqlStore struct {
+type shardedNosqlStoreImpl struct {
 	sync.RWMutex
 
 	config config.ShardedNoSQL
@@ -43,8 +55,8 @@ type shardedNosqlStore struct {
 	shardingPolicy  shardingPolicy
 }
 
-func newShardedNosqlStore(cfg config.ShardedNoSQL, logger log.Logger, dc *persistence.DynamicConfiguration) (*shardedNosqlStore, error) {
-	sn := shardedNosqlStore{
+func newShardedNosqlStore(cfg config.ShardedNoSQL, logger log.Logger, dc *persistence.DynamicConfiguration) (shardedNosqlStore, error) {
+	sn := shardedNosqlStoreImpl{
 		config: cfg,
 		dc:     dc,
 		logger: logger,
@@ -70,7 +82,7 @@ func newShardedNosqlStore(cfg config.ShardedNoSQL, logger log.Logger, dc *persis
 	return &sn, nil
 }
 
-func (sn *shardedNosqlStore) GetStoreShardByHistoryShard(shardID int) (*nosqlStore, error) {
+func (sn *shardedNosqlStoreImpl) GetStoreShardByHistoryShard(shardID int) (*nosqlStore, error) {
 	shardName, err := sn.shardingPolicy.getHistoryShardName(shardID)
 	if err != nil {
 		return nil, err
@@ -78,27 +90,35 @@ func (sn *shardedNosqlStore) GetStoreShardByHistoryShard(shardID int) (*nosqlSto
 	return sn.getShard(shardName)
 }
 
-func (sn *shardedNosqlStore) GetStoreShardByTaskList(domainID string, taskListName string, taskType int) (*nosqlStore, error) {
+func (sn *shardedNosqlStoreImpl) GetStoreShardByTaskList(domainID string, taskListName string, taskType int) (*nosqlStore, error) {
 	shardName := sn.shardingPolicy.getTaskListShardName(domainID, taskListName, taskType)
 	return sn.getShard(shardName)
 }
 
-func (sn *shardedNosqlStore) GetDefaultShard() nosqlStore {
+func (sn *shardedNosqlStoreImpl) GetDefaultShard() nosqlStore {
 	return sn.defaultShard
 }
 
-func (sn *shardedNosqlStore) Close() {
+func (sn *shardedNosqlStoreImpl) Close() {
 	for name, shard := range sn.connectedShards {
 		sn.logger.Warn("Closing store shard", tag.StoreShard(name))
 		shard.Close()
 	}
 }
 
-func (sn *shardedNosqlStore) GetName() string {
+func (sn *shardedNosqlStoreImpl) GetName() string {
 	return "shardedNosql"
 }
 
-func (sn *shardedNosqlStore) getShard(shardName string) (*nosqlStore, error) {
+func (sn *shardedNosqlStoreImpl) GetShardingPolicy() shardingPolicy {
+	return sn.shardingPolicy
+}
+
+func (sn *shardedNosqlStoreImpl) GetLogger() log.Logger {
+	return sn.logger
+}
+
+func (sn *shardedNosqlStoreImpl) getShard(shardName string) (*nosqlStore, error) {
 	sn.RLock()
 	shard, found := sn.connectedShards[shardName]
 	sn.RUnlock()
@@ -130,7 +150,7 @@ func (sn *shardedNosqlStore) getShard(shardName string) (*nosqlStore, error) {
 	return s, nil
 }
 
-func (sn *shardedNosqlStore) connectToShard(shardName string) (*nosqlStore, error) {
+func (sn *shardedNosqlStoreImpl) connectToShard(shardName string) (*nosqlStore, error) {
 	cfg, ok := sn.config.Connections[shardName]
 	if !ok {
 		return nil, &ShardingError{

@@ -90,7 +90,7 @@ func newHashring(
 	logger log.Logger,
 	scope metrics.Scope,
 ) *ring {
-	ring := &ring{
+	r := &ring{
 		status:       common.DaemonStatusInitialized,
 		service:      service,
 		peerProvider: provider,
@@ -100,11 +100,11 @@ func newHashring(
 		scope:        scope,
 	}
 
-	ring.members.keys = make(map[string]HostInfo)
-	ring.subscribers.keys = make(map[string]chan<- *ChangedEvent)
+	r.members.keys = make(map[string]HostInfo)
+	r.subscribers.keys = make(map[string]chan<- *ChangedEvent)
 
-	ring.value.Store(emptyHashring())
-	return ring
+	r.value.Store(emptyHashring())
+	return r
 }
 
 func emptyHashring() *hashring.HashRing {
@@ -124,7 +124,7 @@ func (r *ring) Start() {
 		r.logger.Fatal("subscribing to peer provider", tag.Error(err))
 	}
 
-	if err := r.refresh(); err != nil {
+	if _, err := r.refresh(); err != nil {
 		r.logger.Fatal("failed to start service resolver", tag.Error(err))
 	}
 
@@ -176,22 +176,30 @@ func (r *ring) Lookup(
 	return host, nil
 }
 
-// Subscribe registers callback watcher.
-// All subscribers are notified about ring change.
-func (r *ring) Subscribe(
-	service string,
-	notifyChannel chan<- *ChangedEvent,
-) error {
+// Subscribe registers callback watcher. Services can use this to be informed about membership changes
+func (r *ring) Subscribe(watcher string, notifyChannel chan<- *ChangedEvent) error {
 	r.subscribers.Lock()
 	defer r.subscribers.Unlock()
 
-	_, ok := r.subscribers.keys[service]
+	_, ok := r.subscribers.keys[watcher]
 	if ok {
-		return fmt.Errorf("service %q already subscribed", service)
+		return fmt.Errorf("watcher %q is already subscribed", watcher)
 	}
 
-	r.subscribers.keys[service] = notifyChannel
+	r.subscribers.keys[watcher] = notifyChannel
 	return nil
+}
+
+func (r *ring) notifySubscribers(msg *ChangedEvent) {
+	r.subscribers.Lock()
+	defer r.subscribers.Unlock()
+	for name, ch := range r.subscribers.keys {
+		select {
+		case ch <- msg:
+		default:
+			r.logger.Error("subscriber notification failed", tag.Name(name))
+		}
+	}
 }
 
 // Unsubscribe removes subscriber
@@ -227,22 +235,22 @@ func (r *ring) Members() []HostInfo {
 	return hosts
 }
 
-func (r *ring) refresh() error {
+func (r *ring) refresh() (refreshed bool, err error) {
 	if r.members.refreshed.After(time.Now().Add(-minRefreshInternal)) {
 		// refreshed too frequently
-		return nil
+		return false, nil
 	}
 
 	members, err := r.peerProvider.GetMembers(r.service)
 	if err != nil {
-		return fmt.Errorf("getting members from peer provider: %w", err)
+		return false, fmt.Errorf("getting members from peer provider: %w", err)
 	}
 
 	r.members.Lock()
 	defer r.members.Unlock()
 	newMembersMap, changed := r.compareMembers(members)
 	if !changed {
-		return nil
+		return false, nil
 	}
 
 	ring := emptyHashring()
@@ -253,7 +261,7 @@ func (r *ring) refresh() error {
 	r.value.Store(ring)
 	r.logger.Info("refreshed ring members", tag.Value(members))
 
-	return nil
+	return true, nil
 }
 
 func (r *ring) refreshRingWorker() {
@@ -265,13 +273,17 @@ func (r *ring) refreshRingWorker() {
 		select {
 		case <-r.shutdownCh:
 			return
-		case <-r.refreshChan: // local signal or signal from provider
-			if err := r.refresh(); err != nil {
+		case event := <-r.refreshChan: // local signal or signal from provider
+			refreshed, err := r.refresh()
+			if err != nil {
 				r.logger.Error("refreshing ring", tag.Error(err))
+			}
+			if refreshed {
+				r.notifySubscribers(event)
 			}
 		case <-refreshTicker.C: // periodically refresh membership
 			r.emitHashIdentifier()
-			if err := r.refresh(); err != nil {
+			if _, err := r.refresh(); err != nil {
 				r.logger.Error("periodically refreshing ring", tag.Error(err))
 			}
 		}

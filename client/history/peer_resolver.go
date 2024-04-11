@@ -30,7 +30,7 @@ import (
 // Those are deployed instances of Cadence history services that participate in the cluster ring.
 // The resulting peer is simply an address of form ip:port where RPC calls can be routed to.
 //
-//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination peerResolver_mock.go -package history github.com/uber/cadence/client/history PeerResolver
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination peer_resolver_mock.go -package history github.com/uber/cadence/client/history PeerResolver
 type PeerResolver interface {
 	FromWorkflowID(workflowID string) (string, error)
 	FromDomainID(domainID string) (string, error)
