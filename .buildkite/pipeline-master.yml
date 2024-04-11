@@ -1,16 +1,45 @@
+container:
+  kubernetes: &kubernetes
+    sidecars:
+    - image: us-west1-docker.pkg.dev/ci-compute/buildkite-images/buildkite-dind:v1
+      command:
+      - |-
+        dockerd-entrypoint.sh
+      volumeMounts:
+        - mountPath: /var/run/
+          name: docker-sock
+      securityContext:
+        privileged: true
+        allowPrivilegeEscalation: true
+    mirrorVolumeMounts: true # CRITICAL: this must be at the same indentation level as sidecars
+    podSpec: &podSpec
+      containers:
+        - &commandContainer
+          image: us-west1-docker.pkg.dev/ci-compute/buildkite-images/buildkite-command-container:v2
+          command:
+          - |-
+            echo "Command step was not overridden."
+            exit 1
+          volumeMounts:
+            - mountPath: /var/run/
+              name: docker-sock
+          resources:
+            requests:
+              cpu: 12000m
+              memory: 55G
+      volumes:
+      - name: docker-sock
+        emptyDir: {}
+
 steps:
   - label: "fossa analyze"
     agents:
-      queue: "init"
-      docker: "*"
+      queue: "buildkite-gcp-medium-helm"
     command: "./scripts/buildkite/fossa.sh"
+
   - label: ":golang: unit test"
     agents:
-      queue: "workers"
-      docker: "*"
-    commands:
-      - "CASSANDRA_HOST=cassandra make install-schema && make cover_profile" # make install-schema is needed for a server startup test. See main_test.go
-      - "./scripts/buildkite/gen_coverage_metadata.sh .build/coverage/metadata.txt"
+      queue: "buildkite-gcp-large-helm"
     artifact_paths:
       - ".build/coverage/*.out"
       - ".build/coverage/metadata.txt"
@@ -18,140 +47,214 @@ steps:
       automatic:
         limit: 1
     plugins:
+      - kubernetes:
+          <<: *kubernetes
+          podSpec:
+            <<: *podSpec
+            containers:
+              - <<: *commandContainer
+                command:
+                - |-
+                  # make install-schema is needed for a server startup test. See main_test.go
+                  CASSANDRA_HOST=cassandra make install-schema && make cover_profile
+                  ./scripts/buildkite/gen_coverage_metadata.sh .build/coverage/metadata.txt
       - docker-compose#v3.0.0:
           run: unit-test
           config: docker/buildkite/docker-compose.yml
 
   - label: ":golangci-lint: validate code is clean"
     agents:
-      queue: "workers"
-      docker: "*"
-    command: "./scripts/buildkite/golint.sh"
+      queue: "buildkite-gcp-large-helm"
     artifact_paths: []
     retry:
       automatic:
         limit: 1
     plugins:
+      - kubernetes:
+          <<: *kubernetes
+          podSpec:
+            <<: *podSpec
+            containers:
+              - <<: *commandContainer
+                command:
+                - |-
+                  ./scripts/buildkite/golint.sh
       - docker-compose#v3.0.0:
           run: coverage-report
           config: docker/buildkite/docker-compose.yml
 
   - label: ":golang: integration test with cassandra"
     agents:
-      queue: "workers"
-      docker: "*"
-    command: "make cover_integration_profile"
+      queue: "buildkite-gcp-large-helm"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
       automatic:
         limit: 1
     plugins:
+      - kubernetes:
+          <<: *kubernetes
+          podSpec:
+            <<: *podSpec
+            containers:
+              - <<: *commandContainer
+                command:
+                - |-
+                  make cover_integration_profile
       - docker-compose#v3.0.0:
           run: integration-test-cassandra
           config: docker/buildkite/docker-compose.yml
 
   - label: ":golang: integration test with cassandra with ElasticSearch V7"
     agents:
-      queue: "workers"
-      docker: "*"
-    command: "make cover_integration_profile"
+      queue: "buildkite-gcp-large-helm"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
       automatic:
         limit: 1
     plugins:
+      - kubernetes:
+          <<: *kubernetes
+          podSpec:
+            <<: *podSpec
+            containers:
+              - <<: *commandContainer
+                command:
+                - |-
+                  make cover_integration_profile
       - docker-compose#v3.0.0:
           run: integration-test-cassandra
           config: docker/buildkite/docker-compose-es7.yml
 
   - label: ":golang: integration ndc test with cassandra"
     agents:
-      queue: "workers"
-      docker: "*"
-    command: "make cover_ndc_profile"
+      queue: "buildkite-gcp-large-helm"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
       automatic:
         limit: 1
     plugins:
+      - kubernetes:
+          <<: *kubernetes
+          podSpec:
+            <<: *podSpec
+            containers:
+              - <<: *commandContainer
+                command:
+                - |-
+                  make cover_ndc_profile
       - docker-compose#v3.0.0:
           run: integration-test-ndc-cassandra
           config: docker/buildkite/docker-compose.yml
 
   - label: ":golang: integration test with mysql"
     agents:
-      queue: "workers"
-      docker: "*"
-    command: "make cover_integration_profile"
+      queue: "buildkite-gcp-large-helm"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
       automatic:
         limit: 1
     plugins:
+      - kubernetes:
+          <<: *kubernetes
+          podSpec:
+            <<: *podSpec
+            containers:
+              - <<: *commandContainer
+                command:
+                - |-
+                  make cover_integration_profile
       - docker-compose#v3.0.0:
           run: integration-test-mysql
           config: docker/buildkite/docker-compose.yml
 
   - label: ":golang: integration ndc test with mysql"
     agents:
-      queue: "workers"
-      docker: "*"
-    command: "make cover_ndc_profile"
+      queue: "buildkite-gcp-large-helm"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
       automatic:
         limit: 1
     plugins:
+      - kubernetes:
+          <<: *kubernetes
+          podSpec:
+            <<: *podSpec
+            containers:
+              - <<: *commandContainer
+                command:
+                - |-
+                  make cover_ndc_profile
       - docker-compose#v3.0.0:
           run: integration-test-ndc-mysql
           config: docker/buildkite/docker-compose.yml
 
   - label: ":golang: integration test with postgres"
     agents:
-      queue: "workers"
-      docker: "*"
-    command: "make cover_integration_profile"
+      queue: "buildkite-gcp-large-helm"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
       automatic:
         limit: 1
     plugins:
+      - kubernetes:
+          <<: *kubernetes
+          podSpec:
+            <<: *podSpec
+            containers:
+              - <<: *commandContainer
+                command:
+                - |-
+                  make cover_integration_profile
       - docker-compose#v3.0.0:
           run: integration-test-postgres
           config: docker/buildkite/docker-compose.yml
 
   - label: ":golang: integration ndc test with postgres"
     agents:
-      queue: "workers"
-      docker: "*"
-    command: "make cover_ndc_profile"
+      queue: "buildkite-gcp-large-helm"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
       automatic:
         limit: 1
     plugins:
+      - kubernetes:
+          <<: *kubernetes
+          podSpec:
+            <<: *podSpec
+            containers:
+              - <<: *commandContainer
+                command:
+                - |-
+                  make cover_ndc_profile
       - docker-compose#v3.0.0:
           run: integration-test-ndc-postgres
           config: docker/buildkite/docker-compose.yml
 
   - label: ":golang: async wf integration test with kafka"
     agents:
-      queue: "workers"
-      docker: "*"
-    commands:
-      - "make .just-build" # ensure that we are not rebuilding binaries and not regenerating code
-      - "go test -timeout 60s -run ^TestAsyncWFIntegrationSuite -tags asyncwfintegration -count 1 -v github.com/uber/cadence/host"
+      queue: "buildkite-gcp-large-helm"
     retry:
       automatic:
         limit: 1
     plugins:
+      - kubernetes:
+          <<: *kubernetes
+          podSpec:
+            <<: *podSpec
+            containers:
+              - <<: *commandContainer
+                command:
+                - |-
+                  # ensure that we are not rebuilding binaries and not regenerating code
+                  make .just-build
+                  go test -timeout 60s -run ^TestAsyncWFIntegrationSuite -tags asyncwfintegration -count 1 -v github.com/uber/cadence/host
       - docker-compose#v3.0.0:
           run: integration-test-async-wf
           config: docker/buildkite/docker-compose.yml
@@ -160,26 +263,41 @@ steps:
 
   - label: ":golang: code-coverage"
     agents:
-      queue: "workers"
-      docker: "*"
-    command: "scripts/buildkite/gocov.sh"
+      queue: "buildkite-gcp-large-helm"
     retry:
       automatic:
         limit: 2
     plugins:
+      - kubernetes:
+          <<: *kubernetes
+          podSpec:
+            <<: *podSpec
+            containers:
+              - <<: *commandContainer
+                command:
+                - |-
+                  scripts/buildkite/gocov.sh
       - docker-compose#v3.0.0:
           run: coverage-report
           config: docker/buildkite/docker-compose.yml
 
-  - label: ":docker: build and push master"
-    agents:
-      queue: "workers"
-      docker: "*"
-    command: "scripts/buildkite/docker-push.sh"
-    retry:
-      automatic:
-        limit: 1
-    plugins:
-      - docker-login#v2.0.1:
-          username: ubercadence
-          password-env: DOCKER_LOGIN_PASSWORD
+  # Skip the build and push step for now
+  # - label: ":docker: build and push master"
+  #   agents:
+  #     queue: "buildkite-gcp-large-helm"
+  #   retry:
+  #     automatic:
+  #       limit: 1
+  #   plugins:
+  #     - kubernetes:
+  #         <<: *kubernetes
+  #         podSpec:
+  #           <<: *podSpec
+  #           containers:
+  #             - <<: *commandContainer
+  #               command:
+  #               - |-
+  #                 scripts/buildkite/docker-push.sh
+  #     - docker-login#v2.0.1:
+  #         username: ubercadence
+  #         password-env: DOCKER_LOGIN_PASSWORD
