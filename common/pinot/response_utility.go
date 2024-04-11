@@ -83,12 +83,23 @@ func ConvertSearchResultToVisibilityRecord(hit []interface{}, columnNames []stri
 	if err != nil {
 		logger.Error("Unable to Unmarshal searchAttribute map", tag.Error(err))
 	}
+	var memo *p.DataBlob
+	if attributeMap["Memo"] != nil {
+		err = json.Unmarshal([]byte(fmt.Sprintf("%s", attributeMap["Memo"])), &memo)
+		if err != nil {
+			logger.Error("Unable to Unmarshal memo",
+				tag.Error(err),
+			)
+			return nil
+		}
+	}
+	delete(attributeMap, "Memo") // cleanup after we get memo from search attribute
 
 	var source *VisibilityRecord
 	err = json.Unmarshal(jsonSystemKeyMap, &source)
 	if err != nil {
 		logger.Error("Unable to Unmarshal systemKeyMap",
-			tag.Error(err), // tag.ESDocID(fmt.Sprintf(columnNameToValue["DocID"]))
+			tag.Error(err),
 		)
 		return nil
 	}
@@ -106,6 +117,7 @@ func ConvertSearchResultToVisibilityRecord(hit []interface{}, columnNames []stri
 		NumClusters:      source.NumClusters,
 		ShardID:          source.ShardID,
 		SearchAttributes: attributeMap,
+		Memo:             memo,
 	}
 	if source.UpdateTime > 0 {
 		record.UpdateTime = time.UnixMilli(source.UpdateTime)

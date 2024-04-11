@@ -23,6 +23,8 @@
 package pinot
 
 import (
+	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -36,6 +38,9 @@ import (
 func TestConvertSearchResultToVisibilityRecord(t *testing.T) {
 	columnName := []string{"WorkflowID", "RunID", "WorkflowType", "DomainID", "StartTime", "ExecutionTime", "CloseTime", "CloseStatus", "HistoryLength", "TaskList", "IsCron", "NumClusters", "UpdateTime", "Attr"}
 	closeStatus := types.WorkflowExecutionCloseStatusFailed
+	testMemo := p.NewDataBlob([]byte{}, p.VisibilityEncoding)
+	marshalMemo, err := json.Marshal(testMemo)
+	assert.NoError(t, err)
 
 	tests := map[string]struct {
 		inputColumnNames         []string
@@ -105,7 +110,7 @@ func TestConvertSearchResultToVisibilityRecord(t *testing.T) {
 		},
 		"Case4: open wf with everything": {
 			inputColumnNames: columnName,
-			inputHit:         []interface{}{"wfid", "rid", "wftype", "domainid", testEarliestTime, testEarliestTime, -1, -1, -1, "tsklst", true, 1, testEarliestTime, `{"CustomStringField": "customA and customB or customC", "CustomDoubleField": 3.14}`},
+			inputHit:         []interface{}{"wfid", "rid", "wftype", "domainid", testEarliestTime, testEarliestTime, -1, -1, -1, "tsklst", true, 1, testEarliestTime, fmt.Sprintf("{\"CustomStringField\": \"customA and customB or customC\", \"CustomDoubleField\": 3.14, \"Memo\": %s}", marshalMemo)},
 			expectedVisibilityRecord: &p.InternalVisibilityWorkflowExecutionInfo{
 				DomainID:         "domainid",
 				WorkflowType:     "wftype",
@@ -114,7 +119,7 @@ func TestConvertSearchResultToVisibilityRecord(t *testing.T) {
 				TypeName:         "wftype",
 				StartTime:        time.UnixMilli(testEarliestTime),
 				ExecutionTime:    time.UnixMilli(testEarliestTime),
-				Memo:             nil,
+				Memo:             testMemo,
 				TaskList:         "tsklst",
 				IsCron:           true,
 				NumClusters:      1,
