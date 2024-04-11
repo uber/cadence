@@ -25,8 +25,8 @@ container:
               name: docker-sock
           resources:
             requests:
-              cpu: 12000m
-              memory: 55G
+              cpu: 7500m
+              memory: 30G
       volumes:
       - name: docker-sock
         emptyDir: {}
