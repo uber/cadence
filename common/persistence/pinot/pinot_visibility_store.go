@@ -612,13 +612,15 @@ func createVisibilityMessage(
 		SearchAttributes[key] = val
 	}
 
-	// add memo into search attr
-	memoData, memoEncoding, err := memo.GetVisibilityStoreInfo()
-	if err != nil {
-		return nil, err
+	if memo != nil {
+		// add memo into search attr
+		memoData, memoEncoding, err := memo.GetVisibilityStoreInfo()
+		if err != nil {
+			return nil, err
+		}
+		SearchAttributes[MemoData] = memoData
+		SearchAttributes[MemoEncoding] = memoEncoding
 	}
-	SearchAttributes[MemoData] = memoData
-	SearchAttributes[MemoEncoding] = memoEncoding
 
 	m[Attr] = SearchAttributes
 	serializedMsg, err := json.Marshal(m)
