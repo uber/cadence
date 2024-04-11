@@ -22,6 +22,7 @@
 package cassandra
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"strings"
@@ -35,6 +36,7 @@ import (
 )
 
 func executeCreateWorkflowBatchTransaction(
+	ctx context.Context,
 	session gocql.Session,
 	batch gocql.Batch,
 	currentWorkflowRequest *nosqlplugin.CurrentWorkflowWriteRequest,
@@ -57,12 +59,29 @@ func executeCreateWorkflowBatchTransaction(
 		return nil
 	}
 
+	requestRangeID := shardCondition.RangeID
 	requestConditionalRunID := ""
 	if currentWorkflowRequest.Condition != nil {
 		requestConditionalRunID = currentWorkflowRequest.Condition.GetCurrentRunID()
 	}
 	// There can be two reasons why the query does not get applied. Either the RangeID has changed, or
 	// the workflow is already started. Check the row info returned by Cassandra to figure out which one it is.
+	rangeIDMismatch := false
+	actualRangeID := int64(0)
+	currentExecutionAlreadyExists := false
+	var actualExecution map[string]interface{}
+	runIDMismatch := false
+	actualCurrRunID := ""
+	lastWriteVersionMismatch := false
+	actualLastWriteVersion := int64(common.EmptyVersion)
+	stateMismatch := false
+	actualState := int(0)
+	concreteExecutionAlreadyExists := false
+	workflowRequestAlreadyExists := false
+	workflowRequestID := ""
+	requestRowType := int(0)
+	var allPrevious []map[string]interface{}
+
 	for {
 		rowType, ok := previous["type"].(int)
 		if !ok {
@@ -70,82 +89,49 @@ func executeCreateWorkflowBatchTransaction(
 			break
 		}
 		runID := previous["run_id"].(gocql.UUID).String()
-
 		if rowType == rowTypeShard {
-			if rangeID, ok := previous["range_id"].(int64); ok && rangeID != shardCondition.RangeID {
-				// CreateWorkflowExecution failed because rangeID was modified
-				return &nosqlplugin.WorkflowOperationConditionFailure{
-					ShardRangeIDNotMatch: common.Int64Ptr(rangeID),
-				}
+			if actualRangeID, ok = previous["range_id"].(int64); ok && actualRangeID != requestRangeID {
+				// UpdateWorkflowExecution failed because rangeID was modified
+				rangeIDMismatch = true
 			}
-
 		} else if rowType == rowTypeExecution && runID == permanentRunID {
-			var columns []string
-			for k, v := range previous {
-				columns = append(columns, fmt.Sprintf("%s=%v", k, v))
-			}
-
-			if execution, ok := previous["execution"].(map[string]interface{}); ok {
-				// CreateWorkflowExecution failed because it already exists
-				executionInfo := parseWorkflowExecutionInfo(execution)
-				lastWriteVersion := common.EmptyVersion
-				if previous["workflow_last_write_version"] != nil {
-					lastWriteVersion = previous["workflow_last_write_version"].(int64)
-				}
-
-				msg := fmt.Sprintf("Workflow execution already running. WorkflowId: %v, RunId: %v, rangeID: %v, columns: (%v)",
-					executionInfo.WorkflowID, executionInfo.RunID, shardCondition.RangeID, strings.Join(columns, ","))
-
-				if currentWorkflowRequest.WriteMode == nosqlplugin.CurrentWorkflowWriteModeInsert {
-					return &nosqlplugin.WorkflowOperationConditionFailure{
-						WorkflowExecutionAlreadyExists: &nosqlplugin.WorkflowExecutionAlreadyExists{
-							OtherInfo:        msg,
-							CreateRequestID:  executionInfo.CreateRequestID,
-							RunID:            executionInfo.RunID,
-							State:            executionInfo.State,
-							CloseStatus:      executionInfo.CloseStatus,
-							LastWriteVersion: lastWriteVersion,
-						},
+			if currentWorkflowRequest.WriteMode == nosqlplugin.CurrentWorkflowWriteModeInsert {
+				currentExecutionAlreadyExists = true
+				actualExecution, _ = previous["execution"].(map[string]interface{})
+				if actualExecution != nil {
+					if previous["workflow_last_write_version"] != nil {
+						actualLastWriteVersion = previous["workflow_last_write_version"].(int64)
 					}
 				}
-				return &nosqlplugin.WorkflowOperationConditionFailure{
-					CurrentWorkflowConditionFailInfo: &msg,
+			} else if currentWorkflowRequest.WriteMode == nosqlplugin.CurrentWorkflowWriteModeUpdate {
+				if actualCurrRunID = previous["current_run_id"].(gocql.UUID).String(); requestConditionalRunID != "" && actualCurrRunID != requestConditionalRunID {
+					runIDMismatch = true
 				}
-			}
-
-			if prevRunID := previous["current_run_id"].(gocql.UUID).String(); requestConditionalRunID != "" && prevRunID != requestConditionalRunID {
-				// currentRunID on previous run has been changed, return to caller to handle
-				msg := fmt.Sprintf("Workflow execution creation condition failed by mismatch runID. WorkflowId: %v, Expected Current RunID: %v, Actual Current RunID: %v",
-					execution.WorkflowID, currentWorkflowRequest.Condition.GetCurrentRunID(), prevRunID)
-				return &nosqlplugin.WorkflowOperationConditionFailure{
-					CurrentWorkflowConditionFailInfo: &msg,
+				if currentWorkflowRequest.Condition != nil && currentWorkflowRequest.Condition.LastWriteVersion != nil {
+					ok := false
+					if actualLastWriteVersion, ok = previous["workflow_last_write_version"].(int64); ok && *currentWorkflowRequest.Condition.LastWriteVersion != actualLastWriteVersion {
+						lastWriteVersionMismatch = true
+					}
 				}
-			}
-
-			msg := fmt.Sprintf("Workflow execution creation condition failed. WorkflowId: %v, CurrentRunID: %v, columns: (%v)",
-				execution.WorkflowID, execution.RunID, strings.Join(columns, ","))
-			return &nosqlplugin.WorkflowOperationConditionFailure{
-				CurrentWorkflowConditionFailInfo: &msg,
+				if currentWorkflowRequest.Condition != nil && currentWorkflowRequest.Condition.State != nil {
+					ok := false
+					if actualState, ok = previous["workflow_state"].(int); ok && *currentWorkflowRequest.Condition.State != actualState {
+						stateMismatch = true
+					}
+				}
 			}
 		} else if rowType == rowTypeExecution && execution.RunID == runID {
-			msg := fmt.Sprintf("Workflow execution already running. WorkflowId: %v, RunId: %v, rangeID: %v",
-				execution.WorkflowID, execution.RunID, shardCondition.RangeID)
-			lastWriteVersion := common.EmptyVersion
+			concreteExecutionAlreadyExists = true
 			if previous["workflow_last_write_version"] != nil {
-				lastWriteVersion = previous["workflow_last_write_version"].(int64)
+				actualLastWriteVersion = previous["workflow_last_write_version"].(int64)
 			}
-			return &nosqlplugin.WorkflowOperationConditionFailure{
-				WorkflowExecutionAlreadyExists: &nosqlplugin.WorkflowExecutionAlreadyExists{
-					OtherInfo:        msg,
-					CreateRequestID:  execution.CreateRequestID,
-					RunID:            execution.RunID,
-					State:            execution.State,
-					CloseStatus:      execution.CloseStatus,
-					LastWriteVersion: lastWriteVersion,
-				},
-			}
+		} else if isRequestRowType(rowType) {
+			workflowRequestAlreadyExists = true
+			workflowRequestID = runID
+			requestRowType = rowType
 		}
 
+		allPrevious = append(allPrevious, previous)
 		previous = make(map[string]interface{})
 		if !iter.MapScan(previous) {
 			// Cassandra returns the actual row that caused a condition failure, so we should always return
@@ -154,10 +140,104 @@ func executeCreateWorkflowBatchTransaction(
 		}
 	}
 
-	return newUnknownConditionFailureReason(shardCondition.RangeID, previous)
+	if rangeIDMismatch {
+		return &nosqlplugin.WorkflowOperationConditionFailure{
+			ShardRangeIDNotMatch: common.Int64Ptr(actualRangeID),
+		}
+	}
+	if workflowRequestAlreadyExists {
+		result := make(map[string]interface{})
+		if err := session.Query(
+			templateGetLatestWorkflowRequestQuery,
+			shardCondition.ShardID,
+			requestRowType,
+			execution.DomainID,
+			execution.WorkflowID,
+			workflowRequestID,
+			defaultVisibilityTimestamp,
+		).WithContext(ctx).MapScan(result); err != nil {
+			return err
+		}
+		runID, ok := result["current_run_id"].(gocql.UUID)
+		if !ok {
+			return fmt.Errorf("corrupted data detected. DomainID: %v, WorkflowId: %v, RequestID: %v, RequestType: %v", execution.DomainID, execution.WorkflowID, workflowRequestID, requestRowType)
+		}
+		return &nosqlplugin.WorkflowOperationConditionFailure{
+			DuplicateRequest: &nosqlplugin.DuplicateRequest{
+				RunID: runID.String(),
+			},
+		}
+	}
+	// CreateWorkflowExecution failed because there is already a current execution record for this workflow
+	if currentExecutionAlreadyExists {
+		if actualExecution != nil {
+			executionInfo := parseWorkflowExecutionInfo(actualExecution)
+			msg := fmt.Sprintf("Workflow execution already running. WorkflowId: %v, RunId: %v", currentWorkflowRequest.Row.WorkflowID, executionInfo.RunID)
+			return &nosqlplugin.WorkflowOperationConditionFailure{
+				WorkflowExecutionAlreadyExists: &nosqlplugin.WorkflowExecutionAlreadyExists{
+					OtherInfo:        msg,
+					CreateRequestID:  executionInfo.CreateRequestID,
+					RunID:            executionInfo.RunID,
+					State:            executionInfo.State,
+					CloseStatus:      executionInfo.CloseStatus,
+					LastWriteVersion: actualLastWriteVersion,
+				},
+			}
+		}
+		msg := fmt.Sprintf("Workflow execution already running. WorkflowId: %v", currentWorkflowRequest.Row.WorkflowID)
+		return &nosqlplugin.WorkflowOperationConditionFailure{
+			CurrentWorkflowConditionFailInfo: &msg,
+		}
+	}
+	if runIDMismatch {
+		msg := fmt.Sprintf("Workflow execution creation condition failed by mismatch runID. WorkflowId: %v, Expected Current RunID: %v, Actual Current RunID: %v",
+			currentWorkflowRequest.Row.WorkflowID, currentWorkflowRequest.Condition.GetCurrentRunID(), actualCurrRunID)
+		return &nosqlplugin.WorkflowOperationConditionFailure{
+			CurrentWorkflowConditionFailInfo: &msg,
+		}
+	}
+	if lastWriteVersionMismatch {
+		msg := fmt.Sprintf("Workflow execution creation condition failed. WorkflowId: %v, Expected Version: %v, Actual Version: %v",
+			currentWorkflowRequest.Row.WorkflowID, *currentWorkflowRequest.Condition.LastWriteVersion, actualLastWriteVersion)
+		return &nosqlplugin.WorkflowOperationConditionFailure{
+			CurrentWorkflowConditionFailInfo: &msg,
+		}
+	}
+	if stateMismatch {
+		msg := fmt.Sprintf("Workflow execution creation condition failed. WorkflowId: %v, Expected State: %v, Actual State: %v",
+			currentWorkflowRequest.Row.WorkflowID, *currentWorkflowRequest.Condition.State, actualState)
+		return &nosqlplugin.WorkflowOperationConditionFailure{
+			CurrentWorkflowConditionFailInfo: &msg,
+		}
+	}
+	if concreteExecutionAlreadyExists {
+		msg := fmt.Sprintf("Workflow execution already running. WorkflowId: %v, RunId: %v", execution.WorkflowID, execution.RunID)
+		return &nosqlplugin.WorkflowOperationConditionFailure{
+			WorkflowExecutionAlreadyExists: &nosqlplugin.WorkflowExecutionAlreadyExists{
+				OtherInfo:        msg,
+				CreateRequestID:  execution.CreateRequestID,
+				RunID:            execution.RunID,
+				State:            execution.State,
+				CloseStatus:      execution.CloseStatus,
+				LastWriteVersion: actualLastWriteVersion,
+			},
+		}
+	}
+
+	// At this point we only know that the write was not applied.
+	var columns []string
+	columnID := 0
+	for _, previous := range allPrevious {
+		for k, v := range previous {
+			columns = append(columns, fmt.Sprintf("%v: %s=%v", columnID, k, v))
+		}
+		columnID++
+	}
+	return newUnknownConditionFailureReason(shardCondition.RangeID, columns)
 }
 
 func executeUpdateWorkflowBatchTransaction(
+	ctx context.Context,
 	session gocql.Session,
 	batch gocql.Batch,
 	currentWorkflowRequest *nosqlplugin.CurrentWorkflowWriteRequest,
@@ -195,6 +275,9 @@ func executeUpdateWorkflowBatchTransaction(
 	actualNextEventID := int64(0)
 	runIDMismatch := false
 	actualCurrRunID := ""
+	workflowRequestAlreadyExists := false
+	workflowRequestID := ""
+	requestRowType := int(0)
 	var allPrevious []map[string]interface{}
 
 	for {
@@ -222,6 +305,10 @@ func executeUpdateWorkflowBatchTransaction(
 				// UpdateWorkflowExecution failed because next event ID is unexpected
 				runIDMismatch = true
 			}
+		} else if isRequestRowType(rowType) {
+			workflowRequestAlreadyExists = true
+			workflowRequestID = runID
+			requestRowType = rowType
 		}
 
 		allPrevious = append(allPrevious, previous)
@@ -236,6 +323,30 @@ func executeUpdateWorkflowBatchTransaction(
 	if rangeIDMismatch {
 		return &nosqlplugin.WorkflowOperationConditionFailure{
 			ShardRangeIDNotMatch: common.Int64Ptr(actualRangeID),
+		}
+	}
+
+	if workflowRequestAlreadyExists {
+		result := make(map[string]interface{})
+		if err := session.Query(
+			templateGetLatestWorkflowRequestQuery,
+			shardCondition.ShardID,
+			requestRowType,
+			currentWorkflowRequest.Row.DomainID,
+			currentWorkflowRequest.Row.WorkflowID,
+			workflowRequestID,
+			defaultVisibilityTimestamp,
+		).WithContext(ctx).MapScan(result); err != nil {
+			return err
+		}
+		runID, ok := result["current_run_id"].(gocql.UUID)
+		if !ok {
+			return fmt.Errorf("corrupted data detected. DomainID: %v, WorkflowId: %v, RequestID: %v, RequestType: %v", currentWorkflowRequest.Row.DomainID, currentWorkflowRequest.Row.WorkflowID, workflowRequestID, requestRowType)
+		}
+		return &nosqlplugin.WorkflowOperationConditionFailure{
+			DuplicateRequest: &nosqlplugin.DuplicateRequest{
+				RunID: runID.String(),
+			},
 		}
 	}
 
@@ -274,16 +385,8 @@ func executeUpdateWorkflowBatchTransaction(
 
 func newUnknownConditionFailureReason(
 	rangeID int64,
-	row map[string]interface{},
+	columns []string,
 ) *nosqlplugin.WorkflowOperationConditionFailure {
-	// At this point we only know that the write was not applied.
-	// It's much safer to return ShardOwnershipLostError as the default to force the application to reload
-	// shard to recover from such errors
-	var columns []string
-	for k, v := range row {
-		columns = append(columns, fmt.Sprintf("%s=%v", k, v))
-	}
-
 	msg := fmt.Sprintf("Failed to operate on workflow execution.  Request RangeID: %v, columns: (%v)",
 		rangeID, strings.Join(columns, ","))
 
@@ -1354,6 +1457,75 @@ func createWorkflowExecution(
 		execution.LastWriteVersion,
 		execution.State,
 	)
+	return nil
+}
+
+func isRequestRowType(rowType int) bool {
+	if rowType >= rowTypeWorkflowRequestStart && rowType <= rowTypeWorkflowRequestReset {
+		return true
+	}
+	return false
+}
+
+func getRequestRowType(requestType persistence.WorkflowRequestType) (int, error) {
+	switch requestType {
+	case persistence.WorkflowRequestTypeStart:
+		return rowTypeWorkflowRequestStart, nil
+	case persistence.WorkflowRequestTypeSignal:
+		return rowTypeWorkflowRequestSignal, nil
+	case persistence.WorkflowRequestTypeCancel:
+		return rowTypeWorkflowRequestCancel, nil
+	case persistence.WorkflowRequestTypeReset:
+		return rowTypeWorkflowRequestReset, nil
+	default:
+		return 0, fmt.Errorf("unknown workflow request type %v", requestType)
+	}
+}
+
+func insertOrUpsertWorkflowRequestRow(
+	batch gocql.Batch,
+	requests *nosqlplugin.WorkflowRequestsWriteRequest,
+) error {
+	if requests == nil {
+		return nil
+	}
+	var insertQuery string
+	switch requests.WriteMode {
+	case nosqlplugin.WorkflowRequestWriteModeInsert:
+		insertQuery = templateInsertWorkflowRequestQuery
+	case nosqlplugin.WorkflowRequestWriteModeUpsert:
+		insertQuery = templateUpsertWorkflowRequestQuery
+	default:
+		return fmt.Errorf("unknown workflow request write mode %v", requests.WriteMode)
+	}
+	for _, row := range requests.Rows {
+		rowType, err := getRequestRowType(row.RequestType)
+		if err != nil {
+			return err
+		}
+		batch.Query(insertQuery,
+			row.ShardID,
+			rowType,
+			row.DomainID,
+			row.WorkflowID,
+			row.RequestID,
+			defaultVisibilityTimestamp,
+			emptyWorkflowRequestVersion*-1,
+			row.RunID,
+			workflowRequestTTLInSeconds,
+		)
+		batch.Query(insertQuery,
+			row.ShardID,
+			rowType,
+			row.DomainID,
+			row.WorkflowID,
+			row.RequestID,
+			defaultVisibilityTimestamp,
+			row.Version*-1,
+			row.RunID,
+			workflowRequestTTLInSeconds,
+		)
+	}
 	return nil
 }
 
