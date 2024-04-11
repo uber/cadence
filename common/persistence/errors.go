@@ -22,6 +22,8 @@
 
 package persistence
 
+import "fmt"
+
 type (
 	// TimeoutError is returned when a write operation fails due to a timeout
 	TimeoutError struct {
@@ -73,7 +75,15 @@ type (
 		CloseStatus      int
 		LastWriteVersion int64
 	}
+
+	DuplicateRequestError struct {
+		RunID string
+	}
 )
+
+func (e *DuplicateRequestError) Error() string {
+	return fmt.Sprintf("Request has already been applied to runID: %s", e.RunID)
+}
 
 func (e *InvalidPersistenceRequestError) Error() string {
 	return e.Msg

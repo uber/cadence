@@ -75,6 +75,11 @@ func (d *nosqlExecutionStore) CreateWorkflowExecution(
 		return nil, err
 	}
 
+	workflowRequestWriteMode, err := getWorkflowRequestWriteMode(request.WorkflowRequestMode)
+	if err != nil {
+		return nil, err
+	}
+
 	currentWorkflowWriteReq, err := d.prepareCurrentWorkflowRequestForCreateWorkflowTxn(domainID, workflowID, runID, executionInfo, lastWriteVersion, request)
 	if err != nil {
 		return nil, err
@@ -94,13 +99,21 @@ func (d *nosqlExecutionStore) CreateWorkflowExecution(
 		return nil, err
 	}
 
+	workflowRequests := d.prepareWorkflowRequestRows(domainID, workflowID, runID, newWorkflow.WorkflowRequests, nil)
+
 	shardCondition := &nosqlplugin.ShardCondition{
 		ShardID: d.shardID,
 		RangeID: request.RangeID,
 	}
 
+	workflowRequestsWriteRequest := &nosqlplugin.WorkflowRequestsWriteRequest{
+		Rows:      workflowRequests,
+		WriteMode: workflowRequestWriteMode,
+	}
+
 	err = d.db.InsertWorkflowExecutionWithTasks(
 		ctx,
+		workflowRequestsWriteRequest,
 		currentWorkflowWriteReq, workflowExecutionWriteReq,
 		transferTasks, crossClusterTasks, replicationTasks, timerTasks,
 		shardCondition,
@@ -132,6 +145,10 @@ func (d *nosqlExecutionStore) CreateWorkflowExecution(
 					State:            conditionFailureErr.WorkflowExecutionAlreadyExists.State,
 					CloseStatus:      conditionFailureErr.WorkflowExecutionAlreadyExists.CloseStatus,
 					LastWriteVersion: conditionFailureErr.WorkflowExecutionAlreadyExists.LastWriteVersion,
+				}
+			case conditionFailureErr.DuplicateRequest != nil:
+				return nil, &persistence.DuplicateRequestError{
+					RunID: conditionFailureErr.DuplicateRequest.RunID,
 				}
 			default:
 				// If ever runs into this branch, there is bug in the code either in here, or in the implementation of nosql plugin
@@ -187,6 +204,10 @@ func (d *nosqlExecutionStore) UpdateWorkflowExecution(
 		return err
 	}
 
+	workflowRequestWriteMode, err := getWorkflowRequestWriteMode(request.WorkflowRequestMode)
+	if err != nil {
+		return err
+	}
 	var currentWorkflowWriteReq *nosqlplugin.CurrentWorkflowWriteRequest
 
 	switch request.Mode {
@@ -269,7 +290,7 @@ func (d *nosqlExecutionStore) UpdateWorkflowExecution(
 	var nosqlCrossClusterTasks []*nosqlplugin.CrossClusterTask
 	var nosqlReplicationTasks []*nosqlplugin.ReplicationTask
 	var nosqlTimerTasks []*nosqlplugin.TimerTask
-	var err error
+	var workflowRequests []*nosqlplugin.WorkflowRequestRow
 
 	// 1. current
 	mutateExecution, err = d.prepareUpdateWorkflowExecutionRequestWithMapsAndEventBuffer(&updateWorkflow)
@@ -284,6 +305,7 @@ func (d *nosqlExecutionStore) UpdateWorkflowExecution(
 	if err != nil {
 		return err
 	}
+	workflowRequests = d.prepareWorkflowRequestRows(domainID, workflowID, runID, updateWorkflow.WorkflowRequests, workflowRequests)
 
 	// 2. new
 	if newWorkflow != nil {
@@ -300,6 +322,7 @@ func (d *nosqlExecutionStore) UpdateWorkflowExecution(
 		if err != nil {
 			return err
 		}
+		workflowRequests = d.prepareWorkflowRequestRows(domainID, workflowID, newWorkflow.ExecutionInfo.RunID, newWorkflow.WorkflowRequests, workflowRequests)
 	}
 
 	shardCondition := &nosqlplugin.ShardCondition{
@@ -307,8 +330,13 @@ func (d *nosqlExecutionStore) UpdateWorkflowExecution(
 		RangeID: request.RangeID,
 	}
 
+	workflowRequestsWriteRequest := &nosqlplugin.WorkflowRequestsWriteRequest{
+		Rows:      workflowRequests,
+		WriteMode: workflowRequestWriteMode,
+	}
+
 	err = d.db.UpdateWorkflowExecutionWithTasks(
-		ctx, currentWorkflowWriteReq,
+		ctx, workflowRequestsWriteRequest, currentWorkflowWriteReq,
 		mutateExecution, insertExecution, nil, // no workflow to reset here
 		nosqlTransferTasks, nosqlCrossClusterTasks, nosqlReplicationTasks, nosqlTimerTasks,
 		shardCondition)
@@ -336,6 +364,10 @@ func (d *nosqlExecutionStore) ConflictResolveWorkflowExecution(
 		return err
 	}
 
+	workflowRequestWriteMode, err := getWorkflowRequestWriteMode(request.WorkflowRequestMode)
+	if err != nil {
+		return err
+	}
 	var currentWorkflowWriteReq *nosqlplugin.CurrentWorkflowWriteRequest
 	var prevRunID string
 
@@ -393,7 +425,7 @@ func (d *nosqlExecutionStore) ConflictResolveWorkflowExecution(
 	var nosqlCrossClusterTasks []*nosqlplugin.CrossClusterTask
 	var nosqlReplicationTasks []*nosqlplugin.ReplicationTask
 	var nosqlTimerTasks []*nosqlplugin.TimerTask
-	var err error
+	var workflowRequests []*nosqlplugin.WorkflowRequestRow
 
 	// 1. current
 	if currentWorkflow != nil {
@@ -409,6 +441,7 @@ func (d *nosqlExecutionStore) ConflictResolveWorkflowExecution(
 		if err != nil {
 			return err
 		}
+		workflowRequests = d.prepareWorkflowRequestRows(domainID, workflowID, currentWorkflow.ExecutionInfo.RunID, currentWorkflow.WorkflowRequests, workflowRequests)
 	}
 
 	// 2. reset
@@ -424,6 +457,7 @@ func (d *nosqlExecutionStore) ConflictResolveWorkflowExecution(
 	if err != nil {
 		return err
 	}
+	workflowRequests = d.prepareWorkflowRequestRows(domainID, workflowID, resetWorkflow.ExecutionInfo.RunID, resetWorkflow.WorkflowRequests, workflowRequests)
 
 	// 3. new
 	if newWorkflow != nil {
@@ -440,6 +474,7 @@ func (d *nosqlExecutionStore) ConflictResolveWorkflowExecution(
 		if err != nil {
 			return err
 		}
+		workflowRequests = d.prepareWorkflowRequestRows(domainID, workflowID, newWorkflow.ExecutionInfo.RunID, newWorkflow.WorkflowRequests, workflowRequests)
 	}
 
 	shardCondition := &nosqlplugin.ShardCondition{
@@ -447,8 +482,13 @@ func (d *nosqlExecutionStore) ConflictResolveWorkflowExecution(
 		RangeID: request.RangeID,
 	}
 
+	workflowRequestsWriteRequest := &nosqlplugin.WorkflowRequestsWriteRequest{
+		Rows:      workflowRequests,
+		WriteMode: workflowRequestWriteMode,
+	}
+
 	err = d.db.UpdateWorkflowExecutionWithTasks(
-		ctx, currentWorkflowWriteReq,
+		ctx, workflowRequestsWriteRequest, currentWorkflowWriteReq,
 		mutateExecution, insertExecution, resetExecution,
 		nosqlTransferTasks, nosqlCrossClusterTasks, nosqlReplicationTasks, nosqlTimerTasks,
 		shardCondition)

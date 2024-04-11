@@ -240,6 +240,8 @@ type (
 		PreviousLastWriteVersion int64
 
 		NewWorkflowSnapshot InternalWorkflowSnapshot
+
+		WorkflowRequestMode CreateWorkflowRequestMode
 	}
 
 	// InternalGetReplicationTasksResponse is the response to GetReplicationTask
@@ -424,6 +426,8 @@ type (
 		UpdateWorkflowMutation InternalWorkflowMutation
 
 		NewWorkflowSnapshot *InternalWorkflowSnapshot
+
+		WorkflowRequestMode CreateWorkflowRequestMode
 	}
 
 	// InternalConflictResolveWorkflowExecutionRequest is used to reset workflow execution state for Persistence Interface
@@ -440,6 +444,8 @@ type (
 
 		// current workflow
 		CurrentWorkflowMutation *InternalWorkflowMutation
+
+		WorkflowRequestMode CreateWorkflowRequestMode
 	}
 
 	// InternalWorkflowMutation is used as generic workflow execution state mutation for Persistence Interface
@@ -469,6 +475,8 @@ type (
 		TimerTasks        []Task
 		ReplicationTasks  []Task
 
+		WorkflowRequests []*WorkflowRequest
+
 		Condition int64
 
 		Checksum     checksum.Checksum
@@ -493,6 +501,8 @@ type (
 		CrossClusterTasks []Task
 		TimerTasks        []Task
 		ReplicationTasks  []Task
+
+		WorkflowRequests []*WorkflowRequest
 
 		Condition int64
 

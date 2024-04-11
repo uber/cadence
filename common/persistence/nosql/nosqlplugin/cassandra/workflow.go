@@ -38,6 +38,7 @@ var _ nosqlplugin.WorkflowCRUD = (*cdb)(nil)
 
 func (db *cdb) InsertWorkflowExecutionWithTasks(
 	ctx context.Context,
+	requests *nosqlplugin.WorkflowRequestsWriteRequest,
 	currentWorkflowRequest *nosqlplugin.CurrentWorkflowWriteRequest,
 	execution *nosqlplugin.WorkflowExecutionRequest,
 	transferTasks []*nosqlplugin.TransferTask,
@@ -52,7 +53,11 @@ func (db *cdb) InsertWorkflowExecutionWithTasks(
 
 	batch := db.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
 
-	err := createOrUpdateCurrentWorkflow(batch, shardID, domainID, workflowID, currentWorkflowRequest)
+	err := insertOrUpsertWorkflowRequestRow(batch, requests)
+	if err != nil {
+		return err
+	}
+	err = createOrUpdateCurrentWorkflow(batch, shardID, domainID, workflowID, currentWorkflowRequest)
 	if err != nil {
 		return err
 	}
@@ -68,7 +73,7 @@ func (db *cdb) InsertWorkflowExecutionWithTasks(
 	createTimerTasks(batch, shardID, domainID, workflowID, timerTasks)
 	assertShardRangeID(batch, shardID, shardCondition.RangeID)
 
-	return executeCreateWorkflowBatchTransaction(db.session, batch, currentWorkflowRequest, execution, shardCondition)
+	return executeCreateWorkflowBatchTransaction(ctx, db.session, batch, currentWorkflowRequest, execution, shardCondition)
 }
 
 func (db *cdb) SelectCurrentWorkflow(
@@ -110,6 +115,7 @@ func (db *cdb) SelectCurrentWorkflow(
 
 func (db *cdb) UpdateWorkflowExecutionWithTasks(
 	ctx context.Context,
+	requests *nosqlplugin.WorkflowRequestsWriteRequest,
 	currentWorkflowRequest *nosqlplugin.CurrentWorkflowWriteRequest,
 	mutatedExecution *nosqlplugin.WorkflowExecutionRequest,
 	insertedExecution *nosqlplugin.WorkflowExecutionRequest,
@@ -137,7 +143,11 @@ func (db *cdb) UpdateWorkflowExecutionWithTasks(
 
 	batch := db.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
 
-	err := createOrUpdateCurrentWorkflow(batch, shardID, domainID, workflowID, currentWorkflowRequest)
+	err := insertOrUpsertWorkflowRequestRow(batch, requests)
+	if err != nil {
+		return err
+	}
+	err = createOrUpdateCurrentWorkflow(batch, shardID, domainID, workflowID, currentWorkflowRequest)
 	if err != nil {
 		return err
 	}
@@ -169,7 +179,7 @@ func (db *cdb) UpdateWorkflowExecutionWithTasks(
 	createTimerTasks(batch, shardID, domainID, workflowID, timerTasks)
 	assertShardRangeID(batch, shardID, shardCondition.RangeID)
 
-	return executeUpdateWorkflowBatchTransaction(db.session, batch, currentWorkflowRequest, previousNextEventIDCondition, shardCondition)
+	return executeUpdateWorkflowBatchTransaction(ctx, db.session, batch, currentWorkflowRequest, previousNextEventIDCondition, shardCondition)
 }
 
 func (db *cdb) SelectWorkflowExecution(ctx context.Context, shardID int, domainID, workflowID, runID string) (*nosqlplugin.WorkflowExecution, error) {
