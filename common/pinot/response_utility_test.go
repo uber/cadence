@@ -151,31 +151,29 @@ func TestConvertSearchResultToVisibilityRecord(t *testing.T) {
 }
 
 func TestConvertMemo_easeCase(t *testing.T) {
-	testMemo := p.NewDataBlob([]byte("test memo"), common.EncodingTypeJSON)
-	testMemoData, testMemoEncoding, err := testMemo.GetVisibilityStoreInfo()
-	assert.NoError(t, err)
+	tests := map[string]struct {
+		memo *p.DataBlob
+	}{
+		"Case1: easy case": {
+			memo: p.NewDataBlob([]byte("test memo"), common.EncodingTypeJSON),
+		},
+		"Case2: weird case": {
+			memo: p.NewDataBlob([]byte{0, 0, 0, 0}, common.EncodingTypeJSON),
+		},
+		"Case3: nil case": {
+			memo: p.NewDataBlob(nil, common.EncodingTypeJSON),
+		},
+	}
 
-	res, err := convertMemo(testMemoData, testMemoEncoding)
-	assert.NoError(t, err)
-	assert.Equal(t, testMemo, res)
-}
-
-func TestConvertMemo_complicatedCase(t *testing.T) {
-	testMemo := p.NewDataBlob([]byte{0, 0, 0, 0}, common.EncodingTypeJSON)
-	testMemoData, testMemoEncoding, err := testMemo.GetVisibilityStoreInfo()
-	assert.NoError(t, err)
-
-	res, err := convertMemo(testMemoData, testMemoEncoding)
-	assert.NoError(t, err)
-	assert.Equal(t, testMemo, res)
-}
-
-func TestConvertMemo_nilCase(t *testing.T) {
-	testMemo := p.NewDataBlob(nil, common.EncodingTypeJSON)
-	testMemoData, testMemoEncoding, err := testMemo.GetVisibilityStoreInfo()
-	assert.NoError(t, err)
-
-	res, err := convertMemo(testMemoData, testMemoEncoding)
-	assert.NoError(t, err)
-	assert.Equal(t, testMemo, res)
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				testMemoData, testMemoEncoding, err := test.memo.GetVisibilityStoreInfo()
+				assert.NoError(t, err)
+				res, err := convertMemo(testMemoData, testMemoEncoding)
+				assert.NoError(t, err)
+				assert.Equal(t, test.memo, res)
+			})
+		})
+	}
 }
