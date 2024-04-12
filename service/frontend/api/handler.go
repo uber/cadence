@@ -21,9 +21,7 @@
 package api
 
 import (
-	"bytes"
 	"context"
-	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"sync/atomic"
@@ -40,6 +38,7 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/client"
+	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/elasticsearch/validator"
 	"github.com/uber/cadence/common/log"
@@ -51,6 +50,7 @@ import (
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/frontend/config"
 	"github.com/uber/cadence/service/frontend/validate"
 )
@@ -81,6 +81,7 @@ type (
 		searchAttributesValidator *validator.SearchAttributesValidator
 		throttleRetry             *backoff.ThrottleRetry
 		producerManager           ProducerManager
+		thriftrwEncoder           codec.BinaryEncoder
 	}
 
 	getHistoryContinuationToken struct {
@@ -141,6 +142,7 @@ func NewWorkflowHandler(
 			resource.GetLogger(),
 			resource.GetMetricsClient(),
 		),
+		thriftrwEncoder: codec.NewThriftRWEncoder(),
 	}
 }
 
@@ -1764,11 +1766,10 @@ func (wh *WorkflowHandler) StartWorkflowExecutionAsync(
 	}
 
 	// Serialize the message to be sent to the queue.
-	// We use gob encoding because json encoding of requests excludes PII fields such as input. JSON encoded request are logged by acccess controlled api layer for audit purposes.
-	var buf bytes.Buffer
-	err = gob.NewEncoder(&buf).Encode(startRequest)
+	// Avoid JSON because json encoding of requests excludes PII fields such as input. JSON encoded request are logged by acccess controlled api layer for audit purposes.
+	payload, err := wh.thriftrwEncoder.Encode(thrift.FromStartWorkflowExecutionAsyncRequest(startRequest))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to encode StartWorkflowExecutionAsyncRequest: %v", err)
 	}
 
 	// propagate the headers from the context to the message
@@ -1783,8 +1784,8 @@ func (wh *WorkflowHandler) StartWorkflowExecutionAsync(
 		PartitionKey: common.StringPtr(startRequest.GetWorkflowID()),
 		Type:         &messageType,
 		Header:       header,
-		Encoding:     common.StringPtr(string(common.EncodingTypeGob)),
-		Payload:      buf.Bytes(),
+		Encoding:     common.StringPtr(string(common.EncodingTypeThriftRW)),
+		Payload:      payload,
 	}
 	err = producer.Publish(ctx, message)
 	if err != nil {
@@ -2345,11 +2346,10 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecutionAsync(
 	}
 
 	// Serialize the message to be sent to the queue.
-	// We use gob encoding because json encoding of requests excludes PII fields such as input. JSON encoded request are logged by acccess controlled api layer for audit purposes.
-	var buf bytes.Buffer
-	err = gob.NewEncoder(&buf).Encode(signalWithStartRequest)
+	// Avoid JSON because json encoding of requests excludes PII fields such as input. JSON encoded request are logged by acccess controlled api layer for audit purposes.
+	payload, err := wh.thriftrwEncoder.Encode(thrift.FromSignalWithStartWorkflowExecutionAsyncRequest(signalWithStartRequest))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to encode SignalWithStartWorkflowExecutionAsyncRequest: %v", err)
 	}
 
 	// propagate the headers from the context to the message
@@ -2364,8 +2364,8 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecutionAsync(
 		PartitionKey: common.StringPtr(signalWithStartRequest.GetWorkflowID()),
 		Type:         &messageType,
 		Header:       header,
-		Encoding:     common.StringPtr(string(common.EncodingTypeGob)),
-		Payload:      buf.Bytes(),
+		Encoding:     common.StringPtr(string(common.EncodingTypeThriftRW)),
+		Payload:      payload,
 	}
 	err = producer.Publish(ctx, message)
 	if err != nil {
