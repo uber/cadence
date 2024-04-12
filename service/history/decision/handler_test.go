@@ -48,6 +48,7 @@ import (
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/query"
 	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/workflow"
 )
 
 const (
@@ -378,6 +379,126 @@ func (s *DecisionHandlerSuite) TestHandleDecisionTaskFailed() {
 
 			err := s.decisionHandler.HandleDecisionTaskFailed(context.Background(), request)
 			s.Equal(test.expectErr, err != nil)
+		})
+	}
+}
+
+func (s *DecisionHandlerSuite) TestHandleDecisionTaskStarted() {
+	tests := []struct {
+		name         string
+		domainID     string
+		mutablestate *persistence.WorkflowMutableState
+		expectCalls  func(h *handlerImpl)
+		expectErr    error
+	}{
+		{
+			name:        "fail to retrieve domain From ID",
+			domainID:    _testInvalidDomainUUID,
+			expectCalls: func(h *handlerImpl) {},
+			expectErr:   &types.BadRequestError{Message: "Invalid domain UUID."},
+			mutablestate: &persistence.WorkflowMutableState{
+				ExecutionInfo: &persistence.WorkflowExecutionInfo{},
+			},
+		},
+		{
+			name:     "failure - decision task already started",
+			domainID: _testDomainUUID,
+			expectCalls: func(h *handlerImpl) {
+				h.shard.(*shard.MockContext).EXPECT().GetEventsCache().Times(1).Return(events.NewMockCache(s.controller))
+			},
+			expectErr: &types.EventAlreadyStartedError{Message: "Decision task already started."},
+			mutablestate: &persistence.WorkflowMutableState{
+				ExecutionInfo: &persistence.WorkflowExecutionInfo{},
+			},
+		},
+		{
+			name:     "failure - workflow completed",
+			domainID: _testDomainUUID,
+			expectCalls: func(h *handlerImpl) {
+				h.shard.(*shard.MockContext).EXPECT().GetEventsCache().Times(1).Return(events.NewMockCache(s.controller))
+			},
+			expectErr: workflow.ErrNotExists,
+			mutablestate: &persistence.WorkflowMutableState{
+				ExecutionInfo: &persistence.WorkflowExecutionInfo{
+					State: 2, //2 == WorkflowStateCompleted
+				},
+			},
+		},
+		{
+			name:     "failure - decision task already completed",
+			domainID: _testDomainUUID,
+			expectCalls: func(h *handlerImpl) {
+				h.shard.(*shard.MockContext).EXPECT().GetEventsCache().Times(1).Return(events.NewMockCache(s.controller))
+			},
+			expectErr: &types.EntityNotExistsError{Message: "Decision task not found."},
+			mutablestate: &persistence.WorkflowMutableState{
+				ExecutionInfo: &persistence.WorkflowExecutionInfo{
+					DecisionScheduleID: 1,
+					NextEventID:        2,
+				},
+			},
+		},
+		{
+			name:     "failure - cached mutable state is stale",
+			domainID: _testDomainUUID,
+			expectCalls: func(h *handlerImpl) {
+				// handler will attempt reloading mutable state at most 5 times
+				// this test will fail all retries
+				h.shard.(*shard.MockContext).EXPECT().GetEventsCache().Times(5).Return(events.NewMockCache(s.controller))
+			},
+			expectErr: workflow.ErrMaxAttemptsExceeded,
+			mutablestate: &persistence.WorkflowMutableState{
+				ExecutionInfo: &persistence.WorkflowExecutionInfo{
+					DecisionScheduleID: 1,
+				},
+			},
+		},
+		{
+			name:     "success",
+			domainID: _testDomainUUID,
+			expectCalls: func(h *handlerImpl) {
+				h.shard.(*shard.MockContext).EXPECT().GetEventsCache().Times(1).Return(events.NewMockCache(s.controller))
+			},
+			expectErr: nil,
+			mutablestate: &persistence.WorkflowMutableState{
+				ExecutionInfo: &persistence.WorkflowExecutionInfo{
+					DecisionScheduleID: 0,
+					NextEventID:        3,
+					DecisionRequestID:  "test-request-id",
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		s.Run(test.name, func() {
+			request := &types.RecordDecisionTaskStartedRequest{
+				DomainUUID: test.domainID,
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: _testWorkflowID,
+					RunID:      _testRunID,
+				},
+				ScheduleID: 0,
+				TaskID:     0,
+				RequestID:  "test-request-id",
+				PollRequest: &types.PollForDecisionTaskRequest{
+					Domain:         test.domainID,
+					TaskList:       nil,
+					Identity:       "",
+					BinaryChecksum: "",
+				},
+			}
+			shardContext := shard.NewMockContext(s.controller)
+			s.decisionHandler.shard = shardContext
+			s.expectCommonCalls(test.domainID, test.mutablestate)
+			s.decisionHandler.executionCache = execution.NewCache(shardContext)
+			test.expectCalls(s.decisionHandler)
+
+			resp, err := s.decisionHandler.HandleDecisionTaskStarted(context.Background(), request)
+			s.Equal(test.expectErr, err)
+			if err == nil {
+				s.NotNil(resp)
+			}
 		})
 	}
 }
