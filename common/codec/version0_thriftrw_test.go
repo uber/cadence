@@ -90,31 +90,26 @@ func (s *thriftRWEncoderSuite) TestEncode() {
 
 func (s *thriftRWEncoderSuite) TestEncodeConcurrent() {
 	var wg sync.WaitGroup
-	var mu sync.Mutex
-	var finalErr error
 	count := 200
+	errs := make([]error, count)
 	wg.Add(count)
 	for i := 0; i < count; i++ {
-		go func() {
+		go func(idx int) {
 			defer wg.Done()
 			binary, err := s.encoder.Encode(thriftObject)
 			if err != nil {
-				mu.Lock()
-				finalErr = multierr.Append(finalErr, err)
-				mu.Unlock()
+				errs[idx] = err
 				return
 			}
 
 			if diff := cmp.Diff(thriftEncodedBinary, binary); diff != "" {
-				mu.Lock()
-				finalErr = multierr.Append(finalErr, fmt.Errorf("Mismatch (-want +got):\n%s", diff))
-				mu.Unlock()
+				errs[idx] = fmt.Errorf("Mismatch (-want +got):\n%s", diff)
 				return
 			}
-		}()
+		}(i)
 	}
 	wg.Wait()
-	s.NoError(finalErr)
+	s.NoError(multierr.Combine(errs...))
 }
 
 func (s *thriftRWEncoderSuite) TestDecode() {
