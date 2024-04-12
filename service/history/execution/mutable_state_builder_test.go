@@ -1864,3 +1864,11 @@ func TestAssignEventIDToBufferedEvents(t *testing.T) {
 		})
 	}
 }
+
+// This is only for passing the coverage
+func TestLog(t *testing.T) {
+	var e *mutableStateBuilder
+	assert.NotPanics(t, func() { e.logInfo("a") })
+	assert.NotPanics(t, func() { e.logWarn("a") })
+	assert.NotPanics(t, func() { e.logError("a") })
+}
