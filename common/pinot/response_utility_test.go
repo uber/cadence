@@ -152,7 +152,9 @@ func TestConvertSearchResultToVisibilityRecord(t *testing.T) {
 
 func TestConvertMemo_easeCase(t *testing.T) {
 	tests := map[string]struct {
-		memo *p.DataBlob
+		memo        *p.DataBlob
+		badData     interface{}
+		badEncoding interface{}
 	}{
 		"Case1: easy case": {
 			memo: p.NewDataBlob([]byte("test memo"), common.EncodingTypeJSON),
@@ -163,6 +165,14 @@ func TestConvertMemo_easeCase(t *testing.T) {
 		"Case3: nil case": {
 			memo: p.NewDataBlob(nil, common.EncodingTypeJSON),
 		},
+		"Case4-1: badData case": {
+			badData:     make(chan int),
+			badEncoding: common.EncodingTypeJSON,
+		},
+		"Case4-2: badEncoding case": {
+			badEncoding: make(chan int),
+			badData:     []byte("test"),
+		},
 	}
 
 	for name, test := range tests {
@@ -171,8 +181,13 @@ func TestConvertMemo_easeCase(t *testing.T) {
 				testMemoData, testMemoEncoding, err := test.memo.GetVisibilityStoreInfo()
 				assert.NoError(t, err)
 				res, err := convertMemo(testMemoData, testMemoEncoding)
-				assert.NoError(t, err)
-				assert.Equal(t, test.memo, res)
+				if test.badData != nil || test.badEncoding != nil {
+					res, err = convertMemo(test.badData, test.badEncoding)
+					assert.Error(t, err)
+				} else {
+					assert.NoError(t, err)
+					assert.Equal(t, test.memo, res)
+				}
 			})
 		})
 	}
