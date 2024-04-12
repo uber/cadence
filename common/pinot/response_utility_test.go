@@ -39,10 +39,6 @@ func TestConvertSearchResultToVisibilityRecord(t *testing.T) {
 	columnName := []string{"WorkflowID", "RunID", "WorkflowType", "DomainID", "StartTime", "ExecutionTime", "CloseTime", "CloseStatus", "HistoryLength", "TaskList", "IsCron", "NumClusters", "UpdateTime", "Attr"}
 	closeStatus := types.WorkflowExecutionCloseStatusFailed
 
-	testMemo := p.NewDataBlob([]byte("test memo"), common.EncodingTypeJSON)
-	testMemoData, testMemoEncoding, err := testMemo.GetVisibilityStoreInfo()
-	assert.NoError(t, err)
-
 	tests := map[string]struct {
 		inputColumnNames         []string
 		inputHit                 []interface{}
@@ -113,7 +109,7 @@ func TestConvertSearchResultToVisibilityRecord(t *testing.T) {
 		"Case4: open wf with everything": {
 			inputColumnNames: columnName,
 			inputHit: []interface{}{"wfid", "rid", "wftype", "domainid", testEarliestTime, testEarliestTime, -1, -1, -1,
-				"tsklst", true, 1, testEarliestTime, fmt.Sprintf(`{"Memo_Data": %s, "Memo_Encoding": %s}`, testMemoData, testMemoEncoding)},
+				"tsklst", true, 1, testEarliestTime, fmt.Sprint(`{"CustomStringField": "customA and customB or customC", "CustomDoubleField": 3.14}`)},
 			expectedVisibilityRecord: &p.InternalVisibilityWorkflowExecutionInfo{
 				DomainID:         "domainid",
 				WorkflowType:     "wftype",
@@ -122,7 +118,7 @@ func TestConvertSearchResultToVisibilityRecord(t *testing.T) {
 				TypeName:         "wftype",
 				StartTime:        time.UnixMilli(testEarliestTime),
 				ExecutionTime:    time.UnixMilli(testEarliestTime),
-				Memo:             testMemo,
+				Memo:             nil,
 				TaskList:         "tsklst",
 				IsCron:           true,
 				NumClusters:      1,
@@ -138,13 +134,7 @@ func TestConvertSearchResultToVisibilityRecord(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			assert.NotPanics(t, func() {
 				visibilityRecord := ConvertSearchResultToVisibilityRecord(test.inputHit, test.inputColumnNames, log.NewNoop())
-				if test.memoCheck {
-					assert.Equal(t, test.expectedVisibilityRecord.Memo.Data, visibilityRecord.Memo.Data)
-					assert.Equal(t, test.expectedVisibilityRecord.Memo.Encoding, visibilityRecord.Memo.Encoding)
-				} else {
-					assert.Equal(t, test.expectedVisibilityRecord, visibilityRecord)
-
-				}
+				assert.Equal(t, test.expectedVisibilityRecord, visibilityRecord)
 			})
 		})
 	}
