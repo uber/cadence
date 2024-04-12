@@ -39,6 +39,10 @@ func TestConvertSearchResultToVisibilityRecord(t *testing.T) {
 	columnName := []string{"WorkflowID", "RunID", "WorkflowType", "DomainID", "StartTime", "ExecutionTime", "CloseTime", "CloseStatus", "HistoryLength", "TaskList", "IsCron", "NumClusters", "UpdateTime", "Attr"}
 	closeStatus := types.WorkflowExecutionCloseStatusFailed
 
+	testMemo := p.NewDataBlob(nil, p.VisibilityEncoding)
+	testMemoMarshal, _, err := testMemo.GetVisibilityStoreInfo()
+	assert.NoError(t, err)
+
 	tests := map[string]struct {
 		inputColumnNames         []string
 		inputHit                 []interface{}
@@ -109,7 +113,7 @@ func TestConvertSearchResultToVisibilityRecord(t *testing.T) {
 		"Case4: open wf with everything": {
 			inputColumnNames: columnName,
 			inputHit: []interface{}{"wfid", "rid", "wftype", "domainid", testEarliestTime, testEarliestTime, -1, -1, -1,
-				"tsklst", true, 1, testEarliestTime, fmt.Sprint(`{"CustomStringField": "customA and customB or customC", "CustomDoubleField": 3.14}`)},
+				"tsklst", true, 1, testEarliestTime, fmt.Sprintf(`{"CustomStringField": "customA and customB or customC", "CustomDoubleField": 3.14, "Memo": %s}`, testMemoMarshal)},
 			expectedVisibilityRecord: &p.InternalVisibilityWorkflowExecutionInfo{
 				DomainID:         "domainid",
 				WorkflowType:     "wftype",
@@ -161,6 +165,10 @@ func TestConvertMemo_easeCase(t *testing.T) {
 		},
 		"Case4-2: badEncoding case": {
 			badEncoding: make(chan int),
+			badData:     []byte("test"),
+		},
+		"Case4-3: thrift encoding case": {
+			badEncoding: common.EncodingTypeThriftRW,
 			badData:     []byte("test"),
 		},
 	}

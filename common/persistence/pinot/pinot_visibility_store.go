@@ -61,7 +61,7 @@ const (
 	ExecutionTime        = "ExecutionTime"
 	IsDeleted            = "IsDeleted"   // used for Pinot deletion/rolling upsert only, not visible to user
 	EventTimeMs          = "EventTimeMs" // used for Pinot deletion/rolling upsert only, not visible to user
-	MemoData             = "Memo_Data"
+	Memo                 = "Memo"
 	MemoEncoding         = "Memo_Encoding"
 
 	// used to be micro second
@@ -614,11 +614,11 @@ func createVisibilityMessage(
 
 	if memo != nil {
 		// add memo into search attr
-		memoData, memoEncoding, err := memo.GetVisibilityStoreInfo()
+		memoMarshal, memoEncoding, err := memo.GetVisibilityStoreInfo()
 		if err != nil {
 			return nil, err
 		}
-		SearchAttributes[MemoData] = memoData
+		SearchAttributes[Memo] = memoMarshal
 		SearchAttributes[MemoEncoding] = memoEncoding
 	}
 

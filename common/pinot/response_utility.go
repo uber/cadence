@@ -35,7 +35,7 @@ import (
 )
 
 const (
-	MemoData     = "Memo_Data"
+	Memo         = "Memo"
 	MemoEncoding = "Memo_Encoding"
 )
 
@@ -92,10 +92,10 @@ func ConvertSearchResultToVisibilityRecord(hit []interface{}, columnNames []stri
 	}
 
 	var memo *p.DataBlob
-	if attributeMap[MemoData] != nil {
-		memo, err = convertMemo(attributeMap[MemoData], attributeMap[MemoEncoding])
+	if attributeMap[Memo] != nil {
+		memo, err = convertMemo(attributeMap[Memo], attributeMap[MemoEncoding])
 	}
-	delete(attributeMap, MemoData)     // cleanup after we get memo from search attribute
+	delete(attributeMap, Memo)         // cleanup after we get memo from search attribute
 	delete(attributeMap, MemoEncoding) // cleanup after we get memo from search attribute
 
 	var source *VisibilityRecord
