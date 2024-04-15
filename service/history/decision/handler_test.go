@@ -31,6 +31,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
@@ -38,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	commonConfig "github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
@@ -554,7 +557,7 @@ func (s *DecisionHandlerSuite) TestCreateRecordDecisionTaskStartedResponse() {
 		name        string
 		expectCalls func()
 		expectedErr error
-		queries     int
+		indexes     []string
 	}{
 		{
 			name: "success",
@@ -571,7 +574,7 @@ func (s *DecisionHandlerSuite) TestCreateRecordDecisionTaskStartedResponse() {
 				s.mockMutableState.EXPECT().GetHistorySize()
 			},
 			expectedErr: nil,
-			queries:     2,
+			indexes:     []string{"test-id", "test-id1"},
 		},
 		{
 			name: "failure",
@@ -608,7 +611,10 @@ func (s *DecisionHandlerSuite) TestCreateRecordDecisionTaskStartedResponse() {
 				s.Equal(&types.HistoryEvent{}, resp.DecisionInfo.ScheduledEvent)
 				s.Equal(&types.HistoryEvent{}, resp.DecisionInfo.StartedEvent)
 				s.Equal([]byte{}, resp.BranchToken)
-				s.Equal(test.queries, len(resp.Queries))
+				for _, index := range test.indexes {
+					_, ok := resp.Queries[index]
+					s.True(ok)
+				}
 			}
 		})
 	}
@@ -656,6 +662,84 @@ func (s *DecisionHandlerSuite) TestHandleBufferedQueries_QueryTooLarge() {
 	}
 	s.decisionHandler.handleBufferedQueries(s.mockMutableState, client.GoSDK, client.GoWorkerConsistentQueryVersion, queryResults, false, constants.TestGlobalDomainEntry, false)
 	s.assertQueryCounts(s.queryRegistry, 0, 5, 0, 5)
+}
+
+func (s *DecisionHandlerSuite) TestHandleBufferedQueries_QueryRegistryFailures() {
+	tests := []struct {
+		name                 string
+		expectMockCalls      func()
+		assertCalls          func(logs *observer.ObservedLogs)
+		clientFeatureVersion string
+		queryResults         map[string]*types.WorkflowQueryResult
+	}{
+		{
+			name: "no buffered queries",
+			expectMockCalls: func() {
+				queryRegistry := query.NewMockRegistry(s.controller)
+				s.mockMutableState.EXPECT().GetQueryRegistry().Return(queryRegistry)
+				queryRegistry.EXPECT().HasBufferedQuery().Return(false)
+			},
+			assertCalls: func(logs *observer.ObservedLogs) {},
+		},
+		{
+			name: "set query termination state failed - client unsupported",
+			expectMockCalls: func() {
+				queryRegistry := query.NewMockRegistry(s.controller)
+				s.mockMutableState.EXPECT().GetQueryRegistry().Return(queryRegistry)
+				queryRegistry.EXPECT().HasBufferedQuery().Return(true)
+				queryRegistry.EXPECT().GetBufferedIDs().Return([]string{"some-buffered-id"})
+				queryRegistry.EXPECT().SetTerminationState("some-buffered-id", gomock.Any()).Return(&types.InternalServiceError{Message: "query does not exist"})
+			},
+			assertCalls: func(logs *observer.ObservedLogs) {
+				s.Equal(1, logs.FilterMessage("failed to set query termination state to failed").Len())
+			},
+			clientFeatureVersion: "0.0.0",
+		},
+		{
+			name: "set query termination state failed - query too large",
+			expectMockCalls: func() {
+				queryRegistry := query.NewMockRegistry(s.controller)
+				s.mockMutableState.EXPECT().GetQueryRegistry().Return(queryRegistry)
+				queryRegistry.EXPECT().HasBufferedQuery().Return(true)
+				queryRegistry.EXPECT().GetBufferedIDs().Return([]string{"some-id"})
+				queryRegistry.EXPECT().SetTerminationState("some-id", gomock.Any()).Return(&types.InternalServiceError{Message: "query already in terminal state"}).Times(2)
+			},
+			queryResults:         s.constructQueryResults([]string{"some-id"}, 10*1024*1024),
+			clientFeatureVersion: client.GoWorkerConsistentQueryVersion,
+			assertCalls: func(logs *observer.ObservedLogs) {
+				s.Equal(1, logs.FilterMessage("failed to set query termination state to failed").Len())
+				s.Equal(1, logs.FilterMessage("failed to set query termination state to unblocked").Len())
+			},
+		},
+		{
+			name: "set query termination state unblocked",
+			expectMockCalls: func() {
+				queryRegistry := query.NewMockRegistry(s.controller)
+				s.mockMutableState.EXPECT().GetQueryRegistry().Return(queryRegistry)
+				queryRegistry.EXPECT().HasBufferedQuery().Return(true)
+				queryRegistry.EXPECT().GetBufferedIDs().Return([]string{"some-buffered-id"})
+				queryRegistry.EXPECT().SetTerminationState("some-id", gomock.Any()).Return(&types.InternalServiceError{Message: "query does not exist"})
+				queryRegistry.EXPECT().SetTerminationState("some-buffered-id", gomock.Any()).Return(&types.InternalServiceError{Message: "query already in terminal state"})
+			},
+			clientFeatureVersion: client.GoWorkerConsistentQueryVersion,
+			queryResults:         map[string]*types.WorkflowQueryResult{"some-id": &types.WorkflowQueryResult{}},
+			assertCalls: func(logs *observer.ObservedLogs) {
+				s.Equal(1, logs.FilterMessage("failed to set query termination state to completed").Len())
+				s.Equal(1, logs.FilterMessage("failed to set query termination state to unblocked").Len())
+			},
+		},
+	}
+	for _, test := range tests {
+		s.Run(test.name, func() {
+			core, observedLogs := observer.New(zap.ErrorLevel)
+			logger := zap.New(core)
+			s.decisionHandler.logger = loggerimpl.NewLogger(logger, loggerimpl.WithSampleFunc(func(int) bool { return true }))
+
+			test.expectMockCalls()
+			s.decisionHandler.handleBufferedQueries(s.mockMutableState, client.GoSDK, test.clientFeatureVersion, test.queryResults, false, constants.TestGlobalDomainEntry, false)
+			test.assertCalls(observedLogs)
+		})
+	}
 }
 
 func (s *DecisionHandlerSuite) constructQueryResults(ids []string, resultSize int) map[string]*types.WorkflowQueryResult {
