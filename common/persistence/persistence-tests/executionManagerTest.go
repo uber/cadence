@@ -39,6 +39,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
+	"github.com/uber/cadence/common/persistence"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -243,6 +244,8 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionWithWorkflowRequestsD
 	_, err = s.ExecutionManager.CreateWorkflowExecution(ctx, req)
 	s.Error(err)
 	s.IsType(&p.DuplicateRequestError{}, err)
+	s.Equal(persistence.WorkflowRequestTypeStart, err.(*persistence.DuplicateRequestError).RequestType)
+	s.Equal(runID, err.(*persistence.DuplicateRequestError).RunID)
 	req.WorkflowRequestMode = p.CreateWorkflowRequestModeReplicated
 	_, err = s.ExecutionManager.CreateWorkflowExecution(ctx, req)
 	s.Error(err)
@@ -572,6 +575,8 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionWithWorkflowRequestsD
 	_, err = s.ExecutionManager.UpdateWorkflowExecution(ctx, updateReq)
 	s.Error(err)
 	s.IsType(&p.DuplicateRequestError{}, err)
+	s.Equal(persistence.WorkflowRequestTypeSignal, err.(*persistence.DuplicateRequestError).RequestType)
+	s.Equal(runID, err.(*persistence.DuplicateRequestError).RunID)
 	updateReq.WorkflowRequestMode = p.CreateWorkflowRequestModeReplicated
 	_, err = s.ExecutionManager.UpdateWorkflowExecution(ctx, updateReq)
 	s.Nil(err)

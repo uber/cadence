@@ -20,7 +20,11 @@
 
 package nosqlplugin
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/uber/cadence/common/persistence"
+)
 
 // Condition Errors for NoSQL interfaces
 type (
@@ -34,7 +38,8 @@ type (
 	}
 
 	DuplicateRequest struct {
-		RunID string
+		RequestType persistence.WorkflowRequestType
+		RunID       string
 	}
 
 	WorkflowExecutionAlreadyExists struct {

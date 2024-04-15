@@ -77,7 +77,8 @@ type (
 	}
 
 	DuplicateRequestError struct {
-		RunID string
+		RequestType WorkflowRequestType
+		RunID       string
 	}
 )
 

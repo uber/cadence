@@ -162,9 +162,14 @@ func executeCreateWorkflowBatchTransaction(
 		if !ok {
 			return fmt.Errorf("corrupted data detected. DomainID: %v, WorkflowId: %v, RequestID: %v, RequestType: %v", execution.DomainID, execution.WorkflowID, workflowRequestID, requestRowType)
 		}
+		requestType, err := fromRequestRowType(requestRowType)
+		if err != nil {
+			return err
+		}
 		return &nosqlplugin.WorkflowOperationConditionFailure{
 			DuplicateRequest: &nosqlplugin.DuplicateRequest{
-				RunID: runID.String(),
+				RequestType: requestType,
+				RunID:       runID.String(),
 			},
 		}
 	}
@@ -343,9 +348,14 @@ func executeUpdateWorkflowBatchTransaction(
 		if !ok {
 			return fmt.Errorf("corrupted data detected. DomainID: %v, WorkflowId: %v, RequestID: %v, RequestType: %v", currentWorkflowRequest.Row.DomainID, currentWorkflowRequest.Row.WorkflowID, workflowRequestID, requestRowType)
 		}
+		requestType, err := fromRequestRowType(requestRowType)
+		if err != nil {
+			return err
+		}
 		return &nosqlplugin.WorkflowOperationConditionFailure{
 			DuplicateRequest: &nosqlplugin.DuplicateRequest{
-				RunID: runID.String(),
+				RequestType: requestType,
+				RunID:       runID.String(),
 			},
 		}
 	}
@@ -1467,7 +1477,7 @@ func isRequestRowType(rowType int) bool {
 	return false
 }
 
-func getRequestRowType(requestType persistence.WorkflowRequestType) (int, error) {
+func toRequestRowType(requestType persistence.WorkflowRequestType) (int, error) {
 	switch requestType {
 	case persistence.WorkflowRequestTypeStart:
 		return rowTypeWorkflowRequestStart, nil
@@ -1479,6 +1489,21 @@ func getRequestRowType(requestType persistence.WorkflowRequestType) (int, error)
 		return rowTypeWorkflowRequestReset, nil
 	default:
 		return 0, fmt.Errorf("unknown workflow request type %v", requestType)
+	}
+}
+
+func fromRequestRowType(rowType int) (persistence.WorkflowRequestType, error) {
+	switch rowType {
+	case rowTypeWorkflowRequestStart:
+		return persistence.WorkflowRequestTypeStart, nil
+	case rowTypeWorkflowRequestSignal:
+		return persistence.WorkflowRequestTypeSignal, nil
+	case rowTypeWorkflowRequestCancel:
+		return persistence.WorkflowRequestTypeCancel, nil
+	case rowTypeWorkflowRequestReset:
+		return persistence.WorkflowRequestTypeReset, nil
+	default:
+		return persistence.WorkflowRequestType(0), fmt.Errorf("unknown request row type %v", rowType)
 	}
 }
 
@@ -1499,7 +1524,7 @@ func insertOrUpsertWorkflowRequestRow(
 		return fmt.Errorf("unknown workflow request write mode %v", requests.WriteMode)
 	}
 	for _, row := range requests.Rows {
-		rowType, err := getRequestRowType(row.RequestType)
+		rowType, err := toRequestRowType(row.RequestType)
 		if err != nil {
 			return err
 		}
