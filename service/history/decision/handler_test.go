@@ -23,6 +23,7 @@ package decision
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -390,6 +391,7 @@ func (s *DecisionHandlerSuite) TestHandleDecisionTaskStarted() {
 		mutablestate *persistence.WorkflowMutableState
 		expectCalls  func(h *handlerImpl)
 		expectErr    error
+		assertCalls  func(response *types.RecordDecisionTaskStartedResponse)
 	}{
 		{
 			name:        "fail to retrieve domain From ID",
@@ -399,6 +401,7 @@ func (s *DecisionHandlerSuite) TestHandleDecisionTaskStarted() {
 			mutablestate: &persistence.WorkflowMutableState{
 				ExecutionInfo: &persistence.WorkflowExecutionInfo{},
 			},
+			assertCalls: func(response *types.RecordDecisionTaskStartedResponse) {},
 		},
 		{
 			name:     "failure - decision task already started",
@@ -410,6 +413,7 @@ func (s *DecisionHandlerSuite) TestHandleDecisionTaskStarted() {
 			mutablestate: &persistence.WorkflowMutableState{
 				ExecutionInfo: &persistence.WorkflowExecutionInfo{},
 			},
+			assertCalls: func(response *types.RecordDecisionTaskStartedResponse) {},
 		},
 		{
 			name:     "failure - workflow completed",
@@ -423,6 +427,7 @@ func (s *DecisionHandlerSuite) TestHandleDecisionTaskStarted() {
 					State: 2, //2 == WorkflowStateCompleted
 				},
 			},
+			assertCalls: func(response *types.RecordDecisionTaskStartedResponse) {},
 		},
 		{
 			name:     "failure - decision task already completed",
@@ -437,6 +442,7 @@ func (s *DecisionHandlerSuite) TestHandleDecisionTaskStarted() {
 					NextEventID:        2,
 				},
 			},
+			assertCalls: func(response *types.RecordDecisionTaskStartedResponse) {},
 		},
 		{
 			name:     "failure - cached mutable state is stale",
@@ -452,6 +458,7 @@ func (s *DecisionHandlerSuite) TestHandleDecisionTaskStarted() {
 					DecisionScheduleID: 1,
 				},
 			},
+			assertCalls: func(response *types.RecordDecisionTaskStartedResponse) {},
 		},
 		{
 			name:     "success",
@@ -465,8 +472,43 @@ func (s *DecisionHandlerSuite) TestHandleDecisionTaskStarted() {
 					DecisionScheduleID: 0,
 					NextEventID:        3,
 					DecisionRequestID:  "test-request-id",
+					DecisionAttempt:    1,
 				},
 			},
+			assertCalls: func(resp *types.RecordDecisionTaskStartedResponse) {
+				// expect test.mutablestate.ExecutionInfo.DecisionAttempt
+				s.Equal(int64(1), resp.DecisionInfo.ScheduledEvent.DecisionTaskScheduledEventAttributes.Attempt)
+			},
+		},
+		{
+			name:     "success - decision startedID is empty",
+			domainID: _testDomainUUID,
+			expectCalls: func(h *handlerImpl) {
+				h.shard.(*shard.MockContext).EXPECT().GetEventsCache().Times(1).Return(events.NewMockCache(s.controller))
+				h.shard.(*shard.MockContext).EXPECT().GenerateTransferTaskIDs(gomock.Any()).Times(1).Return([]int64{0}, nil)
+				h.shard.(*shard.MockContext).EXPECT().
+					AppendHistoryV2Events(gomock.Any(), gomock.Any(), _testDomainUUID, types.WorkflowExecution{WorkflowID: _testWorkflowID, RunID: _testRunID}).
+					Return(&persistence.AppendHistoryNodesResponse{}, nil)
+				h.shard.(*shard.MockContext).EXPECT().UpdateWorkflowExecution(gomock.Any(), gomock.Any()).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil)
+				h.shard.(*shard.MockContext).EXPECT().GetShardID().Return(_testShardID)
+				engine := engine.NewMockEngine(s.controller)
+				h.shard.(*shard.MockContext).EXPECT().GetEngine().Times(3).Return(engine)
+				engine.EXPECT().NotifyNewHistoryEvent(gomock.Any())
+				engine.EXPECT().NotifyNewTransferTasks(gomock.Any())
+				engine.EXPECT().NotifyNewTimerTasks(gomock.Any())
+				engine.EXPECT().NotifyNewCrossClusterTasks(gomock.Any())
+				engine.EXPECT().NotifyNewReplicationTasks(gomock.Any())
+			},
+			expectErr: nil,
+			mutablestate: &persistence.WorkflowMutableState{
+				ExecutionInfo: &persistence.WorkflowExecutionInfo{
+					DecisionStartedID:  -23,
+					DecisionScheduleID: 0,
+					NextEventID:        2,
+					State:              0,
+				},
+			},
+			assertCalls: func(resp *types.RecordDecisionTaskStartedResponse) {},
 		},
 	}
 
@@ -482,10 +524,9 @@ func (s *DecisionHandlerSuite) TestHandleDecisionTaskStarted() {
 				TaskID:     0,
 				RequestID:  "test-request-id",
 				PollRequest: &types.PollForDecisionTaskRequest{
-					Domain:         test.domainID,
-					TaskList:       nil,
-					Identity:       "",
-					BinaryChecksum: "",
+					Domain:   test.domainID,
+					TaskList: nil,
+					Identity: "test-identity",
 				},
 			}
 			shardContext := shard.NewMockContext(s.controller)
@@ -498,6 +539,76 @@ func (s *DecisionHandlerSuite) TestHandleDecisionTaskStarted() {
 			s.Equal(test.expectErr, err)
 			if err == nil {
 				s.NotNil(resp)
+				s.Equal(test.mutablestate.ExecutionInfo.DecisionScheduleID, resp.ScheduledEventID)
+				s.Equal(test.mutablestate.ExecutionInfo.DecisionStartedID, resp.StartedEventID)
+				s.Equal(test.mutablestate.ExecutionInfo.NextEventID, resp.NextEventID)
+				s.Equal(test.mutablestate.ExecutionInfo.TaskList, resp.WorkflowExecutionTaskList.Name)
+			}
+			test.assertCalls(resp)
+		})
+	}
+}
+
+func (s *DecisionHandlerSuite) TestCreateRecordDecisionTaskStartedResponse() {
+	tests := []struct {
+		name        string
+		expectCalls func()
+		expectedErr error
+		queries     int
+	}{
+		{
+			name: "success",
+			expectCalls: func() {
+				s.mockMutableState.EXPECT().GetWorkflowType().Return(&types.WorkflowType{})
+				s.mockMutableState.EXPECT().GetNextEventID().Return(int64(1))
+				s.mockMutableState.EXPECT().CreateTransientDecisionEvents(gomock.Any(), "test-identity").Return(&types.HistoryEvent{}, &types.HistoryEvent{})
+				s.mockMutableState.EXPECT().GetCurrentBranchToken().Return([]byte{}, nil)
+				registry := query.NewMockRegistry(s.controller)
+				s.mockMutableState.EXPECT().GetQueryRegistry().Return(registry)
+				registry.EXPECT().GetBufferedIDs().Return([]string{"test-id", "test-id1", "test-id2"})
+				registry.EXPECT().GetQueryInput(gomock.Any()).Return(&types.WorkflowQuery{}, nil).Times(2)
+				registry.EXPECT().GetQueryInput(gomock.Any()).Return(nil, &types.InternalServiceError{Message: "query does not exist"})
+				s.mockMutableState.EXPECT().GetHistorySize()
+			},
+			expectedErr: nil,
+			queries:     2,
+		},
+		{
+			name: "failure",
+			expectCalls: func() {
+				s.mockMutableState.EXPECT().GetWorkflowType().Return(&types.WorkflowType{})
+				s.mockMutableState.EXPECT().GetNextEventID().Return(int64(1))
+				s.mockMutableState.EXPECT().CreateTransientDecisionEvents(gomock.Any(), "test-identity").Return(&types.HistoryEvent{}, &types.HistoryEvent{})
+				s.mockMutableState.EXPECT().GetCurrentBranchToken().Return([]byte{}, &types.BadRequestError{Message: fmt.Sprintf("getting branch index: %d, available branch count: %d", 0, 0)})
+			},
+			expectedErr: &types.BadRequestError{Message: fmt.Sprintf("getting branch index: %d, available branch count: %d", 0, 0)},
+		},
+	}
+
+	for _, test := range tests {
+		s.Run(test.name, func() {
+			decision := &execution.DecisionInfo{
+				Version:                    0,
+				ScheduleID:                 1,
+				StartedID:                  2,
+				RequestID:                  constants.TestRequestID,
+				DecisionTimeout:            0,
+				TaskList:                   "test-tasklist",
+				Attempt:                    1,
+				ScheduledTimestamp:         0,
+				StartedTimestamp:           0,
+				OriginalScheduledTimestamp: 0,
+			}
+			test.expectCalls()
+			resp, err := s.decisionHandler.createRecordDecisionTaskStartedResponse(constants.TestDomainID, s.mockMutableState, decision, "test-identity")
+			s.Equal(test.expectedErr, err)
+			if err != nil {
+				s.Nil(resp)
+			} else {
+				s.Equal(&types.HistoryEvent{}, resp.DecisionInfo.ScheduledEvent)
+				s.Equal(&types.HistoryEvent{}, resp.DecisionInfo.StartedEvent)
+				s.Equal([]byte{}, resp.BranchToken)
+				s.Equal(test.queries, len(resp.Queries))
 			}
 		})
 	}
