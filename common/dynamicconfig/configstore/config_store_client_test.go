@@ -37,6 +37,7 @@ import (
 	dc "github.com/uber/cadence/common/dynamicconfig"
 	c "github.com/uber/cadence/common/dynamicconfig/configstore/config"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/persistence"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
@@ -1296,6 +1297,52 @@ func TestValidateKeyDataBlobPair(t *testing.T) {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestNewConfigStoreClient(t *testing.T) {
+	tests := []struct {
+		desc              string
+		clientConfig      *c.ClientConfig
+		persistenceConfig *config.Persistence
+		configType        persistence.ConfigType
+		logger            log.Logger
+		checkError        bool
+	}{
+		{
+			desc:              "return error when persistenceConfig is nil",
+			clientConfig:      nil,
+			persistenceConfig: nil,
+			checkError:        true,
+		},
+		{
+			desc:              "return error when defaultstore not exists in persistenceConfig datastores",
+			clientConfig:      &c.ClientConfig{},
+			persistenceConfig: &config.Persistence{DefaultStore: "test"},
+			configType:        0,
+			logger:            log.NewNoop(),
+			checkError:        true,
+		},
+		{
+			desc:              "return error when invalid datastore configuration provided",
+			clientConfig:      &c.ClientConfig{},
+			persistenceConfig: &config.Persistence{DefaultStore: "test", DataStores: map[string]config.DataStore{"test": {}}},
+			configType:        0,
+			logger:            log.NewNoop(),
+			checkError:        true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			client, err := NewConfigStoreClient(test.clientConfig, test.persistenceConfig, test.logger, test.configType)
+			if test.checkError {
+				assert.Error(t, err)
+				assert.Nil(t, client)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, client)
 			}
 		})
 	}
