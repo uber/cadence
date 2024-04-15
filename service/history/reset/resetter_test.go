@@ -642,7 +642,7 @@ func (s *workflowResetterSuite) TestReapplyEvents() {
 				attr.GetSignalName(),
 				attr.GetInput(),
 				attr.GetIdentity(),
-				attr.GetRequestID(),
+				"",
 			).Return(&types.HistoryEvent{}, nil).Times(1)
 		}
 	}

@@ -1805,6 +1805,8 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(
 
 	event := startEvent.WorkflowExecutionStartedEventAttributes
 	if event.GetRequestID() != "" {
+		// prefer requestID from history event, ideally we should remove the requestID parameter
+		// removing it may or may not be backward compatible, so keep it now
 		requestID = event.GetRequestID()
 	}
 	e.executionInfo.CreateRequestID = requestID

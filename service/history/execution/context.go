@@ -422,6 +422,7 @@ func (c *contextImpl) CreateWorkflowExecution(
 	}()
 	err := validateWorkflowRequestsAndMode(newWorkflow.WorkflowRequests, workflowRequestMode)
 	if err != nil {
+		// TODO(CDNC-8519): convert it to an error after verification in production
 		c.logger.Error("workflow requests and mode validation error", tag.Error(err))
 	}
 	domain, errorDomainName := c.shard.GetDomainCache().GetDomainName(c.domainID)
@@ -511,6 +512,7 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 			return err
 		}
 		if len(resetWorkflow.WorkflowRequests) != 0 && len(newWorkflow.WorkflowRequests) != 0 {
+			// TODO(CDNC-8519): convert it to an error after verification in production
 			c.logger.Error("Workflow reqeusts are only expected to be generated from one workflow for ConflictResolveWorkflowExecution")
 		}
 		newWorkflowSizeSize := newContext.GetHistorySize()
@@ -540,6 +542,7 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 			return err
 		}
 		if len(currentWorkflow.WorkflowRequests) != 0 {
+			// TODO(CDNC-8519): convert it to an error after verification in production
 			c.logger.Error("workflow requests are not expected from current workflow for ConflictResolveWorkflowExecution")
 		}
 		currentWorkflowSize := currentContext.GetHistorySize()
@@ -677,7 +680,7 @@ func (c *contextImpl) UpdateWorkflowExecutionTasks(
 		}
 	}
 	if len(currentWorkflow.WorkflowRequests) != 0 {
-		// TODO: convert this log to an error once we enable this feature for a long time in production
+		// TODO(CDNC-8519): convert it to an error after verification in production
 		c.logger.Error("UpdateWorkflowExecutionTask can only be used for persisting new workflow tasks, but found new workflow requests")
 	}
 	currentWorkflow.ExecutionStats = &persistence.ExecutionStats{
@@ -728,6 +731,7 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 	}
 	err = validateWorkflowRequestsAndMode(currentWorkflow.WorkflowRequests, workflowRequestMode)
 	if err != nil {
+		// TODO(CDNC-8519): convert it to an error after verification in production
 		c.logger.Error("workflow requests and mode validation error", tag.Error(err))
 	}
 	var persistedBlobs events.PersistedBlobs
@@ -765,13 +769,13 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 			return err
 		}
 		if len(newWorkflow.WorkflowRequests) != 0 && len(currentWorkflow.WorkflowRequests) != 0 {
-			// TODO: convert it to an error if we've verified in production
+			// TODO(CDNC-8519): convert it to an error after verification in production
 			c.logger.Error("Workflow reqeusts are only expected to be generated from one workflow for UpdateWorkflowExecution")
 		}
 
 		err := validateWorkflowRequestsAndMode(newWorkflow.WorkflowRequests, workflowRequestMode)
 		if err != nil {
-			// TODO: convert it to an error if we've verified in production
+			// TODO(CDNC-8519): convert it to an error after verification in production
 			c.logger.Error("workflow requests and mode validation error", tag.Error(err))
 		}
 		newWorkflowSizeSize := newContext.GetHistorySize()
@@ -1404,17 +1408,18 @@ func isOperationPossiblySuccessfulError(err error) bool {
 }
 
 func validateWorkflowRequestsAndMode(requests []*persistence.WorkflowRequest, mode persistence.CreateWorkflowRequestMode) error {
-	if mode == persistence.CreateWorkflowRequestModeNew {
-		if len(requests) > 2 {
-			return &types.InternalServiceError{Message: "Too many workflow requests for a single API request."}
-		} else if len(requests) == 2 {
-			// SignalWithStartWorkflow API can generate 2 workflow requests
-			if (requests[0].RequestType == persistence.WorkflowRequestTypeStart && requests[1].RequestType == persistence.WorkflowRequestTypeSignal) ||
-				(requests[1].RequestType == persistence.WorkflowRequestTypeStart && requests[0].RequestType == persistence.WorkflowRequestTypeSignal) {
-				return nil
-			}
-			return &types.InternalServiceError{Message: "Too many workflow requests for a single API request."}
+	if mode != persistence.CreateWorkflowRequestModeNew {
+		return nil
+	}
+	if len(requests) > 2 {
+		return &types.InternalServiceError{Message: "Too many workflow requests for a single API request."}
+	} else if len(requests) == 2 {
+		// SignalWithStartWorkflow API can generate 2 workflow requests
+		if (requests[0].RequestType == persistence.WorkflowRequestTypeStart && requests[1].RequestType == persistence.WorkflowRequestTypeSignal) ||
+			(requests[1].RequestType == persistence.WorkflowRequestTypeStart && requests[0].RequestType == persistence.WorkflowRequestTypeSignal) {
+			return nil
 		}
+		return &types.InternalServiceError{Message: "Too many workflow requests for a single API request."}
 	}
 	return nil
 }

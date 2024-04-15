@@ -790,9 +790,13 @@ func (e *historyEngineImpl) startWorkflowHelper(
 		persistence.CreateWorkflowRequestModeNew,
 	)
 	if t, ok := err.(*persistence.DuplicateRequestError); ok {
-		return &types.StartWorkflowExecutionResponse{
-			RunID: t.RunID,
-		}, nil
+		if t.RequestType == persistence.WorkflowRequestTypeStart || (isSignalWithStart && t.RequestType == persistence.WorkflowRequestTypeSignal) {
+			return &types.StartWorkflowExecutionResponse{
+				RunID: t.RunID,
+			}, nil
+		}
+		e.logger.Error("A bug is detected for idempotency improvement", tag.Dynamic("request-type", t.RequestType))
+		return nil, t
 	}
 	// handle already started error
 	if t, ok := err.(*persistence.WorkflowExecutionAlreadyStartedError); ok {
@@ -862,9 +866,13 @@ func (e *historyEngineImpl) startWorkflowHelper(
 			persistence.CreateWorkflowRequestModeNew,
 		)
 		if t, ok := err.(*persistence.DuplicateRequestError); ok {
-			return &types.StartWorkflowExecutionResponse{
-				RunID: t.RunID,
-			}, nil
+			if t.RequestType == persistence.WorkflowRequestTypeStart || (isSignalWithStart && t.RequestType == persistence.WorkflowRequestTypeSignal) {
+				return &types.StartWorkflowExecutionResponse{
+					RunID: t.RunID,
+				}, nil
+			}
+			e.logger.Error("A bug is detected for idempotency improvement", tag.Dynamic("request-type", t.RequestType))
+			return nil, t
 		}
 	}
 	if err != nil {
@@ -2633,7 +2641,11 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 			// the history and try the operation again.
 			if err := wfContext.UpdateWorkflowExecutionAsActive(ctx, e.shard.GetTimeSource().Now()); err != nil {
 				if t, ok := err.(*persistence.DuplicateRequestError); ok {
-					return &types.StartWorkflowExecutionResponse{RunID: t.RunID}, nil
+					if t.RequestType == persistence.WorkflowRequestTypeSignal {
+						return &types.StartWorkflowExecutionResponse{RunID: t.RunID}, nil
+					}
+					e.logger.Error("A bug is detected for idempotency improvement", tag.Dynamic("request-type", t.RequestType))
+					return nil, t
 				}
 				if execution.IsConflictError(err) {
 					continue Just_Signal_Loop
@@ -3030,9 +3042,13 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 		request.GetSkipSignalReapply(),
 	); err != nil {
 		if t, ok := err.(*persistence.DuplicateRequestError); ok {
-			return &types.ResetWorkflowExecutionResponse{
-				RunID: t.RunID,
-			}, nil
+			if t.RequestType == persistence.WorkflowRequestTypeReset {
+				return &types.ResetWorkflowExecutionResponse{
+					RunID: t.RunID,
+				}, nil
+			}
+			e.logger.Error("A bug is detected for idempotency improvement", tag.Dynamic("request-type", t.RequestType))
+			return nil, t
 		}
 		return nil, err
 	}
