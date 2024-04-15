@@ -472,10 +472,9 @@ func (s *DecisionHandlerSuite) TestHandleDecisionTaskStarted() {
 			expectErr: nil,
 			mutablestate: &persistence.WorkflowMutableState{
 				ExecutionInfo: &persistence.WorkflowExecutionInfo{
-					DecisionScheduleID: 0,
-					NextEventID:        3,
-					DecisionRequestID:  "test-request-id",
-					DecisionAttempt:    1,
+					NextEventID:       3,
+					DecisionRequestID: "test-request-id",
+					DecisionAttempt:   1,
 				},
 			},
 			assertCalls: func(resp *types.RecordDecisionTaskStartedResponse) {
@@ -505,10 +504,8 @@ func (s *DecisionHandlerSuite) TestHandleDecisionTaskStarted() {
 			expectErr: nil,
 			mutablestate: &persistence.WorkflowMutableState{
 				ExecutionInfo: &persistence.WorkflowExecutionInfo{
-					DecisionStartedID:  -23,
-					DecisionScheduleID: 0,
-					NextEventID:        2,
-					State:              0,
+					DecisionStartedID: -23,
+					NextEventID:       2,
 				},
 			},
 			assertCalls: func(resp *types.RecordDecisionTaskStartedResponse) {},
@@ -523,12 +520,9 @@ func (s *DecisionHandlerSuite) TestHandleDecisionTaskStarted() {
 					WorkflowID: _testWorkflowID,
 					RunID:      _testRunID,
 				},
-				ScheduleID: 0,
-				TaskID:     0,
-				RequestID:  "test-request-id",
+				RequestID: "test-request-id",
 				PollRequest: &types.PollForDecisionTaskRequest{
 					Domain:   test.domainID,
-					TaskList: nil,
 					Identity: "test-identity",
 				},
 			}
@@ -591,16 +585,11 @@ func (s *DecisionHandlerSuite) TestCreateRecordDecisionTaskStartedResponse() {
 	for _, test := range tests {
 		s.Run(test.name, func() {
 			decision := &execution.DecisionInfo{
-				Version:                    0,
-				ScheduleID:                 1,
-				StartedID:                  2,
-				RequestID:                  constants.TestRequestID,
-				DecisionTimeout:            0,
-				TaskList:                   "test-tasklist",
-				Attempt:                    1,
-				ScheduledTimestamp:         0,
-				StartedTimestamp:           0,
-				OriginalScheduledTimestamp: 0,
+				ScheduleID: 1,
+				StartedID:  2,
+				RequestID:  constants.TestRequestID,
+				TaskList:   "test-tasklist",
+				Attempt:    1,
 			}
 			test.expectCalls()
 			resp, err := s.decisionHandler.createRecordDecisionTaskStartedResponse(constants.TestDomainID, s.mockMutableState, decision, "test-identity")
