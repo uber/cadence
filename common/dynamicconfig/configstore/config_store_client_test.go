@@ -45,7 +45,8 @@ import (
 )
 
 const (
-	retryAttempts = 2
+	retryAttempts                = 2
+	unknownKey    unknownKeyType = 0
 )
 
 type configStoreClientSuite struct {
@@ -204,6 +205,21 @@ func (s *configStoreClientSuite) SetupTest() {
 									Value: &types.DataBlob{
 										EncodingType: types.EncodingTypeJSON.Ptr(),
 										Data:         jsonMarshalHelper("random tasklist"),
+									},
+								},
+							},
+						},
+						{
+							Value: &types.DataBlob{
+								EncodingType: types.EncodingTypeJSON.Ptr(),
+								Data:         jsonMarshalHelper(10),
+							},
+							Filters: []*types.DynamicConfigFilter{
+								{
+									Name: "DomainName",
+									Value: &types.DataBlob{
+										EncodingType: types.EncodingTypeJSON.Ptr(),
+										Data:         jsonMarshalHelper("wrong-type-domain"),
 									},
 								},
 							},
@@ -465,6 +481,13 @@ func (s *configStoreClientSuite) TestGetIntValue_WrongType() {
 	s.Equal(dc.TestGetIntPropertyKey.DefaultInt(), v)
 }
 
+func (s *configStoreClientSuite) TestGetIntValueNonExistentKey() {
+	defaultTestSetup(s)
+	v, err := s.client.GetIntValue(dc.UnknownIntKey, nil)
+	s.Equal(err, dc.NotFoundError)
+	s.Equal(dc.UnknownIntKey.DefaultInt(), v)
+}
+
 func (s *configStoreClientSuite) TestGetFloatValue() {
 	defaultTestSetup(s)
 	v, err := s.client.GetFloatValue(dc.TestGetFloat64PropertyKey, nil)
@@ -482,11 +505,25 @@ func (s *configStoreClientSuite) TestGetFloatValue_WrongType() {
 	s.Equal(dc.TestGetFloat64PropertyKey.DefaultFloat(), v)
 }
 
+func (s *configStoreClientSuite) TestGetFloatValueNonExistentKey() {
+	defaultTestSetup(s)
+	v, err := s.client.GetFloatValue(dc.UnknownFloatKey, nil)
+	s.Equal(err, dc.NotFoundError)
+	s.Equal(dc.UnknownFloatKey.DefaultFloat(), v)
+}
+
 func (s *configStoreClientSuite) TestGetBoolValue() {
 	defaultTestSetup(s)
 	v, err := s.client.GetBoolValue(dc.TestGetBoolPropertyKey, nil)
 	s.NoError(err)
 	s.Equal(false, v)
+}
+
+func (s *configStoreClientSuite) TestGetBoolValueNonExistentKey() {
+	defaultTestSetup(s)
+	v, err := s.client.GetBoolValue(dc.UnknownBoolKey, nil)
+	s.Equal(dc.NotFoundError, err)
+	s.Equal(dc.UnknownBoolKey.DefaultValue(), v)
 }
 
 func (s *configStoreClientSuite) TestGetStringValue() {
@@ -497,6 +534,13 @@ func (s *configStoreClientSuite) TestGetStringValue() {
 	v, err := s.client.GetStringValue(dc.TestGetStringPropertyKey, filters)
 	s.NoError(err)
 	s.Equal("constrained-string", v)
+}
+
+func (s *configStoreClientSuite) TestGetStringValueNonExistentKey() {
+	defaultTestSetup(s)
+	v, err := s.client.GetStringValue(dc.UnknownStringKey, nil)
+	s.Equal(dc.NotFoundError, err)
+	s.Equal(dc.UnknownStringKey.DefaultValue(), v)
 }
 
 func (s *configStoreClientSuite) TestGetMapValue() {
@@ -517,6 +561,13 @@ func (s *configStoreClientSuite) TestGetMapValue() {
 	s.Equal(expectedVal, v)
 }
 
+func (s *configStoreClientSuite) TestGetMapValueNonExistentKey() {
+	defaultTestSetup(s)
+	v, err := s.client.GetMapValue(dc.UnknownMapKey, nil)
+	s.Equal(dc.NotFoundError, err)
+	s.Equal(dc.UnknownMapKey.DefaultValue(), v)
+}
+
 func (s *configStoreClientSuite) TestGetMapValue_WrongType() {
 	defaultTestSetup(s)
 	filters := map[dc.Filter]interface{}{
@@ -532,6 +583,13 @@ func (s *configStoreClientSuite) TestGetDurationValue() {
 	v, err := s.client.GetDurationValue(dc.TestGetDurationPropertyKey, nil)
 	s.NoError(err)
 	s.Equal(time.Minute, v)
+}
+
+func (s *configStoreClientSuite) TestGetDurationValueNonExistentKey() {
+	defaultTestSetup(s)
+	v, err := s.client.GetDurationValue(dc.UnknownDurationKey, nil)
+	s.Equal(dc.NotFoundError, err)
+	s.Equal(dc.UnknownDurationKey.DefaultValue(), v)
 }
 
 func (s *configStoreClientSuite) TestGetDurationValue_NotStringRepresentation() {
@@ -1147,6 +1205,24 @@ func TestConvertFromDataBlob(t *testing.T) {
 	}
 }
 
+type unknownKeyType int
+
+func (uk unknownKeyType) String() string {
+	return ""
+}
+
+func (uk unknownKeyType) Description() string {
+	return ""
+}
+
+func (uk unknownKeyType) DefaultValue() interface{} {
+	return struct{}{}
+}
+
+func (uk unknownKeyType) Filters() []dc.Filter {
+	return nil
+}
+
 func TestValidateKeyDataBlobPair(t *testing.T) {
 	tests := []struct {
 		desc       string
@@ -1288,6 +1364,15 @@ func TestValidateKeyDataBlobPair(t *testing.T) {
 				Data:         jsonMarshalHelper([]interface{}{1, 2, 3}),
 			},
 			checkError: false,
+		},
+		{
+			desc: "return error for unknown key",
+			key:  unknownKey,
+			blob: &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         jsonMarshalHelper(1),
+			},
+			checkError: true,
 		},
 	}
 	for _, test := range tests {
