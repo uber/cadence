@@ -32,9 +32,8 @@ import (
 )
 
 const (
-	Memo         = "Memo"
-	MemoEncoding = "Encoding"
-	Attr         = "Attr"
+	Memo = "Memo"
+	Attr = "Attr"
 )
 
 func buildMap(hit []interface{}, columnNames []string) map[string]interface{} {
