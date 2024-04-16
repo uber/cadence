@@ -24,12 +24,14 @@ package persistence
 
 import (
 	"context"
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
-	"github.com/uber/cadence/common/backoff"
-	"github.com/uber/cadence/common/types"
 	"testing"
 	"time"
+
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/types"
 )
 
 func TestPersistenceRetryerListConcreteExecutions(t *testing.T) {
