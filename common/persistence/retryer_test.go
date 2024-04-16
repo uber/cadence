@@ -36,12 +36,12 @@ func TestPersistenceRetryerListConcreteExecutions(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	tests := map[string]struct {
 		request                        *ListConcreteExecutionsRequest
-		mockExecutionManager           ExecutionManager
+		mockExecutionManager           *MockExecutionManager
 		mockExecutionManagerAccordance func(mockExecutionManager *MockExecutionManager)
 		expectedResponse               *ListConcreteExecutionsResponse
 		expectedError                  error
 	}{
-		"Case 1: Success": {
+		"Success": {
 			request:              &ListConcreteExecutionsRequest{},
 			mockExecutionManager: NewMockExecutionManager(ctrl),
 			mockExecutionManagerAccordance: func(mockExecutionManager *MockExecutionManager) {
@@ -50,7 +50,7 @@ func TestPersistenceRetryerListConcreteExecutions(t *testing.T) {
 			expectedResponse: &ListConcreteExecutionsResponse{},
 			expectedError:    nil,
 		},
-		"Case 2: Transient Error": {
+		"Transient Error": {
 			request:              &ListConcreteExecutionsRequest{},
 			mockExecutionManager: NewMockExecutionManager(ctrl),
 			mockExecutionManagerAccordance: func(mockExecutionManager *MockExecutionManager) {
@@ -62,7 +62,7 @@ func TestPersistenceRetryerListConcreteExecutions(t *testing.T) {
 			expectedResponse: &ListConcreteExecutionsResponse{},
 			expectedError:    nil,
 		},
-		"Case 3: Fatal Error": {
+		"Fatal Error": {
 			request:              &ListConcreteExecutionsRequest{},
 			mockExecutionManager: NewMockExecutionManager(ctrl),
 			mockExecutionManagerAccordance: func(mockExecutionManager *MockExecutionManager) {
@@ -75,7 +75,7 @@ func TestPersistenceRetryerListConcreteExecutions(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			if test.mockExecutionManager != nil {
-				test.mockExecutionManagerAccordance(test.mockExecutionManager.(*MockExecutionManager))
+				test.mockExecutionManagerAccordance(test.mockExecutionManager)
 			}
 			retryer := NewPersistenceRetryer(test.mockExecutionManager, NewMockHistoryManager(ctrl), backoff.NewExponentialRetryPolicy(time.Nanosecond))
 
@@ -90,12 +90,12 @@ func TestPersistenceRetryerGetWorkflowExecution(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	tests := map[string]struct {
 		request                        *GetWorkflowExecutionRequest
-		mockExecutionManager           ExecutionManager
+		mockExecutionManager           *MockExecutionManager
 		mockExecutionManagerAccordance func(mockExecutionManager *MockExecutionManager)
 		expectedResponse               *GetWorkflowExecutionResponse
 		expectedError                  error
 	}{
-		"Case 1: Success": {
+		"Success": {
 			request:              &GetWorkflowExecutionRequest{},
 			mockExecutionManager: NewMockExecutionManager(ctrl),
 			mockExecutionManagerAccordance: func(mockExecutionManager *MockExecutionManager) {
@@ -104,7 +104,7 @@ func TestPersistenceRetryerGetWorkflowExecution(t *testing.T) {
 			expectedResponse: &GetWorkflowExecutionResponse{},
 			expectedError:    nil,
 		},
-		"Case 2: Transient Error": {
+		"Transient Error": {
 			request:              &GetWorkflowExecutionRequest{},
 			mockExecutionManager: NewMockExecutionManager(ctrl),
 			mockExecutionManagerAccordance: func(mockExecutionManager *MockExecutionManager) {
@@ -116,7 +116,7 @@ func TestPersistenceRetryerGetWorkflowExecution(t *testing.T) {
 			expectedResponse: &GetWorkflowExecutionResponse{},
 			expectedError:    nil,
 		},
-		"Case 3: Fatal Error": {
+		"Fatal Error": {
 			request:              &GetWorkflowExecutionRequest{},
 			mockExecutionManager: NewMockExecutionManager(ctrl),
 			mockExecutionManagerAccordance: func(mockExecutionManager *MockExecutionManager) {
@@ -129,7 +129,7 @@ func TestPersistenceRetryerGetWorkflowExecution(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			if test.mockExecutionManager != nil {
-				test.mockExecutionManagerAccordance(test.mockExecutionManager.(*MockExecutionManager))
+				test.mockExecutionManagerAccordance(test.mockExecutionManager)
 			}
 			retryer := NewPersistenceRetryer(test.mockExecutionManager, NewMockHistoryManager(ctrl), backoff.NewExponentialRetryPolicy(time.Nanosecond))
 
@@ -144,12 +144,12 @@ func TestPersistenceRetryerGetCurrentExecution(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	tests := map[string]struct {
 		request                        *GetCurrentExecutionRequest
-		mockExecutionManager           ExecutionManager
+		mockExecutionManager           *MockExecutionManager
 		mockExecutionManagerAccordance func(mockExecutionManager *MockExecutionManager)
 		expectedResponse               *GetCurrentExecutionResponse
 		expectedError                  error
 	}{
-		"Case 1: Success": {
+		"Success": {
 			request:              &GetCurrentExecutionRequest{},
 			mockExecutionManager: NewMockExecutionManager(ctrl),
 			mockExecutionManagerAccordance: func(mockExecutionManager *MockExecutionManager) {
@@ -158,7 +158,7 @@ func TestPersistenceRetryerGetCurrentExecution(t *testing.T) {
 			expectedResponse: &GetCurrentExecutionResponse{},
 			expectedError:    nil,
 		},
-		"Case 2: Transient Error": {
+		"Transient Error": {
 			request:              &GetCurrentExecutionRequest{},
 			mockExecutionManager: NewMockExecutionManager(ctrl),
 			mockExecutionManagerAccordance: func(mockExecutionManager *MockExecutionManager) {
@@ -170,7 +170,7 @@ func TestPersistenceRetryerGetCurrentExecution(t *testing.T) {
 			expectedResponse: &GetCurrentExecutionResponse{},
 			expectedError:    nil,
 		},
-		"Case 3: Fatal Error": {
+		"Fatal Error": {
 			request:              &GetCurrentExecutionRequest{},
 			mockExecutionManager: NewMockExecutionManager(ctrl),
 			mockExecutionManagerAccordance: func(mockExecutionManager *MockExecutionManager) {
@@ -183,7 +183,7 @@ func TestPersistenceRetryerGetCurrentExecution(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			if test.mockExecutionManager != nil {
-				test.mockExecutionManagerAccordance(test.mockExecutionManager.(*MockExecutionManager))
+				test.mockExecutionManagerAccordance(test.mockExecutionManager)
 			}
 			retryer := NewPersistenceRetryer(test.mockExecutionManager, NewMockHistoryManager(ctrl), backoff.NewExponentialRetryPolicy(time.Nanosecond))
 
@@ -198,12 +198,12 @@ func TestPersistenceRetryerListCurrentExecutions(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	tests := map[string]struct {
 		request                        *ListCurrentExecutionsRequest
-		mockExecutionManager           ExecutionManager
+		mockExecutionManager           *MockExecutionManager
 		mockExecutionManagerAccordance func(mockExecutionManager *MockExecutionManager)
 		expectedResponse               *ListCurrentExecutionsResponse
 		expectedError                  error
 	}{
-		"Case 1: Success": {
+		"Success": {
 			request:              &ListCurrentExecutionsRequest{},
 			mockExecutionManager: NewMockExecutionManager(ctrl),
 			mockExecutionManagerAccordance: func(mockExecutionManager *MockExecutionManager) {
@@ -212,7 +212,7 @@ func TestPersistenceRetryerListCurrentExecutions(t *testing.T) {
 			expectedResponse: &ListCurrentExecutionsResponse{},
 			expectedError:    nil,
 		},
-		"Case 2: Transient Error": {
+		"Transient Error": {
 			request:              &ListCurrentExecutionsRequest{},
 			mockExecutionManager: NewMockExecutionManager(ctrl),
 			mockExecutionManagerAccordance: func(mockExecutionManager *MockExecutionManager) {
@@ -224,7 +224,7 @@ func TestPersistenceRetryerListCurrentExecutions(t *testing.T) {
 			expectedResponse: &ListCurrentExecutionsResponse{},
 			expectedError:    nil,
 		},
-		"Case 3: Fatal Error": {
+		"Fatal Error": {
 			request:              &ListCurrentExecutionsRequest{},
 			mockExecutionManager: NewMockExecutionManager(ctrl),
 			mockExecutionManagerAccordance: func(mockExecutionManager *MockExecutionManager) {
@@ -237,7 +237,7 @@ func TestPersistenceRetryerListCurrentExecutions(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			if test.mockExecutionManager != nil {
-				test.mockExecutionManagerAccordance(test.mockExecutionManager.(*MockExecutionManager))
+				test.mockExecutionManagerAccordance(test.mockExecutionManager)
 			}
 			retryer := NewPersistenceRetryer(test.mockExecutionManager, NewMockHistoryManager(ctrl), backoff.NewExponentialRetryPolicy(time.Nanosecond))
 
@@ -252,12 +252,12 @@ func TestPersistenceRetryerIsWorkflowExecutionExists(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	tests := map[string]struct {
 		request                        *IsWorkflowExecutionExistsRequest
-		mockExecutionManager           ExecutionManager
+		mockExecutionManager           *MockExecutionManager
 		mockExecutionManagerAccordance func(mockExecutionManager *MockExecutionManager)
 		expectedResponse               *IsWorkflowExecutionExistsResponse
 		expectedError                  error
 	}{
-		"Case 1: Success": {
+		"Success": {
 			request:              &IsWorkflowExecutionExistsRequest{},
 			mockExecutionManager: NewMockExecutionManager(ctrl),
 			mockExecutionManagerAccordance: func(mockExecutionManager *MockExecutionManager) {
@@ -266,7 +266,7 @@ func TestPersistenceRetryerIsWorkflowExecutionExists(t *testing.T) {
 			expectedResponse: &IsWorkflowExecutionExistsResponse{},
 			expectedError:    nil,
 		},
-		"Case 2: Transient Error": {
+		"Transient Error": {
 			request:              &IsWorkflowExecutionExistsRequest{},
 			mockExecutionManager: NewMockExecutionManager(ctrl),
 			mockExecutionManagerAccordance: func(mockExecutionManager *MockExecutionManager) {
@@ -278,7 +278,7 @@ func TestPersistenceRetryerIsWorkflowExecutionExists(t *testing.T) {
 			expectedResponse: &IsWorkflowExecutionExistsResponse{},
 			expectedError:    nil,
 		},
-		"Case 3: Fatal Error": {
+		"Fatal Error": {
 			request:              &IsWorkflowExecutionExistsRequest{},
 			mockExecutionManager: NewMockExecutionManager(ctrl),
 			mockExecutionManagerAccordance: func(mockExecutionManager *MockExecutionManager) {
@@ -291,7 +291,7 @@ func TestPersistenceRetryerIsWorkflowExecutionExists(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			if test.mockExecutionManager != nil {
-				test.mockExecutionManagerAccordance(test.mockExecutionManager.(*MockExecutionManager))
+				test.mockExecutionManagerAccordance(test.mockExecutionManager)
 			}
 			retryer := NewPersistenceRetryer(test.mockExecutionManager, NewMockHistoryManager(ctrl), backoff.NewExponentialRetryPolicy(time.Nanosecond))
 
@@ -306,12 +306,12 @@ func TestPersistenceRetryerReadHistoryBranch(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	tests := map[string]struct {
 		request                      *ReadHistoryBranchRequest
-		mockHistoryManager           HistoryManager
+		mockHistoryManager           *MockHistoryManager
 		mockHistoryManagerAccordance func(mockHistoryManager *MockHistoryManager)
 		expectedResponse             *ReadHistoryBranchResponse
 		expectedError                error
 	}{
-		"Case 1: Success": {
+		"Success": {
 			request:            &ReadHistoryBranchRequest{},
 			mockHistoryManager: NewMockHistoryManager(ctrl),
 			mockHistoryManagerAccordance: func(mockHistoryManager *MockHistoryManager) {
@@ -320,7 +320,7 @@ func TestPersistenceRetryerReadHistoryBranch(t *testing.T) {
 			expectedResponse: &ReadHistoryBranchResponse{},
 			expectedError:    nil,
 		},
-		"Case 2: Transient Error": {
+		"Transient Error": {
 			request:            &ReadHistoryBranchRequest{},
 			mockHistoryManager: NewMockHistoryManager(ctrl),
 			mockHistoryManagerAccordance: func(mockHistoryManager *MockHistoryManager) {
@@ -332,7 +332,7 @@ func TestPersistenceRetryerReadHistoryBranch(t *testing.T) {
 			expectedResponse: &ReadHistoryBranchResponse{},
 			expectedError:    nil,
 		},
-		"Case 3: Fatal Error": {
+		"Fatal Error": {
 			request:            &ReadHistoryBranchRequest{},
 			mockHistoryManager: NewMockHistoryManager(ctrl),
 			mockHistoryManagerAccordance: func(mockHistoryManager *MockHistoryManager) {
@@ -345,7 +345,7 @@ func TestPersistenceRetryerReadHistoryBranch(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			if test.mockHistoryManager != nil {
-				test.mockHistoryManagerAccordance(test.mockHistoryManager.(*MockHistoryManager))
+				test.mockHistoryManagerAccordance(test.mockHistoryManager)
 			}
 			retryer := NewPersistenceRetryer(NewMockExecutionManager(ctrl), test.mockHistoryManager, backoff.NewExponentialRetryPolicy(time.Nanosecond))
 
@@ -360,11 +360,11 @@ func TestPersistenceRetryerDeleteWorkflowExecution(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	tests := map[string]struct {
 		request                        *DeleteWorkflowExecutionRequest
-		mockExecutionManager           ExecutionManager
+		mockExecutionManager           *MockExecutionManager
 		mockExecutionManagerAccordance func(mockExecutionManager *MockExecutionManager)
 		expectedError                  error
 	}{
-		"Case 1: Success": {
+		"Success": {
 			request:              &DeleteWorkflowExecutionRequest{},
 			mockExecutionManager: NewMockExecutionManager(ctrl),
 			mockExecutionManagerAccordance: func(mockExecutionManager *MockExecutionManager) {
@@ -372,7 +372,7 @@ func TestPersistenceRetryerDeleteWorkflowExecution(t *testing.T) {
 			},
 			expectedError: nil,
 		},
-		"Case 2: Transient Error": {
+		"Transient Error": {
 			request:              &DeleteWorkflowExecutionRequest{},
 			mockExecutionManager: NewMockExecutionManager(ctrl),
 			mockExecutionManagerAccordance: func(mockExecutionManager *MockExecutionManager) {
@@ -383,7 +383,7 @@ func TestPersistenceRetryerDeleteWorkflowExecution(t *testing.T) {
 			},
 			expectedError: nil,
 		},
-		"Case 3: Fatal Error": {
+		"Fatal Error": {
 			request:              &DeleteWorkflowExecutionRequest{},
 			mockExecutionManager: NewMockExecutionManager(ctrl),
 			mockExecutionManagerAccordance: func(mockExecutionManager *MockExecutionManager) {
@@ -395,7 +395,7 @@ func TestPersistenceRetryerDeleteWorkflowExecution(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			if test.mockExecutionManager != nil {
-				test.mockExecutionManagerAccordance(test.mockExecutionManager.(*MockExecutionManager))
+				test.mockExecutionManagerAccordance(test.mockExecutionManager)
 			}
 			retryer := NewPersistenceRetryer(test.mockExecutionManager, NewMockHistoryManager(ctrl), backoff.NewExponentialRetryPolicy(time.Nanosecond))
 
@@ -413,11 +413,11 @@ func TestPersistenceRetryerDeleteCurrentWorkflowExecution(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	tests := map[string]struct {
 		request                        *DeleteCurrentWorkflowExecutionRequest
-		mockExecutionManager           ExecutionManager
+		mockExecutionManager           *MockExecutionManager
 		mockExecutionManagerAccordance func(mockExecutionManager *MockExecutionManager)
 		expectedError                  error
 	}{
-		"Case 1: Success": {
+		"Success": {
 			request:              &DeleteCurrentWorkflowExecutionRequest{},
 			mockExecutionManager: NewMockExecutionManager(ctrl),
 			mockExecutionManagerAccordance: func(mockExecutionManager *MockExecutionManager) {
@@ -425,7 +425,7 @@ func TestPersistenceRetryerDeleteCurrentWorkflowExecution(t *testing.T) {
 			},
 			expectedError: nil,
 		},
-		"Case 2: Transient Error": {
+		"Transient Error": {
 			request:              &DeleteCurrentWorkflowExecutionRequest{},
 			mockExecutionManager: NewMockExecutionManager(ctrl),
 			mockExecutionManagerAccordance: func(mockExecutionManager *MockExecutionManager) {
@@ -436,7 +436,7 @@ func TestPersistenceRetryerDeleteCurrentWorkflowExecution(t *testing.T) {
 			},
 			expectedError: nil,
 		},
-		"Case 3: Fatal Error": {
+		"Fatal Error": {
 			request:              &DeleteCurrentWorkflowExecutionRequest{},
 			mockExecutionManager: NewMockExecutionManager(ctrl),
 			mockExecutionManagerAccordance: func(mockExecutionManager *MockExecutionManager) {
@@ -448,7 +448,7 @@ func TestPersistenceRetryerDeleteCurrentWorkflowExecution(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			if test.mockExecutionManager != nil {
-				test.mockExecutionManagerAccordance(test.mockExecutionManager.(*MockExecutionManager))
+				test.mockExecutionManagerAccordance(test.mockExecutionManager)
 			}
 			retryer := NewPersistenceRetryer(test.mockExecutionManager, NewMockHistoryManager(ctrl), backoff.NewExponentialRetryPolicy(time.Nanosecond))
 
@@ -475,12 +475,12 @@ func TestPersistenceRetryerGetTimerIndexTasks(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	tests := map[string]struct {
 		request                        *GetTimerIndexTasksRequest
-		mockExecutionManager           ExecutionManager
+		mockExecutionManager           *MockExecutionManager
 		mockExecutionManagerAccordance func(mockExecutionManager *MockExecutionManager)
 		expectedResponse               *GetTimerIndexTasksResponse
 		expectedError                  error
 	}{
-		"Case 1: Success": {
+		"Success": {
 			request:              &GetTimerIndexTasksRequest{},
 			mockExecutionManager: NewMockExecutionManager(ctrl),
 			mockExecutionManagerAccordance: func(mockExecutionManager *MockExecutionManager) {
@@ -489,7 +489,7 @@ func TestPersistenceRetryerGetTimerIndexTasks(t *testing.T) {
 			expectedResponse: &GetTimerIndexTasksResponse{},
 			expectedError:    nil,
 		},
-		"Case 2: Transient Error": {
+		"Transient Error": {
 			request:              &GetTimerIndexTasksRequest{},
 			mockExecutionManager: NewMockExecutionManager(ctrl),
 			mockExecutionManagerAccordance: func(mockExecutionManager *MockExecutionManager) {
@@ -501,7 +501,7 @@ func TestPersistenceRetryerGetTimerIndexTasks(t *testing.T) {
 			expectedResponse: &GetTimerIndexTasksResponse{},
 			expectedError:    nil,
 		},
-		"Case 3: Fatal Error": {
+		"Fatal Error": {
 			request:              &GetTimerIndexTasksRequest{},
 			mockExecutionManager: NewMockExecutionManager(ctrl),
 			mockExecutionManagerAccordance: func(mockExecutionManager *MockExecutionManager) {
@@ -514,7 +514,7 @@ func TestPersistenceRetryerGetTimerIndexTasks(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			if test.mockExecutionManager != nil {
-				test.mockExecutionManagerAccordance(test.mockExecutionManager.(*MockExecutionManager))
+				test.mockExecutionManagerAccordance(test.mockExecutionManager)
 			}
 			retryer := NewPersistenceRetryer(test.mockExecutionManager, NewMockHistoryManager(ctrl), backoff.NewExponentialRetryPolicy(time.Nanosecond))
 
@@ -529,11 +529,11 @@ func TestPersistenceRetryerCompleteTimerTask(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	tests := map[string]struct {
 		request                        *CompleteTimerTaskRequest
-		mockExecutionManager           ExecutionManager
+		mockExecutionManager           *MockExecutionManager
 		mockExecutionManagerAccordance func(mockExecutionManager *MockExecutionManager)
 		expectedError                  error
 	}{
-		"Case 1: Success": {
+		"Success": {
 			request:              &CompleteTimerTaskRequest{},
 			mockExecutionManager: NewMockExecutionManager(ctrl),
 			mockExecutionManagerAccordance: func(mockExecutionManager *MockExecutionManager) {
@@ -541,7 +541,7 @@ func TestPersistenceRetryerCompleteTimerTask(t *testing.T) {
 			},
 			expectedError: nil,
 		},
-		"Case 2: Transient Error": {
+		"Transient Error": {
 			request:              &CompleteTimerTaskRequest{},
 			mockExecutionManager: NewMockExecutionManager(ctrl),
 			mockExecutionManagerAccordance: func(mockExecutionManager *MockExecutionManager) {
@@ -552,7 +552,7 @@ func TestPersistenceRetryerCompleteTimerTask(t *testing.T) {
 			},
 			expectedError: nil,
 		},
-		"Case 3: Fatal Error": {
+		"Fatal Error": {
 			request:              &CompleteTimerTaskRequest{},
 			mockExecutionManager: NewMockExecutionManager(ctrl),
 			mockExecutionManagerAccordance: func(mockExecutionManager *MockExecutionManager) {
@@ -564,7 +564,7 @@ func TestPersistenceRetryerCompleteTimerTask(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			if test.mockExecutionManager != nil {
-				test.mockExecutionManagerAccordance(test.mockExecutionManager.(*MockExecutionManager))
+				test.mockExecutionManagerAccordance(test.mockExecutionManager)
 			}
 			retryer := NewPersistenceRetryer(test.mockExecutionManager, NewMockHistoryManager(ctrl), backoff.NewExponentialRetryPolicy(time.Nanosecond))
 
