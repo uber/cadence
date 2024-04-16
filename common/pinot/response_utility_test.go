@@ -213,7 +213,7 @@ func TestConvertSearchResultToVisibilityRecord(t *testing.T) {
 }
 
 // This is the process of figuring out how to encode/decode memo for Pinot
-func TestDeserializeMemo(t *testing.T) {
+func TestDeserializeMemoMockingE2E(t *testing.T) {
 	sampleRawMemo := &types.Memo{
 		Fields: map[string][]byte{
 			"Service": []byte("serverName1"),
