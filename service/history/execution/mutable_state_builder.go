@@ -4819,7 +4819,7 @@ func (e *mutableStateBuilder) unixNanoToTime(
 }
 
 func (e *mutableStateBuilder) logInfo(msg string, tags ...tag.Tag) {
-	if e != nil {
+	if e == nil {
 		return
 	}
 	if e.executionInfo != nil {
@@ -4831,7 +4831,7 @@ func (e *mutableStateBuilder) logInfo(msg string, tags ...tag.Tag) {
 }
 
 func (e *mutableStateBuilder) logWarn(msg string, tags ...tag.Tag) {
-	if e != nil {
+	if e == nil {
 		return
 	}
 	if e.executionInfo != nil {
@@ -4843,7 +4843,7 @@ func (e *mutableStateBuilder) logWarn(msg string, tags ...tag.Tag) {
 }
 
 func (e *mutableStateBuilder) logError(msg string, tags ...tag.Tag) {
-	if e != nil {
+	if e == nil {
 		return
 	}
 	if e.executionInfo != nil {

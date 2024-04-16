@@ -88,6 +88,14 @@ var (
 				State: types.IsolationGroupStateDrained,
 			},
 		},
+		AsyncWorkflowConfig: &types.AsyncWorkflowConfiguration{
+			Enabled:   true,
+			QueueType: "custom",
+			QueueConfig: &types.DataBlob{
+				EncodingType: types.EncodingTypeThriftRW.Ptr(),
+				Data:         []byte("custom queue config"),
+			},
+		},
 	}
 	DomainReplicationConfiguration = types.DomainReplicationConfiguration{
 		ActiveClusterName: ClusterName1,

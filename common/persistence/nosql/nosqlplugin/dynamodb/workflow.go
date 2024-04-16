@@ -33,6 +33,7 @@ var _ nosqlplugin.WorkflowCRUD = (*ddb)(nil)
 
 func (db *ddb) InsertWorkflowExecutionWithTasks(
 	ctx context.Context,
+	requests *nosqlplugin.WorkflowRequestsWriteRequest,
 	currentWorkflowRequest *nosqlplugin.CurrentWorkflowWriteRequest,
 	execution *nosqlplugin.WorkflowExecutionRequest,
 	transferTasks []*nosqlplugin.TransferTask,
@@ -46,6 +47,7 @@ func (db *ddb) InsertWorkflowExecutionWithTasks(
 
 func (db *ddb) UpdateWorkflowExecutionWithTasks(
 	ctx context.Context,
+	requests *nosqlplugin.WorkflowRequestsWriteRequest,
 	currentWorkflowRequest *nosqlplugin.CurrentWorkflowWriteRequest,
 	mutatedExecution *nosqlplugin.WorkflowExecutionRequest,
 	insertedExecution *nosqlplugin.WorkflowExecutionRequest,
