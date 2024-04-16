@@ -33,6 +33,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	dc "github.com/uber/cadence/common/dynamicconfig"
 	c "github.com/uber/cadence/common/dynamicconfig/configstore/config"
@@ -1075,6 +1076,18 @@ func (s *configStoreClientSuite) TestListValues_EmptyCache() {
 	val, err := s.client.ListValue(nil)
 	s.NoError(err)
 	s.Nil(val)
+}
+
+func (s *configStoreClientSuite) TestConfigStoreClientStart() {
+	defaultTestSetup(s)
+	s.client.Start()
+	s.Equal(common.DaemonStatusStarted, s.client.status)
+}
+
+func (s *configStoreClientSuite) TestConfigStoreClientStop() {
+	s.mockManager.EXPECT().Close()
+	s.client.Stop()
+	s.Equal(common.DaemonStatusStopped, s.client.status)
 }
 
 func jsonMarshalHelper(v interface{}) []byte {
