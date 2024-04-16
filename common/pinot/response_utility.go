@@ -27,16 +27,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
 
 const (
 	Memo         = "Memo"
-	MemoEncoding = "Memo_Encoding"
+	MemoEncoding = "Encoding"
+	Attr         = "Attr"
 )
 
 func buildMap(hit []interface{}, columnNames []string) map[string]interface{} {
@@ -70,41 +68,44 @@ type VisibilityRecord struct {
 	ShardID       int16
 }
 
-func ConvertSearchResultToVisibilityRecord(hit []interface{}, columnNames []string, logger log.Logger) *p.InternalVisibilityWorkflowExecutionInfo {
+func ConvertSearchResultToVisibilityRecord(hit []interface{}, columnNames []string) (*p.InternalVisibilityWorkflowExecutionInfo, error) {
 	if len(hit) != len(columnNames) {
-		return nil
+		return nil, fmt.Errorf("length of hit (%v) is not equal with length of columnNames(%v)", len(hit), len(columnNames))
 	}
 
 	systemKeyMap := buildMap(hit, columnNames)
 
 	jsonSystemKeyMap, err := json.Marshal(systemKeyMap)
 	if err != nil {
-		logger.Error("unable to marshal systemKeyMap",
-			tag.Error(err))
-		return nil
+		return nil, fmt.Errorf("unable to marshal systemKeyMap")
 	}
 
 	attributeMap := make(map[string]interface{})
-	err = json.Unmarshal([]byte(fmt.Sprint(systemKeyMap["Attr"])), &attributeMap)
-	if err != nil {
-		logger.Error("Unable to Unmarshal searchAttribute map", tag.Error(err))
-		return nil
-	}
-
 	var memo *p.DataBlob
-	if attributeMap[Memo] != nil {
-		memo, err = convertMemo(attributeMap[Memo], attributeMap[MemoEncoding])
+	if systemKeyMap[Attr] != nil {
+		attrMapStr, ok := systemKeyMap[Attr].(string)
+		if !ok {
+			return nil, fmt.Errorf(`assertion error. Can't convert systemKeyMap["Attr"] to string. Found %T`, systemKeyMap["Attr"])
+		}
+
+		err = json.Unmarshal([]byte(attrMapStr), &attributeMap)
+		if err != nil {
+			return nil, fmt.Errorf("unable to Unmarshal searchAttribute map: %s", err.Error())
+		}
+
+		if attributeMap[Memo] != nil {
+			memo, err = convertMemo(attributeMap[Memo])
+			if err != nil {
+				return nil, fmt.Errorf("unable to convert memo: %s", err.Error())
+			}
+		}
+		delete(attributeMap, Memo) // cleanup after we get memo from search attribute
 	}
-	delete(attributeMap, Memo)         // cleanup after we get memo from search attribute
-	delete(attributeMap, MemoEncoding) // cleanup after we get memo from search attribute
 
 	var source *VisibilityRecord
 	err = json.Unmarshal(jsonSystemKeyMap, &source)
 	if err != nil {
-		logger.Error("Unable to Unmarshal systemKeyMap",
-			tag.Error(err),
-		)
-		return nil
+		return nil, fmt.Errorf("unable to Unmarshal systemKeyMap: %s", err.Error())
 	}
 
 	record := &p.InternalVisibilityWorkflowExecutionInfo{
@@ -131,35 +132,22 @@ func ConvertSearchResultToVisibilityRecord(hit []interface{}, columnNames []stri
 		record.HistoryLength = source.HistoryLength
 	}
 
-	return record
+	return record, nil
 }
 
-func convertMemo(data interface{}, encoding interface{}) (*p.DataBlob, error) {
-	memoData, ok := data.([]byte)
+func convertMemo(memoRaw interface{}) (*p.DataBlob, error) {
+	db := p.DataBlob{}
+
+	memoRawStr, ok := memoRaw.(string)
 	if !ok {
-		return nil, fmt.Errorf("couldn't convert data to byte array. %T", data)
-	}
-	if memoData == nil || len(memoData) == 0 || string(memoData) == "null" {
-		return nil, nil
+		return nil, fmt.Errorf("memoRaw is not a String: %T", memoRaw)
 	}
 
-	memoEncoding, ok := encoding.(common.EncodingType)
-	if !ok {
-		return nil, fmt.Errorf("couldn't convert encoding to string. %T", encoding)
-	}
-
-	if memoEncoding != common.EncodingTypeJSON {
-		return nil, fmt.Errorf("encoding type doesn't support. Looking for EncodingTypeJSON, but found %v", encoding)
-	}
-
-	var res p.DataBlob
-	err := json.Unmarshal(memoData, &res)
-
+	err := json.Unmarshal([]byte(memoRawStr), &db)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to unmarshal memoRawStr: %s", err.Error())
 	}
-
-	return &res, nil
+	return &db, nil
 }
 
 func toWorkflowExecutionCloseStatus(status int) *types.WorkflowExecutionCloseStatus {

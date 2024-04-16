@@ -23,7 +23,6 @@ package persistence
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -968,15 +967,6 @@ func (d *DataBlob) GetEncodingString() string {
 		return ""
 	}
 	return string(d.Encoding)
-}
-
-func (d *DataBlob) GetVisibilityStoreInfo() ([]byte, common.EncodingType, error) {
-	data, err := json.Marshal(d)
-	if err != nil {
-		return nil, common.EncodingTypeEmpty, err
-	}
-
-	return data, common.EncodingTypeJSON, nil // for visibility, we use Json encode to keep it safe
 }
 
 // GetData is a safe way to get the byte array or nil

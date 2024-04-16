@@ -614,12 +614,13 @@ func createVisibilityMessage(
 
 	if memo != nil {
 		// add memo into search attr
-		memoMarshal, memoEncoding, err := memo.GetVisibilityStoreInfo()
+		marshalMemo, err := json.Marshal(memo)
 		if err != nil {
 			return nil, err
 		}
-		SearchAttributes[Memo] = memoMarshal
-		SearchAttributes[MemoEncoding] = memoEncoding
+		// string(marshalMemo) is a must-do step,
+		// to give it a type so that it can be unmarshaled correctly in the reading side
+		SearchAttributes[Memo] = string(marshalMemo)
 	}
 
 	m[Attr] = SearchAttributes

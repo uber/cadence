@@ -128,11 +128,6 @@ func TestDataBlob(t *testing.T) {
 		unknown(common.EncodingTypeUnknown)
 		unknown("any other value")
 	})
-	t.Run("GetVisibilityStoreInfo", func(t *testing.T) {
-		testDataBlob := &DataBlob{Encoding: common.EncodingTypeGob, Data: []byte("test memo")} // anything not empty
-		_, _, err := testDataBlob.GetVisibilityStoreInfo()
-		assert.NoError(t, err)
-	})
 	t.Run("to and from internal", func(t *testing.T) {
 		data := []byte("some data")
 		t.Run("supported types", func(t *testing.T) {

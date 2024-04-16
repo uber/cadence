@@ -23,6 +23,7 @@
 package pinot
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -30,7 +31,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -39,30 +39,69 @@ func TestConvertSearchResultToVisibilityRecord(t *testing.T) {
 	columnName := []string{"WorkflowID", "RunID", "WorkflowType", "DomainID", "StartTime", "ExecutionTime", "CloseTime", "CloseStatus", "HistoryLength", "TaskList", "IsCron", "NumClusters", "UpdateTime", "Attr"}
 	closeStatus := types.WorkflowExecutionCloseStatusFailed
 
-	testMemo := p.NewDataBlob(nil, p.VisibilityEncoding)
-	testMemoMarshal, _, err := testMemo.GetVisibilityStoreInfo()
+	sampleRawMemo := &types.Memo{
+		Fields: map[string][]byte{
+			`"Service"`: []byte(`"serverName1"`),
+		},
+	}
+	serializer := p.NewPayloadSerializer()
+	sampleEncodedMemo, err := serializer.SerializeVisibilityMemo(sampleRawMemo, common.EncodingTypeThriftRW)
 	assert.NoError(t, err)
+
+	errorMapRaw1 := map[string]interface{}{"Memo": 123}
+	errorMap1, err := json.Marshal(errorMapRaw1)
+
+	errorMapRaw2 := map[string]interface{}{"Memo": "123"}
+	errorMap2, err := json.Marshal(errorMapRaw2)
 
 	tests := map[string]struct {
 		inputColumnNames         []string
 		inputHit                 []interface{}
 		expectedVisibilityRecord *p.InternalVisibilityWorkflowExecutionInfo
 		memoCheck                bool
+		expectErr                error
 	}{
 		"Case1: nil result": {
 			inputColumnNames:         nil,
 			inputHit:                 []interface{}{"wfid", "rid", "wftype", "domainid", testEarliestTime, testEarliestTime, testLatestTime, -1, 1, "tsklst", true, 1, testEarliestTime, "{}"},
 			expectedVisibilityRecord: nil,
+			expectErr:                fmt.Errorf("length of hit (14) is not equal with length of columnNames(0)"),
 		},
 		"Case2-1: marshal system key error case": {
 			inputColumnNames:         columnName,
 			inputHit:                 []interface{}{"wfid", "rid", "wftype", "domainid", testEarliestTime, testEarliestTime, testLatestTime, 1, 1, "tsklst", true, 1, testEarliestTime, make(chan int)},
 			expectedVisibilityRecord: nil,
+			expectErr:                fmt.Errorf("unable to marshal systemKeyMap"),
 		},
 		"Case2-2: unmarshal system key error case": {
 			inputColumnNames:         columnName,
 			inputHit:                 []interface{}{"wfid", "rid", "wftype", "domainid", testEarliestTime, testEarliestTime, testLatestTime, 1, "1", "tsklst", true, 1, testEarliestTime, `{"CustomStringField": "customA and customB or customC", "CustomDoubleField": 3.14}`},
 			expectedVisibilityRecord: nil,
+			expectErr:                fmt.Errorf("unable to Unmarshal systemKeyMap: json: cannot unmarshal string into Go struct field VisibilityRecord.HistoryLength of type int64"),
+		},
+		"Case2-3: Attr to string error case": {
+			inputColumnNames:         []string{"Attr"},
+			inputHit:                 []interface{}{123},
+			expectedVisibilityRecord: nil,
+			expectErr:                fmt.Errorf(`assertion error. Can't convert systemKeyMap["Attr"] to string. Found int`),
+		},
+		"Case2-4: Attr unmarshal to map error case": {
+			inputColumnNames:         []string{"Attr"},
+			inputHit:                 []interface{}{"123"},
+			expectedVisibilityRecord: nil,
+			expectErr:                fmt.Errorf(`unable to Unmarshal searchAttribute map: json: cannot unmarshal number into Go value of type map[string]interface {}`),
+		},
+		"Case2-4: Memo to string error case": {
+			inputColumnNames:         []string{"Attr"},
+			inputHit:                 []interface{}{string(errorMap1)},
+			expectedVisibilityRecord: nil,
+			expectErr:                fmt.Errorf(`unable to convert memo: memoRaw is not a String: float64`),
+		},
+		"Case2-5: Memo unmarshal error case": {
+			inputColumnNames:         []string{"Attr"},
+			inputHit:                 []interface{}{string(errorMap2)},
+			expectedVisibilityRecord: nil,
+			expectErr:                fmt.Errorf(`unable to convert memo: unable to unmarshal memoRawStr: json: cannot unmarshal number into Go value of type persistence.DataBlob`),
 		},
 		"Case3-1: closed wf with everything except for an empty Attr": {
 			inputColumnNames: columnName,
@@ -113,7 +152,7 @@ func TestConvertSearchResultToVisibilityRecord(t *testing.T) {
 		"Case4: open wf with everything": {
 			inputColumnNames: columnName,
 			inputHit: []interface{}{"wfid", "rid", "wftype", "domainid", testEarliestTime, testEarliestTime, -1, -1, -1,
-				"tsklst", true, 1, testEarliestTime, fmt.Sprintf(`{"CustomStringField": "customA and customB or customC", "CustomDoubleField": 3.14, "Memo": %s}`, testMemoMarshal)},
+				"tsklst", true, 1, testEarliestTime, `{"CustomStringField": "customA and customB or customC", "CustomDoubleField": 3.14}`},
 			expectedVisibilityRecord: &p.InternalVisibilityWorkflowExecutionInfo{
 				DomainID:         "domainid",
 				WorkflowType:     "wftype",
@@ -132,61 +171,75 @@ func TestConvertSearchResultToVisibilityRecord(t *testing.T) {
 			},
 			memoCheck: true,
 		},
+		"Case5: open wf with memo": {
+			inputColumnNames: columnName,
+			inputHit: []interface{}{"wfid", "rid", "wftype", "domainid", testEarliestTime, testEarliestTime, -1, -1, -1,
+				"tsklst", true, 1, testEarliestTime,
+				`{"Memo":"{\"Encoding\":\"thriftrw\",\"Data\":\"WQ0ACgsLAAAAAQAAAAkiU2VydmljZSIAAAANInNlcnZlck5hbWUxIgA=\"}"}`},
+			expectedVisibilityRecord: &p.InternalVisibilityWorkflowExecutionInfo{
+				DomainID:         "domainid",
+				WorkflowType:     "wftype",
+				WorkflowID:       "wfid",
+				RunID:            "rid",
+				TypeName:         "wftype",
+				StartTime:        time.UnixMilli(testEarliestTime),
+				ExecutionTime:    time.UnixMilli(testEarliestTime),
+				Memo:             sampleEncodedMemo,
+				TaskList:         "tsklst",
+				IsCron:           true,
+				NumClusters:      1,
+				UpdateTime:       time.UnixMilli(testEarliestTime),
+				SearchAttributes: map[string]interface{}{"CustomStringField": "customA and customB or customC", "CustomDoubleField": 3.14},
+				ShardID:          0,
+			},
+			memoCheck: true,
+		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			assert.NotPanics(t, func() {
-				visibilityRecord := ConvertSearchResultToVisibilityRecord(test.inputHit, test.inputColumnNames, log.NewNoop())
-				assert.Equal(t, test.expectedVisibilityRecord, visibilityRecord)
+				visibilityRecord, err := ConvertSearchResultToVisibilityRecord(test.inputHit, test.inputColumnNames)
+				if !test.memoCheck {
+					assert.Equal(t, test.expectedVisibilityRecord, visibilityRecord)
+					assert.Equal(t, test.expectErr, err)
+				} else {
+					assert.Equal(t, test.expectedVisibilityRecord.Memo.GetData(), visibilityRecord.Memo.GetData())
+					assert.Equal(t, test.expectedVisibilityRecord.Memo.GetEncoding(), visibilityRecord.Memo.GetEncoding())
+				}
 			})
 		})
 	}
 }
 
-func TestConvertMemo_easeCase(t *testing.T) {
-	tests := map[string]struct {
-		memo        *p.DataBlob
-		badData     interface{}
-		badEncoding interface{}
-	}{
-		"Case1: easy case": {
-			memo: p.NewDataBlob([]byte("test memo"), common.EncodingTypeJSON),
-		},
-		"Case2: weird case": {
-			memo: p.NewDataBlob([]byte{0, 0, 0, 0}, common.EncodingTypeJSON),
-		},
-		"Case3: nil case": {
-			memo: p.NewDataBlob(nil, common.EncodingTypeJSON),
-		},
-		"Case4-1: badData case": {
-			badData:     make(chan int),
-			badEncoding: common.EncodingTypeJSON,
-		},
-		"Case4-2: badEncoding case": {
-			badEncoding: make(chan int),
-			badData:     []byte("test"),
-		},
-		"Case4-3: thrift encoding case": {
-			badEncoding: common.EncodingTypeThriftRW,
-			badData:     []byte("test"),
+// This is the process of figuring out how to encode/decode memo for Pinot
+func TestDeserializeMemo(t *testing.T) {
+	sampleRawMemo := &types.Memo{
+		Fields: map[string][]byte{
+			"Service": []byte("serverName1"),
 		},
 	}
+	serializer := p.NewPayloadSerializer()
+	sampleEncodedMemo, err := serializer.SerializeVisibilityMemo(sampleRawMemo, common.EncodingTypeThriftRW)
+	assert.NoError(t, err)
+	// not a human-readable string
+	assert.Equal(t, "Y\r\x00\n\v\v\x00\x00\x00\x01\x00\x00\x00\aService\x00\x00\x00\vserverName1\x00", string(sampleEncodedMemo.GetData()))
 
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			assert.NotPanics(t, func() {
-				testMemoData, testMemoEncoding, err := test.memo.GetVisibilityStoreInfo()
-				assert.NoError(t, err)
-				res, err := convertMemo(testMemoData, testMemoEncoding)
-				if test.badData != nil || test.badEncoding != nil {
-					res, err = convertMemo(test.badData, test.badEncoding)
-					assert.Error(t, err)
-				} else {
-					assert.NoError(t, err)
-					assert.Equal(t, test.memo, res)
-				}
-			})
-		})
-	}
+	marshaledMemo, err := json.Marshal(sampleEncodedMemo)
+	assert.NoError(t, err)
+	// after marshal, data becomes a human-readable char array
+	assert.Equal(t, `{"Encoding":"thriftrw","Data":"WQ0ACgsLAAAAAQAAAAdTZXJ2aWNlAAAAC3NlcnZlck5hbWUxAA=="}`, string(marshaledMemo))
+
+	// must-do step, to give it a type, or we can't convert it to a string in the reading side.
+	marshaledMemoStr := string(marshaledMemo)
+
+	// mock the reading side
+	unmarshaledRawData := p.DataBlob{}
+
+	// marshaledMemoStr still knows that it is a DataBlob type
+	err = json.Unmarshal([]byte(marshaledMemoStr), &unmarshaledRawData)
+	assert.NoError(t, err)
+	sampleDecodedMemo, err := serializer.DeserializeVisibilityMemo(&unmarshaledRawData)
+	assert.NoError(t, err)
+	assert.Equal(t, "serverName1", string(sampleDecodedMemo.Fields["Service"]))
 }
