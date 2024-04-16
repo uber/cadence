@@ -1874,6 +1874,7 @@ func FromDomainConfiguration(t *types.DomainConfiguration) *shared.DomainConfigu
 		VisibilityArchivalStatus:               FromArchivalStatus(t.VisibilityArchivalStatus),
 		VisibilityArchivalURI:                  &t.VisibilityArchivalURI,
 		Isolationgroups:                        FromIsolationGroupConfig(t.IsolationGroups),
+		AsyncWorkflowConfiguration:             FromDomainAsyncWorkflowConfiguraton(t.AsyncWorkflowConfig),
 	}
 }
 
@@ -1891,6 +1892,7 @@ func ToDomainConfiguration(t *shared.DomainConfiguration) *types.DomainConfigura
 		VisibilityArchivalStatus:               ToArchivalStatus(t.VisibilityArchivalStatus),
 		VisibilityArchivalURI:                  t.GetVisibilityArchivalURI(),
 		IsolationGroups:                        ToIsolationGroupConfig(t.Isolationgroups),
+		AsyncWorkflowConfig:                    ToDomainAsyncWorkflowConfiguraton(t.AsyncWorkflowConfiguration),
 	}
 }
 

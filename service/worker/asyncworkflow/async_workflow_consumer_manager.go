@@ -40,7 +40,7 @@ import (
 )
 
 const (
-	defaultRefreshInterval = 5 * time.Minute
+	defaultRefreshInterval = 1 * time.Minute
 	defaultShutdownTimeout = 5 * time.Second
 )
 

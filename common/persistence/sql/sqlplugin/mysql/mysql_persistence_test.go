@@ -70,9 +70,21 @@ func TestMySQLShardPersistenceSuite(t *testing.T) {
 	suite.Run(t, s)
 }
 
+type ExecutionManagerSuite struct {
+	pt.ExecutionManagerSuite
+}
+
+func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionWithWorkflowRequestsDedup() {
+	s.T().Skip("skip the test until we store workflow_request in mysql")
+}
+
+func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionWithWorkflowRequestsDedup() {
+	s.T().Skip("skip the test until we store workflow_request in mysql")
+}
+
 func TestMySQLExecutionManagerSuite(t *testing.T) {
 	testflags.RequireMySQL(t)
-	s := new(pt.ExecutionManagerSuite)
+	s := new(ExecutionManagerSuite)
 	option, err := GetTestClusterOption()
 	assert.NoError(t, err)
 	s.TestBase = pt.NewTestBaseWithSQL(t, option)
