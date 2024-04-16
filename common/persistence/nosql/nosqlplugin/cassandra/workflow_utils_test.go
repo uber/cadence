@@ -326,7 +326,7 @@ func TestExecuteCreateWorkflowBatchTransaction(t *testing.T) {
 				mapExecuteBatchCASApplied: false,
 				iter:                      &fakeIter{},
 				mapExecuteBatchCASPrev: map[string]any{
-					"type":   rowTypeWorkflowRequestStart,
+					"type":   rowTypeWorkflowRequestCancel,
 					"run_id": uuid.Parse("4b8045c8-7b45-41e0-bf03-1f0d166b818d"),
 				},
 				query: &fakeQuery{
@@ -349,7 +349,8 @@ func TestExecuteCreateWorkflowBatchTransaction(t *testing.T) {
 			},
 			wantErr: &nosqlplugin.WorkflowOperationConditionFailure{
 				DuplicateRequest: &nosqlplugin.DuplicateRequest{
-					RunID: "6b844fb4-c18a-4979-a2d3-731ebdd1db08",
+					RequestType: persistence.WorkflowRequestTypeCancel,
+					RunID:       "6b844fb4-c18a-4979-a2d3-731ebdd1db08",
 				},
 			},
 		},
@@ -671,7 +672,8 @@ func TestExecuteUpdateWorkflowBatchTransaction(t *testing.T) {
 			},
 			wantErr: &nosqlplugin.WorkflowOperationConditionFailure{
 				DuplicateRequest: &nosqlplugin.DuplicateRequest{
-					RunID: "6b844fb4-c18a-4979-a2d3-731ebdd1db08",
+					RequestType: persistence.WorkflowRequestTypeSignal,
+					RunID:       "6b844fb4-c18a-4979-a2d3-731ebdd1db08",
 				},
 			},
 		},
@@ -792,7 +794,7 @@ func TestExecuteUpdateWorkflowBatchTransaction(t *testing.T) {
 	}
 }
 
-func TestGetRequestRowType(t *testing.T) {
+func TestToRequestRowType(t *testing.T) {
 	testCases := []struct {
 		name        string
 		requestType persistence.WorkflowRequestType
@@ -838,7 +840,69 @@ func TestGetRequestRowType(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			want, err := getRequestRowType(tc.requestType)
+			want, err := toRequestRowType(tc.requestType)
+			gotErr := (err != nil)
+			if gotErr != tc.wantErr {
+				t.Fatalf("Got error: %v, want?: %v", err, tc.wantErr)
+			}
+			if gotErr {
+				return
+			}
+
+			if diff := cmp.Diff(tc.want, want); diff != "" {
+				t.Fatalf("request type mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestFromRequestRowType(t *testing.T) {
+	testCases := []struct {
+		name        string
+		requestType int
+		wantErr     bool
+		want        persistence.WorkflowRequestType
+	}{
+		{
+			name:        "StartWorkflow request",
+			requestType: rowTypeWorkflowRequestStart,
+			wantErr:     false,
+			want:        persistence.WorkflowRequestTypeStart,
+		},
+		{
+			name:        "SignalWithWorkflow request",
+			requestType: rowTypeWorkflowRequestSignal,
+			wantErr:     false,
+			want:        persistence.WorkflowRequestTypeSignal,
+		},
+		{
+			name:        "SignalWorkflow request",
+			requestType: rowTypeWorkflowRequestSignal,
+			wantErr:     false,
+			want:        persistence.WorkflowRequestTypeSignal,
+		},
+		{
+			name:        "CancelWorkflow request",
+			requestType: rowTypeWorkflowRequestCancel,
+			wantErr:     false,
+			want:        persistence.WorkflowRequestTypeCancel,
+		},
+		{
+			name:        "ResetWorkflow request",
+			requestType: rowTypeWorkflowRequestReset,
+			wantErr:     false,
+			want:        persistence.WorkflowRequestTypeReset,
+		},
+		{
+			name:        "unknown request",
+			requestType: rowTypeShard,
+			wantErr:     true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			want, err := fromRequestRowType(tc.requestType)
 			gotErr := (err != nil)
 			if gotErr != tc.wantErr {
 				t.Fatalf("Got error: %v, want?: %v", err, tc.wantErr)
