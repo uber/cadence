@@ -146,6 +146,25 @@ func TestCreateWorkflowExecution(t *testing.T) {
 			expectedResp:  nil,
 			expectedError: fmt.Errorf("unsupported conditionFailureReason error"), // Expected generic error for unexpected conditions
 		},
+		{
+			name: "Duplicate request error",
+			setupMock: func(mockDB *nosqlplugin.MockDB, shardID int) {
+				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(true).AnyTimes()
+				mockDB.EXPECT().
+					InsertWorkflowExecutionWithTasks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&nosqlplugin.WorkflowOperationConditionFailure{
+						DuplicateRequest: &nosqlplugin.DuplicateRequest{
+							RequestType: persistence.WorkflowRequestTypeSignal,
+							RunID:       "test-run-id",
+						},
+					})
+			},
+			expectedResp: nil,
+			expectedError: &persistence.DuplicateRequestError{
+				RequestType: persistence.WorkflowRequestTypeSignal,
+				RunID:       "test-run-id",
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -205,6 +224,24 @@ func TestUpdateWorkflowExecution(t *testing.T) {
 				return req
 			},
 			expectedError: nil,
+		},
+		{
+			name: "Duplicate request error",
+			setupMock: func(mockDB *nosqlplugin.MockDB, shardID int) {
+				mockDB.EXPECT().
+					UpdateWorkflowExecutionWithTasks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), nil, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&nosqlplugin.WorkflowOperationConditionFailure{
+						DuplicateRequest: &nosqlplugin.DuplicateRequest{
+							RequestType: persistence.WorkflowRequestTypeSignal,
+							RunID:       "test-run-id",
+						},
+					})
+			},
+			request: newUpdateWorkflowExecutionRequest,
+			expectedError: &persistence.DuplicateRequestError{
+				RequestType: persistence.WorkflowRequestTypeSignal,
+				RunID:       "test-run-id",
+			},
 		},
 		{
 			name: "UpdateWorkflowModeBypassCurrent - assertNotCurrentExecution failure",
