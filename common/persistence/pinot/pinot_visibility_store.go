@@ -555,7 +555,7 @@ func createDeleteVisibilityMessage(domainID string,
 }
 
 func createVisibilityMessage(
-// common parameters
+	// common parameters
 	domainID string,
 	wid,
 	rid string,
@@ -566,11 +566,11 @@ func createVisibilityMessage(
 	taskID int64,
 	isCron bool,
 	numClusters int16,
-// specific to certain status
-	closeTimeUnixMilli int64,                          // close execution
+	// specific to certain status
+	closeTimeUnixMilli int64, // close execution
 	closeStatus workflow.WorkflowExecutionCloseStatus, // close execution
-	historyLength int64,                               // close execution
-	updateTimeUnixMilli int64,                         // update execution,
+	historyLength int64, // close execution
+	updateTimeUnixMilli int64, // update execution,
 	shardID int64,
 	rawSearchAttributes map[string][]byte,
 	isDeleted bool,
