@@ -1079,7 +1079,13 @@ func (s *configStoreClientSuite) TestListValues_EmptyCache() {
 }
 
 func (s *configStoreClientSuite) TestConfigStoreClientStart() {
-	defaultTestSetup(s)
+	s.mockManager.EXPECT().
+		FetchDynamicConfig(gomock.Any(), p.DynamicConfig).
+		Return(&p.FetchDynamicConfigResponse{
+			Snapshot: snapshot1,
+		}, nil).
+		AnyTimes()
+
 	s.client.Start()
 	s.Equal(common.DaemonStatusStarted, s.client.status)
 }
