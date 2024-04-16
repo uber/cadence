@@ -62,7 +62,6 @@ const (
 	IsDeleted            = "IsDeleted"   // used for Pinot deletion/rolling upsert only, not visible to user
 	EventTimeMs          = "EventTimeMs" // used for Pinot deletion/rolling upsert only, not visible to user
 	Memo                 = "Memo"
-	MemoEncoding         = "Memo_Encoding"
 
 	// used to be micro second
 	oneMicroSecondInNano = int64(time.Microsecond / time.Nanosecond)
