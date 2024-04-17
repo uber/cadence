@@ -100,10 +100,7 @@ func TestShardManagerCreateShard(t *testing.T) {
 				store.EXPECT().CreateShard(gomock.Any(), gomock.Eq(test.internalRequest)).Return(test.internalResponse)
 			}
 
-			manager := NewShardManager(store)
-			if test.serializer != nil {
-				manager.(*shardManager).serializer = test.serializer
-			}
+			manager := NewShardManager(store, WithSerializer(test.serializer))
 
 			result := manager.CreateShard(context.Background(), test.request)
 
@@ -183,10 +180,7 @@ func TestShardManagerGetShard(t *testing.T) {
 				store.EXPECT().GetShard(gomock.Any(), gomock.Eq(test.internalRequest)).Return(test.internalResponse, test.internalErr)
 			}
 
-			manager := NewShardManager(store)
-			if test.serializer != nil {
-				manager.(*shardManager).serializer = test.serializer
-			}
+			manager := NewShardManager(store, WithSerializer(test.serializer))
 
 			result, err := manager.GetShard(context.Background(), test.request)
 			assert.Equal(t, test.expected, result)
@@ -246,10 +240,7 @@ func TestShardManagerUpdateShard(t *testing.T) {
 				store.EXPECT().UpdateShard(gomock.Any(), gomock.Eq(test.internalRequest)).Return(test.internalResponse)
 			}
 
-			manager := NewShardManager(store)
-			if test.serializer != nil {
-				manager.(*shardManager).serializer = test.serializer
-			}
+			manager := NewShardManager(store, WithSerializer(test.serializer))
 
 			result := manager.UpdateShard(context.Background(), test.request)
 
