@@ -261,6 +261,9 @@ UpdateHistoryLoop:
 		}
 
 		err = workflowContext.GetContext().UpdateWorkflowExecutionAsActive(ctx, now)
+		if _, ok := err.(*persistence.DuplicateRequestError); ok {
+			return nil
+		}
 		if execution.IsConflictError(err) {
 			if attempt != ConditionalRetryCount-1 {
 				_, err = workflowContext.ReloadMutableState(ctx)

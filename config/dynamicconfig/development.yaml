@@ -10,6 +10,9 @@ history.EnableConsistentQueryByDomain:
 history.useNewInitialFailoverVersion:
 - value: true
   constraints: {}
+history.enableStrongIdempotency:
+- value: true
+  constraints: {}
 frontend.validSearchAttributes:
 - value:
     BinaryChecksums: 1

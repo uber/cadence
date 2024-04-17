@@ -338,6 +338,8 @@ type Config struct {
 	LargeShardHistoryEventMetricThreshold dynamicconfig.IntPropertyFn
 	LargeShardHistoryBlobMetricThreshold  dynamicconfig.IntPropertyFn
 
+	EnableStrongIdempotency dynamicconfig.BoolPropertyFnWithDomainFilter
+
 	// HostName for machine running the service
 	HostName string
 }
@@ -596,6 +598,8 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, s
 		LargeShardHistoryEventMetricThreshold: dc.GetIntProperty(dynamicconfig.LargeShardHistoryEventMetricThreshold),
 		LargeShardHistoryBlobMetricThreshold:  dc.GetIntProperty(dynamicconfig.LargeShardHistoryBlobMetricThreshold),
 
+		EnableStrongIdempotency: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableStrongIdempotency),
+
 		HostName: hostname,
 	}
 
@@ -637,6 +641,7 @@ func NewForTestByShardNumber(shardNumber int) *Config {
 	}))
 	panicIfErr(inMem.UpdateValue(dynamicconfig.QueueProcessorRandomSplitProbability, 0.5))
 	panicIfErr(inMem.UpdateValue(dynamicconfig.ReplicationTaskFetcherEnableGracefulSyncShutdown, true))
+	panicIfErr(inMem.UpdateValue(dynamicconfig.EnableStrongIdempotency, true))
 
 	dc := dynamicconfig.NewCollection(inMem, log.NewNoop())
 	config := New(dc, shardNumber, 1024*1024, config.StoreTypeCassandra, false, "")

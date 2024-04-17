@@ -348,17 +348,17 @@ func (mr *MockmutableStateDecisionTaskManagerMockRecorder) ReplicateDecisionTask
 }
 
 // ReplicateDecisionTaskFailedEvent mocks base method.
-func (m *MockmutableStateDecisionTaskManager) ReplicateDecisionTaskFailedEvent() error {
+func (m *MockmutableStateDecisionTaskManager) ReplicateDecisionTaskFailedEvent(arg0 *types.HistoryEvent) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReplicateDecisionTaskFailedEvent")
+	ret := m.ctrl.Call(m, "ReplicateDecisionTaskFailedEvent", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ReplicateDecisionTaskFailedEvent indicates an expected call of ReplicateDecisionTaskFailedEvent.
-func (mr *MockmutableStateDecisionTaskManagerMockRecorder) ReplicateDecisionTaskFailedEvent() *gomock.Call {
+func (mr *MockmutableStateDecisionTaskManagerMockRecorder) ReplicateDecisionTaskFailedEvent(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplicateDecisionTaskFailedEvent", reflect.TypeOf((*MockmutableStateDecisionTaskManager)(nil).ReplicateDecisionTaskFailedEvent))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplicateDecisionTaskFailedEvent", reflect.TypeOf((*MockmutableStateDecisionTaskManager)(nil).ReplicateDecisionTaskFailedEvent), arg0)
 }
 
 // ReplicateDecisionTaskScheduledEvent mocks base method.
@@ -392,17 +392,17 @@ func (mr *MockmutableStateDecisionTaskManagerMockRecorder) ReplicateDecisionTask
 }
 
 // ReplicateDecisionTaskTimedOutEvent mocks base method.
-func (m *MockmutableStateDecisionTaskManager) ReplicateDecisionTaskTimedOutEvent(timeoutType types.TimeoutType) error {
+func (m *MockmutableStateDecisionTaskManager) ReplicateDecisionTaskTimedOutEvent(arg0 *types.HistoryEvent) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReplicateDecisionTaskTimedOutEvent", timeoutType)
+	ret := m.ctrl.Call(m, "ReplicateDecisionTaskTimedOutEvent", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ReplicateDecisionTaskTimedOutEvent indicates an expected call of ReplicateDecisionTaskTimedOutEvent.
-func (mr *MockmutableStateDecisionTaskManagerMockRecorder) ReplicateDecisionTaskTimedOutEvent(timeoutType interface{}) *gomock.Call {
+func (mr *MockmutableStateDecisionTaskManagerMockRecorder) ReplicateDecisionTaskTimedOutEvent(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplicateDecisionTaskTimedOutEvent", reflect.TypeOf((*MockmutableStateDecisionTaskManager)(nil).ReplicateDecisionTaskTimedOutEvent), timeoutType)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplicateDecisionTaskTimedOutEvent", reflect.TypeOf((*MockmutableStateDecisionTaskManager)(nil).ReplicateDecisionTaskTimedOutEvent), arg0)
 }
 
 // ReplicateTransientDecisionTaskScheduled mocks base method.

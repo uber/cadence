@@ -295,3 +295,24 @@ func TestTrimBinaryChecksums(t *testing.T) {
 	assert.Equal(t, recentBinaryChecksums, trimedBinaryChecksums)
 	assert.Equal(t, currResetPoints, trimedResetPoints)
 }
+
+func TestConvertWorkflowRequests(t *testing.T) {
+	inputs := map[persistence.WorkflowRequest]struct{}{}
+	inputs[persistence.WorkflowRequest{RequestID: "aaa", Version: 1, RequestType: persistence.WorkflowRequestTypeStart}] = struct{}{}
+	inputs[persistence.WorkflowRequest{RequestID: "aaa", Version: 1, RequestType: persistence.WorkflowRequestTypeSignal}] = struct{}{}
+
+	expectedOutputs := []*persistence.WorkflowRequest{
+		{
+			RequestID:   "aaa",
+			Version:     1,
+			RequestType: persistence.WorkflowRequestTypeStart,
+		},
+		{
+			RequestID:   "aaa",
+			Version:     1,
+			RequestType: persistence.WorkflowRequestTypeSignal,
+		},
+	}
+
+	assert.ElementsMatch(t, expectedOutputs, convertWorkflowRequests(inputs))
+}

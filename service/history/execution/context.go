@@ -115,6 +115,7 @@ type (
 			createMode persistence.CreateWorkflowMode,
 			prevRunID string,
 			prevLastWriteVersion int64,
+			workflowRequestMode persistence.CreateWorkflowRequestMode,
 		) error
 		ConflictResolveWorkflowExecution(
 			ctx context.Context,
@@ -155,6 +156,7 @@ type (
 			newMutableState MutableState,
 			currentWorkflowTransactionPolicy TransactionPolicy,
 			newWorkflowTransactionPolicy *TransactionPolicy,
+			workflowRequestMode persistence.CreateWorkflowRequestMode,
 		) error
 		UpdateWorkflowExecutionTasks(
 			ctx context.Context,
@@ -182,7 +184,7 @@ type (
 		getWorkflowExecutionFn                func(context.Context, *persistence.GetWorkflowExecutionRequest) (*persistence.GetWorkflowExecutionResponse, error)
 		createWorkflowExecutionFn             func(context.Context, *persistence.CreateWorkflowExecutionRequest) (*persistence.CreateWorkflowExecutionResponse, error)
 		updateWorkflowExecutionFn             func(context.Context, *persistence.UpdateWorkflowExecutionRequest) (*persistence.UpdateWorkflowExecutionResponse, error)
-		updateWorkflowExecutionWithNewFn      func(context.Context, time.Time, persistence.UpdateWorkflowMode, Context, MutableState, TransactionPolicy, *TransactionPolicy) error
+		updateWorkflowExecutionWithNewFn      func(context.Context, time.Time, persistence.UpdateWorkflowMode, Context, MutableState, TransactionPolicy, *TransactionPolicy, persistence.CreateWorkflowRequestMode) error
 		notifyTasksFromWorkflowSnapshotFn     func(*persistence.WorkflowSnapshot, events.PersistedBlobs, bool)
 		notifyTasksFromWorkflowMutationFn     func(*persistence.WorkflowMutation, events.PersistedBlobs, bool)
 		emitSessionUpdateStatsFn              func(string, *persistence.MutableStateUpdateSessionStats)
@@ -410,6 +412,7 @@ func (c *contextImpl) CreateWorkflowExecution(
 	createMode persistence.CreateWorkflowMode,
 	prevRunID string,
 	prevLastWriteVersion int64,
+	workflowRequestMode persistence.CreateWorkflowRequestMode,
 ) (retError error) {
 
 	defer func() {
@@ -417,6 +420,11 @@ func (c *contextImpl) CreateWorkflowExecution(
 			c.Clear()
 		}
 	}()
+	err := validateWorkflowRequestsAndMode(newWorkflow.WorkflowRequests, workflowRequestMode)
+	if err != nil {
+		// TODO(CDNC-8519): convert it to an error after verification in production
+		c.logger.Error("workflow requests and mode validation error", tag.Error(err))
+	}
 	domain, errorDomainName := c.shard.GetDomainCache().GetDomainName(c.domainID)
 	if errorDomainName != nil {
 		return errorDomainName
@@ -426,9 +434,9 @@ func (c *contextImpl) CreateWorkflowExecution(
 		Mode:                     createMode,
 		PreviousRunID:            prevRunID,
 		PreviousLastWriteVersion: prevLastWriteVersion,
-
-		NewWorkflowSnapshot: *newWorkflow,
-		DomainName:          domain,
+		NewWorkflowSnapshot:      *newWorkflow,
+		WorkflowRequestMode:      workflowRequestMode,
+		DomainName:               domain,
 	}
 
 	historySize := int64(len(persistedHistory.Data))
@@ -499,10 +507,13 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 				newContext.Clear()
 			}
 		}()
-
 		newWorkflow, newWorkflowEventsSeq, err = newMutableState.CloseTransactionAsSnapshot(now, TransactionPolicyPassive)
 		if err != nil {
 			return err
+		}
+		if len(resetWorkflow.WorkflowRequests) != 0 && len(newWorkflow.WorkflowRequests) != 0 {
+			// TODO(CDNC-8519): convert it to an error after verification in production
+			c.logger.Error("Workflow reqeusts are only expected to be generated from one workflow for ConflictResolveWorkflowExecution")
 		}
 		newWorkflowSizeSize := newContext.GetHistorySize()
 		startEvents := newWorkflowEventsSeq[0]
@@ -526,10 +537,13 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 				currentContext.Clear()
 			}
 		}()
-
 		currentWorkflow, currentWorkflowEventsSeq, err = currentMutableState.CloseTransactionAsMutation(now, *currentTransactionPolicy)
 		if err != nil {
 			return err
+		}
+		if len(currentWorkflow.WorkflowRequests) != 0 {
+			// TODO(CDNC-8519): convert it to an error after verification in production
+			c.logger.Error("workflow requests are not expected from current workflow for ConflictResolveWorkflowExecution")
 		}
 		currentWorkflowSize := currentContext.GetHistorySize()
 		for _, workflowEvents := range currentWorkflowEventsSeq {
@@ -564,6 +578,7 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 		ResetWorkflowSnapshot:   *resetWorkflow,
 		NewWorkflowSnapshot:     newWorkflow,
 		CurrentWorkflowMutation: currentWorkflow,
+		WorkflowRequestMode:     persistence.CreateWorkflowRequestModeReplicated,
 		// Encoding, this is set by shard context
 		DomainName: domain,
 	})
@@ -616,7 +631,7 @@ func (c *contextImpl) UpdateWorkflowExecutionAsActive(
 	ctx context.Context,
 	now time.Time,
 ) error {
-	return c.updateWorkflowExecutionWithNewFn(ctx, now, persistence.UpdateWorkflowModeUpdateCurrent, nil, nil, TransactionPolicyActive, nil)
+	return c.updateWorkflowExecutionWithNewFn(ctx, now, persistence.UpdateWorkflowModeUpdateCurrent, nil, nil, TransactionPolicyActive, nil, persistence.CreateWorkflowRequestModeNew)
 }
 
 func (c *contextImpl) UpdateWorkflowExecutionWithNewAsActive(
@@ -625,14 +640,14 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNewAsActive(
 	newContext Context,
 	newMutableState MutableState,
 ) error {
-	return c.updateWorkflowExecutionWithNewFn(ctx, now, persistence.UpdateWorkflowModeUpdateCurrent, newContext, newMutableState, TransactionPolicyActive, TransactionPolicyActive.Ptr())
+	return c.updateWorkflowExecutionWithNewFn(ctx, now, persistence.UpdateWorkflowModeUpdateCurrent, newContext, newMutableState, TransactionPolicyActive, TransactionPolicyActive.Ptr(), persistence.CreateWorkflowRequestModeNew)
 }
 
 func (c *contextImpl) UpdateWorkflowExecutionAsPassive(
 	ctx context.Context,
 	now time.Time,
 ) error {
-	return c.updateWorkflowExecutionWithNewFn(ctx, now, persistence.UpdateWorkflowModeUpdateCurrent, nil, nil, TransactionPolicyPassive, nil)
+	return c.updateWorkflowExecutionWithNewFn(ctx, now, persistence.UpdateWorkflowModeUpdateCurrent, nil, nil, TransactionPolicyPassive, nil, persistence.CreateWorkflowRequestModeReplicated)
 }
 
 func (c *contextImpl) UpdateWorkflowExecutionWithNewAsPassive(
@@ -641,7 +656,7 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNewAsPassive(
 	newContext Context,
 	newMutableState MutableState,
 ) error {
-	return c.updateWorkflowExecutionWithNewFn(ctx, now, persistence.UpdateWorkflowModeUpdateCurrent, newContext, newMutableState, TransactionPolicyPassive, TransactionPolicyPassive.Ptr())
+	return c.updateWorkflowExecutionWithNewFn(ctx, now, persistence.UpdateWorkflowModeUpdateCurrent, newContext, newMutableState, TransactionPolicyPassive, TransactionPolicyPassive.Ptr(), persistence.CreateWorkflowRequestModeReplicated)
 }
 
 func (c *contextImpl) UpdateWorkflowExecutionTasks(
@@ -663,6 +678,10 @@ func (c *contextImpl) UpdateWorkflowExecutionTasks(
 		return &types.InternalServiceError{
 			Message: "UpdateWorkflowExecutionTask can only be used for persisting new workflow tasks, but found new history events",
 		}
+	}
+	if len(currentWorkflow.WorkflowRequests) != 0 {
+		// TODO(CDNC-8519): convert it to an error after verification in production
+		c.logger.Error("UpdateWorkflowExecutionTask can only be used for persisting new workflow tasks, but found new workflow requests")
 	}
 	currentWorkflow.ExecutionStats = &persistence.ExecutionStats{
 		HistorySize: c.GetHistorySize(),
@@ -698,6 +717,7 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 	newMutableState MutableState,
 	currentWorkflowTransactionPolicy TransactionPolicy,
 	newWorkflowTransactionPolicy *TransactionPolicy,
+	workflowRequestMode persistence.CreateWorkflowRequestMode,
 ) (retError error) {
 	defer func() {
 		if retError != nil {
@@ -708,6 +728,11 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 	currentWorkflow, currentWorkflowEventsSeq, err := c.mutableState.CloseTransactionAsMutation(now, currentWorkflowTransactionPolicy)
 	if err != nil {
 		return err
+	}
+	err = validateWorkflowRequestsAndMode(currentWorkflow.WorkflowRequests, workflowRequestMode)
+	if err != nil {
+		// TODO(CDNC-8519): convert it to an error after verification in production
+		c.logger.Error("workflow requests and mode validation error", tag.Error(err))
 	}
 	var persistedBlobs events.PersistedBlobs
 	currentWorkflowSize := c.GetHistorySize()
@@ -736,13 +761,22 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 				newContext.Clear()
 			}
 		}()
-
 		newWorkflow, newWorkflowEventsSeq, err = newMutableState.CloseTransactionAsSnapshot(
 			now,
 			*newWorkflowTransactionPolicy,
 		)
 		if err != nil {
 			return err
+		}
+		if len(newWorkflow.WorkflowRequests) != 0 && len(currentWorkflow.WorkflowRequests) != 0 {
+			// TODO(CDNC-8519): convert it to an error after verification in production
+			c.logger.Error("Workflow reqeusts are only expected to be generated from one workflow for UpdateWorkflowExecution")
+		}
+
+		err := validateWorkflowRequestsAndMode(newWorkflow.WorkflowRequests, workflowRequestMode)
+		if err != nil {
+			// TODO(CDNC-8519): convert it to an error after verification in production
+			c.logger.Error("workflow requests and mode validation error", tag.Error(err))
 		}
 		newWorkflowSizeSize := newContext.GetHistorySize()
 		startEvents := newWorkflowEventsSeq[0]
@@ -785,6 +819,7 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 		Mode:                   updateMode,
 		UpdateWorkflowMutation: *currentWorkflow,
 		NewWorkflowSnapshot:    newWorkflow,
+		WorkflowRequestMode:    workflowRequestMode,
 		// Encoding, this is set by shard context
 		DomainName: domain,
 	})
@@ -1370,4 +1405,21 @@ func isOperationPossiblySuccessfulError(err error) bool {
 	default:
 		return !IsConflictError(err)
 	}
+}
+
+func validateWorkflowRequestsAndMode(requests []*persistence.WorkflowRequest, mode persistence.CreateWorkflowRequestMode) error {
+	if mode != persistence.CreateWorkflowRequestModeNew {
+		return nil
+	}
+	if len(requests) > 2 {
+		return &types.InternalServiceError{Message: "Too many workflow requests for a single API request."}
+	} else if len(requests) == 2 {
+		// SignalWithStartWorkflow API can generate 2 workflow requests
+		if (requests[0].RequestType == persistence.WorkflowRequestTypeStart && requests[1].RequestType == persistence.WorkflowRequestTypeSignal) ||
+			(requests[1].RequestType == persistence.WorkflowRequestTypeStart && requests[0].RequestType == persistence.WorkflowRequestTypeSignal) {
+			return nil
+		}
+		return &types.InternalServiceError{Message: "Too many workflow requests for a single API request."}
+	}
+	return nil
 }

@@ -97,7 +97,7 @@ func (s *eventReapplicationSuite) TestReapplyEvents_AppliedEvent() {
 		attr.GetSignalName(),
 		attr.GetInput(),
 		attr.GetIdentity(),
-		attr.GetRequestID(),
+		"",
 	).Return(event, nil).Times(1)
 	dedupResource := definition.NewEventReappliedID(runID, event.ID, event.Version)
 	msBuilderCurrent.EXPECT().IsResourceDuplicated(dedupResource).Return(false).Times(1)
@@ -170,7 +170,7 @@ func (s *eventReapplicationSuite) TestReapplyEvents_PartialAppliedEvent() {
 		attr1.GetSignalName(),
 		attr1.GetInput(),
 		attr1.GetIdentity(),
-		attr1.GetRequestID(),
+		"",
 	).Return(event1, nil).Times(1)
 	dedupResource1 := definition.NewEventReappliedID(runID, event1.ID, event1.Version)
 	msBuilderCurrent.EXPECT().IsResourceDuplicated(dedupResource1).Return(false).Times(1)
@@ -212,7 +212,7 @@ func (s *eventReapplicationSuite) TestReapplyEvents_Error() {
 		attr.GetSignalName(),
 		attr.GetInput(),
 		attr.GetIdentity(),
-		attr.GetRequestID(),
+		"",
 	).Return(nil, fmt.Errorf("test")).Times(1)
 	dedupResource := definition.NewEventReappliedID(runID, event.ID, event.Version)
 	msBuilderCurrent.EXPECT().IsResourceDuplicated(dedupResource).Return(false).Times(1)
