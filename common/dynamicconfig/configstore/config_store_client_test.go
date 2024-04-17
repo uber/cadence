@@ -1123,21 +1123,21 @@ func EqSnapshotVersion(version int64) gomock.Matcher {
 
 func TestValidateClientConfig(t *testing.T) {
 	tests := []struct {
-		desc          string
-		input         *c.ClientConfig
-		checkForError bool
+		desc    string
+		input   *c.ClientConfig
+		wantErr bool
 	}{
 		{
-			desc:          "return error for nil config",
-			input:         nil,
-			checkForError: true,
+			desc:    "return error for nil config",
+			input:   nil,
+			wantErr: true,
 		},
 		{
 			desc: "return error for minimum PollInterval",
 			input: &c.ClientConfig{
 				PollInterval: 1 * time.Second,
 			},
-			checkForError: true,
+			wantErr: true,
 		},
 		{
 			desc: "return error for invalid UpdateRetryAttempts",
@@ -1145,7 +1145,7 @@ func TestValidateClientConfig(t *testing.T) {
 				PollInterval:        3 * time.Second,
 				UpdateRetryAttempts: -1,
 			},
-			checkForError: true,
+			wantErr: true,
 		},
 		{
 			desc: "return error for invalid FetchTimeout",
@@ -1154,7 +1154,7 @@ func TestValidateClientConfig(t *testing.T) {
 				UpdateRetryAttempts: 1,
 				FetchTimeout:        -1 * time.Second,
 			},
-			checkForError: true,
+			wantErr: true,
 		},
 		{
 			desc: "return error for invalid UpdateTimeout",
@@ -1164,7 +1164,7 @@ func TestValidateClientConfig(t *testing.T) {
 				FetchTimeout:        1 * time.Second,
 				UpdateTimeout:       -1 * time.Second,
 			},
-			checkForError: true,
+			wantErr: true,
 		},
 		{
 			desc: "no error for valid config",
@@ -1174,13 +1174,13 @@ func TestValidateClientConfig(t *testing.T) {
 				FetchTimeout:        1 * time.Second,
 				UpdateTimeout:       1 * time.Second,
 			},
-			checkForError: false,
+			wantErr: false,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			err := validateClientConfig(test.input)
-			if !test.checkForError {
+			if !test.wantErr {
 				assert.NoError(t, err)
 			} else {
 				assert.Error(t, err)
@@ -1191,9 +1191,9 @@ func TestValidateClientConfig(t *testing.T) {
 
 func TestConvertFromDataBlob(t *testing.T) {
 	tests := []struct {
-		desc       string
-		blob       *types.DataBlob
-		checkError bool
+		desc    string
+		blob    *types.DataBlob
+		wantErr bool
 	}{
 		{
 			desc: "return error for unsupported encoding type",
@@ -1201,7 +1201,7 @@ func TestConvertFromDataBlob(t *testing.T) {
 				EncodingType: types.EncodingTypeThriftRW.Ptr(),
 				Data:         nil,
 			},
-			checkError: true,
+			wantErr: true,
 		},
 		{
 			desc: "no error for valid json",
@@ -1209,13 +1209,13 @@ func TestConvertFromDataBlob(t *testing.T) {
 				EncodingType: types.EncodingTypeJSON.Ptr(),
 				Data:         jsonMarshalHelper("test"),
 			},
-			checkError: false,
+			wantErr: false,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			_, err := convertFromDataBlob(test.blob)
-			if test.checkError {
+			if test.wantErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
@@ -1244,10 +1244,10 @@ func (uk unknownKeyType) Filters() []dc.Filter {
 
 func TestValidateKeyDataBlobPair(t *testing.T) {
 	tests := []struct {
-		desc       string
-		key        dc.Key
-		blob       *types.DataBlob
-		checkError bool
+		desc    string
+		key     dc.Key
+		blob    *types.DataBlob
+		wantErr bool
 	}{
 		{
 			desc: "return error for unsupported encoding type",
@@ -1256,7 +1256,7 @@ func TestValidateKeyDataBlobPair(t *testing.T) {
 				EncodingType: types.EncodingTypeThriftRW.Ptr(),
 				Data:         jsonMarshalHelper(1),
 			},
-			checkError: true,
+			wantErr: true,
 		},
 		{
 			desc: "return error for invalid value type for int key",
@@ -1265,7 +1265,7 @@ func TestValidateKeyDataBlobPair(t *testing.T) {
 				EncodingType: types.EncodingTypeJSON.Ptr(),
 				Data:         jsonMarshalHelper("text"),
 			},
-			checkError: true,
+			wantErr: true,
 		},
 		{
 			desc: "return no error for valid value type for int key",
@@ -1274,7 +1274,7 @@ func TestValidateKeyDataBlobPair(t *testing.T) {
 				EncodingType: types.EncodingTypeJSON.Ptr(),
 				Data:         jsonMarshalHelper(1),
 			},
-			checkError: false,
+			wantErr: false,
 		},
 		{
 			desc: "return error for invalid value type for bool key",
@@ -1283,7 +1283,7 @@ func TestValidateKeyDataBlobPair(t *testing.T) {
 				EncodingType: types.EncodingTypeJSON.Ptr(),
 				Data:         jsonMarshalHelper(1),
 			},
-			checkError: true,
+			wantErr: true,
 		},
 		{
 			desc: "return no error for valid value type for bool key",
@@ -1292,7 +1292,7 @@ func TestValidateKeyDataBlobPair(t *testing.T) {
 				EncodingType: types.EncodingTypeJSON.Ptr(),
 				Data:         jsonMarshalHelper(true),
 			},
-			checkError: false,
+			wantErr: false,
 		},
 		{
 			desc: "return error for invalid value type for float key",
@@ -1301,7 +1301,7 @@ func TestValidateKeyDataBlobPair(t *testing.T) {
 				EncodingType: types.EncodingTypeJSON.Ptr(),
 				Data:         jsonMarshalHelper("text"),
 			},
-			checkError: true,
+			wantErr: true,
 		},
 		{
 			desc: "return no error for valid value type for float key",
@@ -1310,7 +1310,7 @@ func TestValidateKeyDataBlobPair(t *testing.T) {
 				EncodingType: types.EncodingTypeJSON.Ptr(),
 				Data:         jsonMarshalHelper(2.5),
 			},
-			checkError: false,
+			wantErr: false,
 		},
 		{
 			desc: "return error for invalid value type for string key",
@@ -1319,7 +1319,7 @@ func TestValidateKeyDataBlobPair(t *testing.T) {
 				EncodingType: types.EncodingTypeJSON.Ptr(),
 				Data:         jsonMarshalHelper(false),
 			},
-			checkError: true,
+			wantErr: true,
 		},
 		{
 			desc: "return no error for valid value type for string key",
@@ -1328,7 +1328,7 @@ func TestValidateKeyDataBlobPair(t *testing.T) {
 				EncodingType: types.EncodingTypeJSON.Ptr(),
 				Data:         jsonMarshalHelper("text"),
 			},
-			checkError: false,
+			wantErr: false,
 		},
 		{
 			desc: "return error for invalid value type for duration key",
@@ -1337,7 +1337,7 @@ func TestValidateKeyDataBlobPair(t *testing.T) {
 				EncodingType: types.EncodingTypeJSON.Ptr(),
 				Data:         jsonMarshalHelper("text"),
 			},
-			checkError: true,
+			wantErr: true,
 		},
 		{
 			desc: "return no error for valid value type for duration key",
@@ -1346,7 +1346,7 @@ func TestValidateKeyDataBlobPair(t *testing.T) {
 				EncodingType: types.EncodingTypeJSON.Ptr(),
 				Data:         jsonMarshalHelper("1m"),
 			},
-			checkError: false,
+			wantErr: false,
 		},
 		{
 			desc: "return error for invalid value type for map key",
@@ -1355,7 +1355,7 @@ func TestValidateKeyDataBlobPair(t *testing.T) {
 				EncodingType: types.EncodingTypeJSON.Ptr(),
 				Data:         jsonMarshalHelper("text"),
 			},
-			checkError: true,
+			wantErr: true,
 		},
 		{
 			desc: "return no error for valid value type for map key",
@@ -1364,7 +1364,7 @@ func TestValidateKeyDataBlobPair(t *testing.T) {
 				EncodingType: types.EncodingTypeJSON.Ptr(),
 				Data:         jsonMarshalHelper(map[string]interface{}{"key": 1}),
 			},
-			checkError: false,
+			wantErr: false,
 		},
 		{
 			desc: "return error for invalid value type for list key",
@@ -1373,7 +1373,7 @@ func TestValidateKeyDataBlobPair(t *testing.T) {
 				EncodingType: types.EncodingTypeJSON.Ptr(),
 				Data:         jsonMarshalHelper("text"),
 			},
-			checkError: true,
+			wantErr: true,
 		},
 		{
 			desc: "return no error for valid value type for list key",
@@ -1382,7 +1382,7 @@ func TestValidateKeyDataBlobPair(t *testing.T) {
 				EncodingType: types.EncodingTypeJSON.Ptr(),
 				Data:         jsonMarshalHelper([]interface{}{1, 2, 3}),
 			},
-			checkError: false,
+			wantErr: false,
 		},
 		{
 			desc: "return error for unknown key",
@@ -1391,13 +1391,13 @@ func TestValidateKeyDataBlobPair(t *testing.T) {
 				EncodingType: types.EncodingTypeJSON.Ptr(),
 				Data:         jsonMarshalHelper(1),
 			},
-			checkError: true,
+			wantErr: true,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			err := validateKeyDataBlobPair(test.key, test.blob)
-			if test.checkError {
+			if test.wantErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
@@ -1413,13 +1413,13 @@ func TestNewConfigStoreClient(t *testing.T) {
 		persistenceConfig *config.Persistence
 		configType        persistence.ConfigType
 		logger            log.Logger
-		checkError        bool
+		wantErr           bool
 	}{
 		{
 			desc:              "return error when persistenceConfig is nil",
 			clientConfig:      nil,
 			persistenceConfig: nil,
-			checkError:        true,
+			wantErr:           true,
 		},
 		{
 			desc:              "return error when defaultstore not exists in persistenceConfig datastores",
@@ -1427,7 +1427,7 @@ func TestNewConfigStoreClient(t *testing.T) {
 			persistenceConfig: &config.Persistence{DefaultStore: "test"},
 			configType:        0,
 			logger:            log.NewNoop(),
-			checkError:        true,
+			wantErr:           true,
 		},
 		{
 			desc:              "return error when invalid datastore configuration provided",
@@ -1435,13 +1435,13 @@ func TestNewConfigStoreClient(t *testing.T) {
 			persistenceConfig: &config.Persistence{DefaultStore: "test", DataStores: map[string]config.DataStore{"test": {}}},
 			configType:        0,
 			logger:            log.NewNoop(),
-			checkError:        true,
+			wantErr:           true,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			client, err := NewConfigStoreClient(test.clientConfig, test.persistenceConfig, test.logger, test.configType)
-			if test.checkError {
+			if test.wantErr {
 				assert.Error(t, err)
 				assert.Nil(t, client)
 			} else {
