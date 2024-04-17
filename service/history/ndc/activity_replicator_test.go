@@ -1143,6 +1143,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning() {
 		nil,
 		execution.TransactionPolicyPassive,
 		nil,
+		persistence.CreateWorkflowRequestModeReplicated,
 	).Return(nil).Times(1)
 	err = s.activityReplicator.SyncActivity(ctx.Background(), request)
 	s.NoError(err)
@@ -1230,6 +1231,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_ZombieWorkflo
 		nil,
 		execution.TransactionPolicyPassive,
 		nil,
+		persistence.CreateWorkflowRequestModeReplicated,
 	).Return(nil).Times(1)
 	err = s.activityReplicator.SyncActivity(ctx.Background(), request)
 	s.NoError(err)

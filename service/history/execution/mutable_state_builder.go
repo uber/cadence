@@ -149,6 +149,8 @@ type (
 		insertReplicationTasks  []persistence.Task
 		insertTimerTasks        []persistence.Task
 
+		workflowRequests map[persistence.WorkflowRequest]struct{}
+
 		// do not rely on this, this is only updated on
 		// Load() and closeTransactionXXX methods. So when
 		// a transaction is in progress, this value will be
@@ -232,6 +234,8 @@ func newMutableStateBuilder(
 		timeSource:      shard.GetTimeSource(),
 		logger:          logger,
 		metricsClient:   shard.GetMetricsClient(),
+
+		workflowRequests: make(map[persistence.WorkflowRequest]struct{}),
 	}
 	s.executionInfo = &persistence.WorkflowExecutionInfo{
 		DecisionVersion:    common.EmptyVersion,
@@ -1800,7 +1804,17 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(
 ) error {
 
 	event := startEvent.WorkflowExecutionStartedEventAttributes
+	if event.GetRequestID() != "" {
+		// prefer requestID from history event, ideally we should remove the requestID parameter
+		// removing it may or may not be backward compatible, so keep it now
+		requestID = event.GetRequestID()
+	}
 	e.executionInfo.CreateRequestID = requestID
+	e.insertWorkflowRequest(persistence.WorkflowRequest{
+		RequestID:   requestID,
+		Version:     startEvent.Version,
+		RequestType: persistence.WorkflowRequestTypeStart,
+	})
 	e.executionInfo.DomainID = e.domainEntry.GetInfo().ID
 	e.executionInfo.WorkflowID = execution.GetWorkflowID()
 	e.executionInfo.RunID = execution.GetRunID()
@@ -2083,9 +2097,9 @@ func (e *mutableStateBuilder) AddDecisionTaskTimedOutEvent(
 }
 
 func (e *mutableStateBuilder) ReplicateDecisionTaskTimedOutEvent(
-	timeoutType types.TimeoutType,
+	event *types.HistoryEvent,
 ) error {
-	return e.decisionTaskManager.ReplicateDecisionTaskTimedOutEvent(timeoutType)
+	return e.decisionTaskManager.ReplicateDecisionTaskTimedOutEvent(event)
 }
 
 func (e *mutableStateBuilder) AddDecisionTaskScheduleToStartTimeoutEvent(
@@ -2152,8 +2166,8 @@ func (e *mutableStateBuilder) AddDecisionTaskFailedEvent(
 	)
 }
 
-func (e *mutableStateBuilder) ReplicateDecisionTaskFailedEvent() error {
-	return e.decisionTaskManager.ReplicateDecisionTaskFailedEvent()
+func (e *mutableStateBuilder) ReplicateDecisionTaskFailedEvent(event *types.HistoryEvent) error {
+	return e.decisionTaskManager.ReplicateDecisionTaskFailedEvent(event)
 }
 
 func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
@@ -2800,9 +2814,6 @@ func (e *mutableStateBuilder) AddWorkflowExecutionCancelRequestedEvent(
 	if err := e.ReplicateWorkflowExecutionCancelRequestedEvent(event); err != nil {
 		return nil, err
 	}
-
-	// Set the CancelRequestID on the active cluster.  This information is not part of the history event.
-	e.executionInfo.CancelRequestID = request.CancelRequest.GetRequestID()
 	return event, nil
 }
 
@@ -2811,6 +2822,13 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionCancelRequestedEvent(
 ) error {
 
 	e.executionInfo.CancelRequested = true
+	requestID := event.WorkflowExecutionCancelRequestedEventAttributes.RequestID
+	e.executionInfo.CancelRequestID = requestID
+	e.insertWorkflowRequest(persistence.WorkflowRequest{
+		RequestID:   requestID,
+		Version:     event.Version,
+		RequestType: persistence.WorkflowRequestTypeCancel,
+	})
 	return nil
 }
 
@@ -3364,6 +3382,11 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionSignaled(
 
 	// Increment signal count in mutable state for this workflow execution
 	e.executionInfo.SignalCount++
+	e.insertWorkflowRequest(persistence.WorkflowRequest{
+		RequestID:   event.WorkflowExecutionSignaledEventAttributes.RequestID,
+		Version:     event.Version,
+		RequestType: persistence.WorkflowRequestTypeSignal,
+	})
 	return nil
 }
 
@@ -4117,6 +4140,8 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 		ReplicationTasks:  e.insertReplicationTasks,
 		TimerTasks:        e.insertTimerTasks,
 
+		WorkflowRequests: convertWorkflowRequests(e.workflowRequests),
+
 		Condition: e.nextEventIDInDB,
 		Checksum:  checksum,
 	}
@@ -4194,6 +4219,8 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 		CrossClusterTasks: e.insertCrossClusterTasks,
 		ReplicationTasks:  e.insertReplicationTasks,
 		TimerTasks:        e.insertTimerTasks,
+
+		WorkflowRequests: convertWorkflowRequests(e.workflowRequests),
 
 		Condition: e.nextEventIDInDB,
 		Checksum:  checksum,
@@ -4304,6 +4331,7 @@ func (e *mutableStateBuilder) cleanupTransaction() error {
 	e.insertReplicationTasks = nil
 	e.insertTimerTasks = nil
 
+	e.workflowRequests = make(map[persistence.WorkflowRequest]struct{})
 	return nil
 }
 
@@ -4751,6 +4779,15 @@ func (e *mutableStateBuilder) checkMutability(
 		return ErrWorkflowFinished
 	}
 	return nil
+}
+
+func (e *mutableStateBuilder) insertWorkflowRequest(request persistence.WorkflowRequest) {
+	if e.domainEntry != nil && e.config.EnableStrongIdempotency(e.domainEntry.GetInfo().Name) && request.RequestID != "" {
+		if _, ok := e.workflowRequests[request]; ok {
+			e.logWarn("error encountering duplicate request", tag.WorkflowRequestID(request.RequestID))
+		}
+		e.workflowRequests[request] = struct{}{}
+	}
 }
 
 func (e *mutableStateBuilder) generateChecksum() checksum.Checksum {
