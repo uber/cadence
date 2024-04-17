@@ -102,7 +102,7 @@ func (l *liveness) eventLoop() {
 func (l *liveness) isAlive() bool {
 	now := l.timeSource.Now().UnixNano()
 	lastUpdate := atomic.LoadInt64(&l.lastEventTimeNano)
-	return now-lastUpdate < int64(l.ttl)
+	return now-lastUpdate < l.ttl.Nanoseconds()
 }
 
 func (l *liveness) markAlive() {
