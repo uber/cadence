@@ -789,7 +789,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 		prevLastWriteVersion,
 		persistence.CreateWorkflowRequestModeNew,
 	)
-	if t, ok := err.(*persistence.DuplicateRequestError); ok {
+	if t, ok := persistence.AsDuplicateRequestError(err); ok {
 		if t.RequestType == persistence.WorkflowRequestTypeStart || (isSignalWithStart && t.RequestType == persistence.WorkflowRequestTypeSignal) {
 			return &types.StartWorkflowExecutionResponse{
 				RunID: t.RunID,
@@ -865,7 +865,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 			t.LastWriteVersion,
 			persistence.CreateWorkflowRequestModeNew,
 		)
-		if t, ok := err.(*persistence.DuplicateRequestError); ok {
+		if t, ok := persistence.AsDuplicateRequestError(err); ok {
 			if t.RequestType == persistence.WorkflowRequestTypeStart || (isSignalWithStart && t.RequestType == persistence.WorkflowRequestTypeSignal) {
 				return &types.StartWorkflowExecutionResponse{
 					RunID: t.RunID,
@@ -2640,7 +2640,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 			// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict then reload
 			// the history and try the operation again.
 			if err := wfContext.UpdateWorkflowExecutionAsActive(ctx, e.shard.GetTimeSource().Now()); err != nil {
-				if t, ok := err.(*persistence.DuplicateRequestError); ok {
+				if t, ok := persistence.AsDuplicateRequestError(err); ok {
 					if t.RequestType == persistence.WorkflowRequestTypeSignal {
 						return &types.StartWorkflowExecutionResponse{RunID: t.RunID}, nil
 					}
@@ -3041,7 +3041,7 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 		nil,
 		request.GetSkipSignalReapply(),
 	); err != nil {
-		if t, ok := err.(*persistence.DuplicateRequestError); ok {
+		if t, ok := persistence.AsDuplicateRequestError(err); ok {
 			if t.RequestType == persistence.WorkflowRequestTypeReset {
 				return &types.ResetWorkflowExecutionResponse{
 					RunID: t.RunID,
