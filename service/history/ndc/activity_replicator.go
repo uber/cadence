@@ -204,6 +204,7 @@ func (r *activityReplicatorImpl) SyncActivity(
 		nil, // no new workflow
 		execution.TransactionPolicyPassive,
 		nil,
+		persistence.CreateWorkflowRequestModeReplicated,
 	)
 }
 

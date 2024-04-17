@@ -261,6 +261,7 @@ func (r *transactionManagerImpl) backfillWorkflow(
 		nil,
 		transactionPolicy,
 		nil,
+		persistence.CreateWorkflowRequestModeReplicated,
 	)
 }
 

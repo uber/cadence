@@ -2003,6 +2003,13 @@ const (
 	// Allowed filters: DomainName
 	EnableRetryForChecksumFailure
 
+	// EnableStrongIdempotency enables strong idempotency for APIs
+	// KeyName: history.enableStrongIdempotency
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: DomainName
+	EnableStrongIdempotency
+
 	// LastBoolKey must be the last one in this const group
 	LastBoolKey
 )
@@ -4308,6 +4315,12 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		KeyName:      "history.enableMutableStateChecksumFailureRetry",
 		Filters:      []Filter{DomainName},
 		Description:  "EnableRetryForChecksumFailure enables retry if mutable state checksum verification fails",
+		DefaultValue: false,
+	},
+	EnableStrongIdempotency: DynamicBool{
+		KeyName:      "history.enableStrongIdempotency",
+		Filters:      []Filter{DomainName},
+		Description:  "EnableStrongIdempotency enables strong idempotency for APIs",
 		DefaultValue: false,
 	},
 }
