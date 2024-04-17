@@ -41,6 +41,7 @@ type (
 		timeSource   clock.MockedTimeSource
 		ttl          time.Duration
 		shutdownFlag int32
+		liveness     *liveness
 	}
 )
 
@@ -49,75 +50,60 @@ func TestLivenessSuite(t *testing.T) {
 	suite.Run(t, s)
 }
 
-func (s *livenessSuite) SetupSuite() {
-}
-
-func (s *livenessSuite) TearDownSuite() {
-}
-
 func (s *livenessSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
-
-	s.ttl = 2 * time.Second
+	s.ttl = 500 * time.Millisecond
 	s.timeSource = clock.NewMockedTimeSource()
-
 	s.shutdownFlag = 0
-}
-
-func (s *livenessSuite) TearDownTest() {
-
+	s.liveness = newLiveness(s.timeSource, s.ttl, func() { atomic.CompareAndSwapInt32(&s.shutdownFlag, 0, 1) })
 }
 
 func (s *livenessSuite) TestIsAlive_No() {
-	liveness := newLiveness(s.timeSource, s.ttl, func() { atomic.CompareAndSwapInt32(&s.shutdownFlag, 0, 1) })
-	s.timeSource.Advance(s.ttl * 2)
-	alive := liveness.isAlive()
+	s.timeSource.Advance(s.ttl)
+	alive := s.liveness.isAlive()
 	s.False(alive)
 }
 
 func (s *livenessSuite) TestIsAlive_Yes() {
-	liveness := newLiveness(s.timeSource, s.ttl, func() { atomic.CompareAndSwapInt32(&s.shutdownFlag, 0, 1) })
 	s.timeSource.Advance(s.ttl / 2)
-	alive := liveness.isAlive()
+	alive := s.liveness.isAlive()
 	s.True(alive)
 }
 
 func (s *livenessSuite) TestMarkAlive_Noop() {
-	liveness := newLiveness(s.timeSource, s.ttl, func() { atomic.CompareAndSwapInt32(&s.shutdownFlag, 0, 1) })
-	lastEventTime := liveness.lastEventTime
-	newEventTime := s.timeSource.Now().Add(-1)
-	liveness.markAlive(newEventTime)
-	s.True(lastEventTime.Equal(liveness.lastEventTime))
+	lastEventTime := s.liveness.lastEventTimeNano
+	// not advanding time so markAlive will be a noop
+	s.liveness.markAlive()
+	s.Equal(lastEventTime, s.liveness.lastEventTimeNano)
 }
 
 func (s *livenessSuite) TestMarkAlive_Updated() {
-	liveness := newLiveness(s.timeSource, s.ttl, func() { atomic.CompareAndSwapInt32(&s.shutdownFlag, 0, 1) })
-	newEventTime := s.timeSource.Now().Add(1)
-	liveness.markAlive(newEventTime)
-	s.True(newEventTime.Equal(liveness.lastEventTime))
+	s.timeSource.Advance(time.Duration(1))
+	s.liveness.markAlive()
+	s.Equal(s.timeSource.Now().UnixNano(), s.liveness.lastEventTimeNano)
 }
 
 func (s *livenessSuite) TestEventLoop_Noop() {
-	liveness := newLiveness(s.timeSource, s.ttl, func() { atomic.CompareAndSwapInt32(&s.shutdownFlag, 0, 1) })
-	liveness.Start()
+	s.liveness.Start()
+	defer s.liveness.Stop()
 
-	s.timeSource.Advance(s.ttl * 4)
-	liveness.markAlive(s.timeSource.Now())
+	// advance time ttl/2 and mark alive
+	s.timeSource.Advance(s.ttl / 2)
+	s.liveness.markAlive()
+	s.True(s.liveness.isAlive())
 
-	timer := time.NewTimer(s.ttl * 2)
-	select {
-	case <-liveness.shutdownChan:
-		s.Fail("should not shutdown")
-	case <-timer.C:
-		s.Equal(int32(0), atomic.LoadInt32(&s.shutdownFlag))
-	}
+	// advance time ttl/2 more and validate still alive
+	s.timeSource.Advance(s.ttl / 2)
+	time.Sleep(100 * time.Millisecond) // give event loop time to run
+	s.True(s.liveness.isAlive())
+	s.Equal(int32(0), atomic.LoadInt32(&s.shutdownFlag))
 }
 
 func (s *livenessSuite) TestEventLoop_Shutdown() {
-	liveness := newLiveness(s.timeSource, s.ttl, func() { atomic.CompareAndSwapInt32(&s.shutdownFlag, 0, 1) })
-	liveness.Start()
+	s.liveness.Start()
+	defer s.liveness.Stop()
 
-	s.timeSource.Advance(s.ttl * 4)
-	<-liveness.shutdownChan
+	s.timeSource.Advance(s.ttl)
+	<-s.liveness.stopCh
 	s.Equal(int32(1), atomic.LoadInt32(&s.shutdownFlag))
 }
