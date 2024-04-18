@@ -87,7 +87,7 @@ func (t *timerActiveTaskExecutor) Execute(
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), taskDefaultTimeout)
+	ctx, cancel := context.WithTimeout(t.ctx, taskDefaultTimeout)
 	defer cancel()
 
 	switch timerTask.TaskType {
@@ -105,7 +105,7 @@ func (t *timerActiveTaskExecutor) Execute(
 		return t.executeWorkflowBackoffTimerTask(ctx, timerTask)
 	case persistence.TaskTypeDeleteHistoryEvent:
 		// special timeout for delete history event
-		deleteHistoryEventContext, deleteHistoryEventCancel := context.WithTimeout(context.Background(), time.Duration(t.config.DeleteHistoryEventContextTimeout())*time.Second)
+		deleteHistoryEventContext, deleteHistoryEventCancel := context.WithTimeout(t.ctx, time.Duration(t.config.DeleteHistoryEventContextTimeout())*time.Second)
 		defer deleteHistoryEventCancel()
 		return t.executeDeleteHistoryEventTask(deleteHistoryEventContext, timerTask)
 	default:
@@ -157,7 +157,7 @@ func (t *timerActiveTaskExecutor) executeUserTimerTimeoutTask(
 	// is encountered, so that we don't need to scan history multiple times
 	// where there're multiple timers with high delay
 	var resurrectedTimer map[string]struct{}
-	scanWorkflowCtx, cancel := context.WithTimeout(context.Background(), scanWorkflowTimeout)
+	scanWorkflowCtx, cancel := context.WithTimeout(t.ctx, scanWorkflowTimeout)
 	defer cancel()
 
 	sortedUserTimers := timerSequence.LoadAndSortUserTimers()
@@ -304,7 +304,7 @@ func (t *timerActiveTaskExecutor) executeActivityTimeoutTask(
 	// is encountered, so that we don't need to scan history multiple times
 	// where there're multiple timers with high delay
 	var resurrectedActivity map[int64]struct{}
-	scanWorkflowCtx, cancel := context.WithTimeout(context.Background(), scanWorkflowTimeout)
+	scanWorkflowCtx, cancel := context.WithTimeout(t.ctx, scanWorkflowTimeout)
 	defer cancel()
 
 	// need to clear activity heartbeat timer task mask for new activity timer task creation

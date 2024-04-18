@@ -178,6 +178,8 @@ func (t *timerQueueProcessor) Stop() {
 
 	if !t.shard.GetConfig().QueueProcessorEnableGracefulSyncShutdown() {
 		t.activeQueueProcessor.Stop()
+		// stop active executor after queue processor
+		t.activeTaskExecutor.Stop()
 		for _, standbyQueueProcessor := range t.standbyQueueProcessors {
 			standbyQueueProcessor.Stop()
 		}
@@ -193,6 +195,7 @@ func (t *timerQueueProcessor) Stop() {
 	if !common.AwaitWaitGroup(&t.shutdownWG, gracefulShutdownTimeout) {
 		t.logger.Warn("transferQueueProcessor timed out on shut down", tag.LifeCycleStopTimedout)
 	}
+	t.activeQueueProcessor.Stop()
 	t.activeQueueProcessor.Stop()
 	for _, standbyQueueProcessor := range t.standbyQueueProcessors {
 		standbyQueueProcessor.Stop()

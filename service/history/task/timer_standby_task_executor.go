@@ -91,7 +91,7 @@ func (t *timerStandbyTaskExecutor) Execute(
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), taskDefaultTimeout)
+	ctx, cancel := context.WithTimeout(t.ctx, taskDefaultTimeout)
 	defer cancel()
 
 	switch timerTask.TaskType {
@@ -111,7 +111,7 @@ func (t *timerStandbyTaskExecutor) Execute(
 		return t.executeWorkflowBackoffTimerTask(ctx, timerTask)
 	case persistence.TaskTypeDeleteHistoryEvent:
 		// special timeout for delete history event
-		deleteHistoryEventContext, deleteHistoryEventCancel := context.WithTimeout(context.Background(), time.Duration(t.config.DeleteHistoryEventContextTimeout())*time.Second)
+		deleteHistoryEventContext, deleteHistoryEventCancel := context.WithTimeout(t.ctx, time.Duration(t.config.DeleteHistoryEventContextTimeout())*time.Second)
 		defer deleteHistoryEventCancel()
 		return t.executeDeleteHistoryEventTask(deleteHistoryEventContext, timerTask)
 	default:
