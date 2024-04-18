@@ -83,7 +83,7 @@ func TestConvertSearchResultToVisibilityRecord(t *testing.T) {
 			inputColumnNames:         []string{"Attr"},
 			inputHit:                 []interface{}{123},
 			expectedVisibilityRecord: nil,
-			expectErr:                fmt.Errorf(`assertion error. Can't convert systemKeyMap["Attr"] to string. Found int`),
+			expectErr:                fmt.Errorf(`assertion error. Can't convert systemKeyMap[Attr] to string. Found int`),
 		},
 		"Case2-4: Attr unmarshal to map error case": {
 			inputColumnNames:         []string{"Attr"},
