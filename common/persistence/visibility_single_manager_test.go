@@ -103,7 +103,11 @@ func TestRecordWorkflowExecutionStarted(t *testing.T) {
 			WorkflowID: "err-wid",
 			RunID:      "err-rid",
 		},
-		Memo: &types.Memo{},
+		Memo: &types.Memo{
+			Fields: map[string][]byte{
+				"Service": []byte("servername1"),
+			},
+		},
 		SearchAttributes: map[string][]byte{
 			"CustomStringField": []byte("test string"),
 			"CustomTimeField":   []byte("2020-01-01T00:00:00Z"),
