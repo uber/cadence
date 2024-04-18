@@ -162,11 +162,11 @@ func (s *taskSuite) TestHandleErr_ErrTargetDomainNotActive() {
 
 	// we should always return the target domain not active error
 	// no matter that the submit time is
-	taskBase.submitTime = time.Now().Add(-cache.DomainCacheRefreshInterval * time.Duration(2))
+	taskBase.submitTime = time.Now().Add(-cache.DomainCacheRefreshInterval*time.Duration(10) + 1)
 	s.Equal(nil, taskBase.HandleErr(err))
 
 	taskBase.submitTime = time.Now()
-	s.Equal(nil, taskBase.HandleErr(err))
+	s.Equal(err, taskBase.HandleErr(err))
 }
 
 func (s *taskSuite) TestHandleErr_ErrDomainNotActive() {
@@ -176,7 +176,7 @@ func (s *taskSuite) TestHandleErr_ErrDomainNotActive() {
 
 	err := &types.DomainNotActiveError{}
 
-	taskBase.submitTime = time.Now().Add(-cache.DomainCacheRefreshInterval * time.Duration(2))
+	taskBase.submitTime = time.Now().Add(-cache.DomainCacheRefreshInterval*time.Duration(10) + time.Second)
 	s.NoError(taskBase.HandleErr(err))
 
 	taskBase.submitTime = time.Now()
