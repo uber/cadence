@@ -112,7 +112,10 @@ func (c *PinotClient) getInternalListWorkflowExecutionsResponse(
 	numOfActualHits := resp.ResultTable.GetRowCount()
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
 	for i := 0; i < numOfActualHits; i++ {
-		workflowExecutionInfo := ConvertSearchResultToVisibilityRecord(actualHits[i], columnNames, c.logger)
+		workflowExecutionInfo, err := ConvertSearchResultToVisibilityRecord(actualHits[i], columnNames)
+		if err != nil {
+			return nil, err
+		}
 
 		if isRecordValid == nil || isRecordValid(workflowExecutionInfo) {
 			response.Executions = append(response.Executions, workflowExecutionInfo)
@@ -149,7 +152,11 @@ func (c *PinotClient) getInternalGetClosedWorkflowExecutionResponse(resp *pinot.
 	schema := resp.ResultTable.DataSchema // get the schema to map results
 	columnNames := schema.ColumnNames
 	actualHits := resp.ResultTable.Rows
-	response.Execution = ConvertSearchResultToVisibilityRecord(actualHits[0], columnNames, c.logger)
+	var err error
+	response.Execution, err = ConvertSearchResultToVisibilityRecord(actualHits[0], columnNames)
+	if err != nil {
+		return nil, err
+	}
 
 	return response, nil
 }
