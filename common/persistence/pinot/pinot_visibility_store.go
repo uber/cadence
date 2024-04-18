@@ -61,6 +61,7 @@ const (
 	ExecutionTime        = "ExecutionTime"
 	IsDeleted            = "IsDeleted"   // used for Pinot deletion/rolling upsert only, not visible to user
 	EventTimeMs          = "EventTimeMs" // used for Pinot deletion/rolling upsert only, not visible to user
+	Memo                 = "Memo"
 
 	// used to be micro second
 	oneMicroSecondInNano = int64(time.Microsecond / time.Nanosecond)
@@ -119,8 +120,6 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionStarted(
 		request.StartTimestamp.UnixMilli(),
 		request.ExecutionTimestamp.UnixMilli(),
 		request.TaskID,
-		request.Memo.Data,
-		request.Memo.GetEncoding(),
 		request.IsCron,
 		request.NumClusters,
 		-1, // represent invalid close time, means open workflow execution
@@ -130,6 +129,7 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionStarted(
 		int64(request.ShardID),
 		request.SearchAttributes,
 		false,
+		request.Memo,
 	)
 
 	if err != nil {
@@ -150,8 +150,6 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionClosed(ctx context.Context
 		request.StartTimestamp.UnixMilli(),
 		request.ExecutionTimestamp.UnixMilli(),
 		request.TaskID,
-		request.Memo.Data,
-		request.Memo.GetEncoding(),
 		request.IsCron,
 		request.NumClusters,
 		request.CloseTimestamp.UnixMilli(),
@@ -161,6 +159,7 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionClosed(ctx context.Context
 		int64(request.ShardID),
 		request.SearchAttributes,
 		false,
+		request.Memo,
 	)
 
 	if err != nil {
@@ -181,8 +180,6 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionUninitialized(ctx context.
 		-1,
 		-1,
 		0,
-		nil,
-		"",
 		false,
 		0,
 		-1, // represent invalid close time, means open workflow execution
@@ -192,6 +189,7 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionUninitialized(ctx context.
 		request.ShardID,
 		nil,
 		false,
+		nil,
 	)
 
 	if err != nil {
@@ -211,8 +209,6 @@ func (v *pinotVisibilityStore) UpsertWorkflowExecution(ctx context.Context, requ
 		request.StartTimestamp.UnixMilli(),
 		request.ExecutionTimestamp.UnixMilli(),
 		request.TaskID,
-		request.Memo.Data,
-		request.Memo.GetEncoding(),
 		request.IsCron,
 		request.NumClusters,
 		-1, // represent invalid close time, means open workflow execution
@@ -222,6 +218,7 @@ func (v *pinotVisibilityStore) UpsertWorkflowExecution(ctx context.Context, requ
 		request.ShardID,
 		request.SearchAttributes,
 		false,
+		request.Memo,
 	)
 
 	if err != nil {
@@ -567,8 +564,6 @@ func createVisibilityMessage(
 	startTimeUnixMilli int64,
 	executionTimeUnixMilli int64,
 	taskID int64,
-	memo []byte,
-	encoding common.EncodingType,
 	isCron bool,
 	numClusters int16,
 	// specific to certain status
@@ -579,6 +574,7 @@ func createVisibilityMessage(
 	shardID int64,
 	rawSearchAttributes map[string][]byte,
 	isDeleted bool,
+	memo *p.DataBlob,
 ) (*indexer.PinotMessage, error) {
 	m := make(map[string]interface{})
 	// loop through all input parameters
@@ -614,6 +610,20 @@ func createVisibilityMessage(
 		}
 		SearchAttributes[key] = val
 	}
+
+	if memo != nil {
+		// add memo into search attr
+		marshalMemo, err := json.Marshal(memo)
+		if err != nil {
+			return nil, err
+		}
+		// string(marshalMemo) is a must-do step,
+		// to give it a type so that it can be converted to a string again
+		// and unmarshaled correctly in the reading side
+		// Also, it doesn't matter to store in Pinot as a pure string since it's not used for search
+		SearchAttributes[Memo] = string(marshalMemo)
+	}
+
 	m[Attr] = SearchAttributes
 	serializedMsg, err := json.Marshal(m)
 	if err != nil {
