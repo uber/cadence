@@ -36,90 +36,76 @@ type (
 		status     int32
 		timeSource clock.TimeSource
 		ttl        time.Duration
-		// internal shutdown channel
-		shutdownChan chan struct{}
+
+		// stopCh is used to signal the liveness to stop
+		stopCh chan struct{}
+		// wg is used to wait for the liveness to stop
+		wg sync.WaitGroup
 
 		// broadcast shutdown functions
 		broadcastShutdownFn func()
 
-		sync.Mutex
-		lastEventTime time.Time
+		lastEventTimeNano int64
 	}
 )
 
 var _ common.Daemon = (*liveness)(nil)
 
-func newLiveness(
-	timeSource clock.TimeSource,
-	ttl time.Duration,
-	broadcastShutdownFn func(),
-) *liveness {
+func newLiveness(timeSource clock.TimeSource, ttl time.Duration, broadcastShutdownFn func()) *liveness {
 	return &liveness{
-		status:       common.DaemonStatusInitialized,
-		timeSource:   timeSource,
-		ttl:          ttl,
-		shutdownChan: make(chan struct{}),
-
+		status:              common.DaemonStatusInitialized,
+		timeSource:          timeSource,
+		ttl:                 ttl,
+		stopCh:              make(chan struct{}),
 		broadcastShutdownFn: broadcastShutdownFn,
-
-		lastEventTime: timeSource.Now().UTC(),
+		lastEventTimeNano:   timeSource.Now().UnixNano(),
 	}
 }
 
 func (l *liveness) Start() {
-	if !atomic.CompareAndSwapInt32(
-		&l.status,
-		common.DaemonStatusInitialized,
-		common.DaemonStatusStarted,
-	) {
+	if !atomic.CompareAndSwapInt32(&l.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
 		return
 	}
 
+	l.wg.Add(1)
 	go l.eventLoop()
 }
 
 func (l *liveness) Stop() {
-	if !atomic.CompareAndSwapInt32(
-		&l.status,
-		common.DaemonStatusStarted,
-		common.DaemonStatusStopped,
-	) {
+	if !atomic.CompareAndSwapInt32(&l.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
 		return
 	}
 
-	close(l.shutdownChan)
+	close(l.stopCh)
 	l.broadcastShutdownFn()
+	l.wg.Wait()
 }
 
 func (l *liveness) eventLoop() {
-	ttlTimer := time.NewTicker(l.ttl)
-	defer ttlTimer.Stop()
+	defer l.wg.Done()
+	checkTimer := time.NewTicker(l.ttl / 2)
+	defer checkTimer.Stop()
 
 	for {
 		select {
-		case <-ttlTimer.C:
+		case <-checkTimer.C:
 			if !l.isAlive() {
 				l.Stop()
 			}
 
-		case <-l.shutdownChan:
+		case <-l.stopCh:
 			return
 		}
 	}
 }
 
 func (l *liveness) isAlive() bool {
-	l.Lock()
-	defer l.Unlock()
-	return l.lastEventTime.Add(l.ttl).After(l.timeSource.Now())
+	now := l.timeSource.Now().UnixNano()
+	lastUpdate := atomic.LoadInt64(&l.lastEventTimeNano)
+	return now-lastUpdate < l.ttl.Nanoseconds()
 }
 
-func (l *liveness) markAlive(
-	now time.Time,
-) {
-	l.Lock()
-	defer l.Unlock()
-	if l.lastEventTime.Before(now) {
-		l.lastEventTime = now.UTC()
-	}
+func (l *liveness) markAlive() {
+	now := l.timeSource.Now().UnixNano()
+	atomic.StoreInt64(&l.lastEventTimeNano, now)
 }
