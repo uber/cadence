@@ -346,6 +346,8 @@ func (m *executionManagerImpl) UpdateWorkflowExecution(
 
 		UpdateWorkflowMutation: *serializedWorkflowMutation,
 		NewWorkflowSnapshot:    serializedNewWorkflowSnapshot,
+
+		WorkflowRequestMode: request.WorkflowRequestMode,
 	}
 	msuss := m.statsComputer.computeMutableStateUpdateStats(newRequest)
 	err = m.persistence.UpdateWorkflowExecution(ctx, newRequest)
@@ -563,6 +565,8 @@ func (m *executionManagerImpl) ConflictResolveWorkflowExecution(
 		NewWorkflowSnapshot: serializedNewWorkflowMutation,
 
 		CurrentWorkflowMutation: serializedCurrentWorkflowMutation,
+
+		WorkflowRequestMode: request.WorkflowRequestMode,
 	}
 	msuss := m.statsComputer.computeMutableStateConflictResolveStats(newRequest)
 	err = m.persistence.ConflictResolveWorkflowExecution(ctx, newRequest)
@@ -593,6 +597,8 @@ func (m *executionManagerImpl) CreateWorkflowExecution(
 		PreviousLastWriteVersion: request.PreviousLastWriteVersion,
 
 		NewWorkflowSnapshot: *serializedNewWorkflowSnapshot,
+
+		WorkflowRequestMode: request.WorkflowRequestMode,
 	}
 
 	msuss := m.statsComputer.computeMutableStateCreateStats(newRequest)
@@ -675,6 +681,8 @@ func (m *executionManagerImpl) SerializeWorkflowMutation(
 		ReplicationTasks:  input.ReplicationTasks,
 		TimerTasks:        input.TimerTasks,
 
+		WorkflowRequests: input.WorkflowRequests,
+
 		Condition:    input.Condition,
 		Checksum:     input.Checksum,
 		ChecksumData: checksumData,
@@ -738,6 +746,8 @@ func (m *executionManagerImpl) SerializeWorkflowSnapshot(
 		CrossClusterTasks: input.CrossClusterTasks,
 		ReplicationTasks:  input.ReplicationTasks,
 		TimerTasks:        input.TimerTasks,
+
+		WorkflowRequests: input.WorkflowRequests,
 
 		Condition:    input.Condition,
 		Checksum:     input.Checksum,

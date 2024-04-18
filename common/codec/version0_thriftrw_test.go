@@ -21,11 +21,15 @@
 package codec
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"sync"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/multierr"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 )
@@ -82,6 +86,30 @@ func (s *thriftRWEncoderSuite) TestEncode() {
 	binary, err := s.encoder.Encode(thriftObject)
 	s.Nil(err)
 	s.Equal(thriftEncodedBinary, binary)
+}
+
+func (s *thriftRWEncoderSuite) TestEncodeConcurrent() {
+	var wg sync.WaitGroup
+	count := 200
+	errs := make([]error, count)
+	wg.Add(count)
+	for i := 0; i < count; i++ {
+		go func(idx int) {
+			defer wg.Done()
+			binary, err := s.encoder.Encode(thriftObject)
+			if err != nil {
+				errs[idx] = err
+				return
+			}
+
+			if diff := cmp.Diff(thriftEncodedBinary, binary); diff != "" {
+				errs[idx] = fmt.Errorf("Mismatch (-want +got):\n%s", diff)
+				return
+			}
+		}(i)
+	}
+	wg.Wait()
+	s.NoError(multierr.Combine(errs...))
 }
 
 func (s *thriftRWEncoderSuite) TestDecode() {

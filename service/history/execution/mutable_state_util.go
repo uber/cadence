@@ -205,6 +205,15 @@ func convertUpdateSignalInfos(
 	return outputs
 }
 
+func convertWorkflowRequests(inputs map[persistence.WorkflowRequest]struct{}) []*persistence.WorkflowRequest {
+	outputs := make([]*persistence.WorkflowRequest, 0, len(inputs))
+	for key := range inputs {
+		key := key // TODO: remove this trick once we upgrade go to 1.22
+		outputs = append(outputs, &key)
+	}
+	return outputs
+}
+
 // FailDecision fails the current decision task
 func FailDecision(
 	mutableState MutableState,

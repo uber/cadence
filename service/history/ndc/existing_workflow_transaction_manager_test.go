@@ -344,6 +344,7 @@ func (s *transactionManagerForExistingWorkflowSuite) TestDispatchForExistingWork
 		newMutableState,
 		execution.TransactionPolicyPassive,
 		execution.TransactionPolicyPassive.Ptr(),
+		persistence.CreateWorkflowRequestModeReplicated,
 	).Return(nil).Times(1)
 
 	err := s.updateMgr.dispatchForExistingWorkflow(ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow)
@@ -416,6 +417,7 @@ func (s *transactionManagerForExistingWorkflowSuite) TestDispatchForExistingWork
 		(execution.MutableState)(nil),
 		execution.TransactionPolicyPassive,
 		(*execution.TransactionPolicy)(nil),
+		persistence.CreateWorkflowRequestModeReplicated,
 	).Return(nil).Times(1)
 
 	err := s.updateMgr.dispatchForExistingWorkflow(ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow)

@@ -1082,6 +1082,7 @@ func FromDescribeDomainResponseDomain(t *types.DescribeDomainResponse) *apiv1.Do
 		domain.HistoryArchivalUri = config.HistoryArchivalURI
 		domain.VisibilityArchivalStatus = FromArchivalStatus(config.VisibilityArchivalStatus)
 		domain.VisibilityArchivalUri = config.VisibilityArchivalURI
+		domain.AsyncWorkflowConfig = FromDomainAsyncWorkflowConfiguraton(config.AsyncWorkflowConfig)
 	}
 	if repl := t.ReplicationConfiguration; repl != nil {
 		domain.ActiveClusterName = repl.ActiveClusterName
@@ -1124,6 +1125,7 @@ func ToDescribeDomainResponseDomain(t *apiv1.Domain) *types.DescribeDomainRespon
 			VisibilityArchivalStatus:               ToArchivalStatus(t.VisibilityArchivalStatus),
 			VisibilityArchivalURI:                  t.VisibilityArchivalUri,
 			IsolationGroups:                        ToIsolationGroupConfig(t.IsolationGroups),
+			AsyncWorkflowConfig:                    ToDomainAsyncWorkflowConfiguraton(t.AsyncWorkflowConfig),
 		},
 		ReplicationConfiguration: &types.DomainReplicationConfiguration{
 			ActiveClusterName: t.ActiveClusterName,
@@ -4303,6 +4305,7 @@ func FromUpdateDomainResponse(t *types.UpdateDomainResponse) *apiv1.UpdateDomain
 		domain.HistoryArchivalUri = config.HistoryArchivalURI
 		domain.VisibilityArchivalStatus = FromArchivalStatus(config.VisibilityArchivalStatus)
 		domain.VisibilityArchivalUri = config.VisibilityArchivalURI
+		domain.AsyncWorkflowConfig = FromDomainAsyncWorkflowConfiguraton(config.AsyncWorkflowConfig)
 	}
 	if repl := t.ReplicationConfiguration; repl != nil {
 		domain.ActiveClusterName = repl.ActiveClusterName
@@ -4334,7 +4337,8 @@ func ToUpdateDomainResponse(t *apiv1.UpdateDomainResponse) *types.UpdateDomainRe
 			HistoryArchivalURI:                     t.Domain.HistoryArchivalUri,
 			VisibilityArchivalStatus:               ToArchivalStatus(t.Domain.VisibilityArchivalStatus),
 			VisibilityArchivalURI:                  t.Domain.VisibilityArchivalUri,
-			IsolationGroups:                        ToIsolationGroupConfig(t.GetDomain().GetIsolationGroups()),
+			IsolationGroups:                        ToIsolationGroupConfig(t.Domain.IsolationGroups),
+			AsyncWorkflowConfig:                    ToDomainAsyncWorkflowConfiguraton(t.Domain.AsyncWorkflowConfig),
 		},
 		ReplicationConfiguration: &types.DomainReplicationConfiguration{
 			ActiveClusterName: t.Domain.ActiveClusterName,

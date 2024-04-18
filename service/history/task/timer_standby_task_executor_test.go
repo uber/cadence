@@ -530,8 +530,10 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Multiple_CanU
 				NewBufferedEvents:         nil,
 				ClearBufferedEvents:       false,
 				VersionHistories:          mutableState.GetVersionHistories(),
+				WorkflowRequests:          []*persistence.WorkflowRequest{},
 			},
 			NewWorkflowSnapshot: nil,
+			WorkflowRequestMode: persistence.CreateWorkflowRequestModeReplicated,
 			Encoding:            common.EncodingType(s.mockShard.GetConfig().EventEncodingType(s.domainID)),
 			DomainName:          constants.TestDomainName,
 		}, input)

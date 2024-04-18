@@ -20,7 +20,11 @@
 
 package nosqlplugin
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/uber/cadence/common/persistence"
+)
 
 // Condition Errors for NoSQL interfaces
 type (
@@ -30,6 +34,12 @@ type (
 		ShardRangeIDNotMatch             *int64  // return the previous shardRangeID
 		WorkflowExecutionAlreadyExists   *WorkflowExecutionAlreadyExists
 		CurrentWorkflowConditionFailInfo *string // return the logging info if fail on condition of CurrentWorkflow
+		DuplicateRequest                 *DuplicateRequest
+	}
+
+	DuplicateRequest struct {
+		RequestType persistence.WorkflowRequestType
+		RunID       string
 	}
 
 	WorkflowExecutionAlreadyExists struct {

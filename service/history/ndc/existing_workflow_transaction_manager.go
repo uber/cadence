@@ -316,6 +316,7 @@ func (r *transactionManagerForExistingWorkflowImpl) updateAsZombie(
 		newMutableState,
 		execution.TransactionPolicyPassive,
 		newTransactionPolicy,
+		persistence.CreateWorkflowRequestModeReplicated,
 	)
 }
 

@@ -22,6 +22,11 @@
 
 package persistence
 
+import (
+	"errors"
+	"fmt"
+)
+
 type (
 	// TimeoutError is returned when a write operation fails due to a timeout
 	TimeoutError struct {
@@ -73,7 +78,16 @@ type (
 		CloseStatus      int
 		LastWriteVersion int64
 	}
+
+	DuplicateRequestError struct {
+		RequestType WorkflowRequestType
+		RunID       string
+	}
 )
+
+func (e *DuplicateRequestError) Error() string {
+	return fmt.Sprintf("Request has already been applied to runID: %s", e.RunID)
+}
 
 func (e *InvalidPersistenceRequestError) Error() string {
 	return e.Msg
@@ -109,4 +123,12 @@ func (e *DBUnavailableError) Error() string {
 
 func (e *TransactionSizeLimitError) Error() string {
 	return e.Msg
+}
+
+func AsDuplicateRequestError(err error) (*DuplicateRequestError, bool) {
+	var e *DuplicateRequestError
+	if errors.As(err, &e) {
+		return e, true
+	}
+	return nil, false
 }

@@ -123,6 +123,24 @@ type (
 		LastWriteVersion int64
 	}
 
+	// WorkflowRequestRow is the request which has been applied to a workflow
+	WorkflowRequestRow struct {
+		ShardID     int
+		DomainID    string
+		WorkflowID  string
+		RequestType persistence.WorkflowRequestType
+		RequestID   string
+		Version     int64
+		RunID       string
+	}
+
+	WorkflowRequestWriteMode int
+
+	WorkflowRequestsWriteRequest struct {
+		Rows      []*WorkflowRequestRow
+		WriteMode WorkflowRequestWriteMode
+	}
+
 	// TasksFilter is for filtering tasks
 	TasksFilter struct {
 		TaskListFilter
@@ -336,6 +354,11 @@ const (
 	EventBufferWriteModeAppend
 	// EventBufferWriteModeClear will clear(delete all event from) the event buffer
 	EventBufferWriteModeClear
+)
+
+const (
+	WorkflowRequestWriteModeInsert WorkflowRequestWriteMode = iota
+	WorkflowRequestWriteModeUpsert
 )
 
 // GetCurrentRunID returns the current runID

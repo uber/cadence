@@ -100,7 +100,7 @@ func (r *eventsReapplierImpl) ReapplyEvents(
 			signal.GetSignalName(),
 			signal.GetInput(),
 			signal.GetIdentity(),
-			signal.GetRequestID(),
+			"", // Do not set requestID for requests reapplied, because they have already been applied previously
 		); err != nil {
 			return nil, err
 		}

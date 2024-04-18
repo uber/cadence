@@ -413,6 +413,7 @@ type (
 		// The API returns error if there is any. If any of the condition is not met, returns WorkflowOperationConditionFailure
 		InsertWorkflowExecutionWithTasks(
 			ctx context.Context,
+			requests *WorkflowRequestsWriteRequest,
 			currentWorkflowRequest *CurrentWorkflowWriteRequest,
 			execution *WorkflowExecutionRequest,
 			transferTasks []*TransferTask,
@@ -440,6 +441,7 @@ type (
 		// The API returns error if there is any. If any of the condition is not met, returns WorkflowOperationConditionFailure
 		UpdateWorkflowExecutionWithTasks(
 			ctx context.Context,
+			requests *WorkflowRequestsWriteRequest,
 			currentWorkflowRequest *CurrentWorkflowWriteRequest,
 			mutatedExecution *WorkflowExecutionRequest,
 			insertedExecution *WorkflowExecutionRequest,
