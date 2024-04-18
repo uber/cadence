@@ -84,7 +84,7 @@ func ConvertSearchResultToVisibilityRecord(hit []interface{}, columnNames []stri
 	if systemKeyMap[Attr] != nil {
 		attrMapStr, ok := systemKeyMap[Attr].(string)
 		if !ok {
-			return nil, fmt.Errorf(`assertion error. Can't convert systemKeyMap["Attr"] to string. Found %T`, systemKeyMap["Attr"])
+			return nil, fmt.Errorf(`assertion error. Can't convert systemKeyMap[Attr] to string. Found %T`, systemKeyMap[Attr])
 		}
 
 		err = json.Unmarshal([]byte(attrMapStr), &attributeMap)
