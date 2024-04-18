@@ -215,6 +215,7 @@ func (s *transferActiveTaskExecutorSuite) SetupTest() {
 }
 
 func (s *transferActiveTaskExecutorSuite) TearDownTest() {
+	s.transferActiveTaskExecutor.Stop()
 	s.controller.Finish()
 	s.mockShard.Finish(s.T())
 	s.mockArchivalClient.AssertExpectations(s.T())
