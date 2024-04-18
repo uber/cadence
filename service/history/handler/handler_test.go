@@ -476,6 +476,278 @@ func (s *handlerSuite) TestRecordDecisionTaskStarted() {
 	}
 }
 
+func (s *handlerSuite) TestRespondActivityTaskCompleted() {
+	testInput := map[string]struct {
+		caseName      string
+		input         *types.HistoryRespondActivityTaskCompletedRequest
+		expectedError bool
+	}{
+		"valid input": {
+			caseName: "valid input",
+			input: &types.HistoryRespondActivityTaskCompletedRequest{
+				DomainUUID: testDomainID,
+				CompleteRequest: &types.RespondActivityTaskCompletedRequest{
+					TaskToken: []byte("task-token"),
+					Result:    []byte("result"),
+					Identity:  "identity",
+				},
+			},
+			expectedError: false,
+		},
+		"empty domainID": {
+			caseName: "empty domainID",
+			input: &types.HistoryRespondActivityTaskCompletedRequest{
+				DomainUUID: "",
+			},
+			expectedError: true,
+		},
+		"ratelimit exceeded": {
+			caseName: "ratelimit exceeded",
+			input: &types.HistoryRespondActivityTaskCompletedRequest{
+				DomainUUID: testDomainID,
+				CompleteRequest: &types.RespondActivityTaskCompletedRequest{
+					TaskToken: []byte("task-token"),
+					Result:    []byte("result"),
+					Identity:  "identity",
+				},
+			},
+			expectedError: true,
+		},
+		"token deserialization error": {
+			caseName: "token deserialization error",
+			input: &types.HistoryRespondActivityTaskCompletedRequest{
+				DomainUUID: testDomainID,
+				CompleteRequest: &types.RespondActivityTaskCompletedRequest{
+					TaskToken: []byte("task-token"),
+					Result:    []byte("result"),
+					Identity:  "identity",
+				},
+			},
+			expectedError: true,
+		},
+		"invalid task token": {
+			caseName: "invalid task token",
+			input: &types.HistoryRespondActivityTaskCompletedRequest{
+				DomainUUID: testDomainID,
+				CompleteRequest: &types.RespondActivityTaskCompletedRequest{
+					TaskToken: []byte("task-token"),
+					Result:    []byte("result"),
+					Identity:  "identity",
+				},
+			},
+			expectedError: true,
+		},
+		"get engine error": {
+			caseName: "get engine error",
+			input: &types.HistoryRespondActivityTaskCompletedRequest{
+				DomainUUID: testDomainID,
+				CompleteRequest: &types.RespondActivityTaskCompletedRequest{
+					TaskToken: []byte("task-token"),
+					Result:    []byte("result"),
+					Identity:  "identity",
+				},
+			},
+			expectedError: true,
+		},
+		"engine error": {
+			caseName: "engine error",
+			input: &types.HistoryRespondActivityTaskCompletedRequest{
+				DomainUUID: testDomainID,
+				CompleteRequest: &types.RespondActivityTaskCompletedRequest{
+					TaskToken: []byte("task-token"),
+					Result:    []byte("result"),
+					Identity:  "identity",
+				},
+			},
+			expectedError: true,
+		},
+	}
+
+	for name, input := range testInput {
+		s.Run(name, func() {
+			switch input.caseName {
+			case "valid input":
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				}, nil).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().RespondActivityTaskCompleted(gomock.Any(), input.input).Return(nil).Times(1)
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+			case "empty domainID":
+			case "ratelimit exceeded":
+				s.mockRatelimiter.EXPECT().Allow().Return(false).Times(1)
+			case "token deserialization error":
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(nil, errors.New("some random error")).Times(1)
+			case "invalid task token":
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{
+					WorkflowID: "",
+					RunID:      "",
+				}, nil).Times(1)
+			case "get engine error":
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				}, nil).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(nil, errors.New("error")).Times(1)
+			case "engine error":
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				}, nil).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().RespondActivityTaskCompleted(gomock.Any(), input.input).Return(errors.New("error")).Times(1)
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+			}
+			err := s.handler.RespondActivityTaskCompleted(context.Background(), input.input)
+			if input.expectedError {
+				s.Error(err)
+			} else {
+				s.NoError(err)
+			}
+		})
+	}
+}
+
+func (s *handlerSuite) TestRespondActivityTaskFailed() {
+	testInput := map[string]struct {
+		caseName      string
+		input         *types.HistoryRespondActivityTaskFailedRequest
+		expectedError bool
+	}{
+		"valid input": {
+			caseName: "valid input",
+			input: &types.HistoryRespondActivityTaskFailedRequest{
+				DomainUUID: testDomainID,
+				FailedRequest: &types.RespondActivityTaskFailedRequest{
+					TaskToken: []byte("task-token"),
+					Details:   []byte("Details"),
+					Identity:  "identity",
+				},
+			},
+			expectedError: false,
+		},
+		"empty domainID": {
+			caseName: "empty domainID",
+			input: &types.HistoryRespondActivityTaskFailedRequest{
+				DomainUUID: "",
+			},
+			expectedError: true,
+		},
+		"ratelimit exceeded": {
+			caseName: "ratelimit exceeded",
+			input: &types.HistoryRespondActivityTaskFailedRequest{
+				DomainUUID: testDomainID,
+				FailedRequest: &types.RespondActivityTaskFailedRequest{
+					TaskToken: []byte("task-token"),
+					Details:   []byte("Details"),
+					Identity:  "identity",
+				},
+			},
+			expectedError: true,
+		},
+		"token deserialization error": {
+			caseName: "token deserialization error",
+			input: &types.HistoryRespondActivityTaskFailedRequest{
+				DomainUUID: testDomainID,
+				FailedRequest: &types.RespondActivityTaskFailedRequest{
+					TaskToken: []byte("task-token"),
+					Details:   []byte("Details"),
+					Identity:  "identity",
+				},
+			},
+			expectedError: true,
+		},
+		"invalid task token": {
+			caseName: "invalid task token",
+			input: &types.HistoryRespondActivityTaskFailedRequest{
+				DomainUUID: testDomainID,
+				FailedRequest: &types.RespondActivityTaskFailedRequest{
+					TaskToken: []byte("task-token"),
+					Details:   []byte("Details"),
+					Identity:  "identity",
+				},
+			},
+			expectedError: true,
+		},
+		"get engine error": {
+			caseName: "get engine error",
+			input: &types.HistoryRespondActivityTaskFailedRequest{
+				DomainUUID: testDomainID,
+				FailedRequest: &types.RespondActivityTaskFailedRequest{
+					TaskToken: []byte("task-token"),
+					Details:   []byte("Details"),
+					Identity:  "identity",
+				},
+			},
+			expectedError: true,
+		},
+		"engine error": {
+			caseName: "engine error",
+			input: &types.HistoryRespondActivityTaskFailedRequest{
+				DomainUUID: testDomainID,
+				FailedRequest: &types.RespondActivityTaskFailedRequest{
+					TaskToken: []byte("task-token"),
+					Details:   []byte("Details"),
+					Identity:  "identity",
+				},
+			},
+			expectedError: true,
+		},
+	}
+
+	for name, input := range testInput {
+		s.Run(name, func() {
+			switch input.caseName {
+			case "valid input":
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				}, nil).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().RespondActivityTaskFailed(gomock.Any(), input.input).Return(nil).Times(1)
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+			case "empty domainID":
+			case "ratelimit exceeded":
+				s.mockRatelimiter.EXPECT().Allow().Return(false).Times(1)
+			case "token deserialization error":
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(nil, errors.New("some random error")).Times(1)
+			case "invalid task token":
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{
+					WorkflowID: "",
+					RunID:      "",
+				}, nil).Times(1)
+			case "get engine error":
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				}, nil).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(nil, errors.New("error")).Times(1)
+			case "engine error":
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				}, nil).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().RespondActivityTaskFailed(gomock.Any(), input.input).Return(errors.New("error")).Times(1)
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+			}
+			err := s.handler.RespondActivityTaskFailed(context.Background(), input.input)
+			if input.expectedError {
+				s.Error(err)
+			} else {
+				s.NoError(err)
+			}
+		})
+	}
+}
+
 func (s *handlerSuite) TestGetCrossClusterTasks() {
 	numShards := 10
 	targetCluster := cluster.TestAlternativeClusterName
