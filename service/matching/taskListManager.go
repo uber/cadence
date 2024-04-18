@@ -192,7 +192,12 @@ func newTaskListManager(
 		taskListTypeMetricScope.UpdateGauge(metrics.PollerPerTaskListCounter,
 			float64(len(tlMgr.pollerHistory.getPollerInfo(time.Time{}))))
 	})
-	tlMgr.liveness = newLiveness(clock.NewRealTimeSource(), taskListConfig.IdleTasklistCheckInterval(), tlMgr.Stop)
+
+	livenessInterval := taskListConfig.IdleTasklistCheckInterval()
+	tlMgr.liveness = newLiveness(clock.NewRealTimeSource(), livenessInterval, func() {
+		tlMgr.logger.Info("Task list manager stopping because no recent events", tag.Dynamic("interval", livenessInterval))
+		tlMgr.Stop()
+	})
 	var isolationGroups []string
 	if tlMgr.isIsolationMatcherEnabled() {
 		isolationGroups = config.AllIsolationGroups
@@ -261,7 +266,7 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams)
 	}
 	if params.forwardedFrom == "" {
 		// request sent by history service
-		c.liveness.markAlive(time.Now())
+		c.liveness.markAlive()
 	}
 	var syncMatch bool
 	_, err := c.executeWithRetry(func() (interface{}, error) {
@@ -347,7 +352,7 @@ func (c *taskListManagerImpl) GetTask(
 		c.Stop()
 		return nil, ErrNoTasks
 	}
-	c.liveness.markAlive(time.Now())
+	c.liveness.markAlive()
 	task, err := c.getTask(ctx, maxDispatchPerSecond)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't get task: %w", err)
