@@ -293,7 +293,7 @@ func (t *taskImpl) HandleErr(err error) (retErr error) {
 	// the domain cache refeshed and then updated here.
 	var e *types.DomainNotActiveError
 	if errors.As(err, &e) || errors.Is(err, errTargetDomainNotActive) {
-		if t.timeSource.Now().Sub(t.submitTime) > 10*cache.DomainCacheRefreshInterval {
+		if t.timeSource.Now().Sub(t.submitTime) > 5*cache.DomainCacheRefreshInterval {
 			t.scope.IncCounter(metrics.TaskNotActiveCounterPerDomain)
 			// If the domain is *still* not active, drop after a while.
 			return nil
