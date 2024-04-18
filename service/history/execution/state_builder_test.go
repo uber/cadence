@@ -706,7 +706,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskTimedOut() {
 			TimeoutType:      types.TimeoutTypeStartToClose.Ptr(),
 		},
 	}
-	s.mockMutableState.EXPECT().ReplicateDecisionTaskTimedOutEvent(types.TimeoutTypeStartToClose).Return(nil).Times(1)
+	s.mockMutableState.EXPECT().ReplicateDecisionTaskTimedOutEvent(event).Return(nil).Times(1)
 	tasklist := "some random tasklist"
 	executionInfo := &persistence.WorkflowExecutionInfo{
 		TaskList: tasklist,
@@ -743,7 +743,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskFailed() {
 			StartedEventID:   startedID,
 		},
 	}
-	s.mockMutableState.EXPECT().ReplicateDecisionTaskFailedEvent().Return(nil).Times(1)
+	s.mockMutableState.EXPECT().ReplicateDecisionTaskFailedEvent(event).Return(nil).Times(1)
 	tasklist := "some random tasklist"
 	executionInfo := &persistence.WorkflowExecutionInfo{
 		TaskList: tasklist,

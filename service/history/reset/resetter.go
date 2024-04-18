@@ -303,6 +303,7 @@ func (r *workflowResetterImpl) persistToDB(
 		persistence.CreateWorkflowModeContinueAsNew,
 		currentRunID,
 		currentLastWriteVersion,
+		persistence.CreateWorkflowRequestModeNew,
 	)
 }
 
@@ -586,7 +587,7 @@ func (r *workflowResetterImpl) reapplyEvents(
 				attr.GetSignalName(),
 				attr.GetInput(),
 				attr.GetIdentity(),
-				attr.GetRequestID(),
+				"", // Do not set requestID for requests reapplied, because they have already been applied previously
 			); err != nil {
 				return err
 			}

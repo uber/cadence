@@ -79,6 +79,15 @@ func TestUpdateHelper(t *testing.T) {
 				return UpdateWithoutDecision, nil
 			},
 		},
+		{
+			msg: "duplicate request",
+			mockSetupFn: func(mockContext *execution.MockContext, mockMutableState *execution.MockMutableState) {
+				mockContext.EXPECT().UpdateWorkflowExecutionAsActive(gomock.Any(), gomock.Any()).Return(&persistence.DuplicateRequestError{})
+			},
+			actionFn: func(context execution.Context, mutableState execution.MutableState) (*UpdateAction, error) {
+				return UpdateWithoutDecision, nil
+			},
+		},
 	}
 
 	for _, tc := range testCases {

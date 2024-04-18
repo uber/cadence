@@ -123,6 +123,11 @@ func WorkflowSignalName(signalName string) Tag {
 	return newStringTag("wf-signal-name", signalName)
 }
 
+// WorkflowRequestID returns tag for WorkflowRequestID
+func WorkflowRequestID(requestID string) Tag {
+	return newStringTag("wf-request-id", requestID)
+}
+
 // WorkflowState returns tag for WorkflowState
 func WorkflowState(s int) Tag {
 	return newInt("wf-state", s)

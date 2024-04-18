@@ -195,7 +195,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 
 		case types.EventTypeDecisionTaskTimedOut:
 			if err := b.mutableState.ReplicateDecisionTaskTimedOutEvent(
-				event.DecisionTaskTimedOutEventAttributes.GetTimeoutType(),
+				event,
 			); err != nil {
 				return nil, err
 			}
@@ -207,7 +207,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 			}
 
 		case types.EventTypeDecisionTaskFailed:
-			if err := b.mutableState.ReplicateDecisionTaskFailedEvent(); err != nil {
+			if err := b.mutableState.ReplicateDecisionTaskFailedEvent(event); err != nil {
 				return nil, err
 			}
 
