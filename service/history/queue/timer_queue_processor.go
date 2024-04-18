@@ -196,7 +196,7 @@ func (t *timerQueueProcessor) Stop() {
 		t.logger.Warn("transferQueueProcessor timed out on shut down", tag.LifeCycleStopTimedout)
 	}
 	t.activeQueueProcessor.Stop()
-	t.activeQueueProcessor.Stop()
+	t.activeTaskExecutor.Stop()
 	for _, standbyQueueProcessor := range t.standbyQueueProcessors {
 		standbyQueueProcessor.Stop()
 	}
