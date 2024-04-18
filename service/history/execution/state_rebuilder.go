@@ -180,7 +180,7 @@ func (r *stateRebuilderImpl) Rebuild(
 		}
 	}
 
-	// close rebuilt mutable state transaction clearing all generated tasks, etc.
+	// close rebuilt mutable state transaction clearing all generated tasks, workflow requests, etc.
 	_, _, err = rebuiltMutableState.CloseTransactionAsSnapshot(now, TransactionPolicyPassive)
 	if err != nil {
 		return nil, 0, err

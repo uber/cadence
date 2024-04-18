@@ -743,7 +743,8 @@ func (d *nosqlExecutionStore) processUpdateWorkflowResult(err error, rangeID int
 				}
 			case conditionFailureErr.DuplicateRequest != nil:
 				return &persistence.DuplicateRequestError{
-					RunID: conditionFailureErr.DuplicateRequest.RunID,
+					RequestType: conditionFailureErr.DuplicateRequest.RequestType,
+					RunID:       conditionFailureErr.DuplicateRequest.RunID,
 				}
 			default:
 				// If ever runs into this branch, there is bug in the code either in here, or in the implementation of nosql plugin

@@ -22,7 +22,10 @@
 
 package persistence
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 type (
 	// TimeoutError is returned when a write operation fails due to a timeout
@@ -77,7 +80,8 @@ type (
 	}
 
 	DuplicateRequestError struct {
-		RunID string
+		RequestType WorkflowRequestType
+		RunID       string
 	}
 )
 
@@ -119,4 +123,12 @@ func (e *DBUnavailableError) Error() string {
 
 func (e *TransactionSizeLimitError) Error() string {
 	return e.Msg
+}
+
+func AsDuplicateRequestError(err error) (*DuplicateRequestError, bool) {
+	var e *DuplicateRequestError
+	if errors.As(err, &e) {
+		return e, true
+	}
+	return nil, false
 }
