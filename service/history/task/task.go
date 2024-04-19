@@ -288,20 +288,14 @@ func (t *taskImpl) HandleErr(err error) (retErr error) {
 		err = nil
 	}
 
-	// target domain not active error, we should retry the task
-	// so that a cross-cluster task can be created.
-	if err == errTargetDomainNotActive {
-		t.scope.IncCounter(metrics.TaskTargetNotActiveCounterPerDomain)
-		t.logger.Error("Dropping 'domain-not-active' error as non-retriable", tag.Error(err))
-		return nil
-	}
-
-	// this is a transient error, and means source domain not active
-	// TODO remove this error check special case
-	// since the new task life cycle will not give up until task processed / verified
-	if _, ok := err.(*types.DomainNotActiveError); ok {
-		if t.timeSource.Now().Sub(t.submitTime) > 2*cache.DomainCacheRefreshInterval {
+	// using a fairly long timeout here because domain updates is an async process
+	// which could take a fair while to be processed by the domain queue, the DB updated
+	// the domain cache refeshed and then updated here.
+	var e *types.DomainNotActiveError
+	if errors.As(err, &e) || errors.Is(err, errTargetDomainNotActive) {
+		if t.timeSource.Now().Sub(t.submitTime) > 5*cache.DomainCacheRefreshInterval {
 			t.scope.IncCounter(metrics.TaskNotActiveCounterPerDomain)
+			// If the domain is *still* not active, drop after a while.
 			return nil
 		}
 
