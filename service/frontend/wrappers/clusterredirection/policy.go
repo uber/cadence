@@ -195,7 +195,14 @@ func (policy *selectedOrAllAPIsForwardingRedirectionPolicy) WithDomainIDRedirect
 		return err
 	}
 	if domainEntry.IsDeprecatedOrDeleted() {
-		return fmt.Errorf("domain %v is deprecated or deleted", domainEntry.GetInfo().Name)
+		//return fmt.Errorf("domain %v is deprecated or deleted", domainEntry.GetInfo().Name)
+		//return types.NewDomainNotActiveError(domainEntry.GetInfo().Name, domainEntry.GetReplicationConfig().ActiveClusterName)
+		return types.DomainNotActiveError{
+			Message:        "domain is deprecated.",
+			DomainName:     domainEntry.GetInfo().Name,
+			CurrentCluster: "",
+			ActiveCluster:  "",
+		}
 	}
 	return policy.withRedirect(ctx, domainEntry, apiName, call)
 }
@@ -207,7 +214,14 @@ func (policy *selectedOrAllAPIsForwardingRedirectionPolicy) WithDomainNameRedire
 		return err
 	}
 	if domainEntry.IsDeprecatedOrDeleted() {
-		return fmt.Errorf("domain %v is deprecated or deleted", domainName)
+		//return fmt.Errorf("domain %v is deprecated or deleted", domainName)
+
+		return types.DomainNotActiveError{
+			Message:        "domain is deprecated or deleted",
+			DomainName:     domainName,
+			CurrentCluster: "",
+			ActiveCluster:  "",
+		}
 	}
 	return policy.withRedirect(ctx, domainEntry, apiName, call)
 }
