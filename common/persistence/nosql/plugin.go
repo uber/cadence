@@ -22,6 +22,7 @@ package nosql
 
 import (
 	"fmt"
+	"testing"
 
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
@@ -36,6 +37,12 @@ func RegisterPlugin(pluginName string, plugin nosqlplugin.Plugin) {
 	if _, ok := supportedPlugins[pluginName]; ok {
 		panic("plugin " + pluginName + " already registered")
 	}
+	supportedPlugins[pluginName] = plugin
+}
+
+// RegisterPluginForTest should be used only in tests to register the DB plugin and de-register at the end
+func RegisterPluginForTest(t *testing.T, pluginName string, plugin nosqlplugin.Plugin) {
+	t.Cleanup(func() { delete(supportedPlugins, pluginName) })
 	supportedPlugins[pluginName] = plugin
 }
 
