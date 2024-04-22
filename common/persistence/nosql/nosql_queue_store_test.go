@@ -210,7 +210,7 @@ func TestEnqueueMessage_Succeeds(t *testing.T) {
 	require.NoError(t, store.EnqueueMessage(ctx, testPayload))
 }
 
-func TestEnqueueMessage_FailsIcCantSelectLastMessageID(t *testing.T) {
+func TestEnqueueMessage_FailsIfCantSelectLastMessageID(t *testing.T) {
 	errSelect := errors.New("failed to select message ID")
 
 	td := newQueueStoreTestData(t)
@@ -277,7 +277,7 @@ func TestEnqueueMessageToDLQ_Succeeds(t *testing.T) {
 	require.NoError(t, store.EnqueueMessageToDLQ(ctx, testPayload))
 }
 
-func TestEnqueueMessageToDLQ_FailsIcCantSelectLastMessageID(t *testing.T) {
+func TestEnqueueMessageToDLQ_FailsIfCantSelectLastMessageID(t *testing.T) {
 	errSelect := errors.New("failed to select message ID")
 
 	td := newQueueStoreTestData(t)
