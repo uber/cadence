@@ -84,6 +84,7 @@ func NewService(
 			AdvancedVisibilityWritingMode:   nil, // frontend service never write
 			EnableReadVisibilityFromPinot:   serviceConfig.EnableReadVisibilityFromPinot,
 			EnableLogCustomerQueryParameter: serviceConfig.EnableLogCustomerQueryParameter,
+			EnableVisibilityDoubleRead:      serviceConfig.EnableVisibilityDoubleRead,
 
 			EnableDBVisibilitySampling:                  serviceConfig.EnableVisibilitySampling,
 			EnableReadDBVisibilityFromClosedExecutionV2: serviceConfig.EnableReadFromClosedExecutionV2,
