@@ -26,6 +26,10 @@ import (
 	"bytes"
 	"encoding/binary"
 	"flag"
+	"strconv"
+	"testing"
+	"time"
+
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -36,9 +40,6 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	pt "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/types"
-	"strconv"
-	"testing"
-	"time"
 )
 
 func TestWorkflowIDInternalRateLimitIntegrationSuite(t *testing.T) {
