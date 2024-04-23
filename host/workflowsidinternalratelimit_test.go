@@ -221,7 +221,7 @@ func (s *WorkflowIDInternalRateLimitIntegrationSuite) TestWorkflowIDSpecificInte
 	eventBeforeRatelimited := history.Events[7]
 
 	timeElapsedBeforeRatelimiting := time.Unix(0, common.Int64Default(eventBeforeRatelimited.Timestamp)).Sub(time.Unix(0, common.Int64Default(firstEvent.Timestamp)))
-	s.True(timeElapsedBeforeRatelimiting <= 1*time.Second)
+	s.True(timeElapsedBeforeRatelimiting < 1*time.Second)
 
 	totalTime := time.Unix(0, common.Int64Default(lastEvent.Timestamp)).Sub(time.Unix(0, common.Int64Default(firstEvent.Timestamp)))
 	s.True(totalTime > 5*time.Second)
