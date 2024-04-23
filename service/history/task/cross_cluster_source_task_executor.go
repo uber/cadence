@@ -110,6 +110,9 @@ func (t *crossClusterSourceTaskExecutor) Execute(
 	return err
 }
 
+// Empty func for now
+func (t *crossClusterSourceTaskExecutor) Stop() {}
+
 func (t *crossClusterSourceTaskExecutor) executeStartChildExecutionTask(
 	ctx context.Context,
 	task *crossClusterSourceTask,

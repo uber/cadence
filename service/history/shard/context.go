@@ -648,6 +648,7 @@ func (s *contextImpl) CreateWorkflowExecution(
 	case *types.WorkflowExecutionAlreadyStartedError,
 		*persistence.WorkflowExecutionAlreadyStartedError,
 		*persistence.CurrentWorkflowConditionFailedError,
+		*persistence.DuplicateRequestError,
 		*types.ServiceBusyError:
 		// No special handling required for these errors
 		// We know write to DB fails if these errors are returned
@@ -755,6 +756,7 @@ func (s *contextImpl) UpdateWorkflowExecution(
 		s.updateMaxReadLevelLocked(transferMaxReadLevel)
 		return resp, nil
 	case *persistence.ConditionFailedError,
+		*persistence.DuplicateRequestError,
 		*types.ServiceBusyError:
 		// No special handling required for these errors
 		// We know write to DB fails if these errors are returned

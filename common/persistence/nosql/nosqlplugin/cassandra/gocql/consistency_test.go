@@ -20,37 +20,48 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package testdata
+package gocql
 
 import (
-	"reflect"
 	"testing"
 
+	"github.com/gocql/gocql"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestAllFieldsSetInTestErrors(t *testing.T) {
-	for _, err := range Errors {
-		name := reflect.TypeOf(err).Elem().Name()
-		t.Run(name, func(t *testing.T) {
-			// Test all fields are set in the error
-			assert.True(t, checkAllIsSet(err))
-		})
+func Test_mustConvertConsistency(t *testing.T) {
+	tests := []struct {
+		input  Consistency
+		output gocql.Consistency
+	}{
+		{Any, gocql.Any},
+		{One, gocql.One},
+		{Two, gocql.Two},
+		{Three, gocql.Three},
+		{Quorum, gocql.Quorum},
+		{All, gocql.All},
+		{LocalQuorum, gocql.LocalQuorum},
+		{EachQuorum, gocql.EachQuorum},
+		{LocalOne, gocql.LocalOne},
 	}
+
+	for _, tt := range tests {
+		assert.Equal(t, tt.output, mustConvertConsistency(tt.input))
+	}
+	assert.Panics(t, func() { mustConvertConsistency(Consistency(9999)) })
 }
 
-func checkAllIsSet(err error) bool {
-	// All the errors are pointers, so we get the value with .Elem
-	errValue := reflect.ValueOf(err).Elem()
-
-	for i := 0; i < errValue.NumField(); i++ {
-		field := errValue.Field(i)
-
-		// IsZero checks if the value is the default value (e.g. nil, "", 0 etc)
-		if field.IsZero() {
-			return false
-		}
+func Test_mustConvertSerialConsistency(t *testing.T) {
+	tests := []struct {
+		input  SerialConsistency
+		output gocql.SerialConsistency
+	}{
+		{Serial, gocql.Serial},
+		{LocalSerial, gocql.LocalSerial},
 	}
 
-	return true
+	for _, tt := range tests {
+		assert.Equal(t, tt.output, mustConvertSerialConsistency(tt.input))
+	}
+	assert.Panics(t, func() { mustConvertSerialConsistency(SerialConsistency(9999)) })
 }

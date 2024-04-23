@@ -20,43 +20,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package persistence
+package testing
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFilterAttrPrefix(t *testing.T) {
-	tests := map[string]struct {
-		expectedInput  string
-		expectedOutput string
-	}{
-		"Case1: empty input": {
-			expectedInput:  "",
-			expectedOutput: "",
-		},
-		"Case2: filtered input": {
-			expectedInput:  "`Attr.CustomIntField` = 12",
-			expectedOutput: "CustomIntField = 12",
-		},
-		"Case3: complex input": {
-			expectedInput:  "WorkflowID = 'test-wf' and (`Attr.CustomIntField` = 12 or `Attr.CustomStringField` = 'a-b-c' and WorkflowType = 'wf-type')",
-			expectedOutput: "WorkflowID = 'test-wf' and (CustomIntField = 12 or CustomStringField = 'a-b-c' and WorkflowType = 'wf-type')",
-		},
-		"Case4: false positive case": {
-			expectedInput:  "`Attr.CustomStringField` = '`Attr.ABCtesting'",
-			expectedOutput: "CustomStringField = 'ABCtesting'", // this is supposed to be CustomStringField = '`Attr.ABCtesting'
-		},
-	}
+func allIsSet(t *testing.T, err error) {
+	// All the errors are pointers, so we get the value with .Elem
+	errValue := reflect.ValueOf(err).Elem()
 
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			assert.NotPanics(t, func() {
-				actualOutput := filterAttrPrefix(test.expectedInput)
-				assert.Equal(t, test.expectedOutput, actualOutput)
-			})
-		})
+	for i := 0; i < errValue.NumField(); i++ {
+		field := errValue.Field(i)
+
+		// IsZero checks if the value is the default value (e.g. nil, "", 0 etc)
+		assert.True(t, !field.IsZero(), "Field %s is not set", errValue.Type().Field(i).Name)
 	}
 }

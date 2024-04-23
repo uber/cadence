@@ -23,11 +23,12 @@
 package consumer
 
 import (
-	"encoding/json"
 	"errors"
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/google/go-cmp/cmp"
+	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
@@ -38,6 +39,28 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
+)
+
+var (
+	testSignalWithStartAsyncReq = &types.SignalWithStartWorkflowExecutionAsyncRequest{
+		SignalWithStartWorkflowExecutionRequest: &types.SignalWithStartWorkflowExecutionRequest{
+			Domain:       "test-domain",
+			WorkflowID:   "test-workflow-id",
+			WorkflowType: &types.WorkflowType{Name: "test-workflow-type"},
+			Input:        []byte("test-input"),
+			SignalName:   "test-signal-name",
+		},
+	}
+
+	testStartReq = &types.StartWorkflowExecutionAsyncRequest{
+		StartWorkflowExecutionRequest: &types.StartWorkflowExecutionRequest{
+			Domain:       "test-domain",
+			WorkflowID:   "test-workflow-id",
+			WorkflowType: &types.WorkflowType{Name: "test-workflow-type"},
+			Input:        []byte("test-input"),
+		},
+	}
 )
 
 type fakeMessageConsumer struct {
@@ -127,33 +150,33 @@ func TestDefaultConsumer(t *testing.T) {
 			name:          "startworkflow request with invalid payload content",
 			frontendFails: true,
 			msgs: []*fakeMessage{
-				{val: mustGenerateStartWorkflowExecutionRequestMsg(t, common.EncodingTypeJSON, false), wantAck: false},
+				{val: mustGenerateStartWorkflowExecutionRequestMsg(t, common.EncodingTypeThriftRW, false), wantAck: false},
 			},
 		},
 		{
 			name:          "startworkflowfrontend fails to respond",
 			frontendFails: true,
 			msgs: []*fakeMessage{
-				{val: mustGenerateStartWorkflowExecutionRequestMsg(t, common.EncodingTypeJSON, true), wantAck: false},
+				{val: mustGenerateStartWorkflowExecutionRequestMsg(t, common.EncodingTypeThriftRW, true), wantAck: false},
 			},
 		},
 		{
-			name: "startworkflow unsupported encoding type",
+			name: "startworkflow unsupported encoding type. json encoding of requests are lossy due to PII masking so it shouldn't be used for async requests",
 			msgs: []*fakeMessage{
-				{val: mustGenerateStartWorkflowExecutionRequestMsg(t, common.EncodingTypeProto, true), wantAck: false},
+				{val: mustGenerateStartWorkflowExecutionRequestMsg(t, common.EncodingTypeJSON, true), wantAck: false},
 			},
 		},
 		{
 			name: "startworkflow ok",
 			msgs: []*fakeMessage{
-				{val: mustGenerateStartWorkflowExecutionRequestMsg(t, common.EncodingTypeJSON, true), wantAck: true},
+				{val: mustGenerateStartWorkflowExecutionRequestMsg(t, common.EncodingTypeThriftRW, true), wantAck: true},
 			},
 		},
 		{
 			name:                "startworkflow ok with chan closed before stopping",
 			closeChanBeforeStop: true,
 			msgs: []*fakeMessage{
-				{val: mustGenerateStartWorkflowExecutionRequestMsg(t, common.EncodingTypeJSON, true), wantAck: true},
+				{val: mustGenerateStartWorkflowExecutionRequestMsg(t, common.EncodingTypeThriftRW, true), wantAck: true},
 			},
 		},
 		// signal with start test cases
@@ -161,26 +184,26 @@ func TestDefaultConsumer(t *testing.T) {
 			name:          "signalwithstartworkflow request with invalid payload content",
 			frontendFails: true,
 			msgs: []*fakeMessage{
-				{val: mustGenerateSignalWithStartWorkflowExecutionRequestMsg(t, common.EncodingTypeJSON, false), wantAck: false},
+				{val: mustGenerateSignalWithStartWorkflowExecutionRequestMsg(t, common.EncodingTypeThriftRW, false), wantAck: false},
 			},
 		},
 		{
 			name:          "signalwithstartworkflow frontend fails to respond",
 			frontendFails: true,
 			msgs: []*fakeMessage{
-				{val: mustGenerateSignalWithStartWorkflowExecutionRequestMsg(t, common.EncodingTypeJSON, true), wantAck: false},
+				{val: mustGenerateSignalWithStartWorkflowExecutionRequestMsg(t, common.EncodingTypeThriftRW, true), wantAck: false},
 			},
 		},
 		{
-			name: "signalwithstartworkflow unsupported encoding type",
+			name: "signalwithstartworkflow unsupported encoding type. json encoding of requests are lossy due to PII masking so it shouldn't be used for async requests",
 			msgs: []*fakeMessage{
-				{val: mustGenerateSignalWithStartWorkflowExecutionRequestMsg(t, common.EncodingTypeProto, true), wantAck: false},
+				{val: mustGenerateSignalWithStartWorkflowExecutionRequestMsg(t, common.EncodingTypeJSON, true), wantAck: false},
 			},
 		},
 		{
 			name: "signalwithstartworkflow ok",
 			msgs: []*fakeMessage{
-				{val: mustGenerateSignalWithStartWorkflowExecutionRequestMsg(t, common.EncodingTypeJSON, true), wantAck: true},
+				{val: mustGenerateSignalWithStartWorkflowExecutionRequestMsg(t, common.EncodingTypeThriftRW, true), wantAck: true},
 			},
 		},
 	}
@@ -206,10 +229,20 @@ func TestDefaultConsumer(t *testing.T) {
 				resp := &types.StartWorkflowExecutionResponse{RunID: "test-run-id"}
 				mockFrontend.EXPECT().
 					StartWorkflowExecution(gomock.Any(), gomock.Any(), opts[0], opts[1]).
-					Return(resp, nil).AnyTimes()
+					DoAndReturn(func(ctx interface{}, req *types.StartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
+						if diff := cmp.Diff(testStartReq.StartWorkflowExecutionRequest, req); diff != "" {
+							t.Fatalf("Request mismatch (-want +got):\n%s", diff)
+						}
+						return resp, nil
+					}).AnyTimes()
 				mockFrontend.EXPECT().
 					SignalWithStartWorkflowExecution(gomock.Any(), gomock.Any(), opts[0], opts[1]).
-					Return(resp, nil).AnyTimes()
+					DoAndReturn(func(ctx interface{}, req *types.SignalWithStartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
+						if diff := cmp.Diff(testSignalWithStartAsyncReq.SignalWithStartWorkflowExecutionRequest, req); diff != "" {
+							t.Fatalf("Request mismatch (-want +got):\n%s", diff)
+						}
+						return resp, nil
+					}).AnyTimes()
 			}
 
 			c := New("queueid1", fakeConsumer, testlogger.New(t), metrics.NewNoopMetricsClient(), mockFrontend, WithConcurrency(2))
@@ -247,16 +280,8 @@ func TestDefaultConsumer(t *testing.T) {
 }
 
 func mustGenerateStartWorkflowExecutionRequestMsg(t *testing.T, encodingType common.EncodingType, validPayload bool) []byte {
-	startRequest := &types.StartWorkflowExecutionAsyncRequest{
-		StartWorkflowExecutionRequest: &types.StartWorkflowExecutionRequest{
-			Domain:       "test-domain",
-			WorkflowID:   "test-workflow-id",
-			WorkflowType: &types.WorkflowType{Name: "test-workflow-type"},
-			Input:        []byte("test-input"),
-		},
-	}
-
-	payload, err := json.Marshal(startRequest)
+	encoder := codec.NewThriftRWEncoder()
+	payload, err := encoder.Encode(thrift.FromStartWorkflowExecutionAsyncRequest(testStartReq))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -281,17 +306,8 @@ func mustGenerateStartWorkflowExecutionRequestMsg(t *testing.T, encodingType com
 }
 
 func mustGenerateSignalWithStartWorkflowExecutionRequestMsg(t *testing.T, encodingType common.EncodingType, validPayload bool) []byte {
-	signalWithStartRequest := &types.SignalWithStartWorkflowExecutionAsyncRequest{
-		SignalWithStartWorkflowExecutionRequest: &types.SignalWithStartWorkflowExecutionRequest{
-			Domain:       "test-domain",
-			WorkflowID:   "test-workflow-id",
-			WorkflowType: &types.WorkflowType{Name: "test-workflow-type"},
-			Input:        []byte("test-input"),
-			SignalName:   "test-signal-name",
-		},
-	}
-
-	payload, err := json.Marshal(signalWithStartRequest)
+	encoder := codec.NewThriftRWEncoder()
+	payload, err := encoder.Encode(thrift.FromSignalWithStartWorkflowExecutionAsyncRequest(testSignalWithStartAsyncReq))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -316,16 +332,8 @@ func mustGenerateSignalWithStartWorkflowExecutionRequestMsg(t *testing.T, encodi
 }
 
 func mustGenerateUnsupportedRequestMsg(t *testing.T) []byte {
-	startRequest := &types.StartWorkflowExecutionAsyncRequest{
-		StartWorkflowExecutionRequest: &types.StartWorkflowExecutionRequest{
-			Domain:       "test-domain",
-			WorkflowID:   "test-workflow-id",
-			WorkflowType: &types.WorkflowType{Name: "test-workflow-type"},
-			Input:        []byte("test-input"),
-		},
-	}
-
-	payload, err := json.Marshal(startRequest)
+	encoder := codec.NewThriftRWEncoder()
+	payload, err := encoder.Encode(thrift.FromStartWorkflowExecutionAsyncRequest(testStartReq))
 	if err != nil {
 		t.Fatal(err)
 	}

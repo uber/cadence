@@ -32,7 +32,8 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-//go:generate mockgen -package $GOPACKAGE -destination data_store_interfaces_mock.go -self_package github.com/uber/cadence/common/persistence github.com/uber/cadence/common/persistence ExecutionStore
+//go:generate mockgen -package $GOPACKAGE -destination data_store_interfaces_mock.go -self_package github.com/uber/cadence/common/persistence github.com/uber/cadence/common/persistence ExecutionStore,ShardStore
+//go:generate mockgen -package $GOPACKAGE -destination visibility_store_mock.go -self_package github.com/uber/cadence/common/persistence github.com/uber/cadence/common/persistence VisibilityStore
 
 type (
 	// ////////////////////////////////////////////////////////////////////
@@ -239,6 +240,8 @@ type (
 		PreviousLastWriteVersion int64
 
 		NewWorkflowSnapshot InternalWorkflowSnapshot
+
+		WorkflowRequestMode CreateWorkflowRequestMode
 	}
 
 	// InternalGetReplicationTasksResponse is the response to GetReplicationTask
@@ -423,6 +426,8 @@ type (
 		UpdateWorkflowMutation InternalWorkflowMutation
 
 		NewWorkflowSnapshot *InternalWorkflowSnapshot
+
+		WorkflowRequestMode CreateWorkflowRequestMode
 	}
 
 	// InternalConflictResolveWorkflowExecutionRequest is used to reset workflow execution state for Persistence Interface
@@ -439,6 +444,8 @@ type (
 
 		// current workflow
 		CurrentWorkflowMutation *InternalWorkflowMutation
+
+		WorkflowRequestMode CreateWorkflowRequestMode
 	}
 
 	// InternalWorkflowMutation is used as generic workflow execution state mutation for Persistence Interface
@@ -468,6 +475,8 @@ type (
 		TimerTasks        []Task
 		ReplicationTasks  []Task
 
+		WorkflowRequests []*WorkflowRequest
+
 		Condition int64
 
 		Checksum     checksum.Checksum
@@ -492,6 +501,8 @@ type (
 		CrossClusterTasks []Task
 		TimerTasks        []Task
 		ReplicationTasks  []Task
+
+		WorkflowRequests []*WorkflowRequest
 
 		Condition int64
 

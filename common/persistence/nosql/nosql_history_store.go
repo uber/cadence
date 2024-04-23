@@ -34,7 +34,7 @@ import (
 )
 
 type nosqlHistoryStore struct {
-	*shardedNosqlStore
+	shardedNosqlStore
 }
 
 // newNoSQLHistoryStore is used to create an instance of HistoryStore implementation
@@ -375,7 +375,7 @@ func (h *nosqlHistoryStore) GetAllHistoryTreeBranches(
 	request *persistence.GetAllHistoryTreeBranchesRequest,
 ) (*persistence.GetAllHistoryTreeBranchesResponse, error) {
 
-	if h.shardingPolicy.hasShardedHistory {
+	if h.GetShardingPolicy().hasShardedHistory {
 		return nil, &types.InternalServiceError{
 			Message: "SelectAllHistoryTrees is not supported on sharded nosql db",
 		}

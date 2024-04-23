@@ -340,7 +340,9 @@ const (
 	// key for tests
 	TestGetIntPropertyKey
 	TestGetIntPropertyFilteredByDomainKey
+	TestGetIntPropertyFilteredByWorkflowTypeKey
 	TestGetIntPropertyFilteredByTaskListInfoKey
+	TestGetIntPropertyFilteredByShardIDKey
 
 	// key for common & admin
 
@@ -1438,6 +1440,13 @@ const (
 	IsolationGroupStateUpdateRetryAttempts
 
 	LargeShardHistoryBlobMetricThreshold
+
+	// DeleteHistoryEventContextTimeout in seconds
+	// KeyName: system.deleteHistoryEventContextTimeout
+	// Value type: Int
+	// Default value: 30
+	DeleteHistoryEventContextTimeout
+
 	// LastIntKey must be the last one in this const group
 	LastIntKey
 )
@@ -1449,6 +1458,8 @@ const (
 	TestGetBoolPropertyKey
 	TestGetBoolPropertyFilteredByDomainIDKey
 	TestGetBoolPropertyFilteredByTaskListInfoKey
+	TestGetBoolPropertyFilteredByDomainKey
+	TestGetBoolPropertyFilteredByDomainIDAndWorkflowIDKey
 
 	// key for common & admin
 
@@ -1992,6 +2003,13 @@ const (
 	// Allowed filters: DomainName
 	EnableRetryForChecksumFailure
 
+	// EnableStrongIdempotency enables strong idempotency for APIs
+	// KeyName: history.enableStrongIdempotency
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: DomainName
+	EnableStrongIdempotency
+
 	// LastBoolKey must be the last one in this const group
 	LastBoolKey
 )
@@ -2001,6 +2019,7 @@ const (
 
 	// key for tests
 	TestGetFloat64PropertyKey
+	TestGetFloat64PropertyFilteredByShardIDKey
 
 	// key for common & admin
 
@@ -2265,6 +2284,9 @@ const (
 	TestGetDurationPropertyKey
 	TestGetDurationPropertyFilteredByDomainKey
 	TestGetDurationPropertyFilteredByTaskListInfoKey
+	TestGetDurationPropertyFilteredByWorkflowTypeKey
+	TestGetDurationPropertyFilteredByDomainIDKey
+	TestGetDurationPropertyFilteredByShardID
 
 	// FrontendShutdownDrainDuration is the duration of traffic drain during shutdown
 	// KeyName: frontend.shutdownDrainDuration
@@ -2784,1640 +2806,1680 @@ const (
 const DefaultIsolationGroupConfigStoreManagerGlobalMapping ListKey = -1 // This is a hack to put it in a different list due to it being a different config type
 
 var IntKeys = map[IntKey]DynamicInt{
-	TestGetIntPropertyKey: DynamicInt{
+	TestGetIntPropertyKey: {
 		KeyName:      "testGetIntPropertyKey",
 		Description:  "",
 		DefaultValue: 0,
 	},
-	TestGetIntPropertyFilteredByDomainKey: DynamicInt{
+	TestGetIntPropertyFilteredByDomainKey: {
 		KeyName:      "testGetIntPropertyFilteredByDomainKey",
 		Description:  "",
 		DefaultValue: 0,
 	},
-	TestGetIntPropertyFilteredByTaskListInfoKey: DynamicInt{
+	TestGetIntPropertyFilteredByTaskListInfoKey: {
 		KeyName:      "testGetIntPropertyFilteredByTaskListInfoKey",
 		Description:  "",
 		DefaultValue: 0,
 	},
-	TransactionSizeLimit: DynamicInt{
+	TestGetIntPropertyFilteredByWorkflowTypeKey: {
+		KeyName:      "testGetIntPropertyFilteredByWorkflowTypeKey",
+		Description:  "",
+		DefaultValue: 0,
+	},
+	TestGetIntPropertyFilteredByShardIDKey: {
+		KeyName:      "testGetIntPropertyFilteredByShardIDKey",
+		Description:  "",
+		DefaultValue: 0,
+		Filters:      nil,
+	},
+	TransactionSizeLimit: {
 		KeyName:      "system.transactionSizeLimit",
 		Description:  "TransactionSizeLimit is the largest allowed transaction size to persistence",
 		DefaultValue: 14680064,
 	},
-	MaxRetentionDays: DynamicInt{
+	MaxRetentionDays: {
 		KeyName:      "system.maxRetentionDays",
 		Description:  "MaxRetentionDays is the maximum allowed retention days for domain",
 		DefaultValue: 30,
 	},
-	MinRetentionDays: DynamicInt{
+	MinRetentionDays: {
 		KeyName:      "system.minRetentionDays",
 		Description:  "MinRetentionDays is the minimal allowed retention days for domain",
 		DefaultValue: 1,
 	},
-	MaxDecisionStartToCloseSeconds: DynamicInt{
+	MaxDecisionStartToCloseSeconds: {
 		KeyName:      "system.maxDecisionStartToCloseSeconds",
 		Description:  "MaxDecisionStartToCloseSeconds is the maximum allowed value for decision start to close timeout in seconds",
 		DefaultValue: 240,
 	},
-	BlobSizeLimitError: DynamicInt{
+	BlobSizeLimitError: {
 		KeyName:      "limit.blobSize.error",
 		Description:  "BlobSizeLimitError is the per event blob size limit",
 		DefaultValue: 2 * 1024 * 1024,
 	},
-	BlobSizeLimitWarn: DynamicInt{
+	BlobSizeLimitWarn: {
 		KeyName:      "limit.blobSize.warn",
 		Filters:      []Filter{DomainName},
 		Description:  "BlobSizeLimitWarn is the per event blob size limit for warning",
 		DefaultValue: 256 * 1024,
 	},
-	HistorySizeLimitError: DynamicInt{
+	HistorySizeLimitError: {
 		KeyName:      "limit.historySize.error",
 		Filters:      []Filter{DomainName},
 		Description:  "HistorySizeLimitError is the per workflow execution history size limit",
 		DefaultValue: 200 * 1024 * 1024,
 	},
-	HistorySizeLimitWarn: DynamicInt{
+	HistorySizeLimitWarn: {
 		KeyName:      "limit.historySize.warn",
 		Filters:      []Filter{DomainName},
 		Description:  "HistorySizeLimitWarn is the per workflow execution history size limit for warning",
 		DefaultValue: 50 * 1024 * 1024,
 	},
-	HistoryCountLimitError: DynamicInt{
+	HistoryCountLimitError: {
 		KeyName:      "limit.historyCount.error",
 		Filters:      []Filter{DomainName},
 		Description:  "HistoryCountLimitError is the per workflow execution history event count limit",
 		DefaultValue: 200 * 1024,
 	},
-	HistoryCountLimitWarn: DynamicInt{
+	HistoryCountLimitWarn: {
 		KeyName:      "limit.historyCount.warn",
 		Filters:      []Filter{DomainName},
 		Description:  "HistoryCountLimitWarn is the per workflow execution history event count limit for warning",
 		DefaultValue: 50 * 1024,
 	},
-	PendingActivitiesCountLimitError: DynamicInt{
+	PendingActivitiesCountLimitError: {
 		KeyName:      "limit.pendingActivityCount.error",
 		Description:  "PendingActivitiesCountLimitError is the limit of how many pending activities a workflow can have at a point in time",
 		DefaultValue: 1024,
 	},
-	PendingActivitiesCountLimitWarn: DynamicInt{
+	PendingActivitiesCountLimitWarn: {
 		KeyName:      "limit.pendingActivityCount.warn",
 		Description:  "PendingActivitiesCountLimitWarn is the limit of how many activities a workflow can have before a warning is logged",
 		DefaultValue: 512,
 	},
-	DomainNameMaxLength: DynamicInt{
+	DomainNameMaxLength: {
 		KeyName:      "limit.domainNameLength",
 		Filters:      []Filter{DomainName},
 		Description:  "DomainNameMaxLength is the length limit for domain name",
 		DefaultValue: 1000,
 	},
-	IdentityMaxLength: DynamicInt{
+	IdentityMaxLength: {
 		KeyName:      "limit.identityLength",
 		Filters:      []Filter{DomainName},
 		Description:  "IdentityMaxLength is the length limit for identity",
 		DefaultValue: 1000,
 	},
-	WorkflowIDMaxLength: DynamicInt{
+	WorkflowIDMaxLength: {
 		KeyName:      "limit.workflowIDLength",
 		Filters:      []Filter{DomainName},
 		Description:  "WorkflowIDMaxLength is the length limit for workflowID",
 		DefaultValue: 1000,
 	},
-	SignalNameMaxLength: DynamicInt{
+	SignalNameMaxLength: {
 		KeyName:      "limit.signalNameLength",
 		Filters:      []Filter{DomainName},
 		Description:  "SignalNameMaxLength is the length limit for signal name",
 		DefaultValue: 1000,
 	},
-	WorkflowTypeMaxLength: DynamicInt{
+	WorkflowTypeMaxLength: {
 		KeyName:      "limit.workflowTypeLength",
 		Filters:      []Filter{DomainName},
 		Description:  "WorkflowTypeMaxLength is the length limit for workflow type",
 		DefaultValue: 1000,
 	},
-	RequestIDMaxLength: DynamicInt{
+	RequestIDMaxLength: {
 		KeyName:      "limit.requestIDLength",
 		Filters:      []Filter{DomainName},
 		Description:  "RequestIDMaxLength is the length limit for requestID",
 		DefaultValue: 1000,
 	},
-	TaskListNameMaxLength: DynamicInt{
+	TaskListNameMaxLength: {
 		KeyName:      "limit.taskListNameLength",
 		Filters:      []Filter{DomainName},
 		Description:  "TaskListNameMaxLength is the length limit for task list name",
 		DefaultValue: 1000,
 	},
-	ActivityIDMaxLength: DynamicInt{
+	ActivityIDMaxLength: {
 		KeyName:      "limit.activityIDLength",
 		Filters:      []Filter{DomainName},
 		Description:  "ActivityIDMaxLength is the length limit for activityID",
 		DefaultValue: 1000,
 	},
-	ActivityTypeMaxLength: DynamicInt{
+	ActivityTypeMaxLength: {
 		KeyName:      "limit.activityTypeLength",
 		Filters:      []Filter{DomainName},
 		Description:  "ActivityTypeMaxLength is the length limit for activity type",
 		DefaultValue: 1000,
 	},
-	MarkerNameMaxLength: DynamicInt{
+	MarkerNameMaxLength: {
 		KeyName:      "limit.markerNameLength",
 		Filters:      []Filter{DomainName},
 		Description:  "MarkerNameMaxLength is the length limit for marker name",
 		DefaultValue: 1000,
 	},
-	TimerIDMaxLength: DynamicInt{
+	TimerIDMaxLength: {
 		KeyName:      "limit.timerIDLength",
 		Filters:      []Filter{DomainName},
 		Description:  "TimerIDMaxLength is the length limit for timerID",
 		DefaultValue: 1000,
 	},
-	MaxIDLengthWarnLimit: DynamicInt{
+	MaxIDLengthWarnLimit: {
 		KeyName:      "limit.maxIDWarnLength",
 		Description:  "MaxIDLengthWarnLimit is the warn length limit for various IDs, including: Domain, TaskList, WorkflowID, ActivityID, TimerID, WorkflowType, ActivityType, SignalName, MarkerName, ErrorReason/FailureReason/CancelCause, Identity, RequestID",
 		DefaultValue: 128,
 	},
-	FrontendPersistenceMaxQPS: DynamicInt{
+	FrontendPersistenceMaxQPS: {
 		KeyName:      "frontend.persistenceMaxQPS",
 		Description:  "FrontendPersistenceMaxQPS is the max qps frontend host can query DB",
 		DefaultValue: 2000,
 	},
-	FrontendPersistenceGlobalMaxQPS: DynamicInt{
+	FrontendPersistenceGlobalMaxQPS: {
 		KeyName:      "frontend.persistenceGlobalMaxQPS",
 		Description:  "FrontendPersistenceGlobalMaxQPS is the max qps frontend cluster can query DB",
 		DefaultValue: 0,
 	},
-	FrontendVisibilityMaxPageSize: DynamicInt{
+	FrontendVisibilityMaxPageSize: {
 		KeyName:      "frontend.visibilityMaxPageSize",
 		Filters:      []Filter{DomainName},
 		Description:  "FrontendVisibilityMaxPageSize is default max size for ListWorkflowExecutions in one page",
 		DefaultValue: 1000,
 	},
-	FrontendVisibilityListMaxQPS: DynamicInt{
+	FrontendVisibilityListMaxQPS: {
 		KeyName: "frontend.visibilityListMaxQPS",
 		Description: "deprecated: never used for ratelimiting, only sampling-based failure injection, and only on database-based visibility.\n" +
 			"FrontendVisibilityListMaxQPS is max qps frontend can list open/close workflows",
 		DefaultValue: 10,
 	},
-	FrontendESVisibilityListMaxQPS: DynamicInt{
+	FrontendESVisibilityListMaxQPS: {
 		KeyName: "frontend.esVisibilityListMaxQPS",
 		Description: "deprecated: never read from, all ES reads and writes erroneously use PersistenceMaxQPS.\n" +
 			"FrontendESVisibilityListMaxQPS is max qps frontend can list open/close workflows from ElasticSearch",
 		DefaultValue: 30,
 	},
-	FrontendESIndexMaxResultWindow: DynamicInt{
+	FrontendESIndexMaxResultWindow: {
 		KeyName:      "frontend.esIndexMaxResultWindow",
 		Description:  "FrontendESIndexMaxResultWindow is ElasticSearch index setting max_result_window",
 		DefaultValue: 10000,
 	},
-	FrontendHistoryMaxPageSize: DynamicInt{
+	FrontendHistoryMaxPageSize: {
 		KeyName:      "frontend.historyMaxPageSize",
 		Filters:      []Filter{DomainName},
 		Description:  "FrontendHistoryMaxPageSize is default max size for GetWorkflowExecutionHistory in one page",
 		DefaultValue: 1000,
 	},
-	FrontendUserRPS: DynamicInt{
+	FrontendUserRPS: {
 		KeyName:      "frontend.rps",
 		Description:  "FrontendUserRPS is workflow rate limit per second",
 		DefaultValue: 1200,
 	},
-	FrontendWorkerRPS: DynamicInt{
+	FrontendWorkerRPS: {
 		KeyName:      "frontend.workerrps",
 		Description:  "FrontendWorkerRPS is background-processing workflow rate limit per second",
 		DefaultValue: UnlimitedRPS,
 	},
-	FrontendVisibilityRPS: DynamicInt{
+	FrontendVisibilityRPS: {
 		KeyName:      "frontend.visibilityrps",
 		Description:  "FrontendVisibilityRPS is the global workflow List*WorkflowExecutions request rate limit per second",
 		DefaultValue: UnlimitedRPS,
 	},
-	FrontendAsyncRPS: DynamicInt{
+	FrontendAsyncRPS: {
 		KeyName:      "frontend.asyncrps",
 		Description:  "FrontendAsyncRPS is the async workflow request rate limit per second",
 		DefaultValue: 10000,
 	},
-	FrontendMaxDomainUserRPSPerInstance: DynamicInt{
+	FrontendMaxDomainUserRPSPerInstance: {
 		KeyName:      "frontend.domainrps",
 		Filters:      []Filter{DomainName},
 		Description:  "FrontendMaxDomainUserRPSPerInstance is workflow domain rate limit per second",
 		DefaultValue: 1200,
 	},
-	FrontendMaxDomainWorkerRPSPerInstance: DynamicInt{
+	FrontendMaxDomainWorkerRPSPerInstance: {
 		KeyName:      "frontend.domainworkerrps",
 		Filters:      []Filter{DomainName},
 		Description:  "FrontendMaxDomainWorkerRPSPerInstance is background-processing workflow domain rate limit per second",
 		DefaultValue: UnlimitedRPS,
 	},
-	FrontendMaxDomainVisibilityRPSPerInstance: DynamicInt{
+	FrontendMaxDomainVisibilityRPSPerInstance: {
 		KeyName:      "frontend.domainvisibilityrps",
 		Filters:      []Filter{DomainName},
 		Description:  "FrontendMaxDomainVisibilityRPSPerInstance is the per-instance List*WorkflowExecutions request rate limit per second",
 		DefaultValue: UnlimitedRPS,
 	},
-	FrontendMaxDomainAsyncRPSPerInstance: DynamicInt{
+	FrontendMaxDomainAsyncRPSPerInstance: {
 		KeyName:      "frontend.domainasyncrps",
 		Filters:      []Filter{DomainName},
 		Description:  "FrontendMaxDomainAsyncRPSPerInstance is the per-instance async workflow request rate limit per second",
 		DefaultValue: 10000,
 	},
-	FrontendGlobalDomainUserRPS: DynamicInt{
+	FrontendGlobalDomainUserRPS: {
 		KeyName:      "frontend.globalDomainrps",
 		Filters:      []Filter{DomainName},
 		Description:  "FrontendGlobalDomainUserRPS is workflow domain rate limit per second for the whole Cadence cluster",
 		DefaultValue: 0,
 	},
-	FrontendGlobalDomainWorkerRPS: DynamicInt{
+	FrontendGlobalDomainWorkerRPS: {
 		KeyName:      "frontend.globalDomainWorkerrps",
 		Filters:      []Filter{DomainName},
 		Description:  "FrontendGlobalDomainWorkerRPS is background-processing workflow domain rate limit per second for the whole Cadence cluster",
 		DefaultValue: UnlimitedRPS,
 	},
-	FrontendGlobalDomainVisibilityRPS: DynamicInt{
+	FrontendGlobalDomainVisibilityRPS: {
 		KeyName:      "frontend.globalDomainVisibilityrps",
 		Filters:      []Filter{DomainName},
 		Description:  "FrontendGlobalDomainVisibilityRPS is the per-domain List*WorkflowExecutions request rate limit per second",
 		DefaultValue: UnlimitedRPS,
 	},
-	FrontendGlobalDomainAsyncRPS: DynamicInt{
+	FrontendGlobalDomainAsyncRPS: {
 		KeyName:      "frontend.globalDomainAsyncrps",
 		Filters:      []Filter{DomainName},
 		Description:  "FrontendGlobalDomainAsyncRPS is the per-domain async workflow request rate limit per second",
 		DefaultValue: 100000,
 	},
-	FrontendDecisionResultCountLimit: DynamicInt{
+	FrontendDecisionResultCountLimit: {
 		KeyName:      "frontend.decisionResultCountLimit",
 		Filters:      []Filter{DomainName},
 		Description:  "FrontendDecisionResultCountLimit is max number of decisions per RespondDecisionTaskCompleted request",
 		DefaultValue: 0,
 	},
-	FrontendHistoryMgrNumConns: DynamicInt{
+	FrontendHistoryMgrNumConns: {
 		KeyName:      "frontend.historyMgrNumConns",
 		Description:  "FrontendHistoryMgrNumConns is for persistence cluster.NumConns",
 		DefaultValue: 10,
 	},
-	FrontendThrottledLogRPS: DynamicInt{
+	FrontendThrottledLogRPS: {
 		KeyName:      "frontend.throttledLogRPS",
 		Description:  "FrontendThrottledLogRPS is the rate limit on number of log messages emitted per second for throttled logger",
 		DefaultValue: 20,
 	},
-	FrontendMaxBadBinaries: DynamicInt{
+	FrontendMaxBadBinaries: {
 		KeyName:      "frontend.maxBadBinaries",
 		Filters:      []Filter{DomainName},
 		Description:  "FrontendMaxBadBinaries is the max number of bad binaries in domain config",
 		DefaultValue: 10,
 	},
-	SearchAttributesNumberOfKeysLimit: DynamicInt{
+	SearchAttributesNumberOfKeysLimit: {
 		KeyName:      "frontend.searchAttributesNumberOfKeysLimit",
 		Filters:      []Filter{DomainName},
 		Description:  "SearchAttributesNumberOfKeysLimit is the limit of number of keys",
 		DefaultValue: 100,
 	},
-	SearchAttributesSizeOfValueLimit: DynamicInt{
+	SearchAttributesSizeOfValueLimit: {
 		KeyName:      "frontend.searchAttributesSizeOfValueLimit",
 		Filters:      []Filter{DomainName},
 		Description:  "SearchAttributesSizeOfValueLimit is the size limit of each value",
 		DefaultValue: 2048,
 	},
-	SearchAttributesTotalSizeLimit: DynamicInt{
+	SearchAttributesTotalSizeLimit: {
 		KeyName:      "frontend.searchAttributesTotalSizeLimit",
 		Filters:      []Filter{DomainName},
 		Description:  "SearchAttributesTotalSizeLimit is the size limit of the whole map",
 		DefaultValue: 40 * 1024,
 	},
-	VisibilityArchivalQueryMaxPageSize: DynamicInt{
+	VisibilityArchivalQueryMaxPageSize: {
 		KeyName:      "frontend.visibilityArchivalQueryMaxPageSize",
 		Description:  "VisibilityArchivalQueryMaxPageSize is the maximum page size for a visibility archival query",
 		DefaultValue: 10000,
 	},
-	MatchingUserRPS: DynamicInt{
+	MatchingUserRPS: {
 		KeyName:      "matching.rps",
 		Description:  "MatchingUserRPS is request rate per second for each matching host",
 		DefaultValue: 1200,
 	},
-	MatchingWorkerRPS: DynamicInt{
+	MatchingWorkerRPS: {
 		KeyName:      "matching.workerrps",
 		Description:  "MatchingWorkerRPS is background-processing request rate per second for each matching host",
 		DefaultValue: UnlimitedRPS,
 	},
-	MatchingDomainUserRPS: DynamicInt{
+	MatchingDomainUserRPS: {
 		KeyName:      "matching.domainrps",
 		Description:  "MatchingDomainUserRPS is request rate per domain per second for each matching host",
 		DefaultValue: 0,
 	},
-	MatchingDomainWorkerRPS: DynamicInt{
+	MatchingDomainWorkerRPS: {
 		KeyName:      "matching.domainworkerrps",
 		Description:  "MatchingDomainWorkerRPS is background-processing request rate per domain per second for each matching host",
 		DefaultValue: UnlimitedRPS,
 	},
-	MatchingPersistenceMaxQPS: DynamicInt{
+	MatchingPersistenceMaxQPS: {
 		KeyName:      "matching.persistenceMaxQPS",
 		Description:  "MatchingPersistenceMaxQPS is the max qps matching host can query DB",
 		DefaultValue: 3000,
 	},
-	MatchingPersistenceGlobalMaxQPS: DynamicInt{
+	MatchingPersistenceGlobalMaxQPS: {
 		KeyName:      "matching.persistenceGlobalMaxQPS",
 		Description:  "MatchingPersistenceGlobalMaxQPS is the max qps matching cluster can query DB",
 		DefaultValue: 0,
 	},
-	MatchingMinTaskThrottlingBurstSize: DynamicInt{
+	MatchingMinTaskThrottlingBurstSize: {
 		KeyName:      "matching.minTaskThrottlingBurstSize",
 		Filters:      []Filter{DomainName, TaskListName, TaskType},
 		Description:  "MatchingMinTaskThrottlingBurstSize is the minimum burst size for task list throttling",
 		DefaultValue: 1,
 	},
-	MatchingGetTasksBatchSize: DynamicInt{
+	MatchingGetTasksBatchSize: {
 		KeyName:      "matching.getTasksBatchSize",
 		Filters:      []Filter{DomainName, TaskListName, TaskType},
 		Description:  "MatchingGetTasksBatchSize is the maximum batch size to fetch from the task buffer",
 		DefaultValue: 1000,
 	},
-	MatchingOutstandingTaskAppendsThreshold: DynamicInt{
+	MatchingOutstandingTaskAppendsThreshold: {
 		KeyName:      "matching.outstandingTaskAppendsThreshold",
 		Filters:      []Filter{DomainName, TaskListName, TaskType},
 		Description:  "MatchingOutstandingTaskAppendsThreshold is the threshold for outstanding task appends",
 		DefaultValue: 250,
 	},
-	MatchingMaxTaskBatchSize: DynamicInt{
+	MatchingMaxTaskBatchSize: {
 		KeyName:      "matching.maxTaskBatchSize",
 		Filters:      []Filter{DomainName, TaskListName, TaskType},
 		Description:  "MatchingMaxTaskBatchSize is max batch size for task writer",
 		DefaultValue: 100,
 	},
-	MatchingMaxTaskDeleteBatchSize: DynamicInt{
+	MatchingMaxTaskDeleteBatchSize: {
 		KeyName:      "matching.maxTaskDeleteBatchSize",
 		Filters:      []Filter{DomainName, TaskListName, TaskType},
 		Description:  "MatchingMaxTaskDeleteBatchSize is the max batch size for range deletion of tasks",
 		DefaultValue: 100,
 	},
-	MatchingThrottledLogRPS: DynamicInt{
+	MatchingThrottledLogRPS: {
 		KeyName:      "matching.throttledLogRPS",
 		Description:  "MatchingThrottledLogRPS is the rate limit on number of log messages emitted per second for throttled logger",
 		DefaultValue: 20,
 	},
-	MatchingNumTasklistWritePartitions: DynamicInt{
+	MatchingNumTasklistWritePartitions: {
 		KeyName:      "matching.numTasklistWritePartitions",
 		Filters:      []Filter{DomainName, TaskListName, TaskType},
 		Description:  "MatchingNumTasklistWritePartitions is the number of write partitions for a task list",
 		DefaultValue: 1,
 	},
-	MatchingNumTasklistReadPartitions: DynamicInt{
+	MatchingNumTasklistReadPartitions: {
 		KeyName:      "matching.numTasklistReadPartitions",
 		Filters:      []Filter{DomainName, TaskListName, TaskType},
 		Description:  "MatchingNumTasklistReadPartitions is the number of read partitions for a task list",
 		DefaultValue: 1,
 	},
-	MatchingForwarderMaxOutstandingPolls: DynamicInt{
+	MatchingForwarderMaxOutstandingPolls: {
 		KeyName:      "matching.forwarderMaxOutstandingPolls",
 		Filters:      []Filter{DomainName, TaskListName, TaskType},
 		Description:  "MatchingForwarderMaxOutstandingPolls is the max number of inflight polls from the forwarder",
 		DefaultValue: 1,
 	},
-	MatchingForwarderMaxOutstandingTasks: DynamicInt{
+	MatchingForwarderMaxOutstandingTasks: {
 		KeyName:      "matching.forwarderMaxOutstandingTasks",
 		Filters:      []Filter{DomainName, TaskListName, TaskType},
 		Description:  "MatchingForwarderMaxOutstandingTasks is the max number of inflight addTask/queryTask from the forwarder",
 		DefaultValue: 1,
 	},
-	MatchingForwarderMaxRatePerSecond: DynamicInt{
+	MatchingForwarderMaxRatePerSecond: {
 		KeyName:      "matching.forwarderMaxRatePerSecond",
 		Filters:      []Filter{DomainName, TaskListName, TaskType},
 		Description:  "MatchingForwarderMaxRatePerSecond is the max rate at which add/query can be forwarded",
 		DefaultValue: 10,
 	},
-	MatchingForwarderMaxChildrenPerNode: DynamicInt{
+	MatchingForwarderMaxChildrenPerNode: {
 		KeyName:      "matching.forwarderMaxChildrenPerNode",
 		Filters:      []Filter{DomainName, TaskListName, TaskType},
 		Description:  "MatchingForwarderMaxChildrenPerNode is the max number of children per node in the task list partition tree",
 		DefaultValue: 20,
 	},
-	HistoryRPS: DynamicInt{
+	HistoryRPS: {
 		KeyName:      "history.rps",
 		Description:  "HistoryRPS is request rate per second for each history host",
 		DefaultValue: 3000,
 	},
-	HistoryPersistenceMaxQPS: DynamicInt{
+	HistoryPersistenceMaxQPS: {
 		KeyName:      "history.persistenceMaxQPS",
 		Description:  "HistoryPersistenceMaxQPS is the max qps history host can query DB",
 		DefaultValue: 9000,
 	},
-	HistoryPersistenceGlobalMaxQPS: DynamicInt{
+	HistoryPersistenceGlobalMaxQPS: {
 		KeyName:      "history.persistenceGlobalMaxQPS",
 		Description:  "HistoryPersistenceGlobalMaxQPS is the max qps history cluster can query DB",
 		DefaultValue: 0,
 	},
-	HistoryVisibilityOpenMaxQPS: DynamicInt{
+	HistoryVisibilityOpenMaxQPS: {
 		KeyName:      "history.historyVisibilityOpenMaxQPS",
 		Filters:      []Filter{DomainName},
 		Description:  "HistoryVisibilityOpenMaxQPS is max qps one history host can write visibility open_executions",
 		DefaultValue: 300,
 	},
-	HistoryVisibilityClosedMaxQPS: DynamicInt{
+	HistoryVisibilityClosedMaxQPS: {
 		KeyName:      "history.historyVisibilityClosedMaxQPS",
 		Filters:      []Filter{DomainName},
 		Description:  "HistoryVisibilityClosedMaxQPS is max qps one history host can write visibility closed_executions",
 		DefaultValue: 300,
 	},
-	HistoryCacheInitialSize: DynamicInt{
+	HistoryCacheInitialSize: {
 		KeyName:      "history.cacheInitialSize",
 		Description:  "HistoryCacheInitialSize is initial size of history cache",
 		DefaultValue: 128,
 	},
-	HistoryCacheMaxSize: DynamicInt{
+	HistoryCacheMaxSize: {
 		KeyName:      "history.cacheMaxSize",
 		Description:  "HistoryCacheMaxSize is max size of history cache",
 		DefaultValue: 512,
 	},
-	EventsCacheInitialCount: DynamicInt{
+	EventsCacheInitialCount: {
 		KeyName:      "history.eventsCacheInitialSize",
 		Description:  "EventsCacheInitialCount is initial count of events cache",
 		DefaultValue: 128,
 	},
-	EventsCacheMaxCount: DynamicInt{
+	EventsCacheMaxCount: {
 		KeyName:      "history.eventsCacheMaxSize",
 		Description:  "EventsCacheMaxCount is max count of events cache",
 		DefaultValue: 512,
 	},
-	EventsCacheMaxSize: DynamicInt{
+	EventsCacheMaxSize: {
 		KeyName:      "history.eventsCacheMaxSizeInBytes",
 		Description:  "EventsCacheMaxSize is max size of events cache in bytes",
 		DefaultValue: 0,
 	},
-	EventsCacheGlobalInitialCount: DynamicInt{
+	EventsCacheGlobalInitialCount: {
 		KeyName:      "history.eventsCacheGlobalInitialSize",
 		Description:  "EventsCacheGlobalInitialCount is initial count of global events cache",
 		DefaultValue: 4096,
 	},
-	EventsCacheGlobalMaxCount: DynamicInt{
+	EventsCacheGlobalMaxCount: {
 		KeyName:      "history.eventsCacheGlobalMaxSize",
 		Description:  "EventsCacheGlobalMaxCount is max count of global events cache",
 		DefaultValue: 131072,
 	},
-	AcquireShardConcurrency: DynamicInt{
+	AcquireShardConcurrency: {
 		KeyName:      "history.acquireShardConcurrency",
 		Description:  "AcquireShardConcurrency is number of goroutines that can be used to acquire shards in the shard controller.",
 		DefaultValue: 1,
 	},
-	TaskProcessRPS: DynamicInt{
+	TaskProcessRPS: {
 		KeyName:      "history.taskProcessRPS",
 		Filters:      []Filter{DomainName},
 		Description:  "TaskProcessRPS is the task processing rate per second for each domain",
 		DefaultValue: 1000,
 	},
-	TaskSchedulerType: DynamicInt{
+	TaskSchedulerType: {
 		KeyName:      "history.taskSchedulerType",
 		Description:  "TaskSchedulerType is the task scheduler type for priority task processor",
 		DefaultValue: 2, // int(task.SchedulerTypeWRR),
 	},
-	TaskSchedulerWorkerCount: DynamicInt{
+	TaskSchedulerWorkerCount: {
 		KeyName:      "history.taskSchedulerWorkerCount",
 		Description:  "TaskSchedulerWorkerCount is the number of workers per host in task scheduler",
 		DefaultValue: 200,
 	},
-	TaskSchedulerShardWorkerCount: DynamicInt{
+	TaskSchedulerShardWorkerCount: {
 		KeyName:      "history.taskSchedulerShardWorkerCount",
 		Description:  "TaskSchedulerShardWorkerCount is the number of worker per shard in task scheduler",
 		DefaultValue: 0,
 	},
-	TaskSchedulerQueueSize: DynamicInt{
+	TaskSchedulerQueueSize: {
 		KeyName:      "history.taskSchedulerQueueSize",
 		Description:  "TaskSchedulerQueueSize is the size of task channel for host level task scheduler",
 		DefaultValue: 10000,
 	},
-	TaskSchedulerShardQueueSize: DynamicInt{
+	TaskSchedulerShardQueueSize: {
 		KeyName:      "history.taskSchedulerShardQueueSize",
 		Description:  "TaskSchedulerShardQueueSize is the size of task channel for shard level task scheduler",
 		DefaultValue: 200,
 	},
-	TaskSchedulerDispatcherCount: DynamicInt{
+	TaskSchedulerDispatcherCount: {
 		KeyName:      "history.taskSchedulerDispatcherCount",
 		Description:  "TaskSchedulerDispatcherCount is the number of task dispatcher in task scheduler (only applies to host level task scheduler)",
 		DefaultValue: 1,
 	},
-	TaskCriticalRetryCount: DynamicInt{
+	TaskCriticalRetryCount: {
 		KeyName:      "history.taskCriticalRetryCount",
 		Description:  "TaskCriticalRetryCount is the critical retry count for background tasks, when task attempt exceeds this threshold:- task attempt metrics and additional error logs will be emitted- task priority will be lowered",
 		DefaultValue: 50,
 	},
-	QueueProcessorSplitMaxLevel: DynamicInt{
+	QueueProcessorSplitMaxLevel: {
 		KeyName:      "history.queueProcessorSplitMaxLevel",
 		Description:  "QueueProcessorSplitMaxLevel is the max processing queue level",
 		DefaultValue: 2, // 3 levels, start from 0
 	},
-	TimerTaskBatchSize: DynamicInt{
+	TimerTaskBatchSize: {
 		KeyName:      "history.timerTaskBatchSize",
 		Description:  "TimerTaskBatchSize is batch size for timer processor to process tasks",
 		DefaultValue: 100,
 	},
-	TimerTaskDeleteBatchSize: DynamicInt{
+	TimerTaskDeleteBatchSize: {
 		KeyName:      "history.timerTaskDeleteBatchSize",
 		Description:  "TimerTaskDeleteBatchSize is batch size for timer processor to delete timer tasks",
 		DefaultValue: 4000,
 	},
-	TimerProcessorGetFailureRetryCount: DynamicInt{
+	TimerProcessorGetFailureRetryCount: {
 		KeyName:      "history.timerProcessorGetFailureRetryCount",
 		Description:  "TimerProcessorGetFailureRetryCount is retry count for timer processor get failure operation",
 		DefaultValue: 5,
 	},
-	TimerProcessorCompleteTimerFailureRetryCount: DynamicInt{
+	TimerProcessorCompleteTimerFailureRetryCount: {
 		KeyName:      "history.timerProcessorCompleteTimerFailureRetryCount",
 		Description:  "TimerProcessorCompleteTimerFailureRetryCount is retry count for timer processor complete timer operation",
 		DefaultValue: 10,
 	},
-	TimerProcessorFailoverMaxPollRPS: DynamicInt{
+	TimerProcessorFailoverMaxPollRPS: {
 		KeyName:      "history.timerProcessorFailoverMaxPollRPS",
 		Description:  "TimerProcessorFailoverMaxPollRPS is max poll rate per second for timer processor",
 		DefaultValue: 1,
 	},
-	TimerProcessorMaxPollRPS: DynamicInt{
+	TimerProcessorMaxPollRPS: {
 		KeyName:      "history.timerProcessorMaxPollRPS",
 		Description:  "TimerProcessorMaxPollRPS is max poll rate per second for timer processor",
 		DefaultValue: 20,
 	},
-	TimerProcessorMaxRedispatchQueueSize: DynamicInt{
+	TimerProcessorMaxRedispatchQueueSize: {
 		KeyName:      "history.timerProcessorMaxRedispatchQueueSize",
 		Description:  "TimerProcessorMaxRedispatchQueueSize is the threshold of the number of tasks in the redispatch queue for timer processor",
 		DefaultValue: 10000,
 	},
-	TimerProcessorHistoryArchivalSizeLimit: DynamicInt{
+	TimerProcessorHistoryArchivalSizeLimit: {
 		KeyName:      "history.timerProcessorHistoryArchivalSizeLimit",
 		Description:  "TimerProcessorHistoryArchivalSizeLimit is the max history size for inline archival",
 		DefaultValue: 500 * 1024,
 	},
-	TransferTaskBatchSize: DynamicInt{
+	TransferTaskBatchSize: {
 		KeyName:      "history.transferTaskBatchSize",
 		Description:  "TransferTaskBatchSize is batch size for transferQueueProcessor",
 		DefaultValue: 100,
 	},
-	TransferTaskDeleteBatchSize: DynamicInt{
+	TransferTaskDeleteBatchSize: {
 		KeyName:      "history.transferTaskDeleteBatchSize",
 		Description:  "TransferTaskDeleteBatchSize is batch size for transferQueueProcessor to delete transfer tasks",
 		DefaultValue: 4000,
 	},
-	TransferProcessorFailoverMaxPollRPS: DynamicInt{
+	TransferProcessorFailoverMaxPollRPS: {
 		KeyName:      "history.transferProcessorFailoverMaxPollRPS",
 		Description:  "TransferProcessorFailoverMaxPollRPS is max poll rate per second for transferQueueProcessor",
 		DefaultValue: 1,
 	},
-	TransferProcessorMaxPollRPS: DynamicInt{
+	TransferProcessorMaxPollRPS: {
 		KeyName:      "history.transferProcessorMaxPollRPS",
 		Description:  "TransferProcessorMaxPollRPS is max poll rate per second for transferQueueProcessor",
 		DefaultValue: 20,
 	},
-	TransferProcessorCompleteTransferFailureRetryCount: DynamicInt{
+	TransferProcessorCompleteTransferFailureRetryCount: {
 		KeyName:      "history.transferProcessorCompleteTransferFailureRetryCount",
 		Description:  "TransferProcessorCompleteTransferFailureRetryCount is times of retry for failure",
 		DefaultValue: 10,
 	},
-	TransferProcessorMaxRedispatchQueueSize: DynamicInt{
+	TransferProcessorMaxRedispatchQueueSize: {
 		KeyName:      "history.transferProcessorMaxRedispatchQueueSize",
 		Description:  "TransferProcessorMaxRedispatchQueueSize is the threshold of the number of tasks in the redispatch queue for transferQueueProcessor",
 		DefaultValue: 10000,
 	},
-	CrossClusterTaskBatchSize: DynamicInt{
+	CrossClusterTaskBatchSize: {
 		KeyName:      "history.crossClusterTaskBatchSize",
 		Description:  "CrossClusterTaskBatchSize is the batch size for loading cross cluster tasks from persistence in crossClusterQueueProcessor",
 		DefaultValue: 100,
 	},
-	CrossClusterTaskDeleteBatchSize: DynamicInt{
+	CrossClusterTaskDeleteBatchSize: {
 		KeyName:      "history.crossClusterTaskDeleteBatchSize",
 		Description:  "CrossClusterTaskDeleteBatchSize is the batch size for deleting cross cluster tasks from persistence in crossClusterQueueProcessor",
 		DefaultValue: 4000,
 	},
-	CrossClusterTaskFetchBatchSize: DynamicInt{
+	CrossClusterTaskFetchBatchSize: {
 		KeyName:      "history.crossClusterTaskFetchBatchSize",
 		Filters:      []Filter{ShardID},
 		Description:  "CrossClusterTaskFetchBatchSize is batch size for dispatching cross cluster tasks to target cluster in crossClusterQueueProcessor",
 		DefaultValue: 100,
 	},
-	CrossClusterSourceProcessorMaxPollRPS: DynamicInt{
+	CrossClusterSourceProcessorMaxPollRPS: {
 		KeyName:      "history.crossClusterSourceProcessorMaxPollRPS",
 		Description:  "CrossClusterSourceProcessorMaxPollRPS is max poll rate per second for crossClusterQueueProcessor",
 		DefaultValue: 20,
 	},
-	CrossClusterSourceProcessorCompleteTaskFailureRetryCount: DynamicInt{
+	CrossClusterSourceProcessorCompleteTaskFailureRetryCount: {
 		KeyName:      "history.crossClusterSourceProcessorCompleteTaskFailureRetryCount",
 		Description:  "CrossClusterSourceProcessorCompleteTaskFailureRetryCount is times of retry for failure",
 		DefaultValue: 10,
 	},
-	CrossClusterSourceProcessorMaxRedispatchQueueSize: DynamicInt{
+	CrossClusterSourceProcessorMaxRedispatchQueueSize: {
 		KeyName:      "history.crossClusterSourceProcessorMaxRedispatchQueueSize",
 		Description:  "CrossClusterSourceProcessorMaxRedispatchQueueSize is the threshold of the number of tasks in the redispatch queue for crossClusterQueueProcessor",
 		DefaultValue: 10000,
 	},
-	CrossClusterSourceProcessorMaxPendingTaskSize: DynamicInt{
+	CrossClusterSourceProcessorMaxPendingTaskSize: {
 		KeyName:      "history.crossClusterSourceProcessorMaxPendingTaskSize",
 		Description:  "CrossClusterSourceProcessorMaxPendingTaskSize is the threshold of the number of ready for polling tasks in crossClusterQueueProcessor, task loading will be stopped when the number is reached",
 		DefaultValue: 500,
 	},
-	CrossClusterTargetProcessorMaxPendingTasks: DynamicInt{
+	CrossClusterTargetProcessorMaxPendingTasks: {
 		KeyName:      "history.crossClusterTargetProcessorMaxPendingTasks",
 		Description:  "CrossClusterTargetProcessorMaxPendingTasks is the max number of pending tasks in cross cluster task processor",
 		DefaultValue: 200,
 	},
-	CrossClusterTargetProcessorMaxRetryCount: DynamicInt{
+	CrossClusterTargetProcessorMaxRetryCount: {
 		KeyName:      "history.crossClusterTargetProcessorMaxRetryCount",
 		Description:  "CrossClusterTargetProcessorMaxRetryCount is the max number of retries when executing a cross-cluster task in target cluster",
 		DefaultValue: 20,
 	},
-	CrossClusterFetcherParallelism: DynamicInt{
+	CrossClusterFetcherParallelism: {
 		KeyName:      "history.crossClusterFetcherParallelism",
 		Description:  "CrossClusterFetcherParallelism is the number of go routines each cross cluster fetcher use, note there's one cross cluster task fetcher per host per source cluster",
 		DefaultValue: 1,
 	},
-	ReplicatorTaskBatchSize: DynamicInt{
+	ReplicatorTaskBatchSize: {
 		KeyName:      "history.replicatorTaskBatchSize",
 		Description:  "ReplicatorTaskBatchSize is batch size for ReplicatorProcessor",
 		DefaultValue: 25,
 	},
-	ReplicatorTaskDeleteBatchSize: DynamicInt{
+	ReplicatorTaskDeleteBatchSize: {
 		KeyName:      "history.replicatorTaskDeleteBatchSize",
 		Description:  "ReplicatorTaskDeleteBatchSize is batch size for ReplicatorProcessor to delete replication tasks",
 		DefaultValue: 4000,
 	},
-	ReplicatorReadTaskMaxRetryCount: DynamicInt{
+	ReplicatorReadTaskMaxRetryCount: {
 		KeyName:      "history.replicatorReadTaskMaxRetryCount",
 		Description:  "ReplicatorReadTaskMaxRetryCount is the number of read replication task retry time",
 		DefaultValue: 3,
 	},
-	ReplicatorCacheCapacity: DynamicInt{
+	ReplicatorCacheCapacity: {
 		KeyName:      "history.replicatorCacheCapacity",
 		Description:  "ReplicatorCacheCapacity is the capacity of replication cache in number of tasks",
 		DefaultValue: 0,
 	},
-	ExecutionMgrNumConns: DynamicInt{
+	ExecutionMgrNumConns: {
 		KeyName:      "history.executionMgrNumConns",
 		Description:  "ExecutionMgrNumConns is persistence connections number for ExecutionManager",
 		DefaultValue: 50,
 	},
-	HistoryMgrNumConns: DynamicInt{
+	HistoryMgrNumConns: {
 		KeyName:      "history.historyMgrNumConns",
 		Description:  "HistoryMgrNumConns is persistence connections number for HistoryManager",
 		DefaultValue: 50,
 	},
-	MaximumBufferedEventsBatch: DynamicInt{
+	MaximumBufferedEventsBatch: {
 		KeyName:      "history.maximumBufferedEventsBatch",
 		Description:  "MaximumBufferedEventsBatch is max number of buffer event in mutable state",
 		DefaultValue: 100,
 	},
-	MaximumSignalsPerExecution: DynamicInt{
+	MaximumSignalsPerExecution: {
 		KeyName:      "history.maximumSignalsPerExecution",
 		Filters:      []Filter{DomainName},
 		Description:  "MaximumSignalsPerExecution is max number of signals supported by single execution",
 		DefaultValue: 10000, // 10K signals should big enough given workflow execution has 200K history lengh limit. It needs to be non-zero to protect continueAsNew from infinit loop
 	},
-	NumArchiveSystemWorkflows: DynamicInt{
+	NumArchiveSystemWorkflows: {
 		KeyName:      "history.numArchiveSystemWorkflows",
 		Description:  "NumArchiveSystemWorkflows is key for number of archive system workflows running in total",
 		DefaultValue: 1000,
 	},
-	ArchiveRequestRPS: DynamicInt{
+	ArchiveRequestRPS: {
 		KeyName:      "history.archiveRequestRPS",
 		Description:  "ArchiveRequestRPS is the rate limit on the number of archive request per second",
 		DefaultValue: 300, // should be much smaller than frontend RPS
 	},
-	ArchiveInlineHistoryRPS: DynamicInt{
+	ArchiveInlineHistoryRPS: {
 		KeyName:      "history.archiveInlineHistoryRPS",
 		Description:  "ArchiveInlineHistoryRPS is the (per instance) rate limit on the number of inline history archival attempts per second",
 		DefaultValue: 1000,
 	},
-	ArchiveInlineHistoryGlobalRPS: DynamicInt{
+	ArchiveInlineHistoryGlobalRPS: {
 		KeyName:      "history.archiveInlineHistoryGlobalRPS",
 		Description:  "ArchiveInlineHistoryGlobalRPS is the global rate limit on the number of inline history archival attempts per second",
 		DefaultValue: 10000,
 	},
-	ArchiveInlineVisibilityRPS: DynamicInt{
+	ArchiveInlineVisibilityRPS: {
 		KeyName:      "history.archiveInlineVisibilityRPS",
 		Description:  "ArchiveInlineVisibilityRPS is the (per instance) rate limit on the number of inline visibility archival attempts per second",
 		DefaultValue: 1000,
 	},
-	ArchiveInlineVisibilityGlobalRPS: DynamicInt{
+	ArchiveInlineVisibilityGlobalRPS: {
 		KeyName:      "history.archiveInlineVisibilityGlobalRPS",
 		Description:  "ArchiveInlineVisibilityGlobalRPS is the global rate limit on the number of inline visibility archival attempts per second",
 		DefaultValue: 10000,
 	},
-	HistoryMaxAutoResetPoints: DynamicInt{
+	HistoryMaxAutoResetPoints: {
 		KeyName:      "history.historyMaxAutoResetPoints",
 		Filters:      []Filter{DomainName},
 		Description:  "HistoryMaxAutoResetPoints is the key for max number of auto reset points stored in mutableState",
 		DefaultValue: 20,
 	},
-	ParentClosePolicyThreshold: DynamicInt{
+	ParentClosePolicyThreshold: {
 		KeyName:      "history.parentClosePolicyThreshold",
 		Filters:      []Filter{DomainName},
 		Description:  "ParentClosePolicyThreshold is decides that parent close policy will be processed by sys workers(if enabled) ifthe number of children greater than or equal to this threshold",
 		DefaultValue: 10,
 	},
-	NumParentClosePolicySystemWorkflows: DynamicInt{
+	NumParentClosePolicySystemWorkflows: {
 		KeyName:      "history.numParentClosePolicySystemWorkflows",
 		Description:  "NumParentClosePolicySystemWorkflows is key for number of parentClosePolicy system workflows running in total",
 		DefaultValue: 10,
 	},
-	HistoryThrottledLogRPS: DynamicInt{
+	HistoryThrottledLogRPS: {
 		KeyName:      "history.throttledLogRPS",
 		Description:  "HistoryThrottledLogRPS is the rate limit on number of log messages emitted per second for throttled logger",
 		DefaultValue: 4,
 	},
-	DecisionRetryCriticalAttempts: DynamicInt{
+	DecisionRetryCriticalAttempts: {
 		KeyName:      "history.decisionRetryCriticalAttempts",
 		Description:  "DecisionRetryCriticalAttempts is decision attempt threshold for logging and emiting metrics",
 		DefaultValue: 10,
 	},
-	DecisionRetryMaxAttempts: DynamicInt{
+	DecisionRetryMaxAttempts: {
 		KeyName:      "history.decisionRetryMaxAttempts",
 		Filters:      []Filter{DomainName},
 		Description:  "DecisionRetryMaxAttempts is the max limit for decision retry attempts. 0 indicates infinite number of attempts.",
 		DefaultValue: 1000,
 	},
-	NormalDecisionScheduleToStartMaxAttempts: DynamicInt{
+	NormalDecisionScheduleToStartMaxAttempts: {
 		KeyName:      "history.normalDecisionScheduleToStartMaxAttempts",
 		Filters:      []Filter{DomainName},
 		Description:  "NormalDecisionScheduleToStartMaxAttempts is the maximum decision attempt for creating a scheduleToStart timeout timer for normal (non-sticky) decision",
 		DefaultValue: 0,
 	},
-	MaxBufferedQueryCount: DynamicInt{
+	MaxBufferedQueryCount: {
 		KeyName:      "history.MaxBufferedQueryCount",
 		Description:  "MaxBufferedQueryCount indicates the maximum number of queries which can be buffered at a given time for a single workflow",
 		DefaultValue: 1,
 	},
-	MutableStateChecksumGenProbability: DynamicInt{
+	MutableStateChecksumGenProbability: {
 		KeyName:      "history.mutableStateChecksumGenProbability",
 		Filters:      []Filter{DomainName},
 		Description:  "MutableStateChecksumGenProbability is the probability [0-100] that checksum will be generated for mutable state",
 		DefaultValue: 0,
 	},
-	MutableStateChecksumVerifyProbability: DynamicInt{
+	MutableStateChecksumVerifyProbability: {
 		KeyName:      "history.mutableStateChecksumVerifyProbability",
 		Filters:      []Filter{DomainName},
 		Description:  "MutableStateChecksumVerifyProbability is the probability [0-100] that checksum will be verified for mutable state",
 		DefaultValue: 0,
 	},
-	MaxActivityCountDispatchByDomain: DynamicInt{
+	MaxActivityCountDispatchByDomain: {
 		KeyName:      "history.maxActivityCountDispatchByDomain",
 		Description:  "MaxActivityCountDispatchByDomain max # of activity tasks to dispatch to matching before creating transfer tasks. This is an performance optimization to skip activity scheduling efforts.",
 		DefaultValue: 0,
 	},
-	ReplicationTaskFetcherParallelism: DynamicInt{
+	ReplicationTaskFetcherParallelism: {
 		KeyName:      "history.ReplicationTaskFetcherParallelism",
 		Description:  "ReplicationTaskFetcherParallelism determines how many go routines we spin up for fetching tasks",
 		DefaultValue: 1,
 	},
-	ReplicationTaskProcessorErrorRetryMaxAttempts: DynamicInt{
+	ReplicationTaskProcessorErrorRetryMaxAttempts: {
 		KeyName:      "history.ReplicationTaskProcessorErrorRetryMaxAttempts",
 		Filters:      []Filter{ShardID},
 		Description:  "ReplicationTaskProcessorErrorRetryMaxAttempts is the max retry attempts for applying replication tasks",
 		DefaultValue: 10,
 	},
-	WorkflowIDExternalRPS: DynamicInt{
+	WorkflowIDExternalRPS: {
 		KeyName:      "history.workflowIDExternalRPS",
 		Filters:      []Filter{DomainName},
 		Description:  "WorkflowIDExternalRPS is the rate limit per workflowID for external calls",
 		DefaultValue: UnlimitedRPS,
 	},
-	WorkflowIDInternalRPS: DynamicInt{
+	WorkflowIDInternalRPS: {
 		KeyName:      "history.workflowIDInternalRPS",
 		Filters:      []Filter{DomainName},
 		Description:  "WorkflowIDInternalRPS is the rate limit per workflowID for internal calls",
 		DefaultValue: UnlimitedRPS,
 	},
-	WorkerPersistenceMaxQPS: DynamicInt{
+	WorkerPersistenceMaxQPS: {
 		KeyName:      "worker.persistenceMaxQPS",
 		Description:  "WorkerPersistenceMaxQPS is the max qps worker host can query DB",
 		DefaultValue: 500,
 	},
-	WorkerPersistenceGlobalMaxQPS: DynamicInt{
+	WorkerPersistenceGlobalMaxQPS: {
 		KeyName:      "worker.persistenceGlobalMaxQPS",
 		Description:  "WorkerPersistenceGlobalMaxQPS is the max qps worker cluster can query DB",
 		DefaultValue: 0,
 	},
-	WorkerIndexerConcurrency: DynamicInt{
+	WorkerIndexerConcurrency: {
 		KeyName:      "worker.indexerConcurrency",
 		Description:  "WorkerIndexerConcurrency is the max concurrent messages to be processed at any given time",
 		DefaultValue: 1000,
 	},
-	WorkerESProcessorNumOfWorkers: DynamicInt{
+	WorkerESProcessorNumOfWorkers: {
 		KeyName:      "worker.ESProcessorNumOfWorkers",
 		Description:  "WorkerESProcessorNumOfWorkers is num of workers for esProcessor",
 		DefaultValue: 1,
 	},
-	WorkerESProcessorBulkActions: DynamicInt{
+	WorkerESProcessorBulkActions: {
 		KeyName:      "worker.ESProcessorBulkActions",
 		Description:  "WorkerESProcessorBulkActions is max number of requests in bulk for esProcessor",
 		DefaultValue: 1000,
 	},
-	WorkerESProcessorBulkSize: DynamicInt{
+	WorkerESProcessorBulkSize: {
 		KeyName:      "worker.ESProcessorBulkSize",
 		Description:  "WorkerESProcessorBulkSize is max total size of bulk in bytes for esProcessor",
 		DefaultValue: 2 << 24, // 16MB
 	},
-	WorkerArchiverConcurrency: DynamicInt{
+	WorkerArchiverConcurrency: {
 		KeyName:      "worker.ArchiverConcurrency",
 		Description:  "WorkerArchiverConcurrency is controls the number of coroutines handling archival work per archival workflow",
 		DefaultValue: 50,
 	},
-	WorkerArchivalsPerIteration: DynamicInt{
+	WorkerArchivalsPerIteration: {
 		KeyName:      "worker.ArchivalsPerIteration",
 		Description:  "WorkerArchivalsPerIteration is controls the number of archivals handled in each iteration of archival workflow",
 		DefaultValue: 1000,
 	},
-	WorkerThrottledLogRPS: DynamicInt{
+	WorkerThrottledLogRPS: {
 		KeyName:      "worker.throttledLogRPS",
 		Description:  "WorkerThrottledLogRPS is the rate limit on number of log messages emitted per second for throttled logger",
 		DefaultValue: 20,
 	},
-	ScannerPersistenceMaxQPS: DynamicInt{
+	ScannerPersistenceMaxQPS: {
 		KeyName:      "worker.scannerPersistenceMaxQPS",
 		Description:  "ScannerPersistenceMaxQPS is the maximum rate of persistence calls from worker.Scanner",
 		DefaultValue: 5,
 	},
-	ScannerGetOrphanTasksPageSize: DynamicInt{
+	ScannerGetOrphanTasksPageSize: {
 		KeyName:      "worker.scannerGetOrphanTasksPageSize",
 		Description:  "ScannerGetOrphanTasksPageSize is the maximum number of orphans to delete in one batch",
 		DefaultValue: 1000,
 	},
-	ScannerBatchSizeForTasklistHandler: DynamicInt{
+	ScannerBatchSizeForTasklistHandler: {
 		KeyName:      "worker.scannerBatchSizeForTasklistHandler",
 		Description:  "ScannerBatchSizeForTasklistHandler is for: 1. max number of tasks to query per call(get tasks for tasklist) in the scavenger handler. 2. The scavenger then uses the return to decide if a tasklist can be deleted. It's better to keep it a relatively high number to let it be more efficient.",
 		DefaultValue: 1000,
 	},
-	ScannerMaxTasksProcessedPerTasklistJob: DynamicInt{
+	ScannerMaxTasksProcessedPerTasklistJob: {
 		KeyName:      "worker.scannerMaxTasksProcessedPerTasklistJob",
 		Description:  "ScannerMaxTasksProcessedPerTasklistJob is the number of tasks to process for a tasklist in each workflow run",
 		DefaultValue: 256,
 	},
-	ConcreteExecutionsScannerConcurrency: DynamicInt{
+	ConcreteExecutionsScannerConcurrency: {
 		KeyName:      "worker.executionsScannerConcurrency",
 		Description:  "ConcreteExecutionsScannerConcurrency indicates the concurrency of concrete execution scanner",
 		DefaultValue: 25,
 	},
-	ConcreteExecutionsScannerBlobstoreFlushThreshold: DynamicInt{
+	ConcreteExecutionsScannerBlobstoreFlushThreshold: {
 		KeyName:      "worker.executionsScannerBlobstoreFlushThreshold",
 		Description:  "ConcreteExecutionsScannerBlobstoreFlushThreshold indicates the flush threshold of blobstore in concrete execution scanner",
 		DefaultValue: 100,
 	},
-	ConcreteExecutionsScannerActivityBatchSize: DynamicInt{
+	ConcreteExecutionsScannerActivityBatchSize: {
 		KeyName:      "worker.executionsScannerActivityBatchSize",
 		Description:  "ConcreteExecutionsScannerActivityBatchSize indicates the batch size of scanner activities",
 		DefaultValue: 25,
 	},
-	ConcreteExecutionsScannerPersistencePageSize: DynamicInt{
+	ConcreteExecutionsScannerPersistencePageSize: {
 		KeyName:      "worker.executionsScannerPersistencePageSize",
 		Description:  "ConcreteExecutionsScannerPersistencePageSize indicates the page size of execution persistence fetches in concrete execution scanner",
 		DefaultValue: 1000,
 	},
-	CurrentExecutionsScannerConcurrency: DynamicInt{
+	CurrentExecutionsScannerConcurrency: {
 		KeyName:      "worker.currentExecutionsConcurrency",
 		Description:  "CurrentExecutionsScannerConcurrency indicates the concurrency of current executions scanner",
 		DefaultValue: 25,
 	},
-	CurrentExecutionsScannerBlobstoreFlushThreshold: DynamicInt{
+	CurrentExecutionsScannerBlobstoreFlushThreshold: {
 		KeyName:      "worker.currentExecutionsBlobstoreFlushThreshold",
 		Description:  "CurrentExecutionsScannerBlobstoreFlushThreshold indicates the flush threshold of blobstore in current executions scanner",
 		DefaultValue: 100,
 	},
-	CurrentExecutionsScannerActivityBatchSize: DynamicInt{
+	CurrentExecutionsScannerActivityBatchSize: {
 		KeyName:      "worker.currentExecutionsActivityBatchSize",
 		Description:  "CurrentExecutionsScannerActivityBatchSize indicates the batch size of scanner activities",
 		DefaultValue: 25,
 	},
-	CurrentExecutionsScannerPersistencePageSize: DynamicInt{
+	CurrentExecutionsScannerPersistencePageSize: {
 		KeyName:      "worker.currentExecutionsPersistencePageSize",
 		Description:  "CurrentExecutionsScannerPersistencePageSize indicates the page size of execution persistence fetches in current executions scanner",
 		DefaultValue: 1000,
 	},
-	TimersScannerConcurrency: DynamicInt{
+	TimersScannerConcurrency: {
 		KeyName:      "worker.timersScannerConcurrency",
 		Description:  "TimersScannerConcurrency is the concurrency of timers scanner",
 		DefaultValue: 5,
 	},
-	TimersScannerPersistencePageSize: DynamicInt{
+	TimersScannerPersistencePageSize: {
 		KeyName:      "worker.timersScannerPersistencePageSize",
 		Description:  "TimersScannerPersistencePageSize is the page size of timers persistence fetches in timers scanner",
 		DefaultValue: 1000,
 	},
-	TimersScannerBlobstoreFlushThreshold: DynamicInt{
+	TimersScannerBlobstoreFlushThreshold: {
 		KeyName:      "worker.timersScannerBlobstoreFlushThreshold",
 		Description:  "TimersScannerBlobstoreFlushThreshold is threshold to flush blob store",
 		DefaultValue: 100,
 	},
-	TimersScannerActivityBatchSize: DynamicInt{
+	TimersScannerActivityBatchSize: {
 		KeyName:      "worker.timersScannerActivityBatchSize",
 		Description:  "TimersScannerActivityBatchSize is TimersScannerActivityBatchSize",
 		DefaultValue: 25,
 	},
-	TimersScannerPeriodStart: DynamicInt{
+	TimersScannerPeriodStart: {
 		KeyName:      "worker.timersScannerPeriodStart",
 		Description:  "TimersScannerPeriodStart is interval start for fetching scheduled timers",
 		DefaultValue: 24,
 	},
-	TimersScannerPeriodEnd: DynamicInt{
+	TimersScannerPeriodEnd: {
 		KeyName:      "worker.timersScannerPeriodEnd",
 		Description:  "TimersScannerPeriodEnd is interval end for fetching scheduled timers",
 		DefaultValue: 3,
 	},
-	ESAnalyzerMaxNumDomains: DynamicInt{
+	ESAnalyzerMaxNumDomains: {
 		KeyName:      "worker.ESAnalyzerMaxNumDomains",
 		Description:  "ESAnalyzerMaxNumDomains defines how many domains to check",
 		DefaultValue: 500,
 	},
-	ESAnalyzerMaxNumWorkflowTypes: DynamicInt{
+	ESAnalyzerMaxNumWorkflowTypes: {
 		KeyName:      "worker.ESAnalyzerMaxNumWorkflowTypes",
 		Description:  "ESAnalyzerMaxNumWorkflowTypes defines how many workflow types to check per domain",
 		DefaultValue: 100,
 	},
-	ESAnalyzerNumWorkflowsToRefresh: DynamicInt{
+	ESAnalyzerNumWorkflowsToRefresh: {
 		KeyName:      "worker.ESAnalyzerNumWorkflowsToRefresh",
 		Description:  "ESAnalyzerNumWorkflowsToRefresh controls how many workflows per workflow type should be refreshed per workflow type",
 		DefaultValue: 100,
 	},
-	ESAnalyzerMinNumWorkflowsForAvg: DynamicInt{
+	ESAnalyzerMinNumWorkflowsForAvg: {
 		KeyName:      "worker.ESAnalyzerMinNumWorkflowsForAvg",
 		Description:  "ESAnalyzerMinNumWorkflowsForAvg controls how many workflows to have at least to rely on workflow run time avg per type",
 		DefaultValue: 100,
 	},
-	VisibilityArchivalQueryMaxRangeInDays: DynamicInt{
+	VisibilityArchivalQueryMaxRangeInDays: {
 		KeyName:      "frontend.visibilityArchivalQueryMaxRangeInDays",
 		Description:  "VisibilityArchivalQueryMaxRangeInDays is the maximum number of days for a visibility archival query",
 		DefaultValue: 60,
 	},
-	VisibilityArchivalQueryMaxQPS: DynamicInt{
+	VisibilityArchivalQueryMaxQPS: {
 		KeyName:      "frontend.visibilityArchivalQueryMaxQPS",
 		Description:  "VisibilityArchivalQueryMaxQPS is the timeout for a visibility archival query",
 		DefaultValue: 1,
 	},
-	WorkflowDeletionJitterRange: DynamicInt{
+	WorkflowDeletionJitterRange: {
 		KeyName:      "system.workflowDeletionJitterRange",
 		Description:  "WorkflowDeletionJitterRange defines the duration in minutes for workflow close tasks jittering",
 		DefaultValue: 60,
 	},
-	SampleLoggingRate: DynamicInt{
+	SampleLoggingRate: {
 		KeyName:      "system.sampleLoggingRate",
 		Description:  "The rate for which sampled logs are logged at. 100 means 1/100 is logged",
 		DefaultValue: 100,
 	},
-	LargeShardHistorySizeMetricThreshold: DynamicInt{
+	LargeShardHistorySizeMetricThreshold: {
 		KeyName:      "system.largeShardHistorySizeMetricThreshold",
 		Description:  "defines the threshold for what consititutes a large history size to alert on, default is 10mb",
 		DefaultValue: 10485760,
 	},
-	LargeShardHistoryEventMetricThreshold: DynamicInt{
+	LargeShardHistoryEventMetricThreshold: {
 		KeyName:      "system.largeShardHistoryEventMetricThreshold",
 		Description:  "defines the threshold for what consititutes a large history event length to alert on, default is 50k",
 		DefaultValue: 50 * 1024,
 	},
-	LargeShardHistoryBlobMetricThreshold: DynamicInt{
+	LargeShardHistoryBlobMetricThreshold: {
 		KeyName:      "system.largeShardHistoryBlobMetricThreshold",
 		Description:  "defines the threshold for what consititutes a large history blob write to alert on, default is 1/4mb",
 		DefaultValue: 262144,
 	},
-	IsolationGroupStateUpdateRetryAttempts: DynamicInt{
+	IsolationGroupStateUpdateRetryAttempts: {
 		KeyName:      "system.isolationGroupStateUpdateRetryAttempts",
 		Description:  "The number of attempts to push Isolation group configuration to the config store",
 		DefaultValue: 2,
 	},
+	DeleteHistoryEventContextTimeout: DynamicInt{
+		KeyName:      "system.deleteHistoryEventContextTimeout",
+		Description:  "This is the number of seconds allowed for a deleteHistoryEvent task to the database",
+		DefaultValue: 30,
+	},
 }
 
 var BoolKeys = map[BoolKey]DynamicBool{
-	TestGetBoolPropertyKey: DynamicBool{
+	TestGetBoolPropertyKey: {
 		KeyName:      "testGetBoolPropertyKey",
 		Description:  "",
 		DefaultValue: false,
 	},
-	TestGetBoolPropertyFilteredByDomainIDKey: DynamicBool{
+	TestGetBoolPropertyFilteredByDomainIDKey: {
 		KeyName:      "testGetBoolPropertyFilteredByDomainIDKey",
 		Description:  "",
 		DefaultValue: false,
 	},
-	TestGetBoolPropertyFilteredByTaskListInfoKey: DynamicBool{
+	TestGetBoolPropertyFilteredByTaskListInfoKey: {
 		KeyName:      "testGetBoolPropertyFilteredByTaskListInfoKey",
 		Description:  "",
 		DefaultValue: false,
 	},
-	EnableVisibilitySampling: DynamicBool{
+	TestGetBoolPropertyFilteredByDomainKey: {
+		KeyName:      "testGetBoolPropertyFilteredByDomainKey",
+		Description:  "",
+		DefaultValue: false,
+		Filters:      nil,
+	},
+	TestGetBoolPropertyFilteredByDomainIDAndWorkflowIDKey: {
+		KeyName:      "testGetBoolPropertyFilteredByDomainIDandWorkflowIDKey",
+		Description:  "",
+		DefaultValue: false,
+		Filters:      nil,
+	},
+	EnableVisibilitySampling: {
 		KeyName:      "system.enableVisibilitySampling",
 		Description:  "EnableVisibilitySampling is key for enable visibility sampling for basic(DB based) visibility",
 		DefaultValue: false, // ...
 		Filters:      nil,
 	},
-	EnableReadFromClosedExecutionV2: DynamicBool{
+	EnableReadFromClosedExecutionV2: {
 		KeyName:      "system.enableReadFromClosedExecutionV2",
 		Description:  "EnableReadFromClosedExecutionV2 is key for enable read from cadence_visibility.closed_executions_v2",
 		DefaultValue: false,
 	},
-	EnableReadVisibilityFromES: DynamicBool{
+	EnableReadVisibilityFromES: {
 		KeyName:      "system.enableReadVisibilityFromES",
 		Filters:      []Filter{DomainName},
 		Description:  "EnableReadVisibilityFromES is key for enable read from elastic search or db visibility, usually using with AdvancedVisibilityWritingMode for seamless migration from db visibility to advanced visibility",
 		DefaultValue: true,
 	},
-	EnableReadVisibilityFromPinot: DynamicBool{
+	EnableReadVisibilityFromPinot: {
 		KeyName:      "system.enableReadVisibilityFromPinot",
 		Filters:      []Filter{DomainName},
 		Description:  "EnableReadVisibilityFromPinot is key for enable read from pinot or db visibility, usually using with AdvancedVisibilityWritingMode for seamless migration from db visibility to advanced visibility",
 		DefaultValue: true,
 	},
-	EnableLogCustomerQueryParameter: DynamicBool{
+	EnableLogCustomerQueryParameter: {
 		KeyName:      "system.enableLogCustomerQueryParameter",
 		Filters:      []Filter{DomainName},
 		Description:  "EnableLogCustomerQueryParameter is key for enable log customer query parameters",
 		DefaultValue: false,
 	},
-	EmitShardDiffLog: DynamicBool{
+	EmitShardDiffLog: {
 		KeyName:      "history.emitShardDiffLog",
 		Description:  "EmitShardDiffLog is whether emit the shard diff log",
 		DefaultValue: false,
 	},
-	EnableRecordWorkflowExecutionUninitialized: DynamicBool{
+	EnableRecordWorkflowExecutionUninitialized: {
 		KeyName:      "history.enableRecordWorkflowExecutionUninitialized",
 		Description:  "EnableRecordWorkflowExecutionUninitialized enables record workflow execution uninitialized state in ElasticSearch",
 		DefaultValue: false,
 	},
-	DisableListVisibilityByFilter: DynamicBool{
+	DisableListVisibilityByFilter: {
 		KeyName:      "frontend.disableListVisibilityByFilter",
 		Filters:      []Filter{DomainName},
 		Description:  "DisableListVisibilityByFilter is config to disable list open/close workflow using filter",
 		DefaultValue: false,
 	},
-	EnableReadFromHistoryArchival: DynamicBool{
+	EnableReadFromHistoryArchival: {
 		KeyName:      "system.enableReadFromHistoryArchival",
 		Description:  "EnableReadFromHistoryArchival is key for enabling reading history from archival store",
 		DefaultValue: true,
 	},
-	EnableReadFromVisibilityArchival: DynamicBool{
+	EnableReadFromVisibilityArchival: {
 		KeyName:      "system.enableReadFromVisibilityArchival",
 		Description:  "EnableReadFromVisibilityArchival is key for enabling reading visibility from archival store to override the value from static config.",
 		DefaultValue: true,
 	},
-	EnableDomainNotActiveAutoForwarding: DynamicBool{
+	EnableDomainNotActiveAutoForwarding: {
 		KeyName:      "system.enableDomainNotActiveAutoForwarding",
 		Filters:      []Filter{DomainName},
 		Description:  "EnableDomainNotActiveAutoForwarding decides requests form which domain will be forwarded to active cluster if domain is not active in current cluster. Only when selected-api-forwarding or all-domain-apis-forwarding is the policy in ClusterRedirectionPolicy(in static config). If the policy is noop(default) this flag is not doing anything.",
 		DefaultValue: true,
 	},
-	EnableGracefulFailover: DynamicBool{
+	EnableGracefulFailover: {
 		KeyName:      "system.enableGracefulFailover",
 		Description:  "EnableGracefulFailover is whether enabling graceful failover",
 		DefaultValue: true,
 	},
-	DisallowQuery: DynamicBool{
+	DisallowQuery: {
 		KeyName:      "system.disallowQuery",
 		Filters:      []Filter{DomainName},
 		Description:  "DisallowQuery is the key to disallow query for a domain",
 		DefaultValue: false,
 	},
-	EnableDebugMode: DynamicBool{
+	EnableDebugMode: {
 		KeyName:      "system.enableDebugMode",
 		Description:  "EnableDebugMode is for enabling debugging components, logs and metrics",
 		DefaultValue: false,
 	},
-	EnableGRPCOutbound: DynamicBool{
+	EnableGRPCOutbound: {
 		KeyName:      "system.enableGRPCOutbound",
 		Description:  "EnableGRPCOutbound is the key for enabling outbound GRPC traffic",
 		DefaultValue: true,
 	},
-	EnableSQLAsyncTransaction: DynamicBool{
+	EnableSQLAsyncTransaction: {
 		KeyName:      "system.enableSQLAsyncTransaction",
 		Description:  "EnableSQLAsyncTransaction is the key for enabling async transaction",
 		DefaultValue: false,
 	},
-	EnableClientVersionCheck: DynamicBool{
+	EnableClientVersionCheck: {
 		KeyName:      "frontend.enableClientVersionCheck",
 		Description:  "EnableClientVersionCheck is enables client version check for frontend",
 		DefaultValue: false,
 	},
-	SendRawWorkflowHistory: DynamicBool{
+	SendRawWorkflowHistory: {
 		KeyName:      "frontend.sendRawWorkflowHistory",
 		Filters:      []Filter{DomainName},
 		Description:  "SendRawWorkflowHistory is whether to enable raw history retrieving",
 		DefaultValue: false,
 	},
-	FrontendEmitSignalNameMetricsTag: DynamicBool{
+	FrontendEmitSignalNameMetricsTag: {
 		KeyName:      "frontend.emitSignalNameMetricsTag",
 		Filters:      []Filter{DomainName},
 		Description:  "FrontendEmitSignalNameMetricsTag enables emitting signal name tag in metrics in frontend client",
 		DefaultValue: false,
 	},
-	EnableQueryAttributeValidation: DynamicBool{
+	EnableQueryAttributeValidation: {
 		KeyName:      "frontend.enableQueryAttributeValidation",
 		Description:  "EnableQueryAttributeValidation enables validation of queries' search attributes against the dynamic config whitelist",
 		DefaultValue: true,
 	},
-	MatchingEnableSyncMatch: DynamicBool{
+	MatchingEnableSyncMatch: {
 		KeyName:      "matching.enableSyncMatch",
 		Filters:      []Filter{DomainName, TaskListName, TaskType},
 		Description:  "MatchingEnableSyncMatch is to enable sync match",
 		DefaultValue: true,
 	},
-	MatchingEnableTaskInfoLogByDomainID: DynamicBool{
+	MatchingEnableTaskInfoLogByDomainID: {
 		KeyName:      "matching.enableTaskInfoLogByDomainID",
 		Filters:      []Filter{DomainID},
 		Description:  "MatchingEnableTaskInfoLogByDomainID is enables info level logs for decision/activity task based on the request domainID",
 		DefaultValue: false,
 	},
-	EventsCacheGlobalEnable: DynamicBool{
+	EventsCacheGlobalEnable: {
 		KeyName:      "history.eventsCacheGlobalEnable",
 		Description:  "EventsCacheGlobalEnable is enables global cache over all history shards",
 		DefaultValue: false,
 	},
-	QueueProcessorEnableSplit: DynamicBool{
+	QueueProcessorEnableSplit: {
 		KeyName:      "history.queueProcessorEnableSplit",
 		Description:  "QueueProcessorEnableSplit indicates whether processing queue split policy should be enabled",
 		DefaultValue: false,
 	},
-	QueueProcessorEnableRandomSplitByDomainID: DynamicBool{
+	QueueProcessorEnableRandomSplitByDomainID: {
 		KeyName:      "history.queueProcessorEnableRandomSplitByDomainID",
 		Filters:      []Filter{DomainID},
 		Description:  "QueueProcessorEnableRandomSplitByDomainID indicates whether random queue split policy should be enabled for a domain",
 		DefaultValue: false,
 	},
-	QueueProcessorEnablePendingTaskSplitByDomainID: DynamicBool{
+	QueueProcessorEnablePendingTaskSplitByDomainID: {
 		KeyName:      "history.queueProcessorEnablePendingTaskSplitByDomainID",
 		Filters:      []Filter{DomainID},
 		Description:  "ueueProcessorEnablePendingTaskSplitByDomainID indicates whether pending task split policy should be enabled",
 		DefaultValue: false,
 	},
-	QueueProcessorEnableStuckTaskSplitByDomainID: DynamicBool{
+	QueueProcessorEnableStuckTaskSplitByDomainID: {
 		KeyName:      "history.queueProcessorEnableStuckTaskSplitByDomainID",
 		Filters:      []Filter{DomainID},
 		Description:  "QueueProcessorEnableStuckTaskSplitByDomainID indicates whether stuck task split policy should be enabled",
 		DefaultValue: false,
 	},
-	QueueProcessorEnablePersistQueueStates: DynamicBool{
+	QueueProcessorEnablePersistQueueStates: {
 		KeyName:      "history.queueProcessorEnablePersistQueueStates",
 		Description:  "QueueProcessorEnablePersistQueueStates indicates whether processing queue states should be persisted",
 		DefaultValue: true,
 	},
-	QueueProcessorEnableLoadQueueStates: DynamicBool{
+	QueueProcessorEnableLoadQueueStates: {
 		KeyName:      "history.queueProcessorEnableLoadQueueStates",
 		Description:  "QueueProcessorEnableLoadQueueStates indicates whether processing queue states should be loaded",
 		DefaultValue: true,
 	},
-	QueueProcessorEnableGracefulSyncShutdown: DynamicBool{
+	QueueProcessorEnableGracefulSyncShutdown: {
 		KeyName:      "history.queueProcessorEnableGracefulSyncShutdown",
 		Description:  "QueueProcessorEnableGracefulSyncShutdown indicates whether processing queue should be shutdown gracefully & synchronously",
 		DefaultValue: false,
 	},
-	ReplicationTaskFetcherEnableGracefulSyncShutdown: DynamicBool{
+	ReplicationTaskFetcherEnableGracefulSyncShutdown: {
 		KeyName:      "history.replicationTaskFetcherEnableGracefulSyncShutdown",
 		Description:  "ReplicationTaskFetcherEnableGracefulSyncShutdown is whether we should gracefully drain replication task fetcher on shutdown",
 		DefaultValue: false,
 	},
-	TransferProcessorEnableValidator: DynamicBool{
+	TransferProcessorEnableValidator: {
 		KeyName:      "history.transferProcessorEnableValidator",
 		Description:  "TransferProcessorEnableValidator is whether validator should be enabled for transferQueueProcessor",
 		DefaultValue: false,
 	},
-	EnableAdminProtection: DynamicBool{
+	EnableAdminProtection: {
 		KeyName:      "history.enableAdminProtection",
 		Description:  "EnableAdminProtection is whether to enable admin checking",
 		DefaultValue: false,
 	},
-	EnableParentClosePolicy: DynamicBool{
+	EnableParentClosePolicy: {
 		KeyName:      "history.enableParentClosePolicy",
 		Filters:      []Filter{DomainName},
 		Description:  "EnableParentClosePolicy is whether to  ParentClosePolicy",
 		DefaultValue: true,
 	},
-	EnableDropStuckTaskByDomainID: DynamicBool{
+	EnableDropStuckTaskByDomainID: {
 		KeyName:      "history.DropStuckTaskByDomain",
 		Filters:      []Filter{DomainID},
 		Description:  "EnableDropStuckTaskByDomainID is whether stuck timer/transfer task should be dropped for a domain",
 		DefaultValue: false,
 	},
-	EnableConsistentQuery: DynamicBool{
+	EnableConsistentQuery: {
 		KeyName:      "history.EnableConsistentQuery",
 		Description:  "EnableConsistentQuery indicates if consistent query is enabled for the cluster",
 		DefaultValue: true,
 	},
-	EnableConsistentQueryByDomain: DynamicBool{
+	EnableConsistentQueryByDomain: {
 		KeyName:      "history.EnableConsistentQueryByDomain",
 		Filters:      []Filter{DomainName},
 		Description:  "EnableConsistentQueryByDomain indicates if consistent query is enabled for a domain",
 		DefaultValue: false,
 	},
-	EnableCrossClusterEngine: DynamicBool{
+	EnableCrossClusterEngine: {
 		KeyName:      "history.enableCrossClusterEngine",
 		Description:  "an overall toggle for the cross-cluster domain feature",
 		DefaultValue: false,
 	},
-	EnableCrossClusterOperationsForDomain: DynamicBool{
+	EnableCrossClusterOperationsForDomain: {
 		KeyName:      "history.enableCrossClusterOperations",
 		Filters:      []Filter{DomainName},
 		Description:  "EnableCrossClusterOperationsForDomain indicates if cross cluster operations can be scheduled for a domain",
 		DefaultValue: false,
 	},
-	EnableHistoryCorruptionCheck: DynamicBool{
+	EnableHistoryCorruptionCheck: {
 		KeyName:      "history.enableHistoryCorruptionCheck",
 		Filters:      []Filter{DomainName},
 		Description:  "EnableHistoryCorruptionCheck enables additional sanity check for corrupted history. This allows early catches of DB corruptions but potiantally increased latency.",
 		DefaultValue: false,
 	},
-	EnableActivityLocalDispatchByDomain: DynamicBool{
+	EnableActivityLocalDispatchByDomain: {
 		KeyName:      "history.enableActivityLocalDispatchByDomain",
 		Filters:      []Filter{DomainName},
 		Description:  "EnableActivityLocalDispatchByDomain is allows worker to dispatch activity tasks through local tunnel after decisions are made. This is an performance optimization to skip activity scheduling efforts",
 		DefaultValue: true,
 	},
-	HistoryEnableTaskInfoLogByDomainID: DynamicBool{
+	HistoryEnableTaskInfoLogByDomainID: {
 		KeyName:      "history.enableTaskInfoLogByDomainID",
 		Filters:      []Filter{DomainID},
 		Description:  "HistoryEnableTaskInfoLogByDomainID is enables info level logs for decision/activity task based on the request domainID",
 		DefaultValue: false,
 	},
-	EnableReplicationTaskGeneration: DynamicBool{
+	EnableReplicationTaskGeneration: {
 		KeyName:      "history.enableReplicationTaskGeneration",
 		Filters:      []Filter{DomainID, WorkflowID},
 		Description:  "EnableReplicationTaskGeneration is the flag to control replication generation",
 		DefaultValue: true,
 	},
-	UseNewInitialFailoverVersion: DynamicBool{
+	UseNewInitialFailoverVersion: {
 		KeyName:      "history.useNewInitialFailoverVersion",
 		Description:  "use the minInitialFailover version",
 		DefaultValue: false,
 	},
-	AllowArchivingIncompleteHistory: DynamicBool{
+	AllowArchivingIncompleteHistory: {
 		KeyName:      "worker.AllowArchivingIncompleteHistory",
 		Description:  "AllowArchivingIncompleteHistory will continue on when seeing some error like history mutated(usually caused by database consistency issues)",
 		DefaultValue: false,
 	},
-	EnableCleaningOrphanTaskInTasklistScavenger: DynamicBool{
+	EnableCleaningOrphanTaskInTasklistScavenger: {
 		KeyName:      "worker.enableCleaningOrphanTaskInTasklistScavenger",
 		Description:  "EnableCleaningOrphanTaskInTasklistScavenger indicates if enabling the scanner to clean up orphan tasks",
 		DefaultValue: false,
 	},
-	TaskListScannerEnabled: DynamicBool{
+	TaskListScannerEnabled: {
 		KeyName:      "worker.taskListScannerEnabled",
 		Description:  "TaskListScannerEnabled indicates if task list scanner should be started as part of worker.Scanner",
 		DefaultValue: true,
 	},
-	HistoryScannerEnabled: DynamicBool{
+	HistoryScannerEnabled: {
 		KeyName:      "worker.historyScannerEnabled",
 		Description:  "HistoryScannerEnabled indicates if history scanner should be started as part of worker.Scanner",
 		DefaultValue: false,
 	},
-	ConcreteExecutionsScannerEnabled: DynamicBool{
+	ConcreteExecutionsScannerEnabled: {
 		KeyName:      "worker.executionsScannerEnabled",
 		Description:  "ConcreteExecutionsScannerEnabled indicates if executions scanner should be started as part of worker.Scanner",
 		DefaultValue: false,
 	},
-	ConcreteExecutionsScannerInvariantCollectionMutableState: DynamicBool{
+	ConcreteExecutionsScannerInvariantCollectionMutableState: {
 		KeyName:      "worker.executionsScannerInvariantCollectionMutableState",
 		Description:  "ConcreteExecutionsScannerInvariantCollectionMutableState indicates if mutable state invariant checks should be run",
 		DefaultValue: true,
 	},
-	ConcreteExecutionsScannerInvariantCollectionHistory: DynamicBool{
+	ConcreteExecutionsScannerInvariantCollectionHistory: {
 		KeyName:      "worker.executionsScannerInvariantCollectionHistory",
 		Description:  "ConcreteExecutionsScannerInvariantCollectionHistory indicates if history invariant checks should be run",
 		DefaultValue: true,
 	},
-	ConcreteExecutionsScannerInvariantCollectionStale: DynamicBool{
+	ConcreteExecutionsScannerInvariantCollectionStale: {
 		KeyName:      "worker.executionsScannerInvariantCollectionStale",
 		Description:  "ConcreteExecutionsScannerInvariantCollectionStale indicates if the stale-workflow invariant should be run",
 		DefaultValue: false, // may be enabled after further verification, but for now it's a bit too risky to enable by default
 	},
-	ConcreteExecutionsFixerInvariantCollectionMutableState: DynamicBool{
+	ConcreteExecutionsFixerInvariantCollectionMutableState: {
 		KeyName:      "worker.executionsFixerInvariantCollectionMutableState",
 		Description:  "ConcreteExecutionsFixerInvariantCollectionMutableState indicates if mutable state invariant checks should be run",
 		DefaultValue: true,
 	},
-	ConcreteExecutionsFixerInvariantCollectionHistory: DynamicBool{
+	ConcreteExecutionsFixerInvariantCollectionHistory: {
 		KeyName:      "worker.executionsFixerInvariantCollectionHistory",
 		Description:  "ConcreteExecutionsFixerInvariantCollectionHistory indicates if history invariant checks should be run",
 		DefaultValue: true,
 	},
-	ConcreteExecutionsFixerInvariantCollectionStale: DynamicBool{
+	ConcreteExecutionsFixerInvariantCollectionStale: {
 		KeyName:      "worker.executionsFixerInvariantCollectionStale",
 		Description:  "ConcreteExecutionsFixerInvariantCollectionStale indicates if the stale-workflow invariant should be run",
 		DefaultValue: false, // may be enabled after further verification, but for now it's a bit too risky to enable by default
 	},
-	CurrentExecutionsScannerEnabled: DynamicBool{
+	CurrentExecutionsScannerEnabled: {
 		KeyName:      "worker.currentExecutionsScannerEnabled",
 		Description:  "CurrentExecutionsScannerEnabled indicates if current executions scanner should be started as part of worker.Scanner",
 		DefaultValue: false,
 	},
-	CurrentExecutionsScannerInvariantCollectionHistory: DynamicBool{
+	CurrentExecutionsScannerInvariantCollectionHistory: {
 		KeyName:      "worker.currentExecutionsScannerInvariantCollectionHistory",
 		Description:  "CurrentExecutionsScannerInvariantCollectionHistory indicates if history invariant checks should be run",
 		DefaultValue: true,
 	},
-	CurrentExecutionsScannerInvariantCollectionMutableState: DynamicBool{
+	CurrentExecutionsScannerInvariantCollectionMutableState: {
 		KeyName:      "worker.currentExecutionsInvariantCollectionMutableState",
 		Description:  "CurrentExecutionsScannerInvariantCollectionMutableState indicates if mutable state invariant checks should be run",
 		DefaultValue: true,
 	},
-	EnableBatcher: DynamicBool{
+	EnableBatcher: {
 		KeyName:      "worker.enableBatcher",
 		Description:  "EnableBatcher is decides whether start batcher in our worker",
 		DefaultValue: true,
 	},
-	EnableParentClosePolicyWorker: DynamicBool{
+	EnableParentClosePolicyWorker: {
 		KeyName:      "system.enableParentClosePolicyWorker",
 		Description:  "EnableParentClosePolicyWorker decides whether or not enable system workers for processing parent close policy task",
 		DefaultValue: true,
 	},
-	EnableESAnalyzer: DynamicBool{
+	EnableESAnalyzer: {
 		KeyName:      "system.enableESAnalyzer",
 		Description:  "EnableESAnalyzer decides whether to enable system workers for processing ElasticSearch Analyzer",
 		DefaultValue: false,
 	},
-	EnableAsyncWorkflowConsumption: DynamicBool{
+	EnableAsyncWorkflowConsumption: {
 		KeyName:      "worker.enableAsyncWorkflowConsumption",
 		Description:  "EnableAsyncWorkflowConsumption decides whether to enable async workflows",
 		DefaultValue: false,
 	},
-	EnableStickyQuery: DynamicBool{
+	EnableStickyQuery: {
 		KeyName:      "system.enableStickyQuery",
 		Filters:      []Filter{DomainName},
 		Description:  "EnableStickyQuery indicates if sticky query should be enabled per domain",
 		DefaultValue: true,
 	},
-	EnableFailoverManager: DynamicBool{
+	EnableFailoverManager: {
 		KeyName:      "system.enableFailoverManager",
 		Description:  "EnableFailoverManager indicates if failover manager is enabled",
 		DefaultValue: true,
 	},
-	ConcreteExecutionFixerDomainAllow: DynamicBool{
+	ConcreteExecutionFixerDomainAllow: {
 		KeyName:      "worker.concreteExecutionFixerDomainAllow",
 		Filters:      []Filter{DomainName},
 		Description:  "ConcreteExecutionFixerDomainAllow is which domains are allowed to be fixed by concrete fixer workflow",
 		DefaultValue: false,
 	},
-	CurrentExecutionFixerDomainAllow: DynamicBool{
+	CurrentExecutionFixerDomainAllow: {
 		KeyName:      "worker.currentExecutionFixerDomainAllow",
 		Filters:      []Filter{DomainName},
 		Description:  "CurrentExecutionFixerDomainAllow is which domains are allowed to be fixed by current fixer workflow",
 		DefaultValue: false,
 	},
-	TimersScannerEnabled: DynamicBool{
+	TimersScannerEnabled: {
 		KeyName:      "worker.timersScannerEnabled",
 		Description:  "TimersScannerEnabled is if timers scanner should be started as part of worker.Scanner",
 		DefaultValue: false,
 	},
-	TimersFixerEnabled: DynamicBool{
+	TimersFixerEnabled: {
 		KeyName:      "worker.timersFixerEnabled",
 		Description:  "TimersFixerEnabled is if timers fixer should be started as part of worker.Scanner",
 		DefaultValue: false,
 	},
-	TimersFixerDomainAllow: DynamicBool{
+	TimersFixerDomainAllow: {
 		KeyName:      "worker.timersFixerDomainAllow",
 		Filters:      []Filter{DomainName},
 		Description:  "TimersFixerDomainAllow is which domains are allowed to be fixed by timer fixer workflow",
 		DefaultValue: false,
 	},
-	ConcreteExecutionFixerEnabled: DynamicBool{
+	ConcreteExecutionFixerEnabled: {
 		KeyName:      "worker.concreteExecutionFixerEnabled",
 		Description:  "ConcreteExecutionFixerEnabled is if concrete execution fixer workflow is enabled",
 		DefaultValue: false,
 	},
-	CurrentExecutionFixerEnabled: DynamicBool{
+	CurrentExecutionFixerEnabled: {
 		KeyName:      "worker.currentExecutionFixerEnabled",
 		Description:  "CurrentExecutionFixerEnabled is if current execution fixer workflow is enabled",
 		DefaultValue: false,
 	},
-	EnableAuthorization: DynamicBool{
+	EnableAuthorization: {
 		KeyName:      "system.enableAuthorization",
 		Description:  "EnableAuthorization is the key to enable authorization for a domain, only for extension binary:",
 		DefaultValue: false,
 	},
-	EnableTasklistIsolation: DynamicBool{
+	EnableTasklistIsolation: {
 		KeyName:      "system.enableTasklistIsolation",
 		Description:  "EnableTasklistIsolation is a feature to enable isolation-groups for a domain. Should not be enabled without a deep understanding of this feature",
 		DefaultValue: false,
 	},
-	EnableServiceAuthorization: DynamicBool{
+	EnableServiceAuthorization: {
 		KeyName:      "system.enableServiceAuthorization",
 		Description:  "EnableServiceAuthorization is the key to enable authorization for a service, only for extension binary:",
 		DefaultValue: false,
 	},
-	EnableServiceAuthorizationLogOnly: DynamicBool{
+	EnableServiceAuthorizationLogOnly: {
 		KeyName:      "system.enableServiceAuthorizationLogOnly",
 		Description:  "EnableServiceAuthorizationLogOnly is the key to enable authorization logging for a service, only for extension binary:",
 		DefaultValue: false,
 	},
-	ESAnalyzerPause: DynamicBool{
+	ESAnalyzerPause: {
 		KeyName:      "worker.ESAnalyzerPause",
 		Description:  "ESAnalyzerPause defines if we want to dynamically pause the analyzer workflow",
 		DefaultValue: false,
 	},
-	EnableArchivalCompression: DynamicBool{
+	EnableArchivalCompression: {
 		KeyName:      "worker.EnableArchivalCompression",
 		Description:  "EnableArchivalCompression indicates whether blobs are compressed before they are archived",
 		DefaultValue: false,
 	},
-	ESAnalyzerEnableAvgDurationBasedChecks: DynamicBool{
+	ESAnalyzerEnableAvgDurationBasedChecks: {
 		KeyName:      "worker.ESAnalyzerEnableAvgDurationBasedChecks",
 		Description:  "ESAnalyzerEnableAvgDurationBasedChecks controls if we want to enable avg duration based task refreshes",
 		DefaultValue: false,
 	},
-	Lockdown: DynamicBool{
+	Lockdown: {
 		KeyName:      "system.Lockdown",
 		Description:  "Lockdown defines if we want to allow failovers of domains to this cluster",
 		DefaultValue: false,
 	},
-	EnablePendingActivityValidation: DynamicBool{
+	EnablePendingActivityValidation: {
 		KeyName:      "limit.pendingActivityCount.enabled",
 		Description:  "Enables pending activity count limiting/validation",
 		DefaultValue: false,
 	},
-	EnableCassandraAllConsistencyLevelDelete: DynamicBool{
+	EnableCassandraAllConsistencyLevelDelete: {
 		KeyName:      "system.enableCassandraAllConsistencyLevelDelete",
 		Description:  "Uses all consistency level for Cassandra delete operations",
 		DefaultValue: false,
 	},
-	EnableShardIDMetrics: DynamicBool{
+	EnableShardIDMetrics: {
 		KeyName:      "system.enableShardIDMetrics",
 		Description:  "Enable shardId metrics in persistence client",
 		DefaultValue: true,
 	},
-	EnableTimerDebugLogByDomainID: DynamicBool{
+	EnableTimerDebugLogByDomainID: {
 		KeyName:      "history.enableTimerDebugLogByDomainID",
 		Filters:      []Filter{DomainID},
 		Description:  "Enable log for debugging timer task issue by domain",
 		DefaultValue: false,
 	},
-	EnableTaskVal: DynamicBool{
+	EnableTaskVal: {
 		KeyName:      "system.enableTaskVal",
 		Description:  "Enable TaskValidation",
 		DefaultValue: false,
 	},
-	WorkflowIDCacheExternalEnabled: DynamicBool{
+	WorkflowIDCacheExternalEnabled: {
 		KeyName:      "history.workflowIDCacheExternalEnabled",
 		Filters:      []Filter{DomainName},
 		Description:  "WorkflowIDCacheExternalEnabled is the key to enable/disable caching of workflowID specific information for external requests",
 		DefaultValue: false,
 	},
-	WorkflowIDCacheInternalEnabled: DynamicBool{
+	WorkflowIDCacheInternalEnabled: {
 		KeyName:      "history.workflowIDCacheInternalEnabled",
 		Filters:      []Filter{DomainName},
 		Description:  "WorkflowIDCacheInternalEnabled is the key to enable/disable caching of workflowID specific information for internal requests",
 		DefaultValue: false,
 	},
-	WorkflowIDExternalRateLimitEnabled: DynamicBool{
+	WorkflowIDExternalRateLimitEnabled: {
 		KeyName:      "history.workflowIDExternalRateLimitEnabled",
 		Filters:      []Filter{DomainName},
 		Description:  "WorkflowIDExternalRateLimitEnabled is the key to enable/disable rate limiting of specific workflowIDs for external requests",
 		DefaultValue: false,
 	},
-	WorkflowIDInternalRateLimitEnabled: DynamicBool{
+	WorkflowIDInternalRateLimitEnabled: {
 		KeyName:      "history.workflowIDInternalRateLimitEnabled",
 		Filters:      []Filter{DomainName},
 		Description:  "WorkflowIDInternalRateLimitEnabled is the key to enable/disable rate limiting of specific workflowIDs for internal requests",
 		DefaultValue: false,
 	},
-	EnableRetryForChecksumFailure: DynamicBool{
+	EnableRetryForChecksumFailure: {
 		KeyName:      "history.enableMutableStateChecksumFailureRetry",
 		Filters:      []Filter{DomainName},
 		Description:  "EnableRetryForChecksumFailure enables retry if mutable state checksum verification fails",
 		DefaultValue: false,
 	},
+	EnableStrongIdempotency: DynamicBool{
+		KeyName:      "history.enableStrongIdempotency",
+		Filters:      []Filter{DomainName},
+		Description:  "EnableStrongIdempotency enables strong idempotency for APIs",
+		DefaultValue: false,
+	},
 }
 
 var FloatKeys = map[FloatKey]DynamicFloat{
-	TestGetFloat64PropertyKey: DynamicFloat{
+	TestGetFloat64PropertyKey: {
 		KeyName:      "testGetFloat64PropertyKey",
 		Description:  "",
 		DefaultValue: 0,
 	},
-	PersistenceErrorInjectionRate: DynamicFloat{
+	TestGetFloat64PropertyFilteredByShardIDKey: {
+		KeyName:      "testGetFloat64PropertyFilteredByShardIDKey",
+		Description:  "",
+		DefaultValue: 0,
+		Filters:      nil,
+	},
+	PersistenceErrorInjectionRate: {
 		KeyName:      "system.persistenceErrorInjectionRate",
 		Description:  "PersistenceErrorInjectionRate is rate for injecting random error in persistence",
 		DefaultValue: 0,
 	},
-	AdminErrorInjectionRate: DynamicFloat{
+	AdminErrorInjectionRate: {
 		KeyName:      "admin.errorInjectionRate",
 		Description:  "dminErrorInjectionRate is the rate for injecting random error in admin client",
 		DefaultValue: 0,
 	},
-	DomainFailoverRefreshTimerJitterCoefficient: DynamicFloat{
+	DomainFailoverRefreshTimerJitterCoefficient: {
 		KeyName:      "frontend.domainFailoverRefreshTimerJitterCoefficient",
 		Description:  "DomainFailoverRefreshTimerJitterCoefficient is the jitter for domain failover refresh timer jitter",
 		DefaultValue: 0.1,
 	},
-	FrontendErrorInjectionRate: DynamicFloat{
+	FrontendErrorInjectionRate: {
 		KeyName:      "frontend.errorInjectionRate",
 		Description:  "FrontendErrorInjectionRate is rate for injecting random error in frontend client",
 		DefaultValue: 0,
 	},
-	MatchingErrorInjectionRate: DynamicFloat{
+	MatchingErrorInjectionRate: {
 		KeyName:      "matching.errorInjectionRate",
 		Description:  "MatchingErrorInjectionRate is rate for injecting random error in matching client",
 		DefaultValue: 0,
 	},
-	TaskRedispatchIntervalJitterCoefficient: DynamicFloat{
+	TaskRedispatchIntervalJitterCoefficient: {
 		KeyName:      "history.taskRedispatchIntervalJitterCoefficient",
 		Description:  "TaskRedispatchIntervalJitterCoefficient is the task redispatch interval jitter coefficient",
 		DefaultValue: 0.15,
 	},
-	QueueProcessorRandomSplitProbability: DynamicFloat{
+	QueueProcessorRandomSplitProbability: {
 		KeyName:      "history.queueProcessorRandomSplitProbability",
 		Description:  "QueueProcessorRandomSplitProbability is the probability for a domain to be split to a new processing queue",
 		DefaultValue: 0.01,
 	},
-	QueueProcessorPollBackoffIntervalJitterCoefficient: DynamicFloat{
+	QueueProcessorPollBackoffIntervalJitterCoefficient: {
 		KeyName:      "history.queueProcessorPollBackoffIntervalJitterCoefficient",
 		Description:  "QueueProcessorPollBackoffIntervalJitterCoefficient is backoff interval jitter coefficient",
 		DefaultValue: 0.15,
 	},
-	TimerProcessorUpdateAckIntervalJitterCoefficient: DynamicFloat{
+	TimerProcessorUpdateAckIntervalJitterCoefficient: {
 		KeyName:      "history.timerProcessorUpdateAckIntervalJitterCoefficient",
 		Description:  "TimerProcessorUpdateAckIntervalJitterCoefficient is the update interval jitter coefficient",
 		DefaultValue: 0.15,
 	},
-	TimerProcessorMaxPollIntervalJitterCoefficient: DynamicFloat{
+	TimerProcessorMaxPollIntervalJitterCoefficient: {
 		KeyName:      "history.timerProcessorMaxPollIntervalJitterCoefficient",
 		Description:  "TimerProcessorMaxPollIntervalJitterCoefficient is the max poll interval jitter coefficient",
 		DefaultValue: 0.15,
 	},
-	TimerProcessorSplitQueueIntervalJitterCoefficient: DynamicFloat{
+	TimerProcessorSplitQueueIntervalJitterCoefficient: {
 		KeyName:      "history.timerProcessorSplitQueueIntervalJitterCoefficient",
 		Description:  "TimerProcessorSplitQueueIntervalJitterCoefficient is the split processing queue interval jitter coefficient",
 		DefaultValue: 0.15,
 	},
-	TransferProcessorMaxPollIntervalJitterCoefficient: DynamicFloat{
+	TransferProcessorMaxPollIntervalJitterCoefficient: {
 		KeyName:      "history.transferProcessorMaxPollIntervalJitterCoefficient",
 		Description:  "TransferProcessorMaxPollIntervalJitterCoefficient is the max poll interval jitter coefficient",
 		DefaultValue: 0.15,
 	},
-	TransferProcessorSplitQueueIntervalJitterCoefficient: DynamicFloat{
+	TransferProcessorSplitQueueIntervalJitterCoefficient: {
 		KeyName:      "history.transferProcessorSplitQueueIntervalJitterCoefficient",
 		Description:  "TransferProcessorSplitQueueIntervalJitterCoefficient is the split processing queue interval jitter coefficient",
 		DefaultValue: 0.15,
 	},
-	TransferProcessorUpdateAckIntervalJitterCoefficient: DynamicFloat{
+	TransferProcessorUpdateAckIntervalJitterCoefficient: {
 		KeyName:      "history.transferProcessorUpdateAckIntervalJitterCoefficient",
 		Description:  "TransferProcessorUpdateAckIntervalJitterCoefficient is the update interval jitter coefficient",
 		DefaultValue: 0.15,
 	},
-	CrossClusterSourceProcessorMaxPollIntervalJitterCoefficient: DynamicFloat{
+	CrossClusterSourceProcessorMaxPollIntervalJitterCoefficient: {
 		KeyName:      "history.crossClusterSourceProcessorMaxPollIntervalJitterCoefficient",
 		Description:  "CrossClusterSourceProcessorMaxPollIntervalJitterCoefficient is the max poll interval jitter coefficient",
 		DefaultValue: 0.15,
 	},
-	CrossClusterSourceProcessorUpdateAckIntervalJitterCoefficient: DynamicFloat{
+	CrossClusterSourceProcessorUpdateAckIntervalJitterCoefficient: {
 		KeyName:      "history.crossClusterSourceProcessorUpdateAckIntervalJitterCoefficient",
 		Description:  "CrossClusterSourceProcessorUpdateAckIntervalJitterCoefficient is the update interval jitter coefficient",
 		DefaultValue: 0.15,
 	},
-	CrossClusterTargetProcessorJitterCoefficient: DynamicFloat{
+	CrossClusterTargetProcessorJitterCoefficient: {
 		KeyName:      "history.crossClusterTargetProcessorJitterCoefficient",
 		Description:  "CrossClusterTargetProcessorJitterCoefficient is the jitter coefficient used in cross cluster task processor",
 		DefaultValue: 0.15,
 	},
-	CrossClusterFetcherJitterCoefficient: DynamicFloat{
+	CrossClusterFetcherJitterCoefficient: {
 		KeyName:      "history.crossClusterFetcherJitterCoefficient",
 		Description:  "CrossClusterFetcherJitterCoefficient is the jitter coefficient used in cross cluster task fetcher",
 		DefaultValue: 0.15,
 	},
-	ReplicationTaskProcessorCleanupJitterCoefficient: DynamicFloat{
+	ReplicationTaskProcessorCleanupJitterCoefficient: {
 		KeyName:      "history.ReplicationTaskProcessorCleanupJitterCoefficient",
 		Filters:      []Filter{ShardID},
 		Description:  "ReplicationTaskProcessorCleanupJitterCoefficient is the jitter for cleanup timer",
 		DefaultValue: 0.15,
 	},
-	ReplicationTaskProcessorStartWaitJitterCoefficient: DynamicFloat{
+	ReplicationTaskProcessorStartWaitJitterCoefficient: {
 		KeyName:      "history.ReplicationTaskProcessorStartWaitJitterCoefficient",
 		Filters:      []Filter{ShardID},
 		Description:  "ReplicationTaskProcessorStartWaitJitterCoefficient is the jitter for batch start wait timer",
 		DefaultValue: 0.9,
 	},
-	ReplicationTaskProcessorHostQPS: DynamicFloat{
+	ReplicationTaskProcessorHostQPS: {
 		KeyName:      "history.ReplicationTaskProcessorHostQPS",
 		Description:  "ReplicationTaskProcessorHostQPS is the qps of task processing rate limiter on host level",
 		DefaultValue: 1500,
 	},
-	ReplicationTaskProcessorShardQPS: DynamicFloat{
+	ReplicationTaskProcessorShardQPS: {
 		KeyName:      "history.ReplicationTaskProcessorShardQPS",
 		Description:  "ReplicationTaskProcessorShardQPS is the qps of task processing rate limiter on shard level",
 		DefaultValue: 5,
 	},
-	ReplicationTaskGenerationQPS: DynamicFloat{
+	ReplicationTaskGenerationQPS: {
 		KeyName:      "history.ReplicationTaskGenerationQPS",
 		Description:  "ReplicationTaskGenerationQPS is the wait time between each replication task generation qps",
 		DefaultValue: 100,
 	},
-	MutableStateChecksumInvalidateBefore: DynamicFloat{
+	MutableStateChecksumInvalidateBefore: {
 		KeyName:      "history.mutableStateChecksumInvalidateBefore",
 		Description:  "MutableStateChecksumInvalidateBefore is the epoch timestamp before which all checksums are to be discarded",
 		DefaultValue: 0,
 	},
-	NotifyFailoverMarkerTimerJitterCoefficient: DynamicFloat{
+	NotifyFailoverMarkerTimerJitterCoefficient: {
 		KeyName:      "history.NotifyFailoverMarkerTimerJitterCoefficient",
 		Description:  "NotifyFailoverMarkerTimerJitterCoefficient is the jitter for failover marker notifier timer",
 		DefaultValue: 0.15,
 	},
-	HistoryErrorInjectionRate: DynamicFloat{
+	HistoryErrorInjectionRate: {
 		KeyName:      "history.errorInjectionRate",
 		Description:  "HistoryErrorInjectionRate is rate for injecting random error in history client",
 		DefaultValue: 0,
 	},
-	ReplicationTaskFetcherTimerJitterCoefficient: DynamicFloat{
+	ReplicationTaskFetcherTimerJitterCoefficient: {
 		KeyName:      "history.ReplicationTaskFetcherTimerJitterCoefficient",
 		Description:  "ReplicationTaskFetcherTimerJitterCoefficient is the jitter for fetcher timer",
 		DefaultValue: 0.15,
 	},
-	WorkerDeterministicConstructionCheckProbability: DynamicFloat{
+	WorkerDeterministicConstructionCheckProbability: {
 		KeyName:      "worker.DeterministicConstructionCheckProbability",
 		Description:  "WorkerDeterministicConstructionCheckProbability controls the probability of running a deterministic construction check for any given archival",
 		DefaultValue: 0.002,
 	},
-	WorkerBlobIntegrityCheckProbability: DynamicFloat{
+	WorkerBlobIntegrityCheckProbability: {
 		KeyName:      "worker.BlobIntegrityCheckProbability",
 		Description:  "WorkerBlobIntegrityCheckProbability controls the probability of running an integrity check for any given archival",
 		DefaultValue: 0.002,
@@ -4425,58 +4487,58 @@ var FloatKeys = map[FloatKey]DynamicFloat{
 }
 
 var StringKeys = map[StringKey]DynamicString{
-	TestGetStringPropertyKey: DynamicString{
+	TestGetStringPropertyKey: {
 		KeyName:      "testGetStringPropertyKey",
 		Description:  "",
 		DefaultValue: "",
 	},
-	AdvancedVisibilityWritingMode: DynamicString{
+	AdvancedVisibilityWritingMode: {
 		KeyName:      "system.advancedVisibilityWritingMode",
 		Description:  "AdvancedVisibilityWritingMode is key for how to write to advanced visibility. The most useful option is dual, which can be used for seamless migration from db visibility to advanced visibility, usually using with EnableReadVisibilityFromES",
 		DefaultValue: "on",
 	},
-	HistoryArchivalStatus: DynamicString{
+	HistoryArchivalStatus: {
 		KeyName:      "system.historyArchivalStatus",
 		Description:  "HistoryArchivalStatus is key for the status of history archival to override the value from static config.",
 		DefaultValue: "enabled",
 	},
-	VisibilityArchivalStatus: DynamicString{
+	VisibilityArchivalStatus: {
 		KeyName:      "system.visibilityArchivalStatus",
 		Description:  "VisibilityArchivalStatus is key for the status of visibility archival to override the value from static config.",
 		DefaultValue: "enabled",
 	},
-	DefaultEventEncoding: DynamicString{
+	DefaultEventEncoding: {
 		KeyName:      "history.defaultEventEncoding",
 		Filters:      []Filter{DomainName},
 		Description:  "DefaultEventEncoding is the encoding type for history events",
 		DefaultValue: string(common.EncodingTypeThriftRW),
 	},
-	AdminOperationToken: DynamicString{
+	AdminOperationToken: {
 		KeyName:      "history.adminOperationToken",
 		Description:  "AdminOperationToken is the token to pass admin checking",
 		DefaultValue: "CadenceTeamONLY",
 	},
-	ESAnalyzerLimitToTypes: DynamicString{
+	ESAnalyzerLimitToTypes: {
 		KeyName:      "worker.ESAnalyzerLimitToTypes",
 		Description:  "ESAnalyzerLimitToTypes controls if we want to limit ESAnalyzer only to some workflow types",
 		DefaultValue: "",
 	},
-	ESAnalyzerLimitToDomains: DynamicString{
+	ESAnalyzerLimitToDomains: {
 		KeyName:      "worker.ESAnalyzerLimitToDomains",
 		Description:  "ESAnalyzerLimitToDomains controls if we want to limit ESAnalyzer only to some domains",
 		DefaultValue: "",
 	},
-	ESAnalyzerWorkflowDurationWarnThresholds: DynamicString{
+	ESAnalyzerWorkflowDurationWarnThresholds: {
 		KeyName:      "worker.ESAnalyzerWorkflowDurationWarnThresholds",
 		Description:  "ESAnalyzerWorkflowDurationWarnThresholds defines the warning execution thresholds for workflow types",
 		DefaultValue: "",
 	},
-	ESAnalyzerWorkflowVersionMetricDomains: DynamicString{
+	ESAnalyzerWorkflowVersionMetricDomains: {
 		KeyName:      "worker.ESAnalyzerWorkflowVersionMetricDomains",
 		Description:  "ESAnalyzerWorkflowDurationWarnThresholds defines the domains we want to emit wf version metrics on",
 		DefaultValue: "",
 	},
-	ESAnalyzerWorkflowTypeMetricDomains: DynamicString{
+	ESAnalyzerWorkflowTypeMetricDomains: {
 		KeyName:      "worker.ESAnalyzerWorkflowTypeMetricDomains",
 		Description:  "ESAnalyzerWorkflowDurationWarnThresholds defines the domains we want to emit wf version metrics on",
 		DefaultValue: "",
@@ -4484,393 +4546,411 @@ var StringKeys = map[StringKey]DynamicString{
 }
 
 var DurationKeys = map[DurationKey]DynamicDuration{
-	TestGetDurationPropertyKey: DynamicDuration{
+	TestGetDurationPropertyKey: {
 		KeyName:      "testGetDurationPropertyKey",
 		Description:  "",
 		DefaultValue: 0,
 	},
-	TestGetDurationPropertyFilteredByDomainKey: DynamicDuration{
+	TestGetDurationPropertyFilteredByDomainKey: {
 		KeyName:      "testGetDurationPropertyFilteredByDomainKey",
 		Description:  "",
 		DefaultValue: 0,
 	},
-	TestGetDurationPropertyFilteredByTaskListInfoKey: DynamicDuration{
+	TestGetDurationPropertyFilteredByTaskListInfoKey: {
 		KeyName:      "testGetDurationPropertyFilteredByTaskListInfoKey",
 		Description:  "",
 		DefaultValue: 0,
 	},
-	FrontendShutdownDrainDuration: DynamicDuration{
+	TestGetDurationPropertyFilteredByWorkflowTypeKey: {
+		KeyName:      "testGetDurationPropertyFilteredByWorkflowTypeKey",
+		Description:  "",
+		DefaultValue: 0,
+		Filters:      nil,
+	},
+	TestGetDurationPropertyFilteredByDomainIDKey: {
+		KeyName:      "testGetDurationPropertyFilteredByDomainIDKey",
+		Description:  "",
+		DefaultValue: 0,
+		Filters:      nil,
+	},
+	TestGetDurationPropertyFilteredByShardID: {
+		KeyName:      "testGetDurationPropertyFilteredByShardID",
+		Description:  "",
+		DefaultValue: 0,
+		Filters:      nil,
+	},
+	FrontendShutdownDrainDuration: {
 		KeyName:      "frontend.shutdownDrainDuration",
 		Description:  "FrontendShutdownDrainDuration is the duration of traffic drain during shutdown",
 		DefaultValue: 0,
 	},
-	FrontendFailoverCoolDown: DynamicDuration{
+	FrontendFailoverCoolDown: {
 		KeyName:      "frontend.failoverCoolDown",
 		Filters:      []Filter{DomainName},
 		Description:  "FrontendFailoverCoolDown is duration between two domain failvoers",
 		DefaultValue: time.Minute,
 	},
-	DomainFailoverRefreshInterval: DynamicDuration{
+	DomainFailoverRefreshInterval: {
 		KeyName:      "frontend.domainFailoverRefreshInterval",
 		Description:  "DomainFailoverRefreshInterval is the domain failover refresh timer",
 		DefaultValue: time.Second * 10,
 	},
-	MatchingLongPollExpirationInterval: DynamicDuration{
+	MatchingLongPollExpirationInterval: {
 		KeyName:      "matching.longPollExpirationInterval",
 		Filters:      []Filter{DomainName, TaskListName, TaskType},
 		Description:  "MatchingLongPollExpirationInterval is the long poll expiration interval in the matching service",
 		DefaultValue: time.Minute,
 	},
-	MatchingUpdateAckInterval: DynamicDuration{
+	MatchingUpdateAckInterval: {
 		KeyName:      "matching.updateAckInterval",
 		Filters:      []Filter{DomainName, TaskListName, TaskType},
 		Description:  "MatchingUpdateAckInterval is the interval for update ack",
 		DefaultValue: time.Minute,
 	},
-	MatchingIdleTasklistCheckInterval: DynamicDuration{
+	MatchingIdleTasklistCheckInterval: {
 		KeyName:      "matching.idleTasklistCheckInterval",
 		Filters:      []Filter{DomainName, TaskListName, TaskType},
 		Description:  "MatchingIdleTasklistCheckInterval is the IdleTasklistCheckInterval",
 		DefaultValue: time.Minute * 5,
 	},
-	MaxTasklistIdleTime: DynamicDuration{
+	MaxTasklistIdleTime: {
 		KeyName:      "matching.maxTasklistIdleTime",
 		Filters:      []Filter{DomainName, TaskListName, TaskType},
 		Description:  "MaxTasklistIdleTime is the max time tasklist being idle",
 		DefaultValue: time.Minute * 5,
 	},
-	MatchingShutdownDrainDuration: DynamicDuration{
+	MatchingShutdownDrainDuration: {
 		KeyName:      "matching.shutdownDrainDuration",
 		Description:  "MatchingShutdownDrainDuration is the duration of traffic drain during shutdown",
 		DefaultValue: 0,
 	},
-	MatchingActivityTaskSyncMatchWaitTime: DynamicDuration{
+	MatchingActivityTaskSyncMatchWaitTime: {
 		KeyName:      "matching.activityTaskSyncMatchWaitTime",
 		Filters:      []Filter{DomainName},
 		Description:  "MatchingActivityTaskSyncMatchWaitTime is the amount of time activity task will wait to be sync matched",
 		DefaultValue: time.Millisecond * 50,
 	},
-	HistoryLongPollExpirationInterval: DynamicDuration{
+	HistoryLongPollExpirationInterval: {
 		KeyName:      "history.longPollExpirationInterval",
 		Filters:      []Filter{DomainName},
 		Description:  "HistoryLongPollExpirationInterval is the long poll expiration interval in the history service",
 		DefaultValue: time.Second * 20, // history client: client/history/client.go set the client timeout 20s
 	},
-	HistoryCacheTTL: DynamicDuration{
+	HistoryCacheTTL: {
 		KeyName:      "history.cacheTTL",
 		Description:  "HistoryCacheTTL is TTL of history cache",
 		DefaultValue: time.Hour,
 	},
-	HistoryShutdownDrainDuration: DynamicDuration{
+	HistoryShutdownDrainDuration: {
 		KeyName:      "history.shutdownDrainDuration",
 		Description:  "HistoryShutdownDrainDuration is the duration of traffic drain during shutdown",
 		DefaultValue: 0,
 	},
-	EventsCacheTTL: DynamicDuration{
+	EventsCacheTTL: {
 		KeyName:      "history.eventsCacheTTL",
 		Description:  "EventsCacheTTL is TTL of events cache",
 		DefaultValue: time.Hour,
 	},
-	AcquireShardInterval: DynamicDuration{
+	AcquireShardInterval: {
 		KeyName:      "history.acquireShardInterval",
 		Description:  "AcquireShardInterval is interval that timer used to acquire shard",
 		DefaultValue: time.Minute,
 	},
-	StandbyClusterDelay: DynamicDuration{
+	StandbyClusterDelay: {
 		KeyName:      "history.standbyClusterDelay",
 		Description:  "StandbyClusterDelay is the artificial delay added to standby cluster's view of active cluster's time",
 		DefaultValue: time.Minute * 5,
 	},
-	StandbyTaskMissingEventsResendDelay: DynamicDuration{
+	StandbyTaskMissingEventsResendDelay: {
 		KeyName:      "history.standbyTaskMissingEventsResendDelay",
 		Description:  "StandbyTaskMissingEventsResendDelay is the amount of time standby cluster's will wait (if events are missing)before calling remote for missing events",
 		DefaultValue: time.Minute * 15,
 	},
-	StandbyTaskMissingEventsDiscardDelay: DynamicDuration{
+	StandbyTaskMissingEventsDiscardDelay: {
 		KeyName:      "history.standbyTaskMissingEventsDiscardDelay",
 		Description:  "StandbyTaskMissingEventsDiscardDelay is the amount of time standby cluster's will wait (if events are missing)before discarding the task",
 		DefaultValue: time.Minute * 25,
 	},
-	ActiveTaskRedispatchInterval: DynamicDuration{
+	ActiveTaskRedispatchInterval: {
 		KeyName:      "history.activeTaskRedispatchInterval",
 		Description:  "ActiveTaskRedispatchInterval is the active task redispatch interval",
 		DefaultValue: time.Second * 5,
 	},
-	StandbyTaskRedispatchInterval: DynamicDuration{
+	StandbyTaskRedispatchInterval: {
 		KeyName:      "history.standbyTaskRedispatchInterval",
 		Description:  "StandbyTaskRedispatchInterval is the standby task redispatch interval",
 		DefaultValue: time.Second * 30,
 	},
-	StandbyTaskReReplicationContextTimeout: DynamicDuration{
+	StandbyTaskReReplicationContextTimeout: {
 		KeyName:      "history.standbyTaskReReplicationContextTimeout",
 		Filters:      []Filter{DomainID},
 		Description:  "StandbyTaskReReplicationContextTimeout is the context timeout for standby task re-replication",
 		DefaultValue: time.Minute * 3,
 	},
-	ResurrectionCheckMinDelay: DynamicDuration{
+	ResurrectionCheckMinDelay: {
 		KeyName:      "history.resurrectionCheckMinDelay",
 		Filters:      []Filter{DomainName},
 		Description:  "ResurrectionCheckMinDelay is the minimal timer processing delay before scanning history to see if there's a resurrected timer/activity",
 		DefaultValue: time.Hour * 24,
 	},
-	QueueProcessorSplitLookAheadDurationByDomainID: DynamicDuration{
+	QueueProcessorSplitLookAheadDurationByDomainID: {
 		KeyName:      "history.queueProcessorSplitLookAheadDurationByDomainID",
 		Filters:      []Filter{DomainID},
 		Description:  "QueueProcessorSplitLookAheadDurationByDomainID is the look ahead duration when spliting a domain to a new processing queue",
 		DefaultValue: time.Minute * 20,
 	},
-	QueueProcessorPollBackoffInterval: DynamicDuration{
+	QueueProcessorPollBackoffInterval: {
 		KeyName:      "history.queueProcessorPollBackoffInterval",
 		Description:  "QueueProcessorPollBackoffInterval is the backoff duration when queue processor is throttled",
 		DefaultValue: time.Second * 5,
 	},
-	TimerProcessorUpdateAckInterval: DynamicDuration{
+	TimerProcessorUpdateAckInterval: {
 		KeyName:      "history.timerProcessorUpdateAckInterval",
 		Description:  "TimerProcessorUpdateAckInterval is update interval for timer processor",
 		DefaultValue: time.Second * 30,
 	},
-	TimerProcessorCompleteTimerInterval: DynamicDuration{
+	TimerProcessorCompleteTimerInterval: {
 		KeyName:      "history.timerProcessorCompleteTimerInterval",
 		Description:  "TimerProcessorCompleteTimerInterval is complete timer interval for timer processor",
 		DefaultValue: time.Minute,
 	},
-	TimerProcessorFailoverMaxStartJitterInterval: DynamicDuration{
+	TimerProcessorFailoverMaxStartJitterInterval: {
 		KeyName:      "history.timerProcessorFailoverMaxStartJitterInterval",
 		Description:  "TimerProcessorFailoverMaxStartJitterInterval is the max jitter interval for starting timer failover queue processing. The actual jitter interval used will be a random duration between 0 and the max interval so that timer failover queue across different shards won't start at the same time",
 		DefaultValue: 0,
 	},
-	TimerProcessorMaxPollInterval: DynamicDuration{
+	TimerProcessorMaxPollInterval: {
 		KeyName:      "history.timerProcessorMaxPollInterval",
 		Description:  "TimerProcessorMaxPollInterval is max poll interval for timer processor",
 		DefaultValue: time.Minute * 5,
 	},
-	TimerProcessorSplitQueueInterval: DynamicDuration{
+	TimerProcessorSplitQueueInterval: {
 		KeyName:      "history.timerProcessorSplitQueueInterval",
 		Description:  "TimerProcessorSplitQueueInterval is the split processing queue interval for timer processor",
 		DefaultValue: time.Minute,
 	},
-	TimerProcessorArchivalTimeLimit: DynamicDuration{
+	TimerProcessorArchivalTimeLimit: {
 		KeyName:      "history.timerProcessorArchivalTimeLimit",
 		Description:  "TimerProcessorArchivalTimeLimit is the upper time limit for inline history archival",
 		DefaultValue: time.Second * 2,
 	},
-	TimerProcessorMaxTimeShift: DynamicDuration{
+	TimerProcessorMaxTimeShift: {
 		KeyName:      "history.timerProcessorMaxTimeShift",
 		Description:  "TimerProcessorMaxTimeShift is the max shift timer processor can have",
 		DefaultValue: time.Second,
 	},
-	TransferProcessorFailoverMaxStartJitterInterval: DynamicDuration{
+	TransferProcessorFailoverMaxStartJitterInterval: {
 		KeyName:      "history.transferProcessorFailoverMaxStartJitterInterval",
 		Description:  "TransferProcessorFailoverMaxStartJitterInterval is the max jitter interval for starting transfer failover queue processing. The actual jitter interval used will be a random duration between 0 and the max interval so that timer failover queue across different shards won't start at the same time",
 		DefaultValue: 0,
 	},
-	TransferProcessorMaxPollInterval: DynamicDuration{
+	TransferProcessorMaxPollInterval: {
 		KeyName:      "history.transferProcessorMaxPollInterval",
 		Description:  "TransferProcessorMaxPollInterval is max poll interval for transferQueueProcessor",
 		DefaultValue: time.Minute,
 	},
-	TransferProcessorSplitQueueInterval: DynamicDuration{
+	TransferProcessorSplitQueueInterval: {
 		KeyName:      "history.transferProcessorSplitQueueInterval",
 		Description:  "TransferProcessorSplitQueueInterval is the split processing queue interval for transferQueueProcessor",
 		DefaultValue: time.Minute,
 	},
-	TransferProcessorUpdateAckInterval: DynamicDuration{
+	TransferProcessorUpdateAckInterval: {
 		KeyName:      "history.transferProcessorUpdateAckInterval",
 		Description:  "TransferProcessorUpdateAckInterval is update interval for transferQueueProcessor",
 		DefaultValue: time.Second * 30,
 	},
-	TransferProcessorCompleteTransferInterval: DynamicDuration{
+	TransferProcessorCompleteTransferInterval: {
 		KeyName:      "history.transferProcessorCompleteTransferInterval",
 		Description:  "TransferProcessorCompleteTransferInterval is complete timer interval for transferQueueProcessor",
 		DefaultValue: time.Minute,
 	},
-	TransferProcessorValidationInterval: DynamicDuration{
+	TransferProcessorValidationInterval: {
 		KeyName:      "history.transferProcessorValidationInterval",
 		Description:  "TransferProcessorValidationInterval is interval for performing transfer queue validation",
 		DefaultValue: time.Second * 30,
 	},
-	TransferProcessorVisibilityArchivalTimeLimit: DynamicDuration{
+	TransferProcessorVisibilityArchivalTimeLimit: {
 		KeyName:      "history.transferProcessorVisibilityArchivalTimeLimit",
 		Description:  "TransferProcessorVisibilityArchivalTimeLimit is the upper time limit for archiving visibility records",
 		DefaultValue: time.Millisecond * 400,
 	},
-	CrossClusterSourceProcessorMaxPollInterval: DynamicDuration{
+	CrossClusterSourceProcessorMaxPollInterval: {
 		KeyName:      "history.crossClusterSourceProcessorMaxPollInterval",
 		Description:  "CrossClusterSourceProcessorMaxPollInterval is max poll interval for crossClusterQueueProcessor",
 		DefaultValue: time.Minute,
 	},
-	CrossClusterSourceProcessorUpdateAckInterval: DynamicDuration{
+	CrossClusterSourceProcessorUpdateAckInterval: {
 		KeyName:      "history.crossClusterSourceProcessorUpdateAckInterval",
 		Description:  "CrossClusterSourceProcessorUpdateAckInterval is update interval for crossClusterQueueProcessor",
 		DefaultValue: time.Second * 30,
 	},
-	CrossClusterTargetProcessorTaskWaitInterval: DynamicDuration{
+	CrossClusterTargetProcessorTaskWaitInterval: {
 		KeyName:      "history.crossClusterTargetProcessorTaskWaitInterval",
 		Description:  "CrossClusterTargetProcessorTaskWaitInterval is the duration for waiting a cross-cluster task response before responding to source",
 		DefaultValue: time.Second * 3,
 	},
-	CrossClusterTargetProcessorServiceBusyBackoffInterval: DynamicDuration{
+	CrossClusterTargetProcessorServiceBusyBackoffInterval: {
 		KeyName:      "history.crossClusterTargetProcessorServiceBusyBackoffInterval",
 		Description:  "CrossClusterTargetProcessorServiceBusyBackoffInterval is the backoff duration for cross cluster task processor when getting a service busy error when calling source cluster",
 		DefaultValue: time.Second * 5,
 	},
-	CrossClusterFetcherAggregationInterval: DynamicDuration{
+	CrossClusterFetcherAggregationInterval: {
 		KeyName:      "history.crossClusterFetcherAggregationInterval",
 		Description:  "CrossClusterFetcherAggregationInterval determines how frequently the fetch requests are sent",
 		DefaultValue: time.Second * 2,
 	},
-	CrossClusterFetcherServiceBusyBackoffInterval: DynamicDuration{
+	CrossClusterFetcherServiceBusyBackoffInterval: {
 		KeyName:      "history.crossClusterFetcherServiceBusyBackoffInterval",
 		Description:  "CrossClusterFetcherServiceBusyBackoffInterval is the backoff duration for cross cluster task fetcher when getting",
 		DefaultValue: time.Second * 5,
 	},
-	CrossClusterFetcherErrorBackoffInterval: DynamicDuration{
+	CrossClusterFetcherErrorBackoffInterval: {
 		KeyName:      "history.crossClusterFetcherErrorBackoffInterval",
 		Description:  "",
 		DefaultValue: time.Second,
 	},
-	ReplicatorUpperLatency: DynamicDuration{
+	ReplicatorUpperLatency: {
 		KeyName:      "history.replicatorUpperLatency",
 		Description:  "ReplicatorUpperLatency indicates the max allowed replication latency between clusters",
 		DefaultValue: time.Second * 40,
 	},
-	ShardUpdateMinInterval: DynamicDuration{
+	ShardUpdateMinInterval: {
 		KeyName:      "history.shardUpdateMinInterval",
 		Description:  "ShardUpdateMinInterval is the minimal time interval which the shard info can be updated",
 		DefaultValue: time.Minute * 5,
 	},
-	ShardSyncMinInterval: DynamicDuration{
+	ShardSyncMinInterval: {
 		KeyName:      "history.shardSyncMinInterval",
 		Description:  "ShardSyncMinInterval is the minimal time interval which the shard info should be sync to remote",
 		DefaultValue: time.Minute * 5,
 	},
-	StickyTTL: DynamicDuration{
+	StickyTTL: {
 		KeyName:      "history.stickyTTL",
 		Filters:      []Filter{DomainName},
 		Description:  "StickyTTL is to expire a sticky tasklist if no update more than this duration",
 		DefaultValue: time.Hour * 24 * 365,
 	},
-	DecisionHeartbeatTimeout: DynamicDuration{
+	DecisionHeartbeatTimeout: {
 		KeyName:      "history.decisionHeartbeatTimeout",
 		Filters:      []Filter{DomainName},
 		Description:  "DecisionHeartbeatTimeout is for decision heartbeat",
 		DefaultValue: time.Minute * 30, // about 30m
 	},
-	NormalDecisionScheduleToStartTimeout: DynamicDuration{
+	NormalDecisionScheduleToStartTimeout: {
 		KeyName:      "history.normalDecisionScheduleToStartTimeout",
 		Filters:      []Filter{DomainName},
 		Description:  "NormalDecisionScheduleToStartTimeout is scheduleToStart timeout duration for normal (non-sticky) decision task",
 		DefaultValue: time.Minute * 5,
 	},
-	NotifyFailoverMarkerInterval: DynamicDuration{
+	NotifyFailoverMarkerInterval: {
 		KeyName:      "history.NotifyFailoverMarkerInterval",
 		Description:  "NotifyFailoverMarkerInterval is determines the frequency to notify failover marker",
 		DefaultValue: time.Second * 5,
 	},
-	ActivityMaxScheduleToStartTimeoutForRetry: DynamicDuration{
+	ActivityMaxScheduleToStartTimeoutForRetry: {
 		KeyName:      "history.activityMaxScheduleToStartTimeoutForRetry",
 		Filters:      []Filter{DomainName},
 		Description:  "ActivityMaxScheduleToStartTimeoutForRetry is maximum value allowed when overwritting the schedule to start timeout for activities with retry policy",
 		DefaultValue: time.Minute * 30,
 	},
-	ReplicationTaskFetcherAggregationInterval: DynamicDuration{
+	ReplicationTaskFetcherAggregationInterval: {
 		KeyName:      "history.ReplicationTaskFetcherAggregationInterval",
 		Description:  "ReplicationTaskFetcherAggregationInterval determines how frequently the fetch requests are sent",
 		DefaultValue: time.Second * 2,
 	},
-	ReplicationTaskFetcherErrorRetryWait: DynamicDuration{
+	ReplicationTaskFetcherErrorRetryWait: {
 		KeyName:      "history.ReplicationTaskFetcherErrorRetryWait",
 		Description:  "ReplicationTaskFetcherErrorRetryWait is the wait time when fetcher encounters error",
 		DefaultValue: time.Second,
 	},
-	ReplicationTaskFetcherServiceBusyWait: DynamicDuration{
+	ReplicationTaskFetcherServiceBusyWait: {
 		KeyName:      "history.ReplicationTaskFetcherServiceBusyWait",
 		Description:  "ReplicationTaskFetcherServiceBusyWait is the wait time when fetcher encounters service busy error",
 		DefaultValue: time.Minute,
 	},
-	ReplicationTaskProcessorErrorRetryWait: DynamicDuration{
+	ReplicationTaskProcessorErrorRetryWait: {
 		KeyName:      "history.ReplicationTaskProcessorErrorRetryWait",
 		Filters:      []Filter{ShardID},
 		Description:  "ReplicationTaskProcessorErrorRetryWait is the initial retry wait when we see errors in applying replication tasks",
 		DefaultValue: time.Millisecond * 50,
 	},
-	ReplicationTaskProcessorErrorSecondRetryWait: DynamicDuration{
+	ReplicationTaskProcessorErrorSecondRetryWait: {
 		KeyName:      "history.ReplicationTaskProcessorErrorSecondRetryWait",
 		Filters:      []Filter{ShardID},
 		Description:  "ReplicationTaskProcessorErrorSecondRetryWait is the initial retry wait for the second phase retry",
 		DefaultValue: time.Second * 5,
 	},
-	ReplicationTaskProcessorErrorSecondRetryMaxWait: DynamicDuration{
+	ReplicationTaskProcessorErrorSecondRetryMaxWait: {
 		KeyName:      "history.ReplicationTaskProcessorErrorSecondRetryMaxWait",
 		Filters:      []Filter{ShardID},
 		Description:  "ReplicationTaskProcessorErrorSecondRetryMaxWait is the max wait time for the second phase retry",
 		DefaultValue: time.Second * 30,
 	},
-	ReplicationTaskProcessorErrorSecondRetryExpiration: DynamicDuration{
+	ReplicationTaskProcessorErrorSecondRetryExpiration: {
 		KeyName:      "history.ReplicationTaskProcessorErrorSecondRetryExpiration",
 		Filters:      []Filter{ShardID},
 		Description:  "ReplicationTaskProcessorErrorSecondRetryExpiration is the expiration duration for the second phase retry",
 		DefaultValue: time.Minute * 5,
 	},
-	ReplicationTaskProcessorNoTaskInitialWait: DynamicDuration{
+	ReplicationTaskProcessorNoTaskInitialWait: {
 		KeyName:      "history.ReplicationTaskProcessorNoTaskInitialWait",
 		Filters:      []Filter{ShardID},
 		Description:  "ReplicationTaskProcessorNoTaskInitialWait is the wait time when not ask is returned",
 		DefaultValue: time.Second * 2,
 	},
-	ReplicationTaskProcessorCleanupInterval: DynamicDuration{
+	ReplicationTaskProcessorCleanupInterval: {
 		KeyName:      "history.ReplicationTaskProcessorCleanupInterval",
 		Filters:      []Filter{ShardID},
 		Description:  "ReplicationTaskProcessorCleanupInterval determines how frequently the cleanup replication queue",
 		DefaultValue: time.Minute,
 	},
-	ReplicationTaskProcessorStartWait: DynamicDuration{
+	ReplicationTaskProcessorStartWait: {
 		KeyName:      "history.ReplicationTaskProcessorStartWait",
 		Filters:      []Filter{ShardID},
 		Description:  "ReplicationTaskProcessorStartWait is the wait time before each task processing batch",
 		DefaultValue: time.Second * 5,
 	},
-	WorkerESProcessorFlushInterval: DynamicDuration{
+	WorkerESProcessorFlushInterval: {
 		KeyName:      "worker.ESProcessorFlushInterval",
 		Description:  "WorkerESProcessorFlushInterval is flush interval for esProcessor",
 		DefaultValue: time.Second,
 	},
-	WorkerTimeLimitPerArchivalIteration: DynamicDuration{
+	WorkerTimeLimitPerArchivalIteration: {
 		KeyName:      "worker.TimeLimitPerArchivalIteration",
 		Description:  "WorkerTimeLimitPerArchivalIteration is controls the time limit of each iteration of archival workflow",
 		DefaultValue: time.Hour * 24 * 15,
 	},
-	WorkerReplicationTaskMaxRetryDuration: DynamicDuration{
+	WorkerReplicationTaskMaxRetryDuration: {
 		KeyName:      "worker.replicationTaskMaxRetryDuration",
 		Description:  "WorkerReplicationTaskMaxRetryDuration is the max retry duration for any task",
 		DefaultValue: time.Minute * 10,
 	},
-	ESAnalyzerTimeWindow: DynamicDuration{
+	ESAnalyzerTimeWindow: {
 		KeyName:      "worker.ESAnalyzerTimeWindow",
 		Description:  "ESAnalyzerTimeWindow defines the time window ElasticSearch Analyzer will consider while taking workflow averages",
 		DefaultValue: time.Hour * 24 * 30,
 	},
-	IsolationGroupStateRefreshInterval: DynamicDuration{
+	IsolationGroupStateRefreshInterval: {
 		KeyName:      "system.isolationGroupStateRefreshInterval",
 		Description:  "the frequency by which the IsolationGroupState handler will poll configuration",
 		DefaultValue: time.Second * 30,
 	},
-	IsolationGroupStateFetchTimeout: DynamicDuration{
+	IsolationGroupStateFetchTimeout: {
 		KeyName:      "system.IsolationGroupStateFetchTimeout",
 		Description:  "IsolationGroupStateFetchTimeout is the dynamic config DB fetch timeout value",
 		DefaultValue: time.Second * 30,
 	},
-	IsolationGroupStateUpdateTimeout: DynamicDuration{
+	IsolationGroupStateUpdateTimeout: {
 		KeyName:      "system.IsolationGroupStateUpdateTimeout",
 		Description:  "IsolationGroupStateFetchTimeout is the dynamic config DB update timeout value",
 		DefaultValue: time.Second * 30,
 	},
-	ESAnalyzerBufferWaitTime: DynamicDuration{
+	ESAnalyzerBufferWaitTime: {
 		KeyName:      "worker.ESAnalyzerBufferWaitTime",
 		Description:  "ESAnalyzerBufferWaitTime controls min time required to consider a worklow stuck",
 		DefaultValue: time.Minute * 30,
 	},
-	AsyncTaskDispatchTimeout: DynamicDuration{
+	AsyncTaskDispatchTimeout: {
 		KeyName:      "matching.asyncTaskDispatchTimeout",
 		Filters:      []Filter{DomainName, TaskListName, TaskType},
 		Description:  "AsyncTaskDispatchTimeout is the timeout of dispatching tasks for async match",
@@ -4879,22 +4959,22 @@ var DurationKeys = map[DurationKey]DynamicDuration{
 }
 
 var MapKeys = map[MapKey]DynamicMap{
-	TestGetMapPropertyKey: DynamicMap{
+	TestGetMapPropertyKey: {
 		KeyName:      "testGetMapPropertyKey",
 		Description:  "",
 		DefaultValue: nil,
 	},
-	RequiredDomainDataKeys: DynamicMap{
+	RequiredDomainDataKeys: {
 		KeyName:      "system.requiredDomainDataKeys",
 		Description:  "RequiredDomainDataKeys is the key for the list of data keys required in domain registration",
 		DefaultValue: nil,
 	},
-	ValidSearchAttributes: DynamicMap{
+	ValidSearchAttributes: {
 		KeyName:      "frontend.validSearchAttributes",
 		Description:  "ValidSearchAttributes is legal indexed keys that can be used in list APIs. When overriding, ensure to include the existing default attributes of the current release",
 		DefaultValue: definition.GetDefaultIndexedKeys(),
 	},
-	TaskSchedulerRoundRobinWeights: DynamicMap{
+	TaskSchedulerRoundRobinWeights: {
 		KeyName:     "history.taskSchedulerRoundRobinWeight",
 		Description: "TaskSchedulerRoundRobinWeights is the priority weight for weighted round robin task scheduler",
 		DefaultValue: common.ConvertIntMapToDynamicConfigMapProperty(map[int]int{
@@ -4903,12 +4983,12 @@ var MapKeys = map[MapKey]DynamicMap{
 			common.GetTaskPriority(common.LowPriorityClass, common.DefaultPrioritySubclass):     5,
 		}),
 	},
-	QueueProcessorPendingTaskSplitThreshold: DynamicMap{
+	QueueProcessorPendingTaskSplitThreshold: {
 		KeyName:      "history.queueProcessorPendingTaskSplitThreshold",
 		Description:  "QueueProcessorPendingTaskSplitThreshold is the threshold for the number of pending tasks per domain",
 		DefaultValue: common.ConvertIntMapToDynamicConfigMapProperty(map[int]int{0: 1000, 1: 10000}),
 	},
-	QueueProcessorStuckTaskSplitThreshold: DynamicMap{
+	QueueProcessorStuckTaskSplitThreshold: {
 		KeyName:      "history.queueProcessorStuckTaskSplitThreshold",
 		Description:  "QueueProcessorStuckTaskSplitThreshold is the threshold for the number of attempts of a task",
 		DefaultValue: common.ConvertIntMapToDynamicConfigMapProperty(map[int]int{0: 100, 1: 10000}),

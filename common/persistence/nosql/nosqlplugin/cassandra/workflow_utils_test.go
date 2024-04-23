@@ -32,6 +32,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
@@ -52,9 +53,11 @@ type fakeSession struct {
 
 	// outputs
 	batches []*fakeBatch
+	queries []string
 }
 
-func (s *fakeSession) Query(string, ...interface{}) gocql.Query {
+func (s *fakeSession) Query(queryTmpl string, args ...interface{}) gocql.Query {
+	s.queries = append(s.queries, sanitizedRenderedQuery(queryTmpl, args...))
 	return s.query
 }
 
@@ -83,23 +86,7 @@ type fakeBatch struct {
 
 // Query is fake implementation of gocql.Batch.Query
 func (b *fakeBatch) Query(queryTmpl string, args ...interface{}) {
-	argsSanitized := make([]interface{}, len(args))
-	for i, arg := range args {
-		// use values instead of pointer so that we can compare them in tests
-		if reflect.ValueOf(arg).Kind() == reflect.Ptr && !reflect.ValueOf(arg).IsZero() {
-			argsSanitized[i] = reflect.ValueOf(arg).Elem().Interface()
-		} else {
-			argsSanitized[i] = arg
-		}
-
-		if t, ok := argsSanitized[i].(time.Time); ok {
-			// use fixed time format to avoid flakiness
-			argsSanitized[i] = t.UTC().Format(time.RFC3339)
-		}
-
-	}
-	queryTmpl = strings.ReplaceAll(queryTmpl, "?", "%v")
-	b.queries = append(b.queries, fmt.Sprintf(queryTmpl, argsSanitized...))
+	b.queries = append(b.queries, sanitizedRenderedQuery(queryTmpl, args...))
 }
 
 // WithContext is fake implementation of gocql.Batch.WithContext
@@ -121,20 +108,71 @@ func (b *fakeBatch) Consistency(gocql.Consistency) gocql.Batch {
 func (s *fakeSession) Close() {
 }
 
+func sanitizedRenderedQuery(queryTmpl string, args ...interface{}) string {
+	argsSanitized := make([]interface{}, len(args))
+	for i, arg := range args {
+		// use values instead of pointer so that we can compare them in tests
+		if reflect.ValueOf(arg).Kind() == reflect.Ptr && !reflect.ValueOf(arg).IsZero() {
+			argsSanitized[i] = reflect.ValueOf(arg).Elem().Interface()
+		} else {
+			argsSanitized[i] = arg
+		}
+
+		if t, ok := argsSanitized[i].(time.Time); ok {
+			// use fixed time format to avoid flakiness
+			argsSanitized[i] = t.UTC().Format(time.RFC3339)
+		}
+
+	}
+	queryTmpl = strings.ReplaceAll(queryTmpl, "?", "%v")
+	return fmt.Sprintf(queryTmpl, argsSanitized...)
+}
+
 // fakeIter is fake implementation of gocql.Iter
 type fakeIter struct {
 	// input parametrs
 	mapScanInputs []map[string]interface{}
+	scanInputs    [][]interface{}
 	pageState     []byte
+	closeErr      error
 
 	// output parameters
 	mapScanCalls int
+	scanCalls    int
 	closed       bool
 }
 
 // Scan is fake implementation of gocql.Iter.Scan
-func (i *fakeIter) Scan(...interface{}) bool {
-	return false
+func (i *fakeIter) Scan(outArgs ...interface{}) bool {
+	if i.scanCalls >= len(i.scanInputs) {
+		return false
+	}
+
+	for j, v := range i.scanInputs[i.scanCalls] {
+		if len(outArgs) <= j {
+			panic(fmt.Sprintf("outArgs length: %d is less than expected: %d", len(outArgs), len(i.scanInputs[i.scanCalls])))
+		}
+
+		if v == nil {
+			continue
+		}
+
+		dst := outArgs[j]
+		dstPtrValue := reflect.ValueOf(dst)
+		dstValue := reflect.Indirect(dstPtrValue)
+
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					panic(fmt.Sprintf("failed to set %dth value: %v to %v, inner panic: %s", j, v, dst, r))
+				}
+			}()
+			dstValue.Set(reflect.ValueOf(v))
+		}()
+	}
+
+	i.scanCalls++
+	return true
 }
 
 // MapScan is fake implementation of gocql.Iter.MapScan
@@ -158,7 +196,7 @@ func (i *fakeIter) PageState() []byte {
 // Close is fake implementation of gocql.Iter.Close
 func (i *fakeIter) Close() error {
 	i.closed = true
-	return nil
+	return i.closeErr
 }
 
 type fakeUUID struct {
@@ -167,6 +205,67 @@ type fakeUUID struct {
 
 func (u *fakeUUID) String() string {
 	return u.uuid
+}
+
+var _ (gocql.Query) = &fakeQuery{}
+
+type fakeQuery struct {
+	iter              *fakeIter
+	mapScan           map[string]interface{}
+	err               error
+	scanCASApplied    bool
+	mapScanCASApplied bool
+}
+
+func (q *fakeQuery) Exec() error {
+	return q.err
+}
+
+func (q *fakeQuery) Scan(...interface{}) error {
+	return q.err
+}
+
+func (q *fakeQuery) ScanCAS(...interface{}) (bool, error) {
+	return q.scanCASApplied, q.err
+}
+
+func (q *fakeQuery) MapScan(res map[string]interface{}) error {
+	for k, v := range q.mapScan {
+		res[k] = v
+	}
+	return q.err
+}
+
+func (q *fakeQuery) MapScanCAS(map[string]interface{}) (bool, error) {
+	return q.mapScanCASApplied, q.err
+}
+
+func (q *fakeQuery) Iter() gocql.Iter {
+	return q.iter
+}
+
+func (q *fakeQuery) PageSize(int) gocql.Query {
+	return q
+}
+
+func (q *fakeQuery) PageState([]byte) gocql.Query {
+	return q
+}
+
+func (q *fakeQuery) WithContext(context.Context) gocql.Query {
+	return q
+}
+
+func (q *fakeQuery) WithTimestamp(int64) gocql.Query {
+	return q
+}
+
+func (q *fakeQuery) Consistency(gocql.Consistency) gocql.Query {
+	return q
+}
+
+func (q *fakeQuery) Bind(...interface{}) gocql.Query {
+	return q
 }
 
 func TestExecuteCreateWorkflowBatchTransaction(t *testing.T) {
@@ -222,35 +321,71 @@ func TestExecuteCreateWorkflowBatchTransaction(t *testing.T) {
 			},
 		},
 		{
-			desc: "execution already exists",
+			desc: "workflow request already exists",
 			session: &fakeSession{
 				mapExecuteBatchCASApplied: false,
 				iter:                      &fakeIter{},
 				mapExecuteBatchCASPrev: map[string]any{
-					"type":                        rowTypeExecution,
-					"run_id":                      uuid.Parse(permanentRunID),
-					"range_id":                    int64(100),
-					"workflow_last_write_version": int64(3),
-					"execution": map[string]any{
-						"workflow_id": "test-workflow-id",
-						"run_id":      uuid.Parse("bda9cd9c-32fb-4267-b120-346e5351fc46"),
-						"state":       1,
+					"type":   rowTypeWorkflowRequestCancel,
+					"run_id": uuid.Parse("4b8045c8-7b45-41e0-bf03-1f0d166b818d"),
+				},
+				query: &fakeQuery{
+					mapScan: map[string]interface{}{
+						"current_run_id": uuid.Parse("6b844fb4-c18a-4979-a2d3-731ebdd1db08"),
 					},
 				},
 			},
 			batch:        &fakeBatch{},
 			currentWFReq: &nosqlplugin.CurrentWorkflowWriteRequest{},
+			execution: &nosqlplugin.WorkflowExecutionRequest{
+				InternalWorkflowExecutionInfo: persistence.InternalWorkflowExecutionInfo{
+					DomainID:   "fd88863f-bb32-4daa-8878-49e08b91545e",
+					WorkflowID: "wfid",
+				},
+			},
 			shardCond: &nosqlplugin.ShardCondition{
+				ShardID: 1,
 				RangeID: 100,
 			},
 			wantErr: &nosqlplugin.WorkflowOperationConditionFailure{
-				CurrentWorkflowConditionFailInfo: common.StringPtr(
-					"Workflow execution already running. WorkflowId: test-workflow-id, " +
-						"RunId: bda9cd9c-32fb-4267-b120-346e5351fc46, rangeID: 100"),
+				DuplicateRequest: &nosqlplugin.DuplicateRequest{
+					RequestType: persistence.WorkflowRequestTypeCancel,
+					RunID:       "6b844fb4-c18a-4979-a2d3-731ebdd1db08",
+				},
 			},
 		},
 		{
-			desc: "execution already exists and write mode is CurrentWorkflowWriteModeInsert",
+			desc: "workflow request already exists - but failed to get latest request",
+			session: &fakeSession{
+				mapExecuteBatchCASApplied: false,
+				iter:                      &fakeIter{},
+				mapExecuteBatchCASPrev: map[string]any{
+					"type":   rowTypeWorkflowRequestSignal,
+					"run_id": uuid.Parse("4b8045c8-7b45-41e0-bf03-1f0d166b818d"),
+				},
+				query: &fakeQuery{
+					mapScan: map[string]interface{}{
+						"current_run_id": uuid.Parse("6b844fb4-c18a-4979-a2d3-731ebdd1db08"),
+					},
+					err: fmt.Errorf("failed to get latest request"),
+				},
+			},
+			batch:        &fakeBatch{},
+			currentWFReq: &nosqlplugin.CurrentWorkflowWriteRequest{},
+			execution: &nosqlplugin.WorkflowExecutionRequest{
+				InternalWorkflowExecutionInfo: persistence.InternalWorkflowExecutionInfo{
+					DomainID:   "fd88863f-bb32-4daa-8878-49e08b91545e",
+					WorkflowID: "wfid",
+				},
+			},
+			shardCond: &nosqlplugin.ShardCondition{
+				ShardID: 1,
+				RangeID: 100,
+			},
+			wantErr: fmt.Errorf("failed to get latest request"),
+		},
+		{
+			desc: "current execution already exists and write mode is CurrentWorkflowWriteModeInsert",
 			session: &fakeSession{
 				mapExecuteBatchCASApplied: false,
 				iter:                      &fakeIter{},
@@ -260,15 +395,17 @@ func TestExecuteCreateWorkflowBatchTransaction(t *testing.T) {
 					"range_id":                    int64(100),
 					"workflow_last_write_version": int64(3),
 					"execution": map[string]any{
-						"workflow_id": "test-workflow-id",
-						"run_id":      uuid.Parse("bda9cd9c-32fb-4267-b120-346e5351fc46"),
-						"state":       1,
+						"run_id": uuid.Parse("bda9cd9c-32fb-4267-b120-346e5351fc46"),
+						"state":  1,
 					},
 				},
 			},
 			batch: &fakeBatch{},
 			currentWFReq: &nosqlplugin.CurrentWorkflowWriteRequest{
 				WriteMode: nosqlplugin.CurrentWorkflowWriteModeInsert,
+				Row: nosqlplugin.CurrentWorkflowRow{
+					WorkflowID: "test-workflow-id",
+				},
 			},
 			shardCond: &nosqlplugin.ShardCondition{
 				RangeID: 100,
@@ -278,7 +415,7 @@ func TestExecuteCreateWorkflowBatchTransaction(t *testing.T) {
 					RunID:            "bda9cd9c-32fb-4267-b120-346e5351fc46",
 					State:            1,
 					LastWriteVersion: 3,
-					OtherInfo:        "Workflow execution already running. WorkflowId: test-workflow-id, RunId: bda9cd9c-32fb-4267-b120-346e5351fc46, rangeID: 100",
+					OtherInfo:        "Workflow execution already running. WorkflowId: test-workflow-id, RunId: bda9cd9c-32fb-4267-b120-346e5351fc46",
 				},
 			},
 		},
@@ -297,13 +434,12 @@ func TestExecuteCreateWorkflowBatchTransaction(t *testing.T) {
 			},
 			batch: &fakeBatch{},
 			currentWFReq: &nosqlplugin.CurrentWorkflowWriteRequest{
+				WriteMode: nosqlplugin.CurrentWorkflowWriteModeUpdate,
+				Row: nosqlplugin.CurrentWorkflowRow{
+					WorkflowID: "wfid",
+				},
 				Condition: &nosqlplugin.CurrentWorkflowWriteCondition{
 					CurrentRunID: common.StringPtr("fd88863f-bb32-4daa-8878-49e08b91545e"), // not matching current_run_id above on purpose
-				},
-			},
-			execution: &nosqlplugin.WorkflowExecutionRequest{
-				InternalWorkflowExecutionInfo: persistence.InternalWorkflowExecutionInfo{
-					WorkflowID: "wfid",
 				},
 			},
 			shardCond: &nosqlplugin.ShardCondition{
@@ -317,7 +453,7 @@ func TestExecuteCreateWorkflowBatchTransaction(t *testing.T) {
 			},
 		},
 		{
-			desc: "creation condition failed",
+			desc: "creation condition failed by mismatch last write version",
 			session: &fakeSession{
 				mapExecuteBatchCASApplied: false,
 				iter:                      &fakeIter{},
@@ -326,15 +462,18 @@ func TestExecuteCreateWorkflowBatchTransaction(t *testing.T) {
 					"run_id":                      uuid.Parse(permanentRunID),
 					"range_id":                    int64(100),
 					"workflow_last_write_version": int64(3),
-					"current_run_id":              uuid.Parse("bda9cd9c-32fb-4267-b120-346e5351fc46"),
+					"current_run_id":              uuid.Parse("fd88863f-bb32-4daa-8878-49e08b91545e"),
 				},
 			},
-			batch:        &fakeBatch{},
-			currentWFReq: &nosqlplugin.CurrentWorkflowWriteRequest{},
-			execution: &nosqlplugin.WorkflowExecutionRequest{
-				InternalWorkflowExecutionInfo: persistence.InternalWorkflowExecutionInfo{
+			batch: &fakeBatch{},
+			currentWFReq: &nosqlplugin.CurrentWorkflowWriteRequest{
+				WriteMode: nosqlplugin.CurrentWorkflowWriteModeUpdate,
+				Row: nosqlplugin.CurrentWorkflowRow{
 					WorkflowID: "wfid",
-					RunID:      "bda9cd9c-32fb-4267-b120-346e5351fc46",
+				},
+				Condition: &nosqlplugin.CurrentWorkflowWriteCondition{
+					CurrentRunID:     common.StringPtr("fd88863f-bb32-4daa-8878-49e08b91545e"), // not matching current_run_id above on purpose
+					LastWriteVersion: common.Int64Ptr(1),
 				},
 			},
 			shardCond: &nosqlplugin.ShardCondition{
@@ -342,12 +481,47 @@ func TestExecuteCreateWorkflowBatchTransaction(t *testing.T) {
 			},
 			wantErr: &nosqlplugin.WorkflowOperationConditionFailure{
 				CurrentWorkflowConditionFailInfo: common.StringPtr(
-					"Workflow execution creation condition failed. WorkflowId: wfid, " +
-						"CurrentRunID: bda9cd9c-32fb-4267-b120-346e5351fc46"),
+					"Workflow execution creation condition failed. " +
+						"WorkflowId: wfid, Expected Version: 1, Actual Version: 3"),
 			},
 		},
 		{
-			desc: "execution already running",
+			desc: "creation condition failed by mismatch state",
+			session: &fakeSession{
+				mapExecuteBatchCASApplied: false,
+				iter:                      &fakeIter{},
+				mapExecuteBatchCASPrev: map[string]any{
+					"type":                        rowTypeExecution,
+					"run_id":                      uuid.Parse(permanentRunID),
+					"range_id":                    int64(100),
+					"workflow_last_write_version": int64(3),
+					"current_run_id":              uuid.Parse("fd88863f-bb32-4daa-8878-49e08b91545e"),
+					"workflow_state":              2,
+				},
+			},
+			batch: &fakeBatch{},
+			currentWFReq: &nosqlplugin.CurrentWorkflowWriteRequest{
+				WriteMode: nosqlplugin.CurrentWorkflowWriteModeUpdate,
+				Row: nosqlplugin.CurrentWorkflowRow{
+					WorkflowID: "wfid",
+				},
+				Condition: &nosqlplugin.CurrentWorkflowWriteCondition{
+					CurrentRunID:     common.StringPtr("fd88863f-bb32-4daa-8878-49e08b91545e"), // not matching current_run_id above on purpose
+					LastWriteVersion: common.Ptr(int64(3)),
+					State:            common.Ptr(int(10)),
+				},
+			},
+			shardCond: &nosqlplugin.ShardCondition{
+				RangeID: 100,
+			},
+			wantErr: &nosqlplugin.WorkflowOperationConditionFailure{
+				CurrentWorkflowConditionFailInfo: common.StringPtr(
+					"Workflow execution creation condition failed. " +
+						"WorkflowId: wfid, Expected State: 10, Actual State: 2"),
+			},
+		},
+		{
+			desc: "concrete execution already exists",
 			session: &fakeSession{
 				mapExecuteBatchCASApplied: false,
 				iter:                      &fakeIter{},
@@ -374,7 +548,7 @@ func TestExecuteCreateWorkflowBatchTransaction(t *testing.T) {
 			wantErr: &nosqlplugin.WorkflowOperationConditionFailure{
 				WorkflowExecutionAlreadyExists: &nosqlplugin.WorkflowExecutionAlreadyExists{
 					OtherInfo: "Workflow execution already running. WorkflowId: wfid, " +
-						"RunId: bda9cd9c-32fb-4267-b120-346e5351fc46, rangeID: 100",
+						"RunId: bda9cd9c-32fb-4267-b120-346e5351fc46",
 					CreateRequestID:  "reqid_123",
 					RunID:            "bda9cd9c-32fb-4267-b120-346e5351fc46",
 					State:            2,
@@ -412,7 +586,7 @@ func TestExecuteCreateWorkflowBatchTransaction(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
-			err := executeCreateWorkflowBatchTransaction(tc.session, tc.batch, tc.currentWFReq, tc.execution, tc.shardCond)
+			err := executeCreateWorkflowBatchTransaction(context.Background(), tc.session, tc.batch, tc.currentWFReq, tc.execution, tc.shardCond)
 			if diff := errDiff(tc.wantErr, err); diff != "" {
 				t.Fatalf("Error mismatch (-want +got):\n%s", diff)
 			}
@@ -474,6 +648,58 @@ func TestExecuteUpdateWorkflowBatchTransaction(t *testing.T) {
 			wantErr: &nosqlplugin.WorkflowOperationConditionFailure{
 				ShardRangeIDNotMatch: common.Int64Ptr(200),
 			},
+		},
+		{
+			desc: "workflow request already exists",
+			session: &fakeSession{
+				mapExecuteBatchCASApplied: false,
+				iter:                      &fakeIter{},
+				mapExecuteBatchCASPrev: map[string]any{
+					"type":   rowTypeWorkflowRequestSignal,
+					"run_id": uuid.Parse("4b8045c8-7b45-41e0-bf03-1f0d166b818d"),
+				},
+				query: &fakeQuery{
+					mapScan: map[string]interface{}{
+						"current_run_id": uuid.Parse("6b844fb4-c18a-4979-a2d3-731ebdd1db08"),
+					},
+				},
+			},
+			batch:        &fakeBatch{},
+			currentWFReq: &nosqlplugin.CurrentWorkflowWriteRequest{},
+			shardCond: &nosqlplugin.ShardCondition{
+				ShardID: 1,
+				RangeID: 100,
+			},
+			wantErr: &nosqlplugin.WorkflowOperationConditionFailure{
+				DuplicateRequest: &nosqlplugin.DuplicateRequest{
+					RequestType: persistence.WorkflowRequestTypeSignal,
+					RunID:       "6b844fb4-c18a-4979-a2d3-731ebdd1db08",
+				},
+			},
+		},
+		{
+			desc: "workflow request already exists - but failed to get latest request",
+			session: &fakeSession{
+				mapExecuteBatchCASApplied: false,
+				iter:                      &fakeIter{},
+				mapExecuteBatchCASPrev: map[string]any{
+					"type":   rowTypeWorkflowRequestCancel,
+					"run_id": uuid.Parse("4b8045c8-7b45-41e0-bf03-1f0d166b818d"),
+				},
+				query: &fakeQuery{
+					mapScan: map[string]interface{}{
+						"current_run_id": uuid.Parse("6b844fb4-c18a-4979-a2d3-731ebdd1db08"),
+					},
+					err: fmt.Errorf("failed to get latest request"),
+				},
+			},
+			batch:        &fakeBatch{},
+			currentWFReq: &nosqlplugin.CurrentWorkflowWriteRequest{},
+			shardCond: &nosqlplugin.ShardCondition{
+				ShardID: 1,
+				RangeID: 100,
+			},
+			wantErr: fmt.Errorf("failed to get latest request"),
 		},
 		{
 			desc: "nextEventID mismatch for execution row",
@@ -557,12 +783,226 @@ func TestExecuteUpdateWorkflowBatchTransaction(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
-			err := executeUpdateWorkflowBatchTransaction(tc.session, tc.batch, tc.currentWFReq, tc.prevNextEventIDCond, tc.shardCond)
+			err := executeUpdateWorkflowBatchTransaction(context.Background(), tc.session, tc.batch, tc.currentWFReq, tc.prevNextEventIDCond, tc.shardCond)
 			if diff := errDiff(tc.wantErr, err); diff != "" {
 				t.Fatalf("Error mismatch (-want +got):\n%s", diff)
 			}
 			if !tc.session.iter.closed {
 				t.Error("iterator not closed")
+			}
+		})
+	}
+}
+
+func TestToRequestRowType(t *testing.T) {
+	testCases := []struct {
+		name        string
+		requestType persistence.WorkflowRequestType
+		wantErr     bool
+		want        int
+	}{
+		{
+			name:        "StartWorkflow request",
+			requestType: persistence.WorkflowRequestTypeStart,
+			wantErr:     false,
+			want:        rowTypeWorkflowRequestStart,
+		},
+		{
+			name:        "SignalWithWorkflow request",
+			requestType: persistence.WorkflowRequestTypeSignal,
+			wantErr:     false,
+			want:        rowTypeWorkflowRequestSignal,
+		},
+		{
+			name:        "SignalWorkflow request",
+			requestType: persistence.WorkflowRequestTypeSignal,
+			wantErr:     false,
+			want:        rowTypeWorkflowRequestSignal,
+		},
+		{
+			name:        "CancelWorkflow request",
+			requestType: persistence.WorkflowRequestTypeCancel,
+			wantErr:     false,
+			want:        rowTypeWorkflowRequestCancel,
+		},
+		{
+			name:        "ResetWorkflow request",
+			requestType: persistence.WorkflowRequestTypeReset,
+			wantErr:     false,
+			want:        rowTypeWorkflowRequestReset,
+		},
+		{
+			name:        "unknown request",
+			requestType: persistence.WorkflowRequestType(-999),
+			wantErr:     true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			want, err := toRequestRowType(tc.requestType)
+			gotErr := (err != nil)
+			if gotErr != tc.wantErr {
+				t.Fatalf("Got error: %v, want?: %v", err, tc.wantErr)
+			}
+			if gotErr {
+				return
+			}
+
+			if diff := cmp.Diff(tc.want, want); diff != "" {
+				t.Fatalf("request type mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestFromRequestRowType(t *testing.T) {
+	testCases := []struct {
+		name        string
+		requestType int
+		wantErr     bool
+		want        persistence.WorkflowRequestType
+	}{
+		{
+			name:        "StartWorkflow request",
+			requestType: rowTypeWorkflowRequestStart,
+			wantErr:     false,
+			want:        persistence.WorkflowRequestTypeStart,
+		},
+		{
+			name:        "SignalWithWorkflow request",
+			requestType: rowTypeWorkflowRequestSignal,
+			wantErr:     false,
+			want:        persistence.WorkflowRequestTypeSignal,
+		},
+		{
+			name:        "SignalWorkflow request",
+			requestType: rowTypeWorkflowRequestSignal,
+			wantErr:     false,
+			want:        persistence.WorkflowRequestTypeSignal,
+		},
+		{
+			name:        "CancelWorkflow request",
+			requestType: rowTypeWorkflowRequestCancel,
+			wantErr:     false,
+			want:        persistence.WorkflowRequestTypeCancel,
+		},
+		{
+			name:        "ResetWorkflow request",
+			requestType: rowTypeWorkflowRequestReset,
+			wantErr:     false,
+			want:        persistence.WorkflowRequestTypeReset,
+		},
+		{
+			name:        "unknown request",
+			requestType: rowTypeShard,
+			wantErr:     true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			want, err := fromRequestRowType(tc.requestType)
+			gotErr := (err != nil)
+			if gotErr != tc.wantErr {
+				t.Fatalf("Got error: %v, want?: %v", err, tc.wantErr)
+			}
+			if gotErr {
+				return
+			}
+
+			if diff := cmp.Diff(tc.want, want); diff != "" {
+				t.Fatalf("request type mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestInsertOrUpsertWorkflowRequestRow(t *testing.T) {
+	testCases := []struct {
+		name        string
+		request     *nosqlplugin.WorkflowRequestsWriteRequest
+		wantErr     bool
+		wantQueries []string
+	}{
+		{
+			name: "WorkflowRequestWriteModeInsert",
+			request: &nosqlplugin.WorkflowRequestsWriteRequest{
+				Rows: []*nosqlplugin.WorkflowRequestRow{
+					{
+						ShardID:    1,
+						DomainID:   "c09537fd-67ce-4b08-a817-eb8f12ad3a91",
+						WorkflowID: "test",
+						RunID:      "25bd1013-0e79-4c45-8e55-08bb45886896",
+						RequestID:  "9ab1d25d-8620-440a-b3f1-d3167e08c769",
+						Version:    100,
+					},
+				},
+				WriteMode: nosqlplugin.WorkflowRequestWriteModeInsert,
+			},
+			wantErr: false,
+			wantQueries: []string{
+				`INSERT INTO executions (shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id, current_run_id) ` +
+					`VALUES(1, 7, c09537fd-67ce-4b08-a817-eb8f12ad3a91, test, 9ab1d25d-8620-440a-b3f1-d3167e08c769, 946684800000, 1000, 25bd1013-0e79-4c45-8e55-08bb45886896) ` +
+					`IF NOT EXISTS USING TTL 10800`,
+				`INSERT INTO executions (shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id, current_run_id) ` +
+					`VALUES(1, 7, c09537fd-67ce-4b08-a817-eb8f12ad3a91, test, 9ab1d25d-8620-440a-b3f1-d3167e08c769, 946684800000, -100, 25bd1013-0e79-4c45-8e55-08bb45886896) ` +
+					`IF NOT EXISTS USING TTL 10800`,
+			},
+		},
+		{
+			name: "WorkflowRequestWriteModeUpsert",
+			request: &nosqlplugin.WorkflowRequestsWriteRequest{
+				Rows: []*nosqlplugin.WorkflowRequestRow{
+					{
+						ShardID:    1,
+						DomainID:   "c09537fd-67ce-4b08-a817-eb8f12ad3a91",
+						WorkflowID: "test",
+						RunID:      "25bd1013-0e79-4c45-8e55-08bb45886896",
+						RequestID:  "9ab1d25d-8620-440a-b3f1-d3167e08c769",
+						Version:    100,
+					},
+				},
+				WriteMode: nosqlplugin.WorkflowRequestWriteModeUpsert,
+			},
+			wantErr: false,
+			wantQueries: []string{
+				`INSERT INTO executions (shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id, current_run_id) ` +
+					`VALUES(1, 7, c09537fd-67ce-4b08-a817-eb8f12ad3a91, test, 9ab1d25d-8620-440a-b3f1-d3167e08c769, 946684800000, 1000, 25bd1013-0e79-4c45-8e55-08bb45886896) ` +
+					`USING TTL 10800`,
+				`INSERT INTO executions (shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id, current_run_id) ` +
+					`VALUES(1, 7, c09537fd-67ce-4b08-a817-eb8f12ad3a91, test, 9ab1d25d-8620-440a-b3f1-d3167e08c769, 946684800000, -100, 25bd1013-0e79-4c45-8e55-08bb45886896) ` +
+					`USING TTL 10800`,
+			},
+		},
+		{
+			name: "unknown mode",
+			request: &nosqlplugin.WorkflowRequestsWriteRequest{
+				Rows: []*nosqlplugin.WorkflowRequestRow{
+					{
+						RequestType: persistence.WorkflowRequestTypeStart,
+					},
+				},
+				WriteMode: nosqlplugin.WorkflowRequestWriteMode(-100),
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			batch := &fakeBatch{}
+			err := insertOrUpsertWorkflowRequestRow(batch, tc.request)
+			gotErr := (err != nil)
+			if gotErr != tc.wantErr {
+				t.Fatalf("Got error: %v, want?: %v", err, tc.wantErr)
+			}
+			if gotErr {
+				return
+			}
+
+			if diff := cmp.Diff(tc.wantQueries, batch.queries); diff != "" {
+				t.Fatalf("Query mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
@@ -2499,6 +2939,13 @@ func TestMustConvertToSlice(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestIsRequestRowType(t *testing.T) {
+	assert.True(t, isRequestRowType(rowTypeWorkflowRequestStart))
+	assert.True(t, isRequestRowType(rowTypeWorkflowRequestSignal))
+	assert.True(t, isRequestRowType(rowTypeWorkflowRequestCancel))
+	assert.True(t, isRequestRowType(rowTypeWorkflowRequestReset))
 }
 
 func errDiff(want, got error) string {

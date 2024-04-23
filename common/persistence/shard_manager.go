@@ -37,14 +37,29 @@ type (
 
 var _ ShardManager = (*shardManager)(nil)
 
+type ShardManagerOption func(manager *shardManager)
+
+func WithSerializer(serializer PayloadSerializer) ShardManagerOption {
+	return func(manager *shardManager) {
+		if serializer != nil {
+			manager.serializer = serializer
+		}
+	}
+}
+
 // NewShardManager returns a new ShardManager
 func NewShardManager(
 	persistence ShardStore,
+	options ...ShardManagerOption,
 ) ShardManager {
-	return &shardManager{
+	manager := &shardManager{
 		persistence: persistence,
 		serializer:  NewPayloadSerializer(),
 	}
+	for _, option := range options {
+		option(manager)
+	}
+	return manager
 }
 
 func (m *shardManager) GetName() string {

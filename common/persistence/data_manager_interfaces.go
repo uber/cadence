@@ -217,6 +217,32 @@ const (
 	TaskTypeWorkflowBackoffTimer
 )
 
+// WorkflowRequestType is the type of workflow request
+type WorkflowRequestType int
+
+// Types of workflow requests
+const (
+	WorkflowRequestTypeStart WorkflowRequestType = iota
+	WorkflowRequestTypeSignal
+	WorkflowRequestTypeCancel
+	WorkflowRequestTypeReset
+)
+
+// CreateWorkflowRequestMode is the mode of create workflow request
+type CreateWorkflowRequestMode int
+
+// Modes of create workflow request
+const (
+	// Fail if data with the same domain_id, workflow_id, request_id exists
+	// It is used for transactions started by external API requests
+	// to allow us detecting duplicate requests
+	CreateWorkflowRequestModeNew CreateWorkflowRequestMode = iota
+	// Upsert the data without checking duplication
+	// It is used for transactions started by replication stack to achieve
+	// eventual consistency
+	CreateWorkflowRequestModeReplicated
+)
+
 // UnknownNumRowsAffected is returned when the number of rows that an API affected cannot be determined
 const UnknownNumRowsAffected = -1
 
@@ -608,7 +634,8 @@ type (
 
 		NewWorkflowSnapshot WorkflowSnapshot
 
-		DomainName string
+		WorkflowRequestMode CreateWorkflowRequestMode
+		DomainName          string
 	}
 
 	// CreateWorkflowExecutionResponse is the response to CreateWorkflowExecutionRequest
@@ -699,6 +726,8 @@ type (
 
 		NewWorkflowSnapshot *WorkflowSnapshot
 
+		WorkflowRequestMode CreateWorkflowRequestMode
+
 		Encoding common.EncodingType // optional binary encoding type
 
 		DomainName string
@@ -719,6 +748,8 @@ type (
 		// current workflow
 		CurrentWorkflowMutation *WorkflowMutation
 
+		WorkflowRequestMode CreateWorkflowRequestMode
+
 		Encoding common.EncodingType // optional binary encoding type
 
 		DomainName string
@@ -731,6 +762,13 @@ type (
 		RunID       string
 		BranchToken []byte
 		Events      []*types.HistoryEvent
+	}
+
+	// WorkflowRequest is used as requestID and it's corresponding failover version container
+	WorkflowRequest struct {
+		RequestID   string
+		Version     int64
+		RequestType WorkflowRequestType
 	}
 
 	// WorkflowMutation is used as generic workflow execution state mutation
@@ -759,6 +797,8 @@ type (
 		ReplicationTasks  []Task
 		TimerTasks        []Task
 
+		WorkflowRequests []*WorkflowRequest
+
 		Condition int64
 		Checksum  checksum.Checksum
 	}
@@ -780,6 +820,8 @@ type (
 		CrossClusterTasks []Task
 		ReplicationTasks  []Task
 		TimerTasks        []Task
+
+		WorkflowRequests []*WorkflowRequest
 
 		Condition int64
 		Checksum  checksum.Checksum

@@ -17,11 +17,11 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
   pinot-controller:
     image: apachepinot/pinot:0.12.1
-    command: "StartController -zkAddress zookeeper:2181"
+    command: "StartController -zkAddress zookeeper:2181 -controllerPort 9001"
     container_name: pinot-controller
     restart: unless-stopped
     ports:
-      - "9000:9000"
+      - "9001:9001"
     environment:
       JAVA_OPTS: "-Dplugins.dir=/opt/pinot/plugins -Xms1G -Xmx4G -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Xloggc:gc-pinot-controller.log"
     depends_on:

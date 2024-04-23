@@ -23,9 +23,6 @@
 package testlogger
 
 import (
-	"testing"
-
-	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 
 	"github.com/uber/cadence/common/log"
@@ -34,11 +31,6 @@ import (
 
 // New is a helper to create new development logger in unit test
 func New(t zaptest.TestingT) log.Logger {
-	if testing.Verbose() {
-		logger, err := loggerimpl.NewDevelopment()
-		require.NoError(t, err)
-		return logger
-	}
-	// test logger samples all logs
+	// test logger that emits all logs (none dropped / sample func never returns false)
 	return loggerimpl.NewLogger(zaptest.NewLogger(t), loggerimpl.WithSampleFunc(func(int) bool { return true }))
 }

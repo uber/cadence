@@ -838,6 +838,37 @@ func (s *engine2Suite) TestRequestCancelWorkflowExecutionSuccess() {
 	s.Equal(int64(4), executionBuilder.GetNextEventID())
 }
 
+func (s *engine2Suite) TestRequestCancelWorkflowExecutionDuplicateRequestError() {
+	domainID := constants.TestDomainID
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
+	}
+
+	identity := "testIdentity"
+	tl := "testTaskList"
+
+	msBuilder := s.createExecutionStartedState(workflowExecution, tl, identity, false)
+	ms1 := execution.CreatePersistenceMutableState(msBuilder)
+	gwmsResponse1 := &p.GetWorkflowExecutionResponse{State: ms1}
+
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse1, nil).Once()
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{}, nil).Once()
+	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(nil, &p.DuplicateRequestError{RunID: "test-run-id"}).Once()
+
+	err := s.historyEngine.RequestCancelWorkflowExecution(context.Background(), &types.HistoryRequestCancelWorkflowExecutionRequest{
+		DomainUUID: domainID,
+		CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
+			WorkflowExecution: &types.WorkflowExecution{
+				WorkflowID: workflowExecution.WorkflowID,
+				RunID:      workflowExecution.RunID,
+			},
+			Identity: "identity",
+		},
+	})
+	s.Nil(err)
+}
+
 func (s *engine2Suite) TestRequestCancelWorkflowExecutionAlreadyCancelled_Success() {
 	domainID := constants.TestDomainID
 	workflowExecution := types.WorkflowExecution{
@@ -1057,6 +1088,74 @@ func (s *engine2Suite) TestStartWorkflowExecution_BrandNew() {
 	s.NotNil(resp.RunID)
 }
 
+func (s *engine2Suite) TestStartWorkflowExecution_BrandNew_DuplicateRequestError() {
+	domainID := constants.TestDomainID
+	workflowID := "workflowID"
+	workflowType := "workflowType"
+	taskList := "testTaskList"
+	identity := "testIdentity"
+	partitionConfig := map[string]string{
+		"zone": "phx",
+	}
+
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{}, nil).Once()
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *p.CreateWorkflowExecutionRequest) bool {
+		return !request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero() && reflect.DeepEqual(partitionConfig, request.NewWorkflowSnapshot.ExecutionInfo.PartitionConfig)
+	})).Return(nil, &p.DuplicateRequestError{RunID: "test-run-id"}).Once()
+
+	requestID := uuid.New()
+	resp, err := s.historyEngine.StartWorkflowExecution(context.Background(), &types.HistoryStartWorkflowExecutionRequest{
+		DomainUUID: domainID,
+		StartRequest: &types.StartWorkflowExecutionRequest{
+			Domain:                              domainID,
+			WorkflowID:                          workflowID,
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
+			TaskList:                            &types.TaskList{Name: taskList},
+			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
+			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
+			Identity:                            identity,
+			RequestID:                           requestID,
+		},
+		PartitionConfig: partitionConfig,
+	})
+	s.NoError(err)
+	s.Equal("test-run-id", resp.RunID)
+}
+
+func (s *engine2Suite) TestStartWorkflowExecution_BrandNew_DuplicateRequestError_TypeMismatch() {
+	domainID := constants.TestDomainID
+	workflowID := "workflowID"
+	workflowType := "workflowType"
+	taskList := "testTaskList"
+	identity := "testIdentity"
+	partitionConfig := map[string]string{
+		"zone": "phx",
+	}
+
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{}, nil).Once()
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *p.CreateWorkflowExecutionRequest) bool {
+		return !request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero() && reflect.DeepEqual(partitionConfig, request.NewWorkflowSnapshot.ExecutionInfo.PartitionConfig)
+	})).Return(nil, &p.DuplicateRequestError{RequestType: p.WorkflowRequestTypeSignal, RunID: "test-run-id"}).Once()
+
+	requestID := uuid.New()
+	_, err := s.historyEngine.StartWorkflowExecution(context.Background(), &types.HistoryStartWorkflowExecutionRequest{
+		DomainUUID: domainID,
+		StartRequest: &types.StartWorkflowExecutionRequest{
+			Domain:                              domainID,
+			WorkflowID:                          workflowID,
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
+			TaskList:                            &types.TaskList{Name: taskList},
+			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
+			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
+			Identity:                            identity,
+			RequestID:                           requestID,
+		},
+		PartitionConfig: partitionConfig,
+	})
+	s.Error(err)
+	s.IsType(&p.DuplicateRequestError{}, err)
+}
+
 func (s *engine2Suite) TestStartWorkflowExecution_StillRunning_Dedup() {
 	domainID := constants.TestDomainID
 	workflowID := "workflowID"
@@ -1130,6 +1229,130 @@ func (s *engine2Suite) TestStartWorkflowExecution_StillRunning_NonDeDup() {
 		s.Fail("return err is not *types.WorkflowExecutionAlreadyStartedError")
 	}
 	s.Nil(resp)
+}
+
+func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevSuccess_DuplicateRequestError() {
+	domainID := constants.TestDomainID
+	workflowID := "workflowID"
+	runID := "runID"
+	workflowType := "workflowType"
+	taskList := "testTaskList"
+	identity := "testIdentity"
+	lastWriteVersion := common.EmptyVersion
+	partitionConfig := map[string]string{
+		"zone": "phx",
+	}
+
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{}, nil).Once()
+	s.mockExecutionMgr.On(
+		"CreateWorkflowExecution",
+		mock.Anything,
+		mock.MatchedBy(func(request *p.CreateWorkflowExecutionRequest) bool {
+			return request.Mode == p.CreateWorkflowModeBrandNew &&
+				!request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero() &&
+				reflect.DeepEqual(partitionConfig, request.NewWorkflowSnapshot.ExecutionInfo.PartitionConfig)
+		}),
+	).Return(nil, &p.WorkflowExecutionAlreadyStartedError{
+		Msg:              "random message",
+		StartRequestID:   "oldRequestID",
+		RunID:            runID,
+		State:            p.WorkflowStateCompleted,
+		CloseStatus:      p.WorkflowCloseStatusCompleted,
+		LastWriteVersion: lastWriteVersion,
+	}).Once()
+
+	s.mockExecutionMgr.On(
+		"CreateWorkflowExecution",
+		mock.Anything,
+		mock.MatchedBy(func(request *p.CreateWorkflowExecutionRequest) bool {
+			return request.Mode == p.CreateWorkflowModeWorkflowIDReuse &&
+				request.PreviousRunID == runID &&
+				request.PreviousLastWriteVersion == lastWriteVersion &&
+				!request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero() &&
+				reflect.DeepEqual(partitionConfig, request.NewWorkflowSnapshot.ExecutionInfo.PartitionConfig)
+		}),
+	).Return(nil, &p.DuplicateRequestError{RequestType: p.WorkflowRequestTypeStart, RunID: "test-run-id"}).Once()
+
+	resp, err := s.historyEngine.StartWorkflowExecution(context.Background(), &types.HistoryStartWorkflowExecutionRequest{
+		DomainUUID: domainID,
+		StartRequest: &types.StartWorkflowExecutionRequest{
+			Domain:                              domainID,
+			WorkflowID:                          workflowID,
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
+			TaskList:                            &types.TaskList{Name: taskList},
+			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
+			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
+			Identity:                            identity,
+			RequestID:                           "newRequestID",
+			WorkflowIDReusePolicy:               types.WorkflowIDReusePolicyAllowDuplicate.Ptr(),
+		},
+		PartitionConfig: partitionConfig,
+	})
+
+	s.Nil(err)
+	s.Equal("test-run-id", resp.RunID)
+}
+
+func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevSuccess_DuplicateRequestError_TypeMismatch() {
+	domainID := constants.TestDomainID
+	workflowID := "workflowID"
+	runID := "runID"
+	workflowType := "workflowType"
+	taskList := "testTaskList"
+	identity := "testIdentity"
+	lastWriteVersion := common.EmptyVersion
+	partitionConfig := map[string]string{
+		"zone": "phx",
+	}
+
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{}, nil).Once()
+	s.mockExecutionMgr.On(
+		"CreateWorkflowExecution",
+		mock.Anything,
+		mock.MatchedBy(func(request *p.CreateWorkflowExecutionRequest) bool {
+			return request.Mode == p.CreateWorkflowModeBrandNew &&
+				!request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero() &&
+				reflect.DeepEqual(partitionConfig, request.NewWorkflowSnapshot.ExecutionInfo.PartitionConfig)
+		}),
+	).Return(nil, &p.WorkflowExecutionAlreadyStartedError{
+		Msg:              "random message",
+		StartRequestID:   "oldRequestID",
+		RunID:            runID,
+		State:            p.WorkflowStateCompleted,
+		CloseStatus:      p.WorkflowCloseStatusCompleted,
+		LastWriteVersion: lastWriteVersion,
+	}).Once()
+
+	s.mockExecutionMgr.On(
+		"CreateWorkflowExecution",
+		mock.Anything,
+		mock.MatchedBy(func(request *p.CreateWorkflowExecutionRequest) bool {
+			return request.Mode == p.CreateWorkflowModeWorkflowIDReuse &&
+				request.PreviousRunID == runID &&
+				request.PreviousLastWriteVersion == lastWriteVersion &&
+				!request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero() &&
+				reflect.DeepEqual(partitionConfig, request.NewWorkflowSnapshot.ExecutionInfo.PartitionConfig)
+		}),
+	).Return(nil, &p.DuplicateRequestError{RequestType: p.WorkflowRequestTypeSignal, RunID: "test-run-id"}).Once()
+
+	_, err := s.historyEngine.StartWorkflowExecution(context.Background(), &types.HistoryStartWorkflowExecutionRequest{
+		DomainUUID: domainID,
+		StartRequest: &types.StartWorkflowExecutionRequest{
+			Domain:                              domainID,
+			WorkflowID:                          workflowID,
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
+			TaskList:                            &types.TaskList{Name: taskList},
+			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
+			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
+			Identity:                            identity,
+			RequestID:                           "newRequestID",
+			WorkflowIDReusePolicy:               types.WorkflowIDReusePolicyAllowDuplicate.Ptr(),
+		},
+		PartitionConfig: partitionConfig,
+	})
+
+	s.Error(err)
+	s.IsType(&p.DuplicateRequestError{}, err)
 }
 
 func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevSuccess() {
@@ -1348,6 +1571,90 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 	s.Equal(runID, resp.GetRunID())
 }
 
+func (s *engine2Suite) TestSignalWithStartWorkflowExecution_JustSignal_DuplicateRequestError() {
+	sRequest := &types.HistorySignalWithStartWorkflowExecutionRequest{}
+	_, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
+	s.Error(err)
+
+	domainID := constants.TestDomainID
+	workflowID := "wId"
+	runID := constants.TestRunID
+	identity := "testIdentity"
+	signalName := "my signal name"
+	input := []byte("test input")
+	sRequest = &types.HistorySignalWithStartWorkflowExecutionRequest{
+		DomainUUID: domainID,
+		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
+			Domain:     domainID,
+			WorkflowID: workflowID,
+			Identity:   identity,
+			SignalName: signalName,
+			Input:      input,
+		},
+	}
+
+	msBuilder := execution.NewMutableStateBuilderWithEventV2(
+		s.historyEngine.shard,
+		testlogger.New(s.Suite.T()),
+		runID,
+		constants.TestLocalDomainEntry,
+	)
+	ms := execution.CreatePersistenceMutableState(msBuilder)
+	gwmsResponse := &p.GetWorkflowExecutionResponse{State: ms}
+	gceResponse := &p.GetCurrentExecutionResponse{RunID: runID}
+
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(gceResponse, nil).Once()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{}, nil).Once()
+	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(nil, &p.DuplicateRequestError{RequestType: p.WorkflowRequestTypeSignal, RunID: "test-run-id"}).Once()
+
+	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
+	s.Nil(err)
+	s.Equal("test-run-id", resp.GetRunID())
+}
+
+func (s *engine2Suite) TestSignalWithStartWorkflowExecution_JustSignal_DuplicateRequestError_TypeMismatch() {
+	sRequest := &types.HistorySignalWithStartWorkflowExecutionRequest{}
+	_, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
+	s.Error(err)
+
+	domainID := constants.TestDomainID
+	workflowID := "wId"
+	runID := constants.TestRunID
+	identity := "testIdentity"
+	signalName := "my signal name"
+	input := []byte("test input")
+	sRequest = &types.HistorySignalWithStartWorkflowExecutionRequest{
+		DomainUUID: domainID,
+		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
+			Domain:     domainID,
+			WorkflowID: workflowID,
+			Identity:   identity,
+			SignalName: signalName,
+			Input:      input,
+		},
+	}
+
+	msBuilder := execution.NewMutableStateBuilderWithEventV2(
+		s.historyEngine.shard,
+		testlogger.New(s.Suite.T()),
+		runID,
+		constants.TestLocalDomainEntry,
+	)
+	ms := execution.CreatePersistenceMutableState(msBuilder)
+	gwmsResponse := &p.GetWorkflowExecutionResponse{State: ms}
+	gceResponse := &p.GetCurrentExecutionResponse{RunID: runID}
+
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(gceResponse, nil).Once()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{}, nil).Once()
+	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(nil, &p.DuplicateRequestError{RequestType: p.WorkflowRequestTypeStart, RunID: "test-run-id"}).Once()
+
+	_, err = s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
+	s.Error(err)
+	s.IsType(&p.DuplicateRequestError{}, err)
+}
+
 func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 	sRequest := &types.HistorySignalWithStartWorkflowExecutionRequest{}
 	_, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
@@ -1393,6 +1700,100 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
 	s.Nil(err)
 	s.NotNil(resp.GetRunID())
+}
+
+func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist_DuplicateRequestError() {
+	sRequest := &types.HistorySignalWithStartWorkflowExecutionRequest{}
+	_, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
+	s.Error(err)
+
+	domainID := constants.TestDomainID
+	workflowID := "wId"
+	workflowType := "workflowType"
+	taskList := "testTaskList"
+	identity := "testIdentity"
+	signalName := "my signal name"
+	input := []byte("test input")
+	requestID := uuid.New()
+	partitionConfig := map[string]string{
+		"zone": "phx",
+	}
+
+	sRequest = &types.HistorySignalWithStartWorkflowExecutionRequest{
+		DomainUUID: domainID,
+		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
+			Domain:                              domainID,
+			WorkflowID:                          workflowID,
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
+			TaskList:                            &types.TaskList{Name: taskList},
+			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
+			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
+			Identity:                            identity,
+			SignalName:                          signalName,
+			Input:                               input,
+			RequestID:                           requestID,
+		},
+		PartitionConfig: partitionConfig,
+	}
+
+	notExistErr := &types.EntityNotExistsError{Message: "Workflow not exist"}
+
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(nil, notExistErr).Once()
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{}, nil).Once()
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *p.CreateWorkflowExecutionRequest) bool {
+		return !request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero() && reflect.DeepEqual(partitionConfig, request.NewWorkflowSnapshot.ExecutionInfo.PartitionConfig)
+	})).Return(nil, &p.DuplicateRequestError{RunID: "test-run-id"}).Once()
+
+	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
+	s.Nil(err)
+	s.Equal("test-run-id", resp.GetRunID())
+}
+
+func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist_DuplicateRequestError_TypeMismatch() {
+	sRequest := &types.HistorySignalWithStartWorkflowExecutionRequest{}
+	_, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
+	s.Error(err)
+
+	domainID := constants.TestDomainID
+	workflowID := "wId"
+	workflowType := "workflowType"
+	taskList := "testTaskList"
+	identity := "testIdentity"
+	signalName := "my signal name"
+	input := []byte("test input")
+	requestID := uuid.New()
+	partitionConfig := map[string]string{
+		"zone": "phx",
+	}
+
+	sRequest = &types.HistorySignalWithStartWorkflowExecutionRequest{
+		DomainUUID: domainID,
+		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
+			Domain:                              domainID,
+			WorkflowID:                          workflowID,
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
+			TaskList:                            &types.TaskList{Name: taskList},
+			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
+			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
+			Identity:                            identity,
+			SignalName:                          signalName,
+			Input:                               input,
+			RequestID:                           requestID,
+		},
+		PartitionConfig: partitionConfig,
+	}
+
+	notExistErr := &types.EntityNotExistsError{Message: "Workflow not exist"}
+
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(nil, notExistErr).Once()
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{}, nil).Once()
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *p.CreateWorkflowExecutionRequest) bool {
+		return !request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero() && reflect.DeepEqual(partitionConfig, request.NewWorkflowSnapshot.ExecutionInfo.PartitionConfig)
+	})).Return(nil, &p.DuplicateRequestError{RequestType: p.WorkflowRequestTypeCancel, RunID: "test-run-id"}).Once()
+
+	_, err = s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
+	s.Error(err)
+	s.IsType(&p.DuplicateRequestError{}, err)
 }
 
 func (s *engine2Suite) TestSignalWithStartWorkflowExecution_CreateTimeout() {
@@ -1553,6 +1954,55 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_Start_DuplicateReque
 	s.Nil(err)
 	s.NotNil(resp.GetRunID())
 	s.Equal(runID, resp.GetRunID())
+}
+
+func (s *engine2Suite) TestSignalWithStartWorkflowExecution_Start_DuplicateRequestError() {
+	domainID := constants.TestDomainID
+	workflowID := "wId"
+	runID := constants.TestRunID
+	workflowType := "workflowType"
+	taskList := "testTaskList"
+	identity := "testIdentity"
+	signalName := "my signal name"
+	input := []byte("test input")
+	requestID := "testRequestID"
+	policy := types.WorkflowIDReusePolicyAllowDuplicate
+	sRequest := &types.HistorySignalWithStartWorkflowExecutionRequest{
+		DomainUUID: domainID,
+		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
+			Domain:                              domainID,
+			WorkflowID:                          workflowID,
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
+			TaskList:                            &types.TaskList{Name: taskList},
+			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
+			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
+			Identity:                            identity,
+			SignalName:                          signalName,
+			Input:                               input,
+			RequestID:                           requestID,
+			WorkflowIDReusePolicy:               &policy,
+		},
+	}
+
+	msBuilder := execution.NewMutableStateBuilderWithEventV2(
+		s.historyEngine.shard,
+		testlogger.New(s.Suite.T()),
+		runID,
+		constants.TestLocalDomainEntry,
+	)
+	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms.ExecutionInfo.State = p.WorkflowStateCompleted
+	gwmsResponse := &p.GetWorkflowExecutionResponse{State: ms}
+	gceResponse := &p.GetCurrentExecutionResponse{RunID: runID}
+
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(gceResponse, nil).Once()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{}, nil).Once()
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.Anything).Return(nil, &p.DuplicateRequestError{RunID: "test-run-id"}).Once()
+
+	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
+	s.Nil(err)
+	s.Equal("test-run-id", resp.GetRunID())
 }
 
 func (s *engine2Suite) TestSignalWithStartWorkflowExecution_Start_WorkflowAlreadyStarted() {

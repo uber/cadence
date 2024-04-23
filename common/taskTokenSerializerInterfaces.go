@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination taskTokenSerializerInterfaces_mock.go -self_package github.com/uber/cadence/common
+
 package common
 
 type (
@@ -48,3 +50,11 @@ type (
 		TaskID   string `json:"taskId"`
 	}
 )
+
+func (t TaskToken) GetDomainID() string {
+	return t.DomainID
+}
+
+func (t QueryTaskToken) GetDomainID() string {
+	return t.DomainID
+}

@@ -74,6 +74,25 @@ func (d *nosqlExecutionStore) prepareCreateWorkflowExecutionRequestWithMaps(newW
 	return executionRequest, nil
 }
 
+func (d *nosqlExecutionStore) prepareWorkflowRequestRows(
+	domainID, workflowID, runID string,
+	requests []*persistence.WorkflowRequest,
+	requestRowsToAppend []*nosqlplugin.WorkflowRequestRow,
+) []*nosqlplugin.WorkflowRequestRow {
+	for _, req := range requests {
+		requestRowsToAppend = append(requestRowsToAppend, &nosqlplugin.WorkflowRequestRow{
+			ShardID:     d.shardID,
+			DomainID:    domainID,
+			WorkflowID:  workflowID,
+			RequestType: req.RequestType,
+			RequestID:   req.RequestID,
+			Version:     req.Version,
+			RunID:       runID,
+		})
+	}
+	return requestRowsToAppend
+}
+
 func (d *nosqlExecutionStore) prepareResetWorkflowExecutionRequestWithMapsAndEventBuffer(resetWorkflow *persistence.InternalWorkflowSnapshot) (*nosqlplugin.WorkflowExecutionRequest, error) {
 	executionInfo := resetWorkflow.ExecutionInfo
 	lastWriteVersion := resetWorkflow.LastWriteVersion
@@ -722,6 +741,11 @@ func (d *nosqlExecutionStore) processUpdateWorkflowResult(err error, rangeID int
 				return &persistence.CurrentWorkflowConditionFailedError{
 					Msg: *conditionFailureErr.CurrentWorkflowConditionFailInfo,
 				}
+			case conditionFailureErr.DuplicateRequest != nil:
+				return &persistence.DuplicateRequestError{
+					RequestType: conditionFailureErr.DuplicateRequest.RequestType,
+					RunID:       conditionFailureErr.DuplicateRequest.RunID,
+				}
 			default:
 				// If ever runs into this branch, there is bug in the code either in here, or in the implementation of nosql plugin
 				err := fmt.Errorf("unexpected conditionFailureReason error")
@@ -758,4 +782,15 @@ func (d *nosqlExecutionStore) assertNotCurrentExecution(
 	}
 
 	return nil
+}
+
+func getWorkflowRequestWriteMode(mode persistence.CreateWorkflowRequestMode) (nosqlplugin.WorkflowRequestWriteMode, error) {
+	switch mode {
+	case persistence.CreateWorkflowRequestModeNew:
+		return nosqlplugin.WorkflowRequestWriteModeInsert, nil
+	case persistence.CreateWorkflowRequestModeReplicated:
+		return nosqlplugin.WorkflowRequestWriteModeUpsert, nil
+	default:
+		return nosqlplugin.WorkflowRequestWriteMode(-1), fmt.Errorf("unknown create workflow request mode: %v", mode)
+	}
 }

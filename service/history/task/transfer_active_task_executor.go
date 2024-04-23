@@ -161,6 +161,9 @@ func (t *transferActiveTaskExecutor) Execute(
 	}
 }
 
+// Empty func for now
+func (t *transferActiveTaskExecutor) Stop() {}
+
 func (t *transferActiveTaskExecutor) processActivityTask(
 	ctx context.Context,
 	task *persistence.TransferTaskInfo,

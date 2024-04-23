@@ -237,6 +237,24 @@ const (
 		`and workflow_last_write_version = ? ` +
 		`and workflow_state = ? `
 
+	templateInsertWorkflowRequestQuery = `INSERT INTO executions (` +
+		`shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id, current_run_id) ` +
+		`VALUES(?, ?, ?, ?, ?, ?, ?, ?) IF NOT EXISTS USING TTL ?`
+
+	templateUpsertWorkflowRequestQuery = `INSERT INTO executions (` +
+		`shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id, current_run_id) ` +
+		`VALUES(?, ?, ?, ?, ?, ?, ?, ?) USING TTL ?`
+
+	templateGetLatestWorkflowRequestQuery = `SELECT current_run_id ` +
+		`FROM executions ` +
+		`WHERE shard_id = ? ` +
+		`and type = ? ` +
+		`and domain_id = ? ` +
+		`and workflow_id = ? ` +
+		`and run_id = ? ` +
+		`and visibility_ts = ? ` +
+		`LIMIT 1`
+
 	templateCreateCurrentWorkflowExecutionQuery = `INSERT INTO executions (` +
 		`shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id, current_run_id, execution, workflow_last_write_version, workflow_state) ` +
 		`VALUES(?, ?, ?, ?, ?, ?, ?, ?, {run_id: ?, create_request_id: ?, state: ?, close_status: ?}, ?, ?) IF NOT EXISTS USING TTL 0 `

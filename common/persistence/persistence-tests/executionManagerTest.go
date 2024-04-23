@@ -39,6 +39,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
+	"github.com/uber/cadence/common/persistence"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -174,6 +175,78 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionDeDup() {
 	req.Mode = p.CreateWorkflowModeWorkflowIDReuse
 	req.PreviousRunID = runID
 	req.PreviousLastWriteVersion = common.EmptyVersion
+	_, err = s.ExecutionManager.CreateWorkflowExecution(ctx, req)
+	s.Error(err)
+	s.IsType(&p.WorkflowExecutionAlreadyStartedError{}, err)
+}
+
+func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionWithWorkflowRequestsDedup() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	domainID := uuid.New()
+	domainName := uuid.New()
+	workflowID := "create-workflow-test-dedup"
+	runID := uuid.New()
+	requestID := uuid.New()
+	tasklist := "some random tasklist"
+	workflowType := "some random workflow type"
+	workflowTimeout := int32(10)
+	decisionTimeout := int32(14)
+	lastProcessedEventID := int64(0)
+	nextEventID := int64(3)
+	csum := s.newRandomChecksum()
+	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
+		{
+			EventID: nextEventID,
+			Version: common.EmptyVersion,
+		},
+	})
+	versionHistories := p.NewVersionHistories(versionHistory)
+
+	req := &p.CreateWorkflowExecutionRequest{
+		NewWorkflowSnapshot: p.WorkflowSnapshot{
+			ExecutionInfo: &p.WorkflowExecutionInfo{
+				CreateRequestID:             requestID,
+				DomainID:                    domainID,
+				WorkflowID:                  workflowID,
+				RunID:                       runID,
+				FirstExecutionRunID:         runID,
+				TaskList:                    tasklist,
+				WorkflowTypeName:            workflowType,
+				WorkflowTimeout:             workflowTimeout,
+				DecisionStartToCloseTimeout: decisionTimeout,
+				LastFirstEventID:            common.FirstEventID,
+				NextEventID:                 nextEventID,
+				LastProcessedEvent:          lastProcessedEventID,
+				State:                       p.WorkflowStateCreated,
+				CloseStatus:                 p.WorkflowCloseStatusNone,
+			},
+			ExecutionStats:   &p.ExecutionStats{},
+			Checksum:         csum,
+			VersionHistories: versionHistories,
+			WorkflowRequests: []*p.WorkflowRequest{
+				{
+					RequestID:   requestID,
+					Version:     1,
+					RequestType: p.WorkflowRequestTypeStart,
+				},
+			},
+		},
+		RangeID:             s.ShardInfo.RangeID,
+		Mode:                p.CreateWorkflowModeBrandNew,
+		WorkflowRequestMode: p.CreateWorkflowRequestModeReplicated,
+		DomainName:          domainName,
+	}
+	_, err := s.ExecutionManager.CreateWorkflowExecution(ctx, req)
+	s.Nil(err)
+	req.WorkflowRequestMode = p.CreateWorkflowRequestModeNew
+	_, err = s.ExecutionManager.CreateWorkflowExecution(ctx, req)
+	s.Error(err)
+	s.IsType(&p.DuplicateRequestError{}, err)
+	s.Equal(persistence.WorkflowRequestTypeStart, err.(*persistence.DuplicateRequestError).RequestType)
+	s.Equal(runID, err.(*persistence.DuplicateRequestError).RunID)
+	req.WorkflowRequestMode = p.CreateWorkflowRequestModeReplicated
 	_, err = s.ExecutionManager.CreateWorkflowExecution(ctx, req)
 	s.Error(err)
 	s.IsType(&p.WorkflowExecutionAlreadyStartedError{}, err)
@@ -406,6 +479,111 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionWithZombieState() {
 	s.Equal(p.WorkflowStateZombie, info.ExecutionInfo.State)
 	s.Equal(p.WorkflowCloseStatusNone, info.ExecutionInfo.CloseStatus)
 	s.assertChecksumsEqual(csum, info.Checksum)
+}
+
+func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionWithWorkflowRequestsDedup() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	domainID := uuid.New()
+	domainName := uuid.New()
+	workflowID := "create-workflow-test-dedup"
+	runID := uuid.New()
+	requestID := uuid.New()
+	tasklist := "some random tasklist"
+	workflowType := "some random workflow type"
+	workflowTimeout := int32(10)
+	decisionTimeout := int32(14)
+	lastProcessedEventID := int64(0)
+	nextEventID := int64(3)
+	csum := s.newRandomChecksum()
+	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
+		{
+			EventID: nextEventID,
+			Version: common.EmptyVersion,
+		},
+	})
+	versionHistories := p.NewVersionHistories(versionHistory)
+
+	req := &p.CreateWorkflowExecutionRequest{
+		NewWorkflowSnapshot: p.WorkflowSnapshot{
+			ExecutionInfo: &p.WorkflowExecutionInfo{
+				CreateRequestID:             requestID,
+				DomainID:                    domainID,
+				WorkflowID:                  workflowID,
+				RunID:                       runID,
+				FirstExecutionRunID:         runID,
+				TaskList:                    tasklist,
+				WorkflowTypeName:            workflowType,
+				WorkflowTimeout:             workflowTimeout,
+				DecisionStartToCloseTimeout: decisionTimeout,
+				LastFirstEventID:            common.FirstEventID,
+				NextEventID:                 nextEventID,
+				LastProcessedEvent:          lastProcessedEventID,
+				State:                       p.WorkflowStateCreated,
+				CloseStatus:                 p.WorkflowCloseStatusNone,
+			},
+			ExecutionStats:   &p.ExecutionStats{},
+			Checksum:         csum,
+			VersionHistories: versionHistories,
+			WorkflowRequests: []*p.WorkflowRequest{
+				{
+					RequestID:   requestID,
+					Version:     1,
+					RequestType: p.WorkflowRequestTypeStart,
+				},
+				{
+					RequestID:   requestID,
+					Version:     1,
+					RequestType: p.WorkflowRequestTypeSignal,
+				},
+			},
+		},
+		RangeID:             s.ShardInfo.RangeID,
+		Mode:                p.CreateWorkflowModeBrandNew,
+		WorkflowRequestMode: p.CreateWorkflowRequestModeNew,
+		DomainName:          domainName,
+	}
+	_, err := s.ExecutionManager.CreateWorkflowExecution(ctx, req)
+	s.Nil(err)
+	info, err := s.GetWorkflowExecutionInfo(ctx, domainID, types.WorkflowExecution{WorkflowID: workflowID, RunID: runID})
+	s.Nil(err)
+	csum = s.newRandomChecksum() // update the checksum to new value
+	updatedInfo := copyWorkflowExecutionInfo(info.ExecutionInfo)
+	updatedStats := copyExecutionStats(info.ExecutionStats)
+	updatedInfo.State = p.WorkflowStateRunning
+	updatedInfo.CloseStatus = p.WorkflowCloseStatusNone
+	updateReq := &p.UpdateWorkflowExecutionRequest{
+		UpdateWorkflowMutation: p.WorkflowMutation{
+			ExecutionInfo:    updatedInfo,
+			ExecutionStats:   updatedStats,
+			Condition:        nextEventID,
+			Checksum:         csum,
+			VersionHistories: versionHistories,
+			WorkflowRequests: []*p.WorkflowRequest{
+				{
+					RequestID:   requestID,
+					Version:     1,
+					RequestType: p.WorkflowRequestTypeSignal,
+				},
+			},
+		},
+		RangeID:             s.ShardInfo.RangeID,
+		Mode:                p.UpdateWorkflowModeUpdateCurrent,
+		WorkflowRequestMode: p.CreateWorkflowRequestModeNew,
+	}
+	_, err = s.ExecutionManager.UpdateWorkflowExecution(ctx, updateReq)
+	s.Error(err)
+	s.IsType(&p.DuplicateRequestError{}, err)
+	s.Equal(persistence.WorkflowRequestTypeSignal, err.(*persistence.DuplicateRequestError).RequestType)
+	s.Equal(runID, err.(*persistence.DuplicateRequestError).RunID)
+	updateReq.WorkflowRequestMode = p.CreateWorkflowRequestModeReplicated
+	_, err = s.ExecutionManager.UpdateWorkflowExecution(ctx, updateReq)
+	s.Nil(err)
+	updateReq.UpdateWorkflowMutation.WorkflowRequests[0].RequestID = uuid.New()
+	updateReq.WorkflowRequestMode = p.CreateWorkflowRequestModeNew
+	_, err = s.ExecutionManager.UpdateWorkflowExecution(ctx, updateReq)
+	s.Nil(err)
 }
 
 // TestUpdateWorkflowExecutionStateCloseStatus test

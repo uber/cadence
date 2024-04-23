@@ -1276,7 +1276,10 @@ func listWorkflows(c *cli.Context) getWorkflowPageFn {
 		},
 	)
 	if err == nil {
-		fmt.Printf("Fetching %v workflows...\n", resp.GetCount())
+		_, err = fmt.Fprintf(os.Stderr, "Fetching %v workflows...\n", resp.GetCount())
+		if err != nil {
+			ErrorAndExit("Failed to print to stderr", err)
+		}
 	}
 
 	if c.IsSet(FlagListQuery) {
