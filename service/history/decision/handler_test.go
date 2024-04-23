@@ -614,22 +614,32 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 					ScheduleID: 0,
 				}
 				decisionHandler.tokenSerializer.(*common.MockTaskTokenSerializer).EXPECT().Deserialize(_serializedTestToken).Return(_deserializedTestToken, nil)
-				decisionHandler.tokenSerializer.(*common.MockTaskTokenSerializer).EXPECT().Serialize(gomock.Any()).Return(_serializedTestToken, nil)
+				decisionHandler.tokenSerializer.(*common.MockTaskTokenSerializer).EXPECT().Serialize(&common.TaskToken{
+					DomainID:     constants.TestDomainID,
+					WorkflowID:   constants.TestWorkflowID,
+					WorkflowType: _testWorkflowTypeName,
+					RunID:        constants.TestRunID,
+					ScheduleID:   1,
+					ActivityID:   "some-activity-id",
+					ActivityType: "some-activity-name",
+				}).Return(_serializedTestToken, nil)
 
 				eventsCache := events.NewMockCache(ctrl)
 				decisionHandler.shard.(*shard.MockContext).EXPECT().GetEventsCache().Times(1).Return(eventsCache)
-				eventsCache.EXPECT().PutEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
+				eventsCache.EXPECT().PutEvent(constants.TestDomainID, constants.TestWorkflowID, constants.TestRunID, int64(1), gomock.Any())
 				decisionHandler.shard.(*shard.MockContext).EXPECT().GetShardID().Times(1).Return(_testShardID)
-				decisionHandler.shard.(*shard.MockContext).EXPECT().GenerateTransferTaskIDs(gomock.Any()).Times(2).Return([]int64{0, 1, 2, 3, 4, 5}, nil)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().GenerateTransferTaskIDs(4).Return([]int64{0, 1, 2, 3}, nil)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().GenerateTransferTaskIDs(6).Return([]int64{0, 1, 2, 3, 4, 5}, nil)
 				decisionHandler.shard.(*shard.MockContext).EXPECT().AppendHistoryV2Events(gomock.Any(), gomock.Any(), constants.TestDomainID, types.WorkflowExecution{
 					WorkflowID: constants.TestWorkflowID,
 					RunID:      constants.TestRunID,
 				}).Return(&persistence.AppendHistoryNodesResponse{}, nil)
-				decisionHandler.shard.(*shard.MockContext).EXPECT().UpdateWorkflowExecution(gomock.Any(), gomock.Any()).Return(&persistence.UpdateWorkflowExecutionResponse{}, nil)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().UpdateWorkflowExecution(context.Background(), gomock.Any()).Return(&persistence.UpdateWorkflowExecutionResponse{}, nil)
 
 				engine := engine.NewMockEngine(ctrl)
 				decisionHandler.shard.(*shard.MockContext).EXPECT().GetEngine().Return(engine).Times(3)
-				engine.EXPECT().NotifyNewHistoryEvent(gomock.Any())
+				engine.EXPECT().NotifyNewHistoryEvent(events.NewNotification(constants.TestDomainID, &types.WorkflowExecution{WorkflowID: constants.TestWorkflowID, RunID: constants.TestRunID},
+					0, 5, 0, nil, 1, 0))
 				engine.EXPECT().NotifyNewTransferTasks(gomock.Any())
 				engine.EXPECT().NotifyNewTimerTasks(gomock.Any())
 				engine.EXPECT().NotifyNewCrossClusterTasks(gomock.Any())
