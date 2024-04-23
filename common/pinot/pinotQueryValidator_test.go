@@ -231,6 +231,10 @@ func TestValidateQuery(t *testing.T) {
 			query:     "CloseStatus = '1'",
 			validated: "CloseStatus = 1",
 		},
+		"case19-3: close status parse normal case": {
+			query:     "CloseStatus = 1",
+			validated: "CloseStatus = 1",
+		},
 	}
 
 	for name, test := range tests {
