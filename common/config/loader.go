@@ -83,9 +83,6 @@ func Load(env string, configDir string, zone string, config interface{}) error {
 		options = append(options, uconfig.File(f))
 	}
 
-	// expand env variables declared in .yaml files
-	options = append(options, uconfig.Expand(os.LookupEnv))
-
 	yaml, err := uconfig.NewYAML(options...)
 	if err != nil {
 		return fmt.Errorf("unable to create yaml parser: %w", err)
