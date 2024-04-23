@@ -64,6 +64,7 @@ type timerQueueProcessor struct {
 	activeTaskExecutor     task.Executor
 	activeQueueProcessor   *timerQueueProcessorBase
 	standbyQueueProcessors map[string]*timerQueueProcessorBase
+	standbyTaskExecutors   []task.Executor
 	standbyQueueTimerGates map[string]RemoteTimerGate
 }
 
@@ -100,6 +101,7 @@ func NewTimerQueueProcessor(
 		logger,
 	)
 
+	standbyTaskExecutors := make([]task.Executor, 0, len(shard.GetClusterMetadata().GetRemoteClusterInfo()))
 	standbyQueueProcessors := make(map[string]*timerQueueProcessorBase)
 	standbyQueueTimerGates := make(map[string]RemoteTimerGate)
 	for clusterName := range shard.GetClusterMetadata().GetRemoteClusterInfo() {
@@ -123,6 +125,7 @@ func NewTimerQueueProcessor(
 			clusterName,
 			config,
 		)
+		standbyTaskExecutors = append(standbyTaskExecutors, standbyTaskExecutor)
 		standbyQueueProcessors[clusterName], standbyQueueTimerGates[clusterName] = newTimerQueueStandbyProcessor(
 			clusterName,
 			shard,
@@ -154,6 +157,7 @@ func NewTimerQueueProcessor(
 		activeQueueProcessor:   activeQueueProcessor,
 		standbyQueueProcessors: standbyQueueProcessors,
 		standbyQueueTimerGates: standbyQueueTimerGates,
+		standbyTaskExecutors:   standbyTaskExecutors,
 	}
 }
 
@@ -178,8 +182,15 @@ func (t *timerQueueProcessor) Stop() {
 
 	if !t.shard.GetConfig().QueueProcessorEnableGracefulSyncShutdown() {
 		t.activeQueueProcessor.Stop()
+		// stop active executor after queue processor
+		t.activeTaskExecutor.Stop()
 		for _, standbyQueueProcessor := range t.standbyQueueProcessors {
 			standbyQueueProcessor.Stop()
+		}
+
+		// stop standby executors after queue processors
+		for _, standbyTaskExecutor := range t.standbyTaskExecutors {
+			standbyTaskExecutor.Stop()
 		}
 
 		close(t.shutdownChan)
@@ -194,8 +205,14 @@ func (t *timerQueueProcessor) Stop() {
 		t.logger.Warn("transferQueueProcessor timed out on shut down", tag.LifeCycleStopTimedout)
 	}
 	t.activeQueueProcessor.Stop()
+	t.activeTaskExecutor.Stop()
 	for _, standbyQueueProcessor := range t.standbyQueueProcessors {
 		standbyQueueProcessor.Stop()
+	}
+
+	// stop standby executors after queue processors
+	for _, standbyTaskExecutor := range t.standbyTaskExecutors {
+		standbyTaskExecutor.Stop()
 	}
 }
 

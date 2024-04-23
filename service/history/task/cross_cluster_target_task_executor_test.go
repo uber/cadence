@@ -85,6 +85,7 @@ func (s *crossClusterTargetTaskExecutorSuite) SetupTest() {
 }
 
 func (s *crossClusterTargetTaskExecutorSuite) TearDownTest() {
+	defer s.executor.Stop()
 	s.controller.Finish()
 	s.mockShard.Finish(s.T())
 }

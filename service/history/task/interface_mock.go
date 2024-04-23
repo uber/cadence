@@ -856,6 +856,18 @@ func (mr *MockExecutorMockRecorder) Execute(task, shouldProcessTask interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockExecutor)(nil).Execute), task, shouldProcessTask)
 }
 
+// Stop mocks base method.
+func (m *MockExecutor) Stop() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Stop")
+}
+
+// Stop indicates an expected call of Stop.
+func (mr *MockExecutorMockRecorder) Stop() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockExecutor)(nil).Stop))
+}
+
 // MockPriorityAssigner is a mock of PriorityAssigner interface.
 type MockPriorityAssigner struct {
 	ctrl     *gomock.Controller

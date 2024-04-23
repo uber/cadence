@@ -50,6 +50,8 @@ type (
 		metricsClient  metrics.Client
 		config         *config.Config
 		throttleRetry  *backoff.ThrottleRetry
+		ctx            context.Context
+		cancelFn       context.CancelFunc
 	}
 )
 
@@ -61,6 +63,7 @@ func newTimerTaskExecutorBase(
 	metricsClient metrics.Client,
 	config *config.Config,
 ) *timerTaskExecutorBase {
+	ctx, cancelFn := context.WithCancel(context.Background())
 	return &timerTaskExecutorBase{
 		shard:          shard,
 		archiverClient: archiverClient,
@@ -72,6 +75,8 @@ func newTimerTaskExecutorBase(
 			backoff.WithRetryPolicy(taskRetryPolicy),
 			backoff.WithRetryableError(persistence.IsTransientError),
 		),
+		ctx:      ctx,
+		cancelFn: cancelFn,
 	}
 }
 
@@ -308,4 +313,9 @@ func (t *timerTaskExecutorBase) deleteWorkflowVisibility(
 		return t.shard.GetService().GetVisibilityManager().DeleteWorkflowExecution(ctx, request) // delete from db
 	}
 	return t.throttleRetry.Do(ctx, op)
+}
+
+func (t *timerTaskExecutorBase) Stop() {
+	t.logger.Info("Stopping timerTaskExecutorBase")
+	t.cancelFn()
 }
