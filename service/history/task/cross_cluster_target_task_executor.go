@@ -143,6 +143,9 @@ func (t *crossClusterTargetTaskExecutor) Execute(
 	return nil
 }
 
+// Empty func for now
+func (t *crossClusterTargetTaskExecutor) Stop() {}
+
 func (t *crossClusterTargetTaskExecutor) executeStartChildExecutionTask(
 	ctx context.Context,
 	task *crossClusterTargetTask,
