@@ -726,9 +726,9 @@ func (handler *handlerImpl) handleBufferedQueries(
 	// Consistent query requires both server and client worker support. If a consistent query was requested (meaning there are
 	// buffered queries) but worker does not support consistent query then all buffered queries should be failed.
 	versionErr := handler.versionChecker.SupportsConsistentQuery(clientImpl, clientFeatureVersion)
-	// todo (David.Porter) remove the skip on version check for 
+	// todo (David.Porter) remove the skip on version check for
 	// clientImpl and clientFeatureVersion where they're nil
-	// There's a bug, probably in matching somewhere which isn't 
+	// There's a bug, probably in matching somewhere which isn't
 	// forwarding the client headers for version
 	// info correctly making this call erroneously fail sometimes.
 	// https://t3.uberinternal.com/browse/CDNC-8641
