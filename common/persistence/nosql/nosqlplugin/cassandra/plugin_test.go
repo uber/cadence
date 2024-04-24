@@ -31,10 +31,11 @@ import (
 
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+	"github.com/uber/cadence/environment"
 )
 
 func Test_toGoCqlConfig(t *testing.T) {
-
+	t.Setenv(environment.CassandraSeeds, environment.Localhost)
 	tests := []struct {
 		name    string
 		cfg     *config.NoSQL
@@ -45,7 +46,7 @@ func Test_toGoCqlConfig(t *testing.T) {
 			"empty config will be filled with defaults",
 			&config.NoSQL{},
 			gocql.ClusterConfig{
-				Hosts:             "127.0.0.1",
+				Hosts:             environment.Localhost,
 				Port:              9042,
 				ProtoVersion:      4,
 				Timeout:           time.Second * 10,
