@@ -192,6 +192,15 @@ func (s *taskSuite) TestHandleErr_ErrWorkflowRateLimited() {
 	s.Equal(errWorkflowRateLimited, taskBase.HandleErr(errWorkflowRateLimited))
 }
 
+func (s *taskSuite) TestHandleErr_ErrShardRecentlyClosed() {
+	taskBase := s.newTestTask(func(task Info) (bool, error) {
+		return true, nil
+	}, nil)
+
+	taskBase.submitTime = time.Now()
+	s.Equal(shard.ErrShardRecentlyClosed, taskBase.HandleErr(shard.ErrShardRecentlyClosed))
+}
+
 func (s *taskSuite) TestHandleErr_ErrCurrentWorkflowConditionFailed() {
 	taskBase := s.newTestTask(func(task Info) (bool, error) {
 		return true, nil

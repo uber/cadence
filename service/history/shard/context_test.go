@@ -234,7 +234,7 @@ func (s *contextTestSuite) TestGetAndUpdateProcessingQueueStates() {
 func TestGetWorkflowExecution(t *testing.T) {
 	testCases := []struct {
 		name           string
-		isClosed       bool
+		closedAt       *time.Time
 		request        *persistence.GetWorkflowExecutionRequest
 		mockSetup      func(*mocks.ExecutionManager)
 		expectedResult *persistence.GetWorkflowExecutionResponse
@@ -282,7 +282,7 @@ func TestGetWorkflowExecution(t *testing.T) {
 		},
 		{
 			name:     "Shard closed",
-			isClosed: true,
+			closedAt: common.TimePtr(time.Now().Add(-time.Minute)),
 			request: &persistence.GetWorkflowExecutionRequest{
 				DomainID:  "testDomain",
 				Execution: types.WorkflowExecution{WorkflowID: "testWorkflowID", RunID: "testRunID"},
@@ -290,6 +290,17 @@ func TestGetWorkflowExecution(t *testing.T) {
 			mockSetup:      func(mgr *mocks.ExecutionManager) {},
 			expectedResult: nil,
 			expectedError:  ErrShardClosed,
+		},
+		{
+			name:     "Shard recently closed",
+			closedAt: common.TimePtr(time.Now()),
+			request: &persistence.GetWorkflowExecutionRequest{
+				DomainID:  "testDomain",
+				Execution: types.WorkflowExecution{WorkflowID: "testWorkflowID", RunID: "testRunID"},
+			},
+			mockSetup:      func(mgr *mocks.ExecutionManager) {},
+			expectedResult: nil,
+			expectedError:  ErrShardRecentlyClosed,
 		},
 	}
 
@@ -301,9 +312,7 @@ func TestGetWorkflowExecution(t *testing.T) {
 				RangeID: 12,
 			},
 		}
-		if tc.isClosed {
-			shardContext.closed = 1
-		}
+		shardContext.closedAt.Store(tc.closedAt)
 		tc.mockSetup(mockExecutionMgr)
 
 		result, err := shardContext.GetWorkflowExecution(context.Background(), tc.request)

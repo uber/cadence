@@ -147,7 +147,7 @@ type (
 		executionManager persistence.ExecutionManager
 		eventsCache      events.Cache
 		closeCallback    func(int, *historyShardsItem)
-		closed           int32
+		closedAt         atomic.Pointer[time.Time]
 		config           *config.Config
 		logger           log.Logger
 		throttledLogger  log.Logger
@@ -176,16 +176,21 @@ var _ Context = (*contextImpl)(nil)
 var (
 	// ErrShardClosed is returned when shard is closed and a req cannot be processed
 	ErrShardClosed = errors.New("shard closed")
+
+	// ErrShardRecentlyClosed is returned when a shard has resently been closed, this
+	// error is transient, and should not cause error logs and error metrics to be emitted
+	ErrShardRecentlyClosed = errors.New("shard recently closed")
 )
 
 const (
 	// transfer/cross cluster diff/lag is in terms of taskID, which is calculated based on shard rangeID
 	// on shard movement, taskID will increase by around 1 million
-	logWarnTransferLevelDiff    = 3000000 // 3 million
-	logWarnCrossClusterLevelLag = 3000000 // 3 million
-	logWarnTimerLevelDiff       = time.Duration(30 * time.Minute)
-	historySizeLogThreshold     = 10 * 1024 * 1024
-	minContextTimeout           = 1 * time.Second
+	logWarnTransferLevelDiff     = 3000000 // 3 million
+	logWarnCrossClusterLevelLag  = 3000000 // 3 million
+	logWarnTimerLevelDiff        = time.Duration(30 * time.Minute)
+	historySizeLogThreshold      = 10 * 1024 * 1024
+	minContextTimeout            = 1 * time.Second
+	timeBeforeShardClosedIsError = 10 * time.Second
 )
 
 func (s *contextImpl) GetShardID() int {
@@ -586,8 +591,8 @@ func (s *contextImpl) GetWorkflowExecution(
 	request *persistence.GetWorkflowExecutionRequest,
 ) (*persistence.GetWorkflowExecutionResponse, error) {
 	request.RangeID = atomic.LoadInt64(&s.rangeID) // This is to make sure read is not blocked by write, s.rangeID is synced with s.shardInfo.RangeID
-	if s.isClosed() {
-		return nil, ErrShardClosed
+	if err := s.closedError(); err != nil {
+		return nil, err
 	}
 	return s.executionManager.GetWorkflowExecution(ctx, request)
 }
@@ -596,8 +601,8 @@ func (s *contextImpl) CreateWorkflowExecution(
 	ctx context.Context,
 	request *persistence.CreateWorkflowExecutionRequest,
 ) (*persistence.CreateWorkflowExecutionResponse, error) {
-	if s.isClosed() {
-		return nil, ErrShardClosed
+	if err := s.closedError(); err != nil {
+		return nil, err
 	}
 
 	ctx, cancel, err := s.ensureMinContextTimeout(ctx)
@@ -633,8 +638,8 @@ func (s *contextImpl) CreateWorkflowExecution(
 		return nil, err
 	}
 
-	if s.isClosed() {
-		return nil, ErrShardClosed
+	if err := s.closedError(); err != nil {
+		return nil, err
 	}
 	currentRangeID := s.getRangeID()
 	request.RangeID = currentRangeID
@@ -693,8 +698,8 @@ func (s *contextImpl) UpdateWorkflowExecution(
 	ctx context.Context,
 	request *persistence.UpdateWorkflowExecutionRequest,
 ) (*persistence.UpdateWorkflowExecutionResponse, error) {
-	if s.isClosed() {
-		return nil, ErrShardClosed
+	if err := s.closedError(); err != nil {
+		return nil, err
 	}
 	ctx, cancel, err := s.ensureMinContextTimeout(ctx)
 	if err != nil {
@@ -743,8 +748,8 @@ func (s *contextImpl) UpdateWorkflowExecution(
 		}
 	}
 
-	if s.isClosed() {
-		return nil, ErrShardClosed
+	if err := s.closedError(); err != nil {
+		return nil, err
 	}
 	currentRangeID := s.getRangeID()
 	request.RangeID = currentRangeID
@@ -797,8 +802,8 @@ func (s *contextImpl) ConflictResolveWorkflowExecution(
 	ctx context.Context,
 	request *persistence.ConflictResolveWorkflowExecutionRequest,
 ) (*persistence.ConflictResolveWorkflowExecutionResponse, error) {
-	if s.isClosed() {
-		return nil, ErrShardClosed
+	if err := s.closedError(); err != nil {
+		return nil, err
 	}
 
 	ctx, cancel, err := s.ensureMinContextTimeout(ctx)
@@ -861,8 +866,8 @@ func (s *contextImpl) ConflictResolveWorkflowExecution(
 		}
 	}
 
-	if s.isClosed() {
-		return nil, ErrShardClosed
+	if err := s.closedError(); err != nil {
+		return nil, err
 	}
 	currentRangeID := s.getRangeID()
 	request.RangeID = currentRangeID
@@ -933,8 +938,8 @@ func (s *contextImpl) AppendHistoryV2Events(
 	domainID string,
 	execution types.WorkflowExecution,
 ) (*persistence.AppendHistoryNodesResponse, error) {
-	if s.isClosed() {
-		return nil, ErrShardClosed
+	if err := s.closedError(); err != nil {
+		return nil, err
 	}
 
 	domainName, err := s.GetDomainCache().GetDomainName(domainID)
@@ -1000,12 +1005,22 @@ func (s *contextImpl) getRangeID() int64 {
 	return s.shardInfo.RangeID
 }
 
-func (s *contextImpl) isClosed() bool {
-	return atomic.LoadInt32(&s.closed) != 0
+func (s *contextImpl) closedError() error {
+	closedAt := s.closedAt.Load()
+
+	if closedAt == nil {
+		return nil
+	}
+
+	if time.Since(*closedAt) < timeBeforeShardClosedIsError {
+		return ErrShardRecentlyClosed
+	}
+
+	return ErrShardClosed
 }
 
 func (s *contextImpl) closeShard() {
-	if !atomic.CompareAndSwapInt32(&s.closed, 0, 1) {
+	if !s.closedAt.CompareAndSwap(nil, common.TimePtr(time.Now())) {
 		return
 	}
 
@@ -1045,8 +1060,8 @@ func (s *contextImpl) renewRangeLocked(isStealing bool) error {
 	}
 
 	var err error
-	if s.isClosed() {
-		return ErrShardClosed
+	if err := s.closedError(); err != nil {
+		return err
 	}
 	err = s.GetShardManager().UpdateShard(context.Background(), &persistence.UpdateShardRequest{
 		ShardInfo:       updatedShardInfo,
@@ -1109,8 +1124,8 @@ func (s *contextImpl) persistShardInfoLocked(
 	isForced bool,
 ) error {
 
-	if s.isClosed() {
-		return ErrShardClosed
+	if err := s.closedError(); err != nil {
+		return err
 	}
 
 	var err error
@@ -1369,8 +1384,8 @@ func (s *contextImpl) ReplicateFailoverMarkers(
 	ctx context.Context,
 	markers []*persistence.FailoverMarkerTask,
 ) error {
-	if s.isClosed() {
-		return ErrShardClosed
+	if err := s.closedError(); err != nil {
+		return err
 	}
 
 	tasks := make([]persistence.Task, 0, len(markers))
@@ -1390,8 +1405,8 @@ func (s *contextImpl) ReplicateFailoverMarkers(
 	}
 
 	var err error
-	if s.isClosed() {
-		return ErrShardClosed
+	if err := s.closedError(); err != nil {
+		return err
 	}
 	err = s.executionManager.CreateFailoverMarkerTasks(
 		ctx,
