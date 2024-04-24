@@ -410,6 +410,10 @@ func (db *cdb) SelectAllDomains(
 		replicationClusters = []map[string]interface{}{}
 		badBinariesData = []byte("")
 		badBinariesDataEncoding = ""
+		isolationGroups = []byte("")
+		isolationGroupsEncoding = ""
+		asyncWFConfigData = []byte("")
+		asyncWFConfigEncoding = ""
 		failoverEndTime = 0
 		lastUpdateTime = 0
 		retentionDays = 0
