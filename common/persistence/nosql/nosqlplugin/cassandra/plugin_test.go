@@ -24,11 +24,13 @@ package cassandra
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 )
 
 func Test_toGoCqlConfig(t *testing.T) {
