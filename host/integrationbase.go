@@ -58,6 +58,7 @@ type (
 		adminClient              AdminClient
 		Logger                   log.Logger
 		domainName               string
+		secondaryDomainName      string
 		testRawHistoryDomainName string
 		foreignDomainName        string
 		archivalDomainName       string

@@ -1182,8 +1182,14 @@ func (m *MetadataPersistenceSuiteV2) TestListDomains() {
 				VisibilityArchivalStatus: types.ArchivalStatusEnabled,
 				VisibilityArchivalURI:    "test://visibility/uri",
 				BadBinaries:              testBinaries1,
-				IsolationGroups:          types.IsolationGroupConfiguration{},
-				AsyncWorkflowConfig:      types.AsyncWorkflowConfiguration{},
+				IsolationGroups: types.IsolationGroupConfiguration{
+					"name1": types.IsolationGroupPartition{Name: "name1"},
+					"name2": types.IsolationGroupPartition{Name: "name2"},
+				},
+				AsyncWorkflowConfig: types.AsyncWorkflowConfiguration{
+					Enabled:             true,
+					PredefinedQueueName: "queue1",
+				},
 			},
 			ReplicationConfig: &p.DomainReplicationConfig{
 				ActiveClusterName: clusterActive1,
@@ -1211,8 +1217,13 @@ func (m *MetadataPersistenceSuiteV2) TestListDomains() {
 				VisibilityArchivalStatus: types.ArchivalStatusDisabled,
 				VisibilityArchivalURI:    "",
 				BadBinaries:              testBinaries2,
-				IsolationGroups:          types.IsolationGroupConfiguration{},
-				AsyncWorkflowConfig:      types.AsyncWorkflowConfiguration{},
+				IsolationGroups: types.IsolationGroupConfiguration{
+					"name3": types.IsolationGroupPartition{Name: "name3"},
+				},
+				AsyncWorkflowConfig: types.AsyncWorkflowConfiguration{
+					Enabled:             false,
+					PredefinedQueueName: "queue2",
+				},
 			},
 			ReplicationConfig: &p.DomainReplicationConfig{
 				ActiveClusterName: clusterActive2,
