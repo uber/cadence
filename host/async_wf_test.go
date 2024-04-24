@@ -111,6 +111,8 @@ func (s *AsyncWFIntegrationSuite) SetupSuite() {
 
 	s.domainName = s.randomizeStr("integration-test-domain")
 	s.Require().NoError(s.registerDomain(s.domainName, 1, types.ArchivalStatusDisabled, "", types.ArchivalStatusDisabled, ""))
+	s.secondaryDomainName = s.randomizeStr("unused-test-domain")
+	s.Require().NoError(s.registerDomain(s.secondaryDomainName, 1, types.ArchivalStatusDisabled, "", types.ArchivalStatusDisabled, ""))
 
 	s.domainCacheRefresh()
 }
@@ -128,10 +130,15 @@ func (s *AsyncWFIntegrationSuite) TestStartWorkflowExecutionAsync() {
 		name             string
 		wantStartFailure bool
 		asyncWFCfg       *types.AsyncWorkflowConfiguration
+		secondaryCfg     *types.AsyncWorkflowConfiguration
 	}{
 		{
 			name:             "start workflow execution async fails because domain missing async queue",
 			wantStartFailure: true,
+			secondaryCfg: &types.AsyncWorkflowConfiguration{
+				Enabled:             true,
+				PredefinedQueueName: "test-async-wf-queue",
+			},
 		},
 		{
 			name: "start workflow execution async fails because async queue is disabled",
@@ -139,11 +146,19 @@ func (s *AsyncWFIntegrationSuite) TestStartWorkflowExecutionAsync() {
 				Enabled: false,
 			},
 			wantStartFailure: true,
+			secondaryCfg: &types.AsyncWorkflowConfiguration{
+				Enabled:             true,
+				PredefinedQueueName: "test-async-wf-queue",
+			},
 		},
 		{
 			name: "start workflow execution async succeeds and workflow starts",
 			asyncWFCfg: &types.AsyncWorkflowConfiguration{
 				Enabled:             true,
+				PredefinedQueueName: "test-async-wf-queue",
+			},
+			secondaryCfg: &types.AsyncWorkflowConfiguration{
+				Enabled:             false,
 				PredefinedQueueName: "test-async-wf-queue",
 			},
 		},
@@ -162,6 +177,18 @@ func (s *AsyncWFIntegrationSuite) TestStartWorkflowExecutionAsync() {
 				_, err := s.adminClient.UpdateDomainAsyncWorkflowConfiguraton(ctx, &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
 					Domain:        s.domainName,
 					Configuration: tc.asyncWFCfg,
+				})
+				if err != nil {
+					t.Fatalf("UpdateDomainAsyncWorkflowConfiguraton() failed: %v", err)
+				}
+
+				s.domainCacheRefresh()
+			}
+
+			if tc.secondaryCfg != nil {
+				_, err := s.adminClient.UpdateDomainAsyncWorkflowConfiguraton(ctx, &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
+					Domain:        s.secondaryDomainName,
+					Configuration: tc.secondaryCfg,
 				})
 				if err != nil {
 					t.Fatalf("UpdateDomainAsyncWorkflowConfiguraton() failed: %v", err)
