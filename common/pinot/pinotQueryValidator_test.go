@@ -219,14 +219,21 @@ func TestValidateQuery(t *testing.T) {
 			query:     "CustomKeywordField < 0",
 			validated: "(JSON_MATCH(Attr, '\"$.CustomKeywordField\"<''0''') or JSON_MATCH(Attr, '\"$.CustomKeywordField[*]\"<''0'''))",
 		},
-		// TODO
 		"Case18: custom int order by. Will have errors at run time. Doesn't support for now": {
 			query:     "CustomIntField = 0 order by CustomIntField desc",
 			validated: "JSON_MATCH(Attr, '\"$.CustomIntField\"=''0''') order by CustomIntField desc",
 		},
-		"case 19: close status parse": {
+		"case19-1: close status parse string": {
 			query:     "CloseStatus = 'CONTINUED_AS_NEW'",
 			validated: "CloseStatus = 4",
+		},
+		"case19-2: close status parse number": {
+			query:     "CloseStatus = '1'",
+			validated: "CloseStatus = 1",
+		},
+		"case19-3: close status parse normal case": {
+			query:     "CloseStatus = 1",
+			validated: "CloseStatus = 1",
 		},
 	}
 
