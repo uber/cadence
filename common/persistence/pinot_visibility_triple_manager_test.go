@@ -25,13 +25,15 @@ package persistence
 import (
 	"context"
 	"fmt"
+	"sync"
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
-	"sync"
-	"testing"
 )
 
 func TestNewPinotVisibilityTripleManager(t *testing.T) {
