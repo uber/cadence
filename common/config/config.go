@@ -236,6 +236,14 @@ type (
 		TLS *TLS `yaml:"tls"`
 		// ProtoVersion
 		ProtoVersion int `yaml:"protoVersion"`
+		// ConnectTimeout defines duration for initial dial
+		ConnectTimeout time.Duration `yaml:"connectTimeout"`
+		// Timout is a connection timeout
+		Timeout time.Duration `yaml:"timeout"`
+		// Consistency defines default consistency level
+		Consistency string `yaml:"consistency"`
+		// SerialConsistency sets the consistency for the serial part of queries
+		SerialConsistency string `yaml:"serialConsistency"`
 		// ConnectAttributes is a set of key-value attributes as a supplement/extension to the above common fields
 		// Use it ONLY when a configure is too specific to a particular NoSQL database that should not be in the common struct
 		// Otherwise please add new fields to the struct for better documentation
