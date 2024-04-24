@@ -1058,20 +1058,20 @@ func getListWorkflowExecutionsByStatusQuery(tableName string, request *p.Interna
 	query.filters.addEqual(DomainID, request.DomainUUID)
 	query.filters.addEqual(IsDeleted, false)
 
-	status := "0"
+	status := 0
 	switch request.Status.String() {
 	case "COMPLETED":
-		status = "0"
+		status = 0
 	case "FAILED":
-		status = "1"
+		status = 1
 	case "CANCELED":
-		status = "2"
+		status = 2
 	case "TERMINATED":
-		status = "3"
+		status = 3
 	case "CONTINUED_AS_NEW":
-		status = "4"
+		status = 4
 	case "TIMED_OUT":
-		status = "5"
+		status = 5
 	}
 
 	query.filters.addEqual(CloseStatus, status)
