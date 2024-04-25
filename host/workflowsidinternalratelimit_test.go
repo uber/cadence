@@ -131,7 +131,7 @@ func (s *WorkflowIDInternalRateLimitIntegrationSuite) TestWorkflowIDSpecificInte
 	defer cancel()
 
 	we, err := s.engine.StartWorkflowExecution(ctx, request)
-	s.Nil(err)
+	s.NoError(err)
 
 	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
@@ -195,17 +195,17 @@ func (s *WorkflowIDInternalRateLimitIntegrationSuite) TestWorkflowIDSpecificInte
 
 	for i := int32(0); i < activityCount; i++ {
 		_, err = poller.PollAndProcessDecisionTask(false, false)
-		s.Nil(err)
+		s.NoError(err)
 
 		err = poller.PollAndProcessActivityTask(false)
-		s.Nil(err)
+		s.NoError(err)
 	}
 
 	s.Logger.Info("Waiting for workflow to complete", tag.WorkflowRunID(we.RunID))
 
 	s.False(workflowComplete)
 	_, err = poller.PollAndProcessDecisionTask(false, false)
-	s.Nil(err)
+	s.NoError(err)
 	s.True(workflowComplete)
 
 	historyResponse, err := s.engine.GetWorkflowExecutionHistory(ctx, &types.GetWorkflowExecutionHistoryRequest{
@@ -214,7 +214,7 @@ func (s *WorkflowIDInternalRateLimitIntegrationSuite) TestWorkflowIDSpecificInte
 			WorkflowID: testWorkflowID,
 		},
 	})
-	s.Nil(err)
+	s.NoError(err)
 	history := historyResponse.History
 	firstEvent := history.Events[0]
 	lastEvent := history.Events[len(history.Events)-1]
