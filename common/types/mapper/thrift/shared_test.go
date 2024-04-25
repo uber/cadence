@@ -3394,14 +3394,14 @@ func TestAny(t *testing.T) {
 		encode := func(thing thriftObject) []byte {
 			// get the intermediate format, ready for byte-encoding
 			wireValue, err := thing.ToWire()
-			require.NoError(t, err, "failed to produce intermediate wire.Value for encoding")
+			require.NoErrorf(t, err, "failed to produce intermediate wire.Value from type %T", thing)
 			// write to binary
 			var writer bytes.Buffer
 			err = binary.Default.Encode(wireValue, &writer)
-			require.NoError(t, err, "failed to encode wire.Value")
+			require.NoErrorf(t, err, "failed to encode wire.Value from type %T", thing)
 			// and return the bytes
 			result := writer.Bytes()
-			require.NotEmpty(t, result, "should have serialized some bytes")
+			require.NotEmptyf(t, result, "should have serialized some bytes from type %T", thing)
 			return result
 		}
 		decode := func(data []byte, target thriftObject) {
@@ -3409,10 +3409,10 @@ func TestAny(t *testing.T) {
 			// the sample *shared.WorkflowExecution is a struct, so use wire.TStruct.
 			// if we used a map or int or something, it'd be a wire.TMap or wire.TI64, etc.
 			intermediate, err := binary.Default.Decode(bytes.NewReader(data), wire.TStruct)
-			require.NoError(t, err, "could not decode thrift bytes to intermediate wire.Value")
+			require.NoErrorf(t, err, "could not decode thrift bytes to intermediate wire.Value for type %T", target)
 			// and populate the target with the wire.Value contents
 			err = target.FromWire(intermediate)
-			require.NoError(t, err, "could not FromWire to the target type")
+			require.NoErrorf(t, err, "could not FromWire to the target type %T", target)
 		}
 
 		// --- create the original data, a thrift object, and encode it by hand
@@ -3436,14 +3436,22 @@ func TestAny(t *testing.T) {
 		networkBytes := encode(thriftAny) // yarpc does this
 		// ^ this is what's sent over the network.
 
+		// as a side note:
 		// the final data is not double-encoded, so this "encode -> wrap -> encode" process is reasonably efficient.
+		//
+		// Thrift and Proto can efficiently move around binary blobs like this, as it's essentially just a memcpy between
+		// the input and the output, and there's no `\0` to `\\0` escaping or base64 encoding or whatever needed.
+		//
+		// no behavior depends on this, it's just presented here as evidence that this Any-wrapper does not meaningfully
+		// change any RPC design concerns: anything you would do with normal RPC can be done through an Any if you need
+		// loose typing, the change-stability / performance / etc is entirely unaffected.
+		//
 		// compare via a sliding window to find the place it overlaps, to prove that this is true:
 		found := false
-		for i := 0; i < len(networkBytes)-len(internalBytes); i++ {
+		for i := 0; i <= len(networkBytes)-len(internalBytes); i++ {
 			if reflect.DeepEqual(internalBytes, networkBytes[i:i+len(internalBytes)]) {
 				found = true
-				t.Logf("Found matching bytes at index %v", i)
-				break
+				t.Logf("Found matching bytes at index %v", i) // currently at index 14
 			}
 		}
 		// *should* be true for efficiency's sake, but is not truly necessary for correct behavior
