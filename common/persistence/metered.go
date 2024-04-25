@@ -121,6 +121,10 @@ func (r UpdateTaskListRequest) MetricTags() []metrics.Tag {
 	return []metrics.Tag{metrics.DomainTag(r.DomainName)}
 }
 
+func (r GetTaskListSizeRequest) MetricTags() []metrics.Tag {
+	return []metrics.Tag{metrics.DomainTag(r.DomainName)}
+}
+
 // For Execution manager there are extra rules.
 // If GetDomainName() string is defined, then the request will have extra log and shard metrics.
 // GetExtraLogTags() []tag.Tag is defined, then the request will have extra log tags.
