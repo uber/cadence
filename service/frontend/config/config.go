@@ -39,6 +39,7 @@ type Config struct {
 	VisibilityListMaxQPS            dynamicconfig.IntPropertyFnWithDomainFilter
 	EnableReadVisibilityFromES      dynamicconfig.BoolPropertyFnWithDomainFilter
 	EnableReadVisibilityFromPinot   dynamicconfig.BoolPropertyFnWithDomainFilter
+	EnableVisibilityDoubleRead      dynamicconfig.BoolPropertyFnWithDomainFilter
 	EnableLogCustomerQueryParameter dynamicconfig.BoolPropertyFnWithDomainFilter
 	// deprecated: never read from
 	ESVisibilityListMaxQPS            dynamicconfig.IntPropertyFnWithDomainFilter
@@ -133,6 +134,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, isAdvancedVis
 		EnableReadVisibilityFromES:                  dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableReadVisibilityFromES),
 		EnableReadVisibilityFromPinot:               dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableReadVisibilityFromPinot),
 		EnableLogCustomerQueryParameter:             dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableLogCustomerQueryParameter),
+		EnableVisibilityDoubleRead:                  dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableVisibilityDoubleRead),
 		ESIndexMaxResultWindow:                      dc.GetIntProperty(dynamicconfig.FrontendESIndexMaxResultWindow),
 		HistoryMaxPageSize:                          dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendHistoryMaxPageSize),
 		UserRPS:                                     dc.GetIntProperty(dynamicconfig.FrontendUserRPS),

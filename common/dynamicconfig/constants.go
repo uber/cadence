@@ -1487,6 +1487,12 @@ const (
 	// Default value: true
 	// Allowed filters: DomainName
 	EnableReadVisibilityFromPinot
+	// EnableVisibilityDoubleRead is the key for enable double read for a latency comparison
+	// KeyName: system.EnableVisibilityDoubleRead
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: DomainName
+	EnableVisibilityDoubleRead
 	// EnableLogCustomerQueryParameter is key for enable log customer query parameters
 	// KeyName: system.enableLogCustomerQueryParameter
 	// Value type: Bool
@@ -3862,6 +3868,12 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		Filters:      []Filter{DomainName},
 		Description:  "EnableReadVisibilityFromPinot is key for enable read from pinot or db visibility, usually using with AdvancedVisibilityWritingMode for seamless migration from db visibility to advanced visibility",
 		DefaultValue: true,
+	},
+	EnableVisibilityDoubleRead: {
+		KeyName:      "system.enableVisibilityDoubleRead",
+		Filters:      []Filter{DomainName},
+		Description:  "EnableVisibilityDoubleRead is key for enable read for both elastic search and Pinot for a latency comparison",
+		DefaultValue: false,
 	},
 	EnableLogCustomerQueryParameter: {
 		KeyName:      "system.enableLogCustomerQueryParameter",
