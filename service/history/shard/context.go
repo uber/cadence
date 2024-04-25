@@ -177,7 +177,7 @@ var (
 	// ErrShardClosed is returned when shard is closed and a req cannot be processed
 	ErrShardClosed = errors.New("shard closed")
 
-	// ErrShardRecentlyClosed is returned when a shard has resently been closed, this
+	// ErrShardRecentlyClosed is returned when a shard has recently been closed, this
 	// error is transient, and should not cause error logs and error metrics to be emitted
 	ErrShardRecentlyClosed = errors.New("shard recently closed")
 )
