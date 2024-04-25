@@ -638,6 +638,9 @@ func (s *contextImpl) CreateWorkflowExecution(
 		return nil, err
 	}
 
+	if err := s.closedError(); err != nil {
+		return nil, err
+	}
 	currentRangeID := s.getRangeID()
 	request.RangeID = currentRangeID
 
@@ -745,6 +748,9 @@ func (s *contextImpl) UpdateWorkflowExecution(
 		}
 	}
 
+	if err := s.closedError(); err != nil {
+		return nil, err
+	}
 	currentRangeID := s.getRangeID()
 	request.RangeID = currentRangeID
 
@@ -860,6 +866,9 @@ func (s *contextImpl) ConflictResolveWorkflowExecution(
 		}
 	}
 
+	if err := s.closedError(); err != nil {
+		return nil, err
+	}
 	currentRangeID := s.getRangeID()
 	request.RangeID = currentRangeID
 	resp, err := s.executionManager.ConflictResolveWorkflowExecution(ctx, request)
@@ -1396,6 +1405,9 @@ func (s *contextImpl) ReplicateFailoverMarkers(
 	}
 
 	var err error
+	if err := s.closedError(); err != nil {
+		return err
+	}
 	err = s.executionManager.CreateFailoverMarkerTasks(
 		ctx,
 		&persistence.CreateFailoverMarkersRequest{
