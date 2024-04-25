@@ -344,3 +344,80 @@ func TestCloseShard(t *testing.T) {
 
 	assert.WithinDuration(t, time.Now(), *shardContext.closedAt.Load(), time.Second)
 }
+
+func TestShardClosedGuard(t *testing.T) {
+	shardContext := &contextImpl{
+		shardInfo: &persistence.ShardInfo{},
+	}
+
+	testCases := []struct {
+		name string
+		call func() error
+	}{
+		{
+			name: "GetWorkflowExecution",
+			call: func() error {
+				_, err := shardContext.GetWorkflowExecution(
+					context.Background(),
+					&persistence.GetWorkflowExecutionRequest{RangeID: 0},
+				)
+				return err
+			},
+		},
+		{
+			name: "CreateWorkflowExecution",
+			call: func() error {
+				_, err := shardContext.CreateWorkflowExecution(context.Background(), nil)
+				return err
+			},
+		},
+		{
+			name: "UpdateWorkflowExecution",
+			call: func() error {
+				_, err := shardContext.UpdateWorkflowExecution(context.Background(), nil)
+				return err
+			},
+		},
+		{
+			name: "ConflictResolveWorkflowExecution",
+			call: func() error {
+				_, err := shardContext.ConflictResolveWorkflowExecution(context.Background(), nil)
+				return err
+			},
+		},
+		{
+			name: "AppendHistoryV2Events",
+			call: func() error {
+				_, err := shardContext.AppendHistoryV2Events(context.Background(), nil, "", types.WorkflowExecution{})
+				return err
+			},
+		},
+		{
+			name: "renewRangeLocked",
+			call: func() error {
+				return shardContext.renewRangeLocked(false)
+			},
+		},
+		{
+			name: "persistShardInfoLocked",
+			call: func() error {
+				return shardContext.persistShardInfoLocked(false)
+			},
+		},
+		{
+			name: "ReplicateFailoverMarkers",
+			call: func() error {
+				return shardContext.ReplicateFailoverMarkers(context.Background(), nil)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			shardContext.closedAt.Store(common.TimePtr(time.Now()))
+
+			err := tc.call()
+			assert.Equal(t, ErrShardRecentlyClosed, err)
+		})
+	}
+}
