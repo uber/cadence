@@ -320,3 +320,27 @@ func TestGetWorkflowExecution(t *testing.T) {
 		assert.Equal(t, tc.expectedError, err)
 	}
 }
+
+func TestCloseShard(t *testing.T) {
+	closeCallback := make(chan struct{})
+
+	mockExecutionMgr := &mocks.ExecutionManager{}
+	shardContext := &contextImpl{
+		executionManager: mockExecutionMgr,
+		shardInfo: &persistence.ShardInfo{
+			RangeID: 12,
+		},
+		closeCallback: func(i int, item *historyShardsItem) {
+			close(closeCallback)
+		},
+	}
+	shardContext.closeShard()
+
+	select {
+	case <-closeCallback:
+	case <-time.After(time.Second):
+		assert.Fail(t, "closeCallback not called")
+	}
+
+	assert.WithinDuration(t, time.Now(), *shardContext.closedAt.Load(), time.Second)
+}
