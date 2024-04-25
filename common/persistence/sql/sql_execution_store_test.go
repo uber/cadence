@@ -3532,7 +3532,6 @@ func TestGetWorkflowExecution(t *testing.T) {
 				},
 			},
 			mockSetup: func(db *sqlplugin.MockDB, parser *serialization.MockParser) {
-				db.EXPECT().SelectFromExecutions(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
 				db.EXPECT().SelectFromActivityInfoMaps(gomock.Any(), gomock.Any()).Return(nil, errors.New("some random error"))
 				db.EXPECT().SelectFromTimerInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
 				db.EXPECT().SelectFromChildExecutionInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
@@ -3554,7 +3553,6 @@ func TestGetWorkflowExecution(t *testing.T) {
 				},
 			},
 			mockSetup: func(db *sqlplugin.MockDB, parser *serialization.MockParser) {
-				db.EXPECT().SelectFromExecutions(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
 				db.EXPECT().SelectFromActivityInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
 				db.EXPECT().SelectFromTimerInfoMaps(gomock.Any(), gomock.Any()).Return(nil, errors.New("some random error"))
 				db.EXPECT().SelectFromChildExecutionInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
@@ -3576,7 +3574,6 @@ func TestGetWorkflowExecution(t *testing.T) {
 				},
 			},
 			mockSetup: func(db *sqlplugin.MockDB, parser *serialization.MockParser) {
-				db.EXPECT().SelectFromExecutions(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
 				db.EXPECT().SelectFromActivityInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
 				db.EXPECT().SelectFromTimerInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
 				db.EXPECT().SelectFromChildExecutionInfoMaps(gomock.Any(), gomock.Any()).Return(nil, errors.New("some random error"))
@@ -3598,7 +3595,6 @@ func TestGetWorkflowExecution(t *testing.T) {
 				},
 			},
 			mockSetup: func(db *sqlplugin.MockDB, parser *serialization.MockParser) {
-				db.EXPECT().SelectFromExecutions(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
 				db.EXPECT().SelectFromActivityInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
 				db.EXPECT().SelectFromTimerInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
 				db.EXPECT().SelectFromChildExecutionInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
@@ -3620,7 +3616,6 @@ func TestGetWorkflowExecution(t *testing.T) {
 				},
 			},
 			mockSetup: func(db *sqlplugin.MockDB, parser *serialization.MockParser) {
-				db.EXPECT().SelectFromExecutions(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
 				db.EXPECT().SelectFromActivityInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
 				db.EXPECT().SelectFromTimerInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
 				db.EXPECT().SelectFromChildExecutionInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
@@ -3642,7 +3637,6 @@ func TestGetWorkflowExecution(t *testing.T) {
 				},
 			},
 			mockSetup: func(db *sqlplugin.MockDB, parser *serialization.MockParser) {
-				db.EXPECT().SelectFromExecutions(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
 				db.EXPECT().SelectFromActivityInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
 				db.EXPECT().SelectFromTimerInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
 				db.EXPECT().SelectFromChildExecutionInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
@@ -3664,7 +3658,6 @@ func TestGetWorkflowExecution(t *testing.T) {
 				},
 			},
 			mockSetup: func(db *sqlplugin.MockDB, parser *serialization.MockParser) {
-				db.EXPECT().SelectFromExecutions(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
 				db.EXPECT().SelectFromActivityInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
 				db.EXPECT().SelectFromTimerInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)
 				db.EXPECT().SelectFromChildExecutionInfoMaps(gomock.Any(), gomock.Any()).Return(nil, sql.ErrNoRows)

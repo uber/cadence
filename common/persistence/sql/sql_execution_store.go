@@ -311,12 +311,6 @@ func (m *sqlExecutionStore) GetWorkflowExecution(
 
 	g.Go(func() (e error) {
 		defer func() { recoverPanic(recover(), &e) }()
-		executions, e = m.getExecutions(childCtx, request, domainID, wfID, runID)
-		return e
-	})
-
-	g.Go(func() (e error) {
-		defer func() { recoverPanic(recover(), &e) }()
 		activityInfos, e = getActivityInfoMap(
 			childCtx, m.db, m.shardID, domainID, wfID, runID, m.parser)
 		return e
@@ -365,6 +359,16 @@ func (m *sqlExecutionStore) GetWorkflowExecution(
 	})
 
 	err := g.Wait()
+	if err != nil {
+		return nil, err
+	}
+
+	// there is a race condition with delete workflow. What could happen is that
+	// a delete workflow transaction can be committed between 2 concurrent read operations
+	// and in that case we can get checksum error because data is partially read.
+	// Since checksum is stored in the executions table, we make it the last step of reading,
+	// in this case, either we read full data with checksum or we don't get checksum and return error.
+	executions, err = m.getExecutions(ctx, request, domainID, wfID, runID)
 	if err != nil {
 		return nil, err
 	}
