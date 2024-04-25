@@ -398,11 +398,11 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) TestGetTargetDataCenter_G
 	for apiName := range selectedAPIsForwardingRedirectionPolicyAPIAllowlist {
 		err := s.policy.WithDomainIDRedirect(context.Background(), s.domainID, apiName, callFn)
 		s.Error(err)
-		s.Equal(fmt.Sprintf("domain %v is deprecated or deleted", s.domainName), err.Error())
+		s.Equal("domain is deprecated.", err.Error())
 
 		err = s.policy.WithDomainNameRedirect(context.Background(), s.domainName, apiName, callFn)
 		s.Error(err)
-		s.Equal(fmt.Sprintf("domain %v is deprecated or deleted", s.domainName), err.Error())
+		s.Equal("domain is deprecated or deleted", err.Error())
 	}
 
 	s.Equal(0, currentClustercallCount)
