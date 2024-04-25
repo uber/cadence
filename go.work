@@ -19,6 +19,6 @@ use (
 	./cmd/server
 	./common/archiver/gcloud
 
-	// DO NOT include, tools dependencies are intentionally separate.
-	// ./internal/tools
+// DO NOT include, tools dependencies are intentionally separate.
+// ./internal/tools
 )
