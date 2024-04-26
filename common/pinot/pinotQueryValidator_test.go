@@ -46,9 +46,13 @@ func TestValidateQuery(t *testing.T) {
 			query:     "WorkflowID = 'wid'",
 			validated: "WorkflowID = 'wid'",
 		},
-		"Case3: query with custom field": {
+		"Case3-1: query with custom field": {
 			query:     "CustomStringField = 'custom'",
 			validated: "(JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'custom*'))",
+		},
+		"Case3-2: query with custom field value is empty": {
+			query:     "CustomStringField = ''",
+			validated: "(JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), '^$'))",
 		},
 		"Case4: custom field query with or in string": {
 			query:     "CustomStringField='Or'",
