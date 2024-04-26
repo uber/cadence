@@ -1023,3 +1023,15 @@ func (s *handlerSuite) TestCorrectUseOfErrorHandling() {
 		})
 	}
 }
+
+func (s *handlerSuite) TestRatelimitUpdate() {
+	response, err := s.handler.RatelimitUpdate(context.Background(), &types.RatelimitUpdateRequest{
+		Any: &types.Any{
+			ValueType: "test",
+			Value:     []byte(`test data`),
+		},
+	})
+	// placeholder while not implemented
+	s.Nil(response)
+	s.Nil(err)
+}

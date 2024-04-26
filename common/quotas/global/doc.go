@@ -88,9 +88,15 @@ Currently:
   - neither of these are fundamentally required, and they may change or be in multiple services later
 
 The actual contents of the requests and responses and how limits are decided is
-intentionally flexible and not defined here - see individual implementations / sub-packages.
-These will likely evolve as needs change, and will ideally be pluggable and
-dynamicconfig-selectable and shadow-able at runtime without changing this overall structure.
+intentionally flexible to allow creating custom algorithms / data / etc externally without
+requiring internal RPC spec definitions.  To achieve this, we have a custom
+[github.com/uber/cadence/common/types.Any] type that can be used with either Thrift or Protobuf.
+This type is intentionally not google.protobuf.Any because there is no reason to require
+exchanging Protobuf data (particularly if using Thrift), and because that tends to bind to a
+specific code generator, but it serves essentially the same purpose.
+
+A built-in version of all this will be coming in later commits, and possibly more in the future
+if we end up needing major changes that are reusable.
 
 # Planned use
 

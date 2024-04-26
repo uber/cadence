@@ -21,12 +21,19 @@
 package proto
 
 import (
+	"reflect"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
+	fuzz "github.com/google/gofuzz"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 
+	sharedv1 "github.com/uber/cadence/.gen/proto/shared/v1"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/testutils"
 	"github.com/uber/cadence/common/types/testdata"
 )
 
@@ -295,4 +302,142 @@ func TestCrossClusterApplyParentClosePolicyResponse(t *testing.T) {
 			FromCrossClusterApplyParentClosePolicyResponseAttributes(&item),
 		),
 	)
+}
+
+func TestAny(t *testing.T) {
+	t.Run("sanity check", func(t *testing.T) {
+		internal := types.Any{
+			ValueType: "testing",
+			Value:     []byte(`test`),
+		}
+		rpc := sharedv1.Any{
+			ValueType: "testing",
+			Value:     []byte(`test`),
+		}
+		require.Equal(t, &rpc, FromAny(&internal))
+		require.Equal(t, &internal, ToAny(&rpc))
+	})
+
+	t.Run("round trip nils", func(t *testing.T) {
+		// somewhat annoying in fuzzing and there are few possibilities, so tested separately
+		assert.Nil(t, FromAny(ToAny(nil)), "nil proto -> internal -> proto => should result in nil")
+		assert.Nil(t, ToAny(FromAny(nil)), "nil internal -> proto -> internal => should result in nil")
+	})
+
+	t.Run("round trip from internal", func(t *testing.T) {
+		testutils.EnsureFuzzCoverage(t, []string{
+			"empty data", "filled data",
+		}, func(t *testing.T, f *fuzz.Fuzzer) string {
+			var orig types.Any
+			f.Fuzz(&orig)
+			out := ToAny(FromAny(&orig))
+			assert.Equal(t, &orig, out, "did not survive round-tripping")
+			// report what branch of behavior was fuzzed occurred
+			if len(orig.Value) == 0 {
+				return "empty data" // ignoring nil vs empty difference
+			}
+			return "filled data"
+		})
+	})
+	t.Run("round trip from proto", func(t *testing.T) {
+		testutils.EnsureFuzzCoverage(t, []string{
+			"empty data", "filled data",
+		}, func(t *testing.T, f *fuzz.Fuzzer) string {
+			// unfortunately:
+			// - gofuzz panics when it encounters interface fields (so this cannot be done on oneof fields)
+			//   - not directly relevant for Any, but causes issues for fuzzing other types
+			// - it populates the XXX_ fields and these can be hard to clear
+			// so this is fuzz-filled by hand with specific fields rather than as a whole.
+			var orig sharedv1.Any
+			f.Fuzz(&orig.ValueType)
+			f.Fuzz(&orig.Value)
+			out := FromAny(ToAny(&orig))
+			assert.Equal(t, &orig, out, "did not survive round-tripping")
+			if len(orig.Value) == 0 {
+				return "empty data" // ignoring nil vs empty difference
+			}
+			return "filled data"
+		})
+	})
+
+	t.Run("can contain proto data", func(t *testing.T) {
+		// pushing thrift or proto data through this type is very much expected,
+		// so this is both evidence that it's possible and an example for how to do so.
+		//
+		// note that there is an equivalent test in mapper/thrift/shared_test.go.
+		// they are structurally the same, but encoding/decoding details vary a bit.
+
+		// some helpers because it's a bit verbose.
+		//
+		// note that these work for both types in this test: they can encode and decode *any* proto data,
+		// you just have to make sure you pass the same type to both encode and decode via some other
+		// source of info (i.e. the ValueType field).
+		encode := func(thing proto.Marshaler) []byte {
+			data, err := thing.Marshal()
+			require.NoErrorf(t, err, "could not Marshal the target type: %T", thing)
+			return data
+		}
+		decode := func(data []byte, target proto.Unmarshaler) {
+			err := target.Unmarshal(data)
+			require.NoErrorf(t, err, "could not Unmarshal to the target type: %T", target)
+		}
+
+		// --- create the original data, a proto object, and encode it by hand
+		orig := &apiv1.WorkflowExecution{
+			WorkflowId: testdata.WorkflowID,
+			RunId:      testdata.RunID,
+		}
+		internalBytes := encode(orig)
+
+		// --- put that data into the custom Any type
+		// proto (unfortunately) maintains a type-registry, which means we can look up the unique name for this type...
+		//
+		// ...BUT this is potentially unsafe in normal code: proto type names can be changed without breaking binary compatibility.
+		// we are unlikely to ever do so, but for this reason, hard-coding is actually a bit safer.
+		var typeName = "uber.cadence.api.v1.WorkflowExecution" // current value of proto.MessageName(orig)
+		anyVal := &types.Any{
+			ValueType: typeName,
+			Value:     internalBytes, // store proto bytes in the Any
+		}
+
+		// --- convert the whole container to proto (mimics making a call via yarpc)
+		protoAny := FromAny(anyVal)      // we map to the rpc type
+		networkBytes := encode(protoAny) // yarpc does this
+		// ^ this is what's sent over the network.
+
+		// as a side note:
+		// the final data is not double-encoded, so this "encode -> wrap -> encode" process is reasonably efficient.
+		//
+		// Thrift and Proto can efficiently move around binary blobs like this, as it's essentially just a memcpy between
+		// the input and the output, and there's no `\0` to `\\0` escaping or base64 encoding or whatever needed.
+		//
+		// no behavior depends on this, it's just presented here as evidence that this Any-wrapper does not meaningfully
+		// change any RPC design concerns: anything you would do with normal RPC can be done through an Any if you need
+		// loose typing, the change-stability / performance / etc is entirely unaffected.
+		//
+		// compare via a sliding window to find the place it overlaps, to prove that this is true:
+		found := false
+		for i := 0; i <= len(networkBytes)-len(internalBytes); i++ {
+			if reflect.DeepEqual(internalBytes, networkBytes[i:i+len(internalBytes)]) {
+				found = true
+				t.Logf("Found matching bytes at index %v", i) // currently at index 41
+			}
+		}
+		// *should* be true for efficiency's sake, but is not truly necessary for correct behavior
+		assert.Truef(t, found, "did not find internal bytes within network bytes, might be paying double-encoding costs:\n\tinternal: %v\n\tnetwork:  %v", internalBytes, networkBytes)
+
+		// --- the network pushes the data to a new location ---
+
+		// --- on the receiving side, we map to internal types like normal
+		var outAny sharedv1.Any
+		decode(networkBytes, &outAny) // yarpc does this
+		outAnyVal := ToAny(&outAny)   // we map to internal types
+
+		// --- and finally decode the any-typed data by hand
+		require.Equal(t, typeName, outAnyVal.ValueType, "type name through RPC should match the original type name")
+		var outOrig apiv1.WorkflowExecution // selected based on the ValueType contents
+		decode(outAnyVal.Value, &outOrig)   // do the actual custom decoding
+		assert.NotEmpty(t, outOrig, "sanity check, decoded value should not be empty")
+		assert.Equal(t, orig, &outOrig, "final round-tripped Any-contained data should be identical to the original object")
+	})
 }
