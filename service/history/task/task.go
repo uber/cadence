@@ -266,7 +266,8 @@ func (t *taskImpl) HandleErr(err error) (retErr error) {
 	}
 
 	// If the shard were recently closed we just return an error, so we retry in a bit.
-	if err == shard.ErrShardRecentlyClosed {
+	var errShardClosed *shard.ErrShardClosed
+	if errors.As(err, &errShardClosed) && time.Since(errShardClosed.ClosedAt) < shard.TimeBeforeShardClosedIsError {
 		return err
 	}
 

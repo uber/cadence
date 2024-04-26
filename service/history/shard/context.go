@@ -173,24 +173,29 @@ type (
 
 var _ Context = (*contextImpl)(nil)
 
-var (
-	// ErrShardClosed is returned when shard is closed and a req cannot be processed
-	ErrShardClosed = errors.New("shard closed")
+type ErrShardClosed struct {
+	Msg      string
+	ClosedAt time.Time
+}
 
-	// ErrShardRecentlyClosed is returned when a shard has recently been closed, this
-	// error is transient, and should not cause error logs and error metrics to be emitted
-	ErrShardRecentlyClosed = errors.New("shard recently closed")
+var _ error = (*ErrShardClosed)(nil)
+
+func (e *ErrShardClosed) Error() string {
+	return e.Msg
+}
+
+const (
+	TimeBeforeShardClosedIsError = 10 * time.Second
 )
 
 const (
 	// transfer/cross cluster diff/lag is in terms of taskID, which is calculated based on shard rangeID
 	// on shard movement, taskID will increase by around 1 million
-	logWarnTransferLevelDiff     = 3000000 // 3 million
-	logWarnCrossClusterLevelLag  = 3000000 // 3 million
-	logWarnTimerLevelDiff        = time.Duration(30 * time.Minute)
-	historySizeLogThreshold      = 10 * 1024 * 1024
-	minContextTimeout            = 1 * time.Second
-	timeBeforeShardClosedIsError = 10 * time.Second
+	logWarnTransferLevelDiff    = 3000000 // 3 million
+	logWarnCrossClusterLevelLag = 3000000 // 3 million
+	logWarnTimerLevelDiff       = time.Duration(30 * time.Minute)
+	historySizeLogThreshold     = 10 * 1024 * 1024
+	minContextTimeout           = 1 * time.Second
 )
 
 func (s *contextImpl) GetShardID() int {
@@ -1007,16 +1012,14 @@ func (s *contextImpl) getRangeID() int64 {
 
 func (s *contextImpl) closedError() error {
 	closedAt := s.closedAt.Load()
-
 	if closedAt == nil {
 		return nil
 	}
 
-	if time.Since(*closedAt) < timeBeforeShardClosedIsError {
-		return ErrShardRecentlyClosed
+	return &ErrShardClosed{
+		Msg:      "shard closed",
+		ClosedAt: *closedAt,
 	}
-
-	return ErrShardClosed
 }
 
 func (s *contextImpl) closeShard() {

@@ -400,13 +400,13 @@ func TestShardClosedGuard(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			shardContext.closedAt.Store(common.TimePtr(time.Now()))
-			err := tc.call()
-			assert.Equal(t, ErrShardRecentlyClosed, err)
+			closedAt := time.Unix(123, 456)
 
-			shardContext.closedAt.Store(common.TimePtr(time.Now().Add(-time.Minute)))
-			err = tc.call()
-			assert.Equal(t, ErrShardClosed, err)
+			shardContext.closedAt.Store(&closedAt)
+			err := tc.call()
+			var shardClosedErr *ErrShardClosed
+			assert.ErrorAs(t, err, &shardClosedErr)
+			assert.Equal(t, closedAt, shardClosedErr.ClosedAt)
 		})
 	}
 }

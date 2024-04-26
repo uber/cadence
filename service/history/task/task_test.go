@@ -198,7 +198,14 @@ func (s *taskSuite) TestHandleErr_ErrShardRecentlyClosed() {
 	}, nil)
 
 	taskBase.submitTime = time.Now()
-	s.Equal(shard.ErrShardRecentlyClosed, taskBase.HandleErr(shard.ErrShardRecentlyClosed))
+
+	shardClosedError := &shard.ErrShardClosed{
+		Msg: "shard closed",
+		// The shard was closed within the TimeBeforeShardClosedIsError interval
+		ClosedAt: time.Now().Add(-shard.TimeBeforeShardClosedIsError / 2),
+	}
+
+	s.Equal(shardClosedError, taskBase.HandleErr(shardClosedError))
 }
 
 func (s *taskSuite) TestHandleErr_ErrCurrentWorkflowConditionFailed() {
