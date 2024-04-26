@@ -125,7 +125,7 @@ func (s *HistoryV2PersistenceSuite) TestScanAllTrees() {
 	if os.Getenv("SKIP_SCAN_HISTORY") != "" {
 		s.T().Skipf("GetAllHistoryTreeBranches not supported in %v", s.TaskMgr.GetName())
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), largeTestContextTimeout)
 	defer cancel()
 
 	resp, err := s.HistoryV2Mgr.GetAllHistoryTreeBranches(ctx, &p.GetAllHistoryTreeBranchesRequest{

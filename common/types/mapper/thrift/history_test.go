@@ -27,6 +27,8 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/uber/cadence/.gen/go/history"
+	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/testdata"
@@ -674,4 +676,23 @@ func TestSyncShardStatusRequestConversion(t *testing.T) {
 		roundTripObj := ToHistorySyncShardStatusRequest(thriftObj)
 		assert.Equal(t, original, roundTripObj)
 	}
+}
+
+func TestRatelimitUpdate(t *testing.T) {
+	t.Run("nil", func(t *testing.T) {
+		assert.Nil(t, ToHistoryRatelimitUpdateRequest(nil), "request to internal")
+		assert.Nil(t, FromHistoryRatelimitUpdateResponse(nil), "response from internal")
+	})
+
+	t.Run("nil Any contents", func(t *testing.T) {
+		assert.Equal(t, &types.RatelimitUpdateRequest{Any: nil}, ToHistoryRatelimitUpdateRequest(&history.RatelimitUpdateRequest{Data: nil}), "request to internal")
+		assert.Equal(t, &history.RatelimitUpdateResponse{Data: nil}, FromHistoryRatelimitUpdateResponse(&types.RatelimitUpdateResponse{Any: nil}), "response from internal")
+	})
+
+	t.Run("with Any contents", func(t *testing.T) {
+		internal := &types.Any{ValueType: "test", Value: []byte(`test data`)}
+		thrift := &shared.Any{ValueType: common.StringPtr("test"), Value: []byte(`test data`)}
+		assert.Equal(t, &types.RatelimitUpdateRequest{Any: internal}, ToHistoryRatelimitUpdateRequest(&history.RatelimitUpdateRequest{Data: thrift}), "request to internal")
+		assert.Equal(t, &history.RatelimitUpdateResponse{Data: thrift}, FromHistoryRatelimitUpdateResponse(&types.RatelimitUpdateResponse{Any: internal}), "response from internal")
+	})
 }

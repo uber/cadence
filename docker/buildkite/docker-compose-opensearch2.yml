@@ -70,7 +70,6 @@ services:
         condition: service_started
     volumes:
       - ../../:/cadence
-      - /usr/bin/buildkite-agent:/usr/bin/buildkite-agent
     networks:
       services-network:
         aliases:

@@ -167,6 +167,10 @@ func (h *historyHandler) QueryWorkflow(ctx context.Context, hp1 *types.HistoryQu
 	return h.wrapped.QueryWorkflow(ctx, hp1)
 }
 
+func (h *historyHandler) RatelimitUpdate(ctx context.Context, rp1 *types.RatelimitUpdateRequest) (rp2 *types.RatelimitUpdateResponse, err error) {
+	return h.wrapped.RatelimitUpdate(ctx, rp1)
+}
+
 func (h *historyHandler) ReadDLQMessages(ctx context.Context, rp1 *types.ReadDLQMessagesRequest) (rp2 *types.ReadDLQMessagesResponse, err error) {
 	return h.wrapped.ReadDLQMessages(ctx, rp1)
 }
