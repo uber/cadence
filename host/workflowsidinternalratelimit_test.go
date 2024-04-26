@@ -26,7 +26,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"flag"
-	"github.com/uber/cadence/service/matching"
 	"strconv"
 	"testing"
 	"time"
@@ -42,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	pt "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/matching"
 )
 
 func TestWorkflowIDInternalRateLimitIntegrationSuite(t *testing.T) {
