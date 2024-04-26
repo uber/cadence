@@ -386,6 +386,12 @@ func processCustomString(comparisonExpr *sqlparser.ComparisonExpr, colNameStr st
 		Type: sqlparser.StrVal,
 		Val:  []byte("%" + colValStr + "%"),
 	}
+
+	if colValStr == "" {
+		return fmt.Sprintf("(JSON_MATCH(Attr, '\"$.%s\" is not null') "+
+			"AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.%s', 'string'), '^$'))", colNameStr, colNameStr)
+	}
+
 	return fmt.Sprintf("(JSON_MATCH(Attr, '\"$.%s\" is not null') "+
 		"AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.%s', 'string'), '%s*'))", colNameStr, colNameStr, colValStr)
 }
