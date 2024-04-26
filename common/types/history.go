@@ -521,6 +521,7 @@ type RecordChildExecutionCompletedRequest struct {
 	InitiatedID        int64              `json:"initiatedId,omitempty"`
 	CompletedExecution *WorkflowExecution `json:"completedExecution,omitempty"`
 	CompletionEvent    *HistoryEvent      `json:"completionEvent,omitempty"`
+	StartedID          int64              `json:"startedId,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
