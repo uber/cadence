@@ -407,6 +407,7 @@ func TestShardClosedGuard(t *testing.T) {
 			var shardClosedErr *ErrShardClosed
 			assert.ErrorAs(t, err, &shardClosedErr)
 			assert.Equal(t, closedAt, shardClosedErr.ClosedAt)
+			assert.ErrorContains(t, err, "shard closed")
 		})
 	}
 }
