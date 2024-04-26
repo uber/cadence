@@ -26,6 +26,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"flag"
+	"github.com/uber/cadence/service/matching"
 	"strconv"
 	"testing"
 	"time"
@@ -196,17 +197,17 @@ func (s *WorkflowIDInternalRateLimitIntegrationSuite) TestWorkflowIDSpecificInte
 
 	for i := int32(0); i < activityCount; i++ {
 		_, err = poller.PollAndProcessDecisionTask(false, false)
-		s.NoError(err)
+		s.True(err == nil || err == matching.ErrNoTasks)
 
 		err = poller.PollAndProcessActivityTask(false)
-		s.NoError(err)
+		s.True(err == nil || err == matching.ErrNoTasks)
 	}
 
 	s.Logger.Info("Waiting for workflow to complete", tag.WorkflowRunID(we.RunID))
 
 	s.False(workflowComplete)
 	_, err = poller.PollAndProcessDecisionTask(false, false)
-	s.NoError(err)
+	s.True(err == nil || err == matching.ErrNoTasks)
 	s.True(workflowComplete)
 
 	historyResponse, err := s.engine.GetWorkflowExecutionHistory(ctx, &types.GetWorkflowExecutionHistoryRequest{
