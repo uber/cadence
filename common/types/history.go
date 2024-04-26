@@ -1194,3 +1194,11 @@ func (v *GetFailoverInfoResponse) GetPendingShards() (o []int32) {
 	}
 	return
 }
+
+type RatelimitUpdateRequest struct {
+	Any *Any `json:"any"`
+}
+
+type RatelimitUpdateResponse struct {
+	Any *Any `json:"any"`
+}

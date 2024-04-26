@@ -2055,6 +2055,14 @@ func (h *handlerImpl) GetFailoverInfo(
 	return resp, nil
 }
 
+func (h *handlerImpl) RatelimitUpdate(
+	ctx context.Context,
+	request *types.RatelimitUpdateRequest,
+) (*types.RatelimitUpdateResponse, error) {
+	// TODO: wire up to real global-ratelimit aggregator
+	return nil, nil
+}
+
 // convertError is a helper method to convert ShardOwnershipLostError from persistence layer returned by various
 // HistoryEngine API calls to ShardOwnershipLost error return by HistoryService for client to be redirected to the
 // correct shard.

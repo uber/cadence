@@ -21,15 +21,22 @@
 package thrift
 
 import (
+	"bytes"
+	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	fuzz "github.com/google/gofuzz"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/thriftrw/protocol/binary"
+	"go.uber.org/thriftrw/wire"
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/testutils"
 	"github.com/uber/cadence/common/types/testdata"
 )
 
@@ -3309,4 +3316,166 @@ func TestStickyWorkerUnavailableErrorConversion(t *testing.T) {
 		roundTripObj := ToStickyWorkerUnavailableError(thriftObj)
 		assert.Equal(t, original, roundTripObj)
 	}
+}
+
+func TestAny(t *testing.T) {
+	t.Run("sanity check", func(t *testing.T) {
+		// test the main fields are mapped correctly
+		internal := types.Any{
+			ValueType: "testing",
+			Value:     []byte(`test`),
+		}
+		rpc := shared.Any{
+			ValueType: common.StringPtr("testing"),
+			Value:     []byte(`test`),
+		}
+		assert.Equal(t, &rpc, FromAny(&internal))
+		assert.Equal(t, &internal, ToAny(&rpc))
+	})
+	t.Run("round trip nils", func(t *testing.T) {
+		// somewhat annoying in fuzzing and there are few possibilities, so tested separately
+		assert.Nil(t, FromAny(ToAny(nil)), "nil thrift -> internal -> thrift => should result in nil")
+		assert.Nil(t, ToAny(FromAny(nil)), "nil internal -> thrift -> internal => should result in nil")
+	})
+
+	t.Run("round trip from internal", func(t *testing.T) {
+		// fuzz test to check round trip data works as it should when starting from internal types
+		testutils.EnsureFuzzCoverage(t, []string{
+			"empty data", "filled data",
+		}, func(t *testing.T, f *fuzz.Fuzzer) string {
+			var orig types.Any
+			f.Fuzz(&orig)
+			out := ToAny(FromAny(&orig))
+			assert.Equal(t, &orig, out, "did not survive round-tripping")
+
+			// report what branch of behavior was executed so we can ensure stable coverage
+			if len(orig.Value) == 0 {
+				return "empty data" // ignoring nil vs empty difference
+			}
+			return "filled data"
+		})
+	})
+	t.Run("round trip from thrift", func(t *testing.T) {
+		// fuzz test to check round trip data works as it should
+		testutils.EnsureFuzzCoverage(t, []string{
+			"nil id", "empty data", "filled data",
+		}, func(t *testing.T, f *fuzz.Fuzzer) string {
+			var orig shared.Any
+			f.Fuzz(&orig)
+			out := FromAny(ToAny(&orig))
+
+			if orig.ValueType == nil {
+				// internal type does not support nil strings, so it will be transformed to an empty string.
+				assert.Equal(t, "", *out.ValueType, "empty value type did not survive round-tripping")
+				assert.Equal(t, orig.Value, out.Value, "value did not survive round-tripping")
+				return "nil id"
+			}
+			// non-nil ValueType can check all fields
+			assert.Equal(t, &orig, out, "did not survive round-tripping")
+			if len(orig.Value) == 0 {
+				return "empty data" // ignoring nil vs empty difference
+			}
+			return "filled data"
+		})
+	})
+
+	t.Run("can contain thrift data", func(t *testing.T) {
+		// pushing thrift or proto data through this type is very much expected,
+		// so this is both evidence that it's possible and an example for how to do so.
+		//
+		// note that there is an equivalent test in mapper/proto/shared_test.go.
+		// they are structurally the same, but encoding/decoding details vary a bit.
+
+		// some helpers because it's a bit verbose.
+		//
+		// note that these work for both types in this test: they can encode and decode *any* thrift data,
+		// you just have to make sure you pass the same type to both encode and decode via some other
+		// source of info (i.e. the ValueType field).
+		encode := func(thing thriftObject) []byte {
+			// get the intermediate format, ready for byte-encoding
+			wireValue, err := thing.ToWire()
+			require.NoErrorf(t, err, "failed to produce intermediate wire.Value from type %T", thing)
+			// write to binary
+			var writer bytes.Buffer
+			err = binary.Default.Encode(wireValue, &writer)
+			require.NoErrorf(t, err, "failed to encode wire.Value from type %T", thing)
+			// and return the bytes
+			result := writer.Bytes()
+			require.NotEmptyf(t, result, "should have serialized some bytes from type %T", thing)
+			return result
+		}
+		decode := func(data []byte, target thriftObject) {
+			// decode to the intermediate format, like encoding.
+			// the sample *shared.WorkflowExecution is a struct, so use wire.TStruct.
+			// if we used a map or int or something, it'd be a wire.TMap or wire.TI64, etc.
+			intermediate, err := binary.Default.Decode(bytes.NewReader(data), wire.TStruct)
+			require.NoErrorf(t, err, "could not decode thrift bytes to intermediate wire.Value for type %T", target)
+			// and populate the target with the wire.Value contents
+			err = target.FromWire(intermediate)
+			require.NoErrorf(t, err, "could not FromWire to the target type %T", target)
+		}
+
+		// --- create the original data, a thrift object, and encode it by hand
+		orig := &shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(testdata.WorkflowID),
+			RunId:      common.StringPtr(testdata.RunID),
+		}
+		internalBytes := encode(orig)
+
+		// --- put that data into the custom Any type
+		// thrift has no registry like proto has, so there is no canonical name.
+		// no problem, just generate one.
+		var typeName = reflect.TypeOf(orig).PkgPath() + reflect.TypeOf(orig).Name()
+		anyVal := &types.Any{
+			ValueType: typeName,
+			Value:     internalBytes, // store thrift bytes in the Any
+		}
+
+		// --- convert the whole container to thrift (mimics making a call via yarpc)
+		thriftAny := FromAny(anyVal)      // we map to the rpc type
+		networkBytes := encode(thriftAny) // yarpc does this
+		// ^ this is what's sent over the network.
+
+		// as a side note:
+		// the final data is not double-encoded, so this "encode -> wrap -> encode" process is reasonably efficient.
+		//
+		// Thrift and Proto can efficiently move around binary blobs like this, as it's essentially just a memcpy between
+		// the input and the output, and there's no `\0` to `\\0` escaping or base64 encoding or whatever needed.
+		//
+		// no behavior depends on this, it's just presented here as evidence that this Any-wrapper does not meaningfully
+		// change any RPC design concerns: anything you would do with normal RPC can be done through an Any if you need
+		// loose typing, the change-stability / performance / etc is entirely unaffected.
+		//
+		// compare via a sliding window to find the place it overlaps, to prove that this is true:
+		found := false
+		for i := 0; i <= len(networkBytes)-len(internalBytes); i++ {
+			if reflect.DeepEqual(internalBytes, networkBytes[i:i+len(internalBytes)]) {
+				found = true
+				t.Logf("Found matching bytes at index %v", i) // currently at index 14
+			}
+		}
+		// *should* be true for efficiency's sake, but is not truly necessary for correct behavior
+		assert.Truef(t, found, "did not find internal bytes within network bytes, might be paying double-encoding costs:\n\tinternal: %v\n\tnetwork:  %v", internalBytes, networkBytes)
+
+		// --- the network pushes the data to a new location ---
+
+		// --- on the receiving side, we map to internal types like normal
+		var outAny shared.Any
+		decode(networkBytes, &outAny) // yarpc does this
+		outAnyVal := ToAny(&outAny)   // we map to internal types
+
+		// --- and finally decode the any-typed data by hand
+		require.Equal(t, typeName, outAnyVal.ValueType, "type name through RPC should match the original type name")
+		var outOrig shared.WorkflowExecution // selected based on the ValueType contents
+		decode(outAnyVal.Value, &outOrig)    // do the actual custom decoding
+		assert.NotEmpty(t, outOrig, "sanity check, decoded value should not be empty")
+		assert.Equal(t, orig, &outOrig, "final round-tripped Any-contained data should be identical to the original object")
+	})
+}
+
+// thriftObject is satisfied by any thrift type, as they all have To/FromWire methods.
+// go.uber.org/cadence has exactly this in an internal API, it's just copied here for simplicity.
+type thriftObject interface {
+	FromWire(w wire.Value) error
+	ToWire() (wire.Value, error)
 }
