@@ -456,3 +456,121 @@ func TestForkHistoryBranch_AllAncestors(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, expecedResp, resp)
 }
+
+func getValidInternalDeleteHistoryBranchRequest() *persistence.InternalDeleteHistoryBranchRequest {
+	return &persistence.InternalDeleteHistoryBranchRequest{
+		BranchInfo: types.HistoryBranch{
+			TreeID:   "TestTreeID",
+			BranchID: "TestBranchID",
+			Ancestors: []*types.HistoryBranchRange{
+				{
+					BranchID:    "TestAncestorBranchID",
+					BeginNodeID: 0,
+					EndNodeID:   5,
+				},
+				{
+					BranchID:    "TestAncestorBranchID",
+					BeginNodeID: 6,
+					EndNodeID:   10,
+				},
+			},
+		},
+		ShardID: testShardID,
+	}
+}
+
+func TestDeleteHistoryBranch_unusedBranch(t *testing.T) {
+	store, dbMock := setUpMocks(t)
+
+	request := getValidInternalDeleteHistoryBranchRequest()
+
+	expecedTreeFilter := &nosqlplugin.HistoryTreeFilter{
+		ShardID:  testShardID,
+		TreeID:   "TestTreeID",
+		BranchID: common.Ptr("TestBranchID"),
+	}
+
+	// Delete in reverse order, add 0 in the end
+	expectedNodeFilters := []*nosqlplugin.HistoryNodeFilter{
+		{
+			ShardID:   testShardID,
+			TreeID:    "TestTreeID",
+			BranchID:  "TestBranchID",
+			MinNodeID: 10,
+		},
+		{
+			ShardID:   testShardID,
+			TreeID:    "TestTreeID",
+			BranchID:  "TestAncestorBranchID",
+			MinNodeID: 6,
+		},
+		{
+			ShardID:   testShardID,
+			TreeID:    "TestTreeID",
+			BranchID:  "TestAncestorBranchID",
+			MinNodeID: 0,
+		},
+	}
+
+	// Expect to delete the history branch
+	dbMock.EXPECT().DeleteFromHistoryTreeAndNode(gomock.Any(), expecedTreeFilter, expectedNodeFilters).
+		Return(nil).Times(1)
+	dbMock.EXPECT().SelectFromHistoryTree(gomock.Any(), gomock.Any()).
+		Return(nil, nil).Times(1)
+
+	err := store.DeleteHistoryBranch(ctx.Background(), request)
+	assert.NoError(t, err)
+}
+
+func TestDeleteHistoryBranch_usedBranch(t *testing.T) {
+	store, dbMock := setUpMocks(t)
+
+	request := getValidInternalDeleteHistoryBranchRequest()
+
+	expecedTreeFilter := &nosqlplugin.HistoryTreeFilter{
+		ShardID:  testShardID,
+		TreeID:   "TestTreeID",
+		BranchID: common.Ptr("TestBranchID"),
+	}
+
+	// Delete in reverse order, add 0 in the end
+	expectedNodeFilters := []*nosqlplugin.HistoryNodeFilter{
+		{
+			ShardID:   testShardID,
+			TreeID:    "TestTreeID",
+			BranchID:  "TestBranchID",
+			MinNodeID: 10,
+		},
+		{
+			ShardID:   testShardID,
+			TreeID:    "TestTreeID",
+			BranchID:  "TestAncestorBranchID",
+			MinNodeID: 7,
+		},
+	}
+
+	// Expect to delete the history branch
+	dbMock.EXPECT().DeleteFromHistoryTreeAndNode(gomock.Any(), expecedTreeFilter, expectedNodeFilters).
+		Return(nil).Times(1)
+
+	historyTree := []*nosqlplugin.HistoryTreeRow{
+		{
+			ShardID:  testShardID,
+			TreeID:   "TestTreeID",
+			BranchID: "TestBranchID",
+			Ancestors: []*types.HistoryBranchRange{
+				{
+					BranchID:    "TestAncestorBranchID",
+					BeginNodeID: 0,
+					EndNodeID:   7,
+				},
+			},
+		},
+	}
+
+	dbMock.EXPECT().SelectFromHistoryTree(gomock.Any(), gomock.Any()).
+		Return(historyTree, nil).Times(1)
+
+	err := store.DeleteHistoryBranch(ctx.Background(), request)
+	assert.NoError(t, err)
+}
