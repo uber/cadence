@@ -629,6 +629,7 @@ func FromRecordChildExecutionCompletedRequest(t *types.RecordChildExecutionCompl
 		InitiatedId:        &t.InitiatedID,
 		CompletedExecution: FromWorkflowExecution(t.CompletedExecution),
 		CompletionEvent:    FromHistoryEvent(t.CompletionEvent),
+		StartedId:          &t.StartedID,
 	}
 }
 
@@ -643,6 +644,7 @@ func ToRecordChildExecutionCompletedRequest(t *history.RecordChildExecutionCompl
 		InitiatedID:        t.GetInitiatedId(),
 		CompletedExecution: ToWorkflowExecution(t.CompletedExecution),
 		CompletionEvent:    ToHistoryEvent(t.CompletionEvent),
+		StartedID:          t.GetStartedId(),
 	}
 }
 
