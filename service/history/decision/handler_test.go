@@ -24,6 +24,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/common/cluster"
 	"reflect"
 	"testing"
 
@@ -245,7 +246,9 @@ func TestHandleDecisionTaskScheduled(t *testing.T) {
 				tokenSerializer: common.NewMockTaskTokenSerializer(ctrl),
 				domainCache:     cache.NewMockDomainCache(ctrl),
 			}
-			expectCommonCalls(decisionHandler, test.domainID, test.mutablestate)
+			expectCommonCalls(decisionHandler, test.domainID)
+			expectGetWorkflowExecution(decisionHandler, test.domainID, test.mutablestate)
+			expectDefaultDomainCache(decisionHandler, test.domainID)
 			if test.expectCalls != nil {
 				test.expectCalls(ctrl, decisionHandler.shard.(*shard.MockContext))
 			}
@@ -380,7 +383,9 @@ func TestHandleDecisionTaskFailed(t *testing.T) {
 				tokenSerializer: common.NewMockTaskTokenSerializer(ctrl),
 				domainCache:     cache.NewMockDomainCache(ctrl),
 			}
-			expectCommonCalls(decisionHandler, test.domainID, test.mutablestate)
+			expectCommonCalls(decisionHandler, test.domainID)
+			expectGetWorkflowExecution(decisionHandler, test.domainID, test.mutablestate)
+			expectDefaultDomainCache(decisionHandler, test.domainID)
 			decisionHandler.executionCache = execution.NewCache(shardContext)
 			if test.expectCalls != nil {
 				test.expectCalls(ctrl, decisionHandler)
@@ -545,7 +550,9 @@ func TestHandleDecisionTaskStarted(t *testing.T) {
 				versionChecker: client.NewVersionChecker(),
 				domainCache:    cache.NewMockDomainCache(ctrl),
 			}
-			expectCommonCalls(decisionHandler, test.domainID, test.mutablestate)
+			expectCommonCalls(decisionHandler, test.domainID)
+			expectGetWorkflowExecution(decisionHandler, test.domainID, test.mutablestate)
+			expectDefaultDomainCache(decisionHandler, test.domainID)
 			decisionHandler.executionCache = execution.NewCache(shardContext)
 			if test.expectCalls != nil {
 				test.expectCalls(ctrl, decisionHandler)
@@ -570,19 +577,21 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 	testTaskListName := "some-tasklist-name"
 	testWorkflowTypeName := "some-workflow-type-name"
 	tests := []struct {
-		name               string
-		domainID           string
-		expectedErr        error
-		expectMockCalls    func(ctrl *gomock.Controller, decisionHandler *handlerImpl)
-		assertResponseBody func(t *testing.T, resp *types.HistoryRespondDecisionTaskCompletedResponse)
-		mutableState       *persistence.WorkflowMutableState
-		request            *types.HistoryRespondDecisionTaskCompletedRequest
+		name                        string
+		domainID                    string
+		expectedErr                 error
+		expectMockCalls             func(ctrl *gomock.Controller, decisionHandler *handlerImpl)
+		assertResponseBody          func(t *testing.T, resp *types.HistoryRespondDecisionTaskCompletedResponse)
+		mutableState                *persistence.WorkflowMutableState
+		request                     *types.HistoryRespondDecisionTaskCompletedRequest
+		expectGetWorkflowExecution  bool
+		expectNonDefaultDomainCache bool
 	}{
 		{
 			name:        "failure to get domain from ID",
 			domainID:    testInvalidDomainUUID,
 			expectedErr: &types.BadRequestError{Message: "Invalid domain UUID."},
-		},
+		}, // no
 		{
 			name:        "token deserialazation failure",
 			domainID:    constants.TestDomainID,
@@ -590,7 +599,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 			expectMockCalls: func(ctrl *gomock.Controller, decisionHandler *handlerImpl) {
 				decisionHandler.tokenSerializer.(*common.MockTaskTokenSerializer).EXPECT().Deserialize(serializedTestToken).Return(nil, errors.New("unable to deserialize task token"))
 			},
-		},
+		}, // no
 		{
 			name:        "get or create wf execution failure",
 			domainID:    constants.TestDomainID,
@@ -602,11 +611,12 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 				}
 				decisionHandler.tokenSerializer.(*common.MockTaskTokenSerializer).EXPECT().Deserialize(serializedTestToken).Return(taskToken, nil)
 			},
-		},
+		}, // no
 		{
-			name:        "success",
-			domainID:    constants.TestDomainID,
-			expectedErr: nil,
+			name:                       "success",
+			domainID:                   constants.TestDomainID,
+			expectedErr:                nil,
+			expectGetWorkflowExecution: true,
 			expectMockCalls: func(ctrl *gomock.Controller, decisionHandler *handlerImpl) {
 				deserializedTestToken := &common.TaskToken{
 					DomainID:   constants.TestDomainID,
@@ -674,11 +684,12 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 				assert.Equal(t, int64(0), resp.StartedResponse.Attempt)
 				assert.Equal(t, testTaskListName, resp.StartedResponse.WorkflowExecutionTaskList.Name)
 			},
-		},
+		}, // default type
 		{
-			name:        "decision task failure",
-			domainID:    constants.TestDomainID,
-			expectedErr: &types.InternalServiceError{Message: "add-decisiontask-failed-event operation failed"},
+			name:                       "decision task failure",
+			domainID:                   constants.TestDomainID,
+			expectedErr:                &types.InternalServiceError{Message: "add-decisiontask-failed-event operation failed"},
+			expectGetWorkflowExecution: true,
 			expectMockCalls: func(ctrl *gomock.Controller, decisionHandler *handlerImpl) {
 				deserializedTestToken := &common.TaskToken{
 					DomainID:   constants.TestDomainID,
@@ -690,11 +701,12 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 				decisionHandler.shard.(*shard.MockContext).EXPECT().GetEventsCache().Times(2).Return(eventsCache)
 				decisionHandler.domainCache.(*cache.MockDomainCache).EXPECT().GetDomain(constants.TestDomainName).Times(1).Return(constants.TestLocalDomainEntry, nil)
 			},
-		},
+		}, // default type
 		{
-			name:        "workflow completed",
-			domainID:    constants.TestDomainID,
-			expectedErr: workflow.ErrAlreadyCompleted,
+			name:                       "workflow completed",
+			domainID:                   constants.TestDomainID,
+			expectedErr:                workflow.ErrAlreadyCompleted,
+			expectGetWorkflowExecution: true,
 			expectMockCalls: func(ctrl *gomock.Controller, decisionHandler *handlerImpl) {
 				deserializedTestToken := &common.TaskToken{
 					DomainID:   constants.TestDomainID,
@@ -710,11 +722,12 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 					State: 2,
 				},
 			},
-		},
+		}, // no
 		{
-			name:        "decision task not found",
-			domainID:    constants.TestDomainID,
-			expectedErr: &types.EntityNotExistsError{Message: "Decision task not found."},
+			name:                       "decision task not found",
+			domainID:                   constants.TestDomainID,
+			expectedErr:                &types.EntityNotExistsError{Message: "Decision task not found."},
+			expectGetWorkflowExecution: true,
 			expectMockCalls: func(ctrl *gomock.Controller, decisionHandler *handlerImpl) {
 				deserializedTestToken := &common.TaskToken{
 					DomainID:        constants.TestDomainID,
@@ -726,11 +739,12 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 				eventsCache := events.NewMockCache(ctrl)
 				decisionHandler.shard.(*shard.MockContext).EXPECT().GetEventsCache().Times(1).Return(eventsCache)
 			},
-		},
+		}, // no
 		{
-			name:        "decision heartbeat time out",
-			domainID:    constants.TestDomainID,
-			expectedErr: &types.EntityNotExistsError{Message: "decision heartbeat timeout"},
+			name:                       "decision heartbeat time out",
+			domainID:                   constants.TestDomainID,
+			expectedErr:                &types.EntityNotExistsError{Message: "decision heartbeat timeout"},
+			expectGetWorkflowExecution: true,
 			request: &types.HistoryRespondDecisionTaskCompletedRequest{
 				DomainUUID: constants.TestDomainID,
 				CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
@@ -777,7 +791,299 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 					DecisionOriginalScheduledTimestamp: 1,
 				},
 			},
-		},
+		}, // default type
+		{
+			name:                       "update continueAsNew info failure - execution size limit exceeded",
+			domainID:                   constants.TestDomainID,
+			expectedErr:                execution.ErrWorkflowFinished,
+			expectGetWorkflowExecution: true,
+			request: &types.HistoryRespondDecisionTaskCompletedRequest{
+				DomainUUID: constants.TestDomainID,
+				CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+					TaskToken: serializedTestToken,
+					Decisions: []*types.Decision{{
+						DecisionType: func(i int32) *types.DecisionType {
+							decisionType := new(types.DecisionType)
+							*decisionType = types.DecisionType(i)
+							return decisionType
+						}(9), // types.DecisionTypeContinueAsNewWorkflowExecution is 9
+						ContinueAsNewWorkflowExecutionDecisionAttributes: &types.ContinueAsNewWorkflowExecutionDecisionAttributes{
+							WorkflowType: &types.WorkflowType{Name: testWorkflowTypeName},
+							TaskList:     &types.TaskList{Name: testTaskListName},
+						},
+					}},
+					ReturnNewDecisionTask: true,
+				},
+			},
+			expectMockCalls: func(ctrl *gomock.Controller, decisionHandler *handlerImpl) {
+				deserializedTestToken := &common.TaskToken{
+					DomainID:   constants.TestDomainID,
+					WorkflowID: constants.TestWorkflowID,
+					RunID:      constants.TestRunID,
+					ScheduleID: 0,
+				}
+				decisionHandler.tokenSerializer.(*common.MockTaskTokenSerializer).EXPECT().Deserialize(serializedTestToken).Return(deserializedTestToken, nil)
+				eventsCache := events.NewMockCache(ctrl)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().GetEventsCache().Times(3).Return(eventsCache)
+				eventsCache.EXPECT().GetEvent(context.Background(), testShardID, constants.TestDomainID, constants.TestWorkflowID, constants.TestRunID, common.FirstEventID, common.FirstEventID, nil).Return(&types.HistoryEvent{}, nil)
+				eventsCache.EXPECT().PutEvent(constants.TestDomainID, constants.TestWorkflowID, gomock.Any(), int64(1), gomock.Any()).Times(2)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().GetShardID().Times(1).Return(testShardID)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().GenerateTransferTaskIDs(2).Times(1).Return([]int64{0, 1}, nil)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().AppendHistoryV2Events(gomock.Any(), gomock.Any(), constants.TestDomainID, gomock.Any()).Return(nil, &persistence.TransactionSizeLimitError{Msg: fmt.Sprintf("transaction size exceeds limit")})
+				decisionHandler.shard.(*shard.MockContext).EXPECT().GetExecutionManager().Times(1)
+			},
+			mutableState: &persistence.WorkflowMutableState{
+				ExecutionInfo: &persistence.WorkflowExecutionInfo{
+					DecisionOriginalScheduledTimestamp: 1,
+					WorkflowTimeout:                    100,
+				},
+			},
+		}, // continue as new type
+		{
+			name:                       "update continueAsNew info failure - conflict error",
+			domainID:                   constants.TestDomainID,
+			expectedErr:                workflow.ErrAlreadyCompleted,
+			expectGetWorkflowExecution: true,
+			request: &types.HistoryRespondDecisionTaskCompletedRequest{
+				DomainUUID: constants.TestDomainID,
+				CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+					TaskToken: serializedTestToken,
+					Decisions: []*types.Decision{{
+						DecisionType: func(i int32) *types.DecisionType {
+							decisionType := new(types.DecisionType)
+							*decisionType = types.DecisionType(i)
+							return decisionType
+						}(3), // DecisionTypeCompleteWorkflowExecution
+						CompleteWorkflowExecutionDecisionAttributes: &types.CompleteWorkflowExecutionDecisionAttributes{Result: []byte{}},
+					}},
+				},
+			},
+			expectMockCalls: func(ctrl *gomock.Controller, decisionHandler *handlerImpl) {
+				deserializedTestToken := &common.TaskToken{
+					DomainID:   constants.TestDomainID,
+					WorkflowID: constants.TestWorkflowID,
+					RunID:      constants.TestRunID,
+				}
+				decisionHandler.tokenSerializer.(*common.MockTaskTokenSerializer).EXPECT().Deserialize(serializedTestToken).Return(deserializedTestToken, nil)
+				eventsCache := events.NewMockCache(ctrl)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().GetEventsCache().Times(3).Return(eventsCache)
+				eventsCache.EXPECT().GetEvent(context.Background(), testShardID, constants.TestDomainID, constants.TestWorkflowID, constants.TestRunID, common.FirstEventID, common.FirstEventID, nil).
+					Return(&types.HistoryEvent{
+						WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{},
+					}, nil).Times(3)
+				eventsCache.EXPECT().PutEvent(constants.TestDomainID, constants.TestWorkflowID, gomock.Any(), int64(1), gomock.Any()).Times(2)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().GetShardID().Times(3).Return(testShardID)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().GenerateTransferTaskIDs(2).Times(1).Return([]int64{0, 1}, nil)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().AppendHistoryV2Events(gomock.Any(), gomock.Any(), constants.TestDomainID, gomock.Any()).Return(nil, execution.NewConflictError(new(testing.T), errors.New("some random conflict error")))
+				decisionHandler.shard.(*shard.MockContext).EXPECT().GetExecutionManager().Times(1)
+			},
+			mutableState: &persistence.WorkflowMutableState{
+				ExecutionInfo: &persistence.WorkflowExecutionInfo{
+					CronSchedule: "0 1 * * 1", //some random cron schedule
+				},
+			},
+		}, // complete wf type as new type
+		{
+			name:        "update continueAsNew info failure - load execution",
+			domainID:    constants.TestDomainID,
+			expectedErr: errors.New("some error occurred when loading workflow execution"),
+			request: &types.HistoryRespondDecisionTaskCompletedRequest{
+				DomainUUID: constants.TestDomainID,
+				CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+					TaskToken: serializedTestToken,
+					Decisions: []*types.Decision{{
+						DecisionType: func(i int32) *types.DecisionType {
+							decisionType := new(types.DecisionType)
+							*decisionType = types.DecisionType(i)
+							return decisionType
+						}(4), // DecisionTypeFailWorkflowExecution
+						FailWorkflowExecutionDecisionAttributes: &types.FailWorkflowExecutionDecisionAttributes{
+							Reason: func(reason string) *string { return &reason }("some reason to fail workflow execution"),
+						},
+					}},
+				},
+			},
+			expectMockCalls: func(ctrl *gomock.Controller, decisionHandler *handlerImpl) {
+				deserializedTestToken := &common.TaskToken{
+					DomainID:   constants.TestDomainID,
+					WorkflowID: constants.TestWorkflowID,
+					RunID:      constants.TestRunID,
+				}
+				decisionHandler.tokenSerializer.(*common.MockTaskTokenSerializer).EXPECT().Deserialize(serializedTestToken).Return(deserializedTestToken, nil)
+				eventsCache := events.NewMockCache(ctrl)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().GetEventsCache().Times(2).Return(eventsCache)
+				eventsCache.EXPECT().GetEvent(context.Background(), testShardID, constants.TestDomainID, constants.TestWorkflowID, constants.TestRunID, common.FirstEventID, common.FirstEventID, nil).
+					Return(&types.HistoryEvent{
+						WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{},
+					}, nil).Times(3)
+				eventsCache.EXPECT().PutEvent(constants.TestDomainID, constants.TestWorkflowID, gomock.Any(), int64(1), gomock.Any()).Times(2)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().GetShardID().Times(3).Return(testShardID)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().GenerateTransferTaskIDs(2).Times(1).Return([]int64{0, 1}, nil)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().AppendHistoryV2Events(gomock.Any(), gomock.Any(), constants.TestDomainID, gomock.Any()).Return(nil, &persistence.TransactionSizeLimitError{Msg: fmt.Sprintf("transaction size exceeds limit")})
+				decisionHandler.shard.(*shard.MockContext).EXPECT().GetExecutionManager().Times(1)
+				firstGetWfExecutionCall := decisionHandler.shard.(*shard.MockContext).EXPECT().GetWorkflowExecution(context.Background(), gomock.Any()).
+					Return(&persistence.GetWorkflowExecutionResponse{
+						State: &persistence.WorkflowMutableState{
+							ExecutionInfo: &persistence.WorkflowExecutionInfo{
+								DomainID:     constants.TestDomainID,
+								WorkflowID:   constants.TestWorkflowID,
+								RunID:        constants.TestRunID,
+								CronSchedule: "0 1 * * 1", //some random cron schedule
+							},
+							ExecutionStats: &persistence.ExecutionStats{},
+						},
+						MutableStateStats: &persistence.MutableStateStats{},
+					}, nil)
+				lastGetWfExecutionCall := decisionHandler.shard.(*shard.MockContext).EXPECT().GetWorkflowExecution(context.Background(), gomock.Any()).Return(nil, errors.New("some error occurred when loading workflow execution"))
+				gomock.InOrder(firstGetWfExecutionCall, lastGetWfExecutionCall)
+			},
+		}, // wf fail continue as new
+		{
+			name:        "update continueAsNew info failure - update execution",
+			domainID:    constants.TestDomainID,
+			expectedErr: errors.New("some error updating workflow execution"),
+			request: &types.HistoryRespondDecisionTaskCompletedRequest{
+				DomainUUID: constants.TestDomainID,
+				CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+					TaskToken: serializedTestToken,
+					Decisions: []*types.Decision{{
+						DecisionType: func(i int32) *types.DecisionType {
+							decisionType := new(types.DecisionType)
+							*decisionType = types.DecisionType(i)
+							return decisionType
+						}(4), // DecisionTypeFailWorkflowExecution
+						FailWorkflowExecutionDecisionAttributes: &types.FailWorkflowExecutionDecisionAttributes{
+							Reason: func(reason string) *string { return &reason }("some reason to fail workflow execution"),
+						},
+					}},
+				},
+			},
+			expectMockCalls: func(ctrl *gomock.Controller, decisionHandler *handlerImpl) {
+				deserializedTestToken := &common.TaskToken{
+					DomainID:   constants.TestDomainID,
+					WorkflowID: constants.TestWorkflowID,
+					RunID:      constants.TestRunID,
+				}
+				decisionHandler.tokenSerializer.(*common.MockTaskTokenSerializer).EXPECT().Deserialize(serializedTestToken).Return(deserializedTestToken, nil)
+				eventsCache := events.NewMockCache(ctrl)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().GetEventsCache().Times(3).Return(eventsCache)
+				eventsCache.EXPECT().GetEvent(context.Background(), testShardID, constants.TestDomainID, constants.TestWorkflowID, constants.TestRunID, common.FirstEventID, common.FirstEventID, nil).
+					Return(&types.HistoryEvent{
+						WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{},
+					}, nil).Times(3)
+				eventsCache.EXPECT().PutEvent(constants.TestDomainID, constants.TestWorkflowID, gomock.Any(), int64(1), gomock.Any()).Times(3)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().GetShardID().Times(3).Return(testShardID)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().GenerateTransferTaskIDs(2).Times(2).Return([]int64{0, 1}, nil)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().GenerateTransferTaskIDs(1).Times(1).Return([]int64{0}, nil)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().AppendHistoryV2Events(gomock.Any(), gomock.Any(), constants.TestDomainID, gomock.Any()).Return(nil, &persistence.TransactionSizeLimitError{Msg: fmt.Sprintf("transaction size exceeds limit")})
+				decisionHandler.shard.(*shard.MockContext).EXPECT().AppendHistoryV2Events(gomock.Any(), gomock.Any(), constants.TestDomainID, gomock.Any()).Return(&persistence.AppendHistoryNodesResponse{}, nil)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().GetExecutionManager().Times(1)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().GetWorkflowExecution(context.Background(), gomock.Any()).
+					DoAndReturn(func(ctx interface{}, request interface{}) (*persistence.GetWorkflowExecutionResponse, error) {
+						return &persistence.GetWorkflowExecutionResponse{
+							State: &persistence.WorkflowMutableState{
+								ExecutionInfo: &persistence.WorkflowExecutionInfo{
+									DomainID:     constants.TestDomainID,
+									WorkflowID:   constants.TestWorkflowID,
+									RunID:        constants.TestRunID,
+									CronSchedule: "0 1 * * 1", //some random cron schedule
+								},
+								ExecutionStats: &persistence.ExecutionStats{},
+							},
+							MutableStateStats: &persistence.MutableStateStats{},
+						}, nil
+					}).Times(2)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().UpdateWorkflowExecution(context.Background(), gomock.Any()).Return(nil, errors.New("some error updating workflow execution"))
+				engine := engine.NewMockEngine(ctrl)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().GetEngine().Return(engine).Times(2)
+				engine.EXPECT().NotifyNewTransferTasks(gomock.Any())
+				engine.EXPECT().NotifyNewTimerTasks(gomock.Any())
+				engine.EXPECT().NotifyNewCrossClusterTasks(gomock.Any())
+				engine.EXPECT().NotifyNewReplicationTasks(gomock.Any())
+
+			},
+		}, // wf fail continue as new
+		{
+			name:                        "",
+			domainID:                    constants.TestDomainID,
+			expectedErr:                 errors.New("some error updating continue as new info"),
+			expectNonDefaultDomainCache: true,
+			expectMockCalls: func(ctrl *gomock.Controller, decisionHandler *handlerImpl) {
+				deserializedTestToken := &common.TaskToken{
+					DomainID:   constants.TestDomainID,
+					WorkflowID: constants.TestWorkflowID,
+					RunID:      constants.TestRunID,
+				}
+				decisionHandler.tokenSerializer.(*common.MockTaskTokenSerializer).EXPECT().Deserialize(serializedTestToken).Return(deserializedTestToken, nil)
+				eventsCache := events.NewMockCache(ctrl)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().GetEventsCache().Times(3).Return(eventsCache)
+				eventsCache.EXPECT().PutEvent(constants.TestDomainID, constants.TestWorkflowID, constants.TestRunID, int64(0), gomock.Any())
+				decisionHandler.shard.(*shard.MockContext).EXPECT().GenerateTransferTaskIDs(1).Return([]int64{0}, nil)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().AppendHistoryV2Events(gomock.Any(), gomock.Any(), constants.TestDomainID, gomock.Any()).Return(nil, errors.New("some error updating continue as new info"))
+				domainEntry := cache.NewLocalDomainCacheEntryForTest(
+					&persistence.DomainInfo{ID: constants.TestDomainID, Name: constants.TestDomainName},
+					&persistence.DomainConfig{
+						Retention:   1,
+						BadBinaries: types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{"test-binary-checksum": {Reason: "some reason"}}},
+					},
+					cluster.TestCurrentClusterName)
+				decisionHandler.domainCache.(*cache.MockDomainCache).EXPECT().GetDomainByID(constants.TestDomainID).AnyTimes().Return(domainEntry, nil)
+
+				//get workflow execution
+				decisionHandler.shard.(*shard.MockContext).EXPECT().GetWorkflowExecution(context.Background(), gomock.Any()).
+					Return(&persistence.GetWorkflowExecutionResponse{
+						State: &persistence.WorkflowMutableState{
+							ExecutionInfo: &persistence.WorkflowExecutionInfo{
+								DomainID:           constants.TestDomainID,
+								WorkflowID:         constants.TestWorkflowID,
+								RunID:              constants.TestRunID,
+								DecisionScheduleID: 1,
+							},
+							ExecutionStats: &persistence.ExecutionStats{},
+						},
+						MutableStateStats: &persistence.MutableStateStats{},
+					}, nil).Times(1)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().GetWorkflowExecution(context.Background(), gomock.Any()).
+					DoAndReturn(func(ctx interface{}, request interface{}) (*persistence.GetWorkflowExecutionResponse, error) {
+						return &persistence.GetWorkflowExecutionResponse{
+							State: &persistence.WorkflowMutableState{
+								ExecutionInfo: &persistence.WorkflowExecutionInfo{
+									DomainID:   constants.TestDomainID,
+									WorkflowID: constants.TestWorkflowID,
+									RunID:      constants.TestRunID,
+								},
+								ExecutionStats: &persistence.ExecutionStats{},
+							},
+							MutableStateStats: &persistence.MutableStateStats{},
+						}, nil
+					}).Times(1)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().GetWorkflowExecution(context.Background(), gomock.Any()).
+					DoAndReturn(func(ctx interface{}, request interface{}) (*persistence.GetWorkflowExecutionResponse, error) {
+						return &persistence.GetWorkflowExecutionResponse{
+							State: &persistence.WorkflowMutableState{
+								ExecutionInfo: &persistence.WorkflowExecutionInfo{
+									DomainID:        constants.TestDomainID,
+									WorkflowID:      constants.TestWorkflowID,
+									RunID:           constants.TestRunID,
+									DecisionAttempt: 2,
+								},
+								ExecutionStats: &persistence.ExecutionStats{},
+							},
+							MutableStateStats: &persistence.MutableStateStats{},
+						}, nil
+					}).Times(1)
+			},
+			request: &types.HistoryRespondDecisionTaskCompletedRequest{
+				DomainUUID: constants.TestDomainID,
+				CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+					TaskToken:                  serializedTestToken,
+					BinaryChecksum:             "test-binary-checksum",
+					ForceCreateNewDecisionTask: true,
+					ReturnNewDecisionTask:      true,
+				},
+			},
+		}, // multi tests binary heartbeat no timeout
+
 	}
 
 	for _, test := range tests {
@@ -788,6 +1094,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 			handlerConfig := config.NewForTest()
 			handlerConfig.MaxActivityCountDispatchByDomain = func(domain string) int { return 1 } // some value > 0
 			handlerConfig.EnableActivityLocalDispatchByDomain = func(domain string) bool { return true }
+			handlerConfig.DecisionRetryMaxAttempts = func(domain string) int { return 1 }
 			decisionHandler := &handlerImpl{
 				config:          handlerConfig,
 				shard:           shard,
@@ -799,7 +1106,13 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 				tokenSerializer: common.NewMockTaskTokenSerializer(ctrl),
 				attrValidator:   newAttrValidator(domainCache, metrics.NewClient(tally.NoopScope, metrics.History), config.NewForTest(), testlogger.New(t)),
 			}
-			expectCommonCalls(decisionHandler, test.domainID, test.mutableState)
+			expectCommonCalls(decisionHandler, test.domainID)
+			if test.expectGetWorkflowExecution {
+				expectGetWorkflowExecution(decisionHandler, test.domainID, test.mutableState)
+			}
+			if !test.expectNonDefaultDomainCache {
+				expectDefaultDomainCache(decisionHandler, test.domainID)
+			}
 			decisionHandler.executionCache = execution.NewCache(shard)
 
 			request := &types.HistoryRespondDecisionTaskCompletedRequest{
@@ -1050,7 +1363,18 @@ func (s *DecisionHandlerSuite) assertQueryCounts(queryRegistry query.Registry, b
 	s.Len(queryRegistry.GetFailedIDs(), failed)
 }
 
-func expectCommonCalls(handler *handlerImpl, domainID string, state *persistence.WorkflowMutableState) {
+func expectCommonCalls(handler *handlerImpl, domainID string) {
+	handler.shard.(*shard.MockContext).EXPECT().GetConfig().AnyTimes().Return(handler.config)
+	handler.shard.(*shard.MockContext).EXPECT().GetLogger().AnyTimes().Return(handler.logger)
+	handler.shard.(*shard.MockContext).EXPECT().GetTimeSource().AnyTimes().Return(handler.timeSource)
+	handler.shard.(*shard.MockContext).EXPECT().GetDomainCache().AnyTimes().Return(handler.domainCache)
+	handler.shard.(*shard.MockContext).EXPECT().GetClusterMetadata().AnyTimes().Return(constants.TestClusterMetadata)
+	handler.shard.(*shard.MockContext).EXPECT().GetMetricsClient().AnyTimes().Return(handler.metricsClient)
+	handler.domainCache.(*cache.MockDomainCache).EXPECT().GetDomainName(domainID).AnyTimes().Return(constants.TestDomainName, nil)
+	handler.shard.(*shard.MockContext).EXPECT().GetExecutionManager().Times(1)
+}
+
+func expectGetWorkflowExecution(handler *handlerImpl, domainID string, state *persistence.WorkflowMutableState) {
 	workflowExecutionResponse := &persistence.GetWorkflowExecutionResponse{
 		State:             state,
 		MutableStateStats: &persistence.MutableStateStats{},
@@ -1071,13 +1395,8 @@ func expectCommonCalls(handler *handlerImpl, domainID string, state *persistence
 			RunID:      constants.TestRunID,
 		},
 	}).AnyTimes().Return(workflowExecutionResponse, nil)
-	handler.shard.(*shard.MockContext).EXPECT().GetConfig().AnyTimes().Return(handler.config)
-	handler.shard.(*shard.MockContext).EXPECT().GetLogger().AnyTimes().Return(handler.logger)
-	handler.shard.(*shard.MockContext).EXPECT().GetTimeSource().AnyTimes().Return(handler.timeSource)
-	handler.shard.(*shard.MockContext).EXPECT().GetDomainCache().AnyTimes().Return(handler.domainCache)
-	handler.shard.(*shard.MockContext).EXPECT().GetClusterMetadata().AnyTimes().Return(constants.TestClusterMetadata)
-	handler.shard.(*shard.MockContext).EXPECT().GetMetricsClient().AnyTimes().Return(handler.metricsClient)
+}
+
+func expectDefaultDomainCache(handler *handlerImpl, domainID string) {
 	handler.domainCache.(*cache.MockDomainCache).EXPECT().GetDomainByID(domainID).AnyTimes().Return(constants.TestLocalDomainEntry, nil)
-	handler.domainCache.(*cache.MockDomainCache).EXPECT().GetDomainName(domainID).AnyTimes().Return(constants.TestDomainName, nil)
-	handler.shard.(*shard.MockContext).EXPECT().GetExecutionManager().Times(1)
 }
