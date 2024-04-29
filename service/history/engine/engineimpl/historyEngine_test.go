@@ -31,9 +31,11 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/uber-go/tally"
 	"go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 
@@ -46,6 +48,7 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/testlogger"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -5244,4 +5247,220 @@ func (s *engineSuite) getActivityScheduledEvent(
 
 func (s *engineSuite) printHistory(builder execution.MutableState) string {
 	return thrift.FromHistory(builder.GetHistoryBuilder().GetHistory()).String()
+}
+
+func TestRecordChildExecutionCompleted(t *testing.T) {
+	testCases := []struct {
+		name      string
+		request   *types.RecordChildExecutionCompletedRequest
+		mockSetup func(*execution.MockMutableState)
+		wantErr   bool
+		assertErr func(t *testing.T, err error)
+	}{
+		{
+			name: "workflow not running",
+			request: &types.RecordChildExecutionCompletedRequest{
+				DomainUUID:  "58f7998e-9c00-4827-bbd3-6a891b3ca0ca",
+				InitiatedID: 1,
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: "wid",
+					RunID:      "4353ddce-ca34-4c78-9785-dc0b83af4bbc",
+				},
+				CompletedExecution: &types.WorkflowExecution{
+					WorkflowID: "wid1",
+					RunID:      "312b2440-2859-4e50-a59f-d92a300a072d",
+				},
+			},
+			mockSetup: func(ms *execution.MockMutableState) {
+				ms.EXPECT().IsWorkflowExecutionRunning().Return(false)
+			},
+			wantErr: true,
+			assertErr: func(t *testing.T, err error) {
+				assert.Equal(t, workflow.ErrNotExists, err)
+			},
+		},
+		{
+			name: "stale mutable state - not containing initiated event",
+			request: &types.RecordChildExecutionCompletedRequest{
+				DomainUUID:  "58f7998e-9c00-4827-bbd3-6a891b3ca0ca",
+				InitiatedID: 10,
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: "wid",
+					RunID:      "4353ddce-ca34-4c78-9785-dc0b83af4bbc",
+				},
+				CompletedExecution: &types.WorkflowExecution{
+					WorkflowID: "wid1",
+					RunID:      "312b2440-2859-4e50-a59f-d92a300a072d",
+				},
+			},
+			mockSetup: func(ms *execution.MockMutableState) {
+				ms.EXPECT().IsWorkflowExecutionRunning().Return(true)
+				ms.EXPECT().GetChildExecutionInfo(int64(10)).Return(nil, false)
+				ms.EXPECT().GetNextEventID().Return(int64(10)).Times(2)
+			},
+			wantErr: true,
+			assertErr: func(t *testing.T, err error) {
+				assert.Equal(t, workflow.ErrStaleState, err)
+			},
+		},
+		{
+			name: "pending child execution not found",
+			request: &types.RecordChildExecutionCompletedRequest{
+				DomainUUID:  "58f7998e-9c00-4827-bbd3-6a891b3ca0ca",
+				InitiatedID: 10,
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: "wid",
+					RunID:      "4353ddce-ca34-4c78-9785-dc0b83af4bbc",
+				},
+				CompletedExecution: &types.WorkflowExecution{
+					WorkflowID: "wid1",
+					RunID:      "312b2440-2859-4e50-a59f-d92a300a072d",
+				},
+			},
+			mockSetup: func(ms *execution.MockMutableState) {
+				ms.EXPECT().IsWorkflowExecutionRunning().Return(true)
+				ms.EXPECT().GetChildExecutionInfo(int64(10)).Return(nil, false)
+				ms.EXPECT().GetNextEventID().Return(int64(11)).Times(1)
+			},
+			wantErr: true,
+			assertErr: func(t *testing.T, err error) {
+				assert.Equal(t, &types.EntityNotExistsError{Message: "Pending child execution not found."}, err)
+			},
+		},
+		{
+			name: "stale mutable state - not containing started event",
+			request: &types.RecordChildExecutionCompletedRequest{
+				DomainUUID:  "58f7998e-9c00-4827-bbd3-6a891b3ca0ca",
+				InitiatedID: 10,
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: "wid",
+					RunID:      "4353ddce-ca34-4c78-9785-dc0b83af4bbc",
+				},
+				CompletedExecution: &types.WorkflowExecution{
+					WorkflowID: "wid1",
+					RunID:      "312b2440-2859-4e50-a59f-d92a300a072d",
+				},
+				StartedID: 11,
+			},
+			mockSetup: func(ms *execution.MockMutableState) {
+				ms.EXPECT().IsWorkflowExecutionRunning().Return(true)
+				ms.EXPECT().GetChildExecutionInfo(int64(10)).Return(&persistence.ChildExecutionInfo{StartedID: common.EmptyEventID}, true)
+				ms.EXPECT().GetNextEventID().Return(int64(11)).Times(2)
+			},
+			wantErr: true,
+			assertErr: func(t *testing.T, err error) {
+				assert.Equal(t, workflow.ErrStaleState, err)
+			},
+		},
+		{
+			name: "pending child execution not started",
+			request: &types.RecordChildExecutionCompletedRequest{
+				DomainUUID:  "58f7998e-9c00-4827-bbd3-6a891b3ca0ca",
+				InitiatedID: 10,
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: "wid",
+					RunID:      "4353ddce-ca34-4c78-9785-dc0b83af4bbc",
+				},
+				CompletedExecution: &types.WorkflowExecution{
+					WorkflowID: "wid1",
+					RunID:      "312b2440-2859-4e50-a59f-d92a300a072d",
+				},
+				StartedID: 11,
+			},
+			mockSetup: func(ms *execution.MockMutableState) {
+				ms.EXPECT().IsWorkflowExecutionRunning().Return(true)
+				ms.EXPECT().GetChildExecutionInfo(int64(10)).Return(&persistence.ChildExecutionInfo{StartedID: common.EmptyEventID}, true)
+				ms.EXPECT().GetNextEventID().Return(int64(12)).Times(1)
+			},
+			wantErr: true,
+			assertErr: func(t *testing.T, err error) {
+				assert.Equal(t, &types.EntityNotExistsError{Message: "Pending child execution not started."}, err)
+			},
+		},
+		{
+			name: "pending child execution workflowID mismatch",
+			request: &types.RecordChildExecutionCompletedRequest{
+				DomainUUID:  "58f7998e-9c00-4827-bbd3-6a891b3ca0ca",
+				InitiatedID: 10,
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: "wid",
+					RunID:      "4353ddce-ca34-4c78-9785-dc0b83af4bbc",
+				},
+				CompletedExecution: &types.WorkflowExecution{
+					WorkflowID: "wid1",
+					RunID:      "312b2440-2859-4e50-a59f-d92a300a072d",
+				},
+				StartedID: 11,
+			},
+			mockSetup: func(ms *execution.MockMutableState) {
+				ms.EXPECT().IsWorkflowExecutionRunning().Return(true)
+				ms.EXPECT().GetChildExecutionInfo(int64(10)).Return(&persistence.ChildExecutionInfo{StartedID: 11, StartedWorkflowID: "wid0"}, true)
+			},
+			wantErr: true,
+			assertErr: func(t *testing.T, err error) {
+				assert.Equal(t, &types.EntityNotExistsError{Message: "Pending child execution workflowID mismatch."}, err)
+			},
+		},
+		{
+			name: "success - child workflow completed",
+			request: &types.RecordChildExecutionCompletedRequest{
+				DomainUUID:  "58f7998e-9c00-4827-bbd3-6a891b3ca0ca",
+				InitiatedID: 10,
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: "wid",
+					RunID:      "4353ddce-ca34-4c78-9785-dc0b83af4bbc",
+				},
+				CompletedExecution: &types.WorkflowExecution{
+					WorkflowID: "wid1",
+					RunID:      "312b2440-2859-4e50-a59f-d92a300a072d",
+				},
+				CompletionEvent: &types.HistoryEvent{
+					EventType: types.EventTypeWorkflowExecutionCompleted.Ptr(),
+					WorkflowExecutionCompletedEventAttributes: &types.WorkflowExecutionCompletedEventAttributes{
+						Result: []byte("success"),
+					},
+				},
+				StartedID: 11,
+			},
+			mockSetup: func(ms *execution.MockMutableState) {
+				ms.EXPECT().IsWorkflowExecutionRunning().Return(true)
+				ms.EXPECT().GetChildExecutionInfo(int64(10)).Return(&persistence.ChildExecutionInfo{StartedID: 11, StartedWorkflowID: "wid1"}, true)
+				ms.EXPECT().AddChildWorkflowExecutionCompletedEvent(int64(10), gomock.Any(), gomock.Any()).Return(nil, nil)
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockShard := shard.NewTestContext(t, ctrl, &persistence.ShardInfo{}, config.NewForTest())
+			mockDomainCache := mockShard.Resource.DomainCache
+			testDomainEntry := cache.NewLocalDomainCacheEntryForTest(
+				&persistence.DomainInfo{ID: constants.TestDomainID}, &persistence.DomainConfig{}, "",
+			)
+			mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
+			mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(constants.TestDomainID, nil).AnyTimes()
+			ms := execution.NewMockMutableState(ctrl)
+			tc.mockSetup(ms)
+
+			historyEngine := &historyEngineImpl{
+				shard:           mockShard,
+				clusterMetadata: mockShard.GetClusterMetadata(),
+				timeSource:      mockShard.GetTimeSource(),
+				metricsClient:   metrics.NewClient(tally.NoopScope, metrics.History),
+				logger:          mockShard.GetLogger(),
+				updateWithActionFn: func(_ context.Context, _ *execution.Cache, _ string, _ types.WorkflowExecution, _ bool, _ time.Time, actionFn func(wfContext execution.Context, mutableState execution.MutableState) error) error {
+					return actionFn(nil, ms)
+				},
+			}
+
+			err := historyEngine.RecordChildExecutionCompleted(context.Background(), tc.request)
+			if tc.wantErr {
+				tc.assertErr(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }

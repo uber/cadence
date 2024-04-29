@@ -127,6 +127,8 @@ type (
 		failoverMarkerNotifier         failover.MarkerNotifier
 		wfIDCache                      workflowcache.WFCache
 		ratelimitInternalPerWorkflowID dynamicconfig.BoolPropertyFnWithDomainFilter
+
+		updateWithActionFn func(context.Context, *execution.Cache, string, types.WorkflowExecution, bool, time.Time, func(wfContext execution.Context, mutableState execution.MutableState) error) error
 	}
 )
 
@@ -242,6 +244,7 @@ func NewEngineWithShardContext(
 			shard.GetShardID(), shard, replicationReader, shard.GetMetricsClient()),
 		wfIDCache:                      wfIDCache,
 		ratelimitInternalPerWorkflowID: ratelimitInternalPerWorkflowID,
+		updateWithActionFn:             workflow.UpdateWithAction,
 	}
 	historyEngImpl.decisionHandler = decision.NewHandler(
 		shard,
@@ -2826,27 +2829,55 @@ func (e *historyEngineImpl) RecordChildExecutionCompleted(
 	domainID := domainEntry.GetInfo().ID
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: completionRequest.WorkflowExecution.WorkflowID,
-		RunID:      completionRequest.WorkflowExecution.RunID,
+		WorkflowID: completionRequest.WorkflowExecution.GetWorkflowID(),
+		RunID:      completionRequest.WorkflowExecution.GetRunID(),
 	}
 
-	return workflow.UpdateWithAction(ctx, e.executionCache, domainID, workflowExecution, true, e.timeSource.Now(),
+	return e.updateWithActionFn(ctx, e.executionCache, domainID, workflowExecution, true, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return workflow.ErrNotExists
 			}
 
 			initiatedID := completionRequest.InitiatedID
+			startedID := completionRequest.StartedID
 			completedExecution := completionRequest.CompletedExecution
 			completionEvent := completionRequest.CompletionEvent
 
 			// Check mutable state to make sure child execution is in pending child executions
 			ci, isRunning := mutableState.GetChildExecutionInfo(initiatedID)
-			if !isRunning || ci.StartedID == common.EmptyEventID {
+			if !isRunning {
+				if initiatedID >= mutableState.GetNextEventID() {
+					e.metricsClient.IncCounter(metrics.HistoryRecordChildExecutionCompletedScope, metrics.StaleMutableStateCounter)
+					e.logger.Error("Encounter stale mutable state in RecordChildExecutionCompleted",
+						tag.WorkflowDomainName(domainEntry.GetInfo().Name),
+						tag.WorkflowID(workflowExecution.GetWorkflowID()),
+						tag.WorkflowRunID(workflowExecution.GetRunID()),
+						tag.WorkflowInitiatedID(initiatedID),
+						tag.WorkflowStartedID(startedID),
+						tag.WorkflowNextEventID(mutableState.GetNextEventID()),
+					)
+					return workflow.ErrStaleState
+				}
 				return &types.EntityNotExistsError{Message: "Pending child execution not found."}
 			}
+			if ci.StartedID == common.EmptyEventID {
+				if startedID >= mutableState.GetNextEventID() {
+					e.metricsClient.IncCounter(metrics.HistoryRecordChildExecutionCompletedScope, metrics.StaleMutableStateCounter)
+					e.logger.Error("Encounter stale mutable state in RecordChildExecutionCompleted",
+						tag.WorkflowDomainName(domainEntry.GetInfo().Name),
+						tag.WorkflowID(workflowExecution.GetWorkflowID()),
+						tag.WorkflowRunID(workflowExecution.GetRunID()),
+						tag.WorkflowInitiatedID(initiatedID),
+						tag.WorkflowStartedID(startedID),
+						tag.WorkflowNextEventID(mutableState.GetNextEventID()),
+					)
+					return workflow.ErrStaleState
+				}
+				return &types.EntityNotExistsError{Message: "Pending child execution not started."}
+			}
 			if ci.StartedWorkflowID != completedExecution.GetWorkflowID() {
-				return &types.EntityNotExistsError{Message: "Pending child execution not found."}
+				return &types.EntityNotExistsError{Message: "Pending child execution workflowID mismatch."}
 			}
 
 			switch *completionEvent.EventType {
@@ -2866,7 +2897,6 @@ func (e *historyEngineImpl) RecordChildExecutionCompleted(
 				attributes := completionEvent.WorkflowExecutionTimedOutEventAttributes
 				_, err = mutableState.AddChildWorkflowExecutionTimedOutEvent(initiatedID, completedExecution, attributes)
 			}
-
 			return err
 		})
 }
