@@ -24,7 +24,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -1962,7 +1961,7 @@ func (h *handlerImpl) GetCrossClusterTasks(
 			if err != nil {
 				logger.Error("History engine not found for shard", tag.Error(err))
 				var owner membership.HostInfo
-				if info, err := h.GetMembershipResolver().Lookup(service.History, strconv.Itoa(int(shardID))); err == nil {
+				if info, err := h.GetMembershipResolver().Lookup(service.History, string(rune(shardID))); err == nil {
 					owner = info
 				}
 				settable.Set(nil, shard.CreateShardOwnershipLostError(h.GetHostInfo(), owner))
@@ -2069,7 +2068,7 @@ func (h *handlerImpl) RatelimitUpdate(
 func (h *handlerImpl) convertError(err error) error {
 	switch err := err.(type) {
 	case *persistence.ShardOwnershipLostError:
-		info, err2 := h.GetMembershipResolver().Lookup(service.History, strconv.Itoa(err.ShardID))
+		info, err2 := h.GetMembershipResolver().Lookup(service.History, string(rune(err.ShardID)))
 		if err2 != nil {
 			return shard.CreateShardOwnershipLostError(h.GetHostInfo(), membership.HostInfo{})
 		}
