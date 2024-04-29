@@ -22,6 +22,7 @@ package queue
 
 import (
 	"context"
+	"errors"
 	"math/rand"
 	"sync"
 	"sync/atomic"
@@ -334,7 +335,8 @@ func (t *transferQueueProcessorBase) processorPump() {
 			}
 		case <-updateAckTimer.C:
 			processFinished, _, err := t.updateAckLevelFn()
-			if err == shard.ErrShardClosed || (err == nil && processFinished) {
+			var errShardClosed *shard.ErrShardClosed
+			if errors.As(err, &errShardClosed) || (err == nil && processFinished) {
 				if !t.options.EnableGracefulSyncShutdown() {
 					go t.Stop()
 					return

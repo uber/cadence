@@ -22,6 +22,7 @@ package queue
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -398,7 +399,8 @@ func (t *timerQueueProcessor) completeTimerLoop() {
 				}
 
 				t.logger.Error("Failed to complete timer task", tag.Error(err))
-				if err == shard.ErrShardClosed {
+				var errShardClosed *shard.ErrShardClosed
+				if errors.As(err, &errShardClosed) {
 					if !t.shard.GetConfig().QueueProcessorEnableGracefulSyncShutdown() {
 						go t.Stop()
 						return

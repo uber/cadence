@@ -332,6 +332,8 @@ func FromCancelExternalWorkflowExecutionFailedCause(t *types.CancelExternalWorkf
 	switch *t {
 	case types.CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution:
 		return apiv1.CancelExternalWorkflowExecutionFailedCause_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_FAILED_CAUSE_UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION
+	case types.CancelExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted:
+		return apiv1.CancelExternalWorkflowExecutionFailedCause_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_FAILED_CAUSE_WORKFLOW_ALREADY_COMPLETED
 	}
 	panic("unexpected enum value")
 }
@@ -342,6 +344,8 @@ func ToCancelExternalWorkflowExecutionFailedCause(t apiv1.CancelExternalWorkflow
 		return nil
 	case apiv1.CancelExternalWorkflowExecutionFailedCause_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_FAILED_CAUSE_UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION:
 		return types.CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution.Ptr()
+	case apiv1.CancelExternalWorkflowExecutionFailedCause_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_FAILED_CAUSE_WORKFLOW_ALREADY_COMPLETED:
+		return types.CancelExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted.Ptr()
 	}
 	panic("unexpected enum value")
 }
@@ -3283,6 +3287,8 @@ func FromSignalExternalWorkflowExecutionFailedCause(t *types.SignalExternalWorkf
 	switch *t {
 	case types.SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution:
 		return apiv1.SignalExternalWorkflowExecutionFailedCause_SIGNAL_EXTERNAL_WORKFLOW_EXECUTION_FAILED_CAUSE_UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION
+	case types.SignalExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted:
+		return apiv1.SignalExternalWorkflowExecutionFailedCause_SIGNAL_EXTERNAL_WORKFLOW_EXECUTION_FAILED_CAUSE_WORKFLOW_ALREADY_COMPLETED
 	}
 	panic("unexpected enum value")
 }
@@ -3293,6 +3299,8 @@ func ToSignalExternalWorkflowExecutionFailedCause(t apiv1.SignalExternalWorkflow
 		return nil
 	case apiv1.SignalExternalWorkflowExecutionFailedCause_SIGNAL_EXTERNAL_WORKFLOW_EXECUTION_FAILED_CAUSE_UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION:
 		return types.SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution.Ptr()
+	case apiv1.SignalExternalWorkflowExecutionFailedCause_SIGNAL_EXTERNAL_WORKFLOW_EXECUTION_FAILED_CAUSE_WORKFLOW_ALREADY_COMPLETED:
+		return types.SignalExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted.Ptr()
 	}
 	panic("unexpected enum value")
 }

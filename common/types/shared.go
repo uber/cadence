@@ -381,6 +381,8 @@ func (e CancelExternalWorkflowExecutionFailedCause) String() string {
 	switch w {
 	case 0:
 		return "UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION"
+	case 1:
+		return "WORKFLOW_ALREADY_COMPLETED"
 	}
 	return fmt.Sprintf("CancelExternalWorkflowExecutionFailedCause(%d)", w)
 }
@@ -390,6 +392,9 @@ func (e *CancelExternalWorkflowExecutionFailedCause) UnmarshalText(value []byte)
 	switch s := strings.ToUpper(string(value)); s {
 	case "UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION":
 		*e = CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution
+		return nil
+	case "WORKFLOW_ALREADY_COMPLETED":
+		*e = CancelExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted
 		return nil
 	default:
 		val, err := strconv.ParseInt(s, 10, 32)
@@ -409,6 +414,7 @@ func (e CancelExternalWorkflowExecutionFailedCause) MarshalText() ([]byte, error
 const (
 	// CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution is an option for CancelExternalWorkflowExecutionFailedCause
 	CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution CancelExternalWorkflowExecutionFailedCause = iota
+	CancelExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted
 )
 
 // CancelTimerDecisionAttributes is an internal type (TBD...)
@@ -5739,6 +5745,8 @@ func (e SignalExternalWorkflowExecutionFailedCause) String() string {
 	switch w {
 	case 0:
 		return "UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION"
+	case 1:
+		return "WORKFLOW_ALREADY_COMPLETED"
 	}
 	return fmt.Sprintf("SignalExternalWorkflowExecutionFailedCause(%d)", w)
 }
@@ -5748,6 +5756,9 @@ func (e *SignalExternalWorkflowExecutionFailedCause) UnmarshalText(value []byte)
 	switch s := strings.ToUpper(string(value)); s {
 	case "UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION":
 		*e = SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution
+		return nil
+	case "WORKFLOW_ALREADY_COMPLETED":
+		*e = SignalExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted
 		return nil
 	default:
 		val, err := strconv.ParseInt(s, 10, 32)
@@ -5767,6 +5778,7 @@ func (e SignalExternalWorkflowExecutionFailedCause) MarshalText() ([]byte, error
 const (
 	// SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution is an option for SignalExternalWorkflowExecutionFailedCause
 	SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution SignalExternalWorkflowExecutionFailedCause = iota
+	SignalExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted
 )
 
 // SignalExternalWorkflowExecutionFailedEventAttributes is an internal type (TBD...)

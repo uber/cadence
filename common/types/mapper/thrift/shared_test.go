@@ -476,6 +476,7 @@ func TestCancelExternalWorkflowExecutionFailedCauseConversion(t *testing.T) {
 	testCases := []*types.CancelExternalWorkflowExecutionFailedCause{
 		nil,
 		types.CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution.Ptr(),
+		types.CancelExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted.Ptr(),
 	}
 
 	for _, original := range testCases {
@@ -2603,6 +2604,7 @@ func TestSignalExternalWorkflowExecutionFailedCauseConversion(t *testing.T) {
 	testCases := []*types.SignalExternalWorkflowExecutionFailedCause{
 		nil,
 		types.SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution.Ptr(),
+		types.SignalExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted.Ptr(),
 	}
 
 	for _, original := range testCases {

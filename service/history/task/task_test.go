@@ -192,6 +192,22 @@ func (s *taskSuite) TestHandleErr_ErrWorkflowRateLimited() {
 	s.Equal(errWorkflowRateLimited, taskBase.HandleErr(errWorkflowRateLimited))
 }
 
+func (s *taskSuite) TestHandleErr_ErrShardRecentlyClosed() {
+	taskBase := s.newTestTask(func(task Info) (bool, error) {
+		return true, nil
+	}, nil)
+
+	taskBase.submitTime = time.Now()
+
+	shardClosedError := &shard.ErrShardClosed{
+		Msg: "shard closed",
+		// The shard was closed within the TimeBeforeShardClosedIsError interval
+		ClosedAt: time.Now().Add(-shard.TimeBeforeShardClosedIsError / 2),
+	}
+
+	s.Equal(shardClosedError, taskBase.HandleErr(shardClosedError))
+}
+
 func (s *taskSuite) TestHandleErr_ErrCurrentWorkflowConditionFailed() {
 	taskBase := s.newTestTask(func(task Info) (bool, error) {
 		return true, nil
@@ -295,6 +311,7 @@ func (s *taskSuite) TestRetryErr() {
 		return true, nil
 	}, nil)
 
+	s.Equal(false, taskBase.RetryErr(&shard.ErrShardClosed{}))
 	s.Equal(false, taskBase.RetryErr(errWorkflowBusy))
 	s.Equal(false, taskBase.RetryErr(ErrTaskPendingActive))
 	s.Equal(false, taskBase.RetryErr(context.DeadlineExceeded))

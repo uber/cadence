@@ -99,6 +99,7 @@ func TestCancelExternalWorkflowExecutionFailedCause(t *testing.T) {
 	for _, item := range []*types.CancelExternalWorkflowExecutionFailedCause{
 		nil,
 		types.CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution.Ptr(),
+		types.CancelExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted.Ptr(),
 	} {
 		assert.Equal(t, item, ToCancelExternalWorkflowExecutionFailedCause(FromCancelExternalWorkflowExecutionFailedCause(item)))
 	}
@@ -297,6 +298,7 @@ func TestSignalExternalWorkflowExecutionFailedCause(t *testing.T) {
 	for _, item := range []*types.SignalExternalWorkflowExecutionFailedCause{
 		nil,
 		types.SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution.Ptr(),
+		types.SignalExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted.Ptr(),
 	} {
 		assert.Equal(t, item, ToSignalExternalWorkflowExecutionFailedCause(FromSignalExternalWorkflowExecutionFailedCause(item)))
 	}
