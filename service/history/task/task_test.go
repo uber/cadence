@@ -311,6 +311,7 @@ func (s *taskSuite) TestRetryErr() {
 		return true, nil
 	}, nil)
 
+	s.Equal(false, taskBase.RetryErr(&shard.ErrShardClosed{}))
 	s.Equal(false, taskBase.RetryErr(errWorkflowBusy))
 	s.Equal(false, taskBase.RetryErr(ErrTaskPendingActive))
 	s.Equal(false, taskBase.RetryErr(context.DeadlineExceeded))

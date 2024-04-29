@@ -327,7 +327,8 @@ func (t *taskImpl) HandleErr(err error) (retErr error) {
 }
 
 func (t *taskImpl) RetryErr(err error) bool {
-	if err == errWorkflowBusy || isRedispatchErr(err) || err == ErrTaskPendingActive || common.IsContextTimeoutError(err) {
+	var errShardClosed *shard.ErrShardClosed
+	if errors.As(err, &errShardClosed) || err == errWorkflowBusy || isRedispatchErr(err) || err == ErrTaskPendingActive || common.IsContextTimeoutError(err) {
 		return false
 	}
 
