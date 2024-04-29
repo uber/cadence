@@ -155,9 +155,9 @@ func (s *WorkflowIDInternalRateLimitIntegrationSuite) TestWorkflowIDSpecificInte
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: testTaskListName},
 					Input:                         buf.Bytes(),
-					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(1),
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
-					StartToCloseTimeoutSeconds:    common.Int32Ptr(1),
+					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(5),
+					ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
+					StartToCloseTimeoutSeconds:    common.Int32Ptr(5),
 					HeartbeatTimeoutSeconds:       common.Int32Ptr(1),
 				},
 			}}, nil
