@@ -694,6 +694,24 @@ func (s *adminHandlerSuite) Test_ConfigStore_NilRequest() {
 	s.Error(err)
 }
 
+func (s *adminHandlerSuite) Test_DescribeShardDistribution() {
+	s.mockResource.MembershipResolver.EXPECT().Lookup(service.History, string(rune(0))).
+		Return(membership.NewHostInfo("127.0.0.1:1234"), nil)
+
+	res, err := s.handler.DescribeShardDistribution(
+		context.Background(),
+		&types.DescribeShardDistributionRequest{PageSize: 10},
+	)
+	s.Require().NoError(err)
+	s.Equal(
+		&types.DescribeShardDistributionResponse{
+			NumberOfShards: 1,
+			Shards:         map[int32]string{0: "127.0.0.1:1234"},
+		},
+		res,
+	)
+}
+
 func (s *adminHandlerSuite) Test_ConfigStore_InvalidKey() {
 	ctx := context.Background()
 	handler := s.handler
