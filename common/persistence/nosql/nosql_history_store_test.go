@@ -24,6 +24,7 @@ package nosql
 
 import (
 	ctx "context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -101,7 +102,7 @@ func TestNewNoSQLHistoryStore(t *testing.T) {
 	assert.NotNil(t, store)
 }
 
-func setUpMocks(t *testing.T) (*nosqlHistoryStore, *nosqlplugin.MockDB) {
+func setUpMocks(t *testing.T) (*nosqlHistoryStore, *nosqlplugin.MockDB, *MockshardedNosqlStore) {
 	ctrl := gomock.NewController(t)
 	dbMock := nosqlplugin.NewMockDB(ctrl)
 
@@ -117,11 +118,11 @@ func setUpMocks(t *testing.T) (*nosqlHistoryStore, *nosqlplugin.MockDB) {
 		shardedNosqlStore: shardedNosqlStoreMock,
 	}
 
-	return store, dbMock
+	return store, dbMock, shardedNosqlStoreMock
 }
 
 func TestAppendHistoryNodes_ErrorIfAppendAbove(t *testing.T) {
-	store, _ := setUpMocks(t)
+	store, _, _ := setUpMocks(t)
 
 	request := validInternalAppendHistoryNodesRequest()
 
@@ -138,7 +139,7 @@ func TestAppendHistoryNodes_ErrorIfAppendAbove(t *testing.T) {
 }
 
 func TestAppendHistoryNodes_NotNewBranch(t *testing.T) {
-	store, dbMock := setUpMocks(t)
+	store, dbMock, _ := setUpMocks(t)
 
 	// Expect to insert the node into the history tree and node, as this is not a new branch, expect treeRow to be nil
 	dbMock.EXPECT().InsertIntoHistoryTreeAndNode(gomock.Any(), nil, validHistoryNodeRow()).Return(nil).Times(1)
@@ -153,7 +154,7 @@ func TestAppendHistoryNodes_NewBranch(t *testing.T) {
 	request := validInternalAppendHistoryNodesRequest()
 	request.IsNewBranch = true
 
-	store, dbMock := setUpMocks(t)
+	store, dbMock, _ := setUpMocks(t)
 
 	// Expect to insert the node into the history tree and node, as this is a new branch expect treeRow to be set
 	dbMock.EXPECT().InsertIntoHistoryTreeAndNode(gomock.Any(), gomock.Any(), validHistoryNodeRow()).
@@ -239,7 +240,7 @@ func validHistoryNodeRows() []*nosqlplugin.HistoryNodeRow {
 }
 
 func TestReadHistoryBranch(t *testing.T) {
-	store, dbMock := setUpMocks(t)
+	store, dbMock, _ := setUpMocks(t)
 
 	request := validInternalReadHistoryBranchRequest()
 	rows := validHistoryNodeRows()
@@ -270,7 +271,7 @@ func TestReadHistoryBranch(t *testing.T) {
 }
 
 func TestReadHistoryBranch_ErrorIfSelectFromHistoryNodeErrors(t *testing.T) {
-	store, dbMock := setUpMocks(t)
+	store, dbMock, _ := setUpMocks(t)
 
 	request := validInternalReadHistoryBranchRequest()
 
@@ -289,7 +290,7 @@ func TestReadHistoryBranch_ErrorIfSelectFromHistoryNodeErrors(t *testing.T) {
 }
 
 func TestReadHistoryBranch_ErrorIfDecreasingNodeID(t *testing.T) {
-	store, dbMock := setUpMocks(t)
+	store, dbMock, _ := setUpMocks(t)
 
 	request := validInternalReadHistoryBranchRequest()
 	rows := validHistoryNodeRows()
@@ -308,7 +309,7 @@ func TestReadHistoryBranch_ErrorIfDecreasingNodeID(t *testing.T) {
 }
 
 func TestReadHistoryBranch_ErrorIfSameNodeID(t *testing.T) {
-	store, dbMock := setUpMocks(t)
+	store, dbMock, _ := setUpMocks(t)
 
 	request := validInternalReadHistoryBranchRequest()
 	rows := validHistoryNodeRows()
@@ -411,7 +412,7 @@ func TestForkHistoryBranch_NotAllAncestors(t *testing.T) {
 	expecedResp.NewBranchInfo.Ancestors[1].EndNodeID = 8
 	expTreeRow.Ancestors[1].EndNodeID = 8
 
-	store, dbMock := setUpMocks(t)
+	store, dbMock, _ := setUpMocks(t)
 
 	// Expect to insert the new branch into the history tree
 	dbMock.EXPECT().InsertIntoHistoryTreeAndNode(gomock.Any(), gomock.Any(), nil).
@@ -442,7 +443,7 @@ func TestForkHistoryBranch_AllAncestors(t *testing.T) {
 		EndNodeID: 14,
 	})
 
-	store, dbMock := setUpMocks(t)
+	store, dbMock, _ := setUpMocks(t)
 
 	// Expect to insert the new branch into the history tree
 	dbMock.EXPECT().InsertIntoHistoryTreeAndNode(gomock.Any(), gomock.Any(), nil).
@@ -480,7 +481,7 @@ func getValidInternalDeleteHistoryBranchRequest() *persistence.InternalDeleteHis
 }
 
 func TestDeleteHistoryBranch_unusedBranch(t *testing.T) {
-	store, dbMock := setUpMocks(t)
+	store, dbMock, _ := setUpMocks(t)
 
 	request := getValidInternalDeleteHistoryBranchRequest()
 
@@ -523,7 +524,7 @@ func TestDeleteHistoryBranch_unusedBranch(t *testing.T) {
 }
 
 func TestDeleteHistoryBranch_usedBranch(t *testing.T) {
-	store, dbMock := setUpMocks(t)
+	store, dbMock, _ := setUpMocks(t)
 
 	request := getValidInternalDeleteHistoryBranchRequest()
 
@@ -573,4 +574,89 @@ func TestDeleteHistoryBranch_usedBranch(t *testing.T) {
 
 	err := store.DeleteHistoryBranch(ctx.Background(), request)
 	assert.NoError(t, err)
+}
+
+func TestGetAllHistoryTreeBranches(t *testing.T) {
+	request := &persistence.GetAllHistoryTreeBranchesRequest{
+		NextPageToken: []byte("nextPageToken"),
+		PageSize:      1000,
+	}
+
+	store, dbMock, shardedNoSQLStoreMock := setUpMocks(t)
+	shardedNoSQLStoreMock.EXPECT().GetShardingPolicy().Return(shardingPolicy{hasShardedHistory: false})
+	shardedNoSQLStoreMock.EXPECT().GetDefaultShard().Return(nosqlStore{db: dbMock}).Times(1)
+
+	expTreeRow := expectedTreeRow()
+
+	// Create another tree row with some different data
+	expTreeRow2 := expectedTreeRow()
+	expTreeRow2.TreeID = "TestTreeID2"
+	expTreeRow2.BranchID = "TestNewBranchID2"
+	expTreeRow2.CreateTimestamp = time.Unix(123, 456)
+	expTreeRow2.Info = "TestInfo2"
+
+	expTreeRows := []*nosqlplugin.HistoryTreeRow{expTreeRow, expTreeRow2}
+	dbMock.EXPECT().SelectAllHistoryTrees(gomock.Any(), request.NextPageToken, request.PageSize).
+		Return(expTreeRows, []byte("anotherPageToken"), nil).Times(1)
+
+	expectedBranches := []persistence.HistoryBranchDetail{
+		{
+			TreeID:   "TestTreeID",
+			BranchID: "TestNewBranchID",
+			ForkTime: expTreeRow.CreateTimestamp,
+			Info:     "TestInfo",
+		},
+		{
+			TreeID:   "TestTreeID2",
+			BranchID: "TestNewBranchID2",
+			ForkTime: expTreeRow2.CreateTimestamp,
+			Info:     "TestInfo2",
+		},
+	}
+
+	expectedResponse := &persistence.GetAllHistoryTreeBranchesResponse{
+		Branches:      expectedBranches,
+		NextPageToken: []byte("anotherPageToken"),
+	}
+
+	resp, err := store.GetAllHistoryTreeBranches(ctx.Background(), request)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedResponse, resp)
+}
+
+func TestGetAllHistoryTreeBranches_dbError(t *testing.T) {
+	request := &persistence.GetAllHistoryTreeBranchesRequest{
+		NextPageToken: []byte("nextPageToken"),
+		PageSize:      1000,
+	}
+
+	store, dbMock, shardedNoSQLStoreMock := setUpMocks(t)
+	shardedNoSQLStoreMock.EXPECT().GetShardingPolicy().Return(shardingPolicy{hasShardedHistory: false})
+	shardedNoSQLStoreMock.EXPECT().GetDefaultShard().Return(nosqlStore{db: dbMock}).Times(1)
+
+	testError := errors.New("TEST ERROR")
+	dbMock.EXPECT().SelectAllHistoryTrees(gomock.Any(), request.NextPageToken, request.PageSize).
+		Return(nil, nil, testError).Times(1)
+	dbMock.EXPECT().IsNotFoundError(testError).Return(true).Times(1)
+
+	_, err := store.GetAllHistoryTreeBranches(ctx.Background(), request)
+	assert.Error(t, err)
+	assert.ErrorContains(t, err, "TEST ERROR")
+	assert.ErrorContains(t, err, "SelectAllHistoryTrees")
+}
+
+func TestGetAllHistoryTreeBranches_hasShardedPolicy(t *testing.T) {
+	request := &persistence.GetAllHistoryTreeBranchesRequest{
+		NextPageToken: []byte("nextPageToken"),
+		PageSize:      1000,
+	}
+
+	store, _, shardedNoSQLStoreMock := setUpMocks(t)
+	shardedNoSQLStoreMock.EXPECT().GetShardingPolicy().Return(shardingPolicy{hasShardedHistory: true})
+
+	_, err := store.GetAllHistoryTreeBranches(ctx.Background(), request)
+	assert.Error(t, err)
+	var internalServiceErr *types.InternalServiceError
+	assert.ErrorAs(t, err, &internalServiceErr)
+	assert.Equal(t, "SelectAllHistoryTrees is not supported on sharded nosql db", internalServiceErr.Message)
 }
