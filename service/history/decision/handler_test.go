@@ -24,7 +24,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/common/cluster"
 	"reflect"
 	"testing"
 
@@ -41,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/checksum"
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/testlogger"
@@ -591,7 +591,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 			name:        "failure to get domain from ID",
 			domainID:    testInvalidDomainUUID,
 			expectedErr: &types.BadRequestError{Message: "Invalid domain UUID."},
-		}, // no
+		},
 		{
 			name:        "token deserialazation failure",
 			domainID:    constants.TestDomainID,
@@ -599,7 +599,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 			expectMockCalls: func(ctrl *gomock.Controller, decisionHandler *handlerImpl) {
 				decisionHandler.tokenSerializer.(*common.MockTaskTokenSerializer).EXPECT().Deserialize(serializedTestToken).Return(nil, errors.New("unable to deserialize task token"))
 			},
-		}, // no
+		},
 		{
 			name:        "get or create wf execution failure",
 			domainID:    constants.TestDomainID,
@@ -611,7 +611,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 				}
 				decisionHandler.tokenSerializer.(*common.MockTaskTokenSerializer).EXPECT().Deserialize(serializedTestToken).Return(taskToken, nil)
 			},
-		}, // no
+		},
 		{
 			name:                       "success",
 			domainID:                   constants.TestDomainID,
@@ -684,7 +684,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 				assert.Equal(t, int64(0), resp.StartedResponse.Attempt)
 				assert.Equal(t, testTaskListName, resp.StartedResponse.WorkflowExecutionTaskList.Name)
 			},
-		}, // default type
+		},
 		{
 			name:                       "decision task failure",
 			domainID:                   constants.TestDomainID,
@@ -701,7 +701,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 				decisionHandler.shard.(*shard.MockContext).EXPECT().GetEventsCache().Times(2).Return(eventsCache)
 				decisionHandler.domainCache.(*cache.MockDomainCache).EXPECT().GetDomain(constants.TestDomainName).Times(1).Return(constants.TestLocalDomainEntry, nil)
 			},
-		}, // default type
+		},
 		{
 			name:                       "workflow completed",
 			domainID:                   constants.TestDomainID,
@@ -722,7 +722,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 					State: 2,
 				},
 			},
-		}, // no
+		},
 		{
 			name:                       "decision task not found",
 			domainID:                   constants.TestDomainID,
@@ -739,7 +739,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 				eventsCache := events.NewMockCache(ctrl)
 				decisionHandler.shard.(*shard.MockContext).EXPECT().GetEventsCache().Times(1).Return(eventsCache)
 			},
-		}, // no
+		},
 		{
 			name:                       "decision heartbeat time out",
 			domainID:                   constants.TestDomainID,
@@ -791,7 +791,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 					DecisionOriginalScheduledTimestamp: 1,
 				},
 			},
-		}, // default type
+		},
 		{
 			name:                       "update continueAsNew info failure - execution size limit exceeded",
 			domainID:                   constants.TestDomainID,
@@ -838,7 +838,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 					WorkflowTimeout:                    100,
 				},
 			},
-		}, // continue as new type
+		},
 		{
 			name:                       "update continueAsNew info failure - conflict error",
 			domainID:                   constants.TestDomainID,
@@ -882,7 +882,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 					CronSchedule: "0 1 * * 1", //some random cron schedule
 				},
 			},
-		}, // complete wf type as new type
+		},
 		{
 			name:        "update continueAsNew info failure - load execution",
 			domainID:    constants.TestDomainID,
@@ -937,7 +937,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 				lastGetWfExecutionCall := decisionHandler.shard.(*shard.MockContext).EXPECT().GetWorkflowExecution(context.Background(), gomock.Any()).Return(nil, errors.New("some error occurred when loading workflow execution"))
 				gomock.InOrder(firstGetWfExecutionCall, lastGetWfExecutionCall)
 			},
-		}, // wf fail continue as new
+		},
 		{
 			name:        "update continueAsNew info failure - update execution",
 			domainID:    constants.TestDomainID,
@@ -1002,9 +1002,9 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 				engine.EXPECT().NotifyNewReplicationTasks(gomock.Any())
 
 			},
-		}, // wf fail continue as new
+		},
 		{
-			name:                        "",
+			name:                        "bad binaries",
 			domainID:                    constants.TestDomainID,
 			expectedErr:                 errors.New("some error updating continue as new info"),
 			expectNonDefaultDomainCache: true,
@@ -1029,49 +1029,30 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 					cluster.TestCurrentClusterName)
 				decisionHandler.domainCache.(*cache.MockDomainCache).EXPECT().GetDomainByID(constants.TestDomainID).AnyTimes().Return(domainEntry, nil)
 
-				//get workflow execution
 				decisionHandler.shard.(*shard.MockContext).EXPECT().GetWorkflowExecution(context.Background(), gomock.Any()).
 					Return(&persistence.GetWorkflowExecutionResponse{
 						State: &persistence.WorkflowMutableState{
-							ExecutionInfo: &persistence.WorkflowExecutionInfo{
-								DomainID:           constants.TestDomainID,
-								WorkflowID:         constants.TestWorkflowID,
-								RunID:              constants.TestRunID,
-								DecisionScheduleID: 1,
-							},
+							ExecutionInfo:  &persistence.WorkflowExecutionInfo{DomainID: constants.TestDomainID, WorkflowID: constants.TestWorkflowID, RunID: constants.TestRunID, DecisionScheduleID: 1},
 							ExecutionStats: &persistence.ExecutionStats{},
 						},
 						MutableStateStats: &persistence.MutableStateStats{},
 					}, nil).Times(1)
 				decisionHandler.shard.(*shard.MockContext).EXPECT().GetWorkflowExecution(context.Background(), gomock.Any()).
-					DoAndReturn(func(ctx interface{}, request interface{}) (*persistence.GetWorkflowExecutionResponse, error) {
-						return &persistence.GetWorkflowExecutionResponse{
-							State: &persistence.WorkflowMutableState{
-								ExecutionInfo: &persistence.WorkflowExecutionInfo{
-									DomainID:   constants.TestDomainID,
-									WorkflowID: constants.TestWorkflowID,
-									RunID:      constants.TestRunID,
-								},
-								ExecutionStats: &persistence.ExecutionStats{},
-							},
-							MutableStateStats: &persistence.MutableStateStats{},
-						}, nil
-					}).Times(1)
+					Return(&persistence.GetWorkflowExecutionResponse{
+						State: &persistence.WorkflowMutableState{
+							ExecutionInfo:  &persistence.WorkflowExecutionInfo{DomainID: constants.TestDomainID, WorkflowID: constants.TestWorkflowID, RunID: constants.TestRunID},
+							ExecutionStats: &persistence.ExecutionStats{},
+						},
+						MutableStateStats: &persistence.MutableStateStats{},
+					}, nil).Times(1)
 				decisionHandler.shard.(*shard.MockContext).EXPECT().GetWorkflowExecution(context.Background(), gomock.Any()).
-					DoAndReturn(func(ctx interface{}, request interface{}) (*persistence.GetWorkflowExecutionResponse, error) {
-						return &persistence.GetWorkflowExecutionResponse{
-							State: &persistence.WorkflowMutableState{
-								ExecutionInfo: &persistence.WorkflowExecutionInfo{
-									DomainID:        constants.TestDomainID,
-									WorkflowID:      constants.TestWorkflowID,
-									RunID:           constants.TestRunID,
-									DecisionAttempt: 2,
-								},
-								ExecutionStats: &persistence.ExecutionStats{},
-							},
-							MutableStateStats: &persistence.MutableStateStats{},
-						}, nil
-					}).Times(1)
+					Return(&persistence.GetWorkflowExecutionResponse{
+						State: &persistence.WorkflowMutableState{
+							ExecutionInfo:  &persistence.WorkflowExecutionInfo{DomainID: constants.TestDomainID, WorkflowID: constants.TestWorkflowID, RunID: constants.TestRunID, DecisionAttempt: 2},
+							ExecutionStats: &persistence.ExecutionStats{},
+						},
+						MutableStateStats: &persistence.MutableStateStats{},
+					}, nil).Times(1)
 			},
 			request: &types.HistoryRespondDecisionTaskCompletedRequest{
 				DomainUUID: constants.TestDomainID,
@@ -1082,8 +1063,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 					ReturnNewDecisionTask:      true,
 				},
 			},
-		}, // multi tests binary heartbeat no timeout
-
+		},
 	}
 
 	for _, test := range tests {
