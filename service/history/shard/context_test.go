@@ -234,7 +234,6 @@ func (s *contextTestSuite) TestGetAndUpdateProcessingQueueStates() {
 func TestGetWorkflowExecution(t *testing.T) {
 	testCases := []struct {
 		name           string
-		isClosed       bool
 		request        *persistence.GetWorkflowExecutionRequest
 		mockSetup      func(*mocks.ExecutionManager)
 		expectedResult *persistence.GetWorkflowExecutionResponse
@@ -280,17 +279,6 @@ func TestGetWorkflowExecution(t *testing.T) {
 			expectedResult: nil,
 			expectedError:  errors.New("some random error"),
 		},
-		{
-			name:     "Shard closed",
-			isClosed: true,
-			request: &persistence.GetWorkflowExecutionRequest{
-				DomainID:  "testDomain",
-				Execution: types.WorkflowExecution{WorkflowID: "testWorkflowID", RunID: "testRunID"},
-			},
-			mockSetup:      func(mgr *mocks.ExecutionManager) {},
-			expectedResult: nil,
-			expectedError:  ErrShardClosed,
-		},
 	}
 
 	for _, tc := range testCases {
@@ -301,13 +289,125 @@ func TestGetWorkflowExecution(t *testing.T) {
 				RangeID: 12,
 			},
 		}
-		if tc.isClosed {
-			shardContext.closed = 1
-		}
 		tc.mockSetup(mockExecutionMgr)
 
 		result, err := shardContext.GetWorkflowExecution(context.Background(), tc.request)
 		assert.Equal(t, tc.expectedResult, result)
 		assert.Equal(t, tc.expectedError, err)
+	}
+}
+
+func TestCloseShard(t *testing.T) {
+	closeCallback := make(chan struct{})
+
+	shardContext := &contextImpl{
+		shardInfo: &persistence.ShardInfo{RangeID: 12},
+		closeCallback: func(i int, item *historyShardsItem) {
+			close(closeCallback)
+		},
+	}
+	shardContext.closeShard()
+
+	select {
+	case <-closeCallback:
+	case <-time.After(time.Second):
+		assert.Fail(t, "closeCallback not called")
+	}
+
+	assert.WithinDuration(t, time.Now(), *shardContext.closedAt.Load(), time.Second)
+	assert.Equal(t, int64(-1), shardContext.shardInfo.RangeID)
+}
+
+func TestCloseShard_AlreadyClosed(t *testing.T) {
+	closeTime := time.Unix(123, 456)
+
+	shardContext := &contextImpl{
+		closeCallback: func(i int, item *historyShardsItem) {
+			assert.Fail(t, "closeCallback should not be called")
+		},
+	}
+	shardContext.closedAt.Store(&closeTime)
+	shardContext.closeShard()
+	assert.Equal(t, closeTime, *shardContext.closedAt.Load())
+}
+
+func TestShardClosedGuard(t *testing.T) {
+	shardContext := &contextImpl{
+		shardInfo: &persistence.ShardInfo{},
+	}
+
+	testCases := []struct {
+		name string
+		call func() error
+	}{
+		{
+			name: "GetWorkflowExecution",
+			call: func() error {
+				_, err := shardContext.GetWorkflowExecution(
+					context.Background(),
+					&persistence.GetWorkflowExecutionRequest{RangeID: 0},
+				)
+				return err
+			},
+		},
+		{
+			name: "CreateWorkflowExecution",
+			call: func() error {
+				_, err := shardContext.CreateWorkflowExecution(context.Background(), nil)
+				return err
+			},
+		},
+		{
+			name: "UpdateWorkflowExecution",
+			call: func() error {
+				_, err := shardContext.UpdateWorkflowExecution(context.Background(), nil)
+				return err
+			},
+		},
+		{
+			name: "ConflictResolveWorkflowExecution",
+			call: func() error {
+				_, err := shardContext.ConflictResolveWorkflowExecution(context.Background(), nil)
+				return err
+			},
+		},
+		{
+			name: "AppendHistoryV2Events",
+			call: func() error {
+				_, err := shardContext.AppendHistoryV2Events(context.Background(), nil, "", types.WorkflowExecution{})
+				return err
+			},
+		},
+		{
+			name: "renewRangeLocked",
+			call: func() error {
+				return shardContext.renewRangeLocked(false)
+			},
+		},
+		{
+			name: "persistShardInfoLocked",
+			call: func() error {
+				return shardContext.persistShardInfoLocked(false)
+			},
+		},
+		{
+			name: "ReplicateFailoverMarkers",
+			call: func() error {
+				return shardContext.ReplicateFailoverMarkers(context.Background(), nil)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			closedAt := time.Unix(123, 456)
+
+			shardContext.closedAt.Store(&closedAt)
+			err := tc.call()
+			var shardClosedErr *ErrShardClosed
+			assert.ErrorAs(t, err, &shardClosedErr)
+			assert.Equal(t, closedAt, shardClosedErr.ClosedAt)
+			assert.ErrorContains(t, err, "shard closed")
+		})
 	}
 }

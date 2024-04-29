@@ -22,6 +22,7 @@ package queue
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -239,7 +240,8 @@ processorPumpLoop:
 			c.notifyAllQueueCollections()
 		case <-updateAckTimer.C:
 			processFinished, ackLevel, err := c.updateAckLevel()
-			if err == shard.ErrShardClosed || (err == nil && processFinished) {
+			var errShardClosed *shard.ErrShardClosed
+			if errors.As(err, &errShardClosed) || (err == nil && processFinished) {
 				go c.Stop()
 				break processorPumpLoop
 			}
