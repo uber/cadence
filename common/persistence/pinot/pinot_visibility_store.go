@@ -611,7 +611,7 @@ func createVisibilityMessage(
 		SearchAttributes[key] = val
 	}
 
-	if memo != nil {
+	if memo != nil && len(memo.Data) > 0 {
 		// add memo into search attr
 		marshalMemo, err := json.Marshal(memo)
 		if err != nil {
