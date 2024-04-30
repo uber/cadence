@@ -21,8 +21,10 @@
 package testdata
 
 import (
+	"log"
 	"time"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/types"
@@ -40,25 +42,30 @@ const (
 	ShardID       = int16(1)
 )
 
-var CurrentTime = time.Now()
-
 func NewVisibilityRow() persistence.InternalVisibilityWorkflowExecutionInfo {
+	ts, err := time.Parse(time.RFC3339, "2024-04-01T22:08:41Z")
+	if err != nil {
+		log.Fatalf("Failed to parse time: %v", err)
+	}
 	return persistence.InternalVisibilityWorkflowExecutionInfo{
-		DomainID:         DomainID,
-		WorkflowType:     WorkflowType,
-		WorkflowID:       WorkflowID,
-		RunID:            RunID,
-		TypeName:         TypeName,
-		StartTime:        CurrentTime,
-		ExecutionTime:    CurrentTime,
-		CloseTime:        CurrentTime,
-		Status:           types.WorkflowExecutionCloseStatusCompleted.Ptr(),
-		HistoryLength:    HistoryLenght,
-		Memo:             &persistence.DataBlob{},
+		DomainID:      DomainID,
+		WorkflowType:  WorkflowType,
+		WorkflowID:    WorkflowID,
+		RunID:         RunID,
+		TypeName:      TypeName,
+		StartTime:     ts,
+		ExecutionTime: ts,
+		CloseTime:     ts,
+		Status:        types.WorkflowExecutionCloseStatusCompleted.Ptr(),
+		HistoryLength: HistoryLenght,
+		Memo: &persistence.DataBlob{
+			Encoding: common.EncodingTypeJSON,
+			Data:     []byte{},
+		},
 		TaskList:         TaskList,
 		IsCron:           false,
 		NumClusters:      NumClusters,
-		UpdateTime:       CurrentTime,
+		UpdateTime:       ts,
 		SearchAttributes: map[string]interface{}{},
 		ShardID:          ShardID,
 	}
@@ -79,5 +86,20 @@ func NewVisibilityRowForUpdate(updateCloseToOpen, updateOpenToClose bool) *nosql
 		DomainID:          DomainID,
 		UpdateCloseToOpen: updateCloseToOpen,
 		UpdateOpenToClose: updateOpenToClose,
+	}
+}
+
+func NewSelectVisibilityRequestFilter(filterType nosqlplugin.VisibilityFilterType, sortType nosqlplugin.VisibilitySortType) *nosqlplugin.VisibilityFilter {
+	ts, err := time.Parse(time.RFC3339, "2024-04-01T22:08:41Z")
+	if err != nil {
+		log.Fatalf("Failed to parse time: %v", err)
+	}
+	return &nosqlplugin.VisibilityFilter{
+		ListRequest:  persistence.InternalListWorkflowExecutionsRequest{DomainUUID: DomainID, EarliestTime: ts, LatestTime: ts},
+		FilterType:   filterType,
+		SortType:     sortType,
+		WorkflowType: WorkflowType,
+		WorkflowID:   WorkflowID,
+		CloseStatus:  0,
 	}
 }
