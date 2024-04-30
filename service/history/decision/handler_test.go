@@ -1067,7 +1067,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 		{
 			name:        "failure to load workflow execution - shard closed",
 			domainID:    constants.TestDomainID,
-			expectedErr: shard.ErrShardClosed,
+			expectedErr: errors.New("some random error"),
 			expectMockCalls: func(ctrl *gomock.Controller, decisionHandler *handlerImpl) {
 				deserializedTestToken := &common.TaskToken{
 					DomainID:   constants.TestDomainID,
@@ -1075,7 +1075,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 					RunID:      constants.TestRunID,
 				}
 				decisionHandler.tokenSerializer.(*common.MockTaskTokenSerializer).EXPECT().Deserialize(serializedTestToken).Return(deserializedTestToken, nil)
-				decisionHandler.shard.(*shard.MockContext).EXPECT().GetWorkflowExecution(context.Background(), gomock.Any()).Times(1).Return(nil, shard.ErrShardClosed)
+				decisionHandler.shard.(*shard.MockContext).EXPECT().GetWorkflowExecution(context.Background(), gomock.Any()).Times(1).Return(nil, errors.New("some random error"))
 			},
 		},
 		{
