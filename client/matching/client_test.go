@@ -24,12 +24,14 @@ package matching
 
 import (
 	"context"
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/yarpc"
+
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"go.uber.org/yarpc"
-	"testing"
 )
 
 const (
