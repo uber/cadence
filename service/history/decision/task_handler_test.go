@@ -33,6 +33,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
@@ -99,6 +100,7 @@ func TestHandleDecisionRequestCancelExternalWorkflow(t *testing.T) {
 					cause := new(types.DecisionTaskFailedCause)
 					*cause = types.DecisionTaskFailedCause(i)
 					return cause
+					// 9 is types.DecisionTaskFailedCause "BAD_REQUEST_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_ATTRIBUTES"
 				}(9), taskHandler.failDecisionCause)
 			},
 		},
@@ -115,7 +117,15 @@ func TestHandleDecisionRequestCancelExternalWorkflow(t *testing.T) {
 			if test.expectMockCalls != nil {
 				test.expectMockCalls(taskHandler)
 			}
-			err := taskHandler.handleDecisionRequestCancelExternalWorkflow(context.Background(), test.attributes)
+			decision := &types.Decision{
+				DecisionType: func(i int32) *types.DecisionType {
+					decisionType := new(types.DecisionType)
+					*decisionType = types.DecisionType(i)
+					return decisionType
+				}(7), //types.DecisionTypeRequestCancelExternalWorkflowExecution == 7
+				RequestCancelExternalWorkflowExecutionDecisionAttributes: test.attributes,
+			}
+			err := taskHandler.handleDecision(context.Background(), decision)
 			test.asserts(t, taskHandler, err)
 		})
 	}
@@ -200,6 +210,7 @@ func TestHandleDecisionRequestCancelActivity(t *testing.T) {
 					cause := new(types.DecisionTaskFailedCause)
 					*cause = types.DecisionTaskFailedCause(i)
 					return cause
+					// 2 is types.DecisionTaskFailedCause "BAD_REQUEST_CANCEL_ACTIVITY_ATTRIBUTES"
 				}(2), taskHandler.failDecisionCause)
 			},
 		},
@@ -211,8 +222,499 @@ func TestHandleDecisionRequestCancelActivity(t *testing.T) {
 			if test.expectMockCalls != nil {
 				test.expectMockCalls(taskHandler)
 			}
-			err := taskHandler.handleDecisionRequestCancelActivity(context.Background(), test.attributes)
+			decision := &types.Decision{
+				DecisionType: func(i int32) *types.DecisionType {
+					decisionType := new(types.DecisionType)
+					*decisionType = types.DecisionType(i)
+					return decisionType
+				}(1), //types.DecisionTypeRequestCancelActivityTask == 1
+				RequestCancelActivityTaskDecisionAttributes: test.attributes,
+			}
+			err := taskHandler.handleDecision(context.Background(), decision)
 			test.asserts(t, taskHandler, err)
+		})
+	}
+}
+
+func TestHandleDecisionStartChildWorkflow(t *testing.T) {
+
+	tests := []struct {
+		name            string
+		expectMockCalls func(taskHandler *taskHandlerImpl, attr *types.StartChildWorkflowExecutionDecisionAttributes)
+		attributes      *types.StartChildWorkflowExecutionDecisionAttributes
+		asserts         func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.StartChildWorkflowExecutionDecisionAttributes, err error)
+	}{
+		{
+			name: "success - ParentClosePolicy enabled",
+			attributes: &types.StartChildWorkflowExecutionDecisionAttributes{
+				Domain:       constants.TestDomainName,
+				WorkflowID:   constants.TestWorkflowID,
+				WorkflowType: &types.WorkflowType{Name: testdata.WorkflowTypeName},
+				TaskList:     &types.TaskList{Name: testdata.TaskListName},
+			},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.StartChildWorkflowExecutionDecisionAttributes) {
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddStartChildWorkflowExecutionInitiatedEvent(testTaskCompletedID, gomock.Any(), attr).Times(1)
+				taskHandler.domainCache.(*cache.MockDomainCache).EXPECT().GetDomain(constants.TestDomainName).Return(constants.TestLocalDomainEntry, nil)
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.StartChildWorkflowExecutionDecisionAttributes, err error) {
+				assert.Equal(t, types.ParentClosePolicyTerminate.Ptr(), attr.ParentClosePolicy)
+				assert.False(t, taskHandler.failDecision)
+				assert.Empty(t, taskHandler.failMessage)
+				assert.Nil(t, taskHandler.failDecisionCause)
+				assert.Equal(t, nil, err)
+
+			},
+		},
+		{
+			name: "success - ParentClosePolicy disabled",
+			attributes: &types.StartChildWorkflowExecutionDecisionAttributes{
+				Domain:       constants.TestDomainName,
+				WorkflowID:   constants.TestWorkflowID,
+				WorkflowType: &types.WorkflowType{Name: testdata.WorkflowTypeName},
+				TaskList:     &types.TaskList{Name: testdata.TaskListName},
+			},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.StartChildWorkflowExecutionDecisionAttributes) {
+				taskHandler.config.EnableParentClosePolicy = func(domain string) bool { return false }
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddStartChildWorkflowExecutionInitiatedEvent(testTaskCompletedID, gomock.Any(), attr).Times(1)
+				taskHandler.domainCache.(*cache.MockDomainCache).EXPECT().GetDomain(constants.TestDomainName).Return(constants.TestLocalDomainEntry, nil)
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.StartChildWorkflowExecutionDecisionAttributes, err error) {
+				assert.Equal(t, types.ParentClosePolicyAbandon.Ptr(), attr.ParentClosePolicy)
+				assert.False(t, taskHandler.failDecision)
+				assert.Empty(t, taskHandler.failMessage)
+				assert.Nil(t, taskHandler.failDecisionCause)
+				assert.Equal(t, nil, err)
+
+			},
+		},
+		{
+			name: "success - ParentClosePolicy non nil",
+			attributes: &types.StartChildWorkflowExecutionDecisionAttributes{
+				Domain:            constants.TestDomainName,
+				WorkflowID:        constants.TestWorkflowID,
+				WorkflowType:      &types.WorkflowType{Name: testdata.WorkflowTypeName},
+				TaskList:          &types.TaskList{Name: testdata.TaskListName},
+				ParentClosePolicy: new(types.ParentClosePolicy),
+			},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.StartChildWorkflowExecutionDecisionAttributes) {
+				taskHandler.config.EnableParentClosePolicy = func(domain string) bool { return false }
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddStartChildWorkflowExecutionInitiatedEvent(testTaskCompletedID, gomock.Any(), attr).Times(1)
+				taskHandler.domainCache.(*cache.MockDomainCache).EXPECT().GetDomain(constants.TestDomainName).Return(constants.TestLocalDomainEntry, nil)
+
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.StartChildWorkflowExecutionDecisionAttributes, err error) {
+				assert.Equal(t, types.ParentClosePolicyAbandon.Ptr(), attr.ParentClosePolicy)
+				assert.False(t, taskHandler.failDecision)
+				assert.Empty(t, taskHandler.failMessage)
+				assert.Nil(t, taskHandler.failDecisionCause)
+				assert.Equal(t, nil, err)
+
+			},
+		},
+		{
+			name: "internal service error",
+			attributes: &types.StartChildWorkflowExecutionDecisionAttributes{
+				Domain:       constants.TestDomainName,
+				WorkflowID:   constants.TestWorkflowID,
+				WorkflowType: &types.WorkflowType{Name: testdata.WorkflowTypeName},
+				TaskList:     &types.TaskList{Name: testdata.TaskListName},
+			},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.StartChildWorkflowExecutionDecisionAttributes) {
+				taskHandler.domainCache.(*cache.MockDomainCache).EXPECT().GetDomain(constants.TestDomainName).Return(nil, errors.New("some error getting domain cache"))
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.StartChildWorkflowExecutionDecisionAttributes, err error) {
+				assert.Equal(t, &types.InternalServiceError{Message: "Unable to schedule child execution across domain some random domain name."}, err)
+			},
+		},
+		{
+			name: "attributes validation failure",
+			attributes: &types.StartChildWorkflowExecutionDecisionAttributes{
+				Domain:       constants.TestDomainName,
+				WorkflowID:   constants.TestWorkflowID,
+				WorkflowType: &types.WorkflowType{Name: testdata.WorkflowTypeName},
+			},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.StartChildWorkflowExecutionDecisionAttributes) {
+				taskHandler.domainCache.(*cache.MockDomainCache).EXPECT().GetDomain(constants.TestDomainName).Return(constants.TestLocalDomainEntry, nil)
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.StartChildWorkflowExecutionDecisionAttributes, err error) {
+				assert.True(t, taskHandler.failDecision)
+				assert.Equal(t, "missing task list name", *taskHandler.failMessage)
+				assert.Equal(t, func(i int32) *types.DecisionTaskFailedCause {
+					cause := new(types.DecisionTaskFailedCause)
+					*cause = types.DecisionTaskFailedCause(i)
+					return cause
+					// 15 is types.DecisionTaskFailedCause "BAD_START_CHILD_EXECUTION_ATTRIBUTES"
+				}(15), taskHandler.failDecisionCause)
+				assert.Equal(t, nil, err)
+			},
+		},
+		{
+			name: "size limit checker failure",
+			attributes: &types.StartChildWorkflowExecutionDecisionAttributes{
+				Domain:       constants.TestDomainName,
+				WorkflowID:   constants.TestWorkflowID,
+				WorkflowType: &types.WorkflowType{Name: testdata.WorkflowTypeName},
+				TaskList:     &types.TaskList{Name: testdata.TaskListName},
+				Input:        []byte("input"),
+			},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.StartChildWorkflowExecutionDecisionAttributes) {
+				taskHandler.sizeLimitChecker.blobSizeLimitError = 1
+				taskHandler.sizeLimitChecker.blobSizeLimitWarn = 2
+				taskHandler.domainCache.(*cache.MockDomainCache).EXPECT().GetDomain(constants.TestDomainName).Return(constants.TestLocalDomainEntry, nil)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddFailWorkflowEvent(testTaskCompletedID, &types.FailWorkflowExecutionDecisionAttributes{
+					Reason:  common.StringPtr(common.FailureReasonDecisionBlobSizeExceedsLimit),
+					Details: []byte("StartChildWorkflowExecutionDecisionAttributes.Input exceeds size limit."),
+				}).Return(nil, errors.New("some error adding fail workflow event"))
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.StartChildWorkflowExecutionDecisionAttributes, err error) {
+				assert.Equal(t, errors.New("some error adding fail workflow event"), err)
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			taskHandler := newTaskHandlerForTest(t)
+			taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().AnyTimes().Return(&persistence.WorkflowExecutionInfo{
+				DomainID:   constants.TestDomainID,
+				WorkflowID: constants.TestWorkflowID,
+				RunID:      constants.TestRunID,
+			})
+			if test.expectMockCalls != nil {
+				test.expectMockCalls(taskHandler, test.attributes)
+			}
+			decision := &types.Decision{
+				DecisionType: func(i int32) *types.DecisionType {
+					decisionType := new(types.DecisionType)
+					*decisionType = types.DecisionType(i)
+					return decisionType
+				}(10), //types.DecisionTypeStartChildWorkflowExecution == 10
+				StartChildWorkflowExecutionDecisionAttributes: test.attributes,
+			}
+			err := taskHandler.handleDecision(context.Background(), decision)
+			test.asserts(t, taskHandler, test.attributes, err)
+		})
+	}
+}
+
+func TestHandleDecisionCancelTimer(t *testing.T) {
+	tests := []struct {
+		name            string
+		expectMockCalls func(taskHandler *taskHandlerImpl, attr *types.CancelTimerDecisionAttributes)
+		attributes      *types.CancelTimerDecisionAttributes
+		asserts         func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.CancelTimerDecisionAttributes, err error)
+	}{
+		{
+			name:       "success",
+			attributes: &types.CancelTimerDecisionAttributes{TimerID: "test-timer-id"},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.CancelTimerDecisionAttributes) {
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddTimerCanceledEvent(testTaskCompletedID, attr, taskHandler.identity)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().HasBufferedEvents()
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.CancelTimerDecisionAttributes, err error) {
+				assert.False(t, taskHandler.failDecision)
+				assert.Empty(t, taskHandler.failMessage)
+				assert.Nil(t, taskHandler.failDecisionCause)
+				assert.Equal(t, nil, err)
+			},
+		},
+		{
+			name:       "bad request error",
+			attributes: &types.CancelTimerDecisionAttributes{TimerID: "test-timer-id"},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.CancelTimerDecisionAttributes) {
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddTimerCanceledEvent(testTaskCompletedID, attr, taskHandler.identity).Return(nil, &types.BadRequestError{"some bad request error"})
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddCancelTimerFailedEvent(testTaskCompletedID, attr, taskHandler.identity)
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.CancelTimerDecisionAttributes, err error) {
+				assert.False(t, taskHandler.failDecision)
+				assert.Empty(t, taskHandler.failMessage)
+				assert.Nil(t, taskHandler.failDecisionCause)
+				assert.Equal(t, nil, err)
+			},
+		},
+		{
+			name:       "default error",
+			attributes: &types.CancelTimerDecisionAttributes{TimerID: "test-timer-id"},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.CancelTimerDecisionAttributes) {
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddTimerCanceledEvent(testTaskCompletedID, attr, taskHandler.identity).Return(nil, errors.New("some random error"))
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.CancelTimerDecisionAttributes, err error) {
+				assert.False(t, taskHandler.failDecision)
+				assert.Empty(t, taskHandler.failMessage)
+				assert.Nil(t, taskHandler.failDecisionCause)
+				assert.Equal(t, errors.New("some random error"), err)
+			},
+		},
+		{
+			name:       "attributes validation error",
+			attributes: &types.CancelTimerDecisionAttributes{},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.CancelTimerDecisionAttributes, err error) {
+				assert.True(t, taskHandler.failDecision)
+				assert.Equal(t, "TimerId is not set on decision.", *taskHandler.failMessage)
+				assert.Equal(t, func(i int32) *types.DecisionTaskFailedCause {
+					cause := new(types.DecisionTaskFailedCause)
+					*cause = types.DecisionTaskFailedCause(i)
+					return cause
+				}(4), taskHandler.failDecisionCause)
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			taskHandler := newTaskHandlerForTest(t)
+			if test.expectMockCalls != nil {
+				test.expectMockCalls(taskHandler, test.attributes)
+			}
+			decision := &types.Decision{
+				DecisionType: func(i int32) *types.DecisionType {
+					decisionType := new(types.DecisionType)
+					*decisionType = types.DecisionType(i)
+					return decisionType
+				}(5), //types.DecisionTypeCancelTimer
+				CancelTimerDecisionAttributes: test.attributes,
+			}
+			err := taskHandler.handleDecision(context.Background(), decision)
+			test.asserts(t, taskHandler, test.attributes, err)
+		})
+	}
+}
+
+func TestHandleDecisionSignalExternalWorkflow(t *testing.T) {
+	tests := []struct {
+		name            string
+		expectMockCalls func(taskHandler *taskHandlerImpl, attr *types.SignalExternalWorkflowExecutionDecisionAttributes)
+		attributes      *types.SignalExternalWorkflowExecutionDecisionAttributes
+		asserts         func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.SignalExternalWorkflowExecutionDecisionAttributes, err error)
+	}{
+		{
+			name: "success",
+			attributes: &types.SignalExternalWorkflowExecutionDecisionAttributes{
+				Domain:     constants.TestDomainName,
+				Execution:  &types.WorkflowExecution{WorkflowID: constants.TestWorkflowID, RunID: constants.TestRunID},
+				SignalName: testdata.SignalName,
+				Input:      []byte("some input data"),
+			},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.SignalExternalWorkflowExecutionDecisionAttributes) {
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Times(2).Return(&persistence.WorkflowExecutionInfo{
+					DomainID:   constants.TestDomainID,
+					WorkflowID: constants.TestWorkflowID,
+					RunID:      constants.TestRunID,
+				})
+				taskHandler.domainCache.(*cache.MockDomainCache).EXPECT().GetDomain(constants.TestDomainName).Return(constants.TestLocalDomainEntry, nil)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddSignalExternalWorkflowExecutionInitiatedEvent(testTaskCompletedID, gomock.Any(), attr)
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.SignalExternalWorkflowExecutionDecisionAttributes, err error) {
+				assert.False(t, taskHandler.failDecision)
+				assert.Empty(t, taskHandler.failMessage)
+				assert.Nil(t, taskHandler.failDecisionCause)
+				assert.Equal(t, nil, err)
+			},
+		},
+		{
+			name: "internal service error",
+			attributes: &types.SignalExternalWorkflowExecutionDecisionAttributes{
+				Domain:     constants.TestDomainName,
+				Execution:  &types.WorkflowExecution{WorkflowID: constants.TestWorkflowID, RunID: constants.TestRunID},
+				SignalName: testdata.SignalName,
+				Input:      []byte("some input data"),
+			},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.SignalExternalWorkflowExecutionDecisionAttributes) {
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Times(1).Return(&persistence.WorkflowExecutionInfo{
+					DomainID:   constants.TestDomainID,
+					WorkflowID: constants.TestWorkflowID,
+					RunID:      constants.TestRunID,
+				})
+				taskHandler.domainCache.(*cache.MockDomainCache).EXPECT().GetDomain(constants.TestDomainName).Return(nil, errors.New("some error getting domain cache"))
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.SignalExternalWorkflowExecutionDecisionAttributes, err error) {
+				assert.Equal(t, &types.InternalServiceError{Message: "Unable to signal workflow across domain: some random domain name."}, err)
+			},
+		},
+		{
+			name: "attributes validation failure",
+			attributes: &types.SignalExternalWorkflowExecutionDecisionAttributes{
+				Domain:    constants.TestDomainName,
+				Execution: &types.WorkflowExecution{WorkflowID: constants.TestWorkflowID, RunID: constants.TestRunID},
+				Input:     []byte("some input data"),
+			},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.SignalExternalWorkflowExecutionDecisionAttributes) {
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Times(1).Return(&persistence.WorkflowExecutionInfo{
+					DomainID:   constants.TestDomainID,
+					WorkflowID: constants.TestWorkflowID,
+					RunID:      constants.TestRunID,
+				})
+				taskHandler.domainCache.(*cache.MockDomainCache).EXPECT().GetDomain(constants.TestDomainName).Return(constants.TestLocalDomainEntry, nil)
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.SignalExternalWorkflowExecutionDecisionAttributes, err error) {
+				assert.True(t, taskHandler.failDecision)
+				assert.Equal(t, "SignalName is not set on decision.", *taskHandler.failMessage)
+				assert.Equal(t, func(i int32) *types.DecisionTaskFailedCause {
+					cause := new(types.DecisionTaskFailedCause)
+					*cause = types.DecisionTaskFailedCause(i)
+					return cause
+					// 14 is types.DecisionTaskFailedCause "BAD_SIGNAL_WORKFLOW_EXECUTION_ATTRIBUTES"
+				}(14), taskHandler.failDecisionCause)
+				assert.Equal(t, nil, err)
+			},
+		},
+		{
+			name: "size limit checker failure",
+			attributes: &types.SignalExternalWorkflowExecutionDecisionAttributes{
+				Domain:     constants.TestDomainName,
+				Execution:  &types.WorkflowExecution{WorkflowID: constants.TestWorkflowID, RunID: constants.TestRunID},
+				SignalName: testdata.SignalName,
+				Input:      []byte("some input data"),
+			},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.SignalExternalWorkflowExecutionDecisionAttributes) {
+				taskHandler.sizeLimitChecker.blobSizeLimitError = 1
+				taskHandler.sizeLimitChecker.blobSizeLimitWarn = 2
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Times(2).Return(&persistence.WorkflowExecutionInfo{
+					DomainID:   constants.TestDomainID,
+					WorkflowID: constants.TestWorkflowID,
+					RunID:      constants.TestRunID,
+				})
+				taskHandler.domainCache.(*cache.MockDomainCache).EXPECT().GetDomain(constants.TestDomainName).Return(constants.TestLocalDomainEntry, nil)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddFailWorkflowEvent(testTaskCompletedID, &types.FailWorkflowExecutionDecisionAttributes{
+					Reason:  common.StringPtr(common.FailureReasonDecisionBlobSizeExceedsLimit),
+					Details: []byte("SignalExternalWorkflowExecutionDecisionAttributes.Input exceeds size limit."),
+				}).Return(nil, errors.New("some error adding fail workflow event"))
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.SignalExternalWorkflowExecutionDecisionAttributes, err error) {
+				assert.Equal(t, errors.New("some error adding fail workflow event"), err)
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			taskHandler := newTaskHandlerForTest(t)
+			if test.expectMockCalls != nil {
+				test.expectMockCalls(taskHandler, test.attributes)
+			}
+			decision := &types.Decision{
+				DecisionType: func(i int32) *types.DecisionType {
+					decisionType := new(types.DecisionType)
+					*decisionType = types.DecisionType(i)
+					return decisionType
+				}(11), //types.DecisionTypeSignalExternalWorkflowExecution
+				SignalExternalWorkflowExecutionDecisionAttributes: test.attributes,
+			}
+			err := taskHandler.handleDecision(context.Background(), decision)
+			test.asserts(t, taskHandler, test.attributes, err)
+		})
+	}
+}
+
+func TestHandleDecisionUpsertWorkflowSearchAttributes(t *testing.T) {
+	tests := []struct {
+		name            string
+		expectMockCalls func(taskHandler *taskHandlerImpl, attr *types.UpsertWorkflowSearchAttributesDecisionAttributes)
+		attributes      *types.UpsertWorkflowSearchAttributesDecisionAttributes
+		asserts         func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.UpsertWorkflowSearchAttributesDecisionAttributes, err error)
+	}{
+		{
+			name: "success",
+			attributes: &types.UpsertWorkflowSearchAttributesDecisionAttributes{
+				SearchAttributes: &types.SearchAttributes{IndexedFields: map[string][]byte{"some-key": []byte(`"some-value"`)}},
+			},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.UpsertWorkflowSearchAttributesDecisionAttributes) {
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Times(2).Return(&persistence.WorkflowExecutionInfo{
+					DomainID:   constants.TestDomainID,
+					WorkflowID: constants.TestWorkflowID,
+					RunID:      constants.TestRunID,
+				})
+				taskHandler.domainCache.(*cache.MockDomainCache).EXPECT().GetDomainName(constants.TestDomainID).Return(constants.TestDomainName, nil)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddUpsertWorkflowSearchAttributesEvent(testTaskCompletedID, attr)
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.UpsertWorkflowSearchAttributesDecisionAttributes, err error) {
+				assert.False(t, taskHandler.failDecision)
+				assert.Empty(t, taskHandler.failMessage)
+				assert.Nil(t, taskHandler.failDecisionCause)
+				assert.Equal(t, nil, err)
+			},
+		},
+		{
+			name: "attributes validation failure",
+			attributes: &types.UpsertWorkflowSearchAttributesDecisionAttributes{
+				SearchAttributes: &types.SearchAttributes{IndexedFields: map[string][]byte{"some-key": []byte("some-value")}},
+			},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.UpsertWorkflowSearchAttributesDecisionAttributes) {
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Times(1).Return(&persistence.WorkflowExecutionInfo{
+					DomainID:   constants.TestDomainID,
+					WorkflowID: constants.TestWorkflowID,
+					RunID:      constants.TestRunID,
+				})
+				taskHandler.domainCache.(*cache.MockDomainCache).EXPECT().GetDomainName(constants.TestDomainID).Return(constants.TestDomainName, nil)
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.UpsertWorkflowSearchAttributesDecisionAttributes, err error) {
+				assert.True(t, taskHandler.failDecision)
+				assert.Equal(t, "some-value is not a valid search attribute value for key some-key", *taskHandler.failMessage)
+				assert.Equal(t, func(i int32) *types.DecisionTaskFailedCause {
+					cause := new(types.DecisionTaskFailedCause)
+					*cause = types.DecisionTaskFailedCause(i)
+					return cause
+					// 22 is types.DecisionTaskFailedCause "BAD_SEARCH_ATTRIBUTES"
+				}(22), taskHandler.failDecisionCause)
+			},
+		},
+		{
+			name: "size limit checker failure",
+			attributes: &types.UpsertWorkflowSearchAttributesDecisionAttributes{
+				SearchAttributes: &types.SearchAttributes{IndexedFields: map[string][]byte{"some-key": []byte(`"some-value"`)}},
+			},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.UpsertWorkflowSearchAttributesDecisionAttributes) {
+				taskHandler.sizeLimitChecker.blobSizeLimitWarn = 2
+				taskHandler.sizeLimitChecker.blobSizeLimitError = 1
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Times(2).Return(&persistence.WorkflowExecutionInfo{
+					DomainID:   constants.TestDomainID,
+					WorkflowID: constants.TestWorkflowID,
+					RunID:      constants.TestRunID,
+				})
+				taskHandler.domainCache.(*cache.MockDomainCache).EXPECT().GetDomainName(constants.TestDomainID).Return(constants.TestDomainName, nil)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddFailWorkflowEvent(testTaskCompletedID, &types.FailWorkflowExecutionDecisionAttributes{
+					Reason:  common.StringPtr(common.FailureReasonDecisionBlobSizeExceedsLimit),
+					Details: []byte("UpsertWorkflowSearchAttributesDecisionAttributes exceeds size limit."),
+				}).Return(nil, errors.New("some random error adding workflow event"))
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.UpsertWorkflowSearchAttributesDecisionAttributes, err error) {
+				assert.False(t, taskHandler.failDecision)
+				assert.Empty(t, taskHandler.failMessage)
+				assert.Nil(t, taskHandler.failDecisionCause)
+				assert.Equal(t, errors.New("some random error adding workflow event"), err)
+			},
+		},
+		{
+			name: "internal service error",
+			attributes: &types.UpsertWorkflowSearchAttributesDecisionAttributes{
+				SearchAttributes: &types.SearchAttributes{IndexedFields: map[string][]byte{"some-key": []byte(`"some-value"`)}},
+			},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.UpsertWorkflowSearchAttributesDecisionAttributes) {
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Times(1).Return(&persistence.WorkflowExecutionInfo{
+					DomainID:   constants.TestDomainID,
+					WorkflowID: constants.TestWorkflowID,
+					RunID:      constants.TestRunID,
+				})
+				taskHandler.domainCache.(*cache.MockDomainCache).EXPECT().GetDomainName(constants.TestDomainID).Return("", errors.New("some random error"))
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.UpsertWorkflowSearchAttributesDecisionAttributes, err error) {
+				assert.Equal(t, &types.InternalServiceError{Message: "Unable to get domain for domainID: deadbeef-0123-4567-890a-bcdef0123456."}, err)
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			taskHandler := newTaskHandlerForTest(t)
+			if test.expectMockCalls != nil {
+				test.expectMockCalls(taskHandler, test.attributes)
+			}
+			decision := &types.Decision{
+				DecisionType: func(i int32) *types.DecisionType {
+					decisionType := new(types.DecisionType)
+					*decisionType = types.DecisionType(i)
+					return decisionType
+				}(12), //types.DecisionTypeUpsertWorkflowSearchAttributes == 12
+				UpsertWorkflowSearchAttributesDecisionAttributes: test.attributes,
+			}
+			err := taskHandler.handleDecision(context.Background(), decision)
+			test.asserts(t, taskHandler, test.attributes, err)
 		})
 	}
 }
@@ -221,6 +723,11 @@ func newTaskHandlerForTest(t *testing.T) *taskHandlerImpl {
 	ctrl := gomock.NewController(t)
 	testLogger := testlogger.New(t)
 	testConfig := config.NewForTest()
+	testConfig.ValidSearchAttributes = func(opts ...dynamicconfig.FilterOption) map[string]interface{} {
+		validSearchAttr := make(map[string]interface{})
+		validSearchAttr["some-key"] = types.IndexedValueTypeString
+		return validSearchAttr
+	}
 	mockMutableState := execution.NewMockMutableState(ctrl)
 	mockDomainCache := cache.NewMockDomainCache(ctrl)
 	workflowSizeChecker := newWorkflowSizeChecker(
