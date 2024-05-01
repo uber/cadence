@@ -100,7 +100,7 @@ func TestHandleDecisionRequestCancelExternalWorkflow(t *testing.T) {
 					cause := new(types.DecisionTaskFailedCause)
 					*cause = types.DecisionTaskFailedCause(i)
 					return cause
-					//9 is types.DecisionTaskFailedCause "BAD_REQUEST_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_ATTRIBUTES"
+					// 9 is types.DecisionTaskFailedCause "BAD_REQUEST_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_ATTRIBUTES"
 				}(9), taskHandler.failDecisionCause)
 			},
 		},
@@ -210,7 +210,7 @@ func TestHandleDecisionRequestCancelActivity(t *testing.T) {
 					cause := new(types.DecisionTaskFailedCause)
 					*cause = types.DecisionTaskFailedCause(i)
 					return cause
-					//2 is types.DecisionTaskFailedCause "BAD_REQUEST_CANCEL_ACTIVITY_ATTRIBUTES"
+					// 2 is types.DecisionTaskFailedCause "BAD_REQUEST_CANCEL_ACTIVITY_ATTRIBUTES"
 				}(2), taskHandler.failDecisionCause)
 			},
 		},
@@ -343,7 +343,7 @@ func TestHandleDecisionStartChildWorkflow(t *testing.T) {
 					cause := new(types.DecisionTaskFailedCause)
 					*cause = types.DecisionTaskFailedCause(i)
 					return cause
-					//15 is types.DecisionTaskFailedCause "BAD_START_CHILD_EXECUTION_ATTRIBUTES"
+					// 15 is types.DecisionTaskFailedCause "BAD_START_CHILD_EXECUTION_ATTRIBUTES"
 				}(15), taskHandler.failDecisionCause)
 				assert.Equal(t, nil, err)
 			},
@@ -551,7 +551,7 @@ func TestHandleDecisionSignalExternalWorkflow(t *testing.T) {
 					cause := new(types.DecisionTaskFailedCause)
 					*cause = types.DecisionTaskFailedCause(i)
 					return cause
-					//14 is types.DecisionTaskFailedCause "BAD_SIGNAL_WORKFLOW_EXECUTION_ATTRIBUTES"
+					// 14 is types.DecisionTaskFailedCause "BAD_SIGNAL_WORKFLOW_EXECUTION_ATTRIBUTES"
 				}(14), taskHandler.failDecisionCause)
 				assert.Equal(t, nil, err)
 			},
@@ -651,7 +651,7 @@ func TestHandleDecisionUpsertWorkflowSearchAttributes(t *testing.T) {
 					cause := new(types.DecisionTaskFailedCause)
 					*cause = types.DecisionTaskFailedCause(i)
 					return cause
-					//22 is types.DecisionTaskFailedCause "BAD_SEARCH_ATTRIBUTES"
+					// 22 is types.DecisionTaskFailedCause "BAD_SEARCH_ATTRIBUTES"
 				}(22), taskHandler.failDecisionCause)
 			},
 		},
