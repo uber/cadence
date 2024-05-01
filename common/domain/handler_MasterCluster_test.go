@@ -990,7 +990,7 @@ func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) setupGlobalDomain(
 	return setupGlobalDomain(s.Suite, s.handler, s.ClusterMetadata, domainName)
 }
 
-func setupGlobalDomain(s suite.Suite, handler *handlerImpl, clusterMetadata cluster.Metadata, domainName string) *types.DescribeDomainResponse {
+func setupGlobalDomain(s *suite.Suite, handler *handlerImpl, clusterMetadata cluster.Metadata, domainName string) *types.DescribeDomainResponse {
 	description := "some random description"
 	email := "some random email"
 	retention := int32(7)
@@ -1030,7 +1030,7 @@ func setupGlobalDomain(s suite.Suite, handler *handlerImpl, clusterMetadata clus
 	return getResp
 }
 
-func setupLocalDomain(s suite.Suite, handler *handlerImpl, clusterMetadata cluster.Metadata, domainName string) *types.DescribeDomainResponse {
+func setupLocalDomain(s *suite.Suite, handler *handlerImpl, clusterMetadata cluster.Metadata, domainName string) *types.DescribeDomainResponse {
 	description := "some random description"
 	email := "some random email"
 	retention := int32(7)
@@ -1060,8 +1060,8 @@ func setupLocalDomain(s suite.Suite, handler *handlerImpl, clusterMetadata clust
 	return getResp
 }
 
-func assertDomainEqual(s suite.Suite, autual, expected *types.DescribeDomainResponse) {
-	s.NotEmpty(autual.DomainInfo.GetUUID())
-	expected.DomainInfo.UUID = autual.DomainInfo.GetUUID()
-	s.Equal(expected, autual)
+func assertDomainEqual(s *suite.Suite, actual, expected *types.DescribeDomainResponse) {
+	s.NotEmpty(actual.DomainInfo.GetUUID())
+	expected.DomainInfo.UUID = actual.DomainInfo.GetUUID()
+	s.Equal(expected, actual)
 }

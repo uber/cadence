@@ -74,7 +74,7 @@ type (
 
 	// TestBase wraps the base setup needed to create workflows over persistence layer.
 	TestBase struct {
-		suite.Suite
+		*suite.Suite
 		ShardMgr                  persistence.ShardManager
 		ExecutionMgrFactory       client.Factory
 		ExecutionManager          persistence.ExecutionManager
@@ -114,6 +114,7 @@ const (
 // NewTestBaseFromParams returns a customized test base from given input
 func NewTestBaseFromParams(t *testing.T, params TestBaseParams) *TestBase {
 	res := &TestBase{
+		Suite:                 &suite.Suite{},
 		DefaultTestCluster:    params.DefaultTestCluster,
 		VisibilityTestCluster: params.VisibilityTestCluster,
 		ClusterMetadata:       params.ClusterMetadata,
