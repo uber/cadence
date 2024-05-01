@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package syncmap
+package internal
 
 import (
 	"sync"
@@ -40,7 +40,7 @@ type SyncMap[Key comparable, Value any] struct {
 	len      int64
 }
 
-// New makes a simplified type-safe [sync.Map] that creates values as needed, and tracks length.
+// NewSyncMap makes a simplified type-safe [sync.Map] that creates values as needed, and tracks length.
 //
 // The `create` callback will be called when creating a new value, possibly multiple times,
 // without synchronization.
@@ -49,7 +49,7 @@ type SyncMap[Key comparable, Value any] struct {
 //
 // Due to length tracking, this is marginally more costly when modifying contents
 // than "just" a type-safe [sync.Map].  It should only be used when length is needed.
-func New[Key comparable, Value any](create func(key Key) Value) *SyncMap[Key, Value] {
+func NewSyncMap[Key comparable, Value any](create func(key Key) Value) *SyncMap[Key, Value] {
 	return &SyncMap[Key, Value]{
 		contents: sync.Map{},
 		create:   create,

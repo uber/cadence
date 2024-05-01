@@ -76,14 +76,24 @@ type (
 		//     ./limiter.go:30:27: func passes lock by value: github.com/uber/cadence/common/quotas/global/limiter/internal.FallbackLimiter contains sync/atomic.Int64 contains sync/atomic.noCopy
 		// which is checked by `make lint` during CI.
 
-		accepted      atomic.Int64 // accepted-request usage data, value-typed because the parent is never copied
-		rejected      atomic.Int64 // rejected-request usage data, value-typed because the parent is never copied
-		failedUpdates atomic.Int64 // number of failed updates, value-typed because the parent is never copied
+		// accepted-request usage counter, value-typed because the parent is never copied
+		accepted atomic.Int64
+		// rejected-request usage counter, value-typed because the parent is never copied
+		rejected atomic.Int64
+		// number of failed updates, value-typed because the parent is never copied
+		failedUpdates atomic.Int64
 
 		// ratelimiters in use
 
-		fallback quotas.Limiter // fallback when limit is nil, accepted until updated
-		limit    *rate.Limiter  // local-only limiter based on remote data.
+		// fallback used when failedUpdates exceeds maxFailedUpdates,
+		// or prior to initial data from the global ratelimiter system.
+		fallback quotas.Limiter
+		// local-only limiter based global ratelimiter values.
+		//
+		// note that use and modification is NOT synchronized externally,
+		// so updates and deciding when to use the fallback must be done carefully
+		// to avoid undesired combinations when they interleave.
+		limit *rate.Limiter
 	}
 )
 
@@ -94,14 +104,14 @@ const (
 	// at startup / new limits in use, use the fallback logic, because that's
 	// expected as we have no data yet.
 	//
-	// this risks being interpreted as a "failure" though, so start deeply
+	// positive values risk being interpreted as a "failure" though, so start deeply
 	// negative so it can be identified as "still starting up".
 	// min-int64 has more than enough room to "count" failed updates for eons
 	// without becoming positive, so it should not risk being misinterpreted.
 	initialFailedUpdates = math.MinInt64
 )
 
-func New(fallback quotas.Limiter) *FallbackLimiter {
+func NewFallbackLimiter(fallback quotas.Limiter) *FallbackLimiter {
 	l := &FallbackLimiter{
 		fallback: fallback,
 		limit:    rate.NewLimiter(rate.Limit(1), 0), // 0 allows no requests, will be unused until we receive an update
@@ -163,6 +173,8 @@ func (b *FallbackLimiter) Clear() {
 }
 
 // Allow returns true if a request is allowed right now.
+//
+// This intentionally implements [../limiter.GlobalLimiter].
 func (b *FallbackLimiter) Allow() bool {
 	var allowed bool
 	if b.useFallback() {

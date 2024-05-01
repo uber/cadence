@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package syncmap
+package internal
 
 import (
 	"math/rand"
@@ -35,15 +35,15 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func TestBasics(t *testing.T) {
+func TestMapBasics(t *testing.T) {
 
 }
 
-func TestNotRacy(t *testing.T) {
+func TestMapNotRacy(t *testing.T) {
 	count := atomic.NewInt64(0)
 	// using a string pointer just to make things a bit riskier / more sensitive to races since mutation is possible.
 	// no mutation currently occurs, but it seems slightly safer to leave it here for future changes.
-	m := New(func(key string) *string {
+	m := NewSyncMap(func(key string) *string {
 		s := key
 		s += "-"
 		s += strconv.Itoa(int(count.Inc())) // just to be recognizable

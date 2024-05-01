@@ -24,6 +24,6 @@ package internal
 
 import "testing"
 
-func TestIt(t *testing.T) {
+func TestLimiter(t *testing.T) {
 	// TODO
 }
