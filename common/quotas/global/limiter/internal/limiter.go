@@ -26,13 +26,16 @@
 package internal
 
 import (
+	"math"
+	"sync/atomic"
+
 	"golang.org/x/time/rate"
 
 	"github.com/uber/cadence/common/quotas"
 )
 
 type (
-	// FallbackLimiter wraps a rate.Limiter with a fallback quotas.Limiter to use
+	// FallbackLimiter wraps a [rate.Limiter] with a fallback [quotas.Limiter] to use
 	// after a configurable number of failed updates.
 	//
 	// Intended use is:
@@ -52,53 +55,89 @@ type (
 	// If no data has been returned for a sufficiently long time, the "smart" ratelimit will be dropped, and
 	// the fallback limit will be used exclusively.  This is intended as a safety fallback, e.g. during initial
 	// rollout and outage scenarios, normal use is not expected to rely on it.
+	//
+	// ---
+	//
+	// Note that this object has no locks, despite being "mutated".
+	// Both [quotas.Limiter] and [rate.Limiter] have internal locks and the instances
+	// are never changed, and the same is true in a sense for the atomic counters.
+	//
+	// If this struct changes, top-level locks may be necessary.
+	// `go vet -copylocks` should detect this, but be careful regardless.
 	FallbackLimiter struct {
 		// usage data cannot be gathered from rate.Limiter, sadly.
 		// so we need to gather it separately. or maybe find a fork.
-		usage    usage
+		//
+		// note that these atomics are values, not pointers.
+		// this requires that FallbackLimiter is used as a pointer, not a value, and is never copied.
+		// if this is not done, `go vet` will produce an error:
+		//     ❯ go vet .
+		//     # github.com/uber/cadence/common/quotas/global/limiter
+		//     ./limiter.go:30:27: func passes lock by value: github.com/uber/cadence/common/quotas/global/limiter/internal.FallbackLimiter contains sync/atomic.Int64 contains sync/atomic.noCopy
+		// which is checked by `make lint` during CI.
+
+		accepted      atomic.Int64 // accepted-request usage data, value-typed because the parent is never copied
+		rejected      atomic.Int64 // rejected-request usage data, value-typed because the parent is never copied
+		failedUpdates atomic.Int64 // number of failed updates, value-typed because the parent is never copied
+
+		// ratelimiters in use
+
 		fallback quotas.Limiter // fallback when limit is nil, accepted until updated
 		limit    *rate.Limiter  // local-only limiter based on remote data.
 	}
+)
 
-	// usage is a simple usage-tracking mechanism for limiting hosts.
+const (
+	// when failed updates exceeds this value, use the fallback
+	maxFailedUpdates = 9
+
+	// at startup / new limits in use, use the fallback logic, because that's
+	// expected as we have no data yet.
 	//
-	// all it cares about is total since last report.  no attempt is made to address
-	// abnormal spikes within report times, widely-varying behavior across reports,
-	// etc - that kind of logic is left to the aggregating hosts, not the limiting ones.
-	usage struct {
-		accepted     int
-		rejected     int
-		failedUpdate int // reset when an update occurs
-	}
+	// this risks being interpreted as a "failure" though, so start deeply
+	// negative so it can be identified as "still starting up".
+	// min-int64 has more than enough room to "count" failed updates for eons
+	// without becoming positive, so it should not risk being misinterpreted.
+	initialFailedUpdates = math.MinInt64
 )
 
 func New(fallback quotas.Limiter) *FallbackLimiter {
-	return &FallbackLimiter{
+	l := &FallbackLimiter{
 		fallback: fallback,
+		limit:    rate.NewLimiter(rate.Limit(1), 0), // 0 allows no requests, will be unused until we receive an update
 	}
+	l.failedUpdates.Store(initialFailedUpdates)
+	return l
 }
 
 // Collect returns the current accepted/rejected values, and resets them to zero.
-func (b *FallbackLimiter) Collect() (used int, refused int, usingFallback bool) {
-	used, refused = b.usage.accepted, b.usage.rejected
-	b.usage.accepted = 0
-	b.usage.rejected = 0
-	return used, refused, b.limit == nil
+// Small bits of imprecise counting / time-bucketing due to concurrent limiting is expected and allowed,
+// as it should be more than small enough in practice to not matter.
+func (b *FallbackLimiter) Collect() (accepted int, rejected int, usingFallback bool) {
+	accepted = int(b.accepted.Swap(0))
+	rejected = int(b.rejected.Swap(0))
+	return accepted, rejected, b.useFallback()
 }
 
-// Update adjusts the underlying ratelimit.
-func (b *FallbackLimiter) Update(rps float64) {
-	b.usage.failedUpdate = 0 // reset the use-fallback fuse
+func (b *FallbackLimiter) useFallback() bool {
+	failed := b.failedUpdates.Load()
+	return failed < 0 /* not yet set */ || failed > maxFailedUpdates /* too many failures */
+}
 
-	if b.limit == nil {
-		// fallback no longer needed, use limiter only
-		b.limit = rate.NewLimiter(
-			rate.Limit(rps),
-			// 0 burst disallows all requests, so allow at least 1 and rely on rps to fill sanely.
-			max(1, int(rps)),
-		)
-		return
-	}
+// Update adjusts the underlying "main" ratelimit, and resets the fallback fuse.
+func (b *FallbackLimiter) Update(rps float64) {
+	// caution: order here matters, to prevent potentially-old limiter values from being used
+	// before they are updated.
+	//
+	// this is probably not going to be noticeable, but some users are sensitive to ANY
+	// requests being ratelimited.  updating the fallback fuse last should be more reliable
+	// in preventing that from happening when they would not otherwise be limited, e.g. with
+	// the initial value of 0 burst, or if their rps was very low long ago and is now high.
+	defer func() {
+		// reset the use-fallback fuse.
+		b.failedUpdates.Store(0)
+	}()
+
 	if b.limit.Limit() == rate.Limit(rps) {
 		return
 	}
@@ -112,11 +151,8 @@ func (b *FallbackLimiter) Update(rps float64) {
 //
 // After crossing a threshold of failures (currently 10), the fallback will be switched to.
 func (b *FallbackLimiter) FailedUpdate() (failures int) {
-	b.usage.failedUpdate++ // always increment the count for monitoring purposes
-	if b.usage.failedUpdate == 10 {
-		b.limit = nil // defer to fallback when crossing the threshold
-	}
-	return b.usage.failedUpdate
+	failures = int(b.failedUpdates.Add(1)) // always increment the count for monitoring purposes
+	return failures
 }
 
 // Clear erases the internal ratelimit, and defers to the fallback until an update is received.
@@ -129,16 +165,16 @@ func (b *FallbackLimiter) Clear() {
 // Allow returns true if a request is allowed right now.
 func (b *FallbackLimiter) Allow() bool {
 	var allowed bool
-	if b.limit == nil {
+	if b.useFallback() {
 		allowed = b.fallback.Allow()
 	} else {
 		allowed = b.limit.Allow()
 	}
 
 	if allowed {
-		b.usage.accepted++
+		b.accepted.Add(1)
 	} else {
-		b.usage.rejected++
+		b.rejected.Add(1)
 	}
 	return allowed
 }
