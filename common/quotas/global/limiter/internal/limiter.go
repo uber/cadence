@@ -134,7 +134,7 @@ func (b *FallbackLimiter) Update(rps float64) {
 	// in preventing that from happening when they would not otherwise be limited, e.g. with
 	// the initial value of 0 burst, or if their rps was very low long ago and is now high.
 	defer func() {
-		// reset the use-fallback fuse.
+		// reset the use-fallback fuse, which may also (re)enable using the main limiter
 		b.failedUpdates.Store(0)
 	}()
 
