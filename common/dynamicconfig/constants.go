@@ -1873,7 +1873,7 @@ const (
 	// Allowed filters: N/A
 	EnableESAnalyzer
 	// EnableAsyncWorkflowConsumption decides whether to enable system workers for processing async workflows
-	// KeyName: system.enableAsyncWorkflowConsumption
+	// KeyName: worker.enableAsyncWorkflowConsumption
 	// Value type: Bool
 	// Default value: false
 	// Allowed filters: N/A
