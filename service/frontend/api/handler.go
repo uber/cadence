@@ -1771,6 +1771,7 @@ func (wh *WorkflowHandler) StartWorkflowExecutionAsync(
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode StartWorkflowExecutionAsyncRequest: %v", err)
 	}
+	scope.RecordTimer(metrics.AsyncRequestPayloadSize, time.Duration(len(payload)))
 
 	// propagate the headers from the context to the message
 	header := &shared.Header{
@@ -2351,6 +2352,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecutionAsync(
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode SignalWithStartWorkflowExecutionAsyncRequest: %v", err)
 	}
+	scope.RecordTimer(metrics.AsyncRequestPayloadSize, time.Duration(len(payload)))
 
 	// propagate the headers from the context to the message
 	header := &shared.Header{
