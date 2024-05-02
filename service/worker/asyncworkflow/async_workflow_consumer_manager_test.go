@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -36,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/asyncworkflow/queue/provider"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
@@ -316,6 +318,84 @@ func TestConsumerManager(t *testing.T) {
 				t.Fatalf("Consumer mismatch after second round (-want +got):\n%s", diff)
 			}
 		})
+	}
+}
+
+func TestConsumerManagerEnabledDisabled(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockTimeSrc := clock.NewMockedTimeSource()
+	mockDomainCache := cache.NewMockDomainCache(ctrl)
+	mockQueueProvider := queue.NewMockProvider(ctrl)
+	dwc := domainWithConfig{
+		name: "domain1",
+		asyncWFCfg: types.AsyncWorkflowConfiguration{
+			Enabled:   true,
+			QueueType: "kafka",
+			QueueConfig: &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         []byte(`{"brokers":["localhost:9092"],"topics":["test-topic"]}`),
+			},
+		},
+	}
+
+	mockDomainCache.EXPECT().GetAllDomain().Return(toDomainCacheEntries([]domainWithConfig{dwc})).AnyTimes()
+	queueMock := provider.NewMockQueue(ctrl)
+	queueMock.EXPECT().ID().Return(queueID(dwc.asyncWFCfg)).AnyTimes()
+	mockQueueProvider.EXPECT().GetQueue(gomock.Any(), gomock.Any()).Return(queueMock, nil).AnyTimes()
+	mockConsumer := provider.NewMockConsumer(ctrl)
+	mockConsumer.EXPECT().Start().Return(nil).AnyTimes()
+	mockConsumer.EXPECT().Stop().AnyTimes()
+	queueMock.EXPECT().CreateConsumer(gomock.Any()).Return(mockConsumer, nil).AnyTimes()
+
+	var consumerMgrEnabled, consumerCount int32
+
+	// create consumer manager
+	cm := NewConsumerManager(
+		testlogger.New(t),
+		metrics.NewNoopMetricsClient(),
+		mockDomainCache,
+		mockQueueProvider,
+		nil,
+		WithTimeSource(mockTimeSrc),
+		WithEnabledPropertyFn(func(opts ...dynamicconfig.FilterOption) bool {
+			return atomic.LoadInt32(&consumerMgrEnabled) == 1
+		}),
+		WithEmitConsumerCountMetrifFn(func(count int) {
+			atomic.StoreInt32(&consumerCount, int32(count))
+		}),
+	)
+
+	cm.Start()
+	defer cm.Stop()
+
+	// wait for the first round of consumers to be created and verify consumer count
+	atomic.StoreInt32(&consumerMgrEnabled, 1)
+	time.Sleep(50 * time.Millisecond)
+	t.Log("first round comparison")
+	got := atomic.LoadInt32(&consumerCount)
+	want := 1 // consumer manager is enabled
+	if got != int32(want) {
+		t.Fatalf("Consumer count mismatch after first round, want: %v, got: %v", want, got)
+	}
+
+	// disable consumer manager and wait for the second round of refresh
+	atomic.StoreInt32(&consumerMgrEnabled, 0)
+	mockTimeSrc.Advance(defaultRefreshInterval)
+	time.Sleep(50 * time.Millisecond)
+	got = atomic.LoadInt32(&consumerCount)
+	want = 0 // all consumers should be stopped when consumer manager is disabled
+	if got != int32(want) {
+		t.Fatalf("Consumer count mismatch after second round, want: %v, got: %v", want, got)
+	}
+
+	// enable consumer manager and wait for the third round of refresh
+	atomic.StoreInt32(&consumerMgrEnabled, 1)
+	mockTimeSrc.Advance(defaultRefreshInterval)
+	time.Sleep(50 * time.Millisecond)
+	got = atomic.LoadInt32(&consumerCount)
+	want = 1 // consumer manager is enabled
+	if got != int32(want) {
+		t.Fatalf("Consumer count mismatch after third round, want: %v, got: %v", want, got)
 	}
 }
 
