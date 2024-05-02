@@ -236,10 +236,8 @@ func (s *Service) Start() {
 		s.startFailoverManager()
 	}
 
-	if s.config.EnableAsyncWorkflowConsumption() {
-		cm := s.startAsyncWorkflowConsumerManager()
-		defer cm.Stop()
-	}
+	cm := s.startAsyncWorkflowConsumerManager()
+	defer cm.Stop()
 
 	logger.Info("worker started", tag.ComponentWorker)
 	<-s.stopC
@@ -407,6 +405,7 @@ func (s *Service) startAsyncWorkflowConsumerManager() common.Daemon {
 		s.GetDomainCache(),
 		s.Resource.GetAsyncWorkflowQueueProvider(),
 		s.GetFrontendClient(),
+		asyncworkflow.WithEnabledPropertyFn(s.config.EnableAsyncWorkflowConsumption),
 	)
 	cm.Start()
 	return cm
