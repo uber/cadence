@@ -101,7 +101,7 @@ func (s *HistoryV2PersistenceSuite) TearDownSuite() {
 // TestGenUUIDs testing  uuid.New() can generate unique UUID
 func (s *HistoryV2PersistenceSuite) TestGenUUIDs() {
 	wg := sync.WaitGroup{}
-	m := sync.Map{}
+	m := &sync.Map{}
 	concurrency := 1000
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
@@ -377,7 +377,7 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 	treeID := uuid.New()
 	wg := sync.WaitGroup{}
 	concurrency := 20
-	m := sync.Map{}
+	m := &sync.Map{}
 
 	// test create new branch along with appending new nodes
 	for i := 0; i < concurrency; i++ {
@@ -538,8 +538,8 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyForkAndAppendBranches() {
 	s.Nil(err)
 	s.Equal((concurrency)+1, len(events))
 
-	level1ID := sync.Map{}
-	level1Br := sync.Map{}
+	level1ID := &sync.Map{}
+	level1Br := &sync.Map{}
 	// test forking from master branch and append nodes
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
@@ -588,7 +588,7 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyForkAndAppendBranches() {
 	branches = s.descTreeByToken(ctx, masterBr)
 	s.Equal(concurrency, len(branches))
 	forkOnLevel1 := int32(0)
-	level2Br := sync.Map{}
+	level2Br := &sync.Map{}
 	wg = sync.WaitGroup{}
 
 	// test forking for second level of branch
@@ -687,14 +687,14 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyForkAndAppendBranches() {
 
 }
 
-func (s *HistoryV2PersistenceSuite) getBranchByKey(m sync.Map, k int) []byte {
+func (s *HistoryV2PersistenceSuite) getBranchByKey(m *sync.Map, k int) []byte {
 	v, ok := m.Load(k)
 	s.Equal(true, ok)
 	br := v.([]byte)
 	return br
 }
 
-func (s *HistoryV2PersistenceSuite) getIDByKey(m sync.Map, k int) int64 {
+func (s *HistoryV2PersistenceSuite) getIDByKey(m *sync.Map, k int) int64 {
 	v, ok := m.Load(k)
 	s.Equal(true, ok)
 	id := v.(int64)
