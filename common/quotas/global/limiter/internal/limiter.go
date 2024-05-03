@@ -30,13 +30,17 @@ import (
 	"sync/atomic"
 
 	"golang.org/x/time/rate"
-
-	"github.com/uber/cadence/common/quotas"
 )
 
 type (
-	// FallbackLimiter wraps a [rate.Limiter] with a fallback [quotas.Limiter] to use
-	// after a configurable number of failed updates.
+	// Limiter is a simplified version of [github.com/uber/cadence/common/quotas.Limiter],
+	// for both simpler mocking and to remove the need to import it.
+	Limiter interface {
+		Allow() bool
+	}
+
+	// FallbackLimiter wraps a [rate.Limiter] with a fallback Limiter (i.e. a [github.com/uber/cadence/common/quotas.Limiter])
+	// to use after a configurable number of failed updates.
 	//
 	// Intended use is:
 	//   - collect allowed vs rejected metrics
@@ -59,7 +63,7 @@ type (
 	// ---
 	//
 	// Note that this object has no locks, despite being "mutated".
-	// Both [quotas.Limiter] and [rate.Limiter] have internal locks and the instances
+	// Both [github.com/uber/cadence/common/quotas.Limiter] and [rate.Limiter] have internal locks and the instances
 	// are never changed, and the same is true in a sense for the atomic counters.
 	//
 	// If this struct changes, top-level locks may be necessary.
@@ -87,7 +91,7 @@ type (
 
 		// fallback used when failedUpdates exceeds maxFailedUpdates,
 		// or prior to initial data from the global ratelimiter system.
-		fallback quotas.Limiter
+		fallback Limiter
 		// local-only limiter based global ratelimiter values.
 		//
 		// note that use and modification is NOT synchronized externally,
@@ -111,10 +115,10 @@ const (
 	initialFailedUpdates = math.MinInt64
 )
 
-func NewFallbackLimiter(fallback quotas.Limiter) *FallbackLimiter {
+func NewFallbackLimiter(fallback Limiter) *FallbackLimiter {
 	l := &FallbackLimiter{
 		fallback: fallback,
-		limit:    rate.NewLimiter(rate.Limit(1), 0), // 0 allows no requests, will be unused until we receive an update
+		limit:    rate.NewLimiter(0, 0), // 0 allows no requests, will be unused until we receive an update
 	}
 	l.failedUpdates.Store(initialFailedUpdates)
 	return l
@@ -165,11 +169,11 @@ func (b *FallbackLimiter) FailedUpdate() (failures int) {
 	return failures
 }
 
-// Clear erases the internal ratelimit, and defers to the fallback until an update is received.
+// Clear defers to the fallback until an update is received.
 // This is intended to be used when the current limit is no longer trustworthy for some reason,
 // determined externally rather than from too many FailedUpdate calls.
 func (b *FallbackLimiter) Clear() {
-	b.limit = nil
+	b.failedUpdates.Store(initialFailedUpdates)
 }
 
 // Allow returns true if a request is allowed right now.

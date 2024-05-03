@@ -29,7 +29,8 @@ import (
 
 // SyncMap adds type safety around a sync.Map, and:
 //   - implicitly constructs values as needed, not relying on zero values
-//   - simplifies the API a bit because not all methods are in use
+//   - simplifies the API a bit because not all methods are in use.
+//     in particular there is no "Store" currently because it is not needed.
 //   - tracks length (atomically, so values are only an estimate)
 //
 // Due to length tracking, this is marginally more costly when modifying contents

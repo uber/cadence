@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package internal
+package internal_test
 
 import (
 	"math/rand"
@@ -33,20 +33,79 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/uber/cadence/common/quotas/global/limiter/internal"
 )
 
 func TestMapBasics(t *testing.T) {
+	const (
+		loaded1 = "four"
+		loaded2 = "tenletters"
+		tried   = "should not exist"
+	)
+	type custom struct{ value int }
 
+	assertContentsEqual := func(t *testing.T, m *internal.SyncMap[string, *custom], expected map[string]int) {
+		dup := make(map[string]int) // to avoid mutating the original
+		for k, v := range expected {
+			dup[k] = v
+		}
+		m.Range(func(k string, v *custom) bool {
+			if _, ok := dup[k]; ok {
+				delete(dup, k)
+			} else {
+				t.Errorf("ranged over unexpected or duplicate key %q", k)
+			}
+			return true
+		})
+		assert.Empty(t, dup, "did not find some contents")
+	}
+
+	m := internal.NewSyncMap(func(key string) *custom {
+		return &custom{value: len(key)}
+	})
+
+	t.Run("load should work", func(t *testing.T) {
+		v := m.Load(loaded1)
+		assert.Equal(t, len(loaded1), v.value, "should use the constructed value initially, not a zero value")
+		v.value = 10
+		reload := m.Load(loaded1)
+		assert.Equal(t, v, reload, "should return the same object when loaded more than once")
+	})
+	t.Run("range should walk over only the one key", func(t *testing.T) {
+		assertContentsEqual(t, m, map[string]int{
+			loaded1: len(loaded1),
+		})
+	})
+	t.Run("loading a second value should range over two", func(t *testing.T) {
+		// init this value too
+		v2 := m.Load(loaded2)
+		assert.Equal(t, len(loaded2), v2.value, "sanity check: loaded2 should be created correctly, like loaded1")
+		assertContentsEqual(t, m, map[string]int{
+			loaded1: len(loaded1),
+			loaded2: len(loaded2),
+		})
+	})
+	t.Run("try should not add keys", func(t *testing.T) {
+		v, ok := m.Try(tried)
+		assert.False(t, ok, "try should return false on nonexistent keys")
+		assert.Nil(t, v, "try should return a zero value if it does not exist")
+		assertContentsEqual(t, m, map[string]int{
+			// should not include `tried`
+			loaded1: len(loaded1),
+			loaded2: len(loaded2),
+		})
+	})
 }
 
 func TestMapNotRacy(t *testing.T) {
-	count := atomic.NewInt64(0)
+	creates := atomic.NewInt64(0)
 	// using a string pointer just to make things a bit riskier / more sensitive to races since mutation is possible.
 	// no mutation currently occurs, but it seems slightly safer to leave it here for future changes.
-	m := NewSyncMap(func(key string) *string {
+	m := internal.NewSyncMap(func(key string) *string {
 		s := key
 		s += "-"
-		s += strconv.Itoa(int(count.Inc())) // just to be recognizable
+		s += strconv.Itoa(int(creates.Inc())) // just to be recognizable
 		return &s
 	})
 
@@ -113,7 +172,7 @@ func TestMapNotRacy(t *testing.T) {
 		}
 
 		vint, err := strconv.ParseInt(parts[1], 10, 64)
-		assert.NoError(t, err, "count-%v should be parse-able as an int", parts[1])
+		assert.NoError(t, err, "creates-%v should be parse-able as an int", parts[1])
 		if vint > upper {
 			upper = vint
 		}
@@ -136,6 +195,6 @@ func TestMapNotRacy(t *testing.T) {
 			"\tNumber of iterations:        %v\n"+
 			"\tHighest saved create:        %v\n"+ // same or higher than iterations
 			"\tTotal num of creates:        %v", // same or higher than saved
-		runtime.GOMAXPROCS(0), same, higher, lower, loops, upper, count.Load(),
+		runtime.GOMAXPROCS(0), same, higher, lower, loops, upper, creates.Load(),
 	)
 }
