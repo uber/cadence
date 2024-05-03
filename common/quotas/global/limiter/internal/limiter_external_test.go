@@ -123,6 +123,13 @@ func TestLimiter(t *testing.T) {
 			}
 		})
 	})
+
+	t.Run("coverage", func(t *testing.T) {
+		// easy line to cover to bring to 100%
+		lim := internal.NewFallbackLimiter(nil)
+		lim.Update(1)
+		lim.Update(1) // should go down "no changes needed, return early" path
+	})
 }
 
 func TestLimiterNotRacy(t *testing.T) {

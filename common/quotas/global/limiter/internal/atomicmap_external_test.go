@@ -45,7 +45,7 @@ func TestMapBasics(t *testing.T) {
 	)
 	type custom struct{ value int }
 
-	assertContentsEqual := func(t *testing.T, m *internal.SyncMap[string, *custom], expected map[string]int) {
+	assertContentsEqual := func(t *testing.T, m *internal.AtomicMap[string, *custom], expected map[string]int) {
 		dup := make(map[string]int) // to avoid mutating the original
 		for k, v := range expected {
 			dup[k] = v
@@ -61,7 +61,7 @@ func TestMapBasics(t *testing.T) {
 		assert.Empty(t, dup, "did not find some contents")
 	}
 
-	m := internal.NewSyncMap(func(key string) *custom {
+	m := internal.NewAtomicMap(func(key string) *custom {
 		return &custom{value: len(key)}
 	})
 
@@ -102,7 +102,7 @@ func TestMapNotRacy(t *testing.T) {
 	creates := atomic.NewInt64(0)
 	// using a string pointer just to make things a bit riskier / more sensitive to races since mutation is possible.
 	// no mutation currently occurs, but it seems slightly safer to leave it here for future changes.
-	m := internal.NewSyncMap(func(key string) *string {
+	m := internal.NewAtomicMap(func(key string) *string {
 		s := key
 		s += "-"
 		s += strconv.Itoa(int(creates.Inc())) // just to be recognizable
