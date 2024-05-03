@@ -73,11 +73,11 @@ func (t *AtomicMap[Key, Value]) Load(key Key) Value {
 	return val.(Value)
 }
 
-// Try will get the current Value for a key, or return false if it did not exist.
+// Peek will get the current Value for a key, or return false if it did not exist.
 //
 // Unlike Load, this will NOT populate the key if it does not exist.
 // It just calls [sync.Map.Load] on the underlying map.
-func (t *AtomicMap[Key, Value]) Try(key Key) (Value, bool) {
+func (t *AtomicMap[Key, Value]) Peek(key Key) (Value, bool) {
 	v, ok := t.contents.Load(key)
 	if ok {
 		return v.(Value), true

@@ -34,7 +34,7 @@ import (
 	"go.uber.org/atomic"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/uber/cadence/common/quotas/global/limiter/internal"
+	"github.com/uber/cadence/common/quotas/global/collection/internal"
 )
 
 func TestMapBasics(t *testing.T) {
@@ -87,7 +87,7 @@ func TestMapBasics(t *testing.T) {
 		})
 	})
 	t.Run("try should not add keys", func(t *testing.T) {
-		v, ok := m.Try(tried)
+		v, ok := m.Peek(tried)
 		assert.False(t, ok, "try should return false on nonexistent keys")
 		assert.Nil(t, v, "try should return a zero value if it does not exist")
 		assertContentsEqual(t, m, map[string]int{
@@ -139,7 +139,7 @@ func TestMapNotRacy(t *testing.T) {
 			return nil
 		})
 		g.Go(func() error {
-			_, _ = m.Try(key) // value does not matter / hard to check usefully.
+			_, _ = m.Peek(key) // value does not matter / hard to check usefully.
 			// could count true vs false to ensure both orders are hit...
 			return nil
 		})

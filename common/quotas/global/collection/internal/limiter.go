@@ -77,7 +77,7 @@ type (
 		// if this is not done, `go vet` will produce an error:
 		//     ❯ go vet .
 		//     # github.com/uber/cadence/common/quotas/global/limiter
-		//     ./limiter.go:30:27: func passes lock by value: github.com/uber/cadence/common/quotas/global/limiter/internal.FallbackLimiter contains sync/atomic.Int64 contains sync/atomic.noCopy
+		//     ./collection.go:30:27: func passes lock by value: github.com/uber/cadence/common/quotas/global/limiter/internal.FallbackLimiter contains sync/atomic.Int64 contains sync/atomic.noCopy
 		// which is checked by `make lint` during CI.
 
 		// accepted-request usage counter, value-typed because the parent is never copied

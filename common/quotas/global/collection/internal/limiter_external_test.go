@@ -32,7 +32,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/uber/cadence/common/quotas"
-	"github.com/uber/cadence/common/quotas/global/limiter/internal"
+	"github.com/uber/cadence/common/quotas/global/collection/internal"
 )
 
 func TestLimiter(t *testing.T) {

@@ -20,10 +20,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package limiter
+/*
+Package collection contains the limiting-host ratelimit usage tracking and enforcing logic,
+which acts as a quotas.Collection.
 
-import "testing"
-
-func TestIt(t *testing.T) {
-	// TODO
-}
+At a very high level, this wraps a [quotas.Limiter] to do a few additional things
+in the context of the [github.com/uber/cadence/common/quotas/global] ratelimiter system:
+  - keep track of usage per key (quotas.Limiter does not support this natively, nor should it)
+  - periodically report usage to an "aggregator" host
+  - apply the aggregator's returned per-key RPS limits to future requests
+  - fall back to the wrapped limiter in case of failures
+*/
+package collection
