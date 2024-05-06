@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination dlqMessageHandler_mock.go
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination dlq_message_handler_mock.go
 
 package domain
 

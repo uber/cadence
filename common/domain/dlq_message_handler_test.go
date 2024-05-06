@@ -138,6 +138,7 @@ func (s *dlqMessageHandlerSuite) TestStart() {
 			s.Equal(test.expectedStatus, atomic.LoadInt32(&s.dlqMessageHandler.status))
 		})
 	}
+	s.dlqMessageHandler.Stop()
 }
 
 func (s *dlqMessageHandlerSuite) TestStop() {
@@ -517,13 +518,13 @@ func (s *dlqMessageHandlerSuite) TestEmitDLQSizeMetricsLoop_ErrorHandling() {
 	go s.dlqMessageHandler.emitDLQSizeMetricsLoop()
 
 	// Allow some time for the goroutine to run and tick at least once
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(1 * time.Nanosecond)
 
 	// Close the done channel to signal the loop to stop
 	close(s.dlqMessageHandler.done)
 
 	// Wait a bit to ensure the loop exits
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(1 * time.Nanosecond)
 
 	s.dlqMessageHandler.logger.Warn("Failed to get DLQ size.", tag.Error(errors.New("DomainReplicationQueueSizeLimit")))
 
