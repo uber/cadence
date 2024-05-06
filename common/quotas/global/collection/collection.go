@@ -39,8 +39,6 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/zap"
-
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
@@ -136,7 +134,7 @@ func (c *Collection) Stop(ctx context.Context) error {
 }
 
 func (c *Collection) For(key string) Limiter {
-
+	return c.limits.Load(key)
 }
 
 func (c *Collection) backgroundUpdateLoop() {
@@ -216,10 +214,10 @@ func (c *Collection) doUpdate(since time.Duration, usage map[string]calls) {
 		if err != nil {
 			c.logger.Error("aggregator batch failed to update",
 				tag.Error(err),
-				tag.Dynamic("host", "hostname?"))
+				tag.Dynamic("agg_host", "hostname?"))
 		}
 		return err
 	}
 	_ = perAggregator
-	}
+
 }
