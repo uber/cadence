@@ -27,7 +27,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"net/http"
 	"testing"
 
 	"github.com/opensearch-project/opensearch-go/v2/opensearchutil"
@@ -67,10 +66,17 @@ func TestFlush(t *testing.T) {
 }
 
 func TestAdd(t *testing.T) {
+	osClient, testServer := getSecureMockOS2Client(t, nil, false)
+	defer testServer.Close()
+
+	params := bulk.BulkProcessorParameters{
+		FlushInterval: 1,
+		NumOfWorkers:  1,
+	}
+	processor, err := osClient.RunBulkProcessor(context.Background(), &params)
 	testcases := []struct {
 		name      string
 		input     bulk.GenericBulkableAddRequest
-		handler   http.HandlerFunc
 		expectErr bool
 	}{
 		{
@@ -82,20 +88,6 @@ func TestAdd(t *testing.T) {
 				Version:     1,
 				VersionType: "external",
 			},
-			handler: func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusNotFound)
-			},
-			expectErr: false,
-		},
-		{
-			name: "index request failure",
-			input: bulk.GenericBulkableAddRequest{
-				RequestType: bulk.BulkableIndexRequest,
-				Index:       "test-index",
-				ID:          "test-id",
-				Doc:         make(chan int),
-			},
-			handler:   nil,
 			expectErr: false,
 		},
 		{
@@ -106,18 +98,6 @@ func TestAdd(t *testing.T) {
 				ID:          "test-id",
 				Doc:         map[string]interface{}{"field": "value"},
 			},
-			handler:   nil,
-			expectErr: false,
-		},
-		{
-			name: "create request failure",
-			input: bulk.GenericBulkableAddRequest{
-				RequestType: bulk.BulkableCreateRequest,
-				Index:       "test-index",
-				ID:          "test-id",
-				Doc:         make(chan int),
-			},
-			handler:   nil,
 			expectErr: false,
 		},
 		{
@@ -128,21 +108,33 @@ func TestAdd(t *testing.T) {
 				ID:          "test-id",
 				Doc:         map[string]interface{}{"field": "value"},
 			},
-			handler:   nil,
+			expectErr: false,
+		},
+		{
+			name: "create request failure",
+			input: bulk.GenericBulkableAddRequest{
+				RequestType: bulk.BulkableCreateRequest,
+				Index:       "test-index",
+				ID:          "test-id",
+				Doc:         func() {},
+			},
+			expectErr: false,
+		},
+		{
+			name: "index request failure",
+			input: bulk.GenericBulkableAddRequest{
+				RequestType: bulk.BulkableIndexRequest,
+				Index:       "test-index",
+				ID:          "test-id",
+				Doc:         func() {},
+			},
 			expectErr: false,
 		},
 	}
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			osClient, testServer := getSecureMockOS2Client(t, tc.handler, false)
-			defer testServer.Close()
 
-			params := bulk.BulkProcessorParameters{
-				FlushInterval: 1,
-				NumOfWorkers:  1,
-			}
-			processor, err := osClient.RunBulkProcessor(context.Background(), &params)
 			assert.NoError(t, err)
 			processor.Add(&tc.input)
 		})
