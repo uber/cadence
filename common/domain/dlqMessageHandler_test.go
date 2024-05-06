@@ -22,8 +22,13 @@ package domain
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/log/tag"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
@@ -100,6 +105,124 @@ func (s *dlqMessageHandlerSuite) TestReadMessages() {
 	s.NoError(err)
 	s.Equal(tasks, resp)
 	s.Nil(token)
+}
+
+func (s *dlqMessageHandlerSuite) TestStart() {
+	tests := []struct {
+		name           string
+		initialStatus  int32
+		expectedStatus int32
+		shouldStart    bool
+	}{
+		{
+			name:           "Should start when initialized",
+			initialStatus:  common.DaemonStatusInitialized,
+			expectedStatus: common.DaemonStatusStarted,
+			shouldStart:    true,
+		},
+		{
+			name:           "Should not start when already started",
+			initialStatus:  common.DaemonStatusStarted,
+			expectedStatus: common.DaemonStatusStarted,
+			shouldStart:    false,
+		},
+	}
+
+	for _, test := range tests {
+		s.Run(test.name, func() {
+			atomic.StoreInt32(&s.dlqMessageHandler.status, test.initialStatus)
+			s.dlqMessageHandler.Start()
+			if test.shouldStart {
+				s.dlqMessageHandler.logger.Info("Domain DLQ handler started.")
+			}
+			s.Equal(test.expectedStatus, atomic.LoadInt32(&s.dlqMessageHandler.status))
+		})
+	}
+}
+
+func (s *dlqMessageHandlerSuite) TestStop() {
+	tests := []struct {
+		name           string
+		initialStatus  int32
+		expectedStatus int32
+		shouldStop     bool
+	}{
+		{
+			name:           "Should stop when started",
+			initialStatus:  common.DaemonStatusStarted,
+			expectedStatus: common.DaemonStatusStopped,
+			shouldStop:     true,
+		},
+		{
+			name:           "Should not stop when not started",
+			initialStatus:  common.DaemonStatusInitialized,
+			expectedStatus: common.DaemonStatusInitialized,
+			shouldStop:     false,
+		},
+	}
+
+	for _, test := range tests {
+		s.Run(test.name, func() {
+			atomic.StoreInt32(&s.dlqMessageHandler.status, test.initialStatus)
+			s.dlqMessageHandler.Stop()
+			if test.shouldStop {
+				s.dlqMessageHandler.logger.Info("Domain DLQ handler shutting down.")
+			}
+			s.Equal(test.expectedStatus, atomic.LoadInt32(&s.dlqMessageHandler.status))
+		})
+	}
+}
+
+func (s *dlqMessageHandlerSuite) TestCount() {
+	tests := []struct {
+		name          string
+		forceFetch    bool
+		lastCount     int64
+		fetchSize     int64
+		fetchError    error
+		expectedCount int64
+		expectedError error
+	}{
+		{
+			name:          "Force fetch with error",
+			forceFetch:    true,
+			lastCount:     10,
+			fetchSize:     0,
+			fetchError:    fmt.Errorf("fetch error"),
+			expectedCount: 0,
+			expectedError: fmt.Errorf("fetch error"),
+		},
+		{
+			name:          "Force fetch with success",
+			forceFetch:    true,
+			lastCount:     10,
+			fetchSize:     20,
+			fetchError:    nil,
+			expectedCount: 20,
+			expectedError: nil,
+		},
+		{
+			name:          "No fetch needed",
+			forceFetch:    false,
+			lastCount:     30,
+			expectedCount: 30,
+			expectedError: nil,
+		},
+	}
+
+	for _, test := range tests {
+		s.Run(test.name, func() {
+			s.mockReplicationQueue.EXPECT().GetDLQSize(gomock.Any()).Return(test.fetchSize, test.fetchError).MaxTimes(1)
+			s.dlqMessageHandler.lastCount = test.lastCount
+			count, err := s.dlqMessageHandler.Count(context.Background(), test.forceFetch)
+			s.Equal(test.expectedCount, count)
+			if test.expectedError != nil {
+				s.Equal(test.expectedError, err)
+			} else {
+				s.NoError(err)
+			}
+		})
+	}
 }
 
 func (s *dlqMessageHandlerSuite) TestReadMessages_ThrowErrorOnGetDLQAckLevel() {
@@ -358,4 +481,50 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_IgnoreErrorOnUpdateDLQAckLeve
 	token, err := s.dlqMessageHandler.Merge(context.Background(), lastMessageID, pageSize, pageToken)
 	s.NoError(err)
 	s.Nil(token)
+}
+
+func (s *dlqMessageHandlerSuite) TestMergeMessages_NonDomainTask() {
+	ackLevel := int64(10)
+	lastMessageID := int64(20)
+	pageSize := 100
+	pageToken := []byte{}
+
+	// Create a task that mimics a non-domain replication task by not setting DomainTaskAttributes
+	tasks := []*types.ReplicationTask{
+		{
+			TaskType:     types.ReplicationTaskTypeDomain.Ptr(), // Still set to domain but no attributes
+			SourceTaskID: 1,
+		},
+	}
+
+	s.mockReplicationQueue.EXPECT().GetDLQAckLevel(gomock.Any()).Return(ackLevel, nil).Times(1)
+	s.mockReplicationQueue.EXPECT().GetMessagesFromDLQ(gomock.Any(), ackLevel, lastMessageID, pageSize, pageToken).
+		Return(tasks, nil, nil).Times(1)
+
+	token, err := s.dlqMessageHandler.Merge(context.Background(), lastMessageID, pageSize, pageToken)
+
+	s.NotNil(err)
+	s.IsType(&types.InternalServiceError{}, err)
+	s.Equal("Encounter non domain replication task in domain replication queue.", err.Error())
+	s.Nil(token)
+}
+
+func (s *dlqMessageHandlerSuite) TestEmitDLQSizeMetricsLoop_ErrorHandling() {
+	expectedError := fmt.Errorf("error fetching DLQ size")
+	s.mockReplicationQueue.EXPECT().GetDLQSize(gomock.Any()).Return(int64(0), expectedError).AnyTimes()
+
+	// Start the metrics loop in a goroutine
+	go s.dlqMessageHandler.emitDLQSizeMetricsLoop()
+
+	// Allow some time for the goroutine to run and tick at least once
+	time.Sleep(100 * time.Millisecond)
+
+	// Close the done channel to signal the loop to stop
+	close(s.dlqMessageHandler.done)
+
+	// Wait a bit to ensure the loop exits
+	time.Sleep(100 * time.Millisecond)
+
+	s.dlqMessageHandler.logger.Warn("Failed to get DLQ size.", tag.Error(errors.New("DomainReplicationQueueSizeLimit")))
+
 }
