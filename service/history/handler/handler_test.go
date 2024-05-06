@@ -1100,6 +1100,32 @@ func (s *handlerSuite) TestRespondDecisionTaskFailed() {
 			input:         validInput,
 			expectedError: true,
 		},
+		"special failure": {
+			caseName: "special failure",
+			input: &types.HistoryRespondDecisionTaskFailedRequest{
+				DomainUUID: testDomainID,
+				FailedRequest: &types.RespondDecisionTaskFailedRequest{
+					TaskToken: []byte("task-token"),
+					Cause:     types.DecisionTaskFailedCauseUnhandledDecision.Ptr(),
+					Details:   []byte("Details"),
+					Identity:  "identity",
+				},
+			},
+			expectedError: false,
+		},
+		"special failure2": {
+			caseName: "special failure",
+			input: &types.HistoryRespondDecisionTaskFailedRequest{
+				DomainUUID: testDomainID,
+				FailedRequest: &types.RespondDecisionTaskFailedRequest{
+					TaskToken: []byte("task-token"),
+					Cause:     types.DecisionTaskFailedCauseUnhandledDecision.Ptr(),
+					Details:   []byte("Details"),
+					Identity:  "identity",
+				},
+			},
+			expectedError: false,
+		},
 	}
 
 	for name, input := range testInput {
@@ -1140,6 +1166,25 @@ func (s *handlerSuite) TestRespondDecisionTaskFailed() {
 				}, nil).Times(1)
 				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
 				s.mockEngine.EXPECT().RespondDecisionTaskFailed(gomock.Any(), input.input).Return(errors.New("error")).Times(1)
+			case "special failure":
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				}, nil).Times(1)
+				s.mockResource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return(testDomainID, nil).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().RespondDecisionTaskFailed(gomock.Any(), input.input).Return(nil).Times(1)
+			case "special failure2":
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				}, nil).Times(1)
+				s.mockResource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return("", errors.New("error")).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().RespondDecisionTaskFailed(gomock.Any(), input.input).Return(nil).Times(1)
+
 			}
 			err := s.handler.RespondDecisionTaskFailed(context.Background(), input.input)
 			if input.expectedError {
@@ -1148,6 +1193,32 @@ func (s *handlerSuite) TestRespondDecisionTaskFailed() {
 				s.NoError(err)
 			}
 		})
+	}
+}
+
+func (s *handlerSuite) TestDescribeHistoryHost() {
+	request := &types.DescribeHistoryHostRequest{
+		HostAddress: common.StringPtr("test"),
+	}
+
+	mockStatus := map[string]int32{
+		"initialized": 0,
+		"started":     1,
+		"stopped":     2,
+	}
+
+	for status, value := range mockStatus {
+		s.mockResource.DomainCache.EXPECT().GetCacheSize().Return(int64(2), int64(3)).Times(1)
+		s.mockShardController.EXPECT().Status().Return(value).Times(1)
+		s.mockShardController.EXPECT().NumShards().Return(1)
+		s.mockShardController.EXPECT().ShardIDs().Return([]int32{0})
+		resp, err := s.handler.DescribeHistoryHost(context.Background(), request)
+		s.NoError(err)
+		s.Equal(resp.DomainCache, &types.DomainCacheInfo{
+			NumOfItemsInCacheByID:   2,
+			NumOfItemsInCacheByName: 3,
+		})
+		s.Equal(resp.ShardControllerStatus, status)
 	}
 }
 
