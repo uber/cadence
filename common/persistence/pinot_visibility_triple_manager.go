@@ -44,6 +44,7 @@ type (
 		readModeIsFromES          dynamicconfig.BoolPropertyFnWithDomainFilter
 		writeMode                 dynamicconfig.StringPropertyFn
 		logCustomerQueryParameter dynamicconfig.BoolPropertyFnWithDomainFilter
+		readModeIsDouble          dynamicconfig.BoolPropertyFnWithDomainFilter
 	}
 )
 
@@ -77,6 +78,7 @@ func NewPinotVisibilityTripleManager(
 	readModeIsFromES dynamicconfig.BoolPropertyFnWithDomainFilter,
 	visWritingMode dynamicconfig.StringPropertyFn,
 	logCustomerQueryParameter dynamicconfig.BoolPropertyFnWithDomainFilter,
+	readModeIsDouble dynamicconfig.BoolPropertyFnWithDomainFilter,
 	logger log.Logger,
 ) VisibilityManager {
 	if dbVisibilityManager == nil && pinotVisibilityManager == nil && esVisibilityManager == nil {
@@ -92,6 +94,7 @@ func NewPinotVisibilityTripleManager(
 		writeMode:                 visWritingMode,
 		logger:                    logger,
 		logCustomerQueryParameter: logCustomerQueryParameter,
+		readModeIsDouble:          readModeIsDouble,
 	}
 }
 
@@ -360,6 +363,34 @@ func filterAttrPrefix(str string) string {
 	return strings.Replace(str, "`", "", -1)
 }
 
+func (v *pinotVisibilityTripleManager) getShadowMgrForDoubleRead(domain string) VisibilityManager {
+	// invalid cases:
+	// case0: when it is not double read
+	if !v.readModeIsDouble(domain) {
+		return nil
+	}
+	// case1: when it is double read, and both advanced visibility are not available
+	if v.pinotVisibilityManager == nil && v.esVisibilityManager == nil {
+		return nil
+	}
+	// case2: when it is double read, and only one of advanced visibility is available
+	if v.pinotVisibilityManager == nil || v.esVisibilityManager == nil {
+		return nil
+	}
+
+	// Valid cases:
+	// case3: when it is double read, and both advanced visibility are available, and read mode is from Pinot
+	if v.readModeIsFromPinot(domain) {
+		return v.esVisibilityManager
+	}
+	// case4: when it is double read, and both advanced visibility are available, and read mode is from ES
+	if v.readModeIsFromES(domain) {
+		return v.pinotVisibilityManager
+	}
+	// exclude all other cases
+	return nil
+}
+
 func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutions(
 	ctx context.Context,
 	request *ListWorkflowExecutionsRequest,
@@ -373,7 +404,15 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutions(
 		latestTime:   request.LatestTime,
 	}, request.Domain, override != nil)
 
+	// get another manager for double read
+	shadowMgr := v.getShadowMgrForDoubleRead(request.Domain)
+	// call the API for latency comparison
+	if shadowMgr != nil {
+		go shadow(shadowMgr.ListOpenWorkflowExecutions, request, v.logger)
+	}
+
 	manager := v.chooseVisibilityManagerForRead(ctx, request.Domain)
+	// return result from primary
 	return manager.ListOpenWorkflowExecutions(ctx, request)
 }
 
@@ -389,6 +428,14 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutions(
 		earliestTime: request.EarliestTime,
 		latestTime:   request.LatestTime,
 	}, request.Domain, override != nil)
+
+	// get another manager for double read
+	shadowMgr := v.getShadowMgrForDoubleRead(request.Domain)
+	// call the API for latency comparison
+	if shadowMgr != nil {
+		go shadow(shadowMgr.ListClosedWorkflowExecutions, request, v.logger)
+	}
+
 	manager := v.chooseVisibilityManagerForRead(ctx, request.Domain)
 	return manager.ListClosedWorkflowExecutions(ctx, request)
 }
@@ -406,6 +453,14 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutionsByType(
 		earliestTime: request.EarliestTime,
 		latestTime:   request.LatestTime,
 	}, request.Domain, override != nil)
+
+	// get another manager for double read
+	shadowMgr := v.getShadowMgrForDoubleRead(request.Domain)
+	// call the API for latency comparison
+	if shadowMgr != nil {
+		go shadow(shadowMgr.ListOpenWorkflowExecutionsByType, request, v.logger)
+	}
+
 	manager := v.chooseVisibilityManagerForRead(ctx, request.Domain)
 	return manager.ListOpenWorkflowExecutionsByType(ctx, request)
 }
@@ -423,6 +478,14 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByType(
 		earliestTime: request.EarliestTime,
 		latestTime:   request.LatestTime,
 	}, request.Domain, override != nil)
+
+	// get another manager for double read
+	shadowMgr := v.getShadowMgrForDoubleRead(request.Domain)
+	// call the API for latency comparison
+	if shadowMgr != nil {
+		go shadow(shadowMgr.ListClosedWorkflowExecutionsByType, request, v.logger)
+	}
+
 	manager := v.chooseVisibilityManagerForRead(ctx, request.Domain)
 	return manager.ListClosedWorkflowExecutionsByType(ctx, request)
 }
@@ -440,6 +503,14 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutionsByWorkflowID(
 		earliestTime: request.EarliestTime,
 		latestTime:   request.LatestTime,
 	}, request.Domain, override != nil)
+
+	// get another manager for double read
+	shadowMgr := v.getShadowMgrForDoubleRead(request.Domain)
+	// call the API for latency comparison
+	if shadowMgr != nil {
+		go shadow(shadowMgr.ListOpenWorkflowExecutionsByWorkflowID, request, v.logger)
+	}
+
 	manager := v.chooseVisibilityManagerForRead(ctx, request.Domain)
 	return manager.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
 }
@@ -457,6 +528,14 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByWorkflowID(
 		earliestTime: request.EarliestTime,
 		latestTime:   request.LatestTime,
 	}, request.Domain, override != nil)
+
+	// get another manager for double read
+	shadowMgr := v.getShadowMgrForDoubleRead(request.Domain)
+	// call the API for latency comparison
+	if shadowMgr != nil {
+		go shadow(shadowMgr.ListClosedWorkflowExecutionsByWorkflowID, request, v.logger)
+	}
+
 	manager := v.chooseVisibilityManagerForRead(ctx, request.Domain)
 	return manager.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
 }
@@ -473,6 +552,14 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByStatus(
 		earliestTime: request.EarliestTime,
 		latestTime:   request.LatestTime,
 	}, request.Domain, override != nil)
+
+	// get another manager for double read
+	shadowMgr := v.getShadowMgrForDoubleRead(request.Domain)
+	// call the API for latency comparison
+	if shadowMgr != nil {
+		go shadow(shadowMgr.ListClosedWorkflowExecutionsByStatus, request, v.logger)
+	}
+
 	manager := v.chooseVisibilityManagerForRead(ctx, request.Domain)
 	return manager.ListClosedWorkflowExecutionsByStatus(ctx, request)
 }
@@ -492,6 +579,14 @@ func (v *pinotVisibilityTripleManager) GetClosedWorkflowExecution(
 		earliestTime: earlistTime,
 		latestTime:   latestTime,
 	}, request.Domain, override != nil)
+
+	// get another manager for double read
+	shadowMgr := v.getShadowMgrForDoubleRead(request.Domain)
+	// call the API for latency comparison
+	if shadowMgr != nil {
+		go shadow(shadowMgr.GetClosedWorkflowExecution, request, v.logger)
+	}
+
 	manager := v.chooseVisibilityManagerForRead(ctx, request.Domain)
 	return manager.GetClosedWorkflowExecution(ctx, request)
 }
@@ -509,6 +604,14 @@ func (v *pinotVisibilityTripleManager) ListWorkflowExecutions(
 		earliestTime: -1,
 		latestTime:   -1,
 	}, request.Domain, override != nil)
+
+	// get another manager for double read
+	shadowMgr := v.getShadowMgrForDoubleRead(request.Domain)
+	// call the API for latency comparison
+	if shadowMgr != nil {
+		go shadow(shadowMgr.ListWorkflowExecutions, request, v.logger)
+	}
+
 	manager := v.chooseVisibilityManagerForRead(ctx, request.Domain)
 	return manager.ListWorkflowExecutions(ctx, request)
 }
@@ -526,6 +629,14 @@ func (v *pinotVisibilityTripleManager) ScanWorkflowExecutions(
 		earliestTime: -1,
 		latestTime:   -1,
 	}, request.Domain, override != nil)
+
+	// get another manager for double read
+	shadowMgr := v.getShadowMgrForDoubleRead(request.Domain)
+	// call the API for latency comparison
+	if shadowMgr != nil {
+		go shadow(shadowMgr.ScanWorkflowExecutions, request, v.logger)
+	}
+
 	manager := v.chooseVisibilityManagerForRead(ctx, request.Domain)
 	return manager.ScanWorkflowExecutions(ctx, request)
 }
@@ -543,6 +654,14 @@ func (v *pinotVisibilityTripleManager) CountWorkflowExecutions(
 		earliestTime: -1,
 		latestTime:   -1,
 	}, request.Domain, override != nil)
+
+	// get another manager for double read
+	shadowMgr := v.getShadowMgrForDoubleRead(request.Domain)
+	// call the API for latency comparison
+	if shadowMgr != nil {
+		go shadow(shadowMgr.CountWorkflowExecutions, request, v.logger)
+	}
+
 	manager := v.chooseVisibilityManagerForRead(ctx, request.Domain)
 	return manager.CountWorkflowExecutions(ctx, request)
 }
@@ -583,4 +702,20 @@ func (v *pinotVisibilityTripleManager) chooseVisibilityManagerForRead(ctx contex
 		}
 	}
 	return visibilityMgr
+}
+
+func shadow[ReqT any, ResT any](f func(ctx context.Context, request ReqT) (ResT, error), request ReqT, logger log.Logger) {
+	ctxNew, cancel := context.WithTimeout(context.Background(), 2*time.Minute) // don't want f to run too long
+
+	defer cancel()
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Info(fmt.Sprintf("Recovered in Shadow function in double read: %v", r))
+		}
+	}()
+
+	_, err := f(ctxNew, request)
+	if err != nil {
+		logger.Error(fmt.Sprintf("Error in Shadow function in double read: %s", err.Error()))
+	}
 }

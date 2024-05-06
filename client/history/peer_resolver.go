@@ -24,6 +24,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/service"
+	"github.com/uber/cadence/service/history/lookup"
 )
 
 // PeerResolver is used to resolve history peers.
@@ -74,8 +75,7 @@ func (pr peerResolver) FromDomainID(domainID string) (string, error) {
 // It uses our membership provider to lookup which instance currently owns the given shard.
 // FromHostAddress is used for further resolving.
 func (pr peerResolver) FromShardID(shardID int) (string, error) {
-	shardIDString := string(rune(shardID))
-	host, err := pr.resolver.Lookup(service.History, shardIDString)
+	host, err := lookup.HistoryServerByShardID(pr.resolver, shardID)
 	if err != nil {
 		return "", common.ToServiceTransientError(err)
 	}

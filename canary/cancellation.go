@@ -204,7 +204,7 @@ func cancellationActivity(ctx context.Context, scheduledTimeNanos int64) error {
 	return apiCancelTestFn(true)
 }
 
-// cancellationActivity is the activity implementation to test for cancellation of non child workflow, using API
+// cancellationChildActivity is the activity implementation to test for cancellation of non child workflow, using API
 func cancellationChildActivity(ctx context.Context, scheduledTimeNanos int64, execution workflow.Execution) error {
 	scope := activity.GetMetricsScope(ctx)
 	var err error

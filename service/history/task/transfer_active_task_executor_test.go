@@ -1046,7 +1046,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCancelExecution_Success() {
 	)
 }
 
-func (s *transferActiveTaskExecutorSuite) TestProcessCancelExecution_Failure() {
+func (s *transferActiveTaskExecutorSuite) TestProcessCancelExecution_EntityNotExistsError() {
 	s.testProcessCancelExecution(
 		s.targetDomainID,
 		func(
@@ -1061,6 +1061,27 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCancelExecution_Failure() {
 			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 			cancelRequest := createTestRequestCancelWorkflowExecutionRequest(s.targetDomainName, transferTask.GetInfo().(*persistence.TransferTaskInfo), requestCancelInfo.CancelRequestID)
 			s.mockHistoryClient.EXPECT().RequestCancelWorkflowExecution(gomock.Any(), cancelRequest).Return(&types.EntityNotExistsError{}).Times(1)
+			s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&persistence.AppendHistoryNodesResponse{}, nil).Once()
+			s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
+		},
+	)
+}
+
+func (s *transferActiveTaskExecutorSuite) TestProcessCancelExecution_WorkflowAlreadyCompleted() {
+	s.testProcessCancelExecution(
+		s.targetDomainID,
+		func(
+			mutableState execution.MutableState,
+			workflowExecution, targetExecution types.WorkflowExecution,
+			event *types.HistoryEvent,
+			transferTask Task,
+			requestCancelInfo *persistence.RequestCancelInfo,
+		) {
+			persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, event.ID, event.Version)
+			s.NoError(err)
+			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
+			cancelRequest := createTestRequestCancelWorkflowExecutionRequest(s.targetDomainName, transferTask.GetInfo().(*persistence.TransferTaskInfo), requestCancelInfo.CancelRequestID)
+			s.mockHistoryClient.EXPECT().RequestCancelWorkflowExecution(gomock.Any(), cancelRequest).Return(&types.WorkflowExecutionAlreadyCompletedError{}).Times(1)
 			s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&persistence.AppendHistoryNodesResponse{}, nil).Once()
 			s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
 		},
@@ -1202,7 +1223,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_Success() {
 	)
 }
 
-func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_Failure() {
+func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_EntityNotExistsError() {
 	s.testProcessSignalExecution(
 		s.targetDomainID,
 		func(
@@ -1223,6 +1244,26 @@ func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_Failure() {
 	)
 }
 
+func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_WorkflowAlreadyCompletedError() {
+	s.testProcessSignalExecution(
+		s.targetDomainID,
+		func(
+			mutableState execution.MutableState,
+			workflowExecution, targetExecution types.WorkflowExecution,
+			event *types.HistoryEvent,
+			transferTask Task,
+			signalInfo *persistence.SignalInfo,
+		) {
+			persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, event.ID, event.Version)
+			s.NoError(err)
+			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
+			signalRequest := createTestSignalWorkflowExecutionRequest(s.targetDomainName, transferTask.GetInfo().(*persistence.TransferTaskInfo), signalInfo)
+			s.mockHistoryClient.EXPECT().SignalWorkflowExecution(gomock.Any(), signalRequest).Return(&types.WorkflowExecutionAlreadyCompletedError{}).Times(1)
+			s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&persistence.AppendHistoryNodesResponse{}, nil).Once()
+			s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
+		},
+	)
+}
 func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_Duplication() {
 	s.testProcessSignalExecution(
 		s.targetDomainID,

@@ -6,6 +6,8 @@ system.enableReadVisibilityFromES:
   - value: false
 system.enableReadVisibilityFromPinot:
   - value: true
+system.enableVisibilityDoubleRead:
+    - value: false
 system.enableLogCustomerQueryParameter:
     -value: false
 frontend.validSearchAttributes:

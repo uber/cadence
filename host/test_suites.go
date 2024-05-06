@@ -65,4 +65,9 @@ type (
 		*require.Assertions
 		*IntegrationBase
 	}
+
+	WorkflowIDInternalRateLimitIntegrationSuite struct {
+		*require.Assertions
+		*IntegrationBase
+	}
 )

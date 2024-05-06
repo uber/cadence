@@ -386,6 +386,12 @@ func processCustomString(comparisonExpr *sqlparser.ComparisonExpr, colNameStr st
 		Type: sqlparser.StrVal,
 		Val:  []byte("%" + colValStr + "%"),
 	}
+
+	if colValStr == "" {
+		return fmt.Sprintf("(JSON_MATCH(Attr, '\"$.%s\" is not null') "+
+			"AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.%s', 'string'), '^$'))", colNameStr, colNameStr)
+	}
+
 	return fmt.Sprintf("(JSON_MATCH(Attr, '\"$.%s\" is not null') "+
 		"AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.%s', 'string'), '%s*'))", colNameStr, colNameStr, colValStr)
 }
@@ -437,8 +443,13 @@ func parseCloseStatus(original *sqlparser.SQLVal) (*sqlparser.SQLVal, error) {
 	statusStr := string(original.Val)
 
 	// first check if already in int64 format
-	if _, err := strconv.ParseInt(statusStr, 10, 64); err == nil {
-		return original, nil
+	if status, err := strconv.ParseInt(statusStr, 10, 64); err == nil {
+		// Instead of returning the original value, return a new SQLVal that holds the integer value
+		// Or it will fail the case CloseStatus = '1'
+		return &sqlparser.SQLVal{
+			Type: sqlparser.IntVal,
+			Val:  []byte(strconv.FormatInt(status, 10)),
+		}, nil
 	}
 
 	// try to parse close status string

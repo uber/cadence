@@ -381,6 +381,8 @@ func (e CancelExternalWorkflowExecutionFailedCause) String() string {
 	switch w {
 	case 0:
 		return "UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION"
+	case 1:
+		return "WORKFLOW_ALREADY_COMPLETED"
 	}
 	return fmt.Sprintf("CancelExternalWorkflowExecutionFailedCause(%d)", w)
 }
@@ -390,6 +392,9 @@ func (e *CancelExternalWorkflowExecutionFailedCause) UnmarshalText(value []byte)
 	switch s := strings.ToUpper(string(value)); s {
 	case "UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION":
 		*e = CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution
+		return nil
+	case "WORKFLOW_ALREADY_COMPLETED":
+		*e = CancelExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted
 		return nil
 	default:
 		val, err := strconv.ParseInt(s, 10, 32)
@@ -409,6 +414,7 @@ func (e CancelExternalWorkflowExecutionFailedCause) MarshalText() ([]byte, error
 const (
 	// CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution is an option for CancelExternalWorkflowExecutionFailedCause
 	CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution CancelExternalWorkflowExecutionFailedCause = iota
+	CancelExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted
 )
 
 // CancelTimerDecisionAttributes is an internal type (TBD...)
@@ -5739,6 +5745,8 @@ func (e SignalExternalWorkflowExecutionFailedCause) String() string {
 	switch w {
 	case 0:
 		return "UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION"
+	case 1:
+		return "WORKFLOW_ALREADY_COMPLETED"
 	}
 	return fmt.Sprintf("SignalExternalWorkflowExecutionFailedCause(%d)", w)
 }
@@ -5748,6 +5756,9 @@ func (e *SignalExternalWorkflowExecutionFailedCause) UnmarshalText(value []byte)
 	switch s := strings.ToUpper(string(value)); s {
 	case "UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION":
 		*e = SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution
+		return nil
+	case "WORKFLOW_ALREADY_COMPLETED":
+		*e = SignalExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted
 		return nil
 	default:
 		val, err := strconv.ParseInt(s, 10, 32)
@@ -5767,6 +5778,7 @@ func (e SignalExternalWorkflowExecutionFailedCause) MarshalText() ([]byte, error
 const (
 	// SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution is an option for SignalExternalWorkflowExecutionFailedCause
 	SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution SignalExternalWorkflowExecutionFailedCause = iota
+	SignalExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted
 )
 
 // SignalExternalWorkflowExecutionFailedEventAttributes is an internal type (TBD...)
@@ -8260,4 +8272,28 @@ func SerializeRequest(request interface{}) (string, error) {
 	}
 
 	return string(res), nil
+}
+
+// Any is an internal mirror of google.protobuf.Any, serving the same purposes, but
+// intentionally breaking direct compatibility because it may hold data that is not
+// actually protobuf encoded.
+//
+// All uses of Any must either:
+//   - check that ValueType is a recognized type, and deserialize based on its contents
+//   - or just pass it along as an opaque type for something else to use
+//
+// Contents are intentionally undefined to allow external definitions, e.g. from
+// third-party plugins that are not part of this source repository.
+type Any struct {
+	// ValueType describes the type of encoded data in Value.
+	//
+	// No structure or allowed values are defined, but you are strongly encouraged
+	// to use hard-coded strings (or unambiguous prefixes) or URLs when possible.
+	//
+	// For more concise encoding of exclusively known types, use e.g. DataBlob instead.
+	ValueType string `json:"value_type"`
+	// Value holds arbitrary bytes, and is described by ValueType.
+	//
+	// To interpret, you MUST check ValueType.
+	Value []byte `json:"value"`
 }

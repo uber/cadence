@@ -7,9 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 You can find a list of previous releases on the [github releases](https://github.com/uber/cadence/releases) page.
 
 ## [Unreleased]
-### Added
-- Added codecov integration to report unit test coverage numbers
-- Added more unit tests to improve test coverage
+
+## [1.2.9] - 2024-05-01
+See [Release Note](https://github.com/uber/cadence/releases/tag/v1.2.9) for details
 
 ## [1.2.8] - 2024-03-26
 See [Release Note](https://github.com/uber/cadence/releases/tag/v1.2.8) for details

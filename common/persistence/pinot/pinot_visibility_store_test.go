@@ -1535,7 +1535,7 @@ func TestGetListWorkflowExecutionsByStatusQuery(t *testing.T) {
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND IsDeleted = false
-AND CloseStatus = '0'
+AND CloseStatus = 0
 AND CloseTime BETWEEN 1547596872371 AND 2547596872371
 Order BY StartTime DESC
 LIMIT 0, 10
@@ -1558,7 +1558,7 @@ LIMIT 0, 10
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND IsDeleted = false
-AND CloseStatus = '1'
+AND CloseStatus = 1
 AND CloseTime BETWEEN 1547596872371 AND 2547596872371
 Order BY StartTime DESC
 LIMIT 0, 10
@@ -1581,7 +1581,7 @@ LIMIT 0, 10
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND IsDeleted = false
-AND CloseStatus = '2'
+AND CloseStatus = 2
 AND CloseTime BETWEEN 1547596872371 AND 2547596872371
 Order BY StartTime DESC
 LIMIT 0, 10
@@ -1604,7 +1604,7 @@ LIMIT 0, 10
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND IsDeleted = false
-AND CloseStatus = '3'
+AND CloseStatus = 3
 AND CloseTime BETWEEN 1547596872371 AND 2547596872371
 Order BY StartTime DESC
 LIMIT 0, 10
@@ -1627,7 +1627,7 @@ LIMIT 0, 10
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND IsDeleted = false
-AND CloseStatus = '4'
+AND CloseStatus = 4
 AND CloseTime BETWEEN 1547596872371 AND 2547596872371
 Order BY StartTime DESC
 LIMIT 0, 10
@@ -1650,7 +1650,7 @@ LIMIT 0, 10
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND IsDeleted = false
-AND CloseStatus = '5'
+AND CloseStatus = 5
 AND CloseTime BETWEEN 1547596872371 AND 2547596872371
 Order BY StartTime DESC
 LIMIT 0, 10

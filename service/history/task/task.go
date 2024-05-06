@@ -265,6 +265,12 @@ func (t *taskImpl) HandleErr(err error) (retErr error) {
 		return err
 	}
 
+	// If the shard were recently closed we just return an error, so we retry in a bit.
+	var errShardClosed *shard.ErrShardClosed
+	if errors.As(err, &errShardClosed) && time.Since(errShardClosed.ClosedAt) < shard.TimeBeforeShardClosedIsError {
+		return err
+	}
+
 	// this is a transient error
 	if isRedispatchErr(err) {
 		t.scope.IncCounter(metrics.TaskStandbyRetryCounterPerDomain)
@@ -321,7 +327,8 @@ func (t *taskImpl) HandleErr(err error) (retErr error) {
 }
 
 func (t *taskImpl) RetryErr(err error) bool {
-	if err == errWorkflowBusy || isRedispatchErr(err) || err == ErrTaskPendingActive || common.IsContextTimeoutError(err) {
+	var errShardClosed *shard.ErrShardClosed
+	if errors.As(err, &errShardClosed) || err == errWorkflowBusy || isRedispatchErr(err) || err == ErrTaskPendingActive || common.IsContextTimeoutError(err) {
 		return false
 	}
 

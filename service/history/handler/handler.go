@@ -24,7 +24,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -43,7 +42,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
-	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/proto"
 	"github.com/uber/cadence/service/history/config"
@@ -52,6 +50,7 @@ import (
 	"github.com/uber/cadence/service/history/engine/engineimpl"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/failover"
+	"github.com/uber/cadence/service/history/lookup"
 	"github.com/uber/cadence/service/history/replication"
 	"github.com/uber/cadence/service/history/resource"
 	"github.com/uber/cadence/service/history/shard"
@@ -1956,13 +1955,13 @@ func (h *handlerImpl) GetCrossClusterTasks(
 	for _, shardID := range request.ShardIDs {
 		future, settable := future.NewFuture()
 		futureByShardID[shardID] = future
-		go func(shardID int32) {
-			logger := h.GetLogger().WithTags(tag.ShardID(int(shardID)))
-			engine, err := h.controller.GetEngineForShard(int(shardID))
+		go func(shardID int) {
+			logger := h.GetLogger().WithTags(tag.ShardID(shardID))
+			engine, err := h.controller.GetEngineForShard(shardID)
 			if err != nil {
 				logger.Error("History engine not found for shard", tag.Error(err))
 				var owner membership.HostInfo
-				if info, err := h.GetMembershipResolver().Lookup(service.History, strconv.Itoa(int(shardID))); err == nil {
+				if info, err := lookup.HistoryServerByShardID(h.GetMembershipResolver(), shardID); err == nil {
 					owner = info
 				}
 				settable.Set(nil, shard.CreateShardOwnershipLostError(h.GetHostInfo(), owner))
@@ -1975,7 +1974,7 @@ func (h *handlerImpl) GetCrossClusterTasks(
 			} else {
 				settable.Set(tasks, nil)
 			}
-		}(shardID)
+		}(int(shardID))
 	}
 
 	response := &types.GetCrossClusterTasksResponse{
@@ -2055,13 +2054,21 @@ func (h *handlerImpl) GetFailoverInfo(
 	return resp, nil
 }
 
+func (h *handlerImpl) RatelimitUpdate(
+	ctx context.Context,
+	request *types.RatelimitUpdateRequest,
+) (*types.RatelimitUpdateResponse, error) {
+	// TODO: wire up to real global-ratelimit aggregator
+	return nil, nil
+}
+
 // convertError is a helper method to convert ShardOwnershipLostError from persistence layer returned by various
 // HistoryEngine API calls to ShardOwnershipLost error return by HistoryService for client to be redirected to the
 // correct shard.
 func (h *handlerImpl) convertError(err error) error {
 	switch err := err.(type) {
 	case *persistence.ShardOwnershipLostError:
-		info, err2 := h.GetMembershipResolver().Lookup(service.History, strconv.Itoa(err.ShardID))
+		info, err2 := lookup.HistoryServerByShardID(h.GetMembershipResolver(), err.ShardID)
 		if err2 != nil {
 			return shard.CreateShardOwnershipLostError(h.GetHostInfo(), membership.HostInfo{})
 		}

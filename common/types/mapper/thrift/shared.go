@@ -415,6 +415,9 @@ func FromCancelExternalWorkflowExecutionFailedCause(t *types.CancelExternalWorkf
 	case types.CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution:
 		v := shared.CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution
 		return &v
+	case types.CancelExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted:
+		v := shared.CancelExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted
+		return &v
 	}
 	panic("unexpected enum value")
 }
@@ -427,6 +430,9 @@ func ToCancelExternalWorkflowExecutionFailedCause(t *shared.CancelExternalWorkfl
 	switch *t {
 	case shared.CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution:
 		v := types.CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution
+		return &v
+	case shared.CancelExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted:
+		v := types.CancelExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted
 		return &v
 	}
 	panic("unexpected enum value")
@@ -4931,6 +4937,9 @@ func FromSignalExternalWorkflowExecutionFailedCause(t *types.SignalExternalWorkf
 	case types.SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution:
 		v := shared.SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution
 		return &v
+	case types.SignalExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted:
+		v := shared.SignalExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted
+		return &v
 	}
 	panic("unexpected enum value")
 }
@@ -4943,6 +4952,9 @@ func ToSignalExternalWorkflowExecutionFailedCause(t *shared.SignalExternalWorkfl
 	switch *t {
 	case shared.SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution:
 		v := types.SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution
+		return &v
+	case shared.SignalExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted:
+		v := types.SignalExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted
 		return &v
 	}
 	panic("unexpected enum value")
@@ -8035,5 +8047,28 @@ func ToStickyWorkerUnavailableError(t *shared.StickyWorkerUnavailableError) *typ
 	}
 	return &types.StickyWorkerUnavailableError{
 		Message: t.Message,
+	}
+}
+
+// ToAny converts thrift Any type to internal
+func ToAny(t *shared.Any) *types.Any {
+	if t == nil {
+		return nil
+	}
+	return &types.Any{
+		ValueType: t.GetValueType(),
+		Value:     t.Value,
+	}
+}
+
+// FromAny converts internal Any type to thrift
+func FromAny(t *types.Any) *shared.Any {
+	if t == nil {
+		return nil
+	}
+	dup := t.ValueType
+	return &shared.Any{
+		ValueType: &dup,
+		Value:     t.Value,
 	}
 }

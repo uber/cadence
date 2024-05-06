@@ -209,10 +209,11 @@ func (vc *versionChecker) SupportsStickyQuery(clientImpl string, clientFeatureVe
 // SupportsConsistentQuery returns error if consistent query is not supported otherwise nil.
 // In case client version lookup fails assume the client does not support feature.
 func (vc *versionChecker) SupportsConsistentQuery(clientImpl string, clientFeatureVersion string) error {
+
 	return vc.featureSupported(clientImpl, clientFeatureVersion, consistentQuery)
 }
 
-// SupportsSendRawWorkflowHistory returns error if raw history query is not supported otherwise nil.
+// SupportsRawHistoryQuery returns error if raw history query is not supported otherwise nil.
 // In case client version lookup fails assume the client does not support feature.
 func (vc *versionChecker) SupportsRawHistoryQuery(clientImpl string, clientFeatureVersion string) error {
 	return vc.featureSupported(clientImpl, clientFeatureVersion, rawHistoryQuery)
