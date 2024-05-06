@@ -132,13 +132,13 @@ func (s *dlqMessageHandlerSuite) TestStart() {
 		s.Run(test.name, func() {
 			atomic.StoreInt32(&s.dlqMessageHandler.status, test.initialStatus)
 			s.dlqMessageHandler.Start()
+			s.Equal(test.expectedStatus, atomic.LoadInt32(&s.dlqMessageHandler.status))
 			if test.shouldStart {
 				s.dlqMessageHandler.logger.Info("Domain DLQ handler started.")
+				s.dlqMessageHandler.Stop()
 			}
-			s.Equal(test.expectedStatus, atomic.LoadInt32(&s.dlqMessageHandler.status))
 		})
 	}
-	s.dlqMessageHandler.Stop()
 }
 
 func (s *dlqMessageHandlerSuite) TestStop() {
