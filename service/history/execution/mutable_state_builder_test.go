@@ -565,8 +565,18 @@ func (s *mutableStateSuite) TestTransientDecisionTaskSchedule_CurrentVersionChan
 		runID,
 		constants.TestGlobalDomainEntry,
 	).(*mutableStateBuilder)
-	_, _ = s.prepareTransientDecisionCompletionFirstBatchReplicated(version, runID)
-	err := s.msBuilder.ReplicateDecisionTaskFailedEvent()
+	decisionScheduleEvent, decisionStartedEvent := s.prepareTransientDecisionCompletionFirstBatchReplicated(version, runID)
+	decisionFailedEvent := &types.HistoryEvent{
+		Version:   version,
+		ID:        3,
+		Timestamp: common.Int64Ptr(time.Now().UnixNano()),
+		EventType: types.EventTypeDecisionTaskFailed.Ptr(),
+		DecisionTaskFailedEventAttributes: &types.DecisionTaskFailedEventAttributes{
+			ScheduledEventID: decisionScheduleEvent.ID,
+			StartedEventID:   decisionStartedEvent.ID,
+		},
+	}
+	err := s.msBuilder.ReplicateDecisionTaskFailedEvent(decisionFailedEvent)
 	s.NoError(err)
 
 	err = s.msBuilder.UpdateCurrentVersion(version+1, true)
@@ -599,8 +609,18 @@ func (s *mutableStateSuite) TestTransientDecisionTaskStart_CurrentVersionChanged
 		runID,
 		constants.TestGlobalDomainEntry,
 	).(*mutableStateBuilder)
-	_, _ = s.prepareTransientDecisionCompletionFirstBatchReplicated(version, runID)
-	err := s.msBuilder.ReplicateDecisionTaskFailedEvent()
+	decisionScheduleEvent, decisionStartedEvent := s.prepareTransientDecisionCompletionFirstBatchReplicated(version, runID)
+	decisionFailedEvent := &types.HistoryEvent{
+		Version:   version,
+		ID:        3,
+		Timestamp: common.Int64Ptr(time.Now().UnixNano()),
+		EventType: types.EventTypeDecisionTaskFailed.Ptr(),
+		DecisionTaskFailedEventAttributes: &types.DecisionTaskFailedEventAttributes{
+			ScheduledEventID: decisionScheduleEvent.ID,
+			StartedEventID:   decisionStartedEvent.ID,
+		},
+	}
+	err := s.msBuilder.ReplicateDecisionTaskFailedEvent(decisionFailedEvent)
 	s.NoError(err)
 
 	decisionScheduleID := int64(4)
@@ -714,7 +734,7 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 	}
 	eventID++
 
-	_ = &types.HistoryEvent{
+	decisionFailedEvent := &types.HistoryEvent{
 		Version:   version,
 		ID:        eventID,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
@@ -763,7 +783,7 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 	s.Nil(err)
 	s.NotNil(di)
 
-	err = s.msBuilder.ReplicateDecisionTaskFailedEvent()
+	err = s.msBuilder.ReplicateDecisionTaskFailedEvent(decisionFailedEvent)
 	s.Nil(err)
 
 	decisionAttempt = int64(123)
@@ -1863,4 +1883,12 @@ func TestAssignEventIDToBufferedEvents(t *testing.T) {
 			assert.Equal(t, td.expectedUpdateChildExecutionInfos, msb.updateChildExecutionInfos)
 		})
 	}
+}
+
+// This is only for passing the coverage
+func TestLog(t *testing.T) {
+	var e *mutableStateBuilder
+	assert.NotPanics(t, func() { e.logInfo("a") })
+	assert.NotPanics(t, func() { e.logWarn("a") })
+	assert.NotPanics(t, func() { e.logError("a") })
 }

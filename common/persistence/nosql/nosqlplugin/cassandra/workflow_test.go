@@ -42,6 +42,7 @@ import (
 func TestInsertWorkflowExecutionWithTasks(t *testing.T) {
 	tests := []struct {
 		name                  string
+		workflowRequest       *nosqlplugin.WorkflowRequestsWriteRequest
 		request               *nosqlplugin.CurrentWorkflowWriteRequest
 		execution             *nosqlplugin.WorkflowExecutionRequest
 		transferTasks         []*nosqlplugin.TransferTask
@@ -61,6 +62,25 @@ func TestInsertWorkflowExecutionWithTasks(t *testing.T) {
 				ShardID: 1,
 			},
 			execution: testdata.WFExecRequest(),
+		},
+		{
+			name: "insertOrUpsertWorkflowRequestRow step fails",
+			workflowRequest: &nosqlplugin.WorkflowRequestsWriteRequest{
+				Rows: []*nosqlplugin.WorkflowRequestRow{
+					{
+						RequestType: persistence.WorkflowRequestTypeStart,
+					},
+				},
+				WriteMode: nosqlplugin.WorkflowRequestWriteMode(-999), // unknown mode will cause failure
+			},
+			request: &nosqlplugin.CurrentWorkflowWriteRequest{
+				WriteMode: nosqlplugin.CurrentWorkflowWriteModeNoop,
+			},
+			shardCondition: &nosqlplugin.ShardCondition{
+				ShardID: 1,
+			},
+			execution: testdata.WFExecRequest(),
+			wantErr:   true,
 		},
 		{
 			name: "createOrUpdateCurrentWorkflow step fails",
@@ -119,6 +139,7 @@ func TestInsertWorkflowExecutionWithTasks(t *testing.T) {
 
 			err := db.InsertWorkflowExecutionWithTasks(
 				context.Background(),
+				tc.workflowRequest,
 				tc.request,
 				tc.execution,
 				tc.transferTasks,
@@ -263,6 +284,7 @@ func TestSelectCurrentWorkflow(t *testing.T) {
 func TestUpdateWorkflowExecutionWithTasks(t *testing.T) {
 	tests := []struct {
 		name                  string
+		workflowRequest       *nosqlplugin.WorkflowRequestsWriteRequest
 		request               *nosqlplugin.CurrentWorkflowWriteRequest
 		mutatedExecution      *nosqlplugin.WorkflowExecutionRequest
 		insertedExecution     *nosqlplugin.WorkflowExecutionRequest
@@ -283,6 +305,27 @@ func TestUpdateWorkflowExecutionWithTasks(t *testing.T) {
 			shardCondition: &nosqlplugin.ShardCondition{
 				ShardID: 1,
 			},
+			wantErr: true,
+		},
+		{
+			name: "insertOrUpsertWorkflowRequestRow step fails",
+			workflowRequest: &nosqlplugin.WorkflowRequestsWriteRequest{
+				Rows: []*nosqlplugin.WorkflowRequestRow{
+					{
+						RequestType: persistence.WorkflowRequestTypeStart,
+					},
+				},
+				WriteMode: nosqlplugin.WorkflowRequestWriteMode(-999), // unknown mode will cause failure
+			},
+			request: &nosqlplugin.CurrentWorkflowWriteRequest{
+				WriteMode: nosqlplugin.CurrentWorkflowWriteModeNoop,
+			},
+			shardCondition: &nosqlplugin.ShardCondition{
+				ShardID: 1,
+			},
+			mutatedExecution: testdata.WFExecRequest(
+				testdata.WFExecRequestWithMapsWriteMode(nosqlplugin.WorkflowExecutionMapsWriteModeUpdate),
+			),
 			wantErr: true,
 		},
 		{
@@ -405,6 +448,7 @@ func TestUpdateWorkflowExecutionWithTasks(t *testing.T) {
 
 			err := db.UpdateWorkflowExecutionWithTasks(
 				context.Background(),
+				tc.workflowRequest,
 				tc.request,
 				tc.mutatedExecution,
 				tc.insertedExecution,

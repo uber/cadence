@@ -24,6 +24,7 @@ jobs:
           repository: ubercadence/server
           build_args: TARGET=server
           tag_with_ref: true
+          platforms: linux/amd64,linux/arm64
   push_server_auto_setup_to_registry:
     name: Push Docker server auto-setup images to Docker Hub
     runs-on: ubuntu-latest
@@ -38,3 +39,4 @@ jobs:
           repository: ubercadence/server
           build_args: TARGET=auto-setup
           tags: ${{ github.event.release.tag_name }}-auto-setup, latestRelease-auto-setup
+          platforms: linux/amd64,linux/arm64

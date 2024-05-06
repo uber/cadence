@@ -123,6 +123,7 @@ func (s *crossClusterSourceTaskExecutorSuite) SetupTest() {
 }
 
 func (s *crossClusterSourceTaskExecutorSuite) TearDownTest() {
+	defer s.executor.Stop()
 	s.controller.Finish()
 	s.mockShard.Finish(s.T())
 }
@@ -663,7 +664,7 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteCancelExecution_Failure
 		&types.CrossClusterTaskResponse{
 			TaskType:    types.CrossClusterTaskTypeCancelExecution.Ptr(),
 			TaskState:   int16(processingStateInitialized),
-			FailedCause: types.CrossClusterTaskFailedCauseWorkflowNotExists.Ptr(),
+			FailedCause: types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted.Ptr(),
 		},
 		func(
 			mutableState execution.MutableState,

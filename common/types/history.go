@@ -521,6 +521,7 @@ type RecordChildExecutionCompletedRequest struct {
 	InitiatedID        int64              `json:"initiatedId,omitempty"`
 	CompletedExecution *WorkflowExecution `json:"completedExecution,omitempty"`
 	CompletionEvent    *HistoryEvent      `json:"completionEvent,omitempty"`
+	StartedID          int64              `json:"startedId,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -1193,4 +1194,12 @@ func (v *GetFailoverInfoResponse) GetPendingShards() (o []int32) {
 		return v.PendingShards
 	}
 	return
+}
+
+type RatelimitUpdateRequest struct {
+	Any *Any `json:"any"`
+}
+
+type RatelimitUpdateResponse struct {
+	Any *Any `json:"any"`
 }

@@ -70,9 +70,21 @@ func TestPostgresSQLShardPersistenceSuite(t *testing.T) {
 	suite.Run(t, s)
 }
 
+type ExecutionManagerSuite struct {
+	pt.ExecutionManagerSuite
+}
+
+func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionWithWorkflowRequestsDedup() {
+	s.T().Skip("skip the test until we store workflow_request in postgres sql")
+}
+
+func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionWithWorkflowRequestsDedup() {
+	s.T().Skip("skip the test until we store workflow_request in postgres sql")
+}
+
 func TestPostgresSQLExecutionManagerSuite(t *testing.T) {
 	testflags.RequirePostgres(t)
-	s := new(pt.ExecutionManagerSuite)
+	s := new(ExecutionManagerSuite)
 	options, err := GetTestClusterOption()
 	assert.NoError(t, err)
 	s.TestBase = pt.NewTestBaseWithSQL(t, options)

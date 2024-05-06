@@ -203,6 +203,7 @@ func (s *workflowResetterSuite) TestPersistToDB_CurrentNotTerminated() {
 		persistence.CreateWorkflowModeContinueAsNew,
 		s.currentRunID,
 		currentLastWriteVersion,
+		persistence.CreateWorkflowRequestModeNew,
 	).Return(nil).Times(1)
 
 	err := s.workflowResetter.persistToDB(context.Background(), currentWorkflowTerminated, currentWorkflow, resetWorkflow)
@@ -641,7 +642,7 @@ func (s *workflowResetterSuite) TestReapplyEvents() {
 				attr.GetSignalName(),
 				attr.GetInput(),
 				attr.GetIdentity(),
-				attr.GetRequestID(),
+				"",
 			).Return(&types.HistoryEvent{}, nil).Times(1)
 		}
 	}

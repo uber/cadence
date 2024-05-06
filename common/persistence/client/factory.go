@@ -305,6 +305,7 @@ func (f *factoryImpl) NewVisibilityManager(
 			resourceConfig.EnableReadVisibilityFromES,
 			resourceConfig.AdvancedVisibilityWritingMode,
 			resourceConfig.EnableLogCustomerQueryParameter,
+			resourceConfig.EnableVisibilityDoubleRead,
 			f.logger,
 		), nil
 	} else if params.PersistenceConfig.AdvancedVisibilityStore != "" {

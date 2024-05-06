@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/common/asyncworkflow/queue/provider"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -40,7 +41,7 @@ import (
 )
 
 const (
-	defaultRefreshInterval = 5 * time.Minute
+	defaultRefreshInterval = 1 * time.Minute
 	defaultShutdownTimeout = 5 * time.Second
 )
 
@@ -58,6 +59,18 @@ func WithRefreshInterval(interval time.Duration) ConsumerManagerOptions {
 	}
 }
 
+func WithEnabledPropertyFn(enabledFn dynamicconfig.BoolPropertyFn) ConsumerManagerOptions {
+	return func(c *ConsumerManager) {
+		c.enabledFn = enabledFn
+	}
+}
+
+func WithEmitConsumerCountMetrifFn(fn func(int)) ConsumerManagerOptions {
+	return func(c *ConsumerManager) {
+		c.emitConsumerCountMetricFn = fn
+	}
+}
+
 func NewConsumerManager(
 	logger log.Logger,
 	metricsClient metrics.Client,
@@ -68,6 +81,7 @@ func NewConsumerManager(
 ) *ConsumerManager {
 	ctx, cancel := context.WithCancel(context.Background())
 	cm := &ConsumerManager{
+		enabledFn:       dynamicconfig.GetBoolPropertyFn(true),
 		logger:          logger.WithTags(tag.ComponentAsyncWFConsumptionManager),
 		metricsClient:   metricsClient,
 		domainCache:     domainCache,
@@ -81,6 +95,8 @@ func NewConsumerManager(
 		timeSrc:         clock.NewRealTimeSource(),
 	}
 
+	cm.emitConsumerCountMetricFn = cm.emitConsumerCountMetric
+
 	for _, opt := range options {
 		opt(cm)
 	}
@@ -88,18 +104,21 @@ func NewConsumerManager(
 }
 
 type ConsumerManager struct {
-	logger          log.Logger
-	metricsClient   metrics.Client
-	timeSrc         clock.TimeSource
-	domainCache     cache.DomainCache
-	queueProvider   queue.Provider
-	frontendClient  frontend.Client
-	refreshInterval time.Duration
-	shutdownTimeout time.Duration
-	ctx             context.Context
-	cancelFn        context.CancelFunc
-	wg              sync.WaitGroup
-	activeConsumers map[string]provider.Consumer
+	// all member variables are accessed without any mutex with the assumption that they are only accessed by the background loop
+	enabledFn                 dynamicconfig.BoolPropertyFn
+	logger                    log.Logger
+	metricsClient             metrics.Client
+	timeSrc                   clock.TimeSource
+	domainCache               cache.DomainCache
+	queueProvider             queue.Provider
+	frontendClient            frontend.Client
+	refreshInterval           time.Duration
+	shutdownTimeout           time.Duration
+	ctx                       context.Context
+	cancelFn                  context.CancelFunc
+	wg                        sync.WaitGroup
+	activeConsumers           map[string]provider.Consumer
+	emitConsumerCountMetricFn func(int)
 }
 
 func (c *ConsumerManager) Start() {
@@ -117,10 +136,7 @@ func (c *ConsumerManager) Stop() {
 		return
 	}
 
-	for qID, consumer := range c.activeConsumers {
-		consumer.Stop()
-		c.logger.Info("Stopped consumer", tag.AsyncWFQueueID(qID))
-	}
+	c.stopConsumers()
 
 	c.logger.Info("Stopped ConsumerManager")
 }
@@ -132,12 +148,30 @@ func (c *ConsumerManager) run() {
 	defer ticker.Stop()
 	c.logger.Info("ConsumerManager background loop started", tag.Dynamic("refresh-interval", c.refreshInterval))
 
-	c.refreshConsumers()
+	enabled := c.enabledFn()
+	if enabled {
+		c.refreshConsumers()
+	} else {
+		c.logger.Info("ConsumerManager is disabled at the moment so skipping initial refresh")
+	}
 
 	for {
 		select {
 		case <-ticker.Chan():
-			c.refreshConsumers()
+			previouslyEnabled := enabled
+			enabled = c.enabledFn()
+			if enabled != previouslyEnabled {
+				c.logger.Info("ConsumerManager enabled state changed", tag.Dynamic("enabled", enabled))
+			}
+
+			if enabled {
+				// refresh consumers every round when consumer is enabled
+				c.refreshConsumers()
+			} else {
+				// stop consumers when consumer is disabled
+				c.stopConsumers()
+			}
+
 		case <-c.ctx.Done():
 			c.logger.Info("ConsumerManager background loop stopped because context is done")
 			return
@@ -218,7 +252,27 @@ func (c *ConsumerManager) refreshConsumers() {
 	}
 
 	c.logger.Info("Refreshed consumers", tag.Dynamic("consumer-count", len(c.activeConsumers)))
-	c.metricsClient.Scope(metrics.AsyncWorkflowConsumerScope).UpdateGauge(metrics.AsyncWorkflowConsumerCount, float64(len(c.activeConsumers)))
+	c.emitConsumerCountMetricFn(len(c.activeConsumers))
+}
+
+func (c *ConsumerManager) emitConsumerCountMetric(count int) {
+	c.metricsClient.Scope(metrics.AsyncWorkflowConsumerScope).UpdateGauge(metrics.AsyncWorkflowConsumerCount, float64(count))
+}
+
+func (c *ConsumerManager) stopConsumers() {
+	if len(c.activeConsumers) == 0 {
+		return
+	}
+
+	c.logger.Info("Stopping all active consumers", tag.Dynamic("consumer-count", len(c.activeConsumers)))
+	for qID, consumer := range c.activeConsumers {
+		consumer.Stop()
+		c.logger.Info("Stopped consumer", tag.AsyncWFQueueID(qID))
+		delete(c.activeConsumers, qID)
+	}
+
+	c.emitConsumerCountMetricFn(len(c.activeConsumers))
+	c.logger.Info("Stopped all active consumers", tag.Dynamic("consumer-count", len(c.activeConsumers)))
 }
 
 func (c *ConsumerManager) getQueue(cfg types.AsyncWorkflowConfiguration) (provider.Queue, error) {

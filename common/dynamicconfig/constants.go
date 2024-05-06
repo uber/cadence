@@ -1440,6 +1440,13 @@ const (
 	IsolationGroupStateUpdateRetryAttempts
 
 	LargeShardHistoryBlobMetricThreshold
+
+	// DeleteHistoryEventContextTimeout in seconds
+	// KeyName: system.deleteHistoryEventContextTimeout
+	// Value type: Int
+	// Default value: 30
+	DeleteHistoryEventContextTimeout
+
 	// LastIntKey must be the last one in this const group
 	LastIntKey
 )
@@ -1480,6 +1487,12 @@ const (
 	// Default value: true
 	// Allowed filters: DomainName
 	EnableReadVisibilityFromPinot
+	// EnableVisibilityDoubleRead is the key for enable double read for a latency comparison
+	// KeyName: system.EnableVisibilityDoubleRead
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: DomainName
+	EnableVisibilityDoubleRead
 	// EnableLogCustomerQueryParameter is key for enable log customer query parameters
 	// KeyName: system.enableLogCustomerQueryParameter
 	// Value type: Bool
@@ -1860,7 +1873,7 @@ const (
 	// Allowed filters: N/A
 	EnableESAnalyzer
 	// EnableAsyncWorkflowConsumption decides whether to enable system workers for processing async workflows
-	// KeyName: system.enableAsyncWorkflowConsumption
+	// KeyName: worker.enableAsyncWorkflowConsumption
 	// Value type: Bool
 	// Default value: false
 	// Allowed filters: N/A
@@ -1995,6 +2008,13 @@ const (
 	// Default value: false
 	// Allowed filters: DomainName
 	EnableRetryForChecksumFailure
+
+	// EnableStrongIdempotency enables strong idempotency for APIs
+	// KeyName: history.enableStrongIdempotency
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: DomainName
+	EnableStrongIdempotency
 
 	// LastBoolKey must be the last one in this const group
 	LastBoolKey
@@ -3791,6 +3811,11 @@ var IntKeys = map[IntKey]DynamicInt{
 		Description:  "The number of attempts to push Isolation group configuration to the config store",
 		DefaultValue: 2,
 	},
+	DeleteHistoryEventContextTimeout: DynamicInt{
+		KeyName:      "system.deleteHistoryEventContextTimeout",
+		Description:  "This is the number of seconds allowed for a deleteHistoryEvent task to the database",
+		DefaultValue: 30,
+	},
 }
 
 var BoolKeys = map[BoolKey]DynamicBool{
@@ -3843,6 +3868,12 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		Filters:      []Filter{DomainName},
 		Description:  "EnableReadVisibilityFromPinot is key for enable read from pinot or db visibility, usually using with AdvancedVisibilityWritingMode for seamless migration from db visibility to advanced visibility",
 		DefaultValue: true,
+	},
+	EnableVisibilityDoubleRead: {
+		KeyName:      "system.enableVisibilityDoubleRead",
+		Filters:      []Filter{DomainName},
+		Description:  "EnableVisibilityDoubleRead is key for enable read for both elastic search and Pinot for a latency comparison",
+		DefaultValue: false,
 	},
 	EnableLogCustomerQueryParameter: {
 		KeyName:      "system.enableLogCustomerQueryParameter",
@@ -4296,6 +4327,12 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		KeyName:      "history.enableMutableStateChecksumFailureRetry",
 		Filters:      []Filter{DomainName},
 		Description:  "EnableRetryForChecksumFailure enables retry if mutable state checksum verification fails",
+		DefaultValue: false,
+	},
+	EnableStrongIdempotency: DynamicBool{
+		KeyName:      "history.enableStrongIdempotency",
+		Filters:      []Filter{DomainName},
+		Description:  "EnableStrongIdempotency enables strong idempotency for APIs",
 		DefaultValue: false,
 	},
 }

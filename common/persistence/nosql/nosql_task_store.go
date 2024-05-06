@@ -37,7 +37,7 @@ import (
 
 type (
 	nosqlTaskStore struct {
-		*shardedNosqlStore
+		shardedNosqlStore
 	}
 )
 

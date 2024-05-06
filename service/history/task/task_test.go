@@ -162,11 +162,11 @@ func (s *taskSuite) TestHandleErr_ErrTargetDomainNotActive() {
 
 	// we should always return the target domain not active error
 	// no matter that the submit time is
-	taskBase.submitTime = time.Now().Add(-cache.DomainCacheRefreshInterval * time.Duration(2))
-	s.Equal(nil, taskBase.HandleErr(err))
+	taskBase.submitTime = time.Now().Add(-cache.DomainCacheRefreshInterval*time.Duration(5) - time.Second)
+	s.Equal(nil, taskBase.HandleErr(err), "should drop errors after a reasonable time")
 
 	taskBase.submitTime = time.Now()
-	s.Equal(nil, taskBase.HandleErr(err))
+	s.Equal(err, taskBase.HandleErr(err))
 }
 
 func (s *taskSuite) TestHandleErr_ErrDomainNotActive() {
@@ -176,7 +176,7 @@ func (s *taskSuite) TestHandleErr_ErrDomainNotActive() {
 
 	err := &types.DomainNotActiveError{}
 
-	taskBase.submitTime = time.Now().Add(-cache.DomainCacheRefreshInterval * time.Duration(2))
+	taskBase.submitTime = time.Now().Add(-cache.DomainCacheRefreshInterval*time.Duration(5) - time.Second)
 	s.NoError(taskBase.HandleErr(err))
 
 	taskBase.submitTime = time.Now()
@@ -190,6 +190,22 @@ func (s *taskSuite) TestHandleErr_ErrWorkflowRateLimited() {
 
 	taskBase.submitTime = time.Now()
 	s.Equal(errWorkflowRateLimited, taskBase.HandleErr(errWorkflowRateLimited))
+}
+
+func (s *taskSuite) TestHandleErr_ErrShardRecentlyClosed() {
+	taskBase := s.newTestTask(func(task Info) (bool, error) {
+		return true, nil
+	}, nil)
+
+	taskBase.submitTime = time.Now()
+
+	shardClosedError := &shard.ErrShardClosed{
+		Msg: "shard closed",
+		// The shard was closed within the TimeBeforeShardClosedIsError interval
+		ClosedAt: time.Now().Add(-shard.TimeBeforeShardClosedIsError / 2),
+	}
+
+	s.Equal(shardClosedError, taskBase.HandleErr(shardClosedError))
 }
 
 func (s *taskSuite) TestHandleErr_ErrCurrentWorkflowConditionFailed() {
@@ -295,6 +311,7 @@ func (s *taskSuite) TestRetryErr() {
 		return true, nil
 	}, nil)
 
+	s.Equal(false, taskBase.RetryErr(&shard.ErrShardClosed{}))
 	s.Equal(false, taskBase.RetryErr(errWorkflowBusy))
 	s.Equal(false, taskBase.RetryErr(ErrTaskPendingActive))
 	s.Equal(false, taskBase.RetryErr(context.DeadlineExceeded))

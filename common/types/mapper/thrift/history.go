@@ -629,6 +629,7 @@ func FromRecordChildExecutionCompletedRequest(t *types.RecordChildExecutionCompl
 		InitiatedId:        &t.InitiatedID,
 		CompletedExecution: FromWorkflowExecution(t.CompletedExecution),
 		CompletionEvent:    FromHistoryEvent(t.CompletionEvent),
+		StartedId:          &t.StartedID,
 	}
 }
 
@@ -643,6 +644,7 @@ func ToRecordChildExecutionCompletedRequest(t *history.RecordChildExecutionCompl
 		InitiatedID:        t.GetInitiatedId(),
 		CompletedExecution: ToWorkflowExecution(t.CompletedExecution),
 		CompletionEvent:    ToHistoryEvent(t.CompletionEvent),
+		StartedID:          t.GetStartedId(),
 	}
 }
 
@@ -1363,5 +1365,22 @@ func ToGetFailoverInfoResponse(t *history.GetFailoverInfoResponse) *types.GetFai
 	return &types.GetFailoverInfoResponse{
 		CompletedShardCount: t.GetCompletedShardCount(),
 		PendingShards:       t.GetPendingShards(),
+	}
+}
+
+func ToHistoryRatelimitUpdateRequest(t *history.RatelimitUpdateRequest) *types.RatelimitUpdateRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.RatelimitUpdateRequest{
+		Any: ToAny(t.Data),
+	}
+}
+func FromHistoryRatelimitUpdateResponse(t *types.RatelimitUpdateResponse) *history.RatelimitUpdateResponse {
+	if t == nil {
+		return nil
+	}
+	return &history.RatelimitUpdateResponse{
+		Data: FromAny(t.Any),
 	}
 }

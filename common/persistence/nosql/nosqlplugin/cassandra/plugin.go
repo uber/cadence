@@ -95,6 +95,33 @@ func toGoCqlConfig(cfg *config.NoSQL) (gocql.ClusterConfig, error) {
 			return gocql.ClusterConfig{}, err
 		}
 	}
+
+	if cfg.Timeout == 0 {
+		cfg.Timeout = defaultSessionTimeout
+	}
+
+	if cfg.ConnectTimeout == 0 {
+		cfg.ConnectTimeout = defaultConnectTimeout
+	}
+
+	if cfg.Consistency == "" {
+		cfg.Consistency = cassandraDefaultConsLevel.String()
+	}
+
+	if cfg.SerialConsistency == "" {
+		cfg.SerialConsistency = cassandraDefaultSerialConsLevel.String()
+	}
+
+	consistency, err := gocql.ParseConsistency(cfg.Consistency)
+	if err != nil {
+		return gocql.ClusterConfig{}, err
+	}
+	serialConsistency, err := gocql.ParseSerialConsistency(cfg.SerialConsistency)
+
+	if err != nil {
+		return gocql.ClusterConfig{}, err
+	}
+
 	return gocql.ClusterConfig{
 		Hosts:                 cfg.Hosts,
 		Port:                  cfg.Port,
@@ -107,9 +134,9 @@ func toGoCqlConfig(cfg *config.NoSQL) (gocql.ClusterConfig, error) {
 		MaxConns:              cfg.MaxConns,
 		TLS:                   cfg.TLS,
 		ProtoVersion:          cfg.ProtoVersion,
-		Consistency:           cassandraDefaultConsLevel,
-		SerialConsistency:     cassandraDefaultSerialConsLevel,
-		Timeout:               defaultSessionTimeout,
-		ConnectTimeout:        defaultConnectTimeout,
+		Consistency:           consistency,
+		SerialConsistency:     serialConsistency,
+		Timeout:               cfg.Timeout,
+		ConnectTimeout:        cfg.ConnectTimeout,
 	}, nil
 }

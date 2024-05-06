@@ -38,6 +38,7 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/client"
+	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/elasticsearch/validator"
 	"github.com/uber/cadence/common/log"
@@ -49,6 +50,7 @@ import (
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/frontend/config"
 	"github.com/uber/cadence/service/frontend/validate"
 )
@@ -79,6 +81,7 @@ type (
 		searchAttributesValidator *validator.SearchAttributesValidator
 		throttleRetry             *backoff.ThrottleRetry
 		producerManager           ProducerManager
+		thriftrwEncoder           codec.BinaryEncoder
 	}
 
 	getHistoryContinuationToken struct {
@@ -139,6 +142,7 @@ func NewWorkflowHandler(
 			resource.GetLogger(),
 			resource.GetMetricsClient(),
 		),
+		thriftrwEncoder: codec.NewThriftRWEncoder(),
 	}
 }
 
@@ -1760,17 +1764,20 @@ func (wh *WorkflowHandler) StartWorkflowExecutionAsync(
 	if err != nil {
 		return nil, err
 	}
-	// serialize the message to be sent to the queue
-	payload, err := json.Marshal(startRequest)
+
+	// Serialize the message to be sent to the queue.
+	// Avoid JSON because json encoding of requests excludes PII fields such as input. JSON encoded request are logged by acccess controlled api layer for audit purposes.
+	payload, err := wh.thriftrwEncoder.Encode(thrift.FromStartWorkflowExecutionAsyncRequest(startRequest))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to encode StartWorkflowExecutionAsyncRequest: %v", err)
 	}
+	scope.RecordTimer(metrics.AsyncRequestPayloadSize, time.Duration(len(payload)))
+
 	// propagate the headers from the context to the message
-	clientHeaders := common.GetClientHeaders(ctx)
 	header := &shared.Header{
-		Fields: map[string][]byte{},
+		Fields: make(map[string][]byte),
 	}
-	for k, v := range clientHeaders {
+	for k, v := range yarpc.CallFromContext(ctx).OriginalHeaders() {
 		header.Fields[k] = []byte(v)
 	}
 	messageType := sqlblobs.AsyncRequestTypeStartWorkflowExecutionAsyncRequest
@@ -1778,7 +1785,7 @@ func (wh *WorkflowHandler) StartWorkflowExecutionAsync(
 		PartitionKey: common.StringPtr(startRequest.GetWorkflowID()),
 		Type:         &messageType,
 		Header:       header,
-		Encoding:     common.StringPtr(string(common.EncodingTypeJSON)),
+		Encoding:     common.StringPtr(string(common.EncodingTypeThriftRW)),
 		Payload:      payload,
 	}
 	err = producer.Publish(ctx, message)
@@ -2338,17 +2345,20 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecutionAsync(
 	if err != nil {
 		return nil, err
 	}
-	// serialize the message to be sent to the queue
-	payload, err := json.Marshal(signalWithStartRequest)
+
+	// Serialize the message to be sent to the queue.
+	// Avoid JSON because json encoding of requests excludes PII fields such as input. JSON encoded request are logged by acccess controlled api layer for audit purposes.
+	payload, err := wh.thriftrwEncoder.Encode(thrift.FromSignalWithStartWorkflowExecutionAsyncRequest(signalWithStartRequest))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to encode SignalWithStartWorkflowExecutionAsyncRequest: %v", err)
 	}
+	scope.RecordTimer(metrics.AsyncRequestPayloadSize, time.Duration(len(payload)))
+
 	// propagate the headers from the context to the message
-	clientHeaders := common.GetClientHeaders(ctx)
 	header := &shared.Header{
 		Fields: map[string][]byte{},
 	}
-	for k, v := range clientHeaders {
+	for k, v := range yarpc.CallFromContext(ctx).OriginalHeaders() {
 		header.Fields[k] = []byte(v)
 	}
 	messageType := sqlblobs.AsyncRequestTypeSignalWithStartWorkflowExecutionAsyncRequest
@@ -2356,7 +2366,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecutionAsync(
 		PartitionKey: common.StringPtr(signalWithStartRequest.GetWorkflowID()),
 		Type:         &messageType,
 		Header:       header,
-		Encoding:     common.StringPtr(string(common.EncodingTypeJSON)),
+		Encoding:     common.StringPtr(string(common.EncodingTypeThriftRW)),
 		Payload:      payload,
 	}
 	err = producer.Publish(ctx, message)

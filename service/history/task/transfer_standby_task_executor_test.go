@@ -166,6 +166,7 @@ func (s *transferStandbyTaskExecutorSuite) TearDownTest() {
 	s.controller.Finish()
 	s.mockShard.Finish(s.T())
 	s.mockArchivalClient.AssertExpectations(s.T())
+	s.transferStandbyTaskExecutor.Stop()
 }
 
 func (s *transferStandbyTaskExecutorSuite) TestProcessActivityTask_Pending() {

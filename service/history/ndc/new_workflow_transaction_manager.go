@@ -192,6 +192,7 @@ func (r *transactionManagerForNewWorkflowImpl) createAsCurrent(
 			createMode,
 			prevRunID,
 			prevLastWriteVersion,
+			persistence.CreateWorkflowRequestModeReplicated,
 		)
 	}
 
@@ -206,6 +207,7 @@ func (r *transactionManagerForNewWorkflowImpl) createAsCurrent(
 		createMode,
 		prevRunID,
 		prevLastWriteVersion,
+		persistence.CreateWorkflowRequestModeReplicated,
 	)
 }
 
@@ -276,6 +278,7 @@ func (r *transactionManagerForNewWorkflowImpl) createAsZombie(
 		createMode,
 		prevRunID,
 		prevLastWriteVersion,
+		persistence.CreateWorkflowRequestModeReplicated,
 	)
 	switch err.(type) {
 	case nil:
@@ -313,6 +316,7 @@ func (r *transactionManagerForNewWorkflowImpl) suppressCurrentAndCreateAsCurrent
 		targetWorkflow.GetMutableState(),
 		currentWorkflowPolicy,
 		execution.TransactionPolicyPassive.Ptr(),
+		persistence.CreateWorkflowRequestModeReplicated,
 	)
 }
 
