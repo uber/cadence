@@ -18,32 +18,29 @@ services:
       timeout: 30s
       retries: 10
 
-  zookeeper:
-    image: wurstmeister/zookeeper:3.4.6
-    ports:
-      - "2181:2181"
-    networks:
-      services-network:
-        aliases:
-          - zookeeper
-
   kafka:
-    image: wurstmeister/kafka:2.12-2.1.1
-    depends_on:
-      - zookeeper
+    image: docker.io/bitnami/kafka:3.7
+    hostname: kafka
+    container_name: kafka
     ports:
       - "9092:9092"
+    environment:
+      # KRaft settings
+      - "KAFKA_CFG_NODE_ID=0"
+      - "KAFKA_CFG_PROCESS_ROLES=controller,broker"
+      - "KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093"
+      # Listeners
+      - "KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093"
+      - "KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092"
+      - "KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+      - "KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER"
+      - "KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT"
+      # Topic settings
+      - "KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true"
     networks:
       services-network:
         aliases:
           - kafka
-    environment:
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      # create a topic with 10 partitions and 1 replica
-      # topic name must match ASYNC_WF_KAFKA_QUEUE_TOPIC specified in cadence container above
-      KAFKA_CREATE_TOPICS: "async-wf-topic1:10:1"
 
   integration-test-async-wf:
     build:
