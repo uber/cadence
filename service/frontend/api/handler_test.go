@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -723,33 +724,111 @@ func (s *workflowHandlerSuite) TestRespondActivityTaskCompletedByID_Success() {
 	s.NoError(err)
 }
 
-func (s *workflowHandlerSuite) TestRespondActivityTaskFailed_Success() {
-	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
-	taskToken := common.TaskToken{
-		DomainID:   s.testDomainID,
+func buildRespondActivityTaskFailedRequest(taskToken common.TaskToken) *types.RespondActivityTaskFailedRequest {
+	serializer := common.NewJSONTaskTokenSerializer()
+	taskTokenBytes, err := serializer.Serialize(&taskToken)
+	if err != nil {
+		panic(err)
+	}
+	return &types.RespondActivityTaskFailedRequest{
+		TaskToken: taskTokenBytes,
+	}
+}
+
+func TestRespondActivityTaskFailed(t *testing.T) {
+
+	failedRequest := buildRespondActivityTaskFailedRequest(common.TaskToken{
+		DomainID:   testDomainID,
 		WorkflowID: testWorkflowID,
 		RunID:      testRunID,
 		ActivityID: "1",
-	}
-	taskTokenBytes, err := wh.tokenSerializer.Serialize(&taskToken)
-	s.NoError(err)
+	})
 
-	req := &types.RespondActivityTaskFailedRequest{
-		TaskToken: taskTokenBytes,
+	type fields struct {
+		shuttingDown int32
 	}
 
-	s.mockDomainCache.EXPECT().GetDomainName(s.testDomainID).Return(s.testDomain, nil)
+	type args struct {
+		ctx           context.Context
+		failedRequest *types.RespondActivityTaskFailedRequest
+	}
 
-	s.mockHistoryClient.EXPECT().RespondActivityTaskFailed(
-		gomock.Any(),
-		&types.HistoryRespondActivityTaskFailedRequest{
-			DomainUUID:    taskToken.DomainID,
-			FailedRequest: req,
-		}).Return(nil)
+	tests := []struct {
+		name       string
+		fields     fields
+		setupMocks func(*resource.Test, *client.VersionCheckerMock)
+		args       args
+		wantErr    assert.ErrorAssertionFunc
+	}{
+		{
+			name: "Success",
+			fields: fields{
+				shuttingDown: 0,
+			},
+			setupMocks: func(t *resource.Test, mockVersionChecker *client.VersionCheckerMock) {
+				mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil)
 
-	err = wh.RespondActivityTaskFailed(context.Background(), req)
-	// only checking for successful write here
-	s.NoError(err)
+				t.HistoryClient.EXPECT().RespondActivityTaskFailed(gomock.Any(), &types.HistoryRespondActivityTaskFailedRequest{
+					DomainUUID:    testDomainID,
+					FailedRequest: failedRequest,
+				}).Return(nil)
+
+				t.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain-id", nil)
+			},
+			args: args{
+				context.Background(),
+				failedRequest,
+			},
+			wantErr: assert.NoError,
+		},
+		{
+			name:   "Error when shutting down",
+			fields: fields{shuttingDown: 1},
+			setupMocks: func(t *resource.Test, mockVersionChecker *client.VersionCheckerMock) {
+
+			},
+			args: args{
+				context.Background(),
+				buildRespondActivityTaskFailedRequest(common.TaskToken{
+					DomainID:   testDomainID,
+					WorkflowID: testWorkflowID,
+					RunID:      testRunID,
+					ActivityID: "1",
+				}),
+			},
+			wantErr: assert.Error,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockResource := resource.NewTest(t, mockCtrl, metrics.Frontend)
+			mockVersionChecker := client.NewMockVersionChecker(mockCtrl)
+
+			tt.setupMocks(mockResource, mockVersionChecker)
+
+			mockProducerManager := NewMockProducerManager(mockCtrl)
+
+			config := frontendcfg.NewConfig(
+				dc.NewCollection(
+					dc.NewInMemoryClient(),
+					mockResource.GetLogger(),
+				),
+				numHistoryShards,
+				false,
+				"hostname",
+			)
+
+			wh := NewWorkflowHandler(mockResource, config, mockVersionChecker, nil)
+			wh.shuttingDown = tt.fields.shuttingDown
+			wh.producerManager = mockProducerManager
+
+			tt.wantErr(t, wh.RespondActivityTaskFailed(tt.args.ctx, tt.args.failedRequest),
+				fmt.Sprintf("RespondActivityTaskFailed(%v, %v)", tt.args.ctx, tt.args.failedRequest))
+		})
+	}
+
 }
 
 func (s *workflowHandlerSuite) TestRegisterDomain_Failure_MissingDomainDataKey() {
