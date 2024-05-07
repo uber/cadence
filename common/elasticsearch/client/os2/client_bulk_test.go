@@ -177,7 +177,7 @@ func TestProcessCallback(t *testing.T) {
 	}
 }
 
-func beforeFunc(executionId int64, requests []bulk.GenericBulkableRequest) {}
+func beforeFunc(executionID int64, requests []bulk.GenericBulkableRequest) {}
 
 func TestRunBulkProcessor(t *testing.T) {
 	osClient, testServer := getSecureMockOS2Client(t, nil, false)
