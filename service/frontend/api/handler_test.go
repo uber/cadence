@@ -56,8 +56,9 @@ import (
 )
 
 const (
-	numHistoryShards = 10
-
+	numHistoryShards          = 10
+	testDomain                = "test-domain"
+	testDomainID              = "e4f90ec0-1313-45be-9877-8aa41f72a45a"
 	testWorkflowID            = "test-workflow-id"
 	testRunID                 = "2c8b555f-1f55-4955-9d1c-b980194555c9"
 	testHistoryArchivalURI    = "testScheme://history/URI"
@@ -105,8 +106,8 @@ func (s *workflowHandlerSuite) TearDownSuite() {
 func (s *workflowHandlerSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
-	s.testDomain = "test-domain"
-	s.testDomainID = "e4f90ec0-1313-45be-9877-8aa41f72a45a"
+	s.testDomain = testDomain
+	s.testDomainID = testDomainID
 
 	s.controller = gomock.NewController(s.T())
 	s.mockResource = resource.NewTest(s.T(), s.controller, metrics.Frontend)
@@ -718,6 +719,35 @@ func (s *workflowHandlerSuite) TestRespondActivityTaskCompletedByID_Success() {
 	s.mockHistoryClient.EXPECT().RespondActivityTaskCompleted(gomock.Any(), gomock.Any()).Return(nil)
 
 	err := wh.RespondActivityTaskCompletedByID(context.Background(), req)
+	// only checking for successful write here
+	s.NoError(err)
+}
+
+func (s *workflowHandlerSuite) TestRespondActivityTaskFailed_Success() {
+	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
+	taskToken := common.TaskToken{
+		DomainID:   s.testDomainID,
+		WorkflowID: testWorkflowID,
+		RunID:      testRunID,
+		ActivityID: "1",
+	}
+	taskTokenBytes, err := wh.tokenSerializer.Serialize(&taskToken)
+	s.NoError(err)
+
+	req := &types.RespondActivityTaskFailedRequest{
+		TaskToken: taskTokenBytes,
+	}
+
+	s.mockDomainCache.EXPECT().GetDomainName(s.testDomainID).Return(s.testDomain, nil)
+
+	s.mockHistoryClient.EXPECT().RespondActivityTaskFailed(
+		gomock.Any(),
+		&types.HistoryRespondActivityTaskFailedRequest{
+			DomainUUID:    taskToken.DomainID,
+			FailedRequest: req,
+		}).Return(nil)
+
+	err = wh.RespondActivityTaskFailed(context.Background(), req)
 	// only checking for successful write here
 	s.NoError(err)
 }
