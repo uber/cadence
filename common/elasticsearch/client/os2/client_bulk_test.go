@@ -65,15 +65,7 @@ func TestFlush(t *testing.T) {
 	}
 }
 
-func TestAdd(t *testing.T) {
-	osClient, testServer := getSecureMockOS2Client(t, nil, false)
-	defer testServer.Close()
-
-	params := bulk.BulkProcessorParameters{
-		FlushInterval: 1,
-		NumOfWorkers:  1,
-	}
-	processor, err := osClient.RunBulkProcessor(context.Background(), &params)
+func TestAddDeleteRequest(t *testing.T) {
 	testcases := []struct {
 		name      string
 		input     bulk.GenericBulkableAddRequest
@@ -134,9 +126,17 @@ func TestAdd(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
+			osClient, testServer := getSecureMockOS2Client(t, nil, false)
+			defer testServer.Close()
 
+			params := bulk.BulkProcessorParameters{
+				FlushInterval: 1,
+				NumOfWorkers:  1,
+			}
+			processor, err := osClient.RunBulkProcessor(context.Background(), &params)
 			assert.NoError(t, err)
 			processor.Add(&tc.input)
+			processor.Stop()
 		})
 	}
 }
