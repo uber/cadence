@@ -40,7 +40,7 @@ services:
     networks:
       services-network:
         aliases:
-          - integration-test
+          - kafka
 
   integration-test-async-wf:
     build:
