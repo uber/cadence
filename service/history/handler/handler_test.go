@@ -1040,6 +1040,15 @@ func (s *handlerSuite) TestRespondDecisionTaskFailed() {
 			Identity:  "identity",
 		},
 	}
+	specialInput := &types.HistoryRespondDecisionTaskFailedRequest{
+		DomainUUID: testDomainID,
+		FailedRequest: &types.RespondDecisionTaskFailedRequest{
+			TaskToken: []byte("task-token"),
+			Cause:     types.DecisionTaskFailedCauseUnhandledDecision.Ptr(),
+			Details:   []byte("Details"),
+			Identity:  "identity",
+		},
+	}
 	testInput := map[string]struct {
 		input         *types.HistoryRespondDecisionTaskFailedRequest
 		expectedError bool
@@ -1116,16 +1125,8 @@ func (s *handlerSuite) TestRespondDecisionTaskFailed() {
 				s.mockEngine.EXPECT().RespondDecisionTaskFailed(gomock.Any(), validInput).Return(errors.New("error")).Times(1)
 			},
 		},
-		"special failure": {
-			input: &types.HistoryRespondDecisionTaskFailedRequest{
-				DomainUUID: testDomainID,
-				FailedRequest: &types.RespondDecisionTaskFailedRequest{
-					TaskToken: []byte("task-token"),
-					Cause:     types.DecisionTaskFailedCauseUnhandledDecision.Ptr(),
-					Details:   []byte("Details"),
-					Identity:  "identity",
-				},
-			},
+		"special domain": {
+			input:         specialInput,
 			expectedError: false,
 			mockFn: func() {
 				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
@@ -1133,20 +1134,13 @@ func (s *handlerSuite) TestRespondDecisionTaskFailed() {
 					WorkflowID: testWorkflowID,
 					RunID:      testValidUUID,
 				}, nil).Times(1)
+				s.mockResource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return("name", nil).Times(1)
 				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
-				s.mockEngine.EXPECT().RespondDecisionTaskFailed(gomock.Any(), validInput).Return(nil).Times(1)
+				s.mockEngine.EXPECT().RespondDecisionTaskFailed(gomock.Any(), specialInput).Return(nil).Times(1)
 			},
 		},
-		"special failure2": {
-			input: &types.HistoryRespondDecisionTaskFailedRequest{
-				DomainUUID: testDomainID,
-				FailedRequest: &types.RespondDecisionTaskFailedRequest{
-					TaskToken: []byte("task-token"),
-					Cause:     types.DecisionTaskFailedCauseUnhandledDecision.Ptr(),
-					Details:   []byte("Details"),
-					Identity:  "identity",
-				},
-			},
+		"special domain2": {
+			input:         specialInput,
 			expectedError: false,
 			mockFn: func() {
 				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
@@ -1154,9 +1148,9 @@ func (s *handlerSuite) TestRespondDecisionTaskFailed() {
 					WorkflowID: testWorkflowID,
 					RunID:      testValidUUID,
 				}, nil).Times(1)
-				s.mockResource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return(testDomainID, nil).Times(1)
+				s.mockResource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return("", errors.New("error")).Times(1)
 				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
-				s.mockEngine.EXPECT().RespondDecisionTaskFailed(gomock.Any(), validInput).Return(nil).Times(1)
+				s.mockEngine.EXPECT().RespondDecisionTaskFailed(gomock.Any(), specialInput).Return(nil).Times(1)
 			},
 		},
 	}
