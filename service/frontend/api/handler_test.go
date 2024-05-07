@@ -736,7 +736,6 @@ func buildRespondActivityTaskFailedRequest(taskToken common.TaskToken) *types.Re
 }
 
 func TestRespondActivityTaskFailed(t *testing.T) {
-
 	failedRequest := buildRespondActivityTaskFailedRequest(common.TaskToken{
 		DomainID:   testDomainID,
 		WorkflowID: testWorkflowID,
