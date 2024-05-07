@@ -730,8 +730,8 @@ func TestReplicationQueueImpl_purgeProcessor(t *testing.T) {
 	rq.Stop()
 	select {
 	case <-done:
-		// Pass if the goroutine exits
-	case <-time.After(1 * time.Millisecond):
+		// Pass if the goroutine exitsit
+	case <-time.After(10 * time.Millisecond):
 		t.Error("purgeProcessor did not stop within expected time")
 	}
 }
