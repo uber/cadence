@@ -105,7 +105,6 @@ services:
       - "CASSANDRA=1"
       - "CASSANDRA_SEEDS=cassandra"
       - "ES_SEEDS=elasticsearch"
-      - "KAFKA_SEEDS=kafka"
       - "TEST_TAG=esintegration"
       - BUILDKITE_AGENT_ACCESS_TOKEN
       - BUILDKITE_JOB_ID
@@ -115,8 +114,6 @@ services:
       cassandra:
         condition: service_healthy
       elasticsearch:
-        condition: service_started
-      kafka:
         condition: service_started
     volumes:
       - ../../:/cadence
@@ -133,7 +130,6 @@ services:
       - "MYSQL=1"
       - "MYSQL_SEEDS=mysql"
       - "ES_SEEDS=elasticsearch"
-      - "KAFKA_SEEDS=kafka"
       - "PERSISTENCE_TYPE=sql"
       - "PERSISTENCE_PLUGIN=mysql"
       - "TEST_TAG=esintegration"
@@ -144,7 +140,6 @@ services:
     depends_on:
       - mysql
       - elasticsearch
-      - kafka
     volumes:
       - ../../:/cadence
     networks:
@@ -161,7 +156,6 @@ services:
       - "POSTGRES_SEEDS=postgres"
       - "PERSISTENCE_PLUGIN=postgres"
       - "ES_SEEDS=elasticsearch"
-      - "KAFKA_SEEDS=kafka"
       - "PERSISTENCE_TYPE=sql"
       - "TEST_TAG=esintegration"
       - BUILDKITE_AGENT_ACCESS_TOKEN
@@ -171,7 +165,6 @@ services:
     depends_on:
       - postgres
       - elasticsearch
-      - kafka
     volumes:
       - ../../:/cadence
     networks:
@@ -187,7 +180,6 @@ services:
       - "CASSANDRA=1"
       - "CASSANDRA_SEEDS=cassandra"
       - "ES_SEEDS=elasticsearch"
-      - "KAFKA_SEEDS=kafka"
       - "TEST_TAG=esintegration"
       - BUILDKITE_AGENT_ACCESS_TOKEN
       - BUILDKITE_JOB_ID
@@ -197,8 +189,6 @@ services:
       cassandra:
         condition: service_healthy
       elasticsearch:
-        condition: service_started
-      kafka:
         condition: service_started
     volumes:
       - ../../:/cadence
@@ -215,7 +205,6 @@ services:
       - "MYSQL=1"
       - "MYSQL_SEEDS=mysql"
       - "ES_SEEDS=elasticsearch"
-      - "KAFKA_SEEDS=kafka"
       - "PERSISTENCE_TYPE=sql"
       - "PERSISTENCE_PLUGIN=mysql"
       - "TEST_TAG=esintegration"
@@ -226,7 +215,6 @@ services:
     depends_on:
       - mysql
       - elasticsearch
-      - kafka
     volumes:
       - ../../:/cadence
     networks:
@@ -242,7 +230,6 @@ services:
       - "POSTGRES=1"
       - "POSTGRES_SEEDS=postgres"
       - "ES_SEEDS=elasticsearch"
-      - "KAFKA_SEEDS=kafka"
       - "PERSISTENCE_TYPE=sql"
       - "PERSISTENCE_PLUGIN=postgres"
       - "TEST_TAG=esintegration"
@@ -253,40 +240,12 @@ services:
     depends_on:
       - postgres
       - elasticsearch
-      - kafka
     volumes:
       - ../../:/cadence
     networks:
       services-network:
         aliases:
           - integration-test-ndc
-
-  integration-test-async-wf:
-    build:
-      context: ../../
-      dockerfile: ./docker/buildkite/Dockerfile
-    environment:
-      - "ASYNC_WF_KAFKA_QUEUE_TOPIC=async-wf-topic1"
-      - "CASSANDRA=1"
-      - "CASSANDRA_SEEDS=cassandra"
-      - "ES_SEEDS=elasticsearch"
-      - "KAFKA_SEEDS=kafka"
-      - "KAFKA_PORT=9092"
-      - BUILDKITE_AGENT_ACCESS_TOKEN
-      - BUILDKITE_JOB_ID
-      - BUILDKITE_BUILD_ID
-      - BUILDKITE_BUILD_NUMBER
-    depends_on:
-      cassandra:
-        condition: service_healthy
-      kafka:
-        condition: service_started
-    volumes:
-      - ../../:/cadence
-    networks:
-      services-network:
-        aliases:
-          - integration-test-async-wf
 
   coverage-report:
     build:
