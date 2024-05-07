@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -56,8 +57,9 @@ import (
 )
 
 const (
-	numHistoryShards = 10
-
+	numHistoryShards          = 10
+	testDomain                = "test-domain"
+	testDomainID              = "e4f90ec0-1313-45be-9877-8aa41f72a45a"
 	testWorkflowID            = "test-workflow-id"
 	testRunID                 = "2c8b555f-1f55-4955-9d1c-b980194555c9"
 	testHistoryArchivalURI    = "testScheme://history/URI"
@@ -105,8 +107,8 @@ func (s *workflowHandlerSuite) TearDownSuite() {
 func (s *workflowHandlerSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
-	s.testDomain = "test-domain"
-	s.testDomainID = "e4f90ec0-1313-45be-9877-8aa41f72a45a"
+	s.testDomain = testDomain
+	s.testDomainID = testDomainID
 
 	s.controller = gomock.NewController(s.T())
 	s.mockResource = resource.NewTest(s.T(), s.controller, metrics.Frontend)
@@ -720,6 +722,112 @@ func (s *workflowHandlerSuite) TestRespondActivityTaskCompletedByID_Success() {
 	err := wh.RespondActivityTaskCompletedByID(context.Background(), req)
 	// only checking for successful write here
 	s.NoError(err)
+}
+
+func buildRespondActivityTaskFailedRequest(taskToken common.TaskToken) *types.RespondActivityTaskFailedRequest {
+	serializer := common.NewJSONTaskTokenSerializer()
+	taskTokenBytes, err := serializer.Serialize(&taskToken)
+	if err != nil {
+		panic(err)
+	}
+	return &types.RespondActivityTaskFailedRequest{
+		TaskToken: taskTokenBytes,
+	}
+}
+
+func TestRespondActivityTaskFailed(t *testing.T) {
+	failedRequest := buildRespondActivityTaskFailedRequest(common.TaskToken{
+		DomainID:   testDomainID,
+		WorkflowID: testWorkflowID,
+		RunID:      testRunID,
+		ActivityID: "1",
+	})
+
+	type fields struct {
+		shuttingDown int32
+	}
+
+	type args struct {
+		ctx           context.Context
+		failedRequest *types.RespondActivityTaskFailedRequest
+	}
+
+	tests := []struct {
+		name       string
+		fields     fields
+		setupMocks func(*resource.Test, *client.VersionCheckerMock)
+		args       args
+		wantErr    assert.ErrorAssertionFunc
+	}{
+		{
+			name: "Success",
+			fields: fields{
+				shuttingDown: 0,
+			},
+			setupMocks: func(t *resource.Test, mockVersionChecker *client.VersionCheckerMock) {
+				mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil)
+
+				t.HistoryClient.EXPECT().RespondActivityTaskFailed(gomock.Any(), &types.HistoryRespondActivityTaskFailedRequest{
+					DomainUUID:    testDomainID,
+					FailedRequest: failedRequest,
+				}).Return(nil)
+
+				t.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain-id", nil)
+			},
+			args: args{
+				context.Background(),
+				failedRequest,
+			},
+			wantErr: assert.NoError,
+		},
+		{
+			name:   "Error when shutting down",
+			fields: fields{shuttingDown: 1},
+			setupMocks: func(t *resource.Test, mockVersionChecker *client.VersionCheckerMock) {
+
+			},
+			args: args{
+				context.Background(),
+				buildRespondActivityTaskFailedRequest(common.TaskToken{
+					DomainID:   testDomainID,
+					WorkflowID: testWorkflowID,
+					RunID:      testRunID,
+					ActivityID: "1",
+				}),
+			},
+			wantErr: assert.Error,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockResource := resource.NewTest(t, mockCtrl, metrics.Frontend)
+			mockVersionChecker := client.NewMockVersionChecker(mockCtrl)
+
+			tt.setupMocks(mockResource, mockVersionChecker)
+
+			mockProducerManager := NewMockProducerManager(mockCtrl)
+
+			config := frontendcfg.NewConfig(
+				dc.NewCollection(
+					dc.NewInMemoryClient(),
+					mockResource.GetLogger(),
+				),
+				numHistoryShards,
+				false,
+				"hostname",
+			)
+
+			wh := NewWorkflowHandler(mockResource, config, mockVersionChecker, nil)
+			wh.shuttingDown = tt.fields.shuttingDown
+			wh.producerManager = mockProducerManager
+
+			tt.wantErr(t, wh.RespondActivityTaskFailed(tt.args.ctx, tt.args.failedRequest),
+				fmt.Sprintf("RespondActivityTaskFailed(%v, %v)", tt.args.ctx, tt.args.failedRequest))
+		})
+	}
+
 }
 
 func (s *workflowHandlerSuite) TestRegisterDomain_Failure_MissingDomainDataKey() {
