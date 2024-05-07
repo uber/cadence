@@ -31,6 +31,7 @@ import (
 
 	"github.com/opensearch-project/opensearch-go/v2/opensearchutil"
 	"github.com/stretchr/testify/assert"
+
 	"github.com/uber/cadence/common/elasticsearch/bulk"
 )
 
