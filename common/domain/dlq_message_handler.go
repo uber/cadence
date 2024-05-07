@@ -26,9 +26,9 @@ import (
 	"context"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -51,6 +51,7 @@ type (
 		replicationQueue   ReplicationQueue
 		logger             log.Logger
 		metricsClient      metrics.Client
+		timeSrc            clock.TimeSource
 		done               chan struct{}
 		status             int32
 
@@ -65,12 +66,14 @@ func NewDLQMessageHandler(
 	replicationQueue ReplicationQueue,
 	logger log.Logger,
 	metricsClient metrics.Client,
+	timeSource clock.TimeSource,
 ) DLQMessageHandler {
 	return &dlqMessageHandlerImpl{
 		replicationHandler: replicationHandler,
 		replicationQueue:   replicationQueue,
 		logger:             logger,
 		metricsClient:      metricsClient,
+		timeSrc:            timeSource,
 		done:               make(chan struct{}),
 		lastCount:          -1,
 	}
@@ -213,14 +216,14 @@ func (d *dlqMessageHandlerImpl) Merge(
 }
 
 func (d *dlqMessageHandlerImpl) emitDLQSizeMetricsLoop() {
-	ticker := time.NewTicker(queueSizeQueryInterval)
+	ticker := d.timeSrc.NewTicker(queueSizeQueryInterval)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-d.done:
 			return
-		case <-ticker.C:
+		case <-ticker.Chan():
 			err := d.fetchAndEmitDLQSize(context.Background())
 			if err != nil {
 				d.logger.Warn("Failed to get DLQ size.", tag.Error(err))

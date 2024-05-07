@@ -30,10 +30,12 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
@@ -78,6 +80,7 @@ func (s *dlqMessageHandlerSuite) SetupTest() {
 		s.mockReplicationQueue,
 		logger,
 		metrics.NewNoopMetricsClient(),
+		clock.NewMockedTimeSource(),
 	).(*dlqMessageHandlerImpl)
 }
 
@@ -107,36 +110,57 @@ func (s *dlqMessageHandlerSuite) TestReadMessages() {
 	s.Nil(token)
 }
 
-func (s *dlqMessageHandlerSuite) TestStart() {
+func TestDLQMessageHandler_Start(t *testing.T) {
 	tests := []struct {
 		name           string
+		setupMocks     func(m *MockReplicationQueue)
 		initialStatus  int32
 		expectedStatus int32
-		shouldStart    bool
 	}{
 		{
-			name:           "Should start when initialized",
+			name: "Should start when initialized",
+			setupMocks: func(m *MockReplicationQueue) {
+				m.EXPECT().GetDLQSize(gomock.Any()).Return(int64(1), nil).Times(1)
+			},
 			initialStatus:  common.DaemonStatusInitialized,
 			expectedStatus: common.DaemonStatusStarted,
-			shouldStart:    true,
 		},
 		{
-			name:           "Should not start when already started",
+			name: "Should not start when already started",
+			setupMocks: func(m *MockReplicationQueue) {
+				// No calls expected since the handler should recognize it's already started
+			},
 			initialStatus:  common.DaemonStatusStarted,
 			expectedStatus: common.DaemonStatusStarted,
-			shouldStart:    false,
 		},
 	}
 
-	for _, test := range tests {
-		s.Run(test.name, func() {
-			atomic.StoreInt32(&s.dlqMessageHandler.status, test.initialStatus)
-			s.dlqMessageHandler.Start()
-			s.Equal(test.expectedStatus, atomic.LoadInt32(&s.dlqMessageHandler.status))
-			if test.shouldStart {
-				s.dlqMessageHandler.logger.Info("Domain DLQ handler started.")
-				s.dlqMessageHandler.Stop()
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockQueue := NewMockReplicationQueue(ctrl)
+			mockReplicationTaskExecutor := NewMockReplicationTaskExecutor(ctrl)
+			mockLogger := testlogger.New(t)
+			mockedTime := clock.NewMockedTimeSource()
+			tc.setupMocks(mockQueue)
+
+			doneChan := make(chan struct{})
+			handler := &dlqMessageHandlerImpl{
+				replicationHandler: mockReplicationTaskExecutor,
+				replicationQueue:   mockQueue,
+				metricsClient:      metrics.NewNoopMetricsClient(),
+				logger:             mockLogger,
+				done:               doneChan,
+				status:             tc.initialStatus,
+				timeSrc:            mockedTime,
 			}
+
+			handler.Start()
+			mockedTime.Advance(5 * time.Minute)
+			defer handler.Stop()
+			assert.Equal(t, tc.expectedStatus, atomic.LoadInt32(&handler.status), assert.Equal(t, tc.expectedStatus, atomic.LoadInt32(&handler.status), "Handler did not reach the expected status for test case: %s", tc.name))
 		})
 	}
 }
