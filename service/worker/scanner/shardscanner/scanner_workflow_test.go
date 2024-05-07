@@ -35,16 +35,16 @@ import (
 	"github.com/uber/cadence/common/reconciliation/invariant"
 )
 
-type workflowsSuite struct {
+type scannerWorkflowsSuite struct {
 	suite.Suite
 	testsuite.WorkflowTestSuite
 }
 
 func TestScannerWorkflowSuite(t *testing.T) {
-	suite.Run(t, new(workflowsSuite))
+	suite.Run(t, new(scannerWorkflowsSuite))
 }
 
-func (s *workflowsSuite) TestGetBatchIndices() {
+func (s *scannerWorkflowsSuite) TestGetBatchIndices() {
 	testCases := []struct {
 		batchSize   int
 		concurrency int
@@ -101,7 +101,7 @@ func (s *workflowsSuite) TestGetBatchIndices() {
 	}
 }
 
-func (s *workflowsSuite) TestGetShardBatches() {
+func (s *scannerWorkflowsSuite) TestGetShardBatches() {
 	var shards []int
 	for i := 5; i < 50; i += 2 {
 		shards = append(shards, i)
@@ -113,7 +113,7 @@ func (s *workflowsSuite) TestGetShardBatches() {
 	}, batches)
 }
 
-func (s *workflowsSuite) TestFlattenShards() {
+func (s *scannerWorkflowsSuite) TestFlattenShards() {
 	testCases := []struct {
 		input        Shards
 		expectedList []int
@@ -160,7 +160,7 @@ func (s *workflowsSuite) TestFlattenShards() {
 	}
 }
 
-func (s *workflowsSuite) TestValidateShards() {
+func (s *scannerWorkflowsSuite) TestValidateShards() {
 	testCases := []struct {
 		shards    Shards
 		expectErr bool
