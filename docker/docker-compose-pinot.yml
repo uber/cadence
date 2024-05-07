@@ -13,7 +13,7 @@ services:
     ports:
       - '9090:9090'
   kafka:
-    image: wurstmeister/kafka:2.13-2.8.1
+    image: ubercadence/wurstmeister-kafka:2.12-2.1.1
     depends_on:
       - zookeeper
     ports:
