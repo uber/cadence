@@ -43,22 +43,6 @@ services:
         aliases:
           - zookeeper
 
-  kafka:
-    image: wurstmeister/kafka:2.12-2.1.1
-    depends_on:
-      - zookeeper
-    networks:
-      services-network:
-        aliases:
-          - kafka
-    environment:
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      # for async wf tests, create a topic with 10 partitions and 1 replica
-      # topic name must match ASYNC_WF_KAFKA_QUEUE_TOPIC
-      KAFKA_CREATE_TOPICS: "async-wf-topic1:10:1"
-
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.8.22
     networks:
