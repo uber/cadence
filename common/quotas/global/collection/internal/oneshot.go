@@ -59,10 +59,15 @@ func (o *OneShot) Context() context.Context {
 }
 
 func (o *OneShot) StopAndWait(ctx context.Context) error {
-	stopErr := o.Stop()               // duplicate calls are wrong...
+	stopErr := o.Stop() // duplicate calls are wrong...
+	if stopErr != nil {
+		stopErr = fmt.Errorf("*OneShot failed to stop: %w", stopErr)
+	}
 	waitErr := o.WaitForShutdown(ctx) // ... but wait either way.
-	combined := multierr.Append(stopErr, waitErr)
-	return combined
+	if waitErr != nil {
+		waitErr = fmt.Errorf("*OneShot failed to wait for stopping: %w", waitErr)
+	}
+	return multierr.Append(stopErr, waitErr)
 }
 
 func (o *OneShot) Stopped() {
