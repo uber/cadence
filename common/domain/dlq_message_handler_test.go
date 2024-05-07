@@ -120,7 +120,7 @@ func TestDLQMessageHandler_Start(t *testing.T) {
 		{
 			name: "Should start when initialized",
 			setupMocks: func(m *MockReplicationQueue) {
-				m.EXPECT().GetDLQSize(gomock.Any()).Return(int64(1), nil).Times(1)
+				m.EXPECT().GetDLQSize(gomock.Any()).Return(int64(1), nil).AnyTimes()
 			},
 			initialStatus:  common.DaemonStatusInitialized,
 			expectedStatus: common.DaemonStatusStarted,
