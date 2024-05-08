@@ -86,9 +86,6 @@ func createTestHistoryReplicator(t *testing.T) historyReplicatorImpl {
 	return *replicatorImpl
 }
 
-type name struct {
-}
-
 func TestNewHistoryReplicator(t *testing.T) {
 	assert.NotNil(t, createTestHistoryReplicator(t))
 }
