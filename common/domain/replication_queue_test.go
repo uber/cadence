@@ -715,14 +715,14 @@ func TestReplicationQueueImpl_purgeProcessor(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockQueue := persistence.NewMockQueueManager(ctrl)
 	rq := NewReplicationQueue(mockQueue, "testCluster", nil, nil).(*replicationQueueImpl)
-	atomic.StoreInt32(&rq.status, common.DaemonStatusStarted)
+	atomic.StoreInt32(&rq.status, common.DaemonStatusInitialized)
 
 	done := make(chan bool)
 	mockQueue.EXPECT().GetAckLevels(gomock.Any()).Return(map[string]int64{}, nil).AnyTimes()
 	mockQueue.EXPECT().DeleteMessagesBefore(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 	go func() {
-		rq.purgeProcessor()
+		rq.Start()
 		close(done)
 	}()
 
