@@ -45,6 +45,33 @@ func TestInsertIntoHistoryTreeAndNode(t *testing.T) {
 		expectError bool
 	}{
 		{
+			name: "Successfully insert both tree and node rows using batch",
+			treeRow: &nosqlplugin.HistoryTreeRow{
+				TreeID:          "treeID",
+				BranchID:        "branchID",
+				Ancestors:       []*types.HistoryBranchRange{{BranchID: "branch1", EndNodeID: 100}},
+				CreateTimestamp: time.Now(),
+			},
+			nodeRow: &nosqlplugin.HistoryNodeRow{
+				TreeID:       "treeID",
+				BranchID:     "branchID",
+				NodeID:       1,
+				TxnID:        nil,
+				Data:         []byte("node data"),
+				DataEncoding: "encoding",
+			},
+			setupMocks: func(ctrl *gomock.Controller, session *fakeSession) {
+				mockBatch := gocql.NewMockBatch(ctrl)
+				mockQuery := gocql.NewMockQuery(ctrl)
+				mockBatch.EXPECT().WithContext(gomock.Any()).Return(mockBatch).AnyTimes()
+				mockBatch.EXPECT().Query(v2templateInsertTree, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return().AnyTimes()
+				mockBatch.EXPECT().Query(v2templateUpsertData, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return().AnyTimes()
+
+				session.query = mockQuery
+			},
+			expectError: false,
+		},
+		{
 			name: "Successfully insert only tree row",
 			treeRow: &nosqlplugin.HistoryTreeRow{
 				TreeID:          "treeID",
