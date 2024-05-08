@@ -75,12 +75,11 @@ func TestReplicationQueueImpl_Start(t *testing.T) {
 			assert.Equal(t, tt.expectedStatus, atomic.LoadInt32(&rq.status))
 
 			if tt.shouldStart {
-				time.Sleep(1 * time.Nanosecond)
 				select {
 				case <-rq.done:
 					t.Error("purgeProcessor should not have stopped")
-				default:
-					// expected no action
+				case <-time.After(time.Millisecond):
+					// expected, as the purgeProcessor should still be running
 				}
 			}
 		})
