@@ -29,7 +29,6 @@ import (
 
 func TestHistoryEngineStartStop(t *testing.T) {
 	eft := testdata.NewEngineForTest(t, NewEngineWithShardContext)
-	defer eft.Cleanup()
 
 	eft.Engine.Start()
 	eft.Engine.Stop()
