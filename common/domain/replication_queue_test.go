@@ -725,7 +725,6 @@ func TestReplicationQueueImpl_purgeProcessor(t *testing.T) {
 		close(done)
 	}()
 
-	time.Sleep(1 * time.Nanosecond)
 	rq.Stop()
 	select {
 	case <-done:
