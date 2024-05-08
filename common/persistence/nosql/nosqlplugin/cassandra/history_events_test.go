@@ -114,7 +114,6 @@ func TestInsertIntoHistoryTreeAndNode(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			session := &fakeSession{}
 			if tt.setupMocks != nil {
@@ -349,7 +348,6 @@ func TestSelectAllHistoryTrees(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			session := &fakeSession{}
 			if tt.setupMocks != nil {
@@ -434,7 +432,6 @@ func TestSelectFromHistoryTree(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 
 			session := &fakeSession{}
 			if tt.setupMocks != nil {
