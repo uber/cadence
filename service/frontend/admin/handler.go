@@ -53,6 +53,7 @@ import (
 	"github.com/uber/cadence/service/frontend/config"
 	"github.com/uber/cadence/service/frontend/validate"
 	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/lookup"
 )
 
 const (
@@ -258,10 +259,9 @@ func (adh *adminHandlerImpl) DescribeWorkflowExecution(
 	}
 
 	shardID := common.WorkflowIDToHistoryShard(request.Execution.WorkflowID, adh.numberOfHistoryShards)
-	shardIDstr := string(rune(shardID)) // originally `string(int_shard_id)`, but changing it will change the ring hashing
 	shardIDForOutput := strconv.Itoa(shardID)
 
-	historyHost, err := adh.GetMembershipResolver().Lookup(service.History, shardIDstr)
+	historyHost, err := lookup.HistoryServerByShardID(adh.GetMembershipResolver(), shardID)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
@@ -663,16 +663,15 @@ func (adh *adminHandlerImpl) DescribeShardDistribution(
 	_, sw := adh.startRequestProfile(ctx, metrics.AdminDescribeShardDistributionScope)
 	defer sw.Stop()
 
-	numShards := adh.config.NumHistoryShards
 	resp = &types.DescribeShardDistributionResponse{
-		NumberOfShards: int32(numShards),
+		NumberOfShards: int32(adh.numberOfHistoryShards),
 		Shards:         make(map[int32]string),
 	}
 
 	offset := int(request.PageID * request.PageSize)
 	nextPageStart := offset + int(request.PageSize)
-	for shardID := offset; shardID < numShards && shardID < nextPageStart; shardID++ {
-		info, err := adh.GetMembershipResolver().Lookup(service.History, string(rune(shardID)))
+	for shardID := offset; shardID < adh.numberOfHistoryShards && shardID < nextPageStart; shardID++ {
+		info, err := lookup.HistoryServerByShardID(adh.GetMembershipResolver(), shardID)
 		if err != nil {
 			resp.Shards[int32(shardID)] = "unknown"
 		} else {

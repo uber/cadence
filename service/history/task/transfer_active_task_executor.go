@@ -630,6 +630,7 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 			task.TargetWorkflowID,
 			task.TargetRunID,
 			t.shard.GetTimeSource().Now(),
+			types.CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution,
 		)
 		return err
 	}
@@ -656,6 +657,11 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 			// for retryable error just return
 			return err
 		}
+		cause := types.CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution
+		var alreadyCompletedErr *types.WorkflowExecutionAlreadyCompletedError
+		if errors.As(err, &alreadyCompletedErr) {
+			cause = types.CancelExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted
+		}
 		return requestCancelExternalExecutionFailed(
 			ctx,
 			task,
@@ -664,6 +670,7 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 			task.TargetWorkflowID,
 			task.TargetRunID,
 			t.shard.GetTimeSource().Now(),
+			cause,
 		)
 	}
 
@@ -750,6 +757,7 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 			task.TargetRunID,
 			signalInfo.Control,
 			t.shard.GetTimeSource().Now(),
+			types.SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution,
 		)
 	}
 
@@ -769,11 +777,16 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 			tag.TargetWorkflowRunID(task.TargetRunID),
 			tag.Error(err))
 
-		// Check to see if the error is non-transient, in which case add SignalFailed
+		// Check to see if the error is non-transient, in which case add RequestCancelFailed
 		// event and complete transfer task by setting the err = nil
 		if common.IsServiceTransientError(err) || common.IsContextTimeoutError(err) {
 			// for retryable error just return
 			return err
+		}
+		var alreadyCompletedErr *types.WorkflowExecutionAlreadyCompletedError
+		cause := types.SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution
+		if errors.As(err, &alreadyCompletedErr) {
+			cause = types.SignalExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted
 		}
 		return signalExternalExecutionFailed(
 			ctx,
@@ -784,6 +797,7 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 			task.TargetRunID,
 			signalInfo.Control,
 			t.shard.GetTimeSource().Now(),
+			cause,
 		)
 	}
 
@@ -1419,6 +1433,7 @@ func requestCancelExternalExecutionFailed(
 	targetWorkflowID string,
 	targetRunID string,
 	now time.Time,
+	cause types.CancelExternalWorkflowExecutionFailedCause,
 ) error {
 
 	err := updateWorkflowExecution(ctx, wfContext, true,
@@ -1439,7 +1454,7 @@ func requestCancelExternalExecutionFailed(
 				targetDomain,
 				targetWorkflowID,
 				targetRunID,
-				types.CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution,
+				cause,
 			)
 			return err
 		},
@@ -1464,6 +1479,7 @@ func signalExternalExecutionFailed(
 	targetRunID string,
 	control []byte,
 	now time.Time,
+	cause types.SignalExternalWorkflowExecutionFailedCause,
 ) error {
 
 	err := updateWorkflowExecution(ctx, wfContext, true,
@@ -1485,7 +1501,7 @@ func signalExternalExecutionFailed(
 				targetWorkflowID,
 				targetRunID,
 				control,
-				types.SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution,
+				cause,
 			)
 			return err
 		},

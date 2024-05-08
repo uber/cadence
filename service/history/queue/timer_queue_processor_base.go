@@ -22,6 +22,7 @@ package queue
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -385,7 +386,8 @@ func (t *timerQueueProcessorBase) splitQueue(splitQueueTimer *time.Timer) {
 // returns true if processing should be terminated
 func (t *timerQueueProcessorBase) handleAckLevelUpdate(updateAckTimer *time.Timer) bool {
 	processFinished, _, err := t.updateAckLevelFn()
-	if err == shard.ErrShardClosed || (err == nil && processFinished) {
+	var errShardClosed *shard.ErrShardClosed
+	if errors.As(err, &errShardClosed) || (err == nil && processFinished) {
 		return true
 	}
 	updateAckTimer.Reset(backoff.JitDuration(

@@ -1,7 +1,7 @@
 // The MIT License (MIT)
-//
+
 // Copyright (c) 2017-2020 Uber Technologies Inc.
-//
+
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -20,31 +20,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package shardscannertest
+package lookup
 
 import (
-	"go.uber.org/cadence/workflow"
-
-	"github.com/uber/cadence/service/worker/scanner/shardscanner"
+	"github.com/uber/cadence/common/membership"
+	"github.com/uber/cadence/common/service"
 )
 
-// NewTestWorkflow is a helper, no-op workflow used for testing purposes.
-func NewTestWorkflow(ctx workflow.Context, name string, params shardscanner.ScannerWorkflowParams) error {
-	wf, err := shardscanner.NewScannerWorkflow(ctx, name, params)
-	if err != nil {
-		return err
-	}
-
-	return wf.Start(ctx)
-}
-
-// NewTestFixerWorkflow is a helper, no-op workflow used for testing purposes.
-func NewTestFixerWorkflow(ctx workflow.Context, params shardscanner.FixerWorkflowParams) error {
-	wf, err := shardscanner.NewFixerWorkflow(ctx, "test-fixer", params)
-	if err != nil {
-		return err
-	}
-
-	return wf.Start(ctx)
-
+// HistoryServerByShardID calls resolver.Lookup with key based on provided shardID
+func HistoryServerByShardID(resolver membership.Resolver, shardID int) (membership.HostInfo, error) {
+	return resolver.Lookup(service.History, string(rune(shardID)))
 }

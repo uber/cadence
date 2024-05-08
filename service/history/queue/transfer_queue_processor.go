@@ -365,7 +365,8 @@ func (t *transferQueueProcessor) completeTransferLoop() {
 				}
 
 				t.logger.Error("Failed to complete transfer task", tag.Error(err))
-				if err == shard.ErrShardClosed {
+				var errShardClosed *shard.ErrShardClosed
+				if errors.As(err, &errShardClosed) {
 					// shard closed, trigger shutdown and bail out
 					if !t.shard.GetConfig().QueueProcessorEnableGracefulSyncShutdown() {
 						go t.Stop()

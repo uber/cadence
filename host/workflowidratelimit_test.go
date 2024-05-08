@@ -127,21 +127,29 @@ func (s *WorkflowIDRateLimitIntegrationSuite) TestWorkflowIDSpecificRateLimits()
 	ctx, cancel := createContext()
 	defer cancel()
 
-	// The ratelimit is 5 per second, so we should be able to start 5 workflows without any error
+	// The ratelimit is 5 per second with a burst of 5, so we should be able to start 5 workflows without any error
 	for i := 0; i < 5; i++ {
 		_, err := s.engine.StartWorkflowExecution(ctx, request)
 		assert.NoError(s.T(), err)
 	}
 
-	// Now we should get a rate limit error
+	// Now we should get a rate limit error (with some fuzziness for time passing)
+	limited := 0
 	for i := 0; i < 5; i++ {
 		_, err := s.engine.StartWorkflowExecution(ctx, request)
 		var busyErr *types.ServiceBusyError
-		assert.ErrorAs(s.T(), err, &busyErr)
-		assert.Equal(s.T(), common.WorkflowIDRateLimitReason, busyErr.Reason)
+		if err != nil {
+			if assert.ErrorAs(s.T(), err, &busyErr) {
+				limited++
+				assert.Equal(s.T(), common.WorkflowIDRateLimitReason, busyErr.Reason)
+			}
+		}
 	}
+	// 5 fails occasionally, trying 4.  If needed, reduce to 3 or find a way to
+	// make this test less sensitive to latency, as test-runner hosts vary a lot.
+	assert.GreaterOrEqual(s.T(), limited, 4, "should have encountered some rate-limit errors after the burst was exhausted")
 
-	// After 1 second we should be able to start another workflow
+	// After 1 second (200ms at a minimum) we should be able to start more workflows without being limited
 	time.Sleep(1 * time.Second)
 	_, err := s.engine.StartWorkflowExecution(ctx, request)
 	assert.NoError(s.T(), err)

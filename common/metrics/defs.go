@@ -2178,6 +2178,8 @@ const (
 
 	HashringViewIdentifier
 
+	AsyncRequestPayloadSize
+
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
 
@@ -2817,6 +2819,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		IsolationGroupStateHealthy:           {metricName: "isolation_group_healthy", metricType: Counter},
 		ValidatedWorkflowCount:               {metricName: "task_validator_count", metricType: Counter},
 		HashringViewIdentifier:               {metricName: "hashring_view_identifier", metricType: Counter},
+
+		AsyncRequestPayloadSize: {metricName: "async_request_payload_size_per_domain", metricRollupName: "async_request_payload_size", metricType: Timer},
 	},
 	History: {
 		TaskRequests:             {metricName: "task_requests", metricType: Counter},
