@@ -145,9 +145,9 @@ func (s *WorkflowIDRateLimitIntegrationSuite) TestWorkflowIDSpecificRateLimits()
 			}
 		}
 	}
-	// 5 fairly regularly fails, 4 seems probably-likely to be reliable with minor time skew,
-	// but be a bit more permissive as buildkite hosts vary a lot
-	assert.GreaterOrEqual(s.T(), limited, 3, "should have encountered some rate-limit errors after the burst was exhausted")
+	// 5 fails occasionally, trying 4.  If needed, reduce to 3 or find a way to
+	// make this test less sensitive to latency, as test-runner hosts vary a lot.
+	assert.GreaterOrEqual(s.T(), limited, 4, "should have encountered some rate-limit errors after the burst was exhausted")
 
 	// After 1 second we should be able to start another workflow without being limited
 	time.Sleep(1 * time.Second)
