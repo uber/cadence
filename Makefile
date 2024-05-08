@@ -360,6 +360,8 @@ $(BUILD)/gomod-lint: go.mod internal/tools/go.mod common/archiver/gcloud/go.mod 
 # it's a coarse "you probably don't need to re-lint" filter, nothing more.
 $(BUILD)/code-lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
 	$Q echo "lint..."
+	$Q # non-optional vet checks.  unfortunately these are not currently included in `go test`'s default behavior.
+	$Q go vet -copylocks ./... ./common/archiver/gcloud/...
 	$Q $(BIN)/revive -config revive.toml -exclude './vendor/...' -exclude './.gen/...' -formatter stylish ./...
 	$Q # look for go files with "//comments", and ignore "//go:build"-style directives ("grep -n" shows "file:line: //go:build" so the regex is a bit complex)
 	$Q bad="$$(find . -type f -name '*.go' -not -path './idls/*' | xargs grep -n -E '^\s*//\S' | grep -E -v '^[^:]+:[^:]+:\s*//[a-z]+:[a-z]+' || true)"; \
