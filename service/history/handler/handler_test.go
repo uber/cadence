@@ -26,6 +26,7 @@ import (
 	"math/rand"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
@@ -764,6 +765,877 @@ func (s *handlerSuite) TestRespondActivityTaskFailed() {
 	}
 }
 
+func (s *handlerSuite) TestRespondActivityTaskCanceled() {
+	validInput := &types.HistoryRespondActivityTaskCanceledRequest{
+		DomainUUID: testDomainID,
+		CancelRequest: &types.RespondActivityTaskCanceledRequest{
+			TaskToken: []byte("task-token"),
+			Details:   []byte("Details"),
+			Identity:  "identity",
+		},
+	}
+	testInput := map[string]struct {
+		input         *types.HistoryRespondActivityTaskCanceledRequest
+		expectedError bool
+		mockFn        func()
+	}{
+		"valid input": {
+			input:         validInput,
+			expectedError: false,
+			mockFn: func() {
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				}, nil).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().RespondActivityTaskCanceled(gomock.Any(), validInput).Return(nil).Times(1)
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+			},
+		},
+		"empty domainID": {
+			input: &types.HistoryRespondActivityTaskCanceledRequest{
+				DomainUUID: "",
+			},
+			expectedError: true,
+			mockFn:        func() {},
+		},
+		"ratelimit exceeded": {
+			input: &types.HistoryRespondActivityTaskCanceledRequest{
+				DomainUUID: testDomainID,
+				CancelRequest: &types.RespondActivityTaskCanceledRequest{
+					TaskToken: []byte("task-token"),
+					Details:   []byte("Details"),
+					Identity:  "identity",
+				},
+			},
+			expectedError: true,
+			mockFn: func() {
+				s.mockRatelimiter.EXPECT().Allow().Return(false).Times(1)
+			},
+		},
+		"token deserialization error": {
+			input: &types.HistoryRespondActivityTaskCanceledRequest{
+				DomainUUID: testDomainID,
+				CancelRequest: &types.RespondActivityTaskCanceledRequest{
+					TaskToken: []byte("task-token"),
+					Details:   []byte("Details"),
+					Identity:  "identity",
+				},
+			},
+			expectedError: true,
+			mockFn: func() {
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(nil, errors.New("some random error")).Times(1)
+			},
+		},
+		"invalid task token": {
+			input: &types.HistoryRespondActivityTaskCanceledRequest{
+				DomainUUID: testDomainID,
+				CancelRequest: &types.RespondActivityTaskCanceledRequest{
+					TaskToken: []byte("task-token"),
+					Details:   []byte("Details"),
+					Identity:  "identity",
+				},
+			},
+			expectedError: true,
+			mockFn: func() {
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{
+					WorkflowID: "",
+					RunID:      "",
+				}, nil).Times(1)
+			},
+		},
+		"get engine error": {
+			input: &types.HistoryRespondActivityTaskCanceledRequest{
+				DomainUUID: testDomainID,
+				CancelRequest: &types.RespondActivityTaskCanceledRequest{
+					TaskToken: []byte("task-token"),
+					Details:   []byte("Details"),
+					Identity:  "identity",
+				},
+			},
+			expectedError: true,
+			mockFn: func() {
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				}, nil).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(nil, errors.New("error")).Times(1)
+			},
+		},
+		"engine error": {
+			input: &types.HistoryRespondActivityTaskCanceledRequest{
+				DomainUUID: testDomainID,
+				CancelRequest: &types.RespondActivityTaskCanceledRequest{
+					TaskToken: []byte("task-token"),
+					Details:   []byte("Details"),
+					Identity:  "identity",
+				},
+			},
+			expectedError: true,
+			mockFn: func() {
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				}, nil).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().RespondActivityTaskCanceled(gomock.Any(), validInput).Return(errors.New("error")).Times(1)
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+			},
+		},
+	}
+
+	for name, input := range testInput {
+		s.Run(name, func() {
+			input.mockFn()
+			err := s.handler.RespondActivityTaskCanceled(context.Background(), input.input)
+			if input.expectedError {
+				s.Error(err)
+			} else {
+				s.NoError(err)
+			}
+		})
+	}
+}
+
+func (s *handlerSuite) TestRespondDecisionTaskCompleted() {
+	validReq := &types.HistoryRespondDecisionTaskCompletedRequest{
+		DomainUUID: testDomainID,
+		CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+			TaskToken: []byte("task-token"),
+			Decisions: []*types.Decision{
+				{
+					DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
+				},
+			},
+			ExecutionContext: nil,
+			Identity:         "identity",
+		},
+	}
+	validResp := &types.HistoryRespondDecisionTaskCompletedResponse{
+		StartedResponse: &types.RecordDecisionTaskStartedResponse{
+			WorkflowType: &types.WorkflowType{},
+		},
+	}
+	testInput := map[string]struct {
+		input         *types.HistoryRespondDecisionTaskCompletedRequest
+		expectedError bool
+		mockFn        func()
+	}{
+		"valid input": {
+			input:         validReq,
+			expectedError: false,
+			mockFn: func() {
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				}, nil).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().RespondDecisionTaskCompleted(gomock.Any(), validReq).Return(validResp, nil).Times(1)
+			},
+		},
+		"empty domainID": {
+			input: &types.HistoryRespondDecisionTaskCompletedRequest{
+				DomainUUID: "",
+			},
+			expectedError: true,
+			mockFn:        func() {},
+		},
+		"ratelimit exceeded": {
+			input:         validReq,
+			expectedError: true,
+			mockFn: func() {
+				s.mockRatelimiter.EXPECT().Allow().Return(false).Times(1)
+			},
+		},
+		"token deserialization error": {
+			input: &types.HistoryRespondDecisionTaskCompletedRequest{
+				DomainUUID: testDomainID,
+				CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+					TaskToken: []byte("task-token"),
+					Decisions: []*types.Decision{},
+				},
+			},
+			expectedError: true,
+			mockFn: func() {
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(nil, errors.New("some random error")).Times(1)
+			},
+		},
+		"invalid task token": {
+			input: &types.HistoryRespondDecisionTaskCompletedRequest{
+				DomainUUID: testDomainID,
+				CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+					TaskToken: []byte("task-token"),
+					Decisions: []*types.Decision{},
+				},
+			},
+			expectedError: true,
+			mockFn: func() {
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{
+					WorkflowID: "",
+					RunID:      "",
+				}, nil).Times(1)
+			},
+		},
+		"get engine error": {
+			input: &types.HistoryRespondDecisionTaskCompletedRequest{
+				DomainUUID: testDomainID,
+				CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+					TaskToken: []byte("task-token"),
+					Decisions: []*types.Decision{},
+				},
+			},
+			expectedError: true,
+			mockFn: func() {
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				}, nil).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(nil, errors.New("error")).Times(1)
+			},
+		},
+		"engine error": {
+			input:         validReq,
+			expectedError: true,
+			mockFn: func() {
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				}, nil).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().RespondDecisionTaskCompleted(gomock.Any(), validReq).Return(nil, errors.New("error")).Times(1)
+			},
+		},
+	}
+
+	for name, input := range testInput {
+		s.Run(name, func() {
+			input.mockFn()
+			resp, err := s.handler.RespondDecisionTaskCompleted(context.Background(), input.input)
+			if input.expectedError {
+				s.Nil(resp)
+				s.Error(err)
+			} else {
+				s.NotNil(resp)
+				s.NoError(err)
+			}
+		})
+
+	}
+}
+
+func (s *handlerSuite) TestRespondDecisionTaskFailed() {
+	validInput := &types.HistoryRespondDecisionTaskFailedRequest{
+		DomainUUID: testDomainID,
+		FailedRequest: &types.RespondDecisionTaskFailedRequest{
+			TaskToken: []byte("task-token"),
+			Cause:     types.DecisionTaskFailedCauseBadBinary.Ptr(),
+			Details:   []byte("Details"),
+			Identity:  "identity",
+		},
+	}
+	specialInput := &types.HistoryRespondDecisionTaskFailedRequest{
+		DomainUUID: testDomainID,
+		FailedRequest: &types.RespondDecisionTaskFailedRequest{
+			TaskToken: []byte("task-token"),
+			Cause:     types.DecisionTaskFailedCauseUnhandledDecision.Ptr(),
+			Details:   []byte("Details"),
+			Identity:  "identity",
+		},
+	}
+	testInput := map[string]struct {
+		input         *types.HistoryRespondDecisionTaskFailedRequest
+		expectedError bool
+		mockFn        func()
+	}{
+		"valid input": {
+			input:         validInput,
+			expectedError: false,
+			mockFn: func() {
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				}, nil).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().RespondDecisionTaskFailed(gomock.Any(), validInput).Return(nil).Times(1)
+			},
+		},
+		"empty domainID": {
+			input: &types.HistoryRespondDecisionTaskFailedRequest{
+				DomainUUID: "",
+			},
+			expectedError: true,
+			mockFn:        func() {},
+		},
+		"ratelimit exceeded": {
+			input:         validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.mockRatelimiter.EXPECT().Allow().Return(false).Times(1)
+			},
+		},
+		"token deserialization error": {
+			input:         validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(nil, errors.New("some random error")).Times(1)
+			},
+		},
+		"invalid task token": {
+			input:         validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{
+					WorkflowID: "",
+					RunID:      "",
+				}, nil).Times(1)
+			},
+		},
+		"get engine error": {
+			input:         validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				}, nil).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(nil, errors.New("error")).Times(1)
+			},
+		},
+		"engine error": {
+			input:         validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				}, nil).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().RespondDecisionTaskFailed(gomock.Any(), validInput).Return(errors.New("error")).Times(1)
+			},
+		},
+		"special domain": {
+			input:         specialInput,
+			expectedError: false,
+			mockFn: func() {
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				}, nil).Times(1)
+				s.mockResource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return("name", nil).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().RespondDecisionTaskFailed(gomock.Any(), specialInput).Return(nil).Times(1)
+			},
+		},
+		"special domain2": {
+			input:         specialInput,
+			expectedError: false,
+			mockFn: func() {
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{
+					WorkflowID: testWorkflowID,
+					RunID:      testValidUUID,
+				}, nil).Times(1)
+				s.mockResource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return("", errors.New("error")).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().RespondDecisionTaskFailed(gomock.Any(), specialInput).Return(nil).Times(1)
+			},
+		},
+	}
+
+	for name, input := range testInput {
+		s.Run(name, func() {
+			input.mockFn()
+			err := s.handler.RespondDecisionTaskFailed(context.Background(), input.input)
+			if input.expectedError {
+				s.Error(err)
+			} else {
+				s.NoError(err)
+			}
+		})
+	}
+}
+
+func (s *handlerSuite) TestDescribeHistoryHost() {
+	request := &types.DescribeHistoryHostRequest{
+		HostAddress: common.StringPtr("test"),
+	}
+
+	mockStatus := map[string]int32{
+		"initialized": 0,
+		"started":     1,
+		"stopped":     2,
+	}
+
+	for status, value := range mockStatus {
+		s.mockResource.DomainCache.EXPECT().GetCacheSize().Return(int64(2), int64(3)).Times(1)
+		s.mockShardController.EXPECT().Status().Return(value).Times(1)
+		s.mockShardController.EXPECT().NumShards().Return(1)
+		s.mockShardController.EXPECT().ShardIDs().Return([]int32{0})
+		resp, err := s.handler.DescribeHistoryHost(context.Background(), request)
+		s.NoError(err)
+		s.Equal(resp.DomainCache, &types.DomainCacheInfo{
+			NumOfItemsInCacheByID:   2,
+			NumOfItemsInCacheByName: 3,
+		})
+		s.Equal(resp.ShardControllerStatus, status)
+	}
+}
+
+func (s *handlerSuite) TestRemoveTask() {
+	now := time.Now()
+	testInput := map[string]struct {
+		request       *types.RemoveTaskRequest
+		expectedError bool
+		mockFn        func()
+	}{
+		"transfer task": {
+			request: &types.RemoveTaskRequest{
+				ShardID: 0,
+				Type:    common.Int32Ptr(int32(common.TaskTypeTransfer)),
+				TaskID:  int64(1),
+			},
+			expectedError: false,
+			mockFn: func() {
+				s.mockResource.ExecutionMgr.On("CompleteTransferTask", mock.Anything, &persistence.CompleteTransferTaskRequest{
+					TaskID: int64(1),
+				}).Return(nil).Once()
+			},
+		},
+		"timer task": {
+			request: &types.RemoveTaskRequest{
+				ShardID:             0,
+				Type:                common.Int32Ptr(int32(common.TaskTypeTimer)),
+				TaskID:              int64(1),
+				VisibilityTimestamp: common.Int64Ptr(int64(now.UnixNano())),
+			},
+			expectedError: false,
+			mockFn: func() {
+				s.mockResource.ExecutionMgr.On("CompleteTimerTask", mock.Anything, mock.Anything).Return(nil).Once()
+			},
+		},
+		"replication task": {
+			request: &types.RemoveTaskRequest{
+				ShardID: 0,
+				Type:    common.Int32Ptr(int32(common.TaskTypeReplication)),
+				TaskID:  int64(1),
+			},
+			expectedError: false,
+			mockFn: func() {
+				s.mockResource.ExecutionMgr.On("CompleteReplicationTask", mock.Anything, &persistence.CompleteReplicationTaskRequest{
+					TaskID: int64(1),
+				}).Return(nil).Once()
+			},
+		},
+		"cross cluster task": {
+			request: &types.RemoveTaskRequest{
+				ShardID: 0,
+				Type:    common.Int32Ptr(int32(common.TaskTypeCrossCluster)),
+				TaskID:  int64(1),
+			},
+			expectedError: false,
+			mockFn: func() {
+				s.mockResource.ExecutionMgr.On("CompleteCrossClusterTask", mock.Anything, &persistence.CompleteCrossClusterTaskRequest{
+					TaskID: int64(1),
+				}).Return(nil).Once()
+			},
+		},
+		"invalid": {
+			request: &types.RemoveTaskRequest{
+				ShardID: 0,
+				Type:    common.Int32Ptr(int32(100)),
+			},
+			expectedError: true,
+			mockFn:        func() {},
+		},
+	}
+
+	for name, input := range testInput {
+		s.Run(name, func() {
+			input.mockFn()
+			err := s.handler.RemoveTask(context.Background(), input.request)
+			if input.expectedError {
+				s.Error(err)
+			} else {
+				s.NoError(err)
+			}
+		})
+
+	}
+}
+
+func (s *handlerSuite) TestCloseShard() {
+	request := &types.CloseShardRequest{
+		ShardID: 0,
+	}
+
+	s.mockShardController.EXPECT().RemoveEngineForShard(0).Return().Times(1)
+	err := s.handler.CloseShard(context.Background(), request)
+	s.NoError(err)
+}
+
+func (s *handlerSuite) TestResetQueue() {
+	testInput := map[string]struct {
+		request       *types.ResetQueueRequest
+		expectedError bool
+		mockFn        func()
+	}{
+		"getEngine error": {
+			request: &types.ResetQueueRequest{
+				ShardID: 0,
+			},
+			expectedError: true,
+			mockFn: func() {
+				s.mockShardController.EXPECT().GetEngineForShard(0).Return(nil, errors.New("error")).Times(1)
+			},
+		},
+		"transfer task": {
+			request: &types.ResetQueueRequest{
+				ShardID: 0,
+				Type:    common.Int32Ptr(int32(common.TaskTypeTransfer)),
+			},
+			expectedError: false,
+			mockFn: func() {
+				s.mockShardController.EXPECT().GetEngineForShard(0).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().ResetTransferQueue(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+		},
+		"timer task": {
+			request: &types.ResetQueueRequest{
+				ShardID: 0,
+				Type:    common.Int32Ptr(int32(common.TaskTypeTimer)),
+			},
+			expectedError: false,
+			mockFn: func() {
+				s.mockShardController.EXPECT().GetEngineForShard(0).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().ResetTimerQueue(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+		},
+		"cros cluster task": {
+			request: &types.ResetQueueRequest{
+				ShardID: 0,
+				Type:    common.Int32Ptr(int32(common.TaskTypeCrossCluster)),
+			},
+			expectedError: false,
+			mockFn: func() {
+				s.mockShardController.EXPECT().GetEngineForShard(0).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().ResetCrossClusterQueue(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+		},
+		"invalid task": {
+			request: &types.ResetQueueRequest{
+				ShardID: 0,
+				Type:    common.Int32Ptr(int32(100)),
+			},
+			expectedError: true,
+			mockFn: func() {
+				s.mockShardController.EXPECT().GetEngineForShard(0).Return(s.mockEngine, nil).Times(1)
+			},
+		},
+	}
+
+	for name, input := range testInput {
+		s.Run(name, func() {
+			input.mockFn()
+			err := s.handler.ResetQueue(context.Background(), input.request)
+			if input.expectedError {
+				s.Error(err)
+			} else {
+				s.NoError(err)
+			}
+		})
+
+	}
+}
+
+func (s *handlerSuite) TestDescribeQueue() {
+	testInput := map[string]struct {
+		request       *types.DescribeQueueRequest
+		expectedError bool
+		mockFn        func()
+	}{
+		"getEngine error": {
+			request: &types.DescribeQueueRequest{
+				ShardID: 0,
+			},
+			expectedError: true,
+			mockFn: func() {
+				s.mockShardController.EXPECT().GetEngineForShard(0).Return(nil, errors.New("error")).Times(1)
+			},
+		},
+		"transfer task": {
+			request: &types.DescribeQueueRequest{
+				ShardID: 0,
+				Type:    common.Int32Ptr(int32(common.TaskTypeTransfer)),
+			},
+			expectedError: false,
+			mockFn: func() {
+				s.mockShardController.EXPECT().GetEngineForShard(0).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().DescribeTransferQueue(gomock.Any(), gomock.Any()).Return(&types.DescribeQueueResponse{}, nil).Times(1)
+			},
+		},
+		"timer task": {
+			request: &types.DescribeQueueRequest{
+				ShardID: 0,
+				Type:    common.Int32Ptr(int32(common.TaskTypeTimer)),
+			},
+			expectedError: false,
+			mockFn: func() {
+				s.mockShardController.EXPECT().GetEngineForShard(0).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().DescribeTimerQueue(gomock.Any(), gomock.Any()).Return(&types.DescribeQueueResponse{}, nil).Times(1)
+			},
+		},
+		"cross cluster task": {
+			request: &types.DescribeQueueRequest{
+				ShardID: 0,
+				Type:    common.Int32Ptr(int32(common.TaskTypeCrossCluster)),
+			},
+			expectedError: false,
+			mockFn: func() {
+				s.mockShardController.EXPECT().GetEngineForShard(0).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().DescribeCrossClusterQueue(gomock.Any(), gomock.Any()).Return(&types.DescribeQueueResponse{}, nil).Times(1)
+			},
+		},
+		"invalid task": {
+			request: &types.DescribeQueueRequest{
+				Type: common.Int32Ptr(int32(100)),
+			},
+			expectedError: true,
+			mockFn: func() {
+				s.mockShardController.EXPECT().GetEngineForShard(0).Return(s.mockEngine, nil).Times(1)
+			},
+		},
+	}
+
+	for name, input := range testInput {
+		s.Run(name, func() {
+			input.mockFn()
+			resp, err := s.handler.DescribeQueue(context.Background(), input.request)
+			if input.expectedError {
+				s.Nil(resp)
+				s.Error(err)
+			} else {
+				s.NotNil(resp)
+				s.NoError(err)
+			}
+		})
+
+	}
+}
+
+func (s *handlerSuite) TestDescribeMutableState() {
+	validInput := &types.DescribeMutableStateRequest{
+		DomainUUID: testDomainID,
+		Execution: &types.WorkflowExecution{
+			WorkflowID: testWorkflowID,
+			RunID:      testValidUUID,
+		},
+	}
+	testInput := map[string]struct {
+		request       *types.DescribeMutableStateRequest
+		expectedError bool
+		mockFn        func()
+	}{
+		"empty domainID": {
+			request: &types.DescribeMutableStateRequest{
+				DomainUUID: "",
+			},
+			expectedError: true,
+			mockFn:        func() {},
+		},
+		"getEngine error": {
+			request:       validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(nil, errors.New("error")).Times(1)
+			},
+		},
+		"getMutableState error": {
+			request:       validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().DescribeMutableState(gomock.Any(), validInput).Return(nil, errors.New("error")).Times(1)
+			},
+		},
+		"success": {
+			request:       validInput,
+			expectedError: false,
+			mockFn: func() {
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().DescribeMutableState(gomock.Any(), validInput).Return(&types.DescribeMutableStateResponse{}, nil).Times(1)
+			},
+		},
+	}
+
+	for name, input := range testInput {
+		s.Run(name, func() {
+			input.mockFn()
+			resp, err := s.handler.DescribeMutableState(context.Background(), input.request)
+			if input.expectedError {
+				s.Nil(resp)
+				s.Error(err)
+			} else {
+				s.NotNil(resp)
+				s.NoError(err)
+			}
+		})
+	}
+}
+
+func (s *handlerSuite) TestGetMutableState() {
+	validInput := &types.GetMutableStateRequest{
+		DomainUUID: testDomainID,
+		Execution: &types.WorkflowExecution{
+			WorkflowID: testWorkflowID,
+			RunID:      testValidUUID,
+		},
+	}
+	testInput := map[string]struct {
+		request       *types.GetMutableStateRequest
+		expectedError bool
+		mockFn        func()
+	}{
+		"empty domainID": {
+			request: &types.GetMutableStateRequest{
+				DomainUUID: "",
+			},
+			expectedError: true,
+			mockFn:        func() {},
+		},
+		"ratelimit": {
+			request:       validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.mockRatelimiter.EXPECT().Allow().Return(false).Times(1)
+			},
+		},
+		"getEngine error": {
+			request:       validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(nil, errors.New("error")).Times(1)
+			},
+		},
+		"getMutableState error": {
+			request:       validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().GetMutableState(gomock.Any(), validInput).Return(nil, errors.New("error")).Times(1)
+			},
+		},
+		"success": {
+			request:       validInput,
+			expectedError: false,
+			mockFn: func() {
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().GetMutableState(gomock.Any(), validInput).Return(&types.GetMutableStateResponse{}, nil).Times(1)
+			},
+		},
+	}
+
+	for name, input := range testInput {
+		s.Run(name, func() {
+			input.mockFn()
+			resp, err := s.handler.GetMutableState(context.Background(), input.request)
+			if input.expectedError {
+				s.Nil(resp)
+				s.Error(err)
+			} else {
+				s.NotNil(resp)
+				s.NoError(err)
+			}
+		})
+	}
+}
+
+func (s *handlerSuite) TestPollMutableState() {
+	validInput := &types.PollMutableStateRequest{
+		DomainUUID: testDomainID,
+		Execution: &types.WorkflowExecution{
+			WorkflowID: testWorkflowID,
+			RunID:      testValidUUID,
+		},
+	}
+	testInput := map[string]struct {
+		request       *types.PollMutableStateRequest
+		expectedError bool
+		mockFn        func()
+	}{
+		"empty domainID": {
+			request: &types.PollMutableStateRequest{
+				DomainUUID: "",
+			},
+			expectedError: true,
+			mockFn:        func() {},
+		},
+		"ratelimit": {
+			request:       validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.mockRatelimiter.EXPECT().Allow().Return(false).Times(1)
+			},
+		},
+		"getEngine error": {
+			request:       validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(nil, errors.New("error")).Times(1)
+			},
+		},
+		"getMutableState error": {
+			request:       validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().PollMutableState(gomock.Any(), validInput).Return(nil, errors.New("error")).Times(1)
+			},
+		},
+		"success": {
+			request:       validInput,
+			expectedError: false,
+			mockFn: func() {
+				s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().PollMutableState(gomock.Any(), validInput).Return(&types.PollMutableStateResponse{}, nil).Times(1)
+			},
+		},
+	}
+
+	for name, input := range testInput {
+		s.Run(name, func() {
+			input.mockFn()
+			resp, err := s.handler.PollMutableState(context.Background(), input.request)
+			if input.expectedError {
+				s.Nil(resp)
+				s.Error(err)
+			} else {
+				s.NotNil(resp)
+				s.NoError(err)
+			}
+		})
+	}
+}
+
 func (s *handlerSuite) TestGetCrossClusterTasks() {
 	numShards := 10
 	targetCluster := cluster.TestAlternativeClusterName
@@ -880,9 +1752,9 @@ func (s *handlerSuite) TestStartWorkflowExecution() {
 		RunID: testWorkflowRunID,
 	}
 
-	s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).AnyTimes()
-	s.mockRatelimiter.EXPECT().Allow().Return(true).AnyTimes()
-	s.mockEngine.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(expectedResponse, nil).AnyTimes()
+	s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+	s.mockRatelimiter.EXPECT().Allow().Return(true).Times(1)
+	s.mockEngine.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(expectedResponse, nil).Times(1)
 
 	response, err := s.handler.StartWorkflowExecution(context.Background(), request)
 	s.Equal(expectedResponse, response)
