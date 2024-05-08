@@ -149,7 +149,7 @@ func (s *WorkflowIDRateLimitIntegrationSuite) TestWorkflowIDSpecificRateLimits()
 	// make this test less sensitive to latency, as test-runner hosts vary a lot.
 	assert.GreaterOrEqual(s.T(), limited, 4, "should have encountered some rate-limit errors after the burst was exhausted")
 
-	// After 1 second we should be able to start another workflow without being limited
+	// After 1 second (200ms at a minimum) we should be able to start more workflows without being limited
 	time.Sleep(1 * time.Second)
 	_, err := s.engine.StartWorkflowExecution(ctx, request)
 	assert.NoError(s.T(), err)
