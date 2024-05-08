@@ -50,6 +50,7 @@ type EngineForTest struct {
 	// Add mocks or other fields here
 }
 
+// NewEngineFn is defined as an alias for engineimpl.NewEngineWithShardContext to avoid circular dependency
 type NewEngineFn func(
 	shard shard.Context,
 	visibilityMgr persistence.VisibilityManager,
