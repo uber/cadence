@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
@@ -40,27 +41,44 @@ func TestInsertIntoHistoryTreeAndNode(t *testing.T) {
 		name        string
 		treeRow     *nosqlplugin.HistoryTreeRow
 		nodeRow     *nosqlplugin.HistoryNodeRow
-		setupMocks  func(session *fakeSession)
+		setupMocks  func(*gomock.Controller, *fakeSession)
 		expectError bool
 	}{
 		{
-			name: "Successfully insert tree and node row",
+			name: "Successfully insert only tree row",
 			treeRow: &nosqlplugin.HistoryTreeRow{
 				TreeID:          "treeID",
 				BranchID:        "branchID",
-				Ancestors:       []*types.HistoryBranchRange{}, // Adjusted to slice of pointers
+				Ancestors:       []*types.HistoryBranchRange{{BranchID: "branch1", EndNodeID: 100}},
 				CreateTimestamp: time.Now(),
 			},
+			nodeRow: nil, // No node row provided
+			setupMocks: func(ctrl *gomock.Controller, session *fakeSession) {
+				mockQuery := gocql.NewMockQuery(ctrl)
+				mockQuery.EXPECT().WithContext(gomock.Any()).Return(mockQuery)
+				mockQuery.EXPECT().Exec().Return(nil)
+
+				session.query = mockQuery
+			},
+			expectError: false,
+		},
+		{
+			name:    "Successfully insert only node row",
+			treeRow: nil, // No tree row provided
 			nodeRow: &nosqlplugin.HistoryNodeRow{
 				TreeID:       "treeID",
 				BranchID:     "branchID",
 				NodeID:       1,
-				Data:         []byte("data"),
+				TxnID:        nil, // Optional field
+				Data:         []byte("node data"),
 				DataEncoding: "encoding",
 			},
-			setupMocks: func(session *fakeSession) {
-				session.mapExecuteBatchCASApplied = true
-				session.mapExecuteBatchCASErr = nil
+			setupMocks: func(ctrl *gomock.Controller, session *fakeSession) {
+				mockQuery := gocql.NewMockQuery(ctrl)
+				mockQuery.EXPECT().WithContext(gomock.Any()).Return(mockQuery)
+				mockQuery.EXPECT().Exec().Return(nil)
+
+				session.query = mockQuery
 			},
 			expectError: false,
 		},
@@ -69,16 +87,14 @@ func TestInsertIntoHistoryTreeAndNode(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
-			session := &fakeSession{
-				query: gocql.NewMockQuery(ctrl),
-			}
+			session := &fakeSession{}
 			if tt.setupMocks != nil {
-				tt.setupMocks(session)
+				tt.setupMocks(ctrl, session)
 			}
 
 			db := &cdb{session: session}
-
 			err := db.InsertIntoHistoryTreeAndNode(context.Background(), tt.treeRow, tt.nodeRow)
 			if tt.expectError {
 				assert.Error(t, err, "Expected an error but got none")
@@ -239,6 +255,191 @@ func TestDeleteFromHistoryTreeAndNode(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSelectAllHistoryTrees(t *testing.T) {
+	location, err := time.LoadLocation("UTC")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fixedTime, err := time.ParseInLocation(time.RFC3339, "2023-12-12T22:08:41Z", location)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name          string
+		nextPageToken []byte
+		pageSize      int
+		setupMocks    func(*gomock.Controller, *fakeSession)
+		expectedRows  []*nosqlplugin.HistoryTreeRow
+		expectedToken []byte
+		expectError   bool
+	}{
+		{
+			name:          "Successfully retrieve all history trees",
+			nextPageToken: []byte("token"),
+			pageSize:      10,
+			setupMocks: func(ctrl *gomock.Controller, session *fakeSession) {
+				mockQuery := gocql.NewMockQuery(ctrl)
+				mockQuery.EXPECT().WithContext(gomock.Any()).Return(mockQuery).AnyTimes()
+				mockQuery.EXPECT().PageSize(gomock.Any()).Return(mockQuery).AnyTimes()
+				mockQuery.EXPECT().PageState(gomock.Any()).Return(mockQuery).AnyTimes()
+
+				session.iter = &fakeIter{
+					scanInputs: [][]interface{}{
+						{"treeID1", "branchID1", fixedTime, "Tree info 1"},
+						{"treeID2", "branchID2", fixedTime.Add(time.Minute), "Tree info 2"},
+					},
+					pageState: []byte("nextPageToken"),
+				}
+				mockQuery.EXPECT().Iter().Return(session.iter).AnyTimes()
+				session.query = mockQuery
+			},
+			expectedRows: []*nosqlplugin.HistoryTreeRow{
+				{TreeID: "treeID1", BranchID: "branchID1", CreateTimestamp: fixedTime, Info: "Tree info 1"},
+				{TreeID: "treeID2", BranchID: "branchID2", CreateTimestamp: fixedTime.Add(time.Minute), Info: "Tree info 2"},
+			},
+			expectedToken: []byte("nextPageToken"),
+			expectError:   false,
+		},
+		{
+			name:          "Failed to create query iterator",
+			nextPageToken: []byte("token"),
+			pageSize:      10,
+			setupMocks: func(ctrl *gomock.Controller, session *fakeSession) {
+				mockQuery := gocql.NewMockQuery(ctrl)
+				mockQuery.EXPECT().WithContext(gomock.Any()).Return(mockQuery).AnyTimes()
+				mockQuery.EXPECT().PageSize(gomock.Any()).Return(mockQuery).AnyTimes()
+				mockQuery.EXPECT().PageState(gomock.Any()).Return(mockQuery).AnyTimes()
+				mockQuery.EXPECT().Iter().Return(nil).AnyTimes() // Simulate failure to create iterator
+				session.query = mockQuery
+			},
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			session := &fakeSession{}
+			if tt.setupMocks != nil {
+				tt.setupMocks(ctrl, session)
+			}
+
+			db := &cdb{session: session}
+			rows, token, err := db.SelectAllHistoryTrees(context.Background(), tt.nextPageToken, tt.pageSize)
+
+			if tt.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				for i, row := range rows {
+					assertHistoryTreeRowEqual(t, tt.expectedRows[i], row)
+				}
+				assert.Equal(t, tt.expectedToken, token)
+			}
+		})
+	}
+}
+
+func TestSelectFromHistoryTree(t *testing.T) {
+	tests := []struct {
+		name         string
+		filter       *nosqlplugin.HistoryTreeFilter
+		setupMocks   func(*gomock.Controller, *fakeSession)
+		expectedRows []*nosqlplugin.HistoryTreeRow
+		expectError  bool
+	}{
+		{
+			name: "Successfully retrieve branches",
+			filter: &nosqlplugin.HistoryTreeFilter{
+				TreeID: "treeID",
+			},
+			setupMocks: func(ctrl *gomock.Controller, session *fakeSession) {
+				mockQuery := gocql.NewMockQuery(ctrl)
+				mockQuery.EXPECT().WithContext(gomock.Any()).Return(mockQuery).AnyTimes()
+				mockQuery.EXPECT().PageSize(gomock.Any()).Return(mockQuery).AnyTimes()
+				mockQuery.EXPECT().PageState(gomock.Any()).Return(mockQuery).AnyTimes()
+
+				iter1 := newFakeIter([][]interface{}{
+					{"branchUUID1", []map[string]interface{}{{"branch_id": uuid.Parse(permanentRunID), "end_node_id": int64(10)}}, time.Now(), "Info1"},
+				}, []byte("nextPageToken"))
+
+				iter2 := newFakeIter([][]interface{}{
+					{"branchUUID2", []map[string]interface{}{{"branch_id": uuid.Parse(permanentRunID), "end_node_id": int64(20)}}, time.Now(), "Info2"},
+				}, nil) // No more pages
+
+				gomock.InOrder(
+					mockQuery.EXPECT().Iter().Return(iter1),
+					mockQuery.EXPECT().Iter().Return(iter2),
+				)
+
+				session.query = mockQuery
+			},
+			expectedRows: []*nosqlplugin.HistoryTreeRow{
+				{TreeID: "treeID", BranchID: "branchUUID1", Ancestors: []*types.HistoryBranchRange{{BranchID: permanentRunID, EndNodeID: 10, BeginNodeID: 1}}, Info: ""},
+				{TreeID: "treeID", BranchID: "branchUUID2", Ancestors: []*types.HistoryBranchRange{{BranchID: permanentRunID, EndNodeID: 20, BeginNodeID: 1}}, Info: ""},
+			},
+			expectError: false,
+		},
+		{
+			name: "Failed to create query iterator",
+			filter: &nosqlplugin.HistoryTreeFilter{
+				TreeID: "treeID",
+			},
+			setupMocks: func(ctrl *gomock.Controller, session *fakeSession) {
+				mockQuery := gocql.NewMockQuery(ctrl)
+				mockQuery.EXPECT().WithContext(gomock.Any()).Return(mockQuery).AnyTimes()
+				mockQuery.EXPECT().PageSize(gomock.Any()).Return(mockQuery).AnyTimes()
+				mockQuery.EXPECT().PageState(gomock.Any()).Return(mockQuery).AnyTimes()
+
+				mockQuery.EXPECT().Iter().Return(nil) // Simulate failure to create iterator
+
+				session.query = mockQuery
+			},
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			session := &fakeSession{}
+			if tt.setupMocks != nil {
+				tt.setupMocks(ctrl, session)
+			}
+
+			db := &cdb{session: session}
+			rows, err := db.SelectFromHistoryTree(context.Background(), tt.filter)
+
+			if tt.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedRows, rows)
+			}
+		})
+	}
+}
+
+// Helper to create a fake iterator with predefined results
+func newFakeIter(data [][]interface{}, nextPageToken []byte) *fakeIter {
+	return &fakeIter{
+		scanInputs: data,
+		pageState:  nextPageToken,
+	}
+}
+
+func assertHistoryTreeRowEqual(t *testing.T, expected, actual *nosqlplugin.HistoryTreeRow) {
+	assert.Equal(t, expected.TreeID, actual.TreeID)
+	assert.Equal(t, expected.BranchID, actual.BranchID)
+	assert.Equal(t, expected.Info, actual.Info)
+	assert.True(t, expected.CreateTimestamp.Equal(actual.CreateTimestamp), "Timestamps do not match")
 }
 
 func stringPtr(s string) *string {
