@@ -926,6 +926,93 @@ func (s *configStoreClientSuite) TestListValues_EmptyCache() {
 	s.Nil(val)
 }
 
+func (s *configStoreClientSuite) TestValidateKeyDataBlobPair() {
+	tests := []struct {
+		name    string
+		key     dc.Key
+		blob    *types.DataBlob
+		wantErr bool
+	}{
+		{
+			name: "valid int key",
+			key:  dc.TestGetIntPropertyKey,
+			blob: &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         jsonMarshalHelper(10),
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid int key - wrong type",
+			key:  dc.TestGetIntPropertyKey,
+			blob: &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         jsonMarshalHelper(true),
+			},
+			wantErr: true,
+		},
+		{
+			name: "valid bool key",
+			key:  dc.TestGetBoolPropertyKey,
+			blob: &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         jsonMarshalHelper(true),
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid bool key - wrong type",
+			key:  dc.TestGetBoolPropertyKey,
+			blob: &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         jsonMarshalHelper("true"),
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		s.Run(tc.name, func() {
+			err := validateKeyDataBlobPair(tc.key, tc.blob)
+			if tc.wantErr {
+				s.Require().Error(err, "Expected an error for case: %s", tc.name)
+			} else {
+				s.Require().NoError(err, "Expected no error for case: %s", tc.name)
+			}
+		})
+	}
+}
+
+func (s *configStoreClientSuite) TestNewConfigStoreClient_NilPersistenceConfig() {
+	_, err := NewConfigStoreClient(&c.ClientConfig{}, nil, log.NewNoop(), p.DynamicConfig)
+	s.Require().Error(err, "should fail when persistence config is nil")
+	s.Require().EqualError(err, "persistence cfg is nil")
+}
+
+func (s *configStoreClientSuite) TestNewConfigStoreClient_MissingDefaultPersistenceConfig() {
+	persistenceCfg := &config.Persistence{
+		DataStores: map[string]config.DataStore{},
+	}
+	_, err := NewConfigStoreClient(&c.ClientConfig{}, persistenceCfg, log.NewNoop(), p.DynamicConfig)
+	s.Require().Error(err, "should fail when default persistence config is missing")
+	s.Require().EqualError(err, "default persistence config missing")
+}
+
+func (s *configStoreClientSuite) TestNewConfigStoreClient_InvalidClientConfig() {
+	persistenceCfg := &config.Persistence{
+		DataStores: map[string]config.DataStore{
+			"default": {},
+		},
+		DefaultStore: "default",
+	}
+	clientCfg := &c.ClientConfig{
+		PollInterval: time.Millisecond,
+	}
+	logger := log.NewNoop()
+	_, err := NewConfigStoreClient(clientCfg, persistenceCfg, logger, p.DynamicConfig)
+	s.Require().Error(err, "should fail when client config is invalid")
+}
+
 func jsonMarshalHelper(v interface{}) []byte {
 	data, _ := json.Marshal(v)
 	return data
