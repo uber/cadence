@@ -180,6 +180,7 @@ type (
 		GetClosedWorkflowExecution(ctx context.Context, request *InternalGetClosedWorkflowExecutionRequest) (*InternalGetClosedWorkflowExecutionResponse, error)
 		DeleteWorkflowExecution(ctx context.Context, request *VisibilityDeleteWorkflowExecutionRequest) error
 		ListWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsByQueryRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ListAllWorkflowExecutions(ctx context.Context, request *InternalListAllWorkflowExecutionsByTypeRequest) (*InternalListWorkflowExecutionsResponse, error)
 		ScanWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsByQueryRequest) (*InternalListWorkflowExecutionsResponse, error)
 		CountWorkflowExecutions(ctx context.Context, request *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error)
 		DeleteUninitializedWorkflowExecution(ctx context.Context, request *VisibilityDeleteWorkflowExecutionRequest) error
@@ -704,6 +705,14 @@ type (
 	InternalListWorkflowExecutionsByTypeRequest struct {
 		InternalListWorkflowExecutionsRequest
 		WorkflowTypeName string
+	}
+
+	// InternalListAllWorkflowExecutionsByTypeRequest is used to list all open and closed executions with specific filters in a domain
+	InternalListAllWorkflowExecutionsByTypeRequest struct {
+		InternalListWorkflowExecutionsRequest
+		Status              types.WorkflowExecutionCloseStatus
+		PartialMatch        bool
+		WorkflowSearchValue string // This value will be searched across workflow type, workflow ID and runID
 	}
 
 	// InternalGetClosedWorkflowExecutionResponse is response from GetWorkflowExecution
