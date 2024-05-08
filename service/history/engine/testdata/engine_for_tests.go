@@ -45,9 +45,9 @@ import (
 )
 
 type EngineForTest struct {
-	Engine  engine.Engine
-	Cleanup func()
+	Engine engine.Engine
 	// Add mocks or other fields here
+	Ctx *shard.TestContext
 }
 
 // NewEngineFn is defined as an alias for engineimpl.NewEngineWithShardContext to avoid circular dependency
@@ -111,7 +111,6 @@ func NewEngineForTest(t *testing.T, newEngineFn NewEngineFn) *EngineForTest {
 		},
 	)
 
-	visibilityMgr := persistence.NewMockVisibilityManager(controller)
 	mockWFServiceClient := workflowservicetest.NewMockClient(controller)
 	xClusterTaskFetcher := task.NewMockFetcher(controller)
 
@@ -160,7 +159,7 @@ func NewEngineForTest(t *testing.T, newEngineFn NewEngineFn) *EngineForTest {
 
 	engine := newEngineFn(
 		shardCtx,
-		visibilityMgr,
+		shardCtx.Resource.VisibilityMgr,
 		shardCtx.Resource.MatchingClient,
 		mockWFServiceClient,
 		historyEventNotifier,
@@ -178,10 +177,10 @@ func NewEngineForTest(t *testing.T, newEngineFn NewEngineFn) *EngineForTest {
 	shardCtx.SetEngine(engine)
 
 	historyEventNotifier.Start()
+	t.Cleanup(historyEventNotifier.Stop)
+
 	return &EngineForTest{
 		Engine: engine,
-		Cleanup: func() {
-			historyEventNotifier.Stop()
-		},
+		Ctx:    shardCtx,
 	}
 }
