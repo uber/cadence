@@ -1,3 +1,25 @@
+// The MIT License (MIT)
+
+// Copyright (c) 2017-2020 Uber Technologies Inc.
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package ndc
 
 import (
@@ -18,48 +40,52 @@ import (
 	"testing"
 )
 
+func createTestHistoryReplicator(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	mockShard := shard.NewMockContext(ctrl)
+	mockShard.EXPECT().GetConfig().Return(&config.Config{
+		NumberOfShards:           0,
+		IsAdvancedVisConfigExist: false,
+		MaxResponseSize:          0,
+		HistoryCacheInitialSize:  dynamicconfig.GetIntPropertyFn(10),
+		HistoryCacheMaxSize:      dynamicconfig.GetIntPropertyFn(10),
+		HistoryCacheTTL:          dynamicconfig.GetDurationPropertyFn(10),
+		HostName:                 "test-host",
+	}).Times(1)
+
+	// before going into NewHistoryReplicator
+	mockExecutionManager := persistence.NewMockExecutionManager(ctrl)
+	mockShard.EXPECT().GetExecutionManager().Return(mockExecutionManager).Times(1)
+	mockShard.EXPECT().GetLogger().Return(log.NewNoop()).Times(1)
+	mockShard.EXPECT().GetMetricsClient().Return(nil).Times(3)
+
+	testExecutionCache := execution.NewCache(mockShard)
+	mockEventsReapplier := NewMockEventsReapplier(ctrl)
+
+	// going into NewHistoryReplicator -> newTransactionManager()
+	mockShard.EXPECT().GetClusterMetadata().Return(cluster.Metadata{}).Times(2)
+	mockHistoryManager := persistence.NewMockHistoryManager(ctrl)
+	mockShard.EXPECT().GetHistoryManager().Return(mockHistoryManager).Times(3)
+
+	mockHistoryResource := resource.NewMockResource(ctrl)
+	mockShard.EXPECT().GetService().Return(mockHistoryResource).Times(2)
+	mockPayloadSerializer := persistence.NewMockPayloadSerializer(ctrl)
+	mockHistoryResource.EXPECT().GetPayloadSerializer().Return(mockPayloadSerializer).Times(1)
+
+	// going into NewHistoryReplicator -> newTransactionManager -> reset.NewWorkflowResetter
+	mockDomainCache := cache.NewMockDomainCache(ctrl)
+	mockShard.EXPECT().GetDomainCache().Return(mockDomainCache).Times(2)
+
+	// going back to NewHistoryReplicator
+	mockHistoryResource.EXPECT().GetClusterMetadata().Return(cluster.Metadata{}).Times(1)
+
+	NewHistoryReplicator(mockShard, testExecutionCache, mockEventsReapplier, log.NewNoop())
+}
+
 func TestNewHistoryReplicator(t *testing.T) {
 	assert.NotPanics(t, func() {
-		ctrl := gomock.NewController(t)
-
-		mockShard := shard.NewMockContext(ctrl)
-		mockShard.EXPECT().GetConfig().Return(&config.Config{
-			NumberOfShards:           0,
-			IsAdvancedVisConfigExist: false,
-			MaxResponseSize:          0,
-			HistoryCacheInitialSize:  dynamicconfig.GetIntPropertyFn(10),
-			HistoryCacheMaxSize:      dynamicconfig.GetIntPropertyFn(10),
-			HistoryCacheTTL:          dynamicconfig.GetDurationPropertyFn(10),
-			HostName:                 "test-host",
-		}).Times(1)
-
-		// before going into NewHistoryReplicator
-		mockExecutionManager := persistence.NewMockExecutionManager(ctrl)
-		mockShard.EXPECT().GetExecutionManager().Return(mockExecutionManager).Times(1)
-		mockShard.EXPECT().GetLogger().Return(log.NewNoop()).Times(1)
-		mockShard.EXPECT().GetMetricsClient().Return(nil).Times(3)
-
-		testExecutionCache := execution.NewCache(mockShard)
-		mockEventsReapplier := NewMockEventsReapplier(ctrl)
-
-		// going into NewHistoryReplicator -> newTransactionManager()
-		mockShard.EXPECT().GetClusterMetadata().Return(cluster.Metadata{}).Times(2)
-		mockHistoryManager := persistence.NewMockHistoryManager(ctrl)
-		mockShard.EXPECT().GetHistoryManager().Return(mockHistoryManager).Times(3)
-
-		mockHistoryResource := resource.NewMockResource(ctrl)
-		mockShard.EXPECT().GetService().Return(mockHistoryResource).Times(2)
-		mockPayloadSerializer := persistence.NewMockPayloadSerializer(ctrl)
-		mockHistoryResource.EXPECT().GetPayloadSerializer().Return(mockPayloadSerializer).Times(1)
-
-		// going into NewHistoryReplicator -> newTransactionManager -> reset.NewWorkflowResetter
-		mockDomainCache := cache.NewMockDomainCache(ctrl)
-		mockShard.EXPECT().GetDomainCache().Return(mockDomainCache).Times(2)
-
-		// going back to NewHistoryReplicator
-		mockHistoryResource.EXPECT().GetClusterMetadata().Return(cluster.Metadata{}).Times(1)
-
-		NewHistoryReplicator(mockShard, testExecutionCache, mockEventsReapplier, log.NewNoop())
+		createTestHistoryReplicator(t)
 	})
 }
 
