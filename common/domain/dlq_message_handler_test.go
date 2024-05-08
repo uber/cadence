@@ -138,8 +138,6 @@ func TestDLQMessageHandler_Start(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
 			mockQueue := NewMockReplicationQueue(ctrl)
 			mockReplicationTaskExecutor := NewMockReplicationTaskExecutor(ctrl)
 			mockLogger := testlogger.New(t)
@@ -160,7 +158,7 @@ func TestDLQMessageHandler_Start(t *testing.T) {
 			handler.Start()
 			mockedTime.Advance(5 * time.Minute)
 			defer handler.Stop()
-			assert.Equal(t, tc.expectedStatus, atomic.LoadInt32(&handler.status), assert.Equal(t, tc.expectedStatus, atomic.LoadInt32(&handler.status), "Handler did not reach the expected status for test case: %s", tc.name))
+			assert.Equal(t, tc.expectedStatus, atomic.LoadInt32(&handler.status))
 		})
 	}
 }
@@ -190,9 +188,6 @@ func (s *dlqMessageHandlerSuite) TestStop() {
 		s.Run(test.name, func() {
 			atomic.StoreInt32(&s.dlqMessageHandler.status, test.initialStatus)
 			s.dlqMessageHandler.Stop()
-			if test.shouldStop {
-				s.dlqMessageHandler.logger.Info("Domain DLQ handler shutting down.")
-			}
 			s.Equal(test.expectedStatus, atomic.LoadInt32(&s.dlqMessageHandler.status))
 		})
 	}
