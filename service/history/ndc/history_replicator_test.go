@@ -41,7 +41,7 @@ import (
 	"github.com/uber/cadence/service/history/shard"
 )
 
-func createTestHistoryReplicator(t *testing.T) {
+func createTestHistoryReplicator(t *testing.T) historyReplicatorImpl {
 	ctrl := gomock.NewController(t)
 
 	mockShard := shard.NewMockContext(ctrl)
@@ -81,11 +81,16 @@ func createTestHistoryReplicator(t *testing.T) {
 	// going back to NewHistoryReplicator
 	mockHistoryResource.EXPECT().GetClusterMetadata().Return(cluster.Metadata{}).Times(1)
 
-	assert.NotNil(t, NewHistoryReplicator(mockShard, testExecutionCache, mockEventsReapplier, log.NewNoop()))
+	replicator := NewHistoryReplicator(mockShard, testExecutionCache, mockEventsReapplier, log.NewNoop())
+	replicatorImpl := replicator.(*historyReplicatorImpl)
+	return *replicatorImpl
+}
+
+type name struct {
 }
 
 func TestNewHistoryReplicator(t *testing.T) {
-	createTestHistoryReplicator(t)
+	assert.NotNil(t, createTestHistoryReplicator(t))
 }
 
 func TestNewHistoryReplicator_newBranchManager(t *testing.T) {
