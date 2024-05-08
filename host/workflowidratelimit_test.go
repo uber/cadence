@@ -127,21 +127,29 @@ func (s *WorkflowIDRateLimitIntegrationSuite) TestWorkflowIDSpecificRateLimits()
 	ctx, cancel := createContext()
 	defer cancel()
 
-	// The ratelimit is 5 per second, so we should be able to start 5 workflows without any error
+	// The ratelimit is 5 per second with a burst of 5, so we should be able to start 5 workflows without any error
 	for i := 0; i < 5; i++ {
 		_, err := s.engine.StartWorkflowExecution(ctx, request)
 		assert.NoError(s.T(), err)
 	}
 
-	// Now we should get a rate limit error
+	// Now we should get a rate limit error (with some fuzziness for time passing)
+	limited := 0
 	for i := 0; i < 5; i++ {
 		_, err := s.engine.StartWorkflowExecution(ctx, request)
 		var busyErr *types.ServiceBusyError
-		assert.ErrorAs(s.T(), err, &busyErr)
-		assert.Equal(s.T(), common.WorkflowIDRateLimitReason, busyErr.Reason)
+		if err != nil {
+			if assert.ErrorAs(s.T(), err, &busyErr) {
+				limited++
+				assert.Equal(s.T(), common.WorkflowIDRateLimitReason, busyErr.Reason)
+			}
+		}
 	}
+	// 5 fairly regularly fails, 4 seems probably-likely to be reliable with minor time skew,
+	// but be a bit more permissive as buildkite hosts vary a lot
+	assert.GreaterOrEqual(s.T(), limited, 3, "should have encountered some rate-limit errors after the burst was exhausted")
 
-	// After 1 second we should be able to start another workflow
+	// After 1 second we should be able to start another workflow without being limited
 	time.Sleep(1 * time.Second)
 	_, err := s.engine.StartWorkflowExecution(ctx, request)
 	assert.NoError(s.T(), err)
