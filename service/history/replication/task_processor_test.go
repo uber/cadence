@@ -32,6 +32,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
+	"go.uber.org/goleak"
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/client"
@@ -129,8 +130,13 @@ func (s *taskProcessorSuite) SetupTest() {
 }
 
 func (s *taskProcessorSuite) TearDownTest() {
-	s.controller.Finish()
 	s.mockShard.Finish(s.T())
+}
+
+func (s *taskProcessorSuite) TestStartStop() {
+	s.taskProcessor.Start()
+	s.taskProcessor.Stop()
+	goleak.VerifyNone(s.T())
 }
 
 func (s *taskProcessorSuite) TestProcessResponse_NoTask() {
@@ -144,12 +150,21 @@ func (s *taskProcessorSuite) TestProcessResponse_NoTask() {
 }
 
 func (s *taskProcessorSuite) TestSendFetchMessageRequest() {
-	s.taskProcessor.sendFetchMessageRequest()
+	// start the process loop so it poppulates requestChan
+	s.taskProcessor.wg.Add(1)
+	go s.taskProcessor.processorLoop()
+
+	// wait a bit and terminate the loop
+	time.Sleep(50 * time.Millisecond)
+	close(s.taskProcessor.done)
+
+	// check the request
 	requestMessage := <-s.requestChan
 
 	s.Equal(int32(0), requestMessage.token.GetShardID())
 	s.Equal(int64(-1), requestMessage.token.GetLastProcessedMessageID())
 	s.Equal(int64(-1), requestMessage.token.GetLastRetrievedMessageID())
+	s.NotNil(requestMessage.respChan)
 }
 
 func (s *taskProcessorSuite) TestHandleSyncShardStatus() {
