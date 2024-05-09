@@ -316,6 +316,8 @@ func (e *mutableStateBuilder) CopyToPersistence() *persistence.WorkflowMutableSt
 	state.BufferedEvents = e.bufferedEvents
 	state.VersionHistories = e.versionHistories
 	state.Checksum = e.checksum
+	state.ReplicationState = e.replicationState
+	state.ExecutionStats = e.executionStats
 
 	return state
 }

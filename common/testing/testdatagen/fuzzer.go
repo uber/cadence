@@ -31,8 +31,14 @@ import (
 
 // NewFuzzer creates a new fuzzer, notes down the deterministic seed
 func New(t *testing.T, generatorFuncs ...interface{}) *fuzz.Fuzzer {
+	return NewWithNilChance(t, 0.2, generatorFuncs...)
+}
+
+
+// NewFuzzer creates a new fuzzer, notes down the deterministic seed
+func NewWithNilChance(t *testing.T, nilchance float32, generatorFuncs ...interface{}) *fuzz.Fuzzer {
 	seed := time.Now().Unix()
 	t.Log("Fuzz Seed:", seed)
 
-	return fuzz.NewWithSeed(time.Now().Unix()).Funcs(generatorFuncs...).NilChance(0.2)
+	return fuzz.NewWithSeed(time.Now().Unix()).Funcs(generatorFuncs...).NilChance(float64(nilchance))
 }

@@ -36,6 +36,8 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/checksum"
+	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
@@ -1891,4 +1893,42 @@ func TestLog(t *testing.T) {
 	assert.NotPanics(t, func() { e.logInfo("a") })
 	assert.NotPanics(t, func() { e.logWarn("a") })
 	assert.NotPanics(t, func() { e.logError("a") })
+}
+
+
+func TestMutableStateBuilder_CopyToPersistence_roundtrip(t *testing.T) {
+
+	ctrl := gomock.NewController(t)
+
+	fuzzer := testdatagen.NewWithNilChance(t, 0)
+
+	execution :=  &persistence.WorkflowMutableState{}
+	fuzzer.Fuzz(&execution)
+
+	shardContext := shard.NewMockContext(ctrl)
+	mockCache := events.NewMockCache(ctrl)
+	mockDomainCache := cache.NewMockDomainCache(ctrl)
+	mockDomainCache.EXPECT().GetDomainID(gomock.Any()).Return("some-domain-id", nil).AnyTimes()
+
+	shardContext.EXPECT().GetClusterMetadata().Return(cluster.TestActiveClusterMetadata).Times(2)
+	shardContext.EXPECT().GetEventsCache().Return(mockCache)
+	shardContext.EXPECT().GetConfig().Return(&config.Config{
+		NumberOfShards:           2,
+		IsAdvancedVisConfigExist: false,
+		MaxResponseSize:          0,
+		MutableStateChecksumInvalidateBefore: dynamicconfig.GetFloatPropertyFn(10),
+		MutableStateChecksumVerifyProbability: dynamicconfig.GetIntPropertyFilteredByDomain(0.0),
+		HostName:                 "test-host",
+	}).Times(1)
+	shardContext.EXPECT().GetTimeSource().Return(clock.NewMockedTimeSource())
+	shardContext.EXPECT().GetMetricsClient().Return(metrics.NewNoopMetricsClient())
+	shardContext.EXPECT().GetDomainCache().Return(mockDomainCache).AnyTimes()
+
+	msb := newMutableStateBuilder(shardContext, log.NewNoop(), constants.TestGlobalDomainEntry)
+
+	msb.Load(execution)
+
+	out := msb.CopyToPersistence()
+
+	assert.Equal(t, execution, out)
 }
