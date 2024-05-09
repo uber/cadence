@@ -41,8 +41,8 @@ func TestDescribeWorkflowExecution(t *testing.T) {
 	eft := testdata.NewEngineForTest(t, NewEngineWithShardContext)
 
 	childDomainID := "deleted-domain"
-	eft.Ctx.Resource.DomainCache.EXPECT().GetDomainName(constants.TestParentDomainID).Return(constants.TestParentDomainName, nil).AnyTimes()
-	eft.Ctx.Resource.DomainCache.EXPECT().GetDomainName(childDomainID).Return("", &types.EntityNotExistsError{}).AnyTimes()
+	eft.ShardCtx.Resource.DomainCache.EXPECT().GetDomainName(constants.TestParentDomainID).Return(constants.TestParentDomainName, nil).AnyTimes()
+	eft.ShardCtx.Resource.DomainCache.EXPECT().GetDomainName(childDomainID).Return("", &types.EntityNotExistsError{}).AnyTimes()
 	execution := types.WorkflowExecution{
 		WorkflowID: constants.TestWorkflowID,
 		RunID:      constants.TestRunID,
@@ -113,7 +113,7 @@ func TestDescribeWorkflowExecution(t *testing.T) {
 		InitiatedID:       3000,
 		ParentClosePolicy: types.ParentClosePolicyAbandon.Ptr(),
 	}
-	eft.Ctx.Resource.ExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{
+	eft.ShardCtx.Resource.ExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{
 		State: &persistence.WorkflowMutableState{
 			ActivityInfos: map[int64]*persistence.ActivityInfo{
 				1: {
@@ -191,7 +191,7 @@ func TestDescribeWorkflowExecution(t *testing.T) {
 			},
 		},
 	}, nil).Once()
-	eft.Ctx.Resource.HistoryMgr.On("ReadHistoryBranch", mock.Anything, mock.Anything).Return(&persistence.ReadHistoryBranchResponse{
+	eft.ShardCtx.Resource.HistoryMgr.On("ReadHistoryBranch", mock.Anything, mock.Anything).Return(&persistence.ReadHistoryBranchResponse{
 		HistoryEvents: []*types.HistoryEvent{
 			{
 				ID: 1,
