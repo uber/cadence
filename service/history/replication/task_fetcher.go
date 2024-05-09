@@ -37,6 +37,8 @@ import (
 	"github.com/uber/cadence/service/history/config"
 )
 
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination task_fetcher_mock.go -self_package github.com/uber/cadence/service/history/replication
+
 // TODO: reuse the interface and implementation defined in history/task package
 
 const (

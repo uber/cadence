@@ -80,52 +80,48 @@ var (
 	errDomainDeprecated = &types.BadRequestError{Message: "Domain is deprecated."}
 )
 
-type (
-	historyEngineImpl struct {
-		currentClusterName             string
-		shard                          shard.Context
-		timeSource                     clock.TimeSource
-		decisionHandler                decision.Handler
-		clusterMetadata                cluster.Metadata
-		historyV2Mgr                   persistence.HistoryManager
-		executionManager               persistence.ExecutionManager
-		visibilityMgr                  persistence.VisibilityManager
-		txProcessor                    queue.Processor
-		timerProcessor                 queue.Processor
-		crossClusterProcessor          queue.Processor
-		nDCReplicator                  ndc.HistoryReplicator
-		nDCActivityReplicator          ndc.ActivityReplicator
-		historyEventNotifier           events.Notifier
-		tokenSerializer                common.TaskTokenSerializer
-		executionCache                 *execution.Cache
-		metricsClient                  metrics.Client
-		logger                         log.Logger
-		throttledLogger                log.Logger
-		config                         *config.Config
-		archivalClient                 warchiver.Client
-		workflowResetter               reset.WorkflowResetter
-		queueTaskProcessor             task.Processor
-		crossClusterTaskProcessors     common.Daemon
-		replicationTaskProcessors      []replication.TaskProcessor
-		replicationAckManager          replication.TaskAckManager
-		replicationTaskStore           *replication.TaskStore
-		replicationHydrator            replication.TaskHydrator
-		replicationMetricsEmitter      *replication.MetricsEmitterImpl
-		publicClient                   workflowserviceclient.Interface
-		eventsReapplier                ndc.EventsReapplier
-		matchingClient                 matching.Client
-		rawMatchingClient              matching.Client
-		clientChecker                  client.VersionChecker
-		replicationDLQHandler          replication.DLQHandler
-		failoverMarkerNotifier         failover.MarkerNotifier
-		wfIDCache                      workflowcache.WFCache
-		ratelimitInternalPerWorkflowID dynamicconfig.BoolPropertyFnWithDomainFilter
+type historyEngineImpl struct {
+	currentClusterName             string
+	shard                          shard.Context
+	timeSource                     clock.TimeSource
+	decisionHandler                decision.Handler
+	clusterMetadata                cluster.Metadata
+	historyV2Mgr                   persistence.HistoryManager
+	executionManager               persistence.ExecutionManager
+	visibilityMgr                  persistence.VisibilityManager
+	txProcessor                    queue.Processor
+	timerProcessor                 queue.Processor
+	crossClusterProcessor          queue.Processor
+	nDCReplicator                  ndc.HistoryReplicator
+	nDCActivityReplicator          ndc.ActivityReplicator
+	historyEventNotifier           events.Notifier
+	tokenSerializer                common.TaskTokenSerializer
+	executionCache                 *execution.Cache
+	metricsClient                  metrics.Client
+	logger                         log.Logger
+	throttledLogger                log.Logger
+	config                         *config.Config
+	archivalClient                 warchiver.Client
+	workflowResetter               reset.WorkflowResetter
+	queueTaskProcessor             task.Processor
+	crossClusterTaskProcessors     common.Daemon
+	replicationTaskProcessors      []replication.TaskProcessor
+	replicationAckManager          replication.TaskAckManager
+	replicationTaskStore           *replication.TaskStore
+	replicationHydrator            replication.TaskHydrator
+	replicationMetricsEmitter      *replication.MetricsEmitterImpl
+	publicClient                   workflowserviceclient.Interface
+	eventsReapplier                ndc.EventsReapplier
+	matchingClient                 matching.Client
+	rawMatchingClient              matching.Client
+	clientChecker                  client.VersionChecker
+	replicationDLQHandler          replication.DLQHandler
+	failoverMarkerNotifier         failover.MarkerNotifier
+	wfIDCache                      workflowcache.WFCache
+	ratelimitInternalPerWorkflowID dynamicconfig.BoolPropertyFnWithDomainFilter
 
-		updateWithActionFn func(context.Context, *execution.Cache, string, types.WorkflowExecution, bool, time.Time, func(wfContext execution.Context, mutableState execution.MutableState) error) error
-	}
-)
-
-var _ engine.Engine = (*historyEngineImpl)(nil)
+	updateWithActionFn func(context.Context, *execution.Cache, string, types.WorkflowExecution, bool, time.Time, func(wfContext execution.Context, mutableState execution.MutableState) error) error
+}
 
 var (
 	// FailedWorkflowCloseState is a set of failed workflow close states, used for start workflow policy
@@ -153,6 +149,7 @@ func NewEngineWithShardContext(
 	failoverCoordinator failover.Coordinator,
 	wfIDCache workflowcache.WFCache,
 	ratelimitInternalPerWorkflowID dynamicconfig.BoolPropertyFnWithDomainFilter,
+	queueProcessorFactory queue.ProcessorFactory,
 ) engine.Engine {
 	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
 
@@ -251,7 +248,7 @@ func NewEngineWithShardContext(
 	)
 	openExecutionCheck := invariant.NewConcreteExecutionExists(pRetry, shard.GetDomainCache())
 
-	historyEngImpl.txProcessor = queue.NewTransferQueueProcessor(
+	historyEngImpl.txProcessor = queueProcessorFactory.NewTransferQueueProcessor(
 		shard,
 		historyEngImpl,
 		queueTaskProcessor,
@@ -263,7 +260,7 @@ func NewEngineWithShardContext(
 		historyEngImpl.ratelimitInternalPerWorkflowID,
 	)
 
-	historyEngImpl.timerProcessor = queue.NewTimerQueueProcessor(
+	historyEngImpl.timerProcessor = queueProcessorFactory.NewTimerQueueProcessor(
 		shard,
 		historyEngImpl,
 		queueTaskProcessor,
@@ -272,7 +269,7 @@ func NewEngineWithShardContext(
 		openExecutionCheck,
 	)
 
-	historyEngImpl.crossClusterProcessor = queue.NewCrossClusterQueueProcessor(
+	historyEngImpl.crossClusterProcessor = queueProcessorFactory.NewCrossClusterQueueProcessor(
 		shard,
 		historyEngImpl,
 		executionCache,

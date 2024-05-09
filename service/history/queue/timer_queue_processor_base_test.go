@@ -94,7 +94,10 @@ func (s *timerQueueProcessorBaseSuite) SetupTest() {
 func (s *timerQueueProcessorBaseSuite) TearDownTest() {
 	s.controller.Finish()
 	s.mockShard.Finish(s.T())
-	goleak.VerifyNone(s.T())
+	defer goleak.VerifyNone(s.T(),
+		// TODO(CDNC-8881):  TimerGate should not start background goroutine in constructor. Make it start/stoppable
+		goleak.IgnoreTopFunction("github.com/uber/cadence/service/history/queue.NewLocalTimerGate.func1"),
+	)
 }
 
 func (s *timerQueueProcessorBaseSuite) TestIsProcessNow() {

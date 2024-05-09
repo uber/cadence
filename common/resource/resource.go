@@ -90,7 +90,6 @@ type (
 		GetClientBean() client.Bean
 
 		// persistence clients
-
 		GetDomainManager() persistence.DomainManager
 		GetTaskManager() persistence.TaskManager
 		GetVisibilityManager() persistence.VisibilityManager
@@ -103,7 +102,6 @@ type (
 		GetHostName() string
 
 		// loggers
-
 		GetLogger() log.Logger
 		GetThrottledLogger() log.Logger
 
