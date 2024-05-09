@@ -63,6 +63,7 @@ ignore:
   - "service/history/workflow/errors.go"
   - "service/history/service.go"
   - "service/matching/service.go"
+  - "service/matching/tasklist/testing.go"
   - "service/worker/service.go"
   - "testflags/**"
   - "tools/common/schema/test/**"

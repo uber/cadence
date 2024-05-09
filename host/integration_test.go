@@ -42,7 +42,7 @@ import (
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/engine/engineimpl"
 	"github.com/uber/cadence/service/history/execution"
-	"github.com/uber/cadence/service/matching"
+	"github.com/uber/cadence/service/matching/tasklist"
 )
 
 func TestIntegrationSuite(t *testing.T) {
@@ -924,11 +924,11 @@ func (s *IntegrationSuite) TestDecisionAndActivityTimeoutsWorkflow() {
 			history := historyResponse.History
 			common.PrettyPrintHistory(history, s.Logger)
 		}
-		s.True(err == nil || err == matching.ErrNoTasks, "%v", err)
+		s.True(err == nil || err == tasklist.ErrNoTasks, "%v", err)
 		if !dropDecisionTask {
 			s.Logger.Info("Calling Activity Task: %d", tag.Counter(i))
 			err = poller.PollAndProcessActivityTask(i%4 == 0)
-			s.True(err == nil || err == matching.ErrNoTasks)
+			s.True(err == nil || err == tasklist.ErrNoTasks)
 		}
 	}
 
