@@ -23,17 +23,20 @@
 package ndc
 
 import (
+	"context"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/execution"
@@ -356,4 +359,197 @@ func TestNewHistoryReplicator_newMutableState(t *testing.T) {
 		&deadline,
 	)
 	assert.NotNil(t, testReplicatorImpl.newMutableState(mockDomainCacheEntry, log.NewNoop()))
+}
+
+func TestApplyEvents_newReplicationTask_validateReplicateEventsRequest(t *testing.T) {
+	encodingType1 := types.EncodingTypeJSON
+	encodingType2 := types.EncodingTypeThriftRW
+
+	historyEvent1 := &types.HistoryEvent{
+		Version: 0,
+	}
+	historyEvent2 := &types.HistoryEvent{
+		Version: 1,
+	}
+
+	historyEvents := []*types.HistoryEvent{historyEvent1, historyEvent2}
+	serializer := persistence.NewPayloadSerializer()
+	serializedEvents, err := serializer.SerializeBatchEvents(historyEvents, common.EncodingTypeThriftRW)
+	assert.NoError(t, err)
+
+	historyEvent3 := &types.HistoryEvent{
+		ID:      0,
+		Version: 2,
+	}
+	historyEvent4 := &types.HistoryEvent{
+		ID:      1,
+		Version: 3,
+	}
+
+	historyEvents2 := []*types.HistoryEvent{historyEvent3}
+	serializedEvents2, err := serializer.SerializeBatchEvents(historyEvents2, common.EncodingTypeThriftRW)
+	assert.NoError(t, err)
+
+	historyEvents3 := []*types.HistoryEvent{historyEvent3, historyEvent4}
+	serializedEvents3, err := serializer.SerializeBatchEvents(historyEvents3, common.EncodingTypeThriftRW)
+	assert.NoError(t, err)
+
+	historyEvents4 := []*types.HistoryEvent{historyEvent4}
+	serializedEvents4, err := serializer.SerializeBatchEvents(historyEvents4, common.EncodingTypeThriftRW)
+	assert.NoError(t, err)
+
+	tests := map[string]struct {
+		request          *types.ReplicateEventsV2Request
+		eventsAffordance func() []*types.HistoryEvent
+		expectedErrorMsg string
+	}{
+		"Case1: empty case": {
+			request:          &types.ReplicateEventsV2Request{},
+			expectedErrorMsg: "invalid domain ID",
+		},
+		"Case2: nil case": {
+			request:          nil,
+			expectedErrorMsg: "invalid domain ID",
+		},
+		"Case3-1: fail case with invalid domain id": {
+			request: &types.ReplicateEventsV2Request{
+				DomainUUID: "12345678-1234-5678-9012-",
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "test-run-id",
+				},
+				VersionHistoryItems: nil,
+				Events:              nil,
+				NewRunEvents:        nil,
+			},
+			expectedErrorMsg: "invalid domain ID",
+		},
+		"Case3-2: fail case in validateReplicateEventsRequest with invalid run id": {
+			request: &types.ReplicateEventsV2Request{
+				DomainUUID: "12345678-1234-5678-9012-123456789011",
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "test-run-id",
+				},
+				VersionHistoryItems: nil,
+				Events:              nil,
+				NewRunEvents:        nil,
+			},
+			expectedErrorMsg: "invalid run ID",
+		},
+		"Case3-3: fail case in validateReplicateEventsRequest with invalid run id": {
+			request: &types.ReplicateEventsV2Request{
+				DomainUUID: "12345678-1234-5678-9012-123456789011",
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "test-run-id",
+				},
+				VersionHistoryItems: nil,
+				Events:              nil,
+				NewRunEvents:        nil,
+			},
+			expectedErrorMsg: "invalid run ID",
+		},
+		"Case3-4: fail case in validateReplicateEventsRequest with invalid workflow execution": {
+			request: &types.ReplicateEventsV2Request{
+				DomainUUID:          "12345678-1234-5678-9012-123456789011",
+				WorkflowExecution:   nil,
+				VersionHistoryItems: nil,
+				Events:              nil,
+				NewRunEvents:        nil,
+			},
+			expectedErrorMsg: "invalid execution",
+		},
+		"Case3-5: fail case in validateReplicateEventsRequest with event is empty": {
+			request: &types.ReplicateEventsV2Request{
+				DomainUUID: "12345678-1234-5678-9012-123456789011",
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "12345678-1234-5678-9012-123456789012",
+				},
+				VersionHistoryItems: nil,
+				Events:              nil,
+				NewRunEvents:        nil,
+			},
+			expectedErrorMsg: "encounter empty history batch",
+		},
+		"Case3-6: fail case in validateReplicateEventsRequest with DeserializeBatchEvents error": {
+			request: &types.ReplicateEventsV2Request{
+				DomainUUID: "12345678-1234-5678-9012-123456789011",
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "12345678-1234-5678-9012-123456789012",
+				},
+				VersionHistoryItems: nil,
+				Events: &types.DataBlob{
+					EncodingType: &encodingType1,
+					Data:         []byte("test-data"),
+				},
+				NewRunEvents: nil,
+			},
+			expectedErrorMsg: "cadence deserialization error: DeserializeBatchEvents encoding: \"thriftrw\", error: Invalid binary encoding version.",
+		},
+		"Case3-7: fail case in validateReplicateEventsRequest with event ID mismatch": {
+			request: &types.ReplicateEventsV2Request{
+				DomainUUID: "12345678-1234-5678-9012-123456789011",
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "12345678-1234-5678-9012-123456789012",
+				},
+				VersionHistoryItems: nil,
+				Events: &types.DataBlob{
+					EncodingType: &encodingType2,
+					Data:         serializedEvents.Data,
+				},
+				NewRunEvents: nil,
+			},
+			expectedErrorMsg: "event ID mismatch",
+		},
+		"Case3-8: fail case in validateReplicateEventsRequest with event version mismatch": {
+			request: &types.ReplicateEventsV2Request{
+				DomainUUID: "12345678-1234-5678-9012-123456789011",
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "12345678-1234-5678-9012-123456789012",
+				},
+				VersionHistoryItems: nil,
+				Events: &types.DataBlob{
+					EncodingType: &encodingType2,
+					Data:         serializedEvents2.Data,
+				},
+				NewRunEvents: &types.DataBlob{
+					EncodingType: &encodingType2,
+					Data:         serializedEvents3.Data,
+				},
+			},
+			expectedErrorMsg: "event version mismatch",
+		},
+		"Case3-9: fail case in validateReplicateEventsRequest with ErrEventVersionMismatch": {
+			request: &types.ReplicateEventsV2Request{
+				DomainUUID: "12345678-1234-5678-9012-123456789011",
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "12345678-1234-5678-9012-123456789012",
+				},
+				VersionHistoryItems: nil,
+				Events: &types.DataBlob{
+					EncodingType: &encodingType2,
+					Data:         serializedEvents2.Data,
+				},
+				NewRunEvents: &types.DataBlob{
+					EncodingType: &encodingType2,
+					Data:         serializedEvents4.Data,
+				},
+			},
+			expectedErrorMsg: "event version mismatch",
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			replicator := createTestHistoryReplicator(t)
+			err := replicator.ApplyEvents(context.Background(), test.request)
+			assert.Equal(t, test.expectedErrorMsg, err.Error())
+		})
+	}
 }
