@@ -1895,7 +1895,6 @@ func TestLog(t *testing.T) {
 	assert.NotPanics(t, func() { e.logError("a") })
 }
 
-
 func TestMutableStateBuilder_CopyToPersistence_roundtrip(t *testing.T) {
 
 	for i := 0; i <= 100; i++ {
@@ -1903,7 +1902,7 @@ func TestMutableStateBuilder_CopyToPersistence_roundtrip(t *testing.T) {
 
 		fuzzer := testdatagen.NewWithNilChance(t, 0)
 
-		execution :=  &persistence.WorkflowMutableState{}
+		execution := &persistence.WorkflowMutableState{}
 		fuzzer.Fuzz(&execution)
 
 		shardContext := shard.NewMockContext(ctrl)
@@ -1914,12 +1913,12 @@ func TestMutableStateBuilder_CopyToPersistence_roundtrip(t *testing.T) {
 		shardContext.EXPECT().GetClusterMetadata().Return(cluster.TestActiveClusterMetadata).Times(2)
 		shardContext.EXPECT().GetEventsCache().Return(mockCache)
 		shardContext.EXPECT().GetConfig().Return(&config.Config{
-			NumberOfShards:           2,
-			IsAdvancedVisConfigExist: false,
-			MaxResponseSize:          0,
-			MutableStateChecksumInvalidateBefore: dynamicconfig.GetFloatPropertyFn(10),
+			NumberOfShards:                        2,
+			IsAdvancedVisConfigExist:              false,
+			MaxResponseSize:                       0,
+			MutableStateChecksumInvalidateBefore:  dynamicconfig.GetFloatPropertyFn(10),
 			MutableStateChecksumVerifyProbability: dynamicconfig.GetIntPropertyFilteredByDomain(0.0),
-			HostName:                 "test-host",
+			HostName:                              "test-host",
 		}).Times(1)
 		shardContext.EXPECT().GetTimeSource().Return(clock.NewMockedTimeSource())
 		shardContext.EXPECT().GetMetricsClient().Return(metrics.NewNoopMetricsClient())
