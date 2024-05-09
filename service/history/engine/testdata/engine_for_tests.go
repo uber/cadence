@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/mock"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/.gen/go/cadence/workflowservicetest"
 
@@ -47,7 +48,7 @@ import (
 type EngineForTest struct {
 	Engine engine.Engine
 	// Add mocks or other fields here
-	Ctx *shard.TestContext
+	ShardCtx *shard.TestContext
 }
 
 // NewEngineFn is defined as an alias for engineimpl.NewEngineWithShardContext to avoid circular dependency
@@ -89,6 +90,12 @@ func NewEngineForTest(t *testing.T, newEngineFn NewEngineFn) *EngineForTest {
 	domainCache.EXPECT().GetDomainID(constants.TestDomainName).Return(constants.TestDomainID, nil).AnyTimes()
 	domainCache.EXPECT().RegisterDomainChangeCallback(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	domainCache.EXPECT().UnregisterDomainChangeCallback(gomock.Any()).Times(1)
+
+	executionMgr := shardCtx.Resource.ExecutionMgr
+	// RangeCompleteReplicationTask is called by taskProcessorImpl's background loop
+	executionMgr.
+		On("RangeCompleteReplicationTask", mock.Anything, mock.Anything).
+		Return(&persistence.RangeCompleteReplicationTaskResponse{}, nil)
 
 	membershipResolver := shardCtx.Resource.MembershipResolver
 	membershipResolver.EXPECT().MemberCount(gomock.Any()).Return(1, nil).AnyTimes()
@@ -180,7 +187,7 @@ func NewEngineForTest(t *testing.T, newEngineFn NewEngineFn) *EngineForTest {
 	t.Cleanup(historyEventNotifier.Stop)
 
 	return &EngineForTest{
-		Engine: engine,
-		Ctx:    shardCtx,
+		Engine:   engine,
+		ShardCtx: shardCtx,
 	}
 }
