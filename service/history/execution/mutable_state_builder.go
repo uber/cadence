@@ -302,7 +302,7 @@ func NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 	return msBuilder
 }
 
-// todo (david.porter)
+// Creates a shallow copy, not safe to use if the copied struct is mutated
 func (e *mutableStateBuilder) CopyToPersistence() *persistence.WorkflowMutableState {
 	state := &persistence.WorkflowMutableState{}
 
