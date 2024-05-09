@@ -25,12 +25,13 @@ package execution
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"time"
 )
 
 // GetActivityInfo gives details about an activity that is currently in progress.

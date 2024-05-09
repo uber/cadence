@@ -25,12 +25,13 @@ package execution
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"time"
 )
 
 // GetChildExecutionInfo gives details about a child execution that is currently in progress.

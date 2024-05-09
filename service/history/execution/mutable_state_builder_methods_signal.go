@@ -24,6 +24,7 @@ package execution
 
 import (
 	"fmt"
+
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"

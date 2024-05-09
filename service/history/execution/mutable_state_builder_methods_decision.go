@@ -24,11 +24,12 @@ package execution
 
 import (
 	"encoding/json"
+	"time"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/types"
-	"time"
 )
 
 // GetDecisionInfo returns details about the in-progress decision task

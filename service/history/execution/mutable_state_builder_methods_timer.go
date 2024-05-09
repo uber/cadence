@@ -24,10 +24,11 @@ package execution
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"time"
 )
 
 func (e *mutableStateBuilder) GetPendingTimerInfos() map[string]*persistence.TimerInfo {
