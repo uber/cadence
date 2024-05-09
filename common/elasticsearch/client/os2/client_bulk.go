@@ -104,16 +104,42 @@ func (v *bulkProcessor) Add(request *bulk.GenericBulkableAddRequest) {
 	}
 
 	req.OnFailure = func(ctx context.Context, item opensearchutil.BulkIndexerItem, res opensearchutil.BulkIndexerResponseItem, err error) {
-		v.before(0, metricsRequest)
-		it := bulk.GenericBulkResponseItem{
-			Index:   res.Index,
-			ID:      res.DocumentID,
-			Version: res.Version,
-			Status:  res.Status,
-			Error:   res.Error,
+		v.processCallback(0, callBackRequest, req, res, false, err)
+	}
+
+	req.OnSuccess = func(ctx context.Context, item opensearchutil.BulkIndexerItem, res opensearchutil.BulkIndexerResponseItem) {
+		v.processCallback(0, callBackRequest, req, res, true, nil)
+	}
+	if err := v.processor.Add(context.Background(), req); err != nil {
+		v.logger.Error("adding bulk request to OpenSearch", tag.Error(err))
+	}
+}
+
+// processCallback processes both success and failure scenarios.
+func (v *bulkProcessor) processCallback(index int64, callBackRequest bulk.GenericBulkableRequest, req opensearchutil.BulkIndexerItem, res opensearchutil.BulkIndexerResponseItem, onSuccess bool, err error) {
+	v.before(0, metricsRequest)
+
+	gr := []bulk.GenericBulkableRequest{callBackRequest}
+
+	it := bulk.GenericBulkResponseItem{
+		Index:   res.Index,
+		ID:      res.DocumentID,
+		Version: res.Version,
+		Status:  res.Status,
+		Error:   res.Error,
+	}
+
+	if onSuccess {
+		gbr := bulk.GenericBulkResponse{
+			Took:   0,
+			Errors: false,
+			Items: []map[string]*bulk.GenericBulkResponseItem{
+				{req.Action: &it},
+			},
 		}
 
-		gr := []bulk.GenericBulkableRequest{callBackRequest}
+		v.after(0, gr, &gbr, nil /*No errors here*/)
+	} else {
 		gbr := bulk.GenericBulkResponse{
 			Took:   0,
 			Errors: res.Error.Type != "" || res.Status > 201,
@@ -128,34 +154,6 @@ func (v *bulkProcessor) Add(request *bulk.GenericBulkableAddRequest) {
 		}
 
 		v.after(0, gr, &gbr, &ge)
-
-	}
-
-	req.OnSuccess = func(ctx context.Context, item opensearchutil.BulkIndexerItem, res opensearchutil.BulkIndexerResponseItem) {
-		v.before(0, metricsRequest)
-
-		gr := []bulk.GenericBulkableRequest{callBackRequest}
-
-		it := bulk.GenericBulkResponseItem{
-			Index:   res.Index,
-			ID:      res.DocumentID,
-			Version: res.Version,
-			Status:  res.Status,
-			Error:   res.Error,
-		}
-
-		gbr := bulk.GenericBulkResponse{
-			Took:   0,
-			Errors: false,
-			Items: []map[string]*bulk.GenericBulkResponseItem{
-				{req.Action: &it},
-			},
-		}
-
-		v.after(0, gr, &gbr, nil /*No errors here*/)
-	}
-	if err := v.processor.Add(context.Background(), req); err != nil {
-		v.logger.Error("adding bulk request to OpenSearch", tag.Error(err))
 	}
 }
 

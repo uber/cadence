@@ -51,6 +51,7 @@ import (
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/failover"
 	"github.com/uber/cadence/service/history/lookup"
+	"github.com/uber/cadence/service/history/queue"
 	"github.com/uber/cadence/service/history/replication"
 	"github.com/uber/cadence/service/history/resource"
 	"github.com/uber/cadence/service/history/shard"
@@ -80,6 +81,7 @@ type (
 		failoverCoordinator            failover.Coordinator
 		workflowIDCache                workflowcache.WFCache
 		ratelimitInternalPerWorkflowID dynamicconfig.BoolPropertyFnWithDomainFilter
+		queueProcessorFactory          queue.ProcessorFactory
 	}
 )
 
@@ -228,6 +230,7 @@ func (h *handlerImpl) CreateEngine(
 		h.failoverCoordinator,
 		h.workflowIDCache,
 		h.ratelimitInternalPerWorkflowID,
+		queue.NewProcessorFactory(),
 	)
 }
 
