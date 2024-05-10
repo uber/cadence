@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
 	historyClient "github.com/uber/cadence/client/history"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
@@ -118,13 +119,13 @@ func (s *taskExecutorSuite) TearDownTest() {
 
 func (s *taskExecutorSuite) TestConvertRetryTaskV2Error_OK() {
 	err := &types.RetryTaskV2Error{}
-	_, ok := s.taskHandler.convertRetryTaskV2Error(err)
+	_, ok := toRetryTaskV2Error(err)
 	s.True(ok)
 }
 
 func (s *taskExecutorSuite) TestConvertRetryTaskV2Error_NotOK() {
 	err := &types.BadRequestError{}
-	_, ok := s.taskHandler.convertRetryTaskV2Error(err)
+	_, ok := toRetryTaskV2Error(err)
 	s.False(ok)
 }
 
@@ -183,9 +184,132 @@ func (s *taskExecutorSuite) TestProcessTask_SyncActivityReplicationTask_SameShar
 		RunID:      runID,
 	}
 
-	s.mockEngine.EXPECT().SyncActivity(gomock.Any(), request).Return(nil).Times(2)
+	s.mockEngine.EXPECT().SyncActivity(gomock.Any(), request).Return(nil).Times(1)
 	_, err := s.taskHandler.execute(task, true)
 	s.NoError(err)
+}
+
+func (s *taskExecutorSuite) TestProcessTask_SyncActivityReplicationTask_SameShardID_RetryTaskV2Error_Success() {
+	domainID := uuid.New()
+	workflowID := "6d89f939-e6a4-4c26-a0ed-626ce27bcc9c" // belong to shard 0
+	runID := uuid.New()
+	task := &types.ReplicationTask{
+		TaskType: types.ReplicationTaskTypeSyncActivity.Ptr(),
+		SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
+			DomainID:   domainID,
+			WorkflowID: workflowID,
+			RunID:      runID,
+		},
+	}
+	request := &types.SyncActivityRequest{
+		DomainID:   domainID,
+		WorkflowID: workflowID,
+		RunID:      runID,
+	}
+
+	s.mockEngine.EXPECT().SyncActivity(gomock.Any(), request).Return(&types.RetryTaskV2Error{
+		DomainID:          "test-domain-id",
+		WorkflowID:        "test-wf-id",
+		RunID:             "test-run-id",
+		StartEventID:      common.Ptr(int64(11)),
+		StartEventVersion: common.Ptr(int64(100)),
+		EndEventID:        common.Ptr(int64(19)),
+		EndEventVersion:   common.Ptr(int64(102)),
+	}).Times(1)
+	s.nDCHistoryResender.EXPECT().SendSingleWorkflowHistory(
+		"test-domain-id",
+		"test-wf-id",
+		"test-run-id",
+		common.Ptr(int64(11)),
+		common.Ptr(int64(100)),
+		common.Ptr(int64(19)),
+		common.Ptr(int64(102))).
+		Return(nil)
+	s.mockEngine.EXPECT().SyncActivity(gomock.Any(), request).Return(nil).Times(1)
+	_, err := s.taskHandler.execute(task, true)
+	s.NoError(err)
+}
+
+func (s *taskExecutorSuite) TestProcessTask_SyncActivityReplicationTask_SameShardID_RetryTaskV2Error_SkipTask() {
+	domainID := uuid.New()
+	workflowID := "6d89f939-e6a4-4c26-a0ed-626ce27bcc9c" // belong to shard 0
+	runID := uuid.New()
+	task := &types.ReplicationTask{
+		TaskType: types.ReplicationTaskTypeSyncActivity.Ptr(),
+		SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
+			DomainID:   domainID,
+			WorkflowID: workflowID,
+			RunID:      runID,
+		},
+	}
+	request := &types.SyncActivityRequest{
+		DomainID:   domainID,
+		WorkflowID: workflowID,
+		RunID:      runID,
+	}
+
+	s.mockEngine.EXPECT().SyncActivity(gomock.Any(), request).Return(&types.RetryTaskV2Error{
+		DomainID:          "test-domain-id",
+		WorkflowID:        "test-wf-id",
+		RunID:             "test-run-id",
+		StartEventID:      common.Ptr(int64(11)),
+		StartEventVersion: common.Ptr(int64(100)),
+		EndEventID:        common.Ptr(int64(19)),
+		EndEventVersion:   common.Ptr(int64(102)),
+	}).Times(1)
+	s.nDCHistoryResender.EXPECT().SendSingleWorkflowHistory(
+		"test-domain-id",
+		"test-wf-id",
+		"test-run-id",
+		common.Ptr(int64(11)),
+		common.Ptr(int64(100)),
+		common.Ptr(int64(19)),
+		common.Ptr(int64(102))).
+		Return(ndc.ErrSkipTask)
+	_, err := s.taskHandler.execute(task, true)
+	s.NoError(err)
+}
+
+func (s *taskExecutorSuite) TestProcessTask_SyncActivityReplicationTask_SameShardID_RetryTaskV2Error_Error() {
+	domainID := uuid.New()
+	workflowID := "6d89f939-e6a4-4c26-a0ed-626ce27bcc9c" // belong to shard 0
+	runID := uuid.New()
+	task := &types.ReplicationTask{
+		TaskType: types.ReplicationTaskTypeSyncActivity.Ptr(),
+		SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
+			DomainID:   domainID,
+			WorkflowID: workflowID,
+			RunID:      runID,
+		},
+	}
+	request := &types.SyncActivityRequest{
+		DomainID:   domainID,
+		WorkflowID: workflowID,
+		RunID:      runID,
+	}
+
+	retryErr := &types.RetryTaskV2Error{
+		DomainID:          "test-domain-id",
+		WorkflowID:        "test-wf-id",
+		RunID:             "test-run-id",
+		StartEventID:      common.Ptr(int64(11)),
+		StartEventVersion: common.Ptr(int64(100)),
+		EndEventID:        common.Ptr(int64(19)),
+		EndEventVersion:   common.Ptr(int64(102)),
+	}
+	s.mockEngine.EXPECT().SyncActivity(gomock.Any(), request).Return(retryErr).Times(1)
+	s.nDCHistoryResender.EXPECT().SendSingleWorkflowHistory(
+		"test-domain-id",
+		"test-wf-id",
+		"test-run-id",
+		common.Ptr(int64(11)),
+		common.Ptr(int64(100)),
+		common.Ptr(int64(19)),
+		common.Ptr(int64(102))).
+		Return(fmt.Errorf("some error"))
+	_, err := s.taskHandler.execute(task, true)
+	s.Error(err)
+	s.ErrorIs(err, retryErr)
 }
 
 func (s *taskExecutorSuite) TestProcessTask_HistoryV2ReplicationTask_SameShardID() {
@@ -211,6 +335,137 @@ func (s *taskExecutorSuite) TestProcessTask_HistoryV2ReplicationTask_SameShardID
 	s.mockEngine.EXPECT().ReplicateEventsV2(gomock.Any(), request).Return(nil).Times(1)
 	_, err := s.taskHandler.execute(task, true)
 	s.NoError(err)
+}
+
+func (s *taskExecutorSuite) TestProcessTask_HistoryV2ReplicationTask_SameShardID_RetryTaskErr_Success() {
+	domainID := uuid.New()
+	workflowID := "6d89f939-e6a4-4c26-a0ed-626ce27bcc9c" // belong to shard 0
+	runID := uuid.New()
+	task := &types.ReplicationTask{
+		TaskType: types.ReplicationTaskTypeHistoryV2.Ptr(),
+		HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
+			DomainID:   domainID,
+			WorkflowID: workflowID,
+			RunID:      runID,
+		},
+	}
+	request := &types.ReplicateEventsV2Request{
+		DomainUUID: domainID,
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
+		},
+	}
+
+	retryErr := &types.RetryTaskV2Error{
+		DomainID:          "test-domain-id",
+		WorkflowID:        "test-wf-id",
+		RunID:             "test-run-id",
+		StartEventID:      common.Ptr(int64(11)),
+		StartEventVersion: common.Ptr(int64(100)),
+		EndEventID:        common.Ptr(int64(19)),
+		EndEventVersion:   common.Ptr(int64(102)),
+	}
+	s.mockEngine.EXPECT().ReplicateEventsV2(gomock.Any(), request).Return(retryErr).Times(1)
+	s.nDCHistoryResender.EXPECT().SendSingleWorkflowHistory(
+		"test-domain-id",
+		"test-wf-id",
+		"test-run-id",
+		common.Ptr(int64(11)),
+		common.Ptr(int64(100)),
+		common.Ptr(int64(19)),
+		common.Ptr(int64(102))).
+		Return(nil)
+	s.mockEngine.EXPECT().ReplicateEventsV2(gomock.Any(), request).Return(nil).Times(1)
+	_, err := s.taskHandler.execute(task, true)
+	s.NoError(err)
+}
+
+func (s *taskExecutorSuite) TestProcessTask_HistoryV2ReplicationTask_SameShardID_RetryTaskErr_SkipTask() {
+	domainID := uuid.New()
+	workflowID := "6d89f939-e6a4-4c26-a0ed-626ce27bcc9c" // belong to shard 0
+	runID := uuid.New()
+	task := &types.ReplicationTask{
+		TaskType: types.ReplicationTaskTypeHistoryV2.Ptr(),
+		HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
+			DomainID:   domainID,
+			WorkflowID: workflowID,
+			RunID:      runID,
+		},
+	}
+	request := &types.ReplicateEventsV2Request{
+		DomainUUID: domainID,
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
+		},
+	}
+
+	retryErr := &types.RetryTaskV2Error{
+		DomainID:          "test-domain-id",
+		WorkflowID:        "test-wf-id",
+		RunID:             "test-run-id",
+		StartEventID:      common.Ptr(int64(11)),
+		StartEventVersion: common.Ptr(int64(100)),
+		EndEventID:        common.Ptr(int64(19)),
+		EndEventVersion:   common.Ptr(int64(102)),
+	}
+	s.mockEngine.EXPECT().ReplicateEventsV2(gomock.Any(), request).Return(retryErr).Times(1)
+	s.nDCHistoryResender.EXPECT().SendSingleWorkflowHistory(
+		"test-domain-id",
+		"test-wf-id",
+		"test-run-id",
+		common.Ptr(int64(11)),
+		common.Ptr(int64(100)),
+		common.Ptr(int64(19)),
+		common.Ptr(int64(102))).
+		Return(ndc.ErrSkipTask)
+	_, err := s.taskHandler.execute(task, true)
+	s.NoError(err)
+}
+
+func (s *taskExecutorSuite) TestProcessTask_HistoryV2ReplicationTask_SameShardID_RetryTaskErr_Error() {
+	domainID := uuid.New()
+	workflowID := "6d89f939-e6a4-4c26-a0ed-626ce27bcc9c" // belong to shard 0
+	runID := uuid.New()
+	task := &types.ReplicationTask{
+		TaskType: types.ReplicationTaskTypeHistoryV2.Ptr(),
+		HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
+			DomainID:   domainID,
+			WorkflowID: workflowID,
+			RunID:      runID,
+		},
+	}
+	request := &types.ReplicateEventsV2Request{
+		DomainUUID: domainID,
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
+		},
+	}
+
+	retryErr := &types.RetryTaskV2Error{
+		DomainID:          "test-domain-id",
+		WorkflowID:        "test-wf-id",
+		RunID:             "test-run-id",
+		StartEventID:      common.Ptr(int64(11)),
+		StartEventVersion: common.Ptr(int64(100)),
+		EndEventID:        common.Ptr(int64(19)),
+		EndEventVersion:   common.Ptr(int64(102)),
+	}
+	s.mockEngine.EXPECT().ReplicateEventsV2(gomock.Any(), request).Return(retryErr).Times(1)
+	s.nDCHistoryResender.EXPECT().SendSingleWorkflowHistory(
+		"test-domain-id",
+		"test-wf-id",
+		"test-run-id",
+		common.Ptr(int64(11)),
+		common.Ptr(int64(100)),
+		common.Ptr(int64(19)),
+		common.Ptr(int64(102))).
+		Return(fmt.Errorf("some error"))
+	_, err := s.taskHandler.execute(task, true)
+	s.Error(err)
+	s.ErrorIs(err, retryErr)
 }
 
 func (s *taskExecutorSuite) TestProcess_HistoryV2ReplicationTask_DifferentShardID() {
@@ -258,7 +513,39 @@ func (s *taskExecutorSuite) TestProcess_SyncActivityReplicationTask_DifferentSha
 	}
 
 	s.mockEngine.EXPECT().SyncActivity(gomock.Any(), request).Return(nil).Times(0)
-	s.historyClient.EXPECT().SyncActivity(gomock.Any(), request).Return(nil).Times(2)
+	s.historyClient.EXPECT().SyncActivity(gomock.Any(), request).Return(nil).Times(1)
 	_, err := s.taskHandler.execute(task, true)
 	s.NoError(err)
+}
+
+func (s *taskExecutorSuite) TestProcess_FailoverReplicationTask() {
+	task := &types.ReplicationTask{
+		TaskType: types.ReplicationTaskTypeFailoverMarker.Ptr(),
+		FailoverMarkerAttributes: &types.FailoverMarkerAttributes{
+			DomainID:        "test-domain-id",
+			FailoverVersion: 101,
+			CreationTime:    common.Ptr(int64(111)),
+		},
+		CreationTime: common.Ptr(int64(222)),
+	}
+	s.mockShard.MockAddingPendingFailoverMarker = func(marker *types.FailoverMarkerAttributes) error {
+		s.Equal(&types.FailoverMarkerAttributes{
+			DomainID:        "test-domain-id",
+			FailoverVersion: 101,
+			CreationTime:    common.Ptr(int64(222)),
+		}, marker)
+		return nil
+	}
+
+	_, err := s.taskHandler.execute(task, true)
+	s.NoError(err)
+}
+
+func (s *taskExecutorSuite) TestProcess_UnknownTask() {
+	task := &types.ReplicationTask{
+		TaskType: common.Ptr(types.ReplicationTaskType(-100)),
+	}
+	_, err := s.taskHandler.execute(task, true)
+	s.Error(err)
+	s.ErrorIs(err, ErrUnknownReplicationTask)
 }
