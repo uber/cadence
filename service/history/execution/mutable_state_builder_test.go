@@ -23,10 +23,10 @@ package execution
 import (
 	"context"
 	"errors"
+	"math/rand"
 	"testing"
 	"time"
 
-	"math/rand"
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
@@ -1935,7 +1935,6 @@ func TestMutableStateBuilder_CopyToPersistence_roundtrip(t *testing.T) {
 		msb.Load(execution)
 
 		out := msb.CopyToPersistence()
-
 
 		assert.Equal(t, execution.ActivityInfos, out.ActivityInfos, "activityinfos mismatch")
 		assert.Equal(t, execution.TimerInfos, out.TimerInfos, "timerinfos mismatch")
