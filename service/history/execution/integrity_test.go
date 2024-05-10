@@ -151,3 +151,88 @@ func TestGetResurrectedTimers(t *testing.T) {
 		})
 	}
 }
+
+func TestGetResurrectedActivities(t *testing.T) {
+	tests := []struct {
+		name    string
+		setup   func(mockShard *shard.MockContext, mockMutableState *MockMutableState, mockHistoryManager *persistence.MockHistoryManager, mockDomainCache *cache.MockDomainCache)
+		want    map[int64]struct{}
+		wantErr bool
+	}{
+		{
+			name: "No pending activities",
+			setup: func(mockShard *shard.MockContext, mockMutableState *MockMutableState, mockHistoryManager *persistence.MockHistoryManager, mockDomainCache *cache.MockDomainCache) {
+				mockMutableState.EXPECT().GetPendingActivityInfos().Return(map[int64]*persistence.ActivityInfo{}).Times(1)
+			},
+			want: map[int64]struct{}{},
+		},
+		{
+			name: "With pending activities and matching events",
+			setup: func(mockShard *shard.MockContext, mockMutableState *MockMutableState, mockHistoryManager *persistence.MockHistoryManager, mockDomainCache *cache.MockDomainCache) {
+				pendingActivities := map[int64]*persistence.ActivityInfo{
+					1: {ScheduleID: 1},
+					2: {ScheduleID: 2},
+					3: {ScheduleID: 3},
+					4: {ScheduleID: 4},
+				}
+				mockMutableState.EXPECT().GetPendingActivityInfos().Return(pendingActivities).Times(1)
+				mockMutableState.EXPECT().GetCurrentBranchToken().Return([]byte("branchToken"), nil).Times(1)
+				mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{DomainID: "testDomain"}).Times(1)
+				mockMutableState.EXPECT().GetNextEventID().Return(int64(10)).Times(1)
+
+				taskCompleted := types.EventTypeActivityTaskCompleted
+				taskFailed := types.EventTypeActivityTaskFailed
+				taskTimedOut := types.EventTypeActivityTaskTimedOut
+				taskCanceled := types.EventTypeActivityTaskCanceled
+
+				events := []*types.HistoryEvent{
+					{EventType: &taskCompleted, ActivityTaskCompletedEventAttributes: &types.ActivityTaskCompletedEventAttributes{ScheduledEventID: 1}},
+					{EventType: &taskFailed, ActivityTaskFailedEventAttributes: &types.ActivityTaskFailedEventAttributes{ScheduledEventID: 2}},
+					{EventType: &taskTimedOut, ActivityTaskTimedOutEventAttributes: &types.ActivityTaskTimedOutEventAttributes{ScheduledEventID: 3}},
+					{EventType: &taskCanceled, ActivityTaskCanceledEventAttributes: &types.ActivityTaskCanceledEventAttributes{ScheduledEventID: 4}},
+				}
+
+				mockShard.EXPECT().GetShardID().Return(1).Times(1)
+				mockShard.EXPECT().GetDomainCache().Return(mockDomainCache).Times(1)
+				mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("testDomain", nil).Times(1)
+
+				mockShard.EXPECT().GetHistoryManager().Return(mockHistoryManager).Times(1)
+				mockHistoryManager.EXPECT().ReadHistoryBranch(gomock.Any(), gomock.Any()).Return(&persistence.ReadHistoryBranchResponse{
+					HistoryEvents: events,
+				}, nil).AnyTimes()
+			},
+			want: map[int64]struct{}{1: {}, 2: {}, 3: {}, 4: {}},
+		},
+		{
+			name: "Error fetching branch token",
+			setup: func(mockShard *shard.MockContext, mockMutableState *MockMutableState, mockHistoryManager *persistence.MockHistoryManager, mockDomainCache *cache.MockDomainCache) {
+				mockMutableState.EXPECT().GetPendingActivityInfos().Return(map[int64]*persistence.ActivityInfo{1: {ScheduleID: 1}}).Times(1)
+				mockMutableState.EXPECT().GetCurrentBranchToken().Return(nil, errors.New("error fetching token")).Times(1)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+
+			mockShard := shard.NewMockContext(mockCtrl)
+			mockMutableState := NewMockMutableState(mockCtrl)
+			mockHistoryManager := persistence.NewMockHistoryManager(mockCtrl)
+			mockDomainCache := cache.NewMockDomainCache(mockCtrl)
+
+			tc.setup(mockShard, mockMutableState, mockHistoryManager, mockDomainCache)
+
+			ctx := context.Background()
+			got, err := GetResurrectedActivities(ctx, mockShard, mockMutableState)
+
+			if tc.wantErr {
+				assert.Error(t, err, "GetResurrectedActivities() should have returned an error")
+			} else {
+				assert.NoError(t, err, "GetResurrectedActivities() should not have returned an error")
+				assert.Equal(t, tc.want, got, "Mismatch in expected and actual resurrected activities")
+			}
+		})
+	}
+}
