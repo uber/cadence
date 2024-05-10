@@ -2508,62 +2508,42 @@ func Test_SerializeRawHistoryToken(t *testing.T) {
 	}
 	marshaledToken, _ := json.Marshal(input)
 	tests := map[string]struct {
-		input    *getWorkflowRawHistoryV2Token
-		wantResp []byte
-		wantErr  bool
+		input              *getWorkflowRawHistoryV2Token
+		wantResp           []byte
+		wantSerializeErr   bool
+		wantDeserializeErr bool
 	}{
-		"nil request": {
-			input:    nil,
-			wantResp: nil,
-			wantErr:  false,
-		},
 		"normal request": {
 			input: &getWorkflowRawHistoryV2Token{
 				DomainName: "test-domain",
 			},
-			wantResp: marshaledToken,
-			wantErr:  false,
+			wantResp:           marshaledToken,
+			wantSerializeErr:   false,
+			wantDeserializeErr: false,
+		},
+		"nil request": {
+			input:              nil,
+			wantResp:           nil,
+			wantSerializeErr:   false,
+			wantDeserializeErr: true,
 		},
 	}
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
 			resp, err := serializeRawHistoryToken(td.input)
-			if td.wantErr {
+			if td.wantSerializeErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, td.wantResp, resp)
 			}
-		})
-	}
-}
-
-func Test_DeserializeRawHistoryToken(t *testing.T) {
-	input := getWorkflowRawHistoryV2Token{
-		DomainName: "test-domain",
-	}
-	marshaledToken, _ := json.Marshal(input)
-	tests := map[string]struct {
-		input    []byte
-		wantResp *getWorkflowRawHistoryV2Token
-		wantErr  bool
-	}{
-		"normal request": {
-			input: marshaledToken,
-			wantResp: &getWorkflowRawHistoryV2Token{
-				DomainName: "test-domain",
-			},
-			wantErr: false,
-		},
-	}
-	for name, td := range tests {
-		t.Run(name, func(t *testing.T) {
-			resp, err := deserializeRawHistoryToken(td.input)
-			if td.wantErr {
+			// deserialize the serialized token
+			res, err := deserializeRawHistoryToken(resp)
+			if td.wantDeserializeErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, td.wantResp.DomainName, resp.DomainName)
+				assert.Equal(t, td.input, res)
 			}
 		})
 	}
