@@ -23,7 +23,6 @@ package handler
 import (
 	"context"
 	"errors"
-	"go.uber.org/goleak"
 	"math/rand"
 	"sync/atomic"
 	"testing"
@@ -33,6 +32,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/goleak"
 	"go.uber.org/yarpc/yarpcerrors"
 
 	"github.com/uber/cadence/common"
@@ -2988,6 +2988,144 @@ func (s *handlerSuite) TestGetDLQReplicationMessages() {
 			goleak.VerifyNone(s.T())
 		})
 
+	}
+}
+
+func (s *handlerSuite) TestReapplyEvents() {
+	validInput := &types.HistoryReapplyEventsRequest{
+		DomainUUID: testDomainID,
+		Request: &types.ReapplyEventsRequest{
+			WorkflowExecution: &types.WorkflowExecution{
+				WorkflowID: testWorkflowID,
+				RunID:      testValidUUID,
+			},
+			Events: &types.DataBlob{
+				EncodingType: types.EncodingTypeThriftRW.Ptr(),
+				Data:         []byte{1, 2, 3, 4, 5},
+			},
+		},
+	}
+
+	testInput := map[string]struct {
+		input         *types.HistoryReapplyEventsRequest
+		expectedError bool
+		mockFn        func()
+	}{
+		"shutting down": {
+			input:         validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.handler.shuttingDown = int32(1)
+			},
+		},
+		"cannot get engine": {
+			input:         validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(nil, errors.New("error")).Times(1)
+			},
+		},
+		"cannot get serialized": {
+			input:         validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockResource.PayloadSerializer.EXPECT().DeserializeBatchEvents(gomock.Any()).Return(nil, errors.New("error")).Times(1)
+			},
+		},
+		"reapplyEvents error": {
+			input:         validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockResource.PayloadSerializer.EXPECT().DeserializeBatchEvents(gomock.Any()).Return(make([]*types.HistoryEvent, 0), nil).Times(1)
+				s.mockEngine.EXPECT().ReapplyEvents(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("error")).Times(1)
+			},
+		},
+		"success": {
+			input:         validInput,
+			expectedError: false,
+			mockFn: func() {
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockResource.PayloadSerializer.EXPECT().DeserializeBatchEvents(gomock.Any()).Return(make([]*types.HistoryEvent, 0), nil).Times(1)
+				s.mockEngine.EXPECT().ReapplyEvents(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+		},
+	}
+
+	for name, input := range testInput {
+		s.Run(name, func() {
+			input.mockFn()
+			err := s.handler.ReapplyEvents(context.Background(), input.input)
+			s.handler.shuttingDown = int32(0)
+			if input.expectedError {
+				s.Error(err)
+			} else {
+				s.NoError(err)
+			}
+		})
+	}
+}
+
+func (s *handlerSuite) TestCountDLQMessages() {
+	validInput := &types.CountDLQMessagesRequest{
+		ForceFetch: true,
+	}
+
+	testInput := map[string]struct {
+		input         *types.CountDLQMessagesRequest
+		expectedError bool
+		mockFn        func()
+	}{
+		"shutting down": {
+			input:         validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.handler.shuttingDown = int32(1)
+			},
+		},
+		"cannot get engine": {
+			input:         validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.mockShardController.EXPECT().ShardIDs().Return([]int32{0}).Times(1)
+				s.mockShardController.EXPECT().GetEngineForShard(gomock.Any()).Return(nil, errors.New("error")).Times(1)
+			},
+		},
+		"countDLQMessages error": {
+			input:         validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.mockShardController.EXPECT().ShardIDs().Return([]int32{0}).Times(1)
+				s.mockShardController.EXPECT().GetEngineForShard(gomock.Any()).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().CountDLQMessages(gomock.Any(), gomock.Any()).Return(map[string]int64{}, errors.New("error")).Times(1)
+			},
+		},
+		"success": {
+			input:         validInput,
+			expectedError: false,
+			mockFn: func() {
+				s.mockShardController.EXPECT().ShardIDs().Return([]int32{0}).Times(1)
+				s.mockShardController.EXPECT().GetEngineForShard(gomock.Any()).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().CountDLQMessages(gomock.Any(), gomock.Any()).Return(map[string]int64{
+					"test":  1,
+					"test2": 2,
+				}, nil).Times(1)
+			},
+		},
+	}
+
+	for name, input := range testInput {
+		s.Run(name, func() {
+			input.mockFn()
+			_, err := s.handler.CountDLQMessages(context.Background(), input.input)
+			s.handler.shuttingDown = int32(0)
+			if input.expectedError {
+				s.Error(err)
+			} else {
+				s.NoError(err)
+			}
+		})
 	}
 }
 
