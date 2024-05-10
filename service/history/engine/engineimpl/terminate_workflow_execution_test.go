@@ -1,63 +1,239 @@
-// Filename: terminate_workflow_execution_test.go
-// Place this file in the appropriate package directory within your Cadence project
+// The MIT License (MIT)
 
+// Copyright (c) 2017-2020 Uber Technologies Inc.
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 package engineimpl
 
 import (
 	"context"
-	"github.com/stretchr/testify/mock"
-	"github.com/uber/cadence/service/history/constants"
+	"errors"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/engine/testdata"
 )
 
-// Helper function to setup the state of a workflow in tests
-func withTerminationState(execution *types.WorkflowExecution, state *persistence.WorkflowMutableState) func(*testing.T, *testdata.EngineForTest) {
-	return func(t *testing.T, engine *testdata.EngineForTest) {
-		engine.ShardCtx.Resource.ExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.MatchedBy(func(req *persistence.GetWorkflowExecutionRequest) bool {
-			return req.Execution == *execution
-		})).Return(&persistence.GetWorkflowExecutionResponse{
-			State: state,
-		}, nil)
-	}
-}
-
-// Creates a request object for the TerminateWorkflowExecution function
-func terminationExecutionRequest(execution *types.WorkflowExecution) *types.HistoryTerminateWorkflowExecutionRequest {
-	return &types.HistoryTerminateWorkflowExecutionRequest{
-		DomainUUID: constants.TestDomainID,
-		TerminateRequest: &types.TerminateWorkflowExecutionRequest{
-			Domain:            constants.TestDomainName,
-			WorkflowExecution: execution,
-			Reason:            "Test termination reason",
-			Identity:          "Test identity",
-		},
-	}
-}
-
-// Main test function for TerminateWorkflowExecution
 func TestTerminateWorkflowExecution(t *testing.T) {
-	execution := &types.WorkflowExecution{WorkflowID: "testWorkflowID", RunID: constants.TestRunID}
-	state := &persistence.WorkflowMutableState{
-		ExecutionInfo: &persistence.WorkflowExecutionInfo{
-			WorkflowID: "testWorkflowID",
-			RunID:      constants.TestRunID,
-			State:      persistence.WorkflowStateRunning,
+	tests := []struct {
+		name       string
+		execution  types.WorkflowExecution
+		setupMocks func(*testing.T, *testdata.EngineForTest)
+		wantErr    bool
+	}{
+		{
+			name: "runid is not uuid",
+			execution: types.WorkflowExecution{
+				WorkflowID: constants.TestWorkflowID,
+				RunID:      "not-a-uuid",
+			},
+			setupMocks: func(t *testing.T, eft *testdata.EngineForTest) {
+				eft.ShardCtx.Resource.ExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).
+					Return(nil, errors.New("invalid UUID")).Once()
+			},
+			wantErr: true,
+		},
+		{
+			name: "failed to get workflow execution",
+			execution: types.WorkflowExecution{
+				WorkflowID: constants.TestWorkflowID,
+				RunID:      constants.TestRunID,
+			},
+			setupMocks: func(t *testing.T, eft *testdata.EngineForTest) {
+				getExecReq := &persistence.GetWorkflowExecutionRequest{
+					DomainID:   constants.TestDomainID,
+					Execution:  types.WorkflowExecution{WorkflowID: constants.TestWorkflowID, RunID: constants.TestRunID},
+					DomainName: constants.TestDomainName,
+					RangeID:    1,
+				}
+				eft.ShardCtx.Resource.ExecutionMgr.On("GetWorkflowExecution", mock.Anything, getExecReq).
+					Return(nil, errors.New("some random error")).Once()
+			},
+			wantErr: true,
+		},
+		{
+			name: "child workflow parent mismatch",
+			execution: types.WorkflowExecution{
+				WorkflowID: constants.TestWorkflowID,
+				RunID:      constants.TestRunID,
+			},
+			setupMocks: func(t *testing.T, eft *testdata.EngineForTest) {
+				// Mock the retrieval of the workflow execution details
+				getExecReq := &persistence.GetWorkflowExecutionRequest{
+					DomainID:   constants.TestDomainID,
+					Execution:  types.WorkflowExecution{WorkflowID: constants.TestWorkflowID, RunID: constants.TestRunID},
+					DomainName: constants.TestDomainName,
+					RangeID:    1,
+				}
+				getExecResp := &persistence.GetWorkflowExecutionResponse{
+					State: &persistence.WorkflowMutableState{
+						ExecutionInfo: &persistence.WorkflowExecutionInfo{
+							DomainID:         constants.TestDomainID,
+							WorkflowID:       constants.TestWorkflowID,
+							RunID:            constants.TestRunID,
+							ParentWorkflowID: "other-parent-id",
+							ParentRunID:      "other-parent-runid",
+						},
+						ExecutionStats: &persistence.ExecutionStats{},
+					},
+					MutableStateStats: &persistence.MutableStateStats{},
+				}
+				eft.ShardCtx.Resource.ExecutionMgr.
+					On("GetWorkflowExecution", mock.Anything, getExecReq).
+					Return(getExecResp, nil).Once()
+
+				// Mock the retrieval of the workflow's history branch
+				historyBranchResp := &persistence.ReadHistoryBranchResponse{
+					HistoryEvents: []*types.HistoryEvent{
+						{
+							ID:                                      1,
+							WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{},
+						},
+					},
+				}
+				historyMgr := eft.ShardCtx.Resource.HistoryMgr
+				historyMgr.
+					On("ReadHistoryBranch", mock.Anything, mock.Anything).
+					Return(historyBranchResp, nil).
+					Once()
+
+				// Mock the update of the workflow execution
+				var _ *persistence.UpdateWorkflowExecutionRequest
+				updateExecResp := &persistence.UpdateWorkflowExecutionResponse{
+					MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{},
+				}
+				eft.ShardCtx.Resource.ExecutionMgr.
+					On("UpdateWorkflowExecution", mock.Anything, mock.Anything).
+					Return(updateExecResp, &types.EntityNotExistsError{Message: "Workflow execution not found due to parent mismatch"}).
+					Once()
+
+				// Mock the update of the shard's range ID
+				eft.ShardCtx.Resource.ShardMgr.
+					On("UpdateShard", mock.Anything, mock.Anything).
+					Return(nil)
+
+				// Mock appending history nodes
+				historyV2Mgr := eft.ShardCtx.Resource.HistoryMgr
+				historyV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.AnythingOfType("*persistence.AppendHistoryNodesRequest")).
+					Return(&persistence.AppendHistoryNodesResponse{}, nil).Once()
+			},
+			wantErr: true,
+		},
+		{
+			name: "successful termination of a running workflow",
+			execution: types.WorkflowExecution{
+				WorkflowID: constants.TestWorkflowID,
+				RunID:      constants.TestRunID,
+			},
+			setupMocks: func(t *testing.T, eft *testdata.EngineForTest) {
+				getExecReq := &persistence.GetWorkflowExecutionRequest{
+					DomainID:   constants.TestDomainID,
+					Execution:  types.WorkflowExecution{WorkflowID: constants.TestWorkflowID, RunID: constants.TestRunID},
+					DomainName: constants.TestDomainName,
+					RangeID:    1,
+				}
+				getExecResp := &persistence.GetWorkflowExecutionResponse{
+					State: &persistence.WorkflowMutableState{
+						ExecutionInfo: &persistence.WorkflowExecutionInfo{
+							DomainID:   constants.TestDomainID,
+							WorkflowID: constants.TestWorkflowID,
+							RunID:      constants.TestRunID,
+						},
+						ExecutionStats: &persistence.ExecutionStats{},
+					},
+					MutableStateStats: &persistence.MutableStateStats{},
+				}
+				eft.ShardCtx.Resource.ExecutionMgr.
+					On("GetWorkflowExecution", mock.Anything, getExecReq).
+					Return(getExecResp, nil).
+					Once()
+
+				// ReadHistoryBranch prep
+				historyBranchResp := &persistence.ReadHistoryBranchResponse{
+					HistoryEvents: []*types.HistoryEvent{
+						// first event.
+						{
+							ID:                                      1,
+							WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{},
+						},
+					},
+				}
+				historyMgr := eft.ShardCtx.Resource.HistoryMgr
+				historyMgr.
+					On("ReadHistoryBranch", mock.Anything, mock.Anything).
+					Return(historyBranchResp, nil).
+					Once()
+				var _ *persistence.UpdateWorkflowExecutionRequest
+				updateExecResp := &persistence.UpdateWorkflowExecutionResponse{
+					MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{},
+				}
+				eft.ShardCtx.Resource.ExecutionMgr.
+					On("UpdateWorkflowExecution", mock.Anything, mock.Anything).
+					Run(func(args mock.Arguments) {
+						var ok bool
+						_, ok = args.Get(1).(*persistence.UpdateWorkflowExecutionRequest)
+						if !ok {
+							t.Fatalf("failed to cast input to *persistence.UpdateWorkflowExecutionRequest, type is %T", args.Get(1))
+						}
+					}).
+					Return(updateExecResp, nil).
+					Once()
+
+				// UpdateShard prep. this is needed to update the shard's rangeID for failure cases.
+				eft.ShardCtx.Resource.ShardMgr.
+					On("UpdateShard", mock.Anything, mock.Anything).
+					Return(nil)
+				historyV2Mgr := eft.ShardCtx.Resource.HistoryMgr
+				historyV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.AnythingOfType("*persistence.AppendHistoryNodesRequest")).
+					Return(&persistence.AppendHistoryNodesResponse{}, nil).Once() // Adjust the return values based on your test case needs
+			},
+			wantErr: false,
 		},
 	}
 
-	eft := testdata.NewEngineForTest(t, NewEngineWithShardContext)
-	eft.Engine.Start()
-	defer eft.Engine.Stop()
-	initFn := withTerminationState(execution, state)
-	initFn(t, eft) // Initialize the test with the setup
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			eft := testdata.NewEngineForTest(t, NewEngineWithShardContext)
+			eft.Engine.Start()
+			defer eft.Engine.Stop()
 
-	request := terminationExecutionRequest(execution)
-	err := eft.Engine.TerminateWorkflowExecution(context.Background(), request)
+			tc.setupMocks(t, eft)
 
-	assert.NoError(t, err)
+			err := eft.Engine.TerminateWorkflowExecution(
+				context.Background(),
+				&types.HistoryTerminateWorkflowExecutionRequest{
+					DomainUUID: constants.TestDomainID,
+					TerminateRequest: &types.TerminateWorkflowExecutionRequest{
+						Domain:            constants.TestDomainName,
+						WorkflowExecution: &tc.execution,
+						Reason:            "Test termination",
+						Identity:          "testRunner",
+					},
+				},
+			)
+
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("TerminateWorkflowExecution() error = %v, wantErr %v", err, tc.wantErr)
+			}
+		})
+	}
 }
