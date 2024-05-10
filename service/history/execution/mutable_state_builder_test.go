@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"math/rand"
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
@@ -1900,10 +1901,15 @@ func TestMutableStateBuilder_CopyToPersistence_roundtrip(t *testing.T) {
 	for i := 0; i <= 100; i++ {
 		ctrl := gomock.NewController(t)
 
-		fuzzer := testdatagen.NewWithNilChance(t, 0)
+		seed := int64(rand.Int())
+		fuzzer := testdatagen.NewWithNilChance(t, seed, 0)
 
 		execution := &persistence.WorkflowMutableState{}
 		fuzzer.Fuzz(&execution)
+
+		// checksum is a calculated value, zero it out because
+		// it'll be overwridden during the constructor setup
+		execution.Checksum = checksum.Checksum{}
 
 		shardContext := shard.NewMockContext(ctrl)
 		mockCache := events.NewMockCache(ctrl)
@@ -1929,6 +1935,20 @@ func TestMutableStateBuilder_CopyToPersistence_roundtrip(t *testing.T) {
 		msb.Load(execution)
 
 		out := msb.CopyToPersistence()
+
+
+		assert.Equal(t, execution.ActivityInfos, out.ActivityInfos, "activityinfos mismatch")
+		assert.Equal(t, execution.TimerInfos, out.TimerInfos, "timerinfos mismatch")
+		assert.Equal(t, execution.ChildExecutionInfos, out.ChildExecutionInfos, "child executino info mismatches")
+		assert.Equal(t, execution.RequestCancelInfos, out.RequestCancelInfos, "request cancellantion info mismatches")
+		assert.Equal(t, execution.SignalInfos, out.SignalInfos, "signal info mismatches")
+		assert.Equal(t, execution.SignalRequestedIDs, out.SignalRequestedIDs, "signal request ids mismaches")
+		assert.Equal(t, execution.ExecutionInfo, out.ExecutionInfo, "execution info mismatches")
+		assert.Equal(t, execution.BufferedEvents, out.BufferedEvents, "buffered events mismatch")
+		assert.Equal(t, execution.VersionHistories, out.VersionHistories, "version histories")
+		assert.Equal(t, execution.Checksum, out.Checksum, "checksum mismatch")
+		assert.Equal(t, execution.ReplicationState, out.ReplicationState, "replication state mismatch")
+		assert.Equal(t, execution.ExecutionStats, out.ExecutionStats, "execution stats mismatch")
 
 		assert.Equal(t, execution, out)
 
