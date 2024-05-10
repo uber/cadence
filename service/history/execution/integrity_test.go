@@ -140,13 +140,13 @@ func TestGetResurrectedTimers(t *testing.T) {
 
 			tc.setup(mockShard, mockMutableState, mockDomainCache, mockHistoryManager)
 			ctx := context.Background()
-			got, err := GetResurrectedTimers(ctx, mockShard, mockMutableState)
+			resurrectedTimers, err := GetResurrectedTimers(ctx, mockShard, mockMutableState)
 
 			if tc.wantErr {
 				assert.Error(t, err, "GetResurrectedTimers() should have returned an error")
 			} else {
 				assert.NoError(t, err, "GetResurrectedTimers() should not have returned an error")
-				assert.Equal(t, tc.want, got, "Mismatch in expected and actual resurrected timers")
+				assert.Equal(t, tc.want, resurrectedTimers, "Mismatch in expected and actual resurrected timers")
 			}
 		})
 	}
