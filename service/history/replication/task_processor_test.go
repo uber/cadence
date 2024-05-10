@@ -181,7 +181,6 @@ func (s *taskProcessorSuite) TestProcessorLoop_RespChanClosed() {
 	// act like taskFetcher here and populate respChan of the request
 	requestMessage := <-s.requestChan
 	close(requestMessage.respChan)
-	time.Sleep(50 * time.Millisecond)
 
 	// loop should have continued by now. validate by checking the new request
 	select {
