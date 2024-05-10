@@ -3001,7 +3001,7 @@ func (s *handlerSuite) TestReapplyEvents() {
 			},
 			Events: &types.DataBlob{
 				EncodingType: types.EncodingTypeThriftRW.Ptr(),
-				Data:         []byte{1, 2, 3, 4, 5},
+				Data:         []byte{},
 			},
 		},
 	}
@@ -3026,11 +3026,22 @@ func (s *handlerSuite) TestReapplyEvents() {
 			},
 		},
 		"cannot get serialized": {
-			input:         validInput,
+			input: &types.HistoryReapplyEventsRequest{
+				DomainUUID: testDomainID,
+				Request: &types.ReapplyEventsRequest{
+					WorkflowExecution: &types.WorkflowExecution{
+						WorkflowID: testWorkflowID,
+						RunID:      testValidUUID,
+					},
+					Events: &types.DataBlob{
+						EncodingType: types.EncodingTypeThriftRW.Ptr(),
+						Data:         []byte{1, 2, 3, 4},
+					},
+				},
+			},
 			expectedError: true,
 			mockFn: func() {
 				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
-				s.mockResource.MockPayloadSerializer.EXPECT().DeserializeBatchEvents(gomock.Any()).Return(nil, errors.New("error")).Times(1)
 			},
 		},
 		"reapplyEvents error": {
@@ -3038,7 +3049,6 @@ func (s *handlerSuite) TestReapplyEvents() {
 			expectedError: true,
 			mockFn: func() {
 				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
-				s.mockResource.MockPayloadSerializer.EXPECT().DeserializeBatchEvents(gomock.Any()).Return(make([]*types.HistoryEvent, 0), nil).Times(1)
 				s.mockEngine.EXPECT().ReapplyEvents(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("error")).Times(1)
 			},
 		},
@@ -3047,7 +3057,6 @@ func (s *handlerSuite) TestReapplyEvents() {
 			expectedError: false,
 			mockFn: func() {
 				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
-				s.mockResource.MockPayloadSerializer.EXPECT().DeserializeBatchEvents(gomock.Any()).Return(make([]*types.HistoryEvent, 0), nil).Times(1)
 				s.mockEngine.EXPECT().ReapplyEvents(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 			},
 		},
