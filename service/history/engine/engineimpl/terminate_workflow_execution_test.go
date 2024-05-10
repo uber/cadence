@@ -27,6 +27,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/mock"
+
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/constants"
