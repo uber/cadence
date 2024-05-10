@@ -595,6 +595,7 @@ func TestMutableStateLoader_GetMutableState(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, expectedMS, ms)
 	assert.NotNil(t, release)
+	release(nil)
 }
 
 func TestImmediateTaskHydrator(t *testing.T) {
