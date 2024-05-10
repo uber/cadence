@@ -310,7 +310,6 @@ func (t *timerQueueProcessor) FailoverDomain(domainIDs map[string]struct{}) {
 	updateClusterAckLevelFn, failoverQueueProcessor := newTimerQueueFailoverProcessor(
 		standbyClusterName,
 		t.shard,
-		t.historyEngine,
 		t.taskProcessor,
 		t.taskAllocator,
 		t.activeTaskExecutor,
@@ -328,8 +327,8 @@ func (t *timerQueueProcessor) FailoverDomain(domainIDs map[string]struct{}) {
 	}
 
 	// Failover queue processors are started on the fly when domains are failed over.
-	// Failover queue processors will be stopped when the timer queue instance is stopped (due to restart or shard movement),
-	// which means the failover queue processor might not finish its job.
+	// Failover queue processors will be stopped when the timer queue instance is stopped (due to restart or shard movement).
+	// This means the failover queue processor might not finish its job.
 	// There is no mechanism to re-start ongoing failover queue processors in the new shard owner.
 	t.failoverQueueProcessors = append(t.failoverQueueProcessors, failoverQueueProcessor)
 	failoverQueueProcessor.Start()
