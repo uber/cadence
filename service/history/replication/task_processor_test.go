@@ -193,28 +193,6 @@ func (s *taskProcessorSuite) TestProcessorLoop_RespChanClosed() {
 }
 
 func (s *taskProcessorSuite) TestProcessorLoop_TaskExecuteSuccess() {
-	// start the process loop
-	s.taskProcessor.wg.Add(1)
-	go s.taskProcessor.processorLoop()
-
-	// act like taskFetcher here and populate respChan of the request
-	requestMessage := <-s.requestChan
-	requestMessage.respChan <- &types.ReplicationMessages{
-		LastRetrievedMessageID: 100,
-		ReplicationTasks: []*types.ReplicationTask{
-			{
-				TaskType: types.ReplicationTaskTypeSyncActivity.Ptr(),
-				SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
-					DomainID:    testDomainID,
-					WorkflowID:  testWorkflowID,
-					RunID:       testRunID,
-					ScheduledID: testScheduleID,
-				},
-				SourceTaskID: testTaskID,
-			},
-		},
-	}
-
 	// taskExecutor will fail to execute the task
 	// returning a non-retriable task to keep mocking simpler
 	s.taskExecutor.EXPECT().execute(gomock.Any(), false).Return(0, nil).Times(1)
@@ -222,12 +200,6 @@ func (s *taskProcessorSuite) TestProcessorLoop_TaskExecuteSuccess() {
 	// domain name will be fetched
 	s.mockDomainCache.EXPECT().GetDomainName(testDomainID).Return(testDomainName, nil).AnyTimes()
 
-	// wait a bit and terminate the loop
-	time.Sleep(50 * time.Millisecond)
-	close(s.taskProcessor.done)
-}
-
-func (s *taskProcessorSuite) TestProcessorLoop_TaskExecuteFailed_PutDLQSuccess() {
 	// start the process loop
 	s.taskProcessor.wg.Add(1)
 	go s.taskProcessor.processorLoop()
@@ -250,6 +222,12 @@ func (s *taskProcessorSuite) TestProcessorLoop_TaskExecuteFailed_PutDLQSuccess()
 		},
 	}
 
+	// wait a bit and terminate the loop
+	time.Sleep(50 * time.Millisecond)
+	close(s.taskProcessor.done)
+}
+
+func (s *taskProcessorSuite) TestProcessorLoop_TaskExecuteFailed_PutDLQSuccess() {
 	// taskExecutor will fail to execute the task
 	// returning a non-retriable task to keep mocking simpler
 	s.taskExecutor.EXPECT().execute(gomock.Any(), false).Return(0, &types.BadRequestError{}).Times(1)
@@ -272,16 +250,6 @@ func (s *taskProcessorSuite) TestProcessorLoop_TaskExecuteFailed_PutDLQSuccess()
 	}
 	s.mockShard.Resource.ExecutionMgr.On("PutReplicationTaskToDLQ", mock.Anything, dlqReq).Return(nil).Times(1)
 
-	// wait a bit and terminate the loop
-	time.Sleep(50 * time.Millisecond)
-	close(s.taskProcessor.done)
-}
-
-func (s *taskProcessorSuite) TestProcessorLoop_TaskExecuteFailed_PutDLQFailed() {
-	dqlRetryPolicy := backoff.NewExponentialRetryPolicy(time.Millisecond)
-	dqlRetryPolicy.SetMaximumAttempts(2)
-	s.taskProcessor.dlqRetryPolicy = dqlRetryPolicy
-
 	// start the process loop
 	s.taskProcessor.wg.Add(1)
 	go s.taskProcessor.processorLoop()
@@ -304,6 +272,12 @@ func (s *taskProcessorSuite) TestProcessorLoop_TaskExecuteFailed_PutDLQFailed() 
 		},
 	}
 
+	// wait a bit and terminate the loop
+	time.Sleep(50 * time.Millisecond)
+	close(s.taskProcessor.done)
+}
+
+func (s *taskProcessorSuite) TestProcessorLoop_TaskExecuteFailed_PutDLQFailed() {
 	// taskExecutor will fail to execute the task
 	// returning a non-retriable task to keep mocking simpler
 	s.taskExecutor.EXPECT().execute(gomock.Any(), false).Return(0, &types.BadRequestError{}).Times(1)
@@ -311,7 +285,10 @@ func (s *taskProcessorSuite) TestProcessorLoop_TaskExecuteFailed_PutDLQFailed() 
 	// domain name will be fetched
 	s.mockDomainCache.EXPECT().GetDomainName(testDomainID).Return(testDomainName, nil).AnyTimes()
 
-	// task will be put into dlq and will fail. It will be attempted 3 times. (first call + 2 retries based on policy overriden above)
+	// task will be put into dlq and will fail. It will be attempted 3 times. (first call + 2 retries based on policy overriden below)
+	dqlRetryPolicy := backoff.NewExponentialRetryPolicy(time.Millisecond)
+	dqlRetryPolicy.SetMaximumAttempts(2)
+	s.taskProcessor.dlqRetryPolicy = dqlRetryPolicy
 	dlqReq := &persistence.PutReplicationTaskToDLQRequest{
 		SourceClusterName: "standby", // TODO move to a constant
 		TaskInfo: &persistence.ReplicationTaskInfo{
@@ -328,6 +305,28 @@ func (s *taskProcessorSuite) TestProcessorLoop_TaskExecuteFailed_PutDLQFailed() 
 		On("PutReplicationTaskToDLQ", mock.Anything, dlqReq).
 		Return(errors.New("failed to put to dlq")).
 		Times(3)
+
+	// start the process loop
+	s.taskProcessor.wg.Add(1)
+	go s.taskProcessor.processorLoop()
+
+	// act like taskFetcher here and populate respChan of the request
+	requestMessage := <-s.requestChan
+	requestMessage.respChan <- &types.ReplicationMessages{
+		LastRetrievedMessageID: 100,
+		ReplicationTasks: []*types.ReplicationTask{
+			{
+				TaskType: types.ReplicationTaskTypeSyncActivity.Ptr(),
+				SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
+					DomainID:    testDomainID,
+					WorkflowID:  testWorkflowID,
+					RunID:       testRunID,
+					ScheduledID: testScheduleID,
+				},
+				SourceTaskID: testTaskID,
+			},
+		},
+	}
 
 	// wait a bit and terminate the loop
 	time.Sleep(50 * time.Millisecond)
