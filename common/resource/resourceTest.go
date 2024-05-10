@@ -74,6 +74,7 @@ type (
 		ArchivalMetadata        *archiver.MockArchivalMetadata
 		ArchiverProvider        *provider.MockArchiverProvider
 		BlobstoreClient         *blobstore.MockClient
+		MockPayloadSerializer   *persistence.MockPayloadSerializer
 
 		// membership infos
 		MembershipResolver *membership.MockResolver
@@ -184,6 +185,7 @@ func NewTest(
 		ArchivalMetadata:        &archiver.MockArchivalMetadata{},
 		ArchiverProvider:        &provider.MockArchiverProvider{},
 		BlobstoreClient:         &blobstore.MockClient{},
+		MockPayloadSerializer:   persistence.NewMockPayloadSerializer(controller),
 
 		// membership infos
 		MembershipResolver: membership.NewMockResolver(controller),
