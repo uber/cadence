@@ -73,11 +73,12 @@ type transferQueueProcessor struct {
 	shutdownChan chan struct{}
 	shutdownWG   sync.WaitGroup
 
-	ackLevel               int64
-	taskAllocator          TaskAllocator
-	activeTaskExecutor     task.Executor
-	activeQueueProcessor   *transferQueueProcessorBase
-	standbyQueueProcessors map[string]*transferQueueProcessorBase
+	ackLevel                int64
+	taskAllocator           TaskAllocator
+	activeTaskExecutor      task.Executor
+	activeQueueProcessor    *transferQueueProcessorBase
+	standbyQueueProcessors  map[string]*transferQueueProcessorBase
+	failoverQueueProcessors []*transferQueueProcessorBase
 }
 
 // NewTransferQueueProcessor creates a new transfer QueueProcessor
@@ -110,7 +111,6 @@ func NewTransferQueueProcessor(
 
 	activeQueueProcessor := newTransferQueueActiveProcessor(
 		shard,
-		historyEngine,
 		taskProcessor,
 		taskAllocator,
 		activeTaskExecutor,
@@ -141,7 +141,6 @@ func NewTransferQueueProcessor(
 		standbyQueueProcessors[clusterName] = newTransferQueueStandbyProcessor(
 			clusterName,
 			shard,
-			historyEngine,
 			taskProcessor,
 			taskAllocator,
 			standbyTaskExecutor,
@@ -205,6 +204,13 @@ func (t *transferQueueProcessor) Stop() {
 	t.activeQueueProcessor.Stop()
 	for _, standbyQueueProcessor := range t.standbyQueueProcessors {
 		standbyQueueProcessor.Stop()
+	}
+
+	if len(t.failoverQueueProcessors) > 0 {
+		t.logger.Info("Shutting down failover transfer queues", tag.Counter(len(t.failoverQueueProcessors)))
+		for _, failoverQueueProcessor := range t.failoverQueueProcessors {
+			failoverQueueProcessor.Stop()
+		}
 	}
 }
 
@@ -287,6 +293,12 @@ func (t *transferQueueProcessor) FailoverDomain(domainIDs map[string]struct{}) {
 	if err != nil {
 		t.logger.Error("Error update shard ack level", tag.Error(err))
 	}
+
+	// Failover queue processors are started on the fly when domains are failed over.
+	// Failover queue processors will be stopped when the transfer queue instance is stopped (due to restart or shard movement),
+	// which means the failover queue processor might not finish its job.
+	// There is no mechanism to re-start ongoing failover queue processors in the new shard owner.
+	t.failoverQueueProcessors = append(t.failoverQueueProcessors, failoverQueueProcessor)
 	failoverQueueProcessor.Start()
 }
 
@@ -456,7 +468,6 @@ func (t *transferQueueProcessor) completeTransfer() error {
 
 func newTransferQueueActiveProcessor(
 	shard shard.Context,
-	historyEngine engine.Engine,
 	taskProcessor task.Processor,
 	taskAllocator TaskAllocator,
 	taskExecutor task.Executor,
@@ -517,7 +528,6 @@ func newTransferQueueActiveProcessor(
 func newTransferQueueStandbyProcessor(
 	clusterName string,
 	shard shard.Context,
-	historyEngine engine.Engine,
 	taskProcessor task.Processor,
 	taskAllocator TaskAllocator,
 	taskExecutor task.Executor,
