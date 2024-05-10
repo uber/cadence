@@ -28,7 +28,6 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
 )
@@ -36,7 +35,6 @@ import (
 func newTimerQueueFailoverProcessor(
 	standbyClusterName string,
 	shardContext shard.Context,
-	historyEngine engine.Engine,
 	taskProcessor task.Processor,
 	taskAllocator TaskAllocator,
 	taskExecutor task.Executor,
