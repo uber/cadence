@@ -39,8 +39,9 @@ import (
 type TestContext struct {
 	*contextImpl
 
-	Resource        *resource.Test
-	MockEventsCache *events.MockCache
+	Resource                        *resource.Test
+	MockEventsCache                 *events.MockCache
+	MockAddingPendingFailoverMarker func(*types.FailoverMarkerAttributes) error
 }
 
 var _ Context = (*TestContext)(nil)
@@ -110,4 +111,11 @@ func (s *TestContext) Finish(
 	t mock.TestingT,
 ) {
 	s.Resource.Finish(t)
+}
+
+func (s *TestContext) AddingPendingFailoverMarker(marker *types.FailoverMarkerAttributes) error {
+	if s.MockAddingPendingFailoverMarker != nil {
+		return s.MockAddingPendingFailoverMarker(marker)
+	}
+	return s.contextImpl.AddingPendingFailoverMarker(marker)
 }

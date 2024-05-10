@@ -60,6 +60,7 @@ ignore:
   - "service/frontend/service.go"
   - "service/history/constants/test_constants.go"
   - "service/history/execution/mutable_state.go"
+  - "service/history/shard/contextTest.go"
   - "service/history/workflow/errors.go"
   - "service/history/service.go"
   - "service/matching/service.go"
