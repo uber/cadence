@@ -24,8 +24,12 @@ package execution
 import (
 	"context"
 	"errors"
+	"testing"
+	"time"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
@@ -33,8 +37,6 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/shard"
-	"testing"
-	"time"
 )
 
 func TestGetResurrectedTimers(t *testing.T) {
