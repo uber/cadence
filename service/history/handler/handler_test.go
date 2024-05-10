@@ -3030,7 +3030,7 @@ func (s *handlerSuite) TestReapplyEvents() {
 			expectedError: true,
 			mockFn: func() {
 				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
-				s.mockResource.PayloadSerializer.EXPECT().DeserializeBatchEvents(gomock.Any()).Return(nil, errors.New("error")).Times(1)
+				s.mockResource.MockPayloadSerializer.EXPECT().DeserializeBatchEvents(gomock.Any()).Return(nil, errors.New("error")).Times(1)
 			},
 		},
 		"reapplyEvents error": {
@@ -3038,7 +3038,7 @@ func (s *handlerSuite) TestReapplyEvents() {
 			expectedError: true,
 			mockFn: func() {
 				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
-				s.mockResource.PayloadSerializer.EXPECT().DeserializeBatchEvents(gomock.Any()).Return(make([]*types.HistoryEvent, 0), nil).Times(1)
+				s.mockResource.MockPayloadSerializer.EXPECT().DeserializeBatchEvents(gomock.Any()).Return(make([]*types.HistoryEvent, 0), nil).Times(1)
 				s.mockEngine.EXPECT().ReapplyEvents(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("error")).Times(1)
 			},
 		},
@@ -3047,7 +3047,7 @@ func (s *handlerSuite) TestReapplyEvents() {
 			expectedError: false,
 			mockFn: func() {
 				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
-				s.mockResource.PayloadSerializer.EXPECT().DeserializeBatchEvents(gomock.Any()).Return(make([]*types.HistoryEvent, 0), nil).Times(1)
+				s.mockResource.MockPayloadSerializer.EXPECT().DeserializeBatchEvents(gomock.Any()).Return(make([]*types.HistoryEvent, 0), nil).Times(1)
 				s.mockEngine.EXPECT().ReapplyEvents(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 			},
 		},

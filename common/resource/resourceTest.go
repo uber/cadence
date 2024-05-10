@@ -69,11 +69,12 @@ type (
 		DomainMetricsScopeCache cache.DomainMetricsScopeCache
 		DomainReplicationQueue  *domain.MockReplicationQueue
 		TimeSource              clock.TimeSource
-		PayloadSerializer       *persistence.MockPayloadSerializer
+		PayloadSerializer       persistence.PayloadSerializer
 		MetricsClient           metrics.Client
 		ArchivalMetadata        *archiver.MockArchivalMetadata
 		ArchiverProvider        *provider.MockArchiverProvider
 		BlobstoreClient         *blobstore.MockClient
+		MockPayloadSerializer   *persistence.MockPayloadSerializer
 
 		// membership infos
 		MembershipResolver *membership.MockResolver
@@ -179,11 +180,12 @@ func NewTest(
 		DomainMetricsScopeCache: cache.NewDomainMetricsScopeCache(),
 		DomainReplicationQueue:  domainReplicationQueue,
 		TimeSource:              clock.NewRealTimeSource(),
-		PayloadSerializer:       persistence.NewMockPayloadSerializer(controller),
+		PayloadSerializer:       persistence.NewPayloadSerializer(),
 		MetricsClient:           metrics.NewClient(scope, serviceMetricsIndex),
 		ArchivalMetadata:        &archiver.MockArchivalMetadata{},
 		ArchiverProvider:        &provider.MockArchiverProvider{},
 		BlobstoreClient:         &blobstore.MockClient{},
+		MockPayloadSerializer:   persistence.NewMockPayloadSerializer(controller),
 
 		// membership infos
 		MembershipResolver: membership.NewMockResolver(controller),
