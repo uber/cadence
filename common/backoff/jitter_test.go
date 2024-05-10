@@ -22,6 +22,7 @@ package backoff
 
 import (
 	"log"
+	"math/rand"
 	"os"
 	"testing"
 	"time"
@@ -59,6 +60,13 @@ func (s *jitterSuite) TestJitInt64() {
 	}
 }
 
+func (s *jitterSuite) TestJitInt64WithZeroCoefficient() {
+	for i := 0; i < 1048576; i++ {
+		input := rand.Int63()
+		s.Equal(input, JitInt64(input, 0))
+	}
+}
+
 func (s *jitterSuite) TestJitFloat64() {
 	input := float64(1048576.1048576)
 	coefficient := float64(0.16)
@@ -72,6 +80,13 @@ func (s *jitterSuite) TestJitFloat64() {
 	}
 }
 
+func (s *jitterSuite) TestJitFloat64WithZeroCoefficient() {
+	for i := 0; i < 1048576; i++ {
+		input := rand.Float64()
+		s.Equal(input, JitFloat64(input, 0))
+	}
+}
+
 func (s *jitterSuite) TestJitDuration() {
 	input := time.Duration(1099511627776)
 	coefficient := float64(0.1)
@@ -82,5 +97,12 @@ func (s *jitterSuite) TestJitDuration() {
 		result := JitDuration(input, coefficient)
 		s.True(result >= lowerBound)
 		s.True(result < upperBound)
+	}
+}
+
+func (s *jitterSuite) TestJitDurationWithZeroCoefficient() {
+	for i := 0; i < 1048576; i++ {
+		input := time.Duration(rand.Int63())
+		s.Equal(input, JitDuration(input, 0))
 	}
 }
