@@ -25,12 +25,15 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/goleak"
 
+	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
@@ -251,4 +254,21 @@ func (s *taskFetcherSuite) TestLifecycle() {
 	_, open = <-fetchAndDistributeTasksSyncChan[3] // block until fetchAndDistributeTasksFn is called
 	s.False(open)
 	s.Equal(4, fetchAndDistributeTasksFnCall)
+}
+
+func TestTaskFetchers(t *testing.T) {
+	defer goleak.VerifyNone(t)
+	ctrl := gomock.NewController(t)
+	mockBean := client.NewMockBean(ctrl)
+	mockAdminClient := admin.NewMockClient(ctrl)
+	logger := testlogger.New(t)
+	cfg := config.NewForTest()
+
+	mockBean.EXPECT().GetRemoteAdminClient(cluster.TestAlternativeClusterName).Return(mockAdminClient)
+	fetchers := NewTaskFetchers(logger, cfg, cluster.TestActiveClusterMetadata, mockBean)
+	assert.NotNil(t, fetchers)
+	assert.Len(t, fetchers.GetFetchers(), len(cluster.TestActiveClusterMetadata.GetRemoteClusterInfo()))
+
+	fetchers.Start()
+	fetchers.Stop()
 }
