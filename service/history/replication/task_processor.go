@@ -443,9 +443,7 @@ func (p *taskProcessorImpl) processSingleTask(replicationTask *types.Replication
 func (p *taskProcessorImpl) processTaskOnce(replicationTask *types.ReplicationTask) error {
 	ts := p.shard.GetTimeSource()
 	startTime := ts.Now()
-	scope, err := p.taskExecutor.execute(
-		replicationTask,
-		false)
+	scope, err := p.taskExecutor.execute(replicationTask, false)
 
 	if err != nil {
 		p.updateFailureMetric(scope, err)
