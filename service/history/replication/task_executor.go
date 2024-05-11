@@ -34,6 +34,8 @@ import (
 	"github.com/uber/cadence/service/history/shard"
 )
 
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination task_executor_mock.go -self_package github.com/uber/cadence/service/history/replication
+
 type (
 	// TaskExecutor is the executor for replication task
 	TaskExecutor interface {
