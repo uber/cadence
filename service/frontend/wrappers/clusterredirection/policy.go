@@ -195,7 +195,7 @@ func (policy *selectedOrAllAPIsForwardingRedirectionPolicy) WithDomainIDRedirect
 		return err
 	}
 	if domainEntry.IsDeprecatedOrDeleted() {
-		return types.DomainNotActiveError{
+		return &types.DomainNotActiveError{
 			Message:        "domain is deprecated.",
 			DomainName:     domainEntry.GetInfo().Name,
 			CurrentCluster: policy.currentClusterName,
@@ -212,7 +212,7 @@ func (policy *selectedOrAllAPIsForwardingRedirectionPolicy) WithDomainNameRedire
 		return err
 	}
 	if domainEntry.IsDeprecatedOrDeleted() {
-		return types.DomainNotActiveError{
+		return &types.DomainNotActiveError{
 			Message:        "domain is deprecated or deleted",
 			DomainName:     domainName,
 			CurrentCluster: policy.currentClusterName,
