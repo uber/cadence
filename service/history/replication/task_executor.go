@@ -34,6 +34,8 @@ import (
 	"github.com/uber/cadence/service/history/shard"
 )
 
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination task_executor_mock.go -self_package github.com/uber/cadence/service/history/replication
+
 type (
 	// TaskExecutor is the executor for replication task
 	TaskExecutor interface {
@@ -147,43 +149,45 @@ func (e *taskExecutorImpl) handleActivityTask(
 	}
 
 	err = syncActivityAction()
+	retryErr, ok := toRetryTaskV2Error(err)
+	if !ok {
+		return err
+	}
 	// Handle resend error
-	if retryErr, ok := e.convertRetryTaskV2Error(err); ok {
-		e.metricsClient.IncCounter(metrics.HistoryRereplicationByActivityReplicationScope, metrics.CadenceClientRequests)
-		stopwatch := e.metricsClient.StartTimer(metrics.HistoryRereplicationByActivityReplicationScope, metrics.CadenceClientLatency)
-		defer stopwatch.Stop()
+	e.metricsClient.IncCounter(metrics.HistoryRereplicationByActivityReplicationScope, metrics.CadenceClientRequests)
+	stopwatch := e.metricsClient.StartTimer(metrics.HistoryRereplicationByActivityReplicationScope, metrics.CadenceClientLatency)
+	defer stopwatch.Stop()
 
-		resendErr := e.historyResender.SendSingleWorkflowHistory(
-			retryErr.GetDomainID(),
-			retryErr.GetWorkflowID(),
-			retryErr.GetRunID(),
-			retryErr.StartEventID,
-			retryErr.StartEventVersion,
-			retryErr.EndEventID,
-			retryErr.EndEventVersion,
+	resendErr := e.historyResender.SendSingleWorkflowHistory(
+		retryErr.GetDomainID(),
+		retryErr.GetWorkflowID(),
+		retryErr.GetRunID(),
+		retryErr.StartEventID,
+		retryErr.StartEventVersion,
+		retryErr.EndEventID,
+		retryErr.EndEventVersion,
+	)
+	switch {
+	case resendErr == nil:
+		break
+	case resendErr == ndc.ErrSkipTask:
+		e.logger.Error(
+			"skip replication sync activity task",
+			tag.WorkflowDomainID(retryErr.GetDomainID()),
+			tag.WorkflowID(retryErr.GetWorkflowID()),
+			tag.WorkflowRunID(retryErr.GetRunID()),
 		)
-		switch {
-		case resendErr == nil:
-			break
-		case resendErr == ndc.ErrSkipTask:
-			e.logger.Error(
-				"skip replication sync activity task",
-				tag.WorkflowDomainID(retryErr.GetDomainID()),
-				tag.WorkflowID(retryErr.GetWorkflowID()),
-				tag.WorkflowRunID(retryErr.GetRunID()),
-			)
-			return nil
-		default:
-			e.logger.Error(
-				"error resend history for sync activity",
-				tag.WorkflowDomainID(retryErr.GetDomainID()),
-				tag.WorkflowID(retryErr.GetWorkflowID()),
-				tag.WorkflowRunID(retryErr.GetRunID()),
-				tag.Error(resendErr),
-			)
-			// should return the replication error, not the resending error
-			return err
-		}
+		return nil
+	default:
+		e.logger.Error(
+			"error resend history for sync activity",
+			tag.WorkflowDomainID(retryErr.GetDomainID()),
+			tag.WorkflowID(retryErr.GetWorkflowID()),
+			tag.WorkflowRunID(retryErr.GetRunID()),
+			tag.Error(resendErr),
+		)
+		// should return the replication error, not the resending error
+		return err
 	}
 	// should try again after back fill the history
 	return syncActivityAction()
@@ -229,7 +233,7 @@ func (e *taskExecutorImpl) handleHistoryReplicationTaskV2(
 	}
 
 	err = historyReplicationAction()
-	retryErr, ok := e.convertRetryTaskV2Error(err)
+	retryErr, ok := toRetryTaskV2Error(err)
 	if !ok {
 		return err
 	}
@@ -284,31 +288,24 @@ func (e *taskExecutorImpl) filterTask(
 	domainID string,
 	forceApply bool,
 ) (bool, error) {
-
 	if forceApply {
 		return true, nil
 	}
-
 	domainEntry, err := e.domainCache.GetDomainByID(domainID)
 	if err != nil {
 		return false, err
 	}
-
 	shouldProcessTask := false
-FilterLoop:
 	for _, targetCluster := range domainEntry.GetReplicationConfig().Clusters {
 		if e.currentCluster == targetCluster.ClusterName {
 			shouldProcessTask = true
-			break FilterLoop
+			break
 		}
 	}
 	return shouldProcessTask, nil
 }
 
-func (e *taskExecutorImpl) convertRetryTaskV2Error(
-	err error,
-) (*types.RetryTaskV2Error, bool) {
-
+func toRetryTaskV2Error(err error) (*types.RetryTaskV2Error, bool) {
 	retError, ok := err.(*types.RetryTaskV2Error)
 	return retError, ok
 }
