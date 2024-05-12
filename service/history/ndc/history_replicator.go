@@ -64,11 +64,12 @@ type (
 		transactionManager transactionManager
 		logger             log.Logger
 
-		newBranchManager    branchManagerProvider
-		newConflictResolver conflictResolverProvider
-		newWorkflowResetter workflowResetterProvider
-		newStateBuilder     stateBuilderProvider
-		newMutableState     mutableStateProvider
+		newBranchManager     branchManagerProvider
+		newConflictResolver  conflictResolverProvider
+		newWorkflowResetter  workflowResetterProvider
+		newStateBuilder      stateBuilderProvider
+		newMutableState      mutableStateProvider
+		newReplicationTaskFn newReplicationTaskFn
 	}
 
 	stateBuilderProvider func(
@@ -100,6 +101,14 @@ type (
 		newRunID string,
 		logger log.Logger,
 	) WorkflowResetter
+
+	newReplicationTaskFn func(
+		clusterMetadata cluster.Metadata,
+		historySerializer persistence.PayloadSerializer,
+		taskStartTime time.Time,
+		logger log.Logger,
+		request *types.ReplicateEventsV2Request,
+	) (replicationTask, error)
 )
 
 var _ HistoryReplicator = (*historyReplicatorImpl)(nil)
@@ -172,6 +181,7 @@ func NewHistoryReplicator(
 				domainEntry,
 			)
 		},
+		newReplicationTaskFn: newReplicationTask,
 	}
 
 	return replicator
@@ -183,7 +193,7 @@ func (r *historyReplicatorImpl) ApplyEvents(
 ) (retError error) {
 
 	startTime := time.Now()
-	task, err := newReplicationTask(
+	task, err := r.newReplicationTaskFn(
 		r.clusterMetadata,
 		r.historySerializer,
 		startTime,
