@@ -31,7 +31,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/service/matching"
+	"github.com/uber/cadence/service/matching/tasklist"
 )
 
 type (
@@ -289,7 +289,7 @@ Loop:
 		return false, newTask, err
 	}
 
-	return false, nil, matching.ErrNoTasks
+	return false, nil, tasklist.ErrNoTasks
 }
 
 // HandlePartialDecision for decision task
@@ -411,7 +411,7 @@ func (p *TaskPoller) PollAndProcessActivityTask(dropTask bool) error {
 		return taskErr
 	}
 
-	return matching.ErrNoTasks
+	return tasklist.ErrNoTasks
 }
 
 // PollAndProcessActivityTaskWithID is similar to PollAndProcessActivityTask but using RespondActivityTask...ByID
@@ -490,7 +490,7 @@ func (p *TaskPoller) PollAndProcessActivityTaskWithID(dropTask bool) error {
 		return taskErr
 	}
 
-	return matching.ErrNoTasks
+	return tasklist.ErrNoTasks
 }
 
 func createContext() (context.Context, context.CancelFunc) {
