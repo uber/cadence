@@ -23,7 +23,6 @@ package handler
 import (
 	"context"
 	"errors"
-	"github.com/uber/cadence/service/history/failover"
 	"math/rand"
 	"sync/atomic"
 	"testing"
@@ -49,6 +48,7 @@ import (
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
+	"github.com/uber/cadence/service/history/failover"
 	"github.com/uber/cadence/service/history/resource"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
