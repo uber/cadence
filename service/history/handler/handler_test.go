@@ -48,6 +48,7 @@ import (
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
+	"github.com/uber/cadence/service/history/failover"
 	"github.com/uber/cadence/service/history/resource"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
@@ -75,6 +76,7 @@ type (
 		mockHistoryEventNotifier     *events.MockNotifier
 		mockRatelimiter              *quotas.MockLimiter
 		mockCrossClusterTaskFetchers *task.MockFetcher
+		mockFailoverCoordinator      *failover.MockCoordinator
 
 		handler *handlerImpl
 	}
@@ -94,6 +96,7 @@ func (s *handlerSuite) SetupTest() {
 	s.mockShardController = shard.NewMockController(s.controller)
 	s.mockEngine = engine.NewMockEngine(s.controller)
 	s.mockWFCache = workflowcache.NewMockWFCache(s.controller)
+	s.mockFailoverCoordinator = failover.NewMockCoordinator(s.controller)
 	internalRequestRateLimitingEnabledConfig := func(domainName string) bool { return false }
 	s.handler = NewHandler(s.mockResource, config.NewForTest(), s.mockWFCache, internalRequestRateLimitingEnabledConfig).(*handlerImpl)
 	s.handler.controller = s.mockShardController
@@ -3128,6 +3131,239 @@ func (s *handlerSuite) TestCountDLQMessages() {
 		s.Run(name, func() {
 			input.mockFn()
 			_, err := s.handler.CountDLQMessages(context.Background(), input.input)
+			s.handler.shuttingDown = int32(0)
+			if input.expectedError {
+				s.Error(err)
+			} else {
+				s.NoError(err)
+			}
+		})
+	}
+}
+
+func (s *handlerSuite) TestReadDLQMessages() {
+	validInput := &types.ReadDLQMessagesRequest{
+		ShardID: 1,
+	}
+
+	testInput := map[string]struct {
+		input         *types.ReadDLQMessagesRequest
+		expectedError bool
+		mockFn        func()
+	}{
+		"shutting down": {
+			input:         validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.handler.shuttingDown = int32(1)
+			},
+		},
+		"get shard engine error": {
+			input:         validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.mockShardController.EXPECT().GetEngineForShard(1).Return(nil, errors.New("error")).Times(1)
+			},
+		},
+		"readDLQMessages error": {
+			input:         validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.mockShardController.EXPECT().GetEngineForShard(1).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().ReadDLQMessages(gomock.Any(), gomock.Any()).Return(nil, errors.New("error")).Times(1)
+			},
+		},
+		"success": {
+			input:         validInput,
+			expectedError: false,
+			mockFn: func() {
+				resp := &types.ReadDLQMessagesResponse{}
+				s.mockShardController.EXPECT().GetEngineForShard(1).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().ReadDLQMessages(gomock.Any(), gomock.Any()).Return(resp, nil).Times(1)
+			},
+		},
+	}
+
+	for name, input := range testInput {
+		s.Run(name, func() {
+			input.mockFn()
+			resp, err := s.handler.ReadDLQMessages(context.Background(), input.input)
+			s.handler.shuttingDown = int32(0)
+			if input.expectedError {
+				s.Nil(resp)
+				s.Error(err)
+			} else {
+				s.NotNil(resp)
+				s.NoError(err)
+			}
+		})
+	}
+}
+
+func (s *handlerSuite) TestPurgeDLQMessages() {
+	validInput := &types.PurgeDLQMessagesRequest{
+		ShardID: 1,
+	}
+
+	testInput := map[string]struct {
+		input         *types.PurgeDLQMessagesRequest
+		expectedError bool
+		mockFn        func()
+	}{
+		"shutting down": {
+			input:         validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.handler.shuttingDown = int32(1)
+			},
+		},
+		"get shard engine error": {
+			input:         validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.mockShardController.EXPECT().GetEngineForShard(1).Return(nil, errors.New("error")).Times(1)
+			},
+		},
+		"purgeDLQMessages error": {
+			input:         validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.mockShardController.EXPECT().GetEngineForShard(1).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().PurgeDLQMessages(gomock.Any(), gomock.Any()).Return(errors.New("error")).Times(1)
+			},
+		},
+		"success": {
+			input:         validInput,
+			expectedError: false,
+			mockFn: func() {
+				s.mockShardController.EXPECT().GetEngineForShard(1).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().PurgeDLQMessages(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+		},
+	}
+
+	for name, input := range testInput {
+		s.Run(name, func() {
+			input.mockFn()
+			err := s.handler.PurgeDLQMessages(context.Background(), input.input)
+			s.handler.shuttingDown = int32(0)
+			if input.expectedError {
+				s.Error(err)
+			} else {
+				s.NoError(err)
+			}
+		})
+	}
+}
+
+func (s *handlerSuite) TestMergeDLQMessages() {
+	validInput := &types.MergeDLQMessagesRequest{
+		ShardID: 1,
+	}
+
+	testInput := map[string]struct {
+		input         *types.MergeDLQMessagesRequest
+		expectedError bool
+		mockFn        func()
+	}{
+		"shutting down": {
+			input:         validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.handler.shuttingDown = int32(1)
+			},
+		},
+		"get shard engine error": {
+			input:         validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.mockShardController.EXPECT().GetEngineForShard(1).Return(nil, errors.New("error")).Times(1)
+			},
+		},
+		"mergeDLQMessages error": {
+			input:         validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.mockShardController.EXPECT().GetEngineForShard(1).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().MergeDLQMessages(gomock.Any(), gomock.Any()).Return(nil, errors.New("error")).Times(1)
+			},
+		},
+		"success": {
+			input:         validInput,
+			expectedError: false,
+			mockFn: func() {
+				s.mockShardController.EXPECT().GetEngineForShard(1).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().MergeDLQMessages(gomock.Any(), gomock.Any()).Return(&types.MergeDLQMessagesResponse{}, nil).Times(1)
+			},
+		},
+	}
+
+	for name, input := range testInput {
+		s.Run(name, func() {
+			input.mockFn()
+			_, err := s.handler.MergeDLQMessages(context.Background(), input.input)
+			s.handler.shuttingDown = int32(0)
+			if input.expectedError {
+				s.Error(err)
+			} else {
+				s.NoError(err)
+			}
+		})
+	}
+}
+
+func (s *handlerSuite) TestRefreshWorkflowTasks() {
+	validInput := &types.HistoryRefreshWorkflowTasksRequest{
+		DomainUIID: testDomainID,
+		Request: &types.RefreshWorkflowTasksRequest{
+			Execution: &types.WorkflowExecution{
+				WorkflowID: testWorkflowID,
+				RunID:      testValidUUID,
+			},
+		},
+	}
+
+	testInput := map[string]struct {
+		input         *types.HistoryRefreshWorkflowTasksRequest
+		expectedError bool
+		mockFn        func()
+	}{
+		"shutting down": {
+			input:         validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.handler.shuttingDown = int32(1)
+			},
+		},
+		"cannot get engine": {
+			input:         validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(nil, errors.New("error")).Times(1)
+			},
+		},
+		"refreshWorkflowTasks error": {
+			input:         validInput,
+			expectedError: true,
+			mockFn: func() {
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().RefreshWorkflowTasks(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("error")).Times(1)
+			},
+		},
+		"success": {
+			input:         validInput,
+			expectedError: false,
+			mockFn: func() {
+				s.mockShardController.EXPECT().GetEngine(testWorkflowID).Return(s.mockEngine, nil).Times(1)
+				s.mockEngine.EXPECT().RefreshWorkflowTasks(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+		},
+	}
+
+	for name, input := range testInput {
+		s.Run(name, func() {
+			input.mockFn()
+			err := s.handler.RefreshWorkflowTasks(context.Background(), input.input)
 			s.handler.shuttingDown = int32(0)
 			if input.expectedError {
 				s.Error(err)
