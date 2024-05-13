@@ -694,8 +694,22 @@ type PinotQuerySearchField struct {
 	string
 }
 
+func (s *PinotQuerySearchField) checkFirstSearchField() {
+	if s.string == "" {
+		s.string = "( "
+	} else {
+		s.string += "OR "
+	}
+}
+
+func (s *PinotQuerySearchField) lastSearchField() {
+	if s.string != "" {
+		s.string += " )"
+	}
+}
+
 func (s *PinotQuerySearchField) addEqual(obj string, val interface{}) {
-	s.string += "OR "
+	s.checkFirstSearchField()
 	if _, ok := val.(string); ok {
 		val = fmt.Sprintf("'%s'", val)
 	} else {
@@ -707,15 +721,10 @@ func (s *PinotQuerySearchField) addEqual(obj string, val interface{}) {
 }
 
 func (s *PinotQuerySearchField) addLike(obj string, val interface{}) {
-	s.string += "OR "
-	if _, ok := val.(string); ok {
-		val = fmt.Sprintf("'%s'", val)
-	} else {
-		val = fmt.Sprintf("%v", val)
-	}
+	s.checkFirstSearchField()
 
 	quotedVal := fmt.Sprintf("%%%s%%", val)
-	s.string += fmt.Sprintf("%s like %s\n", obj, quotedVal)
+	s.string += fmt.Sprintf("%s LIKE \"%s\"\n", obj, quotedVal)
 }
 
 func NewPinotQuery(tableName string) PinotQuery {
@@ -738,7 +747,7 @@ func NewPinotCountQuery(tableName string) PinotQuery {
 }
 
 func (q *PinotQuery) String() string {
-	return fmt.Sprintf("%s%s%s%s%s", q.query, q.filters.string, q.search, q.sorters, q.limits)
+	return fmt.Sprintf("%s%s%s%s", q.query, q.filters.string, q.sorters, q.limits)
 }
 
 func (q *PinotQuery) concatSorter(sorter string) {
@@ -1038,10 +1047,12 @@ func getListAllWorkflowExecutionsQuery(tableName string, request *p.InternalList
 	query.filters.addEqual(DomainID, request.DomainUUID)
 	query.filters.addEqual(IsDeleted, false)
 
-	earliest := request.EarliestTime.UnixMilli() - oneMicroSecondInNano
-	latest := request.LatestTime.UnixMilli() + oneMicroSecondInNano
+	if !request.EarliestTime.IsZero() && !request.LatestTime.IsZero() {
+		earliest := request.EarliestTime.UnixMilli() - oneMicroSecondInNano
+		latest := request.LatestTime.UnixMilli() + oneMicroSecondInNano
+		query.filters.addTimeRange(StartTime, earliest, latest) // convert Unix Time to miliseconds
+	}
 
-	query.filters.addTimeRange(StartTime, earliest, latest) // convert Unix Time to miliseconds
 	query.addPinotSorter(StartTime, DescendingOrder)
 
 	token, err := pnt.GetNextPageToken(request.NextPageToken)
@@ -1053,15 +1064,21 @@ func getListAllWorkflowExecutionsQuery(tableName string, request *p.InternalList
 	pageSize := request.PageSize
 	query.addOffsetAndLimits(from, pageSize)
 
-	if request.PartialMatch {
-		query.search.addLike(WorkflowID, request.WorkflowSearchValue)
-		query.search.addLike(WorkflowType, request.WorkflowSearchValue)
-		query.search.addLike(RunID, request.WorkflowSearchValue)
-	} else {
-		query.search.addEqual(WorkflowID, request.WorkflowSearchValue)
-		query.search.addEqual(WorkflowType, request.WorkflowSearchValue)
-		query.search.addEqual(RunID, request.WorkflowSearchValue)
+	if request.WorkflowSearchValue != "" {
+		if request.PartialMatch {
+			query.search.addLike(WorkflowID, request.WorkflowSearchValue)
+			query.search.addLike(WorkflowType, request.WorkflowSearchValue)
+			query.search.addLike(RunID, request.WorkflowSearchValue)
+		} else {
+			query.search.addEqual(WorkflowID, request.WorkflowSearchValue)
+			query.search.addEqual(WorkflowType, request.WorkflowSearchValue)
+			query.search.addEqual(RunID, request.WorkflowSearchValue)
+		}
+
+		query.search.lastSearchField()
+		query.filters.addQuery(query.search.string)
 	}
+
 	return query.String(), nil
 }
 

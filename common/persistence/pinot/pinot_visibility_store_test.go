@@ -59,7 +59,8 @@ var (
 
 	testContextTimeout = 5 * time.Second
 
-	validSearchAttr = definition.GetDefaultIndexedKeys()
+	validSearchAttr  = definition.GetDefaultIndexedKeys()
+	nextPageTokenErr = fmt.Errorf("next page token: unable to deserialize page token. err: invalid character 'e' looking for beginning of value")
 )
 
 func TestRecordWorkflowExecutionStarted(t *testing.T) {
@@ -428,7 +429,7 @@ func TestListOpenWorkflowExecutions(t *testing.T) {
 			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
 				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
 			},
-			expectedError: fmt.Errorf("next page token: unable to deserialize page token. err: invalid character 'e' looking for beginning of value"),
+			expectedError: nextPageTokenErr,
 		},
 		"Case2: normal case with nil response": {
 			request:      request,
@@ -487,7 +488,7 @@ func TestListClosedWorkflowExecutions(t *testing.T) {
 			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
 				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
 			},
-			expectedError: fmt.Errorf("next page token: unable to deserialize page token. err: invalid character 'e' looking for beginning of value"),
+			expectedError: nextPageTokenErr,
 		},
 		"Case2: normal case with nil response": {
 			request:      request,
@@ -547,7 +548,7 @@ func TestListOpenWorkflowExecutionsByType(t *testing.T) {
 			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
 				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
 			},
-			expectedError: fmt.Errorf("next page token: unable to deserialize page token. err: invalid character 'e' looking for beginning of value"),
+			expectedError: nextPageTokenErr,
 		},
 		"Case2: normal case with nil response": {
 			request:      request,
@@ -606,7 +607,7 @@ func TestListClosedWorkflowExecutionsByType(t *testing.T) {
 			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
 				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
 			},
-			expectedError: fmt.Errorf("next page token: unable to deserialize page token. err: invalid character 'e' looking for beginning of value"),
+			expectedError: nextPageTokenErr,
 		},
 		"Case2: normal case with nil response": {
 			request:      request,
@@ -664,7 +665,7 @@ func TestListOpenWorkflowExecutionsByWorkflowID(t *testing.T) {
 			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
 				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
 			},
-			expectedError: fmt.Errorf("next page token: unable to deserialize page token. err: invalid character 'e' looking for beginning of value"),
+			expectedError: nextPageTokenErr,
 		},
 		"Case2: normal case with nil response": {
 			request:      request,
@@ -722,7 +723,7 @@ func TestListClosedWorkflowExecutionsByWorkflowID(t *testing.T) {
 			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
 				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
 			},
-			expectedError: fmt.Errorf("next page token: unable to deserialize page token. err: invalid character 'e' looking for beginning of value"),
+			expectedError: nextPageTokenErr,
 		},
 		"Case2: normal case with nil response": {
 			request:      request,
@@ -780,7 +781,7 @@ func TestListClosedWorkflowExecutionsByStatus(t *testing.T) {
 			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
 				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
 			},
-			expectedError: fmt.Errorf("next page token: unable to deserialize page token. err: invalid character 'e' looking for beginning of value"),
+			expectedError: nextPageTokenErr,
 		},
 		"Case2: normal case with nil response": {
 			request:      request,
@@ -900,7 +901,7 @@ func TestListWorkflowExecutions(t *testing.T) {
 			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
 				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
 			},
-			expectedError: fmt.Errorf("next page token: unable to deserialize page token. err: invalid character 'e' looking for beginning of value"),
+			expectedError: nextPageTokenErr,
 		},
 		"Case2: normal case with nil response": {
 			request:      request,
@@ -937,6 +938,89 @@ func TestListWorkflowExecutions(t *testing.T) {
 	}
 }
 
+func TestListAllWorkflowExecutions(t *testing.T) {
+	tests := map[string]struct {
+		request                   *p.InternalListAllWorkflowExecutionsByTypeRequest
+		expectedResp              *p.InternalListWorkflowExecutionsResponse
+		pinotClientMockAffordance func(mockPinotClient *pnt.MockGenericClient)
+		expectedError             error
+	}{
+		"successful request": {
+			request: &p.InternalListAllWorkflowExecutionsByTypeRequest{
+				InternalListWorkflowExecutionsRequest: p.InternalListWorkflowExecutionsRequest{
+					DomainUUID:    testDomainID,
+					Domain:        testDomain,
+					EarliestTime:  time.Unix(0, testEarliestTime),
+					LatestTime:    time.Unix(0, testLatestTime),
+					PageSize:      10,
+					NextPageToken: nil,
+				},
+				PartialMatch:        false,
+				WorkflowSearchValue: "",
+			},
+			expectedResp: &p.InternalListWorkflowExecutionsResponse{
+				Executions: []*p.InternalVisibilityWorkflowExecutionInfo{
+					{
+						DomainID: DomainID,
+					},
+				},
+			},
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+				mockPinotClient.EXPECT().Search(gomock.Any()).Return(&pnt.SearchResponse{
+					Executions: []*p.InternalVisibilityWorkflowExecutionInfo{
+						{
+							DomainID: DomainID,
+						},
+					},
+				}, nil).Times(1)
+			},
+			expectedError: nil,
+		},
+		"error request": {
+			request: &p.InternalListAllWorkflowExecutionsByTypeRequest{
+				InternalListWorkflowExecutionsRequest: p.InternalListWorkflowExecutionsRequest{
+					DomainUUID:    testDomainID,
+					Domain:        testDomain,
+					EarliestTime:  time.Unix(0, testEarliestTime),
+					LatestTime:    time.Unix(0, testLatestTime),
+					PageSize:      10,
+					NextPageToken: []byte("error"),
+				},
+				PartialMatch:        false,
+				WorkflowSearchValue: "",
+			},
+			expectedResp: nil,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+			},
+			expectedError: nextPageTokenErr,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockPinotClient := pnt.NewMockGenericClient(ctrl)
+			mockProducer := &mocks.KafkaProducer{}
+			mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
+				ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+				ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
+			}, mockProducer, log.NewNoop())
+			visibilityStore := mgr.(*pinotVisibilityStore)
+
+			test.pinotClientMockAffordance(mockPinotClient)
+
+			resp, err := visibilityStore.ListAllWorkflowExecutions(context.Background(), test.request)
+			assert.Equal(t, test.expectedResp, resp)
+			if test.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestScanWorkflowExecutions(t *testing.T) {
 	errorRequest := &p.ListWorkflowExecutionsByQueryRequest{
 		NextPageToken: []byte("error"),
@@ -955,7 +1039,7 @@ func TestScanWorkflowExecutions(t *testing.T) {
 			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
 				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
 			},
-			expectedError: fmt.Errorf("next page token: unable to deserialize page token. err: invalid character 'e' looking for beginning of value"),
+			expectedError: nextPageTokenErr,
 		},
 		"Case2: normal case with nil response": {
 			request:      request,
@@ -1662,6 +1746,86 @@ LIMIT 0, 10
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			actualResult, actualError := getListWorkflowExecutionsByStatusQuery(testTableName, test.inputRequest)
+			assert.Equal(t, test.expectResult, actualResult)
+			assert.NoError(t, actualError)
+		})
+	}
+}
+func TestGetListAllWorkflowExecutionsQuery(t *testing.T) {
+	tests := map[string]struct {
+		inputRequest *p.InternalListAllWorkflowExecutionsByTypeRequest
+		expectResult string
+		expectError  error
+	}{
+		"complete request with exact match": {
+			inputRequest: &p.InternalListAllWorkflowExecutionsByTypeRequest{
+				InternalListWorkflowExecutionsRequest: p.InternalListWorkflowExecutionsRequest{
+					DomainUUID:    testDomainID,
+					Domain:        testDomain,
+					EarliestTime:  time.Unix(0, testEarliestTime),
+					LatestTime:    time.Unix(0, testLatestTime),
+					PageSize:      testPageSize,
+					NextPageToken: nil,
+				},
+				PartialMatch:        false,
+				WorkflowSearchValue: "123",
+			},
+			expectResult: fmt.Sprintf(`SELECT *
+FROM %s
+WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
+AND IsDeleted = false
+AND StartTime BETWEEN 1547596871371 AND 2547596873371
+AND ( WorkflowID = '123'
+OR WorkflowType = '123'
+OR RunID = '123'
+ )
+Order BY StartTime DESC
+LIMIT 0, 10
+`, testTableName),
+			expectError: nil,
+		},
+		"complete request with partial match": {
+			inputRequest: &p.InternalListAllWorkflowExecutionsByTypeRequest{
+				InternalListWorkflowExecutionsRequest: p.InternalListWorkflowExecutionsRequest{
+					DomainUUID:    testDomainID,
+					Domain:        testDomain,
+					EarliestTime:  time.Unix(0, testEarliestTime),
+					LatestTime:    time.Unix(0, testLatestTime),
+					PageSize:      testPageSize,
+					NextPageToken: nil,
+				},
+				PartialMatch:        true,
+				WorkflowSearchValue: "123",
+			},
+			expectResult: fmt.Sprintf(`SELECT *
+FROM %s
+WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
+AND IsDeleted = false
+AND StartTime BETWEEN 1547596871371 AND 2547596873371
+AND ( WorkflowID LIKE "%%123%%"
+OR WorkflowType LIKE "%%123%%"
+OR RunID LIKE "%%123%%"
+ )
+Order BY StartTime DESC
+LIMIT 0, 10
+`, testTableName),
+			expectError: nil,
+		},
+		"empty request": {
+			inputRequest: &p.InternalListAllWorkflowExecutionsByTypeRequest{},
+			expectResult: fmt.Sprintf(`SELECT *
+FROM %s
+WHERE DomainID = ''
+AND IsDeleted = false
+Order BY StartTime DESC
+LIMIT 0, 0
+`, testTableName),
+			expectError: nil,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			actualResult, actualError := getListAllWorkflowExecutionsQuery(testTableName, test.inputRequest)
 			assert.Equal(t, test.expectResult, actualResult)
 			assert.NoError(t, actualError)
 		})
