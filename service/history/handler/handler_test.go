@@ -38,6 +38,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log/testlogger"
+	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/metrics/mocks"
 	"github.com/uber/cadence/common/persistence"
@@ -3693,4 +3694,65 @@ func (s *handlerSuite) TestRatelimitUpdate() {
 	// placeholder while not implemented
 	s.Nil(response)
 	s.Nil(err)
+}
+
+func (s *handlerSuite) TestConvertError() {
+	testCases := []struct {
+		name     string
+		input    error
+		expected error
+	}{
+		{
+			name: "workflow already started error",
+			input: &persistence.WorkflowExecutionAlreadyStartedError{
+				Msg: "workflow already started",
+			},
+			expected: &types.InternalServiceError{
+				Message: "workflow already started",
+			},
+		},
+		{
+			name: "current workflow condition failed error",
+			input: &persistence.CurrentWorkflowConditionFailedError{
+				Msg: "current workflow condition failed",
+			},
+			expected: &types.InternalServiceError{
+				Message: "current workflow condition failed",
+			},
+		},
+		{
+			name: "persistence timeout error",
+			input: &persistence.TimeoutError{
+				Msg: "persistence timeout",
+			},
+			expected: &types.InternalServiceError{
+				Message: "persistence timeout",
+			},
+		},
+		{
+			name: "transaction size limit error",
+			input: &persistence.TransactionSizeLimitError{
+				Msg: "transaction size limit",
+			},
+			expected: &types.BadRequestError{
+				Message: "transaction size limit",
+			},
+		},
+		{
+			name: "shard ownership lost error",
+			input: &persistence.ShardOwnershipLostError{
+				ShardID: 1,
+			},
+			expected: &types.ShardOwnershipLostError{
+				Owner:   "127.0.0.1:1234",
+				Message: "Shard is not owned by host: test_host",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		s.mockResource.MembershipResolver.EXPECT().Lookup(gomock.Any(), gomock.Any()).Return(membership.NewHostInfo("127.0.0.1:1234"), nil).AnyTimes()
+		err := s.handler.convertError(tc.input)
+		s.Equal(tc.expected, err, tc.name)
+	}
 }

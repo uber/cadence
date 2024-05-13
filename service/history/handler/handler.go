@@ -2081,6 +2081,8 @@ func (h *handlerImpl) convertError(err error) error {
 		return &types.InternalServiceError{Message: err.Msg}
 	case *persistence.CurrentWorkflowConditionFailedError:
 		return &types.InternalServiceError{Message: err.Msg}
+	case *persistence.TimeoutError:
+		return &types.InternalServiceError{Message: err.Msg}
 	case *persistence.TransactionSizeLimitError:
 		return &types.BadRequestError{Message: err.Msg}
 	}
@@ -2110,8 +2112,9 @@ func (h *handlerImpl) updateErrorMetric(
 	var retryTaskV2Error *types.RetryTaskV2Error
 	var serviceBusyError *types.ServiceBusyError
 	var internalServiceError *types.InternalServiceError
+	var queryFailedError *types.QueryFailedError
 
-	if err == context.DeadlineExceeded || err == context.Canceled {
+	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 		scope.IncCounter(metrics.CadenceErrContextTimeoutCounter)
 		return
 	}
@@ -2149,8 +2152,10 @@ func (h *handlerImpl) updateErrorMetric(
 	} else if errors.As(err, &serviceBusyError) {
 		scope.IncCounter(metrics.CadenceErrServiceBusyCounter)
 
-	} else if errors.As(err, &yarpcE) {
+	} else if errors.As(err, &queryFailedError) {
+		scope.IncCounter(metrics.CadenceErrQueryFailedCounter)
 
+	} else if errors.As(err, &yarpcE) {
 		if yarpcE.Code() == yarpcerrors.CodeDeadlineExceeded {
 			scope.IncCounter(metrics.CadenceErrContextTimeoutCounter)
 		}
