@@ -142,7 +142,6 @@ type (
 		// Pass in empty slice for first page.
 		NextPageToken []byte
 		Query         string
-		PartialMatch  bool
 	}
 
 	// ListWorkflowExecutionsResponse is the response to ListWorkflowExecutionsRequest
