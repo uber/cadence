@@ -21,18 +21,17 @@
 package execution
 
 import (
-	"testing"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
-
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/metrics/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/shard"
+	"testing"
 )
 
 func createTestConfig() *config.Config {
@@ -124,6 +123,75 @@ func TestEmitLargeWorkflowShardIDStats(t *testing.T) {
 			}
 
 			context.emitLargeWorkflowShardIDStats(tc.blobSize, tc.oldHistoryCount, tc.oldHistorySize, tc.newHistoryCount)
+		})
+	}
+}
+
+func TestEmitWorkflowHistoryStats(t *testing.T) {
+
+	mockMetricsClient := new(mocks.Client)
+	mockScope := new(mocks.Scope)
+
+	mockMetricsClient.On("Scope", mock.Anything, mock.Anything).Return(mockScope)
+
+	mockScope.On("RecordTimer", mock.Anything, mock.Anything).Return()
+
+	domainName := "testDomain"
+	historySize := 2048
+	historyCount := 150
+
+	emitWorkflowHistoryStats(mockMetricsClient, domainName, historySize, historyCount)
+
+	mockMetricsClient.AssertExpectations(t)
+	mockScope.AssertExpectations(t)
+}
+
+func TestEmitWorkflowExecutionStats(t *testing.T) {
+	tests := []struct {
+		name        string
+		domainName  string
+		stats       *persistence.MutableStateStats
+		historySize int64
+		expectCalls bool
+	}{
+		{
+			name:       "With valid stats",
+			domainName: "testDomain",
+			stats: &persistence.MutableStateStats{
+				MutableStateSize: 1024,
+				ActivityInfoSize: 256,
+				TimerInfoSize:    128,
+			},
+			historySize: 2048,
+			expectCalls: true,
+		},
+		{
+			name:        "Nil stats",
+			domainName:  "testDomain",
+			stats:       nil,
+			historySize: 2048,
+			expectCalls: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+
+			mockMetricsClient := new(mocks.Client)
+			mockScope := new(mocks.Scope)
+
+			if tc.expectCalls {
+				mockMetricsClient.On("Scope", metrics.ExecutionSizeStatsScope, mock.Anything).Return(mockScope)
+				mockMetricsClient.On("Scope", metrics.ExecutionCountStatsScope, mock.Anything).Return(mockScope)
+				mockScope.On("RecordTimer", mock.AnythingOfType("int"), mock.AnythingOfType("time.Duration")).Return().Times(14)
+			} else {
+				mockScope.AssertNotCalled(t, "RecordTimer")
+			}
+
+			emitWorkflowExecutionStats(mockMetricsClient, tc.domainName, tc.stats, tc.historySize)
+
+			mockMetricsClient.AssertExpectations(t)
+			mockScope.AssertExpectations(t)
 		})
 	}
 }
