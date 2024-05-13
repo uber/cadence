@@ -24,6 +24,7 @@ package ndc
 
 import (
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -33,12 +34,18 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/resource"
 	"github.com/uber/cadence/service/history/shard"
+)
+
+var (
+	testStopwatch = metrics.NoopScope(metrics.ReplicateHistoryEventsScope).StartTimer(metrics.CacheLatency)
 )
 
 func createTestHistoryReplicator(t *testing.T) historyReplicatorImpl {
@@ -356,4 +363,20 @@ func TestNewHistoryReplicator_newMutableState(t *testing.T) {
 		&deadline,
 	)
 	assert.NotNil(t, testReplicatorImpl.newMutableState(mockDomainCacheEntry, log.NewNoop()))
+}
+
+func TestApplyEvents(t *testing.T) {
+	replicator := createTestHistoryReplicator(t)
+	replicator.newReplicationTaskFn = func(
+		clusterMetadata cluster.Metadata,
+		historySerializer persistence.PayloadSerializer,
+		taskStartTime time.Time,
+		logger log.Logger,
+		request *types.ReplicateEventsV2Request,
+	) (replicationTask, error) {
+		return nil, nil
+	}
+
+	// Intentionally panic result. Will test applyEvents function seperately
+	assert.Panics(t, func() { replicator.ApplyEvents(nil, nil) })
 }
