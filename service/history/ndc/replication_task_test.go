@@ -156,20 +156,7 @@ func TestNewReplicationTask(t *testing.T) {
 			},
 			expectedErrorMsg: "invalid run ID",
 		},
-		"Case3-3: fail case in validateReplicateEventsRequest with invalid run id": {
-			request: &types.ReplicateEventsV2Request{
-				DomainUUID: "12345678-1234-5678-9012-123456789011",
-				WorkflowExecution: &types.WorkflowExecution{
-					WorkflowID: "test-workflow-id",
-					RunID:      "test-run-id",
-				},
-				VersionHistoryItems: nil,
-				Events:              nil,
-				NewRunEvents:        nil,
-			},
-			expectedErrorMsg: "invalid run ID",
-		},
-		"Case3-4: fail case in validateReplicateEventsRequest with invalid workflow execution": {
+		"Case3-3: fail case in validateReplicateEventsRequest with invalid workflow execution": {
 			request: &types.ReplicateEventsV2Request{
 				DomainUUID:          "12345678-1234-5678-9012-123456789011",
 				WorkflowExecution:   nil,
@@ -179,7 +166,7 @@ func TestNewReplicationTask(t *testing.T) {
 			},
 			expectedErrorMsg: "invalid execution",
 		},
-		"Case3-5: fail case in validateReplicateEventsRequest with event is empty": {
+		"Case3-4: fail case in validateReplicateEventsRequest with event is empty": {
 			request: &types.ReplicateEventsV2Request{
 				DomainUUID: "12345678-1234-5678-9012-123456789011",
 				WorkflowExecution: &types.WorkflowExecution{
@@ -192,7 +179,7 @@ func TestNewReplicationTask(t *testing.T) {
 			},
 			expectedErrorMsg: "encounter empty history batch",
 		},
-		"Case3-6: fail case in validateReplicateEventsRequest with DeserializeBatchEvents error": {
+		"Case3-5: fail case in validateReplicateEventsRequest with DeserializeBatchEvents error": {
 			request: &types.ReplicateEventsV2Request{
 				DomainUUID: "12345678-1234-5678-9012-123456789011",
 				WorkflowExecution: &types.WorkflowExecution{
@@ -208,7 +195,7 @@ func TestNewReplicationTask(t *testing.T) {
 			},
 			expectedErrorMsg: "cadence deserialization error: DeserializeBatchEvents encoding: \"thriftrw\", error: Invalid binary encoding version.",
 		},
-		"Case3-7: fail case in validateReplicateEventsRequest with event ID mismatch": {
+		"Case3-6: fail case in validateReplicateEventsRequest with event ID mismatch": {
 			request: &types.ReplicateEventsV2Request{
 				DomainUUID: "12345678-1234-5678-9012-123456789011",
 				WorkflowExecution: &types.WorkflowExecution{
@@ -224,7 +211,7 @@ func TestNewReplicationTask(t *testing.T) {
 			},
 			expectedErrorMsg: "event ID mismatch",
 		},
-		"Case3-8: fail case in validateReplicateEventsRequest with event version mismatch": {
+		"Case3-7: fail case in validateReplicateEventsRequest with event version mismatch": {
 			request: &types.ReplicateEventsV2Request{
 				DomainUUID: "12345678-1234-5678-9012-123456789011",
 				WorkflowExecution: &types.WorkflowExecution{
@@ -243,7 +230,7 @@ func TestNewReplicationTask(t *testing.T) {
 			},
 			expectedErrorMsg: "event version mismatch",
 		},
-		"Case3-9: fail case in validateReplicateEventsRequest with ErrEventVersionMismatch": {
+		"Case3-8: fail case in validateReplicateEventsRequest with ErrEventVersionMismatch": {
 			request: &types.ReplicateEventsV2Request{
 				DomainUUID: "12345678-1234-5678-9012-123456789011",
 				WorkflowExecution: &types.WorkflowExecution{
