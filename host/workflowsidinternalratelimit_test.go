@@ -41,7 +41,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	pt "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/service/matching"
+	"github.com/uber/cadence/service/matching/tasklist"
 )
 
 func TestWorkflowIDInternalRateLimitIntegrationSuite(t *testing.T) {
@@ -197,17 +197,17 @@ func (s *WorkflowIDInternalRateLimitIntegrationSuite) TestWorkflowIDSpecificInte
 
 	for i := int32(0); i < activityCount; i++ {
 		_, err = poller.PollAndProcessDecisionTask(false, false)
-		s.True(err == nil || err == matching.ErrNoTasks)
+		s.True(err == nil || err == tasklist.ErrNoTasks)
 
 		err = poller.PollAndProcessActivityTask(false)
-		s.True(err == nil || err == matching.ErrNoTasks)
+		s.True(err == nil || err == tasklist.ErrNoTasks)
 	}
 
 	s.Logger.Info("Waiting for workflow to complete", tag.WorkflowRunID(we.RunID))
 
 	s.False(workflowComplete)
 	_, err = poller.PollAndProcessDecisionTask(false, false)
-	s.True(err == nil || err == matching.ErrNoTasks)
+	s.True(err == nil || err == tasklist.ErrNoTasks)
 	s.True(workflowComplete)
 
 	historyResponse, err := s.engine.GetWorkflowExecutionHistory(ctx, &types.GetWorkflowExecutionHistoryRequest{
