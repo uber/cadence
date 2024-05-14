@@ -187,8 +187,8 @@ func (h *handlerImpl) Stop() {
 	h.prepareToShutDown()
 	h.crossClusterTaskFetchers.Stop()
 	h.replicationTaskFetchers.Stop()
-	h.queueTaskProcessor.Stop()
 	h.controller.Stop()
+	h.queueTaskProcessor.Stop()
 	h.historyEventNotifier.Stop()
 	h.failoverCoordinator.Stop()
 }
