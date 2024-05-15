@@ -60,7 +60,7 @@ var (
 	testContextTimeout = 5 * time.Second
 
 	validSearchAttr  = definition.GetDefaultIndexedKeys()
-	nextPageTokenErr = fmt.Errorf("next page token: unable to deserialize page token. err: invalid character 'e' looking for beginning of value")
+	errNextPageToken = fmt.Errorf("next page token: unable to deserialize page token. err: invalid character 'e' looking for beginning of value")
 )
 
 func TestRecordWorkflowExecutionStarted(t *testing.T) {
@@ -429,7 +429,7 @@ func TestListOpenWorkflowExecutions(t *testing.T) {
 			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
 				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
 			},
-			expectedError: nextPageTokenErr,
+			expectedError: errNextPageToken,
 		},
 		"Case2: normal case with nil response": {
 			request:      request,
@@ -488,7 +488,7 @@ func TestListClosedWorkflowExecutions(t *testing.T) {
 			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
 				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
 			},
-			expectedError: nextPageTokenErr,
+			expectedError: errNextPageToken,
 		},
 		"Case2: normal case with nil response": {
 			request:      request,
@@ -548,7 +548,7 @@ func TestListOpenWorkflowExecutionsByType(t *testing.T) {
 			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
 				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
 			},
-			expectedError: nextPageTokenErr,
+			expectedError: errNextPageToken,
 		},
 		"Case2: normal case with nil response": {
 			request:      request,
@@ -607,7 +607,7 @@ func TestListClosedWorkflowExecutionsByType(t *testing.T) {
 			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
 				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
 			},
-			expectedError: nextPageTokenErr,
+			expectedError: errNextPageToken,
 		},
 		"Case2: normal case with nil response": {
 			request:      request,
@@ -665,7 +665,7 @@ func TestListOpenWorkflowExecutionsByWorkflowID(t *testing.T) {
 			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
 				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
 			},
-			expectedError: nextPageTokenErr,
+			expectedError: errNextPageToken,
 		},
 		"Case2: normal case with nil response": {
 			request:      request,
@@ -723,7 +723,7 @@ func TestListClosedWorkflowExecutionsByWorkflowID(t *testing.T) {
 			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
 				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
 			},
-			expectedError: nextPageTokenErr,
+			expectedError: errNextPageToken,
 		},
 		"Case2: normal case with nil response": {
 			request:      request,
@@ -781,7 +781,7 @@ func TestListClosedWorkflowExecutionsByStatus(t *testing.T) {
 			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
 				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
 			},
-			expectedError: nextPageTokenErr,
+			expectedError: errNextPageToken,
 		},
 		"Case2: normal case with nil response": {
 			request:      request,
@@ -901,7 +901,7 @@ func TestListWorkflowExecutions(t *testing.T) {
 			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
 				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
 			},
-			expectedError: nextPageTokenErr,
+			expectedError: errNextPageToken,
 		},
 		"Case2: normal case with nil response": {
 			request:      request,
@@ -994,7 +994,7 @@ func TestListAllWorkflowExecutions(t *testing.T) {
 			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
 				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
 			},
-			expectedError: nextPageTokenErr,
+			expectedError: errNextPageToken,
 		},
 	}
 	for name, test := range tests {
@@ -1039,7 +1039,7 @@ func TestScanWorkflowExecutions(t *testing.T) {
 			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
 				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
 			},
-			expectedError: nextPageTokenErr,
+			expectedError: errNextPageToken,
 		},
 		"Case2: normal case with nil response": {
 			request:      request,
