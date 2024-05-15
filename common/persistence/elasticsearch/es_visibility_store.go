@@ -51,6 +51,8 @@ import (
 
 const (
 	esPersistenceName = "elasticsearch"
+	DomainID          = "DomainID"
+	StartTime         = "StartTime"
 )
 
 type (
@@ -440,6 +442,10 @@ func (v *esVisibilityStore) ListWorkflowExecutions(
 		}
 	}
 	return resp, nil
+}
+
+func (v *esVisibilityStore) ListAllWorkflowExecutions(ctx context.Context, request *p.InternalListAllWorkflowExecutionsByTypeRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
+	return nil, p.ErrVisibilityOperationNotSupported
 }
 
 func (v *esVisibilityStore) ScanWorkflowExecutions(

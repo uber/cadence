@@ -720,11 +720,10 @@ func (s *PinotQuerySearchField) addEqual(obj string, val interface{}) {
 	s.string += fmt.Sprintf("%s = %s\n", obj, quotedVal)
 }
 
-func (s *PinotQuerySearchField) addLike(obj string, val interface{}) {
+func (s *PinotQuerySearchField) addMatch(obj string, val interface{}) {
 	s.checkFirstSearchField()
 
-	quotedVal := fmt.Sprintf("%%%s%%", val)
-	s.string += fmt.Sprintf("%s LIKE \"%s\"\n", obj, quotedVal)
+	s.string += fmt.Sprintf("text_match(%s, '\"%s\"')\n", obj, val)
 }
 
 func NewPinotQuery(tableName string) PinotQuery {
@@ -1066,9 +1065,9 @@ func getListAllWorkflowExecutionsQuery(tableName string, request *p.InternalList
 
 	if request.WorkflowSearchValue != "" {
 		if request.PartialMatch {
-			query.search.addLike(WorkflowID, request.WorkflowSearchValue)
-			query.search.addLike(WorkflowType, request.WorkflowSearchValue)
-			query.search.addLike(RunID, request.WorkflowSearchValue)
+			query.search.addMatch(WorkflowID, request.WorkflowSearchValue)
+			query.search.addMatch(WorkflowType, request.WorkflowSearchValue)
+			query.search.addMatch(RunID, request.WorkflowSearchValue)
 		} else {
 			query.search.addEqual(WorkflowID, request.WorkflowSearchValue)
 			query.search.addEqual(WorkflowType, request.WorkflowSearchValue)
