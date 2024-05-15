@@ -59,6 +59,8 @@ func (p *base) updateErrorMetricPerDomain(scope int, err error, scopeWithDomainT
 		scopeWithDomainTag.IncCounter(metrics.PersistenceErrShardOwnershipLostCounterPerDomain)
 	case *types.EntityNotExistsError:
 		scopeWithDomainTag.IncCounter(metrics.PersistenceErrEntityNotExistsCounterPerDomain)
+	case *persistence.DuplicateRequestError:
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrDuplicateRequestCounterPerDomain)
 	case *persistence.TimeoutError:
 		scopeWithDomainTag.IncCounter(metrics.PersistenceErrTimeoutCounterPerDomain)
 		scopeWithDomainTag.IncCounter(metrics.PersistenceFailuresPerDomain)
@@ -93,6 +95,8 @@ func (p *base) updateErrorMetric(scope int, err error, metricsScope metrics.Scop
 		metricsScope.IncCounter(metrics.PersistenceErrShardOwnershipLostCounter)
 	case *types.EntityNotExistsError:
 		metricsScope.IncCounter(metrics.PersistenceErrEntityNotExistsCounter)
+	case *persistence.DuplicateRequestError:
+		metricsScope.IncCounter(metrics.PersistenceErrDuplicateRequestCounter)
 	case *persistence.TimeoutError:
 		metricsScope.IncCounter(metrics.PersistenceErrTimeoutCounter)
 		metricsScope.IncCounter(metrics.PersistenceFailures)
