@@ -359,6 +359,12 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutionsByType() {
 	s.True(strings.Contains(err.Error(), "ListOpenWorkflowExecutionsByType failed"))
 }
 
+func (s *ESVisibilitySuite) TestListAllWorkflowExecutions() {
+	_, err := s.visibilityStore.ListAllWorkflowExecutions(context.Background(), &p.InternalListAllWorkflowExecutionsByTypeRequest{})
+	s.Error(err)
+	s.Equal(p.ErrVisibilityOperationNotSupported, err)
+}
+
 func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByType() {
 	s.mockESClient.On("Search", mock.Anything, mock.MatchedBy(func(input *es.SearchRequest) bool {
 		s.False(input.IsOpen)
