@@ -664,7 +664,7 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteCancelExecution_Failure
 		&types.CrossClusterTaskResponse{
 			TaskType:    types.CrossClusterTaskTypeCancelExecution.Ptr(),
 			TaskState:   int16(processingStateInitialized),
-			FailedCause: types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted.Ptr(),
+			FailedCause: types.CrossClusterTaskFailedCauseWorkflowNotExists.Ptr(),
 		},
 		func(
 			mutableState execution.MutableState,
