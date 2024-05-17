@@ -257,10 +257,6 @@ func (t *crossClusterSourceTaskExecutor) executeCancelExecutionTask(
 
 		if failedCause != nil {
 			// remaining errors are non-retryable
-			cause := types.CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution
-			if *failedCause == types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted {
-				cause = types.CancelExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted
-			}
 			return requestCancelExternalExecutionFailed(
 				ctx,
 				taskInfo,
@@ -269,7 +265,6 @@ func (t *crossClusterSourceTaskExecutor) executeCancelExecutionTask(
 				taskInfo.TargetWorkflowID,
 				taskInfo.TargetRunID,
 				now,
-				cause,
 			)
 		}
 		return requestCancelExternalExecutionCompleted(
@@ -484,10 +479,6 @@ func (t *crossClusterSourceTaskExecutor) executeSignalExecutionTask(
 
 		if failedCause != nil {
 			// remaining errors are non-retryable
-			cause := types.SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution
-			if *failedCause == types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted {
-				cause = types.SignalExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted
-			}
 			return signalExternalExecutionFailed(
 				ctx,
 				taskInfo,
@@ -497,7 +488,6 @@ func (t *crossClusterSourceTaskExecutor) executeSignalExecutionTask(
 				taskInfo.TargetRunID,
 				signalInfo.Control,
 				now,
-				cause,
 			)
 		}
 
