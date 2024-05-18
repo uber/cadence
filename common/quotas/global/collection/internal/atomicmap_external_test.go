@@ -86,16 +86,6 @@ func TestMapBasics(t *testing.T) {
 			loaded2: len(loaded2),
 		})
 	})
-	t.Run("try should not add keys", func(t *testing.T) {
-		v, ok := m.Peek(tried)
-		assert.False(t, ok, "try should return false on nonexistent keys")
-		assert.Nil(t, v, "try should return a zero value if it does not exist")
-		assertContentsEqual(t, m, map[string]int{
-			// should not include `tried`
-			loaded1: len(loaded1),
-			loaded2: len(loaded2),
-		})
-	})
 }
 
 func TestMapNotRacy(t *testing.T) {
@@ -136,11 +126,6 @@ func TestMapNotRacy(t *testing.T) {
 		})
 		g.Go(func() error {
 			_ = m.Len() // value does not matter / hard to check usefully
-			return nil
-		})
-		g.Go(func() error {
-			_, _ = m.Peek(key) // value does not matter / hard to check usefully.
-			// could count true vs false to ensure both orders are hit...
 			return nil
 		})
 		// delete ~10% of keys to exercise that logic, and mostly ensure coverage

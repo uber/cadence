@@ -59,32 +59,23 @@ type (
 	// If no data has been returned for a sufficiently long time, the "smart" ratelimit will be dropped, and
 	// the fallback limit will be used exclusively.  This is intended as a safety fallback, e.g. during initial
 	// rollout and outage scenarios, normal use is not expected to rely on it.
-	//
-	// ---
-	//
-	// Note that this object has no locks, despite being "mutated".
-	// Both [github.com/uber/cadence/common/quotas.Limiter] and [rate.Limiter] have internal locks and the instances
-	// are never changed, and the same is true in a sense for the atomic counters.
-	//
-	// If this struct changes, top-level locks may be necessary.
-	// `go vet -copylocks` should detect this, but be careful regardless.
 	FallbackLimiter struct {
-		// usage data cannot be gathered from rate.Limiter, sadly.
-		// so we need to gather it separately. or maybe find a fork.
+		// usage / available-limit data cannot be gathered from rate.Limiter, sadly.
+		// so it needs to be collected externally.
 		//
 		// note that these atomics are values, not pointers.
 		// this requires that FallbackLimiter is used as a pointer, not a value, and is never copied.
 		// if this is not done, `go vet` will produce an error:
-		//     ❯ go vet .
+		//     ❯ go vet -copylocks .
 		//     # github.com/uber/cadence/common/quotas/global/limiter
 		//     ./collection.go:30:27: func passes lock by value: github.com/uber/cadence/common/quotas/global/limiter/internal.FallbackLimiter contains sync/atomic.Int64 contains sync/atomic.noCopy
 		// which is checked by `make lint` during CI.
 
-		// accepted-request usage counter, value-typed because the parent is never copied
+		// accepted-request usage counter
 		accepted atomic.Int64
-		// rejected-request usage counter, value-typed because the parent is never copied
+		// rejected-request usage counter
 		rejected atomic.Int64
-		// number of failed updates, value-typed because the parent is never copied
+		// number of failed updates
 		failedUpdates atomic.Int64
 
 		// ratelimiters in use
@@ -135,7 +126,9 @@ func (b *FallbackLimiter) Collect() (accepted int, rejected int, usingFallback b
 
 func (b *FallbackLimiter) useFallback() bool {
 	failed := b.failedUpdates.Load()
-	return failed < 0 /* not yet set */ || failed > maxFailedUpdates /* too many failures */
+	startingUp := failed < 0
+	tooManyFailures := failed > maxFailedUpdates
+	return startingUp || tooManyFailures
 }
 
 // Update adjusts the underlying "main" ratelimit, and resets the fallback fuse.
@@ -177,8 +170,6 @@ func (b *FallbackLimiter) Clear() {
 }
 
 // Allow returns true if a request is allowed right now.
-//
-// This intentionally implements [../limiter.GlobalLimiter].
 func (b *FallbackLimiter) Allow() bool {
 	var allowed bool
 	if b.useFallback() {
@@ -195,6 +186,7 @@ func (b *FallbackLimiter) Allow() bool {
 	return allowed
 }
 
+// intentionally shadows builtin max so it can simply be deleted when 1.21 is adopted
 func max(a, b int) int {
 	if a > b {
 		return a

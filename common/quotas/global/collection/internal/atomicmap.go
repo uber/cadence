@@ -29,7 +29,7 @@ import (
 
 // AtomicMap adds type safety around a sync.Map (which has atomic-like behavior), and:
 //   - implicitly constructs values as needed, not relying on zero values
-//   - simplifies the API a bit because not all methods are in use.
+//   - simplifies the API quite a bit because very few methods are in use.
 //     in particular there is no "Store" currently because it is not needed.
 //   - tracks length (atomically, so values are only an estimate)
 //
@@ -46,7 +46,7 @@ type AtomicMap[Key comparable, Value any] struct {
 // The `create` callback will be called when creating a new value, possibly multiple times,
 // without synchronization.
 // It must be concurrency safe and should return ASAP to reduce the window for storage races,
-// so ideally it should be simple and non-blocking (or consider filling a [sync.Pool] if not).
+// so ideally it should be simple and non-blocking, or pulling from a pre-populated cache if not.
 //
 // Due to length tracking, this is marginally more costly when modifying contents
 // than "just" a type-safe [sync.Map].  It should only be used when length is needed.
@@ -73,23 +73,12 @@ func (t *AtomicMap[Key, Value]) Load(key Key) Value {
 	return val.(Value)
 }
 
-// Peek will get the current Value for a key, or return false if it did not exist.
-//
-// Unlike Load, this will NOT populate the key if it does not exist.
-// It just calls [sync.Map.Load] on the underlying map.
-func (t *AtomicMap[Key, Value]) Peek(key Key) (Value, bool) {
-	v, ok := t.contents.Load(key)
-	if ok {
-		return v.(Value), true
-	}
-	var zero Value
-	return zero, false
-}
-
 // Delete removes an entry from the map, and updates the length.
 //
 // Like the underlying [sync.Map.LoadAndDelete], this can be called concurrently with Range.
 func (t *AtomicMap[Key, Value]) Delete(k Key) {
+	// whether used or not, this is included to ensure it is possible to build
+	// while maintaining length so collections can be pruned later if needed.
 	_, loaded := t.contents.LoadAndDelete(k)
 	if loaded {
 		atomic.AddInt64(&t.len, -1)
@@ -106,8 +95,8 @@ func (t *AtomicMap[Key, Value]) Range(f func(k Key, v Value) bool) {
 	})
 }
 
-// Len is an atomic count of the size of the collection, i.e. it can never be assumed
-// to be precise.
+// Len returns the currently-known size of the collection.  It cannot be guaranteed to
+// be precise, as the collection may change at any time during or after this call.
 //
 // In particular, Range may iterate over more or fewer entries.
 func (t *AtomicMap[Key, Value]) Len() int {

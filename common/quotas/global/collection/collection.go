@@ -57,7 +57,9 @@ type (
 
 		limits *internal.AtomicMap[string, *internal.FallbackLimiter]
 
-		lifecycle *internal.OneShot
+		ctx       context.Context // context used for background operations, canceled when stopping
+		ctxCancel func()
+		stopped   chan struct{} // closed when stopping is complete
 
 		// now exists largely for tests, elsewhere it is always time.Now
 		timesource clock.TimeSource
@@ -86,18 +88,22 @@ func New(
 	contents := internal.NewAtomicMap(func(key string) *internal.FallbackLimiter {
 		return internal.NewFallbackLimiter(fallback.GetLimiter(key))
 	})
-	return &Collection{
+	ctx, cancel := context.WithCancel(context.Background())
+	c := &Collection{
 		limits:     contents,
 		updateRate: updateRate,
 
 		logger: logger, // TODO: tag it
 		scope:  scope,  // TODO: tag it
 
-		lifecycle: internal.NewOneShot(),
+		ctx:       ctx,
+		ctxCancel: cancel,
+		stopped:   make(chan struct{}),
 
 		// override externally in tests
 		timesource: clock.NewRealTimeSource(),
 	}
+	return c
 }
 
 func (c *Collection) TestOverrides(t *testing.T, timesource clock.TimeSource) {
@@ -105,32 +111,34 @@ func (c *Collection) TestOverrides(t *testing.T, timesource clock.TimeSource) {
 	c.timesource = timesource
 }
 
-func (c *Collection) Start(ctx context.Context) error {
-	err := c.lifecycle.Start(func() error {
-		go func() {
-			defer func() {
-				// bad but not worth crashing the process
-				log.CapturePanic(recover(), c.logger, nil)
-			}()
-			defer func() {
-				c.lifecycle.Stopped()
-			}()
-			c.backgroundUpdateLoop()
+// OnStart follows fx's OnStart hook semantics.
+func (c *Collection) OnStart(ctx context.Context) error {
+	go func() {
+		defer func() {
+			// bad but not worth crashing the process
+			log.CapturePanic(recover(), c.logger, nil)
 		}()
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("*Collection failed to start: %w", err)
-	}
+		defer func() {
+			close(c.stopped)
+		}()
+		c.backgroundUpdateLoop()
+	}()
+
 	return nil
 }
 
-func (c *Collection) Stop(ctx context.Context) error {
-	err := c.lifecycle.StopAndWait(ctx)
-	if err != nil {
-		return fmt.Errorf("*Collection failed to stop: %w", err)
+// OnStop follows fx's OnStop hook semantics.
+func (c *Collection) OnStop(ctx context.Context) error {
+	c.ctxCancel()
+	ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	defer cancel()
+
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("*Collection failed to stop, context canceled: %w", ctx.Err())
+	case <-c.stopped:
+		return nil
 	}
-	return nil
 }
 
 func (c *Collection) For(key string) Limiter {
@@ -140,14 +148,14 @@ func (c *Collection) For(key string) Limiter {
 func (c *Collection) backgroundUpdateLoop() {
 	tickRate := c.updateRate()
 
-	logger := c.logger.WithTags(tag.Dynamic("limiter", "update"))
+	logger := c.logger.WithTags(tag.Dynamic("collection", "update")) // TODO: needs a better name
 	logger.Debug("update loop starting")
 
 	ticker := c.timesource.NewTicker(tickRate)
 	lastGatherTime := c.timesource.Now()
 	for {
 		select {
-		case <-c.lifecycle.Context().Done():
+		case <-c.ctx.Done():
 			return
 		case <-ticker.Chan():
 			now := c.timesource.Now()
@@ -177,7 +185,7 @@ func (c *Collection) backgroundUpdateLoop() {
 
 // doUpdate pushes usage data to aggregators
 func (c *Collection) doUpdate(since time.Duration, usage map[string]calls) {
-	ctx, cancel := context.WithTimeout(c.lifecycle.Context(), 10*time.Second) // TODO: configurable
+	ctx, cancel := context.WithTimeout(c.ctx, 10*time.Second) // TODO: configurable
 	defer cancel()
 	_ = ctx
 
