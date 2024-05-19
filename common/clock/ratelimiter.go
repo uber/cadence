@@ -168,8 +168,16 @@ func (r *ratelimiter) Wait(ctx context.Context) (err error) {
 	res := r.limiter.ReserveN(now, 1)
 	defer func() {
 		if err != nil {
-			// err return means "not allowed", so cancel them
-			res.CancelAt(now)
+			// err return means "not allowed", so cancel them.
+			//
+			// note that this makes a separate call to collect Now():
+			// this is intentional, to avoid rewinding time if this Wait
+			// interleaved with other calls to the limiter (which would likely
+			// have advanced its internal time).
+			//
+			// if the cancellation happened before the time-to-act (the delay),
+			// the reservation will still be successfully rolled back.
+			res.CancelAt(r.timesource.Now())
 		}
 	}()
 
@@ -230,7 +238,7 @@ func (r *reservation) Used(used bool) {
 
 			a way to resolve ^ this is to do both:
 				- `ReserveAt(now)` and `CancelAt(now)` where "now" is exactly the same in both calls
-				- guarantee that no other Allow or Reserve calls occur between ^ those calls
+				- ensure no other Allow or Reserve calls occur between ^ those calls
 
 			canceling a reservation at exactly the same time it was reserved is allowed, and will
 			restore the token...
@@ -238,9 +246,9 @@ func (r *reservation) Used(used bool) {
 			if that does happen, the ratelimiter is essentially time traveling randomly, and extra
 			allows or rejects are both possible.
 
-			locking around the ratelimiter could prevent this, but requires care to avoid deadlocks
-			if we ever try to reserve on more than one ratelimiter at a time (we must not allow the
-			calls to double-lock or interleave in different orders).
+			locking the limiter and never rewinding time can prevent the worst behaviors with old
+			`now` values, but interleaved calls will still not be able to restore tokens that have
+			passed their time-to-fire date.
 
 			----
 
