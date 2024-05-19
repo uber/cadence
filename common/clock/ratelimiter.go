@@ -214,18 +214,33 @@ func (r *reservation) Used(used bool) {
 	if !used {
 		/*
 			SURPRISING DETAIL:
-			canceling an immediately-allowed reservation does nothing.
+			canceling an immediately-allowed `Reserve()` does nothing.
 
 			the consumed tokens will not be returned because:
 			- their "time to act" is the .Reserve() call time
-			- the real Reservation does nothing on Cancel() if `r.timeToAct.Before(t)`
+			- the reservation does nothing on Cancel() if `r.timeToAct.Before(t)`
 
 			this means our current tiered ratelimiter allowance logic does not work
 			the way it is clearly intended, where successful limits are "held" until
 			their need is verified, and rolled back if not needed.
+			they are in fact always being consumed (unless already over the limit),
+			regardless of whether the request is ultimately allowed or not.
 
-			unfortunately, until we re-implement the ratelimiter, we cannot address this.
-			tokens cannot be "inserted" into a ratelimiter, only passing time restores them.
+			----
+
+			a way to resolve ^ this is to do both:
+				- `ReserveAt(now)` and `CancelAt(now)` where "now" is exactly the same in both calls
+				- guarantee that no other Allow or Reserve calls occur between ^ those calls
+
+			canceling a reservation at exactly the same time it was reserved is allowed, and will
+			restore the token...
+			... UNLESS the ratelimiter's internal time has advanced (or changed) during that time.
+			if that does happen, the ratelimiter is essentially time traveling randomly, and extra
+			allows or rejects are both possible.
+
+			locking around the ratelimiter could prevent this, but requires care to avoid deadlocks
+			if we ever try to reserve on more than one ratelimiter at a time (we must not allow the
+			calls to double-lock or interleave in different orders).
 
 			----
 
