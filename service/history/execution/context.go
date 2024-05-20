@@ -420,14 +420,16 @@ func (c *contextImpl) CreateWorkflowExecution(
 			c.Clear()
 		}
 	}()
-	err := validateWorkflowRequestsAndMode(newWorkflow.WorkflowRequests, workflowRequestMode)
-	if err != nil {
-		// TODO(CDNC-8519): convert it to an error after verification in production
-		c.logger.Error("workflow requests and mode validation error", tag.Error(err))
-	}
 	domain, errorDomainName := c.shard.GetDomainCache().GetDomainName(c.domainID)
 	if errorDomainName != nil {
 		return errorDomainName
+	}
+	err := validateWorkflowRequestsAndMode(newWorkflow.WorkflowRequests, workflowRequestMode)
+	if err != nil {
+		if c.shard.GetConfig().EnableStrongIdempotencySanityCheck(domain) {
+			return err
+		}
+		c.logger.Error("workflow requests and mode validation error", tag.Error(err))
 	}
 	createRequest := &persistence.CreateWorkflowExecutionRequest{
 		// workflow create mode & prev run ID & version
@@ -484,6 +486,10 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 		return err
 	}
 
+	domain, errorDomainName := c.shard.GetDomainCache().GetDomainName(c.domainID)
+	if errorDomainName != nil {
+		return errorDomainName
+	}
 	var persistedBlobs events.PersistedBlobs
 	resetHistorySize := c.GetHistorySize()
 	for _, workflowEvents := range resetWorkflowEventsSeq {
@@ -512,8 +518,10 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 			return err
 		}
 		if len(resetWorkflow.WorkflowRequests) != 0 && len(newWorkflow.WorkflowRequests) != 0 {
-			// TODO(CDNC-8519): convert it to an error after verification in production
-			c.logger.Error("Workflow reqeusts are only expected to be generated from one workflow for ConflictResolveWorkflowExecution")
+			if c.shard.GetConfig().EnableStrongIdempotencySanityCheck(domain) {
+				return &types.InternalServiceError{Message: "workflow requests are only expected to be generated from either reset workflow or continue-as-new workflow for ConflictResolveWorkflowExecution"}
+			}
+			c.logger.Error("workflow requests are only expected to be generated from either reset workflow or continue-as-new workflow for ConflictResolveWorkflowExecution", tag.Number(int64(len(resetWorkflow.WorkflowRequests))), tag.NextNumber(int64(len(newWorkflow.WorkflowRequests))))
 		}
 		newWorkflowSizeSize := newContext.GetHistorySize()
 		startEvents := newWorkflowEventsSeq[0]
@@ -542,8 +550,10 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 			return err
 		}
 		if len(currentWorkflow.WorkflowRequests) != 0 {
-			// TODO(CDNC-8519): convert it to an error after verification in production
-			c.logger.Error("workflow requests are not expected from current workflow for ConflictResolveWorkflowExecution")
+			if c.shard.GetConfig().EnableStrongIdempotencySanityCheck(domain) {
+				return &types.InternalServiceError{Message: "workflow requests are not expected from current workflow for ConflictResolveWorkflowExecution"}
+			}
+			c.logger.Error("workflow requests are not expected from current workflow for ConflictResolveWorkflowExecution", tag.Counter(len(currentWorkflow.WorkflowRequests)))
 		}
 		currentWorkflowSize := currentContext.GetHistorySize()
 		for _, workflowEvents := range currentWorkflowEventsSeq {
@@ -567,10 +577,6 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 		// current workflow events will not participate in the events reapplication
 	); err != nil {
 		return err
-	}
-	domain, errorDomainName := c.shard.GetDomainCache().GetDomainName(c.domainID)
-	if errorDomainName != nil {
-		return errorDomainName
 	}
 	resp, err := c.shard.ConflictResolveWorkflowExecution(ctx, &persistence.ConflictResolveWorkflowExecutionRequest{
 		// RangeID , this is set by shard context
@@ -679,16 +685,18 @@ func (c *contextImpl) UpdateWorkflowExecutionTasks(
 			Message: "UpdateWorkflowExecutionTask can only be used for persisting new workflow tasks, but found new history events",
 		}
 	}
-	if len(currentWorkflow.WorkflowRequests) != 0 {
-		// TODO(CDNC-8519): convert it to an error after verification in production
-		c.logger.Error("UpdateWorkflowExecutionTask can only be used for persisting new workflow tasks, but found new workflow requests")
-	}
-	currentWorkflow.ExecutionStats = &persistence.ExecutionStats{
-		HistorySize: c.GetHistorySize(),
-	}
 	domainName, errorDomainName := c.shard.GetDomainCache().GetDomainName(c.domainID)
 	if errorDomainName != nil {
 		return errorDomainName
+	}
+	if len(currentWorkflow.WorkflowRequests) != 0 {
+		if c.shard.GetConfig().EnableStrongIdempotencySanityCheck(domainName) {
+			return &types.InternalServiceError{Message: "UpdateWorkflowExecutionTask can only be used for persisting new workflow tasks, but found new workflow requests"}
+		}
+		c.logger.Error("UpdateWorkflowExecutionTask can only be used for persisting new workflow tasks, but found new workflow requests", tag.Counter(len(currentWorkflow.WorkflowRequests)))
+	}
+	currentWorkflow.ExecutionStats = &persistence.ExecutionStats{
+		HistorySize: c.GetHistorySize(),
 	}
 	resp, err := c.updateWorkflowExecutionFn(ctx, &persistence.UpdateWorkflowExecutionRequest{
 		// RangeID , this is set by shard context
@@ -729,9 +737,15 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 	if err != nil {
 		return err
 	}
+	domain, errorDomainName := c.shard.GetDomainCache().GetDomainName(c.domainID)
+	if errorDomainName != nil {
+		return errorDomainName
+	}
 	err = validateWorkflowRequestsAndMode(currentWorkflow.WorkflowRequests, workflowRequestMode)
 	if err != nil {
-		// TODO(CDNC-8519): convert it to an error after verification in production
+		if c.shard.GetConfig().EnableStrongIdempotencySanityCheck(domain) {
+			return err
+		}
 		c.logger.Error("workflow requests and mode validation error", tag.Error(err))
 	}
 	var persistedBlobs events.PersistedBlobs
@@ -769,13 +783,17 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 			return err
 		}
 		if len(newWorkflow.WorkflowRequests) != 0 && len(currentWorkflow.WorkflowRequests) != 0 {
-			// TODO(CDNC-8519): convert it to an error after verification in production
-			c.logger.Error("Workflow reqeusts are only expected to be generated from one workflow for UpdateWorkflowExecution")
+			if c.shard.GetConfig().EnableStrongIdempotencySanityCheck(domain) {
+				return &types.InternalServiceError{Message: "workflow requests are only expected to be generated from one workflow for UpdateWorkflowExecution"}
+			}
+			c.logger.Error("workflow requests are only expected to be generated from one workflow for UpdateWorkflowExecution", tag.Number(int64(len(currentWorkflow.WorkflowRequests))), tag.NextNumber(int64(len(newWorkflow.WorkflowRequests))))
 		}
 
 		err := validateWorkflowRequestsAndMode(newWorkflow.WorkflowRequests, workflowRequestMode)
 		if err != nil {
-			// TODO(CDNC-8519): convert it to an error after verification in production
+			if c.shard.GetConfig().EnableStrongIdempotencySanityCheck(domain) {
+				return err
+			}
 			c.logger.Error("workflow requests and mode validation error", tag.Error(err))
 		}
 		newWorkflowSizeSize := newContext.GetHistorySize()
@@ -809,10 +827,6 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 
 	if err := c.updateWorkflowExecutionEventReapplyFn(updateMode, currentWorkflowEventsSeq, newWorkflowEventsSeq); err != nil {
 		return err
-	}
-	domain, errorDomainName := c.shard.GetDomainCache().GetDomainName(c.domainID)
-	if errorDomainName != nil {
-		return errorDomainName
 	}
 	resp, err := c.updateWorkflowExecutionFn(ctx, &persistence.UpdateWorkflowExecutionRequest{
 		// RangeID , this is set by shard context
@@ -1412,14 +1426,14 @@ func validateWorkflowRequestsAndMode(requests []*persistence.WorkflowRequest, mo
 		return nil
 	}
 	if len(requests) > 2 {
-		return &types.InternalServiceError{Message: "Too many workflow requests for a single API request."}
+		return &types.InternalServiceError{Message: "too many workflow request entities generated from a single API request"}
 	} else if len(requests) == 2 {
 		// SignalWithStartWorkflow API can generate 2 workflow requests
 		if (requests[0].RequestType == persistence.WorkflowRequestTypeStart && requests[1].RequestType == persistence.WorkflowRequestTypeSignal) ||
 			(requests[1].RequestType == persistence.WorkflowRequestTypeStart && requests[0].RequestType == persistence.WorkflowRequestTypeSignal) {
 			return nil
 		}
-		return &types.InternalServiceError{Message: "Too many workflow requests for a single API request."}
+		return &types.InternalServiceError{Message: "too many workflow request entities generated from a single API request"}
 	}
 	return nil
 }
