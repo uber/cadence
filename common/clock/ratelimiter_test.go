@@ -26,6 +26,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"sync"
 	"testing"
 	"time"
 
@@ -35,6 +36,44 @@ import (
 )
 
 func TestAgainstRealRatelimit(t *testing.T) {
+	// The mock ratelimiter should behave the same as a real ratelimiter in all cases.
+	//
+	// So fuzz test it: throw random calls at non-overlapping times that are a bit
+	// spaced out (to prevent noise due to busy CPUs) and make sure all impls agree.
+	//
+	// If a test fails, please verify by hand with the failing seed.
+	// Enabling debug logs can help show what's happening and what *should* be happening,
+	// though there is a chance it's just due to CPU contention.
+	const (
+		maxBurst = 10
+
+		// amount of time between each conceptual "tick" of the test's clocks, both real and fake.
+		// sadly even 10ms has some excessive latency a few % of the time, particularly during the Wait check (10ms just to start a goroutine!).
+		granularity = 20 * time.Millisecond
+		// number of [granularity] events to trigger per round,
+		// and also the number of [granularity] periods before a token is added.
+		//
+		// each test takes at least granularity*events*rounds, so keep it kinda small.
+		events = 10
+		// number of rounds of "N events" to try
+		rounds = 2
+
+		// keep running tests until this amount of time has passed, or a failure has occurred.
+		// this could be a static count of tests to run, but a target duration
+		// is a bit less fiddly.  "many attempts" is the goal, not any specific number.
+		//
+		// alternatively, tests have a deadline, this could run until near that deadline.
+		// but right now that's not fine-tuned per package, so it's quite long.
+		testDuration = 4 * time.Second // mostly stays under 5s, feels reasonable
+	)
+
+	// normally, this produces a ton of text that's just noise during successful runs.
+	// so for bulk verbose modes, like `make test` does, skip the debug logs unless force-enabled.
+	//
+	// regrettably this makes failures less useful when verbose, but the
+	// failure logs do at least inform about this behavior.
+	lowVerbosity := testing.Verbose()
+
 	t.Cleanup(func() {
 		if t.Failed() {
 			/*
@@ -49,53 +88,19 @@ func TestAgainstRealRatelimit(t *testing.T) {
 			t.Logf("---- CAUTION ----")
 			t.Logf("these tests are randomized by design, a random failure may be a real flaw!")
 			t.Logf("please replay with the failing seed and check detailed output to see what the behavior should be.")
-			t.Logf("try enabling the 'detailedWhenVerbose' var to increase logging verbosity.")
+			if lowVerbosity {
+				t.Logf("try setting `lowVerbosity` to false to verbosely log these tests at all times.")
+			}
 			t.Logf("")
 			t.Logf("if you are intentionally making changes, be sure to run a few hundred rounds to make sure your changes are stable")
 			t.Logf("---- CAUTION ----")
 		}
 	})
-	// The mock ratelimiter should behave the same as a real ratelimiter in all cases.
-	//
-	// So fuzz test it: throw random calls at non-overlapping times that are a bit
-	// spaced out (to prevent noise due to busy CPUs) and make sure all impls agree.
-	//
-	// If a test fails, please verify by hand with the failing seed.
-	// Enabling debug logs can help show what's happening and what *should* be happening,
-	// though there is a chance it's just due to CPU contention.
-	const (
-		maxBurst = 10
-
-		// amount of time between each conceptual "tick" of the test's clocks, both real and fake.
-		// 10ms seems fairly good when not parallel.
-		granularity = 10 * time.Millisecond
-		// number of [granularity] events to trigger per round,
-		// and also the number of [granularity] periods before a token is added.
-		//
-		// each test takes at least granularity*events*rounds, so keep it kinda small.
-		events = 10
-		// number of rounds of "N events" to try
-		rounds = 2
-
-		// number of tests to generate.
-		// running these in parallel works and saves time, but leads to output that's hard to read,
-		// and too many can cause noise due to cpu contention.
-		// so keep it smallish, and while debugging try lowering + sequential.
-		numTests = 10
-
-		// set to true to log in more detail, which is generally too noisy
-		detailedWhenVerbose = false
-	)
 
 	debug := func(t *testing.T, format string, args ...interface{}) {
 		t.Logf(format, args...)
 	}
-	if testing.Verbose() && !detailedWhenVerbose {
-		// normally, this is a ton of text that's just noise.
-		// so for bulk verbose modes, skip the debug logs unless force-enabled.
-		//
-		// regrettably this makes failures less useful when verbose, but the
-		// failure logs do at least inform about this behavior.
+	if lowVerbosity {
 		debug = func(t *testing.T, format string, args ...interface{}) {
 			// do nothing
 		}
@@ -112,9 +117,46 @@ func TestAgainstRealRatelimit(t *testing.T) {
 			assert.True(t, actual == wrapped && wrapped == mocked, "ratelimiters disagree")
 		}
 	}
+	checkLatency := func(t *testing.T, round, event int, mustBeLessThan, actual, wrapped, mocked time.Duration, compressed *time.Duration) {
+		// none are currently expected to wait, but if they do, they must not wait the full timeout.
+		// this also helps handle small cpu stutter, as some may wait 1ms or so.
+		maxLatency := maxDur(actual, wrapped, mocked)
+		minLatency := minDur(actual, wrapped, mocked)
+		compressedString := "<n/a>"
+		if compressed != nil {
+			maxLatency = maxDur(maxLatency, *compressed)
+			minLatency = minDur(minLatency, *compressed)
+			compressedString = fmt.Sprintf("%v", *compressed)
+		}
+		// this is not actually asserted.
+		// local testing was quite flaky, with even non-blocking "actual" calls (many avilable tokens)
+		// taking >10ms with some regularity, and mocks/wrappers randomly doing that as well.
+		//
+		// checking each's tokens and behavior before/after look entirely like CPU noise,
+		// and they do not usually break other tests, so asserting is just skipped for now.
+		//
+		// logging the time information can still help show why other failures occurred though, e.g. due to
+		// a very large wait causing real-time-backed limiters to restore a token when the mock does not.
+		t.Logf("all limiters should wait a similar amount of time, got actual: %v, wrapped: %v, mocked: %v, compressed: %v",
+			actual, wrapped, mocked, compressedString)
+	}
 
-	for p := 0; p < numTests; p++ {
-		t.Run(fmt.Sprintf("goroutine %v", p), func(t *testing.T) {
+	// aim for the desired duration, and try to avoid timing out from a CLI-enforced deadline too.
+	deadline := time.Now().Add(testDuration)
+	if testDeadline, ok := t.Deadline(); ok {
+		// a test takes like half a second each, leave some buffer so we don't time out
+		buffer := 5 * time.Second
+		testDeadline = testDeadline.Add(-buffer)
+		if testDeadline.Before(time.Now()) {
+			t.Fatalf("not enough time to run tests, need at least %v", buffer)
+		}
+		// tests want to end before the hardcoded deadline, just run shorter.
+		if testDeadline.Before(deadline) {
+			deadline = testDeadline
+		}
+	}
+	for testnum := 0; !t.Failed() && time.Now().Before(deadline); testnum++ {
+		t.Run(fmt.Sprintf("attempt %v", testnum), func(t *testing.T) {
 			// parallel saves a fair bit of time but introduces a lot of CPU contention
 			// and that leads to a moderate amount of flakiness.
 			//
@@ -122,17 +164,16 @@ func TestAgainstRealRatelimit(t *testing.T) {
 			// t.Parallel()
 
 			seed := time.Now().UnixNano()
-			// seed = 1716151675980912000 // override seed to test a failing scenario
+			seed = 1716164357569243000 // override seed to test a failing scenario
 			rng := rand.New(rand.NewSource(seed))
 			t.Logf("rand seed: %v", seed)
 
 			burst := rng.Intn(maxBurst)               // zero is uninteresting but allowed
 			limit := rate.Every(granularity * events) // refresh after each full round
 			t.Logf("limit: %v, burst: %v", granularity, burst)
-			now := time.Now()
-
-			ts := NewMockedTimeSourceAt(now)
-			compressedTS := NewMockedTimeSourceAt(now)
+			initialNow := time.Now()
+			ts := NewMockedTimeSourceAt(initialNow)
+			compressedTS := NewMockedTimeSourceAt(initialNow)
 
 			actual := rate.NewLimiter(limit, burst)
 			wrapped := NewRatelimiter(limit, burst)
@@ -220,50 +261,62 @@ func TestAgainstRealRatelimit(t *testing.T) {
 							//   - don't make it *too* short or the deadline may be passed before Wait sleeps
 							//     (a timeout of 1ms has done this a few % of the time, it can happen to you too!)
 							//   - don't make it *too* long or it may conflict with later events
-							ctx, cancel := context.WithTimeout(context.Background(), granularity/2)
+							timeout := granularity / 2
+							started := time.Now() // intentionally gathered outside the goroutines, to reveal goroutine-starting lag
+							ctx, cancel := context.WithTimeout(context.Background(), timeout)
 
 							a, w, m := false, false, false
+							var aLatency, wLatency, mLatency time.Duration
 							var g errgroup.Group
 							g.Go(func() error {
-								started := time.Now()
 								_a := actual.Wait(ctx)
-								debug(t, "Wait elapsed: %v, actual err: %v", time.Since(started).Round(time.Millisecond), _a)
+								aLatency = time.Since(started).Round(time.Millisecond)
+								debug(t, "Wait elapsed: %v, actual err: %v", aLatency, _a)
 								a = _a == nil
 								return nil
 							})
 							g.Go(func() error {
-								started := time.Now()
 								_w := wrapped.Wait(ctx)
-								debug(t, "Wait elapsed: %v, wrapped err: %v", time.Since(started).Round(time.Millisecond), _w)
+								wLatency = time.Since(started).Round(time.Millisecond)
+								debug(t, "Wait elapsed: %v, wrapped err: %v", wLatency, _w)
 								w = _w == nil
 								return nil
 							})
 							g.Go(func() error {
-								started := time.Now()
 								_m := mocked.Wait(ctx)
-								debug(t, "Wait elapsed: %v, mocked err: %v", time.Since(started).Round(time.Millisecond), _m)
+								mLatency = time.Since(started).Round(time.Millisecond)
+								debug(t, "Wait elapsed: %v, mocked err: %v", mLatency, _m)
 								m = _m == nil
 								return nil
 							})
 							_ = g.Wait()
 
 							check(t, "Wait", round, event, a, w, m, nil)
+							checkLatency(t, round, event, timeout, aLatency, wLatency, mLatency, nil)
 							compressedReplay[round][event] = func(t *testing.T) {
-								// hmm.  maybe we need a time-mocked context too.
-								ctx, cancel := context.WithTimeout(context.Background(), granularity/1000)
+								// need a mocked-time context, or the real deadline will not match the mocked deadline
+								ctx := &timesourceContext{
+									ts:       compressedTS,
+									deadline: compressedTS.Now().Add(granularity / 2),
+								}
+
 								started := time.Now()
+								// as we have no mock deadline ctx.Done() chan, this is expected to take some time.
+								// rather than running instantly - the mock-timer will not fire.
 								_c := compressed.Wait(ctx)
-								debug(t, "Wait elapsed: %v, compressed err: %v", time.Since(started).Round(time.Millisecond), _c)
+								cLatency := time.Since(started).Round(time.Millisecond)
+								debug(t, "Wait elapsed: %v, compressed err: %v", cLatency, _c)
 								c := _c == nil
 								check(t, "Wait (Compressed)", round, event, a, w, m, &c)
-								cancel()
+								checkLatency(t, round, event, timeout, aLatency, wLatency, mLatency, &cLatency)
 							}
 							cancel()
 						case 3:
 							// call Reserve on everything, and cancel half of them
-							_a, _w, _m := actual.Reserve(), wrapped.Reserve(), mocked.Reserve()
+							now := time.Now() // needed for the real ratelimiter to cancel successfully like the wrapper does
+							_a, _w, _m := actual.ReserveN(now, 1), wrapped.Reserve(), mocked.Reserve()
 							if rng.Intn(2)%2 == 0 {
-								_a.Cancel()
+								_a.CancelAt(now)
 								_w.Used(false)
 								_m.Used(false)
 								t.Logf("round[%v][%v] ReserveWithCancel, canceled", round, event)
@@ -321,3 +374,61 @@ func TestAgainstRealRatelimit(t *testing.T) {
 		})
 	}
 }
+
+func maxDur(d time.Duration, ds ...time.Duration) time.Duration {
+	for _, tmp := range ds {
+		if tmp > d {
+			d = tmp
+		}
+	}
+	return d
+}
+func minDur(d time.Duration, ds ...time.Duration) time.Duration {
+	for _, tmp := range ds {
+		if tmp < d {
+			d = tmp
+		}
+	}
+	return d
+}
+
+type timesourceContext struct {
+	// does not contain a parent context as we currently have no need,
+	// but a "real" one would for forwarding Value and deadline lookups.
+	ts       TimeSource
+	deadline time.Time
+	mut      sync.Mutex
+}
+
+func (t *timesourceContext) Deadline() (deadline time.Time, ok bool) {
+	t.mut.Lock()
+	defer t.mut.Unlock()
+	return t.deadline, t.deadline != time.Time{}
+}
+
+func (t *timesourceContext) Done() <-chan struct{} {
+	// not currently expected to be used, but it would look like this:
+	t.mut.Lock()
+	defer t.mut.Unlock()
+	c := make(chan struct{})
+	t.ts.AfterFunc(t.ts.Now().Sub(t.deadline), func() {
+		// this stack may leak if time is not advanced past it in tests.
+		close(c)
+	})
+	return c
+}
+
+func (t *timesourceContext) Err() error {
+	t.mut.Lock()
+	defer t.mut.Unlock()
+	if t.ts.Now().After(t.deadline) {
+		return context.DeadlineExceeded
+	}
+	return nil
+}
+
+func (t *timesourceContext) Value(key any) any {
+	panic("unimplemented")
+}
+
+var _ context.Context = (*timesourceContext)(nil)
