@@ -23,12 +23,9 @@
 package nosql
 
 import (
-	ctx "context"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/types"
 )
