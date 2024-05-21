@@ -37,20 +37,45 @@ import (
 )
 
 /*
-Results on my machines:
+Benchmark data can be seen in the testdata folder, for relevant machines.
 
-	M1 mac:
-		Allow:
-			Sequential goes from 75ns to 100ns
-			Parallel goes from 200ns to 250ns
-		Reserve and 1/3rd cancel:
-			Sequential goes from 175ns to 220ns
-			Parallel goes from 300ns to 550ns (but real limiters have badly flawed behavior)
-		Wait:
-	Linux cloud machine:
-		Allow:
-		Reserve:
-		Wait:
+Interpretation:
+  - for essentially all operations, mostly regardless of sequential / parallel / how parallel,
+    the added latency is ~25% to ~40%, and even extremes are less than double.
+    this seems entirely tolerable and safe to use.
+  - mock-time ratelimiter is faster than real-time in essentially all cases, as you would hope.
+    though not by much, unless waiting was part of the test.
+  - real *rate.Limiter instances have some pathological behavior that... might disqualify them from safe use tbh.
+    essentially this summarizes as "time.Now() is not globally monotonic", and it can lead to two significant issues (below).
+
+The real *rate.Limiter instances show these quirks during parallel tests, due to time rewinding and jumping forward repeatedly
+from the *rate.Limiter's point of view (as it has an internal last-Now value protected by a mutex):
+ 1. `Allow()`-like calls (both literally `Allow()`, and `Reserve()` followed by sometimes `reservation.Cancel()`)
+    can allow FAR more calls than they should.  At peak, over 4,000x more.
+ 2. `Wait()` can allow calls through at a faster rate than it should.  At peak, a bit over 2x.
+
+Essentially, when one call sets the time to "now", and an out-of-sync call sets it to "now-1ns", a token
+may be restored.  You can recreate this by hand by feeding a ratelimiter "now" and "now+1s" randomly,
+and watching what it allows / what the value of Tokens() is as time passes.  Doing this *literally* by
+hand, e.g. pressing enter on a command-line loop that does this, easily shows it - high frequency is not
+necessary, just illogical "time travel".
+
+The first can be seen in m1_mac.txt by comparing these tests:
+  - BenchmarkLimiter/reserve-canceling-every-3/serial/real (any cpu count, notice the ~1200 allowed calls)
+  - BenchmarkLimiter/reserve-canceling-every-3/parallel/real-4 (notice the ~1200 allowed calls)
+  - BenchmarkLimiter/reserve-canceling-every-3/parallel/real-8 (notice the ~4,000,000 allowed calls)
+
+"real with pinned time" behaves similarly for the same reason, different goroutine thrash the internal "Now",
+and so does "real with cancel".
+
+And the second can be seen in m1_mac.txt by comparing these tests:
+  - BenchmarkLimiter/wait/parallel/1µs_rate/real (almost exactly 1µs per iteration)
+  - BenchmarkLimiter/wait/parallel/1µs_rate/real-2 (same, almost exactly 1µs per iteration)
+  - BenchmarkLimiter/wait/parallel/1µs_rate/real-8 (~500ns, twice as fast as it should allow)
+
+I have not tried to verify Wait's cause by hand, but it certainly seems like time-thrashing explains it as well.
+This is also supported by the wrapper's time-locking *completely* eliminating this flaw, as all iterations take
+almost exactly 1µs as they should.
 */
 func BenchmarkLimiter(b *testing.B) {
 	type runType func(b *testing.B, each func(int) bool)
@@ -275,51 +300,6 @@ func BenchmarkLimiter(b *testing.B) {
 				}
 			})
 		}
-	})
-}
-
-/*
-Results on my machine: quite small impact when contended.
-
-	goos: darwin
-	goarch: arm64
-	pkg: github.com/uber/cadence/common/clock
-	BenchmarkLimiterParallel/real-8         			5924394	       205.6 ns/op
-		ratelimiter_test.go:130: allowed: 5158558, denied: 765836
-	BenchmarkLimiterParallel/mocked-8       			4757856	       264.6 ns/op
-		ratelimiter_test.go:145: allowed: 1260049, denied: 3497807
-	BenchmarkLimiterParallel/mocked_timesource-8        6227589	       192.4 ns/op
-		ratelimiter_test.go:164: allowed: 1246517, denied: 4981072
-*/
-func BenchmarkLimiterParallel(b *testing.B) {
-	run := func(b *testing.B, each func() bool) {
-		var allowed, denied atomic.Int64
-		b.RunParallel(func(pb *testing.PB) {
-			for pb.Next() {
-				if each() {
-					allowed.Inc()
-				} else {
-					denied.Inc()
-				}
-			}
-		})
-		b.Logf("allowed: %v, denied: %v", allowed.Load(), denied.Load())
-	}
-	b.Run("real", func(b *testing.B) {
-		rl := rate.NewLimiter(rate.Every(time.Microsecond), 1000)
-		run(b, rl.Allow)
-	})
-	b.Run("mocked", func(b *testing.B) {
-		rl := NewRatelimiter(rate.Every(time.Microsecond), 1000)
-		run(b, rl.Allow)
-	})
-	b.Run("mocked timesource", func(b *testing.B) {
-		ts := NewMockedTimeSource()
-		rl := NewMockRatelimiter(ts, rate.Every(time.Microsecond), 1000)
-		run(b, func() bool {
-			ts.Advance(time.Microsecond / 2)
-			return rl.Allow()
-		})
 	})
 }
 
@@ -720,306 +700,3 @@ func (t *timesourceContext) Value(key any) any {
 }
 
 var _ context.Context = (*timesourceContext)(nil)
-
-/*
-Benchmark results, removing some noisy logs with `grep ^Benchmark -B1 | grep -v -e '--'`
-
-On an M1 Pro Mac:
-❯ go test -bench . -test.run xxx -cpu 1,2,4,8,32 .
-goos: darwin
-goarch: arm64
-pkg: github.com/uber/cadence/common/clock
-BenchmarkLimiter/allow/serial/real       	13618585	        79.40 ns/op
-    ratelimiter_test.go:68: allowed: 1082245, denied: 12536340
-BenchmarkLimiter/allow/serial/real-2     	15085507	        79.27 ns/op
-    ratelimiter_test.go:68: allowed: 1196772, denied: 13888735
-BenchmarkLimiter/allow/serial/real-4     	15130706	        79.26 ns/op
-    ratelimiter_test.go:68: allowed: 1200201, denied: 13930505
-BenchmarkLimiter/allow/serial/real-8     	15166467	        79.97 ns/op
-    ratelimiter_test.go:68: allowed: 1213767, denied: 13952700
-BenchmarkLimiter/allow/serial/real-32    	15186853	        80.26 ns/op
-    ratelimiter_test.go:68: allowed: 1219812, denied: 13967041
-BenchmarkLimiter/allow/serial/wrapped    	10713946	       118.2 ns/op
-    ratelimiter_test.go:68: allowed: 1267080, denied: 9446866
-BenchmarkLimiter/allow/serial/wrapped-2  	10821831	       110.3 ns/op
-    ratelimiter_test.go:68: allowed: 1194989, denied: 9626842
-BenchmarkLimiter/allow/serial/wrapped-4  	10790121	       110.9 ns/op
-    ratelimiter_test.go:68: allowed: 1197546, denied: 9592575
-BenchmarkLimiter/allow/serial/wrapped-8  	10698758	       111.1 ns/op
-    ratelimiter_test.go:68: allowed: 1189432, denied: 9509326
-BenchmarkLimiter/allow/serial/wrapped-32 	10760622	       110.6 ns/op
-    ratelimiter_test.go:68: allowed: 1190917, denied: 9569705
-BenchmarkLimiter/allow/serial/mocked_timesource            	11918107	       106.8 ns/op
-    ratelimiter_test.go:68: allowed: 2384621, denied: 9533486
-BenchmarkLimiter/allow/serial/mocked_timesource-2          	11764609	       100.4 ns/op
-    ratelimiter_test.go:68: allowed: 2353921, denied: 9410688
-BenchmarkLimiter/allow/serial/mocked_timesource-4          	11542063	        99.76 ns/op
-    ratelimiter_test.go:68: allowed: 2309412, denied: 9232651
-BenchmarkLimiter/allow/serial/mocked_timesource-8          	12157638	        99.47 ns/op
-    ratelimiter_test.go:68: allowed: 2432527, denied: 9725111
-BenchmarkLimiter/allow/serial/mocked_timesource-32         	12005817	        99.16 ns/op
-    ratelimiter_test.go:68: allowed: 2402163, denied: 9603654
-BenchmarkLimiter/allow/parallel/real                       	14720223	        81.69 ns/op
-    ratelimiter_test.go:84: allowed: 1203508, denied: 13516715
-BenchmarkLimiter/allow/parallel/real-2                     	12110864	        97.91 ns/op
-    ratelimiter_test.go:84: allowed: 1187031, denied: 10923833
-BenchmarkLimiter/allow/parallel/real-4                     	 8842538	       123.1 ns/op
-    ratelimiter_test.go:84: allowed: 1093257, denied: 7749281
-BenchmarkLimiter/allow/parallel/real-8                     	 6893467	       178.3 ns/op
-    ratelimiter_test.go:84: allowed: 4181778, denied: 2711689
-BenchmarkLimiter/allow/parallel/real-32                    	 5012532	       246.8 ns/op
-    ratelimiter_test.go:84: allowed: 4719665, denied: 292867
-BenchmarkLimiter/allow/parallel/wrapped                    	 9481642	       115.2 ns/op
-    ratelimiter_test.go:84: allowed: 1093546, denied: 8388096
-BenchmarkLimiter/allow/parallel/wrapped-2                  	 8678460	       138.4 ns/op
-    ratelimiter_test.go:84: allowed: 1201988, denied: 7476472
-BenchmarkLimiter/allow/parallel/wrapped-4                  	 6188439	       193.0 ns/op
-    ratelimiter_test.go:84: allowed: 1195103, denied: 4993336
-BenchmarkLimiter/allow/parallel/wrapped-8                  	 4316008	       264.9 ns/op
-    ratelimiter_test.go:84: allowed: 1144162, denied: 3171846
-BenchmarkLimiter/allow/parallel/wrapped-32                 	 3078057	       366.7 ns/op
-    ratelimiter_test.go:84: allowed: 1129621, denied: 1948436
-BenchmarkLimiter/allow/parallel/mocked_timesource          	11716285	       110.3 ns/op
-    ratelimiter_test.go:84: allowed: 2344256, denied: 9372029
-BenchmarkLimiter/allow/parallel/mocked_timesource-2        	 8348055	       142.8 ns/op
-    ratelimiter_test.go:84: allowed: 1670610, denied: 6677445
-BenchmarkLimiter/allow/parallel/mocked_timesource-4        	 6955520	       172.9 ns/op
-    ratelimiter_test.go:84: allowed: 1392103, denied: 5563417
-BenchmarkLimiter/allow/parallel/mocked_timesource-8        	 6043203	       195.8 ns/op
-    ratelimiter_test.go:84: allowed: 1209640, denied: 4833563
-BenchmarkLimiter/allow/parallel/mocked_timesource-32       	 6134875	       216.2 ns/op
-    ratelimiter_test.go:84: allowed: 1227974, denied: 4906901
-BenchmarkLimiter/reserve-canceling-every-3/serial/real     	 6522390	       186.0 ns/op
-    ratelimiter_test.go:68: allowed: 1178, denied: 6521212
-BenchmarkLimiter/reserve-canceling-every-3/serial/real-2   	 6890377	       173.8 ns/op
-    ratelimiter_test.go:68: allowed: 1177, denied: 6889200
-BenchmarkLimiter/reserve-canceling-every-3/serial/real-4   	 6609655	       180.0 ns/op
-    ratelimiter_test.go:68: allowed: 1183, denied: 6608472
-BenchmarkLimiter/reserve-canceling-every-3/serial/real-8   	 6943302	       174.1 ns/op
-    ratelimiter_test.go:68: allowed: 1191, denied: 6942111
-BenchmarkLimiter/reserve-canceling-every-3/serial/real-32  	 6864550	       175.8 ns/op
-    ratelimiter_test.go:68: allowed: 1183, denied: 6863367
-BenchmarkLimiter/reserve-canceling-every-3/serial/real_pinned_time            	11740456	       102.6 ns/op
-    ratelimiter_test.go:68: allowed: 1724, denied: 11738732
-BenchmarkLimiter/reserve-canceling-every-3/serial/real_pinned_time-2          	11738256	       102.6 ns/op
-    ratelimiter_test.go:68: allowed: 1730, denied: 11736526
-BenchmarkLimiter/reserve-canceling-every-3/serial/real_pinned_time-4          	11573120	       102.8 ns/op
-    ratelimiter_test.go:68: allowed: 1727, denied: 11571393
-BenchmarkLimiter/reserve-canceling-every-3/serial/real_pinned_time-8          	11677448	       102.8 ns/op
-    ratelimiter_test.go:68: allowed: 1734, denied: 11675714
-BenchmarkLimiter/reserve-canceling-every-3/serial/real_pinned_time-32         	11776212	       103.1 ns/op
-    ratelimiter_test.go:68: allowed: 1739, denied: 11774473
-BenchmarkLimiter/reserve-canceling-every-3/serial/wrapped                     	 4711150	       247.7 ns/op
-    ratelimiter_test.go:68: allowed: 2333, denied: 4708817
-BenchmarkLimiter/reserve-canceling-every-3/serial/wrapped-2                   	 5511319	       208.9 ns/op
-    ratelimiter_test.go:68: allowed: 2151, denied: 5509168
-BenchmarkLimiter/reserve-canceling-every-3/serial/wrapped-4                   	 5655414	       211.9 ns/op
-    ratelimiter_test.go:68: allowed: 2102, denied: 5653312
-BenchmarkLimiter/reserve-canceling-every-3/serial/wrapped-8                   	 5629956	       212.7 ns/op
-    ratelimiter_test.go:68: allowed: 2111, denied: 5627845
-BenchmarkLimiter/reserve-canceling-every-3/serial/wrapped-32                  	 5341764	       214.0 ns/op
-    ratelimiter_test.go:68: allowed: 2189, denied: 5339575
-BenchmarkLimiter/reserve-canceling-every-3/serial/mocked_timesource           	 5575029	       218.6 ns/op
-    ratelimiter_test.go:68: allowed: 2142, denied: 5572887
-BenchmarkLimiter/reserve-canceling-every-3/serial/mocked_timesource-2         	 6456499	       187.8 ns/op
-    ratelimiter_test.go:68: allowed: 2142, denied: 6454357
-BenchmarkLimiter/reserve-canceling-every-3/serial/mocked_timesource-4         	 6344293	       188.5 ns/op
-    ratelimiter_test.go:68: allowed: 2142, denied: 6342151
-BenchmarkLimiter/reserve-canceling-every-3/serial/mocked_timesource-8         	 6388226	       193.3 ns/op
-    ratelimiter_test.go:68: allowed: 2142, denied: 6386084
-BenchmarkLimiter/reserve-canceling-every-3/serial/mocked_timesource-32        	 5958344	       192.0 ns/op
-    ratelimiter_test.go:68: allowed: 2142, denied: 5956202
-BenchmarkLimiter/reserve-canceling-every-3/parallel/real                      	 6390843	       189.0 ns/op
-    ratelimiter_test.go:84: allowed: 1216, denied: 6389627
-BenchmarkLimiter/reserve-canceling-every-3/parallel/real-2                    	 8914696	       131.2 ns/op
-    ratelimiter_test.go:84: allowed: 1135, denied: 8913561
-BenchmarkLimiter/reserve-canceling-every-3/parallel/real-4                    	 5277980	       217.4 ns/op
-    ratelimiter_test.go:84: allowed: 1673, denied: 5276307
-BenchmarkLimiter/reserve-canceling-every-3/parallel/real-8                    	 4012483	       294.0 ns/op
-    ratelimiter_test.go:84: allowed: 3918350, denied: 94133
-BenchmarkLimiter/reserve-canceling-every-3/parallel/real-32                   	 3438741	       347.8 ns/op
-    ratelimiter_test.go:84: allowed: 3404112, denied: 34629
-BenchmarkLimiter/reserve-canceling-every-3/parallel/real_pinned_time          	10423504	       104.2 ns/op
-    ratelimiter_test.go:84: allowed: 1733, denied: 10421771
-BenchmarkLimiter/reserve-canceling-every-3/parallel/real_pinned_time-2        	 9515350	       123.6 ns/op
-    ratelimiter_test.go:84: allowed: 1775, denied: 9513575
-BenchmarkLimiter/reserve-canceling-every-3/parallel/real_pinned_time-4        	 6880100	       174.7 ns/op
-    ratelimiter_test.go:84: allowed: 3497, denied: 6876603
-BenchmarkLimiter/reserve-canceling-every-3/parallel/real_pinned_time-8        	 5263464	       213.0 ns/op
-    ratelimiter_test.go:84: allowed: 4781739, denied: 481725
-BenchmarkLimiter/reserve-canceling-every-3/parallel/real_pinned_time-32       	 3952268	       324.6 ns/op
-    ratelimiter_test.go:84: allowed: 3951409, denied: 859
-BenchmarkLimiter/reserve-canceling-every-3/parallel/wrapped                   	 5057402	       240.3 ns/op
-    ratelimiter_test.go:84: allowed: 2063, denied: 5055339
-BenchmarkLimiter/reserve-canceling-every-3/parallel/wrapped-2                 	 3224310	       359.6 ns/op
-    ratelimiter_test.go:84: allowed: 2666, denied: 3221644
-BenchmarkLimiter/reserve-canceling-every-3/parallel/wrapped-4                 	 2820698	       422.3 ns/op
-    ratelimiter_test.go:84: allowed: 2612, denied: 2818086
-BenchmarkLimiter/reserve-canceling-every-3/parallel/wrapped-8                 	 2131276	       538.6 ns/op
-    ratelimiter_test.go:84: allowed: 6946, denied: 2124330
-BenchmarkLimiter/reserve-canceling-every-3/parallel/wrapped-32                	 1543068	       784.4 ns/op
-    ratelimiter_test.go:84: allowed: 1457368, denied: 85700
-BenchmarkLimiter/reserve-canceling-every-3/parallel/mocked_timesource         	 5244424	       221.1 ns/op
-    ratelimiter_test.go:84: allowed: 2142, denied: 5242282
-BenchmarkLimiter/reserve-canceling-every-3/parallel/mocked_timesource-2       	 3810586	       314.6 ns/op
-    ratelimiter_test.go:84: allowed: 2078, denied: 3808508
-BenchmarkLimiter/reserve-canceling-every-3/parallel/mocked_timesource-4       	 2904224	       385.6 ns/op
-    ratelimiter_test.go:84: allowed: 1905, denied: 2902319
-BenchmarkLimiter/reserve-canceling-every-3/parallel/mocked_timesource-8       	 2420433	       499.5 ns/op
-    ratelimiter_test.go:84: allowed: 1774, denied: 2418659
-BenchmarkLimiter/reserve-canceling-every-3/parallel/mocked_timesource-32      	 1649202	       740.3 ns/op
-    ratelimiter_test.go:84: allowed: 1559, denied: 1647643
-BenchmarkLimiter/wait/serial/2ns_rate/real                                    	 2402028	       496.4 ns/op
-    ratelimiter_test.go:68: allowed: 2402028, denied: 0
-BenchmarkLimiter/wait/serial/2ns_rate/real-2                                  	 2979196	       431.4 ns/op
-    ratelimiter_test.go:68: allowed: 2979196, denied: 0
-BenchmarkLimiter/wait/serial/2ns_rate/real-4                                  	 3018830	       400.7 ns/op
-    ratelimiter_test.go:68: allowed: 3018830, denied: 0
-BenchmarkLimiter/wait/serial/2ns_rate/real-8                                  	 2954853	       416.0 ns/op
-    ratelimiter_test.go:68: allowed: 2954853, denied: 0
-BenchmarkLimiter/wait/serial/2ns_rate/real-32                                 	 2862715	       408.1 ns/op
-    ratelimiter_test.go:68: allowed: 2862715, denied: 0
-BenchmarkLimiter/wait/serial/2ns_rate/wrapped                                 	 2292128	       536.9 ns/op
-    ratelimiter_test.go:68: allowed: 2292128, denied: 0
-BenchmarkLimiter/wait/serial/2ns_rate/wrapped-2                               	 2834373	       437.3 ns/op
-    ratelimiter_test.go:68: allowed: 2834373, denied: 0
-BenchmarkLimiter/wait/serial/2ns_rate/wrapped-4                               	 2824138	       422.2 ns/op
-    ratelimiter_test.go:68: allowed: 2824138, denied: 0
-BenchmarkLimiter/wait/serial/2ns_rate/wrapped-8                               	 2879480	       428.0 ns/op
-    ratelimiter_test.go:68: allowed: 2879480, denied: 0
-BenchmarkLimiter/wait/serial/2ns_rate/wrapped-32                              	 2539308	       438.4 ns/op
-    ratelimiter_test.go:68: allowed: 2539308, denied: 0
-BenchmarkLimiter/wait/serial/2ns_rate/mocked_timesource                       	 5113411	       235.9 ns/op
-    ratelimiter_test.go:68: allowed: 5113411, denied: 0
-BenchmarkLimiter/wait/serial/2ns_rate/mocked_timesource-2                     	 5947539	       199.2 ns/op
-    ratelimiter_test.go:68: allowed: 5947539, denied: 0
-BenchmarkLimiter/wait/serial/2ns_rate/mocked_timesource-4                     	 6080888	       196.1 ns/op
-    ratelimiter_test.go:68: allowed: 6080888, denied: 0
-BenchmarkLimiter/wait/serial/2ns_rate/mocked_timesource-8                     	 6101578	       195.8 ns/op
-    ratelimiter_test.go:68: allowed: 6101578, denied: 0
-BenchmarkLimiter/wait/serial/2ns_rate/mocked_timesource-32                    	 6003756	       205.0 ns/op
-    ratelimiter_test.go:68: allowed: 6003756, denied: 0
-BenchmarkLimiter/wait/serial/1µs_rate/real                                    	 1201179	       999.2 ns/op
-    ratelimiter_test.go:68: allowed: 1201179, denied: 0
-BenchmarkLimiter/wait/serial/1µs_rate/real-2                                  	 1201159	       999.2 ns/op
-    ratelimiter_test.go:68: allowed: 1201159, denied: 0
-BenchmarkLimiter/wait/serial/1µs_rate/real-4                                  	 1201179	       999.2 ns/op
-    ratelimiter_test.go:68: allowed: 1201179, denied: 0
-BenchmarkLimiter/wait/serial/1µs_rate/real-8                                  	 1201182	       999.2 ns/op
-    ratelimiter_test.go:68: allowed: 1201182, denied: 0
-BenchmarkLimiter/wait/serial/1µs_rate/real-32                                 	 1201178	       999.2 ns/op
-    ratelimiter_test.go:68: allowed: 1201178, denied: 0
-BenchmarkLimiter/wait/serial/1µs_rate/wrapped                                 	 1200878	       999.2 ns/op
-    ratelimiter_test.go:68: allowed: 1200878, denied: 0
-BenchmarkLimiter/wait/serial/1µs_rate/wrapped-2                               	 1201171	      1000 ns/op
-    ratelimiter_test.go:68: allowed: 1201171, denied: 0
-BenchmarkLimiter/wait/serial/1µs_rate/wrapped-4                               	 1201180	       999.2 ns/op
-    ratelimiter_test.go:68: allowed: 1201180, denied: 0
-BenchmarkLimiter/wait/serial/1µs_rate/wrapped-8                               	 1200398	       999.2 ns/op
-    ratelimiter_test.go:68: allowed: 1200398, denied: 0
-BenchmarkLimiter/wait/serial/1µs_rate/wrapped-32                              	 1201142	       999.2 ns/op
-    ratelimiter_test.go:68: allowed: 1201142, denied: 0
-BenchmarkLimiter/wait/serial/1µs_rate/mocked_timesource                       	 5126984	       238.0 ns/op
-    ratelimiter_test.go:68: allowed: 5126984, denied: 0
-BenchmarkLimiter/wait/serial/1µs_rate/mocked_timesource-2                     	 6061310	       199.3 ns/op
-    ratelimiter_test.go:68: allowed: 6061310, denied: 0
-BenchmarkLimiter/wait/serial/1µs_rate/mocked_timesource-4                     	 6107908	       200.6 ns/op
-    ratelimiter_test.go:68: allowed: 6107908, denied: 0
-BenchmarkLimiter/wait/serial/1µs_rate/mocked_timesource-8                     	 6011832	       200.5 ns/op
-    ratelimiter_test.go:68: allowed: 6011832, denied: 0
-BenchmarkLimiter/wait/serial/1µs_rate/mocked_timesource-32                    	 5872417	       202.2 ns/op
-    ratelimiter_test.go:68: allowed: 5872417, denied: 0
-BenchmarkLimiter/wait/parallel/2ns_rate/real                                  	 2416035	       497.3 ns/op
-    ratelimiter_test.go:84: allowed: 2416035, denied: 0
-BenchmarkLimiter/wait/parallel/2ns_rate/real-2                                	 3957284	       352.1 ns/op
-    ratelimiter_test.go:84: allowed: 3957284, denied: 0
-BenchmarkLimiter/wait/parallel/2ns_rate/real-4                                	 3406399	       348.8 ns/op
-    ratelimiter_test.go:84: allowed: 3406399, denied: 0
-BenchmarkLimiter/wait/parallel/2ns_rate/real-8                                	 2549136	       469.1 ns/op
-    ratelimiter_test.go:84: allowed: 2549136, denied: 0
-BenchmarkLimiter/wait/parallel/2ns_rate/real-32                               	 2143489	       541.1 ns/op
-    ratelimiter_test.go:84: allowed: 2143489, denied: 0
-BenchmarkLimiter/wait/parallel/2ns_rate/wrapped                               	 2177626	       544.1 ns/op
-    ratelimiter_test.go:84: allowed: 2177626, denied: 0
-BenchmarkLimiter/wait/parallel/2ns_rate/wrapped-2                             	 3984897	       294.6 ns/op
-    ratelimiter_test.go:84: allowed: 3984897, denied: 0
-BenchmarkLimiter/wait/parallel/2ns_rate/wrapped-4                             	 3445614	       366.8 ns/op
-    ratelimiter_test.go:84: allowed: 3445614, denied: 0
-BenchmarkLimiter/wait/parallel/2ns_rate/wrapped-8                             	 1841377	       642.8 ns/op
-    ratelimiter_test.go:84: allowed: 1841377, denied: 0
-BenchmarkLimiter/wait/parallel/2ns_rate/wrapped-32                            	 1589787	       748.8 ns/op
-    ratelimiter_test.go:84: allowed: 1589787, denied: 0
-BenchmarkLimiter/wait/parallel/2ns_rate/mocked_timesource                     	 5076840	       234.8 ns/op
-    ratelimiter_test.go:84: allowed: 5076840, denied: 0
-BenchmarkLimiter/wait/parallel/2ns_rate/mocked_timesource-2                   	 5381004	       218.5 ns/op
-    ratelimiter_test.go:84: allowed: 5381004, denied: 0
-BenchmarkLimiter/wait/parallel/2ns_rate/mocked_timesource-4                   	 4833823	       245.8 ns/op
-    ratelimiter_test.go:84: allowed: 4833823, denied: 0
-BenchmarkLimiter/wait/parallel/2ns_rate/mocked_timesource-8                   	 4418911	       279.7 ns/op
-    ratelimiter_test.go:84: allowed: 4418911, denied: 0
-BenchmarkLimiter/wait/parallel/2ns_rate/mocked_timesource-32                  	 4012911	       301.5 ns/op
-    ratelimiter_test.go:84: allowed: 4012911, denied: 0
-BenchmarkLimiter/wait/parallel/1µs_rate/real                                  	 1201164	       999.2 ns/op
-    ratelimiter_test.go:84: allowed: 1201164, denied: 0
-BenchmarkLimiter/wait/parallel/1µs_rate/real-2                                	 1219983	       983.1 ns/op
-    ratelimiter_test.go:84: allowed: 1219983, denied: 0
-BenchmarkLimiter/wait/parallel/1µs_rate/real-4                                	 1297210	       925.0 ns/op
-    ratelimiter_test.go:84: allowed: 1297210, denied: 0
-BenchmarkLimiter/wait/parallel/1µs_rate/real-8                                	 2537467	       470.7 ns/op
-    ratelimiter_test.go:84: allowed: 2537467, denied: 0
-BenchmarkLimiter/wait/parallel/1µs_rate/real-32                               	 2110921	       539.8 ns/op
-    ratelimiter_test.go:84: allowed: 2110921, denied: 0
-BenchmarkLimiter/wait/parallel/1µs_rate/wrapped                               	 1201170	       999.2 ns/op
-    ratelimiter_test.go:84: allowed: 1201170, denied: 0
-BenchmarkLimiter/wait/parallel/1µs_rate/wrapped-2                             	 1201172	       999.2 ns/op
-    ratelimiter_test.go:84: allowed: 1201172, denied: 0
-BenchmarkLimiter/wait/parallel/1µs_rate/wrapped-4                             	 1201144	       999.2 ns/op
-    ratelimiter_test.go:84: allowed: 1201144, denied: 0
-BenchmarkLimiter/wait/parallel/1µs_rate/wrapped-8                             	 1201162	       999.2 ns/op
-    ratelimiter_test.go:84: allowed: 1201162, denied: 0
-BenchmarkLimiter/wait/parallel/1µs_rate/wrapped-32                            	 1201062	       999.3 ns/op
-    ratelimiter_test.go:84: allowed: 1201062, denied: 0
-BenchmarkLimiter/wait/parallel/1µs_rate/mocked_timesource                     	 5097742	       244.0 ns/op
-    ratelimiter_test.go:84: allowed: 5097742, denied: 0
-BenchmarkLimiter/wait/parallel/1µs_rate/mocked_timesource-2                   	 5727841	       212.0 ns/op
-    ratelimiter_test.go:84: allowed: 5727841, denied: 0
-BenchmarkLimiter/wait/parallel/1µs_rate/mocked_timesource-4                   	 4811091	       247.9 ns/op
-    ratelimiter_test.go:84: allowed: 4811091, denied: 0
-BenchmarkLimiter/wait/parallel/1µs_rate/mocked_timesource-8                   	 4357129	       269.6 ns/op
-    ratelimiter_test.go:84: allowed: 4357129, denied: 0
-BenchmarkLimiter/wait/parallel/1µs_rate/mocked_timesource-32                  	 4148046	       296.5 ns/op
-    ratelimiter_test.go:84: allowed: 4148046, denied: 0
-BenchmarkLimiterParallel/real                                                 	14492636	        83.45 ns/op
-    ratelimiter_test.go:306: allowed: 1210390, denied: 13282246
-BenchmarkLimiterParallel/real-2                                               	11602707	       100.8 ns/op
-    ratelimiter_test.go:306: allowed: 1171781, denied: 10430926
-BenchmarkLimiterParallel/real-4                                               	 9222276	       129.0 ns/op
-    ratelimiter_test.go:306: allowed: 1196377, denied: 8025899
-BenchmarkLimiterParallel/real-8                                               	 7036296	       170.0 ns/op
-    ratelimiter_test.go:306: allowed: 3823811, denied: 3212485
-BenchmarkLimiterParallel/real-32                                              	 4980267	       243.1 ns/op
-    ratelimiter_test.go:306: allowed: 4963185, denied: 17082
-BenchmarkLimiterParallel/mocked                                               	10211008	       116.7 ns/op
-    ratelimiter_test.go:306: allowed: 1192235, denied: 9018773
-BenchmarkLimiterParallel/mocked-2                                             	 8599737	       138.1 ns/op
-    ratelimiter_test.go:306: allowed: 1188970, denied: 7410767
-BenchmarkLimiterParallel/mocked-4                                             	 5911910	       204.9 ns/op
-    ratelimiter_test.go:306: allowed: 1212087, denied: 4699823
-BenchmarkLimiterParallel/mocked-8                                             	 4406569	       249.9 ns/op
-    ratelimiter_test.go:306: allowed: 1101959, denied: 3304610
-BenchmarkLimiterParallel/mocked-32                                            	 3157717	       374.9 ns/op
-    ratelimiter_test.go:306: allowed: 1184783, denied: 1972934
-BenchmarkLimiterParallel/mocked_timesource                                    	11131578	       112.3 ns/op
-    ratelimiter_test.go:306: allowed: 5566788, denied: 5564790
-BenchmarkLimiterParallel/mocked_timesource-2                                  	 8479593	       140.7 ns/op
-    ratelimiter_test.go:306: allowed: 4240796, denied: 4238797
-BenchmarkLimiterParallel/mocked_timesource-4                                  	 6908698	       172.1 ns/op
-    ratelimiter_test.go:306: allowed: 3455348, denied: 3453350
-BenchmarkLimiterParallel/mocked_timesource-8                                  	 6280804	       191.8 ns/op
-    ratelimiter_test.go:306: allowed: 3141401, denied: 3139403
-BenchmarkLimiterParallel/mocked_timesource-32                                 	 5643787	       246.0 ns/op
-    ratelimiter_test.go:306: allowed: 2822893, denied: 2820894
-PASS
-ok  	github.com/uber/cadence/common/clock	225.366s
-
-*/

@@ -174,10 +174,10 @@ func (r *ratelimiter) lockNow() (now time.Time, unlock func()) {
 // The lock MUST be held until all time-accepting methods are called on the
 // underlying rate.Limiter, as otherwise the internal "now" value may rewind
 // and cause undefined behavior.
-func (r *ratelimiter) lockCorrectNow(oldNow time.Time) (now time.Time, unlock func()) {
+func (r *ratelimiter) lockCorrectNow(tryNow time.Time) (now time.Time, unlock func()) {
 	r.mut.Lock()
-	if r.latestNow.Before(oldNow) {
-		r.latestNow = oldNow
+	if r.latestNow.Before(tryNow) {
+		r.latestNow = tryNow
 	}
 	return r.latestNow, r.mut.Unlock
 }
@@ -295,7 +295,9 @@ func (r *ratelimiter) Wait(ctx context.Context) (err error) {
 func (r *reservation) Used(used bool) {
 	if !used {
 		now, unlock := r.limiter.lockCorrectNow(r.reservedAt)
+		// lock must be held while canceling, because it updates the limiter's time
 		defer unlock()
+
 		// if no calls interleaved, this will be the same as the reservation time,
 		// and the cancellation will be able to roll back an immediately-available call.
 		//
@@ -310,17 +312,15 @@ func (r *reservation) Used(used bool) {
 }
 
 func (r *reservation) Allow() bool {
-	// this does not update the reservation time, so it will not
-	// change to "allowed" correctly as time passes - only after other things
-	// update the ratelimiter.
+	// because this uses a snapshotted DelayFrom time rather than whatever the
+	// "current" time might be, this result will not change as time passes.
 	//
-	// this is necessary to allow "reserve -> allow -> cancel" to be able to
-	// roll back an allowed call, as the cancel must use the reservation time.
+	// that's intentional because it's more stable... and a bit surprisingly
+	// it's also important, as interleaving calls may advance the limiter's
+	// "now" time, and turn this "would not allow" into a "would allow".
 	//
-	// however, because of this, this reservation must be assumed to be called
-	// ~immediately, and only once.  calling repeatedly or after a long delay
-	// has undefined and likely confusing behavior.
-	now, unlock := r.limiter.lockCorrectNow(r.reservedAt)
-	defer unlock()
-	return r.res.OK() && r.res.DelayFrom(now) == 0
+	// in high-CPU benchmarks, if you use the limiter's "now", you can sometimes
+	// see this allowing many times more requests than it should, due to the
+	// interleaving time advancement.
+	return r.res.OK() && r.res.DelayFrom(r.reservedAt) == 0
 }

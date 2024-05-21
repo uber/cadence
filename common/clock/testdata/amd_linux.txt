@@ -1,0 +1,1210 @@
+// On a giant cloud AMD linux machine with 96 cores (shared machine, possibly noisy but I tried to pick a quiet period):
+
+❯ go test -bench . -test.run xxx -cpu 1,2,4,8,32,128 .
+goos: linux
+goarch: amd64
+pkg: github.com/uber/cadence/common/clock
+cpu: AMD EPYC 7B13
+BenchmarkLimiter/allow/serial/real        	10404256	       115.2 ns/op
+--- BENCH: BenchmarkLimiter/allow/serial/real
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 2132, denied: 7868
+    ratelimiter_test.go:68: allowed: 116296, denied: 883704
+    ratelimiter_test.go:68: allowed: 1199138, denied: 9205118
+BenchmarkLimiter/allow/serial/real-2      	10527003	       114.1 ns/op
+--- BENCH: BenchmarkLimiter/allow/serial/real-2
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 2145, denied: 7855
+    ratelimiter_test.go:68: allowed: 114959, denied: 885041
+    ratelimiter_test.go:68: allowed: 1202131, denied: 9324872
+BenchmarkLimiter/allow/serial/real-4      	10540530	       113.9 ns/op
+--- BENCH: BenchmarkLimiter/allow/serial/real-4
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 2132, denied: 7868
+    ratelimiter_test.go:68: allowed: 114823, denied: 885177
+    ratelimiter_test.go:68: allowed: 1201753, denied: 9338777
+BenchmarkLimiter/allow/serial/real-8      	10510574	       114.3 ns/op
+--- BENCH: BenchmarkLimiter/allow/serial/real-8
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 2168, denied: 7832
+    ratelimiter_test.go:68: allowed: 115137, denied: 884863
+    ratelimiter_test.go:68: allowed: 1202504, denied: 9308070
+BenchmarkLimiter/allow/serial/real-32     	10515364	       114.2 ns/op
+--- BENCH: BenchmarkLimiter/allow/serial/real-32
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 2137, denied: 7863
+    ratelimiter_test.go:68: allowed: 115070, denied: 884930
+    ratelimiter_test.go:68: allowed: 1201875, denied: 9313489
+BenchmarkLimiter/allow/serial/real-128    	10519644	       114.1 ns/op
+--- BENCH: BenchmarkLimiter/allow/serial/real-128
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 2137, denied: 7863
+    ratelimiter_test.go:68: allowed: 115041, denied: 884959
+    ratelimiter_test.go:68: allowed: 1200798, denied: 9318846
+BenchmarkLimiter/allow/serial/wrapped     	 7517832	       159.6 ns/op
+--- BENCH: BenchmarkLimiter/allow/serial/wrapped
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 2999, denied: 7001
+    ratelimiter_test.go:68: allowed: 160598, denied: 839402
+    ratelimiter_test.go:68: allowed: 1200984, denied: 6316848
+BenchmarkLimiter/allow/serial/wrapped-2   	 7693936	       154.9 ns/op
+--- BENCH: BenchmarkLimiter/allow/serial/wrapped-2
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 2517, denied: 7483
+    ratelimiter_test.go:68: allowed: 156935, denied: 843065
+    ratelimiter_test.go:68: allowed: 1192748, denied: 6501188
+BenchmarkLimiter/allow/serial/wrapped-4   	 7796499	       155.7 ns/op
+--- BENCH: BenchmarkLimiter/allow/serial/wrapped-4
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 2570, denied: 7430
+    ratelimiter_test.go:68: allowed: 154886, denied: 845114
+    ratelimiter_test.go:68: allowed: 1214959, denied: 6581540
+BenchmarkLimiter/allow/serial/wrapped-8   	 7673786	       156.8 ns/op
+--- BENCH: BenchmarkLimiter/allow/serial/wrapped-8
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 2627, denied: 7373
+    ratelimiter_test.go:68: allowed: 157347, denied: 842653
+    ratelimiter_test.go:68: allowed: 1204126, denied: 6469660
+BenchmarkLimiter/allow/serial/wrapped-32  	 7695651	       153.8 ns/op
+--- BENCH: BenchmarkLimiter/allow/serial/wrapped-32
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 2644, denied: 7356
+    ratelimiter_test.go:68: allowed: 156900, denied: 843100
+    ratelimiter_test.go:68: allowed: 1184825, denied: 6510826
+BenchmarkLimiter/allow/serial/wrapped-128 	 7668226	       154.4 ns/op
+--- BENCH: BenchmarkLimiter/allow/serial/wrapped-128
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 2566, denied: 7434
+    ratelimiter_test.go:68: allowed: 157459, denied: 842541
+    ratelimiter_test.go:68: allowed: 1184908, denied: 6483318
+BenchmarkLimiter/allow/serial/mocked_timesource             	 9391672	       133.4 ns/op
+--- BENCH: BenchmarkLimiter/allow/serial/mocked_timesource
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 2999, denied: 7001
+    ratelimiter_test.go:68: allowed: 200999, denied: 799001
+    ratelimiter_test.go:68: allowed: 1879334, denied: 7512338
+BenchmarkLimiter/allow/serial/mocked_timesource-2           	 9720792	       121.4 ns/op
+--- BENCH: BenchmarkLimiter/allow/serial/mocked_timesource-2
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 2999, denied: 7001
+    ratelimiter_test.go:68: allowed: 200999, denied: 799001
+    ratelimiter_test.go:68: allowed: 1945158, denied: 7775634
+BenchmarkLimiter/allow/serial/mocked_timesource-4           	 9901046	       126.2 ns/op
+--- BENCH: BenchmarkLimiter/allow/serial/mocked_timesource-4
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 2999, denied: 7001
+    ratelimiter_test.go:68: allowed: 200999, denied: 799001
+    ratelimiter_test.go:68: allowed: 1981209, denied: 7919837
+BenchmarkLimiter/allow/serial/mocked_timesource-8           	 9741610	       123.5 ns/op
+--- BENCH: BenchmarkLimiter/allow/serial/mocked_timesource-8
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 2999, denied: 7001
+    ratelimiter_test.go:68: allowed: 200999, denied: 799001
+    ratelimiter_test.go:68: allowed: 1949321, denied: 7792289
+BenchmarkLimiter/allow/serial/mocked_timesource-32          	 9839271	       120.7 ns/op
+--- BENCH: BenchmarkLimiter/allow/serial/mocked_timesource-32
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 2999, denied: 7001
+    ratelimiter_test.go:68: allowed: 200999, denied: 799001
+    ratelimiter_test.go:68: allowed: 1968854, denied: 7870417
+BenchmarkLimiter/allow/serial/mocked_timesource-128         	 9678510	       122.1 ns/op
+--- BENCH: BenchmarkLimiter/allow/serial/mocked_timesource-128
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 2999, denied: 7001
+    ratelimiter_test.go:68: allowed: 200999, denied: 799001
+    ratelimiter_test.go:68: allowed: 1936701, denied: 7741809
+BenchmarkLimiter/allow/parallel/real                        	10198125	       117.9 ns/op
+--- BENCH: BenchmarkLimiter/allow/parallel/real
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 2175, denied: 7825
+    ratelimiter_test.go:84: allowed: 118646, denied: 881354
+    ratelimiter_test.go:84: allowed: 1203212, denied: 8994913
+BenchmarkLimiter/allow/parallel/real-2                      	 8717328	       149.3 ns/op
+--- BENCH: BenchmarkLimiter/allow/parallel/real-2
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 2587, denied: 7413
+    ratelimiter_test.go:84: allowed: 139078, denied: 860922
+    ratelimiter_test.go:84: allowed: 1306148, denied: 7411180
+BenchmarkLimiter/allow/parallel/real-4                      	 7371642	       138.2 ns/op
+--- BENCH: BenchmarkLimiter/allow/parallel/real-4
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 3168, denied: 6832
+    ratelimiter_test.go:84: allowed: 167068, denied: 832932
+    ratelimiter_test.go:84: allowed: 1044798, denied: 6326844
+BenchmarkLimiter/allow/parallel/real-8                      	 6150458	       205.2 ns/op
+--- BENCH: BenchmarkLimiter/allow/parallel/real-8
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 845725, denied: 154275
+    ratelimiter_test.go:84: allowed: 5407341, denied: 743117
+BenchmarkLimiter/allow/parallel/real-32                     	 3589908	       321.8 ns/op
+--- BENCH: BenchmarkLimiter/allow/parallel/real-32
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 3589908, denied: 0
+BenchmarkLimiter/allow/parallel/real-128                    	 3601142	       314.1 ns/op
+--- BENCH: BenchmarkLimiter/allow/parallel/real-128
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 3600778, denied: 364
+BenchmarkLimiter/allow/parallel/wrapped                     	 7308664	       162.1 ns/op
+--- BENCH: BenchmarkLimiter/allow/parallel/wrapped
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 2588, denied: 7412
+    ratelimiter_test.go:84: allowed: 165157, denied: 834843
+    ratelimiter_test.go:84: allowed: 1185724, denied: 6122940
+BenchmarkLimiter/allow/parallel/wrapped-2                   	 6665180	       171.3 ns/op
+--- BENCH: BenchmarkLimiter/allow/parallel/wrapped-2
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 2815, denied: 7185
+    ratelimiter_test.go:84: allowed: 181001, denied: 818999
+    ratelimiter_test.go:84: allowed: 1142853, denied: 5522327
+BenchmarkLimiter/allow/parallel/wrapped-4                   	 5462830	       217.1 ns/op
+--- BENCH: BenchmarkLimiter/allow/parallel/wrapped-4
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 3310, denied: 6690
+    ratelimiter_test.go:84: allowed: 220636, denied: 779364
+    ratelimiter_test.go:84: allowed: 1187028, denied: 4275802
+BenchmarkLimiter/allow/parallel/wrapped-8                   	 3914368	       275.3 ns/op
+--- BENCH: BenchmarkLimiter/allow/parallel/wrapped-8
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 4012, denied: 5988
+    ratelimiter_test.go:84: allowed: 307510, denied: 692490
+    ratelimiter_test.go:84: allowed: 1078420, denied: 2835948
+BenchmarkLimiter/allow/parallel/wrapped-32                  	 2475373	       490.7 ns/op
+--- BENCH: BenchmarkLimiter/allow/parallel/wrapped-32
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 5398, denied: 4602
+    ratelimiter_test.go:84: allowed: 485721, denied: 514279
+    ratelimiter_test.go:84: allowed: 1215714, denied: 1259659
+BenchmarkLimiter/allow/parallel/wrapped-128                 	 2336205	       501.2 ns/op
+--- BENCH: BenchmarkLimiter/allow/parallel/wrapped-128
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 3457, denied: 6543
+    ratelimiter_test.go:84: allowed: 514558, denied: 485442
+    ratelimiter_test.go:84: allowed: 1171883, denied: 1164322
+BenchmarkLimiter/allow/parallel/mocked_timesource           	 8743651	       129.6 ns/op
+--- BENCH: BenchmarkLimiter/allow/parallel/mocked_timesource
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 2999, denied: 7001
+    ratelimiter_test.go:84: allowed: 200999, denied: 799001
+    ratelimiter_test.go:84: allowed: 1749730, denied: 6993921
+BenchmarkLimiter/allow/parallel/mocked_timesource-2         	 8764071	       137.0 ns/op
+--- BENCH: BenchmarkLimiter/allow/parallel/mocked_timesource-2
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 2999, denied: 7001
+    ratelimiter_test.go:84: allowed: 200999, denied: 799001
+    ratelimiter_test.go:84: allowed: 1753814, denied: 7010257
+BenchmarkLimiter/allow/parallel/mocked_timesource-4         	 5651929	       177.2 ns/op
+--- BENCH: BenchmarkLimiter/allow/parallel/mocked_timesource-4
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 2999, denied: 7001
+    ratelimiter_test.go:84: allowed: 200999, denied: 799001
+    ratelimiter_test.go:84: allowed: 1131385, denied: 4520544
+BenchmarkLimiter/allow/parallel/mocked_timesource-8         	 5566503	       226.4 ns/op
+--- BENCH: BenchmarkLimiter/allow/parallel/mocked_timesource-8
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 2999, denied: 7001
+    ratelimiter_test.go:84: allowed: 200999, denied: 799001
+    ratelimiter_test.go:84: allowed: 1114300, denied: 4452203
+BenchmarkLimiter/allow/parallel/mocked_timesource-32        	 4858723	       251.9 ns/op
+--- BENCH: BenchmarkLimiter/allow/parallel/mocked_timesource-32
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 2999, denied: 7001
+    ratelimiter_test.go:84: allowed: 200999, denied: 799001
+    ratelimiter_test.go:84: allowed: 972744, denied: 3885979
+BenchmarkLimiter/allow/parallel/mocked_timesource-128       	 4967756	       249.4 ns/op
+--- BENCH: BenchmarkLimiter/allow/parallel/mocked_timesource-128
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 2999, denied: 7001
+    ratelimiter_test.go:84: allowed: 200999, denied: 799001
+    ratelimiter_test.go:84: allowed: 994551, denied: 3973205
+BenchmarkLimiter/reserve-canceling-every-3/serial/real      	 4663162	       258.0 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/serial/real
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 1271, denied: 8729
+    ratelimiter_test.go:68: allowed: 1301, denied: 998699
+    ratelimiter_test.go:68: allowed: 1280, denied: 4661882
+BenchmarkLimiter/reserve-canceling-every-3/serial/real-2    	 4401717	       248.2 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/serial/real-2
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 1298, denied: 8702
+    ratelimiter_test.go:68: allowed: 1272, denied: 998728
+    ratelimiter_test.go:68: allowed: 1297, denied: 4400420
+BenchmarkLimiter/reserve-canceling-every-3/serial/real-4    	 4784338	       248.9 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/serial/real-4
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 1364, denied: 8636
+    ratelimiter_test.go:68: allowed: 1269, denied: 998731
+    ratelimiter_test.go:68: allowed: 1327, denied: 4783011
+BenchmarkLimiter/reserve-canceling-every-3/serial/real-8    	 4851766	       250.2 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/serial/real-8
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 1534, denied: 8466
+    ratelimiter_test.go:68: allowed: 1366, denied: 998634
+    ratelimiter_test.go:68: allowed: 1392, denied: 4850374
+BenchmarkLimiter/reserve-canceling-every-3/serial/real-32   	 4755440	       251.8 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/serial/real-32
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 1388, denied: 8612
+    ratelimiter_test.go:68: allowed: 1283, denied: 998717
+    ratelimiter_test.go:68: allowed: 1310, denied: 4754130
+BenchmarkLimiter/reserve-canceling-every-3/serial/real-128  	 4688564	       251.8 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/serial/real-128
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 1400, denied: 8600
+    ratelimiter_test.go:68: allowed: 1276, denied: 998724
+    ratelimiter_test.go:68: allowed: 1315, denied: 4687249
+BenchmarkLimiter/reserve-canceling-every-3/serial/real_pinned_time             	 9010928	       133.0 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/serial/real_pinned_time
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 1833, denied: 8167
+    ratelimiter_test.go:68: allowed: 1833, denied: 998167
+    ratelimiter_test.go:68: allowed: 1878, denied: 9009050
+BenchmarkLimiter/reserve-canceling-every-3/serial/real_pinned_time-2           	 8976508	       133.0 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/serial/real_pinned_time-2
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 1835, denied: 8165
+    ratelimiter_test.go:68: allowed: 1834, denied: 998166
+    ratelimiter_test.go:68: allowed: 1833, denied: 8974675
+BenchmarkLimiter/reserve-canceling-every-3/serial/real_pinned_time-4           	 9003748	       133.4 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/serial/real_pinned_time-4
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 1835, denied: 8165
+    ratelimiter_test.go:68: allowed: 1833, denied: 998167
+    ratelimiter_test.go:68: allowed: 1833, denied: 9001915
+BenchmarkLimiter/reserve-canceling-every-3/serial/real_pinned_time-8           	 8971536	       132.8 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/serial/real_pinned_time-8
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 1833, denied: 8167
+    ratelimiter_test.go:68: allowed: 1853, denied: 998147
+    ratelimiter_test.go:68: allowed: 1841, denied: 8969695
+BenchmarkLimiter/reserve-canceling-every-3/serial/real_pinned_time-32          	 8947855	       132.8 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/serial/real_pinned_time-32
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 1865, denied: 8135
+    ratelimiter_test.go:68: allowed: 1841, denied: 998159
+    ratelimiter_test.go:68: allowed: 1964, denied: 8945891
+BenchmarkLimiter/reserve-canceling-every-3/serial/real_pinned_time-128         	 9068527	       132.9 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/serial/real_pinned_time-128
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 1842, denied: 8158
+    ratelimiter_test.go:68: allowed: 1841, denied: 998159
+    ratelimiter_test.go:68: allowed: 1833, denied: 9066694
+BenchmarkLimiter/reserve-canceling-every-3/serial/wrapped                      	 3538188	       337.5 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/serial/wrapped
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 2949, denied: 7051
+    ratelimiter_test.go:68: allowed: 2566, denied: 997434
+    ratelimiter_test.go:68: allowed: 2518, denied: 3535670
+BenchmarkLimiter/reserve-canceling-every-3/serial/wrapped-2                    	 3835664	       313.1 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/serial/wrapped-2
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 2682, denied: 7318
+    ratelimiter_test.go:68: allowed: 2689, denied: 997311
+    ratelimiter_test.go:68: allowed: 2593, denied: 3833071
+BenchmarkLimiter/reserve-canceling-every-3/serial/wrapped-4                    	 3746409	       305.4 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/serial/wrapped-4
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 2864, denied: 7136
+    ratelimiter_test.go:68: allowed: 3123, denied: 996877
+    ratelimiter_test.go:68: allowed: 3027, denied: 3743382
+BenchmarkLimiter/reserve-canceling-every-3/serial/wrapped-8                    	 3792769	       326.8 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/serial/wrapped-8
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 3376, denied: 6624
+    ratelimiter_test.go:68: allowed: 3016, denied: 996984
+    ratelimiter_test.go:68: allowed: 3057, denied: 3789712
+BenchmarkLimiter/reserve-canceling-every-3/serial/wrapped-32                   	 3600802	       333.4 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/serial/wrapped-32
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 3310, denied: 6690
+    ratelimiter_test.go:68: allowed: 2758, denied: 997242
+    ratelimiter_test.go:68: allowed: 3012, denied: 3597790
+BenchmarkLimiter/reserve-canceling-every-3/serial/wrapped-128                  	 3618142	       331.6 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/serial/wrapped-128
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 3137, denied: 6863
+    ratelimiter_test.go:68: allowed: 2566, denied: 997434
+    ratelimiter_test.go:68: allowed: 2567, denied: 3615575
+BenchmarkLimiter/reserve-canceling-every-3/serial/mocked_timesource            	 3740917	       316.5 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/serial/mocked_timesource
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 2142, denied: 7858
+    ratelimiter_test.go:68: allowed: 2142, denied: 997858
+    ratelimiter_test.go:68: allowed: 2142, denied: 3738775
+BenchmarkLimiter/reserve-canceling-every-3/serial/mocked_timesource-2          	 4304826	       278.8 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/serial/mocked_timesource-2
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 2142, denied: 7858
+    ratelimiter_test.go:68: allowed: 2142, denied: 997858
+    ratelimiter_test.go:68: allowed: 2142, denied: 4302684
+BenchmarkLimiter/reserve-canceling-every-3/serial/mocked_timesource-4          	 4135222	       289.9 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/serial/mocked_timesource-4
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 2142, denied: 7858
+    ratelimiter_test.go:68: allowed: 2142, denied: 997858
+    ratelimiter_test.go:68: allowed: 2142, denied: 4133080
+BenchmarkLimiter/reserve-canceling-every-3/serial/mocked_timesource-8          	 4132587	       298.4 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/serial/mocked_timesource-8
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 2142, denied: 7858
+    ratelimiter_test.go:68: allowed: 2142, denied: 997858
+    ratelimiter_test.go:68: allowed: 2142, denied: 4130445
+BenchmarkLimiter/reserve-canceling-every-3/serial/mocked_timesource-32         	 3995317	       290.5 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/serial/mocked_timesource-32
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 2142, denied: 7858
+    ratelimiter_test.go:68: allowed: 2142, denied: 997858
+    ratelimiter_test.go:68: allowed: 2142, denied: 3993175
+BenchmarkLimiter/reserve-canceling-every-3/serial/mocked_timesource-128        	 4043233	       299.3 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/serial/mocked_timesource-128
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 2142, denied: 7858
+    ratelimiter_test.go:68: allowed: 2142, denied: 997858
+    ratelimiter_test.go:68: allowed: 2142, denied: 4041091
+BenchmarkLimiter/reserve-canceling-every-3/parallel/real                       	 4527718	       266.1 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/parallel/real
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 1388, denied: 8612
+    ratelimiter_test.go:84: allowed: 1320, denied: 998680
+    ratelimiter_test.go:84: allowed: 1288, denied: 4526430
+BenchmarkLimiter/reserve-canceling-every-3/parallel/real-2                     	 4864327	       266.0 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/parallel/real-2
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 1374, denied: 8626
+    ratelimiter_test.go:84: allowed: 1315, denied: 998685
+    ratelimiter_test.go:84: allowed: 1474, denied: 4862853
+BenchmarkLimiter/reserve-canceling-every-3/parallel/real-4                     	 3947241	       283.5 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/parallel/real-4
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 6114, denied: 3886
+    ratelimiter_test.go:84: allowed: 523621, denied: 476379
+    ratelimiter_test.go:84: allowed: 1492372, denied: 2454869
+BenchmarkLimiter/reserve-canceling-every-3/parallel/real-8                     	 4415292	       301.6 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/parallel/real-8
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 999846, denied: 154
+    ratelimiter_test.go:84: allowed: 3594462, denied: 314
+    ratelimiter_test.go:84: allowed: 4415292, denied: 0
+BenchmarkLimiter/reserve-canceling-every-3/parallel/real-32                    	 2729314	       463.2 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/parallel/real-32
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 2729314, denied: 0
+BenchmarkLimiter/reserve-canceling-every-3/parallel/real-128                   	 2392284	       512.3 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/parallel/real-128
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 2392284, denied: 0
+BenchmarkLimiter/reserve-canceling-every-3/parallel/real_pinned_time           	 8682807	       138.6 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/parallel/real_pinned_time
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 1896, denied: 8104
+    ratelimiter_test.go:84: allowed: 1860, denied: 998140
+    ratelimiter_test.go:84: allowed: 1860, denied: 8680947
+BenchmarkLimiter/reserve-canceling-every-3/parallel/real_pinned_time-2         	 6977582	       184.6 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/parallel/real_pinned_time-2
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 2236, denied: 7764
+    ratelimiter_test.go:84: allowed: 2163, denied: 997837
+    ratelimiter_test.go:84: allowed: 2138, denied: 6975444
+BenchmarkLimiter/reserve-canceling-every-3/parallel/real_pinned_time-4         	 5874568	       207.5 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/parallel/real_pinned_time-4
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 534332, denied: 465668
+    ratelimiter_test.go:84: allowed: 2928268, denied: 2946300
+BenchmarkLimiter/reserve-canceling-every-3/parallel/real_pinned_time-8         	 3773019	       292.6 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/parallel/real_pinned_time-8
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 3773019, denied: 0
+BenchmarkLimiter/reserve-canceling-every-3/parallel/real_pinned_time-32        	 2876728	       420.2 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/parallel/real_pinned_time-32
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 2875342, denied: 1386
+BenchmarkLimiter/reserve-canceling-every-3/parallel/real_pinned_time-128       	 2887203	       408.1 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/parallel/real_pinned_time-128
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 2887203, denied: 0
+BenchmarkLimiter/reserve-canceling-every-3/parallel/wrapped                    	 3516975	       339.4 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/parallel/wrapped
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 2846, denied: 7154
+    ratelimiter_test.go:84: allowed: 2587, denied: 997413
+    ratelimiter_test.go:84: allowed: 2464, denied: 3514511
+BenchmarkLimiter/reserve-canceling-every-3/parallel/wrapped-2                  	 3363238	       349.9 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/parallel/wrapped-2
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 3315, denied: 6685
+    ratelimiter_test.go:84: allowed: 3007, denied: 996993
+    ratelimiter_test.go:84: allowed: 3039, denied: 2664526
+    ratelimiter_test.go:84: allowed: 2719, denied: 3360519
+BenchmarkLimiter/reserve-canceling-every-3/parallel/wrapped-4                  	 3086593	       429.2 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/parallel/wrapped-4
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 3430, denied: 6570
+    ratelimiter_test.go:84: allowed: 3462, denied: 996538
+    ratelimiter_test.go:84: allowed: 3142, denied: 3083451
+BenchmarkLimiter/reserve-canceling-every-3/parallel/wrapped-8                  	 2413830	       515.4 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/parallel/wrapped-8
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 8827, denied: 1173
+    ratelimiter_test.go:84: allowed: 4644, denied: 995356
+    ratelimiter_test.go:84: allowed: 7284, denied: 2406546
+BenchmarkLimiter/reserve-canceling-every-3/parallel/wrapped-32                 	 1855238	       681.4 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/parallel/wrapped-32
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 6582, denied: 3418
+    ratelimiter_test.go:84: allowed: 7049, denied: 992951
+    ratelimiter_test.go:84: allowed: 221107, denied: 1634131
+BenchmarkLimiter/reserve-canceling-every-3/parallel/wrapped-128                	 1635981	       791.5 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/parallel/wrapped-128
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 253095, denied: 746905
+    ratelimiter_test.go:84: allowed: 862205, denied: 773776
+BenchmarkLimiter/reserve-canceling-every-3/parallel/mocked_timesource          	 3773559	       318.3 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/parallel/mocked_timesource
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 2142, denied: 7858
+    ratelimiter_test.go:84: allowed: 2142, denied: 997858
+    ratelimiter_test.go:84: allowed: 2142, denied: 3771417
+BenchmarkLimiter/reserve-canceling-every-3/parallel/mocked_timesource-2        	 3750446	       316.7 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/parallel/mocked_timesource-2
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 2142, denied: 7858
+    ratelimiter_test.go:84: allowed: 2134, denied: 997866
+    ratelimiter_test.go:84: allowed: 2139, denied: 3748307
+BenchmarkLimiter/reserve-canceling-every-3/parallel/mocked_timesource-4        	 3092732	       375.8 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/parallel/mocked_timesource-4
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 2076, denied: 7924
+    ratelimiter_test.go:84: allowed: 2140, denied: 997860
+    ratelimiter_test.go:84: allowed: 2114, denied: 3090618
+BenchmarkLimiter/reserve-canceling-every-3/parallel/mocked_timesource-8        	 2520502	       497.0 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/parallel/mocked_timesource-8
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 2061, denied: 7939
+    ratelimiter_test.go:84: allowed: 2055, denied: 997945
+    ratelimiter_test.go:84: allowed: 1999, denied: 2518503
+BenchmarkLimiter/reserve-canceling-every-3/parallel/mocked_timesource-32       	 1698798	       709.5 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/parallel/mocked_timesource-32
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 2040, denied: 7960
+    ratelimiter_test.go:84: allowed: 2012, denied: 997988
+    ratelimiter_test.go:84: allowed: 1982, denied: 1696816
+BenchmarkLimiter/reserve-canceling-every-3/parallel/mocked_timesource-128      	 1677667	       878.5 ns/op
+--- BENCH: BenchmarkLimiter/reserve-canceling-every-3/parallel/mocked_timesource-128
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 1944, denied: 8056
+    ratelimiter_test.go:84: allowed: 1806, denied: 998194
+    ratelimiter_test.go:84: allowed: 1938, denied: 1675729
+BenchmarkLimiter/wait/serial/2ns_rate/real                                     	 1687412	       693.3 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/2ns_rate/real
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+    ratelimiter_test.go:68: allowed: 1687412, denied: 0
+BenchmarkLimiter/wait/serial/2ns_rate/real-2                                   	 1869668	       632.4 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/2ns_rate/real-2
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+    ratelimiter_test.go:68: allowed: 1869668, denied: 0
+BenchmarkLimiter/wait/serial/2ns_rate/real-4                                   	 1961761	       615.4 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/2ns_rate/real-4
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+    ratelimiter_test.go:68: allowed: 1961761, denied: 0
+BenchmarkLimiter/wait/serial/2ns_rate/real-8                                   	 1919000	       630.6 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/2ns_rate/real-8
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+    ratelimiter_test.go:68: allowed: 1919000, denied: 0
+BenchmarkLimiter/wait/serial/2ns_rate/real-32                                  	 1945870	       619.3 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/2ns_rate/real-32
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+    ratelimiter_test.go:68: allowed: 1945870, denied: 0
+BenchmarkLimiter/wait/serial/2ns_rate/real-128                                 	 1889462	       634.3 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/2ns_rate/real-128
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+    ratelimiter_test.go:68: allowed: 1889462, denied: 0
+BenchmarkLimiter/wait/serial/2ns_rate/wrapped                                  	 1571353	       775.8 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/2ns_rate/wrapped
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+    ratelimiter_test.go:68: allowed: 1571353, denied: 0
+BenchmarkLimiter/wait/serial/2ns_rate/wrapped-2                                	 1927798	       657.4 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/2ns_rate/wrapped-2
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+    ratelimiter_test.go:68: allowed: 1927798, denied: 0
+BenchmarkLimiter/wait/serial/2ns_rate/wrapped-4                                	 1803440	       620.6 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/2ns_rate/wrapped-4
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+    ratelimiter_test.go:68: allowed: 1803440, denied: 0
+BenchmarkLimiter/wait/serial/2ns_rate/wrapped-8                                	 1858791	       641.1 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/2ns_rate/wrapped-8
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+    ratelimiter_test.go:68: allowed: 1858791, denied: 0
+BenchmarkLimiter/wait/serial/2ns_rate/wrapped-32                               	 1878099	       626.9 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/2ns_rate/wrapped-32
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+    ratelimiter_test.go:68: allowed: 1878099, denied: 0
+BenchmarkLimiter/wait/serial/2ns_rate/wrapped-128                              	 1917057	       618.3 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/2ns_rate/wrapped-128
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+    ratelimiter_test.go:68: allowed: 1917057, denied: 0
+BenchmarkLimiter/wait/serial/2ns_rate/mocked_timesource                        	 3653378	       330.7 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/2ns_rate/mocked_timesource
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+    ratelimiter_test.go:68: allowed: 3653378, denied: 0
+BenchmarkLimiter/wait/serial/2ns_rate/mocked_timesource-2                      	 3958316	       296.9 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/2ns_rate/mocked_timesource-2
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+    ratelimiter_test.go:68: allowed: 3958316, denied: 0
+BenchmarkLimiter/wait/serial/2ns_rate/mocked_timesource-4                      	 3874233	       292.7 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/2ns_rate/mocked_timesource-4
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+    ratelimiter_test.go:68: allowed: 3874233, denied: 0
+BenchmarkLimiter/wait/serial/2ns_rate/mocked_timesource-8                      	 4123694	       294.9 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/2ns_rate/mocked_timesource-8
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+    ratelimiter_test.go:68: allowed: 4123694, denied: 0
+BenchmarkLimiter/wait/serial/2ns_rate/mocked_timesource-32                     	 4059378	       296.9 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/2ns_rate/mocked_timesource-32
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+    ratelimiter_test.go:68: allowed: 4059378, denied: 0
+BenchmarkLimiter/wait/serial/2ns_rate/mocked_timesource-128                    	 4022715	       296.5 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/2ns_rate/mocked_timesource-128
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+    ratelimiter_test.go:68: allowed: 4022715, denied: 0
+BenchmarkLimiter/wait/serial/1µs_rate/real                                     	 1000000	      1022 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/1µs_rate/real
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+BenchmarkLimiter/wait/serial/1µs_rate/real-2                                   	 1000000	      1007 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/1µs_rate/real-2
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+BenchmarkLimiter/wait/serial/1µs_rate/real-4                                   	 1000000	      1014 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/1µs_rate/real-4
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+BenchmarkLimiter/wait/serial/1µs_rate/real-8                                   	 1000000	      1018 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/1µs_rate/real-8
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+BenchmarkLimiter/wait/serial/1µs_rate/real-32                                  	 1000000	      1014 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/1µs_rate/real-32
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+BenchmarkLimiter/wait/serial/1µs_rate/real-128                                 	 1000000	      1015 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/1µs_rate/real-128
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+BenchmarkLimiter/wait/serial/1µs_rate/wrapped                                  	 1000000	      1021 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/1µs_rate/wrapped
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+BenchmarkLimiter/wait/serial/1µs_rate/wrapped-2                                	 1000000	      1004 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/1µs_rate/wrapped-2
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+BenchmarkLimiter/wait/serial/1µs_rate/wrapped-4                                	 1000000	      1007 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/1µs_rate/wrapped-4
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+BenchmarkLimiter/wait/serial/1µs_rate/wrapped-8                                	 1000000	      1006 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/1µs_rate/wrapped-8
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+BenchmarkLimiter/wait/serial/1µs_rate/wrapped-32                               	 1000000	      1007 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/1µs_rate/wrapped-32
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+BenchmarkLimiter/wait/serial/1µs_rate/wrapped-128                              	 1000000	      1010 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/1µs_rate/wrapped-128
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+BenchmarkLimiter/wait/serial/1µs_rate/mocked_timesource                        	 3636672	       337.0 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/1µs_rate/mocked_timesource
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+    ratelimiter_test.go:68: allowed: 3636672, denied: 0
+BenchmarkLimiter/wait/serial/1µs_rate/mocked_timesource-2                      	 3980900	       288.3 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/1µs_rate/mocked_timesource-2
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+    ratelimiter_test.go:68: allowed: 3980900, denied: 0
+BenchmarkLimiter/wait/serial/1µs_rate/mocked_timesource-4                      	 4075887	       293.6 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/1µs_rate/mocked_timesource-4
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+    ratelimiter_test.go:68: allowed: 4075887, denied: 0
+BenchmarkLimiter/wait/serial/1µs_rate/mocked_timesource-8                      	 4086462	       296.5 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/1µs_rate/mocked_timesource-8
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+    ratelimiter_test.go:68: allowed: 4086462, denied: 0
+BenchmarkLimiter/wait/serial/1µs_rate/mocked_timesource-32                     	 4017194	       298.4 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/1µs_rate/mocked_timesource-32
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+    ratelimiter_test.go:68: allowed: 4017194, denied: 0
+BenchmarkLimiter/wait/serial/1µs_rate/mocked_timesource-128                    	 4055631	       297.9 ns/op
+--- BENCH: BenchmarkLimiter/wait/serial/1µs_rate/mocked_timesource-128
+    ratelimiter_test.go:68: allowed: 1, denied: 0
+    ratelimiter_test.go:68: allowed: 100, denied: 0
+    ratelimiter_test.go:68: allowed: 10000, denied: 0
+    ratelimiter_test.go:68: allowed: 1000000, denied: 0
+    ratelimiter_test.go:68: allowed: 4055631, denied: 0
+BenchmarkLimiter/wait/parallel/2ns_rate/real                                   	 1632441	       754.2 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/2ns_rate/real
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 882105, denied: 0
+    ratelimiter_test.go:84: allowed: 1632441, denied: 0
+BenchmarkLimiter/wait/parallel/2ns_rate/real-2                                 	 1990737	       567.1 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/2ns_rate/real-2
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 1990737, denied: 0
+BenchmarkLimiter/wait/parallel/2ns_rate/real-4                                 	 2118130	       555.5 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/2ns_rate/real-4
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 2118130, denied: 0
+BenchmarkLimiter/wait/parallel/2ns_rate/real-8                                 	 1965613	       616.2 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/2ns_rate/real-8
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 1965613, denied: 0
+BenchmarkLimiter/wait/parallel/2ns_rate/real-32                                	 1571154	       755.5 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/2ns_rate/real-32
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 1571154, denied: 0
+BenchmarkLimiter/wait/parallel/2ns_rate/real-128                               	 1367809	       906.4 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/2ns_rate/real-128
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 1367809, denied: 0
+BenchmarkLimiter/wait/parallel/2ns_rate/wrapped                                	 1504272	       791.7 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/2ns_rate/wrapped
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 1504272, denied: 0
+BenchmarkLimiter/wait/parallel/2ns_rate/wrapped-2                              	 1740196	       646.0 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/2ns_rate/wrapped-2
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 1740196, denied: 0
+BenchmarkLimiter/wait/parallel/2ns_rate/wrapped-4                              	 2250177	       512.8 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/2ns_rate/wrapped-4
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 1866702, denied: 0
+    ratelimiter_test.go:84: allowed: 2250177, denied: 0
+BenchmarkLimiter/wait/parallel/2ns_rate/wrapped-8                              	 1447045	       850.3 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/2ns_rate/wrapped-8
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 1447045, denied: 0
+BenchmarkLimiter/wait/parallel/2ns_rate/wrapped-32                             	 1272367	       940.0 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/2ns_rate/wrapped-32
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 1272367, denied: 0
+BenchmarkLimiter/wait/parallel/2ns_rate/wrapped-128                            	 1000000	      1073 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/2ns_rate/wrapped-128
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+BenchmarkLimiter/wait/parallel/2ns_rate/mocked_timesource                      	 3549426	       340.9 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/2ns_rate/mocked_timesource
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 3549426, denied: 0
+BenchmarkLimiter/wait/parallel/2ns_rate/mocked_timesource-2                    	 3791341	       319.4 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/2ns_rate/mocked_timesource-2
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 3791341, denied: 0
+BenchmarkLimiter/wait/parallel/2ns_rate/mocked_timesource-4                    	 2750877	       373.3 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/2ns_rate/mocked_timesource-4
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 2750877, denied: 0
+BenchmarkLimiter/wait/parallel/2ns_rate/mocked_timesource-8                    	 3137119	       459.3 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/2ns_rate/mocked_timesource-8
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 3137119, denied: 0
+BenchmarkLimiter/wait/parallel/2ns_rate/mocked_timesource-32                   	 2538837	       461.5 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/2ns_rate/mocked_timesource-32
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 2538837, denied: 0
+BenchmarkLimiter/wait/parallel/2ns_rate/mocked_timesource-128                  	 2163394	       543.6 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/2ns_rate/mocked_timesource-128
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 2163394, denied: 0
+BenchmarkLimiter/wait/parallel/1µs_rate/real                                   	 1000000	      1023 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/1µs_rate/real
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+BenchmarkLimiter/wait/parallel/1µs_rate/real-2                                 	 1307954	       907.0 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/1µs_rate/real-2
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 1307954, denied: 0
+BenchmarkLimiter/wait/parallel/1µs_rate/real-4                                 	 2200693	       562.2 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/1µs_rate/real-4
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 2200693, denied: 0
+BenchmarkLimiter/wait/parallel/1µs_rate/real-8                                 	 1880383	       586.8 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/1µs_rate/real-8
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 1880383, denied: 0
+BenchmarkLimiter/wait/parallel/1µs_rate/real-32                                	 1603370	       765.7 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/1µs_rate/real-32
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 1603370, denied: 0
+BenchmarkLimiter/wait/parallel/1µs_rate/real-128                               	 1316176	       903.5 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/1µs_rate/real-128
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 1316176, denied: 0
+BenchmarkLimiter/wait/parallel/1µs_rate/wrapped                                	 1000000	      1020 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/1µs_rate/wrapped
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+BenchmarkLimiter/wait/parallel/1µs_rate/wrapped-2                              	 1000000	      1005 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/1µs_rate/wrapped-2
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+BenchmarkLimiter/wait/parallel/1µs_rate/wrapped-4                              	 1000000	      1005 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/1µs_rate/wrapped-4
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+BenchmarkLimiter/wait/parallel/1µs_rate/wrapped-8                              	 1000000	      1004 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/1µs_rate/wrapped-8
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+BenchmarkLimiter/wait/parallel/1µs_rate/wrapped-32                             	 1000000	      1007 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/1µs_rate/wrapped-32
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+BenchmarkLimiter/wait/parallel/1µs_rate/wrapped-128                            	 1000000	      1018 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/1µs_rate/wrapped-128
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+BenchmarkLimiter/wait/parallel/1µs_rate/mocked_timesource                      	 3514243	       347.9 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/1µs_rate/mocked_timesource
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 3514243, denied: 0
+BenchmarkLimiter/wait/parallel/1µs_rate/mocked_timesource-2                    	 3366944	       348.5 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/1µs_rate/mocked_timesource-2
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 3366944, denied: 0
+BenchmarkLimiter/wait/parallel/1µs_rate/mocked_timesource-4                    	 3313534	       413.6 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/1µs_rate/mocked_timesource-4
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 3313534, denied: 0
+BenchmarkLimiter/wait/parallel/1µs_rate/mocked_timesource-8                    	 2690896	       456.9 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/1µs_rate/mocked_timesource-8
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 2690896, denied: 0
+BenchmarkLimiter/wait/parallel/1µs_rate/mocked_timesource-32                   	 2466369	       475.1 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/1µs_rate/mocked_timesource-32
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 2466369, denied: 0
+BenchmarkLimiter/wait/parallel/1µs_rate/mocked_timesource-128                  	 2377242	       495.0 ns/op
+--- BENCH: BenchmarkLimiter/wait/parallel/1µs_rate/mocked_timesource-128
+    ratelimiter_test.go:84: allowed: 1, denied: 0
+    ratelimiter_test.go:84: allowed: 100, denied: 0
+    ratelimiter_test.go:84: allowed: 10000, denied: 0
+    ratelimiter_test.go:84: allowed: 1000000, denied: 0
+    ratelimiter_test.go:84: allowed: 2377242, denied: 0
+BenchmarkLimiterParallel/real                                                  	10208020	       118.0 ns/op
+--- BENCH: BenchmarkLimiterParallel/real
+    ratelimiter_test.go:306: allowed: 1, denied: 0
+    ratelimiter_test.go:306: allowed: 100, denied: 0
+    ratelimiter_test.go:306: allowed: 2184, denied: 7816
+    ratelimiter_test.go:306: allowed: 118510, denied: 881490
+    ratelimiter_test.go:306: allowed: 1205598, denied: 9002422
+BenchmarkLimiterParallel/real-2                                                	11786382	       134.3 ns/op
+--- BENCH: BenchmarkLimiterParallel/real-2
+    ratelimiter_test.go:306: allowed: 1, denied: 0
+    ratelimiter_test.go:306: allowed: 100, denied: 0
+    ratelimiter_test.go:306: allowed: 2627, denied: 7373
+    ratelimiter_test.go:306: allowed: 103299, denied: 896701
+    ratelimiter_test.go:306: allowed: 1589657, denied: 10196725
+BenchmarkLimiterParallel/real-4                                                	 7554968	       154.9 ns/op
+--- BENCH: BenchmarkLimiterParallel/real-4
+    ratelimiter_test.go:306: allowed: 1, denied: 0
+    ratelimiter_test.go:306: allowed: 100, denied: 0
+    ratelimiter_test.go:306: allowed: 3161, denied: 6839
+    ratelimiter_test.go:306: allowed: 163875, denied: 836125
+    ratelimiter_test.go:306: allowed: 1201548, denied: 6353420
+BenchmarkLimiterParallel/real-8                                                	 7585623	       192.3 ns/op
+--- BENCH: BenchmarkLimiterParallel/real-8
+    ratelimiter_test.go:306: allowed: 1, denied: 0
+    ratelimiter_test.go:306: allowed: 100, denied: 0
+    ratelimiter_test.go:306: allowed: 10000, denied: 0
+    ratelimiter_test.go:306: allowed: 506934, denied: 493066
+    ratelimiter_test.go:306: allowed: 5902255, denied: 1683368
+BenchmarkLimiterParallel/real-32                                               	 3983878	       327.6 ns/op
+--- BENCH: BenchmarkLimiterParallel/real-32
+    ratelimiter_test.go:306: allowed: 1, denied: 0
+    ratelimiter_test.go:306: allowed: 100, denied: 0
+    ratelimiter_test.go:306: allowed: 10000, denied: 0
+    ratelimiter_test.go:306: allowed: 998266, denied: 1734
+    ratelimiter_test.go:306: allowed: 3983715, denied: 163
+BenchmarkLimiterParallel/real-128                                              	 3796748	       328.0 ns/op
+--- BENCH: BenchmarkLimiterParallel/real-128
+    ratelimiter_test.go:306: allowed: 1, denied: 0
+    ratelimiter_test.go:306: allowed: 100, denied: 0
+    ratelimiter_test.go:306: allowed: 10000, denied: 0
+    ratelimiter_test.go:306: allowed: 1000000, denied: 0
+    ratelimiter_test.go:306: allowed: 3795800, denied: 948
+BenchmarkLimiterParallel/mocked                                                	 7482732	       164.2 ns/op
+--- BENCH: BenchmarkLimiterParallel/mocked
+    ratelimiter_test.go:306: allowed: 1, denied: 0
+    ratelimiter_test.go:306: allowed: 100, denied: 0
+    ratelimiter_test.go:306: allowed: 2573, denied: 7427
+    ratelimiter_test.go:306: allowed: 161345, denied: 838655
+    ratelimiter_test.go:306: allowed: 1229796, denied: 6252936
+BenchmarkLimiterParallel/mocked-2                                              	 6696690	       169.3 ns/op
+--- BENCH: BenchmarkLimiterParallel/mocked-2
+    ratelimiter_test.go:306: allowed: 1, denied: 0
+    ratelimiter_test.go:306: allowed: 100, denied: 0
+    ratelimiter_test.go:306: allowed: 2800, denied: 7200
+    ratelimiter_test.go:306: allowed: 180156, denied: 819844
+    ratelimiter_test.go:306: allowed: 1134890, denied: 5561800
+BenchmarkLimiterParallel/mocked-4                                              	 5631302	       208.8 ns/op
+--- BENCH: BenchmarkLimiterParallel/mocked-4
+    ratelimiter_test.go:306: allowed: 1, denied: 0
+    ratelimiter_test.go:306: allowed: 100, denied: 0
+    ratelimiter_test.go:306: allowed: 3336, denied: 6664
+    ratelimiter_test.go:306: allowed: 214041, denied: 785959
+    ratelimiter_test.go:306: allowed: 1176744, denied: 4454558
+BenchmarkLimiterParallel/mocked-8                                              	 4349619	       264.4 ns/op
+--- BENCH: BenchmarkLimiterParallel/mocked-8
+    ratelimiter_test.go:306: allowed: 1, denied: 0
+    ratelimiter_test.go:306: allowed: 100, denied: 0
+    ratelimiter_test.go:306: allowed: 3894, denied: 6106
+    ratelimiter_test.go:306: allowed: 276840, denied: 723160
+    ratelimiter_test.go:306: allowed: 1150996, denied: 3198623
+BenchmarkLimiterParallel/mocked-32                                             	 2863264	       472.8 ns/op
+--- BENCH: BenchmarkLimiterParallel/mocked-32
+    ratelimiter_test.go:306: allowed: 1, denied: 0
+    ratelimiter_test.go:306: allowed: 100, denied: 0
+    ratelimiter_test.go:306: allowed: 4674, denied: 5326
+    ratelimiter_test.go:306: allowed: 420052, denied: 579948
+    ratelimiter_test.go:306: allowed: 1354806, denied: 1508458
+BenchmarkLimiterParallel/mocked-128                                            	 2397242	       486.6 ns/op
+--- BENCH: BenchmarkLimiterParallel/mocked-128
+    ratelimiter_test.go:306: allowed: 1, denied: 0
+    ratelimiter_test.go:306: allowed: 100, denied: 0
+    ratelimiter_test.go:306: allowed: 4557, denied: 5443
+    ratelimiter_test.go:306: allowed: 501507, denied: 498493
+    ratelimiter_test.go:306: allowed: 1167548, denied: 1229694
+BenchmarkLimiterParallel/mocked_timesource                                     	 9689482	       128.3 ns/op
+--- BENCH: BenchmarkLimiterParallel/mocked_timesource
+    ratelimiter_test.go:306: allowed: 1, denied: 0
+    ratelimiter_test.go:306: allowed: 100, denied: 0
+    ratelimiter_test.go:306: allowed: 5999, denied: 4001
+    ratelimiter_test.go:306: allowed: 500999, denied: 499001
+    ratelimiter_test.go:306: allowed: 4845740, denied: 4843742
+BenchmarkLimiterParallel/mocked_timesource-2                                   	 8821108	       131.5 ns/op
+--- BENCH: BenchmarkLimiterParallel/mocked_timesource-2
+    ratelimiter_test.go:306: allowed: 1, denied: 0
+    ratelimiter_test.go:306: allowed: 100, denied: 0
+    ratelimiter_test.go:306: allowed: 5999, denied: 4001
+    ratelimiter_test.go:306: allowed: 500999, denied: 499001
+    ratelimiter_test.go:306: allowed: 4411553, denied: 4409555
+BenchmarkLimiterParallel/mocked_timesource-4                                   	 6592780	       180.2 ns/op
+--- BENCH: BenchmarkLimiterParallel/mocked_timesource-4
+    ratelimiter_test.go:306: allowed: 1, denied: 0
+    ratelimiter_test.go:306: allowed: 100, denied: 0
+    ratelimiter_test.go:306: allowed: 5999, denied: 4001
+    ratelimiter_test.go:306: allowed: 500999, denied: 499001
+    ratelimiter_test.go:306: allowed: 3297389, denied: 3295391
+BenchmarkLimiterParallel/mocked_timesource-8                                   	 5562314	       210.8 ns/op
+--- BENCH: BenchmarkLimiterParallel/mocked_timesource-8
+    ratelimiter_test.go:306: allowed: 1, denied: 0
+    ratelimiter_test.go:306: allowed: 100, denied: 0
+    ratelimiter_test.go:306: allowed: 5999, denied: 4001
+    ratelimiter_test.go:306: allowed: 500999, denied: 499001
+    ratelimiter_test.go:306: allowed: 2782156, denied: 2780158
+BenchmarkLimiterParallel/mocked_timesource-32                                  	 5006875	       230.8 ns/op
+--- BENCH: BenchmarkLimiterParallel/mocked_timesource-32
+    ratelimiter_test.go:306: allowed: 1, denied: 0
+    ratelimiter_test.go:306: allowed: 100, denied: 0
+    ratelimiter_test.go:306: allowed: 5999, denied: 4001
+    ratelimiter_test.go:306: allowed: 500999, denied: 499001
+    ratelimiter_test.go:306: allowed: 2504437, denied: 2502438
+BenchmarkLimiterParallel/mocked_timesource-128                                 	 4675093	       241.3 ns/op
+--- BENCH: BenchmarkLimiterParallel/mocked_timesource-128
+    ratelimiter_test.go:306: allowed: 1, denied: 0
+    ratelimiter_test.go:306: allowed: 100, denied: 0
+    ratelimiter_test.go:306: allowed: 5999, denied: 4001
+    ratelimiter_test.go:306: allowed: 500999, denied: 499001
+    ratelimiter_test.go:306: allowed: 2338546, denied: 2336547
+PASS
+ok  	github.com/uber/cadence/common/clock	264.933s
