@@ -101,7 +101,7 @@ func TestMapNotRacy(t *testing.T) {
 
 	// call ALL the methods concurrently
 	var g errgroup.Group
-	const loops = 1000 // 100 has had some coverage flapping, raise further if needed
+	const loops = 1000 // using 1,000 because 100 had some coverage flapping
 	for i := 0; i < loops; i++ {
 		key := strconv.Itoa(i)
 		g.Go(func() error {
