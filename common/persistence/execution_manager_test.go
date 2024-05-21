@@ -25,7 +25,6 @@ package persistence
 import (
 	"context"
 	"fmt"
-	"go.uber.org/thriftrw/ptr"
 	"reflect"
 	"testing"
 	"time"
@@ -777,7 +776,7 @@ func sampleWorkflowSnapshot() *WorkflowSnapshot {
 func activityScheduledEvent() *types.HistoryEvent {
 	return &types.HistoryEvent{
 		ID:        1,
-		Timestamp: ptr.Int64(scheduledTimestamp.UnixNano()),
+		Timestamp: common.Ptr(scheduledTimestamp.UnixNano()),
 		TaskID:    1,
 	}
 }
@@ -785,7 +784,7 @@ func activityScheduledEvent() *types.HistoryEvent {
 func activityStartedEvent() *types.HistoryEvent {
 	return &types.HistoryEvent{
 		ID:        2,
-		Timestamp: ptr.Int64(startedTimestamp.UnixNano()),
+		Timestamp: common.Ptr(startedTimestamp.UnixNano()),
 		TaskID:    1,
 	}
 }
@@ -793,7 +792,7 @@ func activityStartedEvent() *types.HistoryEvent {
 func childWorkflowScheduledEvent() *types.HistoryEvent {
 	return &types.HistoryEvent{
 		ID:        1,
-		Timestamp: ptr.Int64(scheduledTimestamp.UnixNano()),
+		Timestamp: common.Ptr(scheduledTimestamp.UnixNano()),
 		TaskID:    1,
 	}
 }
@@ -801,7 +800,7 @@ func childWorkflowScheduledEvent() *types.HistoryEvent {
 func completionEvent() *types.HistoryEvent {
 	return &types.HistoryEvent{
 		ID:        99,
-		Timestamp: ptr.Int64(startedTimestamp.UnixNano()),
+		Timestamp: common.Ptr(startedTimestamp.UnixNano()),
 		TaskID:    1,
 	}
 }
@@ -809,7 +808,7 @@ func completionEvent() *types.HistoryEvent {
 func childWorkflowStartedEvent() *types.HistoryEvent {
 	return &types.HistoryEvent{
 		ID:        2,
-		Timestamp: ptr.Int64(startedTimestamp.UnixNano()),
+		Timestamp: common.Ptr(startedTimestamp.UnixNano()),
 		TaskID:    1,
 	}
 }
