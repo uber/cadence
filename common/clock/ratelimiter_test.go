@@ -41,7 +41,7 @@ Benchmark data can be seen in the testdata folder, for relevant machines.
 
 Interpretation:
   - for essentially all operations, mostly regardless of sequential / parallel / how parallel,
-    the added latency is ~25% to ~40%, and even extremes are less than double.
+    the added latency is ~50%, and even extremes are less than double.
     this seems entirely tolerable and safe to use.
   - mock-time ratelimiter is faster than real-time in essentially all cases, as you would hope.
     though not by much, unless waiting was part of the test.
@@ -55,8 +55,9 @@ from the *rate.Limiter's point of view (as it has an internal last-Now value pro
  2. `Wait()` can allow calls through at a faster rate than it should.  At peak, a bit over 2x.
     (and probably slower, but sleeping is not guaranteed to wake up at a precise time so would still be correct behavior)
 
-Essentially, when one call sets the time to "now", and an out-of-sync call sets it to "now-1ns" (as time between
-goroutines is not consistent, this is expected), a token may be restored when a time-consistent limiter would not do so.
+Essentially, when one call sets the time to "now", and an out-of-sync call sets it to "now-1ms" (time is acquired outside
+the limiter's lock, and they may make progress out of order), a token may be restored when a time-consistent limiter would
+not do so.
 
 You can recreate this by hand by feeding a ratelimiter "now" and "now+1s" randomly, and watching what it
 allows / what the value of Tokens() is as time passes.  Doing this *literally* by hand, e.g. pressing enter on a
@@ -77,7 +78,7 @@ And the second can be seen in m1_mac.txt by comparing these tests:
 
 I have not tried to verify Wait's cause by hand, but it certainly seems like time-thrashing explains it as well.
 This is also supported by the wrapper's time-locking *completely* eliminating this flaw, as all iterations take
-almost exactly 1µs (or longer) as they should.
+almost exactly 1µs as they should.
 
 ---
 

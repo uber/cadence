@@ -108,6 +108,10 @@ type (
 	}
 
 	ratelimiter struct {
+		// important concurrency note: the lock MUST be held while acquiring AND handling Now(),
+		// to ensure that times are handled monotonically.
+		// otherwise, even though `time.Now()` is monotonic, they may make progress
+		// past the mutex in a different order and no longer be handled in a monotonic way.
 		timesource TimeSource
 		latestNow  time.Time // updated on each call, never allowed to rewind
 		limiter    *rate.Limiter
@@ -160,8 +164,26 @@ func NewMockRatelimiter(ts TimeSource, lim rate.Limit, burst int) Ratelimiter {
 // The lock MUST be held until all time-accepting methods are called on the
 // underlying rate.Limiter, as otherwise the internal "now" value may rewind
 // and cause undefined behavior.
+//
+// Important design note: `r.timesource.Now()` must be gathered while the lock is held,
+// or the times we compare are not guaranteed to be monotonic due to waiting on mutexes.
+// The `.Before` comparison should ensure *better* behavior in spite of this, but it's
+// much more correct if it's acquired within the lock.
 func (r *ratelimiter) lockNow() (now time.Time, unlock func()) {
-	return r.lockCorrectNow(r.timesource.Now())
+	r.mut.Lock()
+	newNow := r.timesource.Now()
+	if r.latestNow.Before(newNow) {
+		// this should always be true because `time.Now()` is monotonic, and it is
+		// always acquired inside the lock (so values are strictly ordered and
+		// not arbitrarily delayed).
+		//
+		// that means e.g. lockCorrectNow should not ever receive a value newer than
+		// the Now we just acquired, so r.latestNow should never be newer either.
+		//
+		// that said: it still shouldn't be allowed to rewind.
+		r.latestNow = newNow
+	}
+	return r.latestNow, r.mut.Unlock
 }
 
 // lockCorrectNow gets the correct "now" time to use, and ensures it never rolls back.
@@ -177,6 +199,11 @@ func (r *ratelimiter) lockNow() (now time.Time, unlock func()) {
 func (r *ratelimiter) lockCorrectNow(tryNow time.Time) (now time.Time, unlock func()) {
 	r.mut.Lock()
 	if r.latestNow.Before(tryNow) {
+		// this should be true if a cancellation arrives before any other call
+		// has advanced time (e.g. other Allow() calls).
+		//
+		// "old" cancels are expected to skip this path, and return the r.latestNow
+		// without updating it.  they may or may not release their token in this case.
 		r.latestNow = tryNow
 	}
 	return r.latestNow, r.mut.Unlock
@@ -243,7 +270,13 @@ func (r *ratelimiter) Wait(ctx context.Context) (err error) {
 			// ensure we are unlocked, which will not have happened if an err
 			// was returned immediately.
 			once.Do(unlock)
-			// (re)-acquire the latest now value
+
+			// (re)-acquire the latest now value.
+			//
+			// it should not be advanced to the "real" now, to improve the chance
+			// that the token will be restored, but it's pretty likely that other
+			// calls occurred while unlocked and the most-recently-observed time
+			// must be maintained.
 			now, unlock := r.lockCorrectNow(now)
 			defer unlock()
 			res.CancelAt(now)
