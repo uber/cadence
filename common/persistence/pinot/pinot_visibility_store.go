@@ -370,7 +370,7 @@ func (v *pinotVisibilityStore) ListAllWorkflowExecutions(ctx context.Context, re
 
 	query, err := getListAllWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request)
 	if err != nil {
-		v.logger.Error(fmt.Sprintf("failed to build list workflow executions by workflowID query %v", err))
+		v.logger.Error(fmt.Sprintf("failed to build list all workflow executions query %v", err))
 		return nil, err
 	}
 
