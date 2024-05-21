@@ -46,36 +46,44 @@ Interpretation:
   - mock-time ratelimiter is faster than real-time in essentially all cases, as you would hope.
     though not by much, unless waiting was part of the test.
   - real *rate.Limiter instances have some pathological behavior that... might disqualify them from safe use tbh.
-    essentially this summarizes as "time.Now() is not globally monotonic", and it can lead to two significant issues (below).
+    essentially this summarizes as "time.Now() is not globally monotonic", and it can lead to significant over and under limiting.
 
 The real *rate.Limiter instances show these quirks during parallel tests, due to time rewinding and jumping forward repeatedly
 from the *rate.Limiter's point of view (as it has an internal last-Now value protected by a mutex):
  1. `Allow()`-like calls (both literally `Allow()`, and `Reserve()` followed by sometimes `reservation.Cancel()`)
-    can allow FAR more calls than they should.  At peak, over 4,000x more.
+    can allow both significantly more or significantly fewer calls than they should.
  2. `Wait()` can allow calls through at a faster rate than it should.  At peak, a bit over 2x.
+    (and probably slower, but sleeping is not guaranteed to wake up at a precise time so would still be correct behavior)
 
-Essentially, when one call sets the time to "now", and an out-of-sync call sets it to "now-1ns", a token
-may be restored.  You can recreate this by hand by feeding a ratelimiter "now" and "now+1s" randomly,
-and watching what it allows / what the value of Tokens() is as time passes.  Doing this *literally* by
-hand, e.g. pressing enter on a command-line loop that does this, easily shows it - high frequency is not
-necessary, just illogical "time travel".
+Essentially, when one call sets the time to "now", and an out-of-sync call sets it to "now-1ns" (as time between
+goroutines is not consistent, this is expected), a token may be restored when a time-consistent limiter would not do so.
+
+You can recreate this by hand by feeding a ratelimiter "now" and "now+1s" randomly, and watching what it
+allows / what the value of Tokens() is as time passes.  Doing this *literally* by hand, e.g. pressing enter on a
+command-line loop that does this, easily shows it - high frequency is not necessary, just illogical "time travel".
 
 The first can be seen in m1_mac.txt by comparing these tests:
-  - BenchmarkLimiter/reserve-canceling-every-3/serial/real (any cpu count, notice the ~1200 allowed calls)
-  - BenchmarkLimiter/reserve-canceling-every-3/parallel/real-4 (notice the ~1200 allowed calls)
-  - BenchmarkLimiter/reserve-canceling-every-3/parallel/real-8 (notice the ~4,000,000 allowed calls)
+  - BenchmarkLimiter/allow/parallel/real-4 (note the near-1µs time per allow, which serial calls match)
+  - BenchmarkLimiter/allow/parallel/real-8 (time-per-allow is now 231ns, over 4x more allowed than it should)
+  - BenchmarkLimiter/reserve-canceling-every-3/parallel/real-2 (1.5ms per allow, around 1,000x fewer allowed than it should)
+  - BenchmarkLimiter/reserve-canceling-every-3/parallel/real-8 (450ns per allow, around 2x more than it should)
 
-"real with pinned time" behaves similarly for the same reason, different goroutine thrash the internal "Now",
-and so does "real with cancel".
+"real with pinned time" behaves similarly, for similar reasons: canceling can time-travel.
+pinned time does make the behavior when called on a single goroutine roughly perfect though.
 
 And the second can be seen in m1_mac.txt by comparing these tests:
   - BenchmarkLimiter/wait/parallel/1µs_rate/real (almost exactly 1µs per iteration)
-  - BenchmarkLimiter/wait/parallel/1µs_rate/real-2 (same, almost exactly 1µs per iteration)
   - BenchmarkLimiter/wait/parallel/1µs_rate/real-8 (~500ns, twice as fast as it should allow)
 
 I have not tried to verify Wait's cause by hand, but it certainly seems like time-thrashing explains it as well.
 This is also supported by the wrapper's time-locking *completely* eliminating this flaw, as all iterations take
-almost exactly 1µs as they should.
+almost exactly 1µs (or longer) as they should.
+
+---
+
+All machines I've tried it on behave similarly, though whether one parallel test triggers misbehavior or not
+is fairly random.  Higher parallelism triggers it more, and it seems *fairly* likely that at least one misbehaves
+in a full `-cpu 1,2,4,8,...[>=cores]` suite, and sometimes many more.
 */
 func BenchmarkLimiter(b *testing.B) {
 	const (
