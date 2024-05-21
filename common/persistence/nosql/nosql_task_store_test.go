@@ -23,11 +23,22 @@
 package nosql
 
 import (
+	ctx "context"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/types"
+)
+
+const (
+	TestDomainID     = "test-domain-id"
+	TestDomainName   = "test-domain"
+	TestTaskListName = "test-tasklist"
 )
 
 func TestNewNoSQLStore(t *testing.T) {
@@ -39,24 +50,57 @@ func TestNewNoSQLStore(t *testing.T) {
 	assert.NotNil(t, store)
 }
 
-func setupNoSQLStoreMocks(t *testing.T) *nosqlTaskStore {
+func setupNoSQLStoreMocks(t *testing.T) (*nosqlTaskStore, *nosqlplugin.MockDB) {
 	ctrl := gomock.NewController(t)
+	dbMock := nosqlplugin.NewMockDB(ctrl)
+
+	nosqlSt := nosqlStore{
+		logger: log.NewNoop(),
+		db:     dbMock,
+	}
+
 	shardedNosqlStoreMock := NewMockshardedNosqlStore(ctrl)
+	shardedNosqlStoreMock.EXPECT().
+		GetStoreShardByTaskList(
+			TestDomainID,
+			TestTaskListName,
+			int(types.TaskListTypeDecision)).
+		Return(&nosqlSt, nil).
+		AnyTimes()
 
 	store := &nosqlTaskStore{
 		shardedNosqlStore: shardedNosqlStoreMock,
 	}
 
-	return store
+	return store, dbMock
 }
 
-func TestGetOrphanTasks(t *testing.T) {
-	store := setupNoSQLStoreMocks(t)
+func TestGetTaskListSize(t *testing.T) {
+	store, db := setupNoSQLStoreMocks(t)
 
-	// We just expect the function to return an error so we don't need to check the result
-	_, err := store.GetOrphanTasks(ctx.Background(), nil)
+	db.EXPECT().GetTasksCount(
+		gomock.Any(),
+		&nosqlplugin.TasksFilter{
+			TaskListFilter: nosqlplugin.TaskListFilter{
+				DomainID:     TestDomainID,
+				TaskListName: TestTaskListName,
+				TaskListType: int(types.TaskListTypeDecision),
+			},
+			MinTaskID: 456,
+		},
+	).Return(int64(123), nil)
 
-	var expectedErr *types.InternalServiceError
-	assert.ErrorAs(t, err, &expectedErr)
-	assert.ErrorContains(t, err, "Unimplemented call to GetOrphanTasks for NoSQL")
+	size, err := store.GetTaskListSize(ctx.Background(), &persistence.GetTaskListSizeRequest{
+		DomainID:     TestDomainID,
+		DomainName:   TestDomainName,
+		TaskListName: TestTaskListName,
+		TaskListType: int(types.TaskListTypeDecision),
+		AckLevel:     456,
+	})
+
+	assert.NoError(t, err)
+	assert.Equal(t,
+		&persistence.GetTaskListSizeResponse{Size: 123},
+		size,
+	)
 }
