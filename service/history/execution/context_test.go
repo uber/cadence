@@ -36,12 +36,14 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	hcommon "github.com/uber/cadence/service/history/common"
+	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/resource"
@@ -1144,13 +1146,7 @@ func TestCreateWorkflowExecution(t *testing.T) {
 			prevRunID:                 "test-prev-run-id",
 			prevLastWriteVersion:      123,
 			createWorkflowRequestMode: persistence.CreateWorkflowRequestModeNew,
-			mockCreateWorkflowExecutionFn: func(context.Context, *persistence.CreateWorkflowExecutionRequest) (*persistence.CreateWorkflowExecutionResponse, error) {
-				return nil, &types.InternalServiceError{}
-			},
-			mockNotifyTasksFromWorkflowSnapshotFn: func(_ *persistence.WorkflowSnapshot, _ events.PersistedBlobs, persistenceError bool) {
-				assert.Equal(t, true, persistenceError)
-			},
-			wantErr: true,
+			wantErr:                   true,
 		},
 		{
 			name: "success",
@@ -1231,6 +1227,9 @@ func TestCreateWorkflowExecution(t *testing.T) {
 			mockShard := shard.NewMockContext(mockCtrl)
 			mockDomainCache := cache.NewMockDomainCache(mockCtrl)
 			mockShard.EXPECT().GetDomainCache().Return(mockDomainCache)
+			mockShard.EXPECT().GetConfig().Return(&config.Config{
+				EnableStrongIdempotencySanityCheck: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			}).AnyTimes()
 			mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil)
 			ctx := &contextImpl{
 				logger:        testlogger.New(t),
@@ -1294,11 +1293,14 @@ func TestUpdateWorkflowExecutionTasks(t *testing.T) {
 					WorkflowRequests: []*persistence.WorkflowRequest{{}},
 				}, []*persistence.WorkflowEvents{}, nil)
 				mockShard.EXPECT().GetDomainCache().Return(mockDomainCache)
-				mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("", errors.New("some error"))
+				mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil)
+				mockShard.EXPECT().GetConfig().Return(&config.Config{
+					EnableStrongIdempotencySanityCheck: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+				})
 			},
 			wantErr: true,
 			assertErr: func(t *testing.T, err error) {
-				assert.Equal(t, errors.New("some error"), err)
+				assert.Equal(t, &types.InternalServiceError{Message: "UpdateWorkflowExecutionTask can only be used for persisting new workflow tasks, but found new workflow requests"}, err)
 			},
 		},
 		{
@@ -1461,6 +1463,8 @@ func TestUpdateWorkflowExecutionWithNew(t *testing.T) {
 			name:                             "PersistNonStartWorkflowBatchEvents failed",
 			currentWorkflowTransactionPolicy: TransactionPolicyPassive,
 			mockSetup: func(mockShard *shard.MockContext, mockDomainCache *cache.MockDomainCache, mockMutableState *MockMutableState, mockNewMutableState *MockMutableState, mockEngine *engine.MockEngine) {
+				mockShard.EXPECT().GetDomainCache().Return(mockDomainCache)
+				mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil)
 				mockMutableState.EXPECT().CloseTransactionAsMutation(gomock.Any(), gomock.Any()).Return(&persistence.WorkflowMutation{}, []*persistence.WorkflowEvents{
 					{
 						Events: []*types.HistoryEvent{
@@ -1490,6 +1494,8 @@ func TestUpdateWorkflowExecutionWithNew(t *testing.T) {
 			currentWorkflowTransactionPolicy: TransactionPolicyActive,
 			newWorkflowTransactionPolicy:     TransactionPolicyActive.Ptr(),
 			mockSetup: func(mockShard *shard.MockContext, mockDomainCache *cache.MockDomainCache, mockMutableState *MockMutableState, mockNewMutableState *MockMutableState, mockEngine *engine.MockEngine) {
+				mockShard.EXPECT().GetDomainCache().Return(mockDomainCache)
+				mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil)
 				mockMutableState.EXPECT().CloseTransactionAsMutation(gomock.Any(), gomock.Any()).Return(&persistence.WorkflowMutation{}, []*persistence.WorkflowEvents{
 					{
 						Events: []*types.HistoryEvent{
@@ -1521,6 +1527,11 @@ func TestUpdateWorkflowExecutionWithNew(t *testing.T) {
 			currentWorkflowTransactionPolicy: TransactionPolicyActive,
 			newWorkflowTransactionPolicy:     TransactionPolicyActive.Ptr(),
 			mockSetup: func(mockShard *shard.MockContext, mockDomainCache *cache.MockDomainCache, mockMutableState *MockMutableState, mockNewMutableState *MockMutableState, mockEngine *engine.MockEngine) {
+				mockShard.EXPECT().GetDomainCache().Return(mockDomainCache)
+				mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil)
+				mockShard.EXPECT().GetConfig().Return(&config.Config{
+					EnableStrongIdempotencySanityCheck: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+				})
 				mockMutableState.EXPECT().CloseTransactionAsMutation(gomock.Any(), gomock.Any()).Return(&persistence.WorkflowMutation{
 					WorkflowRequests: []*persistence.WorkflowRequest{{}},
 				}, []*persistence.WorkflowEvents{
@@ -1551,15 +1562,9 @@ func TestUpdateWorkflowExecutionWithNew(t *testing.T) {
 			mockPersistNonStartWorkflowBatchEventsFn: func(context.Context, *persistence.WorkflowEvents) (events.PersistedBlob, error) {
 				return events.PersistedBlob{}, nil
 			},
-			mockPersistStartWorkflowBatchEventsFn: func(context.Context, *persistence.WorkflowEvents) (events.PersistedBlob, error) {
-				return events.PersistedBlob{}, nil
-			},
-			mockMergeContinueAsNewReplicationTasksFn: func(persistence.UpdateWorkflowMode, *persistence.WorkflowMutation, *persistence.WorkflowSnapshot) error {
-				return errors.New("some error")
-			},
 			wantErr: true,
 			assertErr: func(t *testing.T, err error) {
-				assert.Equal(t, errors.New("some error"), err)
+				assert.Equal(t, &types.InternalServiceError{Message: "workflow requests are only expected to be generated from one workflow for UpdateWorkflowExecution"}, err)
 			},
 		},
 		{
@@ -1571,6 +1576,8 @@ func TestUpdateWorkflowExecutionWithNew(t *testing.T) {
 			currentWorkflowTransactionPolicy: TransactionPolicyActive,
 			newWorkflowTransactionPolicy:     TransactionPolicyActive.Ptr(),
 			mockSetup: func(mockShard *shard.MockContext, mockDomainCache *cache.MockDomainCache, mockMutableState *MockMutableState, mockNewMutableState *MockMutableState, mockEngine *engine.MockEngine) {
+				mockShard.EXPECT().GetDomainCache().Return(mockDomainCache)
+				mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil)
 				mockMutableState.EXPECT().CloseTransactionAsMutation(gomock.Any(), gomock.Any()).Return(&persistence.WorkflowMutation{}, []*persistence.WorkflowEvents{
 					{
 						Events: []*types.HistoryEvent{
@@ -1617,6 +1624,8 @@ func TestUpdateWorkflowExecutionWithNew(t *testing.T) {
 			currentWorkflowTransactionPolicy: TransactionPolicyActive,
 			newWorkflowTransactionPolicy:     TransactionPolicyActive.Ptr(),
 			mockSetup: func(mockShard *shard.MockContext, mockDomainCache *cache.MockDomainCache, mockMutableState *MockMutableState, mockNewMutableState *MockMutableState, mockEngine *engine.MockEngine) {
+				mockShard.EXPECT().GetDomainCache().Return(mockDomainCache)
+				mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil)
 				mockMutableState.EXPECT().CloseTransactionAsMutation(gomock.Any(), gomock.Any()).Return(&persistence.WorkflowMutation{}, []*persistence.WorkflowEvents{
 					{
 						Events: []*types.HistoryEvent{
@@ -2040,6 +2049,8 @@ func TestConflictResolveWorkflowExecution(t *testing.T) {
 		{
 			name: "persistNonStartWorkflowEvents failed",
 			mockSetup: func(mockShard *shard.MockContext, mockDomainCache *cache.MockDomainCache, mockResetMutableState *MockMutableState, mockNewMutableState *MockMutableState, mockMutableState *MockMutableState, mockEngine *engine.MockEngine) {
+				mockShard.EXPECT().GetDomainCache().Return(mockDomainCache)
+				mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil)
 				mockResetMutableState.EXPECT().CloseTransactionAsSnapshot(gomock.Any(), gomock.Any()).Return(&persistence.WorkflowSnapshot{}, []*persistence.WorkflowEvents{
 					{
 						Events: []*types.HistoryEvent{
@@ -2066,6 +2077,8 @@ func TestConflictResolveWorkflowExecution(t *testing.T) {
 				metricsClient: metrics.NewNoopMetricsClient(),
 			},
 			mockSetup: func(mockShard *shard.MockContext, mockDomainCache *cache.MockDomainCache, mockResetMutableState *MockMutableState, mockNewMutableState *MockMutableState, mockMutableState *MockMutableState, mockEngine *engine.MockEngine) {
+				mockShard.EXPECT().GetDomainCache().Return(mockDomainCache)
+				mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil)
 				mockResetMutableState.EXPECT().CloseTransactionAsSnapshot(gomock.Any(), gomock.Any()).Return(&persistence.WorkflowSnapshot{}, []*persistence.WorkflowEvents{
 					{
 						Events: []*types.HistoryEvent{
@@ -2093,6 +2106,11 @@ func TestConflictResolveWorkflowExecution(t *testing.T) {
 				metricsClient: metrics.NewNoopMetricsClient(),
 			},
 			mockSetup: func(mockShard *shard.MockContext, mockDomainCache *cache.MockDomainCache, mockResetMutableState *MockMutableState, mockNewMutableState *MockMutableState, mockMutableState *MockMutableState, mockEngine *engine.MockEngine) {
+				mockShard.EXPECT().GetDomainCache().Return(mockDomainCache)
+				mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil)
+				mockShard.EXPECT().GetConfig().Return(&config.Config{
+					EnableStrongIdempotencySanityCheck: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+				})
 				mockResetMutableState.EXPECT().CloseTransactionAsSnapshot(gomock.Any(), gomock.Any()).Return(&persistence.WorkflowSnapshot{
 					WorkflowRequests: []*persistence.WorkflowRequest{
 						{
@@ -2133,12 +2151,9 @@ func TestConflictResolveWorkflowExecution(t *testing.T) {
 			mockPersistNonStartWorkflowBatchEventsFn: func(context.Context, *persistence.WorkflowEvents) (events.PersistedBlob, error) {
 				return events.PersistedBlob{}, nil
 			},
-			mockPersistStartWorkflowBatchEventsFn: func(context.Context, *persistence.WorkflowEvents) (events.PersistedBlob, error) {
-				return events.PersistedBlob{}, errors.New("some error")
-			},
 			wantErr: true,
 			assertErr: func(t *testing.T, err error) {
-				assert.Equal(t, errors.New("some error"), err)
+				assert.Equal(t, &types.InternalServiceError{Message: "workflow requests are only expected to be generated from either reset workflow or continue-as-new workflow for ConflictResolveWorkflowExecution"}, err)
 			},
 		},
 		{
@@ -2148,6 +2163,8 @@ func TestConflictResolveWorkflowExecution(t *testing.T) {
 				metricsClient: metrics.NewNoopMetricsClient(),
 			},
 			mockSetup: func(mockShard *shard.MockContext, mockDomainCache *cache.MockDomainCache, mockResetMutableState *MockMutableState, mockNewMutableState *MockMutableState, mockMutableState *MockMutableState, mockEngine *engine.MockEngine) {
+				mockShard.EXPECT().GetDomainCache().Return(mockDomainCache)
+				mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil)
 				mockResetMutableState.EXPECT().CloseTransactionAsSnapshot(gomock.Any(), gomock.Any()).Return(&persistence.WorkflowSnapshot{}, []*persistence.WorkflowEvents{
 					{
 						Events: []*types.HistoryEvent{
@@ -2192,6 +2209,8 @@ func TestConflictResolveWorkflowExecution(t *testing.T) {
 			},
 			currentWorkflowTransactionPolicy: TransactionPolicyActive.Ptr(),
 			mockSetup: func(mockShard *shard.MockContext, mockDomainCache *cache.MockDomainCache, mockResetMutableState *MockMutableState, mockNewMutableState *MockMutableState, mockMutableState *MockMutableState, mockEngine *engine.MockEngine) {
+				mockShard.EXPECT().GetDomainCache().Return(mockDomainCache)
+				mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil)
 				mockResetMutableState.EXPECT().CloseTransactionAsSnapshot(gomock.Any(), gomock.Any()).Return(&persistence.WorkflowSnapshot{}, []*persistence.WorkflowEvents{
 					{
 						Events: []*types.HistoryEvent{
@@ -2237,6 +2256,11 @@ func TestConflictResolveWorkflowExecution(t *testing.T) {
 			},
 			currentWorkflowTransactionPolicy: TransactionPolicyActive.Ptr(),
 			mockSetup: func(mockShard *shard.MockContext, mockDomainCache *cache.MockDomainCache, mockResetMutableState *MockMutableState, mockNewMutableState *MockMutableState, mockMutableState *MockMutableState, mockEngine *engine.MockEngine) {
+				mockShard.EXPECT().GetDomainCache().Return(mockDomainCache)
+				mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil)
+				mockShard.EXPECT().GetConfig().Return(&config.Config{
+					EnableStrongIdempotencySanityCheck: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+				})
 				mockResetMutableState.EXPECT().CloseTransactionAsSnapshot(gomock.Any(), gomock.Any()).Return(&persistence.WorkflowSnapshot{}, []*persistence.WorkflowEvents{
 					{
 						Events: []*types.HistoryEvent{
@@ -2280,14 +2304,14 @@ func TestConflictResolveWorkflowExecution(t *testing.T) {
 				if history.BranchToken[0] == 1 {
 					return events.PersistedBlob{}, nil
 				}
-				return events.PersistedBlob{}, errors.New("some error")
+				return events.PersistedBlob{}, nil
 			},
 			mockPersistStartWorkflowBatchEventsFn: func(context.Context, *persistence.WorkflowEvents) (events.PersistedBlob, error) {
 				return events.PersistedBlob{}, nil
 			},
 			wantErr: true,
 			assertErr: func(t *testing.T, err error) {
-				assert.Equal(t, errors.New("some error"), err)
+				assert.Equal(t, &types.InternalServiceError{Message: "workflow requests are not expected from current workflow for ConflictResolveWorkflowExecution"}, err)
 			},
 		},
 		{
@@ -2302,6 +2326,8 @@ func TestConflictResolveWorkflowExecution(t *testing.T) {
 			},
 			currentWorkflowTransactionPolicy: TransactionPolicyActive.Ptr(),
 			mockSetup: func(mockShard *shard.MockContext, mockDomainCache *cache.MockDomainCache, mockResetMutableState *MockMutableState, mockNewMutableState *MockMutableState, mockMutableState *MockMutableState, mockEngine *engine.MockEngine) {
+				mockShard.EXPECT().GetDomainCache().Return(mockDomainCache)
+				mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil)
 				mockResetMutableState.EXPECT().CloseTransactionAsSnapshot(gomock.Any(), gomock.Any()).Return(&persistence.WorkflowSnapshot{}, []*persistence.WorkflowEvents{
 					{
 						Events: []*types.HistoryEvent{
@@ -2359,6 +2385,8 @@ func TestConflictResolveWorkflowExecution(t *testing.T) {
 			},
 			currentWorkflowTransactionPolicy: TransactionPolicyActive.Ptr(),
 			mockSetup: func(mockShard *shard.MockContext, mockDomainCache *cache.MockDomainCache, mockResetMutableState *MockMutableState, mockNewMutableState *MockMutableState, mockMutableState *MockMutableState, mockEngine *engine.MockEngine) {
+				mockShard.EXPECT().GetDomainCache().Return(mockDomainCache)
+				mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil)
 				mockResetMutableState.EXPECT().CloseTransactionAsSnapshot(gomock.Any(), gomock.Any()).Return(&persistence.WorkflowSnapshot{}, []*persistence.WorkflowEvents{
 					{
 						Events: []*types.HistoryEvent{
