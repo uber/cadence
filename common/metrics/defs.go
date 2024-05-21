@@ -2458,6 +2458,7 @@ const (
 	UpdateWorkflowExecutionCount
 	WorkflowIDCacheSizeGauge
 	WorkflowIDCacheRequestsExternalRatelimitedCounter
+	WorkflowIDCacheRequestsExternalMaxRequestsPerSecondsGauge
 	WorkflowIDCacheRequestsInternalRatelimitedCounter
 	NumHistoryMetrics
 )
@@ -3093,6 +3094,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		UpdateWorkflowExecutionCount:                                 {metricName: "update_workflow_execution_count", metricType: Counter},
 		WorkflowIDCacheSizeGauge:                                     {metricName: "workflow_id_cache_size", metricType: Gauge},
 		WorkflowIDCacheRequestsExternalRatelimitedCounter:            {metricName: "workflow_id_external_requests_ratelimited", metricType: Counter},
+		WorkflowIDCacheRequestsExternalMaxRequestsPerSecondsGauge:    {metricName: "workflow_id_external_requests_max_requests_per_seconds", metricType: Gauge},
 		WorkflowIDCacheRequestsInternalRatelimitedCounter:            {metricName: "workflow_id_internal_requests_ratelimited", metricType: Counter},
 	},
 	Matching: {
