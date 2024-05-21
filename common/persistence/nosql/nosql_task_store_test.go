@@ -23,11 +23,14 @@
 package nosql
 
 import (
+	ctx "context"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/types"
 )
 
 func TestNewNoSQLStore(t *testing.T) {
@@ -37,4 +40,26 @@ func TestNewNoSQLStore(t *testing.T) {
 	store, err := newNoSQLTaskStore(cfg, log.NewNoop(), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, store)
+}
+
+func setupNoSQLStoreMocks(t *testing.T) *nosqlTaskStore {
+	ctrl := gomock.NewController(t)
+	shardedNosqlStoreMock := NewMockshardedNosqlStore(ctrl)
+
+	store := &nosqlTaskStore{
+		shardedNosqlStore: shardedNosqlStoreMock,
+	}
+
+	return store
+}
+
+func TestGetOrphanTasks(t *testing.T) {
+	store := setupNoSQLStoreMocks(t)
+
+	// We just expect the function to return an error so we don't need to check the result
+	_, err := store.GetOrphanTasks(ctx.Background(), nil)
+
+	var expectedErr *types.InternalServiceError
+	assert.ErrorAs(t, err, &expectedErr)
+	assert.ErrorContains(t, err, "Unimplemented call to GetOrphanTasks for NoSQL")
 }
