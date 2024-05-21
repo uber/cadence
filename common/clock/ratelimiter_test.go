@@ -78,6 +78,11 @@ This is also supported by the wrapper's time-locking *completely* eliminating th
 almost exactly 1µs as they should.
 */
 func BenchmarkLimiter(b *testing.B) {
+	const (
+		normalLimit      = time.Microsecond // pretty arbitrary but has a good blend of allow and deny
+		burst            = 1000             // arbitrary, but more interesting than 1, and better matches how we use limiters (rate/s == burst)
+		allowedPeriodFmt = "time per allow: %9s"
+	)
 	type runType func(b *testing.B, each func(int) bool)
 
 	// runs a callback in a sequential benchmark, and tracks allowed/denied metrics
@@ -90,7 +95,13 @@ func BenchmarkLimiter(b *testing.B) {
 				denied++
 			}
 		}
-		b.Logf("allowed: %v, denied: %v", allowed, denied)
+		as := fmt.Sprintf("allowed: %v,", allowed)
+		ds := fmt.Sprintf("denied: %v,", denied)
+		allowedPeriod := fmt.Sprintf(allowedPeriodFmt, "n/a")
+		if allowed > 0 {
+			allowedPeriod = fmt.Sprintf(allowedPeriodFmt, fmt.Sprint(b.Elapsed()/time.Duration(allowed)))
+		}
+		b.Logf("%-20s %-20s %s", as, ds, allowedPeriod) // allows controlling whitespace better
 	}
 	// runs a callback in a parallel benchmark, and tracks allowed/denied metrics
 	var runParallel runType = func(b *testing.B, each func(int) bool) {
@@ -106,7 +117,13 @@ func BenchmarkLimiter(b *testing.B) {
 				n++
 			}
 		})
-		b.Logf("allowed: %v, denied: %v", allowed.Load(), denied.Load())
+		as := fmt.Sprintf("allowed: %v,", allowed.Load())
+		ds := fmt.Sprintf("denied: %v,", denied.Load())
+		allowedPeriod := fmt.Sprintf(allowedPeriodFmt, "n/a")
+		if allowed.Load() > 0 {
+			allowedPeriod = fmt.Sprintf(allowedPeriodFmt, fmt.Sprint(b.Elapsed()/time.Duration(allowed.Load())))
+		}
+		b.Logf("%-20s %-20s %s", as, ds, allowedPeriod) // allows controlling whitespace better
 	}
 
 	both := map[string]runType{
@@ -121,24 +138,24 @@ func BenchmarkLimiter(b *testing.B) {
 			b.Run(name, func(b *testing.B) {
 				b.Run("real", func(b *testing.B) {
 					// very fast to jump back and forth, rather than slamming into "deny"
-					rl := rate.NewLimiter(rate.Every(time.Microsecond), 1000)
+					rl := rate.NewLimiter(rate.Every(normalLimit), burst)
 					runner(b, func(i int) bool {
 						return rl.Allow()
 					})
 				})
 				b.Run("wrapped", func(b *testing.B) {
-					rl := NewRatelimiter(rate.Every(time.Microsecond), 1000)
+					rl := NewRatelimiter(rate.Every(normalLimit), burst)
 					runner(b, func(i int) bool {
 						return rl.Allow()
 					})
 				})
 				b.Run("mocked timesource", func(b *testing.B) {
 					ts := NewMockedTimeSource()
-					rl := NewMockRatelimiter(ts, rate.Every(time.Microsecond), 1000)
+					rl := NewMockRatelimiter(ts, rate.Every(normalLimit), burst)
 					runner(b, func(i int) bool {
 						// adjusted by eye, to try to very roughly match the above values for the final runs.
 						// probably needs to be tweaked per machine.
-						ts.Advance(time.Microsecond / 5)
+						ts.Advance(normalLimit / 5)
 						return rl.Allow()
 					})
 				})
@@ -173,19 +190,21 @@ func BenchmarkLimiter(b *testing.B) {
 				// this is one of the reasons this wrapper was built.
 				// I'm honestly surprised that *rate.Limiter handles non-monotonic time like this.
 				b.Run("real", func(b *testing.B) {
-					rl := rate.NewLimiter(rate.Every(time.Microsecond), 1000)
+					rl := rate.NewLimiter(rate.Every(normalLimit), burst)
 					runner(b, func(i int) (allowed bool) {
 						r := rl.Reserve()
 						allowed = r.OK() && r.Delay() == 0
-						if i%cancelNth == 0 {
-							r.Cancel()
+						canceled := i%cancelNth == 0
+						allowed = allowed && !canceled
+						if !allowed {
+							r.Cancel() // all not-allowed calls must be canceled, as they will not be "used"
 							return
 						}
 						return
 					})
 				})
 				b.Run("real pinned time", func(b *testing.B) {
-					rl := rate.NewLimiter(rate.Every(time.Microsecond), 1000)
+					rl := rate.NewLimiter(rate.Every(normalLimit), burst)
 					runner(b, func(i int) (allowed bool) {
 						// expected to be faster as the limiter's time does not
 						// advance as often, and "now" is only gathered once.
@@ -195,8 +214,10 @@ func BenchmarkLimiter(b *testing.B) {
 						now := time.Now()
 						r := rl.ReserveN(now, 1)
 						allowed = r.OK() && r.DelayFrom(now) == 0
-						if i%cancelNth == 0 {
-							r.CancelAt(now)
+						canceled := i%cancelNth == 0
+						allowed = allowed && !canceled
+						if !allowed {
+							r.CancelAt(now) // all not-allowed calls must be canceled, as they will not be "used"
 							return
 						}
 						return
@@ -212,7 +233,8 @@ func BenchmarkLimiter(b *testing.B) {
 						r := rl.Reserve()
 						allowed = r.Allow()
 						canceled := i%cancelNth == 0
-						r.Used(!canceled)
+						allowed = allowed && !canceled
+						r.Used(allowed)
 						return
 					})
 				}
@@ -220,14 +242,14 @@ func BenchmarkLimiter(b *testing.B) {
 				// notice that the allowed/denied metrics are roughly the same whether parallel or not.
 				// this is how it should be, as the benchmark run times are similar.
 				b.Run("wrapped", func(b *testing.B) {
-					rl := NewRatelimiter(rate.Every(time.Microsecond), 1000)
+					rl := NewRatelimiter(rate.Every(normalLimit), burst)
 					runWrapped(b, rl, runner, nil)
 				})
 				b.Run("mocked timesource", func(b *testing.B) {
 					ts := NewMockedTimeSource()
-					rl := NewMockRatelimiter(ts, rate.Every(time.Microsecond), 1000)
+					rl := NewMockRatelimiter(ts, rate.Every(normalLimit), burst)
 					runWrapped(b, rl, runner, func() {
-						ts.Advance(time.Microsecond / 5)
+						ts.Advance(normalLimit / 5)
 					})
 				})
 			})
@@ -246,12 +268,12 @@ func BenchmarkLimiter(b *testing.B) {
 		for name, runner := range both {
 			b.Run(name, func(b *testing.B) {
 				durations := []time.Duration{
-					// test with an insanely fast refresh, to see maximum throughput with "zero" waiting.
+					// try an insanely fast refresh, to see maximum throughput with "zero" waiting.
 					// intentionally avoiding 1 nanosecond in case it gets special-cased, like 0 and math.MaxInt64.
 					2 * time.Nanosecond,
-					// test with a rate that should contend and wait heavily.
+					// try a rate that should contend and wait heavily.
 					// this SHOULD be how long the per-iteration time is (when not mocked)... but read comments below.
-					time.Microsecond,
+					normalLimit,
 				}
 				for _, dur := range durations {
 					b.Run(fmt.Sprintf("%v rate", dur), func(b *testing.B) {
@@ -269,7 +291,7 @@ func BenchmarkLimiter(b *testing.B) {
 							// this is likely for the same reason as Reserve's extremely incorrect behavior:
 							// time between goroutines is not monotonic when viewed globally, so it's jumping
 							// back and forth and allowing something near 2x more than it should.
-							rl := rate.NewLimiter(limit, 1000)
+							rl := rate.NewLimiter(limit, burst)
 							runner(b, func(i int) bool {
 								ctx, cancel := context.WithTimeout(context.Background(), timeout)
 								defer cancel()
@@ -277,7 +299,7 @@ func BenchmarkLimiter(b *testing.B) {
 							})
 						})
 						b.Run("wrapped", func(b *testing.B) {
-							rl := NewRatelimiter(limit, 1000)
+							rl := NewRatelimiter(limit, burst)
 							runner(b, func(i int) bool {
 								ctx, cancel := context.WithTimeout(context.Background(), timeout)
 								defer cancel()
@@ -286,7 +308,7 @@ func BenchmarkLimiter(b *testing.B) {
 						})
 						b.Run("mocked timesource", func(b *testing.B) {
 							ts := NewMockedTimeSource()
-							rl := NewMockRatelimiter(ts, limit, 1000)
+							rl := NewMockRatelimiter(ts, limit, burst)
 							runner(b, func(i int) bool {
 								ts.Advance(dur) // not entirely sure what a reasonable value is, but this seems... fine?
 								ctx := &timesourceContext{
