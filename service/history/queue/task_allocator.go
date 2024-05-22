@@ -72,7 +72,7 @@ func (t *taskAllocatorImpl) VerifyActiveTask(taskDomainID string, task interface
 	if err != nil {
 		// it is possible that the domain is deleted
 		// we should treat that domain as active
-		if _, ok := err.(*types.EntityNotExistsError); !ok {
+		if !errors.As(err, new(*types.EntityNotExistsError)) {
 			t.logger.Warn("Cannot find domain", tag.WorkflowDomainID(taskDomainID))
 			return false, err
 		}
@@ -108,7 +108,7 @@ func (t *taskAllocatorImpl) VerifyFailoverActiveTask(targetDomainIDs map[string]
 		if err != nil {
 			// it is possible that the domain is deleted
 			// we should treat that domain as not active
-			if _, ok := err.(*types.EntityNotExistsError); !ok {
+			if !errors.As(err, new(*types.EntityNotExistsError)) {
 				t.logger.Warn("Cannot find domain", tag.WorkflowDomainID(taskDomainID))
 				return false, err
 			}
@@ -139,7 +139,7 @@ func (t *taskAllocatorImpl) VerifyStandbyTask(standbyCluster string, taskDomainI
 	if err != nil {
 		// it is possible that the domain is deleted
 		// we should treat that domain as not active
-		if _, ok := err.(*types.EntityNotExistsError); !ok {
+		if !errors.As(err, new(*types.EntityNotExistsError)) {
 			t.logger.Warn("Cannot find domain", tag.WorkflowDomainID(taskDomainID))
 			return false, err
 		}

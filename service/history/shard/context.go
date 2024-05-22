@@ -1103,7 +1103,7 @@ func (s *contextImpl) persistShardInfoLocked(
 
 	if err != nil {
 		// Shard is stolen, trigger history engine shutdown
-		if _, ok := err.(*persistence.ShardOwnershipLostError); ok {
+		if errors.As(err, new(*persistence.ShardOwnershipLostError)) {
 			s.logger.Warn(
 				"Closing shard: updateShardInfoLocked failed due to stolen shard.",
 				tag.Error(err),
@@ -1452,8 +1452,7 @@ func acquireShard(
 		if persistence.IsTransientError(err) {
 			return true
 		}
-		_, ok := err.(*persistence.ShardAlreadyExistError)
-		return ok
+		return errors.As(err, new(*persistence.ShardAlreadyExistError))
 	}
 
 	getShard := func() error {
@@ -1464,7 +1463,7 @@ func acquireShard(
 			shardInfo = resp.ShardInfo
 			return nil
 		}
-		if _, ok := err.(*types.EntityNotExistsError); !ok {
+		if !errors.As(err, new(*types.EntityNotExistsError)) {
 			return err
 		}
 

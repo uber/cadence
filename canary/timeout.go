@@ -62,7 +62,7 @@ func timeoutWorkflow(ctx workflow.Context, inputScheduledTimeNanos int64) error 
 
 	activityErr := activityFuture.Get(ctx, nil)
 	if activityErr != nil {
-		if errors.As(err, new(*workflow.TimeoutError)) {
+		if !errors.As(err, new(*workflow.TimeoutError)) {
 			workflow.GetLogger(ctx).Info("activity timeout failed", zap.Error(activityErr))
 		} else {
 			activityErr = nil

@@ -802,7 +802,7 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 		DomainName:    request.GetDomain(),
 	})
 	if err != nil {
-		if _, ok := err.(*types.EntityNotExistsError); ok {
+		if errors.As(err, new(*types.EntityNotExistsError)) {
 			// when no events can be returned from DB, DB layer will return
 			// EntityNotExistsError, this API shall return empty response
 			return &types.GetWorkflowExecutionRawHistoryV2Response{

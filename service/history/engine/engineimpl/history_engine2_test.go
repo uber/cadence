@@ -1225,9 +1225,7 @@ func (s *engine2Suite) TestStartWorkflowExecution_StillRunning_NonDeDup() {
 			RequestID:                           "newRequestID",
 		},
 	})
-	if _, ok := err.(*types.WorkflowExecutionAlreadyStartedError); !ok {
-		s.Fail("return err is not *types.WorkflowExecutionAlreadyStartedError")
-	}
+	s.ErrorAs(err, new(*types.WorkflowExecutionAlreadyStartedError))
 	s.Nil(resp)
 }
 
@@ -1425,9 +1423,7 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevSuccess() {
 		})
 
 		if expectedErrs[index] {
-			if _, ok := err.(*types.WorkflowExecutionAlreadyStartedError); !ok {
-				s.Fail("return err is not *types.WorkflowExecutionAlreadyStartedError")
-			}
+			s.ErrorAs(err, new(*types.WorkflowExecutionAlreadyStartedError))
 			s.Nil(resp)
 		} else {
 			s.Nil(err)
@@ -1515,9 +1511,7 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevFail() {
 			})
 
 			if expectedErrs[j] {
-				if _, ok := err.(*types.WorkflowExecutionAlreadyStartedError); !ok {
-					s.Fail("return err is not *types.WorkflowExecutionAlreadyStartedError")
-				}
+				s.ErrorAs(err, new(*types.WorkflowExecutionAlreadyStartedError))
 				s.Nil(resp)
 			} else {
 				s.Nil(err)

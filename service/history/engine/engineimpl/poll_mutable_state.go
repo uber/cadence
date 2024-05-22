@@ -24,6 +24,7 @@ package engineimpl
 import (
 	"bytes"
 	"context"
+	"errors"
 	"time"
 
 	"github.com/uber/cadence/common"
@@ -120,8 +121,7 @@ func (e *historyEngineImpl) getMutableState(
 }
 
 func (e *historyEngineImpl) updateEntityNotExistsErrorOnPassiveCluster(err error, domainID string) error {
-	switch err.(type) {
-	case *types.EntityNotExistsError:
+	if errors.As(err, new(*types.EntityNotExistsError)) {
 		domainEntry, domainCacheErr := e.shard.GetDomainCache().GetDomainByID(domainID)
 		if domainCacheErr != nil {
 			return err // if could not access domain cache simply return original error

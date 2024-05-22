@@ -285,7 +285,7 @@ func (t *transferActiveTaskExecutor) processDecisionTask(
 	}
 
 	err = t.pushDecision(ctx, task, taskList, decisionTimeout, mutableState.GetExecutionInfo().PartitionConfig)
-	if _, ok := err.(*types.StickyWorkerUnavailableError); ok {
+	if errors.As(err, new(*types.StickyWorkerUnavailableError)) {
 		// sticky worker is unavailable, switch to non-sticky task list
 		taskList = &types.TaskList{
 			Name: mutableState.GetExecutionInfo().TaskList,
@@ -802,7 +802,7 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 	var targetDomainName string
 	var targetDomainEntry *cache.DomainCacheEntry
 	if targetDomainEntry, err = t.shard.GetDomainCache().GetDomainByID(task.TargetDomainID); err != nil {
-		if _, ok := err.(*types.EntityNotExistsError); !ok {
+		if !errors.As(err, new(*types.EntityNotExistsError)) {
 			return err
 		}
 		// TODO: handle the case where target domain does not exist
@@ -1613,7 +1613,7 @@ func startWorkflowWithRetry(
 	// Get parent domain name
 	domainName, err := domainCache.GetDomainName(task.DomainID)
 	if err != nil {
-		if _, ok := err.(*types.EntityNotExistsError); !ok {
+		if !errors.As(err, new(*types.EntityNotExistsError)) {
 			return "", err
 		}
 		// it is possible that the domain got deleted. Use domainID instead as this is only needed for the history event

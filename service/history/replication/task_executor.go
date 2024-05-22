@@ -22,6 +22,7 @@ package replication
 
 import (
 	"context"
+	"errors"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
@@ -306,6 +307,9 @@ func (e *taskExecutorImpl) filterTask(
 }
 
 func toRetryTaskV2Error(err error) (*types.RetryTaskV2Error, bool) {
-	retError, ok := err.(*types.RetryTaskV2Error)
-	return retError, ok
+	var retError *types.RetryTaskV2Error
+	if errors.As(err, &retError) {
+		return retError, true
+	}
+	return nil, false
 }

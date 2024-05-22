@@ -22,6 +22,7 @@ package tasklist
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/uber/cadence/common/backoff"
@@ -136,8 +137,7 @@ func (s *Scavenger) deleteTaskList(info *p.TaskListInfo) error {
 	throttleRetry := backoff.NewThrottleRetry(
 		backoff.WithRetryPolicy(retryForeverPolicy),
 		backoff.WithRetryableError(func(err error) bool {
-			_, ok := err.(*types.ServiceBusyError)
-			return ok
+			return errors.As(err, new(*types.ServiceBusyError))
 		}),
 	)
 	return throttleRetry.Do(context.Background(), op)

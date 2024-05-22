@@ -22,6 +22,7 @@ package workflow
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/uber/cadence/common/cache"
@@ -261,7 +262,7 @@ UpdateHistoryLoop:
 		}
 
 		err = workflowContext.GetContext().UpdateWorkflowExecutionAsActive(ctx, now)
-		if _, ok := err.(*persistence.DuplicateRequestError); ok {
+		if errors.As(err, new(*persistence.DuplicateRequestError)) {
 			return nil
 		}
 		if execution.IsConflictError(err) {

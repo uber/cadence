@@ -283,7 +283,7 @@ func (fwdr *Forwarder) refreshTokenC(value *atomic.Value, curr *int32, maxLimit 
 }
 
 func (fwdr *Forwarder) handleErr(err error) error {
-	if _, ok := err.(*types.ServiceBusyError); ok {
+	if errors.As(err, new(*types.ServiceBusyError)) {
 		return errForwarderSlowDown
 	}
 	return err

@@ -22,6 +22,7 @@ package task
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/golang/mock/gomock"
@@ -273,7 +274,7 @@ func loadMutableStateForTimerTask(
 ) (execution.MutableState, error) {
 	msBuilder, err := wfContext.LoadWorkflowExecution(ctx)
 	if err != nil {
-		if _, ok := err.(*types.EntityNotExistsError); ok {
+		if errors.As(err, new(*types.EntityNotExistsError)) {
 			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
 			return nil, nil
 		}
@@ -328,7 +329,7 @@ func loadMutableStateForTransferTask(
 
 	msBuilder, err := wfContext.LoadWorkflowExecution(ctx)
 	if err != nil {
-		if _, ok := err.(*types.EntityNotExistsError); ok {
+		if errors.As(err, new(*types.EntityNotExistsError)) {
 			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
 			return nil, nil
 		}
@@ -384,7 +385,7 @@ func loadMutableStateForCrossClusterTask(
 
 	msBuilder, err := wfContext.LoadWorkflowExecution(ctx)
 	if err != nil {
-		if _, ok := err.(*types.EntityNotExistsError); ok {
+		if errors.As(err, new(*types.EntityNotExistsError)) {
 			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
 			return nil, nil
 		}

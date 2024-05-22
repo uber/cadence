@@ -24,6 +24,7 @@ package worker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync/atomic"
 
@@ -447,7 +448,7 @@ func (s *Service) registerSystemDomain(domain string) {
 		FailoverVersion: common.EmptyVersion,
 	})
 	if err != nil {
-		if _, ok := err.(*types.DomainAlreadyExistsError); ok {
+		if errors.As(err, new(*types.DomainAlreadyExistsError)) {
 			return
 		}
 		s.GetLogger().Fatal("failed to register system domain", tag.Error(err))

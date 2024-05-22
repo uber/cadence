@@ -22,6 +22,7 @@ package batcher
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -491,7 +492,7 @@ func processTask(
 		err = procFn(wf.GetWorkflowID(), wf.GetRunID())
 		if err != nil {
 			// EntityNotExistsError means wf is not running or deleted
-			if _, ok := err.(*types.EntityNotExistsError); ok {
+			if errors.As(err, new(*types.EntityNotExistsError)) {
 				continue
 			}
 			return err
@@ -505,7 +506,7 @@ func processTask(
 		})
 		if err != nil {
 			// EntityNotExistsError means wf is deleted
-			if _, ok := err.(*types.EntityNotExistsError); ok {
+			if errors.As(err, new(*types.EntityNotExistsError)) {
 				continue
 			}
 			return err

@@ -555,7 +555,7 @@ func newTransferQueueStandbyProcessor(
 					return true, nil
 				}
 			} else {
-				if _, ok := err.(*types.EntityNotExistsError); !ok {
+				if !errors.As(err, new(*types.EntityNotExistsError)) {
 					// retry the task if failed to find the domain
 					logger.Warn("Cannot find domain", tag.WorkflowDomainID(task.DomainID))
 					return false, err

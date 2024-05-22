@@ -75,7 +75,7 @@ func (client *cadenceClient) createDomain(name string, desc string, owner string
 	}
 	err := client.Register(context.Background(), req)
 	if err != nil {
-		if errors.As(err, new(*shared.DomainAlreadyExistsError)) {
+		if !errors.As(err, new(*shared.DomainAlreadyExistsError)) {
 			return err
 		}
 	}
