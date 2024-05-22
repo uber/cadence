@@ -45,12 +45,13 @@ type (
 	// to use after a configurable number of failed updates.
 	//
 	// Intended use is:
-	//   - collect allowed vs rejected metrics
-	//   - periodically, the limiting host gathers all FallbackLimiter metrics and zeros them
+	//   - collect allowed vs rejected metrics (implicitly tracked by calling Allow())
+	//   - periodically, the limiting host gathers all FallbackLimiter metrics and zeros them (with Collect())
 	//   - this info is submitted to aggregating hosts, who compute new target RPS values
-	//   - these new target values are used to adjust this ratelimiter
+	//   - these new target values are used to adjust this ratelimiter (with Update(...))
 	//
-	// During this sequence, a requested limit may not be returned by an aggregator for two major reasons:
+	// During this sequence, a requested limit may not be returned by an aggregator for two major reasons,
+	// and will result in a FailedUpdate() call to shorten a "use fallback logic" fuse:
 	//   - this limit is legitimately unused and no data exists for it
 	//   - ring re-sharding led to losing track of the limit, and it is now owned by a host with insufficient data
 	//
