@@ -527,7 +527,7 @@ func TestSerializeWorkflowSnapshot(t *testing.T) {
 			},
 			input: sampleWorkflowSnapshot(),
 			checkRes: func(t *testing.T, res *InternalWorkflowSnapshot, err error) {
-				assert.Error(t, err)
+				assert.ErrorIs(t, err, assert.AnError)
 			},
 		},
 		{
@@ -538,7 +538,7 @@ func TestSerializeWorkflowSnapshot(t *testing.T) {
 			},
 			input: sampleWorkflowSnapshot(),
 			checkRes: func(t *testing.T, res *InternalWorkflowSnapshot, err error) {
-				assert.Error(t, err)
+				assert.ErrorIs(t, err, assert.AnError)
 			},
 		},
 		{
@@ -550,7 +550,7 @@ func TestSerializeWorkflowSnapshot(t *testing.T) {
 			},
 			input: sampleWorkflowSnapshot(),
 			checkRes: func(t *testing.T, res *InternalWorkflowSnapshot, err error) {
-				assert.Error(t, err)
+				assert.ErrorIs(t, err, assert.AnError)
 			},
 		},
 		{
@@ -563,7 +563,7 @@ func TestSerializeWorkflowSnapshot(t *testing.T) {
 			},
 			input: sampleWorkflowSnapshot(),
 			checkRes: func(t *testing.T, res *InternalWorkflowSnapshot, err error) {
-				assert.Error(t, err)
+				assert.ErrorIs(t, err, assert.AnError)
 			},
 		},
 		{
@@ -577,7 +577,7 @@ func TestSerializeWorkflowSnapshot(t *testing.T) {
 			},
 			input: sampleWorkflowSnapshot(),
 			checkRes: func(t *testing.T, res *InternalWorkflowSnapshot, err error) {
-				assert.Error(t, err)
+				assert.ErrorIs(t, err, assert.AnError)
 			},
 		},
 
@@ -593,7 +593,7 @@ func TestSerializeWorkflowSnapshot(t *testing.T) {
 			},
 			input: sampleWorkflowSnapshot(),
 			checkRes: func(t *testing.T, res *InternalWorkflowSnapshot, err error) {
-				assert.Error(t, err)
+				assert.ErrorIs(t, err, assert.AnError)
 			},
 		},
 		{
@@ -609,7 +609,7 @@ func TestSerializeWorkflowSnapshot(t *testing.T) {
 			},
 			input: sampleWorkflowSnapshot(),
 			checkRes: func(t *testing.T, res *InternalWorkflowSnapshot, err error) {
-				assert.Error(t, err)
+				assert.ErrorIs(t, err, assert.AnError)
 			},
 		},
 	} {
