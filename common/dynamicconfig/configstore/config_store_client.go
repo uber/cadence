@@ -469,7 +469,7 @@ func (csc *configStoreClient) updateValue(name dc.Key, dcValues []*types.Dynamic
 		return errors.New("timeout error on update")
 	default:
 		if err != nil {
-			if _, ok := err.(*persistence.ConditionFailedError); ok && retryAttempts > 0 {
+			if errors.As(err, new(*persistence.ConditionFailedError)) && retryAttempts > 0 {
 				// fetch new config and retry
 				err := csc.update()
 				if err != nil {

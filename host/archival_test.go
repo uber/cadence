@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -208,7 +209,7 @@ func (s *IntegrationSuite) isMutableStateDeleted(domainID string, execution *typ
 		ctx, cancel := context.WithTimeout(context.Background(), defaultTestPersistenceTimeout)
 		_, err := s.testCluster.testBase.ExecutionManager.GetWorkflowExecution(ctx, request)
 		cancel()
-		if _, ok := err.(*types.EntityNotExistsError); ok {
+		if errors.As(err, new(*types.EntityNotExistsError)) {
 			return true
 		}
 		time.Sleep(retryBackoffTime)

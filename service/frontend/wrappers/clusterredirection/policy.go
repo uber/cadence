@@ -22,6 +22,7 @@ package clusterredirection
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/uber/cadence/common/cache"
@@ -235,8 +236,8 @@ func (policy *selectedOrAllAPIsForwardingRedirectionPolicy) withRedirect(ctx con
 }
 
 func (policy *selectedOrAllAPIsForwardingRedirectionPolicy) isDomainNotActiveError(err error) (string, bool) {
-	domainNotActiveErr, ok := err.(*types.DomainNotActiveError)
-	if !ok {
+	var domainNotActiveErr *types.DomainNotActiveError
+	if !errors.As(err, &domainNotActiveErr) {
 		return "", false
 	}
 	return domainNotActiveErr.ActiveCluster, true

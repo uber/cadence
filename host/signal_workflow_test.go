@@ -1574,7 +1574,9 @@ func (s *IntegrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
 	cancel()
 	s.Nil(resp)
 	s.Error(err)
-	errMsg := err.(*types.WorkflowExecutionAlreadyStartedError).GetMessage()
+	var alreadyStartedErr *types.WorkflowExecutionAlreadyStartedError
+	s.ErrorAs(err, &alreadyStartedErr)
+	errMsg := alreadyStartedErr.GetMessage()
 	s.True(strings.Contains(errMsg, "reject duplicate workflow ID"))
 
 	// test policy WorkflowIDReusePolicyAllowDuplicateFailedOnly
@@ -1585,7 +1587,8 @@ func (s *IntegrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
 	cancel()
 	s.Nil(resp)
 	s.Error(err)
-	errMsg = err.(*types.WorkflowExecutionAlreadyStartedError).GetMessage()
+	s.ErrorAs(err, &alreadyStartedErr)
+	errMsg = alreadyStartedErr.GetMessage()
 	s.True(strings.Contains(errMsg, "allow duplicate workflow ID if last run failed"))
 
 	// test policy WorkflowIDReusePolicyAllowDuplicate

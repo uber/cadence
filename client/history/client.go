@@ -22,6 +22,7 @@ package history
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"sync"
@@ -756,7 +757,7 @@ func (c *clientImpl) GetReplicationMessages(
 					tag.ShardReplicationToken(req),
 				)
 				// Returns service busy error to notify replication
-				if _, ok := err.(*types.ServiceBusyError); ok {
+				if errors.As(err, new(*types.ServiceBusyError)) {
 					return err
 				}
 				return nil
@@ -1113,7 +1114,8 @@ redirectLoop:
 		}
 		err = op(ctx, peer)
 		if err != nil {
-			if s, ok := err.(*types.ShardOwnershipLostError); ok {
+			var s *types.ShardOwnershipLostError
+			if errors.As(err, &s) {
 				// TODO: consider emitting a metric for number of redirects
 				peer, err = c.peerResolver.FromHostAddress(s.GetOwner())
 				if err != nil {
