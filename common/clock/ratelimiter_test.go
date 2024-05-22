@@ -26,6 +26,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -163,7 +164,7 @@ func BenchmarkLimiter(b *testing.B) {
 					rl := NewMockRatelimiter(ts, rate.Every(normalLimit), burst)
 					runner(b, func(i int) bool {
 						// adjusted by eye, to try to very roughly match the above values for the final runs.
-						// probably needs to be tweaked per machine.
+						// anything not extremely higher or lower is probably fine.
 						ts.Advance(normalLimit / 5)
 						return rl.Allow()
 					})
@@ -258,7 +259,13 @@ func BenchmarkLimiter(b *testing.B) {
 					ts := NewMockedTimeSource()
 					rl := NewMockRatelimiter(ts, rate.Every(normalLimit), burst)
 					runWrapped(b, rl, runner, func() {
-						ts.Advance(normalLimit / 5)
+						// any value should work, but smaller than normalLimit revealed
+						// some sub-optimal behavior in the past, where time-thrashing
+						// would lead to extremely low allowed calls.
+						//
+						// this is now resolved with synchronous cancels when reservations
+						// are not synchronously allowed.
+						ts.Advance(normalLimit / 10)
 					})
 				})
 			})
@@ -319,7 +326,9 @@ func BenchmarkLimiter(b *testing.B) {
 							ts := NewMockedTimeSource()
 							rl := NewMockRatelimiter(ts, limit, burst)
 							runner(b, func(i int) bool {
-								ts.Advance(dur) // not entirely sure what a reasonable value is, but this seems... fine?
+								// advance enough to restore a token so it does not block forever.
+								// "mock-wait times out when it should" is asserted in the tests.
+								ts.Advance(dur)
 								ctx := &timesourceContext{
 									ts:       ts,
 									deadline: time.Now().Add(timeout),
@@ -344,7 +353,7 @@ func TestAgainstRealRatelimit(t *testing.T) {
 	// Enabling debug logs can help show what's happening and what *should* be happening,
 	// though there is a chance it's just due to CPU contention.
 	const (
-		maxBurst = 10
+		maxBurst = 5 // half of events, improves odds of Wait waiting
 
 		// amount of time between each conceptual "tick" of the test's clocks, both real and fake.
 		// sadly even 10ms has some excessive latency a few % of the time, particularly during the Wait check (10ms just to start a goroutine!).
@@ -364,14 +373,12 @@ func TestAgainstRealRatelimit(t *testing.T) {
 		// alternatively, tests have a deadline, this could run until near that deadline.
 		// but right now that's not fine-tuned per package, so it's quite long.
 		testDuration = 4 * time.Second // mostly stays under 5s, feels reasonable
-	)
 
-	// normally, this produces a ton of text that's just noise during successful runs.
-	// so for bulk verbose modes, like `make test` does, skip the debug logs unless force-enabled.
-	//
-	// regrettably this makes failures less useful when verbose, but the
-	// failure logs do at least inform about this behavior.
-	lowVerbosity := testing.Verbose()
+		// debug-level output is very noisy on successful runs, so hide it by default.
+		// using a custom seed will also set this to true.
+		logDebug   = false
+		customSeed = 0 // override with non-zero seed to run just one test with that seed
+	)
 
 	t.Cleanup(func() {
 		if t.Failed() {
@@ -386,75 +393,83 @@ func TestAgainstRealRatelimit(t *testing.T) {
 			*/
 			t.Logf("---- CAUTION ----")
 			t.Logf("these tests are randomized by design, a random failure may be a real flaw!")
-			t.Logf("please replay with the failing seed and check detailed output to see what the behavior should be.")
-			if lowVerbosity {
-				t.Logf("try setting `lowVerbosity` to false to verbosely log these tests at all times.")
-			}
+			t.Logf("please replay with the failing seed (set `customSeed`) and check detailed output to see what the behavior should be.")
+			t.Logf("try setting `logDebug` to false to true to show Tokens() progression, this can help explain many issues.")
 			t.Logf("")
-			t.Logf("if you are intentionally making changes, be sure to run a few hundred rounds to make sure your changes are stable")
+			t.Logf("if you are intentionally making changes, be sure to run a few hundred rounds to make sure your changes are stable,")
+			t.Logf("and in particular make sure an 'Advancing mock time ...' event occurs and times match, as that is a bit rare")
 			t.Logf("---- CAUTION ----")
 		}
 	})
 
 	debug := func(t *testing.T, format string, args ...interface{}) {
-		t.Logf(format, args...)
+		// do nothing
 	}
-	if lowVerbosity {
+	if logDebug || customSeed != 0 {
 		debug = func(t *testing.T, format string, args ...interface{}) {
-			// do nothing
+			t.Logf(format, args...)
 		}
 	}
 	_ = debug
 
-	check := func(t *testing.T, what string, round, event int, actual, wrapped, mocked bool, compressed *bool) {
+	const (
+		components  = "%-11s %-14s %-15s %-14s" // "{what:} {actual} {wrapped} {mocked}" with padding
+		normalRound = "round[%v][%v] " + components
+	)
+	assertLimitersAgree := func(t *testing.T, what string, round, event int, actual, wrapped, mocked bool, compressed *bool) {
 		t.Helper()
+		sWhat := what + ":"
+		sActual := fmt.Sprintf("actual: %v,", actual)
+		sWrapped := fmt.Sprintf("wrapped: %v,", wrapped)
+		sMocked := fmt.Sprintf("mocked: %v,", mocked)
+		// format strings should share padding so output aligns and it's easy to read.
+		// unfortunately only strings do this nicely.s
 		if compressed != nil {
-			t.Logf("round[%v][%v] %v, actual limiter: %v, wrapped: %v, mocked: %v, compressed: %v", round, event, what, actual, wrapped, mocked, *compressed)
+			sCompressed := "compressed: " + fmt.Sprint(*compressed)
+			t.Logf(normalRound+" %s", round, event, sWhat, sActual, sWrapped, sMocked, sCompressed)
 			assert.True(t, actual == wrapped && wrapped == mocked && mocked == *compressed, "ratelimiters disagree")
 		} else {
-			t.Logf("round[%v][%v] %v, actual limiter: %v, wrapped: %v, mocked: %v", round, event, what, actual, wrapped, mocked)
+			t.Logf(normalRound, round, event, sWhat, sActual, sWrapped, sMocked)
 			assert.True(t, actual == wrapped && wrapped == mocked, "ratelimiters disagree")
 		}
 	}
-	checkLatency := func(t *testing.T, round, event int, mustBeLessThan, actual, wrapped, mocked time.Duration, compressed *time.Duration) {
+	logLatency := func(t *testing.T, round, event int, mustBeLessThan, actual, wrapped, mocked time.Duration, compressed *time.Duration) {
 		// none are currently expected to wait, but if they do, they must not wait the full timeout.
 		// this also helps handle small cpu stutter, as some may wait 1ms or so.
 		maxLatency := maxDur(actual, wrapped, mocked)
 		minLatency := minDur(actual, wrapped, mocked)
-		compressedString := "<n/a>"
+		compressedString := ""
 		if compressed != nil {
 			maxLatency = maxDur(maxLatency, *compressed)
 			minLatency = minDur(minLatency, *compressed)
-			compressedString = fmt.Sprintf("%v", *compressed)
+			compressedString = fmt.Sprintf("compressed: %v", *compressed)
 		}
-		// this is not actually asserted.
+		// this is unfortunately not asserted.
+		//
 		// local testing was quite flaky, with even non-blocking "actual" calls (many avilable tokens)
 		// taking >10ms with some regularity, and mocks/wrappers randomly doing that as well.
 		//
-		// checking each's tokens and behavior before/after look entirely like CPU noise,
+		// checking each's tokens and behavior before/after, they look entirely like CPU noise
 		// and they do not usually break other tests, so asserting is just skipped for now.
 		//
 		// logging the time information can still help show why other failures occurred though, e.g. due to
 		// a very large wait causing real-time-backed limiters to restore a token when the mock does not.
-		t.Logf("all limiters should wait a similar amount of time, got actual: %v, wrapped: %v, mocked: %v, compressed: %v",
-			actual, wrapped, mocked, compressedString)
+		//
+		// log format tries to align with assertLimitersAgree
+		indent := strings.Repeat(" ", len("round[1][1]"))
+		sActual := fmt.Sprintf("actual: %v,", actual)
+		sWrapped := fmt.Sprintf("wrapped: %v,", wrapped)
+		sMocked := fmt.Sprintf("mocked: %v,", mocked)
+		t.Logf("%s "+components+" %s",
+			indent, "Wait time:", sActual, sWrapped, sMocked, compressedString)
 	}
 
-	// aim for the desired duration, and try to avoid timing out from a CLI-enforced deadline too.
 	deadline := time.Now().Add(testDuration)
-	if testDeadline, ok := t.Deadline(); ok {
-		// a test takes like half a second each, leave some buffer so we don't time out
-		buffer := 5 * time.Second
-		testDeadline = testDeadline.Add(-buffer)
-		if testDeadline.Before(time.Now()) {
-			t.Fatalf("not enough time to run tests, need at least %v", buffer)
-		}
-		// tests want to end before the hardcoded deadline, just run shorter.
-		if testDeadline.Before(deadline) {
-			deadline = testDeadline
-		}
-	}
 	for testnum := 0; !t.Failed() && time.Now().Before(deadline); testnum++ {
+		if testnum > 0 && customSeed != 0 {
+			// already ran the seeded test, stop early.
+			break
+		}
 		t.Run(fmt.Sprintf("attempt %v", testnum), func(t *testing.T) {
 			// parallel saves a fair bit of time but introduces a lot of CPU contention
 			// and that leads to a moderate amount of flakiness.
@@ -463,14 +478,17 @@ func TestAgainstRealRatelimit(t *testing.T) {
 			// t.Parallel()
 
 			seed := time.Now().UnixNano()
-			seed = 1716164357569243000 // override seed to test a failing scenario
+			if customSeed != 0 {
+				seed = customSeed // override seed to test a specific scenario
+			}
 			rng := rand.New(rand.NewSource(seed))
 			t.Logf("rand seed: %v", seed)
 
 			burst := rng.Intn(maxBurst)               // zero is uninteresting but allowed
 			limit := rate.Every(granularity * events) // refresh after each full round
 			t.Logf("limit: %v, burst: %v", granularity, burst)
-			initialNow := time.Now()
+
+			initialNow := time.Now().Round(time.Millisecond) // easier to read when logging/debugging when rounded
 			ts := NewMockedTimeSourceAt(initialNow)
 			compressedTS := NewMockedTimeSourceAt(initialNow)
 
@@ -479,13 +497,37 @@ func TestAgainstRealRatelimit(t *testing.T) {
 			mocked := NewMockRatelimiter(ts, limit, burst)
 			compressed := NewMockRatelimiter(compressedTS, limit, burst)
 
-			// generate some non-colliding "1 == perform an Allow call" rounds.
-			calls := [rounds][events]int{} // using int just to print better than bool
+			// generate some non-colliding "A == perform an Allow call" rounds.
+			calls := [rounds][events]string{} // using string so it prints nicely
+			for i := range calls {
+				for j := range calls[i] {
+					calls[i][j] = "_" // "do nothing" marker
+				}
+			}
+			skipWait := false
 			for i := 0; i < len(calls[0]); i++ {
+				if skipWait {
+					skipWait = false
+					continue
+				}
 				// pick one to set to true, or none (1 chance for none)
 				set := rng.Intn(len(calls) + 1)
 				if set < len(calls) {
-					calls[set][i] = 1
+					// 1/3rd of them are waits
+					switch rng.Intn(4) {
+					case 0:
+						calls[set][i] = "a" // allow
+					case 1:
+						calls[set][i] = "r" // reserve
+					case 2:
+						calls[set][i] = "c" // reserve but cancel
+					case 3:
+						calls[set][i] = "w" // wait
+						// waits can pause for an event and a half, so skip the next event to avoid overlapping
+						skipWait = true
+					default:
+						panic("missing a case")
+					}
 				}
 			}
 			t.Log("round setup:")
@@ -494,25 +536,28 @@ func TestAgainstRealRatelimit(t *testing.T) {
 			}
 			/*
 				rounds look like:
-					[1 0 0 1 0 ...]
-					[0 1 1 0 0 ...]
-				which means that the first round will:
-					- call
-					- do nothing
-					- do nothing
-					- call ...
-				and by the end of that first array it'll reach the end of
-				the rate.Every time, and will begin recovering tokens during
-				the next array's runtime.
-				so the second round will:
-					- refresh 1 token while waiting
-					- consume 1 call
-					- consume 1 call
-					- refresh 1
-					- wait, no tokens refresh because none were consumed here last round
+					[r _ a w _ _ _ _ _ w]
+					[_ c _ _ _ _ w _ _ _]
 
-				the `1`s do not overlap to avoid triggering a race between the
-				old call being refreshed and the new call consuming, as these
+				which means that the first round will:
+					- reserve()
+					- do nothing
+					- allow()
+					- wait() (may extend to next event, so the next one is always "_")
+					- ...
+
+				and by the end of that first array it'll reach the end of
+				the `rate.Every` time, and may recover tokens during the next
+				array's runtime.  so the second round will:
+					- do nothing, just refresh .1 while waiting ==> will have 1.0 tokens regenerated,
+					  as it was reserved earlier (if non-zero burst).
+					  (this could be consumed by last round's final wait)
+					- reserve but cancel, restoring the token (if any), and maybe refresh .1 token
+					- do nothing, maybe refresh .1 more token...
+					- ... and try to wait on the 7th event.
+
+				non-blank events do not overlap to avoid triggering a race between the
+				old consumed tokens being refreshed and a new call consuming them, as these
 				make for very flaky tests unless time is mocked.
 			*/
 
@@ -526,123 +571,155 @@ func TestAgainstRealRatelimit(t *testing.T) {
 				for event := range calls[round] {
 					event := event // for closure
 					<-ticker.C
-					ts.Advance(granularity)
+					ts.Advance(granularity) // may also be advanced inside wait
 					debug(t, "Tokens before round, real: %0.2f, wrapped: %0.2f, mocked: %0.2f", actual.Tokens(), wrapped.Tokens(), mocked.Tokens())
 
-					if calls[round][event] == 1 {
-						const options = 4
-						switch rng.Intn(options) % options {
-						case 0:
-							// call Allow on everything
-							a, w, m := actual.Allow(), wrapped.Allow(), mocked.Allow()
-							check(t, "Allow", round, event, a, w, m, nil)
-							compressedReplay[round][event] = func(t *testing.T) {
-								c := compressed.Allow()
-								check(t, "Allow (Compressed)", round, event, a, w, m, &c)
-							}
-						case 1:
-							// call Reserve on everything
-							_a, _w, _m := actual.Reserve(), wrapped.Reserve(), mocked.Reserve()
-							a, w, m := _a.OK() && _a.Delay() == 0, _w.Allow(), _m.Allow()
-							check(t, "Reserve", round, event, a, w, m, nil)
-							compressedReplay[round][event] = func(t *testing.T) {
-								c := compressed.Reserve().Allow()
-								check(t, "Reserve (Compressed)", round, event, a, w, m, &c)
-							}
-						case 2:
-							// Try a brief Wait on everything.
-							//
-							// ctx must expire:
-							//   - after Wait performs its internal checks
-							//   - before the next event would occur
-							//
-							// so:
-							//   - don't make it *too* short or the deadline may be passed before Wait sleeps
-							//     (a timeout of 1ms has done this a few % of the time, it can happen to you too!)
-							//   - don't make it *too* long or it may conflict with later events
-							timeout := granularity / 2
-							started := time.Now() // intentionally gathered outside the goroutines, to reveal goroutine-starting lag
-							ctx, cancel := context.WithTimeout(context.Background(), timeout)
-
-							a, w, m := false, false, false
-							var aLatency, wLatency, mLatency time.Duration
-							var g errgroup.Group
-							g.Go(func() error {
-								_a := actual.Wait(ctx)
-								aLatency = time.Since(started).Round(time.Millisecond)
-								debug(t, "Wait elapsed: %v, actual err: %v", aLatency, _a)
-								a = _a == nil
-								return nil
-							})
-							g.Go(func() error {
-								_w := wrapped.Wait(ctx)
-								wLatency = time.Since(started).Round(time.Millisecond)
-								debug(t, "Wait elapsed: %v, wrapped err: %v", wLatency, _w)
-								w = _w == nil
-								return nil
-							})
-							g.Go(func() error {
-								_m := mocked.Wait(ctx)
-								mLatency = time.Since(started).Round(time.Millisecond)
-								debug(t, "Wait elapsed: %v, mocked err: %v", mLatency, _m)
-								m = _m == nil
-								return nil
-							})
-							_ = g.Wait()
-
-							check(t, "Wait", round, event, a, w, m, nil)
-							checkLatency(t, round, event, timeout, aLatency, wLatency, mLatency, nil)
-							compressedReplay[round][event] = func(t *testing.T) {
-								// need a mocked-time context, or the real deadline will not match the mocked deadline
-								ctx := &timesourceContext{
-									ts:       compressedTS,
-									deadline: compressedTS.Now().Add(granularity / 2),
-								}
-
-								started := time.Now()
-								// as we have no mock deadline ctx.Done() chan, this is expected to take some time.
-								// rather than running instantly - the mock-timer will not fire.
-								_c := compressed.Wait(ctx)
-								cLatency := time.Since(started).Round(time.Millisecond)
-								debug(t, "Wait elapsed: %v, compressed err: %v", cLatency, _c)
-								c := _c == nil
-								check(t, "Wait (Compressed)", round, event, a, w, m, &c)
-								checkLatency(t, round, event, timeout, aLatency, wLatency, mLatency, &cLatency)
-							}
-							cancel()
-						case 3:
-							// call Reserve on everything, and cancel half of them
-							now := time.Now() // needed for the real ratelimiter to cancel successfully like the wrapper does
-							_a, _w, _m := actual.ReserveN(now, 1), wrapped.Reserve(), mocked.Reserve()
-							if rng.Intn(2)%2 == 0 {
-								_a.CancelAt(now)
-								_w.Used(false)
-								_m.Used(false)
-								t.Logf("round[%v][%v] ReserveWithCancel, canceled", round, event)
-								compressedReplay[round][event] = func(t *testing.T) {
-									compressed.Reserve().Used(false)
-									t.Logf("compressed round[%v][%v] ReserveWithCancel, canceled", round, event)
-								}
-							} else {
-								a, w, m := _a.OK() && _a.Delay() == 0, _w.Allow(), _m.Allow()
-								check(t, "ReserveWithCancel", round, event, a, w, m, nil)
-								if !a {
-									// must cancel, or the not-yet-available reservation affects future calls.
-									// that's valid if you intend to wait for your reservation, but the wrapper
-									// does not allow that.
-									_a.Cancel()
-								}
-								_w.Used(w)
-								_m.Used(m)
-								compressedReplay[round][event] = func(t *testing.T) {
-									_c := compressed.Reserve()
-									c := _c.Allow()
-									_c.Used(c)
-									check(t, "ReserveWithCancel (Compressed)", round, event, a, w, m, &c)
-								}
-							}
+					switch calls[round][event] {
+					case "a":
+						// call Allow on everything
+						a, w, m := actual.Allow(), wrapped.Allow(), mocked.Allow()
+						assertLimitersAgree(t, "Allow", round, event, a, w, m, nil)
+						compressedReplay[round][event] = func(t *testing.T) {
+							c := compressed.Allow()
+							assertLimitersAgree(t, "Allow", round, event, a, w, m, &c)
 						}
+					case "r":
+						// call Reserve on everything, don't cancel any we acquired successfully
+						now := time.Now()
+						_a, _w, _m := actual.ReserveN(now, 1), wrapped.Reserve(), mocked.Reserve()
+						a, w, m := _a.OK() && _a.DelayFrom(now) == 0, _w.Allow(), _m.Allow()
+
+						// un-reserve any that were not successful, we don't leave them dangling.
+						if !a {
+							_a.CancelAt(now)
+						}
+						_w.Used(w)
+						_m.Used(m)
+						assertLimitersAgree(t, "Reserve", round, event, a, w, m, nil)
+						compressedReplay[round][event] = func(t *testing.T) {
+							_c := compressed.Reserve()
+							c := _c.Allow()
+							_c.Used(c)
+							assertLimitersAgree(t, "Reserve", round, event, a, w, m, &c)
+						}
+					case "c":
+						// call Reserve on everything, and cancel them all
+						now := time.Now() // needed for the real ratelimiter to cancel successfully like the wrapper does
+						_a, _w, _m := actual.ReserveN(now, 1), wrapped.Reserve(), mocked.Reserve()
+						_a.CancelAt(now)
+						_w.Used(false)
+						_m.Used(false)
+						t.Logf("round[%v][%v] Cancel:     canceled", round, event)
+						compressedReplay[round][event] = func(t *testing.T) {
+							compressed.Reserve().Used(false)
+							t.Logf("round[%v][%v] Cancel:     canceled", round, event)
+						}
+					case "w":
+						/*
+							Try a brief Wait on everything.
+
+							ctx should expire in the middle of the *next* event, so all three possibilities are exercised:
+							  - sometimes unblocks immediately because a token is available
+							  - sometimes waits because a token will become available soon
+							  - sometimes unblocks immediately because a token will not become available in time
+
+							you can see waits logged like this, they're somewhat rare though.  otherwise wait times are ~0s:
+								regular:
+									ratelimiter_test.go:402: Wait elapsed: 20ms, wrapped err: <nil>
+									ratelimiter_test.go:639: Advancing mock time by 20ms
+									ratelimiter_test.go:402: Wait elapsed: 20ms, mocked err: <nil>
+									ratelimiter_test.go:402: Wait elapsed: 20ms, actual err: <nil>
+									ratelimiter_test.go:655: round[0][9] Wait:       actual: true,  wrapped: true,  mocked: true,
+									ratelimiter_test.go:455:             Wait time:  actual: 20ms,  wrapped: 20ms,  mocked: 20ms,
+								compressed:
+									ratelimiter_test.go:672: Advancing mock time by 20ms
+									ratelimiter_test.go:402: Wait elapsed: 20ms, compressed err: <nil>
+									ratelimiter_test.go:684: round[0][9] Wait:       actual: true,  wrapped: true,  mocked: true,  compressed: true
+									ratelimiter_test.go:455:             Wait time:  actual: 20ms,  wrapped: 20ms,  mocked: 20ms,  compressed: 20ms
+						*/
+						timeout := granularity + (granularity / 2)
+						started := time.Now() // intentionally gathered outside the goroutines, to reveal goroutine-starting lag
+						ctx, cancel := context.WithTimeout(context.Background(), timeout)
+
+						a, w, m := false, false, false
+						var aLatency, wLatency, mLatency time.Duration
+						var g errgroup.Group
+						g.Go(func() error {
+							_a := actual.Wait(ctx)
+							aLatency = time.Since(started).Round(time.Millisecond)
+							debug(t, "Wait elapsed: %v, actual err: %v", aLatency, _a)
+							a = _a == nil
+							return nil
+						})
+						g.Go(func() error {
+							_w := wrapped.Wait(ctx)
+							wLatency = time.Since(started).Round(time.Millisecond)
+							debug(t, "Wait elapsed: %v, wrapped err: %v", wLatency, _w)
+							w = _w == nil
+							return nil
+						})
+						g.Go(func() error {
+							// mocked time needs something to advance it, or it'll block until timeout...
+							// but don't advance time if it returned immediately, the others won't wait either
+							done := make(chan struct{})
+							go func() {
+								select {
+								case <-time.After(granularity):
+									t.Logf("Advancing mock time by %v", granularity)
+									ts.Advance(granularity)
+								case <-done:
+									// do nothing, it is not waiting
+								}
+							}()
+
+							_m := mocked.Wait(ctx)
+							close(done)
+							mLatency = time.Since(started).Round(time.Millisecond)
+							debug(t, "Wait elapsed: %v, mocked err: %v", mLatency, _m)
+							m = _m == nil
+							return nil
+						})
+						_ = g.Wait()
+
+						assertLimitersAgree(t, "Wait", round, event, a, w, m, nil)
+						logLatency(t, round, event, timeout, aLatency, wLatency, mLatency, nil)
+						compressedReplay[round][event] = func(t *testing.T) {
+							// need a mocked-time context, or the real deadline will not match the mocked deadline
+							ctx := &timesourceContext{
+								ts:       compressedTS,
+								deadline: compressedTS.Now().Add(granularity + (granularity / 2)),
+							}
+
+							done := make(chan struct{})
+							go func() {
+								compressedTS.BlockUntil(1) // need Wait to block
+								select {
+								case <-done:
+									// do nothing, wait did not block.
+									// this goroutine may leak if no blockers occur. it's "fine".
+								default:
+									t.Logf("Advancing mock time by %v", granularity)
+									compressedTS.Advance(granularity)
+								}
+							}()
+
+							compressedStarted := compressedTS.Now()
+							_c := compressed.Wait(ctx)
+							close(done)
+							cLatency := time.Since(started).Round(time.Millisecond)
+							cLatency = compressedTS.Since(compressedStarted)
+							debug(t, "Wait elapsed: %v, compressed err: %v", cLatency, _c)
+							c := _c == nil
+							assertLimitersAgree(t, "Wait", round, event, a, w, m, &c)
+							logLatency(t, round, event, timeout, aLatency, wLatency, mLatency, &cLatency)
+						}
+						cancel()
+					case "_":
+						// do nothing
+					default:
+						panic("unhandled case: " + calls[round][event])
 					}
+
 					debug(t, "Tokens after round, real: %0.2f, wrapped: %0.2f, mocked: %0.2f", actual.Tokens(), wrapped.Tokens(), mocked.Tokens())
 				}
 			}
@@ -702,7 +779,7 @@ type timesourceContext struct {
 func (t *timesourceContext) Deadline() (deadline time.Time, ok bool) {
 	t.mut.Lock()
 	defer t.mut.Unlock()
-	return t.deadline, t.deadline != time.Time{}
+	return t.deadline, !t.deadline.IsZero()
 }
 
 func (t *timesourceContext) Done() <-chan struct{} {
@@ -710,7 +787,8 @@ func (t *timesourceContext) Done() <-chan struct{} {
 	t.mut.Lock()
 	defer t.mut.Unlock()
 	c := make(chan struct{})
-	t.ts.AfterFunc(t.ts.Now().Sub(t.deadline), func() {
+	delay := t.deadline.Sub(t.ts.Now())
+	t.ts.AfterFunc(delay, func() {
 		// this stack may leak if time is not advanced past it in tests.
 		close(c)
 	})

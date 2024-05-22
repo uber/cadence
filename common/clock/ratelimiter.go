@@ -126,11 +126,13 @@ type (
 		// need access to the parent-wrapped-ratelimiter to ensure time is not rewound
 		limiter *ratelimiter
 	}
+	deniedReservation struct{}
 )
 
 var (
 	_ Ratelimiter = (*ratelimiter)(nil)
 	_ Reservation = (*reservation)(nil)
+	_ Reservation = deniedReservation{}
 )
 
 // err constants to keep allocations low
@@ -226,11 +228,23 @@ func (r *ratelimiter) Limit() rate.Limit {
 func (r *ratelimiter) Reserve() Reservation {
 	now, unlock := r.lockNow()
 	defer unlock()
-	return &reservation{
-		res:        r.limiter.ReserveN(now, 1),
-		reservedAt: now,
-		limiter:    r,
+	res := r.limiter.ReserveN(now, 1)
+	if res.OK() && res.DelayFrom(now) == 0 {
+		// usable token, return a cancel-able handler in case it's not used
+		return &reservation{
+			res:        res,
+			reservedAt: now,
+			limiter:    r,
+		}
 	}
+	// unusable, immediately cancel it to get rid of the future-reservation
+	// since we don't allow waiting for it.
+	//
+	// this restores MANY more tokens when heavily contended, as time skews
+	// less before canceling, so it gets MUCH closer to the intended limit,
+	// and it performs very slightly better.
+	res.CancelAt(now)
+	return deniedReservation{}
 }
 
 func (r *ratelimiter) SetBurst(newBurst int) {
@@ -356,4 +370,12 @@ func (r *reservation) Allow() bool {
 	// see this allowing many times more requests than it should, due to the
 	// interleaving time advancement.
 	return r.res.OK() && r.res.DelayFrom(r.reservedAt) == 0
+}
+
+func (r deniedReservation) Used(used bool) {
+	// reservation already canceled, nothing to roll back
+}
+
+func (r deniedReservation) Allow() bool {
+	return false
 }
