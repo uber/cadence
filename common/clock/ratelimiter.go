@@ -34,10 +34,12 @@ import (
 type (
 	// Ratelimiter is a test-friendly version of [golang.org/x/time/rate.Limiter],
 	// which can be backed by any TimeSource.  The changes summarize as:
-	//   - Wait has been removed, as it is difficult to precisely mimic, though an
-	//     approximation is likely good enough. However, our Wait-using ratelimiters
-	//     *only* use Wait, and they can have a drastically simplified API and
-	//     implementation if they are handled separately.
+	//   - Time is never allowed to rewind, and does not advance when canceling,
+	//     fixing core issues with [golang.org/x/time/rate.Limiter] and greatly
+	//     improving the chances of successfully canceling a reserved token in our
+	//     usage (from "almost literally never" to "likely 99%+ in our usage").
+	//   - Reservations are simplified and do not allow waiting, but are MUCH more
+	//     likely to return tokens when canceled.
 	//   - All MethodAt APIs have been excluded as we do not use them, and they would
 	//     have to bypass the contained TimeSource, which seems error-prone.
 	//   - All `MethodN` APIs have been excluded because we do not use them, but they
@@ -56,9 +58,9 @@ type (
 		Limit() rate.Limit
 		// Reserve claims a single Allow() call that can be canceled if not used.
 		//
-		// This Reservation MUST have Allow() checked and marked as Used(true/false)
-		// as soon as possible, or behavior may be confusing and it may be unable to
-		// restore the claimed ratelimiter token if not used.
+		// This Reservation is will Reservation.Allow checked, and
+		// Reservation.Used(true/false) called, as soon as possible.  Otherwise
+		// behavior may be confusing
 		Reserve() Reservation
 		// SetBurst sets the Burst value
 		SetBurst(newBurst int)
@@ -118,20 +120,23 @@ type (
 		mut        sync.Mutex
 	}
 
-	reservation struct {
+	// a reservation that allows an immediate call, and can be canceled
+	allowedReservation struct {
 		res *rate.Reservation
-
-		// reservedAt is used to un-reserve at the reservation time, restoring tokens if no calls have interleaved
+		// reservedAt is used to cancel at the reservation time, restoring tokens
+		// if (and only if) no other time-advancing calls have interleaved
 		reservedAt time.Time
-		// need access to the parent-wrapped-ratelimiter to ensure time is not rewound
+		// needs access to the parent-wrapped-ratelimiter to ensure time is not rewound
 		limiter *ratelimiter
 	}
+	// a reservation that does NOT allow an immediate call.
+	// the *rate.Reservation has already been canceled, so this type is trivial.
 	deniedReservation struct{}
 )
 
 var (
 	_ Ratelimiter = (*ratelimiter)(nil)
-	_ Reservation = (*reservation)(nil)
+	_ Reservation = (*allowedReservation)(nil)
 	_ Reservation = deniedReservation{}
 )
 
@@ -231,7 +236,7 @@ func (r *ratelimiter) Reserve() Reservation {
 	res := r.limiter.ReserveN(now, 1)
 	if res.OK() && res.DelayFrom(now) == 0 {
 		// usable token, return a cancel-able handler in case it's not used
-		return &reservation{
+		return &allowedReservation{
 			res:        res,
 			reservedAt: now,
 			limiter:    r,
@@ -339,16 +344,16 @@ func (r *ratelimiter) Wait(ctx context.Context) (err error) {
 	}
 }
 
-func (r *reservation) Used(used bool) {
+func (r *allowedReservation) Used(used bool) {
 	if !used {
 		now, unlock := r.limiter.lockCorrectNow(r.reservedAt)
-		// lock must be held while canceling, because it updates the limiter's time
+		// lock must be held while canceling, because it can affect the limiter's time
 		defer unlock()
 
 		// if no calls interleaved, this will be the same as the reservation time,
 		// and the cancellation will be able to roll back an immediately-available call.
 		//
-		// otherwise, the ratelimiter's time has been advanced, and this may fail to
+		// otherwise, the ratelimiter's time has been advanced, and this will fail to
 		// restore any tokens.
 		r.res.CancelAt(now)
 	}
@@ -358,18 +363,11 @@ func (r *reservation) Used(used bool) {
 	// or customized by an implementation that tracks allowed/rejected metrics.
 }
 
-func (r *reservation) Allow() bool {
-	// because this uses a snapshotted DelayFrom time rather than whatever the
-	// "current" time might be, this result will not change as time passes.
-	//
-	// that's intentional because it's more stable... and a bit surprisingly
-	// it's also important, as interleaving calls may advance the limiter's
-	// "now" time, and turn this "would not allow" into a "would allow".
-	//
-	// in high-CPU benchmarks, if you use the limiter's "now", you can sometimes
-	// see this allowing many times more requests than it should, due to the
-	// interleaving time advancement.
-	return r.res.OK() && r.res.DelayFrom(r.reservedAt) == 0
+func (r *allowedReservation) Allow() bool {
+	// this is equivalent to `r.res.OK() && r.res.DelayFrom(r.reservedAt) == 0`,
+	// but this is known to be `true` when it is first reserved and `r.reservedAt`
+	// does not ever change, so it can be skipped here.
+	return true
 }
 
 func (r deniedReservation) Used(used bool) {

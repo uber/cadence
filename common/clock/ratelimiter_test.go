@@ -44,6 +44,8 @@ Interpretation:
   - for essentially all operations, mostly regardless of sequential / parallel / how parallel,
     the added latency is ~50%, and even extremes are less than double.
     this seems entirely tolerable and safe to use.
+  - "reserve and cancel" sequentially is actually *faster* with the wrapper, probably due to fewer time advancements.
+    with parallel usage, real vs wrapper is basically a tie.
   - mock-time ratelimiter is faster than real-time in essentially all cases, as you would hope.
     though not by much, unless waiting was part of the test.
   - real *rate.Limiter instances have some pathological behavior that... might disqualify them from safe use tbh.
