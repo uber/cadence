@@ -363,6 +363,28 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutionsByType(ctx context.Co
 	return v.pinotClient.Search(req)
 }
 
+func (v *pinotVisibilityStore) ListAllWorkflowExecutions(ctx context.Context, request *p.InternalListAllWorkflowExecutionsByTypeRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
+	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
+		return !request.EarliestTime.After(rec.StartTime) && !rec.StartTime.After(request.LatestTime)
+	}
+
+	query, err := getListAllWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request)
+	if err != nil {
+		v.logger.Error(fmt.Sprintf("failed to build list all workflow executions query %v", err))
+		return nil, err
+	}
+
+	req := &pnt.SearchRequest{
+		Query:           query,
+		IsOpen:          true,
+		Filter:          isRecordValid,
+		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
+		ListRequest:     &request.InternalListWorkflowExecutionsRequest,
+	}
+
+	return v.pinotClient.Search(req)
+}
+
 func (v *pinotVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(ctx context.Context, request *p.InternalListWorkflowExecutionsByWorkflowIDRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
 		return !request.EarliestTime.After(rec.StartTime) && !rec.StartTime.After(request.LatestTime)
@@ -659,6 +681,7 @@ func isTimeStruct(value []byte) ([]byte, error) {
 type PinotQuery struct {
 	query   string
 	filters PinotQueryFilter
+	search  PinotQuerySearchField
 	sorters string
 	limits  string
 }
@@ -667,10 +690,47 @@ type PinotQueryFilter struct {
 	string
 }
 
+type PinotQuerySearchField struct {
+	string
+}
+
+func (s *PinotQuerySearchField) checkFirstSearchField() {
+	if s.string == "" {
+		s.string = "( "
+	} else {
+		s.string += "OR "
+	}
+}
+
+func (s *PinotQuerySearchField) lastSearchField() {
+	if s.string != "" {
+		s.string += " )"
+	}
+}
+
+func (s *PinotQuerySearchField) addEqual(obj string, val interface{}) {
+	s.checkFirstSearchField()
+	if _, ok := val.(string); ok {
+		val = fmt.Sprintf("'%s'", val)
+	} else {
+		val = fmt.Sprintf("%v", val)
+	}
+
+	quotedVal := fmt.Sprintf("%s", val)
+	s.string += fmt.Sprintf("%s = %s\n", obj, quotedVal)
+}
+
+func (s *PinotQuerySearchField) addMatch(obj string, val interface{}) {
+	s.checkFirstSearchField()
+
+	s.string += fmt.Sprintf("text_match(%s, '\"%s\"')\n", obj, val)
+}
+
 func NewPinotQuery(tableName string) PinotQuery {
 	return PinotQuery{
 		query:   fmt.Sprintf("SELECT *\nFROM %s\n", tableName),
 		filters: PinotQueryFilter{},
+		search:  PinotQuerySearchField{},
 		sorters: "",
 		limits:  "",
 	}
@@ -972,6 +1032,51 @@ func getListWorkflowExecutionsQuery(tableName string, request *p.InternalListWor
 
 	query.addPinotSorter(StartTime, DescendingOrder)
 	query.addOffsetAndLimits(from, pageSize)
+
+	return query.String(), nil
+}
+
+func getListAllWorkflowExecutionsQuery(tableName string, request *p.InternalListAllWorkflowExecutionsByTypeRequest) (string, error) {
+	if request == nil {
+		return "", nil
+	}
+
+	query := NewPinotQuery(tableName)
+
+	query.filters.addEqual(DomainID, request.DomainUUID)
+	query.filters.addEqual(IsDeleted, false)
+
+	if !request.EarliestTime.IsZero() && !request.LatestTime.IsZero() {
+		earliest := request.EarliestTime.UnixMilli() - oneMicroSecondInNano
+		latest := request.LatestTime.UnixMilli() + oneMicroSecondInNano
+		query.filters.addTimeRange(StartTime, earliest, latest) // convert Unix Time to miliseconds
+	}
+
+	query.addPinotSorter(StartTime, DescendingOrder)
+
+	token, err := pnt.GetNextPageToken(request.NextPageToken)
+	if err != nil {
+		return "", fmt.Errorf("next page token: %w", err)
+	}
+
+	from := token.From
+	pageSize := request.PageSize
+	query.addOffsetAndLimits(from, pageSize)
+
+	if request.WorkflowSearchValue != "" {
+		if request.PartialMatch {
+			query.search.addMatch(WorkflowID, request.WorkflowSearchValue)
+			query.search.addMatch(WorkflowType, request.WorkflowSearchValue)
+			query.search.addMatch(RunID, request.WorkflowSearchValue)
+		} else {
+			query.search.addEqual(WorkflowID, request.WorkflowSearchValue)
+			query.search.addEqual(WorkflowType, request.WorkflowSearchValue)
+			query.search.addEqual(RunID, request.WorkflowSearchValue)
+		}
+
+		query.search.lastSearchField()
+		query.filters.addQuery(query.search.string)
+	}
 
 	return query.String(), nil
 }
