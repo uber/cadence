@@ -23,6 +23,7 @@ package cli
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os/user"
 	"time"
@@ -290,10 +291,10 @@ func failoverStart(c *cli.Context, params *startParams) {
 
 		// block if there is an on-going failover drill
 		if err := executePauseOrResume(c, failovermanager.DrillWorkflowID, true); err != nil {
-			switch err.(type) {
-			case *types.EntityNotExistsError:
+			switch {
+			case errors.As(err, new(*types.EntityNotExistsError)):
 				break
-			case *types.WorkflowExecutionAlreadyCompletedError:
+			case errors.As(err, new(*types.WorkflowExecutionAlreadyCompletedError)):
 				break
 			default:
 				ErrorAndExit("Failed to send pase signal to drill workflow", err)

@@ -189,7 +189,7 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 		},
 	})
 	if err != nil {
-		if _, ok := err.(*types.EntityNotExistsError); ok {
+		if errors.As(err, new(*types.EntityNotExistsError)) {
 			fmt.Printf("%s %s\n", colorRed("Error:"), err)
 			return
 		}
@@ -1479,7 +1479,7 @@ func processResets(c *cli.Context, domain string, wes chan types.WorkflowExecuti
 				if err == nil {
 					break
 				}
-				if _, ok := err.(*types.BadRequestError); ok {
+				if errors.As(err, new(*types.BadRequestError)) {
 					break
 				}
 				fmt.Println("failed and retry...: ", wid, rid, err)

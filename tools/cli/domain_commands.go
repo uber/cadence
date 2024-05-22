@@ -140,7 +140,7 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) {
 	defer cancel()
 	err = d.registerDomain(ctx, request)
 	if err != nil {
-		if _, ok := err.(*types.DomainAlreadyExistsError); !ok {
+		if errors.As(err, new(*types.DomainAlreadyExistsError)) {
 			ErrorAndExit("Register Domain operation failed.", err)
 		} else {
 			ErrorAndExit(fmt.Sprintf("Domain %s already registered.", domainName), err)
@@ -178,7 +178,7 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) {
 			Name: common.StringPtr(domainName),
 		})
 		if err != nil {
-			if _, ok := err.(*types.EntityNotExistsError); !ok {
+			if errors.As(err, new(*types.EntityNotExistsError)) {
 				ErrorAndExit("Operation UpdateDomain failed.", err)
 			} else {
 				ErrorAndExit(fmt.Sprintf("Domain %s does not exist.", domainName), err)
@@ -261,7 +261,7 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) {
 	updateRequest.SecurityToken = securityToken
 	_, err := d.updateDomain(ctx, updateRequest)
 	if err != nil {
-		if _, ok := err.(*types.EntityNotExistsError); !ok {
+		if errors.As(err, new(*types.EntityNotExistsError)) {
 			ErrorAndExit("Operation UpdateDomain failed.", err)
 		} else {
 			ErrorAndExit(fmt.Sprintf("Domain %s does not exist.", domainName), err)
@@ -297,7 +297,7 @@ func (d *domainCLIImpl) DeprecateDomain(c *cli.Context) {
 		SecurityToken: securityToken,
 	})
 	if err != nil {
-		if _, ok := err.(*types.EntityNotExistsError); !ok {
+		if errors.As(err, new(*types.EntityNotExistsError)) {
 			ErrorAndExit("Operation DeprecateDomain failed.", err)
 		} else {
 			ErrorAndExit(fmt.Sprintf("Domain %s does not exist.", domainName), err)
@@ -420,7 +420,7 @@ func (d *domainCLIImpl) DescribeDomain(c *cli.Context) {
 	defer cancel()
 	resp, err := d.describeDomain(ctx, &request)
 	if err != nil {
-		if _, ok := err.(*types.EntityNotExistsError); !ok {
+		if errors.As(err, new(*types.EntityNotExistsError)) {
 			ErrorAndExit("Operation DescribeDomain failed.", err)
 		}
 		ErrorAndExit(fmt.Sprintf("Domain %s does not exist.", domainName), err)
