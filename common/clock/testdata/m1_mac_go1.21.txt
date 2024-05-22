@@ -1,5 +1,8 @@
 // On an M1 Pro Mac, 8 cores (4 high, 4 low):
 
+❯ go version
+go version go1.21.9 darwin/arm64
+
 ❯ go test -bench . -test.run xxx -cpu 1,2,4,8,32 .
 goos: darwin
 goarch: arm64
