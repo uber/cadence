@@ -24,6 +24,7 @@ package v6
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/olivere/elastic"
@@ -146,9 +147,9 @@ func convertV6ErrorToGenericError(err error) *bulk.GenericError {
 		return nil
 	}
 	status := bulk.UnknownStatusCode
-	switch e := err.(type) {
-	case *elastic.Error:
-		status = e.Status
+	var elasticError *elastic.Error
+	if errors.As(err, &elasticError) {
+		status = elasticError.Status
 	}
 	return &bulk.GenericError{
 		Status:  status,

@@ -27,6 +27,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -230,7 +231,8 @@ func TestParseError(t *testing.T) {
 			err := os2Client.parseError(&response)
 
 			if !tt.expectError {
-				if parsedErr, ok := err.(*osError); ok && parsedErr.Details != nil {
+				var parsedErr *osError
+				if errors.As(err, &parsedErr) && parsedErr.Details != nil {
 					assert.Equal(t, tt.expectedErrMsg, parsedErr.Details.Reason, "Error message mismatch for case: %s", tt.name)
 				} else {
 					t.Errorf("Failed to assert error reason for case: %s", tt.name)
