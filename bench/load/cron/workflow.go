@@ -22,6 +22,7 @@ package cron
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -286,7 +287,8 @@ func launcherWorkflow(
 		} else if err := childFuture.Get(childCtx, nil); err != nil {
 			result.TestStatus = testStatusFailed
 			result.Details = err.Error()
-			if customErr, ok := err.(*cadence.CustomError); ok {
+			var customErr *cadence.CustomError
+			if errors.As(err, &customErr) {
 				var detailStr string
 				if err := customErr.Details(&detailStr); err == nil {
 					result.Details += ": " + detailStr

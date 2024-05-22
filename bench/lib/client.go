@@ -22,6 +22,7 @@ package lib
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -64,7 +65,7 @@ func (client CadenceClient) CreateDomain(name string, desc string, owner string)
 	defer cancel()
 	err := client.Register(ctx, req)
 	if err != nil {
-		if _, ok := err.(*shared.DomainAlreadyExistsError); !ok {
+		if errors.As(err, new(*shared.DomainAlreadyExistsError)) {
 			return err
 		}
 	}
