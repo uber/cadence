@@ -42,9 +42,9 @@ type (
 )
 
 const (
-	initialRangeID    = 1 // Id of the first range of a new task list
-	initialAckLevel   = 0
-	stickyTaskListTTL = int64(24 * time.Hour / time.Second) // if sticky task_list stopped being updated, remove it in one day
+	initialRangeID    int64 = 1 // Id of the first range of a new task list
+	initialAckLevel   int64 = 0
+	stickyTaskListTTL       = int64(24 * time.Hour / time.Second) // if sticky task_list stopped being updated, remove it in one day
 )
 
 // newNoSQLTaskStore is used to create an instance of TaskStore implementation
@@ -124,7 +124,7 @@ func (t *nosqlTaskStore) LeaseTaskList(
 			}
 			err = storeShard.db.InsertTaskList(ctx, currTL)
 		} else {
-			return nil, convertCommonErrors(storeShard.db, "LeaseTaskList", err)
+			return nil, convertCommonErrors(storeShard.db, "LeaseTaskList", selectErr)
 		}
 	} else {
 		// if request.RangeID is > 0, we are trying to renew an already existing
