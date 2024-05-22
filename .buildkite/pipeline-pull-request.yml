@@ -137,7 +137,7 @@ steps:
                     make cover_integration_profile
       - docker-compose#v3.0.0:
           run: integration-test-cassandra
-          config: docker/buildkite/docker-compose-es7.yml
+          config: docker/buildkite/docker-compose-pinot.yml
 
   - label: ":golang: integration test with cassandra with OpenSearch v2"
     artifact_paths:

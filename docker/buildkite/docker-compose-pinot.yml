@@ -50,6 +50,19 @@ services:
     environment:
       - discovery.type=single-node
 
+  zookeeper:
+    image: zookeeper:3.5.8
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      services-network:
+        aliases:
+          - zookeeper
+
   pinot-controller:
     image: apachepinot/pinot:0.12.1
     command: "StartController -zkAddress zookeeper:2181 -controllerPort 9001"
@@ -118,7 +131,11 @@ services:
         condition: service_started
       kafka:
         condition: service_started
-      pinot:
+      pinot-controller:
+        condition: service_started
+      pinot-broker:
+        condition: service_started
+      pinot-server:
         condition: service_started
     volumes:
       - ../../:/cadence

@@ -79,6 +79,65 @@ services:
     environment:
       - discovery.type=single-node
 
+  zookeeper:
+    image: zookeeper:3.5.8
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      services-network:
+        aliases:
+          - zookeeper
+
+  pinot-controller:
+    image: apachepinot/pinot:0.12.1
+    command: "StartController -zkAddress zookeeper:2181 -controllerPort 9001"
+    container_name: pinot-controller
+    restart: unless-stopped
+    ports:
+      - "9001:9001"
+    environment:
+      JAVA_OPTS: "-Dplugins.dir=/opt/pinot/plugins -Xms1G -Xmx4G -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Xloggc:gc-pinot-controller.log"
+    depends_on:
+      - zookeeper
+    networks:
+      services-network:
+        aliases:
+          - pinot-controller
+  pinot-broker:
+    image: apachepinot/pinot:0.12.1
+    command: "StartBroker -zkAddress zookeeper:2181"
+    restart: unless-stopped
+    container_name: "pinot-broker"
+    ports:
+      - "8099:8099"
+    environment:
+      JAVA_OPTS: "-Dplugins.dir=/opt/pinot/plugins -Xms4G -Xmx4G -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Xloggc:gc-pinot-broker.log"
+    depends_on:
+      - pinot-controller
+    networks:
+      services-network:
+        aliases:
+          - pinot-broker
+  pinot-server:
+    image: apachepinot/pinot:0.12.1
+    command: "StartServer -zkAddress zookeeper:2181"
+    restart: unless-stopped
+    container_name: "pinot-server"
+    ports:
+      - "8098:8098"
+    environment:
+      JAVA_OPTS: "-Dplugins.dir=/opt/pinot/plugins -Xms4G -Xmx16G -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Xloggc:gc-pinot-server.log"
+    depends_on:
+      - pinot-broker
+    networks:
+      services-network:
+        aliases:
+          - pinot-server
+
   mongo:
     image: mongo:5
     restart: always
@@ -142,6 +201,12 @@ services:
       elasticsearch:
         condition: service_started
       kafka:
+        condition: service_started
+      pinot-controller:
+        condition: service_started
+      pinot-broker:
+        condition: service_started
+      pinot-server:
         condition: service_started
     volumes:
       - ../../:/cadence
