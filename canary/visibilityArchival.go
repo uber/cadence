@@ -239,6 +239,5 @@ func getURIScheme(URI string) string {
 func isBadRequestError(
 	err error,
 ) bool {
-	_, ok := err.(*shared.BadRequestError)
-	return ok
+	return errors.As(err, new(*shared.BadRequestError))
 }

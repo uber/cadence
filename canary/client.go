@@ -22,6 +22,7 @@ package canary
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
@@ -74,7 +75,7 @@ func (client *cadenceClient) createDomain(name string, desc string, owner string
 	}
 	err := client.Register(context.Background(), req)
 	if err != nil {
-		if _, ok := err.(*shared.DomainAlreadyExistsError); !ok {
+		if errors.As(err, new(*shared.DomainAlreadyExistsError)) {
 			return err
 		}
 	}

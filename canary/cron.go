@@ -22,6 +22,7 @@ package canary
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -122,10 +123,10 @@ func startJob(
 	wf, err := cadenceClient.StartWorkflow(ctx, opts, jobName, time.Now().UnixNano(), domain)
 	if err != nil {
 		scope.Counter(startWorkflowFailureCount).Inc(1)
-		switch err.(type) {
-		case *shared.WorkflowExecutionAlreadyStartedError:
+		switch {
+		case errors.As(err, new(*shared.WorkflowExecutionAlreadyStartedError)):
 			scope.Counter(startWorkflowAlreadyStartedCount).Inc(1)
-		case *shared.DomainNotActiveError:
+		case errors.As(err, new(*shared.DomainNotActiveError)):
 			scope.Counter(startWorkflowDomainNotActiveCount).Inc(1)
 		}
 		return nil, err
@@ -135,6 +136,5 @@ func startJob(
 }
 
 func isDomainNotActiveErr(err error) bool {
-	_, ok := err.(*shared.DomainNotActiveError)
-	return ok
+	return errors.As(err, new(*shared.DomainNotActiveError))
 }

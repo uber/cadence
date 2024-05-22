@@ -77,7 +77,7 @@ func cancellationWorkflow(ctx workflow.Context, inputScheduledTimeNanos int64) e
 		workflow.GetLogger(ctx).Info(msg)
 		return profile.end(errors.New(msg))
 	}
-	if _, ok := err.(*cadence.CanceledError); !ok {
+	if !errors.As(err, new(*cadence.CanceledError)) {
 		workflow.GetLogger(ctx).Info("cancellationWorkflow failed: child workflow return non CanceledError", zap.Error(err))
 		return profile.end(err)
 	}
@@ -108,7 +108,7 @@ func cancellationWorkflow(ctx workflow.Context, inputScheduledTimeNanos int64) e
 			workflow.GetLogger(ctx).Info(msg)
 			return errors.New(msg)
 		}
-		if _, ok := err.(*cadence.CanceledError); !ok {
+		if !errors.As(err, new(*cadence.CanceledError)) {
 			workflow.GetLogger(ctx).Info("cancellationWorkflow failed: child workflow return non CanceledError", zap.Error(err))
 			return err
 		}
@@ -151,7 +151,7 @@ func cancellationWorkflow(ctx workflow.Context, inputScheduledTimeNanos int64) e
 			workflow.GetLogger(ctx).Info(msg)
 			return errors.New(msg)
 		}
-		if _, ok := err.(*cadence.CanceledError); !ok {
+		if !errors.As(err, new(*cadence.CanceledError)) {
 			workflow.GetLogger(ctx).Info("cancellationWorkflow failed: child workflow return non CanceledError", zap.Error(err))
 			return err
 		}
@@ -192,7 +192,7 @@ func cancellationActivity(ctx context.Context, scheduledTimeNanos int64) error {
 		if err == nil {
 			return errors.New("cancellationWorkflow failed: non child workflow not cancelled")
 		}
-		if _, ok := err.(*cadence.CanceledError); !ok {
+		if !errors.As(err, new(*cadence.CanceledError)) {
 			return err
 		}
 		return nil

@@ -22,6 +22,7 @@ package canary
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/opentracing/opentracing-go"
@@ -158,7 +159,7 @@ func (c *canaryImpl) startCronWorkflow() {
 	if err != nil {
 		// TODO: improvement: compare the cron schedule to decide whether or not terminating the current one
 		// https://github.com/uber/cadence/issues/4469
-		if _, ok := err.(*shared.WorkflowExecutionAlreadyStartedError); !ok {
+		if errors.As(err, new(*shared.WorkflowExecutionAlreadyStartedError)) {
 			c.runtime.logger.Error("error starting cron workflow", zap.Error(err))
 		} else {
 			c.runtime.logger.Info("cron workflow already started, you may need to terminate and restart if cron schedule is changed...")
