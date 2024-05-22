@@ -188,7 +188,7 @@ func (i *historyIterator) readHistoryBatches(ctx context.Context, firstEventID i
 	newIterState := historyIteratorState{}
 	for size < targetSize {
 		currHistoryBatches, err := i.readHistory(ctx, firstEventID)
-		if _, ok := err.(*types.EntityNotExistsError); ok && firstEventID != common.FirstEventID {
+		if errors.As(err, new(*types.EntityNotExistsError)) && firstEventID != common.FirstEventID {
 			newIterState.FinishedIteration = true
 			return historyBatches, newIterState, nil
 		}
@@ -217,7 +217,7 @@ func (i *historyIterator) readHistoryBatches(ctx context.Context, firstEventID i
 	// If you are here, it means the target size is met after adding the last batch of read history.
 	// We need to check if there's more history batches.
 	_, err := i.readHistory(ctx, firstEventID)
-	if _, ok := err.(*types.EntityNotExistsError); ok && firstEventID != common.FirstEventID {
+	if errors.As(err, new(*types.EntityNotExistsError)) && firstEventID != common.FirstEventID {
 		newIterState.FinishedIteration = true
 		return historyBatches, newIterState, nil
 	}

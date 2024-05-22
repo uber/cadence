@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"strings"
@@ -127,8 +128,8 @@ func keyExists(ctx context.Context, s3cli s3iface.S3API, URI archiver.URI, key s
 }
 
 func isNotFoundError(err error) bool {
-	aerr, ok := err.(awserr.Error)
-	return ok && (aerr.Code() == "NotFound")
+	var aerr awserr.Error
+	return errors.As(err, &aerr) && (aerr.Code() == "NotFound")
 }
 
 // Key construction
@@ -191,7 +192,8 @@ func upload(ctx context.Context, s3cli s3iface.S3API, URI archiver.URI, key stri
 		Body:   bytes.NewReader(data),
 	})
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
+		var aerr awserr.Error
+		if errors.As(err, &aerr) {
 			if aerr.Code() == s3.ErrCodeNoSuchBucket {
 				return &types.BadRequestError{Message: errBucketNotExists.Error()}
 			}
@@ -210,7 +212,8 @@ func download(ctx context.Context, s3cli s3iface.S3API, URI archiver.URI, key st
 	})
 
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
+		var aerr awserr.Error
+		if errors.As(err, &aerr) {
 			if aerr.Code() == s3.ErrCodeNoSuchBucket {
 				return nil, &types.BadRequestError{Message: errBucketNotExists.Error()}
 			}

@@ -311,8 +311,8 @@ func (h *historyArchiver) Get(
 			if isRetryableError(err) {
 				return nil, &types.InternalServiceError{Message: err.Error()}
 			}
-			switch err.(type) {
-			case *types.BadRequestError, *types.InternalServiceError, *types.EntityNotExistsError:
+			switch {
+			case errors.As(err, new(*types.BadRequestError)), errors.As(err, new(*types.InternalServiceError)), errors.As(err, new(*types.EntityNotExistsError)):
 				return nil, err
 			default:
 				return nil, &types.InternalServiceError{Message: err.Error()}
@@ -389,7 +389,8 @@ func (h *historyArchiver) getHighestVersion(ctx context.Context, URI archiver.UR
 		Delimiter: aws.String("/"),
 	})
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == s3.ErrCodeNoSuchBucket {
+		var aerr awserr.Error
+		if errors.As(err, &aerr) && aerr.Code() == s3.ErrCodeNoSuchBucket {
 			return nil, &types.BadRequestError{Message: errBucketNotExists.Error()}
 		}
 		return nil, err
@@ -416,22 +417,27 @@ func isRetryableError(err error) bool {
 	if err == nil {
 		return false
 	}
-	if aerr, ok := err.(awserr.Error); ok {
+	var aerr awserr.Error
+	if errors.As(err, &aerr) {
 		return isStatusCodeRetryable(aerr) || request.IsErrorRetryable(aerr) || request.IsErrorThrottle(aerr)
 	}
 	return false
 }
 
 func isStatusCodeRetryable(err error) bool {
-	if aerr, ok := err.(awserr.Error); ok {
-		if rerr, ok := err.(awserr.RequestFailure); ok {
-			if rerr.StatusCode() == 429 {
-				return true
-			}
-			if rerr.StatusCode() >= 500 && rerr.StatusCode() != 501 {
-				return true
-			}
+	var (
+		aerr awserr.Error
+		rerr awserr.RequestFailure
+	)
+	if errors.As(err, &rerr) {
+		if rerr.StatusCode() == 429 {
+			return true
 		}
+		if rerr.StatusCode() >= 500 && rerr.StatusCode() != 501 {
+			return true
+		}
+	}
+	if errors.As(err, &aerr) {
 		return isStatusCodeRetryable(aerr.OrigErr())
 	}
 	return false
