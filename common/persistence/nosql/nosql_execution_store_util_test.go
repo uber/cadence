@@ -1255,8 +1255,7 @@ func TestNosqlExecutionStoreUtilsExtended(t *testing.T) {
 			},
 			validate: func(t *testing.T, _ interface{}, err error) {
 				assert.Error(t, err)
-				_, ok := err.(*persistence.CurrentWorkflowConditionFailedError)
-				assert.True(t, ok)
+				assert.True(t, errors.As(err, new(*persistence.CurrentWorkflowConditionFailedError)))
 			},
 		},
 		{
@@ -1278,8 +1277,7 @@ func TestNosqlExecutionStoreUtilsExtended(t *testing.T) {
 			},
 			validate: func(t *testing.T, _ interface{}, err error) {
 				assert.Error(t, err)
-				_, ok := err.(*persistence.ShardOwnershipLostError)
-				assert.True(t, ok)
+				assert.True(t, errors.As(err, new(*persistence.ShardOwnershipLostError)))
 			},
 		},
 		{
@@ -1299,8 +1297,7 @@ func TestNosqlExecutionStoreUtilsExtended(t *testing.T) {
 					"test-domain-id", "test-workflow-id", "test-run-id", executionInfo, 123, request)
 			},
 			validate: func(t *testing.T, result interface{}, err error) {
-				_, ok := err.(*persistence.CurrentWorkflowConditionFailedError)
-				assert.False(t, ok)
+				assert.False(t, errors.As(err, new(*persistence.CurrentWorkflowConditionFailedError)))
 			},
 		},
 		{

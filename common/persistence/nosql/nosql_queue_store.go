@@ -22,6 +22,7 @@ package nosql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/uber/cadence/common/config"
@@ -130,7 +131,7 @@ func (q *nosqlQueueStore) tryEnqueue(
 		Payload:   messagePayload,
 	})
 	if err != nil {
-		if _, ok := err.(*nosqlplugin.ConditionFailure); ok {
+		if errors.As(err, new(*nosqlplugin.ConditionFailure)) {
 			return emptyMessageID, &persistence.ConditionFailedError{Msg: fmt.Sprintf("message ID %v exists in queue", messageID)}
 		}
 
@@ -330,7 +331,7 @@ func (q *nosqlQueueStore) updateQueueMetadata(
 ) error {
 	err := q.db.UpdateQueueMetadataCas(ctx, *metadata)
 	if err != nil {
-		if _, ok := err.(*nosqlplugin.ConditionFailure); ok {
+		if errors.As(err, new(*nosqlplugin.ConditionFailure)) {
 			return &types.InternalServiceError{
 				Message: "UpdateQueueMetadata operation encounter concurrent write.",
 			}

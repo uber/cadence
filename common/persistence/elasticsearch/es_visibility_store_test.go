@@ -304,8 +304,7 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutions() {
 	s.mockESClient.On("Search", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
 	_, err = s.visibilityStore.ListOpenWorkflowExecutions(ctx, testRequest)
 	s.Error(err)
-	_, ok := err.(*types.InternalServiceError)
-	s.True(ok)
+	s.ErrorAs(err, new(*types.InternalServiceError))
 	s.True(strings.Contains(err.Error(), "ListOpenWorkflowExecutions failed"))
 }
 
@@ -325,8 +324,7 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutions() {
 	s.mockESClient.On("Search", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
 	_, err = s.visibilityStore.ListClosedWorkflowExecutions(ctx, testRequest)
 	s.Error(err)
-	_, ok := err.(*types.InternalServiceError)
-	s.True(ok)
+	s.ErrorAs(err, new(*types.InternalServiceError))
 	s.True(strings.Contains(err.Error(), "ListClosedWorkflowExecutions failed"))
 }
 
@@ -354,8 +352,7 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutionsByType() {
 	s.mockESClient.On("Search", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
 	_, err = s.visibilityStore.ListOpenWorkflowExecutionsByType(ctx, request)
 	s.Error(err)
-	_, ok := err.(*types.InternalServiceError)
-	s.True(ok)
+	s.ErrorAs(err, new(*types.InternalServiceError))
 	s.True(strings.Contains(err.Error(), "ListOpenWorkflowExecutionsByType failed"))
 }
 
@@ -439,8 +436,7 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByType() {
 	s.mockESClient.On("Search", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
 	_, err = s.visibilityStore.ListClosedWorkflowExecutionsByType(ctx, request)
 	s.Error(err)
-	_, ok := err.(*types.InternalServiceError)
-	s.True(ok)
+	s.ErrorAs(err, new(*types.InternalServiceError))
 	s.True(strings.Contains(err.Error(), "ListClosedWorkflowExecutionsByType failed"))
 }
 
@@ -469,8 +465,7 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutionsByWorkflowID() {
 	s.mockESClient.On("Search", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
 	_, err = s.visibilityStore.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
 	s.Error(err)
-	_, ok := err.(*types.InternalServiceError)
-	s.True(ok)
+	s.ErrorAs(err, new(*types.InternalServiceError))
 	s.True(strings.Contains(err.Error(), "ListOpenWorkflowExecutionsByWorkflowID failed"))
 }
 
@@ -499,8 +494,7 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByWorkflowID() {
 	s.mockESClient.On("Search", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
 	_, err = s.visibilityStore.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
 	s.Error(err)
-	_, ok := err.(*types.InternalServiceError)
-	s.True(ok)
+	s.ErrorAs(err, new(*types.InternalServiceError))
 	s.True(strings.Contains(err.Error(), "ListClosedWorkflowExecutionsByWorkflowID failed"))
 }
 
@@ -530,8 +524,7 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByStatus() {
 	s.mockESClient.On("Search", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
 	_, err = s.visibilityStore.ListClosedWorkflowExecutionsByStatus(ctx, request)
 	s.Error(err)
-	_, ok := err.(*types.InternalServiceError)
-	s.True(ok)
+	s.ErrorAs(err, new(*types.InternalServiceError))
 	s.True(strings.Contains(err.Error(), "ListClosedWorkflowExecutionsByStatus failed"))
 }
 
@@ -564,9 +557,9 @@ func (s *ESVisibilitySuite) TestDeserializePageToken() {
 	result, err = es.DeserializePageToken(badInput)
 	s.Error(err)
 	s.Nil(result)
-	err, ok := err.(*types.BadRequestError)
-	s.True(ok)
-	s.True(strings.Contains(err.Error(), "unable to deserialize page token"))
+	var typedError *types.BadRequestError
+	s.ErrorAs(err, &typedError)
+	s.True(strings.Contains(typedError.Error(), "unable to deserialize page token"))
 
 	token = &es.ElasticVisibilityPageToken{SortValue: int64(64), TieBreaker: "unique"}
 	data, _ = es.SerializePageToken(token)
@@ -864,15 +857,13 @@ func (s *ESVisibilitySuite) TestListWorkflowExecutions() {
 	s.mockESClient.On("SearchByQuery", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
 	_, err = s.visibilityStore.ListWorkflowExecutions(ctx, request)
 	s.Error(err)
-	_, ok := err.(*types.InternalServiceError)
-	s.True(ok)
+	s.ErrorAs(err, new(*types.InternalServiceError))
 	s.True(strings.Contains(err.Error(), "ListWorkflowExecutions failed"))
 
 	request.Query = `invalid query`
 	_, err = s.visibilityStore.ListWorkflowExecutions(context.Background(), request)
 	s.Error(err)
-	_, ok = err.(*types.BadRequestError)
-	s.True(ok)
+	s.ErrorAs(err, new(*types.BadRequestError))
 	s.True(strings.Contains(err.Error(), "Error when parse query"))
 }
 
@@ -900,8 +891,7 @@ func (s *ESVisibilitySuite) TestScanWorkflowExecutions() {
 	request.Query = `invalid query`
 	_, err = s.visibilityStore.ScanWorkflowExecutions(ctx, request)
 	s.Error(err)
-	_, ok := err.(*types.BadRequestError)
-	s.True(ok)
+	s.ErrorAs(err, new(*types.BadRequestError))
 	s.True(strings.Contains(err.Error(), "Error when parse query"))
 
 	// test internal error
@@ -909,8 +899,7 @@ func (s *ESVisibilitySuite) TestScanWorkflowExecutions() {
 	s.mockESClient.On("ScanByQuery", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
 	_, err = s.visibilityStore.ScanWorkflowExecutions(ctx, request)
 	s.Error(err)
-	_, ok = err.(*types.InternalServiceError)
-	s.True(ok)
+	s.ErrorAs(err, new(*types.InternalServiceError))
 	s.True(strings.Contains(err.Error(), "ScanWorkflowExecutions failed"))
 }
 
@@ -938,16 +927,14 @@ func (s *ESVisibilitySuite) TestCountWorkflowExecutions() {
 
 	_, err = s.visibilityStore.CountWorkflowExecutions(ctx, request)
 	s.Error(err)
-	_, ok := err.(*types.InternalServiceError)
-	s.True(ok)
+	s.ErrorAs(err, new(*types.InternalServiceError))
 	s.True(strings.Contains(err.Error(), "CountWorkflowExecutions failed"))
 
 	// test bad request
 	request.Query = `invalid query`
 	_, err = s.visibilityStore.CountWorkflowExecutions(ctx, request)
 	s.Error(err)
-	_, ok = err.(*types.BadRequestError)
-	s.True(ok)
+	s.ErrorAs(err, new(*types.BadRequestError))
 	s.True(strings.Contains(err.Error(), "Error when parse query"))
 }
 

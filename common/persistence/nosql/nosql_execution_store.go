@@ -22,6 +22,7 @@ package nosql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/uber/cadence/common/log"
@@ -119,8 +120,8 @@ func (d *nosqlExecutionStore) CreateWorkflowExecution(
 		shardCondition,
 	)
 	if err != nil {
-		conditionFailureErr, isConditionFailedError := err.(*nosqlplugin.WorkflowOperationConditionFailure)
-		if isConditionFailedError {
+		var conditionFailureErr *nosqlplugin.WorkflowOperationConditionFailure
+		if errors.As(err, &conditionFailureErr) {
 			switch {
 			case conditionFailureErr.UnknownConditionFailureDetails != nil:
 				return nil, &persistence.ShardOwnershipLostError{
@@ -846,8 +847,8 @@ func (d *nosqlExecutionStore) CreateFailoverMarkerTasks(
 	})
 
 	if err != nil {
-		conditionFailureErr, isConditionFailedError := err.(*nosqlplugin.ShardOperationConditionFailure)
-		if isConditionFailedError {
+		var conditionFailureErr *nosqlplugin.ShardOperationConditionFailure
+		if errors.As(err, &conditionFailureErr) {
 			return &persistence.ShardOwnershipLostError{
 				ShardID: d.shardID,
 				Msg: fmt.Sprintf("Failed to create workflow execution.  Request RangeID: %v, columns: (%v)",

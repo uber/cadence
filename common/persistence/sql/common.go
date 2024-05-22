@@ -25,6 +25,7 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/gob"
+	"errors"
 	"fmt"
 
 	"github.com/uber/cadence/common/log"
@@ -119,16 +120,7 @@ func convertCommonErrors(
 	operation, message string,
 	err error,
 ) error {
-	switch err.(type) {
-	case *persistence.ConditionFailedError,
-		*persistence.CurrentWorkflowConditionFailedError,
-		*persistence.WorkflowExecutionAlreadyStartedError,
-		*persistence.ShardOwnershipLostError,
-		*persistence.TimeoutError,
-		*types.DomainAlreadyExistsError,
-		*types.EntityNotExistsError,
-		*types.ServiceBusyError,
-		*types.InternalServiceError:
+	if terminalError(err) {
 		return err
 	}
 	if errChecker.IsNotFoundError(err) {
@@ -150,4 +142,16 @@ func convertCommonErrors(
 	return &types.InternalServiceError{
 		Message: fmt.Sprintf("%v operation failed. %s Error: %v", operation, message, err),
 	}
+}
+
+func terminalError(err error) bool {
+	return errors.As(err, new(*persistence.ConditionFailedError)) ||
+		errors.As(err, new(*persistence.CurrentWorkflowConditionFailedError)) ||
+		errors.As(err, new(*persistence.WorkflowExecutionAlreadyStartedError)) ||
+		errors.As(err, new(*persistence.ShardOwnershipLostError)) ||
+		errors.As(err, new(*persistence.TimeoutError)) ||
+		errors.As(err, new(*types.DomainAlreadyExistsError)) ||
+		errors.As(err, new(*types.EntityNotExistsError)) ||
+		errors.As(err, new(*types.ServiceBusyError)) ||
+		errors.As(err, new(*types.InternalServiceError))
 }

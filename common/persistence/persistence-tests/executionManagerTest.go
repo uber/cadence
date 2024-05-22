@@ -243,9 +243,10 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionWithWorkflowRequestsD
 	req.WorkflowRequestMode = p.CreateWorkflowRequestModeNew
 	_, err = s.ExecutionManager.CreateWorkflowExecution(ctx, req)
 	s.Error(err)
-	s.IsType(&p.DuplicateRequestError{}, err)
-	s.Equal(persistence.WorkflowRequestTypeStart, err.(*persistence.DuplicateRequestError).RequestType)
-	s.Equal(runID, err.(*persistence.DuplicateRequestError).RunID)
+	var typedErr *p.DuplicateRequestError
+	s.ErrorAs(err, &typedErr)
+	s.Equal(persistence.WorkflowRequestTypeStart, typedErr.RequestType)
+	s.Equal(runID, typedErr.RunID)
 	req.WorkflowRequestMode = p.CreateWorkflowRequestModeReplicated
 	_, err = s.ExecutionManager.CreateWorkflowExecution(ctx, req)
 	s.Error(err)
@@ -574,9 +575,10 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionWithWorkflowRequestsD
 	}
 	_, err = s.ExecutionManager.UpdateWorkflowExecution(ctx, updateReq)
 	s.Error(err)
-	s.IsType(&p.DuplicateRequestError{}, err)
-	s.Equal(persistence.WorkflowRequestTypeSignal, err.(*persistence.DuplicateRequestError).RequestType)
-	s.Equal(runID, err.(*persistence.DuplicateRequestError).RunID)
+	var typedErr *p.DuplicateRequestError
+	s.ErrorAs(err, &typedErr)
+	s.Equal(persistence.WorkflowRequestTypeSignal, typedErr.RequestType)
+	s.Equal(runID, typedErr.RunID)
 	updateReq.WorkflowRequestMode = p.CreateWorkflowRequestModeReplicated
 	_, err = s.ExecutionManager.UpdateWorkflowExecution(ctx, updateReq)
 	s.Nil(err)
@@ -1065,8 +1067,8 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionBrandNew() {
 	s.Nil(err)
 	_, err = s.ExecutionManager.CreateWorkflowExecution(ctx, req)
 	s.NotNil(err)
-	alreadyStartedErr, ok := err.(*p.WorkflowExecutionAlreadyStartedError)
-	s.True(ok, "err is not WorkflowExecutionAlreadyStartedError")
+	var alreadyStartedErr *p.WorkflowExecutionAlreadyStartedError
+	s.ErrorAs(err, &alreadyStartedErr)
 	s.Equal(req.NewWorkflowSnapshot.ExecutionInfo.CreateRequestID, alreadyStartedErr.StartRequestID)
 	s.Equal(workflowExecution.GetRunID(), alreadyStartedErr.RunID)
 	s.Equal(0, alreadyStartedErr.CloseStatus)

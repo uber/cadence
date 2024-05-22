@@ -368,8 +368,7 @@ func (s *MatchingPersistenceSuite) TestLeaseAndUpdateTaskList() {
 		RangeID:  1,
 	})
 	s.Error(err)
-	_, ok := err.(*p.ConditionFailedError)
-	s.True(ok)
+	s.ErrorAs(err, new(*p.ConditionFailedError))
 
 	taskListInfo := &p.TaskListInfo{
 		DomainID: domainID,

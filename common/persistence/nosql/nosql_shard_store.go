@@ -22,6 +22,7 @@ package nosql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/uber/cadence/common/config"
@@ -65,8 +66,8 @@ func (sh *nosqlShardStore) CreateShard(
 	}
 	err = storeShard.db.InsertShard(ctx, request.ShardInfo)
 	if err != nil {
-		conditionFailure, ok := err.(*nosqlplugin.ShardOperationConditionFailure)
-		if ok {
+		var conditionFailure *nosqlplugin.ShardOperationConditionFailure
+		if errors.As(err, &conditionFailure) {
 			return &persistence.ShardAlreadyExistError{
 				Msg: fmt.Sprintf("Shard already exists in executions table.  ShardId: %v, request_range_id: %v, actual_range_id : %v, columns: (%v)",
 					request.ShardInfo.ShardID, request.ShardInfo.RangeID, conditionFailure.RangeID, conditionFailure.Details),
@@ -139,8 +140,8 @@ func (sh *nosqlShardStore) updateRangeID(
 	}
 	err = storeShard.db.UpdateRangeID(ctx, shardID, rangeID, previousRangeID)
 	if err != nil {
-		conditionFailure, ok := err.(*nosqlplugin.ShardOperationConditionFailure)
-		if ok {
+		var conditionFailure *nosqlplugin.ShardOperationConditionFailure
+		if errors.As(err, &conditionFailure) {
 			return &persistence.ShardOwnershipLostError{
 				ShardID: shardID,
 				Msg: fmt.Sprintf("Failed to update shard rangeID.  request_range_id: %v, actual_range_id : %v, columns: (%v)",
@@ -163,8 +164,8 @@ func (sh *nosqlShardStore) UpdateShard(
 	}
 	err = storeShard.db.UpdateShard(ctx, request.ShardInfo, request.PreviousRangeID)
 	if err != nil {
-		conditionFailure, ok := err.(*nosqlplugin.ShardOperationConditionFailure)
-		if ok {
+		var conditionFailure *nosqlplugin.ShardOperationConditionFailure
+		if errors.As(err, &conditionFailure) {
 			return &persistence.ShardOwnershipLostError{
 				ShardID: request.ShardInfo.ShardID,
 				Msg: fmt.Sprintf("Failed to update shard rangeID.  request_range_id: %v, actual_range_id : %v, columns: (%v)",

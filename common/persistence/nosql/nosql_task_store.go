@@ -23,6 +23,7 @@ package nosql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"time"
@@ -151,8 +152,8 @@ func (t *nosqlTaskStore) LeaseTaskList(
 		}, currTL.RangeID-1)
 	}
 	if err != nil {
-		conditionFailure, ok := err.(*nosqlplugin.TaskOperationConditionFailure)
-		if ok {
+		var conditionFailure *nosqlplugin.TaskOperationConditionFailure
+		if errors.As(err, &conditionFailure) {
 			return nil, &persistence.ConditionFailedError{
 				Msg: fmt.Sprintf("leaseTaskList: taskList:%v, taskListType:%v, haveRangeID:%v, gotRangeID:%v",
 					request.TaskList, request.TaskType, currTL.RangeID, conditionFailure.RangeID),
@@ -199,8 +200,8 @@ func (t *nosqlTaskStore) UpdateTaskList(
 	}
 
 	if err != nil {
-		conditionFailure, ok := err.(*nosqlplugin.TaskOperationConditionFailure)
-		if ok {
+		var conditionFailure *nosqlplugin.TaskOperationConditionFailure
+		if errors.As(err, &conditionFailure) {
 			return nil, &persistence.ConditionFailedError{
 				Msg: fmt.Sprintf("Failed to update task list. name: %v, type: %v, rangeID: %v, columns: (%v)",
 					tli.Name, tli.TaskType, tli.RangeID, conditionFailure.Details),
@@ -237,8 +238,8 @@ func (t *nosqlTaskStore) DeleteTaskList(
 	}, request.RangeID)
 
 	if err != nil {
-		conditionFailure, ok := err.(*nosqlplugin.TaskOperationConditionFailure)
-		if ok {
+		var conditionFailure *nosqlplugin.TaskOperationConditionFailure
+		if errors.As(err, &conditionFailure) {
 			return &persistence.ConditionFailedError{
 				Msg: fmt.Sprintf("Failed to delete task list. name: %v, type: %v, rangeID: %v, columns: (%v)",
 					request.TaskListName, request.TaskListType, request.RangeID, conditionFailure.Details),
@@ -291,8 +292,8 @@ func (t *nosqlTaskStore) CreateTasks(
 	err = storeShard.db.InsertTasks(ctx, tasks, tasklistCondition)
 
 	if err != nil {
-		conditionFailure, ok := err.(*nosqlplugin.TaskOperationConditionFailure)
-		if ok {
+		var conditionFailure *nosqlplugin.TaskOperationConditionFailure
+		if errors.As(err, &conditionFailure) {
 			return nil, &persistence.ConditionFailedError{
 				Msg: fmt.Sprintf("Failed to insert tasks. name: %v, type: %v, rangeID: %v, columns: (%v)",
 					request.TaskListInfo.Name, request.TaskListInfo.TaskType, request.TaskListInfo.RangeID, conditionFailure.Details),

@@ -100,7 +100,7 @@ func (s *ConfigStorePersistenceSuite) TestUpdateVersionCollisionFailure() {
 
 	err = s.UpdateDynamicConfig(ctx, snapshot, 2)
 	var condErr *p.ConditionFailedError
-	s.True(errors.As(err, &condErr))
+	s.ErrorAs(err, &condErr)
 }
 
 func (s *ConfigStorePersistenceSuite) TestUpdateIncrementalVersionSuccess() {

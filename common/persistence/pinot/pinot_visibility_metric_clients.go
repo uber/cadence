@@ -22,6 +22,7 @@ package pinotvisibility
 
 import (
 	"context"
+	"errors"
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -385,12 +386,12 @@ func (p *pinotVisibilityMetricsClient) DeleteUninitializedWorkflowExecution(
 
 func (p *pinotVisibilityMetricsClient) updateErrorMetric(scopeWithDomainTag metrics.Scope, scope int, err error) {
 
-	switch err.(type) {
-	case *types.BadRequestError:
+	switch {
+	case errors.As(err, new(*types.BadRequestError)):
 		scopeWithDomainTag.IncCounter(metrics.PinotErrBadRequestCounterPerDomain)
 		scopeWithDomainTag.IncCounter(metrics.PinotFailuresPerDomain)
 
-	case *types.ServiceBusyError:
+	case errors.As(err, new(*types.ServiceBusyError)):
 		scopeWithDomainTag.IncCounter(metrics.PinotErrBusyCounterPerDomain)
 		scopeWithDomainTag.IncCounter(metrics.PinotFailuresPerDomain)
 	default:
