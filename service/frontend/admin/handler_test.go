@@ -400,6 +400,54 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_SameStartIDAnd
 	s.NoError(err)
 }
 
+func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_NextPageToken() {
+	ctx := context.Background()
+	s.mockDomainCache.EXPECT().GetDomainID(s.domainName).Return(s.domainID, nil).AnyTimes()
+	branchToken := []byte{1}
+	versionHistory := persistence.NewVersionHistory(branchToken, []*persistence.VersionHistoryItem{
+		persistence.NewVersionHistoryItem(int64(10), int64(100)),
+	})
+	rawVersionHistories := persistence.NewVersionHistories(versionHistory)
+	versionHistories := rawVersionHistories.ToInternalType()
+	mState := &types.GetMutableStateResponse{
+		NextEventID:        11,
+		CurrentBranchToken: branchToken,
+		VersionHistories:   versionHistories,
+	}
+	s.mockHistoryClient.EXPECT().GetMutableState(gomock.Any(), gomock.Any()).Return(mState, nil).AnyTimes()
+	token := &getWorkflowRawHistoryV2Token{
+		VersionHistories: &types.VersionHistories{
+			CurrentVersionHistoryIndex: 1,
+			Histories: []*types.VersionHistory{
+				{
+					BranchToken: branchToken,
+					Items: []*types.VersionHistoryItem{
+						{
+							EventID: 10,
+							Version: 100,
+						},
+					},
+				},
+			},
+		},
+	}
+	serializedToken, err := serializeRawHistoryToken(token)
+	s.NoError(err)
+	_, err = s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
+		&types.GetWorkflowExecutionRawHistoryV2Request{
+			Domain: s.domainName,
+			Execution: &types.WorkflowExecution{
+				WorkflowID: "workflowID",
+				RunID:      uuid.New(),
+			},
+			StartEventID:      common.Int64Ptr(10),
+			StartEventVersion: common.Int64Ptr(100),
+			MaximumPageSize:   1,
+			NextPageToken:     serializedToken,
+		})
+	s.NoError(err)
+}
+
 func (s *adminHandlerSuite) Test_SetRequestDefaultValueAndGetTargetVersionHistory_DefinedStartAndEnd() {
 	inputStartEventID := int64(1)
 	inputStartVersion := int64(10)
@@ -2544,6 +2592,47 @@ func Test_SerializeRawHistoryToken(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, td.input, res)
+			}
+		})
+	}
+}
+
+func Test_ListDynamicConfig(t *testing.T) {
+	tests := map[string]struct {
+		input         *types.ListDynamicConfigRequest
+		dcHandlerFunc func(mock *dynamicconfig.MockClient)
+		wantErr       bool
+	}{
+		"nil request": {
+			input:   nil,
+			wantErr: true,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			goMock := gomock.NewController(t)
+			hcMock := history.NewMockClient(goMock)
+			dcMock := dynamicconfig.NewMockClient(goMock)
+			if td.dcHandlerFunc != nil {
+				td.dcHandlerFunc(dcMock)
+			}
+			handler := adminHandlerImpl{
+				Resource: &resource.Test{
+					Logger:        testlogger.New(t),
+					MetricsClient: metrics.NewNoopMetricsClient(),
+					HistoryClient: hcMock,
+				},
+				params: &resource.Params{
+					DynamicConfig: dcMock,
+				},
+			}
+
+			_, err := handler.ListDynamicConfig(context.Background(), td.input)
+			if td.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}
