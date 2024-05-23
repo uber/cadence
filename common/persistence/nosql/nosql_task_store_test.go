@@ -302,6 +302,27 @@ func TestUpdateTaskList_ConditionFailure(t *testing.T) {
 	assert.ErrorContains(t, err, "Failed to update task list. name: test-tasklist, type: 0, rangeID: 1, columns: (test-details)")
 }
 
+func TestDeleteTaskList(t *testing.T) {
+	store, db := setupNoSQLStoreMocks(t)
+	db.EXPECT().DeleteTaskList(gomock.Any(), getDecisionTaskListFilter(), int64(0)).Return(nil)
+
+	err := store.DeleteTaskList(context.Background(), getValidDeleteTaskListRequest())
+	assert.NoError(t, err)
+}
+
+func TestDeleteTaskList_ConditionFailure(t *testing.T) {
+	store, db := setupNoSQLStoreMocks(t)
+	db.EXPECT().DeleteTaskList(gomock.Any(), getDecisionTaskListFilter(), int64(0)).Return(
+		&nosqlplugin.TaskOperationConditionFailure{Details: "test-details"},
+	)
+
+	err := store.DeleteTaskList(context.Background(), getValidDeleteTaskListRequest())
+
+	var expectedErr *persistence.ConditionFailedError
+	assert.ErrorAs(t, err, &expectedErr)
+	assert.ErrorContains(t, err, "Failed to delete task list. name: test-tasklist, type: 0, rangeID: 0, columns: (test-details)")
+}
+
 func TestGetTasks(t *testing.T) {
 	store, db := setupNoSQLStoreMocks(t)
 	now := time.Unix(123, 456)
@@ -403,14 +424,6 @@ func getDecisionTaskListFilter() *nosqlplugin.TaskListFilter {
 	}
 }
 
-func getExpectedTaskListFilter() *nosqlplugin.TaskListFilter {
-	return &nosqlplugin.TaskListFilter{
-		DomainID:     TestDomainID,
-		TaskListName: TestTaskListName,
-		TaskListType: int(types.TaskListTypeDecision),
-	}
-}
-
 func getExpectedTaskListRow() *nosqlplugin.TaskListRow {
 	return &nosqlplugin.TaskListRow{
 		DomainID:        TestDomainID,
@@ -441,5 +454,15 @@ func getExpectedTaskListInfo() *persistence.TaskListInfo {
 		AckLevel:    initialAckLevel,
 		Kind:        int(types.TaskListKindNormal),
 		LastUpdated: time.Now(),
+	}
+}
+
+func getValidDeleteTaskListRequest() *persistence.DeleteTaskListRequest {
+	return &persistence.DeleteTaskListRequest{
+		DomainID:     TestDomainID,
+		DomainName:   TestDomainName,
+		TaskListName: TestTaskListName,
+		TaskListType: int(types.TaskListTypeDecision),
+		RangeID:      0,
 	}
 }
