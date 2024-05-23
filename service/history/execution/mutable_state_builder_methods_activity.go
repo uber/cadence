@@ -561,8 +561,6 @@ func (e *mutableStateBuilder) AddActivityTaskTimedOutEvent(
 			tag.WorkflowEventID(e.GetNextEventID()),
 			tag.ErrorTypeInvalidHistoryAction,
 			tag.Bool(ok),
-			tag.WorkflowScheduleID(ai.ScheduleID),
-			tag.WorkflowStartedID(ai.StartedID),
 			tag.WorkflowTimeoutType(int64(timeoutType)))
 		return nil, e.createInternalServerError(opTag)
 	}
