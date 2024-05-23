@@ -40,20 +40,29 @@ import (
 	"time"
 )
 
-func setupMutableStateBuilder(t *testing.T) *mutableStateBuilder {
-	builder := &mutableStateBuilder{
-		decisionTaskManager: NewMockmutableStateDecisionTaskManager(gomock.NewController(t)),
+func CreateDecisionInfo() *DecisionInfo {
+	return &DecisionInfo{
+		Version:                    123,
+		ScheduleID:                 123,
+		StartedID:                  123,
+		RequestID:                  "123",
+		DecisionTimeout:            123,
+		StartedTimestamp:           123,
+		ScheduledTimestamp:         123,
+		OriginalScheduledTimestamp: 123,
 	}
-	return builder
 }
 
 func TestGetDecisionInfoMutableStateBuilder(t *testing.T) {
-	builder := setupMutableStateBuilder(t)
+	decisionTaskManager := NewMockmutableStateDecisionTaskManager(gomock.NewController(t))
+	builder := &mutableStateBuilder{
+		decisionTaskManager: decisionTaskManager,
+	}
 
 	scheduleEventID := int64(123)
-	rets := &DecisionInfo{}
+	rets := CreateDecisionInfo()
 
-	builder.decisionTaskManager.(*MockmutableStateDecisionTaskManager).EXPECT().GetDecisionInfo(scheduleEventID).Return(rets, true).Times(1)
+	decisionTaskManager.EXPECT().GetDecisionInfo(scheduleEventID).Return(rets, true).Times(1)
 
 	decisionInfo, ok := builder.GetDecisionInfo(scheduleEventID)
 
@@ -62,35 +71,47 @@ func TestGetDecisionInfoMutableStateBuilder(t *testing.T) {
 }
 
 func TestUpdateDecisionMutableStateBuilder(t *testing.T) {
-	builder := setupMutableStateBuilder(t)
+	decisionTaskManager := NewMockmutableStateDecisionTaskManager(gomock.NewController(t))
+	builder := &mutableStateBuilder{
+		decisionTaskManager: decisionTaskManager,
+	}
 
-	decision := &DecisionInfo{}
+	decision := CreateDecisionInfo()
 
-	builder.decisionTaskManager.(*MockmutableStateDecisionTaskManager).EXPECT().UpdateDecision(decision).Times(1)
+	decisionTaskManager.EXPECT().UpdateDecision(decision).Times(1)
 
 	builder.UpdateDecision(decision)
 }
 
 func TestDeleteDecisionMutableStateBuilder(t *testing.T) {
-	builder := setupMutableStateBuilder(t)
+	decisionTaskManager := NewMockmutableStateDecisionTaskManager(gomock.NewController(t))
+	builder := &mutableStateBuilder{
+		decisionTaskManager: decisionTaskManager,
+	}
 
-	builder.decisionTaskManager.(*MockmutableStateDecisionTaskManager).EXPECT().DeleteDecision().Times(1)
+	decisionTaskManager.EXPECT().DeleteDecision().Times(1)
 
 	builder.DeleteDecision()
 }
 
 func TestFailDecisionMutableStateBuilder(t *testing.T) {
-	builder := setupMutableStateBuilder(t)
+	decisionTaskManager := NewMockmutableStateDecisionTaskManager(gomock.NewController(t))
+	builder := &mutableStateBuilder{
+		decisionTaskManager: decisionTaskManager,
+	}
 
-	builder.decisionTaskManager.(*MockmutableStateDecisionTaskManager).EXPECT().FailDecision(true).Times(1)
+	decisionTaskManager.EXPECT().FailDecision(true).Times(1)
 
 	builder.FailDecision(true)
 }
 
 func TestHasProcessedOrPendingDecisionMutableStateBuilder(t *testing.T) {
-	builder := setupMutableStateBuilder(t)
+	decisionTaskManager := NewMockmutableStateDecisionTaskManager(gomock.NewController(t))
+	builder := &mutableStateBuilder{
+		decisionTaskManager: decisionTaskManager,
+	}
 
-	builder.decisionTaskManager.(*MockmutableStateDecisionTaskManager).EXPECT().HasProcessedOrPendingDecision().Return(true).Times(1)
+	decisionTaskManager.EXPECT().HasProcessedOrPendingDecision().Return(true).Times(1)
 
 	hasProcessedOrPendingDecision := builder.HasProcessedOrPendingDecision()
 
@@ -98,9 +119,12 @@ func TestHasProcessedOrPendingDecisionMutableStateBuilder(t *testing.T) {
 }
 
 func TestHasPendingDecisionMutableStateBuilder(t *testing.T) {
-	builder := setupMutableStateBuilder(t)
+	decisionTaskManager := NewMockmutableStateDecisionTaskManager(gomock.NewController(t))
+	builder := &mutableStateBuilder{
+		decisionTaskManager: decisionTaskManager,
+	}
 
-	builder.decisionTaskManager.(*MockmutableStateDecisionTaskManager).EXPECT().HasPendingDecision().Return(true).Times(1)
+	decisionTaskManager.EXPECT().HasPendingDecision().Return(true).Times(1)
 
 	hasPendingDecision := builder.HasPendingDecision()
 
@@ -108,11 +132,14 @@ func TestHasPendingDecisionMutableStateBuilder(t *testing.T) {
 }
 
 func TestGetPendingDecisionMutableStateBuilder(t *testing.T) {
-	builder := setupMutableStateBuilder(t)
+	decisionTaskManager := NewMockmutableStateDecisionTaskManager(gomock.NewController(t))
+	builder := &mutableStateBuilder{
+		decisionTaskManager: decisionTaskManager,
+	}
 
-	rets := &DecisionInfo{}
+	rets := CreateDecisionInfo()
 
-	builder.decisionTaskManager.(*MockmutableStateDecisionTaskManager).EXPECT().GetPendingDecision().Return(rets, true).Times(1)
+	decisionTaskManager.EXPECT().GetPendingDecision().Return(rets, true).Times(1)
 
 	pendingDecision, ok := builder.GetPendingDecision()
 
@@ -121,9 +148,12 @@ func TestGetPendingDecisionMutableStateBuilder(t *testing.T) {
 }
 
 func TestHasInFlightDecisionMutableStateBuilder(t *testing.T) {
-	builder := setupMutableStateBuilder(t)
+	decisionTaskManager := NewMockmutableStateDecisionTaskManager(gomock.NewController(t))
+	builder := &mutableStateBuilder{
+		decisionTaskManager: decisionTaskManager,
+	}
 
-	builder.decisionTaskManager.(*MockmutableStateDecisionTaskManager).EXPECT().HasInFlightDecision().Return(true).Times(1)
+	decisionTaskManager.EXPECT().HasInFlightDecision().Return(true).Times(1)
 
 	hasInFlightDecision := builder.HasInFlightDecision()
 
@@ -131,11 +161,14 @@ func TestHasInFlightDecisionMutableStateBuilder(t *testing.T) {
 }
 
 func TestGetInFlightDecisionMutableStateBuilder(t *testing.T) {
-	builder := setupMutableStateBuilder(t)
+	decisionTaskManager := NewMockmutableStateDecisionTaskManager(gomock.NewController(t))
+	builder := &mutableStateBuilder{
+		decisionTaskManager: decisionTaskManager,
+	}
 
-	rets := &DecisionInfo{}
+	rets := CreateDecisionInfo()
 
-	builder.decisionTaskManager.(*MockmutableStateDecisionTaskManager).EXPECT().GetInFlightDecision().Return(rets, true).Times(1)
+	decisionTaskManager.EXPECT().GetInFlightDecision().Return(rets, true).Times(1)
 
 	inFlightDecision, ok := builder.GetInFlightDecision()
 
@@ -144,11 +177,14 @@ func TestGetInFlightDecisionMutableStateBuilder(t *testing.T) {
 }
 
 func TestGetDecisionScheduleToStartTimeoutMutableStateBuilder(t *testing.T) {
-	builder := setupMutableStateBuilder(t)
+	decisionTaskManager := NewMockmutableStateDecisionTaskManager(gomock.NewController(t))
+	builder := &mutableStateBuilder{
+		decisionTaskManager: decisionTaskManager,
+	}
 
 	rets := time.Duration(123)
 
-	builder.decisionTaskManager.(*MockmutableStateDecisionTaskManager).EXPECT().GetDecisionScheduleToStartTimeout().Return(rets).Times(1)
+	decisionTaskManager.EXPECT().GetDecisionScheduleToStartTimeout().Return(rets).Times(1)
 
 	timeout := builder.GetDecisionScheduleToStartTimeout()
 
@@ -178,14 +214,17 @@ func TestAddFirstDecisionTaskScheduledMutableStateBuilder(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			builder := setupMutableStateBuilder(t)
-			builder.executionInfo = tc.executionInfo
-			builder.logger = loggerimpl.NewNopLogger()
+			decisionTaskManager := NewMockmutableStateDecisionTaskManager(gomock.NewController(t))
+			builder := &mutableStateBuilder{
+				decisionTaskManager: decisionTaskManager,
+				executionInfo:       tc.executionInfo,
+				logger:              loggerimpl.NewNopLogger(),
+			}
 
 			startEvent := &types.HistoryEvent{}
 
 			if !tc.wantErr {
-				builder.decisionTaskManager.(*MockmutableStateDecisionTaskManager).EXPECT().AddFirstDecisionTaskScheduled(startEvent).Return(nil).Times(1)
+				decisionTaskManager.EXPECT().AddFirstDecisionTaskScheduled(startEvent).Return(nil).Times(1)
 			}
 
 			err := builder.AddFirstDecisionTaskScheduled(startEvent)
@@ -222,14 +261,17 @@ func TestAddDecisionTaskScheduledEventMutableStateBuilder(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			builder := setupMutableStateBuilder(t)
-			builder.executionInfo = tc.executionInfo
-			builder.logger = loggerimpl.NewNopLogger()
+			decisionTaskManager := NewMockmutableStateDecisionTaskManager(gomock.NewController(t))
+			builder := &mutableStateBuilder{
+				decisionTaskManager: decisionTaskManager,
+				executionInfo:       tc.executionInfo,
+				logger:              loggerimpl.NewNopLogger(),
+			}
 
-			rets := &DecisionInfo{}
+			rets := CreateDecisionInfo()
 
 			if !tc.wantErr {
-				builder.decisionTaskManager.(*MockmutableStateDecisionTaskManager).EXPECT().AddDecisionTaskScheduledEvent(true).Return(rets, nil).Times(1)
+				decisionTaskManager.EXPECT().AddDecisionTaskScheduledEvent(true).Return(rets, nil).Times(1)
 			}
 
 			decisionInfo, err := builder.AddDecisionTaskScheduledEvent(true)
@@ -267,15 +309,18 @@ func TestAddDecisionTaskScheduledEventAsHeartbeatMutableStateBuilder(t *testing.
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			builder := setupMutableStateBuilder(t)
-			builder.executionInfo = tc.executionInfo
-			builder.logger = loggerimpl.NewNopLogger()
+			decisionTaskManager := NewMockmutableStateDecisionTaskManager(gomock.NewController(t))
+			builder := &mutableStateBuilder{
+				decisionTaskManager: decisionTaskManager,
+				executionInfo:       tc.executionInfo,
+				logger:              loggerimpl.NewNopLogger(),
+			}
 
-			rets := &DecisionInfo{}
+			rets := CreateDecisionInfo()
 			originalScheduledTimestamp := int64(1)
 
 			if !tc.wantErr {
-				builder.decisionTaskManager.(*MockmutableStateDecisionTaskManager).EXPECT().AddDecisionTaskScheduledEventAsHeartbeat(true, originalScheduledTimestamp).Return(rets, nil).Times(1)
+				decisionTaskManager.EXPECT().AddDecisionTaskScheduledEventAsHeartbeat(true, originalScheduledTimestamp).Return(rets, nil).Times(1)
 			}
 
 			decisionInfo, err := builder.AddDecisionTaskScheduledEventAsHeartbeat(true, originalScheduledTimestamp)
@@ -291,8 +336,12 @@ func TestAddDecisionTaskScheduledEventAsHeartbeatMutableStateBuilder(t *testing.
 }
 
 func TestReplicateTransientDecisionTaskScheduledMutableStateBuilder(t *testing.T) {
-	builder := setupMutableStateBuilder(t)
-	builder.decisionTaskManager.(*MockmutableStateDecisionTaskManager).EXPECT().ReplicateTransientDecisionTaskScheduled().Return(nil).Times(1)
+	decisionTaskManager := NewMockmutableStateDecisionTaskManager(gomock.NewController(t))
+	builder := &mutableStateBuilder{
+		decisionTaskManager: decisionTaskManager,
+	}
+
+	decisionTaskManager.EXPECT().ReplicateTransientDecisionTaskScheduled().Return(nil).Times(1)
 
 	err := builder.ReplicateTransientDecisionTaskScheduled()
 
@@ -300,14 +349,17 @@ func TestReplicateTransientDecisionTaskScheduledMutableStateBuilder(t *testing.T
 }
 
 func TestReplicateDecisionTaskScheduledEventMutableStateBuilder(t *testing.T) {
-	builder := setupMutableStateBuilder(t)
+	decisionTaskManager := NewMockmutableStateDecisionTaskManager(gomock.NewController(t))
+	builder := &mutableStateBuilder{
+		decisionTaskManager: decisionTaskManager,
+	}
 
 	var version, scheduleID, attempt, scheduleTimestamp, originalScheduledTimestamp int64 = 1, 2, 3, 4, 5
 	startToCloseTimeoutSeconds := int32(6)
 	taskList := "taskList"
-	rets := &DecisionInfo{}
+	rets := CreateDecisionInfo()
 
-	builder.decisionTaskManager.(*MockmutableStateDecisionTaskManager).EXPECT().ReplicateDecisionTaskScheduledEvent(version, scheduleID, taskList, startToCloseTimeoutSeconds, attempt, scheduleTimestamp, originalScheduledTimestamp, true).Return(rets, nil).Times(1)
+	decisionTaskManager.EXPECT().ReplicateDecisionTaskScheduledEvent(version, scheduleID, taskList, startToCloseTimeoutSeconds, attempt, scheduleTimestamp, originalScheduledTimestamp, true).Return(rets, nil).Times(1)
 
 	decisionInfo, err := builder.ReplicateDecisionTaskScheduledEvent(version, scheduleID, taskList, startToCloseTimeoutSeconds, attempt, scheduleTimestamp, originalScheduledTimestamp, true)
 
@@ -341,17 +393,20 @@ func TestAddDecisionTaskStartedEventMutableStateBuilder(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			builder := setupMutableStateBuilder(t)
-			builder.executionInfo = tc.executionInfo
-			builder.logger = loggerimpl.NewNopLogger()
+			decisionTaskManager := NewMockmutableStateDecisionTaskManager(gomock.NewController(t))
+			builder := &mutableStateBuilder{
+				decisionTaskManager: decisionTaskManager,
+				executionInfo:       tc.executionInfo,
+				logger:              loggerimpl.NewNopLogger(),
+			}
 
 			scheduleEventID := int64(123)
 			requestID := "requestID"
 			rets0 := &types.HistoryEvent{}
-			rets1 := &DecisionInfo{}
+			rets1 := CreateDecisionInfo()
 
 			if !tc.wantErr {
-				builder.decisionTaskManager.(*MockmutableStateDecisionTaskManager).EXPECT().AddDecisionTaskStartedEvent(scheduleEventID, requestID, tc.request).Return(rets0, rets1, nil).Times(1)
+				decisionTaskManager.EXPECT().AddDecisionTaskStartedEvent(scheduleEventID, requestID, tc.request).Return(rets0, rets1, nil).Times(1)
 			}
 
 			historyEvent, decisionInfo, err := builder.AddDecisionTaskStartedEvent(scheduleEventID, requestID, tc.request)
@@ -368,29 +423,34 @@ func TestAddDecisionTaskStartedEventMutableStateBuilder(t *testing.T) {
 }
 
 func TestReplicateDecisionTaskStartedEventMutableStateBuilder(t *testing.T) {
-	builder := setupMutableStateBuilder(t)
+	decisionTaskManager := NewMockmutableStateDecisionTaskManager(gomock.NewController(t))
+	builder := &mutableStateBuilder{
+		decisionTaskManager: decisionTaskManager,
+	}
 
-	decision := &DecisionInfo{}
 	var version, scheduleID, startedID, timestamp int64 = 1, 2, 3, 4
 	requestID := "requestID"
-	rets := &DecisionInfo{}
+	rets := CreateDecisionInfo()
 
-	builder.decisionTaskManager.(*MockmutableStateDecisionTaskManager).EXPECT().ReplicateDecisionTaskStartedEvent(decision, version, scheduleID, startedID, requestID, timestamp).Return(rets, nil).Times(1)
+	decisionTaskManager.EXPECT().ReplicateDecisionTaskStartedEvent(rets, version, scheduleID, startedID, requestID, timestamp).Return(rets, nil).Times(1)
 
-	decisionInfo, err := builder.ReplicateDecisionTaskStartedEvent(decision, version, scheduleID, startedID, requestID, timestamp)
+	decisionInfo, err := builder.ReplicateDecisionTaskStartedEvent(rets, version, scheduleID, startedID, requestID, timestamp)
 
 	assert.NoError(t, err)
 	assert.Equal(t, rets, decisionInfo)
 }
 
 func TestCreateTransientDecisionEventsMutableStateBuilder(t *testing.T) {
-	builder := setupMutableStateBuilder(t)
+	decisionTaskManager := NewMockmutableStateDecisionTaskManager(gomock.NewController(t))
+	builder := &mutableStateBuilder{
+		decisionTaskManager: decisionTaskManager,
+	}
 
-	decision := &DecisionInfo{}
+	decision := CreateDecisionInfo()
 	identity := "identity"
 	rets := &types.HistoryEvent{}
 
-	builder.decisionTaskManager.(*MockmutableStateDecisionTaskManager).EXPECT().CreateTransientDecisionEvents(decision, identity).Return(rets, rets).Times(1)
+	decisionTaskManager.EXPECT().CreateTransientDecisionEvents(decision, identity).Return(rets, rets).Times(1)
 
 	historyEvent0, historyEvent1 := builder.CreateTransientDecisionEvents(decision, identity)
 
@@ -480,9 +540,12 @@ func TestAddDecisionTaskCompletedEventMutableStateBuilder(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			builder := setupMutableStateBuilder(t)
-			builder.executionInfo = tc.executionInfo
-			builder.logger = loggerimpl.NewNopLogger()
+			decisionTaskManager := NewMockmutableStateDecisionTaskManager(gomock.NewController(t))
+			builder := &mutableStateBuilder{
+				decisionTaskManager: decisionTaskManager,
+				executionInfo:       tc.executionInfo,
+				logger:              loggerimpl.NewNopLogger(),
+			}
 
 			var scheduleEventID, startedEventID int64 = 123, 234
 			request := &types.RespondDecisionTaskCompletedRequest{}
@@ -490,7 +553,7 @@ func TestAddDecisionTaskCompletedEventMutableStateBuilder(t *testing.T) {
 			rets := &types.HistoryEvent{}
 
 			if !tc.wantErr {
-				builder.decisionTaskManager.(*MockmutableStateDecisionTaskManager).EXPECT().AddDecisionTaskCompletedEvent(scheduleEventID, startedEventID, request, maxResetPoints).Return(rets, nil).Times(1)
+				decisionTaskManager.EXPECT().AddDecisionTaskCompletedEvent(scheduleEventID, startedEventID, request, maxResetPoints).Return(rets, nil).Times(1)
 			}
 
 			historyEvent, err := builder.AddDecisionTaskCompletedEvent(scheduleEventID, startedEventID, request, maxResetPoints)
@@ -506,11 +569,14 @@ func TestAddDecisionTaskCompletedEventMutableStateBuilder(t *testing.T) {
 }
 
 func TestReplicateDecisionTaskCompletedEventMutableStateBuilder(t *testing.T) {
-	builder := setupMutableStateBuilder(t)
+	decisionTaskManager := NewMockmutableStateDecisionTaskManager(gomock.NewController(t))
+	builder := &mutableStateBuilder{
+		decisionTaskManager: decisionTaskManager,
+	}
 
 	event := &types.HistoryEvent{}
 
-	builder.decisionTaskManager.(*MockmutableStateDecisionTaskManager).EXPECT().ReplicateDecisionTaskCompletedEvent(event).Return(nil).Times(1)
+	decisionTaskManager.EXPECT().ReplicateDecisionTaskCompletedEvent(event).Return(nil).Times(1)
 
 	err := builder.ReplicateDecisionTaskCompletedEvent(event)
 
@@ -540,15 +606,18 @@ func TestAddDecisionTaskTimedOutEventMutableStateBuilder(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			builder := setupMutableStateBuilder(t)
-			builder.executionInfo = tc.executionInfo
-			builder.logger = loggerimpl.NewNopLogger()
+			decisionTaskManager := NewMockmutableStateDecisionTaskManager(gomock.NewController(t))
+			builder := &mutableStateBuilder{
+				decisionTaskManager: decisionTaskManager,
+				executionInfo:       tc.executionInfo,
+				logger:              loggerimpl.NewNopLogger(),
+			}
 
 			var scheduleEventID, startedEventID int64 = 123, 234
 			rets := &types.HistoryEvent{}
 
 			if !tc.wantErr {
-				builder.decisionTaskManager.(*MockmutableStateDecisionTaskManager).EXPECT().AddDecisionTaskTimedOutEvent(scheduleEventID, startedEventID).Return(rets, nil).Times(1)
+				decisionTaskManager.EXPECT().AddDecisionTaskTimedOutEvent(scheduleEventID, startedEventID).Return(rets, nil).Times(1)
 			}
 
 			historyEvent, err := builder.AddDecisionTaskTimedOutEvent(scheduleEventID, startedEventID)
@@ -564,11 +633,14 @@ func TestAddDecisionTaskTimedOutEventMutableStateBuilder(t *testing.T) {
 }
 
 func TestReplicateDecisionTaskTimedOutEventMutableStateBuilder(t *testing.T) {
-	builder := setupMutableStateBuilder(t)
+	decisionTaskManager := NewMockmutableStateDecisionTaskManager(gomock.NewController(t))
+	builder := &mutableStateBuilder{
+		decisionTaskManager: decisionTaskManager,
+	}
 
 	event := &types.HistoryEvent{}
 
-	builder.decisionTaskManager.(*MockmutableStateDecisionTaskManager).EXPECT().ReplicateDecisionTaskTimedOutEvent(event).Return(nil).Times(1)
+	decisionTaskManager.EXPECT().ReplicateDecisionTaskTimedOutEvent(event).Return(nil).Times(1)
 
 	err := builder.ReplicateDecisionTaskTimedOutEvent(event)
 
@@ -598,15 +670,18 @@ func TestAddDecisionTaskScheduleToStartTimeoutEventMutableStateBuilder(t *testin
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			builder := setupMutableStateBuilder(t)
-			builder.executionInfo = tc.executionInfo
-			builder.logger = loggerimpl.NewNopLogger()
+			decisionTaskManager := NewMockmutableStateDecisionTaskManager(gomock.NewController(t))
+			builder := &mutableStateBuilder{
+				decisionTaskManager: decisionTaskManager,
+				executionInfo:       tc.executionInfo,
+				logger:              loggerimpl.NewNopLogger(),
+			}
 
 			scheduleEventID := int64(123)
 			rets := &types.HistoryEvent{}
 
 			if !tc.wantErr {
-				builder.decisionTaskManager.(*MockmutableStateDecisionTaskManager).EXPECT().AddDecisionTaskScheduleToStartTimeoutEvent(scheduleEventID).Return(rets, nil).Times(1)
+				decisionTaskManager.EXPECT().AddDecisionTaskScheduleToStartTimeoutEvent(scheduleEventID).Return(rets, nil).Times(1)
 			}
 
 			historyEvent, err := builder.AddDecisionTaskScheduleToStartTimeoutEvent(scheduleEventID)
@@ -644,16 +719,19 @@ func TestAddDecisionTaskResetTimeoutEventMutableStateBuilder(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			builder := setupMutableStateBuilder(t)
-			builder.executionInfo = tc.executionInfo
-			builder.logger = loggerimpl.NewNopLogger()
+			decisionTaskManager := NewMockmutableStateDecisionTaskManager(gomock.NewController(t))
+			builder := &mutableStateBuilder{
+				decisionTaskManager: decisionTaskManager,
+				executionInfo:       tc.executionInfo,
+				logger:              loggerimpl.NewNopLogger(),
+			}
 
 			var scheduleEventID, forkEventVersion int64 = 123, 1
 			baserRunID, newRunID, reason, resetRequestID := "baseRunID", "newRunID", "reason", "resetRequestID"
 			rets := &types.HistoryEvent{}
 
 			if !tc.wantErr {
-				builder.decisionTaskManager.(*MockmutableStateDecisionTaskManager).EXPECT().AddDecisionTaskResetTimeoutEvent(scheduleEventID, baserRunID, newRunID, forkEventVersion, reason, resetRequestID).Return(rets, nil).Times(1)
+				decisionTaskManager.EXPECT().AddDecisionTaskResetTimeoutEvent(scheduleEventID, baserRunID, newRunID, forkEventVersion, reason, resetRequestID).Return(rets, nil).Times(1)
 			}
 
 			historyEvent, err := builder.AddDecisionTaskResetTimeoutEvent(scheduleEventID, baserRunID, newRunID, forkEventVersion, reason, resetRequestID)
@@ -691,9 +769,12 @@ func TestAddDecisionTaskFailedEventMutableStateBuilder(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			builder := setupMutableStateBuilder(t)
-			builder.executionInfo = tc.executionInfo
-			builder.logger = loggerimpl.NewNopLogger()
+			decisionTaskManager := NewMockmutableStateDecisionTaskManager(gomock.NewController(t))
+			builder := &mutableStateBuilder{
+				decisionTaskManager: decisionTaskManager,
+				executionInfo:       tc.executionInfo,
+				logger:              loggerimpl.NewNopLogger(),
+			}
 
 			var scheduleEventID, startedEventID, forkEventVersion int64 = 123, 234, 1
 			cause := types.DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure
@@ -702,7 +783,7 @@ func TestAddDecisionTaskFailedEventMutableStateBuilder(t *testing.T) {
 			rets := &types.HistoryEvent{}
 
 			if !tc.wantErr {
-				builder.decisionTaskManager.(*MockmutableStateDecisionTaskManager).EXPECT().AddDecisionTaskFailedEvent(scheduleEventID, startedEventID, cause, details, identity, reason, binChecksum, baseRunID, newRunID, forkEventVersion, resetRequestID).Return(rets, nil).Times(1)
+				decisionTaskManager.EXPECT().AddDecisionTaskFailedEvent(scheduleEventID, startedEventID, cause, details, identity, reason, binChecksum, baseRunID, newRunID, forkEventVersion, resetRequestID).Return(rets, nil).Times(1)
 			}
 
 			historyEvent, err := builder.AddDecisionTaskFailedEvent(scheduleEventID, startedEventID, cause, details, identity, reason, binChecksum, baseRunID, newRunID, forkEventVersion, resetRequestID)
@@ -718,11 +799,14 @@ func TestAddDecisionTaskFailedEventMutableStateBuilder(t *testing.T) {
 }
 
 func TestReplicateDecisionTaskFailedEventMutableStateBuilder(t *testing.T) {
-	builder := setupMutableStateBuilder(t)
+	decisionTaskManager := NewMockmutableStateDecisionTaskManager(gomock.NewController(t))
+	builder := &mutableStateBuilder{
+		decisionTaskManager: decisionTaskManager,
+	}
 
 	event := &types.HistoryEvent{}
 
-	builder.decisionTaskManager.(*MockmutableStateDecisionTaskManager).EXPECT().ReplicateDecisionTaskFailedEvent(event).Return(nil).Times(1)
+	decisionTaskManager.EXPECT().ReplicateDecisionTaskFailedEvent(event).Return(nil).Times(1)
 
 	err := builder.ReplicateDecisionTaskFailedEvent(event)
 
