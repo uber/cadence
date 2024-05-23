@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
@@ -714,4 +715,59 @@ func (e *mutableStateBuilder) ReplicateActivityTaskCanceledEvent(
 	scheduleID := attributes.GetScheduledEventID()
 
 	return e.DeleteActivity(scheduleID)
+}
+
+func (e *mutableStateBuilder) RetryActivity(
+	ai *persistence.ActivityInfo,
+	failureReason string,
+	failureDetails []byte,
+) (bool, error) {
+
+	opTag := tag.WorkflowActionActivityTaskRetry
+	if err := e.checkMutability(opTag); err != nil {
+		return false, err
+	}
+
+	if !ai.HasRetryPolicy || ai.CancelRequested {
+		return false, nil
+	}
+
+	now := e.timeSource.Now()
+
+	backoffInterval := getBackoffInterval(
+		now,
+		ai.ExpirationTime,
+		ai.Attempt,
+		ai.MaximumAttempts,
+		ai.InitialInterval,
+		ai.MaximumInterval,
+		ai.BackoffCoefficient,
+		failureReason,
+		ai.NonRetriableErrors,
+	)
+	if backoffInterval == backoff.NoBackoff {
+		return false, nil
+	}
+
+	// a retry is needed, update activity info for next retry
+	ai.Version = e.GetCurrentVersion()
+	ai.Attempt++
+	ai.ScheduledTime = now.Add(backoffInterval) // update to next schedule time
+	ai.StartedID = common.EmptyEventID
+	ai.RequestID = ""
+	ai.StartedTime = time.Time{}
+	ai.TimerTaskStatus = TimerTaskStatusNone
+	ai.LastFailureReason = failureReason
+	ai.LastWorkerIdentity = ai.StartedIdentity
+	ai.LastFailureDetails = failureDetails
+
+	if err := e.taskGenerator.GenerateActivityRetryTasks(
+		ai.ScheduleID,
+	); err != nil {
+		return false, err
+	}
+
+	e.updateActivityInfos[ai.ScheduleID] = ai
+	e.syncActivityTasks[ai.ScheduleID] = struct{}{}
+	return true, nil
 }
