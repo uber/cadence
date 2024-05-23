@@ -64,6 +64,13 @@ func TestDynamicConfigEntryCopy(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			valCopy := tc.input.Copy()
+			assert.Equal(t, tc.input, valCopy)
+			// check if modifying the copy does not modify the original
+			if valCopy != nil && valCopy.Values != nil {
+				valCopy.Values[0].Value.Data = []byte("modified")
+				assert.NotEqual(t, tc.input, valCopy)
+			}
 			assert.Equal(t, tc.input, tc.input.Copy())
 		})
 	}
@@ -100,7 +107,13 @@ func TestDynamicConfigFilterCopy(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.input, tc.input.Copy())
+			valCopy := tc.input.Copy()
+			assert.Equal(t, tc.input, valCopy)
+			// check if modifying the copy does not modify the original
+			if valCopy != nil {
+				valCopy.Name = "modified"
+				assert.NotEqual(t, tc.input, valCopy)
+			}
 		})
 	}
 }
@@ -133,7 +146,13 @@ func TestDynamicConfigValueCopy(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.input, tc.input.Copy())
+			// check if modifying the copy does not modify the original
+			valCopy := tc.input.Copy()
+			assert.Equal(t, tc.input, valCopy)
+			if valCopy != nil && valCopy.Value != nil {
+				valCopy.Value.Data = []byte("modified")
+				assert.NotEqual(t, tc.input, valCopy)
+			}
 		})
 	}
 }
