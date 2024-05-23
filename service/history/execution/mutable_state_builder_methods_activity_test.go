@@ -120,6 +120,7 @@ func Test__UpdateActivity(t *testing.T) {
 		mb.pendingActivityInfoIDs[1] = ai
 		err := mb.UpdateActivity(ai)
 		assert.NoError(t, err)
+		assert.Equal(t, ai, mb.updateActivityInfos[1])
 	})
 }
 
@@ -221,6 +222,10 @@ func Test__ReplicateActivityTaskCanceledEvent(t *testing.T) {
 	mb.pendingActivityIDToEventID["1"] = 1
 	err := mb.ReplicateActivityTaskCanceledEvent(event)
 	assert.NoError(t, err)
+	_, ok := mb.pendingActivityInfoIDs[1]
+	assert.False(t, ok)
+	_, ok = mb.pendingActivityIDToEventID["1"]
+	assert.False(t, ok)
 }
 
 func Test__ReplicateActivityTaskCancelRequestedEvent(t *testing.T) {
@@ -233,11 +238,13 @@ func Test__ReplicateActivityTaskCancelRequestedEvent(t *testing.T) {
 	}
 	ai := &persistence.ActivityInfo{
 		ActivityID: "1",
+		ScheduleID: 1,
 	}
 	mb.pendingActivityInfoIDs[1] = ai
 	mb.pendingActivityIDToEventID["1"] = 1
 	err := mb.ReplicateActivityTaskCancelRequestedEvent(event)
 	assert.NoError(t, err)
+	assert.Equal(t, ai, mb.updateActivityInfos[1])
 }
 
 func Test__ReplicateActivityTaskTimedOutEvent(t *testing.T) {
@@ -255,6 +262,10 @@ func Test__ReplicateActivityTaskTimedOutEvent(t *testing.T) {
 	mb.pendingActivityIDToEventID["1"] = 1
 	err := mb.ReplicateActivityTaskTimedOutEvent(event)
 	assert.NoError(t, err)
+	_, ok := mb.pendingActivityInfoIDs[1]
+	assert.False(t, ok)
+	_, ok = mb.pendingActivityIDToEventID["1"]
+	assert.False(t, ok)
 }
 
 func Test__ReplicateActivityTaskFailedEvent(t *testing.T) {
@@ -272,6 +283,10 @@ func Test__ReplicateActivityTaskFailedEvent(t *testing.T) {
 	mb.pendingActivityIDToEventID["1"] = 1
 	err := mb.ReplicateActivityTaskFailedEvent(event)
 	assert.NoError(t, err)
+	_, ok := mb.pendingActivityInfoIDs[1]
+	assert.False(t, ok)
+	_, ok = mb.pendingActivityIDToEventID["1"]
+	assert.False(t, ok)
 }
 
 func Test__ReplicateActivityTaskCompletedEvent(t *testing.T) {
@@ -289,6 +304,10 @@ func Test__ReplicateActivityTaskCompletedEvent(t *testing.T) {
 	mb.pendingActivityIDToEventID["1"] = 1
 	err := mb.ReplicateActivityTaskCompletedEvent(event)
 	assert.NoError(t, err)
+	_, ok := mb.pendingActivityInfoIDs[1]
+	assert.False(t, ok)
+	_, ok = mb.pendingActivityIDToEventID["1"]
+	assert.False(t, ok)
 }
 
 func Test__AddActivityTaskCanceledEvent(t *testing.T) {
