@@ -625,6 +625,48 @@ func TestSerializeWorkflowSnapshot(t *testing.T) {
 	}
 }
 
+func TestDeserializeBufferedEvents(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		mockedSerializer := NewMockPayloadSerializer(ctrl)
+
+		manager := NewExecutionManagerImpl(nil, testlogger.New(t), mockedSerializer).(*executionManagerImpl)
+
+		eventCounter := 0
+
+		mockedSerializer.EXPECT().DeserializeBatchEvents(gomock.Any()).DoAndReturn(func(data *DataBlob) ([]*types.HistoryEvent, error) {
+			res := []*types.HistoryEvent{{ID: int64(eventCounter)}, {ID: int64(eventCounter + 1)}}
+			eventCounter += 2
+			return res, nil
+		}).Times(2)
+
+		events := []*DataBlob{
+			sampleEventData(),
+			sampleEventData(),
+		}
+
+		res, err := manager.DeserializeBufferedEvents(events)
+		assert.NoError(t, err)
+		assert.Equal(t, []*types.HistoryEvent{{ID: 0}, {ID: 1}, {ID: 2}, {ID: 3}}, res)
+	})
+	t.Run("error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		mockedSerializer := NewMockPayloadSerializer(ctrl)
+
+		manager := NewExecutionManagerImpl(nil, testlogger.New(t), mockedSerializer).(*executionManagerImpl)
+
+		mockedSerializer.EXPECT().DeserializeBatchEvents(gomock.Any()).Return(nil, assert.AnError).Times(1)
+
+		events := []*DataBlob{
+			sampleEventData(),
+		}
+
+		res, err := manager.DeserializeBufferedEvents(events)
+		assert.ErrorIs(t, err, assert.AnError)
+		assert.Nil(t, res)
+	})
+}
+
 func sampleInternalActivityInfo(name string) *InternalActivityInfo {
 	return &InternalActivityInfo{
 		Version:        1,
