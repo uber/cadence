@@ -23,7 +23,7 @@
 package nosql
 
 import (
-	ctx "context"
+	"context"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -75,6 +75,17 @@ func setupNoSQLStoreMocks(t *testing.T) (*nosqlTaskStore, *nosqlplugin.MockDB) {
 	return store, dbMock
 }
 
+func TestGetOrphanTasks(t *testing.T) {
+	store, _ := setupNoSQLStoreMocks(t)
+
+	// We just expect the function to return an error so we don't need to check the result
+	_, err := store.GetOrphanTasks(context.Background(), nil)
+
+	var expectedErr *types.InternalServiceError
+	assert.ErrorAs(t, err, &expectedErr)
+	assert.ErrorContains(t, err, "Unimplemented call to GetOrphanTasks for NoSQL")
+}
+
 func TestGetTaskListSize(t *testing.T) {
 	store, db := setupNoSQLStoreMocks(t)
 
@@ -90,7 +101,7 @@ func TestGetTaskListSize(t *testing.T) {
 		},
 	).Return(int64(123), nil)
 
-	size, err := store.GetTaskListSize(ctx.Background(), &persistence.GetTaskListSizeRequest{
+	size, err := store.GetTaskListSize(context.Background(), &persistence.GetTaskListSizeRequest{
 		DomainID:     TestDomainID,
 		DomainName:   TestDomainName,
 		TaskListName: TestTaskListName,
