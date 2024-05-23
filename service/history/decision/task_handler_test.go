@@ -25,7 +25,9 @@ package decision
 import (
 	"context"
 	"errors"
+	"github.com/uber/cadence/common/backoff"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -712,6 +714,416 @@ func TestHandleDecisionUpsertWorkflowSearchAttributes(t *testing.T) {
 					return decisionType
 				}(12), //types.DecisionTypeUpsertWorkflowSearchAttributes == 12
 				UpsertWorkflowSearchAttributesDecisionAttributes: test.attributes,
+			}
+			err := taskHandler.handleDecision(context.Background(), decision)
+			test.asserts(t, taskHandler, test.attributes, err)
+		})
+	}
+}
+
+func TestHandleDecisionStartTimer(t *testing.T) {
+	tests := []struct {
+		name            string
+		expectMockCalls func(taskHandler *taskHandlerImpl, attr *types.StartTimerDecisionAttributes)
+		attributes      *types.StartTimerDecisionAttributes
+		asserts         func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.StartTimerDecisionAttributes, err error)
+	}{
+		{
+			name:       "success",
+			attributes: &types.StartTimerDecisionAttributes{TimerID: "test-timer-id"},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.StartTimerDecisionAttributes) {
+				attr.StartToFireTimeoutSeconds = new(int64)
+				*attr.StartToFireTimeoutSeconds = 60
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddTimerStartedEvent(testTaskCompletedID, attr)
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.StartTimerDecisionAttributes, err error) {
+				assert.Nil(t, err)
+			},
+		},
+		{
+			name:       "attributes validation failure",
+			attributes: &types.StartTimerDecisionAttributes{TimerID: "test-timer-id"},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.StartTimerDecisionAttributes, err error) {
+				assert.True(t, taskHandler.stopProcessing)
+			},
+		},
+		{
+			name:       "bad request error",
+			attributes: &types.StartTimerDecisionAttributes{TimerID: "test-timer-id"},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.StartTimerDecisionAttributes) {
+				attr.StartToFireTimeoutSeconds = new(int64)
+				*attr.StartToFireTimeoutSeconds = 60
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddTimerStartedEvent(testTaskCompletedID, attr).Return(nil, nil, &types.BadRequestError{Message: "some types.BadRequestError error"})
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.StartTimerDecisionAttributes, err error) {
+				assert.Nil(t, err)
+				assert.True(t, taskHandler.failDecision)
+				assert.Equal(t, types.DecisionTaskFailedCauseStartTimerDuplicateID, *taskHandler.failDecisionCause)
+			},
+		},
+		{
+			name:       "default case error",
+			attributes: &types.StartTimerDecisionAttributes{TimerID: "test-timer-id"},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.StartTimerDecisionAttributes) {
+				attr.StartToFireTimeoutSeconds = new(int64)
+				*attr.StartToFireTimeoutSeconds = 60
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddTimerStartedEvent(testTaskCompletedID, attr).Return(nil, nil, errors.New("some random error"))
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.StartTimerDecisionAttributes, err error) {
+				assert.Equal(t, "some random error", err.Error())
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			taskHandler := newTaskHandlerForTest(t)
+			if test.expectMockCalls != nil {
+				test.expectMockCalls(taskHandler, test.attributes)
+			}
+			decision := &types.Decision{
+				DecisionType: func(i int32) *types.DecisionType {
+					decisionType := new(types.DecisionType)
+					*decisionType = types.DecisionType(i)
+					return decisionType
+				}(2), //types.DecisionTypeStartTimer
+				StartTimerDecisionAttributes: test.attributes,
+			}
+			err := taskHandler.handleDecision(context.Background(), decision)
+			test.asserts(t, taskHandler, test.attributes, err)
+		})
+	}
+}
+
+func TestHandleDecisionCompleteWorkflow(t *testing.T) {
+	tests := []struct {
+		name            string
+		expectMockCalls func(taskHandler *taskHandlerImpl, attr *types.CompleteWorkflowExecutionDecisionAttributes)
+		attributes      *types.CompleteWorkflowExecutionDecisionAttributes
+		asserts         func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.CompleteWorkflowExecutionDecisionAttributes, err error)
+	}{
+		{
+			name:       "handler has unhandled events",
+			attributes: &types.CompleteWorkflowExecutionDecisionAttributes{},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.CompleteWorkflowExecutionDecisionAttributes) {
+				taskHandler.hasUnhandledEventsBeforeDecisions = true
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.CompleteWorkflowExecutionDecisionAttributes, err error) {
+				assert.Equal(t, types.DecisionTaskFailedCauseUnhandledDecision, *taskHandler.failDecisionCause)
+				assert.Equal(t, "cannot complete workflow, new pending decisions were scheduled while this decision was processing", *taskHandler.failMessage)
+			},
+		},
+		{
+			name: "attributes validation failure",
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.CompleteWorkflowExecutionDecisionAttributes, err error) {
+				assert.Equal(t, types.DecisionTaskFailedCauseBadCompleteWorkflowExecutionAttributes, *taskHandler.failDecisionCause)
+			},
+		},
+		{
+			name:       "blob size limit check failure",
+			attributes: &types.CompleteWorkflowExecutionDecisionAttributes{Result: []byte("some-result")},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.CompleteWorkflowExecutionDecisionAttributes) {
+				taskHandler.sizeLimitChecker.blobSizeLimitError = 5
+				taskHandler.sizeLimitChecker.blobSizeLimitWarn = 3
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{})
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddFailWorkflowEvent(taskHandler.sizeLimitChecker.completedID,
+					&types.FailWorkflowExecutionDecisionAttributes{
+						Reason:  common.StringPtr(common.FailureReasonDecisionBlobSizeExceedsLimit),
+						Details: []byte("CompleteWorkflowExecutionDecisionAttributes.Result exceeds size limit."),
+					})
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.CompleteWorkflowExecutionDecisionAttributes, err error) {
+				assert.True(t, taskHandler.stopProcessing)
+				assert.Nil(t, err)
+			},
+		},
+		{
+			name:       "workflow not running",
+			attributes: &types.CompleteWorkflowExecutionDecisionAttributes{Result: []byte("some-result")},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.CompleteWorkflowExecutionDecisionAttributes) {
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{})
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsWorkflowExecutionRunning().Return(false)
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.CompleteWorkflowExecutionDecisionAttributes, err error) {
+				assert.Nil(t, err)
+			},
+		},
+		{
+			name:       "failure to get cron duration",
+			attributes: &types.CompleteWorkflowExecutionDecisionAttributes{Result: []byte("some-result")},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.CompleteWorkflowExecutionDecisionAttributes) {
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{})
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsWorkflowExecutionRunning().Return(true)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsCancelRequested()
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetCronBackoffDuration(context.Background()).Return(time.Second, errors.New("some error"))
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.CompleteWorkflowExecutionDecisionAttributes, err error) {
+				assert.Equal(t, "some error", err.Error())
+			},
+		},
+		{
+			name:       "internal service error cancel requested",
+			attributes: &types.CompleteWorkflowExecutionDecisionAttributes{Result: []byte("some-result")},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.CompleteWorkflowExecutionDecisionAttributes) {
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{})
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsWorkflowExecutionRunning().Return(true)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsCancelRequested().Return(true, "")
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetCronBackoffDuration(context.Background()).Return(backoff.NoBackoff, nil)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddCompletedWorkflowEvent(taskHandler.decisionTaskCompletedID, attr).Return(nil, errors.New("some error"))
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.CompleteWorkflowExecutionDecisionAttributes, err error) {
+				assert.Equal(t, &types.InternalServiceError{Message: "Unable to add complete workflow event."}, err)
+			},
+		},
+		{
+			name:       "cancel requested - sucess",
+			attributes: &types.CompleteWorkflowExecutionDecisionAttributes{Result: []byte("some-result")},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.CompleteWorkflowExecutionDecisionAttributes) {
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{})
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsWorkflowExecutionRunning().Return(true)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsCancelRequested().Return(true, "")
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetCronBackoffDuration(context.Background()).Return(backoff.NoBackoff, nil)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddCompletedWorkflowEvent(taskHandler.decisionTaskCompletedID, attr)
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.CompleteWorkflowExecutionDecisionAttributes, err error) {
+				assert.Nil(t, err)
+			},
+		},
+		{
+			name:       "GetStartedEvent failure on cron workflow",
+			attributes: &types.CompleteWorkflowExecutionDecisionAttributes{Result: []byte("some-result")},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.CompleteWorkflowExecutionDecisionAttributes) {
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{})
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsWorkflowExecutionRunning().Return(true)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsCancelRequested()
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetCronBackoffDuration(context.Background())
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetStartEvent(context.Background()).Return(nil, errors.New("some error"))
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.CompleteWorkflowExecutionDecisionAttributes, err error) {
+				assert.NotNil(t, err)
+				assert.Equal(t, "some error", err.Error())
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			taskHandler := newTaskHandlerForTest(t)
+			if test.expectMockCalls != nil {
+				test.expectMockCalls(taskHandler, test.attributes)
+			}
+			decision := &types.Decision{
+				DecisionType: func(i int32) *types.DecisionType {
+					decisionType := new(types.DecisionType)
+					*decisionType = types.DecisionType(i)
+					return decisionType
+				}(3), //types.DecisionTypeCompleteWorkflowExecution
+				CompleteWorkflowExecutionDecisionAttributes: test.attributes,
+			}
+			err := taskHandler.handleDecision(context.Background(), decision)
+			test.asserts(t, taskHandler, test.attributes, err)
+		})
+	}
+}
+
+func TestHandleDecisionFailWorkflow(t *testing.T) {
+	tests := []struct {
+		name            string
+		expectMockCalls func(taskHandler *taskHandlerImpl, attr *types.FailWorkflowExecutionDecisionAttributes)
+		attributes      *types.FailWorkflowExecutionDecisionAttributes
+		asserts         func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.FailWorkflowExecutionDecisionAttributes, err error)
+	}{
+		{
+			name:       "handler has unhandled events",
+			attributes: &types.FailWorkflowExecutionDecisionAttributes{},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.FailWorkflowExecutionDecisionAttributes) {
+				taskHandler.hasUnhandledEventsBeforeDecisions = true
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.FailWorkflowExecutionDecisionAttributes, err error) {
+				assert.Equal(t, types.DecisionTaskFailedCauseUnhandledDecision, *taskHandler.failDecisionCause)
+				assert.Equal(t, "cannot complete workflow, new pending decisions were scheduled while this decision was processing", *taskHandler.failMessage)
+			},
+		},
+		{
+			name: "attributes validation failure",
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.FailWorkflowExecutionDecisionAttributes, err error) {
+				assert.Equal(t, types.DecisionTaskFailedCauseBadFailWorkflowExecutionAttributes, *taskHandler.failDecisionCause)
+				assert.Equal(t, "FailWorkflowExecutionDecisionAttributes is not set on decision.", *taskHandler.failMessage)
+			},
+		},
+		{
+			name:       "blob size limit check failure",
+			attributes: &types.FailWorkflowExecutionDecisionAttributes{Details: []byte("some-details")},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.FailWorkflowExecutionDecisionAttributes) {
+				attr.Reason = new(string)
+				*attr.Reason = "some reason"
+				taskHandler.sizeLimitChecker.blobSizeLimitWarn = 3
+				taskHandler.sizeLimitChecker.blobSizeLimitError = 5
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{})
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddFailWorkflowEvent(taskHandler.sizeLimitChecker.completedID,
+					&types.FailWorkflowExecutionDecisionAttributes{
+						Reason:  common.StringPtr(common.FailureReasonDecisionBlobSizeExceedsLimit),
+						Details: []byte("FailWorkflowExecutionDecisionAttributes.Details exceeds size limit."),
+					})
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.FailWorkflowExecutionDecisionAttributes, err error) {
+				assert.True(t, taskHandler.stopProcessing)
+				assert.Nil(t, err)
+			},
+		},
+		{
+			name:       "workflow not running",
+			attributes: &types.FailWorkflowExecutionDecisionAttributes{Details: []byte("some-details")},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.FailWorkflowExecutionDecisionAttributes) {
+				attr.Reason = new(string)
+				*attr.Reason = "some reason"
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{})
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsWorkflowExecutionRunning().Return(false)
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.FailWorkflowExecutionDecisionAttributes, err error) {
+				assert.Nil(t, err)
+			},
+		},
+		{
+			name:       "cancel requested - failure to add cancel event",
+			attributes: &types.FailWorkflowExecutionDecisionAttributes{Details: []byte("some-details")},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.FailWorkflowExecutionDecisionAttributes) {
+				attr.Reason = new(string)
+				*attr.Reason = "some reason"
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{})
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsWorkflowExecutionRunning().Return(true)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsCancelRequested().Return(true, "")
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddWorkflowExecutionCanceledEvent(taskHandler.decisionTaskCompletedID,
+					&types.CancelWorkflowExecutionDecisionAttributes{
+						Details: attr.Details,
+					}).Return(nil, errors.New("some error"))
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.FailWorkflowExecutionDecisionAttributes, err error) {
+				assert.NotNil(t, err)
+				assert.Equal(t, "some error", err.Error())
+			},
+		},
+		{
+			name:       "cancel requested - success",
+			attributes: &types.FailWorkflowExecutionDecisionAttributes{Details: []byte("some-details")},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.FailWorkflowExecutionDecisionAttributes) {
+				attr.Reason = new(string)
+				*attr.Reason = "some reason"
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{})
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsWorkflowExecutionRunning().Return(true)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsCancelRequested().Return(true, "")
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddWorkflowExecutionCanceledEvent(taskHandler.decisionTaskCompletedID,
+					&types.CancelWorkflowExecutionDecisionAttributes{
+						Details: attr.Details,
+					})
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.FailWorkflowExecutionDecisionAttributes, err error) {
+				assert.Nil(t, err)
+			},
+		},
+		{
+			name:       "failure to get backoff duration on cron",
+			attributes: &types.FailWorkflowExecutionDecisionAttributes{Details: []byte("some-details")},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.FailWorkflowExecutionDecisionAttributes) {
+				attr.Reason = new(string)
+				*attr.Reason = "some reason"
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{})
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsWorkflowExecutionRunning().Return(true)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsCancelRequested().Return(false, "")
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetRetryBackoffDuration(attr.GetReason()).Return(backoff.NoBackoff)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetCronBackoffDuration(context.Background()).Return(time.Second, errors.New("some error"))
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.FailWorkflowExecutionDecisionAttributes, err error) {
+				assert.True(t, taskHandler.stopProcessing)
+				assert.NotNil(t, err)
+				assert.Equal(t, "some error", err.Error())
+			},
+		},
+		{
+			name:       "AddFailWorkflowEvent failure",
+			attributes: &types.FailWorkflowExecutionDecisionAttributes{Details: []byte("some-details")},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.FailWorkflowExecutionDecisionAttributes) {
+				attr.Reason = new(string)
+				*attr.Reason = "some reason"
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{})
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsWorkflowExecutionRunning().Return(true)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsCancelRequested().Return(false, "")
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetRetryBackoffDuration(attr.GetReason()).Return(backoff.NoBackoff)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetCronBackoffDuration(context.Background()).Return(backoff.NoBackoff, nil)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddFailWorkflowEvent(taskHandler.decisionTaskCompletedID, attr).Return(nil, errors.New("some error"))
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.FailWorkflowExecutionDecisionAttributes, err error) {
+				assert.NotNil(t, err)
+				assert.Equal(t, "some error", err.Error())
+			},
+		},
+		{
+			name:       "cron workflow - success",
+			attributes: &types.FailWorkflowExecutionDecisionAttributes{Details: []byte("some-details")},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.FailWorkflowExecutionDecisionAttributes) {
+				attr.Reason = new(string)
+				*attr.Reason = "some reason"
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{})
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsWorkflowExecutionRunning().Return(true)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsCancelRequested().Return(false, "")
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetRetryBackoffDuration(attr.GetReason()).Return(backoff.NoBackoff)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetCronBackoffDuration(context.Background()).Return(backoff.NoBackoff, nil)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddFailWorkflowEvent(taskHandler.decisionTaskCompletedID, attr)
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.FailWorkflowExecutionDecisionAttributes, err error) {
+				assert.Nil(t, err)
+			},
+		},
+		{
+			name:       "GetStartEvent failure",
+			attributes: &types.FailWorkflowExecutionDecisionAttributes{Details: []byte("some-details")},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.FailWorkflowExecutionDecisionAttributes) {
+				attr.Reason = new(string)
+				*attr.Reason = "some reason"
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{})
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsWorkflowExecutionRunning().Return(true)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsCancelRequested().Return(false, "")
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetRetryBackoffDuration(attr.GetReason())
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetStartEvent(context.Background()).Return(nil, errors.New("some error"))
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.FailWorkflowExecutionDecisionAttributes, err error) {
+				assert.NotNil(t, err)
+				assert.Equal(t, "some error", err.Error())
+			},
+		},
+		{
+			name:       "success",
+			attributes: &types.FailWorkflowExecutionDecisionAttributes{Details: []byte("some-details")},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.FailWorkflowExecutionDecisionAttributes) {
+				attr.Reason = new(string)
+				*attr.Reason = "some reason"
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{})
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsWorkflowExecutionRunning().Return(true)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsCancelRequested().Return(false, "")
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetRetryBackoffDuration(attr.GetReason())
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetStartEvent(context.Background()).Return(&types.HistoryEvent{WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{}}, nil)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddContinueAsNewEvent(context.Background(),
+					taskHandler.decisionTaskCompletedID,
+					taskHandler.decisionTaskCompletedID,
+					gomock.Any(),
+					gomock.Any())
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.FailWorkflowExecutionDecisionAttributes, err error) {
+				assert.Nil(t, err)
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			taskHandler := newTaskHandlerForTest(t)
+			if test.expectMockCalls != nil {
+				test.expectMockCalls(taskHandler, test.attributes)
+			}
+			decision := &types.Decision{
+				DecisionType: func(i int32) *types.DecisionType {
+					decisionType := new(types.DecisionType)
+					*decisionType = types.DecisionType(i)
+					return decisionType
+				}(4), //types.DecisionTypeFailWorkflowExecution
+				FailWorkflowExecutionDecisionAttributes: test.attributes,
 			}
 			err := taskHandler.handleDecision(context.Background(), decision)
 			test.asserts(t, taskHandler, test.attributes, err)
