@@ -25,7 +25,6 @@ package decision
 import (
 	"context"
 	"errors"
-	"github.com/uber/cadence/common/backoff"
 	"testing"
 	"time"
 
@@ -34,6 +33,7 @@ import (
 	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/testlogger"
