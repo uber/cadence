@@ -57,6 +57,10 @@ func Test__ReplicateExternalWorkflowExecutionSignaled(t *testing.T) {
 	err := mb.ReplicateExternalWorkflowExecutionSignaled(event)
 	assert.NoError(t, err)
 	assert.NotNil(t, mb.deleteSignalInfos[int64(1)])
+	_, ok := mb.pendingSignalInfoIDs[int64(1)]
+	assert.False(t, ok)
+	_, ok = mb.updateSignalInfos[int64(1)]
+	assert.False(t, ok)
 }
 
 func Test__ReplicateSignalExternalWorkflowExecutionFailedEvent(t *testing.T) {
@@ -75,6 +79,10 @@ func Test__ReplicateSignalExternalWorkflowExecutionFailedEvent(t *testing.T) {
 	err := mb.ReplicateSignalExternalWorkflowExecutionFailedEvent(event)
 	assert.NoError(t, err)
 	assert.NotNil(t, mb.deleteSignalInfos[int64(1)])
+	_, ok := mb.pendingSignalInfoIDs[int64(1)]
+	assert.False(t, ok)
+	_, ok = mb.updateSignalInfos[int64(1)]
+	assert.False(t, ok)
 }
 
 func Test__AddSignalRequested(t *testing.T) {
