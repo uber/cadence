@@ -372,6 +372,54 @@ func TestGetTasks_Empty(t *testing.T) {
 	assert.Empty(t, resp.Tasks)
 }
 
+func TestCompleteTask(t *testing.T) {
+	store, db := setupNoSQLStoreMocks(t)
+
+	// The main assertion is that the correct parameters are passed to the DB
+	db.EXPECT().RangeDeleteTasks(gomock.Any(), &nosqlplugin.TasksFilter{
+		TaskListFilter: *getDecisionTaskListFilter(),
+		MinTaskID:      11,
+		MaxTaskID:      12,
+		BatchSize:      1,
+	}).Return(1, nil)
+
+	err := store.CompleteTask(context.Background(), &persistence.CompleteTaskRequest{
+		TaskList: &persistence.TaskListInfo{
+			DomainID: TestDomainID,
+			Name:     TestTaskListName,
+			TaskType: int(types.TaskListTypeDecision),
+		},
+		TaskID:     12,
+		DomainName: TestDomainName,
+	})
+
+	assert.NoError(t, err)
+}
+
+func TestCompleteTasksLessThan(t *testing.T) {
+	store, db := setupNoSQLStoreMocks(t)
+
+	// The main assertion is that the correct parameters are passed to the DB
+	db.EXPECT().RangeDeleteTasks(gomock.Any(), &nosqlplugin.TasksFilter{
+		TaskListFilter: *getDecisionTaskListFilter(),
+		MinTaskID:      0,
+		MaxTaskID:      12,
+		BatchSize:      100,
+	}).Return(13, nil)
+
+	resp, err := store.CompleteTasksLessThan(context.Background(), &persistence.CompleteTasksLessThanRequest{
+		DomainID:     TestDomainID,
+		TaskListName: TestTaskListName,
+		TaskType:     0,
+		TaskID:       12,
+		Limit:        100,
+		DomainName:   TestDomainName,
+	})
+
+	assert.NoError(t, err)
+	assert.Equal(t, 13, resp.TasksCompleted)
+}
+
 func getValidLeaseTaskListRequest() *persistence.LeaseTaskListRequest {
 	return &persistence.LeaseTaskListRequest{
 		DomainID:     TestDomainID,
