@@ -24,7 +24,6 @@ package execution
 
 import (
 	"context"
-	"github.com/uber/cadence/common/cache"
 	"testing"
 	"time"
 
@@ -32,6 +31,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
