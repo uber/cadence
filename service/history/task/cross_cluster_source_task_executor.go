@@ -43,7 +43,7 @@ var (
 type (
 	crossClusterSourceTaskExecutor struct {
 		shard          shard.Context
-		executionCache *execution.Cache
+		executionCache execution.Cache
 		logger         log.Logger
 		metricsClient  metrics.Client
 	}
@@ -51,7 +51,7 @@ type (
 
 func NewCrossClusterSourceTaskExecutor(
 	shard shard.Context,
-	executionCache *execution.Cache,
+	executionCache execution.Cache,
 	logger log.Logger,
 ) Executor {
 	return &crossClusterSourceTaskExecutor{

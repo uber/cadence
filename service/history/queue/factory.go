@@ -39,7 +39,7 @@ type ProcessorFactory interface {
 		shard shard.Context,
 		historyEngine engine.Engine,
 		taskProcessor task.Processor,
-		executionCache *execution.Cache,
+		executionCache execution.Cache,
 		workflowResetter reset.WorkflowResetter,
 		archivalClient archiver.Client,
 		executionCheck invariant.Invariant,
@@ -51,7 +51,7 @@ type ProcessorFactory interface {
 		shard shard.Context,
 		historyEngine engine.Engine,
 		taskProcessor task.Processor,
-		executionCache *execution.Cache,
+		executionCache execution.Cache,
 		archivalClient archiver.Client,
 		executionCheck invariant.Invariant,
 	) Processor
@@ -59,7 +59,7 @@ type ProcessorFactory interface {
 	NewCrossClusterQueueProcessor(
 		shard shard.Context,
 		historyEngine engine.Engine,
-		executionCache *execution.Cache,
+		executionCache execution.Cache,
 		taskProcessor task.Processor,
 	) Processor
 }
@@ -75,7 +75,7 @@ func (f *factoryImpl) NewTransferQueueProcessor(
 	shard shard.Context,
 	historyEngine engine.Engine,
 	taskProcessor task.Processor,
-	executionCache *execution.Cache,
+	executionCache execution.Cache,
 	workflowResetter reset.WorkflowResetter,
 	archivalClient archiver.Client,
 	executionCheck invariant.Invariant,
@@ -99,7 +99,7 @@ func (f *factoryImpl) NewTimerQueueProcessor(
 	shard shard.Context,
 	historyEngine engine.Engine,
 	taskProcessor task.Processor,
-	executionCache *execution.Cache,
+	executionCache execution.Cache,
 	archivalClient archiver.Client,
 	executionCheck invariant.Invariant,
 ) Processor {
@@ -116,7 +116,7 @@ func (f *factoryImpl) NewTimerQueueProcessor(
 func (f *factoryImpl) NewCrossClusterQueueProcessor(
 	shard shard.Context,
 	historyEngine engine.Engine,
-	executionCache *execution.Cache,
+	executionCache execution.Cache,
 	taskProcessor task.Processor,
 ) Processor {
 	return NewCrossClusterQueueProcessor(

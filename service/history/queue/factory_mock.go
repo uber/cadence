@@ -66,7 +66,7 @@ func (m *MockProcessorFactory) EXPECT() *MockProcessorFactoryMockRecorder {
 }
 
 // NewCrossClusterQueueProcessor mocks base method.
-func (m *MockProcessorFactory) NewCrossClusterQueueProcessor(shard shard.Context, historyEngine engine.Engine, executionCache *execution.Cache, taskProcessor task.Processor) Processor {
+func (m *MockProcessorFactory) NewCrossClusterQueueProcessor(shard shard.Context, historyEngine engine.Engine, executionCache execution.Cache, taskProcessor task.Processor) Processor {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NewCrossClusterQueueProcessor", shard, historyEngine, executionCache, taskProcessor)
 	ret0, _ := ret[0].(Processor)
@@ -80,7 +80,7 @@ func (mr *MockProcessorFactoryMockRecorder) NewCrossClusterQueueProcessor(shard,
 }
 
 // NewTimerQueueProcessor mocks base method.
-func (m *MockProcessorFactory) NewTimerQueueProcessor(shard shard.Context, historyEngine engine.Engine, taskProcessor task.Processor, executionCache *execution.Cache, archivalClient archiver.Client, executionCheck invariant.Invariant) Processor {
+func (m *MockProcessorFactory) NewTimerQueueProcessor(shard shard.Context, historyEngine engine.Engine, taskProcessor task.Processor, executionCache execution.Cache, archivalClient archiver.Client, executionCheck invariant.Invariant) Processor {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NewTimerQueueProcessor", shard, historyEngine, taskProcessor, executionCache, archivalClient, executionCheck)
 	ret0, _ := ret[0].(Processor)
@@ -94,7 +94,7 @@ func (mr *MockProcessorFactoryMockRecorder) NewTimerQueueProcessor(shard, histor
 }
 
 // NewTransferQueueProcessor mocks base method.
-func (m *MockProcessorFactory) NewTransferQueueProcessor(shard shard.Context, historyEngine engine.Engine, taskProcessor task.Processor, executionCache *execution.Cache, workflowResetter reset.WorkflowResetter, archivalClient archiver.Client, executionCheck invariant.Invariant, wfIDCache workflowcache.WFCache, ratelimitInternalPerWorkflowID dynamicconfig.BoolPropertyFnWithDomainFilter) Processor {
+func (m *MockProcessorFactory) NewTransferQueueProcessor(shard shard.Context, historyEngine engine.Engine, taskProcessor task.Processor, executionCache execution.Cache, workflowResetter reset.WorkflowResetter, archivalClient archiver.Client, executionCheck invariant.Invariant, wfIDCache workflowcache.WFCache, ratelimitInternalPerWorkflowID dynamicconfig.BoolPropertyFnWithDomainFilter) Processor {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NewTransferQueueProcessor", shard, historyEngine, taskProcessor, executionCache, workflowResetter, archivalClient, executionCheck, wfIDCache, ratelimitInternalPerWorkflowID)
 	ret0, _ := ret[0].(Processor)

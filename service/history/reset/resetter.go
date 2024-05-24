@@ -64,7 +64,7 @@ type (
 		domainCache       cache.DomainCache
 		clusterMetadata   cluster.Metadata
 		historyV2Mgr      persistence.HistoryManager
-		executionCache    *execution.Cache
+		executionCache    execution.Cache
 		newStateRebuilder nDCStateRebuilderProvider
 		logger            log.Logger
 	}
@@ -77,7 +77,7 @@ var _ WorkflowResetter = (*workflowResetterImpl)(nil)
 // NewWorkflowResetter creates a workflow resetter
 func NewWorkflowResetter(
 	shard shard.Context,
-	executionCache *execution.Cache,
+	executionCache execution.Cache,
 	logger log.Logger,
 ) WorkflowResetter {
 	return &workflowResetterImpl{

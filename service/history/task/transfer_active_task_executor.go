@@ -85,7 +85,7 @@ type (
 func NewTransferActiveTaskExecutor(
 	shard shard.Context,
 	archiverClient archiver.Client,
-	executionCache *execution.Cache,
+	executionCache execution.Cache,
 	workflowResetter reset.WorkflowResetter,
 	logger log.Logger,
 	config *config.Config,
