@@ -26,7 +26,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -1576,8 +1575,7 @@ func (s *IntegrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
 	s.Error(err)
 	var alreadyStartedErr *types.WorkflowExecutionAlreadyStartedError
 	s.ErrorAs(err, &alreadyStartedErr)
-	errMsg := alreadyStartedErr.GetMessage()
-	s.True(strings.Contains(errMsg, "reject duplicate workflow ID"))
+	s.ErrorContains(alreadyStartedErr, "reject duplicate workflow ID")
 
 	// test policy WorkflowIDReusePolicyAllowDuplicateFailedOnly
 	wfIDReusePolicy = types.WorkflowIDReusePolicyAllowDuplicateFailedOnly
@@ -1588,8 +1586,7 @@ func (s *IntegrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
 	s.Nil(resp)
 	s.Error(err)
 	s.ErrorAs(err, &alreadyStartedErr)
-	errMsg = alreadyStartedErr.GetMessage()
-	s.True(strings.Contains(errMsg, "allow duplicate workflow ID if last run failed"))
+	s.ErrorContains(alreadyStartedErr, "allow duplicate workflow ID if last run failed")
 
 	// test policy WorkflowIDReusePolicyAllowDuplicate
 	wfIDReusePolicy = types.WorkflowIDReusePolicyAllowDuplicate

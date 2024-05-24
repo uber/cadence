@@ -305,7 +305,7 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutions() {
 	_, err = s.visibilityStore.ListOpenWorkflowExecutions(ctx, testRequest)
 	s.Error(err)
 	s.ErrorAs(err, new(*types.InternalServiceError))
-	s.True(strings.Contains(err.Error(), "ListOpenWorkflowExecutions failed"))
+	s.ErrorContains(err, "ListOpenWorkflowExecutions failed")
 }
 
 func (s *ESVisibilitySuite) TestListClosedWorkflowExecutions() {
@@ -325,7 +325,7 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutions() {
 	_, err = s.visibilityStore.ListClosedWorkflowExecutions(ctx, testRequest)
 	s.Error(err)
 	s.ErrorAs(err, new(*types.InternalServiceError))
-	s.True(strings.Contains(err.Error(), "ListClosedWorkflowExecutions failed"))
+	s.ErrorContains(err, "ListClosedWorkflowExecutions failed")
 }
 
 func (s *ESVisibilitySuite) TestListOpenWorkflowExecutionsByType() {
@@ -353,7 +353,7 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutionsByType() {
 	_, err = s.visibilityStore.ListOpenWorkflowExecutionsByType(ctx, request)
 	s.Error(err)
 	s.ErrorAs(err, new(*types.InternalServiceError))
-	s.True(strings.Contains(err.Error(), "ListOpenWorkflowExecutionsByType failed"))
+	s.ErrorContains(err, "ListOpenWorkflowExecutionsByType failed")
 }
 
 func (s *ESVisibilitySuite) TestListAllWorkflowExecutions() {
@@ -437,7 +437,7 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByType() {
 	_, err = s.visibilityStore.ListClosedWorkflowExecutionsByType(ctx, request)
 	s.Error(err)
 	s.ErrorAs(err, new(*types.InternalServiceError))
-	s.True(strings.Contains(err.Error(), "ListClosedWorkflowExecutionsByType failed"))
+	s.ErrorContains(err, "ListClosedWorkflowExecutionsByType failed")
 }
 
 func (s *ESVisibilitySuite) TestListOpenWorkflowExecutionsByWorkflowID() {
@@ -466,7 +466,7 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutionsByWorkflowID() {
 	_, err = s.visibilityStore.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
 	s.Error(err)
 	s.ErrorAs(err, new(*types.InternalServiceError))
-	s.True(strings.Contains(err.Error(), "ListOpenWorkflowExecutionsByWorkflowID failed"))
+	s.ErrorContains(err, "ListOpenWorkflowExecutionsByWorkflowID failed")
 }
 
 func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByWorkflowID() {
@@ -495,7 +495,7 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByWorkflowID() {
 	_, err = s.visibilityStore.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
 	s.Error(err)
 	s.ErrorAs(err, new(*types.InternalServiceError))
-	s.True(strings.Contains(err.Error(), "ListClosedWorkflowExecutionsByWorkflowID failed"))
+	s.ErrorContains(err, "ListClosedWorkflowExecutionsByWorkflowID failed")
 }
 
 func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByStatus() {
@@ -525,7 +525,7 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByStatus() {
 	_, err = s.visibilityStore.ListClosedWorkflowExecutionsByStatus(ctx, request)
 	s.Error(err)
 	s.ErrorAs(err, new(*types.InternalServiceError))
-	s.True(strings.Contains(err.Error(), "ListClosedWorkflowExecutionsByStatus failed"))
+	s.ErrorContains(err, "ListClosedWorkflowExecutionsByStatus failed")
 }
 
 func (s *ESVisibilitySuite) TestGetNextPageToken() {
@@ -559,7 +559,7 @@ func (s *ESVisibilitySuite) TestDeserializePageToken() {
 	s.Nil(result)
 	var typedError *types.BadRequestError
 	s.ErrorAs(err, &typedError)
-	s.True(strings.Contains(typedError.Error(), "unable to deserialize page token"))
+	s.ErrorContains(typedError, "unable to deserialize page token")
 
 	token = &es.ElasticVisibilityPageToken{SortValue: int64(64), TieBreaker: "unique"}
 	data, _ = es.SerializePageToken(token)
@@ -858,13 +858,13 @@ func (s *ESVisibilitySuite) TestListWorkflowExecutions() {
 	_, err = s.visibilityStore.ListWorkflowExecutions(ctx, request)
 	s.Error(err)
 	s.ErrorAs(err, new(*types.InternalServiceError))
-	s.True(strings.Contains(err.Error(), "ListWorkflowExecutions failed"))
+	s.ErrorContains(err, "ListWorkflowExecutions failed")
 
 	request.Query = `invalid query`
 	_, err = s.visibilityStore.ListWorkflowExecutions(context.Background(), request)
 	s.Error(err)
 	s.ErrorAs(err, new(*types.BadRequestError))
-	s.True(strings.Contains(err.Error(), "Error when parse query"))
+	s.ErrorContains(err, "Error when parse query")
 }
 
 func (s *ESVisibilitySuite) TestScanWorkflowExecutions() {
@@ -892,7 +892,7 @@ func (s *ESVisibilitySuite) TestScanWorkflowExecutions() {
 	_, err = s.visibilityStore.ScanWorkflowExecutions(ctx, request)
 	s.Error(err)
 	s.ErrorAs(err, new(*types.BadRequestError))
-	s.True(strings.Contains(err.Error(), "Error when parse query"))
+	s.ErrorContains(err, "Error when parse query")
 
 	// test internal error
 	request.Query = `CloseStatus = 5`
@@ -900,7 +900,7 @@ func (s *ESVisibilitySuite) TestScanWorkflowExecutions() {
 	_, err = s.visibilityStore.ScanWorkflowExecutions(ctx, request)
 	s.Error(err)
 	s.ErrorAs(err, new(*types.InternalServiceError))
-	s.True(strings.Contains(err.Error(), "ScanWorkflowExecutions failed"))
+	s.ErrorContains(err, "ScanWorkflowExecutions failed")
 }
 
 func (s *ESVisibilitySuite) TestCountWorkflowExecutions() {
@@ -928,14 +928,14 @@ func (s *ESVisibilitySuite) TestCountWorkflowExecutions() {
 	_, err = s.visibilityStore.CountWorkflowExecutions(ctx, request)
 	s.Error(err)
 	s.ErrorAs(err, new(*types.InternalServiceError))
-	s.True(strings.Contains(err.Error(), "CountWorkflowExecutions failed"))
+	s.ErrorContains(err, "CountWorkflowExecutions failed")
 
 	// test bad request
 	request.Query = `invalid query`
 	_, err = s.visibilityStore.CountWorkflowExecutions(ctx, request)
 	s.Error(err)
 	s.ErrorAs(err, new(*types.BadRequestError))
-	s.True(strings.Contains(err.Error(), "Error when parse query"))
+	s.ErrorContains(err, "Error when parse query")
 }
 
 func (s *ESVisibilitySuite) TestTimeProcessFunc() {
