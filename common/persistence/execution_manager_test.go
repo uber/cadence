@@ -675,6 +675,100 @@ func TestDeserializeBufferedEvents(t *testing.T) {
 	}
 }
 
+func TestPutReplicationTaskToDLQ(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockedStore := NewMockExecutionStore(ctrl)
+	manager := NewExecutionManagerImpl(mockedStore, testlogger.New(t), nil)
+
+	now := time.Now().UTC().Round(time.Second)
+
+	task := &PutReplicationTaskToDLQRequest{
+		SourceClusterName: "test-cluster",
+		TaskInfo: &ReplicationTaskInfo{
+			DomainID:     testDomainID,
+			WorkflowID:   testWorkflowID,
+			CreationTime: now.UnixNano(),
+		},
+		DomainName: testDomain,
+	}
+
+	mockedStore.EXPECT().PutReplicationTaskToDLQ(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, req *InternalPutReplicationTaskToDLQRequest) error {
+		assert.Equal(t, &InternalPutReplicationTaskToDLQRequest{
+			SourceClusterName: "test-cluster",
+			TaskInfo: &InternalReplicationTaskInfo{
+				DomainID:     testDomainID,
+				WorkflowID:   testWorkflowID,
+				CreationTime: now,
+			},
+		}, req)
+		return nil
+	})
+
+	err := manager.PutReplicationTaskToDLQ(context.Background(), task)
+	assert.NoError(t, err)
+}
+
+func TestGetReplicationTasksFromDLQ(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockedStore := NewMockExecutionStore(ctrl)
+	manager := NewExecutionManagerImpl(mockedStore, testlogger.New(t), nil)
+
+	request := &GetReplicationTasksFromDLQRequest{
+		SourceClusterName: "test-cluster",
+		GetReplicationTasksRequest: GetReplicationTasksRequest{
+			ReadLevel:     1,
+			MaxReadLevel:  2,
+			BatchSize:     10,
+			NextPageToken: nil,
+		},
+	}
+
+	now := time.Now().UTC().Round(time.Second)
+
+	mockedStore.EXPECT().GetReplicationTasksFromDLQ(gomock.Any(), request).Return(
+		&InternalGetReplicationTasksFromDLQResponse{
+			Tasks: []*InternalReplicationTaskInfo{
+				{
+					DomainID:     testDomainID,
+					WorkflowID:   testWorkflowID,
+					TaskID:       1,
+					TaskType:     1,
+					CreationTime: now,
+				},
+				{
+					DomainID:     testDomainID,
+					WorkflowID:   testWorkflowID,
+					TaskID:       2,
+					TaskType:     2,
+					CreationTime: now.Add(time.Second),
+				},
+			},
+			NextPageToken: []byte("test-token"),
+		}, nil)
+
+	res, err := manager.GetReplicationTasksFromDLQ(context.Background(), request)
+	assert.NoError(t, err)
+	assert.Equal(t, &GetReplicationTasksFromDLQResponse{
+		Tasks: []*ReplicationTaskInfo{
+			{
+				DomainID:     testDomainID,
+				WorkflowID:   testWorkflowID,
+				TaskID:       1,
+				TaskType:     1,
+				CreationTime: now.UnixNano(),
+			},
+			{
+				DomainID:     testDomainID,
+				WorkflowID:   testWorkflowID,
+				TaskID:       2,
+				TaskType:     2,
+				CreationTime: now.Add(time.Second).UnixNano(),
+			},
+		},
+		NextPageToken: []byte("test-token"),
+	}, res)
+}
+
 func sampleInternalActivityInfo(name string) *InternalActivityInfo {
 	return &InternalActivityInfo{
 		Version:        1,
