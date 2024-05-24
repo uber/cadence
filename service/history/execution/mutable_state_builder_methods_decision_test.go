@@ -24,9 +24,13 @@ package execution
 
 import (
 	"encoding/json"
+	"testing"
+	"time"
+
 	"github.com/golang/mock/gomock"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/definition"
@@ -36,8 +40,6 @@ import (
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/shard"
-	"testing"
-	"time"
 )
 
 func CreateDecisionInfo() *DecisionInfo {
