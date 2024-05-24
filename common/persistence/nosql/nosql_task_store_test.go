@@ -154,7 +154,7 @@ func TestLeaseTaskList_selectErrNotFound(t *testing.T) {
 	// We then expect the tasklist to be inserted
 	db.EXPECT().InsertTaskList(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(ctx context.Context, taskList *nosqlplugin.TaskListRow) error {
-			checkTaskListRowExpected(t, taskList)
+			checkTaskListRowExpected(t, getExpectedTaskListRow(), taskList)
 			return nil
 		})
 
@@ -191,7 +191,7 @@ func TestLeaseTaskList_Renew(t *testing.T) {
 	db.EXPECT().SelectTaskList(gomock.Any(), getDecisionTaskListFilter()).Return(taskListRow, nil)
 	db.EXPECT().UpdateTaskList(gomock.Any(), gomock.Any(), int64(0)).
 		DoAndReturn(func(ctx context.Context, taskList *nosqlplugin.TaskListRow, previousRangeID int64) error {
-			checkTaskListRowExpected(t, taskList)
+			checkTaskListRowExpected(t, getExpectedTaskListRow(), taskList)
 			return nil
 		})
 
@@ -210,7 +210,7 @@ func TestLeaseTaskList_RenewUpdateFailed_OperationConditionFailure(t *testing.T)
 	db.EXPECT().SelectTaskList(gomock.Any(), getDecisionTaskListFilter()).Return(taskListRow, nil)
 	db.EXPECT().UpdateTaskList(gomock.Any(), gomock.Any(), int64(0)).
 		DoAndReturn(func(ctx context.Context, taskList *nosqlplugin.TaskListRow, previousRangeID int64) error {
-			checkTaskListRowExpected(t, taskList)
+			checkTaskListRowExpected(t, getExpectedTaskListRow(), taskList)
 			return &nosqlplugin.TaskOperationConditionFailure{RangeID: 10}
 		})
 
@@ -230,7 +230,7 @@ func TestLeaseTaskList_RenewUpdateFailed_OtherError(t *testing.T) {
 	db.EXPECT().SelectTaskList(gomock.Any(), getDecisionTaskListFilter()).Return(taskListRow, nil)
 	db.EXPECT().UpdateTaskList(gomock.Any(), gomock.Any(), int64(0)).
 		DoAndReturn(func(ctx context.Context, taskList *nosqlplugin.TaskListRow, previousRangeID int64) error {
-			checkTaskListRowExpected(t, taskList)
+			checkTaskListRowExpected(t, getExpectedTaskListRow(), taskList)
 			return assert.AnError
 		})
 	db.EXPECT().IsNotFoundError(assert.AnError).Return(true)
@@ -240,6 +240,66 @@ func TestLeaseTaskList_RenewUpdateFailed_OtherError(t *testing.T) {
 	assert.Error(t, err)
 	// The function does not wrap the error, it just adds it to the message
 	assert.ErrorContains(t, err, assert.AnError.Error())
+}
+
+func TestUpdateTaskList(t *testing.T) {
+	store, db := setupNoSQLStoreMocks(t)
+
+	db.EXPECT().UpdateTaskList(gomock.Any(), gomock.Any(), int64(1)).DoAndReturn(
+		func(ctx context.Context, taskList *nosqlplugin.TaskListRow, previousRangeID int64) error {
+			checkTaskListRowExpected(t, getExpectedTaskListRow(), taskList)
+			return nil
+		},
+	)
+
+	resp, err := store.UpdateTaskList(context.Background(), &persistence.UpdateTaskListRequest{
+		TaskListInfo: getExpectedTaskListInfo(),
+	})
+
+	assert.NoError(t, err)
+	assert.Equal(t, &persistence.UpdateTaskListResponse{}, resp)
+}
+
+func TestUpdateTaskList_Sticky(t *testing.T) {
+	store, db := setupNoSQLStoreMocks(t)
+
+	db.EXPECT().UpdateTaskListWithTTL(gomock.Any(), stickyTaskListTTL, gomock.Any(), int64(1)).DoAndReturn(
+		func(ctx context.Context, ttlSeconds int64, taskList *nosqlplugin.TaskListRow, previousRangeID int64) error {
+			expectedTaskList := getExpectedTaskListRow()
+			expectedTaskList.TaskListKind = int(types.TaskListKindSticky)
+			checkTaskListRowExpected(t, expectedTaskList, taskList)
+			return nil
+		},
+	)
+
+	taskListInfo := getExpectedTaskListInfo()
+	taskListInfo.Kind = int(types.TaskListKindSticky)
+
+	resp, err := store.UpdateTaskList(context.Background(), &persistence.UpdateTaskListRequest{
+		TaskListInfo: taskListInfo,
+	})
+
+	assert.NoError(t, err)
+	assert.Equal(t, &persistence.UpdateTaskListResponse{}, resp)
+}
+
+func TestUpdateTaskList_ConditionFailure(t *testing.T) {
+	store, db := setupNoSQLStoreMocks(t)
+
+	db.EXPECT().UpdateTaskList(gomock.Any(), gomock.Any(), int64(1)).DoAndReturn(
+		func(ctx context.Context, taskList *nosqlplugin.TaskListRow, previousRangeID int64) error {
+			checkTaskListRowExpected(t, getExpectedTaskListRow(), taskList)
+			return &nosqlplugin.TaskOperationConditionFailure{Details: "test-details"}
+		},
+	)
+
+	_, err := store.UpdateTaskList(context.Background(), &persistence.UpdateTaskListRequest{
+		TaskListInfo: getExpectedTaskListInfo(),
+	})
+
+	var expectedErr *persistence.ConditionFailedError
+	assert.ErrorAs(t, err, &expectedErr)
+	assert.ErrorContains(t, err, "Failed to update task list. name: test-tasklist, type: 0, rangeID: 1, columns: (test-details)")
 }
 
 func TestGetTasks(t *testing.T) {
@@ -302,28 +362,6 @@ func getValidLeaseTaskListRequest() *persistence.LeaseTaskListRequest {
 	}
 }
 
-func getExpectedTaskListRow() *nosqlplugin.TaskListRow {
-	return &nosqlplugin.TaskListRow{
-		DomainID:        TestDomainID,
-		TaskListName:    TestTaskListName,
-		TaskListType:    int(types.TaskListTypeDecision),
-		RangeID:         initialRangeID,
-		TaskListKind:    int(types.TaskListKindNormal),
-		AckLevel:        initialAckLevel,
-		LastUpdatedTime: time.Now(),
-	}
-}
-
-func checkTaskListRowExpected(t *testing.T, taskList *nosqlplugin.TaskListRow) {
-	expectedRow := getExpectedTaskListRow()
-	// Check the duration
-	assert.WithinDuration(t, expectedRow.LastUpdatedTime, taskList.LastUpdatedTime, time.Second)
-
-	// Set the expected time to the actual time to make the comparison work
-	expectedRow.LastUpdatedTime = taskList.LastUpdatedTime
-	assert.Equal(t, expectedRow, taskList)
-}
-
 func checkTaskListInfoExpected(t *testing.T, taskListInfo *persistence.TaskListInfo) {
 	assert.Equal(t, TestDomainID, taskListInfo.DomainID)
 	assert.Equal(t, TestTaskListName, taskListInfo.Name)
@@ -362,5 +400,46 @@ func getDecisionTaskListFilter() *nosqlplugin.TaskListFilter {
 		DomainID:     TestDomainID,
 		TaskListName: TestTaskListName,
 		TaskListType: int(types.TaskListTypeDecision),
+	}
+}
+
+func getExpectedTaskListFilter() *nosqlplugin.TaskListFilter {
+	return &nosqlplugin.TaskListFilter{
+		DomainID:     TestDomainID,
+		TaskListName: TestTaskListName,
+		TaskListType: int(types.TaskListTypeDecision),
+	}
+}
+
+func getExpectedTaskListRow() *nosqlplugin.TaskListRow {
+	return &nosqlplugin.TaskListRow{
+		DomainID:        TestDomainID,
+		TaskListName:    TestTaskListName,
+		TaskListType:    int(types.TaskListTypeDecision),
+		RangeID:         initialRangeID,
+		TaskListKind:    int(types.TaskListKindNormal),
+		AckLevel:        initialAckLevel,
+		LastUpdatedTime: time.Now(),
+	}
+}
+
+func checkTaskListRowExpected(t *testing.T, expectedRow *nosqlplugin.TaskListRow, taskList *nosqlplugin.TaskListRow) {
+	// Check the duration
+	assert.WithinDuration(t, expectedRow.LastUpdatedTime, taskList.LastUpdatedTime, time.Second)
+
+	// Set the expected time to the actual time to make the comparison work
+	expectedRow.LastUpdatedTime = taskList.LastUpdatedTime
+	assert.Equal(t, expectedRow, taskList)
+}
+
+func getExpectedTaskListInfo() *persistence.TaskListInfo {
+	return &persistence.TaskListInfo{
+		DomainID:    TestDomainID,
+		Name:        TestTaskListName,
+		TaskType:    int(types.TaskListTypeDecision),
+		RangeID:     initialRangeID,
+		AckLevel:    initialAckLevel,
+		Kind:        int(types.TaskListKindNormal),
+		LastUpdated: time.Now(),
 	}
 }
