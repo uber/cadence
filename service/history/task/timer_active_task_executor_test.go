@@ -65,7 +65,7 @@ type (
 		mockExecutionMgr *mocks.ExecutionManager
 		mockHistoryV2Mgr *mocks.HistoryV2Manager
 
-		executionCache *execution.Cache
+		executionCache execution.Cache
 		logger         log.Logger
 		domainID       string
 		domain         string

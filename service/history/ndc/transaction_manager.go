@@ -145,7 +145,7 @@ type (
 
 	transactionManagerImpl struct {
 		shard            shard.Context
-		executionCache   *execution.Cache
+		executionCache   execution.Cache
 		clusterMetadata  cluster.Metadata
 		historyV2Manager persistence.HistoryManager
 		serializer       persistence.PayloadSerializer
@@ -163,7 +163,7 @@ var _ transactionManager = (*transactionManagerImpl)(nil)
 
 func newTransactionManager(
 	shard shard.Context,
-	executionCache *execution.Cache,
+	executionCache execution.Cache,
 	eventsReapplier EventsReapplier,
 	logger log.Logger,
 ) *transactionManagerImpl {

@@ -104,7 +104,7 @@ type (
 		// targetDomain if the targetDomain performed a failover after
 		// the task is loaded.
 		targetCluster  string
-		executionCache *execution.Cache
+		executionCache execution.Cache
 		response       *types.CrossClusterTaskResponse
 		readyForPollFn func(task CrossClusterTask)
 	}
@@ -141,7 +141,7 @@ type (
 func NewCrossClusterSourceTask(
 	shard shard.Context,
 	targetCluster string,
-	executionCache *execution.Cache,
+	executionCache execution.Cache,
 	taskInfo Info,
 	taskExecutor Executor,
 	taskProcessor Processor,
@@ -953,7 +953,7 @@ func (t *crossClusterTaskBase) ProcessingState() processingState {
 
 func loadWorkflowForCrossClusterTask(
 	ctx context.Context,
-	executionCache *execution.Cache,
+	executionCache execution.Cache,
 	taskInfo *persistence.CrossClusterTaskInfo,
 	metricsClient metrics.Client,
 	logger log.Logger,

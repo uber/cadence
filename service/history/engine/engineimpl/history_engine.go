@@ -96,7 +96,7 @@ type historyEngineImpl struct {
 	nDCActivityReplicator          ndc.ActivityReplicator
 	historyEventNotifier           events.Notifier
 	tokenSerializer                common.TaskTokenSerializer
-	executionCache                 *execution.Cache
+	executionCache                 execution.Cache
 	metricsClient                  metrics.Client
 	logger                         log.Logger
 	throttledLogger                log.Logger
@@ -120,7 +120,7 @@ type historyEngineImpl struct {
 	wfIDCache                      workflowcache.WFCache
 	ratelimitInternalPerWorkflowID dynamicconfig.BoolPropertyFnWithDomainFilter
 
-	updateWithActionFn func(context.Context, *execution.Cache, string, types.WorkflowExecution, bool, time.Time, func(wfContext execution.Context, mutableState execution.MutableState) error) error
+	updateWithActionFn func(context.Context, execution.Cache, string, types.WorkflowExecution, bool, time.Time, func(wfContext execution.Context, mutableState execution.MutableState) error) error
 }
 
 var (
