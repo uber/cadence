@@ -248,11 +248,15 @@ func (r *ratelimiter) lockNow() (now time.Time, unlock func()) {
 func (r *ratelimiter) lockReservedNow(tryNow time.Time) (now time.Time, unlock func()) {
 	r.mut.Lock()
 	if tryNow.After(r.latestNow) {
-		// this should be true if a cancellation arrives before any other call
-		// has advanced time (e.g. other Allow() calls).
+		// this should never occur!
 		//
-		// "old" cancels are expected to skip this path, and return the r.latestNow
-		// without updating it.
+		// reservations and their reserved-time are gathered behind a lock, and time is monotonic.
+		// that means that a reserved-time should ALWAYS be the same or older than any other time
+		// the ratelimiter sees -> its time would have to go backwards.
+		//
+		// that said, if this DOES happen, it must still maintain the newest time.
+		// this should only occur in tests that move time backwards, unless there's
+		// an implementation bug in the ratelimiter or Go's time.
 		r.latestNow = tryNow
 	}
 	return r.latestNow, r.mut.Unlock
@@ -350,27 +354,10 @@ func (r *ratelimiter) Wait(ctx context.Context) (err error) {
 	}()
 
 	if !res.OK() {
-		// impossible to wait for some reason, figure out why
-		if err := ctx.Err(); err != nil {
-			// context already errored or raced, just return it
-			return err
-		}
-		// !OK and not already canceled means either:
-		//   1: insufficient burst, can never satisfy
-		//   2: sufficient burst, but longer wait than deadline allows
-		//
-		// 1 must imply 0 burst and finite limit, as we only reserve 1.
-		// 2 implies too many reservations for a finite wait.
-		//
-		// burst alone is sufficient to tell these apart.
-		//
-		// if we begin allowing >1 reservations, this may have to change, so
-		// these error values are NOT exposed to prevent building behavior
-		// that depends on this detail.
-		burst := r.limiter.Burst()
-		if burst > 0 {
-			return errWaitLongerThanDeadline
-		}
+		// !OK can only mean "impossible to wait" with `ReserveN`.
+		// Since there is no deadline passed to the limiter (the reservation
+		// contains the delay), and we only ever request 1 token, this can only
+		// mean a burst of 0 (and non-infinite rate.Limit).
 		return errWaitZeroBurst
 	}
 	delay := res.DelayFrom(now)
