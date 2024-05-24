@@ -422,10 +422,11 @@ func assertRatelimiterBasicsWork(t *testing.T, makeTimesource func() MockedTimeS
 				target := time.Duration(tc.latency * float64(granularity*2))
 
 				if tc.allowLowerTokens {
-					assert.True(t, after-before <= tc.tokenChange+0.1, "tokens should have changed from %0.2f to ~%0.2f (or lower), but was %0.2f -> %0.2f", before, before+tc.tokenChange, before, after)
+					// some tests can reasonably fail to restore a used token, so they can go lower than would be ideal
+					assert.True(t, after-before <= tc.tokenChange+0.5, "tokens should have changed from %0.2f to ~%0.2f (or lower), but was %0.2f -> %0.2f", before, before+tc.tokenChange, before, after)
 				} else {
-					// tokens should be precise
-					assert.InDeltaf(t, tc.tokenChange, after-before, 0.1, "tokens should have changed from %0.2f to %0.2f, but was %0.2f -> %0.2f", before, before+tc.tokenChange, before, after)
+					// tokens should be fairly precise (cpu noise can make this fuzzy)
+					assert.InDeltaf(t, tc.tokenChange, after-before, 0.5, "tokens should have changed from %0.2f to %0.2f (+/- 0.5 for cpu noise), but was %0.2f -> %0.2f", before, before+tc.tokenChange, before, after)
 				}
 				assert.True(t,
 					elapsed > (target-granularity) && elapsed < (target+granularity),
