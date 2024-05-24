@@ -9,13 +9,14 @@ import (
 )
 
 func Test__IsSignalRequested(t *testing.T) {
-	mb := testMutableStateBuilder(t)
 	requestID := "101"
 	t.Run("signal not found", func(t *testing.T) {
+		mb := testMutableStateBuilder(t)
 		result := mb.IsSignalRequested(requestID)
 		assert.False(t, result)
 	})
 	t.Run("signal found", func(t *testing.T) {
+		mb := testMutableStateBuilder(t)
 		mb.pendingSignalRequestedIDs[requestID] = struct{}{}
 		result := mb.IsSignalRequested(requestID)
 		assert.True(t, result)
@@ -23,17 +24,18 @@ func Test__IsSignalRequested(t *testing.T) {
 }
 
 func Test__GetSignalInfo(t *testing.T) {
-	mb := testMutableStateBuilder(t)
 	initiatedEventID := int64(1)
 	info := &persistence.SignalInfo{
 		InitiatedID:     1,
 		SignalRequestID: "101",
 	}
 	t.Run("signal not found", func(t *testing.T) {
+		mb := testMutableStateBuilder(t)
 		_, ok := mb.GetSignalInfo(initiatedEventID)
 		assert.False(t, ok)
 	})
 	t.Run("signal found", func(t *testing.T) {
+		mb := testMutableStateBuilder(t)
 		mb.pendingSignalInfoIDs[initiatedEventID] = info
 		result, ok := mb.GetSignalInfo(initiatedEventID)
 		assert.True(t, ok)
@@ -105,7 +107,6 @@ func Test__DeleteSignalRequested(t *testing.T) {
 }
 
 func Test__AddExternalWorkflowExecutionSignaled(t *testing.T) {
-	mb := testMutableStateBuilder(t)
 	t.Run("error workflow finished", func(t *testing.T) {
 		mbCompleted := testMutableStateBuilder(t)
 		mbCompleted.executionInfo.State = persistence.WorkflowStateCompleted
@@ -114,11 +115,13 @@ func Test__AddExternalWorkflowExecutionSignaled(t *testing.T) {
 		assert.Equal(t, ErrWorkflowFinished, err)
 	})
 	t.Run("error getting signal info", func(t *testing.T) {
+		mb := testMutableStateBuilder(t)
 		_, err := mb.AddExternalWorkflowExecutionSignaled(1, "test-domain", "wid", "rid", []byte{10})
 		assert.Error(t, err)
 		assert.Equal(t, "add-externalworkflow-signal-requested-event operation failed", err.Error())
 	})
 	t.Run("success", func(t *testing.T) {
+		mb := testMutableStateBuilder(t)
 		si := &persistence.SignalInfo{
 			InitiatedID: 1,
 		}
@@ -131,7 +134,6 @@ func Test__AddExternalWorkflowExecutionSignaled(t *testing.T) {
 }
 
 func Test__AddSignalExternalWorkflowExecutionFailedEvent(t *testing.T) {
-	mb := testMutableStateBuilder(t)
 	t.Run("error workflow finished", func(t *testing.T) {
 		mbCompleted := testMutableStateBuilder(t)
 		mbCompleted.executionInfo.State = persistence.WorkflowStateCompleted
@@ -140,11 +142,13 @@ func Test__AddSignalExternalWorkflowExecutionFailedEvent(t *testing.T) {
 		assert.Equal(t, ErrWorkflowFinished, err)
 	})
 	t.Run("error getting signal info", func(t *testing.T) {
+		mb := testMutableStateBuilder(t)
 		_, err := mb.AddSignalExternalWorkflowExecutionFailedEvent(1, 1, "test-domain", "wid", "rid", []byte{10}, types.SignalExternalWorkflowExecutionFailedCauseWorkflowAlreadyCompleted)
 		assert.Error(t, err)
 		assert.Equal(t, "add-externalworkflow-signal-failed-event operation failed", err.Error())
 	})
 	t.Run("success", func(t *testing.T) {
+		mb := testMutableStateBuilder(t)
 		si := &persistence.SignalInfo{
 			InitiatedID: 1,
 		}
@@ -157,7 +161,6 @@ func Test__AddSignalExternalWorkflowExecutionFailedEvent(t *testing.T) {
 }
 
 func Test__AddSignalExternalWorkflowExecutionInitiatedEvent(t *testing.T) {
-	mb := testMutableStateBuilder(t)
 	request := &types.SignalExternalWorkflowExecutionDecisionAttributes{
 		Domain: constants.TestDomainName,
 		Execution: &types.WorkflowExecution{
@@ -167,11 +170,6 @@ func Test__AddSignalExternalWorkflowExecutionInitiatedEvent(t *testing.T) {
 		SignalName: "test-signal",
 		Input:      make([]byte, 0),
 	}
-	mb.executionInfo = &persistence.WorkflowExecutionInfo{
-		DomainID:   constants.TestDomainID,
-		WorkflowID: "wid",
-		RunID:      "rid",
-	}
 	t.Run("error workflow finished", func(t *testing.T) {
 		mbCompleted := testMutableStateBuilder(t)
 		mbCompleted.executionInfo.State = persistence.WorkflowStateCompleted
@@ -180,6 +178,12 @@ func Test__AddSignalExternalWorkflowExecutionInitiatedEvent(t *testing.T) {
 		assert.Equal(t, ErrWorkflowFinished, err)
 	})
 	t.Run("success", func(t *testing.T) {
+		mb := testMutableStateBuilder(t)
+		mb.executionInfo = &persistence.WorkflowExecutionInfo{
+			DomainID:   constants.TestDomainID,
+			WorkflowID: "wid",
+			RunID:      "rid",
+		}
 		mb.hBuilder = NewHistoryBuilder(mb)
 		event, si, err := mb.AddSignalExternalWorkflowExecutionInitiatedEvent(1, "101", request)
 		assert.NoError(t, err)
