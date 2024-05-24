@@ -48,7 +48,7 @@ func TestRatelimiter(t *testing.T) {
 			}
 			// needs to be a bit coarser than the comparison tests, because time
 			// is less tightly controlled / mock time relies on a background loop.
-			granularity := 50 * time.Millisecond
+			granularity := 100 * time.Millisecond
 			assertRatelimiterBasicsWork(t, ts, granularity)
 		})
 	}
@@ -92,7 +92,7 @@ func assertRatelimiterBasicsWork(t *testing.T, makeTimesource func() MockedTimeS
 	}
 
 	// advances mock time in the background until stopped, at [granularity/10] per millisecond tick.
-	// currently this leads to tests that are about 5x faster than real time, but "faster" is not
+	// currently this leads to tests that are about 10x faster than real time, but "faster" is not
 	// a goal in this context.
 	//
 	// "different" is however good for making sure we don't rely on real time somehow,
@@ -282,11 +282,12 @@ func assertRatelimiterBasicsWork(t *testing.T, makeTimesource func() MockedTimeS
 			}
 		}
 		for name, tc := range map[string]struct {
-			drainFirst  bool
-			do          func(t *testing.T, rl Ratelimiter, ts MockedTimeSource) int64
-			latency     float64 // num of [granularity]s that should elapse
-			allowed     int64
-			tokenChange float64
+			drainFirst       bool
+			do               func(t *testing.T, rl Ratelimiter, ts MockedTimeSource) int64
+			latency          float64 // num of [granularity]s that should elapse
+			allowed          int64
+			tokenChange      float64
+			allowLowerTokens bool // concurrent waits cannot be guaranteed to return tokens, negatives are possible
 		}{
 			"allows immediately with free tokens": {
 				drainFirst: false,
@@ -344,8 +345,9 @@ func assertRatelimiterBasicsWork(t *testing.T, makeTimesource func() MockedTimeS
 					// only one can win
 					return count.Load()
 				},
-				latency: 1,
-				allowed: 1,
+				latency:          1,
+				allowed:          1,
+				allowLowerTokens: true, // tokens are not guaranteed to be returned
 			},
 			"immediately drains 2, waits for 2, fails 2": {
 				drainFirst: false,
@@ -361,9 +363,10 @@ func assertRatelimiterBasicsWork(t *testing.T, makeTimesource func() MockedTimeS
 					g.Wait()
 					return count.Load()
 				},
-				latency:     2,
-				allowed:     2,
-				tokenChange: -2,
+				latency:          2,
+				allowed:          2,
+				tokenChange:      -2,
+				allowLowerTokens: true, // tokens are not guaranteed to be returned
 			},
 			"cancel while waiting": {
 				drainFirst: true,
@@ -418,7 +421,12 @@ func assertRatelimiterBasicsWork(t *testing.T, makeTimesource func() MockedTimeS
 				elapsed := now(ts).Sub(start)
 				target := time.Duration(tc.latency * float64(granularity*2))
 
-				assert.InDeltaf(t, tc.tokenChange, after-before, 0.1, "tokens should have changed from %0.2f to %0.2f, but was %0.2f -> %0.2f", before, before+tc.tokenChange, before, after)
+				if tc.allowLowerTokens {
+					assert.True(t, after-before <= tc.tokenChange+0.1, "tokens should have changed from %0.2f to ~%0.2f (or lower), but was %0.2f -> %0.2f", before, before+tc.tokenChange, before, after)
+				} else {
+					// tokens should be precise
+					assert.InDeltaf(t, tc.tokenChange, after-before, 0.1, "tokens should have changed from %0.2f to %0.2f, but was %0.2f -> %0.2f", before, before+tc.tokenChange, before, after)
+				}
 				assert.True(t,
 					elapsed > (target-granularity) && elapsed < (target+granularity),
 					"should have taken %v < (actual) %v < %v",
