@@ -42,12 +42,13 @@ type (
 	//     likely to return tokens when canceled.
 	//   - All MethodAt APIs have been excluded as we do not use them, and they would
 	//     have to bypass the contained TimeSource, which seems error-prone.
-	//   - All `MethodN` APIs have been excluded because we do not use them, but they
-	//     seem fairly easy to add if needed later.
+	//   - All `MethodN` APIs (specifically the ">1 event" parts) have been excluded
+	//     because we do not use them, but they seem fairly easy to add if needed later.
 	Ratelimiter interface {
-		// Allow returns true if an operation can be performed now, i.e. there are burst-able tokens available to use.
+		// Allow returns true if an event can be performed now, i.e. there
+		// are burst-able tokens available to use.
 		//
-		// To perform operations at a steady rate, use Wait instead.
+		// To perform events at a steady rate, use Wait instead.
 		Allow() bool
 		// Burst returns the maximum burst size allowed by this Ratelimiter.
 		// A Burst of zero returns false from Allow, unless its Limit is infinity.
@@ -57,55 +58,96 @@ type (
 		// Limit returns the maximum overall rate of events that are allowed.
 		Limit() rate.Limit
 		// Reserve claims a single Allow() call that can be canceled if not used.
+		// Check Reservation.Allow() to see if the event is allowed.
 		//
-		// This Reservation is will Reservation.Allow checked, and
-		// Reservation.Used(true/false) called, as soon as possible.  Otherwise
-		// behavior may be confusing
+		// This Reservation does not support waiting, and needs to have
+		// Reservation.Used(true/false) called as soon as possible to have the
+		// best chance of returning its unused token.
 		Reserve() Reservation
 		// SetBurst sets the Burst value
 		SetBurst(newBurst int)
 		// SetLimit sets the Limit value
 		SetLimit(newLimit rate.Limit)
-		// Tokens returns the number of immediately-allowable operations when called.
+		// Tokens returns the number of immediately-allowable events when called.
 		// Values >= 1 will lead to Allow returning true.
 		//
-		// These values are NOT guaranteed, as other calls to Allow or Reserve may
-		// occur before you are able to act on the returned value.
+		// These values are NOT able to guarantee that a later call will succeed
+		// or fail, as other calls to Allow or Reserve may occur before you are
+		// able to act on the returned value.
+		// It is essentially only suitable for monitoring or test use.
 		Tokens() float64
-		// Wait blocks until one token is available (and consumes it), or:
+		// Wait blocks until one token is available (and consumes it), or it returns
+		// an error and does not consume any tokens if:
 		//   - context is canceled
 		//   - a token will never become available (burst == 0)
-		//   - a token is not expected to become available in time (short deadline + many pending reservations)
+		//   - a token is not expected to become available in time
+		//     (short deadline and/or many pending reservations or waiters)
 		//
-		// If an error is returned, regardless of the reason, you may NOT proceed with the
-		// limited action you were waiting for.
+		// If an error is returned, regardless of the reason, you may NOT proceed
+		// with the limited event you were waiting for.
 		Wait(ctx context.Context) error
 	}
+
 	// Reservation is a simplified and test-friendly version of [golang.org/x/time/rate.Reservation]
-	// that only allows checking if it is successful or not.
+	// that only allows checking if it is successful or not, and (possibly) returning unused tokens.
 	//
 	// This Reservation MUST have Allow() checked and marked as Used(true/false)
-	// as soon as possible, or behavior may be confusing and it may be unable to
-	// restore the claimed ratelimiter token if not used.
+	// as soon as possible, or an unused token is unlikely to be returned.
+	//
+	// Recommended use is either by using defer:
+	//
+	// 	func allow() (allowed bool) {
+	//     	r := ratelimiter.Reserve()
+	// 		// defer in a closure to read the most-recent value, not the value when deferred
+	// 		defer func() { r.Used(allowed) }()
+	// 		allowed = r.Allow()
+	// 		if !allowed {
+	//			return false // also marks the reservation as not-used
+	// 		}
+	// 		if somethingElseAllowsIt() {
+	// 			// allow the event, and mark the reservation as used so the token is consumed
+	//			return true
+	// 		}
+	// 		// cancel the reservation and possibly return the token
+	// 		return false
+	// 	}
+	//
+	// Or directly calling Used when appropriate:
+	//
+	// 	func allow() bool {
+	//     	r := ratelimiter.Reserve()
+	// 		allowed = r.Allow()
+	// 		if !allowed {
+	// 			r.Used(false) // mark the reservation as not-used
+	//			return false
+	// 		}
+	// 		if somethingElseAllowsIt() {
+	// 			// allow the event, and mark the reservation as used
+	// 			r.Used(true)
+	//			return true
+	// 		}
+	// 		r.Used(false) // mark the reservation as not-used, and restore the unused token
+	// 		return false
+	// 	}
 	Reservation interface {
 		// Allow returns true if a request should be allowed.
 		//
-		// This is expected to be called ~immediately, and only once.  Doing otherwise may behave
-		// irrationally due to its internally-pinned time.
-		// In particular, do not "Reserve -> time.Sleep -> Allow" as it may or may not account for
-		// any of the time spent sleeping.
+		// This may be called at any time and it will return the same value each time,
+		// but it becomes less correct as time passes, so you are expected to call it ~immediately.
 		//
 		// As soon as possible, also call Used(true/false) to consume / return the reserved token.
 		//
-		// This is equivalent to `OK() == true && Delay() == 0` with [golang.org/x/time/rate.Reservation].
+		// This is equivalent to `OK() == true && DelayFrom(reservationTime) == 0`
+		// with [rate.Reservation].
 		Allow() bool
 
 		// Used marks this Reservation as either used or not-used, and it must be called
 		// once on every Reservation:
-		//  - If true, the operation is assumed to be allowed, and the Ratelimiter token
+		//  - If true, the event is assumed to be allowed, and the Ratelimiter token
 		//    will remain consumed.
-		//  - If false, the Reservation will be rolled back, restoring a Ratelimiter token.
-		//    This is equivalent to calling Cancel() on a golang.org/x/time/rate.Reservation
+		//  - If false, the Reservation will be rolled back, possibly restoring a Ratelimiter token.
+		//    This is equivalent to calling Cancel() on a [rate.Reservation], but it is more likely
+		//    to return the token.
 		Used(wasUsed bool)
 	}
 
@@ -158,6 +200,7 @@ func NewRatelimiter(lim rate.Limit, burst int) Ratelimiter {
 		limiter:    rate.NewLimiter(lim, burst),
 	}
 }
+
 func NewMockRatelimiter(ts TimeSource, lim rate.Limit, burst int) Ratelimiter {
 	return &ratelimiter{
 		timesource: ts,
@@ -166,51 +209,50 @@ func NewMockRatelimiter(ts TimeSource, lim rate.Limit, burst int) Ratelimiter {
 }
 
 // lockNow updates the current "now" time, and ensures it never rolls back.
-// this should be equivalent to `r.timesource.Now()` outside of tests that abuse mocked time.
+// This should be equivalent to setting `r.timesource.Now()`, outside of tests
+// that abuse mocked time and Advance with negative values.
 //
 // The lock MUST be held until all time-accepting methods are called on the
 // underlying rate.Limiter, as otherwise the internal "now" value may rewind
 // and cause undefined behavior.
-//
-// Important design note: `r.timesource.Now()` must be gathered while the lock is held,
-// or the times we compare are not guaranteed to be monotonic due to waiting on mutexes.
-// The `.Before` comparison should ensure *better* behavior in spite of this, but it's
-// much more correct if it's acquired within the lock.
 func (r *ratelimiter) lockNow() (now time.Time, unlock func()) {
 	r.mut.Lock()
+	// important design note: `r.timesource.Now()` MUST be gathered while the lock is held,
+	// or the times we compare are not guaranteed to be monotonic due to waiting on mutexes.
 	newNow := r.timesource.Now()
-	if r.latestNow.Before(newNow) {
+	if newNow.After(r.latestNow) {
 		// this should always be true because `time.Now()` is monotonic, and it is
 		// always acquired inside the lock (so values are strictly ordered and
 		// not arbitrarily delayed).
 		//
-		// that means e.g. lockCorrectNow should not ever receive a value newer than
-		// the Now we just acquired, so r.latestNow should never be newer either.
+		// that means e.g. lockReservedNow should not ever receive a value newer than
+		// the Now we just acquired, so r.latestNow should never be newer either, so
+		// this branch is always selected (unless time is equal).
 		//
-		// that said: it still shouldn't be allowed to rewind.
+		// that said: it still shouldn't be allowed to rewind, so it's checked.
 		r.latestNow = newNow
 	}
 	return r.latestNow, r.mut.Unlock
 }
 
-// lockCorrectNow gets the correct "now" time to use, and ensures it never rolls back.
-// this is intended to be used by reservations, to allow them to return claimed tokens
+// lockReservedNow gets the correct "now" time to use, ensuring it never rolls back.
+// This is intended to be used by reservations, to allow them to return claimed tokens
 // after arbitrary waits, as long as no other calls have interleaved.
 //
-// the returned value MUST be used instead of the passed time: it may be the same or newer.
-// the passed value may rewind the rate.Limiter's internal time record, and cause undefined behavior.
+// The returned value MUST be used instead of the passed time: it may be the same or newer.
+// The passed value may rewind the rate.Limiter's internal time record, and cause undefined behavior.
 //
 // The lock MUST be held until all time-accepting methods are called on the
 // underlying rate.Limiter, as otherwise the internal "now" value may rewind
 // and cause undefined behavior.
-func (r *ratelimiter) lockCorrectNow(tryNow time.Time) (now time.Time, unlock func()) {
+func (r *ratelimiter) lockReservedNow(tryNow time.Time) (now time.Time, unlock func()) {
 	r.mut.Lock()
-	if r.latestNow.Before(tryNow) {
+	if tryNow.After(r.latestNow) {
 		// this should be true if a cancellation arrives before any other call
 		// has advanced time (e.g. other Allow() calls).
 		//
 		// "old" cancels are expected to skip this path, and return the r.latestNow
-		// without updating it.  they may or may not release their token in this case.
+		// without updating it.
 		r.latestNow = tryNow
 	}
 	return r.latestNow, r.mut.Unlock
@@ -220,14 +262,6 @@ func (r *ratelimiter) Allow() bool {
 	now, unlock := r.lockNow()
 	defer unlock()
 	return r.limiter.AllowN(now, 1)
-}
-
-func (r *ratelimiter) Burst() int {
-	return r.limiter.Burst()
-}
-
-func (r *ratelimiter) Limit() rate.Limit {
-	return r.limiter.Limit()
 }
 
 func (r *ratelimiter) Reserve() Reservation {
@@ -246,10 +280,23 @@ func (r *ratelimiter) Reserve() Reservation {
 	// since we don't allow waiting for it.
 	//
 	// this restores MANY more tokens when heavily contended, as time skews
-	// less before canceling, so it gets MUCH closer to the intended limit,
-	// and it performs very slightly better.
+	// less before canceling, so it gets MUCH closer to the intended limit.
 	res.CancelAt(now)
 	return deniedReservation{}
+}
+
+func (r *ratelimiter) Burst() int {
+	// rate.Limiter.Burst does not currently advance time,
+	// so this does not need to hold the ratelimiter lock.
+	// if this changes, use lockNow.
+	return r.limiter.Burst()
+}
+
+func (r *ratelimiter) Limit() rate.Limit {
+	// rate.Limiter.Limit does not currently advance time,
+	// so this does not need to hold the ratelimiter lock.
+	// if this changes, use lockNow.
+	return r.limiter.Limit()
 }
 
 func (r *ratelimiter) SetBurst(newBurst int) {
@@ -273,7 +320,7 @@ func (r *ratelimiter) Tokens() float64 {
 func (r *ratelimiter) Wait(ctx context.Context) (err error) {
 	now, unlock := r.lockNow()
 	var once sync.Once
-	defer once.Do(unlock) // unlock if panic or returned early with no err, noop if it waited
+	defer once.Do(unlock) // unlock if panic or returned early with no err
 
 	res := r.limiter.ReserveN(now, 1)
 	defer func() {
@@ -293,10 +340,10 @@ func (r *ratelimiter) Wait(ctx context.Context) (err error) {
 			// (re)-acquire the latest now value.
 			//
 			// it should not be advanced to the "real" now, to improve the chance
-			// that the token will be restored, but it's pretty likely that other
-			// calls occurred while unlocked and the most-recently-observed time
-			// must be maintained.
-			now, unlock := r.lockCorrectNow(now)
+			// that the token will be restored, but if there was any waiting
+			// it's pretty likely that other calls occurred while unlocked and
+			// the most-recently-observed time must be maintained.
+			now, unlock := r.lockReservedNow(now)
 			defer unlock()
 			res.CancelAt(now)
 		}
@@ -315,8 +362,11 @@ func (r *ratelimiter) Wait(ctx context.Context) (err error) {
 		// 1 must imply 0 burst and finite limit, as we only reserve 1.
 		// 2 implies too many reservations for a finite wait.
 		//
-		// burst alone is sufficient to tell these apart, and a race that changes
-		// burst during this call will at worst lead to a minor miscategorization.
+		// burst alone is sufficient to tell these apart.
+		//
+		// if we begin allowing >1 reservations, this may have to change, so
+		// these error values are NOT exposed to prevent building behavior
+		// that depends on this detail.
 		burst := r.limiter.Burst()
 		if burst > 0 {
 			return errWaitLongerThanDeadline
@@ -333,7 +383,9 @@ func (r *ratelimiter) Wait(ctx context.Context) (err error) {
 
 	once.Do(unlock) // unlock before waiting
 
-	// wait for cancellation or the waiter's turn
+	// wait for cancellation or the waiter's turn.
+	// re-acquiring Now() here is valid and may shorten the delay, but may add
+	// more branches and isn't strictly necessary as sleeps aren't precise anyway.
 	timer := r.timesource.NewTimer(delay)
 	defer timer.Stop()
 	select {
@@ -346,7 +398,7 @@ func (r *ratelimiter) Wait(ctx context.Context) (err error) {
 
 func (r *allowedReservation) Used(used bool) {
 	if !used {
-		now, unlock := r.limiter.lockCorrectNow(r.reservedAt)
+		now, unlock := r.limiter.lockReservedNow(r.reservedAt)
 		// lock must be held while canceling, because it can affect the limiter's time
 		defer unlock()
 
