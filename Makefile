@@ -39,7 +39,12 @@ STABLE_BIN := .bin
 # toolchain version we all use.
 # this export ensures it is a precise version rather than a minimum.
 # lint step ensures this matches other files.
-export GOTOOLCHAIN ?= $(word 2,$(shell grep 'toolchain' go.work))
+GOWORK_TOOLCHAIN := $(word 2,$(shell grep 'toolchain' go.work))
+export GOTOOLCHAIN ?= $(GOWORK_TOOLCHAIN)
+ifneq ($(GOTOOLCHAIN),$(GOWORK_TOOLCHAIN))
+# this can be useful for trying new/old versions, so don't block it
+$(warning warning: your Go toolchain is explicitly set to GOTOOLCHAIN=$(GOTOOLCHAIN), ignoring go.work version $(GOWORK_TOOLCHAIN)...)
+endif
 
 # ====================================
 # book-keeping files that are used to control sequencing.
