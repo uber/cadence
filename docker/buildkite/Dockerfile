@@ -1,4 +1,4 @@
-FROM golang:1.20-bullseye
+FROM golang:1.22.3-bullseye
 
 # Tried to set Python to ignore warnings due to the instructions at this link:
 # https://github.com/yaml/pyyaml/wiki/PyYAML-yaml.load(input)-Deprecation

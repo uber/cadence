@@ -36,19 +36,10 @@ BIN := $(BUILD)/bin
 # usually unnecessary to clean, and may require downloads to restore, so this folder is not automatically cleaned.
 STABLE_BIN := .bin
 
-
-# current (when committed) version of Go used in CI, and ideally also our docker images.
-# this generally does not matter, but can impact goimports output.
-# for maximum stability, make sure you use the same version as CI uses.
-#
-# this can _likely_ remain a major version, as fmt output does not tend to change in minor versions,
-# which will allow findstring to match any minor version.
-EXPECTED_GO_VERSION := go1.20
-CURRENT_GO_VERSION := $(shell go version)
-ifeq (,$(findstring $(EXPECTED_GO_VERSION),$(CURRENT_GO_VERSION)))
-# if you are seeing this warning: consider using https://github.com/travis-ci/gimme to pin your version
-$(warning Caution: you are not using CI's go version. Expected: $(EXPECTED_GO_VERSION), current: $(CURRENT_GO_VERSION))
-endif
+# toolchain version we all use.
+# this export ensures it is a precise version rather than a minimum.
+# lint step ensures this matches other files.
+export GOTOOLCHAIN ?= $(word 2,$(shell grep 'toolchain' go.work))
 
 # ====================================
 # book-keeping files that are used to control sequencing.
@@ -64,6 +55,7 @@ endif
 $(BUILD)/lint: $(BUILD)/fmt # lint will fail if fmt fails, so fmt first
 $(BUILD)/proto-lint:
 $(BUILD)/gomod-lint:
+$(BUILD)/goversion-lint:
 $(BUILD)/fmt: $(BUILD)/copyright # formatting must occur only after all other go-file-modifications are done
 $(BUILD)/copyright: $(BUILD)/codegen # must add copyright to generated code, sometimes needs re-formatting
 $(BUILD)/codegen: $(BUILD)/thrift $(BUILD)/protoc
@@ -175,45 +167,45 @@ endef
 $(BIN) $(BUILD) $(STABLE_BIN):
 	$Q mkdir -p $@
 
-$(BIN)/thriftrw: go.mod
+$(BIN)/thriftrw: go.mod go.work
 	$(call go_mod_build_tool,go.uber.org/thriftrw)
 
-$(BIN)/thriftrw-plugin-yarpc: go.mod
+$(BIN)/thriftrw-plugin-yarpc: go.mod go.work
 	$(call go_mod_build_tool,go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc)
 
-$(BIN)/mockgen: internal/tools/go.mod
+$(BIN)/mockgen: internal/tools/go.mod go.work
 	$(call go_build_tool,github.com/golang/mock/mockgen)
 
-$(BIN)/mockery: internal/tools/go.mod
+$(BIN)/mockery: internal/tools/go.mod go.work
 	$(call go_build_tool,github.com/vektra/mockery/v2,mockery)
 
-$(BIN)/enumer: internal/tools/go.mod
+$(BIN)/enumer: internal/tools/go.mod go.work
 	$(call go_build_tool,github.com/dmarkham/enumer)
 
 # organizes imports and reformats
-$(BIN)/gci: internal/tools/go.mod
+$(BIN)/gci: internal/tools/go.mod go.work
 	$(call go_build_tool,github.com/daixiang0/gci)
 
 # removes unused imports and reformats
-$(BIN)/goimports: internal/tools/go.mod
+$(BIN)/goimports: internal/tools/go.mod go.work
 	$(call go_build_tool,golang.org/x/tools/cmd/goimports)
 
-$(BIN)/gowrap: go.mod
+$(BIN)/gowrap: go.mod go.work
 	$(call go_build_tool,github.com/hexdigest/gowrap/cmd/gowrap)
 
-$(BIN)/revive: internal/tools/go.mod
+$(BIN)/revive: internal/tools/go.mod go.work
 	$(call go_build_tool,github.com/mgechev/revive)
 
-$(BIN)/protoc-gen-gogofast: go.mod | $(BIN)
+$(BIN)/protoc-gen-gogofast: go.mod go.work | $(BIN)
 	$(call go_mod_build_tool,github.com/gogo/protobuf/protoc-gen-gogofast)
 
-$(BIN)/protoc-gen-yarpc-go: go.mod | $(BIN)
+$(BIN)/protoc-gen-yarpc-go: go.mod go.work | $(BIN)
 	$(call go_mod_build_tool,go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go)
 
-$(BIN)/goveralls: internal/tools/go.mod
+$(BIN)/goveralls: internal/tools/go.mod go.work
 	$(call go_build_tool,github.com/mattn/goveralls)
 
-$(BUILD)/go_mod_check: go.mod internal/tools/go.mod
+$(BUILD)/go_mod_check: go.mod internal/tools/go.mod go.work
 	$Q # generated == used is occasionally important for gomock / mock libs in general.  this is not a definite problem if violated though.
 	$Q ./scripts/check-gomod-version.sh github.com/golang/mock/gomock $(if $(verbose),-v)
 	$Q touch $@
@@ -372,6 +364,11 @@ $(BUILD)/code-lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
 		fi
 	$Q touch $@
 
+$(BUILD)/goversion-lint: go.work Dockerfile docker/buildkite/Dockerfile
+	$Q echo "checking go version..."
+	$Q ./scripts/check_go_toolchain.sh $(GOTOOLCHAIN)
+	$Q touch $@
+
 # fmt and copyright are mutually cyclic with their inputs, so if a copyright header is modified:
 # - copyright -> makes changes
 # - fmt sees changes -> makes changes
@@ -420,7 +417,7 @@ endef
 # useful to actually re-run to get output again.
 # reuse the intermediates for simplicity and consistency.
 lint: ## (re)run the linter
-	$(call remake,proto-lint gomod-lint code-lint)
+	$(call remake,proto-lint gomod-lint code-lint goversion-lint)
 
 # intentionally not re-making, it's a bit slow and it's clear when it's unnecessary
 fmt: $(BUILD)/fmt ## run gofmt / organize imports / etc

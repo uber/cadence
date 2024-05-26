@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+
+set -eo pipefail
+
+# enable double-star
+shopt -s globstar
+
+fail=0
+bad() {
+  echo -e "$@" >/dev/stderr
+  fail=1
+}
+
+if [[ $V == 1 ]]; then
+  set -x
+fi
+
+target="${1#go}"
+root="$(git rev-parse --show-toplevel)"
+# this SHOULD match the dependencies in the goversion-lint check to avoid skipping it
+for file in "$root"/**/Dockerfile; do
+  # find "FROM golang:1.22.3-alpine3.18 ..." lines
+  line="$(grep -i 'from golang:' "$file")"
+  # remove "from golang:" prefix
+  version="${line#*golang:}"
+  # remove "-alpine..." suffix
+  version="${version%-*}"
+  # and make sure it matches
+  if [[ "$version" != "$target" ]]; then
+    bad "Wrong Go version in file $file:\n\t$line"
+  fi
+done
+
+if [[ $fail == 1 ]]; then
+  bad "Makefile pins Go to go${target}, Dockerfiles should too."
+  bad "Non-matching versions lead to pointless double-downloading to get the correct version."
+  exit 1
+fi
