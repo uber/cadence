@@ -17,7 +17,10 @@ fi
 
 target="${1#go}"
 root="$(git rev-parse --show-toplevel)"
+
 # this SHOULD match the dependencies in the goversion-lint check to avoid skipping it
+
+# check dockerfiles
 for file in "$root"/**/Dockerfile; do
   # find "FROM golang:1.22.3-alpine3.18 ..." lines
   line="$(grep -i 'from golang:' "$file")"
@@ -31,8 +34,16 @@ for file in "$root"/**/Dockerfile; do
   fi
 done
 
+# check workflows
+codecov_file="$root/.github/workflows/codecov.yml"
+codecov_line="$(grep 'go-version:' "$codecov_file")"
+codecov_version="${codecov_line#*go-version: }"
+if [[ "$codecov_version" != "$target" ]]; then
+  bad "Wrong Go version in file $codecov_file:\n\t$codecov_line"
+fi
+
 if [[ $fail == 1 ]]; then
-  bad "Makefile pins Go to go${target}, Dockerfiles should too."
+  bad "Makefile pins Go to go${target}, Dockerfiles and GitHub workflows should too."
   bad "Non-matching versions lead to pointless double-downloading to get the correct version."
   exit 1
 fi
