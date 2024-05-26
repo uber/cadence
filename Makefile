@@ -371,7 +371,8 @@ $(BUILD)/code-lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
 
 $(BUILD)/goversion-lint: go.work Dockerfile docker/buildkite/Dockerfile
 	$Q echo "checking go version..."
-	$Q ./scripts/check_go_toolchain.sh $(GOTOOLCHAIN)
+	$Q # intentionally using go.work toolchain, as GOTOOLCHAIN is user-overridable
+	$Q ./scripts/check_go_toolchain.sh $(GOWORK_TOOLCHAIN)
 	$Q touch $@
 
 # fmt and copyright are mutually cyclic with their inputs, so if a copyright header is modified:
