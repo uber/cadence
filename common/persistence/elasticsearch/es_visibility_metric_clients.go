@@ -276,6 +276,25 @@ func (p *visibilityMetricsClient) GetClosedWorkflowExecution(
 	return response, err
 }
 
+func (p *visibilityMetricsClient) ListAllWorkflowExecutions(
+	ctx context.Context,
+	request *p.ListAllWorkflowExecutionsRequest,
+) (*p.ListWorkflowExecutionsResponse, error) {
+
+	scopeWithDomainTag := p.metricClient.Scope(metrics.ElasticsearchListAllWorkflowExecutionsScope, metrics.DomainTag(request.Domain))
+	scopeWithDomainTag.IncCounter(metrics.ElasticsearchRequestsPerDomain)
+
+	sw := scopeWithDomainTag.StartTimer(metrics.ElasticsearchLatencyPerDomain)
+	response, err := p.persistence.ListAllWorkflowExecutions(ctx, request)
+	sw.Stop()
+
+	if err != nil {
+		p.updateErrorMetric(scopeWithDomainTag, metrics.ElasticsearchListAllWorkflowExecutionsScope, err)
+	}
+
+	return response, err
+}
+
 func (p *visibilityMetricsClient) ListWorkflowExecutions(
 	ctx context.Context,
 	request *p.ListWorkflowExecutionsByQueryRequest,

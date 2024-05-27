@@ -256,6 +256,25 @@ func (p *pinotVisibilityMetricsClient) ListClosedWorkflowExecutionsByStatus(
 	return response, err
 }
 
+func (p *pinotVisibilityMetricsClient) ListAllWorkflowExecutions(
+	ctx context.Context,
+	request *p.ListAllWorkflowExecutionsRequest,
+) (*p.ListWorkflowExecutionsResponse, error) {
+
+	scopeWithDomainTag := p.metricClient.Scope(metrics.PinotListAllWorkflowExecutionsScope, metrics.DomainTag(request.Domain))
+	scopeWithDomainTag.IncCounter(metrics.PinotRequestsPerDomain)
+
+	sw := scopeWithDomainTag.StartTimer(metrics.PinotLatencyPerDomain)
+	defer sw.Stop()
+	response, err := p.persistence.ListAllWorkflowExecutions(ctx, request)
+
+	if err != nil {
+		p.updateErrorMetric(scopeWithDomainTag, metrics.PinotListAllWorkflowExecutionsScope, err)
+	}
+
+	return response, err
+}
+
 func (p *pinotVisibilityMetricsClient) GetClosedWorkflowExecution(
 	ctx context.Context,
 	request *p.GetClosedWorkflowExecutionRequest,

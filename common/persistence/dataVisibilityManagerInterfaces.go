@@ -133,6 +133,13 @@ type (
 		NextPageToken []byte
 	}
 
+	// ListAllWorkflowExecutionsRequest is used to list all executions in a domain
+	ListAllWorkflowExecutionsRequest struct {
+		ListWorkflowExecutionsRequest
+		PartialMatch        bool
+		WorkflowSearchValue string // This value will be searched across workflow type, workflow ID and runID
+	}
+
 	// ListWorkflowExecutionsByQueryRequest is used to list executions in a domain
 	ListWorkflowExecutionsByQueryRequest struct {
 		DomainUUID string
@@ -225,6 +232,7 @@ type (
 		ListClosedWorkflowExecutionsByStatus(ctx context.Context, request *ListClosedWorkflowExecutionsByStatusRequest) (*ListWorkflowExecutionsResponse, error)
 		DeleteWorkflowExecution(ctx context.Context, request *VisibilityDeleteWorkflowExecutionRequest) error
 		ListWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsByQueryRequest) (*ListWorkflowExecutionsResponse, error)
+		ListAllWorkflowExecutions(ctx context.Context, request *ListAllWorkflowExecutionsRequest) (*ListWorkflowExecutionsResponse, error)
 		ScanWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsByQueryRequest) (*ListWorkflowExecutionsResponse, error)
 		CountWorkflowExecutions(ctx context.Context, request *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error)
 		// NOTE: GetClosedWorkflowExecution is only for persistence testing, currently no index is supported for filtering by RunID

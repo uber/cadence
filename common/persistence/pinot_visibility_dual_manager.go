@@ -299,6 +299,14 @@ func (v *pinotVisibilityDualManager) ListWorkflowExecutions(
 	return manager.ListWorkflowExecutions(ctx, request)
 }
 
+func (v *pinotVisibilityDualManager) ListAllWorkflowExecutions(
+	ctx context.Context,
+	request *ListAllWorkflowExecutionsRequest,
+) (*ListWorkflowExecutionsResponse, error) {
+	manager := v.chooseVisibilityManagerForRead(request.Domain)
+	return manager.ListAllWorkflowExecutions(ctx, request)
+}
+
 func (v *pinotVisibilityDualManager) ScanWorkflowExecutions(
 	ctx context.Context,
 	request *ListWorkflowExecutionsByQueryRequest,

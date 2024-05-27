@@ -270,6 +270,8 @@ const (
 	PersistenceDeleteUninitializedWorkflowExecutionScope
 	// PersistenceListWorkflowExecutionsScope tracks ListWorkflowExecutions calls made by service to persistence layer
 	PersistenceListWorkflowExecutionsScope
+	// PersistenceListAllWorkflowExecutionsScope tracks ListWorkflowExecutions calls made by service to persistence layer
+	PersistenceListAllWorkflowExecutionsScope
 	// PersistenceScanWorkflowExecutionsScope tracks ScanWorkflowExecutions calls made by service to persistence layer
 	PersistenceScanWorkflowExecutionsScope
 	// PersistenceCountWorkflowExecutionsScope tracks CountWorkflowExecutions calls made by service to persistence layer
@@ -749,6 +751,8 @@ const (
 	ElasticsearchGetClosedWorkflowExecutionScope
 	// ElasticsearchListWorkflowExecutionsScope tracks ListWorkflowExecutions calls made by service to persistence layer
 	ElasticsearchListWorkflowExecutionsScope
+	// ElasticsearchListAllWorkflowExecutionsScope tracks ListWorkflowExecutions calls made by service to persistence layer
+	ElasticsearchListAllWorkflowExecutionsScope
 	// ElasticsearchScanWorkflowExecutionsScope tracks ScanWorkflowExecutions calls made by service to persistence layer
 	ElasticsearchScanWorkflowExecutionsScope
 	// ElasticsearchCountWorkflowExecutionsScope tracks CountWorkflowExecutions calls made by service to persistence layer
@@ -784,6 +788,8 @@ const (
 	PinotGetClosedWorkflowExecutionScope
 	// PinotListWorkflowExecutionsScope tracks ListWorkflowExecutions calls made by service to persistence layer
 	PinotListWorkflowExecutionsScope
+	// PinotListAllWorkflowExecutionsScope tracks ListAllWorkflowExecutions calls made by service to persistence layer
+	PinotListAllWorkflowExecutionsScope
 	// PinotScanWorkflowExecutionsScope tracks ScanWorkflowExecutions calls made by service to persistence layer
 	PinotScanWorkflowExecutionsScope
 	// PinotCountWorkflowExecutionsScope tracks CountWorkflowExecutions calls made by service to persistence layer

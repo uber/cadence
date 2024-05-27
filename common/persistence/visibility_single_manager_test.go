@@ -523,6 +523,46 @@ func TestListClosedWorkflowExecutions(t *testing.T) {
 	}
 }
 
+func TestListAllWorkflowExecutions(t *testing.T) {
+	tests := map[string]struct {
+		request                   *ListAllWorkflowExecutionsRequest
+		visibilityStoreAffordance func(mockVisibilityStore *MockVisibilityStore)
+		expectedError             error
+	}{
+		"Case1: error case": {
+			request: &ListAllWorkflowExecutionsRequest{},
+			visibilityStoreAffordance: func(mockVisibilityStore *MockVisibilityStore) {
+				mockVisibilityStore.EXPECT().ListAllWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("error")).Times(1)
+			},
+			expectedError: fmt.Errorf("error"),
+		},
+		"Case2: normal case": {
+			request: &ListAllWorkflowExecutionsRequest{},
+			visibilityStoreAffordance: func(mockVisibilityStore *MockVisibilityStore) {
+				mockVisibilityStore.EXPECT().ListAllWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			expectedError: nil,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockVisibilityStore := NewMockVisibilityStore(ctrl)
+			visibilityManager := NewVisibilityManagerImpl(mockVisibilityStore, log.NewNoop())
+
+			test.visibilityStoreAffordance(mockVisibilityStore)
+
+			_, err := visibilityManager.ListAllWorkflowExecutions(context.Background(), test.request)
+			if test.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestListOpenWorkflowExecutionsByType(t *testing.T) {
 	errorRequest := &ListWorkflowExecutionsByTypeRequest{}
 

@@ -713,6 +713,64 @@ func TestDualListClosedWorkflowExecutions(t *testing.T) {
 	}
 }
 
+func TestDualListAllWorkflowExecutions(t *testing.T) {
+	request := &ListAllWorkflowExecutionsRequest{
+		ListWorkflowExecutionsRequest: ListWorkflowExecutionsRequest{Domain: "test-domain"},
+		PartialMatch:                  false,
+		WorkflowSearchValue:           "",
+	}
+
+	ctrl := gomock.NewController(t)
+
+	tests := map[string]struct {
+		request                           *ListAllWorkflowExecutionsRequest
+		mockDBVisibilityManager           VisibilityManager
+		mockESVisibilityManager           VisibilityManager
+		mockDBVisibilityManagerAccordance func(mockDBVisibilityManager *MockVisibilityManager)
+		mockESVisibilityManagerAccordance func(mockESVisibilityManager *MockVisibilityManager)
+		readModeIsFromES                  dynamicconfig.BoolPropertyFnWithDomainFilter
+		expectedError                     error
+	}{
+		"Case1-1: success case with DB visibility is not nil": {
+			request:                 request,
+			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockDBVisibilityManagerAccordance: func(mockDBVisibilityManager *MockVisibilityManager) {
+				mockDBVisibilityManager.EXPECT().ListAllWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+		"Case1-2: success case with ES visibility is not nil": {
+			request:                 request,
+			mockESVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockESVisibilityManagerAccordance: func(mockESVisibilityManager *MockVisibilityManager) {
+				mockESVisibilityManager.EXPECT().ListAllWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+			},
+			readModeIsFromES: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+			expectedError:    nil,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			if test.mockDBVisibilityManager != nil {
+				test.mockDBVisibilityManagerAccordance(test.mockDBVisibilityManager.(*MockVisibilityManager))
+			}
+			if test.mockESVisibilityManager != nil {
+				test.mockESVisibilityManagerAccordance(test.mockESVisibilityManager.(*MockVisibilityManager))
+			}
+			visibilityManager := NewVisibilityDualManager(test.mockDBVisibilityManager,
+				test.mockESVisibilityManager, test.readModeIsFromES, nil, log.NewNoop())
+
+			_, err := visibilityManager.ListAllWorkflowExecutions(context.Background(), test.request)
+			if test.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestDualListOpenWorkflowExecutionsByType(t *testing.T) {
 	request := &ListWorkflowExecutionsByTypeRequest{
 		ListWorkflowExecutionsRequest: ListWorkflowExecutionsRequest{
