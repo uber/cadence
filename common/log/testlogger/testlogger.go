@@ -40,6 +40,12 @@ type TestingT interface {
 
 // New is a helper to create new development logger in unit test
 func New(t TestingT) log.Logger {
+	// test logger that emits all logs (none dropped / sample func never returns false)
+	return loggerimpl.NewLogger(NewZap(t), loggerimpl.WithSampleFunc(func(int) bool { return true }))
+}
+
+// NewZap makes a new test-oriented logger that prevents bad-lifecycle logs from failing tests.
+func NewZap(t TestingT) *zap.Logger {
 	/*
 		HORRIBLE HACK due to async shutdown, both in our code and in libraries (e.g. gocql):
 		normally, logs produced after a test finishes will *intentionally* fail the test and/or cause data to race.
@@ -69,8 +75,7 @@ func New(t TestingT) log.Logger {
 
 	t.Cleanup(replaced.UseFallback) // switch to fallback before ending the test
 
-	// test logger that emits all logs (none dropped / sample func never returns false)
-	return loggerimpl.NewLogger(tl, loggerimpl.WithSampleFunc(func(int) bool { return true }))
+	return tl
 }
 
 type fallbackTestCore struct {

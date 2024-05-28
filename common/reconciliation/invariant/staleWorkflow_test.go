@@ -31,9 +31,9 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap/zaptest"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -44,7 +44,7 @@ func setup(t *testing.T, retentionDays int) (pr *persistence.MockRetryer, impl *
 	impl = &staleWorkflowCheck{
 		pr:       m,
 		dc:       nil, // not used by these tests
-		log:      zaptest.NewLogger(t),
+		log:      testlogger.NewZap(t),
 		testable: &mocked{},
 	}
 	withDomain(retentionDays, impl)
