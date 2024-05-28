@@ -300,9 +300,10 @@ func BenchmarkLimiter(b *testing.B) {
 						limit := rate.Every(dur)
 						// set a wait timeout long enough to allow ~all attempts.
 						//
-						// b.Run seems to target below 1s per batch, staying above
-						// that should be fine and tests should not take this long.
-						timeout := 5 * time.Second
+						// b.Run seems to target <1s, but very fast or very slow things can extend it,
+						// and up to about 2s seems normal for these.
+						// because of that, 5s occasionally timed out, but 10s seems fine.
+						timeout := 10 * time.Second
 						ctx, cancel := context.WithTimeout(context.Background(), timeout)
 						defer cancel()
 
@@ -337,12 +338,13 @@ func BenchmarkLimiter(b *testing.B) {
 								ts.Advance(dur)
 								return rl.Wait(ctx) == nil
 							})
-							// should be true if the round took longer than timeout,
-							// as the AfterFunc will fire -> advance time -> close context -> then the round finishes.
-							if ctx.Err() != nil {
-								b.Errorf("benchmark likely invalid, did not complete before context timeout (%v)", timeout)
-							}
 						})
+
+						// should be true if the round took longer than timeout,
+						// as the AfterFunc will fire -> advance time -> close context -> then the round finishes.
+						if ctx.Err() != nil {
+							b.Errorf("benchmark likely invalid, did not complete before context timeout (%v)", timeout)
+						}
 					})
 				}
 			})
