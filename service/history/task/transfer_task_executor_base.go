@@ -22,11 +22,13 @@ package task
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -395,6 +397,22 @@ func getWorkflowMemo(
 		return nil
 	}
 	return &types.Memo{Fields: memo}
+}
+
+func appendContextHeaderToSearchAttributes(attr, context map[string][]byte) map[string][]byte {
+	for k, v := range context {
+		key := fmt.Sprintf(definition.HeaderFormat, k)
+		if _, ok := attr[key]; ok { // skip if key already exists
+			continue
+		}
+		val := make([]byte, len(v))
+		copy(val, v)
+		if attr == nil {
+			attr = make(map[string][]byte)
+		}
+		attr[key] = val
+	}
+	return attr
 }
 
 func copySearchAttributes(
