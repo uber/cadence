@@ -1047,7 +1047,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 	searchAttr := copySearchAttributes(executionInfo.SearchAttributes)
 	if t.config.EnableContextHeaderInVisibility(domainEntry.GetInfo().Name) {
 		if attributes := startEvent.GetWorkflowExecutionStartedEventAttributes(); attributes != nil && attributes.Header != nil {
-			searchAttr = appendContextHeaderToSearchAttributes(searchAttr, attributes.Header.Fields)
+			searchAttr = appendContextHeaderToSearchAttributes(searchAttr, attributes.Header.Fields, t.config.ValidSearchAttributes())
 		}
 	}
 	isCron := len(executionInfo.CronSchedule) > 0

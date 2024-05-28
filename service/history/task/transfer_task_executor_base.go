@@ -399,10 +399,13 @@ func getWorkflowMemo(
 	return &types.Memo{Fields: memo}
 }
 
-func appendContextHeaderToSearchAttributes(attr, context map[string][]byte) map[string][]byte {
+func appendContextHeaderToSearchAttributes(attr, context map[string][]byte, allowedKeys map[string]interface{}) map[string][]byte {
 	for k, v := range context {
 		key := fmt.Sprintf(definition.HeaderFormat, k)
 		if _, ok := attr[key]; ok { // skip if key already exists
+			continue
+		}
+		if _, allowed := allowedKeys[key]; !allowed { // skip if not allowed
 			continue
 		}
 		val := make([]byte, len(v))

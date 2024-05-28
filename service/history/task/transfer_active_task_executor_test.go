@@ -22,7 +22,6 @@ package task
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
 	"strconv"
 	"testing"
@@ -42,7 +41,6 @@ import (
 	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
-	"github.com/uber/cadence/common/definition"
 	dc "github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/mocks"
@@ -1709,6 +1707,12 @@ func (s *transferActiveTaskExecutorSuite) TestProcessRecordWorkflowStartedTask()
 func (s *transferActiveTaskExecutorSuite) TestProcessRecordWorkflowStartedTaskWithContextHeader() {
 	// switch on context header in viz
 	s.mockShard.GetConfig().EnableContextHeaderInVisibility = func(domain string) bool {return true}
+	s.mockShard.GetConfig().ValidSearchAttributes = func(opts ...dc.FilterOption) map[string]interface{}  {
+		return map[string]interface{}{
+			"Header.contextKey": struct{}{},
+		}
+	}
+
 	workflowExecution, mutableState, decisionCompletionID, err := test.SetupWorkflowWithCompletedDecision(s.mockShard, s.domainID)
 	s.NoError(err)
 	executionInfo := mutableState.GetExecutionInfo()
@@ -1784,6 +1788,12 @@ func (s *transferActiveTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttribu
 func (s *transferActiveTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttributesWithContextHeader() {
 	// switch on context header in viz
 	s.mockShard.GetConfig().EnableContextHeaderInVisibility = func(domain string) bool {return true}
+	s.mockShard.GetConfig().ValidSearchAttributes = func(opts ...dc.FilterOption) map[string]interface{}  {
+		return map[string]interface{}{
+			"Header.contextKey": struct{}{},
+		}
+	}
+
 	workflowExecution, mutableState, decisionCompletionID, err := test.SetupWorkflowWithCompletedDecision(s.mockShard, s.domainID)
 	s.NoError(err)
 
@@ -1928,10 +1938,9 @@ func createRecordWorkflowExecutionStartedRequest(
 		executionTimestamp = startEvent.GetTimestamp() + int64(backoffSeconds)*int64(time.Second)
 	}
 	var searchAttributes map[string][]byte
-	if enableContextHeaderInVisibility && startEvent.WorkflowExecutionStartedEventAttributes.Header != nil {
-		searchAttributes = make(map[string][]byte)
-		for k, v := range startEvent.WorkflowExecutionStartedEventAttributes.Header.Fields {
-			searchAttributes[fmt.Sprintf(definition.HeaderFormat, k)] = v
+	if enableContextHeaderInVisibility {
+		searchAttributes = map[string][]byte {
+			"Header.contextKey": []byte("contextValue"),
 		}
 	}
 	return &persistence.RecordWorkflowExecutionStartedRequest{
@@ -2079,10 +2088,9 @@ func createUpsertWorkflowSearchAttributesRequest(
 		executionTimestamp = startEvent.GetTimestamp() + int64(backoffSeconds)*int64(time.Second)
 	}
 	var searchAttributes map[string][]byte
-	if enableContextHeaderInVisibility && startEvent.WorkflowExecutionStartedEventAttributes.Header != nil {
-		searchAttributes = make(map[string][]byte)
-		for k, v := range startEvent.WorkflowExecutionStartedEventAttributes.Header.Fields {
-			searchAttributes[fmt.Sprintf(definition.HeaderFormat, k)] = v
+	if enableContextHeaderInVisibility {
+		searchAttributes = map[string][]byte {
+			"Header.contextKey": []byte("contextValue"),
 		}
 	}
 

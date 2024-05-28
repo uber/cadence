@@ -38,6 +38,7 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
+	dc "github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/ndc"
@@ -814,6 +815,12 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessRecordWorkflowStartedTaskW
 	s.mockShard.GetConfig().EnableContextHeaderInVisibility = func (domain string) bool {
 		return true
 	}
+	s.mockShard.GetConfig().ValidSearchAttributes = func(opts ...dc.FilterOption) map[string]interface{}  {
+		return map[string]interface{}{
+			"Header.contextKey": struct{}{},
+		}
+	}
+
 	workflowExecution, mutableState, err := test.StartWorkflow(s.mockShard, s.domainID)
 	s.NoError(err)
 	executionInfo := mutableState.GetExecutionInfo()
@@ -896,6 +903,11 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttrib
 	// switch on context header in viz
 	s.mockShard.GetConfig().EnableContextHeaderInVisibility = func (domain string) bool {
 		return true
+	}
+	s.mockShard.GetConfig().ValidSearchAttributes = func(opts ...dc.FilterOption) map[string]interface{}  {
+		return map[string]interface{}{
+			"Header.contextKey": struct{}{},
+		}
 	}
 
 	workflowExecution, mutableState, decisionCompletionID, err := test.SetupWorkflowWithCompletedDecision(s.mockShard, s.domainID)

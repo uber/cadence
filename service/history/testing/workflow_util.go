@@ -65,7 +65,9 @@ func StartWorkflow(
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 				Header: 							&types.Header{Fields: map[string][]byte{
-					"contextKey": []byte("contextValue")}},
+					"contextKey": []byte("contextValue"),
+					"invalidContextKey": []byte("invalidContextValue"),
+				}},
 			},
 			PartitionConfig: map[string]string{"userid": uuid.New()},
 		},
