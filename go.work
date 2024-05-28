@@ -22,3 +22,12 @@ use (
 // DO NOT include, tools dependencies are intentionally separate.
 // ./internal/tools
 )
+
+// technically only a minimum version, but forced to be precise in makefile targets.
+// must be kept in sync with docker files to avoid double-downloading.
+//
+// this should be safe to raise any time as it only impacts us, as this affects the
+// Go version used to build within this workspace only, it does not affect dependencies.
+// but note that it needs to be a version that docker + mac + linux all support, as
+// they all must be in sync.
+toolchain go1.22.3
