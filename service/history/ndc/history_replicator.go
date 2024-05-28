@@ -59,7 +59,7 @@ type (
 		historySerializer  persistence.PayloadSerializer
 		metricsClient      metrics.Client
 		domainCache        cache.DomainCache
-		executionCache     *execution.Cache
+		executionCache     execution.Cache
 		eventsReapplier    EventsReapplier
 		transactionManager transactionManager
 		logger             log.Logger
@@ -118,7 +118,7 @@ var errPanic = errors.NewInternalFailureError("encounter panic")
 // NewHistoryReplicator creates history replicator
 func NewHistoryReplicator(
 	shard shard.Context,
-	executionCache *execution.Cache,
+	executionCache execution.Cache,
 	eventsReapplier EventsReapplier,
 	logger log.Logger,
 ) HistoryReplicator {

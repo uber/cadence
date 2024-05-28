@@ -43,7 +43,7 @@ import (
 // purposes.
 
 // ErrVisibilityOperationNotSupported is an error which indicates that operation is not supported in selected persistence
-var ErrVisibilityOperationNotSupported = &types.BadRequestError{Message: "Operation is not supported. Please use ElasticSearch"}
+var ErrVisibilityOperationNotSupported = &types.BadRequestError{Message: "Operation is not supported"}
 
 type (
 	// RecordWorkflowExecutionStartedRequest is used to add a record of a newly

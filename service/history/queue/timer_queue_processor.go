@@ -75,7 +75,7 @@ func NewTimerQueueProcessor(
 	shard shard.Context,
 	historyEngine engine.Engine,
 	taskProcessor task.Processor,
-	executionCache *execution.Cache,
+	executionCache execution.Cache,
 	archivalClient archiver.Client,
 	executionCheck invariant.Invariant,
 ) Processor {

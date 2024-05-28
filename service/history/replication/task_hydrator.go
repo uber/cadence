@@ -70,7 +70,7 @@ func NewImmediateTaskHydrator(isRunning bool, vh *persistence.VersionHistories, 
 
 // NewDeferredTaskHydrator will enrich replication tasks with additional information that is not available on hand,
 // but is rather loaded in a deferred way later from a database and cache.
-func NewDeferredTaskHydrator(shardID int, historyManager persistence.HistoryManager, executionCache *execution.Cache, domains domainCache) TaskHydrator {
+func NewDeferredTaskHydrator(shardID int, historyManager persistence.HistoryManager, executionCache execution.Cache, domains domainCache) TaskHydrator {
 	return TaskHydrator{
 		history:    historyLoader{shardID, historyManager, domains},
 		msProvider: mutableStateLoader{executionCache},
@@ -262,7 +262,7 @@ func (h historyLoader) getEventsBlob(ctx context.Context, domainID string, branc
 
 // mutableStateLoader uses workflow execution cache to load mutable state
 type mutableStateLoader struct {
-	cache *execution.Cache
+	cache execution.Cache
 }
 
 func (l mutableStateLoader) GetMutableState(ctx context.Context, domainID, workflowID, runID string) (mutableState, execution.ReleaseFunc, error) {

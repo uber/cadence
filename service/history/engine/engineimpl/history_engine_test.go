@@ -5450,7 +5450,7 @@ func TestRecordChildExecutionCompleted(t *testing.T) {
 				timeSource:      mockShard.GetTimeSource(),
 				metricsClient:   metrics.NewClient(tally.NoopScope, metrics.History),
 				logger:          mockShard.GetLogger(),
-				updateWithActionFn: func(_ context.Context, _ *execution.Cache, _ string, _ types.WorkflowExecution, _ bool, _ time.Time, actionFn func(wfContext execution.Context, mutableState execution.MutableState) error) error {
+				updateWithActionFn: func(_ context.Context, _ execution.Cache, _ string, _ types.WorkflowExecution, _ bool, _ time.Time, actionFn func(wfContext execution.Context, mutableState execution.MutableState) error) error {
 					return actionFn(nil, ms)
 				},
 			}

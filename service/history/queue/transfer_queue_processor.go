@@ -86,7 +86,7 @@ func NewTransferQueueProcessor(
 	shard shard.Context,
 	historyEngine engine.Engine,
 	taskProcessor task.Processor,
-	executionCache *execution.Cache,
+	executionCache execution.Cache,
 	workflowResetter reset.WorkflowResetter,
 	archivalClient archiver.Client,
 	executionCheck invariant.Invariant,

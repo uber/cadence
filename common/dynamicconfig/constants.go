@@ -2016,6 +2016,13 @@ const (
 	// Allowed filters: DomainName
 	EnableStrongIdempotency
 
+	// EnableStrongIdempotencySanityCheck enables sanity check for strong idempotency
+	// KeyName: history.enableStrongIdempotencySanityCheck
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: DomainName
+	EnableStrongIdempotencySanityCheck
+
 	// LastBoolKey must be the last one in this const group
 	LastBoolKey
 )
@@ -4333,6 +4340,12 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		KeyName:      "history.enableStrongIdempotency",
 		Filters:      []Filter{DomainName},
 		Description:  "EnableStrongIdempotency enables strong idempotency for APIs",
+		DefaultValue: false,
+	},
+	EnableStrongIdempotencySanityCheck: DynamicBool{
+		KeyName:      "history.enableStrongIdempotencySanityCheck",
+		Filters:      []Filter{DomainName},
+		Description:  "EnableStrongIdempotencySanityCheck enables sanity check for strong idempotency",
 		DefaultValue: false,
 	},
 }

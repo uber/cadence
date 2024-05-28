@@ -75,7 +75,7 @@ type (
 func newCrossClusterQueueProcessorBase(
 	shard shard.Context,
 	clusterName string,
-	executionCache *execution.Cache,
+	executionCache execution.Cache,
 	taskProcessor task.Processor,
 	taskExecutor task.Executor,
 	logger log.Logger,
@@ -116,7 +116,7 @@ func newCrossClusterQueueProcessorBase(
 func newCrossClusterQueueProcessorBaseHelper(
 	shard shard.Context,
 	targetCluster string,
-	executionCache *execution.Cache,
+	executionCache execution.Cache,
 	processingQueueStates []ProcessingQueueState,
 	taskProcessor task.Processor,
 	options *queueProcessorOptions,

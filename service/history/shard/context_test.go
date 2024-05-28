@@ -45,8 +45,16 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/resource"
+)
+
+const (
+	testShardID                   = 123
+	testRangeID                   = 1
+	testTransferMaxReadLevel      = 10
+	testMaxTransferSequenceNumber = 100
 )
 
 type (
@@ -87,8 +95,8 @@ func (s *contextTestSuite) newContext() *contextImpl {
 	eventsCache := events.NewMockCache(s.controller)
 	config := config.NewForTest()
 	shardInfo := &persistence.ShardInfo{
-		ShardID: 0,
-		RangeID: 1,
+		ShardID: testShardID,
+		RangeID: testRangeID,
 		// the following fields will be initialized
 		// when acquiring the shard if they are nil
 		ClusterTransferAckLevel: make(map[string]int64),
@@ -113,12 +121,15 @@ func (s *contextTestSuite) newContext() *contextImpl {
 		logger:                    s.logger,
 		throttledLogger:           s.logger,
 		transferSequenceNumber:    1,
-		transferMaxReadLevel:      0,
-		maxTransferSequenceNumber: 100000,
+		transferMaxReadLevel:      testTransferMaxReadLevel,
+		maxTransferSequenceNumber: testMaxTransferSequenceNumber,
 		timerMaxReadLevelMap:      make(map[string]time.Time),
 		remoteClusterCurrentTime:  make(map[string]time.Time),
 		eventsCache:               eventsCache,
 	}
+
+	s.Require().True(testMaxTransferSequenceNumber < (1<<context.config.RangeSizeBits), "bad config value")
+
 	return context
 }
 
@@ -126,18 +137,54 @@ func (s *contextTestSuite) TearDownTest() {
 	s.controller.Finish()
 }
 
-func (s *contextTestSuite) TestRenewRangeLockedSuccess() {
-	s.mockShardManager.On("UpdateShard", mock.Anything, mock.Anything).Once().Return(nil)
+// test various setters and getters
+func (s *contextTestSuite) TestAccessorMethods() {
+	s.Assert().EqualValues(testShardID, s.context.GetShardID())
+	s.Assert().Equal(s.mockResource, s.context.GetService())
+	s.Assert().Equal(s.mockResource.ExecutionMgr, s.context.GetExecutionManager())
+	s.Assert().EqualValues(testTransferMaxReadLevel, s.context.GetTransferMaxReadLevel())
+	s.Assert().Equal(s.logger, s.context.GetLogger())
+	s.Assert().Equal(s.logger, s.context.GetThrottledLogger())
 
-	err := s.context.renewRangeLocked(false)
-	s.NoError(err)
+	mockEngine := engine.NewMockEngine(s.controller)
+	s.context.SetEngine(mockEngine)
+	s.Assert().Equal(mockEngine, s.context.GetEngine())
 }
 
-func (s *contextTestSuite) TestRenewRangeLockedSuccessAfterRetries() {
-	s.mockShardManager.On("UpdateShard", mock.Anything, mock.Anything).Return(nil)
+func (s *contextTestSuite) TestGenerateTransferTaskID() {
+	taskID, err := s.context.GenerateTransferTaskID()
+	s.Require().NoError(err)
+	s.Assert().Equal(int64(1), taskID)
 
-	err := s.context.renewRangeLocked(false)
-	s.NoError(err)
+	taskID, err = s.context.GenerateTransferTaskID()
+	s.Require().NoError(err)
+	s.Assert().Equal(int64(2), taskID)
+}
+
+func (s *contextTestSuite) TestGenerateTransferTaskIDs() {
+	expectedTaskIDs := []int64{1, 2, 3, 4}
+
+	taskIDs, err := s.context.GenerateTransferTaskIDs(4)
+	s.Require().NoError(err)
+	s.Assert().Equal(expectedTaskIDs, taskIDs)
+}
+
+func (s *contextTestSuite) TestGenerateTransferTaskID_RenewsRange() {
+	// we acquire task IDs until testMaxTransferSequenceNumber, then next generation should involve
+	// renewing range
+	_, err := s.context.GenerateTransferTaskIDs(testMaxTransferSequenceNumber - 1)
+	s.Require().NoError(err)
+
+	s.mockShardManager.On("UpdateShard", mock.Anything, mock.Anything).Once().Return(nil)
+
+	taskID, err := s.context.GenerateTransferTaskID()
+	s.Require().NoError(err)
+
+	newRangeID := testRangeID + 1
+	s.Assert().EqualValues(newRangeID, s.context.getRangeID(), "RangeID should be incremented when renewing range")
+	expectedTransferTaskID := newRangeID << s.context.config.RangeSizeBits
+
+	s.Assert().EqualValues(expectedTransferTaskID, taskID)
 }
 
 func (s *contextTestSuite) TestRenewRangeLockedRetriesExceeded() {

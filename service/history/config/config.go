@@ -338,7 +338,8 @@ type Config struct {
 	LargeShardHistoryEventMetricThreshold dynamicconfig.IntPropertyFn
 	LargeShardHistoryBlobMetricThreshold  dynamicconfig.IntPropertyFn
 
-	EnableStrongIdempotency dynamicconfig.BoolPropertyFnWithDomainFilter
+	EnableStrongIdempotency            dynamicconfig.BoolPropertyFnWithDomainFilter
+	EnableStrongIdempotencySanityCheck dynamicconfig.BoolPropertyFnWithDomainFilter
 
 	// HostName for machine running the service
 	HostName string
@@ -598,7 +599,8 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, s
 		LargeShardHistoryEventMetricThreshold: dc.GetIntProperty(dynamicconfig.LargeShardHistoryEventMetricThreshold),
 		LargeShardHistoryBlobMetricThreshold:  dc.GetIntProperty(dynamicconfig.LargeShardHistoryBlobMetricThreshold),
 
-		EnableStrongIdempotency: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableStrongIdempotency),
+		EnableStrongIdempotency:            dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableStrongIdempotency),
+		EnableStrongIdempotencySanityCheck: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableStrongIdempotencySanityCheck),
 
 		HostName: hostname,
 	}

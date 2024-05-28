@@ -57,7 +57,7 @@ type (
 func NewCrossClusterQueueProcessor(
 	shard shard.Context,
 	historyEngine engine.Engine,
-	executionCache *execution.Cache,
+	executionCache execution.Cache,
 	taskProcessor task.Processor,
 ) Processor {
 	logger := shard.GetLogger().WithTags(tag.ComponentCrossClusterQueueProcessor)
