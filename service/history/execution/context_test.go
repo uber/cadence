@@ -30,6 +30,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -38,6 +39,7 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
@@ -2931,7 +2933,7 @@ func TestGetWorkflowExecutionWithRetry(t *testing.T) {
 	testCases := []struct {
 		name      string
 		request   *persistence.GetWorkflowExecutionRequest
-		mockSetup func(*shard.MockContext)
+		mockSetup func(*shard.MockContext, *log.MockLogger)
 		want      *persistence.GetWorkflowExecutionResponse
 		wantErr   bool
 		assertErr func(*testing.T, error)
@@ -2941,7 +2943,7 @@ func TestGetWorkflowExecutionWithRetry(t *testing.T) {
 			request: &persistence.GetWorkflowExecutionRequest{
 				RangeID: 100,
 			},
-			mockSetup: func(mockShard *shard.MockContext) {
+			mockSetup: func(mockShard *shard.MockContext, mockLogger *log.MockLogger) {
 				mockShard.EXPECT().GetWorkflowExecution(gomock.Any(), &persistence.GetWorkflowExecutionRequest{
 					RangeID: 100,
 				}).Return(&persistence.GetWorkflowExecutionResponse{
@@ -2962,7 +2964,7 @@ func TestGetWorkflowExecutionWithRetry(t *testing.T) {
 			request: &persistence.GetWorkflowExecutionRequest{
 				RangeID: 100,
 			},
-			mockSetup: func(mockShard *shard.MockContext) {
+			mockSetup: func(mockShard *shard.MockContext, mockLogger *log.MockLogger) {
 				mockShard.EXPECT().GetWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, &types.EntityNotExistsError{})
 			},
 			wantErr: true,
@@ -2971,12 +2973,46 @@ func TestGetWorkflowExecutionWithRetry(t *testing.T) {
 			},
 		},
 		{
+			name: "shard closed error recent",
+			request: &persistence.GetWorkflowExecutionRequest{
+				RangeID: 100,
+			},
+			mockSetup: func(mockShard *shard.MockContext, mockLogger *log.MockLogger) {
+				mockShard.EXPECT().GetWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, &shard.ErrShardClosed{
+					ClosedAt: time.Now().Add(-shard.TimeBeforeShardClosedIsError / 2),
+				})
+				// We do _not_ expect a log call
+			},
+			wantErr: true,
+			assertErr: func(t *testing.T, err error) {
+				assert.ErrorAs(t, err, new(*shard.ErrShardClosed))
+			},
+		},
+		{
+			name: "shard closed error",
+			request: &persistence.GetWorkflowExecutionRequest{
+				RangeID: 100,
+			},
+			mockSetup: func(mockShard *shard.MockContext, mockLogger *log.MockLogger) {
+				err := &shard.ErrShardClosed{
+					ClosedAt: time.Now().Add(-shard.TimeBeforeShardClosedIsError * 2),
+				}
+				mockShard.EXPECT().GetWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, err)
+				expectLog(mockLogger, err)
+			},
+			wantErr: true,
+			assertErr: func(t *testing.T, err error) {
+				assert.ErrorAs(t, err, new(*shard.ErrShardClosed))
+			},
+		},
+		{
 			name: "non retryable error",
 			request: &persistence.GetWorkflowExecutionRequest{
 				RangeID: 100,
 			},
-			mockSetup: func(mockShard *shard.MockContext) {
+			mockSetup: func(mockShard *shard.MockContext, mockLogger *log.MockLogger) {
 				mockShard.EXPECT().GetWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
+				expectLog(mockLogger, errors.New("some error"))
 			},
 			wantErr: true,
 			assertErr: func(t *testing.T, err error) {
@@ -2988,7 +3024,7 @@ func TestGetWorkflowExecutionWithRetry(t *testing.T) {
 			request: &persistence.GetWorkflowExecutionRequest{
 				RangeID: 100,
 			},
-			mockSetup: func(mockShard *shard.MockContext) {
+			mockSetup: func(mockShard *shard.MockContext, mockLogger *log.MockLogger) {
 				mockShard.EXPECT().GetWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, &types.ServiceBusyError{})
 				mockShard.EXPECT().GetWorkflowExecution(gomock.Any(), gomock.Any()).Return(&persistence.GetWorkflowExecutionResponse{
 					MutableStateStats: &persistence.MutableStateStats{
@@ -3009,12 +3045,13 @@ func TestGetWorkflowExecutionWithRetry(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			mockShard := shard.NewMockContext(mockCtrl)
+			mockLogger := new(log.MockLogger)
 			policy := backoff.NewExponentialRetryPolicy(time.Millisecond)
 			policy.SetMaximumAttempts(1)
 			if tc.mockSetup != nil {
-				tc.mockSetup(mockShard)
+				tc.mockSetup(mockShard, mockLogger)
 			}
-			resp, err := getWorkflowExecutionWithRetry(context.Background(), mockShard, testlogger.New(t), policy, tc.request)
+			resp, err := getWorkflowExecutionWithRetry(context.Background(), mockShard, mockLogger, policy, tc.request)
 			if tc.wantErr {
 				assert.Error(t, err)
 				if tc.assertErr != nil {
@@ -3026,6 +3063,16 @@ func TestGetWorkflowExecutionWithRetry(t *testing.T) {
 			}
 		})
 	}
+}
+
+func expectLog(mockLogger *log.MockLogger, err error) *mock.Call {
+	return mockLogger.On(
+		"Error",
+		"Persistent fetch operation failure",
+		[]tag.Tag{
+			tag.StoreOperationGetWorkflowExecution,
+			tag.Error(err),
+		})
 }
 
 func TestLoadWorkflowExecutionWithTaskVersion(t *testing.T) {
