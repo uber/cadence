@@ -1706,8 +1706,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessRecordWorkflowStartedTask()
 
 func (s *transferActiveTaskExecutorSuite) TestProcessRecordWorkflowStartedTaskWithContextHeader() {
 	// switch on context header in viz
-	s.mockShard.GetConfig().EnableContextHeaderInVisibility = func(domain string) bool {return true}
-	s.mockShard.GetConfig().ValidSearchAttributes = func(opts ...dc.FilterOption) map[string]interface{}  {
+	s.mockShard.GetConfig().EnableContextHeaderInVisibility = func(domain string) bool { return true }
+	s.mockShard.GetConfig().ValidSearchAttributes = func(opts ...dc.FilterOption) map[string]interface{} {
 		return map[string]interface{}{
 			"Header.contextKey": struct{}{},
 		}
@@ -1778,7 +1778,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttribu
 		mock.Anything,
 		createUpsertWorkflowSearchAttributesRequest(
 			s.domainName, startEvent, transferTask, mutableState, 2, s.mockShard.GetTimeSource().Now(),
-		    false),
+			false),
 	).Once().Return(nil)
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
@@ -1787,8 +1787,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttribu
 
 func (s *transferActiveTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttributesWithContextHeader() {
 	// switch on context header in viz
-	s.mockShard.GetConfig().EnableContextHeaderInVisibility = func(domain string) bool {return true}
-	s.mockShard.GetConfig().ValidSearchAttributes = func(opts ...dc.FilterOption) map[string]interface{}  {
+	s.mockShard.GetConfig().EnableContextHeaderInVisibility = func(domain string) bool { return true }
+	s.mockShard.GetConfig().ValidSearchAttributes = func(opts ...dc.FilterOption) map[string]interface{} {
 		return map[string]interface{}{
 			"Header.contextKey": struct{}{},
 		}
@@ -1817,7 +1817,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttribu
 		mock.Anything,
 		createUpsertWorkflowSearchAttributesRequest(
 			s.domainName, startEvent, transferTask, mutableState, 2, s.mockShard.GetTimeSource().Now(),
-		    true),
+			true),
 	).Once().Return(nil)
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
@@ -1939,7 +1939,7 @@ func createRecordWorkflowExecutionStartedRequest(
 	}
 	var searchAttributes map[string][]byte
 	if enableContextHeaderInVisibility {
-		searchAttributes = map[string][]byte {
+		searchAttributes = map[string][]byte{
 			"Header.contextKey": []byte("contextValue"),
 		}
 	}
@@ -2089,7 +2089,7 @@ func createUpsertWorkflowSearchAttributesRequest(
 	}
 	var searchAttributes map[string][]byte
 	if enableContextHeaderInVisibility {
-		searchAttributes = map[string][]byte {
+		searchAttributes = map[string][]byte{
 			"Header.contextKey": []byte("contextValue"),
 		}
 	}

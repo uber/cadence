@@ -812,10 +812,10 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessRecordWorkflowStartedTask(
 
 func (s *transferStandbyTaskExecutorSuite) TestProcessRecordWorkflowStartedTaskWithContextHeader() {
 	// switch on context header in viz
-	s.mockShard.GetConfig().EnableContextHeaderInVisibility = func (domain string) bool {
+	s.mockShard.GetConfig().EnableContextHeaderInVisibility = func(domain string) bool {
 		return true
 	}
-	s.mockShard.GetConfig().ValidSearchAttributes = func(opts ...dc.FilterOption) map[string]interface{}  {
+	s.mockShard.GetConfig().ValidSearchAttributes = func(opts ...dc.FilterOption) map[string]interface{} {
 		return map[string]interface{}{
 			"Header.contextKey": struct{}{},
 		}
@@ -891,7 +891,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttrib
 		mock.Anything,
 		createUpsertWorkflowSearchAttributesRequest(
 			s.domainName, startEvent, transferTask, mutableState, 2, s.mockShard.GetTimeSource().Now(),
-		false),
+			false),
 	).Return(nil).Once()
 
 	s.mockShard.SetCurrentTime(s.clusterName, now)
@@ -901,10 +901,10 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttrib
 
 func (s *transferStandbyTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttributesTaskWithContextHeader() {
 	// switch on context header in viz
-	s.mockShard.GetConfig().EnableContextHeaderInVisibility = func (domain string) bool {
+	s.mockShard.GetConfig().EnableContextHeaderInVisibility = func(domain string) bool {
 		return true
 	}
-	s.mockShard.GetConfig().ValidSearchAttributes = func(opts ...dc.FilterOption) map[string]interface{}  {
+	s.mockShard.GetConfig().ValidSearchAttributes = func(opts ...dc.FilterOption) map[string]interface{} {
 		return map[string]interface{}{
 			"Header.contextKey": struct{}{},
 		}
@@ -935,7 +935,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttrib
 		mock.Anything,
 		createUpsertWorkflowSearchAttributesRequest(
 			s.domainName, startEvent, transferTask, mutableState, 2, s.mockShard.GetTimeSource().Now(),
-		true),
+			true),
 	).Return(nil).Once()
 
 	s.mockShard.SetCurrentTime(s.clusterName, now)

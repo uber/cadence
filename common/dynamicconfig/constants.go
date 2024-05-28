@@ -2538,8 +2538,6 @@ const (
 	// Default value: 400ms (400*time.Millisecond)
 	// Allowed filters: N/A
 	TransferProcessorVisibilityArchivalTimeLimit
-	//
-	TransferProcessorContextVisibility
 	// CrossClusterSourceProcessorMaxPollInterval is max poll interval for crossClusterQueueProcessor
 	// KeyName: history.crossClusterProcessorMaxPollInterval
 	// Value type: Duration
