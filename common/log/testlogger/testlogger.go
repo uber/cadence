@@ -87,7 +87,7 @@ type fallbackTestCore struct {
 var _ zapcore.Core = (*fallbackTestCore)(nil)
 
 func (f *fallbackTestCore) UseFallback() {
-	f.completed.Store(true)
+	// f.completed.Store(true)
 }
 
 func (f *fallbackTestCore) Enabled(level zapcore.Level) bool {
