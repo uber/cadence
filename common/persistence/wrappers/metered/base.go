@@ -23,6 +23,7 @@
 package metered
 
 import (
+	"errors"
 	"time"
 
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -42,30 +43,32 @@ type base struct {
 }
 
 func (p *base) updateErrorMetricPerDomain(scope int, err error, scopeWithDomainTag metrics.Scope) {
-	switch err.(type) {
-	case *types.DomainAlreadyExistsError:
+	switch {
+	case errors.As(err, new(*types.DomainAlreadyExistsError)):
 		scopeWithDomainTag.IncCounter(metrics.PersistenceErrDomainAlreadyExistsCounterPerDomain)
-	case *types.BadRequestError:
+	case errors.As(err, new(*types.BadRequestError)):
 		scopeWithDomainTag.IncCounter(metrics.PersistenceErrBadRequestCounterPerDomain)
-	case *persistence.WorkflowExecutionAlreadyStartedError:
+	case errors.As(err, new(*persistence.WorkflowExecutionAlreadyStartedError)):
 		scopeWithDomainTag.IncCounter(metrics.PersistenceErrExecutionAlreadyStartedCounterPerDomain)
-	case *persistence.ConditionFailedError:
+	case errors.As(err, new(*persistence.ConditionFailedError)):
 		scopeWithDomainTag.IncCounter(metrics.PersistenceErrConditionFailedCounterPerDomain)
-	case *persistence.CurrentWorkflowConditionFailedError:
+	case errors.As(err, new(*persistence.CurrentWorkflowConditionFailedError)):
 		scopeWithDomainTag.IncCounter(metrics.PersistenceErrCurrentWorkflowConditionFailedCounterPerDomain)
-	case *persistence.ShardAlreadyExistError:
+	case errors.As(err, new(*persistence.ShardAlreadyExistError)):
 		scopeWithDomainTag.IncCounter(metrics.PersistenceErrShardExistsCounterPerDomain)
-	case *persistence.ShardOwnershipLostError:
+	case errors.As(err, new(*persistence.ShardOwnershipLostError)):
 		scopeWithDomainTag.IncCounter(metrics.PersistenceErrShardOwnershipLostCounterPerDomain)
-	case *types.EntityNotExistsError:
+	case errors.As(err, new(*types.EntityNotExistsError)):
 		scopeWithDomainTag.IncCounter(metrics.PersistenceErrEntityNotExistsCounterPerDomain)
-	case *persistence.TimeoutError:
+	case errors.As(err, new(*persistence.DuplicateRequestError)):
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrDuplicateRequestCounterPerDomain)
+	case errors.As(err, new(*persistence.TimeoutError)):
 		scopeWithDomainTag.IncCounter(metrics.PersistenceErrTimeoutCounterPerDomain)
 		scopeWithDomainTag.IncCounter(metrics.PersistenceFailuresPerDomain)
-	case *types.ServiceBusyError:
+	case errors.As(err, new(*types.ServiceBusyError)):
 		scopeWithDomainTag.IncCounter(metrics.PersistenceErrBusyCounterPerDomain)
 		scopeWithDomainTag.IncCounter(metrics.PersistenceFailuresPerDomain)
-	case *persistence.DBUnavailableError:
+	case errors.As(err, new(*persistence.DBUnavailableError)):
 		scopeWithDomainTag.IncCounter(metrics.PersistenceErrDBUnavailableCounterPerDomain)
 		scopeWithDomainTag.IncCounter(metrics.PersistenceFailuresPerDomain)
 		p.logger.Error("DBUnavailable Error:", tag.Error(err), tag.MetricScope(scope))
@@ -76,30 +79,32 @@ func (p *base) updateErrorMetricPerDomain(scope int, err error, scopeWithDomainT
 }
 
 func (p *base) updateErrorMetric(scope int, err error, metricsScope metrics.Scope) {
-	switch err.(type) {
-	case *types.DomainAlreadyExistsError:
+	switch {
+	case errors.As(err, new(*types.DomainAlreadyExistsError)):
 		metricsScope.IncCounter(metrics.PersistenceErrDomainAlreadyExistsCounter)
-	case *types.BadRequestError:
+	case errors.As(err, new(*types.BadRequestError)):
 		metricsScope.IncCounter(metrics.PersistenceErrBadRequestCounter)
-	case *persistence.WorkflowExecutionAlreadyStartedError:
+	case errors.As(err, new(*persistence.WorkflowExecutionAlreadyStartedError)):
 		metricsScope.IncCounter(metrics.PersistenceErrExecutionAlreadyStartedCounter)
-	case *persistence.ConditionFailedError:
+	case errors.As(err, new(*persistence.ConditionFailedError)):
 		metricsScope.IncCounter(metrics.PersistenceErrConditionFailedCounter)
-	case *persistence.CurrentWorkflowConditionFailedError:
+	case errors.As(err, new(*persistence.CurrentWorkflowConditionFailedError)):
 		metricsScope.IncCounter(metrics.PersistenceErrCurrentWorkflowConditionFailedCounter)
-	case *persistence.ShardAlreadyExistError:
+	case errors.As(err, new(*persistence.ShardAlreadyExistError)):
 		metricsScope.IncCounter(metrics.PersistenceErrShardExistsCounter)
-	case *persistence.ShardOwnershipLostError:
+	case errors.As(err, new(*persistence.ShardOwnershipLostError)):
 		metricsScope.IncCounter(metrics.PersistenceErrShardOwnershipLostCounter)
-	case *types.EntityNotExistsError:
+	case errors.As(err, new(*types.EntityNotExistsError)):
 		metricsScope.IncCounter(metrics.PersistenceErrEntityNotExistsCounter)
-	case *persistence.TimeoutError:
+	case errors.As(err, new(*persistence.DuplicateRequestError)):
+		metricsScope.IncCounter(metrics.PersistenceErrDuplicateRequestCounter)
+	case errors.As(err, new(*persistence.TimeoutError)):
 		metricsScope.IncCounter(metrics.PersistenceErrTimeoutCounter)
 		metricsScope.IncCounter(metrics.PersistenceFailures)
-	case *types.ServiceBusyError:
+	case errors.As(err, new(*types.ServiceBusyError)):
 		metricsScope.IncCounter(metrics.PersistenceErrBusyCounter)
 		metricsScope.IncCounter(metrics.PersistenceFailures)
-	case *persistence.DBUnavailableError:
+	case errors.As(err, new(*persistence.DBUnavailableError)):
 		metricsScope.IncCounter(metrics.PersistenceErrDBUnavailableCounter)
 		metricsScope.IncCounter(metrics.PersistenceFailures)
 		p.logger.Error("DBUnavailable Error:", tag.Error(err), tag.MetricScope(scope))

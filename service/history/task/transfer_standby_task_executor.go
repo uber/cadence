@@ -51,7 +51,7 @@ type (
 func NewTransferStandbyTaskExecutor(
 	shard shard.Context,
 	archiverClient archiver.Client,
-	executionCache *execution.Cache,
+	executionCache execution.Cache,
 	historyResender ndc.HistoryResender,
 	logger log.Logger,
 	clusterName string,

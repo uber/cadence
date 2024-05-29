@@ -51,7 +51,7 @@ type (
 	transferTaskExecutorBase struct {
 		shard          shard.Context
 		archiverClient archiver.Client
-		executionCache *execution.Cache
+		executionCache execution.Cache
 		logger         log.Logger
 		metricsClient  metrics.Client
 		matchingClient matching.Client
@@ -64,7 +64,7 @@ type (
 func newTransferTaskExecutorBase(
 	shard shard.Context,
 	archiverClient archiver.Client,
-	executionCache *execution.Cache,
+	executionCache execution.Cache,
 	logger log.Logger,
 	config *config.Config,
 ) *transferTaskExecutorBase {

@@ -51,6 +51,7 @@ import (
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/failover"
 	"github.com/uber/cadence/service/history/lookup"
+	"github.com/uber/cadence/service/history/queue"
 	"github.com/uber/cadence/service/history/replication"
 	"github.com/uber/cadence/service/history/resource"
 	"github.com/uber/cadence/service/history/shard"
@@ -80,6 +81,7 @@ type (
 		failoverCoordinator            failover.Coordinator
 		workflowIDCache                workflowcache.WFCache
 		ratelimitInternalPerWorkflowID dynamicconfig.BoolPropertyFnWithDomainFilter
+		queueProcessorFactory          queue.ProcessorFactory
 	}
 )
 
@@ -185,8 +187,8 @@ func (h *handlerImpl) Stop() {
 	h.prepareToShutDown()
 	h.crossClusterTaskFetchers.Stop()
 	h.replicationTaskFetchers.Stop()
-	h.queueTaskProcessor.Stop()
 	h.controller.Stop()
+	h.queueTaskProcessor.Stop()
 	h.historyEventNotifier.Stop()
 	h.failoverCoordinator.Stop()
 }
@@ -228,6 +230,7 @@ func (h *handlerImpl) CreateEngine(
 		h.failoverCoordinator,
 		h.workflowIDCache,
 		h.ratelimitInternalPerWorkflowID,
+		queue.NewProcessorFactory(),
 	)
 }
 
@@ -2078,6 +2081,8 @@ func (h *handlerImpl) convertError(err error) error {
 		return &types.InternalServiceError{Message: err.Msg}
 	case *persistence.CurrentWorkflowConditionFailedError:
 		return &types.InternalServiceError{Message: err.Msg}
+	case *persistence.TimeoutError:
+		return &types.InternalServiceError{Message: err.Msg}
 	case *persistence.TransactionSizeLimitError:
 		return &types.BadRequestError{Message: err.Msg}
 	}
@@ -2107,8 +2112,9 @@ func (h *handlerImpl) updateErrorMetric(
 	var retryTaskV2Error *types.RetryTaskV2Error
 	var serviceBusyError *types.ServiceBusyError
 	var internalServiceError *types.InternalServiceError
+	var queryFailedError *types.QueryFailedError
 
-	if err == context.DeadlineExceeded || err == context.Canceled {
+	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 		scope.IncCounter(metrics.CadenceErrContextTimeoutCounter)
 		return
 	}
@@ -2146,8 +2152,10 @@ func (h *handlerImpl) updateErrorMetric(
 	} else if errors.As(err, &serviceBusyError) {
 		scope.IncCounter(metrics.CadenceErrServiceBusyCounter)
 
-	} else if errors.As(err, &yarpcE) {
+	} else if errors.As(err, &queryFailedError) {
+		scope.IncCounter(metrics.CadenceErrQueryFailedCounter)
 
+	} else if errors.As(err, &yarpcE) {
 		if yarpcE.Code() == yarpcerrors.CodeDeadlineExceeded {
 			scope.IncCounter(metrics.CadenceErrContextTimeoutCounter)
 		}

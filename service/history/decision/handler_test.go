@@ -111,7 +111,7 @@ func (s *DecisionHandlerSuite) TestNewHandler() {
 	shardContext.EXPECT().GetDomainCache().Times(2)
 	shardContext.EXPECT().GetMetricsClient().Times(2)
 	shardContext.EXPECT().GetThrottledLogger().Times(1).Return(testlogger.New(s.T()))
-	h := NewHandler(shardContext, &execution.Cache{}, tokenSerializer)
+	h := NewHandler(shardContext, execution.NewMockCache(s.controller), tokenSerializer)
 	s.NotNil(h)
 	s.Equal("handlerImpl", reflect.ValueOf(h).Elem().Type().Name())
 }

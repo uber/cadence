@@ -372,6 +372,13 @@ func (v *nosqlVisibilityStore) ListWorkflowExecutions(
 	return nil, persistence.ErrVisibilityOperationNotSupported
 }
 
+func (v *nosqlVisibilityStore) ListAllWorkflowExecutions(
+	ctx context.Context,
+	request *persistence.InternalListAllWorkflowExecutionsByTypeRequest,
+) (*persistence.InternalListWorkflowExecutionsResponse, error) {
+	return nil, persistence.ErrVisibilityOperationNotSupported
+}
+
 func (v *nosqlVisibilityStore) ScanWorkflowExecutions(
 	_ context.Context,
 	_ *persistence.ListWorkflowExecutionsByQueryRequest) (*persistence.InternalListWorkflowExecutionsResponse, error) {

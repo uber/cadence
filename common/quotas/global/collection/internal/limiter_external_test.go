@@ -140,7 +140,7 @@ func TestLimiterNotRacy(t *testing.T) {
 		// clear ~10% of the time
 		if rand.Intn(10) == 0 {
 			g.Go(func() error {
-				lim.Clear()
+				lim.Reset()
 				return nil
 			})
 		}

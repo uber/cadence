@@ -22,13 +22,20 @@ package replication
 
 import (
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/goleak"
 
+	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
-	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/types"
@@ -67,8 +74,9 @@ func (s *taskFetcherSuite) SetupTest() {
 
 	s.mockResource = resource.NewTest(s.T(), s.controller, metrics.History)
 	s.frontendClient = s.mockResource.RemoteAdminClient
-	logger := log.NewNoop()
+	logger := testlogger.New(s.T())
 	s.config = config.NewForTest()
+	s.config.ReplicationTaskFetcherTimerJitterCoefficient = dynamicconfig.GetFloatPropertyFn(0.0) // set jitter to 0 for test
 
 	s.taskFetcher = newReplicationTaskFetcher(
 		logger,
@@ -139,4 +147,128 @@ func (s *taskFetcherSuite) TestFetchAndDistributeTasks() {
 	s.NoError(err)
 	respToken := <-respChan
 	s.Equal(messageByShared[0], respToken)
+}
+
+func (s *taskFetcherSuite) TestLifecycle() {
+	defer goleak.VerifyNone(s.T())
+	mockTimeSource := clock.NewMockedTimeSourceAt(time.Now())
+	s.taskFetcher.timeSource = mockTimeSource
+	respChan0 := make(chan *types.ReplicationMessages, 1)
+	respChan1 := make(chan *types.ReplicationMessages, 1)
+	respChan2 := make(chan *types.ReplicationMessages, 1)
+	respChan3 := make(chan *types.ReplicationMessages, 1)
+	req0 := &request{
+		token: &types.ReplicationToken{
+			ShardID:                0,
+			LastRetrievedMessageID: 100,
+			LastProcessedMessageID: 10,
+		},
+		respChan: respChan0,
+	}
+	req1 := &request{
+		token: &types.ReplicationToken{
+			ShardID:                1,
+			LastRetrievedMessageID: 10,
+			LastProcessedMessageID: 1,
+		},
+		respChan: respChan1,
+	}
+	req2 := &request{
+		token: &types.ReplicationToken{
+			ShardID:                0,
+			LastRetrievedMessageID: 10,
+			LastProcessedMessageID: 1,
+		},
+		respChan: respChan2,
+	}
+	req3 := &request{
+		token: &types.ReplicationToken{
+			ShardID:                1,
+			LastRetrievedMessageID: 11,
+			LastProcessedMessageID: 2,
+		},
+		respChan: respChan3,
+	}
+	fetchAndDistributeTasksFnCall := 0
+	fetchAndDistributeTasksSyncChan := []chan struct{}{make(chan struct{}), make(chan struct{}), make(chan struct{}), make(chan struct{})}
+	s.taskFetcher.fetchAndDistributeTasksFn = func(requestByShard map[int32]*request) error {
+		defer func() {
+			fetchAndDistributeTasksFnCall++
+			close(fetchAndDistributeTasksSyncChan[fetchAndDistributeTasksFnCall-1])
+		}()
+		if fetchAndDistributeTasksFnCall == 0 {
+			s.Equal(map[int32]*request{1: req1, 0: req2}, requestByShard)
+			return &types.ServiceBusyError{}
+		} else if fetchAndDistributeTasksFnCall == 1 {
+			s.Equal(map[int32]*request{1: req3, 0: req2}, requestByShard)
+			return &types.InternalServiceError{}
+		} else if fetchAndDistributeTasksFnCall == 2 {
+			s.Equal(map[int32]*request{1: req3, 0: req2}, requestByShard)
+			for shard := range requestByShard {
+				delete(requestByShard, shard)
+			}
+			return nil
+		} else if fetchAndDistributeTasksFnCall == 3 {
+			s.Equal(map[int32]*request{}, requestByShard)
+			return nil
+		}
+		return nil
+	}
+	s.taskFetcher.Start()
+	defer s.taskFetcher.Stop()
+
+	requestChan := s.taskFetcher.GetRequestChan()
+	// send 3 replication requests to the fetcher
+	requestChan <- req0
+	requestChan <- req1
+	requestChan <- req2
+	_, open := <-respChan0 // block until duplicate replication task is read from fetcher's request channel
+	s.False(open)
+
+	// process the existing replication requests and return service busy error
+	s.Equal(0, fetchAndDistributeTasksFnCall)
+	mockTimeSource.Advance(s.config.ReplicationTaskFetcherAggregationInterval())
+	_, open = <-fetchAndDistributeTasksSyncChan[0] // block until fetchAndDistributeTasksFn is called
+	s.False(open)
+	s.Equal(1, fetchAndDistributeTasksFnCall)
+
+	// send a new duplicate replication request to fetcher
+	requestChan <- req3
+	_, open = <-respChan1 // block until duplicate replication task is read from fetcher's request channel
+	s.False(open)
+
+	// process the existing replication requests and return non-service busy error
+	mockTimeSource.Advance(s.config.ReplicationTaskFetcherServiceBusyWait())
+	_, open = <-fetchAndDistributeTasksSyncChan[1] // block until fetchAndDistributeTasksFn is called
+	s.False(open)
+	s.Equal(2, fetchAndDistributeTasksFnCall)
+
+	// process the existing replication requests and return success
+	mockTimeSource.Advance(s.config.ReplicationTaskFetcherErrorRetryWait())
+	_, open = <-fetchAndDistributeTasksSyncChan[2] // block until fetchAndDistributeTasksFn is called
+	s.False(open)
+	s.Equal(3, fetchAndDistributeTasksFnCall)
+
+	// process empty requests and return success
+	mockTimeSource.Advance(s.config.ReplicationTaskFetcherAggregationInterval())
+	_, open = <-fetchAndDistributeTasksSyncChan[3] // block until fetchAndDistributeTasksFn is called
+	s.False(open)
+	s.Equal(4, fetchAndDistributeTasksFnCall)
+}
+
+func TestTaskFetchers(t *testing.T) {
+	defer goleak.VerifyNone(t)
+	ctrl := gomock.NewController(t)
+	mockBean := client.NewMockBean(ctrl)
+	mockAdminClient := admin.NewMockClient(ctrl)
+	logger := testlogger.New(t)
+	cfg := config.NewForTest()
+
+	mockBean.EXPECT().GetRemoteAdminClient(cluster.TestAlternativeClusterName).Return(mockAdminClient)
+	fetchers := NewTaskFetchers(logger, cfg, cluster.TestActiveClusterMetadata, mockBean)
+	assert.NotNil(t, fetchers)
+	assert.Len(t, fetchers.GetFetchers(), len(cluster.TestActiveClusterMetadata.GetRemoteClusterInfo()))
+
+	fetchers.Start()
+	fetchers.Stop()
 }

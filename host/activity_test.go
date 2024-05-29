@@ -34,7 +34,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/service/matching"
+	"github.com/uber/cadence/service/matching/tasklist"
 )
 
 func (s *IntegrationSuite) TestActivityHeartBeatWorkflow_Success() {
@@ -142,10 +142,10 @@ func (s *IntegrationSuite) TestActivityHeartBeatWorkflow_Success() {
 	}
 
 	_, err := poller.PollAndProcessDecisionTask(false, false)
-	s.True(err == nil || err == matching.ErrNoTasks)
+	s.True(err == nil || err == tasklist.ErrNoTasks)
 
 	err = poller.PollAndProcessActivityTask(false)
-	s.True(err == nil || err == matching.ErrNoTasks)
+	s.True(err == nil || err == tasklist.ErrNoTasks)
 
 	s.Logger.Info("Waiting for workflow to complete", tag.WorkflowRunID(we.RunID))
 
@@ -516,7 +516,7 @@ func (s *IntegrationSuite) TestActivityRetry() {
 	s.True(err == nil, err)
 
 	err = poller.PollAndProcessActivityTask(false)
-	s.True(err == nil || err == matching.ErrNoTasks, err)
+	s.True(err == nil || err == tasklist.ErrNoTasks, err)
 
 	descResp, err := describeWorkflowExecution()
 	s.Nil(err)
@@ -530,7 +530,7 @@ func (s *IntegrationSuite) TestActivityRetry() {
 	}
 
 	err = poller2.PollAndProcessActivityTask(false)
-	s.True(err == nil || err == matching.ErrNoTasks, err)
+	s.True(err == nil || err == tasklist.ErrNoTasks, err)
 
 	descResp, err = describeWorkflowExecution()
 	s.Nil(err)
@@ -659,7 +659,7 @@ func (s *IntegrationSuite) TestActivityHeartBeatWorkflow_Timeout() {
 	}
 
 	_, err := poller.PollAndProcessDecisionTask(false, false)
-	s.True(err == nil || err == matching.ErrNoTasks)
+	s.True(err == nil || err == tasklist.ErrNoTasks)
 
 	err = poller.PollAndProcessActivityTask(false)
 	s.Error(err)
@@ -894,7 +894,7 @@ func (s *IntegrationSuite) TestActivityTimeouts() {
 	}
 
 	_, err := poller.PollAndProcessDecisionTask(false, false)
-	s.True(err == nil || err == matching.ErrNoTasks)
+	s.True(err == nil || err == tasklist.ErrNoTasks)
 
 	for i := 0; i < 3; i++ {
 		go func() {
@@ -1083,7 +1083,7 @@ func (s *IntegrationSuite) TestActivityHeartbeatTimeouts() {
 	}
 
 	_, err := poller.PollAndProcessDecisionTask(false, false)
-	s.True(err == nil || err == matching.ErrNoTasks)
+	s.True(err == nil || err == tasklist.ErrNoTasks)
 
 	for i := 0; i < activityCount; i++ {
 		go func() {
@@ -1224,7 +1224,7 @@ func (s *IntegrationSuite) TestActivityCancellation() {
 	}
 
 	_, err := poller.PollAndProcessDecisionTask(false, false)
-	s.True(err == nil || err == matching.ErrNoTasks, err)
+	s.True(err == nil || err == tasklist.ErrNoTasks, err)
 
 	cancelCh := make(chan struct{})
 
@@ -1233,12 +1233,12 @@ func (s *IntegrationSuite) TestActivityCancellation() {
 		scheduleActivity = false
 		requestCancellation = true
 		_, err := poller.PollAndProcessDecisionTask(false, false)
-		s.True(err == nil || err == matching.ErrNoTasks, err)
+		s.True(err == nil || err == tasklist.ErrNoTasks, err)
 		cancelCh <- struct{}{}
 	}()
 
 	err = poller.PollAndProcessActivityTask(false)
-	s.True(err == nil || err == matching.ErrNoTasks, err)
+	s.True(err == nil || err == tasklist.ErrNoTasks, err)
 
 	<-cancelCh
 	s.Logger.Info("Waiting for workflow to complete", tag.WorkflowRunID(we.RunID))
@@ -1340,7 +1340,7 @@ func (s *IntegrationSuite) TestActivityCancellationNotStarted() {
 	}
 
 	_, err := poller.PollAndProcessDecisionTask(false, false)
-	s.True(err == nil || err == matching.ErrNoTasks)
+	s.True(err == nil || err == tasklist.ErrNoTasks)
 
 	// Send signal so that worker can send an activity cancel
 	signalName := "my signal"
@@ -1368,5 +1368,5 @@ func (s *IntegrationSuite) TestActivityCancellationNotStarted() {
 	scheduleActivity = false
 	requestCancellation = false
 	_, err = poller.PollAndProcessDecisionTask(false, false)
-	s.True(err == nil || err == matching.ErrNoTasks)
+	s.True(err == nil || err == tasklist.ErrNoTasks)
 }

@@ -60,13 +60,14 @@ type timerQueueProcessor struct {
 	shutdownChan chan struct{}
 	shutdownWG   sync.WaitGroup
 
-	ackLevel               time.Time
-	taskAllocator          TaskAllocator
-	activeTaskExecutor     task.Executor
-	activeQueueProcessor   *timerQueueProcessorBase
-	standbyQueueProcessors map[string]*timerQueueProcessorBase
-	standbyTaskExecutors   []task.Executor
-	standbyQueueTimerGates map[string]RemoteTimerGate
+	ackLevel                time.Time
+	taskAllocator           TaskAllocator
+	activeTaskExecutor      task.Executor
+	activeQueueProcessor    *timerQueueProcessorBase
+	standbyQueueProcessors  map[string]*timerQueueProcessorBase
+	standbyTaskExecutors    []task.Executor
+	standbyQueueTimerGates  map[string]RemoteTimerGate
+	failoverQueueProcessors []*timerQueueProcessorBase
 }
 
 // NewTimerQueueProcessor creates a new timer QueueProcessor
@@ -74,7 +75,7 @@ func NewTimerQueueProcessor(
 	shard shard.Context,
 	historyEngine engine.Engine,
 	taskProcessor task.Processor,
-	executionCache *execution.Cache,
+	executionCache execution.Cache,
 	archivalClient archiver.Client,
 	executionCheck invariant.Invariant,
 ) Processor {
@@ -206,7 +207,7 @@ func (t *timerQueueProcessor) Stop() {
 		t.logger.Warn("transferQueueProcessor timed out on shut down", tag.LifeCycleStopTimedout)
 	}
 	t.activeQueueProcessor.Stop()
-	t.activeTaskExecutor.Stop()
+
 	for _, standbyQueueProcessor := range t.standbyQueueProcessors {
 		standbyQueueProcessor.Stop()
 	}
@@ -215,6 +216,15 @@ func (t *timerQueueProcessor) Stop() {
 	for _, standbyTaskExecutor := range t.standbyTaskExecutors {
 		standbyTaskExecutor.Stop()
 	}
+
+	if len(t.failoverQueueProcessors) > 0 {
+		t.logger.Info("Shutting down failover timer queues", tag.Counter(len(t.failoverQueueProcessors)))
+		for _, failoverQueueProcessor := range t.failoverQueueProcessors {
+			failoverQueueProcessor.Stop()
+		}
+	}
+
+	t.activeTaskExecutor.Stop()
 }
 
 func (t *timerQueueProcessor) NotifyNewTask(clusterName string, info *hcommon.NotifyTaskInfo) {
@@ -300,7 +310,6 @@ func (t *timerQueueProcessor) FailoverDomain(domainIDs map[string]struct{}) {
 	updateClusterAckLevelFn, failoverQueueProcessor := newTimerQueueFailoverProcessor(
 		standbyClusterName,
 		t.shard,
-		t.historyEngine,
 		t.taskProcessor,
 		t.taskAllocator,
 		t.activeTaskExecutor,
@@ -316,6 +325,12 @@ func (t *timerQueueProcessor) FailoverDomain(domainIDs map[string]struct{}) {
 	if err != nil {
 		t.logger.Error("Error update shard ack level", tag.Error(err))
 	}
+
+	// Failover queue processors are started on the fly when domains are failed over.
+	// Failover queue processors will be stopped when the timer queue instance is stopped (due to restart or shard movement).
+	// This means the failover queue processor might not finish its job.
+	// There is no mechanism to re-start ongoing failover queue processors in the new shard owner.
+	t.failoverQueueProcessors = append(t.failoverQueueProcessors, failoverQueueProcessor)
 	failoverQueueProcessor.Start()
 }
 
@@ -367,7 +382,7 @@ func (t *timerQueueProcessor) UnlockTaskProcessing() {
 func (t *timerQueueProcessor) drain() {
 	if !t.shard.GetConfig().QueueProcessorEnableGracefulSyncShutdown() {
 		if err := t.completeTimer(context.Background()); err != nil {
-			t.logger.Error("Failed to complete timer task during shutdown", tag.Error(err))
+			t.logger.Error("Failed to complete timer task during drain", tag.Error(err))
 		}
 		return
 	}
@@ -376,7 +391,7 @@ func (t *timerQueueProcessor) drain() {
 	ctx, cancel := context.WithTimeout(context.Background(), gracefulShutdownTimeout)
 	defer cancel()
 	if err := t.completeTimer(ctx); err != nil {
-		t.logger.Error("Failed to complete timer task during shutdown", tag.Error(err))
+		t.logger.Error("Failed to complete timer task during drain", tag.Error(err))
 	}
 }
 

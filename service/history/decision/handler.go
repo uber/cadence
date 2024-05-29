@@ -61,7 +61,7 @@ type (
 		shard           shard.Context
 		timeSource      clock.TimeSource
 		domainCache     cache.DomainCache
-		executionCache  *execution.Cache
+		executionCache  execution.Cache
 		tokenSerializer common.TaskTokenSerializer
 		metricsClient   metrics.Client
 		logger          log.Logger
@@ -74,7 +74,7 @@ type (
 // NewHandler creates a new Handler for handling decision business logic
 func NewHandler(
 	shard shard.Context,
-	executionCache *execution.Cache,
+	executionCache execution.Cache,
 	tokenSerializer common.TaskTokenSerializer,
 ) Handler {
 	config := shard.GetConfig()

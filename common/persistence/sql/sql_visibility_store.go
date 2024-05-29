@@ -319,6 +319,13 @@ func (s *sqlVisibilityStore) ListWorkflowExecutions(
 	return nil, p.ErrVisibilityOperationNotSupported
 }
 
+func (s *sqlVisibilityStore) ListAllWorkflowExecutions(
+	_ context.Context,
+	_ *p.InternalListAllWorkflowExecutionsByTypeRequest,
+) (*p.InternalListWorkflowExecutionsResponse, error) {
+	return nil, p.ErrVisibilityOperationNotSupported
+}
+
 func (s *sqlVisibilityStore) ScanWorkflowExecutions(
 	_ context.Context,
 	_ *p.ListWorkflowExecutionsByQueryRequest,

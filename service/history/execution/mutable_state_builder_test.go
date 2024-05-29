@@ -23,6 +23,7 @@ package execution
 import (
 	"context"
 	"errors"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -36,6 +37,8 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/checksum"
+	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
@@ -1891,4 +1894,62 @@ func TestLog(t *testing.T) {
 	assert.NotPanics(t, func() { e.logInfo("a") })
 	assert.NotPanics(t, func() { e.logWarn("a") })
 	assert.NotPanics(t, func() { e.logError("a") })
+}
+
+func TestMutableStateBuilder_CopyToPersistence_roundtrip(t *testing.T) {
+
+	for i := 0; i <= 100; i++ {
+		ctrl := gomock.NewController(t)
+
+		seed := int64(rand.Int())
+		fuzzer := testdatagen.NewWithNilChance(t, seed, 0)
+
+		execution := &persistence.WorkflowMutableState{}
+		fuzzer.Fuzz(&execution)
+
+		// checksum is a calculated value, zero it out because
+		// it'll be overwridden during the constructor setup
+		execution.Checksum = checksum.Checksum{}
+
+		shardContext := shard.NewMockContext(ctrl)
+		mockCache := events.NewMockCache(ctrl)
+		mockDomainCache := cache.NewMockDomainCache(ctrl)
+		mockDomainCache.EXPECT().GetDomainID(gomock.Any()).Return("some-domain-id", nil).AnyTimes()
+
+		shardContext.EXPECT().GetClusterMetadata().Return(cluster.TestActiveClusterMetadata).Times(2)
+		shardContext.EXPECT().GetEventsCache().Return(mockCache)
+		shardContext.EXPECT().GetConfig().Return(&config.Config{
+			NumberOfShards:                        2,
+			IsAdvancedVisConfigExist:              false,
+			MaxResponseSize:                       0,
+			MutableStateChecksumInvalidateBefore:  dynamicconfig.GetFloatPropertyFn(10),
+			MutableStateChecksumVerifyProbability: dynamicconfig.GetIntPropertyFilteredByDomain(0.0),
+			HostName:                              "test-host",
+		}).Times(1)
+		shardContext.EXPECT().GetTimeSource().Return(clock.NewMockedTimeSource())
+		shardContext.EXPECT().GetMetricsClient().Return(metrics.NewNoopMetricsClient())
+		shardContext.EXPECT().GetDomainCache().Return(mockDomainCache).AnyTimes()
+
+		msb := newMutableStateBuilder(shardContext, log.NewNoop(), constants.TestGlobalDomainEntry)
+
+		msb.Load(execution)
+
+		out := msb.CopyToPersistence()
+
+		assert.Equal(t, execution.ActivityInfos, out.ActivityInfos, "activityinfos mismatch")
+		assert.Equal(t, execution.TimerInfos, out.TimerInfos, "timerinfos mismatch")
+		assert.Equal(t, execution.ChildExecutionInfos, out.ChildExecutionInfos, "child executino info mismatches")
+		assert.Equal(t, execution.RequestCancelInfos, out.RequestCancelInfos, "request cancellantion info mismatches")
+		assert.Equal(t, execution.SignalInfos, out.SignalInfos, "signal info mismatches")
+		assert.Equal(t, execution.SignalRequestedIDs, out.SignalRequestedIDs, "signal request ids mismaches")
+		assert.Equal(t, execution.ExecutionInfo, out.ExecutionInfo, "execution info mismatches")
+		assert.Equal(t, execution.BufferedEvents, out.BufferedEvents, "buffered events mismatch")
+		assert.Equal(t, execution.VersionHistories, out.VersionHistories, "version histories")
+		assert.Equal(t, execution.Checksum, out.Checksum, "checksum mismatch")
+		assert.Equal(t, execution.ReplicationState, out.ReplicationState, "replication state mismatch")
+		assert.Equal(t, execution.ExecutionStats, out.ExecutionStats, "execution stats mismatch")
+
+		assert.Equal(t, execution, out)
+
+	}
 }

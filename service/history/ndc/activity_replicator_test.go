@@ -61,7 +61,7 @@ type (
 		mockExecutionMgr *mocks.ExecutionManager
 
 		logger         log.Logger
-		executionCache *execution.Cache
+		executionCache execution.Cache
 
 		activityReplicator ActivityReplicator
 	}

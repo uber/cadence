@@ -41,7 +41,10 @@ import (
 
 func TestTransferQueueProcessor_RequireStartStop(t *testing.T) {
 	// some goroutine leak not from this test
-	defer goleak.VerifyNone(t)
+	defer goleak.VerifyNone(t,
+		// TODO(CDNC-8881):  TimerGate should not start background goroutine in constructor. Make it start/stoppable
+		goleak.IgnoreTopFunction("github.com/uber/cadence/service/history/queue.NewLocalTimerGate.func1"),
+	)
 	ctrl := gomock.NewController(t)
 	mockShard := shard.NewTestContext(
 		t, ctrl, &persistence.ShardInfo{

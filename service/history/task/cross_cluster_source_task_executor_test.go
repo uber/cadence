@@ -56,7 +56,7 @@ type (
 		mockDomainCache  *cache.MockDomainCache
 		mockExecutionMgr *mocks.ExecutionManager
 		mockHistoryV2Mgr *mocks.HistoryV2Manager
-		executionCache   *execution.Cache
+		executionCache   execution.Cache
 
 		executor Executor
 	}
@@ -664,7 +664,7 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteCancelExecution_Failure
 		&types.CrossClusterTaskResponse{
 			TaskType:    types.CrossClusterTaskTypeCancelExecution.Ptr(),
 			TaskState:   int16(processingStateInitialized),
-			FailedCause: types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted.Ptr(),
+			FailedCause: types.CrossClusterTaskFailedCauseWorkflowNotExists.Ptr(),
 		},
 		func(
 			mutableState execution.MutableState,

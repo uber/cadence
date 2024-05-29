@@ -52,7 +52,7 @@ type (
 	}
 
 	activityReplicatorImpl struct {
-		executionCache  *execution.Cache
+		executionCache  execution.Cache
 		clusterMetadata cluster.Metadata
 		logger          log.Logger
 	}
@@ -63,7 +63,7 @@ var _ ActivityReplicator = (*activityReplicatorImpl)(nil)
 // NewActivityReplicator creates activity replicator
 func NewActivityReplicator(
 	shard shard.Context,
-	executionCache *execution.Cache,
+	executionCache execution.Cache,
 	logger log.Logger,
 ) ActivityReplicator {
 

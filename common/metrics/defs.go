@@ -2020,6 +2020,7 @@ const (
 	PersistenceErrExecutionAlreadyStartedCounter
 	PersistenceErrDomainAlreadyExistsCounter
 	PersistenceErrBadRequestCounter
+	PersistenceErrDuplicateRequestCounter
 	PersistenceErrDBUnavailableCounter
 	PersistenceSampledCounter
 	PersistenceEmptyResponseCounter
@@ -2039,6 +2040,7 @@ const (
 	PersistenceErrExecutionAlreadyStartedCounterPerDomain
 	PersistenceErrDomainAlreadyExistsCounterPerDomain
 	PersistenceErrBadRequestCounterPerDomain
+	PersistenceErrDuplicateRequestCounterPerDomain
 	PersistenceErrDBUnavailableCounterPerDomain
 	PersistenceSampledCounterPerDomain
 	PersistenceEmptyResponseCounterPerDomain
@@ -2642,6 +2644,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		PersistenceErrExecutionAlreadyStartedCounter:                 {metricName: "persistence_errors_execution_already_started", metricType: Counter},
 		PersistenceErrDomainAlreadyExistsCounter:                     {metricName: "persistence_errors_domain_already_exists", metricType: Counter},
 		PersistenceErrBadRequestCounter:                              {metricName: "persistence_errors_bad_request", metricType: Counter},
+		PersistenceErrDuplicateRequestCounter:                        {metricName: "persistence_errors_duplicate_request", metricType: Counter},
 		PersistenceErrDBUnavailableCounter:                           {metricName: "persistence_errors_db_unavailable", metricType: Counter},
 		PersistenceSampledCounter:                                    {metricName: "persistence_sampled", metricType: Counter},
 		PersistenceEmptyResponseCounter:                              {metricName: "persistence_empty_response", metricType: Counter},
@@ -2660,6 +2663,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		PersistenceErrExecutionAlreadyStartedCounterPerDomain:        {metricName: "persistence_errors_execution_already_started_per_domain", metricRollupName: "persistence_errors_execution_already_started", metricType: Counter},
 		PersistenceErrDomainAlreadyExistsCounterPerDomain:            {metricName: "persistence_errors_domain_already_exists_per_domain", metricRollupName: "persistence_errors_domain_already_exists", metricType: Counter},
 		PersistenceErrBadRequestCounterPerDomain:                     {metricName: "persistence_errors_bad_request_per_domain", metricRollupName: "persistence_errors_bad_request", metricType: Counter},
+		PersistenceErrDuplicateRequestCounterPerDomain:               {metricName: "persistence_errors_duplicate_request_per_domain", metricRollupName: "persistence_errors_duplicate_request", metricType: Counter},
 		PersistenceErrDBUnavailableCounterPerDomain:                  {metricName: "persistence_errors_db_unavailable_per_domain", metricRollupName: "persistence_errors_db_unavailable", metricType: Counter},
 		PersistenceSampledCounterPerDomain:                           {metricName: "persistence_sampled_per_domain", metricRollupName: "persistence_sampled", metricType: Counter},
 		PersistenceEmptyResponseCounterPerDomain:                     {metricName: "persistence_empty_response_per_domain", metricRollupName: "persistence_empty_response", metricType: Counter},
