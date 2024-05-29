@@ -1695,6 +1695,12 @@ const (
 	// Default value: false
 	// Allowed filters: DomainName
 	EnableConsistentQueryByDomain
+	// EnableContextHeaderInVisibility is key for enable context header in visibility
+	// KeyName: history.enableContextHeaderInVisibility
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: DomainName
+	EnableContextHeaderInVisibility
 	// EnableCrossClusterEngine is used as an overall switch for the cross-cluster feature, a feature which, if not enabled
 	// can be quite expensive in terms of resources
 	// KeyName: history.enableCrossClusterEngine
@@ -4059,6 +4065,12 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		KeyName:      "history.EnableConsistentQueryByDomain",
 		Filters:      []Filter{DomainName},
 		Description:  "EnableConsistentQueryByDomain indicates if consistent query is enabled for a domain",
+		DefaultValue: false,
+	},
+	EnableContextHeaderInVisibility: {
+		KeyName:      "history.enableContextHeaderInVisibility",
+		Filters:      []Filter{DomainName},
+		Description:  "EnableContextHeaderInVisibility is key for enable context header in visibility",
 		DefaultValue: false,
 	},
 	EnableCrossClusterEngine: {
