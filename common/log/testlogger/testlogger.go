@@ -120,7 +120,7 @@ func (f *fallbackTestCore) Check(entry zapcore.Entry, checked *zapcore.CheckedEn
 
 func (f *fallbackTestCore) Write(entry zapcore.Entry, fields []zapcore.Field) error {
 	if f.completed.Load() {
-		entry.Message = fmt.Sprintf("WOULD FAIL TEST %q, logged too late: %v", f.t.Name(), entry.Message)
+		entry.Message = fmt.Sprintf("COULD FAIL TEST %q, logged too late: %v", f.t.Name(), entry.Message)
 
 		hasStack := slices.ContainsFunc(fields, func(field zapcore.Field) bool {
 			// no specific stack-trace type, so just look for probable fields.
