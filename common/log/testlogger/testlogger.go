@@ -23,6 +23,10 @@
 package testlogger
 
 import (
+	"fmt"
+	"slices"
+	"strings"
+
 	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
@@ -48,7 +52,8 @@ func New(t TestingT) log.Logger {
 func NewZap(t TestingT) *zap.Logger {
 	/*
 		HORRIBLE HACK due to async shutdown, both in our code and in libraries (e.g. gocql):
-		normally, logs produced after a test finishes will *intentionally* fail the test and/or cause data to race.
+		normally, logs produced after a test finishes will *intentionally* fail the test and/or
+		cause data to race on the test's internal `t.done` field.
 
 		that's a good thing, it reveals possibly-dangerously-flawed lifecycle management.
 
@@ -59,35 +64,31 @@ func NewZap(t TestingT) *zap.Logger {
 		EVERY ONE of these logs is bad and we should not produce them, but it's causing many
 		otherwise-useful tests to be flaky, and that's a larger interruption than is useful.
 	*/
-	logAfterComplete, err := zap.NewDevelopment(
-		zap.AddStacktrace(zapcore.DebugLevel), // to help find these logs.
-	)
+	logAfterComplete, err := zap.NewDevelopment()
 	require.NoError(t, err, "could not build a fallback zap logger")
-
 	replaced := &fallbackTestCore{
-		fallback: logAfterComplete.Core(),
-		testing:  nil, // populated in WrapCore
+		t:         t,
+		fallback:  logAfterComplete.Core(),
+		testing:   zaptest.NewLogger(t).Core(),
+		completed: &atomic.Bool{},
 	}
-	tl := zaptest.NewLogger(t, zaptest.WrapOptions(zap.WrapCore(func(core zapcore.Core) zapcore.Core {
-		replaced.testing = core
-		return replaced
-	})))
 
 	t.Cleanup(replaced.UseFallback) // switch to fallback before ending the test
 
-	return tl
+	return zap.New(replaced)
 }
 
 type fallbackTestCore struct {
+	t         TestingT
 	fallback  zapcore.Core
 	testing   zapcore.Core
-	completed atomic.Bool
+	completed *atomic.Bool
 }
 
 var _ zapcore.Core = (*fallbackTestCore)(nil)
 
 func (f *fallbackTestCore) UseFallback() {
-	// f.completed.Store(true)
+	f.completed.Store(true)
 }
 
 func (f *fallbackTestCore) Enabled(level zapcore.Level) bool {
@@ -98,21 +99,36 @@ func (f *fallbackTestCore) Enabled(level zapcore.Level) bool {
 }
 
 func (f *fallbackTestCore) With(fields []zapcore.Field) zapcore.Core {
-	if f.completed.Load() {
-		return f.fallback.With(fields)
+	// need to copy and defer, else the returned core will be used at an
+	// arbitrarily later point in time, possibly after the test has completed.
+	return &fallbackTestCore{
+		t:         f.t,
+		fallback:  f.fallback.With(fields),
+		testing:   f.testing.With(fields),
+		completed: f.completed,
 	}
-	return f.testing.With(fields)
 }
 
 func (f *fallbackTestCore) Check(entry zapcore.Entry, checked *zapcore.CheckedEntry) *zapcore.CheckedEntry {
-	if f.completed.Load() {
-		return f.fallback.Check(entry, checked)
+	// see other Check impls, all look similar.
+	// this defers the "where to log" decision to Write, as `f` is the core that will write.
+	if f.fallback.Enabled(entry.Level) {
+		return checked.AddCore(entry, f)
 	}
-	return f.testing.Check(entry, checked)
+	return checked // do not add any cores
 }
 
 func (f *fallbackTestCore) Write(entry zapcore.Entry, fields []zapcore.Field) error {
 	if f.completed.Load() {
+		entry.Message = fmt.Sprintf("WOULD FAIL TEST %q, logged too late: %v", f.t.Name(), entry.Message)
+
+		hasStack := slices.ContainsFunc(fields, func(field zapcore.Field) bool {
+			// no specific stack-trace type, so just look for probable fields.
+			return strings.Contains(strings.ToLower(field.Key), "stack")
+		})
+		if !hasStack {
+			fields = append(fields, zap.Stack("log_stack"))
+		}
 		return f.fallback.Write(entry, fields)
 	}
 	return f.testing.Write(entry, fields)
