@@ -284,6 +284,8 @@ func visibilityManagerTags(op string) *tag.Tag {
 		return &tag.StoreOperationDeleteWorkflowExecution
 	case "VisibilityManager.ListWorkflowExecutions":
 		return &tag.StoreOperationListWorkflowExecutions
+	case "VisibilityManager.ListAllWorkflowExecutions":
+		return &tag.StoreOperationListAllWorkflowExecutions
 	case "VisibilityManager.ScanWorkflowExecutions":
 		return &tag.StoreOperationScanWorkflowExecutions
 	case "VisibilityManager.CountWorkflowExecutions":
