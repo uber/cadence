@@ -73,6 +73,7 @@ type PinotIntegrationSuite struct {
 func TestPinotIntegrationSuite(t *testing.T) {
 	flag.Parse()
 	clusterConfig, err := GetTestClusterConfig("testdata/integration_pinot_cluster.yaml")
+	fmt.Println("ABCDDDBUG,", clusterConfig)
 	if err != nil {
 		panic(err)
 	}
@@ -134,7 +135,7 @@ func (s *PinotIntegrationSuite) SetupSuite() {
 		Table:       tableName,
 		ServiceName: "",
 	}
-	s.pinotClient = pinotutils.CreatePinotClient(s.Suite, pinotConfig, s.Logger)
+	s.pinotClient = pinotutils.CreatePinotClient(&s.Suite, pinotConfig, s.Logger)
 }
 
 func (s *PinotIntegrationSuite) SetupTest() {

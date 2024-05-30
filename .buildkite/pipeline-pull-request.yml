@@ -117,7 +117,7 @@ steps:
           run: integration-test-cassandra
           config: docker/buildkite/docker-compose-es7.yml
 
-  - label: ":golang: integration test with cassandra with Pinot"
+  - label: ":golang: integration test with cassandra with pinot"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
@@ -136,7 +136,7 @@ steps:
                     make .just-build
                     make cover_integration_profile
       - docker-compose#v3.0.0:
-          run: integration-test-cassandra
+          run: integration-test-cassandra-pinot
           config: docker/buildkite/docker-compose-pinot.yml
 
   - label: ":golang: integration test with cassandra with OpenSearch v2"

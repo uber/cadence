@@ -7,6 +7,18 @@ services:
     environment:
       - "MAX_HEAP_SIZE=256M"
       - "HEAP_NEWSIZE=128M"
+    networks:
+      services-network:
+        aliases:
+          - cassandra
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus:/etc/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    ports:
+      - '9090:9090'
   zookeeper:
     image: zookeeper:3.5.8
     container_name: zookeeper
@@ -15,6 +27,10 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      services-network:
+        aliases:
+          - zookeeper
   pinot-controller:
     image: apachepinot/pinot:0.12.1
     command: "StartController -zkAddress zookeeper:2181 -controllerPort 9001"
@@ -26,6 +42,10 @@ services:
       JAVA_OPTS: "-Dplugins.dir=/opt/pinot/plugins -Xms1G -Xmx4G -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Xloggc:gc-pinot-controller.log"
     depends_on:
       - zookeeper
+    networks:
+      services-network:
+        aliases:
+          - pinot-controller
   pinot-broker:
     image: apachepinot/pinot:0.12.1
     command: "StartBroker -zkAddress zookeeper:2181"
@@ -37,6 +57,10 @@ services:
       JAVA_OPTS: "-Dplugins.dir=/opt/pinot/plugins -Xms4G -Xmx4G -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Xloggc:gc-pinot-broker.log"
     depends_on:
       - pinot-controller
+    networks:
+      services-network:
+        aliases:
+          - pinot-broker
   pinot-server:
     image: apachepinot/pinot:0.12.1
     command: "StartServer -zkAddress zookeeper:2181"
@@ -48,8 +72,12 @@ services:
       JAVA_OPTS: "-Dplugins.dir=/opt/pinot/plugins -Xms4G -Xmx16G -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Xloggc:gc-pinot-server.log"
     depends_on:
       - pinot-broker
-   kafka:
-    image: docker.io/bitnami/kafka:3.7
+    networks:
+      services-network:
+        aliases:
+          - pinot-server
+  kafka:
+    image: docker.io/bitnami/kafka:latest
     hostname: kafka
     container_name: kafka
     ports:
@@ -67,9 +95,61 @@ services:
       - "KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT"
       # Topic settings
       - "KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true"
+    networks:
+      services-network:
+        aliases:
+          - kafka
+
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch-oss:7.9.3
     ports:
       - "9200:9200"
     environment:
       - discovery.type=single-node
+    networks:
+      services-network:
+        aliases:
+          - elasticsearch
+  cadence:
+    image: ubercadence/server:master-auto-setup
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+      - "8002:8002"
+      - "8003:8003"
+      - "7933:7933"
+      - "7934:7934"
+      - "7935:7935"
+      - "7939:7939"
+      - "7833:7833"
+    environment:
+      - "ENABLE_ES=true"
+      - "ES_SEEDS=elasticsearch"
+#      - "ASYNC_WF_KAFKA_QUEUE_ENABLED=true"
+#      - "ASYNC_WF_KAFKA_QUEUE_TOPIC=async-wf-topic1"
+      - "KAFKA_SEEDS=kafka"
+      - "KAFKA_PORT=9092"
+      - "ZOOKEEPER_SEEDS=zookeeper"
+      - "ZOOKEEPER_PORT=2181"
+      - "CASSANDRA_SEEDS=cassandra"
+      - "PROMETHEUS_ENDPOINT_0=0.0.0.0:8000"
+      - "PROMETHEUS_ENDPOINT_1=0.0.0.0:8001"
+      - "PROMETHEUS_ENDPOINT_2=0.0.0.0:8002"
+      - "PROMETHEUS_ENDPOINT_3=0.0.0.0:8003"
+      - "DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development_pinot.yaml"
+      - "LOG_LEVEL=debug"
+    depends_on:
+      - cassandra
+      - prometheus
+      - kafka
+      - elasticsearch
+    networks:
+      services-network:
+        aliases:
+          - cadence
+
+networks:
+  services-network:
+    name: services-network
+    driver: bridge
+

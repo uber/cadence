@@ -202,6 +202,34 @@ services:
         condition: service_started
       kafka:
         condition: service_started
+    volumes:
+      - ../../:/cadence
+      - /cadence/.build/ # ensure we don't mount the build directory
+      - /cadence/.bin/ # ensure we don't mount the bin directory
+    networks:
+      services-network:
+        aliases:
+          - integration-test
+
+  integration-test-cassandra-pinot:
+    build:
+      context: ../../
+      dockerfile: ./docker/buildkite/Dockerfile
+    command: make cover_integration_profile
+    environment:
+      - "CASSANDRA_HOST=cassandra"
+      - "CASSANDRA=1"
+      - "CASSANDRA_SEEDS=cassandra"
+      - "ES_SEEDS=elasticsearch"
+      - "KAFKA_SEEDS=kafka"
+      - "TEST_TAG=pinotintegration"
+    depends_on:
+      cassandra:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_started
+      kafka:
+        condition: service_started
       pinot-controller:
         condition: service_started
       pinot-broker:
