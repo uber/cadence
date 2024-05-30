@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -55,7 +56,10 @@ type wfCache struct {
 	domainCache                    cache.DomainCache
 	metricsClient                  metrics.Client
 	logger                         log.Logger
-	getCacheItemFn                 func(domainName string, workflowID string) (*cacheValue, error)
+	timeSource                     clock.TimeSource
+
+	// we use functions to get cache items, and the current time, so we can mock it in unit tests
+	getCacheItemFn func(domainName string, workflowID string) (*cacheValue, error)
 }
 
 type cacheKey struct {
@@ -66,6 +70,7 @@ type cacheKey struct {
 type cacheValue struct {
 	externalRateLimiter quotas.Limiter
 	internalRateLimiter quotas.Limiter
+	countMetric         workflowIDCountMetric
 }
 
 // Params is the parameters for a new WFCache
@@ -96,6 +101,7 @@ func New(params Params) WFCache {
 		workflowIDCacheInternalEnabled: params.WorkflowIDCacheInternalEnabled,
 		domainCache:                    params.DomainCache,
 		metricsClient:                  params.MetricsClient,
+		timeSource:                     clock.NewRealTimeSource(),
 		logger:                         params.Logger,
 	}
 	// We set getCacheItemFn to cache.getCacheItem so that we can mock it in unit tests
@@ -138,6 +144,7 @@ func (c *wfCache) allow(domainID string, workflowID string, rateLimitType rateLi
 
 	switch rateLimitType {
 	case external:
+		value.countMetric.updatePerDomainMaxWFRequestCount(domainName, c.timeSource, c.metricsClient)
 		if !value.externalRateLimiter.Allow() {
 			c.emitRateLimitMetrics(domainID, workflowID, domainName, "external", metrics.WorkflowIDCacheRequestsExternalRatelimitedCounter)
 			return false
