@@ -2933,7 +2933,7 @@ func TestGetWorkflowExecutionWithRetry(t *testing.T) {
 	testCases := []struct {
 		name      string
 		request   *persistence.GetWorkflowExecutionRequest
-		mockSetup func(*shard.MockContext, *log.MockLogger)
+		mockSetup func(*shard.MockContext, *log.MockLogger, clock.MockedTimeSource)
 		want      *persistence.GetWorkflowExecutionResponse
 		wantErr   bool
 		assertErr func(*testing.T, error)
@@ -2943,7 +2943,7 @@ func TestGetWorkflowExecutionWithRetry(t *testing.T) {
 			request: &persistence.GetWorkflowExecutionRequest{
 				RangeID: 100,
 			},
-			mockSetup: func(mockShard *shard.MockContext, mockLogger *log.MockLogger) {
+			mockSetup: func(mockShard *shard.MockContext, mockLogger *log.MockLogger, timeSource clock.MockedTimeSource) {
 				mockShard.EXPECT().GetWorkflowExecution(gomock.Any(), &persistence.GetWorkflowExecutionRequest{
 					RangeID: 100,
 				}).Return(&persistence.GetWorkflowExecutionResponse{
@@ -2964,7 +2964,7 @@ func TestGetWorkflowExecutionWithRetry(t *testing.T) {
 			request: &persistence.GetWorkflowExecutionRequest{
 				RangeID: 100,
 			},
-			mockSetup: func(mockShard *shard.MockContext, mockLogger *log.MockLogger) {
+			mockSetup: func(mockShard *shard.MockContext, mockLogger *log.MockLogger, timeSource clock.MockedTimeSource) {
 				mockShard.EXPECT().GetWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, &types.EntityNotExistsError{})
 			},
 			wantErr: true,
@@ -2977,9 +2977,9 @@ func TestGetWorkflowExecutionWithRetry(t *testing.T) {
 			request: &persistence.GetWorkflowExecutionRequest{
 				RangeID: 100,
 			},
-			mockSetup: func(mockShard *shard.MockContext, mockLogger *log.MockLogger) {
+			mockSetup: func(mockShard *shard.MockContext, mockLogger *log.MockLogger, timeSource clock.MockedTimeSource) {
 				mockShard.EXPECT().GetWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, &shard.ErrShardClosed{
-					ClosedAt: time.Now().Add(-shard.TimeBeforeShardClosedIsError / 2),
+					ClosedAt: timeSource.Now().Add(-shard.TimeBeforeShardClosedIsError / 2),
 				})
 				// We do _not_ expect a log call
 			},
@@ -2993,9 +2993,9 @@ func TestGetWorkflowExecutionWithRetry(t *testing.T) {
 			request: &persistence.GetWorkflowExecutionRequest{
 				RangeID: 100,
 			},
-			mockSetup: func(mockShard *shard.MockContext, mockLogger *log.MockLogger) {
+			mockSetup: func(mockShard *shard.MockContext, mockLogger *log.MockLogger, timeSource clock.MockedTimeSource) {
 				err := &shard.ErrShardClosed{
-					ClosedAt: time.Now().Add(-shard.TimeBeforeShardClosedIsError * 2),
+					ClosedAt: timeSource.Now().Add(-shard.TimeBeforeShardClosedIsError * 2),
 				}
 				mockShard.EXPECT().GetWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, err)
 				expectLog(mockLogger, err)
@@ -3010,7 +3010,7 @@ func TestGetWorkflowExecutionWithRetry(t *testing.T) {
 			request: &persistence.GetWorkflowExecutionRequest{
 				RangeID: 100,
 			},
-			mockSetup: func(mockShard *shard.MockContext, mockLogger *log.MockLogger) {
+			mockSetup: func(mockShard *shard.MockContext, mockLogger *log.MockLogger, timeSource clock.MockedTimeSource) {
 				mockShard.EXPECT().GetWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
 				expectLog(mockLogger, errors.New("some error"))
 			},
@@ -3024,7 +3024,7 @@ func TestGetWorkflowExecutionWithRetry(t *testing.T) {
 			request: &persistence.GetWorkflowExecutionRequest{
 				RangeID: 100,
 			},
-			mockSetup: func(mockShard *shard.MockContext, mockLogger *log.MockLogger) {
+			mockSetup: func(mockShard *shard.MockContext, mockLogger *log.MockLogger, timeSource clock.MockedTimeSource) {
 				mockShard.EXPECT().GetWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, &types.ServiceBusyError{})
 				mockShard.EXPECT().GetWorkflowExecution(gomock.Any(), gomock.Any()).Return(&persistence.GetWorkflowExecutionResponse{
 					MutableStateStats: &persistence.MutableStateStats{
@@ -3046,10 +3046,12 @@ func TestGetWorkflowExecutionWithRetry(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			mockShard := shard.NewMockContext(mockCtrl)
 			mockLogger := new(log.MockLogger)
+			timeSource := clock.NewMockedTimeSource()
+			mockShard.EXPECT().GetTimeSource().Return(timeSource).AnyTimes()
 			policy := backoff.NewExponentialRetryPolicy(time.Millisecond)
 			policy.SetMaximumAttempts(1)
 			if tc.mockSetup != nil {
-				tc.mockSetup(mockShard, mockLogger)
+				tc.mockSetup(mockShard, mockLogger, timeSource)
 			}
 			resp, err := getWorkflowExecutionWithRetry(context.Background(), mockShard, mockLogger, policy, tc.request)
 			if tc.wantErr {

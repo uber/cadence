@@ -1214,7 +1214,7 @@ func getWorkflowExecutionWithRetry(
 		// If error is shard closed, only log error if shard has been closed for a while,
 		// otherwise always log
 		var shardClosedError *shard.ErrShardClosed
-		if !errors.As(err, &shardClosedError) || time.Since(shardClosedError.ClosedAt) > shard.TimeBeforeShardClosedIsError {
+		if !errors.As(err, &shardClosedError) || shardContext.GetTimeSource().Since(shardClosedError.ClosedAt) > shard.TimeBeforeShardClosedIsError {
 			logger.Error("Persistent fetch operation failure", tag.StoreOperationGetWorkflowExecution, tag.Error(err))
 		}
 
