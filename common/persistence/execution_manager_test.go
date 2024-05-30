@@ -769,6 +769,112 @@ func TestGetReplicationTasksFromDLQ(t *testing.T) {
 	}, res)
 }
 
+func TestDeserializeChildExecutionInfos(t *testing.T) {
+	tests := []struct {
+		name         string
+		prepareMocks func(*MockPayloadSerializer)
+		checkRes     func(*testing.T, map[int64]*ChildExecutionInfo, error)
+	}{
+		{
+			name: "success",
+			prepareMocks: func(mockedSerializer *MockPayloadSerializer) {
+				// Child 1 init event
+				mockedSerializer.EXPECT().DeserializeEvent(sampleEventDataWithVersion(1)).Return(&types.HistoryEvent{
+					ID:      1,
+					Version: 1,
+				}, nil)
+				// Child 1 start event
+				mockedSerializer.EXPECT().DeserializeEvent(sampleEventDataWithVersion(2)).Return(&types.HistoryEvent{
+					ID:      2,
+					Version: 2,
+				}, nil)
+				// Child 2 init event
+				mockedSerializer.EXPECT().DeserializeEvent(sampleEventDataWithVersion(3)).Return(&types.HistoryEvent{
+					ID:      3,
+					Version: 3,
+				}, nil)
+
+				// Child 2 start event is mimicking legacy behavior where runID and workflowID were not stored inside the info
+				// but was extracted from the startEvent
+				mockedSerializer.EXPECT().DeserializeEvent(sampleEventDataWithVersion(4)).Return(&types.HistoryEvent{
+					ID:      4,
+					Version: 4,
+					ChildWorkflowExecutionStartedEventAttributes: &types.ChildWorkflowExecutionStartedEventAttributes{
+						WorkflowExecution: &types.WorkflowExecution{
+							WorkflowID: "legacy-workflow-id",
+							RunID:      "legacy-run-id",
+						},
+					},
+				}, nil)
+			},
+			checkRes: func(t *testing.T, events map[int64]*ChildExecutionInfo, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, map[int64]*ChildExecutionInfo{
+					1: {
+						Version:           1,
+						DomainID:          testDomainID,
+						WorkflowTypeName:  testWorkflowType,
+						InitiatedID:       1,
+						InitiatedEvent:    &types.HistoryEvent{ID: 1, Version: 1},
+						StartedID:         2,
+						StartedEvent:      &types.HistoryEvent{ID: 2, Version: 2},
+						CreateRequestID:   "create-request-id",
+						StartedWorkflowID: "workflow-id",
+						StartedRunID:      "run-id",
+					},
+					2: {
+						Version:          3,
+						DomainID:         testDomainID,
+						WorkflowTypeName: testWorkflowType,
+						InitiatedID:      3,
+						InitiatedEvent:   &types.HistoryEvent{ID: 3, Version: 3},
+						StartedID:        4,
+						StartedEvent: &types.HistoryEvent{ID: 4, Version: 4,
+							ChildWorkflowExecutionStartedEventAttributes: &types.ChildWorkflowExecutionStartedEventAttributes{
+								WorkflowExecution: &types.WorkflowExecution{
+									WorkflowID: "legacy-workflow-id",
+									RunID:      "legacy-run-id",
+								},
+							}},
+						CreateRequestID:   "create-request-id",
+						StartedWorkflowID: "legacy-workflow-id",
+						StartedRunID:      "legacy-run-id",
+					},
+				}, events)
+			},
+		},
+		{
+			name: "deserialize event error",
+			prepareMocks: func(mockedSerializer *MockPayloadSerializer) {
+				mockedSerializer.EXPECT().DeserializeEvent(gomock.Any()).Return(nil, assert.AnError).Times(1)
+			},
+			checkRes: func(t *testing.T, events map[int64]*ChildExecutionInfo, err error) {
+				assert.ErrorIs(t, err, assert.AnError)
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+
+			mockedSerializer := NewMockPayloadSerializer(ctrl)
+
+			test.prepareMocks(mockedSerializer)
+
+			manager := &executionManagerImpl{
+				serializer: mockedSerializer,
+			}
+
+			result, err := manager.DeserializeChildExecutionInfos(map[int64]*InternalChildExecutionInfo{
+				1: sampleInternalChildExecutionInfo(1, 2),
+				2: sampleInternalChildExecutionInfo(3, 4),
+			})
+			test.checkRes(t, result, err)
+		})
+	}
+}
+
 func sampleInternalActivityInfo(name string) *InternalActivityInfo {
 	return &InternalActivityInfo{
 		Version:        1,
@@ -1023,4 +1129,23 @@ func sampleResetPointsData() *DataBlob {
 
 func sampleCheckSumData() *DataBlob {
 	return NewDataBlob([]byte("test-checksum"), common.EncodingTypeThriftRW)
+}
+
+func sampleInternalChildExecutionInfo(initEventID, startedEventID int64) *InternalChildExecutionInfo {
+	return &InternalChildExecutionInfo{
+		Version:           initEventID,
+		InitiatedID:       initEventID,
+		InitiatedEvent:    sampleEventDataWithVersion(initEventID),
+		StartedID:         startedEventID,
+		StartedEvent:      sampleEventDataWithVersion(startedEventID),
+		CreateRequestID:   "create-request-id",
+		DomainID:          testDomainID,
+		WorkflowTypeName:  testWorkflowType,
+		StartedWorkflowID: "workflow-id",
+		StartedRunID:      "run-id",
+	}
+}
+
+func sampleEventDataWithVersion(i int64) *DataBlob {
+	return NewDataBlob([]byte(fmt.Sprintf("test-event-%d", i)), common.EncodingTypeThriftRW)
 }
