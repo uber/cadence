@@ -6,6 +6,8 @@ persistence:
         broker: "localhost:8099"
         cluster: pinot-test
         table: "cadence_visibility_pinot"
+        migration:
+          enabled: false
     es-visibility:
       elasticsearch:
         version: "v6"

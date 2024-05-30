@@ -33,11 +33,11 @@ import (
 
 type (
 	visibilityDualManager struct {
-		logger              log.Logger
-		dbVisibilityManager VisibilityManager
-		esVisibilityManager VisibilityManager
-		readModeIsFromES    dynamicconfig.BoolPropertyFnWithDomainFilter
-		writeMode           dynamicconfig.StringPropertyFn
+		logger                    log.Logger
+		dbVisibilityManager       VisibilityManager
+		advancedVisibilityManager VisibilityManager
+		readModeIsFromAdvanced    dynamicconfig.BoolPropertyFnWithDomainFilter
+		writeMode                 dynamicconfig.StringPropertyFn
 	}
 )
 
@@ -46,21 +46,21 @@ var _ VisibilityManager = (*visibilityDualManager)(nil)
 // NewVisibilityDualManager create a visibility manager that operate on DB or ElasticSearch based on dynamic config.
 func NewVisibilityDualManager(
 	dbVisibilityManager VisibilityManager, // one of the VisibilityManager can be nil
-	esVisibilityManager VisibilityManager, // one of the VisibilityManager can be nil
-	readModeIsFromES dynamicconfig.BoolPropertyFnWithDomainFilter,
+	advancedVisibilityManager VisibilityManager, // one of the VisibilityManager can be nil
+	readModeIsFromAdvanced dynamicconfig.BoolPropertyFnWithDomainFilter,
 	visWritingMode dynamicconfig.StringPropertyFn,
 	logger log.Logger,
 ) VisibilityManager {
-	if dbVisibilityManager == nil && esVisibilityManager == nil {
-		logger.Fatal("require one of dbVisibilityManager or esVisibilityManager")
+	if dbVisibilityManager == nil && advancedVisibilityManager == nil {
+		logger.Fatal("require one of dbVisibilityManager or advancedVisibilityManager, such as es or pinot")
 		return nil
 	}
 	return &visibilityDualManager{
-		dbVisibilityManager: dbVisibilityManager,
-		esVisibilityManager: esVisibilityManager,
-		readModeIsFromES:    readModeIsFromES,
-		writeMode:           visWritingMode,
-		logger:              logger,
+		dbVisibilityManager:       dbVisibilityManager,
+		advancedVisibilityManager: advancedVisibilityManager,
+		readModeIsFromAdvanced:    readModeIsFromAdvanced,
+		writeMode:                 visWritingMode,
+		logger:                    logger,
 	}
 }
 
@@ -68,14 +68,14 @@ func (v *visibilityDualManager) Close() {
 	if v.dbVisibilityManager != nil {
 		v.dbVisibilityManager.Close()
 	}
-	if v.esVisibilityManager != nil {
-		v.esVisibilityManager.Close()
+	if v.advancedVisibilityManager != nil {
+		v.advancedVisibilityManager.Close()
 	}
 }
 
 func (v *visibilityDualManager) GetName() string {
-	if v.esVisibilityManager != nil {
-		return v.esVisibilityManager.GetName()
+	if v.advancedVisibilityManager != nil {
+		return v.advancedVisibilityManager.GetName()
 	}
 	return v.dbVisibilityManager.GetName()
 }
@@ -90,7 +90,7 @@ func (v *visibilityDualManager) RecordWorkflowExecutionStarted(
 			return v.dbVisibilityManager.RecordWorkflowExecutionStarted(ctx, request)
 		},
 		func() error {
-			return v.esVisibilityManager.RecordWorkflowExecutionStarted(ctx, request)
+			return v.advancedVisibilityManager.RecordWorkflowExecutionStarted(ctx, request)
 		},
 	)
 }
@@ -105,7 +105,7 @@ func (v *visibilityDualManager) RecordWorkflowExecutionClosed(
 			return v.dbVisibilityManager.RecordWorkflowExecutionClosed(ctx, request)
 		},
 		func() error {
-			return v.esVisibilityManager.RecordWorkflowExecutionClosed(ctx, request)
+			return v.advancedVisibilityManager.RecordWorkflowExecutionClosed(ctx, request)
 		},
 	)
 }
@@ -120,7 +120,7 @@ func (v *visibilityDualManager) RecordWorkflowExecutionUninitialized(
 			return v.dbVisibilityManager.RecordWorkflowExecutionUninitialized(ctx, request)
 		},
 		func() error {
-			return v.esVisibilityManager.RecordWorkflowExecutionUninitialized(ctx, request)
+			return v.advancedVisibilityManager.RecordWorkflowExecutionUninitialized(ctx, request)
 		},
 	)
 }
@@ -135,7 +135,7 @@ func (v *visibilityDualManager) DeleteWorkflowExecution(
 			return v.dbVisibilityManager.DeleteWorkflowExecution(ctx, request)
 		},
 		func() error {
-			return v.esVisibilityManager.DeleteWorkflowExecution(ctx, request)
+			return v.advancedVisibilityManager.DeleteWorkflowExecution(ctx, request)
 		},
 	)
 }
@@ -150,7 +150,7 @@ func (v *visibilityDualManager) DeleteUninitializedWorkflowExecution(
 			return v.dbVisibilityManager.DeleteUninitializedWorkflowExecution(ctx, request)
 		},
 		func() error {
-			return v.esVisibilityManager.DeleteUninitializedWorkflowExecution(ctx, request)
+			return v.advancedVisibilityManager.DeleteUninitializedWorkflowExecution(ctx, request)
 		},
 	)
 }
@@ -165,16 +165,16 @@ func (v *visibilityDualManager) UpsertWorkflowExecution(
 			return v.dbVisibilityManager.UpsertWorkflowExecution(ctx, request)
 		},
 		func() error {
-			return v.esVisibilityManager.UpsertWorkflowExecution(ctx, request)
+			return v.advancedVisibilityManager.UpsertWorkflowExecution(ctx, request)
 		},
 	)
 }
 
 func (v *visibilityDualManager) chooseVisibilityModeForAdmin() string {
 	switch {
-	case v.dbVisibilityManager != nil && v.esVisibilityManager != nil:
+	case v.dbVisibilityManager != nil && v.advancedVisibilityManager != nil:
 		return common.AdvancedVisibilityWritingModeDual
-	case v.esVisibilityManager != nil:
+	case v.advancedVisibilityManager != nil:
 		return common.AdvancedVisibilityWritingModeOn
 	case v.dbVisibilityManager != nil:
 		return common.AdvancedVisibilityWritingModeOff
@@ -202,13 +202,13 @@ func (v *visibilityDualManager) chooseVisibilityManagerForWrite(ctx context.Cont
 		v.logger.Warn("basic visibility is not available to write, fall back to advanced visibility")
 		return esVisFunc()
 	case common.AdvancedVisibilityWritingModeOn:
-		if v.esVisibilityManager != nil {
+		if v.advancedVisibilityManager != nil {
 			return esVisFunc()
 		}
 		v.logger.Warn("advanced visibility is not available to write, fall back to basic visibility")
 		return dbVisFunc()
 	case common.AdvancedVisibilityWritingModeDual:
-		if v.esVisibilityManager != nil {
+		if v.advancedVisibilityManager != nil {
 			if err := esVisFunc(); err != nil {
 				return err
 			}
@@ -325,19 +325,19 @@ func (v *visibilityDualManager) CountWorkflowExecutions(
 
 func (v *visibilityDualManager) chooseVisibilityManagerForRead(domain string) VisibilityManager {
 	var visibilityMgr VisibilityManager
-	if v.readModeIsFromES(domain) {
-		if v.esVisibilityManager != nil {
-			visibilityMgr = v.esVisibilityManager
+	if v.readModeIsFromAdvanced(domain) {
+		if v.advancedVisibilityManager != nil {
+			visibilityMgr = v.advancedVisibilityManager
 		} else {
 			visibilityMgr = v.dbVisibilityManager
-			v.logger.Warn("domain is configured to read from advanced visibility(ElasticSearch based) but it's not available, fall back to basic visibility",
+			v.logger.Warn("domain is configured to read from advanced visibility(ElasticSearch/Pinot based) but it's not available, fall back to basic visibility",
 				tag.WorkflowDomainName(domain))
 		}
 	} else {
 		if v.dbVisibilityManager != nil {
 			visibilityMgr = v.dbVisibilityManager
 		} else {
-			visibilityMgr = v.esVisibilityManager
+			visibilityMgr = v.advancedVisibilityManager
 			v.logger.Warn("domain is configured to read from basic visibility but it's not available, fall back to advanced visibility",
 				tag.WorkflowDomainName(domain))
 		}
