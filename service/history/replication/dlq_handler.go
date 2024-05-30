@@ -82,6 +82,7 @@ type (
 		metricsClient metrics.Client
 		done          chan struct{}
 		status        int32
+		getInterval   func() time.Duration
 
 		mu           sync.Mutex
 		latestCounts map[string]int64
@@ -106,6 +107,12 @@ func NewDLQHandler(
 		logger:        shard.GetLogger(),
 		metricsClient: shard.GetMetricsClient(),
 		done:          make(chan struct{}),
+		getInterval: func() time.Duration {
+			return backoff.JitDuration(
+				dlqMetricsEmitTimerInterval,
+				dlqMetricsEmitTimerCoefficient,
+			)
+		},
 	}
 }
 
@@ -169,21 +176,14 @@ func (r *dlqHandlerImpl) fetchAndEmitMessageCount(ctx context.Context) error {
 }
 
 func (r *dlqHandlerImpl) emitDLQSizeMetricsLoop() {
-	getInterval := func() time.Duration {
-		return backoff.JitDuration(
-			dlqMetricsEmitTimerInterval,
-			dlqMetricsEmitTimerCoefficient,
-		)
-	}
-
-	timer := time.NewTimer(getInterval())
+	timer := time.NewTimer(r.getInterval())
 	defer timer.Stop()
 
 	for {
 		select {
 		case <-timer.C:
 			r.fetchAndEmitMessageCount(context.Background())
-			timer.Reset(getInterval())
+			timer.Reset(r.getInterval())
 		case <-r.done:
 			return
 		}
@@ -322,7 +322,7 @@ func (r *dlqHandlerImpl) MergeMessages(
 			}
 		}
 
-		// If hydrated replication task does not exists in remote cluster - continue merging
+		// If hydrated replication task does not exist in remote cluster - continue merging
 		// Record lastMessageID with raw task id, so that they can be purged after.
 		if lastMessageID < raw.TaskID {
 			lastMessageID = raw.TaskID
