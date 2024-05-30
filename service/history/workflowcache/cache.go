@@ -26,7 +26,6 @@ package workflowcache
 
 import (
 	"errors"
-	"sync"
 	"time"
 
 	"github.com/uber/cadence/common/cache"
@@ -50,7 +49,6 @@ type WFCache interface {
 
 type wfCache struct {
 	lru                            cache.Cache
-	domainMaxCount                 sync.Map // map[string]domainMaxCount
 	externalLimiterFactory         quotas.LimiterFactory
 	internalLimiterFactory         quotas.LimiterFactory
 	workflowIDCacheExternalEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
@@ -97,7 +95,6 @@ func New(params Params) WFCache {
 			MaxCount:      params.MaxCount,
 			ActivelyEvict: true,
 		}),
-		domainMaxCount:                 sync.Map{}, // map[string]domainMaxCount
 		externalLimiterFactory:         params.ExternalLimiterFactory,
 		internalLimiterFactory:         params.InternalLimiterFactory,
 		workflowIDCacheExternalEnabled: params.WorkflowIDCacheExternalEnabled,

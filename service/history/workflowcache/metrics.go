@@ -30,60 +30,27 @@ import (
 )
 
 type workflowIDCountMetric struct {
-	secondStart time.Time
-	count       int
+	sync.Mutex
+
+	startingSecond time.Time
+	count          int
 }
 
 func (w *workflowIDCountMetric) reset(now time.Time) {
-	w.secondStart = now
+	w.startingSecond = now
 	w.count = 0
 }
 
-type domainMaxCount struct {
-	mu          sync.Mutex
-	maxCount    int
-	secondStart time.Time
-}
-
-func (d *domainMaxCount) reset(now time.Time) {
-	d.maxCount = 0
-	d.secondStart = now
-}
-
-func (c *wfCache) getOrCreateDomain(domainName string, now time.Time) *domainMaxCount {
-	newDomainCount := &domainMaxCount{
-		mu:          sync.Mutex{},
-		maxCount:    0,
-		secondStart: now,
-	}
-
-	domainCount, _ := c.domainMaxCount.LoadOrStore(domainName, newDomainCount)
-
-	return domainCount.(*domainMaxCount)
-}
-
 func (c *wfCache) updatePerDomainMaxWFRequestCount(domainName string, value *cacheValue) {
-	now := c.timeSource.Now()
-	domain := c.getOrCreateDomain(domainName, now)
+	value.countMetric.Lock()
+	defer value.countMetric.Unlock()
 
-	// It's enough to lock the domain, as the workflowIDCountMetric belongs to the domain
-	domain.mu.Lock()
-	defer domain.mu.Unlock()
-
-	if c.timeSource.Since(domain.secondStart) > time.Second {
-		// Emit the max count for the previous second and reset the count
-		c.metricsClient.Scope(metrics.HistoryClientWfIDCacheScope, metrics.DomainTag(domainName)).
-			UpdateGauge(metrics.WorkflowIDCacheRequestsExternalMaxRequestsPerSecondsGauge, float64(domain.maxCount))
-		domain.reset(now)
+	if c.timeSource.Since(value.countMetric.startingSecond) > time.Second {
+		value.countMetric.reset(c.timeSource.Now().UTC())
 	}
-
-	if c.timeSource.Since(value.countMetric.secondStart) > time.Second {
-		value.countMetric.reset(now)
-	}
-
 	value.countMetric.count++
 
-	if value.countMetric.count > domain.maxCount {
-		domain.maxCount = value.countMetric.count
-	}
+	// We can just use the upper of the metric, so it is not an issue to emit all the counts
+	c.metricsClient.Scope(metrics.HistoryClientWfIDCacheScope, metrics.DomainTag(domainName)).
+		RecordTimer(metrics.WorkflowIDCacheRequestsExternalMaxRequestsPerSecondsTimer, time.Duration(value.countMetric.count))
 }

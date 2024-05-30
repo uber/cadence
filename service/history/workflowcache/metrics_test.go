@@ -26,76 +26,85 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/metrics"
 )
 
-func TestGetOrCreateDomain(t *testing.T) {
-	wfCache := &wfCache{}
-
-	domainID := "some domain name"
-	otherDomainID := "some other domain name"
-
-	domainMaxCount1 := wfCache.getOrCreateDomain(domainID, time.Unix(123, 0))
-	domainMaxCount2 := wfCache.getOrCreateDomain(domainID, time.Unix(456, 0))
-	otherDomainMaxCount := wfCache.getOrCreateDomain(otherDomainID, time.Unix(789, 0))
-
-	// None of them are nil
-	assert.NotNil(t, domainMaxCount1)
-	assert.NotNil(t, domainMaxCount2)
-	assert.NotNil(t, otherDomainMaxCount)
-
-	// domainMaxCount1 and domainMaxCount2 are the same
-	assert.Equal(t, domainMaxCount1, domainMaxCount2)
-
-	// domainMaxCount1/domainMaxCount2 and otherDomainMaxCount are different
-	assert.NotEqual(t, domainMaxCount1, otherDomainMaxCount)
-	assert.NotEqual(t, domainMaxCount2, otherDomainMaxCount)
-}
-
 func TestUpdatePerDomainMaxWFRequestCount(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	metricsClientMock := metrics.NewMockClient(ctrl)
-	metricsMockScope := metrics.NewMockScope(ctrl)
-
-	now := time.Unix(123, 456)
-	timeSource := clock.NewMockedTimeSourceAt(now)
-
-	wfc := &wfCache{
-		metricsClient: metricsClientMock,
-		timeSource:    timeSource,
-	}
-
 	domainName := "some domain name"
-	value := &cacheValue{}
 
-	for i := 0; i < 5; i++ {
-		wfc.updatePerDomainMaxWFRequestCount(domainName, value)
+	cases := []struct {
+		name                             string
+		updatePerDomainMaxWFRequestCount func(wfc *wfCache, source clock.MockedTimeSource)
+		expecetMetrics                   []time.Duration
+	}{
+		{
+			name: "Single workflowID",
+			updatePerDomainMaxWFRequestCount: func(wfc *wfCache, timeSource clock.MockedTimeSource) {
+				workflowID1 := &cacheValue{}
+				wfc.updatePerDomainMaxWFRequestCount(domainName, workflowID1) // Emits 1
+				wfc.updatePerDomainMaxWFRequestCount(domainName, workflowID1) // Emits 2
+			},
+			expecetMetrics: []time.Duration{1, 2},
+		},
+		{
+			name: "Separate workflowIDs",
+			updatePerDomainMaxWFRequestCount: func(wfc *wfCache, timeSource clock.MockedTimeSource) {
+				workflowID1 := &cacheValue{}
+				wfc.updatePerDomainMaxWFRequestCount(domainName, workflowID1) // Emits 1
+
+				workflowID2 := &cacheValue{}
+				wfc.updatePerDomainMaxWFRequestCount(domainName, workflowID2) // Emits 1
+				wfc.updatePerDomainMaxWFRequestCount(domainName, workflowID2) // Emits 2
+				wfc.updatePerDomainMaxWFRequestCount(domainName, workflowID2) // Emits 3
+
+				wfc.updatePerDomainMaxWFRequestCount(domainName, workflowID1) // Emits 2
+
+			},
+			expecetMetrics: []time.Duration{1, 1, 2, 3, 2},
+		},
+		{
+			name: "Reset",
+			updatePerDomainMaxWFRequestCount: func(wfc *wfCache, timeSource clock.MockedTimeSource) {
+				workflowID1 := &cacheValue{}
+				wfc.updatePerDomainMaxWFRequestCount(domainName, workflowID1) // Emits 1
+				wfc.updatePerDomainMaxWFRequestCount(domainName, workflowID1) // Emits 2
+
+				timeSource.Advance(1100 * time.Millisecond)
+				wfc.updatePerDomainMaxWFRequestCount(domainName, workflowID1) // Emits 1
+			},
+			expecetMetrics: []time.Duration{1, 2, 1},
+		},
 	}
 
-	// Test that the max count is recorded
-	domain := wfc.getOrCreateDomain(domainName, now)
-	assert.Equal(t, 5, domain.maxCount)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			testScope := tally.NewTestScope("", make(map[string]string))
+			timeSource := clock.NewMockedTimeSourceAt(time.Unix(123, 456))
 
-	// Test that different values are independent
-	value = &cacheValue{}
-	for i := 0; i < 8; i++ {
-		wfc.updatePerDomainMaxWFRequestCount(domainName, value)
+			wfc := &wfCache{
+				metricsClient: metrics.NewClient(testScope, metrics.History),
+				timeSource:    timeSource,
+			}
+
+			tc.updatePerDomainMaxWFRequestCount(wfc, timeSource)
+
+			// We expect the domain tag to be set to "all" and "some domain name", we don't know the order, so use a set
+			expectedDomainTags := map[string]struct{}{"all": {}, "some domain name": {}}
+			actualDomainTags := map[string]struct{}{}
+
+			timers := testScope.Snapshot().Timers()
+			assert.Equal(t, 2, len(timers))
+			for _, v := range timers {
+				actualDomainTags[v.Tags()["domain"]] = struct{}{}
+				assert.Equal(t, tc.expecetMetrics, v.Values())
+			}
+
+			assert.Equal(t, expectedDomainTags, actualDomainTags)
+		})
 	}
-	domain = wfc.getOrCreateDomain(domainName, now)
-	assert.Equal(t, 8, domain.maxCount)
 
-	// Test that the max count is emitted and reset after a second
-	metricsClientMock.EXPECT().Scope(metrics.HistoryClientWfIDCacheScope, metrics.DomainTag(domainName)).
-		Return(metricsMockScope)
-	metricsMockScope.EXPECT().
-		UpdateGauge(metrics.WorkflowIDCacheRequestsExternalMaxRequestsPerSecondsGauge, 8.0)
-	timeSource.Advance(1100 * time.Millisecond)
-	wfc.updatePerDomainMaxWFRequestCount(domainName, value)
-
-	domain = wfc.getOrCreateDomain(domainName, now)
-	assert.Equal(t, 1, domain.maxCount)
 }
