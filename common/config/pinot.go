@@ -31,7 +31,6 @@ type (
 	}
 
 	PinotMigration struct {
-		Enabled bool   `yaml:"enabled"` //nolint:govet
-		Source  string `yaml:"source"`  //nolint:govet
+		Enabled bool `yaml:"enabled"` //nolint:govet
 	}
 )
