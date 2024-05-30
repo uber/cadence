@@ -38,43 +38,43 @@ func TestUpdatePerDomainMaxWFRequestCount(t *testing.T) {
 
 	cases := []struct {
 		name                             string
-		updatePerDomainMaxWFRequestCount func(wfc *wfCache, source clock.MockedTimeSource)
+		updatePerDomainMaxWFRequestCount func(metricsClient metrics.Client, source clock.MockedTimeSource)
 		expecetMetrics                   []time.Duration
 	}{
 		{
 			name: "Single workflowID",
-			updatePerDomainMaxWFRequestCount: func(wfc *wfCache, timeSource clock.MockedTimeSource) {
-				workflowID1 := &cacheValue{}
-				wfc.updatePerDomainMaxWFRequestCount(domainName, workflowID1) // Emits 1
-				wfc.updatePerDomainMaxWFRequestCount(domainName, workflowID1) // Emits 2
+			updatePerDomainMaxWFRequestCount: func(metricsClient metrics.Client, timeSource clock.MockedTimeSource) {
+				workflowID1 := &workflowIDCountMetric{}
+				workflowID1.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient) // Emits 1
+				workflowID1.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient) // Emits 2
 			},
 			expecetMetrics: []time.Duration{1, 2},
 		},
 		{
 			name: "Separate workflowIDs",
-			updatePerDomainMaxWFRequestCount: func(wfc *wfCache, timeSource clock.MockedTimeSource) {
-				workflowID1 := &cacheValue{}
-				wfc.updatePerDomainMaxWFRequestCount(domainName, workflowID1) // Emits 1
+			updatePerDomainMaxWFRequestCount: func(metricsClient metrics.Client, timeSource clock.MockedTimeSource) {
+				workflowID1 := &workflowIDCountMetric{}
+				workflowID1.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient) // Emits 1
 
-				workflowID2 := &cacheValue{}
-				wfc.updatePerDomainMaxWFRequestCount(domainName, workflowID2) // Emits 1
-				wfc.updatePerDomainMaxWFRequestCount(domainName, workflowID2) // Emits 2
-				wfc.updatePerDomainMaxWFRequestCount(domainName, workflowID2) // Emits 3
+				workflowID2 := &workflowIDCountMetric{}
+				workflowID2.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient) // Emits 1
+				workflowID2.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient) // Emits 2
+				workflowID2.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient) // Emits 3
 
-				wfc.updatePerDomainMaxWFRequestCount(domainName, workflowID1) // Emits 2
+				workflowID1.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient) // Emits 2
 
 			},
 			expecetMetrics: []time.Duration{1, 1, 2, 3, 2},
 		},
 		{
 			name: "Reset",
-			updatePerDomainMaxWFRequestCount: func(wfc *wfCache, timeSource clock.MockedTimeSource) {
-				workflowID1 := &cacheValue{}
-				wfc.updatePerDomainMaxWFRequestCount(domainName, workflowID1) // Emits 1
-				wfc.updatePerDomainMaxWFRequestCount(domainName, workflowID1) // Emits 2
+			updatePerDomainMaxWFRequestCount: func(metricsClient metrics.Client, timeSource clock.MockedTimeSource) {
+				workflowID1 := &workflowIDCountMetric{}
+				workflowID1.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient) // Emits 1
+				workflowID1.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient) // Emits 2
 
 				timeSource.Advance(1100 * time.Millisecond)
-				wfc.updatePerDomainMaxWFRequestCount(domainName, workflowID1) // Emits 1
+				workflowID1.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient) // Emits 1
 			},
 			expecetMetrics: []time.Duration{1, 2, 1},
 		},
@@ -84,13 +84,9 @@ func TestUpdatePerDomainMaxWFRequestCount(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			testScope := tally.NewTestScope("", make(map[string]string))
 			timeSource := clock.NewMockedTimeSourceAt(time.Unix(123, 456))
+			metricsClient := metrics.NewClient(testScope, metrics.History)
 
-			wfc := &wfCache{
-				metricsClient: metrics.NewClient(testScope, metrics.History),
-				timeSource:    timeSource,
-			}
-
-			tc.updatePerDomainMaxWFRequestCount(wfc, timeSource)
+			tc.updatePerDomainMaxWFRequestCount(metricsClient, timeSource)
 
 			// We expect the domain tag to be set to "all" and "some domain name", we don't know the order, so use a set
 			expectedDomainTags := map[string]struct{}{"all": {}, "some domain name": {}}

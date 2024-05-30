@@ -26,9 +26,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/metrics"
 )
 
+// workflowIDCountMetric holds the count of requests for a given second, for a domain/workflowID pair
+// This is used to emit the max count of requests for a given domain
+// Ideally we would just emit the count of requests for a given domain/workflowID pair, but this is not
+// possible, due to the high cardinality of workflowIDs
 type workflowIDCountMetric struct {
 	sync.Mutex
 
@@ -36,21 +41,25 @@ type workflowIDCountMetric struct {
 	count          int
 }
 
-func (w *workflowIDCountMetric) reset(now time.Time) {
-	w.startingSecond = now
-	w.count = 0
+func (cm *workflowIDCountMetric) reset(now time.Time) {
+	cm.startingSecond = now
+	cm.count = 0
 }
 
-func (c *wfCache) updatePerDomainMaxWFRequestCount(domainName string, value *cacheValue) {
-	value.countMetric.Lock()
-	defer value.countMetric.Unlock()
+func (cm *workflowIDCountMetric) updatePerDomainMaxWFRequestCount(
+	domainName string,
+	timeSource clock.TimeSource,
+	metricsClient metrics.Client,
+) {
+	cm.Lock()
+	defer cm.Unlock()
 
-	if c.timeSource.Since(value.countMetric.startingSecond) > time.Second {
-		value.countMetric.reset(c.timeSource.Now().UTC())
+	if timeSource.Since(cm.startingSecond) > time.Second {
+		cm.reset(timeSource.Now().UTC())
 	}
-	value.countMetric.count++
+	cm.count++
 
 	// We can just use the upper of the metric, so it is not an issue to emit all the counts
-	c.metricsClient.Scope(metrics.HistoryClientWfIDCacheScope, metrics.DomainTag(domainName)).
-		RecordTimer(metrics.WorkflowIDCacheRequestsExternalMaxRequestsPerSecondsTimer, time.Duration(value.countMetric.count))
+	metricsClient.Scope(metrics.HistoryClientWfIDCacheScope, metrics.DomainTag(domainName)).
+		RecordTimer(metrics.WorkflowIDCacheRequestsExternalMaxRequestsPerSecondsTimer, time.Duration(cm.count))
 }

@@ -144,7 +144,7 @@ func (c *wfCache) allow(domainID string, workflowID string, rateLimitType rateLi
 
 	switch rateLimitType {
 	case external:
-		c.updatePerDomainMaxWFRequestCount(domainName, value)
+		value.countMetric.updatePerDomainMaxWFRequestCount(domainName, c.timeSource, c.metricsClient)
 		if !value.externalRateLimiter.Allow() {
 			c.emitRateLimitMetrics(domainID, workflowID, domainName, "external", metrics.WorkflowIDCacheRequestsExternalRatelimitedCounter)
 			return false
