@@ -28,6 +28,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 )
@@ -113,4 +115,11 @@ func TestSubtestShouldNotFail(t *testing.T) {
 	}, func(t *testing.T) {
 		l.Info("too late but allowed")
 	})
+}
+
+func TestObserver(t *testing.T) {
+	l, obs := NewObserved(t)
+	l.Info("a log")
+	l.Info("some unrelated log")
+	assert.Len(t, obs.FilterMessage("a log").All(), 1, "did not find a log that was logged")
 }
