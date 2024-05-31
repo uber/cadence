@@ -299,6 +299,14 @@ func (v *visibilityDualManager) ListWorkflowExecutions(
 	return manager.ListWorkflowExecutions(ctx, request)
 }
 
+func (v *visibilityDualManager) ListAllWorkflowExecutions(
+	ctx context.Context,
+	request *ListAllWorkflowExecutionsRequest,
+) (*ListWorkflowExecutionsResponse, error) {
+	manager := v.chooseVisibilityManagerForRead(request.Domain)
+	return manager.ListAllWorkflowExecutions(ctx, request)
+}
+
 func (v *visibilityDualManager) ScanWorkflowExecutions(
 	ctx context.Context,
 	request *ListWorkflowExecutionsByQueryRequest,

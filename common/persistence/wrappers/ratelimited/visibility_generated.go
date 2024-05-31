@@ -91,6 +91,14 @@ func (c *ratelimitedVisibilityManager) GetName() (s1 string) {
 	return c.wrapped.GetName()
 }
 
+func (c *ratelimitedVisibilityManager) ListAllWorkflowExecutions(ctx context.Context, request *persistence.ListAllWorkflowExecutionsRequest) (lp1 *persistence.ListWorkflowExecutionsResponse, err error) {
+	if ok := c.rateLimiter.Allow(); !ok {
+		err = ErrPersistenceLimitExceeded
+		return
+	}
+	return c.wrapped.ListAllWorkflowExecutions(ctx, request)
+}
+
 func (c *ratelimitedVisibilityManager) ListClosedWorkflowExecutions(ctx context.Context, request *persistence.ListWorkflowExecutionsRequest) (lp1 *persistence.ListWorkflowExecutionsResponse, err error) {
 	if ok := c.rateLimiter.Allow(); !ok {
 		err = ErrPersistenceLimitExceeded

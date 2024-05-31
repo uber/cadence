@@ -140,6 +140,21 @@ func (mr *MockVisibilityManagerMockRecorder) GetName() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetName", reflect.TypeOf((*MockVisibilityManager)(nil).GetName))
 }
 
+// ListAllWorkflowExecutions mocks base method.
+func (m *MockVisibilityManager) ListAllWorkflowExecutions(arg0 context.Context, arg1 *ListAllWorkflowExecutionsRequest) (*ListWorkflowExecutionsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAllWorkflowExecutions", arg0, arg1)
+	ret0, _ := ret[0].(*ListWorkflowExecutionsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAllWorkflowExecutions indicates an expected call of ListAllWorkflowExecutions.
+func (mr *MockVisibilityManagerMockRecorder) ListAllWorkflowExecutions(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAllWorkflowExecutions", reflect.TypeOf((*MockVisibilityManager)(nil).ListAllWorkflowExecutions), arg0, arg1)
+}
+
 // ListClosedWorkflowExecutions mocks base method.
 func (m *MockVisibilityManager) ListClosedWorkflowExecutions(arg0 context.Context, arg1 *ListWorkflowExecutionsRequest) (*ListWorkflowExecutionsResponse, error) {
 	m.ctrl.T.Helper()

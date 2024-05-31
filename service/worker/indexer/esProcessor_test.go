@@ -28,7 +28,6 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-	"go.uber.org/zap/zaptest"
 
 	"github.com/uber/cadence/.gen/go/indexer"
 	"github.com/uber/cadence/common"
@@ -38,7 +37,7 @@ import (
 	"github.com/uber/cadence/common/elasticsearch/bulk"
 	mocks2 "github.com/uber/cadence/common/elasticsearch/bulk/mocks"
 	esMocks "github.com/uber/cadence/common/elasticsearch/mocks"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	msgMocks "github.com/uber/cadence/common/messaging/mocks"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/metrics/mocks"
@@ -78,12 +77,11 @@ func (s *esProcessorSuite) SetupTest() {
 		ESProcessorFlushInterval: dynamicconfig.GetDurationPropertyFn(1 * time.Minute),
 	}
 	s.mockBulkProcessor = &mocks2.GenericBulkProcessor{}
-	zapLogger := zaptest.NewLogger(s.T())
 	s.mockScope = &mocks.Scope{}
 
 	p := &ESProcessorImpl{
 		config:     config,
-		logger:     loggerimpl.NewLogger(zapLogger),
+		logger:     testlogger.New(s.T()),
 		scope:      s.mockScope,
 		msgEncoder: defaultEncoder,
 	}

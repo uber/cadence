@@ -616,6 +616,30 @@ func (v *pinotVisibilityTripleManager) ListWorkflowExecutions(
 	return manager.ListWorkflowExecutions(ctx, request)
 }
 
+func (v *pinotVisibilityTripleManager) ListAllWorkflowExecutions(
+	ctx context.Context,
+	request *ListAllWorkflowExecutionsRequest,
+) (*ListWorkflowExecutionsResponse, error) {
+	override := ctx.Value(ContextKey)
+	v.logUserQueryParameters(userParameters{
+		operation:    string(Operation.LIST),
+		domainName:   request.Domain,
+		closeStatus:  6, // 6 means not set closeStatus.
+		earliestTime: request.EarliestTime,
+		latestTime:   request.LatestTime,
+	}, request.Domain, override != nil)
+
+	// get another manager for double read
+	shadowMgr := v.getShadowMgrForDoubleRead(request.Domain)
+	// call the API for latency comparison
+	if shadowMgr != nil {
+		go shadow(shadowMgr.ListAllWorkflowExecutions, request, v.logger)
+	}
+
+	manager := v.chooseVisibilityManagerForRead(ctx, request.Domain)
+	return manager.ListAllWorkflowExecutions(ctx, request)
+}
+
 func (v *pinotVisibilityTripleManager) ScanWorkflowExecutions(
 	ctx context.Context,
 	request *ListWorkflowExecutionsByQueryRequest,
