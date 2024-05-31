@@ -72,7 +72,6 @@ type (
 	isolationGroupCtxKey struct{}
 
 	AddTaskParams struct {
-		Execution                *types.WorkflowExecution
 		TaskInfo                 *persistence.TaskInfo
 		Source                   types.TaskSource
 		ForwardedFrom            string
@@ -311,7 +310,7 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params AddTaskParams)
 				return &persistence.CreateTasksResponse{}, errRemoteSyncMatchFailed
 			}
 
-			r, err := c.taskWriter.appendTask(params.Execution, params.TaskInfo)
+			r, err := c.taskWriter.appendTask(params.TaskInfo)
 			return r, err
 		}
 
@@ -334,7 +333,7 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params AddTaskParams)
 			return &persistence.CreateTasksResponse{}, errRemoteSyncMatchFailed
 		}
 
-		return c.taskWriter.appendTask(params.Execution, params.TaskInfo)
+		return c.taskWriter.appendTask(params.TaskInfo)
 	})
 
 	if err == nil && !syncMatch {

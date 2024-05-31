@@ -615,7 +615,6 @@ func (s *MatchingPersistenceSuite) TestGetOrphanTasks() {
 		TaskListInfo: resp.TaskListInfo,
 		Tasks: []*p.CreateTaskInfo{
 			{
-				Execution: types.WorkflowExecution{WorkflowID: wid, RunID: rid},
 				Data: &p.TaskInfo{
 					DomainID:               domainID,
 					WorkflowID:             wid,

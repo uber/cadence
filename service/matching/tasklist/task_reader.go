@@ -356,8 +356,7 @@ func (tr *taskReader) completeTask(task *persistence.TaskInfo, err error) {
 		// Note that RecordTaskStarted only fails after retrying for a long time, so a single task will not be
 		// re-written to persistence frequently.
 		op := func() error {
-			wf := &types.WorkflowExecution{WorkflowID: task.WorkflowID, RunID: task.RunID}
-			_, err := tr.taskWriter.appendTask(wf, task)
+			_, err := tr.taskWriter.appendTask(task)
 			return err
 		}
 		err = tr.throttleRetry.Do(context.Background(), op)
