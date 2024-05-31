@@ -1696,7 +1696,57 @@ func (s *transferActiveTaskExecutorSuite) TestProcessRecordWorkflowStartedTask()
 		"RecordWorkflowExecutionStarted",
 		mock.Anything,
 		createRecordWorkflowExecutionStartedRequest(
-			s.domainName, startEvent, transferTask, mutableState, 2, s.mockShard.GetTimeSource().Now()),
+			s.domainName, startEvent, transferTask, mutableState, 2, s.mockShard.GetTimeSource().Now(),
+			false),
+	).Once().Return(nil)
+
+	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
+	s.Nil(err)
+}
+
+func (s *transferActiveTaskExecutorSuite) TestProcessRecordWorkflowStartedTaskWithContextHeader() {
+	// switch on context header in viz
+	s.mockShard.GetConfig().EnableContextHeaderInVisibility = func(domain string) bool { return true }
+	s.mockShard.GetConfig().ValidSearchAttributes = func(opts ...dc.FilterOption) map[string]interface{} {
+		return map[string]interface{}{
+			"Header.contextKey": struct{}{},
+		}
+	}
+
+	workflowExecution, mutableState, decisionCompletionID, err := test.SetupWorkflowWithCompletedDecision(s.mockShard, s.domainID)
+	s.NoError(err)
+	executionInfo := mutableState.GetExecutionInfo()
+	executionInfo.CronSchedule = "@every 5s"
+	startEvent, err := mutableState.GetStartEvent(context.Background())
+	s.NoError(err)
+	startEvent.WorkflowExecutionStartedEventAttributes.FirstDecisionTaskBackoffSeconds = common.Int32Ptr(5)
+
+	transferTask := s.newTransferTaskFromInfo(&persistence.TransferTaskInfo{
+		Version:    s.version,
+		DomainID:   s.domainID,
+		WorkflowID: workflowExecution.GetWorkflowID(),
+		RunID:      workflowExecution.GetRunID(),
+		TaskID:     int64(59),
+		TaskList:   mutableState.GetExecutionInfo().TaskList,
+		TaskType:   persistence.TransferTaskTypeRecordWorkflowStarted,
+	})
+
+	persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, decisionCompletionID, mutableState.GetCurrentVersion())
+	s.NoError(err)
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
+	if s.mockShard.GetConfig().EnableRecordWorkflowExecutionUninitialized(s.domainName) {
+		s.mockVisibilityMgr.On(
+			"RecordWorkflowExecutionUninitialized",
+			mock.Anything,
+			createRecordWorkflowExecutionUninitializedRequest(transferTask, mutableState, s.mockShard.GetTimeSource().Now(), 1234),
+		).Once().Return(nil)
+	}
+	s.mockVisibilityMgr.On(
+		"RecordWorkflowExecutionStarted",
+		mock.Anything,
+		createRecordWorkflowExecutionStartedRequest(
+			s.domainName, startEvent, transferTask, mutableState, 2, s.mockShard.GetTimeSource().Now(),
+			true),
 	).Once().Return(nil)
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
@@ -1727,7 +1777,47 @@ func (s *transferActiveTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttribu
 		"UpsertWorkflowExecution",
 		mock.Anything,
 		createUpsertWorkflowSearchAttributesRequest(
-			s.domainName, startEvent, transferTask, mutableState, 2, s.mockShard.GetTimeSource().Now()),
+			s.domainName, startEvent, transferTask, mutableState, 2, s.mockShard.GetTimeSource().Now(),
+			false),
+	).Once().Return(nil)
+
+	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
+	s.Nil(err)
+}
+
+func (s *transferActiveTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttributesWithContextHeader() {
+	// switch on context header in viz
+	s.mockShard.GetConfig().EnableContextHeaderInVisibility = func(domain string) bool { return true }
+	s.mockShard.GetConfig().ValidSearchAttributes = func(opts ...dc.FilterOption) map[string]interface{} {
+		return map[string]interface{}{
+			"Header.contextKey": struct{}{},
+		}
+	}
+
+	workflowExecution, mutableState, decisionCompletionID, err := test.SetupWorkflowWithCompletedDecision(s.mockShard, s.domainID)
+	s.NoError(err)
+
+	transferTask := s.newTransferTaskFromInfo(&persistence.TransferTaskInfo{
+		Version:    s.version,
+		DomainID:   s.domainID,
+		WorkflowID: workflowExecution.GetWorkflowID(),
+		RunID:      workflowExecution.GetRunID(),
+		TaskID:     int64(59),
+		TaskList:   mutableState.GetExecutionInfo().TaskList,
+		TaskType:   persistence.TransferTaskTypeUpsertWorkflowSearchAttributes,
+	})
+
+	persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, decisionCompletionID, mutableState.GetCurrentVersion())
+	s.NoError(err)
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
+	startEvent, err := mutableState.GetStartEvent(context.Background())
+	s.NoError(err)
+	s.mockVisibilityMgr.On(
+		"UpsertWorkflowExecution",
+		mock.Anything,
+		createUpsertWorkflowSearchAttributesRequest(
+			s.domainName, startEvent, transferTask, mutableState, 2, s.mockShard.GetTimeSource().Now(),
+			true),
 	).Once().Return(nil)
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
@@ -1834,6 +1924,7 @@ func createRecordWorkflowExecutionStartedRequest(
 	mutableState execution.MutableState,
 	numClusters int16,
 	updateTime time.Time,
+	enableContextHeaderInVisibility bool,
 ) *persistence.RecordWorkflowExecutionStartedRequest {
 	taskInfo := transferTask.GetInfo().(*persistence.TransferTaskInfo)
 	workflowExecution := types.WorkflowExecution{
@@ -1845,6 +1936,12 @@ func createRecordWorkflowExecutionStartedRequest(
 	executionTimestamp := int64(0)
 	if backoffSeconds != 0 {
 		executionTimestamp = startEvent.GetTimestamp() + int64(backoffSeconds)*int64(time.Second)
+	}
+	var searchAttributes map[string][]byte
+	if enableContextHeaderInVisibility {
+		searchAttributes = map[string][]byte{
+			"Header.contextKey": []byte("contextValue"),
+		}
 	}
 	return &persistence.RecordWorkflowExecutionStartedRequest{
 		Domain:             domainName,
@@ -1859,6 +1956,7 @@ func createRecordWorkflowExecutionStartedRequest(
 		IsCron:             len(executionInfo.CronSchedule) > 0,
 		NumClusters:        numClusters,
 		UpdateTimestamp:    updateTime.UnixNano(),
+		SearchAttributes:   searchAttributes,
 	}
 }
 
@@ -1975,6 +2073,7 @@ func createUpsertWorkflowSearchAttributesRequest(
 	mutableState execution.MutableState,
 	numClusters int16,
 	updateTime time.Time,
+	enableContextHeaderInVisibility bool,
 ) *persistence.UpsertWorkflowExecutionRequest {
 
 	taskInfo := transferTask.GetInfo().(*persistence.TransferTaskInfo)
@@ -1987,6 +2086,12 @@ func createUpsertWorkflowSearchAttributesRequest(
 	executionTimestamp := int64(0)
 	if backoffSeconds != 0 {
 		executionTimestamp = startEvent.GetTimestamp() + int64(backoffSeconds)*int64(time.Second)
+	}
+	var searchAttributes map[string][]byte
+	if enableContextHeaderInVisibility {
+		searchAttributes = map[string][]byte{
+			"Header.contextKey": []byte("contextValue"),
+		}
 	}
 
 	return &persistence.UpsertWorkflowExecutionRequest{
@@ -2002,6 +2107,7 @@ func createUpsertWorkflowSearchAttributesRequest(
 		IsCron:             len(executionInfo.CronSchedule) > 0,
 		NumClusters:        numClusters,
 		UpdateTimestamp:    updateTime.UnixNano(),
+		SearchAttributes:   searchAttributes,
 	}
 }
 
