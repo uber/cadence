@@ -875,6 +875,154 @@ func TestDeserializeChildExecutionInfos(t *testing.T) {
 	}
 }
 
+func TestListConcreteExecutions(t *testing.T) {
+	request := &ListConcreteExecutionsRequest{
+		PageSize:  10,
+		PageToken: []byte("next"),
+	}
+
+	internalResponse := &InternalListConcreteExecutionsResponse{
+		Executions: []*InternalListConcreteExecutionsEntity{
+			{
+				ExecutionInfo:    sampleInternalWorkflowExecutionInfo(),
+				VersionHistories: sampleEventData(),
+			},
+		},
+		NextPageToken: []byte("next"),
+	}
+
+	testCases := []struct {
+		name         string
+		prepareMocks func(*MockExecutionStore, *MockPayloadSerializer)
+		checkRes     func(*testing.T, *ListConcreteExecutionsResponse, error)
+	}{
+		{
+			name: "success",
+			prepareMocks: func(mockedStore *MockExecutionStore, mockedSerializer *MockPayloadSerializer) {
+				mockedStore.EXPECT().ListConcreteExecutions(gomock.Any(), request).Return(internalResponse, nil)
+
+				mockedSerializer.EXPECT().DeserializeEvent(internalResponse.Executions[0].ExecutionInfo.CompletionEvent).Return(completionEvent(), nil)
+				mockedSerializer.EXPECT().DeserializeResetPoints(internalResponse.Executions[0].ExecutionInfo.AutoResetPoints).Return(&types.ResetPoints{
+					Points: []*types.ResetPointInfo{
+						{
+							RunID: testRunID,
+						},
+					},
+				}, nil)
+
+				mockedSerializer.EXPECT().DeserializeVersionHistories(internalResponse.Executions[0].VersionHistories).Return(&types.VersionHistories{
+					CurrentVersionHistoryIndex: 1,
+					Histories: []*types.VersionHistory{
+						{
+							BranchToken: []byte("branch-token-1"),
+							Items: []*types.VersionHistoryItem{
+								{
+									EventID: 1,
+									Version: 1,
+								},
+							},
+						},
+						{
+							BranchToken: []byte("branch-token-2"),
+							Items: []*types.VersionHistoryItem{
+								{
+									EventID: 2,
+									Version: 1,
+								},
+								{
+									EventID: 3,
+									Version: 2,
+								},
+							},
+						},
+					},
+				}, nil)
+			},
+			checkRes: func(t *testing.T, response *ListConcreteExecutionsResponse, err error) {
+				executionInfo := sampleWorkflowExecutionInfo()
+				executionInfo.CompletionEvent = completionEvent()
+				executionInfo.AutoResetPoints = &types.ResetPoints{
+					Points: []*types.ResetPointInfo{
+						{
+							RunID: testRunID,
+						},
+					},
+				}
+				assert.Equal(t, &ListConcreteExecutionsResponse{
+					Executions: []*ListConcreteExecutionsEntity{
+						{
+							ExecutionInfo: executionInfo,
+							VersionHistories: &VersionHistories{
+								CurrentVersionHistoryIndex: 1,
+								Histories: []*VersionHistory{
+									{
+										BranchToken: []byte("branch-token-1"),
+										Items: []*VersionHistoryItem{
+											{
+												EventID: 1,
+												Version: 1,
+											},
+										},
+									},
+									{
+										BranchToken: []byte("branch-token-2"),
+										Items: []*VersionHistoryItem{
+											{
+												EventID: 2,
+												Version: 1,
+											},
+											{
+												EventID: 3,
+												Version: 2,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					PageToken: []byte("next"),
+				}, response)
+			},
+		},
+		{
+			name: "persistence error",
+			prepareMocks: func(mockedStore *MockExecutionStore, mockedSerializer *MockPayloadSerializer) {
+				mockedStore.EXPECT().ListConcreteExecutions(gomock.Any(), request).Return(nil, assert.AnError)
+			},
+			checkRes: func(t *testing.T, response *ListConcreteExecutionsResponse, err error) {
+				assert.ErrorIs(t, err, assert.AnError)
+			},
+		},
+		{
+			name: "deserialize execution info error",
+			prepareMocks: func(mockedStore *MockExecutionStore, mockedSerializer *MockPayloadSerializer) {
+				mockedStore.EXPECT().ListConcreteExecutions(gomock.Any(), request).Return(internalResponse, nil)
+				mockedSerializer.EXPECT().DeserializeEvent(internalResponse.Executions[0].ExecutionInfo.CompletionEvent).Return(nil, assert.AnError)
+			},
+			checkRes: func(t *testing.T, response *ListConcreteExecutionsResponse, err error) {
+				assert.ErrorIs(t, err, assert.AnError)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockedStore := NewMockExecutionStore(ctrl)
+			mockedSerializer := NewMockPayloadSerializer(ctrl)
+
+			tc.prepareMocks(mockedStore, mockedSerializer)
+
+			manager := NewExecutionManagerImpl(mockedStore, testlogger.New(t), mockedSerializer)
+
+			res, err := manager.ListConcreteExecutions(context.Background(), request)
+
+			tc.checkRes(t, res, err)
+		})
+	}
+}
+
 func sampleInternalActivityInfo(name string) *InternalActivityInfo {
 	return &InternalActivityInfo{
 		Version:        1,
