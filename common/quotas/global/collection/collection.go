@@ -27,9 +27,9 @@ which acts as a quotas.Collection.
 At a very high level, this wraps a [quotas.Limiter] to do a few additional things
 in the context of the [github.com/uber/cadence/common/quotas/global] ratelimiter system:
   - keep track of usage per key (quotas.Limiter does not support this natively, nor should it)
-  - periodically report usage to an "aggregator" host
+  - periodically report usage to each key's "aggregator" host (batched and fanned out in parallel)
   - apply the aggregator's returned per-key RPS limits to future requests
-  - fall back to the wrapped limiter in case of failures
+  - fall back to the wrapped limiter in case of failures (handled internally in internal.FallbackLimiter)
 */
 package collection
 
@@ -67,8 +67,8 @@ type (
 
 	// Limiter is a simplified quotas.Limiter API, covering the only global-ratelimiter-used API: Allow.
 	//
-	// This is largely because Reserve() is essentially impossible to monitor for usage-tracking purposes.
-	// Once that's wrapped with a replacement, we can likely support the full API here.
+	// This is largely because Reserve() and Wait() are difficult to monitor for usage-tracking purposes.
+	// If converted to the wrapper, Reserve can probably be added pretty easily.
 	Limiter interface {
 		Allow() bool
 	}
@@ -130,6 +130,8 @@ func (c *Collection) OnStart(ctx context.Context) error {
 // OnStop follows fx's OnStop hook semantics.
 func (c *Collection) OnStop(ctx context.Context) error {
 	c.ctxCancel()
+	// context timeout is for everything to shut down, but this one should be fast.
+	// don't wait very long.
 	ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
 	defer cancel()
 
@@ -152,6 +154,8 @@ func (c *Collection) backgroundUpdateLoop() {
 	logger.Debug("update loop starting")
 
 	ticker := c.timesource.NewTicker(tickRate)
+	defer ticker.Stop()
+
 	lastGatherTime := c.timesource.Now()
 	for {
 		select {
@@ -168,11 +172,14 @@ func (c *Collection) backgroundUpdateLoop() {
 			}
 
 			capacity := c.limits.Len()
-			capacity += capacity / 10 // size may grow while we range, try to avoid that realloc too
+			capacity += capacity / 10 // size may grow while we range, try to avoid reallocating in that case
 			usage := make(map[string]calls, capacity)
 			c.limits.Range(func(k string, v *internal.FallbackLimiter) bool {
 				allowed, rejected, _ := v.Collect()
-				usage[k] = calls{allowed: allowed, rejected: rejected}
+				usage[k] = calls{
+					allowed:  allowed,
+					rejected: rejected,
+				}
 				return true
 			})
 
@@ -190,8 +197,8 @@ func (c *Collection) doUpdate(since time.Duration, usage map[string]calls) {
 	_ = ctx
 
 	// TODO: use the RPC code to shard requests to all aggregators, and apply the updated RPS values.
-	perAggregator := func(since time.Duration, requestedBatch map[string]calls) error {
-		// do the call
+	perAggregator := func(ctx context.Context, since time.Duration, requestedBatch map[string]calls) error {
+		// do the call, get the result
 		resultBatch, err := make(map[string]float64, len(requestedBatch)), error(nil)
 
 		if err == nil {
@@ -199,7 +206,10 @@ func (c *Collection) doUpdate(since time.Duration, usage map[string]calls) {
 				delete(requestedBatch, k) // clean up the list so we know what was missed
 
 				if v < 0 {
-					// error loading this key, do something
+					// negative values cannot be valid, so they're a failure.
+					//
+					// this is largely for future-proofing and to cover all possibilities,
+					// so unrecognized values lead to fallback behavior because they cannot be understood.
 					c.limits.Load(k).FailedUpdate()
 				} else {
 					c.limits.Load(k).Update(v)
@@ -226,6 +236,6 @@ func (c *Collection) doUpdate(since time.Duration, usage map[string]calls) {
 		}
 		return err
 	}
-	_ = perAggregator
+	_ = perAggregator // make the compiler happy about this pseudocode
 
 }
