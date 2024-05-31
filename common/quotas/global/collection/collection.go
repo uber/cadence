@@ -83,7 +83,7 @@ func New(
 	fallback quotas.LimiterFactory,
 	updateRate dynamicconfig.DurationPropertyFn,
 	logger log.Logger,
-	scope metrics.Scope,
+	met metrics.Client,
 ) *Collection {
 	contents := internal.NewAtomicMap(func(key string) *internal.FallbackLimiter {
 		return internal.NewFallbackLimiter(fallback.GetLimiter(key))
@@ -93,8 +93,8 @@ func New(
 		limits:     contents,
 		updateRate: updateRate,
 
-		logger: logger, // TODO: tag it
-		scope:  scope,  // TODO: tag it
+		logger: logger.WithTags(tag.ComponentArchiver),
+		scope:  met.Scope(metrics.FrontendGlobalRatelimiter),
 
 		ctx:       ctx,
 		ctxCancel: cancel,
@@ -150,8 +150,7 @@ func (c *Collection) For(key string) Limiter {
 func (c *Collection) backgroundUpdateLoop() {
 	tickRate := c.updateRate()
 
-	logger := c.logger.WithTags(tag.Dynamic("collection", "update")) // TODO: needs a better name
-	logger.Debug("update loop starting")
+	c.logger.Debug("update loop starting")
 
 	ticker := c.timesource.NewTicker(tickRate)
 	defer ticker.Stop()
@@ -163,7 +162,7 @@ func (c *Collection) backgroundUpdateLoop() {
 			return
 		case <-ticker.Chan():
 			now := c.timesource.Now()
-			logger.Debug("update tick")
+			c.logger.Debug("update tick")
 			// update tick-rate if it changed
 			newTickRate := c.updateRate()
 			if tickRate != newTickRate {
@@ -174,14 +173,25 @@ func (c *Collection) backgroundUpdateLoop() {
 			capacity := c.limits.Len()
 			capacity += capacity / 10 // size may grow while we range, try to avoid reallocating in that case
 			usage := make(map[string]calls, capacity)
+			fallbacks, globals := 0, 0
 			c.limits.Range(func(k string, v *internal.FallbackLimiter) bool {
-				allowed, rejected, _ := v.Collect()
+				allowed, rejected, usingFallback := v.Collect()
+				if usingFallback {
+					fallbacks++
+				} else {
+					globals++
+				}
 				usage[k] = calls{
 					allowed:  allowed,
 					rejected: rejected,
 				}
 				return true
 			})
+			// track how often we're using fallbacks vs non-fallbacks.
+			// this also tells us about how many keys are used per host.
+			// timer-sums unfortunately must be divided by the update frequency to get correct totals.
+			c.scope.RecordTimer(metrics.GlobalRatelimiterFallbackUsageTimer, time.Duration(fallbacks))
+			c.scope.RecordTimer(metrics.GlobalRatelimiterGlobalUsageTimer, time.Duration(globals))
 
 			c.doUpdate(now.Sub(lastGatherTime), usage)
 

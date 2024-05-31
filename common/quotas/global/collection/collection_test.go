@@ -47,7 +47,7 @@ func TestLifecycleBasics(t *testing.T) {
 	logger, logs := testlogger.NewObserved(t)
 	c := New(quotas.NewMockLimiterFactory(ctrl), func(opts ...dynamicconfig.FilterOption) time.Duration {
 		return time.Second
-	}, logger, metrics.NewNoopMetricsClient().Scope(metrics.GetGlobalIsolationGroups)) // TODO: make scope
+	}, logger, metrics.NewNoopMetricsClient())
 	ts := clock.NewMockedTimeSource()
 	c.TestOverrides(t, ts)
 
@@ -76,7 +76,7 @@ func TestCollectionLimitersCollectMetrics(t *testing.T) {
 	})
 	c := New(fallback, func(opts ...dynamicconfig.FilterOption) time.Duration {
 		return time.Second
-	}, testlogger.New(t), metrics.NewNoopMetricsClient().Scope(metrics.GetGlobalIsolationGroups)) // TODO: make scope
+	}, testlogger.New(t), metrics.NewNoopMetricsClient())
 	// not starting as it's not currently necessary.  it should not affect this test.
 
 	_ = c.For("test").Allow()

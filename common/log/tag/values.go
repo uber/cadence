@@ -134,6 +134,7 @@ var (
 	ComponentShardFixer                 = component("shardscanner-fixer")
 	ComponentPinotVisibilityManager     = component("pinot-visibility-manager")
 	ComponentAsyncWFConsumptionManager  = component("async-wf-consumption-manager")
+	ComponentGlobalRatelimiter          = component("global-ratelimiter")
 )
 
 // Pre-defined values for TagSysLifecycle
