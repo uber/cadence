@@ -352,7 +352,6 @@ func (e *matchingEngineImpl) AddDecisionTask(
 	}
 
 	return tlMgr.AddTask(hCtx.Context, tasklist.AddTaskParams{
-		Execution:     request.Execution,
 		TaskInfo:      taskInfo,
 		Source:        request.GetSource(),
 		ForwardedFrom: request.GetForwardedFrom(),
@@ -418,7 +417,6 @@ func (e *matchingEngineImpl) AddActivityTask(
 	}
 
 	return tlMgr.AddTask(hCtx.Context, tasklist.AddTaskParams{
-		Execution:                request.Execution,
 		TaskInfo:                 taskInfo,
 		Source:                   request.GetSource(),
 		ForwardedFrom:            request.GetForwardedFrom(),

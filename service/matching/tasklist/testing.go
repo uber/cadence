@@ -220,10 +220,10 @@ func (m *TestTaskManager) CreateTasks(
 		scheduleID := task.Data.ScheduleID
 		info := &persistence.TaskInfo{
 			DomainID:        domainID,
-			RunID:           task.Execution.RunID,
+			WorkflowID:      task.Data.WorkflowID,
+			RunID:           task.Data.RunID,
 			ScheduleID:      scheduleID,
 			TaskID:          task.TaskID,
-			WorkflowID:      task.Execution.WorkflowID,
 			PartitionConfig: task.Data.PartitionConfig,
 		}
 		if task.Data.ScheduleToStartTimeout != 0 {

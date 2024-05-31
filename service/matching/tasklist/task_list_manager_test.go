@@ -275,10 +275,6 @@ func TestCheckIdleTaskList(t *testing.T) {
 		runID := uuid.New()
 
 		addTaskParam := AddTaskParams{
-			Execution: &types.WorkflowExecution{
-				WorkflowID: workflowID,
-				RunID:      runID,
-			},
 			TaskInfo: &persistence.TaskInfo{
 				DomainID:               domainID,
 				WorkflowID:             workflowID,
@@ -328,10 +324,6 @@ func TestAddTaskStandby(t *testing.T) {
 	runID := "some random runID"
 
 	addTaskParam := AddTaskParams{
-		Execution: &types.WorkflowExecution{
-			WorkflowID: workflowID,
-			RunID:      runID,
-		},
 		TaskInfo: &persistence.TaskInfo{
 			DomainID:               domainID,
 			WorkflowID:             workflowID,
@@ -531,10 +523,6 @@ func TestTaskWriterShutdown(t *testing.T) {
 
 	// now attempt to add a task
 	addParams := AddTaskParams{
-		Execution: &types.WorkflowExecution{
-			WorkflowID: "workflow1",
-			RunID:      "run1",
-		},
 		TaskInfo: &persistence.TaskInfo{
 			DomainID:               "domainId",
 			RunID:                  "run1",
@@ -593,10 +581,6 @@ func TestTaskListManagerGetTaskBatch(t *testing.T) {
 	for i := int64(0); i < taskCount; i++ {
 		scheduleID := i * 3
 		addParams := AddTaskParams{
-			Execution: &types.WorkflowExecution{
-				WorkflowID: "workflow1",
-				RunID:      "run1",
-			},
 			TaskInfo: &persistence.TaskInfo{
 				DomainID:               "domainId",
 				RunID:                  "run1",
@@ -769,10 +753,6 @@ func TestTaskExpiryAndCompletion(t *testing.T) {
 			for i := int64(0); i < taskCount; i++ {
 				scheduleID := i * 3
 				addParams := AddTaskParams{
-					Execution: &types.WorkflowExecution{
-						WorkflowID: "workflow1",
-						RunID:      "run1",
-					},
 					TaskInfo: &persistence.TaskInfo{
 						DomainID:               "domainId",
 						RunID:                  "run1",
