@@ -3146,14 +3146,13 @@ func (wh *WorkflowHandler) ListAllWorkflowExecutions(
 			WorkflowSearchValue:           listRequest.WorkflowSearchValue,
 		},
 	)
-
-	wh.GetLogger().Debug("List all workflows",
-		tag.WorkflowDomainName(listRequest.GetDomain()), tag.WorkflowListWorkflowFilterByType)
-
 	if err != nil {
 		return nil, err
 	}
 
+	wh.GetLogger().Debug("List all workflows",
+		tag.WorkflowDomainName(listRequest.GetDomain()), tag.WorkflowListWorkflowFilterByType)
+	
 	resp = &types.ListAllWorkflowExecutionsResponse{}
 	resp.Executions = persistenceResp.Executions
 	resp.NextPageToken = persistenceResp.NextPageToken
