@@ -1781,6 +1781,56 @@ func (s *workflowHandlerSuite) TestListWorkflowExecutions() {
 	s.NotNil(err)
 }
 
+func (s *workflowHandlerSuite) TestListAllWorkflowExecutions() {
+	config := s.newConfig(dc.NewInMemoryClient())
+	wh := s.getWorkflowHandler(config)
+
+	s.mockDomainCache.EXPECT().GetDomainID(gomock.Any()).Return(s.testDomainID, nil).AnyTimes()
+	s.mockVisibilityMgr.On("ListAllWorkflowExecutions", mock.Anything, mock.Anything).Return(&persistence.ListWorkflowExecutionsResponse{}, nil).Once()
+
+	listRequest := &types.ListAllWorkflowExecutionsRequest{
+		Domain:          s.testDomain,
+		MaximumPageSize: 0,
+		NextPageToken:   nil,
+		StartTimeFilter: &types.StartTimeFilter{
+			EarliestTime: common.Int64Ptr(0),
+			LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
+		},
+		PartialMatch:        false,
+		WorkflowSearchValue: "test",
+	}
+	ctx := context.Background()
+
+	// valid request
+	_, err := wh.ListAllWorkflowExecutions(ctx, listRequest)
+	s.NoError(err)
+
+	// nil request
+	listRequest = nil
+	_, err = wh.ListAllWorkflowExecutions(ctx, listRequest)
+	s.NotNil(err)
+	s.Equal(err, validate.ErrRequestNotSet)
+
+	// invalid request - start time filter not set
+	listRequest = &types.ListAllWorkflowExecutionsRequest{
+		Domain:          s.testDomain,
+		StartTimeFilter: nil,
+	}
+	_, err = wh.ListAllWorkflowExecutions(ctx, listRequest)
+	s.NotNil(err)
+
+	// invalid request - earliest time > latest time
+	listRequest = &types.ListAllWorkflowExecutionsRequest{
+		Domain: s.testDomain,
+		StartTimeFilter: &types.StartTimeFilter{
+			EarliestTime: common.Int64Ptr(time.Now().UnixNano()),
+			LatestTime:   common.Int64Ptr(0),
+		},
+	}
+	_, err = wh.ListAllWorkflowExecutions(ctx, listRequest)
+	s.NotNil(err)
+}
+
 func (s *workflowHandlerSuite) TestScantWorkflowExecutions() {
 	config := s.newConfig(dc.NewInMemoryClient())
 	wh := s.getWorkflowHandler(config)

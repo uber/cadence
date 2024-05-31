@@ -122,6 +122,21 @@ func (c *injectorVisibilityManager) GetName() (s1 string) {
 	return c.wrapped.GetName()
 }
 
+func (c *injectorVisibilityManager) ListAllWorkflowExecutions(ctx context.Context, request *persistence.ListAllWorkflowExecutionsRequest) (lp1 *persistence.ListWorkflowExecutionsResponse, err error) {
+	fakeErr := generateFakeError(c.errorRate)
+	var forwardCall bool
+	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
+		lp1, err = c.wrapped.ListAllWorkflowExecutions(ctx, request)
+	}
+
+	if fakeErr != nil {
+		logErr(c.logger, "VisibilityManager.ListAllWorkflowExecutions", fakeErr, forwardCall, err)
+		err = fakeErr
+		return
+	}
+	return
+}
+
 func (c *injectorVisibilityManager) ListClosedWorkflowExecutions(ctx context.Context, request *persistence.ListWorkflowExecutionsRequest) (lp1 *persistence.ListWorkflowExecutionsResponse, err error) {
 	fakeErr := generateFakeError(c.errorRate)
 	var forwardCall bool

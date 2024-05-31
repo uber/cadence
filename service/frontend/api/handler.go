@@ -3075,6 +3075,91 @@ func (wh *WorkflowHandler) ListWorkflowExecutions(
 	return resp, nil
 }
 
+// ListAllWorkflowExecutions - retrieves info for all workflow executions in a domain
+func (wh *WorkflowHandler) ListAllWorkflowExecutions(
+	ctx context.Context,
+	listRequest *types.ListAllWorkflowExecutionsRequest,
+) (resp *types.ListAllWorkflowExecutionsResponse, retError error) {
+	if wh.isShuttingDown() {
+		return nil, validate.ErrShuttingDown
+	}
+
+	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
+		return nil, err
+	}
+
+	if listRequest == nil {
+		return nil, validate.ErrRequestNotSet
+	}
+
+	if listRequest.GetDomain() == "" {
+		return nil, validate.ErrDomainNotSet
+	}
+
+	if listRequest.StartTimeFilter == nil {
+		return nil, &types.BadRequestError{Message: "StartTimeFilter is required"}
+	}
+
+	if listRequest.StartTimeFilter.EarliestTime == nil {
+		return nil, &types.BadRequestError{Message: "EarliestTime in StartTimeFilter is required"}
+	}
+
+	if listRequest.StartTimeFilter.LatestTime == nil {
+		return nil, &types.BadRequestError{Message: "LatestTime in StartTimeFilter is required"}
+	}
+
+	if listRequest.StartTimeFilter.GetEarliestTime() > listRequest.StartTimeFilter.GetLatestTime() {
+		return nil, &types.BadRequestError{Message: "EarliestTime in StartTimeFilter should not be larger than LatestTime"}
+	}
+
+	if listRequest.GetMaximumPageSize() <= 0 {
+		listRequest.MaximumPageSize = int32(wh.config.VisibilityMaxPageSize(listRequest.GetDomain()))
+	}
+
+	if wh.isListRequestPageSizeTooLarge(listRequest.GetMaximumPageSize(), listRequest.GetDomain()) {
+		return nil, &types.BadRequestError{
+			Message: fmt.Sprintf("Pagesize is larger than allow %d", wh.config.ESIndexMaxResultWindow())}
+	}
+
+	domain := listRequest.GetDomain()
+	domainID, err := wh.GetDomainCache().GetDomainID(domain)
+	if err != nil {
+		return nil, err
+	}
+
+	baseReq := persistence.ListWorkflowExecutionsRequest{
+		DomainUUID:    domainID,
+		Domain:        domain,
+		PageSize:      int(listRequest.GetMaximumPageSize()),
+		NextPageToken: listRequest.NextPageToken,
+		EarliestTime:  listRequest.StartTimeFilter.GetEarliestTime(),
+		LatestTime:    listRequest.StartTimeFilter.GetLatestTime(),
+	}
+
+	var persistenceResp *persistence.ListWorkflowExecutionsResponse
+
+	persistenceResp, err = wh.GetVisibilityManager().ListAllWorkflowExecutions(
+		ctx,
+		&persistence.ListAllWorkflowExecutionsRequest{
+			ListWorkflowExecutionsRequest: baseReq,
+			PartialMatch:                  listRequest.PartialMatch,
+			WorkflowSearchValue:           listRequest.WorkflowSearchValue,
+		},
+	)
+
+	wh.GetLogger().Debug("List all workflows",
+		tag.WorkflowDomainName(listRequest.GetDomain()), tag.WorkflowListWorkflowFilterByType)
+
+	if err != nil {
+		return nil, err
+	}
+
+	resp = &types.ListAllWorkflowExecutionsResponse{}
+	resp.Executions = persistenceResp.Executions
+	resp.NextPageToken = persistenceResp.NextPageToken
+	return resp, nil
+}
+
 // RestartWorkflowExecution - retrieves info for an existing workflow then restarts it
 func (wh *WorkflowHandler) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest) (resp *types.RestartWorkflowExecutionResponse, retError error) {
 	if wh.isShuttingDown() {
