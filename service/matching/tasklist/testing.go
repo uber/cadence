@@ -83,7 +83,7 @@ func (m *TestTaskManager) LeaseTaskList(
 	tlm.Lock()
 	defer tlm.Unlock()
 	tlm.rangeID++
-	m.logger.Debug(fmt.Sprintf("LeaseTaskList rangeID=%v", tlm.rangeID))
+	m.logger.Debug(fmt.Sprintf("testTaskManager.LeaseTaskList rangeID=%v", tlm.rangeID))
 
 	return &persistence.LeaseTaskListResponse{
 		TaskListInfo: &persistence.TaskListInfo{
@@ -102,7 +102,7 @@ func (m *TestTaskManager) UpdateTaskList(
 	_ context.Context,
 	request *persistence.UpdateTaskListRequest,
 ) (*persistence.UpdateTaskListResponse, error) {
-	m.logger.Debug(fmt.Sprintf("UpdateTaskList taskListInfo=%v, ackLevel=%v", request.TaskListInfo, request.TaskListInfo.AckLevel))
+	m.logger.Debug(fmt.Sprintf("testTaskManager.UpdateTaskList taskListInfo=%v, ackLevel=%v", request.TaskListInfo, request.TaskListInfo.AckLevel))
 
 	tli := request.TaskListInfo
 	tlm := m.getTaskListManager(NewTestTaskListID(m.t, tli.DomainID, tli.Name, tli.TaskType))
@@ -111,7 +111,7 @@ func (m *TestTaskManager) UpdateTaskList(
 	defer tlm.Unlock()
 	if tlm.rangeID != tli.RangeID {
 		return nil, &persistence.ConditionFailedError{
-			Msg: fmt.Sprintf("Failed to update task list: name=%v, type=%v", tli.Name, tli.TaskType),
+			Msg: fmt.Sprintf("Failed to update task list: name=%v, type=%v, expected rangeID=%v, input rangeID=%v", tli.Name, tli.TaskType, tlm.rangeID, tli.RangeID),
 		}
 	}
 	tlm.ackLevel = tli.AckLevel
@@ -123,7 +123,7 @@ func (m *TestTaskManager) CompleteTask(
 	_ context.Context,
 	request *persistence.CompleteTaskRequest,
 ) error {
-	m.logger.Debug(fmt.Sprintf("CompleteTask taskID=%v, ackLevel=%v", request.TaskID, request.TaskList.AckLevel))
+	m.logger.Debug(fmt.Sprintf("testTaskManager.CompleteTask taskID=%v, ackLevel=%v", request.TaskID, request.TaskList.AckLevel))
 	if request.TaskID <= 0 {
 		panic(fmt.Errorf("Invalid taskID=%v", request.TaskID))
 	}
@@ -143,7 +143,7 @@ func (m *TestTaskManager) CompleteTasksLessThan(
 	_ context.Context,
 	request *persistence.CompleteTasksLessThanRequest,
 ) (*persistence.CompleteTasksLessThanResponse, error) {
-	m.logger.Debug(fmt.Sprintf("CompleteTasksLessThan taskID=%v", request.TaskID))
+	m.logger.Debug(fmt.Sprintf("testTaskManager.CompleteTasksLessThan taskID=%v", request.TaskID))
 	tlm := m.getTaskListManager(NewTestTaskListID(m.t, request.DomainID, request.TaskListName, request.TaskType))
 	tlm.Lock()
 	defer tlm.Unlock()
