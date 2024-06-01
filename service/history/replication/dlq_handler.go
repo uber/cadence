@@ -29,6 +29,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -82,7 +83,8 @@ type (
 		metricsClient metrics.Client
 		done          chan struct{}
 		status        int32
-		getInterval   func() time.Duration
+		timeSource    clock.TimeSource
+		timerInterval time.Duration
 
 		mu           sync.Mutex
 		latestCounts map[string]int64
@@ -107,12 +109,13 @@ func NewDLQHandler(
 		logger:        shard.GetLogger(),
 		metricsClient: shard.GetMetricsClient(),
 		done:          make(chan struct{}),
-		getInterval: func() time.Duration {
+		timeSource:    clock.NewRealTimeSource(),
+		timerInterval: func() time.Duration {
 			return backoff.JitDuration(
 				dlqMetricsEmitTimerInterval,
 				dlqMetricsEmitTimerCoefficient,
 			)
-		},
+		}(),
 	}
 }
 
@@ -122,7 +125,7 @@ func (r *dlqHandlerImpl) Start() {
 		return
 	}
 
-	go r.emitDLQSizeMetricsLoop()
+	go r.emitDLQSizeMetricsLoop(r.timeSource.NewTimer(r.timerInterval))
 	r.logger.Info("DLQ handler started.")
 }
 
@@ -175,15 +178,14 @@ func (r *dlqHandlerImpl) fetchAndEmitMessageCount(ctx context.Context) error {
 	return nil
 }
 
-func (r *dlqHandlerImpl) emitDLQSizeMetricsLoop() {
-	timer := time.NewTimer(r.getInterval())
+func (r *dlqHandlerImpl) emitDLQSizeMetricsLoop(timer clock.Timer) {
 	defer timer.Stop()
 
 	for {
 		select {
-		case <-timer.C:
+		case <-timer.Chan():
 			r.fetchAndEmitMessageCount(context.Background())
-			timer.Reset(r.getInterval())
+			timer.Reset(r.timerInterval)
 		case <-r.done:
 			return
 		}

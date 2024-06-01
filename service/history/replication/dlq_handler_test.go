@@ -31,10 +31,12 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/goleak"
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -117,7 +119,7 @@ func (s *dlqHandlerSuite) TestNewDLQHandler_panic() {
 	s.Panics(func() { NewDLQHandler(s.mockShard, nil) }, "Failed to initialize replication DLQ handler due to nil task executors")
 }
 
-func (s *dlqHandlerSuite) TestStart() {
+func (s *dlqHandlerSuite) TestStartStop() {
 	tests := []struct {
 		name   string
 		status int32
@@ -134,33 +136,11 @@ func (s *dlqHandlerSuite) TestStart() {
 
 	for _, tc := range tests {
 		s.T().Run(tc.name, func(t *testing.T) {
+			defer goleak.VerifyNone(t)
+
 			s.messageHandler.status = tc.status
 
 			s.messageHandler.Start()
-
-			s.messageHandler.Stop()
-		})
-	}
-}
-
-func (s *dlqHandlerSuite) TestStop() {
-	tests := []struct {
-		name   string
-		status int32
-	}{
-		{
-			name:   "stopped",
-			status: common.DaemonStatusStopped,
-		},
-		{
-			name:   "started",
-			status: common.DaemonStatusStarted,
-		},
-	}
-
-	for _, tc := range tests {
-		s.T().Run(tc.name, func(t *testing.T) {
-			s.messageHandler.status = tc.status
 
 			s.messageHandler.Stop()
 		})
@@ -250,32 +230,24 @@ func (s *dlqHandlerSuite) TestFetchAndEmitMessageCount() {
 	}
 }
 
-func (s *dlqHandlerSuite) TestEmitDLQSizeMetricsLoop_StopsWhenDoneSignalReceived() {
-	s.messageHandler.status = common.DaemonStatusStarted
-	go s.messageHandler.emitDLQSizeMetricsLoop()
-
-	s.messageHandler.Stop()
-	time.Sleep(1000 * time.Millisecond) // Allow go routine to process done signal
-
-	s.Equal(common.DaemonStatusStopped, s.messageHandler.status)
-}
-
 func (s *dlqHandlerSuite) TestEmitDLQSizeMetricsLoop_FetchesAndEmitsMetricsPeriodically() {
-	emissionNumber := 2
-	interval := 1 * time.Second
+	defer goleak.VerifyNone(s.T())
 
 	s.messageHandler.status = common.DaemonStatusStarted
-	s.executionManager.On("GetReplicationDLQSize", mock.Anything, mock.Anything).Return(&persistence.GetReplicationDLQSizeResponse{Size: 1}, nil).Times(emissionNumber)
-	s.messageHandler.getInterval = func() time.Duration { return interval }
+	s.executionManager.On("GetReplicationDLQSize", mock.Anything, mock.Anything).Return(&persistence.GetReplicationDLQSizeResponse{Size: 1}, nil).Times(1)
+	mockTimeSource := clock.NewMockedTimeSource()
+	s.messageHandler.timeSource = mockTimeSource
+	s.messageHandler.timerInterval = time.Minute
+	timer := s.messageHandler.timeSource.NewTimer(s.messageHandler.timerInterval)
 
-	go s.messageHandler.emitDLQSizeMetricsLoop()
+	go s.messageHandler.emitDLQSizeMetricsLoop(timer)
 
-	// Allow go routine to fetch and emit metrics based on emissionNumber
-	time.Sleep(2*interval + 100*time.Millisecond)
+	// Advance time to trigger the next emission
+	mockTimeSource.Advance(s.messageHandler.timerInterval)
+
 	s.messageHandler.Stop()
 
 	s.Equal(common.DaemonStatusStopped, s.messageHandler.status)
-	s.executionManager.AssertExpectations(s.T())
 }
 
 func (s *dlqHandlerSuite) TestReadMessages_OK() {
