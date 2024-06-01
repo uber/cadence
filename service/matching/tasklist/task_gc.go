@@ -35,8 +35,6 @@ type taskGC struct {
 	config         *config.TaskListConfig
 }
 
-var maxTimeBetweenTaskDeletes = time.Second
-
 // newTaskGC returns an instance of a task garbage collector object
 // taskGC internally maintains a delete cursor and attempts to delete
 // a batch of tasks everytime Run() method is called.
@@ -91,7 +89,7 @@ func (tgc *taskGC) checkPrecond(ackLevel int64, batchSize int, ignoreTimeCond bo
 	if backlog >= int64(batchSize) {
 		return true
 	}
-	return backlog > 0 && (ignoreTimeCond || time.Since(tgc.lastDeleteTime) > maxTimeBetweenTaskDeletes)
+	return backlog > 0 && (ignoreTimeCond || time.Since(tgc.lastDeleteTime) > tgc.config.MaxTimeBetweenTaskDeletes)
 }
 
 func (tgc *taskGC) tryLock() bool {

@@ -759,9 +759,10 @@ func newTaskListConfig(id *Identifier, cfg *config.Config, domainCache cache.Dom
 				return common.MaxInt(1, cfg.ForwarderMaxChildrenPerNode(domainName, taskListName, taskType))
 			},
 		},
-		HostName:           cfg.HostName,
-		TaskDispatchRPS:    cfg.TaskDispatchRPS,
-		TaskDispatchRPSTTL: cfg.TaskDispatchRPSTTL,
+		HostName:                  cfg.HostName,
+		TaskDispatchRPS:           cfg.TaskDispatchRPS,
+		TaskDispatchRPSTTL:        cfg.TaskDispatchRPSTTL,
+		MaxTimeBetweenTaskDeletes: cfg.MaxTimeBetweenTaskDeletes,
 	}, nil
 }
 

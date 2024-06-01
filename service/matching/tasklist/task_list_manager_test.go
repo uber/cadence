@@ -714,7 +714,6 @@ func TestTaskExpiryAndCompletion(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run("", func(t *testing.T) {
-			maxTimeBetweenTaskDeletes = tc.maxTimeBtwnDeletes
 			controller := gomock.NewController(t)
 			mockPartitioner := partition.NewMockPartitioner(controller)
 			mockPartitioner.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil).AnyTimes()
@@ -728,6 +727,7 @@ func TestTaskExpiryAndCompletion(t *testing.T) {
 			cfg := defaultTestConfig()
 			cfg.RangeSize = rangeSize
 			cfg.MaxTaskDeleteBatchSize = dynamicconfig.GetIntPropertyFilteredByTaskListInfo(tc.batchSize)
+			cfg.MaxTimeBetweenTaskDeletes = tc.maxTimeBtwnDeletes
 			// set idle timer check to a really small value to assert that we don't accidentally drop tasks while blocking
 			// on enqueuing a task to task buffer
 			cfg.IdleTasklistCheckInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)

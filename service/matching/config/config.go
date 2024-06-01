@@ -77,6 +77,8 @@ type (
 		// rate limiter configuration
 		TaskDispatchRPS    float64
 		TaskDispatchRPSTTL time.Duration
+		// task gc configuration
+		MaxTimeBetweenTaskDeletes time.Duration
 	}
 
 	ForwarderConfig struct {
@@ -113,6 +115,8 @@ type (
 		// rate limiter configuration
 		TaskDispatchRPS    float64
 		TaskDispatchRPSTTL time.Duration
+		// task gc configuration
+		MaxTimeBetweenTaskDeletes time.Duration
 	}
 )
 
@@ -153,6 +157,7 @@ func NewConfig(dc *dynamicconfig.Collection, hostName string) *Config {
 		HostName:                        hostName,
 		TaskDispatchRPS:                 100000.0,
 		TaskDispatchRPSTTL:              time.Minute,
+		MaxTimeBetweenTaskDeletes:       time.Second,
 	}
 }
 
