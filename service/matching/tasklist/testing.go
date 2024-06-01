@@ -32,6 +32,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/emirpasic/gods/maps/treemap"
 
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 )
@@ -41,9 +42,10 @@ var _ persistence.TaskManager = (*TestTaskManager)(nil) // Asserts that interfac
 type (
 	TestTaskManager struct {
 		sync.Mutex
-		t         *testing.T
-		taskLists map[Identifier]*testTaskListManager
-		logger    log.Logger
+		t          *testing.T
+		taskLists  map[Identifier]*testTaskListManager
+		logger     log.Logger
+		timeSource clock.TimeSource
 	}
 
 	testTaskListManager struct {
@@ -59,11 +61,12 @@ func newTestTaskListManager() *testTaskListManager {
 	return &testTaskListManager{tasks: treemap.NewWith(int64Comparator)}
 }
 
-func NewTestTaskManager(t *testing.T, logger log.Logger) *TestTaskManager {
+func NewTestTaskManager(t *testing.T, logger log.Logger, timeSource clock.TimeSource) *TestTaskManager {
 	return &TestTaskManager{
-		t:         t,
-		taskLists: make(map[Identifier]*testTaskListManager),
-		logger:    logger,
+		t:          t,
+		taskLists:  make(map[Identifier]*testTaskListManager),
+		logger:     logger,
+		timeSource: timeSource,
 	}
 }
 
@@ -227,7 +230,7 @@ func (m *TestTaskManager) CreateTasks(
 			PartitionConfig: task.Data.PartitionConfig,
 		}
 		if task.Data.ScheduleToStartTimeout != 0 {
-			info.Expiry = time.Now().Add(time.Duration(task.Data.ScheduleToStartTimeout) * time.Second)
+			info.Expiry = m.timeSource.Now().Add(time.Duration(task.Data.ScheduleToStartTimeout) * time.Second)
 		}
 		tlm.tasks.Put(task.TaskID, info)
 		tlm.createTaskCount++

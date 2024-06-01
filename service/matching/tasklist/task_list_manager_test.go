@@ -157,7 +157,7 @@ func createTestTaskListManager(t *testing.T, logger log.Logger, controller *gomo
 }
 
 func createTestTaskListManagerWithConfig(t *testing.T, logger log.Logger, controller *gomock.Controller, cfg *config.Config) *taskListManagerImpl {
-	tm := NewTestTaskManager(t, logger)
+	tm := NewTestTaskManager(t, logger, clock.NewRealTimeSource())
 	mockPartitioner := partition.NewMockPartitioner(controller)
 	mockPartitioner.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil).AnyTimes()
 	mockDomainCache := cache.NewMockDomainCache(controller)
@@ -552,9 +552,9 @@ func TestTaskListManagerGetTaskBatch(t *testing.T) {
 	mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.CreateDomainCacheEntry("domainName"), nil).AnyTimes()
 	mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("domainName", nil).AnyTimes()
 	logger := testlogger.New(t)
-	tm := NewTestTaskManager(t, logger)
-	taskListID := NewTestTaskListID(t, "domainId", "tl", 0)
 	timeSource := clock.NewRealTimeSource()
+	tm := NewTestTaskManager(t, logger, timeSource)
+	taskListID := NewTestTaskListID(t, "domainId", "tl", 0)
 	cfg := defaultTestConfig()
 	cfg.RangeSize = rangeSize
 	tlMgr, err := NewManager(
@@ -721,9 +721,9 @@ func TestTaskExpiryAndCompletion(t *testing.T) {
 			mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.CreateDomainCacheEntry("domainName"), nil).AnyTimes()
 			mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("domainName", nil).AnyTimes()
 			logger := testlogger.New(t)
-			tm := NewTestTaskManager(t, logger)
-			taskListID := NewTestTaskListID(t, "domainId", "tl", 0)
 			timeSource := clock.NewRealTimeSource()
+			tm := NewTestTaskManager(t, logger, timeSource)
+			taskListID := NewTestTaskListID(t, "domainId", "tl", 0)
 			cfg := defaultTestConfig()
 			cfg.RangeSize = rangeSize
 			cfg.MaxTaskDeleteBatchSize = dynamicconfig.GetIntPropertyFilteredByTaskListInfo(tc.batchSize)
