@@ -27,6 +27,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/common"
@@ -355,6 +356,12 @@ func TestCreatePersistenceMutableState(t *testing.T) {
 
 	mutableState := CreatePersistenceMutableState(builder)
 	assert.NotNil(t, mutableState)
+	assert.Equal(t, builder.executionInfo, mutableState.ExecutionInfo)
+	assert.Equal(t, builder.pendingActivityInfoIDs, mutableState.ActivityInfos)
+	assert.Equal(t, builder.pendingSignalInfoIDs, mutableState.SignalInfos)
+	assert.Equal(t, builder.pendingTimerInfoIDs, mutableState.TimerInfos)
+	assert.Equal(t, builder.pendingRequestCancelInfoIDs, mutableState.RequestCancelInfos)
+	assert.Equal(t, len(builder.bufferedEvents)+len(builder.updateBufferedEvents), len(mutableState.BufferedEvents))
 }
 
 func TestGetChildExecutionDomainName(t *testing.T) {
@@ -364,7 +371,7 @@ func TestGetChildExecutionDomainName(t *testing.T) {
 		expected := testdata.DomainName
 		mockDomainCache.EXPECT().GetDomainName(childInfo.DomainID).Return(expected, nil)
 		name, err := GetChildExecutionDomainName(childInfo, mockDomainCache, constants.TestLocalDomainEntry)
-		assert.Nil(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, expected, name)
 	})
 
@@ -373,7 +380,7 @@ func TestGetChildExecutionDomainName(t *testing.T) {
 		parentDomainEntry := constants.TestLocalDomainEntry
 		mockDomainCache := cache.NewMockDomainCache(gomock.NewController(t))
 		name, err := GetChildExecutionDomainName(childInfo, mockDomainCache, parentDomainEntry)
-		assert.Nil(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, testdata.DomainName, name)
 	})
 
@@ -382,7 +389,7 @@ func TestGetChildExecutionDomainName(t *testing.T) {
 		parentDomainEntry := constants.TestLocalDomainEntry
 		mockDomainCache := cache.NewMockDomainCache(gomock.NewController(t))
 		name, err := GetChildExecutionDomainName(childInfo, mockDomainCache, parentDomainEntry)
-		assert.Nil(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, parentDomainEntry.GetInfo().Name, name)
 	})
 }
@@ -392,7 +399,7 @@ func TestGetChildExecutionDomainID(t *testing.T) {
 		childInfo := &persistence.ChildExecutionInfo{DomainID: testdata.DomainID}
 		mockDomainCache := cache.NewMockDomainCache(gomock.NewController(t))
 		name, err := GetChildExecutionDomainID(childInfo, mockDomainCache, constants.TestLocalDomainEntry)
-		assert.Nil(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, testdata.DomainID, name)
 	})
 
@@ -402,7 +409,7 @@ func TestGetChildExecutionDomainID(t *testing.T) {
 		mockDomainCache := cache.NewMockDomainCache(gomock.NewController(t))
 		mockDomainCache.EXPECT().GetDomainID(testdata.DomainName).Return(testdata.DomainID, nil)
 		name, err := GetChildExecutionDomainID(childInfo, mockDomainCache, parentDomainEntry)
-		assert.Nil(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, testdata.DomainID, name)
 	})
 
@@ -411,7 +418,7 @@ func TestGetChildExecutionDomainID(t *testing.T) {
 		parentDomainEntry := constants.TestLocalDomainEntry
 		mockDomainCache := cache.NewMockDomainCache(gomock.NewController(t))
 		name, err := GetChildExecutionDomainID(childInfo, mockDomainCache, parentDomainEntry)
-		assert.Nil(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, parentDomainEntry.GetInfo().ID, name)
 	})
 }
@@ -423,7 +430,7 @@ func TestGetChildExecutionDomainEntry(t *testing.T) {
 		expected := &cache.DomainCacheEntry{}
 		mockDomainCache.EXPECT().GetDomainByID(childInfo.DomainID).Return(expected, nil)
 		entry, err := GetChildExecutionDomainEntry(childInfo, mockDomainCache, constants.TestLocalDomainEntry)
-		assert.Nil(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, expected, entry)
 	})
 
@@ -434,7 +441,7 @@ func TestGetChildExecutionDomainEntry(t *testing.T) {
 		expected := &cache.DomainCacheEntry{}
 		mockDomainCache.EXPECT().GetDomain(childInfo.DomainNameDEPRECATED).Return(expected, nil)
 		entry, err := GetChildExecutionDomainEntry(childInfo, mockDomainCache, parentDomainEntry)
-		assert.Nil(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, expected, entry)
 	})
 
@@ -443,7 +450,7 @@ func TestGetChildExecutionDomainEntry(t *testing.T) {
 		parentDomainEntry := constants.TestLocalDomainEntry
 		mockDomainCache := cache.NewMockDomainCache(gomock.NewController(t))
 		entry, err := GetChildExecutionDomainEntry(childInfo, mockDomainCache, parentDomainEntry)
-		assert.Nil(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, parentDomainEntry, entry)
 	})
 }
@@ -510,7 +517,7 @@ func TestScheduleDecision(t *testing.T) {
 		mockMutableState := NewMockMutableState(gomock.NewController(t))
 		mockMutableState.EXPECT().HasPendingDecision().Return(true)
 		err := ScheduleDecision(mockMutableState)
-		assert.Nil(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("internal service error", func(t *testing.T) {
@@ -527,11 +534,33 @@ func TestScheduleDecision(t *testing.T) {
 		mockMutableState.EXPECT().HasPendingDecision().Return(false)
 		mockMutableState.EXPECT().AddDecisionTaskScheduledEvent(false).Return(nil, nil)
 		err := ScheduleDecision(mockMutableState)
-		assert.Nil(t, err)
+		require.NoError(t, err)
 	})
 }
 
 func TestFailDecision(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		mockMutableState := NewMockMutableState(gomock.NewController(t))
+		decision := &DecisionInfo{}
+		failureCause := new(types.DecisionTaskFailedCause)
+		mockMutableState.EXPECT().AddDecisionTaskFailedEvent(
+			decision.ScheduleID,
+			decision.StartedID,
+			*failureCause,
+			nil,
+			IdentityHistoryService,
+			"",
+			"",
+			"",
+			"",
+			int64(0),
+			"",
+		).Return(nil, nil)
+		mockMutableState.EXPECT().FlushBufferedEvents() // only on success
+		err := FailDecision(mockMutableState, decision, *failureCause)
+		require.NoError(t, err)
+	})
+
 	t.Run("failure", func(t *testing.T) {
 		mockMutableState := NewMockMutableState(gomock.NewController(t))
 		decision := &DecisionInfo{}
@@ -552,27 +581,5 @@ func TestFailDecision(t *testing.T) {
 		err := FailDecision(mockMutableState, decision, *failureCause)
 		assert.NotNil(t, err)
 		assert.Equal(t, "some error adding failed event", err.Error())
-	})
-
-	t.Run("success", func(t *testing.T) {
-		mockMutableState := NewMockMutableState(gomock.NewController(t))
-		decision := &DecisionInfo{}
-		failureCause := new(types.DecisionTaskFailedCause)
-		mockMutableState.EXPECT().AddDecisionTaskFailedEvent(
-			decision.ScheduleID,
-			decision.StartedID,
-			*failureCause,
-			nil,
-			IdentityHistoryService,
-			"",
-			"",
-			"",
-			"",
-			int64(0),
-			"",
-		).Return(nil, nil)
-		mockMutableState.EXPECT().FlushBufferedEvents()
-		err := FailDecision(mockMutableState, decision, *failureCause)
-		assert.Nil(t, err)
 	})
 }
