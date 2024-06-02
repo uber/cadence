@@ -1535,8 +1535,7 @@ func TestHandleDecisionContinueAsNewWorkflow(t *testing.T) {
 					&types.CancelWorkflowExecutionDecisionAttributes{}).Return(nil, errors.New("some error adding execution canceled event"))
 			},
 			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.ContinueAsNewWorkflowExecutionDecisionAttributes, err error) {
-				assert.NotNil(t, err)
-				assert.Equal(t, "some error adding execution canceled event", err.Error())
+				assert.ErrorContains(t, err, "some error adding execution canceled event")
 			},
 		},
 		{
@@ -1566,8 +1565,7 @@ func TestHandleDecisionContinueAsNewWorkflow(t *testing.T) {
 				taskHandler.domainCache.(*cache.MockDomainCache).EXPECT().GetDomainName(executionInfo.ParentDomainID).Return("", errors.New("some error getting parent domain name"))
 			},
 			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.ContinueAsNewWorkflowExecutionDecisionAttributes, err error) {
-				assert.NotNil(t, err)
-				assert.Equal(t, "some error getting parent domain name", err.Error())
+				assert.ErrorContains(t, err, "some error getting parent domain name")
 			},
 		},
 		{
@@ -1585,8 +1583,7 @@ func TestHandleDecisionContinueAsNewWorkflow(t *testing.T) {
 
 			},
 			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.ContinueAsNewWorkflowExecutionDecisionAttributes, err error) {
-				assert.NotNil(t, err)
-				assert.Equal(t, "some error adding continueAsNew event", err.Error())
+				assert.ErrorContains(t, err, "some error adding continueAsNew event")
 			},
 		},
 	}
@@ -1612,8 +1609,7 @@ func TestValidateAttributes(t *testing.T) {
 		validationFn := func() error { return errors.New("some validation error") }
 		failedCause := new(types.DecisionTaskFailedCause)
 		err := taskHandler.validateDecisionAttr(validationFn, *failedCause)
-		assert.NotNil(t, err)
-		assert.Equal(t, "some validation error", err.Error())
+		assert.ErrorContains(t, err, "some validation error")
 	})
 }
 
