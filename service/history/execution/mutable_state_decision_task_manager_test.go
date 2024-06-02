@@ -141,8 +141,7 @@ func TestReplicateDecisionTaskScheduledEvent(t *testing.T) {
 				}
 			},
 			assertions: func(t *testing.T, info *DecisionInfo, err error, observedLogs *observer.ObservedLogs) {
-				require.Error(t, err)
-				assert.Equal(t, "unable to change workflow state from 2 to 1, close status 0", err.Error())
+				assert.ErrorContains(t, err, "unable to change workflow state from 2 to 1, close status 0")
 				assert.Nil(t, info)
 			},
 		},
@@ -160,8 +159,7 @@ func TestReplicateDecisionTaskScheduledEvent(t *testing.T) {
 				mgr.msb.taskGenerator.(*MockMutableStateTaskGenerator).EXPECT().GenerateDecisionScheduleTasks(scheduleID).Return(errors.New("some error"))
 			},
 			assertions: func(t *testing.T, info *DecisionInfo, err error, observedLogs *observer.ObservedLogs) {
-				require.Error(t, err)
-				assert.Equal(t, "some error", err.Error())
+				assert.ErrorContains(t, err, "some error")
 				assert.Nil(t, info)
 				assert.Equal(t, 1, observedLogs.FilterMessage(fmt.Sprintf(
 					"Decision Updated: {Schedule: %v, Started: %v, ID: %v, Timeout: %v, Attempt: %v, Timestamp: %v}",
@@ -442,9 +440,7 @@ func TestReplicateDecisionTaskStartedEvent(t *testing.T) {
 		}
 		var decision *DecisionInfo
 		result, err := m.ReplicateDecisionTaskStartedEvent(decision, version, scheduleID, startedID, requestID, timeStamp)
-		require.Error(t, err)
+		assert.ErrorContains(t, err, fmt.Sprintf("unable to find decision: %v", scheduleID))
 		require.Nil(t, result)
-		assert.Equal(t, fmt.Sprintf("unable to find decision: %v", scheduleID), err.Error())
-
 	})
 }
