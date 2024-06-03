@@ -37,12 +37,6 @@ steps:
     command: "./scripts/buildkite/fossa.sh"
 
   - label: ":golang: unit test"
-    agents:
-      queue: "workers"
-    commands:
-      - "make .just-build" # ensure that we are not rebuilding binaries and not regenerating code
-      - "CASSANDRA_HOST=cassandra make install-schema && make cover_profile" # make install-schema is needed for a server startup test. See main_test.go
-      - "./scripts/buildkite/gen_coverage_metadata.sh .build/coverage/metadata.txt"
     artifact_paths:
       - ".build/coverage/*.out"
       - ".build/coverage/metadata.txt"
@@ -50,6 +44,19 @@ steps:
       automatic:
         limit: 1
     plugins:
+      - kubernetes:
+          <<: *kubernetes
+          podSpec:
+            <<: *podSpec
+            containers:
+              - <<: *commandContainer
+                command:
+                - |-
+                  # ensure that we are not rebuilding binaries and not regenerating code
+                  make .just-build
+                  # make install-schema is needed for a server startup test. See main_test.go
+                  CASSANDRA_HOST=cassandra make install-schema && make cover_profile
+                  ./scripts/buildkite/gen_coverage_metadata.sh .build/coverage/metadata.txt
       - docker-compose#v3.0.0:
           run: unit-test
           config: docker/buildkite/docker-compose.yml
