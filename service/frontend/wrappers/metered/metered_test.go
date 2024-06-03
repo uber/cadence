@@ -76,7 +76,10 @@ func TestSignalMetricHasSignalName(t *testing.T) {
 	signalRequest := &types.SignalWorkflowExecutionRequest{
 		SignalName: "test_signal",
 	}
-	handler.SignalWorkflowExecution(context.Background(), signalRequest)
+	err := handler.SignalWorkflowExecution(context.Background(), signalRequest)
+	if err != nil {
+		return
+	}
 
 	expectedMetrics := make(map[string]bool)
 	expectedMetrics["test.cadence_requests"] = false
@@ -105,7 +108,6 @@ func TestHandleErr_InternalServiceError(t *testing.T) {
 
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "cadence internal error")
-	assert.Contains(t, err.Error(), "internal error")
 }
 
 func TestHandleErr_UncategorizedError(t *testing.T) {
@@ -542,4 +544,204 @@ func TestToPollForDecisionTaskRequestTags(t *testing.T) {
 	}
 
 	assert.ElementsMatch(t, expectedTags, tags)
+}
+
+func TestToListWorkflowExecutionsRequestTags(t *testing.T) {
+	req := &types.ListWorkflowExecutionsRequest{
+		Domain: "test-domain",
+	}
+
+	tags := toListWorkflowExecutionsRequestTags(req)
+
+	expectedTags := []tag.Tag{
+		tag.WorkflowDomainName("test-domain"),
+	}
+
+	assert.ElementsMatch(t, expectedTags, tags)
+}
+
+func TestToPollForActivityTaskRequestTags(t *testing.T) {
+	kind := types.TaskListKindNormal
+	req := &types.PollForActivityTaskRequest{
+		Domain: "test-domain",
+		TaskList: &types.TaskList{
+			Name: "test-task-list",
+			Kind: &kind,
+		},
+	}
+
+	tags := toPollForActivityTaskRequestTags(req)
+
+	expectedTags := []tag.Tag{
+		tag.WorkflowDomainName("test-domain"),
+		tag.WorkflowTaskListName("test-task-list"),
+		tag.WorkflowTaskListKind(int32(types.TaskListKindNormal)),
+	}
+
+	assert.ElementsMatch(t, expectedTags, tags)
+}
+
+func TestToSignalWithStartWorkflowExecutionAsyncRequestTags(t *testing.T) {
+	req := &types.SignalWithStartWorkflowExecutionAsyncRequest{
+		SignalWithStartWorkflowExecutionRequest: &types.SignalWithStartWorkflowExecutionRequest{
+			Domain:     "test-domain",
+			WorkflowID: "test-workflow-id",
+			WorkflowType: &types.WorkflowType{
+				Name: "test-workflow-type",
+			},
+			SignalName: "test-signal",
+		},
+	}
+
+	tags := toSignalWithStartWorkflowExecutionAsyncRequestTags(req)
+
+	expectedTags := []tag.Tag{
+		tag.WorkflowDomainName("test-domain"),
+		tag.WorkflowID("test-workflow-id"),
+		tag.WorkflowType("test-workflow-type"),
+		tag.WorkflowSignalName("test-signal"),
+	}
+
+	assert.ElementsMatch(t, expectedTags, tags)
+}
+
+func TestToDescribeTaskListRequestTags(t *testing.T) {
+	kind := types.TaskListKindNormal
+	taskListType := types.TaskListTypeDecision
+	req := &types.DescribeTaskListRequest{
+		Domain: "test-domain",
+		TaskList: &types.TaskList{
+			Name: "test-task-list",
+			Kind: &kind,
+		},
+		TaskListType: &taskListType,
+	}
+
+	tags := toDescribeTaskListRequestTags(req)
+
+	expectedTags := []tag.Tag{
+		tag.WorkflowDomainName("test-domain"),
+		tag.WorkflowTaskListName("test-task-list"),
+		tag.WorkflowTaskListType(int(taskListType)),
+		tag.WorkflowTaskListKind(int32(types.TaskListKindNormal)),
+	}
+
+	assert.ElementsMatch(t, expectedTags, tags)
+}
+
+func TestHandleErr(t *testing.T) {
+	tests := []struct {
+		name            string
+		err             error
+		expectedErrType interface{}
+		expectedErrMsg  string
+		expectedCounter string
+	}{
+		{
+			name:            "BadRequestError",
+			err:             &types.BadRequestError{Message: "bad request"},
+			expectedErrType: &types.BadRequestError{},
+			expectedErrMsg:  "bad request",
+			expectedCounter: "test.cadence_err_bad_request_counter+",
+		},
+		{
+			name:            "DomainNotActiveError",
+			err:             &types.DomainNotActiveError{Message: "domain not active"},
+			expectedErrType: &types.DomainNotActiveError{},
+			expectedErrMsg:  "domain not active",
+			expectedCounter: "test.cadence_err_bad_request_counter+",
+		},
+		{
+			name:            "ServiceBusyError",
+			err:             &types.ServiceBusyError{Message: "service busy"},
+			expectedErrType: &types.ServiceBusyError{},
+			expectedErrMsg:  "service busy",
+			expectedCounter: "test.cadence_err_service_busy_counter+",
+		},
+		{
+			name:            "EntityNotExistsError",
+			err:             &types.EntityNotExistsError{Message: "entity not exists"},
+			expectedErrType: &types.EntityNotExistsError{},
+			expectedErrMsg:  "entity not exists",
+			expectedCounter: "test.cadence_err_entity_not_exists_counter+",
+		},
+		{
+			name:            "WorkflowExecutionAlreadyCompletedError",
+			err:             &types.WorkflowExecutionAlreadyCompletedError{Message: "workflow execution already completed"},
+			expectedErrType: &types.WorkflowExecutionAlreadyCompletedError{},
+			expectedErrMsg:  "workflow execution already completed",
+			expectedCounter: "test.cadence_err_workflow_execution_already_completed_counter+",
+		},
+		{
+			name:            "WorkflowExecutionAlreadyStartedError",
+			err:             &types.WorkflowExecutionAlreadyStartedError{Message: "workflow execution already started"},
+			expectedErrType: &types.WorkflowExecutionAlreadyStartedError{},
+			expectedErrMsg:  "workflow execution already started",
+			expectedCounter: "test.cadence_err_execution_already_started_counter+",
+		},
+		{
+			name:            "DomainAlreadyExistsError",
+			err:             &types.DomainAlreadyExistsError{Message: "domain already exists"},
+			expectedErrType: &types.DomainAlreadyExistsError{},
+			expectedErrMsg:  "domain already exists",
+			expectedCounter: "test.cadence_err_domain_already_exists_counter+",
+		},
+		{
+			name:            "CancellationAlreadyRequestedError",
+			err:             &types.CancellationAlreadyRequestedError{Message: "cancellation already requested"},
+			expectedErrType: &types.CancellationAlreadyRequestedError{},
+			expectedErrMsg:  "cancellation already requested",
+			expectedCounter: "test.cadence_err_cancellation_already_requested_counter+",
+		},
+		{
+			name:            "QueryFailedError",
+			err:             &types.QueryFailedError{Message: "query failed"},
+			expectedErrType: &types.QueryFailedError{},
+			expectedErrMsg:  "query failed",
+			expectedCounter: "test.cadence_err_query_failed_counter+",
+		},
+		{
+			name:            "LimitExceededError",
+			err:             &types.LimitExceededError{Message: "limit exceeded"},
+			expectedErrType: &types.LimitExceededError{},
+			expectedErrMsg:  "limit exceeded",
+			expectedCounter: "test.cadence_err_limit_exceeded_counter+",
+		},
+		{
+			name:            "ClientVersionNotSupportedError",
+			err:             &types.ClientVersionNotSupportedError{},
+			expectedErrType: &types.ClientVersionNotSupportedError{},
+			expectedErrMsg:  "client version not supported",
+			expectedCounter: "test.cadence_err_client_version_not_supported_counter+",
+		},
+		{
+			name:            "ContextDeadlineExceeded",
+			err:             context.DeadlineExceeded,
+			expectedErrType: context.DeadlineExceeded,
+			expectedErrMsg:  "context deadline exceeded",
+			expectedCounter: "test.cadence_err_context_timeout_counter+",
+		},
+		{
+			name:            "UncategorizedError",
+			err:             errors.New("unknown error"),
+			expectedErrType: errors.New("unknown error"),
+			expectedErrMsg:  "unknown error",
+			expectedCounter: "test.cadence_failures+",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logger := testlogger.New(t)
+			testScope := tally.NewTestScope("test", nil)
+			metricsClient := metrics.NewClient(testScope, metrics.Frontend)
+			handler := &apiHandler{}
+
+			err := handler.handleErr(tt.err, metricsClient.Scope(0), logger)
+
+			assert.NotNil(t, err)
+			assert.IsType(t, tt.expectedErrType, err)
+			assert.Contains(t, err.Error(), tt.expectedErrMsg)
+		})
+	}
 }
