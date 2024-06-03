@@ -233,17 +233,21 @@ func (s *dlqHandlerSuite) TestFetchAndEmitMessageCount() {
 func (s *dlqHandlerSuite) TestEmitDLQSizeMetricsLoop_FetchesAndEmitsMetricsPeriodically() {
 	defer goleak.VerifyNone(s.T())
 
+	emissionNumber := 2
+
 	s.messageHandler.status = common.DaemonStatusStarted
-	s.executionManager.On("GetReplicationDLQSize", mock.Anything, mock.Anything).Return(&persistence.GetReplicationDLQSizeResponse{Size: 1}, nil).Times(1)
+	s.executionManager.On("GetReplicationDLQSize", mock.Anything, mock.Anything).Return(&persistence.GetReplicationDLQSizeResponse{Size: 1}, nil).Times(emissionNumber)
 	mockTimeSource := clock.NewMockedTimeSource()
 	s.messageHandler.timeSource = mockTimeSource
-	s.messageHandler.timerInterval = time.Minute
-	timer := s.messageHandler.timeSource.NewTimer(s.messageHandler.timerInterval)
 
-	go s.messageHandler.emitDLQSizeMetricsLoop(timer)
+	go s.messageHandler.emitDLQSizeMetricsLoop()
 
-	// Advance time to trigger the next emission
-	mockTimeSource.Advance(s.messageHandler.timerInterval)
+	for i := 0; i < emissionNumber; i++ {
+		mockTimeSource.BlockUntil(1)
+
+		// Advance time to trigger the next emission
+		mockTimeSource.Advance(dlqMetricsEmitTimerInterval + time.Duration(int64(float64(dlqMetricsEmitTimerInterval)*(1+dlqMetricsEmitTimerCoefficient))))
+	}
 
 	s.messageHandler.Stop()
 

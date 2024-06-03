@@ -84,7 +84,6 @@ type (
 		done          chan struct{}
 		status        int32
 		timeSource    clock.TimeSource
-		timerInterval time.Duration
 
 		mu           sync.Mutex
 		latestCounts map[string]int64
@@ -110,12 +109,6 @@ func NewDLQHandler(
 		metricsClient: shard.GetMetricsClient(),
 		done:          make(chan struct{}),
 		timeSource:    clock.NewRealTimeSource(),
-		timerInterval: func() time.Duration {
-			return backoff.JitDuration(
-				dlqMetricsEmitTimerInterval,
-				dlqMetricsEmitTimerCoefficient,
-			)
-		}(),
 	}
 }
 
@@ -125,7 +118,7 @@ func (r *dlqHandlerImpl) Start() {
 		return
 	}
 
-	go r.emitDLQSizeMetricsLoop(r.timeSource.NewTimer(r.timerInterval))
+	go r.emitDLQSizeMetricsLoop()
 	r.logger.Info("DLQ handler started.")
 }
 
@@ -178,14 +171,22 @@ func (r *dlqHandlerImpl) fetchAndEmitMessageCount(ctx context.Context) error {
 	return nil
 }
 
-func (r *dlqHandlerImpl) emitDLQSizeMetricsLoop(timer clock.Timer) {
+func (r *dlqHandlerImpl) emitDLQSizeMetricsLoop() {
+	getInterval := func() time.Duration {
+		return backoff.JitDuration(
+			dlqMetricsEmitTimerInterval,
+			dlqMetricsEmitTimerCoefficient,
+		)
+	}
+
+	timer := r.timeSource.NewTimer(getInterval())
 	defer timer.Stop()
 
 	for {
 		select {
 		case <-timer.Chan():
 			r.fetchAndEmitMessageCount(context.Background())
-			timer.Reset(r.timerInterval)
+			timer.Reset(getInterval())
 		case <-r.done:
 			return
 		}
