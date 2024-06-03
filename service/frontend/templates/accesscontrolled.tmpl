@@ -42,6 +42,9 @@ import (
 {{$permissionMap = set $permissionMap "RefreshWorkflowTasks" "PermissionWrite"}}
 {{$permissionMap = set $permissionMap "UpdateDomain" "PermissionAdmin"}}
 
+{{$adminPermissionMap := dict }}
+{{$adminPermissionMap = set $adminPermissionMap "DescribeCluster" "PermissionRead"}}
+
 {{$nonDomainAuthAPIs := list "RegisterDomain" "DescribeDomain" "UpdateDomain" "DeprecateDomain" "ListDomains" "GetSearchAttributes" "GetClusterInfo" "RecordActivityTaskHeartbeat" "RespondActivityTaskCanceled" "RespondActivityTaskCompleted" "RespondActivityTaskFailed" "RespondDecisionTaskCompleted" "RespondDecisionTaskFailed" "RespondQueryTaskCompleted"}}
 {{$taskListAuthAPIs := list "PollForActivityTask" "PollForDecisionTask"}}
 {{$workflowTypeAuthAPIs := list "SignalWithStartWorkflowExecution" "StartWorkflowExecution"}}
@@ -92,7 +95,11 @@ func (a *{{$decorator}}) {{$method.Declaration}} {
 	attr := &authorization.Attributes{
 		APIName: "{{$method.Name}}",
 		{{- if eq $interfaceType "admin.Handler"}}
+		{{- if hasKey $adminPermissionMap $method.Name}}
+		Permission: authorization.{{get $adminPermissionMap $method.Name}},
+		{{- else}}
 		Permission:  authorization.PermissionAdmin,
+		{{- end}}
 		{{- else if hasKey $permissionMap $method.Name}}
 		Permission: authorization.{{get $permissionMap $method.Name}},
 		{{- end}}
