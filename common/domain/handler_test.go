@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"reflect"
 	"testing"
 	"time"
 
@@ -933,6 +934,327 @@ func TestHandler_UpdateIsolationGroups(t *testing.T) {
 			if tc.expectedErr != nil {
 				assert.Error(t, err)
 				assert.Equal(t, tc.expectedErr, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestHandler_UpdateAsyncWorkflowConfiguraton(t *testing.T) {
+	testDomain := "testDomain"
+
+	createDomainConfig := func(asyncEnabled bool) *persistence.DomainConfig {
+		return &persistence.DomainConfig{
+			Retention:                10,
+			EmitMetric:               true,
+			HistoryArchivalStatus:    types.ArchivalStatusEnabled,
+			HistoryArchivalURI:       "https://history.example.com",
+			VisibilityArchivalStatus: types.ArchivalStatusEnabled,
+			VisibilityArchivalURI:    "https://visibility.example.com",
+			BadBinaries:              types.BadBinaries{},
+			IsolationGroups:          types.IsolationGroupConfiguration{},
+			AsyncWorkflowConfig:      types.AsyncWorkflowConfiguration{Enabled: asyncEnabled},
+		}
+	}
+
+	tests := []struct {
+		name             string
+		setupMocks       func(mockDomainManager *persistence.MockDomainManager, mockReplicator *MockReplicator)
+		isPrimaryCluster bool
+		request          *types.UpdateDomainAsyncWorkflowConfiguratonRequest
+		expectedErr      error
+	}{
+		{
+			name: "success",
+			setupMocks: func(mockDomainManager *persistence.MockDomainManager, mockReplicator *MockReplicator) {
+				mockDomainManager.EXPECT().GetMetadata(gomock.Any()).Return(&persistence.GetMetadataResponse{NotificationVersion: 1}, nil)
+				mockDomainManager.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: testDomain}).Return(&persistence.GetDomainResponse{
+					Info:            &persistence.DomainInfo{ID: "domainID", Name: testDomain},
+					Config:          createDomainConfig(false),
+					ConfigVersion:   1,
+					FailoverVersion: 1,
+					LastUpdatedTime: time.Now().Add(-10 * time.Minute).UnixNano(),
+				}, nil)
+				mockDomainManager.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, req *persistence.UpdateDomainRequest) error {
+						expectedReq := &persistence.UpdateDomainRequest{
+							Info:                        &persistence.DomainInfo{ID: "domainID", Name: testDomain},
+							Config:                      createDomainConfig(true),
+							ConfigVersion:               2,
+							FailoverVersion:             1,
+							FailoverNotificationVersion: 0,
+							LastUpdatedTime:             req.LastUpdatedTime,
+							NotificationVersion:         1,
+						}
+						if !reflect.DeepEqual(req, expectedReq) {
+							return fmt.Errorf("unexpected UpdateDomainRequest: got %+v, want %+v", req, expectedReq)
+						}
+						return nil
+					},
+				)
+			},
+			request: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: testDomain,
+				Configuration: &types.AsyncWorkflowConfiguration{
+					Enabled: true,
+				},
+			},
+			expectedErr: nil,
+		},
+		{
+			name: "fail to get metadata",
+			setupMocks: func(mockDomainManager *persistence.MockDomainManager, mockReplicator *MockReplicator) {
+				mockDomainManager.EXPECT().GetMetadata(gomock.Any()).Return(nil, fmt.Errorf("metadata error"))
+			},
+			request: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: testDomain,
+			},
+			expectedErr: fmt.Errorf("metadata error"),
+		},
+		{
+			name: "fail to get domain",
+			setupMocks: func(mockDomainManager *persistence.MockDomainManager, mockReplicator *MockReplicator) {
+				mockDomainManager.EXPECT().GetMetadata(gomock.Any()).Return(&persistence.GetMetadataResponse{NotificationVersion: 1}, nil)
+				mockDomainManager.EXPECT().GetDomain(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("get domain error"))
+			},
+			request: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: testDomain,
+			},
+			expectedErr: fmt.Errorf("get domain error"),
+		},
+		{
+			name: "fail due to nil domain config",
+			setupMocks: func(mockDomainManager *persistence.MockDomainManager, mockReplicator *MockReplicator) {
+				mockDomainManager.EXPECT().GetMetadata(gomock.Any()).Return(&persistence.GetMetadataResponse{NotificationVersion: 1}, nil)
+				mockDomainManager.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: testDomain}).Return(&persistence.GetDomainResponse{
+					Info:   &persistence.DomainInfo{ID: "domainID", Name: testDomain},
+					Config: nil,
+				}, nil)
+			},
+			request: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: testDomain,
+				Configuration: &types.AsyncWorkflowConfiguration{
+					Enabled: true,
+				},
+			},
+			expectedErr: fmt.Errorf("unable to load config for domain as expected"),
+		},
+		{
+			name: "fail due to update too frequent",
+			setupMocks: func(mockDomainManager *persistence.MockDomainManager, mockReplicator *MockReplicator) {
+				mockDomainManager.EXPECT().GetMetadata(gomock.Any()).Return(&persistence.GetMetadataResponse{NotificationVersion: 1}, nil)
+				lastUpdatedWithinCoolDownPeriod := time.Now().UnixNano() - (500 * int64(time.Millisecond))
+				mockDomainManager.EXPECT().GetDomain(gomock.Any(), gomock.Eq(&persistence.GetDomainRequest{Name: "test-domain"})).Return(&persistence.GetDomainResponse{
+					Info:   &persistence.DomainInfo{Name: "test-domain", ID: "domainID"},
+					Config: createDomainConfig(false),
+					ReplicationConfig: &persistence.DomainReplicationConfig{
+						ActiveClusterName: "active",
+						Clusters:          []*persistence.ClusterReplicationConfig{{ClusterName: "active"}, {ClusterName: "standby"}},
+					},
+					ConfigVersion:   1,
+					FailoverVersion: 123,
+					IsGlobalDomain:  false,
+					LastUpdatedTime: lastUpdatedWithinCoolDownPeriod,
+				}, nil)
+			},
+			request: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+				Configuration: &types.AsyncWorkflowConfiguration{
+					Enabled: true,
+				},
+			},
+			expectedErr: errDomainUpdateTooFrequent,
+		},
+		{
+			name:             "fail due to non-primary cluster update for global domain",
+			isPrimaryCluster: false,
+			setupMocks: func(mockDomainManager *persistence.MockDomainManager, mockReplicator *MockReplicator) {
+				mockDomainManager.EXPECT().GetMetadata(gomock.Any()).Return(&persistence.GetMetadataResponse{NotificationVersion: 1}, nil)
+				mockDomainManager.EXPECT().GetDomain(gomock.Any(), gomock.Eq(&persistence.GetDomainRequest{Name: "global-test-domain"})).Return(&persistence.GetDomainResponse{
+					Info:   &persistence.DomainInfo{Name: "global-test-domain", ID: "domainID"},
+					Config: createDomainConfig(false),
+					ReplicationConfig: &persistence.DomainReplicationConfig{
+						ActiveClusterName: "active",
+						Clusters:          []*persistence.ClusterReplicationConfig{{ClusterName: "active"}, {ClusterName: "standby"}},
+					},
+					ConfigVersion:   1,
+					FailoverVersion: 123,
+					IsGlobalDomain:  true,
+					LastUpdatedTime: time.Now().Add(-24 * time.Hour).UnixNano(),
+				}, nil)
+
+			},
+			request: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "global-test-domain",
+				Configuration: &types.AsyncWorkflowConfiguration{
+					Enabled: true,
+				},
+			},
+			expectedErr: errNotPrimaryCluster,
+		},
+		{
+			name: "configuration delete request",
+			setupMocks: func(mockDomainManager *persistence.MockDomainManager, mockReplicator *MockReplicator) {
+				mockDomainManager.EXPECT().GetMetadata(gomock.Any()).Return(&persistence.GetMetadataResponse{NotificationVersion: 1}, nil)
+				mockDomainManager.EXPECT().GetDomain(gomock.Any(), gomock.Eq(&persistence.GetDomainRequest{Name: "test-domain"})).Return(&persistence.GetDomainResponse{
+					Info:   &persistence.DomainInfo{Name: "test-domain", ID: "domainID"},
+					Config: createDomainConfig(true),
+					ReplicationConfig: &persistence.DomainReplicationConfig{
+						ActiveClusterName: "active",
+						Clusters:          []*persistence.ClusterReplicationConfig{{ClusterName: "active"}, {ClusterName: "standby"}},
+					},
+					ConfigVersion:   1,
+					FailoverVersion: 123,
+					IsGlobalDomain:  false,
+					LastUpdatedTime: time.Now().Add(-24 * time.Hour).UnixNano(),
+				}, nil)
+				mockDomainManager.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, req *persistence.UpdateDomainRequest) error {
+						if req.Config.AsyncWorkflowConfig.Enabled != false {
+							return fmt.Errorf("unexpected UpdateDomainRequest for delete configuration")
+						}
+						return nil
+					},
+				)
+			},
+			request: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain:        "test-domain",
+				Configuration: nil,
+			},
+			expectedErr: nil,
+		},
+		{
+			name: "fail on domain manager UpdateDomain call",
+			setupMocks: func(mockDomainManager *persistence.MockDomainManager, mockReplicator *MockReplicator) {
+				mockDomainManager.EXPECT().GetMetadata(gomock.Any()).Return(&persistence.GetMetadataResponse{NotificationVersion: 1}, nil)
+				mockDomainManager.EXPECT().GetDomain(gomock.Any(), gomock.Eq(&persistence.GetDomainRequest{Name: "test-domain"})).Return(&persistence.GetDomainResponse{
+					Info:   &persistence.DomainInfo{Name: "test-domain", ID: "domainID"},
+					Config: createDomainConfig(false),
+					ReplicationConfig: &persistence.DomainReplicationConfig{
+						ActiveClusterName: "active",
+						Clusters:          []*persistence.ClusterReplicationConfig{{ClusterName: "active"}, {ClusterName: "standby"}},
+					},
+					ConfigVersion:   1,
+					FailoverVersion: 123,
+					IsGlobalDomain:  false,
+					LastUpdatedTime: time.Now().Add(-24 * time.Hour).UnixNano(),
+				}, nil)
+				mockDomainManager.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).Return(fmt.Errorf("update domain error"))
+			},
+			request: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "test-domain",
+				Configuration: &types.AsyncWorkflowConfiguration{
+					Enabled: true,
+				},
+			},
+			expectedErr: fmt.Errorf("update domain error"),
+		},
+		{
+			name:             "global domain update triggers replication",
+			isPrimaryCluster: true,
+			setupMocks: func(mockDomainManager *persistence.MockDomainManager, mockReplicator *MockReplicator) {
+				mockDomainManager.EXPECT().GetMetadata(gomock.Any()).Return(&persistence.GetMetadataResponse{NotificationVersion: 1}, nil)
+				mockDomainManager.EXPECT().GetDomain(gomock.Any(), gomock.Eq(&persistence.GetDomainRequest{Name: "global-test-domain"})).Return(&persistence.GetDomainResponse{
+					Info:   &persistence.DomainInfo{Name: "global-test-domain", ID: "domainID"},
+					Config: createDomainConfig(false),
+					ReplicationConfig: &persistence.DomainReplicationConfig{
+						ActiveClusterName: "active",
+						Clusters:          []*persistence.ClusterReplicationConfig{{ClusterName: "active"}, {ClusterName: "standby"}},
+					},
+					ConfigVersion:   1,
+					FailoverVersion: 123,
+					IsGlobalDomain:  true,
+					LastUpdatedTime: time.Now().Add(-24 * time.Hour).UnixNano(),
+				}, nil)
+				mockDomainManager.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, req *persistence.UpdateDomainRequest) error {
+						if req.Config.AsyncWorkflowConfig.Enabled != true {
+							return fmt.Errorf("unexpected UpdateDomainRequest for global domain update")
+						}
+						return nil
+					},
+				)
+				mockReplicator.EXPECT().HandleTransmissionTask(
+					gomock.Any(),
+					types.DomainOperationUpdate,
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+					true,
+				).Return(nil)
+			},
+			request: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "global-test-domain",
+				Configuration: &types.AsyncWorkflowConfiguration{
+					Enabled: true,
+				},
+			},
+			expectedErr: nil,
+		},
+		{
+			name:             "global domain update replication error",
+			isPrimaryCluster: true,
+			setupMocks: func(mockDomainManager *persistence.MockDomainManager, mockReplicator *MockReplicator) {
+				mockDomainManager.EXPECT().GetMetadata(gomock.Any()).Return(&persistence.GetMetadataResponse{NotificationVersion: 1}, nil)
+				mockDomainManager.EXPECT().GetDomain(gomock.Any(), gomock.Eq(&persistence.GetDomainRequest{Name: "global-test-domain"})).Return(&persistence.GetDomainResponse{
+					Info:   &persistence.DomainInfo{Name: "global-test-domain", ID: "domainID"},
+					Config: createDomainConfig(false),
+					ReplicationConfig: &persistence.DomainReplicationConfig{
+						ActiveClusterName: "active",
+						Clusters:          []*persistence.ClusterReplicationConfig{{ClusterName: "active"}, {ClusterName: "standby"}},
+					},
+					ConfigVersion:   1,
+					FailoverVersion: 123,
+					IsGlobalDomain:  true,
+					LastUpdatedTime: time.Now().Add(-24 * time.Hour).UnixNano(),
+				}, nil)
+				mockDomainManager.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, req *persistence.UpdateDomainRequest) error {
+						// Validate the UpdateDomainRequest for global domain update
+						if req.Config.AsyncWorkflowConfig.Enabled != true {
+							return fmt.Errorf("unexpected UpdateDomainRequest for global domain update")
+						}
+						return nil
+					},
+				)
+				mockReplicator.EXPECT().HandleTransmissionTask(
+					gomock.Any(),
+					types.DomainOperationUpdate,
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+					true,
+				).Return(fmt.Errorf("replication error"))
+			},
+			request: &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
+				Domain: "global-test-domain",
+				Configuration: &types.AsyncWorkflowConfiguration{
+					Enabled: true,
+				},
+			},
+			expectedErr: fmt.Errorf("replication error"),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+
+			mockDomainManager := persistence.NewMockDomainManager(ctrl)
+			mockReplicator := NewMockReplicator(ctrl)
+			handler := newTestHandler(mockDomainManager, test.isPrimaryCluster, mockReplicator)
+			test.setupMocks(mockDomainManager, mockReplicator)
+
+			err := handler.UpdateAsyncWorkflowConfiguraton(context.Background(), *test.request)
+			if test.expectedErr != nil {
+				assert.EqualError(t, err, test.expectedErr.Error())
 			} else {
 				assert.NoError(t, err)
 			}
