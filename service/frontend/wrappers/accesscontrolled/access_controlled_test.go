@@ -25,6 +25,8 @@ package accesscontrolled
 import (
 	"context"
 	"errors"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/frontend/admin"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -88,6 +90,57 @@ func TestIsAuthorized(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tc.isAuthorized, got)
+			}
+		})
+	}
+}
+
+func TestDescribeCluster(t *testing.T) {
+	someErr := errors.New("some random err")
+	testCases := []struct {
+		name      string
+		mockSetup func(*authorization.MockAuthorizer, *admin.MockHandler)
+		wantErr   error
+	}{
+		{
+			name: "Success case",
+			mockSetup: func(authorizer *authorization.MockAuthorizer, adminHandler *admin.MockHandler) {
+				authorizer.EXPECT().Authorize(gomock.Any(), gomock.Any()).Return(authorization.Result{Decision: authorization.DecisionAllow}, nil)
+				adminHandler.EXPECT().DescribeCluster(gomock.Any()).Return(&types.DescribeClusterResponse{}, nil)
+			},
+			wantErr: nil,
+		},
+		{
+			name: "Error case - unauthorized",
+			mockSetup: func(authorizer *authorization.MockAuthorizer, adminHandler *admin.MockHandler) {
+				authorizer.EXPECT().Authorize(gomock.Any(), gomock.Any()).Return(authorization.Result{Decision: authorization.DecisionDeny}, nil)
+			},
+			wantErr: errUnauthorized,
+		},
+		{
+			name: "Error case - authorization error",
+			mockSetup: func(authorizer *authorization.MockAuthorizer, adminHandler *admin.MockHandler) {
+				authorizer.EXPECT().Authorize(gomock.Any(), gomock.Any()).Return(authorization.Result{}, someErr)
+			},
+			wantErr: someErr,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+
+			mockAuthorizer := authorization.NewMockAuthorizer(controller)
+			mockAdminHandler := admin.NewMockHandler(controller)
+			tc.mockSetup(mockAuthorizer, mockAdminHandler)
+
+			handler := &adminHandler{authorizer: mockAuthorizer, handler: mockAdminHandler}
+			_, err := handler.DescribeCluster(context.Background())
+			if tc.wantErr != nil {
+				assert.Error(t, err)
+				assert.ErrorIs(t, err, tc.wantErr)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}
