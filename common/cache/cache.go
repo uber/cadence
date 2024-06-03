@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/metrics"
 )
 
@@ -93,6 +94,10 @@ type Options struct {
 	// - when the cache is full
 	// - when the item is accessed
 	ActivelyEvict bool
+
+	// TimeSource is used to get the current time
+	// It is optional and defaults to clock.NewRealTimeSource()
+	TimeSource clock.TimeSource
 }
 
 // SimpleOptions provides options that can be used to configure SimpleCache

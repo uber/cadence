@@ -213,7 +213,7 @@ func NewManager(
 	tlMgr.pollerHistory = poller.NewPollerHistory(func() {
 		taskListTypeMetricScope.UpdateGauge(metrics.PollerPerTaskListCounter,
 			float64(len(tlMgr.pollerHistory.GetPollerInfo(time.Time{}))))
-	})
+	}, timeSource)
 
 	livenessInterval := taskListConfig.IdleTasklistCheckInterval()
 	tlMgr.liveness = liveness.NewLiveness(clock.NewRealTimeSource(), livenessInterval, func() {

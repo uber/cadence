@@ -32,6 +32,7 @@ import (
 
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -66,6 +67,7 @@ type (
 		taskAckManager  messaging.AckManager
 		domainCache     cache.DomainCache
 		clusterMetadata cluster.Metadata
+		timeSource      clock.TimeSource
 		// The cancel objects are to cancel the ratelimiter Wait in dispatchBufferedTasks. The ideal
 		// approach is to use request-scoped contexts and use a unique one for each call to Wait. However
 		// in order to cancel it on shutdown, we need a new goroutine for each call that would wait on
@@ -111,6 +113,7 @@ func newTaskReader(tlMgr *taskListManagerImpl, isolationGroups []string) *taskRe
 		taskBuffers:              taskBuffers,
 		domainCache:              tlMgr.domainCache,
 		clusterMetadata:          tlMgr.clusterMetadata,
+		timeSource:               tlMgr.timeSource,
 		logger:                   tlMgr.logger,
 		scope:                    tlMgr.scope,
 		handleErr:                tlMgr.handleErr,
@@ -280,20 +283,12 @@ func (tr *taskReader) getTaskBatch() ([]*persistence.TaskInfo, int64, bool, erro
 	return tasks, readLevel, readLevel == maxReadLevel, nil // caller will update readLevel when no task grabbed
 }
 
-func (tr *taskReader) isTaskExpired(t *persistence.TaskInfo, now time.Time) bool {
-	return t.Expiry.After(epochStartTime) && time.Now().After(t.Expiry)
+func (tr *taskReader) isTaskExpired(t *persistence.TaskInfo) bool {
+	return t.Expiry.After(epochStartTime) && tr.timeSource.Now().After(t.Expiry)
 }
 
 func (tr *taskReader) addTasksToBuffer(tasks []*persistence.TaskInfo) bool {
-	now := time.Now()
 	for _, t := range tasks {
-		if tr.isTaskExpired(t, now) {
-			tr.scope.IncCounter(metrics.ExpiredTasksPerTaskListCounter)
-			// Also increment readLevel for expired tasks otherwise it could result in
-			// looping over the same tasks if all tasks read in the batch are expired
-			tr.taskAckManager.SetReadLevel(t.TaskID)
-			continue
-		}
 		if !tr.addSingleTaskToBuffer(t) {
 			return false // we are shutting down the task list
 		}
@@ -302,6 +297,13 @@ func (tr *taskReader) addTasksToBuffer(tasks []*persistence.TaskInfo) bool {
 }
 
 func (tr *taskReader) addSingleTaskToBuffer(task *persistence.TaskInfo) bool {
+	if tr.isTaskExpired(task) {
+		tr.scope.IncCounter(metrics.ExpiredTasksPerTaskListCounter)
+		// Also increment readLevel for expired tasks otherwise it could result in
+		// looping over the same tasks if all tasks read in the batch are expired
+		tr.taskAckManager.SetReadLevel(task.TaskID)
+		return true
+	}
 	err := tr.taskAckManager.ReadItem(task.TaskID)
 	if err != nil {
 		tr.logger.Fatal("critical bug when adding item to ackManager", tag.Error(err))

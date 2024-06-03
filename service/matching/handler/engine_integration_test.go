@@ -118,7 +118,8 @@ func (s *matchingEngineSuite) SetupTest() {
 	s.mockExecutionManager = &mocks.ExecutionManager{}
 	s.controller = gomock.NewController(s.T())
 	s.mockHistoryClient = history.NewMockClient(s.controller)
-	s.taskManager = tasklist.NewTestTaskManager(s.T(), s.logger)
+	s.mockTimeSource = clock.NewMockedTimeSourceAt(time.Now())
+	s.taskManager = tasklist.NewTestTaskManager(s.T(), s.logger, s.mockTimeSource)
 	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.CreateDomainCacheEntry(matchingTestDomainName), nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(cache.CreateDomainCacheEntry(matchingTestDomainName), nil).AnyTimes()
@@ -130,7 +131,6 @@ func (s *matchingEngineSuite) SetupTest() {
 	dc := dynamicconfig.NewCollection(dcClient, s.logger)
 	isolationGroupState, _ := defaultisolationgroupstate.NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(s.logger, dc, s.mockDomainCache, s.mockIsolationStore, metrics.NewNoopMetricsClient())
 	s.partitioner = partition.NewDefaultPartitioner(s.logger, isolationGroupState)
-	s.mockTimeSource = clock.NewMockedTimeSourceAt(time.Unix(1000000, 0))
 	s.handlerContext = newHandlerContext(
 		context.Background(),
 		matchingTestDomainName,

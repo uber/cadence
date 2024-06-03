@@ -25,6 +25,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -55,12 +56,13 @@ type History struct {
 // HistoryUpdatedFunc is a type for notifying applications when the poller history was updated
 type HistoryUpdatedFunc func()
 
-func NewPollerHistory(historyUpdatedFunc HistoryUpdatedFunc) *History {
+func NewPollerHistory(historyUpdatedFunc HistoryUpdatedFunc, timeSource clock.TimeSource) *History {
 	opts := &cache.Options{
 		InitialCapacity: pollerHistoryInitSize,
 		TTL:             pollerHistoryTTL,
 		Pin:             false,
 		MaxCount:        pollerHistoryInitMaxSize,
+		TimeSource:      timeSource,
 	}
 
 	return &History{
