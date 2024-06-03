@@ -18,8 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:build pinotintegration
-// +build pinotintegration
+//go:build !race && pinotintegration
+// +build !race,pinotintegration
 
 // to run locally, make sure kafka and pinot is running,
 // then run cmd `go test -v ./host -run TestPinotIntegrationSuite -tags pinotintegration`
@@ -73,7 +73,7 @@ type PinotIntegrationSuite struct {
 func TestPinotIntegrationSuite(t *testing.T) {
 	flag.Parse()
 	clusterConfig, err := GetTestClusterConfig("testdata/integration_pinot_cluster.yaml")
-	fmt.Println("ABCDDDBUG,", clusterConfig)
+	//panic(fmt.Sprintf("ABCDDDBUG, %#v", clusterConfig.MessagingClientConfig.KafkaConfig))
 	if err != nil {
 		panic(err)
 	}

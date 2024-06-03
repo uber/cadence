@@ -199,18 +199,20 @@ func NewPinotTestCluster(t *testing.T, options *TestClusterConfig, logger log.Lo
 	var pinotClient pnt.GenericClient
 	if options.WorkerConfig.EnableIndexer {
 		var err error
+		//if options.PinotConfig.Migration.Enabled {
 		esClient, err = elasticsearch.NewGenericClient(options.ESConfig, logger)
 		if err != nil {
 			return nil, err
 		}
-		pConfig.AdvancedVisibilityStore = "pinot-visibility"
-		pinotBroker := options.PinotConfig.Broker
-		pinotRawClient, err := pinot.NewFromBrokerList([]string{pinotBroker})
-		if err != nil || pinotRawClient == nil {
-			return nil, err
-		}
-		pinotClient = pnt.NewPinotClient(pinotRawClient, logger, options.PinotConfig)
+		//}
 	}
+	pConfig.AdvancedVisibilityStore = "pinot-visibility"
+	pinotBroker := options.PinotConfig.Broker
+	pinotRawClient, err := pinot.NewFromBrokerList([]string{pinotBroker})
+	if err != nil || pinotRawClient == nil {
+		return nil, err
+	}
+	pinotClient = pnt.NewPinotClient(pinotRawClient, logger, options.PinotConfig)
 
 	scope := tally.NewTestScope("integration-test", nil)
 	metricsClient := metrics.NewClient(scope, metrics.ServiceIdx(0))
