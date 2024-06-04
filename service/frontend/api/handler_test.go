@@ -2419,3 +2419,130 @@ func TestSignalWithStartWorkflowExecutionAsync(t *testing.T) {
 		})
 	}
 }
+
+func TestRequestCancelWorkflowExecution(t *testing.T) {
+	testCases := []struct {
+		name          string
+		setupMocks    func(checkerMock *client.VersionCheckerMock, mockResource *resource.Test)
+		cancelRequest *types.RequestCancelWorkflowExecutionRequest
+		shuttingDown  int32
+		wantErr       bool
+		err           error
+	}{
+		{
+			name: "Success case",
+			setupMocks: func(mockVersionChecker *client.VersionCheckerMock, mockResource *resource.Test) {
+				mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				mockResource.DomainCache.EXPECT().GetDomainID(gomock.Any()).Return("test-domain-id", nil).Times(1)
+				mockResource.HistoryClient.EXPECT().RequestCancelWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			cancelRequest: &types.RequestCancelWorkflowExecutionRequest{
+				Domain: "test-domain",
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+				},
+			},
+		},
+		{
+			name:         "Error case - is shutting down",
+			setupMocks:   func(_ *client.VersionCheckerMock, _ *resource.Test) {},
+			shuttingDown: 1,
+			err:          validate.ErrShuttingDown,
+		},
+		{
+			name: "Error case - client not supported",
+			setupMocks: func(mockVersionChecker *client.VersionCheckerMock, _ *resource.Test) {
+				mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(errors.New("version-checker-error")).Times(1)
+			},
+			err: errors.New("version-checker-error"),
+		},
+		{
+			name: "Error case - error request not set",
+			setupMocks: func(mockVersionChecker *client.VersionCheckerMock, _ *resource.Test) {
+				mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			err: validate.ErrRequestNotSet,
+		},
+		{
+			name: "Error case - domain name not set",
+			setupMocks: func(mockVersionChecker *client.VersionCheckerMock, _ *resource.Test) {
+				mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			cancelRequest: &types.RequestCancelWorkflowExecutionRequest{},
+			err:           validate.ErrDomainNotSet,
+		},
+		{
+			name: "Error case - check execution error",
+			setupMocks: func(mockVersionChecker *client.VersionCheckerMock, _ *resource.Test) {
+				mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			cancelRequest: &types.RequestCancelWorkflowExecutionRequest{
+				Domain: "test-domain",
+			},
+			err: validate.ErrExecutionNotSet,
+		},
+		{
+			name: "Error case - get domain ID error",
+			setupMocks: func(mockVersionChecker *client.VersionCheckerMock, mockResource *resource.Test) {
+				mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				mockResource.DomainCache.EXPECT().GetDomainID(gomock.Any()).Return("", errors.New("get-domain-id-error")).Times(1)
+			},
+			cancelRequest: &types.RequestCancelWorkflowExecutionRequest{
+				Domain: "test-domain",
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+				},
+			},
+			err: errors.New("get-domain-id-error"),
+		},
+		{
+			name: "Error case - RequestCancelWorkflowExecution error",
+			setupMocks: func(mockVersionChecker *client.VersionCheckerMock, mockResource *resource.Test) {
+				mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				mockResource.DomainCache.EXPECT().GetDomainID(gomock.Any()).Return("test-domain-id", nil).Times(1)
+				mockResource.HistoryClient.EXPECT().RequestCancelWorkflowExecution(gomock.Any(), gomock.Any()).Return(errors.New("request-cancel-workflow-execution-error")).Times(1)
+			},
+			cancelRequest: &types.RequestCancelWorkflowExecutionRequest{
+				Domain: "test-domain",
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+				},
+			},
+			err: errors.New("request-cancel-workflow-execution-error"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockResource := resource.NewTest(t, mockCtrl, metrics.Frontend)
+			mockVersionChecker := client.NewMockVersionChecker(mockCtrl)
+
+			cfg := frontendcfg.NewConfig(
+				dc.NewCollection(
+					dc.NewInMemoryClient(),
+					mockResource.GetLogger(),
+				),
+				numHistoryShards,
+				false,
+				"hostname",
+			)
+			wh := NewWorkflowHandler(mockResource, cfg, mockVersionChecker, nil)
+			wh.shuttingDown = tc.shuttingDown
+
+			tc.setupMocks(mockVersionChecker, mockResource)
+
+			err := wh.RequestCancelWorkflowExecution(context.Background(), tc.cancelRequest)
+
+			if tc.err != nil {
+				assert.Error(t, err)
+				assert.Equal(t, tc.err, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
