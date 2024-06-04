@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/asyncworkflow/queueconfigapi"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/client"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/domain"
@@ -131,6 +132,7 @@ func NewHandler(
 			resource.GetDomainReplicationQueue(),
 			resource.GetLogger(),
 			resource.GetMetricsClient(),
+			clock.NewRealTimeSource(),
 		),
 		domainFailoverWatcher: domain.NewFailoverWatcher(
 			resource.GetDomainCache(),
