@@ -2681,3 +2681,225 @@ func TestRequestCancelWorkflowExecution(t *testing.T) {
 		})
 	}
 }
+
+func TestQueryWorkflow(t *testing.T) {
+	testCases := []struct {
+		name           string
+		setupMocks     func(*client.VersionCheckerMock, *resource.Test)
+		queryRequest   *types.QueryWorkflowRequest
+		inMemoryClient dc.Client
+		isShuttingDown int32
+		err            error
+	}{
+		{
+			name: "Success case",
+			setupMocks: func(mockVersionChecker *client.VersionCheckerMock, resourceMock *resource.Test) {
+				mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				resourceMock.DomainCache.EXPECT().GetDomainID(gomock.Any()).Return("test-domain-id", nil).Times(1)
+				resourceMock.HistoryClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(
+					&types.HistoryQueryWorkflowResponse{
+						Response: &types.QueryWorkflowResponse{
+							QueryResult: []byte("test-result"),
+						},
+					}, nil).Times(1)
+			},
+			inMemoryClient: dc.NewInMemoryClient(),
+			queryRequest: &types.QueryWorkflowRequest{
+				Domain: "test-domain",
+				Execution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+				},
+				Query: &types.WorkflowQuery{
+					QueryType: "test-query-type",
+				},
+			},
+		},
+		{
+			name:           "Error case - is shutting down",
+			setupMocks:     func(_ *client.VersionCheckerMock, _ *resource.Test) {},
+			isShuttingDown: 1,
+			err:            validate.ErrShuttingDown,
+		},
+		{
+			name: "Error case - client not supported",
+			setupMocks: func(mockVersionChecker *client.VersionCheckerMock, _ *resource.Test) {
+				mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(errors.New("version-checker-error")).Times(1)
+			},
+			inMemoryClient: dc.NewInMemoryClient(),
+			err:            errors.New("version-checker-error"),
+		},
+		{
+			name: "Error case - query request not set",
+			setupMocks: func(mockVersionChecker *client.VersionCheckerMock, _ *resource.Test) {
+				mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			inMemoryClient: dc.NewInMemoryClient(),
+			err:            validate.ErrRequestNotSet,
+		},
+		{
+			name: "Error case - domain not set",
+			setupMocks: func(mockVersionChecker *client.VersionCheckerMock, _ *resource.Test) {
+				mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			inMemoryClient: dc.NewInMemoryClient(),
+			queryRequest:   &types.QueryWorkflowRequest{},
+			err:            validate.ErrDomainNotSet,
+		},
+		{
+			name: "Error case - check execution error",
+			setupMocks: func(mockVersionChecker *client.VersionCheckerMock, _ *resource.Test) {
+				mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			inMemoryClient: dc.NewInMemoryClient(),
+			queryRequest: &types.QueryWorkflowRequest{
+				Domain: "test-domain",
+			},
+			err: validate.ErrExecutionNotSet,
+		},
+		{
+			name: "Error case - query disallowed for domain",
+			setupMocks: func(mockVersionChecker *client.VersionCheckerMock, resourceMock *resource.Test) {
+				mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			inMemoryClient: func() dc.Client {
+				inMemoryClient := dc.NewInMemoryClient()
+				inMemoryClient.UpdateValue(dc.DisallowQuery, true)
+				return inMemoryClient
+			}(),
+			queryRequest: &types.QueryWorkflowRequest{
+				Domain: "test-domain",
+				Execution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+				},
+			},
+			err: validate.ErrQueryDisallowedForDomain,
+		},
+		{
+			name: "Error case - query not set",
+			setupMocks: func(mockVersionChecker *client.VersionCheckerMock, resourceMock *resource.Test) {
+				mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			inMemoryClient: dc.NewInMemoryClient(),
+			queryRequest: &types.QueryWorkflowRequest{
+				Domain: "test-domain",
+				Execution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+				},
+			},
+			err: validate.ErrQueryNotSet,
+		},
+		{
+			name: "Error case - query type not set",
+			setupMocks: func(mockVersionChecker *client.VersionCheckerMock, resourceMock *resource.Test) {
+				mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			inMemoryClient: dc.NewInMemoryClient(),
+			queryRequest: &types.QueryWorkflowRequest{
+				Domain: "test-domain",
+				Execution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+				},
+				Query: &types.WorkflowQuery{},
+			},
+			err: validate.ErrQueryTypeNotSet,
+		},
+		{
+			name: "Error case - get domain ID error",
+			setupMocks: func(mockVersionChecker *client.VersionCheckerMock, resourceMock *resource.Test) {
+				mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				resourceMock.DomainCache.EXPECT().GetDomainID(gomock.Any()).Return("", errors.New("get-domain-id-error")).Times(1)
+			},
+			inMemoryClient: dc.NewInMemoryClient(),
+			queryRequest: &types.QueryWorkflowRequest{
+				Domain: "test-domain",
+				Execution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+				},
+				Query: &types.WorkflowQuery{
+					QueryType: "test-query-type",
+				},
+			},
+			err: errors.New("get-domain-id-error"),
+		},
+		{
+			name: "Error case - CheckEventBlobSizeLimit error",
+			setupMocks: func(mockVersionChecker *client.VersionCheckerMock, resourceMock *resource.Test) {
+				mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				resourceMock.DomainCache.EXPECT().GetDomainID(gomock.Any()).Return("test-domain-id", nil).Times(1)
+			},
+			inMemoryClient: dc.NewInMemoryClient(),
+			queryRequest: &types.QueryWorkflowRequest{
+				Domain: "test-domain",
+				Execution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+				},
+				Query: &types.WorkflowQuery{
+					QueryType: "test-query-type",
+					QueryArgs: []byte("test-query-args"),
+				},
+			},
+			err: common.ErrBlobSizeExceedsLimit,
+		},
+		{
+			name: "Error case - QueryWorkflow error",
+			setupMocks: func(mockVersionChecker *client.VersionCheckerMock, resourceMock *resource.Test) {
+				mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				resourceMock.DomainCache.EXPECT().GetDomainID(gomock.Any()).Return("test-domain-id", nil).Times(1)
+				resourceMock.HistoryClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(nil, errors.New("query-workflow-error")).Times(1)
+			},
+			inMemoryClient: dc.NewInMemoryClient(),
+			queryRequest: &types.QueryWorkflowRequest{
+				Domain: "test-domain",
+				Execution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+				},
+				Query: &types.WorkflowQuery{
+					QueryType: "test-query-type",
+				},
+			},
+			err: errors.New("query-workflow-error"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockResource := resource.NewTest(t, mockCtrl, metrics.Frontend)
+			mockVersionChecker := client.NewMockVersionChecker(mockCtrl)
+
+			cfg := frontendcfg.NewConfig(
+				dc.NewCollection(
+					tc.inMemoryClient,
+					mockResource.GetLogger(),
+				),
+				numHistoryShards,
+				false,
+				"hostname",
+			)
+			cfg.BlobSizeLimitError = func(domain string) int { return 10 }
+			cfg.BlobSizeLimitWarn = func(domain string) int { return 9 }
+
+			wh := NewWorkflowHandler(mockResource, cfg, mockVersionChecker, nil)
+			wh.shuttingDown = tc.isShuttingDown
+
+			tc.setupMocks(mockVersionChecker, mockResource)
+
+			queryResult, err := wh.QueryWorkflow(context.Background(), tc.queryRequest)
+
+			if tc.err != nil {
+				assert.Error(t, err)
+				assert.Equal(t, tc.err, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, []byte("test-result"), queryResult.QueryResult)
+			}
+		})
+	}
+}
