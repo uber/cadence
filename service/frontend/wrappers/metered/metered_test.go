@@ -30,6 +30,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/uber-go/tally"
+	"go.uber.org/yarpc/yarpcerrors"
 
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -713,6 +714,13 @@ func TestHandleErr(t *testing.T) {
 			expectedErrType: &types.ClientVersionNotSupportedError{},
 			expectedErrMsg:  "client version not supported",
 			expectedCounter: "test.cadence_err_client_version_not_supported_counter+",
+		},
+		{
+			name:            "YARPCDeadlineExceededError",
+			err:             yarpcerrors.Newf(yarpcerrors.CodeDeadlineExceeded, "deadline exceeded"),
+			expectedErrType: &yarpcerrors.Status{},
+			expectedErrMsg:  "deadline exceeded",
+			expectedCounter: "test.cadence_err_context_timeout_counter+",
 		},
 		{
 			name:            "ContextDeadlineExceeded",
