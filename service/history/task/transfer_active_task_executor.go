@@ -760,14 +760,16 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 		targetDomainName,
 		signalInfo,
 	); err != nil {
-		t.logger.Error("Failed to signal external workflow execution",
-			tag.WorkflowDomainID(task.DomainID),
-			tag.WorkflowID(task.WorkflowID),
-			tag.WorkflowRunID(task.RunID),
-			tag.TargetWorkflowDomainID(task.TargetDomainID),
-			tag.TargetWorkflowID(task.TargetWorkflowID),
-			tag.TargetWorkflowRunID(task.TargetRunID),
-			tag.Error(err))
+		if !common.IsExpectedError(err) {
+			t.logger.Error("Failed to signal external workflow execution",
+				tag.WorkflowDomainID(task.DomainID),
+				tag.WorkflowID(task.WorkflowID),
+				tag.WorkflowRunID(task.RunID),
+				tag.TargetWorkflowDomainID(task.TargetDomainID),
+				tag.TargetWorkflowID(task.TargetWorkflowID),
+				tag.TargetWorkflowRunID(task.TargetRunID),
+				tag.Error(err))
+		}
 
 		// Check to see if the error is non-transient, in which case add SignalFailed
 		// event and complete transfer task by setting the err = nil

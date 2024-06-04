@@ -29,10 +29,13 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/yarpc"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 
 	hclient "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
@@ -43,6 +46,7 @@ import (
 	"github.com/uber/cadence/common/clock"
 	dc "github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -1203,24 +1207,49 @@ func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_Success() {
 }
 
 func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_Failure() {
-	s.testProcessSignalExecution(
-		s.targetDomainID,
-		func(
-			mutableState execution.MutableState,
-			workflowExecution, targetExecution types.WorkflowExecution,
-			event *types.HistoryEvent,
-			transferTask Task,
-			signalInfo *persistence.SignalInfo,
-		) {
-			persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, event.ID, event.Version)
-			s.NoError(err)
-			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
-			signalRequest := createTestSignalWorkflowExecutionRequest(s.targetDomainName, transferTask.GetInfo().(*persistence.TransferTaskInfo), signalInfo)
-			s.mockHistoryClient.EXPECT().SignalWorkflowExecution(gomock.Any(), signalRequest).Return(&types.EntityNotExistsError{}).Times(1)
-			s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&persistence.AppendHistoryNodesResponse{}, nil).Once()
-			s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
+	for name, c := range map[string]struct {
+		Err          error
+		ExpectedLogs []string
+	}{
+		"GenericErr": {
+			Err:          assert.AnError,
+			ExpectedLogs: []string{"Failed to signal external workflow execution"},
 		},
-	)
+		"NotExistsErr": {
+			Err:          &types.EntityNotExistsError{},
+			ExpectedLogs: nil,
+		},
+		"WorkflowExecutionAlreadyCompleted": {
+			Err:          &types.WorkflowExecutionAlreadyCompletedError{},
+			ExpectedLogs: nil,
+		},
+	} {
+		s.Run(name, func() {
+			// Need setup the suite manually, since we are in a subtest
+			s.SetupTest()
+			s.testProcessSignalExecutionWithErrorAndLogs(
+				s.targetDomainID,
+				func(
+					mutableState execution.MutableState,
+					workflowExecution, targetExecution types.WorkflowExecution,
+					event *types.HistoryEvent,
+					transferTask Task,
+					signalInfo *persistence.SignalInfo,
+				) {
+					persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, event.ID, event.Version)
+					s.NoError(err)
+					s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
+					signalRequest := createTestSignalWorkflowExecutionRequest(s.targetDomainName, transferTask.GetInfo().(*persistence.TransferTaskInfo), signalInfo)
+					s.mockHistoryClient.EXPECT().SignalWorkflowExecution(gomock.Any(), signalRequest).Return(c.Err).Times(1)
+					s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&persistence.AppendHistoryNodesResponse{}, nil).Once()
+					s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
+				},
+				nil,
+				c.ExpectedLogs,
+			)
+		})
+	}
+
 }
 
 func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_Duplication() {
@@ -1277,10 +1306,10 @@ func (s *transferActiveTaskExecutorSuite) testProcessSignalExecution(
 		signalInfo *persistence.SignalInfo,
 	),
 ) {
-	s.testProcessSignalExecutionWithError(targetDomainID, setupMockFn, nil)
+	s.testProcessSignalExecutionWithErrorAndLogs(targetDomainID, setupMockFn, nil, nil)
 }
 
-func (s *transferActiveTaskExecutorSuite) testProcessSignalExecutionWithError(
+func (s *transferActiveTaskExecutorSuite) testProcessSignalExecutionWithErrorAndLogs(
 	targetDomainID string,
 	setupMockFn func(
 		mutableState execution.MutableState,
@@ -1290,6 +1319,7 @@ func (s *transferActiveTaskExecutorSuite) testProcessSignalExecutionWithError(
 		signalInfo *persistence.SignalInfo,
 	),
 	expectedErr error,
+	expectedLogs []string,
 ) {
 	workflowExecution, mutableState, decisionCompletionID, err := test.SetupWorkflowWithCompletedDecision(s.mockShard, s.domainID)
 	s.NoError(err)
@@ -1324,10 +1354,19 @@ func (s *transferActiveTaskExecutorSuite) testProcessSignalExecutionWithError(
 		ScheduleID:       event.ID,
 	})
 
+	// Make sure we can observe the logs
+	observedZapCore, observedLogs := observer.New(zap.InfoLevel)
+	s.transferActiveTaskExecutor.logger = loggerimpl.NewLogger(zap.New(observedZapCore))
+
 	setupMockFn(mutableState, workflowExecution, targetExecution, event, transferTask, signalInfo)
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
 	s.Equal(expectedErr, err)
+
+	assert.Equal(s.T(), len(expectedLogs), observedLogs.Len(), "expected %v logs, but got %v logs", len(expectedLogs), observedLogs.Len())
+	for _, expectedLog := range expectedLogs {
+		s.True(observedLogs.FilterMessage(expectedLog).Len() > 0, "expected log missing: %v", expectedLog)
+	}
 }
 
 func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Success() {
