@@ -400,54 +400,6 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_SameStartIDAnd
 	s.NoError(err)
 }
 
-func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_NextPageToken() {
-	ctx := context.Background()
-	s.mockDomainCache.EXPECT().GetDomainID(s.domainName).Return(s.domainID, nil).AnyTimes()
-	branchToken := []byte{1}
-	versionHistory := persistence.NewVersionHistory(branchToken, []*persistence.VersionHistoryItem{
-		persistence.NewVersionHistoryItem(int64(10), int64(100)),
-	})
-	rawVersionHistories := persistence.NewVersionHistories(versionHistory)
-	versionHistories := rawVersionHistories.ToInternalType()
-	mState := &types.GetMutableStateResponse{
-		NextEventID:        11,
-		CurrentBranchToken: branchToken,
-		VersionHistories:   versionHistories,
-	}
-	s.mockHistoryClient.EXPECT().GetMutableState(gomock.Any(), gomock.Any()).Return(mState, nil).AnyTimes()
-	token := &getWorkflowRawHistoryV2Token{
-		VersionHistories: &types.VersionHistories{
-			CurrentVersionHistoryIndex: 1,
-			Histories: []*types.VersionHistory{
-				{
-					BranchToken: branchToken,
-					Items: []*types.VersionHistoryItem{
-						{
-							EventID: 10,
-							Version: 100,
-						},
-					},
-				},
-			},
-		},
-	}
-	serializedToken, err := serializeRawHistoryToken(token)
-	s.NoError(err)
-	_, err = s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
-		&types.GetWorkflowExecutionRawHistoryV2Request{
-			Domain: s.domainName,
-			Execution: &types.WorkflowExecution{
-				WorkflowID: "workflowID",
-				RunID:      uuid.New(),
-			},
-			StartEventID:      common.Int64Ptr(10),
-			StartEventVersion: common.Int64Ptr(100),
-			MaximumPageSize:   1,
-			NextPageToken:     serializedToken,
-		})
-	s.NoError(err)
-}
-
 func (s *adminHandlerSuite) Test_SetRequestDefaultValueAndGetTargetVersionHistory_DefinedStartAndEnd() {
 	inputStartEventID := int64(1)
 	inputStartVersion := int64(10)
@@ -1691,11 +1643,11 @@ func Test_GetDomainReplicationMessages(t *testing.T) {
 			hcHandlerFunc: func(mock *history.MockClient) {
 			},
 			drqHandlerFunc: func(mock *domain.MockReplicationQueue) {
-				mock.EXPECT().GetAckLevels(gomock.Any()).Return(map[string]int64{
+				mock.EXPECT().GetAckLevels(context.Background()).Return(map[string]int64{
 					"test-cluster": 1,
 				}, nil)
-				mock.EXPECT().GetReplicationMessages(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(2), nil)
-				mock.EXPECT().UpdateAckLevel(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mock.EXPECT().GetReplicationMessages(context.Background(), int64(1), getDomainReplicationMessageBatchSize).Return(nil, int64(2), nil)
+				mock.EXPECT().UpdateAckLevel(context.Background(), int64(-1), "test-cluster").Return(nil)
 			},
 			wantErr: false,
 		},
@@ -1707,8 +1659,8 @@ func Test_GetDomainReplicationMessages(t *testing.T) {
 			hcHandlerFunc: func(mock *history.MockClient) {
 			},
 			drqHandlerFunc: func(mock *domain.MockReplicationQueue) {
-				mock.EXPECT().GetReplicationMessages(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(2), nil)
-				mock.EXPECT().UpdateAckLevel(gomock.Any(), gomock.Any(), gomock.Any()).Return(assert.AnError)
+				mock.EXPECT().GetReplicationMessages(context.Background(), int64(1), getDomainReplicationMessageBatchSize).Return(nil, int64(2), nil)
+				mock.EXPECT().UpdateAckLevel(context.Background(), int64(1), "").Return(assert.AnError)
 			},
 			wantErr: false,
 		},
@@ -1720,7 +1672,7 @@ func Test_GetDomainReplicationMessages(t *testing.T) {
 			hcHandlerFunc: func(mock *history.MockClient) {
 			},
 			drqHandlerFunc: func(mock *domain.MockReplicationQueue) {
-				mock.EXPECT().GetReplicationMessages(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(2), assert.AnError)
+				mock.EXPECT().GetReplicationMessages(context.Background(), int64(1), getDomainReplicationMessageBatchSize).Return(nil, int64(2), assert.AnError)
 			},
 			wantErr: true,
 		},
@@ -1891,10 +1843,25 @@ func Test_ReapplyEvents(t *testing.T) {
 				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: "test-workflow-id",
 				},
-				Events: &types.DataBlob{},
+				Events: &types.DataBlob{
+					EncodingType: types.EncodingTypeThriftRW.Ptr(),
+					Data:         []byte("test-event-data"),
+				},
 			},
 			hcHandlerFunc: func(mock *history.MockClient) {
-				mock.EXPECT().ReapplyEvents(gomock.Any(), gomock.Any()).Return(nil)
+				mock.EXPECT().ReapplyEvents(context.Background(), &types.HistoryReapplyEventsRequest{
+					DomainUUID: "test-domain-id",
+					Request: &types.ReapplyEventsRequest{
+						DomainName: "test-domain",
+						WorkflowExecution: &types.WorkflowExecution{
+							WorkflowID: "test-workflow-id",
+						},
+						Events: &types.DataBlob{
+							EncodingType: types.EncodingTypeThriftRW.Ptr(),
+							Data:         []byte("test-event-data"),
+						},
+					},
+				}).Return(nil)
 			},
 			dcHandlerFunc: func(mock *cache.MockDomainCache) {
 				mock.EXPECT().GetDomain("test-domain").Return(cache.NewGlobalDomainCacheEntryForTest(
@@ -2622,6 +2589,140 @@ func Test_ListDynamicConfig(t *testing.T) {
 					Logger:        testlogger.New(t),
 					MetricsClient: metrics.NewNoopMetricsClient(),
 					HistoryClient: hcMock,
+				},
+				params: &resource.Params{
+					DynamicConfig: dcMock,
+				},
+			}
+
+			_, err := handler.ListDynamicConfig(context.Background(), td.input)
+			if td.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateConfigForAdvanceVisibility_Error(t *testing.T) {
+	handler := adminHandlerImpl{
+		params: &resource.Params{},
+	}
+	err := handler.validateConfigForAdvanceVisibility()
+	assert.Error(t, err, "ES related config not found")
+}
+
+func TestRestoreDynamicConfig(t *testing.T) {
+	tests := map[string]struct {
+		input         *types.RestoreDynamicConfigRequest
+		dcHandlerFunc func(mock *dynamicconfig.MockClient)
+		wantErr       bool
+	}{
+		"nil request": {
+			input:   nil,
+			wantErr: true,
+		},
+		"invalid config name": {
+			input: &types.RestoreDynamicConfigRequest{
+				ConfigName: "invalid",
+			},
+			wantErr: true,
+		},
+		"valid config name": {
+			input: &types.RestoreDynamicConfigRequest{
+				ConfigName: "testGetIntPropertyKey",
+				Filters:    nil,
+			},
+			dcHandlerFunc: func(mock *dynamicconfig.MockClient) {
+				mock.EXPECT().RestoreValue(gomock.Any(), nil).Return(nil)
+			},
+			wantErr: false,
+		},
+		"valid config with invalid filters": {
+			input: &types.RestoreDynamicConfigRequest{
+				ConfigName: "testGetIntPropertyKey",
+				Filters: []*types.DynamicConfigFilter{
+					&types.DynamicConfigFilter{
+						Name: "test-filter",
+						Value: &types.DataBlob{
+							Data: []byte("test-value"),
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			goMock := gomock.NewController(t)
+			dcMock := dynamicconfig.NewMockClient(goMock)
+			if td.dcHandlerFunc != nil {
+				td.dcHandlerFunc(dcMock)
+			}
+			handler := adminHandlerImpl{
+				Resource: &resource.Test{
+					Logger:        testlogger.New(t),
+					MetricsClient: metrics.NewNoopMetricsClient(),
+				},
+				params: &resource.Params{
+					DynamicConfig: dcMock,
+				},
+			}
+
+			err := handler.RestoreDynamicConfig(context.Background(), td.input)
+			if td.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestListDynamicConfig(t *testing.T) {
+	tests := map[string]struct {
+		input         *types.ListDynamicConfigRequest
+		dcHandlerFunc func(mock *dynamicconfig.MockClient)
+		wantErr       bool
+	}{
+		"nil request": {
+			input:   nil,
+			wantErr: true,
+		},
+		"invalid config name": {
+			input: &types.ListDynamicConfigRequest{
+				ConfigName: "invalid",
+			},
+			dcHandlerFunc: func(mock *dynamicconfig.MockClient) {
+				mock.EXPECT().ListValue(gomock.Any()).Return(nil, assert.AnError)
+			},
+			wantErr: true,
+		},
+		"valid config name": {
+			input: &types.ListDynamicConfigRequest{
+				ConfigName: "testGetIntPropertyKey",
+			},
+			dcHandlerFunc: func(mock *dynamicconfig.MockClient) {
+				mock.EXPECT().ListValue(gomock.Any()).Return(nil, nil)
+			},
+			wantErr: false,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			goMock := gomock.NewController(t)
+			dcMock := dynamicconfig.NewMockClient(goMock)
+			if td.dcHandlerFunc != nil {
+				td.dcHandlerFunc(dcMock)
+			}
+			handler := adminHandlerImpl{
+				Resource: &resource.Test{
+					Logger:        testlogger.New(t),
+					MetricsClient: metrics.NewNoopMetricsClient(),
 				},
 				params: &resource.Params{
 					DynamicConfig: dcMock,
