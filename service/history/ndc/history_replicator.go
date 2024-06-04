@@ -64,11 +64,12 @@ type (
 		transactionManager transactionManager
 		logger             log.Logger
 
-		newBranchManager    branchManagerProvider
-		newConflictResolver conflictResolverProvider
-		newWorkflowResetter workflowResetterProvider
-		newStateBuilder     stateBuilderProvider
-		newMutableState     mutableStateProvider
+		newBranchManagerFn    newBranchManagerFn
+		newConflictResolverFn newConflictResolverFn
+		newWorkflowResetterFn newWorkflowResetterFn
+		newStateBuilderFn     newStateBuilderFn
+		newMutableStateFn     newMutableStateFn
+
 		// refactored functions for a better testability
 		newReplicationTaskFn                                         newReplicationTaskFn
 		applyStartEventsFn                                           applyStartEventsFn
@@ -82,28 +83,28 @@ type (
 		applyNonStartEventsResetWorkflowFn                           applyNonStartEventsResetWorkflowFn
 	}
 
-	stateBuilderProvider func(
+	newStateBuilderFn func(
 		mutableState execution.MutableState,
 		logger log.Logger) execution.StateBuilder
 
-	mutableStateProvider func(
+	newMutableStateFn func(
 		domainEntry *cache.DomainCacheEntry,
 		logger log.Logger,
 	) execution.MutableState
 
-	branchManagerProvider func(
+	newBranchManagerFn func(
 		context execution.Context,
 		mutableState execution.MutableState,
 		logger log.Logger,
 	) branchManager
 
-	conflictResolverProvider func(
+	newConflictResolverFn func(
 		context execution.Context,
 		mutableState execution.MutableState,
 		logger log.Logger,
 	) conflictResolver
 
-	workflowResetterProvider func(
+	newWorkflowResetterFn func(
 		domainID string,
 		workflowID string,
 		baseRunID string,
@@ -126,8 +127,8 @@ type (
 		releaseFn execution.ReleaseFunc,
 		task replicationTask,
 		domainCache cache.DomainCache,
-		newMutableState mutableStateProvider,
-		newStateBuilder stateBuilderProvider,
+		newMutableState newMutableStateFn,
+		newStateBuilder newStateBuilderFn,
 		transactionManager transactionManager,
 		logger log.Logger,
 		shard shard.Context,
@@ -139,7 +140,7 @@ type (
 		context execution.Context,
 		mutableState execution.MutableState,
 		task replicationTask,
-		newBranchManager branchManagerProvider,
+		newBranchManager newBranchManagerFn,
 	) (bool, int, error)
 
 	applyNonStartEventsPrepareMutableStateFn func(
@@ -148,7 +149,7 @@ type (
 		mutableState execution.MutableState,
 		branchIndex int,
 		task replicationTask,
-		newConflictResolver conflictResolverProvider,
+		newConflictResolver newConflictResolverFn,
 	) (execution.MutableState, bool, error)
 
 	applyNonStartEventsToCurrentBranchFn func(
@@ -158,7 +159,7 @@ type (
 		isRebuilt bool,
 		releaseFn execution.ReleaseFunc,
 		task replicationTask,
-		newStateBuilder stateBuilderProvider,
+		newStateBuilder newStateBuilderFn,
 		clusterMetadata cluster.Metadata,
 		shard shard.Context,
 		logger log.Logger,
@@ -198,7 +199,7 @@ type (
 		ctx ctx.Context,
 		newContext execution.Context,
 		task replicationTask,
-		newWorkflowResetter workflowResetterProvider,
+		newWorkflowResetter newWorkflowResetterFn,
 	) (execution.MutableState, error)
 
 	applyNonStartEventsResetWorkflowFn func(
@@ -206,7 +207,7 @@ type (
 		context execution.Context,
 		mutableState execution.MutableState,
 		task replicationTask,
-		newStateBuilder stateBuilderProvider,
+		newStateBuilder newStateBuilderFn,
 		transactionManager transactionManager,
 		clusterMetadata cluster.Metadata,
 		logger log.Logger,
@@ -239,21 +240,21 @@ func NewHistoryReplicator(
 		eventsReapplier:    eventsReapplier,
 		logger:             logger.WithTags(tag.ComponentHistoryReplicator),
 
-		newBranchManager: func(
+		newBranchManagerFn: func(
 			context execution.Context,
 			mutableState execution.MutableState,
 			logger log.Logger,
 		) branchManager {
 			return newBranchManager(shard, context, mutableState, logger)
 		},
-		newConflictResolver: func(
+		newConflictResolverFn: func(
 			context execution.Context,
 			mutableState execution.MutableState,
 			logger log.Logger,
 		) conflictResolver {
 			return newConflictResolver(shard, context, mutableState, logger)
 		},
-		newWorkflowResetter: func(
+		newWorkflowResetterFn: func(
 			domainID string,
 			workflowID string,
 			baseRunID string,
@@ -263,7 +264,7 @@ func NewHistoryReplicator(
 		) WorkflowResetter {
 			return NewWorkflowResetter(shard, transactionManager, domainID, workflowID, baseRunID, newContext, newRunID, logger)
 		},
-		newStateBuilder: func(
+		newStateBuilderFn: func(
 			state execution.MutableState,
 			logger log.Logger,
 		) execution.StateBuilder {
@@ -274,7 +275,7 @@ func NewHistoryReplicator(
 				state,
 			)
 		},
-		newMutableState: func(
+		newMutableStateFn: func(
 			domainEntry *cache.DomainCacheEntry,
 			logger log.Logger,
 		) execution.MutableState {
@@ -346,7 +347,7 @@ func (r *historyReplicatorImpl) applyEvents(
 	switch task.getFirstEvent().GetEventType() {
 	case types.EventTypeWorkflowExecutionStarted:
 		return r.applyStartEventsFn(ctx, context, releaseFn, task, r.domainCache,
-			r.newMutableState, r.newStateBuilder, r.transactionManager, r.logger, r.shard, r.clusterMetadata)
+			r.newMutableStateFn, r.newStateBuilderFn, r.transactionManager, r.logger, r.shard, r.clusterMetadata)
 
 	default:
 		// apply events, other than simple start workflow execution
@@ -359,7 +360,7 @@ func (r *historyReplicatorImpl) applyEvents(
 				return execution.ErrMissingVersionHistories
 			}
 
-			doContinue, branchIndex, err := r.applyNonStartEventsPrepareBranchFn(ctx, context, mutableState, task, r.newBranchManager)
+			doContinue, branchIndex, err := r.applyNonStartEventsPrepareBranchFn(ctx, context, mutableState, task, r.newBranchManagerFn)
 			if err != nil {
 				return err
 			} else if !doContinue {
@@ -367,27 +368,27 @@ func (r *historyReplicatorImpl) applyEvents(
 				return nil
 			}
 
-			mutableState, isRebuilt, err := r.applyNonStartEventsPrepareMutableStateFn(ctx, context, mutableState, branchIndex, task, r.newConflictResolver)
+			mutableState, isRebuilt, err := r.applyNonStartEventsPrepareMutableStateFn(ctx, context, mutableState, branchIndex, task, r.newConflictResolverFn)
 			if err != nil {
 				return err
 			}
 
 			if mutableState.GetVersionHistories().GetCurrentVersionHistoryIndex() == branchIndex {
 				return r.applyNonStartEventsToCurrentBranchFn(ctx, context, mutableState, isRebuilt, releaseFn, task,
-					r.newStateBuilder, r.clusterMetadata, r.shard, r.logger, r.transactionManager)
+					r.newStateBuilderFn, r.clusterMetadata, r.shard, r.logger, r.transactionManager)
 			}
 			// passed in r because there's a recursive call within applyNonStartEventsToNoneCurrentBranchWithContinueAsNew
 			return r.applyNonStartEventsToNoneCurrentBranchFn(ctx, context, mutableState, branchIndex, releaseFn, task, r)
 
 		case *types.EntityNotExistsError:
 			// mutable state not created, check if is workflow reset
-			mutableState, err := r.applyNonStartEventsMissingMutableStateFn(ctx, context, task, r.newWorkflowResetter)
+			mutableState, err := r.applyNonStartEventsMissingMutableStateFn(ctx, context, task, r.newWorkflowResetterFn)
 			if err != nil {
 				return err
 			}
 
 			return r.applyNonStartEventsResetWorkflowFn(ctx, context, mutableState, task,
-				r.newStateBuilder, r.transactionManager, r.clusterMetadata, r.logger, r.shard)
+				r.newStateBuilderFn, r.transactionManager, r.clusterMetadata, r.logger, r.shard)
 
 		default:
 			// unable to get mutable state, return err so we can retry the task later
@@ -402,8 +403,8 @@ func applyStartEvents(
 	releaseFn execution.ReleaseFunc,
 	task replicationTask,
 	domainCache cache.DomainCache,
-	newMutableState mutableStateProvider,
-	newStateBuilder stateBuilderProvider,
+	newMutableState newMutableStateFn,
+	newStateBuilder newStateBuilderFn,
 	transactionManager transactionManager,
 	logger log.Logger,
 	shard shard.Context,
@@ -461,7 +462,7 @@ func applyNonStartEventsPrepareBranch(
 	context execution.Context,
 	mutableState execution.MutableState,
 	task replicationTask,
-	newBranchManager branchManagerProvider,
+	newBranchManager newBranchManagerFn,
 ) (bool, int, error) {
 
 	incomingVersionHistory := task.getVersionHistory()
@@ -494,7 +495,7 @@ func applyNonStartEventsPrepareMutableState(
 	mutableState execution.MutableState,
 	branchIndex int,
 	task replicationTask,
-	newConflictResolver conflictResolverProvider,
+	newConflictResolver newConflictResolverFn,
 ) (execution.MutableState, bool, error) {
 
 	incomingVersion := task.getVersion()
@@ -520,7 +521,7 @@ func applyNonStartEventsToCurrentBranch(
 	isRebuilt bool,
 	releaseFn execution.ReleaseFunc,
 	task replicationTask,
-	newStateBuilder stateBuilderProvider,
+	newStateBuilder newStateBuilderFn,
 	clusterMetadata cluster.Metadata,
 	shard shard.Context,
 	logger log.Logger,
@@ -730,7 +731,7 @@ func applyNonStartEventsMissingMutableState(
 	ctx ctx.Context,
 	newContext execution.Context,
 	task replicationTask,
-	newWorkflowResetter workflowResetterProvider,
+	newWorkflowResetter newWorkflowResetterFn,
 ) (execution.MutableState, error) {
 
 	// for non reset workflow execution replication task, just do re-replication
@@ -784,7 +785,7 @@ func applyNonStartEventsResetWorkflow(
 	context execution.Context,
 	mutableState execution.MutableState,
 	task replicationTask,
-	newStateBuilder stateBuilderProvider,
+	newStateBuilder newStateBuilderFn,
 	transactionManager transactionManager,
 	clusterMetadata cluster.Metadata,
 	logger log.Logger,

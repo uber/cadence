@@ -140,10 +140,10 @@ func TestNewHistoryReplicator_newBranchManager(t *testing.T) {
 	testReplicator := NewHistoryReplicator(mockShard, testExecutionCache, mockEventsReapplier, log.NewNoop())
 	testReplicatorImpl := testReplicator.(*historyReplicatorImpl)
 
-	// test newBranchManager function in history replicator
+	// test newBranchManagerFn function in history replicator
 	mockExecutionContext := execution.NewMockContext(ctrl)
 	mockExecutionMutableState := execution.NewMockMutableState(ctrl)
-	assert.NotNil(t, testReplicatorImpl.newBranchManager(mockExecutionContext, mockExecutionMutableState, log.NewNoop()))
+	assert.NotNil(t, testReplicatorImpl.newBranchManagerFn(mockExecutionContext, mockExecutionMutableState, log.NewNoop()))
 }
 
 func TestNewHistoryReplicator_newConflictResolver(t *testing.T) {
@@ -189,14 +189,14 @@ func TestNewHistoryReplicator_newConflictResolver(t *testing.T) {
 	testReplicator := NewHistoryReplicator(mockShard, testExecutionCache, mockEventsReapplier, log.NewNoop())
 	testReplicatorImpl := testReplicator.(*historyReplicatorImpl)
 
-	// test newConflictResolver function in history replicator
+	// test newConflictResolverFn function in history replicator
 	mockEventsCache := events.NewMockCache(ctrl)
 	mockShard.EXPECT().GetEventsCache().Return(mockEventsCache).Times(1)
 	mockShard.EXPECT().GetShardID().Return(0).Times(1)
 
 	mockExecutionContext := execution.NewMockContext(ctrl)
 	mockExecutionMutableState := execution.NewMockMutableState(ctrl)
-	assert.NotNil(t, testReplicatorImpl.newConflictResolver(mockExecutionContext, mockExecutionMutableState, log.NewNoop()))
+	assert.NotNil(t, testReplicatorImpl.newConflictResolverFn(mockExecutionContext, mockExecutionMutableState, log.NewNoop()))
 }
 
 func TestNewHistoryReplicator_newWorkflowResetter(t *testing.T) {
@@ -242,13 +242,13 @@ func TestNewHistoryReplicator_newWorkflowResetter(t *testing.T) {
 	testReplicator := NewHistoryReplicator(mockShard, testExecutionCache, mockEventsReapplier, log.NewNoop())
 	testReplicatorImpl := testReplicator.(*historyReplicatorImpl)
 
-	// test newWorkflowResetter function in history replicator
+	// test newWorkflowResetterFn function in history replicator
 	mockEventsCache := events.NewMockCache(ctrl)
 	mockShard.EXPECT().GetEventsCache().Return(mockEventsCache).Times(1)
 	mockShard.EXPECT().GetShardID().Return(0).Times(1)
 
 	mockExecutionContext := execution.NewMockContext(ctrl)
-	assert.NotNil(t, testReplicatorImpl.newWorkflowResetter(
+	assert.NotNil(t, testReplicatorImpl.newWorkflowResetterFn(
 		"test-domain-id",
 		"test-workflow-id",
 		"test-base-run-id",
@@ -301,9 +301,9 @@ func TestNewHistoryReplicator_newStateBuilder(t *testing.T) {
 	testReplicator := NewHistoryReplicator(mockShard, testExecutionCache, mockEventsReapplier, log.NewNoop())
 	testReplicatorImpl := testReplicator.(*historyReplicatorImpl)
 
-	// test newStateBuilder function in history replicator
+	// test newStateBuilderFn function in history replicator
 	mockExecutionMutableState := execution.NewMockMutableState(ctrl)
-	assert.NotNil(t, testReplicatorImpl.newStateBuilder(mockExecutionMutableState, log.NewNoop()))
+	assert.NotNil(t, testReplicatorImpl.newStateBuilderFn(mockExecutionMutableState, log.NewNoop()))
 }
 
 func TestNewHistoryReplicator_newMutableState(t *testing.T) {
@@ -349,7 +349,7 @@ func TestNewHistoryReplicator_newMutableState(t *testing.T) {
 	testReplicator := NewHistoryReplicator(mockShard, testExecutionCache, mockEventsReapplier, log.NewNoop())
 	testReplicatorImpl := testReplicator.(*historyReplicatorImpl)
 
-	// test newMutableState function in history replicator
+	// test newMutableStateFn function in history replicator
 	deadline := int64(0)
 	mockShard.EXPECT().GetTimeSource().Return(clock.NewMockedTimeSource()).Times(1)
 	mockEventsCache := events.NewMockCache(ctrl)
@@ -362,7 +362,7 @@ func TestNewHistoryReplicator_newMutableState(t *testing.T) {
 		0,
 		&deadline,
 	)
-	assert.NotNil(t, testReplicatorImpl.newMutableState(mockDomainCacheEntry, log.NewNoop()))
+	assert.NotNil(t, testReplicatorImpl.newMutableStateFn(mockDomainCacheEntry, log.NewNoop()))
 }
 
 func TestApplyEvents(t *testing.T) {
