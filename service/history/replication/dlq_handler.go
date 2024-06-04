@@ -29,6 +29,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -82,6 +83,7 @@ type (
 		metricsClient metrics.Client
 		done          chan struct{}
 		status        int32
+		timeSource    clock.TimeSource
 
 		mu           sync.Mutex
 		latestCounts map[string]int64
@@ -106,6 +108,7 @@ func NewDLQHandler(
 		logger:        shard.GetLogger(),
 		metricsClient: shard.GetMetricsClient(),
 		done:          make(chan struct{}),
+		timeSource:    clock.NewRealTimeSource(),
 	}
 }
 
@@ -176,12 +179,12 @@ func (r *dlqHandlerImpl) emitDLQSizeMetricsLoop() {
 		)
 	}
 
-	timer := time.NewTimer(getInterval())
+	timer := r.timeSource.NewTimer(getInterval())
 	defer timer.Stop()
 
 	for {
 		select {
-		case <-timer.C:
+		case <-timer.Chan():
 			r.fetchAndEmitMessageCount(context.Background())
 			timer.Reset(getInterval())
 		case <-r.done:
@@ -322,7 +325,7 @@ func (r *dlqHandlerImpl) MergeMessages(
 			}
 		}
 
-		// If hydrated replication task does not exists in remote cluster - continue merging
+		// If hydrated replication task does not exist in remote cluster - continue merging
 		// Record lastMessageID with raw task id, so that they can be purged after.
 		if lastMessageID < raw.TaskID {
 			lastMessageID = raw.TaskID
