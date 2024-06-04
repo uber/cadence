@@ -32,7 +32,7 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v2
       - name: Push to Docker Hub (auto-setup build)
-        uses: docker/build-push-action@v1
+        uses: docker/build-push-action@v2
         with:
           username: ${{ secrets.CADENCE_SERVER_DOCKERHUB_USERNAME }}
           password: ${{ secrets.CADENCE_SERVER_DOCKERHUB_TOKEN }}
