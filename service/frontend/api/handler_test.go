@@ -2903,3 +2903,139 @@ func TestQueryWorkflow(t *testing.T) {
 		})
 	}
 }
+
+func TestDescribeWorkflowExecution(t *testing.T) {
+	resp := &types.DescribeWorkflowExecutionResponse{
+		ExecutionConfiguration: &types.WorkflowExecutionConfiguration{
+			TaskList: &types.TaskList{
+				Name: "test-task-list",
+			},
+		},
+	}
+
+	testCases := []struct {
+		name            string
+		setupMocks      func(mockVersionChecker *client.VersionCheckerMock, mockResource *resource.Test)
+		describeRequest *types.DescribeWorkflowExecutionRequest
+		isShuttingDown  int32
+		err             error
+	}{
+		{
+			name: "Success case",
+			setupMocks: func(mockVersionChecker *client.VersionCheckerMock, mockResource *resource.Test) {
+				mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				mockResource.DomainCache.EXPECT().GetDomainID(gomock.Any()).Return("test-domain-id", nil).Times(1)
+				mockResource.HistoryClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, nil).Times(1)
+			},
+			describeRequest: &types.DescribeWorkflowExecutionRequest{
+				Domain: "test-domain",
+				Execution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+				},
+			},
+		},
+		{
+			name:           "Error case - is shutting down",
+			setupMocks:     func(_ *client.VersionCheckerMock, _ *resource.Test) {},
+			isShuttingDown: 1,
+			err:            validate.ErrShuttingDown,
+		},
+		{
+			name: "Error case - client not supported",
+			setupMocks: func(mockVersionChecker *client.VersionCheckerMock, _ *resource.Test) {
+				mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(errors.New("version-checker-error")).Times(1)
+			},
+			err: errors.New("version-checker-error"),
+		},
+		{
+			name: "Error case - describe request not set",
+			setupMocks: func(mockVersionChecker *client.VersionCheckerMock, _ *resource.Test) {
+				mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			err: validate.ErrRequestNotSet,
+		},
+		{
+			name: "Error case - domain name not set",
+			setupMocks: func(mockVersionChecker *client.VersionCheckerMock, _ *resource.Test) {
+				mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			describeRequest: &types.DescribeWorkflowExecutionRequest{},
+			err:             validate.ErrDomainNotSet,
+		},
+		{
+			name: "Error case - check execution error",
+			setupMocks: func(mockVersionChecker *client.VersionCheckerMock, _ *resource.Test) {
+				mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			describeRequest: &types.DescribeWorkflowExecutionRequest{
+				Domain: "test-domain",
+			},
+			err: validate.ErrExecutionNotSet,
+		},
+		{
+			name: "Error case - get domain ID error",
+			setupMocks: func(mockVersionChecker *client.VersionCheckerMock, mockResource *resource.Test) {
+				mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				mockResource.DomainCache.EXPECT().GetDomainID(gomock.Any()).Return("", errors.New("get-domain-id-error")).Times(1)
+			},
+			describeRequest: &types.DescribeWorkflowExecutionRequest{
+				Domain: "test-domain",
+				Execution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+				},
+			},
+			err: errors.New("get-domain-id-error"),
+		},
+		{
+			name: "Error case - DescribeWorkflowExecution error",
+			setupMocks: func(mockVersionChecker *client.VersionCheckerMock, mockResource *resource.Test) {
+				mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				mockResource.DomainCache.EXPECT().GetDomainID(gomock.Any()).Return("test-domain-id", nil).Times(1)
+				mockResource.HistoryClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, errors.New("describe-workflow-execution-error")).Times(1)
+			},
+			describeRequest: &types.DescribeWorkflowExecutionRequest{
+				Domain: "test-domain",
+				Execution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+				},
+			},
+			err: errors.New("describe-workflow-execution-error"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockResource := resource.NewTest(t, mockCtrl, metrics.Frontend)
+			mockVersionChecker := client.NewMockVersionChecker(mockCtrl)
+
+			cfg := frontendcfg.NewConfig(
+				dc.NewCollection(
+					dc.NewInMemoryClient(),
+					mockResource.GetLogger(),
+				),
+				numHistoryShards,
+				false,
+				"hostname",
+			)
+
+			wh := NewWorkflowHandler(mockResource, cfg, mockVersionChecker, nil)
+			wh.shuttingDown = tc.isShuttingDown
+
+			tc.setupMocks(mockVersionChecker, mockResource)
+
+			describeResponse, err := wh.DescribeWorkflowExecution(context.Background(), tc.describeRequest)
+
+			if tc.err != nil {
+				assert.Error(t, err)
+				assert.Equal(t, tc.err, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, resp, describeResponse)
+			}
+		})
+	}
+}
