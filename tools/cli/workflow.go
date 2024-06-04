@@ -36,9 +36,7 @@ func newWorkflowCommands() []cli.Command {
 			Aliases: []string{"res"},
 			Usage:   "restarts a previous workflow execution",
 			Flags:   flagsForExecution,
-			Action: func(c *cli.Context) {
-				RestartWorkflow(c)
-			},
+			Action:  RestartWorkflow,
 		},
 		{
 			Name:        "activity",
@@ -47,72 +45,56 @@ func newWorkflowCommands() []cli.Command {
 			Subcommands: newActivityCommands(),
 		},
 		{
-			Name:  "show",
-			Usage: "show workflow history",
-			Flags: getFlagsForShow(),
-			Action: func(c *cli.Context) {
-				ShowHistory(c)
-			},
+			Name:   "show",
+			Usage:  "show workflow history",
+			Flags:  getFlagsForShow(),
+			Action: ShowHistory,
 		},
 		{
 			Name:        "showid",
 			Usage:       "show workflow history with given workflow_id and run_id (a shortcut of `show -w <wid> -r <rid>`). run_id is only required for archived history",
 			Description: "cadence workflow showid <workflow_id> <run_id>. workflow_id is required; run_id is only required for archived history",
 			Flags:       getFlagsForShowID(),
-			Action: func(c *cli.Context) {
-				ShowHistoryWithWID(c)
-			},
+			Action:      ShowHistoryWithWID,
 		},
 		{
-			Name:  "start",
-			Usage: "start a new workflow execution",
-			Flags: getFlagsForStart(),
-			Action: func(c *cli.Context) {
-				StartWorkflow(c)
-			},
+			Name:   "start",
+			Usage:  "start a new workflow execution",
+			Flags:  getFlagsForStart(),
+			Action: StartWorkflow,
 		},
 		{
-			Name:  "run",
-			Usage: "start a new workflow execution and get workflow progress",
-			Flags: getFlagsForRun(),
-			Action: func(c *cli.Context) {
-				RunWorkflow(c)
-			},
+			Name:   "run",
+			Usage:  "start a new workflow execution and get workflow progress",
+			Flags:  getFlagsForRun(),
+			Action: RunWorkflow,
 		},
 		{
 			Name:    "cancel",
 			Aliases: []string{"c"},
 			Usage:   "cancel a workflow execution",
 			Flags:   getFlagsForCancel(),
-			Action: func(c *cli.Context) {
-				CancelWorkflow(c)
-			},
+			Action:  CancelWorkflow,
 		},
 		{
 			Name:    "signal",
 			Aliases: []string{"s"},
 			Usage:   "signal a workflow execution",
 			Flags:   getFlagsForSignal(),
-			Action: func(c *cli.Context) {
-				SignalWorkflow(c)
-			},
+			Action:  SignalWorkflow,
 		},
 		{
-			Name:  "signalwithstart",
-			Usage: "signal the current open workflow if exists, or attempt to start a new run based on IDResuePolicy and signals it",
-			Flags: getFlagsForSignalWithStart(),
-			Action: func(c *cli.Context) {
-				SignalWithStartWorkflowExecution(c)
-			},
+			Name:   "signalwithstart",
+			Usage:  "signal the current open workflow if exists, or attempt to start a new run based on IDResuePolicy and signals it",
+			Flags:  getFlagsForSignalWithStart(),
+			Action: SignalWithStartWorkflowExecution,
 		},
 		{
 			Name:    "terminate",
 			Aliases: []string{"term"},
 			Usage:   "terminate a new workflow execution",
 			Flags:   getFlagsForTerminate(),
-			Action: func(c *cli.Context) {
-				TerminateWorkflow(c)
-			},
+			Action:  TerminateWorkflow,
 		},
 		{
 			Name:        "list",
@@ -120,79 +102,61 @@ func newWorkflowCommands() []cli.Command {
 			Usage:       "list open or closed workflow executions",
 			Description: "list one page (default size 10 items) by default, use flag --pagesize to change page size",
 			Flags:       getFlagsForList(),
-			Action: func(c *cli.Context) {
-				ListWorkflow(c)
-			},
+			Action:      ListWorkflow,
 		},
 		{
 			Name:    "listall",
 			Aliases: []string{"la"},
 			Usage:   "list all open or closed workflow executions",
 			Flags:   getFlagsForListAll(),
-			Action: func(c *cli.Context) {
-				ListAllWorkflow(c)
-			},
+			Action:  ListAllWorkflow,
 		},
 		{
-			Name:  "listarchived",
-			Usage: "list archived workflow executions",
-			Flags: getFlagsForListArchived(),
-			Action: func(c *cli.Context) {
-				ListArchivedWorkflow(c)
-			},
+			Name:   "listarchived",
+			Usage:  "list archived workflow executions",
+			Flags:  getFlagsForListArchived(),
+			Action: ListArchivedWorkflow,
 		},
 		{
 			Name:    "scan",
 			Aliases: []string{"sc", "scanall"},
 			Usage: "scan workflow executions (need to enable Cadence server on ElasticSearch). " +
 				"It will be faster than listall, but result are not sorted.",
-			Flags: getFlagsForScan(),
-			Action: func(c *cli.Context) {
-				ScanAllWorkflow(c)
-			},
+			Flags:  getFlagsForScan(),
+			Action: ScanAllWorkflow,
 		},
 		{
 			Name:    "count",
 			Aliases: []string{"cnt"},
 			Usage:   "count number of workflow executions (need to enable Cadence server on ElasticSearch)",
 			Flags:   getFlagsForCount(),
-			Action: func(c *cli.Context) {
-				CountWorkflow(c)
-			},
+			Action:  CountWorkflow,
 		},
 		{
 			Name:        "query",
 			Usage:       "query workflow execution",
 			Description: "query result will be printed as JSON",
 			Flags:       getFlagsForQuery(),
-			Action: func(c *cli.Context) {
-				QueryWorkflow(c)
-			},
+			Action:      QueryWorkflow,
 		},
 		{
-			Name:  "query-types",
-			Usage: "list all available query types",
-			Flags: getFlagsForStack(),
-			Action: func(c *cli.Context) {
-				QueryWorkflowUsingQueryTypes(c)
-			},
+			Name:   "query-types",
+			Usage:  "list all available query types",
+			Flags:  getFlagsForStack(),
+			Action: QueryWorkflowUsingQueryTypes,
 		},
 		{
-			Name:  "stack",
-			Usage: "query workflow execution with __stack_trace as query type",
-			Flags: getFlagsForStack(),
-			Action: func(c *cli.Context) {
-				QueryWorkflowUsingStackTrace(c)
-			},
+			Name:   "stack",
+			Usage:  "query workflow execution with __stack_trace as query type",
+			Flags:  getFlagsForStack(),
+			Action: QueryWorkflowUsingStackTrace,
 		},
 		{
 			Name:    "describe",
 			Aliases: []string{"desc"},
 			Usage:   "show information of workflow execution",
 			Flags:   getFlagsForDescribe(),
-			Action: func(c *cli.Context) {
-				DescribeWorkflow(c)
-			},
+			Action:  DescribeWorkflow,
 		},
 		{
 			Name:        "describeid",
@@ -200,27 +164,21 @@ func newWorkflowCommands() []cli.Command {
 			Usage:       "show information of workflow execution with given workflow_id and optional run_id (a shortcut of `describe -w <wid> -r <rid>`)",
 			Description: "cadence workflow describeid <workflow_id> <run_id>. workflow_id is required; run_id is optional",
 			Flags:       getFlagsForDescribeID(),
-			Action: func(c *cli.Context) {
-				DescribeWorkflowWithID(c)
-			},
+			Action:      DescribeWorkflowWithID,
 		},
 		{
 			Name:    "observe",
 			Aliases: []string{"ob"},
 			Usage:   "show the progress of workflow history",
 			Flags:   getFlagsForObserve(),
-			Action: func(c *cli.Context) {
-				ObserveHistory(c)
-			},
+			Action:  ObserveHistory,
 		},
 		{
 			Name:    "observeid",
 			Aliases: []string{"obid"},
 			Usage:   "show the progress of workflow history with given workflow_id and optional run_id (a shortcut of `observe -w <wid> -r <rid>`)",
 			Flags:   getFlagsForObserveID(),
-			Action: func(c *cli.Context) {
-				ObserveHistoryWithID(c)
-			},
+			Action:  ObserveHistoryWithID,
 		},
 		{
 			Name:    "reset",
@@ -269,9 +227,7 @@ func newWorkflowCommands() []cli.Command {
 					Usage: "whether or not skipping signals reapply after the reset point",
 				},
 			},
-			Action: func(c *cli.Context) {
-				ResetWorkflow(c)
-			},
+			Action: ResetWorkflow,
 		},
 		{
 			Name: "reset-batch",
@@ -366,9 +322,7 @@ func newWorkflowCommands() []cli.Command {
 						"meaning that workflow will be reset to the first decision that completed in last 15 minutes.",
 				},
 			},
-			Action: func(c *cli.Context) {
-				ResetInBatch(c)
-			},
+			Action: ResetInBatch,
 		},
 		{
 			Name:        "batch",
@@ -410,9 +364,7 @@ func newActivityCommands() []cli.Command {
 					Usage: "Identity of the operator",
 				},
 			},
-			Action: func(c *cli.Context) {
-				CompleteActivity(c)
-			},
+			Action: CompleteActivity,
 		},
 		{
 			Name:  "fail",
@@ -443,9 +395,7 @@ func newActivityCommands() []cli.Command {
 					Usage: "Identity of the operator",
 				},
 			},
-			Action: func(c *cli.Context) {
-				FailActivity(c)
-			},
+			Action: FailActivity,
 		},
 	}
 }
@@ -462,9 +412,7 @@ func newBatchCommands() []cli.Command {
 					Usage: "Batch Job ID",
 				},
 			},
-			Action: func(c *cli.Context) {
-				DescribeBatchJob(c)
-			},
+			Action: DescribeBatchJob,
 		},
 		{
 			Name:  "terminate",
@@ -479,9 +427,7 @@ func newBatchCommands() []cli.Command {
 					Usage: "Reason to stop this batch job",
 				},
 			},
-			Action: func(c *cli.Context) {
-				TerminateBatchJob(c)
-			},
+			Action: TerminateBatchJob,
 		},
 		{
 			Name:    "list",
@@ -494,9 +440,7 @@ func newBatchCommands() []cli.Command {
 					Usage: "Result page size",
 				},
 			},
-			Action: func(c *cli.Context) {
-				ListBatchJobs(c)
-			},
+			Action: ListBatchJobs,
 		},
 		{
 			Name:  "start",
@@ -561,9 +505,7 @@ func newBatchCommands() []cli.Command {
 					Usage: "Concurrency of batch activity",
 				},
 			},
-			Action: func(c *cli.Context) {
-				StartBatchJob(c)
-			},
+			Action: StartBatchJob,
 		},
 	}
 }
