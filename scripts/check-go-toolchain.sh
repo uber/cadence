@@ -2,9 +2,6 @@
 
 set -eo pipefail
 
-# enable double-star
-shopt -s globstar
-
 fail=0
 bad() {
   echo -e "$@" >/dev/stderr
@@ -21,7 +18,7 @@ root="$(git rev-parse --show-toplevel)"
 # this SHOULD match the dependencies in the goversion-lint check to avoid skipping it
 
 # check dockerfiles
-for file in "$root"/**/Dockerfile; do
+while read file; do
   # find "FROM golang:1.22.3-alpine3.18 ..." lines
   line="$(grep -i 'from golang:' "$file")"
   # remove "from golang:" prefix
@@ -32,7 +29,7 @@ for file in "$root"/**/Dockerfile; do
   if [[ "$version" != "$target" ]]; then
     bad "Wrong Go version in file $file:\n\t$line"
   fi
-done
+done < <( find "$root" -name Dockerfile )
 
 # check workflows
 codecov_file="$root/.github/workflows/codecov.yml"
