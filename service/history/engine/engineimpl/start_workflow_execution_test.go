@@ -144,7 +144,7 @@ func TestStartWorkflowExecution(t *testing.T) {
 					Identity:              "workflow-starter",
 					RequestID:             "request-id-for-start",
 					WorkflowType:          &types.WorkflowType{Name: "workflow-type"},
-					WorkflowIDReusePolicy: (*types.WorkflowIDReusePolicy)(common.Int32Ptr(1)),
+					WorkflowIDReusePolicy: types.WorkflowIDReusePolicyAllowDuplicate.Ptr(),
 				},
 			},
 			setupMocks: func(t *testing.T, eft *testdata.EngineForTest) {
@@ -179,7 +179,7 @@ func TestStartWorkflowExecution(t *testing.T) {
 					Identity:              "workflow-starter",
 					RequestID:             "request-id-for-start",
 					WorkflowType:          &types.WorkflowType{Name: "workflow-type"},
-					WorkflowIDReusePolicy: (*types.WorkflowIDReusePolicy)(common.Int32Ptr(3)),
+					WorkflowIDReusePolicy: types.WorkflowIDReusePolicyTerminateIfRunning.Ptr(),
 				},
 			},
 			setupMocks: func(t *testing.T, eft *testdata.EngineForTest) {
@@ -196,6 +196,39 @@ func TestStartWorkflowExecution(t *testing.T) {
 					Return(&persistence.AppendHistoryNodesResponse{}, nil).Once()
 			},
 			wantErr: false,
+		},
+		{
+			name: "workflow ID reuse policy - reject duplicate",
+			request: &types.HistoryStartWorkflowExecutionRequest{
+				DomainUUID: constants.TestDomainID,
+				StartRequest: &types.StartWorkflowExecutionRequest{
+					Domain:                              constants.TestDomainName,
+					WorkflowID:                          "workflow-id",
+					WorkflowType:                        &types.WorkflowType{Name: "workflow-type"},
+					TaskList:                            &types.TaskList{Name: "default-task-list"},
+					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(3600), // 1 hour
+					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),   // 10 seconds
+					Identity:                            "workflow-starter",
+					RequestID:                           "request-id-for-start",
+					WorkflowIDReusePolicy:               types.WorkflowIDReusePolicyRejectDuplicate.Ptr(),
+				},
+			},
+			setupMocks: func(t *testing.T, eft *testdata.EngineForTest) {
+				domainEntry := &cache.DomainCacheEntry{}
+				eft.ShardCtx.Resource.DomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(domainEntry, nil).AnyTimes()
+
+				eft.ShardCtx.Resource.ExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.Anything).Return(nil, &persistence.WorkflowExecutionAlreadyStartedError{
+					StartRequestID: "existing-request-id",
+					RunID:          "existing-run-id",
+				}).Once()
+				eft.ShardCtx.Resource.ShardMgr.
+					On("UpdateShard", mock.Anything, mock.Anything).
+					Return(nil)
+				historyV2Mgr := eft.ShardCtx.Resource.HistoryMgr
+				historyV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.AnythingOfType("*persistence.AppendHistoryNodesRequest")).
+					Return(&persistence.AppendHistoryNodesResponse{}, nil).Once()
+			},
+			wantErr: true,
 		},
 	}
 
