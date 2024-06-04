@@ -87,6 +87,7 @@ type (
 		mockHistoryArchiver    *archiver.HistoryArchiverMock
 		mockVisibilityArchiver *archiver.VisibilityArchiverMock
 		mockVersionChecker     *client.VersionCheckerMock
+		mockTokenSerializer    *common.MockTaskTokenSerializer
 
 		testDomain   string
 		testDomainID string
@@ -119,6 +120,7 @@ func (s *workflowHandlerSuite) SetupTest() {
 	s.mockVisibilityMgr = s.mockResource.VisibilityMgr
 	s.mockArchivalMetadata = s.mockResource.ArchivalMetadata
 	s.mockArchiverProvider = s.mockResource.ArchiverProvider
+	s.mockTokenSerializer = common.NewMockTaskTokenSerializer(s.controller)
 
 	s.mockProducer = &mocks.KafkaProducer{}
 	s.mockMessagingClient = mocks.NewMockMessagingClient(s.mockProducer, nil)
@@ -2008,6 +2010,139 @@ func (s *workflowHandlerSuite) newConfig(dynamicClient dc.Client) *frontendcfg.C
 	)
 	config.EmitSignalNameMetricsTag = dc.GetBoolPropertyFnFilteredByDomain(true)
 	return config
+}
+
+func (s *workflowHandlerSuite) TestRespondActivityTaskFailedByID() {
+	config := s.newConfig(dc.NewInMemoryClient())
+	config.EnableClientVersionCheck = dc.GetBoolPropertyFn(true)
+	wh := NewWorkflowHandler(s.mockResource, config, s.mockVersionChecker, nil)
+	wh.tokenSerializer = s.mockTokenSerializer
+
+	validRequest := &types.RespondActivityTaskFailedByIDRequest{
+		Domain:     s.testDomain,
+		WorkflowID: testWorkflowID,
+		RunID:      testRunID,
+		ActivityID: "activityID",
+		Identity:   "identity",
+		Details:    make([]byte, 1000),
+	}
+
+	testInput := map[string]struct {
+		request     *types.RespondActivityTaskFailedByIDRequest
+		expectError bool
+		mockFn      func()
+	}{
+		"shutting down": {
+			request: validRequest,
+			mockFn: func() {
+				wh.shuttingDown = int32(1)
+			},
+			expectError: true,
+		},
+		"nil request": {
+			request:     nil,
+			mockFn:      func() {},
+			expectError: true,
+		},
+		"empty domain": {
+			request: &types.RespondActivityTaskFailedByIDRequest{
+				Domain: "",
+			},
+			mockFn:      func() {},
+			expectError: true,
+		},
+		"cannot get domain ID": {
+			request: validRequest,
+			mockFn: func() {
+				s.mockDomainCache.EXPECT().GetDomainID(s.testDomain).Return("", errors.New("error getting domain ID"))
+			},
+			expectError: true,
+		},
+		"empty domain ID": {
+			request: &types.RespondActivityTaskFailedByIDRequest{
+				Domain:     s.testDomain,
+				WorkflowID: "",
+			},
+			mockFn: func() {
+				s.mockDomainCache.EXPECT().GetDomainID(s.testDomain).Return("", nil)
+			},
+			expectError: true,
+		},
+		"empty workflow ID": {
+			request: &types.RespondActivityTaskFailedByIDRequest{
+				Domain:     s.testDomain,
+				WorkflowID: "",
+			},
+			mockFn: func() {
+				s.mockDomainCache.EXPECT().GetDomainID(s.testDomain).Return(s.testDomainID, nil)
+			},
+			expectError: true,
+		},
+		"empty activity ID": {
+			request: &types.RespondActivityTaskFailedByIDRequest{
+				Domain:     s.testDomain,
+				WorkflowID: testWorkflowID,
+				ActivityID: "",
+			},
+			mockFn: func() {
+				s.mockDomainCache.EXPECT().GetDomainID(s.testDomain).Return(s.testDomainID, nil)
+			},
+			expectError: true,
+		},
+		"exceeds id length limit": {
+			request: validRequest,
+			mockFn: func() {
+				s.mockDomainCache.EXPECT().GetDomainID(s.testDomain).Return(s.testDomainID, nil)
+				wh.config.MaxIDLengthWarnLimit = dc.GetIntPropertyFn(1)
+				wh.config.IdentityMaxLength = dc.GetIntPropertyFilteredByDomain(1)
+			},
+			expectError: true,
+		},
+		"serialzation failure": {
+			request: validRequest,
+			mockFn: func() {
+				s.mockDomainCache.EXPECT().GetDomainID(s.testDomain).Return(s.testDomainID, nil)
+				s.mockTokenSerializer.EXPECT().Serialize(gomock.Any()).Return(nil, errors.New("failed to deserialize token"))
+			},
+			expectError: true,
+		},
+		"return exceeds blob size limit": {
+			request: validRequest,
+			mockFn: func() {
+				s.mockDomainCache.EXPECT().GetDomainID(s.testDomain).Return(s.testDomainID, nil)
+				s.mockTokenSerializer.EXPECT().Serialize(gomock.Any()).Return(make([]byte, 100), nil)
+				wh.config.BlobSizeLimitWarn = dc.GetIntPropertyFilteredByDomain(1)
+				wh.config.BlobSizeLimitError = dc.GetIntPropertyFilteredByDomain(1)
+				s.mockHistoryClient.EXPECT().RespondActivityTaskFailed(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			expectError: false,
+		},
+		"history client returns error": {
+			request: validRequest,
+			mockFn: func() {
+				s.mockDomainCache.EXPECT().GetDomainID(s.testDomain).Return(s.testDomainID, nil)
+				s.mockTokenSerializer.EXPECT().Serialize(gomock.Any()).Return(make([]byte, 100), nil)
+				s.mockHistoryClient.EXPECT().RespondActivityTaskFailed(gomock.Any(), gomock.Any()).Return(errors.New("error"))
+			},
+			expectError: true,
+		},
+	}
+
+	for name, input := range testInput {
+		s.Run(name, func() {
+			input.mockFn()
+			err := wh.RespondActivityTaskFailedByID(context.Background(), input.request)
+			if input.expectError {
+				s.Error(err)
+			} else {
+				s.NoError(err)
+			}
+			wh.shuttingDown = int32(0)
+			wh.config.MaxIDLengthWarnLimit = dc.GetIntPropertyFn(1000)
+			wh.config.IdentityMaxLength = dc.GetIntPropertyFilteredByDomain(1000)
+
+		})
+	}
 }
 
 func updateRequest(
