@@ -131,6 +131,8 @@ func (s *contextTestSuite) newContext() *contextImpl {
 		maxTransferSequenceNumber: testMaxTransferSequenceNumber,
 		timerMaxReadLevelMap:      make(map[string]time.Time),
 		remoteClusterCurrentTime:  make(map[string]time.Time),
+		transferFailoverLevels:    make(map[string]TransferFailoverLevel),
+		timerFailoverLevels:       make(map[string]TimerFailoverLevel),
 		eventsCache:               eventsCache,
 	}
 
@@ -155,6 +157,152 @@ func (s *contextTestSuite) TestAccessorMethods() {
 	mockEngine := engine.NewMockEngine(s.controller)
 	s.context.SetEngine(mockEngine)
 	s.Assert().Equal(mockEngine, s.context.GetEngine())
+}
+
+func (s *contextTestSuite) TestTransferAckLevel() {
+	// validate default value returned
+	s.context.shardInfo.TransferAckLevel = 5
+	s.Assert().EqualValues(5, s.context.GetTransferAckLevel())
+
+	// update and validate it's returned
+	s.mockShardManager.On("UpdateShard", mock.Anything, mock.Anything).Once().Return(nil)
+	s.context.UpdateTransferAckLevel(20)
+	s.Assert().EqualValues(20, s.context.GetTransferAckLevel())
+	s.Assert().Equal(0, s.context.shardInfo.StolenSinceRenew)
+}
+
+func (s *contextTestSuite) TestClusterTransferAckLevel() {
+	// update and validate cluster transfer ack level
+	s.mockShardManager.On("UpdateShard", mock.Anything, mock.Anything).Once().Return(nil)
+	s.context.UpdateTransferClusterAckLevel(cluster.TestCurrentClusterName, 5)
+	s.Assert().EqualValues(5, s.context.GetTransferClusterAckLevel(cluster.TestCurrentClusterName))
+	s.Assert().Equal(0, s.context.shardInfo.StolenSinceRenew)
+
+	// get cluster transfer ack level for non existing cluster
+	s.context.shardInfo.TransferAckLevel = 10
+	s.Assert().EqualValues(10, s.context.GetTransferClusterAckLevel("non-existing-cluster"))
+}
+
+func (s *contextTestSuite) TestTimerAckLevel() {
+	// validate default value returned
+	now := time.Now()
+	s.context.shardInfo.TimerAckLevel = now
+	s.Assert().Equal(now.UnixNano(), s.context.GetTimerAckLevel().UnixNano())
+
+	// update and validate it's returned
+	newTime := time.Now()
+	s.mockShardManager.On("UpdateShard", mock.Anything, mock.Anything).Once().Return(nil)
+	s.context.UpdateTimerAckLevel(newTime)
+	s.Assert().EqualValues(newTime.UnixNano(), s.context.GetTimerAckLevel().UnixNano())
+	s.Assert().Equal(0, s.context.shardInfo.StolenSinceRenew)
+}
+
+func (s *contextTestSuite) TestClusterTimerAckLevel() {
+	// update and validate cluster timer ack level
+	now := time.Now()
+	s.mockShardManager.On("UpdateShard", mock.Anything, mock.Anything).Once().Return(nil)
+	s.context.UpdateTimerClusterAckLevel(cluster.TestCurrentClusterName, now)
+	s.Assert().EqualValues(now.UnixNano(), s.context.GetTimerClusterAckLevel(cluster.TestCurrentClusterName).UnixNano())
+	s.Assert().Equal(0, s.context.shardInfo.StolenSinceRenew)
+
+	// get cluster timer ack level for non existing cluster
+	s.context.shardInfo.TimerAckLevel = now
+	s.Assert().EqualValues(now.UnixNano(), s.context.GetTimerClusterAckLevel("non-existing-cluster").UnixNano())
+}
+
+func (s *contextTestSuite) TestUpdateTransferFailoverLevel() {
+	failoverLevel1 := TransferFailoverLevel{
+		StartTime:    time.Now(),
+		MinLevel:     1,
+		CurrentLevel: 10,
+		MaxLevel:     100,
+		DomainIDs:    map[string]struct{}{"testDomainID": {}},
+	}
+	failoverLevel2 := TransferFailoverLevel{
+		StartTime:    time.Now(),
+		MinLevel:     2,
+		CurrentLevel: 20,
+		MaxLevel:     200,
+		DomainIDs:    map[string]struct{}{"testDomainID2": {}},
+	}
+
+	err := s.context.UpdateTransferFailoverLevel("id1", failoverLevel1)
+	s.NoError(err)
+	err = s.context.UpdateTransferFailoverLevel("id2", failoverLevel2)
+	s.NoError(err)
+
+	gotLevels := s.context.GetAllTransferFailoverLevels()
+	s.Len(gotLevels, 2)
+	assert.Equal(s.T(), failoverLevel1, gotLevels["id1"])
+	assert.Equal(s.T(), failoverLevel2, gotLevels["id2"])
+
+	err = s.context.DeleteTransferFailoverLevel("id1")
+	s.NoError(err)
+	gotLevels = s.context.GetAllTransferFailoverLevels()
+	s.Len(gotLevels, 1)
+	assert.Equal(s.T(), failoverLevel2, gotLevels["id2"])
+}
+
+func (s *contextTestSuite) TestUpdateTimerFailoverLevel() {
+	t := time.Now()
+	failoverLevel1 := TimerFailoverLevel{
+		StartTime:    t,
+		MinLevel:     t.Add(time.Minute),
+		CurrentLevel: t.Add(time.Minute * 2),
+		MaxLevel:     t.Add(time.Minute * 3),
+		DomainIDs:    map[string]struct{}{"testDomainID": {}},
+	}
+	failoverLevel2 := TimerFailoverLevel{
+		StartTime:    t,
+		MinLevel:     t.Add(time.Minute * 2),
+		CurrentLevel: t.Add(time.Minute * 4),
+		MaxLevel:     t.Add(time.Minute * 6),
+		DomainIDs:    map[string]struct{}{"testDomainID2": {}},
+	}
+
+	err := s.context.UpdateTimerFailoverLevel("id1", failoverLevel1)
+	s.NoError(err)
+	err = s.context.UpdateTimerFailoverLevel("id2", failoverLevel2)
+	s.NoError(err)
+
+	gotLevels := s.context.GetAllTimerFailoverLevels()
+	s.Len(gotLevels, 2)
+	assert.Equal(s.T(), failoverLevel1, gotLevels["id1"])
+	assert.Equal(s.T(), failoverLevel2, gotLevels["id2"])
+
+	err = s.context.DeleteTimerFailoverLevel("id1")
+	s.NoError(err)
+	gotLevels = s.context.GetAllTimerFailoverLevels()
+	s.Len(gotLevels, 1)
+	assert.Equal(s.T(), failoverLevel2, gotLevels["id2"])
+}
+
+func (s *contextTestSuite) TestDomainNotificationVersion() {
+	// test initial value
+	s.EqualValues(0, s.context.GetDomainNotificationVersion())
+
+	// test updated value
+	s.mockShardManager.On("UpdateShard", mock.Anything, mock.Anything).Once().Return(nil)
+	err := s.context.UpdateDomainNotificationVersion(10)
+	s.NoError(err)
+	s.EqualValues(10, s.context.GetDomainNotificationVersion())
+}
+
+func (s *contextTestSuite) TestTimerMaxReadLevel() {
+	// get current cluster's level
+	gotLevel := s.context.UpdateTimerMaxReadLevel(cluster.TestCurrentClusterName)
+	wantLevel := s.mockResource.TimeSource.Now().Add(s.context.config.TimerProcessorMaxTimeShift()).Truncate(time.Millisecond)
+	s.Equal(wantLevel, gotLevel)
+	s.Equal(wantLevel, s.context.GetTimerMaxReadLevel(cluster.TestCurrentClusterName))
+
+	// get remote cluster's level
+	remoteCluster := "remote-cluster"
+	now := time.Now()
+	s.context.SetCurrentTime(remoteCluster, now)
+	gotLevel = s.context.UpdateTimerMaxReadLevel(remoteCluster)
+	wantLevel = now.Add(s.context.config.TimerProcessorMaxTimeShift()).Truncate(time.Millisecond)
+	s.Equal(wantLevel, gotLevel)
+	s.Equal(wantLevel, s.context.GetTimerMaxReadLevel(remoteCluster))
 }
 
 func (s *contextTestSuite) TestGenerateTransferTaskID() {
