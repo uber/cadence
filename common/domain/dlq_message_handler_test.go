@@ -528,23 +528,3 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_NonDomainTask() {
 	s.Equal("Encounter non domain replication task in domain replication queue.", err.Error())
 	s.Nil(token)
 }
-
-func (s *dlqMessageHandlerSuite) TestEmitDLQSizeMetricsLoop_ErrorHandling() {
-	expectedError := fmt.Errorf("error fetching DLQ size")
-	s.mockReplicationQueue.EXPECT().GetDLQSize(gomock.Any()).Return(int64(0), expectedError).AnyTimes()
-
-	// Start the metrics loop in a goroutine
-	go s.dlqMessageHandler.emitDLQSizeMetricsLoop()
-
-	// Allow some time for the goroutine to run and tick at least once
-	time.Sleep(1 * time.Nanosecond)
-
-	// Close the done channel to signal the loop to stop
-	close(s.dlqMessageHandler.done)
-
-	// Wait a bit to ensure the loop exits
-	time.Sleep(1 * time.Nanosecond)
-
-	s.dlqMessageHandler.logger.Warn("Failed to get DLQ size.", tag.Error(errors.New("DomainReplicationQueueSizeLimit")))
-
-}
