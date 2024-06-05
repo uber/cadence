@@ -533,15 +533,18 @@ func (s *taskProcessorSuite) TestTriggerDataInconsistencyScan_Success() {
 }
 
 func (s *taskProcessorSuite) TestCleanupReplicationTaskLoop() {
-	wantResp := &persistence.RangeCompleteReplicationTaskResponse{
-		TasksCompleted: 15, // if this number is different than page size the loop breaks
-	}
-	s.executionManager.On("RangeCompleteReplicationTask", mock.Anything, &persistence.RangeCompleteReplicationTaskRequest{
+	req := &persistence.RangeCompleteReplicationTaskRequest{
 		// this is min ack level of remote clusters. there's only one remote cluster in this test "standby".
 		// its replication ack level is set to 350 in SetupTest()
 		InclusiveEndTaskID: 350,
 		PageSize:           50, // this comes from test config
-	}).Return(wantResp, nil)
+	}
+	s.executionManager.On("RangeCompleteReplicationTask", mock.Anything, req).Return(&persistence.RangeCompleteReplicationTaskResponse{
+		TasksCompleted: 50, // if this number equals to page size the loop continues
+	}, nil).Times(1)
+	s.executionManager.On("RangeCompleteReplicationTask", mock.Anything, req).Return(&persistence.RangeCompleteReplicationTaskResponse{
+		TasksCompleted: 15, // if this number is different than page size the loop breaks
+	}, nil)
 
 	// start the cleanup loop
 	s.taskProcessor.wg.Add(1)
