@@ -78,33 +78,6 @@ type (
 		ActivityTaskDispatchInfo *types.ActivityTaskDispatchInfo
 	}
 
-	Manager interface {
-		Start() error
-		Stop()
-		// AddTask adds a task to the task list. This method will first attempt a synchronous
-		// match with a poller. When that fails, task will be written to database and later
-		// asynchronously matched with a poller
-		AddTask(ctx context.Context, params AddTaskParams) (syncMatch bool, err error)
-		// GetTask blocks waiting for a task Returns error when context deadline is exceeded
-		// maxDispatchPerSecond is the max rate at which tasks are allowed to be dispatched
-		// from this task list to pollers
-		GetTask(ctx context.Context, maxDispatchPerSecond *float64) (*InternalTask, error)
-		// DispatchTask dispatches a task to a poller. When there are no pollers to pick
-		// up the task, this method will return error. Task will not be persisted to db
-		DispatchTask(ctx context.Context, task *InternalTask) error
-		// DispatchQueryTask will dispatch query to local or remote poller. If forwarded then result or error is returned,
-		// if dispatched to local poller then nil and nil is returned.
-		DispatchQueryTask(ctx context.Context, taskID string, request *types.MatchingQueryWorkflowRequest) (*types.QueryWorkflowResponse, error)
-		CancelPoller(pollerID string)
-		GetAllPollerInfo() []*types.PollerInfo
-		HasPollerAfter(accessTime time.Time) bool
-		// DescribeTaskList returns information about the target tasklist
-		DescribeTaskList(includeTaskListStatus bool) *types.DescribeTaskListResponse
-		String() string
-		GetTaskListKind() types.TaskListKind
-		TaskListID() *Identifier
-	}
-
 	outstandingPollerInfo struct {
 		isolationGroup string
 		cancel         context.CancelFunc
@@ -151,8 +124,6 @@ const (
 	// maxSyncMatchWaitTime is the max amount of time that we are willing to wait for a sync match to happen
 	maxSyncMatchWaitTime = 200 * time.Millisecond
 )
-
-var _ Manager = (*taskListManagerImpl)(nil)
 
 var errRemoteSyncMatchFailed = &types.RemoteSyncMatchedError{Message: "remote sync match failed"}
 
