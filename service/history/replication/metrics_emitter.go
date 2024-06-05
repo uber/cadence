@@ -23,7 +23,7 @@
 package replication
 
 import (
-	ctx "context"
+	"context"
 	"fmt"
 	"strconv"
 	"sync"
@@ -54,7 +54,9 @@ type (
 		scope          metrics.Scope
 		logger         log.Logger
 		status         int32
-		done           chan struct{}
+		interval       time.Duration
+		ctx            context.Context
+		cancelCtx      context.CancelFunc
 		wg             sync.WaitGroup
 	}
 
@@ -86,6 +88,7 @@ func NewMetricsEmitter(
 		tag.ClusterName(currentCluster),
 		tag.ShardID(shardID))
 
+	ctx, cancel := context.WithCancel(context.Background())
 	return &MetricsEmitterImpl{
 		shardID:        shardID,
 		currentCluster: currentCluster,
@@ -94,8 +97,10 @@ func NewMetricsEmitter(
 		shardData:      shardData,
 		reader:         reader,
 		scope:          scope,
+		interval:       metricsEmissionInterval,
 		logger:         logger,
-		done:           make(chan struct{}),
+		ctx:            ctx,
+		cancelCtx:      cancel,
 	}
 }
 
@@ -115,7 +120,7 @@ func (m *MetricsEmitterImpl) Stop() {
 	}
 
 	m.logger.Info("ReplicationMetricsEmitter shutting down.")
-	close(m.done)
+	m.cancelCtx()
 	if !common.AwaitWaitGroup(&m.wg, 5*time.Second) {
 		m.logger.Warn("ReplicationMetricsEmitter timed out on shutdown.")
 	}
@@ -124,13 +129,13 @@ func (m *MetricsEmitterImpl) Stop() {
 func (m *MetricsEmitterImpl) emitMetricsLoop() {
 	defer m.wg.Done()
 
-	ticker := time.NewTicker(metricsEmissionInterval)
+	ticker := time.NewTicker(m.interval)
 	defer ticker.Stop()
 	defer func() { log.CapturePanic(recover(), m.logger, nil) }()
 
 	for {
 		select {
-		case <-m.done:
+		case <-m.ctx.Done():
 			return
 		case <-ticker.C:
 			m.emitMetrics()
@@ -157,7 +162,7 @@ func (m *MetricsEmitterImpl) determineReplicationLatency(remoteClusterName strin
 	logger := m.logger.WithTags(tag.RemoteCluster(remoteClusterName))
 	lastReadTaskID := m.shardData.GetClusterReplicationLevel(remoteClusterName)
 
-	tasks, _, err := m.reader.Read(ctx.Background(), lastReadTaskID, lastReadTaskID+1)
+	tasks, _, err := m.reader.Read(m.ctx, lastReadTaskID, lastReadTaskID+1)
 	if err != nil {
 		logger.Error(fmt.Sprintf(
 			"Error reading when determining replication latency, lastReadTaskID=%v", lastReadTaskID),

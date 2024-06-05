@@ -52,7 +52,9 @@ func TestMetricsEmitterStartStop(t *testing.T) {
 	testShardData := newTestShardData(timeSource, metadata)
 
 	metricsEmitter := NewMetricsEmitter(1, testShardData, fakeTaskReader{}, metrics.NewNoopMetricsClient())
+	metricsEmitter.interval = 5 * time.Millisecond
 	metricsEmitter.Start()
+	time.Sleep(20 * time.Millisecond) // let the metrics emitter run a few times
 	metricsEmitter.Stop()
 }
 
