@@ -48,37 +48,17 @@ func TestMetricsEmitterStartStop(t *testing.T) {
 	goleak.VerifyNone(t)
 
 	timeSource := clock.NewMockedTimeSource()
-	metadata := cluster.NewMetadata(0, cluster1, cluster1, map[string]config.ClusterInformation{
-		cluster1: {Enabled: true},
-		cluster2: {Enabled: true},
-		cluster3: {Enabled: true},
-	},
-		func(d string) bool { return false },
-		metrics.NewNoopMetricsClient(),
-		testlogger.New(t),
-	)
+	metadata := newClusterMetadata(t)
 	testShardData := newTestShardData(timeSource, metadata)
 
-	task1 := persistence.ReplicationTaskInfo{TaskID: 1, CreationTime: timeSource.Now().Add(-time.Hour).UnixNano()}
-	task2 := persistence.ReplicationTaskInfo{TaskID: 2, CreationTime: timeSource.Now().Add(-time.Minute).UnixNano()}
-	reader := fakeTaskReader{&task1, &task2}
-
-	metricsEmitter := NewMetricsEmitter(1, testShardData, reader, metrics.NewNoopMetricsClient())
+	metricsEmitter := NewMetricsEmitter(1, testShardData, fakeTaskReader{}, metrics.NewNoopMetricsClient())
 	metricsEmitter.Start()
 	metricsEmitter.Stop()
 }
 
 func TestMetricsEmitter(t *testing.T) {
 	timeSource := clock.NewMockedTimeSource()
-	metadata := cluster.NewMetadata(0, cluster1, cluster1, map[string]config.ClusterInformation{
-		cluster1: {Enabled: true},
-		cluster2: {Enabled: true},
-		cluster3: {Enabled: true},
-	},
-		func(d string) bool { return false },
-		metrics.NewNoopMetricsClient(),
-		testlogger.New(t),
-	)
+	metadata := newClusterMetadata(t)
 	testShardData := newTestShardData(timeSource, metadata)
 
 	task1 := persistence.ReplicationTaskInfo{TaskID: 1, CreationTime: timeSource.Now().Add(-time.Hour).UnixNano()}
@@ -109,9 +89,7 @@ func TestMetricsEmitter(t *testing.T) {
 }
 
 type testShardData struct {
-	shardID                 int
 	logger                  log.Logger
-	maxReadLevel            int64
 	clusterReplicationLevel map[string]int64
 	timeSource              clock.TimeSource
 	metadata                cluster.Metadata
@@ -145,4 +123,16 @@ func (t testShardData) GetTimeSource() clock.TimeSource {
 
 func (t testShardData) GetClusterMetadata() cluster.Metadata {
 	return t.metadata
+}
+
+func newClusterMetadata(t *testing.T) cluster.Metadata {
+	return cluster.NewMetadata(0, cluster1, cluster1, map[string]config.ClusterInformation{
+		cluster1: {Enabled: true},
+		cluster2: {Enabled: true},
+		cluster3: {Enabled: true},
+	},
+		func(d string) bool { return false },
+		metrics.NewNoopMetricsClient(),
+		testlogger.New(t),
+	)
 }
