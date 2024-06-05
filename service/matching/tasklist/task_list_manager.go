@@ -142,19 +142,18 @@ func NewManager(
 	timeSource clock.TimeSource,
 	createTime time.Time,
 ) (Manager, error) {
-	taskListConfig, err := newTaskListConfig(taskList, config, domainCache)
+	domainName, err := domainCache.GetDomainName(taskList.GetDomainID())
 	if err != nil {
 		return nil, err
 	}
+
+	taskListConfig := newTaskListConfig(taskList, config, domainName)
 
 	if taskListKind == nil {
 		normalTaskListKind := types.TaskListKindNormal
 		taskListKind = &normalTaskListKind
 	}
-	domainName, err := domainCache.GetDomainName(taskList.GetDomainID())
-	if err != nil {
-		return nil, err
-	}
+
 	scope := NewPerTaskListScope(domainName, taskList.GetName(), *taskListKind, metricsClient, metrics.MatchingTaskListMgrScope)
 	db := newTaskListDB(taskManager, taskList.GetDomainID(), domainName, taskList.GetName(), taskList.GetType(), int(*taskListKind), logger)
 
@@ -253,6 +252,7 @@ func (c *taskListManagerImpl) handleErr(err error) error {
 // be written to database and later asynchronously matched with a poller
 func (c *taskListManagerImpl) AddTask(ctx context.Context, params AddTaskParams) (bool, error) {
 	c.startWG.Wait()
+
 	if c.shouldReload() {
 		c.Stop()
 		return false, errShutdown
@@ -662,12 +662,7 @@ func rangeIDToTaskIDBlock(rangeID, rangeSize int64) taskIDBlock {
 	}
 }
 
-func newTaskListConfig(id *Identifier, cfg *config.Config, domainCache cache.DomainCache) (*config.TaskListConfig, error) {
-	domainName, err := domainCache.GetDomainName(id.GetDomainID())
-	if err != nil {
-		return nil, err
-	}
-
+func newTaskListConfig(id *Identifier, cfg *config.Config, domainName string) *config.TaskListConfig {
 	taskListName := id.GetName()
 	taskType := id.GetType()
 	return &config.TaskListConfig{
@@ -734,7 +729,7 @@ func newTaskListConfig(id *Identifier, cfg *config.Config, domainCache cache.Dom
 		TaskDispatchRPS:           cfg.TaskDispatchRPS,
 		TaskDispatchRPSTTL:        cfg.TaskDispatchRPSTTL,
 		MaxTimeBetweenTaskDeletes: cfg.MaxTimeBetweenTaskDeletes,
-	}, nil
+	}
 }
 
 func NewPerTaskListScope(
