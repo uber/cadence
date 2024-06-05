@@ -37,9 +37,19 @@ var (
 	AdminCloseShardRequest = types.CloseShardRequest{
 		ShardID: ShardID,
 	}
+	AdminDeleteWorkflowRequest = types.AdminDeleteWorkflowRequest{
+		Domain:    DomainID,
+		Execution: &WorkflowExecution,
+	}
+	AdminDeleteWorkflowResponse = types.AdminDeleteWorkflowResponse{
+		HistoryDeleted:    true,
+		ExecutionsDeleted: false,
+		VisibilityDeleted: true,
+	}
 	AdminDescribeClusterResponse = types.DescribeClusterResponse{
 		SupportedClientVersions: &SupportedClientVersions,
 		MembershipInfo:          &MembershipInfo,
+		PersistenceInfo:         PersistenceInfoMap,
 	}
 	AdminDescribeHistoryHostRequest_ByHost = types.DescribeHistoryHostRequest{
 		HostAddress: common.StringPtr(HostName),
@@ -65,6 +75,17 @@ var (
 	AdminDescribeQueueResponse = types.DescribeQueueResponse{
 		ProcessingQueueStates: []string{"state1", "state2"},
 	}
+	AdminDescribeShardDistributionRequest = types.DescribeShardDistributionRequest{
+		PageSize: PageSize,
+		PageID:   1,
+	}
+	AdminDescribeShardDistributionResponse = types.DescribeShardDistributionResponse{
+		NumberOfShards: 2,
+		Shards: map[int32]string{
+			0: "shard1",
+			1: "shard2",
+		},
+	}
 	AdminDescribeWorkflowExecutionRequest = types.AdminDescribeWorkflowExecutionRequest{
 		Domain:    DomainName,
 		Execution: &WorkflowExecution,
@@ -81,6 +102,12 @@ var (
 	AdminGetDLQReplicationMessagesResponse = types.GetDLQReplicationMessagesResponse{
 		ReplicationTasks: ReplicationTaskArray,
 	}
+	AdminGetDomainIsolationGroupsRequest = types.GetDomainIsolationGroupsRequest{
+		Domain: DomainName,
+	}
+	AdminGetDomainIsolationGroupsResponse = types.GetDomainIsolationGroupsResponse{
+		IsolationGroups: IsolationGroupConfiguration,
+	}
 	AdminGetDomainReplicationMessagesRequest = types.GetDomainReplicationMessagesRequest{
 		LastRetrievedMessageID: common.Int64Ptr(MessageID1),
 		LastProcessedMessageID: common.Int64Ptr(MessageID2),
@@ -89,7 +116,13 @@ var (
 	AdminGetDomainReplicationMessagesResponse = types.GetDomainReplicationMessagesResponse{
 		Messages: &ReplicationMessages,
 	}
-	AdminGetReplicationMessagesRequest = types.GetReplicationMessagesRequest{
+	AdminGetDynamicConfigRequest = types.GetDynamicConfigRequest{
+		ConfigName: DynamicConfigEntryName,
+		Filters:    []*types.DynamicConfigFilter{&DynamicConfigFilter},
+	}
+	AdminGetDynamicConfigResponse        = types.GetDynamicConfigResponse{Value: &DataBlob}
+	AdminGetGlobalIsolationGroupsRequest = types.GetGlobalIsolationGroupsRequest{}
+	AdminGetReplicationMessagesRequest   = types.GetReplicationMessagesRequest{
 		Tokens:      ReplicationTokenArray,
 		ClusterName: ClusterName1,
 	}
@@ -115,6 +148,29 @@ var (
 	AdminCountDLQMessagesResponse = types.CountDLQMessagesResponse{
 		History: HistoryCountDLQMessagesResponse.Entries,
 		Domain:  123456,
+	}
+	AdminListDynamicConfigRequest = types.ListDynamicConfigRequest{
+		ConfigName: DynamicConfigEntryName,
+	}
+	AdminListDynamicConfigResponse = types.ListDynamicConfigResponse{
+		Entries: []*types.DynamicConfigEntry{
+			{
+				Name: DynamicConfigEntryName,
+				Values: []*types.DynamicConfigValue{
+					&DynamicConfigValue,
+				},
+			},
+			nil,
+		},
+	}
+	AdminMaintainCorruptWorkflowRequest = types.AdminMaintainWorkflowRequest{
+		Domain:    DomainName,
+		Execution: &WorkflowExecution,
+	}
+	AdminMaintainCorruptWorkflowResponse = types.AdminMaintainWorkflowResponse{
+		HistoryDeleted:    false,
+		ExecutionsDeleted: true,
+		VisibilityDeleted: false,
 	}
 	AdminMergeDLQMessagesRequest = types.MergeDLQMessagesRequest{
 		Type:                  types.DLQTypeDomain.Ptr(),
@@ -182,4 +238,29 @@ var (
 	AdminGetCrossClusterTasksResponse              = GetCrossClusterTasksResponse
 	AdminRespondCrossClusterTasksCompletedRequest  = RespondCrossClusterTasksCompletedRequest
 	AdminRespondCrossClusterTasksCompletedResponse = RespondCrossClusterTasksCompletedResponse
+	AdminRestoreDynamicConfigRequest               = types.RestoreDynamicConfigRequest{
+		ConfigName: DynamicConfigEntryName,
+		Filters: []*types.DynamicConfigFilter{
+			&DynamicConfigFilter,
+		},
+	}
+	AdminUpdateDomainIsolationGroupsRequest = types.UpdateDomainIsolationGroupsRequest{
+		Domain:          DomainName,
+		IsolationGroups: IsolationGroupConfiguration,
+	}
+	AdminUpdateDomainIsolationGroupsResponse = types.UpdateDomainIsolationGroupsResponse{}
+	AdminUpdateDynamicConfigRequest          = types.UpdateDynamicConfigRequest{
+		ConfigName: DynamicConfigEntryName,
+		ConfigValues: []*types.DynamicConfigValue{
+			{
+				Filters: []*types.DynamicConfigFilter{
+					&DynamicConfigFilter,
+					nil,
+				},
+				Value: &DataBlob,
+			},
+			nil,
+		},
+	}
+	AdminUpdateGlobalIsolationGroupsResponse = types.UpdateGlobalIsolationGroupsResponse{}
 )
