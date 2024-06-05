@@ -254,6 +254,13 @@ func FrontendRetry(err error) bool {
 	return IsServiceTransientError(err)
 }
 
+// IsExpectedError checks if an error is expected to happen in normal operation of the system
+func IsExpectedError(err error) bool {
+	return IsServiceTransientError(err) ||
+		IsEntityNotExistsError(err) ||
+		errors.As(err, new(*types.WorkflowExecutionAlreadyCompletedError))
+}
+
 // IsServiceTransientError checks if the error is a transient error.
 func IsServiceTransientError(err error) bool {
 

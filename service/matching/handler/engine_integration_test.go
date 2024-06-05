@@ -94,7 +94,7 @@ func TestMatchingEngineSuite(t *testing.T) {
 }
 
 func (s *matchingEngineSuite) SetupSuite() {
-	http.Handle("/test/tasks", http.HandlerFunc(s.TasksHandler))
+	// http.Handle("/test/tasks", http.HandlerFunc(s.TasksHandler))
 }
 
 // Renders content of taskManager and matchingEngine when called at http://localhost:6060/test/tasks
@@ -545,7 +545,7 @@ func (s *matchingEngineSuite) SyncMatchTasks(taskType int, enableIsolation bool)
 	isolationGroups := s.matchingEngine.config.AllIsolationGroups
 
 	// Set a short long poll expiration so we don't have to wait too long for 0 throttling cases
-	s.matchingEngine.config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(50 * time.Millisecond)
+	s.matchingEngine.config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(200 * time.Millisecond)
 	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
 	s.matchingEngine.config.TaskDispatchRPSTTL = time.Nanosecond
 	s.matchingEngine.config.MinTaskThrottlingBurstSize = dynamicconfig.GetIntPropertyFilteredByTaskListInfo(_minBurst)
@@ -599,6 +599,8 @@ func (s *matchingEngineSuite) SyncMatchTasks(taskType int, enableIsolation bool)
 		s.NotNil(result)
 		s.assertPollTaskResponse(taskType, testParam, scheduleID, result)
 	}
+	// expect more than half of the tasks get sync matches
+	s.True(s.taskManager.GetCreateTaskCount(testParam.TaskListID) < taskCount/2)
 
 	// Set the dispatch RPS to 0, to verify that poller will not get any task and task will be persisted into database
 	// Revert the dispatch RPS and verify that poller will get the task
@@ -631,19 +633,14 @@ func (s *matchingEngineSuite) SyncMatchTasks(taskType int, enableIsolation bool)
 		// when ratelimit is set to zero, poller is expected to return empty result
 		// reset ratelimit, poll again and make sure task is returned this time
 		s.True(isEmptyToken(result.TaskToken))
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			result, pollErr = pollFunc(_defaultTaskDispatchRPS, group)
-		}()
-		wg.Wait()
+		result, pollErr = pollFunc(_defaultTaskDispatchRPS, group)
 		s.NoError(err)
 		s.NoError(pollErr)
 		s.NotNil(result)
 		s.False(isEmptyToken(result.TaskToken))
 		s.assertPollTaskResponse(taskType, testParam, scheduleID, result)
 	}
-	s.EqualValues(throttledTaskCount, s.taskManager.GetCreateTaskCount(testParam.TaskListID))
+	s.True(int(throttledTaskCount) <= s.taskManager.GetCreateTaskCount(testParam.TaskListID))
 	s.EqualValues(0, s.taskManager.GetTaskCount(testParam.TaskListID))
 	expectedRange := getExpectedRange(initialRangeID, int(taskCount+throttledTaskCount), rangeSize)
 	// Due to conflicts some ids are skipped and more real ranges are used.

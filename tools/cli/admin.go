@@ -67,9 +67,7 @@ func newAdminWorkflowCommands() []cli.Command {
 					Name:  FlagShardIDWithAlias,
 					Usage: "ShardID",
 				}),
-			Action: func(c *cli.Context) {
-				AdminShowWorkflow(c)
-			},
+			Action: AdminShowWorkflow,
 		},
 		{
 			Name:    "describe",
@@ -85,9 +83,7 @@ func newAdminWorkflowCommands() []cli.Command {
 					Usage: "RunID",
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminDescribeWorkflow(c)
-			},
+			Action: AdminDescribeWorkflow,
 		},
 		{
 			Name:    "refresh-tasks",
@@ -103,9 +99,7 @@ func newAdminWorkflowCommands() []cli.Command {
 					Usage: "RunID",
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminRefreshWorkflowTasks(c)
-			},
+			Action: AdminRefreshWorkflowTasks,
 		},
 		{
 			Name:    "delete",
@@ -128,9 +122,7 @@ func newAdminWorkflowCommands() []cli.Command {
 					Name:  FlagRemote,
 					Usage: "Executes deletion on server side",
 				}),
-			Action: func(c *cli.Context) {
-				AdminDeleteWorkflow(c)
-			},
+			Action: AdminDeleteWorkflow,
 		},
 		{
 			Name:    "fix_corruption",
@@ -150,9 +142,7 @@ func newAdminWorkflowCommands() []cli.Command {
 					Usage: "Skip errors and tries to delete as much as possible from the DB",
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminMaintainCorruptWorkflow(c)
-			},
+			Action: AdminMaintainCorruptWorkflow,
 		},
 	}
 }
@@ -170,9 +160,7 @@ func newAdminShardManagementCommands() []cli.Command {
 					Usage: "The Id of the shard to describe",
 				},
 			),
-			Action: func(c *cli.Context) {
-				AdminDescribeShard(c)
-			},
+			Action: AdminDescribeShard,
 		},
 		{
 			Name:    "list",
@@ -191,9 +179,7 @@ func newAdminShardManagementCommands() []cli.Command {
 				},
 				getFormatFlag(),
 			},
-			Action: func(c *cli.Context) {
-				AdminDescribeShardDistribution(c)
-			},
+			Action: AdminDescribeShardDistribution,
 		},
 		{
 			Name:    "setRangeID",
@@ -210,9 +196,7 @@ func newAdminShardManagementCommands() []cli.Command {
 					Usage: "new shard rangeID",
 				},
 			),
-			Action: func(c *cli.Context) {
-				AdminSetShardRangeID(c)
-			},
+			Action: AdminSetShardRangeID,
 		},
 		{
 			Name:    "closeShard",
@@ -224,9 +208,7 @@ func newAdminShardManagementCommands() []cli.Command {
 					Usage: "ShardID for the cadence cluster to manage",
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminCloseShard(c)
-			},
+			Action: AdminCloseShard,
 		},
 		{
 			Name:    "removeTask",
@@ -254,9 +236,7 @@ func newAdminShardManagementCommands() []cli.Command {
 					Usage: "target cluster of the task (required for removing cross-cluster task)",
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminRemoveTask(c)
-			},
+			Action: AdminRemoveTask,
 		},
 		{
 			Name:  "timers",
@@ -320,9 +300,7 @@ func newAdminShardManagementCommands() []cli.Command {
 					Value: 16384,
 				},
 			),
-			Action: func(c *cli.Context) {
-				AdminTimers(c)
-			},
+			Action: AdminTimers,
 		},
 	}
 }
@@ -351,9 +329,7 @@ func newAdminHistoryHostCommands() []cli.Command {
 					Usage: "Print fully detail",
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminDescribeHistoryHost(c)
-			},
+			Action: AdminDescribeHistoryHost,
 		},
 		{
 			Name:    "getshard",
@@ -369,9 +345,7 @@ func newAdminHistoryHostCommands() []cli.Command {
 					Usage: "NumberOfShards for the cadence cluster(see config for numHistoryShards)",
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminGetShardID(c)
-			},
+			Action: AdminGetShardID,
 		},
 	}
 }
@@ -427,9 +401,7 @@ func newAdminDomainCommands() []cli.Command {
 					Name:  FlagDomainID,
 					Usage: "Domain ID(uuid)",
 				}),
-			Action: func(c *cli.Context) {
-				AdminGetDomainIDOrName(c)
-			},
+			Action: AdminGetDomainIDOrName,
 		},
 		{
 			Name:    "list",
@@ -509,9 +481,7 @@ func newAdminKafkaCommands() []cli.Command {
 					Value: 0,
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminKafkaParse(c)
-			},
+			Action: AdminKafkaParse,
 		},
 		{
 			// TODO: move this command be a subcommand of admin workflow
@@ -543,9 +513,7 @@ func newAdminKafkaCommands() []cli.Command {
 					Name:  FlagEndEventVersion,
 					Usage: "Workflow end event version, required if MaxEventID is specified",
 				}},
-			Action: func(c *cli.Context) {
-				AdminRereplicate(c)
-			},
+			Action: AdminRereplicate,
 		},
 	}
 }
@@ -563,9 +531,7 @@ func newAdminElasticSearchCommands() []cli.Command {
 				},
 				getFormatFlag(),
 			},
-			Action: func(c *cli.Context) {
-				AdminCatIndices(c)
-			},
+			Action: AdminCatIndices,
 		},
 		{
 			Name:    "index",
@@ -590,9 +556,7 @@ func newAdminElasticSearchCommands() []cli.Command {
 					Value: 1000,
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminIndex(c)
-			},
+			Action: AdminIndex,
 		},
 		{
 			Name:    "delete",
@@ -623,9 +587,7 @@ func newAdminElasticSearchCommands() []cli.Command {
 					Value: 30,
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminDelete(c)
-			},
+			Action: AdminDelete,
 		},
 		{
 			Name:    "report",
@@ -653,9 +615,7 @@ func newAdminElasticSearchCommands() []cli.Command {
 					Usage: "Additional output filename with path",
 				},
 			},
-			Action: func(c *cli.Context) {
-				GenerateReport(c)
-			},
+			Action: GenerateReport,
 		},
 	}
 }
@@ -677,9 +637,7 @@ func newAdminTaskListCommands() []cli.Command {
 					Usage: "Optional TaskList type [decision|activity]",
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminDescribeTaskList(c)
-			},
+			Action: AdminDescribeTaskList,
 		},
 		{
 			Name:    "list",
@@ -691,9 +649,7 @@ func newAdminTaskListCommands() []cli.Command {
 					Usage: "Required Domain name",
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminListTaskList(c)
-			},
+			Action: AdminListTaskList,
 		},
 	}
 }
@@ -719,17 +675,13 @@ func newAdminClusterCommands() []cli.Command {
 					Usage: "Optional token for security check",
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminAddSearchAttribute(c)
-			},
+			Action: AdminAddSearchAttribute,
 		},
 		{
 			Name:    "describe",
 			Aliases: []string{"d"},
 			Usage:   "Describe cluster information",
-			Action: func(c *cli.Context) {
-				AdminDescribeCluster(c)
-			},
+			Action:  AdminDescribeCluster,
 		},
 		{
 			Name:        "failover",
@@ -800,9 +752,7 @@ func newAdminDLQCommands() []cli.Command {
 					Usage: "Force fetch latest counts (will put additional stress on DB)",
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminCountDLQMessages(c)
-			},
+			Action: AdminCountDLQMessages,
 		},
 		{
 			Name:    "read",
@@ -815,27 +765,21 @@ func newAdminDLQCommands() []cli.Command {
 				},
 				getFormatFlag(),
 			),
-			Action: func(c *cli.Context) {
-				AdminGetDLQMessages(c)
-			},
+			Action: AdminGetDLQMessages,
 		},
 		{
 			Name:    "purge",
 			Aliases: []string{"p"},
 			Usage:   "Delete DLQ messages with equal or smaller ids than the provided task id",
 			Flags:   getDLQFlags(),
-			Action: func(c *cli.Context) {
-				AdminPurgeDLQMessages(c)
-			},
+			Action:  AdminPurgeDLQMessages,
 		},
 		{
 			Name:    "merge",
 			Aliases: []string{"m"},
 			Usage:   "Merge DLQ messages with equal or smaller ids than the provided task id",
 			Flags:   getDLQFlags(),
-			Action: func(c *cli.Context) {
-				AdminMergeDLQMessages(c)
-			},
+			Action:  AdminMergeDLQMessages,
 		},
 	}
 }
@@ -843,21 +787,17 @@ func newAdminDLQCommands() []cli.Command {
 func newAdminQueueCommands() []cli.Command {
 	return []cli.Command{
 		{
-			Name:  "reset",
-			Usage: "reset processing queue states for transfer or timer queue processor",
-			Flags: getQueueCommandFlags(),
-			Action: func(c *cli.Context) {
-				AdminResetQueue(c)
-			},
+			Name:   "reset",
+			Usage:  "reset processing queue states for transfer or timer queue processor",
+			Flags:  getQueueCommandFlags(),
+			Action: AdminResetQueue,
 		},
 		{
 			Name:    "describe",
 			Aliases: []string{"desc"},
 			Usage:   "describe processing queue states for transfer or timer queue processor",
 			Flags:   getQueueCommandFlags(),
-			Action: func(c *cli.Context) {
-				AdminDescribeQueue(c)
-			},
+			Action:  AdminDescribeQueue,
 		},
 	}
 }
@@ -874,9 +814,7 @@ func newAdminAsyncQueueCommands() []cli.Command {
 					Required: true,
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminGetAsyncWFConfig(c)
-			},
+			Action: AdminGetAsyncWFConfig,
 		},
 		{
 			Name:  "update",
@@ -893,9 +831,7 @@ func newAdminAsyncQueueCommands() []cli.Command {
 					Required: true,
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminUpdateAsyncWFConfig(c)
-			},
+			Action: AdminUpdateAsyncWFConfig,
 		},
 	}
 }
@@ -940,9 +876,7 @@ func newDBCommands() []cli.Command {
 				verboseFlag,
 			),
 
-			Action: func(c *cli.Context) {
-				AdminDBScan(c)
-			},
+			Action: AdminDBScan,
 		},
 		{
 			Name:  "unsupported-workflow",
@@ -971,9 +905,7 @@ func newDBCommands() []cli.Command {
 				},
 			),
 
-			Action: func(c *cli.Context) {
-				AdminDBScanUnsupportedWorkflow(c)
-			},
+			Action: AdminDBScanUnsupportedWorkflow,
 		},
 		{
 			Name:  "clean",
@@ -987,9 +919,7 @@ func newDBCommands() []cli.Command {
 				},
 				verboseFlag,
 			),
-			Action: func(c *cli.Context) {
-				AdminDBClean(c)
-			},
+			Action: AdminDBClean,
 		},
 		{
 			Name:  "decode_thrift",
@@ -1005,9 +935,7 @@ func newDBCommands() []cli.Command {
 					Usage: "Encoding of the input: [hex|base64] (Default: hex)",
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminDBDataDecodeThrift(c)
-			},
+			Action: AdminDBDataDecodeThrift,
 		},
 	}
 }
@@ -1080,9 +1008,7 @@ func newAdminFailoverCommands() []cli.Command {
 						"if this field is specific",
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminFailoverStart(c)
-			},
+			Action: AdminFailoverStart,
 		},
 		{
 			Name:    "pause",
@@ -1100,9 +1026,7 @@ func newAdminFailoverCommands() []cli.Command {
 				},
 			},
 
-			Action: func(c *cli.Context) {
-				AdminFailoverPause(c)
-			},
+			Action: AdminFailoverPause,
 		},
 		{
 			Name:    "resume",
@@ -1119,9 +1043,7 @@ func newAdminFailoverCommands() []cli.Command {
 						" The default is normal failover workflow",
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminFailoverResume(c)
-			},
+			Action: AdminFailoverResume,
 		},
 		{
 			Name:    "query",
@@ -1138,9 +1060,7 @@ func newAdminFailoverCommands() []cli.Command {
 					Usage: "Optional Failover workflow runID, default is latest runID",
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminFailoverQuery(c)
-			},
+			Action: AdminFailoverQuery,
 		},
 		{
 			Name:    "abort",
@@ -1161,9 +1081,7 @@ func newAdminFailoverCommands() []cli.Command {
 						" The default is normal failover workflow",
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminFailoverAbort(c)
-			},
+			Action: AdminFailoverAbort,
 		},
 		{
 			Name:    "rollback",
@@ -1194,9 +1112,7 @@ func newAdminFailoverCommands() []cli.Command {
 					Value: defaultBatchFailoverSize,
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminFailoverRollback(c)
-			},
+			Action: AdminFailoverRollback,
 		},
 		{
 			Name:    "list",
@@ -1222,9 +1138,7 @@ func newAdminFailoverCommands() []cli.Command {
 						" The default is normal failover workflow",
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminFailoverList(c)
-			},
+			Action: AdminFailoverList,
 		},
 	}
 }
@@ -1236,9 +1150,7 @@ func newAdminRebalanceCommands() []cli.Command {
 			Aliases: []string{"s"},
 			Usage:   "start rebalance workflow",
 			Flags:   []cli.Flag{},
-			Action: func(c *cli.Context) {
-				AdminRebalanceStart(c)
-			},
+			Action:  AdminRebalanceStart,
 		},
 		{
 			Name:    "list",
@@ -1255,9 +1167,7 @@ func newAdminRebalanceCommands() []cli.Command {
 					Usage: "Result page size",
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminRebalanceList(c)
-			},
+			Action: AdminRebalanceList,
 		},
 	}
 }
@@ -1279,9 +1189,7 @@ func newAdminConfigStoreCommands() []cli.Command {
 					Usage: fmt.Sprintf(`Optional. Can be specified multiple times for multiple filters. ex: --%s '{"Name":"domainName","Value":"global-samples-domain"}'`, FlagDynamicConfigFilter),
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminGetDynamicConfig(c)
-			},
+			Action: AdminGetDynamicConfig,
 		},
 		{
 			Name:    "update",
@@ -1299,9 +1207,7 @@ func newAdminConfigStoreCommands() []cli.Command {
 					Required: true,
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminUpdateDynamicConfig(c)
-			},
+			Action: AdminUpdateDynamicConfig,
 		},
 		{
 			Name:    "restore",
@@ -1318,27 +1224,21 @@ func newAdminConfigStoreCommands() []cli.Command {
 					Usage: fmt.Sprintf(`Optional. Can be specified multiple times for multiple filters. ex: --%s '{"Name":"domainName","Value":"global-samples-domain"}'`, FlagDynamicConfigFilter),
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminRestoreDynamicConfig(c)
-			},
+			Action: AdminRestoreDynamicConfig,
 		},
 		{
 			Name:    "list",
 			Aliases: []string{"l"},
 			Usage:   "List Dynamic Config Value",
 			Flags:   []cli.Flag{},
-			Action: func(c *cli.Context) {
-				AdminListDynamicConfig(c)
-			},
+			Action:  AdminListDynamicConfig,
 		},
 		{
 			Name:    "listall",
 			Aliases: []string{"la"},
 			Usage:   "List all available configuration keys",
 			Flags:   []cli.Flag{getFormatFlag()},
-			Action: func(c *cli.Context) {
-				AdminListConfigKeys(c)
-			},
+			Action:  AdminListConfigKeys,
 		},
 	}
 }
@@ -1354,9 +1254,7 @@ func newAdminIsolationGroupCommands() []cli.Command {
 					Usage: `output format`,
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminGetGlobalIsolationGroups(c)
-			},
+			Action: AdminGetGlobalIsolationGroups,
 		},
 		{
 			Name:  "update-global",
@@ -1378,9 +1276,7 @@ func newAdminIsolationGroupCommands() []cli.Command {
 					Required: false,
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminUpdateGlobalIsolationGroups(c)
-			},
+			Action: AdminUpdateGlobalIsolationGroups,
 		},
 		{
 			Name:  "get-domain",
@@ -1396,9 +1292,7 @@ func newAdminIsolationGroupCommands() []cli.Command {
 					Usage: `output format`,
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminGetDomainIsolationGroups(c)
-			},
+			Action: AdminGetDomainIsolationGroups,
 		},
 		{
 			Name:  "update-domain",
@@ -1425,9 +1319,7 @@ func newAdminIsolationGroupCommands() []cli.Command {
 					Required: false,
 				},
 			},
-			Action: func(c *cli.Context) {
-				AdminUpdateDomainIsolationGroups(c)
-			},
+			Action: AdminUpdateDomainIsolationGroups,
 		},
 	}
 }

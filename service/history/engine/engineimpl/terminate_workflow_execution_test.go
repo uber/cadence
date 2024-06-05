@@ -326,6 +326,221 @@ func TestTerminateWorkflowExecution(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "first execution run ID matches",
+			terminationRequest: types.HistoryTerminateWorkflowExecutionRequest{
+				DomainUUID: constants.TestDomainID,
+				TerminateRequest: &types.TerminateWorkflowExecutionRequest{
+					Domain:              constants.TestDomainName,
+					WorkflowExecution:   &types.WorkflowExecution{WorkflowID: constants.TestWorkflowID, RunID: constants.TestRunID},
+					Reason:              "Test termination",
+					Identity:            "testRunner",
+					FirstExecutionRunID: "matching-first-run-id",
+				},
+			},
+			setupMocks: func(t *testing.T, eft *testdata.EngineForTest) {
+				getExecReq := &persistence.GetWorkflowExecutionRequest{
+					DomainID:   constants.TestDomainID,
+					Execution:  types.WorkflowExecution{WorkflowID: constants.TestWorkflowID, RunID: constants.TestRunID},
+					DomainName: constants.TestDomainName,
+					RangeID:    1,
+				}
+				getExecResp := &persistence.GetWorkflowExecutionResponse{
+					State: &persistence.WorkflowMutableState{
+						ExecutionInfo: &persistence.WorkflowExecutionInfo{
+							DomainID:            constants.TestDomainID,
+							WorkflowID:          constants.TestWorkflowID,
+							RunID:               constants.TestRunID,
+							FirstExecutionRunID: "matching-first-run-id",
+						},
+						ExecutionStats: &persistence.ExecutionStats{},
+					},
+					MutableStateStats: &persistence.MutableStateStats{},
+				}
+				eft.ShardCtx.Resource.ExecutionMgr.
+					On("GetWorkflowExecution", mock.Anything, getExecReq).
+					Return(getExecResp, nil).Once()
+
+				getCurrentExecReq := &persistence.GetCurrentExecutionRequest{
+					DomainID:   constants.TestDomainID,
+					WorkflowID: constants.TestWorkflowID,
+					DomainName: constants.TestDomainName,
+				}
+				getCurrentExecResp := &persistence.GetCurrentExecutionResponse{
+					RunID:       constants.TestRunID,
+					State:       persistence.WorkflowStateRunning,
+					CloseStatus: persistence.WorkflowCloseStatusNone,
+				}
+				eft.ShardCtx.Resource.ExecutionMgr.
+					On("GetCurrentExecution", mock.Anything, getCurrentExecReq).
+					Return(getCurrentExecResp, nil).Once()
+
+				historyMgr := eft.ShardCtx.Resource.HistoryMgr
+				historyMgr.
+					On("ReadHistoryBranch", mock.Anything, mock.Anything).
+					Return(&persistence.ReadHistoryBranchResponse{}, nil).
+					Once()
+
+				updateExecResp := &persistence.UpdateWorkflowExecutionResponse{
+					MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{},
+				}
+				eft.ShardCtx.Resource.ExecutionMgr.
+					On("UpdateWorkflowExecution", mock.Anything, mock.Anything).
+					Return(updateExecResp, nil).Once()
+
+				eft.ShardCtx.Resource.ShardMgr.
+					On("UpdateShard", mock.Anything, mock.Anything).
+					Return(nil)
+
+				historyV2Mgr := eft.ShardCtx.Resource.HistoryMgr
+				historyV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.AnythingOfType("*persistence.AppendHistoryNodesRequest")).
+					Return(&persistence.AppendHistoryNodesResponse{}, nil).Once()
+			},
+			wantErr: false,
+		},
+		{
+			name: "first execution run ID does not match",
+			terminationRequest: types.HistoryTerminateWorkflowExecutionRequest{
+				DomainUUID: constants.TestDomainID,
+				TerminateRequest: &types.TerminateWorkflowExecutionRequest{
+					Domain:              constants.TestDomainName,
+					WorkflowExecution:   &types.WorkflowExecution{WorkflowID: constants.TestWorkflowID, RunID: constants.TestRunID},
+					Reason:              "Test termination",
+					Identity:            "testRunner",
+					FirstExecutionRunID: "non-matching-first-run-id",
+				},
+			},
+			setupMocks: func(t *testing.T, eft *testdata.EngineForTest) {
+				getExecReq := &persistence.GetWorkflowExecutionRequest{
+					DomainID:   constants.TestDomainID,
+					Execution:  types.WorkflowExecution{WorkflowID: constants.TestWorkflowID, RunID: constants.TestRunID},
+					DomainName: constants.TestDomainName,
+					RangeID:    1,
+				}
+				getExecResp := &persistence.GetWorkflowExecutionResponse{
+					State: &persistence.WorkflowMutableState{
+						ExecutionInfo: &persistence.WorkflowExecutionInfo{
+							DomainID:            constants.TestDomainID,
+							WorkflowID:          constants.TestWorkflowID,
+							RunID:               constants.TestRunID,
+							FirstExecutionRunID: "matching-first-run-id",
+						},
+						ExecutionStats: &persistence.ExecutionStats{},
+					},
+					MutableStateStats: &persistence.MutableStateStats{},
+				}
+				eft.ShardCtx.Resource.ExecutionMgr.
+					On("GetWorkflowExecution", mock.Anything, getExecReq).
+					Return(getExecResp, nil).Once()
+
+				getCurrentExecReq := &persistence.GetCurrentExecutionRequest{
+					DomainID:   constants.TestDomainID,
+					WorkflowID: constants.TestWorkflowID,
+					DomainName: constants.TestDomainName,
+				}
+				getCurrentExecResp := &persistence.GetCurrentExecutionResponse{
+					RunID:       constants.TestRunID,
+					State:       persistence.WorkflowStateRunning,
+					CloseStatus: persistence.WorkflowCloseStatusNone,
+				}
+				eft.ShardCtx.Resource.ExecutionMgr.
+					On("GetCurrentExecution", mock.Anything, getCurrentExecReq).
+					Return(getCurrentExecResp, nil).Once()
+
+				historyMgr := eft.ShardCtx.Resource.HistoryMgr
+				historyMgr.
+					On("ReadHistoryBranch", mock.Anything, mock.Anything).
+					Return(&persistence.ReadHistoryBranchResponse{}, nil).
+					Once()
+
+				eft.ShardCtx.Resource.ExecutionMgr.
+					On("UpdateWorkflowExecution", mock.Anything, mock.Anything).
+					Return(&persistence.UpdateWorkflowExecutionResponse{}, nil).Once()
+			},
+			wantErr: true,
+		},
+		{
+			name: "load first execution run ID from start event",
+			terminationRequest: types.HistoryTerminateWorkflowExecutionRequest{
+				DomainUUID: constants.TestDomainID,
+				TerminateRequest: &types.TerminateWorkflowExecutionRequest{
+					Domain:              constants.TestDomainName,
+					WorkflowExecution:   &types.WorkflowExecution{WorkflowID: constants.TestWorkflowID, RunID: constants.TestRunID},
+					Reason:              "Test termination",
+					Identity:            "testRunner",
+					FirstExecutionRunID: "fetched-first-run-id",
+				},
+			},
+			setupMocks: func(t *testing.T, eft *testdata.EngineForTest) {
+				getExecReq := &persistence.GetWorkflowExecutionRequest{
+					DomainID:   constants.TestDomainID,
+					Execution:  types.WorkflowExecution{WorkflowID: constants.TestWorkflowID, RunID: constants.TestRunID},
+					DomainName: constants.TestDomainName,
+					RangeID:    1,
+				}
+				getExecResp := &persistence.GetWorkflowExecutionResponse{
+					State: &persistence.WorkflowMutableState{
+						ExecutionInfo: &persistence.WorkflowExecutionInfo{
+							DomainID:            constants.TestDomainID,
+							WorkflowID:          constants.TestWorkflowID,
+							RunID:               constants.TestRunID,
+							FirstExecutionRunID: "",
+						},
+						ExecutionStats: &persistence.ExecutionStats{},
+					},
+					MutableStateStats: &persistence.MutableStateStats{},
+				}
+				eft.ShardCtx.Resource.ExecutionMgr.
+					On("GetWorkflowExecution", mock.Anything, getExecReq).
+					Return(getExecResp, nil).Once()
+
+				getCurrentExecReq := &persistence.GetCurrentExecutionRequest{
+					DomainID:   constants.TestDomainID,
+					WorkflowID: constants.TestWorkflowID,
+					DomainName: constants.TestDomainName,
+				}
+				getCurrentExecResp := &persistence.GetCurrentExecutionResponse{
+					RunID:       constants.TestRunID,
+					State:       persistence.WorkflowStateRunning,
+					CloseStatus: persistence.WorkflowCloseStatusNone,
+				}
+				eft.ShardCtx.Resource.ExecutionMgr.
+					On("GetCurrentExecution", mock.Anything, getCurrentExecReq).
+					Return(getCurrentExecResp, nil).Once()
+
+				historyBranchResp := &persistence.ReadHistoryBranchResponse{
+					HistoryEvents: []*types.HistoryEvent{
+						{
+							ID: 1,
+							WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
+								FirstExecutionRunID: "fetched-first-run-id",
+							},
+						},
+					},
+				}
+				historyMgr := eft.ShardCtx.Resource.HistoryMgr
+				historyMgr.
+					On("ReadHistoryBranch", mock.Anything, mock.Anything).
+					Return(historyBranchResp, nil).
+					Once()
+
+				updateExecResp := &persistence.UpdateWorkflowExecutionResponse{
+					MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{},
+				}
+				eft.ShardCtx.Resource.ExecutionMgr.
+					On("UpdateWorkflowExecution", mock.Anything, mock.Anything).
+					Return(updateExecResp, nil).Once()
+
+				eft.ShardCtx.Resource.ShardMgr.
+					On("UpdateShard", mock.Anything, mock.Anything).
+					Return(nil)
+
+				historyV2Mgr := eft.ShardCtx.Resource.HistoryMgr
+				historyV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.AnythingOfType("*persistence.AppendHistoryNodesRequest")).
+					Return(&persistence.AppendHistoryNodesResponse{}, nil).Once()
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tc := range tests {
