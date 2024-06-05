@@ -308,7 +308,7 @@ func (e *matchingEngineImpl) AddDecisionTask(
 		tag.WorkflowTaskListKind(int32(request.GetTaskList().GetKind())),
 	)
 
-	taskList, err := tasklist.NewIdentifier(domainID, taskListName, taskListType)
+	taskListID, err := tasklist.NewIdentifier(domainID, taskListName, taskListType)
 	if err != nil {
 		return false, err
 	}
@@ -326,10 +326,10 @@ func (e *matchingEngineImpl) AddDecisionTask(
 			metrics.MatchingHostTag(e.config.HostName)).IncCounter(metrics.CadenceTasklistRequests)
 		e.emitInfoOrDebugLog(domainID, "Emitting tasklist counter on decision task",
 			tag.WorkflowTaskListName(taskListName),
-			tag.Dynamic("taskListBaseName", taskList.GetRoot()))
+			tag.Dynamic("taskListBaseName", taskListID.GetRoot()))
 	}
 
-	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
+	tlMgr, err := e.getTaskListManager(taskListID, taskListKind)
 	if err != nil {
 		return false, err
 	}
@@ -380,7 +380,7 @@ func (e *matchingEngineImpl) AddActivityTask(
 		tag.WorkflowTaskListKind(int32(request.GetTaskList().GetKind())),
 	)
 
-	taskList, err := tasklist.NewIdentifier(domainID, taskListName, taskListType)
+	taskListID, err := tasklist.NewIdentifier(domainID, taskListName, taskListType)
 	if err != nil {
 		return false, err
 	}
@@ -398,10 +398,10 @@ func (e *matchingEngineImpl) AddActivityTask(
 			metrics.MatchingHostTag(e.config.HostName)).IncCounter(metrics.CadenceTasklistRequests)
 		e.emitInfoOrDebugLog(domainID, "Emitting tasklist counter on activity task",
 			tag.WorkflowTaskListName(taskListName),
-			tag.Dynamic("taskListBaseName", taskList.GetRoot()))
+			tag.Dynamic("taskListBaseName", taskListID.GetRoot()))
 	}
 
-	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
+	tlMgr, err := e.getTaskListManager(taskListID, taskListKind)
 	if err != nil {
 		return false, err
 	}
@@ -444,7 +444,7 @@ pollLoop:
 			return nil, err
 		}
 
-		taskList, err := tasklist.NewIdentifier(domainID, taskListName, persistence.TaskListTypeDecision)
+		taskListID, err := tasklist.NewIdentifier(domainID, taskListName, persistence.TaskListTypeDecision)
 		if err != nil {
 			return nil, fmt.Errorf("couldn't create new decision tasklist %w", err)
 		}
@@ -454,7 +454,7 @@ pollLoop:
 		pollerCtx := tasklist.ContextWithPollerID(hCtx.Context, pollerID)
 		pollerCtx = tasklist.ContextWithIdentity(pollerCtx, request.GetIdentity())
 		pollerCtx = tasklist.ContextWithIsolationGroup(pollerCtx, req.GetIsolationGroup())
-		task, err := e.getTask(pollerCtx, taskList, nil, taskListKind)
+		task, err := e.getTask(pollerCtx, taskListID, nil, taskListKind)
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
 			if errors.Is(err, tasklist.ErrNoTasks) || errors.Is(err, errPumpClosed) {
@@ -566,7 +566,7 @@ pollLoop:
 			return nil, err
 		}
 
-		taskList, err := tasklist.NewIdentifier(domainID, taskListName, persistence.TaskListTypeActivity)
+		taskListID, err := tasklist.NewIdentifier(domainID, taskListName, persistence.TaskListTypeActivity)
 		if err != nil {
 			return nil, err
 		}
@@ -581,7 +581,7 @@ pollLoop:
 		pollerCtx = tasklist.ContextWithIdentity(pollerCtx, request.GetIdentity())
 		pollerCtx = tasklist.ContextWithIsolationGroup(pollerCtx, req.GetIsolationGroup())
 		taskListKind := request.TaskList.Kind
-		task, err := e.getTask(pollerCtx, taskList, maxDispatch, taskListKind)
+		task, err := e.getTask(pollerCtx, taskListID, maxDispatch, taskListKind)
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
 			if errors.Is(err, tasklist.ErrNoTasks) || errors.Is(err, errPumpClosed) {
@@ -681,12 +681,12 @@ func (e *matchingEngineImpl) QueryWorkflow(
 	domainID := queryRequest.GetDomainUUID()
 	taskListName := queryRequest.GetTaskList().GetName()
 	taskListKind := queryRequest.GetTaskList().Kind
-	taskList, err := tasklist.NewIdentifier(domainID, taskListName, persistence.TaskListTypeDecision)
+	taskListID, err := tasklist.NewIdentifier(domainID, taskListName, persistence.TaskListTypeDecision)
 	if err != nil {
 		return nil, err
 	}
 
-	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
+	tlMgr, err := e.getTaskListManager(taskListID, taskListKind)
 	if err != nil {
 		return nil, err
 	}
@@ -769,12 +769,12 @@ func (e *matchingEngineImpl) CancelOutstandingPoll(
 	taskListKind := request.GetTaskList().Kind
 	pollerID := request.GetPollerID()
 
-	taskList, err := tasklist.NewIdentifier(domainID, taskListName, taskListType)
+	taskListID, err := tasklist.NewIdentifier(domainID, taskListName, taskListType)
 	if err != nil {
 		return err
 	}
 
-	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
+	tlMgr, err := e.getTaskListManager(taskListID, taskListKind)
 	if err != nil {
 		return err
 	}
@@ -795,12 +795,12 @@ func (e *matchingEngineImpl) DescribeTaskList(
 	taskListName := request.GetDescRequest().GetTaskList().GetName()
 	taskListKind := request.GetDescRequest().GetTaskList().Kind
 
-	taskList, err := tasklist.NewIdentifier(domainID, taskListName, taskListType)
+	taskListID, err := tasklist.NewIdentifier(domainID, taskListName, taskListType)
 	if err != nil {
 		return nil, err
 	}
 
-	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
+	tlMgr, err := e.getTaskListManager(taskListID, taskListKind)
 	if err != nil {
 		return nil, err
 	}
