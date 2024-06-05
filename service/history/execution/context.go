@@ -961,11 +961,6 @@ func notifyTasks(
 		Tasks:            timerTasks,
 		PersistenceError: persistenceError,
 	}
-	crossClusterTaskInfo := &hcommon.NotifyTaskInfo{
-		ExecutionInfo:    executionInfo,
-		Tasks:            crossClusterTasks,
-		PersistenceError: persistenceError,
-	}
 	replicationTaskInfo := &hcommon.NotifyTaskInfo{
 		ExecutionInfo:    executionInfo,
 		Tasks:            replicationTasks,
@@ -977,7 +972,6 @@ func notifyTasks(
 
 	engine.NotifyNewTransferTasks(transferTaskInfo)
 	engine.NotifyNewTimerTasks(timerTaskInfo)
-	engine.NotifyNewCrossClusterTasks(crossClusterTaskInfo)
 	engine.NotifyNewReplicationTasks(replicationTaskInfo)
 }
 

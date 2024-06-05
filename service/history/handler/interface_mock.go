@@ -148,21 +148,6 @@ func (mr *MockHandlerMockRecorder) DescribeWorkflowExecution(arg0, arg1 interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeWorkflowExecution", reflect.TypeOf((*MockHandler)(nil).DescribeWorkflowExecution), arg0, arg1)
 }
 
-// GetCrossClusterTasks mocks base method.
-func (m *MockHandler) GetCrossClusterTasks(arg0 context.Context, arg1 *types.GetCrossClusterTasksRequest) (*types.GetCrossClusterTasksResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCrossClusterTasks", arg0, arg1)
-	ret0, _ := ret[0].(*types.GetCrossClusterTasksResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetCrossClusterTasks indicates an expected call of GetCrossClusterTasks.
-func (mr *MockHandlerMockRecorder) GetCrossClusterTasks(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCrossClusterTasks", reflect.TypeOf((*MockHandler)(nil).GetCrossClusterTasks), arg0, arg1)
-}
-
 // GetDLQReplicationMessages mocks base method.
 func (m *MockHandler) GetDLQReplicationMessages(arg0 context.Context, arg1 *types.GetDLQReplicationMessagesRequest) (*types.GetDLQReplicationMessagesResponse, error) {
 	m.ctrl.T.Helper()
@@ -582,21 +567,6 @@ func (m *MockHandler) RespondActivityTaskFailed(arg0 context.Context, arg1 *type
 func (mr *MockHandlerMockRecorder) RespondActivityTaskFailed(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RespondActivityTaskFailed", reflect.TypeOf((*MockHandler)(nil).RespondActivityTaskFailed), arg0, arg1)
-}
-
-// RespondCrossClusterTasksCompleted mocks base method.
-func (m *MockHandler) RespondCrossClusterTasksCompleted(arg0 context.Context, arg1 *types.RespondCrossClusterTasksCompletedRequest) (*types.RespondCrossClusterTasksCompletedResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RespondCrossClusterTasksCompleted", arg0, arg1)
-	ret0, _ := ret[0].(*types.RespondCrossClusterTasksCompletedResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// RespondCrossClusterTasksCompleted indicates an expected call of RespondCrossClusterTasksCompleted.
-func (mr *MockHandlerMockRecorder) RespondCrossClusterTasksCompleted(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RespondCrossClusterTasksCompleted", reflect.TypeOf((*MockHandler)(nil).RespondCrossClusterTasksCompleted), arg0, arg1)
 }
 
 // RespondDecisionTaskCompleted mocks base method.

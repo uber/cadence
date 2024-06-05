@@ -309,22 +309,6 @@ func (mr *MockMutableStateMockRecorder) AddContinueAsNewEvent(arg0, arg1, arg2, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddContinueAsNewEvent", reflect.TypeOf((*MockMutableState)(nil).AddContinueAsNewEvent), arg0, arg1, arg2, arg3, arg4)
 }
 
-// AddCrossClusterTasks mocks base method.
-func (m *MockMutableState) AddCrossClusterTasks(crossClusterTasks ...persistence.Task) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{}
-	for _, a := range crossClusterTasks {
-		varargs = append(varargs, a)
-	}
-	m.ctrl.Call(m, "AddCrossClusterTasks", varargs...)
-}
-
-// AddCrossClusterTasks indicates an expected call of AddCrossClusterTasks.
-func (mr *MockMutableStateMockRecorder) AddCrossClusterTasks(crossClusterTasks ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddCrossClusterTasks", reflect.TypeOf((*MockMutableState)(nil).AddCrossClusterTasks), crossClusterTasks...)
-}
-
 // AddDecisionTaskCompletedEvent mocks base method.
 func (m *MockMutableState) AddDecisionTaskCompletedEvent(arg0, arg1 int64, arg2 *types.RespondDecisionTaskCompletedRequest, arg3 int) (*types.HistoryEvent, error) {
 	m.ctrl.T.Helper()
@@ -952,18 +936,6 @@ func (mr *MockMutableStateMockRecorder) DeleteActivity(scheduleEventID interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteActivity", reflect.TypeOf((*MockMutableState)(nil).DeleteActivity), scheduleEventID)
 }
 
-// DeleteCrossClusterTasks mocks base method.
-func (m *MockMutableState) DeleteCrossClusterTasks() {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "DeleteCrossClusterTasks")
-}
-
-// DeleteCrossClusterTasks indicates an expected call of DeleteCrossClusterTasks.
-func (mr *MockMutableStateMockRecorder) DeleteCrossClusterTasks() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCrossClusterTasks", reflect.TypeOf((*MockMutableState)(nil).DeleteCrossClusterTasks))
-}
-
 // DeleteDecision mocks base method.
 func (m *MockMutableState) DeleteDecision() {
 	m.ctrl.T.Helper()
@@ -1155,20 +1127,6 @@ func (m *MockMutableState) GetCronBackoffDuration(arg0 context.Context) (time.Du
 func (mr *MockMutableStateMockRecorder) GetCronBackoffDuration(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCronBackoffDuration", reflect.TypeOf((*MockMutableState)(nil).GetCronBackoffDuration), arg0)
-}
-
-// GetCrossClusterTasks mocks base method.
-func (m *MockMutableState) GetCrossClusterTasks() []persistence.Task {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCrossClusterTasks")
-	ret0, _ := ret[0].([]persistence.Task)
-	return ret0
-}
-
-// GetCrossClusterTasks indicates an expected call of GetCrossClusterTasks.
-func (mr *MockMutableStateMockRecorder) GetCrossClusterTasks() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCrossClusterTasks", reflect.TypeOf((*MockMutableState)(nil).GetCrossClusterTasks))
 }
 
 // GetCurrentBranchToken mocks base method.

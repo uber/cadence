@@ -22,6 +22,7 @@ package task
 
 import (
 	"context"
+	"errors"
 	"math/rand"
 	"strconv"
 	"testing"
@@ -1840,7 +1841,7 @@ func (s *transferActiveTaskExecutorSuite) TestCopySearchAttributes() {
 }
 
 func (s *transferActiveTaskExecutorSuite) TestAllowTask() {
-	s.mockDomainCache.EXPECT().GetDomainName(constants.TestUnknownDomainID).Return("", errDomainNotExists).Times(1)
+	s.mockDomainCache.EXPECT().GetDomainName(constants.TestUnknownDomainID).Return("", errors.New("err does not exist")).Times(1)
 	task := &persistence.TransferTaskInfo{
 		Version:        s.version,
 		DomainID:       constants.TestUnknownDomainID,

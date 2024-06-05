@@ -436,63 +436,7 @@ func (t *transferActiveTaskExecutor) processCloseExecutionTaskHelper(
 		return err
 	}
 
-	// generate cross cluster task for applying parent close policy
-	var crossClusterTaskGenerators []generatorF
-	var sameClusterChildDomainIDs map[int64]string
-	var signalParentClosePolicyWorker bool
-	if applyParentClosePolicy {
-		crossClusterTaskGenerators,
-			sameClusterChildDomainIDs,
-			signalParentClosePolicyWorker,
-			err = t.applyParentClosePolicyDomainActiveCheck(task, domainName, children, domainEntry)
-		if err != nil {
-			return err
-		}
-	}
-
-	// generate cross cluster task for record child execution completed
-	replyToParentWorkflow = replyToParentWorkflow &&
-		mutableState.HasParentExecution() &&
-		executionInfo.CloseStatus != persistence.WorkflowCloseStatusContinuedAsNew
-	if replyToParentWorkflow {
-		// generate cross cluster task for recording child completion
-		targetDomainEntry, err := t.shard.GetDomainCache().GetDomainByID(parentDomainID)
-		if err != nil {
-			return err
-		}
-		if targetCluster, isCrossCluster := t.isCrossClusterTask(task.DomainID, targetDomainEntry); isCrossCluster {
-			parentInfo := &types.ParentExecutionInfo{
-				DomainUUID: parentDomainID,
-				Domain:     targetDomainEntry.GetInfo().Name,
-				Execution: &types.WorkflowExecution{
-					WorkflowID: parentWorkflowID,
-					RunID:      parentRunID,
-				},
-				InitiatedID: initiatedID,
-			}
-			crossClusterTaskGenerators = append(crossClusterTaskGenerators,
-				func(taskGenerator execution.MutableStateTaskGenerator) error {
-					return taskGenerator.GenerateCrossClusterRecordChildCompletedTask(task, targetCluster, parentInfo)
-				})
-			replyToParentWorkflow = false
-		}
-	}
-
-	// update workflow execute to persist generated cross cluster tasks
-	if len(crossClusterTaskGenerators) > 0 {
-		if err := t.generateCrossClusterTasks(
-			ctx,
-			wfContext,
-			mutableState,
-			task,
-			crossClusterTaskGenerators,
-		); err != nil {
-			return err
-		}
-	}
-
-	// we've gathered all necessary information from mutable state and
-	// generated/persisted necessary cross cluster tasks.
+	// we've gathered all necessary information from mutable state.
 	// release the context lock since we no longer need mutable state builder and
 	// the rest of logic is making RPC call, which takes time.
 	release(nil)
@@ -555,15 +499,8 @@ func (t *transferActiveTaskExecutor) processCloseExecutionTaskHelper(
 	}
 
 	if applyParentClosePolicy {
-		if err := t.processParentClosePolicy(
-			ctx,
-			wfContext,
-			task,
-			children,
-			sameClusterChildDomainIDs,
-			signalParentClosePolicyWorker,
-			domainEntry,
-		); err != nil {
+		err := t.processParentClosePolicy(ctx, task.DomainID, domainName, children)
+		if err != nil {
 			return err
 		}
 	}
@@ -611,10 +548,6 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 	if err != nil {
 		// TODO: handle the case where target domain does not exist
 		return err
-	}
-
-	if targetCluster, isCrossCluster := t.isCrossClusterTask(task.DomainID, targetDomainEntry); isCrossCluster {
-		return t.generateCrossClusterTaskFromTransferTask(ctx, wfContext, mutableState, task, targetCluster)
 	}
 
 	targetDomainName := targetDomainEntry.GetInfo().Name
@@ -730,10 +663,6 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 	if err != nil {
 		// TODO: handle the case where target domain does not exist
 		return err
-	}
-
-	if targetCluster, isCrossCluster := t.isCrossClusterTask(task.DomainID, targetDomainEntry); isCrossCluster {
-		return t.generateCrossClusterTaskFromTransferTask(ctx, wfContext, mutableState, task, targetCluster)
 	}
 
 	targetDomainName := targetDomainEntry.GetInfo().Name
@@ -875,9 +804,6 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 		// it is possible that the domain got deleted. Use domainID instead as this is only needed for the history event
 		targetDomainName = task.TargetDomainID
 	} else {
-		if targetCluster, isCrossCluster := t.isCrossClusterTask(task.DomainID, targetDomainEntry); isCrossCluster {
-			return t.generateCrossClusterTaskFromTransferTask(ctx, wfContext, mutableState, task, targetCluster)
-		}
 
 		targetDomainName = targetDomainEntry.GetInfo().Name
 	}
@@ -1507,81 +1433,6 @@ func signalExternalExecutionFailed(
 	return err
 }
 
-func (t *transferActiveTaskExecutor) isCrossClusterTask(
-	sourceDomainID string,
-	targetDomainEntry *cache.DomainCacheEntry,
-) (string, bool) {
-	if sourceDomainID == targetDomainEntry.GetInfo().ID {
-		return "", false
-	}
-
-	targetCluster := targetDomainEntry.GetReplicationConfig().ActiveClusterName
-	if targetCluster != t.shard.GetClusterMetadata().GetCurrentClusterName() {
-		return targetCluster, true
-	}
-	return "", false
-}
-
-func (t *transferActiveTaskExecutor) generateCrossClusterTasks(
-	ctx context.Context,
-	wfContext execution.Context,
-	mutableState execution.MutableState,
-	task *persistence.TransferTaskInfo,
-	generators []generatorF,
-) error {
-
-	// TODO: we don't have to do this check here, as we hold the mutable state lock
-	// during the update and we already checked the workflow status after acquiring the lock.
-	if task.TaskType == persistence.TransferTaskTypeCloseExecution {
-		// IsWorkflowCompleted only returns true when the workflow is completed,
-		// !IsWorkflowExecutionRunning below returns true when the wf is zombie or corrupted too
-		if !mutableState.IsWorkflowCompleted() {
-			t.logger.Error("generateCrossClusterTasks", tag.Error(types.BadRequestError{
-				Message: "Workflow has an invalid state for recordChildClose cross cluster task",
-			}))
-			// Returning nil to avoid infinite retry loop
-			return nil
-		}
-	} else if task.TaskType != persistence.TransferTaskTypeStartChildExecution &&
-		!mutableState.IsWorkflowExecutionRunning() {
-		return &types.WorkflowExecutionAlreadyCompletedError{Message: "Workflow execution already completed."}
-	}
-
-	taskGenerator := execution.NewMutableStateTaskGenerator(
-		t.shard.GetClusterMetadata(),
-		t.shard.GetDomainCache(),
-		mutableState,
-	)
-	for _, generator := range generators {
-		err := generator(taskGenerator)
-		if err != nil {
-			return err
-		}
-	}
-
-	return wfContext.UpdateWorkflowExecutionTasks(ctx, t.shard.GetTimeSource().Now())
-}
-
-func (t *transferActiveTaskExecutor) generateCrossClusterTaskFromTransferTask(
-	ctx context.Context,
-	wfContext execution.Context,
-	mutableState execution.MutableState,
-	task *persistence.TransferTaskInfo,
-	targetCluster string,
-) error {
-	return t.generateCrossClusterTasks(
-		ctx,
-		wfContext,
-		mutableState,
-		task,
-		[]generatorF{
-			func(taskGenerator execution.MutableStateTaskGenerator) error {
-				return taskGenerator.GenerateFromTransferTask(task, targetCluster)
-			},
-		},
-	)
-}
-
 func updateWorkflowExecution(
 	ctx context.Context,
 	wfContext execution.Context,
@@ -1901,88 +1752,21 @@ func (t *transferActiveTaskExecutor) resetWorkflow(
 	}
 }
 
-// applyParentClosePolicyDomainActiveCheck determines how parent close policy should be applied
-// this function returns four results
-// 1. cross cluster task generator function
-// 2. a map of child workflow whose domain is active in the current cluster.
-// Map is from child init eventID to child domainID. Child
-// This result so what when actually processing parent close policy
-// we have a consistent view of whether child domain is active or not
-// otherwise if child domain did a failover in the middle, we may skip some child domains.
-// 3. signal parent policy worker: Whether we should signal the parent close policy workflow instead of
-// handling it within this transfer task. If true, the previous two results should not be used.
-// 4. error if there's any
-func (t *transferActiveTaskExecutor) applyParentClosePolicyDomainActiveCheck(
-	task *persistence.TransferTaskInfo,
-	domainName string,
-	childInfos map[int64]*persistence.ChildExecutionInfo,
-	parentDomainEntry *cache.DomainCacheEntry,
-) ([]generatorF, map[int64]string, bool, error) {
-	sameClusterChildDomainIDs := make(map[int64]string) // child init eventID -> child domainID
-	remoteClusters := make(map[string]map[string]struct{})
-	parentClosePolicyWorkerEnabled := t.shard.GetConfig().EnableParentClosePolicyWorker()
-	if parentClosePolicyWorkerEnabled &&
-		len(childInfos) >= t.shard.GetConfig().ParentClosePolicyThreshold(domainName) {
-		// only signal parent close policy workflow when # of child workflow exceeds threshold
-		// the system workflow can handle the case where child domain is active in a different cluster
-		return nil, nil, true, nil
-	}
-
-	for initiatedID, childInfo := range childInfos {
-		if childInfo.ParentClosePolicy == types.ParentClosePolicyAbandon {
-			continue
-		}
-
-		targetDomainEntry, err := execution.GetChildExecutionDomainEntry(
-			childInfo,
-			t.shard.GetDomainCache(),
-			parentDomainEntry,
-		)
-		if err != nil {
-			if common.IsEntityNotExistsError(err) {
-				// if domain no longer exists, ignore the child
-				// don't return error here, otherwise the entire close execution task will get skipped.
-				continue
-			}
-			return nil, nil, false, err
-		}
-		targetCluster, isCrossCluster := t.isCrossClusterTask(task.DomainID, targetDomainEntry)
-		if isCrossCluster {
-			if _, ok := remoteClusters[targetCluster]; !ok {
-				remoteClusters[targetCluster] = map[string]struct{}{}
-			}
-			remoteClusters[targetCluster][targetDomainEntry.GetInfo().ID] = struct{}{}
-		} else {
-			sameClusterChildDomainIDs[initiatedID] = targetDomainEntry.GetInfo().ID
-		}
-	}
-
-	generators := []generatorF{}
-	for remoteCluster, targetDomainIDs := range remoteClusters {
-		generators = append(
-			generators,
-			func(taskGenerator execution.MutableStateTaskGenerator) error {
-				return taskGenerator.GenerateCrossClusterApplyParentClosePolicyTask(task, remoteCluster, targetDomainIDs)
-			})
-	}
-	return generators, sameClusterChildDomainIDs, false, nil
-}
-
 func (t *transferActiveTaskExecutor) processParentClosePolicy(
 	ctx context.Context,
-	wfContext execution.Context,
-	task *persistence.TransferTaskInfo,
+	domainID string,
+	domainName string,
 	childInfos map[int64]*persistence.ChildExecutionInfo,
-	sameClusterChildDomainIDs map[int64]string, // child init ID -> child domainID
-	signalParentClosePolicyWorkflow bool,
-	parentDomainEntry *cache.DomainCacheEntry,
 ) error {
+
 	if len(childInfos) == 0 {
 		return nil
 	}
 
 	scope := t.metricsClient.Scope(metrics.TransferActiveTaskCloseExecutionScope)
-	if signalParentClosePolicyWorkflow {
+
+	if t.shard.GetConfig().EnableParentClosePolicyWorker() &&
+		len(childInfos) >= t.shard.GetConfig().ParentClosePolicyThreshold(domainName) {
 
 		executions := make([]parentclosepolicy.RequestDetail, 0, len(childInfos))
 		for _, childInfo := range childInfos {
@@ -1990,17 +1774,9 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 				continue
 			}
 
-			domainEntry, err := execution.GetChildExecutionDomainEntry(childInfo, t.shard.GetDomainCache(), parentDomainEntry)
-			if common.IsEntityNotExistsError(err) {
-				continue
-			}
-			if err != nil {
-				return err
-			}
-
 			executions = append(executions, parentclosepolicy.RequestDetail{
-				DomainID:   domainEntry.GetInfo().ID,
-				DomainName: domainEntry.GetInfo().Name,
+				DomainID:   domainID,
+				DomainName: domainName,
 				WorkflowID: childInfo.StartedWorkflowID,
 				RunID:      childInfo.StartedRunID,
 				Policy:     childInfo.ParentClosePolicy,
@@ -2012,46 +1788,20 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 		}
 
 		request := parentclosepolicy.Request{
-			ParentExecution: types.WorkflowExecution{
-				WorkflowID: task.WorkflowID,
-				RunID:      task.RunID,
-			},
+			DomainName: domainName,
 			Executions: executions,
 		}
-
-		// Cross cluster requests will be handled via auto-forwarding, no need to treat them differently here
 		return t.parentClosePolicyClient.SendParentClosePolicyRequest(ctx, request)
 	}
 
-	for initiatedID, childDomainID := range sameClusterChildDomainIDs {
-		childDomainName, err := t.shard.GetDomainCache().GetDomainName(childDomainID)
-		if err != nil {
-			// domainName is not actually used when applyParentClosePolicy is calling
-			// history service for terminating or cancelling workflow
-			childDomainName = childDomainID
-		}
-
-		childInfo := childInfos[initiatedID]
-		if err := applyParentClosePolicy(
+	for _, childInfo := range childInfos {
+		if err := t.applyParentClosePolicy(
 			ctx,
-			t.historyClient,
-			&types.WorkflowExecution{
-				WorkflowID: task.WorkflowID,
-				RunID:      task.RunID,
-			},
-			childDomainID,
-			childDomainName,
-			childInfo.StartedWorkflowID,
-			childInfo.StartedRunID,
-			childInfo.ParentClosePolicy,
+			domainID,
+			domainName,
+			childInfo,
 		); err != nil {
-			switch err.(type) {
-			case *types.EntityNotExistsError,
-				*types.WorkflowExecutionAlreadyCompletedError,
-				*types.CancellationAlreadyRequestedError:
-				// expected error, no-op
-				break
-			default:
+			if _, ok := err.(*types.EntityNotExistsError); !ok {
 				scope.IncCounter(metrics.ParentClosePolicyProcessorFailures)
 				return err
 			}
@@ -2061,71 +1811,50 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 	return nil
 }
 
-func applyParentClosePolicy(
+func (t *transferActiveTaskExecutor) applyParentClosePolicy(
 	ctx context.Context,
-	historyClient history.Client,
-	parentWorkflowExecution *types.WorkflowExecution,
-	childDomainID string,
-	childDomainName string,
-	childStartedWorkflowID string,
-	childStartedRunID string,
-	parentClosePolicy types.ParentClosePolicy,
+	domainID string,
+	domainName string,
+	childInfo *persistence.ChildExecutionInfo,
 ) error {
 
-	ctx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
-	defer cancel()
-
-	var err error
-	switch parentClosePolicy {
+	switch childInfo.ParentClosePolicy {
 	case types.ParentClosePolicyAbandon:
 		// noop
-		err = nil
+		return nil
 
 	case types.ParentClosePolicyTerminate:
-		err = historyClient.TerminateWorkflowExecution(ctx, &types.HistoryTerminateWorkflowExecutionRequest{
-			DomainUUID: childDomainID,
+		return t.historyClient.TerminateWorkflowExecution(ctx, &types.HistoryTerminateWorkflowExecutionRequest{
+			DomainUUID: domainID,
 			TerminateRequest: &types.TerminateWorkflowExecutionRequest{
-				Domain: childDomainName,
+				Domain: domainName,
 				WorkflowExecution: &types.WorkflowExecution{
-					WorkflowID: childStartedWorkflowID,
+					WorkflowID: childInfo.StartedWorkflowID,
+					RunID:      childInfo.StartedRunID,
 				},
 				Reason:   "by parent close policy",
 				Identity: execution.IdentityHistoryService,
-				// Include StartedRunID as FirstExecutionRunID on the request to allow child to be terminated across runs.
-				// If the child does continue as new it still propagates the RunID of first execution.
-				FirstExecutionRunID: childStartedRunID,
 			},
-			ExternalWorkflowExecution: parentWorkflowExecution,
-			ChildWorkflowOnly:         true,
 		})
 
 	case types.ParentClosePolicyRequestCancel:
-		err = historyClient.RequestCancelWorkflowExecution(ctx, &types.HistoryRequestCancelWorkflowExecutionRequest{
-			DomainUUID: childDomainID,
+		return t.historyClient.RequestCancelWorkflowExecution(ctx, &types.HistoryRequestCancelWorkflowExecutionRequest{
+			DomainUUID: domainID,
 			CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
-				Domain: childDomainName,
+				Domain: domainName,
 				WorkflowExecution: &types.WorkflowExecution{
-					WorkflowID: childStartedWorkflowID,
+					WorkflowID: childInfo.StartedWorkflowID,
+					RunID:      childInfo.StartedRunID,
 				},
 				Identity: execution.IdentityHistoryService,
-				// Include StartedRunID as FirstExecutionRunID on the request to allow child to be canceled across runs.
-				// If the child does continue as new it still propagates the RunID of first execution.
-				FirstExecutionRunID: childStartedRunID,
 			},
-			ExternalWorkflowExecution: parentWorkflowExecution,
-			ChildWorkflowOnly:         true,
 		})
 
 	default:
-		err = &types.InternalServiceError{
-			Message: fmt.Sprintf("unknown parent close policy: %v", parentClosePolicy),
+		return &types.InternalServiceError{
+			Message: fmt.Sprintf("unknown parent close policy: %v", childInfo.ParentClosePolicy),
 		}
 	}
-
-	if _, ok := err.(*types.DomainNotActiveError); ok {
-		err = errTargetDomainNotActive
-	}
-	return err
 }
 
 func filterPendingChildExecutions(

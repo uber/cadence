@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+// todo (david.porter) determine if any of this code is used at all
+// or if it's just all cross-cluster code that can be deleted
 package task
 
 import (
@@ -36,7 +38,6 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -92,62 +93,6 @@ var (
 	errTaskFetcherShutdown    = errors.New("task fetcher has already shutdown")
 	errDuplicatedFetchRequest = errors.New("duplicated task fetch request")
 )
-
-// NewCrossClusterTaskFetchers creates a set of task fetchers,
-// one for each source cluster
-// The future returned by Fetcher.Get() will have value type []*types.CrossClusterTaskRequest
-func NewCrossClusterTaskFetchers(
-	clusterMetadata cluster.Metadata,
-	clientBean client.Bean,
-	options *FetcherOptions,
-	metricsClient metrics.Client,
-	logger log.Logger,
-) Fetchers {
-	return newTaskFetchers(
-		clusterMetadata,
-		clientBean,
-		crossClusterTaskFetchFn,
-		options,
-		metricsClient,
-		logger,
-	)
-}
-
-func crossClusterTaskFetchFn(
-	ctx context.Context,
-	clientBean client.Bean,
-	sourceCluster string,
-	currentCluster string,
-	requestByShard map[int32]fetchRequest,
-) (map[int32]interface{}, error) {
-	adminClient := clientBean.GetRemoteAdminClient(sourceCluster)
-	shardIDs := make([]int32, 0, len(requestByShard))
-	for shardID := range requestByShard {
-		shardIDs = append(shardIDs, shardID)
-	}
-	// number of tasks returned will be controlled by source cluster.
-	// if there are lots of tasks in the source cluster, they will be
-	// returned in batches.
-	request := &types.GetCrossClusterTasksRequest{
-		ShardIDs:      shardIDs,
-		TargetCluster: currentCluster,
-	}
-	ctx, cancel := context.WithTimeout(ctx, defaultFetchTimeout)
-	defer cancel()
-	resp, err := adminClient.GetCrossClusterTasks(ctx, request)
-	if err != nil {
-		return nil, err
-	}
-
-	responseByShard := make(map[int32]interface{}, len(resp.TasksByShard))
-	for shardID, tasks := range resp.TasksByShard {
-		responseByShard[shardID] = tasks
-	}
-	for shardID, failedCause := range resp.FailedCauseByShard {
-		responseByShard[shardID] = common.ConvertGetTaskFailedCauseToErr(failedCause)
-	}
-	return responseByShard, nil
-}
 
 func newTaskFetchers(
 	clusterMetadata cluster.Metadata,

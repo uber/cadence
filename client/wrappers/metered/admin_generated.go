@@ -167,19 +167,6 @@ func (c *adminClient) DescribeWorkflowExecution(ctx context.Context, ap1 *types.
 	return ap2, err
 }
 
-func (c *adminClient) GetCrossClusterTasks(ctx context.Context, gp1 *types.GetCrossClusterTasksRequest, p1 ...yarpc.CallOption) (gp2 *types.GetCrossClusterTasksResponse, err error) {
-	c.metricsClient.IncCounter(metrics.AdminClientGetCrossClusterTasksScope, metrics.CadenceClientRequests)
-
-	sw := c.metricsClient.StartTimer(metrics.AdminClientGetCrossClusterTasksScope, metrics.CadenceClientLatency)
-	gp2, err = c.client.GetCrossClusterTasks(ctx, gp1, p1...)
-	sw.Stop()
-
-	if err != nil {
-		c.metricsClient.IncCounter(metrics.AdminClientGetCrossClusterTasksScope, metrics.CadenceClientFailures)
-	}
-	return gp2, err
-}
-
 func (c *adminClient) GetDLQReplicationMessages(ctx context.Context, gp1 *types.GetDLQReplicationMessagesRequest, p1 ...yarpc.CallOption) (gp2 *types.GetDLQReplicationMessagesResponse, err error) {
 	c.metricsClient.IncCounter(metrics.AdminClientGetDLQReplicationMessagesScope, metrics.CadenceClientRequests)
 
@@ -412,19 +399,6 @@ func (c *adminClient) ResetQueue(ctx context.Context, rp1 *types.ResetQueueReque
 		c.metricsClient.IncCounter(metrics.AdminClientResetQueueScope, metrics.CadenceClientFailures)
 	}
 	return err
-}
-
-func (c *adminClient) RespondCrossClusterTasksCompleted(ctx context.Context, rp1 *types.RespondCrossClusterTasksCompletedRequest, p1 ...yarpc.CallOption) (rp2 *types.RespondCrossClusterTasksCompletedResponse, err error) {
-	c.metricsClient.IncCounter(metrics.AdminClientRespondCrossClusterTasksCompletedScope, metrics.CadenceClientRequests)
-
-	sw := c.metricsClient.StartTimer(metrics.AdminClientRespondCrossClusterTasksCompletedScope, metrics.CadenceClientLatency)
-	rp2, err = c.client.RespondCrossClusterTasksCompleted(ctx, rp1, p1...)
-	sw.Stop()
-
-	if err != nil {
-		c.metricsClient.IncCounter(metrics.AdminClientRespondCrossClusterTasksCompletedScope, metrics.CadenceClientFailures)
-	}
-	return rp2, err
 }
 
 func (c *adminClient) RestoreDynamicConfig(ctx context.Context, rp1 *types.RestoreDynamicConfigRequest, p1 ...yarpc.CallOption) (err error) {

@@ -62,34 +62,6 @@ func (e *historyEngineImpl) NotifyNewTimerTasks(info *hcommon.NotifyTaskInfo) {
 	}
 }
 
-func (e *historyEngineImpl) NotifyNewCrossClusterTasks(info *hcommon.NotifyTaskInfo) {
-	taskByTargetCluster := make(map[string][]persistence.Task)
-	for _, task := range info.Tasks {
-		// TODO: consider defining a new interface in persistence package
-		// for cross cluster tasks and add a method for returning the target cluster
-		var targetCluster string
-		switch crossClusterTask := task.(type) {
-		case *persistence.CrossClusterStartChildExecutionTask:
-			targetCluster = crossClusterTask.TargetCluster
-		case *persistence.CrossClusterCancelExecutionTask:
-			targetCluster = crossClusterTask.TargetCluster
-		case *persistence.CrossClusterSignalExecutionTask:
-			targetCluster = crossClusterTask.TargetCluster
-		case *persistence.CrossClusterRecordChildExecutionCompletedTask:
-			targetCluster = crossClusterTask.TargetCluster
-		case *persistence.CrossClusterApplyParentClosePolicyTask:
-			targetCluster = crossClusterTask.TargetCluster
-		default:
-			panic("encountered unknown cross cluster task type")
-		}
-		taskByTargetCluster[targetCluster] = append(taskByTargetCluster[targetCluster], task)
-	}
-
-	for targetCluster, tasks := range taskByTargetCluster {
-		e.crossClusterProcessor.NotifyNewTask(targetCluster, &hcommon.NotifyTaskInfo{ExecutionInfo: info.ExecutionInfo, Tasks: tasks, PersistenceError: info.PersistenceError})
-	}
-}
-
 func (e *historyEngineImpl) NotifyNewReplicationTasks(info *hcommon.NotifyTaskInfo) {
 	for _, task := range info.Tasks {
 		hTask, err := hydrateReplicationTask(task, info.ExecutionInfo, info.VersionHistories, info.Activities, info.History)

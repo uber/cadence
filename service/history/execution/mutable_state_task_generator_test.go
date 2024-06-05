@@ -337,52 +337,6 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateFromTransferTask() {
 	}
 }
 
-func (s *mutableStateTaskGeneratorSuite) TestGenerateCrossClusterRecordChildCompletedTask() {
-	targetCluster := cluster.TestAlternativeClusterName
-	transferTask := &persistence.TransferTaskInfo{
-		TaskType:            persistence.TransferTaskTypeCloseExecution,
-		VisibilityTimestamp: time.Now(),
-		Version:             int64(101),
-	}
-	parentInfo := &types.ParentExecutionInfo{
-		DomainUUID: constants.TestParentDomainID,
-		Domain:     constants.TestParentDomainName,
-		Execution: &types.WorkflowExecution{
-			WorkflowID: constants.TestWorkflowID,
-			RunID:      constants.TestRunID,
-		},
-		InitiatedID: 123,
-	}
-	expectedTask := &persistence.CrossClusterRecordChildExecutionCompletedTask{
-		TargetCluster: targetCluster,
-		RecordChildExecutionCompletedTask: persistence.RecordChildExecutionCompletedTask{
-			TaskData: persistence.TaskData{
-				VisibilityTimestamp: transferTask.GetVisibilityTimestamp(),
-				Version:             101,
-			},
-			TargetDomainID:   constants.TestParentDomainID,
-			TargetWorkflowID: constants.TestWorkflowID,
-			TargetRunID:      constants.TestRunID,
-		},
-	}
-
-	var actualTask persistence.Task
-	s.mockMutableState.EXPECT().AddCrossClusterTasks(gomock.Any()).Do(
-		func(crossClusterTasks ...persistence.Task) {
-			s.Len(crossClusterTasks, 1)
-			actualTask = crossClusterTasks[0]
-		},
-	).Times(1)
-
-	err := s.taskGenerator.GenerateCrossClusterRecordChildCompletedTask(
-		transferTask,
-		targetCluster,
-		parentInfo,
-	)
-	s.NoError(err)
-	s.Equal(expectedTask, actualTask)
-}
-
 func (s *mutableStateTaskGeneratorSuite) TestGenerateCrossClusterApplyParentClosePolicyTask() {
 	targetCluster := cluster.TestAlternativeClusterName
 	transferTask := &persistence.TransferTaskInfo{

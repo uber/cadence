@@ -119,10 +119,6 @@ func (h *historyHandler) DescribeWorkflowExecution(ctx context.Context, hp1 *typ
 	return h.wrapped.DescribeWorkflowExecution(ctx, hp1)
 }
 
-func (h *historyHandler) GetCrossClusterTasks(ctx context.Context, gp1 *types.GetCrossClusterTasksRequest) (gp2 *types.GetCrossClusterTasksResponse, err error) {
-	return h.wrapped.GetCrossClusterTasks(ctx, gp1)
-}
-
 func (h *historyHandler) GetDLQReplicationMessages(ctx context.Context, gp1 *types.GetDLQReplicationMessagesRequest) (gp2 *types.GetDLQReplicationMessagesResponse, err error) {
 	return h.wrapped.GetDLQReplicationMessages(ctx, gp1)
 }
@@ -237,10 +233,6 @@ func (h *historyHandler) RespondActivityTaskCompleted(ctx context.Context, hp1 *
 
 func (h *historyHandler) RespondActivityTaskFailed(ctx context.Context, hp1 *types.HistoryRespondActivityTaskFailedRequest) (err error) {
 	return h.wrapped.RespondActivityTaskFailed(ctx, hp1)
-}
-
-func (h *historyHandler) RespondCrossClusterTasksCompleted(ctx context.Context, rp1 *types.RespondCrossClusterTasksCompletedRequest) (rp2 *types.RespondCrossClusterTasksCompletedResponse, err error) {
-	return h.wrapped.RespondCrossClusterTasksCompleted(ctx, rp1)
 }
 
 func (h *historyHandler) RespondDecisionTaskCompleted(ctx context.Context, hp1 *types.HistoryRespondDecisionTaskCompletedRequest) (hp2 *types.HistoryRespondDecisionTaskCompletedResponse, err error) {

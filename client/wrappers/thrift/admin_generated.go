@@ -79,11 +79,6 @@ func (g adminClient) DescribeWorkflowExecution(ctx context.Context, ap1 *types.A
 	return thrift.ToAdminDescribeWorkflowExecutionResponse(response), thrift.ToError(err)
 }
 
-func (g adminClient) GetCrossClusterTasks(ctx context.Context, gp1 *types.GetCrossClusterTasksRequest, p1 ...yarpc.CallOption) (gp2 *types.GetCrossClusterTasksResponse, err error) {
-	response, err := g.c.GetCrossClusterTasks(ctx, thrift.FromAdminGetCrossClusterTasksRequest(gp1), p1...)
-	return thrift.ToAdminGetCrossClusterTasksResponse(response), thrift.ToError(err)
-}
-
 func (g adminClient) GetDLQReplicationMessages(ctx context.Context, gp1 *types.GetDLQReplicationMessagesRequest, p1 ...yarpc.CallOption) (gp2 *types.GetDLQReplicationMessagesResponse, err error) {
 	response, err := g.c.GetDLQReplicationMessages(ctx, thrift.FromAdminGetDLQReplicationMessagesRequest(gp1), p1...)
 	return thrift.ToAdminGetDLQReplicationMessagesResponse(response), thrift.ToError(err)
@@ -172,11 +167,6 @@ func (g adminClient) ResendReplicationTasks(ctx context.Context, rp1 *types.Rese
 func (g adminClient) ResetQueue(ctx context.Context, rp1 *types.ResetQueueRequest, p1 ...yarpc.CallOption) (err error) {
 	err = g.c.ResetQueue(ctx, thrift.FromAdminResetQueueRequest(rp1), p1...)
 	return thrift.ToError(err)
-}
-
-func (g adminClient) RespondCrossClusterTasksCompleted(ctx context.Context, rp1 *types.RespondCrossClusterTasksCompletedRequest, p1 ...yarpc.CallOption) (rp2 *types.RespondCrossClusterTasksCompletedResponse, err error) {
-	response, err := g.c.RespondCrossClusterTasksCompleted(ctx, thrift.FromAdminRespondCrossClusterTasksCompletedRequest(rp1), p1...)
-	return thrift.ToAdminRespondCrossClusterTasksCompletedResponse(response), thrift.ToError(err)
 }
 
 func (g adminClient) RestoreDynamicConfig(ctx context.Context, rp1 *types.RestoreDynamicConfigRequest, p1 ...yarpc.CallOption) (err error) {
