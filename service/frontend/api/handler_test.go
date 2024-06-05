@@ -2307,6 +2307,7 @@ func (s *workflowHandlerSuite) TestRespondActivityTaskCanceled() {
 		err := wh.RespondActivityTaskCanceled(context.Background(), validInput)
 		s.Error(err)
 	})
+
 }
 
 func updateRequest(
