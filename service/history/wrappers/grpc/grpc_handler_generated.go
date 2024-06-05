@@ -72,6 +72,11 @@ func (g GRPCHandler) DescribeWorkflowExecution(ctx context.Context, request *his
 	return proto.FromHistoryDescribeWorkflowExecutionResponse(response), proto.FromError(err)
 }
 
+func (g GRPCHandler) GetCrossClusterTasks(ctx context.Context, request *historyv1.GetCrossClusterTasksRequest) (*historyv1.GetCrossClusterTasksResponse, error) {
+	response, err := g.h.GetCrossClusterTasks(ctx, proto.ToHistoryGetCrossClusterTasksRequest(request))
+	return proto.FromHistoryGetCrossClusterTasksResponse(response), proto.FromError(err)
+}
+
 func (g GRPCHandler) GetDLQReplicationMessages(ctx context.Context, request *historyv1.GetDLQReplicationMessagesRequest) (*historyv1.GetDLQReplicationMessagesResponse, error) {
 	response, err := g.h.GetDLQReplicationMessages(ctx, proto.ToHistoryGetDLQReplicationMessagesRequest(request))
 	return proto.FromHistoryGetDLQReplicationMessagesResponse(response), proto.FromError(err)
@@ -205,6 +210,11 @@ func (g GRPCHandler) RespondActivityTaskCompleted(ctx context.Context, request *
 func (g GRPCHandler) RespondActivityTaskFailed(ctx context.Context, request *historyv1.RespondActivityTaskFailedRequest) (*historyv1.RespondActivityTaskFailedResponse, error) {
 	err := g.h.RespondActivityTaskFailed(ctx, proto.ToHistoryRespondActivityTaskFailedRequest(request))
 	return &historyv1.RespondActivityTaskFailedResponse{}, proto.FromError(err)
+}
+
+func (g GRPCHandler) RespondCrossClusterTasksCompleted(ctx context.Context, request *historyv1.RespondCrossClusterTasksCompletedRequest) (*historyv1.RespondCrossClusterTasksCompletedResponse, error) {
+	response, err := g.h.RespondCrossClusterTasksCompleted(ctx, proto.ToHistoryRespondCrossClusterTasksCompletedRequest(request))
+	return proto.FromHistoryRespondCrossClusterTasksCompletedResponse(response), proto.FromError(err)
 }
 
 func (g GRPCHandler) RespondDecisionTaskCompleted(ctx context.Context, request *historyv1.RespondDecisionTaskCompletedRequest) (*historyv1.RespondDecisionTaskCompletedResponse, error) {

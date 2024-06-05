@@ -74,6 +74,7 @@ type (
 		config                         *config.Config
 		historyEventNotifier           events.Notifier
 		rateLimiter                    quotas.Limiter
+		crossClusterTaskFetchers       task.Fetchers
 		replicationTaskFetchers        replication.TaskFetchers
 		queueTaskProcessor             task.Processor
 		failoverCoordinator            failover.Coordinator
@@ -109,7 +110,6 @@ func NewHandler(
 
 // Start starts the handler
 func (h *handlerImpl) Start() {
-
 	h.replicationTaskFetchers = replication.NewTaskFetchers(
 		h.GetLogger(),
 		h.config,
@@ -169,6 +169,7 @@ func (h *handlerImpl) Start() {
 // Stop stops the handler
 func (h *handlerImpl) Stop() {
 	h.prepareToShutDown()
+	h.crossClusterTaskFetchers.Stop()
 	h.replicationTaskFetchers.Stop()
 	h.controller.Stop()
 	h.queueTaskProcessor.Stop()
@@ -1908,6 +1909,20 @@ func (h *handlerImpl) NotifyFailoverMarkers(
 		h.failoverCoordinator.ReceiveFailoverMarkers(token.GetShardIDs(), token.GetFailoverMarker())
 	}
 	return nil
+}
+
+func (h *handlerImpl) GetCrossClusterTasks(
+	ctx context.Context,
+	request *types.GetCrossClusterTasksRequest,
+) (resp *types.GetCrossClusterTasksResponse, retError error) {
+	return nil, types.BadRequestError{Message: "The cross-cluster feature has been deprecated."}
+}
+
+func (h *handlerImpl) RespondCrossClusterTasksCompleted(
+	ctx context.Context,
+	request *types.RespondCrossClusterTasksCompletedRequest,
+) (resp *types.RespondCrossClusterTasksCompletedResponse, retError error) {
+	return nil, types.BadRequestError{Message: "The cross-cluster feature has been deprecated"}
 }
 
 func (h *handlerImpl) GetFailoverInfo(
