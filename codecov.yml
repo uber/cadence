@@ -33,6 +33,7 @@ ignore:
   - "**/*_generated.go"
   - "**/*_mock.go"
   - "**/*_test.go"
+  - "**/*Test.go"
   - "**/*_test_utils.go"
   - "**/constants.go"
   - "**/interface.go"
