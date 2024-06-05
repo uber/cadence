@@ -358,7 +358,7 @@ func (t *transferActiveTaskExecutor) processCloseExecutionTaskHelper(
 	ctx context.Context,
 	task *persistence.TransferTaskInfo,
 	recordWorkflowClosed bool,
-	replyToParentWorkflow bool,
+	replyToParentWorkflowIfApplicable bool,
 	applyParentClosePolicy bool,
 ) (retError error) {
 
@@ -468,6 +468,7 @@ func (t *transferActiveTaskExecutor) processCloseExecutionTaskHelper(
 
 	// Communicate the result to parent execution if this is Child Workflow execution
 	// and parent domain is in the same cluster
+	replyToParentWorkflow := replyToParentWorkflowIfApplicable && mutableState.HasParentExecution() && executionInfo.CloseStatus != persistence.WorkflowCloseStatusContinuedAsNew
 	if replyToParentWorkflow {
 		recordChildCompletionCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
 		defer cancel()
