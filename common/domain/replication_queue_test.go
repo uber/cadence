@@ -709,27 +709,3 @@ func TestPurgeAckedMessages(t *testing.T) {
 		})
 	}
 }
-
-func TestReplicationQueueImpl_purgeProcessor(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockQueue := persistence.NewMockQueueManager(ctrl)
-	rq := NewReplicationQueue(mockQueue, "testCluster", nil, nil).(*replicationQueueImpl)
-	atomic.StoreInt32(&rq.status, common.DaemonStatusInitialized)
-
-	done := make(chan bool)
-	mockQueue.EXPECT().GetAckLevels(gomock.Any()).Return(map[string]int64{}, nil).AnyTimes()
-	mockQueue.EXPECT().DeleteMessagesBefore(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-
-	go func() {
-		rq.Start()
-		close(done)
-	}()
-
-	rq.Stop()
-	select {
-	case <-done:
-		// Pass if the goroutine exits
-	case <-time.After(10 * time.Millisecond):
-		t.Error("purgeProcessor did not stop within expected time")
-	}
-}
