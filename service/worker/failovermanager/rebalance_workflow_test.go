@@ -287,6 +287,149 @@ func (s *rebalanceWorkflowTestSuite) TestWorkflow_GetRebalanceDomainsActivityErr
 	s.Error(err)
 }
 
+func (s *rebalanceWorkflowTestSuite) TestShouldAllowRebalance() {
+	testCases := []struct {
+		name   string
+		domain *types.DescribeDomainResponse
+		expect bool
+	}{
+		{
+			name: "allow rebalance",
+			domain: &types.DescribeDomainResponse{
+				DomainInfo: &types.DomainInfo{
+					Name: "d1",
+					Data: map[string]string{
+						common.DomainDataKeyForManagedFailover:  "true",
+						common.DomainDataKeyForPreferredCluster: "c2",
+					},
+					Status: types.DomainStatusRegistered.Ptr(),
+				},
+				ReplicationConfiguration: &types.DomainReplicationConfiguration{
+					ActiveClusterName: "c1",
+					Clusters:          clusters,
+				},
+				IsGlobalDomain: true,
+			},
+			expect: true,
+		},
+		{
+			name: "not allow rebalance because domain failover is not managed by cadence",
+			domain: &types.DescribeDomainResponse{
+				DomainInfo: &types.DomainInfo{
+					Name: "d1",
+					Data: map[string]string{
+						common.DomainDataKeyForManagedFailover:  "false",
+						common.DomainDataKeyForPreferredCluster: "c2",
+					},
+					Status: types.DomainStatusRegistered.Ptr(),
+				},
+				ReplicationConfiguration: &types.DomainReplicationConfiguration{
+					ActiveClusterName: "c1",
+					Clusters:          clusters,
+				},
+				IsGlobalDomain: true,
+			},
+			expect: false,
+		},
+		{
+			name: "not allow rebalance because domain is not global domain",
+			domain: &types.DescribeDomainResponse{
+				DomainInfo: &types.DomainInfo{
+					Name: "d1",
+					Data: map[string]string{
+						common.DomainDataKeyForManagedFailover:  "true",
+						common.DomainDataKeyForPreferredCluster: "c2",
+					},
+					Status: types.DomainStatusRegistered.Ptr(),
+				},
+				ReplicationConfiguration: &types.DomainReplicationConfiguration{
+					ActiveClusterName: "c1",
+					Clusters:          clusters,
+				},
+				IsGlobalDomain: false,
+			},
+			expect: false,
+		},
+		{
+			name: "not allow rebalance because domain status is not registered",
+			domain: &types.DescribeDomainResponse{
+				DomainInfo: &types.DomainInfo{
+					Name: "d1",
+					Data: map[string]string{
+						common.DomainDataKeyForManagedFailover:  "true",
+						common.DomainDataKeyForPreferredCluster: "c2",
+					},
+					Status: types.DomainStatusDeprecated.Ptr(),
+				},
+				ReplicationConfiguration: &types.DomainReplicationConfiguration{
+					ActiveClusterName: "c1",
+					Clusters:          clusters,
+				},
+				IsGlobalDomain: true,
+			},
+		},
+		{
+			name: "not allow rebalance because domain has no preferred cluster",
+			domain: &types.DescribeDomainResponse{
+				DomainInfo: &types.DomainInfo{
+					Name: "d1",
+					Data: map[string]string{
+						common.DomainDataKeyForManagedFailover: "true",
+					},
+					Status: types.DomainStatusRegistered.Ptr(),
+				},
+				ReplicationConfiguration: &types.DomainReplicationConfiguration{
+					ActiveClusterName: "c1",
+					Clusters:          clusters,
+				},
+				IsGlobalDomain: true,
+			},
+		},
+		{
+			name: "not allow rebalance because preferred cluster is the same as active cluster",
+			domain: &types.DescribeDomainResponse{
+				DomainInfo: &types.DomainInfo{
+					Name: "d1",
+					Data: map[string]string{
+						common.DomainDataKeyForManagedFailover:  "true",
+						common.DomainDataKeyForPreferredCluster: "c1",
+					},
+					Status: types.DomainStatusRegistered.Ptr(),
+				},
+				ReplicationConfiguration: &types.DomainReplicationConfiguration{
+					ActiveClusterName: "c1",
+					Clusters:          clusters,
+				},
+				IsGlobalDomain: true,
+			},
+		},
+		{
+			name: "not allow rebalance because preferred cluster is not in cluster list",
+			domain: &types.DescribeDomainResponse{
+				DomainInfo: &types.DomainInfo{
+					Name: "d1",
+					Data: map[string]string{
+						common.DomainDataKeyForManagedFailover:  "true",
+						common.DomainDataKeyForPreferredCluster: "c3",
+					},
+					Status: types.DomainStatusRegistered.Ptr(),
+				},
+				ReplicationConfiguration: &types.DomainReplicationConfiguration{
+					ActiveClusterName: "c1",
+					Clusters:          clusters,
+				},
+				IsGlobalDomain: true,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		s.T().Run(tc.name, func(t *testing.T) {
+			s.Equal(tc.expect, shouldAllowRebalance(tc.domain))
+		})
+	}
+}
+
 func (s *rebalanceWorkflowTestSuite) prepareTestActivityEnv() (*testsuite.TestActivityEnvironment, *resource.Test) {
 	controller := gomock.NewController(s.T())
 	mockResource := resource.NewTest(s.T(), controller, metrics.Worker)
