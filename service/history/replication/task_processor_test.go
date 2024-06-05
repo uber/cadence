@@ -550,6 +550,9 @@ func (s *taskProcessorSuite) TestCleanupReplicationTaskLoop() {
 	// wait a bit and terminate the loop
 	time.Sleep(50 * time.Millisecond)
 	close(s.taskProcessor.done)
+
+	// wait until goroutine terminates
+	s.taskProcessor.wg.Wait()
 }
 
 func (s *taskProcessorSuite) TestSyncShardStatusLoop_WithoutSyncShardTask() {
@@ -560,6 +563,9 @@ func (s *taskProcessorSuite) TestSyncShardStatusLoop_WithoutSyncShardTask() {
 	// wait a bit and terminate the loop
 	time.Sleep(50 * time.Millisecond)
 	close(s.taskProcessor.done)
+
+	// wait until goroutine terminates
+	s.taskProcessor.wg.Wait()
 }
 
 func (s *taskProcessorSuite) TestSyncShardStatusLoop_WithSyncShardTask() {
@@ -580,8 +586,8 @@ func (s *taskProcessorSuite) TestSyncShardStatusLoop_WithSyncShardTask() {
 	s.taskProcessor.wg.Add(1)
 	go s.taskProcessor.syncShardStatusLoop()
 
-	// wait a bit
-	time.Sleep(50 * time.Millisecond)
+	// wait until goroutine terminates
+	s.taskProcessor.wg.Wait()
 }
 
 func (s *taskProcessorSuite) TestShouldRetryDLQ() {
