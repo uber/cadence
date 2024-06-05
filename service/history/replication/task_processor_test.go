@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -42,6 +43,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
@@ -59,8 +61,7 @@ type (
 	taskProcessorSuite struct {
 		suite.Suite
 		*require.Assertions
-		controller *gomock.Controller
-
+		controller         *gomock.Controller
 		mockShard          *shard.TestContext
 		mockEngine         *engine.MockEngine
 		config             *config.Config
@@ -75,6 +76,24 @@ type (
 		taskProcessor      *taskProcessorImpl
 	}
 )
+
+type fakeTaskFetcher struct {
+	sourceCluster string
+	requestChan   chan<- *request
+	rateLimiter   *quotas.DynamicRateLimiter
+}
+
+func (f fakeTaskFetcher) Start() {}
+func (f fakeTaskFetcher) Stop()  {}
+func (f fakeTaskFetcher) GetSourceCluster() string {
+	return f.sourceCluster
+}
+func (f fakeTaskFetcher) GetRequestChan() chan<- *request {
+	return f.requestChan
+}
+func (f fakeTaskFetcher) GetRateLimiter() *quotas.DynamicRateLimiter {
+	return f.rateLimiter
+}
 
 func TestTaskProcessorSuite(t *testing.T) {
 	s := new(taskProcessorSuite)
@@ -97,9 +116,10 @@ func (s *taskProcessorSuite) SetupTest() {
 		s.T(),
 		s.controller,
 		&persistence.ShardInfo{
-			ShardID:          0,
-			RangeID:          1,
-			TransferAckLevel: 0,
+			ShardID:                 0,
+			RangeID:                 1,
+			TransferAckLevel:        0,
+			ClusterReplicationLevel: map[string]int64{cluster.TestAlternativeClusterName: 350},
 		},
 		s.config,
 	)
@@ -444,6 +464,37 @@ func (s *taskProcessorSuite) TestGenerateDLQRequest_ReplicationTaskTypeSyncActiv
 	s.Equal(persistence.ReplicationTaskTypeSyncActivity, request.TaskInfo.GetTaskType())
 }
 
+func (s *taskProcessorSuite) TestGenerateDLQRequest_InvalidTaskType() {
+	domainID := uuid.New()
+	workflowID := uuid.New()
+	runID := uuid.New()
+	events := []*types.HistoryEvent{
+		{
+			ID:      1,
+			Version: 1,
+		},
+	}
+	serializer := s.mockShard.GetPayloadSerializer()
+	data, err := serializer.SerializeBatchEvents(events, common.EncodingTypeThriftRW)
+	s.NoError(err)
+	taskType := types.ReplicationTaskType(-1)
+	task := &types.ReplicationTask{
+		TaskType: &taskType,
+		HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
+			DomainID:   domainID,
+			WorkflowID: workflowID,
+			RunID:      runID,
+			Events: &types.DataBlob{
+				EncodingType: types.EncodingTypeThriftRW.Ptr(),
+				Data:         data.Data,
+			},
+		},
+	}
+
+	_, err = s.taskProcessor.generateDLQRequest(task)
+	s.ErrorContains(err, "unknown replication task type")
+}
+
 func (s *taskProcessorSuite) TestTriggerDataInconsistencyScan_Success() {
 	domainID := uuid.New()
 	workflowID := uuid.New()
@@ -481,20 +532,63 @@ func (s *taskProcessorSuite) TestTriggerDataInconsistencyScan_Success() {
 	s.NoError(err)
 }
 
-type fakeTaskFetcher struct {
-	sourceCluster string
-	requestChan   chan<- *request
-	rateLimiter   *quotas.DynamicRateLimiter
+func (s *taskProcessorSuite) TestCleanupReplicationTaskLoop() {
+	wantResp := &persistence.RangeCompleteReplicationTaskResponse{
+		TasksCompleted: 15, // if this number is different than page size the loop breaks
+	}
+	s.executionManager.On("RangeCompleteReplicationTask", mock.Anything, &persistence.RangeCompleteReplicationTaskRequest{
+		// this is min ack level of remote clusters. there's only one remote cluster in this test "standby".
+		// its replication ack level is set to 350 in SetupTest()
+		InclusiveEndTaskID: 350,
+		PageSize:           50, // this comes from test config
+	}).Return(wantResp, nil)
+
+	// start the cleanup loop
+	s.taskProcessor.wg.Add(1)
+	go s.taskProcessor.cleanupReplicationTaskLoop()
+
+	// wait a bit and terminate the loop
+	time.Sleep(50 * time.Millisecond)
+	close(s.taskProcessor.done)
 }
 
-func (f fakeTaskFetcher) Start() {}
-func (f fakeTaskFetcher) Stop()  {}
-func (f fakeTaskFetcher) GetSourceCluster() string {
-	return f.sourceCluster
+func (s *taskProcessorSuite) TestSyncShardStatusLoop_WithoutSyncShardTask() {
+	// start the sync shard loop
+	s.taskProcessor.wg.Add(1)
+	go s.taskProcessor.syncShardStatusLoop()
+
+	// wait a bit and terminate the loop
+	time.Sleep(50 * time.Millisecond)
+	close(s.taskProcessor.done)
 }
-func (f fakeTaskFetcher) GetRequestChan() chan<- *request {
-	return f.requestChan
+
+func (s *taskProcessorSuite) TestSyncShardStatusLoop_WithSyncShardTask() {
+	now := time.Now()
+	s.taskProcessor.syncShardChan <- &types.SyncShardStatus{
+		Timestamp: common.Int64Ptr(now.UnixNano()),
+	}
+	s.mockEngine.EXPECT().SyncShardStatus(gomock.Any(), &types.SyncShardStatusRequest{
+		SourceCluster: "standby",
+		ShardID:       0,
+		Timestamp:     common.Int64Ptr(now.UnixNano()),
+	}).DoAndReturn(func(ctx context.Context, request *types.SyncShardStatusRequest) error {
+		close(s.taskProcessor.done)
+		return nil
+	}).Times(1)
+
+	// start the sync shard loop
+	s.taskProcessor.wg.Add(1)
+	go s.taskProcessor.syncShardStatusLoop()
+
+	// wait a bit
+	time.Sleep(50 * time.Millisecond)
 }
-func (f fakeTaskFetcher) GetRateLimiter() *quotas.DynamicRateLimiter {
-	return f.rateLimiter
+
+func (s *taskProcessorSuite) TestShouldRetryDLQ() {
+	s.False(s.taskProcessor.shouldRetryDLQ(nil))
+	s.True(s.taskProcessor.shouldRetryDLQ(&types.InternalServiceError{}))
+	s.True(s.taskProcessor.shouldRetryDLQ(fmt.Errorf("error before done channel closed should be retried")))
+	close(s.taskProcessor.done)
+	s.False(s.taskProcessor.shouldRetryDLQ(&types.ServiceBusyError{}))
+	s.False(s.taskProcessor.shouldRetryDLQ(fmt.Errorf("error after done channel closed should NOT be retried")))
 }
