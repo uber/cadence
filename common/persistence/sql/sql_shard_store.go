@@ -262,8 +262,6 @@ func shardInfoToShardsRow(s persistence.InternalShardInfo, parser serialization.
 		ClusterTimerAckLevel:                      s.ClusterTimerAckLevel,
 		TransferProcessingQueueStates:             transferPQSData,
 		TransferProcessingQueueStatesEncoding:     transferPQSEncoding,
-		CrossClusterProcessingQueueStates:         crossClusterPQS,
-		CrossClusterProcessingQueueStatesEncoding: crossClusterPQSEncoding,
 		TimerProcessingQueueStates:                timerPQSData,
 		TimerProcessingQueueStatesEncoding:        timerPQSEncoding,
 		DomainNotificationVersion:                 s.DomainNotificationVersion,
