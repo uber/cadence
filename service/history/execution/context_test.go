@@ -236,14 +236,6 @@ func TestNotifyTasksFromWorkflowSnapshot(t *testing.T) {
 						Attempt: 10,
 					},
 				},
-				CrossClusterTasks: []persistence.Task{
-					&persistence.CrossClusterStartChildExecutionTask{
-						StartChildExecutionTask: persistence.StartChildExecutionTask{
-							TargetDomainID: "target-domain",
-						},
-						TargetCluster: "target",
-					},
-				},
 				ReplicationTasks: []persistence.Task{
 					&persistence.HistoryReplicationTask{
 						FirstEventID: 1,
@@ -278,22 +270,6 @@ func TestNotifyTasksFromWorkflowSnapshot(t *testing.T) {
 					Tasks: []persistence.Task{
 						&persistence.ActivityTimeoutTask{
 							Attempt: 10,
-						},
-					},
-					PersistenceError: true,
-				})
-				mockEngine.EXPECT().NotifyNewCrossClusterTasks(&hcommon.NotifyTaskInfo{
-					ExecutionInfo: &persistence.WorkflowExecutionInfo{
-						DomainID:   "test-domain-id",
-						WorkflowID: "test-workflow-id",
-						RunID:      "test-run-id",
-					},
-					Tasks: []persistence.Task{
-						&persistence.CrossClusterStartChildExecutionTask{
-							StartChildExecutionTask: persistence.StartChildExecutionTask{
-								TargetDomainID: "target-domain",
-							},
-							TargetCluster: "target",
 						},
 					},
 					PersistenceError: true,
@@ -388,14 +364,6 @@ func TestNotifyTasksFromWorkflowMutation(t *testing.T) {
 						Attempt: 10,
 					},
 				},
-				CrossClusterTasks: []persistence.Task{
-					&persistence.CrossClusterStartChildExecutionTask{
-						StartChildExecutionTask: persistence.StartChildExecutionTask{
-							TargetDomainID: "target-domain",
-						},
-						TargetCluster: "target",
-					},
-				},
 				ReplicationTasks: []persistence.Task{
 					&persistence.HistoryReplicationTask{
 						FirstEventID: 1,
@@ -430,22 +398,6 @@ func TestNotifyTasksFromWorkflowMutation(t *testing.T) {
 					Tasks: []persistence.Task{
 						&persistence.ActivityTimeoutTask{
 							Attempt: 10,
-						},
-					},
-					PersistenceError: true,
-				})
-				mockEngine.EXPECT().NotifyNewCrossClusterTasks(&hcommon.NotifyTaskInfo{
-					ExecutionInfo: &persistence.WorkflowExecutionInfo{
-						DomainID:   "test-domain-id",
-						WorkflowID: "test-workflow-id",
-						RunID:      "test-run-id",
-					},
-					Tasks: []persistence.Task{
-						&persistence.CrossClusterStartChildExecutionTask{
-							StartChildExecutionTask: persistence.StartChildExecutionTask{
-								TargetDomainID: "target-domain",
-							},
-							TargetCluster: "target",
 						},
 					},
 					PersistenceError: true,

@@ -190,7 +190,8 @@ const (
 	TransferTaskTypeApplyParentClosePolicy
 )
 
-// Types of cross-cluster tasks
+// Types of cross-cluster tasks. These are deprecated as of
+// May 2024
 const (
 	CrossClusterTaskTypeStartChildExecution = iota + 1
 	CrossClusterTaskTypeCancelExecution
@@ -264,6 +265,7 @@ const (
 	TransferTaskTransferTargetRunID = "30000000-0000-f000-f000-000000000002"
 	// CrossClusterTaskDefaultTargetRunID is the the dummy run ID for cross-cluster tasks of types
 	// that do not have a target workflow
+	// This is deprecated as of May 24
 	CrossClusterTaskDefaultTargetRunID = TransferTaskTransferTargetRunID
 
 	// indicate invalid workflow state transition
@@ -411,6 +413,7 @@ type (
 	// Cross cluster tasks are exactly like transfer tasks so
 	// instead of creating another struct and duplicating the same
 	// logic everywhere. We reuse TransferTaskInfo
+	// This is a deprecated feature as of May 24
 	CrossClusterTaskInfo = TransferTaskInfo
 
 	// ReplicationTaskInfo describes the replication task created for replication of history events

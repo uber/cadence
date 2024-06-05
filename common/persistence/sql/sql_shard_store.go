@@ -245,9 +245,6 @@ func shardInfoToShardsRow(s persistence.InternalShardInfo, parser serialization.
 		transferPQSEncoding = string(s.TransferProcessingQueueStates.Encoding)
 	}
 
-	var crossClusterPQS []byte
-	crossClusterPQSEncoding := string(common.EncodingTypeEmpty)
-
 	var timerPQSData []byte
 	timerPQSEncoding := string(common.EncodingTypeEmpty)
 	if s.TimerProcessingQueueStates != nil {

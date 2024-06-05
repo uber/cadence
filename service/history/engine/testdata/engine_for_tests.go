@@ -59,7 +59,6 @@ type NewEngineFn func(
 	publicClient workflowserviceclient.Interface,
 	historyEventNotifier events.Notifier,
 	config *config.Config,
-	crossClusterTaskFetchers task.Fetchers,
 	replicationTaskFetchers replication.TaskFetchers,
 	rawMatchingClient matching.Client,
 	queueTaskProcessor task.Processor,
@@ -153,15 +152,6 @@ func NewEngineForTest(t *testing.T, newEngineFn NewEngineFn) *EngineForTest {
 	queueProcessorFactory.EXPECT().
 		NewTransferQueueProcessor(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(transferQProcessor).
-		Times(1)
-
-	xClusterQProcessor := queue.NewMockProcessor(controller)
-	xClusterQProcessor.EXPECT().Start().Return().Times(1)
-	xClusterQProcessor.EXPECT().NotifyNewTask(gomock.Any(), gomock.Any()).Return().AnyTimes()
-	xClusterQProcessor.EXPECT().Stop().Return().Times(1)
-	queueProcessorFactory.EXPECT().
-		NewCrossClusterQueueProcessor(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(xClusterQProcessor).
 		Times(1)
 
 	engine := newEngineFn(

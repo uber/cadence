@@ -70,7 +70,7 @@ func TestInsertShard(t *testing.T) {
 					`VALUES(` +
 					`15, 0, 10000000-1000-f000-f000-000000000000, 20000000-1000-f000-f000-000000000000, 30000000-1000-f000-f000-000000000000, ` +
 					`946684800000, -11, ` +
-					`{shard_id: 15, owner: owner, range_id: 1000, stolen_since_renew: 0, updated_at: 1712080800000, replication_ack_level: 2000, transfer_ack_level: 3000, timer_ack_level: 2024-04-02T17:00:00Z, cluster_transfer_ack_level: map[cluster2:4000], cluster_timer_ack_level: map[cluster2:2024-04-02 16:00:00 +0000 UTC], transfer_processing_queue_states: [116 114 97 110 115 102 101 114 113 117 101 117 101], transfer_processing_queue_states_encoding: thriftrw, cross_cluster_processing_queue_states: [120 99 108 117 115 116 101 114 113 117 101 117 101], cross_cluster_processing_queue_states_encoding: thriftrw, timer_processing_queue_states: [116 105 109 101 114 113 117 101 117 101], timer_processing_queue_states_encoding: thriftrw, domain_notification_version: 3, cluster_replication_level: map[cluster2:5000], replication_dlq_ack_level: map[cluster2:10], pending_failover_markers: [102 97 105 108 111 118 101 114 109 97 114 107 101 114 115], pending_failover_markers_encoding: thriftrw }, ` +
+					`{shard_id: 15, owner: owner, range_id: 1000, stolen_since_renew: 0, updated_at: 1712080800000, replication_ack_level: 2000, transfer_ack_level: 3000, timer_ack_level: 2024-04-02T17:00:00Z, cluster_transfer_ack_level: map[cluster2:4000], cluster_timer_ack_level: map[cluster2:2024-04-02 16:00:00 +0000 UTC], transfer_processing_queue_states: [116 114 97 110 115 102 101 114 113 117 101 117 101], transfer_processing_queue_states_encoding: thriftrw, timer_processing_queue_states: [116 105 109 101 114 113 117 101 117 101], timer_processing_queue_states_encoding: thriftrw, domain_notification_version: 3, cluster_replication_level: map[cluster2:5000], replication_dlq_ack_level: map[cluster2:10], pending_failover_markers: [102 97 105 108 111 118 101 114 109 97 114 107 101 114 115], pending_failover_markers_encoding: thriftrw }, ` +
 					`1000` +
 					`) IF NOT EXISTS`,
 			},
@@ -162,22 +162,21 @@ func TestSelectShard(t *testing.T) {
 			},
 			wantRangeID: int64(1000),
 			wantShardInfo: &persistence.InternalShardInfo{
-				ShardID:                           15,
-				Owner:                             "owner",
-				RangeID:                           1000,
-				UpdatedAt:                         ts,
-				ReplicationAckLevel:               2000,
-				ReplicationDLQAckLevel:            map[string]int64{"cluster2": 5},
-				TransferAckLevel:                  3000,
-				TimerAckLevel:                     ts.Add(-1 * time.Hour),
-				ClusterTransferAckLevel:           map[string]int64{"cluster1": 3000},
-				ClusterTimerAckLevel:              map[string]time.Time{"cluster1": ts.Add(-1 * time.Hour)},
-				TransferProcessingQueueStates:     &persistence.DataBlob{Encoding: "thriftrw", Data: []uint8("transferqueue")},
-				CrossClusterProcessingQueueStates: &persistence.DataBlob{Encoding: "thriftrw", Data: []uint8("xclusterqueue")},
-				TimerProcessingQueueStates:        &persistence.DataBlob{Encoding: "thriftrw", Data: []uint8("timerqueue")},
-				ClusterReplicationLevel:           map[string]int64{"cluster2": 1500},
-				DomainNotificationVersion:         3,
-				PendingFailoverMarkers:            &persistence.DataBlob{Encoding: "thriftrw", Data: []uint8("failovermarkers")},
+				ShardID:                       15,
+				Owner:                         "owner",
+				RangeID:                       1000,
+				UpdatedAt:                     ts,
+				ReplicationAckLevel:           2000,
+				ReplicationDLQAckLevel:        map[string]int64{"cluster2": 5},
+				TransferAckLevel:              3000,
+				TimerAckLevel:                 ts.Add(-1 * time.Hour),
+				ClusterTransferAckLevel:       map[string]int64{"cluster1": 3000},
+				ClusterTimerAckLevel:          map[string]time.Time{"cluster1": ts.Add(-1 * time.Hour)},
+				TransferProcessingQueueStates: &persistence.DataBlob{Encoding: "thriftrw", Data: []uint8("transferqueue")},
+				TimerProcessingQueueStates:    &persistence.DataBlob{Encoding: "thriftrw", Data: []uint8("timerqueue")},
+				ClusterReplicationLevel:       map[string]int64{"cluster2": 1500},
+				DomainNotificationVersion:     3,
+				PendingFailoverMarkers:        &persistence.DataBlob{Encoding: "thriftrw", Data: []uint8("failovermarkers")},
 			},
 			wantQueries: []string{
 				`SELECT shard, range_id FROM executions WHERE ` +
@@ -209,22 +208,21 @@ func TestSelectShard(t *testing.T) {
 			},
 			wantRangeID: int64(1000),
 			wantShardInfo: &persistence.InternalShardInfo{
-				ShardID:                           15,
-				Owner:                             "owner",
-				RangeID:                           1000,
-				UpdatedAt:                         ts,
-				ReplicationAckLevel:               2000,
-				ReplicationDLQAckLevel:            map[string]int64{}, // this was reset to empty map
-				TransferAckLevel:                  3000,
-				TimerAckLevel:                     ts.Add(-1 * time.Hour),
-				ClusterTransferAckLevel:           map[string]int64{"cluster1": 3000},
-				ClusterTimerAckLevel:              map[string]time.Time{"cluster1": ts.Add(-1 * time.Hour)},
-				TransferProcessingQueueStates:     &persistence.DataBlob{Encoding: "thriftrw", Data: []uint8("transferqueue")},
-				CrossClusterProcessingQueueStates: &persistence.DataBlob{Encoding: "thriftrw", Data: []uint8("xclusterqueue")},
-				TimerProcessingQueueStates:        &persistence.DataBlob{Encoding: "thriftrw", Data: []uint8("timerqueue")},
-				ClusterReplicationLevel:           map[string]int64{}, // this was reset to empty map
-				DomainNotificationVersion:         3,
-				PendingFailoverMarkers:            &persistence.DataBlob{Encoding: "thriftrw", Data: []uint8("failovermarkers")},
+				ShardID:                       15,
+				Owner:                         "owner",
+				RangeID:                       1000,
+				UpdatedAt:                     ts,
+				ReplicationAckLevel:           2000,
+				ReplicationDLQAckLevel:        map[string]int64{}, // this was reset to empty map
+				TransferAckLevel:              3000,
+				TimerAckLevel:                 ts.Add(-1 * time.Hour),
+				ClusterTransferAckLevel:       map[string]int64{"cluster1": 3000},
+				ClusterTimerAckLevel:          map[string]time.Time{"cluster1": ts.Add(-1 * time.Hour)},
+				TransferProcessingQueueStates: &persistence.DataBlob{Encoding: "thriftrw", Data: []uint8("transferqueue")},
+				TimerProcessingQueueStates:    &persistence.DataBlob{Encoding: "thriftrw", Data: []uint8("timerqueue")},
+				ClusterReplicationLevel:       map[string]int64{}, // this was reset to empty map
+				DomainNotificationVersion:     3,
+				PendingFailoverMarkers:        &persistence.DataBlob{Encoding: "thriftrw", Data: []uint8("failovermarkers")},
 			},
 			wantQueries: []string{
 				`SELECT shard, range_id FROM executions WHERE ` +
@@ -425,8 +423,6 @@ func TestUpdateShard(t *testing.T) {
 					`cluster_timer_ack_level: map[cluster2:2024-04-02 16:00:00 +0000 UTC], ` +
 					`transfer_processing_queue_states: [116 114 97 110 115 102 101 114 113 117 101 117 101], ` +
 					`transfer_processing_queue_states_encoding: thriftrw, ` +
-					`cross_cluster_processing_queue_states: [120 99 108 117 115 116 101 114 113 117 101 117 101], ` +
-					`cross_cluster_processing_queue_states_encoding: thriftrw, ` +
 					`timer_processing_queue_states: [116 105 109 101 114 113 117 101 117 101], ` +
 					`timer_processing_queue_states_encoding: thriftrw, ` +
 					`domain_notification_version: 3, ` +
