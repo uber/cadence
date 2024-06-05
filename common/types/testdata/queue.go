@@ -116,16 +116,18 @@ var (
 		StartChildExecutionAttributes: &CrossClusterStartChildExecutionResponseAttributes,
 	}
 	CrossClusterTaskResponseCancelExecution = types.CrossClusterTaskResponse{
-		TaskID:      TaskID,
-		TaskType:    types.CrossClusterTaskTypeCancelExecution.Ptr(),
-		TaskState:   3,
-		FailedCause: types.CrossClusterTaskFailedCauseDomainNotActive.Ptr(),
+		TaskID:                    TaskID,
+		TaskType:                  types.CrossClusterTaskTypeCancelExecution.Ptr(),
+		TaskState:                 3,
+		FailedCause:               types.CrossClusterTaskFailedCauseDomainNotActive.Ptr(),
+		CancelExecutionAttributes: &types.CrossClusterCancelExecutionResponseAttributes{},
 	}
 	CrossClusterTaskResponseSignalExecution = types.CrossClusterTaskResponse{
-		TaskID:      TaskID,
-		TaskType:    types.CrossClusterTaskTypeSignalExecution.Ptr(),
-		TaskState:   3,
-		FailedCause: types.CrossClusterTaskFailedCauseWorkflowNotExists.Ptr(),
+		TaskID:                    TaskID,
+		TaskType:                  types.CrossClusterTaskTypeSignalExecution.Ptr(),
+		TaskState:                 3,
+		FailedCause:               types.CrossClusterTaskFailedCauseWorkflowNotExists.Ptr(),
+		SignalExecutionAttributes: &types.CrossClusterSignalExecutionResponseAttributes{},
 	}
 	CrossClusterTaskResponseRecordChildExecutionComplete = types.CrossClusterTaskResponse{
 		TaskID:    TaskID,
