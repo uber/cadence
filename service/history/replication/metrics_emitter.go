@@ -26,6 +26,7 @@ import (
 	ctx "context"
 	"fmt"
 	"strconv"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -54,6 +55,7 @@ type (
 		logger         log.Logger
 		status         int32
 		done           chan struct{}
+		wg             sync.WaitGroup
 	}
 
 	// metricsEmitterShardData is for testing.
@@ -102,6 +104,7 @@ func (m *MetricsEmitterImpl) Start() {
 		return
 	}
 
+	m.wg.Add(1)
 	go m.emitMetricsLoop()
 	m.logger.Info("ReplicationMetricsEmitter started.")
 }
@@ -113,9 +116,14 @@ func (m *MetricsEmitterImpl) Stop() {
 
 	m.logger.Info("ReplicationMetricsEmitter shutting down.")
 	close(m.done)
+	if !common.AwaitWaitGroup(&m.wg, 5*time.Second) {
+		m.logger.Warn("ReplicationMetricsEmitter timed out on shutdown.")
+	}
 }
 
 func (m *MetricsEmitterImpl) emitMetricsLoop() {
+	defer m.wg.Done()
+
 	ticker := time.NewTicker(metricsEmissionInterval)
 	defer ticker.Stop()
 	defer func() { log.CapturePanic(recover(), m.logger, nil) }()

@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/goleak"
 
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
@@ -42,6 +43,30 @@ var (
 	cluster2 = "cluster2"
 	cluster3 = "cluster3"
 )
+
+func TestMetricsEmitterStartStop(t *testing.T) {
+	goleak.VerifyNone(t)
+
+	timeSource := clock.NewMockedTimeSource()
+	metadata := cluster.NewMetadata(0, cluster1, cluster1, map[string]config.ClusterInformation{
+		cluster1: {Enabled: true},
+		cluster2: {Enabled: true},
+		cluster3: {Enabled: true},
+	},
+		func(d string) bool { return false },
+		metrics.NewNoopMetricsClient(),
+		testlogger.New(t),
+	)
+	testShardData := newTestShardData(timeSource, metadata)
+
+	task1 := persistence.ReplicationTaskInfo{TaskID: 1, CreationTime: timeSource.Now().Add(-time.Hour).UnixNano()}
+	task2 := persistence.ReplicationTaskInfo{TaskID: 2, CreationTime: timeSource.Now().Add(-time.Minute).UnixNano()}
+	reader := fakeTaskReader{&task1, &task2}
+
+	metricsEmitter := NewMetricsEmitter(1, testShardData, reader, metrics.NewNoopMetricsClient())
+	metricsEmitter.Start()
+	metricsEmitter.Stop()
+}
 
 func TestMetricsEmitter(t *testing.T) {
 	timeSource := clock.NewMockedTimeSource()
