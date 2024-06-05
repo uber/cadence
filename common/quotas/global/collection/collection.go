@@ -93,7 +93,7 @@ func New(
 		limits:     contents,
 		updateRate: updateRate,
 
-		logger: logger.WithTags(tag.ComponentArchiver),
+		logger: logger.WithTags(tag.ComponentGlobalRatelimiter),
 		scope:  met.Scope(metrics.FrontendGlobalRatelimiter),
 
 		ctx:       ctx,
