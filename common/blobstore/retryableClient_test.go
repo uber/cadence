@@ -134,3 +134,23 @@ func TestRetryableClient_NotRetryOnError(t *testing.T) {
 
 	mockClient.AssertExpectations(t)
 }
+
+func TestRetryableClient_IsRetryableError(t *testing.T) {
+	mockClient := new(MockClient)
+	client := &retryableClient{
+		client: mockClient,
+		throttleRetry: backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(backoff.NewExponentialRetryPolicy(0)),
+			backoff.WithRetryableError(mockClient.IsRetryableError),
+		),
+	}
+
+	retryableError := errors.New("retryable error")
+
+	mockClient.On("IsRetryableError", retryableError).Return(true).Once()
+
+	isRetryable := client.IsRetryableError(retryableError)
+	assert.True(t, isRetryable, "Expected error to be retryable")
+
+	mockClient.AssertExpectations(t)
+}
