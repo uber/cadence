@@ -50,7 +50,7 @@ import (
 
 type (
 	Collection struct {
-		updateRate dynamicconfig.DurationPropertyFn
+		updateInterval dynamicconfig.DurationPropertyFn
 
 		logger log.Logger
 		scope  metrics.Scope
@@ -81,7 +81,7 @@ type (
 
 func New(
 	fallback quotas.LimiterFactory,
-	updateRate dynamicconfig.DurationPropertyFn,
+	updateInterval dynamicconfig.DurationPropertyFn,
 	logger log.Logger,
 	met metrics.Client,
 ) *Collection {
@@ -90,8 +90,8 @@ func New(
 	})
 	ctx, cancel := context.WithCancel(context.Background())
 	c := &Collection{
-		limits:     contents,
-		updateRate: updateRate,
+		limits:         contents,
+		updateInterval: updateInterval,
 
 		logger: logger.WithTags(tag.ComponentGlobalRatelimiter),
 		scope:  met.Scope(metrics.FrontendGlobalRatelimiter),
@@ -148,11 +148,11 @@ func (c *Collection) For(key string) Limiter {
 }
 
 func (c *Collection) backgroundUpdateLoop() {
-	tickRate := c.updateRate()
+	tickInterval := c.updateInterval()
 
 	c.logger.Debug("update loop starting")
 
-	ticker := c.timesource.NewTicker(tickRate)
+	ticker := c.timesource.NewTicker(tickInterval)
 	defer ticker.Stop()
 
 	lastGatherTime := c.timesource.Now()
@@ -163,11 +163,11 @@ func (c *Collection) backgroundUpdateLoop() {
 		case <-ticker.Chan():
 			now := c.timesource.Now()
 			c.logger.Debug("update tick")
-			// update tick-rate if it changed
-			newTickRate := c.updateRate()
-			if tickRate != newTickRate {
-				tickRate = newTickRate
-				ticker.Reset(newTickRate)
+			// update  if it changed
+			newTickInterval := c.updateInterval()
+			if tickInterval != newTickInterval {
+				tickInterval = newTickInterval
+				ticker.Reset(newTickInterval)
 			}
 
 			capacity := c.limits.Len()
