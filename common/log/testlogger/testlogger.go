@@ -32,6 +32,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest"
+	"go.uber.org/zap/zaptest/observer"
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
@@ -76,6 +77,18 @@ func NewZap(t TestingT) *zap.Logger {
 	t.Cleanup(replaced.UseFallback) // switch to fallback before ending the test
 
 	return zap.New(replaced)
+}
+
+// NewObserved makes a new test logger that both logs to `t` and collects logged
+// events for asserting in tests.
+func NewObserved(t TestingT) (log.Logger, *observer.ObservedLogs) {
+	obsCore, obs := observer.New(zapcore.DebugLevel)
+	z := NewZap(t)
+	z = z.WithOptions(zap.WrapCore(func(core zapcore.Core) zapcore.Core {
+		return zapcore.NewTee(core, obsCore)
+	}))
+	l := loggerimpl.NewLogger(z, loggerimpl.WithSampleFunc(func(int) bool { return true }))
+	return l, obs
 }
 
 type fallbackTestCore struct {
