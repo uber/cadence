@@ -30,6 +30,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/goleak"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
@@ -116,6 +117,8 @@ func (s *handlerSuite) TestNewHandler() {
 }
 
 func (s *handlerSuite) TestStart() {
+	defer goleak.VerifyNone(s.T())
+
 	cfg := config.NewConfig(dynamicconfig.NewCollection(dynamicconfig.NewInMemoryClient(), s.mockResource.Logger), "matching-test")
 	handler := s.getHandler(cfg)
 
@@ -126,6 +129,8 @@ func (s *handlerSuite) TestStart() {
 }
 
 func (s *handlerSuite) TestStop() {
+	defer goleak.VerifyNone(s.T())
+
 	cfg := config.NewConfig(dynamicconfig.NewCollection(dynamicconfig.NewInMemoryClient(), s.mockResource.Logger), "matching-test")
 	handler := s.getHandler(cfg)
 
