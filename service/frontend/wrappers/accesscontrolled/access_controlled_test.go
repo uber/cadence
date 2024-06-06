@@ -25,8 +25,6 @@ package accesscontrolled
 import (
 	"context"
 	"errors"
-	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/service/frontend/admin"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -35,6 +33,8 @@ import (
 	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/metrics/mocks"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/frontend/admin"
 )
 
 func TestIsAuthorized(t *testing.T) {
