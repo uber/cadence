@@ -226,7 +226,7 @@ writerLoop:
 					maxReadLevel = taskIDs[i]
 				}
 
-				r, err := w.db.CreateTasks(tasks)
+				resp, err := w.db.CreateTasks(tasks)
 				err = w.handleErr(err)
 				if err != nil {
 					w.logger.Error("Persistent store operation failure",
@@ -241,12 +241,11 @@ writerLoop:
 					atomic.StoreInt64(&w.maxReadLevel, maxReadLevel)
 				}
 
-				w.sendWriteResponse(reqs, err, r)
+				w.sendWriteResponse(reqs, err, resp)
 			}
 		case <-w.stopCh:
 			// we don't close the appendCh here
-			// because that can cause on a send on closed
-			// channel panic on the appendTask()
+			// because that can cause "send on closed channel" panic on the appendTask()
 			break writerLoop
 		}
 	}

@@ -42,19 +42,19 @@ type (
 		RatePerSecond  float64
 		IsolationGroup string
 	}
+
+	History struct {
+		// poller ID -> pollerInfo
+		// pollers map[pollerID]pollerInfo
+		history cache.Cache
+
+		// OnHistoryUpdatedFunc is a function called when the poller history was updated
+		onHistoryUpdatedFunc HistoryUpdatedFunc
+	}
+
+	// HistoryUpdatedFunc is a type for notifying applications when the poller history was updated
+	HistoryUpdatedFunc func()
 )
-
-type History struct {
-	// poller ID -> pollerInfo
-	// pollers map[pollerID]pollerInfo
-	history cache.Cache
-
-	// OnHistoryUpdatedFunc is a function called when the poller history was updated
-	onHistoryUpdatedFunc HistoryUpdatedFunc
-}
-
-// HistoryUpdatedFunc is a type for notifying applications when the poller history was updated
-type HistoryUpdatedFunc func()
 
 func NewPollerHistory(historyUpdatedFunc HistoryUpdatedFunc, timeSource clock.TimeSource) *History {
 	opts := &cache.Options{
@@ -80,7 +80,6 @@ func (pollers *History) UpdatePollerInfo(id Identity, info Info) {
 
 func (pollers *History) GetPollerInfo(earliestAccessTime time.Time) []*types.PollerInfo {
 	var result []*types.PollerInfo
-
 	ite := pollers.history.Iterator()
 	defer ite.Close()
 	for ite.HasNext() {
@@ -97,7 +96,6 @@ func (pollers *History) GetPollerInfo(earliestAccessTime time.Time) []*types.Pol
 			})
 		}
 	}
-
 	return result
 }
 

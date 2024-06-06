@@ -1180,9 +1180,6 @@ func FromAdminUpdateGlobalIsolationGroupsRequest(t *types.UpdateGlobalIsolationG
 	if t == nil {
 		return nil
 	}
-	if t.IsolationGroups == nil {
-		return &adminv1.UpdateGlobalIsolationGroupsRequest{}
-	}
 	return &adminv1.UpdateGlobalIsolationGroupsRequest{
 		IsolationGroups: FromIsolationGroupConfig(&t.IsolationGroups),
 	}
@@ -1192,10 +1189,8 @@ func FromAdminUpdateDomainIsolationGroupsRequest(t *types.UpdateDomainIsolationG
 	if t == nil {
 		return nil
 	}
-	if t.IsolationGroups == nil {
-		return &adminv1.UpdateDomainIsolationGroupsRequest{}
-	}
 	return &adminv1.UpdateDomainIsolationGroupsRequest{
+		Domain:          t.Domain,
 		IsolationGroups: FromIsolationGroupConfig(&t.IsolationGroups),
 	}
 }
@@ -1324,7 +1319,7 @@ func ToAdminUpdateDomainIsolationGroupsRequest(t *adminv1.UpdateDomainIsolationG
 }
 
 func FromIsolationGroupConfig(in *types.IsolationGroupConfiguration) *apiv1.IsolationGroupConfiguration {
-	if in == nil {
+	if in == nil || *in == nil {
 		return nil
 	}
 	var out []*apiv1.IsolationGroupPartition

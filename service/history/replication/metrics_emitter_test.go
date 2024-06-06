@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/goleak"
 
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
@@ -43,17 +44,23 @@ var (
 	cluster3 = "cluster3"
 )
 
+func TestMetricsEmitterStartStop(t *testing.T) {
+	goleak.VerifyNone(t)
+
+	timeSource := clock.NewMockedTimeSource()
+	metadata := newClusterMetadata(t)
+	testShardData := newTestShardData(timeSource, metadata)
+
+	metricsEmitter := NewMetricsEmitter(1, testShardData, fakeTaskReader{}, metrics.NewNoopMetricsClient())
+	metricsEmitter.interval = 5 * time.Millisecond
+	metricsEmitter.Start()
+	time.Sleep(20 * time.Millisecond) // let the metrics emitter run a few times
+	metricsEmitter.Stop()
+}
+
 func TestMetricsEmitter(t *testing.T) {
 	timeSource := clock.NewMockedTimeSource()
-	metadata := cluster.NewMetadata(0, cluster1, cluster1, map[string]config.ClusterInformation{
-		cluster1: {Enabled: true},
-		cluster2: {Enabled: true},
-		cluster3: {Enabled: true},
-	},
-		func(d string) bool { return false },
-		metrics.NewNoopMetricsClient(),
-		testlogger.New(t),
-	)
+	metadata := newClusterMetadata(t)
 	testShardData := newTestShardData(timeSource, metadata)
 
 	task1 := persistence.ReplicationTaskInfo{TaskID: 1, CreationTime: timeSource.Now().Add(-time.Hour).UnixNano()}
@@ -84,9 +91,7 @@ func TestMetricsEmitter(t *testing.T) {
 }
 
 type testShardData struct {
-	shardID                 int
 	logger                  log.Logger
-	maxReadLevel            int64
 	clusterReplicationLevel map[string]int64
 	timeSource              clock.TimeSource
 	metadata                cluster.Metadata
@@ -120,4 +125,16 @@ func (t testShardData) GetTimeSource() clock.TimeSource {
 
 func (t testShardData) GetClusterMetadata() cluster.Metadata {
 	return t.metadata
+}
+
+func newClusterMetadata(t *testing.T) cluster.Metadata {
+	return cluster.NewMetadata(0, cluster1, cluster1, map[string]config.ClusterInformation{
+		cluster1: {Enabled: true},
+		cluster2: {Enabled: true},
+		cluster3: {Enabled: true},
+	},
+		func(d string) bool { return false },
+		metrics.NewNoopMetricsClient(),
+		testlogger.New(t),
+	)
 }

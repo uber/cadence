@@ -134,6 +134,21 @@ func TestContinueAsNewInitiator(t *testing.T) {
 	assert.Panics(t, func() { ToContinueAsNewInitiator(apiv1.ContinueAsNewInitiator(UnknownValue)) })
 	assert.Panics(t, func() { FromContinueAsNewInitiator(types.ContinueAsNewInitiator(UnknownValue).Ptr()) })
 }
+func TestCrossClusterTaskFailedCause(t *testing.T) {
+	for _, item := range []*types.CrossClusterTaskFailedCause{
+		nil,
+		types.CrossClusterTaskFailedCauseDomainNotActive.Ptr(),
+		types.CrossClusterTaskFailedCauseDomainNotExists.Ptr(),
+		types.CrossClusterTaskFailedCauseWorkflowAlreadyRunning.Ptr(),
+		types.CrossClusterTaskFailedCauseWorkflowNotExists.Ptr(),
+		types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted.Ptr(),
+		types.CrossClusterTaskFailedCauseUncategorized.Ptr(),
+	} {
+		assert.Equal(t, item, ToCrossClusterTaskFailedCause(FromCrossClusterTaskFailedCause(item)))
+	}
+	assert.Panics(t, func() { ToCrossClusterTaskFailedCause(adminv1.CrossClusterTaskFailedCause(UnknownValue)) })
+	assert.Panics(t, func() { FromCrossClusterTaskFailedCause(types.CrossClusterTaskFailedCause(UnknownValue).Ptr()) })
+}
 func TestDecisionTaskFailedCause(t *testing.T) {
 	for _, item := range []*types.DecisionTaskFailedCause{
 		nil,
