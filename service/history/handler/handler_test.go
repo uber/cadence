@@ -64,15 +64,15 @@ type (
 		suite.Suite
 		*require.Assertions
 
-		controller                   *gomock.Controller
-		mockResource                 *resource.Test
-		mockShardController          *shard.MockController
-		mockEngine                   *engine.MockEngine
-		mockWFCache                  *workflowcache.MockWFCache
-		mockTokenSerializer          *common.MockTaskTokenSerializer
-		mockHistoryEventNotifier     *events.MockNotifier
-		mockRatelimiter              *quotas.MockLimiter
-		mockFailoverCoordinator      *failover.MockCoordinator
+		controller               *gomock.Controller
+		mockResource             *resource.Test
+		mockShardController      *shard.MockController
+		mockEngine               *engine.MockEngine
+		mockWFCache              *workflowcache.MockWFCache
+		mockTokenSerializer      *common.MockTaskTokenSerializer
+		mockHistoryEventNotifier *events.MockNotifier
+		mockRatelimiter          *quotas.MockLimiter
+		mockFailoverCoordinator  *failover.MockCoordinator
 
 		handler *handlerImpl
 	}

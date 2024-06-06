@@ -61,9 +61,9 @@ var (
 )
 
 var (
-	errUnknownTransferTask   = errors.New("unknown transfer task")
-	errWorkflowBusy          = errors.New("unable to get workflow execution lock within specified timeout")
-	errWorkflowRateLimited   = errors.New("workflow is being rate limited for making too many requests")
+	errUnknownTransferTask = errors.New("unknown transfer task")
+	errWorkflowBusy        = errors.New("unable to get workflow execution lock within specified timeout")
+	errWorkflowRateLimited = errors.New("workflow is being rate limited for making too many requests")
 )
 
 type (
@@ -465,7 +465,6 @@ func (t *transferActiveTaskExecutor) processCloseExecutionTaskHelper(
 		}
 	}
 
-
 	// Communicate the result to parent execution if this is Child Workflow execution
 	// and parent domain is in the same cluster
 	replyToParentWorkflow := replyToParentWorkflowIfApplicable && mutableState.HasParentExecution() && executionInfo.CloseStatus != persistence.WorkflowCloseStatusContinuedAsNew
@@ -500,8 +499,8 @@ func (t *transferActiveTaskExecutor) processCloseExecutionTaskHelper(
 	if applyParentClosePolicy {
 
 		parentExecution := types.WorkflowExecution{
-				WorkflowID: parentWorkflowID,
-				RunID:      parentRunID,
+			WorkflowID: parentWorkflowID,
+			RunID:      parentRunID,
 		}
 
 		err := t.processParentClosePolicy(ctx, task.DomainID, domainName, &parentExecution, children)
@@ -1821,21 +1820,21 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicy(
 
 	case types.ParentClosePolicyTerminate:
 		return t.historyClient.TerminateWorkflowExecution(ctx, &types.HistoryTerminateWorkflowExecutionRequest{
-				DomainUUID: domainID,
-				TerminateRequest: &types.TerminateWorkflowExecutionRequest{
-					Domain: domainName,
-					WorkflowExecution: &types.WorkflowExecution{
-						WorkflowID: childInfo.StartedWorkflowID,
-					},
-					Reason:   "by parent close policy",
-					Identity: execution.IdentityHistoryService,
-					// Include StartedRunID as FirstExecutionRunID on the request to allow child to be terminated across runs.
-					// If the child does continue as new it still propagates the RunID of first execution.
-					FirstExecutionRunID: childInfo.StartedRunID,
+			DomainUUID: domainID,
+			TerminateRequest: &types.TerminateWorkflowExecutionRequest{
+				Domain: domainName,
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: childInfo.StartedWorkflowID,
 				},
-				ExternalWorkflowExecution: parentWorkflowExecution,
-				ChildWorkflowOnly:         true,
-			})
+				Reason:   "by parent close policy",
+				Identity: execution.IdentityHistoryService,
+				// Include StartedRunID as FirstExecutionRunID on the request to allow child to be terminated across runs.
+				// If the child does continue as new it still propagates the RunID of first execution.
+				FirstExecutionRunID: childInfo.StartedRunID,
+			},
+			ExternalWorkflowExecution: parentWorkflowExecution,
+			ChildWorkflowOnly:         true,
+		})
 
 	case types.ParentClosePolicyRequestCancel:
 		return t.historyClient.RequestCancelWorkflowExecution(ctx, &types.HistoryRequestCancelWorkflowExecutionRequest{

@@ -822,15 +822,15 @@ func (s *transferActiveTaskExecutorSuite) testProcessCloseExecutionNoParentHasFe
 	event := test.AddCompleteWorkflowEvent(mutableState, decisionCompletionID, nil)
 
 	transferTask := s.newTransferTaskFromInfo(&persistence.TransferTaskInfo{
-		Version:    s.version,
-		DomainID:   s.domainID,
-		WorkflowID: workflowExecution.GetWorkflowID(),
-		RunID:      workflowExecution.GetRunID(),
-		TaskID:     int64(59),
-		TaskList:   mutableState.GetExecutionInfo().TaskList,
-		TaskType:   persistence.TransferTaskTypeCloseExecution,
+		Version:                 s.version,
+		DomainID:                s.domainID,
+		WorkflowID:              workflowExecution.GetWorkflowID(),
+		RunID:                   workflowExecution.GetRunID(),
+		TaskID:                  int64(59),
+		TaskList:                mutableState.GetExecutionInfo().TaskList,
+		TaskType:                persistence.TransferTaskTypeCloseExecution,
 		TargetChildWorkflowOnly: true,
-		ScheduleID: event.ID,
+		ScheduleID:              event.ID,
 	})
 
 	persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, event.ID, event.Version)
