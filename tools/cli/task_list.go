@@ -39,9 +39,7 @@ func newTaskListCommands() []cli.Command {
 					Usage: "Optional TaskList type [decision|activity]",
 				},
 			},
-			Action: func(c *cli.Context) {
-				DescribeTaskList(c)
-			},
+			Action: DescribeTaskList,
 		},
 		{
 			Name:    "list-partition",
@@ -53,9 +51,7 @@ func newTaskListCommands() []cli.Command {
 					Usage: "TaskList description",
 				},
 			},
-			Action: func(c *cli.Context) {
-				ListTaskListPartitions(c)
-			},
+			Action: ListTaskListPartitions,
 		},
 	}
 }

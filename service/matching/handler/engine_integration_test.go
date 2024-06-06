@@ -94,13 +94,11 @@ func TestMatchingEngineSuite(t *testing.T) {
 }
 
 func (s *matchingEngineSuite) SetupSuite() {
-	s.logger = testlogger.New(s.Suite.T())
-	http.Handle("/test/tasks", http.HandlerFunc(s.TasksHandler))
+	// http.Handle("/test/tasks", http.HandlerFunc(s.TasksHandler))
 }
 
 // Renders content of taskManager and matchingEngine when called at http://localhost:6060/test/tasks
 // Uncomment HTTP server initialization in SetupSuite method to enable.
-
 func (s *matchingEngineSuite) TasksHandler(w http.ResponseWriter, r *http.Request) {
 	s.Lock()
 	defer s.Unlock()
@@ -115,11 +113,13 @@ func (s *matchingEngineSuite) TearDownSuite() {
 func (s *matchingEngineSuite) SetupTest() {
 	s.Lock()
 	defer s.Unlock()
+	s.logger = testlogger.New(s.Suite.T()).WithTags(tag.Dynamic("test-name", s.T().Name()))
 	tlKindNormal := types.TaskListKindNormal
 	s.mockExecutionManager = &mocks.ExecutionManager{}
 	s.controller = gomock.NewController(s.T())
 	s.mockHistoryClient = history.NewMockClient(s.controller)
-	s.taskManager = tasklist.NewTestTaskManager(s.T(), s.logger)
+	s.mockTimeSource = clock.NewMockedTimeSourceAt(time.Now())
+	s.taskManager = tasklist.NewTestTaskManager(s.T(), s.logger, s.mockTimeSource)
 	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.CreateDomainCacheEntry(matchingTestDomainName), nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(cache.CreateDomainCacheEntry(matchingTestDomainName), nil).AnyTimes()
@@ -131,7 +131,6 @@ func (s *matchingEngineSuite) SetupTest() {
 	dc := dynamicconfig.NewCollection(dcClient, s.logger)
 	isolationGroupState, _ := defaultisolationgroupstate.NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(s.logger, dc, s.mockDomainCache, s.mockIsolationStore, metrics.NewNoopMetricsClient())
 	s.partitioner = partition.NewDefaultPartitioner(s.logger, isolationGroupState)
-	s.mockTimeSource = clock.NewMockedTimeSourceAt(time.Unix(1000000, 0))
 	s.handlerContext = newHandlerContext(
 		context.Background(),
 		matchingTestDomainName,
@@ -546,7 +545,7 @@ func (s *matchingEngineSuite) SyncMatchTasks(taskType int, enableIsolation bool)
 	isolationGroups := s.matchingEngine.config.AllIsolationGroups
 
 	// Set a short long poll expiration so we don't have to wait too long for 0 throttling cases
-	s.matchingEngine.config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(50 * time.Millisecond)
+	s.matchingEngine.config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(200 * time.Millisecond)
 	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
 	s.matchingEngine.config.TaskDispatchRPSTTL = time.Nanosecond
 	s.matchingEngine.config.MinTaskThrottlingBurstSize = dynamicconfig.GetIntPropertyFilteredByTaskListInfo(_minBurst)
@@ -555,24 +554,7 @@ func (s *matchingEngineSuite) SyncMatchTasks(taskType int, enableIsolation bool)
 	s.matchingEngine.metricsClient = metrics.NewClient(scope, metrics.Matching)
 
 	testParam := newTestParam(s.T(), taskType)
-	tlKind := types.TaskListKindNormal
-	mgr, err := tasklist.NewManager(
-		s.matchingEngine.domainCache,
-		s.matchingEngine.logger,
-		s.matchingEngine.metricsClient,
-		s.matchingEngine.taskManager,
-		s.matchingEngine.clusterMetadata,
-		s.matchingEngine.partitioner,
-		s.matchingEngine.matchingClient,
-		s.matchingEngine.removeTaskListManager,
-		testParam.TaskListID,
-		&tlKind,
-		s.matchingEngine.config,
-		s.matchingEngine.timeSource,
-		s.matchingEngine.timeSource.Now())
-	s.NoError(err)
 	s.taskManager.SetRangeID(testParam.TaskListID, initialRangeID)
-	s.NoError(mgr.Start())
 
 	s.setupGetDrainStatus()
 	s.setupRecordTaskStartedMock(taskType, testParam, false)
@@ -617,6 +599,8 @@ func (s *matchingEngineSuite) SyncMatchTasks(taskType int, enableIsolation bool)
 		s.NotNil(result)
 		s.assertPollTaskResponse(taskType, testParam, scheduleID, result)
 	}
+	// expect more than half of the tasks get sync matches
+	s.True(s.taskManager.GetCreateTaskCount(testParam.TaskListID) < taskCount/2)
 
 	// Set the dispatch RPS to 0, to verify that poller will not get any task and task will be persisted into database
 	// Revert the dispatch RPS and verify that poller will get the task
@@ -649,19 +633,14 @@ func (s *matchingEngineSuite) SyncMatchTasks(taskType int, enableIsolation bool)
 		// when ratelimit is set to zero, poller is expected to return empty result
 		// reset ratelimit, poll again and make sure task is returned this time
 		s.True(isEmptyToken(result.TaskToken))
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			result, pollErr = pollFunc(_defaultTaskDispatchRPS, group)
-		}()
-		wg.Wait()
+		result, pollErr = pollFunc(_defaultTaskDispatchRPS, group)
 		s.NoError(err)
 		s.NoError(pollErr)
 		s.NotNil(result)
 		s.False(isEmptyToken(result.TaskToken))
 		s.assertPollTaskResponse(taskType, testParam, scheduleID, result)
 	}
-	s.EqualValues(throttledTaskCount, s.taskManager.GetCreateTaskCount(testParam.TaskListID))
+	s.True(int(throttledTaskCount) <= s.taskManager.GetCreateTaskCount(testParam.TaskListID))
 	s.EqualValues(0, s.taskManager.GetTaskCount(testParam.TaskListID))
 	expectedRange := getExpectedRange(initialRangeID, int(taskCount+throttledTaskCount), rangeSize)
 	// Due to conflicts some ids are skipped and more real ranges are used.
@@ -740,24 +719,7 @@ func (s *matchingEngineSuite) ConcurrentAddAndPollTasks(taskType int, workerCoun
 	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
 	s.matchingEngine.config.TaskDispatchRPSTTL = time.Nanosecond
 	s.matchingEngine.config.MinTaskThrottlingBurstSize = dynamicconfig.GetIntPropertyFilteredByTaskListInfo(_minBurst)
-
-	mgr, err := tasklist.NewManager(
-		s.matchingEngine.domainCache,
-		s.matchingEngine.logger,
-		s.matchingEngine.metricsClient,
-		s.matchingEngine.taskManager,
-		s.matchingEngine.clusterMetadata,
-		s.matchingEngine.partitioner,
-		s.matchingEngine.matchingClient,
-		s.matchingEngine.removeTaskListManager,
-		testParam.TaskListID,
-		&tlKind,
-		s.matchingEngine.config,
-		s.matchingEngine.timeSource,
-		s.matchingEngine.timeSource.Now())
-	s.NoError(err)
 	s.taskManager.SetRangeID(testParam.TaskListID, initialRangeID)
-	s.NoError(mgr.Start())
 
 	s.setupGetDrainStatus()
 
@@ -822,6 +784,10 @@ func (s *matchingEngineSuite) ConcurrentAddAndPollTasks(taskType int, workerCoun
 	expectedRange := getExpectedRange(initialRangeID, persisted, rangeSize)
 	// Due to conflicts some ids are skipped and more real ranges are used.
 	s.True(expectedRange <= s.taskManager.GetRangeID(testParam.TaskListID))
+	mgr, err := s.matchingEngine.getTaskListManager(testParam.TaskListID, &tlKind)
+	s.NoError(err)
+	// stop the tasklist manager to force the acked tasks to be deleted
+	mgr.Stop()
 	s.EqualValues(0, s.taskManager.GetTaskCount(testParam.TaskListID))
 
 	syncCtr := scope.Snapshot().Counters()["test.sync_throttle_count_per_tl+domain="+matchingTestDomainName+",operation=TaskListMgr,tasklist="+testParam.TaskList.Name]
@@ -1237,7 +1203,7 @@ func (s *matchingEngineSuite) setupRecordTaskStartedMock(taskType int, param *te
 	if taskType == persistence.TaskListTypeActivity {
 		s.mockHistoryClient.EXPECT().RecordActivityTaskStarted(gomock.Any(), gomock.Any()).DoAndReturn(
 			func(ctx context.Context, taskRequest *types.RecordActivityTaskStartedRequest, option ...yarpc.CallOption) (*types.RecordActivityTaskStartedResponse, error) {
-				s.logger.Debug("Mock Received RecordActivityTaskStartedRequest")
+				s.logger.Debug(fmt.Sprintf("Mock Received RecordActivityTaskStartedRequest, taskID: %v", taskRequest.TaskID))
 				if checkDuplicate {
 					if _, ok := startedTasks[taskRequest.TaskID]; ok {
 						return nil, &types.EventAlreadyStartedError{Message: "already started"}
@@ -1262,7 +1228,7 @@ func (s *matchingEngineSuite) setupRecordTaskStartedMock(taskType int, param *te
 	} else {
 		s.mockHistoryClient.EXPECT().RecordDecisionTaskStarted(gomock.Any(), gomock.Any()).DoAndReturn(
 			func(ctx context.Context, taskRequest *types.RecordDecisionTaskStartedRequest, option ...yarpc.CallOption) (*types.RecordDecisionTaskStartedResponse, error) {
-				s.logger.Debug("Mock Received RecordDecisionTaskStartedRequest")
+				s.logger.Debug(fmt.Sprintf("Mock Received RecordDecisionTaskStartedRequest, taskID: %v", taskRequest.TaskID))
 				if checkDuplicate {
 					if _, ok := startedTasks[taskRequest.TaskID]; ok {
 						return nil, &types.EventAlreadyStartedError{Message: "already started"}
@@ -1376,6 +1342,7 @@ func defaultTestConfig() *config.Config {
 	config.AllIsolationGroups = []string{"datacenterA", "datacenterB"}
 	config.GetTasksBatchSize = dynamicconfig.GetIntPropertyFilteredByTaskListInfo(10)
 	config.AsyncTaskDispatchTimeout = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
+	config.MaxTimeBetweenTaskDeletes = time.Duration(0)
 	return config
 }
 

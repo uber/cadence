@@ -1068,9 +1068,8 @@ type (
 
 	// CreateTaskInfo describes a task to be created in CreateTasksRequest
 	CreateTaskInfo struct {
-		Execution types.WorkflowExecution
-		Data      *TaskInfo
-		TaskID    int64
+		Data   *TaskInfo
+		TaskID int64
 	}
 
 	// CreateTasksResponse is the response to CreateTasksRequest

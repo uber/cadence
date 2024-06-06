@@ -72,38 +72,10 @@ type (
 	isolationGroupCtxKey struct{}
 
 	AddTaskParams struct {
-		Execution                *types.WorkflowExecution
 		TaskInfo                 *persistence.TaskInfo
 		Source                   types.TaskSource
 		ForwardedFrom            string
 		ActivityTaskDispatchInfo *types.ActivityTaskDispatchInfo
-	}
-
-	Manager interface {
-		Start() error
-		Stop()
-		// AddTask adds a task to the task list. This method will first attempt a synchronous
-		// match with a poller. When that fails, task will be written to database and later
-		// asynchronously matched with a poller
-		AddTask(ctx context.Context, params AddTaskParams) (syncMatch bool, err error)
-		// GetTask blocks waiting for a task Returns error when context deadline is exceeded
-		// maxDispatchPerSecond is the max rate at which tasks are allowed to be dispatched
-		// from this task list to pollers
-		GetTask(ctx context.Context, maxDispatchPerSecond *float64) (*InternalTask, error)
-		// DispatchTask dispatches a task to a poller. When there are no pollers to pick
-		// up the task, this method will return error. Task will not be persisted to db
-		DispatchTask(ctx context.Context, task *InternalTask) error
-		// DispatchQueryTask will dispatch query to local or remote poller. If forwarded then result or error is returned,
-		// if dispatched to local poller then nil and nil is returned.
-		DispatchQueryTask(ctx context.Context, taskID string, request *types.MatchingQueryWorkflowRequest) (*types.QueryWorkflowResponse, error)
-		CancelPoller(pollerID string)
-		GetAllPollerInfo() []*types.PollerInfo
-		HasPollerAfter(accessTime time.Time) bool
-		// DescribeTaskList returns information about the target tasklist
-		DescribeTaskList(includeTaskListStatus bool) *types.DescribeTaskListResponse
-		String() string
-		GetTaskListKind() types.TaskListKind
-		TaskListID() *Identifier
 	}
 
 	outstandingPollerInfo struct {
@@ -153,8 +125,6 @@ const (
 	maxSyncMatchWaitTime = 200 * time.Millisecond
 )
 
-var _ Manager = (*taskListManagerImpl)(nil)
-
 var errRemoteSyncMatchFailed = &types.RemoteSyncMatchedError{Message: "remote sync match failed"}
 
 func NewManager(
@@ -172,19 +142,18 @@ func NewManager(
 	timeSource clock.TimeSource,
 	createTime time.Time,
 ) (Manager, error) {
-	taskListConfig, err := newTaskListConfig(taskList, config, domainCache)
+	domainName, err := domainCache.GetDomainName(taskList.GetDomainID())
 	if err != nil {
 		return nil, err
 	}
+
+	taskListConfig := newTaskListConfig(taskList, config, domainName)
 
 	if taskListKind == nil {
 		normalTaskListKind := types.TaskListKindNormal
 		taskListKind = &normalTaskListKind
 	}
-	domainName, err := domainCache.GetDomainName(taskList.GetDomainID())
-	if err != nil {
-		return nil, err
-	}
+
 	scope := NewPerTaskListScope(domainName, taskList.GetName(), *taskListKind, metricsClient, metrics.MatchingTaskListMgrScope)
 	db := newTaskListDB(taskManager, taskList.GetDomainID(), domainName, taskList.GetName(), taskList.GetType(), int(*taskListKind), logger)
 
@@ -214,7 +183,7 @@ func NewManager(
 	tlMgr.pollerHistory = poller.NewPollerHistory(func() {
 		taskListTypeMetricScope.UpdateGauge(metrics.PollerPerTaskListCounter,
 			float64(len(tlMgr.pollerHistory.GetPollerInfo(time.Time{}))))
-	})
+	}, timeSource)
 
 	livenessInterval := taskListConfig.IdleTasklistCheckInterval()
 	tlMgr.liveness = liveness.NewLiveness(clock.NewRealTimeSource(), livenessInterval, func() {
@@ -283,6 +252,7 @@ func (c *taskListManagerImpl) handleErr(err error) error {
 // be written to database and later asynchronously matched with a poller
 func (c *taskListManagerImpl) AddTask(ctx context.Context, params AddTaskParams) (bool, error) {
 	c.startWG.Wait()
+
 	if c.shouldReload() {
 		c.Stop()
 		return false, errShutdown
@@ -311,7 +281,7 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params AddTaskParams)
 				return &persistence.CreateTasksResponse{}, errRemoteSyncMatchFailed
 			}
 
-			r, err := c.taskWriter.appendTask(params.Execution, params.TaskInfo)
+			r, err := c.taskWriter.appendTask(params.TaskInfo)
 			return r, err
 		}
 
@@ -334,7 +304,7 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params AddTaskParams)
 			return &persistence.CreateTasksResponse{}, errRemoteSyncMatchFailed
 		}
 
-		return c.taskWriter.appendTask(params.Execution, params.TaskInfo)
+		return c.taskWriter.appendTask(params.TaskInfo)
 	})
 
 	if err == nil && !syncMatch {
@@ -692,12 +662,7 @@ func rangeIDToTaskIDBlock(rangeID, rangeSize int64) taskIDBlock {
 	}
 }
 
-func newTaskListConfig(id *Identifier, cfg *config.Config, domainCache cache.DomainCache) (*config.TaskListConfig, error) {
-	domainName, err := domainCache.GetDomainName(id.GetDomainID())
-	if err != nil {
-		return nil, err
-	}
-
+func newTaskListConfig(id *Identifier, cfg *config.Config, domainName string) *config.TaskListConfig {
 	taskListName := id.GetName()
 	taskType := id.GetType()
 	return &config.TaskListConfig{
@@ -760,10 +725,11 @@ func newTaskListConfig(id *Identifier, cfg *config.Config, domainCache cache.Dom
 				return common.MaxInt(1, cfg.ForwarderMaxChildrenPerNode(domainName, taskListName, taskType))
 			},
 		},
-		HostName:           cfg.HostName,
-		TaskDispatchRPS:    cfg.TaskDispatchRPS,
-		TaskDispatchRPSTTL: cfg.TaskDispatchRPSTTL,
-	}, nil
+		HostName:                  cfg.HostName,
+		TaskDispatchRPS:           cfg.TaskDispatchRPS,
+		TaskDispatchRPSTTL:        cfg.TaskDispatchRPSTTL,
+		MaxTimeBetweenTaskDeletes: cfg.MaxTimeBetweenTaskDeletes,
+	}
 }
 
 func NewPerTaskListScope(

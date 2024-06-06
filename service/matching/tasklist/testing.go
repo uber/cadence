@@ -32,6 +32,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/emirpasic/gods/maps/treemap"
 
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 )
@@ -41,9 +42,10 @@ var _ persistence.TaskManager = (*TestTaskManager)(nil) // Asserts that interfac
 type (
 	TestTaskManager struct {
 		sync.Mutex
-		t         *testing.T
-		taskLists map[Identifier]*testTaskListManager
-		logger    log.Logger
+		t          *testing.T
+		taskLists  map[Identifier]*testTaskListManager
+		logger     log.Logger
+		timeSource clock.TimeSource
 	}
 
 	testTaskListManager struct {
@@ -59,11 +61,12 @@ func newTestTaskListManager() *testTaskListManager {
 	return &testTaskListManager{tasks: treemap.NewWith(int64Comparator)}
 }
 
-func NewTestTaskManager(t *testing.T, logger log.Logger) *TestTaskManager {
+func NewTestTaskManager(t *testing.T, logger log.Logger, timeSource clock.TimeSource) *TestTaskManager {
 	return &TestTaskManager{
-		t:         t,
-		taskLists: make(map[Identifier]*testTaskListManager),
-		logger:    logger,
+		t:          t,
+		taskLists:  make(map[Identifier]*testTaskListManager),
+		logger:     logger,
+		timeSource: timeSource,
 	}
 }
 
@@ -83,7 +86,7 @@ func (m *TestTaskManager) LeaseTaskList(
 	tlm.Lock()
 	defer tlm.Unlock()
 	tlm.rangeID++
-	m.logger.Debug(fmt.Sprintf("LeaseTaskList rangeID=%v", tlm.rangeID))
+	m.logger.Debug(fmt.Sprintf("testTaskManager.LeaseTaskList rangeID=%v", tlm.rangeID))
 
 	return &persistence.LeaseTaskListResponse{
 		TaskListInfo: &persistence.TaskListInfo{
@@ -102,7 +105,7 @@ func (m *TestTaskManager) UpdateTaskList(
 	_ context.Context,
 	request *persistence.UpdateTaskListRequest,
 ) (*persistence.UpdateTaskListResponse, error) {
-	m.logger.Debug(fmt.Sprintf("UpdateTaskList taskListInfo=%v, ackLevel=%v", request.TaskListInfo, request.TaskListInfo.AckLevel))
+	m.logger.Debug(fmt.Sprintf("testTaskManager.UpdateTaskList taskListInfo=%v, ackLevel=%v", request.TaskListInfo, request.TaskListInfo.AckLevel))
 
 	tli := request.TaskListInfo
 	tlm := m.getTaskListManager(NewTestTaskListID(m.t, tli.DomainID, tli.Name, tli.TaskType))
@@ -111,7 +114,7 @@ func (m *TestTaskManager) UpdateTaskList(
 	defer tlm.Unlock()
 	if tlm.rangeID != tli.RangeID {
 		return nil, &persistence.ConditionFailedError{
-			Msg: fmt.Sprintf("Failed to update task list: name=%v, type=%v", tli.Name, tli.TaskType),
+			Msg: fmt.Sprintf("Failed to update task list: name=%v, type=%v, expected rangeID=%v, input rangeID=%v", tli.Name, tli.TaskType, tlm.rangeID, tli.RangeID),
 		}
 	}
 	tlm.ackLevel = tli.AckLevel
@@ -123,7 +126,7 @@ func (m *TestTaskManager) CompleteTask(
 	_ context.Context,
 	request *persistence.CompleteTaskRequest,
 ) error {
-	m.logger.Debug(fmt.Sprintf("CompleteTask taskID=%v, ackLevel=%v", request.TaskID, request.TaskList.AckLevel))
+	m.logger.Debug(fmt.Sprintf("testTaskManager.CompleteTask taskID=%v, ackLevel=%v", request.TaskID, request.TaskList.AckLevel))
 	if request.TaskID <= 0 {
 		panic(fmt.Errorf("Invalid taskID=%v", request.TaskID))
 	}
@@ -143,7 +146,7 @@ func (m *TestTaskManager) CompleteTasksLessThan(
 	_ context.Context,
 	request *persistence.CompleteTasksLessThanRequest,
 ) (*persistence.CompleteTasksLessThanResponse, error) {
-	m.logger.Debug(fmt.Sprintf("CompleteTasksLessThan taskID=%v", request.TaskID))
+	m.logger.Debug(fmt.Sprintf("testTaskManager.CompleteTasksLessThan taskID=%v", request.TaskID))
 	tlm := m.getTaskListManager(NewTestTaskListID(m.t, request.DomainID, request.TaskListName, request.TaskType))
 	tlm.Lock()
 	defer tlm.Unlock()
@@ -220,14 +223,14 @@ func (m *TestTaskManager) CreateTasks(
 		scheduleID := task.Data.ScheduleID
 		info := &persistence.TaskInfo{
 			DomainID:        domainID,
-			RunID:           task.Execution.RunID,
+			WorkflowID:      task.Data.WorkflowID,
+			RunID:           task.Data.RunID,
 			ScheduleID:      scheduleID,
 			TaskID:          task.TaskID,
-			WorkflowID:      task.Execution.WorkflowID,
 			PartitionConfig: task.Data.PartitionConfig,
 		}
 		if task.Data.ScheduleToStartTimeout != 0 {
-			info.Expiry = time.Now().Add(time.Duration(task.Data.ScheduleToStartTimeout) * time.Second)
+			info.Expiry = m.timeSource.Now().Add(time.Duration(task.Data.ScheduleToStartTimeout) * time.Second)
 		}
 		tlm.tasks.Put(task.TaskID, info)
 		tlm.createTaskCount++

@@ -126,11 +126,7 @@ func TestHandleDecisionRequestCancelExternalWorkflow(t *testing.T) {
 				test.expectMockCalls(taskHandler)
 			}
 			decision := &types.Decision{
-				DecisionType: func(i int32) *types.DecisionType {
-					decisionType := new(types.DecisionType)
-					*decisionType = types.DecisionType(i)
-					return decisionType
-				}(7), //types.DecisionTypeRequestCancelExternalWorkflowExecution == 7
+				DecisionType: common.Ptr(types.DecisionTypeRequestCancelExternalWorkflowExecution),
 				RequestCancelExternalWorkflowExecutionDecisionAttributes: test.attributes,
 			}
 			err := taskHandler.handleDecision(context.Background(), decision)
@@ -231,11 +227,7 @@ func TestHandleDecisionRequestCancelActivity(t *testing.T) {
 				test.expectMockCalls(taskHandler)
 			}
 			decision := &types.Decision{
-				DecisionType: func(i int32) *types.DecisionType {
-					decisionType := new(types.DecisionType)
-					*decisionType = types.DecisionType(i)
-					return decisionType
-				}(1), //types.DecisionTypeRequestCancelActivityTask == 1
+				DecisionType: common.Ptr(types.DecisionTypeRequestCancelActivityTask),
 				RequestCancelActivityTaskDecisionAttributes: test.attributes,
 			}
 			err := taskHandler.handleDecision(context.Background(), decision)
@@ -391,11 +383,7 @@ func TestHandleDecisionStartChildWorkflow(t *testing.T) {
 				test.expectMockCalls(taskHandler, test.attributes)
 			}
 			decision := &types.Decision{
-				DecisionType: func(i int32) *types.DecisionType {
-					decisionType := new(types.DecisionType)
-					*decisionType = types.DecisionType(i)
-					return decisionType
-				}(10), //types.DecisionTypeStartChildWorkflowExecution == 10
+				DecisionType: common.Ptr(types.DecisionTypeStartChildWorkflowExecution),
 				StartChildWorkflowExecutionDecisionAttributes: test.attributes,
 			}
 			err := taskHandler.handleDecision(context.Background(), decision)
@@ -473,11 +461,7 @@ func TestHandleDecisionCancelTimer(t *testing.T) {
 				test.expectMockCalls(taskHandler, test.attributes)
 			}
 			decision := &types.Decision{
-				DecisionType: func(i int32) *types.DecisionType {
-					decisionType := new(types.DecisionType)
-					*decisionType = types.DecisionType(i)
-					return decisionType
-				}(5), //types.DecisionTypeCancelTimer
+				DecisionType:                  common.Ptr(types.DecisionTypeCancelTimer),
 				CancelTimerDecisionAttributes: test.attributes,
 			}
 			err := taskHandler.handleDecision(context.Background(), decision)
@@ -598,11 +582,7 @@ func TestHandleDecisionSignalExternalWorkflow(t *testing.T) {
 				test.expectMockCalls(taskHandler, test.attributes)
 			}
 			decision := &types.Decision{
-				DecisionType: func(i int32) *types.DecisionType {
-					decisionType := new(types.DecisionType)
-					*decisionType = types.DecisionType(i)
-					return decisionType
-				}(11), //types.DecisionTypeSignalExternalWorkflowExecution
+				DecisionType: common.Ptr(types.DecisionTypeSignalExternalWorkflowExecution),
 				SignalExternalWorkflowExecutionDecisionAttributes: test.attributes,
 			}
 			err := taskHandler.handleDecision(context.Background(), decision)
@@ -714,11 +694,7 @@ func TestHandleDecisionUpsertWorkflowSearchAttributes(t *testing.T) {
 				test.expectMockCalls(taskHandler, test.attributes)
 			}
 			decision := &types.Decision{
-				DecisionType: func(i int32) *types.DecisionType {
-					decisionType := new(types.DecisionType)
-					*decisionType = types.DecisionType(i)
-					return decisionType
-				}(12), //types.DecisionTypeUpsertWorkflowSearchAttributes == 12
+				DecisionType: common.Ptr(types.DecisionTypeUpsertWorkflowSearchAttributes),
 				UpsertWorkflowSearchAttributesDecisionAttributes: test.attributes,
 			}
 			err := taskHandler.handleDecision(context.Background(), decision)
@@ -787,11 +763,7 @@ func TestHandleDecisionStartTimer(t *testing.T) {
 				test.expectMockCalls(taskHandler, test.attributes)
 			}
 			decision := &types.Decision{
-				DecisionType: func(i int32) *types.DecisionType {
-					decisionType := new(types.DecisionType)
-					*decisionType = types.DecisionType(i)
-					return decisionType
-				}(2), //types.DecisionTypeStartTimer
+				DecisionType:                 common.Ptr(types.DecisionTypeStartTimer),
 				StartTimerDecisionAttributes: test.attributes,
 			}
 			err := taskHandler.handleDecision(context.Background(), decision)
@@ -917,11 +889,7 @@ func TestHandleDecisionCompleteWorkflow(t *testing.T) {
 				test.expectMockCalls(taskHandler, test.attributes)
 			}
 			decision := &types.Decision{
-				DecisionType: func(i int32) *types.DecisionType {
-					decisionType := new(types.DecisionType)
-					*decisionType = types.DecisionType(i)
-					return decisionType
-				}(3), //types.DecisionTypeCompleteWorkflowExecution
+				DecisionType: common.Ptr(types.DecisionTypeCompleteWorkflowExecution),
 				CompleteWorkflowExecutionDecisionAttributes: test.attributes,
 			}
 			err := taskHandler.handleDecision(context.Background(), decision)
@@ -1124,11 +1092,7 @@ func TestHandleDecisionFailWorkflow(t *testing.T) {
 				test.expectMockCalls(taskHandler, test.attributes)
 			}
 			decision := &types.Decision{
-				DecisionType: func(i int32) *types.DecisionType {
-					decisionType := new(types.DecisionType)
-					*decisionType = types.DecisionType(i)
-					return decisionType
-				}(4), //types.DecisionTypeFailWorkflowExecution
+				DecisionType:                            common.Ptr(types.DecisionTypeFailWorkflowExecution),
 				FailWorkflowExecutionDecisionAttributes: test.attributes,
 			}
 			err := taskHandler.handleDecision(context.Background(), decision)
@@ -1197,11 +1161,7 @@ func TestHandleDecisionCancelWorkflow(t *testing.T) {
 				test.expectMockCalls(taskHandler, test.attributes)
 			}
 			decision := &types.Decision{
-				DecisionType: func(i int32) *types.DecisionType {
-					decisionType := new(types.DecisionType)
-					*decisionType = types.DecisionType(i)
-					return decisionType
-				}(6), //types.DecisionTypeCancelWorkflowExecution
+				DecisionType: common.Ptr(types.DecisionTypeCancelWorkflowExecution),
 				CancelWorkflowExecutionDecisionAttributes: test.attributes,
 			}
 			err := taskHandler.handleDecision(context.Background(), decision)
@@ -1261,11 +1221,7 @@ func TestHandleDecisionRecordMarker(t *testing.T) {
 				test.expectMockCalls(taskHandler, test.attributes)
 			}
 			decision := &types.Decision{
-				DecisionType: func(i int32) *types.DecisionType {
-					decisionType := new(types.DecisionType)
-					*decisionType = types.DecisionType(i)
-					return decisionType
-				}(8), //types.DecisionTypeRecordMarker
+				DecisionType:                   common.Ptr(types.DecisionTypeRecordMarker),
 				RecordMarkerDecisionAttributes: test.attributes,
 			}
 			err := taskHandler.handleDecision(context.Background(), decision)
@@ -1475,11 +1431,7 @@ func TestHandleDecisionScheduleActivity(t *testing.T) {
 				test.expectMockCalls(taskHandler, test.attributes)
 			}
 			decision := &types.Decision{
-				DecisionType: func(i int32) *types.DecisionType {
-					decisionType := new(types.DecisionType)
-					*decisionType = types.DecisionType(i)
-					return decisionType
-				}(0), //types.DecisionTypeScheduleActivityTask
+				DecisionType:                           common.Ptr(types.DecisionTypeScheduleActivityTask),
 				ScheduleActivityTaskDecisionAttributes: test.attributes,
 			}
 			err := taskHandler.handleDecision(context.Background(), decision)
@@ -1490,6 +1442,191 @@ func TestHandleDecisionScheduleActivity(t *testing.T) {
 			test.asserts(t, taskHandler, test.attributes, decisionRes, err)
 		})
 	}
+}
+
+func TestHandleDecisionContinueAsNewWorkflow(t *testing.T) {
+	executionInfo := &persistence.WorkflowExecutionInfo{
+		DomainID:        testdata.DomainID,
+		WorkflowID:      testdata.WorkflowID,
+		WorkflowTimeout: 100,
+		ParentDomainID:  "parent-domain-id",
+	}
+	validAttr := &types.ContinueAsNewWorkflowExecutionDecisionAttributes{
+		WorkflowType:                        &types.WorkflowType{Name: testdata.WorkflowTypeName},
+		TaskList:                            &types.TaskList{Name: testdata.TaskListName},
+		Input:                               []byte("some-input"),
+		ExecutionStartToCloseTimeoutSeconds: func(i int32) *int32 { return &i }(100),
+		TaskStartToCloseTimeoutSeconds:      func(i int32) *int32 { return &i }(80),
+		BackoffStartIntervalInSeconds:       new(int32),
+		FailureReason:                       func(i string) *string { return &i }("some reason"),
+		SearchAttributes:                    &types.SearchAttributes{IndexedFields: map[string][]byte{"some-key": []byte(`"some-value"`)}},
+	}
+	tests := []struct {
+		name            string
+		expectMockCalls func(taskHandler *taskHandlerImpl, attr *types.ContinueAsNewWorkflowExecutionDecisionAttributes)
+		attributes      *types.ContinueAsNewWorkflowExecutionDecisionAttributes
+		asserts         func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.ContinueAsNewWorkflowExecutionDecisionAttributes, err error)
+	}{
+		{
+			name:       "handler has unhandled events",
+			attributes: &types.ContinueAsNewWorkflowExecutionDecisionAttributes{},
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.ContinueAsNewWorkflowExecutionDecisionAttributes) {
+				taskHandler.hasUnhandledEventsBeforeDecisions = true
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.ContinueAsNewWorkflowExecutionDecisionAttributes, err error) {
+				assert.Equal(t, types.DecisionTaskFailedCauseUnhandledDecision, *taskHandler.failDecisionCause)
+				assert.Equal(t, "cannot complete workflow, new pending decisions were scheduled while this decision was processing", *taskHandler.failMessage)
+			},
+		},
+		{
+			name: "attributes validation failure",
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.ContinueAsNewWorkflowExecutionDecisionAttributes) {
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Return(executionInfo)
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.ContinueAsNewWorkflowExecutionDecisionAttributes, err error) {
+				assert.Equal(t, types.DecisionTaskFailedCauseBadContinueAsNewAttributes, *taskHandler.failDecisionCause)
+				assert.Equal(t, "ContinueAsNewWorkflowExecutionDecisionAttributes is not set on decision.", *taskHandler.failMessage)
+			},
+		},
+		{
+			name:       "blob size limit check failure",
+			attributes: validAttr,
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.ContinueAsNewWorkflowExecutionDecisionAttributes) {
+				taskHandler.sizeLimitChecker.blobSizeLimitWarn = 3
+				taskHandler.sizeLimitChecker.blobSizeLimitError = 5
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Return(executionInfo).Times(2)
+				taskHandler.attrValidator.domainCache.(*cache.MockDomainCache).EXPECT().GetDomainName(testdata.DomainID).Return(testdata.DomainName, nil)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddFailWorkflowEvent(testTaskCompletedID, &types.FailWorkflowExecutionDecisionAttributes{
+					Reason:  common.StringPtr(common.FailureReasonDecisionBlobSizeExceedsLimit),
+					Details: []byte("ContinueAsNewWorkflowExecutionDecisionAttributes. Input exceeds size limit."),
+				})
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.ContinueAsNewWorkflowExecutionDecisionAttributes, err error) {
+				assert.True(t, taskHandler.stopProcessing)
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name:       "workflow not running",
+			attributes: validAttr,
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.ContinueAsNewWorkflowExecutionDecisionAttributes) {
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Return(executionInfo).Times(2)
+				taskHandler.attrValidator.domainCache.(*cache.MockDomainCache).EXPECT().GetDomainName(testdata.DomainID).Return(testdata.DomainName, nil)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsWorkflowExecutionRunning().Return(false)
+				taskHandler.metricsClient = new(mocks.Client)
+				taskHandler.logger = new(log.MockLogger)
+				taskHandler.metricsClient.(*mocks.Client).On("IncCounter", metrics.HistoryRespondDecisionTaskCompletedScope, metrics.DecisionTypeContinueAsNewCounter)
+				taskHandler.metricsClient.(*mocks.Client).On("IncCounter", metrics.HistoryRespondDecisionTaskCompletedScope, metrics.MultipleCompletionDecisionsCounter)
+				taskHandler.logger.(*log.MockLogger).On("Warn", "Multiple completion decisions", []tag.Tag{tag.WorkflowDecisionType(int64(types.DecisionTypeContinueAsNewWorkflowExecution)), tag.ErrorTypeMultipleCompletionDecisions})
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.ContinueAsNewWorkflowExecutionDecisionAttributes, err error) {
+				assert.Nil(t, err)
+			},
+		},
+		{
+			name:       "cancel requested - failure to add cancel event",
+			attributes: validAttr,
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.ContinueAsNewWorkflowExecutionDecisionAttributes) {
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Return(executionInfo).Times(2)
+				taskHandler.attrValidator.domainCache.(*cache.MockDomainCache).EXPECT().GetDomainName(testdata.DomainID).Return(testdata.DomainName, nil)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsWorkflowExecutionRunning().Return(true)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsCancelRequested().Return(true, "")
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddWorkflowExecutionCanceledEvent(taskHandler.decisionTaskCompletedID,
+					&types.CancelWorkflowExecutionDecisionAttributes{}).Return(nil, errors.New("some error adding execution canceled event"))
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.ContinueAsNewWorkflowExecutionDecisionAttributes, err error) {
+				assert.ErrorContains(t, err, "some error adding execution canceled event")
+			},
+		},
+		{
+			name:       "cancel requested - success",
+			attributes: validAttr,
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.ContinueAsNewWorkflowExecutionDecisionAttributes) {
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Return(executionInfo).Times(2)
+				taskHandler.attrValidator.domainCache.(*cache.MockDomainCache).EXPECT().GetDomainName(testdata.DomainID).Return(testdata.DomainName, nil)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsWorkflowExecutionRunning().Return(true)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsCancelRequested().Return(true, "")
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddWorkflowExecutionCanceledEvent(taskHandler.decisionTaskCompletedID,
+					&types.CancelWorkflowExecutionDecisionAttributes{}).Return(&types.HistoryEvent{}, nil)
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.ContinueAsNewWorkflowExecutionDecisionAttributes, err error) {
+				assert.Nil(t, err)
+			},
+		},
+		{
+			name:       "failure to extract parent domain name",
+			attributes: validAttr,
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.ContinueAsNewWorkflowExecutionDecisionAttributes) {
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Return(executionInfo).Times(2)
+				taskHandler.attrValidator.domainCache.(*cache.MockDomainCache).EXPECT().GetDomainName(testdata.DomainID).Return(testdata.DomainName, nil)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsWorkflowExecutionRunning().Return(true)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsCancelRequested().Return(false, "")
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().HasParentExecution().Return(true)
+				taskHandler.domainCache.(*cache.MockDomainCache).EXPECT().GetDomainName(executionInfo.ParentDomainID).Return("", errors.New("some error getting parent domain name"))
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.ContinueAsNewWorkflowExecutionDecisionAttributes, err error) {
+				assert.ErrorContains(t, err, "some error getting parent domain name")
+			},
+		},
+		{
+			name:       "failure to add continueAsNew event",
+			attributes: validAttr,
+			expectMockCalls: func(taskHandler *taskHandlerImpl, attr *types.ContinueAsNewWorkflowExecutionDecisionAttributes) {
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Return(executionInfo).Times(2)
+				taskHandler.attrValidator.domainCache.(*cache.MockDomainCache).EXPECT().GetDomainName(testdata.DomainID).Return(testdata.DomainName, nil)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsWorkflowExecutionRunning().Return(true)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().IsCancelRequested().Return(false, "")
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().HasParentExecution().Return(true)
+				taskHandler.domainCache.(*cache.MockDomainCache).EXPECT().GetDomainName(executionInfo.ParentDomainID).Return("parent-domain-name", nil)
+				taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddContinueAsNewEvent(context.Background(), taskHandler.decisionTaskCompletedID, taskHandler.decisionTaskCompletedID, "parent-domain-name", attr).
+					Return(nil, nil, errors.New("some error adding continueAsNew event"))
+
+			},
+			asserts: func(t *testing.T, taskHandler *taskHandlerImpl, attr *types.ContinueAsNewWorkflowExecutionDecisionAttributes, err error) {
+				assert.ErrorContains(t, err, "some error adding continueAsNew event")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			taskHandler := newTaskHandlerForTest(t)
+			if test.expectMockCalls != nil {
+				test.expectMockCalls(taskHandler, test.attributes)
+			}
+			decision := &types.Decision{
+				DecisionType: common.Ptr(types.DecisionTypeContinueAsNewWorkflowExecution),
+				ContinueAsNewWorkflowExecutionDecisionAttributes: test.attributes,
+			}
+			err := taskHandler.handleDecision(context.Background(), decision)
+			test.asserts(t, taskHandler, test.attributes, err)
+		})
+	}
+}
+
+func TestValidateAttributes(t *testing.T) {
+	t.Run("failure", func(t *testing.T) {
+		taskHandler := newTaskHandlerForTest(t)
+		validationFn := func() error { return errors.New("some validation error") }
+		failedCause := new(types.DecisionTaskFailedCause)
+		err := taskHandler.validateDecisionAttr(validationFn, *failedCause)
+		assert.ErrorContains(t, err, "some validation error")
+	})
+}
+
+func TestHandleDecisions(t *testing.T) {
+	t.Run("workflow size exceeds limit", func(t *testing.T) {
+		taskHandler := newTaskHandlerForTest(t)
+		taskHandler.sizeLimitChecker.historyCountLimitError = 10
+		taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetNextEventID().Return(int64(12)) //nextEventID - 1 > historyCountLimit of 10
+		taskHandler.mutableState.(*execution.MockMutableState).EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{})
+		taskHandler.mutableState.(*execution.MockMutableState).EXPECT().AddFailWorkflowEvent(taskHandler.sizeLimitChecker.completedID, &types.FailWorkflowExecutionDecisionAttributes{
+			Reason:  common.StringPtr(common.FailureReasonSizeExceedsLimit),
+			Details: []byte("Workflow history size / count exceeds limit."),
+		}).Return(nil, errors.New("some error adding fail workflow event"))
+		res, err := taskHandler.handleDecisions(context.Background(), []byte{}, []*types.Decision{})
+		assert.Nil(t, res)
+		assert.ErrorContains(t, err, "some error adding fail workflow event")
+	})
 }
 
 func newTaskHandlerForTest(t *testing.T) *taskHandlerImpl {

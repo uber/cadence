@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
@@ -39,6 +40,7 @@ import (
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/asyncworkflow/queueconfigapi"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/domain"
@@ -1611,6 +1613,1123 @@ func TestGetReplicationMessages(t *testing.T) {
 			}
 
 			_, err := handler.GetReplicationMessages(context.Background(), td.input)
+			if td.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func Test_GetDomainReplicationMessages(t *testing.T) {
+	tests := map[string]struct {
+		input          *types.GetDomainReplicationMessagesRequest
+		hcHandlerFunc  func(mock *history.MockClient)
+		drqHandlerFunc func(mock *domain.MockReplicationQueue)
+		wantErr        bool
+	}{
+		"nil request": {
+			input:          nil,
+			hcHandlerFunc:  func(mock *history.MockClient) {},
+			drqHandlerFunc: func(mock *domain.MockReplicationQueue) {},
+			wantErr:        true,
+		},
+		"with default last message ID": {
+			input: &types.GetDomainReplicationMessagesRequest{
+				LastRetrievedMessageID: common.Int64Ptr(-1), // default value
+				ClusterName:            "test-cluster",
+			},
+			hcHandlerFunc: func(mock *history.MockClient) {
+			},
+			drqHandlerFunc: func(mock *domain.MockReplicationQueue) {
+				mock.EXPECT().GetAckLevels(context.Background()).Return(map[string]int64{
+					"test-cluster": 1,
+				}, nil)
+				mock.EXPECT().GetReplicationMessages(context.Background(), int64(1), getDomainReplicationMessageBatchSize).Return(nil, int64(2), nil)
+				mock.EXPECT().UpdateAckLevel(context.Background(), int64(-1), "test-cluster").Return(nil)
+			},
+			wantErr: false,
+		},
+		"with random last message ID but update ack level error": {
+			input: &types.GetDomainReplicationMessagesRequest{
+				LastRetrievedMessageID: common.Int64Ptr(1),
+				LastProcessedMessageID: common.Int64Ptr(1),
+			},
+			hcHandlerFunc: func(mock *history.MockClient) {
+			},
+			drqHandlerFunc: func(mock *domain.MockReplicationQueue) {
+				mock.EXPECT().GetReplicationMessages(context.Background(), int64(1), getDomainReplicationMessageBatchSize).Return(nil, int64(2), nil)
+				mock.EXPECT().UpdateAckLevel(context.Background(), int64(1), "").Return(assert.AnError)
+			},
+			wantErr: false,
+		},
+		"get replication messages error": {
+			input: &types.GetDomainReplicationMessagesRequest{
+				LastRetrievedMessageID: common.Int64Ptr(1),
+				LastProcessedMessageID: common.Int64Ptr(1),
+			},
+			hcHandlerFunc: func(mock *history.MockClient) {
+			},
+			drqHandlerFunc: func(mock *domain.MockReplicationQueue) {
+				mock.EXPECT().GetReplicationMessages(context.Background(), int64(1), getDomainReplicationMessageBatchSize).Return(nil, int64(2), assert.AnError)
+			},
+			wantErr: true,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			goMock := gomock.NewController(t)
+			hcMock := history.NewMockClient(goMock)
+			drqMock := domain.NewMockReplicationQueue(goMock)
+			if td.hcHandlerFunc != nil {
+				td.hcHandlerFunc(hcMock)
+			}
+			if td.drqHandlerFunc != nil {
+				td.drqHandlerFunc(drqMock)
+			}
+
+			handler := adminHandlerImpl{
+				Resource: &resource.Test{
+					Logger:                 testlogger.New(t),
+					MetricsClient:          metrics.NewNoopMetricsClient(),
+					DomainReplicationQueue: drqMock,
+				},
+			}
+
+			resp, err := handler.GetDomainReplicationMessages(context.Background(), td.input)
+			if td.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, int64(2), resp.Messages.LastRetrievedMessageID)
+			}
+		})
+	}
+}
+
+func Test_GetDLQReplicationMessages(t *testing.T) {
+	tests := map[string]struct {
+		input         *types.GetDLQReplicationMessagesRequest
+		hcHandlerFunc func(mock *history.MockClient)
+		wantErr       bool
+	}{
+		"nil request": {
+			input: nil,
+			hcHandlerFunc: func(mock *history.MockClient) {
+			},
+			wantErr: true,
+		},
+		"missing task info": {
+			input: &types.GetDLQReplicationMessagesRequest{},
+			hcHandlerFunc: func(mock *history.MockClient) {
+			},
+			wantErr: true,
+		},
+		"normal request": {
+			input: &types.GetDLQReplicationMessagesRequest{
+				TaskInfos: []*types.ReplicationTaskInfo{
+					{
+						DomainID:     "test-domain-id",
+						WorkflowID:   "test-workflow-id",
+						RunID:        uuid.New(),
+						TaskID:       int64(1),
+						TaskType:     1,
+						Version:      0,
+						FirstEventID: 1,
+					},
+				},
+			},
+			hcHandlerFunc: func(mock *history.MockClient) {
+				mock.EXPECT().GetDLQReplicationMessages(gomock.Any(), gomock.Any()).Return(nil, nil)
+			},
+			wantErr: false,
+		},
+		"get dql message error": {
+			input: &types.GetDLQReplicationMessagesRequest{
+				TaskInfos: []*types.ReplicationTaskInfo{
+					{
+						DomainID:   "test-domain-id",
+						WorkflowID: "test-workflow-id",
+					},
+				},
+			},
+			hcHandlerFunc: func(mock *history.MockClient) {
+				mock.EXPECT().GetDLQReplicationMessages(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+			},
+			wantErr: true,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			goMock := gomock.NewController(t)
+			hcMock := history.NewMockClient(goMock)
+			if td.hcHandlerFunc != nil {
+				td.hcHandlerFunc(hcMock)
+			}
+			handler := adminHandlerImpl{
+				Resource: &resource.Test{
+					Logger:        testlogger.New(t),
+					MetricsClient: metrics.NewNoopMetricsClient(),
+					HistoryClient: hcMock,
+				},
+			}
+
+			_, err := handler.GetDLQReplicationMessages(context.Background(), td.input)
+			if td.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func Test_ReapplyEvents(t *testing.T) {
+	tests := map[string]struct {
+		input         *types.ReapplyEventsRequest
+		hcHandlerFunc func(mock *history.MockClient)
+		dcHandlerFunc func(mock *cache.MockDomainCache)
+		wantErr       bool
+	}{
+		"nil request": {
+			input:   nil,
+			wantErr: true,
+		},
+		"empty domain name": {
+			input:   &types.ReapplyEventsRequest{},
+			wantErr: true,
+		},
+		"empty workflow execution": {
+			input: &types.ReapplyEventsRequest{
+				DomainName: "test-domain",
+			},
+			wantErr: true,
+		},
+		"empty workflow ID": {
+			input: &types.ReapplyEventsRequest{
+				DomainName:        "test-domain",
+				WorkflowExecution: &types.WorkflowExecution{},
+			},
+			wantErr: true,
+		},
+		"empty events": {
+			input: &types.ReapplyEventsRequest{
+				DomainName: "test-domain",
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+				},
+			},
+			wantErr: true,
+		},
+		"get domain error": {
+			input: &types.ReapplyEventsRequest{
+				DomainName: "test-domain",
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+				},
+				Events: &types.DataBlob{},
+			},
+			dcHandlerFunc: func(mock *cache.MockDomainCache) {
+				mock.EXPECT().GetDomain("test-domain").Return(nil, assert.AnError)
+			},
+			wantErr: true,
+		},
+		"normal request": {
+			input: &types.ReapplyEventsRequest{
+				DomainName: "test-domain",
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+				},
+				Events: &types.DataBlob{
+					EncodingType: types.EncodingTypeThriftRW.Ptr(),
+					Data:         []byte("test-event-data"),
+				},
+			},
+			hcHandlerFunc: func(mock *history.MockClient) {
+				mock.EXPECT().ReapplyEvents(context.Background(), &types.HistoryReapplyEventsRequest{
+					DomainUUID: "test-domain-id",
+					Request: &types.ReapplyEventsRequest{
+						DomainName: "test-domain",
+						WorkflowExecution: &types.WorkflowExecution{
+							WorkflowID: "test-workflow-id",
+						},
+						Events: &types.DataBlob{
+							EncodingType: types.EncodingTypeThriftRW.Ptr(),
+							Data:         []byte("test-event-data"),
+						},
+					},
+				}).Return(nil)
+			},
+			dcHandlerFunc: func(mock *cache.MockDomainCache) {
+				mock.EXPECT().GetDomain("test-domain").Return(cache.NewGlobalDomainCacheEntryForTest(
+					&persistence.DomainInfo{ID: "test-domain-id"},
+					&persistence.DomainConfig{},
+					&persistence.DomainReplicationConfig{},
+					0,
+				), nil)
+			},
+			wantErr: false,
+		},
+		"reapply events error": {
+			input: &types.ReapplyEventsRequest{
+				DomainName: "test-domain",
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+				},
+				Events: &types.DataBlob{},
+			},
+			hcHandlerFunc: func(mock *history.MockClient) {
+				mock.EXPECT().ReapplyEvents(gomock.Any(), gomock.Any()).Return(assert.AnError)
+			},
+			dcHandlerFunc: func(mock *cache.MockDomainCache) {
+				mock.EXPECT().GetDomain("test-domain").Return(cache.NewGlobalDomainCacheEntryForTest(
+					&persistence.DomainInfo{ID: "test-domain-id"},
+					&persistence.DomainConfig{},
+					&persistence.DomainReplicationConfig{},
+					0,
+				), nil)
+			},
+			wantErr: true,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			goMock := gomock.NewController(t)
+			hcMock := history.NewMockClient(goMock)
+			dcMock := cache.NewMockDomainCache(goMock)
+			if td.hcHandlerFunc != nil {
+				td.hcHandlerFunc(hcMock)
+			}
+			if td.dcHandlerFunc != nil {
+				td.dcHandlerFunc(dcMock)
+			}
+			handler := adminHandlerImpl{
+				Resource: &resource.Test{
+					Logger:        testlogger.New(t),
+					MetricsClient: metrics.NewNoopMetricsClient(),
+					HistoryClient: hcMock,
+					DomainCache:   dcMock,
+				},
+			}
+
+			err := handler.ReapplyEvents(context.Background(), td.input)
+			if td.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func Test_ReadDLQMessages(t *testing.T) {
+	tests := map[string]struct {
+		input            *types.ReadDLQMessagesRequest
+		hcHandlerFunc    func(mock *history.MockClient)
+		retryHandelrFunc func(mock *backoff.ThrottleRetry)
+		wantErr          bool
+	}{
+		"nil request": {
+			input:   nil,
+			wantErr: true,
+		},
+		"missing type": {
+			input:   &types.ReadDLQMessagesRequest{},
+			wantErr: true,
+		},
+		"type DLQTypeReplication": {
+			input: &types.ReadDLQMessagesRequest{
+				Type: types.DLQTypeReplication.Ptr(),
+			},
+			hcHandlerFunc: func(mock *history.MockClient) {
+				mock.EXPECT().ReadDLQMessages(gomock.Any(), gomock.Any()).Return(nil, nil)
+			},
+			wantErr: false,
+		},
+		"type DLQTypeDomain": {
+			input: &types.ReadDLQMessagesRequest{
+				Type: types.DLQTypeDomain.Ptr(),
+			},
+			hcHandlerFunc: func(mock *history.MockClient) {
+			},
+			retryHandelrFunc: func(mock *backoff.ThrottleRetry) {
+			},
+		},
+		"default type": {
+			input: &types.ReadDLQMessagesRequest{
+				Type: types.DLQType(22).Ptr(),
+			},
+			hcHandlerFunc: func(mock *history.MockClient) {
+			},
+			wantErr: true,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			goMock := gomock.NewController(t)
+			hcMock := history.NewMockClient(goMock)
+			if td.hcHandlerFunc != nil {
+				td.hcHandlerFunc(hcMock)
+			}
+			handler := adminHandlerImpl{
+				Resource: &resource.Test{
+					Logger:        testlogger.New(t),
+					MetricsClient: metrics.NewNoopMetricsClient(),
+					HistoryClient: hcMock,
+				},
+			}
+
+			if td.retryHandelrFunc != nil {
+				policy := backoff.NewExponentialRetryPolicy(1 * time.Millisecond)
+				policy.SetMaximumInterval(5 * time.Millisecond)
+				policy.SetMaximumAttempts(5)
+				handler.throttleRetry = backoff.NewThrottleRetry(
+					backoff.WithRetryPolicy(policy),
+					backoff.WithRetryableError(func(_ error) bool { return true }),
+				)
+				mockDlqHandler := domain.NewMockDLQMessageHandler(goMock)
+				mockDlqHandler.EXPECT().Read(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil, nil)
+				handler.domainDLQHandler = mockDlqHandler
+			}
+
+			_, err := handler.ReadDLQMessages(context.Background(), td.input)
+			if td.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func Test_PurgeDLQMessages(t *testing.T) {
+	tests := map[string]struct {
+		input            *types.PurgeDLQMessagesRequest
+		hcHandlerFunc    func(mock *history.MockClient)
+		retryHandelrFunc func(mock *backoff.ThrottleRetry)
+		wantErr          bool
+	}{
+		"nil request": {
+			input:   nil,
+			wantErr: true,
+		},
+		"missing type": {
+			input:   &types.PurgeDLQMessagesRequest{},
+			wantErr: true,
+		},
+		"type DLQTypeReplication": {
+			input: &types.PurgeDLQMessagesRequest{
+				Type: types.DLQTypeReplication.Ptr(),
+			},
+			hcHandlerFunc: func(mock *history.MockClient) {
+				mock.EXPECT().PurgeDLQMessages(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			wantErr: false,
+		},
+		"type DLQTypeDomain": {
+			input: &types.PurgeDLQMessagesRequest{
+				Type: types.DLQTypeDomain.Ptr(),
+			},
+			hcHandlerFunc: func(mock *history.MockClient) {
+			},
+			retryHandelrFunc: func(mock *backoff.ThrottleRetry) {
+			},
+		},
+		"default type": {
+			input: &types.PurgeDLQMessagesRequest{
+				Type: types.DLQType(22).Ptr(),
+			},
+			hcHandlerFunc: func(mock *history.MockClient) {
+			},
+			wantErr: true,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			goMock := gomock.NewController(t)
+			hcMock := history.NewMockClient(goMock)
+			if td.hcHandlerFunc != nil {
+				td.hcHandlerFunc(hcMock)
+			}
+			handler := adminHandlerImpl{
+				Resource: &resource.Test{
+					Logger:        testlogger.New(t),
+					MetricsClient: metrics.NewNoopMetricsClient(),
+					HistoryClient: hcMock,
+				},
+			}
+
+			if td.retryHandelrFunc != nil {
+				policy := backoff.NewExponentialRetryPolicy(1 * time.Millisecond)
+				policy.SetMaximumInterval(5 * time.Millisecond)
+				policy.SetMaximumAttempts(5)
+				handler.throttleRetry = backoff.NewThrottleRetry(
+					backoff.WithRetryPolicy(policy),
+					backoff.WithRetryableError(func(_ error) bool { return true }),
+				)
+				mockDlqHandler := domain.NewMockDLQMessageHandler(goMock)
+				mockDlqHandler.EXPECT().Purge(gomock.Any(), gomock.Any()).Return(nil)
+				handler.domainDLQHandler = mockDlqHandler
+			}
+
+			err := handler.PurgeDLQMessages(context.Background(), td.input)
+			if td.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func Test_CountDQLMessages(t *testing.T) {
+	tests := map[string]struct {
+		input          *types.CountDLQMessagesRequest
+		hcHandlerFunc  func(mock *history.MockClient)
+		dlqHandlerFunc func(mock *domain.MockDLQMessageHandler)
+		wantErr        bool
+	}{
+		"normal request": {
+			input: &types.CountDLQMessagesRequest{},
+			hcHandlerFunc: func(mock *history.MockClient) {
+				mock.EXPECT().CountDLQMessages(gomock.Any(), gomock.Any()).Return(&types.HistoryCountDLQMessagesResponse{
+					Entries: map[types.HistoryDLQCountKey]int64{
+						{
+							ShardID:       1,
+							SourceCluster: "test-cluster",
+						}: 1,
+					},
+				}, nil)
+			},
+			dlqHandlerFunc: func(mock *domain.MockDLQMessageHandler) {
+				mock.EXPECT().Count(gomock.Any(), gomock.Any()).Return(int64(1), nil)
+			},
+			wantErr: false,
+		},
+		"domain dlq handler error": {
+			input: &types.CountDLQMessagesRequest{},
+			hcHandlerFunc: func(mock *history.MockClient) {
+			},
+			dlqHandlerFunc: func(mock *domain.MockDLQMessageHandler) {
+				mock.EXPECT().Count(gomock.Any(), gomock.Any()).Return(int64(1), assert.AnError)
+			},
+			wantErr: true,
+		},
+		"history client error": {
+			input: &types.CountDLQMessagesRequest{},
+			hcHandlerFunc: func(mock *history.MockClient) {
+				mock.EXPECT().CountDLQMessages(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+			},
+			dlqHandlerFunc: func(mock *domain.MockDLQMessageHandler) {
+				mock.EXPECT().Count(gomock.Any(), gomock.Any()).Return(int64(1), nil)
+			},
+			wantErr: true,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			goMock := gomock.NewController(t)
+			hcMock := history.NewMockClient(goMock)
+			dlqMock := domain.NewMockDLQMessageHandler(goMock)
+			if td.hcHandlerFunc != nil {
+				td.hcHandlerFunc(hcMock)
+			}
+			if td.dlqHandlerFunc != nil {
+				td.dlqHandlerFunc(dlqMock)
+			}
+			handler := adminHandlerImpl{
+				Resource: &resource.Test{
+					Logger:        testlogger.New(t),
+					MetricsClient: metrics.NewNoopMetricsClient(),
+					HistoryClient: hcMock,
+				},
+				domainDLQHandler: dlqMock,
+			}
+
+			_, err := handler.CountDLQMessages(context.Background(), td.input)
+			if td.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func Test_MergeDLQMessages(t *testing.T) {
+	tests := map[string]struct {
+		input            *types.MergeDLQMessagesRequest
+		hcHandlerFunc    func(mock *history.MockClient)
+		retryHandelrFunc func(mock *backoff.ThrottleRetry)
+		wantErr          bool
+	}{
+		"nil request": {
+			input:   nil,
+			wantErr: true,
+		},
+		"missing type": {
+			input:   &types.MergeDLQMessagesRequest{},
+			wantErr: true,
+		},
+		"type DLQTypeReplication": {
+			input: &types.MergeDLQMessagesRequest{
+				Type: types.DLQTypeReplication.Ptr(),
+			},
+			hcHandlerFunc: func(mock *history.MockClient) {
+				mock.EXPECT().MergeDLQMessages(gomock.Any(), gomock.Any()).Return(nil, nil)
+			},
+			wantErr: false,
+		},
+		"type DLQTypeDomain": {
+			input: &types.MergeDLQMessagesRequest{
+				Type: types.DLQTypeDomain.Ptr(),
+			},
+			hcHandlerFunc: func(mock *history.MockClient) {
+			},
+			retryHandelrFunc: func(mock *backoff.ThrottleRetry) {
+			},
+		},
+		"default type": {
+			input: &types.MergeDLQMessagesRequest{
+				Type: types.DLQType(22).Ptr(),
+			},
+			hcHandlerFunc: func(mock *history.MockClient) {
+			},
+			wantErr: true,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			goMock := gomock.NewController(t)
+			hcMock := history.NewMockClient(goMock)
+			if td.hcHandlerFunc != nil {
+				td.hcHandlerFunc(hcMock)
+			}
+			handler := adminHandlerImpl{
+				Resource: &resource.Test{
+					Logger:        testlogger.New(t),
+					MetricsClient: metrics.NewNoopMetricsClient(),
+					HistoryClient: hcMock,
+				},
+			}
+
+			if td.retryHandelrFunc != nil {
+				policy := backoff.NewExponentialRetryPolicy(1 * time.Millisecond)
+				policy.SetMaximumInterval(5 * time.Millisecond)
+				policy.SetMaximumAttempts(5)
+				handler.throttleRetry = backoff.NewThrottleRetry(
+					backoff.WithRetryPolicy(policy),
+					backoff.WithRetryableError(func(_ error) bool { return true }),
+				)
+				mockDlqHandler := domain.NewMockDLQMessageHandler(goMock)
+				mockDlqHandler.EXPECT().Merge(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
+				handler.domainDLQHandler = mockDlqHandler
+			}
+
+			_, err := handler.MergeDLQMessages(context.Background(), td.input)
+			if td.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func Test_RefreshWorkflowTasks(t *testing.T) {
+	tests := map[string]struct {
+		input         *types.RefreshWorkflowTasksRequest
+		hcHandlerFunc func(mock *history.MockClient)
+		dcHandlerFunc func(mock *cache.MockDomainCache)
+		wantErr       bool
+	}{
+		"nil request": {
+			input:   nil,
+			wantErr: true,
+		},
+		"empty workflow execution": {
+			input: &types.RefreshWorkflowTasksRequest{
+				Domain: "test-domain",
+			},
+			wantErr: true,
+		},
+		"check execution error": {
+			input: &types.RefreshWorkflowTasksRequest{
+				Domain: "test-domain",
+				Execution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+				},
+			},
+			dcHandlerFunc: func(mock *cache.MockDomainCache) {
+				mock.EXPECT().GetDomain("test-domain").Return(nil, assert.AnError)
+			},
+			wantErr: true,
+		},
+		"normal request": {
+			input: &types.RefreshWorkflowTasksRequest{
+				Domain: "test-domain",
+				Execution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+				},
+			},
+			hcHandlerFunc: func(mock *history.MockClient) {
+				mock.EXPECT().RefreshWorkflowTasks(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			dcHandlerFunc: func(mock *cache.MockDomainCache) {
+				mock.EXPECT().GetDomain("test-domain").Return(cache.NewGlobalDomainCacheEntryForTest(
+					&persistence.DomainInfo{ID: "test-domain-id"},
+					&persistence.DomainConfig{},
+					&persistence.DomainReplicationConfig{},
+					0,
+				), nil)
+			},
+			wantErr: false,
+		},
+		"refresh workflow tasks error": {
+			input: &types.RefreshWorkflowTasksRequest{
+				Domain: "test-domain",
+				Execution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+				},
+			},
+			hcHandlerFunc: func(mock *history.MockClient) {
+				mock.EXPECT().RefreshWorkflowTasks(gomock.Any(), gomock.Any()).Return(assert.AnError)
+			},
+			dcHandlerFunc: func(mock *cache.MockDomainCache) {
+				mock.EXPECT().GetDomain("test-domain").Return(cache.NewGlobalDomainCacheEntryForTest(
+					&persistence.DomainInfo{ID: "test-domain-id"},
+					&persistence.DomainConfig{},
+					&persistence.DomainReplicationConfig{},
+					0,
+				), nil)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run("", func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			hcMock := history.NewMockClient(ctrl)
+			dcMock := cache.NewMockDomainCache(ctrl)
+			if tt.hcHandlerFunc != nil {
+				tt.hcHandlerFunc(hcMock)
+			}
+			if tt.dcHandlerFunc != nil {
+				tt.dcHandlerFunc(dcMock)
+			}
+
+			handler := adminHandlerImpl{
+				Resource: &resource.Test{
+					Logger:        testlogger.New(t),
+					MetricsClient: metrics.NewNoopMetricsClient(),
+					HistoryClient: hcMock,
+					DomainCache:   dcMock,
+				},
+			}
+
+			err := handler.RefreshWorkflowTasks(context.Background(), tt.input)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func Test_ResendReplicationTasks(t *testing.T) {
+	tests := map[string]struct {
+		input         *types.ResendReplicationTasksRequest
+		hcHandlerFunc func(mock *history.MockClient)
+		wantErr       bool
+	}{
+		"nil request": {
+			input: nil,
+			hcHandlerFunc: func(mock *history.MockClient) {
+			},
+			wantErr: true,
+		},
+		"normal request": {
+			input: &types.ResendReplicationTasksRequest{
+				RemoteCluster: "test-cluster",
+			},
+			hcHandlerFunc: func(mock *history.MockClient) {
+			},
+			wantErr: true,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			goMock := gomock.NewController(t)
+			hcMock := history.NewMockClient(goMock)
+			if td.hcHandlerFunc != nil {
+				td.hcHandlerFunc(hcMock)
+			}
+			handler := adminHandlerImpl{
+				Resource: &resource.Test{
+					Logger:        testlogger.New(t),
+					MetricsClient: metrics.NewNoopMetricsClient(),
+					HistoryClient: hcMock,
+				},
+			}
+
+			err := handler.ResendReplicationTasks(context.Background(), td.input)
+			if td.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func Test_GetCrossClusterTasks(t *testing.T) {
+	tests := map[string]struct {
+		input         *types.GetCrossClusterTasksRequest
+		hcHandlerFunc func(mock *history.MockClient)
+		wantErr       bool
+	}{
+		"nil request": {
+			input: nil,
+			hcHandlerFunc: func(mock *history.MockClient) {
+			},
+			wantErr: true,
+		},
+		"missing cluster name": {
+			input: &types.GetCrossClusterTasksRequest{},
+			hcHandlerFunc: func(mock *history.MockClient) {
+			},
+			wantErr: true,
+		},
+		"normal request": {
+			input: &types.GetCrossClusterTasksRequest{
+				TargetCluster: "test-cluster",
+			},
+			hcHandlerFunc: func(mock *history.MockClient) {
+				mock.EXPECT().GetCrossClusterTasks(gomock.Any(), gomock.Any()).Return(nil, nil)
+			},
+			wantErr: false,
+		},
+		"return error": {
+			input: &types.GetCrossClusterTasksRequest{
+				TargetCluster: "test-cluster",
+			},
+			hcHandlerFunc: func(mock *history.MockClient) {
+				mock.EXPECT().GetCrossClusterTasks(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+			},
+			wantErr: true,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			goMock := gomock.NewController(t)
+			hcMock := history.NewMockClient(goMock)
+			if td.hcHandlerFunc != nil {
+				td.hcHandlerFunc(hcMock)
+			}
+			handler := adminHandlerImpl{
+				Resource: &resource.Test{
+					Logger:        testlogger.New(t),
+					MetricsClient: metrics.NewNoopMetricsClient(),
+					HistoryClient: hcMock,
+				},
+			}
+
+			_, err := handler.GetCrossClusterTasks(context.Background(), td.input)
+			if td.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func Test_RespondCrossClusterTasksCompleted(t *testing.T) {
+	tests := map[string]struct {
+		input         *types.RespondCrossClusterTasksCompletedRequest
+		hcHandlerFunc func(mock *history.MockClient)
+		wantErr       bool
+	}{
+		"nil request": {
+			input:   nil,
+			wantErr: true,
+		},
+		"empty target cluster": {
+			input:   &types.RespondCrossClusterTasksCompletedRequest{},
+			wantErr: true,
+		},
+		"normal request": {
+			input: &types.RespondCrossClusterTasksCompletedRequest{
+				TargetCluster: "test-cluster",
+			},
+			hcHandlerFunc: func(mock *history.MockClient) {
+				mock.EXPECT().RespondCrossClusterTasksCompleted(gomock.Any(), gomock.Any()).Return(nil, nil)
+			},
+			wantErr: false,
+		},
+		"respond error": {
+			input: &types.RespondCrossClusterTasksCompletedRequest{
+				TargetCluster: "test-cluster",
+			},
+			hcHandlerFunc: func(mock *history.MockClient) {
+				mock.EXPECT().RespondCrossClusterTasksCompleted(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+			},
+			wantErr: true,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			goMock := gomock.NewController(t)
+			hcMock := history.NewMockClient(goMock)
+			if td.hcHandlerFunc != nil {
+				td.hcHandlerFunc(hcMock)
+			}
+			handler := adminHandlerImpl{
+				Resource: &resource.Test{
+					Logger:        testlogger.New(t),
+					MetricsClient: metrics.NewNoopMetricsClient(),
+					HistoryClient: hcMock,
+				},
+			}
+
+			_, err := handler.RespondCrossClusterTasksCompleted(context.Background(), td.input)
+			if td.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func Test_SerializeRawHistoryToken(t *testing.T) {
+	input := getWorkflowRawHistoryV2Token{
+		DomainName: "test-domain",
+	}
+	marshaledToken, _ := json.Marshal(input)
+	tests := map[string]struct {
+		input              *getWorkflowRawHistoryV2Token
+		wantResp           []byte
+		wantSerializeErr   bool
+		wantDeserializeErr bool
+	}{
+		"normal request": {
+			input: &getWorkflowRawHistoryV2Token{
+				DomainName: "test-domain",
+			},
+			wantResp:           marshaledToken,
+			wantSerializeErr:   false,
+			wantDeserializeErr: false,
+		},
+		"nil request": {
+			input:              nil,
+			wantResp:           nil,
+			wantSerializeErr:   false,
+			wantDeserializeErr: true,
+		},
+	}
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			resp, err := serializeRawHistoryToken(td.input)
+			if td.wantSerializeErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, td.wantResp, resp)
+			}
+			// deserialize the serialized token
+			res, err := deserializeRawHistoryToken(resp)
+			if td.wantDeserializeErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, td.input, res)
+			}
+		})
+	}
+}
+
+func Test_ListDynamicConfig(t *testing.T) {
+	tests := map[string]struct {
+		input         *types.ListDynamicConfigRequest
+		dcHandlerFunc func(mock *dynamicconfig.MockClient)
+		wantErr       bool
+	}{
+		"nil request": {
+			input:   nil,
+			wantErr: true,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			goMock := gomock.NewController(t)
+			hcMock := history.NewMockClient(goMock)
+			dcMock := dynamicconfig.NewMockClient(goMock)
+			if td.dcHandlerFunc != nil {
+				td.dcHandlerFunc(dcMock)
+			}
+			handler := adminHandlerImpl{
+				Resource: &resource.Test{
+					Logger:        testlogger.New(t),
+					MetricsClient: metrics.NewNoopMetricsClient(),
+					HistoryClient: hcMock,
+				},
+				params: &resource.Params{
+					DynamicConfig: dcMock,
+				},
+			}
+
+			_, err := handler.ListDynamicConfig(context.Background(), td.input)
+			if td.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateConfigForAdvanceVisibility_Error(t *testing.T) {
+	handler := adminHandlerImpl{
+		params: &resource.Params{},
+	}
+	err := handler.validateConfigForAdvanceVisibility()
+	assert.Error(t, err, "ES related config not found")
+}
+
+func TestRestoreDynamicConfig(t *testing.T) {
+	tests := map[string]struct {
+		input         *types.RestoreDynamicConfigRequest
+		dcHandlerFunc func(mock *dynamicconfig.MockClient)
+		wantErr       bool
+	}{
+		"nil request": {
+			input:   nil,
+			wantErr: true,
+		},
+		"invalid config name": {
+			input: &types.RestoreDynamicConfigRequest{
+				ConfigName: "invalid",
+			},
+			wantErr: true,
+		},
+		"valid config name": {
+			input: &types.RestoreDynamicConfigRequest{
+				ConfigName: "testGetIntPropertyKey",
+				Filters:    nil,
+			},
+			dcHandlerFunc: func(mock *dynamicconfig.MockClient) {
+				mock.EXPECT().RestoreValue(gomock.Any(), nil).Return(nil)
+			},
+			wantErr: false,
+		},
+		"valid config with invalid filters": {
+			input: &types.RestoreDynamicConfigRequest{
+				ConfigName: "testGetIntPropertyKey",
+				Filters: []*types.DynamicConfigFilter{
+					&types.DynamicConfigFilter{
+						Name: "test-filter",
+						Value: &types.DataBlob{
+							Data: []byte("test-value"),
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			goMock := gomock.NewController(t)
+			dcMock := dynamicconfig.NewMockClient(goMock)
+			if td.dcHandlerFunc != nil {
+				td.dcHandlerFunc(dcMock)
+			}
+			handler := adminHandlerImpl{
+				Resource: &resource.Test{
+					Logger:        testlogger.New(t),
+					MetricsClient: metrics.NewNoopMetricsClient(),
+				},
+				params: &resource.Params{
+					DynamicConfig: dcMock,
+				},
+			}
+
+			err := handler.RestoreDynamicConfig(context.Background(), td.input)
+			if td.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestListDynamicConfig(t *testing.T) {
+	tests := map[string]struct {
+		input         *types.ListDynamicConfigRequest
+		dcHandlerFunc func(mock *dynamicconfig.MockClient)
+		wantErr       bool
+	}{
+		"nil request": {
+			input:   nil,
+			wantErr: true,
+		},
+		"invalid config name": {
+			input: &types.ListDynamicConfigRequest{
+				ConfigName: "invalid",
+			},
+			dcHandlerFunc: func(mock *dynamicconfig.MockClient) {
+				mock.EXPECT().ListValue(gomock.Any()).Return(nil, assert.AnError)
+			},
+			wantErr: true,
+		},
+		"valid config name": {
+			input: &types.ListDynamicConfigRequest{
+				ConfigName: "testGetIntPropertyKey",
+			},
+			dcHandlerFunc: func(mock *dynamicconfig.MockClient) {
+				mock.EXPECT().ListValue(gomock.Any()).Return(nil, nil)
+			},
+			wantErr: false,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			goMock := gomock.NewController(t)
+			dcMock := dynamicconfig.NewMockClient(goMock)
+			if td.dcHandlerFunc != nil {
+				td.dcHandlerFunc(dcMock)
+			}
+			handler := adminHandlerImpl{
+				Resource: &resource.Test{
+					Logger:        testlogger.New(t),
+					MetricsClient: metrics.NewNoopMetricsClient(),
+				},
+				params: &resource.Params{
+					DynamicConfig: dcMock,
+				},
+			}
+
+			_, err := handler.ListDynamicConfig(context.Background(), td.input)
 			if td.wantErr {
 				assert.Error(t, err)
 			} else {

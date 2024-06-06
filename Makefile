@@ -126,9 +126,12 @@ FRESH_ALL_SRC = $(shell \
 		-o -path './idls/*' \
 		-o -path './.build/*' \
 		-o -path './.bin/*' \
+		-o -path './.git/*' \
 	\) \
 	-prune \
-	-o -name '*.go' -print \
+	-o -name '*.go' \
+	-type f \
+	-print \
 )
 # most things can use a cached copy, e.g. all dependencies.
 # this will not include any files that are created during a `make` run, e.g. via protoc,

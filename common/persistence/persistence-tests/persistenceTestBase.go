@@ -1700,8 +1700,7 @@ func (s *TestBase) CreateDecisionTask(ctx context.Context, domainID string, work
 	taskID := s.GetNextSequenceNumber()
 	tasks := []*persistence.CreateTaskInfo{
 		{
-			TaskID:    taskID,
-			Execution: workflowExecution,
+			TaskID: taskID,
 			Data: &persistence.TaskInfo{
 				DomainID:        domainID,
 				WorkflowID:      workflowExecution.WorkflowID,
@@ -1763,8 +1762,7 @@ func (s *TestBase) CreateActivityTasks(ctx context.Context, domainID string, wor
 		taskID := s.GetNextSequenceNumber()
 		tasks := []*persistence.CreateTaskInfo{
 			{
-				TaskID:    taskID,
-				Execution: workflowExecution,
+				TaskID: taskID,
 				Data: &persistence.TaskInfo{
 					DomainID:               domainID,
 					WorkflowID:             workflowExecution.WorkflowID,

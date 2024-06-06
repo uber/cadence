@@ -802,11 +802,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 				CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
 					TaskToken: serializedTestToken,
 					Decisions: []*types.Decision{{
-						DecisionType: func(i int32) *types.DecisionType {
-							decisionType := new(types.DecisionType)
-							*decisionType = types.DecisionType(i)
-							return decisionType
-						}(9), // types.DecisionTypeContinueAsNewWorkflowExecution is 9
+						DecisionType: common.Ptr(types.DecisionTypeContinueAsNewWorkflowExecution),
 						ContinueAsNewWorkflowExecutionDecisionAttributes: &types.ContinueAsNewWorkflowExecutionDecisionAttributes{
 							WorkflowType: &types.WorkflowType{Name: testWorkflowTypeName},
 							TaskList:     &types.TaskList{Name: testTaskListName},
@@ -849,11 +845,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 				CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
 					TaskToken: serializedTestToken,
 					Decisions: []*types.Decision{{
-						DecisionType: func(i int32) *types.DecisionType {
-							decisionType := new(types.DecisionType)
-							*decisionType = types.DecisionType(i)
-							return decisionType
-						}(3), // DecisionTypeCompleteWorkflowExecution
+						DecisionType: common.Ptr(types.DecisionTypeCompleteWorkflowExecution),
 						CompleteWorkflowExecutionDecisionAttributes: &types.CompleteWorkflowExecutionDecisionAttributes{Result: []byte{}},
 					}},
 				},
@@ -892,11 +884,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 				CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
 					TaskToken: serializedTestToken,
 					Decisions: []*types.Decision{{
-						DecisionType: func(i int32) *types.DecisionType {
-							decisionType := new(types.DecisionType)
-							*decisionType = types.DecisionType(i)
-							return decisionType
-						}(4), // DecisionTypeFailWorkflowExecution
+						DecisionType: common.Ptr(types.DecisionTypeFailWorkflowExecution),
 						FailWorkflowExecutionDecisionAttributes: &types.FailWorkflowExecutionDecisionAttributes{
 							Reason: func(reason string) *string { return &reason }("some reason to fail workflow execution"),
 						},
@@ -947,11 +935,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 				CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
 					TaskToken: serializedTestToken,
 					Decisions: []*types.Decision{{
-						DecisionType: func(i int32) *types.DecisionType {
-							decisionType := new(types.DecisionType)
-							*decisionType = types.DecisionType(i)
-							return decisionType
-						}(4), // DecisionTypeFailWorkflowExecution
+						DecisionType: common.Ptr(types.DecisionTypeFailWorkflowExecution),
 						FailWorkflowExecutionDecisionAttributes: &types.FailWorkflowExecutionDecisionAttributes{
 							Reason: func(reason string) *string { return &reason }("some reason to fail workflow execution"),
 						},
@@ -1116,11 +1100,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 				CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
 					TaskToken: serializedTestToken,
 					Decisions: []*types.Decision{{
-						DecisionType: func(i int32) *types.DecisionType {
-							decisionType := new(types.DecisionType)
-							*decisionType = types.DecisionType(i)
-							return decisionType
-						}(6), // types.DecisionTypeCancelWorkflowExecution
+						DecisionType: common.Ptr(types.DecisionTypeCancelWorkflowExecution),
 						CancelWorkflowExecutionDecisionAttributes: &types.CancelWorkflowExecutionDecisionAttributes{Details: []byte{}},
 					}},
 				},

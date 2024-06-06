@@ -118,9 +118,8 @@ func (t *taskManager) toInternalCreateTaskInfo(createTaskInfo *CreateTaskInfo) *
 		return nil
 	}
 	return &InternalCreateTasksInfo{
-		Execution: createTaskInfo.Execution,
-		Data:      t.toInternalTaskInfo(createTaskInfo.Data),
-		TaskID:    createTaskInfo.TaskID,
+		Data:   t.toInternalTaskInfo(createTaskInfo.Data),
+		TaskID: createTaskInfo.TaskID,
 	}
 }
 

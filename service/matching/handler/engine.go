@@ -92,6 +92,8 @@ type (
 		membershipResolver   membership.Resolver
 		partitioner          partition.Partitioner
 		timeSource           clock.TimeSource
+
+		waitForQueryResultFn func(hCtx *handlerContext, isStrongConsistencyQuery bool, queryResultCh <-chan *queryResult) (*types.QueryWorkflowResponse, error)
 	}
 
 	// HistoryInfo consists of two integer regarding the history size and history count
@@ -128,7 +130,7 @@ func NewEngine(taskManager persistence.TaskManager,
 	partitioner partition.Partitioner,
 	timeSource clock.TimeSource,
 ) Engine {
-	return &matchingEngineImpl{
+	e := &matchingEngineImpl{
 		taskManager:          taskManager,
 		clusterMetadata:      clusterMetadata,
 		historyService:       historyService,
@@ -145,6 +147,8 @@ func NewEngine(taskManager persistence.TaskManager,
 		partitioner:          partitioner,
 		timeSource:           timeSource,
 	}
+	e.waitForQueryResultFn = e.waitForQueryResult
+	return e
 }
 
 func (e *matchingEngineImpl) Start() {
@@ -249,15 +253,14 @@ func (e *matchingEngineImpl) getTaskListByDomainLocked(domainID string) *types.G
 	decisionTaskListMap := make(map[string]*types.DescribeTaskListResponse)
 	activityTaskListMap := make(map[string]*types.DescribeTaskListResponse)
 	for tl, tlm := range e.taskLists {
-		if tlm.GetTaskListKind() == types.TaskListKindNormal && tl.GetDomainID() == domainID {
+		if tl.GetDomainID() == domainID && tlm.GetTaskListKind() == types.TaskListKindNormal {
 			if types.TaskListType(tl.GetType()) == types.TaskListTypeDecision {
 				decisionTaskListMap[tl.GetRoot()] = tlm.DescribeTaskList(false)
+			} else {
+				activityTaskListMap[tl.GetRoot()] = tlm.DescribeTaskList(false)
 			}
-			// TODO: review this logic
-			activityTaskListMap[tl.GetRoot()] = tlm.DescribeTaskList(false)
 		}
 	}
-
 	return &types.GetTaskListsByDomainResponse{
 		DecisionTaskListMap: decisionTaskListMap,
 		ActivityTaskListMap: activityTaskListMap,
@@ -308,7 +311,7 @@ func (e *matchingEngineImpl) AddDecisionTask(
 		tag.WorkflowTaskListKind(int32(request.GetTaskList().GetKind())),
 	)
 
-	taskList, err := tasklist.NewIdentifier(domainID, taskListName, taskListType)
+	taskListID, err := tasklist.NewIdentifier(domainID, taskListName, taskListType)
 	if err != nil {
 		return false, err
 	}
@@ -326,10 +329,10 @@ func (e *matchingEngineImpl) AddDecisionTask(
 			metrics.MatchingHostTag(e.config.HostName)).IncCounter(metrics.CadenceTasklistRequests)
 		e.emitInfoOrDebugLog(domainID, "Emitting tasklist counter on decision task",
 			tag.WorkflowTaskListName(taskListName),
-			tag.Dynamic("taskListBaseName", taskList.GetRoot()))
+			tag.Dynamic("taskListBaseName", taskListID.GetRoot()))
 	}
 
-	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
+	tlMgr, err := e.getTaskListManager(taskListID, taskListKind)
 	if err != nil {
 		return false, err
 	}
@@ -352,7 +355,6 @@ func (e *matchingEngineImpl) AddDecisionTask(
 	}
 
 	return tlMgr.AddTask(hCtx.Context, tasklist.AddTaskParams{
-		Execution:     request.Execution,
 		TaskInfo:      taskInfo,
 		Source:        request.GetSource(),
 		ForwardedFrom: request.GetForwardedFrom(),
@@ -381,7 +383,7 @@ func (e *matchingEngineImpl) AddActivityTask(
 		tag.WorkflowTaskListKind(int32(request.GetTaskList().GetKind())),
 	)
 
-	taskList, err := tasklist.NewIdentifier(domainID, taskListName, taskListType)
+	taskListID, err := tasklist.NewIdentifier(domainID, taskListName, taskListType)
 	if err != nil {
 		return false, err
 	}
@@ -399,10 +401,10 @@ func (e *matchingEngineImpl) AddActivityTask(
 			metrics.MatchingHostTag(e.config.HostName)).IncCounter(metrics.CadenceTasklistRequests)
 		e.emitInfoOrDebugLog(domainID, "Emitting tasklist counter on activity task",
 			tag.WorkflowTaskListName(taskListName),
-			tag.Dynamic("taskListBaseName", taskList.GetRoot()))
+			tag.Dynamic("taskListBaseName", taskListID.GetRoot()))
 	}
 
-	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
+	tlMgr, err := e.getTaskListManager(taskListID, taskListKind)
 	if err != nil {
 		return false, err
 	}
@@ -418,7 +420,6 @@ func (e *matchingEngineImpl) AddActivityTask(
 	}
 
 	return tlMgr.AddTask(hCtx.Context, tasklist.AddTaskParams{
-		Execution:                request.Execution,
 		TaskInfo:                 taskInfo,
 		Source:                   request.GetSource(),
 		ForwardedFrom:            request.GetForwardedFrom(),
@@ -446,7 +447,7 @@ pollLoop:
 			return nil, err
 		}
 
-		taskList, err := tasklist.NewIdentifier(domainID, taskListName, persistence.TaskListTypeDecision)
+		taskListID, err := tasklist.NewIdentifier(domainID, taskListName, persistence.TaskListTypeDecision)
 		if err != nil {
 			return nil, fmt.Errorf("couldn't create new decision tasklist %w", err)
 		}
@@ -456,7 +457,7 @@ pollLoop:
 		pollerCtx := tasklist.ContextWithPollerID(hCtx.Context, pollerID)
 		pollerCtx = tasklist.ContextWithIdentity(pollerCtx, request.GetIdentity())
 		pollerCtx = tasklist.ContextWithIsolationGroup(pollerCtx, req.GetIsolationGroup())
-		task, err := e.getTask(pollerCtx, taskList, nil, taskListKind)
+		task, err := e.getTask(pollerCtx, taskListID, nil, taskListKind)
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
 			if errors.Is(err, tasklist.ErrNoTasks) || errors.Is(err, errPumpClosed) {
@@ -568,7 +569,7 @@ pollLoop:
 			return nil, err
 		}
 
-		taskList, err := tasklist.NewIdentifier(domainID, taskListName, persistence.TaskListTypeActivity)
+		taskListID, err := tasklist.NewIdentifier(domainID, taskListName, persistence.TaskListTypeActivity)
 		if err != nil {
 			return nil, err
 		}
@@ -583,7 +584,7 @@ pollLoop:
 		pollerCtx = tasklist.ContextWithIdentity(pollerCtx, request.GetIdentity())
 		pollerCtx = tasklist.ContextWithIsolationGroup(pollerCtx, req.GetIsolationGroup())
 		taskListKind := request.TaskList.Kind
-		task, err := e.getTask(pollerCtx, taskList, maxDispatch, taskListKind)
+		task, err := e.getTask(pollerCtx, taskListID, maxDispatch, taskListKind)
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
 			if errors.Is(err, tasklist.ErrNoTasks) || errors.Is(err, errPumpClosed) {
@@ -683,12 +684,12 @@ func (e *matchingEngineImpl) QueryWorkflow(
 	domainID := queryRequest.GetDomainUUID()
 	taskListName := queryRequest.GetTaskList().GetName()
 	taskListKind := queryRequest.GetTaskList().Kind
-	taskList, err := tasklist.NewIdentifier(domainID, taskListName, persistence.TaskListTypeDecision)
+	taskListID, err := tasklist.NewIdentifier(domainID, taskListName, persistence.TaskListTypeDecision)
 	if err != nil {
 		return nil, err
 	}
 
-	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
+	tlMgr, err := e.getTaskListManager(taskListID, taskListKind)
 	if err != nil {
 		return nil, err
 	}
@@ -714,23 +715,24 @@ func (e *matchingEngineImpl) QueryWorkflow(
 	queryResultCh := make(chan *queryResult, 1)
 	e.lockableQueryTaskMap.put(taskID, queryResultCh)
 	defer e.lockableQueryTaskMap.delete(taskID)
+	return e.waitForQueryResultFn(hCtx, queryRequest.GetQueryRequest().GetQueryConsistencyLevel() == types.QueryConsistencyLevelStrong, queryResultCh)
+}
 
+func (e *matchingEngineImpl) waitForQueryResult(hCtx *handlerContext, isStrongConsistencyQuery bool, queryResultCh <-chan *queryResult) (*types.QueryWorkflowResponse, error) {
 	select {
 	case result := <-queryResultCh:
 		if result.internalError != nil {
 			return nil, result.internalError
 		}
-
 		workerResponse := result.workerResponse
 		// if query was intended as consistent query check to see if worker supports consistent query
-		if queryRequest.GetQueryRequest().GetQueryConsistencyLevel() == types.QueryConsistencyLevelStrong {
+		if isStrongConsistencyQuery {
 			if err := e.versionChecker.SupportsConsistentQuery(
 				workerResponse.GetCompletedRequest().GetWorkerVersionInfo().GetImpl(),
 				workerResponse.GetCompletedRequest().GetWorkerVersionInfo().GetFeatureVersion()); err != nil {
 				return nil, err
 			}
 		}
-
 		switch workerResponse.GetCompletedRequest().GetCompletedType() {
 		case types.QueryTaskCompletedTypeCompleted:
 			return &types.QueryWorkflowResponse{QueryResult: workerResponse.GetCompletedRequest().GetQueryResult()}, nil
@@ -771,12 +773,12 @@ func (e *matchingEngineImpl) CancelOutstandingPoll(
 	taskListKind := request.GetTaskList().Kind
 	pollerID := request.GetPollerID()
 
-	taskList, err := tasklist.NewIdentifier(domainID, taskListName, taskListType)
+	taskListID, err := tasklist.NewIdentifier(domainID, taskListName, taskListType)
 	if err != nil {
 		return err
 	}
 
-	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
+	tlMgr, err := e.getTaskListManager(taskListID, taskListKind)
 	if err != nil {
 		return err
 	}
@@ -797,12 +799,12 @@ func (e *matchingEngineImpl) DescribeTaskList(
 	taskListName := request.GetDescRequest().GetTaskList().GetName()
 	taskListKind := request.GetDescRequest().GetTaskList().Kind
 
-	taskList, err := tasklist.NewIdentifier(domainID, taskListName, taskListType)
+	taskListID, err := tasklist.NewIdentifier(domainID, taskListName, taskListType)
 	if err != nil {
 		return nil, err
 	}
 
-	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
+	tlMgr, err := e.getTaskListManager(taskListID, taskListKind)
 	if err != nil {
 		return nil, err
 	}
@@ -880,30 +882,22 @@ func (e *matchingEngineImpl) getAllPartitions(
 	request *types.MatchingListTaskListPartitionsRequest,
 	taskListType int,
 ) ([]string, error) {
-	var partitionKeys []string
 	domainID, err := e.domainCache.GetDomainID(request.GetDomain())
 	if err != nil {
-		return partitionKeys, err
+		return nil, err
 	}
 	taskList := request.GetTaskList()
 	taskListID, err := tasklist.NewIdentifier(domainID, taskList.GetName(), taskListType)
 	if err != nil {
-		return partitionKeys, err
+		return nil, err
 	}
+
 	rootPartition := taskListID.GetRoot()
-
-	partitionKeys = append(partitionKeys, rootPartition)
-
-	nWritePartitions := e.config.NumTasklistWritePartitions
-	n := nWritePartitions(request.GetDomain(), rootPartition, taskListType)
-	if n <= 0 {
-		return partitionKeys, nil
-	}
-
+	partitionKeys := []string{rootPartition}
+	n := e.config.NumTasklistWritePartitions(request.GetDomain(), rootPartition, taskListType)
 	for i := 1; i < n; i++ {
 		partitionKeys = append(partitionKeys, fmt.Sprintf("%v%v/%v", common.ReservedTaskListPrefix, rootPartition, i))
 	}
-
 	return partitionKeys, nil
 }
 

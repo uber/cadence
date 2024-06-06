@@ -922,9 +922,8 @@ type (
 
 	// InternalCreateTasksInfo describes a task to be created in InternalCreateTasksRequest
 	InternalCreateTasksInfo struct {
-		Execution types.WorkflowExecution
-		Data      *InternalTaskInfo
-		TaskID    int64
+		Data   *InternalTaskInfo
+		TaskID int64
 	}
 
 	// InternalCreateTasksRequest is request to CreateTasks

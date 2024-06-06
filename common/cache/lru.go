@@ -25,6 +25,8 @@ import (
 	"errors"
 	"sync"
 	"time"
+
+	"github.com/uber/cadence/common/clock"
 )
 
 var (
@@ -52,7 +54,7 @@ type (
 		isSizeBased   bool
 		activelyEvict bool
 		// We use this instead of time.Now() in order to make testing easier
-		now func() time.Time
+		timeSource clock.TimeSource
 	}
 
 	iteratorImpl struct {
@@ -117,7 +119,7 @@ func (c *lru) Iterator() Iterator {
 	c.mut.Lock()
 	iterator := &iteratorImpl{
 		lru:        c,
-		createTime: c.now(),
+		createTime: c.timeSource.Now(),
 		nextItem:   c.byAccess.Front(),
 	}
 	iterator.prepareNext()
@@ -143,6 +145,10 @@ func New(opts *Options) Cache {
 			"MaxSize and GetCacheItemSizeFunc (size based) options must be provided for the LRU cache")
 	}
 
+	timeSource := opts.TimeSource
+	if timeSource == nil {
+		timeSource = clock.NewRealTimeSource()
+	}
 	cache := &lru{
 		byAccess:      list.New(),
 		byKey:         make(map[interface{}]*list.Element, opts.InitialCapacity),
@@ -150,7 +156,7 @@ func New(opts *Options) Cache {
 		pin:           opts.Pin,
 		rmFunc:        opts.RemovedFunc,
 		activelyEvict: opts.ActivelyEvict,
-		now:           time.Now,
+		timeSource:    timeSource,
 	}
 
 	cache.isSizeBased = opts.GetCacheItemSizeFunc != nil && opts.MaxSize > 0
@@ -183,7 +189,7 @@ func (c *lru) Get(key interface{}) interface{} {
 
 	entry := element.Value.(*entryImpl)
 
-	if c.isEntryExpired(entry, c.now()) {
+	if c.isEntryExpired(entry, c.timeSource.Now()) {
 		// Entry has expired
 		c.deleteInternal(element)
 		return nil
@@ -262,7 +268,7 @@ func (c *lru) evictExpiredItems() {
 		return // do nothing if activelyEvict is not set
 	}
 
-	now := c.now()
+	now := c.timeSource.Now()
 	for elt := c.byAccess.Back(); elt != nil; elt = c.byAccess.Back() {
 		if !c.isEntryExpired(elt.Value.(*entryImpl), now) {
 			// List is sorted by item age, so we can stop as soon as we found first non expired item.
@@ -284,7 +290,7 @@ func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) 
 	elt := c.byKey[key]
 	if elt != nil {
 		entry := elt.Value.(*entryImpl)
-		if c.isEntryExpired(entry, c.now()) {
+		if c.isEntryExpired(entry, c.timeSource.Now()) {
 			// Entry has expired
 			c.deleteInternal(elt)
 		} else {
@@ -292,7 +298,7 @@ func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) 
 			if allowUpdate {
 				entry.value = value
 				if c.ttl != 0 {
-					entry.createTime = c.now()
+					entry.createTime = c.timeSource.Now()
 				}
 			}
 
@@ -314,7 +320,7 @@ func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) 
 	}
 
 	if c.ttl != 0 {
-		entry.createTime = c.now()
+		entry.createTime = c.timeSource.Now()
 	}
 
 	c.byKey[key] = c.byAccess.PushFront(entry)

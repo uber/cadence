@@ -96,6 +96,34 @@ func TestIsServiceTransientError(t *testing.T) {
 
 }
 
+func TestIsExpectedError(t *testing.T) {
+	for name, c := range map[string]struct {
+		err  error
+		want bool
+	}{
+		"An error": {
+			err:  assert.AnError,
+			want: false,
+		},
+		"Transient error": {
+			err:  &types.ServiceBusyError{},
+			want: true,
+		},
+		"Entity not exists error": {
+			err:  &types.EntityNotExistsError{},
+			want: true,
+		},
+		"Already completed error": {
+			err:  &types.WorkflowExecutionAlreadyCompletedError{},
+			want: true,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, c.want, IsExpectedError(c.err))
+		})
+	}
+}
+
 func TestFrontendRetry(t *testing.T) {
 	tests := []struct {
 		name string

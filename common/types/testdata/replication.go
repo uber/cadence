@@ -150,6 +150,28 @@ var (
 	FailoverMarkerAttributesArray = []*types.FailoverMarkerAttributes{
 		&FailoverMarkerAttributes,
 	}
+	PersistenceFeatures = []*types.PersistenceFeature{
+		{
+			Key:     "PersistenceFeature",
+			Enabled: true,
+		},
+		nil,
+	}
+	PersistenceSettings = []*types.PersistenceSetting{
+		{
+			Key:   "PersistenceKey",
+			Value: "PersistenceValue",
+		},
+		nil,
+	}
+	PersistenceInfoMap = map[string]*types.PersistenceInfo{
+		"Backend": {
+			Backend:  "Backend",
+			Settings: PersistenceSettings,
+			Features: PersistenceFeatures,
+		},
+		"Invalid": nil,
+	}
 	GetDomainReplicationMessagesRequest = types.GetDomainReplicationMessagesRequest{
 		LastRetrievedMessageID: common.Int64Ptr(MessageID1),
 		LastProcessedMessageID: common.Int64Ptr(MessageID2),
