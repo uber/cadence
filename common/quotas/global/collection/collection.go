@@ -137,7 +137,7 @@ func (c *Collection) OnStop(ctx context.Context) error {
 
 	select {
 	case <-ctx.Done():
-		return fmt.Errorf("*Collection failed to stop, context canceled: %w", ctx.Err())
+		return fmt.Errorf("ollection failed to stop, context canceled: %w", ctx.Err())
 	case <-c.stopped:
 		return nil
 	}
