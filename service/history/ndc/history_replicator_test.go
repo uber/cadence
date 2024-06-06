@@ -1248,3 +1248,244 @@ func Test_applyEvents_defaultCase_noErrorBranch(t *testing.T) {
 		})
 	}
 }
+
+func Test_applyEvents_defaultCase_errorAndDefault(t *testing.T) {
+	workflowExecutionType := types.EventTypeWorkflowExecutionCompleted
+
+	tests := map[string]struct {
+		mockExecutionCacheAffordance                       func(mockExecutionCache *execution.MockCache, mockExecutionContext *execution.MockContext)
+		mockReplicationTaskAffordance                      func(mockReplicationTask *MockreplicationTask)
+		mockExecutionContextAffordance                     func(mockExecutionContext *execution.MockContext, mockExecutionMutableState *execution.MockMutableState)
+		mockMutableStateAffordance                         func(mockExecutionMutableState *execution.MockMutableState)
+		applyNonStartEventsMissingMutableStateFnAffordance func() func(ctx ctx.Context,
+			newContext execution.Context,
+			task replicationTask,
+			newWorkflowResetter newWorkflowResetterFn,
+		) (execution.MutableState, error)
+		applyNonStartEventsResetWorkflowFnAffordance func() func(ctx ctx.Context,
+			context execution.Context,
+			mutableState execution.MutableState,
+			task replicationTask,
+			newStateBuilder newStateBuilderFn,
+			transactionManager transactionManager,
+			clusterMetadata cluster.Metadata,
+			logger log.Logger,
+			shard shard.Context,
+		) error
+		expectError error
+	}{
+		"Case1-1: case EntityNotExistsError + applyNonStartEventsMissingMutableStateFn error": {
+			mockExecutionCacheAffordance: func(mockExecutionCache *execution.MockCache, mockExecutionContext *execution.MockContext) {
+				mockExecutionCache.EXPECT().GetOrCreateWorkflowExecution(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(mockExecutionContext, func(err error) {}, nil).Times(1)
+			},
+			mockReplicationTaskAffordance: func(mockReplicationTask *MockreplicationTask) {
+				mockReplicationTask.EXPECT().getDomainID().Return("test-domain-id").Times(1)
+				mockReplicationTask.EXPECT().getExecution().Return(&types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "test-run-id",
+				}).Times(1)
+				mockReplicationTask.EXPECT().getFirstEvent().Return(&types.HistoryEvent{
+					EventType: &workflowExecutionType,
+				}).Times(1)
+				mockReplicationTask.EXPECT().getVersion().Return(int64(1)).Times(1)
+			},
+			mockExecutionContextAffordance: func(mockExecutionContext *execution.MockContext, mockExecutionMutableState *execution.MockMutableState) {
+				mockExecutionContext.EXPECT().LoadWorkflowExecutionWithTaskVersion(gomock.Any(), gomock.Any()).
+					Return(mockExecutionMutableState, &types.EntityNotExistsError{}).Times(1)
+			},
+			mockMutableStateAffordance: func(mockExecutionMutableState *execution.MockMutableState) {
+				return
+			},
+			applyNonStartEventsMissingMutableStateFnAffordance: func() func(ctx ctx.Context,
+				newContext execution.Context,
+				task replicationTask,
+				newWorkflowResetter newWorkflowResetterFn,
+			) (execution.MutableState, error) {
+				fn := func(ctx ctx.Context,
+					newContext execution.Context,
+					task replicationTask,
+					newWorkflowResetter newWorkflowResetterFn,
+				) (execution.MutableState, error) {
+					return nil, fmt.Errorf("test error")
+				}
+				return fn
+			},
+			applyNonStartEventsResetWorkflowFnAffordance: func() func(ctx ctx.Context,
+				context execution.Context,
+				mutableState execution.MutableState,
+				task replicationTask,
+				newStateBuilder newStateBuilderFn,
+				transactionManager transactionManager,
+				clusterMetadata cluster.Metadata,
+				logger log.Logger,
+				shard shard.Context,
+			) error {
+				fn := func(ctx ctx.Context,
+					context execution.Context,
+					mutableState execution.MutableState,
+					task replicationTask,
+					newStateBuilder newStateBuilderFn,
+					transactionManager transactionManager,
+					clusterMetadata cluster.Metadata,
+					logger log.Logger,
+					shard shard.Context,
+				) error {
+					return nil
+				}
+				return fn
+			},
+			expectError: fmt.Errorf("test error"),
+		},
+		"Case1-2: case EntityNotExistsError": {
+			mockExecutionCacheAffordance: func(mockExecutionCache *execution.MockCache, mockExecutionContext *execution.MockContext) {
+				mockExecutionCache.EXPECT().GetOrCreateWorkflowExecution(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(mockExecutionContext, func(err error) {}, nil).Times(1)
+			},
+			mockReplicationTaskAffordance: func(mockReplicationTask *MockreplicationTask) {
+				mockReplicationTask.EXPECT().getDomainID().Return("test-domain-id").Times(1)
+				mockReplicationTask.EXPECT().getExecution().Return(&types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "test-run-id",
+				}).Times(1)
+				mockReplicationTask.EXPECT().getFirstEvent().Return(&types.HistoryEvent{
+					EventType: &workflowExecutionType,
+				}).Times(1)
+				mockReplicationTask.EXPECT().getVersion().Return(int64(1)).Times(1)
+			},
+			mockExecutionContextAffordance: func(mockExecutionContext *execution.MockContext, mockExecutionMutableState *execution.MockMutableState) {
+				mockExecutionContext.EXPECT().LoadWorkflowExecutionWithTaskVersion(gomock.Any(), gomock.Any()).
+					Return(mockExecutionMutableState, &types.EntityNotExistsError{}).Times(1)
+			},
+			mockMutableStateAffordance: func(mockExecutionMutableState *execution.MockMutableState) {
+				return
+			},
+			applyNonStartEventsMissingMutableStateFnAffordance: func() func(ctx ctx.Context,
+				newContext execution.Context,
+				task replicationTask,
+				newWorkflowResetter newWorkflowResetterFn,
+			) (execution.MutableState, error) {
+				fn := func(ctx ctx.Context,
+					newContext execution.Context,
+					task replicationTask,
+					newWorkflowResetter newWorkflowResetterFn,
+				) (execution.MutableState, error) {
+					return nil, nil
+				}
+				return fn
+			},
+			expectError: nil,
+			applyNonStartEventsResetWorkflowFnAffordance: func() func(ctx ctx.Context,
+				context execution.Context,
+				mutableState execution.MutableState,
+				task replicationTask,
+				newStateBuilder newStateBuilderFn,
+				transactionManager transactionManager,
+				clusterMetadata cluster.Metadata,
+				logger log.Logger,
+				shard shard.Context,
+			) error {
+				fn := func(ctx ctx.Context,
+					context execution.Context,
+					mutableState execution.MutableState,
+					task replicationTask,
+					newStateBuilder newStateBuilderFn,
+					transactionManager transactionManager,
+					clusterMetadata cluster.Metadata,
+					logger log.Logger,
+					shard shard.Context,
+				) error {
+					return nil
+				}
+				return fn
+			},
+		},
+		"Case1-3: case other errors": {
+			mockExecutionCacheAffordance: func(mockExecutionCache *execution.MockCache, mockExecutionContext *execution.MockContext) {
+				mockExecutionCache.EXPECT().GetOrCreateWorkflowExecution(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(mockExecutionContext, func(err error) {}, nil).Times(1)
+			},
+			mockReplicationTaskAffordance: func(mockReplicationTask *MockreplicationTask) {
+				mockReplicationTask.EXPECT().getDomainID().Return("test-domain-id").Times(1)
+				mockReplicationTask.EXPECT().getExecution().Return(&types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "test-run-id",
+				}).Times(1)
+				mockReplicationTask.EXPECT().getFirstEvent().Return(&types.HistoryEvent{
+					EventType: &workflowExecutionType,
+				}).Times(1)
+				mockReplicationTask.EXPECT().getVersion().Return(int64(1)).Times(1)
+			},
+			mockExecutionContextAffordance: func(mockExecutionContext *execution.MockContext, mockExecutionMutableState *execution.MockMutableState) {
+				mockExecutionContext.EXPECT().LoadWorkflowExecutionWithTaskVersion(gomock.Any(), gomock.Any()).
+					Return(mockExecutionMutableState, fmt.Errorf("test-error")).Times(1)
+			},
+			mockMutableStateAffordance: func(mockExecutionMutableState *execution.MockMutableState) {
+				return
+			},
+			applyNonStartEventsMissingMutableStateFnAffordance: func() func(ctx ctx.Context,
+				newContext execution.Context,
+				task replicationTask,
+				newWorkflowResetter newWorkflowResetterFn,
+			) (execution.MutableState, error) {
+				fn := func(ctx ctx.Context,
+					newContext execution.Context,
+					task replicationTask,
+					newWorkflowResetter newWorkflowResetterFn,
+				) (execution.MutableState, error) {
+					return nil, nil
+				}
+				return fn
+			},
+			expectError: fmt.Errorf("test-error"),
+			applyNonStartEventsResetWorkflowFnAffordance: func() func(ctx ctx.Context,
+				context execution.Context,
+				mutableState execution.MutableState,
+				task replicationTask,
+				newStateBuilder newStateBuilderFn,
+				transactionManager transactionManager,
+				clusterMetadata cluster.Metadata,
+				logger log.Logger,
+				shard shard.Context,
+			) error {
+				fn := func(ctx ctx.Context,
+					context execution.Context,
+					mutableState execution.MutableState,
+					task replicationTask,
+					newStateBuilder newStateBuilderFn,
+					transactionManager transactionManager,
+					clusterMetadata cluster.Metadata,
+					logger log.Logger,
+					shard shard.Context,
+				) error {
+					return nil
+				}
+				return fn
+			},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			// mock objects
+			replicator := createTestHistoryReplicator(t)
+			mockReplicationTask := NewMockreplicationTask(ctrl)
+			mockExecutionCache := execution.NewMockCache(ctrl)
+			mockExecutionContext := execution.NewMockContext(ctrl)
+			mockExecutionMutableState := execution.NewMockMutableState(ctrl)
+			replicator.executionCache = mockExecutionCache
+
+			// mock functions
+			test.mockReplicationTaskAffordance(mockReplicationTask)
+			test.mockExecutionCacheAffordance(mockExecutionCache, mockExecutionContext)
+			test.mockExecutionContextAffordance(mockExecutionContext, mockExecutionMutableState)
+			test.mockMutableStateAffordance(mockExecutionMutableState)
+
+			// parameter functions affordance
+			replicator.applyNonStartEventsMissingMutableStateFn = test.applyNonStartEventsMissingMutableStateFnAffordance()
+			replicator.applyNonStartEventsResetWorkflowFn = test.applyNonStartEventsResetWorkflowFnAffordance()
+
+			assert.Equal(t, replicator.applyEvents(ctx.Background(), mockReplicationTask), test.expectError)
+		})
+	}
+}
