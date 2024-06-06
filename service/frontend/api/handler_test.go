@@ -2477,7 +2477,6 @@ func (s *workflowHandlerSuite) TestRespondActivityTaskCanceledByID() {
 
 }
 
-
 func (s *workflowHandlerSuite) TestRespondDecisionTaskCompleted() {
 	validRequest := &types.RespondDecisionTaskCompletedRequest{
 		TaskToken: []byte("token"),
