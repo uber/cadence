@@ -63,7 +63,6 @@ var (
 var (
 	errUnknownTransferTask   = errors.New("unknown transfer task")
 	errWorkflowBusy          = errors.New("unable to get workflow execution lock within specified timeout")
-	errTargetDomainNotActive = errors.New("target domain not active")
 	errWorkflowRateLimited   = errors.New("workflow is being rate limited for making too many requests")
 )
 
@@ -466,6 +465,7 @@ func (t *transferActiveTaskExecutor) processCloseExecutionTaskHelper(
 		}
 	}
 
+
 	// Communicate the result to parent execution if this is Child Workflow execution
 	// and parent domain is in the same cluster
 	replyToParentWorkflow := replyToParentWorkflowIfApplicable && mutableState.HasParentExecution() && executionInfo.CloseStatus != persistence.WorkflowCloseStatusContinuedAsNew
@@ -490,8 +490,6 @@ func (t *transferActiveTaskExecutor) processCloseExecutionTaskHelper(
 		switch err.(type) {
 		case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError:
 			err = nil
-		case *types.DomainNotActiveError:
-			err = errTargetDomainNotActive
 		}
 
 		if err != nil {
@@ -500,7 +498,13 @@ func (t *transferActiveTaskExecutor) processCloseExecutionTaskHelper(
 	}
 
 	if applyParentClosePolicy {
-		err := t.processParentClosePolicy(ctx, task.DomainID, domainName, children)
+
+		parentExecution := types.WorkflowExecution{
+				WorkflowID: parentWorkflowID,
+				RunID:      parentRunID,
+		}
+
+		err := t.processParentClosePolicy(ctx, task.DomainID, domainName, &parentExecution, children)
 		if err != nil {
 			return err
 		}
@@ -1250,8 +1254,6 @@ func createFirstDecisionTask(
 		// as the target domain may failover before first decision is scheduled.
 		case *types.WorkflowExecutionAlreadyCompletedError:
 			return nil
-		case *types.DomainNotActiveError:
-			err = errTargetDomainNotActive
 		}
 	}
 
@@ -1509,8 +1511,6 @@ func requestCancelExternalExecutionWithRetry(
 		// this could happen if target workflow cancellation is already requested
 		// mark as success
 		err = nil
-	case *types.DomainNotActiveError:
-		err = errTargetDomainNotActive
 	}
 	return err
 }
@@ -1555,11 +1555,7 @@ func signalExternalExecutionWithRetry(
 		backoff.WithRetryPolicy(taskRetryPolicy),
 		backoff.WithRetryableError(common.IsServiceTransientError),
 	)
-	err := throttleRetry.Do(context.Background(), op)
-	if _, ok := err.(*types.DomainNotActiveError); ok {
-		err = errTargetDomainNotActive
-	}
-	return err
+	return throttleRetry.Do(context.Background(), op)
 }
 
 func removeSignalMutableStateWithRetry(
@@ -1593,10 +1589,7 @@ func removeSignalMutableStateWithRetry(
 	case *types.EntityNotExistsError:
 		// it's safe to discard entity not exists error here
 		// as there's nothing to remove.
-		// for cross cluster task, we don't have to return the error to the source cluster
 		return nil
-	case *types.DomainNotActiveError:
-		err = errTargetDomainNotActive
 	}
 	return err
 }
@@ -1670,9 +1663,6 @@ func startWorkflowWithRetry(
 		backoff.WithRetryableError(common.IsServiceTransientError),
 	)
 	if err := throttleRetry.Do(context.Background(), op); err != nil {
-		if _, ok := err.(*types.DomainNotActiveError); ok {
-			err = errTargetDomainNotActive
-		}
 		return "", err
 	}
 	return response.GetRunID(), nil
@@ -1759,6 +1749,7 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 	ctx context.Context,
 	domainID string,
 	domainName string,
+	parentExecution *types.WorkflowExecution,
 	childInfos map[int64]*persistence.ChildExecutionInfo,
 ) error {
 
@@ -1802,6 +1793,7 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 			ctx,
 			domainID,
 			domainName,
+			parentExecution,
 			childInfo,
 		); err != nil {
 			if _, ok := err.(*types.EntityNotExistsError); !ok {
@@ -1818,6 +1810,7 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicy(
 	ctx context.Context,
 	domainID string,
 	domainName string,
+	parentWorkflowExecution *types.WorkflowExecution,
 	childInfo *persistence.ChildExecutionInfo,
 ) error {
 
@@ -1828,17 +1821,21 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicy(
 
 	case types.ParentClosePolicyTerminate:
 		return t.historyClient.TerminateWorkflowExecution(ctx, &types.HistoryTerminateWorkflowExecutionRequest{
-			DomainUUID: domainID,
-			TerminateRequest: &types.TerminateWorkflowExecutionRequest{
-				Domain: domainName,
-				WorkflowExecution: &types.WorkflowExecution{
-					WorkflowID: childInfo.StartedWorkflowID,
-					RunID:      childInfo.StartedRunID,
+				DomainUUID: domainID,
+				TerminateRequest: &types.TerminateWorkflowExecutionRequest{
+					Domain: domainName,
+					WorkflowExecution: &types.WorkflowExecution{
+						WorkflowID: childInfo.StartedWorkflowID,
+					},
+					Reason:   "by parent close policy",
+					Identity: execution.IdentityHistoryService,
+					// Include StartedRunID as FirstExecutionRunID on the request to allow child to be terminated across runs.
+					// If the child does continue as new it still propagates the RunID of first execution.
+					FirstExecutionRunID: childInfo.StartedRunID,
 				},
-				Reason:   "by parent close policy",
-				Identity: execution.IdentityHistoryService,
-			},
-		})
+				ExternalWorkflowExecution: parentWorkflowExecution,
+				ChildWorkflowOnly:         true,
+			})
 
 	case types.ParentClosePolicyRequestCancel:
 		return t.historyClient.RequestCancelWorkflowExecution(ctx, &types.HistoryRequestCancelWorkflowExecutionRequest{
@@ -1847,10 +1844,14 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicy(
 				Domain: domainName,
 				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: childInfo.StartedWorkflowID,
-					RunID:      childInfo.StartedRunID,
 				},
 				Identity: execution.IdentityHistoryService,
+				// Include StartedRunID as FirstExecutionRunID on the request to allow child to be canceled across runs.
+				// If the child does continue as new it still propagates the RunID of first execution.
+				FirstExecutionRunID: childInfo.StartedRunID,
 			},
+			ExternalWorkflowExecution: parentWorkflowExecution,
+			ChildWorkflowOnly:         true,
 		})
 
 	default:

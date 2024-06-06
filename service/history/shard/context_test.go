@@ -110,9 +110,6 @@ func (s *contextTestSuite) newContext() *contextImpl {
 		TransferProcessingQueueStates: &types.ProcessingQueueStates{
 			StatesByCluster: make(map[string][]*types.ProcessingQueueState),
 		},
-		CrossClusterProcessingQueueStates: &types.ProcessingQueueStates{
-			StatesByCluster: make(map[string][]*types.ProcessingQueueState),
-		},
 		TimerProcessingQueueStates: &types.ProcessingQueueStates{
 			StatesByCluster: make(map[string][]*types.ProcessingQueueState),
 		},
@@ -466,7 +463,6 @@ func (s *contextTestSuite) TestGetAndUpdateProcessingQueueStates() {
 	clusterName := cluster.TestCurrentClusterName
 	var initialQueueStates [][]*types.ProcessingQueueState
 	initialQueueStates = append(initialQueueStates, s.context.GetTransferProcessingQueueStates(clusterName))
-	initialQueueStates = append(initialQueueStates, s.context.GetCrossClusterProcessingQueueStates(clusterName))
 	initialQueueStates = append(initialQueueStates, s.context.GetTimerProcessingQueueStates(clusterName))
 	for _, queueStates := range initialQueueStates {
 		s.Len(queueStates, 1)
@@ -491,26 +487,6 @@ func (s *contextTestSuite) TestGetAndUpdateProcessingQueueStates() {
 			},
 		},
 	}
-	updatedCrossClusterQueueStates := []*types.ProcessingQueueState{
-		{
-			Level:    common.Int32Ptr(0),
-			AckLevel: common.Int64Ptr(456),
-			MaxLevel: common.Int64Ptr(math.MaxInt64),
-			DomainFilter: &types.DomainFilter{
-				ReverseMatch: true,
-				DomainIDs:    []string{"testDomainID"},
-			},
-		},
-		{
-			Level:    common.Int32Ptr(1),
-			AckLevel: common.Int64Ptr(123),
-			MaxLevel: common.Int64Ptr(math.MaxInt64),
-			DomainFilter: &types.DomainFilter{
-				ReverseMatch: false,
-				DomainIDs:    []string{"testDomainID"},
-			},
-		},
-	}
 	updatedTimerQueueStates := []*types.ProcessingQueueState{
 		{
 			Level:    common.Int32Ptr(0),
@@ -523,13 +499,10 @@ func (s *contextTestSuite) TestGetAndUpdateProcessingQueueStates() {
 	}
 	err := s.context.UpdateTransferProcessingQueueStates(clusterName, updatedTransferQueueStates)
 	s.NoError(err)
-	err = s.context.UpdateCrossClusterProcessingQueueStates(clusterName, updatedCrossClusterQueueStates)
-	s.NoError(err)
 	err = s.context.UpdateTimerProcessingQueueStates(clusterName, updatedTimerQueueStates)
 	s.NoError(err)
 
 	s.Equal(updatedTransferQueueStates, s.context.GetTransferProcessingQueueStates(clusterName))
-	s.Equal(updatedCrossClusterQueueStates, s.context.GetCrossClusterProcessingQueueStates(clusterName))
 	s.Equal(updatedTimerQueueStates, s.context.GetTimerProcessingQueueStates(clusterName))
 
 	// check if cluster ack level for transfer and timer is backfilled for backward compatibility

@@ -118,7 +118,6 @@ func NewEngineForTest(t *testing.T, newEngineFn NewEngineFn) *EngineForTest {
 	)
 
 	mockWFServiceClient := workflowservicetest.NewMockClient(controller)
-	xClusterTaskFetcher := task.NewMockFetcher(controller)
 
 	replicatonTaskFetchers := replication.NewMockTaskFetchers(controller)
 	replicationTaskFetcher := replication.NewMockTaskFetcher(controller)
@@ -161,7 +160,6 @@ func NewEngineForTest(t *testing.T, newEngineFn NewEngineFn) *EngineForTest {
 		mockWFServiceClient,
 		historyEventNotifier,
 		historyCfg,
-		task.Fetchers{xClusterTaskFetcher},
 		replicatonTaskFetchers,
 		shardCtx.Resource.MatchingClient,
 		queueTaskProcessor,

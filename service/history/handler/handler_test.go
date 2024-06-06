@@ -49,7 +49,6 @@ import (
 	"github.com/uber/cadence/service/history/failover"
 	"github.com/uber/cadence/service/history/resource"
 	"github.com/uber/cadence/service/history/shard"
-	"github.com/uber/cadence/service/history/task"
 	"github.com/uber/cadence/service/history/workflowcache"
 )
 
@@ -73,7 +72,6 @@ type (
 		mockTokenSerializer          *common.MockTaskTokenSerializer
 		mockHistoryEventNotifier     *events.MockNotifier
 		mockRatelimiter              *quotas.MockLimiter
-		mockCrossClusterTaskFetchers *task.MockFetcher
 		mockFailoverCoordinator      *failover.MockCoordinator
 
 		handler *handlerImpl
@@ -1238,19 +1236,6 @@ func (s *handlerSuite) TestRemoveTask() {
 			expectedError: false,
 			mockFn: func() {
 				s.mockResource.ExecutionMgr.On("CompleteReplicationTask", mock.Anything, &persistence.CompleteReplicationTaskRequest{
-					TaskID: int64(1),
-				}).Return(nil).Once()
-			},
-		},
-		"cross cluster task": {
-			request: &types.RemoveTaskRequest{
-				ShardID: 0,
-				Type:    common.Int32Ptr(int32(common.TaskTypeCrossCluster)),
-				TaskID:  int64(1),
-			},
-			expectedError: false,
-			mockFn: func() {
-				s.mockResource.ExecutionMgr.On("CompleteCrossClusterTask", mock.Anything, &persistence.CompleteCrossClusterTaskRequest{
 					TaskID: int64(1),
 				}).Return(nil).Once()
 			},
