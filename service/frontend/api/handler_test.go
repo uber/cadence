@@ -2328,28 +2328,32 @@ func (s *workflowHandlerSuite) TestRespondDecisionTaskCompleted() {
 	wh.tokenSerializer = s.mockTokenSerializer
 
 	testInput := map[string]struct {
-		input       *types.RespondDecisionTaskCompletedRequest
-		mockFn      func()
-		expectError bool
+		input           *types.RespondDecisionTaskCompletedRequest
+		mockFn          func()
+		expectError     bool
+		expectErrorType error
 	}{
 		"shutting down": {
 			input: validRequest,
 			mockFn: func() {
 				wh.shuttingDown = int32(1)
 			},
-			expectError: true,
+			expectError:     true,
+			expectErrorType: validate.ErrShuttingDown,
 		},
 		"nil request": {
-			input:       nil,
-			mockFn:      func() {},
-			expectError: true,
+			input:           nil,
+			mockFn:          func() {},
+			expectError:     true,
+			expectErrorType: validate.ErrRequestNotSet,
 		},
 		"nil task token": {
 			input: &types.RespondDecisionTaskCompletedRequest{
 				TaskToken: nil,
 			},
-			mockFn:      func() {},
-			expectError: true,
+			mockFn:          func() {},
+			expectError:     true,
+			expectErrorType: validate.ErrTaskTokenNotSet,
 		},
 		"deserialization failure": {
 			input: validRequest,
@@ -2363,7 +2367,8 @@ func (s *workflowHandlerSuite) TestRespondDecisionTaskCompleted() {
 			mockFn: func() {
 				s.mockTokenSerializer.EXPECT().Deserialize(gomock.Any()).Return(&common.TaskToken{DomainID: ""}, nil)
 			},
-			expectError: true,
+			expectError:     true,
+			expectErrorType: validate.ErrDomainNotSet,
 		},
 		"cannot get domain name": {
 			input: validRequest,
@@ -2381,7 +2386,8 @@ func (s *workflowHandlerSuite) TestRespondDecisionTaskCompleted() {
 				wh.config.MaxIDLengthWarnLimit = dc.GetIntPropertyFn(1)
 				wh.config.IdentityMaxLength = dc.GetIntPropertyFilteredByDomain(1)
 			},
-			expectError: true,
+			expectError:     true,
+			expectErrorType: validate.ErrIdentityTooLong,
 		},
 		"exceeds decision size limit": {
 			input: validRequest,
@@ -2438,6 +2444,9 @@ func (s *workflowHandlerSuite) TestRespondDecisionTaskCompleted() {
 			_, err := wh.RespondDecisionTaskCompleted(context.Background(), input.input)
 			if input.expectError {
 				s.Error(err)
+				if input.expectErrorType != nil {
+					s.ErrorIs(err, input.expectErrorType)
+				}
 			} else {
 				s.NoError(err)
 			}
