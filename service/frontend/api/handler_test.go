@@ -2923,6 +2923,256 @@ func (s *workflowHandlerSuite) TestRespondQueryTaskCompleted() {
 	})
 }
 
+func (s *workflowHandlerSuite) TestStartWorkflowExecution_Remaining() {
+	config := s.newConfig(dc.NewInMemoryClient())
+	config.EnableClientVersionCheck = dc.GetBoolPropertyFn(true)
+	wh := NewWorkflowHandler(s.mockResource, config, s.mockVersionChecker, nil)
+	wh.tokenSerializer = s.mockTokenSerializer
+
+	validRequest := &types.StartWorkflowExecutionRequest{
+		Domain:     s.testDomain,
+		WorkflowID: "wid",
+		RequestID:  testRunID,
+		WorkflowType: &types.WorkflowType{
+			Name: "wType",
+		},
+		TaskList: &types.TaskList{
+			Name: "tasklist",
+		},
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(100),
+	}
+	testInput := map[string]struct {
+		Request         *types.StartWorkflowExecutionRequest
+		MockFn          func()
+		ExpectError     bool
+		ExpectErrorType error
+	}{
+		"shutting down": {
+			Request: validRequest,
+			MockFn: func() {
+				wh.shuttingDown = int32(1)
+			},
+			ExpectError:     true,
+			ExpectErrorType: validate.ErrShuttingDown,
+		},
+		"cannot get domain ID": {
+			Request: validRequest,
+			MockFn: func() {
+				s.mockDomainCache.EXPECT().GetDomainID(s.testDomain).Return("domainid", nil)
+				s.mockDomainCache.EXPECT().GetDomainID(s.testDomain).Return("", errors.New("error getting domain ID"))
+			},
+			ExpectError: true,
+		},
+		"history client returns error": {
+			Request: validRequest,
+			MockFn: func() {
+				s.mockDomainCache.EXPECT().GetDomainID(s.testDomain).Return(s.testDomainID, nil)
+				s.mockDomainCache.EXPECT().GetDomainID(s.testDomain).Return(s.testDomainID, nil)
+				s.mockHistoryClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, errors.New("error"))
+			},
+			ExpectError: true,
+		},
+		"success": {
+			Request: validRequest,
+			MockFn: func() {
+				s.mockDomainCache.EXPECT().GetDomainID(s.testDomain).Return(s.testDomainID, nil)
+				s.mockDomainCache.EXPECT().GetDomainID(s.testDomain).Return(s.testDomainID, nil)
+				s.mockHistoryClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, nil)
+			},
+			ExpectError: false,
+		},
+	}
+
+	for name, input := range testInput {
+		s.Run(name, func() {
+			input.MockFn()
+			_, err := wh.StartWorkflowExecution(context.Background(), input.Request)
+			if input.ExpectError {
+				s.Error(err)
+				if input.ExpectErrorType != nil {
+					s.Equal(input.ExpectErrorType, err)
+				}
+			} else {
+				s.NoError(err)
+			}
+			wh.shuttingDown = int32(0)
+		})
+
+	}
+}
+
+func (s *workflowHandlerSuite) TestSignalWorkflowExecution() {
+	config := s.newConfig(dc.NewInMemoryClient())
+	config.EnableClientVersionCheck = dc.GetBoolPropertyFn(true)
+	wh := NewWorkflowHandler(s.mockResource, config, s.mockVersionChecker, nil)
+	wh.tokenSerializer = s.mockTokenSerializer
+
+	validRequest := &types.SignalWorkflowExecutionRequest{
+		Domain: s.testDomain,
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: testWorkflowID,
+			RunID:      testRunID,
+		},
+		SignalName: "signal",
+		RequestID:  testRunID,
+		Input:      make([]byte, 1000),
+	}
+
+	testInput := map[string]struct {
+		request         *types.SignalWorkflowExecutionRequest
+		expectError     bool
+		mockFn          func()
+		expectErrorType error
+	}{
+		"shutting down": {
+			request: validRequest,
+			mockFn: func() {
+				wh.shuttingDown = int32(1)
+			},
+			expectError:     true,
+			expectErrorType: validate.ErrShuttingDown,
+		},
+		"nil request": {
+			request:         nil,
+			mockFn:          func() {},
+			expectError:     true,
+			expectErrorType: validate.ErrRequestNotSet,
+		},
+		"empty domain": {
+			request: &types.SignalWorkflowExecutionRequest{
+				Domain: "",
+			},
+			mockFn:          func() {},
+			expectError:     true,
+			expectErrorType: validate.ErrDomainNotSet,
+		},
+		"empty workflow ID": {
+			request: &types.SignalWorkflowExecutionRequest{
+				Domain: s.testDomain,
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: "",
+				},
+			},
+			mockFn:          func() {},
+			expectError:     true,
+			expectErrorType: validate.ErrWorkflowIDNotSet,
+		},
+		"domain length exceeds limit": {
+			request: validRequest,
+			mockFn: func() {
+				wh.config.DomainNameMaxLength = dc.GetIntPropertyFilteredByDomain(1)
+			},
+			expectError:     true,
+			expectErrorType: validate.ErrDomainTooLong,
+		},
+		"empty signal name": {
+			request: &types.SignalWorkflowExecutionRequest{
+				Domain: s.testDomain,
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: testWorkflowID,
+					RunID:      testRunID,
+				},
+				SignalName: "",
+			},
+			mockFn:          func() {},
+			expectError:     true,
+			expectErrorType: validate.ErrSignalNameNotSet,
+		},
+		"signal name length exceeds limit": {
+			request: validRequest,
+			mockFn: func() {
+				wh.config.SignalNameMaxLength = dc.GetIntPropertyFilteredByDomain(1)
+			},
+			expectError:     true,
+			expectErrorType: validate.ErrSignalNameTooLong,
+		},
+		"requestID length exceeds limit": {
+			request: validRequest,
+			mockFn: func() {
+				wh.config.RequestIDMaxLength = dc.GetIntPropertyFilteredByDomain(1)
+			},
+			expectError:     true,
+			expectErrorType: validate.ErrRequestIDTooLong,
+		},
+		"cannot get domain ID": {
+			request: validRequest,
+			mockFn: func() {
+				s.mockDomainCache.EXPECT().GetDomainID(s.testDomain).Return("", errors.New("error getting domain ID"))
+			},
+			expectError: true,
+		},
+		"input exceeds blob size limit": {
+			request: validRequest,
+			mockFn: func() {
+				s.mockDomainCache.EXPECT().GetDomainID(s.testDomain).Return(s.testDomainID, nil)
+				wh.config.BlobSizeLimitWarn = dc.GetIntPropertyFilteredByDomain(1)
+				wh.config.BlobSizeLimitError = dc.GetIntPropertyFilteredByDomain(1)
+			},
+			expectError: true,
+		},
+		"history client returns error": {
+			request: validRequest,
+			mockFn: func() {
+				s.mockDomainCache.EXPECT().GetDomainID(s.testDomain).Return(s.testDomainID, nil)
+				s.mockHistoryClient.EXPECT().SignalWorkflowExecution(gomock.Any(), gomock.Any()).Return(errors.New("error"))
+			},
+			expectError: true,
+		},
+		"success": {
+			request: validRequest,
+			mockFn: func() {
+				s.mockDomainCache.EXPECT().GetDomainID(s.testDomain).Return(s.testDomainID, nil)
+				s.mockHistoryClient.EXPECT().SignalWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			expectError: false,
+		},
+	}
+
+	for name, input := range testInput {
+		s.Run(name, func() {
+			input.mockFn()
+			err := wh.SignalWorkflowExecution(context.Background(), input.request)
+			if input.expectError {
+				s.Error(err)
+				if input.expectErrorType != nil {
+					s.ErrorIs(err, input.expectErrorType)
+				}
+			} else {
+				s.NoError(err)
+			}
+			wh.shuttingDown = int32(0)
+			wh.config.DomainNameMaxLength = dc.GetIntPropertyFilteredByDomain(200)
+			wh.config.SignalNameMaxLength = dc.GetIntPropertyFilteredByDomain(200)
+			wh.config.RequestIDMaxLength = dc.GetIntPropertyFilteredByDomain(200)
+			wh.config.BlobSizeLimitWarn = dc.GetIntPropertyFilteredByDomain(1000)
+			wh.config.BlobSizeLimitError = dc.GetIntPropertyFilteredByDomain(1000)
+		})
+	}
+
+	// test version checker
+	s.Run("version checker", func() {
+		mockCtrl := gomock.NewController(s.T())
+		mockResource := resource.NewTest(s.T(), mockCtrl, metrics.Frontend)
+		mockVersionChecker := client.NewMockVersionChecker(mockCtrl)
+
+		cfg := frontendcfg.NewConfig(
+			dc.NewCollection(
+				dc.NewInMemoryClient(),
+				mockResource.GetLogger(),
+			),
+			numHistoryShards,
+			false,
+			"hostname",
+		)
+		cfg.EnableClientVersionCheck = dc.GetBoolPropertyFn(true)
+		wh := NewWorkflowHandler(mockResource, cfg, mockVersionChecker, nil)
+		mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(errors.New("error")).Times(1)
+		err := wh.SignalWorkflowExecution(context.Background(), validRequest)
+		s.Error(err)
+	})
+}
+
 func updateRequest(
 	historyArchivalURI *string,
 	historyArchivalStatus *types.ArchivalStatus,
