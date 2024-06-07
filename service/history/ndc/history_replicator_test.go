@@ -672,7 +672,7 @@ func Test_applyEvents_defaultCase_noErrorBranch(t *testing.T) {
 				task replicationTask,
 				newBranchManager newBranchManagerFn,
 			) (bool, int, error) {
-				return true, 0, nil
+				return true, 5, nil
 			},
 			applyNonStartEventsPrepareMutableStateFnAffordance: func(mockExecutionMutableState *execution.MockMutableState) func(ctx ctx.Context,
 				context execution.Context,
@@ -688,6 +688,7 @@ func Test_applyEvents_defaultCase_noErrorBranch(t *testing.T) {
 					task replicationTask,
 					newConflictResolver newConflictResolverFn,
 				) (execution.MutableState, bool, error) {
+					assert.Equal(t, branchIndex, 5)
 					return nil, false, fmt.Errorf("test error")
 				}
 				return fn
@@ -742,6 +743,7 @@ func Test_applyEvents_defaultCase_noErrorBranch(t *testing.T) {
 					task replicationTask,
 					newConflictResolver newConflictResolverFn,
 				) (execution.MutableState, bool, error) {
+					assert.Equal(t, branchIndex, 1)
 					return mockExecutionMutableState, false, nil
 				}
 				return fn
@@ -796,6 +798,7 @@ func Test_applyEvents_defaultCase_noErrorBranch(t *testing.T) {
 					task replicationTask,
 					newConflictResolver newConflictResolverFn,
 				) (execution.MutableState, bool, error) {
+					assert.Equal(t, branchIndex, 2)
 					return mockExecutionMutableState, false, nil
 				}
 				return fn
