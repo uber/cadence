@@ -389,20 +389,7 @@ func Test_applyEvents_EventTypeWorkflowExecutionStarted(t *testing.T) {
 	tests := map[string]struct {
 		mockExecutionCacheAffordance  func(mockExecutionCache *execution.MockCache)
 		mockReplicationTaskAffordance func(mockReplicationTask *MockreplicationTask)
-		applyStartEventsFnAffordance  func() func(
-			ctx ctx.Context,
-			context execution.Context,
-			releaseFn execution.ReleaseFunc,
-			task replicationTask,
-			domainCache cache.DomainCache,
-			newMutableState newMutableStateFn,
-			newStateBuilder newStateBuilderFn,
-			transactionManager transactionManager,
-			logger log.Logger,
-			shard shard.Context,
-			clusterMetadata cluster.Metadata,
-		) error
-		expectError error
+		expectError                   error
 	}{
 		"Case1: success case": {
 			mockExecutionCacheAffordance: func(mockExecutionCache *execution.MockCache) {
@@ -419,36 +406,6 @@ func Test_applyEvents_EventTypeWorkflowExecutionStarted(t *testing.T) {
 					EventType: &workflowExecutionStartedType,
 				}).Times(1)
 			},
-			applyStartEventsFnAffordance: func() func(
-				ctx ctx.Context,
-				context execution.Context,
-				releaseFn execution.ReleaseFunc,
-				task replicationTask,
-				domainCache cache.DomainCache,
-				newMutableState newMutableStateFn,
-				newStateBuilder newStateBuilderFn,
-				transactionManager transactionManager,
-				logger log.Logger,
-				shard shard.Context,
-				clusterMetadata cluster.Metadata,
-			) error {
-				fn := func(
-					ctx ctx.Context,
-					context execution.Context,
-					releaseFn execution.ReleaseFunc,
-					task replicationTask,
-					domainCache cache.DomainCache,
-					newMutableState newMutableStateFn,
-					newStateBuilder newStateBuilderFn,
-					transactionManager transactionManager,
-					logger log.Logger,
-					shard shard.Context,
-					clusterMetadata cluster.Metadata,
-				) error {
-					return nil
-				}
-				return fn
-			},
 			expectError: nil,
 		},
 		"Case2: error case": {
@@ -462,36 +419,6 @@ func Test_applyEvents_EventTypeWorkflowExecutionStarted(t *testing.T) {
 					WorkflowID: "test-workflow-id",
 					RunID:      "test-run-id",
 				}).Times(1)
-			},
-			applyStartEventsFnAffordance: func() func(
-				ctx ctx.Context,
-				context execution.Context,
-				releaseFn execution.ReleaseFunc,
-				task replicationTask,
-				domainCache cache.DomainCache,
-				newMutableState newMutableStateFn,
-				newStateBuilder newStateBuilderFn,
-				transactionManager transactionManager,
-				logger log.Logger,
-				shard shard.Context,
-				clusterMetadata cluster.Metadata,
-			) error {
-				fn := func(
-					ctx ctx.Context,
-					context execution.Context,
-					releaseFn execution.ReleaseFunc,
-					task replicationTask,
-					domainCache cache.DomainCache,
-					newMutableState newMutableStateFn,
-					newStateBuilder newStateBuilderFn,
-					transactionManager transactionManager,
-					logger log.Logger,
-					shard shard.Context,
-					clusterMetadata cluster.Metadata,
-				) error {
-					return nil
-				}
-				return fn
 			},
 			expectError: fmt.Errorf("test error"),
 		},
@@ -510,7 +437,21 @@ func Test_applyEvents_EventTypeWorkflowExecutionStarted(t *testing.T) {
 			test.mockExecutionCacheAffordance(mockExecutionCache)
 
 			// parameter functions affordance
-			replicator.applyStartEventsFn = test.applyStartEventsFnAffordance()
+			replicator.applyStartEventsFn = func(
+				ctx ctx.Context,
+				context execution.Context,
+				releaseFn execution.ReleaseFunc,
+				task replicationTask,
+				domainCache cache.DomainCache,
+				newMutableState newMutableStateFn,
+				newStateBuilder newStateBuilderFn,
+				transactionManager transactionManager,
+				logger log.Logger,
+				shard shard.Context,
+				clusterMetadata cluster.Metadata,
+			) error {
+				return nil
+			}
 
 			assert.Equal(t, replicator.applyEvents(ctx.Background(), mockReplicationTask), test.expectError)
 		})
@@ -521,11 +462,11 @@ func Test_applyEvents_defaultCase_noErrorBranch(t *testing.T) {
 	workflowExecutionType := types.EventTypeWorkflowExecutionCompleted
 
 	tests := map[string]struct {
-		mockExecutionCacheAffordance                 func(mockExecutionCache *execution.MockCache, mockExecutionContext *execution.MockContext)
-		mockReplicationTaskAffordance                func(mockReplicationTask *MockreplicationTask)
-		mockExecutionContextAffordance               func(mockExecutionContext *execution.MockContext, mockExecutionMutableState *execution.MockMutableState)
-		mockMutableStateAffordance                   func(mockExecutionMutableState *execution.MockMutableState)
-		applyNonStartEventsPrepareBranchFnAffordance func() func(ctx ctx.Context,
+		mockExecutionCacheAffordance           func(mockExecutionCache *execution.MockCache, mockExecutionContext *execution.MockContext)
+		mockReplicationTaskAffordance          func(mockReplicationTask *MockreplicationTask)
+		mockExecutionContextAffordance         func(mockExecutionContext *execution.MockContext, mockExecutionMutableState *execution.MockMutableState)
+		mockMutableStateAffordance             func(mockExecutionMutableState *execution.MockMutableState)
+		mockApplyNonStartEventsPrepareBranchFn func(ctx ctx.Context,
 			context execution.Context,
 			mutableState execution.MutableState,
 			task replicationTask,
@@ -538,26 +479,6 @@ func Test_applyEvents_defaultCase_noErrorBranch(t *testing.T) {
 			task replicationTask,
 			newConflictResolver newConflictResolverFn,
 		) (execution.MutableState, bool, error)
-		applyNonStartEventsToCurrentBranchFnAffordance func() func(ctx ctx.Context,
-			context execution.Context,
-			mutableState execution.MutableState,
-			isRebuilt bool,
-			releaseFn execution.ReleaseFunc,
-			task replicationTask,
-			newStateBuilder newStateBuilderFn,
-			clusterMetadata cluster.Metadata,
-			shard shard.Context,
-			logger log.Logger,
-			transactionManager transactionManager,
-		) error
-		applyNonStartEventsToNoneCurrentBranchFnAffordance func() func(ctx ctx.Context,
-			context execution.Context,
-			mutableState execution.MutableState,
-			branchIndex int,
-			releaseFn execution.ReleaseFunc,
-			task replicationTask,
-			r *historyReplicatorImpl,
-		) error
 		expectError error
 	}{
 		"Case1: case nil with GetVersionHistories is nil": {
@@ -583,21 +504,13 @@ func Test_applyEvents_defaultCase_noErrorBranch(t *testing.T) {
 			mockMutableStateAffordance: func(mockExecutionMutableState *execution.MockMutableState) {
 				mockExecutionMutableState.EXPECT().GetVersionHistories().Return(nil).Times(1)
 			},
-			applyNonStartEventsPrepareBranchFnAffordance: func() func(ctx ctx.Context,
+			mockApplyNonStartEventsPrepareBranchFn: func(ctx ctx.Context,
 				context execution.Context,
 				mutableState execution.MutableState,
 				task replicationTask,
 				newBranchManager newBranchManagerFn,
 			) (bool, int, error) {
-				fn := func(ctx ctx.Context,
-					context execution.Context,
-					mutableState execution.MutableState,
-					task replicationTask,
-					newBranchManager newBranchManagerFn,
-				) (bool, int, error) {
-					return false, 0, nil
-				}
-				return fn
+				return false, 0, nil
 			},
 			applyNonStartEventsPrepareMutableStateFnAffordance: func(mockExecutionMutableState *execution.MockMutableState) func(ctx ctx.Context,
 				context execution.Context,
@@ -614,54 +527,6 @@ func Test_applyEvents_defaultCase_noErrorBranch(t *testing.T) {
 					newConflictResolver newConflictResolverFn,
 				) (execution.MutableState, bool, error) {
 					return nil, false, fmt.Errorf("test error")
-				}
-				return fn
-			},
-			applyNonStartEventsToCurrentBranchFnAffordance: func() func(ctx ctx.Context,
-				context execution.Context,
-				mutableState execution.MutableState,
-				isRebuilt bool,
-				releaseFn execution.ReleaseFunc,
-				task replicationTask,
-				newStateBuilder newStateBuilderFn,
-				clusterMetadata cluster.Metadata,
-				shard shard.Context,
-				logger log.Logger,
-				transactionManager transactionManager,
-			) error {
-				fn := func(ctx ctx.Context,
-					context execution.Context,
-					mutableState execution.MutableState,
-					isRebuilt bool,
-					releaseFn execution.ReleaseFunc,
-					task replicationTask,
-					newStateBuilder newStateBuilderFn,
-					clusterMetadata cluster.Metadata,
-					shard shard.Context,
-					logger log.Logger,
-					transactionManager transactionManager,
-				) error {
-					return nil
-				}
-				return fn
-			},
-			applyNonStartEventsToNoneCurrentBranchFnAffordance: func() func(ctx ctx.Context,
-				context execution.Context,
-				mutableState execution.MutableState,
-				branchIndex int,
-				releaseFn execution.ReleaseFunc,
-				task replicationTask,
-				r *historyReplicatorImpl,
-			) error {
-				fn := func(ctx ctx.Context,
-					context execution.Context,
-					mutableState execution.MutableState,
-					branchIndex int,
-					releaseFn execution.ReleaseFunc,
-					task replicationTask,
-					r *historyReplicatorImpl,
-				) error {
-					return nil
 				}
 				return fn
 			},
@@ -693,21 +558,13 @@ func Test_applyEvents_defaultCase_noErrorBranch(t *testing.T) {
 					Histories:                  nil,
 				}).Times(1)
 			},
-			applyNonStartEventsPrepareBranchFnAffordance: func() func(ctx ctx.Context,
+			mockApplyNonStartEventsPrepareBranchFn: func(ctx ctx.Context,
 				context execution.Context,
 				mutableState execution.MutableState,
 				task replicationTask,
 				newBranchManager newBranchManagerFn,
 			) (bool, int, error) {
-				fn := func(ctx ctx.Context,
-					context execution.Context,
-					mutableState execution.MutableState,
-					task replicationTask,
-					newBranchManager newBranchManagerFn,
-				) (bool, int, error) {
-					return false, 0, fmt.Errorf("test error")
-				}
-				return fn
+				return false, 0, fmt.Errorf("test error")
 			},
 			applyNonStartEventsPrepareMutableStateFnAffordance: func(mockExecutionMutableState *execution.MockMutableState) func(ctx ctx.Context,
 				context execution.Context,
@@ -727,57 +584,9 @@ func Test_applyEvents_defaultCase_noErrorBranch(t *testing.T) {
 				}
 				return fn
 			},
-			applyNonStartEventsToCurrentBranchFnAffordance: func() func(ctx ctx.Context,
-				context execution.Context,
-				mutableState execution.MutableState,
-				isRebuilt bool,
-				releaseFn execution.ReleaseFunc,
-				task replicationTask,
-				newStateBuilder newStateBuilderFn,
-				clusterMetadata cluster.Metadata,
-				shard shard.Context,
-				logger log.Logger,
-				transactionManager transactionManager,
-			) error {
-				fn := func(ctx ctx.Context,
-					context execution.Context,
-					mutableState execution.MutableState,
-					isRebuilt bool,
-					releaseFn execution.ReleaseFunc,
-					task replicationTask,
-					newStateBuilder newStateBuilderFn,
-					clusterMetadata cluster.Metadata,
-					shard shard.Context,
-					logger log.Logger,
-					transactionManager transactionManager,
-				) error {
-					return nil
-				}
-				return fn
-			},
-			applyNonStartEventsToNoneCurrentBranchFnAffordance: func() func(ctx ctx.Context,
-				context execution.Context,
-				mutableState execution.MutableState,
-				branchIndex int,
-				releaseFn execution.ReleaseFunc,
-				task replicationTask,
-				r *historyReplicatorImpl,
-			) error {
-				fn := func(ctx ctx.Context,
-					context execution.Context,
-					mutableState execution.MutableState,
-					branchIndex int,
-					releaseFn execution.ReleaseFunc,
-					task replicationTask,
-					r *historyReplicatorImpl,
-				) error {
-					return nil
-				}
-				return fn
-			},
 			expectError: fmt.Errorf("test error"),
 		},
-		"Case3: case nil with !doContinue": {
+		"Case3: case nil with applyNonStartEventsPrepareBranchFn no error and doContinue is false": {
 			mockExecutionCacheAffordance: func(mockExecutionCache *execution.MockCache, mockExecutionContext *execution.MockContext) {
 				mockExecutionCache.EXPECT().GetOrCreateWorkflowExecution(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(mockExecutionContext, func(err error) {}, nil).Times(1)
@@ -803,21 +612,13 @@ func Test_applyEvents_defaultCase_noErrorBranch(t *testing.T) {
 					Histories:                  nil,
 				}).Times(1)
 			},
-			applyNonStartEventsPrepareBranchFnAffordance: func() func(ctx ctx.Context,
+			mockApplyNonStartEventsPrepareBranchFn: func(ctx ctx.Context,
 				context execution.Context,
 				mutableState execution.MutableState,
 				task replicationTask,
 				newBranchManager newBranchManagerFn,
 			) (bool, int, error) {
-				fn := func(ctx ctx.Context,
-					context execution.Context,
-					mutableState execution.MutableState,
-					task replicationTask,
-					newBranchManager newBranchManagerFn,
-				) (bool, int, error) {
-					return false, 0, nil
-				}
-				return fn
+				return false, 0, nil
 			},
 			applyNonStartEventsPrepareMutableStateFnAffordance: func(mockExecutionMutableState *execution.MockMutableState) func(ctx ctx.Context,
 				context execution.Context,
@@ -834,54 +635,6 @@ func Test_applyEvents_defaultCase_noErrorBranch(t *testing.T) {
 					newConflictResolver newConflictResolverFn,
 				) (execution.MutableState, bool, error) {
 					return nil, false, fmt.Errorf("test error")
-				}
-				return fn
-			},
-			applyNonStartEventsToCurrentBranchFnAffordance: func() func(ctx ctx.Context,
-				context execution.Context,
-				mutableState execution.MutableState,
-				isRebuilt bool,
-				releaseFn execution.ReleaseFunc,
-				task replicationTask,
-				newStateBuilder newStateBuilderFn,
-				clusterMetadata cluster.Metadata,
-				shard shard.Context,
-				logger log.Logger,
-				transactionManager transactionManager,
-			) error {
-				fn := func(ctx ctx.Context,
-					context execution.Context,
-					mutableState execution.MutableState,
-					isRebuilt bool,
-					releaseFn execution.ReleaseFunc,
-					task replicationTask,
-					newStateBuilder newStateBuilderFn,
-					clusterMetadata cluster.Metadata,
-					shard shard.Context,
-					logger log.Logger,
-					transactionManager transactionManager,
-				) error {
-					return nil
-				}
-				return fn
-			},
-			applyNonStartEventsToNoneCurrentBranchFnAffordance: func() func(ctx ctx.Context,
-				context execution.Context,
-				mutableState execution.MutableState,
-				branchIndex int,
-				releaseFn execution.ReleaseFunc,
-				task replicationTask,
-				r *historyReplicatorImpl,
-			) error {
-				fn := func(ctx ctx.Context,
-					context execution.Context,
-					mutableState execution.MutableState,
-					branchIndex int,
-					releaseFn execution.ReleaseFunc,
-					task replicationTask,
-					r *historyReplicatorImpl,
-				) error {
-					return nil
 				}
 				return fn
 			},
@@ -913,21 +666,13 @@ func Test_applyEvents_defaultCase_noErrorBranch(t *testing.T) {
 					Histories:                  nil,
 				}).Times(1)
 			},
-			applyNonStartEventsPrepareBranchFnAffordance: func() func(ctx ctx.Context,
+			mockApplyNonStartEventsPrepareBranchFn: func(ctx ctx.Context,
 				context execution.Context,
 				mutableState execution.MutableState,
 				task replicationTask,
 				newBranchManager newBranchManagerFn,
 			) (bool, int, error) {
-				fn := func(ctx ctx.Context,
-					context execution.Context,
-					mutableState execution.MutableState,
-					task replicationTask,
-					newBranchManager newBranchManagerFn,
-				) (bool, int, error) {
-					return true, 0, nil
-				}
-				return fn
+				return true, 0, nil
 			},
 			applyNonStartEventsPrepareMutableStateFnAffordance: func(mockExecutionMutableState *execution.MockMutableState) func(ctx ctx.Context,
 				context execution.Context,
@@ -944,54 +689,6 @@ func Test_applyEvents_defaultCase_noErrorBranch(t *testing.T) {
 					newConflictResolver newConflictResolverFn,
 				) (execution.MutableState, bool, error) {
 					return nil, false, fmt.Errorf("test error")
-				}
-				return fn
-			},
-			applyNonStartEventsToCurrentBranchFnAffordance: func() func(ctx ctx.Context,
-				context execution.Context,
-				mutableState execution.MutableState,
-				isRebuilt bool,
-				releaseFn execution.ReleaseFunc,
-				task replicationTask,
-				newStateBuilder newStateBuilderFn,
-				clusterMetadata cluster.Metadata,
-				shard shard.Context,
-				logger log.Logger,
-				transactionManager transactionManager,
-			) error {
-				fn := func(ctx ctx.Context,
-					context execution.Context,
-					mutableState execution.MutableState,
-					isRebuilt bool,
-					releaseFn execution.ReleaseFunc,
-					task replicationTask,
-					newStateBuilder newStateBuilderFn,
-					clusterMetadata cluster.Metadata,
-					shard shard.Context,
-					logger log.Logger,
-					transactionManager transactionManager,
-				) error {
-					return nil
-				}
-				return fn
-			},
-			applyNonStartEventsToNoneCurrentBranchFnAffordance: func() func(ctx ctx.Context,
-				context execution.Context,
-				mutableState execution.MutableState,
-				branchIndex int,
-				releaseFn execution.ReleaseFunc,
-				task replicationTask,
-				r *historyReplicatorImpl,
-			) error {
-				fn := func(ctx ctx.Context,
-					context execution.Context,
-					mutableState execution.MutableState,
-					branchIndex int,
-					releaseFn execution.ReleaseFunc,
-					task replicationTask,
-					r *historyReplicatorImpl,
-				) error {
-					return nil
 				}
 				return fn
 			},
@@ -1023,21 +720,13 @@ func Test_applyEvents_defaultCase_noErrorBranch(t *testing.T) {
 					Histories:                  nil,
 				}).Times(2)
 			},
-			applyNonStartEventsPrepareBranchFnAffordance: func() func(ctx ctx.Context,
+			mockApplyNonStartEventsPrepareBranchFn: func(ctx ctx.Context,
 				context execution.Context,
 				mutableState execution.MutableState,
 				task replicationTask,
 				newBranchManager newBranchManagerFn,
 			) (bool, int, error) {
-				fn := func(ctx ctx.Context,
-					context execution.Context,
-					mutableState execution.MutableState,
-					task replicationTask,
-					newBranchManager newBranchManagerFn,
-				) (bool, int, error) {
-					return true, 1, nil
-				}
-				return fn
+				return true, 1, nil
 			},
 			applyNonStartEventsPrepareMutableStateFnAffordance: func(mockExecutionMutableState *execution.MockMutableState) func(ctx ctx.Context,
 				context execution.Context,
@@ -1054,54 +743,6 @@ func Test_applyEvents_defaultCase_noErrorBranch(t *testing.T) {
 					newConflictResolver newConflictResolverFn,
 				) (execution.MutableState, bool, error) {
 					return mockExecutionMutableState, false, nil
-				}
-				return fn
-			},
-			applyNonStartEventsToCurrentBranchFnAffordance: func() func(ctx ctx.Context,
-				context execution.Context,
-				mutableState execution.MutableState,
-				isRebuilt bool,
-				releaseFn execution.ReleaseFunc,
-				task replicationTask,
-				newStateBuilder newStateBuilderFn,
-				clusterMetadata cluster.Metadata,
-				shard shard.Context,
-				logger log.Logger,
-				transactionManager transactionManager,
-			) error {
-				fn := func(ctx ctx.Context,
-					context execution.Context,
-					mutableState execution.MutableState,
-					isRebuilt bool,
-					releaseFn execution.ReleaseFunc,
-					task replicationTask,
-					newStateBuilder newStateBuilderFn,
-					clusterMetadata cluster.Metadata,
-					shard shard.Context,
-					logger log.Logger,
-					transactionManager transactionManager,
-				) error {
-					return nil
-				}
-				return fn
-			},
-			applyNonStartEventsToNoneCurrentBranchFnAffordance: func() func(ctx ctx.Context,
-				context execution.Context,
-				mutableState execution.MutableState,
-				branchIndex int,
-				releaseFn execution.ReleaseFunc,
-				task replicationTask,
-				r *historyReplicatorImpl,
-			) error {
-				fn := func(ctx ctx.Context,
-					context execution.Context,
-					mutableState execution.MutableState,
-					branchIndex int,
-					releaseFn execution.ReleaseFunc,
-					task replicationTask,
-					r *historyReplicatorImpl,
-				) error {
-					return nil
 				}
 				return fn
 			},
@@ -1133,21 +774,13 @@ func Test_applyEvents_defaultCase_noErrorBranch(t *testing.T) {
 					Histories:                  nil,
 				}).Times(2)
 			},
-			applyNonStartEventsPrepareBranchFnAffordance: func() func(ctx ctx.Context,
+			mockApplyNonStartEventsPrepareBranchFn: func(ctx ctx.Context,
 				context execution.Context,
 				mutableState execution.MutableState,
 				task replicationTask,
 				newBranchManager newBranchManagerFn,
 			) (bool, int, error) {
-				fn := func(ctx ctx.Context,
-					context execution.Context,
-					mutableState execution.MutableState,
-					task replicationTask,
-					newBranchManager newBranchManagerFn,
-				) (bool, int, error) {
-					return true, 2, nil
-				}
-				return fn
+				return true, 2, nil
 			},
 			applyNonStartEventsPrepareMutableStateFnAffordance: func(mockExecutionMutableState *execution.MockMutableState) func(ctx ctx.Context,
 				context execution.Context,
@@ -1164,54 +797,6 @@ func Test_applyEvents_defaultCase_noErrorBranch(t *testing.T) {
 					newConflictResolver newConflictResolverFn,
 				) (execution.MutableState, bool, error) {
 					return mockExecutionMutableState, false, nil
-				}
-				return fn
-			},
-			applyNonStartEventsToCurrentBranchFnAffordance: func() func(ctx ctx.Context,
-				context execution.Context,
-				mutableState execution.MutableState,
-				isRebuilt bool,
-				releaseFn execution.ReleaseFunc,
-				task replicationTask,
-				newStateBuilder newStateBuilderFn,
-				clusterMetadata cluster.Metadata,
-				shard shard.Context,
-				logger log.Logger,
-				transactionManager transactionManager,
-			) error {
-				fn := func(ctx ctx.Context,
-					context execution.Context,
-					mutableState execution.MutableState,
-					isRebuilt bool,
-					releaseFn execution.ReleaseFunc,
-					task replicationTask,
-					newStateBuilder newStateBuilderFn,
-					clusterMetadata cluster.Metadata,
-					shard shard.Context,
-					logger log.Logger,
-					transactionManager transactionManager,
-				) error {
-					return nil
-				}
-				return fn
-			},
-			applyNonStartEventsToNoneCurrentBranchFnAffordance: func() func(ctx ctx.Context,
-				context execution.Context,
-				mutableState execution.MutableState,
-				branchIndex int,
-				releaseFn execution.ReleaseFunc,
-				task replicationTask,
-				r *historyReplicatorImpl,
-			) error {
-				fn := func(ctx ctx.Context,
-					context execution.Context,
-					mutableState execution.MutableState,
-					branchIndex int,
-					releaseFn execution.ReleaseFunc,
-					task replicationTask,
-					r *historyReplicatorImpl,
-				) error {
-					return nil
 				}
 				return fn
 			},
@@ -1239,10 +824,32 @@ func Test_applyEvents_defaultCase_noErrorBranch(t *testing.T) {
 			test.mockMutableStateAffordance(mockExecutionMutableState)
 
 			// parameter functions affordance
-			replicator.applyNonStartEventsPrepareBranchFn = test.applyNonStartEventsPrepareBranchFnAffordance()
+			replicator.applyNonStartEventsPrepareBranchFn = test.mockApplyNonStartEventsPrepareBranchFn
 			replicator.applyNonStartEventsPrepareMutableStateFn = test.applyNonStartEventsPrepareMutableStateFnAffordance(mockExecutionMutableState)
-			replicator.applyNonStartEventsToCurrentBranchFn = test.applyNonStartEventsToCurrentBranchFnAffordance()
-			replicator.applyNonStartEventsToNoneCurrentBranchFn = test.applyNonStartEventsToNoneCurrentBranchFnAffordance()
+			replicator.applyNonStartEventsToCurrentBranchFn = func(ctx ctx.Context,
+				context execution.Context,
+				mutableState execution.MutableState,
+				isRebuilt bool,
+				releaseFn execution.ReleaseFunc,
+				task replicationTask,
+				newStateBuilder newStateBuilderFn,
+				clusterMetadata cluster.Metadata,
+				shard shard.Context,
+				logger log.Logger,
+				transactionManager transactionManager,
+			) error {
+				return nil
+			}
+			replicator.applyNonStartEventsToNoneCurrentBranchFn = func(ctx ctx.Context,
+				context execution.Context,
+				mutableState execution.MutableState,
+				branchIndex int,
+				releaseFn execution.ReleaseFunc,
+				task replicationTask,
+				r *historyReplicatorImpl,
+			) error {
+				return nil
+			}
 
 			assert.Equal(t, replicator.applyEvents(ctx.Background(), mockReplicationTask), test.expectError)
 		})
@@ -1253,25 +860,15 @@ func Test_applyEvents_defaultCase_errorAndDefault(t *testing.T) {
 	workflowExecutionType := types.EventTypeWorkflowExecutionCompleted
 
 	tests := map[string]struct {
-		mockExecutionCacheAffordance                       func(mockExecutionCache *execution.MockCache, mockExecutionContext *execution.MockContext)
-		mockReplicationTaskAffordance                      func(mockReplicationTask *MockreplicationTask)
-		mockExecutionContextAffordance                     func(mockExecutionContext *execution.MockContext, mockExecutionMutableState *execution.MockMutableState)
-		mockMutableStateAffordance                         func(mockExecutionMutableState *execution.MockMutableState)
-		applyNonStartEventsMissingMutableStateFnAffordance func() func(ctx ctx.Context,
+		mockExecutionCacheAffordance                 func(mockExecutionCache *execution.MockCache, mockExecutionContext *execution.MockContext)
+		mockReplicationTaskAffordance                func(mockReplicationTask *MockreplicationTask)
+		mockExecutionContextAffordance               func(mockExecutionContext *execution.MockContext, mockExecutionMutableState *execution.MockMutableState)
+		mockMutableStateAffordance                   func(mockExecutionMutableState *execution.MockMutableState)
+		mockApplyNonStartEventsMissingMutableStateFn func(ctx ctx.Context,
 			newContext execution.Context,
 			task replicationTask,
 			newWorkflowResetter newWorkflowResetterFn,
 		) (execution.MutableState, error)
-		applyNonStartEventsResetWorkflowFnAffordance func() func(ctx ctx.Context,
-			context execution.Context,
-			mutableState execution.MutableState,
-			task replicationTask,
-			newStateBuilder newStateBuilderFn,
-			transactionManager transactionManager,
-			clusterMetadata cluster.Metadata,
-			logger log.Logger,
-			shard shard.Context,
-		) error
 		expectError error
 	}{
 		"Case1-1: case EntityNotExistsError + applyNonStartEventsMissingMutableStateFn error": {
@@ -1297,43 +894,12 @@ func Test_applyEvents_defaultCase_errorAndDefault(t *testing.T) {
 			mockMutableStateAffordance: func(mockExecutionMutableState *execution.MockMutableState) {
 				return
 			},
-			applyNonStartEventsMissingMutableStateFnAffordance: func() func(ctx ctx.Context,
+			mockApplyNonStartEventsMissingMutableStateFn: func(ctx ctx.Context,
 				newContext execution.Context,
 				task replicationTask,
 				newWorkflowResetter newWorkflowResetterFn,
 			) (execution.MutableState, error) {
-				fn := func(ctx ctx.Context,
-					newContext execution.Context,
-					task replicationTask,
-					newWorkflowResetter newWorkflowResetterFn,
-				) (execution.MutableState, error) {
-					return nil, fmt.Errorf("test error")
-				}
-				return fn
-			},
-			applyNonStartEventsResetWorkflowFnAffordance: func() func(ctx ctx.Context,
-				context execution.Context,
-				mutableState execution.MutableState,
-				task replicationTask,
-				newStateBuilder newStateBuilderFn,
-				transactionManager transactionManager,
-				clusterMetadata cluster.Metadata,
-				logger log.Logger,
-				shard shard.Context,
-			) error {
-				fn := func(ctx ctx.Context,
-					context execution.Context,
-					mutableState execution.MutableState,
-					task replicationTask,
-					newStateBuilder newStateBuilderFn,
-					transactionManager transactionManager,
-					clusterMetadata cluster.Metadata,
-					logger log.Logger,
-					shard shard.Context,
-				) error {
-					return nil
-				}
-				return fn
+				return nil, fmt.Errorf("test error")
 			},
 			expectError: fmt.Errorf("test error"),
 		},
@@ -1360,45 +926,14 @@ func Test_applyEvents_defaultCase_errorAndDefault(t *testing.T) {
 			mockMutableStateAffordance: func(mockExecutionMutableState *execution.MockMutableState) {
 				return
 			},
-			applyNonStartEventsMissingMutableStateFnAffordance: func() func(ctx ctx.Context,
+			mockApplyNonStartEventsMissingMutableStateFn: func(ctx ctx.Context,
 				newContext execution.Context,
 				task replicationTask,
 				newWorkflowResetter newWorkflowResetterFn,
 			) (execution.MutableState, error) {
-				fn := func(ctx ctx.Context,
-					newContext execution.Context,
-					task replicationTask,
-					newWorkflowResetter newWorkflowResetterFn,
-				) (execution.MutableState, error) {
-					return nil, nil
-				}
-				return fn
+				return nil, nil
 			},
 			expectError: nil,
-			applyNonStartEventsResetWorkflowFnAffordance: func() func(ctx ctx.Context,
-				context execution.Context,
-				mutableState execution.MutableState,
-				task replicationTask,
-				newStateBuilder newStateBuilderFn,
-				transactionManager transactionManager,
-				clusterMetadata cluster.Metadata,
-				logger log.Logger,
-				shard shard.Context,
-			) error {
-				fn := func(ctx ctx.Context,
-					context execution.Context,
-					mutableState execution.MutableState,
-					task replicationTask,
-					newStateBuilder newStateBuilderFn,
-					transactionManager transactionManager,
-					clusterMetadata cluster.Metadata,
-					logger log.Logger,
-					shard shard.Context,
-				) error {
-					return nil
-				}
-				return fn
-			},
 		},
 		"Case1-3: case other errors": {
 			mockExecutionCacheAffordance: func(mockExecutionCache *execution.MockCache, mockExecutionContext *execution.MockContext) {
@@ -1423,45 +958,14 @@ func Test_applyEvents_defaultCase_errorAndDefault(t *testing.T) {
 			mockMutableStateAffordance: func(mockExecutionMutableState *execution.MockMutableState) {
 				return
 			},
-			applyNonStartEventsMissingMutableStateFnAffordance: func() func(ctx ctx.Context,
+			mockApplyNonStartEventsMissingMutableStateFn: func(ctx ctx.Context,
 				newContext execution.Context,
 				task replicationTask,
 				newWorkflowResetter newWorkflowResetterFn,
 			) (execution.MutableState, error) {
-				fn := func(ctx ctx.Context,
-					newContext execution.Context,
-					task replicationTask,
-					newWorkflowResetter newWorkflowResetterFn,
-				) (execution.MutableState, error) {
-					return nil, nil
-				}
-				return fn
+				return nil, nil
 			},
 			expectError: fmt.Errorf("test-error"),
-			applyNonStartEventsResetWorkflowFnAffordance: func() func(ctx ctx.Context,
-				context execution.Context,
-				mutableState execution.MutableState,
-				task replicationTask,
-				newStateBuilder newStateBuilderFn,
-				transactionManager transactionManager,
-				clusterMetadata cluster.Metadata,
-				logger log.Logger,
-				shard shard.Context,
-			) error {
-				fn := func(ctx ctx.Context,
-					context execution.Context,
-					mutableState execution.MutableState,
-					task replicationTask,
-					newStateBuilder newStateBuilderFn,
-					transactionManager transactionManager,
-					clusterMetadata cluster.Metadata,
-					logger log.Logger,
-					shard shard.Context,
-				) error {
-					return nil
-				}
-				return fn
-			},
 		},
 	}
 	for name, test := range tests {
@@ -1482,8 +986,19 @@ func Test_applyEvents_defaultCase_errorAndDefault(t *testing.T) {
 			test.mockMutableStateAffordance(mockExecutionMutableState)
 
 			// parameter functions affordance
-			replicator.applyNonStartEventsMissingMutableStateFn = test.applyNonStartEventsMissingMutableStateFnAffordance()
-			replicator.applyNonStartEventsResetWorkflowFn = test.applyNonStartEventsResetWorkflowFnAffordance()
+			replicator.applyNonStartEventsMissingMutableStateFn = test.mockApplyNonStartEventsMissingMutableStateFn
+			replicator.applyNonStartEventsResetWorkflowFn = func(ctx ctx.Context,
+				context execution.Context,
+				mutableState execution.MutableState,
+				task replicationTask,
+				newStateBuilder newStateBuilderFn,
+				transactionManager transactionManager,
+				clusterMetadata cluster.Metadata,
+				logger log.Logger,
+				shard shard.Context,
+			) error {
+				return nil
+			}
 
 			assert.Equal(t, replicator.applyEvents(ctx.Background(), mockReplicationTask), test.expectError)
 		})
