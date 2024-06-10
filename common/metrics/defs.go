@@ -2199,6 +2199,9 @@ const (
 	GlobalRatelimiterFallbackUsageTimer
 	GlobalRatelimiterGlobalUsageTimer
 
+	GlobalRatelimiterAllowedRequestsCount  // per key/type usage
+	GlobalRatelimiterRejectedRequestsCount // per key/type usage
+
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
 
@@ -2846,6 +2849,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 
 		GlobalRatelimiterFallbackUsageTimer: {metricName: "global_ratelimiter_fallback_usage_timer", metricType: Timer},
 		GlobalRatelimiterGlobalUsageTimer:   {metricName: "global_ratelimiter_global_usage_timer", metricType: Timer},
+
+		GlobalRatelimiterAllowedRequestsCount:  {metricName: "global_ratelimiter_allowed_requests", metricType: Counter},
+		GlobalRatelimiterRejectedRequestsCount: {metricName: "global_ratelimiter_rejected_requests", metricType: Counter},
 	},
 	History: {
 		TaskRequests:             {metricName: "task_requests", metricType: Counter},

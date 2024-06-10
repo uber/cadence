@@ -173,6 +173,9 @@ type DurationPropertyFnWithWorkflowTypeFilter func(domainName string, workflowTy
 // ListPropertyFn is a wrapper to get a list property from dynamic config
 type ListPropertyFn func(opts ...FilterOption) []interface{}
 
+// StringPropertyWithRatelimitKeyFilter is a wrapper to get strings (currently global ratelimiter modes) per global ratelimit key
+type StringPropertyWithRatelimitKeyFilter func(globalRatelimitKey string) string
+
 // GetProperty gets a interface property and returns defaultValue if property is not found
 func (c *Collection) GetProperty(key Key) PropertyFn {
 	return func() interface{} {
@@ -573,6 +576,22 @@ func (c *Collection) GetListProperty(key ListKey) ListPropertyFn {
 			return key.DefaultList()
 		}
 		c.logValue(key, filters, val, key.DefaultValue(), reflect.DeepEqual)
+		return val
+	}
+}
+
+func (c *Collection) GetStringPropertyFilteredByRatelimitKey(key StringKey) StringPropertyWithRatelimitKeyFilter {
+	return func(ratelimitKey string) string {
+		filters := c.toFilterMap(RatelimitKeyFilter(ratelimitKey))
+		val, err := c.client.GetStringValue(
+			key,
+			filters,
+		)
+		if err != nil {
+			c.logError(key, filters, err)
+			return key.DefaultString()
+		}
+		c.logValue(key, filters, val, key.DefaultValue(), stringCompareEquals)
 		return val
 	}
 }

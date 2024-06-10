@@ -59,6 +59,8 @@ const (
 	host                   = "host"
 	pollerIsolationGroup   = "poller_isolation_group"
 	asyncWFRequestType     = "async_wf_request_type"
+	globalRatelimitKey     = "global_ratelimit_key"
+	globalRatelimitType    = "global_ratelimit_type"
 
 	allValue     = "all"
 	unknownValue = "_unknown_"
@@ -240,6 +242,15 @@ func PollerIsolationGroupTag(value string) Tag {
 // AsyncWFRequestTypeTag returns a new AsyncWFRequestTypeTag tag
 func AsyncWFRequestTypeTag(value string) Tag {
 	return metricWithUnknown(asyncWFRequestType, value)
+}
+
+func GlobalRatelimitKeyTag(value string) Tag {
+	return simpleMetric{key: globalRatelimitKey, value: value}
+}
+
+// "limit usage type" being reported, e.g. global / fallback / actual
+func GlobalRatelimitTypeTag(value string) Tag {
+	return simpleMetric{key: globalRatelimitType, value: value}
 }
 
 // PartitionConfigTags returns a list of partition config tags

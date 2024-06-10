@@ -71,10 +71,10 @@ func TestLifecycleBasics(t *testing.T) {
 }
 
 func TestCollectionLimitersCollectMetrics(t *testing.T) {
-	fallback := quotas.NewSimpleDynamicRateLimiterFactory(func(domain string) int {
+	fallbackLimiters := quotas.NewSimpleDynamicRateLimiterFactory(func(domain string) int {
 		return 1
 	})
-	c := New(fallback, func(opts ...dynamicconfig.FilterOption) time.Duration {
+	c := New(fallbackLimiters, func(opts ...dynamicconfig.FilterOption) time.Duration {
 		return time.Second
 	}, testlogger.New(t), metrics.NewNoopMetricsClient())
 	// not starting as it's not currently necessary.  it should not affect this test.
@@ -87,20 +87,20 @@ func TestCollectionLimitersCollectMetrics(t *testing.T) {
 	}
 	events := make(map[string]data)
 	c.limits.Range(func(k string, v *internal.FallbackLimiter) bool {
-		allowed, rejected, fallback := v.Collect()
+		_, _, actual, usingFallback := v.Collect()
 		events[k] = data{
-			allowed:  allowed,
-			rejected: rejected,
-			fallback: fallback,
+			allowed:  actual.Allowed,
+			rejected: actual.Rejected,
+			fallback: usingFallback,
 		}
 		return true
 	})
 
-	assert.Len(t, events, 1, "unexpected number of limiters exist, should be just the one that was called")
-	testevent := events["test"]
-	assert.Equalf(t, data{
-		allowed:  1,
-		rejected: 0,
-		fallback: true, // fallback is always used because there have been no updates
-	}, testevent, "should have observed one allowed request on the fallback, got: %#v", testevent)
+	assert.Equalf(t, map[string]data{
+		"test": data{
+			allowed:  1,
+			rejected: 0,
+			fallback: true, // fallback is always used because there have been no updates
+		},
+	}, events, "should have observed one allowed request on the fallback")
 }

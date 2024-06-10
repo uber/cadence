@@ -61,6 +61,8 @@ type (
 		ctxCancel func()
 		stopped   chan struct{} // closed when stopping is complete
 
+		keyModes dynamicconfig.StringPropertyWithRatelimitKeyFilter
+
 		// now exists largely for tests, elsewhere it is always time.Now
 		timesource clock.TimeSource
 	}
@@ -82,6 +84,7 @@ type (
 func New(
 	fallback quotas.LimiterFactory,
 	updateInterval dynamicconfig.DurationPropertyFn,
+	keyModes dynamicconfig.StringPropertyWithRatelimitKeyFilter,
 	logger log.Logger,
 	met metrics.Client,
 ) *Collection {
@@ -93,8 +96,9 @@ func New(
 		limits:         contents,
 		updateInterval: updateInterval,
 
-		logger: logger.WithTags(tag.ComponentGlobalRatelimiter),
-		scope:  met.Scope(metrics.FrontendGlobalRatelimiter),
+		logger:   logger.WithTags(tag.ComponentGlobalRatelimiter),
+		scope:    met.Scope(metrics.FrontendGlobalRatelimiter),
+		keyModes: keyModes,
 
 		ctx:       ctx,
 		ctxCancel: cancel,
@@ -144,6 +148,14 @@ func (c *Collection) OnStop(ctx context.Context) error {
 }
 
 func (c *Collection) For(key string) Limiter {
+	TODO: need the key mapper to continue.  blaaah.  so much stuff to do at the same time.
+	right here I should be leaning on the fallback collection (not limiter) if it is not shadowing.
+	that way fallback truly is "fallback" and does not even trigger dual-collection.
+		so like 5 modes?
+		- disable (use fallback collection, ignore everything)
+		- fallback (use this code, but do not submit anything)
+		- fallback-shadow (use this code, submit everything, but rely on fallback for behavior)
+		- global, global-shadow
 	return c.limits.Load(key)
 }
 
@@ -175,16 +187,20 @@ func (c *Collection) backgroundUpdateLoop() {
 			usage := make(map[string]calls, capacity)
 			fallbacks, globals := 0, 0
 			c.limits.Range(func(k string, v *internal.FallbackLimiter) bool {
-				allowed, rejected, usingFallback := v.Collect()
+				limit, fallback, actual, usingFallback := v.Collect()
 				if usingFallback {
 					fallbacks++
 				} else {
 					globals++
 				}
 				usage[k] = calls{
-					allowed:  allowed,
-					rejected: rejected,
+					allowed:  actual.Allowed,
+					rejected: actual.Rejected,
 				}
+				c.sendMetrics(k, "global", limit)      // for shadow verification
+				c.sendMetrics(k, "fallback", fallback) // for shadow verification
+				c.sendMetrics(k, "actual", actual)     // for user-side behavior monitoring
+
 				return true
 			})
 			// track how often we're using fallbacks vs non-fallbacks.
@@ -198,6 +214,15 @@ func (c *Collection) backgroundUpdateLoop() {
 			lastGatherTime = now
 		}
 	}
+}
+
+func (c *Collection) sendMetrics(globalKey string, limitType string, usage internal.UsageMetrics) {
+	scope := c.scope.Tagged(
+		metrics.GlobalRatelimitKeyTag(globalKey),
+		metrics.GlobalRatelimitTypeTag(limitType),
+	)
+	scope.AddCounter(metrics.GlobalRatelimiterAllowedRequestsCount, int64(usage.Allowed))
+	scope.AddCounter(metrics.GlobalRatelimiterRejectedRequestsCount, int64(usage.Rejected))
 }
 
 // doUpdate pushes usage data to aggregators

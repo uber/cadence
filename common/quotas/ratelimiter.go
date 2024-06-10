@@ -116,6 +116,9 @@ func (rl *RateLimiter) storeLimiter(maxDispatchPerSecond *float64) {
 	if *maxDispatchPerSecond != 0 && burst <= rl.minBurst {
 		burst = rl.minBurst
 	}
+	// TODO: ... after further reading, this is stranger than it seems.
+	// ratelimiters are safe to concurrently mutate, this could just set limit/burst.
+	// seems like a decent chance it'd perform better too.
 	limiter := rate.NewLimiter(rate.Limit(*maxDispatchPerSecond), burst)
 	rl.goRateLimiter.Store(limiter)
 }

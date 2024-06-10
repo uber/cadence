@@ -77,10 +77,13 @@ type (
 		//
 		// changing them to pointers will not change any semantics, so that should be fine if it becomes needed.
 
-		// accepted-request usage counter
-		accepted atomic.Int64
-		// rejected-request usage counter
-		rejected atomic.Int64
+		// TODO: when quotas.Limiter moves to clock.Ratelimiter, these counters would likely fit better in a clock.Ratelimiter wrapper per Limiter.
+		// there isn't a shared usable interface between them right now though.
+
+		fallbackUsage atomicUsage
+		limitUsage    atomicUsage
+		actualUsage   atomicUsage
+
 		// number of failed updates, for deciding when to use fallback
 		failedUpdates atomic.Int64
 
@@ -96,7 +99,29 @@ type (
 		// to avoid undesired combinations when they interleave.
 		limit *rate.Limiter
 	}
+
+	atomicUsage struct {
+		allowed, rejected atomic.Int64
+	}
+
+	UsageMetrics struct {
+		Allowed, Rejected int
+	}
 )
+
+func (a *atomicUsage) Count(allowed bool) {
+	if allowed {
+		a.allowed.Add(1)
+	} else {
+		a.rejected.Add(1)
+	}
+}
+func (a *atomicUsage) Collect() UsageMetrics {
+	return UsageMetrics{
+		Allowed:  int(a.allowed.Swap(0)),
+		Rejected: int(a.rejected.Swap(0)),
+	}
+}
 
 const (
 	// when failed updates exceeds this value, use the fallback
@@ -121,13 +146,14 @@ func NewFallbackLimiter(fallback Limiter) *FallbackLimiter {
 	return l
 }
 
-// Collect returns the current accepted/rejected values, and resets them to zero.
+// Collect returns the current allowed/rejected values, and resets them to zero.
 // Small bits of imprecise counting / time-bucketing due to concurrent limiting is expected and allowed,
 // as it should be more than small enough in practice to not matter.
-func (b *FallbackLimiter) Collect() (accepted int, rejected int, usingFallback bool) {
-	accepted = int(b.accepted.Swap(0))
-	rejected = int(b.rejected.Swap(0))
-	return accepted, rejected, b.useFallback()
+func (b *FallbackLimiter) Collect() (limit, fallback, actual UsageMetrics, usingFallback bool) {
+	limit = b.limitUsage.Collect()
+	fallback = b.fallbackUsage.Collect()
+	actual = b.actualUsage.Collect()
+	return limit, fallback, actual, b.useFallback()
 }
 
 func (b *FallbackLimiter) useFallback() bool {
@@ -138,6 +164,7 @@ func (b *FallbackLimiter) useFallback() bool {
 }
 
 // Update adjusts the underlying "main" ratelimit, and resets the fallback fuse.
+// This implies switching to the "main" limiter - if that is not desired, call Reset() immediately after.
 func (b *FallbackLimiter) Update(rps float64) {
 	// caution: order here matters, to prevent potentially-old limiter values from being used
 	// before they are updated.
@@ -178,19 +205,20 @@ func (b *FallbackLimiter) Reset() {
 
 // Allow returns true if a request is allowed right now.
 func (b *FallbackLimiter) Allow() bool {
-	var allowed bool
-	if b.useFallback() {
-		allowed = b.fallback.Allow()
-	} else {
-		allowed = b.limit.Allow()
-	}
+	// call and track both so limiters are "warm" when switching,
+	// and so shadowing-mode metrics can be collected.
+	limitAllowed := b.limit.Allow()
+	fallbackAllowed := b.fallback.Allow()
 
-	if allowed {
-		b.accepted.Add(1)
-	} else {
-		b.rejected.Add(1)
+	b.limitUsage.Count(limitAllowed)
+	b.fallbackUsage.Count(fallbackAllowed)
+
+	if b.useFallback() {
+		b.actualUsage.Count(fallbackAllowed)
+		return fallbackAllowed
 	}
-	return allowed
+	b.actualUsage.Count(limitAllowed)
+	return limitAllowed
 }
 
 // intentionally shadows builtin max, so it can simply be deleted when 1.21 is adopted

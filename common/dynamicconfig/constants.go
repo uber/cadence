@@ -630,6 +630,16 @@ const (
 	// Default value: 10000
 	// Allowed filters: N/A
 	VisibilityArchivalQueryMaxPageSize
+	// FrontendGlobalRatelimiterMode controls what keys use global vs fallback behavior,
+	// and whether shadowing is enabled.  This is only available for frontend usage for now.
+	//
+	// "x-shadow" means "use x, and also shadow the other".
+	//
+	// KeyName: frontend.GlobalRatelimiterMode
+	// Value type: string enum: "fallback", "global", "fallback-shadow", or "global-shadow"
+	// Default value: "fallback"
+	// Allowed filters: RatelimitKey (on global key, e.g. prefixed by collection name)
+	FrontendGlobalRatelimiterMode
 
 	// key for matching
 
