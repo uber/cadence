@@ -102,7 +102,7 @@ func ConvertSearchResultToVisibilityRecord(hit []interface{}, columnNames []stri
 	}
 
 	// if memo is empty, set it to nil
-	if memo != nil && memo.GetData() == nil {
+	if memo != nil && len(memo.GetData()) == 0 {
 		memo = nil
 	}
 
