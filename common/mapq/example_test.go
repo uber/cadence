@@ -1,3 +1,25 @@
+// The MIT License (MIT)
+
+// Copyright (c) 2017-2020 Uber Technologies Inc.
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package mapq
 
 import (
@@ -6,26 +28,34 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/common/mapq/types"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/playground/mapq/types"
 )
 
 func TestExample(t *testing.T) {
+	persister := &InMemoryPersister{}
 	cl, err := New(
 		WithConsumerFactory(&NoOpConsumerFactory{}),
-		WithPersister(&InMemoryPersister{}),
+		WithPersister(persister),
 		WithPartitions([]string{"type", "sub-type", "domain"}),
 		WithPolicies([]types.NodePolicy{
-			// level 0: split by type
+			// level 0: default policy for root (splitted by type)
 			{
-				Path: "",
+				Path: "*",
 				SplitPolicy: &types.SplitPolicy{
 					PredefinedSplits: []any{"timer", "transfer"},
 				},
 			},
+			// level 1: default policy (splitted by sub-type)
+			{
+				Path: "*/.",
+				SplitPolicy: &types.SplitPolicy{
+					PredefinedSplits: []any{},
+				},
+			},
 			// level 1: timer node
 			{
-				Path: "/timer",
+				Path: "*/timer",
 				SplitPolicy: &types.SplitPolicy{
 					PredefinedSplits: []any{
 						persistence.TaskTypeDeleteHistoryEvent,
@@ -34,7 +64,7 @@ func TestExample(t *testing.T) {
 			},
 			// level 1: transfer node
 			{
-				Path: "/transfer",
+				Path: "*/transfer",
 				SplitPolicy: &types.SplitPolicy{
 					PredefinedSplits: []any{
 						persistence.TransferTaskTypeStartChildExecution,
@@ -43,12 +73,13 @@ func TestExample(t *testing.T) {
 			},
 			// level 2: nodes per <type, sub-type> pairs
 			// - default 1000 RPS for per sub-type node
-			// - split by domain
+			// - split by domain. predefined split for d3 domain
 			// - allow top 5 domains to be split based on burst
 			{
-				Path: "/./.",
+				Path: "*/./.",
 				SplitPolicy: &types.SplitPolicy{
-					MaxNumChildren: 5, // allow top 4 tomains to be split. 5th domain will be catch-all
+					MaxNumChildren:   5, // allow top 4 tomains to be split. 5th domain will be catch-all
+					PredefinedSplits: []any{"d3"},
 					Strategy: &types.SplitStrategy{
 						SplitEnqueueRPSThreshold: 100,
 					},
@@ -58,7 +89,7 @@ func TestExample(t *testing.T) {
 			// - only allow 50 RPS
 			// - disable split policy
 			{
-				Path:           "/timer/4",
+				Path:           "*/timer/4",
 				DispatchPolicy: &types.DispatchPolicy{DispatchRPS: 50},
 				SplitPolicy:    &types.SplitPolicy{Disabled: true},
 			},
@@ -66,7 +97,7 @@ func TestExample(t *testing.T) {
 			// - only allow 10 RPS
 			// - disable split policy
 			{
-				Path:           "/transfer/4",
+				Path:           "*/transfer/4",
 				DispatchPolicy: &types.DispatchPolicy{DispatchRPS: 10},
 				SplitPolicy:    &types.SplitPolicy{Disabled: true},
 			},
@@ -74,14 +105,14 @@ func TestExample(t *testing.T) {
 			// - only allow 100 rps
 			// - disable split policy
 			{
-				Path:           "/././.",
+				Path:           "*/././.",
 				DispatchPolicy: &types.DispatchPolicy{DispatchRPS: 100},
 				SplitPolicy:    &types.SplitPolicy{Disabled: true},
 			},
 			// level 3: override policy for catch-all nodes at this level (all domains that don't have a specific node)
 			// this policy will override the 100 RPS policy defined above to give more RPS to catch-all nodes
 			{
-				Path:           "/././*",
+				Path:           "*/././*",
 				DispatchPolicy: &types.DispatchPolicy{DispatchRPS: 1000},
 				SplitPolicy:    &types.SplitPolicy{Disabled: true},
 			},
@@ -102,9 +133,15 @@ func TestExample(t *testing.T) {
 		newTimerItem("d1", time.Now(), persistence.TaskTypeDecisionTimeout),
 		newTimerItem("d1", time.Now(), persistence.TaskTypeActivityTimeout),
 		newTimerItem("d1", time.Now(), persistence.TaskTypeUserTimer),
+		newTimerItem("d3", time.Now(), persistence.TaskTypeUserTimer),
+		newTimerItem("d3", time.Now(), persistence.TaskTypeUserTimer),
 	})
 	if err != nil {
 		panic(err)
+	}
+
+	if len(persister.items) != 5 {
+		panic(fmt.Errorf("expected 5 items in persister, got %v", len(persister.items)))
 	}
 
 	err = cl.Enqueue(context.Background(), []types.Item{
@@ -118,14 +155,21 @@ func TestExample(t *testing.T) {
 		panic(err)
 	}
 
+	if len(persister.items) != 10 {
+		panic(fmt.Errorf("expected 10 items in persister, got %v", len(persister.items)))
+	}
+
 }
 
 var _ types.ConsumerFactory = (*NoOpConsumerFactory)(nil)
 
 type NoOpConsumerFactory struct{}
 
-func (f *NoOpConsumerFactory) New(context.Context, types.ItemPartitions) types.Consumer {
-	return &NoOpConsumer{}
+func (f *NoOpConsumerFactory) New(types.ItemPartitions) (types.Consumer, error) {
+	return &NoOpConsumer{}, nil
+}
+func (f *NoOpConsumerFactory) Stop(context.Context) error {
+	return nil
 }
 
 type NoOpConsumer struct{}
@@ -150,6 +194,16 @@ type InMemoryPersister struct {
 
 func (p *InMemoryPersister) Persist(ctx context.Context, items []types.ItemToPersist) error {
 	fmt.Printf("persisting %v items\n", len(items))
+	for _, item := range items {
+		partitionsKV := map[string]any{}
+		actualKV := map[string]any{}
+		for _, k := range item.GetPartitions() {
+			partitionsKV[k] = item.GetPartitionValue(k)
+			actualKV[k] = item.GetAttribute(k)
+		}
+		fmt.Printf("item attributes: %v, partitions: %v\n", actualKV, partitionsKV)
+	}
+	p.items = append(p.items, items...)
 	return nil
 }
 

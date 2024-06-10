@@ -1,3 +1,25 @@
+// The MIT License (MIT)
+
+// Copyright (c) 2017-2020 Uber Technologies Inc.
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package types
 
 import (
@@ -24,13 +46,19 @@ func (npc NodePolicyCollection) GetMergedPolicyForNode(path string) (NodePolicy,
 	for _, policy := range npc.policies {
 		pathParts := strings.Split(path, "/")
 		plcPathParts := strings.Split(policy.Path, "/")
-		if len(pathParts) != len(plcPathParts) {
+		length := len(pathParts)
+		if len(plcPathParts) <= length {
+			length = len(plcPathParts)
+		} else {
+			// if policy path is longer than the node path then it can't be a match
 			continue
 		}
 
 		match := true
-		for i, part := range pathParts {
-			if part == "." || pathParts[i] == "." || part == pathParts[i] {
+		for i := 0; i < length; i++ {
+			pathPart := pathParts[i]
+			plcPathPart := plcPathParts[i]
+			if pathPart == "." || plcPathPart == "." || pathPart == plcPathPart {
 				continue
 			}
 			match = false
@@ -46,6 +74,9 @@ func (npc NodePolicyCollection) GetMergedPolicyForNode(path string) (NodePolicy,
 			return result, fmt.Errorf("failed to merge policies: %w", err)
 		}
 	}
+
+	// set the path in the result
+	result.Path = path
 	return result, nil
 }
 
@@ -92,7 +123,7 @@ func sortPolicies(policies []NodePolicy) {
 			}
 		}
 
-		// If parts have same precedence then jusr return the order
+		// If parts have same precedence then just return the order
 		return i < j
 	})
 }
