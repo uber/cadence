@@ -55,7 +55,8 @@ type (
 		logger log.Logger
 		scope  metrics.Scope
 
-		limits *internal.AtomicMap[string, *internal.FallbackLimiter]
+		limits   *internal.AtomicMap[string, *internal.FallbackLimiter]
+		fallback *quotas.Collection
 
 		ctx       context.Context // context used for background operations, canceled when stopping
 		ctxCancel func()
@@ -82,18 +83,19 @@ type (
 )
 
 func New(
-	fallback quotas.LimiterFactory,
+	fallback *quotas.Collection,
 	updateInterval dynamicconfig.DurationPropertyFn,
 	keyModes dynamicconfig.StringPropertyWithRatelimitKeyFilter,
 	logger log.Logger,
 	met metrics.Client,
 ) *Collection {
 	contents := internal.NewAtomicMap(func(key string) *internal.FallbackLimiter {
-		return internal.NewFallbackLimiter(fallback.GetLimiter(key))
+		return internal.NewFallbackLimiter(fallback.For(key))
 	})
 	ctx, cancel := context.WithCancel(context.Background())
 	c := &Collection{
 		limits:         contents,
+		fallback:       fallback,
 		updateInterval: updateInterval,
 
 		logger:   logger.WithTags(tag.ComponentGlobalRatelimiter),
@@ -148,14 +150,19 @@ func (c *Collection) OnStop(ctx context.Context) error {
 }
 
 func (c *Collection) For(key string) Limiter {
-	TODO: need the key mapper to continue.  blaaah.  so much stuff to do at the same time.
-	right here I should be leaning on the fallback collection (not limiter) if it is not shadowing.
-	that way fallback truly is "fallback" and does not even trigger dual-collection.
-		so like 5 modes?
-		- disable (use fallback collection, ignore everything)
-		- fallback (use this code, but do not submit anything)
-		- fallback-shadow (use this code, submit everything, but rely on fallback for behavior)
-		- global, global-shadow
+	mode := c.keyModes(key)
+	if mode == "disable" {
+		// pass through to the fallback, as if this collection did not exist.
+		// this means usage cannot be collected, so changing to or from "disable"
+		// may allow a burst of requests beyond intended limits.
+		//
+		// this is largely intended for safety during initial rollouts, not
+		// normal use - normally fallback or global should be used.
+		// "fallback" SHOULD behave the same, but with added monitoring, and
+		// the ability to warm caches in either direction before switching.
+		return c.fallback.For(key)
+	}
+	// else this collection is used
 	return c.limits.Load(key)
 }
 
