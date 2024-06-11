@@ -6,10 +6,11 @@ verify_no_files_changed () {
   # intentionally capture stderr, so status-errors are also PR-failing.
   # in particular this catches "dubious ownership" failures, which otherwise
   # do not fail this check and the $() hides the exit code.
-  if [ -n "$(git status --porcelain  2>&1)" ]; then
-    echo "There file changes after applying your diff and performing a build."
-    echo "Please run this command and commit the changes:"
-    echo "\tmake tidy && make copyright && make go-generate && make fmt && make lint"
+  NUM_FILES_CHANGED=$(git status --porcelain 2>&1 | wc -l)
+  if [[ $NUM_FILES_CHANGED -ne 0 ]]; then
+    printf "There file changes after applying your diff and performing a build."
+    printf "Please run this command and commit the changes:"
+    printf "\tmake tidy && make copyright && make go-generate && make fmt && make lint"
     git status --porcelain
     git --no-pager diff
     exit 1
@@ -21,6 +22,7 @@ make tidy
 make copyright
 make fmt
 make lint
+
 verify_no_files_changed
 
 # Run go-generate after the fast checks, to avoid unnecessary waiting
@@ -30,4 +32,5 @@ make go-generate
 make copyright
 make fmt
 make lint
+
 verify_no_files_changed
