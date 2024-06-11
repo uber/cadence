@@ -22,11 +22,13 @@ package task
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -51,7 +53,7 @@ type (
 	transferTaskExecutorBase struct {
 		shard          shard.Context
 		archiverClient archiver.Client
-		executionCache *execution.Cache
+		executionCache execution.Cache
 		logger         log.Logger
 		metricsClient  metrics.Client
 		matchingClient matching.Client
@@ -64,7 +66,7 @@ type (
 func newTransferTaskExecutorBase(
 	shard shard.Context,
 	archiverClient archiver.Client,
-	executionCache *execution.Cache,
+	executionCache execution.Cache,
 	logger log.Logger,
 	config *config.Config,
 ) *transferTaskExecutorBase {
@@ -395,6 +397,25 @@ func getWorkflowMemo(
 		return nil
 	}
 	return &types.Memo{Fields: memo}
+}
+
+func appendContextHeaderToSearchAttributes(attr, context map[string][]byte, allowedKeys map[string]interface{}) map[string][]byte {
+	for k, v := range context {
+		key := fmt.Sprintf(definition.HeaderFormat, k)
+		if _, ok := attr[key]; ok { // skip if key already exists
+			continue
+		}
+		if _, allowed := allowedKeys[key]; !allowed { // skip if not allowed
+			continue
+		}
+		val := make([]byte, len(v))
+		copy(val, v)
+		if attr == nil {
+			attr = make(map[string][]byte)
+		}
+		attr[key] = val
+	}
+	return attr
 }
 
 func copySearchAttributes(

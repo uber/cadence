@@ -56,7 +56,7 @@ type (
 		mockDomainCache  *cache.MockDomainCache
 		mockExecutionMgr *mocks.ExecutionManager
 		mockHistoryV2Mgr *mocks.HistoryV2Manager
-		executionCache   *execution.Cache
+		executionCache   execution.Cache
 
 		executor Executor
 	}

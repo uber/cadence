@@ -232,6 +232,17 @@ func (p *visibilityManager) ListClosedWorkflowExecutionsByStatus(
 	return p.persistence.ListClosedWorkflowExecutionsByStatus(ctx, request)
 }
 
+func (p *visibilityManager) ListAllWorkflowExecutions(
+	ctx context.Context,
+	request *persistence.ListAllWorkflowExecutionsRequest,
+) (*persistence.ListWorkflowExecutionsResponse, error) {
+	if err := p.tryConsumeListToken(request.Domain, "ListAllWorkflowExecutions"); err != nil {
+		return nil, err
+	}
+
+	return p.persistence.ListAllWorkflowExecutions(ctx, request)
+}
+
 func (p *visibilityManager) RecordWorkflowExecutionUninitialized(
 	ctx context.Context,
 	request *persistence.RecordWorkflowExecutionUninitializedRequest,

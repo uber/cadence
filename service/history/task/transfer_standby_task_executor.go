@@ -51,7 +51,7 @@ type (
 func NewTransferStandbyTaskExecutor(
 	shard shard.Context,
 	archiverClient archiver.Client,
-	executionCache *execution.Cache,
+	executionCache execution.Cache,
 	historyResender ndc.HistoryResender,
 	logger log.Logger,
 	clusterName string,
@@ -483,7 +483,6 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 	startTimestamp := startEvent.GetTimestamp()
 	executionTimestamp := getWorkflowExecutionTimestamp(mutableState, startEvent)
 	visibilityMemo := getWorkflowMemo(executionInfo.Memo)
-	searchAttr := copySearchAttributes(executionInfo.SearchAttributes)
 	isCron := len(executionInfo.CronSchedule) > 0
 	updateTimestamp := t.shard.GetTimeSource().Now()
 
@@ -492,6 +491,13 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 		return err
 	}
 	numClusters := (int16)(len(domainEntry.GetReplicationConfig().Clusters))
+
+	searchAttr := copySearchAttributes(executionInfo.SearchAttributes)
+	if t.config.EnableContextHeaderInVisibility(domainEntry.GetInfo().Name) {
+		if attributes := startEvent.GetWorkflowExecutionStartedEventAttributes(); attributes != nil && attributes.Header != nil {
+			searchAttr = appendContextHeaderToSearchAttributes(searchAttr, attributes.Header.Fields, t.config.ValidSearchAttributes())
+		}
+	}
 
 	if isRecordStart {
 		workflowStartedScope.IncCounter(metrics.WorkflowStartedCount)

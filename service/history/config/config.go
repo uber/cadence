@@ -302,6 +302,9 @@ type Config struct {
 	EnableConsistentQueryByDomain dynamicconfig.BoolPropertyFnWithDomainFilter
 	MaxBufferedQueryCount         dynamicconfig.IntPropertyFn
 
+	// EnableContextHeaderInVisibility whether to enable indexing context header in visibility
+	EnableContextHeaderInVisibility dynamicconfig.BoolPropertyFnWithDomainFilter
+
 	EnableCrossClusterEngine              dynamicconfig.BoolPropertyFn
 	EnableCrossClusterOperationsForDomain dynamicconfig.BoolPropertyFnWithDomainFilter
 
@@ -570,6 +573,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, s
 
 		EnableConsistentQuery:                 dc.GetBoolProperty(dynamicconfig.EnableConsistentQuery),
 		EnableConsistentQueryByDomain:         dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableConsistentQueryByDomain),
+		EnableContextHeaderInVisibility:       dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableContextHeaderInVisibility),
 		EnableCrossClusterEngine:              dc.GetBoolProperty(dynamicconfig.EnableCrossClusterEngine),
 		EnableCrossClusterOperationsForDomain: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableCrossClusterOperationsForDomain),
 		MaxBufferedQueryCount:                 dc.GetIntProperty(dynamicconfig.MaxBufferedQueryCount),
@@ -624,6 +628,9 @@ func NewForTestByShardNumber(shardNumber int) *Config {
 	panicIfErr(inMem.UpdateValue(dynamicconfig.HistoryLongPollExpirationInterval, 10*time.Second))
 	panicIfErr(inMem.UpdateValue(dynamicconfig.EnableConsistentQueryByDomain, true))
 	panicIfErr(inMem.UpdateValue(dynamicconfig.ReplicationTaskProcessorHostQPS, float64(10000)))
+	panicIfErr(inMem.UpdateValue(dynamicconfig.ReplicationTaskProcessorCleanupInterval, 20*time.Millisecond))
+	panicIfErr(inMem.UpdateValue(dynamicconfig.ReplicatorTaskDeleteBatchSize, 50))
+	panicIfErr(inMem.UpdateValue(dynamicconfig.ShardSyncMinInterval, 20*time.Millisecond))
 	panicIfErr(inMem.UpdateValue(dynamicconfig.ReplicationTaskProcessorShardQPS, float64(10000)))
 	panicIfErr(inMem.UpdateValue(dynamicconfig.ReplicationTaskProcessorStartWait, time.Nanosecond))
 	panicIfErr(inMem.UpdateValue(dynamicconfig.EnableActivityLocalDispatchByDomain, true))
@@ -651,6 +658,9 @@ func NewForTestByShardNumber(shardNumber int) *Config {
 	config.LongPollExpirationInterval = dc.GetDurationPropertyFilteredByDomain(dynamicconfig.HistoryLongPollExpirationInterval)
 	config.EnableConsistentQueryByDomain = dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableConsistentQueryByDomain)
 	config.ReplicationTaskProcessorHostQPS = dc.GetFloat64Property(dynamicconfig.ReplicationTaskProcessorHostQPS)
+	config.ReplicationTaskProcessorCleanupInterval = dc.GetDurationPropertyFilteredByShardID(dynamicconfig.ReplicationTaskProcessorCleanupInterval)
+	config.ReplicatorTaskDeleteBatchSize = dc.GetIntProperty(dynamicconfig.ReplicatorTaskDeleteBatchSize)
+	config.ShardSyncMinInterval = dc.GetDurationProperty(dynamicconfig.ShardSyncMinInterval)
 	config.ReplicationTaskProcessorShardQPS = dc.GetFloat64Property(dynamicconfig.ReplicationTaskProcessorShardQPS)
 	config.ReplicationTaskProcessorStartWait = dc.GetDurationPropertyFilteredByShardID(dynamicconfig.ReplicationTaskProcessorStartWait)
 	config.EnableActivityLocalDispatchByDomain = dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableActivityLocalDispatchByDomain)

@@ -21,16 +21,28 @@
 package execution
 
 import (
+	"errors"
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/log/testlogger"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/testing/testdatagen/idlfuzzedtestdata"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/testdata"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/constants"
+	"github.com/uber/cadence/service/history/events"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 func TestCopyActivityInfo(t *testing.T) {
@@ -315,4 +327,259 @@ func TestConvertWorkflowRequests(t *testing.T) {
 	}
 
 	assert.ElementsMatch(t, expectedOutputs, convertWorkflowRequests(inputs))
+}
+
+func TestCreatePersistenceMutableState(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockShardContext := shard.NewMockContext(ctrl)
+	logger := testlogger.New(t)
+	mockEventsCache := events.NewMockCache(ctrl)
+	mockDomainCache := cache.NewMockDomainCache(ctrl)
+	mockShardContext.EXPECT().GetClusterMetadata().Return(constants.TestClusterMetadata).Times(2)
+	mockShardContext.EXPECT().GetEventsCache().Return(mockEventsCache)
+	mockShardContext.EXPECT().GetConfig().Return(config.NewForTest())
+	mockShardContext.EXPECT().GetTimeSource().Return(clock.NewMockedTimeSource())
+	mockShardContext.EXPECT().GetMetricsClient().Return(metrics.NewClient(tally.NoopScope, metrics.History))
+	mockShardContext.EXPECT().GetDomainCache().Return(mockDomainCache)
+
+	builder := newMutableStateBuilder(mockShardContext, logger, constants.TestLocalDomainEntry)
+	builder.pendingActivityInfoIDs[0] = &persistence.ActivityInfo{}
+	builder.pendingTimerInfoIDs["some-key"] = &persistence.TimerInfo{}
+	builder.pendingSignalInfoIDs[0] = &persistence.SignalInfo{}
+	builder.pendingChildExecutionInfoIDs[0] = &persistence.ChildExecutionInfo{}
+	builder.bufferedEvents = []*types.HistoryEvent{{}}
+	builder.updateBufferedEvents = []*types.HistoryEvent{{}}
+	builder.versionHistories = &persistence.VersionHistories{CurrentVersionHistoryIndex: 0, Histories: []*persistence.VersionHistory{}}
+	builder.pendingRequestCancelInfoIDs[0] = &persistence.RequestCancelInfo{}
+	builder.decisionTaskManager.(*mutableStateDecisionTaskManagerImpl).HasInFlightDecision()
+	builder.executionInfo.DecisionStartedID = 1
+
+	mutableState := CreatePersistenceMutableState(builder)
+	assert.NotNil(t, mutableState)
+	assert.Equal(t, builder.executionInfo, mutableState.ExecutionInfo)
+	assert.Equal(t, builder.pendingActivityInfoIDs, mutableState.ActivityInfos)
+	assert.Equal(t, builder.pendingSignalInfoIDs, mutableState.SignalInfos)
+	assert.Equal(t, builder.pendingTimerInfoIDs, mutableState.TimerInfos)
+	assert.Equal(t, builder.pendingRequestCancelInfoIDs, mutableState.RequestCancelInfos)
+	assert.Equal(t, len(builder.bufferedEvents)+len(builder.updateBufferedEvents), len(mutableState.BufferedEvents))
+}
+
+func TestGetChildExecutionDomainName(t *testing.T) {
+	t.Run("nonempty domain ID", func(t *testing.T) {
+		childInfo := &persistence.ChildExecutionInfo{DomainID: testdata.DomainID}
+		mockDomainCache := cache.NewMockDomainCache(gomock.NewController(t))
+		expected := testdata.DomainName
+		mockDomainCache.EXPECT().GetDomainName(childInfo.DomainID).Return(expected, nil)
+		name, err := GetChildExecutionDomainName(childInfo, mockDomainCache, constants.TestLocalDomainEntry)
+		require.NoError(t, err)
+		assert.Equal(t, expected, name)
+	})
+
+	t.Run("nonempty domain name", func(t *testing.T) {
+		childInfo := &persistence.ChildExecutionInfo{DomainNameDEPRECATED: testdata.DomainName}
+		parentDomainEntry := constants.TestLocalDomainEntry
+		mockDomainCache := cache.NewMockDomainCache(gomock.NewController(t))
+		name, err := GetChildExecutionDomainName(childInfo, mockDomainCache, parentDomainEntry)
+		require.NoError(t, err)
+		assert.Equal(t, testdata.DomainName, name)
+	})
+
+	t.Run("empty childInfo", func(t *testing.T) {
+		childInfo := &persistence.ChildExecutionInfo{}
+		parentDomainEntry := constants.TestLocalDomainEntry
+		mockDomainCache := cache.NewMockDomainCache(gomock.NewController(t))
+		name, err := GetChildExecutionDomainName(childInfo, mockDomainCache, parentDomainEntry)
+		require.NoError(t, err)
+		assert.Equal(t, parentDomainEntry.GetInfo().Name, name)
+	})
+}
+
+func TestGetChildExecutionDomainID(t *testing.T) {
+	t.Run("nonempty domain ID", func(t *testing.T) {
+		childInfo := &persistence.ChildExecutionInfo{DomainID: testdata.DomainID}
+		mockDomainCache := cache.NewMockDomainCache(gomock.NewController(t))
+		name, err := GetChildExecutionDomainID(childInfo, mockDomainCache, constants.TestLocalDomainEntry)
+		require.NoError(t, err)
+		assert.Equal(t, testdata.DomainID, name)
+	})
+
+	t.Run("nonempty domain name", func(t *testing.T) {
+		childInfo := &persistence.ChildExecutionInfo{DomainNameDEPRECATED: testdata.DomainName}
+		parentDomainEntry := constants.TestLocalDomainEntry
+		mockDomainCache := cache.NewMockDomainCache(gomock.NewController(t))
+		mockDomainCache.EXPECT().GetDomainID(testdata.DomainName).Return(testdata.DomainID, nil)
+		name, err := GetChildExecutionDomainID(childInfo, mockDomainCache, parentDomainEntry)
+		require.NoError(t, err)
+		assert.Equal(t, testdata.DomainID, name)
+	})
+
+	t.Run("empty childInfo", func(t *testing.T) {
+		childInfo := &persistence.ChildExecutionInfo{}
+		parentDomainEntry := constants.TestLocalDomainEntry
+		mockDomainCache := cache.NewMockDomainCache(gomock.NewController(t))
+		name, err := GetChildExecutionDomainID(childInfo, mockDomainCache, parentDomainEntry)
+		require.NoError(t, err)
+		assert.Equal(t, parentDomainEntry.GetInfo().ID, name)
+	})
+}
+
+func TestGetChildExecutionDomainEntry(t *testing.T) {
+	t.Run("nonempty domain ID", func(t *testing.T) {
+		childInfo := &persistence.ChildExecutionInfo{DomainID: testdata.DomainID}
+		mockDomainCache := cache.NewMockDomainCache(gomock.NewController(t))
+		expected := &cache.DomainCacheEntry{}
+		mockDomainCache.EXPECT().GetDomainByID(childInfo.DomainID).Return(expected, nil)
+		entry, err := GetChildExecutionDomainEntry(childInfo, mockDomainCache, constants.TestLocalDomainEntry)
+		require.NoError(t, err)
+		assert.Equal(t, expected, entry)
+	})
+
+	t.Run("nonempty domain name", func(t *testing.T) {
+		childInfo := &persistence.ChildExecutionInfo{DomainNameDEPRECATED: testdata.DomainName}
+		parentDomainEntry := constants.TestLocalDomainEntry
+		mockDomainCache := cache.NewMockDomainCache(gomock.NewController(t))
+		expected := &cache.DomainCacheEntry{}
+		mockDomainCache.EXPECT().GetDomain(childInfo.DomainNameDEPRECATED).Return(expected, nil)
+		entry, err := GetChildExecutionDomainEntry(childInfo, mockDomainCache, parentDomainEntry)
+		require.NoError(t, err)
+		assert.Equal(t, expected, entry)
+	})
+
+	t.Run("empty childInfo", func(t *testing.T) {
+		childInfo := &persistence.ChildExecutionInfo{}
+		parentDomainEntry := constants.TestLocalDomainEntry
+		mockDomainCache := cache.NewMockDomainCache(gomock.NewController(t))
+		entry, err := GetChildExecutionDomainEntry(childInfo, mockDomainCache, parentDomainEntry)
+		require.NoError(t, err)
+		assert.Equal(t, parentDomainEntry, entry)
+	})
+}
+
+func TestConvert(t *testing.T) {
+	t.Run("convertSyncActivityInfos", func(t *testing.T) {
+		activityInfos := map[int64]*persistence.ActivityInfo{1: {Version: 1, ScheduleID: 1}}
+		inputs := map[int64]struct{}{1: {}}
+		outputs := convertSyncActivityInfos(activityInfos, inputs)
+		assert.NotNil(t, outputs)
+		assert.Equal(t, 1, len(outputs))
+		assert.Equal(t, int64(1), outputs[0].(*persistence.SyncActivityTask).ScheduledID)
+		assert.Equal(t, int64(1), outputs[0].GetVersion())
+	})
+
+	t.Run("convertUpdateRequestCancelInfos", func(t *testing.T) {
+		key := int64(0)
+		inputs := map[int64]*persistence.RequestCancelInfo{key: {}}
+		outputs := convertUpdateRequestCancelInfos(inputs)
+		assert.NotNil(t, outputs)
+		assert.Equal(t, 1, len(outputs))
+		assert.Equal(t, inputs[key], outputs[0])
+	})
+
+	t.Run("convertPendingRequestCancelInfos", func(t *testing.T) {
+		key := int64(0)
+		inputs := map[int64]*persistence.RequestCancelInfo{key: {}}
+		outputs := convertPendingRequestCancelInfos(inputs)
+		assert.NotNil(t, outputs)
+		assert.Equal(t, 1, len(outputs))
+		assert.Equal(t, inputs[key], outputs[0])
+	})
+
+	t.Run("convertInt64SetToSlice", func(t *testing.T) {
+		key := int64(0)
+		inputs := map[int64]struct{}{key: {}}
+		outputs := convertInt64SetToSlice(inputs)
+		assert.NotNil(t, outputs)
+		assert.Equal(t, 1, len(outputs))
+		assert.Equal(t, key, outputs[0])
+	})
+
+	t.Run("convertUpdateChildExecutionInfos", func(t *testing.T) {
+		key := int64(0)
+		inputs := map[int64]*persistence.ChildExecutionInfo{key: {}}
+		outputs := convertUpdateChildExecutionInfos(inputs)
+		assert.NotNil(t, outputs)
+		assert.Equal(t, 1, len(outputs))
+		assert.Equal(t, inputs[key], outputs[0])
+	})
+
+	t.Run("convertUpdateSignalInfos", func(t *testing.T) {
+		key := int64(0)
+		inputs := map[int64]*persistence.SignalInfo{key: {}}
+		outputs := convertUpdateSignalInfos(inputs)
+		assert.NotNil(t, outputs)
+		assert.Equal(t, 1, len(outputs))
+		assert.Equal(t, inputs[key], outputs[0])
+	})
+}
+
+func TestScheduleDecision(t *testing.T) {
+	t.Run("mutable state has pending decision", func(t *testing.T) {
+		mockMutableState := NewMockMutableState(gomock.NewController(t))
+		mockMutableState.EXPECT().HasPendingDecision().Return(true)
+		err := ScheduleDecision(mockMutableState)
+		require.NoError(t, err)
+	})
+
+	t.Run("internal service error", func(t *testing.T) {
+		mockMutableState := NewMockMutableState(gomock.NewController(t))
+		mockMutableState.EXPECT().HasPendingDecision().Return(false)
+		mockMutableState.EXPECT().AddDecisionTaskScheduledEvent(false).Return(nil, errors.New("some error"))
+		err := ScheduleDecision(mockMutableState)
+		assert.NotNil(t, err)
+		assert.Equal(t, "Failed to add decision scheduled event.", err.Error())
+	})
+
+	t.Run("success", func(t *testing.T) {
+		mockMutableState := NewMockMutableState(gomock.NewController(t))
+		mockMutableState.EXPECT().HasPendingDecision().Return(false)
+		mockMutableState.EXPECT().AddDecisionTaskScheduledEvent(false).Return(nil, nil)
+		err := ScheduleDecision(mockMutableState)
+		require.NoError(t, err)
+	})
+}
+
+func TestFailDecision(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		mockMutableState := NewMockMutableState(gomock.NewController(t))
+		decision := &DecisionInfo{}
+		failureCause := new(types.DecisionTaskFailedCause)
+		mockMutableState.EXPECT().AddDecisionTaskFailedEvent(
+			decision.ScheduleID,
+			decision.StartedID,
+			*failureCause,
+			nil,
+			IdentityHistoryService,
+			"",
+			"",
+			"",
+			"",
+			int64(0),
+			"",
+		).Return(nil, nil)
+		mockMutableState.EXPECT().FlushBufferedEvents() // only on success
+		err := FailDecision(mockMutableState, decision, *failureCause)
+		require.NoError(t, err)
+	})
+
+	t.Run("failure", func(t *testing.T) {
+		mockMutableState := NewMockMutableState(gomock.NewController(t))
+		decision := &DecisionInfo{}
+		failureCause := new(types.DecisionTaskFailedCause)
+		mockMutableState.EXPECT().AddDecisionTaskFailedEvent(
+			decision.ScheduleID,
+			decision.StartedID,
+			*failureCause,
+			nil,
+			IdentityHistoryService,
+			"",
+			"",
+			"",
+			"",
+			int64(0),
+			"",
+		).Return(nil, errors.New("some error adding failed event"))
+		err := FailDecision(mockMutableState, decision, *failureCause)
+		assert.NotNil(t, err)
+		assert.Equal(t, "some error adding failed event", err.Error())
+	})
 }

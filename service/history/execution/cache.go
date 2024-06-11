@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination cache_mock.go
+
 package execution
 
 import (
@@ -40,12 +42,52 @@ import (
 	"github.com/uber/cadence/service/history/shard"
 )
 
+// Cache is a cache that holds workflow execution context
+type Cache interface {
+	cache.Cache
+
+	// GetOrCreateCurrentWorkflowExecution gets or creates workflow execution context for the current run
+	GetOrCreateCurrentWorkflowExecution(
+		ctx context.Context,
+		domainID string,
+		workflowID string,
+	) (Context, ReleaseFunc, error)
+
+	// GetAndCreateWorkflowExecution is for analyzing mutableState, it will try getting Context from cache
+	// and also load from database
+	GetAndCreateWorkflowExecution(
+		ctx context.Context,
+		domainID string,
+		execution types.WorkflowExecution,
+	) (Context, Context, ReleaseFunc, bool, error)
+
+	// GetOrCreateWorkflowExecutionForBackground gets or creates workflow execution context with background context
+	GetOrCreateWorkflowExecutionForBackground(
+		domainID string,
+		execution types.WorkflowExecution,
+	) (Context, ReleaseFunc, error)
+
+	// GetOrCreateWorkflowExecutionWithTimeout gets or creates workflow execution context with timeout
+	GetOrCreateWorkflowExecutionWithTimeout(
+		domainID string,
+		execution types.WorkflowExecution,
+		timeout time.Duration,
+	) (Context, ReleaseFunc, error)
+
+	// GetOrCreateWorkflowExecution gets or creates workflow execution context
+	GetOrCreateWorkflowExecution(
+		ctx context.Context,
+		domainID string,
+		execution types.WorkflowExecution,
+	) (Context, ReleaseFunc, error)
+}
+
 type (
 	// ReleaseFunc releases workflow execution context
 	ReleaseFunc func(err error)
 
 	// Cache caches workflow execution context
-	Cache struct {
+	cacheImpl struct {
 		cache.Cache
 		shard            shard.Context
 		executionManager persistence.ExecutionManager
@@ -67,7 +109,7 @@ const (
 )
 
 // NewCache creates a new workflow execution context cache
-func NewCache(shard shard.Context) *Cache {
+func NewCache(shard shard.Context) Cache {
 	opts := &cache.Options{}
 	config := shard.GetConfig()
 	opts.InitialCapacity = config.HistoryCacheInitialSize()
@@ -75,7 +117,7 @@ func NewCache(shard shard.Context) *Cache {
 	opts.Pin = true
 	opts.MaxCount = config.HistoryCacheMaxSize()
 
-	return &Cache{
+	return &cacheImpl{
 		Cache:            cache.New(opts),
 		shard:            shard,
 		executionManager: shard.GetExecutionManager(),
@@ -86,7 +128,7 @@ func NewCache(shard shard.Context) *Cache {
 }
 
 // GetOrCreateCurrentWorkflowExecution gets or creates workflow execution context for the current run
-func (c *Cache) GetOrCreateCurrentWorkflowExecution(
+func (c *cacheImpl) GetOrCreateCurrentWorkflowExecution(
 	ctx context.Context,
 	domainID string,
 	workflowID string,
@@ -115,7 +157,7 @@ func (c *Cache) GetOrCreateCurrentWorkflowExecution(
 
 // GetAndCreateWorkflowExecution is for analyzing mutableState, it will try getting Context from cache
 // and also load from database
-func (c *Cache) GetAndCreateWorkflowExecution(
+func (c *cacheImpl) GetAndCreateWorkflowExecution(
 	ctx context.Context,
 	domainID string,
 	execution types.WorkflowExecution,
@@ -157,7 +199,7 @@ func (c *Cache) GetAndCreateWorkflowExecution(
 
 // GetOrCreateWorkflowExecutionForBackground gets or creates workflow execution context with background context
 // currently only used in tests
-func (c *Cache) GetOrCreateWorkflowExecutionForBackground(
+func (c *cacheImpl) GetOrCreateWorkflowExecutionForBackground(
 	domainID string,
 	execution types.WorkflowExecution,
 ) (Context, ReleaseFunc, error) {
@@ -166,7 +208,7 @@ func (c *Cache) GetOrCreateWorkflowExecutionForBackground(
 }
 
 // GetOrCreateWorkflowExecutionWithTimeout gets or creates workflow execution context with timeout
-func (c *Cache) GetOrCreateWorkflowExecutionWithTimeout(
+func (c *cacheImpl) GetOrCreateWorkflowExecutionWithTimeout(
 	domainID string,
 	execution types.WorkflowExecution,
 	timeout time.Duration,
@@ -179,7 +221,7 @@ func (c *Cache) GetOrCreateWorkflowExecutionWithTimeout(
 }
 
 // GetOrCreateWorkflowExecution gets or creates workflow execution context
-func (c *Cache) GetOrCreateWorkflowExecution(
+func (c *cacheImpl) GetOrCreateWorkflowExecution(
 	ctx context.Context,
 	domainID string,
 	execution types.WorkflowExecution,
@@ -204,7 +246,7 @@ func (c *Cache) GetOrCreateWorkflowExecution(
 	)
 }
 
-func (c *Cache) getOrCreateWorkflowExecutionInternal(
+func (c *cacheImpl) getOrCreateWorkflowExecutionInternal(
 	ctx context.Context,
 	domainID string,
 	execution types.WorkflowExecution,
@@ -245,7 +287,7 @@ func (c *Cache) getOrCreateWorkflowExecutionInternal(
 	return workflowCtx, releaseFunc, nil
 }
 
-func (c *Cache) validateWorkflowExecutionInfo(
+func (c *cacheImpl) validateWorkflowExecutionInfo(
 	ctx context.Context,
 	domainID string,
 	execution *types.WorkflowExecution,
@@ -277,7 +319,7 @@ func (c *Cache) validateWorkflowExecutionInfo(
 	return nil
 }
 
-func (c *Cache) makeReleaseFunc(
+func (c *cacheImpl) makeReleaseFunc(
 	key definition.WorkflowIdentifier,
 	context Context,
 	forceClearContext bool,
@@ -305,7 +347,7 @@ func (c *Cache) makeReleaseFunc(
 	}
 }
 
-func (c *Cache) getCurrentExecutionWithRetry(
+func (c *cacheImpl) getCurrentExecutionWithRetry(
 	ctx context.Context,
 	request *persistence.GetCurrentExecutionRequest,
 ) (*persistence.GetCurrentExecutionResponse, error) {

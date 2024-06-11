@@ -111,6 +111,17 @@ func (c *meteredVisibilityManager) GetName() (s1 string) {
 	return c.wrapped.GetName()
 }
 
+func (c *meteredVisibilityManager) ListAllWorkflowExecutions(ctx context.Context, request *persistence.ListAllWorkflowExecutionsRequest) (lp1 *persistence.ListWorkflowExecutionsResponse, err error) {
+	op := func() error {
+		lp1, err = c.wrapped.ListAllWorkflowExecutions(ctx, request)
+		c.emptyMetric("VisibilityManager.ListAllWorkflowExecutions", request, lp1, err)
+		return err
+	}
+
+	err = c.call(metrics.PersistenceListAllWorkflowExecutionsScope, op, getCustomMetricTags(request)...)
+	return
+}
+
 func (c *meteredVisibilityManager) ListClosedWorkflowExecutions(ctx context.Context, request *persistence.ListWorkflowExecutionsRequest) (lp1 *persistence.ListWorkflowExecutionsResponse, err error) {
 	op := func() error {
 		lp1, err = c.wrapped.ListClosedWorkflowExecutions(ctx, request)

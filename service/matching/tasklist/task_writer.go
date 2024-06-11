@@ -33,7 +33,6 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/matching/config"
 )
 
@@ -44,7 +43,6 @@ type (
 	}
 
 	writeTaskRequest struct {
-		execution  *types.WorkflowExecution
 		taskInfo   *persistence.TaskInfo
 		responseCh chan<- *writeTaskResponse
 	}
@@ -121,16 +119,13 @@ func (w *taskWriter) isStopped() bool {
 	return atomic.LoadInt64(&w.stopped) == 1
 }
 
-func (w *taskWriter) appendTask(execution *types.WorkflowExecution,
-	taskInfo *persistence.TaskInfo) (*persistence.CreateTasksResponse, error) {
-
+func (w *taskWriter) appendTask(taskInfo *persistence.TaskInfo) (*persistence.CreateTasksResponse, error) {
 	if w.isStopped() {
 		return nil, errShutdown
 	}
 
 	ch := make(chan *writeTaskResponse)
 	req := &writeTaskRequest{
-		execution:  execution,
 		taskInfo:   taskInfo,
 		responseCh: ch,
 	}
@@ -225,14 +220,13 @@ writerLoop:
 				tasks := []*persistence.CreateTaskInfo{}
 				for i, req := range reqs {
 					tasks = append(tasks, &persistence.CreateTaskInfo{
-						TaskID:    taskIDs[i],
-						Execution: *req.execution,
-						Data:      req.taskInfo,
+						TaskID: taskIDs[i],
+						Data:   req.taskInfo,
 					})
 					maxReadLevel = taskIDs[i]
 				}
 
-				r, err := w.db.CreateTasks(tasks)
+				resp, err := w.db.CreateTasks(tasks)
 				err = w.handleErr(err)
 				if err != nil {
 					w.logger.Error("Persistent store operation failure",
@@ -247,12 +241,11 @@ writerLoop:
 					atomic.StoreInt64(&w.maxReadLevel, maxReadLevel)
 				}
 
-				w.sendWriteResponse(reqs, err, r)
+				w.sendWriteResponse(reqs, err, resp)
 			}
 		case <-w.stopCh:
 			// we don't close the appendCh here
-			// because that can cause on a send on closed
-			// channel panic on the appendTask()
+			// because that can cause "send on closed channel" panic on the appendTask()
 			break writerLoop
 		}
 	}

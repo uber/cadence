@@ -59,7 +59,7 @@ type (
 		mockExecutor     *MockExecutor
 		mockProcessor    *MockProcessor
 		mockRedispatcher *MockRedispatcher
-		executionCache   *execution.Cache
+		executionCache   execution.Cache
 	}
 )
 

@@ -157,7 +157,7 @@ func createTestTaskListManager(t *testing.T, logger log.Logger, controller *gomo
 }
 
 func createTestTaskListManagerWithConfig(t *testing.T, logger log.Logger, controller *gomock.Controller, cfg *config.Config) *taskListManagerImpl {
-	tm := NewTestTaskManager(t, logger)
+	tm := NewTestTaskManager(t, logger, clock.NewRealTimeSource())
 	mockPartitioner := partition.NewMockPartitioner(controller)
 	mockPartitioner.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil).AnyTimes()
 	mockDomainCache := cache.NewMockDomainCache(controller)
@@ -275,10 +275,6 @@ func TestCheckIdleTaskList(t *testing.T) {
 		runID := uuid.New()
 
 		addTaskParam := AddTaskParams{
-			Execution: &types.WorkflowExecution{
-				WorkflowID: workflowID,
-				RunID:      runID,
-			},
 			TaskInfo: &persistence.TaskInfo{
 				DomainID:               domainID,
 				WorkflowID:             workflowID,
@@ -328,10 +324,6 @@ func TestAddTaskStandby(t *testing.T) {
 	runID := "some random runID"
 
 	addTaskParam := AddTaskParams{
-		Execution: &types.WorkflowExecution{
-			WorkflowID: workflowID,
-			RunID:      runID,
-		},
 		TaskInfo: &persistence.TaskInfo{
 			DomainID:               domainID,
 			WorkflowID:             workflowID,
@@ -531,10 +523,6 @@ func TestTaskWriterShutdown(t *testing.T) {
 
 	// now attempt to add a task
 	addParams := AddTaskParams{
-		Execution: &types.WorkflowExecution{
-			WorkflowID: "workflow1",
-			RunID:      "run1",
-		},
 		TaskInfo: &persistence.TaskInfo{
 			DomainID:               "domainId",
 			RunID:                  "run1",
@@ -564,9 +552,9 @@ func TestTaskListManagerGetTaskBatch(t *testing.T) {
 	mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.CreateDomainCacheEntry("domainName"), nil).AnyTimes()
 	mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("domainName", nil).AnyTimes()
 	logger := testlogger.New(t)
-	tm := NewTestTaskManager(t, logger)
-	taskListID := NewTestTaskListID(t, "domainId", "tl", 0)
 	timeSource := clock.NewRealTimeSource()
+	tm := NewTestTaskManager(t, logger, timeSource)
+	taskListID := NewTestTaskListID(t, "domainId", "tl", 0)
 	cfg := defaultTestConfig()
 	cfg.RangeSize = rangeSize
 	tlMgr, err := NewManager(
@@ -593,10 +581,6 @@ func TestTaskListManagerGetTaskBatch(t *testing.T) {
 	for i := int64(0); i < taskCount; i++ {
 		scheduleID := i * 3
 		addParams := AddTaskParams{
-			Execution: &types.WorkflowExecution{
-				WorkflowID: "workflow1",
-				RunID:      "run1",
-			},
 			TaskInfo: &persistence.TaskInfo{
 				DomainID:               "domainId",
 				RunID:                  "run1",
@@ -730,7 +714,6 @@ func TestTaskExpiryAndCompletion(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run("", func(t *testing.T) {
-			maxTimeBetweenTaskDeletes = tc.maxTimeBtwnDeletes
 			controller := gomock.NewController(t)
 			mockPartitioner := partition.NewMockPartitioner(controller)
 			mockPartitioner.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil).AnyTimes()
@@ -738,12 +721,13 @@ func TestTaskExpiryAndCompletion(t *testing.T) {
 			mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.CreateDomainCacheEntry("domainName"), nil).AnyTimes()
 			mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("domainName", nil).AnyTimes()
 			logger := testlogger.New(t)
-			tm := NewTestTaskManager(t, logger)
-			taskListID := NewTestTaskListID(t, "domainId", "tl", 0)
 			timeSource := clock.NewRealTimeSource()
+			tm := NewTestTaskManager(t, logger, timeSource)
+			taskListID := NewTestTaskListID(t, "domainId", "tl", 0)
 			cfg := defaultTestConfig()
 			cfg.RangeSize = rangeSize
 			cfg.MaxTaskDeleteBatchSize = dynamicconfig.GetIntPropertyFilteredByTaskListInfo(tc.batchSize)
+			cfg.MaxTimeBetweenTaskDeletes = tc.maxTimeBtwnDeletes
 			// set idle timer check to a really small value to assert that we don't accidentally drop tasks while blocking
 			// on enqueuing a task to task buffer
 			cfg.IdleTasklistCheckInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
@@ -769,10 +753,6 @@ func TestTaskExpiryAndCompletion(t *testing.T) {
 			for i := int64(0); i < taskCount; i++ {
 				scheduleID := i * 3
 				addParams := AddTaskParams{
-					Execution: &types.WorkflowExecution{
-						WorkflowID: "workflow1",
-						RunID:      "run1",
-					},
 					TaskInfo: &persistence.TaskInfo{
 						DomainID:               "domainId",
 						RunID:                  "run1",

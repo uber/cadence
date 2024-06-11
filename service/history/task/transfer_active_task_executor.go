@@ -85,7 +85,7 @@ type (
 func NewTransferActiveTaskExecutor(
 	shard shard.Context,
 	archiverClient archiver.Client,
-	executionCache *execution.Cache,
+	executionCache execution.Cache,
 	workflowResetter reset.WorkflowResetter,
 	logger log.Logger,
 	config *config.Config,
@@ -760,14 +760,16 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 		targetDomainName,
 		signalInfo,
 	); err != nil {
-		t.logger.Error("Failed to signal external workflow execution",
-			tag.WorkflowDomainID(task.DomainID),
-			tag.WorkflowID(task.WorkflowID),
-			tag.WorkflowRunID(task.RunID),
-			tag.TargetWorkflowDomainID(task.TargetDomainID),
-			tag.TargetWorkflowID(task.TargetWorkflowID),
-			tag.TargetWorkflowRunID(task.TargetRunID),
-			tag.Error(err))
+		if !common.IsExpectedError(err) {
+			t.logger.Error("Failed to signal external workflow execution",
+				tag.WorkflowDomainID(task.DomainID),
+				tag.WorkflowID(task.WorkflowID),
+				tag.WorkflowRunID(task.RunID),
+				tag.TargetWorkflowDomainID(task.TargetDomainID),
+				tag.TargetWorkflowID(task.TargetWorkflowID),
+				tag.TargetWorkflowRunID(task.TargetRunID),
+				tag.Error(err))
+		}
 
 		// Check to see if the error is non-transient, in which case add SignalFailed
 		// event and complete transfer task by setting the err = nil
@@ -1045,6 +1047,11 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 	executionTimestamp := getWorkflowExecutionTimestamp(mutableState, startEvent)
 	visibilityMemo := getWorkflowMemo(executionInfo.Memo)
 	searchAttr := copySearchAttributes(executionInfo.SearchAttributes)
+	if t.config.EnableContextHeaderInVisibility(domainEntry.GetInfo().Name) {
+		if attributes := startEvent.GetWorkflowExecutionStartedEventAttributes(); attributes != nil && attributes.Header != nil {
+			searchAttr = appendContextHeaderToSearchAttributes(searchAttr, attributes.Header.Fields, t.config.ValidSearchAttributes())
+		}
+	}
 	isCron := len(executionInfo.CronSchedule) > 0
 	numClusters := (int16)(len(domainEntry.GetReplicationConfig().Clusters))
 	updateTimestamp := t.shard.GetTimeSource().Now()

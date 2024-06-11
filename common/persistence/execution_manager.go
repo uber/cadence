@@ -1044,7 +1044,7 @@ func (m *executionManagerImpl) toInternalReplicationTaskInfo(info *ReplicationTa
 		ScheduledID:       info.ScheduledID,
 		BranchToken:       info.BranchToken,
 		NewRunBranchToken: info.NewRunBranchToken,
-		CreationTime:      time.Unix(0, info.CreationTime),
+		CreationTime:      time.Unix(0, info.CreationTime).UTC(),
 	}
 }
 

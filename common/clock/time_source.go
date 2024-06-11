@@ -80,8 +80,8 @@ type (
 		// Advance advances the FakeClock to a new point in time, ensuring any existing
 		// waiters are notified appropriately before returning.
 		Advance(d time.Duration)
-		// BlockUntil blocks until the FakeClock has the given number of waiters
-		// running at the same time.
+		// BlockUntil blocks until the FakeClock has at least the given number
+		// of waiters running at the same time.
 		//
 		// Waiters are either time.Sleep, time.After[Func], time.Ticker, or time.Timer,
 		// and they decrement the counter when they complete or are stopped.

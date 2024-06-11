@@ -3480,6 +3480,61 @@ func (v *ListOpenWorkflowExecutionsResponse) GetExecutions() (o []*WorkflowExecu
 	return
 }
 
+// ListAllWorkflowExecutionsRequest is the request to ListAllWorkflowExecutions
+type ListAllWorkflowExecutionsRequest struct {
+	Domain              string           `json:"domain,omitempty"`
+	MaximumPageSize     int32            `json:"maximumPageSize,omitempty"`
+	NextPageToken       []byte           `json:"nextPageToken,omitempty"`
+	StartTimeFilter     *StartTimeFilter `json:"StartTimeFilter,omitempty"`
+	PartialMatch        bool             `json:"partialMatch,omitempty"`
+	WorkflowSearchValue string           `json:"workflowSearchValue,omitempty"`
+}
+
+func (v *ListAllWorkflowExecutionsRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
+	return SerializeRequest(v)
+}
+
+// GetDomain gets the domain
+func (v *ListAllWorkflowExecutionsRequest) GetDomain() (o string) {
+	if v != nil {
+		return v.Domain
+	}
+	return
+}
+
+// GetMaximumPageSize returns the max page size
+func (v *ListAllWorkflowExecutionsRequest) GetMaximumPageSize() (o int32) {
+	if v != nil {
+		return v.MaximumPageSize
+	}
+	return
+}
+
+// ListAllWorkflowExecutionsResponse is the response for ListAllWorkflowExecutions
+type ListAllWorkflowExecutionsResponse struct {
+	Executions    []*WorkflowExecutionInfo `json:"executions,omitempty"`
+	NextPageToken []byte                   `json:"nextPageToken,omitempty"`
+}
+
+// GetExecutions returns the workflow execution info
+func (v *ListAllWorkflowExecutionsResponse) GetExecutions() (o []*WorkflowExecutionInfo) {
+	if v != nil && v.Executions != nil {
+		return v.Executions
+	}
+	return
+}
+
+// GetNextPageToken returns the next page token)
+func (v *ListAllWorkflowExecutionsResponse) GetNextPageToken() (o []byte) {
+	if v != nil && v.NextPageToken != nil {
+		return v.NextPageToken
+	}
+	return
+}
+
 // ListTaskListPartitionsRequest is an internal type (TBD...)
 type ListTaskListPartitionsRequest struct {
 	Domain   string    `json:"domain,omitempty"`

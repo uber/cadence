@@ -43,6 +43,8 @@ import (
 	"github.com/uber/cadence/service/matching/config"
 )
 
+const testDomainName = "test-domain"
+
 type MatcherTestSuite struct {
 	suite.Suite
 	controller      *gomock.Controller
@@ -64,8 +66,8 @@ func (t *MatcherTestSuite) SetupTest() {
 	t.client = matching.NewMockClient(t.controller)
 	cfg := config.NewConfig(dynamicconfig.NewNopCollection(), "some random hostname")
 	t.taskList = NewTestTaskListID(t.T(), uuid.New(), common.ReservedTaskListPrefix+"tl0/1", persistence.TaskListTypeDecision)
-	tlCfg, err := newTaskListConfig(t.taskList, cfg, t.newDomainCache())
-	t.NoError(err)
+	tlCfg := newTaskListConfig(t.taskList, cfg, testDomainName)
+
 	tlCfg.ForwarderConfig = config.ForwarderConfig{
 		ForwarderMaxOutstandingPolls: func() int { return 1 },
 		ForwarderMaxOutstandingTasks: func() int { return 1 },
@@ -78,8 +80,7 @@ func (t *MatcherTestSuite) SetupTest() {
 	t.matcher = newTaskMatcher(tlCfg, t.fwdr, metrics.NoopScope(metrics.Matching), []string{"dca1", "dca2"}, loggerimpl.NewNopLogger())
 
 	rootTaskList := NewTestTaskListID(t.T(), t.taskList.GetDomainID(), t.taskList.Parent(20), persistence.TaskListTypeDecision)
-	rootTasklistCfg, err := newTaskListConfig(rootTaskList, cfg, t.newDomainCache())
-	t.NoError(err)
+	rootTasklistCfg := newTaskListConfig(rootTaskList, cfg, testDomainName)
 	t.rootMatcher = newTaskMatcher(rootTasklistCfg, nil, metrics.NoopScope(metrics.Matching), []string{"dca1", "dca2"}, loggerimpl.NewNopLogger())
 }
 
@@ -593,7 +594,7 @@ func (t *MatcherTestSuite) TestIsolationPollFailure() {
 }
 
 func (t *MatcherTestSuite) newDomainCache() cache.DomainCache {
-	domainName := "test-domain"
+	domainName := testDomainName
 	dc := cache.NewMockDomainCache(t.controller)
 	dc.EXPECT().GetDomainName(gomock.Any()).Return(domainName, nil).AnyTimes()
 	return dc

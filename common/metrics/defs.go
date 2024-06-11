@@ -270,6 +270,8 @@ const (
 	PersistenceDeleteUninitializedWorkflowExecutionScope
 	// PersistenceListWorkflowExecutionsScope tracks ListWorkflowExecutions calls made by service to persistence layer
 	PersistenceListWorkflowExecutionsScope
+	// PersistenceListAllWorkflowExecutionsScope tracks ListWorkflowExecutions calls made by service to persistence layer
+	PersistenceListAllWorkflowExecutionsScope
 	// PersistenceScanWorkflowExecutionsScope tracks ScanWorkflowExecutions calls made by service to persistence layer
 	PersistenceScanWorkflowExecutionsScope
 	// PersistenceCountWorkflowExecutionsScope tracks CountWorkflowExecutions calls made by service to persistence layer
@@ -749,6 +751,8 @@ const (
 	ElasticsearchGetClosedWorkflowExecutionScope
 	// ElasticsearchListWorkflowExecutionsScope tracks ListWorkflowExecutions calls made by service to persistence layer
 	ElasticsearchListWorkflowExecutionsScope
+	// ElasticsearchListAllWorkflowExecutionsScope tracks ListWorkflowExecutions calls made by service to persistence layer
+	ElasticsearchListAllWorkflowExecutionsScope
 	// ElasticsearchScanWorkflowExecutionsScope tracks ScanWorkflowExecutions calls made by service to persistence layer
 	ElasticsearchScanWorkflowExecutionsScope
 	// ElasticsearchCountWorkflowExecutionsScope tracks CountWorkflowExecutions calls made by service to persistence layer
@@ -784,6 +788,8 @@ const (
 	PinotGetClosedWorkflowExecutionScope
 	// PinotListWorkflowExecutionsScope tracks ListWorkflowExecutions calls made by service to persistence layer
 	PinotListWorkflowExecutionsScope
+	// PinotListAllWorkflowExecutionsScope tracks ListAllWorkflowExecutions calls made by service to persistence layer
+	PinotListAllWorkflowExecutionsScope
 	// PinotScanWorkflowExecutionsScope tracks ScanWorkflowExecutions calls made by service to persistence layer
 	PinotScanWorkflowExecutionsScope
 	// PinotCountWorkflowExecutionsScope tracks CountWorkflowExecutions calls made by service to persistence layer
@@ -1000,6 +1006,8 @@ const (
 	FrontendGetSearchAttributesScope
 	// FrontendGetClusterInfoScope is the metric scope for frontend.GetClusterInfo
 	FrontendGetClusterInfoScope
+	// FrontendGlobalRatelimiter is the metrics scope for frontend.GlobalRatelimiter
+	FrontendGlobalRatelimiter
 
 	NumFrontendScopes
 )
@@ -1425,6 +1433,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceVisibilityDeleteWorkflowExecutionScope:        {operation: "VisibilityDeleteWorkflowExecution"},
 		PersistenceDeleteUninitializedWorkflowExecutionScope:     {operation: "VisibilityDeleteUninitializedWorkflowExecution"},
 		PersistenceListWorkflowExecutionsScope:                   {operation: "ListWorkflowExecutions"},
+		PersistenceListAllWorkflowExecutionsScope:                {operation: "ListAllWorkflowExecutions"},
 		PersistenceScanWorkflowExecutionsScope:                   {operation: "ScanWorkflowExecutions"},
 		PersistenceCountWorkflowExecutionsScope:                  {operation: "CountWorkflowExecutions"},
 		PersistenceAppendHistoryNodesScope:                       {operation: "AppendHistoryNodes"},
@@ -1667,6 +1676,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ElasticsearchListClosedWorkflowExecutionsByStatusScope:     {operation: "ListClosedWorkflowExecutionsByStatus"},
 		ElasticsearchGetClosedWorkflowExecutionScope:               {operation: "GetClosedWorkflowExecution"},
 		ElasticsearchListWorkflowExecutionsScope:                   {operation: "ListWorkflowExecutions"},
+		ElasticsearchListAllWorkflowExecutionsScope:                {operation: "ListAllWorkflowExecutions"},
 		ElasticsearchScanWorkflowExecutionsScope:                   {operation: "ScanWorkflowExecutions"},
 		ElasticsearchCountWorkflowExecutionsScope:                  {operation: "CountWorkflowExecutions"},
 		ElasticsearchDeleteWorkflowExecutionsScope:                 {operation: "DeleteWorkflowExecution"},
@@ -1684,6 +1694,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PinotListClosedWorkflowExecutionsByStatusScope:             {operation: "ListClosedWorkflowExecutionsByStatus"},
 		PinotGetClosedWorkflowExecutionScope:                       {operation: "GetClosedWorkflowExecution"},
 		PinotListWorkflowExecutionsScope:                           {operation: "ListWorkflowExecutions"},
+		PinotListAllWorkflowExecutionsScope:                        {operation: "ListAllWorkflowExecutions"},
 		PinotScanWorkflowExecutionsScope:                           {operation: "ScanWorkflowExecutions"},
 		PinotCountWorkflowExecutionsScope:                          {operation: "CountWorkflowExecutions"},
 		PinotDeleteWorkflowExecutionsScope:                         {operation: "DeleteWorkflowExecution"},
@@ -1793,6 +1804,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendResetStickyTaskListScope:                   {operation: "ResetStickyTaskList"},
 		FrontendGetSearchAttributesScope:                   {operation: "GetSearchAttributes"},
 		FrontendGetClusterInfoScope:                        {operation: "GetClusterInfo"},
+		FrontendGlobalRatelimiter:                          {operation: "GlobalRatelimiter"},
 	},
 	// History Scope Names
 	History: {
@@ -2182,6 +2194,11 @@ const (
 
 	AsyncRequestPayloadSize
 
+	// emitted as timers to provide cluster-wide usage info.
+	// probably better as a histogram for better aggregation.
+	GlobalRatelimiterFallbackUsageTimer
+	GlobalRatelimiterGlobalUsageTimer
+
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
 
@@ -2458,6 +2475,7 @@ const (
 	UpdateWorkflowExecutionCount
 	WorkflowIDCacheSizeGauge
 	WorkflowIDCacheRequestsExternalRatelimitedCounter
+	WorkflowIDCacheRequestsExternalMaxRequestsPerSecondsTimer
 	WorkflowIDCacheRequestsInternalRatelimitedCounter
 	NumHistoryMetrics
 )
@@ -2825,6 +2843,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		HashringViewIdentifier:               {metricName: "hashring_view_identifier", metricType: Counter},
 
 		AsyncRequestPayloadSize: {metricName: "async_request_payload_size_per_domain", metricRollupName: "async_request_payload_size", metricType: Timer},
+
+		GlobalRatelimiterFallbackUsageTimer: {metricName: "global_ratelimiter_fallback_usage_timer", metricType: Timer},
+		GlobalRatelimiterGlobalUsageTimer:   {metricName: "global_ratelimiter_global_usage_timer", metricType: Timer},
 	},
 	History: {
 		TaskRequests:             {metricName: "task_requests", metricType: Counter},
@@ -3093,6 +3114,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		UpdateWorkflowExecutionCount:                                 {metricName: "update_workflow_execution_count", metricType: Counter},
 		WorkflowIDCacheSizeGauge:                                     {metricName: "workflow_id_cache_size", metricType: Gauge},
 		WorkflowIDCacheRequestsExternalRatelimitedCounter:            {metricName: "workflow_id_external_requests_ratelimited", metricType: Counter},
+		WorkflowIDCacheRequestsExternalMaxRequestsPerSecondsTimer:    {metricName: "workflow_id_external_requests_max_requests_per_seconds", metricType: Timer},
 		WorkflowIDCacheRequestsInternalRatelimitedCounter:            {metricName: "workflow_id_internal_requests_ratelimited", metricType: Counter},
 	},
 	Matching: {

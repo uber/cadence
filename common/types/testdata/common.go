@@ -256,6 +256,16 @@ var (
 	IndexedValueTypeMap = map[string]types.IndexedValueType{
 		"IndexedValueType1": IndexedValueType,
 	}
+	IsolationGroupConfiguration = types.IsolationGroupConfiguration{
+		IsolationGroup: {
+			Name:  IsolationGroup,
+			State: types.IsolationGroupStateHealthy,
+		},
+		"zone 1": {
+			Name:  "zone 1",
+			State: types.IsolationGroupStateDrained,
+		},
+	}
 	ParentExecutionInfo = types.ParentExecutionInfo{
 		DomainUUID:  DomainID,
 		Domain:      DomainName,

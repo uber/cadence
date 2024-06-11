@@ -57,7 +57,7 @@ type (
 func NewTimerActiveTaskExecutor(
 	shard shard.Context,
 	archiverClient archiver.Client,
-	executionCache *execution.Cache,
+	executionCache execution.Cache,
 	logger log.Logger,
 	metricsClient metrics.Client,
 	config *config.Config,

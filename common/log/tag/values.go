@@ -134,6 +134,7 @@ var (
 	ComponentShardFixer                 = component("shardscanner-fixer")
 	ComponentPinotVisibilityManager     = component("pinot-visibility-manager")
 	ComponentAsyncWFConsumptionManager  = component("async-wf-consumption-manager")
+	ComponentGlobalRatelimiter          = component("global-ratelimiter")
 )
 
 // Pre-defined values for TagSysLifecycle
@@ -248,6 +249,7 @@ var (
 	StoreOperationGetClosedWorkflowExecution               = storeOperation("get-closed-wf-execution")
 	StoreOperationVisibilityDeleteWorkflowExecution        = storeOperation("vis-delete-wf-execution")
 	StoreOperationListWorkflowExecutions                   = storeOperation("list-wf-executions")
+	StoreOperationListAllWorkflowExecutions                = storeOperation("list-all-wf-executions")
 	StoreOperationScanWorkflowExecutions                   = storeOperation("scan-wf-executions")
 	StoreOperationCountWorkflowExecutions                  = storeOperation("count-wf-executions")
 	StoreOperationDeleteUninitializedWorkflowExecution     = storeOperation("delete-uninitialized-wf-execution")

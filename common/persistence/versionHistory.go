@@ -108,7 +108,7 @@ func NewVersionHistoryFromInternalType(
 		panic("version history is null")
 	}
 
-	items := []*VersionHistoryItem{}
+	items := make([]*VersionHistoryItem, 0, len(input.Items))
 	for _, item := range input.Items {
 		items = append(items, NewVersionHistoryItemFromInternalType(item))
 	}
