@@ -8,9 +8,9 @@ verify_no_files_changed () {
   # do not fail this check and the $() hides the exit code.
   NUM_FILES_CHANGED=$(git status --porcelain 2>&1 | wc -l)
   if [ "${NUM_FILES_CHANGED}" -ne 0 ]; then
-    printf "There file changes after applying your diff and performing a build."
-    printf "Please run this command and commit the changes:"
-    printf "\tmake tidy && make copyright && make go-generate && make fmt && make lint"
+    printf "There file changes after applying your diff and performing a build.\n"
+    printf "Please run this command and commit the changes:\n"
+    printf "\tmake tidy && make copyright && make go-generate && make fmt && make lint\n"
     git status --porcelain
     git --no-pager diff
     exit 1
