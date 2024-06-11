@@ -74,7 +74,6 @@ type (
 		config                         *config.Config
 		historyEventNotifier           events.Notifier
 		rateLimiter                    quotas.Limiter
-		crossClusterTaskFetchers       task.Fetchers
 		replicationTaskFetchers        replication.TaskFetchers
 		queueTaskProcessor             task.Processor
 		failoverCoordinator            failover.Coordinator
@@ -169,7 +168,6 @@ func (h *handlerImpl) Start() {
 // Stop stops the handler
 func (h *handlerImpl) Stop() {
 	h.prepareToShutDown()
-	h.crossClusterTaskFetchers.Stop()
 	h.replicationTaskFetchers.Stop()
 	h.controller.Stop()
 	h.queueTaskProcessor.Stop()
