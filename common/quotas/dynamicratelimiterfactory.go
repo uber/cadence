@@ -24,7 +24,9 @@
 
 package quotas
 
-import "github.com/uber/cadence/common/dynamicconfig"
+import (
+	"github.com/uber/cadence/common/dynamicconfig"
+)
 
 // LimiterFactory is used to create a Limiter for a given domain
 type LimiterFactory interface {

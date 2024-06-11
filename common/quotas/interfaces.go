@@ -25,7 +25,7 @@ package quotas
 import (
 	"context"
 
-	"golang.org/x/time/rate"
+	"github.com/uber/cadence/common/clock"
 )
 
 // RPSFunc returns a float64 as the RPS
@@ -40,6 +40,10 @@ type Info struct {
 }
 
 // Limiter corresponds to basic rate limiting functionality.
+//
+// TODO: This can likely be replaced with clock.Ratelimiter, now that it exists,
+// but it is being left as a read-only mirror for now as only these methods are
+// currently needed in areas that currently use this Limiter.
 type Limiter interface {
 	// Allow attempts to allow a request to go through. The method returns
 	// immediately with a true or false indicating if the request can make
@@ -51,7 +55,7 @@ type Limiter interface {
 	Wait(ctx context.Context) error
 
 	// Reserve reserves a rate limit token
-	Reserve() *rate.Reservation
+	Reserve() clock.Reservation
 }
 
 // Policy corresponds to a quota policy. A policy allows implementing layered
