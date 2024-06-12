@@ -43,7 +43,7 @@ import (
 const (
 	pinotPersistenceName = "pinot"
 	DescendingOrder      = "DESC"
-	AcendingOrder        = "ASC"
+	AscendingOrder       = "ASC"
 	DomainID             = "DomainID"
 	WorkflowID           = "WorkflowID"
 	RunID                = "RunID"
@@ -368,7 +368,7 @@ func (v *pinotVisibilityStore) ListAllWorkflowExecutions(ctx context.Context, re
 		return !request.EarliestTime.After(rec.StartTime) && !rec.StartTime.After(request.LatestTime)
 	}
 
-	query, err := getListAllWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request)
+	query, err := v.getListAllWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request)
 	if err != nil {
 		v.logger.Error(fmt.Sprintf("failed to build list all workflow executions query %v", err))
 		return nil, err
@@ -1036,7 +1036,7 @@ func getListWorkflowExecutionsQuery(tableName string, request *p.InternalListWor
 	return query.String(), nil
 }
 
-func getListAllWorkflowExecutionsQuery(tableName string, request *p.InternalListAllWorkflowExecutionsByTypeRequest) (string, error) {
+func (v *pinotVisibilityStore) getListAllWorkflowExecutionsQuery(tableName string, request *p.InternalListAllWorkflowExecutionsByTypeRequest) (string, error) {
 	if request == nil {
 		return "", nil
 	}
@@ -1052,7 +1052,12 @@ func getListAllWorkflowExecutionsQuery(tableName string, request *p.InternalList
 		query.filters.addTimeRange(StartTime, earliest, latest) // convert Unix Time to miliseconds
 	}
 
-	query.addPinotSorter(StartTime, DescendingOrder)
+	if v.validSortInput(request.SortColumn, request.SortOrder) {
+		query.addPinotSorter(request.SortColumn, request.SortOrder)
+	} else {
+		//fallback to sorting by StartTime in descending order
+		query.addPinotSorter(StartTime, DescendingOrder)
+	}
 
 	token, err := pnt.GetNextPageToken(request.NextPageToken)
 	if err != nil {
@@ -1079,6 +1084,13 @@ func getListAllWorkflowExecutionsQuery(tableName string, request *p.InternalList
 	}
 
 	return query.String(), nil
+}
+
+func (v *pinotVisibilityStore) validSortInput(sortColumn, sortOrder string) bool {
+	validSortColumn := v.pinotQueryValidator.IsValidSearchAttributes(sortColumn)
+	validSortOrder := sortOrder == DescendingOrder || sortOrder == AscendingOrder
+
+	return validSortColumn && validSortOrder
 }
 
 func getListWorkflowExecutionsByTypeQuery(tableName string, request *p.InternalListWorkflowExecutionsByTypeRequest, isClosed bool) (string, error) {
