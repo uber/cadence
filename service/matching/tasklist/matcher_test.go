@@ -22,6 +22,7 @@ package tasklist
 
 import (
 	"context"
+	"math"
 	"math/rand"
 	"sync"
 	"testing"
@@ -30,6 +31,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/yarpc"
 	"golang.org/x/time/rate"
@@ -615,6 +617,8 @@ func (t *MatcherTestSuite) newTaskInfo() *persistence.TaskInfo {
 }
 
 func TestRatelimitBehavior(t *testing.T) {
+	// NOT t.Parallel() to avoid noise from cpu-heavy tests
+
 	const (
 		granularity = 100 * time.Millisecond
 		precision   = float64(granularity / 10) // for elapsed-time delta checks
@@ -775,8 +779,61 @@ func TestRatelimitBehavior(t *testing.T) {
 		})
 	}
 
+	t.Run("known misleading behavior", func(t *testing.T) {
+		t.Parallel()
+		run := func(t *testing.T, limit *rate.Limiter) time.Duration {
+			// more than enough time to wait
+			ctx, cancel := context.WithTimeout(context.Background(), granularity*2)
+			defer cancel()
+
+			start := time.Now()
+			t.Logf("tokens before wait: %0.5f", limit.Tokens())
+			res, err := orig(ctx, limit)
+			t.Logf("tokens after wait: %0.5f", limit.Tokens())
+			elapsed := time.Since(start).Round(time.Millisecond)
+
+			require.NoError(t, err, "should have succeeded")
+
+			tokensBefore := limit.Tokens()
+			t.Logf("tokens before cancel: %0.5f", tokensBefore)
+			res.Cancel()
+			tokensAfter := limit.Tokens()
+			t.Logf("tokens after cancel: %0.5f", tokensAfter)
+
+			assert.Lessf(t, math.Abs(tokensBefore-tokensAfter), 0.1, "canceling a delay-passed reservation does not return any tokens.  had %0.5f, cancel(), now have %0.5f", tokensBefore, tokensAfter)
+			assert.Lessf(t, tokensAfter, 0.1, "near zero tokens should remain")
+
+			return elapsed // varies per test
+		}
+		t.Run("orig returned tokens are un-cancel-able if available immediately", func(t *testing.T) {
+			t.Parallel()
+			perSecond := time.Second / granularity
+			limit := rate.NewLimiter(rate.Limit(perSecond), int(perSecond))
+			for limit.Allow() {
+				// drain tokens to start
+			}
+
+			time.Sleep(granularity) // restore one full token
+			elapsed := run(t, limit)
+			require.Lessf(t, elapsed, granularity/10, "should have returned basically immediately")
+		})
+		t.Run("orig returned tokens are un-cancel-able if it had to wait", func(t *testing.T) {
+			t.Parallel()
+			perSecond := time.Second / granularity
+			limit := rate.NewLimiter(rate.Limit(perSecond), int(perSecond))
+			for limit.Allow() {
+				// drain tokens to start
+			}
+			time.Sleep(granularity / 2) // restore only half of one token so it waits
+			elapsed := run(t, limit)
+			require.InDeltaf(t, elapsed, granularity/2, precision, "should have waited %v for the remaining half token", granularity/2)
+		})
+	})
+
 	t.Run("known different behavior", func(t *testing.T) {
+		t.Parallel()
 		t.Run("canceling while waiting with a deadline", func(t *testing.T) {
+			t.Parallel()
 			cancelWhileWaiting := func(cb func(context.Context) error) (time.Duration, error) {
 				// sufficient deadline, but canceled after half a token recovers
 				ctx, cancel := context.WithTimeout(context.Background(), granularity*2)
@@ -792,6 +849,7 @@ func TestRatelimitBehavior(t *testing.T) {
 				return elapsed, err
 			}
 			t.Run("orig does not stop", func(t *testing.T) {
+				t.Parallel()
 				perSecond := time.Second / granularity
 				limit := rate.NewLimiter(rate.Limit(perSecond), int(perSecond))
 				for limit.Allow() {
@@ -809,7 +867,8 @@ func TestRatelimitBehavior(t *testing.T) {
 				time.Sleep(granularity / 2)
 				assert.False(t, limit.Allow(), "did not have 0.5 tokens available after waiting") // should be 0.5 now though
 			})
-			t.Run("new code stops quickly", func(t *testing.T) {
+			t.Run("new code stops quickly and returns unused tokens", func(t *testing.T) {
+				t.Parallel()
 				perSecond := float64(time.Second / granularity)
 				limit := quotas.NewRateLimiter(&perSecond, time.Minute, int(perSecond))
 				for limit.Allow() {
