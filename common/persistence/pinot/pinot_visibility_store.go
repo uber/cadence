@@ -1055,7 +1055,7 @@ func (v *pinotVisibilityStore) getListAllWorkflowExecutionsQuery(tableName strin
 	if v.validSortInput(request.SortColumn, request.SortOrder) {
 		query.addPinotSorter(request.SortColumn, request.SortOrder)
 	} else {
-		//fallback to sorting by StartTime in descending order
+		// fallback to sorting by StartTime in descending order
 		query.addPinotSorter(StartTime, DescendingOrder)
 	}
 
