@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -133,18 +134,90 @@ func TestAgainstRealRatelimit(t *testing.T) {
 		}
 	})
 
-	// also check an edge case that random tests only rarely hit:
-	// Wait at the end of a round until a token recovers at the start of the next.
-	t.Run("wait_must_wait_similarly", func(t *testing.T) {
-		schedule := [][]string{
-			{"a", "_", "_", "w"}, // consume the only token, then wait with 0.75 tokens.
-			{"_", "_", "_", "_"}, // first slot must be _ to recover a token and unblock the wait.
-		}
-		logSchedule(t, schedule)
-		minWait := fuzzGranularity / 2 // not waiting will fail this test
-		burst := 1
-		assertRatelimitersBehaveSimilarly(t, burst, minWait, schedule)
+	// also check edge cases that random tests only rarely or never hit:
+	t.Run("edge cases", func(t *testing.T) {
+		// Wait at the end of a round until a token recovers at the start of the next.
+		t.Run("wait must wait similarly", func(t *testing.T) {
+			schedule := [][]string{
+				{"a", "_", "_", "w"}, // consume the only token, then wait with 0.75 tokens.
+				{"_", "_", "_", "_"}, // first slot must be _ to recover a token and unblock the wait.
+			}
+			logSchedule(t, schedule)
+			minWait := fuzzGranularity / 2 // not waiting will fail this test
+			burst := 1
+			assertRatelimitersBehaveSimilarly(t, burst, minWait, schedule)
+		})
+		t.Run("canceled contexts do not consume tokens", func(t *testing.T) {
+			actual := rate.NewLimiter(rate.Every(time.Second), 1)
+			wrapped := NewRatelimiter(rate.Every(time.Second), 1)
+
+			canceledCtx, cancel := context.WithCancel(context.Background())
+			cancel()
+
+			actualErr := actual.Wait(canceledCtx)
+			actualTokens := actual.Tokens()
+
+			wrappedErr := wrapped.Wait(canceledCtx)
+			wrappedTokens := wrapped.Tokens()
+
+			assert.ErrorIs(t, actualErr, context.Canceled)
+			assert.ErrorIs(t, wrappedErr, context.Canceled)
+
+			assert.Equal(t, 1.0, actualTokens, "rate.Limiter should still have a token available")
+			assert.Equal(t, 1.0, wrappedTokens, "wrapped should still have a token available")
+		})
+		t.Run("cancel while waiting returns tokens", func(t *testing.T) {
+			actual := rate.NewLimiter(rate.Every(time.Second), 1)
+			wrapped := NewRatelimiter(rate.Every(time.Second), 1)
+
+			actual.Allow()
+			wrapped.Allow()
+
+			t.Logf("tokens in real: %0.5f, actual: %0.5f", actual.Tokens(), wrapped.Tokens())
+			assert.InDeltaf(t, 0, actual.Tokens(), 0.1, "rate.Limiter should have near zero tokens")
+			assert.InDeltaf(t, 0, wrapped.Tokens(), 0.1, "wrapped should have near zero tokens")
+
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			go func() {
+				time.Sleep(fuzzGranularity)
+				cancel()
+			}()
+
+			var actualDur, wrappedDur time.Duration
+			var actualErr, wrappedErr error
+
+			var wg sync.WaitGroup
+			wg.Add(2)
+			go func() {
+				defer wg.Done()
+				start := time.Now()
+				actualErr = actual.Wait(ctx)
+				actualDur = time.Since(start).Round(time.Millisecond)
+			}()
+			go func() {
+				defer wg.Done()
+				start := time.Now()
+				wrappedErr = wrapped.Wait(ctx)
+				wrappedDur = time.Since(start).Round(time.Millisecond)
+			}()
+			wg.Wait()
+
+			assert.ErrorIs(t, actualErr, context.Canceled)
+			assert.ErrorIs(t, wrappedErr, context.Canceled)
+
+			// in particular, this would go to -1 if the token was not successfully returned.
+			// that can happen if canceling near the wait time elapsing, but that would take a full second in this test.
+			t.Logf("tokens in real: %0.5f, actual: %0.5f", actual.Tokens(), wrapped.Tokens())
+			assert.InDeltaf(t, 0, actual.Tokens(), 0.1, "rate.Limiter should have near zero tokens after canceling")
+			assert.InDeltaf(t, 0, wrapped.Tokens(), 0.1, "wrapped should have near zero tokens after canceling")
+
+			t.Logf("waiting times for real: %v, actual: %v", actualDur, wrappedDur)
+			assert.InDeltaf(t, actualDur, fuzzGranularity, float64(fuzzGranularity/2), "rate.Limiter should have waited until canceled")
+			assert.InDeltaf(t, wrappedDur, fuzzGranularity, float64(fuzzGranularity/2), "wrapped should have waited until canceled")
+		})
 	})
+
 }
 
 /*
