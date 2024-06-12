@@ -447,7 +447,7 @@ func (tm *TaskMatcher) ratelimit(ctx context.Context) error {
 		// in either case, this is returned immediately.
 		return ErrTasklistThrottled
 	}
-	return err
+	return err // nil if success, non-nil if canceled
 }
 
 func (tm *TaskMatcher) isForwardingAllowed() bool {
