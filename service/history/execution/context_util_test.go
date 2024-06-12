@@ -21,6 +21,9 @@
 package execution
 
 import (
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/uber-go/tally"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -98,7 +101,8 @@ func TestEmitLargeWorkflowShardIDStats(t *testing.T) {
 			defer mockCtrl.Finish()
 
 			mockShard := shard.NewMockContext(mockCtrl)
-			mockMetricsClient := metrics.NewNoopMetricsClient()
+			metricScope := tally.NewTestScope("test", make(map[string]string))
+			mockMetricsClient := metrics.NewClient(metricScope, metrics.History)
 			mockLogger := &log.MockLogger{}
 			stats := &persistence.ExecutionStats{
 				HistorySize: 1024 * 1024 * 3, // 3 MB, setting it above the threshold for test
@@ -125,6 +129,18 @@ func TestEmitLargeWorkflowShardIDStats(t *testing.T) {
 			}
 
 			context.emitLargeWorkflowShardIDStats(tc.blobSize, tc.oldHistoryCount, tc.oldHistorySize, tc.newHistoryCount)
+
+			if tc.expectMetrics {
+				countersSnapshot := metricScope.Snapshot().Counters()
+
+				require.Contains(t, countersSnapshot, "test.large_history_blob_count+domain=testDomain,operation=LargeExecutionBlobShard,shard_id=1")
+				require.Contains(t, countersSnapshot, "test.large_history_event_count+domain=testDomain,operation=LargeExecutionCountShard,shard_id=1")
+				require.Contains(t, countersSnapshot, "test.large_history_size_count+domain=testDomain,operation=LargeExecutionSizeShard,shard_id=1")
+
+				assert.Equal(t, int64(1), countersSnapshot["test.large_history_blob_count+domain=testDomain,operation=LargeExecutionBlobShard,shard_id=1"].Value())
+				assert.Equal(t, int64(1), countersSnapshot["test.large_history_event_count+domain=testDomain,operation=LargeExecutionCountShard,shard_id=1"].Value())
+				assert.Equal(t, int64(1), countersSnapshot["test.large_history_size_count+domain=testDomain,operation=LargeExecutionSizeShard,shard_id=1"].Value())
+			}
 		})
 	}
 }
