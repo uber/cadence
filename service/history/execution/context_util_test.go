@@ -21,13 +21,13 @@
 package execution
 
 import (
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/uber-go/tally"
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
