@@ -57,7 +57,7 @@ func (c *contextImpl) emitLargeWorkflowShardIDStats(blobSize int64, oldHistoryCo
 		if oldHistorySize < historySizeWarn && c.stats.HistorySize >= historySizeWarn {
 			c.logger.Warn("Workflow history event size is reaching dangerous levels", tag.WorkflowDomainName(c.GetDomainName()),
 				tag.WorkflowID(c.workflowExecution.GetWorkflowID()), tag.ShardID(c.shard.GetShardID()), tag.WorkflowRunID(c.workflowExecution.GetRunID()))
-			c.metricsClient.Scope(metrics.LargeExecutionSizeShardScope, metrics.ShardIDTag(shardID)).IncCounter(metrics.LargeHistorySizeCount)
+			c.metricsClient.Scope(metrics.LargeExecutionSizeShardScope, metrics.ShardIDTag(shardID), metrics.DomainTag(c.GetDomainName())).IncCounter(metrics.LargeHistorySizeCount)
 		}
 	}
 }
