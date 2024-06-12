@@ -712,6 +712,8 @@ type (
 		InternalListWorkflowExecutionsRequest
 		PartialMatch        bool
 		WorkflowSearchValue string // This value will be searched across workflow type, workflow ID and runID
+		SortColumn          string // This should be a valid search attribute
+		SortOrder           string // DESC or ASC
 	}
 
 	// InternalGetClosedWorkflowExecutionResponse is response from GetWorkflowExecution

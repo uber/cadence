@@ -270,6 +270,8 @@ func (v *visibilityManagerImpl) ListAllWorkflowExecutions(
 	internalRequest := &InternalListAllWorkflowExecutionsByTypeRequest{
 		PartialMatch:        request.PartialMatch,
 		WorkflowSearchValue: request.WorkflowSearchValue,
+		SortColumn:          request.SortColumn,
+		SortOrder:           request.SortOrder,
 	}
 	if internalListRequest != nil {
 		internalRequest.InternalListWorkflowExecutionsRequest = *internalListRequest

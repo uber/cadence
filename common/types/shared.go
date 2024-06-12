@@ -3488,6 +3488,8 @@ type ListAllWorkflowExecutionsRequest struct {
 	StartTimeFilter     *StartTimeFilter `json:"StartTimeFilter,omitempty"`
 	PartialMatch        bool             `json:"partialMatch,omitempty"`
 	WorkflowSearchValue string           `json:"workflowSearchValue,omitempty"`
+	SortColumn          string           `json:"sortColumn,omitempty"`
+	SortOrder           string           `json:"sortOrder,omitempty"`
 }
 
 func (v *ListAllWorkflowExecutionsRequest) SerializeForLogging() (string, error) {
