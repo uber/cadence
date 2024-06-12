@@ -115,9 +115,8 @@ func newTaskMatcher(config *config.TaskListConfig, fwdr *Forwarder, scope metric
 //   - context deadline is exceeded
 //   - task is matched and consumer returns error in response channel
 func (tm *TaskMatcher) Offer(ctx context.Context, task *InternalTask) (bool, error) {
-	var err error
 	if !task.IsForwarded() {
-		err = tm.ratelimit(ctx)
+		err := tm.ratelimit(ctx)
 		if err != nil {
 			tm.scope.IncCounter(metrics.SyncThrottlePerTaskListCounter)
 			return false, err
@@ -129,7 +128,7 @@ func (tm *TaskMatcher) Offer(ctx context.Context, task *InternalTask) (bool, err
 		if task.ResponseC != nil {
 			// if there is a response channel, block until resp is received
 			// and return error if the response contains error
-			err = <-task.ResponseC
+			err := <-task.ResponseC
 			return true, err
 		}
 		return false, nil
