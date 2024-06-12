@@ -53,13 +53,3 @@ type Client interface {
 	// - persist the last committed offsets
 	Stop(context.Context) error
 }
-
-type Persister interface {
-	Persist(ctx context.Context, items []ItemToPersist) error
-	GetOffsets(ctx context.Context) (*Offsets, error)
-	CommitOffsets(ctx context.Context, offsets *Offsets) error
-}
-
-type Offsets struct {
-	// TODO: define offsets
-}

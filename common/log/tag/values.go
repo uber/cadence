@@ -135,6 +135,9 @@ var (
 	ComponentPinotVisibilityManager     = component("pinot-visibility-manager")
 	ComponentAsyncWFConsumptionManager  = component("async-wf-consumption-manager")
 	ComponentGlobalRatelimiter          = component("global-ratelimiter")
+	ComponentMapQ                       = component("mapq")
+	ComponentMapQTree                   = component("mapq-tree")
+	ComponentMapQTreeNode               = component("mapq-tree-node")
 )
 
 // Pre-defined values for TagSysLifecycle

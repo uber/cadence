@@ -27,11 +27,17 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/mapq/types"
+	"github.com/uber/cadence/common/metrics"
 )
 
 // QueueTree is a tree structure that represents the queue structure for MAPQ
 type QueueTree struct {
+	originalLogger  log.Logger
+	logger          log.Logger
+	scope           metrics.Scope
 	partitions      []string
 	policyCol       types.NodePolicyCollection
 	persister       types.Persister
@@ -40,30 +46,49 @@ type QueueTree struct {
 }
 
 func New(
+	logger log.Logger,
+	scope metrics.Scope,
 	partitions []string,
 	policies []types.NodePolicy,
 	persister types.Persister,
 	consumerFactory types.ConsumerFactory,
 ) (*QueueTree, error) {
 	t := &QueueTree{
+		originalLogger:  logger,
+		logger:          logger.WithTags(tag.ComponentMapQTree),
+		scope:           scope,
 		partitions:      partitions,
 		policyCol:       types.NewNodePolicyCollection(policies),
 		persister:       persister,
 		consumerFactory: consumerFactory,
 	}
 
-	err := t.init()
-	return t, err
+	return t, t.init()
 }
 
 // Start the dispatchers for all leaf nodes
 func (t *QueueTree) Start(ctx context.Context) error {
-	return t.root.Start(ctx, t.consumerFactory, nil, map[string]any{})
+	t.logger.Info("Starting MAPQ tree", tag.Dynamic("tree", t.String()))
+	err := t.root.Start(ctx, t.consumerFactory, nil, map[string]any{})
+	if err != nil {
+		return fmt.Errorf("failed to start root node: %w", err)
+	}
+
+	t.logger.Info("Started MAPQ tree")
+	return nil
 }
 
 // Stop the dispatchers for all leaf nodes
 func (t *QueueTree) Stop(ctx context.Context) error {
-	return t.root.Stop(ctx)
+	t.logger.Info("Stopping MAPQ tree", tag.Dynamic("tree", t.String()))
+
+	err := t.root.Stop(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to stop nodes: %w", err)
+	}
+
+	t.logger.Info("Stopped MAPQ tree")
+	return nil
 }
 
 func (t *QueueTree) String() string {
@@ -106,21 +131,21 @@ func (t *QueueTree) init() error {
 		Children: map[any]*QueueTreeNode{},
 	}
 
-	if err := t.root.Init(t.policyCol, t.partitions); err != nil {
-		return fmt.Errorf("failed to initialize root node: %w", err)
+	if err := t.root.Init(t.originalLogger, t.scope, t.policyCol, t.partitions); err != nil {
+		return fmt.Errorf("failed to initialize node: %w", err)
 	}
 
 	// Create tree nodes with catch-all nodes at all levels and predefined splits.
 	// There will be len(partitions) levels in the tree.
-	err := t.addCatchAllNodes(t.root)
+	err := t.constructInitialNodes(t.root)
 	if err != nil {
-		return fmt.Errorf("failed to initialize tree: %w", err)
+		return fmt.Errorf("failed to construct initial tree: %w", err)
 	}
 
 	return nil
 }
 
-func (t *QueueTree) addCatchAllNodes(n *QueueTreeNode) error {
+func (t *QueueTree) constructInitialNodes(n *QueueTreeNode) error {
 	nodeLevel := nodeLevel(n.Path)
 	if nodeLevel == len(t.partitions) { // reached the leaf level
 		return nil
@@ -136,7 +161,7 @@ func (t *QueueTree) addCatchAllNodes(n *QueueTreeNode) error {
 	}
 
 	for _, child := range n.Children {
-		if err := t.addCatchAllNodes(child); err != nil {
+		if err := t.constructInitialNodes(child); err != nil {
 			return err
 		}
 	}

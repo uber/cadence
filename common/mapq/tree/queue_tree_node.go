@@ -26,12 +26,22 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/mapq/dispatcher"
 	"github.com/uber/cadence/common/mapq/types"
+	"github.com/uber/cadence/common/metrics"
 )
 
 // QueueTreeNode represents a node in the queue tree
 type QueueTreeNode struct {
+	// originalLogger is the logger passed in during creation. No node specific tags are added to this logger and it should be passed to child nodes
+	originalLogger log.Logger
+
+	// logger is the logger for this node. It has the node specific tags added to it
+	logger log.Logger
+	scope  metrics.Scope
+
 	// The path to the node
 	Path string
 
@@ -63,8 +73,11 @@ func (n *QueueTreeNode) Start(
 	partitions []string,
 	partitionMap map[string]any,
 ) error {
+	n.logger.Info("Starting node", tag.Dynamic("node", n.String()))
+
 	// If there are no children then this is a leaf node
 	if len(n.Children) == 0 {
+		n.logger.Info("Creating consumer and starting a new dispatcher for leaf node")
 		c, err := consumerFactory.New(types.NewItemPartitions(partitions, partitionMap))
 		if err != nil {
 			return err
@@ -81,24 +94,28 @@ func (n *QueueTreeNode) Start(
 		partitionMap[n.PartitionKey] = child.AttributeVal
 		err := child.Start(ctx, consumerFactory, partitions, partitionMap)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to start child %s: %w", child.Path, err)
 		}
 	}
 
+	n.logger.Info("Started node")
 	return nil
 }
 
 func (n *QueueTreeNode) Stop(ctx context.Context) error {
-	if n.Dispatcher != nil {
+	n.logger.Info("Stopping node")
+
+	if n.Dispatcher != nil { // leaf node
 		return n.Dispatcher.Stop(ctx)
 	}
 
 	for _, child := range n.Children {
 		if err := child.Stop(ctx); err != nil {
-			return err
+			return fmt.Errorf("failed to stop child %s: %w", child.Path, err)
 		}
 	}
 
+	n.logger.Info("Stopped node")
 	return nil
 }
 
@@ -136,7 +153,11 @@ func (n *QueueTreeNode) String() string {
 	return fmt.Sprintf("QueueTreeNode{Path: %q, AttributeKey: %v, AttributeVal: %v, NodePolicy: %s, Num Children: %d}", n.Path, n.AttributeKey, n.AttributeVal, n.NodePolicy, len(n.Children))
 }
 
-func (n *QueueTreeNode) Init(policyCol types.NodePolicyCollection, partitions []string) error {
+func (n *QueueTreeNode) Init(logger log.Logger, scope metrics.Scope, policyCol types.NodePolicyCollection, partitions []string) error {
+	n.originalLogger = logger
+	n.logger = logger.WithTags(tag.ComponentMapQTreeNode, tag.Dynamic("path", n.Path))
+	n.scope = scope
+
 	// Get the merged policy for this node
 	policy, err := policyCol.GetMergedPolicyForNode(n.Path)
 	if err != nil {
@@ -163,7 +184,7 @@ func (n *QueueTreeNode) addChild(attrVal any, policyCol types.NodePolicyCollecti
 		Children:     map[any]*QueueTreeNode{},
 	}
 
-	if err := ch.Init(policyCol, partitions); err != nil {
+	if err := ch.Init(n.originalLogger, n.scope, policyCol, partitions); err != nil {
 		return nil, err
 	}
 

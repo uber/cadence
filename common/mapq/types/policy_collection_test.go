@@ -23,59 +23,45 @@
 package types
 
 import (
+	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 )
 
+const (
+	fuzzCustomSeed = 0
+)
+
+func TestGetPolicies(t *testing.T) {
+	policies := getTestPolicies()
+	wantOrderedPaths := make([]string, len(policies))
+	for i, p := range policies {
+		wantOrderedPaths[i] = p.Path
+	}
+
+	shufflePolicies(policies)
+	npc := NewNodePolicyCollection(policies)
+
+	gotPolicies := npc.GetPolicies()
+	if len(gotPolicies) != len(policies) {
+		t.Fatalf("Policies count mismatch, got %v, want %v", len(gotPolicies), len(policies))
+	}
+
+	gotPaths := make([]string, len(policies))
+	for i, p := range gotPolicies {
+		t.Logf("%d - %s", i, p)
+		gotPaths[i] = p.Path
+	}
+
+	if diff := cmp.Diff(wantOrderedPaths, gotPaths); diff != "" {
+		t.Fatalf("Policies not sorted as expected (-want +got):\n%s", diff)
+	}
+}
+
 func TestGetMergedPolicyforNode(t *testing.T) {
-	npc := NewNodePolicyCollection([]NodePolicy{
-		{
-			Path: "*", // level 0
-			SplitPolicy: &SplitPolicy{
-				PredefinedSplits: []any{"timer", "transfer"},
-			},
-			DispatchPolicy: &DispatchPolicy{DispatchRPS: 100},
-		},
-		{
-			Path:           "*/.", // level 1 default policy
-			SplitPolicy:    &SplitPolicy{},
-			DispatchPolicy: &DispatchPolicy{DispatchRPS: 50},
-		},
-		{
-			Path: "*/timer", // level 1 timer node
-			SplitPolicy: &SplitPolicy{
-				PredefinedSplits: []any{"deletehistory"},
-			},
-		},
-		{
-			Path: "*/./.", // level 2 default policy
-			SplitPolicy: &SplitPolicy{
-				PredefinedSplits: []any{"domain1"},
-			},
-		},
-		{
-			Path: "*/timer/deletehistory", // level 2 deletehistory timer node policy
-			SplitPolicy: &SplitPolicy{
-				Disabled: true,
-			},
-			DispatchPolicy: &DispatchPolicy{DispatchRPS: 5},
-		},
-		{
-			Path: "*/././*", // level 3 default catch-all node policy
-			SplitPolicy: &SplitPolicy{
-				Disabled: true,
-			},
-			DispatchPolicy: &DispatchPolicy{DispatchRPS: 1000},
-		},
-		{
-			Path: "*/././domain1", // level 3 domain node policy
-			SplitPolicy: &SplitPolicy{
-				Disabled: true,
-			},
-			DispatchPolicy: &DispatchPolicy{DispatchRPS: 42},
-		},
-	})
+	npc := NewNodePolicyCollection(getTestPolicies())
 
 	tests := []struct {
 		name string
@@ -182,4 +168,67 @@ func TestGetMergedPolicyforNode(t *testing.T) {
 			}
 		})
 	}
+}
+
+// getTestPolicies returns a set of test policies for testing
+// It intentionally returns the policies in a sorted order to test the sorting logic
+func getTestPolicies() []NodePolicy {
+	return []NodePolicy{
+		{
+			Path: "*", // level 0
+			SplitPolicy: &SplitPolicy{
+				PredefinedSplits: []any{"timer", "transfer"},
+			},
+			DispatchPolicy: &DispatchPolicy{DispatchRPS: 100},
+		},
+		{
+			Path:           "*/.", // level 1 default policy
+			SplitPolicy:    &SplitPolicy{},
+			DispatchPolicy: &DispatchPolicy{DispatchRPS: 50},
+		},
+		{
+			Path: "*/timer", // level 1 timer node
+			SplitPolicy: &SplitPolicy{
+				PredefinedSplits: []any{"deletehistory"},
+			},
+		},
+		{
+			Path: "*/./.", // level 2 default policy
+			SplitPolicy: &SplitPolicy{
+				PredefinedSplits: []any{"domain1"},
+			},
+		},
+		{
+			Path: "*/timer/deletehistory", // level 2 deletehistory timer node policy
+			SplitPolicy: &SplitPolicy{
+				Disabled: true,
+			},
+			DispatchPolicy: &DispatchPolicy{DispatchRPS: 5},
+		},
+		{
+			Path: "*/././*", // level 3 default catch-all node policy
+			SplitPolicy: &SplitPolicy{
+				Disabled: true,
+			},
+			DispatchPolicy: &DispatchPolicy{DispatchRPS: 1000},
+		},
+		{
+			Path: "*/././domain1", // level 3 domain node policy
+			SplitPolicy: &SplitPolicy{
+				Disabled: true,
+			},
+			DispatchPolicy: &DispatchPolicy{DispatchRPS: 42},
+		},
+	}
+}
+
+func shufflePolicies(policies []NodePolicy) {
+	seed := time.Now().UnixNano()
+	if fuzzCustomSeed != 0 {
+		seed = fuzzCustomSeed // override seed to test a specific scenario
+	}
+	rng := rand.New(rand.NewSource(seed))
+	rng.Shuffle(len(policies), func(i, j int) {
+		policies[i], policies[j] = policies[j], policies[i]
+	})
 }

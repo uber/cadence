@@ -1,5 +1,7 @@
 # MAPQ: Multi-tenant, Auto-partitioned, Persistent Queue
 
+NOTE: This component is WIP.
+
 ## Overview
 
 MAPQ is a new queue framework (introduced in June 2024), aiming to unify Cadence's internal task/request queues. The existing implementations for these applications are cumbersome and maintenance-heavy, with significant overlap and limited extensibility.

@@ -28,13 +28,23 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/mapq/types"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 )
 
 func TestExample(t *testing.T) {
 	persister := &InMemoryPersister{}
+
+	logger, err := loggerimpl.NewDevelopment()
+	if err != nil {
+		panic(err)
+	}
+	scope := metrics.NoopScope(0)
 	cl, err := New(
+		logger,
+		scope,
 		WithConsumerFactory(&NoOpConsumerFactory{}),
 		WithPersister(persister),
 		WithPartitions([]string{"type", "sub-type", "domain"}),

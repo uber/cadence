@@ -24,12 +24,18 @@ package mapq
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/mapq/tree"
 	"github.com/uber/cadence/common/mapq/types"
+	"github.com/uber/cadence/common/metrics"
 )
 
-type ClientImpl struct {
+type clientImpl struct {
+	logger          log.Logger
+	scope           metrics.Scope
 	persister       types.Persister
 	consumerFactory types.ConsumerFactory
 	tree            *tree.QueueTree
@@ -37,30 +43,43 @@ type ClientImpl struct {
 	policies        []types.NodePolicy
 }
 
-func (c *ClientImpl) Start(ctx context.Context) error {
-	return c.tree.Start(ctx)
-}
-
-func (c *ClientImpl) Stop(ctx context.Context) error {
-	// Stop the tree which will stop the dispatchers
-	if err := c.tree.Stop(ctx); err != nil {
+func (c *clientImpl) Start(ctx context.Context) error {
+	c.logger.Info("Starting MAPQ client")
+	err := c.tree.Start(ctx)
+	if err != nil {
 		return err
 	}
 
-	// stop the consumer factory which will stop the consumers
-	return c.consumerFactory.Stop(ctx)
+	c.logger.Info("Started MAPQ client")
+	return nil
 }
 
-func (c *ClientImpl) Enqueue(ctx context.Context, items []types.Item) error {
+func (c *clientImpl) Stop(ctx context.Context) error {
+	c.logger.Info("Stopping MAPQ client")
+
+	// Stop the tree which will stop the dispatchers
+	if err := c.tree.Stop(ctx); err != nil {
+		return fmt.Errorf("failed to stop tree: %w", err)
+	}
+
+	// stop the consumer factory which will stop the consumers
+	err := c.consumerFactory.Stop(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to stop consumer factory: %w", err)
+	}
+
+	c.logger.Info("Stopped MAPQ client")
+	return nil
+}
+
+func (c *clientImpl) Enqueue(ctx context.Context, items []types.Item) error {
 	return c.tree.Enqueue(ctx, items)
 }
 
-func (c *ClientImpl) Ack(context.Context, types.Item) error {
-	// TODO: implement
-	return nil
+func (c *clientImpl) Ack(context.Context, types.Item) error {
+	return errors.New("not implemented")
 }
 
-func (c *ClientImpl) Nack(context.Context, types.Item) error {
-	// TODO: implement
-	return nil
+func (c *clientImpl) Nack(context.Context, types.Item) error {
+	return errors.New("not implemented")
 }

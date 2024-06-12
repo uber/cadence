@@ -22,6 +22,8 @@
 
 package types
 
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination item_mock.go -package types github.com/uber/cadence/common/mapq/types Item
+
 import "fmt"
 
 type Item interface {
@@ -61,6 +63,9 @@ type ItemPartitions interface {
 	//  	ItemPartitions.GetPartitionValue("sub-type") returns "*"
 	//
 	GetPartitionValue(key string) any
+
+	// String returns a human friendly representation of the item for logging purposes
+	String() string
 }
 
 func NewItemPartitions(partitions []string, partitionMap map[string]any) ItemPartitions {
