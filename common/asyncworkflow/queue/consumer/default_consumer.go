@@ -24,6 +24,7 @@ package consumer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"sync"
@@ -199,6 +200,12 @@ func (c *DefaultConsumer) processRequest(logger log.Logger, request *sqlblobs.As
 			ctx, cancel := context.WithTimeout(c.ctx, c.startWFTimeout)
 			defer cancel()
 			resp, err = c.frontendClient.StartWorkflowExecution(ctx, startWFReq, yarpcCallOpts...)
+
+			var startedError *types.WorkflowExecutionAlreadyStartedError
+			if errors.As(err, &startedError) {
+				logger.Info("Received WorkflowExecutionAlreadyStartedError, treating it as a success", tag.WorkflowID(startWFReq.GetWorkflowID()), tag.WorkflowRunID(startedError.RunID))
+				return nil
+			}
 			return err
 		}
 
@@ -223,6 +230,12 @@ func (c *DefaultConsumer) processRequest(logger log.Logger, request *sqlblobs.As
 			ctx, cancel := context.WithTimeout(c.ctx, c.startWFTimeout)
 			defer cancel()
 			resp, err = c.frontendClient.SignalWithStartWorkflowExecution(ctx, startWFReq, yarpcCallOpts...)
+
+			var startedError *types.WorkflowExecutionAlreadyStartedError
+			if errors.As(err, &startedError) {
+				logger.Info("Received WorkflowExecutionAlreadyStartedError, treating it as a success", tag.WorkflowID(startWFReq.GetWorkflowID()), tag.WorkflowRunID(startedError.RunID))
+				return nil
+			}
 			return err
 		}
 

@@ -122,11 +122,13 @@ func (m *fakeMessage) Nack() error {
 
 func TestDefaultConsumer(t *testing.T) {
 	tests := []struct {
-		name                     string
-		innerConsumerFailToStart bool
-		frontendFails            bool
-		closeChanBeforeStop      bool
-		msgs                     []*fakeMessage
+		name                         string
+		innerConsumerFailToStart     bool
+		closeChanBeforeStop          bool
+		frontendErr                  error
+		expectStartRequest           bool
+		expectSignalWithStartRequest bool
+		msgs                         []*fakeMessage
 	}{
 		{
 			name:                     "failed to start",
@@ -140,25 +142,32 @@ func TestDefaultConsumer(t *testing.T) {
 			},
 		},
 		{
-			name:          "unsupported request type",
-			frontendFails: true,
+			name: "unsupported request type",
 			msgs: []*fakeMessage{
 				{val: mustGenerateUnsupportedRequestMsg(t), wantAck: false},
 			},
 		},
 		{
-			name:          "startworkflow request with invalid payload content",
-			frontendFails: true,
+			name: "startworkflow request with invalid payload content",
 			msgs: []*fakeMessage{
 				{val: mustGenerateStartWorkflowExecutionRequestMsg(t, common.EncodingTypeThriftRW, false), wantAck: false},
 			},
 		},
 		{
-			name:          "startworkflowfrontend fails to respond",
-			frontendFails: true,
+			name:        "startworkflowfrontend error",
+			frontendErr: &types.InternalServiceError{Message: "oh no"},
 			msgs: []*fakeMessage{
 				{val: mustGenerateStartWorkflowExecutionRequestMsg(t, common.EncodingTypeThriftRW, true), wantAck: false},
 			},
+			expectStartRequest: true,
+		},
+		{
+			name:        "startworkflowfrontend WorkflowExecutionAlreadyStartedError",
+			frontendErr: &types.WorkflowExecutionAlreadyStartedError{Message: "all good, already started"},
+			msgs: []*fakeMessage{
+				{val: mustGenerateStartWorkflowExecutionRequestMsg(t, common.EncodingTypeThriftRW, true), wantAck: true},
+			},
+			expectStartRequest: true,
 		},
 		{
 			name: "startworkflow unsupported encoding type. json encoding of requests are lossy due to PII masking so it shouldn't be used for async requests",
@@ -171,6 +180,7 @@ func TestDefaultConsumer(t *testing.T) {
 			msgs: []*fakeMessage{
 				{val: mustGenerateStartWorkflowExecutionRequestMsg(t, common.EncodingTypeThriftRW, true), wantAck: true},
 			},
+			expectStartRequest: true,
 		},
 		{
 			name:                "startworkflow ok with chan closed before stopping",
@@ -178,21 +188,30 @@ func TestDefaultConsumer(t *testing.T) {
 			msgs: []*fakeMessage{
 				{val: mustGenerateStartWorkflowExecutionRequestMsg(t, common.EncodingTypeThriftRW, true), wantAck: true},
 			},
+			expectStartRequest: true,
 		},
 		// signal with start test cases
 		{
-			name:          "signalwithstartworkflow request with invalid payload content",
-			frontendFails: true,
+			name: "signalwithstartworkflow request with invalid payload content",
 			msgs: []*fakeMessage{
 				{val: mustGenerateSignalWithStartWorkflowExecutionRequestMsg(t, common.EncodingTypeThriftRW, false), wantAck: false},
 			},
 		},
 		{
-			name:          "signalwithstartworkflow frontend fails to respond",
-			frontendFails: true,
+			name:        "signalwithstartworkflow frontend error",
+			frontendErr: &types.InternalServiceError{Message: "oh no"},
 			msgs: []*fakeMessage{
 				{val: mustGenerateSignalWithStartWorkflowExecutionRequestMsg(t, common.EncodingTypeThriftRW, true), wantAck: false},
 			},
+			expectSignalWithStartRequest: true,
+		},
+		{
+			name:        "signalwithstartworkflow WorkflowExecutionAlreadyStartedError error",
+			frontendErr: &types.WorkflowExecutionAlreadyStartedError{Message: "All good"},
+			msgs: []*fakeMessage{
+				{val: mustGenerateSignalWithStartWorkflowExecutionRequestMsg(t, common.EncodingTypeThriftRW, true), wantAck: true},
+			},
+			expectSignalWithStartRequest: true,
 		},
 		{
 			name: "signalwithstartworkflow unsupported encoding type. json encoding of requests are lossy due to PII masking so it shouldn't be used for async requests",
@@ -205,6 +224,7 @@ func TestDefaultConsumer(t *testing.T) {
 			msgs: []*fakeMessage{
 				{val: mustGenerateSignalWithStartWorkflowExecutionRequestMsg(t, common.EncodingTypeThriftRW, true), wantAck: true},
 			},
+			expectSignalWithStartRequest: true,
 		},
 	}
 
@@ -218,31 +238,31 @@ func TestDefaultConsumer(t *testing.T) {
 			mockFrontend := frontend.NewMockClient(gomock.NewController(t))
 			// we fake 2 headers and pass them manually to the mock because "..." extension doesn't work with mocked interface
 			opts := getYARPCOptions(fakeHeaders())
-			if tc.frontendFails {
-				mockFrontend.EXPECT().
-					StartWorkflowExecution(gomock.Any(), gomock.Any(), opts[0], opts[1]).
-					Return(nil, errors.New("failed")).AnyTimes()
-				mockFrontend.EXPECT().
-					SignalWithStartWorkflowExecution(gomock.Any(), gomock.Any(), opts[0], opts[1]).
-					Return(nil, errors.New("failed")).AnyTimes()
-			} else {
-				resp := &types.StartWorkflowExecutionResponse{RunID: "test-run-id"}
+			if tc.expectStartRequest {
 				mockFrontend.EXPECT().
 					StartWorkflowExecution(gomock.Any(), gomock.Any(), opts[0], opts[1]).
 					DoAndReturn(func(ctx interface{}, req *types.StartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
 						if diff := cmp.Diff(testStartReq.StartWorkflowExecutionRequest, req); diff != "" {
 							t.Fatalf("Request mismatch (-want +got):\n%s", diff)
 						}
-						return resp, nil
-					}).AnyTimes()
+						if tc.frontendErr != nil {
+							return nil, tc.frontendErr
+						}
+						return &types.StartWorkflowExecutionResponse{RunID: "test-run-id"}, nil
+					}).MinTimes(1)
+			}
+			if tc.expectSignalWithStartRequest {
 				mockFrontend.EXPECT().
 					SignalWithStartWorkflowExecution(gomock.Any(), gomock.Any(), opts[0], opts[1]).
 					DoAndReturn(func(ctx interface{}, req *types.SignalWithStartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
 						if diff := cmp.Diff(testSignalWithStartAsyncReq.SignalWithStartWorkflowExecutionRequest, req); diff != "" {
 							t.Fatalf("Request mismatch (-want +got):\n%s", diff)
 						}
-						return resp, nil
-					}).AnyTimes()
+						if tc.frontendErr != nil {
+							return nil, tc.frontendErr
+						}
+						return &types.StartWorkflowExecutionResponse{RunID: "test-run-id"}, nil
+					}).MinTimes(1)
 			}
 
 			c := New("queueid1", fakeConsumer, testlogger.New(t), metrics.NewNoopMetricsClient(), mockFrontend, WithConcurrency(2))
