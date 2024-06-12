@@ -3144,6 +3144,8 @@ func (wh *WorkflowHandler) ListAllWorkflowExecutions(
 			ListWorkflowExecutionsRequest: baseReq,
 			PartialMatch:                  listRequest.PartialMatch,
 			WorkflowSearchValue:           listRequest.WorkflowSearchValue,
+			SortColumn:                    listRequest.SortColumn,
+			SortOrder:                     listRequest.SortOrder,
 		},
 	)
 	if err != nil {
