@@ -499,8 +499,8 @@ func (t *transferActiveTaskExecutor) processCloseExecutionTaskHelper(
 	if applyParentClosePolicy {
 
 		parentExecution := types.WorkflowExecution{
-			WorkflowID: parentWorkflowID,
-			RunID:      parentRunID,
+			WorkflowID: task.WorkflowID,
+			RunID:      task.RunID,
 		}
 
 		err := t.processParentClosePolicy(ctx, task.DomainID, domainName, &parentExecution, children)
