@@ -185,23 +185,19 @@ func NewConfig(params *resource.Params) *Config {
 	advancedVisWritingMode := dc.GetStringProperty(
 		dynamicconfig.AdvancedVisibilityWritingMode,
 	)
-	// only start indexer when advanced visibility writing mode is set to on and ES visibility store is configured
-	// when it is using pinot and not in migration mode, indexer should not be started
-	if common.IsAdvancedVisibilityWritingEnabled(advancedVisWritingMode(), params.PersistenceConfig.IsAdvancedVisibilityConfigExist()) {
-		if params.PersistenceConfig.AdvancedVisibilityStore == common.PinotVisibilityStoreName && params.PinotConfig != nil && !params.PinotConfig.Migration.Enabled {
-			config.IndexerCfg = nil
-		} else {
-			config.IndexerCfg = &indexer.Config{
-				IndexerConcurrency:             dc.GetIntProperty(dynamicconfig.WorkerIndexerConcurrency),
-				ESProcessorNumOfWorkers:        dc.GetIntProperty(dynamicconfig.WorkerESProcessorNumOfWorkers),
-				ESProcessorBulkActions:         dc.GetIntProperty(dynamicconfig.WorkerESProcessorBulkActions),
-				ESProcessorBulkSize:            dc.GetIntProperty(dynamicconfig.WorkerESProcessorBulkSize),
-				ESProcessorFlushInterval:       dc.GetDurationProperty(dynamicconfig.WorkerESProcessorFlushInterval),
-				ValidSearchAttributes:          dc.GetMapProperty(dynamicconfig.ValidSearchAttributes),
-				EnableQueryAttributeValidation: dc.GetBoolProperty(dynamicconfig.EnableQueryAttributeValidation),
-			}
+
+	if shouldStartIndexer(params, advancedVisWritingMode) {
+		config.IndexerCfg = &indexer.Config{
+			IndexerConcurrency:             dc.GetIntProperty(dynamicconfig.WorkerIndexerConcurrency),
+			ESProcessorNumOfWorkers:        dc.GetIntProperty(dynamicconfig.WorkerESProcessorNumOfWorkers),
+			ESProcessorBulkActions:         dc.GetIntProperty(dynamicconfig.WorkerESProcessorBulkActions),
+			ESProcessorBulkSize:            dc.GetIntProperty(dynamicconfig.WorkerESProcessorBulkSize),
+			ESProcessorFlushInterval:       dc.GetDurationProperty(dynamicconfig.WorkerESProcessorFlushInterval),
+			ValidSearchAttributes:          dc.GetMapProperty(dynamicconfig.ValidSearchAttributes),
+			EnableQueryAttributeValidation: dc.GetBoolProperty(dynamicconfig.EnableQueryAttributeValidation),
 		}
 	}
+
 	return config
 }
 
@@ -469,4 +465,20 @@ func getDomainID(domain string) string {
 		domainID = common.ShadowerDomainID
 	}
 	return domainID
+}
+
+func shouldStartIndexer(params *resource.Params, advancedWritingMode dynamicconfig.StringPropertyFn) bool {
+	// only start indexer when advanced visibility writing mode is set to on and advanced visibility store is configured
+	if !common.IsAdvancedVisibilityWritingEnabled(advancedWritingMode(), params.PersistenceConfig.IsAdvancedVisibilityConfigExist()) {
+		return false
+	}
+
+	// when it is using pinot and not in migration mode, indexer should not be started since Pinot will direclty ingest from kafka
+	if params.PersistenceConfig.AdvancedVisibilityStore == common.PinotVisibilityStoreName &&
+		params.PinotConfig != nil &&
+		!params.PinotConfig.Migration.Enabled {
+		return false
+	}
+
+	return true
 }
