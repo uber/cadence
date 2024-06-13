@@ -107,3 +107,55 @@ func TestStartStop(t *testing.T) {
 	cl.Start(context.Background())
 	defer cl.Stop(context.Background())
 }
+
+func TestAck(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	consumerFactory := types.NewMockConsumerFactory(ctrl)
+	consumer := types.NewMockConsumer(ctrl)
+	consumerFactory.EXPECT().Stop(gomock.Any()).Return(nil).Times(1)
+	consumerFactory.EXPECT().New(gomock.Any()).Return(consumer, nil).Times(1)
+	opts := []Options{
+		WithPersister(types.NewMockPersister(ctrl)),
+		WithConsumerFactory(consumerFactory),
+	}
+	logger := testlogger.New(t)
+	scope := metrics.NoopScope(0)
+	cl, err := New(logger, scope, opts...)
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	cl.Start(context.Background())
+	defer cl.Stop(context.Background())
+
+	err = cl.Ack(context.Background(), nil)
+	if err != nil || err.Error() != "not implemented" {
+		t.Errorf("Ack() error: %v, want %v", err, "not implemented")
+	}
+}
+
+func TestNack(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	consumerFactory := types.NewMockConsumerFactory(ctrl)
+	consumer := types.NewMockConsumer(ctrl)
+	consumerFactory.EXPECT().Stop(gomock.Any()).Return(nil).Times(1)
+	consumerFactory.EXPECT().New(gomock.Any()).Return(consumer, nil).Times(1)
+	opts := []Options{
+		WithPersister(types.NewMockPersister(ctrl)),
+		WithConsumerFactory(consumerFactory),
+	}
+	logger := testlogger.New(t)
+	scope := metrics.NoopScope(0)
+	cl, err := New(logger, scope, opts...)
+	if err != nil {
+		t.Fatalf("New() error: %v", err)
+	}
+
+	cl.Start(context.Background())
+	defer cl.Stop(context.Background())
+
+	err = cl.Nack(context.Background(), nil)
+	if err != nil || err.Error() != "not implemented" {
+		t.Errorf("Ack() error: %v, want %v", err, "not implemented")
+	}
+}

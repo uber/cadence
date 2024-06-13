@@ -24,7 +24,7 @@ package types
 
 import "context"
 
-//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination consumer_mock.go -package types github.com/uber/cadence/common/mapq/types ConsumerFactor,Consumer
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination consumer_mock.go -package types github.com/uber/cadence/common/mapq/types ConsumerFactory,Consumer
 
 type ConsumerFactory interface {
 	// New creates a new consumer with the given partitions or returns an existing consumer

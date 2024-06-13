@@ -40,14 +40,16 @@ type Dispatcher struct {
 }
 
 func New(c types.Consumer) *Dispatcher {
+	ctx, cancelCtx := context.WithCancel(context.Background())
 	return &Dispatcher{
-		consumer: c,
+		consumer:  c,
+		ctx:       ctx,
+		cancelCtx: cancelCtx,
 	}
 }
 
 func (d *Dispatcher) Start(ctx context.Context) error {
 	d.wg.Add(1)
-	d.ctx, d.cancelCtx = context.WithCancel(ctx)
 	go d.run()
 	return nil
 }
@@ -65,13 +67,6 @@ func (d *Dispatcher) Stop(ctx context.Context) error {
 }
 
 func (d *Dispatcher) run() {
-	d.wg.Done()
+	defer d.wg.Done()
 	// TODO: implement
-	for {
-		select {
-		case <-d.ctx.Done():
-			return
-		default:
-		}
-	}
 }

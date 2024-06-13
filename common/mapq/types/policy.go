@@ -44,6 +44,7 @@ func (dp DispatchPolicy) String() string {
 }
 
 type SplitPolicy struct {
+	// Disabled is used to disable the split policy for the node.
 	Disabled bool `json:"disabled,omitempty"`
 
 	// PredefinedSplits is a list of predefined splits for the attribute key
@@ -52,29 +53,10 @@ type SplitPolicy struct {
 
 	// The max number of children to split the node into.
 	MaxNumChildren int `json:"maxNumChildren,omitempty"`
-
-	// Strategy for splitting the node
-	Strategy *SplitStrategy `json:"strategy,omitempty"`
 }
 
 func (sp SplitPolicy) String() string {
-	return fmt.Sprintf("SplitPolicy{Disabled:%v, PredefinedSplits:%v, MaxNumChildren:%d, Strategy:%s}", sp.Disabled, sp.PredefinedSplits, sp.MaxNumChildren, sp.Strategy)
-}
-
-type SplitStrategy struct {
-	// Split items into child queues when the RPS of items sharing same attribute value for given key
-	// exceeds this threshold
-	// If 0, then no split by RPS
-	SplitEnqueueRPSThreshold int `json:"splitRPSThreshold,omitempty"`
-
-	// Enable burst detection for this level
-	// If enabled, then the node will keep track of the burst score per item group (grouped by attribute value)
-	// and split the node if the burst score exceeds the threshold
-	EnableBurstDetection bool `json:"enableBurstDetection,omitempty"`
-}
-
-func (ss SplitStrategy) String() string {
-	return fmt.Sprintf("SplitStrategy{SplitEnqueueRPSThreshold:%d, EnableBurstDetection:%v}", ss.SplitEnqueueRPSThreshold, ss.EnableBurstDetection)
+	return fmt.Sprintf("SplitPolicy{Disabled:%v, PredefinedSplits:%v, MaxNumChildren:%d}", sp.Disabled, sp.PredefinedSplits, sp.MaxNumChildren)
 }
 
 type NodePolicy struct {
