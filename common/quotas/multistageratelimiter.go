@@ -38,7 +38,7 @@ func NewMultiStageRateLimiter(global Limiter, domainLimiters *Collection) *Multi
 // Allow attempts to allow a request to go through. The method returns
 // immediately with a true or false indicating if the request can make
 // progress
-func (d *MultiStageRateLimiter) Allow(info Info) bool {
+func (d *MultiStageRateLimiter) Allow(info Info) (allowed bool) {
 	domain := info.Domain
 	if len(domain) == 0 {
 		return d.globalLimiter.Allow()
@@ -46,21 +46,17 @@ func (d *MultiStageRateLimiter) Allow(info Info) bool {
 
 	// take a reservation with the domain limiter first
 	rsv := d.domainLimiters.For(domain).Reserve()
-	if !rsv.OK() {
-		return false
-	}
+	defer func() {
+		rsv.Used(allowed) // returns the token if allowed but not used
+	}()
 
-	// check whether the reservation is valid now, otherwise
-	// cancel and return right away so we can drop the request
-	if rsv.Delay() != 0 {
-		rsv.Cancel()
+	if !rsv.Allow() {
 		return false
 	}
 
 	// ensure that the reservation does not break the global rate limit, if it
 	// does, cancel the reservation and do not allow to proceed.
 	if !d.globalLimiter.Allow() {
-		rsv.Cancel()
 		return false
 	}
 	return true

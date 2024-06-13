@@ -28,12 +28,18 @@ import (
 	"time"
 
 	"golang.org/x/time/rate"
+
+	"github.com/uber/cadence/common/clock"
 )
 
 const (
 	_defaultRPSTTL = 60 * time.Second
 	_burstSize     = 1
 )
+
+// TODO: this is likely major overkill, especially now that clock.Ratelimiter exists.
+// Just mutate the limit, it's concurrency-safe and efficient.  And consider a background
+// debouncer only if that proves too costly (stevenl: I suspect it will not be).
 
 // RateLimiter is a wrapper around the golang rate limiter handling dynamic
 // configuration updates of the max dispatch per second. This has comparable
@@ -83,20 +89,20 @@ func (rl *RateLimiter) UpdateMaxDispatch(maxDispatchPerSecond *float64) {
 
 // Wait waits up till deadline for a rate limit token
 func (rl *RateLimiter) Wait(ctx context.Context) error {
-	limiter := rl.goRateLimiter.Load().(*rate.Limiter)
+	limiter := rl.goRateLimiter.Load().(clock.Ratelimiter)
 	return limiter.Wait(ctx)
 }
 
 // Reserve reserves a rate limit token
-func (rl *RateLimiter) Reserve() *rate.Reservation {
-	limiter := rl.goRateLimiter.Load().(*rate.Limiter)
+func (rl *RateLimiter) Reserve() clock.Reservation {
+	limiter := rl.goRateLimiter.Load().(clock.Ratelimiter)
 	return limiter.Reserve()
 }
 
 // Allow immediately returns with true or false indicating if a rate limit
 // token is available or not
 func (rl *RateLimiter) Allow() bool {
-	limiter := rl.goRateLimiter.Load().(*rate.Limiter)
+	limiter := rl.goRateLimiter.Load().(clock.Ratelimiter)
 	return limiter.Allow()
 }
 
@@ -116,7 +122,7 @@ func (rl *RateLimiter) storeLimiter(maxDispatchPerSecond *float64) {
 	if *maxDispatchPerSecond != 0 && burst <= rl.minBurst {
 		burst = rl.minBurst
 	}
-	limiter := rate.NewLimiter(rate.Limit(*maxDispatchPerSecond), burst)
+	limiter := clock.NewRatelimiter(rate.Limit(*maxDispatchPerSecond), burst)
 	rl.goRateLimiter.Store(limiter)
 }
 
