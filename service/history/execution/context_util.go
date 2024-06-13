@@ -40,7 +40,7 @@ func (c *contextImpl) emitLargeWorkflowShardIDStats(blobSize int64, oldHistoryCo
 		if blobSize > blobSizeWarn {
 			c.logger.SampleInfo("Workflow writing a large blob", c.shard.GetConfig().SampleLoggingRate(), tag.WorkflowDomainName(c.GetDomainName()),
 				tag.WorkflowID(c.workflowExecution.GetWorkflowID()), tag.ShardID(c.shard.GetShardID()), tag.WorkflowRunID(c.workflowExecution.GetRunID()))
-			c.metricsClient.Scope(metrics.LargeExecutionBlobShardScope, metrics.ShardIDTag(shardID)).IncCounter(metrics.LargeHistoryBlobCount)
+			c.metricsClient.Scope(metrics.LargeExecutionBlobShardScope, metrics.ShardIDTag(shardID), metrics.DomainTag(c.GetDomainName())).IncCounter(metrics.LargeHistoryBlobCount)
 		}
 
 		historyCountWarn := common.MinInt64(int64(c.shard.GetConfig().LargeShardHistoryEventMetricThreshold()), int64(c.shard.GetConfig().HistoryCountLimitWarn(c.GetDomainName())))
@@ -49,7 +49,7 @@ func (c *contextImpl) emitLargeWorkflowShardIDStats(blobSize int64, oldHistoryCo
 		if oldHistoryCount < historyCountWarn && newHistoryCount >= historyCountWarn {
 			c.logger.Warn("Workflow history event count is reaching dangerous levels", tag.WorkflowDomainName(c.GetDomainName()),
 				tag.WorkflowID(c.workflowExecution.GetWorkflowID()), tag.ShardID(c.shard.GetShardID()), tag.WorkflowRunID(c.workflowExecution.GetRunID()))
-			c.metricsClient.Scope(metrics.LargeExecutionCountShardScope, metrics.ShardIDTag(shardID)).IncCounter(metrics.LargeHistoryEventCount)
+			c.metricsClient.Scope(metrics.LargeExecutionCountShardScope, metrics.ShardIDTag(shardID), metrics.DomainTag(c.GetDomainName())).IncCounter(metrics.LargeHistoryEventCount)
 		}
 
 		historySizeWarn := common.MinInt64(int64(c.shard.GetConfig().LargeShardHistorySizeMetricThreshold()), int64(c.shard.GetConfig().HistorySizeLimitWarn(c.GetDomainName())))
@@ -57,7 +57,7 @@ func (c *contextImpl) emitLargeWorkflowShardIDStats(blobSize int64, oldHistoryCo
 		if oldHistorySize < historySizeWarn && c.stats.HistorySize >= historySizeWarn {
 			c.logger.Warn("Workflow history event size is reaching dangerous levels", tag.WorkflowDomainName(c.GetDomainName()),
 				tag.WorkflowID(c.workflowExecution.GetWorkflowID()), tag.ShardID(c.shard.GetShardID()), tag.WorkflowRunID(c.workflowExecution.GetRunID()))
-			c.metricsClient.Scope(metrics.LargeExecutionSizeShardScope, metrics.ShardIDTag(shardID)).IncCounter(metrics.LargeHistorySizeCount)
+			c.metricsClient.Scope(metrics.LargeExecutionSizeShardScope, metrics.ShardIDTag(shardID), metrics.DomainTag(c.GetDomainName())).IncCounter(metrics.LargeHistorySizeCount)
 		}
 	}
 }
