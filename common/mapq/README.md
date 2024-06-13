@@ -44,4 +44,22 @@ The routing key per level, partitioning/departitioning strategy, RPS limits and 
 
 Once initialized the tree will have a minimal number of nodes provided in the policy but it respects policies for not-yet-existing nodes. Since MAPQ supports auto-partitioning there will be new nodes added/removed and it accepts providing policies for such nodes. For example, you might want to partition by domain only for bursty domains and allocate them specific RPS.
 
-![MAPQ tenant burst visualization](../../docs/images/mapq_tenant_burst_visualization.png)
+
+#### Tree structure with policies
+
+![MAPQ partitioned queue tree](../../docs/images/mapq_partitioned_queue_tree_example.png)
+
+
+#### Initialization and Object Hierarcy
+
+![MAPQ initialization](../../docs/images/mapq_initialization.png)
+
+
+#### Enqueue Flow
+
+![MAPQ enqueue flow](../../docs/images/mapq_enqueue_flow.png)
+
+
+#### Dispatch Flow
+
+![MAPQ enqueue flow](../../docs/images/mapq_enqueue_flow.png)

@@ -139,7 +139,7 @@ func TestExample(t *testing.T) {
 	}
 	defer cl.Stop(ctx)
 
-	err = cl.Enqueue(context.Background(), []types.Item{
+	_, err = cl.Enqueue(context.Background(), []types.Item{
 		newTimerItem("d1", time.Now(), persistence.TaskTypeDecisionTimeout),
 		newTimerItem("d1", time.Now(), persistence.TaskTypeActivityTimeout),
 		newTimerItem("d1", time.Now(), persistence.TaskTypeUserTimer),
@@ -154,7 +154,7 @@ func TestExample(t *testing.T) {
 		panic(fmt.Errorf("expected 5 items in persister, got %v", len(persister.items)))
 	}
 
-	err = cl.Enqueue(context.Background(), []types.Item{
+	_, err = cl.Enqueue(context.Background(), []types.Item{
 		newTransferItem("d2", 1, persistence.TransferTaskTypeDecisionTask),
 		newTransferItem("d2", 2, persistence.TransferTaskTypeActivityTask),
 		newTransferItem("d2", 3, persistence.TransferTaskTypeStartChildExecution),
@@ -168,7 +168,6 @@ func TestExample(t *testing.T) {
 	if len(persister.items) != 10 {
 		panic(fmt.Errorf("expected 10 items in persister, got %v", len(persister.items)))
 	}
-
 }
 
 var _ types.ConsumerFactory = (*NoOpConsumerFactory)(nil)
@@ -225,6 +224,11 @@ func (p *InMemoryPersister) CommitOffsets(ctx context.Context, offsets *types.Of
 	fmt.Printf("committing offsets: %v\n", offsets)
 	p.offsets = offsets
 	return nil
+}
+
+// Fetch(ctx context.Context, partitions ItemPartitions, pageInfo PageInfo) ([]Item, error)
+func (p *InMemoryPersister) Fetch(ctx context.Context, partitions types.ItemPartitions, pageInfo types.PageInfo) ([]types.Item, error) {
+	return nil, nil
 }
 
 func newTimerItem(domain string, t time.Time, timerType int) types.Item {

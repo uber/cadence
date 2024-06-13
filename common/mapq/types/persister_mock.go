@@ -70,6 +70,21 @@ func (mr *MockPersisterMockRecorder) CommitOffsets(ctx, offsets interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommitOffsets", reflect.TypeOf((*MockPersister)(nil).CommitOffsets), ctx, offsets)
 }
 
+// Fetch mocks base method.
+func (m *MockPersister) Fetch(ctx context.Context, partitions ItemPartitions, pageInfo PageInfo) ([]Item, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Fetch", ctx, partitions, pageInfo)
+	ret0, _ := ret[0].([]Item)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Fetch indicates an expected call of Fetch.
+func (mr *MockPersisterMockRecorder) Fetch(ctx, partitions, pageInfo interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Fetch", reflect.TypeOf((*MockPersister)(nil).Fetch), ctx, partitions, pageInfo)
+}
+
 // GetOffsets mocks base method.
 func (m *MockPersister) GetOffsets(ctx context.Context) (*Offsets, error) {
 	m.ctrl.T.Helper()

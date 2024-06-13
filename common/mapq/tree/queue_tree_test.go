@@ -157,10 +157,10 @@ func TestEnqueue(t *testing.T) {
 			// consumers will be creeted for each leaf node
 			consumerFactory.EXPECT().New(gomock.Any()).Return(consumer, nil).Times(tc.leafNodeCount)
 
-			var gotItemsToPersist []types.ItemToPersist
+			var gotItemsToPersistByPersister []types.ItemToPersist
 			persister := types.NewMockPersister(ctrl)
 			persister.EXPECT().Persist(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, itemsToPersist []types.ItemToPersist) error {
-				gotItemsToPersist = itemsToPersist
+				gotItemsToPersistByPersister = itemsToPersist
 				return tc.persistErr
 			})
 
@@ -181,7 +181,7 @@ func TestEnqueue(t *testing.T) {
 			}
 			defer tree.Stop(context.Background())
 
-			err = tree.Enqueue(context.Background(), tc.items)
+			returnedItemsToPersist, err := tree.Enqueue(context.Background(), tc.items)
 			if (err != nil) != tc.wantErr {
 				t.Errorf("Enqueue() error: %v, wantErr: %v", err, tc.wantErr)
 			}
@@ -190,13 +190,21 @@ func TestEnqueue(t *testing.T) {
 				return
 			}
 
-			if got, want := len(gotItemsToPersist), len(tc.wantItemsToPersist); got != want {
-				t.Fatalf("Items to persist count mismatch: got=%v, want=%v", got, want)
+			if got, want := len(gotItemsToPersistByPersister), len(tc.wantItemsToPersist); got != want {
+				t.Fatalf("Items to persist count mismatch: gotItemsToPersistByPersister=%v, want=%v", got, want)
 			}
 
-			for i := range gotItemsToPersist {
-				if diff := cmp.Diff(tc.wantItemsToPersist[i].String(), gotItemsToPersist[i].String()); diff != "" {
-					t.Errorf("%d - Item to persist mismatch (-want +got):\n%s", i, diff)
+			if got, want := len(returnedItemsToPersist), len(tc.wantItemsToPersist); got != want {
+				t.Fatalf("Items to persist count mismatch: returnedItemsToPersist=%v, want=%v", got, want)
+			}
+
+			for i := range gotItemsToPersistByPersister {
+				if diff := cmp.Diff(tc.wantItemsToPersist[i].String(), gotItemsToPersistByPersister[i].String()); diff != "" {
+					t.Errorf("%d - gotItemsToPersistByPersister mismatch (-want +got):\n%s", i, diff)
+				}
+
+				if diff := cmp.Diff(tc.wantItemsToPersist[i].String(), returnedItemsToPersist[i].String()); diff != "" {
+					t.Errorf("%d - returnedItemsToPersist mismatch (-want +got):\n%s", i, diff)
 				}
 			}
 		})

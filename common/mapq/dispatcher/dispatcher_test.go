@@ -20,36 +20,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package types
+package dispatcher
 
 import (
 	"context"
+	"testing"
+
+	"go.uber.org/goleak"
 )
 
-type Client interface {
-	// Enqueue adds an item to the queue
-	Enqueue(context.Context, []Item) ([]ItemToPersist, error)
+func TestStartStop(t *testing.T) {
+	defer goleak.VerifyNone(t)
 
-	// Ack marks the item as processed.
-	// Out of order acks are supported.
-	// Acking an item that has not been dequeued will have no effect.
-	// Queue's committed offset is updated to the last ack'ed item's offset periodically until there's a gap (un-acked item).
-	// In other words, all items up to the committed offset are ack'ed.
-	// Ack'ed item might still be returned from Dequeue if its offset is higher than last committed offset before process restarts.
-	Ack(context.Context, Item) error
+	d := New(nil)
+	err := d.Start(context.TODO())
+	if err != nil {
+		t.Fatalf("Start() failed: %v", err)
+	}
 
-	// Nack negatively acknowledges an item in the queue
-	// Nack'ing an already ack'ed item will have no effect.
-	Nack(context.Context, Item) error
-
-	// Start the client. It will
-	// - fetch the last committed offsets from the persister,
-	// - start corresponding consumers
-	// - dispatch items starting from those offsets.
-	Start(context.Context) error
-
-	// Stop the client. It will
-	// - stop all consumers
-	// - persist the last committed offsets
-	Stop(context.Context) error
+	err = d.Stop(context.TODO())
+	if err != nil {
+		t.Fatalf("Stop() failed: %v", err)
+	}
 }

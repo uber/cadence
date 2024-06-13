@@ -108,21 +108,21 @@ func (t *QueueTree) String() string {
 	return sb.String()
 }
 
-func (t *QueueTree) Enqueue(ctx context.Context, items []types.Item) error {
+func (t *QueueTree) Enqueue(ctx context.Context, items []types.Item) ([]types.ItemToPersist, error) {
 	if t.root == nil {
-		return fmt.Errorf("root node is nil")
+		return nil, fmt.Errorf("root node is nil")
 	}
 
 	var itemsToPersist []types.ItemToPersist
 	for _, item := range items {
 		itemToPersist, err := t.root.Enqueue(ctx, item, nil, map[string]any{})
 		if err != nil {
-			return err
+			return nil, err
 		}
 		itemsToPersist = append(itemsToPersist, itemToPersist)
 	}
 
-	return t.persister.Persist(ctx, itemsToPersist)
+	return itemsToPersist, t.persister.Persist(ctx, itemsToPersist)
 }
 
 func (t *QueueTree) init() error {

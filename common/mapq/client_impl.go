@@ -72,7 +72,7 @@ func (c *clientImpl) Stop(ctx context.Context) error {
 	return nil
 }
 
-func (c *clientImpl) Enqueue(ctx context.Context, items []types.Item) error {
+func (c *clientImpl) Enqueue(ctx context.Context, items []types.Item) ([]types.ItemToPersist, error) {
 	return c.tree.Enqueue(ctx, items)
 }
 
