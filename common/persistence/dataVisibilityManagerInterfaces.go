@@ -137,6 +137,7 @@ type (
 	ListAllWorkflowExecutionsRequest struct {
 		ListWorkflowExecutionsRequest
 		PartialMatch        bool
+		StatusFilter        []types.WorkflowExecutionCloseStatus
 		WorkflowSearchValue string // This value will be searched across workflow type, workflow ID and runID
 		SortColumn          string // This should be a valid search attribute
 		SortOrder           string // DESC or ASC

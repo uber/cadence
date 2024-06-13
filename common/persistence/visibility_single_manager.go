@@ -273,6 +273,7 @@ func (v *visibilityManagerImpl) ListAllWorkflowExecutions(
 		SortColumn:          request.SortColumn,
 		SortOrder:           request.SortOrder,
 	}
+	copy(internalRequest.StatusFilter, request.StatusFilter)
 	if internalListRequest != nil {
 		internalRequest.InternalListWorkflowExecutionsRequest = *internalListRequest
 	}
