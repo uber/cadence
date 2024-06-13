@@ -62,4 +62,4 @@ Once initialized the tree will have a minimal number of nodes provided in the po
 
 #### Dispatch Flow
 
-![MAPQ enqueue flow](../../docs/images/mapq_enqueue_flow.png)
+![MAPQ enqueue flow](../../docs/images/mapq_dispatch_flow.png)
