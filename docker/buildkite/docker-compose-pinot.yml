@@ -54,6 +54,8 @@ services:
   # will be deleted later when we get rid of ES usages
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch-oss:7.9.3
+    # version here must be the same as the one in testdata/integration_pinot_cluster
+    #image: webhippie/elasticsearch:6.4
     ports:
       - "9200:9200"
     networks:

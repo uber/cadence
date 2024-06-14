@@ -29,8 +29,9 @@ historyconfig:
 workerconfig:
   enablearchiver: false
   enablereplicator: false
-  enableindexer: false
+  enableindexer: true
 esconfig:
+  version: "v7"
   url:
     scheme: "http"
     host: "${ES_SEEDS}:9200"
