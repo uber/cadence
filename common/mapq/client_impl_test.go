@@ -129,8 +129,8 @@ func TestAck(t *testing.T) {
 	defer cl.Stop(context.Background())
 
 	err = cl.Ack(context.Background(), nil)
-	if err != nil || err.Error() != "not implemented" {
-		t.Errorf("Ack() error: %v, want %v", err, "not implemented")
+	if err == nil || err.Error() != "not implemented" {
+		t.Errorf("Ack() error: %q, want %q", err, "not implemented")
 	}
 }
 
@@ -155,7 +155,7 @@ func TestNack(t *testing.T) {
 	defer cl.Stop(context.Background())
 
 	err = cl.Nack(context.Background(), nil)
-	if err != nil || err.Error() != "not implemented" {
-		t.Errorf("Ack() error: %v, want %v", err, "not implemented")
+	if err == nil || err.Error() != "not implemented" {
+		t.Errorf("Ack() error: %q, want %q", err, "not implemented")
 	}
 }

@@ -84,15 +84,10 @@ func TestExample(t *testing.T) {
 			// level 2: nodes per <type, sub-type> pairs
 			// - default 1000 RPS for per sub-type node
 			// - split by domain. predefined split for d3 domain
-			// - allow top 5 domains to be split based on burst
 			{
 				Path: "*/./.",
 				SplitPolicy: &types.SplitPolicy{
-					MaxNumChildren:   5, // allow top 4 tomains to be split. 5th domain will be catch-all
 					PredefinedSplits: []any{"d3"},
-					Strategy: &types.SplitStrategy{
-						SplitEnqueueRPSThreshold: 100,
-					},
 				},
 			},
 			// override for timer delete history event:

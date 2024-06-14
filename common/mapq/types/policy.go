@@ -50,13 +50,10 @@ type SplitPolicy struct {
 	// PredefinedSplits is a list of predefined splits for the attribute key
 	// Child nodes for these attributes will be created during initialization
 	PredefinedSplits []any `json:"predefinedSplits,omitempty"`
-
-	// The max number of children to split the node into.
-	MaxNumChildren int `json:"maxNumChildren,omitempty"`
 }
 
 func (sp SplitPolicy) String() string {
-	return fmt.Sprintf("SplitPolicy{Disabled:%v, PredefinedSplits:%v, MaxNumChildren:%d}", sp.Disabled, sp.PredefinedSplits, sp.MaxNumChildren)
+	return fmt.Sprintf("SplitPolicy{Disabled:%v, PredefinedSplits:%v}", sp.Disabled, sp.PredefinedSplits)
 }
 
 type NodePolicy struct {
