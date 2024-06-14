@@ -1769,12 +1769,16 @@ func TestGetListAllWorkflowExecutionsQuery(t *testing.T) {
 				},
 				PartialMatch:        false,
 				WorkflowSearchValue: "123",
+				StatusFilter:        []types.WorkflowExecutionCloseStatus{types.WorkflowExecutionCloseStatusCompleted, types.WorkflowExecutionCloseStatusTimedOut},
 			},
 			expectResult: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND IsDeleted = false
 AND StartTime BETWEEN 1547596871371 AND 2547596873371
+AND ( CloseStatus = 'COMPLETED'
+OR CloseStatus = 'TIMED_OUT'
+ )
 AND ( WorkflowID = '123'
 OR WorkflowType = '123'
 OR RunID = '123'
@@ -1796,6 +1800,7 @@ LIMIT 0, 10
 				},
 				PartialMatch:        false,
 				WorkflowSearchValue: "123",
+				StatusFilter:        []types.WorkflowExecutionCloseStatus{types.WorkflowExecutionCloseStatusTerminated},
 				SortColumn:          CloseTime,
 				SortOrder:           AscendingOrder,
 			},
@@ -1804,6 +1809,8 @@ FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND IsDeleted = false
 AND StartTime BETWEEN 1547596871371 AND 2547596873371
+AND ( CloseStatus = 'TERMINATED'
+ )
 AND ( WorkflowID = '123'
 OR WorkflowType = '123'
 OR RunID = '123'
