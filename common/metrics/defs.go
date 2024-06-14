@@ -2476,6 +2476,7 @@ const (
 	WorkflowIDCacheSizeGauge
 	WorkflowIDCacheRequestsExternalRatelimitedCounter
 	WorkflowIDCacheRequestsExternalMaxRequestsPerSecondsTimer
+	WorkflowIDCacheRequestsInternalMaxRequestsPerSecondsTimer
 	WorkflowIDCacheRequestsInternalRatelimitedCounter
 	NumHistoryMetrics
 )
@@ -3115,6 +3116,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		WorkflowIDCacheSizeGauge:                                     {metricName: "workflow_id_cache_size", metricType: Gauge},
 		WorkflowIDCacheRequestsExternalRatelimitedCounter:            {metricName: "workflow_id_external_requests_ratelimited", metricType: Counter},
 		WorkflowIDCacheRequestsExternalMaxRequestsPerSecondsTimer:    {metricName: "workflow_id_external_requests_max_requests_per_seconds", metricType: Timer},
+		WorkflowIDCacheRequestsInternalMaxRequestsPerSecondsTimer:    {metricName: "workflow_id_internal_requests_max_requests_per_seconds", metricType: Timer},
 		WorkflowIDCacheRequestsInternalRatelimitedCounter:            {metricName: "workflow_id_internal_requests_ratelimited", metricType: Counter},
 	},
 	Matching: {
