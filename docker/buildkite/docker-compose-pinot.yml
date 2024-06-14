@@ -150,7 +150,7 @@ services:
       - -e
       - -c
       - >
-        go test -timeout 3600s
+        go test -timeout 60s
         -run ^TestPinotIntegrationSuite$
         -tags pinotintegration
         -count 1
