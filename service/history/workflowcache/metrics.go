@@ -50,6 +50,7 @@ func (cm *workflowIDCountMetric) updatePerDomainMaxWFRequestCount(
 	domainName string,
 	timeSource clock.TimeSource,
 	metricsClient metrics.Client,
+	metric int,
 ) {
 	cm.Lock()
 	defer cm.Unlock()
@@ -61,5 +62,5 @@ func (cm *workflowIDCountMetric) updatePerDomainMaxWFRequestCount(
 
 	// We can just use the upper of the metric, so it is not an issue to emit all the counts
 	metricsClient.Scope(metrics.HistoryClientWfIDCacheScope, metrics.DomainTag(domainName)).
-		RecordTimer(metrics.WorkflowIDCacheRequestsExternalMaxRequestsPerSecondsTimer, time.Duration(cm.count))
+		RecordTimer(metric, time.Duration(cm.count))
 }
