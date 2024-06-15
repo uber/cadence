@@ -1757,7 +1757,7 @@ func TestGetListAllWorkflowExecutionsQuery(t *testing.T) {
 		expectResult string
 		expectError  error
 	}{
-		"complete request with exact match": {
+		"complete request with exact match and default sorting": {
 			inputRequest: &p.InternalListAllWorkflowExecutionsByTypeRequest{
 				InternalListWorkflowExecutionsRequest: p.InternalListWorkflowExecutionsRequest{
 					DomainUUID:    testDomainID,
@@ -1769,6 +1769,71 @@ func TestGetListAllWorkflowExecutionsQuery(t *testing.T) {
 				},
 				PartialMatch:        false,
 				WorkflowSearchValue: "123",
+				StatusFilter:        []types.WorkflowExecutionCloseStatus{types.WorkflowExecutionCloseStatusCompleted, types.WorkflowExecutionCloseStatusTimedOut},
+			},
+			expectResult: fmt.Sprintf(`SELECT *
+FROM %s
+WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
+AND IsDeleted = false
+AND StartTime BETWEEN 1547596871371 AND 2547596873371
+AND ( CloseStatus = 'COMPLETED'
+OR CloseStatus = 'TIMED_OUT'
+ )
+AND ( WorkflowID = '123'
+OR WorkflowType = '123'
+OR RunID = '123'
+ )
+Order BY StartTime DESC
+LIMIT 0, 10
+`, testTableName),
+			expectError: nil,
+		},
+		"complete request with exact match with valid custom sorting": {
+			inputRequest: &p.InternalListAllWorkflowExecutionsByTypeRequest{
+				InternalListWorkflowExecutionsRequest: p.InternalListWorkflowExecutionsRequest{
+					DomainUUID:    testDomainID,
+					Domain:        testDomain,
+					EarliestTime:  time.Unix(0, testEarliestTime),
+					LatestTime:    time.Unix(0, testLatestTime),
+					PageSize:      testPageSize,
+					NextPageToken: nil,
+				},
+				PartialMatch:        false,
+				WorkflowSearchValue: "123",
+				StatusFilter:        []types.WorkflowExecutionCloseStatus{types.WorkflowExecutionCloseStatusTerminated},
+				SortColumn:          CloseTime,
+				SortOrder:           AscendingOrder,
+			},
+			expectResult: fmt.Sprintf(`SELECT *
+FROM %s
+WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
+AND IsDeleted = false
+AND StartTime BETWEEN 1547596871371 AND 2547596873371
+AND ( CloseStatus = 'TERMINATED'
+ )
+AND ( WorkflowID = '123'
+OR WorkflowType = '123'
+OR RunID = '123'
+ )
+Order BY CloseTime ASC
+LIMIT 0, 10
+`, testTableName),
+			expectError: nil,
+		},
+		"complete request with exact match with invalid custom sorting": {
+			inputRequest: &p.InternalListAllWorkflowExecutionsByTypeRequest{
+				InternalListWorkflowExecutionsRequest: p.InternalListWorkflowExecutionsRequest{
+					DomainUUID:    testDomainID,
+					Domain:        testDomain,
+					EarliestTime:  time.Unix(0, testEarliestTime),
+					LatestTime:    time.Unix(0, testLatestTime),
+					PageSize:      testPageSize,
+					NextPageToken: nil,
+				},
+				PartialMatch:        false,
+				WorkflowSearchValue: "123",
+				SortColumn:          "EndTime",
+				SortOrder:           AscendingOrder,
 			},
 			expectResult: fmt.Sprintf(`SELECT *
 FROM %s
@@ -1784,7 +1849,7 @@ LIMIT 0, 10
 `, testTableName),
 			expectError: nil,
 		},
-		"complete request with partial match": {
+		"complete request with partial match and default sorting": {
 			inputRequest: &p.InternalListAllWorkflowExecutionsByTypeRequest{
 				InternalListWorkflowExecutionsRequest: p.InternalListWorkflowExecutionsRequest{
 					DomainUUID:    testDomainID,
@@ -1823,9 +1888,17 @@ LIMIT 0, 0
 			expectError: nil,
 		},
 	}
+	ctrl := gomock.NewController(t)
+	mockPinotClient := pnt.NewMockGenericClient(ctrl)
+	mockProducer := &mocks.KafkaProducer{}
+	mgr := NewPinotVisibilityStore(mockPinotClient, &service.Config{
+		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
+	}, mockProducer, log.NewNoop())
+	visibilityStore := mgr.(*pinotVisibilityStore)
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			actualResult, actualError := getListAllWorkflowExecutionsQuery(testTableName, test.inputRequest)
+			actualResult, actualError := visibilityStore.getListAllWorkflowExecutionsQuery(testTableName, test.inputRequest)
 			assert.Equal(t, test.expectResult, actualResult)
 			assert.NoError(t, actualError)
 		})

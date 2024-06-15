@@ -22,6 +22,7 @@ package tasklist
 
 import (
 	"context"
+	"math"
 	"math/rand"
 	"sync"
 	"testing"
@@ -29,8 +30,11 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/yarpc"
+	"golang.org/x/time/rate"
 
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
@@ -39,6 +43,7 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/matching/config"
 )
@@ -609,6 +614,280 @@ func (t *MatcherTestSuite) newTaskInfo() *persistence.TaskInfo {
 		ScheduleID:             rand.Int63(),
 		ScheduleToStartTimeout: rand.Int31(),
 	}
+}
+
+func TestRatelimitBehavior(t *testing.T) {
+	// NOT t.Parallel() to avoid noise from cpu-heavy tests
+
+	const (
+		granularity = 100 * time.Millisecond
+		precision   = float64(granularity / 10) // for elapsed-time delta checks
+	)
+
+	// code prior to ~june 2024, kept around until new behavior is thoroughly validated,
+	// largely to make regression tests easier to build if we encounter problems
+	orig := func(ctx context.Context, limiter *rate.Limiter) (*rate.Reservation, error) {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
+		deadline, ok := ctx.Deadline()
+		if !ok {
+			if err := limiter.Wait(ctx); err != nil {
+				return nil, err
+			}
+			return nil, nil
+		}
+
+		rsv := limiter.Reserve()
+		// If we have to wait too long for reservation, give up and return
+		if !rsv.OK() || rsv.Delay() > time.Until(deadline) {
+			if rsv.OK() { // if we were indeed given a reservation, return it before we bail out
+				rsv.Cancel()
+			}
+			return nil, ErrTasklistThrottled
+		}
+
+		time.Sleep(rsv.Delay())
+		return rsv, nil
+	}
+	tests := map[string]struct {
+		run         func(allowable func(ctx context.Context) (*rate.Reservation, error)) error
+		err         error
+		duration    time.Duration
+		beginTokens int
+		endTokens   int
+	}{
+		"no deadline returns immediately if available": {
+			run: func(allowable func(ctx context.Context) (*rate.Reservation, error)) error {
+				_, err := allowable(context.Background())
+				return err
+			},
+			duration:    0,
+			beginTokens: 1,
+		},
+		"no deadline waits until available": {
+			run: func(allowable func(ctx context.Context) (*rate.Reservation, error)) error {
+				_, err := allowable(context.Background())
+				return err
+			},
+			duration: granularity,
+		},
+		"canceling no deadline while waiting returns ctx err": {
+			run: func(allowable func(ctx context.Context) (*rate.Reservation, error)) error {
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+				go func() {
+					time.Sleep(granularity / 2)
+					cancel()
+				}()
+				_, err := allowable(ctx)
+				return err
+			},
+			err:      context.Canceled,
+			duration: granularity / 2,
+		},
+		"returns immediately if canceled": {
+			run: func(allowable func(ctx context.Context) (*rate.Reservation, error)) error {
+				ctx, cancel := context.WithCancel(context.Background())
+				cancel()
+				_, err := allowable(ctx)
+				return err
+			},
+			err:         context.Canceled,
+			duration:    0,
+			beginTokens: 1,
+			endTokens:   1,
+		},
+		"sufficient deadline returns immediately if available": {
+			run: func(allowable func(ctx context.Context) (*rate.Reservation, error)) error {
+				ctx, cancel := context.WithTimeout(context.Background(), granularity*2)
+				defer cancel()
+				_, err := allowable(ctx)
+				return err
+			},
+			duration:    0,
+			beginTokens: 1,
+		},
+		"sufficient deadline waits": {
+			run: func(allowable func(ctx context.Context) (*rate.Reservation, error)) error {
+				ctx, cancel := context.WithTimeout(context.Background(), granularity*2)
+				defer cancel()
+				_, err := allowable(ctx)
+				return err
+			},
+			duration: granularity,
+		},
+		"insufficient deadline stops immediately": {
+			run: func(allowable func(ctx context.Context) (*rate.Reservation, error)) error {
+				ctx, cancel := context.WithTimeout(context.Background(), granularity/2)
+				defer cancel()
+				_, err := allowable(ctx)
+				return err
+			},
+			err:         ErrTasklistThrottled,
+			duration:    0,
+			beginTokens: 0,
+		},
+	}
+	for name, test := range tests {
+		test := test // closure copy
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			check := func(t *testing.T, allow func() bool, allowable func(ctx context.Context) (*rate.Reservation, error)) {
+				for allow() {
+					// drain tokens to start
+				}
+				if test.beginTokens > 0 {
+					time.Sleep(time.Duration(test.beginTokens) * granularity)
+				}
+				start := time.Now()
+				err := test.run(allowable)
+				dur := time.Since(start).Round(time.Millisecond)
+
+				if test.err != nil {
+					assert.ErrorIs(t, err, test.err, "wrong err returned, got %v", err)
+				} else {
+					assert.NoError(t, err)
+				}
+				assert.InDeltaf(t, test.duration, dur, precision, "duration should be within %v of %v, was %v", time.Duration(precision), test.duration, dur)
+				availableTokens := 0
+				for allow() {
+					availableTokens++
+				}
+				assert.Equal(t, test.endTokens, availableTokens, "should have %v tokens available after the test runs", test.endTokens)
+
+			}
+			t.Run("orig", func(t *testing.T) {
+				t.Parallel()
+				perSecond := time.Second / granularity
+				limiter := rate.NewLimiter(rate.Limit(perSecond), int(perSecond))
+				check(t, limiter.Allow, func(ctx context.Context) (*rate.Reservation, error) {
+					return orig(ctx, limiter)
+				})
+			})
+			t.Run("current", func(t *testing.T) {
+				t.Parallel()
+				perSecond := float64(time.Second / granularity)
+				limiter := quotas.NewRateLimiter(&perSecond, time.Minute, int(perSecond))
+				check(t, limiter.Allow, func(ctx context.Context) (*rate.Reservation, error) {
+					return nil, (&TaskMatcher{limiter: limiter}).ratelimit(ctx)
+				})
+			})
+		})
+	}
+
+	t.Run("known misleading behavior", func(t *testing.T) {
+		t.Parallel()
+		run := func(t *testing.T, limit *rate.Limiter) time.Duration {
+			// more than enough time to wait
+			ctx, cancel := context.WithTimeout(context.Background(), granularity*2)
+			defer cancel()
+
+			start := time.Now()
+			t.Logf("tokens before wait: %0.5f", limit.Tokens())
+			res, err := orig(ctx, limit)
+			t.Logf("tokens after wait: %0.5f", limit.Tokens())
+			elapsed := time.Since(start).Round(time.Millisecond)
+
+			require.NoError(t, err, "should have succeeded")
+
+			tokensBefore := limit.Tokens()
+			t.Logf("tokens before cancel: %0.5f", tokensBefore)
+			res.Cancel()
+			tokensAfter := limit.Tokens()
+			t.Logf("tokens after cancel: %0.5f", tokensAfter)
+
+			assert.Lessf(t, math.Abs(tokensBefore-tokensAfter), 0.1, "canceling a delay-passed reservation does not return any tokens.  had %0.5f, cancel(), now have %0.5f", tokensBefore, tokensAfter)
+			assert.Lessf(t, tokensAfter, 0.1, "near zero tokens should remain")
+
+			return elapsed // varies per test
+		}
+		t.Run("orig returned tokens are un-cancel-able if available immediately", func(t *testing.T) {
+			t.Parallel()
+			perSecond := time.Second / granularity
+			limit := rate.NewLimiter(rate.Limit(perSecond), int(perSecond))
+			for limit.Allow() {
+				// drain tokens to start
+			}
+
+			time.Sleep(granularity) // restore one full token
+			elapsed := run(t, limit)
+			require.Lessf(t, elapsed, granularity/10, "should have returned basically immediately")
+		})
+		t.Run("orig returned tokens are un-cancel-able if it had to wait", func(t *testing.T) {
+			t.Parallel()
+			perSecond := time.Second / granularity
+			limit := rate.NewLimiter(rate.Limit(perSecond), int(perSecond))
+			for limit.Allow() {
+				// drain tokens to start
+			}
+			time.Sleep(granularity / 2) // restore only half of one token so it waits
+			elapsed := run(t, limit)
+			require.InDeltaf(t, elapsed, granularity/2, precision, "should have waited %v for the remaining half token", granularity/2)
+		})
+	})
+
+	t.Run("known different behavior", func(t *testing.T) {
+		t.Parallel()
+		t.Run("canceling while waiting with a deadline", func(t *testing.T) {
+			t.Parallel()
+			cancelWhileWaiting := func(cb func(context.Context) error) (time.Duration, error) {
+				// sufficient deadline, but canceled after half a token recovers
+				ctx, cancel := context.WithTimeout(context.Background(), granularity*2)
+				defer cancel()
+				go func() {
+					time.Sleep(granularity / 2)
+					cancel()
+				}()
+
+				start := time.Now()
+				err := cb(ctx)
+				elapsed := time.Since(start)
+				return elapsed, err
+			}
+			t.Run("orig does not stop", func(t *testing.T) {
+				t.Parallel()
+				perSecond := time.Second / granularity
+				limit := rate.NewLimiter(rate.Limit(perSecond), int(perSecond))
+				for limit.Allow() {
+					// drain tokens to start
+				}
+
+				elapsed, err := cancelWhileWaiting(func(ctx context.Context) error {
+					_, err := orig(ctx, limit)
+					return err
+				})
+
+				assert.NoError(t, err, "continues waiting and returns successfully despite being canceled")
+				assert.InDeltaf(t, granularity, elapsed, precision, "waits until a full token would recover")
+				assert.False(t, limit.Allow(), "consumes the token that was recovered")
+				time.Sleep(granularity / 2)
+				assert.False(t, limit.Allow(), "did not have 0.5 tokens available after waiting") // should be 0.5 now though
+			})
+			t.Run("new code stops quickly and returns unused tokens", func(t *testing.T) {
+				t.Parallel()
+				perSecond := float64(time.Second / granularity)
+				limit := quotas.NewRateLimiter(&perSecond, time.Minute, int(perSecond))
+				for limit.Allow() {
+					// drain tokens to start
+				}
+
+				elapsed, err := cancelWhileWaiting(func(ctx context.Context) error {
+					return (&TaskMatcher{limiter: limit}).ratelimit(ctx)
+				})
+
+				assert.ErrorIs(t, err, context.Canceled, "gives up and returns context error")
+				assert.InDeltaf(t, granularity/2, elapsed, precision, "waits only until canceled")
+				assert.False(t, limit.Allow(), "does not yet have a full token, only 0.5")
+				time.Sleep(granularity / 2)
+				// note this is false in the original code
+				assert.True(t, limit.Allow(), "0.5 -> 1 tokens recovered shows 0.5 were available after waiting")
+			})
+		})
+	})
 }
 
 // Try to ensure a blocking callback in a goroutine is not running until the thing immediately

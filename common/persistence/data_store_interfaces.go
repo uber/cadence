@@ -710,8 +710,11 @@ type (
 	// InternalListAllWorkflowExecutionsByTypeRequest is used to list all open and closed executions with specific filters in a domain
 	InternalListAllWorkflowExecutionsByTypeRequest struct {
 		InternalListWorkflowExecutionsRequest
+		StatusFilter        []types.WorkflowExecutionCloseStatus
 		PartialMatch        bool
 		WorkflowSearchValue string // This value will be searched across workflow type, workflow ID and runID
+		SortColumn          string // This should be a valid search attribute
+		SortOrder           string // DESC or ASC
 	}
 
 	// InternalGetClosedWorkflowExecutionResponse is response from GetWorkflowExecution

@@ -124,7 +124,7 @@ func (qv *VisibilityQueryValidator) validateRangeExpr(expr sqlparser.Expr) (stri
 	}
 	colNameStr := colName.Name.String()
 
-	if !qv.isValidSearchAttributes(colNameStr) {
+	if !qv.IsValidSearchAttributes(colNameStr) {
 		return "", fmt.Errorf("invalid search attribute %q", colNameStr)
 	}
 
@@ -209,7 +209,7 @@ func (qv *VisibilityQueryValidator) validateComparisonExpr(expr sqlparser.Expr) 
 
 	colNameStr := colName.Name.String()
 
-	if !qv.isValidSearchAttributes(colNameStr) {
+	if !qv.IsValidSearchAttributes(colNameStr) {
 		return "", fmt.Errorf("invalid search attribute %q", colNameStr)
 	}
 
@@ -224,8 +224,8 @@ func (qv *VisibilityQueryValidator) validateComparisonExpr(expr sqlparser.Expr) 
 	return qv.processCustomKey(expr)
 }
 
-// isValidSearchAttributes return true if key is registered
-func (qv *VisibilityQueryValidator) isValidSearchAttributes(key string) bool {
+// IsValidSearchAttributes return true if key is registered
+func (qv *VisibilityQueryValidator) IsValidSearchAttributes(key string) bool {
 	validAttr := qv.validSearchAttributes
 	_, isValidKey := validAttr[key]
 	return isValidKey

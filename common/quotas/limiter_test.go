@@ -26,7 +26,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/time/rate"
+
+	"github.com/uber/cadence/common/clock"
 )
 
 const (
@@ -39,7 +40,7 @@ func TestNewRateLimiter(t *testing.T) {
 	t.Parallel()
 	maxDispatch := 0.01
 	rl := NewRateLimiter(&maxDispatch, time.Second, _minBurst)
-	limiter := rl.goRateLimiter.Load().(*rate.Limiter)
+	limiter := rl.goRateLimiter.Load().(clock.Ratelimiter)
 	assert.Equal(t, _minBurst, limiter.Burst())
 }
 

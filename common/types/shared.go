@@ -3482,12 +3482,15 @@ func (v *ListOpenWorkflowExecutionsResponse) GetExecutions() (o []*WorkflowExecu
 
 // ListAllWorkflowExecutionsRequest is the request to ListAllWorkflowExecutions
 type ListAllWorkflowExecutionsRequest struct {
-	Domain              string           `json:"domain,omitempty"`
-	MaximumPageSize     int32            `json:"maximumPageSize,omitempty"`
-	NextPageToken       []byte           `json:"nextPageToken,omitempty"`
-	StartTimeFilter     *StartTimeFilter `json:"StartTimeFilter,omitempty"`
-	PartialMatch        bool             `json:"partialMatch,omitempty"`
-	WorkflowSearchValue string           `json:"workflowSearchValue,omitempty"`
+	Domain              string                         `json:"domain,omitempty"`
+	MaximumPageSize     int32                          `json:"maximumPageSize,omitempty"`
+	NextPageToken       []byte                         `json:"nextPageToken,omitempty"`
+	StartTimeFilter     *StartTimeFilter               `json:"StartTimeFilter,omitempty"`
+	PartialMatch        bool                           `json:"partialMatch,omitempty"`
+	StatusFilter        []WorkflowExecutionCloseStatus `json:"closeStatus,omitempty"`
+	WorkflowSearchValue string                         `json:"workflowSearchValue,omitempty"`
+	SortColumn          string                         `json:"sortColumn,omitempty"`
+	SortOrder           string                         `json:"sortOrder,omitempty"`
 }
 
 func (v *ListAllWorkflowExecutionsRequest) SerializeForLogging() (string, error) {
