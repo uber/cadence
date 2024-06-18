@@ -73,7 +73,6 @@ type PinotIntegrationSuite struct {
 func TestPinotIntegrationSuite(t *testing.T) {
 	flag.Parse()
 	clusterConfig, err := GetTestClusterConfig("testdata/integration_pinot_cluster.yaml")
-	//panic(fmt.Sprintf("ABCDDDBUG, %#v", clusterConfig.MessagingClientConfig.KafkaConfig))
 	if err != nil {
 		panic(err)
 	}

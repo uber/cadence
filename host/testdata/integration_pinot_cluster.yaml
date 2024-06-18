@@ -6,7 +6,8 @@ messagingclientconfig:
     clusters:
       test:
         brokers:
-          - "${KAFKA_SEEDS}:9092"
+          #- "${KAFKA_SEEDS}:9092"
+          - "kafka:9092"
     topics:
       test-visibility-topic:
         cluster: test

@@ -41,9 +41,12 @@ services:
       - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
       - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,OUTSIDE:PLAINTEXT
       - KAFKA_CFG_LISTENERS=PLAINTEXT://:9093,OUTSIDE://:9092
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9093,OUTSIDE://localhost:9092
+#      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9093,OUTSIDE://localhost:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9093,OUTSIDE://kafka:9092
       - KAFKA_CFG_BROKER_ID=0
       - ALLOW_PLAINTEXT_LISTENER=yes
+      # Topic settings
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
     depends_on:
       - zookeeper
     networks:
@@ -145,23 +148,23 @@ services:
     build:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
-#    command:
-#      - /bin/sh
-#      - -e
-#      - -c
-#      - >
-#        go test -timeout 60s
-#        -run ^TestPinotIntegrationSuite$
-#        -tags pinotintegration
-#        -count 1
-#        -v
-#        github.com/uber/cadence/host
-#        | tee test.log
-#    ports:
-#      - "7933:7933"
-#      - "7934:7934"
-#      - "7935:7935"
-#      - "7939:7939"
+    command:
+      - /bin/sh
+      - -e
+      - -c
+      - >
+        go test -timeout 600s
+        -run ^TestPinotIntegrationSuite$
+        -tags pinotintegration
+        -count 1
+        -v
+        github.com/uber/cadence/host
+        | tee test.log
+    ports:
+      - "7933:7933"
+      - "7934:7934"
+      - "7935:7935"
+      - "7939:7939"
     environment:
       - "CASSANDRA=1"
       - "CASSANDRA_SEEDS=cassandra"
@@ -201,5 +204,9 @@ services:
 
 networks:
   services-network:
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: 2001:0DB8::/112
     name: services-network
     driver: bridge
