@@ -146,6 +146,23 @@ services:
     build:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
+    command:
+      - /bin/sh
+      - -e
+      - -c
+      - >
+        go test -timeout 600s
+        -run ^TestPinotIntegrationSuite$
+        -tags pinotintegration
+        -count 1
+        -v
+        github.com/uber/cadence/host
+        | tee test.log
+    ports:
+      - "7933:7933"
+      - "7934:7934"
+      - "7935:7935"
+      - "7939:7939"
     environment:
       - "CASSANDRA=1"
       - "CASSANDRA_SEEDS=cassandra"
