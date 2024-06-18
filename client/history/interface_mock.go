@@ -376,6 +376,26 @@ func (mr *MockClientMockRecorder) QueryWorkflow(arg0, arg1 interface{}, arg2 ...
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryWorkflow", reflect.TypeOf((*MockClient)(nil).QueryWorkflow), varargs...)
 }
 
+// RatelimitUpdate mocks base method.
+func (m *MockClient) RatelimitUpdate(ctx context.Context, request *types.RatelimitUpdateRequest, opts ...yarpc.CallOption) (*types.RatelimitUpdateResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, request}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "RatelimitUpdate", varargs...)
+	ret0, _ := ret[0].(*types.RatelimitUpdateResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RatelimitUpdate indicates an expected call of RatelimitUpdate.
+func (mr *MockClientMockRecorder) RatelimitUpdate(ctx, request interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, request}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RatelimitUpdate", reflect.TypeOf((*MockClient)(nil).RatelimitUpdate), varargs...)
+}
+
 // ReadDLQMessages mocks base method.
 func (m *MockClient) ReadDLQMessages(arg0 context.Context, arg1 *types.ReadDLQMessagesRequest, arg2 ...yarpc.CallOption) (*types.ReadDLQMessagesResponse, error) {
 	m.ctrl.T.Helper()

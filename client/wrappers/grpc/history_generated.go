@@ -115,6 +115,11 @@ func (g historyClient) QueryWorkflow(ctx context.Context, hp1 *types.HistoryQuer
 	return proto.ToHistoryQueryWorkflowResponse(response), proto.ToError(err)
 }
 
+func (g historyClient) RatelimitUpdate(ctx context.Context, request *types.RatelimitUpdateRequest, opts ...yarpc.CallOption) (rp1 *types.RatelimitUpdateResponse, err error) {
+	response, err := g.c.RatelimitUpdate(ctx, proto.FromHistoryRatelimitUpdateRequest(request), opts...)
+	return proto.ToHistoryRatelimitUpdateResponse(response), proto.ToError(err)
+}
+
 func (g historyClient) ReadDLQMessages(ctx context.Context, rp1 *types.ReadDLQMessagesRequest, p1 ...yarpc.CallOption) (rp2 *types.ReadDLQMessagesResponse, err error) {
 	response, err := g.c.ReadDLQMessages(ctx, proto.FromHistoryReadDLQMessagesRequest(rp1), p1...)
 	return proto.ToHistoryReadDLQMessagesResponse(response), proto.ToError(err)

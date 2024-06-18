@@ -1368,6 +1368,14 @@ func ToGetFailoverInfoResponse(t *history.GetFailoverInfoResponse) *types.GetFai
 	}
 }
 
+func FromHistoryRatelimitUpdateRequest(t *types.RatelimitUpdateRequest) *history.RatelimitUpdateRequest {
+	if t == nil {
+		return nil
+	}
+	return &history.RatelimitUpdateRequest{
+		Data: FromAny(t.Any),
+	}
+}
 func ToHistoryRatelimitUpdateRequest(t *history.RatelimitUpdateRequest) *types.RatelimitUpdateRequest {
 	if t == nil {
 		return nil
@@ -1382,5 +1390,13 @@ func FromHistoryRatelimitUpdateResponse(t *types.RatelimitUpdateResponse) *histo
 	}
 	return &history.RatelimitUpdateResponse{
 		Data: FromAny(t.Any),
+	}
+}
+func ToHistoryRatelimitUpdateResponse(t *history.RatelimitUpdateResponse) *types.RatelimitUpdateResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.RatelimitUpdateResponse{
+		Any: ToAny(t.Data),
 	}
 }

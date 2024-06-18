@@ -129,3 +129,18 @@ func (mr *MockPeerResolverMockRecorder) GetAllPeers() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllPeers", reflect.TypeOf((*MockPeerResolver)(nil).GetAllPeers))
 }
+
+// GlobalRatelimitPeers mocks base method.
+func (m *MockPeerResolver) GlobalRatelimitPeers(ratelimits []string) (map[string][]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GlobalRatelimitPeers", ratelimits)
+	ret0, _ := ret[0].(map[string][]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GlobalRatelimitPeers indicates an expected call of GlobalRatelimitPeers.
+func (mr *MockPeerResolverMockRecorder) GlobalRatelimitPeers(ratelimits interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GlobalRatelimitPeers", reflect.TypeOf((*MockPeerResolver)(nil).GlobalRatelimitPeers), ratelimits)
+}

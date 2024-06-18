@@ -22,10 +22,15 @@ package history
 
 import (
 	"errors"
+	"slices"
 	"testing"
 
+	"github.com/dgryski/go-farm"
 	gomock "github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/uber/ringpop-go/hashring"
+	"golang.org/x/exp/maps"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/membership"
@@ -214,4 +219,135 @@ func TestPeerResolver(t *testing.T) {
 			})
 		}
 	})
+	t.Run("GlobalRatelimitPeers", func(t *testing.T) {
+		peers := []membership.HostInfo{
+			membership.NewDetailedHostInfo(
+				"abc:123",
+				"abc-id",
+				membership.PortMap{membership.PortTchannel: 1235}),
+			membership.NewDetailedHostInfo(
+				"def:456",
+				"def-id",
+				membership.PortMap{membership.PortTchannel: 1235}),
+			membership.NewDetailedHostInfo(
+				"xyz:789",
+				"xyz-id",
+				membership.PortMap{membership.PortTchannel: 1235}),
+		}
+		limitKeys := []string{
+			"domain-w-async",
+			"domain-x-user",
+			"domain-x-worker",
+			"domain-y-worker",
+			"domain-z-visibility",
+		}
+
+		t.Run("errs", func(t *testing.T) {
+			t.Run("no members", func(t *testing.T) {
+				resolver := membership.NewMockResolver(gomock.NewController(t))
+				resolver.EXPECT().Members(service.History).Return(nil, errors.New("no members"))
+
+				r := NewPeerResolver(numShards, resolver, membership.PortTchannel)
+				_, err := r.GlobalRatelimitPeers([]string{"test"})
+				assert.ErrorContains(t, err, "no members")
+			})
+			t.Run("no host for key", func(t *testing.T) {
+				resolver := membership.NewMockResolver(gomock.NewController(t))
+				resolver.EXPECT().Members(service.History).Return(peers, nil)
+				// seems likely impossible, unless the service is unknown
+				resolver.EXPECT().Lookup(service.History, gomock.Any()).Return(membership.HostInfo{}, errors.New("no host"))
+
+				r := NewPeerResolver(numShards, resolver, membership.PortTchannel)
+				_, err := r.GlobalRatelimitPeers(limitKeys)
+				assert.ErrorContains(t, err, "no host")
+			})
+			t.Run("no protocol", func(t *testing.T) {
+				resolver := membership.NewMockResolver(gomock.NewController(t))
+				resolver.EXPECT().Members(service.History).Return(peers, nil)
+				resolver.EXPECT().Lookup(service.History, gomock.Any()).Return(peers[0], nil)
+
+				// request GRPC, but only configured for TChannel
+				r := NewPeerResolver(numShards, resolver, membership.PortGRPC)
+				_, err := r.GlobalRatelimitPeers(limitKeys)
+				assert.ErrorContains(t, err, "unable to get address")
+			})
+		})
+		t.Run("success", func(t *testing.T) {
+			resolver := membership.NewMockResolver(gomock.NewController(t))
+			resolver.EXPECT().Members(service.History).Return(peers, nil).Times(2)
+
+			// use a real hashring to resolve the keys.
+			// partly because it's easy and removes the need to mock,
+			// and partly because this must remain stable across hashring upgrades.
+			ring := hashring.New(farm.Fingerprint32, 100 /* arbitrary, but affects sharding */)
+			for _, p := range peers {
+				ring.AddMembers(p) // casts type
+			}
+			resolver.EXPECT().Lookup(service.History, gomock.Any()).DoAndReturn(func(service, key string) (membership.HostInfo, error) {
+				peer, ok := ring.Lookup(key)
+				require.True(t, ok, "keys should always be findable")
+				return find(t, peers, func(info membership.HostInfo) bool {
+					return info.GetAddress() == peer
+				}), nil
+			}).AnyTimes()
+
+			// small sanity check: sharded response should return all inputs
+			assertAllKeysPresent := func(t *testing.T, sharded map[string][]string, limits []string) {
+				responded := maps.Values(sharded)
+				assert.ElementsMatchf(t,
+					limits,
+					slices.Concat(responded...), // flatten the [][]string
+					"sharded response does not contain exactly the limits requested:\n\trequested: %v\n\tresponse: %v",
+					limits, sharded)
+			}
+
+			// shard the keys to hosts
+			r := NewPeerResolver(numShards, resolver, membership.PortTchannel)
+			res, err := r.GlobalRatelimitPeers(limitKeys)
+			require.NoError(t, err)
+			assertAllKeysPresent(t, res, limitKeys)
+			assert.Equal(t, map[string][]string{ // determined experimentally, but needs to be stable
+				"abc:1235": {"domain-w-async", "domain-x-worker", "domain-y-worker"},
+				"def:1235": {"domain-x-user"},
+				"xyz:1235": {"domain-z-visibility"},
+			}, res, "")
+
+			// request with another key, response should be the same but with a new key somewhere
+			oneMoreKey := append(limitKeys, "domain-other-user")
+			res, err = r.GlobalRatelimitPeers(oneMoreKey)
+			require.NoError(t, err)
+			assertAllKeysPresent(t, res, oneMoreKey)
+			assert.Equal(t, map[string][]string{
+				"abc:1235": {"domain-w-async", "domain-x-worker", "domain-y-worker"},
+				"def:1235": {"domain-x-user"},
+				"xyz:1235": {"domain-z-visibility", "domain-other-user"},
+			}, res, "")
+		})
+	})
+}
+
+// finds a single element that matches, or fails.
+// surprisingly "slices" doesn't have any filter or find equivalent, only Index,
+// and either way I want to ensure no multi-matches.
+func find[T any](t *testing.T, elems []T, equals func(T) bool) T {
+	var zero T
+	filtered := filter(elems, equals)
+	if len(filtered) == 0 {
+		t.Fatalf("no matching %T elements found", zero)
+		return zero // unreachable
+	}
+	if len(filtered) > 1 {
+		t.Fatalf("found multiple matching %T elements: %v", zero, filtered)
+		return zero // unreachable
+	}
+	return filtered[0]
+}
+
+func filter[T any](elems []T, match func(T) bool) (filtered []T) {
+	for _, e := range elems {
+		if match(e) {
+			filtered = append(filtered, e)
+		}
+	}
+	return filtered
 }

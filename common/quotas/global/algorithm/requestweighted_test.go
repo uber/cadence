@@ -96,9 +96,17 @@ func TestMissedUpdateHandling(t *testing.T) {
 
 	h1, h2 := Identity("host 1"), Identity("host 2")
 	key := Limit("key")
-	err := agg.Update(h1, map[Limit]Requests{key: {1, 1}}, time.Second)
+	err := agg.Update(UpdateParams{
+		ID:      h1,
+		Load:    map[Limit]Requests{key: {1, 1}},
+		Elapsed: time.Second,
+	})
 	require.NoError(t, err)
-	err = agg.Update(h2, map[Limit]Requests{key: {1, 1}}, time.Second)
+	err = agg.Update(UpdateParams{
+		ID:      h2,
+		Load:    map[Limit]Requests{key: {1, 1}},
+		Elapsed: time.Second,
+	})
 	require.NoError(t, err)
 
 	// sanity-check the initial values
@@ -160,9 +168,9 @@ func TestGC(t *testing.T) {
 			decayAfter: 2 * time.Second,
 		})
 
-		err := agg.Update(h1, map[Limit]Requests{key: {1, 1}}, time.Second)
+		err := agg.Update(UpdateParams{ID: h1, Load: map[Limit]Requests{key: {1, 1}}, Elapsed: time.Second})
 		require.NoError(t, err)
-		err = agg.Update(h2, map[Limit]Requests{key: {1, 1}}, time.Second)
+		err = agg.Update(UpdateParams{ID: h2, Load: map[Limit]Requests{key: {1, 1}}, Elapsed: time.Second})
 		require.NoError(t, err)
 		weights, used, err := agg.HostWeights(h1, []Limit{key})
 		require.NoError(t, err)
@@ -208,7 +216,7 @@ func TestGC(t *testing.T) {
 		agg, tick := setup(t)
 
 		// refresh data for one host
-		err := agg.Update(h1, map[Limit]Requests{key: {1, 1}}, time.Second)
+		err := agg.Update(UpdateParams{ID: h1, Load: map[Limit]Requests{key: {1, 1}}, Elapsed: time.Second})
 		require.NoError(t, err)
 		tick.Advance(time.Second) // advance to 10th second
 
@@ -255,7 +263,7 @@ func TestMinorCoverage(t *testing.T) {
 	t.Run("update", func(t *testing.T) {
 		// invalid config
 		agg, _ := newForTest(t, configSnapshot{})
-		err := agg.Update("ignored", nil, time.Second)
+		err := agg.Update(UpdateParams{ID: "ignored", Load: nil, Elapsed: time.Second})
 		assert.ErrorContains(t, err, "bad ratelimiter config")
 	})
 	t.Run("get-weights", func(t *testing.T) {
@@ -346,12 +354,16 @@ func TestRapidlyCoalesces(t *testing.T) {
 	assert.Zero(t, used, "should have no used RPS")
 
 	push := func(host Identity, accept, reject int) {
-		err := agg.Update(host, map[Limit]Requests{
-			key: {
-				Accepted: accept,
-				Rejected: reject,
+		err := agg.Update(UpdateParams{
+			ID: host,
+			Load: map[Limit]Requests{
+				key: {
+					Accepted: accept,
+					Rejected: reject,
+				},
 			},
-		}, time.Second) // 1s just to make rps in == rps out
+			Elapsed: time.Second, // 1s just to make rps in == rps out
+		})
 		require.NoError(t, err)
 	}
 
@@ -459,7 +471,7 @@ func TestConcurrent(t *testing.T) {
 
 				// randomly update or read
 				if rand.Intn(2) == 0 {
-					err := agg.Update(host, updates, updateRate)
+					err := agg.Update(UpdateParams{ID: host, Load: updates, Elapsed: updateRate})
 					require.NoError(t, err)
 				} else {
 					_, _, err := agg.HostWeights(host, maps.Keys(updates))
@@ -528,12 +540,16 @@ func TestSimulate(t *testing.T) {
 
 	// just simplifies arg-construction
 	push := func(host Identity, key Limit, accept, reject int) {
-		err := agg.Update(host, map[Limit]Requests{
-			key: {
-				Accepted: accept,
-				Rejected: reject,
+		err := agg.Update(UpdateParams{
+			ID: host,
+			Load: map[Limit]Requests{
+				key: {
+					Accepted: accept,
+					Rejected: reject,
+				},
 			},
-		}, time.Second)
+			Elapsed: time.Second,
+		})
 		require.NoError(t, err)
 	}
 
@@ -901,7 +917,7 @@ func BenchmarkNormalUse(b *testing.B) {
 
 	sawnonzero := 0
 	for _, r := range rounds { // == b.N times
-		err := agg.Update(r.host, r.load, r.elapsed)
+		err := agg.Update(UpdateParams{ID: r.host, Load: r.load, Elapsed: r.elapsed})
 		require.NoError(b, err)
 		var unused map[Limit]PerSecond // ensure non-error second return for test safety
 		weights, unused, err := agg.HostWeights(r.host, r.keys)

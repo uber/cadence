@@ -382,6 +382,26 @@ func (c *historyClient) QueryWorkflow(ctx context.Context, hp1 *types.HistoryQue
 	return
 }
 
+func (c *historyClient) RatelimitUpdate(ctx context.Context, request *types.RatelimitUpdateRequest, opts ...yarpc.CallOption) (rp1 *types.RatelimitUpdateResponse, err error) {
+	fakeErr := c.fakeErrFn(c.errorRate)
+	var forwardCall bool
+	if forwardCall = c.forwardCallFn(fakeErr); forwardCall {
+		rp1, err = c.client.RatelimitUpdate(ctx, request, opts...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgHistoryInjectedFakeErr,
+			tag.HistoryClientOperationRatelimitUpdate,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(err),
+		)
+		err = fakeErr
+		return
+	}
+	return
+}
+
 func (c *historyClient) ReadDLQMessages(ctx context.Context, rp1 *types.ReadDLQMessagesRequest, p1 ...yarpc.CallOption) (rp2 *types.ReadDLQMessagesResponse, err error) {
 	fakeErr := c.fakeErrFn(c.errorRate)
 	var forwardCall bool

@@ -114,6 +114,11 @@ func (g historyClient) QueryWorkflow(ctx context.Context, hp1 *types.HistoryQuer
 	return thrift.ToHistoryQueryWorkflowResponse(response), thrift.ToError(err)
 }
 
+func (g historyClient) RatelimitUpdate(ctx context.Context, request *types.RatelimitUpdateRequest, opts ...yarpc.CallOption) (rp1 *types.RatelimitUpdateResponse, err error) {
+	response, err := g.c.RatelimitUpdate(ctx, thrift.FromHistoryRatelimitUpdateRequest(request), opts...)
+	return thrift.ToHistoryRatelimitUpdateResponse(response), thrift.ToError(err)
+}
+
 func (g historyClient) ReadDLQMessages(ctx context.Context, rp1 *types.ReadDLQMessagesRequest, p1 ...yarpc.CallOption) (rp2 *types.ReadDLQMessagesResponse, err error) {
 	response, err := g.c.ReadDLQMessages(ctx, thrift.FromHistoryReadDLQMessagesRequest(rp1), p1...)
 	return thrift.ToHistoryReadDLQMessagesResponse(response), thrift.ToError(err)

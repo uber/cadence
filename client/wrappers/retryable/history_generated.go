@@ -217,6 +217,17 @@ func (c *historyClient) QueryWorkflow(ctx context.Context, hp1 *types.HistoryQue
 	return resp, err
 }
 
+func (c *historyClient) RatelimitUpdate(ctx context.Context, request *types.RatelimitUpdateRequest, opts ...yarpc.CallOption) (rp1 *types.RatelimitUpdateResponse, err error) {
+	var resp *types.RatelimitUpdateResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.RatelimitUpdate(ctx, request, opts...)
+		return err
+	}
+	err = c.throttleRetry.Do(ctx, op)
+	return resp, err
+}
+
 func (c *historyClient) ReadDLQMessages(ctx context.Context, rp1 *types.ReadDLQMessagesRequest, p1 ...yarpc.CallOption) (rp2 *types.ReadDLQMessagesResponse, err error) {
 	var resp *types.ReadDLQMessagesResponse
 	op := func() error {

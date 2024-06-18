@@ -136,6 +136,8 @@ type (
 	// requests holds the running per-second running average request data for a single key from a single host,
 	// and the last time it was updated.
 	requests struct {
+		// TODO: add "first update" time, don't return to callers until it has passed 1(+?) update cycle as data is incomplete.
+
 		lastUpdate         time.Time // only so we know if elapsed times are exceeded, not used to compute per-second rates
 		accepted, rejected PerSecond // requests received, per second (conceptually divided by update rate)
 	}
@@ -193,7 +195,7 @@ type (
 		// Update load-data for this host's requests, given a known elapsed time spent accumulating this load info.
 		//
 		// Elapsed time must be non-zero, but is not otherwise constrained.
-		Update(host Identity, load map[Limit]Requests, elapsed time.Duration) error
+		Update(params UpdateParams) error
 
 		// HostWeights returns the per-[Limit] weights for all requested + known keys for this Identity,
 		// as well as the Limit's overall used RPS (to decide RPS to allow for new hosts).
@@ -235,6 +237,13 @@ type (
 		GcAfter dynamicconfig.DurationPropertyFn
 	}
 
+	// UpdateParams contains args for calling Update.
+	UpdateParams struct {
+		ID      Identity
+		Load    map[Limit]Requests
+		Elapsed time.Duration
+	}
+
 	// configSnapshot holds a non-changing snapshot of the dynamic config values,
 	// and also provides a validate() method to make sure they're sane.
 	configSnapshot struct {
@@ -251,6 +260,16 @@ const (
 	guessNumKeys   = 1024 // guesstimate at num of ratelimit keys in a cluster
 	guessHostCount = 32   // guesstimate at num of frontend hosts in a cluster that receive traffic for each key
 )
+
+func (p UpdateParams) Validate() error {
+	if len(p.ID) == 0 {
+		return fmt.Errorf("empty caller ID")
+	}
+	if p.Elapsed <= 0 {
+		return fmt.Errorf("elapsed time must be positive, got %v", p.Elapsed)
+	}
+	return nil
+}
 
 func (c configSnapshot) validate() error {
 	// errors are untyped because they should not generally be "handled", only returned.
@@ -340,7 +359,10 @@ func New(cfg Config) (RequestWeighted, error) {
 }
 
 // Update performs a weighted update to the running RPS for this host's per-key request data
-func (a *impl) Update(id Identity, load map[Limit]Requests, elapsed time.Duration) error {
+func (a *impl) Update(p UpdateParams) error {
+	if err := p.Validate(); err != nil {
+		return fmt.Errorf("bad args to update: %w", err)
+	}
 	a.mut.Lock()
 	defer a.mut.Unlock()
 
@@ -348,16 +370,16 @@ func (a *impl) Update(id Identity, load map[Limit]Requests, elapsed time.Duratio
 	if err != nil {
 		return err
 	}
-	for key, req := range load {
+	for key, req := range p.Load {
 		ih := a.usage[key]
 		if ih == nil {
 			ih = make(map[Identity]requests, guessHostCount)
 		}
 
 		var next requests
-		prev := ih[id]
-		aps := PerSecond(float64(req.Accepted) / float64(elapsed/time.Second))
-		rps := PerSecond(float64(req.Rejected) / float64(elapsed/time.Second))
+		prev := ih[p.ID]
+		aps := PerSecond(float64(req.Accepted) / float64(p.Elapsed/time.Second))
+		rps := PerSecond(float64(req.Rejected) / float64(p.Elapsed/time.Second))
 		if prev.lastUpdate.IsZero() {
 			next = requests{
 				lastUpdate: snap.now,
@@ -384,7 +406,7 @@ func (a *impl) Update(id Identity, load map[Limit]Requests, elapsed time.Duratio
 			}
 		}
 
-		ih[id] = next
+		ih[p.ID] = next
 		a.usage[key] = ih
 	}
 
