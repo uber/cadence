@@ -114,24 +114,28 @@ type (
 		// come from this mapper.
 		GlobalToLocal(key string) (string, error)
 	}
+
+	simplekm struct {
+		prefix string
+	}
+
+	// basically an enum for key values.
+	// when plug-in behavior is allowed, this will eventually be from a parsed string,
+	// and values (aside from disabled) are not known at compile time.
+	keyMode string
 )
 
-// basically an enum for key values.
-// when plug-in behavior is allowed, this will eventually be from a parsed string,
-// and values (aside from disabled) are not known at compile time.
-type keyMode string
-
+// current known values.
+//
+// all unknown values become modeDisabled, which should also be used for
+// the default fallback in switch statements.
 var (
-	modeDisabled          keyMode = "modeDisabled"
+	modeDisabled          keyMode = "disabled"
 	modeLocal             keyMode = "local"
 	modeGlobal            keyMode = "global"
 	modeLocalShadowGlobal keyMode = "local-shadow-global"
 	modeGlobalShadowLocal keyMode = "global-shadow-global"
 )
-
-type simplekm struct {
-	prefix string
-}
 
 var _ KeyMapper = simplekm{}
 
@@ -155,7 +159,7 @@ func PrefixKey(prefix string) KeyMapper {
 func New(
 	name string,
 	// quotas for "local only" behavior.
-	// used for both "local" and "modeDisabled" behavior, though "local" wraps the values.
+	// used for both "local" and "disabled" behavior, though "local" wraps the values.
 	local *quotas.Collection,
 	// quotas for the global limiter's internal fallback.
 	//
