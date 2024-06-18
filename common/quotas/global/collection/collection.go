@@ -35,9 +35,12 @@ package collection
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
+
+	"golang.org/x/time/rate"
 
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -49,14 +52,35 @@ import (
 )
 
 type (
+	// Collection wraps three kinds of ratelimiter collections:
+	//   1. a "global" collection, which tracks usage, and is weighted to match request patterns.
+	//   2. a "local" collection, which tracks usage, and can be optionally used (and/or shadowed) instead of "global"
+	//   3. a "disabled" collection, which does NOT track usage, and is used to bypass as much of this Collection as possible
+	//
+	// 1 is the reason this Collection exists - limiter-usage has to be tracked and submitted to aggregating hosts to
+	// drive the whole "global load-balanced ratelimiter" system.  internally, this will fall back to a local collection
+	// if there is insufficient data or too many errors.
+	//
+	// 2 is the previous non-global behavior, where ratelimits are determined locally, more simply, and load information is not shared.
+	// this is a lower-cost and MUCH less complex system, and it SHOULD be used if your Cadence cluster receives requests
+	// in a roughly random way (e.g. any client-side request goes to a roughly-fair roughly-random Frontend host).
+	//
+	// 3 disables as much of 1 and 2 as possible, and is intended to be temporary.
+	// it is essentially a maximum-safety fallback during initial rollout, and should be removed once 2 is demonstrated
+	// to be safe enough to use in all cases.
+	//
+	// And last but not least:
+	// 1's local-fallback and 2 MUST NOT share ratelimiter instances, or the local instances will be double-counted when shadowing.
+	// they should likely be configured to behave identically, but they need to be separate instances.
 	Collection struct {
 		updateInterval dynamicconfig.DurationPropertyFn
 
 		logger log.Logger
 		scope  metrics.Scope
 
-		limits   *internal.AtomicMap[string, *internal.FallbackLimiter]
-		fallback *quotas.Collection
+		global   *internal.AtomicMap[string, *internal.FallbackLimiter]
+		local    *internal.AtomicMap[string, internal.CountedLimiter]
+		disabled *quotas.Collection
 
 		ctx       context.Context // context used for background operations, canceled when stopping
 		ctxCancel func()
@@ -68,34 +92,55 @@ type (
 		timesource clock.TimeSource
 	}
 
-	// Limiter is a simplified quotas.Limiter API, covering the only global-ratelimiter-used API: Allow.
-	//
-	// This is largely because Reserve() and Wait() are difficult to monitor for usage-tracking purposes.
-	// If converted to the wrapper, Reserve can probably be added pretty easily.
-	Limiter interface {
-		Allow() bool
-	}
-
 	// calls is a small temporary pair[T] container
 	calls struct {
 		allowed, rejected int
 	}
 )
 
+// basically an enum for key values.
+// when plug-in behavior is allowed, this will eventually be from a parsed string,
+// and values (aside from disabled) are not known at compile time.
+type keyMode string
+
+var (
+	modeDisabled          keyMode = "modeDisabled"
+	modeLocal             keyMode = "local"
+	modeGlobal            keyMode = "global"
+	modeLocalShadowGlobal keyMode = "local-shadow-global"
+	modeGlobalShadowLocal keyMode = "global-shadow-global"
+)
+
 func New(
-	fallback *quotas.Collection,
+	// quotas for "local only" behavior.
+	// used for both "local" and "modeDisabled" behavior, though "local" wraps the values.
+	local *quotas.Collection,
+	// quotas for the global limiter's internal fallback.
+	//
+	// this should be configured the same as the local collection, but it
+	// MUST NOT actually be the same collection, or shadowing will double-count
+	// events on the fallback.
+	global *quotas.Collection,
 	updateInterval dynamicconfig.DurationPropertyFn,
 	keyModes dynamicconfig.StringPropertyWithRatelimitKeyFilter,
 	logger log.Logger,
 	met metrics.Client,
-) *Collection {
-	contents := internal.NewAtomicMap(func(key string) *internal.FallbackLimiter {
-		return internal.NewFallbackLimiter(fallback.For(key))
+) (*Collection, error) {
+	if local == global {
+		return nil, errors.New("local and global collections must be different")
+	}
+
+	globalCollection := internal.NewAtomicMap(func(key string) *internal.FallbackLimiter {
+		return internal.NewFallbackLimiter(global.For(key))
+	})
+	localCollection := internal.NewAtomicMap(func(key string) internal.CountedLimiter {
+		return internal.NewCountedLimiter(local.For(key))
 	})
 	ctx, cancel := context.WithCancel(context.Background())
 	c := &Collection{
-		limits:         contents,
-		fallback:       fallback,
+		global:         globalCollection,
+		local:          localCollection,
+		disabled:       local,
 		updateInterval: updateInterval,
 
 		logger:   logger.WithTags(tag.ComponentGlobalRatelimiter),
@@ -109,7 +154,7 @@ func New(
 		// override externally in tests
 		timesource: clock.NewRealTimeSource(),
 	}
-	return c
+	return c, nil
 }
 
 func (c *Collection) TestOverrides(t *testing.T, timesource clock.TimeSource) {
@@ -149,21 +194,48 @@ func (c *Collection) OnStop(ctx context.Context) error {
 	}
 }
 
-func (c *Collection) For(key string) Limiter {
-	mode := c.keyModes(key)
-	if mode == "disable" {
+func (c *Collection) keyMode(key string) keyMode {
+	rawMode := keyMode(c.keyModes(key))
+	switch rawMode {
+	case modeLocal, modeGlobal, modeLocalShadowGlobal, modeGlobalShadowLocal, modeDisabled:
+		return rawMode
+	default:
+		return modeDisabled
+	}
+}
+
+func (c *Collection) For(key string) quotas.Limiter {
+	switch c.keyMode(key) {
+	case modeLocal:
+		return c.local.Load(key)
+	case modeGlobal:
+		return c.global.Load(key)
+	case modeLocalShadowGlobal:
+		return internal.NewShadowedLimiter(c.local.Load(key), c.global.Load(key))
+	case modeGlobalShadowLocal:
+		return internal.NewShadowedLimiter(c.global.Load(key), c.local.Load(key))
+
+	default:
 		// pass through to the fallback, as if this collection did not exist.
-		// this means usage cannot be collected, so changing to or from "disable"
-		// may allow a burst of requests beyond intended limits.
+		// this means usage cannot be collected or shadowed, so changing to or
+		// from "disable" may allow a burst of requests beyond intended limits.
 		//
 		// this is largely intended for safety during initial rollouts, not
-		// normal use - normally fallback or global should be used.
+		// normal use - normally "fallback" or "global" should be used.
 		// "fallback" SHOULD behave the same, but with added monitoring, and
 		// the ability to warm caches in either direction before switching.
-		return c.fallback.For(key)
+		return c.disabled.For(key)
 	}
-	// else this collection is used
-	return c.limits.Load(key)
+}
+
+func (c *Collection) shouldDeleteKey(mode keyMode) bool {
+	switch mode {
+	case modeLocal, modeGlobal, modeLocalShadowGlobal, modeGlobalShadowLocal:
+		return false
+
+	default:
+		return true
+	}
 }
 
 func (c *Collection) backgroundUpdateLoop() {
@@ -182,41 +254,67 @@ func (c *Collection) backgroundUpdateLoop() {
 		case <-ticker.Chan():
 			now := c.timesource.Now()
 			c.logger.Debug("update tick")
-			// update  if it changed
+			// update interval if it changed
 			newTickInterval := c.updateInterval()
 			if tickInterval != newTickInterval {
 				tickInterval = newTickInterval
 				ticker.Reset(newTickInterval)
 			}
 
-			capacity := c.limits.Len()
+			// submit local metrics asynchronously, because there's no need to do it synchronously
+			localMetricsDone := make(chan struct{})
+			go func() {
+				defer close(localMetricsDone)
+				c.local.Range(func(k string, v internal.CountedLimiter) bool {
+					if c.shouldDeleteKey(c.keyMode(k)) {
+						c.local.Delete(k) // clean up so maintenance cost is near zero
+						return true       // continue iterating, delete others too
+					}
+
+					c.sendMetrics(k, "local", v.Collect())
+					return true
+				})
+			}()
+
+			capacity := c.global.Len()
 			capacity += capacity / 10 // size may grow while we range, try to avoid reallocating in that case
 			usage := make(map[string]calls, capacity)
-			fallbacks, globals := 0, 0
-			c.limits.Range(func(k string, v *internal.FallbackLimiter) bool {
-				limit, fallback, actual, usingFallback := v.Collect()
-				if usingFallback {
-					fallbacks++
-				} else {
+			startups, failings, globals := 0, 0, 0
+			c.global.Range(func(k string, v *internal.FallbackLimiter) bool {
+				if c.shouldDeleteKey(c.keyMode(k)) {
+					c.global.Delete(k) // clean up so maintenance cost is near zero
+					return true        // continue iterating, delete others too
+				}
+
+				counts, startup, failing := v.Collect()
+				if startup {
+					startups++
+				}
+				if failing {
+					failings++
+				}
+				if !(startup || failing) {
 					globals++
 				}
 				usage[k] = calls{
-					allowed:  actual.Allowed,
-					rejected: actual.Rejected,
+					allowed:  counts.Allowed,
+					rejected: counts.Rejected,
 				}
-				c.sendMetrics(k, "global", limit)      // for shadow verification
-				c.sendMetrics(k, "fallback", fallback) // for shadow verification
-				c.sendMetrics(k, "actual", actual)     // for user-side behavior monitoring
+				c.sendMetrics(k, "global", counts)
 
 				return true
 			})
+
 			// track how often we're using fallbacks vs non-fallbacks.
 			// this also tells us about how many keys are used per host.
 			// timer-sums unfortunately must be divided by the update frequency to get correct totals.
-			c.scope.RecordTimer(metrics.GlobalRatelimiterFallbackUsageTimer, time.Duration(fallbacks))
+			c.scope.RecordTimer(metrics.GlobalRatelimiterStartupUsageTimer, time.Duration(startups))
+			c.scope.RecordTimer(metrics.GlobalRatelimiterFallbackUsageTimer, time.Duration(failings))
 			c.scope.RecordTimer(metrics.GlobalRatelimiterGlobalUsageTimer, time.Duration(globals))
 
 			c.doUpdate(now.Sub(lastGatherTime), usage)
+
+			<-localMetricsDone // should be much faster than doUpdate, unless it's no-opped
 
 			lastGatherTime = now
 		}
@@ -234,6 +332,10 @@ func (c *Collection) sendMetrics(globalKey string, limitType string, usage inter
 
 // doUpdate pushes usage data to aggregators
 func (c *Collection) doUpdate(since time.Duration, usage map[string]calls) {
+	if len(usage) == 0 {
+		return // modeDisabled or just no activity on this collection of limits, nothing to do
+	}
+
 	ctx, cancel := context.WithTimeout(c.ctx, 10*time.Second) // TODO: configurable
 	defer cancel()
 	_ = ctx
@@ -252,9 +354,10 @@ func (c *Collection) doUpdate(since time.Duration, usage map[string]calls) {
 					//
 					// this is largely for future-proofing and to cover all possibilities,
 					// so unrecognized values lead to fallback behavior because they cannot be understood.
-					c.limits.Load(k).FailedUpdate()
+					c.global.Load(k).FailedUpdate()
 				} else {
-					c.limits.Load(k).Update(v)
+					// TODO: needs to be scaled by the configured ratelimit
+					c.global.Load(k).Update(rate.Limit(v))
 				}
 			}
 		}
@@ -268,7 +371,7 @@ func (c *Collection) doUpdate(since time.Duration, usage map[string]calls) {
 		// are pretty clear either way.
 		for k := range requestedBatch {
 			// requested but not returned, bump the fallback fuse
-			c.limits.Load(k).FailedUpdate()
+			c.global.Load(k).FailedUpdate()
 		}
 
 		if err != nil {

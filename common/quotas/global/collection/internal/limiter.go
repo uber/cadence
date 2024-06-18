@@ -25,10 +25,14 @@
 package internal
 
 import (
+	"context"
 	"math"
 	"sync/atomic"
 
 	"golang.org/x/time/rate"
+
+	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/quotas"
 )
 
 type (
@@ -77,51 +81,24 @@ type (
 		//
 		// changing them to pointers will not change any semantics, so that should be fine if it becomes needed.
 
-		// TODO: when quotas.Limiter moves to clock.Ratelimiter, these counters would likely fit better in a clock.Ratelimiter wrapper per Limiter.
-		// there isn't a shared usable interface between them right now though.
-
-		fallbackUsage atomicUsage
-		limitUsage    atomicUsage
-		actualUsage   atomicUsage
-
 		// number of failed updates, for deciding when to use fallback
 		failedUpdates atomic.Int64
+		// counts of what was allowed vs not
+		usage AtomicUsage
 
 		// ratelimiters in use
 
-		// fallback used when failedUpdates exceeds maxFailedUpdates,
-		// or prior to initial data from the global ratelimiter system.
-		fallback Limiter
-		// local-only limiter based global ratelimiter values.
+		// local-only limiter based global weight values.
 		//
 		// note that use and modification is NOT synchronized externally,
 		// so updates and deciding when to use the fallback must be done carefully
 		// to avoid undesired combinations when they interleave.
-		limit *rate.Limiter
-	}
-
-	atomicUsage struct {
-		allowed, rejected atomic.Int64
-	}
-
-	UsageMetrics struct {
-		Allowed, Rejected int
+		primary clock.Ratelimiter
+		// fallback used when failedUpdates exceeds maxFailedUpdates,
+		// or prior to the first Update call with globally-adjusted values.
+		fallback quotas.Limiter
 	}
 )
-
-func (a *atomicUsage) Count(allowed bool) {
-	if allowed {
-		a.allowed.Add(1)
-	} else {
-		a.rejected.Add(1)
-	}
-}
-func (a *atomicUsage) Collect() UsageMetrics {
-	return UsageMetrics{
-		Allowed:  int(a.allowed.Swap(0)),
-		Rejected: int(a.rejected.Swap(0)),
-	}
-}
 
 const (
 	// when failed updates exceeds this value, use the fallback
@@ -137,10 +114,15 @@ const (
 	initialFailedUpdates = math.MinInt64
 )
 
-func NewFallbackLimiter(fallback Limiter) *FallbackLimiter {
+// NewFallbackLimiter returns a quotas.Limiter that uses a simpler fallback when necessary,
+// and attempts to keep both the fallback and the "real" limiter "warm" by mirroring calls
+// between the two regardless of which is being used.
+func NewFallbackLimiter(fallback quotas.Limiter) *FallbackLimiter {
 	l := &FallbackLimiter{
+		// 0 allows no requests, will be unused until we receive an update.
+		// this will lead to
+		primary:  clock.NewRatelimiter(0, 0),
 		fallback: fallback,
-		limit:    rate.NewLimiter(0, 0), // 0 allows no requests, will be unused until we receive an update
 	}
 	l.failedUpdates.Store(initialFailedUpdates)
 	return l
@@ -149,23 +131,27 @@ func NewFallbackLimiter(fallback Limiter) *FallbackLimiter {
 // Collect returns the current allowed/rejected values, and resets them to zero.
 // Small bits of imprecise counting / time-bucketing due to concurrent limiting is expected and allowed,
 // as it should be more than small enough in practice to not matter.
-func (b *FallbackLimiter) Collect() (limit, fallback, actual UsageMetrics, usingFallback bool) {
-	limit = b.limitUsage.Collect()
-	fallback = b.fallbackUsage.Collect()
-	actual = b.actualUsage.Collect()
-	return limit, fallback, actual, b.useFallback()
+func (b *FallbackLimiter) Collect() (usage UsageMetrics, starting, failing bool) {
+	usage = b.usage.Collect()
+	starting, failing = b.mode()
+	return usage, starting, failing
+}
+
+func (b *FallbackLimiter) mode() (startingUp, tooManyFailures bool) {
+	failed := b.failedUpdates.Load()
+	startingUp = failed < 0
+	tooManyFailures = failed > maxFailedUpdates
+	return startingUp, tooManyFailures
 }
 
 func (b *FallbackLimiter) useFallback() bool {
-	failed := b.failedUpdates.Load()
-	startingUp := failed < 0
-	tooManyFailures := failed > maxFailedUpdates
-	return startingUp || tooManyFailures
+	starting, fallback := b.mode()
+	return starting || fallback
 }
 
 // Update adjusts the underlying "main" ratelimit, and resets the fallback fuse.
 // This implies switching to the "main" limiter - if that is not desired, call Reset() immediately after.
-func (b *FallbackLimiter) Update(rps float64) {
+func (b *FallbackLimiter) Update(lim rate.Limit) {
 	// caution: order here matters, to prevent potentially-old limiter values from being used
 	// before they are updated.
 	//
@@ -178,12 +164,12 @@ func (b *FallbackLimiter) Update(rps float64) {
 		b.failedUpdates.Store(0)
 	}()
 
-	if b.limit.Limit() == rate.Limit(rps) {
+	if b.primary.Limit() == lim {
 		return
 	}
 
-	b.limit.SetLimit(rate.Limit(rps))
-	b.limit.SetBurst(max(1, int(rps))) // 0 burst blocks all requests, so allow at least 1 and rely on rps to fill sanely
+	b.primary.SetLimit(lim)
+	b.primary.SetBurst(max(1, int(lim))) // 0 burst blocks all requests, so allow at least 1 and rely on rps to fill sanely
 }
 
 // FailedUpdate should be called when a limit fails to update from an aggregator,
@@ -205,20 +191,37 @@ func (b *FallbackLimiter) Reset() {
 
 // Allow returns true if a request is allowed right now.
 func (b *FallbackLimiter) Allow() bool {
-	// call and track both so limiters are "warm" when switching,
-	// and so shadowing-mode metrics can be collected.
-	limitAllowed := b.limit.Allow()
-	fallbackAllowed := b.fallback.Allow()
+	allowed := b.both().Allow()
+	b.usage.Count(allowed)
+	return allowed
+}
 
-	b.limitUsage.Count(limitAllowed)
-	b.fallbackUsage.Count(fallbackAllowed)
+func (b *FallbackLimiter) Wait(ctx context.Context) error {
+	err := b.both().Wait(ctx)
+	b.usage.Count(err == nil)
+	return err
+}
 
-	if b.useFallback() {
-		b.actualUsage.Count(fallbackAllowed)
-		return fallbackAllowed
+func (b *FallbackLimiter) Reserve() clock.Reservation {
+	res := b.both().Reserve()
+	return countedReservation{
+		wrapped: res,
+		usage:   &b.usage,
 	}
-	b.actualUsage.Count(limitAllowed)
-	return limitAllowed
+}
+
+func (b *FallbackLimiter) both() ShadowedLimiter {
+	if b.useFallback() {
+		return ShadowedLimiter{
+			primary: b.fallback,
+			shadow:  b.primary,
+		}
+	}
+	return ShadowedLimiter{
+		primary: b.primary,
+		shadow:  b.fallback,
+	}
+
 }
 
 // intentionally shadows builtin max, so it can simply be deleted when 1.21 is adopted

@@ -24,6 +24,7 @@ package collection
 
 import (
 	"context"
+	"reflect"
 	"testing"
 	"time"
 
@@ -45,9 +46,17 @@ func TestLifecycleBasics(t *testing.T) {
 
 	ctrl := gomock.NewController(t)
 	logger, logs := testlogger.NewObserved(t)
-	c := New(quotas.NewMockLimiterFactory(ctrl), func(opts ...dynamicconfig.FilterOption) time.Duration {
-		return time.Second
-	}, logger, metrics.NewNoopMetricsClient())
+	c, err := New(
+		quotas.NewCollection(quotas.NewMockLimiterFactory(ctrl)),
+		quotas.NewCollection(quotas.NewMockLimiterFactory(ctrl)),
+		func(opts ...dynamicconfig.FilterOption) time.Duration {
+			return time.Second
+		},
+		func(globalRatelimitKey string) string {
+			return string(modeGlobal)
+		},
+		logger, metrics.NewNoopMetricsClient())
+	require.NoError(t, err)
 	ts := clock.NewMockedTimeSource()
 	c.TestOverrides(t, ts)
 
@@ -71,36 +80,93 @@ func TestLifecycleBasics(t *testing.T) {
 }
 
 func TestCollectionLimitersCollectMetrics(t *testing.T) {
-	fallbackLimiters := quotas.NewSimpleDynamicRateLimiterFactory(func(domain string) int {
-		return 1
-	})
-	c := New(fallbackLimiters, func(opts ...dynamicconfig.FilterOption) time.Duration {
-		return time.Second
-	}, testlogger.New(t), metrics.NewNoopMetricsClient())
-	// not starting as it's not currently necessary.  it should not affect this test.
-
-	_ = c.For("test").Allow()
-	// make sure we have some keys and a call was counted.
-	type data struct {
-		allowed, rejected int
-		fallback          bool
-	}
-	events := make(map[string]data)
-	c.limits.Range(func(k string, v *internal.FallbackLimiter) bool {
-		_, _, actual, usingFallback := v.Collect()
-		events[k] = data{
-			allowed:  actual.Allowed,
-			rejected: actual.Rejected,
-			fallback: usingFallback,
-		}
-		return true
-	})
-
-	assert.Equalf(t, map[string]data{
-		"test": data{
-			allowed:  1,
-			rejected: 0,
-			fallback: true, // fallback is always used because there have been no updates
+	tests := map[string]struct {
+		mode   keyMode
+		local  internal.UsageMetrics
+		global internal.UsageMetrics
+	}{
+		"disabled": {
+			mode: modeDisabled,
 		},
-	}, events, "should have observed one allowed request on the fallback")
+		"local": {
+			mode:  modeLocal,
+			local: internal.UsageMetrics{Allowed: 1},
+		},
+		"global": {
+			mode:   modeGlobal,
+			global: internal.UsageMetrics{Allowed: 1},
+		},
+		"local-shadow": {
+			mode:   modeLocalShadowGlobal,
+			local:  internal.UsageMetrics{Allowed: 1},
+			global: internal.UsageMetrics{Allowed: 1},
+		},
+		"global-shadow": {
+			mode:   modeGlobalShadowLocal,
+			local:  internal.UsageMetrics{Allowed: 1},
+			global: internal.UsageMetrics{Allowed: 1},
+		},
+	}
+
+	for name, test := range tests {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// anything non-zero
+			localLimiters := quotas.NewSimpleDynamicRateLimiterFactory(func(domain string) int {
+				return 1
+			})
+			globalLimiters := quotas.NewSimpleDynamicRateLimiterFactory(func(domain string) int {
+				return 10
+			})
+
+			c, err := New(
+				quotas.NewCollection(localLimiters),
+				quotas.NewCollection(globalLimiters),
+				func(opts ...dynamicconfig.FilterOption) time.Duration {
+					return time.Second
+				},
+				func(globalRatelimitKey string) string {
+					return string(test.mode)
+				},
+				testlogger.New(t), metrics.NewNoopMetricsClient())
+			require.NoError(t, err)
+			// not starting, in principle it could Collect() in the background and break this test.
+
+			// perform one call
+			_ = c.For("test").Allow()
+
+			// check counts on limits
+			globalEvents := make(map[string]internal.UsageMetrics)
+			c.global.Range(func(k string, v *internal.FallbackLimiter) bool {
+				usage, _, _ := v.Collect()
+				_, ok := globalEvents[k]
+				require.False(t, ok, "data key should not already exist: %v", k)
+				globalEvents[k] = internal.UsageMetrics{
+					Allowed:  usage.Allowed,
+					Rejected: usage.Rejected,
+				}
+				return true
+			})
+			localEvents := make(map[string]internal.UsageMetrics)
+			c.local.Range(func(k string, v internal.CountedLimiter) bool {
+				_, ok := localEvents[k]
+				require.False(t, ok, "data key should not already exist: %v", k)
+				localEvents[k] = v.Collect()
+				return true
+			})
+
+			if reflect.ValueOf(test.global).IsZero() {
+				assert.Empty(t, globalEvents, "unexpected global events, should be none")
+			} else {
+				assert.Equal(t, map[string]internal.UsageMetrics{"test": test.global}, globalEvents, "incorrect global metrics")
+			}
+			if reflect.ValueOf(test.local).IsZero() {
+				assert.Empty(t, localEvents, "unexpected local events, should be none")
+			} else {
+				assert.Equal(t, map[string]internal.UsageMetrics{"test": test.local}, localEvents, "incorrect local metrics")
+			}
+		})
+	}
 }

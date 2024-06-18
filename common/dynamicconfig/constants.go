@@ -633,10 +633,14 @@ const (
 	// FrontendGlobalRatelimiterMode controls what keys use global vs fallback behavior,
 	// and whether shadowing is enabled.  This is only available for frontend usage for now.
 	//
-	// "x-shadow" means "use x, and also shadow the other".
+	//   - "disable" stops usage-tracking and all Update requests, in an attempt to be as close to "do not use at all" as possible.
+	//   - "fallback" uses the new limiters with call tracking and metrics, but forces fallback behavior and does not submit usage data to aggregators.
+	//   - "global" uses the new global-load-balanced logic (though it may decide to use a fallback internally, and this is not prevented)
+	//   - "x-shadow" means "use x, and also shadow the other".  this calls both, tracks and emits both metrics, and can be used to "warm" either
+	//     limiter's in-memory state before switching.
 	//
 	// KeyName: frontend.GlobalRatelimiterMode
-	// Value type: string enum: "fallback", "global", "fallback-shadow", or "global-shadow"
+	// Value type: string enum: "disable", "fallback", "global", "fallback-shadow", or "global-shadow"
 	// Default value: "fallback"
 	// Allowed filters: RatelimitKey (on global key, e.g. prefixed by collection name)
 	FrontendGlobalRatelimiterMode

@@ -2196,6 +2196,7 @@ const (
 
 	// emitted as timers to provide cluster-wide usage info.
 	// probably better as a histogram for better aggregation.
+	GlobalRatelimiterStartupUsageTimer
 	GlobalRatelimiterFallbackUsageTimer
 	GlobalRatelimiterGlobalUsageTimer
 
@@ -2848,6 +2849,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 
 		AsyncRequestPayloadSize: {metricName: "async_request_payload_size_per_domain", metricRollupName: "async_request_payload_size", metricType: Timer},
 
+		GlobalRatelimiterStartupUsageTimer:  {metricName: "global_ratelimiter_startup_usage_timer", metricType: Timer},
 		GlobalRatelimiterFallbackUsageTimer: {metricName: "global_ratelimiter_fallback_usage_timer", metricType: Timer},
 		GlobalRatelimiterGlobalUsageTimer:   {metricName: "global_ratelimiter_global_usage_timer", metricType: Timer},
 

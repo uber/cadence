@@ -22,6 +22,7 @@
 package internal_test
 
 import (
+	"context"
 	"math/rand"
 	"testing"
 	"time"
@@ -30,7 +31,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/time/rate"
 
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/quotas/global/collection/internal"
 )
@@ -46,13 +49,12 @@ func TestLimiter(t *testing.T) {
 		assert.False(t, lim.Allow(), "should return fallback's second response")
 		assert.False(t, lim.Allow(), "should return fallback's third response")
 
-		limit, fallback, actual, usingFallback := lim.Collect()
-		assert.Equal(t, internal.UsageMetrics{0, 3}, limit, "real limiter should not have allowed any calls, not configured yet")
-		assert.Equal(t, internal.UsageMetrics{1, 2}, fallback, "fallback should have allowed one request, rejected two")
-		assert.Equal(t, internal.UsageMetrics{1, 2}, actual, "actual values should match fallback because it was used")
-		assert.True(t, usingFallback, "should be using fallback")
+		usage, starting, failing := lim.Collect()
+		assert.Equal(t, internal.UsageMetrics{1, 2}, usage, "usage metrics should match returned values")
+		assert.True(t, starting, "should still be starting up")
+		assert.False(t, failing, "should not be failing, still starting up")
 	})
-	t.Run("uses real after update", func(t *testing.T) {
+	t.Run("uses primary after update", func(t *testing.T) {
 		lim := internal.NewFallbackLimiter(allowlimiter{})
 		lim.Update(1_000_000) // large enough to allow millisecond sleeps to refill
 
@@ -60,20 +62,19 @@ func TestLimiter(t *testing.T) {
 		assert.True(t, lim.Allow(), "limiter allows after enough time has passed")
 		assert.True(t, lim.Allow(), "limiter allows burst too")
 
-		limit, fallback, actual, usingFallback := lim.Collect()
-		assert.False(t, usingFallback, "should not use fallback limiter after update")
-		assert.Equal(t, internal.UsageMetrics{2, 0}, limit, "real limiter should allow both calls")
-		assert.Equal(t, internal.UsageMetrics{2, 0}, fallback, "fallback should match mocked behavior")
-		assert.Equal(t, internal.UsageMetrics{2, 0}, actual, "actual should match real limiter")
+		usage, startup, failing := lim.Collect()
+		assert.False(t, failing, "should not use fallback limiter after update")
+		assert.False(t, startup, "should not be starting up, has had an update")
+		assert.Equal(t, internal.UsageMetrics{2, 0}, usage, "usage should match behavior")
 	})
 
 	t.Run("collecting usage data resets counts", func(t *testing.T) {
 		lim := internal.NewFallbackLimiter(allowlimiter{})
 		lim.Update(1)
 		lim.Allow()
-		limit, _, _, _ := lim.Collect()
+		limit, _, _ := lim.Collect()
 		assert.Equal(t, 1, limit.Allowed+limit.Rejected, "should count one request")
-		limit, _, _, _ = lim.Collect()
+		limit, _, _ = lim.Collect()
 		assert.Zero(t, limit.Allowed+limit.Rejected, "collect should have cleared the counts")
 	})
 
@@ -89,8 +90,10 @@ func TestLimiter(t *testing.T) {
 		t.Run("falls back after too many failures", func(t *testing.T) {
 			lim := internal.NewFallbackLimiter(allowlimiter{}) // fallback behavior is ignored
 			lim.Update(1)
-			_, _, _, usingFallback := lim.Collect()
-			require.False(t, usingFallback, "should not be using fallback")
+			_, startup, failing := lim.Collect()
+			require.False(t, failing, "should not be using fallback")
+			require.False(t, startup, "should not be starting up, has had an update")
+
 			// bucket starts out empty / with whatever contents it had before (zero).
 			// this is possibly surprising, so it's asserted.
 			require.False(t, lim.Allow(), "rate.Limiter should reject requests until filled")
@@ -99,21 +102,22 @@ func TestLimiter(t *testing.T) {
 			for i := 0; i < maxFailedUpdates; i++ {
 				// build up to the edge...
 				lim.FailedUpdate()
-				_, _, _, usingFallback = lim.Collect()
-				require.False(t, usingFallback, "should not be using fallback after %n failed updates", i+1)
+				_, _, failing = lim.Collect()
+				require.False(t, failing, "should not be using fallback after %n failed updates", i+1)
 			}
 			lim.FailedUpdate() // ... and push it over
-			_, _, _, usingFallback = lim.Collect()
-			require.True(t, usingFallback, "%vth update should switch to fallback", maxFailedUpdates+1)
+			_, _, failing = lim.Collect()
+			require.True(t, failing, "%vth update should switch to fallback", maxFailedUpdates+1)
 
 			assert.True(t, lim.Allow(), "should return fallback's allowed request")
 		})
-		t.Run("failing many times does not accidentally switch away from fallback", func(t *testing.T) {
+		t.Run("failing many times does not accidentally switch away from startup mode", func(t *testing.T) {
 			lim := internal.NewFallbackLimiter(nil)
 			for i := 0; i < maxFailedUpdates*10; i++ {
 				lim.FailedUpdate()
-				_, _, _, usingFallback := lim.Collect()
-				require.True(t, usingFallback, "should use fallback after %v failed updates", i+1)
+				_, startup, failing := lim.Collect()
+				require.True(t, startup, "should still be starting up %v failed updates", i+1)
+				require.False(t, failing, "failing can only happen after startup finishess")
 			}
 		})
 	})
@@ -142,7 +146,7 @@ func TestLimiterNotRacy(t *testing.T) {
 		// this should randomly clear occasionally via failures.
 		if rand.Intn(10) == 0 {
 			g.Go(func() error {
-				lim.Update(rand.Float64()) // essentially never exercises "skip no update" logic
+				lim.Update(rate.Limit(1 / rand.Float64())) // essentially never exercises "same value, do nothing" logic
 				return nil
 			})
 		} else {
@@ -162,11 +166,28 @@ func TestLimiterNotRacy(t *testing.T) {
 			lim.Allow()
 			return nil
 		})
+		g.Go(func() error {
+			lim.Reserve().Used(rand.Int()%2 == 0)
+			return nil
+		})
+		g.Go(func() error {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Microsecond)
+			defer cancel()
+			_ = lim.Wait(ctx)
+			return nil
+		})
 	}
 }
 
-var _ internal.Limiter = allowlimiter{}
+var _ quotas.Limiter = allowlimiter{}
+var _ clock.Reservation = allowres{}
 
 type allowlimiter struct{}
+type allowres struct{}
 
-func (allowlimiter) Allow() bool { return true }
+func (allowlimiter) Allow() bool                  { return true }
+func (a allowlimiter) Wait(context.Context) error { return nil }
+func (a allowlimiter) Reserve() clock.Reservation { return allowres{} }
+
+func (a allowres) Allow() bool { return true }
+func (a allowres) Used(bool)   {}
