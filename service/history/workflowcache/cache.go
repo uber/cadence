@@ -70,7 +70,8 @@ type cacheKey struct {
 type cacheValue struct {
 	externalRateLimiter quotas.Limiter
 	internalRateLimiter quotas.Limiter
-	countMetric         workflowIDCountMetric
+	externalCountMetric workflowIDCountMetric
+	internalCountMetric workflowIDCountMetric
 }
 
 // Params is the parameters for a new WFCache
@@ -144,13 +145,14 @@ func (c *wfCache) allow(domainID string, workflowID string, rateLimitType rateLi
 
 	switch rateLimitType {
 	case external:
-		value.countMetric.updatePerDomainMaxWFRequestCount(domainName, c.timeSource, c.metricsClient)
+		value.externalCountMetric.updatePerDomainMaxWFRequestCount(domainName, c.timeSource, c.metricsClient, metrics.WorkflowIDCacheRequestsExternalMaxRequestsPerSecondsTimer)
 		if !value.externalRateLimiter.Allow() {
 			c.emitRateLimitMetrics(domainID, workflowID, domainName, "external", metrics.WorkflowIDCacheRequestsExternalRatelimitedCounter)
 			return false
 		}
 		return true
 	case internal:
+		value.internalCountMetric.updatePerDomainMaxWFRequestCount(domainName, c.timeSource, c.metricsClient, metrics.WorkflowIDCacheRequestsInternalMaxRequestsPerSecondsTimer)
 		if !value.internalRateLimiter.Allow() {
 			c.emitRateLimitMetrics(domainID, workflowID, domainName, "internal", metrics.WorkflowIDCacheRequestsInternalRatelimitedCounter)
 			return false

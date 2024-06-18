@@ -708,6 +708,10 @@ func (s *PinotQuerySearchField) lastSearchField() {
 	}
 }
 
+func (s *PinotQuerySearchField) resetSearchField() {
+	s.string = ""
+}
+
 func (s *PinotQuerySearchField) addEqual(obj string, val interface{}) {
 	s.checkFirstSearchField()
 	if _, ok := val.(string); ok {
@@ -764,6 +768,16 @@ func (q *PinotQuery) addPinotSorter(orderBy string, order string) {
 
 func (q *PinotQuery) addOffsetAndLimits(offset int, limit int) {
 	q.limits += fmt.Sprintf("LIMIT %d, %d\n", offset, limit)
+}
+
+func (q *PinotQuery) addStatusFilters(status []types.WorkflowExecutionCloseStatus) {
+	for _, s := range status {
+		q.search.addEqual(CloseStatus, s.String())
+	}
+
+	q.search.lastSearchField()
+	q.filters.addQuery(q.search.string)
+	q.search.resetSearchField()
 }
 
 func (f *PinotQueryFilter) checkFirstFilter() {
@@ -1067,6 +1081,10 @@ func (v *pinotVisibilityStore) getListAllWorkflowExecutionsQuery(tableName strin
 	from := token.From
 	pageSize := request.PageSize
 	query.addOffsetAndLimits(from, pageSize)
+
+	if request.StatusFilter != nil {
+		query.addStatusFilters(request.StatusFilter)
+	}
 
 	if request.WorkflowSearchValue != "" {
 		if request.PartialMatch {
