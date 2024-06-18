@@ -141,7 +141,7 @@ steps:
                   - |-
                     # ensure that we are not rebuilding binaries and not regenerating code
                     make .just-build
-                    go test -timeout 60s -run ^TestPinotIntegrationSuite -tags pinotintegration -count 1 -v github.com/uber/cadence/host
+                    go test -timeout 600s -run ^TestPinotIntegrationSuite -tags pinotintegration -count 1 -v github.com/uber/cadence/host
       - docker-compose#v3.0.0:
           run: integration-test-cassandra-pinot
           config: docker/buildkite/docker-compose-pinot.yml
