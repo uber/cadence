@@ -31,12 +31,13 @@ workerconfig:
   enablereplicator: false
   enableindexer: true
 esconfig:
+  version: "v7"
   url:
     scheme: "http"
     host: "${ES_SEEDS}:9200"
   indices:
     visibility: test-visibility-
 pinotconfig:
-  broker: "localhost:8099"
+  broker: "${PINOT_SEEDS}:8099"
   cluster: pinot-test
   table: "cadence_visibility_pinot"

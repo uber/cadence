@@ -18,8 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:build pinotintegration
-// +build pinotintegration
+//go:build !race && pinotintegration
+// +build !race,pinotintegration
 
 // to run locally, make sure kafka and pinot is running,
 // then run cmd `go test -v ./host -run TestPinotIntegrationSuite -tags pinotintegration`
@@ -134,7 +134,7 @@ func (s *PinotIntegrationSuite) SetupSuite() {
 		Table:       tableName,
 		ServiceName: "",
 	}
-	s.pinotClient = pinotutils.CreatePinotClient(s.Suite, pinotConfig, s.Logger)
+	s.pinotClient = pinotutils.CreatePinotClient(&s.Suite, pinotConfig, s.Logger)
 }
 
 func (s *PinotIntegrationSuite) SetupTest() {
