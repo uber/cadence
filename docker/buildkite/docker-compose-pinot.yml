@@ -146,6 +146,7 @@ services:
     build:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
+#    When run integration test locally, uncomment this.
 #    command:
 #      - /bin/sh
 #      - -e
