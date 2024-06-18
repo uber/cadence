@@ -24,9 +24,12 @@ package resource
 
 import (
 	"sync/atomic"
+	"time"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/quotas/global/algorithm"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/service/history/config"
@@ -37,13 +40,15 @@ import (
 type Resource interface {
 	resource.Resource
 	GetEventCache() events.Cache
+	GetRatelimiterAlgorithm() algorithm.RequestWeighted
 }
 
 type resourceImpl struct {
 	status int32
 
 	resource.Resource
-	eventCache events.Cache
+	eventCache         events.Cache
+	ratelimitAlgorithm algorithm.RequestWeighted
 }
 
 // Start starts all resources
@@ -79,6 +84,9 @@ func (h *resourceImpl) Stop() {
 // GetEventCache return event cache
 func (h *resourceImpl) GetEventCache() events.Cache {
 	return h.eventCache
+}
+func (h *resourceImpl) GetRatelimiterAlgorithm() algorithm.RequestWeighted {
+	return h.ratelimitAlgorithm
 }
 
 // New create a new resource containing common history dependencies
@@ -126,10 +134,26 @@ func New(
 		uint64(config.EventsCacheMaxSize()),
 		serviceResource.GetDomainCache(),
 	)
+	// TODO: get dynamicconfig collection
+	ratelimitAlgorithm, err := algorithm.New(algorithm.Config{
+		NewDataWeight: func(opts ...dynamicconfig.FilterOption) float64 {
+			return 0.5
+		},
+		UpdateInterval: func(opts ...dynamicconfig.FilterOption) time.Duration {
+			return 3 * time.Second
+		},
+		DecayAfter: func(opts ...dynamicconfig.FilterOption) time.Duration {
+			return 6 * time.Second
+		},
+		GcAfter: func(opts ...dynamicconfig.FilterOption) time.Duration {
+			return time.Minute
+		},
+	})
 
 	historyResource = &resourceImpl{
-		Resource:   serviceResource,
-		eventCache: eventCache,
+		Resource:           serviceResource,
+		eventCache:         eventCache,
+		ratelimitAlgorithm: ratelimitAlgorithm,
 	}
 	return
 }

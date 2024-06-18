@@ -62,7 +62,7 @@ func newForTest(t require.TestingT, snap configSnapshot) (*impl, clock.MockedTim
 		NewDataWeight: func(_ ...dynamicconfig.FilterOption) float64 {
 			return snap.weight
 		},
-		UpdateRate: func(_ ...dynamicconfig.FilterOption) time.Duration {
+		UpdateInterval: func(_ ...dynamicconfig.FilterOption) time.Duration {
 			return snap.rate
 		},
 		DecayAfter: func(_ ...dynamicconfig.FilterOption) time.Duration {

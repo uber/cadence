@@ -420,7 +420,7 @@ func (c *Collection) doUpdate(since time.Duration, usage map[string]rpc.Calls) {
 			// so unrecognized values lead to fallback behavior because they cannot be understood.
 			c.global.Load(localKey).FailedUpdate()
 		} else {
-			target := float64(c.targetRPS(localKey))
+			target := float64(c.targetRPS(globalKey))
 			c.global.Load(localKey).Update(rate.Limit(weight * target))
 		}
 	}

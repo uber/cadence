@@ -213,16 +213,16 @@ type (
 		// Must be between 0 and 1, recommend starting with 0.5 (4 updates until data has <10% influence)
 		NewDataWeight dynamicconfig.FloatPropertyFn
 
-		// Expected rate of updates.  Should match the cluster's config for how often limiters check in,
+		// Expected time between updates.  Should match the cluster's config for how often limiters check in,
 		// i.e. this should probably be the same dynamic config value, updated at / near the same time.
-		UpdateRate dynamicconfig.DurationPropertyFn
+		UpdateInterval dynamicconfig.DurationPropertyFn
 
 		// How long to wait before considering a host-limit's RPS usage "probably inactive", rather than
 		// simply delayed.
 		//
-		// Should always be larger than UpdateRate, as less is meaningless.  Values are reduced based on
-		// missed UpdateRate multiples, not DecayAfter.
-		// Unsure about a good default (try 2x UpdateRate?), but larger numbers mean smoother behavior
+		// Should always be larger than UpdateInterval, as less is meaningless.  Values are reduced based on
+		// missed UpdateInterval multiples, not DecayAfter.
+		// Unsure about a good default (try 2x UpdateInterval?), but larger numbers mean smoother behavior
 		// but longer delays on adjusting to hosts that have disappeared or stopped receiving requests.
 		DecayAfter dynamicconfig.DurationPropertyFn
 
@@ -232,7 +232,7 @@ type (
 		// not influence behavior / weights returned.  Even extremely-low-weighted hosts will still be retained
 		// as long as they keep reporting "in use" (e.g. 1 rps used out of >100,000 is fine and will be tracked).
 		//
-		// "Good" values depend on a lot of details, but >=10*UpdateRate seems reasonably safe for a
+		// "Good" values depend on a lot of details, but >=10*UpdateInterval seems reasonably safe for a
 		// NewDataWeight of 0.5, as the latest data will be reduced to only 0.1% and may not be worth keeping.
 		GcAfter dynamicconfig.DurationPropertyFn
 	}
@@ -515,7 +515,7 @@ func (a *impl) snapshot() (configSnapshot, error) {
 	snap := configSnapshot{
 		now:        a.clock.Now(),
 		weight:     a.cfg.NewDataWeight(),
-		rate:       a.cfg.UpdateRate(),
+		rate:       a.cfg.UpdateInterval(),
 		decayAfter: a.cfg.DecayAfter(),
 		gcAfter:    a.cfg.GcAfter(),
 	}

@@ -32,6 +32,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -51,17 +52,13 @@ func TestLifecycleBasics(t *testing.T) {
 		"test",
 		quotas.NewCollection(quotas.NewMockLimiterFactory(ctrl)),
 		quotas.NewCollection(quotas.NewMockLimiterFactory(ctrl)),
-		func(opts ...dynamicconfig.FilterOption) time.Duration {
-			return time.Second
-		},
-		func(domain string) int {
-			return 5
-		},
-		func(globalRatelimitKey string) string {
-			return string(modeGlobal)
-		},
-		rpc.NewMockClient(ctrl),
-		logger, metrics.NewNoopMetricsClient())
+		func(opts ...dynamicconfig.FilterOption) time.Duration { return time.Second },
+		nil, // not used
+		func(globalRatelimitKey string) string { return string(modeGlobal) },
+		nil, // no rpc expected as there are no metrics to submit
+		logger,
+		metrics.NewNoopMetricsClient(),
+	)
 	require.NoError(t, err)
 	mts := clock.NewMockedTimeSource()
 	ts := mts.(clock.TimeSource)
@@ -132,17 +129,13 @@ func TestCollectionLimitersCollectMetrics(t *testing.T) {
 				"test",
 				quotas.NewCollection(localLimiters),
 				quotas.NewCollection(globalLimiters),
-				func(opts ...dynamicconfig.FilterOption) time.Duration {
-					return time.Second
-				},
-				func(domain string) int {
-					return 5
-				},
-				func(globalRatelimitKey string) string {
-					return string(test.mode)
-				},
+				func(opts ...dynamicconfig.FilterOption) time.Duration { return time.Second },
+				func(domain string) int { return 5 },
+				func(globalRatelimitKey string) string { return string(test.mode) },
 				nil,
-				testlogger.New(t), metrics.NewNoopMetricsClient())
+				testlogger.New(t),
+				metrics.NewNoopMetricsClient(),
+			)
 			require.NoError(t, err)
 			// not starting, in principle it could Collect() in the background and break this test.
 
@@ -180,5 +173,94 @@ func TestCollectionLimitersCollectMetrics(t *testing.T) {
 				assert.Equal(t, map[string]internal.UsageMetrics{"test": test.local}, localEvents, "incorrect local metrics")
 			}
 		})
+	}
+}
+
+func TestCollectionSubmitsDataAndUpdates(t *testing.T) {
+	defer goleak.VerifyNone(t) // must shut down cleanly
+
+	ctrl := gomock.NewController(t)
+	// anything non-zero
+	limiters := quotas.NewSimpleDynamicRateLimiterFactory(func(domain string) int {
+		return 1
+	})
+	logger, observed := testlogger.NewObserved(t)
+	aggs := rpc.NewMockClient(ctrl)
+	c, err := New(
+		"test",
+		quotas.NewCollection(limiters),
+		quotas.NewCollection(limiters),
+		func(opts ...dynamicconfig.FilterOption) time.Duration { return time.Second },
+		func(domain string) int { return 10 }, // target 10 rps / one per 100ms
+		func(globalRatelimitKey string) string { return string(modeGlobal) },
+		aggs,
+		logger,
+		metrics.NewNoopMetricsClient(),
+	)
+	require.NoError(t, err)
+	mts := clock.NewMockedTimeSource()
+	ts := mts.(clock.TimeSource)
+	c.TestOverrides(t, &ts, nil)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	require.NoError(t, c.OnStart(ctx))
+
+	// generate some data
+	someLimiter := c.For("something")
+	res := someLimiter.Reserve()
+	assert.True(t, res.Allow(), "first request should have been allowed")
+	res.Used(true)
+	assert.False(t, someLimiter.Allow(), "second request on the same domain should have been rejected")
+	assert.NoError(t, c.For("other").Wait(ctx), "request on a different domain should be allowed")
+
+	// prep for the calls
+	called := make(chan struct{}, 1)
+	aggs.EXPECT().Update(gomock.Any(), gomock.Any(), map[string]rpc.Calls{
+		"test:other": {
+			Allowed:  1,
+			Rejected: 0,
+		},
+		"test:something": {
+			Allowed:  1,
+			Rejected: 1,
+		},
+	}).DoAndReturn(func(ctx context.Context, period time.Duration, load map[string]rpc.Calls) rpc.UpdateResult {
+		called <- struct{}{}
+		return rpc.UpdateResult{
+			Weights: map[string]float64{
+				"test:something": 1, // should recover a token in 100ms
+				// "test:other":   // not returned, should not change weight
+			},
+			Err: nil,
+		}
+	})
+
+	mts.BlockUntil(1)        // need to have created timer in background updater
+	mts.Advance(time.Second) // trigger the update
+
+	// wait until the calls occur
+	select {
+	case <-called:
+	case <-time.After(time.Second):
+		t.Fatal("did not make an rpc call after 1s")
+	}
+	// panic if more calls occur
+	close(called)
+
+	// wait for the updates to be sent to the ratelimiters, and for "something"'s 100ms token to recover
+	time.Sleep(150 * time.Millisecond)
+
+	// and make sure updates occurred
+	assert.False(t, c.For("other").Allow(), "should be no recovered tokens yet on the slow limit")
+	assert.True(t, c.For("something").Allow(), "should have allowed one request on the fast limit")            // should use weight, not target rps
+	assert.False(t, c.For("something").Allow(), "should not have allowed as second request on the fast limit") // should use weight, not target rps
+
+	assert.NoError(t, c.OnStop(ctx))
+
+	// and make sure no non-fatal errors were logged
+	for _, log := range observed.All() {
+		t.Logf("observed log: %v", log.Message)
+		assert.Lessf(t, log.Level, zapcore.ErrorLevel, "should not be any error logs, got: %v", log.Message)
 	}
 }

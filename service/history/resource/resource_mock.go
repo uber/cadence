@@ -55,6 +55,7 @@ import (
 	partition "github.com/uber/cadence/common/partition"
 	persistence "github.com/uber/cadence/common/persistence"
 	client0 "github.com/uber/cadence/common/persistence/client"
+	algorithm "github.com/uber/cadence/common/quotas/global/algorithm"
 	events "github.com/uber/cadence/service/history/events"
 )
 
@@ -514,6 +515,20 @@ func (m *MockResource) GetPersistenceBean() client0.Bean {
 func (mr *MockResourceMockRecorder) GetPersistenceBean() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPersistenceBean", reflect.TypeOf((*MockResource)(nil).GetPersistenceBean))
+}
+
+// GetRatelimiterAlgorithm mocks base method.
+func (m *MockResource) GetRatelimiterAlgorithm() algorithm.RequestWeighted {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRatelimiterAlgorithm")
+	ret0, _ := ret[0].(algorithm.RequestWeighted)
+	return ret0
+}
+
+// GetRatelimiterAlgorithm indicates an expected call of GetRatelimiterAlgorithm.
+func (mr *MockResourceMockRecorder) GetRatelimiterAlgorithm() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRatelimiterAlgorithm", reflect.TypeOf((*MockResource)(nil).GetRatelimiterAlgorithm))
 }
 
 // GetRemoteAdminClient mocks base method.
