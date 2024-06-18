@@ -2194,11 +2194,10 @@ const (
 
 	AsyncRequestPayloadSize
 
-	// emitted as timers to provide cluster-wide usage info.
-	// probably better as a histogram for better aggregation.
-	GlobalRatelimiterStartupUsageTimer
-	GlobalRatelimiterFallbackUsageTimer
-	GlobalRatelimiterGlobalUsageTimer
+	GlobalRatelimiterStartupUsageHistogram
+	GlobalRatelimiterFallbackUsageHistogram
+	GlobalRatelimiterGlobalUsageHistogram
+	GlobalRatelimiterUpdateLatency
 
 	GlobalRatelimiterAllowedRequestsCount  // per key/type usage
 	GlobalRatelimiterRejectedRequestsCount // per key/type usage
@@ -2849,9 +2848,10 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 
 		AsyncRequestPayloadSize: {metricName: "async_request_payload_size_per_domain", metricRollupName: "async_request_payload_size", metricType: Timer},
 
-		GlobalRatelimiterStartupUsageTimer:  {metricName: "global_ratelimiter_startup_usage_timer", metricType: Timer},
-		GlobalRatelimiterFallbackUsageTimer: {metricName: "global_ratelimiter_fallback_usage_timer", metricType: Timer},
-		GlobalRatelimiterGlobalUsageTimer:   {metricName: "global_ratelimiter_global_usage_timer", metricType: Timer},
+		GlobalRatelimiterStartupUsageHistogram:  {metricName: "global_ratelimiter_startup_usage_histogram", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
+		GlobalRatelimiterFallbackUsageHistogram: {metricName: "global_ratelimiter_fallback_usage_histogram", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
+		GlobalRatelimiterGlobalUsageHistogram:   {metricName: "global_ratelimiter_global_usage_histogram", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
+		GlobalRatelimiterUpdateLatency:          {metricName: "global_ratelimiter_update_latency", metricType: Timer},
 
 		GlobalRatelimiterAllowedRequestsCount:  {metricName: "global_ratelimiter_allowed_requests", metricType: Counter},
 		GlobalRatelimiterRejectedRequestsCount: {metricName: "global_ratelimiter_rejected_requests", metricType: Counter},
@@ -3311,6 +3311,16 @@ var PersistenceLatencyBuckets = tally.DurationBuckets([]time.Duration{
 	50 * time.Second,
 	60 * time.Second,
 })
+
+// GlobalRatelimiterUsageHistogram contains buckets for tracking how many ratelimiters are
+// in which state (startup, healthy, failing).
+var GlobalRatelimiterUsageHistogram = tally.ValueBuckets{
+	1, 2, 5, 10,
+	25, 50, 100,
+	250, 500, 1000,
+	1250, 1500, 2000,
+	// TODO: almost certainly want more, but how many?
+}
 
 // ErrorClass is an enum to help with classifying SLA vs. non-SLA errors (SLA = "service level agreement")
 type ErrorClass uint8

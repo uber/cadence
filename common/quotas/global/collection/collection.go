@@ -37,6 +37,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -49,6 +50,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/quotas/global/collection/internal"
+	"github.com/uber/cadence/common/quotas/global/rpc"
 )
 
 type (
@@ -74,13 +76,16 @@ type (
 	// they should likely be configured to behave identically, but they need to be separate instances.
 	Collection struct {
 		updateInterval dynamicconfig.DurationPropertyFn
+		targetRPS      dynamicconfig.IntPropertyFnWithDomainFilter
 
 		logger log.Logger
 		scope  metrics.Scope
+		aggs   rpc.Client
 
-		global   *internal.AtomicMap[string, *internal.FallbackLimiter]
-		local    *internal.AtomicMap[string, internal.CountedLimiter]
+		global   *internal.AtomicMap[string, *internal.FallbackLimiter] // keyed by local-key, not global
+		local    *internal.AtomicMap[string, internal.CountedLimiter]   // keyed by local-key
 		disabled *quotas.Collection
+		km       KeyMapper
 
 		ctx       context.Context // context used for background operations, canceled when stopping
 		ctxCancel func()
@@ -95,6 +100,19 @@ type (
 	// calls is a small temporary pair[T] container
 	calls struct {
 		allowed, rejected int
+	}
+
+	// KeyMapper is used to ensure that all keys that get communicated to
+	// aggregators are uniquely identifiable, when multiple collections are used.
+	//
+	// A unique prefix / pattern per collection should be sufficient.
+	KeyMapper interface {
+		LocalToGlobal(key string) string
+		// GlobalToLocal does the reverse of LocalToGlobal.
+		//
+		// An error will be returned if the global key does not seem to have
+		// come from this mapper.
+		GlobalToLocal(key string) (string, error)
 	}
 )
 
@@ -111,7 +129,31 @@ var (
 	modeGlobalShadowLocal keyMode = "global-shadow-global"
 )
 
+type simplekm struct {
+	prefix string
+}
+
+var _ KeyMapper = simplekm{}
+
+func (s simplekm) LocalToGlobal(key string) string {
+	return s.prefix + key
+}
+
+func (s simplekm) GlobalToLocal(key string) (string, error) {
+	if !strings.HasPrefix(key, s.prefix) {
+		return "", fmt.Errorf("missing prefix %q in global key: %q", s.prefix, key)
+	}
+	return strings.TrimPrefix(key, s.prefix), nil
+}
+
+func PrefixKey(prefix string) KeyMapper {
+	return simplekm{
+		prefix: prefix,
+	}
+}
+
 func New(
+	name string,
 	// quotas for "local only" behavior.
 	// used for both "local" and "modeDisabled" behavior, though "local" wraps the values.
 	local *quotas.Collection,
@@ -122,7 +164,9 @@ func New(
 	// events on the fallback.
 	global *quotas.Collection,
 	updateInterval dynamicconfig.DurationPropertyFn,
+	targetRPS dynamicconfig.IntPropertyFnWithDomainFilter,
 	keyModes dynamicconfig.StringPropertyWithRatelimitKeyFilter,
+	aggs rpc.Client,
 	logger log.Logger,
 	met metrics.Client,
 ) (*Collection, error) {
@@ -141,11 +185,14 @@ func New(
 		global:         globalCollection,
 		local:          localCollection,
 		disabled:       local,
+		aggs:           aggs,
 		updateInterval: updateInterval,
+		targetRPS:      targetRPS,
 
 		logger:   logger.WithTags(tag.ComponentGlobalRatelimiter),
 		scope:    met.Scope(metrics.FrontendGlobalRatelimiter),
 		keyModes: keyModes,
+		km:       PrefixKey(name + ":"),
 
 		ctx:       ctx,
 		ctxCancel: cancel,
@@ -157,9 +204,14 @@ func New(
 	return c, nil
 }
 
-func (c *Collection) TestOverrides(t *testing.T, timesource clock.TimeSource) {
+func (c *Collection) TestOverrides(t *testing.T, timesource *clock.TimeSource, km *KeyMapper) {
 	t.Helper()
-	c.timesource = timesource
+	if timesource != nil {
+		c.timesource = *timesource
+	}
+	if km != nil {
+		c.km = *km
+	}
 }
 
 // OnStart follows fx's OnStart hook semantics.
@@ -188,7 +240,7 @@ func (c *Collection) OnStop(ctx context.Context) error {
 
 	select {
 	case <-ctx.Done():
-		return fmt.Errorf("ollection failed to stop, context canceled: %w", ctx.Err())
+		return fmt.Errorf("collection failed to stop, context canceled: %w", ctx.Err())
 	case <-c.stopped:
 		return nil
 	}
@@ -205,7 +257,8 @@ func (c *Collection) keyMode(key string) keyMode {
 }
 
 func (c *Collection) For(key string) quotas.Limiter {
-	switch c.keyMode(key) {
+	globalKey := c.km.LocalToGlobal(key)
+	switch c.keyMode(globalKey) {
 	case modeLocal:
 		return c.local.Load(key)
 	case modeGlobal:
@@ -266,22 +319,24 @@ func (c *Collection) backgroundUpdateLoop() {
 			go func() {
 				defer close(localMetricsDone)
 				c.local.Range(func(k string, v internal.CountedLimiter) bool {
-					if c.shouldDeleteKey(c.keyMode(k)) {
+					globalKey := c.km.LocalToGlobal(k)
+					if c.shouldDeleteKey(c.keyMode(globalKey)) {
 						c.local.Delete(k) // clean up so maintenance cost is near zero
 						return true       // continue iterating, delete others too
 					}
 
-					c.sendMetrics(k, "local", v.Collect())
+					c.sendMetrics(globalKey, "local", v.Collect())
 					return true
 				})
 			}()
 
 			capacity := c.global.Len()
 			capacity += capacity / 10 // size may grow while we range, try to avoid reallocating in that case
-			usage := make(map[string]calls, capacity)
+			usage := make(map[string]rpc.Calls, capacity)
 			startups, failings, globals := 0, 0, 0
 			c.global.Range(func(k string, v *internal.FallbackLimiter) bool {
-				if c.shouldDeleteKey(c.keyMode(k)) {
+				globalKey := c.km.LocalToGlobal(k)
+				if c.shouldDeleteKey(c.keyMode(globalKey)) {
 					c.global.Delete(k) // clean up so maintenance cost is near zero
 					return true        // continue iterating, delete others too
 				}
@@ -296,11 +351,11 @@ func (c *Collection) backgroundUpdateLoop() {
 				if !(startup || failing) {
 					globals++
 				}
-				usage[k] = calls{
-					allowed:  counts.Allowed,
-					rejected: counts.Rejected,
+				usage[globalKey] = rpc.Calls{
+					Allowed:  counts.Allowed,
+					Rejected: counts.Rejected,
 				}
-				c.sendMetrics(k, "global", counts)
+				c.sendMetrics(globalKey, "global", counts)
 
 				return true
 			})
@@ -308,11 +363,15 @@ func (c *Collection) backgroundUpdateLoop() {
 			// track how often we're using fallbacks vs non-fallbacks.
 			// this also tells us about how many keys are used per host.
 			// timer-sums unfortunately must be divided by the update frequency to get correct totals.
-			c.scope.RecordTimer(metrics.GlobalRatelimiterStartupUsageTimer, time.Duration(startups))
-			c.scope.RecordTimer(metrics.GlobalRatelimiterFallbackUsageTimer, time.Duration(failings))
-			c.scope.RecordTimer(metrics.GlobalRatelimiterGlobalUsageTimer, time.Duration(globals))
+			c.scope.RecordHistogramValue(metrics.GlobalRatelimiterStartupUsageHistogram, float64(startups))
+			c.scope.RecordHistogramValue(metrics.GlobalRatelimiterFallbackUsageHistogram, float64(failings))
+			c.scope.RecordHistogramValue(metrics.GlobalRatelimiterGlobalUsageHistogram, float64(globals))
 
-			c.doUpdate(now.Sub(lastGatherTime), usage)
+			if len(usage) > 0 {
+				sw := c.scope.StartTimer(metrics.GlobalRatelimiterUpdateLatency)
+				c.doUpdate(now.Sub(lastGatherTime), usage)
+				sw.Stop()
+			}
 
 			<-localMetricsDone // should be much faster than doUpdate, unless it's no-opped
 
@@ -330,57 +389,53 @@ func (c *Collection) sendMetrics(globalKey string, limitType string, usage inter
 	scope.AddCounter(metrics.GlobalRatelimiterRejectedRequestsCount, int64(usage.Rejected))
 }
 
-// doUpdate pushes usage data to aggregators
-func (c *Collection) doUpdate(since time.Duration, usage map[string]calls) {
-	if len(usage) == 0 {
-		return // modeDisabled or just no activity on this collection of limits, nothing to do
-	}
-
-	ctx, cancel := context.WithTimeout(c.ctx, 10*time.Second) // TODO: configurable
+// doUpdate pushes usage data to aggregators. mutates `usage` as it runs.
+func (c *Collection) doUpdate(since time.Duration, usage map[string]rpc.Calls) {
+	ctx, cancel := context.WithTimeout(c.ctx, 10*time.Second) // TODO: configurable?  possibly even worth cutting off after 1s.
 	defer cancel()
-	_ = ctx
-
-	// TODO: use the RPC code to shard requests to all aggregators, and apply the updated RPS values.
-	perAggregator := func(ctx context.Context, since time.Duration, requestedBatch map[string]calls) error {
-		// do the call, get the result
-		resultBatch, err := make(map[string]float64, len(requestedBatch)), error(nil)
-
-		if err == nil {
-			for k, v := range resultBatch {
-				delete(requestedBatch, k) // clean up the list so we know what was missed
-
-				if v < 0 {
-					// negative values cannot be valid, so they're a failure.
-					//
-					// this is largely for future-proofing and to cover all possibilities,
-					// so unrecognized values lead to fallback behavior because they cannot be understood.
-					c.global.Load(k).FailedUpdate()
-				} else {
-					// TODO: needs to be scaled by the configured ratelimit
-					c.global.Load(k).Update(rate.Limit(v))
-				}
-			}
-		}
-
-		// mark all non-returned limits as failures.
-		// this also handles request errors: all requested values are failed
-		// because none of them have been deleted above.
-		//
-		// aside from request errors this should be extremely rare and might
-		// represent a race in the aggregator, but the semantics for handling it
-		// are pretty clear either way.
-		for k := range requestedBatch {
-			// requested but not returned, bump the fallback fuse
-			c.global.Load(k).FailedUpdate()
-		}
-
-		if err != nil {
-			c.logger.Error("aggregator batch failed to update",
-				tag.Error(err),
-				tag.Dynamic("agg_host", "hostname?"))
-		}
-		return err
+	res := c.aggs.Update(ctx, since, usage)
+	if res.Err != nil {
+		// should not happen outside pretty major errors, but may recover next time.
+		c.logger.Error("aggregator update error", tag.Error(res.Err))
 	}
-	_ = perAggregator // make the compiler happy about this pseudocode
+	// either way, process all weights we did successfully retrieve.
+	for globalKey, weight := range res.Weights {
+		delete(usage, globalKey) // clean up the list so we know what was missed
+		localKey, err := c.km.GlobalToLocal(globalKey)
+		if err != nil {
+			// should not happen unless agg returns keys that were not asked for,
+			// and are not for this collection
+			c.logger.Error("bad global key structure returned", tag.Error(err))
+			continue
+		}
 
+		if weight < 0 {
+			// negative values cannot be valid, so they're a failure.
+			//
+			// this is largely for future-proofing and to cover all possibilities,
+			// so unrecognized values lead to fallback behavior because they cannot be understood.
+			c.global.Load(localKey).FailedUpdate()
+		} else {
+			target := float64(c.targetRPS(localKey))
+			c.global.Load(localKey).Update(rate.Limit(weight * target))
+		}
+	}
+
+	// mark all non-returned limits as failures.
+	// this also handles request errors: all requested values are failed
+	// because none of them have been deleted above.
+	//
+	// aside from request errors this should be rare and might represent a race
+	// in the aggregator, but the semantics for handling it are pretty clear
+	// either way.
+	for globalkey := range usage {
+		localKey, err := c.km.GlobalToLocal(globalkey)
+		if err != nil {
+			// should not happen, would require local mapping to be wrong
+			c.logger.Error("bad global key structure in local-only path", tag.Error(err))
+			continue
+		}
+		// requested but not returned, bump the fallback fuse
+		c.global.Load(localKey).FailedUpdate()
+	}
 }
