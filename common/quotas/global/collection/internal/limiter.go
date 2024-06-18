@@ -36,15 +36,6 @@ import (
 )
 
 type (
-	// Limiter is a simplified version of [github.com/uber/cadence/common/quotas.Limiter],
-	// for both simpler mocking and to remove the need to import it.
-	//
-	// Wait and Reserve are intentionally excluded here.  They are not currently needed,
-	// and it seems likely to be much more difficult to correctly track their usage.
-	Limiter interface {
-		Allow() bool
-	}
-
 	// FallbackLimiter wraps a [rate.Limiter] with a fallback Limiter (i.e. a [github.com/uber/cadence/common/quotas.Limiter])
 	// to use after a configurable number of failed updates.
 	//

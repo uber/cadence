@@ -365,10 +365,10 @@ func (c *Collection) backgroundUpdateLoop() {
 			})
 
 			// track how often we're using fallbacks vs non-fallbacks.
-			// this also tells us about how many keys are used per host.
-			// timer-sums unfortunately must be divided by the update frequency to get correct totals.
+			// with per-host metrics this can tell us if a host is abnormal
+			// compared to the rest of the cluster, e.g. persistent failing values.
 			c.scope.RecordHistogramValue(metrics.GlobalRatelimiterStartupUsageHistogram, float64(startups))
-			c.scope.RecordHistogramValue(metrics.GlobalRatelimiterFallbackUsageHistogram, float64(failings))
+			c.scope.RecordHistogramValue(metrics.GlobalRatelimiterFailingUsageHistogram, float64(failings))
 			c.scope.RecordHistogramValue(metrics.GlobalRatelimiterGlobalUsageHistogram, float64(globals))
 
 			if len(usage) > 0 {

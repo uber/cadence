@@ -403,6 +403,8 @@ const (
 	HistoryClientGetReplicationMessagesScope
 	// HistoryClientWfIDCacheScope tracks workflow ID cache metrics
 	HistoryClientWfIDCacheScope
+	// HistoryClientRatelimitUpdateScope tracks global ratelimiter related calls to history service
+	HistoryClientRatelimitUpdateScope
 
 	// MatchingClientPollForDecisionTaskScope tracks RPC calls to matching service
 	MatchingClientPollForDecisionTaskScope
@@ -1510,6 +1512,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryClientGetDLQReplicationMessagesScope:         {operation: "HistoryClientGetDLQReplicationMessages", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
 		HistoryClientGetReplicationMessagesScope:            {operation: "HistoryClientGetReplicationMessages", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
 		HistoryClientWfIDCacheScope:                         {operation: "HistoryClientWfIDCache", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRatelimitUpdateScope:                   {operation: "HistoryClientRatelimitUpdate", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
 
 		MatchingClientPollForDecisionTaskScope:                   {operation: "MatchingClientPollForDecisionTask", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
 		MatchingClientPollForActivityTaskScope:                   {operation: "MatchingClientPollForActivityTask", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
@@ -2195,9 +2198,9 @@ const (
 	AsyncRequestPayloadSize
 
 	GlobalRatelimiterStartupUsageHistogram
-	GlobalRatelimiterFallbackUsageHistogram
+	GlobalRatelimiterFailingUsageHistogram
 	GlobalRatelimiterGlobalUsageHistogram
-	GlobalRatelimiterUpdateLatency
+	GlobalRatelimiterUpdateLatency // time spent performing all Update requests, per batch attempt.  ideally well below update interval.
 
 	GlobalRatelimiterAllowedRequestsCount  // per key/type usage
 	GlobalRatelimiterRejectedRequestsCount // per key/type usage
@@ -2848,10 +2851,10 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 
 		AsyncRequestPayloadSize: {metricName: "async_request_payload_size_per_domain", metricRollupName: "async_request_payload_size", metricType: Timer},
 
-		GlobalRatelimiterStartupUsageHistogram:  {metricName: "global_ratelimiter_startup_usage_histogram", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
-		GlobalRatelimiterFallbackUsageHistogram: {metricName: "global_ratelimiter_fallback_usage_histogram", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
-		GlobalRatelimiterGlobalUsageHistogram:   {metricName: "global_ratelimiter_global_usage_histogram", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
-		GlobalRatelimiterUpdateLatency:          {metricName: "global_ratelimiter_update_latency", metricType: Timer},
+		GlobalRatelimiterStartupUsageHistogram: {metricName: "global_ratelimiter_startup_usage_histogram", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
+		GlobalRatelimiterFailingUsageHistogram: {metricName: "global_ratelimiter_failing_usage_histogram", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
+		GlobalRatelimiterGlobalUsageHistogram:  {metricName: "global_ratelimiter_global_usage_histogram", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
+		GlobalRatelimiterUpdateLatency:         {metricName: "global_ratelimiter_update_latency", metricType: Timer},
 
 		GlobalRatelimiterAllowedRequestsCount:  {metricName: "global_ratelimiter_allowed_requests", metricType: Counter},
 		GlobalRatelimiterRejectedRequestsCount: {metricName: "global_ratelimiter_rejected_requests", metricType: Counter},

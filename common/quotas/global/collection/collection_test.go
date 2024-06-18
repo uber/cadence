@@ -39,6 +39,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/quotas/global/collection/internal"
+	"github.com/uber/cadence/common/quotas/global/rpc"
 )
 
 func TestLifecycleBasics(t *testing.T) {
@@ -47,25 +48,31 @@ func TestLifecycleBasics(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	logger, logs := testlogger.NewObserved(t)
 	c, err := New(
+		"test",
 		quotas.NewCollection(quotas.NewMockLimiterFactory(ctrl)),
 		quotas.NewCollection(quotas.NewMockLimiterFactory(ctrl)),
 		func(opts ...dynamicconfig.FilterOption) time.Duration {
 			return time.Second
 		},
+		func(domain string) int {
+			return 5
+		},
 		func(globalRatelimitKey string) string {
 			return string(modeGlobal)
 		},
+		rpc.NewMockClient(ctrl),
 		logger, metrics.NewNoopMetricsClient())
 	require.NoError(t, err)
-	ts := clock.NewMockedTimeSource()
-	c.TestOverrides(t, ts)
+	mts := clock.NewMockedTimeSource()
+	ts := mts.(clock.TimeSource)
+	c.TestOverrides(t, &ts, nil)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	require.NoError(t, c.OnStart(ctx))
 
-	ts.BlockUntil(1)        // created timer in background updater
-	ts.Advance(time.Second) // trigger the update
+	mts.BlockUntil(1)        // created timer in background updater
+	mts.Advance(time.Second) // trigger the update
 	// clockwork does not provide a way to wait for "a ticker or timer event was consumed",
 	// so just sleep for a bit to allow that branch of the select statement to be followed.
 	//
@@ -122,14 +129,19 @@ func TestCollectionLimitersCollectMetrics(t *testing.T) {
 			})
 
 			c, err := New(
+				"test",
 				quotas.NewCollection(localLimiters),
 				quotas.NewCollection(globalLimiters),
 				func(opts ...dynamicconfig.FilterOption) time.Duration {
 					return time.Second
 				},
+				func(domain string) int {
+					return 5
+				},
 				func(globalRatelimitKey string) string {
 					return string(test.mode)
 				},
+				nil,
 				testlogger.New(t), metrics.NewNoopMetricsClient())
 			require.NoError(t, err)
 			// not starting, in principle it could Collect() in the background and break this test.

@@ -367,6 +367,15 @@ func TestHistoryGetTaskInfoResponse(t *testing.T) {
 }
 
 func TestRatelimitUpdate(t *testing.T) {
+	t.Run("round trip", func(t *testing.T) {
+		for _, item := range []*types.RatelimitUpdateResponse{nil, {}, &testdata.RatelimitUpdateResponse} {
+			assert.Equal(t, item, ToHistoryRatelimitUpdateResponse(FromHistoryRatelimitUpdateResponse(item)))
+		}
+		for _, item := range []*types.RatelimitUpdateRequest{nil, {}, &testdata.RatelimitUpdateRequest} {
+			assert.Equal(t, item, ToHistoryRatelimitUpdateRequest(FromHistoryRatelimitUpdateRequest(item)))
+		}
+	})
+
 	t.Run("nil", func(t *testing.T) {
 		assert.Nil(t, ToHistoryRatelimitUpdateRequest(nil), "request to internal")
 		assert.Nil(t, FromHistoryRatelimitUpdateResponse(nil), "response from internal")
