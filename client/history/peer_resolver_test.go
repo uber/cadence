@@ -39,46 +39,48 @@ import (
 
 func TestPeerResolver(t *testing.T) {
 	numShards := 123
-	controller := gomock.NewController(t)
-	serviceResolver := membership.NewMockResolver(controller)
-	serviceResolver.EXPECT().Lookup(
-		service.History, string(rune(common.DomainIDToHistoryShard("domainID", numShards)))).Return(
-		membership.NewDetailedHostInfo(
-			"domainHost:123",
-			"domainHost_123",
-			membership.PortMap{membership.PortTchannel: 1234}),
-		nil)
-	serviceResolver.EXPECT().Lookup(service.History, string(rune(common.WorkflowIDToHistoryShard("workflowID", numShards)))).Return(
-		membership.NewDetailedHostInfo(
-			"workflowHost:123",
-			"workflow",
-			membership.PortMap{membership.PortTchannel: 1235, membership.PortGRPC: 1666}), nil)
+	t.Run("FromIDs", func(t *testing.T) {
+		controller := gomock.NewController(t)
+		serviceResolver := membership.NewMockResolver(controller)
+		serviceResolver.EXPECT().Lookup(
+			service.History, string(rune(common.DomainIDToHistoryShard("domainID", numShards)))).Return(
+			membership.NewDetailedHostInfo(
+				"domainHost:123",
+				"domainHost_123",
+				membership.PortMap{membership.PortTchannel: 1234}),
+			nil)
+		serviceResolver.EXPECT().Lookup(service.History, string(rune(common.WorkflowIDToHistoryShard("workflowID", numShards)))).Return(
+			membership.NewDetailedHostInfo(
+				"workflowHost:123",
+				"workflow",
+				membership.PortMap{membership.PortTchannel: 1235, membership.PortGRPC: 1666}), nil)
 
-	serviceResolver.EXPECT().Lookup(service.History, string(rune(99))).Return(
-		membership.NewDetailedHostInfo(
-			"shardHost:123",
-			"shard_123",
-			membership.PortMap{membership.PortTchannel: 1235}),
-		nil)
+		serviceResolver.EXPECT().Lookup(service.History, string(rune(99))).Return(
+			membership.NewDetailedHostInfo(
+				"shardHost:123",
+				"shard_123",
+				membership.PortMap{membership.PortTchannel: 1235}),
+			nil)
 
-	serviceResolver.EXPECT().Lookup(service.History, string(rune(11))).Return(membership.HostInfo{}, assert.AnError)
+		serviceResolver.EXPECT().Lookup(service.History, string(rune(11))).Return(membership.HostInfo{}, assert.AnError)
 
-	r := NewPeerResolver(numShards, serviceResolver, membership.PortTchannel)
+		r := NewPeerResolver(numShards, serviceResolver, membership.PortTchannel)
 
-	peer, err := r.FromDomainID("domainID")
-	assert.NoError(t, err)
-	assert.Equal(t, "domainHost:1234", peer)
+		peer, err := r.FromDomainID("domainID")
+		assert.NoError(t, err)
+		assert.Equal(t, "domainHost:1234", peer)
 
-	peer, err = r.FromWorkflowID("workflowID")
-	assert.NoError(t, err)
-	assert.Equal(t, "workflowHost:1235", peer)
+		peer, err = r.FromWorkflowID("workflowID")
+		assert.NoError(t, err)
+		assert.Equal(t, "workflowHost:1235", peer)
 
-	peer, err = r.FromShardID(99)
-	assert.NoError(t, err)
-	assert.Equal(t, "shardHost:1235", peer)
+		peer, err = r.FromShardID(99)
+		assert.NoError(t, err)
+		assert.Equal(t, "shardHost:1235", peer)
 
-	_, err = r.FromShardID(11)
-	assert.Error(t, err)
+		_, err = r.FromShardID(11)
+		assert.Error(t, err)
+	})
 
 	t.Run("FromHostAddress", func(t *testing.T) {
 		tests := []struct {
