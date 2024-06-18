@@ -41,7 +41,6 @@ services:
       - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
       - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,OUTSIDE:PLAINTEXT
       - KAFKA_CFG_LISTENERS=PLAINTEXT://:9093,OUTSIDE://:9092
-#      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9093,OUTSIDE://localhost:9092
       - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9093,OUTSIDE://kafka:9092
       - KAFKA_CFG_BROKER_ID=0
       - ALLOW_PLAINTEXT_LISTENER=yes
@@ -58,7 +57,6 @@ services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch-oss:7.9.3
     # version here must be the same as the one in testdata/integration_pinot_cluster
-    #image: webhippie/elasticsearch:6.4
     ports:
       - "9200:9200"
     networks:
@@ -173,9 +171,6 @@ services:
       - "ES_VERSION=v7"
       - "KAFKA_SEEDS=kafka"
       - "PINOT_SEEDS=pinot-broker"
-#      - "KAFKA_PORT=9092"
-#      - "ZOOKEEPER_SEEDS=zookeeper"
-#      - "ZOOKEEPER_PORT=2181"
       - BUILDKITE_AGENT_ACCESS_TOKEN
       - BUILDKITE_JOB_ID
       - BUILDKITE_BUILD_ID
