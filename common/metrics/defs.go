@@ -839,6 +839,10 @@ const (
 	GetAvailableIsolationGroupsScope
 	// TaskValidatorScope is the metric for the taskvalidator's workflow check operation.
 	TaskValidatorScope
+
+	// FrontendGlobalRatelimiter is the metrics scope for frontend.GlobalRatelimiter
+	FrontendGlobalRatelimiter
+
 	NumCommonScopes
 )
 
@@ -1008,8 +1012,6 @@ const (
 	FrontendGetSearchAttributesScope
 	// FrontendGetClusterInfoScope is the metric scope for frontend.GetClusterInfo
 	FrontendGetClusterInfoScope
-	// FrontendGlobalRatelimiter is the metrics scope for frontend.GlobalRatelimiter
-	FrontendGlobalRatelimiter
 
 	NumFrontendScopes
 )
@@ -1725,10 +1727,13 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		DomainReplicationQueueScope: {operation: "DomainReplicationQueue"},
 		ClusterMetadataScope:        {operation: "ClusterMetadata"},
 		HashringScope:               {operation: "Hashring"},
+
+		// currently used by both frontend and history, but may grow to other limiting-host-services.
+		FrontendGlobalRatelimiter: {operation: "GlobalRatelimiter"},
 	},
 	// Frontend Scope Names
 	Frontend: {
-		// Admin API scope co-locates with with frontend
+		// Admin API scope co-locates with frontend
 		AdminRemoveTaskScope:                        {operation: "AdminRemoveTask"},
 		AdminCloseShardScope:                        {operation: "AdminCloseShard"},
 		AdminResetQueueScope:                        {operation: "AdminResetQueue"},
@@ -1809,7 +1814,6 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendResetStickyTaskListScope:                   {operation: "ResetStickyTaskList"},
 		FrontendGetSearchAttributesScope:                   {operation: "GetSearchAttributes"},
 		FrontendGetClusterInfoScope:                        {operation: "GetClusterInfo"},
-		FrontendGlobalRatelimiter:                          {operation: "GlobalRatelimiter"},
 	},
 	// History Scope Names
 	History: {
