@@ -63,6 +63,14 @@ type Config struct {
 	ShutdownDrainDuration             dynamicconfig.DurationPropertyFn
 	Lockdown                          dynamicconfig.BoolPropertyFnWithDomainFilter
 
+	// global ratelimiter config
+	GlobalRatelimiterKeyMode             dynamicconfig.StringPropertyWithRatelimitKeyFilter
+	GlobalRatelimiterUpdateInterval      dynamicconfig.DurationPropertyFn
+	GlobalRatelimiterDomainUserRPS       dynamicconfig.IntPropertyFnWithDomainFilter
+	GlobalRatelimiterDomainWorkerRPS     dynamicconfig.IntPropertyFnWithDomainFilter
+	GlobalRatelimiterDomainVisibilityRPS dynamicconfig.IntPropertyFnWithDomainFilter
+	GlobalRatelimiterDomainAsyncRPS      dynamicconfig.IntPropertyFnWithDomainFilter
+
 	// isolation configuration
 	EnableTasklistIsolation dynamicconfig.BoolPropertyFnWithDomainFilter
 
@@ -149,6 +157,12 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, isAdvancedVis
 		GlobalDomainWorkerRPS:                       dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendGlobalDomainWorkerRPS),
 		GlobalDomainVisibilityRPS:                   dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendGlobalDomainVisibilityRPS),
 		GlobalDomainAsyncRPS:                        dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendGlobalDomainAsyncRPS),
+		GlobalRatelimiterKeyMode:                    dc.GetStringPropertyFilteredByRatelimitKey(dynamicconfig.FrontendGlobalRatelimiterMode),
+		GlobalRatelimiterUpdateInterval:             dc.GetDurationProperty(dynamicconfig.GlobalRatelimiterUpdateInterval),
+		GlobalRatelimiterDomainUserRPS:              dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendGlobalRatelimiterDomainUserRPS),
+		GlobalRatelimiterDomainWorkerRPS:            dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendGlobalRatelimiterDomainWorkerRPS),
+		GlobalRatelimiterDomainVisibilityRPS:        dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendGlobalRatelimiterDomainVisibilityRPS),
+		GlobalRatelimiterDomainAsyncRPS:             dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendGlobalRatelimiterDomainAsyncRPS),
 		MaxIDLengthWarnLimit:                        dc.GetIntProperty(dynamicconfig.MaxIDLengthWarnLimit),
 		DomainNameMaxLength:                         dc.GetIntPropertyFilteredByDomain(dynamicconfig.DomainNameMaxLength),
 		IdentityMaxLength:                           dc.GetIntPropertyFilteredByDomain(dynamicconfig.IdentityMaxLength),

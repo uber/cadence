@@ -582,6 +582,30 @@ const (
 	// Default value: 100000
 	// Allowed filters: DomainName
 	FrontendGlobalDomainAsyncRPS
+	// FrontendGlobalRatelimiterDomainUserRPS is workflow domain rate limit per second for the whole Cadence cluster
+	// KeyName: frontend.globalRatelimiterDomainrps
+	// Value type: Int
+	// Default value: 1000
+	// Allowed filters: DomainName
+	FrontendGlobalRatelimiterDomainUserRPS
+	// FrontendGlobalRatelimiterDomainWorkerRPS is background-processing workflow domain rate limit per second for the whole Cadence cluster
+	// KeyName: frontend.globalRatelimiterDomainWorkerrps
+	// Value type: Int
+	// Default value: 1000
+	// Allowed filters: DomainName
+	FrontendGlobalRatelimiterDomainWorkerRPS
+	// FrontendGlobalRatelimiterDomainVisibilityRPS is the per-domain List*WorkflowExecutions request rate limit per second
+	// KeyName: frontend.globalRatelimiterDomainVisibilityrps
+	// Value type: Int
+	// Default value: 1000
+	// Allowed filters: DomainName
+	FrontendGlobalRatelimiterDomainVisibilityRPS
+	// FrontendGlobalRatelimiterDomainAsyncRPS is the per-domain async workflow request rate limit per second
+	// KeyName: frontend.globalRatelimiterDomainAsyncrps
+	// Value type: Int
+	// Default value: 100000
+	// Allowed filters: DomainName
+	FrontendGlobalRatelimiterDomainAsyncRPS
 	// FrontendDecisionResultCountLimit is max number of decisions per RespondDecisionTaskCompleted request
 	// KeyName: frontend.decisionResultCountLimit
 	// Value type: Int
@@ -630,20 +654,6 @@ const (
 	// Default value: 10000
 	// Allowed filters: N/A
 	VisibilityArchivalQueryMaxPageSize
-	// FrontendGlobalRatelimiterMode controls what keys use global vs fallback behavior,
-	// and whether shadowing is enabled.  This is only available for frontend usage for now.
-	//
-	//   - "disable" stops usage-tracking and all Update requests, in an attempt to be as close to "do not use at all" as possible.
-	//   - "fallback" uses the new limiters with call tracking and metrics, but forces fallback behavior and does not submit usage data to aggregators.
-	//   - "global" uses the new global-load-balanced logic (though it may decide to use a fallback internally, and this is not prevented)
-	//   - "x-shadow" means "use x, and also shadow the other".  this calls both, tracks and emits both metrics, and can be used to "warm" either
-	//     limiter's in-memory state before switching.
-	//
-	// KeyName: frontend.GlobalRatelimiterMode
-	// Value type: string enum: "disable", "fallback", "global", "fallback-shadow", or "global-shadow"
-	// Default value: "fallback"
-	// Allowed filters: RatelimitKey (on global key, e.g. prefixed by collection name)
-	FrontendGlobalRatelimiterMode
 
 	// key for matching
 
@@ -2238,6 +2248,12 @@ const (
 	// TODO: https://github.com/uber/cadence/issues/3861
 	WorkerBlobIntegrityCheckProbability
 
+	// HistoryGlobalRatelimiterNewDataWeight defines how much weight to give each host's newest data, per update.  Must be between 0 and 1, higher values match new values more closely after a single update.
+	// KeyName: history.globalRatelimiterNewDataWeight
+	// Value type: Float64
+	// Default value: 0.5
+	HistoryGlobalRatelimiterNewDataWeight
+
 	// LastFloatKey must be the last one in this const group
 	LastFloatKey
 )
@@ -2306,6 +2322,21 @@ const (
 	// Default value: ""
 	ESAnalyzerWorkflowTypeMetricDomains
 
+	// FrontendGlobalRatelimiterMode controls what keys use global vs fallback behavior,
+	// and whether shadowing is enabled.  This is only available for frontend usage for now.
+	//
+	//   - "disable" stops usage-tracking and all Update requests, in an attempt to be as close to "do not use at all" as possible.
+	//   - "local" uses the new limiters with call tracking and metrics, but forces local-only behavior and does not submit usage data to aggregators.
+	//   - "global" uses the new global-load-balanced logic (though it may decide to use a local-fallback internally, and this is not prevented)
+	//   - "x-shadow" means "use x, and also shadow the other".
+	//     this calls both, tracks and emits both metrics, and can be used to "warm" either limiter's in-memory state before switching.
+	//
+	// KeyName: frontend.GlobalRatelimiterMode
+	// Value type: string enum: "disable", "local", "global", "local-shadow", or "global-shadow"
+	// Default value: "disable"
+	// Allowed filters: RatelimitKey (on global key, e.g. prefixed by collection name)
+	FrontendGlobalRatelimiterMode
+
 	// LastStringKey must be the last one in this const group
 	LastStringKey
 )
@@ -2339,6 +2370,12 @@ const (
 	// Default value: 10s (10*time.Second)
 	// Allowed filters: N/A
 	DomainFailoverRefreshInterval
+	// GlobalRatelimiterUpdateInterval controls how frequently ratelimiter usage information is submitted to aggregators.
+	// This value is shared between limiting and aggregating hosts (frontend and history).
+	// KeyName: frontend.globalRatelimiterUpdateInterval
+	// Value type: Duration
+	// Default value: 3 seconds
+	GlobalRatelimiterUpdateInterval
 
 	// MatchingLongPollExpirationInterval is the long poll expiration interval in the matching service
 	// KeyName: matching.longPollExpirationInterval
@@ -2756,6 +2793,17 @@ const (
 	// Allowed filters: domainName, taskListName, taskListType
 	AsyncTaskDispatchTimeout
 
+	// HistoryGlobalRatelimiterDecayAfter defines how long to wait for an update before considering a host's data "possibly gone", causing its weight to gradually decline.
+	// KeyName: history.globalRatelimiterDecayAfter
+	// Value type: Duration
+	// Default value: 6 seconds
+	HistoryGlobalRatelimiterDecayAfter
+	// HistoryGlobalRatelimiterGCAfter defines how long to wait until a host's data is considered entirely useless, e.g. host has likely disappeared, its weight is very low, and the data can be deleted.
+	// KeyName: history.globalRatelimiterGCAfter
+	// Value type: Duration
+	// Default value: 30 seconds
+	HistoryGlobalRatelimiterGCAfter
+
 	// LastDurationKey must be the last one in this const group
 	LastDurationKey
 )
@@ -3106,6 +3154,30 @@ var IntKeys = map[IntKey]DynamicInt{
 		KeyName:      "frontend.globalDomainAsyncrps",
 		Filters:      []Filter{DomainName},
 		Description:  "FrontendGlobalDomainAsyncRPS is the per-domain async workflow request rate limit per second",
+		DefaultValue: 100000,
+	},
+	FrontendGlobalRatelimiterDomainUserRPS: {
+		KeyName:      "frontend.globalRatelimiterDomainrps",
+		Filters:      []Filter{DomainName},
+		Description:  "FrontendGlobalRatelimiterDomainUserRPS is workflow domain rate limit per second for the whole Cadence cluster in the global ratelimiter system",
+		DefaultValue: 1000,
+	},
+	FrontendGlobalRatelimiterDomainWorkerRPS: {
+		KeyName:      "frontend.globalRatelimiterDomainWorkerrps",
+		Filters:      []Filter{DomainName},
+		Description:  "FrontendGlobalRatelimiterDomainWorkerRPS is background-processing workflow domain rate limit per second for the whole Cadence cluster in the global ratelimiter system",
+		DefaultValue: 1000,
+	},
+	FrontendGlobalRatelimiterDomainVisibilityRPS: {
+		KeyName:      "frontend.globalRatelimiterDomainVisibilityrps",
+		Filters:      []Filter{DomainName},
+		Description:  "FrontendGlobalRatelimiterDomainVisibilityRPS is the per-domain List*WorkflowExecutions request rate limit per second in the global ratelimiter system",
+		DefaultValue: 1000,
+	},
+	FrontendGlobalRatelimiterDomainAsyncRPS: {
+		KeyName:      "frontend.globalRatelimiterDomainAsyncrps",
+		Filters:      []Filter{DomainName},
+		Description:  "FrontendGlobalRatelimiterDomainAsyncRPS is the per-domain async workflow request rate limit per second in the global ratelimiter system",
 		DefaultValue: 100000,
 	},
 	FrontendDecisionResultCountLimit: {
@@ -4535,6 +4607,11 @@ var FloatKeys = map[FloatKey]DynamicFloat{
 		Description:  "WorkerBlobIntegrityCheckProbability controls the probability of running an integrity check for any given archival",
 		DefaultValue: 0.002,
 	},
+	HistoryGlobalRatelimiterNewDataWeight: {
+		KeyName:      "history.globalRatelimiterNewDataWeight",
+		Description:  "HistoryGlobalRatelimiterNewDataWeight defines how much weight to give each host's newest data, per update.  Must be between 0 and 1, higher values match new values more closely after a single update",
+		DefaultValue: 0.5,
+	},
 }
 
 var StringKeys = map[StringKey]DynamicString{
@@ -4594,6 +4671,12 @@ var StringKeys = map[StringKey]DynamicString{
 		Description:  "ESAnalyzerWorkflowDurationWarnThresholds defines the domains we want to emit wf version metrics on",
 		DefaultValue: "",
 	},
+	FrontendGlobalRatelimiterMode: {
+		KeyName:      "frontend.GlobalRatelimiterMode",
+		Description:  "FrontendGlobalRatelimiterMode defines which mode a global key should be in, to make gradual changes to ratelimiter algorithms",
+		DefaultValue: "disable",
+		Filters:      []Filter{RatelimitKey},
+	},
 }
 
 var DurationKeys = map[DurationKey]DynamicDuration{
@@ -4645,6 +4728,11 @@ var DurationKeys = map[DurationKey]DynamicDuration{
 		KeyName:      "frontend.domainFailoverRefreshInterval",
 		Description:  "DomainFailoverRefreshInterval is the domain failover refresh timer",
 		DefaultValue: time.Second * 10,
+	},
+	GlobalRatelimiterUpdateInterval: {
+		KeyName:      "frontend.globalRatelimiterUpdateInterval",
+		Description:  "GlobalRatelimiterUpdateInterval defines how often each global ratelimiter collection submits load information, and the expected update rate in aggregators (used to determine when hosts are lost)",
+		DefaultValue: 3 * time.Second,
 	},
 	MatchingLongPollExpirationInterval: {
 		KeyName:      "matching.longPollExpirationInterval",
@@ -5006,6 +5094,16 @@ var DurationKeys = map[DurationKey]DynamicDuration{
 		Filters:      []Filter{DomainName, TaskListName, TaskType},
 		Description:  "AsyncTaskDispatchTimeout is the timeout of dispatching tasks for async match",
 		DefaultValue: time.Second * 3,
+	},
+	HistoryGlobalRatelimiterDecayAfter: {
+		KeyName:      "history.globalRatelimiterDecayAfter",
+		Description:  "HistoryGlobalRatelimiterDecayAfter defines how long to wait for an update before considering a host's data \"possibly gone\", causing its weight to gradually decline.",
+		DefaultValue: 6 * time.Second,
+	},
+	HistoryGlobalRatelimiterGCAfter: {
+		KeyName:      "history.globalRatelimiterGCAfter",
+		Description:  "HistoryGlobalRatelimiterGCAfter defines how long to wait until a host's data is considered entirely useless, e.g. host has likely disappeared, its weight is very low, and the data can be deleted.",
+		DefaultValue: 30 * time.Second,
 	},
 }
 

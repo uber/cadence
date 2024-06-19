@@ -22,13 +22,13 @@ package quotas
 
 // MultiStageRateLimiter indicates a domain specific rate limit policy
 type MultiStageRateLimiter struct {
-	domainLimiters *Collection
+	domainLimiters ICollection
 	globalLimiter  Limiter
 }
 
 // NewMultiStageRateLimiter returns a new domain quota rate limiter. This is about
 // an order of magnitude slower than
-func NewMultiStageRateLimiter(global Limiter, domainLimiters *Collection) *MultiStageRateLimiter {
+func NewMultiStageRateLimiter(global Limiter, domainLimiters ICollection) *MultiStageRateLimiter {
 	return &MultiStageRateLimiter{
 		domainLimiters: domainLimiters,
 		globalLimiter:  global,

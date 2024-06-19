@@ -25,6 +25,7 @@ package rpc
 import (
 	"fmt"
 	"math"
+	"testing"
 	"time"
 
 	"github.com/uber/cadence/.gen/go/history"
@@ -139,4 +140,18 @@ func saturatingInt32[T numeric](i T) int32 {
 		return math.MaxInt32
 	}
 	return int32(i)
+}
+
+// exposed only for testing purposes
+
+// TestUpdateToAny is exposed for handler tests, use updateToAny in internal code instead.
+func TestUpdateToAny(t *testing.T, host string, elapsed time.Duration, load map[string]Calls) (*types.Any, error) {
+	t.Helper()
+	return updateToAny(host, elapsed, load)
+}
+
+// TestAnyToWeights is exposed for handler tests, use anyToWeights in internal code instead
+func TestAnyToWeights(t *testing.T, response *types.Any) (map[string]float64, error) {
+	t.Helper()
+	return anyToWeights(response)
 }

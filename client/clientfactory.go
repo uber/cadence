@@ -54,10 +54,10 @@ import (
 type (
 	// Factory can be used to create RPC clients for cadence services
 	Factory interface {
-		NewHistoryClient() (history.Client, error)
+		NewHistoryClient() (history.Client, history.PeerResolver, error)
 		NewMatchingClient(domainIDToName DomainIDToNameFunc) (matching.Client, error)
 
-		NewHistoryClientWithTimeout(timeout time.Duration) (history.Client, error)
+		NewHistoryClientWithTimeout(timeout time.Duration) (history.Client, history.PeerResolver, error)
 		NewMatchingClientWithTimeout(domainIDToName DomainIDToNameFunc, timeout time.Duration, longPollTimeout time.Duration) (matching.Client, error)
 
 		NewAdminClientWithTimeoutAndConfig(config transport.ClientConfig, timeout time.Duration, largeTimeout time.Duration) (admin.Client, error)
@@ -96,7 +96,7 @@ func NewRPCClientFactory(
 	}
 }
 
-func (cf *rpcClientFactory) NewHistoryClient() (history.Client, error) {
+func (cf *rpcClientFactory) NewHistoryClient() (history.Client, history.PeerResolver, error) {
 	return cf.NewHistoryClientWithTimeout(timeoutwrapper.HistoryDefaultTimeout)
 }
 
@@ -104,7 +104,7 @@ func (cf *rpcClientFactory) NewMatchingClient(domainIDToName DomainIDToNameFunc)
 	return cf.NewMatchingClientWithTimeout(domainIDToName, timeoutwrapper.MatchingDefaultTimeout, timeoutwrapper.MatchingDefaultLongPollTimeout)
 }
 
-func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (history.Client, error) {
+func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (history.Client, history.PeerResolver, error) {
 	var rawClient history.Client
 	var namedPort = membership.PortTchannel
 
@@ -132,7 +132,7 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 		client = metered.NewHistoryClient(client, cf.metricsClient)
 	}
 	client = timeoutwrapper.NewHistoryClient(client, timeout)
-	return client, nil
+	return client, peerResolver, nil
 }
 
 func (cf *rpcClientFactory) NewMatchingClientWithTimeout(

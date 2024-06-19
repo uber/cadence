@@ -104,6 +104,12 @@ func TestNewConfig(t *testing.T) {
 		"EmitSignalNameMetricsTag":                    {dynamicconfig.FrontendEmitSignalNameMetricsTag, true},
 		"Lockdown":                                    {dynamicconfig.Lockdown, false},
 		"EnableTasklistIsolation":                     {dynamicconfig.EnableTasklistIsolation, true},
+		"GlobalRatelimiterKeyMode":                    {dynamicconfig.FrontendGlobalRatelimiterMode, "disable"},
+		"GlobalRatelimiterUpdateInterval":             {dynamicconfig.GlobalRatelimiterUpdateInterval, 3 * time.Second},
+		"GlobalRatelimiterDomainUserRPS":              {dynamicconfig.FrontendGlobalRatelimiterDomainUserRPS, 1000},
+		"GlobalRatelimiterDomainWorkerRPS":            {dynamicconfig.FrontendGlobalRatelimiterDomainWorkerRPS, 1000},
+		"GlobalRatelimiterDomainVisibilityRPS":        {dynamicconfig.FrontendGlobalRatelimiterDomainVisibilityRPS, 1000},
+		"GlobalRatelimiterDomainAsyncRPS":             {dynamicconfig.FrontendGlobalRatelimiterDomainAsyncRPS, 100000},
 	}
 	domainFields := map[string]configTestCase{
 		"MaxBadBinaryCount":      {dynamicconfig.FrontendMaxBadBinaries, 40},
@@ -170,6 +176,8 @@ func getValue(f *reflect.Value) interface{} {
 			return fn()
 		case dynamicconfig.StringPropertyFn:
 			return fn()
+		case dynamicconfig.StringPropertyWithRatelimitKeyFilter:
+			return fn("user:domain")
 		default:
 			panic("Unable to handle type: " + f.Type().Name())
 		}

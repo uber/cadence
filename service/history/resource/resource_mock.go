@@ -56,6 +56,7 @@ import (
 	persistence "github.com/uber/cadence/common/persistence"
 	client0 "github.com/uber/cadence/common/persistence/client"
 	algorithm "github.com/uber/cadence/common/quotas/global/algorithm"
+	rpc "github.com/uber/cadence/common/quotas/global/rpc"
 	events "github.com/uber/cadence/service/history/events"
 )
 
@@ -515,6 +516,20 @@ func (m *MockResource) GetPersistenceBean() client0.Bean {
 func (mr *MockResourceMockRecorder) GetPersistenceBean() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPersistenceBean", reflect.TypeOf((*MockResource)(nil).GetPersistenceBean))
+}
+
+// GetRatelimiterAggregatorsClient mocks base method.
+func (m *MockResource) GetRatelimiterAggregatorsClient() rpc.Client {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRatelimiterAggregatorsClient")
+	ret0, _ := ret[0].(rpc.Client)
+	return ret0
+}
+
+// GetRatelimiterAggregatorsClient indicates an expected call of GetRatelimiterAggregatorsClient.
+func (mr *MockResourceMockRecorder) GetRatelimiterAggregatorsClient() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRatelimiterAggregatorsClient", reflect.TypeOf((*MockResource)(nil).GetRatelimiterAggregatorsClient))
 }
 
 // GetRatelimiterAlgorithm mocks base method.

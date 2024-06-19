@@ -57,7 +57,11 @@ func defaultConfig(rate time.Duration) configSnapshot {
 	}
 }
 
-func newForTest(t require.TestingT, snap configSnapshot) (*impl, clock.MockedTimeSource) {
+func newValid(t require.TestingT, snap configSnapshot) (*impl, clock.MockedTimeSource) {
+	return newForTest(t, snap, true)
+}
+
+func newForTest(t require.TestingT, snap configSnapshot, validate bool) (*impl, clock.MockedTimeSource) {
 	cfg := Config{
 		NewDataWeight: func(_ ...dynamicconfig.FilterOption) float64 {
 			return snap.weight
@@ -72,12 +76,29 @@ func newForTest(t require.TestingT, snap configSnapshot) (*impl, clock.MockedTim
 			return snap.gcAfter
 		},
 	}
-	agg, err := New(cfg)
-	require.NoError(t, err)
+	var agg RequestWeighted
+
+	if validate {
+		var err error
+		agg, err = New(cfg)
+		require.NoError(t, err)
+	} else {
+		// need to build by hand, New returns nil on err
+		agg = &impl{
+			cfg:   cfg,
+			usage: make(map[Limit]map[Identity]requests),
+			clock: nil,
+		}
+	}
 
 	underlying := agg.(*impl)
 	tick := clock.NewMockedTimeSource()
 	underlying.clock = tick
+
+	if !validate {
+		_, err := agg.(*impl).snapshot()
+		require.Error(t, err, "non-validating tests must not be valid")
+	}
 
 	// adjust time to get rid of sub-second output, it's just harder to read.
 	// doesn't matter if this goes forward or backward.
@@ -87,7 +108,7 @@ func newForTest(t require.TestingT, snap configSnapshot) (*impl, clock.MockedTim
 }
 
 func TestMissedUpdateHandling(t *testing.T) {
-	agg, tick := newForTest(t, configSnapshot{
+	agg, tick := newValid(t, configSnapshot{
 		weight:     0.1,
 		rate:       time.Second,
 		decayAfter: 2 * time.Second,
@@ -159,7 +180,7 @@ func TestGC(t *testing.T) {
 	// advance 1 more second to trigger garbage collection.
 	// this moves slightly beyond 9s to avoid testing the precise boundary time, as it's not relevant.
 	setup := func(t *testing.T) (*impl, clock.MockedTimeSource) {
-		agg, tick := newForTest(t, configSnapshot{
+		agg, tick := newValid(t, configSnapshot{
 			rate:    time.Second,
 			gcAfter: 10 * time.Second,
 
@@ -255,20 +276,20 @@ func TestMinorCoverage(t *testing.T) {
 	// not overly useful tests, but coverage++
 	t.Run("gc", func(t *testing.T) {
 		// invalid config
-		agg, _ := newForTest(t, configSnapshot{})
+		agg, _ := newForTest(t, configSnapshot{}, false)
 		m, err := agg.GC()
 		assert.Zero(t, m)
 		assert.ErrorContains(t, err, "bad ratelimiter config")
 	})
 	t.Run("update", func(t *testing.T) {
 		// invalid config
-		agg, _ := newForTest(t, configSnapshot{})
+		agg, _ := newForTest(t, configSnapshot{}, false)
 		err := agg.Update(UpdateParams{ID: "ignored", Load: nil, Elapsed: time.Second})
 		assert.ErrorContains(t, err, "bad ratelimiter config")
 	})
 	t.Run("get-weights", func(t *testing.T) {
 		// invalid config
-		agg, _ := newForTest(t, configSnapshot{})
+		agg, _ := newForTest(t, configSnapshot{}, false)
 		weights, rps, err := agg.HostWeights("ignored", nil)
 		assert.Zero(t, weights)
 		assert.Zero(t, rps)
@@ -329,7 +350,7 @@ func TestRapidlyCoalesces(t *testing.T) {
 	//
 	// Time is also not advanced because it doesn't actually need to be advanced.
 	// An update is an update, and the caller's elapsed time is assumed to be correct.
-	agg, _ := newForTest(t, configSnapshot{
+	agg, _ := newValid(t, configSnapshot{
 		// Using 0.5 weight because that's what we expect to use IRL, and this test is
 		// ensuring that weight is good enough for the behavior we want.
 		// Weight-math-correctness is ensured by other tests.
@@ -426,7 +447,7 @@ func TestConcurrent(t *testing.T) {
 		updatesPerBatch = numHosts / 3 // intentionally below len(hosts) to allow some to gc normally
 	)
 
-	agg, _ := newForTest(t, configSnapshot{
+	agg, _ := newValid(t, configSnapshot{
 		rate:       updateRate,
 		decayAfter: 2 * updateRate,
 		gcAfter:    3 * updateRate, // relatively low to trigger implicit gc, check coverage if changing the values
@@ -519,7 +540,7 @@ func TestSimulate(t *testing.T) {
 	// Exact matches after changes are not at all important.
 
 	updateRate := 3 * time.Second // both expected and duration fed to update
-	agg, tick := newForTest(t, configSnapshot{
+	agg, tick := newValid(t, configSnapshot{
 		// now:    , ignored
 		weight:     0.75, // fairly fast adjustment, and semi-human-friendly math
 		rate:       updateRate,
@@ -864,7 +885,7 @@ func expectSimilar[V ~float64](
 // than the fine-grained locking gains us in concurrency flexibility.  benchmark first!
 func BenchmarkNormalUse(b *testing.B) {
 	updateRate := 3 * time.Second
-	agg, _ := newForTest(b, defaultConfig(updateRate))
+	agg, _ := newValid(b, defaultConfig(updateRate))
 	// intentionally using real clock source, time-gathering cost is relevant to benchmark
 	agg.clock = clock.NewRealTimeSource()
 

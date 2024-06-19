@@ -23,11 +23,10 @@
 package resource
 
 import (
+	"fmt"
 	"sync/atomic"
-	"time"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/quotas/global/algorithm"
 	"github.com/uber/cadence/common/resource"
@@ -134,21 +133,15 @@ func New(
 		uint64(config.EventsCacheMaxSize()),
 		serviceResource.GetDomainCache(),
 	)
-	// TODO: get dynamicconfig collection
 	ratelimitAlgorithm, err := algorithm.New(algorithm.Config{
-		NewDataWeight: func(opts ...dynamicconfig.FilterOption) float64 {
-			return 0.5
-		},
-		UpdateInterval: func(opts ...dynamicconfig.FilterOption) time.Duration {
-			return 3 * time.Second
-		},
-		DecayAfter: func(opts ...dynamicconfig.FilterOption) time.Duration {
-			return 6 * time.Second
-		},
-		GcAfter: func(opts ...dynamicconfig.FilterOption) time.Duration {
-			return time.Minute
-		},
+		NewDataWeight:  config.GlobalRatelimiterNewDataWeight,
+		UpdateInterval: config.GlobalRatelimiterUpdateInterval,
+		DecayAfter:     config.GlobalRatelimiterDecayAfter,
+		GcAfter:        config.GlobalRatelimiterGCAfter,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("invalid ratelimit algorithm config: %w", err)
+	}
 
 	historyResource = &resourceImpl{
 		Resource:           serviceResource,

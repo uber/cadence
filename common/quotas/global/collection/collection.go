@@ -84,7 +84,7 @@ type (
 
 		global   *internal.AtomicMap[string, *internal.FallbackLimiter] // keyed by local-key, not global
 		local    *internal.AtomicMap[string, internal.CountedLimiter]   // keyed by local-key
-		disabled *quotas.Collection
+		disabled quotas.ICollection
 		km       KeyMapper
 
 		ctx       context.Context // context used for background operations, canceled when stopping
@@ -160,13 +160,13 @@ func New(
 	name string,
 	// quotas for "local only" behavior.
 	// used for both "local" and "disabled" behavior, though "local" wraps the values.
-	local *quotas.Collection,
+	local quotas.ICollection,
 	// quotas for the global limiter's internal fallback.
 	//
 	// this should be configured the same as the local collection, but it
 	// MUST NOT actually be the same collection, or shadowing will double-count
 	// events on the fallback.
-	global *quotas.Collection,
+	global quotas.ICollection,
 	updateInterval dynamicconfig.DurationPropertyFn,
 	targetRPS dynamicconfig.IntPropertyFnWithDomainFilter,
 	keyModes dynamicconfig.StringPropertyWithRatelimitKeyFilter,

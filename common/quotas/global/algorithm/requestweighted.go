@@ -350,12 +350,17 @@ func (c configSnapshot) missedUpdateScalar(dataAge time.Duration) PerSecond {
 // This instance is effectively single-threaded, but a small sharding wrapper should allow better concurrent
 // throughput if needed (bound by CPU cores, as it's moderately CPU-costly).
 func New(cfg Config) (RequestWeighted, error) {
-	return &impl{
+	i := &impl{
 		cfg:   cfg,
 		usage: make(map[Limit]map[Identity]requests, guessNumKeys), // start out relatively large
 
 		clock: clock.NewRealTimeSource(),
-	}, nil
+	}
+	_, err := i.snapshot() // validate config by just taking a snapshot
+	if err != nil {
+		return nil, fmt.Errorf("invalid config: %w", err)
+	}
+	return i, nil
 }
 
 // Update performs a weighted update to the running RPS for this host's per-key request data
