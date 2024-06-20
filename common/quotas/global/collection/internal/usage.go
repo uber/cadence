@@ -43,11 +43,11 @@ type (
 	}
 
 	AtomicUsage struct {
-		allowed, rejected atomic.Int64
+		allowed, rejected, idle atomic.Int64
 	}
 
 	UsageMetrics struct {
-		Allowed, Rejected int
+		Allowed, Rejected, Idle int
 	}
 )
 
@@ -74,6 +74,8 @@ func (c CountedLimiter) Wait(ctx context.Context) error {
 }
 
 func (c CountedLimiter) Reserve() clock.Reservation {
+	c.usage.idle.Store(0) // not idle regardless of the result
+
 	res := c.wrapped.Reserve()
 	if res.Allow() {
 		// may be used or canceled, return a wrapped version so it's tracked
@@ -115,11 +117,16 @@ func (a *AtomicUsage) Count(allowed bool) {
 	} else {
 		a.rejected.Add(1)
 	}
+	a.idle.Store(0)
 }
 
 func (a *AtomicUsage) Collect() UsageMetrics {
-	return UsageMetrics{
+	m := UsageMetrics{
 		Allowed:  int(a.allowed.Swap(0)),
 		Rejected: int(a.rejected.Swap(0)),
 	}
+	if m.Allowed+m.Rejected == 0 {
+		m.Idle = int(a.idle.Add(1))
+	} // else 0
+	return m
 }

@@ -50,7 +50,7 @@ func TestLimiter(t *testing.T) {
 		assert.False(t, lim.Allow(), "should return fallback's third response")
 
 		usage, starting, failing := lim.Collect()
-		assert.Equal(t, internal.UsageMetrics{1, 2}, usage, "usage metrics should match returned values")
+		assert.Equal(t, internal.UsageMetrics{1, 2, 0}, usage, "usage metrics should match returned values")
 		assert.True(t, starting, "should still be starting up")
 		assert.False(t, failing, "should not be failing, still starting up")
 	})
@@ -65,7 +65,7 @@ func TestLimiter(t *testing.T) {
 		usage, startup, failing := lim.Collect()
 		assert.False(t, failing, "should not use fallback limiter after update")
 		assert.False(t, startup, "should not be starting up, has had an update")
-		assert.Equal(t, internal.UsageMetrics{2, 0}, usage, "usage should match behavior")
+		assert.Equal(t, internal.UsageMetrics{2, 0, 0}, usage, "usage should match behavior")
 	})
 
 	t.Run("collecting usage data resets counts", func(t *testing.T) {

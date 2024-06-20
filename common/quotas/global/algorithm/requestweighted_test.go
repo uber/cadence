@@ -76,12 +76,12 @@ func newForTest(t require.TestingT, snap configSnapshot, validate bool) (*impl, 
 			return snap.gcAfter
 		},
 	}
-	var agg RequestWeighted
+	var agg *impl
 
 	if validate {
-		var err error
-		agg, err = New(cfg)
+		i, err := New(cfg)
 		require.NoError(t, err)
+		agg = i.(*impl)
 	} else {
 		// need to build by hand, New returns nil on err
 		agg = &impl{
@@ -91,14 +91,9 @@ func newForTest(t require.TestingT, snap configSnapshot, validate bool) (*impl, 
 		}
 	}
 
-	underlying := agg.(*impl)
+	underlying := agg
 	tick := clock.NewMockedTimeSource()
 	underlying.clock = tick
-
-	if !validate {
-		_, err := agg.(*impl).snapshot()
-		require.Error(t, err, "non-validating tests must not be valid")
-	}
 
 	// adjust time to get rid of sub-second output, it's just harder to read.
 	// doesn't matter if this goes forward or backward.

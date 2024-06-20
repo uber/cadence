@@ -123,6 +123,11 @@ func (pr peerResolver) GlobalRatelimitPeers(ratelimits []string) (map[string][]s
 	if err != nil {
 		return nil, fmt.Errorf("unable to get history peers: %w", err)
 	}
+	if len(hosts) == 0 {
+		// can occur when shutting down the only instance because it calls EvictSelf ASAP.
+		// this is common in dev, but otherwise *probably* should not be possible in a healthy system.
+		return nil, fmt.Errorf("unable to get history peers: no peers available")
+	}
 
 	results := make(map[string][]string, len(hosts))
 	initialCapacity := len(ratelimits) / len(hosts)

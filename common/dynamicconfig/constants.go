@@ -2331,7 +2331,7 @@ const (
 	//   - "x-shadow" means "use x, and also shadow the other".
 	//     this calls both, tracks and emits both metrics, and can be used to "warm" either limiter's in-memory state before switching.
 	//
-	// KeyName: frontend.GlobalRatelimiterMode
+	// KeyName: frontend.globalRatelimiterMode
 	// Value type: string enum: "disable", "local", "global", "local-shadow", or "global-shadow"
 	// Default value: "disable"
 	// Allowed filters: RatelimitKey (on global key, e.g. prefixed by collection name)
@@ -4672,7 +4672,7 @@ var StringKeys = map[StringKey]DynamicString{
 		DefaultValue: "",
 	},
 	FrontendGlobalRatelimiterMode: {
-		KeyName:      "frontend.GlobalRatelimiterMode",
+		KeyName:      "frontend.globalRatelimiterMode",
 		Description:  "FrontendGlobalRatelimiterMode defines which mode a global key should be in, to make gradual changes to ratelimiter algorithms",
 		DefaultValue: "disable",
 		Filters:      []Filter{RatelimitKey},

@@ -134,7 +134,30 @@ var (
 	modeLocal             keyMode = "local"
 	modeGlobal            keyMode = "global"
 	modeLocalShadowGlobal keyMode = "local-shadow-global"
-	modeGlobalShadowLocal keyMode = "global-shadow-global"
+	modeGlobalShadowLocal keyMode = "global-shadow-local"
+)
+
+const (
+	// stop sending an idle key after N zero-valued updates in a row.
+	// this will delete unused limiters locally, keeping collections small,
+	// and also allow the aggregator to delete the key soon after.
+	//
+	// this has two major consequences:
+	//  1. the next usage will use the local fallback, which may unfairly allow
+	//     more requests than it should if other hosts are consuming the whole
+	//     quota.  shorter values increase this effect.
+	//  2. since zero values are submitted until garbage-collected, this host
+	//     will repeatedly reduce its weight for a key until GC occurs.  if a
+	//     request occurs during this window, it will take that many rounds to
+	//     get back to the weight it left off at, because it is not starting from
+	//     a zero state.  larger values increase this effect.
+	//
+	// currently, it is believed that this should be kept relatively small, to
+	// get closer to the desired behavior: new frontend requests allow a small
+	// number through (local fallback) until rebalanced, and idle time between
+	// those requests does not very strongly penalize an abnormal-host caller
+	// (e.g. leading to 0.0001 rps or similar).
+	gcAfterIdle = 5 // TODO: change to time-based, like aggregator?
 )
 
 var _ KeyMapper = simplekm{}
@@ -193,8 +216,8 @@ func New(
 		updateInterval: updateInterval,
 		targetRPS:      targetRPS,
 
-		logger:   logger.WithTags(tag.ComponentGlobalRatelimiter),
-		scope:    met.Scope(metrics.FrontendGlobalRatelimiter),
+		logger:   logger.WithTags(tag.ComponentGlobalRatelimiter, tag.Dynamic("collection_name", name)),
+		scope:    met.Scope(metrics.FrontendGlobalRatelimiter), // todo: tag with name
 		keyModes: keyModes,
 		km:       PrefixKey(name + ":"),
 
@@ -254,8 +277,10 @@ func (c *Collection) keyMode(key string) keyMode {
 	rawMode := keyMode(c.keyModes(key))
 	switch rawMode {
 	case modeLocal, modeGlobal, modeLocalShadowGlobal, modeGlobalShadowLocal, modeDisabled:
+		c.logger.Debug("ratelimiter key mode", tag.Dynamic("key", key), tag.Dynamic("mode", rawMode))
 		return rawMode
 	default:
+		c.logger.Error("ratelimiter key forcefully disabled, bad mode", tag.Dynamic("key", key), tag.Dynamic("mode", modeDisabled))
 		return modeDisabled
 	}
 }
@@ -285,14 +310,11 @@ func (c *Collection) For(key string) quotas.Limiter {
 	}
 }
 
-func (c *Collection) shouldDeleteKey(mode keyMode) bool {
-	switch mode {
-	case modeLocal, modeGlobal, modeLocalShadowGlobal, modeGlobalShadowLocal:
-		return false
-
-	default:
-		return true
+func (c *Collection) shouldDeleteKey(mode keyMode, local bool) bool {
+	if local {
+		return !(mode == modeLocal || mode == modeLocalShadowGlobal || mode == modeGlobalShadowLocal)
 	}
+	return !(mode == modeGlobal || mode == modeLocalShadowGlobal || mode == modeGlobalShadowLocal)
 }
 
 func (c *Collection) backgroundUpdateLoop() {
@@ -324,12 +346,18 @@ func (c *Collection) backgroundUpdateLoop() {
 				defer close(localMetricsDone)
 				c.local.Range(func(k string, v internal.CountedLimiter) bool {
 					globalKey := c.km.LocalToGlobal(k)
-					if c.shouldDeleteKey(c.keyMode(globalKey)) {
-						c.local.Delete(k) // clean up so maintenance cost is near zero
-						return true       // continue iterating, delete others too
+					counts := v.Collect()
+					if counts.Idle > gcAfterIdle || c.shouldDeleteKey(c.keyMode(globalKey), true) {
+						c.logger.Debug(
+							"deleting local ratelimiter",
+							tag.Dynamic("key", globalKey),
+							tag.Dynamic("idle", counts.Idle > gcAfterIdle),
+						)
+						c.local.Delete(k)
+						return true // continue iterating, possibly delete others too
 					}
 
-					c.sendMetrics(globalKey, "local", v.Collect())
+					c.sendMetrics(globalKey, "local", counts)
 					return true
 				})
 			}()
@@ -340,12 +368,17 @@ func (c *Collection) backgroundUpdateLoop() {
 			startups, failings, globals := 0, 0, 0
 			c.global.Range(func(k string, v *internal.FallbackLimiter) bool {
 				globalKey := c.km.LocalToGlobal(k)
-				if c.shouldDeleteKey(c.keyMode(globalKey)) {
-					c.global.Delete(k) // clean up so maintenance cost is near zero
-					return true        // continue iterating, delete others too
+				counts, startup, failing := v.Collect()
+				if counts.Idle > gcAfterIdle || c.shouldDeleteKey(c.keyMode(globalKey), false) {
+					c.logger.Debug(
+						"deleting global ratelimiter",
+						tag.Dynamic("key", globalKey),
+						tag.Dynamic("idle", counts.Idle > gcAfterIdle),
+					)
+					c.global.Delete(k)
+					return true // continue iterating, possibly delete others too
 				}
 
-				counts, startup, failing := v.Collect()
 				if startup {
 					startups++
 				}

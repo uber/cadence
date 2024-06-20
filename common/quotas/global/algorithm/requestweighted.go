@@ -405,8 +405,11 @@ func (a *impl) Update(p UpdateParams) error {
 				reduce := snap.missedUpdateScalar(age)
 				next = requests{
 					lastUpdate: snap.now,
-					accepted:   weighted(aps, prev.accepted*reduce, snap.weight),
-					rejected:   weighted(rps, prev.rejected*reduce, snap.weight),
+					// TODO: max(1, actual) so this does not lead to <1 rps allowances?  or maybe just 1+actual and then reduce in used-responses?
+					// otherwise currently this may lead to rare callers getting 0.0001 rps,
+					// and never recovering, despite steady and fair usage.
+					accepted: weighted(aps, prev.accepted*reduce, snap.weight),
+					rejected: weighted(rps, prev.rejected*reduce, snap.weight),
 				}
 			}
 		}
