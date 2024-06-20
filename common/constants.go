@@ -166,6 +166,8 @@ const (
 	DomainDataKeyForManagedFailover = "IsManagedByCadence"
 	// DomainDataKeyForPreferredCluster is the key of DomainData for domain rebalance
 	DomainDataKeyForPreferredCluster = "PreferredCluster"
+	// DomainDataKeyForFailoverHistory is the key of DomainData for failover history
+	DomainDataKeyForFailoverHistory = "FailoverHistory"
 	// DomainDataKeyForReadGroups stores which groups have read permission of the domain API
 	DomainDataKeyForReadGroups = "READ_GROUPS"
 	// DomainDataKeyForWriteGroups stores which groups have write permission of the domain API
@@ -269,3 +271,24 @@ const (
 	// WorkflowIDRateLimitReason is the reason set in ServiceBusyError when workflow ID rate limit is exceeded
 	WorkflowIDRateLimitReason = "external-workflow-id-rate-limit"
 )
+
+type (
+	// FailoverType is the enum for representing different failover types
+	FailoverType int
+)
+
+const (
+	FailoverTypeForce = iota + 1
+	FailoverTypeGrace
+)
+
+func (v FailoverType) String() string {
+	switch v {
+	case FailoverTypeForce:
+		return "Force"
+	case FailoverTypeGrace:
+		return "Grace"
+	default:
+		return "Unknown"
+	}
+}

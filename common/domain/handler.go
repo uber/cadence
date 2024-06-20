@@ -24,6 +24,7 @@ package domain
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"time"
@@ -101,6 +102,20 @@ type (
 		RequiredDomainDataKeys dynamicconfig.MapPropertyFn
 		MaxBadBinaryCount      dynamicconfig.IntPropertyFnWithDomainFilter
 		FailoverCoolDown       dynamicconfig.DurationPropertyFnWithDomainFilter
+		FailoverHistoryMaxSize dynamicconfig.IntPropertyFnWithDomainFilter
+	}
+
+	// FailoverEvent is the failover information to be stored for each failover event in domain data
+	FailoverEvent struct {
+		EventTime    time.Time `json:"eventTime"`
+		FromCluster  string    `json:"fromCluster"`
+		ToCluster    string    `json:"toCluster"`
+		FailoverType string    `json:"failoverType"`
+	}
+
+	// FailoverHistory is the history of failovers for a domain limited by the FailoverHistoryMaxSize config
+	FailoverHistory struct {
+		FailoverEvents []FailoverEvent
 	}
 )
 
@@ -496,9 +511,14 @@ func (d *handlerImpl) UpdateDomain(
 		if configurationChanged {
 			configVersion++
 		}
+
 		if activeClusterChanged && isGlobalDomain {
+			var failoverType common.FailoverType = common.FailoverTypeGrace
+
 			// Force failover cleans graceful failover state
 			if updateRequest.FailoverTimeoutInSeconds == nil {
+				failoverType = common.FailoverTypeForce
+
 				// force failover cleanup graceful failover state
 				gracefulFailoverEndTime = nil
 				previousFailoverVersion = common.InitialPreviousFailoverVersion
@@ -508,6 +528,11 @@ func (d *handlerImpl) UpdateDomain(
 				failoverVersion,
 				updateRequest.Name,
 			)
+			err = updateFailoverHistory(info, d.config, now, currentActiveCluster, *updateRequest.ActiveClusterName, failoverType)
+			if err != nil {
+				d.logger.Warn("failed to update failover history", tag.Error(err))
+			}
+
 			failoverNotificationVersion = notificationVersion
 		}
 		lastUpdatedTime = now
@@ -1261,4 +1286,36 @@ func createUpdateRequest(
 		LastUpdatedTime:             lastUpdatedTime.UnixNano(),
 		NotificationVersion:         notificationVersion,
 	}
+}
+
+func updateFailoverHistory(
+	info *persistence.DomainInfo,
+	config Config,
+	eventTime time.Time,
+	fromCluster string,
+	toCluster string,
+	failoverType common.FailoverType,
+) error {
+	data := info.Data
+	if info.Data == nil {
+		data = make(map[string]string)
+	}
+
+	newFailoverEvent := FailoverEvent{EventTime: eventTime, FromCluster: fromCluster, ToCluster: toCluster, FailoverType: failoverType.String()}
+
+	var failoverHistory []FailoverEvent
+	_ = json.Unmarshal([]byte(data[common.DomainDataKeyForFailoverHistory]), &failoverHistory)
+
+	failoverHistory = append([]FailoverEvent{newFailoverEvent}, failoverHistory...)
+
+	// Truncate the history to the max size
+	failoverHistoryJSON, err := json.Marshal(failoverHistory[:common.MinInt(config.FailoverHistoryMaxSize(info.Name), len(failoverHistory))])
+	if err != nil {
+		return err
+	}
+	data[common.DomainDataKeyForFailoverHistory] = string(failoverHistoryJSON)
+
+	info.Data = data
+
+	return nil
 }
