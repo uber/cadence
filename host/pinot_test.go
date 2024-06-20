@@ -26,6 +26,22 @@
 // currently we have to manually add test table and delete the table for cleaning
 // waiting for the support to clean the data programmatically
 
+/*
+To run locally with docker containers:
+
+1. Stop the previous run if any
+
+	docker-compose -f docker/buildkite/docker-compose-local-pinot.yml down
+
+2. Build the integration-test-async-wf image
+
+	docker-compose -f docker/buildkite/docker-compose-local-pinot.yml build integration-test-cassandra-pinot
+
+3. Run the test in the docker container
+
+	docker-compose -f docker/buildkite/docker-compose-local-pinot.yml run --rm integration-test-cassandra-pinot
+*/
+
 package host
 
 import (
