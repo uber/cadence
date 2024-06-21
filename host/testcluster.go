@@ -199,12 +199,12 @@ func NewPinotTestCluster(t *testing.T, options *TestClusterConfig, logger log.Lo
 	var pinotClient pnt.GenericClient
 	if options.WorkerConfig.EnableIndexer {
 		var err error
-		// if options.PinotConfig.Migration.Enabled {
-		esClient, err = elasticsearch.NewGenericClient(options.ESConfig, logger)
-		if err != nil {
-			return nil, err
+		if options.PinotConfig.Migration.Enabled {
+			esClient, err = elasticsearch.NewGenericClient(options.ESConfig, logger)
+			if err != nil {
+				return nil, err
+			}
 		}
-		// }
 	}
 	pConfig.AdvancedVisibilityStore = "pinot-visibility"
 	pinotBroker := options.PinotConfig.Broker

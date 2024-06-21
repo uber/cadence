@@ -540,6 +540,7 @@ func (c *cadenceImpl) startHistory(
 		params.ArchiverProvider = c.archiverProvider
 		params.ESConfig = c.esConfig
 		params.ESClient = c.esClient
+		params.PinotConfig = c.pinotConfig
 
 		var err error
 		params.PersistenceConfig, err = copyPersistenceConfig(c.persistenceConfig)

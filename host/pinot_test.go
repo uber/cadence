@@ -149,6 +149,9 @@ func (s *PinotIntegrationSuite) SetupSuite() {
 		Broker:      "localhost:8099",
 		Table:       tableName,
 		ServiceName: "",
+		Migration: config.PinotMigration{
+			Enabled: true,
+		},
 	}
 	s.pinotClient = pinotutils.CreatePinotClient(&s.Suite, pinotConfig, s.Logger)
 }

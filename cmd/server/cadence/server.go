@@ -222,15 +222,32 @@ func (s *server) startService() common.Daemon {
 			log.Fatalf("not able to find advanced visibility store in config: %v", advancedVisStoreKey)
 		}
 
-		params.ESConfig = advancedVisStore.ElasticSearch
+		// there are 3 circumstances:
+		// 1. advanced visibility store == elasticsearch, use ESClient and visibilityDualManager
+		// 2. advanced visibility store == pinot and in process of migration, use ESClient, PinotClient and and visibilityTripleManager
+		// 3. advanced visibility store == pinot and not migrating, use PinotClient and visibilityDualManager
 		if params.PersistenceConfig.AdvancedVisibilityStore == common.PinotVisibilityStoreName {
-			// components like ESAnalyzer is still using ElasticSearch
-			// The plan is to clean those after we switch to operate on Pinot
-			esVisibilityStore, ok := s.cfg.Persistence.DataStores[common.ESVisibilityStoreName]
-			if !ok {
-				log.Fatalf("Missing Elasticsearch config")
+			if advancedVisStore.Pinot.Migration.Enabled {
+				esVisibilityStore, ok := s.cfg.Persistence.DataStores[common.ESVisibilityStoreName]
+				if !ok {
+					log.Fatalf("not able to find elasticsearch visibility store in config")
+				}
+				params.ESConfig = esVisibilityStore.ElasticSearch
+				params.ESConfig.SetUsernamePassword()
+				esClient, err := elasticsearch.NewGenericClient(params.ESConfig, params.Logger)
+				if err != nil {
+					log.Fatalf("error creating elastic search client: %v", err)
+				}
+				params.ESClient = esClient
+
+				// verify index name
+				indexName, ok := params.ESConfig.Indices[common.VisibilityAppName]
+				if !ok || len(indexName) == 0 {
+					log.Fatalf("elastic search config missing visibility index")
+				}
+			} else {
+				params.ESClient = nil
 			}
-			params.ESConfig = esVisibilityStore.ElasticSearch
 			params.PinotConfig = advancedVisStore.Pinot
 			pinotBroker := params.PinotConfig.Broker
 			pinotRawClient, err := pinot.NewFromBrokerList([]string{pinotBroker})
@@ -239,18 +256,20 @@ func (s *server) startService() common.Daemon {
 			}
 			pinotClient := pnt.NewPinotClient(pinotRawClient, params.Logger, params.PinotConfig)
 			params.PinotClient = pinotClient
-		}
-		params.ESConfig.SetUsernamePassword()
-		esClient, err := elasticsearch.NewGenericClient(params.ESConfig, params.Logger)
-		if err != nil {
-			log.Fatalf("error creating elastic search client: %v", err)
-		}
-		params.ESClient = esClient
+		} else {
+			params.ESConfig = advancedVisStore.ElasticSearch
+			params.ESConfig.SetUsernamePassword()
+			esClient, err := elasticsearch.NewGenericClient(params.ESConfig, params.Logger)
+			if err != nil {
+				log.Fatalf("error creating elastic search client: %v", err)
+			}
+			params.ESClient = esClient
 
-		// verify index name
-		indexName, ok := params.ESConfig.Indices[common.VisibilityAppName]
-		if !ok || len(indexName) == 0 {
-			log.Fatalf("elastic search config missing visibility index")
+			// verify index name
+			indexName, ok := params.ESConfig.Indices[common.VisibilityAppName]
+			if !ok || len(indexName) == 0 {
+				log.Fatalf("elastic search config missing visibility index")
+			}
 		}
 	}
 
