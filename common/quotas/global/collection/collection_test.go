@@ -31,6 +31,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/atomic"
 	"go.uber.org/goleak"
 	"go.uber.org/zap/zapcore"
 
@@ -61,8 +62,7 @@ func TestLifecycleBasics(t *testing.T) {
 	)
 	require.NoError(t, err)
 	mts := clock.NewMockedTimeSource()
-	ts := mts.(clock.TimeSource)
-	c.TestOverrides(t, &ts, nil)
+	c.TestOverrides(t, &mts, nil)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
@@ -199,8 +199,7 @@ func TestCollectionSubmitsDataAndUpdates(t *testing.T) {
 	)
 	require.NoError(t, err)
 	mts := clock.NewMockedTimeSource()
-	ts := mts.(clock.TimeSource)
-	c.TestOverrides(t, &ts, nil)
+	c.TestOverrides(t, &mts, nil)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
@@ -263,4 +262,163 @@ func TestCollectionSubmitsDataAndUpdates(t *testing.T) {
 		t.Logf("observed log: %v", log.Message)
 		assert.Lessf(t, log.Level, zapcore.ErrorLevel, "should not be any error logs, got: %v", log.Message)
 	}
+}
+
+func TestTogglingMode(t *testing.T) {
+	defer goleak.VerifyNone(t)
+	aggs := rpc.NewMockClient(gomock.NewController(t))
+	var mode atomic.Value
+	mode.Store(modeDisabled)
+	c, err := New(
+		"test",
+		quotas.NewCollection(quotas.NewSimpleDynamicRateLimiterFactory(func(domain string) int { return 1 })),
+		quotas.NewCollection(quotas.NewSimpleDynamicRateLimiterFactory(func(domain string) int { return 1 })),
+		func(opts ...dynamicconfig.FilterOption) time.Duration { return time.Second }, // update every second
+		func(domain string) int { return 1 },
+		func(globalRatelimitKey string) string { return string(mode.Load().(keyMode)) },
+		aggs,
+		testlogger.New(t),
+		metrics.NewNoopMetricsClient(),
+	)
+	require.NoError(t, err)
+	ts := clock.NewMockedTimeSource()
+	c.TestOverrides(t, &ts, nil)
+
+	require.NoError(t, c.OnStart(context.Background()), "failed to start")
+	defer func() {
+		// reduces goroutine-noise on failure
+		require.NoError(t, c.OnStop(context.Background()), "failed to stop")
+	}()
+
+	ts.BlockUntil(1) // background ticker created
+
+	// must tick "incrementally" or updates may be lost unrealistically
+	tick := func(n int) {
+		for i := 0; i < n; i++ {
+			ts.Advance(time.Second)
+			time.Sleep(10 * time.Millisecond) // allow code time to run to get back to waiting
+		}
+	}
+
+	// a bit of shenaniganry:
+	// use the same mock for all the sub-tests, but don't make any assertions on the number of calls.
+	// if you do, it "blames" the parent test rather than the sub-test, which is hard to debug.
+	//
+	// this could be resolved by rerunning all steps <N for the Nth sub-test, but that's a fair bit
+	// more boilerplate.
+	remainingCalls := atomic.NewInt64(int64(0))
+	aggs.EXPECT().
+		Update(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(context.Context, time.Duration, map[string]rpc.Calls) rpc.UpdateResult {
+			remainingCalls.Sub(1)
+			// empty because this test doesn't change if global chooses to use its internal fallback
+			return rpc.UpdateResult{}
+		}).
+		AnyTimes()
+	// enforce actual call counts uniquely per test
+	expectUpdateCall := func(t *testing.T, times int) {
+		previousBudget := remainingCalls.Swap(int64(times))
+		require.Zero(t, previousBudget, "should not have any remaining call budget before making an expectation, have %v and tried to add %v", previousBudget, times)
+		t.Cleanup(func() {
+			called := remainingCalls.Load()
+			assert.Zero(t, called, "incorrect number of update calls performed, current budget is %v out of %v", called, times)
+		})
+	}
+
+	t.Run("disabled should not make any internal limiters or update calls", func(t *testing.T) {
+		mode.Store(modeDisabled)
+		c.For("key").Allow()
+		assert.Equal(t, c.local.Len(), 0, "local collection should be empty when disabled")
+		assert.Equal(t, c.global.Len(), 0, "global collection should be empty when disabled")
+
+		assertLimiterKeys(t, c.local, "local")
+		assertLimiterKeys(t, c.global, "global")
+		tick(1) // ensure no update calls occur
+	})
+	require.False(t, t.Failed(), "stopping early, already failed")
+	t.Run("local creates only local keys", func(t *testing.T) {
+		mode.Store(modeLocal)
+		c.For("key").Allow()
+		assertLimiterKeys(t, c.local, "local", "key")
+		assertLimiterKeys(t, c.global, "global") // not in a global-accessing mode
+		tick(1)                                  // ensure no update calls occur
+	})
+	require.False(t, t.Failed(), "stopping early, already failed")
+	t.Run("local keys GC", func(t *testing.T) {
+		tick(1)
+		// not garbage-collected immediately
+		assertLimiterKeys(t, c.local, "local", "key")
+		tick(1)
+		assertLimiterKeys(t, c.local, "local", "key")
+		tick(10)
+
+		assertLimiterKeys(t, c.local, "local")
+		assertLimiterKeys(t, c.global, "global")
+	})
+	require.False(t, t.Failed(), "stopping early, already failed")
+	t.Run("global-local creates both keys", func(t *testing.T) {
+		mode.Store(modeLocalShadowGlobal)
+		c.For("key").Allow()
+		assertLimiterKeys(t, c.local, "local", "key")
+		assertLimiterKeys(t, c.global, "global", "key")
+
+		expectUpdateCall(t, 1) // global-touching mode should send an update request
+		tick(1)
+	})
+	require.False(t, t.Failed(), "stopping early, already failed")
+	t.Run("collections GC separately", func(t *testing.T) {
+		// must start with data in both
+		assertLimiterKeys(t, c.local, "local", "key")
+		assertLimiterKeys(t, c.global, "global", "key")
+
+		// switch modes so only global is retained
+		mode.Store(modeGlobal)
+		expectUpdateCall(t, 1) // global mode should send an update request
+		tick(1)
+		assertLimiterKeys(t, c.local, "local") // GC'd because it's no longer a local-touching mode
+		assertLimiterKeys(t, c.global, "global", "key")
+	})
+	require.False(t, t.Failed(), "stopping early, already failed")
+	t.Run("global keys GC", func(t *testing.T) {
+		// sanity check
+		assertLimiterKeys(t, c.local, "local") // GC'd because it's no longer a local-touching mode
+		assertLimiterKeys(t, c.global, "global", "key")
+
+		// should send ~4 more updates (5 after above), then delete data and stop updating.
+		// exact number doesn't matter, just that it's less than the number of
+		// ticks, to show that empty means "no update calls"
+		expectUpdateCall(t, 4)
+		tick(10)
+		assertLimiterKeys(t, c.local, "local")
+		assertLimiterKeys(t, c.global, "global")
+	})
+	t.Run("disabling stops updates and GCs immediately", func(t *testing.T) {
+		mode.Store(modeGlobalShadowLocal)
+		c.For("key").Allow()
+		// sanity check
+		assertLimiterKeys(t, c.local, "local", "key")
+		assertLimiterKeys(t, c.global, "global", "key")
+
+		mode.Store(modeDisabled)
+		// should not cause an update despite global keys existing,
+		// disabled mode should delete them before sending
+		tick(1)
+		// should be emptied in a single tick
+		assertLimiterKeys(t, c.local, "local")
+		assertLimiterKeys(t, c.global, "global")
+	})
+}
+
+func assertLimiterKeys[V any](t *testing.T, collection *internal.AtomicMap[string, V], name string, keys ...string) {
+	t.Helper()
+	found := map[string]struct{}{}
+	collection.Range(func(k string, v V) bool {
+		found[k] = struct{}{}
+		return true
+	})
+	keyMap := map[string]struct{}{}
+	for _, k := range keys {
+		keyMap[k] = struct{}{}
+	}
+	assert.Equal(t, keyMap, found, "unexpected keys in %v collection", name)
 }

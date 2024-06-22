@@ -231,7 +231,7 @@ func New(
 	return c, nil
 }
 
-func (c *Collection) TestOverrides(t *testing.T, timesource *clock.TimeSource, km *KeyMapper) {
+func (c *Collection) TestOverrides(t *testing.T, timesource *clock.MockedTimeSource, km *KeyMapper) {
 	t.Helper()
 	if timesource != nil {
 		c.timesource = *timesource

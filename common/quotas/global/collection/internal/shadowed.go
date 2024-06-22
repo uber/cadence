@@ -72,12 +72,16 @@ func (s ShadowedLimiter) Wait(ctx context.Context) (err error) {
 	// (e.g. if "which API was called" counting is added).
 	go func() {
 		defer wg.Done()
-		defer cancel()
-		err = s.primary.Wait(ctx)
+		_ = s.shadow.Wait(ctx)
 	}()
+	// start primary after shadow, to give shadow a bit more of a chance
+	// to complete successfully if it has an available token.
+	// this is not anything close to a guarantee, but it behaves better in
+	// most tests, and might be more realistic in prod too.
 	go func() {
 		defer wg.Done()
-		_ = s.shadow.Wait(ctx)
+		defer cancel()
+		err = s.primary.Wait(ctx)
 	}()
 	wg.Wait()
 
