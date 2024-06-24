@@ -201,7 +201,7 @@ func (p *InMemoryPersister) Persist(ctx context.Context, items []types.ItemToPer
 	for _, item := range items {
 		partitionsKV := map[string]any{}
 		actualKV := map[string]any{}
-		for _, k := range item.GetPartitions() {
+		for _, k := range item.GetPartitionKeys() {
 			partitionsKV[k] = item.GetPartitionValue(k)
 			actualKV[k] = item.GetAttribute(k)
 		}

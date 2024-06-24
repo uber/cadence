@@ -59,9 +59,9 @@ func TestNewItemToPersist(t *testing.T) {
 		t.Errorf("itemToPersist.GetAttribute(attr2) = %v, want %v", got, "value2")
 	}
 
-	gotPartitions := itemToPersist.GetPartitions()
+	gotPartitions := itemToPersist.GetPartitionKeys()
 	if diff := cmp.Diff(partitions, gotPartitions); diff != "" {
-		t.Fatalf("Partitions mismatch (-want +got):\n%s", diff)
+		t.Fatalf("Partition keys mismatch (-want +got):\n%s", diff)
 	}
 	if got := itemToPersist.GetPartitionValue("attr1"); got != "*" {
 		t.Errorf("itemToPersist.GetPartitionValue(attr1) = %v, want %v", got, "*")

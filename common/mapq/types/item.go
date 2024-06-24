@@ -53,8 +53,8 @@ func NewItemToPersist(item Item, itemPartitions ItemPartitions) ItemToPersist {
 }
 
 type ItemPartitions interface {
-	// GetPartitions returns the partition keys ordered by their level in the tree
-	GetPartitions() []string
+	// GetPartitionKeys returns the partition keys ordered by their level in the tree
+	GetPartitionKeys() []string
 
 	// GetPartitionValue returns the partition value to determine the target queue
 	// e.g.
@@ -68,20 +68,20 @@ type ItemPartitions interface {
 	String() string
 }
 
-func NewItemPartitions(partitions []string, partitionMap map[string]any) ItemPartitions {
+func NewItemPartitions(partitionKeys []string, partitionMap map[string]any) ItemPartitions {
 	return &defaultItemPartitions{
-		partitions:   partitions,
-		partitionMap: partitionMap,
+		partitionKeys: partitionKeys,
+		partitionMap:  partitionMap,
 	}
 }
 
 type defaultItemPartitions struct {
-	partitions   []string
-	partitionMap map[string]any
+	partitionKeys []string
+	partitionMap  map[string]any
 }
 
-func (i *defaultItemPartitions) GetPartitions() []string {
-	return i.partitions
+func (i *defaultItemPartitions) GetPartitionKeys() []string {
+	return i.partitionKeys
 }
 
 func (i *defaultItemPartitions) GetPartitionValue(key string) any {
@@ -89,7 +89,7 @@ func (i *defaultItemPartitions) GetPartitionValue(key string) any {
 }
 
 func (i *defaultItemPartitions) String() string {
-	return fmt.Sprintf("ItemPartitions{partitions:%v, partitionMap:%v}", i.partitions, i.partitionMap)
+	return fmt.Sprintf("ItemPartitions{partitionKeys:%v, partitionMap:%v}", i.partitionKeys, i.partitionMap)
 }
 
 type defaultItemToPersist struct {
@@ -109,8 +109,8 @@ func (i *defaultItemToPersist) GetAttribute(key string) any {
 	return i.item.GetAttribute(key)
 }
 
-func (i *defaultItemToPersist) GetPartitions() []string {
-	return i.itemPartitions.GetPartitions()
+func (i *defaultItemToPersist) GetPartitionKeys() []string {
+	return i.itemPartitions.GetPartitionKeys()
 }
 
 func (i *defaultItemToPersist) GetPartitionValue(key string) any {
