@@ -126,8 +126,8 @@ func TestValidSearchAttributeKey(t *testing.T) {
 	assert.NoError(t, validateSearchAttributeKey("cityId"))
 	assert.NoError(t, validateSearchAttributeKey("paymentProfileUUID"))
 	assert.NoError(t, validateSearchAttributeKey("job_type"))
+	assert.NoError(t, validateSearchAttributeKey("Header.ctx-tenancy"))
 
-	assert.Error(t, validateSearchAttributeKey("payments-biling-invoices-TransactionUUID"))
 	assert.Error(t, validateSearchAttributeKey("9lives"))
 	assert.Error(t, validateSearchAttributeKey("tax%"))
 }
