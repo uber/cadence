@@ -22,10 +22,12 @@ package domain
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
 	"reflect"
+	"strconv"
 	"testing"
 	"time"
 
@@ -1277,7 +1279,7 @@ func TestHandler_UpdateDomain(t *testing.T) {
 			domainReplicator *MockReplicator,
 		)
 		request  *types.UpdateDomainRequest
-		response *types.UpdateDomainResponse
+		response func(timeSource clock.MockedTimeSource) *types.UpdateDomainResponse
 		err      error
 	}{
 		{
@@ -1346,29 +1348,33 @@ func TestHandler_UpdateDomain(t *testing.T) {
 				Name:              constants.TestDomainName,
 				ActiveClusterName: common.Ptr(cluster.TestAlternativeClusterName),
 			},
-			response: &types.UpdateDomainResponse{
-				IsGlobalDomain:  true,
-				FailoverVersion: cluster.TestCurrentClusterInitialFailoverVersion/cluster.TestFailoverVersionIncrement*cluster.TestFailoverVersionIncrement + cluster.TestAlternativeClusterInitialFailoverVersion,
-				DomainInfo: &types.DomainInfo{
-					Name:   constants.TestDomainName,
-					UUID:   constants.TestDomainID,
-					Status: common.Ptr(types.DomainStatusRegistered),
-				},
-				Configuration: &types.DomainConfiguration{
-					WorkflowExecutionRetentionPeriodInDays: 1,
-					EmitMetric:                             true,
-					HistoryArchivalStatus:                  common.Ptr(types.ArchivalStatusDisabled),
-					VisibilityArchivalStatus:               common.Ptr(types.ArchivalStatusDisabled),
-					BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
-					IsolationGroups:                        &types.IsolationGroupConfiguration{},
-					AsyncWorkflowConfig:                    &types.AsyncWorkflowConfiguration{Enabled: true},
-				},
-				ReplicationConfiguration: &types.DomainReplicationConfiguration{
-					ActiveClusterName: cluster.TestAlternativeClusterName,
-					Clusters: []*types.ClusterReplicationConfiguration{
-						{ClusterName: cluster.TestCurrentClusterName}, {ClusterName: cluster.TestAlternativeClusterName},
+			response: func(timeSource clock.MockedTimeSource) *types.UpdateDomainResponse {
+				data, _ := json.Marshal([]FailoverEvent{{EventTime: timeSource.Now(), FromCluster: cluster.TestCurrentClusterName, ToCluster: cluster.TestAlternativeClusterName, FailoverType: common.FailoverType(common.FailoverTypeForce).String()}})
+				return &types.UpdateDomainResponse{
+					IsGlobalDomain:  true,
+					FailoverVersion: cluster.TestCurrentClusterInitialFailoverVersion/cluster.TestFailoverVersionIncrement*cluster.TestFailoverVersionIncrement + cluster.TestAlternativeClusterInitialFailoverVersion,
+					DomainInfo: &types.DomainInfo{
+						Name:   constants.TestDomainName,
+						UUID:   constants.TestDomainID,
+						Data:   map[string]string{common.DomainDataKeyForFailoverHistory: string(data)},
+						Status: common.Ptr(types.DomainStatusRegistered),
 					},
-				},
+					Configuration: &types.DomainConfiguration{
+						WorkflowExecutionRetentionPeriodInDays: 1,
+						EmitMetric:                             true,
+						HistoryArchivalStatus:                  common.Ptr(types.ArchivalStatusDisabled),
+						VisibilityArchivalStatus:               common.Ptr(types.ArchivalStatusDisabled),
+						BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
+						IsolationGroups:                        &types.IsolationGroupConfiguration{},
+						AsyncWorkflowConfig:                    &types.AsyncWorkflowConfiguration{Enabled: true},
+					},
+					ReplicationConfiguration: &types.DomainReplicationConfiguration{
+						ActiveClusterName: cluster.TestAlternativeClusterName,
+						Clusters: []*types.ClusterReplicationConfiguration{
+							{ClusterName: cluster.TestCurrentClusterName}, {ClusterName: cluster.TestAlternativeClusterName},
+						},
+					},
+				}
 			},
 		},
 		{
@@ -1439,29 +1445,33 @@ func TestHandler_UpdateDomain(t *testing.T) {
 				ActiveClusterName:        common.Ptr(cluster.TestCurrentClusterName),
 				FailoverTimeoutInSeconds: common.Int32Ptr(10),
 			},
-			response: &types.UpdateDomainResponse{
-				IsGlobalDomain:  true,
-				FailoverVersion: cluster.TestFailoverVersionIncrement,
-				DomainInfo: &types.DomainInfo{
-					Name:   constants.TestDomainName,
-					UUID:   constants.TestDomainID,
-					Status: common.Ptr(types.DomainStatusRegistered),
-				},
-				Configuration: &types.DomainConfiguration{
-					WorkflowExecutionRetentionPeriodInDays: 1,
-					EmitMetric:                             true,
-					HistoryArchivalStatus:                  common.Ptr(types.ArchivalStatusDisabled),
-					VisibilityArchivalStatus:               common.Ptr(types.ArchivalStatusDisabled),
-					BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
-					IsolationGroups:                        &types.IsolationGroupConfiguration{},
-					AsyncWorkflowConfig:                    &types.AsyncWorkflowConfiguration{Enabled: true},
-				},
-				ReplicationConfiguration: &types.DomainReplicationConfiguration{
-					ActiveClusterName: cluster.TestCurrentClusterName,
-					Clusters: []*types.ClusterReplicationConfiguration{
-						{ClusterName: cluster.TestCurrentClusterName}, {ClusterName: cluster.TestAlternativeClusterName},
+			response: func(timeSource clock.MockedTimeSource) *types.UpdateDomainResponse {
+				data, _ := json.Marshal([]FailoverEvent{{EventTime: timeSource.Now(), FromCluster: cluster.TestAlternativeClusterName, ToCluster: cluster.TestCurrentClusterName, FailoverType: common.FailoverType(common.FailoverTypeGrace).String()}})
+				return &types.UpdateDomainResponse{
+					IsGlobalDomain:  true,
+					FailoverVersion: cluster.TestFailoverVersionIncrement,
+					DomainInfo: &types.DomainInfo{
+						Name:   constants.TestDomainName,
+						UUID:   constants.TestDomainID,
+						Data:   map[string]string{common.DomainDataKeyForFailoverHistory: string(data)},
+						Status: common.Ptr(types.DomainStatusRegistered),
 					},
-				},
+					Configuration: &types.DomainConfiguration{
+						WorkflowExecutionRetentionPeriodInDays: 1,
+						EmitMetric:                             true,
+						HistoryArchivalStatus:                  common.Ptr(types.ArchivalStatusDisabled),
+						VisibilityArchivalStatus:               common.Ptr(types.ArchivalStatusDisabled),
+						BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
+						IsolationGroups:                        &types.IsolationGroupConfiguration{},
+						AsyncWorkflowConfig:                    &types.AsyncWorkflowConfiguration{Enabled: true},
+					},
+					ReplicationConfiguration: &types.DomainReplicationConfiguration{
+						ActiveClusterName: cluster.TestCurrentClusterName,
+						Clusters: []*types.ClusterReplicationConfiguration{
+							{ClusterName: cluster.TestCurrentClusterName}, {ClusterName: cluster.TestAlternativeClusterName},
+						},
+					},
+				}
 			},
 		},
 		{
@@ -1530,29 +1540,31 @@ func TestHandler_UpdateDomain(t *testing.T) {
 				Name:       constants.TestDomainName,
 				EmitMetric: common.Ptr(false),
 			},
-			response: &types.UpdateDomainResponse{
-				IsGlobalDomain:  true,
-				FailoverVersion: cluster.TestCurrentClusterInitialFailoverVersion,
-				DomainInfo: &types.DomainInfo{
-					Name:   constants.TestDomainName,
-					UUID:   constants.TestDomainID,
-					Status: common.Ptr(types.DomainStatusRegistered),
-				},
-				Configuration: &types.DomainConfiguration{
-					WorkflowExecutionRetentionPeriodInDays: 1,
-					EmitMetric:                             false,
-					HistoryArchivalStatus:                  common.Ptr(types.ArchivalStatusDisabled),
-					VisibilityArchivalStatus:               common.Ptr(types.ArchivalStatusDisabled),
-					BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
-					IsolationGroups:                        &types.IsolationGroupConfiguration{},
-					AsyncWorkflowConfig:                    &types.AsyncWorkflowConfiguration{Enabled: true},
-				},
-				ReplicationConfiguration: &types.DomainReplicationConfiguration{
-					ActiveClusterName: cluster.TestCurrentClusterName,
-					Clusters: []*types.ClusterReplicationConfiguration{
-						{ClusterName: cluster.TestCurrentClusterName}, {ClusterName: cluster.TestAlternativeClusterName},
+			response: func(_ clock.MockedTimeSource) *types.UpdateDomainResponse {
+				return &types.UpdateDomainResponse{
+					IsGlobalDomain:  true,
+					FailoverVersion: cluster.TestCurrentClusterInitialFailoverVersion,
+					DomainInfo: &types.DomainInfo{
+						Name:   constants.TestDomainName,
+						UUID:   constants.TestDomainID,
+						Status: common.Ptr(types.DomainStatusRegistered),
 					},
-				},
+					Configuration: &types.DomainConfiguration{
+						WorkflowExecutionRetentionPeriodInDays: 1,
+						EmitMetric:                             false,
+						HistoryArchivalStatus:                  common.Ptr(types.ArchivalStatusDisabled),
+						VisibilityArchivalStatus:               common.Ptr(types.ArchivalStatusDisabled),
+						BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
+						IsolationGroups:                        &types.IsolationGroupConfiguration{},
+						AsyncWorkflowConfig:                    &types.AsyncWorkflowConfiguration{Enabled: true},
+					},
+					ReplicationConfiguration: &types.DomainReplicationConfiguration{
+						ActiveClusterName: cluster.TestCurrentClusterName,
+						Clusters: []*types.ClusterReplicationConfiguration{
+							{ClusterName: cluster.TestCurrentClusterName}, {ClusterName: cluster.TestAlternativeClusterName},
+						},
+					},
+				}
 			},
 		},
 		{
@@ -1601,29 +1613,32 @@ func TestHandler_UpdateDomain(t *testing.T) {
 				Name:              constants.TestDomainName,
 				ActiveClusterName: common.Ptr(cluster.TestCurrentClusterName),
 			},
-			response: &types.UpdateDomainResponse{
-				IsGlobalDomain:  false,
-				FailoverVersion: cluster.TestCurrentClusterInitialFailoverVersion/cluster.TestFailoverVersionIncrement*cluster.TestFailoverVersionIncrement + cluster.TestCurrentClusterInitialFailoverVersion,
-				DomainInfo: &types.DomainInfo{
-					Name:   constants.TestDomainName,
-					UUID:   constants.TestDomainID,
-					Status: common.Ptr(types.DomainStatusRegistered),
-				},
-				Configuration: &types.DomainConfiguration{
-					WorkflowExecutionRetentionPeriodInDays: 1,
-					EmitMetric:                             true,
-					HistoryArchivalStatus:                  common.Ptr(types.ArchivalStatusDisabled),
-					VisibilityArchivalStatus:               common.Ptr(types.ArchivalStatusDisabled),
-					BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
-					IsolationGroups:                        &types.IsolationGroupConfiguration{},
-					AsyncWorkflowConfig:                    &types.AsyncWorkflowConfiguration{Enabled: true},
-				},
-				ReplicationConfiguration: &types.DomainReplicationConfiguration{
-					ActiveClusterName: cluster.TestCurrentClusterName,
-					Clusters: []*types.ClusterReplicationConfiguration{
-						{ClusterName: cluster.TestCurrentClusterName},
+			response: func(_ clock.MockedTimeSource) *types.UpdateDomainResponse {
+				return &types.UpdateDomainResponse{
+					IsGlobalDomain:  false,
+					FailoverVersion: cluster.TestCurrentClusterInitialFailoverVersion/cluster.TestFailoverVersionIncrement*cluster.TestFailoverVersionIncrement + cluster.TestCurrentClusterInitialFailoverVersion,
+					DomainInfo: &types.DomainInfo{
+						Name: constants.TestDomainName,
+						UUID: constants.TestDomainID,
+
+						Status: common.Ptr(types.DomainStatusRegistered),
 					},
-				},
+					Configuration: &types.DomainConfiguration{
+						WorkflowExecutionRetentionPeriodInDays: 1,
+						EmitMetric:                             true,
+						HistoryArchivalStatus:                  common.Ptr(types.ArchivalStatusDisabled),
+						VisibilityArchivalStatus:               common.Ptr(types.ArchivalStatusDisabled),
+						BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
+						IsolationGroups:                        &types.IsolationGroupConfiguration{},
+						AsyncWorkflowConfig:                    &types.AsyncWorkflowConfiguration{Enabled: true},
+					},
+					ReplicationConfiguration: &types.DomainReplicationConfiguration{
+						ActiveClusterName: cluster.TestCurrentClusterName,
+						Clusters: []*types.ClusterReplicationConfiguration{
+							{ClusterName: cluster.TestCurrentClusterName},
+						},
+					},
+				}
 			},
 		},
 		{
@@ -1971,6 +1986,7 @@ func TestHandler_UpdateDomain(t *testing.T) {
 				RequiredDomainDataKeys: nil,
 				MaxBadBinaryCount:      dynamicconfig.GetIntPropertyFilteredByDomain(maxLength),
 				FailoverCoolDown:       func(string) time.Duration { return time.Second },
+				FailoverHistoryMaxSize: dynamicconfig.GetIntPropertyFilteredByDomain(5),
 			}
 
 			clusterMetadata := cluster.GetTestClusterMetadata(true)
@@ -1998,7 +2014,7 @@ func TestHandler_UpdateDomain(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.NotNil(t, response)
-				assert.Equal(t, tc.response, response)
+				assert.Equal(t, tc.response(mockTimeSource), response)
 			}
 		})
 	}
@@ -2476,6 +2492,100 @@ func TestHandleGracefulFailover(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, tc.updatedGracefulFailoverEndTime(now), gracefulFailoverEndTime)
 				assert.Equal(t, failoverVersion, previousFailoverVersion)
+			}
+		})
+	}
+}
+
+func TestUpdateFailoverHistory(t *testing.T) {
+	now := time.Now()
+	fromCluster := "fromCluster"
+	toCluster := "toCluster"
+	failoverType := common.FailoverType(common.FailoverTypeForce)
+	failoverHistoryMaxSize := 5
+
+	testCases := []struct {
+		name       string
+		domainInfo func() *persistence.DomainInfo
+		response   func() string
+		err        error
+	}{
+		{
+			name:       "Success case - DomainInfo data is nil",
+			domainInfo: func() *persistence.DomainInfo { return &persistence.DomainInfo{} },
+			response: func() string {
+				failoverHistory := []FailoverEvent{{EventTime: now, FromCluster: fromCluster, ToCluster: toCluster, FailoverType: failoverType.String()}}
+				jsonResp, _ := json.Marshal(failoverHistory)
+				return string(jsonResp)
+			},
+		},
+		{
+			name:       "Success case - FailoverHistory is nil",
+			domainInfo: func() *persistence.DomainInfo { return &persistence.DomainInfo{Data: map[string]string{}} },
+			response: func() string {
+				failoverHistory := []FailoverEvent{{EventTime: now, FromCluster: fromCluster, ToCluster: toCluster, FailoverType: failoverType.String()}}
+				jsonResp, _ := json.Marshal(failoverHistory)
+				return string(jsonResp)
+			},
+		},
+		{
+			name: "Success case - FailoverHistory is not nil",
+			domainInfo: func() *persistence.DomainInfo {
+				eventTime := time.Date(2021, 1, 1, 1, 1, 1, 1, time.UTC)
+				failoverHistory := []FailoverEvent{{EventTime: eventTime, FromCluster: "fromCluster1", ToCluster: "toCluster1", FailoverType: common.FailoverType(common.FailoverTypeGrace).String()}}
+				failoverHistoryJSON, _ := json.Marshal(failoverHistory)
+				return &persistence.DomainInfo{Data: map[string]string{common.DomainDataKeyForFailoverHistory: string(failoverHistoryJSON)}}
+			},
+			response: func() string {
+				eventTime := time.Date(2021, 1, 1, 1, 1, 1, 1, time.UTC)
+				failoverHistory := []FailoverEvent{{EventTime: eventTime, FromCluster: "fromCluster1", ToCluster: "toCluster1", FailoverType: common.FailoverType(common.FailoverTypeGrace).String()}}
+				failoverHistory = append([]FailoverEvent{{EventTime: now, FromCluster: fromCluster, ToCluster: toCluster, FailoverType: failoverType.String()}}, failoverHistory...)
+				jsonResp, _ := json.Marshal(failoverHistory)
+				return string(jsonResp)
+			},
+		},
+		{
+			name: "Success case - FailoverHistory is at max size",
+			domainInfo: func() *persistence.DomainInfo {
+				var failoverHistory []FailoverEvent
+				for i := 0; i < failoverHistoryMaxSize; i++ {
+					eventTime := time.Date(2021, 1, i, 1, 1, 1, 1, time.UTC)
+					failoverHistory = append(failoverHistory, FailoverEvent{EventTime: eventTime, FromCluster: "fromCluster" + strconv.Itoa(i), ToCluster: "toCluster" + strconv.Itoa(i), FailoverType: common.FailoverType(common.FailoverTypeGrace).String()})
+				}
+				failoverHistoryJSON, _ := json.Marshal(failoverHistory)
+				return &persistence.DomainInfo{Data: map[string]string{common.DomainDataKeyForFailoverHistory: string(failoverHistoryJSON)}}
+			},
+			response: func() string {
+				var failoverHistory []FailoverEvent
+				for i := 0; i < 5; i++ {
+					eventTime := time.Date(2021, 1, i, 1, 1, 1, 1, time.UTC)
+					failoverHistory = append(failoverHistory, FailoverEvent{EventTime: eventTime, FromCluster: "fromCluster" + strconv.Itoa(i), ToCluster: "toCluster" + strconv.Itoa(i), FailoverType: common.FailoverType(common.FailoverTypeGrace).String()})
+				}
+				failoverHistory = append([]FailoverEvent{{EventTime: now, FromCluster: fromCluster, ToCluster: toCluster, FailoverType: failoverType.String()}}, failoverHistory[:(5-1)]...)
+				jsonResp, _ := json.Marshal(failoverHistory)
+				return string(jsonResp)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := Config{
+				FailoverHistoryMaxSize: func(domain string) int {
+					return failoverHistoryMaxSize
+				},
+			}
+
+			domainInfo := tc.domainInfo()
+			err := updateFailoverHistory(domainInfo, cfg, now, fromCluster, toCluster, failoverType)
+
+			if tc.err != nil {
+				assert.Equal(t, tc.err, err)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, domainInfo.Data)
+				assert.NotNil(t, domainInfo.Data[common.DomainDataKeyForFailoverHistory])
+				assert.Equal(t, tc.response(), domainInfo.Data[common.DomainDataKeyForFailoverHistory])
 			}
 		})
 	}

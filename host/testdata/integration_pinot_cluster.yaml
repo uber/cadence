@@ -41,3 +41,5 @@ pinotconfig:
   broker: "${PINOT_SEEDS}:8099"
   cluster: pinot-test
   table: "cadence_visibility_pinot"
+  migration:
+    enabled: true

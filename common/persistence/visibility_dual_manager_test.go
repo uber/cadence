@@ -363,7 +363,7 @@ func TestChooseVisibilityModeForAdmin(t *testing.T) {
 	mgr := NewVisibilityDualManager(dbManager, esManager, nil, nil, log.NewNoop())
 	dualManager := mgr.(*visibilityDualManager)
 	dualManager.dbVisibilityManager = nil
-	dualManager.esVisibilityManager = nil
+	dualManager.advancedVisibilityManager = nil
 	assert.Equal(t, "INVALID_ADMIN_MODE", dualManager.chooseVisibilityModeForAdmin())
 }
 

@@ -60,7 +60,7 @@ func TestNewPinotVisibilityTripleManager(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			assert.NotPanics(t, func() {
-				NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+				NewVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
 					test.mockESVisibilityManager, nil, nil,
 					nil, nil, nil, log.NewNoop())
 			})
@@ -111,7 +111,7 @@ func TestPinotTripleManagerClose(t *testing.T) {
 				test.mockESVisibilityManagerAffordance(test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
 
-			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+			visibilityManager := NewVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
 				test.mockESVisibilityManager, nil, nil,
 				nil, nil, nil, log.NewNoop())
 			assert.NotPanics(t, func() {
@@ -164,7 +164,7 @@ func TestPinotTripleManagerGetName(t *testing.T) {
 			if test.mockESVisibilityManager != nil {
 				test.mockESVisibilityManagerAffordance(test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
-			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+			visibilityManager := NewVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
 				test.mockESVisibilityManager, nil, nil,
 				nil, nil, nil, log.NewNoop())
 
@@ -230,7 +230,7 @@ func TestPinotTripleRecordWorkflowExecutionStarted(t *testing.T) {
 			if test.mockESVisibilityManager != nil {
 				test.mockESVisibilityManagerAffordance(test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
-			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+			visibilityManager := NewVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
 				test.mockESVisibilityManager, nil, nil,
 				test.advancedVisibilityWritingMode, nil, nil, log.NewNoop())
 
@@ -545,7 +545,7 @@ func TestPinotTripleRecordWorkflowExecutionClosed(t *testing.T) {
 				test.mockESVisibilityManagerAffordance(test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
 
-			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+			visibilityManager := NewVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
 				test.mockESVisibilityManager, nil, nil,
 				test.advancedVisibilityWritingMode, nil, nil, log.NewNoop())
 
@@ -565,9 +565,9 @@ func TestPinotTripleChooseVisibilityModeForAdmin(t *testing.T) {
 	dbManager := NewMockVisibilityManager(ctrl)
 	esManager := NewMockVisibilityManager(ctrl)
 	pntManager := NewMockVisibilityManager(ctrl)
-	mgr := NewPinotVisibilityTripleManager(dbManager, pntManager, esManager, nil, nil,
+	mgr := NewVisibilityTripleManager(dbManager, pntManager, esManager, nil, nil,
 		nil, nil, nil, log.NewNoop())
-	tripleManager := mgr.(*pinotVisibilityTripleManager)
+	tripleManager := mgr.(*visibilityTripleManager)
 	tripleManager.dbVisibilityManager = nil
 	tripleManager.pinotVisibilityManager = nil
 	tripleManager.esVisibilityManager = nil
@@ -631,7 +631,7 @@ func TestPinotTripleRecordWorkflowExecutionUninitialized(t *testing.T) {
 				test.mockESVisibilityManagerAffordance(test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
 
-			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+			visibilityManager := NewVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
 				test.mockESVisibilityManager, nil, nil,
 				test.advancedVisibilityWritingMode, nil, nil, log.NewNoop())
 
@@ -702,7 +702,7 @@ func TestPinotTripleUpsertWorkflowExecution(t *testing.T) {
 				test.mockESVisibilityManagerAffordance(test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
 
-			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+			visibilityManager := NewVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
 				test.mockESVisibilityManager, nil, nil,
 				test.advancedVisibilityWritingMode, nil, nil, log.NewNoop())
 
@@ -773,7 +773,7 @@ func TestPinotTripleDeleteWorkflowExecution(t *testing.T) {
 				test.mockESVisibilityManagerAffordance(test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
 
-			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+			visibilityManager := NewVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
 				test.mockESVisibilityManager, nil, nil,
 				test.advancedVisibilityWritingMode, nil, nil, log.NewNoop())
 
@@ -844,7 +844,7 @@ func TestPinotTripleDeleteUninitializedWorkflowExecution(t *testing.T) {
 				test.mockESVisibilityManagerAffordance(test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
 
-			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+			visibilityManager := NewVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
 				test.mockESVisibilityManager, nil, nil,
 				test.advancedVisibilityWritingMode, nil, nil, log.NewNoop())
 
@@ -1074,7 +1074,7 @@ func TestPinotTripleListOpenWorkflowExecutions(t *testing.T) {
 				test.mockESVisibilityManagerAffordance(&wg, test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
 
-			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+			visibilityManager := NewVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
 				test.mockESVisibilityManager, test.readModeIsFromPinot, test.readModeIsFromES,
 				nil, dynamicconfig.GetBoolPropertyFnFilteredByDomain(true), test.readModeIsDouble, log.NewNoop())
 
@@ -1275,7 +1275,7 @@ func TestPinotTripleListAllWorkflowExecutions(t *testing.T) {
 				test.mockESVisibilityManagerAffordance(&wg, test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
 
-			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+			visibilityManager := NewVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
 				test.mockESVisibilityManager, test.readModeIsFromPinot, test.readModeIsFromES,
 				nil, dynamicconfig.GetBoolPropertyFnFilteredByDomain(true), test.readModeIsDouble, log.NewNoop())
 
@@ -1470,7 +1470,7 @@ func TestPinotTripleListClosedWorkflowExecutions(t *testing.T) {
 				test.mockESVisibilityManagerAffordance(&wg, test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
 
-			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+			visibilityManager := NewVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
 				test.mockESVisibilityManager, test.readModeIsFromPinot, test.readModeIsFromES,
 				nil, dynamicconfig.GetBoolPropertyFnFilteredByDomain(true), test.readModeIsDouble, log.NewNoop())
 
@@ -1590,7 +1590,7 @@ func TestPinotTripleListOpenWorkflowExecutionsByType(t *testing.T) {
 				test.mockESVisibilityManagerAffordance(&wg, test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
 
-			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+			visibilityManager := NewVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
 				test.mockESVisibilityManager, test.readModeIsFromPinot, test.readModeIsFromES,
 				nil, dynamicconfig.GetBoolPropertyFnFilteredByDomain(true), test.readModeIsDouble, log.NewNoop())
 
@@ -1710,7 +1710,7 @@ func TestPinotTripleListClosedWorkflowExecutionsByType(t *testing.T) {
 				test.mockESVisibilityManagerAffordance(&wg, test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
 
-			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+			visibilityManager := NewVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
 				test.mockESVisibilityManager, test.readModeIsFromPinot, test.readModeIsFromES,
 				nil, dynamicconfig.GetBoolPropertyFnFilteredByDomain(true), test.readModeIsDouble, log.NewNoop())
 
@@ -1831,7 +1831,7 @@ func TestPinotTripleListOpenWorkflowExecutionsByWorkflowID(t *testing.T) {
 				test.mockESVisibilityManagerAffordance(&wg, test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
 
-			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+			visibilityManager := NewVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
 				test.mockESVisibilityManager, test.readModeIsFromPinot, test.readModeIsFromES,
 				nil, dynamicconfig.GetBoolPropertyFnFilteredByDomain(true), test.readModeIsDouble, log.NewNoop())
 
@@ -1951,7 +1951,7 @@ func TestPinotTripleListClosedWorkflowExecutionsByWorkflowID(t *testing.T) {
 				test.mockESVisibilityManagerAffordance(&wg, test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
 
-			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+			visibilityManager := NewVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
 				test.mockESVisibilityManager, test.readModeIsFromPinot, test.readModeIsFromES,
 				nil, dynamicconfig.GetBoolPropertyFnFilteredByDomain(false), test.readModeIsDouble, log.NewNoop())
 
@@ -2071,7 +2071,7 @@ func TestPinotTripleListClosedWorkflowExecutionsByStatus(t *testing.T) {
 				test.mockESVisibilityManagerAffordance(&wg, test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
 
-			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+			visibilityManager := NewVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
 				test.mockESVisibilityManager, test.readModeIsFromPinot, test.readModeIsFromES,
 				nil, dynamicconfig.GetBoolPropertyFnFilteredByDomain(true), test.readModeIsDouble, log.NewNoop())
 
@@ -2189,7 +2189,7 @@ func TestPinotTripleGetClosedWorkflowExecution(t *testing.T) {
 				test.mockESVisibilityManagerAffordance(&wg, test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
 
-			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+			visibilityManager := NewVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
 				test.mockESVisibilityManager, test.readModeIsFromPinot, test.readModeIsFromES,
 				nil, dynamicconfig.GetBoolPropertyFnFilteredByDomain(true), test.readModeIsDouble, log.NewNoop())
 
@@ -2307,7 +2307,7 @@ func TestPinotTripleListWorkflowExecutions(t *testing.T) {
 				test.mockESVisibilityManagerAffordance(&wg, test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
 
-			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+			visibilityManager := NewVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
 				test.mockESVisibilityManager, test.readModeIsFromPinot, test.readModeIsFromES,
 				nil, dynamicconfig.GetBoolPropertyFnFilteredByDomain(true), test.readModeIsDouble, log.NewNoop())
 
@@ -2426,7 +2426,7 @@ func TestPinotTripleScanWorkflowExecutions(t *testing.T) {
 				test.mockESVisibilityManagerAffordance(&wg, test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
 
-			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+			visibilityManager := NewVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
 				test.mockESVisibilityManager, test.readModeIsFromPinot, test.readModeIsFromES,
 				nil, dynamicconfig.GetBoolPropertyFnFilteredByDomain(true), test.readModeIsDouble, log.NewNoop())
 
@@ -2543,7 +2543,7 @@ func TestPinotTripleCountWorkflowExecutions(t *testing.T) {
 				test.mockESVisibilityManagerAffordance(&wg, test.mockESVisibilityManager.(*MockVisibilityManager))
 			}
 
-			visibilityManager := NewPinotVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
+			visibilityManager := NewVisibilityTripleManager(test.mockDBVisibilityManager, test.mockPinotVisibilityManager,
 				test.mockESVisibilityManager, test.readModeIsFromPinot, test.readModeIsFromES,
 				nil, dynamicconfig.GetBoolPropertyFnFilteredByDomain(true), test.readModeIsDouble, log.NewNoop())
 

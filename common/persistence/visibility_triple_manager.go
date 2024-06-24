@@ -35,7 +35,7 @@ import (
 )
 
 type (
-	pinotVisibilityTripleManager struct {
+	visibilityTripleManager struct {
 		logger                    log.Logger
 		dbVisibilityManager       VisibilityManager
 		pinotVisibilityManager    VisibilityManager
@@ -67,10 +67,10 @@ var Operation = struct {
 	COUNT: "count",
 }
 
-var _ VisibilityManager = (*pinotVisibilityTripleManager)(nil)
+var _ VisibilityManager = (*visibilityTripleManager)(nil)
 
 // NewPinotVisibilityTripleManager create a visibility manager that operate on DB or Pinot based on dynamic config.
-func NewPinotVisibilityTripleManager(
+func NewVisibilityTripleManager(
 	dbVisibilityManager VisibilityManager, // one of the VisibilityManager can be nil
 	pinotVisibilityManager VisibilityManager,
 	esVisibilityManager VisibilityManager,
@@ -85,7 +85,7 @@ func NewPinotVisibilityTripleManager(
 		logger.Fatal("require one of dbVisibilityManager or pinotVisibilityManager or esVisibilityManager")
 		return nil
 	}
-	return &pinotVisibilityTripleManager{
+	return &visibilityTripleManager{
 		dbVisibilityManager:       dbVisibilityManager,
 		pinotVisibilityManager:    pinotVisibilityManager,
 		esVisibilityManager:       esVisibilityManager,
@@ -98,7 +98,7 @@ func NewPinotVisibilityTripleManager(
 	}
 }
 
-func (v *pinotVisibilityTripleManager) Close() {
+func (v *visibilityTripleManager) Close() {
 	if v.dbVisibilityManager != nil {
 		v.dbVisibilityManager.Close()
 	}
@@ -110,7 +110,7 @@ func (v *pinotVisibilityTripleManager) Close() {
 	}
 }
 
-func (v *pinotVisibilityTripleManager) GetName() string {
+func (v *visibilityTripleManager) GetName() string {
 	if v.pinotVisibilityManager != nil {
 		return v.pinotVisibilityManager.GetName()
 	} else if v.esVisibilityManager != nil {
@@ -119,7 +119,7 @@ func (v *pinotVisibilityTripleManager) GetName() string {
 	return v.dbVisibilityManager.GetName()
 }
 
-func (v *pinotVisibilityTripleManager) RecordWorkflowExecutionStarted(
+func (v *visibilityTripleManager) RecordWorkflowExecutionStarted(
 	ctx context.Context,
 	request *RecordWorkflowExecutionStartedRequest,
 ) error {
@@ -137,7 +137,7 @@ func (v *pinotVisibilityTripleManager) RecordWorkflowExecutionStarted(
 	)
 }
 
-func (v *pinotVisibilityTripleManager) RecordWorkflowExecutionClosed(
+func (v *visibilityTripleManager) RecordWorkflowExecutionClosed(
 	ctx context.Context,
 	request *RecordWorkflowExecutionClosedRequest,
 ) error {
@@ -155,7 +155,7 @@ func (v *pinotVisibilityTripleManager) RecordWorkflowExecutionClosed(
 	)
 }
 
-func (v *pinotVisibilityTripleManager) RecordWorkflowExecutionUninitialized(
+func (v *visibilityTripleManager) RecordWorkflowExecutionUninitialized(
 	ctx context.Context,
 	request *RecordWorkflowExecutionUninitializedRequest,
 ) error {
@@ -173,7 +173,7 @@ func (v *pinotVisibilityTripleManager) RecordWorkflowExecutionUninitialized(
 	)
 }
 
-func (v *pinotVisibilityTripleManager) DeleteWorkflowExecution(
+func (v *visibilityTripleManager) DeleteWorkflowExecution(
 	ctx context.Context,
 	request *VisibilityDeleteWorkflowExecutionRequest,
 ) error {
@@ -191,7 +191,7 @@ func (v *pinotVisibilityTripleManager) DeleteWorkflowExecution(
 	)
 }
 
-func (v *pinotVisibilityTripleManager) DeleteUninitializedWorkflowExecution(
+func (v *visibilityTripleManager) DeleteUninitializedWorkflowExecution(
 	ctx context.Context,
 	request *VisibilityDeleteWorkflowExecutionRequest,
 ) error {
@@ -209,7 +209,7 @@ func (v *pinotVisibilityTripleManager) DeleteUninitializedWorkflowExecution(
 	)
 }
 
-func (v *pinotVisibilityTripleManager) UpsertWorkflowExecution(
+func (v *visibilityTripleManager) UpsertWorkflowExecution(
 	ctx context.Context,
 	request *UpsertWorkflowExecutionRequest,
 ) error {
@@ -227,7 +227,7 @@ func (v *pinotVisibilityTripleManager) UpsertWorkflowExecution(
 	)
 }
 
-func (v *pinotVisibilityTripleManager) chooseVisibilityModeForAdmin() string {
+func (v *visibilityTripleManager) chooseVisibilityModeForAdmin() string {
 	switch {
 	case v.dbVisibilityManager != nil && v.esVisibilityManager != nil && v.pinotVisibilityManager != nil:
 		return common.AdvancedVisibilityWritingModeTriple
@@ -242,7 +242,7 @@ func (v *pinotVisibilityTripleManager) chooseVisibilityModeForAdmin() string {
 	}
 }
 
-func (v *pinotVisibilityTripleManager) chooseVisibilityManagerForWrite(ctx context.Context, dbVisFunc, esVisFunc, pinotVisFunc func() error) error {
+func (v *visibilityTripleManager) chooseVisibilityManagerForWrite(ctx context.Context, dbVisFunc, esVisFunc, pinotVisFunc func() error) error {
 	var writeMode string
 	if v.writeMode != nil {
 		writeMode = v.writeMode()
@@ -332,7 +332,7 @@ type userParameters struct {
 
 // For Pinot Migration uses. It will be a temporary usage
 // logUserQueryParameters will log user queries' parameters so that a comparator workflow can consume
-func (v *pinotVisibilityTripleManager) logUserQueryParameters(userParam userParameters, domain string, override bool) {
+func (v *visibilityTripleManager) logUserQueryParameters(userParam userParameters, domain string, override bool) {
 	// Don't log if it is not enabled
 	// don't log if it is a call from Pinot Response Comparator workflow
 	if !v.logCustomerQueryParameter(domain) || override {
@@ -363,7 +363,7 @@ func filterAttrPrefix(str string) string {
 	return strings.Replace(str, "`", "", -1)
 }
 
-func (v *pinotVisibilityTripleManager) getShadowMgrForDoubleRead(domain string) VisibilityManager {
+func (v *visibilityTripleManager) getShadowMgrForDoubleRead(domain string) VisibilityManager {
 	// invalid cases:
 	// case0: when it is not double read
 	if !v.readModeIsDouble(domain) {
@@ -391,7 +391,7 @@ func (v *pinotVisibilityTripleManager) getShadowMgrForDoubleRead(domain string) 
 	return nil
 }
 
-func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutions(
+func (v *visibilityTripleManager) ListOpenWorkflowExecutions(
 	ctx context.Context,
 	request *ListWorkflowExecutionsRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
@@ -416,7 +416,7 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutions(
 	return manager.ListOpenWorkflowExecutions(ctx, request)
 }
 
-func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutions(
+func (v *visibilityTripleManager) ListClosedWorkflowExecutions(
 	ctx context.Context,
 	request *ListWorkflowExecutionsRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
@@ -440,7 +440,7 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutions(
 	return manager.ListClosedWorkflowExecutions(ctx, request)
 }
 
-func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutionsByType(
+func (v *visibilityTripleManager) ListOpenWorkflowExecutionsByType(
 	ctx context.Context,
 	request *ListWorkflowExecutionsByTypeRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
@@ -465,7 +465,7 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutionsByType(
 	return manager.ListOpenWorkflowExecutionsByType(ctx, request)
 }
 
-func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByType(
+func (v *visibilityTripleManager) ListClosedWorkflowExecutionsByType(
 	ctx context.Context,
 	request *ListWorkflowExecutionsByTypeRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
@@ -490,7 +490,7 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByType(
 	return manager.ListClosedWorkflowExecutionsByType(ctx, request)
 }
 
-func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutionsByWorkflowID(
+func (v *visibilityTripleManager) ListOpenWorkflowExecutionsByWorkflowID(
 	ctx context.Context,
 	request *ListWorkflowExecutionsByWorkflowIDRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
@@ -515,7 +515,7 @@ func (v *pinotVisibilityTripleManager) ListOpenWorkflowExecutionsByWorkflowID(
 	return manager.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
 }
 
-func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByWorkflowID(
+func (v *visibilityTripleManager) ListClosedWorkflowExecutionsByWorkflowID(
 	ctx context.Context,
 	request *ListWorkflowExecutionsByWorkflowIDRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
@@ -540,7 +540,7 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByWorkflowID(
 	return manager.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
 }
 
-func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByStatus(
+func (v *visibilityTripleManager) ListClosedWorkflowExecutionsByStatus(
 	ctx context.Context,
 	request *ListClosedWorkflowExecutionsByStatusRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
@@ -564,7 +564,7 @@ func (v *pinotVisibilityTripleManager) ListClosedWorkflowExecutionsByStatus(
 	return manager.ListClosedWorkflowExecutionsByStatus(ctx, request)
 }
 
-func (v *pinotVisibilityTripleManager) GetClosedWorkflowExecution(
+func (v *visibilityTripleManager) GetClosedWorkflowExecution(
 	ctx context.Context,
 	request *GetClosedWorkflowExecutionRequest,
 ) (*GetClosedWorkflowExecutionResponse, error) {
@@ -591,7 +591,7 @@ func (v *pinotVisibilityTripleManager) GetClosedWorkflowExecution(
 	return manager.GetClosedWorkflowExecution(ctx, request)
 }
 
-func (v *pinotVisibilityTripleManager) ListWorkflowExecutions(
+func (v *visibilityTripleManager) ListWorkflowExecutions(
 	ctx context.Context,
 	request *ListWorkflowExecutionsByQueryRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
@@ -616,7 +616,7 @@ func (v *pinotVisibilityTripleManager) ListWorkflowExecutions(
 	return manager.ListWorkflowExecutions(ctx, request)
 }
 
-func (v *pinotVisibilityTripleManager) ListAllWorkflowExecutions(
+func (v *visibilityTripleManager) ListAllWorkflowExecutions(
 	ctx context.Context,
 	request *ListAllWorkflowExecutionsRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
@@ -640,7 +640,7 @@ func (v *pinotVisibilityTripleManager) ListAllWorkflowExecutions(
 	return manager.ListAllWorkflowExecutions(ctx, request)
 }
 
-func (v *pinotVisibilityTripleManager) ScanWorkflowExecutions(
+func (v *visibilityTripleManager) ScanWorkflowExecutions(
 	ctx context.Context,
 	request *ListWorkflowExecutionsByQueryRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
@@ -665,7 +665,7 @@ func (v *pinotVisibilityTripleManager) ScanWorkflowExecutions(
 	return manager.ScanWorkflowExecutions(ctx, request)
 }
 
-func (v *pinotVisibilityTripleManager) CountWorkflowExecutions(
+func (v *visibilityTripleManager) CountWorkflowExecutions(
 	ctx context.Context,
 	request *CountWorkflowExecutionsRequest,
 ) (*CountWorkflowExecutionsResponse, error) {
@@ -690,7 +690,7 @@ func (v *pinotVisibilityTripleManager) CountWorkflowExecutions(
 	return manager.CountWorkflowExecutions(ctx, request)
 }
 
-func (v *pinotVisibilityTripleManager) chooseVisibilityManagerForRead(ctx context.Context, domain string) VisibilityManager {
+func (v *visibilityTripleManager) chooseVisibilityManagerForRead(ctx context.Context, domain string) VisibilityManager {
 	if override := ctx.Value(ContextKey); override == VisibilityOverridePrimary {
 		v.logger.Info("Pinot Migration log: Primary visibility manager was chosen for read.")
 		return v.esVisibilityManager

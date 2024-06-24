@@ -188,6 +188,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, isAdvancedVis
 			MaxRetentionDays:       dc.GetIntProperty(dynamicconfig.MaxRetentionDays),
 			FailoverCoolDown:       dc.GetDurationPropertyFilteredByDomain(dynamicconfig.FrontendFailoverCoolDown),
 			RequiredDomainDataKeys: dc.GetMapProperty(dynamicconfig.RequiredDomainDataKeys),
+			FailoverHistoryMaxSize: dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendFailoverHistoryMaxSize),
 		},
 		HostName: hostName,
 	}
