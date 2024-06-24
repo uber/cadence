@@ -134,6 +134,20 @@ func (mr *MockItemToPersistMockRecorder) GetAttribute(key interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAttribute", reflect.TypeOf((*MockItemToPersist)(nil).GetAttribute), key)
 }
 
+// GetPartitionKeys mocks base method.
+func (m *MockItemToPersist) GetPartitionKeys() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPartitionKeys")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// GetPartitionKeys indicates an expected call of GetPartitionKeys.
+func (mr *MockItemToPersistMockRecorder) GetPartitionKeys() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPartitionKeys", reflect.TypeOf((*MockItemToPersist)(nil).GetPartitionKeys))
+}
+
 // GetPartitionValue mocks base method.
 func (m *MockItemToPersist) GetPartitionValue(key string) any {
 	m.ctrl.T.Helper()
@@ -146,20 +160,6 @@ func (m *MockItemToPersist) GetPartitionValue(key string) any {
 func (mr *MockItemToPersistMockRecorder) GetPartitionValue(key interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPartitionValue", reflect.TypeOf((*MockItemToPersist)(nil).GetPartitionValue), key)
-}
-
-// GetPartitions mocks base method.
-func (m *MockItemToPersist) GetPartitions() []string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPartitions")
-	ret0, _ := ret[0].([]string)
-	return ret0
-}
-
-// GetPartitions indicates an expected call of GetPartitions.
-func (mr *MockItemToPersistMockRecorder) GetPartitions() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPartitions", reflect.TypeOf((*MockItemToPersist)(nil).GetPartitions))
 }
 
 // Offset mocks base method.
@@ -213,6 +213,20 @@ func (m *MockItemPartitions) EXPECT() *MockItemPartitionsMockRecorder {
 	return m.recorder
 }
 
+// GetPartitionKeys mocks base method.
+func (m *MockItemPartitions) GetPartitionKeys() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPartitionKeys")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// GetPartitionKeys indicates an expected call of GetPartitionKeys.
+func (mr *MockItemPartitionsMockRecorder) GetPartitionKeys() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPartitionKeys", reflect.TypeOf((*MockItemPartitions)(nil).GetPartitionKeys))
+}
+
 // GetPartitionValue mocks base method.
 func (m *MockItemPartitions) GetPartitionValue(key string) any {
 	m.ctrl.T.Helper()
@@ -225,20 +239,6 @@ func (m *MockItemPartitions) GetPartitionValue(key string) any {
 func (mr *MockItemPartitionsMockRecorder) GetPartitionValue(key interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPartitionValue", reflect.TypeOf((*MockItemPartitions)(nil).GetPartitionValue), key)
-}
-
-// GetPartitions mocks base method.
-func (m *MockItemPartitions) GetPartitions() []string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPartitions")
-	ret0, _ := ret[0].([]string)
-	return ret0
-}
-
-// GetPartitions indicates an expected call of GetPartitions.
-func (mr *MockItemPartitionsMockRecorder) GetPartitions() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPartitions", reflect.TypeOf((*MockItemPartitions)(nil).GetPartitions))
 }
 
 // String mocks base method.
