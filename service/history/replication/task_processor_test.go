@@ -658,7 +658,6 @@ func TestProcessorLoop_TaskExecuteFailed_ShardChangeErr(t *testing.T) {
 				time.Sleep(time.Millisecond * 50)
 				return 0, &persistence.ShardOwnershipLostError{Msg: "some shard err"}
 			}).AnyTimes()
-		//.Return(0, &persistence.ShardOwnershipLostError{Msg: "some shard err"}).AnyTimes()
 
 		// domain name will be fetched
 		mockDomainCache.EXPECT().GetDomainName(testDomainID).Return(testDomainName, nil).AnyTimes()
