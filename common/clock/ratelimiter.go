@@ -321,6 +321,13 @@ func (r *ratelimiter) Tokens() float64 {
 }
 
 func (r *ratelimiter) Wait(ctx context.Context) (err error) {
+	if err := ctx.Err(); err != nil {
+		// canceled contexts imply that the limited-work will not be done,
+		// so do not allow any tokens to be consumed.
+		// rate.Limiter also behaves this way in Wait.
+		return err
+	}
+
 	now, unlock := r.lockNow()
 	unlockOnce := doOnce(unlock)
 	defer unlockOnce() // unlock if panic or returned early with no err

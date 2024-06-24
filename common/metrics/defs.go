@@ -1006,6 +1006,8 @@ const (
 	FrontendGetSearchAttributesScope
 	// FrontendGetClusterInfoScope is the metric scope for frontend.GetClusterInfo
 	FrontendGetClusterInfoScope
+	// FrontendGlobalRatelimiter is the metrics scope for frontend.GlobalRatelimiter
+	FrontendGlobalRatelimiter
 
 	NumFrontendScopes
 )
@@ -1802,6 +1804,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendResetStickyTaskListScope:                   {operation: "ResetStickyTaskList"},
 		FrontendGetSearchAttributesScope:                   {operation: "GetSearchAttributes"},
 		FrontendGetClusterInfoScope:                        {operation: "GetClusterInfo"},
+		FrontendGlobalRatelimiter:                          {operation: "GlobalRatelimiter"},
 	},
 	// History Scope Names
 	History: {
@@ -2191,6 +2194,11 @@ const (
 
 	AsyncRequestPayloadSize
 
+	// emitted as timers to provide cluster-wide usage info.
+	// probably better as a histogram for better aggregation.
+	GlobalRatelimiterFallbackUsageTimer
+	GlobalRatelimiterGlobalUsageTimer
+
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
 
@@ -2468,6 +2476,7 @@ const (
 	WorkflowIDCacheSizeGauge
 	WorkflowIDCacheRequestsExternalRatelimitedCounter
 	WorkflowIDCacheRequestsExternalMaxRequestsPerSecondsTimer
+	WorkflowIDCacheRequestsInternalMaxRequestsPerSecondsTimer
 	WorkflowIDCacheRequestsInternalRatelimitedCounter
 	NumHistoryMetrics
 )
@@ -2835,6 +2844,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		HashringViewIdentifier:               {metricName: "hashring_view_identifier", metricType: Counter},
 
 		AsyncRequestPayloadSize: {metricName: "async_request_payload_size_per_domain", metricRollupName: "async_request_payload_size", metricType: Timer},
+
+		GlobalRatelimiterFallbackUsageTimer: {metricName: "global_ratelimiter_fallback_usage_timer", metricType: Timer},
+		GlobalRatelimiterGlobalUsageTimer:   {metricName: "global_ratelimiter_global_usage_timer", metricType: Timer},
 	},
 	History: {
 		TaskRequests:             {metricName: "task_requests", metricType: Counter},
@@ -3104,6 +3116,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		WorkflowIDCacheSizeGauge:                                     {metricName: "workflow_id_cache_size", metricType: Gauge},
 		WorkflowIDCacheRequestsExternalRatelimitedCounter:            {metricName: "workflow_id_external_requests_ratelimited", metricType: Counter},
 		WorkflowIDCacheRequestsExternalMaxRequestsPerSecondsTimer:    {metricName: "workflow_id_external_requests_max_requests_per_seconds", metricType: Timer},
+		WorkflowIDCacheRequestsInternalMaxRequestsPerSecondsTimer:    {metricName: "workflow_id_internal_requests_max_requests_per_seconds", metricType: Timer},
 		WorkflowIDCacheRequestsInternalRatelimitedCounter:            {metricName: "workflow_id_internal_requests_ratelimited", metricType: Counter},
 	},
 	Matching: {

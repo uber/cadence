@@ -167,15 +167,14 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowCloseTasks(
 	}
 
 	closeTimestamp := time.Unix(0, closeEvent.GetTimestamp())
-
 	retentionDuration := (time.Duration(retentionInDays) * time.Hour * 24)
 	if workflowDeletionTaskJitterRange > 1 {
 		retentionDuration += time.Duration(rand.Intn(workflowDeletionTaskJitterRange*60)) * time.Second
 	}
 
 	r.mutableState.AddTimerTasks(&persistence.DeleteHistoryEventTask{
-		// TaskID is set by shard
 		TaskData: persistence.TaskData{
+			// TaskID is set by shard
 			VisibilityTimestamp: closeTimestamp.Add(retentionDuration),
 			Version:             closeEvent.Version,
 		},
@@ -393,9 +392,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateChildWorkflowTasks(
 	event *types.HistoryEvent,
 ) error {
 
-	attr := event.StartChildWorkflowExecutionInitiatedEventAttributes
 	childWorkflowScheduleID := event.ID
-	childWorkflowTargetDomain := attr.GetDomain()
 
 	childWorkflowInfo, ok := r.mutableState.GetChildExecutionInfo(childWorkflowScheduleID)
 	if !ok {
@@ -404,13 +401,20 @@ func (r *mutableStateTaskGeneratorImpl) GenerateChildWorkflowTasks(
 		}
 	}
 
+	msbDomainID := r.mutableState.GetDomainEntry().GetInfo().ID
+
 	targetDomainID := childWorkflowInfo.DomainID
-	if targetDomainID == "" {
-		var err error
-		targetDomainID, err = r.getTargetDomainID(childWorkflowTargetDomain)
-		if err != nil {
-			return err
+	if childWorkflowInfo.DomainID == "" {
+		targetDomainID = msbDomainID
+	}
+	// This was formerly supported with the cross cluster feature
+	// but is no longer. So erroring out explicitly here
+	if targetDomainID != msbDomainID {
+		return &types.BadRequestError{
+			Message: fmt.Sprintf("there would appear to be a bug: The child workflow is trying to use domain %s but it's running in domain %s. Cross-cluster child workflows are not supported",
+				childWorkflowInfo.DomainID, msbDomainID),
 		}
+
 	}
 
 	startChildExecutionTask := &persistence.StartChildExecutionTask{
@@ -424,7 +428,6 @@ func (r *mutableStateTaskGeneratorImpl) GenerateChildWorkflowTasks(
 	}
 
 	r.mutableState.AddTransferTasks(startChildExecutionTask)
-
 	return nil
 }
 

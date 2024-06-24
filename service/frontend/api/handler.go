@@ -3135,16 +3135,19 @@ func (wh *WorkflowHandler) ListAllWorkflowExecutions(
 		EarliestTime:  listRequest.StartTimeFilter.GetEarliestTime(),
 		LatestTime:    listRequest.StartTimeFilter.GetLatestTime(),
 	}
-
+	listallrequest := &persistence.ListAllWorkflowExecutionsRequest{
+		ListWorkflowExecutionsRequest: baseReq,
+		PartialMatch:                  listRequest.PartialMatch,
+		WorkflowSearchValue:           listRequest.WorkflowSearchValue,
+		SortColumn:                    listRequest.SortColumn,
+		SortOrder:                     listRequest.SortOrder,
+	}
+	copy(listallrequest.StatusFilter, listRequest.StatusFilter)
 	var persistenceResp *persistence.ListWorkflowExecutionsResponse
 
 	persistenceResp, err = wh.GetVisibilityManager().ListAllWorkflowExecutions(
 		ctx,
-		&persistence.ListAllWorkflowExecutionsRequest{
-			ListWorkflowExecutionsRequest: baseReq,
-			PartialMatch:                  listRequest.PartialMatch,
-			WorkflowSearchValue:           listRequest.WorkflowSearchValue,
-		},
+		listallrequest,
 	)
 	if err != nil {
 		return nil, err

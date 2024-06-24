@@ -124,6 +124,28 @@ steps:
           run: integration-test-cassandra
           config: docker/buildkite/docker-compose-es7.yml
 
+  - label: ":golang: integration test with cassandra with pinot"
+    artifact_paths:
+      - ".build/coverage/*.out"
+    retry:
+      automatic:
+        limit: 1
+    plugins:
+      - kubernetes:
+          <<: *kubernetes
+          podSpec:
+            <<: *podSpec
+            containers:
+              - <<: *commandContainer
+                command:
+                  - |-
+                    # ensure that we are not rebuilding binaries and not regenerating code
+                    make .just-build
+                    go test -timeout 600s -run ^TestPinotIntegrationSuite -tags pinotintegration -count 1 -v github.com/uber/cadence/host
+      - docker-compose#v3.0.0:
+          run: integration-test-cassandra-pinot
+          config: docker/buildkite/docker-compose-pinot.yml
+
   - label: ":golang: integration test with cassandra with OpenSearch v2"
     artifact_paths:
       - ".build/coverage/*.out"

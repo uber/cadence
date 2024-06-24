@@ -35,6 +35,7 @@ import (
 
 func TestUpdatePerDomainMaxWFRequestCount(t *testing.T) {
 	domainName := "some domain name"
+	metric := metrics.WorkflowIDCacheRequestsInternalMaxRequestsPerSecondsTimer
 
 	cases := []struct {
 		name                             string
@@ -45,8 +46,8 @@ func TestUpdatePerDomainMaxWFRequestCount(t *testing.T) {
 			name: "Single workflowID",
 			updatePerDomainMaxWFRequestCount: func(metricsClient metrics.Client, timeSource clock.MockedTimeSource) {
 				workflowID1 := &workflowIDCountMetric{}
-				workflowID1.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient) // Emits 1
-				workflowID1.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient) // Emits 2
+				workflowID1.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient, metric) // Emits 1
+				workflowID1.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient, metric) // Emits 2
 			},
 			expecetMetrics: []time.Duration{1, 2},
 		},
@@ -54,14 +55,14 @@ func TestUpdatePerDomainMaxWFRequestCount(t *testing.T) {
 			name: "Separate workflowIDs",
 			updatePerDomainMaxWFRequestCount: func(metricsClient metrics.Client, timeSource clock.MockedTimeSource) {
 				workflowID1 := &workflowIDCountMetric{}
-				workflowID1.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient) // Emits 1
+				workflowID1.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient, metric) // Emits 1
 
 				workflowID2 := &workflowIDCountMetric{}
-				workflowID2.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient) // Emits 1
-				workflowID2.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient) // Emits 2
-				workflowID2.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient) // Emits 3
+				workflowID2.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient, metric) // Emits 1
+				workflowID2.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient, metric) // Emits 2
+				workflowID2.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient, metric) // Emits 3
 
-				workflowID1.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient) // Emits 2
+				workflowID1.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient, metric) // Emits 2
 
 			},
 			expecetMetrics: []time.Duration{1, 1, 2, 3, 2},
@@ -70,11 +71,11 @@ func TestUpdatePerDomainMaxWFRequestCount(t *testing.T) {
 			name: "Reset",
 			updatePerDomainMaxWFRequestCount: func(metricsClient metrics.Client, timeSource clock.MockedTimeSource) {
 				workflowID1 := &workflowIDCountMetric{}
-				workflowID1.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient) // Emits 1
-				workflowID1.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient) // Emits 2
+				workflowID1.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient, metric) // Emits 1
+				workflowID1.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient, metric) // Emits 2
 
 				timeSource.Advance(1100 * time.Millisecond)
-				workflowID1.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient) // Emits 1
+				workflowID1.updatePerDomainMaxWFRequestCount(domainName, timeSource, metricsClient, metric) // Emits 1
 			},
 			expecetMetrics: []time.Duration{1, 2, 1},
 		},

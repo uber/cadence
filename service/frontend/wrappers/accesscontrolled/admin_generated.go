@@ -127,7 +127,7 @@ func (a *adminHandler) DeleteWorkflow(ctx context.Context, ap1 *types.AdminDelet
 func (a *adminHandler) DescribeCluster(ctx context.Context) (dp1 *types.DescribeClusterResponse, err error) {
 	attr := &authorization.Attributes{
 		APIName:    "DescribeCluster",
-		Permission: authorization.PermissionAdmin,
+		Permission: authorization.PermissionRead,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr)
 	if err != nil {

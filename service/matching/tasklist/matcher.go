@@ -26,8 +26,7 @@ import (
 	"fmt"
 	"time"
 
-	"golang.org/x/time/rate"
-
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -116,10 +115,8 @@ func newTaskMatcher(config *config.TaskListConfig, fwdr *Forwarder, scope metric
 //   - context deadline is exceeded
 //   - task is matched and consumer returns error in response channel
 func (tm *TaskMatcher) Offer(ctx context.Context, task *InternalTask) (bool, error) {
-	var err error
-	var rsv *rate.Reservation
 	if !task.IsForwarded() {
-		rsv, err = tm.ratelimit(ctx)
+		err := tm.ratelimit(ctx)
 		if err != nil {
 			tm.scope.IncCounter(metrics.SyncThrottlePerTaskListCounter)
 			return false, err
@@ -131,7 +128,7 @@ func (tm *TaskMatcher) Offer(ctx context.Context, task *InternalTask) (bool, err
 		if task.ResponseC != nil {
 			// if there is a response channel, block until resp is received
 			// and return error if the response contains error
-			err = <-task.ResponseC
+			err := <-task.ResponseC
 			return true, err
 		}
 		return false, nil
@@ -156,11 +153,6 @@ func (tm *TaskMatcher) Offer(ctx context.Context, task *InternalTask) (bool, err
 			}
 		}
 
-		if rsv != nil {
-			// there was a ratelimit token we consumed
-			// return it since we did not really do any work
-			rsv.Cancel()
-		}
 		return false, nil
 	}
 }
@@ -222,7 +214,7 @@ func (tm *TaskMatcher) OfferQuery(ctx context.Context, task *InternalTask) (*typ
 // MustOffer blocks until a consumer is found to handle this task
 // Returns error only when context is canceled, expired or the ratelimit is set to zero (allow nothing)
 func (tm *TaskMatcher) MustOffer(ctx context.Context, task *InternalTask) error {
-	if _, err := tm.ratelimit(ctx); err != nil {
+	if err := tm.ratelimit(ctx); err != nil {
 		return fmt.Errorf("rate limit error dispatching: %w", err)
 	}
 
@@ -445,32 +437,17 @@ func (tm *TaskMatcher) fwdrAddReqTokenC() <-chan *ForwarderReqToken {
 	return tm.fwdr.AddReqTokenC()
 }
 
-func (tm *TaskMatcher) ratelimit(ctx context.Context) (*rate.Reservation, error) {
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	default:
+func (tm *TaskMatcher) ratelimit(ctx context.Context) error {
+	err := tm.limiter.Wait(ctx)
+	if errors.Is(err, clock.ErrCannotWait) {
+		// "err != ctx.Err()" may also be correct, as that would mean "gave up due to context".
+		//
+		// in this branch: either the request would wait longer than ctx's timeout,
+		// or the limiter's config does not allow any operations at all (burst 0).
+		// in either case, this is returned immediately.
+		return ErrTasklistThrottled
 	}
-
-	deadline, ok := ctx.Deadline()
-	if !ok {
-		if err := tm.limiter.Wait(ctx); err != nil {
-			return nil, err
-		}
-		return nil, nil
-	}
-
-	rsv := tm.limiter.Reserve()
-	// If we have to wait too long for reservation, give up and return
-	if !rsv.OK() || rsv.Delay() > time.Until(deadline) {
-		if rsv.OK() { // if we were indeed given a reservation, return it before we bail out
-			rsv.Cancel()
-		}
-		return nil, ErrTasklistThrottled
-	}
-
-	time.Sleep(rsv.Delay())
-	return rsv, nil
+	return err // nil if success, non-nil if canceled
 }
 
 func (tm *TaskMatcher) isForwardingAllowed() bool {

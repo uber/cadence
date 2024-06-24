@@ -31,7 +31,8 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	rate "golang.org/x/time/rate"
+
+	clock "github.com/uber/cadence/common/clock"
 )
 
 // MockLimiter is a mock of Limiter interface.
@@ -72,10 +73,10 @@ func (mr *MockLimiterMockRecorder) Allow() *gomock.Call {
 }
 
 // Reserve mocks base method.
-func (m *MockLimiter) Reserve() *rate.Reservation {
+func (m *MockLimiter) Reserve() clock.Reservation {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Reserve")
-	ret0, _ := ret[0].(*rate.Reservation)
+	ret0, _ := ret[0].(clock.Reservation)
 	return ret0
 }
 

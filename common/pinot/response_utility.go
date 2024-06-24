@@ -101,6 +101,11 @@ func ConvertSearchResultToVisibilityRecord(hit []interface{}, columnNames []stri
 		delete(attributeMap, Memo) // cleanup after we get memo from search attribute
 	}
 
+	// if memo is empty, set it to nil
+	if memo != nil && len(memo.GetData()) == 0 {
+		memo = nil
+	}
+
 	var source *VisibilityRecord
 	err = json.Unmarshal(jsonSystemKeyMap, &source)
 	if err != nil {
