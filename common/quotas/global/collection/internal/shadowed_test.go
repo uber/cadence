@@ -101,9 +101,8 @@ func TestShadowed(t *testing.T) {
 					case <-time.After(10 * time.Millisecond): // give the shadow some time to run
 						if test.primary {
 							return nil
-						} else {
-							return context.Canceled
 						}
+						return context.Canceled
 					}
 				})
 				cPrimary := NewCountedLimiter(primary)
@@ -113,9 +112,8 @@ func TestShadowed(t *testing.T) {
 					// more stable.
 					if test.shadow {
 						return nil
-					} else {
-						return context.Canceled
 					}
+					return context.Canceled
 				})
 				cShadow := NewCountedLimiter(shadow)
 				s := NewShadowedLimiter(cPrimary, cShadow)
