@@ -140,15 +140,20 @@ func (s *transferStandbyTaskExecutorSuite) SetupTest() {
 	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(constants.TestGlobalDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainName(constants.TestDomainID).Return(constants.TestDomainName, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(constants.TestDomainName).Return(constants.TestGlobalDomainEntry, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestTargetDomainID).Return(constants.TestGlobalTargetDomainEntry, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainName(constants.TestTargetDomainID).Return(constants.TestTargetDomainName, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainID(constants.TestTargetDomainName).Return(constants.TestTargetDomainID, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestParentDomainID).Return(constants.TestGlobalParentDomainEntry, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainName(constants.TestParentDomainID).Return(constants.TestParentDomainName, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomain(constants.TestParentDomainName).Return(constants.TestGlobalParentDomainEntry, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestChildDomainID).Return(constants.TestGlobalChildDomainEntry, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainName(constants.TestChildDomainID).Return(constants.TestChildDomainName, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainID(constants.TestChildDomainName).Return(constants.TestChildDomainID, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainID(constants.TestDomainName).Return(constants.TestDomainID, nil).AnyTimes()
+
+	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestRateLimitedDomainID).Return(constants.TestRateLimitedDomainEntry, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainName(constants.TestRateLimitedDomainID).Return(constants.TestRateLimitedDomainName, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomain(constants.TestRateLimitedDomainName).Return(constants.TestRateLimitedDomainEntry, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainID(constants.TestRateLimitedDomainName).Return(constants.TestRateLimitedDomainID, nil).AnyTimes()
+	//s.mockDomainCache.EXPECT().GetDomainByID(constants.TestTargetDomainID).Return(constants.TestGlobalTargetDomainEntry, nil).AnyTimes()
+	//s.mockDomainCache.EXPECT().GetDomainName(constants.TestTargetDomainID).Return(constants.TestTargetDomainName, nil).AnyTimes()
+	//s.mockDomainCache.EXPECT().GetDomainByID(constants.TestParentDomainID).Return(constants.TestGlobalParentDomainEntry, nil).AnyTimes()
+	//s.mockDomainCache.EXPECT().GetDomainName(constants.TestParentDomainID).Return(constants.TestParentDomainName, nil).AnyTimes()
+	//s.mockDomainCache.EXPECT().GetDomain(constants.TestParentDomainName).Return(constants.TestGlobalParentDomainEntry, nil).AnyTimes()
+	//s.mockDomainCache.EXPECT().GetDomainByID(constants.TestChildDomainID).Return(constants.TestGlobalChildDomainEntry, nil).AnyTimes()
+	//s.mockDomainCache.EXPECT().GetDomainName(constants.TestChildDomainID).Return(constants.TestChildDomainName, nil).AnyTimes()
+	//s.mockDomainCache.EXPECT().GetDomainID(constants.TestChildDomainName).Return(constants.TestChildDomainID, nil).AnyTimes()
 
 	s.logger = s.mockShard.GetLogger()
 	s.clusterName = cluster.TestAlternativeClusterName
@@ -456,7 +461,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessCancelExecution_Pending() 
 		mutableState,
 		decisionCompletionID,
 		uuid.New(),
-		constants.TestTargetDomainName,
+		constants.TestDomainName,
 		targetExecution.GetWorkflowID(),
 		targetExecution.GetRunID(),
 	)
@@ -469,7 +474,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessCancelExecution_Pending() 
 		WorkflowID:          workflowExecution.GetWorkflowID(),
 		RunID:               workflowExecution.GetRunID(),
 		VisibilityTimestamp: now,
-		TargetDomainID:      constants.TestTargetDomainID,
+		TargetDomainID:      constants.TestDomainID,
 		TargetWorkflowID:    targetExecution.GetWorkflowID(),
 		TargetRunID:         targetExecution.GetRunID(),
 		TaskID:              int64(59),
@@ -517,11 +522,11 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessCancelExecution_Success() 
 		mutableState,
 		decisionCompletionID,
 		uuid.New(),
-		constants.TestTargetDomainName,
+		constants.TestDomainName,
 		targetExecution.GetWorkflowID(),
 		targetExecution.GetRunID(),
 	)
-	event = test.AddCancelRequestedEvent(mutableState, event.ID, constants.TestTargetDomainID, targetExecution.GetWorkflowID(), targetExecution.GetRunID())
+	event = test.AddCancelRequestedEvent(mutableState, event.ID, constants.TestDomainID, targetExecution.GetWorkflowID(), targetExecution.GetRunID())
 	mutableState.FlushBufferedEvents()
 
 	now := time.Now()
@@ -531,7 +536,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessCancelExecution_Success() 
 		WorkflowID:          workflowExecution.GetWorkflowID(),
 		RunID:               workflowExecution.GetRunID(),
 		VisibilityTimestamp: now,
-		TargetDomainID:      constants.TestTargetDomainID,
+		TargetDomainID:      constants.TestDomainID,
 		TargetWorkflowID:    targetExecution.GetWorkflowID(),
 		TargetRunID:         targetExecution.GetRunID(),
 		TaskID:              int64(59),
@@ -562,7 +567,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessSignalExecution_Pending() 
 		mutableState,
 		decisionCompletionID,
 		uuid.New(),
-		constants.TestTargetDomainName,
+		constants.TestDomainName,
 		targetExecution.GetWorkflowID(),
 		targetExecution.GetRunID(),
 		"some random signal name", nil, nil,
@@ -576,7 +581,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessSignalExecution_Pending() 
 		WorkflowID:          workflowExecution.GetWorkflowID(),
 		RunID:               workflowExecution.GetRunID(),
 		VisibilityTimestamp: now,
-		TargetDomainID:      constants.TestTargetDomainID,
+		TargetDomainID:      constants.TestDomainID,
 		TargetWorkflowID:    targetExecution.GetWorkflowID(),
 		TargetRunID:         targetExecution.GetRunID(),
 		TaskID:              int64(59),
@@ -624,7 +629,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessSignalExecution_Success() 
 		mutableState,
 		decisionCompletionID,
 		uuid.New(),
-		constants.TestTargetDomainName,
+		constants.TestDomainName,
 		targetExecution.GetWorkflowID(),
 		targetExecution.GetRunID(),
 		"some random signal name", nil, nil,
@@ -637,7 +642,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessSignalExecution_Success() 
 		WorkflowID:          workflowExecution.GetWorkflowID(),
 		RunID:               workflowExecution.GetRunID(),
 		VisibilityTimestamp: now,
-		TargetDomainID:      constants.TestTargetDomainID,
+		TargetDomainID:      constants.TestDomainID,
 		TargetWorkflowID:    targetExecution.GetWorkflowID(),
 		TargetRunID:         targetExecution.GetRunID(),
 		TaskID:              int64(59),
@@ -646,7 +651,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessSignalExecution_Success() 
 		ScheduleID:          event.ID,
 	})
 
-	event = test.AddSignaledEvent(mutableState, event.ID, constants.TestTargetDomainName, targetExecution.GetWorkflowID(), targetExecution.GetRunID(), nil)
+	event = test.AddSignaledEvent(mutableState, event.ID, constants.TestDomainName, targetExecution.GetWorkflowID(), targetExecution.GetRunID(), nil)
 	mutableState.FlushBufferedEvents()
 
 	persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, event.ID, event.Version)
@@ -668,7 +673,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessStartChildExecution_Pendin
 		mutableState,
 		decisionCompletionID,
 		uuid.New(),
-		constants.TestChildDomainName,
+		constants.TestDomainName,
 		childWorkflowID,
 		"some random child workflow type",
 		"some random child task list",
@@ -683,7 +688,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessStartChildExecution_Pendin
 		WorkflowID:          workflowExecution.GetWorkflowID(),
 		RunID:               workflowExecution.GetRunID(),
 		VisibilityTimestamp: now,
-		TargetDomainID:      constants.TestChildDomainID,
+		TargetDomainID:      constants.TestDomainID,
 		TargetWorkflowID:    childWorkflowID,
 		TargetRunID:         "",
 		TaskID:              int64(59),
@@ -729,14 +734,14 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessStartChildExecution_Succes
 		mutableState,
 		decisionCompletionID,
 		uuid.New(),
-		constants.TestChildDomainName,
+		constants.TestDomainName,
 		childWorkflowID,
 		childWorkflowType,
 		"some random child task list",
 		nil, 1, 1, nil,
 	)
 
-	event = test.AddChildWorkflowExecutionStartedEvent(mutableState, event.ID, constants.TestChildDomainName, childWorkflowID, uuid.New(), childWorkflowType)
+	event = test.AddChildWorkflowExecutionStartedEvent(mutableState, event.ID, constants.TestDomainName, childWorkflowID, uuid.New(), childWorkflowType)
 	mutableState.FlushBufferedEvents()
 	childInfo.StartedID = event.ID
 
@@ -747,7 +752,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessStartChildExecution_Succes
 		WorkflowID:          workflowExecution.GetWorkflowID(),
 		RunID:               workflowExecution.GetRunID(),
 		VisibilityTimestamp: now,
-		TargetDomainID:      constants.TestChildDomainID,
+		TargetDomainID:      constants.TestDomainID,
 		TargetWorkflowID:    childWorkflowID,
 		TargetRunID:         "",
 		TaskID:              int64(59),
