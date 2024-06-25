@@ -80,7 +80,7 @@ func TestValidateQuery(t *testing.T) {
 		},
 		"Case7: invalid sql query": {
 			query: "Invalid SQL",
-			err:   "Invalid query.",
+			err:   "Invalid query.syntax error at position 38 near 'sql'",
 		},
 		"Case8-1: query with missing val": {
 			query:     "CloseTime = missing",
@@ -112,7 +112,7 @@ func TestValidateQuery(t *testing.T) {
 		},
 		"Case12-1: security SQL injection - with another statement": {
 			query: "WorkflowID = 'wid'; SELECT * FROM important_table;",
-			err:   "Invalid query.",
+			err:   "Invalid query.syntax error at position 53 near 'select'",
 		},
 		"Case12-2: security SQL injection - with union": {
 			query: "WorkflowID = 'wid' union select * from dummy",
@@ -239,6 +239,19 @@ func TestValidateQuery(t *testing.T) {
 			query:     "CloseStatus = 1",
 			validated: "CloseStatus = 1",
 		},
+		"case20-1: in clause in Attr": {
+			query:     "CustomKeywordField in (123)",
+			validated: "JSON_MATCH(Attr, '\"$.CustomKeywordField\" IN (''123'')') or JSON_MATCH(Attr, '\"$.CustomKeywordField[*]\" IN (''123'')')",
+		},
+		"case20-2: in clause in Attr with multiple values": {
+			query:     "CustomKeywordField in (123, 456)",
+			validated: "JSON_MATCH(Attr, '\"$.CustomKeywordField\" IN (''123'',''456'')') or JSON_MATCH(Attr, '\"$.CustomKeywordField[*]\" IN (''123'',''456'')')",
+		},
+		"case20-3: in clause in Attr with invalid IN expression, value": {
+			query:     "CustomKeywordField in (abc)",
+			validated: "",
+			err:       "invalid IN expression, value",
+		},
 	}
 
 	for name, test := range tests {
@@ -250,6 +263,43 @@ func TestValidateQuery(t *testing.T) {
 				assert.Equal(t, test.err, err.Error())
 			} else {
 				assert.Equal(t, test.validated, validated)
+			}
+		})
+	}
+}
+
+func TestProcessInClause_FailedInputExprCases(t *testing.T) {
+	// Define test cases
+	tests := map[string]struct {
+		inputExpr     sqlparser.Expr
+		expectedError string
+	}{
+		"case1: in clause in Attr with invalid expr": {
+			inputExpr:     &sqlparser.SQLVal{Type: sqlparser.StrVal, Val: []byte("invalid")},
+			expectedError: "invalid IN expression",
+		},
+		"case2: in clause in Attr with invalid expr, left": {
+			inputExpr:     &sqlparser.ComparisonExpr{Operator: sqlparser.InStr},
+			expectedError: "invalid IN expression, left",
+		},
+		"case3: in clause in Attr with invalid expr, right": {
+			inputExpr:     &sqlparser.ComparisonExpr{Operator: sqlparser.InStr, Left: &sqlparser.ColName{Name: sqlparser.NewColIdent("CustomKeywordField")}},
+			expectedError: "invalid IN expression, right",
+		},
+	}
+
+	// Create a new VisibilityQueryValidator
+	validSearchAttr := dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys())
+	qv := NewPinotQueryValidator(validSearchAttr())
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			// Call processInClause with the input expression
+			_, err := qv.processInClause(test.inputExpr)
+
+			// Check that an error was returned and that the error message matches the expected error message
+			if assert.Error(t, err) {
+				assert.Contains(t, err.Error(), test.expectedError)
 			}
 		})
 	}
