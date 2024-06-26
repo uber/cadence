@@ -190,7 +190,7 @@ const (
 	TaskTypeTimer
 	// TaskTypeReplication is the task type for replication task
 	TaskTypeReplication
-	// Deprecated! TaskTypeCrossCluster is the task type for cross cluster task
+	// Deprecated: TaskTypeCrossCluster is the task type for cross cluster task
 	// as of June 2024, this feature is no longer supported. Keeping the enum here
 	// to avoid future reuse of the ID and/or confusion
 	TaskTypeCrossCluster TaskType = 6
