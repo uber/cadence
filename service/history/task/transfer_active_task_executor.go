@@ -1051,7 +1051,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 		if attributes := startEvent.GetWorkflowExecutionStartedEventAttributes(); attributes != nil && attributes.Header != nil {
 			// fail open to avoid blocking the task processing
 			if newSearchAttr, err := appendContextHeaderToSearchAttributes(searchAttr, attributes.Header.Fields, t.config.ValidSearchAttributes()); err != nil {
-				t.logger.Error("error adding context key to search attributes", tag.Error(err))
+				t.logger.Error("failed to add headers to search attributes", tag.Error(err))
 			} else {
 				searchAttr = newSearchAttr
 			}
