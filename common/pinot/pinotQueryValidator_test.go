@@ -247,7 +247,15 @@ func TestValidateQuery(t *testing.T) {
 			query:     "CustomKeywordField in (123, 456)",
 			validated: "JSON_MATCH(Attr, '\"$.CustomKeywordField\" IN (''123'',''456'')') or JSON_MATCH(Attr, '\"$.CustomKeywordField[*]\" IN (''123'',''456'')')",
 		},
-		"case20-3: in clause in Attr with invalid IN expression, value": {
+		"case20-3-1: in clause in Attr with a string value, double quote": {
+			query:     "CustomKeywordField in (\"abc\")",
+			validated: "JSON_MATCH(Attr, '\"$.CustomKeywordField\" IN (''abc'')') or JSON_MATCH(Attr, '\"$.CustomKeywordField[*]\" IN (''abc'')')",
+		},
+		"case20-3-2: in clause in Attr with a string value, single quote": {
+			query:     "CustomKeywordField in ('abc')",
+			validated: "JSON_MATCH(Attr, '\"$.CustomKeywordField\" IN (''abc'')') or JSON_MATCH(Attr, '\"$.CustomKeywordField[*]\" IN (''abc'')')",
+		},
+		"case20-4: in clause in Attr with invalid IN expression, value": {
 			query:     "CustomKeywordField in (abc)",
 			validated: "",
 			err:       "invalid IN expression, value",
