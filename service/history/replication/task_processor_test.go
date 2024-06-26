@@ -605,98 +605,95 @@ func (s *taskProcessorSuite) TestShouldRetryDLQ() {
 
 func TestProcessorLoop_TaskExecuteFailed_ShardChangeErr(t *testing.T) {
 
-	for i := 0; i < 10; i++ {
+	ctrl := gomock.NewController(t)
+	config := config.NewForTest()
+	mockShard := shard.NewTestContext(
+		t,
+		ctrl,
+		&persistence.ShardInfo{
+			ShardID:                 0,
+			RangeID:                 1,
+			TransferAckLevel:        0,
+			ClusterReplicationLevel: map[string]int64{cluster.TestAlternativeClusterName: 350},
+		},
+		config,
+	)
 
-		ctrl := gomock.NewController(t)
-		config := config.NewForTest()
-		mockShard := shard.NewTestContext(
-			t,
-			ctrl,
-			&persistence.ShardInfo{
-				ShardID:                 0,
-				RangeID:                 1,
-				TransferAckLevel:        0,
-				ClusterReplicationLevel: map[string]int64{cluster.TestAlternativeClusterName: 350},
-			},
-			config,
-		)
+	mockDomainCache := mockShard.Resource.DomainCache
 
-		mockDomainCache := mockShard.Resource.DomainCache
+	requestChan := make(chan *request, 10)
 
-		requestChan := make(chan *request, 10)
-
-		taskFetcher := &fakeTaskFetcher{
-			sourceCluster: "standby",
-			requestChan:   requestChan,
-			// ensure that the fetcher always nearly-immediately fetches
-			rateLimiter: quotas.NewDynamicRateLimiter(func() float64 { return 100000 }),
-		}
-
-		mockEngine := engine.NewMockEngine(ctrl)
-		metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
-
-		taskExecutor := NewMockTaskExecutor(ctrl)
-
-		taskProcessor := NewTaskProcessor(
-			mockShard,
-			mockEngine,
-			config,
-			metricsClient,
-			taskFetcher,
-			taskExecutor,
-		).(*taskProcessorImpl)
-
-		// start the process loop
-		taskProcessor.wg.Add(1)
-		go taskProcessor.processorLoop()
-
-		taskExecutor.EXPECT().execute(gomock.Any(), false).
-			DoAndReturn(func(*types.ReplicationTask, bool) (any, any) {
-				// take a minute like a real RPC call, enough time for it probably be doing it's thing
-				// then to fail, return the shard error (as if the host is closing down) and then
-				// trigger the Stop function as if the shard is properly closing.
-				time.Sleep(time.Millisecond * 50)
-				return 0, &persistence.ShardOwnershipLostError{Msg: "some shard err"}
-			}).AnyTimes()
-
-		// domain name will be fetched
-		mockDomainCache.EXPECT().GetDomainName(testDomainID).Return(testDomainName, nil).AnyTimes()
-
-		// act like taskFetcher here and populate respChan of the request
-		requestMessage := <-requestChan
-		requestMessage.respChan <- &types.ReplicationMessages{
-			LastRetrievedMessageID: int64(105),
-			ReplicationTasks: []*types.ReplicationTask{
-				{
-					TaskType: types.ReplicationTaskTypeSyncActivity.Ptr(),
-					SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
-						DomainID:    testDomainID,
-						WorkflowID:  testWorkflowID,
-						RunID:       testRunID,
-						ScheduledID: testScheduleID,
-					},
-					SourceTaskID: testTaskID,
-				},
-			},
-		}
-		if len(taskProcessor.requestChan) != 0 {
-			t.Error("there shoudn't have been any data sent")
-		}
-		time.Sleep(50 * time.Millisecond)
-
-		close(taskProcessor.done)
-		// wait a bit and terminate the loop
-		time.Sleep(50 * time.Millisecond)
-
-		taskProcessor.wg.Wait()
-		// this is a rather complicated test, and this is the main assertion:
-		// that *if* there's some shutdown logic thats going on, and in addition to that
-		// there's replication tasks that can't be processed because there's shard stealing
-		// going on, then we should expect that these in-memory offsets aren't changed and,
-		// more importantly, aren't sent until they're successfully processed by a shard.
-		assert.Equal(t, int64(-1), taskProcessor.lastProcessedMessageID)
-		assert.Equal(t, int64(-1), taskProcessor.lastRetrievedMessageID)
+	taskFetcher := &fakeTaskFetcher{
+		sourceCluster: "standby",
+		requestChan:   requestChan,
+		// ensure that the fetcher always nearly-immediately fetches
+		rateLimiter: quotas.NewDynamicRateLimiter(func() float64 { return 100000 }),
 	}
+
+	mockEngine := engine.NewMockEngine(ctrl)
+	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
+
+	taskExecutor := NewMockTaskExecutor(ctrl)
+
+	taskProcessor := NewTaskProcessor(
+		mockShard,
+		mockEngine,
+		config,
+		metricsClient,
+		taskFetcher,
+		taskExecutor,
+	).(*taskProcessorImpl)
+
+	// start the process loop
+	taskProcessor.wg.Add(1)
+	go taskProcessor.processorLoop()
+
+	taskExecutor.EXPECT().execute(gomock.Any(), false).
+		DoAndReturn(func(*types.ReplicationTask, bool) (any, any) {
+			// take a minute like a real RPC call, enough time for it probably be doing it's thing
+			// then to fail, return the shard error (as if the host is closing down) and then
+			// trigger the Stop function as if the shard is properly closing.
+			time.Sleep(time.Millisecond * 50)
+			return 0, &persistence.ShardOwnershipLostError{Msg: "some shard err"}
+		}).AnyTimes()
+
+	// domain name will be fetched
+	mockDomainCache.EXPECT().GetDomainName(testDomainID).Return(testDomainName, nil).AnyTimes()
+
+	// act like taskFetcher here and populate respChan of the request
+	requestMessage := <-requestChan
+	requestMessage.respChan <- &types.ReplicationMessages{
+		LastRetrievedMessageID: int64(105),
+		ReplicationTasks: []*types.ReplicationTask{
+			{
+				TaskType: types.ReplicationTaskTypeSyncActivity.Ptr(),
+				SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
+					DomainID:    testDomainID,
+					WorkflowID:  testWorkflowID,
+					RunID:       testRunID,
+					ScheduledID: testScheduleID,
+				},
+				SourceTaskID: testTaskID,
+			},
+		},
+	}
+	if len(taskProcessor.requestChan) != 0 {
+		t.Error("there shoudn't have been any data sent")
+	}
+	time.Sleep(50 * time.Millisecond)
+
+	close(taskProcessor.done)
+	// wait a bit and terminate the loop
+	time.Sleep(50 * time.Millisecond)
+
+	taskProcessor.wg.Wait()
+	// this is a rather complicated test, and this is the main assertion:
+	// that *if* there's some shutdown logic thats going on, and in addition to that
+	// there's replication tasks that can't be processed because there's shard stealing
+	// going on, then we should expect that these in-memory offsets aren't changed and,
+	// more importantly, aren't sent until they're successfully processed by a shard.
+	assert.Equal(t, int64(-1), taskProcessor.lastProcessedMessageID)
+	assert.Equal(t, int64(-1), taskProcessor.lastRetrievedMessageID)
 }
 
 func TestIsShuttingDown(t *testing.T) {

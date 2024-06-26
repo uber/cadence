@@ -197,15 +197,21 @@ Loop:
 		if p.isShuttingDown() {
 			return
 		}
-		p.requestChan <- &request{
+
+		select {
+		case <-p.done:
+			// shard is closing
+			return
+		case p.requestChan <- &request{
 			token: &types.ReplicationToken{
 				ShardID:                int32(p.shard.GetShardID()),
 				LastRetrievedMessageID: p.lastRetrievedMessageID,
 				LastProcessedMessageID: p.lastProcessedMessageID,
 			},
 			respChan: respChan,
+		}:
+			// signal sent, continue to process replication messages
 		}
-		// signal sent, continue to process replication messages
 
 		select {
 		case response, ok := <-respChan:
