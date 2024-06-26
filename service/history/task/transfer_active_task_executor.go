@@ -1795,7 +1795,14 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 			parentExecution,
 			childInfo,
 		); err != nil {
-			if _, ok := err.(*types.EntityNotExistsError); !ok {
+
+			switch err.(type) {
+			case *types.EntityNotExistsError,
+				*types.WorkflowExecutionAlreadyCompletedError,
+				*types.CancellationAlreadyRequestedError:
+				// expected error, no-op
+				break
+			default:
 				scope.IncCounter(metrics.ParentClosePolicyProcessorFailures)
 				return err
 			}
