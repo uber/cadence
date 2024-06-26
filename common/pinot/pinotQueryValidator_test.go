@@ -80,7 +80,7 @@ func TestValidateQuery(t *testing.T) {
 		},
 		"Case7: invalid sql query": {
 			query: "Invalid SQL",
-			err:   "Invalid query.syntax error at position 38 near 'sql'",
+			err:   "Invalid query: syntax error at position 38 near 'sql'",
 		},
 		"Case8-1: query with missing val": {
 			query:     "CloseTime = missing",
@@ -112,7 +112,7 @@ func TestValidateQuery(t *testing.T) {
 		},
 		"Case12-1: security SQL injection - with another statement": {
 			query: "WorkflowID = 'wid'; SELECT * FROM important_table;",
-			err:   "Invalid query.syntax error at position 53 near 'select'",
+			err:   "Invalid query: syntax error at position 53 near 'select'",
 		},
 		"Case12-2: security SQL injection - with union": {
 			query: "WorkflowID = 'wid' union select * from dummy",

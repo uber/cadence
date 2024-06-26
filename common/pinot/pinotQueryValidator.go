@@ -71,7 +71,7 @@ func (qv *VisibilityQueryValidator) ValidateQuery(whereClause string) (string, e
 
 		stmt, err := sqlparser.Parse(placeholderQuery)
 		if err != nil {
-			return "", &types.BadRequestError{Message: "Invalid query." + err.Error()}
+			return "", &types.BadRequestError{Message: "Invalid query: " + err.Error()}
 		}
 
 		sel, ok := stmt.(*sqlparser.Select)
