@@ -190,7 +190,7 @@ const (
 	TransferTaskTypeApplyParentClosePolicy
 )
 
-// Types of cross-cluster tasks. These are deprecated as of
+// Deprecated: Types of cross-cluster tasks. These are deprecated as of
 // May 2024
 const (
 	CrossClusterTaskTypeStartChildExecution = iota + 1
