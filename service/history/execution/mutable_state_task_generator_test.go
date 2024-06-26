@@ -65,13 +65,6 @@ func (s *mutableStateTaskGeneratorSuite) SetupTest() {
 	s.mockMutableState = NewMockMutableState(s.controller)
 
 	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(constants.TestGlobalDomainEntry, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestParentDomainID).Return(constants.TestGlobalParentDomainEntry, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestChildDomainID).Return(constants.TestGlobalChildDomainEntry, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainID(constants.TestChildDomainName).Return(constants.TestChildDomainID, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestTargetDomainID).Return(constants.TestGlobalTargetDomainEntry, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainID(constants.TestTargetDomainName).Return(constants.TestTargetDomainID, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestRemoteTargetDomainID).Return(constants.TestGlobalRemoteTargetDomainEntry, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainID(constants.TestRemoteTargetDomainName).Return(constants.TestRemoteTargetDomainID, nil).AnyTimes()
 
 	s.taskGenerator = NewMutableStateTaskGenerator(
 		constants.TestClusterMetadata,
@@ -252,7 +245,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateFromTransferTask() {
 		{
 			transferTask: &persistence.TransferTaskInfo{
 				TaskType:                persistence.TransferTaskTypeCancelExecution,
-				TargetDomainID:          constants.TestTargetDomainID,
+				TargetDomainID:          constants.TestDomainID,
 				TargetWorkflowID:        constants.TestWorkflowID,
 				TargetRunID:             constants.TestRunID,
 				TargetChildWorkflowOnly: false,
@@ -263,7 +256,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateFromTransferTask() {
 		{
 			transferTask: &persistence.TransferTaskInfo{
 				TaskType:                persistence.TransferTaskTypeSignalExecution,
-				TargetDomainID:          constants.TestTargetDomainID,
+				TargetDomainID:          constants.TestDomainID,
 				TargetWorkflowID:        constants.TestWorkflowID,
 				TargetRunID:             constants.TestRunID,
 				TargetChildWorkflowOnly: false,
@@ -274,7 +267,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateFromTransferTask() {
 		{
 			transferTask: &persistence.TransferTaskInfo{
 				TaskType:         persistence.TransferTaskTypeStartChildExecution,
-				TargetDomainID:   constants.TestTargetDomainID,
+				TargetDomainID:   constants.TestDomainID,
 				TargetWorkflowID: constants.TestWorkflowID,
 				ScheduleID:       int64(123),
 			},
@@ -671,7 +664,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateDecisionStartTasks() {
 }
 
 func (s *mutableStateTaskGeneratorSuite) TestGenerateActivityTransferTasks() {
-	domain := constants.TestParentDomainName
+	domain := constants.TestDomainName
 	event := &types.HistoryEvent{
 		ID: 123,
 		ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{
@@ -1201,7 +1194,7 @@ func GenerateWorkflowCloseTasksTestCases(retention time.Duration, closeEvent *ty
 					DomainID:         constants.TestDomainID,
 					WorkflowID:       constants.TestWorkflowID,
 					RunID:            constants.TestRunID,
-					ParentDomainID:   constants.TestParentDomainID,
+					ParentDomainID:   constants.TestDomainID,
 					ParentWorkflowID: "parent workflowID",
 					ParentRunID:      "parent runID",
 					InitiatedID:      101,
@@ -1209,8 +1202,8 @@ func GenerateWorkflowCloseTasksTestCases(retention time.Duration, closeEvent *ty
 				}).AnyTimes()
 				mockMutableState.EXPECT().HasParentExecution().Return(true).AnyTimes()
 				mockMutableState.EXPECT().GetPendingChildExecutionInfos().Return(map[int64]*persistence.ChildExecutionInfo{
-					102: {DomainID: constants.TestTargetDomainID, ParentClosePolicy: types.ParentClosePolicyTerminate},
-					103: {DomainID: constants.TestRemoteTargetDomainID, ParentClosePolicy: types.ParentClosePolicyAbandon},
+					102: {DomainID: constants.TestDomainID, ParentClosePolicy: types.ParentClosePolicyTerminate},
+					103: {DomainID: constants.TestDomainID, ParentClosePolicy: types.ParentClosePolicyAbandon},
 				}).AnyTimes()
 			},
 			generatedTasks: []persistence.Task{

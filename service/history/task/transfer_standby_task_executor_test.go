@@ -146,14 +146,6 @@ func (s *transferStandbyTaskExecutorSuite) SetupTest() {
 	s.mockDomainCache.EXPECT().GetDomainName(constants.TestRateLimitedDomainID).Return(constants.TestRateLimitedDomainName, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(constants.TestRateLimitedDomainName).Return(constants.TestRateLimitedDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainID(constants.TestRateLimitedDomainName).Return(constants.TestRateLimitedDomainID, nil).AnyTimes()
-	//s.mockDomainCache.EXPECT().GetDomainByID(constants.TestTargetDomainID).Return(constants.TestGlobalTargetDomainEntry, nil).AnyTimes()
-	//s.mockDomainCache.EXPECT().GetDomainName(constants.TestTargetDomainID).Return(constants.TestTargetDomainName, nil).AnyTimes()
-	//s.mockDomainCache.EXPECT().GetDomainByID(constants.TestParentDomainID).Return(constants.TestGlobalParentDomainEntry, nil).AnyTimes()
-	//s.mockDomainCache.EXPECT().GetDomainName(constants.TestParentDomainID).Return(constants.TestParentDomainName, nil).AnyTimes()
-	//s.mockDomainCache.EXPECT().GetDomain(constants.TestParentDomainName).Return(constants.TestGlobalParentDomainEntry, nil).AnyTimes()
-	//s.mockDomainCache.EXPECT().GetDomainByID(constants.TestChildDomainID).Return(constants.TestGlobalChildDomainEntry, nil).AnyTimes()
-	//s.mockDomainCache.EXPECT().GetDomainName(constants.TestChildDomainID).Return(constants.TestChildDomainName, nil).AnyTimes()
-	//s.mockDomainCache.EXPECT().GetDomainID(constants.TestChildDomainName).Return(constants.TestChildDomainID, nil).AnyTimes()
 
 	s.logger = s.mockShard.GetLogger()
 	s.clusterName = cluster.TestAlternativeClusterName
