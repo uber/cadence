@@ -22,6 +22,7 @@ package task
 
 import (
 	"context"
+	"encoding/json"
 	"math/rand"
 	"strconv"
 	"testing"
@@ -1735,6 +1736,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessRecordWorkflowStartedTask()
 		"RecordWorkflowExecutionStarted",
 		mock.Anything,
 		createRecordWorkflowExecutionStartedRequest(
+			s.T(),
 			s.domainName, startEvent, transferTask, mutableState, 2, s.mockShard.GetTimeSource().Now(),
 			false),
 	).Once().Return(nil)
@@ -1784,6 +1786,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessRecordWorkflowStartedTaskWi
 		"RecordWorkflowExecutionStarted",
 		mock.Anything,
 		createRecordWorkflowExecutionStartedRequest(
+			s.T(),
 			s.domainName, startEvent, transferTask, mutableState, 2, s.mockShard.GetTimeSource().Now(),
 			true),
 	).Once().Return(nil)
@@ -1816,6 +1819,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttribu
 		"UpsertWorkflowExecution",
 		mock.Anything,
 		createUpsertWorkflowSearchAttributesRequest(
+			s.T(),
 			s.domainName, startEvent, transferTask, mutableState, 2, s.mockShard.GetTimeSource().Now(),
 			false),
 	).Once().Return(nil)
@@ -1855,6 +1859,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttribu
 		"UpsertWorkflowExecution",
 		mock.Anything,
 		createUpsertWorkflowSearchAttributesRequest(
+			s.T(),
 			s.domainName, startEvent, transferTask, mutableState, 2, s.mockShard.GetTimeSource().Now(),
 			true),
 	).Once().Return(nil)
@@ -1957,6 +1962,7 @@ func createAddDecisionTaskRequest(
 }
 
 func createRecordWorkflowExecutionStartedRequest(
+	t *testing.T,
 	domainName string,
 	startEvent *types.HistoryEvent,
 	transferTask Task,
@@ -1978,8 +1984,12 @@ func createRecordWorkflowExecutionStartedRequest(
 	}
 	var searchAttributes map[string][]byte
 	if enableContextHeaderInVisibility {
+		contextValueJSONString, err := json.Marshal("contextValue")
+		if err != nil {
+			t.Fatal(err)
+		}
 		searchAttributes = map[string][]byte{
-			"Header.contextKey": []byte("contextValue"),
+			"Header.contextKey": contextValueJSONString,
 		}
 	}
 	return &persistence.RecordWorkflowExecutionStartedRequest{
@@ -2106,6 +2116,7 @@ func createTestChildWorkflowExecutionRequest(
 }
 
 func createUpsertWorkflowSearchAttributesRequest(
+	t *testing.T,
 	domainName string,
 	startEvent *types.HistoryEvent,
 	transferTask Task,
@@ -2128,8 +2139,12 @@ func createUpsertWorkflowSearchAttributesRequest(
 	}
 	var searchAttributes map[string][]byte
 	if enableContextHeaderInVisibility {
+		contextValueJSONString, err := json.Marshal("contextValue")
+		if err != nil {
+			t.Fatal(err)
+		}
 		searchAttributes = map[string][]byte{
-			"Header.contextKey": []byte("contextValue"),
+			"Header.contextKey": contextValueJSONString,
 		}
 	}
 
