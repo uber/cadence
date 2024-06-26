@@ -22,6 +22,7 @@ package task
 
 import (
 	"context"
+	"encoding/json"
 	"math/rand"
 	"strconv"
 	"testing"
@@ -1978,8 +1979,12 @@ func createRecordWorkflowExecutionStartedRequest(
 	}
 	var searchAttributes map[string][]byte
 	if enableContextHeaderInVisibility {
+		contextValueJsonString, err := json.Marshal("contextValue")
+		if err != nil {
+			panic(err) // must not happen in tests
+		}
 		searchAttributes = map[string][]byte{
-			"Header.contextKey": []byte("contextValue"),
+			"Header.contextKey": contextValueJsonString,
 		}
 	}
 	return &persistence.RecordWorkflowExecutionStartedRequest{
@@ -2128,8 +2133,12 @@ func createUpsertWorkflowSearchAttributesRequest(
 	}
 	var searchAttributes map[string][]byte
 	if enableContextHeaderInVisibility {
+		contextValueJsonString, err := json.Marshal("contextValue")
+		if err != nil {
+			panic(err) // must not happen in tests
+		}
 		searchAttributes = map[string][]byte{
-			"Header.contextKey": []byte("contextValue"),
+			"Header.contextKey": contextValueJsonString,
 		}
 	}
 
