@@ -71,7 +71,7 @@ func (qv *VisibilityQueryValidator) ValidateQuery(whereClause string) (string, e
 
 		stmt, err := sqlparser.Parse(placeholderQuery)
 		if err != nil {
-			return "", &types.BadRequestError{Message: "Invalid query."}
+			return "", &types.BadRequestError{Message: "Invalid query: " + err.Error()}
 		}
 
 		sel, ok := stmt.(*sqlparser.Select)
@@ -313,6 +313,36 @@ func (qv *VisibilityQueryValidator) processSystemKey(expr sqlparser.Expr) (strin
 	return buf.String(), nil
 }
 
+func (qv *VisibilityQueryValidator) processInClause(expr sqlparser.Expr) (string, error) {
+	comparisonExpr, ok := expr.(*sqlparser.ComparisonExpr)
+	if !ok {
+		return "", errors.New("invalid IN expression")
+	}
+
+	colName, ok := comparisonExpr.Left.(*sqlparser.ColName)
+	if !ok {
+		return "", errors.New("invalid IN expression, left")
+	}
+
+	colNameStr := colName.Name.String()
+	valTuple, ok := comparisonExpr.Right.(sqlparser.ValTuple)
+	if !ok {
+		return "", errors.New("invalid IN expression, right")
+	}
+
+	values := make([]string, len(valTuple))
+	for i, val := range valTuple {
+		sqlVal, ok := val.(*sqlparser.SQLVal)
+		if !ok {
+			return "", errors.New("invalid IN expression, value")
+		}
+		values[i] = "''" + string(sqlVal.Val) + "''"
+	}
+
+	return fmt.Sprintf("JSON_MATCH(Attr, '\"$.%s\" IN (%s)') or JSON_MATCH(Attr, '\"$.%s[*]\" IN (%s)')",
+		colNameStr, strings.Join(values, ","), colNameStr, strings.Join(values, ",")), nil
+}
+
 func (qv *VisibilityQueryValidator) processCustomKey(expr sqlparser.Expr) (string, error) {
 	comparisonExpr := expr.(*sqlparser.ComparisonExpr)
 
@@ -329,6 +359,12 @@ func (qv *VisibilityQueryValidator) processCustomKey(expr sqlparser.Expr) (strin
 		return "", fmt.Errorf("invalid search attribute")
 	}
 
+	// process IN clause in json indexed col: Attr
+	operator := strings.ToLower(comparisonExpr.Operator)
+	if operator == sqlparser.InStr {
+		return qv.processInClause(expr)
+	}
+
 	// get the column value
 	colVal, ok := comparisonExpr.Right.(*sqlparser.SQLVal)
 	if !ok {
@@ -337,7 +373,6 @@ func (qv *VisibilityQueryValidator) processCustomKey(expr sqlparser.Expr) (strin
 
 	// get the value type
 	indexValType := common.ConvertIndexedValueTypeToInternalType(valType, log.NewNoop())
-	operator := comparisonExpr.Operator
 	colValStr := string(colVal.Val)
 
 	switch indexValType {
