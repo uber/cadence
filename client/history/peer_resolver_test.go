@@ -319,7 +319,7 @@ func TestPeerResolver(t *testing.T) {
 			res, err = r.GlobalRatelimitPeers(oneMoreKey)
 			require.NoError(t, err)
 			assertAllKeysPresent(t, res, oneMoreKey)
-			assert.Equal(t, map[string][]string{
+			assert.Equal(t, map[Peer][]string{
 				"abc:1235": {"domain-w-async", "domain-x-worker", "domain-y-worker"},
 				"def:1235": {"domain-x-user"},
 				"xyz:1235": {"domain-z-visibility", "domain-other-user"},

@@ -2090,14 +2090,13 @@ func (h *handlerImpl) RatelimitUpdate(
 
 	// collect the response data and pack it into an Any for the response.
 	// like unpacking, this will eventually be handled by the registry above.
-	weights, used, err := h.ratelimitAggregator.HostWeights(arg.ID, maps.Keys(arg.Load))
+	//
+	// "_" is ignoring "used RPS" data here.  it is likely useful for being friendlier
+	// to brief, bursty-but-within-limits load, but that has not yet been built.
+	weights, _, err := h.ratelimitAggregator.HostWeights(arg.ID, maps.Keys(arg.Load))
 	if err != nil {
 		return nil, h.error(fmt.Errorf("failed to retrieve updated weights: %w", err), scope, "", "", "")
 	}
-	h.GetLogger().Debug("ratelimit data",
-		tag.Dynamic("used", used),
-		tag.Dynamic("weights", weights),
-	)
 	resAny, err := rpc.AggregatorWeightsToAny(weights)
 	if err != nil {
 		return nil, h.error(fmt.Errorf("failed to Any-package response: %w", err), scope, "", "", "")

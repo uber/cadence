@@ -175,7 +175,11 @@ func (c *client) updateSinglePeer(ctx context.Context, peer history.Peer, period
 	if err != nil {
 		// client metrics are fine for monitoring, but it does not log errors.
 		// TODO: possibly filter out or aggregate "peer lost" logs?  they're expected during deploys, since calls are not implicitly retried.
-		c.logger.Warn("request failure when updating ratelimits", tag.Error(&RPCError{err}))
+		c.logger.Warn(
+			"request failure when updating ratelimits",
+			tag.Error(&RPCError{err}),
+			tag.GlobalRatelimiterPeer(string(peer)),
+		)
 		return nil, nil // rpc errors are essentially expected, and not an "error"
 	}
 

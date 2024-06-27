@@ -261,10 +261,13 @@ func (c *Collection) keyMode(key shared.GlobalKey) keyMode {
 	rawMode := keyMode(c.keyModes(key))
 	switch rawMode {
 	case modeLocal, modeGlobal, modeLocalShadowGlobal, modeGlobalShadowLocal, modeDisabled:
-		c.logger.Debug("ratelimiter key mode", tag.Dynamic("key", key), tag.Dynamic("mode", rawMode))
 		return rawMode
 	default:
-		c.logger.Error("ratelimiter key forcefully disabled, bad mode", tag.Dynamic("key", key), tag.Dynamic("mode", modeDisabled))
+		c.logger.Error(
+			"ratelimiter key forcefully disabled, bad mode",
+			tag.GlobalRatelimiterKey(string(key)),
+			tag.GlobalRatelimiterKeyMode(string(rawMode)),
+		)
 		return modeDisabled
 	}
 }
@@ -335,8 +338,8 @@ func (c *Collection) backgroundUpdateLoop() {
 					if counts.Idle > gcAfterIdle || c.shouldDeleteKey(c.keyMode(gkey), true) {
 						c.logger.Debug(
 							"deleting local ratelimiter",
-							tag.Dynamic("local_ratelimit_key", gkey),
-							tag.Dynamic("idle_count", counts.Idle > gcAfterIdle),
+							tag.GlobalRatelimiterKey(string(gkey)),
+							tag.GlobalRatelimiterIdleCount(counts.Idle),
 						)
 						c.local.Delete(k)
 						return true // continue iterating, possibly delete others too
