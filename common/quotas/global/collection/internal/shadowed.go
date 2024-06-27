@@ -49,10 +49,10 @@ var _ clock.Reservation = shadowedReservation{}
 // This is intended for when you want to use one limit but also run a second
 // limit at the same time for comparison (to decide before switching) or
 // to warm data (to reduce spikes when switching).
-func NewShadowedLimiter(primary, secondary quotas.Limiter) quotas.Limiter {
+func NewShadowedLimiter(primary, shadow quotas.Limiter) quotas.Limiter {
 	return shadowedLimiter{
 		primary: primary,
-		shadow:  secondary,
+		shadow:  shadow,
 	}
 }
 

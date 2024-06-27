@@ -510,73 +510,137 @@ const (
 	// Default value: 1000 (see common.GetHistoryMaxPageSize)
 	// Allowed filters: DomainName
 	FrontendHistoryMaxPageSize
-	// FrontendUserRPS is workflow rate limit per second
+	// FrontendUserRPS is used to limit "user" requests (StartWorkflow, Signal, etc)
+	// per frontend instance (across all domains, or for non-domain-related requests),
+	// and is mostly intended to protect against excessive single-host load.
+	//
 	// KeyName: frontend.rps
 	// Value type: Int
 	// Default value: 1200
 	// Allowed filters: N/A
 	FrontendUserRPS
-	// FrontendWorkerRPS is background-processing workflow rate limit per second
+	// FrontendWorkerRPS is used to limit "worker" requests (PollFor...Task, RespondTask..., etc)
+	// per frontend instance (across all domains, or for non-domain-related requests),
+	// and is mostly intended to protect against excessive single-host load.
+	//
 	// KeyName: frontend.workerrps
 	// Value type: Int
 	// Default value: UnlimitedRPS
 	// Allowed filters: N/A
 	FrontendWorkerRPS
-	// FrontendVisibilityRPS is the global workflow List*WorkflowExecutions request rate limit per second
+	// FrontendVisibilityRPS is used to limit "visibility" requests (ListWorkflow* and similar)
+	// per frontend instance (across all domains, or for non-domain-related requests),
+	// and is mostly intended to protect against excessive single-host load.
+	//
 	// KeyName: frontend.visibilityrps
 	// Value type: Int
 	// Default value: UnlimitedRPS
 	// Allowed filters: N/A
 	FrontendVisibilityRPS
-	// FrontendAsync is the async workflow request rate limit per second
+	// FrontendAsyncRPS is used to limit "async" requests (StartWorkflowAsync, etc for many "user" APIs)
+	// per frontend instance (across all domains, or for non-domain-related requests),
+	// and is mostly intended to protect against excessive single-host load.
+	//
 	// KeyName: frontend.asyncrps
 	// Value type: Int
 	// Default value: 10000
 	// Allowed filters: N/A
 	FrontendAsyncRPS
-	// FrontendMaxDomainUserRPSPerInstance is workflow domain rate limit per second
+	// FrontendMaxDomainUserRPSPerInstance is used to limit "user" requests (StartWorkflow, Signal, etc)
+	// per domain per frontend instance, and is mostly intended to protect against excessive single-host load.
+	//
+	// This limit applies along-side FrontendGlobalDomainUserRPS: both must be allowed to allow a request.
+	//
 	// KeyName: frontend.domainrps
 	// Value type: Int
 	// Default value: 1200
 	// Allowed filters: DomainName
 	FrontendMaxDomainUserRPSPerInstance
-	// FrontendMaxDomainWorkerRPSPerInstance is background-processing workflow domain rate limit per second
+	// FrontendMaxDomainWorkerRPSPerInstance is used to limit "worker" requests (PollFor...Task, RespondTask..., etc)
+	// per domain per frontend instance, and is mostly intended to protect against excessive single-host load.
+	//
+	// This limit applies along-side FrontendGlobalDomainWorkerRPS: both must be allowed to allow a request.
+	//
 	// KeyName: frontend.domainworkerrps
 	// Value type: Int
 	// Default value: UnlimitedRPS
 	// Allowed filters: DomainName
 	FrontendMaxDomainWorkerRPSPerInstance
-	// FrontendMaxDomainVisibilityRPSPerInstance is the per-instance List*WorkflowExecutions request rate limit per second
+	// FrontendMaxDomainVisibilityRPSPerInstance is used to limit "visibility" requests (ListWorkflow* and similar)
+	// per domain per frontend instance, and is mostly intended to protect against excessive single-host load.
+	//
+	// This limit applies along-side FrontendGlobalDomainVisibilityRPS: both must be allowed to allow a request.
+	//
 	// KeyName: frontend.domainvisibilityrps
 	// Value type: Int
 	// Default value: UnlimitedRPS
 	// Allowed filters: DomainName
 	FrontendMaxDomainVisibilityRPSPerInstance
-	// FrontendMaxDomainAsyncRPSPerInstance is the per-instance async workflow request rate limit per second
+	// FrontendMaxDomainAsyncRPSPerInstance is used to limit "async" requests (StartWorkflowAsync, etc for many "user" APIs)
+	// per frontend instance, and is mostly intended to protect against excessive single-host load.
+	//
+	// This limit applies along-side FrontendGlobalDomainAsyncRPS: both must be allowed to allow a request.
+	//
 	// KeyName: frontend.domainasyncrps
 	// Value type: Int
 	// Default value: 10000
 	// Allowed filters: DomainName
 	FrontendMaxDomainAsyncRPSPerInstance
-	// FrontendGlobalDomainUserRPS is workflow domain rate limit per second for the whole Cadence cluster
+	// FrontendGlobalDomainUserRPS is used to limit "user" requests (StartWorkflow, Signal, etc)
+	// per domain to a target RPS that is shared across the entire cluster.
+	//
+	// Currently, there are two ways this is achieved, which can be selected by FrontendGlobalRatelimiterMode
+	// with a "user:" key prefix:
+	//   1. "local", where the configured RPS is split evenly across all frontend hosts in the cluster.
+	//      This works well if your load is roughly evenly distributed.
+	//   2. "global", where frontend hosts share load information with each other, to adjust to imbalanced load.
+	//      This works well if your load is very imbalanced, e.g. one domain tends to contact a subset of frontend hosts much more than others.
+	//
 	// KeyName: frontend.globalDomainrps
 	// Value type: Int
 	// Default value: 0
 	// Allowed filters: DomainName
 	FrontendGlobalDomainUserRPS
-	// FrontendGlobalDomainWorkerRPS is background-processing workflow domain rate limit per second for the whole Cadence cluster
+	// FrontendGlobalDomainWorkerRPS is used to limit "worker" requests (PollFor...Task, RespondTask..., etc)
+	// per domain to a target RPS that is shared across the entire cluster.
+	//
+	// Currently, there are two ways this is achieved, which can be selected by FrontendGlobalRatelimiterMode
+	// with a "worker:" key prefix:
+	//   1. "local", where the configured RPS is split evenly across all frontend hosts in the cluster.
+	//      This works well if your load is roughly evenly distributed.
+	//   2. "global", where frontend hosts share load information with each other, to adjust to imbalanced load.
+	//      This works well if your load is very imbalanced, e.g. one domain tends to contact a subset of frontend hosts much more than others.
+	//
 	// KeyName: frontend.globalDomainWorkerrps
 	// Value type: Int
 	// Default value: UnlimitedRPS
 	// Allowed filters: DomainName
 	FrontendGlobalDomainWorkerRPS
-	// FrontendGlobalDomainVisibilityRPS is the per-domain List*WorkflowExecutions request rate limit per second
+	// FrontendGlobalDomainVisibilityRPS is used to limit "visibility" requests (ListWorkflow* and similar)
+	// per domain to a target RPS that is shared across the entire cluster.
+	//
+	// Currently, there are two ways this is achieved, which can be selected by FrontendGlobalRatelimiterMode
+	// with a "visibility:" key prefix:
+	//   1. "local", where the configured RPS is split evenly across all frontend hosts in the cluster.
+	//      This works well if your load is roughly evenly distributed.
+	//   2. "global", where frontend hosts share load information with each other, to adjust to imbalanced load.
+	//      This works well if your load is very imbalanced, e.g. one domain tends to contact a subset of frontend hosts much more than others.
+	//
 	// KeyName: frontend.globalDomainVisibilityrps
 	// Value type: Int
 	// Default value: UnlimitedRPS
 	// Allowed filters: DomainName
 	FrontendGlobalDomainVisibilityRPS
-	// FrontendGlobalDomainAsyncRPS is the per-domain async workflow request rate limit per second
+	// FrontendGlobalDomainAsyncRPS is used to limit "async" requests (StartWorkflowAsync, etc for many "user" APIs)
+	// per domain to a target RPS that is shared across the entire cluster.
+	//
+	// Currently, there are two ways this is achieved, which can be selected by FrontendGlobalRatelimiterMode
+	// with a "async:" key prefix:
+	//   1. "local", where the configured RPS is split evenly across all frontend hosts in the cluster.
+	//      This works well if your load is roughly evenly distributed.
+	//   2. "global", where frontend hosts share load information with each other, to adjust to imbalanced load.
+	//      This works well if your load is very imbalanced, e.g. one domain tends to contact a subset of frontend hosts much more than others.
+	//
 	// KeyName: frontend.globalDomainAsyncrps
 	// Value type: Int
 	// Default value: 100000
