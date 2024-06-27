@@ -630,6 +630,12 @@ const (
 	// Default value: 10000
 	// Allowed filters: N/A
 	VisibilityArchivalQueryMaxPageSize
+	// FrontendFailoverHistoryMaxSize is the maximum size for the number of failover event records in a domain failover history
+	// KeyName: frontend.failoverHistoryMaxSize
+	// Value type: Int
+	// Default value: 5
+	// Allowed filters: DomainName
+	FrontendFailoverHistoryMaxSize
 
 	// key for matching
 
@@ -3176,6 +3182,12 @@ var IntKeys = map[IntKey]DynamicInt{
 		KeyName:      "frontend.visibilityArchivalQueryMaxPageSize",
 		Description:  "VisibilityArchivalQueryMaxPageSize is the maximum page size for a visibility archival query",
 		DefaultValue: 10000,
+	},
+	FrontendFailoverHistoryMaxSize: {
+		KeyName:      "frontend.failoverHistoryMaxSize",
+		Filters:      []Filter{DomainName},
+		Description:  "FrontendFailoverHistoryMaxSize is the maximum size for the number of failover event records in a domain failover history",
+		DefaultValue: 5,
 	},
 	MatchingUserRPS: {
 		KeyName:      "matching.rps",

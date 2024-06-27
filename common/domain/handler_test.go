@@ -22,10 +22,12 @@ package domain
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
 	"reflect"
+	"strconv"
 	"testing"
 	"time"
 
@@ -42,6 +44,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/history/constants"
 )
 
 // newTestHandler creates a new instance of the handler with mocked dependencies for testing.
@@ -1257,6 +1260,1332 @@ func TestHandler_UpdateAsyncWorkflowConfiguraton(t *testing.T) {
 				assert.EqualError(t, err, test.expectedErr.Error())
 			} else {
 				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestHandler_UpdateDomain(t *testing.T) {
+	ctx := context.Background()
+	maxLength := 1
+
+	testCases := []struct {
+		name      string
+		setupMock func(
+			domainManager *persistence.MockDomainManager,
+			updateRequest *types.UpdateDomainRequest,
+			archivalMetadata *archiver.MockArchivalMetadata,
+			timeSource clock.MockedTimeSource,
+			domainReplicator *MockReplicator,
+		)
+		request  *types.UpdateDomainRequest
+		response func(timeSource clock.MockedTimeSource) *types.UpdateDomainResponse
+		err      error
+	}{
+		{
+			name: "Success case - global domain force failover",
+			setupMock: func(domainManager *persistence.MockDomainManager, updateRequest *types.UpdateDomainRequest, archivalMetadata *archiver.MockArchivalMetadata, timeSource clock.MockedTimeSource, domainReplicator *MockReplicator) {
+				domainResponse := &persistence.GetDomainResponse{
+					ReplicationConfig: &persistence.DomainReplicationConfig{
+						ActiveClusterName: cluster.TestCurrentClusterName,
+						Clusters: []*persistence.ClusterReplicationConfig{
+							{ClusterName: cluster.TestCurrentClusterName}, {ClusterName: cluster.TestAlternativeClusterName}},
+					},
+					Config: &persistence.DomainConfig{
+						Retention:                1,
+						EmitMetric:               true,
+						HistoryArchivalStatus:    types.ArchivalStatusDisabled,
+						VisibilityArchivalStatus: types.ArchivalStatusDisabled,
+						BadBinaries:              types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
+						IsolationGroups:          types.IsolationGroupConfiguration{},
+						AsyncWorkflowConfig:      types.AsyncWorkflowConfiguration{Enabled: true},
+					},
+					Info: &persistence.DomainInfo{
+						Name:   constants.TestDomainName,
+						ID:     constants.TestDomainID,
+						Status: persistence.DomainStatusRegistered,
+					},
+					IsGlobalDomain:  true,
+					LastUpdatedTime: timeSource.Now().UnixNano(),
+					FailoverVersion: cluster.TestCurrentClusterInitialFailoverVersion,
+				}
+				domainManager.EXPECT().GetMetadata(ctx).Return(&persistence.GetMetadataResponse{}, nil).Times(1)
+				domainManager.EXPECT().GetDomain(ctx, &persistence.GetDomainRequest{Name: updateRequest.GetName()}).
+					Return(domainResponse, nil).Times(1)
+				archivalConfig := archiver.NewArchivalConfig(
+					common.ArchivalDisabled,
+					dynamicconfig.GetStringPropertyFn(common.ArchivalDisabled),
+					false,
+					dynamicconfig.GetBoolPropertyFn(false),
+					common.ArchivalDisabled,
+					"")
+				archivalMetadata.On("GetHistoryConfig").Return(archivalConfig).Times(1)
+				archivalMetadata.On("GetVisibilityConfig").Return(archivalConfig).Times(1)
+				timeSource.Advance(time.Hour)
+				domainManager.EXPECT().UpdateDomain(ctx, &persistence.UpdateDomainRequest{
+					Info:                    domainResponse.Info,
+					Config:                  domainResponse.Config,
+					ReplicationConfig:       domainResponse.ReplicationConfig,
+					PreviousFailoverVersion: common.InitialPreviousFailoverVersion,
+					ConfigVersion:           domainResponse.ConfigVersion,
+					FailoverVersion:         cluster.TestAlternativeClusterInitialFailoverVersion,
+					LastUpdatedTime:         timeSource.Now().UnixNano(),
+				}).Return(nil).Times(1)
+				domainReplicator.EXPECT().
+					HandleTransmissionTask(
+						ctx,
+						types.DomainOperationUpdate,
+						domainResponse.Info,
+						domainResponse.Config,
+						domainResponse.ReplicationConfig,
+						domainResponse.ConfigVersion,
+						cluster.TestAlternativeClusterInitialFailoverVersion,
+						common.InitialPreviousFailoverVersion,
+						domainResponse.IsGlobalDomain,
+					).Return(nil).Times(1)
+			},
+			request: &types.UpdateDomainRequest{
+				Name:              constants.TestDomainName,
+				ActiveClusterName: common.Ptr(cluster.TestAlternativeClusterName),
+			},
+			response: func(timeSource clock.MockedTimeSource) *types.UpdateDomainResponse {
+				data, _ := json.Marshal([]FailoverEvent{{EventTime: timeSource.Now(), FromCluster: cluster.TestCurrentClusterName, ToCluster: cluster.TestAlternativeClusterName, FailoverType: common.FailoverType(common.FailoverTypeForce).String()}})
+				return &types.UpdateDomainResponse{
+					IsGlobalDomain:  true,
+					FailoverVersion: cluster.TestCurrentClusterInitialFailoverVersion/cluster.TestFailoverVersionIncrement*cluster.TestFailoverVersionIncrement + cluster.TestAlternativeClusterInitialFailoverVersion,
+					DomainInfo: &types.DomainInfo{
+						Name:   constants.TestDomainName,
+						UUID:   constants.TestDomainID,
+						Data:   map[string]string{common.DomainDataKeyForFailoverHistory: string(data)},
+						Status: common.Ptr(types.DomainStatusRegistered),
+					},
+					Configuration: &types.DomainConfiguration{
+						WorkflowExecutionRetentionPeriodInDays: 1,
+						EmitMetric:                             true,
+						HistoryArchivalStatus:                  common.Ptr(types.ArchivalStatusDisabled),
+						VisibilityArchivalStatus:               common.Ptr(types.ArchivalStatusDisabled),
+						BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
+						IsolationGroups:                        &types.IsolationGroupConfiguration{},
+						AsyncWorkflowConfig:                    &types.AsyncWorkflowConfiguration{Enabled: true},
+					},
+					ReplicationConfiguration: &types.DomainReplicationConfiguration{
+						ActiveClusterName: cluster.TestAlternativeClusterName,
+						Clusters: []*types.ClusterReplicationConfiguration{
+							{ClusterName: cluster.TestCurrentClusterName}, {ClusterName: cluster.TestAlternativeClusterName},
+						},
+					},
+				}
+			},
+		},
+		{
+			name: "Success case - global domain grace failover",
+			setupMock: func(domainManager *persistence.MockDomainManager, updateRequest *types.UpdateDomainRequest, archivalMetadata *archiver.MockArchivalMetadata, timeSource clock.MockedTimeSource, domainReplicator *MockReplicator) {
+				domainResponse := &persistence.GetDomainResponse{
+					ReplicationConfig: &persistence.DomainReplicationConfig{
+						ActiveClusterName: cluster.TestAlternativeClusterName,
+						Clusters: []*persistence.ClusterReplicationConfig{
+							{ClusterName: cluster.TestCurrentClusterName}, {ClusterName: cluster.TestAlternativeClusterName}},
+					},
+					Config: &persistence.DomainConfig{
+						Retention:                1,
+						EmitMetric:               true,
+						HistoryArchivalStatus:    types.ArchivalStatusDisabled,
+						VisibilityArchivalStatus: types.ArchivalStatusDisabled,
+						BadBinaries:              types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
+						IsolationGroups:          types.IsolationGroupConfiguration{},
+						AsyncWorkflowConfig:      types.AsyncWorkflowConfiguration{Enabled: true},
+					},
+					Info: &persistence.DomainInfo{
+						Name:   constants.TestDomainName,
+						ID:     constants.TestDomainID,
+						Status: persistence.DomainStatusRegistered,
+					},
+					IsGlobalDomain:  true,
+					LastUpdatedTime: timeSource.Now().UnixNano(),
+					FailoverVersion: 1,
+				}
+				domainManager.EXPECT().GetMetadata(ctx).Return(&persistence.GetMetadataResponse{}, nil).Times(1)
+				domainManager.EXPECT().GetDomain(ctx, &persistence.GetDomainRequest{Name: updateRequest.GetName()}).
+					Return(domainResponse, nil).Times(1)
+				archivalConfig := archiver.NewArchivalConfig(
+					common.ArchivalDisabled,
+					dynamicconfig.GetStringPropertyFn(common.ArchivalDisabled),
+					false,
+					dynamicconfig.GetBoolPropertyFn(false),
+					common.ArchivalDisabled,
+					"")
+				archivalMetadata.On("GetHistoryConfig").Return(archivalConfig).Times(1)
+				archivalMetadata.On("GetVisibilityConfig").Return(archivalConfig).Times(1)
+				timeSource.Advance(time.Hour)
+				domainManager.EXPECT().UpdateDomain(ctx, &persistence.UpdateDomainRequest{
+					Info:                    domainResponse.Info,
+					Config:                  domainResponse.Config,
+					ReplicationConfig:       domainResponse.ReplicationConfig,
+					PreviousFailoverVersion: 1,
+					ConfigVersion:           domainResponse.ConfigVersion,
+					FailoverVersion:         10,
+					FailoverEndTime:         common.Ptr(timeSource.Now().Add(time.Duration(10) * time.Second).UnixNano()),
+					LastUpdatedTime:         timeSource.Now().UnixNano(),
+				}).Return(nil).Times(1)
+				domainReplicator.EXPECT().
+					HandleTransmissionTask(
+						ctx,
+						types.DomainOperationUpdate,
+						domainResponse.Info,
+						domainResponse.Config,
+						domainResponse.ReplicationConfig,
+						domainResponse.ConfigVersion,
+						int64(10),
+						int64(1),
+						domainResponse.IsGlobalDomain,
+					).Return(nil).Times(1)
+			},
+			request: &types.UpdateDomainRequest{
+				Name:                     constants.TestDomainName,
+				ActiveClusterName:        common.Ptr(cluster.TestCurrentClusterName),
+				FailoverTimeoutInSeconds: common.Int32Ptr(10),
+			},
+			response: func(timeSource clock.MockedTimeSource) *types.UpdateDomainResponse {
+				data, _ := json.Marshal([]FailoverEvent{{EventTime: timeSource.Now(), FromCluster: cluster.TestAlternativeClusterName, ToCluster: cluster.TestCurrentClusterName, FailoverType: common.FailoverType(common.FailoverTypeGrace).String()}})
+				return &types.UpdateDomainResponse{
+					IsGlobalDomain:  true,
+					FailoverVersion: cluster.TestFailoverVersionIncrement,
+					DomainInfo: &types.DomainInfo{
+						Name:   constants.TestDomainName,
+						UUID:   constants.TestDomainID,
+						Data:   map[string]string{common.DomainDataKeyForFailoverHistory: string(data)},
+						Status: common.Ptr(types.DomainStatusRegistered),
+					},
+					Configuration: &types.DomainConfiguration{
+						WorkflowExecutionRetentionPeriodInDays: 1,
+						EmitMetric:                             true,
+						HistoryArchivalStatus:                  common.Ptr(types.ArchivalStatusDisabled),
+						VisibilityArchivalStatus:               common.Ptr(types.ArchivalStatusDisabled),
+						BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
+						IsolationGroups:                        &types.IsolationGroupConfiguration{},
+						AsyncWorkflowConfig:                    &types.AsyncWorkflowConfiguration{Enabled: true},
+					},
+					ReplicationConfiguration: &types.DomainReplicationConfiguration{
+						ActiveClusterName: cluster.TestCurrentClusterName,
+						Clusters: []*types.ClusterReplicationConfiguration{
+							{ClusterName: cluster.TestCurrentClusterName}, {ClusterName: cluster.TestAlternativeClusterName},
+						},
+					},
+				}
+			},
+		},
+		{
+			name: "Success case - global domain config change",
+			setupMock: func(domainManager *persistence.MockDomainManager, updateRequest *types.UpdateDomainRequest, archivalMetadata *archiver.MockArchivalMetadata, timeSource clock.MockedTimeSource, domainReplicator *MockReplicator) {
+				domainResponse := &persistence.GetDomainResponse{
+					ReplicationConfig: &persistence.DomainReplicationConfig{
+						ActiveClusterName: cluster.TestCurrentClusterName,
+						Clusters: []*persistence.ClusterReplicationConfig{
+							{ClusterName: cluster.TestCurrentClusterName}, {ClusterName: cluster.TestAlternativeClusterName}},
+					},
+					Config: &persistence.DomainConfig{
+						Retention:                1,
+						EmitMetric:               true,
+						HistoryArchivalStatus:    types.ArchivalStatusDisabled,
+						VisibilityArchivalStatus: types.ArchivalStatusDisabled,
+						BadBinaries:              types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
+						IsolationGroups:          types.IsolationGroupConfiguration{},
+						AsyncWorkflowConfig:      types.AsyncWorkflowConfiguration{Enabled: true},
+					},
+					Info: &persistence.DomainInfo{
+						Name:   constants.TestDomainName,
+						ID:     constants.TestDomainID,
+						Status: persistence.DomainStatusRegistered,
+					},
+					IsGlobalDomain:  true,
+					LastUpdatedTime: timeSource.Now().UnixNano(),
+					FailoverVersion: cluster.TestCurrentClusterInitialFailoverVersion,
+				}
+				domainManager.EXPECT().GetMetadata(ctx).Return(&persistence.GetMetadataResponse{}, nil).Times(1)
+				domainManager.EXPECT().GetDomain(ctx, &persistence.GetDomainRequest{Name: updateRequest.GetName()}).
+					Return(domainResponse, nil).Times(1)
+				archivalConfig := archiver.NewArchivalConfig(
+					common.ArchivalDisabled,
+					dynamicconfig.GetStringPropertyFn(common.ArchivalDisabled),
+					false,
+					dynamicconfig.GetBoolPropertyFn(false),
+					common.ArchivalDisabled,
+					"")
+				archivalMetadata.On("GetHistoryConfig").Return(archivalConfig).Times(1)
+				archivalMetadata.On("GetVisibilityConfig").Return(archivalConfig).Times(1)
+				timeSource.Advance(time.Hour)
+				domainManager.EXPECT().UpdateDomain(ctx, &persistence.UpdateDomainRequest{
+					Info:                    domainResponse.Info,
+					Config:                  domainResponse.Config,
+					ReplicationConfig:       domainResponse.ReplicationConfig,
+					PreviousFailoverVersion: cluster.TestCurrentClusterInitialFailoverVersion,
+					ConfigVersion:           domainResponse.ConfigVersion + 1,
+					FailoverVersion:         cluster.TestCurrentClusterInitialFailoverVersion,
+					LastUpdatedTime:         timeSource.Now().UnixNano(),
+				}).Return(nil).Times(1)
+				domainReplicator.EXPECT().
+					HandleTransmissionTask(
+						ctx,
+						types.DomainOperationUpdate,
+						domainResponse.Info,
+						domainResponse.Config,
+						domainResponse.ReplicationConfig,
+						domainResponse.ConfigVersion+1,
+						cluster.TestCurrentClusterInitialFailoverVersion,
+						cluster.TestCurrentClusterInitialFailoverVersion,
+						domainResponse.IsGlobalDomain,
+					).Return(nil).Times(1)
+			},
+			request: &types.UpdateDomainRequest{
+				Name:       constants.TestDomainName,
+				EmitMetric: common.Ptr(false),
+			},
+			response: func(_ clock.MockedTimeSource) *types.UpdateDomainResponse {
+				return &types.UpdateDomainResponse{
+					IsGlobalDomain:  true,
+					FailoverVersion: cluster.TestCurrentClusterInitialFailoverVersion,
+					DomainInfo: &types.DomainInfo{
+						Name:   constants.TestDomainName,
+						UUID:   constants.TestDomainID,
+						Status: common.Ptr(types.DomainStatusRegistered),
+					},
+					Configuration: &types.DomainConfiguration{
+						WorkflowExecutionRetentionPeriodInDays: 1,
+						EmitMetric:                             false,
+						HistoryArchivalStatus:                  common.Ptr(types.ArchivalStatusDisabled),
+						VisibilityArchivalStatus:               common.Ptr(types.ArchivalStatusDisabled),
+						BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
+						IsolationGroups:                        &types.IsolationGroupConfiguration{},
+						AsyncWorkflowConfig:                    &types.AsyncWorkflowConfiguration{Enabled: true},
+					},
+					ReplicationConfiguration: &types.DomainReplicationConfiguration{
+						ActiveClusterName: cluster.TestCurrentClusterName,
+						Clusters: []*types.ClusterReplicationConfiguration{
+							{ClusterName: cluster.TestCurrentClusterName}, {ClusterName: cluster.TestAlternativeClusterName},
+						},
+					},
+				}
+			},
+		},
+		{
+			name: "Success case - local domain force failover",
+			setupMock: func(domainManager *persistence.MockDomainManager, updateRequest *types.UpdateDomainRequest, archivalMetadata *archiver.MockArchivalMetadata, timeSource clock.MockedTimeSource, _ *MockReplicator) {
+				domainResponse := &persistence.GetDomainResponse{
+					ReplicationConfig: &persistence.DomainReplicationConfig{
+						ActiveClusterName: cluster.TestCurrentClusterName,
+						Clusters: []*persistence.ClusterReplicationConfig{
+							{ClusterName: cluster.TestCurrentClusterName}},
+					},
+					Config: &persistence.DomainConfig{
+						Retention:                1,
+						EmitMetric:               true,
+						HistoryArchivalStatus:    types.ArchivalStatusDisabled,
+						VisibilityArchivalStatus: types.ArchivalStatusDisabled,
+						BadBinaries:              types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
+						IsolationGroups:          types.IsolationGroupConfiguration{},
+						AsyncWorkflowConfig:      types.AsyncWorkflowConfiguration{Enabled: true},
+					},
+					Info: &persistence.DomainInfo{
+						Name:   constants.TestDomainName,
+						ID:     constants.TestDomainID,
+						Status: persistence.DomainStatusRegistered,
+					},
+					IsGlobalDomain:  false,
+					LastUpdatedTime: timeSource.Now().UnixNano(),
+					FailoverVersion: cluster.TestCurrentClusterInitialFailoverVersion,
+				}
+				domainManager.EXPECT().GetMetadata(ctx).Return(&persistence.GetMetadataResponse{}, nil).Times(1)
+				domainManager.EXPECT().GetDomain(ctx, &persistence.GetDomainRequest{Name: updateRequest.GetName()}).
+					Return(domainResponse, nil).Times(1)
+				archivalConfig := archiver.NewArchivalConfig(
+					common.ArchivalDisabled,
+					dynamicconfig.GetStringPropertyFn(common.ArchivalDisabled),
+					false,
+					dynamicconfig.GetBoolPropertyFn(false),
+					common.ArchivalDisabled,
+					"")
+				archivalMetadata.On("GetHistoryConfig").Return(archivalConfig).Times(1)
+				archivalMetadata.On("GetVisibilityConfig").Return(archivalConfig).Times(1)
+				timeSource.Advance(time.Hour)
+				domainManager.EXPECT().UpdateDomain(ctx, gomock.Any()).Return(nil).Times(1)
+			},
+			request: &types.UpdateDomainRequest{
+				Name:              constants.TestDomainName,
+				ActiveClusterName: common.Ptr(cluster.TestCurrentClusterName),
+			},
+			response: func(_ clock.MockedTimeSource) *types.UpdateDomainResponse {
+				return &types.UpdateDomainResponse{
+					IsGlobalDomain:  false,
+					FailoverVersion: cluster.TestCurrentClusterInitialFailoverVersion/cluster.TestFailoverVersionIncrement*cluster.TestFailoverVersionIncrement + cluster.TestCurrentClusterInitialFailoverVersion,
+					DomainInfo: &types.DomainInfo{
+						Name: constants.TestDomainName,
+						UUID: constants.TestDomainID,
+
+						Status: common.Ptr(types.DomainStatusRegistered),
+					},
+					Configuration: &types.DomainConfiguration{
+						WorkflowExecutionRetentionPeriodInDays: 1,
+						EmitMetric:                             true,
+						HistoryArchivalStatus:                  common.Ptr(types.ArchivalStatusDisabled),
+						VisibilityArchivalStatus:               common.Ptr(types.ArchivalStatusDisabled),
+						BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
+						IsolationGroups:                        &types.IsolationGroupConfiguration{},
+						AsyncWorkflowConfig:                    &types.AsyncWorkflowConfiguration{Enabled: true},
+					},
+					ReplicationConfiguration: &types.DomainReplicationConfiguration{
+						ActiveClusterName: cluster.TestCurrentClusterName,
+						Clusters: []*types.ClusterReplicationConfiguration{
+							{ClusterName: cluster.TestCurrentClusterName},
+						},
+					},
+				}
+			},
+		},
+		{
+			name: "Error case - GetMetadata error",
+			setupMock: func(domainManager *persistence.MockDomainManager, _ *types.UpdateDomainRequest, _ *archiver.MockArchivalMetadata, _ clock.MockedTimeSource, _ *MockReplicator) {
+				domainManager.EXPECT().GetMetadata(ctx).Return(nil, errors.New("get-metadata-error")).Times(1)
+			},
+			err: errors.New("get-metadata-error"),
+		},
+		{
+			name: "Error case - GetDomain error",
+			setupMock: func(domainManager *persistence.MockDomainManager, updateRequest *types.UpdateDomainRequest, _ *archiver.MockArchivalMetadata, _ clock.MockedTimeSource, _ *MockReplicator) {
+				domainManager.EXPECT().GetMetadata(ctx).Return(&persistence.GetMetadataResponse{}, nil).Times(1)
+				domainManager.EXPECT().GetDomain(ctx, &persistence.GetDomainRequest{Name: updateRequest.GetName()}).Return(nil, errors.New("get-domain-error")).Times(1)
+			},
+			request: &types.UpdateDomainRequest{
+				Name: constants.TestDomainName,
+			},
+			err: errors.New("get-domain-error"),
+		},
+		{
+			name: "Error case - updateHistoryArchivalState error",
+			setupMock: func(domainManager *persistence.MockDomainManager, updateRequest *types.UpdateDomainRequest, archivalMetadata *archiver.MockArchivalMetadata, _ clock.MockedTimeSource, _ *MockReplicator) {
+				domainManager.EXPECT().GetMetadata(ctx).Return(&persistence.GetMetadataResponse{}, nil).Times(1)
+				domainManager.EXPECT().GetDomain(ctx, &persistence.GetDomainRequest{Name: updateRequest.GetName()}).
+					Return(&persistence.GetDomainResponse{
+						ReplicationConfig: &persistence.DomainReplicationConfig{},
+						Config:            &persistence.DomainConfig{},
+					}, nil).Times(1)
+				archivalConfig := archiver.NewArchivalConfig(
+					common.ArchivalEnabled,
+					dynamicconfig.GetStringPropertyFn(common.ArchivalEnabled),
+					false,
+					dynamicconfig.GetBoolPropertyFn(false),
+					common.ArchivalEnabled,
+					"")
+				archivalMetadata.On("GetHistoryConfig").Return(archivalConfig).Times(1)
+			},
+			request: &types.UpdateDomainRequest{
+				Name: constants.TestDomainName,
+			},
+			err: errInvalidEvent,
+		},
+		{
+			name: "Error case - updateVisibilityArchivalState error",
+			setupMock: func(domainManager *persistence.MockDomainManager, updateRequest *types.UpdateDomainRequest, archivalMetadata *archiver.MockArchivalMetadata, _ clock.MockedTimeSource, _ *MockReplicator) {
+				domainManager.EXPECT().GetMetadata(ctx).Return(&persistence.GetMetadataResponse{}, nil).Times(1)
+				domainManager.EXPECT().GetDomain(ctx, &persistence.GetDomainRequest{Name: updateRequest.GetName()}).
+					Return(&persistence.GetDomainResponse{
+						ReplicationConfig: &persistence.DomainReplicationConfig{},
+						Config:            &persistence.DomainConfig{},
+					}, nil).Times(1)
+				archivalConfigHistory := archiver.NewArchivalConfig(
+					common.ArchivalDisabled,
+					dynamicconfig.GetStringPropertyFn(common.ArchivalDisabled),
+					false,
+					dynamicconfig.GetBoolPropertyFn(false),
+					common.ArchivalDisabled,
+					"")
+				archivalConfigVisibility := archiver.NewArchivalConfig(
+					common.ArchivalEnabled,
+					dynamicconfig.GetStringPropertyFn(common.ArchivalEnabled),
+					false,
+					dynamicconfig.GetBoolPropertyFn(false),
+					common.ArchivalEnabled,
+					"")
+				archivalMetadata.On("GetHistoryConfig").Return(archivalConfigHistory).Times(1)
+				archivalMetadata.On("GetVisibilityConfig").Return(archivalConfigVisibility).Times(1)
+			},
+			request: &types.UpdateDomainRequest{
+				Name: constants.TestDomainName,
+			},
+			err: errInvalidEvent,
+		},
+		{
+			name: "Error case - updateDomainConfiguration error",
+			setupMock: func(domainManager *persistence.MockDomainManager, updateRequest *types.UpdateDomainRequest, archivalMetadata *archiver.MockArchivalMetadata, _ clock.MockedTimeSource, _ *MockReplicator) {
+				domainManager.EXPECT().GetMetadata(ctx).Return(&persistence.GetMetadataResponse{}, nil).Times(1)
+				domainManager.EXPECT().GetDomain(ctx, &persistence.GetDomainRequest{Name: updateRequest.GetName()}).
+					Return(&persistence.GetDomainResponse{
+						ReplicationConfig: &persistence.DomainReplicationConfig{},
+						Config:            &persistence.DomainConfig{},
+						LastUpdatedTime:   time.Now().UnixNano(),
+					}, nil).Times(1)
+				archivalConfig := archiver.NewArchivalConfig(
+					common.ArchivalDisabled,
+					dynamicconfig.GetStringPropertyFn(common.ArchivalDisabled),
+					false,
+					dynamicconfig.GetBoolPropertyFn(false),
+					common.ArchivalDisabled,
+					"")
+				archivalMetadata.On("GetHistoryConfig").Return(archivalConfig).Times(1)
+				archivalMetadata.On("GetVisibilityConfig").Return(archivalConfig).Times(1)
+			},
+			request: &types.UpdateDomainRequest{
+				Name: constants.TestDomainName,
+				BadBinaries: &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{
+					"bad-binary": {
+						Reason: "test-reason",
+					},
+					"bad-binary-2": {
+						Reason: "test-reason-2",
+					},
+				}},
+			},
+			err: &types.BadRequestError{
+				Message: fmt.Sprintf("Total resetBinaries cannot exceed the max limit: %v", maxLength),
+			},
+		},
+		{
+			name: "Error case - updateDeleteBadBinary error",
+			setupMock: func(domainManager *persistence.MockDomainManager, updateRequest *types.UpdateDomainRequest, archivalMetadata *archiver.MockArchivalMetadata, _ clock.MockedTimeSource, _ *MockReplicator) {
+				domainManager.EXPECT().GetMetadata(ctx).Return(&persistence.GetMetadataResponse{}, nil).Times(1)
+				domainManager.EXPECT().GetDomain(ctx, &persistence.GetDomainRequest{Name: updateRequest.GetName()}).
+					Return(&persistence.GetDomainResponse{
+						ReplicationConfig: &persistence.DomainReplicationConfig{},
+						Config:            &persistence.DomainConfig{},
+					}, nil).Times(1)
+				archivalConfig := archiver.NewArchivalConfig(
+					common.ArchivalDisabled,
+					dynamicconfig.GetStringPropertyFn(common.ArchivalDisabled),
+					false,
+					dynamicconfig.GetBoolPropertyFn(false),
+					common.ArchivalDisabled,
+					"")
+				archivalMetadata.On("GetHistoryConfig").Return(archivalConfig).Times(1)
+				archivalMetadata.On("GetVisibilityConfig").Return(archivalConfig).Times(1)
+			},
+			request: &types.UpdateDomainRequest{
+				Name:            constants.TestDomainName,
+				DeleteBadBinary: common.Ptr("bad-binary"),
+			},
+			err: &types.BadRequestError{
+				Message: fmt.Sprintf("Bad binary checksum %v doesn't exists.", "bad-binary"),
+			},
+		},
+		{
+			name: "Error case - handleGracefulFailover error",
+			setupMock: func(domainManager *persistence.MockDomainManager, updateRequest *types.UpdateDomainRequest, archivalMetadata *archiver.MockArchivalMetadata, _ clock.MockedTimeSource, _ *MockReplicator) {
+				domainManager.EXPECT().GetMetadata(ctx).Return(&persistence.GetMetadataResponse{}, nil).Times(1)
+				domainManager.EXPECT().GetDomain(ctx, &persistence.GetDomainRequest{Name: updateRequest.GetName()}).
+					Return(&persistence.GetDomainResponse{
+						ReplicationConfig: &persistence.DomainReplicationConfig{},
+						Config:            &persistence.DomainConfig{},
+					}, nil).Times(1)
+				archivalConfig := archiver.NewArchivalConfig(
+					common.ArchivalDisabled,
+					dynamicconfig.GetStringPropertyFn(common.ArchivalDisabled),
+					false,
+					dynamicconfig.GetBoolPropertyFn(false),
+					common.ArchivalDisabled,
+					"")
+				archivalMetadata.On("GetHistoryConfig").Return(archivalConfig).Times(1)
+				archivalMetadata.On("GetVisibilityConfig").Return(archivalConfig).Times(1)
+			},
+			request: &types.UpdateDomainRequest{
+				Name:                     constants.TestDomainName,
+				FailoverTimeoutInSeconds: common.Int32Ptr(1),
+			},
+			err: errInvalidGracefulFailover,
+		},
+		{
+			name: "Error case - validateDomainConfig error",
+			setupMock: func(domainManager *persistence.MockDomainManager, updateRequest *types.UpdateDomainRequest, archivalMetadata *archiver.MockArchivalMetadata, _ clock.MockedTimeSource, _ *MockReplicator) {
+				domainManager.EXPECT().GetMetadata(ctx).Return(&persistence.GetMetadataResponse{}, nil).Times(1)
+				domainManager.EXPECT().GetDomain(ctx, &persistence.GetDomainRequest{Name: updateRequest.GetName()}).
+					Return(&persistence.GetDomainResponse{
+						ReplicationConfig: &persistence.DomainReplicationConfig{},
+						Config:            &persistence.DomainConfig{},
+					}, nil).Times(1)
+				archivalConfig := archiver.NewArchivalConfig(
+					common.ArchivalDisabled,
+					dynamicconfig.GetStringPropertyFn(common.ArchivalDisabled),
+					false,
+					dynamicconfig.GetBoolPropertyFn(false),
+					common.ArchivalDisabled,
+					"")
+				archivalMetadata.On("GetHistoryConfig").Return(archivalConfig).Times(1)
+				archivalMetadata.On("GetVisibilityConfig").Return(archivalConfig).Times(1)
+			},
+			request: &types.UpdateDomainRequest{
+				Name: constants.TestDomainName,
+			},
+			err: errInvalidRetentionPeriod,
+		},
+		{
+			name: "Error case - validateDomainReplicationConfigForUpdateDomain error",
+			setupMock: func(domainManager *persistence.MockDomainManager, updateRequest *types.UpdateDomainRequest, archivalMetadata *archiver.MockArchivalMetadata, _ clock.MockedTimeSource, _ *MockReplicator) {
+				domainManager.EXPECT().GetMetadata(ctx).Return(&persistence.GetMetadataResponse{}, nil).Times(1)
+				domainManager.EXPECT().GetDomain(ctx, &persistence.GetDomainRequest{Name: updateRequest.GetName()}).
+					Return(&persistence.GetDomainResponse{
+						ReplicationConfig: &persistence.DomainReplicationConfig{
+							ActiveClusterName: "bad-cluster",
+						},
+						Config: &persistence.DomainConfig{
+							Retention: 1,
+						},
+						IsGlobalDomain: true,
+					}, nil).Times(1)
+				archivalConfig := archiver.NewArchivalConfig(
+					common.ArchivalDisabled,
+					dynamicconfig.GetStringPropertyFn(common.ArchivalDisabled),
+					false,
+					dynamicconfig.GetBoolPropertyFn(false),
+					common.ArchivalDisabled,
+					"")
+				archivalMetadata.On("GetHistoryConfig").Return(archivalConfig).Times(1)
+				archivalMetadata.On("GetVisibilityConfig").Return(archivalConfig).Times(1)
+			},
+			request: &types.UpdateDomainRequest{
+				Name: constants.TestDomainName,
+			},
+			err: &types.BadRequestError{Message: fmt.Sprintf(
+				"Invalid cluster name: %v",
+				"bad-cluster",
+			)},
+		},
+		{
+			name: "Error case - updateChangesForUpdateDomain error",
+			setupMock: func(domainManager *persistence.MockDomainManager, updateRequest *types.UpdateDomainRequest, archivalMetadata *archiver.MockArchivalMetadata, timeSource clock.MockedTimeSource, _ *MockReplicator) {
+				domainManager.EXPECT().GetMetadata(ctx).Return(&persistence.GetMetadataResponse{}, nil).Times(1)
+				domainManager.EXPECT().GetDomain(ctx, &persistence.GetDomainRequest{Name: updateRequest.GetName()}).
+					Return(&persistence.GetDomainResponse{
+						ReplicationConfig: &persistence.DomainReplicationConfig{
+							ActiveClusterName: cluster.TestCurrentClusterName,
+							Clusters:          []*persistence.ClusterReplicationConfig{{ClusterName: cluster.TestCurrentClusterName}, {ClusterName: cluster.TestAlternativeClusterName}},
+						},
+						Config: &persistence.DomainConfig{
+							Retention: 1,
+						},
+						Info: &persistence.DomainInfo{
+							Name: constants.TestDomainName,
+						},
+						IsGlobalDomain:  true,
+						LastUpdatedTime: timeSource.Now().UnixNano(),
+					}, nil).Times(1)
+				archivalConfig := archiver.NewArchivalConfig(
+					common.ArchivalDisabled,
+					dynamicconfig.GetStringPropertyFn(common.ArchivalDisabled),
+					false,
+					dynamicconfig.GetBoolPropertyFn(false),
+					common.ArchivalDisabled,
+					"")
+				archivalMetadata.On("GetHistoryConfig").Return(archivalConfig).Times(1)
+				archivalMetadata.On("GetVisibilityConfig").Return(archivalConfig).Times(1)
+				timeSource.Advance(-time.Hour)
+			},
+			request: &types.UpdateDomainRequest{
+				Name:              constants.TestDomainName,
+				ActiveClusterName: common.Ptr(cluster.TestAlternativeClusterName),
+			},
+			err: errDomainUpdateTooFrequent,
+		},
+		{
+			name: "Error case - domainManager.UpdateDomain error",
+			setupMock: func(domainManager *persistence.MockDomainManager, updateRequest *types.UpdateDomainRequest, archivalMetadata *archiver.MockArchivalMetadata, timeSource clock.MockedTimeSource, _ *MockReplicator) {
+				domainManager.EXPECT().GetMetadata(ctx).Return(&persistence.GetMetadataResponse{}, nil).Times(1)
+				domainManager.EXPECT().GetDomain(ctx, &persistence.GetDomainRequest{Name: updateRequest.GetName()}).
+					Return(&persistence.GetDomainResponse{
+						ReplicationConfig: &persistence.DomainReplicationConfig{
+							ActiveClusterName: cluster.TestCurrentClusterName,
+							Clusters:          []*persistence.ClusterReplicationConfig{{ClusterName: cluster.TestCurrentClusterName}, {ClusterName: cluster.TestAlternativeClusterName}},
+						},
+						Config: &persistence.DomainConfig{
+							Retention: 1,
+						},
+						Info: &persistence.DomainInfo{
+							Name: constants.TestDomainName,
+						},
+						IsGlobalDomain:  true,
+						LastUpdatedTime: timeSource.Now().UnixNano(),
+					}, nil).Times(1)
+				archivalConfig := archiver.NewArchivalConfig(
+					common.ArchivalDisabled,
+					dynamicconfig.GetStringPropertyFn(common.ArchivalDisabled),
+					false,
+					dynamicconfig.GetBoolPropertyFn(false),
+					common.ArchivalDisabled,
+					"")
+				archivalMetadata.On("GetHistoryConfig").Return(archivalConfig).Times(1)
+				archivalMetadata.On("GetVisibilityConfig").Return(archivalConfig).Times(1)
+				timeSource.Advance(time.Hour)
+				domainManager.EXPECT().UpdateDomain(ctx, gomock.Any()).Return(errors.New("update-domain-error")).Times(1)
+			},
+			request: &types.UpdateDomainRequest{
+				Name:              constants.TestDomainName,
+				ActiveClusterName: common.Ptr(cluster.TestAlternativeClusterName),
+			},
+			err: errors.New("update-domain-error"),
+		},
+		{
+			name: "Error case - HandleTransmissionTask error",
+			setupMock: func(domainManager *persistence.MockDomainManager, updateRequest *types.UpdateDomainRequest, archivalMetadata *archiver.MockArchivalMetadata, timeSource clock.MockedTimeSource, domainReplicator *MockReplicator) {
+				domainManager.EXPECT().GetMetadata(ctx).Return(&persistence.GetMetadataResponse{}, nil).Times(1)
+				domainManager.EXPECT().GetDomain(ctx, &persistence.GetDomainRequest{Name: updateRequest.GetName()}).
+					Return(&persistence.GetDomainResponse{
+						ReplicationConfig: &persistence.DomainReplicationConfig{
+							ActiveClusterName: cluster.TestCurrentClusterName,
+							Clusters:          []*persistence.ClusterReplicationConfig{{ClusterName: cluster.TestCurrentClusterName}, {ClusterName: cluster.TestAlternativeClusterName}},
+						},
+						Config: &persistence.DomainConfig{
+							Retention: 1,
+						},
+						Info: &persistence.DomainInfo{
+							Name: constants.TestDomainName,
+						},
+						IsGlobalDomain:  true,
+						LastUpdatedTime: timeSource.Now().UnixNano(),
+					}, nil).Times(1)
+				archivalConfig := archiver.NewArchivalConfig(
+					common.ArchivalDisabled,
+					dynamicconfig.GetStringPropertyFn(common.ArchivalDisabled),
+					false,
+					dynamicconfig.GetBoolPropertyFn(false),
+					common.ArchivalDisabled,
+					"")
+				archivalMetadata.On("GetHistoryConfig").Return(archivalConfig).Times(1)
+				archivalMetadata.On("GetVisibilityConfig").Return(archivalConfig).Times(1)
+				timeSource.Advance(time.Hour)
+				domainManager.EXPECT().UpdateDomain(ctx, gomock.Any()).Return(nil).Times(1)
+				domainReplicator.EXPECT().
+					HandleTransmissionTask(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(errors.New("handle-transmission-task-error")).Times(1)
+			},
+			request: &types.UpdateDomainRequest{
+				Name:              constants.TestDomainName,
+				ActiveClusterName: common.Ptr(cluster.TestAlternativeClusterName),
+			},
+			err: errors.New("handle-transmission-task-error"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockDomainManager := persistence.NewMockDomainManager(ctrl)
+			mockReplicator := NewMockReplicator(ctrl)
+			mockArchivalMetadata := &archiver.MockArchivalMetadata{}
+
+			testConfig := Config{
+				MinRetentionDays:       dynamicconfig.GetIntPropertyFn(1),
+				MaxRetentionDays:       dynamicconfig.GetIntPropertyFn(5),
+				RequiredDomainDataKeys: nil,
+				MaxBadBinaryCount:      dynamicconfig.GetIntPropertyFilteredByDomain(maxLength),
+				FailoverCoolDown:       func(string) time.Duration { return time.Second },
+				FailoverHistoryMaxSize: dynamicconfig.GetIntPropertyFilteredByDomain(5),
+			}
+
+			clusterMetadata := cluster.GetTestClusterMetadata(true)
+			mockTimeSource := clock.NewMockedTimeSource()
+
+			handler := handlerImpl{
+				domainManager:       mockDomainManager,
+				clusterMetadata:     clusterMetadata,
+				domainReplicator:    mockReplicator,
+				domainAttrValidator: newAttrValidator(clusterMetadata, int32(testConfig.MinRetentionDays())),
+				archivalMetadata:    mockArchivalMetadata,
+				archiverProvider:    provider.NewArchiverProvider(nil, nil),
+				timeSource:          mockTimeSource,
+				config:              testConfig,
+				logger:              log.NewNoop(),
+			}
+
+			tc.setupMock(mockDomainManager, tc.request, mockArchivalMetadata, mockTimeSource, mockReplicator)
+
+			response, err := handler.UpdateDomain(ctx, tc.request)
+
+			if tc.err != nil {
+				assert.Error(t, err)
+				assert.Equal(t, tc.err.Error(), err.Error())
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, response)
+				assert.Equal(t, tc.response(mockTimeSource), response)
+			}
+		})
+	}
+}
+
+func TestUpdateDomainInfo(t *testing.T) {
+	testCases := []struct {
+		name              string
+		request           *types.UpdateDomainRequest
+		changed           bool
+		updatedDomainInfo *persistence.DomainInfo
+	}{
+		{
+			name: "Success case - new domain info",
+			request: &types.UpdateDomainRequest{
+				Description: common.Ptr("new-description"),
+				OwnerEmail:  common.Ptr("new-email"),
+				Data:        map[string]string{"new-key": "new-value"},
+			},
+			changed: true,
+			updatedDomainInfo: &persistence.DomainInfo{
+				ID:          constants.TestDomainID,
+				Name:        constants.TestDomainName,
+				Status:      persistence.DomainStatusRegistered,
+				Description: "new-description",
+				OwnerEmail:  "new-email",
+				Data:        map[string]string{"key": "value", "new-key": "new-value"},
+			},
+		},
+		{
+			name:    "Success case - no new domain info in request",
+			request: &types.UpdateDomainRequest{},
+			updatedDomainInfo: &persistence.DomainInfo{
+				ID:          constants.TestDomainID,
+				Name:        constants.TestDomainName,
+				Status:      persistence.DomainStatusRegistered,
+				Description: "some-description",
+				OwnerEmail:  "some-email",
+				Data:        map[string]string{"key": "value"},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+
+			domainInfo := &persistence.DomainInfo{
+				ID:          constants.TestDomainID,
+				Name:        constants.TestDomainName,
+				Status:      persistence.DomainStatusRegistered,
+				Description: "some-description",
+				OwnerEmail:  "some-email",
+				Data:        map[string]string{"key": "value"},
+			}
+
+			mockDomainMgr := persistence.NewMockDomainManager(controller)
+			mockReplicator := NewMockReplicator(controller)
+
+			handler := newTestHandler(mockDomainMgr, true, mockReplicator)
+
+			updatedDomainInfo, changed := (*handlerImpl).updateDomainInfo(handler.(*handlerImpl), tc.request, domainInfo)
+
+			assert.Equal(t, tc.changed, changed)
+			assert.Equal(t, tc.updatedDomainInfo, updatedDomainInfo)
+		})
+	}
+}
+
+func TestUpdateDomainConfiguration(t *testing.T) {
+	testCases := []struct {
+		name                string
+		request             *types.UpdateDomainRequest
+		changed             bool
+		updatedDomainConfig func(now int64) *persistence.DomainConfig
+		err                 error
+	}{
+		{
+			name: "Success case - new domain config",
+			request: &types.UpdateDomainRequest{
+				EmitMetric:                             common.Ptr(false),
+				WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(3),
+				BadBinaries: &types.BadBinaries{
+					Binaries: map[string]*types.BadBinaryInfo{
+						"bad-binary": {
+							Reason: "test-reason",
+						},
+					},
+				},
+			},
+			changed: true,
+			updatedDomainConfig: func(now int64) *persistence.DomainConfig {
+				return &persistence.DomainConfig{
+					Retention:                3,
+					EmitMetric:               false,
+					HistoryArchivalStatus:    types.ArchivalStatusDisabled,
+					HistoryArchivalURI:       "",
+					VisibilityArchivalStatus: types.ArchivalStatusDisabled,
+					VisibilityArchivalURI:    "",
+					BadBinaries: types.BadBinaries{
+						Binaries: map[string]*types.BadBinaryInfo{
+							"bad-binary": {
+								Reason:          "test-reason",
+								CreatedTimeNano: common.Ptr(now),
+							},
+						},
+					},
+					IsolationGroups:     types.IsolationGroupConfiguration{},
+					AsyncWorkflowConfig: types.AsyncWorkflowConfiguration{Enabled: true},
+				}
+			},
+		},
+		{
+			name: "Success case - new domain config - only new bad binaries",
+			request: &types.UpdateDomainRequest{
+				BadBinaries: &types.BadBinaries{
+					Binaries: map[string]*types.BadBinaryInfo{
+						"bad-binary": {
+							Reason: "test-reason",
+						},
+					},
+				},
+			},
+			changed: false,
+			updatedDomainConfig: func(now int64) *persistence.DomainConfig {
+				return &persistence.DomainConfig{
+					Retention:                1,
+					EmitMetric:               true,
+					HistoryArchivalStatus:    types.ArchivalStatusDisabled,
+					HistoryArchivalURI:       "",
+					VisibilityArchivalStatus: types.ArchivalStatusDisabled,
+					VisibilityArchivalURI:    "",
+					BadBinaries: types.BadBinaries{
+						Binaries: map[string]*types.BadBinaryInfo{
+							"bad-binary": {
+								Reason:          "test-reason",
+								CreatedTimeNano: common.Ptr(now),
+							},
+						},
+					},
+					IsolationGroups:     types.IsolationGroupConfiguration{},
+					AsyncWorkflowConfig: types.AsyncWorkflowConfiguration{Enabled: true},
+				}
+			},
+		},
+		{
+			name: "Error case - new domain config has bad binaries greater than max length",
+			request: &types.UpdateDomainRequest{
+				EmitMetric:                             common.Ptr(false),
+				WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(3),
+				BadBinaries: &types.BadBinaries{
+					Binaries: map[string]*types.BadBinaryInfo{
+						"bad-binary": {
+							Reason: "test-reason",
+						},
+						"bad-binary-2": {
+							Reason: "test-reason-2",
+						},
+						"bad-binary-3": {
+							Reason: "test-reason-3",
+						},
+						"bad-binary-4": {
+							Reason: "test-reason-4",
+						},
+					},
+				},
+			},
+			err: &types.BadRequestError{
+				Message: fmt.Sprintf("Total resetBinaries cannot exceed the max limit: %v", 3),
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+
+			mockDomainMgr := persistence.NewMockDomainManager(controller)
+			mockReplicator := NewMockReplicator(controller)
+
+			handler := newTestHandler(mockDomainMgr, true, mockReplicator)
+
+			cfg := &persistence.DomainConfig{
+				Retention:                1,
+				EmitMetric:               true,
+				HistoryArchivalStatus:    types.ArchivalStatusDisabled,
+				HistoryArchivalURI:       "",
+				VisibilityArchivalStatus: types.ArchivalStatusDisabled,
+				VisibilityArchivalURI:    "",
+				BadBinaries:              types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
+				IsolationGroups:          types.IsolationGroupConfiguration{},
+				AsyncWorkflowConfig:      types.AsyncWorkflowConfiguration{Enabled: true},
+			}
+
+			now := handler.(*handlerImpl).timeSource.Now().UnixNano()
+
+			updatedDomainConfig, changed, err := (*handlerImpl).updateDomainConfiguration(handler.(*handlerImpl), constants.TestDomainName, cfg, tc.request)
+
+			if tc.err != nil {
+				assert.Error(t, err)
+				assert.Equal(t, tc.err, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.changed, changed)
+				assert.Equal(t, tc.updatedDomainConfig(now), updatedDomainConfig)
+			}
+		})
+	}
+}
+
+func TestUpdateDeleteBadBinary(t *testing.T) {
+	now := time.Now().UnixNano()
+
+	testCases := []struct {
+		name                string
+		deleteBadBinary     *string
+		changed             bool
+		updatedDomainConfig *persistence.DomainConfig
+		err                 error
+	}{
+		{
+			name:            "Success case - deleteBadBinary not nil",
+			deleteBadBinary: common.Ptr("bad-binary"),
+			changed:         true,
+			updatedDomainConfig: &persistence.DomainConfig{
+				Retention:                1,
+				EmitMetric:               true,
+				HistoryArchivalStatus:    types.ArchivalStatusDisabled,
+				HistoryArchivalURI:       "",
+				VisibilityArchivalStatus: types.ArchivalStatusDisabled,
+				VisibilityArchivalURI:    "",
+				BadBinaries:              types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
+				IsolationGroups:          types.IsolationGroupConfiguration{},
+				AsyncWorkflowConfig:      types.AsyncWorkflowConfiguration{Enabled: true},
+			},
+		},
+		{
+			name: "Success case - deleteBadBinary nil",
+			updatedDomainConfig: &persistence.DomainConfig{
+				Retention:                1,
+				EmitMetric:               true,
+				HistoryArchivalStatus:    types.ArchivalStatusDisabled,
+				HistoryArchivalURI:       "",
+				VisibilityArchivalStatus: types.ArchivalStatusDisabled,
+				VisibilityArchivalURI:    "",
+				BadBinaries: types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{
+					"bad-binary": {
+						Reason:          "test-reason",
+						CreatedTimeNano: &now,
+					},
+				}},
+				IsolationGroups:     types.IsolationGroupConfiguration{},
+				AsyncWorkflowConfig: types.AsyncWorkflowConfiguration{Enabled: true},
+			},
+		},
+		{
+			name:            "Error case - deleteBadBinary not in config.BadBinaries.Binaries",
+			deleteBadBinary: common.Ptr("bad-binary-2"),
+			err:             &types.BadRequestError{Message: "Bad binary checksum bad-binary-2 doesn't exists."},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+
+			mockDomainMgr := persistence.NewMockDomainManager(controller)
+			mockReplicator := NewMockReplicator(controller)
+
+			handler := newTestHandler(mockDomainMgr, true, mockReplicator)
+
+			cfg := &persistence.DomainConfig{
+				Retention:                1,
+				EmitMetric:               true,
+				HistoryArchivalStatus:    types.ArchivalStatusDisabled,
+				HistoryArchivalURI:       "",
+				VisibilityArchivalStatus: types.ArchivalStatusDisabled,
+				VisibilityArchivalURI:    "",
+				BadBinaries: types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{
+					"bad-binary": {
+						Reason:          "test-reason",
+						CreatedTimeNano: &now,
+					},
+				}},
+				IsolationGroups:     types.IsolationGroupConfiguration{},
+				AsyncWorkflowConfig: types.AsyncWorkflowConfiguration{Enabled: true},
+			}
+
+			updatedDomainConfig, changed, err := (*handlerImpl).updateDeleteBadBinary(handler.(*handlerImpl), cfg, tc.deleteBadBinary)
+
+			if tc.err != nil {
+				assert.Error(t, err)
+				assert.Equal(t, tc.err, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.changed, changed)
+				assert.Equal(t, tc.updatedDomainConfig, updatedDomainConfig)
+			}
+		})
+	}
+}
+
+func TestUpdateReplicationConfig(t *testing.T) {
+	testCases := []struct {
+		name                     string
+		request                  *types.UpdateDomainRequest
+		updatedReplicationConfig *persistence.DomainReplicationConfig
+		clusterUpdated           bool
+		activeClusterUpdated     bool
+	}{
+		{
+			name:    "Success case - no change",
+			request: &types.UpdateDomainRequest{},
+			updatedReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters:          []*persistence.ClusterReplicationConfig{{ClusterName: cluster.TestCurrentClusterName}, {ClusterName: cluster.TestAlternativeClusterName}},
+			},
+		},
+		{
+			name: "Success case - cluster and activeCluster updated",
+			request: &types.UpdateDomainRequest{
+				ActiveClusterName: common.Ptr(cluster.TestAlternativeClusterName),
+				Clusters:          []*types.ClusterReplicationConfiguration{{ClusterName: cluster.TestDisabledClusterName}, {ClusterName: cluster.TestAlternativeClusterName}, {ClusterName: cluster.TestCurrentClusterName}},
+			},
+			updatedReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestAlternativeClusterName,
+				Clusters:          []*persistence.ClusterReplicationConfig{{ClusterName: cluster.TestDisabledClusterName}, {ClusterName: cluster.TestAlternativeClusterName}, {ClusterName: cluster.TestCurrentClusterName}},
+			},
+			clusterUpdated:       true,
+			activeClusterUpdated: true,
+		},
+		{
+			name: "Success case - cluster and activeCluster updated with warning",
+			request: &types.UpdateDomainRequest{
+				ActiveClusterName: common.Ptr(cluster.TestAlternativeClusterName),
+				Clusters:          []*types.ClusterReplicationConfiguration{{ClusterName: cluster.TestAlternativeClusterName}},
+			},
+			updatedReplicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestAlternativeClusterName,
+				Clusters:          []*persistence.ClusterReplicationConfig{{ClusterName: cluster.TestAlternativeClusterName}},
+			},
+			clusterUpdated:       true,
+			activeClusterUpdated: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+
+			mockDomainMgr := persistence.NewMockDomainManager(controller)
+			mockReplicator := NewMockReplicator(controller)
+
+			handler := newTestHandler(mockDomainMgr, true, mockReplicator)
+
+			cfg := &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters:          []*persistence.ClusterReplicationConfig{{ClusterName: cluster.TestCurrentClusterName}, {ClusterName: cluster.TestAlternativeClusterName}},
+			}
+
+			updatedReplicationConfig, clusterUpdated, activeClusterUpdated, err := (*handlerImpl).updateReplicationConfig(handler.(*handlerImpl), cfg, tc.request)
+
+			assert.NoError(t, err)
+			assert.Equal(t, tc.clusterUpdated, clusterUpdated)
+			assert.Equal(t, tc.activeClusterUpdated, activeClusterUpdated)
+			assert.Equal(t, tc.updatedReplicationConfig, updatedReplicationConfig)
+		})
+	}
+}
+
+func TestHandleGracefulFailover(t *testing.T) {
+	failoverTimeoutInSeconds := int32(1)
+	failoverVersion := int64(3)
+
+	testCases := []struct {
+		name                           string
+		replicationConfig              *persistence.DomainReplicationConfig
+		currentActiveCluster           string
+		gracefulFailoverEndTime        *int64
+		activeClusterChange            bool
+		isGlobalDomain                 bool
+		updatedGracefulFailoverEndTime func(now time.Time) *int64
+		err                            error
+	}{
+		{
+			name: "Success case",
+			replicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters:          []*persistence.ClusterReplicationConfig{{ClusterName: cluster.TestCurrentClusterName}, {ClusterName: cluster.TestAlternativeClusterName}},
+			},
+			currentActiveCluster: cluster.TestAlternativeClusterName,
+			activeClusterChange:  true,
+			isGlobalDomain:       true,
+			updatedGracefulFailoverEndTime: func(now time.Time) *int64 {
+				return common.Ptr(now.Add(time.Duration(failoverTimeoutInSeconds) * time.Second).UnixNano())
+			},
+		},
+		{
+			name:                "Error case - activeClusterChange is false",
+			activeClusterChange: false,
+			isGlobalDomain:      true,
+			err:                 errInvalidGracefulFailover,
+		},
+		{
+			name:                "Error case - isGlobalDomain is false",
+			activeClusterChange: true,
+			isGlobalDomain:      false,
+			err:                 errInvalidGracefulFailover,
+		},
+		{
+			name: "Error case - replication ActiveClusterName is different from clusterMetadata currentClusterName",
+			replicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestAlternativeClusterName,
+				Clusters:          []*persistence.ClusterReplicationConfig{{ClusterName: cluster.TestCurrentClusterName}, {ClusterName: cluster.TestAlternativeClusterName}},
+			},
+			activeClusterChange: true,
+			isGlobalDomain:      true,
+			err:                 errCannotDoGracefulFailoverFromCluster,
+		},
+		{
+			name: "Error case - replication ActiveClusterName is the same as target currentActiveCluster",
+			replicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters:          []*persistence.ClusterReplicationConfig{{ClusterName: cluster.TestCurrentClusterName}, {ClusterName: cluster.TestAlternativeClusterName}},
+			},
+			currentActiveCluster: cluster.TestCurrentClusterName,
+			activeClusterChange:  true,
+			isGlobalDomain:       true,
+			err:                  errGracefulFailoverInActiveCluster,
+		},
+		{
+			name: "Error case - ongoing failover, cannot have concurrent failover",
+			replicationConfig: &persistence.DomainReplicationConfig{
+				ActiveClusterName: cluster.TestCurrentClusterName,
+				Clusters:          []*persistence.ClusterReplicationConfig{{ClusterName: cluster.TestCurrentClusterName}, {ClusterName: cluster.TestAlternativeClusterName}},
+			},
+			currentActiveCluster:    cluster.TestAlternativeClusterName,
+			activeClusterChange:     true,
+			isGlobalDomain:          true,
+			gracefulFailoverEndTime: common.Int64Ptr(time.Now().UnixNano()),
+			err:                     errOngoingGracefulFailover,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+
+			mockDomainMgr := persistence.NewMockDomainManager(controller)
+			mockReplicator := NewMockReplicator(controller)
+
+			handler := newTestHandler(mockDomainMgr, true, mockReplicator)
+
+			now := handler.(*handlerImpl).timeSource.Now()
+
+			request := &types.UpdateDomainRequest{
+				FailoverTimeoutInSeconds: common.Int32Ptr(failoverTimeoutInSeconds),
+			}
+
+			gracefulFailoverEndTime, previousFailoverVersion, err := (*handlerImpl).handleGracefulFailover(
+				handler.(*handlerImpl),
+				request,
+				tc.replicationConfig,
+				tc.currentActiveCluster,
+				tc.gracefulFailoverEndTime,
+				failoverVersion,
+				tc.activeClusterChange,
+				tc.isGlobalDomain,
+			)
+
+			if tc.err != nil {
+				assert.Error(t, err)
+				assert.Equal(t, tc.err, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.updatedGracefulFailoverEndTime(now), gracefulFailoverEndTime)
+				assert.Equal(t, failoverVersion, previousFailoverVersion)
+			}
+		})
+	}
+}
+
+func TestUpdateFailoverHistory(t *testing.T) {
+	now := time.Now()
+	fromCluster := "fromCluster"
+	toCluster := "toCluster"
+	failoverType := common.FailoverType(common.FailoverTypeForce)
+	failoverHistoryMaxSize := 5
+
+	testCases := []struct {
+		name       string
+		domainInfo func() *persistence.DomainInfo
+		response   func() string
+		err        error
+	}{
+		{
+			name:       "Success case - DomainInfo data is nil",
+			domainInfo: func() *persistence.DomainInfo { return &persistence.DomainInfo{} },
+			response: func() string {
+				failoverHistory := []FailoverEvent{{EventTime: now, FromCluster: fromCluster, ToCluster: toCluster, FailoverType: failoverType.String()}}
+				jsonResp, _ := json.Marshal(failoverHistory)
+				return string(jsonResp)
+			},
+		},
+		{
+			name:       "Success case - FailoverHistory is nil",
+			domainInfo: func() *persistence.DomainInfo { return &persistence.DomainInfo{Data: map[string]string{}} },
+			response: func() string {
+				failoverHistory := []FailoverEvent{{EventTime: now, FromCluster: fromCluster, ToCluster: toCluster, FailoverType: failoverType.String()}}
+				jsonResp, _ := json.Marshal(failoverHistory)
+				return string(jsonResp)
+			},
+		},
+		{
+			name: "Success case - FailoverHistory is not nil",
+			domainInfo: func() *persistence.DomainInfo {
+				eventTime := time.Date(2021, 1, 1, 1, 1, 1, 1, time.UTC)
+				failoverHistory := []FailoverEvent{{EventTime: eventTime, FromCluster: "fromCluster1", ToCluster: "toCluster1", FailoverType: common.FailoverType(common.FailoverTypeGrace).String()}}
+				failoverHistoryJSON, _ := json.Marshal(failoverHistory)
+				return &persistence.DomainInfo{Data: map[string]string{common.DomainDataKeyForFailoverHistory: string(failoverHistoryJSON)}}
+			},
+			response: func() string {
+				eventTime := time.Date(2021, 1, 1, 1, 1, 1, 1, time.UTC)
+				failoverHistory := []FailoverEvent{{EventTime: eventTime, FromCluster: "fromCluster1", ToCluster: "toCluster1", FailoverType: common.FailoverType(common.FailoverTypeGrace).String()}}
+				failoverHistory = append([]FailoverEvent{{EventTime: now, FromCluster: fromCluster, ToCluster: toCluster, FailoverType: failoverType.String()}}, failoverHistory...)
+				jsonResp, _ := json.Marshal(failoverHistory)
+				return string(jsonResp)
+			},
+		},
+		{
+			name: "Success case - FailoverHistory is at max size",
+			domainInfo: func() *persistence.DomainInfo {
+				var failoverHistory []FailoverEvent
+				for i := 0; i < failoverHistoryMaxSize; i++ {
+					eventTime := time.Date(2021, 1, i, 1, 1, 1, 1, time.UTC)
+					failoverHistory = append(failoverHistory, FailoverEvent{EventTime: eventTime, FromCluster: "fromCluster" + strconv.Itoa(i), ToCluster: "toCluster" + strconv.Itoa(i), FailoverType: common.FailoverType(common.FailoverTypeGrace).String()})
+				}
+				failoverHistoryJSON, _ := json.Marshal(failoverHistory)
+				return &persistence.DomainInfo{Data: map[string]string{common.DomainDataKeyForFailoverHistory: string(failoverHistoryJSON)}}
+			},
+			response: func() string {
+				var failoverHistory []FailoverEvent
+				for i := 0; i < 5; i++ {
+					eventTime := time.Date(2021, 1, i, 1, 1, 1, 1, time.UTC)
+					failoverHistory = append(failoverHistory, FailoverEvent{EventTime: eventTime, FromCluster: "fromCluster" + strconv.Itoa(i), ToCluster: "toCluster" + strconv.Itoa(i), FailoverType: common.FailoverType(common.FailoverTypeGrace).String()})
+				}
+				failoverHistory = append([]FailoverEvent{{EventTime: now, FromCluster: fromCluster, ToCluster: toCluster, FailoverType: failoverType.String()}}, failoverHistory[:(5-1)]...)
+				jsonResp, _ := json.Marshal(failoverHistory)
+				return string(jsonResp)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := Config{
+				FailoverHistoryMaxSize: func(domain string) int {
+					return failoverHistoryMaxSize
+				},
+			}
+
+			domainInfo := tc.domainInfo()
+			err := updateFailoverHistory(domainInfo, cfg, now, fromCluster, toCluster, failoverType)
+
+			if tc.err != nil {
+				assert.Equal(t, tc.err, err)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, domainInfo.Data)
+				assert.NotNil(t, domainInfo.Data[common.DomainDataKeyForFailoverHistory])
+				assert.Equal(t, tc.response(), domainInfo.Data[common.DomainDataKeyForFailoverHistory])
 			}
 		})
 	}

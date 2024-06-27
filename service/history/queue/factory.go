@@ -55,13 +55,6 @@ type ProcessorFactory interface {
 		archivalClient archiver.Client,
 		executionCheck invariant.Invariant,
 	) Processor
-
-	NewCrossClusterQueueProcessor(
-		shard shard.Context,
-		historyEngine engine.Engine,
-		executionCache execution.Cache,
-		taskProcessor task.Processor,
-	) Processor
 }
 
 func NewProcessorFactory() ProcessorFactory {
@@ -110,19 +103,5 @@ func (f *factoryImpl) NewTimerQueueProcessor(
 		executionCache,
 		archivalClient,
 		executionCheck,
-	)
-}
-
-func (f *factoryImpl) NewCrossClusterQueueProcessor(
-	shard shard.Context,
-	historyEngine engine.Engine,
-	executionCache execution.Cache,
-	taskProcessor task.Processor,
-) Processor {
-	return NewCrossClusterQueueProcessor(
-		shard,
-		historyEngine,
-		executionCache,
-		taskProcessor,
 	)
 }

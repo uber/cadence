@@ -54,11 +54,6 @@ func TestTaskCommonMethods(t *testing.T) {
 		&HistoryReplicationTask{TaskData: TaskData{Version: 1, TaskID: 1, VisibilityTimestamp: timeNow}},
 		&SyncActivityTask{TaskData: TaskData{Version: 1, TaskID: 1, VisibilityTimestamp: timeNow}},
 		&FailoverMarkerTask{TaskData: TaskData{Version: 1, TaskID: 1, VisibilityTimestamp: timeNow}},
-		&CrossClusterStartChildExecutionTask{StartChildExecutionTask: StartChildExecutionTask{TaskData: TaskData{Version: 1, TaskID: 1, VisibilityTimestamp: timeNow}}},
-		&CrossClusterCancelExecutionTask{CancelExecutionTask: CancelExecutionTask{TaskData: TaskData{Version: 1, TaskID: 1, VisibilityTimestamp: timeNow}}},
-		&CrossClusterSignalExecutionTask{SignalExecutionTask: SignalExecutionTask{TaskData: TaskData{Version: 1, TaskID: 1, VisibilityTimestamp: timeNow}}},
-		&CrossClusterRecordChildExecutionCompletedTask{RecordChildExecutionCompletedTask: RecordChildExecutionCompletedTask{TaskData: TaskData{Version: 1, TaskID: 1, VisibilityTimestamp: timeNow}}},
-		&CrossClusterApplyParentClosePolicyTask{ApplyParentClosePolicyTask: ApplyParentClosePolicyTask{TaskData: TaskData{Version: 1, TaskID: 1, VisibilityTimestamp: timeNow}}},
 	}
 
 	for _, task := range tasks {
@@ -107,16 +102,6 @@ func TestTaskCommonMethods(t *testing.T) {
 			assert.Equal(t, ReplicationTaskTypeSyncActivity, ty.GetType())
 		case *FailoverMarkerTask:
 			assert.Equal(t, ReplicationTaskTypeFailoverMarker, ty.GetType())
-		case *CrossClusterStartChildExecutionTask:
-			assert.Equal(t, CrossClusterTaskTypeStartChildExecution, ty.GetType())
-		case *CrossClusterCancelExecutionTask:
-			assert.Equal(t, CrossClusterTaskTypeCancelExecution, ty.GetType())
-		case *CrossClusterSignalExecutionTask:
-			assert.Equal(t, CrossClusterTaskTypeSignalExecution, ty.GetType())
-		case *CrossClusterRecordChildExecutionCompletedTask:
-			assert.Equal(t, CrossClusterTaskTypeRecordChildExeuctionCompleted, ty.GetType())
-		case *CrossClusterApplyParentClosePolicyTask:
-			assert.Equal(t, CrossClusterTaskTypeApplyParentClosePolicy, ty.GetType())
 		default:
 			t.Fatalf("Unhandled task type: %T", t)
 		}

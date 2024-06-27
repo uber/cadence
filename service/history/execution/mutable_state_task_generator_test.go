@@ -65,13 +65,6 @@ func (s *mutableStateTaskGeneratorSuite) SetupTest() {
 	s.mockMutableState = NewMockMutableState(s.controller)
 
 	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(constants.TestGlobalDomainEntry, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestParentDomainID).Return(constants.TestGlobalParentDomainEntry, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestChildDomainID).Return(constants.TestGlobalChildDomainEntry, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainID(constants.TestChildDomainName).Return(constants.TestChildDomainID, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestTargetDomainID).Return(constants.TestGlobalTargetDomainEntry, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainID(constants.TestTargetDomainName).Return(constants.TestTargetDomainID, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestRemoteTargetDomainID).Return(constants.TestGlobalRemoteTargetDomainEntry, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainID(constants.TestRemoteTargetDomainName).Return(constants.TestRemoteTargetDomainID, nil).AnyTimes()
 
 	s.taskGenerator = NewMutableStateTaskGenerator(
 		constants.TestClusterMetadata,
@@ -82,109 +75,6 @@ func (s *mutableStateTaskGeneratorSuite) SetupTest() {
 
 func (s *mutableStateTaskGeneratorSuite) TearDownTest() {
 	s.controller.Finish()
-}
-
-func (s *mutableStateTaskGeneratorSuite) TestIsCrossClusterTask() {
-	testCases := []struct {
-		name           string
-		sourceDomainID string
-		targetDomainID string
-		isCrossCluster bool
-		targetCluster  string
-		setupMock      func()
-		err            error
-	}{
-		{
-			name:           "Success case - is not cross cluster task - not cross domain task",
-			sourceDomainID: constants.TestDomainID,
-			targetDomainID: constants.TestDomainID,
-			isCrossCluster: false,
-			targetCluster:  "",
-			setupMock: func() {
-				s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{
-					DomainID: constants.TestDomainID,
-				}).Times(1)
-			},
-		},
-		{
-			name:           "Success case - is not cross cluster task - source domain is passive in the current cluster",
-			sourceDomainID: constants.TestRemoteTargetDomainID,
-			targetDomainID: constants.TestDomainID,
-			isCrossCluster: false,
-			targetCluster:  "",
-			setupMock: func() {
-				s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{
-					DomainID: constants.TestRemoteTargetDomainID,
-				})
-			},
-		},
-		{
-			name:           "Success case - is not cross cluster task - target cluster is the same as source domain active cluster",
-			sourceDomainID: constants.TestDomainID,
-			targetDomainID: constants.TestTargetDomainID,
-			isCrossCluster: false,
-			targetCluster:  "",
-			setupMock: func() {
-				s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{
-					DomainID: constants.TestDomainID,
-				})
-			},
-		},
-		{
-			name:           "Success case - is cross cluster task",
-			sourceDomainID: constants.TestDomainID,
-			targetDomainID: constants.TestRemoteTargetDomainID,
-			isCrossCluster: true,
-			targetCluster:  cluster.TestAlternativeClusterName,
-			setupMock: func() {
-				s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{
-					DomainID: constants.TestDomainID,
-				})
-			},
-		},
-		{
-			name:           "Error case - GetDomainByID error for source domain",
-			sourceDomainID: "some-source-domain-id",
-			targetDomainID: constants.TestRemoteTargetDomainID,
-			setupMock: func() {
-				s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{
-					DomainID: "some-source-domain-id",
-				})
-				s.mockDomainCache.EXPECT().GetDomainByID("some-source-domain-id").Return(nil, errors.New("get-domain-by-id-error")).Times(1)
-			},
-			err: errors.New("get-domain-by-id-error"),
-		},
-		{
-			name:           "Error case - GetDomainByID error for target domain",
-			sourceDomainID: "some-source-domain-id",
-			targetDomainID: "some-target-domain-id",
-			setupMock: func() {
-				s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{
-					DomainID: "some-source-domain-id",
-				})
-				s.mockDomainCache.EXPECT().GetDomainByID("some-source-domain-id").Return(&cache.DomainCacheEntry{}, nil).Times(1)
-				s.mockDomainCache.EXPECT().GetDomainByID("some-target-domain-id").Return(nil, errors.New("get-domain-by-id-error")).Times(1)
-			},
-			err: errors.New("get-domain-by-id-error"),
-		},
-	}
-
-	for _, tc := range testCases {
-		s.T().Run(tc.name, func(t *testing.T) {
-			tc.setupMock()
-
-			targetCluster, isCrossCluster, err := s.taskGenerator.isCrossClusterTask(tc.targetDomainID)
-
-			if tc.err != nil {
-				s.Error(err)
-				s.Equal(tc.err, err)
-			} else {
-				s.NoError(err)
-				s.Equal(tc.isCrossCluster, isCrossCluster)
-				s.Equal(tc.targetCluster, targetCluster)
-			}
-		})
-	}
 }
 
 func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks_JitteredDeletion() {
@@ -210,14 +100,10 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks_Jittered
 		)
 
 		var transferTasks []persistence.Task
-		var crossClusterTasks []persistence.Task
 		var timerTasks []persistence.Task
 		mockMutableState.EXPECT().GetDomainEntry().Return(domainEntry).AnyTimes()
 		mockMutableState.EXPECT().AddTransferTasks(gomock.Any()).Do(func(tasks ...persistence.Task) {
 			transferTasks = tasks
-		}).MaxTimes(1)
-		mockMutableState.EXPECT().AddCrossClusterTasks(gomock.Any()).Do(func(tasks ...persistence.Task) {
-			crossClusterTasks = tasks
 		}).MaxTimes(1)
 		mockMutableState.EXPECT().AddTimerTasks(gomock.Any()).Do(func(tasks ...persistence.Task) {
 			timerTasks = tasks
@@ -227,7 +113,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks_Jittered
 		err := taskGenerator.GenerateWorkflowCloseTasks(closeEvent, 60)
 		s.NoError(err)
 
-		actualGeneratedTasks := append(transferTasks, crossClusterTasks...)
+		actualGeneratedTasks := transferTasks
 		for _, task := range actualGeneratedTasks {
 			// force set visibility timestamp since that field is not assigned
 			// for transfer and cross cluster in GenerateWorkflowCloseTasks
@@ -269,14 +155,10 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks() {
 		)
 
 		var transferTasks []persistence.Task
-		var crossClusterTasks []persistence.Task
 		var timerTasks []persistence.Task
 		mockMutableState.EXPECT().GetDomainEntry().Return(domainEntry).AnyTimes()
 		mockMutableState.EXPECT().AddTransferTasks(gomock.Any()).Do(func(tasks ...persistence.Task) {
 			transferTasks = tasks
-		}).MaxTimes(1)
-		mockMutableState.EXPECT().AddCrossClusterTasks(gomock.Any()).Do(func(tasks ...persistence.Task) {
-			crossClusterTasks = tasks
 		}).MaxTimes(1)
 		mockMutableState.EXPECT().AddTimerTasks(gomock.Any()).Do(func(tasks ...persistence.Task) {
 			timerTasks = tasks
@@ -286,7 +168,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks() {
 		err := taskGenerator.GenerateWorkflowCloseTasks(closeEvent, 1)
 		s.NoError(err)
 
-		actualGeneratedTasks := append(transferTasks, crossClusterTasks...)
+		actualGeneratedTasks := transferTasks
 		for _, task := range actualGeneratedTasks {
 			// force set visibility timestamp since that field is not assigned
 			// for transfer and cross cluster in GenerateWorkflowCloseTasks
@@ -301,13 +183,16 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks() {
 
 func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks_NotActive() {
 	closeEvent := &types.HistoryEvent{
-		Version: constants.TestVersion,
+		Version:   constants.TestVersion,
+		Timestamp: common.Ptr(time.Unix(1719224698, 0).UnixNano()),
 	}
 
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{DomainID: "some-domain-id"}).Times(1)
 	domainEntry := cache.NewGlobalDomainCacheEntryForTest(
 		&persistence.DomainInfo{},
-		&persistence.DomainConfig{},
+		&persistence.DomainConfig{
+			Retention: defaultWorkflowRetentionInDays,
+		},
 		&persistence.DomainReplicationConfig{
 			ActiveClusterName: cluster.TestAlternativeClusterName,
 			Clusters: []*persistence.ClusterReplicationConfig{
@@ -319,7 +204,6 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks_NotActiv
 	)
 
 	s.mockDomainCache.EXPECT().GetDomainByID("some-domain-id").Return(domainEntry, nil).Times(1)
-	s.mockDomainCache.EXPECT().GetDomainByID("some-domain-id").Return(nil, &types.EntityNotExistsError{}).Times(1)
 
 	var transferTasks []persistence.Task
 	transferTasks = append(transferTasks, &persistence.CloseExecutionTask{
@@ -329,11 +213,14 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks_NotActiv
 	})
 
 	s.mockMutableState.EXPECT().AddTransferTasks(transferTasks).Times(1)
-	s.mockMutableState.EXPECT().AddCrossClusterTasks([]persistence.Task{}).Times(1)
+
+	expectedDeletionTS := time.Unix(0, closeEvent.GetTimestamp()).
+		Add(time.Duration(defaultWorkflowRetentionInDays) * time.Hour * 24)
+
 	s.mockMutableState.EXPECT().AddTimerTasks(&persistence.DeleteHistoryEventTask{
 		TaskData: persistence.TaskData{
 			// TaskID is set by shard
-			VisibilityTimestamp: time.Unix(0, closeEvent.GetTimestamp()).Add(time.Duration(defaultWorkflowRetentionInDays) * time.Hour * 24),
+			VisibilityTimestamp: expectedDeletionTS,
 			Version:             closeEvent.Version,
 		},
 	})
@@ -344,12 +231,10 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks_NotActiv
 }
 
 func (s *mutableStateTaskGeneratorSuite) TestGenerateFromTransferTask() {
-	targetCluster := cluster.TestAlternativeClusterName
 	now := time.Now()
 	testCases := []struct {
-		transferTask             *persistence.TransferTaskInfo
-		expectError              bool
-		expectedCrossClusterTask persistence.Task
+		transferTask *persistence.TransferTaskInfo
+		expectError  bool
 	}{
 		{
 			transferTask: &persistence.TransferTaskInfo{
@@ -360,393 +245,40 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateFromTransferTask() {
 		{
 			transferTask: &persistence.TransferTaskInfo{
 				TaskType:                persistence.TransferTaskTypeCancelExecution,
-				TargetDomainID:          constants.TestTargetDomainID,
+				TargetDomainID:          constants.TestDomainID,
 				TargetWorkflowID:        constants.TestWorkflowID,
 				TargetRunID:             constants.TestRunID,
 				TargetChildWorkflowOnly: false,
 				ScheduleID:              int64(123),
 			},
 			expectError: false,
-			expectedCrossClusterTask: &persistence.CrossClusterCancelExecutionTask{
-				TargetCluster: targetCluster,
-				CancelExecutionTask: persistence.CancelExecutionTask{
-					TargetDomainID:          constants.TestTargetDomainID,
-					TargetWorkflowID:        constants.TestWorkflowID,
-					TargetRunID:             constants.TestRunID,
-					TargetChildWorkflowOnly: false,
-					InitiatedID:             int64(123),
-				},
-			},
 		},
 		{
 			transferTask: &persistence.TransferTaskInfo{
 				TaskType:                persistence.TransferTaskTypeSignalExecution,
-				TargetDomainID:          constants.TestTargetDomainID,
+				TargetDomainID:          constants.TestDomainID,
 				TargetWorkflowID:        constants.TestWorkflowID,
 				TargetRunID:             constants.TestRunID,
 				TargetChildWorkflowOnly: false,
 				ScheduleID:              int64(123),
 			},
 			expectError: false,
-			expectedCrossClusterTask: &persistence.CrossClusterSignalExecutionTask{
-				TargetCluster: targetCluster,
-				SignalExecutionTask: persistence.SignalExecutionTask{
-					TargetDomainID:          constants.TestTargetDomainID,
-					TargetWorkflowID:        constants.TestWorkflowID,
-					TargetRunID:             constants.TestRunID,
-					TargetChildWorkflowOnly: false,
-					InitiatedID:             int64(123),
-				},
-			},
 		},
 		{
 			transferTask: &persistence.TransferTaskInfo{
 				TaskType:         persistence.TransferTaskTypeStartChildExecution,
-				TargetDomainID:   constants.TestTargetDomainID,
+				TargetDomainID:   constants.TestDomainID,
 				TargetWorkflowID: constants.TestWorkflowID,
 				ScheduleID:       int64(123),
 			},
 			expectError: false,
-			expectedCrossClusterTask: &persistence.CrossClusterStartChildExecutionTask{
-				TargetCluster: targetCluster,
-				StartChildExecutionTask: persistence.StartChildExecutionTask{
-					TargetDomainID:   constants.TestTargetDomainID,
-					TargetWorkflowID: constants.TestWorkflowID,
-					InitiatedID:      int64(123),
-				},
-			},
 		},
 	}
 	for _, tc := range testCases {
-		var actualCrossClusterTask persistence.Task
 		if !tc.expectError {
 			tc.transferTask.Version = int64(101)
-			tc.expectedCrossClusterTask.SetVersion(int64(101))
 			tc.transferTask.VisibilityTimestamp = now
-			tc.expectedCrossClusterTask.SetVisibilityTimestamp(now)
-
-			s.mockMutableState.EXPECT().AddCrossClusterTasks(gomock.Any()).Do(
-				func(crossClusterTasks ...persistence.Task) {
-					actualCrossClusterTask = crossClusterTasks[0]
-				},
-			).MaxTimes(1)
 		}
-
-		err := s.taskGenerator.GenerateFromTransferTask(tc.transferTask, targetCluster)
-		if tc.expectError {
-			s.Error(err)
-		} else {
-			s.Equal(tc.expectedCrossClusterTask, actualCrossClusterTask)
-		}
-	}
-}
-
-func (s *mutableStateTaskGeneratorSuite) TestGenerateCrossClusterRecordChildCompletedTask() {
-	targetCluster := cluster.TestAlternativeClusterName
-	transferTask := &persistence.TransferTaskInfo{
-		TaskType:            persistence.TransferTaskTypeCloseExecution,
-		VisibilityTimestamp: time.Now(),
-		Version:             int64(101),
-	}
-	parentInfo := &types.ParentExecutionInfo{
-		DomainUUID: constants.TestParentDomainID,
-		Domain:     constants.TestParentDomainName,
-		Execution: &types.WorkflowExecution{
-			WorkflowID: constants.TestWorkflowID,
-			RunID:      constants.TestRunID,
-		},
-		InitiatedID: 123,
-	}
-	expectedTask := &persistence.CrossClusterRecordChildExecutionCompletedTask{
-		TargetCluster: targetCluster,
-		RecordChildExecutionCompletedTask: persistence.RecordChildExecutionCompletedTask{
-			TaskData: persistence.TaskData{
-				VisibilityTimestamp: transferTask.GetVisibilityTimestamp(),
-				Version:             101,
-			},
-			TargetDomainID:   constants.TestParentDomainID,
-			TargetWorkflowID: constants.TestWorkflowID,
-			TargetRunID:      constants.TestRunID,
-		},
-	}
-
-	var actualTask persistence.Task
-	s.mockMutableState.EXPECT().AddCrossClusterTasks(gomock.Any()).Do(
-		func(crossClusterTasks ...persistence.Task) {
-			s.Len(crossClusterTasks, 1)
-			actualTask = crossClusterTasks[0]
-		},
-	).Times(1)
-
-	err := s.taskGenerator.GenerateCrossClusterRecordChildCompletedTask(
-		transferTask,
-		targetCluster,
-		parentInfo,
-	)
-	s.NoError(err)
-	s.Equal(expectedTask, actualTask)
-}
-
-func (s *mutableStateTaskGeneratorSuite) TestGenerateCrossClusterApplyParentClosePolicyTask() {
-	targetCluster := cluster.TestAlternativeClusterName
-	transferTask := &persistence.TransferTaskInfo{
-		TaskType:            persistence.TransferTaskTypeCloseExecution,
-		VisibilityTimestamp: time.Now(),
-		Version:             int64(101),
-	}
-	childDomainIDs := map[string]struct{}{constants.TestRemoteTargetDomainID: {}}
-	expectedTask := &persistence.CrossClusterApplyParentClosePolicyTask{
-		TargetCluster: targetCluster,
-		ApplyParentClosePolicyTask: persistence.ApplyParentClosePolicyTask{
-			TaskData: persistence.TaskData{
-				VisibilityTimestamp: transferTask.GetVisibilityTimestamp(),
-				Version:             101,
-			},
-			TargetDomainIDs: map[string]struct{}{constants.TestRemoteTargetDomainID: {}},
-		},
-	}
-
-	var actualTask persistence.Task
-	s.mockMutableState.EXPECT().AddCrossClusterTasks(gomock.Any()).Do(
-		func(crossClusterTasks ...persistence.Task) {
-			s.Len(crossClusterTasks, 1)
-			actualTask = crossClusterTasks[0]
-		},
-	).Times(1)
-
-	err := s.taskGenerator.GenerateCrossClusterApplyParentClosePolicyTask(
-		transferTask,
-		targetCluster,
-		childDomainIDs,
-	)
-	s.NoError(err)
-	s.Equal(expectedTask, actualTask)
-}
-
-func (s *mutableStateTaskGeneratorSuite) TestGenerateFromCrossClusterTask() {
-	testCases := []struct {
-		sourceActive     bool
-		crossClusterTask *persistence.CrossClusterTaskInfo
-		generatedTasks   []persistence.Task
-	}{
-		{
-			sourceActive: true,
-			crossClusterTask: &persistence.CrossClusterTaskInfo{
-				TaskType:         persistence.CrossClusterTaskTypeStartChildExecution,
-				TargetDomainID:   constants.TestTargetDomainID,
-				TargetWorkflowID: constants.TestWorkflowID,
-				ScheduleID:       int64(123),
-			},
-			generatedTasks: []persistence.Task{
-				&persistence.StartChildExecutionTask{
-					TargetDomainID:   constants.TestTargetDomainID,
-					TargetWorkflowID: constants.TestWorkflowID,
-					InitiatedID:      int64(123),
-				},
-			},
-		},
-		{
-			sourceActive: true,
-			crossClusterTask: &persistence.CrossClusterTaskInfo{
-				TaskType:                persistence.CrossClusterTaskTypeSignalExecution,
-				TargetDomainID:          constants.TestRemoteTargetDomainID,
-				TargetWorkflowID:        constants.TestWorkflowID,
-				TargetRunID:             constants.TestRunID,
-				TargetChildWorkflowOnly: false,
-				ScheduleID:              int64(123),
-			},
-			generatedTasks: []persistence.Task{
-				&persistence.CrossClusterSignalExecutionTask{
-					TargetCluster: cluster.TestAlternativeClusterName,
-					SignalExecutionTask: persistence.SignalExecutionTask{
-						TargetDomainID:          constants.TestRemoteTargetDomainID,
-						TargetWorkflowID:        constants.TestWorkflowID,
-						TargetRunID:             constants.TestRunID,
-						TargetChildWorkflowOnly: false,
-						InitiatedID:             int64(123),
-					},
-				},
-			},
-		},
-		{
-			sourceActive: false,
-			crossClusterTask: &persistence.CrossClusterTaskInfo{
-				TaskType:                persistence.CrossClusterTaskTypeCancelExecution,
-				TargetDomainID:          constants.TestTargetDomainID,
-				TargetWorkflowID:        constants.TestWorkflowID,
-				TargetRunID:             constants.TestRunID,
-				TargetChildWorkflowOnly: false,
-				ScheduleID:              int64(123),
-			},
-			generatedTasks: []persistence.Task{
-				&persistence.CancelExecutionTask{
-					TargetDomainID:          constants.TestTargetDomainID,
-					TargetWorkflowID:        constants.TestWorkflowID,
-					TargetRunID:             constants.TestRunID,
-					TargetChildWorkflowOnly: false,
-					InitiatedID:             int64(123),
-				},
-			},
-		},
-		{
-			sourceActive: true,
-			crossClusterTask: &persistence.CrossClusterTaskInfo{
-				TaskType:         persistence.CrossClusterTaskTypeRecordChildExeuctionCompleted,
-				TargetDomainID:   constants.TestRemoteTargetDomainID,
-				TargetWorkflowID: constants.TestWorkflowID,
-				TargetRunID:      constants.TestRunID,
-				ScheduleID:       int64(123),
-			},
-			generatedTasks: []persistence.Task{
-				&persistence.CrossClusterRecordChildExecutionCompletedTask{
-					TargetCluster: cluster.TestAlternativeClusterName,
-					RecordChildExecutionCompletedTask: persistence.RecordChildExecutionCompletedTask{
-						TargetDomainID:   constants.TestRemoteTargetDomainID,
-						TargetWorkflowID: constants.TestWorkflowID,
-						TargetRunID:      constants.TestRunID,
-					},
-				},
-			},
-		},
-		{
-			sourceActive: false,
-			crossClusterTask: &persistence.CrossClusterTaskInfo{
-				TaskType:         persistence.CrossClusterTaskTypeRecordChildExeuctionCompleted,
-				TargetDomainID:   constants.TestRemoteTargetDomainID,
-				TargetWorkflowID: constants.TestWorkflowID,
-				TargetRunID:      constants.TestRunID,
-				ScheduleID:       int64(123),
-			},
-			generatedTasks: []persistence.Task{
-				&persistence.RecordChildExecutionCompletedTask{
-					TargetDomainID:   constants.TestRemoteTargetDomainID,
-					TargetWorkflowID: constants.TestWorkflowID,
-					TargetRunID:      constants.TestRunID,
-				},
-			},
-		},
-		{
-			sourceActive: true,
-			crossClusterTask: &persistence.CrossClusterTaskInfo{
-				TaskType:         persistence.CrossClusterTaskTypeRecordChildExeuctionCompleted,
-				TargetDomainID:   constants.TestTargetDomainID,
-				TargetWorkflowID: constants.TestWorkflowID,
-				TargetRunID:      constants.TestRunID,
-				ScheduleID:       int64(123),
-			},
-			generatedTasks: []persistence.Task{
-				&persistence.RecordChildExecutionCompletedTask{
-					TargetDomainID:   constants.TestTargetDomainID,
-					TargetWorkflowID: constants.TestWorkflowID,
-					TargetRunID:      constants.TestRunID,
-				},
-			},
-		},
-		{
-			sourceActive: true,
-			crossClusterTask: &persistence.CrossClusterTaskInfo{
-				TaskType:        persistence.CrossClusterTaskTypeApplyParentClosePolicy,
-				TargetDomainIDs: map[string]struct{}{constants.TestRemoteTargetDomainID: {}},
-				ScheduleID:      int64(123),
-			},
-			generatedTasks: []persistence.Task{
-				&persistence.CrossClusterApplyParentClosePolicyTask{
-					TargetCluster: cluster.TestAlternativeClusterName,
-					ApplyParentClosePolicyTask: persistence.ApplyParentClosePolicyTask{
-						TargetDomainIDs: map[string]struct{}{constants.TestRemoteTargetDomainID: {}},
-					},
-				},
-			},
-		},
-		{
-			sourceActive: false,
-			crossClusterTask: &persistence.CrossClusterTaskInfo{
-				TaskType:        persistence.CrossClusterTaskTypeApplyParentClosePolicy,
-				TargetDomainIDs: map[string]struct{}{constants.TestRemoteTargetDomainID: {}},
-				ScheduleID:      int64(123),
-			},
-			generatedTasks: []persistence.Task{
-				&persistence.ApplyParentClosePolicyTask{
-					TargetDomainIDs: map[string]struct{}{
-						constants.TestRemoteTargetDomainID: {},
-					},
-				},
-			},
-		},
-		{
-			sourceActive: true,
-			crossClusterTask: &persistence.CrossClusterTaskInfo{
-				TaskType:        persistence.CrossClusterTaskTypeApplyParentClosePolicy,
-				TargetDomainIDs: map[string]struct{}{constants.TestTargetDomainID: {}},
-				ScheduleID:      int64(123),
-			},
-			generatedTasks: []persistence.Task{
-				&persistence.ApplyParentClosePolicyTask{
-					TargetDomainIDs: map[string]struct{}{
-						constants.TestTargetDomainID: {},
-					},
-				},
-			},
-		},
-		{
-			sourceActive: true,
-			crossClusterTask: &persistence.CrossClusterTaskInfo{
-				TaskType: persistence.CrossClusterTaskTypeApplyParentClosePolicy,
-				TargetDomainIDs: map[string]struct{}{
-					constants.TestTargetDomainID:       {},
-					constants.TestRemoteTargetDomainID: {},
-				},
-				ScheduleID: int64(123),
-			},
-			generatedTasks: []persistence.Task{
-				&persistence.ApplyParentClosePolicyTask{
-					TargetDomainIDs: map[string]struct{}{
-						constants.TestTargetDomainID: {},
-					},
-				},
-				&persistence.CrossClusterApplyParentClosePolicyTask{
-					TargetCluster: cluster.TestAlternativeClusterName,
-					ApplyParentClosePolicyTask: persistence.ApplyParentClosePolicyTask{
-						TargetDomainIDs: map[string]struct{}{
-							constants.TestRemoteTargetDomainID: {},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	for _, tc := range testCases {
-		// create new mockMutableState so can we can setup separete mock for each test case
-		mockMutableState := NewMockMutableState(s.controller)
-		taskGenerator := NewMutableStateTaskGenerator(
-			constants.TestClusterMetadata,
-			s.mockDomainCache,
-			mockMutableState,
-		)
-
-		if tc.sourceActive {
-			tc.crossClusterTask.DomainID = constants.TestDomainID
-			mockMutableState.EXPECT().GetDomainEntry().Return(constants.TestGlobalDomainEntry).Times(1)
-		} else {
-			tc.crossClusterTask.DomainID = constants.TestRemoteTargetDomainID
-			mockMutableState.EXPECT().GetDomainEntry().Return(constants.TestGlobalRemoteTargetDomainEntry).Times(1)
-		}
-
-		var transferTasks []persistence.Task
-		var crossClusterTasks []persistence.Task
-		mockMutableState.EXPECT().AddTransferTasks(gomock.Any()).Do(func(tasks ...persistence.Task) {
-			transferTasks = tasks
-		}).MaxTimes(1)
-		mockMutableState.EXPECT().AddCrossClusterTasks(gomock.Any()).Do(func(tasks ...persistence.Task) {
-			crossClusterTasks = tasks
-		}).MaxTimes(1)
-
-		err := taskGenerator.GenerateFromCrossClusterTask(tc.crossClusterTask)
-		s.NoError(err)
-
-		actualGeneratedTasks := append(transferTasks, crossClusterTasks...)
-		s.Equal(tc.generatedTasks, actualGeneratedTasks)
 	}
 }
 
@@ -1132,7 +664,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateDecisionStartTasks() {
 }
 
 func (s *mutableStateTaskGeneratorSuite) TestGenerateActivityTransferTasks() {
-	domain := constants.TestParentDomainName
+	domain := constants.TestDomainName
 	event := &types.HistoryEvent{
 		ID: 123,
 		ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{
@@ -1289,6 +821,16 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateChildWorkflowTasks() {
 		}
 	}
 
+	parentDomain := cache.NewGlobalDomainCacheEntryForTest(
+		&persistence.DomainInfo{
+			ID:   constants.TestDomainID,
+			Name: constants.TestDomainName,
+		},
+		&persistence.DomainConfig{},
+		nil,
+		0,
+	)
+
 	testCases := []struct {
 		name       string
 		setupMock  func()
@@ -1300,8 +842,8 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateChildWorkflowTasks() {
 			setupMock: func() {
 				childWorkflowInfo := getChildWorkflowInfo()
 				childWorkflowInfo.DomainID = constants.TestDomainID
+				s.mockMutableState.EXPECT().GetDomainEntry().Return(parentDomain).Times(1)
 				s.mockMutableState.EXPECT().GetChildExecutionInfo(eventID).Return(childWorkflowInfo, true).Times(1)
-				s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{DomainID: constants.TestDomainID}).Times(1)
 				s.mockMutableState.EXPECT().AddTransferTasks(&persistence.StartChildExecutionTask{
 					TaskData: persistence.TaskData{
 						Version: childWorkflowInfo.Version,
@@ -1313,29 +855,40 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateChildWorkflowTasks() {
 			},
 		},
 		{
-			name:       "Success case - targetDomainID is empty and isCrossClusterTask is true",
+			name:       "Success case - targetDomainID is empty - the expectations is that this should default to the existing parent workflow's domain",
 			domainName: "",
 			setupMock: func() {
 				childWorkflowInfo := getChildWorkflowInfo()
+
+				s.mockMutableState.EXPECT().GetDomainEntry().Return(parentDomain).Times(1)
 				s.mockMutableState.EXPECT().GetChildExecutionInfo(eventID).Return(childWorkflowInfo, true).Times(1)
-				s.mockMutableState.EXPECT().GetExecutionInfo().
-					Return(&persistence.WorkflowExecutionInfo{DomainID: "target-domain-id"}).Times(1)
-				s.mockMutableState.EXPECT().GetExecutionInfo().
-					Return(&persistence.WorkflowExecutionInfo{DomainID: constants.TestDomainID}).Times(1)
-				s.mockDomainCache.EXPECT().GetDomainByID("target-domain-id").
-					Return(cache.NewLocalDomainCacheEntryForTest(&persistence.DomainInfo{}, &persistence.DomainConfig{}, cluster.TestAlternativeClusterName), nil).
-					Times(1)
-				s.mockMutableState.EXPECT().AddCrossClusterTasks(&persistence.CrossClusterStartChildExecutionTask{
-					TargetCluster: cluster.TestAlternativeClusterName,
-					StartChildExecutionTask: persistence.StartChildExecutionTask{
-						TaskData: persistence.TaskData{
-							Version: childWorkflowInfo.Version,
-						},
-						TargetDomainID:   "target-domain-id",
-						TargetWorkflowID: childWorkflowInfo.StartedWorkflowID,
-						InitiatedID:      childWorkflowInfo.InitiatedID,
+				s.mockMutableState.EXPECT().AddTransferTasks(&persistence.StartChildExecutionTask{
+					TaskData: persistence.TaskData{
+						Version: childWorkflowInfo.Version,
 					},
-				})
+					TargetDomainID:   constants.TestDomainID,
+					TargetWorkflowID: childWorkflowInfo.StartedWorkflowID,
+					InitiatedID:      childWorkflowInfo.InitiatedID,
+				}).Times(1)
+			},
+		},
+		{
+			name:       "targetDomainID different to child's - this is invalid and should be an error",
+			domainName: "child-domain-B",
+			setupMock: func() {
+
+				childWorkflowInfo := &persistence.ChildExecutionInfo{
+					Version:           constants.TestVersion,
+					InitiatedID:       123,
+					StartedWorkflowID: constants.TestWorkflowID,
+					DomainID:          "child-domain-B",
+				}
+
+				s.mockMutableState.EXPECT().GetChildExecutionInfo(eventID).Return(childWorkflowInfo, true).Times(1)
+				s.mockMutableState.EXPECT().GetDomainEntry().Return(parentDomain).Times(1)
+			},
+			err: &types.BadRequestError{
+				Message: "there would appear to be a bug: The child workflow is trying to use domain child-domain-B but it's running in domain deadbeef-0123-4567-890a-bcdef0123456. Cross-cluster child workflows are not supported",
 			},
 		},
 		{
@@ -1346,28 +899,6 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateChildWorkflowTasks() {
 			err: &types.InternalServiceError{
 				Message: fmt.Sprintf("it could be a bug, cannot get pending child workflow: %v", eventID),
 			},
-		},
-		{
-			name:       "Error case - getTargetDomainID error",
-			domainName: "domain-name",
-			setupMock: func() {
-				childWorkflowInfo := getChildWorkflowInfo()
-				s.mockMutableState.EXPECT().GetChildExecutionInfo(eventID).Return(childWorkflowInfo, true).Times(1)
-				s.mockDomainCache.EXPECT().GetDomainID("domain-name").
-					Return("", errors.New("get-target-domain-id-error")).Times(1)
-			},
-			err: errors.New("get-target-domain-id-error"),
-		},
-		{
-			name: "Error case - isCrossClusterTask error",
-			setupMock: func() {
-				childWorkflowInfo := getChildWorkflowInfo()
-				s.mockMutableState.EXPECT().GetChildExecutionInfo(eventID).Return(childWorkflowInfo, true).Times(1)
-				s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{DomainID: "target-domain-id"}).Times(1)
-				s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{DomainID: "source-domain-id"}).Times(1)
-				s.mockDomainCache.EXPECT().GetDomainByID("source-domain-id").Return(nil, errors.New("get-domain-by-id-error")).Times(1)
-			},
-			err: errors.New("get-domain-by-id-error"),
 		},
 	}
 
@@ -1413,51 +944,6 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateRequestCancelExternalTasks(
 		err       error
 	}{
 		{
-			name: "Success case - no cross cluster task",
-			setupMock: func() {
-				targetDomainID := "target-domain-id"
-				s.mockMutableState.EXPECT().GetRequestCancelInfo(event.ID).Return(nil, true).Times(1)
-				s.mockDomainCache.EXPECT().GetDomainID(event.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes.GetDomain()).
-					Return(targetDomainID, nil).Times(1)
-				s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{DomainID: constants.TestDomainID}).Times(1)
-				s.mockDomainCache.EXPECT().GetDomainByID(targetDomainID).Return(constants.TestGlobalDomainEntry, nil).Times(1)
-				s.mockMutableState.EXPECT().AddTransferTasks(&persistence.CancelExecutionTask{
-					TaskData: persistence.TaskData{
-						Version: event.Version,
-					},
-					TargetDomainID:          targetDomainID,
-					TargetWorkflowID:        event.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes.WorkflowExecution.GetWorkflowID(),
-					TargetRunID:             event.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes.WorkflowExecution.GetRunID(),
-					TargetChildWorkflowOnly: event.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes.GetChildWorkflowOnly(),
-					InitiatedID:             event.ID,
-				}).Times(1)
-			},
-		},
-		{
-			name: "Success case - cross cluster task",
-			setupMock: func() {
-				targetDomainID := "target-domain-id"
-				s.mockMutableState.EXPECT().GetRequestCancelInfo(event.ID).Return(nil, true).Times(1)
-				s.mockDomainCache.EXPECT().GetDomainID(event.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes.GetDomain()).
-					Return(targetDomainID, nil).Times(1)
-				s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{DomainID: constants.TestDomainID}).Times(1)
-				s.mockDomainCache.EXPECT().GetDomainByID(targetDomainID).Return(constants.TestGlobalRemoteTargetDomainEntry, nil).Times(1)
-				s.mockMutableState.EXPECT().AddCrossClusterTasks(&persistence.CrossClusterCancelExecutionTask{
-					TargetCluster: constants.TestGlobalRemoteTargetDomainEntry.GetReplicationConfig().ActiveClusterName,
-					CancelExecutionTask: persistence.CancelExecutionTask{
-						TaskData: persistence.TaskData{
-							Version: event.Version,
-						},
-						TargetDomainID:          targetDomainID,
-						TargetWorkflowID:        event.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes.WorkflowExecution.GetWorkflowID(),
-						TargetRunID:             event.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes.WorkflowExecution.GetRunID(),
-						TargetChildWorkflowOnly: event.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes.GetChildWorkflowOnly(),
-						InitiatedID:             event.ID,
-					},
-				}).Times(1)
-			},
-		},
-		{
 			name: "Error case - GetRequestCancelInfo error",
 			setupMock: func() {
 				s.mockMutableState.EXPECT().GetRequestCancelInfo(event.ID).Return(nil, false).Times(1)
@@ -1474,18 +960,6 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateRequestCancelExternalTasks(
 					Return("", errors.New("get-target-domain-id-error")).Times(1)
 			},
 			err: errors.New("get-target-domain-id-error"),
-		},
-		{
-			name: "Error case - isCrossClusterTask error",
-			setupMock: func() {
-				targetDomainID := "target-domain-id"
-				s.mockMutableState.EXPECT().GetRequestCancelInfo(event.ID).Return(&persistence.RequestCancelInfo{}, true).Times(1)
-				s.mockDomainCache.EXPECT().GetDomainID(event.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes.GetDomain()).
-					Return(targetDomainID, nil).Times(1)
-				s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{DomainID: constants.TestDomainID}).Times(1)
-				s.mockDomainCache.EXPECT().GetDomainByID(targetDomainID).Return(nil, errors.New("get-domain-by-id-error")).Times(1)
-			},
-			err: errors.New("get-domain-by-id-error"),
 		},
 	}
 
@@ -1524,14 +998,12 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateSignalExternalTasks() {
 		err       error
 	}{
 		{
-			name: "Success case - no cross cluster task",
+			name: "Success case",
 			setupMock: func() {
 				targetDomainID := "target-domain-id"
 				s.mockMutableState.EXPECT().GetSignalInfo(event.ID).Return(nil, true).Times(1)
 				s.mockDomainCache.EXPECT().GetDomainID(event.SignalExternalWorkflowExecutionInitiatedEventAttributes.GetDomain()).
 					Return(targetDomainID, nil).Times(1)
-				s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{DomainID: constants.TestDomainID}).Times(1)
-				s.mockDomainCache.EXPECT().GetDomainByID(targetDomainID).Return(constants.TestGlobalDomainEntry, nil).Times(1)
 				s.mockMutableState.EXPECT().AddTransferTasks(&persistence.SignalExecutionTask{
 					TaskData: persistence.TaskData{
 						Version: event.Version,
@@ -1540,29 +1012,6 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateSignalExternalTasks() {
 					TargetWorkflowID: event.SignalExternalWorkflowExecutionInitiatedEventAttributes.WorkflowExecution.GetWorkflowID(),
 					TargetRunID:      event.SignalExternalWorkflowExecutionInitiatedEventAttributes.WorkflowExecution.GetRunID(),
 					InitiatedID:      event.ID,
-				}).Times(1)
-			},
-		},
-		{
-			name: "Success case - cross cluster task",
-			setupMock: func() {
-				targetDomainID := "target-domain-id"
-				s.mockMutableState.EXPECT().GetSignalInfo(event.ID).Return(nil, true).Times(1)
-				s.mockDomainCache.EXPECT().GetDomainID(event.SignalExternalWorkflowExecutionInitiatedEventAttributes.GetDomain()).
-					Return(targetDomainID, nil).Times(1)
-				s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{DomainID: constants.TestDomainID}).Times(1)
-				s.mockDomainCache.EXPECT().GetDomainByID(targetDomainID).Return(constants.TestGlobalRemoteTargetDomainEntry, nil).Times(1)
-				s.mockMutableState.EXPECT().AddCrossClusterTasks(&persistence.CrossClusterSignalExecutionTask{
-					TargetCluster: constants.TestGlobalRemoteTargetDomainEntry.GetReplicationConfig().ActiveClusterName,
-					SignalExecutionTask: persistence.SignalExecutionTask{
-						TaskData: persistence.TaskData{
-							Version: event.Version,
-						},
-						TargetDomainID:   targetDomainID,
-						TargetWorkflowID: event.SignalExternalWorkflowExecutionInitiatedEventAttributes.WorkflowExecution.GetWorkflowID(),
-						TargetRunID:      event.SignalExternalWorkflowExecutionInitiatedEventAttributes.WorkflowExecution.GetRunID(),
-						InitiatedID:      event.ID,
-					},
 				}).Times(1)
 			},
 		},
@@ -1583,18 +1032,6 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateSignalExternalTasks() {
 					Return("", errors.New("get-target-domain-id-error")).Times(1)
 			},
 			err: errors.New("get-target-domain-id-error"),
-		},
-		{
-			name: "Error case - isCrossClusterTask error",
-			setupMock: func() {
-				targetDomainID := "target-domain-id"
-				s.mockMutableState.EXPECT().GetSignalInfo(event.ID).Return(&persistence.SignalInfo{}, true).Times(1)
-				s.mockDomainCache.EXPECT().GetDomainID(event.SignalExternalWorkflowExecutionInitiatedEventAttributes.GetDomain()).
-					Return(targetDomainID, nil).Times(1)
-				s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{DomainID: constants.TestDomainID}).Times(1)
-				s.mockDomainCache.EXPECT().GetDomainByID(targetDomainID).Return(nil, errors.New("get-domain-by-id-error")).Times(1)
-			},
-			err: errors.New("get-domain-by-id-error"),
 		},
 	}
 
@@ -1757,7 +1194,7 @@ func GenerateWorkflowCloseTasksTestCases(retention time.Duration, closeEvent *ty
 					DomainID:         constants.TestDomainID,
 					WorkflowID:       constants.TestWorkflowID,
 					RunID:            constants.TestRunID,
-					ParentDomainID:   constants.TestParentDomainID,
+					ParentDomainID:   constants.TestDomainID,
 					ParentWorkflowID: "parent workflowID",
 					ParentRunID:      "parent runID",
 					InitiatedID:      101,
@@ -1765,8 +1202,8 @@ func GenerateWorkflowCloseTasksTestCases(retention time.Duration, closeEvent *ty
 				}).AnyTimes()
 				mockMutableState.EXPECT().HasParentExecution().Return(true).AnyTimes()
 				mockMutableState.EXPECT().GetPendingChildExecutionInfos().Return(map[int64]*persistence.ChildExecutionInfo{
-					102: {DomainID: constants.TestTargetDomainID, ParentClosePolicy: types.ParentClosePolicyTerminate},
-					103: {DomainID: constants.TestRemoteTargetDomainID, ParentClosePolicy: types.ParentClosePolicyAbandon},
+					102: {DomainID: constants.TestDomainID, ParentClosePolicy: types.ParentClosePolicyTerminate},
+					103: {DomainID: constants.TestDomainID, ParentClosePolicy: types.ParentClosePolicyAbandon},
 				}).AnyTimes()
 			},
 			generatedTasks: []persistence.Task{
@@ -1774,185 +1211,6 @@ func GenerateWorkflowCloseTasksTestCases(retention time.Duration, closeEvent *ty
 					TaskData: persistence.TaskData{
 						VisibilityTimestamp: now,
 						Version:             version,
-					},
-				},
-				&persistence.DeleteHistoryEventTask{
-					TaskData: persistence.TaskData{
-						VisibilityTimestamp: time.Unix(0, closeEvent.GetTimestamp()).Add(retention),
-						Version:             version,
-					},
-				},
-			},
-		},
-		{
-			// parent active in cluster cluster,
-			// one child active in cluster, one child active in remote
-			setupFn: func(mockMutableState *MockMutableState) {
-				mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{
-					DomainID:         constants.TestDomainID,
-					WorkflowID:       constants.TestWorkflowID,
-					RunID:            constants.TestRunID,
-					ParentDomainID:   constants.TestParentDomainID,
-					ParentWorkflowID: "parent workflowID",
-					ParentRunID:      "parent runID",
-					InitiatedID:      101,
-					CloseStatus:      persistence.WorkflowCloseStatusCompleted,
-				}).AnyTimes()
-				mockMutableState.EXPECT().HasParentExecution().Return(true).AnyTimes()
-				mockMutableState.EXPECT().GetPendingChildExecutionInfos().Return(map[int64]*persistence.ChildExecutionInfo{
-					102: {DomainID: constants.TestTargetDomainID, ParentClosePolicy: types.ParentClosePolicyTerminate},
-					103: {DomainID: constants.TestRemoteTargetDomainID, ParentClosePolicy: types.ParentClosePolicyRequestCancel},
-				}).AnyTimes()
-			},
-			generatedTasks: []persistence.Task{
-				&persistence.RecordChildExecutionCompletedTask{
-					TaskData: persistence.TaskData{
-						VisibilityTimestamp: now,
-						Version:             version,
-					},
-					TargetDomainID:   constants.TestParentDomainID,
-					TargetWorkflowID: "parent workflowID",
-					TargetRunID:      "parent runID",
-				},
-				&persistence.ApplyParentClosePolicyTask{
-					TaskData: persistence.TaskData{
-						VisibilityTimestamp: now,
-						Version:             version,
-					},
-					TargetDomainIDs: map[string]struct{}{constants.TestTargetDomainID: {}},
-				},
-				&persistence.RecordWorkflowClosedTask{
-					TaskData: persistence.TaskData{
-						VisibilityTimestamp: now,
-						Version:             version,
-					},
-				},
-				&persistence.CrossClusterApplyParentClosePolicyTask{
-					TargetCluster: cluster.TestAlternativeClusterName,
-					ApplyParentClosePolicyTask: persistence.ApplyParentClosePolicyTask{
-						TaskData: persistence.TaskData{
-							VisibilityTimestamp: now,
-							Version:             version,
-						},
-						TargetDomainIDs: map[string]struct{}{constants.TestRemoteTargetDomainID: {}},
-					},
-				},
-				&persistence.DeleteHistoryEventTask{
-					TaskData: persistence.TaskData{
-						VisibilityTimestamp: time.Unix(0, closeEvent.GetTimestamp()).Add(retention),
-						Version:             version,
-					},
-				},
-			},
-		},
-		{
-			// parent active in remote cluster, all children active in current cluster
-			setupFn: func(mockMutableState *MockMutableState) {
-				mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{
-					DomainID:         constants.TestDomainID,
-					WorkflowID:       constants.TestWorkflowID,
-					RunID:            constants.TestRunID,
-					ParentDomainID:   constants.TestRemoteTargetDomainID,
-					ParentWorkflowID: "parent workflowID",
-					ParentRunID:      "parent runID",
-					InitiatedID:      101,
-					CloseStatus:      persistence.WorkflowCloseStatusCompleted,
-				}).AnyTimes()
-				mockMutableState.EXPECT().HasParentExecution().Return(true).AnyTimes()
-				mockMutableState.EXPECT().GetPendingChildExecutionInfos().Return(map[int64]*persistence.ChildExecutionInfo{
-					102: {DomainID: constants.TestTargetDomainID, ParentClosePolicy: types.ParentClosePolicyTerminate},
-					103: {DomainID: constants.TestChildDomainID, ParentClosePolicy: types.ParentClosePolicyRequestCancel},
-				}).AnyTimes()
-			},
-			generatedTasks: []persistence.Task{
-				&persistence.ApplyParentClosePolicyTask{
-					TaskData: persistence.TaskData{
-						VisibilityTimestamp: now,
-						Version:             version,
-					},
-					TargetDomainIDs: map[string]struct{}{constants.TestTargetDomainID: {}, constants.TestChildDomainID: {}},
-				},
-				&persistence.RecordWorkflowClosedTask{
-					TaskData: persistence.TaskData{
-						VisibilityTimestamp: now,
-						Version:             version,
-					},
-				},
-				&persistence.CrossClusterRecordChildExecutionCompletedTask{
-					TargetCluster: cluster.TestAlternativeClusterName,
-					RecordChildExecutionCompletedTask: persistence.RecordChildExecutionCompletedTask{
-						TaskData: persistence.TaskData{
-							VisibilityTimestamp: now,
-							Version:             version,
-						},
-						TargetDomainID:   constants.TestRemoteTargetDomainID,
-						TargetWorkflowID: "parent workflowID",
-						TargetRunID:      "parent runID",
-					},
-				},
-				&persistence.DeleteHistoryEventTask{
-					TaskData: persistence.TaskData{
-						VisibilityTimestamp: time.Unix(0, closeEvent.GetTimestamp()).Add(retention),
-						Version:             version,
-					},
-				},
-			},
-		},
-		{
-			// parent active in remote cluster
-			// two children active in current cluster, one child active in remote cluster
-			setupFn: func(mockMutableState *MockMutableState) {
-				mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{
-					DomainID:         constants.TestDomainID,
-					WorkflowID:       constants.TestWorkflowID,
-					RunID:            constants.TestRunID,
-					ParentDomainID:   constants.TestRemoteTargetDomainID,
-					ParentWorkflowID: "parent workflowID",
-					ParentRunID:      "parent runID",
-					InitiatedID:      101,
-					CloseStatus:      persistence.WorkflowCloseStatusCompleted,
-				}).AnyTimes()
-				mockMutableState.EXPECT().HasParentExecution().Return(true).AnyTimes()
-				mockMutableState.EXPECT().GetPendingChildExecutionInfos().Return(map[int64]*persistence.ChildExecutionInfo{
-					102: {DomainID: constants.TestTargetDomainID, ParentClosePolicy: types.ParentClosePolicyTerminate},
-					103: {DomainID: constants.TestChildDomainID, ParentClosePolicy: types.ParentClosePolicyRequestCancel},
-					104: {DomainID: constants.TestRemoteTargetDomainID, ParentClosePolicy: types.ParentClosePolicyRequestCancel},
-				}).AnyTimes()
-			},
-			generatedTasks: []persistence.Task{
-				&persistence.ApplyParentClosePolicyTask{
-					TaskData: persistence.TaskData{
-						VisibilityTimestamp: now,
-						Version:             version,
-					},
-					TargetDomainIDs: map[string]struct{}{constants.TestTargetDomainID: {}, constants.TestChildDomainID: {}},
-				},
-				&persistence.RecordWorkflowClosedTask{
-					TaskData: persistence.TaskData{
-						VisibilityTimestamp: now,
-						Version:             version,
-					},
-				},
-				&persistence.CrossClusterRecordChildExecutionCompletedTask{
-					TargetCluster: cluster.TestAlternativeClusterName,
-					RecordChildExecutionCompletedTask: persistence.RecordChildExecutionCompletedTask{
-						TaskData: persistence.TaskData{
-							VisibilityTimestamp: now,
-							Version:             version,
-						},
-						TargetDomainID:   constants.TestRemoteTargetDomainID,
-						TargetWorkflowID: "parent workflowID",
-						TargetRunID:      "parent runID",
-					},
-				},
-				&persistence.CrossClusterApplyParentClosePolicyTask{
-					TargetCluster: cluster.TestAlternativeClusterName,
-					ApplyParentClosePolicyTask: persistence.ApplyParentClosePolicyTask{
-						TaskData: persistence.TaskData{
-							VisibilityTimestamp: now,
-							Version:             version,
-						},
-						TargetDomainIDs: map[string]struct{}{constants.TestRemoteTargetDomainID: {}},
 					},
 				},
 				&persistence.DeleteHistoryEventTask{

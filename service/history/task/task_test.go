@@ -158,7 +158,7 @@ func (s *taskSuite) TestHandleErr_ErrTargetDomainNotActive() {
 		return true, nil
 	}, nil)
 
-	err := errTargetDomainNotActive
+	err := &types.DomainNotActiveError{}
 
 	// we should always return the target domain not active error
 	// no matter that the submit time is

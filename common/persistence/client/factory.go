@@ -270,7 +270,7 @@ func (f *factoryImpl) NewVisibilityManager(
 	params *Params,
 	resourceConfig *service.Config,
 ) (p.VisibilityManager, error) {
-	if resourceConfig.EnableReadVisibilityFromES == nil && resourceConfig.AdvancedVisibilityWritingMode == nil {
+	if resourceConfig.EnableReadVisibilityFromES == nil && resourceConfig.EnableReadVisibilityFromPinot == nil && resourceConfig.AdvancedVisibilityWritingMode == nil {
 		// No need to create visibility manager as no read/write needed
 		return nil, nil
 	}
@@ -291,21 +291,34 @@ func (f *factoryImpl) NewVisibilityManager(
 		visibilityFromPinot = newPinotVisibilityManager(
 			params.PinotClient, resourceConfig, visibilityProducer, params.MetricsClient, f.logger)
 
-		esVisibilityProducer, err := params.MessagingClient.NewProducer(common.VisibilityAppName)
-		visibilityIndexName := params.ESConfig.Indices[common.VisibilityAppName]
-		visibilityFromES = newESVisibilityManager(
-			visibilityIndexName, params.ESClient, resourceConfig, esVisibilityProducer, params.MetricsClient, f.logger,
-		)
+		// need to use triple manager in migration mode
+		if params.PinotConfig.Migration.Enabled {
+			esVisibilityProducer, err := params.MessagingClient.NewProducer(common.VisibilityAppName)
+			if err != nil {
+				f.logger.Fatal("Creating visibility producer failed", tag.Error(err))
+			}
+			visibilityIndexName := params.ESConfig.Indices[common.VisibilityAppName]
+			visibilityFromES = newESVisibilityManager(
+				visibilityIndexName, params.ESClient, resourceConfig, esVisibilityProducer, params.MetricsClient, f.logger,
+			)
 
-		return p.NewPinotVisibilityTripleManager(
+			return p.NewVisibilityTripleManager(
+				visibilityFromDB,
+				visibilityFromPinot,
+				visibilityFromES,
+				resourceConfig.EnableReadVisibilityFromPinot,
+				resourceConfig.EnableReadVisibilityFromES,
+				resourceConfig.AdvancedVisibilityWritingMode,
+				resourceConfig.EnableLogCustomerQueryParameter,
+				resourceConfig.EnableVisibilityDoubleRead,
+				f.logger,
+			), nil
+		}
+		return p.NewVisibilityDualManager(
 			visibilityFromDB,
 			visibilityFromPinot,
-			visibilityFromES,
 			resourceConfig.EnableReadVisibilityFromPinot,
-			resourceConfig.EnableReadVisibilityFromES,
 			resourceConfig.AdvancedVisibilityWritingMode,
-			resourceConfig.EnableLogCustomerQueryParameter,
-			resourceConfig.EnableVisibilityDoubleRead,
 			f.logger,
 		), nil
 	} else if params.PersistenceConfig.AdvancedVisibilityStore != "" {

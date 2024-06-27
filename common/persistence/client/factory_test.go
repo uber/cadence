@@ -26,6 +26,7 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/Shopify/sarama/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/uber-go/tally"
@@ -33,6 +34,8 @@ import (
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/testlogger"
+	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/common/messaging/kafka"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
@@ -179,6 +182,64 @@ func TestFactoryMethods(t *testing.T) {
 
 		ds.EXPECT().NewConfigStore().Return(nil, nil).MinTimes(1)
 		check(t, fact.NewConfigStoreManager)
+	})
+	t.Run("NewVisibilityManager_TripleVisibilityManager", func(t *testing.T) {
+		fact := makeFactory(t)
+		ds := mockDatastore(t, fact, storeTypeVisibility)
+
+		logger := testlogger.New(t)
+		mc := messaging.NewMockClient(gomock.NewController(t))
+		mc.EXPECT().NewProducer(gomock.Any()).Return(kafka.NewKafkaProducer("test-topic", mocks.NewSyncProducer(t, nil), logger), nil).MinTimes(1)
+		readFromClosed := true
+		testAttributes := map[string]interface{}{
+			"CustomAttribute": "test", // Define your custom attributes and types
+		}
+
+		ds.EXPECT().NewVisibilityStore(readFromClosed).Return(nil, nil).MinTimes(1)
+		_, err := fact.NewVisibilityManager(&Params{
+			PersistenceConfig: config.Persistence{
+				// a configured VisibilityStore uses the db store, which is mockable,
+				// unlike basically every other store.
+				AdvancedVisibilityStore: "pinot-visibility",
+				VisibilityStore:         "fake",
+				DataStores: map[string]config.DataStore{
+					"pinot-visibility": {
+						Pinot: &config.PinotVisibilityConfig{
+							// fields are unused but must be non-nil
+							Cluster: "cluster",
+							Broker:  "broker",
+							Migration: config.PinotMigration{
+								Enabled: false,
+							},
+						}, // fields are unused but must be non-nil
+					},
+				},
+			},
+			MessagingClient: mc,
+			PinotConfig: &config.PinotVisibilityConfig{
+				Migration: config.PinotMigration{
+					Enabled: true,
+				},
+			},
+			ESConfig: &config.ElasticSearchConfig{
+				Indices: map[string]string{
+					"visibility": "test-index",
+				},
+			},
+		}, &service.Config{
+			// must be non-nil to create a "manager", else nil return from NewVisibilityManager is expected
+			EnableReadVisibilityFromES: func(domain string) bool {
+				return false // any value is fine as there are no read calls
+			},
+			// non-nil avoids a warning log
+			EnableReadDBVisibilityFromClosedExecutionV2: func(opts ...dynamicconfig.FilterOption) bool {
+				return readFromClosed // any value is fine as there are no read calls
+			},
+			ValidSearchAttributes: func(opts ...dynamicconfig.FilterOption) map[string]interface{} {
+				return testAttributes
+			},
+		})
+		assert.NoError(t, err)
 	})
 }
 

@@ -114,11 +114,6 @@ type (
 		CompleteTransferTask(ctx context.Context, request *CompleteTransferTaskRequest) error
 		RangeCompleteTransferTask(ctx context.Context, request *RangeCompleteTransferTaskRequest) (*RangeCompleteTransferTaskResponse, error)
 
-		// Cross-cluster task related methods
-		GetCrossClusterTasks(ctx context.Context, request *GetCrossClusterTasksRequest) (*GetCrossClusterTasksResponse, error)
-		CompleteCrossClusterTask(ctx context.Context, request *CompleteCrossClusterTaskRequest) error
-		RangeCompleteCrossClusterTask(ctx context.Context, request *RangeCompleteCrossClusterTaskRequest) (*RangeCompleteCrossClusterTaskResponse, error)
-
 		// Replication task related methods
 		GetReplicationTasks(ctx context.Context, request *GetReplicationTasksRequest) (*InternalGetReplicationTasksResponse, error)
 		CompleteReplicationTask(ctx context.Context, request *CompleteReplicationTaskRequest) error
@@ -870,23 +865,22 @@ type (
 
 	// InternalShardInfo describes a shard
 	InternalShardInfo struct {
-		ShardID                           int                  `json:"shard_id"`
-		Owner                             string               `json:"owner"`
-		RangeID                           int64                `json:"range_id"`
-		StolenSinceRenew                  int                  `json:"stolen_since_renew"`
-		UpdatedAt                         time.Time            `json:"updated_at"`
-		ReplicationAckLevel               int64                `json:"replication_ack_level"`
-		ReplicationDLQAckLevel            map[string]int64     `json:"replication_dlq_ack_level"`
-		TransferAckLevel                  int64                `json:"transfer_ack_level"`
-		TimerAckLevel                     time.Time            `json:"timer_ack_level"`
-		ClusterTransferAckLevel           map[string]int64     `json:"cluster_transfer_ack_level"`
-		ClusterTimerAckLevel              map[string]time.Time `json:"cluster_timer_ack_level"`
-		TransferProcessingQueueStates     *DataBlob            `json:"transfer_processing_queue_states"`
-		CrossClusterProcessingQueueStates *DataBlob            `json:"cross_cluster_processing_queue_states"`
-		TimerProcessingQueueStates        *DataBlob            `json:"timer_processing_queue_states"`
-		ClusterReplicationLevel           map[string]int64     `json:"cluster_replication_level"`
-		DomainNotificationVersion         int64                `json:"domain_notification_version"`
-		PendingFailoverMarkers            *DataBlob            `json:"pending_failover_markers"`
+		ShardID                       int                  `json:"shard_id"`
+		Owner                         string               `json:"owner"`
+		RangeID                       int64                `json:"range_id"`
+		StolenSinceRenew              int                  `json:"stolen_since_renew"`
+		UpdatedAt                     time.Time            `json:"updated_at"`
+		ReplicationAckLevel           int64                `json:"replication_ack_level"`
+		ReplicationDLQAckLevel        map[string]int64     `json:"replication_dlq_ack_level"`
+		TransferAckLevel              int64                `json:"transfer_ack_level"`
+		TimerAckLevel                 time.Time            `json:"timer_ack_level"`
+		ClusterTransferAckLevel       map[string]int64     `json:"cluster_transfer_ack_level"`
+		ClusterTimerAckLevel          map[string]time.Time `json:"cluster_timer_ack_level"`
+		TransferProcessingQueueStates *DataBlob            `json:"transfer_processing_queue_states"`
+		TimerProcessingQueueStates    *DataBlob            `json:"timer_processing_queue_states"`
+		ClusterReplicationLevel       map[string]int64     `json:"cluster_replication_level"`
+		DomainNotificationVersion     int64                `json:"domain_notification_version"`
+		PendingFailoverMarkers        *DataBlob            `json:"pending_failover_markers"`
 	}
 
 	// InternalCreateShardRequest is request to CreateShard

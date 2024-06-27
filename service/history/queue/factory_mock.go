@@ -65,20 +65,6 @@ func (m *MockProcessorFactory) EXPECT() *MockProcessorFactoryMockRecorder {
 	return m.recorder
 }
 
-// NewCrossClusterQueueProcessor mocks base method.
-func (m *MockProcessorFactory) NewCrossClusterQueueProcessor(shard shard.Context, historyEngine engine.Engine, executionCache execution.Cache, taskProcessor task.Processor) Processor {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewCrossClusterQueueProcessor", shard, historyEngine, executionCache, taskProcessor)
-	ret0, _ := ret[0].(Processor)
-	return ret0
-}
-
-// NewCrossClusterQueueProcessor indicates an expected call of NewCrossClusterQueueProcessor.
-func (mr *MockProcessorFactoryMockRecorder) NewCrossClusterQueueProcessor(shard, historyEngine, executionCache, taskProcessor interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewCrossClusterQueueProcessor", reflect.TypeOf((*MockProcessorFactory)(nil).NewCrossClusterQueueProcessor), shard, historyEngine, executionCache, taskProcessor)
-}
-
 // NewTimerQueueProcessor mocks base method.
 func (m *MockProcessorFactory) NewTimerQueueProcessor(shard shard.Context, historyEngine engine.Engine, taskProcessor task.Processor, executionCache execution.Cache, archivalClient archiver.Client, executionCheck invariant.Invariant) Processor {
 	m.ctrl.T.Helper()

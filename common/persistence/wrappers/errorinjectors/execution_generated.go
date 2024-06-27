@@ -58,21 +58,6 @@ func (c *injectorExecutionManager) Close() {
 	return
 }
 
-func (c *injectorExecutionManager) CompleteCrossClusterTask(ctx context.Context, request *persistence.CompleteCrossClusterTaskRequest) (err error) {
-	fakeErr := generateFakeError(c.errorRate)
-	var forwardCall bool
-	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		err = c.wrapped.CompleteCrossClusterTask(ctx, request)
-	}
-
-	if fakeErr != nil {
-		logErr(c.logger, "ExecutionManager.CompleteCrossClusterTask", fakeErr, forwardCall, err)
-		err = fakeErr
-		return
-	}
-	return
-}
-
 func (c *injectorExecutionManager) CompleteReplicationTask(ctx context.Context, request *persistence.CompleteReplicationTaskRequest) (err error) {
 	fakeErr := generateFakeError(c.errorRate)
 	var forwardCall bool
@@ -202,21 +187,6 @@ func (c *injectorExecutionManager) DeleteWorkflowExecution(ctx context.Context, 
 
 	if fakeErr != nil {
 		logErr(c.logger, "ExecutionManager.DeleteWorkflowExecution", fakeErr, forwardCall, err)
-		err = fakeErr
-		return
-	}
-	return
-}
-
-func (c *injectorExecutionManager) GetCrossClusterTasks(ctx context.Context, request *persistence.GetCrossClusterTasksRequest) (gp1 *persistence.GetCrossClusterTasksResponse, err error) {
-	fakeErr := generateFakeError(c.errorRate)
-	var forwardCall bool
-	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		gp1, err = c.wrapped.GetCrossClusterTasks(ctx, request)
-	}
-
-	if fakeErr != nil {
-		logErr(c.logger, "ExecutionManager.GetCrossClusterTasks", fakeErr, forwardCall, err)
 		err = fakeErr
 		return
 	}
@@ -390,21 +360,6 @@ func (c *injectorExecutionManager) PutReplicationTaskToDLQ(ctx context.Context, 
 
 	if fakeErr != nil {
 		logErr(c.logger, "ExecutionManager.PutReplicationTaskToDLQ", fakeErr, forwardCall, err)
-		err = fakeErr
-		return
-	}
-	return
-}
-
-func (c *injectorExecutionManager) RangeCompleteCrossClusterTask(ctx context.Context, request *persistence.RangeCompleteCrossClusterTaskRequest) (rp1 *persistence.RangeCompleteCrossClusterTaskResponse, err error) {
-	fakeErr := generateFakeError(c.errorRate)
-	var forwardCall bool
-	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		rp1, err = c.wrapped.RangeCompleteCrossClusterTask(ctx, request)
-	}
-
-	if fakeErr != nil {
-		logErr(c.logger, "ExecutionManager.RangeCompleteCrossClusterTask", fakeErr, forwardCall, err)
 		err = fakeErr
 		return
 	}

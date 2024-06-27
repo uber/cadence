@@ -112,12 +112,6 @@ func (c *adminClient) DescribeWorkflowExecution(ctx context.Context, ap1 *types.
 	return c.client.DescribeWorkflowExecution(ctx, ap1, p1...)
 }
 
-func (c *adminClient) GetCrossClusterTasks(ctx context.Context, gp1 *types.GetCrossClusterTasksRequest, p1 ...yarpc.CallOption) (gp2 *types.GetCrossClusterTasksResponse, err error) {
-	ctx, cancel := createContext(ctx, c.largeTimeout)
-	defer cancel()
-	return c.client.GetCrossClusterTasks(ctx, gp1, p1...)
-}
-
 func (c *adminClient) GetDLQReplicationMessages(ctx context.Context, gp1 *types.GetDLQReplicationMessagesRequest, p1 ...yarpc.CallOption) (gp2 *types.GetDLQReplicationMessagesResponse, err error) {
 	ctx, cancel := createContext(ctx, c.timeout)
 	defer cancel()
@@ -224,12 +218,6 @@ func (c *adminClient) ResetQueue(ctx context.Context, rp1 *types.ResetQueueReque
 	ctx, cancel := createContext(ctx, c.timeout)
 	defer cancel()
 	return c.client.ResetQueue(ctx, rp1, p1...)
-}
-
-func (c *adminClient) RespondCrossClusterTasksCompleted(ctx context.Context, rp1 *types.RespondCrossClusterTasksCompletedRequest, p1 ...yarpc.CallOption) (rp2 *types.RespondCrossClusterTasksCompletedResponse, err error) {
-	ctx, cancel := createContext(ctx, c.timeout)
-	defer cancel()
-	return c.client.RespondCrossClusterTasksCompleted(ctx, rp1, p1...)
 }
 
 func (c *adminClient) RestoreDynamicConfig(ctx context.Context, rp1 *types.RestoreDynamicConfigRequest, p1 ...yarpc.CallOption) (err error) {

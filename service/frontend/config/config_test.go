@@ -113,6 +113,7 @@ func TestNewConfig(t *testing.T) {
 		"MaxRetentionDays":       {dynamicconfig.MaxRetentionDays, 42},
 		"FailoverCoolDown":       {dynamicconfig.FrontendFailoverCoolDown, time.Duration(43)},
 		"RequiredDomainDataKeys": {dynamicconfig.RequiredDomainDataKeys, map[string]interface{}{"bar": "baz"}},
+		"FailoverHistoryMaxSize": {dynamicconfig.FrontendFailoverHistoryMaxSize, 44},
 	}
 	client := dynamicconfig.NewInMemoryClient()
 	dc := dynamicconfig.NewCollection(client, testlogger.New(t))

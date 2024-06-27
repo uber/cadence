@@ -1413,29 +1413,7 @@ Loop:
 
 // GetCrossClusterTasks is a utility method to get tasks from transfer task queue
 func (s *TestBase) GetCrossClusterTasks(ctx context.Context, targetCluster string, readLevel int64, batchSize int, getAll bool) ([]*persistence.CrossClusterTaskInfo, error) {
-	result := []*persistence.CrossClusterTaskInfo{}
-	var token []byte
-
-	for {
-		response, err := s.ExecutionManager.GetCrossClusterTasks(ctx, &persistence.GetCrossClusterTasksRequest{
-			TargetCluster: targetCluster,
-			ReadLevel:     readLevel,
-			MaxReadLevel:  int64(math.MaxInt64),
-			BatchSize:     batchSize,
-			NextPageToken: token,
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		token = response.NextPageToken
-		result = append(result, response.Tasks...)
-		if len(response.NextPageToken) == 0 || !getAll {
-			break
-		}
-	}
-
-	return result, nil
+	return nil, nil
 }
 
 // GetReplicationTasks is a utility method to get tasks from replication task queue
@@ -1596,28 +1574,11 @@ func (s *TestBase) RangeCompleteTransferTask(ctx context.Context, exclusiveBegin
 
 // CompleteCrossClusterTask is a utility method to complete a cross-cluster task
 func (s *TestBase) CompleteCrossClusterTask(ctx context.Context, targetCluster string, taskID int64) error {
-	return s.ExecutionManager.CompleteCrossClusterTask(ctx, &persistence.CompleteCrossClusterTaskRequest{
-		TargetCluster: targetCluster,
-		TaskID:        taskID,
-	})
+	return nil
 }
 
 // RangeCompleteCrossClusterTask is a utility method to complete a range of cross-cluster tasks
 func (s *TestBase) RangeCompleteCrossClusterTask(ctx context.Context, targetCluster string, exclusiveBeginTaskID int64, inclusiveEndTaskID int64) error {
-	for {
-		resp, err := s.ExecutionManager.RangeCompleteCrossClusterTask(ctx, &persistence.RangeCompleteCrossClusterTaskRequest{
-			TargetCluster:        targetCluster,
-			ExclusiveBeginTaskID: exclusiveBeginTaskID,
-			InclusiveEndTaskID:   inclusiveEndTaskID,
-			PageSize:             1,
-		})
-		if err != nil {
-			return err
-		}
-		if !persistence.HasMoreRowsToDelete(resp.TasksCompleted, 1) {
-			break
-		}
-	}
 	return nil
 }
 

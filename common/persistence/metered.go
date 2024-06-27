@@ -59,10 +59,6 @@ func (r *GetTransferTasksResponse) Len() int {
 	return len(r.Tasks)
 }
 
-func (r *GetCrossClusterTasksResponse) Len() int {
-	return len(r.Tasks)
-}
-
 func (r QueueMessageList) Len() int {
 	return len(r)
 }

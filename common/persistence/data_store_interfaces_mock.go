@@ -68,20 +68,6 @@ func (mr *MockExecutionStoreMockRecorder) Close() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockExecutionStore)(nil).Close))
 }
 
-// CompleteCrossClusterTask mocks base method.
-func (m *MockExecutionStore) CompleteCrossClusterTask(arg0 context.Context, arg1 *CompleteCrossClusterTaskRequest) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CompleteCrossClusterTask", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// CompleteCrossClusterTask indicates an expected call of CompleteCrossClusterTask.
-func (mr *MockExecutionStoreMockRecorder) CompleteCrossClusterTask(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompleteCrossClusterTask", reflect.TypeOf((*MockExecutionStore)(nil).CompleteCrossClusterTask), arg0, arg1)
-}
-
 // CompleteReplicationTask mocks base method.
 func (m *MockExecutionStore) CompleteReplicationTask(arg0 context.Context, arg1 *CompleteReplicationTaskRequest) error {
 	m.ctrl.T.Helper()
@@ -207,21 +193,6 @@ func (m *MockExecutionStore) DeleteWorkflowExecution(arg0 context.Context, arg1 
 func (mr *MockExecutionStoreMockRecorder) DeleteWorkflowExecution(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWorkflowExecution", reflect.TypeOf((*MockExecutionStore)(nil).DeleteWorkflowExecution), arg0, arg1)
-}
-
-// GetCrossClusterTasks mocks base method.
-func (m *MockExecutionStore) GetCrossClusterTasks(arg0 context.Context, arg1 *GetCrossClusterTasksRequest) (*GetCrossClusterTasksResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCrossClusterTasks", arg0, arg1)
-	ret0, _ := ret[0].(*GetCrossClusterTasksResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetCrossClusterTasks indicates an expected call of GetCrossClusterTasks.
-func (mr *MockExecutionStoreMockRecorder) GetCrossClusterTasks(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCrossClusterTasks", reflect.TypeOf((*MockExecutionStore)(nil).GetCrossClusterTasks), arg0, arg1)
 }
 
 // GetCurrentExecution mocks base method.
@@ -414,21 +385,6 @@ func (m *MockExecutionStore) PutReplicationTaskToDLQ(arg0 context.Context, arg1 
 func (mr *MockExecutionStoreMockRecorder) PutReplicationTaskToDLQ(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutReplicationTaskToDLQ", reflect.TypeOf((*MockExecutionStore)(nil).PutReplicationTaskToDLQ), arg0, arg1)
-}
-
-// RangeCompleteCrossClusterTask mocks base method.
-func (m *MockExecutionStore) RangeCompleteCrossClusterTask(arg0 context.Context, arg1 *RangeCompleteCrossClusterTaskRequest) (*RangeCompleteCrossClusterTaskResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RangeCompleteCrossClusterTask", arg0, arg1)
-	ret0, _ := ret[0].(*RangeCompleteCrossClusterTaskResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// RangeCompleteCrossClusterTask indicates an expected call of RangeCompleteCrossClusterTask.
-func (mr *MockExecutionStoreMockRecorder) RangeCompleteCrossClusterTask(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RangeCompleteCrossClusterTask", reflect.TypeOf((*MockExecutionStore)(nil).RangeCompleteCrossClusterTask), arg0, arg1)
 }
 
 // RangeCompleteReplicationTask mocks base method.

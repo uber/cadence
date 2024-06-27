@@ -900,7 +900,6 @@ func notifyTasksFromWorkflowSnapshot(
 		workflowSnapShot.ActivityInfos,
 		workflowSnapShot.TransferTasks,
 		workflowSnapShot.TimerTasks,
-		workflowSnapShot.CrossClusterTasks,
 		workflowSnapShot.ReplicationTasks,
 		history,
 		persistenceError,
@@ -924,7 +923,6 @@ func notifyTasksFromWorkflowMutation(
 		workflowMutation.UpsertActivityInfos,
 		workflowMutation.TransferTasks,
 		workflowMutation.TimerTasks,
-		workflowMutation.CrossClusterTasks,
 		workflowMutation.ReplicationTasks,
 		history,
 		persistenceError,
@@ -946,7 +944,6 @@ func notifyTasks(
 	activities []*persistence.ActivityInfo,
 	transferTasks []persistence.Task,
 	timerTasks []persistence.Task,
-	crossClusterTasks []persistence.Task,
 	replicationTasks []persistence.Task,
 	history events.PersistedBlobs,
 	persistenceError bool,
@@ -961,11 +958,6 @@ func notifyTasks(
 		Tasks:            timerTasks,
 		PersistenceError: persistenceError,
 	}
-	crossClusterTaskInfo := &hcommon.NotifyTaskInfo{
-		ExecutionInfo:    executionInfo,
-		Tasks:            crossClusterTasks,
-		PersistenceError: persistenceError,
-	}
 	replicationTaskInfo := &hcommon.NotifyTaskInfo{
 		ExecutionInfo:    executionInfo,
 		Tasks:            replicationTasks,
@@ -977,7 +969,6 @@ func notifyTasks(
 
 	engine.NotifyNewTransferTasks(transferTaskInfo)
 	engine.NotifyNewTimerTasks(timerTaskInfo)
-	engine.NotifyNewCrossClusterTasks(crossClusterTaskInfo)
 	engine.NotifyNewReplicationTasks(replicationTaskInfo)
 }
 

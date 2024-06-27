@@ -54,13 +54,14 @@ type (
 	domainHandlerCommonSuite struct {
 		*persistencetests.TestBase
 
-		minRetentionDays     int
-		maxBadBinaryCount    int
-		domainManager        persistence.DomainManager
-		mockProducer         *mocks.KafkaProducer
-		mockDomainReplicator Replicator
-		archivalMetadata     archiver.ArchivalMetadata
-		mockArchiverProvider *provider.MockArchiverProvider
+		minRetentionDays       int
+		maxBadBinaryCount      int
+		failoverHistoryMaxSize int
+		domainManager          persistence.DomainManager
+		mockProducer           *mocks.KafkaProducer
+		mockDomainReplicator   Replicator
+		archivalMetadata       archiver.ArchivalMetadata
+		mockArchiverProvider   *provider.MockArchiverProvider
 
 		handler *handlerImpl
 	}
@@ -95,6 +96,7 @@ func (s *domainHandlerCommonSuite) SetupTest() {
 	dcCollection := dc.NewCollection(dc.NewNopClient(), logger)
 	s.minRetentionDays = 1
 	s.maxBadBinaryCount = 10
+	s.failoverHistoryMaxSize = 5
 	s.domainManager = s.TestBase.DomainManager
 	s.mockProducer = &mocks.KafkaProducer{}
 	s.mockDomainReplicator = NewDomainReplicator(s.mockProducer, logger)
@@ -108,9 +110,10 @@ func (s *domainHandlerCommonSuite) SetupTest() {
 	)
 	s.mockArchiverProvider = &provider.MockArchiverProvider{}
 	domainConfig := Config{
-		MinRetentionDays:  dc.GetIntPropertyFn(s.minRetentionDays),
-		MaxBadBinaryCount: dc.GetIntPropertyFilteredByDomain(s.maxBadBinaryCount),
-		FailoverCoolDown:  dc.GetDurationPropertyFnFilteredByDomain(0 * time.Second),
+		MinRetentionDays:       dc.GetIntPropertyFn(s.minRetentionDays),
+		MaxBadBinaryCount:      dc.GetIntPropertyFilteredByDomain(s.maxBadBinaryCount),
+		FailoverCoolDown:       dc.GetDurationPropertyFnFilteredByDomain(0 * time.Second),
+		FailoverHistoryMaxSize: dc.GetIntPropertyFilteredByDomain(s.failoverHistoryMaxSize),
 	}
 	s.handler = NewHandler(
 		domainConfig,
