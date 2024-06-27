@@ -2307,15 +2307,15 @@ const (
 	// FrontendGlobalRatelimiterMode controls what keys use global vs fallback behavior,
 	// and whether shadowing is enabled.  This is only available for frontend usage for now.
 	//
-	//   - "disable" stops usage-tracking and all Update requests, in an attempt to be as close to "do not use at all" as possible.
+	//   - "disabled" stops usage-tracking and all Update requests, in an attempt to be as close to "do not use at all" as possible.
 	//   - "local" uses the new limiters with call tracking and metrics, but forces local-only behavior and does not submit usage data to aggregators.
 	//   - "global" uses the new global-load-balanced logic (though it may decide to use a local-fallback internally, and this is not prevented)
 	//   - "x-shadow" means "use x, and also shadow the other".
 	//     this calls both, tracks and emits both metrics, and can be used to "warm" either limiter's in-memory state before switching.
 	//
 	// KeyName: frontend.globalRatelimiterMode
-	// Value type: string enum: "disable", "local", "global", "local-shadow", or "global-shadow"
-	// Default value: "disable"
+	// Value type: string enum: "disabled", "local", "global", "local-shadow", or "global-shadow"
+	// Default value: "disabled"
 	// Allowed filters: RatelimitKey (on global key, e.g. prefixed by collection name)
 	FrontendGlobalRatelimiterMode
 
@@ -4637,8 +4637,8 @@ var StringKeys = map[StringKey]DynamicString{
 	},
 	FrontendGlobalRatelimiterMode: {
 		KeyName:      "frontend.globalRatelimiterMode",
-		Description:  "FrontendGlobalRatelimiterMode defines which mode a global key should be in, to make gradual changes to ratelimiter algorithms",
-		DefaultValue: "disable",
+		Description:  "FrontendGlobalRatelimiterMode defines which mode a global key should be in, per key, to make gradual changes to ratelimiter algorithms",
+		DefaultValue: "disabled",
 		Filters:      []Filter{RatelimitKey},
 	},
 }

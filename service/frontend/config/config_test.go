@@ -104,7 +104,7 @@ func TestNewConfig(t *testing.T) {
 		"EmitSignalNameMetricsTag":                    {dynamicconfig.FrontendEmitSignalNameMetricsTag, true},
 		"Lockdown":                                    {dynamicconfig.Lockdown, false},
 		"EnableTasklistIsolation":                     {dynamicconfig.EnableTasklistIsolation, true},
-		"GlobalRatelimiterKeyMode":                    {dynamicconfig.FrontendGlobalRatelimiterMode, "disable"},
+		"GlobalRatelimiterKeyMode":                    {dynamicconfig.FrontendGlobalRatelimiterMode, "disabled"},
 		"GlobalRatelimiterUpdateInterval":             {dynamicconfig.GlobalRatelimiterUpdateInterval, 3 * time.Second},
 	}
 	domainFields := map[string]configTestCase{

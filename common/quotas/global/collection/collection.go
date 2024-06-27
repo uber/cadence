@@ -286,14 +286,16 @@ func (c *Collection) For(key string) quotas.Limiter {
 		return internal.NewShadowedLimiter(c.global.Load(k), c.local.Load(k))
 
 	default:
-		// pass through to the fallback, as if this collection did not exist.
+		// pass through to the disabled collection, as if this fancy collection
+		// wrapper did not exist.
 		// this means usage cannot be collected or shadowed, so changing to or
-		// from "disable" may allow a burst of requests beyond intended limits.
+		// from "disabled" may allow a burst of requests beyond intended limits.
 		//
-		// this is largely intended for safety during initial rollouts, not
-		// normal use - normally "fallback" or "global" should be used.
-		// "fallback" SHOULD behave the same, but with added monitoring, and
-		// the ability to warm caches in either direction before switching.
+		// this is intended for safety during initial rollouts, not normal use,
+		// and will be removed.  normally "local" or "global" should be used.
+		// "local" SHOULD behave the same as "disabled", but with added
+		// monitoring, and the ability to warm caches in either direction before
+		// switching.
 		return c.disabled.For(key)
 	}
 }
