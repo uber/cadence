@@ -41,7 +41,7 @@ func TestConfigSuite(t *testing.T) {
 	suite.Run(t, s)
 }
 
-func (s *configSuite) SetupSuite() {
+func (s *configSuite) SetupTest() {
 	s.client = NewInMemoryClient().(*inMemoryClient)
 	logger := log.NewNoop()
 	s.cln = NewCollection(s.client, logger)
@@ -50,6 +50,14 @@ func (s *configSuite) SetupSuite() {
 func (s *configSuite) TestGetProperty() {
 	key := TestGetStringPropertyKey
 	value := s.cln.GetProperty(key)
+	s.Equal(key.DefaultValue(), value())
+	s.client.SetValue(key, "b")
+	s.Equal("b", value())
+}
+
+func (s *configSuite) TestGetStringProperty() {
+	key := TestGetStringPropertyKey
+	value := s.cln.GetStringProperty(key)
 	s.Equal(key.DefaultValue(), value())
 	s.client.SetValue(key, "b")
 	s.Equal("b", value())
@@ -98,6 +106,15 @@ func (s *configSuite) TestGetStringPropertyFnWithDomainFilter() {
 	s.Equal(key.DefaultString(), value(domain))
 	s.client.SetValue(key, "efg")
 	s.Equal("efg", value(domain))
+}
+
+func (s *configSuite) TestGetStringPropertyFilteredByRatelimitKey() {
+	key := FrontendGlobalRatelimiterMode
+	ratelimitKey := "user:testDomain"
+	value := s.cln.GetStringPropertyFilteredByRatelimitKey(key)
+	s.Equal(key.DefaultString(), value(ratelimitKey))
+	s.client.SetValue(key, "fake-mode")
+	s.Equal("fake-mode", value(ratelimitKey))
 }
 
 func (s *configSuite) TestGetIntPropertyFilteredByTaskListInfo() {
