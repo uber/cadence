@@ -221,13 +221,10 @@ type (
 		UpdateWorkflowStateCloseStatus(state int, closeStatus int) error
 
 		AddTransferTasks(transferTasks ...persistence.Task)
-		AddCrossClusterTasks(crossClusterTasks ...persistence.Task)
 		AddTimerTasks(timerTasks ...persistence.Task)
 		GetTransferTasks() []persistence.Task
-		GetCrossClusterTasks() []persistence.Task
 		GetTimerTasks() []persistence.Task
 		DeleteTransferTasks()
-		DeleteCrossClusterTasks()
 		DeleteTimerTasks()
 
 		SetUpdateCondition(int64)

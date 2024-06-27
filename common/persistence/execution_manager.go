@@ -866,28 +866,6 @@ func (m *executionManagerImpl) RangeCompleteTransferTask(
 	return m.persistence.RangeCompleteTransferTask(ctx, request)
 }
 
-// Cross-cluster task related methods
-func (m *executionManagerImpl) GetCrossClusterTasks(
-	ctx context.Context,
-	request *GetCrossClusterTasksRequest,
-) (*GetCrossClusterTasksResponse, error) {
-	return m.persistence.GetCrossClusterTasks(ctx, request)
-}
-
-func (m *executionManagerImpl) CompleteCrossClusterTask(
-	ctx context.Context,
-	request *CompleteCrossClusterTaskRequest,
-) error {
-	return m.persistence.CompleteCrossClusterTask(ctx, request)
-}
-
-func (m *executionManagerImpl) RangeCompleteCrossClusterTask(
-	ctx context.Context,
-	request *RangeCompleteCrossClusterTaskRequest,
-) (*RangeCompleteCrossClusterTaskResponse, error) {
-	return m.persistence.RangeCompleteCrossClusterTask(ctx, request)
-}
-
 // Replication task related methods
 func (m *executionManagerImpl) GetReplicationTasks(
 	ctx context.Context,

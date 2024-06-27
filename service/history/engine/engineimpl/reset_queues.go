@@ -42,11 +42,3 @@ func (e *historyEngineImpl) ResetTimerQueue(
 	_, err := e.timerProcessor.HandleAction(ctx, clusterName, queue.NewResetAction())
 	return err
 }
-
-func (e *historyEngineImpl) ResetCrossClusterQueue(
-	ctx context.Context,
-	clusterName string,
-) error {
-	_, err := e.crossClusterProcessor.HandleAction(ctx, clusterName, queue.NewResetAction())
-	return err
-}

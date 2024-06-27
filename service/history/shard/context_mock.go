@@ -256,20 +256,6 @@ func (mr *MockContextMockRecorder) GetConfig() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConfig", reflect.TypeOf((*MockContext)(nil).GetConfig))
 }
 
-// GetCrossClusterProcessingQueueStates mocks base method.
-func (m *MockContext) GetCrossClusterProcessingQueueStates(cluster string) []*types.ProcessingQueueState {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCrossClusterProcessingQueueStates", cluster)
-	ret0, _ := ret[0].([]*types.ProcessingQueueState)
-	return ret0
-}
-
-// GetCrossClusterProcessingQueueStates indicates an expected call of GetCrossClusterProcessingQueueStates.
-func (mr *MockContextMockRecorder) GetCrossClusterProcessingQueueStates(cluster interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCrossClusterProcessingQueueStates", reflect.TypeOf((*MockContext)(nil).GetCrossClusterProcessingQueueStates), cluster)
-}
-
 // GetCurrentTime mocks base method.
 func (m *MockContext) GetCurrentTime(cluster string) time.Time {
 	m.ctrl.T.Helper()
@@ -657,20 +643,6 @@ func (m *MockContext) UpdateClusterReplicationLevel(cluster string, lastTaskID i
 func (mr *MockContextMockRecorder) UpdateClusterReplicationLevel(cluster, lastTaskID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateClusterReplicationLevel", reflect.TypeOf((*MockContext)(nil).UpdateClusterReplicationLevel), cluster, lastTaskID)
-}
-
-// UpdateCrossClusterProcessingQueueStates mocks base method.
-func (m *MockContext) UpdateCrossClusterProcessingQueueStates(cluster string, states []*types.ProcessingQueueState) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateCrossClusterProcessingQueueStates", cluster, states)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// UpdateCrossClusterProcessingQueueStates indicates an expected call of UpdateCrossClusterProcessingQueueStates.
-func (mr *MockContextMockRecorder) UpdateCrossClusterProcessingQueueStates(cluster, states interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCrossClusterProcessingQueueStates", reflect.TypeOf((*MockContext)(nil).UpdateCrossClusterProcessingQueueStates), cluster, states)
 }
 
 // UpdateDomainNotificationVersion mocks base method.

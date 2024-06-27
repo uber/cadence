@@ -1974,7 +1974,9 @@ func (v *DomainInfo) GetUUID() (o string) {
 	return
 }
 
-// DomainNotActiveError is an internal type (TBD...)
+// DomainNotActiveError is an internal type.
+// this is a retriable error and *must* be retried under at least
+// some circumstances due to domain failover races.
 type DomainNotActiveError struct {
 	Message        string `json:"message,required"`
 	DomainName     string `json:"domainName,required"`

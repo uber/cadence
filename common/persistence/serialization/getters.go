@@ -148,22 +148,6 @@ func (s *ShardInfo) GetTransferProcessingQueueStatesEncoding() (o string) {
 	return
 }
 
-// GetCrossClusterProcessingQueueStates internal sql blob getter
-func (s *ShardInfo) GetCrossClusterProcessingQueueStates() (o []byte) {
-	if s != nil {
-		return s.CrossClusterProcessingQueueStates
-	}
-	return
-}
-
-// GetCrossClusterProcessingQueueStatesEncoding internal sql blob getter
-func (s *ShardInfo) GetCrossClusterProcessingQueueStatesEncoding() (o string) {
-	if s != nil {
-		return s.CrossClusterProcessingQueueStatesEncoding
-	}
-	return
-}
-
 // GetTimerProcessingQueueStates internal sql blob getter
 func (s *ShardInfo) GetTimerProcessingQueueStates() (o []byte) {
 	if s != nil {

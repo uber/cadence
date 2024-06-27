@@ -283,21 +283,6 @@ var (
 			},
 		},
 	}
-	crossClusterProcessingQueueStates = &types.ProcessingQueueStates{
-		StatesByCluster: map[string][]*types.ProcessingQueueState{
-			"cross": {
-				{
-					Level:    common.Int32Ptr(4),
-					AckLevel: common.Int64Ptr(5),
-					MaxLevel: common.Int64Ptr(6),
-					DomainFilter: &types.DomainFilter{
-						DomainIDs:    []string{"baz"},
-						ReverseMatch: false,
-					},
-				},
-			},
-		},
-	}
 	timerProcesssingQueueStates = &types.ProcessingQueueStates{
 		StatesByCluster: map[string][]*types.ProcessingQueueState{
 			"timer": {
@@ -340,51 +325,47 @@ func sampleInternalShardInfo(t *testing.T) *InternalShardInfo {
 	serializer := NewPayloadSerializer()
 	transferProcessingQueueStatesBlob, err := serializer.SerializeProcessingQueueStates(transferProcessingQueueStates, common.EncodingTypeThriftRW)
 	assert.NoError(t, err)
-	crossClusterProcessingQueueStatesBlob, err := serializer.SerializeProcessingQueueStates(crossClusterProcessingQueueStates, common.EncodingTypeThriftRW)
-	assert.NoError(t, err)
 	timerProcessingQueueStatesBlob, err := serializer.SerializeProcessingQueueStates(timerProcesssingQueueStates, common.EncodingTypeThriftRW)
 	assert.NoError(t, err)
 	pendingFailoverMarkerBlob, err := serializer.SerializePendingFailoverMarkers(pendingFailoverMarkers, common.EncodingTypeThriftRW)
 	assert.NoError(t, err)
 	return &InternalShardInfo{
-		ShardID:                           shardID,
-		Owner:                             owner,
-		RangeID:                           rangeID,
-		StolenSinceRenew:                  3,
-		UpdatedAt:                         updatedAt,
-		ReplicationAckLevel:               4,
-		ReplicationDLQAckLevel:            replicationDlqAckLevel,
-		TransferAckLevel:                  5,
-		TimerAckLevel:                     timerAckLevel,
-		ClusterTransferAckLevel:           clusterTransferAckLevel,
-		ClusterTimerAckLevel:              clusterTimerAckLevel,
-		TransferProcessingQueueStates:     transferProcessingQueueStatesBlob,
-		CrossClusterProcessingQueueStates: crossClusterProcessingQueueStatesBlob,
-		TimerProcessingQueueStates:        timerProcessingQueueStatesBlob,
-		ClusterReplicationLevel:           clusterReplicationLevel,
-		DomainNotificationVersion:         domainNotificationVersion,
-		PendingFailoverMarkers:            pendingFailoverMarkerBlob,
+		ShardID:                       shardID,
+		Owner:                         owner,
+		RangeID:                       rangeID,
+		StolenSinceRenew:              3,
+		UpdatedAt:                     updatedAt,
+		ReplicationAckLevel:           4,
+		ReplicationDLQAckLevel:        replicationDlqAckLevel,
+		TransferAckLevel:              5,
+		TimerAckLevel:                 timerAckLevel,
+		ClusterTransferAckLevel:       clusterTransferAckLevel,
+		ClusterTimerAckLevel:          clusterTimerAckLevel,
+		TransferProcessingQueueStates: transferProcessingQueueStatesBlob,
+		TimerProcessingQueueStates:    timerProcessingQueueStatesBlob,
+		ClusterReplicationLevel:       clusterReplicationLevel,
+		DomainNotificationVersion:     domainNotificationVersion,
+		PendingFailoverMarkers:        pendingFailoverMarkerBlob,
 	}
 }
 
 func sampleShardInfo() *ShardInfo {
 	return &ShardInfo{
-		ShardID:                           shardID,
-		Owner:                             owner,
-		RangeID:                           rangeID,
-		StolenSinceRenew:                  stolenSinceRenew,
-		UpdatedAt:                         updatedAt,
-		ReplicationAckLevel:               replicationAckLevel,
-		ReplicationDLQAckLevel:            replicationDlqAckLevel,
-		TransferAckLevel:                  transferAckLevel,
-		TimerAckLevel:                     timerAckLevel,
-		ClusterTransferAckLevel:           clusterTransferAckLevel,
-		ClusterTimerAckLevel:              clusterTimerAckLevel,
-		TransferProcessingQueueStates:     transferProcessingQueueStates,
-		CrossClusterProcessingQueueStates: crossClusterProcessingQueueStates,
-		TimerProcessingQueueStates:        timerProcesssingQueueStates,
-		ClusterReplicationLevel:           clusterReplicationLevel,
-		DomainNotificationVersion:         domainNotificationVersion,
-		PendingFailoverMarkers:            pendingFailoverMarkers,
+		ShardID:                       shardID,
+		Owner:                         owner,
+		RangeID:                       rangeID,
+		StolenSinceRenew:              stolenSinceRenew,
+		UpdatedAt:                     updatedAt,
+		ReplicationAckLevel:           replicationAckLevel,
+		ReplicationDLQAckLevel:        replicationDlqAckLevel,
+		TransferAckLevel:              transferAckLevel,
+		TimerAckLevel:                 timerAckLevel,
+		ClusterTransferAckLevel:       clusterTransferAckLevel,
+		ClusterTimerAckLevel:          clusterTimerAckLevel,
+		TransferProcessingQueueStates: transferProcessingQueueStates,
+		TimerProcessingQueueStates:    timerProcesssingQueueStates,
+		ClusterReplicationLevel:       clusterReplicationLevel,
+		DomainNotificationVersion:     domainNotificationVersion,
+		PendingFailoverMarkers:        pendingFailoverMarkers,
 	}
 }

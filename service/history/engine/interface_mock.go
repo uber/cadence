@@ -75,21 +75,6 @@ func (mr *MockEngineMockRecorder) CountDLQMessages(ctx, forceFetch interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountDLQMessages", reflect.TypeOf((*MockEngine)(nil).CountDLQMessages), ctx, forceFetch)
 }
 
-// DescribeCrossClusterQueue mocks base method.
-func (m *MockEngine) DescribeCrossClusterQueue(ctx context.Context, clusterName string) (*types.DescribeQueueResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DescribeCrossClusterQueue", ctx, clusterName)
-	ret0, _ := ret[0].(*types.DescribeQueueResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// DescribeCrossClusterQueue indicates an expected call of DescribeCrossClusterQueue.
-func (mr *MockEngineMockRecorder) DescribeCrossClusterQueue(ctx, clusterName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeCrossClusterQueue", reflect.TypeOf((*MockEngine)(nil).DescribeCrossClusterQueue), ctx, clusterName)
-}
-
 // DescribeMutableState mocks base method.
 func (m *MockEngine) DescribeMutableState(ctx context.Context, request *types.DescribeMutableStateRequest) (*types.DescribeMutableStateResponse, error) {
 	m.ctrl.T.Helper()
@@ -150,21 +135,6 @@ func (mr *MockEngineMockRecorder) DescribeWorkflowExecution(ctx, request interfa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeWorkflowExecution", reflect.TypeOf((*MockEngine)(nil).DescribeWorkflowExecution), ctx, request)
 }
 
-// GetCrossClusterTasks mocks base method.
-func (m *MockEngine) GetCrossClusterTasks(ctx context.Context, targetCluster string) ([]*types.CrossClusterTaskRequest, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCrossClusterTasks", ctx, targetCluster)
-	ret0, _ := ret[0].([]*types.CrossClusterTaskRequest)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetCrossClusterTasks indicates an expected call of GetCrossClusterTasks.
-func (mr *MockEngineMockRecorder) GetCrossClusterTasks(ctx, targetCluster interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCrossClusterTasks", reflect.TypeOf((*MockEngine)(nil).GetCrossClusterTasks), ctx, targetCluster)
-}
-
 // GetDLQReplicationMessages mocks base method.
 func (m *MockEngine) GetDLQReplicationMessages(ctx context.Context, taskInfos []*types.ReplicationTaskInfo) ([]*types.ReplicationTask, error) {
 	m.ctrl.T.Helper()
@@ -223,18 +193,6 @@ func (m *MockEngine) MergeDLQMessages(ctx context.Context, messagesRequest *type
 func (mr *MockEngineMockRecorder) MergeDLQMessages(ctx, messagesRequest interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MergeDLQMessages", reflect.TypeOf((*MockEngine)(nil).MergeDLQMessages), ctx, messagesRequest)
-}
-
-// NotifyNewCrossClusterTasks mocks base method.
-func (m *MockEngine) NotifyNewCrossClusterTasks(info *common.NotifyTaskInfo) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "NotifyNewCrossClusterTasks", info)
-}
-
-// NotifyNewCrossClusterTasks indicates an expected call of NotifyNewCrossClusterTasks.
-func (mr *MockEngineMockRecorder) NotifyNewCrossClusterTasks(info interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewCrossClusterTasks", reflect.TypeOf((*MockEngine)(nil).NotifyNewCrossClusterTasks), info)
 }
 
 // NotifyNewHistoryEvent mocks base method.
@@ -473,20 +431,6 @@ func (mr *MockEngineMockRecorder) RequestCancelWorkflowExecution(ctx, request in
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestCancelWorkflowExecution", reflect.TypeOf((*MockEngine)(nil).RequestCancelWorkflowExecution), ctx, request)
 }
 
-// ResetCrossClusterQueue mocks base method.
-func (m *MockEngine) ResetCrossClusterQueue(ctx context.Context, clusterName string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ResetCrossClusterQueue", ctx, clusterName)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ResetCrossClusterQueue indicates an expected call of ResetCrossClusterQueue.
-func (mr *MockEngineMockRecorder) ResetCrossClusterQueue(ctx, clusterName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetCrossClusterQueue", reflect.TypeOf((*MockEngine)(nil).ResetCrossClusterQueue), ctx, clusterName)
-}
-
 // ResetStickyTaskList mocks base method.
 func (m *MockEngine) ResetStickyTaskList(ctx context.Context, resetRequest *types.HistoryResetStickyTaskListRequest) (*types.HistoryResetStickyTaskListResponse, error) {
 	m.ctrl.T.Helper()
@@ -585,20 +529,6 @@ func (m *MockEngine) RespondActivityTaskFailed(ctx context.Context, request *typ
 func (mr *MockEngineMockRecorder) RespondActivityTaskFailed(ctx, request interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RespondActivityTaskFailed", reflect.TypeOf((*MockEngine)(nil).RespondActivityTaskFailed), ctx, request)
-}
-
-// RespondCrossClusterTasksCompleted mocks base method.
-func (m *MockEngine) RespondCrossClusterTasksCompleted(ctx context.Context, targetCluster string, responses []*types.CrossClusterTaskResponse) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RespondCrossClusterTasksCompleted", ctx, targetCluster, responses)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// RespondCrossClusterTasksCompleted indicates an expected call of RespondCrossClusterTasksCompleted.
-func (mr *MockEngineMockRecorder) RespondCrossClusterTasksCompleted(ctx, targetCluster, responses interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RespondCrossClusterTasksCompleted", reflect.TypeOf((*MockEngine)(nil).RespondCrossClusterTasksCompleted), ctx, targetCluster, responses)
 }
 
 // RespondDecisionTaskCompleted mocks base method.

@@ -65,11 +65,6 @@ func NewTestContext(
 			StatesByCluster: make(map[string][]*types.ProcessingQueueState),
 		}
 	}
-	if shardInfo.CrossClusterProcessingQueueStates == nil {
-		shardInfo.CrossClusterProcessingQueueStates = &types.ProcessingQueueStates{
-			StatesByCluster: make(map[string][]*types.ProcessingQueueState),
-		}
-	}
 	shard := &contextImpl{
 		Resource:                  resource,
 		shardID:                   shardInfo.ShardID,
