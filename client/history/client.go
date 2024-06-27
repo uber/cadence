@@ -1085,8 +1085,9 @@ func (c *clientImpl) RatelimitUpdate(ctx context.Context, request *types.Ratelim
 		// unfortunately there is not really any way to ensure "must have a shard key option"
 		// due to the closed nature of yarpc.CallOption's implementation, outside private-field-reading reflection.
 		//
-		// we could achieve this by making this client a different interface,
-		// but that'd complicate wrappers quite a bit more.
+		// there are a few options to work around this, but they are currently rather high effort or
+		// run into import cycles or similar.  risk is low for now as there is only one caller, and likely
+		// never will be others.
 		return nil, fmt.Errorf("invalid arguments, missing yarpc.WithShardKey(peer) at a minimum")
 	}
 

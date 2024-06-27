@@ -47,6 +47,7 @@ import (
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/quotas/global/algorithm"
 	"github.com/uber/cadence/common/quotas/global/rpc"
+	"github.com/uber/cadence/common/quotas/global/shared"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
@@ -3754,7 +3755,7 @@ func TestRatelimitUpdate(t *testing.T) {
 	res := resource.NewMockResource(ctrl)
 	res.EXPECT().GetMetricsClient().Return(metrics.NewNoopMetricsClient()).AnyTimes()
 	res.EXPECT().GetLogger().Return(testlogger.New(t)).AnyTimes()
-	update, err := rpc.TestUpdateToAny(t, "testhost", time.Second, map[string]rpc.Calls{
+	update, err := rpc.TestUpdateToAny(t, "testhost", time.Second, map[shared.GlobalKey]rpc.Calls{
 		"test:domain-user-limit": {
 			Allowed:  10,
 			Rejected: 5,

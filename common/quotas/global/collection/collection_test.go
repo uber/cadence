@@ -42,6 +42,7 @@ import (
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/quotas/global/collection/internal"
 	"github.com/uber/cadence/common/quotas/global/rpc"
+	"github.com/uber/cadence/common/quotas/global/shared"
 )
 
 func TestLifecycleBasics(t *testing.T) {
@@ -143,8 +144,8 @@ func TestCollectionLimitersCollectMetrics(t *testing.T) {
 			_ = c.For("test").Allow()
 
 			// check counts on limits
-			globalEvents := make(map[string]internal.UsageMetrics)
-			c.global.Range(func(k string, v *internal.FallbackLimiter) bool {
+			globalEvents := make(map[shared.LocalKey]internal.UsageMetrics)
+			c.global.Range(func(k shared.LocalKey, v *internal.FallbackLimiter) bool {
 				usage, _, _ := v.Collect()
 				_, ok := globalEvents[k]
 				require.False(t, ok, "data key should not already exist: %v", k)
@@ -154,8 +155,8 @@ func TestCollectionLimitersCollectMetrics(t *testing.T) {
 				}
 				return true
 			})
-			localEvents := make(map[string]internal.UsageMetrics)
-			c.local.Range(func(k string, v internal.CountedLimiter) bool {
+			localEvents := make(map[shared.LocalKey]internal.UsageMetrics)
+			c.local.Range(func(k shared.LocalKey, v internal.CountedLimiter) bool {
 				_, ok := localEvents[k]
 				require.False(t, ok, "data key should not already exist: %v", k)
 				localEvents[k] = v.Collect()
@@ -165,12 +166,12 @@ func TestCollectionLimitersCollectMetrics(t *testing.T) {
 			if reflect.ValueOf(test.global).IsZero() {
 				assert.Empty(t, globalEvents, "unexpected global events, should be none")
 			} else {
-				assert.Equal(t, map[string]internal.UsageMetrics{"test": test.global}, globalEvents, "incorrect global metrics")
+				assert.Equal(t, map[shared.LocalKey]internal.UsageMetrics{"test": test.global}, globalEvents, "incorrect global metrics")
 			}
 			if reflect.ValueOf(test.local).IsZero() {
 				assert.Empty(t, localEvents, "unexpected local events, should be none")
 			} else {
-				assert.Equal(t, map[string]internal.UsageMetrics{"test": test.local}, localEvents, "incorrect local metrics")
+				assert.Equal(t, map[shared.LocalKey]internal.UsageMetrics{"test": test.local}, localEvents, "incorrect local metrics")
 			}
 		})
 	}
@@ -215,7 +216,7 @@ func TestCollectionSubmitsDataAndUpdates(t *testing.T) {
 
 	// prep for the calls
 	called := make(chan struct{}, 1)
-	aggs.EXPECT().Update(gomock.Any(), gomock.Any(), map[string]rpc.Calls{
+	aggs.EXPECT().Update(gomock.Any(), gomock.Any(), map[shared.GlobalKey]rpc.Calls{
 		"test:other": {
 			Allowed:  1,
 			Rejected: 0,
@@ -224,10 +225,10 @@ func TestCollectionSubmitsDataAndUpdates(t *testing.T) {
 			Allowed:  1,
 			Rejected: 1,
 		},
-	}).DoAndReturn(func(ctx context.Context, period time.Duration, load map[string]rpc.Calls) rpc.UpdateResult {
+	}).DoAndReturn(func(ctx context.Context, period time.Duration, load map[shared.GlobalKey]rpc.Calls) rpc.UpdateResult {
 		called <- struct{}{}
 		return rpc.UpdateResult{
-			Weights: map[string]float64{
+			Weights: map[shared.GlobalKey]float64{
 				"test:something": 1, // should recover a token in 100ms
 				// "test:other":   // not returned, should not change weight
 			},
@@ -309,7 +310,7 @@ func TestTogglingMode(t *testing.T) {
 	remainingCalls := atomic.NewInt64(int64(0))
 	aggs.EXPECT().
 		Update(gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(context.Context, time.Duration, map[string]rpc.Calls) rpc.UpdateResult {
+		DoAndReturn(func(context.Context, time.Duration, map[shared.GlobalKey]rpc.Calls) rpc.UpdateResult {
 			remainingCalls.Sub(1)
 			// empty because this test doesn't change if global chooses to use its internal fallback
 			return rpc.UpdateResult{}
@@ -409,14 +410,14 @@ func TestTogglingMode(t *testing.T) {
 	})
 }
 
-func assertLimiterKeys[V any](t *testing.T, collection *internal.AtomicMap[string, V], name string, keys ...string) {
+func assertLimiterKeys[V any](t *testing.T, collection *internal.AtomicMap[shared.LocalKey, V], name string, keys ...shared.LocalKey) {
 	t.Helper()
-	found := map[string]struct{}{}
-	collection.Range(func(k string, v V) bool {
+	found := map[shared.LocalKey]struct{}{}
+	collection.Range(func(k shared.LocalKey, v V) bool {
 		found[k] = struct{}{}
 		return true
 	})
-	keyMap := map[string]struct{}{}
+	keyMap := map[shared.LocalKey]struct{}{}
 	for _, k := range keys {
 		keyMap[k] = struct{}{}
 	}

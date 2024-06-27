@@ -30,6 +30,7 @@ import (
 
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/common/quotas/global/algorithm"
+	"github.com/uber/cadence/common/quotas/global/shared"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
@@ -47,10 +48,10 @@ import (
 // e.g. use a mapper with a `peer_callback(keys for peer) Any` so it does not need to
 // know what kind of data is being converted.
 
-func updateToAny(host string, elapsed time.Duration, load map[string]Calls) (*types.Any, error) {
+func updateToAny(host string, elapsed time.Duration, load map[shared.GlobalKey]Calls) (*types.Any, error) {
 	calls := make(map[string]*history.WeightedRatelimitCalls, len(load))
 	for k, v := range load {
-		calls[k] = &history.WeightedRatelimitCalls{
+		calls[string(k)] = &history.WeightedRatelimitCalls{
 			Allowed:  saturatingInt32(v.Allowed),
 			Rejected: saturatingInt32(v.Rejected),
 		}
@@ -118,7 +119,7 @@ func AggregatorWeightsToAny(response map[algorithm.Limit]algorithm.HostWeight) (
 	}, nil
 }
 
-func anyToWeights(response *types.Any) (map[string]float64, error) {
+func anyToWeights(response *types.Any) (map[shared.GlobalKey]float64, error) {
 	if response.ValueType != history.WeightedRatelimitQuotasAnyType {
 		return nil, fmt.Errorf("unrecognized Any type: %q", response.ValueType)
 	}
@@ -127,8 +128,11 @@ func anyToWeights(response *types.Any) (map[string]float64, error) {
 	if err != nil {
 		return nil, &SerializationError{err}
 	}
-	// no further mapping needed currently, it's already primitively-typed
-	return out.Quotas, nil
+	result := make(map[shared.GlobalKey]float64, len(out.Quotas))
+	for k, v := range out.Quotas {
+		result[shared.GlobalKey(k)] = v
+	}
+	return result, nil
 }
 
 type numeric interface {
@@ -145,13 +149,13 @@ func saturatingInt32[T numeric](i T) int32 {
 // exposed only for testing purposes
 
 // TestUpdateToAny is exposed for handler tests, use updateToAny in internal code instead.
-func TestUpdateToAny(t *testing.T, host string, elapsed time.Duration, load map[string]Calls) (*types.Any, error) {
+func TestUpdateToAny(t *testing.T, host string, elapsed time.Duration, load map[shared.GlobalKey]Calls) (*types.Any, error) {
 	t.Helper()
 	return updateToAny(host, elapsed, load)
 }
 
 // TestAnyToWeights is exposed for handler tests, use anyToWeights in internal code instead
-func TestAnyToWeights(t *testing.T, response *types.Any) (map[string]float64, error) {
+func TestAnyToWeights(t *testing.T, response *types.Any) (map[shared.GlobalKey]float64, error) {
 	t.Helper()
 	return anyToWeights(response)
 }

@@ -131,10 +131,10 @@ func (mr *MockPeerResolverMockRecorder) GetAllPeers() *gomock.Call {
 }
 
 // GlobalRatelimitPeers mocks base method.
-func (m *MockPeerResolver) GlobalRatelimitPeers(ratelimits []string) (map[string][]string, error) {
+func (m *MockPeerResolver) GlobalRatelimitPeers(ratelimits []string) (map[Peer][]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GlobalRatelimitPeers", ratelimits)
-	ret0, _ := ret[0].(map[string][]string)
+	ret0, _ := ret[0].(map[Peer][]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

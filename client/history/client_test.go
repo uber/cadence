@@ -1016,11 +1016,12 @@ func TestClient_withResponse(t *testing.T) {
 			op: func(c Client) (any, error) {
 				// same as successful call...
 				return c.RatelimitUpdate(context.Background(), &types.RatelimitUpdateRequest{
+					// Peer: "", // intentionally the zero value
 					Any: &types.Any{
 						ValueType: "something",
 						Value:     []byte("data"),
 					},
-				} /* ... but no yarpc option */)
+				})
 			},
 			mock: func(p *MockPeerResolver, c *MockClient) {
 				// no calls expected

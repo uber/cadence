@@ -294,7 +294,7 @@ func TestPeerResolver(t *testing.T) {
 			}).AnyTimes()
 
 			// small sanity check: sharded response should return all inputs
-			assertAllKeysPresent := func(t *testing.T, sharded map[string][]string, limits []string) {
+			assertAllKeysPresent := func(t *testing.T, sharded map[Peer][]string, limits []string) {
 				responded := maps.Values(sharded)
 				assert.ElementsMatchf(t,
 					limits,
@@ -308,7 +308,7 @@ func TestPeerResolver(t *testing.T) {
 			res, err := r.GlobalRatelimitPeers(limitKeys)
 			require.NoError(t, err)
 			assertAllKeysPresent(t, res, limitKeys)
-			assert.Equal(t, map[string][]string{ // determined experimentally, but needs to be stable
+			assert.Equal(t, map[Peer][]string{ // determined experimentally, but needs to be stable
 				"abc:1235": {"domain-w-async", "domain-x-worker", "domain-y-worker"},
 				"def:1235": {"domain-x-user"},
 				"xyz:1235": {"domain-z-visibility"},

@@ -24,7 +24,6 @@ package internal
 
 import (
 	"context"
-	"sync"
 
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/quotas"
@@ -60,32 +59,11 @@ func (s ShadowedLimiter) Wait(ctx context.Context) (err error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	var wg sync.WaitGroup
-	wg.Add(2)
-	// wait on both limiters, but give up as soon as the primary one has a result.
-	// it's not possible to get precisely-correct counts, but this feels pretty close.
-	//
-	// alternatively, calling `shadow.Allow()` if the primary succeeds might also
-	// be good enough, and it'd be a bit more efficient.  it will be unable to
-	// "reserve" a partial token though, which might matter in some scenarios,
-	// and it would also mean a different call in case that matters at some point
-	// (e.g. if "which API was called" counting is added).
 	go func() {
-		defer wg.Done()
 		_ = s.shadow.Wait(ctx)
 	}()
-	// start primary after shadow, to give shadow a bit more of a chance
-	// to complete successfully if it has an available token.
-	// this is not anything close to a guarantee, but it behaves better in
-	// most tests, and might be more realistic in prod too.
-	go func() {
-		defer wg.Done()
-		defer cancel()
-		err = s.primary.Wait(ctx)
-	}()
-	wg.Wait()
 
-	return err
+	return s.primary.Wait(ctx)
 }
 
 func (s ShadowedLimiter) Reserve() clock.Reservation {

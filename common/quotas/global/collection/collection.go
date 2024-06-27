@@ -37,7 +37,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -51,6 +50,7 @@ import (
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/quotas/global/collection/internal"
 	"github.com/uber/cadence/common/quotas/global/rpc"
+	"github.com/uber/cadence/common/quotas/global/shared"
 )
 
 type (
@@ -76,22 +76,26 @@ type (
 	// they should likely be configured to behave identically, but they need to be separate instances.
 	Collection struct {
 		updateInterval dynamicconfig.DurationPropertyFn
-		targetRPS      dynamicconfig.IntPropertyFnWithDomainFilter
+
+		// targetRPS is a small type-casting wrapper around dynamicconfig.IntPropertyFnWithDomainFilter
+		// to prevent accidentally using the wrong key type.
+		targetRPS func(lkey shared.LocalKey) int
+		// keyModes is a small type-casting wrapper around dynamicconfig.StringPropertyWithRatelimitKeyFilter
+		// to prevent accidentally using the wrong key type.
+		keyModes func(gkey shared.GlobalKey) string
 
 		logger log.Logger
 		scope  metrics.Scope
 		aggs   rpc.Client
 
-		global   *internal.AtomicMap[string, *internal.FallbackLimiter] // keyed by local-key, not global
-		local    *internal.AtomicMap[string, internal.CountedLimiter]   // keyed by local-key
+		global   *internal.AtomicMap[shared.LocalKey, *internal.FallbackLimiter]
+		local    *internal.AtomicMap[shared.LocalKey, internal.CountedLimiter]
 		disabled quotas.ICollection
-		km       KeyMapper
+		km       shared.KeyMapper
 
 		ctx       context.Context // context used for background operations, canceled when stopping
 		ctxCancel func()
 		stopped   chan struct{} // closed when stopping is complete
-
-		keyModes dynamicconfig.StringPropertyWithRatelimitKeyFilter
 
 		// now exists largely for tests, elsewhere it is always time.Now
 		timesource clock.TimeSource
@@ -100,23 +104,6 @@ type (
 	// calls is a small temporary pair[T] container
 	calls struct {
 		allowed, rejected int
-	}
-
-	// KeyMapper is used to ensure that all keys that get communicated to
-	// aggregators are uniquely identifiable, when multiple collections are used.
-	//
-	// A unique prefix / pattern per collection should be sufficient.
-	KeyMapper interface {
-		LocalToGlobal(key string) string
-		// GlobalToLocal does the reverse of LocalToGlobal.
-		//
-		// An error will be returned if the global key does not seem to have
-		// come from this mapper.
-		GlobalToLocal(key string) (string, error)
-	}
-
-	simplekm struct {
-		prefix string
 	}
 
 	// basically an enum for key values.
@@ -160,25 +147,6 @@ const (
 	gcAfterIdle = 5 // TODO: change to time-based, like aggregator?
 )
 
-var _ KeyMapper = simplekm{}
-
-func (s simplekm) LocalToGlobal(key string) string {
-	return s.prefix + key
-}
-
-func (s simplekm) GlobalToLocal(key string) (string, error) {
-	if !strings.HasPrefix(key, s.prefix) {
-		return "", fmt.Errorf("missing prefix %q in global key: %q", s.prefix, key)
-	}
-	return strings.TrimPrefix(key, s.prefix), nil
-}
-
-func PrefixKey(prefix string) KeyMapper {
-	return simplekm{
-		prefix: prefix,
-	}
-}
-
 func New(
 	name string,
 	// quotas for "local only" behavior.
@@ -201,11 +169,11 @@ func New(
 		return nil, errors.New("local and global collections must be different")
 	}
 
-	globalCollection := internal.NewAtomicMap(func(key string) *internal.FallbackLimiter {
-		return internal.NewFallbackLimiter(global.For(key))
+	globalCollection := internal.NewAtomicMap(func(key shared.LocalKey) *internal.FallbackLimiter {
+		return internal.NewFallbackLimiter(global.For(string(key)))
 	})
-	localCollection := internal.NewAtomicMap(func(key string) internal.CountedLimiter {
-		return internal.NewCountedLimiter(local.For(key))
+	localCollection := internal.NewAtomicMap(func(key shared.LocalKey) internal.CountedLimiter {
+		return internal.NewCountedLimiter(local.For(string(key)))
 	})
 	ctx, cancel := context.WithCancel(context.Background())
 	c := &Collection{
@@ -214,12 +182,28 @@ func New(
 		disabled:       local,
 		aggs:           aggs,
 		updateInterval: updateInterval,
-		targetRPS:      targetRPS,
+		targetRPS: func(lkey shared.LocalKey) int {
+			// wrapper just ensures only local keys are used, as each
+			// collection uses a separate dynamic config value.
+			//
+			// local keys also help ensure that "local" and "disabled"
+			// use the same underlying golang.org/x/time/rate.Limiter,
+			// so switching between them is practically a noop.
+			return targetRPS(string(lkey))
+		},
 
-		logger:   logger.WithTags(tag.ComponentGlobalRatelimiter, tag.Dynamic("collection_name", name)),
-		scope:    met.Scope(metrics.FrontendGlobalRatelimiter), // todo: tag with name
-		keyModes: keyModes,
-		km:       PrefixKey(name + ":"),
+		logger: logger.WithTags(tag.ComponentGlobalRatelimiter, tag.GlobalRatelimiterCollectionName(name)),
+		scope:  met.Scope(metrics.FrontendGlobalRatelimiter).Tagged(metrics.GlobalRatelimiterCollectionName(name)),
+		keyModes: func(gkey shared.GlobalKey) string {
+			// all collections share a single dynamic config key,
+			// so they must use the global key to uniquely identify all keys.
+			//
+			// in the future I think we may want to move the target RPS configs
+			// to use this same strategy, to keep user-facing limits together and
+			// easier to notice.
+			return keyModes(string(gkey))
+		},
+		km: shared.PrefixKey(name + ":"),
 
 		ctx:       ctx,
 		ctxCancel: cancel,
@@ -231,7 +215,7 @@ func New(
 	return c, nil
 }
 
-func (c *Collection) TestOverrides(t *testing.T, timesource *clock.MockedTimeSource, km *KeyMapper) {
+func (c *Collection) TestOverrides(t *testing.T, timesource *clock.MockedTimeSource, km *shared.KeyMapper) {
 	t.Helper()
 	if timesource != nil {
 		c.timesource = *timesource
@@ -273,7 +257,7 @@ func (c *Collection) OnStop(ctx context.Context) error {
 	}
 }
 
-func (c *Collection) keyMode(key string) keyMode {
+func (c *Collection) keyMode(key shared.GlobalKey) keyMode {
 	rawMode := keyMode(c.keyModes(key))
 	switch rawMode {
 	case modeLocal, modeGlobal, modeLocalShadowGlobal, modeGlobalShadowLocal, modeDisabled:
@@ -286,16 +270,17 @@ func (c *Collection) keyMode(key string) keyMode {
 }
 
 func (c *Collection) For(key string) quotas.Limiter {
-	globalKey := c.km.LocalToGlobal(key)
-	switch c.keyMode(globalKey) {
+	k := shared.LocalKey(key)
+	gkey := c.km.LocalToGlobal(k)
+	switch c.keyMode(gkey) {
 	case modeLocal:
-		return c.local.Load(key)
+		return c.local.Load(k)
 	case modeGlobal:
-		return c.global.Load(key)
+		return c.global.Load(k)
 	case modeLocalShadowGlobal:
-		return internal.NewShadowedLimiter(c.local.Load(key), c.global.Load(key))
+		return internal.NewShadowedLimiter(c.local.Load(k), c.global.Load(k))
 	case modeGlobalShadowLocal:
-		return internal.NewShadowedLimiter(c.global.Load(key), c.local.Load(key))
+		return internal.NewShadowedLimiter(c.global.Load(k), c.local.Load(k))
 
 	default:
 		// pass through to the fallback, as if this collection did not exist.
@@ -344,36 +329,36 @@ func (c *Collection) backgroundUpdateLoop() {
 			localMetricsDone := make(chan struct{})
 			go func() {
 				defer close(localMetricsDone)
-				c.local.Range(func(k string, v internal.CountedLimiter) bool {
-					globalKey := c.km.LocalToGlobal(k)
+				c.local.Range(func(k shared.LocalKey, v internal.CountedLimiter) bool {
+					gkey := c.km.LocalToGlobal(k)
 					counts := v.Collect()
-					if counts.Idle > gcAfterIdle || c.shouldDeleteKey(c.keyMode(globalKey), true) {
+					if counts.Idle > gcAfterIdle || c.shouldDeleteKey(c.keyMode(gkey), true) {
 						c.logger.Debug(
 							"deleting local ratelimiter",
-							tag.Dynamic("key", globalKey),
-							tag.Dynamic("idle", counts.Idle > gcAfterIdle),
+							tag.Dynamic("local_ratelimit_key", gkey),
+							tag.Dynamic("idle_count", counts.Idle > gcAfterIdle),
 						)
 						c.local.Delete(k)
 						return true // continue iterating, possibly delete others too
 					}
 
-					c.sendMetrics(globalKey, "local", counts)
+					c.sendMetrics(gkey, k, "local", counts)
 					return true
 				})
 			}()
 
 			capacity := c.global.Len()
 			capacity += capacity / 10 // size may grow while we range, try to avoid reallocating in that case
-			usage := make(map[string]rpc.Calls, capacity)
+			usage := make(map[shared.GlobalKey]rpc.Calls, capacity)
 			startups, failings, globals := 0, 0, 0
-			c.global.Range(func(k string, v *internal.FallbackLimiter) bool {
-				globalKey := c.km.LocalToGlobal(k)
+			c.global.Range(func(k shared.LocalKey, v *internal.FallbackLimiter) bool {
+				gkey := c.km.LocalToGlobal(k)
 				counts, startup, failing := v.Collect()
-				if counts.Idle > gcAfterIdle || c.shouldDeleteKey(c.keyMode(globalKey), false) {
+				if counts.Idle > gcAfterIdle || c.shouldDeleteKey(c.keyMode(gkey), false) {
 					c.logger.Debug(
 						"deleting global ratelimiter",
-						tag.Dynamic("key", globalKey),
-						tag.Dynamic("idle", counts.Idle > gcAfterIdle),
+						tag.GlobalRatelimiterKey(string(gkey)),
+						tag.GlobalRatelimiterIdleCount(counts.Idle),
 					)
 					c.global.Delete(k)
 					return true // continue iterating, possibly delete others too
@@ -388,11 +373,11 @@ func (c *Collection) backgroundUpdateLoop() {
 				if !(startup || failing) {
 					globals++
 				}
-				usage[globalKey] = rpc.Calls{
+				usage[gkey] = rpc.Calls{
 					Allowed:  counts.Allowed,
 					Rejected: counts.Rejected,
 				}
-				c.sendMetrics(globalKey, "global", counts)
+				c.sendMetrics(gkey, k, "global", counts)
 
 				return true
 			})
@@ -417,17 +402,25 @@ func (c *Collection) backgroundUpdateLoop() {
 	}
 }
 
-func (c *Collection) sendMetrics(globalKey string, limitType string, usage internal.UsageMetrics) {
+func (c *Collection) sendMetrics(gkey shared.GlobalKey, lkey shared.LocalKey, limitType string, usage internal.UsageMetrics) {
+	// emit quota information to make monitoring easier.
+	// regrettably this will only be emitted when the key is (recently) in use, but
+	// for active users this is probably sufficient.  other cases will probably need
+	// a continual "emit all quotas" loop somewhere.
+	c.scope.
+		Tagged(metrics.GlobalRatelimiterKeyTag(string(gkey))).
+		UpdateGauge(metrics.GlobalRatelimiterQuota, float64(c.targetRPS(lkey)))
+
 	scope := c.scope.Tagged(
-		metrics.GlobalRatelimitKeyTag(globalKey),
-		metrics.GlobalRatelimitTypeTag(limitType),
+		metrics.GlobalRatelimiterKeyTag(string(gkey)),
+		metrics.GlobalRatelimiterTypeTag(limitType),
 	)
 	scope.AddCounter(metrics.GlobalRatelimiterAllowedRequestsCount, int64(usage.Allowed))
 	scope.AddCounter(metrics.GlobalRatelimiterRejectedRequestsCount, int64(usage.Rejected))
 }
 
 // doUpdate pushes usage data to aggregators. mutates `usage` as it runs.
-func (c *Collection) doUpdate(since time.Duration, usage map[string]rpc.Calls) {
+func (c *Collection) doUpdate(since time.Duration, usage map[shared.GlobalKey]rpc.Calls) {
 	ctx, cancel := context.WithTimeout(c.ctx, 10*time.Second) // TODO: configurable?  possibly even worth cutting off after 1s.
 	defer cancel()
 	res := c.aggs.Update(ctx, since, usage)
@@ -436,9 +429,9 @@ func (c *Collection) doUpdate(since time.Duration, usage map[string]rpc.Calls) {
 		c.logger.Error("aggregator update error", tag.Error(res.Err))
 	}
 	// either way, process all weights we did successfully retrieve.
-	for globalKey, weight := range res.Weights {
-		delete(usage, globalKey) // clean up the list so we know what was missed
-		localKey, err := c.km.GlobalToLocal(globalKey)
+	for gkey, weight := range res.Weights {
+		delete(usage, gkey) // clean up the list so we know what was missed
+		lkey, err := c.km.GlobalToLocal(gkey)
 		if err != nil {
 			// should not happen unless agg returns keys that were not asked for,
 			// and are not for this collection
@@ -451,10 +444,10 @@ func (c *Collection) doUpdate(since time.Duration, usage map[string]rpc.Calls) {
 			//
 			// this is largely for future-proofing and to cover all possibilities,
 			// so unrecognized values lead to fallback behavior because they cannot be understood.
-			c.global.Load(localKey).FailedUpdate()
+			c.global.Load(lkey).FailedUpdate()
 		} else {
-			target := float64(c.targetRPS(globalKey))
-			c.global.Load(localKey).Update(rate.Limit(weight * target))
+			target := float64(c.targetRPS(lkey))
+			c.global.Load(lkey).Update(rate.Limit(weight * target))
 		}
 	}
 

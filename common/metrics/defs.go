@@ -2211,6 +2211,7 @@ const (
 
 	GlobalRatelimiterAllowedRequestsCount  // per key/type usage
 	GlobalRatelimiterRejectedRequestsCount // per key/type usage
+	GlobalRatelimiterQuota                 // per-global-key quota information, emitted when a key is in use
 
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )

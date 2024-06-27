@@ -85,7 +85,7 @@ type Client interface {
 	// RatelimitUpdate pushes usage info for the passed ratelimit keys, and requests updated weight info from aggregating hosts.
 	// Exact semantics beyond this depend on the load-balanced ratelimit implementation.
 	//
-	// An peer (via yarpc.WithShardkey(peer)) MUST be determined before calling and passed in yarpc opts,
+	// A peer (via yarpc.WithShardkey) MUST be determined before calling and passed in yarpc opts,
 	// and unlike most endpoints this will NOT be forwarded to a new peer if the ring membership changes.
 	// To correctly forward keys to the new hosts, they must be re-sharded to find their new hosts.
 	RatelimitUpdate(ctx context.Context, request *types.RatelimitUpdateRequest, opts ...yarpc.CallOption) (*types.RatelimitUpdateResponse, error)

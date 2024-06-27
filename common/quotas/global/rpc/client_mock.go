@@ -32,6 +32,8 @@ import (
 	time "time"
 
 	gomock "github.com/golang/mock/gomock"
+
+	shared "github.com/uber/cadence/common/quotas/global/shared"
 )
 
 // MockClient is a mock of Client interface.
@@ -58,7 +60,7 @@ func (m *MockClient) EXPECT() *MockClientMockRecorder {
 }
 
 // Update mocks base method.
-func (m *MockClient) Update(ctx context.Context, period time.Duration, load map[string]Calls) UpdateResult {
+func (m *MockClient) Update(ctx context.Context, period time.Duration, load map[shared.GlobalKey]Calls) UpdateResult {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", ctx, period, load)
 	ret0, _ := ret[0].(UpdateResult)

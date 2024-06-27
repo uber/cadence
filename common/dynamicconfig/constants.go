@@ -582,30 +582,6 @@ const (
 	// Default value: 100000
 	// Allowed filters: DomainName
 	FrontendGlobalDomainAsyncRPS
-	// FrontendGlobalRatelimiterDomainUserRPS is workflow domain rate limit per second for the whole Cadence cluster
-	// KeyName: frontend.globalRatelimiterDomainrps
-	// Value type: Int
-	// Default value: 1000
-	// Allowed filters: DomainName
-	FrontendGlobalRatelimiterDomainUserRPS
-	// FrontendGlobalRatelimiterDomainWorkerRPS is background-processing workflow domain rate limit per second for the whole Cadence cluster
-	// KeyName: frontend.globalRatelimiterDomainWorkerrps
-	// Value type: Int
-	// Default value: 1000
-	// Allowed filters: DomainName
-	FrontendGlobalRatelimiterDomainWorkerRPS
-	// FrontendGlobalRatelimiterDomainVisibilityRPS is the per-domain List*WorkflowExecutions request rate limit per second
-	// KeyName: frontend.globalRatelimiterDomainVisibilityrps
-	// Value type: Int
-	// Default value: 1000
-	// Allowed filters: DomainName
-	FrontendGlobalRatelimiterDomainVisibilityRPS
-	// FrontendGlobalRatelimiterDomainAsyncRPS is the per-domain async workflow request rate limit per second
-	// KeyName: frontend.globalRatelimiterDomainAsyncrps
-	// Value type: Int
-	// Default value: 100000
-	// Allowed filters: DomainName
-	FrontendGlobalRatelimiterDomainAsyncRPS
 	// FrontendDecisionResultCountLimit is max number of decisions per RespondDecisionTaskCompleted request
 	// KeyName: frontend.decisionResultCountLimit
 	// Value type: Int
@@ -3154,30 +3130,6 @@ var IntKeys = map[IntKey]DynamicInt{
 		KeyName:      "frontend.globalDomainAsyncrps",
 		Filters:      []Filter{DomainName},
 		Description:  "FrontendGlobalDomainAsyncRPS is the per-domain async workflow request rate limit per second",
-		DefaultValue: 100000,
-	},
-	FrontendGlobalRatelimiterDomainUserRPS: {
-		KeyName:      "frontend.globalRatelimiterDomainrps",
-		Filters:      []Filter{DomainName},
-		Description:  "FrontendGlobalRatelimiterDomainUserRPS is workflow domain rate limit per second for the whole Cadence cluster in the global ratelimiter system",
-		DefaultValue: 1000,
-	},
-	FrontendGlobalRatelimiterDomainWorkerRPS: {
-		KeyName:      "frontend.globalRatelimiterDomainWorkerrps",
-		Filters:      []Filter{DomainName},
-		Description:  "FrontendGlobalRatelimiterDomainWorkerRPS is background-processing workflow domain rate limit per second for the whole Cadence cluster in the global ratelimiter system",
-		DefaultValue: 1000,
-	},
-	FrontendGlobalRatelimiterDomainVisibilityRPS: {
-		KeyName:      "frontend.globalRatelimiterDomainVisibilityrps",
-		Filters:      []Filter{DomainName},
-		Description:  "FrontendGlobalRatelimiterDomainVisibilityRPS is the per-domain List*WorkflowExecutions request rate limit per second in the global ratelimiter system",
-		DefaultValue: 1000,
-	},
-	FrontendGlobalRatelimiterDomainAsyncRPS: {
-		KeyName:      "frontend.globalRatelimiterDomainAsyncrps",
-		Filters:      []Filter{DomainName},
-		Description:  "FrontendGlobalRatelimiterDomainAsyncRPS is the per-domain async workflow request rate limit per second in the global ratelimiter system",
 		DefaultValue: 100000,
 	},
 	FrontendDecisionResultCountLimit: {

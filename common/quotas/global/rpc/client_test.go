@@ -39,6 +39,7 @@ import (
 	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/quotas/global/algorithm"
+	"github.com/uber/cadence/common/quotas/global/shared"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -53,12 +54,12 @@ func TestClient(t *testing.T) {
 
 	t.Run("valid request", func(t *testing.T) {
 		c, hc, pr := setup(t)
-		data := map[string]Calls{
+		data := map[shared.GlobalKey]Calls{
 			"a": {10, 20},
 			"b": {3, 5},
 			"c": {78, 9},
 		}
-		response := map[string]float64{
+		response := map[shared.GlobalKey]float64{
 			"a": 0.1,
 			"b": 0.2,
 			"c": 0.3,
@@ -70,7 +71,11 @@ func TestClient(t *testing.T) {
 				Any: a,
 			}, nil
 		}
-		pr.EXPECT().GlobalRatelimitPeers(gomock.InAnyOrder(maps.Keys(data))).Return(map[string][]string{
+		stringKeys := make([]string, 0, len(data))
+		for k := range data {
+			stringKeys = append(stringKeys, string(k))
+		}
+		pr.EXPECT().GlobalRatelimitPeers(gomock.InAnyOrder(stringKeys)).Return(map[history.Peer][]string{
 			"agg-1": {"a", "c"},
 			"agg-2": {"b"},
 		}, nil)

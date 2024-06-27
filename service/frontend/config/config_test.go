@@ -106,10 +106,6 @@ func TestNewConfig(t *testing.T) {
 		"EnableTasklistIsolation":                     {dynamicconfig.EnableTasklistIsolation, true},
 		"GlobalRatelimiterKeyMode":                    {dynamicconfig.FrontendGlobalRatelimiterMode, "disable"},
 		"GlobalRatelimiterUpdateInterval":             {dynamicconfig.GlobalRatelimiterUpdateInterval, 3 * time.Second},
-		"GlobalRatelimiterDomainUserRPS":              {dynamicconfig.FrontendGlobalRatelimiterDomainUserRPS, 1000},
-		"GlobalRatelimiterDomainWorkerRPS":            {dynamicconfig.FrontendGlobalRatelimiterDomainWorkerRPS, 1000},
-		"GlobalRatelimiterDomainVisibilityRPS":        {dynamicconfig.FrontendGlobalRatelimiterDomainVisibilityRPS, 1000},
-		"GlobalRatelimiterDomainAsyncRPS":             {dynamicconfig.FrontendGlobalRatelimiterDomainAsyncRPS, 100000},
 	}
 	domainFields := map[string]configTestCase{
 		"MaxBadBinaryCount":      {dynamicconfig.FrontendMaxBadBinaries, 40},

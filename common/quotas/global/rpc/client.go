@@ -34,14 +34,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"go.uber.org/yarpc"
-	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/quotas/global/shared"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -59,7 +58,7 @@ type (
 		// all successfully-returned weights.
 		// this may be populated and is safe to use even if Errors is present,
 		// as some shards may have succeeded.
-		Weights map[string]float64
+		Weights map[shared.GlobalKey]float64
 		// Any unexpected errors encountered, or nil if none.
 		// Weights is valid even if this is present, though it may be empty.
 		//
@@ -79,7 +78,7 @@ type (
 		// Currently, there are no truly fatal errors so this API does not return `error`.
 		// Even in the presence of errors, some successful data may have been loaded,
 		// and that will be part of the UpdateResult struct.
-		Update(ctx context.Context, period time.Duration, load map[string]Calls) UpdateResult
+		Update(ctx context.Context, period time.Duration, load map[shared.GlobalKey]Calls) UpdateResult
 	}
 
 	client struct {
@@ -109,8 +108,12 @@ func New(
 	}
 }
 
-func (c *client) Update(ctx context.Context, period time.Duration, load map[string]Calls) UpdateResult {
-	batches, err := c.resolver.GlobalRatelimitPeers(maps.Keys(load))
+func (c *client) Update(ctx context.Context, period time.Duration, load map[shared.GlobalKey]Calls) UpdateResult {
+	keys := make([]string, 0, len(load))
+	for k := range load {
+		keys = append(keys, string(k))
+	}
+	peers, err := c.resolver.GlobalRatelimitPeers(keys)
 	if err != nil {
 		// should only happen if peers are unavailable, individual requests are handled other ways
 		return UpdateResult{
@@ -119,18 +122,18 @@ func (c *client) Update(ctx context.Context, period time.Duration, load map[stri
 	}
 
 	var mut sync.Mutex
-	weights := make(map[string]float64, len(load)) // should get back most or all keys requested
+	weights := make(map[shared.GlobalKey]float64, len(load)) // should get back most or all keys requested
 
 	var g errgroup.Group
 	// could limit max concurrency easily with `g.SetLimit(n)` if desired,
 	// but as each goes to a different host this seems fine to just blast out all at once,
 	// and it makes timeouts easy because we don't need to reserve room for queued calls.
-	for peerAddress, batch := range batches {
-		peerAddress, batch := peerAddress, batch // for closure
+	for peer, peerKeys := range peers {
+		peer, peerKeys := peer, peerKeys // for closure
 		g.Go(func() (err error) {
 			defer func() { log.CapturePanic(recover(), c.logger, &err) }()
 
-			result, err := c.updateSinglePeer(ctx, peerAddress, period, filterKeys(batch, load))
+			result, err := c.updateSinglePeer(ctx, peer, period, filterKeys(peerKeys, load))
 			if err != nil {
 				return err // does not stop other calls, nor should it
 			}
@@ -155,7 +158,7 @@ func (c *client) Update(ctx context.Context, period time.Duration, load map[stri
 	}
 }
 
-func (c *client) updateSinglePeer(ctx context.Context, peerAddress string, period time.Duration, load map[string]Calls) (map[string]float64, error) {
+func (c *client) updateSinglePeer(ctx context.Context, peer history.Peer, period time.Duration, load map[shared.GlobalKey]Calls) (map[shared.GlobalKey]float64, error) {
 	anyValue, err := updateToAny(c.thisHost, period, load)
 	if err != nil {
 		// serialization errors should never happen
@@ -164,8 +167,10 @@ func (c *client) updateSinglePeer(ctx context.Context, peerAddress string, perio
 
 	result, err := c.history.RatelimitUpdate(
 		ctx,
-		&types.RatelimitUpdateRequest{Any: anyValue},
-		yarpc.WithShardKey(peerAddress),
+		&types.RatelimitUpdateRequest{
+			Any: anyValue,
+		},
+		peer.ToYarpcShardKey(),
 	)
 	if err != nil {
 		// client metrics are fine for monitoring, but it does not log errors.
@@ -182,10 +187,10 @@ func (c *client) updateSinglePeer(ctx context.Context, peerAddress string, perio
 	return resp, nil
 }
 
-func filterKeys[K comparable, V any](keys []K, all map[K]V) map[K]V {
-	result := make(map[K]V, len(keys))
-	for _, key := range keys {
-		result[key] = all[key]
+func filterKeys(keys []string, load map[shared.GlobalKey]Calls) map[shared.GlobalKey]Calls {
+	result := make(map[shared.GlobalKey]Calls, len(keys))
+	for _, k := range keys {
+		result[shared.GlobalKey(k)] = load[shared.GlobalKey(k)]
 	}
 	return result
 }

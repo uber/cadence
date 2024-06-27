@@ -208,6 +208,9 @@ type globalRatelimiterCollections struct {
 	user, worker, visibility, async *collection.Collection
 }
 
+// ratelimiterCollections contains the "base" ratelimiters that make up both:
+// - "local" limits, which do not use global-load-balancing to adjust to request load
+// - fallbacks within "global" limits, for when the global-load information cannot be retrieved (startup, errors, etc)
 type ratelimiterCollections struct {
 	user, worker, visibility, async *quotas.Collection
 }
@@ -235,18 +238,18 @@ func (s *Service) createGlobalQuotaCollections() (globalRatelimiterCollections, 
 	// to safely shadow global ratelimits, we must make duplicate *quota.Collection collections
 	// so they do not share data when the global limiter decides to use its local fallback.
 	// these are then combined into the global/algorithm.Collection to handle all limiting calls
-	local, global := s.createBaseCollections()
+	local, global := s.createBaseLimiters(), s.createBaseLimiters()
 
-	user, err := create("user", local.user, global.user, s.config.GlobalRatelimiterDomainUserRPS)
+	user, err := create("user", local.user, global.user, s.config.GlobalDomainUserRPS)
 	combinedErr = multierr.Combine(combinedErr, err)
 
-	worker, err := create("worker", local.worker, global.worker, s.config.GlobalRatelimiterDomainWorkerRPS)
+	worker, err := create("worker", local.worker, global.worker, s.config.GlobalDomainWorkerRPS)
 	combinedErr = multierr.Combine(combinedErr, err)
 
-	visibility, err := create("visibility", local.visibility, global.visibility, s.config.GlobalRatelimiterDomainVisibilityRPS)
+	visibility, err := create("visibility", local.visibility, global.visibility, s.config.GlobalDomainVisibilityRPS)
 	combinedErr = multierr.Combine(combinedErr, err)
 
-	async, err := create("async", local.async, global.async, s.config.GlobalRatelimiterDomainAsyncRPS)
+	async, err := create("async", local.async, global.async, s.config.GlobalDomainAsyncRPS)
 	combinedErr = multierr.Combine(combinedErr, err)
 
 	return globalRatelimiterCollections{
@@ -256,9 +259,7 @@ func (s *Service) createGlobalQuotaCollections() (globalRatelimiterCollections, 
 		async:      async,
 	}, combinedErr
 }
-func (s *Service) createBaseCollections() (local, global ratelimiterCollections) {
-	// local and global are essentially identical, but one uses "GlobalDomain..." keys
-	// and the other uses "GlobalRatelimiterDomain..." keys as their "global" limit.
+func (s *Service) createBaseLimiters() ratelimiterCollections {
 	create := func(shared, perInstance dynamicconfig.IntPropertyFnWithDomainFilter) *quotas.Collection {
 		return quotas.NewCollection(quotas.NewPerMemberDynamicRateLimiterFactory(
 			service.Frontend,
@@ -267,19 +268,12 @@ func (s *Service) createBaseCollections() (local, global ratelimiterCollections)
 			s.GetMembershipResolver(),
 		))
 	}
-	local = ratelimiterCollections{
+	return ratelimiterCollections{
 		user:       create(s.config.GlobalDomainUserRPS, s.config.MaxDomainUserRPSPerInstance),
 		worker:     create(s.config.GlobalDomainWorkerRPS, s.config.MaxDomainWorkerRPSPerInstance),
 		visibility: create(s.config.GlobalDomainVisibilityRPS, s.config.MaxDomainVisibilityRPSPerInstance),
 		async:      create(s.config.GlobalDomainAsyncRPS, s.config.MaxDomainAsyncRPSPerInstance),
 	}
-	global = ratelimiterCollections{
-		user:       create(s.config.GlobalRatelimiterDomainUserRPS, s.config.MaxDomainUserRPSPerInstance),
-		worker:     create(s.config.GlobalRatelimiterDomainWorkerRPS, s.config.MaxDomainWorkerRPSPerInstance),
-		visibility: create(s.config.GlobalRatelimiterDomainVisibilityRPS, s.config.MaxDomainVisibilityRPSPerInstance),
-		async:      create(s.config.GlobalRatelimiterDomainAsyncRPS, s.config.MaxDomainAsyncRPSPerInstance),
-	}
-	return
 }
 
 // Stop stops the service

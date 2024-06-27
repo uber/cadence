@@ -23,6 +23,8 @@ package history
 import (
 	"fmt"
 
+	"go.uber.org/yarpc"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/service"
@@ -42,7 +44,18 @@ type PeerResolver interface {
 	GetAllPeers() ([]string, error)
 
 	// GlobalRatelimitPeers partitions the ratelimit keys into map[yarpc peer][]limits_for_peer
-	GlobalRatelimitPeers(ratelimits []string) (ratelimitsByPeer map[string][]string, err error)
+	GlobalRatelimitPeers(ratelimits []string) (ratelimitsByPeer map[Peer][]string, err error)
+}
+
+// Peer is used to mark a string as the routing information to a peer process.
+//
+// This is essentially the host:port address of the peer to be contacted,
+// but it is meant to be treated as an opaque blob until given to yarpc
+// via ToYarpcShardKey.
+type Peer string
+
+func (s Peer) ToYarpcShardKey() yarpc.CallOption {
+	return yarpc.WithShardKey(string(s))
 }
 
 type peerResolver struct {
@@ -116,7 +129,7 @@ func (pr peerResolver) GetAllPeers() ([]string, error) {
 	return peers, nil
 }
 
-func (pr peerResolver) GlobalRatelimitPeers(ratelimits []string) (map[string][]string, error) {
+func (pr peerResolver) GlobalRatelimitPeers(ratelimits []string) (map[Peer][]string, error) {
 	// History was selected simply because it already has a ring and an internal-only API.
 	// Any service should be fine, it just needs to be shared by both ends of the system.
 	hosts, err := pr.resolver.Members(service.History)
@@ -129,7 +142,7 @@ func (pr peerResolver) GlobalRatelimitPeers(ratelimits []string) (map[string][]s
 		return nil, fmt.Errorf("unable to get history peers: no peers available")
 	}
 
-	results := make(map[string][]string, len(hosts))
+	results := make(map[Peer][]string, len(hosts))
 	initialCapacity := len(ratelimits) / len(hosts)
 	// add a small buffer to reduce copies, as this is only an estimate
 	initialCapacity += initialCapacity / 10
@@ -157,12 +170,12 @@ func (pr peerResolver) GlobalRatelimitPeers(ratelimits []string) (map[string][]s
 		}
 
 		// add to the peer's partition
-		current := results[peer]
+		current := results[Peer(peer)]
 		if len(current) == 0 {
 			current = make([]string, 0, initialCapacity)
 		}
 		current = append(current, r)
-		results[peer] = current
+		results[Peer(peer)] = current
 	}
 	return results, nil
 }
