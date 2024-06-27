@@ -24,9 +24,9 @@
 Package collection contains the limiting-host ratelimit usage tracking and enforcing logic,
 which acts as a quotas.Collection.
 
-At a very high level, this wraps a [quotas.Limiter] to do a few additional things
+At a very high level, this wraps [quotas.Limiter] values to do a few additional things
 in the context of the [github.com/uber/cadence/common/quotas/global] ratelimiter system:
-  - keep track of usage per key (quotas.Limiter does not support this natively, nor should it)
+  - keep track of usage per key (quotas.Limiter does not support this natively)
   - periodically report usage to each key's "aggregator" host (batched and fanned out in parallel)
   - apply the aggregator's returned per-key RPS limits to future requests
   - fall back to the wrapped limiter in case of failures (handled internally in internal.FallbackLimiter)
@@ -54,21 +54,22 @@ import (
 )
 
 type (
-	// Collection wraps three kinds of ratelimiter collections:
-	//   1. a "global" collection, which tracks usage, and is weighted to match request patterns.
-	//   2. a "local" collection, which tracks usage, and can be optionally used (and/or shadowed) instead of "global"
+	// Collection wraps three kinds of ratelimiter collections, and allows choosing/shadowing which one is used per key:
+	//   1. a "global" collection, which tracks usage, sends data to aggregators, and adjusts to match request patterns between hosts.
+	//   2. a "local" collection, which tracks usage, but all decisions stay local (no requests are sent anywhere to share load info).
 	//   3. a "disabled" collection, which does NOT track usage, and is used to bypass as much of this Collection as possible
 	//
-	// 1 is the reason this Collection exists - limiter-usage has to be tracked and submitted to aggregating hosts to
-	// drive the whole "global load-balanced ratelimiter" system.  internally, this will fall back to a local collection
+	// 1 is the reason this Collection exists - limiter-usage is tracked and submitted to aggregating hosts to
+	// drive the whole "global load-balanced ratelimiter" system.  Internally, this will fall back to a local collection
 	// if there is insufficient data or too many errors.
 	//
-	// 2 is the previous non-global behavior, where ratelimits are determined locally, more simply, and load information is not shared.
-	// this is a lower-cost and MUCH less complex system, and it SHOULD be used if your Cadence cluster receives requests
+	// 2 is essentially just a pass-through of the "local" collection, but with added allow/reject metrics.
+	// Currently, all of these are our "target RPS / num hosts in ring" ratelimiters.
+	// This is a lower-cost and MUCH less complex system, and it SHOULD be used if your Cadence cluster receives requests
 	// in a roughly random way (e.g. any client-side request goes to a roughly-fair roughly-random Frontend host).
 	//
-	// 3 disables as much of 1 and 2 as possible, and is intended to be temporary.
-	// it is essentially a maximum-safety fallback during initial rollout, and should be removed once 2 is demonstrated
+	// 3 is a *complete* pass-through of the "local" collection (no metrics, no monitoring, nothing), and is intended to be temporary.
+	// It is meant to be a maximum-safety fallback mode during initial rollout, and should be removed once 2 is demonstrated
 	// to be safe enough to use in all cases.
 	//
 	// And last but not least:
@@ -99,11 +100,6 @@ type (
 
 		// now exists largely for tests, elsewhere it is always time.Now
 		timesource clock.TimeSource
-	}
-
-	// calls is a small temporary pair[T] container
-	calls struct {
-		allowed, rejected int
 	}
 
 	// basically an enum for key values.
@@ -150,14 +146,14 @@ const (
 func New(
 	name string,
 	// quotas for "local only" behavior.
-	// used for both "local" and "disabled" behavior, though "local" wraps the values.
+	// used for both "local" and "disabled" behavior, though "local" wraps the values with usage metrics.
 	local quotas.ICollection,
 	// quotas for the global limiter's internal fallback.
 	//
 	// this should be configured the same as the local collection, but it
 	// MUST NOT actually be the same collection, or shadowing will double-count
 	// events on the fallback.
-	global quotas.ICollection,
+	globalFallback quotas.ICollection,
 	updateInterval dynamicconfig.DurationPropertyFn,
 	targetRPS dynamicconfig.IntPropertyFnWithDomainFilter,
 	keyModes dynamicconfig.StringPropertyWithRatelimitKeyFilter,
@@ -165,12 +161,12 @@ func New(
 	logger log.Logger,
 	met metrics.Client,
 ) (*Collection, error) {
-	if local == global {
-		return nil, errors.New("local and global collections must be different")
+	if local == globalFallback {
+		return nil, errors.New("local and global-fallback collections must be different")
 	}
 
 	globalCollection := internal.NewAtomicMap(func(key shared.LocalKey) *internal.FallbackLimiter {
-		return internal.NewFallbackLimiter(global.For(string(key)))
+		return internal.NewFallbackLimiter(globalFallback.For(string(key)))
 	})
 	localCollection := internal.NewAtomicMap(func(key shared.LocalKey) internal.CountedLimiter {
 		return internal.NewCountedLimiter(local.For(string(key)))

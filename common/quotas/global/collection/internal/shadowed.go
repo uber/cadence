@@ -30,7 +30,7 @@ import (
 )
 
 type (
-	ShadowedLimiter struct {
+	shadowedLimiter struct {
 		primary quotas.Limiter
 		shadow  quotas.Limiter
 	}
@@ -40,33 +40,39 @@ type (
 	}
 )
 
-var _ quotas.Limiter = ShadowedLimiter{}
+var _ quotas.Limiter = shadowedLimiter{}
 var _ clock.Reservation = shadowedReservation{}
 
+// NewShadowedLimiter mirrors all quotas.Limiter to its two wrapped limiters,
+// but only returns results from / waits as long as the "primary" one (first arg).
+//
+// This is intended for when you want to use one limit but also run a second
+// limit at the same time for comparison (to decide before switching) or
+// to warm data (to reduce spikes when switching).
 func NewShadowedLimiter(primary, secondary quotas.Limiter) quotas.Limiter {
-	return ShadowedLimiter{
+	return shadowedLimiter{
 		primary: primary,
 		shadow:  secondary,
 	}
 }
 
-func (s ShadowedLimiter) Allow() bool {
+func (s shadowedLimiter) Allow() bool {
 	_ = s.shadow.Allow()
 	return s.primary.Allow()
 }
 
-func (s ShadowedLimiter) Wait(ctx context.Context) (err error) {
+func (s shadowedLimiter) Wait(ctx context.Context) (err error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	go func() {
-		_ = s.shadow.Wait(ctx)
+		_ = s.shadow.Wait(ctx) // not waited for because it should end ~immediately on its own
 	}()
 
 	return s.primary.Wait(ctx)
 }
 
-func (s ShadowedLimiter) Reserve() clock.Reservation {
+func (s shadowedLimiter) Reserve() clock.Reservation {
 	return shadowedReservation{
 		primary: s.primary.Reserve(),
 		shadow:  s.shadow.Reserve(),

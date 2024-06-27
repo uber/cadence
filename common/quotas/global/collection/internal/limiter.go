@@ -36,54 +36,63 @@ import (
 )
 
 type (
-	// FallbackLimiter wraps a [rate.Limiter] with a fallback Limiter (i.e. a [github.com/uber/cadence/common/quotas.Limiter])
-	// to use after a configurable number of failed updates.
+	// FallbackLimiter wraps a "primary" [rate.Limiter] with a "fallback" Limiter (i.e. a [github.com/uber/cadence/common/quotas.Limiter])
+	// to use before the primary is fully ready, or after too many attempts to update the "primary" limit have failed.
 	//
 	// Intended use is:
-	//   - collect allowed vs rejected metrics (implicitly tracked by calling Allow())
-	//   - periodically, the limiting host gathers all FallbackLimiter metrics and zeros them (with Collect())
-	//   - this info is submitted to aggregating hosts, who compute new target RPS values
-	//   - these new target values are used to adjust this ratelimiter (with Update(...))
+	//   - "primary" is the global-load-balanced ratelimiter, with weights updating every few seconds
+	//   - "fallback" is the "rps / num-of-hosts" ratelimiters we use many other places, which do not need to exchange data to work
+	//   - When "primary" is not yet initialized (no updates yet at startup) or the global-load-balancing system is broken (too many failures),
+	//     this limiter internally switches to the "fallback" limiter until it recovers.  Otherwise, "primary" is preferred.
+	//   - both limiters are called all the time to keep their used-tokens roughly in sync (via shadowedLimiter), so they
+	//     can be switched between without allowing bursts due to the "other" limit's token bucket filling up.
+	//
+	// The owning global/collection.Collection uses this as follows:
+	//   - every couple seconds, Collect() usage information from all limiters
+	//   - submit this to aggregator hosts, which return how much weight to allow this host per limiter
+	//   - per limiter:
+	//     - if a weight was returned, Update(rps) it so the new value is used in the future
+	//     - else, call FailedUpdate() to shorten the "use fallback" fuse, possibly switching to the fallback by doing so
 	//
 	// During this sequence, a requested limit may not be returned by an aggregator for two major reasons,
 	// and will result in a FailedUpdate() call to shorten a "use fallback logic" fuse:
-	//   - this limit is legitimately unused and no data exists for it
-	//   - ring re-sharding led to losing track of the limit, and it is now owned by a host with insufficient data
+	//   1. this limit is legitimately unused (or idle too long) and no data exists for it
+	//   2. ring re-sharding led to losing track of the limit, and it is now owned by a host with insufficient data
 	//
-	// To mitigate the impact of the second case, "insufficient data" responses from aggregating hosts
-	// (which are currently modeled as "no data") are temporarily ignored, and the previously-configured
-	// update is used.  This gives the aggregating host time to fill in its data, and then the next cycle should
-	// use "real" values that match actual usage.
+	// To mitigate the impact of the second case, missing data is temporarily ignored, and the previously-configured
+	// Update rate is used without any changes.  This gives the aggregating host time to fill in its data, and a later
+	// cycle should return "real" values that match actual usage, Update-ing this limiter.
 	//
-	// If no data has been returned for a sufficiently long time, the "main" ratelimit will be dropped, and
+	// If no data has been returned for a sufficiently long time, the "primary" ratelimit will be ignored, and
 	// the fallback limit will be used exclusively.  This is intended as a safety fallback, e.g. during initial
 	// rollout/rollback and outage scenarios, normal use is not expected to rely on it.
+	//
+	// -----
+	//
+	// Implementation notes:
+	//   - atomics are used as values instead of pointers simply for data locality, which requires FallbackLimiter
+	//     to be used as a pointer.  `go vet -copylocks` should be enough to ensure this is done correctly, which is
+	//     enforced by `make lint`.
+	//   - the variety of atomics here is almost certainly NOT necessary for performance,
+	//     it was just possible and simple enough to use, and it makes deadlocks trivially impossible.
+	//     but rate.Limiter already use mutexes internally, so adding another to track counts / fallback
+	//     decisions / etc should be entirely fine, if it becomes needed.
 	FallbackLimiter struct {
-		// usage / available-limit data cannot be gathered from rate.Limiter, sadly.
-		// so it needs to be collected externally.
-		//
-		// note that these atomics are values, not pointers, to keep data access relatively local.
-		// this requires that FallbackLimiter is used as a pointer, not a value, and is never copied.
-		// if this is not done, `go vet` will produce an error:
-		//     ❯ go vet -copylocks .
-		//     # github.com/uber/cadence/common/quotas/global/limiter
-		//     ./collection.go:30:27: func passes lock by value: github.com/uber/cadence/common/quotas/global/limiter/internal.FallbackLimiter contains sync/atomic.Int64 contains sync/atomic.noCopy
-		// which is checked by `make lint` during CI.
-		//
-		// changing them to pointers will not change any semantics, so that should be fine if it becomes needed.
-
 		// number of failed updates, for deciding when to use fallback
 		failedUpdates atomic.Int64
-		// counts of what was allowed vs not
+		// counts of what was allowed vs not.
+		// this is not collected by a wrapper because it would hide the limit-setting methods,
+		// but it is otherwise identical to a CountedLimiter around this FallbackLimiter.
 		usage AtomicUsage
 
-		// ratelimiters in use
-
-		// local-only limiter based global weight values.
+		// primary / desired limiter, based on load-balanced information.
 		//
 		// note that use and modification is NOT synchronized externally,
 		// so updates and deciding when to use the fallback must be done carefully
 		// to avoid undesired combinations when they interleave.
+		//
+		// if needed or desired, just switch to locks, they should be more than
+		// fast enough because the limiter already uses locking internally.
 		primary clock.Ratelimiter
 		// fallback used when failedUpdates exceeds maxFailedUpdates,
 		// or prior to the first Update call with globally-adjusted values.
@@ -99,7 +108,7 @@ const (
 	// that's expected / normal behavior as we have no data yet.
 	//
 	// positive values risk being interpreted as a "failure" though, so start deeply
-	// negative so it can be identified as "still starting up".
+	// negative, so it can be identified as "still starting up".
 	// min-int64 has more than enough room to "count" failed updates for eons
 	// without becoming positive, so it should not risk being misinterpreted.
 	initialFailedUpdates = math.MinInt64
@@ -111,7 +120,6 @@ const (
 func NewFallbackLimiter(fallback quotas.Limiter) *FallbackLimiter {
 	l := &FallbackLimiter{
 		// 0 allows no requests, will be unused until we receive an update.
-		// this will lead to
 		primary:  clock.NewRatelimiter(0, 0),
 		fallback: fallback,
 	}
@@ -119,9 +127,10 @@ func NewFallbackLimiter(fallback quotas.Limiter) *FallbackLimiter {
 	return l
 }
 
-// Collect returns the current allowed/rejected values, and resets them to zero.
-// Small bits of imprecise counting / time-bucketing due to concurrent limiting is expected and allowed,
-// as it should be more than small enough in practice to not matter.
+// Collect returns the current allowed/rejected values and resets them to zero (like CountedLimiter).
+// it also returns info about if this limiter is currently starting up or in a "use fallback due to failures" mode.
+// "starting" is expected any time a limit is new (or not recently used), "failing" may happen rarely
+// but should not ever be a steady event unless something is broken.
 func (b *FallbackLimiter) Collect() (usage UsageMetrics, starting, failing bool) {
 	usage = b.usage.Collect()
 	starting, failing = b.mode()
@@ -140,8 +149,8 @@ func (b *FallbackLimiter) useFallback() bool {
 	return starting || fallback
 }
 
-// Update adjusts the underlying "main" ratelimit, and resets the fallback fuse.
-// This implies switching to the "main" limiter - if that is not desired, call Reset() immediately after.
+// Update adjusts the underlying "primary" ratelimit, and resets the fallback fuse.
+// This implies switching to the "primary" limiter - if that is not desired, call Reset() immediately after.
 func (b *FallbackLimiter) Update(lim rate.Limit) {
 	// caution: order here matters, to prevent potentially-old limiter values from being used
 	// before they are updated.
@@ -149,9 +158,10 @@ func (b *FallbackLimiter) Update(lim rate.Limit) {
 	// this is probably not going to be noticeable, but some users are sensitive to ANY
 	// requests being ratelimited.  updating the fallback fuse last should be more reliable
 	// in preventing that from happening when they would not otherwise be limited, e.g. with
-	// the initial value of 0 burst, or if their rps was very low long ago and is now high.
+	// the initial value of 0 burst, or if this rps was very low previously and is now high
+	// (because the token bucket will be empty).
 	defer func() {
-		// reset the use-fallback fuse, which may also (re)enable using the "main" limiter
+		// reset the use-fallback fuse, which may also (re)enable using the "primary" limiter
 		b.failedUpdates.Store(0)
 	}()
 
@@ -172,7 +182,7 @@ func (b *FallbackLimiter) FailedUpdate() (failures int) {
 	return failures
 }
 
-// Reset defers to the fallback until an update is received.
+// Reset defers to the fallback limiter until an update is received.
 //
 // This is intended to be used when the current limit is no longer trustworthy for some reason,
 // determined externally rather than from too many FailedUpdate calls.
@@ -180,7 +190,6 @@ func (b *FallbackLimiter) Reset() {
 	b.failedUpdates.Store(initialFailedUpdates)
 }
 
-// Allow returns true if a request is allowed right now.
 func (b *FallbackLimiter) Allow() bool {
 	allowed := b.both().Allow()
 	b.usage.Count(allowed)
@@ -201,18 +210,11 @@ func (b *FallbackLimiter) Reserve() clock.Reservation {
 	}
 }
 
-func (b *FallbackLimiter) both() ShadowedLimiter {
+func (b *FallbackLimiter) both() quotas.Limiter {
 	if b.useFallback() {
-		return ShadowedLimiter{
-			primary: b.fallback,
-			shadow:  b.primary,
-		}
+		return NewShadowedLimiter(b.fallback, b.primary)
 	}
-	return ShadowedLimiter{
-		primary: b.primary,
-		shadow:  b.fallback,
-	}
-
+	return NewShadowedLimiter(b.primary, b.fallback)
 }
 
 // intentionally shadows builtin max, so it can simply be deleted when 1.21 is adopted
