@@ -2374,11 +2374,13 @@ const (
 	//   - "disabled" stops usage-tracking and all Update requests, in an attempt to be as close to "do not use at all" as possible.
 	//   - "local" uses the new limiters with call tracking and metrics, but forces local-only behavior and does not submit usage data to aggregators.
 	//   - "global" uses the new global-load-balanced logic (though it may decide to use a local-fallback internally, and this is not prevented)
-	//   - "x-shadow" means "use x, and also shadow the other".
+	//   - "x-shadow-y" means "use x, and shadow all calls to y but ignore the result".
 	//     this calls both, tracks and emits both metrics, and can be used to "warm" either limiter's in-memory state before switching.
 	//
+	// These values can be seen as constants of github.com/uber/cadence/common/quotas/global/collection.keyMode
+	//
 	// KeyName: frontend.globalRatelimiterMode
-	// Value type: string enum: "disabled", "local", "global", "local-shadow", or "global-shadow"
+	// Value type: string enum: "disabled", "local", "global", "local-shadow-global", or "global-shadow-local"
 	// Default value: "disabled"
 	// Allowed filters: RatelimitKey (on global key, e.g. prefixed by collection name)
 	FrontendGlobalRatelimiterMode
