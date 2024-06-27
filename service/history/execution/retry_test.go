@@ -31,6 +31,43 @@ import (
 	"github.com/uber/cadence/common/persistence"
 )
 
+func Test_NextRetry2(t *testing.T) {
+	// a := assert.New(t)
+	now, _ := time.Parse(time.RFC3339, "2018-04-13T16:08:08+00:00")
+	reason := "good-reason"
+	identity := "some-worker-identity"
+
+	// no retry without retry policy
+	ai := &persistence.ActivityInfo{
+		ScheduleToStartTimeout: int32((30 * time.Minute).Seconds()),
+		ScheduleToCloseTimeout: int32((30 * time.Minute).Seconds()),
+		StartToCloseTimeout:    int32((30 * time.Minute).Seconds()),
+		HasRetryPolicy:         true,
+		NonRetriableErrors:     []string{"bad-reason", "ugly-reason"},
+		StartedIdentity:        identity,
+		MaximumAttempts:        0,
+		InitialInterval:        60,
+		BackoffCoefficient:     1,
+		MaximumInterval:        6000,
+		ExpirationTime:         now.Add(86400 * time.Second),
+		Attempt:                5,
+	}
+
+	dur := getBackoffInterval(
+		now,
+		ai.ExpirationTime,
+		ai.Attempt,
+		ai.MaximumAttempts,
+		ai.InitialInterval,
+		ai.MaximumInterval,
+		ai.BackoffCoefficient,
+		reason,
+		ai.NonRetriableErrors,
+	)
+
+	t.Logf("dur: %v", dur)
+}
+
 func Test_NextRetry(t *testing.T) {
 	a := assert.New(t)
 	now, _ := time.Parse(time.RFC3339, "2018-04-13T16:08:08+00:00")
