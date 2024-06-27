@@ -2866,6 +2866,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 
 		GlobalRatelimiterAllowedRequestsCount:  {metricName: "global_ratelimiter_allowed_requests", metricType: Counter},
 		GlobalRatelimiterRejectedRequestsCount: {metricName: "global_ratelimiter_rejected_requests", metricType: Counter},
+		GlobalRatelimiterQuota:                 {metricName: "global_ratelimiter_quota", metricType: Gauge},
 	},
 	History: {
 		TaskRequests:             {metricName: "task_requests", metricType: Counter},
