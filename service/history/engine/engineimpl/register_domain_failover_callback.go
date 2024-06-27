@@ -98,7 +98,6 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 
 				e.txProcessor.FailoverDomain(failoverDomainIDs)
 				e.timerProcessor.FailoverDomain(failoverDomainIDs)
-				e.crossClusterProcessor.FailoverDomain(failoverDomainIDs)
 
 				now := e.shard.GetTimeSource().Now()
 				// the fake tasks will not be actually used, we just need to make sure

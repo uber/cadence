@@ -69,29 +69,6 @@ func (c *meteredExecutionManager) Close() {
 	return
 }
 
-func (c *meteredExecutionManager) CompleteCrossClusterTask(ctx context.Context, request *persistence.CompleteCrossClusterTaskRequest) (err error) {
-	op := func() error {
-		err = c.wrapped.CompleteCrossClusterTask(ctx, request)
-		return err
-	}
-
-	if domainName, hasDomainName := getDomainNameFromRequest(request); hasDomainName {
-		logTags := append([]tag.Tag{tag.WorkflowDomainName(domainName)}, getCustomLogTags(request)...)
-		c.logger.SampleInfo("Persistence CompleteCrossClusterTask called", c.sampleLoggingRate(), logTags...)
-		if c.enableShardIDMetrics() {
-			err = c.callWithDomainAndShardScope(metrics.PersistenceCompleteCrossClusterTaskScope, op, metrics.DomainTag(domainName),
-				metrics.ShardIDTag(c.GetShardID()))
-		} else {
-			err = c.call(metrics.PersistenceCompleteCrossClusterTaskScope, op, metrics.DomainTag(domainName))
-		}
-		return
-	}
-
-	err = c.call(metrics.PersistenceCompleteCrossClusterTaskScope, op, getCustomMetricTags(request)...)
-
-	return
-}
-
 func (c *meteredExecutionManager) CompleteReplicationTask(ctx context.Context, request *persistence.CompleteReplicationTaskRequest) (err error) {
 	op := func() error {
 		err = c.wrapped.CompleteReplicationTask(ctx, request)
@@ -297,30 +274,6 @@ func (c *meteredExecutionManager) DeleteWorkflowExecution(ctx context.Context, r
 	}
 
 	err = c.call(metrics.PersistenceDeleteWorkflowExecutionScope, op, getCustomMetricTags(request)...)
-
-	return
-}
-
-func (c *meteredExecutionManager) GetCrossClusterTasks(ctx context.Context, request *persistence.GetCrossClusterTasksRequest) (gp1 *persistence.GetCrossClusterTasksResponse, err error) {
-	op := func() error {
-		gp1, err = c.wrapped.GetCrossClusterTasks(ctx, request)
-		c.emptyMetric("ExecutionManager.GetCrossClusterTasks", request, gp1, err)
-		return err
-	}
-
-	if domainName, hasDomainName := getDomainNameFromRequest(request); hasDomainName {
-		logTags := append([]tag.Tag{tag.WorkflowDomainName(domainName)}, getCustomLogTags(request)...)
-		c.logger.SampleInfo("Persistence GetCrossClusterTasks called", c.sampleLoggingRate(), logTags...)
-		if c.enableShardIDMetrics() {
-			err = c.callWithDomainAndShardScope(metrics.PersistenceGetCrossClusterTasksScope, op, metrics.DomainTag(domainName),
-				metrics.ShardIDTag(c.GetShardID()))
-		} else {
-			err = c.call(metrics.PersistenceGetCrossClusterTasksScope, op, metrics.DomainTag(domainName))
-		}
-		return
-	}
-
-	err = c.call(metrics.PersistenceGetCrossClusterTasksScope, op, getCustomMetricTags(request)...)
 
 	return
 }
@@ -592,30 +545,6 @@ func (c *meteredExecutionManager) PutReplicationTaskToDLQ(ctx context.Context, r
 	}
 
 	err = c.call(metrics.PersistencePutReplicationTaskToDLQScope, op, getCustomMetricTags(request)...)
-
-	return
-}
-
-func (c *meteredExecutionManager) RangeCompleteCrossClusterTask(ctx context.Context, request *persistence.RangeCompleteCrossClusterTaskRequest) (rp1 *persistence.RangeCompleteCrossClusterTaskResponse, err error) {
-	op := func() error {
-		rp1, err = c.wrapped.RangeCompleteCrossClusterTask(ctx, request)
-		c.emptyMetric("ExecutionManager.RangeCompleteCrossClusterTask", request, rp1, err)
-		return err
-	}
-
-	if domainName, hasDomainName := getDomainNameFromRequest(request); hasDomainName {
-		logTags := append([]tag.Tag{tag.WorkflowDomainName(domainName)}, getCustomLogTags(request)...)
-		c.logger.SampleInfo("Persistence RangeCompleteCrossClusterTask called", c.sampleLoggingRate(), logTags...)
-		if c.enableShardIDMetrics() {
-			err = c.callWithDomainAndShardScope(metrics.PersistenceRangeCompleteCrossClusterTaskScope, op, metrics.DomainTag(domainName),
-				metrics.ShardIDTag(c.GetShardID()))
-		} else {
-			err = c.call(metrics.PersistenceRangeCompleteCrossClusterTaskScope, op, metrics.DomainTag(domainName))
-		}
-		return
-	}
-
-	err = c.call(metrics.PersistenceRangeCompleteCrossClusterTaskScope, op, getCustomMetricTags(request)...)
 
 	return
 }

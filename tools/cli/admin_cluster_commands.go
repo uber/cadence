@@ -36,7 +36,7 @@ import (
 
 // An indirection for the prompt function so that it can be mocked in the unit tests
 var promptFn = prompt
-var validSearchAttributeKey = regexp.MustCompile(`^[a-zA-Z][a-zA-Z_0-9]*$`)
+var validSearchAttributeKey = regexp.MustCompile(`^[a-zA-Z][a-zA-Z_.-0-9]*$`)
 
 // AdminAddSearchAttribute to whitelist search attribute
 func AdminAddSearchAttribute(c *cli.Context) {

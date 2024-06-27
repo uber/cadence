@@ -97,24 +97,6 @@ func TestExecutionManager_ProxyStoreMethods(t *testing.T) {
 			},
 		},
 		{
-			method: "GetCrossClusterTasks",
-			prepareMocks: func(mockedStore *MockExecutionStore) {
-				mockedStore.EXPECT().GetCrossClusterTasks(gomock.Any(), gomock.Any()).Return(nil, nil)
-			},
-		},
-		{
-			method: "CompleteCrossClusterTask",
-			prepareMocks: func(mockedStore *MockExecutionStore) {
-				mockedStore.EXPECT().CompleteCrossClusterTask(gomock.Any(), gomock.Any()).Return(nil)
-			},
-		},
-		{
-			method: "RangeCompleteCrossClusterTask",
-			prepareMocks: func(mockedStore *MockExecutionStore) {
-				mockedStore.EXPECT().RangeCompleteCrossClusterTask(gomock.Any(), gomock.Any()).Return(nil, nil)
-			},
-		},
-		{
 			method: "DeleteReplicationTaskFromDLQ",
 			prepareMocks: func(mockedStore *MockExecutionStore) {
 				mockedStore.EXPECT().DeleteReplicationTaskFromDLQ(gomock.Any(), gomock.Any()).Return(nil)

@@ -81,11 +81,6 @@ func (g adminClient) DescribeWorkflowExecution(ctx context.Context, ap1 *types.A
 	return proto.ToAdminDescribeWorkflowExecutionResponse(response), proto.ToError(err)
 }
 
-func (g adminClient) GetCrossClusterTasks(ctx context.Context, gp1 *types.GetCrossClusterTasksRequest, p1 ...yarpc.CallOption) (gp2 *types.GetCrossClusterTasksResponse, err error) {
-	response, err := g.c.GetCrossClusterTasks(ctx, proto.FromAdminGetCrossClusterTasksRequest(gp1), p1...)
-	return proto.ToAdminGetCrossClusterTasksResponse(response), proto.ToError(err)
-}
-
 func (g adminClient) GetDLQReplicationMessages(ctx context.Context, gp1 *types.GetDLQReplicationMessagesRequest, p1 ...yarpc.CallOption) (gp2 *types.GetDLQReplicationMessagesResponse, err error) {
 	response, err := g.c.GetDLQReplicationMessages(ctx, proto.FromAdminGetDLQReplicationMessagesRequest(gp1), p1...)
 	return proto.ToAdminGetDLQReplicationMessagesResponse(response), proto.ToError(err)
@@ -174,11 +169,6 @@ func (g adminClient) ResendReplicationTasks(ctx context.Context, rp1 *types.Rese
 func (g adminClient) ResetQueue(ctx context.Context, rp1 *types.ResetQueueRequest, p1 ...yarpc.CallOption) (err error) {
 	_, err = g.c.ResetQueue(ctx, proto.FromAdminResetQueueRequest(rp1), p1...)
 	return proto.ToError(err)
-}
-
-func (g adminClient) RespondCrossClusterTasksCompleted(ctx context.Context, rp1 *types.RespondCrossClusterTasksCompletedRequest, p1 ...yarpc.CallOption) (rp2 *types.RespondCrossClusterTasksCompletedResponse, err error) {
-	response, err := g.c.RespondCrossClusterTasksCompleted(ctx, proto.FromAdminRespondCrossClusterTasksCompletedRequest(rp1), p1...)
-	return proto.ToAdminRespondCrossClusterTasksCompletedResponse(response), proto.ToError(err)
 }
 
 func (g adminClient) RestoreDynamicConfig(ctx context.Context, rp1 *types.RestoreDynamicConfigRequest, p1 ...yarpc.CallOption) (err error) {

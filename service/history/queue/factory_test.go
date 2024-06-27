@@ -105,32 +105,3 @@ func TestNewTimerQueueProcessor(t *testing.T) {
 		t.Error("NewTimerQueueProcessor returned nil")
 	}
 }
-
-func TestNewCrossClusterQueueProcessor(t *testing.T) {
-	defer goleak.VerifyNone(t,
-		// TODO(CDNC-8881):  TimerGate should not start background goroutine in constructor. Make it start/stoppable
-		goleak.IgnoreTopFunction("github.com/uber/cadence/service/history/queue.NewLocalTimerGate.func1"),
-	)
-	ctrl := gomock.NewController(t)
-	mockShard := shard.NewTestContext(
-		t, ctrl, &persistence.ShardInfo{
-			ShardID:          10,
-			RangeID:          1,
-			TransferAckLevel: 0,
-		},
-		config.NewForTest())
-	defer mockShard.Finish(t)
-
-	mockProcessor := task.NewMockProcessor(ctrl)
-
-	f := NewProcessorFactory()
-	processor := f.NewCrossClusterQueueProcessor(
-		mockShard,
-		mockShard.GetEngine(),
-		execution.NewCache(mockShard),
-		mockProcessor)
-
-	if processor == nil {
-		t.Error("NewCrossClusterQueueProcessor returned nil")
-	}
-}

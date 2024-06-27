@@ -311,7 +311,6 @@ func TestHandleDecisionTaskFailed(t *testing.T) {
 				engine.EXPECT().NotifyNewHistoryEvent(gomock.Any())
 				engine.EXPECT().NotifyNewTransferTasks(gomock.Any())
 				engine.EXPECT().NotifyNewTimerTasks(gomock.Any())
-				engine.EXPECT().NotifyNewCrossClusterTasks(gomock.Any())
 				engine.EXPECT().NotifyNewReplicationTasks(gomock.Any())
 			},
 			expectErr: false,
@@ -504,7 +503,6 @@ func TestHandleDecisionTaskStarted(t *testing.T) {
 				engine.EXPECT().NotifyNewHistoryEvent(gomock.Any())
 				engine.EXPECT().NotifyNewTransferTasks(gomock.Any())
 				engine.EXPECT().NotifyNewTimerTasks(gomock.Any())
-				engine.EXPECT().NotifyNewCrossClusterTasks(gomock.Any())
 				engine.EXPECT().NotifyNewReplicationTasks(gomock.Any())
 			},
 			expectErr: nil,
@@ -653,7 +651,6 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 					0, 5, 0, nil, 1, 0))
 				engine.EXPECT().NotifyNewTransferTasks(gomock.Any())
 				engine.EXPECT().NotifyNewTimerTasks(gomock.Any())
-				engine.EXPECT().NotifyNewCrossClusterTasks(gomock.Any())
 				engine.EXPECT().NotifyNewReplicationTasks(gomock.Any())
 
 				decisionHandler.domainCache.(*cache.MockDomainCache).EXPECT().GetDomain(constants.TestDomainName).Times(1).Return(constants.TestLocalDomainEntry, nil)
@@ -783,7 +780,6 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 					0, 1, 0, nil, 1, 0))
 				engine.EXPECT().NotifyNewTransferTasks(gomock.Any())
 				engine.EXPECT().NotifyNewTimerTasks(gomock.Any())
-				engine.EXPECT().NotifyNewCrossClusterTasks(gomock.Any())
 				engine.EXPECT().NotifyNewReplicationTasks(gomock.Any())
 			},
 			mutableState: &persistence.WorkflowMutableState{
@@ -982,7 +978,6 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 				decisionHandler.shard.(*shard.MockContext).EXPECT().GetEngine().Return(engine).Times(2)
 				engine.EXPECT().NotifyNewTransferTasks(gomock.Any())
 				engine.EXPECT().NotifyNewTimerTasks(gomock.Any())
-				engine.EXPECT().NotifyNewCrossClusterTasks(gomock.Any())
 				engine.EXPECT().NotifyNewReplicationTasks(gomock.Any())
 
 			},
@@ -1161,7 +1156,6 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 					0, 3, 0, nil, 1, 0))
 				engine.EXPECT().NotifyNewTransferTasks(gomock.Any())
 				engine.EXPECT().NotifyNewTimerTasks(gomock.Any())
-				engine.EXPECT().NotifyNewCrossClusterTasks(gomock.Any())
 				engine.EXPECT().NotifyNewReplicationTasks(gomock.Any())
 			},
 			assertResponseBody: func(t *testing.T, resp *types.HistoryRespondDecisionTaskCompletedResponse) {

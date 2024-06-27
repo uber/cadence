@@ -41,7 +41,7 @@ func TestDescribeWorkflowExecution(t *testing.T) {
 	eft := testdata.NewEngineForTest(t, NewEngineWithShardContext)
 
 	childDomainID := "deleted-domain"
-	eft.ShardCtx.Resource.DomainCache.EXPECT().GetDomainName(constants.TestParentDomainID).Return(constants.TestParentDomainName, nil).AnyTimes()
+	eft.ShardCtx.Resource.DomainCache.EXPECT().GetDomainName(constants.TestDomainID).Return(constants.TestDomainName, nil).AnyTimes()
 	eft.ShardCtx.Resource.DomainCache.EXPECT().GetDomainName(childDomainID).Return("", &types.EntityNotExistsError{}).AnyTimes()
 	execution := types.WorkflowExecution{
 		WorkflowID: constants.TestWorkflowID,
@@ -156,7 +156,7 @@ func TestDescribeWorkflowExecution(t *testing.T) {
 				WorkflowID:             constants.TestWorkflowID,
 				RunID:                  constants.TestRunID,
 				FirstExecutionRunID:    "first",
-				ParentDomainID:         constants.TestParentDomainID,
+				ParentDomainID:         constants.TestDomainID,
 				ParentWorkflowID:       parentWorkflowID,
 				ParentRunID:            parentRunID,
 				InitiatedID:            initiatedID,
@@ -230,8 +230,8 @@ func TestDescribeWorkflowExecution(t *testing.T) {
 			CloseTime:      closeTime,
 			CloseStatus:    types.WorkflowExecutionCloseStatusCompleted.Ptr(),
 			HistoryLength:  historyLength,
-			ParentDomainID: &constants.TestParentDomainID,
-			ParentDomain:   &constants.TestParentDomainName,
+			ParentDomainID: &constants.TestDomainID,
+			ParentDomain:   &constants.TestDomainName,
 			ParentExecution: &types.WorkflowExecution{
 				WorkflowID: parentWorkflowID,
 				RunID:      parentRunID,

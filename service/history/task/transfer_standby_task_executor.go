@@ -495,7 +495,12 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 	searchAttr := copySearchAttributes(executionInfo.SearchAttributes)
 	if t.config.EnableContextHeaderInVisibility(domainEntry.GetInfo().Name) {
 		if attributes := startEvent.GetWorkflowExecutionStartedEventAttributes(); attributes != nil && attributes.Header != nil {
-			searchAttr = appendContextHeaderToSearchAttributes(searchAttr, attributes.Header.Fields, t.config.ValidSearchAttributes())
+			// fail open to avoid blocking the task processing
+			if newSearchAttr, err := appendContextHeaderToSearchAttributes(searchAttr, attributes.Header.Fields, t.config.ValidSearchAttributes()); err != nil {
+				t.logger.Error("failed to add headers to search attributes", tag.Error(err))
+			} else {
+				searchAttr = newSearchAttr
+			}
 		}
 	}
 

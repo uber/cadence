@@ -91,7 +91,6 @@ type historyEngineImpl struct {
 	visibilityMgr                  persistence.VisibilityManager
 	txProcessor                    queue.Processor
 	timerProcessor                 queue.Processor
-	crossClusterProcessor          queue.Processor
 	nDCReplicator                  ndc.HistoryReplicator
 	nDCActivityReplicator          ndc.ActivityReplicator
 	historyEventNotifier           events.Notifier
@@ -104,7 +103,6 @@ type historyEngineImpl struct {
 	archivalClient                 warchiver.Client
 	workflowResetter               reset.WorkflowResetter
 	queueTaskProcessor             task.Processor
-	crossClusterTaskProcessors     common.Daemon
 	replicationTaskProcessors      []replication.TaskProcessor
 	replicationAckManager          replication.TaskAckManager
 	replicationTaskStore           *replication.TaskStore
@@ -142,7 +140,6 @@ func NewEngineWithShardContext(
 	publicClient workflowserviceclient.Interface,
 	historyEventNotifier events.Notifier,
 	config *config.Config,
-	crossClusterTaskFetchers task.Fetchers,
 	replicationTaskFetchers replication.TaskFetchers,
 	rawMatchingClient matching.Client,
 	queueTaskProcessor task.Processor,
@@ -269,13 +266,6 @@ func NewEngineWithShardContext(
 		openExecutionCheck,
 	)
 
-	historyEngImpl.crossClusterProcessor = queueProcessorFactory.NewCrossClusterQueueProcessor(
-		shard,
-		historyEngImpl,
-		executionCache,
-		queueTaskProcessor,
-	)
-
 	historyEngImpl.eventsReapplier = ndc.NewEventsReapplier(shard.GetMetricsClient(), logger)
 
 	historyEngImpl.nDCReplicator = ndc.NewHistoryReplicator(
@@ -288,21 +278,6 @@ func NewEngineWithShardContext(
 		shard,
 		executionCache,
 		logger,
-	)
-
-	historyEngImpl.crossClusterTaskProcessors = task.NewCrossClusterTaskProcessors(
-		shard,
-		queueTaskProcessor,
-		crossClusterTaskFetchers,
-		&task.CrossClusterTaskProcessorOptions{
-			Enabled:                    config.EnableCrossClusterEngine,
-			MaxPendingTasks:            config.CrossClusterTargetProcessorMaxPendingTasks,
-			TaskMaxRetryCount:          config.CrossClusterTargetProcessorMaxRetryCount,
-			TaskRedispatchInterval:     config.ActiveTaskRedispatchInterval,
-			TaskWaitInterval:           config.CrossClusterTargetProcessorTaskWaitInterval,
-			ServiceBusyBackoffInterval: config.CrossClusterTargetProcessorServiceBusyBackoffInterval,
-			TimerJitterCoefficient:     config.CrossClusterTargetProcessorJitterCoefficient,
-		},
 	)
 
 	var replicationTaskProcessors []replication.TaskProcessor
@@ -371,7 +346,6 @@ func (e *historyEngineImpl) Start() {
 
 	e.txProcessor.Start()
 	e.timerProcessor.Start()
-	e.crossClusterProcessor.Start()
 	e.replicationDLQHandler.Start()
 	e.replicationMetricsEmitter.Start()
 
@@ -381,8 +355,6 @@ func (e *historyEngineImpl) Start() {
 	// before queue processor is started, it may result in a deadline as to create the failover queue,
 	// queue processor need to be started.
 	e.registerDomainFailoverCallback()
-
-	e.crossClusterTaskProcessors.Start()
 
 	for _, replicationTaskProcessor := range e.replicationTaskProcessors {
 		replicationTaskProcessor.Start()
@@ -400,11 +372,8 @@ func (e *historyEngineImpl) Stop() {
 
 	e.txProcessor.Stop()
 	e.timerProcessor.Stop()
-	e.crossClusterProcessor.Stop()
 	e.replicationDLQHandler.Stop()
 	e.replicationMetricsEmitter.Stop()
-
-	e.crossClusterTaskProcessors.Stop()
 
 	for _, replicationTaskProcessor := range e.replicationTaskProcessors {
 		replicationTaskProcessor.Stop()
@@ -438,11 +407,9 @@ func (e *historyEngineImpl) SyncShardStatus(ctx context.Context, request *types.
 	// 1. update the view of remote cluster's shard time
 	// 2. notify the timer gate in the timer queue standby processor
 	// 3. notify the transfer (essentially a no op, just put it here so it looks symmetric)
-	// 4. notify the cross cluster (essentially a no op, just put it here so it looks symmetric)
 	e.shard.SetCurrentTime(clusterName, now)
 	e.txProcessor.NotifyNewTask(clusterName, &hcommon.NotifyTaskInfo{Tasks: []persistence.Task{}})
 	e.timerProcessor.NotifyNewTask(clusterName, &hcommon.NotifyTaskInfo{Tasks: []persistence.Task{}})
-	e.crossClusterProcessor.NotifyNewTask(clusterName, &hcommon.NotifyTaskInfo{Tasks: []persistence.Task{}})
 	return nil
 }
 

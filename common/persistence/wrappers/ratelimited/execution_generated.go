@@ -55,14 +55,6 @@ func (c *ratelimitedExecutionManager) Close() {
 	return
 }
 
-func (c *ratelimitedExecutionManager) CompleteCrossClusterTask(ctx context.Context, request *persistence.CompleteCrossClusterTaskRequest) (err error) {
-	if ok := c.rateLimiter.Allow(); !ok {
-		err = ErrPersistenceLimitExceeded
-		return
-	}
-	return c.wrapped.CompleteCrossClusterTask(ctx, request)
-}
-
 func (c *ratelimitedExecutionManager) CompleteReplicationTask(ctx context.Context, request *persistence.CompleteReplicationTaskRequest) (err error) {
 	if ok := c.rateLimiter.Allow(); !ok {
 		err = ErrPersistenceLimitExceeded
@@ -133,14 +125,6 @@ func (c *ratelimitedExecutionManager) DeleteWorkflowExecution(ctx context.Contex
 		return
 	}
 	return c.wrapped.DeleteWorkflowExecution(ctx, request)
-}
-
-func (c *ratelimitedExecutionManager) GetCrossClusterTasks(ctx context.Context, request *persistence.GetCrossClusterTasksRequest) (gp1 *persistence.GetCrossClusterTasksResponse, err error) {
-	if ok := c.rateLimiter.Allow(); !ok {
-		err = ErrPersistenceLimitExceeded
-		return
-	}
-	return c.wrapped.GetCrossClusterTasks(ctx, request)
 }
 
 func (c *ratelimitedExecutionManager) GetCurrentExecution(ctx context.Context, request *persistence.GetCurrentExecutionRequest) (gp1 *persistence.GetCurrentExecutionResponse, err error) {
@@ -237,14 +221,6 @@ func (c *ratelimitedExecutionManager) PutReplicationTaskToDLQ(ctx context.Contex
 		return
 	}
 	return c.wrapped.PutReplicationTaskToDLQ(ctx, request)
-}
-
-func (c *ratelimitedExecutionManager) RangeCompleteCrossClusterTask(ctx context.Context, request *persistence.RangeCompleteCrossClusterTaskRequest) (rp1 *persistence.RangeCompleteCrossClusterTaskResponse, err error) {
-	if ok := c.rateLimiter.Allow(); !ok {
-		err = ErrPersistenceLimitExceeded
-		return
-	}
-	return c.wrapped.RangeCompleteCrossClusterTask(ctx, request)
 }
 
 func (c *ratelimitedExecutionManager) RangeCompleteReplicationTask(ctx context.Context, request *persistence.RangeCompleteReplicationTaskRequest) (rp1 *persistence.RangeCompleteReplicationTaskResponse, err error) {

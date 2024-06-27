@@ -379,9 +379,6 @@ func AdminRemoveTask(c *cli.Context) {
 		visibilityTimestamp = getRequiredInt64Option(c, FlagTaskVisibilityTimestamp)
 	}
 	var clusterName string
-	if common.TaskType(taskID) == common.TaskTypeCrossCluster {
-		clusterName = getRequiredOption(c, FlagCluster)
-	}
 
 	ctx, cancel := newContext(c)
 	defer cancel()

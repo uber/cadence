@@ -35,8 +35,6 @@ const (
 		`cluster_timer_ack_level: ?, ` +
 		`transfer_processing_queue_states: ?, ` +
 		`transfer_processing_queue_states_encoding: ?, ` +
-		`cross_cluster_processing_queue_states: ?, ` +
-		`cross_cluster_processing_queue_states_encoding: ?, ` +
 		`timer_processing_queue_states: ?, ` +
 		`timer_processing_queue_states_encoding: ?, ` +
 		`domain_notification_version: ?, ` +

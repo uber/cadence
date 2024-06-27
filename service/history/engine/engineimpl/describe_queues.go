@@ -43,13 +43,6 @@ func (e *historyEngineImpl) DescribeTimerQueue(
 	return e.describeQueue(ctx, e.timerProcessor, clusterName)
 }
 
-func (e *historyEngineImpl) DescribeCrossClusterQueue(
-	ctx context.Context,
-	clusterName string,
-) (*types.DescribeQueueResponse, error) {
-	return e.describeQueue(ctx, e.crossClusterProcessor, clusterName)
-}
-
 func (e *historyEngineImpl) describeQueue(
 	ctx context.Context,
 	queueProcessor queue.Processor,

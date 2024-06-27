@@ -22,6 +22,7 @@ package task
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -399,7 +400,7 @@ func getWorkflowMemo(
 	return &types.Memo{Fields: memo}
 }
 
-func appendContextHeaderToSearchAttributes(attr, context map[string][]byte, allowedKeys map[string]interface{}) map[string][]byte {
+func appendContextHeaderToSearchAttributes(attr, context map[string][]byte, allowedKeys map[string]interface{}) (map[string][]byte, error) {
 	for k, v := range context {
 		key := fmt.Sprintf(definition.HeaderFormat, k)
 		if _, ok := attr[key]; ok { // skip if key already exists
@@ -408,14 +409,17 @@ func appendContextHeaderToSearchAttributes(attr, context map[string][]byte, allo
 		if _, allowed := allowedKeys[key]; !allowed { // skip if not allowed
 			continue
 		}
-		val := make([]byte, len(v))
-		copy(val, v)
 		if attr == nil {
 			attr = make(map[string][]byte)
 		}
-		attr[key] = val
+		// context header are raw string bytes, need to be json encoded to be stored in search attributes
+		data, err := json.Marshal(string(v))
+		if err != nil {
+			return nil, fmt.Errorf("fail to json encoding context key %s, val %v: %w", k, v, err)
+		}
+		attr[key] = data
 	}
-	return attr
+	return attr, nil
 }
 
 func copySearchAttributes(

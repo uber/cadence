@@ -85,9 +85,6 @@ type (
 		GetTransferProcessingQueueStates(cluster string) []*types.ProcessingQueueState
 		UpdateTransferProcessingQueueStates(cluster string, states []*types.ProcessingQueueState) error
 
-		GetCrossClusterProcessingQueueStates(cluster string) []*types.ProcessingQueueState
-		UpdateCrossClusterProcessingQueueStates(cluster string, states []*types.ProcessingQueueState) error
-
 		GetClusterReplicationLevel(cluster string) int64
 		UpdateClusterReplicationLevel(cluster string, lastTaskID int64) error
 
@@ -335,46 +332,6 @@ func (s *contextImpl) UpdateTransferProcessingQueueStates(cluster string, states
 		ackLevel = common.MinInt64(ackLevel, state.GetAckLevel())
 	}
 	s.shardInfo.ClusterTransferAckLevel[cluster] = ackLevel
-
-	s.shardInfo.StolenSinceRenew = 0
-	return s.updateShardInfoLocked()
-}
-
-func (s *contextImpl) GetCrossClusterProcessingQueueStates(cluster string) []*types.ProcessingQueueState {
-	s.RLock()
-	defer s.RUnlock()
-
-	// if we can find corresponding processing queue states
-	if states, ok := s.shardInfo.CrossClusterProcessingQueueStates.StatesByCluster[cluster]; ok {
-		return states
-	}
-
-	// otherwise, create default processing queue state
-	// this can happen if you add more cluster
-	return []*types.ProcessingQueueState{
-		{
-			Level:    common.Int32Ptr(0),
-			AckLevel: common.Int64Ptr(0),
-			MaxLevel: common.Int64Ptr(math.MaxInt64),
-			DomainFilter: &types.DomainFilter{
-				ReverseMatch: true,
-			},
-		},
-	}
-}
-
-func (s *contextImpl) UpdateCrossClusterProcessingQueueStates(cluster string, states []*types.ProcessingQueueState) error {
-	s.Lock()
-	defer s.Unlock()
-
-	if len(states) == 0 {
-		return errors.New("empty cross-cluster processing queue states")
-	}
-
-	if s.shardInfo.CrossClusterProcessingQueueStates.StatesByCluster == nil {
-		s.shardInfo.CrossClusterProcessingQueueStates.StatesByCluster = make(map[string][]*types.ProcessingQueueState)
-	}
-	s.shardInfo.CrossClusterProcessingQueueStates.StatesByCluster[cluster] = states
 
 	s.shardInfo.StolenSinceRenew = 0
 	return s.updateShardInfoLocked()
@@ -1200,21 +1157,6 @@ func (s *contextImpl) emitShardInfoMetricsLogsLocked() {
 	transferLag := s.transferMaxReadLevel - s.shardInfo.TransferAckLevel
 	timerLag := time.Since(s.shardInfo.TimerAckLevel)
 
-	minCrossClusterLevel := int64(math.MaxInt64)
-	crossClusterLevelByCluster := make(map[string]int64)
-	for cluster, pqs := range s.shardInfo.CrossClusterProcessingQueueStates.StatesByCluster {
-		crossClusterLevel := int64(math.MaxInt64)
-		for _, queueState := range pqs {
-			crossClusterLevel = common.MinInt64(crossClusterLevel, queueState.GetAckLevel())
-		}
-		crossClusterLevelByCluster[cluster] = crossClusterLevel
-		minCrossClusterLevel = common.MinInt64(minCrossClusterLevel, crossClusterLevel)
-	}
-	crossClusterLag := s.transferMaxReadLevel - minCrossClusterLevel
-	if minCrossClusterLevel == 0 {
-		crossClusterLag = 0
-	}
-
 	transferFailoverInProgress := len(s.transferFailoverLevels)
 	timerFailoverInProgress := len(s.timerFailoverLevels)
 
@@ -1222,15 +1164,13 @@ func (s *contextImpl) emitShardInfoMetricsLogsLocked() {
 		(logWarnTransferLevelDiff < diffTransferLevel ||
 			logWarnTimerLevelDiff < diffTimerLevel ||
 			logWarnTransferLevelDiff < transferLag ||
-			logWarnTimerLevelDiff < timerLag ||
-			logWarnCrossClusterLevelLag < crossClusterLag) {
+			logWarnTimerLevelDiff < timerLag) {
 
 		logger := s.logger.WithTags(
 			tag.ShardTime(s.remoteClusterCurrentTime),
 			tag.ShardReplicationAck(s.shardInfo.ReplicationAckLevel),
 			tag.ShardTimerAcks(s.shardInfo.ClusterTimerAckLevel),
 			tag.ShardTransferAcks(s.shardInfo.ClusterTransferAckLevel),
-			tag.ShardCrossClusterAcks(crossClusterLevelByCluster),
 		)
 
 		logger.Warn("Shard ack levels diff exceeds warn threshold.")
@@ -1243,9 +1183,6 @@ func (s *contextImpl) emitShardInfoMetricsLogsLocked() {
 	metricsScope.RecordTimer(metrics.ShardInfoReplicationLagTimer, time.Duration(replicationLag))
 	metricsScope.RecordTimer(metrics.ShardInfoTransferLagTimer, time.Duration(transferLag))
 	metricsScope.RecordTimer(metrics.ShardInfoTimerLagTimer, timerLag)
-	for cluster, crossClusterLag := range crossClusterLevelByCluster {
-		metricsScope.Tagged(metrics.TargetClusterTag(cluster)).RecordTimer(metrics.ShardInfoCrossClusterLagTimer, time.Duration(crossClusterLag))
-	}
 
 	metricsScope.RecordTimer(metrics.ShardInfoTransferFailoverInProgressTimer, time.Duration(transferFailoverInProgress))
 	metricsScope.RecordTimer(metrics.ShardInfoTimerFailoverInProgressTimer, time.Duration(timerFailoverInProgress))
@@ -1575,11 +1512,6 @@ func acquireShard(
 
 	if updatedShardInfo.TransferProcessingQueueStates == nil {
 		updatedShardInfo.TransferProcessingQueueStates = &types.ProcessingQueueStates{
-			StatesByCluster: make(map[string][]*types.ProcessingQueueState),
-		}
-	}
-	if updatedShardInfo.CrossClusterProcessingQueueStates == nil {
-		updatedShardInfo.CrossClusterProcessingQueueStates = &types.ProcessingQueueStates{
 			StatesByCluster: make(map[string][]*types.ProcessingQueueState),
 		}
 	}
