@@ -325,7 +325,17 @@ func TestDynamicConfigFilterTypeIsMapped(t *testing.T) {
 }
 
 func TestDynamicConfigFilterTypeIsParseable(t *testing.T) {
+	allFilters := map[Filter]int{}
 	for idx, filterString := range filters { // TestDynamicConfigFilterTypeIsMapped ensures this is a complete list
+		// all filter-strings must parse to unique filters
+		parsed := ParseFilter(filterString)
+		prev, ok := allFilters[parsed]
+		assert.False(t, ok, "%q is already mapped to the same filter type as %q", filterString, filters[prev])
+		allFilters[parsed] = idx
+
+		// otherwise, only "unknown" should map to "unknown".
+		// ParseFilter should probably be re-implemented to simply use a map that is shared with the definitions
+		// so values cannot get out of sync, but for now this is just asserting what is currently built.
 		if idx == 0 {
 			assert.Equalf(t, UnknownFilter, ParseFilter(filterString), "first filter string should have parsed as unknown: %v", filterString)
 			// unknown filter string is likely safe to change and then should be updated here, but otherwise this ensures the logic isn't entirely position-dependent.
