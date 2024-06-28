@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -320,6 +321,18 @@ func TestDynamicConfigFilterTypeIsMapped(t *testing.T) {
 	require.Equal(t, int(LastFilterTypeForTest), len(filters))
 	for i := UnknownFilter; i < LastFilterTypeForTest; i++ {
 		require.NotEmpty(t, filters[i])
+	}
+}
+
+func TestDynamicConfigFilterTypeIsParseable(t *testing.T) {
+	for idx, filterString := range filters { // TestDynamicConfigFilterTypeIsMapped ensures this is a complete list
+		if idx == 0 {
+			assert.Equalf(t, UnknownFilter, ParseFilter(filterString), "first filter string should have parsed as unknown: %v", filterString)
+			// unknown filter string is likely safe to change and then should be updated here, but otherwise this ensures the logic isn't entirely position-dependent.
+			require.Equalf(t, "unknownFilter", filterString, "expected first filter to be 'unknownFilter', but it was %v", filterString)
+		} else {
+			assert.NotEqualf(t, UnknownFilter, ParseFilter(filterString), "failed to parse filter: %s, make sure it is in ParseFilter's switch statement", filterString)
+		}
 	}
 }
 

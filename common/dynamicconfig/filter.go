@@ -55,6 +55,8 @@ func ParseFilter(filterName string) Filter {
 		return WorkflowID
 	case "workflowType":
 		return WorkflowType
+	case "ratelimitKey":
+		return RatelimitKey
 	default:
 		return UnknownFilter
 	}
