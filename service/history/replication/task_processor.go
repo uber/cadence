@@ -194,8 +194,13 @@ Loop:
 		respChan := make(chan *types.ReplicationMessages, 1)
 		// TODO: when we support prefetching, LastRetrievedMessageID can be different than LastProcessedMessageID
 
+		if p.isShuttingDown() {
+			return
+		}
+
 		select {
 		case <-p.done:
+			// shard is closing
 			return
 		case p.requestChan <- &request{
 			token: &types.ReplicationToken{
@@ -319,6 +324,12 @@ func (p *taskProcessorImpl) processResponse(response *types.ReplicationMessages)
 		time.Sleep(backoffDuration)
 	} else {
 		scope.RecordTimer(metrics.ReplicationTasksAppliedLatency, time.Since(batchRequestStartTime))
+	}
+
+	if p.isShuttingDown() {
+		// avoid updating ack-levels if there's a shutdown as well remembering that GetReplication messages is a *write* api
+		// (keeping track of consumer offsets), so we have to be careful what data it's sent
+		return
 	}
 
 	p.lastProcessedMessageID = response.GetLastRetrievedMessageID()
@@ -671,4 +682,13 @@ func (p *taskProcessorImpl) taskProcessingStartWait() {
 		p.config.ReplicationTaskProcessorStartWait(shardID),
 		p.config.ReplicationTaskProcessorStartWaitJitterCoefficient(shardID),
 	))
+}
+
+func (p *taskProcessorImpl) isShuttingDown() bool {
+	select {
+	case <-p.done:
+		return true
+	default:
+		return false
+	}
 }
