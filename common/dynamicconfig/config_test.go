@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -41,7 +42,7 @@ func TestConfigSuite(t *testing.T) {
 	suite.Run(t, s)
 }
 
-func (s *configSuite) SetupSuite() {
+func (s *configSuite) SetupTest() {
 	s.client = NewInMemoryClient().(*inMemoryClient)
 	logger := log.NewNoop()
 	s.cln = NewCollection(s.client, logger)
@@ -50,6 +51,14 @@ func (s *configSuite) SetupSuite() {
 func (s *configSuite) TestGetProperty() {
 	key := TestGetStringPropertyKey
 	value := s.cln.GetProperty(key)
+	s.Equal(key.DefaultValue(), value())
+	s.client.SetValue(key, "b")
+	s.Equal("b", value())
+}
+
+func (s *configSuite) TestGetStringProperty() {
+	key := TestGetStringPropertyKey
+	value := s.cln.GetStringProperty(key)
 	s.Equal(key.DefaultValue(), value())
 	s.client.SetValue(key, "b")
 	s.Equal("b", value())
@@ -98,6 +107,15 @@ func (s *configSuite) TestGetStringPropertyFnWithDomainFilter() {
 	s.Equal(key.DefaultString(), value(domain))
 	s.client.SetValue(key, "efg")
 	s.Equal("efg", value(domain))
+}
+
+func (s *configSuite) TestGetStringPropertyFilteredByRatelimitKey() {
+	key := FrontendGlobalRatelimiterMode
+	ratelimitKey := "user:testDomain"
+	value := s.cln.GetStringPropertyFilteredByRatelimitKey(key)
+	s.Equal(key.DefaultString(), value(ratelimitKey))
+	s.client.SetValue(key, "fake-mode")
+	s.Equal("fake-mode", value(ratelimitKey))
 }
 
 func (s *configSuite) TestGetIntPropertyFilteredByTaskListInfo() {
@@ -303,6 +321,28 @@ func TestDynamicConfigFilterTypeIsMapped(t *testing.T) {
 	require.Equal(t, int(LastFilterTypeForTest), len(filters))
 	for i := UnknownFilter; i < LastFilterTypeForTest; i++ {
 		require.NotEmpty(t, filters[i])
+	}
+}
+
+func TestDynamicConfigFilterTypeIsParseable(t *testing.T) {
+	allFilters := map[Filter]int{}
+	for idx, filterString := range filters { // TestDynamicConfigFilterTypeIsMapped ensures this is a complete list
+		// all filter-strings must parse to unique filters
+		parsed := ParseFilter(filterString)
+		prev, ok := allFilters[parsed]
+		assert.False(t, ok, "%q is already mapped to the same filter type as %q", filterString, filters[prev])
+		allFilters[parsed] = idx
+
+		// otherwise, only "unknown" should map to "unknown".
+		// ParseFilter should probably be re-implemented to simply use a map that is shared with the definitions
+		// so values cannot get out of sync, but for now this is just asserting what is currently built.
+		if idx == 0 {
+			assert.Equalf(t, UnknownFilter, ParseFilter(filterString), "first filter string should have parsed as unknown: %v", filterString)
+			// unknown filter string is likely safe to change and then should be updated here, but otherwise this ensures the logic isn't entirely position-dependent.
+			require.Equalf(t, "unknownFilter", filterString, "expected first filter to be 'unknownFilter', but it was %v", filterString)
+		} else {
+			assert.NotEqualf(t, UnknownFilter, ParseFilter(filterString), "failed to parse filter: %s, make sure it is in ParseFilter's switch statement", filterString)
+		}
 	}
 }
 

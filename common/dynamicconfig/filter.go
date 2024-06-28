@@ -55,6 +55,8 @@ func ParseFilter(filterName string) Filter {
 		return WorkflowID
 	case "workflowType":
 		return WorkflowType
+	case "ratelimitKey":
+		return RatelimitKey
 	default:
 		return UnknownFilter
 	}
@@ -70,6 +72,7 @@ var filters = []string{
 	"clusterName",
 	"workflowID",
 	"workflowType",
+	"ratelimitKey",
 }
 
 const (
@@ -90,6 +93,8 @@ const (
 	WorkflowID
 	// WorkflowType is the workflow type name
 	WorkflowType
+	// RatelimitKey is the global ratelimit key (not a local key name)
+	RatelimitKey
 
 	// LastFilterTypeForTest must be the last one in this const group for testing purpose
 	LastFilterTypeForTest
@@ -151,6 +156,13 @@ func WorkflowIDFilter(workflowID string) FilterOption {
 func WorkflowTypeFilter(name string) FilterOption {
 	return func(filterMap map[Filter]interface{}) {
 		filterMap[WorkflowType] = name
+	}
+}
+
+// RatelimitKeyFilter filters on global ratelimiter keys (via the global name, not local names)
+func RatelimitKeyFilter(key string) FilterOption {
+	return func(filterMap map[Filter]interface{}) {
+		filterMap[RatelimitKey] = key
 	}
 }
 

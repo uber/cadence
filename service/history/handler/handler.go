@@ -30,6 +30,7 @@ import (
 
 	"github.com/pborman/uuid"
 	"go.uber.org/yarpc/yarpcerrors"
+	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/uber/cadence/common"
@@ -41,6 +42,8 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
+	"github.com/uber/cadence/common/quotas/global/algorithm"
+	"github.com/uber/cadence/common/quotas/global/rpc"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/proto"
 	"github.com/uber/cadence/service/history/config"
@@ -80,6 +83,7 @@ type (
 		workflowIDCache                workflowcache.WFCache
 		ratelimitInternalPerWorkflowID dynamicconfig.BoolPropertyFnWithDomainFilter
 		queueProcessorFactory          queue.ProcessorFactory
+		ratelimitAggregator            algorithm.RequestWeighted
 	}
 )
 
@@ -100,6 +104,7 @@ func NewHandler(
 		rateLimiter:                    quotas.NewDynamicRateLimiter(config.RPS.AsFloat64()),
 		workflowIDCache:                wfCache,
 		ratelimitInternalPerWorkflowID: ratelimitInternalPerWorkflowID,
+		ratelimitAggregator:            resource.GetRatelimiterAlgorithm(),
 	}
 
 	// prevent us from trying to serve requests before shard controller is started and ready
@@ -1947,9 +1952,46 @@ func (h *handlerImpl) GetFailoverInfo(
 func (h *handlerImpl) RatelimitUpdate(
 	ctx context.Context,
 	request *types.RatelimitUpdateRequest,
-) (*types.RatelimitUpdateResponse, error) {
-	// TODO: wire up to real global-ratelimit aggregator
-	return nil, nil
+) (_ *types.RatelimitUpdateResponse, retError error) {
+	defer func() { log.CapturePanic(recover(), h.GetLogger(), &retError) }()
+	h.startWG.Wait()
+
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryRatelimitUpdateScope)
+	defer sw.Stop()
+
+	if h.isShuttingDown() {
+		return nil, constants.ErrShuttingDown
+	}
+
+	// for now there is just one ratelimit-rpc type and one algorithm that makes use of it.
+	// unpack the arg and pass it to the aggregator.
+	// in the future, this should select the algorithm by the Any.ValueType, via a registry of some kind.
+	arg, err := rpc.AnyToAggregatorUpdate(request.Any)
+	if err != nil {
+		return nil, h.error(fmt.Errorf("failed to map data to args: %w", err), scope, "", "", "")
+	}
+	err = h.ratelimitAggregator.Update(arg)
+	if err != nil {
+		return nil, h.error(fmt.Errorf("failed to update ratelimits: %w", err), scope, "", "", "")
+	}
+
+	// collect the response data and pack it into an Any for the response.
+	// like unpacking, this will eventually be handled by the registry above.
+	//
+	// "_" is ignoring "used RPS" data here.  it is likely useful for being friendlier
+	// to brief, bursty-but-within-limits load, but that has not yet been built.
+	weights, _, err := h.ratelimitAggregator.HostWeights(arg.ID, maps.Keys(arg.Load))
+	if err != nil {
+		return nil, h.error(fmt.Errorf("failed to retrieve updated weights: %w", err), scope, "", "", "")
+	}
+	resAny, err := rpc.AggregatorWeightsToAny(weights)
+	if err != nil {
+		return nil, h.error(fmt.Errorf("failed to Any-package response: %w", err), scope, "", "", "")
+	}
+
+	return &types.RatelimitUpdateResponse{
+		Any: resAny,
+	}, nil
 }
 
 // convertError is a helper method to convert ShardOwnershipLostError from persistence layer returned by various

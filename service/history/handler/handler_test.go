@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -34,12 +35,16 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/metrics/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
+	"github.com/uber/cadence/common/quotas/global/algorithm"
+	"github.com/uber/cadence/common/quotas/global/rpc"
+	"github.com/uber/cadence/common/quotas/global/shared"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
@@ -3541,18 +3546,6 @@ func (s *handlerSuite) TestCorrectUseOfErrorHandling() {
 	}
 }
 
-func (s *handlerSuite) TestRatelimitUpdate() {
-	response, err := s.handler.RatelimitUpdate(context.Background(), &types.RatelimitUpdateRequest{
-		Any: &types.Any{
-			ValueType: "test",
-			Value:     []byte(`test data`),
-		},
-	})
-	// placeholder while not implemented
-	s.Nil(response)
-	s.Nil(err)
-}
-
 func (s *handlerSuite) TestConvertError() {
 	testCases := []struct {
 		name     string
@@ -3612,4 +3605,41 @@ func (s *handlerSuite) TestConvertError() {
 		err := s.handler.convertError(tc.input)
 		s.Equal(tc.expected, err, tc.name)
 	}
+}
+
+func TestRatelimitUpdate(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	res := resource.NewMockResource(ctrl)
+	res.EXPECT().GetMetricsClient().Return(metrics.NewNoopMetricsClient()).AnyTimes()
+	res.EXPECT().GetLogger().Return(testlogger.New(t)).AnyTimes()
+	update, err := rpc.TestUpdateToAny(t, "testhost", time.Second, map[shared.GlobalKey]rpc.Calls{
+		"test:domain-user-limit": {
+			Allowed:  10,
+			Rejected: 5,
+		},
+	})
+	require.NoError(t, err)
+	alg, err := algorithm.New(algorithm.Config{
+		NewDataWeight:  func(opts ...dynamicconfig.FilterOption) float64 { return 0.5 },
+		UpdateInterval: func(opts ...dynamicconfig.FilterOption) time.Duration { return 3 * time.Second },
+		DecayAfter:     func(opts ...dynamicconfig.FilterOption) time.Duration { return 6 * time.Second },
+		GcAfter:        func(opts ...dynamicconfig.FilterOption) time.Duration { return time.Minute },
+	})
+	require.NoError(t, err)
+	h := &handlerImpl{
+		Resource:            res,
+		ratelimitAggregator: alg,
+	}
+
+	resp, err := h.RatelimitUpdate(context.Background(), &types.RatelimitUpdateRequest{
+		Any: update,
+	})
+	require.NoError(t, err)
+	w, err := rpc.TestAnyToWeights(t, resp.Any)
+	require.NoError(t, err)
+	assert.Equalf(t,
+		map[shared.GlobalKey]float64{"test:domain-user-limit": 1},
+		w,
+		"unexpected weights returned from aggregator or serialization.  if values differ in a reasonable way, possibly aggregator behavior changed?",
+	)
 }

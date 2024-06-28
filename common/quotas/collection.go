@@ -29,6 +29,12 @@ type Collection struct {
 	limiters map[string]Limiter
 }
 
+type ICollection interface {
+	For(key string) Limiter
+}
+
+var _ ICollection = (*Collection)(nil)
+
 // NewCollection create a new limiter collection.
 // Given factory is called to create new individual limiter.
 func NewCollection(factory LimiterFactory) *Collection {

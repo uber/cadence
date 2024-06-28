@@ -344,6 +344,12 @@ type Config struct {
 	EnableStrongIdempotency            dynamicconfig.BoolPropertyFnWithDomainFilter
 	EnableStrongIdempotencySanityCheck dynamicconfig.BoolPropertyFnWithDomainFilter
 
+	// Global ratelimiter
+	GlobalRatelimiterNewDataWeight  dynamicconfig.FloatPropertyFn
+	GlobalRatelimiterUpdateInterval dynamicconfig.DurationPropertyFn
+	GlobalRatelimiterDecayAfter     dynamicconfig.DurationPropertyFn
+	GlobalRatelimiterGCAfter        dynamicconfig.DurationPropertyFn
+
 	// HostName for machine running the service
 	HostName string
 }
@@ -605,6 +611,11 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, s
 
 		EnableStrongIdempotency:            dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableStrongIdempotency),
 		EnableStrongIdempotencySanityCheck: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableStrongIdempotencySanityCheck),
+
+		GlobalRatelimiterNewDataWeight:  dc.GetFloat64Property(dynamicconfig.HistoryGlobalRatelimiterNewDataWeight),
+		GlobalRatelimiterUpdateInterval: dc.GetDurationProperty(dynamicconfig.GlobalRatelimiterUpdateInterval),
+		GlobalRatelimiterDecayAfter:     dc.GetDurationProperty(dynamicconfig.HistoryGlobalRatelimiterDecayAfter),
+		GlobalRatelimiterGCAfter:        dc.GetDurationProperty(dynamicconfig.HistoryGlobalRatelimiterGCAfter),
 
 		HostName: hostname,
 	}

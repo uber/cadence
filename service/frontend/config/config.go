@@ -63,6 +63,10 @@ type Config struct {
 	ShutdownDrainDuration             dynamicconfig.DurationPropertyFn
 	Lockdown                          dynamicconfig.BoolPropertyFnWithDomainFilter
 
+	// global ratelimiter config, uses GlobalDomain*RPS for RPS configuration
+	GlobalRatelimiterKeyMode        dynamicconfig.StringPropertyWithRatelimitKeyFilter
+	GlobalRatelimiterUpdateInterval dynamicconfig.DurationPropertyFn
+
 	// isolation configuration
 	EnableTasklistIsolation dynamicconfig.BoolPropertyFnWithDomainFilter
 
@@ -149,6 +153,8 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, isAdvancedVis
 		GlobalDomainWorkerRPS:                       dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendGlobalDomainWorkerRPS),
 		GlobalDomainVisibilityRPS:                   dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendGlobalDomainVisibilityRPS),
 		GlobalDomainAsyncRPS:                        dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendGlobalDomainAsyncRPS),
+		GlobalRatelimiterKeyMode:                    dc.GetStringPropertyFilteredByRatelimitKey(dynamicconfig.FrontendGlobalRatelimiterMode),
+		GlobalRatelimiterUpdateInterval:             dc.GetDurationProperty(dynamicconfig.GlobalRatelimiterUpdateInterval),
 		MaxIDLengthWarnLimit:                        dc.GetIntProperty(dynamicconfig.MaxIDLengthWarnLimit),
 		DomainNameMaxLength:                         dc.GetIntPropertyFilteredByDomain(dynamicconfig.DomainNameMaxLength),
 		IdentityMaxLength:                           dc.GetIntPropertyFilteredByDomain(dynamicconfig.IdentityMaxLength),

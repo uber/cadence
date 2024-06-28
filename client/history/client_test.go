@@ -455,6 +455,22 @@ func TestClient_withResponse(t *testing.T) {
 			want: &types.StartWorkflowExecutionResponse{},
 		},
 		{
+			name: "RatelimitUpdate",
+			op: func(c Client) (any, error) {
+				return c.RatelimitUpdate(context.Background(), &types.RatelimitUpdateRequest{
+					Any: &types.Any{
+						ValueType: "something",
+						Value:     []byte("data"),
+					},
+				}, yarpc.WithShardKey("test-peer"))
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				c.EXPECT().RatelimitUpdate(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer")}).
+					Return(&types.RatelimitUpdateResponse{}, nil).Times(1)
+			},
+			want: &types.RatelimitUpdateResponse{},
+		},
+		{
 			name: "StartWorkflowExecution peer resolve failure",
 			op: func(c Client) (any, error) {
 				return c.StartWorkflowExecution(context.Background(), &types.HistoryStartWorkflowExecutionRequest{
@@ -903,6 +919,23 @@ func TestClient_withResponse(t *testing.T) {
 				p.EXPECT().FromWorkflowID("test-workflow").Return("test-peer", nil).Times(1)
 				c.EXPECT().SignalWithStartWorkflowExecution(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("test-peer")}).
 					Return(nil, fmt.Errorf("SignalWithStartWorkflowExecution failed")).Times(1)
+			},
+			wantError: true,
+		},
+		{
+			name: "RatelimitUpdate requires explicit shard key arg",
+			op: func(c Client) (any, error) {
+				// same as successful call...
+				return c.RatelimitUpdate(context.Background(), &types.RatelimitUpdateRequest{
+					// Peer: "", // intentionally the zero value
+					Any: &types.Any{
+						ValueType: "something",
+						Value:     []byte("data"),
+					},
+				})
+			},
+			mock: func(p *MockPeerResolver, c *MockClient) {
+				// no calls expected
 			},
 			wantError: true,
 		},

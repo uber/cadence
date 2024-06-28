@@ -57,12 +57,16 @@ func defaultConfig(rate time.Duration) configSnapshot {
 	}
 }
 
-func newForTest(t require.TestingT, snap configSnapshot) (*impl, clock.MockedTimeSource) {
+func newValid(t require.TestingT, snap configSnapshot) (*impl, clock.MockedTimeSource) {
+	return newForTest(t, snap, true)
+}
+
+func newForTest(t require.TestingT, snap configSnapshot, validate bool) (*impl, clock.MockedTimeSource) {
 	cfg := Config{
 		NewDataWeight: func(_ ...dynamicconfig.FilterOption) float64 {
 			return snap.weight
 		},
-		UpdateRate: func(_ ...dynamicconfig.FilterOption) time.Duration {
+		UpdateInterval: func(_ ...dynamicconfig.FilterOption) time.Duration {
 			return snap.rate
 		},
 		DecayAfter: func(_ ...dynamicconfig.FilterOption) time.Duration {
@@ -72,10 +76,22 @@ func newForTest(t require.TestingT, snap configSnapshot) (*impl, clock.MockedTim
 			return snap.gcAfter
 		},
 	}
-	agg, err := New(cfg)
-	require.NoError(t, err)
+	var agg *impl
 
-	underlying := agg.(*impl)
+	if validate {
+		i, err := New(cfg)
+		require.NoError(t, err)
+		agg = i.(*impl)
+	} else {
+		// need to build by hand, New returns nil on err
+		agg = &impl{
+			cfg:   cfg,
+			usage: make(map[Limit]map[Identity]requests),
+			clock: nil,
+		}
+	}
+
+	underlying := agg
 	tick := clock.NewMockedTimeSource()
 	underlying.clock = tick
 
@@ -87,7 +103,7 @@ func newForTest(t require.TestingT, snap configSnapshot) (*impl, clock.MockedTim
 }
 
 func TestMissedUpdateHandling(t *testing.T) {
-	agg, tick := newForTest(t, configSnapshot{
+	agg, tick := newValid(t, configSnapshot{
 		weight:     0.1,
 		rate:       time.Second,
 		decayAfter: 2 * time.Second,
@@ -96,9 +112,17 @@ func TestMissedUpdateHandling(t *testing.T) {
 
 	h1, h2 := Identity("host 1"), Identity("host 2")
 	key := Limit("key")
-	err := agg.Update(h1, map[Limit]Requests{key: {1, 1}}, time.Second)
+	err := agg.Update(UpdateParams{
+		ID:      h1,
+		Load:    map[Limit]Requests{key: {1, 1}},
+		Elapsed: time.Second,
+	})
 	require.NoError(t, err)
-	err = agg.Update(h2, map[Limit]Requests{key: {1, 1}}, time.Second)
+	err = agg.Update(UpdateParams{
+		ID:      h2,
+		Load:    map[Limit]Requests{key: {1, 1}},
+		Elapsed: time.Second,
+	})
 	require.NoError(t, err)
 
 	// sanity-check the initial values
@@ -151,7 +175,7 @@ func TestGC(t *testing.T) {
 	// advance 1 more second to trigger garbage collection.
 	// this moves slightly beyond 9s to avoid testing the precise boundary time, as it's not relevant.
 	setup := func(t *testing.T) (*impl, clock.MockedTimeSource) {
-		agg, tick := newForTest(t, configSnapshot{
+		agg, tick := newValid(t, configSnapshot{
 			rate:    time.Second,
 			gcAfter: 10 * time.Second,
 
@@ -160,9 +184,9 @@ func TestGC(t *testing.T) {
 			decayAfter: 2 * time.Second,
 		})
 
-		err := agg.Update(h1, map[Limit]Requests{key: {1, 1}}, time.Second)
+		err := agg.Update(UpdateParams{ID: h1, Load: map[Limit]Requests{key: {1, 1}}, Elapsed: time.Second})
 		require.NoError(t, err)
-		err = agg.Update(h2, map[Limit]Requests{key: {1, 1}}, time.Second)
+		err = agg.Update(UpdateParams{ID: h2, Load: map[Limit]Requests{key: {1, 1}}, Elapsed: time.Second})
 		require.NoError(t, err)
 		weights, used, err := agg.HostWeights(h1, []Limit{key})
 		require.NoError(t, err)
@@ -208,7 +232,7 @@ func TestGC(t *testing.T) {
 		agg, tick := setup(t)
 
 		// refresh data for one host
-		err := agg.Update(h1, map[Limit]Requests{key: {1, 1}}, time.Second)
+		err := agg.Update(UpdateParams{ID: h1, Load: map[Limit]Requests{key: {1, 1}}, Elapsed: time.Second})
 		require.NoError(t, err)
 		tick.Advance(time.Second) // advance to 10th second
 
@@ -247,20 +271,20 @@ func TestMinorCoverage(t *testing.T) {
 	// not overly useful tests, but coverage++
 	t.Run("gc", func(t *testing.T) {
 		// invalid config
-		agg, _ := newForTest(t, configSnapshot{})
+		agg, _ := newForTest(t, configSnapshot{}, false)
 		m, err := agg.GC()
 		assert.Zero(t, m)
 		assert.ErrorContains(t, err, "bad ratelimiter config")
 	})
 	t.Run("update", func(t *testing.T) {
 		// invalid config
-		agg, _ := newForTest(t, configSnapshot{})
-		err := agg.Update("ignored", nil, time.Second)
+		agg, _ := newForTest(t, configSnapshot{}, false)
+		err := agg.Update(UpdateParams{ID: "ignored", Load: nil, Elapsed: time.Second})
 		assert.ErrorContains(t, err, "bad ratelimiter config")
 	})
 	t.Run("get-weights", func(t *testing.T) {
 		// invalid config
-		agg, _ := newForTest(t, configSnapshot{})
+		agg, _ := newForTest(t, configSnapshot{}, false)
 		weights, rps, err := agg.HostWeights("ignored", nil)
 		assert.Zero(t, weights)
 		assert.Zero(t, rps)
@@ -321,7 +345,7 @@ func TestRapidlyCoalesces(t *testing.T) {
 	//
 	// Time is also not advanced because it doesn't actually need to be advanced.
 	// An update is an update, and the caller's elapsed time is assumed to be correct.
-	agg, _ := newForTest(t, configSnapshot{
+	agg, _ := newValid(t, configSnapshot{
 		// Using 0.5 weight because that's what we expect to use IRL, and this test is
 		// ensuring that weight is good enough for the behavior we want.
 		// Weight-math-correctness is ensured by other tests.
@@ -346,12 +370,16 @@ func TestRapidlyCoalesces(t *testing.T) {
 	assert.Zero(t, used, "should have no used RPS")
 
 	push := func(host Identity, accept, reject int) {
-		err := agg.Update(host, map[Limit]Requests{
-			key: {
-				Accepted: accept,
-				Rejected: reject,
+		err := agg.Update(UpdateParams{
+			ID: host,
+			Load: map[Limit]Requests{
+				key: {
+					Accepted: accept,
+					Rejected: reject,
+				},
 			},
-		}, time.Second) // 1s just to make rps in == rps out
+			Elapsed: time.Second, // 1s just to make rps in == rps out
+		})
 		require.NoError(t, err)
 	}
 
@@ -414,7 +442,7 @@ func TestConcurrent(t *testing.T) {
 		updatesPerBatch = numHosts / 3 // intentionally below len(hosts) to allow some to gc normally
 	)
 
-	agg, _ := newForTest(t, configSnapshot{
+	agg, _ := newValid(t, configSnapshot{
 		rate:       updateRate,
 		decayAfter: 2 * updateRate,
 		gcAfter:    3 * updateRate, // relatively low to trigger implicit gc, check coverage if changing the values
@@ -459,7 +487,7 @@ func TestConcurrent(t *testing.T) {
 
 				// randomly update or read
 				if rand.Intn(2) == 0 {
-					err := agg.Update(host, updates, updateRate)
+					err := agg.Update(UpdateParams{ID: host, Load: updates, Elapsed: updateRate})
 					require.NoError(t, err)
 				} else {
 					_, _, err := agg.HostWeights(host, maps.Keys(updates))
@@ -507,7 +535,7 @@ func TestSimulate(t *testing.T) {
 	// Exact matches after changes are not at all important.
 
 	updateRate := 3 * time.Second // both expected and duration fed to update
-	agg, tick := newForTest(t, configSnapshot{
+	agg, tick := newValid(t, configSnapshot{
 		// now:    , ignored
 		weight:     0.75, // fairly fast adjustment, and semi-human-friendly math
 		rate:       updateRate,
@@ -528,12 +556,16 @@ func TestSimulate(t *testing.T) {
 
 	// just simplifies arg-construction
 	push := func(host Identity, key Limit, accept, reject int) {
-		err := agg.Update(host, map[Limit]Requests{
-			key: {
-				Accepted: accept,
-				Rejected: reject,
+		err := agg.Update(UpdateParams{
+			ID: host,
+			Load: map[Limit]Requests{
+				key: {
+					Accepted: accept,
+					Rejected: reject,
+				},
 			},
-		}, time.Second)
+			Elapsed: time.Second,
+		})
 		require.NoError(t, err)
 	}
 
@@ -848,7 +880,7 @@ func expectSimilar[V ~float64](
 // than the fine-grained locking gains us in concurrency flexibility.  benchmark first!
 func BenchmarkNormalUse(b *testing.B) {
 	updateRate := 3 * time.Second
-	agg, _ := newForTest(b, defaultConfig(updateRate))
+	agg, _ := newValid(b, defaultConfig(updateRate))
 	// intentionally using real clock source, time-gathering cost is relevant to benchmark
 	agg.clock = clock.NewRealTimeSource()
 
@@ -901,7 +933,7 @@ func BenchmarkNormalUse(b *testing.B) {
 
 	sawnonzero := 0
 	for _, r := range rounds { // == b.N times
-		err := agg.Update(r.host, r.load, r.elapsed)
+		err := agg.Update(UpdateParams{ID: r.host, Load: r.load, Elapsed: r.elapsed})
 		require.NoError(b, err)
 		var unused map[Limit]PerSecond // ensure non-error second return for test safety
 		weights, unused, err := agg.HostWeights(r.host, r.keys)

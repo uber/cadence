@@ -54,6 +54,7 @@ import (
 	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
+	"github.com/uber/cadence/common/quotas/global/rpc"
 	"github.com/uber/cadence/common/taskvalidator"
 )
 
@@ -107,6 +108,8 @@ type (
 		taskvalidator       taskvalidator.Checker
 
 		AsyncWorkflowQueueProvider *queue.MockProvider
+
+		RatelimiterAggregatorClient rpc.Client
 	}
 )
 
@@ -217,6 +220,8 @@ func NewTest(
 		Logger: logger,
 
 		AsyncWorkflowQueueProvider: asyncWorkflowQueueProvider,
+
+		RatelimiterAggregatorClient: nil, // TODO: not currently used
 	}
 }
 
@@ -448,6 +453,10 @@ func (s *Test) GetIsolationGroupStore() configstore.Client {
 
 func (s *Test) GetAsyncWorkflowQueueProvider() queue.Provider {
 	return s.AsyncWorkflowQueueProvider
+}
+
+func (s *Test) GetRatelimiterAggregatorsClient() rpc.Client {
+	return s.RatelimiterAggregatorClient
 }
 
 // Finish checks whether expectations are met

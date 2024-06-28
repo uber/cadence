@@ -23,10 +23,12 @@
 package resource
 
 import (
+	"fmt"
 	"sync/atomic"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/quotas/global/algorithm"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/service/history/config"
@@ -37,13 +39,15 @@ import (
 type Resource interface {
 	resource.Resource
 	GetEventCache() events.Cache
+	GetRatelimiterAlgorithm() algorithm.RequestWeighted
 }
 
 type resourceImpl struct {
 	status int32
 
 	resource.Resource
-	eventCache events.Cache
+	eventCache         events.Cache
+	ratelimitAlgorithm algorithm.RequestWeighted
 }
 
 // Start starts all resources
@@ -79,6 +83,9 @@ func (h *resourceImpl) Stop() {
 // GetEventCache return event cache
 func (h *resourceImpl) GetEventCache() events.Cache {
 	return h.eventCache
+}
+func (h *resourceImpl) GetRatelimiterAlgorithm() algorithm.RequestWeighted {
+	return h.ratelimitAlgorithm
 }
 
 // New create a new resource containing common history dependencies
@@ -126,10 +133,20 @@ func New(
 		uint64(config.EventsCacheMaxSize()),
 		serviceResource.GetDomainCache(),
 	)
+	ratelimitAlgorithm, err := algorithm.New(algorithm.Config{
+		NewDataWeight:  config.GlobalRatelimiterNewDataWeight,
+		UpdateInterval: config.GlobalRatelimiterUpdateInterval,
+		DecayAfter:     config.GlobalRatelimiterDecayAfter,
+		GcAfter:        config.GlobalRatelimiterGCAfter,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("invalid ratelimit algorithm config: %w", err)
+	}
 
 	historyResource = &resourceImpl{
-		Resource:   serviceResource,
-		eventCache: eventCache,
+		Resource:           serviceResource,
+		eventCache:         eventCache,
+		ratelimitAlgorithm: ratelimitAlgorithm,
 	}
 	return
 }

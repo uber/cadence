@@ -22,6 +22,7 @@ package history
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"sync"
 	"time"
@@ -1077,6 +1078,22 @@ func (c *clientImpl) GetFailoverInfo(
 		return nil, err
 	}
 	return c.client.GetFailoverInfo(ctx, request, append(opts, yarpc.WithShardKey(peer))...)
+}
+
+func (c *clientImpl) RatelimitUpdate(ctx context.Context, request *types.RatelimitUpdateRequest, opts ...yarpc.CallOption) (*types.RatelimitUpdateResponse, error) {
+	if len(opts) == 0 {
+		// unfortunately there is not really any way to ensure "must have a shard key option"
+		// due to the closed nature of yarpc.CallOption's implementation, outside private-field-reading reflection.
+		//
+		// there are a few options to work around this, but they are currently rather high effort or
+		// run into import cycles or similar.  risk is low for now as there is only one caller, and likely
+		// never will be others.
+		return nil, fmt.Errorf("invalid arguments, missing yarpc.WithShardKey(peer) at a minimum")
+	}
+
+	// intentionally does not use peer-redirecting retries, as keys in this request
+	// could end up on multiple different hosts after a peer change.
+	return c.client.RatelimitUpdate(ctx, request, opts...)
 }
 
 func (c *clientImpl) executeWithRedirect(

@@ -403,6 +403,8 @@ const (
 	HistoryClientGetReplicationMessagesScope
 	// HistoryClientWfIDCacheScope tracks workflow ID cache metrics
 	HistoryClientWfIDCacheScope
+	// HistoryClientRatelimitUpdateScope tracks global ratelimiter related calls to history service
+	HistoryClientRatelimitUpdateScope
 
 	// MatchingClientPollForDecisionTaskScope tracks RPC calls to matching service
 	MatchingClientPollForDecisionTaskScope
@@ -837,6 +839,10 @@ const (
 	GetAvailableIsolationGroupsScope
 	// TaskValidatorScope is the metric for the taskvalidator's workflow check operation.
 	TaskValidatorScope
+
+	// FrontendGlobalRatelimiter is the metrics scope for frontend.GlobalRatelimiter
+	FrontendGlobalRatelimiter
+
 	NumCommonScopes
 )
 
@@ -1006,8 +1012,6 @@ const (
 	FrontendGetSearchAttributesScope
 	// FrontendGetClusterInfoScope is the metric scope for frontend.GetClusterInfo
 	FrontendGetClusterInfoScope
-	// FrontendGlobalRatelimiter is the metrics scope for frontend.GlobalRatelimiter
-	FrontendGlobalRatelimiter
 
 	NumFrontendScopes
 )
@@ -1098,6 +1102,8 @@ const (
 	HistoryRespondCrossClusterTasksCompletedScope
 	// HistoryGetFailoverInfoScope tracks HistoryGetFailoverInfo API calls received by service
 	HistoryGetFailoverInfoScope
+	// HistoryRatelimitUpdateScope tracks RatelimitUpdate API calls received by the history service
+	HistoryRatelimitUpdateScope
 	// TaskPriorityAssignerScope is the scope used by all metric emitted by task priority assigner
 	TaskPriorityAssignerScope
 	// TransferQueueProcessorScope is the scope used by all metric emitted by transfer queue processor
@@ -1510,6 +1516,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryClientGetDLQReplicationMessagesScope:         {operation: "HistoryClientGetDLQReplicationMessages", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
 		HistoryClientGetReplicationMessagesScope:            {operation: "HistoryClientGetReplicationMessages", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
 		HistoryClientWfIDCacheScope:                         {operation: "HistoryClientWfIDCache", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientRatelimitUpdateScope:                   {operation: "HistoryClientRatelimitUpdate", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
 
 		MatchingClientPollForDecisionTaskScope:                   {operation: "MatchingClientPollForDecisionTask", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
 		MatchingClientPollForActivityTaskScope:                   {operation: "MatchingClientPollForActivityTask", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
@@ -1720,10 +1727,13 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		DomainReplicationQueueScope: {operation: "DomainReplicationQueue"},
 		ClusterMetadataScope:        {operation: "ClusterMetadata"},
 		HashringScope:               {operation: "Hashring"},
+
+		// currently used by both frontend and history, but may grow to other limiting-host-services.
+		FrontendGlobalRatelimiter: {operation: "GlobalRatelimiter"},
 	},
 	// Frontend Scope Names
 	Frontend: {
-		// Admin API scope co-locates with with frontend
+		// Admin API scope co-locates with frontend
 		AdminRemoveTaskScope:                        {operation: "AdminRemoveTask"},
 		AdminCloseShardScope:                        {operation: "AdminCloseShard"},
 		AdminResetQueueScope:                        {operation: "AdminResetQueue"},
@@ -1804,7 +1814,6 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendResetStickyTaskListScope:                   {operation: "ResetStickyTaskList"},
 		FrontendGetSearchAttributesScope:                   {operation: "GetSearchAttributes"},
 		FrontendGetClusterInfoScope:                        {operation: "GetClusterInfo"},
-		FrontendGlobalRatelimiter:                          {operation: "GlobalRatelimiter"},
 	},
 	// History Scope Names
 	History: {
@@ -1853,6 +1862,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryGetCrossClusterTasksScope:                                {operation: "GetCrossClusterTasks"},
 		HistoryRespondCrossClusterTasksCompletedScope:                   {operation: "RespondCrossClusterTasksCompleted"},
 		HistoryGetFailoverInfoScope:                                     {operation: "GetFailoverInfo"},
+		HistoryRatelimitUpdateScope:                                     {operation: "RatelimitUpdate"},
 		TaskPriorityAssignerScope:                                       {operation: "TaskPriorityAssigner"},
 		TransferQueueProcessorScope:                                     {operation: "TransferQueueProcessor"},
 		TransferActiveQueueProcessorScope:                               {operation: "TransferActiveQueueProcessor"},
@@ -2194,10 +2204,14 @@ const (
 
 	AsyncRequestPayloadSize
 
-	// emitted as timers to provide cluster-wide usage info.
-	// probably better as a histogram for better aggregation.
-	GlobalRatelimiterFallbackUsageTimer
-	GlobalRatelimiterGlobalUsageTimer
+	GlobalRatelimiterStartupUsageHistogram
+	GlobalRatelimiterFailingUsageHistogram
+	GlobalRatelimiterGlobalUsageHistogram
+	GlobalRatelimiterUpdateLatency // time spent performing all Update requests, per batch attempt.  ideally well below update interval.
+
+	GlobalRatelimiterAllowedRequestsCount  // per key/type usage
+	GlobalRatelimiterRejectedRequestsCount // per key/type usage
+	GlobalRatelimiterQuota                 // per-global-key quota information, emitted when a key is in use
 
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
@@ -2845,8 +2859,14 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 
 		AsyncRequestPayloadSize: {metricName: "async_request_payload_size_per_domain", metricRollupName: "async_request_payload_size", metricType: Timer},
 
-		GlobalRatelimiterFallbackUsageTimer: {metricName: "global_ratelimiter_fallback_usage_timer", metricType: Timer},
-		GlobalRatelimiterGlobalUsageTimer:   {metricName: "global_ratelimiter_global_usage_timer", metricType: Timer},
+		GlobalRatelimiterStartupUsageHistogram: {metricName: "global_ratelimiter_startup_usage_histogram", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
+		GlobalRatelimiterFailingUsageHistogram: {metricName: "global_ratelimiter_failing_usage_histogram", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
+		GlobalRatelimiterGlobalUsageHistogram:  {metricName: "global_ratelimiter_global_usage_histogram", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
+		GlobalRatelimiterUpdateLatency:         {metricName: "global_ratelimiter_update_latency", metricType: Timer},
+
+		GlobalRatelimiterAllowedRequestsCount:  {metricName: "global_ratelimiter_allowed_requests", metricType: Counter},
+		GlobalRatelimiterRejectedRequestsCount: {metricName: "global_ratelimiter_rejected_requests", metricType: Counter},
+		GlobalRatelimiterQuota:                 {metricName: "global_ratelimiter_quota", metricType: Gauge},
 	},
 	History: {
 		TaskRequests:             {metricName: "task_requests", metricType: Counter},
@@ -3303,6 +3323,16 @@ var PersistenceLatencyBuckets = tally.DurationBuckets([]time.Duration{
 	50 * time.Second,
 	60 * time.Second,
 })
+
+// GlobalRatelimiterUsageHistogram contains buckets for tracking how many ratelimiters are
+// in which state (startup, healthy, failing).
+var GlobalRatelimiterUsageHistogram = tally.ValueBuckets{
+	1, 2, 5, 10,
+	25, 50, 100,
+	250, 500, 1000,
+	1250, 1500, 2000,
+	// TODO: almost certainly want more, but how many?
+}
 
 // ErrorClass is an enum to help with classifying SLA vs. non-SLA errors (SLA = "service level agreement")
 type ErrorClass uint8

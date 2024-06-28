@@ -23,6 +23,7 @@ package testdata
 import (
 	"github.com/pborman/uuid"
 
+	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 )
@@ -581,6 +582,18 @@ var (
 	GetFailoverInfoResponse = types.GetFailoverInfoResponse{
 		CompletedShardCount: 0,
 		PendingShards:       []int32{1, 2, 3},
+	}
+	RatelimitUpdateRequest = types.RatelimitUpdateRequest{
+		Any: &types.Any{
+			ValueType: history.WeightedRatelimitUsageAnyType, // only correct value currently
+			Value:     []byte("test request"),                // invalid contents, but not inspected in these tests
+		},
+	}
+	RatelimitUpdateResponse = types.RatelimitUpdateResponse{
+		Any: &types.Any{
+			ValueType: history.WeightedRatelimitQuotasAnyType, // only correct value currently
+			Value:     []byte("test response"),                // invalid contents, but not inspected in these tests
+		},
 	}
 )
 

@@ -59,6 +59,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
 	"github.com/uber/cadence/common/quotas"
+	"github.com/uber/cadence/common/quotas/global/rpc"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -134,6 +135,8 @@ type (
 		partitioner               partition.Partitioner
 
 		asyncWorkflowQueueProvider queue.Provider
+
+		ratelimiterAggregatorClient rpc.Client
 	}
 )
 
@@ -277,6 +280,13 @@ func New(
 	}
 	partitioner := ensurePartitionerOrDefault(params, isolationGroupState)
 
+	ratelimiterAggs := rpc.New(
+		historyRawClient, // no retries, will retry internally if needed
+		clientBean.GetHistoryPeers(),
+		logger,
+		params.MetricsClient,
+	)
+
 	impl = &Impl{
 		status: common.DaemonStatusInitialized,
 
@@ -342,6 +352,8 @@ func New(
 		partitioner:               partitioner,
 
 		asyncWorkflowQueueProvider: params.AsyncWorkflowQueueProvider,
+
+		ratelimiterAggregatorClient: ratelimiterAggs,
 	}
 	return impl, nil
 }
@@ -517,6 +529,10 @@ func (h *Impl) GetHistoryRawClient() history.Client {
 // GetHistoryClient return history client with retry policy
 func (h *Impl) GetHistoryClient() history.Client {
 	return h.historyClient
+}
+
+func (h *Impl) GetRatelimiterAggregatorsClient() rpc.Client {
+	return h.ratelimiterAggregatorClient
 }
 
 // GetRemoteAdminClient return remote admin client for given cluster name

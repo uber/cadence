@@ -21,6 +21,10 @@
 package history
 
 import (
+	"fmt"
+
+	"go.uber.org/yarpc"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/service"
@@ -38,6 +42,20 @@ type PeerResolver interface {
 	FromShardID(shardID int) (string, error)
 	FromHostAddress(hostAddress string) (string, error)
 	GetAllPeers() ([]string, error)
+
+	// GlobalRatelimitPeers partitions the ratelimit keys into map[yarpc peer][]limits_for_peer
+	GlobalRatelimitPeers(ratelimits []string) (ratelimitsByPeer map[Peer][]string, err error)
+}
+
+// Peer is used to mark a string as the routing information to a peer process.
+//
+// This is essentially the host:port address of the peer to be contacted,
+// but it is meant to be treated as an opaque blob until given to yarpc
+// via ToYarpcShardKey.
+type Peer string
+
+func (s Peer) ToYarpcShardKey() yarpc.CallOption {
+	return yarpc.WithShardKey(string(s))
 }
 
 type peerResolver struct {
@@ -109,4 +127,55 @@ func (pr peerResolver) GetAllPeers() ([]string, error) {
 		peers = append(peers, peer)
 	}
 	return peers, nil
+}
+
+func (pr peerResolver) GlobalRatelimitPeers(ratelimits []string) (map[Peer][]string, error) {
+	// History was selected simply because it already has a ring and an internal-only API.
+	// Any service should be fine, it just needs to be shared by both ends of the system.
+	hosts, err := pr.resolver.Members(service.History)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get history peers: %w", err)
+	}
+	if len(hosts) == 0 {
+		// can occur when shutting down the only instance because it calls EvictSelf ASAP.
+		// this is common in dev, but otherwise *probably* should not be possible in a healthy system.
+		return nil, fmt.Errorf("unable to get history peers: no peers available")
+	}
+
+	results := make(map[Peer][]string, len(hosts))
+	initialCapacity := len(ratelimits) / len(hosts)
+	// add a small buffer to reduce copies, as this is only an estimate
+	initialCapacity += initialCapacity / 10
+	// but don't use zero, that'd be pointless
+	if initialCapacity < 1 {
+		initialCapacity = 1
+	}
+
+	for _, r := range ratelimits {
+		// figure out the destination for this ratelimit
+		host, err := pr.resolver.Lookup(service.History, r)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"unable to find host for ratelimit key %q: %w", r, err)
+		}
+		peer, err := host.GetNamedAddress(pr.namedPort)
+		if err != nil {
+			// AFAICT should not happen unless the peer data is incomplete / the ring has no port info.
+			// retry may work?  eventually?
+			return nil, fmt.Errorf(
+				"unable to get address from host: %s, %w",
+				host.String(), // HostInfo has a readable String(), it's good enough
+				err,
+			)
+		}
+
+		// add to the peer's partition
+		current := results[Peer(peer)]
+		if len(current) == 0 {
+			current = make([]string, 0, initialCapacity)
+		}
+		current = append(current, r)
+		results[Peer(peer)] = current
+	}
+	return results, nil
 }

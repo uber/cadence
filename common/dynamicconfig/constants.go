@@ -510,73 +510,137 @@ const (
 	// Default value: 1000 (see common.GetHistoryMaxPageSize)
 	// Allowed filters: DomainName
 	FrontendHistoryMaxPageSize
-	// FrontendUserRPS is workflow rate limit per second
+	// FrontendUserRPS is used to limit "user" requests (StartWorkflow, Signal, etc)
+	// per frontend instance (across all domains, or for non-domain-related requests),
+	// and is mostly intended to protect against excessive single-host load.
+	//
 	// KeyName: frontend.rps
 	// Value type: Int
 	// Default value: 1200
 	// Allowed filters: N/A
 	FrontendUserRPS
-	// FrontendWorkerRPS is background-processing workflow rate limit per second
+	// FrontendWorkerRPS is used to limit "worker" requests (PollFor...Task, RespondTask..., etc)
+	// per frontend instance (across all domains, or for non-domain-related requests),
+	// and is mostly intended to protect against excessive single-host load.
+	//
 	// KeyName: frontend.workerrps
 	// Value type: Int
 	// Default value: UnlimitedRPS
 	// Allowed filters: N/A
 	FrontendWorkerRPS
-	// FrontendVisibilityRPS is the global workflow List*WorkflowExecutions request rate limit per second
+	// FrontendVisibilityRPS is used to limit "visibility" requests (ListWorkflow* and similar)
+	// per frontend instance (across all domains, or for non-domain-related requests),
+	// and is mostly intended to protect against excessive single-host load.
+	//
 	// KeyName: frontend.visibilityrps
 	// Value type: Int
 	// Default value: UnlimitedRPS
 	// Allowed filters: N/A
 	FrontendVisibilityRPS
-	// FrontendAsync is the async workflow request rate limit per second
+	// FrontendAsyncRPS is used to limit "async" requests (StartWorkflowAsync, etc for many "user" APIs)
+	// per frontend instance (across all domains, or for non-domain-related requests),
+	// and is mostly intended to protect against excessive single-host load.
+	//
 	// KeyName: frontend.asyncrps
 	// Value type: Int
 	// Default value: 10000
 	// Allowed filters: N/A
 	FrontendAsyncRPS
-	// FrontendMaxDomainUserRPSPerInstance is workflow domain rate limit per second
+	// FrontendMaxDomainUserRPSPerInstance is used to limit "user" requests (StartWorkflow, Signal, etc)
+	// per domain per frontend instance, and is mostly intended to protect against excessive single-host load.
+	//
+	// This limit applies along-side FrontendGlobalDomainUserRPS: both must be allowed to allow a request.
+	//
 	// KeyName: frontend.domainrps
 	// Value type: Int
 	// Default value: 1200
 	// Allowed filters: DomainName
 	FrontendMaxDomainUserRPSPerInstance
-	// FrontendMaxDomainWorkerRPSPerInstance is background-processing workflow domain rate limit per second
+	// FrontendMaxDomainWorkerRPSPerInstance is used to limit "worker" requests (PollFor...Task, RespondTask..., etc)
+	// per domain per frontend instance, and is mostly intended to protect against excessive single-host load.
+	//
+	// This limit applies along-side FrontendGlobalDomainWorkerRPS: both must be allowed to allow a request.
+	//
 	// KeyName: frontend.domainworkerrps
 	// Value type: Int
 	// Default value: UnlimitedRPS
 	// Allowed filters: DomainName
 	FrontendMaxDomainWorkerRPSPerInstance
-	// FrontendMaxDomainVisibilityRPSPerInstance is the per-instance List*WorkflowExecutions request rate limit per second
+	// FrontendMaxDomainVisibilityRPSPerInstance is used to limit "visibility" requests (ListWorkflow* and similar)
+	// per domain per frontend instance, and is mostly intended to protect against excessive single-host load.
+	//
+	// This limit applies along-side FrontendGlobalDomainVisibilityRPS: both must be allowed to allow a request.
+	//
 	// KeyName: frontend.domainvisibilityrps
 	// Value type: Int
 	// Default value: UnlimitedRPS
 	// Allowed filters: DomainName
 	FrontendMaxDomainVisibilityRPSPerInstance
-	// FrontendMaxDomainAsyncRPSPerInstance is the per-instance async workflow request rate limit per second
+	// FrontendMaxDomainAsyncRPSPerInstance is used to limit "async" requests (StartWorkflowAsync, etc for many "user" APIs)
+	// per frontend instance, and is mostly intended to protect against excessive single-host load.
+	//
+	// This limit applies along-side FrontendGlobalDomainAsyncRPS: both must be allowed to allow a request.
+	//
 	// KeyName: frontend.domainasyncrps
 	// Value type: Int
 	// Default value: 10000
 	// Allowed filters: DomainName
 	FrontendMaxDomainAsyncRPSPerInstance
-	// FrontendGlobalDomainUserRPS is workflow domain rate limit per second for the whole Cadence cluster
+	// FrontendGlobalDomainUserRPS is used to limit "user" requests (StartWorkflow, Signal, etc)
+	// per domain to a target RPS that is shared across the entire cluster.
+	//
+	// Currently, there are two ways this is achieved, which can be selected by FrontendGlobalRatelimiterMode
+	// with a "user:" key prefix:
+	//   1. "local", where the configured RPS is split evenly across all frontend hosts in the cluster.
+	//      This works well if your load is roughly evenly distributed.
+	//   2. "global", where frontend hosts share load information with each other, to adjust to imbalanced load.
+	//      This works well if your load is very imbalanced, e.g. one domain tends to contact a subset of frontend hosts much more than others.
+	//
 	// KeyName: frontend.globalDomainrps
 	// Value type: Int
 	// Default value: 0
 	// Allowed filters: DomainName
 	FrontendGlobalDomainUserRPS
-	// FrontendGlobalDomainWorkerRPS is background-processing workflow domain rate limit per second for the whole Cadence cluster
+	// FrontendGlobalDomainWorkerRPS is used to limit "worker" requests (PollFor...Task, RespondTask..., etc)
+	// per domain to a target RPS that is shared across the entire cluster.
+	//
+	// Currently, there are two ways this is achieved, which can be selected by FrontendGlobalRatelimiterMode
+	// with a "worker:" key prefix:
+	//   1. "local", where the configured RPS is split evenly across all frontend hosts in the cluster.
+	//      This works well if your load is roughly evenly distributed.
+	//   2. "global", where frontend hosts share load information with each other, to adjust to imbalanced load.
+	//      This works well if your load is very imbalanced, e.g. one domain tends to contact a subset of frontend hosts much more than others.
+	//
 	// KeyName: frontend.globalDomainWorkerrps
 	// Value type: Int
 	// Default value: UnlimitedRPS
 	// Allowed filters: DomainName
 	FrontendGlobalDomainWorkerRPS
-	// FrontendGlobalDomainVisibilityRPS is the per-domain List*WorkflowExecutions request rate limit per second
+	// FrontendGlobalDomainVisibilityRPS is used to limit "visibility" requests (ListWorkflow* and similar)
+	// per domain to a target RPS that is shared across the entire cluster.
+	//
+	// Currently, there are two ways this is achieved, which can be selected by FrontendGlobalRatelimiterMode
+	// with a "visibility:" key prefix:
+	//   1. "local", where the configured RPS is split evenly across all frontend hosts in the cluster.
+	//      This works well if your load is roughly evenly distributed.
+	//   2. "global", where frontend hosts share load information with each other, to adjust to imbalanced load.
+	//      This works well if your load is very imbalanced, e.g. one domain tends to contact a subset of frontend hosts much more than others.
+	//
 	// KeyName: frontend.globalDomainVisibilityrps
 	// Value type: Int
 	// Default value: UnlimitedRPS
 	// Allowed filters: DomainName
 	FrontendGlobalDomainVisibilityRPS
-	// FrontendGlobalDomainAsyncRPS is the per-domain async workflow request rate limit per second
+	// FrontendGlobalDomainAsyncRPS is used to limit "async" requests (StartWorkflowAsync, etc for many "user" APIs)
+	// per domain to a target RPS that is shared across the entire cluster.
+	//
+	// Currently, there are two ways this is achieved, which can be selected by FrontendGlobalRatelimiterMode
+	// with a "async:" key prefix:
+	//   1. "local", where the configured RPS is split evenly across all frontend hosts in the cluster.
+	//      This works well if your load is roughly evenly distributed.
+	//   2. "global", where frontend hosts share load information with each other, to adjust to imbalanced load.
+	//      This works well if your load is very imbalanced, e.g. one domain tends to contact a subset of frontend hosts much more than others.
+	//
 	// KeyName: frontend.globalDomainAsyncrps
 	// Value type: Int
 	// Default value: 100000
@@ -2230,6 +2294,12 @@ const (
 	// TODO: https://github.com/uber/cadence/issues/3861
 	WorkerBlobIntegrityCheckProbability
 
+	// HistoryGlobalRatelimiterNewDataWeight defines how much weight to give each host's newest data, per update.  Must be between 0 and 1, higher values match new values more closely after a single update.
+	// KeyName: history.globalRatelimiterNewDataWeight
+	// Value type: Float64
+	// Default value: 0.5
+	HistoryGlobalRatelimiterNewDataWeight
+
 	// LastFloatKey must be the last one in this const group
 	LastFloatKey
 )
@@ -2298,6 +2368,23 @@ const (
 	// Default value: ""
 	ESAnalyzerWorkflowTypeMetricDomains
 
+	// FrontendGlobalRatelimiterMode controls what keys use global vs fallback behavior,
+	// and whether shadowing is enabled.  This is only available for frontend usage for now.
+	//
+	//   - "disabled" stops usage-tracking and all Update requests, in an attempt to be as close to "do not use at all" as possible.
+	//   - "local" uses the new limiters with call tracking and metrics, but forces local-only behavior and does not submit usage data to aggregators.
+	//   - "global" uses the new global-load-balanced logic (though it may decide to use a local-fallback internally, and this is not prevented)
+	//   - "x-shadow-y" means "use x, and shadow all calls to y but ignore the result".
+	//     this calls both, tracks and emits both metrics, and can be used to "warm" either limiter's in-memory state before switching.
+	//
+	// These values can be seen as constants of github.com/uber/cadence/common/quotas/global/collection.keyMode
+	//
+	// KeyName: frontend.globalRatelimiterMode
+	// Value type: string enum: "disabled", "local", "global", "local-shadow-global", or "global-shadow-local"
+	// Default value: "disabled"
+	// Allowed filters: RatelimitKey (on global key, e.g. prefixed by collection name)
+	FrontendGlobalRatelimiterMode
+
 	// LastStringKey must be the last one in this const group
 	LastStringKey
 )
@@ -2331,6 +2418,12 @@ const (
 	// Default value: 10s (10*time.Second)
 	// Allowed filters: N/A
 	DomainFailoverRefreshInterval
+	// GlobalRatelimiterUpdateInterval controls how frequently ratelimiter usage information is submitted to aggregators.
+	// This value is shared between limiting and aggregating hosts (frontend and history).
+	// KeyName: frontend.globalRatelimiterUpdateInterval
+	// Value type: Duration
+	// Default value: 3 seconds
+	GlobalRatelimiterUpdateInterval
 
 	// MatchingLongPollExpirationInterval is the long poll expiration interval in the matching service
 	// KeyName: matching.longPollExpirationInterval
@@ -2747,6 +2840,17 @@ const (
 	// Default value: 3 seconds
 	// Allowed filters: domainName, taskListName, taskListType
 	AsyncTaskDispatchTimeout
+
+	// HistoryGlobalRatelimiterDecayAfter defines how long to wait for an update before considering a host's data "possibly gone", causing its weight to gradually decline.
+	// KeyName: history.globalRatelimiterDecayAfter
+	// Value type: Duration
+	// Default value: 6 seconds
+	HistoryGlobalRatelimiterDecayAfter
+	// HistoryGlobalRatelimiterGCAfter defines how long to wait until a host's data is considered entirely useless, e.g. host has likely disappeared, its weight is very low, and the data can be deleted.
+	// KeyName: history.globalRatelimiterGCAfter
+	// Value type: Duration
+	// Default value: 30 seconds
+	HistoryGlobalRatelimiterGCAfter
 
 	// LastDurationKey must be the last one in this const group
 	LastDurationKey
@@ -4533,6 +4637,11 @@ var FloatKeys = map[FloatKey]DynamicFloat{
 		Description:  "WorkerBlobIntegrityCheckProbability controls the probability of running an integrity check for any given archival",
 		DefaultValue: 0.002,
 	},
+	HistoryGlobalRatelimiterNewDataWeight: {
+		KeyName:      "history.globalRatelimiterNewDataWeight",
+		Description:  "HistoryGlobalRatelimiterNewDataWeight defines how much weight to give each host's newest data, per update.  Must be between 0 and 1, higher values match new values more closely after a single update",
+		DefaultValue: 0.5,
+	},
 }
 
 var StringKeys = map[StringKey]DynamicString{
@@ -4592,6 +4701,12 @@ var StringKeys = map[StringKey]DynamicString{
 		Description:  "ESAnalyzerWorkflowDurationWarnThresholds defines the domains we want to emit wf version metrics on",
 		DefaultValue: "",
 	},
+	FrontendGlobalRatelimiterMode: {
+		KeyName:      "frontend.globalRatelimiterMode",
+		Description:  "FrontendGlobalRatelimiterMode defines which mode a global key should be in, per key, to make gradual changes to ratelimiter algorithms",
+		DefaultValue: "disabled",
+		Filters:      []Filter{RatelimitKey},
+	},
 }
 
 var DurationKeys = map[DurationKey]DynamicDuration{
@@ -4643,6 +4758,11 @@ var DurationKeys = map[DurationKey]DynamicDuration{
 		KeyName:      "frontend.domainFailoverRefreshInterval",
 		Description:  "DomainFailoverRefreshInterval is the domain failover refresh timer",
 		DefaultValue: time.Second * 10,
+	},
+	GlobalRatelimiterUpdateInterval: {
+		KeyName:      "frontend.globalRatelimiterUpdateInterval",
+		Description:  "GlobalRatelimiterUpdateInterval defines how often each global ratelimiter collection submits load information, and the expected update rate in aggregators (used to determine when hosts are lost)",
+		DefaultValue: 3 * time.Second,
 	},
 	MatchingLongPollExpirationInterval: {
 		KeyName:      "matching.longPollExpirationInterval",
@@ -5004,6 +5124,16 @@ var DurationKeys = map[DurationKey]DynamicDuration{
 		Filters:      []Filter{DomainName, TaskListName, TaskType},
 		Description:  "AsyncTaskDispatchTimeout is the timeout of dispatching tasks for async match",
 		DefaultValue: time.Second * 3,
+	},
+	HistoryGlobalRatelimiterDecayAfter: {
+		KeyName:      "history.globalRatelimiterDecayAfter",
+		Description:  "HistoryGlobalRatelimiterDecayAfter defines how long to wait for an update before considering a host's data \"possibly gone\", causing its weight to gradually decline.",
+		DefaultValue: 6 * time.Second,
+	},
+	HistoryGlobalRatelimiterGCAfter: {
+		KeyName:      "history.globalRatelimiterGCAfter",
+		Description:  "HistoryGlobalRatelimiterGCAfter defines how long to wait until a host's data is considered entirely useless, e.g. host has likely disappeared, its weight is very low, and the data can be deleted.",
+		DefaultValue: 30 * time.Second,
 	},
 }
 

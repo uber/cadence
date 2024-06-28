@@ -978,3 +978,19 @@ func WorkflowIDCacheSize(size int) Tag {
 func AsyncWFQueueID(queueID string) Tag {
 	return newStringTag("async-wf-queue-id", queueID)
 }
+
+func GlobalRatelimiterKey(globalKey string) Tag {
+	return newStringTag("global-ratelimit-key", globalKey)
+}
+func GlobalRatelimiterKeyMode(mode string) Tag {
+	return newStringTag("global-ratelimit-key-mode", mode)
+}
+func GlobalRatelimiterIdleCount(count int) Tag {
+	return newInt("global-ratelimit-key-idle-count", count)
+}
+func GlobalRatelimiterCollectionName(name string) Tag {
+	return newStringTag("global-ratelimit-collection", name)
+}
+func GlobalRatelimiterPeer(peer string) Tag {
+	return newStringTag("global-ratelimit-peer", peer)
+}

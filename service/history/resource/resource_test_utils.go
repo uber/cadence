@@ -26,6 +26,7 @@ import (
 	"github.com/golang/mock/gomock"
 
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/quotas/global/algorithm"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/service/history/events"
 )
@@ -34,7 +35,8 @@ type (
 	// Test is the test implementation used for testing
 	Test struct {
 		*resource.Test
-		EventCache *events.MockCache
+		EventCache           *events.MockCache
+		ratelimiterAlgorithm algorithm.RequestWeighted
 	}
 )
 
@@ -55,4 +57,8 @@ func NewTest(
 // GetEventCache for testing
 func (s *Test) GetEventCache() events.Cache {
 	return s.EventCache
+}
+
+func (s *Test) GetRatelimiterAlgorithm() algorithm.RequestWeighted {
+	return s.ratelimiterAlgorithm
 }

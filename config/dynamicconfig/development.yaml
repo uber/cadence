@@ -13,6 +13,8 @@ history.useNewInitialFailoverVersion:
 history.enableStrongIdempotency:
 - value: true
   constraints: {}
+frontend.globalRatelimiterMode:
+- value: local
 frontend.validSearchAttributes:
 - value:
     BinaryChecksums: 1

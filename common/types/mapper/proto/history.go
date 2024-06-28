@@ -1586,6 +1586,14 @@ func ToHistoryResetStickyTaskListResponse(t *historyv1.ResetStickyTaskListRespon
 	return &types.HistoryResetStickyTaskListResponse{}
 }
 
+func FromHistoryRatelimitUpdateRequest(t *types.RatelimitUpdateRequest) *historyv1.RatelimitUpdateRequest {
+	if t == nil {
+		return nil
+	}
+	return &historyv1.RatelimitUpdateRequest{
+		Data: FromAny(t.Any),
+	}
+}
 func ToHistoryRatelimitUpdateRequest(t *historyv1.RatelimitUpdateRequest) *types.RatelimitUpdateRequest {
 	if t == nil {
 		return nil
@@ -1601,5 +1609,14 @@ func FromHistoryRatelimitUpdateResponse(t *types.RatelimitUpdateResponse) *histo
 	}
 	return &historyv1.RatelimitUpdateResponse{
 		Data: FromAny(t.Any),
+	}
+}
+
+func ToHistoryRatelimitUpdateResponse(t *historyv1.RatelimitUpdateResponse) *types.RatelimitUpdateResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.RatelimitUpdateResponse{
+		Any: ToAny(t.Data),
 	}
 }

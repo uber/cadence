@@ -137,6 +137,12 @@ func (c *historyClient) QueryWorkflow(ctx context.Context, hp1 *types.HistoryQue
 	return c.client.QueryWorkflow(ctx, hp1, p1...)
 }
 
+func (c *historyClient) RatelimitUpdate(ctx context.Context, request *types.RatelimitUpdateRequest, opts ...yarpc.CallOption) (rp1 *types.RatelimitUpdateResponse, err error) {
+	ctx, cancel := createContext(ctx, c.timeout)
+	defer cancel()
+	return c.client.RatelimitUpdate(ctx, request, opts...)
+}
+
 func (c *historyClient) ReadDLQMessages(ctx context.Context, rp1 *types.ReadDLQMessagesRequest, p1 ...yarpc.CallOption) (rp2 *types.ReadDLQMessagesResponse, err error) {
 	return c.client.ReadDLQMessages(ctx, rp1, p1...)
 }

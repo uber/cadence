@@ -88,6 +88,20 @@ func (mr *MockBeanMockRecorder) GetHistoryClient() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHistoryClient", reflect.TypeOf((*MockBean)(nil).GetHistoryClient))
 }
 
+// GetHistoryPeers mocks base method.
+func (m *MockBean) GetHistoryPeers() history.PeerResolver {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetHistoryPeers")
+	ret0, _ := ret[0].(history.PeerResolver)
+	return ret0
+}
+
+// GetHistoryPeers indicates an expected call of GetHistoryPeers.
+func (mr *MockBeanMockRecorder) GetHistoryPeers() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHistoryPeers", reflect.TypeOf((*MockBean)(nil).GetHistoryPeers))
+}
+
 // GetMatchingClient mocks base method.
 func (m *MockBean) GetMatchingClient(domainIDToName DomainIDToNameFunc) (matching.Client, error) {
 	m.ctrl.T.Helper()
