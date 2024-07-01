@@ -1,4 +1,3 @@
-
 CREATE TYPE shard (
   shard_id                          int,
   owner                             text, -- Host identifier processing the shard

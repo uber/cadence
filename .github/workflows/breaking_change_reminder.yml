@@ -34,7 +34,9 @@ jobs:
                 continue
             else
                 echo "Schema changes detected! Please update the PR description to include following template:"
+                echo "----"
                 echo "$TEMPLATE"
+                echo "----"
                 exit 1
             fi
         done
