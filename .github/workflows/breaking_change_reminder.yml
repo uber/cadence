@@ -18,7 +18,7 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Fail if PR description is missing schema change template
+    - name: Fail if PR description is missing breaking change template
       if: steps.pr-changes.outputs.changes != '[]'
       run: |
         PR_NUMBER=${{ github.event.pull_request.number }}
