@@ -18,11 +18,40 @@ jobs:
       env:
         ACTIONS_STEP_DEBUG: true
       run: |
-        # Use GitHub API to create a comment on the PR
-        PR_NUMBER=${{ github.event.pull_request.number }}
-        COMMENT="test comment"
-        GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
-        COMMENT_URL="https://api.github.com/repos/${{ github.repository }}/issues/${PR_NUMBER}/comments"
-        echo "Comment URL: $COMMENT_URL"
+        PR_URL="https://api.github.com/repos/${{ github.repository }}/pulls/${PR_NUMBER}"
+        BODY=$(curl $PR_URL | jq '.body')
+        CHECKLIST=(
+          "Detailed Description"
+          "Impact Analysis"
+          "Testing Plan"
+          "Rollout Plan"
+        )
+        for i in "${CHECKLIST[@]}"; do
+          if [[ $BODY ~= *$i* ]]; then
+            continue
+          else
+            read -r -d '' COMMENT << EOM
+            ### Detailed Description
+            [In-depth description of the changes made to the schema, specifying new fields, removed fields, or modified data structures]
 
-        curl -s -H "Authorization: token ${GITHUB_TOKEN}" -X POST $COMMENT_URL -d "{\"body\":\"$COMMENT\"}"
+            ### Impact Analysis
+            - **Backward Compatibility**: [Analysis of backward compatibility]
+            - **Forward Compatibility**: [Analysis of forward compatibility]
+
+            ### Testing Plan
+            - **Unit Tests**: [Do we have unit test covering the change?]
+            - **Persistence Tests**: [If the change is related to a data type which is persisted, do we have persistence tests covering the change?]
+            - **Integration Tests**: [Do we have integration test covering the change?]
+            - **Compatibility Tests**: [Have we done tests to test the backward and forward compatibility?]
+
+            ### Rollout Plan
+            - What is the rollout plan?
+            - Does the order of deployment matter?
+            - Is it safe to rollback? Does the order of rollback matter?
+            - Is there a kill switch to mitigate the impact immediately?
+            EOM
+            echo "Schema changes detected! Please update the PR description with the following details:"
+            echo "$COMMENT"
+            exit 1
+          fi
+        done
