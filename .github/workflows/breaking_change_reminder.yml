@@ -1,0 +1,45 @@
+name: Workflow for Breaking Change Reminder
+on:
+  pull_request:
+    paths:
+      - schema/**
+      - client/frontend/interface.go
+      - client/history/interface.go
+      - client/matching/interface.go
+      - client/admin/interface.go
+
+jobs:
+  breaking-change-pr-template-reminder:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Fail if PR description is missing breaking change template
+      if: steps.pr-changes.outputs.changes != '[]'
+      run: |
+        PR_NUMBER=${{ github.event.pull_request.number }}
+        PR_URL="https://api.github.com/repos/${{ github.repository }}/pulls/${PR_NUMBER}"
+        BODY=$(curl $PR_URL | jq '.body')
+        CHECKLIST=(
+          "Detailed Description"
+          "Impact Analysis"
+          "Testing Plan"
+          "Rollout Plan"
+        )
+        TEMPLATE=$(cat .github/workflows/breaking_change_pr_template.md)
+
+        for i in "${CHECKLIST[@]}"; do
+            if [[ "$BODY" == *"$i"* ]]; then
+                continue
+            else
+                echo "Potential breaking changes detected! Please update the PR description to include following template:"
+                echo "---"
+                echo "$TEMPLATE"
+                echo "---"
+                exit 1
+            fi
+        done
