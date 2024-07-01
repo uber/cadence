@@ -36,10 +36,10 @@ jobs:
             if [[ "$BODY" == *"$i"* ]]; then
                 continue
             else
-                echo "Potential breaking changes detected! Please update the PR description to include following template:"
-                echo "----"
+                echo "\n\nPotential breaking changes detected! Please update the PR description to include following template:\n"
+                echo "---"
                 echo "$TEMPLATE"
-                echo "----"
+                echo "---\n"
                 exit 1
             fi
         done

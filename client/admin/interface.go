@@ -37,7 +37,6 @@ import (
 //go:generate gowrap gen -g -p . -i Client -t ../templates/timeout.tmpl -o ../wrappers/timeout/admin_generated.go -v client=Admin
 
 // Client is the interface exposed by admin service client
-// TODO: revert this line.
 type Client interface {
 	AddSearchAttribute(context.Context, *types.AddSearchAttributeRequest, ...yarpc.CallOption) error
 	CloseShard(context.Context, *types.CloseShardRequest, ...yarpc.CallOption) error
