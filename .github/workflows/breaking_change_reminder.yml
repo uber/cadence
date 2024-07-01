@@ -9,11 +9,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Check PR Changes
-      id: pr-changes
-      run: echo "::set-output name=changes::${{ toJson(github.event.pull_request.changed_files) }}"
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
-    - name: Create Comment
+
+    - name: Fail if PR description is missing schema change template
       if: steps.pr-changes.outputs.changes != '[]'
       run: |
         PR_NUMBER=${{ github.event.pull_request.number }}
