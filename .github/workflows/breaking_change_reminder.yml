@@ -2,7 +2,7 @@ name: Workflow for Breaking Change Reminder
 on:
   pull_request:
     paths:
-      - 'schema/*'
+      - 'schema/**'
 
 jobs:
   auto-comment:
