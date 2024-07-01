@@ -2,10 +2,14 @@ name: Workflow for Breaking Change Reminder
 on:
   pull_request:
     paths:
-      - 'schema/**'
+      - schema/**
+      - client/frontend/interface.go
+      - client/history/interface.go
+      - client/matching/interface.go
+      - client/admin/interface.go
 
 jobs:
-  schema-change-pr-template-reminder:
+  breaking-change-pr-template-reminder:
     runs-on: ubuntu-latest
 
     steps:
@@ -13,7 +17,6 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-
 
     - name: Fail if PR description is missing schema change template
       if: steps.pr-changes.outputs.changes != '[]'
@@ -33,7 +36,7 @@ jobs:
             if [[ "$BODY" == *"$i"* ]]; then
                 continue
             else
-                echo "Schema changes detected! Please update the PR description to include following template:"
+                echo "Potential breaking changes detected! Please update the PR description to include following template:"
                 echo "----"
                 echo "$TEMPLATE"
                 echo "----"

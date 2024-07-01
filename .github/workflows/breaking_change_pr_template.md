@@ -1,5 +1,5 @@
 **Detailed Description**
-[In-depth description of the changes made to the schema, specifying new fields, removed fields, or modified data structures]
+[In-depth description of the changes made to the schema or interfaces, specifying new fields, removed fields, or modified data structures]
 
 **Impact Analysis**
 - **Backward Compatibility**: [Analysis of backward compatibility]
