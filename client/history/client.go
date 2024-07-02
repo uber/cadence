@@ -158,6 +158,7 @@ func (c *clientImpl) DescribeHistoryHost(
 		peer, err = c.peerResolver.FromHostAddress(request.GetHostAddress())
 	}
 	if err != nil {
+		c.logger.Error("peer could not be resolved for host.", tag.Error(err), tag.Address(request.GetHostAddress()))
 		return nil, err
 	}
 
