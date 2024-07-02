@@ -210,9 +210,6 @@ $(BIN)/protoc-gen-gogofast: go.mod go.work | $(BIN)
 $(BIN)/protoc-gen-yarpc-go: go.mod go.work | $(BIN)
 	$(call go_mod_build_tool,go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go)
 
-$(BIN)/goveralls: internal/tools/go.mod go.work
-	$(call go_build_tool,github.com/mattn/goveralls)
-
 $(BUILD)/go_mod_check: go.mod internal/tools/go.mod go.work
 	$Q # generated == used is occasionally important for gomock / mock libs in general.  this is not a definite problem if violated though.
 	$Q ./scripts/check-gomod-version.sh github.com/golang/mock/gomock $(if $(verbose),-v)
@@ -546,7 +543,7 @@ clean: ## Clean build products
 
 # v----- not yet cleaned up -----v
 
-.PHONY: git-submodules test bins build clean cover cover_ci help
+.PHONY: git-submodules test bins build clean cover help
 
 TOOLS_CMD_ROOT=./cmd/tools
 INTEG_TEST_ROOT=./host
@@ -672,9 +669,6 @@ $(COVER_ROOT)/cover.out: $(UNIT_COVER_FILE) $(INTEG_COVER_FILE_CASS) $(INTEG_COV
 
 cover: $(COVER_ROOT)/cover.out
 	go tool cover -html=$(COVER_ROOT)/cover.out;
-
-cover_ci: $(COVER_ROOT)/cover.out $(BIN)/goveralls
-	$(BIN)/goveralls -coverprofile=$(COVER_ROOT)/cover.out -service=buildkite || echo Coveralls failed;
 
 install-schema: cadence-cassandra-tool
 	$Q echo installing schema

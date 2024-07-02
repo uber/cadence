@@ -300,24 +300,6 @@ steps:
 
   - wait
 
-  - label: ":golang: code-coverage"
-    retry:
-      automatic:
-        limit: 2
-    plugins:
-      - kubernetes:
-          <<: *kubernetes
-          podSpec:
-            <<: *podSpec
-            containers:
-              - <<: *commandContainer
-                command:
-                - |-
-                  scripts/buildkite/gocov.sh
-      - docker-compose#v3.0.0:
-          run: coverage-report
-          config: docker/buildkite/docker-compose.yml
-
   - label: ":docker: build (no push)"
     retry:
       automatic:
