@@ -31,10 +31,10 @@ import (
 type Filter int
 
 func (f Filter) String() string {
-	if f >= 0 && int(f) < len(filters) {
+	if f > UnknownFilter && int(f) < len(filters) {
 		return filters[f]
 	}
-	return filters[0] // unknown
+	return filters[UnknownFilter]
 }
 
 func ParseFilter(filterName string) Filter {
