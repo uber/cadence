@@ -52,12 +52,13 @@ import (
 type Service struct {
 	resource.Resource
 
-	status       int32
-	handler      *api.WorkflowHandler
-	adminHandler admin.Handler
-	stopC        chan struct{}
-	config       *config.Config
-	params       *resource.Params
+	status                 int32
+	handler                *api.WorkflowHandler
+	adminHandler           admin.Handler
+	stopC                  chan struct{}
+	config                 *config.Config
+	params                 *resource.Params
+	ratelimiterCollections globalRatelimiterCollections
 }
 
 // NewService builds a new cadence-frontend service
@@ -193,6 +194,7 @@ func (s *Service) Start() {
 		logger.Fatal("failed to start async global ratelimiter collection", tag.Error(err))
 	}
 	cancel()
+	s.ratelimiterCollections = collections // save so they can be stopped later
 
 	s.handler.Start()
 	s.adminHandler.Start()
@@ -300,6 +302,22 @@ func (s *Service) Stop() {
 
 	s.handler.Stop()
 	s.adminHandler.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second) // should take nearly no time at all
+	defer cancel()
+	if err := s.ratelimiterCollections.user.OnStop(ctx); err != nil {
+		s.GetLogger().Error("failed to stop user global ratelimiter collection", tag.Error(err))
+	}
+	if err := s.ratelimiterCollections.worker.OnStop(ctx); err != nil {
+		s.GetLogger().Error("failed to stop worker global ratelimiter collection", tag.Error(err))
+	}
+	if err := s.ratelimiterCollections.visibility.OnStop(ctx); err != nil {
+		s.GetLogger().Error("failed to stop visibility global ratelimiter collection", tag.Error(err))
+	}
+	if err := s.ratelimiterCollections.async.OnStop(ctx); err != nil {
+		s.GetLogger().Error("failed to stop async global ratelimiter collection", tag.Error(err))
+	}
+	cancel()
 
 	s.GetLogger().Info("ShutdownHandler: Draining traffic")
 	time.Sleep(requestDrainTime)
