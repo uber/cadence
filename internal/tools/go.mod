@@ -8,7 +8,6 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
 	github.com/hexdigest/gowrap v1.2.5
-	github.com/mattn/goveralls v0.0.11
 	github.com/mgechev/revive v1.3.2
 	github.com/vektra/mockery/v2 v2.32.0
 	go.uber.org/thriftrw v1.29.2

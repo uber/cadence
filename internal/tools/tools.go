@@ -34,8 +34,6 @@ import (
 	_ "github.com/golang/mock/mockgen"
 	// gowrap for generating decorators for interface
 	_ "github.com/hexdigest/gowrap"
-	// coverage reporting
-	_ "github.com/mattn/goveralls"
 	// replaces golint - configurable and much faster
 	_ "github.com/mgechev/revive"
 	// mockery for generating mocks

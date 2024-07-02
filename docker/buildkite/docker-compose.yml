@@ -327,7 +327,6 @@ services:
       - BUILDKITE_BUILD_CREATOR_EMAIL
       - BUILDKITE_BUILD_CREATOR_TEAMS
       - BUILDKITE_PULL_REQUEST_REPO
-      - COVERALLS_TOKEN
     volumes:
       - ../../:/cadence
 
