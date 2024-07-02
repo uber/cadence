@@ -31,10 +31,10 @@ import (
 type Filter int
 
 func (f Filter) String() string {
-	if f <= UnknownFilter || f > WorkflowID {
-		return filters[UnknownFilter]
+	if f >= 0 && int(f) < len(filters) {
+		return filters[f]
 	}
-	return filters[f]
+	return filters[0] // unknown
 }
 
 func ParseFilter(filterName string) Filter {
