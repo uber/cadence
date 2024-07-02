@@ -346,6 +346,17 @@ func TestDynamicConfigFilterTypeIsParseable(t *testing.T) {
 	}
 }
 
+func TestDynamicConfigFilterStringsCorrectly(t *testing.T) {
+	for _, filterString := range filters {
+		// filter-string-parsing and the resulting filter's String() must match
+		parsed := ParseFilter(filterString)
+		assert.Equal(t, filterString, parsed.String(), "filters need to String() correctly as some impls rely on it")
+	}
+	// should not be possible normally, but improper casting could trigger it
+	badFilter := Filter(len(filters))
+	assert.Equal(t, UnknownFilter.String(), badFilter.String(), "filters with indexes outside the list of known strings should String() to the unknown filter type")
+}
+
 func BenchmarkLogValue(b *testing.B) {
 	keys := []Key{
 		HistorySizeLimitError,
