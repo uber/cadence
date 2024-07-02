@@ -3327,6 +3327,7 @@ var PersistenceLatencyBuckets = tally.DurationBuckets([]time.Duration{
 // GlobalRatelimiterUsageHistogram contains buckets for tracking how many ratelimiters are
 // in which state (startup, healthy, failing).
 var GlobalRatelimiterUsageHistogram = tally.ValueBuckets{
+	0, // need an explicit 0 to record zeros
 	1, 2, 5, 10,
 	25, 50, 100,
 	250, 500, 1000,
