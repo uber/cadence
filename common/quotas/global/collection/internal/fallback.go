@@ -203,10 +203,16 @@ func (b *FallbackLimiter) Wait(ctx context.Context) error {
 }
 
 func (b *FallbackLimiter) Reserve() clock.Reservation {
-	return countedReservation{
-		wrapped: b.both().Reserve(),
-		usage:   &b.usage,
+	res := b.both().Reserve()
+	if res.Allow() {
+		return allowedReservation{
+			wrapped: res,
+			usage:   &b.usage,
+		}
 	}
+	res.Used(false)
+	b.usage.Count(false)
+	return deniedReservation{}
 }
 
 func (b *FallbackLimiter) both() quotas.Limiter {
