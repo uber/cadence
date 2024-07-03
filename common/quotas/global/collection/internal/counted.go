@@ -37,7 +37,7 @@ type (
 		usage   *AtomicUsage
 	}
 
-	allowedReservation struct {
+	countedReservation struct {
 		wrapped clock.Reservation
 		usage   *AtomicUsage // reference to the reservation's limiter's usage
 	}
@@ -52,7 +52,7 @@ type (
 )
 
 var _ quotas.Limiter = CountedLimiter{}
-var _ clock.Reservation = allowedReservation{}
+var _ clock.Reservation = countedReservation{}
 
 func NewCountedLimiter(limiter quotas.Limiter) CountedLimiter {
 	return CountedLimiter{
@@ -74,42 +74,45 @@ func (c CountedLimiter) Wait(ctx context.Context) error {
 }
 
 func (c CountedLimiter) Reserve() clock.Reservation {
-	// caution: keep fallback limiter in sync!
-	// TODO: ideally it would actually be the same code, but that's a bit awkward due to needing different interfaces.
-	res := c.wrapped.Reserve()
-	if res.Allow() {
-		return allowedReservation{
-			wrapped: res,
-			usage:   c.usage,
-		}
+	return countedReservation{
+		wrapped: c.wrapped.Reserve(),
+		usage:   c.usage,
 	}
-	// rejections cannot be rolled back, so they are always counted immediately
-	c.usage.Count(false)
-	res.Used(false)
-	return res
 }
 
 func (c CountedLimiter) Collect() UsageMetrics {
 	return c.usage.Collect()
 }
 
-func (c allowedReservation) Allow() bool {
-	return true
+func (c countedReservation) Allow() bool {
+	return c.wrapped.Allow()
 }
 
-func (c allowedReservation) Used(wasUsed bool) {
+func (c countedReservation) Used(wasUsed bool) {
 	c.wrapped.Used(wasUsed)
-	if wasUsed {
-		// only counts as allowed if used, else it is hopefully rolled back.
-		// this may or may not restore the token, but it does imply "this limiter did not limit the event".
-		c.usage.Count(true)
-	}
+	c.usage.idle.Store(0)
+	if c.Allow() {
+		if wasUsed {
+			// only counts as allowed if used, else it is hopefully rolled back.
+			// this may or may not restore the token, but it does imply "this limiter did not limit the event".
+			c.usage.Count(true)
+		}
 
-	// else it was canceled, and not "used".
-	//
-	// currently these are not tracked because some other rejection will occur
-	// and be emitted in all our current uses, but with bad enough luck or
-	// latency before canceling it could lead to misleading metrics.
+		// else it was canceled, and not "used".
+		//
+		// currently these are not tracked because some other rejection will occur
+		// and be emitted in all our current uses, but with bad enough luck or
+		// latency before canceling it could lead to misleading metrics.
+	} else {
+		// these reservations cannot be waited on so they cannot become allowed,
+		// and they cannot be returned, so they are always rejected.
+		//
+		// specifically: it is likely that `wasUsed == Allow()`, so false cannot be
+		// trusted to mean "will not use for some other reason", and the underlying
+		// rate.Limiter did not change state anyway because it returned the
+		// pending-token before becoming a clock.Reservation.
+		c.usage.Count(false)
+	}
 }
 
 func (a *AtomicUsage) Count(allowed bool) {

@@ -92,8 +92,8 @@ func TestUsage(t *testing.T) {
 
 		r = lim.Reserve()
 		assert.False(t, r.Allow(), "should not have a token available")
-		assert.Equal(t, UsageMetrics{0, 1, 0}, lim.Collect(), "not-allowed reservations immediately count rejection")
 		r.Used(false)
+		assert.Equal(t, UsageMetrics{0, 1, 0}, lim.Collect(), "not-allowed reservations count as rejection")
 	})
 }
 
