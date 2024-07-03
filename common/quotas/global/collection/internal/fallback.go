@@ -203,11 +203,19 @@ func (b *FallbackLimiter) Wait(ctx context.Context) error {
 }
 
 func (b *FallbackLimiter) Reserve() clock.Reservation {
+	// caution: keep counted-limiter in sync!
+	// TODO: ideally it would actually be the same code, but that's a bit awkward due to needing different interfaces.
 	res := b.both().Reserve()
-	return countedReservation{
-		wrapped: res,
-		usage:   &b.usage,
+	if res.Allow() {
+		return allowedReservation{
+			wrapped: res,
+			usage:   &b.usage,
+		}
 	}
+	// rejections cannot be rolled back, so they are always counted immediately
+	b.usage.Count(false)
+	res.Used(false)
+	return res
 }
 
 func (b *FallbackLimiter) both() quotas.Limiter {

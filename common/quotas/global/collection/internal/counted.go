@@ -37,7 +37,7 @@ type (
 		usage   *AtomicUsage
 	}
 
-	countedReservation struct {
+	allowedReservation struct {
 		wrapped clock.Reservation
 		usage   *AtomicUsage // reference to the reservation's limiter's usage
 	}
@@ -52,7 +52,7 @@ type (
 )
 
 var _ quotas.Limiter = CountedLimiter{}
-var _ clock.Reservation = countedReservation{}
+var _ clock.Reservation = allowedReservation{}
 
 func NewCountedLimiter(limiter quotas.Limiter) CountedLimiter {
 	return CountedLimiter{
@@ -74,20 +74,18 @@ func (c CountedLimiter) Wait(ctx context.Context) error {
 }
 
 func (c CountedLimiter) Reserve() clock.Reservation {
-	c.usage.idle.Store(0) // not idle regardless of the result
-
+	// caution: keep fallback limiter in sync!
+	// TODO: ideally it would actually be the same code, but that's a bit awkward due to needing different interfaces.
 	res := c.wrapped.Reserve()
 	if res.Allow() {
-		// may be used or canceled, return a wrapped version so it's tracked
-		// when we know which it is.
-		return countedReservation{
+		return allowedReservation{
 			wrapped: res,
 			usage:   c.usage,
 		}
 	}
-	// cannot be used, just count the rejection immediately
-	// and return the original so it's a bit cheaper
-	c.usage.rejected.Add(1)
+	// rejections cannot be rolled back, so they are always counted immediately
+	c.usage.Count(false)
+	res.Used(false)
 	return res
 }
 
@@ -95,13 +93,16 @@ func (c CountedLimiter) Collect() UsageMetrics {
 	return c.usage.Collect()
 }
 
-func (c countedReservation) Allow() bool {
-	return c.wrapped.Allow()
+func (c allowedReservation) Allow() bool {
+	return true
 }
 
-func (c countedReservation) Used(wasUsed bool) {
+func (c allowedReservation) Used(wasUsed bool) {
+	c.wrapped.Used(wasUsed)
 	if wasUsed {
-		c.usage.allowed.Add(1)
+		// only counts as allowed if used, else it is hopefully rolled back.
+		// this may or may not restore the token, but it does imply "this limiter did not limit the event".
+		c.usage.Count(true)
 	}
 
 	// else it was canceled, and not "used".
