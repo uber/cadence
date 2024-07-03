@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
@@ -430,6 +431,7 @@ Loop:
 			tag.WorkflowRunID(task.GetRunID()),
 			tag.ScheduleAttempt(task.ScheduleAttempt),
 			tag.FailoverVersion(task.GetVersion()),
+			tag.ActivityTimeoutType(shared.TimeoutType(timerSequenceID.TimerType)),
 		)
 
 		if _, err := mutableState.AddActivityTaskTimedOutEvent(
