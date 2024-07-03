@@ -50,9 +50,8 @@ import (
 )
 
 const (
-	esPersistenceName = "elasticsearch"
-	DomainID          = "DomainID"
-	StartTime         = "StartTime"
+	esPersistenceName    = "elasticsearch"
+	oneMicroSecondInNano = int64(time.Microsecond / time.Nanosecond)
 )
 
 type (
@@ -445,7 +444,38 @@ func (v *esVisibilityStore) ListWorkflowExecutions(
 }
 
 func (v *esVisibilityStore) ListAllWorkflowExecutions(ctx context.Context, request *p.InternalListAllWorkflowExecutionsByTypeRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
-	return nil, p.ErrVisibilityOperationNotSupported
+	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
+		return !request.EarliestTime.After(rec.StartTime) && !rec.StartTime.After(request.LatestTime)
+	}
+
+	if request.PageSize == 0 {
+		request.PageSize = 1000
+	}
+
+	token, err := es.GetNextPageToken(request.NextPageToken)
+	if err != nil {
+		return nil, err
+	}
+
+	queryDSL, err := v.getESQueryDSLForListAll(request, token)
+	if err != nil {
+		return nil, &types.BadRequestError{Message: fmt.Sprintf("Error when building query: %v", err)}
+	}
+
+	resp, err := v.esClient.SearchByQuery(ctx, &es.SearchByQueryRequest{
+		Index:           v.index,
+		Query:           queryDSL,
+		NextPageToken:   request.NextPageToken,
+		PageSize:        request.PageSize,
+		Filter:          isRecordValid,
+		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
+	})
+	if err != nil {
+		return nil, &types.InternalServiceError{
+			Message: fmt.Sprintf("ListAllWorkflowExecutions failed, %v", err),
+		}
+	}
+	return resp, nil
 }
 
 func (v *esVisibilityStore) ScanWorkflowExecutions(
@@ -566,7 +596,16 @@ func getESQueryDSLForCount(request *p.CountWorkflowExecutionsRequest) (string, e
 
 func (v *esVisibilityStore) getESQueryDSL(request *p.ListWorkflowExecutionsByQueryRequest, token *es.ElasticVisibilityPageToken) (string, error) {
 	sql := getSQLFromListRequest(request)
-	dsl, err := getCustomizedDSLFromSQL(sql, request.DomainUUID)
+	return v.processedDSLfromSQL(sql, request.DomainUUID, token)
+}
+
+func (v *esVisibilityStore) getESQueryDSLForListAll(request *p.InternalListAllWorkflowExecutionsByTypeRequest, token *es.ElasticVisibilityPageToken) (string, error) {
+	sql := getSQLFromListAllRequest(request)
+	return v.processedDSLfromSQL(sql, request.DomainUUID, token)
+}
+
+func (v *esVisibilityStore) processedDSLfromSQL(sql, domainUUID string, token *es.ElasticVisibilityPageToken) (string, error) {
+	dsl, err := getCustomizedDSLFromSQL(sql, domainUUID)
 	if err != nil {
 		return "", err
 	}
@@ -602,6 +641,59 @@ func getSQLFromListRequest(request *p.ListWorkflowExecutionsByQueryRequest) stri
 		sql = fmt.Sprintf("select * from dummy where %s limit %d", request.Query, request.PageSize)
 	}
 	return sql
+}
+
+func getSQLFromListAllRequest(request *p.InternalListAllWorkflowExecutionsByTypeRequest) string {
+	sql := "select * from dummy "
+	var earliestTimeStr, latestTimeStr, timeRange, searchString, statusFilter, whereClause, orderByClause string
+
+	if !request.EarliestTime.IsZero() && !request.LatestTime.IsZero() {
+		earliestTimeStr = strconv.FormatInt(request.EarliestTime.UnixNano()-oneMicroSecondInNano, 10)
+		latestTimeStr = strconv.FormatInt(request.LatestTime.UnixNano()+oneMicroSecondInNano, 10)
+		timeRange = fmt.Sprintf("%s between %s and %s", es.StartTime, earliestTimeStr, latestTimeStr)
+		whereClause = addToWhereClause(whereClause, timeRange)
+	}
+
+	for _, status := range request.StatusFilter {
+		if statusFilter == "" {
+			statusFilter = fmt.Sprintf("%s = %s",
+				es.CloseStatus, status)
+		}
+		statusFilter += fmt.Sprintf("or %s = %s",
+			es.CloseStatus, status)
+	}
+	whereClause = addToWhereClause(whereClause, statusFilter)
+
+	if request.WorkflowSearchValue != "" {
+		searchString = fmt.Sprintf("%s = %s or %s = %s or %s = %s ",
+			es.WorkflowID, request.WorkflowSearchValue,
+			es.RunID, request.WorkflowSearchValue,
+			es.WorkflowType, request.WorkflowSearchValue)
+		whereClause = addToWhereClause(whereClause, searchString)
+	}
+
+	if whereClause != "" {
+		sql += whereClause
+	}
+
+	if request.SortColumn != "" && request.SortOrder != "" {
+		orderByClause = fmt.Sprintf("order by %s %s", request.SortColumn, request.SortOrder)
+		sql += orderByClause
+	}
+
+	return fmt.Sprintf("%s limit %d", sql, request.PageSize)
+}
+
+func addToWhereClause(whereClause, condition string) string {
+	if condition == "" {
+		return whereClause
+	}
+	if whereClause == "" {
+		return fmt.Sprintf("where (%s)", condition)
+	}
+
+	whereClause += fmt.Sprintf("and (%s)", condition)
+	return whereClause
 }
 
 func getSQLFromCountRequest(request *p.CountWorkflowExecutionsRequest) string {
