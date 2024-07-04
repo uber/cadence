@@ -645,7 +645,7 @@ func getSQLFromListRequest(request *p.ListWorkflowExecutionsByQueryRequest) stri
 
 func getSQLFromListAllRequest(request *p.InternalListAllWorkflowExecutionsByTypeRequest) string {
 	sql := "select * from dummy "
-	var earliestTimeStr, latestTimeStr, timeRange, searchString, statusFilter, whereClause, orderByClause string
+	var earliestTimeStr, latestTimeStr, timeRange, searchString, whereClause, orderByClause string
 
 	if !request.EarliestTime.IsZero() && !request.LatestTime.IsZero() {
 		earliestTimeStr = strconv.FormatInt(request.EarliestTime.UnixNano()-oneMicroSecondInNano, 10)
@@ -654,17 +654,12 @@ func getSQLFromListAllRequest(request *p.InternalListAllWorkflowExecutionsByType
 		whereClause = addToWhereClause(whereClause, timeRange)
 	}
 
+	statusFilters := make([]string, 0)
 	for _, status := range request.StatusFilter {
-		if statusFilter == "" {
-			statusFilter = fmt.Sprintf("%s = %d ",
-				es.CloseStatus, status)
-		} else {
-			statusFilter += fmt.Sprintf("or %s = %d",
-				es.CloseStatus, status)
-		}
-
+		statusFilters = append(statusFilters, fmt.Sprintf("%s = %d", es.CloseStatus, status))
 	}
-	whereClause = addToWhereClause(whereClause, statusFilter)
+	statusFilterString := strings.Join(statusFilters, " or ")
+	whereClause = addToWhereClause(whereClause, statusFilterString)
 
 	if request.WorkflowSearchValue != "" {
 		searchString = fmt.Sprintf("%s = \"%s\" or %s = \"%s\" or %s = \"%s\" ",
