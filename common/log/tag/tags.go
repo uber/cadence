@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -91,6 +92,11 @@ func WorkflowError(error error) Tag {
 // WorkflowTimeoutType returns tag for WorkflowTimeoutType
 func WorkflowTimeoutType(timeoutType int64) Tag {
 	return newInt64("wf-timeout-type", timeoutType)
+}
+
+// ActivityTimeoutType returns tag for ActivityTimeoutType
+func ActivityTimeoutType(timerType shared.TimeoutType) Tag {
+	return newStringTag("activity-timer-type", timerType.String())
 }
 
 // WorkflowPollContextTimeout returns tag for WorkflowPollContextTimeout
