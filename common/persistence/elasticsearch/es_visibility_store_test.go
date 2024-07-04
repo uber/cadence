@@ -392,6 +392,23 @@ func (s *ESVisibilitySuite) TestListAllWorkflowExecutions() {
 	_, ok := err.(*types.InternalServiceError)
 	s.True(ok)
 	s.True(strings.Contains(err.Error(), "ListAllWorkflowExecutions failed"))
+
+	invalidRequest := &p.InternalListAllWorkflowExecutionsByTypeRequest{
+		InternalListWorkflowExecutionsRequest: p.InternalListWorkflowExecutionsRequest{
+			DomainUUID:   testDomainID,
+			Domain:       testDomain,
+			EarliestTime: time.UnixMilli(testEarliestTime),
+			LatestTime:   time.UnixMilli(testLatestTime),
+		},
+		WorkflowSearchValue: ")",
+		SortOrder:           "DESC",
+	}
+	_, err = s.visibilityStore.ListAllWorkflowExecutions(ctx, invalidRequest)
+	s.Error(err)
+	_, ok = err.(*types.BadRequestError)
+	s.True(ok)
+	s.True(strings.Contains(err.Error(), "Error when building query"))
+
 }
 
 func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByType() {
