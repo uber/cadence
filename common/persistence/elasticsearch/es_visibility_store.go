@@ -656,16 +656,18 @@ func getSQLFromListAllRequest(request *p.InternalListAllWorkflowExecutionsByType
 
 	for _, status := range request.StatusFilter {
 		if statusFilter == "" {
-			statusFilter = fmt.Sprintf("%s = %s",
+			statusFilter = fmt.Sprintf("%s = %d ",
+				es.CloseStatus, status)
+		} else {
+			statusFilter += fmt.Sprintf("or %s = %d",
 				es.CloseStatus, status)
 		}
-		statusFilter += fmt.Sprintf("or %s = %s",
-			es.CloseStatus, status)
+
 	}
 	whereClause = addToWhereClause(whereClause, statusFilter)
 
 	if request.WorkflowSearchValue != "" {
-		searchString = fmt.Sprintf("%s = %s or %s = %s or %s = %s ",
+		searchString = fmt.Sprintf("%s = \"%s\" or %s = \"%s\" or %s = \"%s\" ",
 			es.WorkflowID, request.WorkflowSearchValue,
 			es.RunID, request.WorkflowSearchValue,
 			es.WorkflowType, request.WorkflowSearchValue)
@@ -677,7 +679,7 @@ func getSQLFromListAllRequest(request *p.InternalListAllWorkflowExecutionsByType
 	}
 
 	if request.SortColumn != "" && request.SortOrder != "" {
-		orderByClause = fmt.Sprintf("order by %s %s", request.SortColumn, request.SortOrder)
+		orderByClause = fmt.Sprintf(" order by %s %s", request.SortColumn, request.SortOrder)
 		sql += orderByClause
 	}
 
@@ -692,7 +694,7 @@ func addToWhereClause(whereClause, condition string) string {
 		return fmt.Sprintf("where (%s)", condition)
 	}
 
-	whereClause += fmt.Sprintf("and (%s)", condition)
+	whereClause += fmt.Sprintf(" and (%s)", condition)
 	return whereClause
 }
 

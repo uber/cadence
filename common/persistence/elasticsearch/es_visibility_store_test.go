@@ -376,8 +376,10 @@ func (s *ESVisibilitySuite) TestListAllWorkflowExecutions() {
 			LatestTime:   time.UnixMilli(testLatestTime),
 			PageSize:     10,
 		},
+		StatusFilter:        []types.WorkflowExecutionCloseStatus{types.WorkflowExecutionCloseStatusCanceled, types.WorkflowExecutionCloseStatusFailed},
 		WorkflowSearchValue: "123",
 		SortOrder:           "DESC",
+		SortColumn:          es.WorkflowID,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
@@ -400,8 +402,8 @@ func (s *ESVisibilitySuite) TestListAllWorkflowExecutions() {
 			EarliestTime: time.UnixMilli(testEarliestTime),
 			LatestTime:   time.UnixMilli(testLatestTime),
 		},
-		WorkflowSearchValue: ")",
-		SortOrder:           "DESC",
+		SortColumn: ")",
+		SortOrder:  "DESC",
 	}
 	_, err = s.visibilityStore.ListAllWorkflowExecutions(ctx, invalidRequest)
 	s.Error(err)
