@@ -857,6 +857,10 @@ func TestWorkflowSizeChecker_failWorkflowIfBlobSizeExceedsLimit(t *testing.T) {
 }
 
 func TestWorkflowSizeChecker_failWorkflowSizeExceedsLimit(t *testing.T) {
+	var (
+		testEventID = int64(1)
+	)
+
 	for name, tc := range map[string]struct {
 		historyCount           int
 		historyCountLimitWarn  int
@@ -971,8 +975,15 @@ func TestWorkflowSizeChecker_failWorkflowSizeExceedsLimit(t *testing.T) {
 					RunID:      testRunID,
 				}).Times(1)
 			}
+			if tc.expectFail {
+				mutableState.EXPECT().AddFailWorkflowEvent(testEventID, &types.FailWorkflowExecutionDecisionAttributes{
+					Reason:  common.StringPtr(common.FailureReasonSizeExceedsLimit),
+					Details: []byte("Workflow history size / count exceeds limit."),
+				}).Return(nil, nil).Times(1)
+			}
 
 			checker := &workflowSizeChecker{
+				completedID:            testEventID,
 				historyCountLimitWarn:  tc.historyCountLimitWarn,
 				historyCountLimitError: tc.historyCountLimitError,
 				historySizeLimitWarn:   tc.historySizeLimitWarn,
