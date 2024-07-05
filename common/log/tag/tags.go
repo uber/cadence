@@ -214,6 +214,11 @@ func IsWorkflowOpen(isOpen bool) Tag {
 	return newBoolTag("is-workflow-open", isOpen)
 }
 
+// WorkflowTerminationReason returns a tag to report a workflow's termination reason
+func WorkflowTerminationReason(reason string) Tag {
+	return newStringTag("wf-termination-reason", reason)
+}
+
 // domain related
 
 // WorkflowDomainID returns tag for WorkflowDomainID

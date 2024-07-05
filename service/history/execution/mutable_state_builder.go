@@ -1181,6 +1181,22 @@ func (e *mutableStateBuilder) AddWorkflowExecutionTerminatedEvent(
 	if err := e.ReplicateWorkflowExecutionTerminatedEvent(firstEventID, event); err != nil {
 		return nil, err
 	}
+
+	domainName := e.GetDomainEntry().GetInfo().Name
+
+	e.logger.Info(
+		"Workflow execution terminated.",
+		tag.WorkflowDomainName(domainName),
+		tag.WorkflowID(e.GetExecutionInfo().WorkflowID),
+		tag.WorkflowRunID(e.GetExecutionInfo().RunID),
+		tag.WorkflowTerminationReason(reason),
+	)
+
+	scopeWithDomainTag := e.metricsClient.Scope(metrics.HistoryTerminateWorkflowExecutionScope).
+		Tagged(metrics.DomainTag(domainName)).
+		Tagged(metrics.WorkflowTerminationReasonTag(reason))
+	scopeWithDomainTag.IncCounter(metrics.WorkflowTerminateCounterPerDomain)
+
 	return event, nil
 }
 

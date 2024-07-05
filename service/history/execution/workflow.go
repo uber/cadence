@@ -36,7 +36,7 @@ const (
 	IdentityHistoryService = "history-service"
 	// WorkflowTerminationIdentity is the component which decides to terminate the workflow
 	WorkflowTerminationIdentity = "worker-service"
-	// WorkflowTerminationReason is the reason for terminating workflow due to version conflit
+	// WorkflowTerminationReason is the reason for terminating workflow due to version conflict
 	WorkflowTerminationReason = "Terminate Workflow Due To Version Conflict."
 )
 
@@ -189,7 +189,7 @@ func (r *workflowImpl) SuppressBy(
 	currentCluster := r.clusterMetadata.GetCurrentClusterName()
 
 	if currentCluster == lastWriteCluster {
-		return TransactionPolicyActive, r.terminateWorkflow(lastWriteVersion, incomingLastWriteVersion)
+		return TransactionPolicyActive, r.terminateWorkflow(lastWriteVersion, incomingLastWriteVersion, WorkflowTerminationReason)
 	}
 	return TransactionPolicyPassive, r.zombiefyWorkflow()
 }
@@ -251,6 +251,7 @@ func (r *workflowImpl) failDecision(
 func (r *workflowImpl) terminateWorkflow(
 	lastWriteVersion int64,
 	incomingLastWriteVersion int64,
+	terminationReason string,
 ) error {
 
 	eventBatchFirstEventID := r.GetMutableState().GetNextEventID()
@@ -265,7 +266,7 @@ func (r *workflowImpl) terminateWorkflow(
 
 	_, err := r.mutableState.AddWorkflowExecutionTerminatedEvent(
 		eventBatchFirstEventID,
-		WorkflowTerminationReason,
+		terminationReason,
 		[]byte(fmt.Sprintf("terminated by version: %v", incomingLastWriteVersion)),
 		WorkflowTerminationIdentity,
 	)

@@ -62,6 +62,7 @@ const (
 	globalRatelimitKey            = "global_ratelimit_key"
 	globalRatelimitType           = "global_ratelimit_type"
 	globalRatelimitCollectionName = "global_ratelimit_collection"
+	workflowTerminationReason     = "workflow_termination_reason"
 
 	allValue     = "all"
 	unknownValue = "_unknown_"
@@ -260,6 +261,11 @@ func GlobalRatelimiterTypeTag(value string) Tag {
 // coming from the different ratelimiter collections (user, worker, visibility, async).
 func GlobalRatelimiterCollectionName(value string) Tag {
 	return simpleMetric{key: globalRatelimitCollectionName, value: value}
+}
+
+// WorkflowTerminationReasonTag reports the reason for workflow termination
+func WorkflowTerminationReasonTag(value string) Tag {
+	return simpleMetric{key: workflowTerminationReason, value: value}
 }
 
 // PartitionConfigTags returns a list of partition config tags

@@ -2247,6 +2247,7 @@ const (
 	TaskQueueLatencyPerDomain
 	TransferTaskMissingEventCounterPerDomain
 	ReplicationTasksAppliedPerDomain
+	WorkflowTerminateCounterPerDomain
 
 	TaskRedispatchQueuePendingTasksTimer
 
@@ -2898,6 +2899,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		TaskQueueLatencyPerDomain:                {metricName: "task_latency_queue_per_domain", metricRollupName: "task_latency_queue", metricType: Timer},
 		TransferTaskMissingEventCounterPerDomain: {metricName: "transfer_task_missing_event_counter_per_domain", metricRollupName: "transfer_task_missing_event_counter", metricType: Counter},
 		ReplicationTasksAppliedPerDomain:         {metricName: "replication_tasks_applied_per_domain", metricRollupName: "replication_tasks_applied", metricType: Counter},
+		WorkflowTerminateCounterPerDomain:        {metricName: "workflow_terminate_counter_per_domain", metricRollupName: "workflow_terminate_counter", metricType: Counter},
 
 		TaskBatchCompleteCounter:                                     {metricName: "task_batch_complete_counter", metricType: Counter},
 		TaskBatchCompleteFailure:                                     {metricName: "task_batch_complete_error", metricType: Counter},
