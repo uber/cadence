@@ -654,7 +654,7 @@ func getSQLFromListAllRequest(request *p.InternalListAllWorkflowExecutionsByType
 		whereClause = addToWhereClause(whereClause, timeRange)
 	}
 
-	statusFilters := make([]string, 0)
+	statusFilters := make([]string, 0, len(request.StatusFilter))
 	for _, status := range request.StatusFilter {
 		statusFilters = append(statusFilters, fmt.Sprintf("%s = %d", es.CloseStatus, status))
 	}
