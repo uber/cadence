@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-package internal_test
+package internal
 
 import (
 	"context"
@@ -35,7 +35,6 @@ import (
 
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/quotas"
-	"github.com/uber/cadence/common/quotas/global/collection/internal"
 )
 
 func TestLimiter(t *testing.T) {
@@ -43,19 +42,19 @@ func TestLimiter(t *testing.T) {
 		m := quotas.NewMockLimiter(gomock.NewController(t))
 		m.EXPECT().Allow().Times(1).Return(true)
 		m.EXPECT().Allow().Times(2).Return(false)
-		lim := internal.NewFallbackLimiter(m)
+		lim := NewFallbackLimiter(m)
 
 		assert.True(t, lim.Allow(), "should return fallback's first response")
 		assert.False(t, lim.Allow(), "should return fallback's second response")
 		assert.False(t, lim.Allow(), "should return fallback's third response")
 
 		usage, starting, failing := lim.Collect()
-		assert.Equal(t, internal.UsageMetrics{1, 2, 0}, usage, "usage metrics should match returned values")
+		assert.Equal(t, UsageMetrics{1, 2, 0}, usage, "usage metrics should match returned values")
 		assert.True(t, starting, "should still be starting up")
 		assert.False(t, failing, "should not be failing, still starting up")
 	})
 	t.Run("uses primary after update", func(t *testing.T) {
-		lim := internal.NewFallbackLimiter(allowlimiter{})
+		lim := NewFallbackLimiter(allowlimiter{})
 		lim.Update(1_000_000) // large enough to allow millisecond sleeps to refill
 
 		time.Sleep(time.Millisecond) // allow some tokens to fill
@@ -65,11 +64,11 @@ func TestLimiter(t *testing.T) {
 		usage, startup, failing := lim.Collect()
 		assert.False(t, failing, "should not use fallback limiter after update")
 		assert.False(t, startup, "should not be starting up, has had an update")
-		assert.Equal(t, internal.UsageMetrics{2, 0, 0}, usage, "usage should match behavior")
+		assert.Equal(t, UsageMetrics{2, 0, 0}, usage, "usage should match behavior")
 	})
 
 	t.Run("collecting usage data resets counts", func(t *testing.T) {
-		lim := internal.NewFallbackLimiter(allowlimiter{})
+		lim := NewFallbackLimiter(allowlimiter{})
 		lim.Update(1)
 		lim.Allow()
 		limit, _, _ := lim.Collect()
@@ -88,7 +87,7 @@ func TestLimiter(t *testing.T) {
 		})
 
 		t.Run("falls back after too many failures", func(t *testing.T) {
-			lim := internal.NewFallbackLimiter(allowlimiter{}) // fallback behavior is ignored
+			lim := NewFallbackLimiter(allowlimiter{}) // fallback behavior is ignored
 			lim.Update(1)
 			_, startup, failing := lim.Collect()
 			require.False(t, failing, "should not be using fallback")
@@ -112,7 +111,7 @@ func TestLimiter(t *testing.T) {
 			assert.True(t, lim.Allow(), "should return fallback's allowed request")
 		})
 		t.Run("failing many times does not accidentally switch away from startup mode", func(t *testing.T) {
-			lim := internal.NewFallbackLimiter(nil)
+			lim := NewFallbackLimiter(nil)
 			for i := 0; i < maxFailedUpdates*10; i++ {
 				lim.FailedUpdate()
 				_, startup, failing := lim.Collect()
@@ -124,14 +123,14 @@ func TestLimiter(t *testing.T) {
 
 	t.Run("coverage", func(t *testing.T) {
 		// easy line to cover to bring to 100%
-		lim := internal.NewFallbackLimiter(nil)
+		lim := NewFallbackLimiter(nil)
 		lim.Update(1)
 		lim.Update(1) // should go down "no changes needed, return early" path
 	})
 }
 
 func TestLimiterNotRacy(t *testing.T) {
-	lim := internal.NewFallbackLimiter(allowlimiter{})
+	lim := NewFallbackLimiter(allowlimiter{})
 	var g errgroup.Group
 	const loops = 1000
 	for i := 0; i < loops; i++ {

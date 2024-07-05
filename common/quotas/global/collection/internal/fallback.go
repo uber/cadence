@@ -203,9 +203,8 @@ func (b *FallbackLimiter) Wait(ctx context.Context) error {
 }
 
 func (b *FallbackLimiter) Reserve() clock.Reservation {
-	res := b.both().Reserve()
 	return countedReservation{
-		wrapped: res,
+		wrapped: b.both().Reserve(),
 		usage:   &b.usage,
 	}
 }

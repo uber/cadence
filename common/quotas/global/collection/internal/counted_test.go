@@ -24,6 +24,7 @@ package internal
 
 import (
 	"context"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -31,6 +32,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/quotas"
 )
 
 func TestUsage(t *testing.T) {
@@ -90,10 +92,87 @@ func TestUsage(t *testing.T) {
 
 		r = lim.Reserve()
 		assert.False(t, r.Allow(), "should not have a token available")
-		assert.Equal(t, UsageMetrics{0, 1, 0}, lim.Collect(), "not-allowed reservations immediately count rejection")
 		r.Used(false)
+		assert.Equal(t, UsageMetrics{0, 1, 0}, lim.Collect(), "not-allowed reservations count as rejection")
 	})
+}
 
+func TestRegression_ReserveCountsCorrectly(t *testing.T) {
+	run := func(t *testing.T, lim quotas.Limiter, advance func(time.Duration), collect func() UsageMetrics) {
+		allowed, returned, rejected := 0, 0, 0
+		for i := 0; ; i++ {
+			if rejected > 3 {
+				// normal exit: some rejects occurred.
+				break // just to get more than 1 to be more interesting
+			}
+			if i > 1_000 {
+				// infinite loop guard because it's a real mess to debug
+				t.Error("too many attempts, test is not sane. allowed:", allowed, "rejected:", rejected, "returned:", returned)
+				break
+			}
+
+			r := lim.Reserve()
+
+			if rand.Intn(2) == 0 {
+				// time advancing before canceling should not affect this test because it is not concurrent,
+				// so only do it sometimes to make sure that's true
+				advance(time.Millisecond)
+			}
+
+			if r.Allow() {
+				if i%2 == 0 {
+					allowed++
+					r.Used(true)
+				} else {
+					returned++
+					r.Used(false)
+				}
+			} else {
+				rejected++
+				// try with both true and false.
+				// expected use is to call with false on all rejects, but it should not be required
+				r.Used(i%2 == 0)
+			}
+		}
+		usage := collect()
+		t.Logf("usage: %#v", usage)
+		assert.NotZero(t, allowed, "should have allowed some requests")
+		assert.Equal(t, allowed, usage.Allowed, "wrong num of requests allowed")
+		assert.Equal(t, rejected, usage.Rejected, "wrong num of requests rejected")
+		assert.Equal(t, 0, usage.Idle, "limiter should never be idle in this test")
+	}
+
+	t.Run("counted", func(t *testing.T) {
+		// "base" counting-limiter should count correctly
+		ts := clock.NewMockedTimeSource()
+		wrapped := clock.NewMockRatelimiter(ts, 1, 100)
+		lim := NewCountedLimiter(wrapped)
+
+		run(t, lim, ts.Advance, lim.Collect)
+	})
+	t.Run("shadowed", func(t *testing.T) {
+		// "shadowed" should call the primary correctly at the very least
+		ts := clock.NewMockedTimeSource()
+		wrapped := clock.NewMockRatelimiter(ts, 1, 100)
+		counted := NewCountedLimiter(wrapped)
+		lim := NewShadowedLimiter(counted, allowlimiter{})
+
+		run(t, lim, ts.Advance, counted.Collect)
+	})
+	t.Run("fallback", func(t *testing.T) {
+		// "fallback" uses a different implementation, but it should count exactly the same.
+		// TODO: ideally it would actually be the same code, but that's a bit awkward due to needing different interfaces.
+		ts := clock.NewMockedTimeSource()
+		wrapped := clock.NewMockRatelimiter(ts, 1, 100)
+		l := NewFallbackLimiter(allowlimiter{})
+		l.Update(1)         // allows using primary, else it calls the fallback
+		l.primary = wrapped // cheat, just swap it out
+
+		run(t, l, ts.Advance, func() UsageMetrics {
+			u, _, _ := l.Collect()
+			return u
+		})
+	})
 }
 
 // Wait-based tests can block forever if there's an issue, better to fail fast.
