@@ -67,6 +67,28 @@ type (
 	}
 )
 
+func newAttrValidator(
+	domainCache cache.DomainCache,
+	metricsClient metrics.Client,
+	config *config.Config,
+	logger log.Logger,
+) *attrValidator {
+	return &attrValidator{
+		config:        config,
+		domainCache:   domainCache,
+		metricsClient: metricsClient,
+		logger:        logger,
+		searchAttributesValidator: validator.NewSearchAttributesValidator(
+			logger,
+			config.EnableQueryAttributeValidation,
+			config.ValidSearchAttributes,
+			config.SearchAttributesNumberOfKeysLimit,
+			config.SearchAttributesSizeOfValueLimit,
+			config.SearchAttributesTotalSizeLimit,
+		),
+	}
+}
+
 func newWorkflowSizeChecker(
 	blobSizeLimitWarn int,
 	blobSizeLimitError int,
@@ -92,28 +114,6 @@ func newWorkflowSizeChecker(
 		executionStats:         executionStats,
 		metricsScope:           metricsScope,
 		logger:                 logger,
-	}
-}
-
-func newAttrValidator(
-	domainCache cache.DomainCache,
-	metricsClient metrics.Client,
-	config *config.Config,
-	logger log.Logger,
-) *attrValidator {
-	return &attrValidator{
-		config:        config,
-		domainCache:   domainCache,
-		metricsClient: metricsClient,
-		logger:        logger,
-		searchAttributesValidator: validator.NewSearchAttributesValidator(
-			logger,
-			config.EnableQueryAttributeValidation,
-			config.ValidSearchAttributes,
-			config.SearchAttributesNumberOfKeysLimit,
-			config.SearchAttributesSizeOfValueLimit,
-			config.SearchAttributesTotalSizeLimit,
-		),
 	}
 }
 
