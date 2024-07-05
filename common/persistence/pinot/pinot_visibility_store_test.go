@@ -1776,12 +1776,12 @@ FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND IsDeleted = false
 AND StartTime BETWEEN 1547596871371 AND 2547596873371
-AND ( CloseStatus = 'COMPLETED'
-OR CloseStatus = 'TIMED_OUT'
+AND ( CloseStatus = 0
+OR CloseStatus = 5
  )
-AND ( WorkflowID = '123'
-OR WorkflowType = '123'
-OR RunID = '123'
+AND ( WorkflowIDTextSearch = '123'
+OR WorkflowTypeTextSearch = '123'
+OR RunIDTextSearch = '123'
  )
 Order BY StartTime DESC
 LIMIT 0, 10
@@ -1809,11 +1809,11 @@ FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND IsDeleted = false
 AND StartTime BETWEEN 1547596871371 AND 2547596873371
-AND ( CloseStatus = 'TERMINATED'
+AND ( CloseStatus = 3
  )
-AND ( WorkflowID = '123'
-OR WorkflowType = '123'
-OR RunID = '123'
+AND ( WorkflowIDTextSearch = '123'
+OR WorkflowTypeTextSearch = '123'
+OR RunIDTextSearch = '123'
  )
 Order BY CloseTime ASC
 LIMIT 0, 10
@@ -1840,9 +1840,9 @@ FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND IsDeleted = false
 AND StartTime BETWEEN 1547596871371 AND 2547596873371
-AND ( WorkflowID = '123'
-OR WorkflowType = '123'
-OR RunID = '123'
+AND ( WorkflowIDTextSearch = '123'
+OR WorkflowTypeTextSearch = '123'
+OR RunIDTextSearch = '123'
  )
 Order BY StartTime DESC
 LIMIT 0, 10
@@ -1867,9 +1867,9 @@ FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND IsDeleted = false
 AND StartTime BETWEEN 1547596871371 AND 2547596873371
-AND ( text_match(WorkflowID, '"123"')
-OR text_match(WorkflowType, '"123"')
-OR text_match(RunID, '"123"')
+AND ( REGEXP_LIKE(WorkflowIDTextSearch, '^.*123.*$')
+OR REGEXP_LIKE(WorkflowTypeTextSearch, '^.*123.*$')
+OR REGEXP_LIKE(RunIDTextSearch, '^.*123.*$')
  )
 Order BY StartTime DESC
 LIMIT 0, 10

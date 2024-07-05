@@ -721,19 +721,17 @@ func (s *PinotQuerySearchField) resetSearchField() {
 func (s *PinotQuerySearchField) addEqual(obj string, val interface{}) {
 	s.checkFirstSearchField()
 	if _, ok := val.(string); ok {
-		val = fmt.Sprintf("'%s'", val)
+		s.string += fmt.Sprintf("%s = '%s'\n", obj, val)
+	} else if _, ok = val.(int32); ok {
+		s.string += fmt.Sprintf("%s = %d\n", obj, val)
 	} else {
-		val = fmt.Sprintf("%v", val)
+		s.string += fmt.Sprintf("%s = %v\n", obj, val)
 	}
-
-	quotedVal := fmt.Sprintf("%s", val)
-	s.string += fmt.Sprintf("%s = %s\n", obj, quotedVal)
 }
 
 func (s *PinotQuerySearchField) addMatch(obj string, val interface{}) {
 	s.checkFirstSearchField()
-
-	s.string += fmt.Sprintf("text_match(%s, '\"%s\"')\n", obj, val)
+	s.string += fmt.Sprintf("REGEXP_LIKE(%s, '^.*%s.*$')\n", obj, val)
 }
 
 func NewPinotQuery(tableName string) PinotQuery {
@@ -778,7 +776,7 @@ func (q *PinotQuery) addOffsetAndLimits(offset int, limit int) {
 
 func (q *PinotQuery) addStatusFilters(status []types.WorkflowExecutionCloseStatus) {
 	for _, s := range status {
-		q.search.addEqual(CloseStatus, s.String())
+		q.search.addEqual(CloseStatus, int32(s))
 	}
 
 	q.search.lastSearchField()
@@ -1094,13 +1092,13 @@ func (v *pinotVisibilityStore) getListAllWorkflowExecutionsQuery(tableName strin
 
 	if request.WorkflowSearchValue != "" {
 		if request.PartialMatch {
-			query.search.addMatch(WorkflowID, request.WorkflowSearchValue)
-			query.search.addMatch(WorkflowType, request.WorkflowSearchValue)
-			query.search.addMatch(RunID, request.WorkflowSearchValue)
+			query.search.addMatch(WfIDTextSearch, request.WorkflowSearchValue)
+			query.search.addMatch(WfTypeTextSearch, request.WorkflowSearchValue)
+			query.search.addMatch(RunIDTextSearch, request.WorkflowSearchValue)
 		} else {
-			query.search.addEqual(WorkflowID, request.WorkflowSearchValue)
-			query.search.addEqual(WorkflowType, request.WorkflowSearchValue)
-			query.search.addEqual(RunID, request.WorkflowSearchValue)
+			query.search.addEqual(WfIDTextSearch, request.WorkflowSearchValue)
+			query.search.addEqual(WfTypeTextSearch, request.WorkflowSearchValue)
+			query.search.addEqual(RunIDTextSearch, request.WorkflowSearchValue)
 		}
 
 		query.search.lastSearchField()
