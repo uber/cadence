@@ -62,9 +62,6 @@ const (
 	IsDeleted            = "IsDeleted"   // used for Pinot deletion/rolling upsert only, not visible to user
 	EventTimeMs          = "EventTimeMs" // used for Pinot deletion/rolling upsert only, not visible to user
 	Memo                 = "Memo"
-	WfIDTextSearch       = "WorkflowIDTextSearch"   // used for text search which can improve the partial match performance on WorkflowID/RunID/WorkflowType text search columns
-	WfTypeTextSearch     = "WorkflowTypeTextSearch" // used for text search which can improve the partial match performance on WorkflowID/RunID/WorkflowType text search columns
-	RunIDTextSearch      = "RunIDTextSearch"        // used for text search which can improve the partial match performance on WorkflowID/RunID/WorkflowType text search columns
 
 	// used to be micro second
 	oneMicroSecondInNano = int64(time.Microsecond / time.Nanosecond)
@@ -618,10 +615,7 @@ func createVisibilityMessage(
 	m[UpdateTime] = updateTimeUnixMilli
 	m[ShardID] = shardID
 	m[IsDeleted] = isDeleted
-	m[EventTimeMs] = updateTimeUnixMilli   // same as update time when record is upserted, could not use updateTime directly since this will be modified by Pinot
-	m[WfIDTextSearch] = wid                // used for text search which can improve the partial match performance
-	m[RunIDTextSearch] = rid               // used for text search which can improve the partial match performance
-	m[WfTypeTextSearch] = workflowTypeName // used for text search which can improve the partial match performance
+	m[EventTimeMs] = updateTimeUnixMilli // same as update time when record is upserted, could not use updateTime directly since this will be modified by Pinot
 
 	SearchAttributes := make(map[string]interface{})
 	var err error
@@ -1093,13 +1087,13 @@ func (v *pinotVisibilityStore) getListAllWorkflowExecutionsQuery(tableName strin
 
 	if request.WorkflowSearchValue != "" {
 		if request.PartialMatch {
-			query.search.addMatch(WfIDTextSearch, request.WorkflowSearchValue)
-			query.search.addMatch(WfTypeTextSearch, request.WorkflowSearchValue)
-			query.search.addMatch(RunIDTextSearch, request.WorkflowSearchValue)
+			query.search.addMatch(WorkflowID, request.WorkflowSearchValue)
+			query.search.addMatch(WorkflowType, request.WorkflowSearchValue)
+			query.search.addMatch(RunID, request.WorkflowSearchValue)
 		} else {
-			query.search.addEqual(WfIDTextSearch, request.WorkflowSearchValue)
-			query.search.addEqual(WfTypeTextSearch, request.WorkflowSearchValue)
-			query.search.addEqual(RunIDTextSearch, request.WorkflowSearchValue)
+			query.search.addEqual(WorkflowID, request.WorkflowSearchValue)
+			query.search.addEqual(WorkflowType, request.WorkflowSearchValue)
+			query.search.addEqual(RunID, request.WorkflowSearchValue)
 		}
 
 		query.search.lastSearchField()
