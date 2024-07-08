@@ -23,6 +23,7 @@ package decision
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/pborman/uuid"
 
@@ -153,6 +154,10 @@ func (c *workflowSizeChecker) failWorkflowIfBlobSizeExceedsLimit(
 func (c *workflowSizeChecker) failWorkflowSizeExceedsLimit() (bool, error) {
 	historyCount := int(c.mutableState.GetNextEventID()) - 1
 	historySize := int(c.executionStats.HistorySize)
+
+	// metricsScope already has domainName and operation: "RespondDecisionTaskCompleted"
+	c.metricsScope.RecordTimer(metrics.HistorySize, time.Duration(historySize))
+	c.metricsScope.RecordTimer(metrics.HistoryCount, time.Duration(historyCount))
 
 	if historySize > c.historySizeLimitError || historyCount > c.historyCountLimitError {
 		executionInfo := c.mutableState.GetExecutionInfo()
