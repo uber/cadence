@@ -720,11 +720,12 @@ func (s *PinotQuerySearchField) resetSearchField() {
 
 func (s *PinotQuerySearchField) addEqual(obj string, val interface{}) {
 	s.checkFirstSearchField()
-	if _, ok := val.(string); ok {
+	switch val.(type) {
+	case string:
 		s.string += fmt.Sprintf("%s = '%s'\n", obj, val)
-	} else if _, ok = val.(int32); ok {
+	case int32:
 		s.string += fmt.Sprintf("%s = %d\n", obj, val)
-	} else {
+	default:
 		s.string += fmt.Sprintf("%s = %v\n", obj, val)
 	}
 }
