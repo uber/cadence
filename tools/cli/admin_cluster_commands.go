@@ -29,8 +29,8 @@ import (
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/elasticsearch/validator"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/visibility"
 	"github.com/uber/cadence/service/worker/failovermanager"
 )
 
@@ -40,7 +40,7 @@ var promptFn = prompt
 // AdminAddSearchAttribute to whitelist search attribute
 func AdminAddSearchAttribute(c *cli.Context) {
 	key := getRequiredOption(c, FlagSearchAttributesKey)
-	if err := validator.ValidateSearchAttributeKey(key); err != nil {
+	if err := visibility.ValidateSearchAttributeKey(key); err != nil {
 		ErrorAndExit("Invalid search-attribute key.", err)
 	}
 

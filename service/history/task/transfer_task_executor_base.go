@@ -30,13 +30,13 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/definition"
-	"github.com/uber/cadence/common/elasticsearch/validator"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/visibility"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
@@ -404,7 +404,7 @@ func getWorkflowMemo(
 func appendContextHeaderToSearchAttributes(attr, context map[string][]byte, allowedKeys map[string]interface{}) (map[string][]byte, error) {
 	for k, v := range context {
 		unsanitizedKey := fmt.Sprintf(definition.HeaderFormat, k)
-		key, err := validator.SanitizeSearchAttributeKey(unsanitizedKey)
+		key, err := visibility.SanitizeSearchAttributeKey(unsanitizedKey)
 		if err != nil {
 			return nil, fmt.Errorf("fail to sanitize context key %s: %w", key, err)
 		}
