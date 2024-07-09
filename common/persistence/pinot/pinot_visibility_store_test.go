@@ -1779,9 +1779,9 @@ AND StartTime BETWEEN 1547596871371 AND 2547596873371
 AND ( CloseStatus = 0
 OR CloseStatus = 5
  )
-AND ( WorkflowIDTextSearch = '123'
-OR WorkflowTypeTextSearch = '123'
-OR RunIDTextSearch = '123'
+AND ( WorkflowID = '123'
+OR WorkflowType = '123'
+OR RunID = '123'
  )
 Order BY StartTime DESC
 LIMIT 0, 10
@@ -1811,9 +1811,9 @@ AND IsDeleted = false
 AND StartTime BETWEEN 1547596871371 AND 2547596873371
 AND ( CloseStatus = 3
  )
-AND ( WorkflowIDTextSearch = '123'
-OR WorkflowTypeTextSearch = '123'
-OR RunIDTextSearch = '123'
+AND ( WorkflowID = '123'
+OR WorkflowType = '123'
+OR RunID = '123'
  )
 Order BY CloseTime ASC
 LIMIT 0, 10
@@ -1840,9 +1840,9 @@ FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND IsDeleted = false
 AND StartTime BETWEEN 1547596871371 AND 2547596873371
-AND ( WorkflowIDTextSearch = '123'
-OR WorkflowTypeTextSearch = '123'
-OR RunIDTextSearch = '123'
+AND ( WorkflowID = '123'
+OR WorkflowType = '123'
+OR RunID = '123'
  )
 Order BY StartTime DESC
 LIMIT 0, 10
@@ -1867,9 +1867,9 @@ FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND IsDeleted = false
 AND StartTime BETWEEN 1547596871371 AND 2547596873371
-AND ( REGEXP_LIKE(WorkflowIDTextSearch, '^.*123.*$')
-OR REGEXP_LIKE(WorkflowTypeTextSearch, '^.*123.*$')
-OR REGEXP_LIKE(RunIDTextSearch, '^.*123.*$')
+AND ( REGEXP_LIKE(WorkflowID, '^.*123.*$')
+OR REGEXP_LIKE(WorkflowType, '^.*123.*$')
+OR REGEXP_LIKE(RunID, '^.*123.*$')
  )
 Order BY StartTime DESC
 LIMIT 0, 10
