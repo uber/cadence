@@ -24,13 +24,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"time"
 
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/definition"
+	"github.com/uber/cadence/common/elasticsearch/validator"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -50,8 +50,6 @@ const (
 	secondsInDay                   = int32(24 * time.Hour / time.Second)
 	defaultDomainName              = "defaultDomainName"
 )
-
-var nonAlphanumericRegex = regexp.MustCompile(`[^a-zA-Z0-9]+`)
 
 type (
 	transferTaskExecutorBase struct {
@@ -405,7 +403,12 @@ func getWorkflowMemo(
 
 func appendContextHeaderToSearchAttributes(attr, context map[string][]byte, allowedKeys map[string]interface{}) (map[string][]byte, error) {
 	for k, v := range context {
-		key := sanitizedHeaderKey(k)
+		unsanitizedKey := fmt.Sprintf(definition.HeaderFormat, k)
+		key, err := validator.SanitizeSearchAttributeKey(unsanitizedKey)
+		if err != nil {
+			return nil, fmt.Errorf("fail to sanitize context key %s: %w", key, err)
+		}
+
 		if _, ok := attr[key]; ok { // skip if key already exists
 			continue
 		}
@@ -445,9 +448,4 @@ func copySearchAttributes(
 func isWorkflowNotExistError(err error) bool {
 	_, ok := err.(*types.EntityNotExistsError)
 	return ok
-}
-
-func sanitizedHeaderKey(key string) string {
-	sanitizedKey := nonAlphanumericRegex.ReplaceAllString(key, "_")
-	return fmt.Sprintf(definition.HeaderFormat, sanitizedKey)
 }
