@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/uber/cadence/client/matching"
@@ -49,6 +50,8 @@ const (
 	secondsInDay                   = int32(24 * time.Hour / time.Second)
 	defaultDomainName              = "defaultDomainName"
 )
+
+var nonAlphanumericRegex = regexp.MustCompile(`[^a-zA-Z0-9]+`)
 
 type (
 	transferTaskExecutorBase struct {
@@ -402,7 +405,7 @@ func getWorkflowMemo(
 
 func appendContextHeaderToSearchAttributes(attr, context map[string][]byte, allowedKeys map[string]interface{}) (map[string][]byte, error) {
 	for k, v := range context {
-		key := fmt.Sprintf(definition.HeaderFormat, k)
+		key := sanitizedHeaderKey(k)
 		if _, ok := attr[key]; ok { // skip if key already exists
 			continue
 		}
@@ -442,4 +445,9 @@ func copySearchAttributes(
 func isWorkflowNotExistError(err error) bool {
 	_, ok := err.(*types.EntityNotExistsError)
 	return ok
+}
+
+func sanitizedHeaderKey(key string) string {
+	sanitizedKey := nonAlphanumericRegex.ReplaceAllString(key, "_")
+	return fmt.Sprintf(definition.HeaderFormat, sanitizedKey)
 }
