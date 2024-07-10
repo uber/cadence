@@ -815,7 +815,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessRecordWorkflowStartedTaskW
 	}
 	s.mockShard.GetConfig().ValidSearchAttributes = func(opts ...dc.FilterOption) map[string]interface{} {
 		return map[string]interface{}{
-			"Header.contextKey": struct{}{},
+			"Header_context_key": struct{}{},
 		}
 	}
 
@@ -906,7 +906,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttrib
 	}
 	s.mockShard.GetConfig().ValidSearchAttributes = func(opts ...dc.FilterOption) map[string]interface{} {
 		return map[string]interface{}{
-			"Header.contextKey": struct{}{},
+			"Header_context_key": struct{}{},
 		}
 	}
 

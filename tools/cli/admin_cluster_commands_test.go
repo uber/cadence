@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/visibility"
 )
 
 func TestAdminAddSearchAttribute_isValueTypeValid(t *testing.T) {
@@ -122,12 +123,12 @@ func TestAdminFailover(t *testing.T) {
 }
 
 func TestValidSearchAttributeKey(t *testing.T) {
-	assert.NoError(t, validateSearchAttributeKey("city"))
-	assert.NoError(t, validateSearchAttributeKey("cityId"))
-	assert.NoError(t, validateSearchAttributeKey("paymentProfileUUID"))
-	assert.NoError(t, validateSearchAttributeKey("job_type"))
-	assert.NoError(t, validateSearchAttributeKey("Header.ctx-tenancy"))
+	assert.NoError(t, visibility.ValidateSearchAttributeKey("city"))
+	assert.NoError(t, visibility.ValidateSearchAttributeKey("cityId"))
+	assert.NoError(t, visibility.ValidateSearchAttributeKey("paymentProfileUUID"))
+	assert.NoError(t, visibility.ValidateSearchAttributeKey("job_type"))
 
-	assert.Error(t, validateSearchAttributeKey("9lives"))
-	assert.Error(t, validateSearchAttributeKey("tax%"))
+	assert.Error(t, visibility.ValidateSearchAttributeKey("payments-biling-invoices-TransactionUUID"))
+	assert.Error(t, visibility.ValidateSearchAttributeKey("9lives"))
+	assert.Error(t, visibility.ValidateSearchAttributeKey("tax%"))
 }

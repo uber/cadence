@@ -58,7 +58,7 @@ const (
 	// Attr is prefix of custom search attributes
 	Attr = "Attr"
 	// HeaderFormat is the format of context headers in search attributes
-	HeaderFormat = "Header.%s"
+	HeaderFormat = "Header_%s"
 )
 
 // defaultIndexedKeys defines all searchable keys

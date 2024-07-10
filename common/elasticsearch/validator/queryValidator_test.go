@@ -27,6 +27,7 @@ import (
 
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 )
 
 func TestValidateQuery(t *testing.T) {
@@ -35,6 +36,7 @@ func TestValidateQuery(t *testing.T) {
 		query     string
 		validated string
 		err       string
+		dcValid   map[string]interface{}
 	}{
 		{
 			msg:       "empty query",
@@ -126,11 +128,54 @@ func TestValidateQuery(t *testing.T) {
 			query: "WorkflowID = 'wid' union select * from dummy",
 			err:   "Invalid select query.",
 		},
+		{
+			msg:       "valid custom search attribute",
+			query:     "CustomStringField = 'value'",
+			validated: "`Attr.CustomStringField` = 'value'",
+		},
+		{
+			msg:       "custom search attribute can contain underscore",
+			query:     "Custom_Field = 'value'",
+			validated: "`Attr.Custom_Field` = 'value'",
+			dcValid: map[string]interface{}{
+				"Custom_Field": types.IndexedValueTypeString,
+			},
+		},
+		{
+			msg:       "custom search attribute can contain number",
+			query:     "Custom_0 = 'value'",
+			validated: "`Attr.Custom_0` = 'value'",
+			dcValid: map[string]interface{}{
+				"Custom_0": types.IndexedValueTypeString,
+			},
+		},
+		{
+			msg:   "customg search attribute cannot contain dot",
+			query: "Custom.Field = 'value'",
+			err:   "invalid search attribute \"Field\"",
+			dcValid: map[string]interface{}{
+				"Custom.Field": types.IndexedValueTypeString,
+			},
+		},
+		{
+			msg:   "custom search attribute cannot contain dash",
+			query: "Custom-Field = 'value'",
+			err:   "invalid comparison expression",
+			dcValid: map[string]interface{}{
+				"Custom-Field": types.IndexedValueTypeString,
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			validSearchAttr := dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys())
+			validSearchAttr := func(opts ...dynamicconfig.FilterOption) map[string]interface{} {
+				valid := definition.GetDefaultIndexedKeys()
+				for k, v := range tt.dcValid {
+					valid[k] = v
+				}
+				return valid
+			}
 			validateSearchAttr := dynamicconfig.GetBoolPropertyFn(true)
 			qv := NewQueryValidator(validSearchAttr, validateSearchAttr)
 			validated, err := qv.ValidateQuery(tt.query)

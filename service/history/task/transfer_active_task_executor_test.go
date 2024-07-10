@@ -1543,7 +1543,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessRecordWorkflowStartedTaskWi
 	s.mockShard.GetConfig().EnableContextHeaderInVisibility = func(domain string) bool { return true }
 	s.mockShard.GetConfig().ValidSearchAttributes = func(opts ...dc.FilterOption) map[string]interface{} {
 		return map[string]interface{}{
-			"Header.contextKey": struct{}{},
+			"Header_context_key": struct{}{},
 		}
 	}
 
@@ -1626,7 +1626,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttribu
 	s.mockShard.GetConfig().EnableContextHeaderInVisibility = func(domain string) bool { return true }
 	s.mockShard.GetConfig().ValidSearchAttributes = func(opts ...dc.FilterOption) map[string]interface{} {
 		return map[string]interface{}{
-			"Header.contextKey": struct{}{},
+			"Header_context_key": struct{}{},
 		}
 	}
 
@@ -1782,7 +1782,7 @@ func createRecordWorkflowExecutionStartedRequest(
 			t.Fatal(err)
 		}
 		searchAttributes = map[string][]byte{
-			"Header.contextKey": contextValueJSONString,
+			"Header_context_key": contextValueJSONString,
 		}
 	}
 	return &persistence.RecordWorkflowExecutionStartedRequest{
@@ -1937,7 +1937,7 @@ func createUpsertWorkflowSearchAttributesRequest(
 			t.Fatal(err)
 		}
 		searchAttributes = map[string][]byte{
-			"Header.contextKey": contextValueJSONString,
+			"Header_context_key": contextValueJSONString,
 		}
 	}
 
