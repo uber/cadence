@@ -22,6 +22,7 @@ package metrics
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 )
 
@@ -66,6 +67,10 @@ const (
 
 	allValue     = "all"
 	unknownValue = "_unknown_"
+)
+
+var (
+	safeAlphaNumericStringRE = regexp.MustCompile(`[^a-zA-Z0-9]`)
 )
 
 // Tag is an interface to define metrics tags
@@ -265,6 +270,7 @@ func GlobalRatelimiterCollectionName(value string) Tag {
 
 // WorkflowTerminationReasonTag reports the reason for workflow termination
 func WorkflowTerminationReasonTag(value string) Tag {
+	value = safeAlphaNumericStringRE.ReplaceAllString(value, "_")
 	return simpleMetric{key: workflowTerminationReason, value: value}
 }
 

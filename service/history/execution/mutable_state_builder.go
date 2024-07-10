@@ -25,7 +25,6 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
-	"regexp"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -1192,9 +1191,6 @@ func (e *mutableStateBuilder) AddWorkflowExecutionTerminatedEvent(
 		tag.WorkflowRunID(e.GetExecutionInfo().RunID),
 		tag.WorkflowTerminationReason(reason),
 	)
-
-	re := regexp.MustCompile(`[^a-zA-Z0-9]`)
-	reason = re.ReplaceAllString(reason, "_")
 
 	scopeWithDomainTag := e.metricsClient.Scope(metrics.HistoryTerminateWorkflowExecutionScope).
 		Tagged(metrics.DomainTag(domainName)).
