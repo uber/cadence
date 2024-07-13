@@ -95,8 +95,8 @@ func (lb *defaultLoadBalancer) PickWritePartition(
 	if nRead := lb.nReadPartitions(domainName, taskList.GetName(), taskListType); nPartitions > nRead {
 		nPartitions = nRead
 	}
-	return lb.pickPartition(taskList, forwardedFrom, nPartitions)
-
+	partition := lb.pickPartition(taskList, forwardedFrom, nPartitions)
+	return partition
 }
 
 func (lb *defaultLoadBalancer) PickReadPartition(
@@ -129,14 +129,27 @@ func (lb *defaultLoadBalancer) pickPartition(
 		return taskList.GetName()
 	}
 
-	if nPartitions <= 0 {
-		return taskList.GetName()
-	}
-
-	p := rand.Intn(nPartitions)
+	p := generateRandomPartitionID(nPartitions)
 	if p == 0 {
 		return taskList.GetName()
 	}
 
 	return fmt.Sprintf("%v%v/%v", common.ReservedTaskListPrefix, taskList.GetName(), p)
+}
+
+// generates a number within the range of partitions for partitions > 1, but excluding
+// the root partition. Given n=5 partitions, valid values are 1-4 with 0 reserved for the root partition
+//
+// edge-cases:
+// nPartitions == 0 is actually not a valid number of partitions so just return root (0)
+// nPartitions == 1 similarly is not a really sane partition count, so just return root (0)
+func generateRandomPartitionID(nPartitions int) int {
+	if nPartitions <= 0 {
+		return 0
+	}
+	if nPartitions == 1 {
+		return 0
+	}
+	p := rand.Intn(nPartitions - 1)
+	return p + 1
 }

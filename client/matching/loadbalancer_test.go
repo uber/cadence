@@ -224,6 +224,18 @@ func Test_defaultLoadBalancer_pickPartition(t *testing.T) {
 			},
 			want: common.ReservedTaskListPrefix + "taskList3",
 		},
+		// This behaviour will be preserved, but this is being removed as an expected value
+		// for the partitioning. The function to generate a partition count *should never
+		// send traffic to the root partition directly* so therefore this is an invalid value.
+		// All traffic should be directed to root partitions and then only if there's a problem
+		// finding an immediate match, to therefore forward to the root partition.
+		//
+		// The reason for this is that it adds needless complexity to the partitioned tasklists -
+		// it's hard to follow what's going on when 1/n of traffic is being forwarded directly and the
+		// rest is being forwarded, so spotting misconfigurations due to overpartitioning is harder
+		// and it introduces additional load on the root partition which risks being a heavy contention
+		// point if the number of partitions is too great for the number of pollers (a very
+		// frequent problem with zonal isolation).
 		{
 			name:   "Test: nPartitions <= 0",
 			fields: fields{},
@@ -248,6 +260,51 @@ func Test_defaultLoadBalancer_pickPartition(t *testing.T) {
 			}
 			got := lb.pickPartition(tt.args.taskList, tt.args.forwardedFrom, tt.args.nPartitions)
 			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestGeneratingAPartitionCount(t *testing.T) {
+
+	tests := map[string]struct {
+		numberOfPartitions       int
+		expectedResultLowerBound int
+		expectedResultUpperBound int
+	}{
+		"valid partition count = 5, expected values are between 1 to 4": {
+			numberOfPartitions:       5,
+			expectedResultLowerBound: 1,
+			expectedResultUpperBound: 4,
+		},
+		"min sane partition count = 2 expected values are between 1 to 2": {
+			numberOfPartitions:       2,
+			expectedResultLowerBound: 1,
+			expectedResultUpperBound: 2,
+		},
+		"weird, probably a mistake, partition count 1, just ensure that everything is sent to root": {
+			numberOfPartitions:       1,
+			expectedResultLowerBound: 0,
+			expectedResultUpperBound: 1,
+		},
+		"weird, probably a mistake, partition count 0, just ensure that everything is sent to root": {
+			numberOfPartitions:       0,
+			expectedResultLowerBound: 0,
+			expectedResultUpperBound: 0,
+		},
+		"invalid partition count, just ensure that everything is sent to root": {
+			numberOfPartitions:       -1,
+			expectedResultLowerBound: 0,
+			expectedResultUpperBound: 0,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			for i := 0; i < 100; i++ {
+				p := generateRandomPartitionID(td.numberOfPartitions)
+				assert.LessOrEqual(t, p, td.expectedResultUpperBound)
+				assert.GreaterOrEqual(t, p, td.expectedResultLowerBound)
+			}
 		})
 	}
 }
