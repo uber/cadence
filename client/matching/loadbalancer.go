@@ -95,8 +95,7 @@ func (lb *defaultLoadBalancer) PickWritePartition(
 	if nRead := lb.nReadPartitions(domainName, taskList.GetName(), taskListType); nPartitions > nRead {
 		nPartitions = nRead
 	}
-	partition := lb.pickPartition(taskList, forwardedFrom, nPartitions)
-	return partition
+	return lb.pickPartition(taskList, forwardedFrom, nPartitions)
 }
 
 func (lb *defaultLoadBalancer) PickReadPartition(
