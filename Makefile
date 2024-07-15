@@ -516,7 +516,7 @@ release: ## Re-generate generated code and run tests
 	$(MAKE) --no-print-directory go-generate
 	$(MAKE) --no-print-directory test
 
-build: ## Build all packages and all tests (ensures everything compiles)
+build: ## `go build` all packages and tests (a quick compile check only, skips all other steps)
 	$Q echo 'Building all packages and submodules...'
 	$Q go build ./...
 	$Q cd common/archiver/gcloud; go build ./...
