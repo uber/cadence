@@ -335,6 +335,16 @@ func TestListWorkflowExecutionsResponse(t *testing.T) {
 		assert.Equal(t, item, ToListWorkflowExecutionsResponse(FromListWorkflowExecutionsResponse(item)))
 	}
 }
+func TestListAllWorkflowExecutionsRequest(t *testing.T) {
+	for _, item := range []*types.ListAllWorkflowExecutionsRequest{nil, {}, &testdata.ListAllWorkflowExecutionsRequest} {
+		assert.Equal(t, item, ToListAllWorkflowExecutionsRequest(FromListAllWorkflowExecutionsRequest(item)))
+	}
+}
+func TestListAllWorkflowExecutionsResponse(t *testing.T) {
+	for _, item := range []*types.ListAllWorkflowExecutionsResponse{nil, {}, &testdata.ListAllWorkflowExecutionsResponse} {
+		assert.Equal(t, item, ToListAllWorkflowExecutionsResponse(FromListAllWorkflowExecutionsResponse(item)))
+	}
+}
 func TestMarkerRecordedEventAttributes(t *testing.T) {
 	for _, item := range []*types.MarkerRecordedEventAttributes{nil, {}, &testdata.MarkerRecordedEventAttributes} {
 		assert.Equal(t, item, ToMarkerRecordedEventAttributes(FromMarkerRecordedEventAttributes(item)))

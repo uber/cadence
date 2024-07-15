@@ -101,6 +101,20 @@ var (
 		Executions:    WorkflowExecutionInfoArray,
 		NextPageToken: NextPageToken,
 	}
+	ListAllWorkflowExecutionsRequest = types.ListAllWorkflowExecutionsRequest{
+		Domain:              DomainName,
+		MaximumPageSize:     PageSize,
+		NextPageToken:       NextPageToken,
+		StartTimeFilter:     &StartTimeFilter,
+		PartialMatch:        false,
+		StatusFilter:        []types.WorkflowExecutionCloseStatus{WorkflowExecutionCloseStatus},
+		WorkflowSearchValue: "test",
+		SortColumn:          WorkflowID,
+	}
+	ListAllWorkflowExecutionsResponse = types.ListAllWorkflowExecutionsResponse{
+		Executions:    WorkflowExecutionInfoArray,
+		NextPageToken: NextPageToken,
+	}
 	ListOpenWorkflowExecutionsRequest_ExecutionFilter = types.ListOpenWorkflowExecutionsRequest{
 		Domain:          DomainName,
 		MaximumPageSize: PageSize,

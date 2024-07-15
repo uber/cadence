@@ -3245,14 +3245,14 @@ func FromListAllWorkflowExecutionsRequest(t *types.ListAllWorkflowExecutionsRequ
 		NextPageToken:       t.NextPageToken,
 		StartTimeFilter:     FromStartTimeFilter(t.StartTimeFilter),
 		PartialMatch:        &t.PartialMatch,
-		CloseStatus:         fromWorkflowExecutionCloseStatusArray(t.StatusFilter),
+		CloseStatus:         FromWorkflowExecutionCloseStatusArray(t.StatusFilter),
 		WorkflowSearchValue: &t.WorkflowSearchValue,
 		SortColumn:          &t.SortColumn,
 		SortOrder:           &t.SortOrder,
 	}
 }
 
-func fromWorkflowExecutionCloseStatusArray(t []types.WorkflowExecutionCloseStatus) []shared.WorkflowExecutionCloseStatus {
+func FromWorkflowExecutionCloseStatusArray(t []types.WorkflowExecutionCloseStatus) []shared.WorkflowExecutionCloseStatus {
 	if t == nil {
 		return nil
 	}
@@ -3274,14 +3274,14 @@ func ToListAllWorkflowExecutionsRequest(t *shared.ListAllWorkflowExecutionsReque
 		NextPageToken:       t.NextPageToken,
 		StartTimeFilter:     ToStartTimeFilter(t.StartTimeFilter),
 		PartialMatch:        t.GetPartialMatch(),
-		StatusFilter:        toWorkflowExecutionCloseStatusArray(t.GetCloseStatus()),
+		StatusFilter:        ToWorkflowExecutionCloseStatusArray(t.GetCloseStatus()),
 		WorkflowSearchValue: t.GetWorkflowSearchValue(),
 		SortColumn:          t.GetSortColumn(),
 		SortOrder:           t.GetSortOrder(),
 	}
 }
 
-func toWorkflowExecutionCloseStatusArray(t []shared.WorkflowExecutionCloseStatus) []types.WorkflowExecutionCloseStatus {
+func ToWorkflowExecutionCloseStatusArray(t []shared.WorkflowExecutionCloseStatus) []types.WorkflowExecutionCloseStatus {
 	if t == nil {
 		return nil
 	}

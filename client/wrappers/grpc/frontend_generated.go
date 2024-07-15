@@ -82,7 +82,7 @@ func (g frontendClient) GetWorkflowExecutionHistory(ctx context.Context, gp1 *ty
 }
 
 func (g frontendClient) ListAllWorkflowExecutions(ctx context.Context, lp1 *types.ListAllWorkflowExecutionsRequest) (lp2 *types.ListAllWorkflowExecutionsResponse, err error) {
-	response, err := g.c.ListAllWorkflowExecutions(ctx, &apiv1.ListAllWorkflowExecutionsRequest{}, lp1)
+	response, err := g.c.ListAllWorkflowExecutions(ctx,  proto.FromListAllWorkflowExecutionsRequest(lp1))
 	return proto.ToListAllWorkflowExecutionsResponse(response), proto.ToError(err)
 }
 

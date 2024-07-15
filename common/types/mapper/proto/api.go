@@ -1869,28 +1869,76 @@ func FromListAllWorkflowExecutionsRequest(t *types.ListAllWorkflowExecutionsRequ
 	if t == nil {
 		return nil
 	}
-	return &apiv1.ListAllWorkflowExecutionsRequest{}
+	return &apiv1.ListAllWorkflowExecutionsRequest{
+		Domain:              t.Domain,
+		PageSize:            t.MaximumPageSize,
+		NextPageToken:       t.NextPageToken,
+		StartTimeFilter:     FromStartTimeFilter(t.StartTimeFilter),
+		PartialMatch:        t.PartialMatch,
+		CloseStatus:         FromStatusFilterArray(t.StatusFilter),
+		WorkflowSearchValue: t.WorkflowSearchValue,
+		SortColumn:          t.SortColumn,
+		SortOrder:           t.SortOrder,
+	}
+}
+
+func FromStatusFilterArray(t []types.WorkflowExecutionCloseStatus) []*apiv1.StatusFilter {
+	if t == nil {
+		return nil
+	}
+	v := make([]*apiv1.StatusFilter, len(t))
+	for i := range t {
+		v[i] = &apiv1.StatusFilter{Status: FromWorkflowExecutionCloseStatus(&t[i])}
+	}
+	return v
 }
 
 func ToListAllWorkflowExecutionsRequest(t *apiv1.ListAllWorkflowExecutionsRequest) *types.ListAllWorkflowExecutionsRequest {
 	if t == nil {
 		return nil
 	}
-	return &types.ListAllWorkflowExecutionsRequest{}
+	return &types.ListAllWorkflowExecutionsRequest{
+		Domain:              t.Domain,
+		MaximumPageSize:     t.PageSize,
+		NextPageToken:       t.NextPageToken,
+		StartTimeFilter:     ToStartTimeFilter(t.StartTimeFilter),
+		PartialMatch:        t.PartialMatch,
+		StatusFilter:        ToStatusFilterArray(t.CloseStatus),
+		WorkflowSearchValue: t.WorkflowSearchValue,
+		SortColumn:          t.SortColumn,
+		SortOrder:           t.SortOrder,
+	}
+}
+
+func ToStatusFilterArray(t []*apiv1.StatusFilter) []types.WorkflowExecutionCloseStatus {
+	if t == nil {
+		return nil
+	}
+	v := make([]types.WorkflowExecutionCloseStatus, len(t))
+	for i := range t {
+		v[i] = *ToWorkflowExecutionCloseStatus(t[i].Status)
+	}
+	return v
 }
 
 func FromListAllWorkflowExecutionsResponse(t *types.ListAllWorkflowExecutionsResponse) *apiv1.ListAllWorkflowExecutionsResponse {
 	if t == nil {
 		return nil
 	}
-	return &apiv1.ListAllWorkflowExecutionsResponse{}
+	return &apiv1.ListAllWorkflowExecutionsResponse{
+		Executions:    FromWorkflowExecutionInfoArray(t.Executions),
+		NextPageToken: t.NextPageToken,
+	}
 }
 
 func ToListAllWorkflowExecutionsResponse(t *apiv1.ListAllWorkflowExecutionsResponse) *types.ListAllWorkflowExecutionsResponse {
 	if t == nil {
 		return nil
 	}
-	return &types.ListAllWorkflowExecutionsResponse{}
+	return &types.ListAllWorkflowExecutionsResponse{
+		Executions:    ToWorkflowExecutionInfoArray(t.Executions),
+		NextPageToken: t.NextPageToken,
+	}
 }
 
 func FromMarkerRecordedEventAttributes(t *types.MarkerRecordedEventAttributes) *apiv1.MarkerRecordedEventAttributes {

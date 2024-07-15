@@ -1778,6 +1778,34 @@ func TestListWorkflowExecutionsResponseConversion(t *testing.T) {
 	}
 }
 
+func TestListAllWorkflowExecutionsRequestConversion(t *testing.T) {
+	testCases := []*types.ListAllWorkflowExecutionsRequest{
+		nil,
+		{},
+		&testdata.ListAllWorkflowExecutionsRequest,
+	}
+
+	for _, original := range testCases {
+		thriftObj := FromListAllWorkflowExecutionsRequest(original)
+		roundTripObj := ToListAllWorkflowExecutionsRequest(thriftObj)
+		assert.Equal(t, original, roundTripObj)
+	}
+}
+
+func TestListAllWorkflowExecutionsResponseConversion(t *testing.T) {
+	testCases := []*types.ListAllWorkflowExecutionsResponse{
+		nil,
+		{},
+		&testdata.ListAllWorkflowExecutionsResponse,
+	}
+
+	for _, original := range testCases {
+		thriftObj := FromListAllWorkflowExecutionsResponse(original)
+		roundTripObj := ToListAllWorkflowExecutionsResponse(thriftObj)
+		assert.Equal(t, original, roundTripObj)
+	}
+}
+
 func TestMarkerRecordedEventAttributesConversion(t *testing.T) {
 	testCases := []*types.MarkerRecordedEventAttributes{
 		nil,
