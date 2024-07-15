@@ -83,6 +83,11 @@ type Interface interface {
 		GetRequest *shared.GetWorkflowExecutionHistoryRequest,
 	) (*shared.GetWorkflowExecutionHistoryResponse, error)
 
+	ListAllWorkflowExecutions(
+		ctx context.Context,
+		ListRequest *shared.ListAllWorkflowExecutionsRequest,
+	) (*shared.ListAllWorkflowExecutionsResponse, error)
+
 	ListArchivedWorkflowExecutions(
 		ctx context.Context,
 		ListRequest *shared.ListArchivedWorkflowExecutionsRequest,
@@ -370,6 +375,18 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: getworkflowexecutionhistory_NoWireHandler{impl},
 				},
 				Signature:    "GetWorkflowExecutionHistory(GetRequest *shared.GetWorkflowExecutionHistoryRequest) (*shared.GetWorkflowExecutionHistoryResponse)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "ListAllWorkflowExecutions",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.ListAllWorkflowExecutions),
+					NoWire: listallworkflowexecutions_NoWireHandler{impl},
+				},
+				Signature:    "ListAllWorkflowExecutions(ListRequest *shared.ListAllWorkflowExecutionsRequest) (*shared.ListAllWorkflowExecutionsResponse)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -783,7 +800,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 43)
+	procedures := make([]transport.Procedure, 0, 44)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -1045,6 +1062,36 @@ func (h handler) GetWorkflowExecutionHistory(ctx context.Context, body wire.Valu
 
 	hadError := appErr != nil
 	result, err := cadence.WorkflowService_GetWorkflowExecutionHistory_Helper.WrapResponse(success, appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
+	return response, err
+}
+
+func (h handler) ListAllWorkflowExecutions(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_ListAllWorkflowExecutions_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'WorkflowService' procedure 'ListAllWorkflowExecutions': %w", err)
+	}
+
+	success, appErr := h.impl.ListAllWorkflowExecutions(ctx, args.ListRequest)
+
+	hadError := appErr != nil
+	result, err := cadence.WorkflowService_ListAllWorkflowExecutions_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
@@ -2399,6 +2446,43 @@ func (h getworkflowexecutionhistory_NoWireHandler) HandleNoWire(ctx context.Cont
 
 	hadError := appErr != nil
 	result, err := cadence.WorkflowService_GetWorkflowExecutionHistory_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type listallworkflowexecutions_NoWireHandler struct{ impl Interface }
+
+func (h listallworkflowexecutions_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args cadence.WorkflowService_ListAllWorkflowExecutions_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'WorkflowService' procedure 'ListAllWorkflowExecutions': %w", err)
+	}
+
+	success, appErr := h.impl.ListAllWorkflowExecutions(ctx, args.ListRequest)
+
+	hadError := appErr != nil
+	result, err := cadence.WorkflowService_ListAllWorkflowExecutions_Helper.WrapResponse(success, appErr)
 	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError

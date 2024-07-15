@@ -504,6 +504,8 @@ const (
 	FrontendClientUpdateDomainScope
 	// FrontendClientListWorkflowExecutionsScope tracks RPC calls to frontend service
 	FrontendClientListWorkflowExecutionsScope
+	// FrontendClientListAllWorkflowExecutionsScope tracks RPC calls to frontend service
+	FrontendClientListAllWorkflowExecutionsScope
 	// FrontendClientScanWorkflowExecutionsScope tracks RPC calls to frontend service
 	FrontendClientScanWorkflowExecutionsScope
 	// FrontendClientCountWorkflowExecutionsScope tracks RPC calls to frontend service
@@ -620,6 +622,8 @@ const (
 	DCRedirectionListOpenWorkflowExecutionsScope
 	// DCRedirectionListWorkflowExecutionsScope tracks RPC calls for dc redirection
 	DCRedirectionListWorkflowExecutionsScope
+	// DCRedirectionListAllWorkflowExecutionsScope tracks RPC calls for dc redirection
+	DCRedirectionListAllWorkflowExecutionsScope
 	// DCRedirectionScanWorkflowExecutionsScope tracks RPC calls for dc redirection
 	DCRedirectionScanWorkflowExecutionsScope
 	// DCRedirectionCountWorkflowExecutionsScope tracks RPC calls for dc redirection
@@ -978,6 +982,8 @@ const (
 	FrontendListClosedWorkflowExecutionsScope
 	// FrontendListWorkflowExecutionsScope is the metric scope for frontend.ListWorkflowExecutions
 	FrontendListWorkflowExecutionsScope
+	// FrontendListAllWorkflowExecutionsScope is the metric scope for frontend.ListAllWorkflowExecutions
+	FrontendListAllWorkflowExecutionsScope
 	// FrontendScanWorkflowExecutionsScope is the metric scope for frontend.ListWorkflowExecutions
 	FrontendScanWorkflowExecutionsScope
 	// FrontendCountWorkflowExecutionsScope is the metric scope for frontend.CountWorkflowExecutions

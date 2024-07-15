@@ -3234,6 +3234,86 @@ func ToListWorkflowExecutionsResponse(t *shared.ListWorkflowExecutionsResponse) 
 	}
 }
 
+// FromListAllWorkflowExecutionsRequest converts internal ListAllWorkflowExecutionsRequest type to thrift
+func FromListAllWorkflowExecutionsRequest(t *types.ListAllWorkflowExecutionsRequest) *shared.ListAllWorkflowExecutionsRequest {
+	if t == nil {
+		return nil
+	}
+	return &shared.ListAllWorkflowExecutionsRequest{
+		Domain:              &t.Domain,
+		PageSize:            &t.MaximumPageSize,
+		NextPageToken:       t.NextPageToken,
+		StartTimeFilter:     FromStartTimeFilter(t.StartTimeFilter),
+		PartialMatch:        &t.PartialMatch,
+		CloseStatus:         fromWorkflowExecutionCloseStatusArray(t.StatusFilter),
+		WorkflowSearchValue: &t.WorkflowSearchValue,
+		SortColumn:          &t.SortColumn,
+		SortOrder:           &t.SortOrder,
+	}
+}
+
+func fromWorkflowExecutionCloseStatusArray(t []types.WorkflowExecutionCloseStatus) []shared.WorkflowExecutionCloseStatus {
+	if t == nil {
+		return nil
+	}
+	v := make([]shared.WorkflowExecutionCloseStatus, len(t))
+	for i := range t {
+		v[i] = *FromWorkflowExecutionCloseStatus(&t[i])
+	}
+	return v
+}
+
+// ToListAllWorkflowExecutionsRequest converts thrift ListAllWorkflowExecutionsRequest type to internal
+func ToListAllWorkflowExecutionsRequest(t *shared.ListAllWorkflowExecutionsRequest) *types.ListAllWorkflowExecutionsRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.ListAllWorkflowExecutionsRequest{
+		Domain:              t.GetDomain(),
+		MaximumPageSize:     t.GetPageSize(),
+		NextPageToken:       t.NextPageToken,
+		StartTimeFilter:     ToStartTimeFilter(t.StartTimeFilter),
+		PartialMatch:        t.GetPartialMatch(),
+		StatusFilter:        toWorkflowExecutionCloseStatusArray(t.GetCloseStatus()),
+		WorkflowSearchValue: t.GetWorkflowSearchValue(),
+		SortColumn:          t.GetSortColumn(),
+		SortOrder:           t.GetSortOrder(),
+	}
+}
+
+func toWorkflowExecutionCloseStatusArray(t []shared.WorkflowExecutionCloseStatus) []types.WorkflowExecutionCloseStatus {
+	if t == nil {
+		return nil
+	}
+	v := make([]types.WorkflowExecutionCloseStatus, len(t))
+	for i := range t {
+		v[i] = *ToWorkflowExecutionCloseStatus(&t[i])
+	}
+	return v
+}
+
+// FromListAllWorkflowExecutionsResponse converts internal ListAllWorkflowExecutionsResponse type to thrift
+func FromListAllWorkflowExecutionsResponse(t *types.ListAllWorkflowExecutionsResponse) *shared.ListAllWorkflowExecutionsResponse {
+	if t == nil {
+		return nil
+	}
+	return &shared.ListAllWorkflowExecutionsResponse{
+		Executions:    FromWorkflowExecutionInfoArray(t.Executions),
+		NextPageToken: t.NextPageToken,
+	}
+}
+
+// ToListAllWorkflowExecutionsResponse converts thrift ListAllWorkflowExecutionsResponse type to internal
+func ToListAllWorkflowExecutionsResponse(t *shared.ListAllWorkflowExecutionsResponse) *types.ListAllWorkflowExecutionsResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.ListAllWorkflowExecutionsResponse{
+		Executions:    ToWorkflowExecutionInfoArray(t.Executions),
+		NextPageToken: t.NextPageToken,
+	}
+}
+
 // FromMarkerRecordedEventAttributes converts internal MarkerRecordedEventAttributes type to thrift
 func FromMarkerRecordedEventAttributes(t *types.MarkerRecordedEventAttributes) *shared.MarkerRecordedEventAttributes {
 	if t == nil {

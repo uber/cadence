@@ -333,6 +333,7 @@ var (
 	FrontendClientOperationListDomains                           = clientOperation("frontend-list-domains")
 	FrontendClientOperationListOpenWorkflowExecutions            = clientOperation("frontend-list-open-wf-executions")
 	FrontendClientOperationListWorkflowExecutions                = clientOperation("frontend-list-wf-executions")
+	FrontendClientOperationListAllWorkflowExecutions             = clientOperation("frontend-list-all-wf-executions")
 	FrontendClientOperationScanWorkflowExecutions                = clientOperation("frontend-scan-wf-executions")
 	FrontendClientOperationCountWorkflowExecutions               = clientOperation("frontend-count-wf-executions")
 	FrontendClientOperationGetSearchAttributes                   = clientOperation("frontend-get-search-attributes")

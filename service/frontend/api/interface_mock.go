@@ -207,6 +207,21 @@ func (mr *MockHandlerMockRecorder) Health(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Health", reflect.TypeOf((*MockHandler)(nil).Health), arg0)
 }
 
+// ListAllWorkflowExecutions mocks base method.
+func (m *MockHandler) ListAllWorkflowExecutions(arg0 context.Context, arg1 *types.ListAllWorkflowExecutionsRequest) (*types.ListAllWorkflowExecutionsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAllWorkflowExecutions", arg0, arg1)
+	ret0, _ := ret[0].(*types.ListAllWorkflowExecutionsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAllWorkflowExecutions indicates an expected call of ListAllWorkflowExecutions.
+func (mr *MockHandlerMockRecorder) ListAllWorkflowExecutions(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAllWorkflowExecutions", reflect.TypeOf((*MockHandler)(nil).ListAllWorkflowExecutions), arg0, arg1)
+}
+
 // ListArchivedWorkflowExecutions mocks base method.
 func (m *MockHandler) ListArchivedWorkflowExecutions(arg0 context.Context, arg1 *types.ListArchivedWorkflowExecutionsRequest) (*types.ListArchivedWorkflowExecutionsResponse, error) {
 	m.ctrl.T.Helper()

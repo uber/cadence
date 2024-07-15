@@ -54,6 +54,7 @@ type (
 		GetTaskListsByDomain(context.Context, *types.GetTaskListsByDomainRequest) (*types.GetTaskListsByDomainResponse, error)
 		RefreshWorkflowTasks(context.Context, *types.RefreshWorkflowTasksRequest) error
 		ListWorkflowExecutions(context.Context, *types.ListWorkflowExecutionsRequest) (*types.ListWorkflowExecutionsResponse, error)
+		ListAllWorkflowExecutions(context.Context, *types.ListAllWorkflowExecutionsRequest) (*types.ListAllWorkflowExecutionsResponse, error)
 		PollForActivityTask(context.Context, *types.PollForActivityTaskRequest) (*types.PollForActivityTaskResponse, error)
 		PollForDecisionTask(context.Context, *types.PollForDecisionTaskRequest) (*types.PollForDecisionTaskResponse, error)
 		QueryWorkflow(context.Context, *types.QueryWorkflowRequest) (*types.QueryWorkflowResponse, error)

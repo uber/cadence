@@ -53,6 +53,7 @@ type Client interface {
 	ListTaskListPartitions(context.Context, *types.ListTaskListPartitionsRequest, ...yarpc.CallOption) (*types.ListTaskListPartitionsResponse, error)
 	GetTaskListsByDomain(context.Context, *types.GetTaskListsByDomainRequest, ...yarpc.CallOption) (*types.GetTaskListsByDomainResponse, error)
 	RefreshWorkflowTasks(context.Context, *types.RefreshWorkflowTasksRequest, ...yarpc.CallOption) error
+	ListAllWorkflowExecutions(context.Context, *types.ListAllWorkflowExecutionsRequest) (*types.ListAllWorkflowExecutionsResponse, error)
 	ListWorkflowExecutions(context.Context, *types.ListWorkflowExecutionsRequest, ...yarpc.CallOption) (*types.ListWorkflowExecutionsResponse, error)
 	PollForActivityTask(context.Context, *types.PollForActivityTaskRequest, ...yarpc.CallOption) (*types.PollForActivityTaskResponse, error)
 	PollForDecisionTask(context.Context, *types.PollForDecisionTaskRequest, ...yarpc.CallOption) (*types.PollForDecisionTaskResponse, error)

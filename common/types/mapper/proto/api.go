@@ -1865,6 +1865,34 @@ func ToListWorkflowExecutionsResponse(t *apiv1.ListWorkflowExecutionsResponse) *
 	}
 }
 
+func FromListAllWorkflowExecutionsRequest(t *types.ListAllWorkflowExecutionsRequest) *apiv1.ListAllWorkflowExecutionsRequest {
+	if t == nil {
+		return nil
+	}
+	return &apiv1.ListAllWorkflowExecutionsRequest{}
+}
+
+func ToListAllWorkflowExecutionsRequest(t *apiv1.ListAllWorkflowExecutionsRequest) *types.ListAllWorkflowExecutionsRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.ListAllWorkflowExecutionsRequest{}
+}
+
+func FromListAllWorkflowExecutionsResponse(t *types.ListAllWorkflowExecutionsResponse) *apiv1.ListAllWorkflowExecutionsResponse {
+	if t == nil {
+		return nil
+	}
+	return &apiv1.ListAllWorkflowExecutionsResponse{}
+}
+
+func ToListAllWorkflowExecutionsResponse(t *apiv1.ListAllWorkflowExecutionsResponse) *types.ListAllWorkflowExecutionsResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.ListAllWorkflowExecutionsResponse{}
+}
+
 func FromMarkerRecordedEventAttributes(t *types.MarkerRecordedEventAttributes) *apiv1.MarkerRecordedEventAttributes {
 	if t == nil {
 		return nil
