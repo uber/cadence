@@ -32,6 +32,13 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
+func TestConstructor(t *testing.T) {
+	assert.NotPanics(t, func() {
+		lb := NewLoadBalancer(func(string) (string, error) { return "", nil }, dynamicconfig.NewNopCollection())
+		assert.NotNil(t, lb)
+	})
+}
+
 func Test_defaultLoadBalancer_PickReadPartition(t *testing.T) {
 	type fields struct {
 		nReadPartitions  dynamicconfig.IntPropertyFnWithTaskListInfoFilters
