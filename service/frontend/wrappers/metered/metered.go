@@ -177,6 +177,12 @@ func toListWorkflowExecutionsRequestTags(req *types.ListWorkflowExecutionsReques
 	}
 }
 
+func toListAllWorkflowExecutionsRequestTags(req *types.ListAllWorkflowExecutionsRequest) []tag.Tag {
+	return []tag.Tag{
+		tag.WorkflowDomainName(req.GetDomain()),
+	}
+}
+
 func toPollForActivityTaskRequestTags(req *types.PollForActivityTaskRequest) []tag.Tag {
 	return []tag.Tag{
 		tag.WorkflowDomainName(req.GetDomain()),
