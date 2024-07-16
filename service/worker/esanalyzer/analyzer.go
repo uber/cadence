@@ -22,6 +22,7 @@ package esanalyzer
 
 import (
 	"context"
+	"github.com/uber/cadence/common/pinot"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
@@ -44,6 +45,13 @@ import (
 	"github.com/uber/cadence/service/worker/workercommon"
 )
 
+type readMode string
+
+const (
+	Pinot readMode = "pinot"
+	ES    readMode = "es"
+)
+
 type (
 	// Analyzer is the background sub-system to query ElasticSearch and execute mitigations
 	Analyzer struct {
@@ -51,6 +59,8 @@ type (
 		frontendClient      frontend.Client
 		clientBean          client.Bean
 		esClient            es.GenericClient
+		pinotClient         pinot.GenericClient
+		readMode            readMode
 		logger              log.Logger
 		tallyScope          tally.Scope
 		visibilityIndexName string
@@ -98,6 +108,7 @@ func New(
 	frontendClient frontend.Client,
 	clientBean client.Bean,
 	esClient es.GenericClient,
+	pinotClient pinot.GenericClient,
 	esConfig *config.ElasticSearchConfig,
 	logger log.Logger,
 	tallyScope tally.Scope,
@@ -105,11 +116,20 @@ func New(
 	domainCache cache.DomainCache,
 	config *Config,
 ) *Analyzer {
+	var mode readMode
+	if esClient != nil {
+		mode = ES
+	} else if pinotClient != nil {
+		mode = Pinot
+	}
+
 	return &Analyzer{
 		svcClient:           svcClient,
 		frontendClient:      frontendClient,
 		clientBean:          clientBean,
 		esClient:            esClient,
+		pinotClient:         pinotClient,
+		readMode:            mode,
 		logger:              logger,
 		tallyScope:          tallyScope,
 		visibilityIndexName: esConfig.Indices[common.VisibilityAppName],

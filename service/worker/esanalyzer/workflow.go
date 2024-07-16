@@ -157,52 +157,65 @@ func (w *Workflow) emitWorkflowVersionMetrics(ctx context.Context) error {
 			return err
 		}
 		for _, domainName := range workflowMetricDomainNames {
-			wfVersionEsQuery, err := w.getWorkflowVersionQuery(domainName)
+			switch w.analyzer.readMode {
+			case ES:
+				err = w.emitWorkflowVersionMetricsES(ctx, domainName, logger)
+			default:
+				err = w.emitWorkflowVersionMetricsES(ctx, domainName, logger)
+			}
 			if err != nil {
-				logger.Error("Failed to get ElasticSearch query to find workflow version Info",
-					zap.Error(err),
-					zap.String("DomainName", domainName),
-				)
 				return err
 			}
-			response, err := w.analyzer.esClient.SearchRaw(ctx, w.analyzer.visibilityIndexName, wfVersionEsQuery)
-			if err != nil {
-				logger.Error("Failed to query ElasticSearch to find workflow version Info",
-					zap.Error(err),
-					zap.String("VisibilityQuery", wfVersionEsQuery),
-					zap.String("DomainName", domainName),
-				)
-				return err
-			}
-			agg, foundAggregation := response.Aggregations[workflowTypesAggKey]
+		}
+	}
+	return nil
+}
 
-			if !foundAggregation {
-				logger.Error("ElasticSearch error: aggregation failed.",
-					zap.Error(err),
-					zap.String("Aggregation", string(agg)),
-					zap.String("DomainName", domainName),
-					zap.String("VisibilityQuery", wfVersionEsQuery),
-				)
-				return err
-			}
-			var domainWorkflowVersionCount DomainWorkflowVersionCount
-			err = json.Unmarshal(agg, &domainWorkflowVersionCount)
-			if err != nil {
-				logger.Error("ElasticSearch error parsing aggregation.",
-					zap.Error(err),
-					zap.String("Aggregation", string(agg)),
-					zap.String("DomainName", domainName),
-					zap.String("VisibilityQuery", wfVersionEsQuery),
-				)
-				return err
-			}
-			for _, workflowType := range domainWorkflowVersionCount.WorkflowTypes {
-				for _, workflowVersion := range workflowType.WorkflowVersions.WorkflowVersions {
-					w.analyzer.tallyScope.Tagged(
-						map[string]string{domainTag: domainName, workflowVersionTag: workflowVersion.AggregateKey, workflowTypeTag: workflowType.AggregateKey},
-					).Gauge(workflowVersionCountMetrics).Update(float64(workflowVersion.AggregateCount))
-				}
-			}
+func (w *Workflow) emitWorkflowVersionMetricsES(ctx context.Context, domainName string, logger *zap.Logger) error {
+	wfVersionEsQuery, err := w.getWorkflowVersionQuery(domainName)
+	if err != nil {
+		logger.Error("Failed to get ElasticSearch query to find workflow version Info",
+			zap.Error(err),
+			zap.String("DomainName", domainName),
+		)
+		return err
+	}
+	response, err := w.analyzer.esClient.SearchRaw(ctx, w.analyzer.visibilityIndexName, wfVersionEsQuery)
+	if err != nil {
+		logger.Error("Failed to query ElasticSearch to find workflow version Info",
+			zap.Error(err),
+			zap.String("VisibilityQuery", wfVersionEsQuery),
+			zap.String("DomainName", domainName),
+		)
+		return err
+	}
+	agg, foundAggregation := response.Aggregations[workflowTypesAggKey]
+
+	if !foundAggregation {
+		logger.Error("ElasticSearch error: aggregation failed.",
+			zap.Error(err),
+			zap.String("Aggregation", string(agg)),
+			zap.String("DomainName", domainName),
+			zap.String("VisibilityQuery", wfVersionEsQuery),
+		)
+		return err
+	}
+	var domainWorkflowVersionCount DomainWorkflowVersionCount
+	err = json.Unmarshal(agg, &domainWorkflowVersionCount)
+	if err != nil {
+		logger.Error("ElasticSearch error parsing aggregation.",
+			zap.Error(err),
+			zap.String("Aggregation", string(agg)),
+			zap.String("DomainName", domainName),
+			zap.String("VisibilityQuery", wfVersionEsQuery),
+		)
+		return err
+	}
+	for _, workflowType := range domainWorkflowVersionCount.WorkflowTypes {
+		for _, workflowVersion := range workflowType.WorkflowVersions.WorkflowVersions {
+			w.analyzer.tallyScope.Tagged(
+				map[string]string{domainTag: domainName, workflowVersionTag: workflowVersion.AggregateKey, workflowTypeTag: workflowType.AggregateKey},
+			).Gauge(workflowVersionCountMetrics).Update(float64(workflowVersion.AggregateCount))
 		}
 	}
 	return nil

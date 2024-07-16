@@ -283,6 +283,7 @@ func (s *Service) startESAnalyzer() {
 		s.GetFrontendClient(),
 		s.GetClientBean(),
 		s.params.ESClient,
+		s.params.PinotClient,
 		s.params.ESConfig,
 		s.GetLogger(),
 		s.params.MetricScope,
