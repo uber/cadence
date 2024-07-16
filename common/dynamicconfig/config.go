@@ -22,9 +22,7 @@ package dynamicconfig
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -47,7 +45,6 @@ func NewCollection(
 	return &Collection{
 		client:        client,
 		logger:        logger,
-		logKeys:       &sync.Map{},
 		errCount:      -1,
 		filterOptions: filterOptions,
 	}
@@ -59,7 +56,6 @@ func NewCollection(
 type Collection struct {
 	client        Client
 	logger        log.Logger
-	logKeys       *sync.Map // map of config Keys for logging to capture changes
 	errCount      int64
 	filterOptions []FilterOption
 }
@@ -77,29 +73,6 @@ func (c *Collection) logError(
 			c.logger.Debug("dynamic config not set, use default value", tag.Key(filteredKey))
 		} else {
 			c.logger.Warn("Failed to fetch key from dynamic config", tag.Key(filteredKey), tag.Error(err))
-		}
-	}
-}
-
-func (c *Collection) logValue(
-	key Key,
-	filters map[Filter]interface{},
-	value, defaultValue interface{},
-	cmpValueEquals func(interface{}, interface{}) bool,
-) {
-	filteredKey := getFilteredKeyAsString(key, filters)
-	loadedValue, loaded := c.logKeys.LoadOrStore(filteredKey, value)
-	if !loaded {
-		c.logger.Debug("First loading dynamic config",
-			tag.Key(filteredKey), tag.Value(value), tag.DefaultValue(defaultValue))
-	} else {
-		// it's loaded before, check if the value has changed
-		if !cmpValueEquals(loadedValue, value) {
-			c.logger.Info("Dynamic config has changed",
-				tag.Key(filteredKey), tag.Value(value), tag.DefaultValue(loadedValue))
-			// update the logKeys so that we can capture the changes again
-			// (ignore the racing condition here because it's just for logging, we need a lock if really need to solve it)
-			c.logKeys.Store(filteredKey, value)
 		}
 	}
 }
@@ -184,7 +157,6 @@ func (c *Collection) GetProperty(key Key) PropertyFn {
 			c.logError(key, nil, err)
 			return key.DefaultValue()
 		}
-		c.logValue(key, nil, val, key.DefaultValue(), reflect.DeepEqual)
 		return val
 	}
 }
@@ -201,7 +173,6 @@ func (c *Collection) GetIntProperty(key IntKey) IntPropertyFn {
 			c.logError(key, filters, err)
 			return key.DefaultInt()
 		}
-		c.logValue(key, filters, val, key.DefaultValue(), intCompareEquals)
 		return val
 	}
 }
@@ -218,7 +189,6 @@ func (c *Collection) GetIntPropertyFilteredByDomain(key IntKey) IntPropertyFnWit
 			c.logError(key, filters, err)
 			return key.DefaultInt()
 		}
-		c.logValue(key, filters, val, key.DefaultValue(), intCompareEquals)
 		return val
 	}
 }
@@ -238,7 +208,6 @@ func (c *Collection) GetIntPropertyFilteredByWorkflowType(key IntKey) IntPropert
 			c.logError(key, filters, err)
 			return key.DefaultInt()
 		}
-		c.logValue(key, filters, val, key.DefaultValue(), intCompareEquals)
 		return val
 	}
 }
@@ -258,7 +227,6 @@ func (c *Collection) GetDurationPropertyFilteredByWorkflowType(key DurationKey) 
 			c.logError(key, filters, err)
 			return key.DefaultDuration()
 		}
-		c.logValue(key, filters, val, key.DefaultValue(), durationCompareEquals)
 		return val
 	}
 }
@@ -279,7 +247,6 @@ func (c *Collection) GetIntPropertyFilteredByTaskListInfo(key IntKey) IntPropert
 			c.logError(key, filters, err)
 			return key.DefaultInt()
 		}
-		c.logValue(key, filters, val, key.DefaultValue(), intCompareEquals)
 		return val
 	}
 }
@@ -296,7 +263,6 @@ func (c *Collection) GetIntPropertyFilteredByShardID(key IntKey) IntPropertyFnWi
 			c.logError(key, filters, err)
 			return key.DefaultInt()
 		}
-		c.logValue(key, filters, val, key.DefaultValue(), intCompareEquals)
 		return val
 	}
 }
@@ -313,7 +279,6 @@ func (c *Collection) GetFloat64Property(key FloatKey) FloatPropertyFn {
 			c.logError(key, filters, err)
 			return key.DefaultFloat()
 		}
-		c.logValue(key, filters, val, key.DefaultValue(), float64CompareEquals)
 		return val
 	}
 }
@@ -330,7 +295,6 @@ func (c *Collection) GetFloat64PropertyFilteredByShardID(key FloatKey) FloatProp
 			c.logError(key, filters, err)
 			return key.DefaultFloat()
 		}
-		c.logValue(key, filters, val, key.DefaultValue(), float64CompareEquals)
 		return val
 	}
 }
@@ -347,7 +311,6 @@ func (c *Collection) GetDurationProperty(key DurationKey) DurationPropertyFn {
 			c.logError(key, filters, err)
 			return key.DefaultDuration()
 		}
-		c.logValue(key, filters, val, key.DefaultValue(), durationCompareEquals)
 		return val
 	}
 }
@@ -364,7 +327,6 @@ func (c *Collection) GetDurationPropertyFilteredByDomain(key DurationKey) Durati
 			c.logError(key, filters, err)
 			return key.DefaultDuration()
 		}
-		c.logValue(key, filters, val, key.DefaultValue(), durationCompareEquals)
 		return val
 	}
 }
@@ -381,7 +343,6 @@ func (c *Collection) GetDurationPropertyFilteredByDomainID(key DurationKey) Dura
 			c.logError(key, filters, err)
 			return key.DefaultDuration()
 		}
-		c.logValue(key, filters, val, key.DefaultValue(), durationCompareEquals)
 		return val
 	}
 }
@@ -402,7 +363,6 @@ func (c *Collection) GetDurationPropertyFilteredByTaskListInfo(key DurationKey) 
 			c.logError(key, filters, err)
 			return key.DefaultDuration()
 		}
-		c.logValue(key, filters, val, key.DefaultValue(), durationCompareEquals)
 		return val
 	}
 }
@@ -419,7 +379,6 @@ func (c *Collection) GetDurationPropertyFilteredByShardID(key DurationKey) Durat
 			c.logError(key, filters, err)
 			return key.DefaultDuration()
 		}
-		c.logValue(key, filters, val, key.DefaultValue(), durationCompareEquals)
 		return val
 	}
 }
@@ -436,7 +395,6 @@ func (c *Collection) GetBoolProperty(key BoolKey) BoolPropertyFn {
 			c.logError(key, filters, err)
 			return key.DefaultBool()
 		}
-		c.logValue(key, filters, val, key.DefaultValue(), boolCompareEquals)
 		return val
 	}
 }
@@ -453,7 +411,6 @@ func (c *Collection) GetStringProperty(key StringKey) StringPropertyFn {
 			c.logError(key, filters, err)
 			return key.DefaultString()
 		}
-		c.logValue(key, filters, val, key.DefaultValue(), stringCompareEquals)
 		return val
 	}
 }
@@ -470,7 +427,6 @@ func (c *Collection) GetMapProperty(key MapKey) MapPropertyFn {
 			c.logError(key, filters, err)
 			return key.DefaultMap()
 		}
-		c.logValue(key, filters, val, key.DefaultValue(), reflect.DeepEqual)
 		return val
 	}
 }
@@ -487,7 +443,6 @@ func (c *Collection) GetStringPropertyFilteredByDomain(key StringKey) StringProp
 			c.logError(key, filters, err)
 			return key.DefaultString()
 		}
-		c.logValue(key, filters, val, key.DefaultValue(), stringCompareEquals)
 		return val
 	}
 }
@@ -504,7 +459,6 @@ func (c *Collection) GetBoolPropertyFilteredByDomain(key BoolKey) BoolPropertyFn
 			c.logError(key, filters, err)
 			return key.DefaultBool()
 		}
-		c.logValue(key, filters, val, key.DefaultValue(), boolCompareEquals)
 		return val
 	}
 }
@@ -521,7 +475,6 @@ func (c *Collection) GetBoolPropertyFilteredByDomainID(key BoolKey) BoolProperty
 			c.logError(key, filters, err)
 			return key.DefaultBool()
 		}
-		c.logValue(key, filters, val, key.DefaultValue(), boolCompareEquals)
 		return val
 	}
 }
@@ -538,7 +491,6 @@ func (c *Collection) GetBoolPropertyFilteredByDomainIDAndWorkflowID(key BoolKey)
 			c.logError(key, filters, err)
 			return key.DefaultBool()
 		}
-		c.logValue(key, filters, val, key.DefaultValue(), boolCompareEquals)
 		return val
 	}
 }
@@ -559,7 +511,6 @@ func (c *Collection) GetBoolPropertyFilteredByTaskListInfo(key BoolKey) BoolProp
 			c.logError(key, filters, err)
 			return key.DefaultBool()
 		}
-		c.logValue(key, filters, val, key.DefaultValue(), boolCompareEquals)
 		return val
 	}
 }
@@ -575,7 +526,6 @@ func (c *Collection) GetListProperty(key ListKey) ListPropertyFn {
 			c.logError(key, filters, err)
 			return key.DefaultList()
 		}
-		c.logValue(key, filters, val, key.DefaultValue(), reflect.DeepEqual)
 		return val
 	}
 }
@@ -591,7 +541,6 @@ func (c *Collection) GetStringPropertyFilteredByRatelimitKey(key StringKey) Stri
 			c.logError(key, filters, err)
 			return key.DefaultString()
 		}
-		c.logValue(key, filters, val, key.DefaultValue(), stringCompareEquals)
 		return val
 	}
 }
