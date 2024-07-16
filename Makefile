@@ -422,14 +422,14 @@ endef
 
 # useful to actually re-run to get output again.
 # reuse the intermediates for simplicity and consistency.
-lint: ## (re)run the linter
+lint: ## (Re)run the linter
 	$(call remake,proto-lint gomod-lint code-lint goversion-lint)
 
 # intentionally not re-making, it's a bit slow and it's clear when it's unnecessary
-fmt: $(BUILD)/fmt ## run gofmt / organize imports / etc
+fmt: $(BUILD)/fmt ## Run `gofmt` / organize imports / etc
 
 # not identical to the intermediate target, but does provide the same codegen (or more).
-copyright: $(BIN)/copyright | $(BUILD) ## update copyright headers
+copyright: $(BIN)/copyright | $(BUILD) ## Update copyright headers
 	$(BIN)/copyright
 	$Q touch $(BUILD)/copyright
 
@@ -439,8 +439,7 @@ $Q output=$$(mktemp); $(MAKE) $1 > $$output 2>&1 || ( cat $$output; echo -e '\nf
 endef
 
 # pre-PR target to build and refresh everything
-# this is ##-documented directly in the help target, to keep it more visible.
-pr:
+pr: ## Redo all codegen and basic checks, to ensure your PR will be able to run tests.  Recommended before opening a github PR
 	$Q $(if $(verbose),$(MAKE) tidy,$(call make_quietly,tidy))
 	$Q $(if $(verbose),$(MAKE) go-generate,$(call make_quietly,go-generate))
 	$Q $(if $(verbose),$(MAKE) copyright,$(call make_quietly,copyright))
@@ -500,11 +499,11 @@ cadence-bench: $(BINS_DEPEND_ON)
 
 .PHONY: go-generate bins tools release clean
 
-bins: $(BINS) ## Make all binaries
+bins: $(BINS) ## Build all binaries, and any fast codegen needed (does not refresh wrappers or mocks)
 
 tools: $(TOOLS)
 
-go-generate: $(BIN)/mockgen $(BIN)/enumer $(BIN)/mockery  $(BIN)/gowrap ## run go generate to regen mocks, enums, etc
+go-generate: $(BIN)/mockgen $(BIN)/enumer $(BIN)/mockery  $(BIN)/gowrap ## Run `go generate` to regen mocks, enums, etc
 	$Q echo "running go generate ./..., this takes a minute or more..."
 	$Q # add our bins to PATH so `go generate` can find them
 	$Q $(BIN_PATH) go generate $(if $(verbose),-v) ./...
@@ -516,7 +515,7 @@ release: ## Re-generate generated code and run tests
 	$(MAKE) --no-print-directory go-generate
 	$(MAKE) --no-print-directory test
 
-build: ## Build all packages and all tests (ensures everything compiles)
+build: ## `go build` all packages and tests (a quick compile check only, skips all other steps)
 	$Q echo 'Building all packages and submodules...'
 	$Q go build ./...
 	$Q cd common/archiver/gcloud; go build ./...
@@ -528,7 +527,7 @@ build: ## Build all packages and all tests (ensures everything compiles)
 	$Q cd common/archiver/gcloud; go test -exec /usr/bin/true ./... >/dev/null
 	$Q cd cmd/server; go test -exec /usr/bin/true ./... >/dev/null
 
-tidy: ## go mod tidy all packages
+tidy: ## `go mod tidy` all packages
 	$Q # tidy in dependency order
 	$Q go mod tidy
 	$Q cd common/archiver/gcloud; go mod tidy || (echo "failed to tidy gcloud plugin, try manually copying go.mod contents into common/archiver/gcloud/go.mod and rerunning" >&2; exit 1)
@@ -605,7 +604,7 @@ $Q FAIL=""; for dir in $1; do \
 done; test -z "$$FAIL" || (echo "Failed packages; $$FAIL"; exit 1)
 endef
 
-test: ## Build and run all tests. This target is for local development. The pipeline is using cover_profile target
+test: ## Build and run all tests locally
 	$Q rm -f test
 	$Q rm -f test.log
 	$Q echo Running special test cases without race detector:
@@ -800,10 +799,8 @@ deps-all: ## Check for all dependency updates
 		| $(JQ_DEPS_AGE) \
 		| sort -n
 
-help:
-	$Q # print help and PR first, so they're highly visible
-	$Q printf "\033[36m%-20s\033[0m %s\n" 'help' 'Prints a help message showing any specially-commented targets'
-	$Q printf "\033[36m%-20s\033[0m %s\n" 'pr' 'Refresh all code, to ensure your PR can reach tests.  Recommended before opening a github PR.'
+help: ## Prints a help message showing any specially-commented targets
+	$Q # print the high-value ones first, so they're more visible.  the "....." prefixes match the shell coloring chars
+	$Q cat $(MAKEFILE_LIST) | grep -e "^[a-zA-Z_\-]*:.* ## .*" | awk 'BEGIN {FS = ":.*? ## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}' | sort | grep -E '^.....(help|pr|bins)\b'
 	$Q echo '-----------------------------------'
-	$Q # then everything matching "target: ## magic comments"
-	$Q cat $(MAKEFILE_LIST) | grep -e "^[a-zA-Z_\-]*:.* ## .*" | awk 'BEGIN {FS = ":.*? ## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}' | sort
+	$Q cat $(MAKEFILE_LIST) | grep -e "^[a-zA-Z_\-]*:.* ## .*" | awk 'BEGIN {FS = ":.*? ## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}' | sort | grep -vE '^.....(help|pr|bins)\b'
