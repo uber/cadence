@@ -22,7 +22,6 @@ package esanalyzer
 
 import (
 	"context"
-	"github.com/uber/cadence/common/pinot"
 	"time"
 
 	"github.com/opentracing/opentracing-go"
@@ -41,6 +40,7 @@ import (
 	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/pinot"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/service/worker/workercommon"
 )
