@@ -24,6 +24,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/stretchr/testify/assert"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/pinot"
+	"go.uber.org/zap"
 	"testing"
 	"time"
 
@@ -339,4 +344,185 @@ func (s *esanalyzerWorkflowTestSuite) TestEmitWorkflowTypeCountMetricsActivity()
 	_, err = s.activityEnv.ExecuteActivity(s.workflow.emitWorkflowTypeCountMetrics)
 	s.NoError(err)
 
+}
+
+func TestNewAnalyzer(t *testing.T) {
+	mockESConfig := &config.ElasticSearchConfig{
+		Indices: map[string]string{
+			common.VisibilityAppName: "test",
+		},
+	}
+
+	mockESClient := &esMocks.GenericClient{}
+	testAnalyzer1 := New(nil, nil, nil, mockESClient, nil, mockESConfig, nil, nil, nil, nil, nil)
+
+	mockPinotClient := &pinot.MockGenericClient{}
+	testAnalyzer2 := New(nil, nil, nil, nil, mockPinotClient, mockESConfig, nil, nil, nil, nil, nil)
+
+	assert.Equal(t, testAnalyzer1.readMode, ES)
+	assert.Equal(t, testAnalyzer2.readMode, Pinot)
+}
+
+func TestEmitWorkflowTypeCountMetricsESErrorCases(t *testing.T) {
+	mockESConfig := &config.ElasticSearchConfig{
+		Indices: map[string]string{
+			common.VisibilityAppName: "test",
+		},
+	}
+
+	ctrl := gomock.NewController(t)
+	mockESClient := &esMocks.GenericClient{}
+	mockDomainCache := cache.NewMockDomainCache(ctrl)
+	testAnalyzer := New(nil, nil, nil, mockESClient, nil, mockESConfig, log.NewNoop(), tally.NoopScope, nil, mockDomainCache, nil)
+	testWorkflow := &Workflow{analyzer: testAnalyzer}
+
+	tests := map[string]struct {
+		domainCacheAffordance func(mockDomainCache *cache.MockDomainCache)
+		ESClientAffordance    func(mockESClient *esMocks.GenericClient)
+		expectedErr           error
+	}{
+		"Case1: error getting domain": {
+			domainCacheAffordance: func(mockDomainCache *cache.MockDomainCache) {
+				mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(nil, fmt.Errorf("error")).Times(1)
+			},
+			ESClientAffordance: func(mockESClient *esMocks.GenericClient) {},
+			expectedErr:        fmt.Errorf("error"),
+		},
+		"Case2: error ES searchRaw": {
+			domainCacheAffordance: func(mockDomainCache *cache.MockDomainCache) {
+				mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(cache.NewDomainCacheEntryForTest(
+					&persistence.DomainInfo{ID: "test-id"}, nil, false, nil, 0, nil), nil)
+			},
+			ESClientAffordance: func(mockESClient *esMocks.GenericClient) {
+				mockESClient.On("SearchRaw", mock.Anything, mock.Anything, mock.Anything).Return(
+					nil, fmt.Errorf("error")).Times(1)
+			},
+			expectedErr: fmt.Errorf("error"),
+		},
+		"Case3: foundAggregation is false": {
+			domainCacheAffordance: func(mockDomainCache *cache.MockDomainCache) {
+				mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(cache.NewDomainCacheEntryForTest(
+					&persistence.DomainInfo{ID: "test-id"}, nil, false, nil, 0, nil), nil)
+			},
+			ESClientAffordance: func(mockESClient *esMocks.GenericClient) {
+				mockESClient.On("SearchRaw", mock.Anything, mock.Anything, mock.Anything).Return(
+					&elasticsearch.RawResponse{
+						Aggregations: map[string]json.RawMessage{},
+					}, nil).Times(1)
+			},
+			expectedErr: nil,
+		},
+		"Case4: error unmarshalling aggregation": {
+			domainCacheAffordance: func(mockDomainCache *cache.MockDomainCache) {
+				mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(cache.NewDomainCacheEntryForTest(
+					&persistence.DomainInfo{ID: "test-id"}, nil, false, nil, 0, nil), nil)
+			},
+			ESClientAffordance: func(mockESClient *esMocks.GenericClient) {
+				mockESClient.On("SearchRaw", mock.Anything, mock.Anything, mock.Anything).Return(
+					&elasticsearch.RawResponse{
+						Aggregations: map[string]json.RawMessage{
+							"wftypes": []byte("invalid"),
+						},
+					}, nil).Times(1)
+			},
+			expectedErr: fmt.Errorf("invalid character 'i' looking for beginning of value"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			// Set up mocks
+			test.domainCacheAffordance(mockDomainCache)
+			test.ESClientAffordance(mockESClient)
+
+			err := testWorkflow.emitWorkflowTypeCountMetricsES(context.Background(), "test-domain", zap.NewNop())
+			if err == nil {
+				assert.Equal(t, test.expectedErr, err)
+			} else {
+				assert.Equal(t, test.expectedErr.Error(), err.Error())
+			}
+		})
+	}
+}
+
+func TestEmitWorkflowVersionMetricsESErrorCases(t *testing.T) {
+	mockESConfig := &config.ElasticSearchConfig{
+		Indices: map[string]string{
+			common.VisibilityAppName: "test",
+		},
+	}
+
+	ctrl := gomock.NewController(t)
+	mockESClient := &esMocks.GenericClient{}
+	mockDomainCache := cache.NewMockDomainCache(ctrl)
+	testAnalyzer := New(nil, nil, nil, mockESClient, nil, mockESConfig, log.NewNoop(), tally.NoopScope, nil, mockDomainCache, nil)
+	testWorkflow := &Workflow{analyzer: testAnalyzer}
+
+	tests := map[string]struct {
+		domainCacheAffordance func(mockDomainCache *cache.MockDomainCache)
+		ESClientAffordance    func(mockESClient *esMocks.GenericClient)
+		expectedErr           error
+	}{
+		"Case1: error getting domain": {
+			domainCacheAffordance: func(mockDomainCache *cache.MockDomainCache) {
+				mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(nil, fmt.Errorf("error")).Times(1)
+			},
+			ESClientAffordance: func(mockESClient *esMocks.GenericClient) {},
+			expectedErr:        fmt.Errorf("error"),
+		},
+		"Case2: error ES searchRaw": {
+			domainCacheAffordance: func(mockDomainCache *cache.MockDomainCache) {
+				mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(cache.NewDomainCacheEntryForTest(
+					&persistence.DomainInfo{ID: "test-id"}, nil, false, nil, 0, nil), nil)
+			},
+			ESClientAffordance: func(mockESClient *esMocks.GenericClient) {
+				mockESClient.On("SearchRaw", mock.Anything, mock.Anything, mock.Anything).Return(
+					nil, fmt.Errorf("error")).Times(1)
+			},
+			expectedErr: fmt.Errorf("error"),
+		},
+		"Case3: foundAggregation is false": {
+			domainCacheAffordance: func(mockDomainCache *cache.MockDomainCache) {
+				mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(cache.NewDomainCacheEntryForTest(
+					&persistence.DomainInfo{ID: "test-id"}, nil, false, nil, 0, nil), nil)
+			},
+			ESClientAffordance: func(mockESClient *esMocks.GenericClient) {
+				mockESClient.On("SearchRaw", mock.Anything, mock.Anything, mock.Anything).Return(
+					&elasticsearch.RawResponse{
+						Aggregations: map[string]json.RawMessage{},
+					}, nil).Times(1)
+			},
+			expectedErr: nil,
+		},
+		"Case4: error unmarshalling aggregation": {
+			domainCacheAffordance: func(mockDomainCache *cache.MockDomainCache) {
+				mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(cache.NewDomainCacheEntryForTest(
+					&persistence.DomainInfo{ID: "test-id"}, nil, false, nil, 0, nil), nil)
+			},
+			ESClientAffordance: func(mockESClient *esMocks.GenericClient) {
+				mockESClient.On("SearchRaw", mock.Anything, mock.Anything, mock.Anything).Return(
+					&elasticsearch.RawResponse{
+						Aggregations: map[string]json.RawMessage{
+							"wftypes": []byte("invalid"),
+						},
+					}, nil).Times(1)
+			},
+			expectedErr: fmt.Errorf("invalid character 'i' looking for beginning of value"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			// Set up mocks
+			test.domainCacheAffordance(mockDomainCache)
+			test.ESClientAffordance(mockESClient)
+
+			err := testWorkflow.emitWorkflowVersionMetricsES(context.Background(), "test-domain", zap.NewNop())
+			if err == nil {
+				assert.Equal(t, test.expectedErr, err)
+			} else {
+				assert.Equal(t, test.expectedErr.Error(), err.Error())
+			}
+		})
+	}
 }
