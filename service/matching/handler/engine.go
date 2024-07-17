@@ -471,13 +471,12 @@ pollLoop:
 			return nil, fmt.Errorf("couldn't get task: %w", err)
 		}
 
-		e.emitForwardedFromStats(hCtx.scope, task.IsForwarded(), req.GetForwardedFrom())
-
 		if task.IsStarted() {
 			return task.PollForDecisionResponse(), nil
 			// TODO: Maybe add history expose here?
 		}
 
+		e.emitForwardedFromStats(hCtx.scope, task.IsForwarded(), req.GetForwardedFrom())
 		if task.IsQuery() {
 			task.Finish(nil) // this only means query task sync match succeed.
 
@@ -598,18 +597,17 @@ pollLoop:
 			return nil, err
 		}
 
-		e.emitForwardedFromStats(hCtx.scope, task.IsForwarded(), req.GetForwardedFrom())
-
 		if task.IsStarted() {
 			// tasks received from remote are already started. So, simply forward the response
 			return task.PollForActivityResponse(), nil
 		}
+		e.emitForwardedFromStats(hCtx.scope, task.IsForwarded(), req.GetForwardedFrom())
+		e.emitTaskIsolationMetrics(hCtx.scope, task.Event.PartitionConfig, req.GetIsolationGroup())
 		if task.ActivityTaskDispatchInfo != nil {
 			task.Finish(nil)
 			return e.createSyncMatchPollForActivityTaskResponse(task, task.ActivityTaskDispatchInfo), nil
 		}
 
-		e.emitTaskIsolationMetrics(hCtx.scope, task.Event.PartitionConfig, req.GetIsolationGroup())
 		resp, err := e.recordActivityTaskStarted(hCtx.Context, request, task)
 		if err != nil {
 			switch err.(type) {
