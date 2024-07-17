@@ -24,6 +24,7 @@ package domain
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/uber/cadence/common/clock"
@@ -210,7 +211,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ct
 		Name: task.Info.GetName(),
 	})
 	if err != nil {
-		if _, ok := err.(*types.EntityNotExistsError); ok {
+		if errors.As(err, new(*types.EntityNotExistsError)) {
 			// this can happen if the create domain replication task is to processed.
 			// e.g. new cluster which does not have anything
 			return h.handleDomainCreationReplicationTask(ctx, task)

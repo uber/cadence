@@ -22,6 +22,7 @@ package common
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -51,25 +52,22 @@ func GetActivityServiceConfig(ctx context.Context) *lib.RuntimeContext {
 
 // IsServiceBusyError returns if the err is a ServiceBusyError
 func IsServiceBusyError(err error) bool {
-	_, ok := err.(*shared.ServiceBusyError)
-	return ok
+	return errors.As(err, new(*shared.ServiceBusyError))
 }
 
 // IsCancellationAlreadyRequestedError returns if the err is a CancellationAlreadyRequestedError
 func IsCancellationAlreadyRequestedError(err error) bool {
-	_, ok := err.(*shared.CancellationAlreadyRequestedError)
-	return ok
+	return errors.As(err, new(*shared.CancellationAlreadyRequestedError))
 }
 
 // IsEntityNotExistsError returns if the err is a EntityNotExistsError
 func IsEntityNotExistsError(err error) bool {
-	_, ok := err.(*shared.EntityNotExistsError)
-	return ok
+	return errors.As(err, new(*shared.EntityNotExistsError))
 }
 
 // IsNonRetryableError return true if the err is considered non-retryable
 func IsNonRetryableError(err error) bool {
-	if err == context.DeadlineExceeded || err == context.Canceled {
+	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 		return true
 	}
 

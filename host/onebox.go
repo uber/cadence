@@ -23,6 +23,7 @@ package host
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -813,7 +814,7 @@ func (c *cadenceImpl) createSystemDomain() error {
 		FailoverVersion:   common.EmptyVersion,
 	})
 	if err != nil {
-		if _, ok := err.(*types.DomainAlreadyExistsError); ok {
+		if errors.As(err, new(*types.DomainAlreadyExistsError)) {
 			return nil
 		}
 		return fmt.Errorf("failed to create cadence-system domain: %v", err)

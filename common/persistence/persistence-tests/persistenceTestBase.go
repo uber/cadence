@@ -23,6 +23,7 @@ package persistencetests
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -1884,8 +1885,7 @@ func (s *TestBase) Publish(
 }
 
 func isMessageIDConflictError(err error) bool {
-	_, ok := err.(*persistence.ConditionFailedError)
-	return ok
+	return errors.As(err, new(*persistence.ConditionFailedError))
 }
 
 // GetReplicationMessages is a utility method to get messages from the queue

@@ -22,6 +22,7 @@ package backoff
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
@@ -117,8 +118,7 @@ func NewThrottleRetry(opts ...ThrottleRetryOption) *ThrottleRetry {
 		},
 		throttlePolicy: throttlePolicy,
 		isThrottle: func(err error) bool {
-			_, ok := err.(*types.ServiceBusyError)
-			return ok
+			return errors.As(err, new(*types.ServiceBusyError))
 		},
 		clock: SystemClock,
 	}

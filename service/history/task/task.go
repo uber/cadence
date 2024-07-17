@@ -240,27 +240,27 @@ func (t *taskImpl) HandleErr(err error) (retErr error) {
 
 	logEvent(t.eventLogger, "Handling task processing error", err)
 
-	if _, ok := err.(*types.EntityNotExistsError); ok {
+	if errors.As(err, new(*types.EntityNotExistsError)) {
 		return nil
-	} else if _, ok := err.(*types.WorkflowExecutionAlreadyCompletedError); ok {
+	} else if errors.As(err, new(*types.WorkflowExecutionAlreadyCompletedError)) {
 		return nil
 	}
 
 	if transferTask, ok := t.Info.(*persistence.TransferTaskInfo); ok &&
 		transferTask.TaskType == persistence.TransferTaskTypeCloseExecution &&
-		err == execution.ErrMissingWorkflowStartEvent &&
+		errors.Is(err, execution.ErrMissingWorkflowStartEvent) &&
 		t.shard.GetConfig().EnableDropStuckTaskByDomainID(t.Info.GetDomainID()) { // use domainID here to avoid accessing domainCache
 		t.scope.IncCounter(metrics.TransferTaskMissingEventCounterPerDomain)
 		t.logger.Error("Drop close execution transfer task due to corrupted workflow history", tag.Error(err), tag.LifeCycleProcessingFailed)
 		return nil
 	}
 
-	if err == errWorkflowBusy {
+	if errors.Is(err, errWorkflowBusy) {
 		t.scope.IncCounter(metrics.TaskWorkflowBusyPerDomain)
 		return err
 	}
 
-	if err == errWorkflowRateLimited {
+	if errors.Is(err, errWorkflowRateLimited) {
 		// metrics are emitted within the rate limiter
 		return err
 	}
@@ -278,17 +278,17 @@ func (t *taskImpl) HandleErr(err error) (retErr error) {
 	}
 
 	// this is a transient error during graceful failover
-	if err == ErrTaskPendingActive {
+	if errors.Is(err, ErrTaskPendingActive) {
 		t.scope.IncCounter(metrics.TaskPendingActiveCounterPerDomain)
 		return err
 	}
 
-	if err == ErrTaskDiscarded {
+	if errors.Is(err, ErrTaskDiscarded) {
 		t.scope.IncCounter(metrics.TaskDiscardedPerDomain)
 		err = nil
 	}
 
-	if err == execution.ErrMissingVersionHistories {
+	if errors.Is(err, execution.ErrMissingVersionHistories) {
 		t.logger.Error("Encounter 2DC workflow during task processing.")
 		t.scope.IncCounter(metrics.TaskUnsupportedPerDomain)
 		err = nil
@@ -310,7 +310,7 @@ func (t *taskImpl) HandleErr(err error) (retErr error) {
 
 	t.scope.IncCounter(metrics.TaskFailuresPerDomain)
 
-	if _, ok := err.(*persistence.CurrentWorkflowConditionFailedError); ok {
+	if errors.As(err, new(*persistence.CurrentWorkflowConditionFailedError)) {
 		t.logger.Error("More than 2 workflow are running.", tag.Error(err), tag.LifeCycleProcessingFailed)
 		return nil
 	}

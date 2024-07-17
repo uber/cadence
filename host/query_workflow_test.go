@@ -210,8 +210,8 @@ func (s *IntegrationSuite) TestQueryWorkflow_Sticky() {
 	}
 	queryResult = <-queryResultCh
 	s.NotNil(queryResult.Err)
-	queryFailError, ok := queryResult.Err.(*types.QueryFailedError)
-	s.True(ok)
+	var queryFailError *types.QueryFailedError
+	s.ErrorAs(err, &queryFailError)
 	s.Equal("unknown-query-type", queryFailError.Message)
 }
 
@@ -523,8 +523,8 @@ func (s *IntegrationSuite) TestQueryWorkflow_NonSticky() {
 	}
 	queryResult = <-queryResultCh
 	s.NotNil(queryResult.Err)
-	queryFailError, ok := queryResult.Err.(*types.QueryFailedError)
-	s.True(ok)
+	var queryFailError *types.QueryFailedError
+	s.ErrorAs(err, &queryFailError)
 	s.Equal("unknown-query-type", queryFailError.Message)
 
 	// advance the state of the decider
@@ -1416,6 +1416,7 @@ func (s *IntegrationSuite) TestQueryWorkflow_BeforeFirstDecision() {
 		},
 	})
 	s.Nil(queryResp)
-	s.IsType(&types.QueryFailedError{}, err)
-	s.Equal("workflow must handle at least one decision task before it can be queried", err.(*types.QueryFailedError).Message)
+	var queryErr *types.QueryFailedError
+	s.ErrorAs(err, &queryErr)
+	s.Equal("workflow must handle at least one decision task before it can be queried", queryErr.Message)
 }

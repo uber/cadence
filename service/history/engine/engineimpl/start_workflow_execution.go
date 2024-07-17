@@ -23,6 +23,7 @@ package engineimpl
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -232,7 +233,8 @@ func (e *historyEngineImpl) startWorkflowHelper(
 		return nil, t
 	}
 	// handle already started error
-	if t, ok := err.(*persistence.WorkflowExecutionAlreadyStartedError); ok {
+	var t *persistence.WorkflowExecutionAlreadyStartedError
+	if errors.As(err, &t) {
 
 		if t.StartRequestID == request.GetRequestID() {
 			return &types.StartWorkflowExecutionResponse{

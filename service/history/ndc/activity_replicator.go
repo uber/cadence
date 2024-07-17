@@ -24,6 +24,7 @@ package ndc
 
 import (
 	ctx "context"
+	"errors"
 	"time"
 
 	"github.com/uber/cadence/common"
@@ -100,7 +101,7 @@ func (r *activityReplicatorImpl) SyncActivity(
 
 	mutableState, err := context.LoadWorkflowExecution(ctx)
 	if err != nil {
-		if _, ok := err.(*types.EntityNotExistsError); !ok {
+		if !errors.As(err, new(*types.EntityNotExistsError)) {
 			return err
 		}
 

@@ -23,6 +23,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -56,8 +57,8 @@ const ErrInsufficientResources = "53000"
 const ErrTooManyConnections = "53300"
 
 func (pdb *db) IsDupEntryError(err error) bool {
-	sqlErr, ok := err.(*pq.Error)
-	return ok && sqlErr.Code == ErrDupEntry
+	var sqlErr *pq.Error
+	return errors.As(err, &sqlErr) && sqlErr.Code == ErrDupEntry
 }
 
 func (pdb *db) IsNotFoundError(err error) bool {
@@ -69,8 +70,8 @@ func (pdb *db) IsTimeoutError(err error) bool {
 }
 
 func (pdb *db) IsThrottlingError(err error) bool {
-	sqlErr, ok := err.(*pq.Error)
-	if ok {
+	var sqlErr *pq.Error
+	if errors.As(err, &sqlErr) {
 		if sqlErr.Code == ErrTooManyConnections ||
 			sqlErr.Code == ErrInsufficientResources {
 			return true

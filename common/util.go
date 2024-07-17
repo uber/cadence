@@ -293,24 +293,19 @@ func IsServiceTransientError(err error) bool {
 
 // IsEntityNotExistsError checks if the error is an entity not exists error.
 func IsEntityNotExistsError(err error) bool {
-	_, ok := err.(*types.EntityNotExistsError)
-	return ok
+	return errors.As(err, new(*types.EntityNotExistsError))
 }
 
 // IsServiceBusyError checks if the error is a service busy error.
 func IsServiceBusyError(err error) bool {
-	switch err.(type) {
-	case *types.ServiceBusyError:
-		return true
-	}
-	return false
+	return errors.As(err, new(*types.ServiceBusyError))
 }
 
 // IsContextTimeoutError checks if the error is context timeout error
 func IsContextTimeoutError(err error) bool {
-	switch err := err.(type) {
-	case *types.InternalServiceError:
-		return err.Message == context.DeadlineExceeded.Error()
+	var internalErr *types.InternalServiceError
+	if errors.As(err, &internalErr) {
+		return internalErr.Message == context.DeadlineExceeded.Error()
 	}
 	return err == context.DeadlineExceeded || yarpcerrors.IsDeadlineExceeded(err)
 }
@@ -940,7 +935,8 @@ func ConvertDynamicConfigMapPropertyToIntMap(dcValue map[string]interface{}) (ma
 
 // IsStickyTaskConditionError is error from matching engine
 func IsStickyTaskConditionError(err error) bool {
-	if e, ok := err.(*types.InternalServiceError); ok {
+	var e *types.InternalServiceError
+	if errors.As(err, &e) {
 		return e.GetMessage() == StickyTaskConditionFailedErrorMsg
 	}
 	return false
@@ -984,7 +980,7 @@ func ConvertErrToGetTaskFailedCause(err error) types.GetTaskFailedCause {
 	if IsServiceBusyError(err) {
 		return types.GetTaskFailedCauseServiceBusy
 	}
-	if _, ok := err.(*types.ShardOwnershipLostError); ok {
+	if errors.As(err, new(*types.ShardOwnershipLostError)) {
 		return types.GetTaskFailedCauseShardOwnershipLost
 	}
 	return types.GetTaskFailedCauseUncategorized

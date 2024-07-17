@@ -22,6 +22,7 @@ package history
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"go.uber.org/cadence/activity"
@@ -250,7 +251,7 @@ func (s *Scavenger) startTaskProcessor(
 			})
 
 			if err != nil {
-				if _, ok := err.(*types.EntityNotExistsError); ok {
+				if errors.As(err, new(*types.EntityNotExistsError)) {
 					// deleting history branch
 					var branchToken []byte
 					branchToken, err = p.NewHistoryBranchTokenByBranchID(task.treeID, task.branchID)

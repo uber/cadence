@@ -22,6 +22,7 @@ package replication
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -235,7 +236,7 @@ func (f *taskFetcherImpl) fetchTasks() {
 			// When timer fires, we collect all the requests we have so far and attempt to send them to remote.
 			err := f.fetchAndDistributeTasksFn(requestByShard)
 			if err != nil {
-				if _, ok := err.(*types.ServiceBusyError); ok {
+				if errors.As(err, new(*types.ServiceBusyError)) {
 					// slow down replication when source cluster is busy
 					timer.Reset(f.config.ReplicationTaskFetcherServiceBusyWait())
 				} else {
@@ -265,7 +266,7 @@ func (f *taskFetcherImpl) fetchAndDistributeTasks(requestByShard map[int32]*requ
 
 	messagesByShard, err := f.getMessages(requestByShard)
 	if err != nil {
-		if _, ok := err.(*types.ServiceBusyError); !ok {
+		if !errors.As(err, new(*types.ServiceBusyError)) {
 			f.logger.Error("Failed to get replication tasks", tag.Error(err))
 		} else {
 			f.logger.Debug("Failed to get replication tasks because service busy")

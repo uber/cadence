@@ -23,6 +23,7 @@ package mysql
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/VividCortex/mysqlerr"
@@ -51,10 +52,10 @@ var _ sqlplugin.DB = (*db)(nil)
 var _ sqlplugin.Tx = (*db)(nil)
 
 func (mdb *db) IsDupEntryError(err error) bool {
-	sqlErr, ok := err.(*mysql.MySQLError)
+	var sqlErr *mysql.MySQLError
 	// ErrDupEntry MySQL Error 1062 indicates a duplicate primary key i.e. the row already exists,
 	// so we don't do the insert and return a ConditionalUpdate error.
-	return ok && sqlErr.Number == mysqlerr.ER_DUP_ENTRY
+	return errors.As(err, &sqlErr) && sqlErr.Number == mysqlerr.ER_DUP_ENTRY
 }
 
 func (mdb *db) IsNotFoundError(err error) bool {
@@ -62,11 +63,11 @@ func (mdb *db) IsNotFoundError(err error) bool {
 }
 
 func (mdb *db) IsTimeoutError(err error) bool {
-	if err == context.DeadlineExceeded {
+	if errors.Is(err, context.DeadlineExceeded) {
 		return true
 	}
-	sqlErr, ok := err.(*mysql.MySQLError)
-	if ok {
+	var sqlErr *mysql.MySQLError
+	if errors.As(err, &sqlErr) {
 		if sqlErr.Number == mysqlerr.ER_NET_READ_INTERRUPTED ||
 			sqlErr.Number == mysqlerr.ER_NET_WRITE_INTERRUPTED ||
 			sqlErr.Number == mysqlerr.ER_LOCK_WAIT_TIMEOUT ||
@@ -81,8 +82,8 @@ func (mdb *db) IsTimeoutError(err error) bool {
 }
 
 func (mdb *db) IsThrottlingError(err error) bool {
-	sqlErr, ok := err.(*mysql.MySQLError)
-	if ok {
+	var sqlErr *mysql.MySQLError
+	if errors.As(err, &sqlErr) {
 		if sqlErr.Number == mysqlerr.ER_CON_COUNT_ERROR ||
 			sqlErr.Number == mysqlerr.ER_TOO_MANY_USER_CONNECTIONS ||
 			sqlErr.Number == mysqlerr.ER_TOO_MANY_CONCURRENT_TRXS ||

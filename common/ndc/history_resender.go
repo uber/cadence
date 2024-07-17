@@ -156,20 +156,18 @@ func (n *HistoryResenderImpl) SendSingleWorkflowHistory(
 			historyBatch.versionHistory.GetItems())
 
 		err = n.sendReplicationRawRequest(ctx, replicationRequest)
-		switch err.(type) {
-		case nil:
-			// continue to process the events
-			break
-		case *types.EntityNotExistsError:
+		if err == nil {
+			continue
+		}
+		if errors.As(err, new(*types.EntityNotExistsError)) {
 			// Case 1: the workflow pass the retention period
 			// Case 2: the workflow is corrupted
 			if skipTask := n.fixCurrentExecution(ctx, domainID, workflowID, runID); skipTask {
 				return ErrSkipTask
 			}
 			return err
-		default:
-			return fmt.Errorf("sending replication request: %w", err)
 		}
+		return fmt.Errorf("sending replication request: %w", err)
 	}
 	return nil
 }

@@ -21,6 +21,7 @@
 package canary
 
 import (
+	"errors"
 	"time"
 
 	"github.com/uber-go/tally"
@@ -99,7 +100,7 @@ func recordWorkflowEnd(scope tally.Scope, elapsed time.Duration, err error) erro
 		return err
 	}
 	scope.Counter(failedCount).Inc(1)
-	if _, ok := err.(*workflow.TimeoutError); ok {
+	if errors.As(err, new(*workflow.TimeoutError)) {
 		scope.Counter(errTimeoutCount).Inc(1)
 	}
 	return err

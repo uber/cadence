@@ -22,6 +22,7 @@ package nosql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/uber/cadence/common"
@@ -84,7 +85,7 @@ func (m *nosqlDomainStore) CreateDomain(
 	err = m.db.InsertDomain(ctx, row)
 
 	if err != nil {
-		if _, ok := err.(*types.DomainAlreadyExistsError); ok {
+		if errors.As(err, new(*types.DomainAlreadyExistsError)) {
 			return nil, err
 		}
 		return nil, convertCommonErrors(m.db, "CreateDomain", err)

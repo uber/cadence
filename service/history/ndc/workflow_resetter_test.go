@@ -251,8 +251,8 @@ func (s *workflowResetterSuite) TestResetWorkflow_Error() {
 	s.IsType(&types.RetryTaskV2Error{}, err)
 	s.Nil(rebuiltMutableState)
 
-	retryErr, isRetryError := err.(*types.RetryTaskV2Error)
-	s.True(isRetryError)
+	var retryErr *types.RetryTaskV2Error
+	s.ErrorAs(err, &retryErr)
 	expectedErr := &types.RetryTaskV2Error{
 		Message:         resendOnResetWorkflowMessage,
 		DomainID:        s.domainID,

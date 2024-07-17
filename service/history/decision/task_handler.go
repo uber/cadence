@@ -22,6 +22,7 @@ package decision
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/pborman/uuid"
@@ -1074,7 +1075,7 @@ func (handler *taskHandlerImpl) validateDecisionAttr(
 ) error {
 
 	if err := validationFn(); err != nil {
-		if _, ok := err.(*types.BadRequestError); ok {
+		if errors.As(err, new(*types.BadRequestError)) {
 			return handler.handlerFailDecision(failedCause, err.Error())
 		}
 		return err

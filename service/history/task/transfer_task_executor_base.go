@@ -23,6 +23,7 @@ package task
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -165,7 +166,7 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 	domain := defaultDomainName
 
 	if domainEntry, err := t.shard.GetDomainCache().GetDomainByID(domainID); err != nil {
-		if _, ok := err.(*types.EntityNotExistsError); !ok {
+		if !errors.As(err, new(*types.EntityNotExistsError)) {
 			return err
 		}
 	} else {
@@ -238,7 +239,7 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 
 	domain, err := t.shard.GetDomainCache().GetDomainName(domainID)
 	if err != nil {
-		if _, ok := err.(*types.EntityNotExistsError); !ok {
+		if !errors.As(err, new(*types.EntityNotExistsError)) {
 			return err
 		}
 		domain = defaultDomainName
@@ -446,6 +447,5 @@ func copySearchAttributes(
 }
 
 func isWorkflowNotExistError(err error) bool {
-	_, ok := err.(*types.EntityNotExistsError)
-	return ok
+	return errors.As(err, new(*types.EntityNotExistsError))
 }

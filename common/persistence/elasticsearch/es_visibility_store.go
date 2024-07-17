@@ -816,11 +816,12 @@ func (v *esVisibilityStore) getValueOfSearchAfterInJSON(token *es.ElasticVisibil
 	case types.IndexedValueTypeInt, types.IndexedValueTypeDatetime, types.IndexedValueTypeBool:
 		sortVal, err = token.SortValue.(json.Number).Int64()
 		if err != nil {
-			err, ok := err.(*strconv.NumError) // field not present, ES will return big int +-9223372036854776000
-			if !ok {
+			var typedErr *strconv.NumError
+			// field not present, ES will return big int +-9223372036854776000
+			if !errors.As(err, &typedErr) {
 				return "", err
 			}
-			if err.Num[0] == '-' { // desc
+			if typedErr.Num[0] == '-' { // desc
 				sortVal = math.MinInt64
 			} else { // asc
 				sortVal = math.MaxInt64

@@ -21,6 +21,8 @@
 package queue
 
 import (
+	"errors"
+
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
@@ -62,7 +64,7 @@ func newTimerQueueStandbyProcessor(
 					return true, nil
 				}
 			} else {
-				if _, ok := err.(*types.EntityNotExistsError); !ok {
+				if !errors.As(err, new(*types.EntityNotExistsError)) {
 					// retry the task if failed to find the domain
 					logger.Warn("Cannot find domain", tag.WorkflowDomainID(timer.DomainID))
 					return false, err

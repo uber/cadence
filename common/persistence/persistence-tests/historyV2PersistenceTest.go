@@ -22,6 +22,7 @@ package persistencetests
 
 import (
 	"context"
+	"errors"
 	"log"
 	"math"
 	"math/rand"
@@ -72,12 +73,7 @@ func createHistoryTestRetryPolicy() backoff.RetryPolicy {
 }
 
 func isConditionFail(err error) bool {
-	switch err.(type) {
-	case *p.ConditionFailedError:
-		return true
-	default:
-		return false
-	}
+	return errors.As(err, new(*p.ConditionFailedError))
 }
 
 // SetupSuite implementation
@@ -456,8 +452,7 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 
 			// read to verify override success, at this point history is corrupted, missing 7/8, so we should only see 6 events
 			_, err = s.readWithError(ctx, branch, 1, 25)
-			_, ok := err.(*types.InternalDataInconsistencyError)
-			s.Equal(true, ok)
+			s.ErrorAs(err, new(*types.InternalDataInconsistencyError))
 
 			events = s.read(ctx, branch, 1, 7)
 			s.Equal(6, len(events))
@@ -556,8 +551,7 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyForkAndAppendBranches() {
 			// cannot append to ancestors
 			events := s.genRandomEvents([]int64{forkNodeID - 1}, 1)
 			err = s.appendNewNode(ctx, bi, events, reserveTxn(1))
-			_, ok := err.(*p.InvalidPersistenceRequestError)
-			s.Equal(true, ok)
+			s.ErrorAs(err, new(*p.InvalidPersistenceRequestError))
 
 			// append second batch to first level
 			eids := make([]int64, 0)

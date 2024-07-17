@@ -22,6 +22,7 @@ package parentclosepolicy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"time"
@@ -197,12 +198,12 @@ func ProcessorActivity(ctx context.Context, request Request) error {
 			err = fmt.Errorf("unknown parent close policy: %v", execution.Policy)
 		}
 		if err != nil {
-			switch err.(type) {
-			case *types.EntityNotExistsError,
-				*types.WorkflowExecutionAlreadyCompletedError,
-				*types.CancellationAlreadyRequestedError:
+			switch {
+			case errors.As(err, new(*types.EntityNotExistsError)),
+				errors.As(err, new(*types.WorkflowExecutionAlreadyCompletedError)),
+				errors.As(err, new(*types.CancellationAlreadyRequestedError)):
 				err = nil
-			case *types.DomainNotActiveError:
+			case errors.As(err, new(*types.DomainNotActiveError)):
 				var domainEntry *cache.DomainCacheEntry
 				if domainEntry, err = domainCache.GetDomainByID(domainID); err == nil {
 					cluster := domainEntry.GetReplicationConfig().ActiveClusterName

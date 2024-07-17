@@ -22,6 +22,7 @@ package canary
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -61,7 +62,7 @@ func timeoutWorkflow(ctx workflow.Context, inputScheduledTimeNanos int64) error 
 
 	activityErr := activityFuture.Get(ctx, nil)
 	if activityErr != nil {
-		if _, ok := activityErr.(*workflow.TimeoutError); !ok {
+		if !errors.As(activityErr, new(*workflow.TimeoutError)) {
 			workflow.GetLogger(ctx).Info("activity timeout failed", zap.Error(activityErr))
 		} else {
 			activityErr = nil

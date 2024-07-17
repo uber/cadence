@@ -23,6 +23,7 @@ package nosql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -724,8 +725,8 @@ func (d *nosqlExecutionStore) prepareCurrentWorkflowRequestForCreateWorkflowTxn(
 
 func (d *nosqlExecutionStore) processUpdateWorkflowResult(err error, rangeID int64) error {
 	if err != nil {
-		conditionFailureErr, isConditionFailedError := err.(*nosqlplugin.WorkflowOperationConditionFailure)
-		if isConditionFailedError {
+		var conditionFailureErr *nosqlplugin.WorkflowOperationConditionFailure
+		if errors.As(err, &conditionFailureErr) {
 			switch {
 			case conditionFailureErr.UnknownConditionFailureDetails != nil:
 				return &persistence.ConditionFailedError{
@@ -770,7 +771,7 @@ func (d *nosqlExecutionStore) assertNotCurrentExecution(
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}); err != nil {
-		if _, ok := err.(*types.EntityNotExistsError); ok {
+		if errors.As(err, new(*types.EntityNotExistsError)) {
 			// allow bypassing no current record
 			return nil
 		}

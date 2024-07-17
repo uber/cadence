@@ -110,8 +110,7 @@ func (s *HandlerTestSuite) assertValidateSetupSucceeds(input *SetupConfig) {
 func (s *HandlerTestSuite) assertValidateSetupFails(input *SetupConfig) {
 	err := validateSetupConfig(input)
 	s.NotNil(err)
-	_, ok := err.(*ConfigError)
-	s.True(ok)
+	s.ErrorAs(err, new(*ConfigError))
 }
 
 func (s *HandlerTestSuite) assertValidateUpdateSucceeds(input *UpdateConfig) {
@@ -122,6 +121,5 @@ func (s *HandlerTestSuite) assertValidateUpdateSucceeds(input *UpdateConfig) {
 func (s *HandlerTestSuite) assertValidateUpdateFails(input *UpdateConfig) {
 	err := validateUpdateConfig(input)
 	s.NotNil(err)
-	_, ok := err.(*ConfigError)
-	s.True(ok)
+	s.ErrorAs(err, new(*ConfigError))
 }

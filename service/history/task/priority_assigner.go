@@ -21,6 +21,7 @@
 package task
 
 import (
+	"errors"
 	"sync"
 
 	"github.com/uber/cadence/common"
@@ -134,7 +135,7 @@ func (a *priorityAssignerImpl) Assign(queueTask Task) error {
 func (a *priorityAssignerImpl) getDomainInfo(domainID string) (string, bool, error) {
 	domainEntry, err := a.domainCache.GetDomainByID(domainID)
 	if err != nil {
-		if _, ok := err.(*types.EntityNotExistsError); !ok {
+		if !errors.As(err, new(*types.EntityNotExistsError)) {
 			a.logger.Warn("Cannot find domain", tag.WorkflowDomainID(domainID))
 			return "", false, err
 		}

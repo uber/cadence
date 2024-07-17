@@ -21,6 +21,7 @@
 package lib
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -147,7 +148,7 @@ func recordWorkflowEnd(
 		return err
 	}
 	scope.Counter(FailedCount).Inc(1)
-	if _, ok := err.(*workflow.TimeoutError); ok {
+	if errors.As(err, new(*workflow.TimeoutError)) {
 		scope.Counter(errTimeoutCount).Inc(1)
 	}
 	return err

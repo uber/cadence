@@ -53,6 +53,7 @@ package persistence
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -1665,8 +1666,7 @@ type (
 
 // IsTimeoutError check whether error is TimeoutError
 func IsTimeoutError(err error) bool {
-	_, ok := err.(*TimeoutError)
-	return ok
+	return errors.As(err, new(*TimeoutError))
 }
 
 // GetTaskID returns the task ID for transfer task
@@ -1970,8 +1970,8 @@ func NewGetReplicationTasksFromDLQRequest(
 
 // IsTransientError checks if the error is a transient persistence error
 func IsTransientError(err error) bool {
-	switch err.(type) {
-	case *types.InternalServiceError, *types.ServiceBusyError, *TimeoutError:
+	switch {
+	case errors.As(err, new(*types.InternalServiceError)), errors.As(err, new(*types.ServiceBusyError)), errors.As(err, new(*TimeoutError)):
 		return true
 	}
 
@@ -1980,8 +1980,8 @@ func IsTransientError(err error) bool {
 
 // IsBackgroundTransientError checks if the error is a transient error on background jobs
 func IsBackgroundTransientError(err error) bool {
-	switch err.(type) {
-	case *types.InternalServiceError, *TimeoutError:
+	switch {
+	case errors.As(err, new(*types.InternalServiceError)), errors.As(err, new(*TimeoutError)):
 		return true
 	}
 

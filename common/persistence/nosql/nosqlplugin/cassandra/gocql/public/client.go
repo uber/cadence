@@ -22,6 +22,7 @@ package public
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	gogocql "github.com/gocql/gocql"
@@ -47,17 +48,16 @@ func (c client) CreateSession(
 }
 
 func (c client) IsTimeoutError(err error) bool {
-	if err == context.DeadlineExceeded {
+	if errors.Is(err, context.DeadlineExceeded) {
 		return true
 	}
-	if err == gogocql.ErrTimeoutNoResponse {
+	if errors.Is(err, gogocql.ErrTimeoutNoResponse) {
 		return true
 	}
-	if err == gogocql.ErrConnectionClosed {
+	if errors.Is(err, gogocql.ErrConnectionClosed) {
 		return true
 	}
-	_, ok := err.(*gogocql.RequestErrWriteTimeout)
-	return ok
+	return errors.As(err, new(*gogocql.RequestErrWriteTimeout))
 }
 
 func (c client) IsNotFoundError(err error) bool {
@@ -65,7 +65,8 @@ func (c client) IsNotFoundError(err error) bool {
 }
 
 func (c client) IsThrottlingError(err error) bool {
-	if req, ok := err.(gogocql.RequestError); ok {
+	var req gogocql.RequestError
+	if errors.As(err, &req) {
 		// gocql does not expose the constant errOverloaded = 0x1001
 		return req.Code() == 0x1001
 	}
@@ -73,7 +74,8 @@ func (c client) IsThrottlingError(err error) bool {
 }
 
 func (c client) IsDBUnavailableError(err error) bool {
-	if req, ok := err.(gogocql.RequestError); ok {
+	var req gogocql.RequestError
+	if errors.As(err, &req) {
 		// 0x1000 == UNAVAILABLE
 		if req.Code() != 0x1000 {
 			return false
@@ -86,7 +88,8 @@ func (c client) IsDBUnavailableError(err error) bool {
 }
 
 func (c client) IsCassandraConsistencyError(err error) bool {
-	if req, ok := err.(gogocql.RequestError); ok {
+	var req gogocql.RequestError
+	if errors.As(err, &req) {
 		// 0x1000 == UNAVAILABLE
 		return req.Code() == 0x1000
 	}

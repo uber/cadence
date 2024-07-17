@@ -22,6 +22,7 @@ package elasticsearch
 
 import (
 	"context"
+	"errors"
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -389,12 +390,12 @@ func (p *visibilityMetricsClient) DeleteUninitializedWorkflowExecution(
 
 func (p *visibilityMetricsClient) updateErrorMetric(scopeWithDomainTag metrics.Scope, scope int, err error) {
 
-	switch err.(type) {
-	case *types.BadRequestError:
+	switch {
+	case errors.As(err, new(*types.BadRequestError)):
 		scopeWithDomainTag.IncCounter(metrics.ElasticsearchErrBadRequestCounterPerDomain)
 		scopeWithDomainTag.IncCounter(metrics.ElasticsearchFailuresPerDomain)
 
-	case *types.ServiceBusyError:
+	case errors.As(err, new(*types.ServiceBusyError)):
 		scopeWithDomainTag.IncCounter(metrics.ElasticsearchErrBusyCounterPerDomain)
 		scopeWithDomainTag.IncCounter(metrics.ElasticsearchFailuresPerDomain)
 	default:

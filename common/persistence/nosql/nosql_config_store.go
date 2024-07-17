@@ -22,6 +22,7 @@ package nosql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/uber/cadence/common/config"
@@ -62,7 +63,7 @@ func (m *nosqlConfigStore) FetchConfig(ctx context.Context, configType persisten
 func (m *nosqlConfigStore) UpdateConfig(ctx context.Context, value *persistence.InternalConfigStoreEntry) error {
 	err := m.db.InsertConfig(ctx, value)
 	if err != nil {
-		if _, ok := err.(*nosqlplugin.ConditionFailure); ok {
+		if errors.As(err, new(*nosqlplugin.ConditionFailure)) {
 			return &persistence.ConditionFailedError{Msg: fmt.Sprintf("Version %v already exists. Condition Failed", value.Version)}
 		}
 		return convertCommonErrors(m.db, "UpdateConfig", err)

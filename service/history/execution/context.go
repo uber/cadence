@@ -1145,7 +1145,7 @@ func createWorkflowExecutionWithRetry(
 		return err
 	}
 	isRetryable := func(err error) bool {
-		if _, ok := err.(*persistence.TimeoutError); ok {
+		if errors.As(err, new(*persistence.TimeoutError)) {
 			// TODO: is timeout error retryable for create workflow?
 			// if we treat it as retryable, user may receive workflowAlreadyRunning error
 			// on the first start workflow execution request.
@@ -1236,7 +1236,7 @@ func updateWorkflowExecutionWithRetry(
 	// checker, _ := taskvalidator.NewWfChecker(zapLogger, metricsClient, domainCache, executionManager, historymanager)
 
 	isRetryable := func(err error) bool {
-		if _, ok := err.(*persistence.TimeoutError); ok {
+		if errors.As(err, new(*persistence.TimeoutError)) {
 			// timeout error is not retryable for update workflow execution
 			return false
 		}

@@ -25,6 +25,7 @@ package domain
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"time"
@@ -158,16 +159,14 @@ func (d *handlerImpl) RegisterDomain(
 
 	// first check if the name is already registered as the local domain
 	_, err := d.domainManager.GetDomain(ctx, &persistence.GetDomainRequest{Name: registerRequest.GetName()})
-	switch err.(type) {
-	case nil:
+	if err == nil {
 		// domain already exists, cannot proceed
 		return &types.DomainAlreadyExistsError{Message: "Domain already exists."}
-	case *types.EntityNotExistsError:
-		// domain does not exists, proceeds
-	default:
-		// other err
+	}
+	if !errors.As(err, new(*types.EntityNotExistsError)) {
 		return err
 	}
+	// domain does not exists, proceeds
 
 	// input validation on domain name
 	matchedRegex, err := regexp.MatchString("^[a-zA-Z0-9-]+$", registerRequest.GetName())

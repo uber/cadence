@@ -22,6 +22,7 @@ package backoff
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -144,7 +145,7 @@ func (s *RetrySuite) TestIsRetryableSuccess() {
 	}
 
 	isRetryable := func(err error) bool {
-		if _, ok := err.(*someError); ok {
+		if errors.As(err, new(*someError)) {
 			return true
 		}
 
