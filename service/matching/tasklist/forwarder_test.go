@@ -76,11 +76,11 @@ func (t *ForwarderTestSuite) TearDownTest() {
 
 func (t *ForwarderTestSuite) TestForwardTaskError() {
 	task := newInternalTask(&persistence.TaskInfo{}, nil, types.TaskSourceHistory, "", false, nil, "")
-	t.Equal(errNoParent, t.fwdr.ForwardTask(context.Background(), task))
+	t.Equal(ErrNoParent, t.fwdr.ForwardTask(context.Background(), task))
 
 	t.usingTasklistPartition(persistence.TaskListTypeActivity)
 	t.fwdr.taskListKind = types.TaskListKindSticky
-	t.Equal(errTaskListKind, t.fwdr.ForwardTask(context.Background(), task))
+	t.Equal(ErrTaskListKind, t.fwdr.ForwardTask(context.Background(), task))
 }
 
 func (t *ForwarderTestSuite) TestForwardDecisionTask() {
@@ -142,18 +142,18 @@ func (t *ForwarderTestSuite) TestForwardTaskRateExceeded() {
 	for i := 0; i < rps; i++ {
 		t.NoError(t.fwdr.ForwardTask(context.Background(), task))
 	}
-	t.Equal(errForwarderSlowDown, t.fwdr.ForwardTask(context.Background(), task))
+	t.Equal(ErrForwarderSlowDown, t.fwdr.ForwardTask(context.Background(), task))
 }
 
 func (t *ForwarderTestSuite) TestForwardQueryTaskError() {
 	task := newInternalQueryTask("id1", &types.MatchingQueryWorkflowRequest{})
 	_, err := t.fwdr.ForwardQueryTask(context.Background(), task)
-	t.Equal(errNoParent, err)
+	t.Equal(ErrNoParent, err)
 
 	t.usingTasklistPartition(persistence.TaskListTypeDecision)
 	t.fwdr.taskListKind = types.TaskListKindSticky
 	_, err = t.fwdr.ForwardQueryTask(context.Background(), task)
-	t.Equal(errTaskListKind, err)
+	t.Equal(ErrTaskListKind, err)
 }
 
 func (t *ForwarderTestSuite) TestForwardQueryTask() {
@@ -191,12 +191,12 @@ func (t *ForwarderTestSuite) TestForwardQueryTaskRateNotEnforced() {
 
 func (t *ForwarderTestSuite) TestForwardPollError() {
 	_, err := t.fwdr.ForwardPoll(context.Background())
-	t.Equal(errNoParent, err)
+	t.Equal(ErrNoParent, err)
 
 	t.usingTasklistPartition(persistence.TaskListTypeActivity)
 	t.fwdr.taskListKind = types.TaskListKindSticky
 	_, err = t.fwdr.ForwardPoll(context.Background())
-	t.Equal(errTaskListKind, err)
+	t.Equal(ErrTaskListKind, err)
 
 }
 
