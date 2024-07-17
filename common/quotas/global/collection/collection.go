@@ -143,6 +143,19 @@ const (
 	gcAfterIdle = 5 // TODO: change to time-based, like aggregator?
 )
 
+func (m keyMode) isLocalPrimary() bool {
+	return m == modeLocal || m == modeLocalShadowGlobal
+}
+func (m keyMode) isGlobalPrimary() bool {
+	return m == modeGlobal || m == modeGlobalShadowLocal
+}
+func (m keyMode) usesLocal() bool {
+	return m == modeLocal || m == modeLocalShadowGlobal || m == modeGlobalShadowLocal
+}
+func (m keyMode) usesGlobal() bool {
+	return m == modeGlobal || m == modeGlobalShadowLocal || m == modeLocalShadowGlobal
+}
+
 func New(
 	name string,
 	// quotas for "local only" behavior.
@@ -298,9 +311,9 @@ func (c *Collection) For(key string) quotas.Limiter {
 
 func (c *Collection) shouldDeleteKey(mode keyMode, local bool) bool {
 	if local {
-		return !(mode == modeLocal || mode == modeLocalShadowGlobal || mode == modeGlobalShadowLocal)
+		return !mode.usesLocal()
 	}
-	return !(mode == modeGlobal || mode == modeLocalShadowGlobal || mode == modeGlobalShadowLocal)
+	return !mode.usesGlobal()
 }
 
 func (c *Collection) backgroundUpdateLoop() {
@@ -333,7 +346,8 @@ func (c *Collection) backgroundUpdateLoop() {
 				c.local.Range(func(k shared.LocalKey, v internal.CountedLimiter) bool {
 					gkey := c.km.LocalToGlobal(k)
 					counts := v.Collect()
-					if counts.Idle > gcAfterIdle || c.shouldDeleteKey(c.keyMode(gkey), true) {
+					mode := c.keyMode(gkey)
+					if counts.Idle > gcAfterIdle || c.shouldDeleteKey(mode, true) {
 						c.logger.Debug(
 							"deleting local ratelimiter",
 							tag.GlobalRatelimiterKey(string(gkey)),
@@ -343,7 +357,7 @@ func (c *Collection) backgroundUpdateLoop() {
 						return true // continue iterating, possibly delete others too
 					}
 
-					c.sendMetrics(gkey, k, "local", counts)
+					c.sendMetrics(gkey, k, true, mode, counts)
 					return true
 				})
 			}()
@@ -355,7 +369,8 @@ func (c *Collection) backgroundUpdateLoop() {
 			c.global.Range(func(k shared.LocalKey, v *internal.FallbackLimiter) bool {
 				gkey := c.km.LocalToGlobal(k)
 				counts, startup, failing := v.Collect()
-				if counts.Idle > gcAfterIdle || c.shouldDeleteKey(c.keyMode(gkey), false) {
+				mode := c.keyMode(gkey)
+				if counts.Idle > gcAfterIdle || c.shouldDeleteKey(mode, false) {
 					c.logger.Debug(
 						"deleting global ratelimiter",
 						tag.GlobalRatelimiterKey(string(gkey)),
@@ -378,7 +393,7 @@ func (c *Collection) backgroundUpdateLoop() {
 					Allowed:  counts.Allowed,
 					Rejected: counts.Rejected,
 				}
-				c.sendMetrics(gkey, k, "global", counts)
+				c.sendMetrics(gkey, k, false, mode, counts)
 
 				return true
 			})
@@ -403,7 +418,7 @@ func (c *Collection) backgroundUpdateLoop() {
 	}
 }
 
-func (c *Collection) sendMetrics(gkey shared.GlobalKey, lkey shared.LocalKey, limitType string, usage internal.UsageMetrics) {
+func (c *Collection) sendMetrics(gkey shared.GlobalKey, lkey shared.LocalKey, isLocalLimiter bool, mode keyMode, usage internal.UsageMetrics) {
 	// emit quota information to make monitoring easier.
 	// regrettably this will only be emitted when the key is (recently) in use, but
 	// for active users this is probably sufficient.  other cases will probably need
@@ -412,9 +427,17 @@ func (c *Collection) sendMetrics(gkey shared.GlobalKey, lkey shared.LocalKey, li
 		Tagged(metrics.GlobalRatelimiterKeyTag(string(gkey))).
 		UpdateGauge(metrics.GlobalRatelimiterQuota, float64(c.targetRPS(lkey)))
 
+	limitType := "global"
+	if isLocalLimiter {
+		limitType = "local"
+	}
+	limitTypeIsPrimary := isLocalLimiter && mode.isLocalPrimary() || !isLocalLimiter && mode.isGlobalPrimary()
+
 	scope := c.scope.Tagged(
 		metrics.GlobalRatelimiterKeyTag(string(gkey)),
 		metrics.GlobalRatelimiterTypeTag(limitType),
+		// useful for being able to tell when a key is "in use" or not, e.g. for monitoring purposes
+		metrics.GlobalRatelimiterIsPrimary(limitTypeIsPrimary),
 	)
 	scope.AddCounter(metrics.GlobalRatelimiterAllowedRequestsCount, int64(usage.Allowed))
 	scope.AddCounter(metrics.GlobalRatelimiterRejectedRequestsCount, int64(usage.Rejected))

@@ -62,6 +62,7 @@ const (
 	asyncWFRequestType            = "async_wf_request_type"
 	globalRatelimitKey            = "global_ratelimit_key"
 	globalRatelimitType           = "global_ratelimit_type"
+	globalRatelimitIsPrimary      = "is_primary"
 	globalRatelimitCollectionName = "global_ratelimit_collection"
 	workflowTerminationReason     = "workflow_termination_reason"
 
@@ -260,6 +261,14 @@ func GlobalRatelimiterKeyTag(value string) Tag {
 // GlobalRatelimiterTypeTag reports the "limit usage type" being reported, e.g. global vs local
 func GlobalRatelimiterTypeTag(value string) Tag {
 	return simpleMetric{key: globalRatelimitType, value: value}
+}
+
+func GlobalRatelimiterIsPrimary(isPrimary bool) Tag {
+	value := "false"
+	if isPrimary {
+		value = "true"
+	}
+	return simpleMetric{key: globalRatelimitIsPrimary, value: value}
 }
 
 // GlobalRatelimiterCollectionName is a namespacing tag to uniquely identify metrics
