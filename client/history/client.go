@@ -152,15 +152,26 @@ func (c *clientImpl) DescribeHistoryHost(
 
 	if request.ShardIDForHost != nil {
 		peer, err = c.peerResolver.FromShardID(int(request.GetShardIDForHost()))
+		if err != nil {
+			c.logger.Error("peer could not be resolved for host.", tag.Error(err), tag.ShardID(int(request.GetShardIDForHost())))
+			return nil, err
+		}
+
 	} else if request.ExecutionForHost != nil {
 		peer, err = c.peerResolver.FromWorkflowID(request.ExecutionForHost.GetWorkflowID())
+		if err != nil {
+			c.logger.Error("peer could not be resolved for workflow.", tag.Error(err), tag.WorkflowID(request.ExecutionForHost.GetWorkflowID()))
+			return nil, err
+		}
+
 	} else {
 		peer, err = c.peerResolver.FromHostAddress(request.GetHostAddress())
-	}
-	if err != nil {
-		return nil, err
-	}
+		if err != nil {
+			c.logger.Error("peer could not be resolved for address.", tag.Error(err), tag.Address(request.GetHostAddress()))
+			return nil, err
+		}
 
+	}
 	var response *types.DescribeHistoryHostResponse
 	op := func(ctx context.Context, peer string) error {
 		var err error
