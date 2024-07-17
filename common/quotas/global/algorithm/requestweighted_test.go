@@ -38,6 +38,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/metrics"
 )
 
 // just simplifies newForTest usage as most tests only care about rate
@@ -79,13 +80,14 @@ func newForTest(t require.TestingT, snap configSnapshot, validate bool) (*impl, 
 	var agg *impl
 
 	if validate {
-		i, err := New(cfg)
+		i, err := New(metrics.NewNoopMetricsClient(), cfg)
 		require.NoError(t, err)
 		agg = i.(*impl)
 	} else {
 		// need to build by hand, New returns nil on err
 		agg = &impl{
 			cfg:   cfg,
+			scope: metrics.NewNoopMetricsClient().Scope(metrics.GlobalRatelimiterAggregator),
 			usage: make(map[Limit]map[Identity]requests),
 			clock: nil,
 		}
@@ -365,9 +367,10 @@ func TestRapidlyCoalesces(t *testing.T) {
 	key := Limit("start workflow")
 	h1, h2, h3 := Identity("one"), Identity("two"), Identity("three")
 
-	weights, used := agg.getWeightsLocked(key, snapshot())
+	weights, used, met := agg.getWeightsLocked(key, snapshot())
 	assert.Zero(t, weights, "should have no weights")
 	assert.Zero(t, used, "should have no used RPS")
+	assert.Zero(t, met, "should have processed no data while calculating")
 
 	push := func(host Identity, accept, reject int) {
 		err := agg.Update(UpdateParams{
@@ -394,16 +397,18 @@ func TestRapidlyCoalesces(t *testing.T) {
 	// which feels pretty reasonable: after ~10 seconds (3s updates), the oldest data only has ~10% weight.
 	const target = 10 + 200 + 999
 	for i := 0; i < 4; i++ {
-		weights, used = agg.getWeightsLocked(key, snapshot())
+		weights, used, met = agg.getWeightsLocked(key, snapshot())
 		t.Log("used:", used, "of actual:", target)
 		t.Log("weights so far:", weights)
+		t.Log("calculation metrics:", met)
 		push(h1, 10, 10)
 		push(h2, 200, 200)
 		push(h3, 999, 999)
 	}
-	weights, used = agg.getWeightsLocked(key, snapshot())
+	weights, used, met = agg.getWeightsLocked(key, snapshot())
 	t.Log("used:", used, "of actual:", target)
 	t.Log("weights so far:", weights)
+	t.Log("calculation metrics:", met)
 
 	// aggregated allowed-request values should be less than 10% off
 	assert.InDeltaf(t, target, float64(used), target*0.1, "should have allowed >90%% of target rps by the 5th round") // actually ~94%
@@ -550,9 +555,10 @@ func TestSimulate(t *testing.T) {
 
 	snap, err := agg.snapshot()
 	require.NoError(t, err)
-	weights, used := agg.getWeightsLocked(start, snap)
+	weights, used, met := agg.getWeightsLocked(start, snap)
 	assert.Zero(t, weights, "should have no weights")
 	assert.Zero(t, used, "should have no used RPS")
+	assert.Zero(t, met, "should have processed no data while calculating")
 
 	// just simplifies arg-construction
 	push := func(host Identity, key Limit, accept, reject int) {

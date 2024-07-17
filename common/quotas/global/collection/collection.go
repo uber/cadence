@@ -189,7 +189,7 @@ func New(
 		},
 
 		logger: logger.WithTags(tag.ComponentGlobalRatelimiter, tag.GlobalRatelimiterCollectionName(name)),
-		scope:  met.Scope(metrics.FrontendGlobalRatelimiter).Tagged(metrics.GlobalRatelimiterCollectionName(name)),
+		scope:  met.Scope(metrics.GlobalRatelimiter).Tagged(metrics.GlobalRatelimiterCollectionName(name)),
 		keyModes: func(gkey shared.GlobalKey) string {
 			// all collections share a single dynamic config key,
 			// so they must use the global key to uniquely identify all keys.
