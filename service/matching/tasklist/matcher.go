@@ -240,7 +240,6 @@ forLoop:
 		case token := <-tm.fwdrAddReqTokenC():
 			childCtx, cancel := context.WithDeadline(ctx, time.Now().Add(time.Second*2))
 			err := tm.fwdr.ForwardTask(childCtx, task)
-			fmt.Println("forwarding", err, errors.Is(err, ErrTasklistThrottled))
 			token.release("")
 			if err != nil {
 
