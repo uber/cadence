@@ -71,10 +71,10 @@ type (
 )
 
 var (
-	errNoParent            = errors.New("cannot find parent task list for forwarding")
-	errTaskListKind        = errors.New("forwarding is not supported on sticky task list")
-	errInvalidTaskListType = errors.New("unrecognized task list type")
-	errForwarderSlowDown   = errors.New("limit exceeded")
+	ErrNoParent            = errors.New("cannot find parent task list for forwarding")
+	ErrTaskListKind        = errors.New("forwarding is not supported on sticky task list")
+	ErrInvalidTaskListType = errors.New("unrecognized task list type")
+	ErrForwarderSlowDown   = errors.New("tasklist forwarding throttle limit exceeded")
 )
 
 // noopForwarderTokenC refers to a token channel that blocks forever
@@ -116,16 +116,16 @@ func newForwarder(
 // ForwardTask forwards an activity or decision task to the parent task list partition if it exist
 func (fwdr *Forwarder) ForwardTask(ctx context.Context, task *InternalTask) error {
 	if fwdr.taskListKind == types.TaskListKindSticky {
-		return errTaskListKind
+		return ErrTaskListKind
 	}
 
 	name := fwdr.taskListID.Parent(fwdr.cfg.ForwarderMaxChildrenPerNode())
 	if name == "" {
-		return errNoParent
+		return ErrNoParent
 	}
 
 	if !fwdr.limiter.Allow() {
-		return errForwarderSlowDown
+		return ErrForwarderSlowDown
 	}
 
 	var err error
@@ -161,7 +161,7 @@ func (fwdr *Forwarder) ForwardTask(ctx context.Context, task *InternalTask) erro
 			PartitionConfig:               task.Event.PartitionConfig,
 		})
 	default:
-		return errInvalidTaskListType
+		return ErrInvalidTaskListType
 	}
 
 	return fwdr.handleErr(err)
@@ -174,12 +174,12 @@ func (fwdr *Forwarder) ForwardQueryTask(
 ) (*types.QueryWorkflowResponse, error) {
 
 	if fwdr.taskListKind == types.TaskListKindSticky {
-		return nil, errTaskListKind
+		return nil, ErrTaskListKind
 	}
 
 	name := fwdr.taskListID.Parent(fwdr.cfg.ForwarderMaxChildrenPerNode())
 	if name == "" {
-		return nil, errNoParent
+		return nil, ErrNoParent
 	}
 
 	resp, err := fwdr.client.QueryWorkflow(ctx, &types.MatchingQueryWorkflowRequest{
@@ -198,12 +198,12 @@ func (fwdr *Forwarder) ForwardQueryTask(
 // ForwardPoll forwards a poll request to parent task list partition if it exist
 func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*InternalTask, error) {
 	if fwdr.taskListKind == types.TaskListKindSticky {
-		return nil, errTaskListKind
+		return nil, ErrTaskListKind
 	}
 
 	name := fwdr.taskListID.Parent(fwdr.cfg.ForwarderMaxChildrenPerNode())
 	if name == "" {
-		return nil, errNoParent
+		return nil, ErrNoParent
 	}
 
 	pollerID := PollerIDFromContext(ctx)
@@ -249,7 +249,7 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*InternalTask, error) {
 		return newInternalStartedTask(&startedTaskInfo{activityTaskInfo: resp}), nil
 	}
 
-	return nil, errInvalidTaskListType
+	return nil, ErrInvalidTaskListType
 }
 
 // AddReqTokenC returns a channel that can be used to wait for a token
@@ -284,7 +284,7 @@ func (fwdr *Forwarder) refreshTokenC(value *atomic.Value, curr *int32, maxLimit 
 
 func (fwdr *Forwarder) handleErr(err error) error {
 	if _, ok := err.(*types.ServiceBusyError); ok {
-		return errForwarderSlowDown
+		return ErrForwarderSlowDown
 	}
 	return err
 }

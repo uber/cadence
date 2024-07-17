@@ -42,6 +42,7 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/metrics/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/types"
@@ -235,6 +236,20 @@ func (t *MatcherTestSuite) TestSyncMatchFailure() {
 	t.NotNil(req)
 	t.NoError(err)
 	t.False(syncMatch)
+}
+
+func (t *MatcherTestSuite) TestRateLimitHandling() {
+	scope := mocks.Scope{}
+	scope.On("IncCounter", metrics.SyncMatchForwardTaskThrottleErrorPerTasklist)
+	t.matcher.scope = &scope
+	for i := 0; i < 5; i++ {
+		t.client.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+		task := newInternalTask(t.newTaskInfo(), nil, types.TaskSourceHistory, "", true, nil, "")
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		_, err := t.matcher.Offer(ctx, task)
+		cancel()
+		assert.NoError(t.T(), err)
+	}
 }
 
 func (t *MatcherTestSuite) TestIsolationSyncMatchFailure() {
@@ -471,6 +486,20 @@ func (t *MatcherTestSuite) TestMustOfferRemoteMatch() {
 	t.True(taskCompleted)
 	t.Equal(t.taskList.name, req.GetForwardedFrom())
 	t.Equal(t.taskList.Parent(20), req.GetTaskList().GetName())
+}
+
+func (t *MatcherTestSuite) TestMustOfferRemoteRateLimit() {
+	scope := mocks.Scope{}
+	scope.On("IncCounter", metrics.AsyncMatchForwardTaskThrottleErrorPerTasklist)
+	t.matcher.scope = &scope
+	completionFunc := func(*persistence.TaskInfo, error) {}
+	for i := 0; i < 5; i++ {
+		t.client.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any()).Return(nil)
+		task := newInternalTask(t.newTaskInfo(), completionFunc, types.TaskSourceDbBacklog, "", false, nil, "")
+		ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+		t.NoError(t.matcher.MustOffer(ctx, task))
+		cancel()
+	}
 }
 
 func (t *MatcherTestSuite) TestIsolationMustOfferRemoteMatch() {

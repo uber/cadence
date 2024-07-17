@@ -137,12 +137,15 @@ func (tm *TaskMatcher) Offer(ctx context.Context, task *InternalTask) (bool, err
 		// root partition if possible
 		select {
 		case token := <-tm.fwdrAddReqTokenC():
-			if err := tm.fwdr.ForwardTask(ctx, task); err == nil {
+			err := tm.fwdr.ForwardTask(ctx, task)
+			token.release("")
+			if err == nil {
 				// task was remotely sync matched on the parent partition
-				token.release("")
 				return true, nil
 			}
-			token.release("")
+			if errors.Is(err, ErrForwarderSlowDown) {
+				tm.scope.IncCounter(metrics.SyncMatchForwardTaskThrottleErrorPerTasklist)
+			}
 		default:
 			if !tm.isForwardingAllowed() && // we are the root partition and forwarding is not possible
 				task.source == types.TaskSourceDbBacklog && // task was from backlog (stored in db)
@@ -198,7 +201,7 @@ func (tm *TaskMatcher) OfferQuery(ctx context.Context, task *InternalTask) (*typ
 			if err == nil {
 				return resp, nil
 			}
-			if err == errForwarderSlowDown {
+			if err == ErrForwarderSlowDown {
 				// if we are rate limited, try only local match for the
 				// remainder of the context timeout left
 				fwdrTokenC = noopForwarderTokenC
@@ -240,6 +243,9 @@ forLoop:
 			token.release("")
 			if err != nil {
 
+				if errors.Is(err, ErrForwarderSlowDown) {
+					tm.scope.IncCounter(metrics.AsyncMatchForwardTaskThrottleErrorPerTasklist)
+				}
 				tm.log.Debug("failed to forward task",
 					tag.Error(err),
 					tag.TaskID(task.Event.TaskID),
