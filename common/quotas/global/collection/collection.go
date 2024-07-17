@@ -431,12 +431,13 @@ func (c *Collection) sendMetrics(gkey shared.GlobalKey, lkey shared.LocalKey, is
 	if isLocalLimiter {
 		limitType = "local"
 	}
+	limitTypeIsPrimary := isLocalLimiter && mode.isLocalPrimary() || !isLocalLimiter && mode.isGlobalPrimary()
 
 	scope := c.scope.Tagged(
 		metrics.GlobalRatelimiterKeyTag(string(gkey)),
 		metrics.GlobalRatelimiterTypeTag(limitType),
 		// useful for being able to tell when a key is "in use" or not, e.g. for monitoring purposes
-		metrics.GlobalRatelimiterIsPrimary(isLocalLimiter && mode.isLocalPrimary() || !isLocalLimiter && mode.isGlobalPrimary()),
+		metrics.GlobalRatelimiterIsPrimary(limitTypeIsPrimary),
 	)
 	scope.AddCounter(metrics.GlobalRatelimiterAllowedRequestsCount, int64(usage.Allowed))
 	scope.AddCounter(metrics.GlobalRatelimiterRejectedRequestsCount, int64(usage.Rejected))
