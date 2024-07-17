@@ -3352,14 +3352,10 @@ var PersistenceLatencyBuckets = tally.DurationBuckets([]time.Duration{
 //
 // this is intended for coarse scale checking, not alerting, so the buckets
 // should be considered unstable and can be changed whenever desired.
-var GlobalRatelimiterUsageHistogram = tally.ValueBuckets{
-	0, // need an explicit 0 or zero is reported as 1
-	1, 2, 5,
-	10, 25, 50,
-	100, 250, 500,
-	1000, 2500, 5000,
-	10000, 25000, 50000,
-}
+var GlobalRatelimiterUsageHistogram = append(
+	tally.ValueBuckets{0},                              // need an explicit 0 or zero is reported as 1
+	tally.MustMakeExponentialValueBuckets(1, 2, 17)..., // 1..65536
+)
 
 // ErrorClass is an enum to help with classifying SLA vs. non-SLA errors (SLA = "service level agreement")
 type ErrorClass uint8
