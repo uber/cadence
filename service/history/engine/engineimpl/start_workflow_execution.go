@@ -494,6 +494,7 @@ func getStartRequest(
 		Header:                              request.Header,
 		DelayStartSeconds:                   request.DelayStartSeconds,
 		JitterStartSeconds:                  request.JitterStartSeconds,
+		FirstRunAtTimeStamp:                 request.FirstRunAtTimestamp,
 	}
 
 	return common.CreateHistoryStartWorkflowRequest(domainID, req, time.Now(), partitionConfig)

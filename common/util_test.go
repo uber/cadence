@@ -213,6 +213,14 @@ func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithCron(t *testing.T) 
 // with & without cron, delayStart and jitterStart.
 // - Also see tests in cron_test.go for more exhaustive testing.
 func TestFirstDecisionTaskBackoffDuringStartWorkflow(t *testing.T) {
+	firstRunTimestampPast, _ := time.Parse(time.RFC3339, "2017-12-17T08:00:00+00:00")
+	firstRunTimestampFuture, _ := time.Parse(time.RFC3339, "2018-12-17T08:00:02+00:00")
+	firstRunAtTimestampMap := map[string]int64{
+		"null":   0,
+		"past":   firstRunTimestampPast.Unix(),
+		"future": firstRunTimestampFuture.Unix(),
+	}
+
 	var tests = []struct {
 		cron               bool
 		jitterStartSeconds int32
@@ -231,61 +239,68 @@ func TestFirstDecisionTaskBackoffDuringStartWorkflow(t *testing.T) {
 	rand.Seed(int64(time.Now().Nanosecond()))
 
 	for idx, tt := range tests {
-		t.Run(strconv.Itoa(idx), func(t *testing.T) {
-			domainID := uuid.New()
-			request := &types.StartWorkflowExecutionRequest{
-				DelayStartSeconds:  Int32Ptr(tt.delayStartSeconds),
-				JitterStartSeconds: Int32Ptr(tt.jitterStartSeconds),
-			}
-			if tt.cron {
-				request.CronSchedule = "* * * * *"
-			}
-
-			// Run X loops so that the test isn't flaky, since jitter adds randomness.
-			caseCount := 10
-			exactCount := 0
-			for i := 0; i < caseCount; i++ {
-				// Start at the minute boundary so we know what the backoff should be
-				startTime, _ := time.Parse(time.RFC3339, "2018-12-17T08:00:00+00:00")
-				startRequest, err := CreateHistoryStartWorkflowRequest(domainID, request, startTime, nil)
-				require.NoError(t, err)
-				require.NotNil(t, startRequest)
-
-				backoff := startRequest.GetFirstDecisionTaskBackoffSeconds()
-
-				expectedWithoutJitter := tt.delayStartSeconds
+		for jdx, ts := range firstRunAtTimestampMap {
+			t.Run(strconv.Itoa(idx), func(t *testing.T) {
+				domainID := uuid.New()
+				request := &types.StartWorkflowExecutionRequest{
+					FirstRunAtTimeStamp: Int64Ptr(ts),
+					DelayStartSeconds:   Int32Ptr(tt.delayStartSeconds),
+					JitterStartSeconds:  Int32Ptr(tt.jitterStartSeconds),
+				}
 				if tt.cron {
-					expectedWithoutJitter += 60
-				}
-				expectedMax := expectedWithoutJitter + tt.jitterStartSeconds
-
-				if backoff == expectedWithoutJitter {
-					exactCount++
+					request.CronSchedule = "* * * * *"
 				}
 
-				if tt.jitterStartSeconds == 0 {
-					require.Equal(t, expectedWithoutJitter, backoff, "test specs = %v", tt)
-				} else {
-					require.True(t, backoff >= expectedWithoutJitter && backoff <= expectedMax,
-						"test specs = %v, backoff (%v) should be >= %v and <= %v",
-						tt, backoff, expectedWithoutJitter, expectedMax)
+				// Run X loops so that the test isn't flaky, since jitter adds randomness.
+				caseCount := 10
+				exactCount := 0
+				for i := 0; i < caseCount; i++ {
+					// Start at the minute boundary so we know what the backoff should be
+					startTime, _ := time.Parse(time.RFC3339, "2018-12-17T08:00:00+00:00")
+					startRequest, err := CreateHistoryStartWorkflowRequest(domainID, request, startTime, nil)
+					require.NoError(t, err)
+					require.NotNil(t, startRequest)
+
+					backoff := startRequest.GetFirstDecisionTaskBackoffSeconds()
+
+					expectedWithoutJitter := tt.delayStartSeconds
+					if tt.cron {
+						expectedWithoutJitter += 60
+					}
+					expectedMax := expectedWithoutJitter + tt.jitterStartSeconds
+
+					if backoff == expectedWithoutJitter {
+						exactCount++
+					}
+
+					if jdx == "future" {
+						require.Equal(t, int32(2), backoff, "test specs = %v", tt)
+					} else {
+						if tt.jitterStartSeconds == 0 {
+							require.Equal(t, expectedWithoutJitter, backoff, "test specs = %v", tt)
+						} else {
+							require.True(t, backoff >= expectedWithoutJitter && backoff <= expectedMax,
+								"test specs = %v, backoff (%v) should be >= %v and <= %v",
+								tt, backoff, expectedWithoutJitter, expectedMax)
+						}
+					}
 				}
 
-			}
-
-			// If jitter is > 0, we want to detect whether jitter is being applied - BUT we don't want the test
-			// to be flaky if the code randomly chooses a jitter of 0, so we try to have enough data points by
-			// checking the next X cron times AND by choosing a jitter thats not super low.
-
-			if tt.jitterStartSeconds > 0 && exactCount == caseCount {
-				// Test to make sure a jitter test case sometimes doesn't get exact values
-				t.Fatalf("FAILED to jitter properly? Test specs = %v\n", tt)
-			} else if tt.jitterStartSeconds == 0 && exactCount != caseCount {
-				// Test to make sure a non-jitter test case always gets exact values
-				t.Fatalf("Jittered when we weren't supposed to? Test specs = %v\n", tt)
-			}
-
-		})
+				// If firstRunTimestamp is either null or past ONLY
+				// If jitter is > 0, we want to detect whether jitter is being applied - BUT we don't want the test
+				// to be flaky if the code randomly chooses a jitter of 0, so we try to have enough data points by
+				// checking the next X cron times AND by choosing a jitter thats not super low.
+				if jdx != "future" {
+					if tt.jitterStartSeconds > 0 && exactCount == caseCount {
+						// Test to make sure a jitter test case sometimes doesn't get exact values
+						t.Fatalf("FAILED to jitter properly? Test specs = %v\n", tt)
+					} else if tt.jitterStartSeconds == 0 && exactCount != caseCount {
+						// Test to make sure a non-jitter test case always gets exact values
+						t.Fatalf("Jittered when we weren't supposed to? Test specs = %v\n", tt)
+					}
+				}
+			})
+		}
 	}
 }
 

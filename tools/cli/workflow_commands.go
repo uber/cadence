@@ -609,6 +609,7 @@ func constructSignalWithStartWorkflowRequest(c *cli.Context) *types.SignalWithSt
 		SignalInput:                         []byte(processJSONInputSignal(c)),
 		DelayStartSeconds:                   startRequest.DelayStartSeconds,
 		JitterStartSeconds:                  startRequest.JitterStartSeconds,
+		FirstRunAtTimestamp:                 startRequest.FirstRunAtTimeStamp,
 	}
 }
 

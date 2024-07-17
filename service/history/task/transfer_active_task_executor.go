@@ -1638,6 +1638,7 @@ func startWorkflowWithRetry(
 		SearchAttributes:      attributes.SearchAttributes,
 		DelayStartSeconds:     attributes.DelayStartSeconds,
 		JitterStartSeconds:    attributes.JitterStartSeconds,
+		FirstRunAtTimeStamp:   attributes.FirstRunAtTimestamp,
 	}
 
 	historyStartReq, err := common.CreateHistoryStartWorkflowRequest(task.TargetDomainID, frontendStartReq, timeSource.Now(), partitionConfig)

@@ -548,21 +548,31 @@ func CreateHistoryStartWorkflowRequest(
 	delayStartSeconds := startRequest.GetDelayStartSeconds()
 	jitterStartSeconds := startRequest.GetJitterStartSeconds()
 	firstDecisionTaskBackoffSeconds := delayStartSeconds
-	if len(startRequest.GetCronSchedule()) > 0 {
-		delayedStartTime := now.Add(time.Second * time.Duration(delayStartSeconds))
-		var err error
-		firstDecisionTaskBackoffSeconds, err = backoff.GetBackoffForNextScheduleInSeconds(
-			startRequest.GetCronSchedule(), delayedStartTime, delayedStartTime, jitterStartSeconds)
-		if err != nil {
-			return nil, err
-		}
 
-		// backoff seconds was calculated based on delayed start time, so we need to
-		// add the delayStartSeconds to that backoff.
-		firstDecisionTaskBackoffSeconds += delayStartSeconds
-	} else if jitterStartSeconds > 0 {
-		// Add a random jitter to start time, if requested.
-		firstDecisionTaskBackoffSeconds += rand.Int31n(jitterStartSeconds + 1)
+	// if the user specified a timestamp for the first run, we will use that as the start time,
+	// ignoring the delayStartSeconds, jitterStartSeconds, and cronSchedule
+	// The following condition guarantees two things:
+	// - The logic is only triggered when the user specifies a first run timestamp
+	// - AND that timestamp is only triggered ONCE hence not interfering with other scheduling logic
+	if startRequest.GetFirstRunAtTimeStamp() > now.Unix() {
+		firstDecisionTaskBackoffSeconds = int32(startRequest.GetFirstRunAtTimeStamp() - now.Unix())
+	} else {
+		if len(startRequest.GetCronSchedule()) > 0 {
+			delayedStartTime := now.Add(time.Second * time.Duration(delayStartSeconds))
+			var err error
+			firstDecisionTaskBackoffSeconds, err = backoff.GetBackoffForNextScheduleInSeconds(
+				startRequest.GetCronSchedule(), delayedStartTime, delayedStartTime, jitterStartSeconds)
+			if err != nil {
+				return nil, err
+			}
+
+			// backoff seconds was calculated based on delayed start time, so we need to
+			// add the delayStartSeconds to that backoff.
+			firstDecisionTaskBackoffSeconds += delayStartSeconds
+		} else if jitterStartSeconds > 0 {
+			// Add a random jitter to start time, if requested.
+			firstDecisionTaskBackoffSeconds += rand.Int31n(jitterStartSeconds + 1)
+		}
 	}
 
 	histRequest.FirstDecisionTaskBackoffSeconds = Int32Ptr(firstDecisionTaskBackoffSeconds)

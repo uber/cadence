@@ -37,7 +37,7 @@ func TestSignalWithStartWorkflowExecutionRequestSerializeForLogging(t *testing.T
 	}{
 		"complete request without error": {
 			input:               createNewSignalWithStartWorkflowExecutionRequest(),
-			expectedOutput:      "{\"domain\":\"testDomain\",\"workflowId\":\"testWorkflowID\",\"workflowType\":{\"name\":\"testWorkflowType\"},\"taskList\":{\"name\":\"testTaskList\",\"kind\":\"STICKY\"},\"executionStartToCloseTimeoutSeconds\":1,\"taskStartToCloseTimeoutSeconds\":1,\"identity\":\"testIdentity\",\"requestId\":\"DF66E35D-A5B0-425D-8731-6AAC4A4B6368\",\"workflowIdReusePolicy\":\"AllowDuplicate\",\"signalName\":\"testRequest\",\"control\":\"dGVzdENvbnRyb2w=\",\"retryPolicy\":{\"initialIntervalInSeconds\":1,\"backoffCoefficient\":1,\"maximumIntervalInSeconds\":1,\"maximumAttempts\":1,\"nonRetriableErrorReasons\":[\"testArray\"],\"expirationIntervalInSeconds\":1},\"cronSchedule\":\"testSchedule\",\"header\":{},\"delayStartSeconds\":1,\"jitterStartSeconds\":1}",
+			expectedOutput:      "{\"domain\":\"testDomain\",\"workflowId\":\"testWorkflowID\",\"workflowType\":{\"name\":\"testWorkflowType\"},\"taskList\":{\"name\":\"testTaskList\",\"kind\":\"STICKY\"},\"executionStartToCloseTimeoutSeconds\":1,\"taskStartToCloseTimeoutSeconds\":1,\"identity\":\"testIdentity\",\"requestId\":\"DF66E35D-A5B0-425D-8731-6AAC4A4B6368\",\"workflowIdReusePolicy\":\"AllowDuplicate\",\"signalName\":\"testRequest\",\"control\":\"dGVzdENvbnRyb2w=\",\"retryPolicy\":{\"initialIntervalInSeconds\":1,\"backoffCoefficient\":1,\"maximumIntervalInSeconds\":1,\"maximumAttempts\":1,\"nonRetriableErrorReasons\":[\"testArray\"],\"expirationIntervalInSeconds\":1},\"cronSchedule\":\"testSchedule\",\"header\":{},\"delayStartSeconds\":1,\"jitterStartSeconds\":1,\"firstRunAtTimestamp\":1}",
 			expectedErrorOutput: nil,
 		},
 
@@ -187,7 +187,13 @@ func TestSerializeRequest(t *testing.T) {
 	testReq := createNewSignalWithStartWorkflowExecutionRequest()
 	serializeRes, err := SerializeRequest(testReq)
 
-	expectRes := "{\"domain\":\"testDomain\",\"workflowId\":\"testWorkflowID\",\"workflowType\":{\"name\":\"testWorkflowType\"},\"taskList\":{\"name\":\"testTaskList\",\"kind\":\"STICKY\"},\"executionStartToCloseTimeoutSeconds\":1,\"taskStartToCloseTimeoutSeconds\":1,\"identity\":\"testIdentity\",\"requestId\":\"DF66E35D-A5B0-425D-8731-6AAC4A4B6368\",\"workflowIdReusePolicy\":\"AllowDuplicate\",\"signalName\":\"testRequest\",\"control\":\"dGVzdENvbnRyb2w=\",\"retryPolicy\":{\"initialIntervalInSeconds\":1,\"backoffCoefficient\":1,\"maximumIntervalInSeconds\":1,\"maximumAttempts\":1,\"nonRetriableErrorReasons\":[\"testArray\"],\"expirationIntervalInSeconds\":1},\"cronSchedule\":\"testSchedule\",\"header\":{},\"delayStartSeconds\":1,\"jitterStartSeconds\":1}"
+	expectRes := "{\"domain\":\"testDomain\",\"workflowId\":\"testWorkflowID\",\"workflowType\":{\"name\":\"testWorkflowType\"}," +
+		"\"taskList\":{\"name\":\"testTaskList\",\"kind\":\"STICKY\"},\"executionStartToCloseTimeoutSeconds\":1," +
+		"\"taskStartToCloseTimeoutSeconds\":1,\"identity\":\"testIdentity\",\"requestId\":\"DF66E35D-A5B0-425D-8731-6AAC4A4B6368\"," +
+		"\"workflowIdReusePolicy\":\"AllowDuplicate\",\"signalName\":\"testRequest\",\"control\":\"dGVzdENvbnRyb2w=\"," +
+		"\"retryPolicy\":{\"initialIntervalInSeconds\":1,\"backoffCoefficient\":1,\"maximumIntervalInSeconds\":1," +
+		"\"maximumAttempts\":1,\"nonRetriableErrorReasons\":[\"testArray\"],\"expirationIntervalInSeconds\":1}," +
+		"\"cronSchedule\":\"testSchedule\",\"header\":{},\"delayStartSeconds\":1,\"jitterStartSeconds\":1,\"firstRunAtTimestamp\":1}"
 	expectErr := error(nil)
 
 	assert.Equal(t, expectRes, serializeRes)
@@ -206,6 +212,7 @@ func createNewSignalWithStartWorkflowExecutionRequest() *SignalWithStartWorkflow
 	testWorkflowIDReusePolicy := WorkflowIDReusePolicy(1)
 	testDelayStartSeconds := int32(1)
 	testJitterStartSeconds := int32(1)
+	testFirstRunAtTimestamp := int64(1)
 	piiTestArray := []byte("testInputPII")
 	piiTestMap := make(map[string][]byte)
 	piiTestMap["PII"] = piiTestArray
@@ -235,12 +242,13 @@ func createNewSignalWithStartWorkflowExecutionRequest() *SignalWithStartWorkflow
 			NonRetriableErrorReasons:    []string{"testArray"},
 			ExpirationIntervalInSeconds: 1,
 		},
-		CronSchedule:       "testSchedule",
-		Memo:               &Memo{Fields: piiTestMap},
-		SearchAttributes:   &SearchAttributes{IndexedFields: piiTestMap},
-		Header:             &Header{Fields: map[string][]byte{}},
-		DelayStartSeconds:  &testDelayStartSeconds,
-		JitterStartSeconds: &testJitterStartSeconds,
+		CronSchedule:        "testSchedule",
+		Memo:                &Memo{Fields: piiTestMap},
+		SearchAttributes:    &SearchAttributes{IndexedFields: piiTestMap},
+		Header:              &Header{Fields: map[string][]byte{}},
+		DelayStartSeconds:   &testDelayStartSeconds,
+		JitterStartSeconds:  &testJitterStartSeconds,
+		FirstRunAtTimestamp: &testFirstRunAtTimestamp,
 	}
 	return testReq
 }
