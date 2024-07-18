@@ -41,12 +41,12 @@ const (
 		`}`
 
 	templateCreateTaskQuery = `INSERT INTO tasks (` +
-		`domain_id, task_list_name, task_list_type, type, task_id, task) ` +
-		`VALUES(?, ?, ?, ?, ?, ` + templateTaskType + `)`
+		`domain_id, task_list_name, task_list_type, type, task_id, run_id, task) ` +
+		`VALUES(?, ?, ?, ?, ?, ?, ` + templateTaskType + `)`
 
 	templateCreateTaskWithTTLQuery = `INSERT INTO tasks (` +
-		`domain_id, task_list_name, task_list_type, type, task_id, task) ` +
-		`VALUES(?, ?, ?, ?, ?, ` + templateTaskType + `) USING TTL ?`
+		`domain_id, task_list_name, task_list_type, type, task_id, run_id, task) ` +
+		`VALUES(?, ?, ?, ?, ?, ?, ` + templateTaskType + `) USING TTL ?`
 
 	templateGetTasksQuery = `SELECT task_id, task ` +
 		`FROM tasks ` +

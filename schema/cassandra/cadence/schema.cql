@@ -400,6 +400,7 @@ CREATE TABLE tasks (
   task_list_type   int, -- enum TaskListType {ActivityTask, DecisionTask}
   type             int, -- enum rowType {Task, TaskList}
   task_id          bigint,  -- unique identifier for tasks, monotonically increasing
+  run_id           uuid,
   range_id         bigint, -- Used to ensure that only one process can write to the table
   task             frozen<task>,
   task_list        frozen<task_list>,
