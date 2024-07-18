@@ -285,6 +285,7 @@ func (s *Service) startESAnalyzer() {
 		s.params.ESClient,
 		s.params.PinotClient,
 		s.params.ESConfig,
+		s.params.PinotConfig,
 		s.GetLogger(),
 		s.params.MetricScope,
 		s.Resource,

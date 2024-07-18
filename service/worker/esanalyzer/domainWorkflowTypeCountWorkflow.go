@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/uber/cadence/common/pinot"
 	"time"
 
 	"go.uber.org/cadence"
@@ -149,6 +150,8 @@ func (w *Workflow) emitWorkflowTypeCountMetrics(ctx context.Context) error {
 			switch w.analyzer.readMode {
 			case ES:
 				err = w.emitWorkflowTypeCountMetricsES(ctx, domainName, logger)
+			case Pinot:
+				err = w.emitWorkflowTypeCountMetricsPinot(ctx, domainName, logger)
 			default:
 				err = w.emitWorkflowTypeCountMetricsES(ctx, domainName, logger)
 			}
@@ -156,6 +159,74 @@ func (w *Workflow) emitWorkflowTypeCountMetrics(ctx context.Context) error {
 				return err
 			}
 		}
+	}
+	return nil
+}
+
+func (w *Workflow) getDomainWorkflowTypeCountPinotQuery(domainName string) (string, error) {
+	domain, err := w.analyzer.domainCache.GetDomain(domainName)
+	if err != nil {
+		return "", err
+	}
+	// exclude uninitialized workflow executions by checking whether record has start time field
+	return fmt.Sprintf(`
+SELECT WorkflowType, COUNT(*) AS count
+FROM %s
+WHERE DomainID = '%s'
+AND IsDeleted = false
+AND CloseStatus = -1
+AND StartTime > 0
+GROUP BY WorkflowType
+ORDER BY count
+OFFSET 0
+LIMIT 10
+    `, w.analyzer.pinotTableName, domain.GetInfo().ID), nil
+}
+
+func (w *Workflow) emitWorkflowTypeCountMetricsPinot(ctx context.Context, domainName string, logger *zap.Logger) error {
+	wfTypeCountPinotQuery, err := w.getDomainWorkflowTypeCountPinotQuery(domainName)
+	if err != nil {
+		logger.Error("Failed to get Pinot query to find domain workflow type Info",
+			zap.Error(err),
+			zap.String("DomainName", domainName),
+		)
+		return err
+	}
+	response, err := w.analyzer.pinotClient.Search(&pinot.SearchRequest{Query: wfTypeCountPinotQuery})
+	if err != nil {
+		logger.Error("Failed to query Pinot to find workflow type count Info",
+			zap.Error(err),
+			zap.String("VisibilityQuery", wfTypeCountPinotQuery),
+			zap.String("DomainName", domainName),
+		)
+		return err
+	}
+	agg, foundAggregation := response.Aggregations[workflowTypesAggKey]
+
+	if !foundAggregation {
+		logger.Error("Pinot error: aggregation failed.",
+			zap.Error(err),
+			zap.String("Aggregation", string(agg)),
+			zap.String("DomainName", domainName),
+			zap.String("VisibilityQuery", wfTypeCountPinotQuery),
+		)
+		return err
+	}
+	var domainWorkflowTypeCount DomainWorkflowTypeCount
+	err = json.Unmarshal(agg, &domainWorkflowTypeCount)
+	if err != nil {
+		logger.Error("Pinot error parsing aggregation.",
+			zap.Error(err),
+			zap.String("Aggregation", string(agg)),
+			zap.String("DomainName", domainName),
+			zap.String("VisibilityQuery", wfTypeCountPinotQuery),
+		)
+		return err
+	}
+	for _, workflowType := range domainWorkflowTypeCount.WorkflowTypes {
+		w.analyzer.tallyScope.Tagged(
+			map[string]string{domainTag: domainName, workflowTypeTag: workflowType.AggregateKey},
+		).Gauge(workflowTypeCountMetrics).Update(float64(workflowType.AggregateCount))
 	}
 	return nil
 }

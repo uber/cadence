@@ -64,6 +64,7 @@ type (
 		logger              log.Logger
 		tallyScope          tally.Scope
 		visibilityIndexName string
+		pinotTableName      string
 		resource            resource.Resource
 		domainCache         cache.DomainCache
 		config              *Config
@@ -110,6 +111,7 @@ func New(
 	esClient es.GenericClient,
 	pinotClient pinot.GenericClient,
 	esConfig *config.ElasticSearchConfig,
+	pinotConfig *config.PinotVisibilityConfig,
 	logger log.Logger,
 	tallyScope tally.Scope,
 	resource resource.Resource,
@@ -133,6 +135,7 @@ func New(
 		logger:              logger,
 		tallyScope:          tallyScope,
 		visibilityIndexName: esConfig.Indices[common.VisibilityAppName],
+		pinotTableName:      pinotConfig.Table,
 		resource:            resource,
 		domainCache:         domainCache,
 		config:              config,
