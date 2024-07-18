@@ -130,6 +130,7 @@ import (
 
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/metrics"
 )
 
 type (
@@ -154,7 +155,8 @@ type (
 	impl struct {
 		// intentionally value-typed so caller cannot mutate the fields.
 		// manually copy data if this changes.
-		cfg Config
+		cfg   Config
+		scope metrics.Scope
 
 		// mut protects usage, as it is the only mutable data
 		mut sync.Mutex
@@ -349,9 +351,10 @@ func (c configSnapshot) missedUpdateScalar(dataAge time.Duration) PerSecond {
 //
 // This instance is effectively single-threaded, but a small sharding wrapper should allow better concurrent
 // throughput if needed (bound by CPU cores, as it's moderately CPU-costly).
-func New(cfg Config) (RequestWeighted, error) {
+func New(met metrics.Client, cfg Config) (RequestWeighted, error) {
 	i := &impl{
 		cfg:   cfg,
+		scope: met.Scope(metrics.GlobalRatelimiterAggregator),
 		usage: make(map[Limit]map[Identity]requests, guessNumKeys), // start out relatively large
 
 		clock: clock.NewRealTimeSource(),
@@ -369,7 +372,10 @@ func (a *impl) Update(p UpdateParams) error {
 		return fmt.Errorf("bad args to update: %w", err)
 	}
 	a.mut.Lock()
-	defer a.mut.Unlock()
+	once := newOnce()
+	defer once.Do(a.mut.Unlock)
+
+	var initialized, reinitialized, updated, decayed int64
 
 	snap, err := a.snapshot()
 	if err != nil {
@@ -386,6 +392,7 @@ func (a *impl) Update(p UpdateParams) error {
 		aps := PerSecond(float64(req.Accepted) / float64(p.Elapsed/time.Second))
 		rps := PerSecond(float64(req.Rejected) / float64(p.Elapsed/time.Second))
 		if prev.lastUpdate.IsZero() {
+			initialized++
 			next = requests{
 				lastUpdate: snap.now,
 				accepted:   aps, // no requests == 100% weight
@@ -394,6 +401,7 @@ func (a *impl) Update(p UpdateParams) error {
 		} else {
 			age := snap.now.Sub(prev.lastUpdate)
 			if snap.shouldGC(age) {
+				reinitialized++
 				// would have GC'd if we had seen it earlier, so it's the same as the zero state
 				next = requests{
 					lastUpdate: snap.now,
@@ -401,8 +409,12 @@ func (a *impl) Update(p UpdateParams) error {
 					rejected:   rps, // no requests == 100% weight
 				}
 			} else {
+				updated++
 				// compute the next rolling average step (`*reduce` simulates skipped updates)
 				reduce := snap.missedUpdateScalar(age)
+				if reduce < 1 {
+					decayed++
+				}
 				next = requests{
 					lastUpdate: snap.now,
 					// TODO: max(1, actual) so this does not lead to <1 rps allowances?  or maybe just 1+actual and then reduce in used-responses?
@@ -418,14 +430,21 @@ func (a *impl) Update(p UpdateParams) error {
 		a.usage[key] = ih
 	}
 
+	once.Do(a.mut.Unlock) // don't hold the lock while emitting metrics
+
+	a.scope.RecordHistogramValue(metrics.GlobalRatelimiterInitialized, float64(initialized))
+	a.scope.RecordHistogramValue(metrics.GlobalRatelimiterReinitialized, float64(reinitialized))
+	a.scope.RecordHistogramValue(metrics.GlobalRatelimiterUpdated, float64(updated))
+	a.scope.RecordHistogramValue(metrics.GlobalRatelimiterDecayed, float64(decayed))
+
 	return nil
 }
 
 // getWeightsLocked returns the weights of observed hosts (based on ALL requests), and the total number of requests accepted per second.
-func (a *impl) getWeightsLocked(key Limit, snap configSnapshot) (weights map[Identity]HostWeight, usedRPS PerSecond) {
+func (a *impl) getWeightsLocked(key Limit, snap configSnapshot) (weights map[Identity]HostWeight, usedRPS PerSecond, met Metrics) {
 	ir := a.usage[key]
 	if len(ir) == 0 {
-		return nil, 0
+		return nil, 0, met
 	}
 
 	weights = make(map[Identity]HostWeight, len(ir))
@@ -436,6 +455,7 @@ func (a *impl) getWeightsLocked(key Limit, snap configSnapshot) (weights map[Ide
 		if snap.shouldGC(age) {
 			// old, clean up
 			delete(ir, id)
+			met.RemovedHostLimits++
 			continue
 		}
 
@@ -445,12 +465,14 @@ func (a *impl) getWeightsLocked(key Limit, snap configSnapshot) (weights map[Ide
 		weights[id] = actual // populate with the reduced values so it doesn't have to be calculated again
 		total += actual      // keep a running total to scale all values when done
 		usedRPS += reqs.accepted * reduce
+		met.HostLimits++
 	}
 
 	if len(ir) == 0 {
 		// completely empty Limit, gc it as well
 		delete(a.usage, key)
-		return nil, 0
+		met.RemovedLimits++
+		return nil, 0, met
 	}
 
 	for id := range ir {
@@ -458,12 +480,16 @@ func (a *impl) getWeightsLocked(key Limit, snap configSnapshot) (weights map[Ide
 		// this also ensures all values are between 0 and 1 (inclusive)
 		weights[id] = weights[id] / total
 	}
-	return weights, usedRPS
+	met.Limits = 1
+	return weights, usedRPS, met
 }
 
 func (a *impl) HostWeights(host Identity, limits []Limit) (weights map[Limit]HostWeight, usedRPS map[Limit]PerSecond, err error) {
 	a.mut.Lock()
-	defer a.mut.Unlock()
+	once := newOnce()
+	defer once.Do(a.mut.Unlock)
+
+	var cumulative Metrics
 
 	weights = make(map[Limit]HostWeight, len(limits))
 	usedRPS = make(map[Limit]PerSecond, len(limits))
@@ -472,7 +498,13 @@ func (a *impl) HostWeights(host Identity, limits []Limit) (weights map[Limit]Hos
 		return nil, nil, err
 	}
 	for _, lim := range limits {
-		hosts, used := a.getWeightsLocked(lim, snap)
+		hosts, used, met := a.getWeightsLocked(lim, snap)
+
+		cumulative.Limits += met.Limits // always 1 or 0
+		cumulative.HostLimits += met.HostLimits
+		cumulative.RemovedLimits += met.RemovedLimits // always 0 or 1 (opposite Limits)
+		cumulative.RemovedHostLimits += met.RemovedHostLimits
+
 		if len(hosts) > 0 {
 			usedRPS[lim] = used // limit is known, has some usage
 			if weight, ok := hosts[host]; ok {
@@ -480,6 +512,14 @@ func (a *impl) HostWeights(host Identity, limits []Limit) (weights map[Limit]Hos
 			}
 		}
 	}
+
+	once.Do(a.mut.Unlock) // don't hold the lock while emitting metrics
+
+	a.scope.RecordHistogramValue(metrics.GlobalRatelimiterLimitsQueried, float64(cumulative.Limits))
+	a.scope.RecordHistogramValue(metrics.GlobalRatelimiterHostLimitsQueried, float64(cumulative.HostLimits))
+	a.scope.RecordHistogramValue(metrics.GlobalRatelimiterRemovedLimits, float64(cumulative.RemovedLimits))
+	a.scope.RecordHistogramValue(metrics.GlobalRatelimiterRemovedHostLimits, float64(cumulative.RemovedHostLimits))
+
 	return weights, usedRPS, nil
 }
 
@@ -537,4 +577,19 @@ func weighted[T numeric](newer, older T, weight float64) T {
 
 type numeric interface {
 	constraints.Integer | constraints.Float
+}
+
+// non-sync version of sync.Once, for easier unlocking
+type doOnce bool
+
+func newOnce() *doOnce {
+	value := doOnce(false)
+	return &value
+}
+
+func (o *doOnce) Do(cb func()) {
+	if *o == false {
+		*o = true
+		cb()
+	}
 }
