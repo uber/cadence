@@ -265,7 +265,7 @@ func TestValidateQuery(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			validSearchAttr := dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys())
-			qv := NewPinotQueryValidator(validSearchAttr())
+			qv := NewPinotQueryValidator(validSearchAttr)
 			validated, err := qv.ValidateQuery(test.query)
 			if err != nil {
 				assert.Equal(t, test.err, err.Error())
@@ -298,7 +298,7 @@ func TestProcessInClause_FailedInputExprCases(t *testing.T) {
 
 	// Create a new VisibilityQueryValidator
 	validSearchAttr := dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys())
-	qv := NewPinotQueryValidator(validSearchAttr())
+	qv := NewPinotQueryValidator(validSearchAttr)
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
