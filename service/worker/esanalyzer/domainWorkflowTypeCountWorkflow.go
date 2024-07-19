@@ -179,8 +179,8 @@ AND CloseStatus = -1
 AND StartTime > 0
 GROUP BY WorkflowType
 ORDER BY count
-OFFSET 0
 LIMIT 10
+OFFSET 0
     `, w.analyzer.pinotTableName, domain.GetInfo().ID), nil
 }
 
