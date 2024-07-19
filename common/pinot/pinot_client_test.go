@@ -211,6 +211,76 @@ func TestCountByQuery(t *testing.T) {
 	}
 }
 
+func TestSearchAggr(t *testing.T) {
+	query := "select teamID, count(*) as cnt, sum(homeRuns) as sum_homeRuns from baseballStats group by teamID limit 10"
+
+	request := &SearchRequest{
+		Query: query,
+		ListRequest: &p.InternalListWorkflowExecutionsRequest{
+			NextPageToken: nil,
+		},
+	}
+
+	errorRequest := &SearchRequest{
+		Query: "error",
+		ListRequest: &p.InternalListWorkflowExecutionsRequest{
+			NextPageToken: []byte("ha-ha"),
+		},
+	}
+
+	tests := map[string]struct {
+		inputRequest  *SearchRequest
+		expectedError error
+		server        *httptest.Server
+	}{
+		"Case1-1: error internal server case": {
+			inputRequest: errorRequest,
+			expectedError: &types.InternalServiceError{
+				Message: fmt.Sprintf("Pinot SearchAggr failed, caught http exception when querying Pinot: 400 Bad Request"),
+			},
+			server: httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusBadRequest)
+			})),
+		},
+		"Case2: normal case": {
+			inputRequest:  request,
+			expectedError: nil,
+			server: httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				assert.Equal(t, "POST", r.Method)
+				assert.True(t, strings.HasSuffix(r.RequestURI, "/query/sql"))
+				fmt.Fprintln(w, "{\"resultTable\":{\"dataSchema\":{\"columnDataTypes\":[\"LONG\"],\"columnNames\":[\"cnt\"]},\"rows\":[[\"test-domain\", 10]]},\"exceptions\":[],\"numServersQueried\":1,\"numServersResponded\":1,\"numSegmentsQueried\":1,\"numSegmentsProcessed\":1,\"numSegmentsMatched\":1,\"numConsumingSegmentsQueried\":0,\"numDocsScanned\":97889,\"numEntriesScannedInFilter\":0,\"numEntriesScannedPostFilter\":0,\"numGroupsLimitReached\":false,\"totalDocs\":97889,\"timeUsedMs\":5,\"segmentStatistics\":[],\"traceInfo\":{},\"minConsumingFreshnessTimeMs\":0}")
+			})),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ts := test.server
+			defer ts.Close()
+			pinotConnection, err := pinot.NewFromBrokerList([]string{ts.URL})
+			assert.NotNil(t, pinotConnection)
+			assert.Nil(t, err)
+
+			pinotClient := NewPinotClient(pinotConnection, testlogger.New(t), &config.PinotVisibilityConfig{
+				Table:       "",
+				ServiceName: "",
+			})
+
+			actualOutput, err := pinotClient.SearchAggr(test.inputRequest)
+
+			if test.expectedError != nil {
+				assert.Nil(t, actualOutput)
+				assert.Equal(t, test.expectedError.Error(), err.Error())
+			} else {
+				assert.NotNil(t, actualOutput)
+				assert.Nil(t, err)
+			}
+		})
+	}
+}
+
 func TestGetTableName(t *testing.T) {
 	assert.Equal(t, "", client.GetTableName())
 }
