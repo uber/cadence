@@ -138,6 +138,7 @@ func (w *Workflow) getDomainWorkflowTypeCountQuery(domainName string) (string, e
 }
 
 // emitWorkflowTypeCountMetrics is an activity that emits the running workflow type counts of a domain
+// it will switch between ES and Pinot based on the readMode
 func (w *Workflow) emitWorkflowTypeCountMetrics(ctx context.Context) error {
 	logger := activity.GetLogger(ctx)
 	var workflowMetricDomainNames []string
