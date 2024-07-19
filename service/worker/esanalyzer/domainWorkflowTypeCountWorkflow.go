@@ -24,7 +24,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/uber/cadence/common/pinot"
 	"time"
 
 	"go.uber.org/cadence"
@@ -32,6 +31,8 @@ import (
 	cclient "go.uber.org/cadence/client"
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
+
+	"github.com/uber/cadence/common/pinot"
 )
 
 const (
@@ -151,7 +152,7 @@ func (w *Workflow) emitWorkflowTypeCountMetrics(ctx context.Context) error {
 			case ES:
 				err = w.emitWorkflowTypeCountMetricsES(ctx, domainName, logger)
 			case Pinot:
-				err = w.emitWorkflowTypeCountMetricsPinot(ctx, domainName, logger)
+				err = w.emitWorkflowTypeCountMetricsPinot(domainName, logger)
 			default:
 				err = w.emitWorkflowTypeCountMetricsES(ctx, domainName, logger)
 			}
@@ -183,7 +184,7 @@ LIMIT 10
     `, w.analyzer.pinotTableName, domain.GetInfo().ID), nil
 }
 
-func (w *Workflow) emitWorkflowTypeCountMetricsPinot(ctx context.Context, domainName string, logger *zap.Logger) error {
+func (w *Workflow) emitWorkflowTypeCountMetricsPinot(domainName string, logger *zap.Logger) error {
 	wfTypeCountPinotQuery, err := w.getDomainWorkflowTypeCountPinotQuery(domainName)
 	if err != nil {
 		logger.Error("Failed to get Pinot query to find domain workflow type Info",
@@ -192,7 +193,7 @@ func (w *Workflow) emitWorkflowTypeCountMetricsPinot(ctx context.Context, domain
 		)
 		return err
 	}
-	response, err := w.analyzer.pinotClient.Search(&pinot.SearchRequest{Query: wfTypeCountPinotQuery})
+	response, err := w.analyzer.pinotClient.SearchAggr(&pinot.SearchRequest{Query: wfTypeCountPinotQuery})
 	if err != nil {
 		logger.Error("Failed to query Pinot to find workflow type count Info",
 			zap.Error(err),
@@ -201,27 +202,33 @@ func (w *Workflow) emitWorkflowTypeCountMetricsPinot(ctx context.Context, domain
 		)
 		return err
 	}
-	agg, foundAggregation := response.Aggregations[workflowTypesAggKey]
+	foundAggregation := len(response) > 0
 
 	if !foundAggregation {
 		logger.Error("Pinot error: aggregation failed.",
 			zap.Error(err),
-			zap.String("Aggregation", string(agg)),
+			zap.String("Aggregation", fmt.Sprintf("%v", response)),
 			zap.String("DomainName", domainName),
 			zap.String("VisibilityQuery", wfTypeCountPinotQuery),
 		)
 		return err
 	}
 	var domainWorkflowTypeCount DomainWorkflowTypeCount
-	err = json.Unmarshal(agg, &domainWorkflowTypeCount)
-	if err != nil {
-		logger.Error("Pinot error parsing aggregation.",
-			zap.Error(err),
-			zap.String("Aggregation", string(agg)),
-			zap.String("DomainName", domainName),
-			zap.String("VisibilityQuery", wfTypeCountPinotQuery),
-		)
-		return err
+	for _, row := range response {
+		workflowType := row[0].(string)
+		workflowCount, ok := row[1].(int)
+		if !ok {
+			logger.Error("Error parsing workflow count",
+				zap.Error(err),
+				zap.String("WorkflowType", workflowType),
+				zap.String("DomainName", domainName),
+			)
+			return fmt.Errorf("error parsing workflow count for workflow type %s", workflowType)
+		}
+		domainWorkflowTypeCount.WorkflowTypes = append(domainWorkflowTypeCount.WorkflowTypes, EsAggregateCount{
+			AggregateKey:   workflowType,
+			AggregateCount: int64(workflowCount),
+		})
 	}
 	for _, workflowType := range domainWorkflowTypeCount.WorkflowTypes {
 		w.analyzer.tallyScope.Tagged(

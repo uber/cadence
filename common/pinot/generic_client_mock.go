@@ -98,3 +98,18 @@ func (mr *MockGenericClientMockRecorder) Search(request interface{}) *gomock.Cal
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Search", reflect.TypeOf((*MockGenericClient)(nil).Search), request)
 }
+
+// SearchAggr mocks base method.
+func (m *MockGenericClient) SearchAggr(request *SearchRequest) (AggrResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SearchAggr", request)
+	ret0, _ := ret[0].(AggrResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SearchAggr indicates an expected call of SearchAggr.
+func (mr *MockGenericClientMockRecorder) SearchAggr(request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchAggr", reflect.TypeOf((*MockGenericClient)(nil).SearchAggr), request)
+}

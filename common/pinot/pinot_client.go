@@ -70,6 +70,18 @@ func (c *PinotClient) Search(request *SearchRequest) (*SearchResponse, error) {
 	return c.getInternalListWorkflowExecutionsResponse(resp, request.Filter, token, request.ListRequest.PageSize, request.MaxResultWindow)
 }
 
+func (c *PinotClient) SearchAggr(request *SearchRequest) (AggrResponse, error) {
+	resp, err := c.client.ExecuteSQL(c.tableName, request.Query)
+
+	if err != nil {
+		return nil, &types.InternalServiceError{
+			Message: fmt.Sprintf("Pinot SearchAggr failed, %v", err),
+		}
+	}
+
+	return resp.ResultTable.Rows, nil
+}
+
 func (c *PinotClient) CountByQuery(query string) (int64, error) {
 	resp, err := c.client.ExecuteSQL(c.tableName, query)
 	if err != nil {
