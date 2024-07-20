@@ -220,8 +220,7 @@ getTasksPumpLoop:
 			{
 				ackLevel := tr.taskAckManager.GetAckLevel()
 				if size, err := tr.db.GetTaskListSize(ackLevel); err == nil {
-					tr.scope.Tagged(getTaskListTypeTag(tr.taskListID.GetType())).
-						UpdateGauge(metrics.TaskCountPerTaskListGauge, float64(size))
+					tr.scope.UpdateGauge(metrics.TaskCountPerTaskListGauge, float64(size))
 				}
 				if err := tr.handleErr(tr.persistAckLevel()); err != nil {
 					tr.logger.Error("Persistent store operation failure",
@@ -233,8 +232,7 @@ getTasksPumpLoop:
 				updateAckTimer = time.NewTimer(tr.config.UpdateAckInterval())
 			}
 		}
-		scope := tr.scope.Tagged(getTaskListTypeTag(tr.taskListID.GetType()))
-		scope.UpdateGauge(metrics.TaskBacklogPerTaskListGauge, float64(tr.taskAckManager.GetBacklogCount()))
+		tr.scope.UpdateGauge(metrics.TaskBacklogPerTaskListGauge, float64(tr.taskAckManager.GetBacklogCount()))
 	}
 }
 
@@ -334,10 +332,9 @@ func (tr *taskReader) persistAckLevel() error {
 	ackLevel := tr.taskAckManager.GetAckLevel()
 	if ackLevel >= 0 {
 		maxReadLevel := tr.taskWriter.GetMaxReadLevel()
-		scope := tr.scope.Tagged(getTaskListTypeTag(tr.taskListID.GetType()))
 		// note: this metrics is only an estimation for the lag. taskID in DB may not be continuous,
 		// especially when task list ownership changes.
-		scope.UpdateGauge(metrics.TaskLagPerTaskListGauge, float64(maxReadLevel-ackLevel))
+		tr.scope.UpdateGauge(metrics.TaskLagPerTaskListGauge, float64(maxReadLevel-ackLevel))
 
 		return tr.db.UpdateState(ackLevel)
 	}
