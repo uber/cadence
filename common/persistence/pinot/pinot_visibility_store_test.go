@@ -1104,6 +1104,14 @@ func TestCountWorkflowExecutions(t *testing.T) {
 			},
 			expectedError: nil,
 		},
+		"Case3: query error case": {
+			request:      &p.CountWorkflowExecutionsRequest{Domain: testDomain, DomainUUID: testDomainID, Query: "CustomKeywordField = missing"},
+			expectedResp: nil,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+			},
+			expectedError: fmt.Errorf("pinot query validator error: invalid comparison expression, right, query: CustomKeywordField = missing"),
+		},
 	}
 
 	for name, test := range tests {
