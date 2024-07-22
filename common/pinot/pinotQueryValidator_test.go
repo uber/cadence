@@ -90,6 +90,10 @@ func TestValidateQuery(t *testing.T) {
 			query:     "CloseTime != missing",
 			validated: "CloseTime != -1",
 		},
+		"Case8-3: query with custom attr": {
+			query: "CustomKeywordField = missing",
+			err:   "invalid comparison expression, right",
+		},
 		"Case9: invalid where expression": {
 			query: "InvalidWhereExpr",
 			err:   "invalid where clause",

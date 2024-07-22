@@ -1104,6 +1104,14 @@ func TestCountWorkflowExecutions(t *testing.T) {
 			},
 			expectedError: nil,
 		},
+		"Case3: query error case": {
+			request:      &p.CountWorkflowExecutionsRequest{Domain: testDomain, DomainUUID: testDomainID, Query: "CustomKeywordField = missing"},
+			expectedResp: nil,
+			pinotClientMockAffordance: func(mockPinotClient *pnt.MockGenericClient) {
+				mockPinotClient.EXPECT().GetTableName().Return(testTableName).Times(1)
+			},
+			expectedError: fmt.Errorf("pinot query validator error: invalid comparison expression, right, query: CustomKeywordField = missing"),
+		},
 	}
 
 	for name, test := range tests {
@@ -1192,6 +1200,15 @@ AND WorkflowID = 'wfid'
 			expectedRes:   expectEmptyQueryResult,
 			expectedError: nil,
 		},
+		"Case3: custom attr is missing case": {
+			request: &p.CountWorkflowExecutionsRequest{
+				DomainUUID: testDomainID,
+				Domain:     testDomain,
+				Query:      "CustomKeywordField = missing",
+			},
+			expectedRes:   "",
+			expectedError: fmt.Errorf("pinot query validator error: invalid comparison expression, right, query: CustomKeywordField = missing"),
+		},
 	}
 
 	for name, test := range tests {
@@ -1205,8 +1222,11 @@ AND WorkflowID = 'wfid'
 			}, mockProducer, log.NewNoop())
 			visibilityStore := mgr.(*pinotVisibilityStore)
 
-			res := visibilityStore.getCountWorkflowExecutionsQuery(testTableName, test.request)
+			res, err := visibilityStore.getCountWorkflowExecutionsQuery(testTableName, test.request)
 			assert.Equal(t, test.expectedRes, res)
+			if test.expectedError != nil {
+				assert.Equal(t, test.expectedError.Error(), err.Error())
+			}
 		})
 	}
 }
