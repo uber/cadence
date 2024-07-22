@@ -435,7 +435,7 @@ Update_History_Loop:
 				msBuilder,
 				executionStats,
 				handler.metricsClient.Scope(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.DomainTag(domainName)),
-				handler.throttledLogger,
+				handler.logger,
 			)
 
 			decisionTaskHandler := newDecisionTaskHandler(
