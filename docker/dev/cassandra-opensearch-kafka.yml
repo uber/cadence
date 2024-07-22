@@ -7,13 +7,27 @@ services:
     environment:
       - "MAX_HEAP_SIZE=256M"
       - "HEAP_NEWSIZE=128M"
-  elasticsearch:
-    image: opensearchproject/opensearch:1.3.6
-    ports:
-      - "9200:9200"
-      - "9600:9600"
+  opensearch:
+    image: opensearchproject/opensearch:2.13.0
     environment:
       - discovery.type=single-node
+      - OPENSEARCH_SECURITY_SSL_HTTP_ENABLED=false
+      - cluster.name=opensearch-cluster
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=DevTestInitial123!    # Sets the demo admin user password when using demo configuration, required for OpenSearch 2.12 and later
+    ports:
+      - 9200:9200 # REST API
+      - 9600:9600 # Performance Analyzer
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.13.0
+    container_name: opensearch-dashboards
+    ports:
+      - 5601:5601
+    expose:
+      - "5601" # Expose port 5601 for web access to OpenSearch Dashboards
+    environment:
+      OPENSEARCH_HOSTS: '["https://opensearch:9200"]' # Define the OpenSearch nodes that OpenSearch Dashboards will query
   kafka:
     image: docker.io/bitnami/kafka:3.7
     hostname: kafka
