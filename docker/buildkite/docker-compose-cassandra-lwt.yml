@@ -31,6 +31,7 @@ services:
         -run ^TestCassandraLWT$
         -count 1
         -v
+        -tags cassandralwt
         github.com/uber/cadence/host
         | tee test.log
     ports:
