@@ -411,6 +411,7 @@ func processEqual(colNameStr string, colValStr string) string {
 }
 
 func processCustomKeyword(operator string, colNameStr string, colValStr string) string {
+	// edge case
 	if operator == "!=" {
 		return fmt.Sprintf("JSON_MATCH(Attr, '\"$.%s\"%s''%s''') and JSON_MATCH(Attr, '\"$.%s[*]\"%s''%s''')",
 			colNameStr, operator, colValStr, colNameStr, operator, colValStr)
