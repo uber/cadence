@@ -34,36 +34,39 @@ const (
 	goVersionTag      = "go_version"
 	cadenceVersionTag = "cadence_version"
 
-	instance                      = "instance"
-	domain                        = "domain"
-	domainType                    = "domain_type"
-	clusterGroup                  = "cluster_group"
-	sourceCluster                 = "source_cluster"
-	targetCluster                 = "target_cluster"
-	activeCluster                 = "active_cluster"
-	taskList                      = "tasklist"
-	taskListType                  = "tasklistType"
-	workflowType                  = "workflowType"
-	activityType                  = "activityType"
-	decisionType                  = "decisionType"
-	invariantType                 = "invariantType"
-	shardScannerScanResult        = "shardscanner_scan_result"
-	shardScannerFixResult         = "shardscanner_fix_result"
-	kafkaPartition                = "kafkaPartition"
-	transport                     = "transport"
-	caller                        = "caller"
-	service                       = "service"
-	signalName                    = "signalName"
-	workflowVersion               = "workflow_version"
-	shardID                       = "shard_id"
-	matchingHost                  = "matching_host"
-	host                          = "host"
-	pollerIsolationGroup          = "poller_isolation_group"
-	asyncWFRequestType            = "async_wf_request_type"
+	instance                  = "instance"
+	domain                    = "domain"
+	domainType                = "domain_type"
+	clusterGroup              = "cluster_group"
+	sourceCluster             = "source_cluster"
+	targetCluster             = "target_cluster"
+	activeCluster             = "active_cluster"
+	taskList                  = "tasklist"
+	taskListType              = "tasklistType"
+	workflowType              = "workflowType"
+	activityType              = "activityType"
+	decisionType              = "decisionType"
+	invariantType             = "invariantType"
+	shardScannerScanResult    = "shardscanner_scan_result"
+	shardScannerFixResult     = "shardscanner_fix_result"
+	kafkaPartition            = "kafkaPartition"
+	transport                 = "transport"
+	caller                    = "caller"
+	service                   = "service"
+	signalName                = "signalName"
+	workflowVersion           = "workflow_version"
+	shardID                   = "shard_id"
+	matchingHost              = "matching_host"
+	host                      = "host"
+	pollerIsolationGroup      = "poller_isolation_group"
+	asyncWFRequestType        = "async_wf_request_type"
+	workflowTerminationReason = "workflow_termination_reason"
+
+	// limiter-side tags
 	globalRatelimitKey            = "global_ratelimit_key"
 	globalRatelimitType           = "global_ratelimit_type"
+	globalRatelimitIsPrimary      = "is_primary"
 	globalRatelimitCollectionName = "global_ratelimit_collection"
-	workflowTerminationReason     = "workflow_termination_reason"
 
 	allValue     = "all"
 	unknownValue = "_unknown_"
@@ -260,6 +263,14 @@ func GlobalRatelimiterKeyTag(value string) Tag {
 // GlobalRatelimiterTypeTag reports the "limit usage type" being reported, e.g. global vs local
 func GlobalRatelimiterTypeTag(value string) Tag {
 	return simpleMetric{key: globalRatelimitType, value: value}
+}
+
+func GlobalRatelimiterIsPrimary(isPrimary bool) Tag {
+	value := "false"
+	if isPrimary {
+		value = "true"
+	}
+	return simpleMetric{key: globalRatelimitIsPrimary, value: value}
 }
 
 // GlobalRatelimiterCollectionName is a namespacing tag to uniquely identify metrics

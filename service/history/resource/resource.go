@@ -133,12 +133,15 @@ func New(
 		uint64(config.EventsCacheMaxSize()),
 		serviceResource.GetDomainCache(),
 	)
-	ratelimitAlgorithm, err := algorithm.New(algorithm.Config{
-		NewDataWeight:  config.GlobalRatelimiterNewDataWeight,
-		UpdateInterval: config.GlobalRatelimiterUpdateInterval,
-		DecayAfter:     config.GlobalRatelimiterDecayAfter,
-		GcAfter:        config.GlobalRatelimiterGCAfter,
-	})
+	ratelimitAlgorithm, err := algorithm.New(
+		params.MetricsClient,
+		algorithm.Config{
+			NewDataWeight:  config.GlobalRatelimiterNewDataWeight,
+			UpdateInterval: config.GlobalRatelimiterUpdateInterval,
+			DecayAfter:     config.GlobalRatelimiterDecayAfter,
+			GcAfter:        config.GlobalRatelimiterGCAfter,
+		},
+	)
 	if err != nil {
 		return nil, fmt.Errorf("invalid ratelimit algorithm config: %w", err)
 	}

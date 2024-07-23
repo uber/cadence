@@ -647,7 +647,7 @@ func (s *matchingEngineSuite) SyncMatchTasks(taskType int, enableIsolation bool)
 	s.True(expectedRange <= s.taskManager.GetRangeID(testParam.TaskListID))
 
 	if throttledTaskCount > 0 {
-		syncCtr := scope.Snapshot().Counters()["test.sync_throttle_count_per_tl+domain="+matchingTestDomainName+",operation=TaskListMgr,tasklist="+testParam.TaskList.Name]
+		syncCtr := scope.Snapshot().Counters()["test.sync_throttle_count_per_tl+domain="+matchingTestDomainName+",operation=TaskListMgr,tasklist="+testParam.TaskList.Name+",tasklistType=activity"]
 		s.EqualValues(throttledTaskCount, int(syncCtr.Value()))
 	}
 
@@ -790,8 +790,8 @@ func (s *matchingEngineSuite) ConcurrentAddAndPollTasks(taskType int, workerCoun
 	mgr.Stop()
 	s.EqualValues(0, s.taskManager.GetTaskCount(testParam.TaskListID))
 
-	syncCtr := scope.Snapshot().Counters()["test.sync_throttle_count_per_tl+domain="+matchingTestDomainName+",operation=TaskListMgr,tasklist="+testParam.TaskList.Name]
-	bufCtr := scope.Snapshot().Counters()["test.buffer_throttle_count_per_tl+domain="+matchingTestDomainName+",operation=TaskListMgr,tasklist="+testParam.TaskList.Name]
+	syncCtr := scope.Snapshot().Counters()["test.sync_throttle_count_per_tl+domain="+matchingTestDomainName+",operation=TaskListMgr,tasklist="+testParam.TaskList.Name+",tasklistType=activity"]
+	bufCtr := scope.Snapshot().Counters()["test.buffer_throttle_count_per_tl+domain="+matchingTestDomainName+",operation=TaskListMgr,tasklist="+testParam.TaskList.Name+",tasklistType=activity"]
 	total := int64(0)
 	if syncCtr != nil {
 		total += syncCtr.Value()

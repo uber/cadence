@@ -90,6 +90,14 @@ func TestValidateQuery(t *testing.T) {
 			query:     "CloseTime != missing",
 			validated: "CloseTime != -1",
 		},
+		"Case8-3: query with custom attr": {
+			query: "CustomKeywordField = missing",
+			err:   "invalid comparison expression, right",
+		},
+		"Case8-4: query with custom keyword field not equal": {
+			query:     "CustomKeywordField != 0",
+			validated: "JSON_MATCH(Attr, '\"$.CustomKeywordField\"!=''0''') and JSON_MATCH(Attr, '\"$.CustomKeywordField[*]\"!=''0''')",
+		},
 		"Case9: invalid where expression": {
 			query: "InvalidWhereExpr",
 			err:   "invalid where clause",
@@ -265,7 +273,7 @@ func TestValidateQuery(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			validSearchAttr := dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys())
-			qv := NewPinotQueryValidator(validSearchAttr())
+			qv := NewPinotQueryValidator(validSearchAttr)
 			validated, err := qv.ValidateQuery(test.query)
 			if err != nil {
 				assert.Equal(t, test.err, err.Error())
@@ -298,7 +306,7 @@ func TestProcessInClause_FailedInputExprCases(t *testing.T) {
 
 	// Create a new VisibilityQueryValidator
 	validSearchAttr := dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys())
-	qv := NewPinotQueryValidator(validSearchAttr())
+	qv := NewPinotQueryValidator(validSearchAttr)
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {

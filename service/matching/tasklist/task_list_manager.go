@@ -154,7 +154,8 @@ func NewManager(
 		taskListKind = &normalTaskListKind
 	}
 
-	scope := NewPerTaskListScope(domainName, taskList.GetName(), *taskListKind, metricsClient, metrics.MatchingTaskListMgrScope)
+	scope := NewPerTaskListScope(domainName, taskList.GetName(), *taskListKind, metricsClient, metrics.MatchingTaskListMgrScope).
+		Tagged(getTaskListTypeTag(taskList.GetType()))
 	db := newTaskListDB(taskManager, taskList.GetDomainID(), domainName, taskList.GetName(), taskList.GetType(), int(*taskListKind), logger)
 
 	tlMgr := &taskListManagerImpl{
@@ -177,11 +178,8 @@ func NewManager(
 		closeCallback:       closeCallback,
 	}
 
-	taskListTypeMetricScope := tlMgr.scope.Tagged(
-		getTaskListTypeTag(taskList.GetType()),
-	)
 	tlMgr.pollerHistory = poller.NewPollerHistory(func() {
-		taskListTypeMetricScope.UpdateGauge(metrics.PollerPerTaskListCounter,
+		scope.UpdateGauge(metrics.PollerPerTaskListCounter,
 			float64(len(tlMgr.pollerHistory.GetPollerInfo(time.Time{}))))
 	}, timeSource)
 

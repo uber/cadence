@@ -33,13 +33,14 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/types"
 )
 
 // VisibilityQueryValidator for sql query validation
 type VisibilityQueryValidator struct {
-	validSearchAttributes map[string]interface{}
+	validSearchAttributes dynamicconfig.MapPropertyFn
 }
 
 var timeSystemKeys = map[string]bool{
@@ -50,7 +51,7 @@ var timeSystemKeys = map[string]bool{
 }
 
 // NewPinotQueryValidator create VisibilityQueryValidator
-func NewPinotQueryValidator(validSearchAttributes map[string]interface{}) *VisibilityQueryValidator {
+func NewPinotQueryValidator(validSearchAttributes dynamicconfig.MapPropertyFn) *VisibilityQueryValidator {
 	return &VisibilityQueryValidator{
 		validSearchAttributes: validSearchAttributes,
 	}
@@ -226,7 +227,7 @@ func (qv *VisibilityQueryValidator) validateComparisonExpr(expr sqlparser.Expr) 
 
 // IsValidSearchAttributes return true if key is registered
 func (qv *VisibilityQueryValidator) IsValidSearchAttributes(key string) bool {
-	validAttr := qv.validSearchAttributes
+	validAttr := qv.validSearchAttributes()
 	_, isValidKey := validAttr[key]
 	return isValidKey
 }
@@ -354,7 +355,7 @@ func (qv *VisibilityQueryValidator) processCustomKey(expr sqlparser.Expr) (strin
 	colNameStr := colName.Name.String()
 
 	// check type: if is IndexedValueTypeString, change to like statement for partial match
-	valType, ok := qv.validSearchAttributes[colNameStr]
+	valType, ok := qv.validSearchAttributes()[colNameStr]
 	if !ok {
 		return "", fmt.Errorf("invalid search attribute")
 	}
@@ -410,6 +411,12 @@ func processEqual(colNameStr string, colValStr string) string {
 }
 
 func processCustomKeyword(operator string, colNameStr string, colValStr string) string {
+	// edge case
+	if operator == "!=" {
+		return fmt.Sprintf("JSON_MATCH(Attr, '\"$.%s\"%s''%s''') and JSON_MATCH(Attr, '\"$.%s[*]\"%s''%s''')",
+			colNameStr, operator, colValStr, colNameStr, operator, colValStr)
+	}
+
 	return fmt.Sprintf("(JSON_MATCH(Attr, '\"$.%s\"%s''%s''') or JSON_MATCH(Attr, '\"$.%s[*]\"%s''%s'''))",
 		colNameStr, operator, colValStr, colNameStr, operator, colValStr)
 }

@@ -94,7 +94,7 @@ func NewPinotVisibilityStore(
 		producer:            producer,
 		logger:              logger.WithTags(tag.ComponentPinotVisibilityManager),
 		config:              config,
-		pinotQueryValidator: pnt.NewPinotQueryValidator(config.ValidSearchAttributes()),
+		pinotQueryValidator: pnt.NewPinotQueryValidator(config.ValidSearchAttributes),
 	}
 }
 
@@ -537,7 +537,11 @@ func (v *pinotVisibilityStore) ScanWorkflowExecutions(ctx context.Context, reque
 }
 
 func (v *pinotVisibilityStore) CountWorkflowExecutions(ctx context.Context, request *p.CountWorkflowExecutionsRequest) (*p.CountWorkflowExecutionsResponse, error) {
-	query := v.getCountWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request)
+	query, err := v.getCountWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request)
+	if err != nil {
+		v.logger.Error(fmt.Sprintf("failed to build count workflow executions query %v", err))
+		return nil, err
+	}
 
 	resp, err := v.pinotClient.CountByQuery(query)
 	if err != nil {
@@ -822,9 +826,9 @@ func (f *PinotQueryFilter) addTimeRange(obj string, earliest interface{}, latest
 	f.string += fmt.Sprintf("%s BETWEEN %v AND %v\n", obj, earliest, latest)
 }
 
-func (v *pinotVisibilityStore) getCountWorkflowExecutionsQuery(tableName string, request *p.CountWorkflowExecutionsRequest) string {
+func (v *pinotVisibilityStore) getCountWorkflowExecutionsQuery(tableName string, request *p.CountWorkflowExecutionsRequest) (string, error) {
 	if request == nil {
-		return ""
+		return "", nil
 	}
 
 	query := NewPinotCountQuery(tableName)
@@ -837,7 +841,7 @@ func (v *pinotVisibilityStore) getCountWorkflowExecutionsQuery(tableName string,
 
 	// if customized query is empty, directly return
 	if requestQuery == "" {
-		return query.String()
+		return query.String(), nil
 	}
 
 	requestQuery = filterPrefix(requestQuery)
@@ -845,7 +849,7 @@ func (v *pinotVisibilityStore) getCountWorkflowExecutionsQuery(tableName string,
 	comparExpr, _ := parseOrderBy(requestQuery)
 	comparExpr, err := v.pinotQueryValidator.ValidateQuery(comparExpr)
 	if err != nil {
-		v.logger.Error(fmt.Sprintf("pinot query validator error: %s", err))
+		return "", fmt.Errorf("pinot query validator error: %w, query: %s", err, request.Query)
 	}
 
 	comparExpr = filterPrefix(comparExpr)
@@ -853,7 +857,7 @@ func (v *pinotVisibilityStore) getCountWorkflowExecutionsQuery(tableName string,
 		query.filters.addQuery(comparExpr)
 	}
 
-	return query.String()
+	return query.String(), nil
 }
 
 func (v *pinotVisibilityStore) getListWorkflowExecutionsByQueryQuery(tableName string, request *p.ListWorkflowExecutionsByQueryRequest) (string, error) {

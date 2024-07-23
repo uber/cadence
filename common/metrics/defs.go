@@ -840,8 +840,10 @@ const (
 	// TaskValidatorScope is the metric for the taskvalidator's workflow check operation.
 	TaskValidatorScope
 
-	// FrontendGlobalRatelimiter is the metrics scope for frontend.GlobalRatelimiter
-	FrontendGlobalRatelimiter
+	// GlobalRatelimiter is the metrics scope for limiting-side common/quotas/global behavior
+	GlobalRatelimiter
+	// GlobalRatelimiterAggregator is the metrics scope for aggregator-side common/quotas/global behavior
+	GlobalRatelimiterAggregator
 
 	NumCommonScopes
 )
@@ -1729,7 +1731,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HashringScope:               {operation: "Hashring"},
 
 		// currently used by both frontend and history, but may grow to other limiting-host-services.
-		FrontendGlobalRatelimiter: {operation: "GlobalRatelimiter"},
+		GlobalRatelimiter:           {operation: "GlobalRatelimiter"},
+		GlobalRatelimiterAggregator: {operation: "GlobalRatelimiterAggregator"},
 	},
 	// Frontend Scope Names
 	Frontend: {
@@ -2204,14 +2207,24 @@ const (
 
 	AsyncRequestPayloadSize
 
+	// limiter-side metrics
 	GlobalRatelimiterStartupUsageHistogram
 	GlobalRatelimiterFailingUsageHistogram
 	GlobalRatelimiterGlobalUsageHistogram
-	GlobalRatelimiterUpdateLatency // time spent performing all Update requests, per batch attempt.  ideally well below update interval.
-
+	GlobalRatelimiterUpdateLatency         // time spent performing all Update requests, per batch attempt. ideally well below update interval.
 	GlobalRatelimiterAllowedRequestsCount  // per key/type usage
 	GlobalRatelimiterRejectedRequestsCount // per key/type usage
-	GlobalRatelimiterQuota                 // per-global-key quota information, emitted when a key is in use
+	GlobalRatelimiterQuota                 // per-global-key quota information, emitted when a key is in us
+
+	// aggregator-side metrics
+	GlobalRatelimiterInitialized
+	GlobalRatelimiterReinitialized
+	GlobalRatelimiterUpdated
+	GlobalRatelimiterDecayed
+	GlobalRatelimiterLimitsQueried
+	GlobalRatelimiterHostLimitsQueried
+	GlobalRatelimiterRemovedLimits
+	GlobalRatelimiterRemovedHostLimits
 
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
@@ -2866,10 +2879,18 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		GlobalRatelimiterFailingUsageHistogram: {metricName: "global_ratelimiter_failing_usage_histogram", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
 		GlobalRatelimiterGlobalUsageHistogram:  {metricName: "global_ratelimiter_global_usage_histogram", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
 		GlobalRatelimiterUpdateLatency:         {metricName: "global_ratelimiter_update_latency", metricType: Timer},
-
 		GlobalRatelimiterAllowedRequestsCount:  {metricName: "global_ratelimiter_allowed_requests", metricType: Counter},
 		GlobalRatelimiterRejectedRequestsCount: {metricName: "global_ratelimiter_rejected_requests", metricType: Counter},
 		GlobalRatelimiterQuota:                 {metricName: "global_ratelimiter_quota", metricType: Gauge},
+
+		GlobalRatelimiterInitialized:       {metricName: "global_ratelimiter_initialized", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
+		GlobalRatelimiterReinitialized:     {metricName: "global_ratelimiter_reinitialized", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
+		GlobalRatelimiterUpdated:           {metricName: "global_ratelimiter_updated", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
+		GlobalRatelimiterDecayed:           {metricName: "global_ratelimiter_decayed", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
+		GlobalRatelimiterLimitsQueried:     {metricName: "global_ratelimiter_limits_queried", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
+		GlobalRatelimiterHostLimitsQueried: {metricName: "global_ratelimiter_host_limits_queried", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
+		GlobalRatelimiterRemovedLimits:     {metricName: "global_ratelimiter_removed_limits", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
+		GlobalRatelimiterRemovedHostLimits: {metricName: "global_ratelimiter_removed_host_limits", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
 	},
 	History: {
 		TaskRequests:             {metricName: "task_requests", metricType: Counter},
@@ -3331,15 +3352,14 @@ var PersistenceLatencyBuckets = tally.DurationBuckets([]time.Duration{
 })
 
 // GlobalRatelimiterUsageHistogram contains buckets for tracking how many ratelimiters are
-// in which state (startup, healthy, failing).
-var GlobalRatelimiterUsageHistogram = tally.ValueBuckets{
-	0, // need an explicit 0 to record zeros
-	1, 2, 5, 10,
-	25, 50, 100,
-	250, 500, 1000,
-	1250, 1500, 2000,
-	// TODO: almost certainly want more, but how many?
-}
+// in which various states (startup, healthy, failing, as well as aggregator-side quantities, deleted, etc).
+//
+// this is intended for coarse scale checking, not alerting, so the buckets
+// should be considered unstable and can be changed whenever desired.
+var GlobalRatelimiterUsageHistogram = append(
+	tally.ValueBuckets{0},                              // need an explicit 0 or zero is reported as 1
+	tally.MustMakeExponentialValueBuckets(1, 2, 17)..., // 1..65536
+)
 
 // ErrorClass is an enum to help with classifying SLA vs. non-SLA errors (SLA = "service level agreement")
 type ErrorClass uint8

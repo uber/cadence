@@ -3619,12 +3619,15 @@ func TestRatelimitUpdate(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	alg, err := algorithm.New(algorithm.Config{
-		NewDataWeight:  func(opts ...dynamicconfig.FilterOption) float64 { return 0.5 },
-		UpdateInterval: func(opts ...dynamicconfig.FilterOption) time.Duration { return 3 * time.Second },
-		DecayAfter:     func(opts ...dynamicconfig.FilterOption) time.Duration { return 6 * time.Second },
-		GcAfter:        func(opts ...dynamicconfig.FilterOption) time.Duration { return time.Minute },
-	})
+	alg, err := algorithm.New(
+		metrics.NewNoopMetricsClient(),
+		algorithm.Config{
+			NewDataWeight:  func(opts ...dynamicconfig.FilterOption) float64 { return 0.5 },
+			UpdateInterval: func(opts ...dynamicconfig.FilterOption) time.Duration { return 3 * time.Second },
+			DecayAfter:     func(opts ...dynamicconfig.FilterOption) time.Duration { return 6 * time.Second },
+			GcAfter:        func(opts ...dynamicconfig.FilterOption) time.Duration { return time.Minute },
+		},
+	)
 	require.NoError(t, err)
 	h := &handlerImpl{
 		Resource:            res,

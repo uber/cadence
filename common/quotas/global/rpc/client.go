@@ -104,7 +104,7 @@ func New(
 		resolver: resolver,
 		thisHost: uuid.NewString(), // TODO: would descriptive be better?  but it works, unique ensures correctness.
 		logger:   logger,
-		scope:    met.Scope(metrics.FrontendGlobalRatelimiter),
+		scope:    met.Scope(metrics.GlobalRatelimiter),
 	}
 }
 

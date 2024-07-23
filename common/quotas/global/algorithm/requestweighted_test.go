@@ -26,18 +26,21 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/uber-go/tally"
 	"go.uber.org/multierr"
 	"golang.org/x/exp/maps"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/metrics"
 )
 
 // just simplifies newForTest usage as most tests only care about rate
@@ -79,13 +82,14 @@ func newForTest(t require.TestingT, snap configSnapshot, validate bool) (*impl, 
 	var agg *impl
 
 	if validate {
-		i, err := New(cfg)
+		i, err := New(metrics.NewNoopMetricsClient(), cfg)
 		require.NoError(t, err)
 		agg = i.(*impl)
 	} else {
 		// need to build by hand, New returns nil on err
 		agg = &impl{
 			cfg:   cfg,
+			scope: metrics.NewNoopMetricsClient().Scope(metrics.GlobalRatelimiterAggregator),
 			usage: make(map[Limit]map[Identity]requests),
 			clock: nil,
 		}
@@ -100,6 +104,97 @@ func newForTest(t require.TestingT, snap configSnapshot, validate bool) (*impl, 
 	tick.Advance(tick.Now().Sub(tick.Now().Round(time.Second)))
 
 	return underlying, tick
+}
+
+func TestEmitsMetrics(t *testing.T) {
+	t.Cleanup(func() {
+		if t.Failed() {
+			t.Log("This test is sensitive about bucket sizes, but they aren't actually important.")
+			t.Log("If bucket sizes have changed, just update the test to create enough data / use the new values, so each step is unique")
+		}
+	})
+
+	assertHistogramContents := func(name string, snap tally.HistogramSnapshot, expected map[float64]int64) {
+		t.Helper()
+		for bucket, val := range snap.Values() { // {bucket_boundary: value}
+			assert.Equal(t, expected[bucket], val, "bucket %v has unexpected value for histogram name %v", bucket, name)
+		}
+	}
+	assertAllHistogramContents := func(snap tally.Snapshot, contents map[string]map[float64]int64) {
+		t.Helper()
+		for _, data := range snap.Histograms() { // {"full.name+tags":{tags, values, etc}}
+			name := strings.TrimPrefix(data.Name(), "test.global_ratelimiter_") // common prefix for this test
+			exp, ok := contents[name]
+			if !ok {
+				// keys remain between snapshots, so they're a bit of a pain.
+				// values are zeroed by each snapshot though.
+				for bucket, val := range data.Values() {
+					assert.Zerof(t, val, "ignored key %v (trimmed: %v) in bucket %v has non-zero value, cannot be ignored", data.Name(), name, bucket)
+				}
+			} else {
+				assertHistogramContents(name, data, exp)
+			}
+		}
+	}
+
+	agg, _ := newValid(t, defaultConfig(time.Second))
+	ts := tally.NewTestScope("test", nil)
+	agg.scope = metrics.NewClient(ts, metrics.History).Scope(metrics.GlobalRatelimiterAggregator)
+
+	h1, h2 := Identity("host 1"), Identity("host 2")
+	key := Limit("key")
+
+	err := agg.Update(UpdateParams{
+		ID:      h1,
+		Load:    map[Limit]Requests{key: {1, 1}},
+		Elapsed: time.Second,
+	})
+	require.NoError(t, err)
+	snap := ts.Snapshot()
+	assertAllHistogramContents(snap, map[string]map[float64]int64{
+		"initialized":   {1: 1}, // one key was created
+		"reinitialized": {0: 1},
+		"updated":       {0: 1},
+		"decayed":       {0: 1},
+	})
+
+	err = agg.Update(UpdateParams{
+		ID:      h2,
+		Load:    map[Limit]Requests{key: {1, 1}},
+		Elapsed: time.Second,
+	})
+	require.NoError(t, err)
+	snap = ts.Snapshot()
+	assertAllHistogramContents(snap, map[string]map[float64]int64{
+		"initialized":   {1: 1}, // keys are disjoint, so another key was created
+		"reinitialized": {0: 1},
+		"updated":       {0: 1},
+		"decayed":       {0: 1},
+	})
+
+	err = agg.Update(UpdateParams{
+		ID:      h1,
+		Load:    map[Limit]Requests{key: {1, 1}},
+		Elapsed: time.Second,
+	})
+	require.NoError(t, err)
+	snap = ts.Snapshot()
+	assertAllHistogramContents(snap, map[string]map[float64]int64{
+		"initialized":   {0: 1},
+		"reinitialized": {0: 1},
+		"updated":       {1: 1}, // h1 was updated
+		"decayed":       {0: 1},
+	})
+
+	_, _, err = agg.HostWeights(h1, []Limit{key})
+	require.NoError(t, err)
+	snap = ts.Snapshot()
+	assertAllHistogramContents(snap, map[string]map[float64]int64{
+		"limits_queried":      {1: 1}, // one limit exists
+		"host_limits_queried": {2: 1}, // two hosts have data for that limit
+		"removed_limits":      {0: 1}, // none removed
+		"removed_host_limits": {0: 1}, // none removed
+	})
 }
 
 func TestMissedUpdateHandling(t *testing.T) {
@@ -365,9 +460,10 @@ func TestRapidlyCoalesces(t *testing.T) {
 	key := Limit("start workflow")
 	h1, h2, h3 := Identity("one"), Identity("two"), Identity("three")
 
-	weights, used := agg.getWeightsLocked(key, snapshot())
+	weights, used, met := agg.getWeightsLocked(key, snapshot())
 	assert.Zero(t, weights, "should have no weights")
 	assert.Zero(t, used, "should have no used RPS")
+	assert.Zero(t, met, "should have processed no data while calculating")
 
 	push := func(host Identity, accept, reject int) {
 		err := agg.Update(UpdateParams{
@@ -394,16 +490,18 @@ func TestRapidlyCoalesces(t *testing.T) {
 	// which feels pretty reasonable: after ~10 seconds (3s updates), the oldest data only has ~10% weight.
 	const target = 10 + 200 + 999
 	for i := 0; i < 4; i++ {
-		weights, used = agg.getWeightsLocked(key, snapshot())
+		weights, used, met = agg.getWeightsLocked(key, snapshot())
 		t.Log("used:", used, "of actual:", target)
 		t.Log("weights so far:", weights)
+		t.Log("calculation metrics:", met)
 		push(h1, 10, 10)
 		push(h2, 200, 200)
 		push(h3, 999, 999)
 	}
-	weights, used = agg.getWeightsLocked(key, snapshot())
+	weights, used, met = agg.getWeightsLocked(key, snapshot())
 	t.Log("used:", used, "of actual:", target)
 	t.Log("weights so far:", weights)
+	t.Log("calculation metrics:", met)
 
 	// aggregated allowed-request values should be less than 10% off
 	assert.InDeltaf(t, target, float64(used), target*0.1, "should have allowed >90%% of target rps by the 5th round") // actually ~94%
@@ -550,9 +648,10 @@ func TestSimulate(t *testing.T) {
 
 	snap, err := agg.snapshot()
 	require.NoError(t, err)
-	weights, used := agg.getWeightsLocked(start, snap)
+	weights, used, met := agg.getWeightsLocked(start, snap)
 	assert.Zero(t, weights, "should have no weights")
 	assert.Zero(t, used, "should have no used RPS")
+	assert.Zero(t, met, "should have processed no data while calculating")
 
 	// just simplifies arg-construction
 	push := func(host Identity, key Limit, accept, reject int) {
