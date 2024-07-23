@@ -171,7 +171,7 @@ func (w *Workflow) getDomainWorkflowTypeCountPinotQuery(domainName string) (stri
 		return "", err
 	}
 	// exclude uninitialized workflow executions by checking whether record has start time field
-	// there's a LIMIT 10 because in ES, Aggr clause by default returns the top 10 results
+	// there's a "LIMIT 10" because in ES, Aggr clause by default returns the top 10 results
 	return fmt.Sprintf(`
 SELECT WorkflowType, COUNT(*) AS count
 FROM %s
