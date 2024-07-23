@@ -38,6 +38,7 @@ type testCluster struct {
 
 	keyspace      string
 	schemaBaseDir string
+	replicas      int
 	cfg           config.NoSQL
 }
 
@@ -51,6 +52,10 @@ type TestClusterParams struct {
 	Port          int
 	ProtoVersion  int
 	SchemaBaseDir string
+	// Replicas defaults to 1 if not set
+	Replicas int
+	// MaxConns defaults to 2 if not set
+	MaxConns int
 }
 
 // NewTestCluster returns a new cassandra test cluster
@@ -61,13 +66,14 @@ func NewTestCluster(t *testing.T, params TestClusterParams) testcluster.Persiste
 		logger:        testlogger.New(t),
 		keyspace:      params.KeySpace,
 		schemaBaseDir: params.SchemaBaseDir,
+		replicas:      replicas(params.Replicas),
 		cfg: config.NoSQL{
 			PluginName:   params.PluginName,
 			User:         params.Username,
 			Password:     params.Password,
 			Hosts:        params.Host,
 			Port:         params.Port,
-			MaxConns:     2,
+			MaxConns:     maxConns(params.MaxConns),
 			Keyspace:     params.KeySpace,
 			ProtoVersion: params.ProtoVersion,
 		},
@@ -94,7 +100,7 @@ func (s *testCluster) SetupTestDatabase() {
 	if err != nil {
 		s.logger.Fatal(err.Error())
 	}
-	err = adminDB.SetupTestDatabase(s.schemaBaseDir)
+	err = adminDB.SetupTestDatabase(s.schemaBaseDir, s.replicas)
 	if err != nil {
 		s.logger.Fatal(err.Error())
 	}
@@ -110,4 +116,20 @@ func (s *testCluster) TearDownTestDatabase() {
 	if err != nil {
 		s.logger.Fatal(err.Error())
 	}
+}
+
+func replicas(replicas int) int {
+	if replicas == 0 {
+		return 1
+	}
+
+	return replicas
+}
+
+func maxConns(maxConns int) int {
+	if maxConns == 0 {
+		return 2
+	}
+
+	return maxConns
 }

@@ -40,7 +40,7 @@ type (
 
 	// AdminDB is for tooling and testing
 	AdminDB interface {
-		SetupTestDatabase(schemaBaseDir string) error
+		SetupTestDatabase(schemaBaseDir string, replicas int) error
 		TeardownTestDatabase() error
 	}
 

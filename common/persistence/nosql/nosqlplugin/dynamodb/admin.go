@@ -25,7 +25,7 @@ import "github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 
 var _ nosqlplugin.AdminDB = (*ddb)(nil)
 
-func (db *ddb) SetupTestDatabase(schemaBaseDir string) error {
+func (db *ddb) SetupTestDatabase(schemaBaseDir string, replicas int) error {
 	panic("TODO")
 }
 

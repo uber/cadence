@@ -40,12 +40,32 @@ To run locally:
 */
 
 /*
-Local run results with different concurrency levels:
+-- Benchmark Results --
+
+Single node cassandra cluster, maxConns=2, replicas=1:
 	Total updates: 1000, concurrency: 1, success: 1000, failed: 0, avg duration: 7.41ms, max duration: 26.9ms, min duration: 4.8ms, elapsed: 7.42s
 	Total updates: 1000, concurrency: 10, success: 1000, failed: 0, avg duration: 54.54ms, max duration: 808.2ms, min duration: 2.8ms, elapsed: 5.16s
 	Total updates: 1000, concurrency: 20, success: 999, failed: 1, avg duration: 90.61ms, max duration: 1.075s, min duration: 2.8ms, elapsed: 4.63s
 	Total updates: 1000, concurrency: 40, success: 993, failed: 7, avg duration: 145.95ms, max duration: 1.071s, min duration: 2.2ms, elapsed: 3.78s
 	Total updates: 1000, concurrency: 80, success: 976, failed: 24, avg duration: 254.02ms, max duration: 1.093s, min duration: 1.4ms, elapsed: 3.36s
+
+Two nodes cassandra cluster, maxConns=2, replicas=1:
+	Total updates: 1000, concurrency: 10, success: 1000, failed: 0, avg duration: 52.37s, max duration: 681.20ms, min duration: 2.91ms, elapsed: 5.29s
+	Total updates: 1000, concurrency: 100, success: 949, failed: 51, avg duration: 283.95ms, max duration: 1.11s, min duration: 2.21ms, elapsed: 3.09s
+
+Two nodes cassandra cluster, maxConns=2, replicas=2:
+	Total updates: 1000, concurrency: 10, success: 898, failed: 102, avg duration: 367.31ms, max duration: 1.12s, min duration: 7.98ms, elapsed: 36.88s
+    Total updates: 1000, concurrency: 60, success: 160, failed: 840, avg duration: 951.3ms, max duration: 1.11s, min duration: 8.99ms, elapsed: 16.35s
+    Total updates: 1000, concurrency: 80, success: 71, failed: 929, avg duration: 1.00s, max duration: 1.12s, min duration: 8.10ms, elapsed: 13.02s
+	Total updates: 1000, concurrency: 100, success: 38, failed: 962, avg duration: 1.02s, max duration: 1.11s, min duration: 7.89ms, elapsed: 10.52s
+
+Two nodes cassandra cluster, maxConns=0, replicas=2:
+    Total updates: 1000, concurrency: 1, success: 1000, failed: 0, avg duration: 11.75ms, max duration: 50.09ms, min duration: 6.69ms, elapsed: 11.76s
+    Total updates: 1000, concurrency: 10, success: 900, failed: 100, avg duration: 370.96ms, max duration: 1.12s, min duration: 7.92ms, elapsed: 37.31s
+    Total updates: 1000, concurrency: 20, success: 642, failed: 358, avg duration: 602.63ms, max duration: 1.12s, min duration: 5.95ms, elapsed: 30.40s
+    Total updates: 1000, concurrency: 40, success: 365, failed: 635, avg duration: 826.45ms, max duration: 1.13s, min duration: 7.83ms, elapsed: 21.12s
+    Total updates: 1000, concurrency: 80, success: 64, failed: 936, avg duration: 1.00s, max duration: 1.12s, min duration: 6.87ms, elapsed: 12.93s
+	Total updates: 1000, concurrency: 100, success: 29, failed: 971, avg duration: 1.02s, max duration: 1.11s, min duration: 36.97ms, elapsed: 10.51s
 */
 
 package host
@@ -72,13 +92,16 @@ import (
 
 const (
 	updateRequestsChannelSize = 1000
-	concurrency               = 100
+	concurrency               = 10
 	totalUpdates              = 1000
+	replicas                  = 1
+	maxConns                  = 2
 )
 
 type updateStats struct {
 	updateNum int
 	duration  time.Duration
+	ts        time.Time
 	err       error
 }
 
@@ -88,6 +111,7 @@ type aggStats struct {
 	totalDuration time.Duration
 	maxDuration   time.Duration
 	minDuration   time.Duration
+	lastUpdate    time.Time
 	errs          error
 }
 
@@ -96,35 +120,35 @@ func TestCassandraLWT(t *testing.T) {
 	testflags.RequireCassandra(t)
 	t.Logf("Running Cassandra LWT tests, concurrency: %d", concurrency)
 
-	testBase := public.NewTestBaseWithPublicCassandra(t, &persistencetests.TestBaseOptions{})
+	testBase := public.NewTestBaseWithPublicCassandra(t, &persistencetests.TestBaseOptions{
+		Replicas: replicas,
+		MaxConns: maxConns,
+	})
 	testBase.Setup()
 	defer testBase.TearDownWorkflowStore()
 
 	// Create workflows
-	workflows := make([]*persistence.WorkflowMutableState, 0, concurrency)
-	for i := 0; i < concurrency; i++ {
-		wfID := fmt.Sprintf("workflow-%v", i)
-		info, err := createWorkflow(testBase, wfID)
-		if err != nil {
-			t.Fatalf("createWorkflow failed: %v", err)
-		}
-
-		workflows = append(workflows, info)
+	wfID := fmt.Sprintf("workflow-%v", 0)
+	wfInfo, err := createWorkflow(testBase, wfID)
+	if err != nil {
+		t.Fatalf("createWorkflow failed: %v", err)
 	}
+	updateReq := infoToUpdateReq(testBase, wfInfo)
 
 	t.Logf("Created %d workflows", concurrency)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	var wg sync.WaitGroup
+
 	updateRequestsCh := make(chan int, updateRequestsChannelSize)
 
 	// Start a goroutine to consume the update stats
 	var aggStats aggStats
 	statsCh := make(chan updateStats, totalUpdates)
-	wg.Add(1)
+	var statCollectorWG sync.WaitGroup
+	statCollectorWG.Add(1)
 	go func() {
-		defer wg.Done()
+		defer statCollectorWG.Done()
 		for i := 0; i < totalUpdates; i++ {
 			stats := <-statsCh
 			if stats.err != nil {
@@ -141,13 +165,18 @@ func TestCassandraLWT(t *testing.T) {
 			if aggStats.minDuration == 0 || aggStats.minDuration > stats.duration {
 				aggStats.minDuration = stats.duration
 			}
+
+			if aggStats.lastUpdate.Before(stats.ts) {
+				aggStats.lastUpdate = stats.ts
+			}
 		}
 	}()
 
 	// Start concurrent handlers to update the workflows. Each one will update its own workflow
+	var updateHandlersWG sync.WaitGroup
 	for i := 0; i < concurrency; i++ {
-		wg.Add(1)
-		go updateHandler(ctx, testBase, updateRequestsCh, statsCh, &wg, i, workflows[i])
+		updateHandlersWG.Add(1)
+		go updateHandler(ctx, testBase, updateRequestsCh, statsCh, &updateHandlersWG, i, updateReq)
 	}
 
 	// wait a bit before starting the updates
@@ -158,13 +187,9 @@ func TestCassandraLWT(t *testing.T) {
 		updateRequestsCh <- i
 	}
 
-	// close the channel to signal the handlers to exit
-	close(updateRequestsCh)
-
 	// wait for the updates to complete
-	wg.Wait()
+	statCollectorWG.Wait()
 
-	elapsed := time.Since(now)
 	t.Logf("Total updates: %v, concurrency: %d, success: %v, failed: %v, avg duration: %v, max duration: %v, min duration: %v, elapsed: %v",
 		totalUpdates,
 		concurrency,
@@ -173,11 +198,21 @@ func TestCassandraLWT(t *testing.T) {
 		aggStats.totalDuration/time.Duration(totalUpdates),
 		aggStats.maxDuration,
 		aggStats.minDuration,
-		elapsed,
+		aggStats.lastUpdate.Sub(now),
 	)
 	if aggStats.errs != nil {
-		t.Fatalf("Errors: %v", aggStats.errs)
+		msg := aggStats.errs.Error()
+		len := len(msg)
+		if len > 1000 {
+			len = 1000
+		}
+		t.Errorf("Errors: %s", msg[:len-1])
 	}
+
+	// close the channel to signal the handlers to exit
+	close(updateRequestsCh)
+	// wait for the handlers to exit
+	updateHandlersWG.Wait()
 }
 
 func updateHandler(
@@ -187,7 +222,7 @@ func updateHandler(
 	statsCh chan updateStats,
 	wg *sync.WaitGroup,
 	handlerNo int,
-	info *persistence.WorkflowMutableState,
+	updateReq *persistence.UpdateWorkflowExecutionRequest,
 ) {
 	defer wg.Done()
 	for {
@@ -200,12 +235,14 @@ func updateHandler(
 				s.T().Logf("updateHandler %v exiting because channel closed", handlerNo)
 				return
 			}
-			now := time.Now()
-			err := updateWorkflow(s, info)
-			elapsed := time.Since(now)
+			start := time.Now()
+			err := updateWorkflow(s, updateReq)
+			end := time.Now()
+
 			statsCh <- updateStats{
 				updateNum: updateNum,
-				duration:  elapsed,
+				duration:  end.Sub(start),
+				ts:        end,
 				err:       err,
 			}
 		}
@@ -213,8 +250,6 @@ func updateHandler(
 }
 
 // createWorkflow creates a new workflow and returns the workflow info to be used for updates
-// the parameters of the workflow including the workflow id do not matter for the test.
-// all workflows are handled by same shard's ExecutionManager
 func createWorkflow(s *persistencetests.TestBase, wfID string) (*persistence.WorkflowMutableState, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -289,10 +324,7 @@ func createWorkflow(s *persistencetests.TestBase, wfID string) (*persistence.Wor
 	return info, nil
 }
 
-func updateWorkflow(s *persistencetests.TestBase, info *persistence.WorkflowMutableState) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
+func infoToUpdateReq(s *persistencetests.TestBase, info *persistence.WorkflowMutableState) *persistence.UpdateWorkflowExecutionRequest {
 	updatedInfo := info.ExecutionInfo
 	updatedStats := info.ExecutionStats
 	updatedInfo.State = persistence.WorkflowStateRunning
@@ -309,7 +341,7 @@ func updateWorkflow(s *persistencetests.TestBase, info *persistence.WorkflowMuta
 		},
 	})
 	versionHistories := persistence.NewVersionHistories(versionHistory)
-	_, err := s.ExecutionManager.UpdateWorkflowExecution(ctx, &persistence.UpdateWorkflowExecutionRequest{
+	return &persistence.UpdateWorkflowExecutionRequest{
 		UpdateWorkflowMutation: persistence.WorkflowMutation{
 			ExecutionInfo:    updatedInfo,
 			ExecutionStats:   updatedStats,
@@ -319,8 +351,14 @@ func updateWorkflow(s *persistencetests.TestBase, info *persistence.WorkflowMuta
 		},
 		RangeID: s.ShardInfo.RangeID,
 		Mode:    persistence.UpdateWorkflowModeUpdateCurrent,
-	})
+	}
+}
 
+func updateWorkflow(s *persistencetests.TestBase, req *persistence.UpdateWorkflowExecutionRequest) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := s.ExecutionManager.UpdateWorkflowExecution(ctx, req)
 	if err == nil {
 		return nil
 	}
