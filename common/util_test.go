@@ -217,8 +217,8 @@ func TestFirstDecisionTaskBackoffDuringStartWorkflow(t *testing.T) {
 	firstRunTimestampFuture, _ := time.Parse(time.RFC3339, "2018-12-17T08:00:02+00:00")
 	firstRunAtTimestampMap := map[string]int64{
 		"null":   0,
-		"past":   firstRunTimestampPast.Unix(),
-		"future": firstRunTimestampFuture.Unix(),
+		"past":   firstRunTimestampPast.UnixNano(),
+		"future": firstRunTimestampFuture.UnixNano(),
 	}
 
 	var tests = []struct {

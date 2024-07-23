@@ -337,6 +337,15 @@ func constructStartWorkflowRequest(c *cli.Context) *types.StartWorkflowExecution
 		startRequest.JitterStartSeconds = common.Int32Ptr(int32(c.Int(JitterStartSeconds)))
 	}
 
+	if c.IsSet(FirstRunAtTime) {
+		t, err := time.Parse(time.RFC3339, c.String(FirstRunAtTime))
+		if err != nil {
+			ErrorAndExit("First_run_at time format invalid, please use RFC3339", err)
+		}
+		startRequest.FirstRunAtTimeStamp = common.Int64Ptr(t.UnixNano())
+		fmt.Printf("First run at time: %v %d \n", t, t.UnixNano())
+	}
+
 	headerFields := processHeader(c)
 	if len(headerFields) != 0 {
 		startRequest.Header = &types.Header{Fields: headerFields}

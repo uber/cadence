@@ -547,6 +547,8 @@ func CreateHistoryStartWorkflowRequest(
 
 	delayStartSeconds := startRequest.GetDelayStartSeconds()
 	jitterStartSeconds := startRequest.GetJitterStartSeconds()
+	firstRunAtTimestamp := startRequest.GetFirstRunAtTimeStamp()
+
 	firstDecisionTaskBackoffSeconds := delayStartSeconds
 
 	// if the user specified a timestamp for the first run, we will use that as the start time,
@@ -554,8 +556,8 @@ func CreateHistoryStartWorkflowRequest(
 	// The following condition guarantees two things:
 	// - The logic is only triggered when the user specifies a first run timestamp
 	// - AND that timestamp is only triggered ONCE hence not interfering with other scheduling logic
-	if startRequest.GetFirstRunAtTimeStamp() > now.Unix() {
-		firstDecisionTaskBackoffSeconds = int32(startRequest.GetFirstRunAtTimeStamp() - now.Unix())
+	if firstRunAtTimestamp > now.UnixNano() {
+		firstDecisionTaskBackoffSeconds = int32((firstRunAtTimestamp - now.UnixNano()) / int64(time.Second))
 	} else {
 		if len(startRequest.GetCronSchedule()) > 0 {
 			delayedStartTime := now.Add(time.Second * time.Duration(delayStartSeconds))

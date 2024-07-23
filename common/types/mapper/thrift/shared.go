@@ -5369,6 +5369,7 @@ func FromStartWorkflowExecutionRequest(t *types.StartWorkflowExecutionRequest) *
 		Header:                              FromHeader(t.Header),
 		DelayStartSeconds:                   t.DelayStartSeconds,
 		JitterStartSeconds:                  t.JitterStartSeconds,
+		FirstRunAtTimestamp:                 t.FirstRunAtTimeStamp,
 	}
 }
 
@@ -5395,6 +5396,7 @@ func ToStartWorkflowExecutionRequest(t *shared.StartWorkflowExecutionRequest) *t
 		Header:                              ToHeader(t.Header),
 		DelayStartSeconds:                   t.DelayStartSeconds,
 		JitterStartSeconds:                  t.JitterStartSeconds,
+		FirstRunAtTimeStamp:                 t.FirstRunAtTimestamp,
 	}
 }
 
