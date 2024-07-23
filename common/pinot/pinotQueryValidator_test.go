@@ -94,6 +94,10 @@ func TestValidateQuery(t *testing.T) {
 			query: "CustomKeywordField = missing",
 			err:   "invalid comparison expression, right",
 		},
+		"Case8-4: query with custom keyword field not equal": {
+			query:     "CustomKeywordField != 0",
+			validated: "JSON_MATCH(Attr, '\"$.CustomKeywordField\"!=''0''') and JSON_MATCH(Attr, '\"$.CustomKeywordField[*]\"!=''0''')",
+		},
 		"Case9: invalid where expression": {
 			query: "InvalidWhereExpr",
 			err:   "invalid where clause",
