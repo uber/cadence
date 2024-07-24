@@ -29,17 +29,12 @@ import (
 
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/membership"
+	"github.com/uber/cadence/common/syncmap"
 )
 
-func TestRegisterAllowsPluginOnlyOnce(t *testing.T) {
-	assert.NoError(t, Register("testConfig", func(cfg *config.YamlNode, container Container) (membership.PeerProvider, error) { return nil, nil }))
-	assert.Error(t, Register("testConfig",
-		func(cfg *config.YamlNode, container Container) (membership.PeerProvider, error) { return nil, nil }),
-		"plugin can be registered only once",
-	)
-
-}
 func TestProviderRetrunsErrorWhenNoProviderRegistered(t *testing.T) {
+	// Reset plugins
+	plugins = syncmap.New[string, plugin]()
 	a := Provider{
 		config:    nil,
 		container: Container{},
@@ -49,15 +44,43 @@ func TestProviderRetrunsErrorWhenNoProviderRegistered(t *testing.T) {
 	assert.EqualError(t, err, "no configured peer providers found")
 }
 
-func TestProviderRetrunsErrorWhenNoConfigFound(t *testing.T) {
-	err := Register("providerName", func(cfg *config.YamlNode, container Container) (membership.PeerProvider, error) {
+func TestProviderRetrunsErrorWhenPluginAlreadyRegistered(t *testing.T) {
+	// Reset plugins
+	plugins = syncmap.New[string, plugin]()
+	err := Register("provider1", func(cfg *config.YamlNode, container Container) (membership.PeerProvider, error) {
 		return nil, nil
 	})
 	assert.NoError(t, err)
-	ppConfig := config.PeerProvider{
-		"configKey": &config.YamlNode{},
-	}
-	p, err := New(ppConfig, Container{}).Provider()
-	assert.Nil(t, p)
+	err = Register("provider2", func(cfg *config.YamlNode, container Container) (membership.PeerProvider, error) {
+		return nil, nil
+	})
 	assert.Error(t, err)
+}
+
+func TestConfigIsPickedUp(t *testing.T) {
+	// Reset plugins
+	plugins = syncmap.New[string, plugin]()
+
+	peerProviderConfig := map[string]*config.YamlNode{}
+	peerProviderConfig["provider1"] = &config.YamlNode{}
+
+	pp := New(peerProviderConfig, Container{})
+	err := Register("provider1", func(cfg *config.YamlNode, container Container) (membership.PeerProvider, error) {
+		return nil, nil
+	})
+	assert.NoError(t, err)
+	_, err = pp.Provider()
+	assert.NoError(t, err)
+}
+
+func TestErrorWhenConfigIsNotProvided(t *testing.T) {
+	// Reset plugins
+	plugins = syncmap.New[string, plugin]()
+	pp := New(config.PeerProvider{}, Container{})
+	err := Register("provider1", func(cfg *config.YamlNode, container Container) (membership.PeerProvider, error) {
+		return nil, nil
+	})
+	p, err := pp.Provider()
+	assert.Nil(t, p)
+	assert.EqualError(t, err, "no configuration for \"provider1\" peer provider found")
 }

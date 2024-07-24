@@ -33,6 +33,8 @@ import (
 	"github.com/uber/cadence/common/syncmap"
 )
 
+const key = "peerprovider"
+
 // Container is passed to peer provider plugin
 type Container struct {
 	Service string
@@ -64,24 +66,33 @@ func New(config config.PeerProvider, container Container) *Provider {
 }
 
 func Register(configKey string, constructor constructorFn) error {
-	inserted := plugins.Put(configKey, plugin{
+
+	inserted := plugins.Put(key, plugin{
 		fn:        constructor,
 		configKey: configKey,
 	})
 
+	// only one plugin is allowed to be registered
 	if !inserted {
-		return fmt.Errorf("peer provider %q is already registered", configKey)
+		registeredPlugin, _ := plugins.Get(key)
+		return fmt.Errorf("cannot register %q provider, %q is already registered", configKey, registeredPlugin.configKey)
 	}
 
 	return nil
 }
 
 func (p *Provider) Provider() (membership.PeerProvider, error) {
+	registeredPlugin, found := plugins.Get(key)
+
+	if !found {
+		return nil, fmt.Errorf("no configured peer providers found")
+	}
+
 	for configKey, cfg := range p.config {
-		if plugin, found := plugins.Get(configKey); found {
-			return plugin.fn(cfg, p.container)
+		if configKey == registeredPlugin.configKey {
+			return registeredPlugin.fn(cfg, p.container)
 		}
 	}
 
-	return nil, fmt.Errorf("no configured peer providers found")
+	return nil, fmt.Errorf("no configuration for %q peer provider found", registeredPlugin.configKey)
 }
