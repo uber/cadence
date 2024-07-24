@@ -41,8 +41,8 @@ const (
 
 var _ nosqlplugin.AdminDB = (*cdb)(nil)
 
-func (db *cdb) SetupTestDatabase(schemaBaseDir string) error {
-	err := db.createCassandraKeyspace(db.session, db.cfg.Keyspace, 1, true)
+func (db *cdb) SetupTestDatabase(schemaBaseDir string, replicas int) error {
+	err := db.createCassandraKeyspace(db.session, db.cfg.Keyspace, replicas, true)
 	if err != nil {
 		return err
 	}

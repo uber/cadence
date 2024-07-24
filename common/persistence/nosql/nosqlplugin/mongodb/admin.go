@@ -36,7 +36,7 @@ const (
 	testSchemaDir = "schema/mongodb/"
 )
 
-func (db *mdb) SetupTestDatabase(schemaBaseDir string) error {
+func (db *mdb) SetupTestDatabase(schemaBaseDir string, replicas int) error {
 	if schemaBaseDir == "" {
 		var err error
 		schemaBaseDir, err = nosqlplugin.GetDefaultTestSchemaDir(testSchemaDir)

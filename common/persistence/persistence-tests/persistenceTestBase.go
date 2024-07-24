@@ -70,6 +70,8 @@ type (
 		SchemaDir       string           `yaml:"-"`
 		ClusterMetadata cluster.Metadata `yaml:"-"`
 		ProtoVersion    int              `yaml:"-"`
+		Replicas        int              `yaml:"-"`
+		MaxConns        int              `yaml:"-"`
 	}
 
 	// TestBase wraps the base setup needed to create workflows over persistence layer.
@@ -138,6 +140,8 @@ func NewTestBaseWithNoSQL(t *testing.T, options *TestBaseOptions) *TestBase {
 		Host:         options.DBHost,
 		Port:         options.DBPort,
 		ProtoVersion: options.ProtoVersion,
+		Replicas:     options.Replicas,
+		MaxConns:     options.MaxConns,
 	})
 	metadata := options.ClusterMetadata
 	if metadata.GetCurrentClusterName() == "" {
