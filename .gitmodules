@@ -1,4 +1,4 @@
 [submodule "idls"]
 	path = idls
-	url = https://github.com/timl3136/cadence-idl.git
-	branch = addFirstRunStartAtTimestamp
+	url = https://github.com/uber/cadence-idl.git
+	branch = master
