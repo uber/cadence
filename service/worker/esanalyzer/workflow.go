@@ -219,7 +219,7 @@ func (w *Workflow) emitWorkflowVersionMetrics(ctx context.Context) error {
 func (w *Workflow) emitWorkflowVersionMetricsPinot(domainName string, logger *zap.Logger) error {
 	wfVersionPinotQuery, err := w.getWorkflowTypePinotQuery(domainName)
 	if err != nil {
-		logger.Error("Failed to get Pinot query to find workflow version Info",
+		logger.Error("Failed to get Pinot query to find workflow type Info",
 			zap.Error(err),
 			zap.String("DomainName", domainName),
 		)
