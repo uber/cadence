@@ -50,6 +50,9 @@ func TestValidateQuery(t *testing.T) {
 			query:     "WorkflowID like 'wid'",
 			validated: "(JSON_MATCH(Attr, '\"$.WorkflowID\" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.WorkflowID', 'string'), 'wid*'))",
 		},
+		"Case2-3: invalid simple query with partial match": {
+			query: "WorkflowID like wid",
+			err:   "right comparison is invalid: &{<nil> wid { }}"},
 		"Case3-1: query with custom field": {
 			query:     "CustomStringField = 'custom'",
 			validated: "(JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'custom*'))",
