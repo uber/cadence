@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/uber/cadence/common/pinot"
 	"time"
 
 	"go.uber.org/cadence"
@@ -146,6 +147,47 @@ func (w *Workflow) getWorkflowVersionQuery(domainName string) (string, error) {
     `, domain.GetInfo().ID), nil
 }
 
+func (w *Workflow) getWorkflowTypePinotQuery(domainName string) (string, error) {
+	domain, err := w.analyzer.domainCache.GetDomain(domainName)
+	if err != nil {
+		return "", err
+	}
+	// exclude uninitialized workflow executions by checking whether record has start time field
+	// there's a "LIMIT 10" because in ES, Aggr clause by default returns the top 10 results
+	return fmt.Sprintf(`
+SELECT WorkflowType, COUNT(*) AS count
+FROM %s
+WHERE DomainID = '%s'
+  AND CloseStatus = -1
+  AND StartTime > 0
+GROUP BY WorkflowType
+ORDER BY count DESC
+LIMIT 10
+OFFSET 0
+    `, w.analyzer.pinotTableName, domain.GetInfo().ID), nil
+}
+
+func (w *Workflow) getWorkflowVersionPinotQuery(domainName string, wfType string) (string, error) {
+	domain, err := w.analyzer.domainCache.GetDomain(domainName)
+	if err != nil {
+		return "", err
+	}
+	// exclude uninitialized workflow executions by checking whether record has start time field
+	// there's a "LIMIT 10" because in ES, Aggr clause by default returns the top 10 results
+	return fmt.Sprintf(`
+SELECT JSON_EXTRACT_SCALAR(Attr, '$.CadenceChangeVersion', 'STRING_ARRAY') AS CadenceChangeVersion, COUNT(*) AS count
+FROM %s
+WHERE DomainID = '%s'
+  AND CloseStatus = -1
+  AND StartTime > 0
+  AND WorkflowType = '%s'
+GROUP BY JSON_EXTRACT_SCALAR(Attr, '$.CadenceChangeVersion', 'STRING_ARRAY') AS CadenceChangeVersion
+ORDER BY count DESC
+LIMIT 10
+OFFSET 0
+    `, w.analyzer.pinotTableName, domain.GetInfo().ID, wfType), nil
+}
+
 // emitWorkflowVersionMetrics is an activity that emits the running WF versions of a domain
 func (w *Workflow) emitWorkflowVersionMetrics(ctx context.Context) error {
 	logger := activity.GetLogger(ctx)
@@ -160,6 +202,8 @@ func (w *Workflow) emitWorkflowVersionMetrics(ctx context.Context) error {
 			switch w.analyzer.readMode {
 			case ES:
 				err = w.emitWorkflowVersionMetricsES(ctx, domainName, logger)
+			case Pinot:
+				err = w.emitWorkflowVersionMetricsPinot(domainName, logger)
 			default:
 				err = w.emitWorkflowVersionMetricsES(ctx, domainName, logger)
 			}
@@ -169,6 +213,123 @@ func (w *Workflow) emitWorkflowVersionMetrics(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+func (w *Workflow) emitWorkflowVersionMetricsPinot(domainName string, logger *zap.Logger) error {
+	wfVersionPinotQuery, err := w.getWorkflowTypePinotQuery(domainName)
+	if err != nil {
+		logger.Error("Failed to get Pinot query to find workflow version Info",
+			zap.Error(err),
+			zap.String("DomainName", domainName),
+		)
+		return err
+	}
+	response, err := w.analyzer.pinotClient.SearchAggr(&pinot.SearchRequest{Query: wfVersionPinotQuery})
+	if err != nil {
+		logger.Error("Failed to query Pinot to find workflow type count Info",
+			zap.Error(err),
+			zap.String("VisibilityQuery", wfVersionPinotQuery),
+			zap.String("DomainName", domainName),
+		)
+		return err
+	}
+	foundAggregation := len(response) > 0
+
+	if !foundAggregation {
+		logger.Error("Pinot error: aggregation failed.",
+			zap.Error(err),
+			zap.String("Aggregation", fmt.Sprintf("%v", response)),
+			zap.String("DomainName", domainName),
+			zap.String("VisibilityQuery", wfVersionPinotQuery),
+		)
+		return err
+	}
+	var domainWorkflowVersionCount DomainWorkflowVersionCount
+	for _, row := range response {
+		workflowType := row[0].(string)
+		workflowCount, ok := row[1].(int)
+		if !ok {
+			logger.Error("Error parsing workflow count",
+				zap.Error(err),
+				zap.String("WorkflowType", workflowType),
+				zap.String("DomainName", domainName),
+			)
+			return fmt.Errorf("error parsing workflow count for workflow type %s", workflowType)
+		}
+		workflowVersions, err := w.queryWorkflowVersionsWithType(domainName, workflowType, logger)
+
+		if err != nil {
+			logger.Error("Error querying workflow versions",
+				zap.Error(err),
+				zap.String("WorkflowType", workflowType),
+				zap.String("DomainName", domainName),
+			)
+			return fmt.Errorf("error querying workflow versions for workflow type: %s: error: %s", workflowType, err.Error())
+		}
+
+		domainWorkflowVersionCount.WorkflowTypes = append(domainWorkflowVersionCount.WorkflowTypes, WorkflowTypeCount{
+			EsAggregateCount: EsAggregateCount{
+				AggregateKey:   workflowType,
+				AggregateCount: int64(workflowCount),
+			},
+			WorkflowVersions: workflowVersions,
+		})
+	}
+
+	for _, workflowType := range domainWorkflowVersionCount.WorkflowTypes {
+		for _, workflowVersion := range workflowType.WorkflowVersions.WorkflowVersions {
+			w.analyzer.tallyScope.Tagged(
+				map[string]string{domainTag: domainName, workflowVersionTag: workflowVersion.AggregateKey, workflowTypeTag: workflowType.AggregateKey},
+			).Gauge(workflowVersionCountMetrics).Update(float64(workflowVersion.AggregateCount))
+		}
+	}
+	return nil
+}
+
+func (w *Workflow) queryWorkflowVersionsWithType(domainName string, wfType string, logger *zap.Logger) (WorkflowVersionCount, error) {
+	wfVersionPinotQuery, err := w.getWorkflowVersionPinotQuery(domainName, wfType)
+	if err != nil {
+		logger.Error("Failed to get Pinot query to find workflow version Info",
+			zap.Error(err),
+			zap.String("DomainName", domainName),
+		)
+		return WorkflowVersionCount{}, err
+	}
+
+	response, err := w.analyzer.pinotClient.SearchAggr(&pinot.SearchRequest{Query: wfVersionPinotQuery})
+	if err != nil {
+		logger.Error("Failed to query Pinot to find workflow type count Info",
+			zap.Error(err),
+			zap.String("VisibilityQuery", wfVersionPinotQuery),
+			zap.String("DomainName", domainName),
+		)
+		return WorkflowVersionCount{}, err
+	}
+	foundAggregation := len(response) > 0
+
+	// if no CadenceChangeVersion is found, return an empty WorkflowVersionCount, no errors
+	if !foundAggregation {
+		return WorkflowVersionCount{}, nil
+	}
+
+	var workflowVersions WorkflowVersionCount
+	for _, row := range response {
+		workflowVersion := row[0].(string)
+		workflowCount, ok := row[1].(int)
+		if !ok {
+			logger.Error("Error parsing workflow count",
+				zap.Error(err),
+				zap.String("WorkflowVersion", workflowVersion),
+				zap.String("DomainName", domainName),
+			)
+			return WorkflowVersionCount{}, fmt.Errorf("error parsing workflow count for workflow version %s", workflowVersion)
+		}
+		workflowVersions.WorkflowVersions = append(workflowVersions.WorkflowVersions, EsAggregateCount{
+			AggregateKey:   workflowVersion,
+			AggregateCount: int64(workflowCount),
+		})
+	}
+	return workflowVersions, nil
 }
 
 func (w *Workflow) emitWorkflowVersionMetricsES(ctx context.Context, domainName string, logger *zap.Logger) error {

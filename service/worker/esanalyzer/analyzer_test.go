@@ -627,3 +627,149 @@ func TestEmitWorkflowTypeCountMetricsPinot(t *testing.T) {
 		})
 	}
 }
+
+func TestEmitWorkflowVersionMetricsPinot(t *testing.T) {
+	mockPinotConfig := &config.PinotVisibilityConfig{
+		Table: "test",
+	}
+	mockESConfig := &config.ElasticSearchConfig{
+		Indices: map[string]string{
+			common.VisibilityAppName: "test",
+		},
+	}
+
+	ctrl := gomock.NewController(t)
+
+	mockPinotClient := pinot.NewMockGenericClient(ctrl)
+	mockDomainCache := cache.NewMockDomainCache(ctrl)
+	testAnalyzer := New(nil, nil, nil, nil, mockPinotClient, mockESConfig, mockPinotConfig, log.NewNoop(), tally.NoopScope, nil, mockDomainCache, nil)
+	testWorkflow := &Workflow{analyzer: testAnalyzer}
+
+	tests := map[string]struct {
+		domainCacheAffordance func(mockDomainCache *cache.MockDomainCache)
+		PinotClientAffordance func(mockPinotClient *pinot.MockGenericClient)
+		expectedErr           error
+	}{
+		"Case0: success": {
+			domainCacheAffordance: func(mockDomainCache *cache.MockDomainCache) {
+				mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(cache.NewDomainCacheEntryForTest(
+					&persistence.DomainInfo{ID: "test-id"}, nil, false, nil, 0, nil), nil).Times(3)
+			},
+			PinotClientAffordance: func(mockPinotClient *pinot.MockGenericClient) {
+				mockPinotClient.EXPECT().SearchAggr(gomock.Any()).Return([][]interface{}{
+					{"test-wf-type0", 100},
+					{"test-wf-type1", 200},
+				}, nil).Times(1)
+				mockPinotClient.EXPECT().SearchAggr(gomock.Any()).Return([][]interface{}{
+					{"test-wf-version0", 1},
+					{"test-wf-version1", 20},
+				}, nil).Times(1)
+				mockPinotClient.EXPECT().SearchAggr(gomock.Any()).Return([][]interface{}{
+					{"test-wf-version3", 10},
+					{"test-wf-version4", 2},
+				}, nil).Times(1)
+			},
+			expectedErr: nil,
+		},
+		"Case1: error getting domain": {
+			domainCacheAffordance: func(mockDomainCache *cache.MockDomainCache) {
+				mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(nil, fmt.Errorf("domain error")).Times(1)
+			},
+			PinotClientAffordance: func(mockPinotClient *pinot.MockGenericClient) {},
+			expectedErr:           fmt.Errorf("domain error"),
+		},
+		"Case2: error Pinot query": {
+			domainCacheAffordance: func(mockDomainCache *cache.MockDomainCache) {
+				mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(cache.NewDomainCacheEntryForTest(
+					&persistence.DomainInfo{ID: "test-id"}, nil, false, nil, 0, nil), nil)
+			},
+			PinotClientAffordance: func(mockPinotClient *pinot.MockGenericClient) {
+				mockPinotClient.EXPECT().SearchAggr(gomock.Any()).Return(nil, fmt.Errorf("pinot error")).Times(1)
+			},
+			expectedErr: fmt.Errorf("pinot error"),
+		},
+		"Case3: Aggregation is empty": {
+			domainCacheAffordance: func(mockDomainCache *cache.MockDomainCache) {
+				mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(cache.NewDomainCacheEntryForTest(
+					&persistence.DomainInfo{ID: "test-id"}, nil, false, nil, 0, nil), nil)
+			},
+			PinotClientAffordance: func(mockPinotClient *pinot.MockGenericClient) {
+				mockPinotClient.EXPECT().SearchAggr(gomock.Any()).Return([][]interface{}{}, nil).Times(1)
+			},
+			expectedErr: nil,
+		},
+		"Case4: error parsing workflow count": {
+			domainCacheAffordance: func(mockDomainCache *cache.MockDomainCache) {
+				mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(cache.NewDomainCacheEntryForTest(
+					&persistence.DomainInfo{ID: "test-id"}, nil, false, nil, 0, nil), nil)
+			},
+			PinotClientAffordance: func(mockPinotClient *pinot.MockGenericClient) {
+				mockPinotClient.EXPECT().SearchAggr(gomock.Any()).Return([][]interface{}{
+					{"test", "invalid"},
+				}, nil).Times(1)
+			},
+			expectedErr: fmt.Errorf("error parsing workflow count for workflow type test"),
+		},
+		"Case5-1: failure case in queryWorkflowVersionsWithType: getWorkflowVersionPinotQuery error": {
+			domainCacheAffordance: func(mockDomainCache *cache.MockDomainCache) {
+				mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(cache.NewDomainCacheEntryForTest(
+					&persistence.DomainInfo{ID: "test-id"}, nil, false, nil, 0, nil), nil).Times(1)
+				mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(nil, fmt.Errorf("domain error")).Times(1)
+			},
+			PinotClientAffordance: func(mockPinotClient *pinot.MockGenericClient) {
+				mockPinotClient.EXPECT().SearchAggr(gomock.Any()).Return([][]interface{}{
+					{"test-wf-type0", 100},
+					{"test-wf-type1", 200},
+				}, nil).Times(1)
+			},
+			expectedErr: fmt.Errorf("error querying workflow versions for workflow type: test-wf-type0: error: domain error"),
+		},
+		"Case5-2: failure case in queryWorkflowVersionsWithType: SearchAggr error": {
+			domainCacheAffordance: func(mockDomainCache *cache.MockDomainCache) {
+				mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(cache.NewDomainCacheEntryForTest(
+					&persistence.DomainInfo{ID: "test-id"}, nil, false, nil, 0, nil), nil).Times(2)
+			},
+			PinotClientAffordance: func(mockPinotClient *pinot.MockGenericClient) {
+				mockPinotClient.EXPECT().SearchAggr(gomock.Any()).Return([][]interface{}{
+					{"test-wf-type0", 100},
+					{"test-wf-type1", 200},
+				}, nil).Times(1)
+				mockPinotClient.EXPECT().SearchAggr(gomock.Any()).Return(nil, fmt.Errorf("pinot error")).Times(1)
+			},
+			expectedErr: fmt.Errorf("error querying workflow versions for workflow type: test-wf-type0: error: pinot error"),
+		},
+		"Case5-3: failure case in queryWorkflowVersionsWithType: error parsing workflow count": {
+			domainCacheAffordance: func(mockDomainCache *cache.MockDomainCache) {
+				mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(cache.NewDomainCacheEntryForTest(
+					&persistence.DomainInfo{ID: "test-id"}, nil, false, nil, 0, nil), nil).Times(2)
+			},
+			PinotClientAffordance: func(mockPinotClient *pinot.MockGenericClient) {
+				mockPinotClient.EXPECT().SearchAggr(gomock.Any()).Return([][]interface{}{
+					{"test-wf-type0", 100},
+					{"test-wf-type1", 200},
+				}, nil).Times(1)
+				mockPinotClient.EXPECT().SearchAggr(gomock.Any()).Return([][]interface{}{
+					{"test-wf-version0", 1.5},
+					{"test-wf-version1", 20},
+				}, nil).Times(1)
+			},
+			expectedErr: fmt.Errorf("error querying workflow versions for workflow type: " +
+				"test-wf-type0: error: error parsing workflow count for workflow version test-wf-version0"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			// Set up mocks
+			test.domainCacheAffordance(mockDomainCache)
+			test.PinotClientAffordance(mockPinotClient)
+
+			err := testWorkflow.emitWorkflowVersionMetricsPinot("test-domain", zap.NewNop())
+			if err == nil {
+				assert.Equal(t, test.expectedErr, err)
+			} else {
+				assert.Equal(t, test.expectedErr.Error(), err.Error())
+			}
+		})
+	}
+}
