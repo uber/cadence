@@ -242,6 +242,15 @@ func (qv *VisibilityQueryValidator) processSystemKey(expr sqlparser.Expr) (strin
 	}
 	colNameStr := colName.Name.String()
 
+	if comparisonExpr.Operator == sqlparser.LikeStr {
+		colVal, ok := comparisonExpr.Right.(*sqlparser.SQLVal)
+		if !ok {
+			return "", fmt.Errorf("right comparison is invalid: %v", comparisonExpr.Right)
+		}
+		colValStr := string(colVal.Val)
+		return processCustomString(comparisonExpr, colNameStr, colValStr), nil
+	}
+
 	if comparisonExpr.Operator != sqlparser.EqualStr && comparisonExpr.Operator != sqlparser.NotEqualStr {
 		if _, ok := timeSystemKeys[colNameStr]; ok {
 			sqlVal, ok := comparisonExpr.Right.(*sqlparser.SQLVal)
