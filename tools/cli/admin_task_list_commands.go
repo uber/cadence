@@ -37,11 +37,12 @@ type (
 		PollerCount int    `header:"Poller Count"`
 	}
 	TaskListStatusRow struct {
-		ReadLevel int64 `header:"Read Level"`
-		AckLevel  int64 `header:"Ack Level"`
-		Backlog   int64 `header:"Backlog"`
-		StartID   int64 `header:"Lease Start TaskID"`
-		EndID     int64 `header:"Lease End TaskID"`
+		ReadLevel int64   `header:"Read Level"`
+		AckLevel  int64   `header:"Ack Level"`
+		Backlog   int64   `header:"Backlog"`
+		RPS       float64 `header:"RPS"`
+		StartID   int64   `header:"Lease Start TaskID"`
+		EndID     int64   `header:"Lease End TaskID"`
 	}
 )
 
@@ -115,6 +116,7 @@ func printTaskListStatus(taskListStatus *types.TaskListStatus) {
 		ReadLevel: taskListStatus.GetReadLevel(),
 		AckLevel:  taskListStatus.GetAckLevel(),
 		Backlog:   taskListStatus.GetBacklogCountHint(),
+		RPS:       taskListStatus.GetRatePerSecond(),
 		StartID:   taskListStatus.GetTaskIDBlock().GetStartID(),
 		EndID:     taskListStatus.GetTaskIDBlock().GetEndID(),
 	}}
