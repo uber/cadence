@@ -343,7 +343,6 @@ func constructStartWorkflowRequest(c *cli.Context) *types.StartWorkflowExecution
 			ErrorAndExit("First_run_at time format invalid, please use RFC3339", err)
 		}
 		startRequest.FirstRunAtTimeStamp = common.Int64Ptr(t.UnixNano())
-		fmt.Printf("First run at time: %v %d \n", t, t.UnixNano())
 	}
 
 	headerFields := processHeader(c)

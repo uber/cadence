@@ -222,85 +222,105 @@ func TestFirstDecisionTaskBackoffDuringStartWorkflow(t *testing.T) {
 	}
 
 	var tests = []struct {
-		cron               bool
-		jitterStartSeconds int32
-		delayStartSeconds  int32
+		cron                   bool
+		jitterStartSeconds     int32
+		delayStartSeconds      int32
+		firstRunAtTimeCategory string
 	}{
-		{true, 0, 0},
-		{true, 15, 0},
-		{true, 0, 600},
-		{true, 15, 600},
-		{false, 0, 0},
-		{false, 15, 0},
-		{false, 0, 600},
-		{false, 15, 600},
+		// Null first run at cases
+		{true, 0, 0, "null"},
+		{true, 15, 0, "null"},
+		{true, 0, 600, "null"},
+		{true, 15, 600, "null"},
+		{false, 0, 0, "null"},
+		{false, 15, 0, "null"},
+		{false, 0, 600, "null"},
+		{false, 15, 600, "null"},
+
+		// Past first run at cases
+		{true, 0, 0, "past"},
+		{true, 15, 0, "past"},
+		{true, 0, 600, "past"},
+		{true, 15, 600, "past"},
+		{false, 0, 0, "past"},
+		{false, 15, 0, "past"},
+		{false, 0, 600, "past"},
+		{false, 15, 600, "past"},
+
+		// Future first run at cases
+		{true, 0, 0, "future"},
+		{true, 15, 0, "future"},
+		{true, 0, 600, "future"},
+		{true, 15, 600, "future"},
+		{false, 0, 0, "future"},
+		{false, 15, 0, "future"},
+		{false, 0, 600, "future"},
+		{false, 15, 600, "future"},
 	}
 
 	rand.Seed(int64(time.Now().Nanosecond()))
 
 	for idx, tt := range tests {
-		for jdx, ts := range firstRunAtTimestampMap {
-			t.Run(strconv.Itoa(idx), func(t *testing.T) {
-				domainID := uuid.New()
-				request := &types.StartWorkflowExecutionRequest{
-					FirstRunAtTimeStamp: Int64Ptr(ts),
-					DelayStartSeconds:   Int32Ptr(tt.delayStartSeconds),
-					JitterStartSeconds:  Int32Ptr(tt.jitterStartSeconds),
-				}
+		t.Run(strconv.Itoa(idx), func(t *testing.T) {
+			domainID := uuid.New()
+			request := &types.StartWorkflowExecutionRequest{
+				FirstRunAtTimeStamp: Int64Ptr(firstRunAtTimestampMap[tt.firstRunAtTimeCategory]),
+				DelayStartSeconds:   Int32Ptr(tt.delayStartSeconds),
+				JitterStartSeconds:  Int32Ptr(tt.jitterStartSeconds),
+			}
+			if tt.cron {
+				request.CronSchedule = "* * * * *"
+			}
+
+			// Run X loops so that the test isn't flaky, since jitter adds randomness.
+			caseCount := 10
+			exactCount := 0
+			for i := 0; i < caseCount; i++ {
+				// Start at the minute boundary so we know what the backoff should be
+				startTime, _ := time.Parse(time.RFC3339, "2018-12-17T08:00:00+00:00")
+				startRequest, err := CreateHistoryStartWorkflowRequest(domainID, request, startTime, nil)
+				require.NoError(t, err)
+				require.NotNil(t, startRequest)
+
+				backoff := startRequest.GetFirstDecisionTaskBackoffSeconds()
+
+				expectedWithoutJitter := tt.delayStartSeconds
 				if tt.cron {
-					request.CronSchedule = "* * * * *"
+					expectedWithoutJitter += 60
+				}
+				expectedMax := expectedWithoutJitter + tt.jitterStartSeconds
+
+				if backoff == expectedWithoutJitter {
+					exactCount++
 				}
 
-				// Run X loops so that the test isn't flaky, since jitter adds randomness.
-				caseCount := 10
-				exactCount := 0
-				for i := 0; i < caseCount; i++ {
-					// Start at the minute boundary so we know what the backoff should be
-					startTime, _ := time.Parse(time.RFC3339, "2018-12-17T08:00:00+00:00")
-					startRequest, err := CreateHistoryStartWorkflowRequest(domainID, request, startTime, nil)
-					require.NoError(t, err)
-					require.NotNil(t, startRequest)
-
-					backoff := startRequest.GetFirstDecisionTaskBackoffSeconds()
-
-					expectedWithoutJitter := tt.delayStartSeconds
-					if tt.cron {
-						expectedWithoutJitter += 60
-					}
-					expectedMax := expectedWithoutJitter + tt.jitterStartSeconds
-
-					if backoff == expectedWithoutJitter {
-						exactCount++
-					}
-
-					if jdx == "future" {
-						require.Equal(t, int32(2), backoff, "test specs = %v", tt)
+				if tt.firstRunAtTimeCategory == "future" {
+					require.Equal(t, int32(2), backoff, "test specs = %v", tt)
+				} else {
+					if tt.jitterStartSeconds == 0 {
+						require.Equal(t, expectedWithoutJitter, backoff, "test specs = %v", tt)
 					} else {
-						if tt.jitterStartSeconds == 0 {
-							require.Equal(t, expectedWithoutJitter, backoff, "test specs = %v", tt)
-						} else {
-							require.True(t, backoff >= expectedWithoutJitter && backoff <= expectedMax,
-								"test specs = %v, backoff (%v) should be >= %v and <= %v",
-								tt, backoff, expectedWithoutJitter, expectedMax)
-						}
+						require.True(t, backoff >= expectedWithoutJitter && backoff <= expectedMax,
+							"test specs = %v, backoff (%v) should be >= %v and <= %v",
+							tt, backoff, expectedWithoutJitter, expectedMax)
 					}
 				}
+			}
 
-				// If firstRunTimestamp is either null or past ONLY
-				// If jitter is > 0, we want to detect whether jitter is being applied - BUT we don't want the test
-				// to be flaky if the code randomly chooses a jitter of 0, so we try to have enough data points by
-				// checking the next X cron times AND by choosing a jitter thats not super low.
-				if jdx != "future" {
-					if tt.jitterStartSeconds > 0 && exactCount == caseCount {
-						// Test to make sure a jitter test case sometimes doesn't get exact values
-						t.Fatalf("FAILED to jitter properly? Test specs = %v\n", tt)
-					} else if tt.jitterStartSeconds == 0 && exactCount != caseCount {
-						// Test to make sure a non-jitter test case always gets exact values
-						t.Fatalf("Jittered when we weren't supposed to? Test specs = %v\n", tt)
-					}
+			// If firstRunTimestamp is either null or past ONLY
+			// If jitter is > 0, we want to detect whether jitter is being applied - BUT we don't want the test
+			// to be flaky if the code randomly chooses a jitter of 0, so we try to have enough data points by
+			// checking the next X cron times AND by choosing a jitter thats not super low.
+			if tt.firstRunAtTimeCategory != "future" {
+				if tt.jitterStartSeconds > 0 && exactCount == caseCount {
+					// Test to make sure a jitter test case sometimes doesn't get exact values
+					t.Fatalf("FAILED to jitter properly? Test specs = %v\n", tt)
+				} else if tt.jitterStartSeconds == 0 && exactCount != caseCount {
+					// Test to make sure a non-jitter test case always gets exact values
+					t.Fatalf("Jittered when we weren't supposed to? Test specs = %v\n", tt)
 				}
-			})
-		}
+			}
+		})
 	}
 }
 

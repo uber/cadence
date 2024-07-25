@@ -488,7 +488,7 @@ func getFlagsForStart() []cli.Flag {
 		},
 		cli.StringFlag{
 			Name:  FirstRunAtTime,
-			Usage: "Optional workflow's first run start time. If set, workflow will start at the specified time.",
+			Usage: "Optional workflow's first run start time in RFC3339 format, like \"1970-01-01T00:00:00Z\". If set, first run of the workflow will start at the specified time.",
 		},
 	}
 }
