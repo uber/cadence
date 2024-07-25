@@ -24,7 +24,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/uber/cadence/common/pinot"
 	"time"
 
 	"go.uber.org/cadence"
@@ -32,6 +31,8 @@ import (
 	cclient "go.uber.org/cadence/client"
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
+
+	"github.com/uber/cadence/common/pinot"
 )
 
 const (
