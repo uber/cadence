@@ -320,6 +320,7 @@ var (
 		Memo:                                &Memo,
 		SearchAttributes:                    &SearchAttributes,
 		Header:                              &Header,
+		FirstRunAtTimeStamp:                 &Timestamp1,
 	}
 	StartWorkflowExecutionResponse = types.StartWorkflowExecutionResponse{
 		RunID: RunID,
@@ -356,6 +357,7 @@ var (
 		Memo:                                &Memo,
 		SearchAttributes:                    &SearchAttributes,
 		Header:                              &Header,
+		FirstRunAtTimestamp:                 &Timestamp1,
 	}
 	SignalWithStartWorkflowExecutionAsyncRequest = types.SignalWithStartWorkflowExecutionAsyncRequest{
 		SignalWithStartWorkflowExecutionRequest: &SignalWithStartWorkflowExecutionRequest,

@@ -5046,6 +5046,7 @@ func FromSignalWithStartWorkflowExecutionRequest(t *types.SignalWithStartWorkflo
 		Memo:                                FromMemo(t.Memo),
 		SearchAttributes:                    FromSearchAttributes(t.SearchAttributes),
 		Header:                              FromHeader(t.Header),
+		FirstRunAtTimestamp:                 t.FirstRunAtTimestamp,
 	}
 }
 
@@ -5073,6 +5074,7 @@ func ToSignalWithStartWorkflowExecutionRequest(t *shared.SignalWithStartWorkflow
 		Memo:                                ToMemo(t.Memo),
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
 		Header:                              ToHeader(t.Header),
+		FirstRunAtTimestamp:                 t.FirstRunAtTimestamp,
 	}
 }
 
