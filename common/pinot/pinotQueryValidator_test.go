@@ -48,7 +48,7 @@ func TestValidateQuery(t *testing.T) {
 		},
 		"Case2-2: simple query with partial match": {
 			query:     "WorkflowID like 'wid'",
-			validated: "(JSON_MATCH(Attr, '\"$.WorkflowID\" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.WorkflowID', 'string'), 'wid*'))",
+			validated: "TEXT_MATCH(WorkflowID, wid)",
 		},
 		"Case2-3: invalid simple query with partial match": {
 			query: "WorkflowID like wid",
@@ -87,7 +87,7 @@ func TestValidateQuery(t *testing.T) {
 		},
 		"Case6-5: complex query with partial match": {
 			query:     "RunID like '123' or WorkflowID like '123'",
-			validated: "((JSON_MATCH(Attr, '\"$.RunID\" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.RunID', 'string'), '123*')) or (JSON_MATCH(Attr, '\"$.WorkflowID\" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.WorkflowID', 'string'), '123*')))",
+			validated: "(TEXT_MATCH(RunID, 123) or TEXT_MATCH(WorkflowID, 123))",
 		},
 		"Case7: invalid sql query": {
 			query: "Invalid SQL",
