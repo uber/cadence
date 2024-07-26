@@ -5212,6 +5212,7 @@ func FromStartChildWorkflowExecutionInitiatedEventAttributes(t *types.StartChild
 		Header:                              FromHeader(t.Header),
 		Memo:                                FromMemo(t.Memo),
 		SearchAttributes:                    FromSearchAttributes(t.SearchAttributes),
+		FirstRunAtTimestamp:                 t.FirstRunAtTimestamp,
 	}
 }
 
@@ -5237,6 +5238,7 @@ func ToStartChildWorkflowExecutionInitiatedEventAttributes(t *shared.StartChildW
 		Header:                              ToHeader(t.Header),
 		Memo:                                ToMemo(t.Memo),
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
+		FirstRunAtTimestamp:                 t.FirstRunAtTimestamp,
 	}
 }
 
