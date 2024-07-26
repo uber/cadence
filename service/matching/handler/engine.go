@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"math"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -76,6 +77,7 @@ type (
 	}
 
 	matchingEngineImpl struct {
+		isActive             atomic.Bool
 		taskManager          persistence.TaskManager
 		clusterMetadata      cluster.Metadata
 		historyService       history.Client
@@ -131,6 +133,7 @@ func NewEngine(taskManager persistence.TaskManager,
 	timeSource clock.TimeSource,
 ) Engine {
 	e := &matchingEngineImpl{
+		isActive:             atomic.Bool{},
 		taskManager:          taskManager,
 		clusterMetadata:      clusterMetadata,
 		historyService:       historyService,
@@ -152,10 +155,12 @@ func NewEngine(taskManager persistence.TaskManager,
 }
 
 func (e *matchingEngineImpl) Start() {
+	e.isActive.Store(true)
 	// As task lists are initialized lazily nothing is done on startup at this point.
 }
 
 func (e *matchingEngineImpl) Stop() {
+	e.isActive.Store(false)
 	// Executes Stop() on each task list outside of lock
 	for _, l := range e.getTaskLists(math.MaxInt32) {
 		l.Stop()
@@ -189,6 +194,12 @@ func (e *matchingEngineImpl) String() string {
 // Returns taskListManager for a task list. If not already cached gets new range from DB and
 // if successful creates one.
 func (e *matchingEngineImpl) getTaskListManager(taskList *tasklist.Identifier, taskListKind *types.TaskListKind) (tasklist.Manager, error) {
+
+	isActive := e.isActive.Load()
+	if !isActive {
+		return nil, fmt.Errorf("shutting down")
+	}
+
 	// The first check is an optimization so almost all requests will have a task list manager
 	// and return avoiding the write lock
 	e.taskListsLock.RLock()
