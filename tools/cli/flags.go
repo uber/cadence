@@ -288,6 +288,7 @@ const (
 	FlagBucketSize                        = "bucket_size"
 	DelayStartSeconds                     = "delay_start_seconds"
 	JitterStartSeconds                    = "jitter_start_seconds"
+	FirstRunAtTime                        = "first_run_at_time"
 	FlagConnectionAttributes              = "conn_attrs"
 	FlagJWT                               = "jwt"
 	FlagJWTPrivateKey                     = "jwt-private-key"
@@ -484,6 +485,10 @@ func getFlagsForStart() []cli.Flag {
 		cli.IntFlag{
 			Name:  JitterStartSeconds,
 			Usage: "Optional workflow start jitter in seconds. If set, workflow start will be jittered between 0-n seconds (after delay)",
+		},
+		cli.StringFlag{
+			Name:  FirstRunAtTime,
+			Usage: "Optional workflow's first run start time in RFC3339 format, like \"1970-01-01T00:00:00Z\". If set, first run of the workflow will start at the specified time.",
 		},
 	}
 }

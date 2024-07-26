@@ -3386,6 +3386,7 @@ func FromSignalWithStartWorkflowExecutionRequest(t *types.SignalWithStartWorkflo
 			Header:                       FromHeader(t.Header),
 			DelayStart:                   secondsToDuration(t.DelayStartSeconds),
 			JitterStart:                  secondsToDuration(t.JitterStartSeconds),
+			FirstRunAt:                   unixNanoToTime(t.FirstRunAtTimestamp),
 		},
 		SignalName:  t.SignalName,
 		SignalInput: FromPayload(t.SignalInput),
@@ -3418,6 +3419,7 @@ func ToSignalWithStartWorkflowExecutionRequest(t *apiv1.SignalWithStartWorkflowE
 		Header:                              ToHeader(t.StartRequest.Header),
 		DelayStartSeconds:                   durationToSeconds(t.StartRequest.DelayStart),
 		JitterStartSeconds:                  durationToSeconds(t.StartRequest.JitterStart),
+		FirstRunAtTimestamp:                 timeToUnixNano(t.StartRequest.FirstRunAt),
 	}
 }
 
@@ -3568,6 +3570,7 @@ func FromStartChildWorkflowExecutionInitiatedEventAttributes(t *types.StartChild
 		SearchAttributes:             FromSearchAttributes(t.SearchAttributes),
 		DelayStart:                   secondsToDuration(t.DelayStartSeconds),
 		JitterStart:                  secondsToDuration(t.JitterStartSeconds),
+		FirstRunAt:                   unixNanoToTime(t.FirstRunAtTimestamp),
 	}
 }
 
@@ -3594,6 +3597,7 @@ func ToStartChildWorkflowExecutionInitiatedEventAttributes(t *apiv1.StartChildWo
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
 		DelayStartSeconds:                   durationToSeconds(t.DelayStart),
 		JitterStartSeconds:                  durationToSeconds(t.JitterStart),
+		FirstRunAtTimestamp:                 timeToUnixNano(t.FirstRunAt),
 	}
 }
 
@@ -3743,6 +3747,7 @@ func FromStartWorkflowExecutionRequest(t *types.StartWorkflowExecutionRequest) *
 		Header:                       FromHeader(t.Header),
 		DelayStart:                   secondsToDuration(t.DelayStartSeconds),
 		JitterStart:                  secondsToDuration(t.JitterStartSeconds),
+		FirstRunAt:                   unixNanoToTime(t.FirstRunAtTimeStamp),
 	}
 }
 
@@ -3768,6 +3773,7 @@ func ToStartWorkflowExecutionRequest(t *apiv1.StartWorkflowExecutionRequest) *ty
 		Header:                              ToHeader(t.Header),
 		DelayStartSeconds:                   durationToSeconds(t.DelayStart),
 		JitterStartSeconds:                  durationToSeconds(t.JitterStart),
+		FirstRunAtTimeStamp:                 timeToUnixNano(t.FirstRunAt),
 	}
 }
 

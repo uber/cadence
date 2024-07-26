@@ -5932,6 +5932,7 @@ type SignalWithStartWorkflowExecutionRequest struct {
 	Header                              *Header                `json:"header,omitempty"`
 	DelayStartSeconds                   *int32                 `json:"delayStartSeconds,omitempty"`
 	JitterStartSeconds                  *int32                 `json:"jitterStartSeconds,omitempty"`
+	FirstRunAtTimestamp                 *int64                 `json:"firstRunAtTimestamp,omitempty"`
 }
 
 func (v *SignalWithStartWorkflowExecutionRequest) SerializeForLogging() (string, error) {
@@ -6226,6 +6227,7 @@ type StartChildWorkflowExecutionInitiatedEventAttributes struct {
 	SearchAttributes                    *SearchAttributes      `json:"searchAttributes,omitempty"`
 	DelayStartSeconds                   *int32                 `json:"delayStartSeconds,omitempty"`
 	JitterStartSeconds                  *int32                 `json:"jitterStartSeconds,omitempty"`
+	FirstRunAtTimestamp                 *int64                 `json:"firstRunAtTimestamp,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -6352,6 +6354,7 @@ type StartWorkflowExecutionRequest struct {
 	Header                              *Header                `json:"header,omitempty"`
 	DelayStartSeconds                   *int32                 `json:"delayStartSeconds,omitempty"`
 	JitterStartSeconds                  *int32                 `json:"jitterStartSeconds,omitempty"`
+	FirstRunAtTimeStamp                 *int64                 `json:"firstRunAtTimeStamp,omitempty"`
 }
 
 func (v *StartWorkflowExecutionRequest) SerializeForLogging() (string, error) {
@@ -6405,6 +6408,14 @@ func (v *StartWorkflowExecutionRequest) GetDelayStartSeconds() (o int32) {
 func (v *StartWorkflowExecutionRequest) GetJitterStartSeconds() (o int32) {
 	if v != nil && v.JitterStartSeconds != nil {
 		return *v.JitterStartSeconds
+	}
+	return
+}
+
+// GetFirstRunAtTimeStamp is an internal getter (TBD...)
+func (v *StartWorkflowExecutionRequest) GetFirstRunAtTimeStamp() (o int64) {
+	if v != nil && v.FirstRunAtTimeStamp != nil {
+		return *v.FirstRunAtTimeStamp
 	}
 	return
 }

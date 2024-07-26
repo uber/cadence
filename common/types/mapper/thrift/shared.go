@@ -5046,6 +5046,7 @@ func FromSignalWithStartWorkflowExecutionRequest(t *types.SignalWithStartWorkflo
 		Memo:                                FromMemo(t.Memo),
 		SearchAttributes:                    FromSearchAttributes(t.SearchAttributes),
 		Header:                              FromHeader(t.Header),
+		FirstRunAtTimestamp:                 t.FirstRunAtTimestamp,
 	}
 }
 
@@ -5073,6 +5074,7 @@ func ToSignalWithStartWorkflowExecutionRequest(t *shared.SignalWithStartWorkflow
 		Memo:                                ToMemo(t.Memo),
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
 		Header:                              ToHeader(t.Header),
+		FirstRunAtTimestamp:                 t.FirstRunAtTimestamp,
 	}
 }
 
@@ -5210,6 +5212,7 @@ func FromStartChildWorkflowExecutionInitiatedEventAttributes(t *types.StartChild
 		Header:                              FromHeader(t.Header),
 		Memo:                                FromMemo(t.Memo),
 		SearchAttributes:                    FromSearchAttributes(t.SearchAttributes),
+		FirstRunAtTimestamp:                 t.FirstRunAtTimestamp,
 	}
 }
 
@@ -5235,6 +5238,7 @@ func ToStartChildWorkflowExecutionInitiatedEventAttributes(t *shared.StartChildW
 		Header:                              ToHeader(t.Header),
 		Memo:                                ToMemo(t.Memo),
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
+		FirstRunAtTimestamp:                 t.FirstRunAtTimestamp,
 	}
 }
 
@@ -5369,6 +5373,7 @@ func FromStartWorkflowExecutionRequest(t *types.StartWorkflowExecutionRequest) *
 		Header:                              FromHeader(t.Header),
 		DelayStartSeconds:                   t.DelayStartSeconds,
 		JitterStartSeconds:                  t.JitterStartSeconds,
+		FirstRunAtTimestamp:                 t.FirstRunAtTimeStamp,
 	}
 }
 
@@ -5395,6 +5400,7 @@ func ToStartWorkflowExecutionRequest(t *shared.StartWorkflowExecutionRequest) *t
 		Header:                              ToHeader(t.Header),
 		DelayStartSeconds:                   t.DelayStartSeconds,
 		JitterStartSeconds:                  t.JitterStartSeconds,
+		FirstRunAtTimeStamp:                 t.FirstRunAtTimestamp,
 	}
 }
 
