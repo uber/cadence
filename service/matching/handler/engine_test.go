@@ -26,13 +26,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/common"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/clock"
