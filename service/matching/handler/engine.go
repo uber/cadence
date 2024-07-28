@@ -197,6 +197,11 @@ func (e *matchingEngineImpl) String() string {
 // if successful creates one.
 func (e *matchingEngineImpl) getTaskListManager(taskList *tasklist.Identifier, taskListKind *types.TaskListKind) (tasklist.Manager, error) {
 
+	// because tasklists are created dynamically
+	// there's a risk for them to be created after the engine shutdown
+	// but unable to correctly function because another engine has a lock
+	// before the host has completely stopped, so check the parent
+	// status on lazy creation to guard against this
 	s := atomic.LoadInt32(e.status)
 	if s == common.DaemonStatusStopped {
 		return nil, &cerrors.ShutdownError{

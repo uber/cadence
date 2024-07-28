@@ -2,6 +2,8 @@ package errors
 
 import "fmt"
 
+var _ error = &ShutdownError{}
+
 type ShutdownError struct {
 	Service string
 	Message string

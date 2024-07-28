@@ -26,6 +26,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/stretchr/testify/assert"
+	cerrors "github.com/uber/cadence/common/errors"
 	"net/http"
 	"strings"
 	"sync"
@@ -1562,6 +1564,18 @@ func pollTask(engine *matchingEngineImpl, hCtx *handlerContext, request *pollTas
 		StartedTimestamp:          resp.StartedTimestamp,
 		Queries:                   resp.Queries,
 	}, nil
+}
+
+func TestGettingTasklistsDuringOnShutdownIsPrevented(t *testing.T) {
+	stopped := common.DaemonStatusStopped
+	e := matchingEngineImpl{status: &stopped}
+
+	id, _ := tasklist.NewIdentifier("some domain", "tl", persistence.TaskListTypeDecision)
+	kind := types.TaskListKindNormal
+	tl, err := e.getTaskListManager(id, &kind)
+	assert.Equal(t, tl, nil)
+	mE := &cerrors.ShutdownError{}
+	assert.ErrorAs(t, err, &mE)
 }
 
 func isEmptyToken(token *common.TaskToken) bool {
