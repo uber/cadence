@@ -91,6 +91,7 @@ func (s *Service) Start() {
 	logger.Info("matching starting")
 
 	engine := handler.NewEngine(
+		&s.status,
 		s.GetTaskManager(),
 		s.GetClusterMetadata(),
 		s.GetHistoryClient(),

@@ -26,6 +26,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/common"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -306,7 +307,9 @@ func TestCancelOutstandingPoll(t *testing.T) {
 			tc.mockSetup(mockManager)
 			tasklistID, err := tasklist.NewIdentifier("test-domain-id", "test-tasklist", 0)
 			require.NoError(t, err)
+			status := common.DaemonStatusStarted
 			engine := &matchingEngineImpl{
+				status: &status,
 				taskLists: map[tasklist.Identifier]tasklist.Manager{
 					*tasklistID: mockManager,
 				},
@@ -461,7 +464,9 @@ func TestQueryWorkflow(t *testing.T) {
 			tc.mockSetup(mockManager)
 			tasklistID, err := tasklist.NewIdentifier("test-domain-id", "test-tasklist", 0)
 			require.NoError(t, err)
+			status := common.DaemonStatusStarted
 			engine := &matchingEngineImpl{
+				status: &status,
 				taskLists: map[tasklist.Identifier]tasklist.Manager{
 					*tasklistID: mockManager,
 				},

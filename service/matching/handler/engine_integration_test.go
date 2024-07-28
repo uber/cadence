@@ -153,7 +153,9 @@ func (s *matchingEngineSuite) TearDownTest() {
 func (s *matchingEngineSuite) newMatchingEngine(
 	config *config.Config, taskMgr persistence.TaskManager,
 ) *matchingEngineImpl {
+	status := common.DaemonStatusStarted
 	return NewEngine(
+		&status,
 		taskMgr,
 		cluster.GetTestClusterMetadata(true),
 		s.mockHistoryClient,

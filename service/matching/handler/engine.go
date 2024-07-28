@@ -42,6 +42,7 @@ import (
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
+	cerrors "github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
@@ -77,7 +78,7 @@ type (
 	}
 
 	matchingEngineImpl struct {
-		isActive             atomic.Bool
+		status               *int32
 		taskManager          persistence.TaskManager
 		clusterMetadata      cluster.Metadata
 		historyService       history.Client
@@ -120,7 +121,9 @@ var (
 var _ Engine = (*matchingEngineImpl)(nil) // Asserts that interface is indeed implemented
 
 // NewEngine creates an instance of matching engine
-func NewEngine(taskManager persistence.TaskManager,
+func NewEngine(
+	status *int32,
+	taskManager persistence.TaskManager,
 	clusterMetadata cluster.Metadata,
 	historyService history.Client,
 	matchingClient matching.Client,
@@ -133,7 +136,7 @@ func NewEngine(taskManager persistence.TaskManager,
 	timeSource clock.TimeSource,
 ) Engine {
 	e := &matchingEngineImpl{
-		isActive:             atomic.Bool{},
+		status:               status, // service status is set by the matching.Service
 		taskManager:          taskManager,
 		clusterMetadata:      clusterMetadata,
 		historyService:       historyService,
@@ -155,12 +158,11 @@ func NewEngine(taskManager persistence.TaskManager,
 }
 
 func (e *matchingEngineImpl) Start() {
-	e.isActive.Store(true)
 	// As task lists are initialized lazily nothing is done on startup at this point.
 }
 
 func (e *matchingEngineImpl) Stop() {
-	e.isActive.Store(false)
+	// s.status is set by matching.Status
 	// Executes Stop() on each task list outside of lock
 	for _, l := range e.getTaskLists(math.MaxInt32) {
 		l.Stop()
@@ -195,9 +197,12 @@ func (e *matchingEngineImpl) String() string {
 // if successful creates one.
 func (e *matchingEngineImpl) getTaskListManager(taskList *tasklist.Identifier, taskListKind *types.TaskListKind) (tasklist.Manager, error) {
 
-	isActive := e.isActive.Load()
-	if !isActive {
-		return nil, fmt.Errorf("shutting down")
+	s := atomic.LoadInt32(e.status)
+	if s == common.DaemonStatusStopped {
+		return nil, &cerrors.ShutdownError{
+			Service: "matching",
+			Message: "service is shutting down",
+		}
 	}
 
 	// The first check is an optimization so almost all requests will have a task list manager
