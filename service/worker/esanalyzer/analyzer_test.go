@@ -686,7 +686,7 @@ func TestEmitWorkflowVersionMetricsPinot(t *testing.T) {
 			PinotClientAffordance: func(mockPinotClient *pinot.MockGenericClient) {
 				mockPinotClient.EXPECT().SearchAggr(gomock.Any()).Return(nil, fmt.Errorf("pinot error")).Times(1)
 			},
-			expectedErr: fmt.Errorf("pinot error"),
+			expectedErr: fmt.Errorf("failed to query Pinot to find workflow type count Info: test-domain, error: pinot error"),
 		},
 		"Case3: Aggregation is empty": {
 			domainCacheAffordance: func(mockDomainCache *cache.MockDomainCache) {

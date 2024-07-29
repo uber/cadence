@@ -232,7 +232,7 @@ func (w *Workflow) emitWorkflowVersionMetricsPinot(domainName string, logger *za
 			zap.String("VisibilityQuery", wfVersionPinotQuery),
 			zap.String("DomainName", domainName),
 		)
-		return err
+		return fmt.Errorf("failed to query Pinot to find workflow type count Info: %s, error: %s", domainName, err.Error())
 	}
 	foundAggregation := len(response) > 0
 
