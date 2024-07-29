@@ -159,13 +159,33 @@ func TestShadowed(t *testing.T) {
 		}
 	})
 	t.Run("reserve", func(t *testing.T) {
-		ts := clock.NewMockedTimeSource()
-		primary := NewCountedLimiter(clock.NewMockRatelimiter(ts, 1, 1)) // allows an event
-		shadow := NewCountedLimiter(clock.NewMockRatelimiter(ts, 0, 0))  // always rejects
-		s := NewShadowedLimiter(primary, shadow)
+		t.Run("only returns primary behavior", func(t *testing.T) {
+			t.Run("allowed", func(t *testing.T) {
+				ts := clock.NewMockedTimeSource()
+				primary := NewCountedLimiter(clock.NewMockRatelimiter(ts, 1, 1)) // allows an event
+				shadow := NewCountedLimiter(clock.NewMockRatelimiter(ts, 0, 0))  // always rejects
+				s := NewShadowedLimiter(primary, shadow)
+				res := s.Reserve()
+				res.Used(res.Allow())
 
-		assert.True(t, s.Allow(), "should match primary behavior")
-		assert.Equal(t, UsageMetrics{1, 0, 0}, primary.Collect(), "should have called primary")
-		assert.Equal(t, UsageMetrics{0, 1, 0}, shadow.Collect(), "should have called shadow")
+				assert.True(t, res.Allow(), "should match primary behavior")
+				assert.Equal(t, UsageMetrics{1, 0, 0}, primary.Collect(), "should have called primary")
+				assert.Equal(t, UsageMetrics{0, 1, 0}, shadow.Collect(), "should have called shadow")
+			})
+			t.Run("rejected", func(t *testing.T) {
+				ts := clock.NewMockedTimeSource()
+				primary := NewCountedLimiter(clock.NewMockRatelimiter(ts, 0, 0)) // always rejects
+				shadow := NewCountedLimiter(clock.NewMockRatelimiter(ts, 1, 1))  // allow an event
+				s := NewShadowedLimiter(primary, shadow)
+				res := s.Reserve()
+				res.Used(res.Allow())
+
+				assert.False(t, res.Allow(), "should match primary behavior")
+				assert.Equal(t, UsageMetrics{0, 1, 0}, primary.Collect(), "should have called primary")
+				// this also checks "shadow can allow higher than primary".
+				// this was not true with the original too-simple implementation.
+				assert.Equal(t, UsageMetrics{1, 0, 0}, shadow.Collect(), "should have called shadow, and shadow should have allowed despite primary rejecting")
+			})
+		})
 	})
 }
