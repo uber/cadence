@@ -416,7 +416,7 @@ func TestEmitWorkflowTypeCountMetricsESErrorCases(t *testing.T) {
 						Aggregations: map[string]json.RawMessage{},
 					}, nil).Times(1)
 			},
-			expectedErr: nil,
+			expectedErr: fmt.Errorf("aggregation failed for domain in ES: test-domain"),
 		},
 		"Case4: error unmarshalling aggregation": {
 			domainCacheAffordance: func(mockDomainCache *cache.MockDomainCache) {
@@ -501,7 +501,7 @@ func TestEmitWorkflowVersionMetricsESErrorCases(t *testing.T) {
 						Aggregations: map[string]json.RawMessage{},
 					}, nil).Times(1)
 			},
-			expectedErr: nil,
+			expectedErr: fmt.Errorf("aggregation failed for domain in ES: test-domain"),
 		},
 		"Case4: error unmarshalling aggregation": {
 			domainCacheAffordance: func(mockDomainCache *cache.MockDomainCache) {
@@ -596,7 +596,7 @@ func TestEmitWorkflowTypeCountMetricsPinot(t *testing.T) {
 			PinotClientAffordance: func(mockPinotClient *pinot.MockGenericClient) {
 				mockPinotClient.EXPECT().SearchAggr(gomock.Any()).Return([][]interface{}{}, nil).Times(1)
 			},
-			expectedErr: nil,
+			expectedErr: fmt.Errorf("aggregation failed for domain in Pinot: test-domain"),
 		},
 		"Case4: error parsing workflow count": {
 			domainCacheAffordance: func(mockDomainCache *cache.MockDomainCache) {
@@ -696,7 +696,7 @@ func TestEmitWorkflowVersionMetricsPinot(t *testing.T) {
 			PinotClientAffordance: func(mockPinotClient *pinot.MockGenericClient) {
 				mockPinotClient.EXPECT().SearchAggr(gomock.Any()).Return([][]interface{}{}, nil).Times(1)
 			},
-			expectedErr: nil,
+			expectedErr: fmt.Errorf("aggregation failed for domain in Pinot: test-domain"),
 		},
 		"Case4: error parsing workflow count": {
 			domainCacheAffordance: func(mockDomainCache *cache.MockDomainCache) {

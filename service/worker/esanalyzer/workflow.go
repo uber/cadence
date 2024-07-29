@@ -243,7 +243,7 @@ func (w *Workflow) emitWorkflowVersionMetricsPinot(domainName string, logger *za
 			zap.String("DomainName", domainName),
 			zap.String("VisibilityQuery", wfVersionPinotQuery),
 		)
-		return err
+		return fmt.Errorf("aggregation failed for domain in Pinot: %s", domainName)
 	}
 	var domainWorkflowVersionCount DomainWorkflowVersionCount
 	for _, row := range response {
@@ -360,7 +360,7 @@ func (w *Workflow) emitWorkflowVersionMetricsES(ctx context.Context, domainName 
 			zap.String("DomainName", domainName),
 			zap.String("VisibilityQuery", wfVersionEsQuery),
 		)
-		return err
+		return fmt.Errorf("aggregation failed for domain in ES: %s", domainName)
 	}
 	var domainWorkflowVersionCount DomainWorkflowVersionCount
 	err = json.Unmarshal(agg, &domainWorkflowVersionCount)
