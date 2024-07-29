@@ -123,8 +123,10 @@ func (tm *TaskMatcher) Offer(ctx context.Context, task *InternalTask) (bool, err
 		}
 	}
 
+	childCtx, cancel := newChildContext(ctx, maxSyncMatchWaitTime, 0) // wait for a poller for maxSyncMatchWaitTime before forwarding to another partition or writing to database
 	select {
 	case tm.getTaskC(task) <- task: // poller picked up the task
+		cancel()
 		if task.ResponseC != nil {
 			// if there is a response channel, block until resp is received
 			// and return error if the response contains error
@@ -132,7 +134,7 @@ func (tm *TaskMatcher) Offer(ctx context.Context, task *InternalTask) (bool, err
 			return true, err
 		}
 		return false, nil
-	default:
+	case <-childCtx.Done():
 		// no poller waiting for tasks, try forwarding this task to the
 		// root partition if possible
 		select {

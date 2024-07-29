@@ -543,7 +543,7 @@ func TestTaskWriterShutdown(t *testing.T) {
 }
 
 func TestTaskListManagerGetTaskBatch(t *testing.T) {
-	const taskCount = 1200
+	const taskCount = 30
 	const rangeSize = 10
 	controller := gomock.NewController(t)
 	mockPartitioner := partition.NewMockPartitioner(controller)
@@ -586,11 +586,12 @@ func TestTaskListManagerGetTaskBatch(t *testing.T) {
 				RunID:                  "run1",
 				WorkflowID:             "workflow1",
 				ScheduleID:             scheduleID,
-				ScheduleToStartTimeout: 1,
+				ScheduleToStartTimeout: 60,
 			},
 		}
-		_, err = tlm.AddTask(context.Background(), addParams)
+		syncMatch, err := tlm.AddTask(context.Background(), addParams)
 		assert.NoError(t, err)
+		assert.False(t, syncMatch)
 	}
 	assert.Equal(t, taskCount, tm.GetTaskCount(taskListID))
 
@@ -713,7 +714,7 @@ func TestTaskExpiryAndCompletion(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run("", func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
 			mockPartitioner := partition.NewMockPartitioner(controller)
 			mockPartitioner.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil).AnyTimes()
@@ -730,7 +731,7 @@ func TestTaskExpiryAndCompletion(t *testing.T) {
 			cfg.MaxTimeBetweenTaskDeletes = tc.maxTimeBtwnDeletes
 			// set idle timer check to a really small value to assert that we don't accidentally drop tasks while blocking
 			// on enqueuing a task to task buffer
-			cfg.IdleTasklistCheckInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
+			cfg.IdleTasklistCheckInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(300 * time.Millisecond)
 			tlMgr, err := NewManager(
 				mockDomainCache,
 				logger,
@@ -758,7 +759,7 @@ func TestTaskExpiryAndCompletion(t *testing.T) {
 						RunID:                  "run1",
 						WorkflowID:             "workflow1",
 						ScheduleID:             scheduleID,
-						ScheduleToStartTimeout: 5,
+						ScheduleToStartTimeout: 50,
 					},
 				}
 				if i%2 == 0 {

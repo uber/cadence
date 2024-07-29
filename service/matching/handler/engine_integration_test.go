@@ -417,7 +417,7 @@ func (s *matchingEngineSuite) AddTasksTest(taskType int, isForwarded bool) {
 			Execution:                     &execution,
 			ScheduleID:                    scheduleID,
 			TaskList:                      taskList,
-			ScheduleToStartTimeoutSeconds: 1,
+			ScheduleToStartTimeoutSeconds: 100,
 		}
 		if isForwarded {
 			addRequest.ForwardedFrom = forwardedFrom
@@ -481,7 +481,7 @@ func (s *matchingEngineSuite) AddAndPollTasks(taskType int, enableIsolation bool
 			Execution:                     testParam.WorkflowExecution,
 			ScheduleID:                    scheduleID,
 			TaskList:                      testParam.TaskList,
-			ScheduleToStartTimeoutSeconds: 1,
+			ScheduleToStartTimeoutSeconds: 5,
 			PartitionConfig:               map[string]string{partition.IsolationGroupKey: isolationGroups[int(i)%len(isolationGroups)]},
 		}
 		_, err := addTask(s.matchingEngine, s.handlerContext, addRequest)
@@ -855,7 +855,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 
 func (s *matchingEngineSuite) MultipleEnginesTasksRangeStealing(taskType int) {
 	const engineCount = 2
-	const taskCount = 400
+	const taskCount = 40
 	const iterations = 2
 	const initialRangeID = 0
 	const rangeSize = 10
@@ -1054,7 +1054,7 @@ func (s *matchingEngineSuite) DrainBacklogNoPollersIsolationGroup(taskType int) 
 
 	isolationGroups := s.matchingEngine.config.AllIsolationGroups
 
-	const taskCount = 1000
+	const taskCount = 40
 	const initialRangeID = 102
 	// TODO: Understand why publish is low when rangeSize is 3
 	const rangeSize = 30
@@ -1079,7 +1079,7 @@ func (s *matchingEngineSuite) DrainBacklogNoPollersIsolationGroup(taskType int) 
 			Execution:                     testParam.WorkflowExecution,
 			ScheduleID:                    scheduleID,
 			TaskList:                      testParam.TaskList,
-			ScheduleToStartTimeoutSeconds: 1,
+			ScheduleToStartTimeoutSeconds: 100,
 			PartitionConfig:               map[string]string{partition.IsolationGroupKey: isolationGroups[int(i)%len(isolationGroups)]},
 		}
 		_, err := addTask(s.matchingEngine, s.handlerContext, addRequest)
