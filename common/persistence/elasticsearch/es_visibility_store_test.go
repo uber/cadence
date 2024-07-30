@@ -846,7 +846,7 @@ func (s *ESVisibilitySuite) TestListWorkflowExecutions() {
 		s.True(strings.Contains(input.Query, `{"match_phrase":{"CloseStatus":{"query":"5"}}}`))
 		s.Equal(esIndexMaxResultWindow, input.MaxResultWindow)
 		return true
-	})).Return(testSearchResult, nil).Once()
+	})).Return(testSearchResult, nil).Twice()
 
 	request := &p.ListWorkflowExecutionsByQueryRequest{
 		DomainUUID: testDomainID,
@@ -859,6 +859,16 @@ func (s *ESVisibilitySuite) TestListWorkflowExecutions() {
 	defer cancel()
 
 	_, err := s.visibilityStore.ListWorkflowExecutions(ctx, request)
+	s.NoError(err)
+
+	requestWithLike := &p.ListWorkflowExecutionsByQueryRequest{
+		DomainUUID: testDomainID,
+		Domain:     testDomain,
+		PageSize:   10,
+		Query:      `CloseStatus like '5'`,
+	}
+
+	_, err = s.visibilityStore.ListWorkflowExecutions(ctx, requestWithLike)
 	s.NoError(err)
 
 	s.mockESClient.On("SearchByQuery", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
