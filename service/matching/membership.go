@@ -13,6 +13,11 @@ import (
 func (s *Service) subscribeToMembershipChanges(
 	engine handler.Engine,
 ) {
+	defer func() {
+		if r := recover(); r != nil {
+			s.GetLogger().Error("matching membership watcher changes caused a panic, recovering", tag.Dynamic("recovered-panic", r))
+		}
+	}()
 	listener := make(chan *membership.ChangedEvent)
 	s.GetMembershipResolver().Subscribe(service.Matching, "matching-engine", listener)
 	self, err := s.GetMembershipResolver().WhoAmI()
@@ -78,7 +83,7 @@ func selfIsEvicted(log log.Logger, self membership.HostInfo, updates *membership
 func selfIsReturned(log log.Logger, self membership.HostInfo, updates *membership.ChangedEvent) bool {
 	for _, r := range updates.HostsAdded {
 		matches := r == self.Identity()
-		log.Debug("Container removal check: determining if this host needs to be removed from the ring and/or shutdown",
+		log.Debug("Container return check: determining if this host needs to be removed from the ring and/or shutdown",
 			tag.MembershipChangeEvent(updates),
 			tag.Dynamic("self-hostport", self.String()),
 			tag.Dynamic("removal-result", matches),
