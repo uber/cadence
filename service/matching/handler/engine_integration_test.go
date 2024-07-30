@@ -48,6 +48,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/log/testlogger"
+	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/partition"
@@ -60,10 +61,11 @@ import (
 type (
 	matchingEngineSuite struct {
 		suite.Suite
-		controller         *gomock.Controller
-		mockHistoryClient  *history.MockClient
-		mockDomainCache    *cache.MockDomainCache
-		mockIsolationStore *dynamicconfig.MockClient
+		controller             *gomock.Controller
+		mockHistoryClient      *history.MockClient
+		mockDomainCache        *cache.MockDomainCache
+		mockMembershipResolver *membership.MockResolver
+		mockIsolationStore     *dynamicconfig.MockClient
 
 		matchingEngine       *matchingEngineImpl
 		taskManager          *tasklist.TestTaskManager
@@ -124,6 +126,9 @@ func (s *matchingEngineSuite) SetupTest() {
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.CreateDomainCacheEntry(matchingTestDomainName), nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(cache.CreateDomainCacheEntry(matchingTestDomainName), nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(matchingTestDomainName, nil).AnyTimes()
+	s.mockMembershipResolver = membership.NewMockResolver(s.controller)
+	s.mockMembershipResolver.EXPECT().Lookup(gomock.Any(), gomock.Any()).Return(membership.HostInfo{}, nil).AnyTimes()
+	s.mockMembershipResolver.EXPECT().WhoAmI().Return(membership.HostInfo{}, nil).AnyTimes()
 	s.mockIsolationStore = dynamicconfig.NewMockClient(s.controller)
 	dcClient := dynamicconfig.NewInMemoryClient()
 	dcClient.UpdateValue(dynamicconfig.EnableTasklistIsolation, true)
@@ -162,7 +167,7 @@ func (s *matchingEngineSuite) newMatchingEngine(
 		s.logger,
 		metrics.NewClient(tally.NoopScope, metrics.Matching),
 		s.mockDomainCache,
-		nil,
+		s.mockMembershipResolver,
 		s.partitioner,
 		s.mockTimeSource,
 	).(*matchingEngineImpl)
