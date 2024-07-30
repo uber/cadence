@@ -153,6 +153,8 @@ func TestWeightAlgorithms(t *testing.T) {
 					results.callRPS[1] += float64(r[1])
 					results.callRPS[2] += float64(r[2])
 					// find out how many would've been accepted and track it (uses previous-round target-RPS because limiters always lag by an update cycle)
+					// this could be a fair bit more accurate if I used a mock ratelimiter and simulated calls / updates / etc,
+					// but I'm not sure if that'd be any easier to follow...
 					track(&results.accepts[0], &results.rejects[0], r[0], results.targetRPS[0])
 					track(&results.accepts[1], &results.rejects[1], r[1], results.targetRPS[1])
 					track(&results.accepts[2], &results.rejects[2], r[2], results.targetRPS[2])
