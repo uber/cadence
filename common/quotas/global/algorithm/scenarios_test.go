@@ -25,10 +25,53 @@ package algorithm
 import (
 	"math"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/time/rate"
+
+	"github.com/uber/cadence/common/clock"
 )
+
+type rl struct {
+	rl  CountedLimiter
+	mts clock.MockedTimeSource
+}
+
+func makerl() rl {
+	mts := clock.NewMockedTimeSource()
+	return rl{
+		rl:  NewCountedLimiter(clock.NewMockRatelimiter(mts, 0, 0)), // first round will be discarded
+		mts: mts,
+	}
+}
+
+func (r rl) Update(target float64) {
+	r.rl.wrapped.(clock.Ratelimiter).SetLimit(rate.Limit(target))
+	r.rl.wrapped.(clock.Ratelimiter).SetBurst(int(math.Max(1, target)))
+}
+
+func (r rl) Simulate(calls int) {
+	if calls == 0 {
+		r.mts.Advance(time.Second)
+		return
+	}
+	step := time.Second / time.Duration(calls)
+	remain := time.Second % time.Duration(calls)
+	for i := 0; i < calls; i++ {
+		r.mts.Advance(step)
+		r.rl.Allow()
+	}
+	r.mts.Advance(remain)
+}
+
+func (r rl) Counts(period time.Duration) (float64, float64) {
+	met := r.rl.Collect()
+	allowed := float64(met.Allowed) / float64(period/time.Second)
+	rejected := float64(met.Rejected) / float64(period/time.Second)
+	return allowed, rejected
+}
 
 func TestWeightAlgorithms(t *testing.T) {
 	/*
@@ -115,13 +158,13 @@ func TestWeightAlgorithms(t *testing.T) {
 		deltaslice(expected.rejects, actual.rejects, "wrong number of per-host rejected requests")
 		assert.InDeltaf(t, expected.cumulativeRPS, actual.cumulativeRPS, 0.1, "cumulative RPS does not match")
 	}
-	divide := func(ary [3]float64, by int) [3]float64 {
-		return [3]float64{
-			ary[0] / float64(by),
-			ary[1] / float64(by),
-			ary[2] / float64(by),
-		}
-	}
+	// divide := func(ary [3]float64, by int) [3]float64 {
+	// 	return [3]float64{
+	// 		ary[0] / float64(by),
+	// 		ary[1] / float64(by),
+	// 		ary[2] / float64(by),
+	// 	}
+	// }
 
 	t.Run("v1 - simple running average", func(t *testing.T) {
 		// original algorithm, unfortunately has rather bad behavior with intermittent / low-volume usage.
@@ -135,8 +178,10 @@ func TestWeightAlgorithms(t *testing.T) {
 			}
 			return (prev / 2) + (float64(curr) / 2)
 		}
+
 		run := func(t *testing.T, schedule [][][3]int) (results data) {
 			hostRPS := [3]float64{}
+			rls := [3]rl{makerl(), makerl(), makerl()}
 			// results.targetRPS = [3]float64{0, 0, 0} // else they're NaN
 			for _, round := range schedule {
 				// cleared each round so only the last round remains,
@@ -144,20 +189,12 @@ func TestWeightAlgorithms(t *testing.T) {
 				//
 				// these are nonsense on the first round, when rps start at zero,
 				// which unrealistic as data is only returned when non-zero data is submitted.
-				results.accepts = [3]float64{0, 0, 0}
-				results.rejects = [3]float64{0, 0, 0}
-				results.callRPS = [3]float64{0, 0, 0}
+				results.cumulativeRPS = 0
 				for ri, r := range round {
-					// keep track of call RPS
-					results.callRPS[0] += float64(r[0])
-					results.callRPS[1] += float64(r[1])
-					results.callRPS[2] += float64(r[2])
-					// find out how many would've been accepted and track it (uses previous-round target-RPS because limiters always lag by an update cycle)
-					// this could be a fair bit more accurate if I used a mock ratelimiter and simulated calls / updates / etc,
-					// but I'm not sure if that'd be any easier to follow...
-					track(&results.accepts[0], &results.rejects[0], r[0], results.targetRPS[0])
-					track(&results.accepts[1], &results.rejects[1], r[1], results.targetRPS[1])
-					track(&results.accepts[2], &results.rejects[2], r[2], results.targetRPS[2])
+					// simulate the calls
+					rls[0].Simulate(r[0])
+					rls[1].Simulate(r[1])
+					rls[2].Simulate(r[2])
 					// update per-host RPS (running average in aggregator)
 					hostRPS[0] = average(hostRPS[0], r[0])
 					hostRPS[1] = average(hostRPS[1], r[1])
@@ -171,6 +208,17 @@ func TestWeightAlgorithms(t *testing.T) {
 					results.targetRPS[1] = targetRPS * (hostRPS[1] / totalRPS)
 					results.targetRPS[2] = targetRPS * (hostRPS[2] / totalRPS)
 
+					// t.Logf("tokens before: %0.2f, %0.2f, %0.2f",
+					// 	rls[0].rl.wrapped.(clock.Ratelimiter).Tokens(),
+					// 	rls[1].rl.wrapped.(clock.Ratelimiter).Tokens(),
+					// 	rls[2].rl.wrapped.(clock.Ratelimiter).Tokens(),
+					// )
+
+					// update the limiters too
+					rls[0].Update(results.targetRPS[0])
+					rls[1].Update(results.targetRPS[1])
+					rls[2].Update(results.targetRPS[2])
+
 					t.Logf("round %d: "+
 						"calls: [%d, %d, %d], "+
 						"real: [%0.3f, %0.3f, %0.3f], "+
@@ -179,12 +227,24 @@ func TestWeightAlgorithms(t *testing.T) {
 						r[0], r[1], r[2],
 						hostRPS[0], hostRPS[1], hostRPS[2],
 						results.targetRPS[0], results.targetRPS[1], results.targetRPS[2])
+					// t.Logf("tokens after update: %0.2f, %0.2f, %0.2f",
+					// 	rls[0].rl.wrapped.(clock.Ratelimiter).Tokens(),
+					// 	rls[1].rl.wrapped.(clock.Ratelimiter).Tokens(),
+					// 	rls[2].rl.wrapped.(clock.Ratelimiter).Tokens(),
+					// )
 				}
 
 				// and divide to get accept/reject-RPS (much more scale-agnostic)
-				results.accepts = divide(results.accepts, len(round))
-				results.rejects = divide(results.rejects, len(round))
-				results.callRPS = divide(results.callRPS, len(round))
+				handle := func(idx int) {
+					allow, rej := rls[idx].Counts(time.Second * time.Duration(len(round)))
+					// t.Logf("idx %v: allow %v reject %v", idx, allow, rej)
+					results.accepts[idx] = allow
+					results.rejects[idx] = rej
+					results.callRPS[idx] = allow + rej
+				}
+				handle(0)
+				handle(1)
+				handle(2)
 				results.cumulativeRPS = results.targetRPS[0] + results.targetRPS[1] + results.targetRPS[2]
 			}
 			return
@@ -192,20 +252,24 @@ func TestWeightAlgorithms(t *testing.T) {
 		t.Run("zeros", func(t *testing.T) {
 			// zeros are the worst-case scenario here, greatly favoring the non-zero values.
 			check(t, data{
-				targetRPS:     [3]float64{0.63, 3.57, 10.7}, // intermittent allows far too few, constant is allowed over 2x what it uses
-				callRPS:       [3]float64{1.25, 2.50, 5.00}, // all at or below per-host limit at all times, not just in aggregate
-				accepts:       [3]float64{0.00, 1.50, 5.00}, // this is the main problems with this algorithm: bad behavior when imbalanced but low usage.
-				rejects:       [3]float64{1.25, 1.00, 0.00},
+				targetRPS: [3]float64{0.63, 3.57, 10.7}, // intermittent allows far too few, constant is allowed over 2x what it uses
+				callRPS:   [3]float64{1.25, 2.50, 5.00}, // all at or below per-host limit at all times, not just in aggregate
+				accepts:   [3]float64{0.25, 2.50, 5.00}, // this is the main problems with this algorithm: bad behavior when imbalanced but low usage.
+				rejects:   [3]float64{1.00, 0.00, 0.00},
+				// accepts: [3]float64{0.00, 1.50, 5.00},
+				// rejects: [3]float64{1.25, 1.00, 0.00},
 				cumulativeRPS: targetRPS, // but this is useful and simple: it always tries to enforce the "real" target, never over or under.
 			}, run(t, roundSchedule(0, 5)))
 		})
 		t.Run("low non-zeros", func(t *testing.T) {
 			// even 1 instead of 0 does quite a lot better, though still not great
 			check(t, data{
-				targetRPS:     [3]float64{2.21, 4.07, 8.72},
-				callRPS:       [3]float64{2.00, 3.00, 5.00},
-				accepts:       [3]float64{1.25, 2.25, 5.00}, // constant use behaves well, others are not great
-				rejects:       [3]float64{0.75, 0.75, 0.00},
+				targetRPS: [3]float64{2.21, 4.07, 8.72},
+				callRPS:   [3]float64{2.00, 3.00, 5.00},
+				accepts:   [3]float64{1.50, 3.00, 5.00}, // constant use behaves well, others are not great
+				rejects:   [3]float64{0.50, 0.00, 0.00},
+				// accepts: [3]float64{1.25, 2.25, 5.00},
+				// rejects: [3]float64{0.75, 0.75, 0.00},
 				cumulativeRPS: targetRPS,
 			}, run(t, roundSchedule(1, 5)))
 		})
@@ -236,10 +300,12 @@ func TestWeightAlgorithms(t *testing.T) {
 			//   added [1, 1, 8], got: [1.467, 3.333, 8.000], rps: [1.719, 3.906, 9.375]
 			// low-usage keeps degrading despite there being more room for it to run than it does
 			check(t, data{
-				targetRPS:     [3]float64{1.72, 3.91, 9.38}, // doesn't seem too unfair at a glance
-				callRPS:       [3]float64{2.75, 4.50, 8.00},
-				accepts:       [3]float64{1.00, 2.00, 7.25}, // but high unfair-reject rate outside constant (less than half accepted)
-				rejects:       [3]float64{1.75, 2.50, 0.75},
+				targetRPS: [3]float64{1.72, 3.91, 9.38}, // doesn't seem too unfair at a glance
+				callRPS:   [3]float64{2.75, 4.50, 8.00},
+				accepts:   [3]float64{1.00, 3.50, 8.00}, // but high unfair-reject rate outside constant (less than half accepted)
+				rejects:   [3]float64{1.75, 1.00, 0.00},
+				// accepts:       [3]float64{1.00, 2.00, 7.25},
+				// rejects:       [3]float64{1.75, 2.50, 0.75},
 				cumulativeRPS: targetRPS,
 			}, run(t, roundSchedule(1, 8)))
 		})
@@ -273,16 +339,13 @@ func TestWeightAlgorithms(t *testing.T) {
 		run := func(t *testing.T, schedule [][][3]int) (results data) {
 			var rps1, rps2, rps3, obs1, obs2, obs3 float64
 			u1, u2, u3 := updater(), updater(), updater()
+			rls := [3]rl{makerl(), makerl(), makerl()}
 			for _, round := range schedule {
-				// clear each round so only the last round remains.
-				// these are nonsense the first round, when rps are not known
-				results.accepts = [3]float64{0, 0, 0}
-				results.rejects = [3]float64{0, 0, 0}
-				results.callRPS = [3]float64{0, 0, 0}
+				results.cumulativeRPS = 0
 				for ri, r := range round {
-					results.callRPS[0] += float64(r[0])
-					results.callRPS[1] += float64(r[1])
-					results.callRPS[2] += float64(r[2])
+					rls[0].Simulate(r[0])
+					rls[1].Simulate(r[1])
+					rls[2].Simulate(r[2])
 					// find out how many would've been accepted and track it
 					track(&results.accepts[0], &results.rejects[0], r[0], results.targetRPS[0])
 					track(&results.accepts[1], &results.rejects[1], r[1], results.targetRPS[1])
@@ -295,6 +358,12 @@ func TestWeightAlgorithms(t *testing.T) {
 					results.targetRPS[0] = targetRPS * (obs1 / (obs1 + rps2 + rps3))
 					results.targetRPS[1] = targetRPS * (obs2 / (rps1 + obs2 + rps3))
 					results.targetRPS[2] = targetRPS * (obs3 / (rps1 + rps2 + obs3))
+
+					// update the limiters too
+					rls[0].Update(results.targetRPS[0])
+					rls[1].Update(results.targetRPS[1])
+					rls[2].Update(results.targetRPS[2])
+
 					t.Logf("round %d: "+
 						"calls: [%d, %d, %d], "+
 						"real: [%0.3f, %0.3f, %0.3f], "+
@@ -305,9 +374,16 @@ func TestWeightAlgorithms(t *testing.T) {
 						obs1, obs2, obs3,
 						results.targetRPS[0], results.targetRPS[1], results.targetRPS[2])
 				}
-				results.accepts = divide(results.accepts, len(round))
-				results.rejects = divide(results.rejects, len(round))
-				results.callRPS = divide(results.callRPS, len(round))
+				handle := func(idx int) {
+					allow, rej := rls[idx].Counts(time.Second * time.Duration(len(round)))
+					// t.Logf("idx %v: allow %v reject %v", idx, allow, rej)
+					results.accepts[idx] = allow
+					results.rejects[idx] = rej
+					results.callRPS[idx] = allow + rej
+				}
+				handle(0)
+				handle(1)
+				handle(2)
 				results.cumulativeRPS = results.targetRPS[0] + results.targetRPS[1] + results.targetRPS[2]
 			}
 			return
@@ -315,20 +391,24 @@ func TestWeightAlgorithms(t *testing.T) {
 		t.Run("zeros", func(t *testing.T) {
 			// handles zeros pretty well, the intermittent host allows most of the requests
 			check(t, data{
-				targetRPS:     [3]float64{4.09, 4.79, 10.7},
-				callRPS:       [3]float64{1.25, 2.50, 5.00},
-				accepts:       [3]float64{1.00, 2.00, 5.00}, // quite good accept/reject rates despite zeros
-				rejects:       [3]float64{0.25, 0.50, 0.00},
+				targetRPS: [3]float64{4.09, 4.79, 10.7},
+				callRPS:   [3]float64{1.25, 2.50, 5.00},
+				accepts:   [3]float64{1.25, 2.50, 5.00}, // quite good accept/reject rates despite zeros
+				rejects:   [3]float64{0.00, 0.00, 0.00},
+				// accepts: [3]float64{1.00, 2.00, 5.00},
+				// rejects: [3]float64{0.25, 0.50, 0.00},
 				cumulativeRPS: targetRPS + 4.6, // may allow moderate bit over desired RPS
 			}, run(t, roundSchedule(0, 5)))
 		})
 		t.Run("low nonzeros", func(t *testing.T) {
 			// nonzeros are *nearly* the same as the original.  not awful but not good.
 			check(t, data{
-				targetRPS:     [3]float64{2.21, 4.87, 8.72},
-				callRPS:       [3]float64{2.00, 3.00, 5.00},
-				accepts:       [3]float64{1.25, 2.50, 5.00}, // almost the same as original
-				rejects:       [3]float64{0.75, 0.50, 0.00},
+				targetRPS: [3]float64{2.21, 4.87, 8.72},
+				callRPS:   [3]float64{2.00, 3.00, 5.00},
+				accepts:   [3]float64{1.50, 3.00, 5.00}, // almost the same as original
+				rejects:   [3]float64{0.50, 0.00, 0.00},
+				// accepts: [3]float64{1.25, 2.50, 5.00},
+				// rejects: [3]float64{0.75, 0.50, 0.00},
 				cumulativeRPS: targetRPS + 0.8, // close but still a bit above
 			}, run(t, roundSchedule(1, 5)))
 		})
@@ -375,20 +455,16 @@ func TestWeightAlgorithms(t *testing.T) {
 		}
 		run := func(t *testing.T, schedule [][][3]int) (results data) {
 			var rps1, rps2, rps3 float64
+			rls := [3]rl{makerl(), makerl(), makerl()}
 			for _, round := range schedule {
 				// clear each round so only the last round remains.
 				// these are nonsense the first round, when rps are not known
-				results.accepts = [3]float64{0, 0, 0}
-				results.rejects = [3]float64{0, 0, 0}
-				results.callRPS = [3]float64{0, 0, 0}
+				results.cumulativeRPS = 0
 				for ri, r := range round {
 					// all the same as the original
-					results.callRPS[0] += float64(r[0])
-					results.callRPS[1] += float64(r[1])
-					results.callRPS[2] += float64(r[2])
-					track(&results.accepts[0], &results.rejects[0], r[0], results.targetRPS[0])
-					track(&results.accepts[1], &results.rejects[1], r[1], results.targetRPS[1])
-					track(&results.accepts[2], &results.rejects[2], r[2], results.targetRPS[2])
+					rls[0].Simulate(r[0])
+					rls[1].Simulate(r[1])
+					rls[2].Simulate(r[2])
 					rps1 = average(rps1, r[0])
 					rps2 = average(rps2, r[1])
 					rps3 = average(rps3, r[2])
@@ -420,6 +496,12 @@ func TestWeightAlgorithms(t *testing.T) {
 					results.targetRPS[0] = boostUnused(fair0, float64(r[0]))
 					results.targetRPS[1] = boostUnused(fair1, float64(r[1]))
 					results.targetRPS[2] = boostUnused(fair2, float64(r[2]))
+
+					// update the limiters too
+					rls[0].Update(results.targetRPS[0])
+					rls[1].Update(results.targetRPS[1])
+					rls[2].Update(results.targetRPS[2])
+
 					t.Logf("round %d: "+
 						"calls: [%d, %d, %d], "+
 						"real: [%0.3f, %0.3f, %0.3f], "+
@@ -433,9 +515,18 @@ func TestWeightAlgorithms(t *testing.T) {
 						fair0, fair1, fair2, // same as original logic
 						results.targetRPS[0], results.targetRPS[1], results.targetRPS[2])
 				}
-				results.accepts = divide(results.accepts, len(round))
-				results.rejects = divide(results.rejects, len(round))
-				results.callRPS = divide(results.callRPS, len(round))
+
+				// and divide to get accept/reject-RPS (much more scale-agnostic)
+				handle := func(idx int) {
+					allow, rej := rls[idx].Counts(time.Second * time.Duration(len(round)))
+					// t.Logf("idx %v: allow %v reject %v", idx, allow, rej)
+					results.accepts[idx] = allow
+					results.rejects[idx] = rej
+					results.callRPS[idx] = allow + rej
+				}
+				handle(0)
+				handle(1)
+				handle(2)
 				results.cumulativeRPS = results.targetRPS[0] + results.targetRPS[1] + results.targetRPS[2]
 			}
 			return
@@ -443,20 +534,24 @@ func TestWeightAlgorithms(t *testing.T) {
 
 		t.Run("zeros", func(t *testing.T) {
 			check(t, data{
-				targetRPS:     [3]float64{3.38, 5.00, 10.7},
-				callRPS:       [3]float64{1.25, 2.50, 5.00},
-				accepts:       [3]float64{0.75, 2.50, 5.00}, // very close, a main motivating reason for this approach
-				rejects:       [3]float64{0.50, 0.00, 0.00},
+				targetRPS: [3]float64{3.38, 5.00, 10.7},
+				callRPS:   [3]float64{1.25, 2.50, 5.00},
+				accepts:   [3]float64{1.25, 2.50, 5.00}, // perfect, a main motivating reason for this approach
+				rejects:   [3]float64{0.00, 0.00, 0.00},
+				// accepts: [3]float64{0.75, 2.50, 5.00},
+				// rejects: [3]float64{0.50, 0.00, 0.00},
 				cumulativeRPS: targetRPS + 4.1, // when very low, allows moderate bit above
 			}, run(t, roundSchedule(0, 5)))
 		})
 		t.Run("low nonzeros", func(t *testing.T) {
 
 			check(t, data{
-				targetRPS:     [3]float64{4.34, 5.00, 8.72},
-				callRPS:       [3]float64{2.00, 3.00, 5.00},
-				accepts:       [3]float64{1.75, 3.00, 5.00}, // almost perfect, a main motivating reason for this approach
-				rejects:       [3]float64{0.25, 0.00, 0.00},
+				targetRPS: [3]float64{4.34, 5.00, 8.72},
+				callRPS:   [3]float64{2.00, 3.00, 5.00},
+				accepts:   [3]float64{2.00, 3.00, 5.00}, // perfect, a main motivating reason for this approach
+				rejects:   [3]float64{0.00, 0.00, 0.00},
+				// accepts: [3]float64{1.75, 3.00, 5.00},
+				// rejects: [3]float64{0.25, 0.00, 0.00},
 				cumulativeRPS: targetRPS + 3.1, // less overage but still moderate
 			}, run(t, roundSchedule(1, 5)))
 		})
@@ -490,10 +585,12 @@ func TestWeightAlgorithms(t *testing.T) {
 			// the important part of this one is that the positive-unused values go to the lowest weights,
 			// on the assumption that the higher-weighted ones do not need it (their overage is already accounted for by their weight, note ^ 9.3 is above 8)
 			check(t, data{
-				targetRPS:     [3]float64{2.45, 4.65, 9.38},
-				callRPS:       [3]float64{2.75, 4.50, 8.00},
-				accepts:       [3]float64{1.25, 2.25, 7.25}, // slightly better than orig
-				rejects:       [3]float64{1.50, 2.25, 0.75},
+				targetRPS: [3]float64{2.45, 4.65, 9.38},
+				callRPS:   [3]float64{2.75, 4.50, 8.00},
+				accepts:   [3]float64{1.25, 4.00, 8.00}, // slightly better than orig
+				rejects:   [3]float64{1.50, 0.50, 0.00},
+				// accepts: [3]float64{1.25, 2.25, 7.25},
+				// rejects: [3]float64{1.50, 2.25, 0.75},
 				cumulativeRPS: targetRPS + 1.4, // allows moderate bit above as it's low after the calls
 			}, run(t, roundSchedule(1, 8)))
 		})
