@@ -32,21 +32,22 @@ func (s *Service) subscribeToMembershipChanges(
 
 // checkAndShutdownIfEvicted checks if the host has been evicted from the hashring
 func checkAndShutdownIfEvicted(engine handler.Engine, cfg *config.Config, log log.Logger, self membership.HostInfo, event *membership.ChangedEvent) {
+	featureEnabled := cfg.EnableServiceDiscoveryShutdown()
 	if selfIsEvicted(log, self, event) {
-		shutdown := cfg.EnableServiceDiscoveryShutdown()
-		if shutdown {
+		if featureEnabled {
 			log.Info("shutting down service due to hashring removing it from service", tag.MembershipChangeEvent(event))
 			engine.Stop()
 		} else {
 			log.Info("Service has been removed from hashring. No other actions triggered", tag.MembershipChangeEvent(event))
 		}
-	} else if selfIsReturned(log, self, event) {
-		shutdown := cfg.EnableServiceDiscoveryShutdown()
-		if shutdown {
-			log.Info("shutting down service due to hashring removing it from service", tag.MembershipChangeEvent(event))
+	}
+	// these are hopefully mutually exclusive,
+	if selfIsReturned(log, self, event) {
+		if featureEnabled {
+			log.Info("service has been returned to hashring and engine restarted", tag.MembershipChangeEvent(event))
 			engine.Start()
 		} else {
-			log.Info("Service has been removed from hashring. No other actions triggered", tag.MembershipChangeEvent(event))
+			log.Info("Service has returned to the hashring. No other actions triggered", tag.MembershipChangeEvent(event))
 		}
 	}
 }
