@@ -154,31 +154,38 @@ type (
 	}
 
 	MatchingSimulationConfig struct {
-		// number of task list write partitions defaults to 1
+		// Number of task list write partitions defaults to 1
 		TaskListWritePartitions int
 
-		// number of task list read partitions defaults to 1
+		// Number of task list read partitions defaults to 1
 		TaskListReadPartitions int
 
-		// number of pollers defaults to 10
+		// Number of pollers defaults to 10
 		NumPollers int
 
-		// number of task generators defaults to 1
+		// Number of task generators defaults to 1
 		NumTaskGenerators int
 
-		// poll request timeout defaults to 1 second
+		// Each generator will produce a new task every TaskGeneratorTickInterval. Defaults to 50ms
+		TaskGeneratorTickInterval time.Duration
+
+		// Upper limit of tasks to generate. Task generators will stop if total number of tasks generated reaches MaxTaskToGenerate during simulation
+		// Defaults to 2k
+		MaxTaskToGenerate int
+
+		// Poll request timeout defaults to 1 second
 		PollTimeout time.Duration
 
-		// at most N polls will be forwarded at a time. defaults to 20
+		// At most N polls will be forwarded at a time. defaults to 20
 		ForwarderMaxOutstandingPolls int
 
-		// at most N tasks will be forwarded at a time. defaults to 1
+		// At most N tasks will be forwarded at a time. defaults to 1
 		ForwarderMaxOutstandingTasks int
 
-		// forwarder rps limit defaults to 10
+		// Forwarder rps limit defaults to 10
 		ForwarderMaxRatePerSecond int
 
-		// children per node. defaults to 20
+		// Children per node. defaults to 20
 		ForwarderMaxChildrenPerNode int
 	}
 

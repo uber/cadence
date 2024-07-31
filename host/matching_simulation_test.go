@@ -175,11 +175,12 @@ func (s *MatchingSimulationSuite) TestMatchingSimulation() {
 	generatedTasksCounter := int32(0)
 	lastTaskScheduleID := int32(0)
 	numGenerators := getNumGenerators(s.testClusterConfig.MatchingConfig.SimulationConfig.NumTaskGenerators)
-	numTasksToGenerate := 10000
+	taskGenerateInterval := getTaskGenerateInterval(s.testClusterConfig.MatchingConfig.SimulationConfig.TaskGeneratorTickInterval)
+	maxTasksToGenerate := getMaxTaskstoGenerate(s.testClusterConfig.MatchingConfig.SimulationConfig.MaxTaskToGenerate)
 	var generatorWG sync.WaitGroup
 	for i := 1; i <= numGenerators; i++ {
 		generatorWG.Add(1)
-		go s.generate(ctx, matchingClient, domainID, tasklist, numTasksToGenerate, &generatedTasksCounter, &lastTaskScheduleID, &generatorWG)
+		go s.generate(ctx, matchingClient, domainID, tasklist, maxTasksToGenerate, taskGenerateInterval, &generatedTasksCounter, &lastTaskScheduleID, &generatorWG)
 	}
 
 	// Start pollers
@@ -215,6 +216,7 @@ func (s *MatchingSimulationSuite) TestMatchingSimulation() {
 	testSummary = append(testSummary, fmt.Sprintf("Num of Pollers: %d", numPollers))
 	testSummary = append(testSummary, fmt.Sprintf("Poll Timeout: %v", pollDuration))
 	testSummary = append(testSummary, fmt.Sprintf("Num of Task Generators: %d", numGenerators))
+	testSummary = append(testSummary, fmt.Sprintf("Task generated every: %d", taskGenerateInterval))
 	testSummary = append(testSummary, fmt.Sprintf("Num of Write Partitions: %d", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.MatchingNumTasklistWritePartitions]))
 	testSummary = append(testSummary, fmt.Sprintf("Num of Read Partitions: %d", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.MatchingNumTasklistReadPartitions]))
 	testSummary = append(testSummary, fmt.Sprintf("Forwarder Max Outstanding Polls: %d", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.MatchingForwarderMaxOutstandingPolls]))
@@ -249,13 +251,14 @@ func (s *MatchingSimulationSuite) generate(
 	ctx context.Context,
 	matchingClient MatchingClient,
 	domainID, tasklist string,
-	numTasks int,
+	maxTasksToGenerate int,
+	taskGenerateInterval time.Duration,
 	generatedTasksCounter *int32,
 	lastTaskScheduleID *int32,
 	wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	t := time.NewTicker(50 * time.Millisecond)
+	t := time.NewTicker(taskGenerateInterval)
 	defer t.Stop()
 
 	for {
@@ -265,8 +268,8 @@ func (s *MatchingSimulationSuite) generate(
 			return
 		case <-t.C:
 			scheduleID := int(atomic.AddInt32(lastTaskScheduleID, 1))
-			if scheduleID > numTasks {
-				s.log("Generated %d tasks so generator will stop", numTasks)
+			if scheduleID > maxTasksToGenerate {
+				s.log("Generated %d tasks so generator will stop", maxTasksToGenerate)
 				return
 			}
 			decisionTask := newDecisionTask(domainID, tasklist, scheduleID)
@@ -392,6 +395,20 @@ func newDecisionTask(domainID, tasklist string, i int) *types.AddDecisionTaskReq
 		},
 		ScheduleID: int64(i),
 	}
+}
+
+func getMaxTaskstoGenerate(i int) int {
+	if i == 0 {
+		return 2000
+	}
+	return i
+}
+
+func getTaskGenerateInterval(i time.Duration) time.Duration {
+	if i == 0 {
+		return 50 * time.Millisecond
+	}
+	return i
 }
 
 func getNumGenerators(i int) int {

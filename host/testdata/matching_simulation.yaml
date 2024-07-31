@@ -12,6 +12,8 @@ matchingconfig:
     tasklistreadpartitions: 2
     numpollers: 10
     numtaskgenerators: 2
+    taskgeneratortickinterval: 50ms
+    maxtasktogenerate: 3000
     polltimeout: 5s
     forwardermaxoutstandingpolls: 20
     forwardermaxoutstandingtasks: 1

@@ -34,14 +34,30 @@ cat test.log | sed -n '/Simulation Summary/,/End of Simulation Summary/p' | grep
 
 tmp=$(cat "$eventLogsFile" \
   | jq -c 'select(.EventName == "PollForDecisionTask returning task")' \
-  | jq .Payload.Latency | awk '{s+=$1}END{print s/NR}' RS=" ")
+  | jq .Payload.Latency | awk '{s+=$0}END{print s/NR}')
 echo "Avg Task latency (ms): $tmp" | tee -a $testSummaryFile
+
+tmp=$(cat "$eventLogsFile" \
+  | jq -c 'select(.EventName == "PollForDecisionTask returning task")' \
+  | jq .Payload.Latency | sort -n | awk '{a[NR]=$0}END{print a[int(NR*0.75)]}')
+echo "P75 Task latency (ms): $tmp" | tee -a $testSummaryFile
+
+tmp=$(cat "$eventLogsFile" \
+  | jq -c 'select(.EventName == "PollForDecisionTask returning task")' \
+  | jq .Payload.Latency | sort -n | awk '{a[NR]=$0}END{print a[int(NR*0.95)]}')
+echo "P95 Task latency (ms): $tmp" | tee -a $testSummaryFile
+
+
+tmp=$(cat "$eventLogsFile" \
+  | jq -c 'select(.EventName == "PollForDecisionTask returning task")' \
+  | jq .Payload.Latency | sort -n | awk '{a[NR]=$0}END{print a[int(NR*0.99)]}')
+echo "P99 Task latency (ms): $tmp" | tee -a $testSummaryFile
+
 
 tmp=$(cat "$eventLogsFile" \
   | jq -c 'select(.EventName == "PollForDecisionTask returning task")' \
   | jq .Payload.Latency | sort -n | tail -n 1)
 echo "Max Task latency (ms): $tmp" | tee -a $testSummaryFile
-
 
 
 tmp=$(cat "$eventLogsFile" \
