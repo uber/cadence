@@ -24,11 +24,11 @@ import (
 	"context"
 	"sync"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/service/matching/tasklist"
 )
 
 type handlerContext struct {
@@ -47,7 +47,7 @@ func newHandlerContext(
 ) *handlerContext {
 	return &handlerContext{
 		Context: ctx,
-		scope:   tasklist.NewPerTaskListScope(domainName, taskList.GetName(), taskList.GetKind(), metricsClient, metricsScope).Tagged(metrics.GetContextTags(ctx)...),
+		scope:   common.NewPerTaskListScope(domainName, taskList.GetName(), taskList.GetKind(), metricsClient, metricsScope).Tagged(metrics.GetContextTags(ctx)...),
 		logger:  logger.WithTags(tag.WorkflowDomainName(domainName), tag.WorkflowTaskListName(taskList.GetName())),
 	}
 }

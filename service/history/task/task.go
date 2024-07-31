@@ -346,6 +346,7 @@ func (t *taskImpl) Ack() {
 		t.scope.RecordTimer(metrics.TaskAttemptTimerPerDomain, time.Duration(t.attempt))
 		t.scope.RecordTimer(metrics.TaskLatencyPerDomain, time.Since(t.submitTime))
 		t.scope.RecordTimer(metrics.TaskQueueLatencyPerDomain, time.Since(t.GetVisibilityTimestamp()))
+
 	}
 
 	if t.eventLogger != nil && t.shouldProcessTask && t.attempt != 0 {

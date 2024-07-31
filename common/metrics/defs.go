@@ -2234,6 +2234,7 @@ const (
 	TaskBatchCompleteFailure
 	TaskProcessingLatency
 	TaskQueueLatency
+	ScheduleToStartHistoryQueueLatencyPerTaskList
 
 	TaskRequestsPerDomain
 	TaskLatencyPerDomain
@@ -2901,6 +2902,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		TaskLimitExceededCounter: {metricName: "task_errors_limit_exceeded_counter", metricType: Counter},
 		TaskProcessingLatency:    {metricName: "task_latency_processing", metricType: Timer},
 		TaskQueueLatency:         {metricName: "task_latency_queue", metricType: Timer},
+		ScheduleToStartHistoryQueueLatencyPerTaskList: {metricName: "schedule_to_start_history_queue_latency_per_tl", metricType: Timer},
 
 		// per domain task metrics
 
