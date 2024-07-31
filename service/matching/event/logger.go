@@ -43,6 +43,8 @@ type E struct {
 	TaskListType int // persistence.TaskListTypeDecision or persistence.TaskListTypeActivity
 
 	EventTime time.Time
+
+	// EventName describes the event. It is used to query events in simulations so don't change existing event names.
 	EventName string
 	Host      string
 	Payload   map[string]any
