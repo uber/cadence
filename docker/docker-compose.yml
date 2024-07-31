@@ -36,6 +36,7 @@ services:
      - "7935:7935"
      - "7939:7939"
      - "7833:7833"
+     - "7936:7936"
     environment:
       - "CASSANDRA_SEEDS=cassandra"
       - "PROMETHEUS_ENDPOINT_0=0.0.0.0:8000"
@@ -43,6 +44,7 @@ services:
       - "PROMETHEUS_ENDPOINT_2=0.0.0.0:8002"
       - "PROMETHEUS_ENDPOINT_3=0.0.0.0:8003"
       - "DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development.yaml"
+      - "FRONTEND_PPROF_PORT=7936"
       - "LOG_LEVEL=debug"
     depends_on:
       cassandra:
