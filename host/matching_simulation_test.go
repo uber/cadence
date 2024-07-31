@@ -171,6 +171,19 @@ func (s *MatchingSimulationSuite) TestMatchingSimulation() {
 	collectorWG.Add(1)
 	go s.collectStats(statsCh, aggStats, &collectorWG)
 
+	// Start pollers
+	numPollers := getNumPollers(s.testClusterConfig.MatchingConfig.SimulationConfig.NumPollers)
+	pollDuration := getPollDuration(s.testClusterConfig.MatchingConfig.SimulationConfig.PollTimeout)
+	polledTasksCounter := int32(0)
+	var pollerWG sync.WaitGroup
+	for i := 0; i < numPollers; i++ {
+		pollerWG.Add(1)
+		go s.poll(ctx, matchingClient, domainID, tasklist, &polledTasksCounter, &pollerWG, pollDuration, statsCh)
+	}
+
+	// wait a bit for pollers to start.
+	time.Sleep(300 * time.Millisecond)
+
 	// Start task generators
 	generatedTasksCounter := int32(0)
 	lastTaskScheduleID := int32(0)
@@ -181,16 +194,6 @@ func (s *MatchingSimulationSuite) TestMatchingSimulation() {
 	for i := 1; i <= numGenerators; i++ {
 		generatorWG.Add(1)
 		go s.generate(ctx, matchingClient, domainID, tasklist, maxTasksToGenerate, taskGenerateInterval, &generatedTasksCounter, &lastTaskScheduleID, &generatorWG)
-	}
-
-	// Start pollers
-	numPollers := getNumPollers(s.testClusterConfig.MatchingConfig.SimulationConfig.NumPollers)
-	pollDuration := getPollDuration(s.testClusterConfig.MatchingConfig.SimulationConfig.PollTimeout)
-	polledTasksCounter := int32(0)
-	var pollerWG sync.WaitGroup
-	for i := 0; i < numPollers; i++ {
-		pollerWG.Add(1)
-		go s.poll(ctx, matchingClient, domainID, tasklist, &polledTasksCounter, &pollerWG, pollDuration, statsCh)
 	}
 
 	// Let it run for a while
