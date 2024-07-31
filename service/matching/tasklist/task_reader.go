@@ -41,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/matching/config"
+	"github.com/uber/cadence/service/matching/event"
 )
 
 var epochStartTime = time.Unix(0, 0)
@@ -174,6 +175,13 @@ dispatchLoop:
 			if !ok { // Task list getTasks pump is shutdown
 				break dispatchLoop
 			}
+			event.Log(event.E{
+				TaskListName: tr.taskListID.GetName(),
+				TaskListType: tr.taskListID.GetType(),
+				TaskListKind: &tr.tlMgr.taskListKind,
+				TaskInfo:     *taskInfo,
+				EventName:    "Attempting to Dispatch Buffered Task",
+			})
 			breakDispatchLoop := tr.dispatchSingleTaskFromBufferWithRetries(isolationGroup, taskInfo)
 			if breakDispatchLoop {
 				// shutting down
@@ -415,10 +423,24 @@ func (tr *taskReader) dispatchSingleTaskFromBuffer(isolationGroup string, taskIn
 	cancel()
 
 	if err == nil {
+		event.Log(event.E{
+			TaskListName: tr.taskListID.GetName(),
+			TaskListType: tr.taskListID.GetType(),
+			TaskListKind: &tr.tlMgr.taskListKind,
+			TaskInfo:     *taskInfo,
+			EventName:    "Dispatched Buffered Task",
+		})
 		return false, true
 	}
 
 	if errors.Is(err, context.Canceled) {
+		event.Log(event.E{
+			TaskListName: tr.taskListID.GetName(),
+			TaskListType: tr.taskListID.GetType(),
+			TaskListKind: &tr.tlMgr.taskListKind,
+			TaskInfo:     *taskInfo,
+			EventName:    "Dispatch Failed because Context Cancelled",
+		})
 		tr.logger.Info("Tasklist manager context is cancelled, shutting down")
 		return true, true
 	}
@@ -436,6 +458,13 @@ func (tr *taskReader) dispatchSingleTaskFromBuffer(isolationGroup string, taskIn
 			tag.Error(err),
 			tag.WorkflowDomainID(taskInfo.DomainID),
 		)
+		event.Log(event.E{
+			TaskListName: tr.taskListID.GetName(),
+			TaskListType: tr.taskListID.GetType(),
+			TaskListKind: &tr.tlMgr.taskListKind,
+			TaskInfo:     *taskInfo,
+			EventName:    "Dispatch Timed Out",
+		})
 		tr.scope.IncCounter(metrics.AsyncMatchDispatchTimeoutCounterPerTaskList)
 
 		// the idea here is that by re-fetching the isolation-groups, if something has shifted
@@ -448,12 +477,29 @@ func (tr *taskReader) dispatchSingleTaskFromBuffer(isolationGroup string, taskIn
 			// and let the decision get timed out and rescheduled to non-sticky tasklist
 			if err == _stickyPollerUnavailableError {
 				tr.completeTask(taskInfo, nil)
+				event.Log(event.E{
+					TaskListName: tr.taskListID.GetName(),
+					TaskListType: tr.taskListID.GetType(),
+					TaskListKind: &tr.tlMgr.taskListKind,
+					TaskInfo:     *taskInfo,
+					EventName:    "Dispatch Failed because StickyPollerUnavailable",
+				})
 				return false, true
 			}
 			// it should never happen, unless there is a bug in 'getIsolationGroupForTask' method
 			tr.logger.Error("taskReader: unexpected error getting isolation group",
 				tag.Error(err),
 				tag.IsolationGroup(group))
+			event.Log(event.E{
+				TaskListName: tr.taskListID.GetName(),
+				TaskListType: tr.taskListID.GetType(),
+				TaskListKind: &tr.tlMgr.taskListKind,
+				TaskInfo:     *taskInfo,
+				EventName:    "Dispatch Failed due to unexpected error getting isolation group",
+				Payload: map[string]any{
+					"error": err,
+				},
+			})
 			tr.completeTask(taskInfo, err)
 			return false, true
 		}
@@ -482,12 +528,33 @@ func (tr *taskReader) dispatchSingleTaskFromBuffer(isolationGroup string, taskIn
 			select {
 			case <-tr.cancelCtx.Done():
 				// the task reader is shutting down
+				event.Log(event.E{
+					TaskListName: tr.taskListID.GetName(),
+					TaskListType: tr.taskListID.GetType(),
+					TaskListKind: &tr.tlMgr.taskListKind,
+					TaskInfo:     *taskInfo,
+					EventName:    "Dispatch Failed because task reader is shutting down",
+				})
 				return true, true
 			case tr.taskBuffers[defaultTaskBufferIsolationGroup] <- taskInfo:
 				// task successfully rerouted to default tasklist
+				event.Log(event.E{
+					TaskListName: tr.taskListID.GetName(),
+					TaskListType: tr.taskListID.GetType(),
+					TaskListKind: &tr.tlMgr.taskListKind,
+					TaskInfo:     *taskInfo,
+					EventName:    "Task rerouted to default isolation group",
+				})
 				return false, true
 			default:
 				// couldn't redirect, loop and try again
+				event.Log(event.E{
+					TaskListName: tr.taskListID.GetName(),
+					TaskListType: tr.taskListID.GetType(),
+					TaskListKind: &tr.tlMgr.taskListKind,
+					TaskInfo:     *taskInfo,
+					EventName:    "Task is not rerouted to default isolation group. Will retry dispatch",
+				})
 				return false, false
 			}
 		}
@@ -498,9 +565,27 @@ func (tr *taskReader) dispatchSingleTaskFromBuffer(isolationGroup string, taskIn
 		select {
 		case <-tr.cancelCtx.Done():
 			// the task reader is shutting down
+			event.Log(event.E{
+				TaskListName: tr.taskListID.GetName(),
+				TaskListType: tr.taskListID.GetType(),
+				TaskListKind: &tr.tlMgr.taskListKind,
+				TaskInfo:     *taskInfo,
+				EventName:    "Dispatch Failed because task reader is shutting down",
+			})
 			return true, true
 		case tr.taskBuffers[group] <- taskInfo:
 			// successful redirect
+			event.Log(event.E{
+				TaskListName: tr.taskListID.GetName(),
+				TaskListType: tr.taskListID.GetType(),
+				TaskListKind: &tr.tlMgr.taskListKind,
+				TaskInfo:     *taskInfo,
+				EventName:    "Task forwarded to another isolation group",
+				Payload: map[string]any{
+					"redirection-from-isolation-group": isolationGroup,
+					"redirection-to-isolation-group":   group,
+				},
+			})
 			tr.scope.IncCounter(metrics.BufferIsolationGroupRedirectCounter)
 			tr.logger.Warn("some tasks were redirected to another isolation group.",
 				tag.Dynamic("redirection-from-isolation-group", isolationGroup),
@@ -512,6 +597,13 @@ func (tr *taskReader) dispatchSingleTaskFromBuffer(isolationGroup string, taskIn
 			)
 			return false, true
 		default:
+			event.Log(event.E{
+				TaskListName: tr.taskListID.GetName(),
+				TaskListType: tr.taskListID.GetType(),
+				TaskListKind: &tr.tlMgr.taskListKind,
+				TaskInfo:     *taskInfo,
+				EventName:    "Task is not rerouted to another isolation group. Will retry dispatch",
+			})
 			tr.scope.IncCounter(metrics.BufferIsolationGroupRedirectFailureCounter)
 			tr.logger.Error("some tasks could not be redirected to another isolation group as the buffer's already full",
 				tag.WorkflowRunID(taskInfo.RunID),
@@ -527,11 +619,28 @@ func (tr *taskReader) dispatchSingleTaskFromBuffer(isolationGroup string, taskIn
 	}
 
 	if errors.Is(err, ErrTasklistThrottled) {
+		event.Log(event.E{
+			TaskListName: tr.taskListID.GetName(),
+			TaskListType: tr.taskListID.GetType(),
+			TaskListKind: &tr.tlMgr.taskListKind,
+			TaskInfo:     *taskInfo,
+			EventName:    "Dispatch failed because throttled. Will retry dispatch",
+		})
 		tr.scope.IncCounter(metrics.BufferThrottlePerTaskListCounter)
 		runtime.Gosched()
 		return false, false
 	}
 
+	event.Log(event.E{
+		TaskListName: tr.taskListID.GetName(),
+		TaskListType: tr.taskListID.GetType(),
+		TaskListKind: &tr.tlMgr.taskListKind,
+		TaskInfo:     *taskInfo,
+		EventName:    "Dispatch failed because of unknown error. Will retry dispatch",
+		Payload: map[string]any{
+			"error": err,
+		},
+	})
 	tr.scope.IncCounter(metrics.BufferUnknownTaskDispatchError)
 	tr.logger.Error("unknown error while dispatching task",
 		tag.Error(err),

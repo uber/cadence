@@ -50,6 +50,7 @@ import (
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/matching/config"
+	"github.com/uber/cadence/service/matching/event"
 	"github.com/uber/cadence/service/matching/tasklist"
 )
 
@@ -246,6 +247,16 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *tasklist.Identifier, t
 		return nil, err
 	}
 	logger.Info("Task list manager state changed", tag.LifeCycleStarted)
+	event.Log(event.E{
+		TaskListName: taskList.GetName(),
+		TaskListKind: taskListKind,
+		TaskListType: taskList.GetType(),
+		TaskInfo: persistence.TaskInfo{
+			DomainID: taskList.GetDomainID(),
+		},
+		EventName: "TaskListManager Started",
+		Host:      e.config.HostName,
+	})
 	return mgr, nil
 }
 
@@ -299,6 +310,20 @@ func (e *matchingEngineImpl) AddDecisionTask(
 	taskListKind := request.GetTaskList().Kind
 	taskListType := persistence.TaskListTypeDecision
 
+	event.Log(event.E{
+		TaskListName: taskListName,
+		TaskListKind: taskListKind,
+		TaskListType: taskListType,
+		TaskInfo: persistence.TaskInfo{
+			DomainID:   domainID,
+			ScheduleID: request.GetScheduleID(),
+		},
+		EventName: "Received AddDecisionTask",
+		Host:      e.config.HostName,
+		Payload: map[string]any{
+			"RequestForwardedFrom": request.GetForwardedFrom(),
+		},
+	})
 	e.emitInfoOrDebugLog(
 		domainID,
 		"Received AddDecisionTask",
@@ -441,6 +466,16 @@ func (e *matchingEngineImpl) PollForDecisionTask(
 		tag.WorkflowTaskListName(taskListName),
 		tag.WorkflowDomainID(domainID),
 	)
+	event.Log(event.E{
+		TaskListName: taskListName,
+		TaskListKind: taskListKind,
+		TaskListType: persistence.TaskListTypeDecision,
+		TaskInfo: persistence.TaskInfo{
+			DomainID: domainID,
+		},
+		EventName: "Received PollForDecisionTask",
+		Host:      e.config.HostName,
+	})
 pollLoop:
 	for {
 		if err := common.IsValidContext(hCtx.Context); err != nil {
@@ -466,12 +501,33 @@ pollLoop:
 					tag.WorkflowDomainID(domainID),
 					tag.Error(err),
 				)
+				event.Log(event.E{
+					TaskListName: taskListName,
+					TaskListKind: taskListKind,
+					TaskListType: persistence.TaskListTypeDecision,
+					TaskInfo: persistence.TaskInfo{
+						DomainID: domainID,
+					},
+					EventName: "PollForDecisionTask returned no tasks",
+					Host:      e.config.HostName,
+					Payload: map[string]any{
+						"RequestForwardedFrom": req.GetForwardedFrom(),
+					},
+				})
 				return emptyPollForDecisionTaskResponse, nil
 			}
 			return nil, fmt.Errorf("couldn't get task: %w", err)
 		}
 
 		if task.IsStarted() {
+			event.Log(event.E{
+				TaskListName: taskListName,
+				TaskListKind: taskListKind,
+				TaskListType: persistence.TaskListTypeDecision,
+				TaskInfo:     task.Info(),
+				EventName:    "PollForDecisionTask returning already started task",
+				Host:         e.config.HostName,
+			})
 			return task.PollForDecisionResponse(), nil
 			// TODO: Maybe add history expose here?
 		}
@@ -540,7 +596,22 @@ pollLoop:
 
 			continue pollLoop
 		}
+
 		task.Finish(nil)
+		event.Log(event.E{
+			TaskListName: taskListName,
+			TaskListKind: taskListKind,
+			TaskListType: persistence.TaskListTypeDecision,
+			TaskInfo:     task.Info(),
+			EventName:    "PollForDecisionTask returning task",
+			Host:         e.config.HostName,
+			Payload: map[string]any{
+				"TaskIsForwarded":      task.IsForwarded(),
+				"RequestForwardedFrom": req.GetForwardedFrom(),
+				"Latency":              time.Since(task.Info().CreatedTime).Milliseconds(),
+			},
+		})
+
 		return e.createPollForDecisionTaskResponse(task, resp, hCtx.scope), nil
 	}
 }

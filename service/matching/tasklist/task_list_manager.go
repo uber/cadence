@@ -46,6 +46,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/matching/config"
+	"github.com/uber/cadence/service/matching/event"
 	"github.com/uber/cadence/service/matching/liveness"
 	"github.com/uber/cadence/service/matching/poller"
 )
@@ -196,7 +197,7 @@ func NewManager(
 	if tlMgr.isFowardingAllowed(taskList, *taskListKind) {
 		fwdr = newForwarder(&taskListConfig.ForwarderConfig, taskList, *taskListKind, matchingClient, isolationGroups)
 	}
-	tlMgr.matcher = newTaskMatcher(taskListConfig, fwdr, tlMgr.scope, isolationGroups, tlMgr.logger)
+	tlMgr.matcher = newTaskMatcher(taskListConfig, fwdr, tlMgr.scope, isolationGroups, tlMgr.logger, taskList, *taskListKind)
 	tlMgr.taskWriter = newTaskWriter(tlMgr)
 	tlMgr.taskReader = newTaskReader(tlMgr, isolationGroups)
 	tlMgr.startWG.Add(1)
@@ -290,6 +291,13 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params AddTaskParams)
 		// active task, try sync match first
 		syncMatch, err = c.trySyncMatch(ctx, params, isolationGroup)
 		if syncMatch {
+			event.Log(event.E{
+				TaskListName: c.taskListID.GetName(),
+				TaskListKind: &c.taskListKind,
+				TaskListType: c.taskListID.GetType(),
+				TaskInfo:     *params.TaskInfo,
+				EventName:    "SyncMatched so not persisted",
+			})
 			return &persistence.CreateTasksResponse{}, err
 		}
 		if params.ActivityTaskDispatchInfo != nil {
@@ -299,9 +307,23 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params AddTaskParams)
 		if isForwarded {
 			// forwarded from child partition - only do sync match
 			// child partition will persist the task when sync match fails
+			event.Log(event.E{
+				TaskListName: c.taskListID.GetName(),
+				TaskListKind: &c.taskListKind,
+				TaskListType: c.taskListID.GetType(),
+				TaskInfo:     *params.TaskInfo,
+				EventName:    "Could not SyncMatched Forwarded Task so not persisted",
+			})
 			return &persistence.CreateTasksResponse{}, errRemoteSyncMatchFailed
 		}
 
+		event.Log(event.E{
+			TaskListName: c.taskListID.GetName(),
+			TaskListKind: &c.taskListKind,
+			TaskListType: c.taskListID.GetType(),
+			TaskInfo:     *params.TaskInfo,
+			EventName:    "Task Sent to Writer",
+		})
 		return c.taskWriter.appendTask(params.TaskInfo)
 	})
 

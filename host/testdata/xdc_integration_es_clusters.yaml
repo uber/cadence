@@ -26,6 +26,8 @@
   historyconfig:
     numhistoryshards: 1
     numhistoryhosts: 1
+  matchingconfig:
+    nummatchinghosts: 1
   messagingclientconfig:
     usemock: false
     kafkaconfig:
@@ -92,6 +94,8 @@
   historyconfig:
     numhistoryshards: 1
     numhistoryhosts: 1
+  matchingconfig:
+    nummatchinghosts: 1
   messagingclientconfig:
     usemock: false
     kafkaconfig:

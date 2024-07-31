@@ -33,7 +33,9 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/matching/config"
+	"github.com/uber/cadence/service/matching/event"
 )
 
 type (
@@ -218,10 +220,19 @@ writerLoop:
 				}
 
 				tasks := []*persistence.CreateTaskInfo{}
+				events := []event.E{}
 				for i, req := range reqs {
 					tasks = append(tasks, &persistence.CreateTaskInfo{
 						TaskID: taskIDs[i],
 						Data:   req.taskInfo,
+					})
+					kind := types.TaskListKind(w.db.taskListKind)
+					events = append(events, event.E{
+						TaskListName: w.db.taskListName,
+						TaskListKind: &kind,
+						TaskListType: w.db.taskType,
+						TaskInfo:     *req.taskInfo,
+						EventName:    "Task Written to DB",
 					})
 					maxReadLevel = taskIDs[i]
 				}
@@ -235,6 +246,8 @@ writerLoop:
 						tag.Number(taskIDs[0]),
 						tag.NextNumber(taskIDs[batchSize-1]),
 					)
+				} else {
+					event.Log(events...)
 				}
 				// Update the maxReadLevel after the writes are completed.
 				if maxReadLevel > 0 {
