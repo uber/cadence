@@ -317,13 +317,13 @@ func (csc *configStoreClient) RestoreValue(name dc.Key, filters map[dc.Filter]in
 	if filters == nil {
 		for _, dcValue := range val.Values {
 			if dcValue.Filters != nil || len(dcValue.Filters) != 0 {
-				newValues = append(newValues, copyDynamicConfigValue(dcValue))
+				newValues = append(newValues, dcValue.Copy())
 			}
 		}
 	} else {
 		for _, dcValue := range val.Values {
 			if !matchFilters(dcValue, filters) || dcValue.Filters == nil || len(dcValue.Filters) == 0 {
-				newValues = append(newValues, copyDynamicConfigValue(dcValue))
+				newValues = append(newValues, dcValue.Copy())
 			}
 		}
 	}
@@ -355,7 +355,7 @@ func (csc *configStoreClient) ListValue(name dc.Key) ([]*types.DynamicConfigEntr
 		// if key is not known/specified, return all entries
 		resList = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries))
 		for _, entry := range currentCached.dcEntries {
-			resList = append(resList, copyDynamicConfigEntry(entry))
+			resList = append(resList, entry.Copy())
 		}
 	} else {
 		// if key is known, return just that specific entry
@@ -417,7 +417,7 @@ func (csc *configStoreClient) updateValue(name dc.Key, dcValues []*types.Dynamic
 			if entryExists && entry == existingEntry {
 				continue
 			} else {
-				newEntries = append(newEntries, copyDynamicConfigEntry(entry))
+				newEntries = append(newEntries, entry.Copy())
 			}
 		}
 	} else {
@@ -440,7 +440,7 @@ func (csc *configStoreClient) updateValue(name dc.Key, dcValues []*types.Dynamic
 						Values: dcValues,
 					})
 			} else {
-				newEntries = append(newEntries, copyDynamicConfigEntry(entry))
+				newEntries = append(newEntries, entry.Copy())
 			}
 		}
 	}
@@ -484,68 +484,6 @@ func (csc *configStoreClient) updateValue(name dc.Key, dcValues []*types.Dynamic
 			return err
 		}
 		return nil
-	}
-}
-
-func copyDynamicConfigEntry(entry *types.DynamicConfigEntry) *types.DynamicConfigEntry {
-	if entry == nil {
-		return nil
-	}
-
-	newValues := make([]*types.DynamicConfigValue, 0, len(entry.Values))
-	for _, value := range entry.Values {
-		newValues = append(newValues, copyDynamicConfigValue(value))
-	}
-
-	return &types.DynamicConfigEntry{
-		Name:   entry.Name,
-		Values: newValues,
-	}
-}
-
-func copyDynamicConfigValue(value *types.DynamicConfigValue) *types.DynamicConfigValue {
-	if value == nil {
-		return nil
-	}
-
-	var newFilters []*types.DynamicConfigFilter
-	if value.Filters == nil {
-		newFilters = nil
-	} else {
-		newFilters = make([]*types.DynamicConfigFilter, 0, len(value.Filters))
-		for _, filter := range value.Filters {
-			newFilters = append(newFilters, copyDynamicConfigFilter(filter))
-		}
-	}
-
-	return &types.DynamicConfigValue{
-		Value:   copyDataBlob(value.Value),
-		Filters: newFilters,
-	}
-}
-
-func copyDynamicConfigFilter(filter *types.DynamicConfigFilter) *types.DynamicConfigFilter {
-	if filter == nil {
-		return nil
-	}
-
-	return &types.DynamicConfigFilter{
-		Name:  filter.Name,
-		Value: copyDataBlob(filter.Value),
-	}
-}
-
-func copyDataBlob(blob *types.DataBlob) *types.DataBlob {
-	if blob == nil {
-		return nil
-	}
-
-	newData := make([]byte, len(blob.Data))
-	copy(newData, blob.Data)
-
-	return &types.DataBlob{
-		EncodingType: blob.EncodingType,
-		Data:         newData,
 	}
 }
 
