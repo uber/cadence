@@ -30,7 +30,10 @@ if cat test.log | grep -a "FAIL: TestMatchingSimulationSuite"; then
 fi
 
 echo "---- Simulation Summary ----"
-cat test.log | sed -n '/Simulation Summary/,/End of Simulation Summary/p' | grep -v "Simulation Summary" | grep -v "Simulation Summary"
+cat test.log \
+  | sed -n '/Simulation Summary/,/End of Simulation Summary/p' \
+  | grep -v "Simulation Summary" \
+  | tee -a $testSummaryFile
 
 tmp=$(cat "$eventLogsFile" \
   | jq -c 'select(.EventName == "PollForDecisionTask returning task")' \
@@ -118,7 +121,7 @@ tmp=$(cat "$eventLogsFile" \
 echo "Sync matches - task is not forwarded: $tmp" | tee -a $testSummaryFile
 
 
-echo "Per tasklist sync matches:"
+echo "Per tasklist sync matches:" | tee -a $testSummaryFile
 cat "$eventLogsFile" \
   | jq -c 'select(.EventName == "SyncMatched so not persisted")' \
   | jq '.TaskListName' \
@@ -139,13 +142,13 @@ tmp=$(cat "$eventLogsFile" \
 echo "Async matches: $tmp" | tee -a $testSummaryFile
 
 
-echo "AddDecisionTask request per tasklist:"
+echo "AddDecisionTask request per tasklist:" | tee -a $testSummaryFile
 cat "$eventLogsFile" \
   | jq -c 'select(.EventName == "Received AddDecisionTask")' \
   | jq '.TaskListName' \
   | jq -c '.' | sort -n | uniq -c | sed -e 's/^/     /' | tee -a $testSummaryFile
 
-echo "PollForDecisionTask request per tasklist:"
+echo "PollForDecisionTask request per tasklist:" | tee -a $testSummaryFile
 cat "$eventLogsFile" \
   | jq -c 'select(.EventName == "Received PollForDecisionTask")' \
   | jq '.TaskListName' \
