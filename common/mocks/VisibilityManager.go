@@ -156,36 +156,6 @@ func (_m *VisibilityManager) GetName() string {
 	return r0
 }
 
-// ListAllWorkflowExecutions provides a mock function with given fields: ctx, request
-func (_m *VisibilityManager) ListAllWorkflowExecutions(ctx context.Context, request *persistence.ListAllWorkflowExecutionsRequest) (*persistence.ListWorkflowExecutionsResponse, error) {
-	ret := _m.Called(ctx, request)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ListAllWorkflowExecutions")
-	}
-
-	var r0 *persistence.ListWorkflowExecutionsResponse
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, *persistence.ListAllWorkflowExecutionsRequest) (*persistence.ListWorkflowExecutionsResponse, error)); ok {
-		return rf(ctx, request)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, *persistence.ListAllWorkflowExecutionsRequest) *persistence.ListWorkflowExecutionsResponse); ok {
-		r0 = rf(ctx, request)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*persistence.ListWorkflowExecutionsResponse)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, *persistence.ListAllWorkflowExecutionsRequest) error); ok {
-		r1 = rf(ctx, request)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // ListClosedWorkflowExecutions provides a mock function with given fields: ctx, request
 func (_m *VisibilityManager) ListClosedWorkflowExecutions(ctx context.Context, request *persistence.ListWorkflowExecutionsRequest) (*persistence.ListWorkflowExecutionsResponse, error) {
 	ret := _m.Called(ctx, request)

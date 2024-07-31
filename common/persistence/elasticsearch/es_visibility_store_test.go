@@ -359,60 +359,6 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutionsByType() {
 	s.True(strings.Contains(err.Error(), "ListOpenWorkflowExecutionsByType failed"))
 }
 
-func (s *ESVisibilitySuite) TestListAllWorkflowExecutions() {
-	s.mockESClient.On("SearchByQuery", mock.Anything, mock.MatchedBy(func(input *es.SearchByQueryRequest) bool {
-		s.True(strings.Contains(input.Query, `{"match_phrase":{"WorkflowID":{"query":"123"}}}`))
-		s.True(strings.Contains(input.Query, `{"match_phrase":{"WorkflowType":{"query":"123"}}}`))
-		s.True(strings.Contains(input.Query, `{"match_phrase":{"RunID":{"query":"123"}}}`))
-		s.Equal(esIndexMaxResultWindow, input.MaxResultWindow)
-		return true
-	})).Return(testSearchResult, nil).Once()
-
-	request := &p.InternalListAllWorkflowExecutionsByTypeRequest{
-		InternalListWorkflowExecutionsRequest: p.InternalListWorkflowExecutionsRequest{
-			DomainUUID:   testDomainID,
-			Domain:       testDomain,
-			EarliestTime: time.UnixMilli(testEarliestTime),
-			LatestTime:   time.UnixMilli(testLatestTime),
-			PageSize:     10,
-		},
-		StatusFilter:        []types.WorkflowExecutionCloseStatus{types.WorkflowExecutionCloseStatusCanceled, types.WorkflowExecutionCloseStatusFailed},
-		WorkflowSearchValue: "123",
-		SortOrder:           "DESC",
-		SortColumn:          es.WorkflowID,
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
-	defer cancel()
-
-	_, err := s.visibilityStore.ListAllWorkflowExecutions(ctx, request)
-	s.NoError(err)
-
-	s.mockESClient.On("SearchByQuery", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
-	_, err = s.visibilityStore.ListAllWorkflowExecutions(ctx, request)
-	s.Error(err)
-	_, ok := err.(*types.InternalServiceError)
-	s.True(ok)
-	s.True(strings.Contains(err.Error(), "ListAllWorkflowExecutions failed"))
-
-	invalidRequest := &p.InternalListAllWorkflowExecutionsByTypeRequest{
-		InternalListWorkflowExecutionsRequest: p.InternalListWorkflowExecutionsRequest{
-			DomainUUID:   testDomainID,
-			Domain:       testDomain,
-			EarliestTime: time.UnixMilli(testEarliestTime),
-			LatestTime:   time.UnixMilli(testLatestTime),
-		},
-		SortColumn: ")",
-		SortOrder:  "DESC",
-	}
-	_, err = s.visibilityStore.ListAllWorkflowExecutions(ctx, invalidRequest)
-	s.Error(err)
-	_, ok = err.(*types.BadRequestError)
-	s.True(ok)
-	s.True(strings.Contains(err.Error(), "Error when building query"))
-
-}
-
 func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByType() {
 	s.mockESClient.On("Search", mock.Anything, mock.MatchedBy(func(input *es.SearchRequest) bool {
 		s.False(input.IsOpen)

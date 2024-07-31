@@ -262,28 +262,6 @@ func (v *visibilityManagerImpl) ListClosedWorkflowExecutionsByStatus(
 	return v.convertInternalListResponse(internalResp), nil
 }
 
-func (v *visibilityManagerImpl) ListAllWorkflowExecutions(
-	ctx context.Context,
-	request *ListAllWorkflowExecutionsRequest,
-) (*ListWorkflowExecutionsResponse, error) {
-	internalListRequest := v.toInternalListWorkflowExecutionsRequest(&request.ListWorkflowExecutionsRequest)
-	internalRequest := &InternalListAllWorkflowExecutionsByTypeRequest{
-		PartialMatch:        request.PartialMatch,
-		WorkflowSearchValue: request.WorkflowSearchValue,
-		SortColumn:          request.SortColumn,
-		SortOrder:           request.SortOrder,
-	}
-	copy(internalRequest.StatusFilter, request.StatusFilter)
-	if internalListRequest != nil {
-		internalRequest.InternalListWorkflowExecutionsRequest = *internalListRequest
-	}
-	internalResp, err := v.persistence.ListAllWorkflowExecutions(ctx, internalRequest)
-	if err != nil {
-		return nil, err
-	}
-	return v.convertInternalListResponse(internalResp), nil
-}
-
 func (v *visibilityManagerImpl) GetClosedWorkflowExecution(
 	ctx context.Context,
 	request *GetClosedWorkflowExecutionRequest,

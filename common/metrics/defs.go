@@ -270,8 +270,6 @@ const (
 	PersistenceDeleteUninitializedWorkflowExecutionScope
 	// PersistenceListWorkflowExecutionsScope tracks ListWorkflowExecutions calls made by service to persistence layer
 	PersistenceListWorkflowExecutionsScope
-	// PersistenceListAllWorkflowExecutionsScope tracks ListWorkflowExecutions calls made by service to persistence layer
-	PersistenceListAllWorkflowExecutionsScope
 	// PersistenceScanWorkflowExecutionsScope tracks ScanWorkflowExecutions calls made by service to persistence layer
 	PersistenceScanWorkflowExecutionsScope
 	// PersistenceCountWorkflowExecutionsScope tracks CountWorkflowExecutions calls made by service to persistence layer
@@ -753,8 +751,6 @@ const (
 	ElasticsearchGetClosedWorkflowExecutionScope
 	// ElasticsearchListWorkflowExecutionsScope tracks ListWorkflowExecutions calls made by service to persistence layer
 	ElasticsearchListWorkflowExecutionsScope
-	// ElasticsearchListAllWorkflowExecutionsScope tracks ListWorkflowExecutions calls made by service to persistence layer
-	ElasticsearchListAllWorkflowExecutionsScope
 	// ElasticsearchScanWorkflowExecutionsScope tracks ScanWorkflowExecutions calls made by service to persistence layer
 	ElasticsearchScanWorkflowExecutionsScope
 	// ElasticsearchCountWorkflowExecutionsScope tracks CountWorkflowExecutions calls made by service to persistence layer
@@ -790,8 +786,6 @@ const (
 	PinotGetClosedWorkflowExecutionScope
 	// PinotListWorkflowExecutionsScope tracks ListWorkflowExecutions calls made by service to persistence layer
 	PinotListWorkflowExecutionsScope
-	// PinotListAllWorkflowExecutionsScope tracks ListAllWorkflowExecutions calls made by service to persistence layer
-	PinotListAllWorkflowExecutionsScope
 	// PinotScanWorkflowExecutionsScope tracks ScanWorkflowExecutions calls made by service to persistence layer
 	PinotScanWorkflowExecutionsScope
 	// PinotCountWorkflowExecutionsScope tracks CountWorkflowExecutions calls made by service to persistence layer
@@ -1441,7 +1435,6 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceVisibilityDeleteWorkflowExecutionScope:        {operation: "VisibilityDeleteWorkflowExecution"},
 		PersistenceDeleteUninitializedWorkflowExecutionScope:     {operation: "VisibilityDeleteUninitializedWorkflowExecution"},
 		PersistenceListWorkflowExecutionsScope:                   {operation: "ListWorkflowExecutions"},
-		PersistenceListAllWorkflowExecutionsScope:                {operation: "ListAllWorkflowExecutions"},
 		PersistenceScanWorkflowExecutionsScope:                   {operation: "ScanWorkflowExecutions"},
 		PersistenceCountWorkflowExecutionsScope:                  {operation: "CountWorkflowExecutions"},
 		PersistenceAppendHistoryNodesScope:                       {operation: "AppendHistoryNodes"},
@@ -1685,7 +1678,6 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ElasticsearchListClosedWorkflowExecutionsByStatusScope:     {operation: "ListClosedWorkflowExecutionsByStatus"},
 		ElasticsearchGetClosedWorkflowExecutionScope:               {operation: "GetClosedWorkflowExecution"},
 		ElasticsearchListWorkflowExecutionsScope:                   {operation: "ListWorkflowExecutions"},
-		ElasticsearchListAllWorkflowExecutionsScope:                {operation: "ListAllWorkflowExecutions"},
 		ElasticsearchScanWorkflowExecutionsScope:                   {operation: "ScanWorkflowExecutions"},
 		ElasticsearchCountWorkflowExecutionsScope:                  {operation: "CountWorkflowExecutions"},
 		ElasticsearchDeleteWorkflowExecutionsScope:                 {operation: "DeleteWorkflowExecution"},
@@ -1703,7 +1695,6 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PinotListClosedWorkflowExecutionsByStatusScope:             {operation: "ListClosedWorkflowExecutionsByStatus"},
 		PinotGetClosedWorkflowExecutionScope:                       {operation: "GetClosedWorkflowExecution"},
 		PinotListWorkflowExecutionsScope:                           {operation: "ListWorkflowExecutions"},
-		PinotListAllWorkflowExecutionsScope:                        {operation: "ListAllWorkflowExecutions"},
 		PinotScanWorkflowExecutionsScope:                           {operation: "ScanWorkflowExecutions"},
 		PinotCountWorkflowExecutionsScope:                          {operation: "CountWorkflowExecutions"},
 		PinotDeleteWorkflowExecutionsScope:                         {operation: "DeleteWorkflowExecution"},
