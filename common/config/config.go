@@ -43,6 +43,8 @@ type (
 	Config struct {
 		// Ringpop is the ringpop related configuration
 		Ringpop ringpopprovider.Config `yaml:"ringpop"`
+		// Membership is used to configure peer provider plugin
+		Membership Membership `yaml:"membership"`
 		// Persistence contains the configuration for cadence datastores
 		Persistence Persistence `yaml:"persistence"`
 		// Log is the logging config
@@ -83,6 +85,14 @@ type (
 		// Either refer to one of the predefined queues in this config or alternatively specify the queue details inline in the API call.
 		AsyncWorkflowQueues map[string]AsyncWorkflowQueueProvider `yaml:"asyncWorkflowQueues"`
 	}
+
+	// Membership holds peer provider configuration.
+	Membership struct {
+		Provider PeerProvider `yaml:"provider"`
+	}
+
+	// PeerProvider is provider config. Contents depends on plugin in use
+	PeerProvider map[string]*YamlNode
 
 	HeaderRule struct {
 		Add   bool // if false, matching headers are removed if previously matched.
