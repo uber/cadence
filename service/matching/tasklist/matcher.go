@@ -221,28 +221,34 @@ func (tm *TaskMatcher) MustOffer(ctx context.Context, task *InternalTask) error 
 		return fmt.Errorf("rate limit error dispatching: %w", err)
 	}
 
+	startT := time.Now()
 	// attempt a match with local poller first. When that
 	// doesn't succeed, try both local match and remote match
 	taskC := tm.getTaskC(task)
 	select {
 	case taskC <- task: // poller picked up the task
+		tm.scope.IncCounter(metrics.AsyncMatchLocalPollCounterPerTaskList)
+		tm.scope.RecordTimer(metrics.AsyncMatchLocalPollLatencyPerTaskList, time.Since(startT))
 		return nil
 	case <-ctx.Done():
 		return fmt.Errorf("context done when trying to forward local task: %w", ctx.Err())
 	default:
 	}
 
+	attempt := 0
 forLoop:
 	for {
 		select {
 		case taskC <- task: // poller picked up the task
+			tm.scope.IncCounter(metrics.AsyncMatchLocalPollCounterPerTaskList)
+			tm.scope.RecordTimer(metrics.AsyncMatchAttemptPerTaskList, time.Duration(attempt))
+			tm.scope.RecordTimer(metrics.AsyncMatchLocalPollLatencyPerTaskList, time.Since(startT))
 			return nil
 		case token := <-tm.fwdrAddReqTokenC():
-			childCtx, cancel := context.WithDeadline(ctx, time.Now().Add(time.Second*2))
+			childCtx, cancel := context.WithTimeout(ctx, time.Second*2)
 			err := tm.fwdr.ForwardTask(childCtx, task)
 			token.release("")
 			if err != nil {
-
 				if errors.Is(err, ErrForwarderSlowDown) {
 					tm.scope.IncCounter(metrics.AsyncMatchForwardTaskThrottleErrorPerTasklist)
 				}
@@ -257,6 +263,9 @@ forLoop:
 				select {
 				case taskC <- task: // poller picked up the task
 					cancel()
+					tm.scope.IncCounter(metrics.AsyncMatchLocalPollAfterForwardFailedCounterPerTaskList)
+					tm.scope.RecordTimer(metrics.AsyncMatchAttemptPerTaskList, time.Duration(attempt))
+					tm.scope.RecordTimer(metrics.AsyncMatchLocalPollAfterForwardFailedLatencyPerTaskList, time.Since(startT))
 					return nil
 				case <-childCtx.Done():
 				case <-ctx.Done():
@@ -264,9 +273,13 @@ forLoop:
 					return fmt.Errorf("failed to dispatch after failing to forward task: %w", ctx.Err())
 				}
 				cancel()
+				attempt++
 				continue forLoop
 			}
 			cancel()
+			tm.scope.IncCounter(metrics.AsyncMatchForwardPollCounterPerTaskList)
+			tm.scope.RecordTimer(metrics.AsyncMatchAttemptPerTaskList, time.Duration(attempt))
+			tm.scope.RecordTimer(metrics.AsyncMatchForwardPollLatencyPerTaskList, time.Since(startT))
 			// at this point, we forwarded the task to a parent partition which
 			// in turn dispatched the task to a poller. Make sure we delete the
 			// task from the database

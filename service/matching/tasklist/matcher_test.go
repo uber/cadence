@@ -31,6 +31,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/yarpc"
@@ -494,6 +495,9 @@ func (t *MatcherTestSuite) TestMustOfferRemoteRateLimit() {
 	t.matcher.scope = &scope
 	completionFunc := func(*persistence.TaskInfo, error) {}
 	for i := 0; i < 5; i++ {
+		scope.On("IncCounter", metrics.AsyncMatchForwardPollCounterPerTaskList)
+		scope.On("RecordTimer", metrics.AsyncMatchAttemptPerTaskList, mock.Anything)
+		scope.On("RecordTimer", metrics.AsyncMatchForwardPollLatencyPerTaskList, mock.Anything)
 		t.client.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any()).Return(nil)
 		task := newInternalTask(t.newTaskInfo(), completionFunc, types.TaskSourceDbBacklog, "", false, nil, "")
 		ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
