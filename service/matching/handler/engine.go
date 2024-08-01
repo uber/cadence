@@ -475,6 +475,9 @@ func (e *matchingEngineImpl) PollForDecisionTask(
 		},
 		EventName: "Received PollForDecisionTask",
 		Host:      e.config.HostName,
+		Payload: map[string]any{
+			"RequestForwardedFrom": req.GetForwardedFrom(),
+		},
 	})
 pollLoop:
 	for {

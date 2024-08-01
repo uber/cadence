@@ -148,15 +148,29 @@ tmp=$(cat "$eventLogsFile" \
 echo "Async matches: $tmp" | tee -a $testSummaryFile
 
 
-echo "AddDecisionTask request per tasklist:" | tee -a $testSummaryFile
+echo "AddDecisionTask request per tasklist (excluding forwarded):" | tee -a $testSummaryFile
 cat "$eventLogsFile" \
-  | jq -c 'select(.EventName == "Received AddDecisionTask")' \
+  | jq -c 'select(.EventName == "Received AddDecisionTask" and .Payload.RequestForwardedFrom == "")' \
   | jq '.TaskListName' \
   | jq -c '.' | sort -n | uniq -c | sed -e 's/^/     /' | tee -a $testSummaryFile
 
-echo "PollForDecisionTask request per tasklist:" | tee -a $testSummaryFile
+echo "AddDecisionTask request per tasklist (forwarded):" | tee -a $testSummaryFile
 cat "$eventLogsFile" \
-  | jq -c 'select(.EventName == "Received PollForDecisionTask")' \
+  | jq -c 'select(.EventName == "Received AddDecisionTask" and .Payload.RequestForwardedFrom != "")' \
+  | jq '.TaskListName' \
+  | jq -c '.' | sort -n | uniq -c | sed -e 's/^/     /' | tee -a $testSummaryFile
+
+
+echo "PollForDecisionTask request per tasklist (excluding forwarded):" | tee -a $testSummaryFile
+cat "$eventLogsFile" \
+  | jq -c 'select(.EventName == "Received PollForDecisionTask" and .Payload.RequestForwardedFrom == "")' \
+  | jq '.TaskListName' \
+  | jq -c '.' | sort -n | uniq -c | sed -e 's/^/     /' | tee -a $testSummaryFile
+
+
+echo "PollForDecisionTask request per tasklist (forwarded):" | tee -a $testSummaryFile
+cat "$eventLogsFile" \
+  | jq -c 'select(.EventName == "Received PollForDecisionTask" and .Payload.RequestForwardedFrom != "")' \
   | jq '.TaskListName' \
   | jq -c '.' | sort -n | uniq -c | sed -e 's/^/     /' | tee -a $testSummaryFile
 
