@@ -34,6 +34,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 	"go.uber.org/yarpc"
@@ -1299,6 +1300,27 @@ func (s *matchingEngineSuite) TestConfigDefaultHostName() {
 	configEmpty := config.Config{}
 	s.NotEqualValues(s.matchingEngine.config.HostName, configEmpty.HostName)
 	s.EqualValues(configEmpty.HostName, "")
+}
+
+func (s *matchingEngineSuite) TestGetTaskListManager() {
+	resolverMock := membership.NewMockResolver(s.controller)
+	s.matchingEngine.membershipResolver = resolverMock
+
+	resolverMock.EXPECT().Lookup(gomock.Any(), gomock.Any()).Return(
+		membership.NewDetailedHostInfo("", "A", make(membership.PortMap)), nil,
+	)
+	resolverMock.EXPECT().WhoAmI().Return(
+		membership.NewDetailedHostInfo("", "B", make(membership.PortMap)), nil,
+	)
+
+	taskListKind := types.TaskListKindNormal
+
+	_, err := s.matchingEngine.getTaskListManager(
+		tasklist.NewTestTaskListID(s.T(), "domain", "tasklist", persistence.TaskListTypeActivity),
+		&taskListKind,
+	)
+
+	assert.ErrorContains(s.T(), err, "task list is not owned by this host")
 }
 
 func newActivityTaskScheduledEvent(eventID int64, decisionTaskCompletedEventID int64,

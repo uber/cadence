@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
+	cadence_errors "github.com/uber/cadence/common/errors"
 
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
@@ -213,7 +214,11 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *tasklist.Identifier, t
 	}
 
 	if tasklistOwner.Identity() != self.Identity() {
-		return nil, errors.New("task list is not owned by this host")
+		return nil, cadence_errors.NewTaskListNotOwnnedByHostError(
+			tasklistOwner.Identity(),
+			self.Identity(),
+			taskList.GetName(),
+		)
 	}
 
 	// If it gets here, write lock and check again in case a task list is created between the two locks
