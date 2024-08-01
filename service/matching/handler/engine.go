@@ -32,7 +32,6 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
-	cadence_errors "github.com/uber/cadence/common/errors"
 
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
@@ -42,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
+	cadence_errors "github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
