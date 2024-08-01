@@ -101,6 +101,12 @@ tmp=$(cat "$eventLogsFile" \
 echo "Forwarded poll returned task: $tmp" | tee -a $testSummaryFile
 
 tmp=$(cat "$eventLogsFile" \
+  | jq -c 'select(.EventName == "Task Written to DB")' \
+  | jq '{ScheduleID,TaskListName,EventName,Payload}' \
+  | jq -c '.' | wc -l)
+echo "Tasks Written to DB: $tmp" | tee -a $testSummaryFile
+
+tmp=$(cat "$eventLogsFile" \
   | jq -c 'select(.EventName == "Attempting to Forward Task")' \
   | jq '{ScheduleID,TaskListName,EventName,Payload}' \
   | jq -c '.' | wc -l)
