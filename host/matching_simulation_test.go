@@ -18,7 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// TODO: add build tags to this is excluded from other CI tests
+//go:build !race && matchingsim
+// +build !race,matchingsim
 
 /*
 To run locally:

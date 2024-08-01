@@ -31,6 +31,7 @@ services:
         -run ^TestMatchingSimulationSuite$
         -count 1
         -v
+        -tags matchingsim
         github.com/uber/cadence/host
         | tee test.log
     environment:
