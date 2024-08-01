@@ -189,6 +189,7 @@ func (t *transferActiveTaskExecutor) processActivityTask(
 		return nil
 	}
 
+	domainName := mutableState.GetDomainEntry().GetInfo().Name
 	ai, ok := mutableState.GetActivityInfo(task.ScheduleID)
 	if !ok {
 		t.logger.Debug("Potentially duplicate ", tag.TaskID(task.TaskID), tag.WorkflowScheduleID(task.ScheduleID), tag.TaskType(persistence.TransferTaskTypeActivityTask))
@@ -209,7 +210,12 @@ func (t *transferActiveTaskExecutor) processActivityTask(
 		return errWorkflowRateLimited
 	}
 
-	return t.pushActivity(ctx, task, timeout, mutableState.GetExecutionInfo().PartitionConfig)
+	err = t.pushActivity(ctx, task, timeout, mutableState.GetExecutionInfo().PartitionConfig)
+	if err == nil {
+		scope := common.NewPerTaskListScope(domainName, task.TaskList, types.TaskListKindNormal, t.metricsClient, metrics.TransferActiveTaskActivityScope)
+		scope.RecordTimer(metrics.ScheduleToStartHistoryQueueLatencyPerTaskList, time.Since(task.GetVisibilityTimestamp()))
+	}
+	return err
 }
 
 func (t *transferActiveTaskExecutor) processDecisionTask(
@@ -248,6 +254,7 @@ func (t *transferActiveTaskExecutor) processDecisionTask(
 		return err
 	}
 
+	domainName := mutableState.GetDomainEntry().GetInfo().Name
 	executionInfo := mutableState.GetExecutionInfo()
 	workflowTimeout := executionInfo.WorkflowTimeout
 	decisionTimeout := common.MinInt32(workflowTimeout, common.MaxTaskTimeout)
@@ -297,6 +304,14 @@ func (t *transferActiveTaskExecutor) processDecisionTask(
 		// the sticky queue to a new one. However, if worker is completely down, that schedule_to_start timeout task
 		// will re-create a new non-sticky task and reset sticky.
 		err = t.pushDecision(ctx, task, taskList, decisionTimeout, mutableState.GetExecutionInfo().PartitionConfig)
+	}
+	if err == nil {
+		tlKind := types.TaskListKindNormal
+		if taskList.Kind != nil {
+			tlKind = *taskList.Kind
+		}
+		scope := common.NewPerTaskListScope(domainName, taskList.Name, tlKind, t.metricsClient, metrics.TransferActiveTaskDecisionScope)
+		scope.RecordTimer(metrics.ScheduleToStartHistoryQueueLatencyPerTaskList, time.Since(task.GetVisibilityTimestamp()))
 	}
 	return err
 }

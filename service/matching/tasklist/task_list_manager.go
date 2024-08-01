@@ -63,7 +63,6 @@ var (
 	persistenceOperationRetryPolicy = common.CreatePersistenceRetryPolicy()
 	taskListActivityTypeTag         = metrics.TaskListTypeTag("activity")
 	taskListDecisionTypeTag         = metrics.TaskListTypeTag("decision")
-	stickyTaskListMetricTag         = metrics.TaskListTag("__sticky__")
 )
 
 type (
@@ -154,7 +153,7 @@ func NewManager(
 		taskListKind = &normalTaskListKind
 	}
 
-	scope := NewPerTaskListScope(domainName, taskList.GetName(), *taskListKind, metricsClient, metrics.MatchingTaskListMgrScope).
+	scope := common.NewPerTaskListScope(domainName, taskList.GetName(), *taskListKind, metricsClient, metrics.MatchingTaskListMgrScope).
 		Tagged(getTaskListTypeTag(taskList.GetType()))
 	db := newTaskListDB(taskManager, taskList.GetDomainID(), domainName, taskList.GetName(), taskList.GetType(), int(*taskListKind), logger)
 
@@ -728,27 +727,6 @@ func newTaskListConfig(id *Identifier, cfg *config.Config, domainName string) *c
 		TaskDispatchRPSTTL:        cfg.TaskDispatchRPSTTL,
 		MaxTimeBetweenTaskDeletes: cfg.MaxTimeBetweenTaskDeletes,
 	}
-}
-
-func NewPerTaskListScope(
-	domainName string,
-	taskListName string,
-	taskListKind types.TaskListKind,
-	client metrics.Client,
-	scopeIdx int,
-) metrics.Scope {
-	domainTag := metrics.DomainUnknownTag()
-	taskListTag := metrics.TaskListUnknownTag()
-	if domainName != "" {
-		domainTag = metrics.DomainTag(domainName)
-	}
-	if taskListName != "" && taskListKind != types.TaskListKindSticky {
-		taskListTag = metrics.TaskListTag(taskListName)
-	}
-	if taskListKind == types.TaskListKindSticky {
-		taskListTag = stickyTaskListMetricTag
-	}
-	return client.Scope(scopeIdx, domainTag, taskListTag)
 }
 
 func IdentityFromContext(ctx context.Context) string {

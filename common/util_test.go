@@ -1633,3 +1633,8 @@ func TestSecondsToDuration(t *testing.T) {
 		})
 	}
 }
+
+func TestNewPerTaskListScope(t *testing.T) {
+	assert.NotNil(t, NewPerTaskListScope("test-domain", "test-tasklist", types.TaskListKindNormal, metrics.NewNoopMetricsClient(), 0))
+	assert.NotNil(t, NewPerTaskListScope("test-domain", "test-tasklist", types.TaskListKindSticky, metrics.NewNoopMetricsClient(), 0))
+}

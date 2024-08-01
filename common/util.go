@@ -108,6 +108,7 @@ var (
 	ErrContextTimeoutNotSet = &types.BadRequestError{Message: "Context timeout is not set."}
 	// ErrDecisionResultCountTooLarge error for decision result count exceeds limit
 	ErrDecisionResultCountTooLarge = &types.BadRequestError{Message: "Decision result count exceeds limit."}
+	stickyTaskListMetricTag        = metrics.TaskListTag("__sticky__")
 )
 
 // AwaitWaitGroup calls Wait on the given wait
@@ -1037,4 +1038,26 @@ func IntersectionStringSlice(a, b []string) []string {
 		}
 	}
 	return result
+}
+
+// NewPerTaskListScope creates a tasklist metrics scope
+func NewPerTaskListScope(
+	domainName string,
+	taskListName string,
+	taskListKind types.TaskListKind,
+	client metrics.Client,
+	scopeIdx int,
+) metrics.Scope {
+	domainTag := metrics.DomainUnknownTag()
+	taskListTag := metrics.TaskListUnknownTag()
+	if domainName != "" {
+		domainTag = metrics.DomainTag(domainName)
+	}
+	if taskListName != "" && taskListKind != types.TaskListKindSticky {
+		taskListTag = metrics.TaskListTag(taskListName)
+	}
+	if taskListKind == types.TaskListKindSticky {
+		taskListTag = stickyTaskListMetricTag
+	}
+	return client.Scope(scopeIdx, domainTag, taskListTag)
 }
