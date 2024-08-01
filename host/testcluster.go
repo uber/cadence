@@ -89,6 +89,7 @@ type (
 		MessagingClientConfig *MessagingClientConfig
 		Persistence           persistencetests.TestBaseOptions
 		HistoryConfig         *HistoryConfig
+		MatchingConfig        *MatchingConfig
 		ESConfig              *config.ElasticSearchConfig
 		WorkerConfig          *WorkerConfig
 		MockAdminClient       map[string]adminClient.Client
@@ -168,6 +169,7 @@ func NewCluster(t *testing.T, options *TestClusterConfig, logger log.Logger, par
 		ArchiverMetadata:              archiverBase.metadata,
 		ArchiverProvider:              archiverBase.provider,
 		HistoryConfig:                 options.HistoryConfig,
+		MatchingConfig:                options.MatchingConfig,
 		WorkerConfig:                  options.WorkerConfig,
 		MockAdminClient:               options.MockAdminClient,
 		DomainReplicationTaskExecutor: domain.NewReplicationTaskExecutor(testBase.DomainManager, clock.NewRealTimeSource(), logger),
@@ -238,6 +240,7 @@ func NewPinotTestCluster(t *testing.T, options *TestClusterConfig, logger log.Lo
 		ArchiverMetadata:              archiverBase.metadata,
 		ArchiverProvider:              archiverBase.provider,
 		HistoryConfig:                 options.HistoryConfig,
+		MatchingConfig:                options.MatchingConfig,
 		WorkerConfig:                  options.WorkerConfig,
 		MockAdminClient:               options.MockAdminClient,
 		DomainReplicationTaskExecutor: domain.NewReplicationTaskExecutor(testBase.DomainManager, clock.NewRealTimeSource(), logger),
@@ -347,7 +350,7 @@ func newArchiverBase(enabled bool, logger log.Logger) *ArchiverBase {
 	if !enabled {
 		return &ArchiverBase{
 			metadata: archiver.NewArchivalMetadata(dcCollection, "", false, "", false, &config.ArchivalDomainDefaults{}),
-			provider: provider.NewArchiverProvider(nil, nil),
+			provider: provider.NewNoOpArchiverProvider(),
 		}
 	}
 
@@ -421,6 +424,11 @@ func (tc *TestCluster) GetAdminClient() AdminClient {
 // GetHistoryClient returns a history client from the test cluster
 func (tc *TestCluster) GetHistoryClient() HistoryClient {
 	return tc.host.GetHistoryClient()
+}
+
+// GetMatchingClient returns a matching client from the test cluster
+func (tc *TestCluster) GetMatchingClient() MatchingClient {
+	return tc.host.GetMatchingClient()
 }
 
 // GetExecutionManagerFactory returns an execution manager factory from the test cluster

@@ -239,7 +239,14 @@ func New(
 		serviceConfig.IsErrorRetryableFunction,
 	)
 
-	historyRawClient := clientBean.GetHistoryClient()
+	var historyRawClient history.Client
+	if params.HistoryClientFn != nil {
+		logger.Debug("Using history client from HistoryClientFn")
+		historyRawClient = params.HistoryClientFn()
+	} else {
+		logger.Debug("Using history client from bean")
+		historyRawClient = clientBean.GetHistoryClient()
+	}
 	historyClient := retryable.NewHistoryClient(
 		historyRawClient,
 		common.CreateHistoryServiceRetryPolicy(),

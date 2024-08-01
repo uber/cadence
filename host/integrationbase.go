@@ -23,7 +23,6 @@ package host
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -148,7 +147,6 @@ func (s *IntegrationBase) setupLogger() {
 
 // GetTestClusterConfig return test cluster config
 func GetTestClusterConfig(configFile string) (*TestClusterConfig, error) {
-
 	if err := environment.SetupEnv(); err != nil {
 		return nil, err
 	}
@@ -159,7 +157,7 @@ func GetTestClusterConfig(configFile string) (*TestClusterConfig, error) {
 	}
 	// This is just reading a config so it's less of a security concern
 	// #nosec
-	confContent, err := ioutil.ReadFile(configLocation)
+	confContent, err := os.ReadFile(configLocation)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read test cluster config file %v: %v", configLocation, err)
 	}
@@ -190,7 +188,7 @@ func GetTestClusterConfigs(configFile string) ([]*TestClusterConfig, error) {
 		fileName = TestFlags.TestClusterConfigFile
 	}
 
-	confContent, err := ioutil.ReadFile(fileName)
+	confContent, err := os.ReadFile(fileName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read test cluster config file %v: %v", fileName, err)
 	}

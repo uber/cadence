@@ -24,6 +24,7 @@ import (
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 
+	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
@@ -80,5 +81,7 @@ type (
 		PinotClient                pinot.GenericClient
 		AsyncWorkflowQueueProvider queue.Provider
 		TimeSource                 clock.TimeSource
+		// HistoryClientFn is used by integration tests to mock a history client
+		HistoryClientFn func() history.Client
 	}
 )
