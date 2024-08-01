@@ -45,6 +45,7 @@ import (
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/dynamicconfig"
+	cadence_errors "github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/isolationgroup/defaultisolationgroupstate"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -1302,25 +1303,56 @@ func (s *matchingEngineSuite) TestConfigDefaultHostName() {
 	s.EqualValues(configEmpty.HostName, "")
 }
 
-func (s *matchingEngineSuite) TestGetTaskListManager() {
-	resolverMock := membership.NewMockResolver(s.controller)
-	s.matchingEngine.membershipResolver = resolverMock
+func (s *matchingEngineSuite) TestGetTaskListManager_OwnerShip() {
+	testCases := []struct {
+		name         string
+		lookUpResult string
+		lookUpErr    error
+		whoAmIResult string
+		whoAmIErr    error
 
-	resolverMock.EXPECT().Lookup(gomock.Any(), gomock.Any()).Return(
-		membership.NewDetailedHostInfo("", "A", make(membership.PortMap)), nil,
-	)
-	resolverMock.EXPECT().WhoAmI().Return(
-		membership.NewDetailedHostInfo("", "B", make(membership.PortMap)), nil,
-	)
+		expectedError error
+	}{
+		{
+			name:          "Not owned by current host",
+			lookUpResult:  "A",
+			whoAmIResult:  "B",
+			expectedError: new(cadence_errors.TaskListNotOwnnedByHostError),
+		},
+		{
+			name:          "LookupError",
+			lookUpErr:     assert.AnError,
+			expectedError: assert.AnError,
+		},
+		{
+			name:          "WhoAmIError",
+			whoAmIErr:     assert.AnError,
+			expectedError: assert.AnError,
+		},
+	}
 
-	taskListKind := types.TaskListKindNormal
+	for _, tc := range testCases {
+		s.T().Run(tc.name, func(t *testing.T) {
+			resolverMock := membership.NewMockResolver(s.controller)
+			s.matchingEngine.membershipResolver = resolverMock
 
-	_, err := s.matchingEngine.getTaskListManager(
-		tasklist.NewTestTaskListID(s.T(), "domain", "tasklist", persistence.TaskListTypeActivity),
-		&taskListKind,
-	)
+			resolverMock.EXPECT().Lookup(gomock.Any(), gomock.Any()).Return(
+				membership.NewDetailedHostInfo("", tc.lookUpResult, make(membership.PortMap)), tc.lookUpErr,
+			).AnyTimes()
+			resolverMock.EXPECT().WhoAmI().Return(
+				membership.NewDetailedHostInfo("", tc.whoAmIResult, make(membership.PortMap)), tc.whoAmIErr,
+			).AnyTimes()
 
-	assert.ErrorContains(s.T(), err, "task list is not owned by this host")
+			taskListKind := types.TaskListKindNormal
+
+			_, err := s.matchingEngine.getTaskListManager(
+				tasklist.NewTestTaskListID(s.T(), "domain", "tasklist", persistence.TaskListTypeActivity),
+				&taskListKind,
+			)
+
+			assert.ErrorAs(s.T(), err, &tc.expectedError)
+		})
+	}
 }
 
 func newActivityTaskScheduledEvent(eventID int64, decisionTaskCompletedEventID int64,
