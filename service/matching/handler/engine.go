@@ -201,9 +201,9 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *tasklist.Identifier, t
 
 	// Defensive check to make sure we actually own the task list
 	//   If we try to create a task list manager for a task list that is not owned by us, return an error
-	//   The new task list manager will steel the task list from the current owner, which should only happen if
+	//   The new task list manager will steal the task list from the current owner, which should only happen if
 	//   the task list is owned by the current host.
-	tasklistOwner, err := e.membershipResolver.Lookup(service.Matching, taskList.GetName())
+	taskListOwner, err := e.membershipResolver.Lookup(service.Matching, taskList.GetName())
 	if err != nil {
 		return nil, fmt.Errorf("failed to lookup task list owner: %w", err)
 	}
@@ -213,9 +213,9 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *tasklist.Identifier, t
 		return nil, fmt.Errorf("failed to lookup self im membership: %w", err)
 	}
 
-	if tasklistOwner.Identity() != self.Identity() {
+	if taskListOwner.Identity() != self.Identity() {
 		return nil, cadence_errors.NewTaskListNotOwnnedByHostError(
-			tasklistOwner.Identity(),
+			taskListOwner.Identity(),
 			self.Identity(),
 			taskList.GetName(),
 		)
