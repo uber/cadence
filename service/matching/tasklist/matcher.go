@@ -281,7 +281,7 @@ forLoop:
 			e.EventName = "Dispatched to Local Poller"
 			event.Log(e)
 			tm.scope.IncCounter(metrics.AsyncMatchLocalPollCounterPerTaskList)
-			tm.scope.RecordTimer(metrics.AsyncMatchAttemptPerTaskList, time.Duration(attempt))
+			tm.scope.RecordTimer(metrics.AsyncMatchLocalPollAttemptPerTaskList, time.Duration(attempt))
 			tm.scope.RecordTimer(metrics.AsyncMatchLocalPollLatencyPerTaskList, time.Since(startT))
 			return nil
 		case token := <-tm.fwdrAddReqTokenC():
@@ -312,7 +312,7 @@ forLoop:
 					event.Log(e)
 					cancel()
 					tm.scope.IncCounter(metrics.AsyncMatchLocalPollAfterForwardFailedCounterPerTaskList)
-					tm.scope.RecordTimer(metrics.AsyncMatchAttemptPerTaskList, time.Duration(attempt))
+					tm.scope.RecordTimer(metrics.AsyncMatchLocalPollAfterForwardFailedAttemptPerTaskList, time.Duration(attempt))
 					tm.scope.RecordTimer(metrics.AsyncMatchLocalPollAfterForwardFailedLatencyPerTaskList, time.Since(startT))
 					return nil
 				case <-childCtx.Done():
@@ -329,7 +329,7 @@ forLoop:
 			e.EventName = "Task Forwarded"
 			event.Log(e)
 			tm.scope.IncCounter(metrics.AsyncMatchForwardPollCounterPerTaskList)
-			tm.scope.RecordTimer(metrics.AsyncMatchAttemptPerTaskList, time.Duration(attempt))
+			tm.scope.RecordTimer(metrics.AsyncMatchForwardPollAttemptPerTaskList, time.Duration(attempt))
 			tm.scope.RecordTimer(metrics.AsyncMatchForwardPollLatencyPerTaskList, time.Since(startT))
 
 			// at this point, we forwarded the task to a parent partition which
