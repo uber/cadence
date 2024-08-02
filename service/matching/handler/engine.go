@@ -41,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
+	cadence_errors "github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
@@ -198,6 +199,28 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *tasklist.Identifier, t
 		return result, nil
 	}
 	e.taskListsLock.RUnlock()
+
+	// Defensive check to make sure we actually own the task list
+	//   If we try to create a task list manager for a task list that is not owned by us, return an error
+	//   The new task list manager will steal the task list from the current owner, which should only happen if
+	//   the task list is owned by the current host.
+	taskListOwner, err := e.membershipResolver.Lookup(service.Matching, taskList.GetName())
+	if err != nil {
+		return nil, fmt.Errorf("failed to lookup task list owner: %w", err)
+	}
+
+	self, err := e.membershipResolver.WhoAmI()
+	if err != nil {
+		return nil, fmt.Errorf("failed to lookup self im membership: %w", err)
+	}
+
+	if taskListOwner.Identity() != self.Identity() {
+		return nil, cadence_errors.NewTaskListNotOwnnedByHostError(
+			taskListOwner.Identity(),
+			self.Identity(),
+			taskList.GetName(),
+		)
+	}
 
 	// If it gets here, write lock and check again in case a task list is created between the two locks
 	e.taskListsLock.Lock()
