@@ -540,7 +540,7 @@ func (c *taskListManagerImpl) trySyncMatch(ctx context.Context, params AddTaskPa
 	var matched bool
 	var err error
 	if params.ActivityTaskDispatchInfo != nil {
-		matched, err = c.matcher.offerOrTimeout(childCtx, task)
+		matched, err = c.matcher.offerOrTimeout(childCtx, c.timeSource.Now(), task)
 	} else {
 		matched, err = c.matcher.Offer(childCtx, task)
 	}

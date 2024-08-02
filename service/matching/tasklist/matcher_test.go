@@ -242,6 +242,7 @@ func (t *MatcherTestSuite) TestSyncMatchFailure() {
 func (t *MatcherTestSuite) TestRateLimitHandling() {
 	scope := mocks.Scope{}
 	scope.On("IncCounter", metrics.SyncMatchForwardTaskThrottleErrorPerTasklist)
+	scope.On("RecordTimer", mock.Anything, mock.Anything)
 	t.matcher.scope = &scope
 	for i := 0; i < 5; i++ {
 		t.client.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
