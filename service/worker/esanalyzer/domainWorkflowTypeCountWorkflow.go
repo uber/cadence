@@ -182,7 +182,6 @@ AND StartTime > 0
 GROUP BY WorkflowType
 ORDER BY count
 LIMIT 10
-OFFSET 0
     `, w.analyzer.pinotTableName, domain.GetInfo().ID), nil
 }
 

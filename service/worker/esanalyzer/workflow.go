@@ -164,7 +164,6 @@ WHERE DomainID = '%s'
 GROUP BY WorkflowType
 ORDER BY count DESC
 LIMIT 10
-OFFSET 0
     `, w.analyzer.pinotTableName, domain.GetInfo().ID), nil
 }
 
@@ -185,7 +184,6 @@ WHERE DomainID = '%s'
 GROUP BY JSON_EXTRACT_SCALAR(Attr, '$.CadenceChangeVersion', 'STRING_ARRAY') AS CadenceChangeVersion
 ORDER BY count DESC
 LIMIT 10
-OFFSET 0
     `, w.analyzer.pinotTableName, domain.GetInfo().ID, wfType), nil
 }
 
