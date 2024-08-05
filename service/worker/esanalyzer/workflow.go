@@ -252,6 +252,7 @@ func (w *Workflow) emitWorkflowVersionMetricsPinot(domainName string, logger *za
 				zap.Error(err),
 				zap.String("WorkflowType", workflowType),
 				zap.String("DomainName", domainName),
+				zap.String("raw data", fmt.Sprintf("%#v", response)),
 			)
 			return fmt.Errorf("error parsing workflow count for workflow type %s", workflowType)
 		}
@@ -320,6 +321,7 @@ func (w *Workflow) queryWorkflowVersionsWithType(domainName string, wfType strin
 				zap.Error(err),
 				zap.String("WorkflowVersion", workflowVersion),
 				zap.String("DomainName", domainName),
+				zap.String("raw data", fmt.Sprintf("%#v", response)),
 			)
 			return WorkflowVersionCount{}, fmt.Errorf("error parsing workflow count for workflow version %s", workflowVersion)
 		}
