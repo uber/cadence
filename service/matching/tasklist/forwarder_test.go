@@ -35,6 +35,7 @@ import (
 
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/matching/config"
@@ -67,7 +68,7 @@ func (t *ForwarderTestSuite) SetupTest() {
 	t.NoError(err)
 	t.taskList = id
 	t.isolationGroups = []string{"abc", "xyz"}
-	t.fwdr = newForwarder(t.cfg, t.taskList, types.TaskListKindNormal, t.client, t.isolationGroups)
+	t.fwdr = newForwarder(t.cfg, t.taskList, types.TaskListKindNormal, t.client, t.isolationGroups, metrics.NoopScope(metrics.Matching))
 }
 
 func (t *ForwarderTestSuite) TearDownTest() {

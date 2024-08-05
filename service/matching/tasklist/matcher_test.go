@@ -83,7 +83,7 @@ func (t *MatcherTestSuite) SetupTest() {
 	}
 	t.cfg = tlCfg
 	t.isolationGroups = []string{"dca1", "dca2"}
-	t.fwdr = newForwarder(&t.cfg.ForwarderConfig, t.taskList, types.TaskListKindNormal, t.client, []string{"dca1", "dca2"})
+	t.fwdr = newForwarder(&t.cfg.ForwarderConfig, t.taskList, types.TaskListKindNormal, t.client, []string{"dca1", "dca2"}, metrics.NoopScope(metrics.Matching))
 	t.matcher = newTaskMatcher(tlCfg, t.fwdr, metrics.NoopScope(metrics.Matching), []string{"dca1", "dca2"}, loggerimpl.NewNopLogger(), t.taskList, types.TaskListKindNormal)
 
 	rootTaskList := NewTestTaskListID(t.T(), t.taskList.GetDomainID(), t.taskList.Parent(20), persistence.TaskListTypeDecision)
@@ -493,12 +493,11 @@ func (t *MatcherTestSuite) TestMustOfferRemoteMatch() {
 func (t *MatcherTestSuite) TestMustOfferRemoteRateLimit() {
 	scope := mocks.Scope{}
 	scope.On("IncCounter", metrics.AsyncMatchForwardTaskThrottleErrorPerTasklist)
+	scope.On("RecordTimer", mock.Anything, mock.Anything)
 	t.matcher.scope = &scope
 	completionFunc := func(*persistence.TaskInfo, error) {}
 	for i := 0; i < 5; i++ {
 		scope.On("IncCounter", metrics.AsyncMatchForwardPollCounterPerTaskList)
-		scope.On("RecordTimer", metrics.AsyncMatchAttemptPerTaskList, mock.Anything)
-		scope.On("RecordTimer", metrics.AsyncMatchForwardPollLatencyPerTaskList, mock.Anything)
 		t.client.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any()).Return(nil)
 		task := newInternalTask(t.newTaskInfo(), completionFunc, types.TaskSourceDbBacklog, "", false, nil, "")
 		ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
