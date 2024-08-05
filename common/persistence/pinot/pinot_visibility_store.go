@@ -363,28 +363,6 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutionsByType(ctx context.Co
 	return v.pinotClient.Search(req)
 }
 
-func (v *pinotVisibilityStore) ListAllWorkflowExecutions(ctx context.Context, request *p.InternalListAllWorkflowExecutionsByTypeRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
-	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
-		return !request.EarliestTime.After(rec.StartTime) && !rec.StartTime.After(request.LatestTime)
-	}
-
-	query, err := v.getListAllWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request)
-	if err != nil {
-		v.logger.Error(fmt.Sprintf("failed to build list all workflow executions query %v", err))
-		return nil, err
-	}
-
-	req := &pnt.SearchRequest{
-		Query:           query,
-		IsOpen:          true,
-		Filter:          isRecordValid,
-		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
-		ListRequest:     &request.InternalListWorkflowExecutionsRequest,
-	}
-
-	return v.pinotClient.Search(req)
-}
-
 func (v *pinotVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(ctx context.Context, request *p.InternalListWorkflowExecutionsByWorkflowIDRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
 		return !request.EarliestTime.After(rec.StartTime) && !rec.StartTime.After(request.LatestTime)
@@ -685,7 +663,6 @@ func isTimeStruct(value []byte) ([]byte, error) {
 type PinotQuery struct {
 	query   string
 	filters PinotQueryFilter
-	search  PinotQuerySearchField
 	sorters string
 	limits  string
 }
@@ -694,50 +671,10 @@ type PinotQueryFilter struct {
 	string
 }
 
-type PinotQuerySearchField struct {
-	string
-}
-
-func (s *PinotQuerySearchField) checkFirstSearchField() {
-	if s.string == "" {
-		s.string = "( "
-	} else {
-		s.string += "OR "
-	}
-}
-
-func (s *PinotQuerySearchField) lastSearchField() {
-	if s.string != "" {
-		s.string += " )"
-	}
-}
-
-func (s *PinotQuerySearchField) resetSearchField() {
-	s.string = ""
-}
-
-func (s *PinotQuerySearchField) addEqual(obj string, val interface{}) {
-	s.checkFirstSearchField()
-	switch val.(type) {
-	case string:
-		s.string += fmt.Sprintf("%s = '%s'\n", obj, val)
-	case int32:
-		s.string += fmt.Sprintf("%s = %d\n", obj, val)
-	default:
-		s.string += fmt.Sprintf("%s = %v\n", obj, val)
-	}
-}
-
-func (s *PinotQuerySearchField) addMatch(obj string, val interface{}) {
-	s.checkFirstSearchField()
-	s.string += fmt.Sprintf("REGEXP_LIKE(%s, '^.*%s.*$')\n", obj, val)
-}
-
 func NewPinotQuery(tableName string) PinotQuery {
 	return PinotQuery{
 		query:   fmt.Sprintf("SELECT *\nFROM %s\n", tableName),
 		filters: PinotQueryFilter{},
-		search:  PinotQuerySearchField{},
 		sorters: "",
 		limits:  "",
 	}
@@ -771,16 +708,6 @@ func (q *PinotQuery) addPinotSorter(orderBy string, order string) {
 
 func (q *PinotQuery) addOffsetAndLimits(offset int, limit int) {
 	q.limits += fmt.Sprintf("LIMIT %d, %d\n", offset, limit)
-}
-
-func (q *PinotQuery) addStatusFilters(status []types.WorkflowExecutionCloseStatus) {
-	for _, s := range status {
-		q.search.addEqual(CloseStatus, int32(s))
-	}
-
-	q.search.lastSearchField()
-	q.filters.addQuery(q.search.string)
-	q.search.resetSearchField()
 }
 
 func (f *PinotQueryFilter) checkFirstFilter() {
@@ -1051,67 +978,6 @@ func getListWorkflowExecutionsQuery(tableName string, request *p.InternalListWor
 	query.addOffsetAndLimits(from, pageSize)
 
 	return query.String(), nil
-}
-
-func (v *pinotVisibilityStore) getListAllWorkflowExecutionsQuery(tableName string, request *p.InternalListAllWorkflowExecutionsByTypeRequest) (string, error) {
-	if request == nil {
-		return "", nil
-	}
-
-	query := NewPinotQuery(tableName)
-
-	query.filters.addEqual(DomainID, request.DomainUUID)
-	query.filters.addEqual(IsDeleted, false)
-
-	if !request.EarliestTime.IsZero() && !request.LatestTime.IsZero() {
-		earliest := request.EarliestTime.UnixMilli() - oneMicroSecondInNano
-		latest := request.LatestTime.UnixMilli() + oneMicroSecondInNano
-		query.filters.addTimeRange(StartTime, earliest, latest) // convert Unix Time to miliseconds
-	}
-
-	if v.validSortInput(request.SortColumn, request.SortOrder) {
-		query.addPinotSorter(request.SortColumn, request.SortOrder)
-	} else {
-		// fallback to sorting by StartTime in descending order
-		query.addPinotSorter(StartTime, DescendingOrder)
-	}
-
-	token, err := pnt.GetNextPageToken(request.NextPageToken)
-	if err != nil {
-		return "", fmt.Errorf("next page token: %w", err)
-	}
-
-	from := token.From
-	pageSize := request.PageSize
-	query.addOffsetAndLimits(from, pageSize)
-
-	if request.StatusFilter != nil {
-		query.addStatusFilters(request.StatusFilter)
-	}
-
-	if request.WorkflowSearchValue != "" {
-		if request.PartialMatch {
-			query.search.addMatch(WorkflowID, request.WorkflowSearchValue)
-			query.search.addMatch(WorkflowType, request.WorkflowSearchValue)
-			query.search.addMatch(RunID, request.WorkflowSearchValue)
-		} else {
-			query.search.addEqual(WorkflowID, request.WorkflowSearchValue)
-			query.search.addEqual(WorkflowType, request.WorkflowSearchValue)
-			query.search.addEqual(RunID, request.WorkflowSearchValue)
-		}
-
-		query.search.lastSearchField()
-		query.filters.addQuery(query.search.string)
-	}
-
-	return query.String(), nil
-}
-
-func (v *pinotVisibilityStore) validSortInput(sortColumn, sortOrder string) bool {
-	validSortColumn := v.pinotQueryValidator.IsValidSearchAttributes(sortColumn)
-	validSortOrder := sortOrder == DescendingOrder || sortOrder == AscendingOrder
-
-	return validSortColumn && validSortOrder
 }
 
 func getListWorkflowExecutionsByTypeQuery(tableName string, request *p.InternalListWorkflowExecutionsByTypeRequest, isClosed bool) (string, error) {

@@ -123,6 +123,14 @@ func (task *InternalTask) IsSyncMatch() bool {
 	return task.ResponseC != nil
 }
 
+func (task *InternalTask) Info() persistence.TaskInfo {
+	if task == nil || task.Event == nil || task.Event.TaskInfo == nil {
+		return persistence.TaskInfo{}
+	}
+
+	return *task.Event.TaskInfo
+}
+
 func (task *InternalTask) WorkflowExecution() *types.WorkflowExecution {
 	switch {
 	case task.Event != nil:

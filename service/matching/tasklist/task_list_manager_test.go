@@ -89,6 +89,15 @@ func TestDeliverBufferTasks(t *testing.T) {
 	}
 }
 
+func TestTaskListString(t *testing.T) {
+	controller := gomock.NewController(t)
+	logger := testlogger.New(t)
+	tlm := createTestTaskListManager(t, logger, controller)
+	got := tlm.String()
+	want := "Activity task list tl\nRangeID=0\nTaskIDBlock={start:-99999 end:0}\nAckLevel=-1\nMaxReadLevel=-1\n"
+	assert.Equal(t, want, got)
+}
+
 func TestDeliverBufferTasks_NoPollers(t *testing.T) {
 	controller := gomock.NewController(t)
 	logger := testlogger.New(t)

@@ -7,6 +7,8 @@ historyconfig:
   numhistoryhosts: 1
   historycountlimiterror: 20
   historycountlimitwarn: 10
+matchingconfig:
+  nummatchinghosts: 1
 workerconfig:
   enablearchiver: false
   enablereplicator: false

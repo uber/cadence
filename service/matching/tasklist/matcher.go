@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/matching/config"
+	"github.com/uber/cadence/service/matching/event"
 )
 
 // TaskMatcher matches a task producer with a task consumer
@@ -58,6 +59,9 @@ type TaskMatcher struct {
 	fwdr          *Forwarder
 	scope         metrics.Scope // domain metric scope
 	numPartitions func() int    // number of task list partitions
+
+	tasklist     *Identifier
+	tasklistKind types.TaskListKind
 }
 
 // ErrTasklistThrottled implies a tasklist was throttled
@@ -66,7 +70,14 @@ var ErrTasklistThrottled = errors.New("tasklist limit exceeded")
 // newTaskMatcher returns an task matcher instance. The returned instance can be
 // used by task producers and consumers to find a match. Both sync matches and non-sync
 // matches should use this implementation
-func newTaskMatcher(config *config.TaskListConfig, fwdr *Forwarder, scope metrics.Scope, isolationGroups []string, log log.Logger) *TaskMatcher {
+func newTaskMatcher(
+	config *config.TaskListConfig,
+	fwdr *Forwarder,
+	scope metrics.Scope,
+	isolationGroups []string,
+	log log.Logger,
+	tasklist *Identifier,
+	tasklistKind types.TaskListKind) *TaskMatcher {
 	dPtr := config.TaskDispatchRPS
 	limiter := quotas.NewRateLimiter(&dPtr, config.TaskDispatchRPSTTL, config.MinTaskThrottlingBurstSize())
 	isolatedTaskC := make(map[string]chan *InternalTask)
@@ -82,6 +93,8 @@ func newTaskMatcher(config *config.TaskListConfig, fwdr *Forwarder, scope metric
 		isolatedTaskC: isolatedTaskC,
 		queryTaskC:    make(chan *InternalTask),
 		numPartitions: config.NumReadPartitions,
+		tasklist:      tasklist,
+		tasklistKind:  tasklistKind,
 	}
 }
 
@@ -115,6 +128,7 @@ func newTaskMatcher(config *config.TaskListConfig, fwdr *Forwarder, scope metric
 //   - context deadline is exceeded
 //   - task is matched and consumer returns error in response channel
 func (tm *TaskMatcher) Offer(ctx context.Context, task *InternalTask) (bool, error) {
+	startT := time.Now()
 	if !task.IsForwarded() {
 		err := tm.ratelimit(ctx)
 		if err != nil {
@@ -123,12 +137,16 @@ func (tm *TaskMatcher) Offer(ctx context.Context, task *InternalTask) (bool, err
 		}
 	}
 
+	// TODO: Pollers are aggressively forwarded to parent partitions so it's unlikely
+	// to have a poller available to pick up the task below for sub-partitions.
+	// Try adding some wait here.
 	select {
 	case tm.getTaskC(task) <- task: // poller picked up the task
 		if task.ResponseC != nil {
 			// if there is a response channel, block until resp is received
 			// and return error if the response contains error
 			err := <-task.ResponseC
+			tm.scope.RecordTimer(metrics.SyncMatchLocalPollLatencyPerTaskList, time.Since(startT))
 			return true, err
 		}
 		return false, nil
@@ -137,10 +155,17 @@ func (tm *TaskMatcher) Offer(ctx context.Context, task *InternalTask) (bool, err
 		// root partition if possible
 		select {
 		case token := <-tm.fwdrAddReqTokenC():
+			event.Log(event.E{
+				TaskListName: tm.tasklist.GetName(),
+				TaskListType: tm.tasklist.GetType(),
+				TaskListKind: tm.tasklistKind.Ptr(),
+				EventName:    "Attempting to Forward Task",
+			})
 			err := tm.fwdr.ForwardTask(ctx, task)
 			token.release("")
 			if err == nil {
 				// task was remotely sync matched on the parent partition
+				tm.scope.RecordTimer(metrics.SyncMatchForwardPollLatencyPerTaskList, time.Since(startT))
 				return true, nil
 			}
 			if errors.Is(err, ErrForwarderSlowDown) {
@@ -152,7 +177,7 @@ func (tm *TaskMatcher) Offer(ctx context.Context, task *InternalTask) (bool, err
 				task.IsForwarded() { // task came from a child partition
 				// a forwarded backlog task from a child partition, block trying
 				// to match with a poller until ctx timeout
-				return tm.offerOrTimeout(ctx, task)
+				return tm.offerOrTimeout(ctx, startT, task)
 			}
 		}
 
@@ -160,12 +185,13 @@ func (tm *TaskMatcher) Offer(ctx context.Context, task *InternalTask) (bool, err
 	}
 }
 
-func (tm *TaskMatcher) offerOrTimeout(ctx context.Context, task *InternalTask) (bool, error) {
+func (tm *TaskMatcher) offerOrTimeout(ctx context.Context, startT time.Time, task *InternalTask) (bool, error) {
 	select {
 	case tm.getTaskC(task) <- task: // poller picked up the task
 		if task.ResponseC != nil {
 			select {
 			case err := <-task.ResponseC:
+				tm.scope.RecordTimer(metrics.SyncMatchLocalPollLatencyPerTaskList, time.Since(startT))
 				return true, err
 			case <-ctx.Done():
 				return false, nil
@@ -217,35 +243,61 @@ func (tm *TaskMatcher) OfferQuery(ctx context.Context, task *InternalTask) (*typ
 // MustOffer blocks until a consumer is found to handle this task
 // Returns error only when context is canceled, expired or the ratelimit is set to zero (allow nothing)
 func (tm *TaskMatcher) MustOffer(ctx context.Context, task *InternalTask) error {
+	e := event.E{
+		TaskListName: tm.tasklist.GetName(),
+		TaskListType: tm.tasklist.GetType(),
+		TaskListKind: tm.tasklistKind.Ptr(),
+		TaskInfo:     task.Info(),
+	}
 	if err := tm.ratelimit(ctx); err != nil {
+		e.EventName = "Throttled While Dispatching"
+		event.Log(e)
 		return fmt.Errorf("rate limit error dispatching: %w", err)
 	}
 
+	startT := time.Now()
 	// attempt a match with local poller first. When that
 	// doesn't succeed, try both local match and remote match
 	taskC := tm.getTaskC(task)
 	select {
 	case taskC <- task: // poller picked up the task
+		tm.scope.IncCounter(metrics.AsyncMatchLocalPollCounterPerTaskList)
+		tm.scope.RecordTimer(metrics.AsyncMatchLocalPollLatencyPerTaskList, time.Since(startT))
+		e.EventName = "Dispatched to Local Poller"
+		event.Log(e)
 		return nil
 	case <-ctx.Done():
+		e.EventName = "Context Done While Dispatching to Local Poller"
+		event.Log(e)
 		return fmt.Errorf("context done when trying to forward local task: %w", ctx.Err())
 	default:
 	}
 
+	attempt := 0
 forLoop:
 	for {
 		select {
 		case taskC <- task: // poller picked up the task
+			e.EventName = "Dispatched to Local Poller"
+			event.Log(e)
+			tm.scope.IncCounter(metrics.AsyncMatchLocalPollCounterPerTaskList)
+			tm.scope.RecordTimer(metrics.AsyncMatchLocalPollAttemptPerTaskList, time.Duration(attempt))
+			tm.scope.RecordTimer(metrics.AsyncMatchLocalPollLatencyPerTaskList, time.Since(startT))
 			return nil
 		case token := <-tm.fwdrAddReqTokenC():
-			childCtx, cancel := context.WithDeadline(ctx, time.Now().Add(time.Second*2))
+			e.EventName = "Attempting to Forward Task"
+			event.Log(e)
+			childCtx, cancel := context.WithTimeout(ctx, time.Second*2)
 			err := tm.fwdr.ForwardTask(childCtx, task)
 			token.release("")
 			if err != nil {
-
 				if errors.Is(err, ErrForwarderSlowDown) {
 					tm.scope.IncCounter(metrics.AsyncMatchForwardTaskThrottleErrorPerTasklist)
 				}
+				e.EventName = "Task Forwarding Failed"
+				e.Payload = map[string]any{"error": err.Error()}
+				event.Log(e)
+				e.Payload = nil
 				tm.log.Debug("failed to forward task",
 					tag.Error(err),
 					tag.TaskID(task.Event.TaskID),
@@ -256,7 +308,12 @@ forLoop:
 				// hoping for a local poller match
 				select {
 				case taskC <- task: // poller picked up the task
+					e.EventName = "Dispatched to Local Poller (after failed forward)"
+					event.Log(e)
 					cancel()
+					tm.scope.IncCounter(metrics.AsyncMatchLocalPollAfterForwardFailedCounterPerTaskList)
+					tm.scope.RecordTimer(metrics.AsyncMatchLocalPollAfterForwardFailedAttemptPerTaskList, time.Duration(attempt))
+					tm.scope.RecordTimer(metrics.AsyncMatchLocalPollAfterForwardFailedLatencyPerTaskList, time.Since(startT))
 					return nil
 				case <-childCtx.Done():
 				case <-ctx.Done():
@@ -264,15 +321,25 @@ forLoop:
 					return fmt.Errorf("failed to dispatch after failing to forward task: %w", ctx.Err())
 				}
 				cancel()
+				attempt++
 				continue forLoop
 			}
 			cancel()
+
+			e.EventName = "Task Forwarded"
+			event.Log(e)
+			tm.scope.IncCounter(metrics.AsyncMatchForwardPollCounterPerTaskList)
+			tm.scope.RecordTimer(metrics.AsyncMatchForwardPollAttemptPerTaskList, time.Duration(attempt))
+			tm.scope.RecordTimer(metrics.AsyncMatchForwardPollLatencyPerTaskList, time.Since(startT))
+
 			// at this point, we forwarded the task to a parent partition which
 			// in turn dispatched the task to a poller. Make sure we delete the
 			// task from the database
 			task.Finish(nil)
 			return nil
 		case <-ctx.Done():
+			e.EventName = "Context Done While Dispatching to Local or Forwarding"
+			event.Log(e)
 			return fmt.Errorf("failed to offer task: %w", ctx.Err())
 		}
 	}
@@ -282,6 +349,7 @@ forLoop:
 // On success, the returned task could be a query task or a regular task
 // Returns ErrNoTasks when context deadline is exceeded
 func (tm *TaskMatcher) Poll(ctx context.Context, isolationGroup string) (*InternalTask, error) {
+	startT := time.Now()
 	isolatedTaskC, ok := tm.isolatedTaskC[isolationGroup]
 	if !ok && isolationGroup != "" {
 		// fallback to default isolation group instead of making poller crash if the isolation group is invalid
@@ -290,6 +358,7 @@ func (tm *TaskMatcher) Poll(ctx context.Context, isolationGroup string) (*Intern
 	}
 	// try local match first without blocking until context timeout
 	if task, err := tm.pollNonBlocking(ctx, isolatedTaskC, tm.taskC, tm.queryTaskC); err == nil {
+		tm.scope.RecordTimer(metrics.PollLocalMatchLatencyPerTaskList, time.Since(startT))
 		return task, nil
 	}
 	// there is no local poller available to pickup this task. Now block waiting
@@ -300,20 +369,28 @@ func (tm *TaskMatcher) Poll(ctx context.Context, isolationGroup string) (*Intern
 		tag.Dynamic("isolated channel", len(isolatedTaskC)),
 		tag.Dynamic("fallback channel", len(tm.taskC)),
 	)
-	return tm.pollOrForward(ctx, isolationGroup, isolatedTaskC, tm.taskC, tm.queryTaskC)
+	event.Log(event.E{
+		TaskListName: tm.tasklist.GetName(),
+		TaskListType: tm.tasklist.GetType(),
+		TaskListKind: tm.tasklistKind.Ptr(),
+		EventName:    "Matcher Falling Back to Non-Local Polling",
+	})
+	return tm.pollOrForward(ctx, startT, isolationGroup, isolatedTaskC, tm.taskC, tm.queryTaskC)
 }
 
 // PollForQuery blocks until a *query* task is found or context deadline is exceeded
 // Returns ErrNoTasks when context deadline is exceeded
 func (tm *TaskMatcher) PollForQuery(ctx context.Context) (*InternalTask, error) {
+	startT := time.Now()
 	// try local match first without blocking until context timeout
 	if task, err := tm.pollNonBlocking(ctx, nil, nil, tm.queryTaskC); err == nil {
+		tm.scope.RecordTimer(metrics.PollLocalMatchLatencyPerTaskList, time.Since(startT))
 		return task, nil
 	}
 	// there is no local poller available to pickup this task. Now block waiting
 	// either for a local poller or a forwarding token to be available. When a
 	// forwarding token becomes available, send this poll to a parent partition
-	return tm.pollOrForward(ctx, "", nil, nil, tm.queryTaskC)
+	return tm.pollOrForward(ctx, startT, "", nil, nil, tm.queryTaskC)
 }
 
 // UpdateRatelimit updates the task dispatch rate
@@ -337,6 +414,7 @@ func (tm *TaskMatcher) Rate() float64 {
 
 func (tm *TaskMatcher) pollOrForward(
 	ctx context.Context,
+	startT time.Time,
 	isolationGroup string,
 	isolatedTaskC <-chan *InternalTask,
 	taskC <-chan *InternalTask,
@@ -347,13 +425,41 @@ func (tm *TaskMatcher) pollOrForward(
 		if task.ResponseC != nil {
 			tm.scope.IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
 		}
+		tm.scope.RecordTimer(metrics.PollLocalMatchLatencyPerTaskList, time.Since(startT))
 		tm.scope.IncCounter(metrics.PollSuccessPerTaskListCounter)
+		event.Log(event.E{
+			TaskListName: tm.tasklist.GetName(),
+			TaskListType: tm.tasklist.GetType(),
+			TaskListKind: tm.tasklistKind.Ptr(),
+			TaskInfo:     task.Info(),
+			EventName:    "Matched Task (pollOrForward)",
+			Payload: map[string]any{
+				"TaskIsForwarded":   task.IsForwarded(),
+				"SyncMatched":       task.ResponseC != nil,
+				"FromIsolatedTaskC": true,
+				"IsolationGroup":    task.isolationGroup,
+			},
+		})
 		return task, nil
 	case task := <-taskC:
 		if task.ResponseC != nil {
 			tm.scope.IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
 		}
+		tm.scope.RecordTimer(metrics.PollLocalMatchLatencyPerTaskList, time.Since(startT))
 		tm.scope.IncCounter(metrics.PollSuccessPerTaskListCounter)
+		event.Log(event.E{
+			TaskListName: tm.tasklist.GetName(),
+			TaskListType: tm.tasklist.GetType(),
+			TaskListKind: tm.tasklistKind.Ptr(),
+			TaskInfo:     task.Info(),
+			EventName:    "Matched Task (pollOrForward)",
+			Payload: map[string]any{
+				"TaskIsForwarded":   task.IsForwarded(),
+				"SyncMatched":       task.ResponseC != nil,
+				"FromIsolatedTaskC": false,
+				"IsolationGroup":    task.isolationGroup,
+			},
+		})
 		return task, nil
 	case task := <-queryTaskC:
 		tm.scope.IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
@@ -361,19 +467,39 @@ func (tm *TaskMatcher) pollOrForward(
 		return task, nil
 	case <-ctx.Done():
 		tm.scope.IncCounter(metrics.PollTimeoutPerTaskListCounter)
+		event.Log(event.E{
+			TaskListName: tm.tasklist.GetName(),
+			TaskListType: tm.tasklist.GetType(),
+			TaskListKind: tm.tasklistKind.Ptr(),
+			EventName:    "Poll Timeout",
+		})
 		return nil, ErrNoTasks
 	case token := <-tm.fwdrPollReqTokenC(isolationGroup):
+		event.Log(event.E{
+			TaskListName: tm.tasklist.GetName(),
+			TaskListType: tm.tasklist.GetType(),
+			TaskListKind: tm.tasklistKind.Ptr(),
+			EventName:    "Attempting to Forward Poll",
+		})
 		if task, err := tm.fwdr.ForwardPoll(ctx); err == nil {
 			token.release(isolationGroup)
+			tm.scope.RecordTimer(metrics.PollForwardMatchLatencyPerTaskList, time.Since(startT))
+			event.Log(event.E{
+				TaskListName: tm.tasklist.GetName(),
+				TaskListType: tm.tasklist.GetType(),
+				TaskListKind: tm.tasklistKind.Ptr(),
+				EventName:    "Forwarded Poll returned task",
+			})
 			return task, nil
 		}
 		token.release(isolationGroup)
-		return tm.poll(ctx, isolatedTaskC, taskC, queryTaskC)
+		return tm.poll(ctx, startT, isolatedTaskC, taskC, queryTaskC)
 	}
 }
 
 func (tm *TaskMatcher) poll(
 	ctx context.Context,
+	startT time.Time,
 	isolatedTaskC <-chan *InternalTask,
 	taskC <-chan *InternalTask,
 	queryTaskC <-chan *InternalTask,
@@ -383,13 +509,41 @@ func (tm *TaskMatcher) poll(
 		if task.ResponseC != nil {
 			tm.scope.IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
 		}
+		tm.scope.RecordTimer(metrics.PollLocalMatchAfterForwardFailedLatencyPerTaskList, time.Since(startT))
 		tm.scope.IncCounter(metrics.PollSuccessPerTaskListCounter)
+		event.Log(event.E{
+			TaskListName: tm.tasklist.GetName(),
+			TaskListType: tm.tasklist.GetType(),
+			TaskListKind: tm.tasklistKind.Ptr(),
+			TaskInfo:     task.Info(),
+			EventName:    "Matched Task (poll)",
+			Payload: map[string]any{
+				"TaskIsForwarded":   task.IsForwarded(),
+				"SyncMatched":       task.ResponseC != nil,
+				"FromIsolatedTaskC": true,
+				"IsolationGroup":    task.isolationGroup,
+			},
+		})
 		return task, nil
 	case task := <-taskC:
 		if task.ResponseC != nil {
 			tm.scope.IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
 		}
+		tm.scope.RecordTimer(metrics.PollLocalMatchAfterForwardFailedLatencyPerTaskList, time.Since(startT))
 		tm.scope.IncCounter(metrics.PollSuccessPerTaskListCounter)
+		event.Log(event.E{
+			TaskListName: tm.tasklist.GetName(),
+			TaskListType: tm.tasklist.GetType(),
+			TaskListKind: tm.tasklistKind.Ptr(),
+			TaskInfo:     task.Info(),
+			EventName:    "Matched Task (poll)",
+			Payload: map[string]any{
+				"TaskIsForwarded":   task.IsForwarded(),
+				"SyncMatched":       task.ResponseC != nil,
+				"FromIsolatedTaskC": false,
+				"IsolationGroup":    task.isolationGroup,
+			},
+		})
 		return task, nil
 	case task := <-queryTaskC:
 		tm.scope.IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
@@ -397,6 +551,12 @@ func (tm *TaskMatcher) poll(
 		return task, nil
 	case <-ctx.Done():
 		tm.scope.IncCounter(metrics.PollTimeoutPerTaskListCounter)
+		event.Log(event.E{
+			TaskListName: tm.tasklist.GetName(),
+			TaskListType: tm.tasklist.GetType(),
+			TaskListKind: tm.tasklistKind.Ptr(),
+			EventName:    "Poll Timeout",
+		})
 		return nil, ErrNoTasks
 	}
 }
@@ -413,18 +573,50 @@ func (tm *TaskMatcher) pollNonBlocking(
 			tm.scope.IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
 		}
 		tm.scope.IncCounter(metrics.PollSuccessPerTaskListCounter)
+		event.Log(event.E{
+			TaskListName: tm.tasklist.GetName(),
+			TaskListType: tm.tasklist.GetType(),
+			TaskListKind: tm.tasklistKind.Ptr(),
+			TaskInfo:     task.Info(),
+			EventName:    "Matched Task Nonblocking",
+			Payload: map[string]any{
+				"TaskIsForwarded":   task.IsForwarded(),
+				"SyncMatched":       task.ResponseC != nil,
+				"FromIsolatedTaskC": true,
+				"IsolationGroup":    task.isolationGroup,
+			},
+		})
 		return task, nil
 	case task := <-taskC:
 		if task.ResponseC != nil {
 			tm.scope.IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
 		}
 		tm.scope.IncCounter(metrics.PollSuccessPerTaskListCounter)
+		event.Log(event.E{
+			TaskListName: tm.tasklist.GetName(),
+			TaskListType: tm.tasklist.GetType(),
+			TaskListKind: tm.tasklistKind.Ptr(),
+			TaskInfo:     task.Info(),
+			EventName:    "Matched Task Nonblocking",
+			Payload: map[string]any{
+				"TaskIsForwarded":   task.IsForwarded(),
+				"SyncMatched":       task.ResponseC != nil,
+				"FromIsolatedTaskC": false,
+				"IsolationGroup":    task.isolationGroup,
+			},
+		})
 		return task, nil
 	case task := <-queryTaskC:
 		tm.scope.IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
 		tm.scope.IncCounter(metrics.PollSuccessPerTaskListCounter)
 		return task, nil
 	default:
+		event.Log(event.E{
+			TaskListName: tm.tasklist.GetName(),
+			TaskListType: tm.tasklist.GetType(),
+			TaskListKind: tm.tasklistKind.Ptr(),
+			EventName:    "Matcher Found No Tasks Nonblocking",
+		})
 		return nil, ErrNoTasks
 	}
 }

@@ -40,6 +40,7 @@ import (
 	adminClient "github.com/uber/cadence/client/admin"
 	frontendClient "github.com/uber/cadence/client/frontend"
 	historyClient "github.com/uber/cadence/client/history"
+	matchingClient "github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	carchiver "github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
@@ -83,18 +84,20 @@ type Cadence interface {
 	GetFrontendClient() frontendClient.Client
 	FrontendHost() membership.HostInfo
 	GetHistoryClient() historyClient.Client
+	GetMatchingClient() matchingClient.Client
 	GetExecutionManagerFactory() persistence.ExecutionManagerFactory
 }
 
 type (
 	cadenceImpl struct {
-		frontendService common.Daemon
-		matchingService common.Daemon
-		historyServices []common.Daemon
+		frontendService  common.Daemon
+		matchingServices []common.Daemon
+		historyServices  []common.Daemon
 
 		adminClient                   adminClient.Client
 		frontendClient                frontendClient.Client
 		historyClient                 historyClient.Client
+		matchingClient                matchingClient.Client
 		logger                        log.Logger
 		clusterMetadata               cluster.Metadata
 		persistenceConfig             config.Persistence
@@ -112,6 +115,7 @@ type (
 		archiverMetadata              carchiver.ArchivalMetadata
 		archiverProvider              provider.ArchiverProvider
 		historyConfig                 *HistoryConfig
+		matchingConfig                *MatchingConfig
 		esConfig                      *config.ElasticSearchConfig
 		esClient                      elasticsearch.GenericClient
 		workerConfig                  *WorkerConfig
@@ -132,10 +136,57 @@ type (
 
 	// HistoryConfig contains configs for history service
 	HistoryConfig struct {
+		// When MockClient is set, rest of the configs are ignored, history service is not started
+		// and mock history client is passed to other services
+		MockClient HistoryClient
+
 		NumHistoryShards       int
 		NumHistoryHosts        int
 		HistoryCountLimitError int
 		HistoryCountLimitWarn  int
+	}
+
+	MatchingConfig struct {
+		// number of matching host can be at most 4 due to existing static port assignments in onebox.go.
+		// can be changed easily.
+		NumMatchingHosts int
+		SimulationConfig MatchingSimulationConfig
+	}
+
+	MatchingSimulationConfig struct {
+		// Number of task list write partitions defaults to 1
+		TaskListWritePartitions int
+
+		// Number of task list read partitions defaults to 1
+		TaskListReadPartitions int
+
+		// Number of pollers defaults to 10
+		NumPollers int
+
+		// Number of task generators defaults to 1
+		NumTaskGenerators int
+
+		// Each generator will produce a new task every TaskGeneratorTickInterval. Defaults to 50ms
+		TaskGeneratorTickInterval time.Duration
+
+		// Upper limit of tasks to generate. Task generators will stop if total number of tasks generated reaches MaxTaskToGenerate during simulation
+		// Defaults to 2k
+		MaxTaskToGenerate int
+
+		// Poll request timeout defaults to 1 second
+		PollTimeout time.Duration
+
+		// At most N polls will be forwarded at a time. defaults to 20
+		ForwarderMaxOutstandingPolls int
+
+		// At most N tasks will be forwarded at a time. defaults to 1
+		ForwarderMaxOutstandingTasks int
+
+		// Forwarder rps limit defaults to 10
+		ForwarderMaxRatePerSecond int
+
+		// Children per node. defaults to 20
+		ForwarderMaxChildrenPerNode int
 	}
 
 	// CadenceParams contains everything needed to bootstrap Cadence
@@ -153,6 +204,7 @@ type (
 		ArchiverProvider              provider.ArchiverProvider
 		EnableReadHistoryFromArchival bool
 		HistoryConfig                 *HistoryConfig
+		MatchingConfig                *MatchingConfig
 		ESConfig                      *config.ElasticSearchConfig
 		ESClient                      elasticsearch.GenericClient
 		WorkerConfig                  *WorkerConfig
@@ -189,6 +241,7 @@ func NewCadence(params *CadenceParams) Cadence {
 		archiverMetadata:              params.ArchiverMetadata,
 		archiverProvider:              params.ArchiverProvider,
 		historyConfig:                 params.HistoryConfig,
+		matchingConfig:                params.MatchingConfig,
 		workerConfig:                  params.WorkerConfig,
 		mockAdminClient:               params.MockAdminClient,
 		domainReplicationTaskExecutor: params.DomainReplicationTaskExecutor,
@@ -211,7 +264,7 @@ func (c *cadenceImpl) enableWorker() bool {
 func (c *cadenceImpl) Start() error {
 	hosts := make(map[string][]membership.HostInfo)
 	hosts[service.Frontend] = []membership.HostInfo{c.FrontendHost()}
-	hosts[service.Matching] = []membership.HostInfo{c.MatchingServiceHost()}
+	hosts[service.Matching] = c.MatchingHosts()
 	hosts[service.History] = c.HistoryHosts()
 	if c.enableWorker() {
 		hosts[service.Worker] = []membership.HostInfo{c.WorkerServiceHost()}
@@ -224,8 +277,11 @@ func (c *cadenceImpl) Start() error {
 	}
 
 	var startWG sync.WaitGroup
-	startWG.Add(2)
+	startWG.Add(1)
 	go c.startHistory(hosts, &startWG)
+	startWG.Wait()
+
+	startWG.Add(1)
 	go c.startMatching(hosts, &startWG)
 	startWG.Wait()
 
@@ -243,16 +299,20 @@ func (c *cadenceImpl) Start() error {
 }
 
 func (c *cadenceImpl) Stop() {
+	serviceCount := 3
 	if c.enableWorker() {
-		c.shutdownWG.Add(4)
-	} else {
-		c.shutdownWG.Add(3)
+		serviceCount++
 	}
+
+	c.shutdownWG.Add(serviceCount)
 	c.frontendService.Stop()
 	for _, historyService := range c.historyServices {
 		historyService.Stop()
 	}
-	c.matchingService.Stop()
+	for _, matchingService := range c.matchingServices {
+		matchingService.Stop()
+	}
+
 	if c.workerConfig.EnableReplicator {
 		c.replicator.Stop()
 	}
@@ -334,7 +394,7 @@ func (c *cadenceImpl) HistoryHosts() []membership.HostInfo {
 	return hosts
 }
 
-func (c *cadenceImpl) HistoryPProfPort() []int {
+func (c *cadenceImpl) HistoryPProfPorts() []int {
 	var ports []int
 	var startPort int
 	switch c.clusterNo {
@@ -358,7 +418,8 @@ func (c *cadenceImpl) HistoryPProfPort() []int {
 	return ports
 }
 
-func (c *cadenceImpl) MatchingServiceHost() membership.HostInfo {
+func (c *cadenceImpl) MatchingHosts() []membership.HostInfo {
+	var hosts []membership.HostInfo
 	var tchan uint16
 	switch c.clusterNo {
 	case 0:
@@ -373,23 +434,39 @@ func (c *cadenceImpl) MatchingServiceHost() membership.HostInfo {
 		tchan = 7106
 	}
 
-	return newHost(tchan)
+	for i := 0; i < c.matchingConfig.NumMatchingHosts; i++ {
+		port := tchan + uint16(i)
+		hosts = append(hosts, newHost(uint16(port)))
+	}
 
+	c.logger.Info("Matching hosts", tag.Value(hosts))
+
+	return hosts
 }
 
-func (c *cadenceImpl) MatchingPProfPort() int {
+func (c *cadenceImpl) MatchingPProfPorts() []int {
+	var ports []int
+	var startPort int
 	switch c.clusterNo {
 	case 0:
-		return 7107
+		startPort = 7206
 	case 1:
-		return 8107
+		startPort = 8206
 	case 2:
-		return 9107
+		startPort = 9206
 	case 3:
-		return 10107
+		startPort = 10206
 	default:
-		return 7107
+		startPort = 7206
 	}
+
+	for i := 0; i < c.matchingConfig.NumMatchingHosts; i++ {
+		port := startPort + i
+		ports = append(ports, port)
+	}
+
+	c.logger.Info("Matching pprof ports", tag.Value(ports))
+	return ports
 }
 
 func (c *cadenceImpl) WorkerServiceHost() membership.HostInfo {
@@ -434,6 +511,10 @@ func (c *cadenceImpl) GetFrontendClient() frontendClient.Client {
 
 func (c *cadenceImpl) GetHistoryClient() historyClient.Client {
 	return c.historyClient
+}
+
+func (c *cadenceImpl) GetMatchingClient() matchingClient.Client {
+	return c.matchingClient
 }
 
 func (c *cadenceImpl) startFrontend(hosts map[string][]membership.HostInfo, startWG *sync.WaitGroup) {
@@ -509,17 +590,17 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]membership.HostInfo, star
 	c.adminClient = NewAdminClient(frontendService.GetDispatcher())
 	go frontendService.Start()
 
+	c.logger.Info("Started frontend service")
 	startWG.Done()
+
 	<-c.shutdownCh
 	c.shutdownWG.Done()
 }
 
-func (c *cadenceImpl) startHistory(
-	hosts map[string][]membership.HostInfo,
-	startWG *sync.WaitGroup,
-) {
-	pprofPorts := c.HistoryPProfPort()
-	for i, hostport := range c.HistoryHosts() {
+func (c *cadenceImpl) startHistory(hosts map[string][]membership.HostInfo, startWG *sync.WaitGroup) {
+	pprofPorts := c.HistoryPProfPorts()
+	historyHosts := c.HistoryHosts()
+	for i, hostport := range historyHosts {
 		params := new(resource.Params)
 		params.Name = service.History
 		params.Logger = c.logger
@@ -588,49 +669,69 @@ func (c *cadenceImpl) startHistory(
 	}
 
 	startWG.Done()
+	c.logger.Info(fmt.Sprintf("Started %d history services", len(c.historyServices)))
+
 	<-c.shutdownCh
 	c.shutdownWG.Done()
 }
 
 func (c *cadenceImpl) startMatching(hosts map[string][]membership.HostInfo, startWG *sync.WaitGroup) {
+	pprofPorts := c.MatchingPProfPorts()
+	for i, hostport := range c.MatchingHosts() {
+		hostport.Identity()
+		matchingHost := fmt.Sprintf("matching-host-%d:%s", i, hostport.Identity())
+		params := new(resource.Params)
+		params.Name = service.Matching
+		params.Logger = c.logger.WithTags(tag.Dynamic("matching-host", matchingHost))
+		params.ThrottledLogger = c.logger
+		params.TimeSource = c.timeSource
+		params.PProfInitializer = newPProfInitializerImpl(c.logger, pprofPorts[i])
+		params.RPCFactory = c.newRPCFactory(service.Matching, hostport)
+		params.MetricScope = tally.NewTestScope(service.Matching, map[string]string{"matching-host": matchingHost})
+		params.MembershipResolver = newMembershipResolver(params.Name, hosts)
+		params.ClusterMetadata = c.clusterMetadata
+		params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
+		params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient(), c.matchingDynCfgOverrides)
+		params.ArchivalMetadata = c.archiverMetadata
+		params.ArchiverProvider = c.archiverProvider
 
-	params := new(resource.Params)
-	params.Name = service.Matching
-	params.Logger = c.logger
-	params.ThrottledLogger = c.logger
-	params.TimeSource = c.timeSource
-	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.MatchingPProfPort())
-	params.RPCFactory = c.newRPCFactory(service.Matching, c.MatchingServiceHost())
-	params.MetricScope = tally.NewTestScope(service.Matching, make(map[string]string))
-	params.MembershipResolver = newMembershipResolver(params.Name, hosts)
-	params.ClusterMetadata = c.clusterMetadata
-	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
-	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient(), c.matchingDynCfgOverrides)
-	params.ArchivalMetadata = c.archiverMetadata
-	params.ArchiverProvider = c.archiverProvider
+		var err error
+		params.PersistenceConfig, err = copyPersistenceConfig(c.persistenceConfig)
+		if err != nil {
+			c.logger.Fatal("Failed to copy persistence config for matching", tag.Error(err))
+		}
 
-	var err error
-	params.PersistenceConfig, err = copyPersistenceConfig(c.persistenceConfig)
-	if err != nil {
-		c.logger.Fatal("Failed to copy persistence config for matching", tag.Error(err))
-	}
+		if c.historyConfig.MockClient != nil {
+			params.HistoryClientFn = func() historyClient.Client {
+				return c.historyConfig.MockClient
+			}
+		}
 
-	matchingService, err := matching.NewService(params)
-	if err != nil {
-		params.Logger.Fatal("unable to start matching service", tag.Error(err))
-	}
-	if c.mockAdminClient != nil {
+		matchingService, err := matching.NewService(params)
+		if err != nil {
+			params.Logger.Fatal("unable to start matching service", tag.Error(err))
+		}
+
 		clientBean := matchingService.GetClientBean()
-		if clientBean != nil {
+		if c.mockAdminClient != nil {
 			for serviceName, client := range c.mockAdminClient {
 				clientBean.SetRemoteAdminClient(serviceName, client)
 			}
 		}
+
+		// When there are multiple matching hosts the last client will overwrite previous ones.
+		// It should be fine because the underlying client bean logic should still pick the right destination.
+		c.matchingClient, err = clientBean.GetMatchingClient(matchingService.GetDomainCache().GetDomainName)
+		if err != nil {
+			params.Logger.Fatal("unable to get matching client", tag.Error(err))
+		}
+		c.matchingServices = append(c.matchingServices, matchingService)
+		go matchingService.Start()
 	}
-	c.matchingService = matchingService
-	go c.matchingService.Start()
 
 	startWG.Done()
+	c.logger.Info(fmt.Sprintf("Started %d matching services", len(c.matchingServices)))
+
 	<-c.shutdownCh
 	c.shutdownWG.Done()
 }
@@ -717,7 +818,9 @@ func (c *cadenceImpl) startWorker(hosts map[string][]membership.HostInfo, startW
 		defer cm.Stop()
 	}
 
+	c.logger.Info("Started worker service")
 	startWG.Done()
+
 	<-c.shutdownCh
 	if c.workerConfig.EnableReplicator {
 		replicatorDomainCache.Stop()
@@ -725,7 +828,6 @@ func (c *cadenceImpl) startWorker(hosts map[string][]membership.HostInfo, startW
 	if c.workerConfig.EnableArchiver {
 		clientWorkerDomainCache.Stop()
 	}
-
 }
 
 func (c *cadenceImpl) startWorkerReplicator(svc Service) {

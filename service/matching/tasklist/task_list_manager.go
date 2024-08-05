@@ -46,6 +46,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/matching/config"
+	"github.com/uber/cadence/service/matching/event"
 	"github.com/uber/cadence/service/matching/liveness"
 	"github.com/uber/cadence/service/matching/poller"
 )
@@ -63,7 +64,6 @@ var (
 	persistenceOperationRetryPolicy = common.CreatePersistenceRetryPolicy()
 	taskListActivityTypeTag         = metrics.TaskListTypeTag("activity")
 	taskListDecisionTypeTag         = metrics.TaskListTypeTag("decision")
-	stickyTaskListMetricTag         = metrics.TaskListTag("__sticky__")
 )
 
 type (
@@ -154,7 +154,7 @@ func NewManager(
 		taskListKind = &normalTaskListKind
 	}
 
-	scope := NewPerTaskListScope(domainName, taskList.GetName(), *taskListKind, metricsClient, metrics.MatchingTaskListMgrScope).
+	scope := common.NewPerTaskListScope(domainName, taskList.GetName(), *taskListKind, metricsClient, metrics.MatchingTaskListMgrScope).
 		Tagged(getTaskListTypeTag(taskList.GetType()))
 	db := newTaskListDB(taskManager, taskList.GetDomainID(), domainName, taskList.GetName(), taskList.GetType(), int(*taskListKind), logger)
 
@@ -194,9 +194,9 @@ func NewManager(
 	}
 	var fwdr *Forwarder
 	if tlMgr.isFowardingAllowed(taskList, *taskListKind) {
-		fwdr = newForwarder(&taskListConfig.ForwarderConfig, taskList, *taskListKind, matchingClient, isolationGroups)
+		fwdr = newForwarder(&taskListConfig.ForwarderConfig, taskList, *taskListKind, matchingClient, isolationGroups, scope)
 	}
-	tlMgr.matcher = newTaskMatcher(taskListConfig, fwdr, tlMgr.scope, isolationGroups, tlMgr.logger)
+	tlMgr.matcher = newTaskMatcher(taskListConfig, fwdr, tlMgr.scope, isolationGroups, tlMgr.logger, taskList, *taskListKind)
 	tlMgr.taskWriter = newTaskWriter(tlMgr)
 	tlMgr.taskReader = newTaskReader(tlMgr, isolationGroups)
 	tlMgr.startWG.Add(1)
@@ -260,6 +260,12 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params AddTaskParams)
 		c.liveness.MarkAlive()
 	}
 	var syncMatch bool
+	e := event.E{
+		TaskListName: c.taskListID.GetName(),
+		TaskListKind: &c.taskListKind,
+		TaskListType: c.taskListID.GetType(),
+		TaskInfo:     *params.TaskInfo,
+	}
 	_, err := c.executeWithRetry(func() (interface{}, error) {
 		if err := ctx.Err(); err != nil {
 			return nil, err
@@ -290,6 +296,8 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params AddTaskParams)
 		// active task, try sync match first
 		syncMatch, err = c.trySyncMatch(ctx, params, isolationGroup)
 		if syncMatch {
+			e.EventName = "SyncMatched so not persisted"
+			event.Log(e)
 			return &persistence.CreateTasksResponse{}, err
 		}
 		if params.ActivityTaskDispatchInfo != nil {
@@ -299,9 +307,13 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params AddTaskParams)
 		if isForwarded {
 			// forwarded from child partition - only do sync match
 			// child partition will persist the task when sync match fails
+			e.EventName = "Could not SyncMatched Forwarded Task so not persisted"
+			event.Log(e)
 			return &persistence.CreateTasksResponse{}, errRemoteSyncMatchFailed
 		}
 
+		e.EventName = "Task Sent to Writer"
+		event.Log(e)
 		return c.taskWriter.appendTask(params.TaskInfo)
 	})
 
@@ -528,7 +540,7 @@ func (c *taskListManagerImpl) trySyncMatch(ctx context.Context, params AddTaskPa
 	var matched bool
 	var err error
 	if params.ActivityTaskDispatchInfo != nil {
-		matched, err = c.matcher.offerOrTimeout(childCtx, task)
+		matched, err = c.matcher.offerOrTimeout(childCtx, c.timeSource.Now(), task)
 	} else {
 		matched, err = c.matcher.Offer(childCtx, task)
 	}
@@ -728,27 +740,6 @@ func newTaskListConfig(id *Identifier, cfg *config.Config, domainName string) *c
 		TaskDispatchRPSTTL:        cfg.TaskDispatchRPSTTL,
 		MaxTimeBetweenTaskDeletes: cfg.MaxTimeBetweenTaskDeletes,
 	}
-}
-
-func NewPerTaskListScope(
-	domainName string,
-	taskListName string,
-	taskListKind types.TaskListKind,
-	client metrics.Client,
-	scopeIdx int,
-) metrics.Scope {
-	domainTag := metrics.DomainUnknownTag()
-	taskListTag := metrics.TaskListUnknownTag()
-	if domainName != "" {
-		domainTag = metrics.DomainTag(domainName)
-	}
-	if taskListName != "" && taskListKind != types.TaskListKindSticky {
-		taskListTag = metrics.TaskListTag(taskListName)
-	}
-	if taskListKind == types.TaskListKindSticky {
-		taskListTag = stickyTaskListMetricTag
-	}
-	return client.Scope(scopeIdx, domainTag, taskListTag)
 }
 
 func IdentityFromContext(ctx context.Context) string {

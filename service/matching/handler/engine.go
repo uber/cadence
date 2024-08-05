@@ -41,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
+	cadence_errors "github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
@@ -50,6 +51,7 @@ import (
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/matching/config"
+	"github.com/uber/cadence/service/matching/event"
 	"github.com/uber/cadence/service/matching/tasklist"
 )
 
@@ -198,6 +200,28 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *tasklist.Identifier, t
 	}
 	e.taskListsLock.RUnlock()
 
+	// Defensive check to make sure we actually own the task list
+	//   If we try to create a task list manager for a task list that is not owned by us, return an error
+	//   The new task list manager will steal the task list from the current owner, which should only happen if
+	//   the task list is owned by the current host.
+	taskListOwner, err := e.membershipResolver.Lookup(service.Matching, taskList.GetName())
+	if err != nil {
+		return nil, fmt.Errorf("failed to lookup task list owner: %w", err)
+	}
+
+	self, err := e.membershipResolver.WhoAmI()
+	if err != nil {
+		return nil, fmt.Errorf("failed to lookup self im membership: %w", err)
+	}
+
+	if taskListOwner.Identity() != self.Identity() {
+		return nil, cadence_errors.NewTaskListNotOwnnedByHostError(
+			taskListOwner.Identity(),
+			self.Identity(),
+			taskList.GetName(),
+		)
+	}
+
 	// If it gets here, write lock and check again in case a task list is created between the two locks
 	e.taskListsLock.Lock()
 	if result, ok := e.taskLists[*taskList]; ok {
@@ -246,6 +270,16 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *tasklist.Identifier, t
 		return nil, err
 	}
 	logger.Info("Task list manager state changed", tag.LifeCycleStarted)
+	event.Log(event.E{
+		TaskListName: taskList.GetName(),
+		TaskListKind: taskListKind,
+		TaskListType: taskList.GetType(),
+		TaskInfo: persistence.TaskInfo{
+			DomainID: taskList.GetDomainID(),
+		},
+		EventName: "TaskListManager Started",
+		Host:      e.config.HostName,
+	})
 	return mgr, nil
 }
 
@@ -299,6 +333,20 @@ func (e *matchingEngineImpl) AddDecisionTask(
 	taskListKind := request.GetTaskList().Kind
 	taskListType := persistence.TaskListTypeDecision
 
+	event.Log(event.E{
+		TaskListName: taskListName,
+		TaskListKind: taskListKind,
+		TaskListType: taskListType,
+		TaskInfo: persistence.TaskInfo{
+			DomainID:   domainID,
+			ScheduleID: request.GetScheduleID(),
+		},
+		EventName: "Received AddDecisionTask",
+		Host:      e.config.HostName,
+		Payload: map[string]any{
+			"RequestForwardedFrom": request.GetForwardedFrom(),
+		},
+	})
 	e.emitInfoOrDebugLog(
 		domainID,
 		"Received AddDecisionTask",
@@ -441,6 +489,19 @@ func (e *matchingEngineImpl) PollForDecisionTask(
 		tag.WorkflowTaskListName(taskListName),
 		tag.WorkflowDomainID(domainID),
 	)
+	event.Log(event.E{
+		TaskListName: taskListName,
+		TaskListKind: taskListKind,
+		TaskListType: persistence.TaskListTypeDecision,
+		TaskInfo: persistence.TaskInfo{
+			DomainID: domainID,
+		},
+		EventName: "Received PollForDecisionTask",
+		Host:      e.config.HostName,
+		Payload: map[string]any{
+			"RequestForwardedFrom": req.GetForwardedFrom(),
+		},
+	})
 pollLoop:
 	for {
 		if err := common.IsValidContext(hCtx.Context); err != nil {
@@ -466,12 +527,33 @@ pollLoop:
 					tag.WorkflowDomainID(domainID),
 					tag.Error(err),
 				)
+				event.Log(event.E{
+					TaskListName: taskListName,
+					TaskListKind: taskListKind,
+					TaskListType: persistence.TaskListTypeDecision,
+					TaskInfo: persistence.TaskInfo{
+						DomainID: domainID,
+					},
+					EventName: "PollForDecisionTask returned no tasks",
+					Host:      e.config.HostName,
+					Payload: map[string]any{
+						"RequestForwardedFrom": req.GetForwardedFrom(),
+					},
+				})
 				return emptyPollForDecisionTaskResponse, nil
 			}
 			return nil, fmt.Errorf("couldn't get task: %w", err)
 		}
 
 		if task.IsStarted() {
+			event.Log(event.E{
+				TaskListName: taskListName,
+				TaskListKind: taskListKind,
+				TaskListType: persistence.TaskListTypeDecision,
+				TaskInfo:     task.Info(),
+				EventName:    "PollForDecisionTask returning already started task",
+				Host:         e.config.HostName,
+			})
 			return task.PollForDecisionResponse(), nil
 			// TODO: Maybe add history expose here?
 		}
@@ -540,7 +622,22 @@ pollLoop:
 
 			continue pollLoop
 		}
+
 		task.Finish(nil)
+		event.Log(event.E{
+			TaskListName: taskListName,
+			TaskListKind: taskListKind,
+			TaskListType: persistence.TaskListTypeDecision,
+			TaskInfo:     task.Info(),
+			EventName:    "PollForDecisionTask returning task",
+			Host:         e.config.HostName,
+			Payload: map[string]any{
+				"TaskIsForwarded":      task.IsForwarded(),
+				"RequestForwardedFrom": req.GetForwardedFrom(),
+				"Latency":              time.Since(task.Info().CreatedTime).Milliseconds(),
+			},
+		})
+
 		return e.createPollForDecisionTaskResponse(task, resp, hCtx.scope), nil
 	}
 }

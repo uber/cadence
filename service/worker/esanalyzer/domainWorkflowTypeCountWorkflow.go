@@ -182,7 +182,6 @@ AND StartTime > 0
 GROUP BY WorkflowType
 ORDER BY count
 LIMIT 10
-OFFSET 0
     `, w.analyzer.pinotTableName, domain.GetInfo().ID), nil
 }
 
@@ -213,7 +212,7 @@ func (w *Workflow) emitWorkflowTypeCountMetricsPinot(domainName string, logger *
 			zap.String("DomainName", domainName),
 			zap.String("VisibilityQuery", wfTypeCountPinotQuery),
 		)
-		return err
+		return fmt.Errorf("aggregation failed for domain in Pinot: %s", domainName)
 	}
 	var domainWorkflowTypeCount DomainWorkflowTypeCount
 	for _, row := range response {
@@ -267,7 +266,7 @@ func (w *Workflow) emitWorkflowTypeCountMetricsES(ctx context.Context, domainNam
 			zap.String("DomainName", domainName),
 			zap.String("VisibilityQuery", wfTypeCountEsQuery),
 		)
-		return err
+		return fmt.Errorf("aggregation failed for domain in ES: %s", domainName)
 	}
 	var domainWorkflowTypeCount DomainWorkflowTypeCount
 	err = json.Unmarshal(agg, &domainWorkflowTypeCount)

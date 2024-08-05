@@ -29,6 +29,7 @@ import (
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"
+	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/client/wrappers/thrift"
 	"github.com/uber/cadence/common/service"
 )
@@ -46,6 +47,10 @@ type FrontendClient interface {
 // HistoryClient is the interface exposed by history service client
 type HistoryClient interface {
 	history.Client
+}
+
+type MatchingClient interface {
+	matching.Client
 }
 
 // NewAdminClient creates a client to cadence admin client

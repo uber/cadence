@@ -26,6 +26,7 @@ import (
 	"sync/atomic"
 
 	"github.com/uber/cadence/client/matching"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/types"
@@ -36,6 +37,7 @@ type (
 	// Forwarder is the type that contains state pertaining to
 	// the api call forwarder component
 	Forwarder struct {
+		scope        metrics.Scope
 		cfg          *config.ForwarderConfig
 		taskListID   *Identifier
 		taskListKind types.TaskListKind
@@ -96,6 +98,7 @@ func newForwarder(
 	kind types.TaskListKind,
 	client matching.Client,
 	isolationGroups []string,
+	scope metrics.Scope,
 ) *Forwarder {
 	rpsFunc := func() float64 { return float64(cfg.ForwarderMaxRatePerSecond()) }
 	fwdr := &Forwarder{
@@ -107,6 +110,7 @@ func newForwarder(
 		outstandingPollsLimit: int32(cfg.ForwarderMaxOutstandingPolls()),
 		limiter:               quotas.NewDynamicRateLimiter(rpsFunc),
 		isolationGroups:       isolationGroups,
+		scope:                 scope,
 	}
 	fwdr.addReqToken.Store(newForwarderReqToken(int(fwdr.outstandingTasksLimit), nil))
 	fwdr.pollReqToken.Store(newForwarderReqToken(int(fwdr.outstandingPollsLimit), isolationGroups))
@@ -130,6 +134,8 @@ func (fwdr *Forwarder) ForwardTask(ctx context.Context, task *InternalTask) erro
 
 	var err error
 
+	sw := fwdr.scope.StartTimer(metrics.ForwardTaskLatencyPerTaskList)
+	defer sw.Stop()
 	switch fwdr.taskListID.GetType() {
 	case persistence.TaskListTypeDecision:
 		err = fwdr.client.AddDecisionTask(ctx, &types.AddDecisionTaskRequest{
@@ -182,6 +188,8 @@ func (fwdr *Forwarder) ForwardQueryTask(
 		return nil, ErrNoParent
 	}
 
+	sw := fwdr.scope.StartTimer(metrics.ForwardQueryLatencyPerTaskList)
+	defer sw.Stop()
 	resp, err := fwdr.client.QueryWorkflow(ctx, &types.MatchingQueryWorkflowRequest{
 		DomainUUID: task.Query.Request.DomainUUID,
 		TaskList: &types.TaskList{
@@ -206,6 +214,8 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*InternalTask, error) {
 		return nil, ErrNoParent
 	}
 
+	sw := fwdr.scope.StartTimer(metrics.ForwardPollLatencyPerTaskList)
+	defer sw.Stop()
 	pollerID := PollerIDFromContext(ctx)
 	identity := IdentityFromContext(ctx)
 	isolationGroup := IsolationGroupFromContext(ctx)

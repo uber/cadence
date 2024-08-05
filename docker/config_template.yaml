@@ -142,7 +142,11 @@ services:
                 timerType: {{ default .Env.PROMETHEUS_TIMER_TYPE "histogram" }}
                 listenAddress: {{ .Env.PROMETHEUS_ENDPOINT_0 }}
         {{- end }}
-
+        {{- if .Env.FRONTEND_PPROF_PORT }}
+        pprof:
+            port: {{ .Env.FRONTEND_PPROF_PORT }}
+            host: {{ default .Env.BIND_ON_IP "localhost" }}
+        {{- end }}
     matching:
         rpc:
             port: {{ default .Env.MATCHING_PORT "7935" }}
@@ -164,7 +168,11 @@ services:
                 timerType: {{ default .Env.PROMETHEUS_TIMER_TYPE "histogram" }}
                 listenAddress: {{ .Env.PROMETHEUS_ENDPOINT_1 }}
         {{- end }}
-
+      {{- if .Env.MATCHING_PPROF_PORT }}
+        pprof:
+            port: {{ .Env.MATCHING_PPROF_PORT }}
+            host: {{ default .Env.BIND_ON_IP "localhost" }}
+      {{- end }}
     history:
         rpc:
             port: {{ default .Env.HISTORY_PORT "7934" }}
@@ -186,7 +194,11 @@ services:
                 timerType: {{ default .Env.PROMETHEUS_TIMER_TYPE "histogram" }}
                 listenAddress: {{ .Env.PROMETHEUS_ENDPOINT_2 }}
         {{- end }}
-
+      {{- if .Env.HISTORY_PPROF_PORT }}
+        pprof:
+            port: {{ .Env.HISTORY_PPROF_PORT }}
+            host: {{ default .Env.BIND_ON_IP "localhost" }}
+      {{- end }}
     worker:
         rpc:
             port: {{ default .Env.WORKER_PORT "7939" }}
@@ -207,7 +219,11 @@ services:
                 timerType: {{ default .Env.PROMETHEUS_TIMER_TYPE "histogram" }}
                 listenAddress: {{ .Env.PROMETHEUS_ENDPOINT_3 }}
         {{- end }}
-
+      {{- if .Env.WORKER_PPROF_PORT }}
+        pprof:
+            port: {{ .Env.WORKER_PPROF_PORT }}
+            host: {{ default .Env.BIND_ON_IP "localhost" }}
+      {{- end }}
 clusterGroupMetadata:
     clusterRedirectionPolicy:
         policy: {{ default .Env.CLUSTER_REDIRECT_POLICY "all-domain-apis-forwarding" }}

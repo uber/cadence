@@ -119,10 +119,17 @@ func New(
 	config *Config,
 ) *Analyzer {
 	var mode readMode
+	var indexName string
+	var pinotTableName string
+
 	if esClient != nil {
 		mode = ES
+		indexName = esConfig.Indices[common.VisibilityAppName]
+		pinotTableName = ""
 	} else if pinotClient != nil {
 		mode = Pinot
+		indexName = ""
+		pinotTableName = pinotConfig.Table
 	}
 
 	return &Analyzer{
@@ -134,8 +141,8 @@ func New(
 		readMode:            mode,
 		logger:              logger,
 		tallyScope:          tallyScope,
-		visibilityIndexName: esConfig.Indices[common.VisibilityAppName],
-		pinotTableName:      pinotConfig.Table,
+		visibilityIndexName: indexName,
+		pinotTableName:      pinotTableName,
 		resource:            resource,
 		domainCache:         domainCache,
 		config:              config,
