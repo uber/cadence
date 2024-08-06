@@ -1672,13 +1672,6 @@ const (
 	// Default value: false
 	// Allowed filters: DomainID
 	MatchingEnableTaskInfoLogByDomainID
-	// MatchingEnableServiceDiscoveryShutdown enables the service-discovery mechanism to mark the matching host
-	// as no longer part of the ring, and to use this to shutdown the matching engine in response preemptively, even
-	// if the container scheduler may not yet have caught up. This is an anti-contention measure to make shutdowns and scale events less disruptive
-	// KeyName: matching.enableServiceDiscoveryShutdown
-	// Value type: Bool
-	// Default value: false
-	MatchingEnableServiceDiscoveryShutdown
 	// MatchingEnableTasklistGuardAgainstOwnershipShardLoss
 	// enables guards to prevent tasklists from processing if there is any detection that the host
 	// no longer is active or owns the shard
@@ -4116,15 +4109,10 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		Description:  "MatchingEnableTaskInfoLogByDomainID is enables info level logs for decision/activity task based on the request domainID",
 		DefaultValue: false,
 	},
-	MatchingEnableServiceDiscoveryShutdown: {
-		KeyName:      "matching.enableServiceDiscoveryShutdown",
-		Description:  "Allows service discovery to stop the matching engine, even if the container scheduler hasn't caught up yet",
-		DefaultValue: false,
-	},
 	MatchingEnableTasklistGuardAgainstOwnershipShardLoss: {
 		KeyName:      "matching.enableTasklistGuardAgainstOwnershipLoss",
 		Description:  "allows guards to ensure that tasklists don't continue processing if there's signal that they've lost ownership",
-		DefaultValue: false,
+		DefaultValue: true,
 	},
 	EventsCacheGlobalEnable: {
 		KeyName:      "history.eventsCacheGlobalEnable",

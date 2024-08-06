@@ -116,8 +116,6 @@ func (s *Service) Start() {
 	s.Resource.Start()
 	s.handler.Start()
 
-	go s.subscribeToMembershipChanges(engine)
-
 	logger.Info("matching started")
 
 	<-s.stopC

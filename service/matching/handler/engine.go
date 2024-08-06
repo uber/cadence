@@ -1200,15 +1200,30 @@ func (e *matchingEngineImpl) shutDownNonOwnedTasklists() error {
 	if err != nil {
 		return err
 	}
+
 	e.taskListsLock.Lock()
 	defer e.taskListsLock.Unlock()
+
 	for _, tl := range noLongerOwned {
-		e.logger.Info("shutting down tasklist preemptively because they are no longer owned by this host",
-			tag.WorkflowTaskListName(tl.TaskListID().GetName()),
-			tag.WorkflowDomainID(tl.TaskListID().GetDomainID()),
-			tag.Dynamic("tasklist-debug-info", tl.String()),
-		)
-		tl.Stop()
+		// for each of the tasklists that are no longer owned, kick off the
+		// process of stopping them. The stopping process is IO heavy and
+		// can take a while, so do them in parallel so as to not hold the
+		// lock too long.
+		go func(tl tasklist.Manager) {
+
+			defer func() {
+				if r := recover(); r != nil {
+					e.logger.Error("panic occurred while trying to shut down tasklist", tag.Dynamic("recovered-panic", r))
+				}
+			}()
+
+			e.logger.Info("shutting down tasklist preemptively because they are no longer owned by this host",
+				tag.WorkflowTaskListName(tl.TaskListID().GetName()),
+				tag.WorkflowDomainID(tl.TaskListID().GetDomainID()),
+				tag.Dynamic("tasklist-debug-info", tl.String()),
+			)
+			tl.Stop()
+		}(tl)
 	}
 	return nil
 }
@@ -1290,7 +1305,7 @@ func (e *matchingEngineImpl) guardAgainstShardLoss(taskList *tasklist.Identifier
 	return nil
 }
 
-func (e matchingEngineImpl) isShuttingDown() bool {
+func (e *matchingEngineImpl) isShuttingDown() bool {
 	select {
 	case <-e.shutdown:
 		return true

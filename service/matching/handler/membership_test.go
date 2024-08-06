@@ -20,11 +20,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package matching
+package handler
 
 import (
-	"github.com/uber/cadence/common/resource"
-	"github.com/uber/cadence/common/service"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -33,8 +31,10 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/membership"
+	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/common/service"
+	"github.com/uber/cadence/service/matching"
 	"github.com/uber/cadence/service/matching/config"
-	"github.com/uber/cadence/service/matching/handler"
 )
 
 func TestMembershipSubscriptionShutdown(t *testing.T) {
@@ -42,11 +42,11 @@ func TestMembershipSubscriptionShutdown(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		// this is nil for the memebership resolver, and it'll panic
 		r := resource.NewTest(t, ctrl, 0)
-		s := Service{
+		s := matching.Service{
 			stopC:    make(chan struct{}),
 			Resource: r,
 		}
-		e := handler.NewMockEngine(ctrl)
+		e := NewMockEngine(ctrl)
 		r.MembershipResolver.EXPECT().Subscribe(service.Matching, "matching-engine", gomock.Any()).Times(1)
 		r.MembershipResolver.EXPECT().WhoAmI().Times(1)
 
@@ -62,11 +62,11 @@ func TestMembershipSubscriptionPanicHandling(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		// this is nil for the memebership resolver, and it'll panic
 		r := resource.NewTest(t, ctrl, 0)
-		s := Service{
+		s := matching.Service{
 			stopC:    make(chan struct{}),
 			Resource: r,
 		}
-		e := handler.NewMockEngine(ctrl)
+		e := NewMockEngine(ctrl)
 		r.MembershipResolver.EXPECT().Subscribe(service.Matching, "matching-engine", gomock.Any()).DoAndReturn(func(_, _, _ any) {
 			panic("a panic has occurred")
 		})
