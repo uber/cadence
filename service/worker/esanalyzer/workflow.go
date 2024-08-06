@@ -181,7 +181,7 @@ WHERE DomainID = '%s'
   AND CloseStatus = -1
   AND StartTime > 0
   AND WorkflowType = '%s'
-GROUP BY JSON_EXTRACT_SCALAR(Attr, '$.CadenceChangeVersion', 'STRING_ARRAY') AS CadenceChangeVersion
+GROUP BY JSON_EXTRACT_SCALAR(Attr, '$.CadenceChangeVersion', 'STRING_ARRAY')
 ORDER BY count DESC
 LIMIT 10
     `, w.analyzer.pinotTableName, domain.GetInfo().ID, wfType), nil
