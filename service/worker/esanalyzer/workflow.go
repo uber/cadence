@@ -246,13 +246,13 @@ func (w *Workflow) emitWorkflowVersionMetricsPinot(domainName string, logger *za
 	var domainWorkflowVersionCount DomainWorkflowVersionCount
 	for _, row := range response {
 		workflowType := row[0].(string)
-		workflowCount, ok := row[1].(int)
+		workflowCount, ok := row[1].(float64)
 		if !ok {
 			logger.Error("error parsing workflow count for cadence version",
 				zap.Error(err),
 				zap.String("WorkflowType", workflowType),
 				zap.String("DomainName", domainName),
-				zap.Int("WorkflowCount", workflowCount),
+				zap.Float64("WorkflowCount", workflowCount),
 				zap.String("WorkflowCountType", fmt.Sprintf("%T", row[1])),
 				zap.String("raw data", fmt.Sprintf("%#v", response)),
 			)
@@ -317,13 +317,13 @@ func (w *Workflow) queryWorkflowVersionsWithType(domainName string, wfType strin
 	var workflowVersions WorkflowVersionCount
 	for _, row := range response {
 		workflowVersion := row[0].(string)
-		workflowCount, ok := row[1].(int)
+		workflowCount, ok := row[1].(float64)
 		if !ok {
 			logger.Error("error parsing workflow count for cadence version",
 				zap.Error(err),
 				zap.String("WorkflowVersion", workflowVersion),
 				zap.String("DomainName", domainName),
-				zap.Int("WorkflowCount", workflowCount),
+				zap.Float64("WorkflowCount", workflowCount),
 				zap.String("WorkflowCountType", fmt.Sprintf("%T", row[1])),
 				zap.String("raw data", fmt.Sprintf("%#v", response)),
 			)

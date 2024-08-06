@@ -218,13 +218,13 @@ func (w *Workflow) emitWorkflowTypeCountMetricsPinot(domainName string, logger *
 	for _, row := range response {
 		workflowType := row[0].(string)
 
-		workflowCount, ok := row[1].(int)
+		workflowCount, ok := row[1].(float64)
 		if !ok {
 			logger.Error("Error parsing workflow count",
 				zap.Error(err),
 				zap.String("WorkflowType", workflowType),
 				zap.String("DomainName", domainName),
-				zap.Int("WorkflowCount", workflowCount),
+				zap.Float64("WorkflowCount", workflowCount),
 				zap.String("WorkflowCountType", fmt.Sprintf("%T", row[1])),
 				zap.String("raw data", fmt.Sprintf("%#v", response)),
 			)
