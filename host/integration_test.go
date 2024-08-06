@@ -2953,14 +2953,34 @@ func (s *IntegrationSuite) TestDescribeTaskList() {
 	testDescribeTaskList := func(domain string, tasklist *types.TaskList, tasklistType types.TaskListType) []*types.PollerInfo {
 		ctx, cancel := createContext()
 		defer cancel()
-		responseInner, errInner := s.engine.DescribeTaskList(ctx, &types.DescribeTaskListRequest{
-			Domain:       domain,
-			TaskList:     taskList,
-			TaskListType: &tasklistType,
+		listResp, err := s.engine.ListTaskListPartitions(ctx, &types.ListTaskListPartitionsRequest{
+			Domain:   domain,
+			TaskList: tasklist,
 		})
-
-		s.Nil(errInner)
-		return responseInner.Pollers
+		s.NoError(err)
+		pollers := make(map[string]*types.PollerInfo)
+		var partitions []*types.TaskListPartitionMetadata
+		if tasklistType == types.TaskListTypeActivity {
+			partitions = listResp.ActivityTaskListPartitions
+		} else {
+			partitions = listResp.DecisionTaskListPartitions
+		}
+		for _, partition := range partitions {
+			responseInner, errInner := s.engine.DescribeTaskList(ctx, &types.DescribeTaskListRequest{
+				Domain:       domain,
+				TaskList:     &types.TaskList{Name: partition.Key, Kind: tasklist.Kind},
+				TaskListType: &tasklistType,
+			})
+			s.Nil(errInner)
+			for _, poller := range responseInner.Pollers {
+				pollers[poller.GetIdentity()] = poller
+			}
+		}
+		var results []*types.PollerInfo
+		for _, poller := range pollers {
+			results = append(results, poller)
+		}
+		return results
 	}
 
 	before := time.Now()
