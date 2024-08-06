@@ -78,6 +78,7 @@ type (
 	}
 
 	matchingEngineImpl struct {
+		shutdown             chan struct{}
 		taskManager          persistence.TaskManager
 		clusterMetadata      cluster.Metadata
 		historyService       history.Client
@@ -120,7 +121,8 @@ var (
 var _ Engine = (*matchingEngineImpl)(nil) // Asserts that interface is indeed implemented
 
 // NewEngine creates an instance of matching engine
-func NewEngine(taskManager persistence.TaskManager,
+func NewEngine(
+	taskManager persistence.TaskManager,
 	clusterMetadata cluster.Metadata,
 	historyService history.Client,
 	matchingClient matching.Client,
@@ -132,7 +134,9 @@ func NewEngine(taskManager persistence.TaskManager,
 	partitioner partition.Partitioner,
 	timeSource clock.TimeSource,
 ) Engine {
+
 	e := &matchingEngineImpl{
+		shutdown:             make(chan struct{}),
 		taskManager:          taskManager,
 		clusterMetadata:      clusterMetadata,
 		historyService:       historyService,
@@ -149,15 +153,18 @@ func NewEngine(taskManager persistence.TaskManager,
 		partitioner:          partitioner,
 		timeSource:           timeSource,
 	}
+
+	go e.subscribeToMembershipChanges()
+
 	e.waitForQueryResultFn = e.waitForQueryResult
 	return e
 }
 
 func (e *matchingEngineImpl) Start() {
-	// As task lists are initialized lazily nothing is done on startup at this point.
 }
 
 func (e *matchingEngineImpl) Stop() {
+	close(e.shutdown)
 	// Executes Stop() on each task list outside of lock
 	for _, l := range e.getTaskLists(math.MaxInt32) {
 		l.Stop()
@@ -200,33 +207,16 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *tasklist.Identifier, t
 	}
 	e.taskListsLock.RUnlock()
 
-	// Defensive check to make sure we actually own the task list
-	//   If we try to create a task list manager for a task list that is not owned by us, return an error
-	//   The new task list manager will steal the task list from the current owner, which should only happen if
-	//   the task list is owned by the current host.
-	taskListOwner, err := e.membershipResolver.Lookup(service.Matching, taskList.GetName())
-	if err != nil {
-		return nil, fmt.Errorf("failed to lookup task list owner: %w", err)
-	}
-
-	self, err := e.membershipResolver.WhoAmI()
-	if err != nil {
-		return nil, fmt.Errorf("failed to lookup self im membership: %w", err)
-	}
-
-	if taskListOwner.Identity() != self.Identity() {
-		return nil, cadence_errors.NewTaskListNotOwnnedByHostError(
-			taskListOwner.Identity(),
-			self.Identity(),
-			taskList.GetName(),
-		)
-	}
-
 	// If it gets here, write lock and check again in case a task list is created between the two locks
 	e.taskListsLock.Lock()
 	if result, ok := e.taskLists[*taskList]; ok {
 		e.taskListsLock.Unlock()
 		return result, nil
+	}
+
+	err := e.guardAgainstShardLoss(taskList)
+	if err != nil {
+		return nil, err
 	}
 
 	// common tagged logger
@@ -1199,6 +1189,113 @@ func (e *matchingEngineImpl) emitInfoOrDebugLog(
 		e.logger.Info(msg, tags...)
 	} else {
 		e.logger.Debug(msg, tags...)
+	}
+}
+
+func (e *matchingEngineImpl) shutDownNonOwnedTasklists() error {
+	if !e.config.EnableTasklistOwnershipGuard() {
+		return nil
+	}
+	noLongerOwned, err := e.getNonOwnedTasklists()
+	if err != nil {
+		return err
+	}
+	e.taskListsLock.Lock()
+	defer e.taskListsLock.Unlock()
+	for _, tl := range noLongerOwned {
+		e.logger.Info("shutting down tasklist preemptively because they are no longer owned by this host",
+			tag.WorkflowTaskListName(tl.TaskListID().GetName()),
+			tag.WorkflowDomainID(tl.TaskListID().GetDomainID()),
+			tag.Dynamic("tasklist-debug-info", tl.String()),
+		)
+		tl.Stop()
+	}
+	return nil
+}
+
+func (e *matchingEngineImpl) getNonOwnedTasklists() ([]tasklist.Manager, error) {
+	if !e.config.EnableTasklistOwnershipGuard() {
+		return nil, nil
+	}
+
+	toShutDown := make([]tasklist.Manager, 0)
+
+	e.taskListsLock.RLock()
+	defer e.taskListsLock.RUnlock()
+
+	self, err := e.membershipResolver.WhoAmI()
+	if err != nil {
+		return nil, fmt.Errorf("failed to lookup self im membership: %w", err)
+	}
+
+	for tl, manager := range e.taskLists {
+		taskListOwner, err := e.membershipResolver.Lookup(service.Matching, tl.GetName())
+		if err != nil {
+			return nil, fmt.Errorf("failed to lookup task list owner: %w", err)
+		}
+
+		if taskListOwner.Identity() != self.Identity() {
+			toShutDown = append(toShutDown, manager)
+		}
+	}
+	return toShutDown, nil
+}
+
+func (e *matchingEngineImpl) guardAgainstShardLoss(taskList *tasklist.Identifier) error {
+	if !e.config.EnableTasklistOwnershipGuard() {
+		return nil
+	}
+
+	self, err := e.membershipResolver.WhoAmI()
+	if err != nil {
+		return fmt.Errorf("failed to lookup self im membership: %w", err)
+	}
+
+	if e.isShuttingDown() {
+		e.logger.Warn("request to get tasklist is being rejected be cause engine is Host is shut down",
+			tag.WorkflowDomainID(taskList.GetDomainID()),
+			tag.WorkflowTaskListType(taskList.GetType()),
+			tag.WorkflowTaskListName(taskList.GetName()),
+		)
+
+		return cadence_errors.NewTaskListNotOwnedByHostError(
+			"not known",
+			self.Identity(),
+			taskList.GetName(),
+		)
+	}
+
+	// Defensive check to make sure we actually own the task list
+	//   If we try to create a task list manager for a task list that is not owned by us, return an error
+	//   The new task list manager will steal the task list from the current owner, which should only happen if
+	//   the task list is owned by the current host.
+	taskListOwner, err := e.membershipResolver.Lookup(service.Matching, taskList.GetName())
+	if err != nil {
+		return fmt.Errorf("failed to lookup task list owner: %w", err)
+	}
+
+	if taskListOwner.Identity() != self.Identity() {
+		e.logger.Warn("Request to get tasklist is being rejected be cause engine does not own this shard",
+			tag.WorkflowDomainID(taskList.GetDomainID()),
+			tag.WorkflowTaskListType(taskList.GetType()),
+			tag.WorkflowTaskListName(taskList.GetName()),
+		)
+		return cadence_errors.NewTaskListNotOwnedByHostError(
+			taskListOwner.Identity(),
+			self.Identity(),
+			taskList.GetName(),
+		)
+	}
+
+	return nil
+}
+
+func (e matchingEngineImpl) isShuttingDown() bool {
+	select {
+	case <-e.shutdown:
+		return true
+	default:
+		return false
 	}
 }
 

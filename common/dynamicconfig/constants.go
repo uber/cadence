@@ -1679,6 +1679,13 @@ const (
 	// Value type: Bool
 	// Default value: false
 	MatchingEnableServiceDiscoveryShutdown
+	// MatchingEnableTasklistGuardAgainstOwnershipShardLoss
+	// enables guards to prevent tasklists from processing if there is any detection that the host
+	// no longer is active or owns the shard
+	// KeyName: matching.enableTasklistGuardAgainstOwnershipLoss
+	// Value type: Bool
+	// Default value: false
+	MatchingEnableTasklistGuardAgainstOwnershipShardLoss
 
 	// key for history
 
@@ -4112,6 +4119,11 @@ var BoolKeys = map[BoolKey]DynamicBool{
 	MatchingEnableServiceDiscoveryShutdown: {
 		KeyName:      "matching.enableServiceDiscoveryShutdown",
 		Description:  "Allows service discovery to stop the matching engine, even if the container scheduler hasn't caught up yet",
+		DefaultValue: false,
+	},
+	MatchingEnableTasklistGuardAgainstOwnershipShardLoss: {
+		KeyName:      "matching.enableTasklistGuardAgainstOwnershipLoss",
+		Description:  "allows guards to ensure that tasklists don't continue processing if there's signal that they've lost ownership",
 		DefaultValue: false,
 	},
 	EventsCacheGlobalEnable: {
