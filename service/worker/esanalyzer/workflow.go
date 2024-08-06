@@ -248,10 +248,11 @@ func (w *Workflow) emitWorkflowVersionMetricsPinot(domainName string, logger *za
 		workflowType := row[0].(string)
 		workflowCount, ok := row[1].(int)
 		if !ok {
-			logger.Error("Error parsing workflow count",
+			logger.Error("error parsing workflow count for cadence version",
 				zap.Error(err),
 				zap.String("WorkflowType", workflowType),
 				zap.String("DomainName", domainName),
+				zap.Int("WorkflowCount", workflowCount),
 				zap.String("raw data", fmt.Sprintf("%#v", response)),
 			)
 			return fmt.Errorf("error parsing workflow count for workflow type %s", workflowType)
@@ -317,13 +318,14 @@ func (w *Workflow) queryWorkflowVersionsWithType(domainName string, wfType strin
 		workflowVersion := row[0].(string)
 		workflowCount, ok := row[1].(int)
 		if !ok {
-			logger.Error("Error parsing workflow count",
+			logger.Error("error parsing workflow count for cadence version",
 				zap.Error(err),
 				zap.String("WorkflowVersion", workflowVersion),
 				zap.String("DomainName", domainName),
+				zap.Int("WorkflowCount", workflowCount),
 				zap.String("raw data", fmt.Sprintf("%#v", response)),
 			)
-			return WorkflowVersionCount{}, fmt.Errorf("error parsing workflow count for workflow version %s", workflowVersion)
+			return WorkflowVersionCount{}, fmt.Errorf("error parsing workflow count for cadence version %s", workflowVersion)
 		}
 		workflowVersions.WorkflowVersions = append(workflowVersions.WorkflowVersions, EsAggregateCount{
 			AggregateKey:   workflowVersion,
