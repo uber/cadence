@@ -1249,10 +1249,15 @@ func (e *matchingEngineImpl) getNonOwnedTasklists() ([]tasklist.Manager, error) 
 			return nil, fmt.Errorf("failed to lookup task list owner: %w", err)
 		}
 
+		e.logger.Info(fmt.Sprintf(">> Debugging tasklist ownership : %v, %v", taskListOwner.Identity(), self.Identity()))
 		if taskListOwner.Identity() != self.Identity() {
 			toShutDown = append(toShutDown, manager)
 		}
 	}
+
+	e.logger.Info("Got list of non-owned-tasklists",
+		tag.Dynamic("tasklist-debug-info", toShutDown),
+	)
 	return toShutDown, nil
 }
 

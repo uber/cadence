@@ -51,7 +51,7 @@ func (e *matchingEngineImpl) subscribeToMembershipChanges() {
 		return
 	}
 
-	listener := make(chan *membership.ChangedEvent)
+	listener := make(chan *membership.ChangedEvent, 1000)
 	e.membershipResolver.Subscribe(service.Matching, "matching-engine", listener)
 
 	for {
@@ -61,7 +61,7 @@ func (e *matchingEngineImpl) subscribeToMembershipChanges() {
 			// and this here. In lieu if a better solution, wait a moment to ensure the hashring
 			// is stable before attempting to clear out disused tasklists. This is a best effort optimization
 			// for shutdown steed anyway so while hardly ideal, it's not catastrophic that it races.
-			time.Sleep(time.Millisecond * 200)
+			time.Sleep(time.Millisecond * 10)
 			err := e.shutDownNonOwnedTasklists()
 			if err != nil {
 				e.logger.Error("Error while trying to determine if tasklists have been shutdown",
