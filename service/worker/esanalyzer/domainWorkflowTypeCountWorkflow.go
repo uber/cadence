@@ -218,7 +218,7 @@ func (w *Workflow) emitWorkflowTypeCountMetricsPinot(domainName string, logger *
 	for _, row := range response {
 		workflowType := row[0].(string)
 
-		// even though the count is a int, it is returned as a float64
+		// even though the count is a int, it is returned as a float64, need to pay attention to this
 		workflowCount, ok := row[1].(float64)
 		if !ok {
 			logger.Error("Error parsing workflow count",
