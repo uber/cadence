@@ -34,7 +34,6 @@ import (
 
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
@@ -55,11 +54,15 @@ const (
 	// Time budget for empty task to propagate through the function stack and be returned to
 	// pollForActivityTask or pollForDecisionTask handler.
 	returnEmptyTaskTimeBudget = time.Second
+	// maxSyncMatchWaitTime is the max amount of time that we are willing to wait for a sync match to happen
+	maxSyncMatchWaitTime = 200 * time.Millisecond
 )
 
 var (
 	// ErrNoTasks is exported temporarily for integration test
 	ErrNoTasks                      = errors.New("no tasks")
+	ErrRemoteSyncMatchFailed        = &types.RemoteSyncMatchedError{Message: "remote sync match failed"}
+	ErrTooManyOutstandingTasks      = &types.ServiceBusyError{Message: "Too many outstanding appends to the TaskList"}
 	_stickyPollerUnavailableError   = &types.StickyWorkerUnavailableError{Message: "sticky worker is unavailable, please use non-sticky task list."}
 	persistenceOperationRetryPolicy = common.CreatePersistenceRetryPolicy()
 	taskListActivityTypeTag         = metrics.TaskListTypeTag("activity")
@@ -119,13 +122,6 @@ type (
 		closeCallback        func(Manager)
 	}
 )
-
-const (
-	// maxSyncMatchWaitTime is the max amount of time that we are willing to wait for a sync match to happen
-	maxSyncMatchWaitTime = 200 * time.Millisecond
-)
-
-var errRemoteSyncMatchFailed = &types.RemoteSyncMatchedError{Message: "remote sync match failed"}
 
 func NewManager(
 	domainCache cache.DomainCache,
@@ -250,7 +246,6 @@ func (c *taskListManagerImpl) handleErr(err error) error {
 // be written to database and later asynchronously matched with a poller
 func (c *taskListManagerImpl) AddTask(ctx context.Context, params AddTaskParams) (bool, error) {
 	c.startWG.Wait()
-
 	if c.shouldReload() {
 		c.Stop()
 		return false, errShutdown
@@ -259,69 +254,51 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params AddTaskParams)
 		// request sent by history service
 		c.liveness.MarkAlive()
 	}
-	var syncMatch bool
 	e := event.E{
 		TaskListName: c.taskListID.GetName(),
 		TaskListKind: &c.taskListKind,
 		TaskListType: c.taskListID.GetType(),
 		TaskInfo:     *params.TaskInfo,
 	}
-	_, err := c.executeWithRetry(func() (interface{}, error) {
-		if err := ctx.Err(); err != nil {
-			return nil, err
-		}
+	domainEntry, err := c.domainCache.GetDomainByID(params.TaskInfo.DomainID)
+	if err != nil {
+		return false, err
+	}
 
-		domainEntry, err := c.domainCache.GetDomainByID(params.TaskInfo.DomainID)
-		if err != nil {
-			return nil, err
-		}
-
-		isForwarded := params.ForwardedFrom != ""
-
-		if _, err := domainEntry.IsActiveIn(c.clusterMetadata.GetCurrentClusterName()); err != nil {
-			// standby task, only persist when task is not forwarded from child partition
-			syncMatch = false
-			if isForwarded {
-				return &persistence.CreateTasksResponse{}, errRemoteSyncMatchFailed
-			}
-
-			r, err := c.taskWriter.appendTask(params.TaskInfo)
-			return r, err
-		}
-
+	if isActive, err := domainEntry.IsActiveIn(c.clusterMetadata.GetCurrentClusterName()); err == nil && isActive {
 		isolationGroup, err := c.getIsolationGroupForTask(ctx, params.TaskInfo)
 		if err != nil {
 			return false, err
 		}
 		// active task, try sync match first
-		syncMatch, err = c.trySyncMatch(ctx, params, isolationGroup)
+		syncMatch, err := c.trySyncMatch(ctx, params, isolationGroup)
 		if syncMatch {
 			e.EventName = "SyncMatched so not persisted"
 			event.Log(e)
-			return &persistence.CreateTasksResponse{}, err
+			return syncMatch, err
 		}
-		if params.ActivityTaskDispatchInfo != nil {
-			return false, errRemoteSyncMatchFailed
-		}
+	}
 
-		if isForwarded {
-			// forwarded from child partition - only do sync match
-			// child partition will persist the task when sync match fails
-			e.EventName = "Could not SyncMatched Forwarded Task so not persisted"
-			event.Log(e)
-			return &persistence.CreateTasksResponse{}, errRemoteSyncMatchFailed
-		}
+	if params.ActivityTaskDispatchInfo != nil {
+		return false, ErrRemoteSyncMatchFailed
+	}
 
-		e.EventName = "Task Sent to Writer"
+	if params.ForwardedFrom != "" {
+		// forwarded from child partition - only do sync match
+		// child partition will persist the task when sync match fails
+		e.EventName = "Could not SyncMatched Forwarded Task so not persisted"
 		event.Log(e)
-		return c.taskWriter.appendTask(params.TaskInfo)
-	})
+		return false, ErrRemoteSyncMatchFailed
+	}
 
-	if err == nil && !syncMatch {
+	e.EventName = "Task Sent to Writer"
+	event.Log(e)
+	_, err = c.taskWriter.appendTask(ctx, params.TaskInfo)
+	if err == nil {
 		c.taskReader.Signal()
 	}
 
-	return syncMatch, err
+	return false, c.handleErr(err)
 }
 
 // DispatchTask dispatches a task to a poller. When there are no pollers to pick
@@ -370,7 +347,7 @@ func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond 
 	// reached, instead of emptyTask, context timeout error is returned to the frontend by the rpc stack,
 	// which counts against our SLO. By shortening the timeout by a very small amount, the emptyTask can be
 	// returned to the handler before a context timeout error is generated.
-	childCtx, cancel := c.newChildContext(ctx, c.config.LongPollExpirationInterval(), returnEmptyTaskTimeBudget)
+	childCtx, cancel := newChildContext(ctx, c.config.LongPollExpirationInterval(), returnEmptyTaskTimeBudget)
 	defer cancel()
 
 	isolationGroup := IsolationGroupFromContext(ctx)
@@ -506,24 +483,6 @@ func (c *taskListManagerImpl) TaskListID() *Identifier {
 	return c.taskListID
 }
 
-// Retry operation on transient error. On rangeID update by another process calls c.Stop().
-func (c *taskListManagerImpl) executeWithRetry(
-	operation func() (interface{}, error),
-) (result interface{}, err error) {
-
-	op := func() error {
-		result, err = operation()
-		return err
-	}
-
-	throttleRetry := backoff.NewThrottleRetry(
-		backoff.WithRetryPolicy(persistenceOperationRetryPolicy),
-		backoff.WithRetryableError(persistence.IsTransientError),
-	)
-	err = c.handleErr(throttleRetry.Do(context.Background(), op))
-	return
-}
-
 func (c *taskListManagerImpl) trySyncMatch(ctx context.Context, params AddTaskParams, isolationGroup string) (bool, error) {
 	task := newInternalTask(params.TaskInfo, nil, params.Source, params.ForwardedFrom, true, params.ActivityTaskDispatchInfo, isolationGroup)
 	childCtx := ctx
@@ -535,7 +494,7 @@ func (c *taskListManagerImpl) trySyncMatch(ctx context.Context, params AddTaskPa
 	if !task.IsForwarded() {
 		// when task is forwarded from another matching host, we trust the context as is
 		// otherwise, we override to limit the amount of time we can block on sync match
-		childCtx, cancel = c.newChildContext(ctx, waitTime, time.Second)
+		childCtx, cancel = newChildContext(ctx, waitTime, time.Second)
 	}
 	var matched bool
 	var err error
@@ -554,7 +513,7 @@ func (c *taskListManagerImpl) trySyncMatch(ctx context.Context, params AddTaskPa
 // method to create child context when childContext cannot use
 // all of parent's deadline but instead there is a need to leave
 // some time for parent to do some post-work
-func (c *taskListManagerImpl) newChildContext(
+func newChildContext(
 	parent context.Context,
 	timeout time.Duration,
 	tailroom time.Duration,
@@ -659,10 +618,6 @@ func getTaskListTypeTag(taskListType int) metrics.Tag {
 	default:
 		return metrics.TaskListTypeTag("")
 	}
-}
-
-func createServiceBusyError(msg string) *types.ServiceBusyError {
-	return &types.ServiceBusyError{Message: msg}
 }
 
 func rangeIDToTaskIDBlock(rangeID, rangeSize int64) taskIDBlock {

@@ -363,10 +363,10 @@ func (tr *taskReader) completeTask(task *persistence.TaskInfo, err error) {
 		// Note that RecordTaskStarted only fails after retrying for a long time, so a single task will not be
 		// re-written to persistence frequently.
 		op := func() error {
-			_, err := tr.taskWriter.appendTask(task)
+			_, err := tr.taskWriter.appendTask(tr.cancelCtx, task)
 			return err
 		}
-		err = tr.throttleRetry.Do(context.Background(), op)
+		err = tr.throttleRetry.Do(tr.cancelCtx, op)
 		if err != nil {
 			// OK, we also failed to write to persistence.
 			// This should only happen in very extreme cases where persistence is completely down.

@@ -368,6 +368,137 @@ func TestAddTaskStandby(t *testing.T) {
 	require.False(t, syncMatch)
 }
 
+func TestAddTaskStandbyTimeout(t *testing.T) {
+	controller := gomock.NewController(t)
+	logger := testlogger.New(t)
+
+	cfg := config.NewConfig(dynamicconfig.NewNopCollection(), "some random hostname")
+	cfg.IdleTasklistCheckInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
+
+	tlm := createTestTaskListManagerWithConfig(t, logger, controller, cfg)
+	require.NoError(t, tlm.Start())
+
+	// always block on the channel
+	tlm.taskWriter.appendCh = nil
+
+	domainID := uuid.New()
+	workflowID := "some random workflowID"
+	runID := "some random runID"
+
+	addTaskParam := AddTaskParams{
+		TaskInfo: &persistence.TaskInfo{
+			DomainID:               domainID,
+			WorkflowID:             workflowID,
+			RunID:                  runID,
+			ScheduleID:             2,
+			ScheduleToStartTimeout: 5,
+			CreatedTime:            time.Now(),
+		},
+	}
+
+	testStandbyDomainEntry := cache.NewGlobalDomainCacheEntryForTest(
+		&persistence.DomainInfo{ID: domainID, Name: "some random domain name"},
+		&persistence.DomainConfig{Retention: 1},
+		&persistence.DomainReplicationConfig{
+			ActiveClusterName: cluster.TestAlternativeClusterName,
+			Clusters: []*persistence.ClusterReplicationConfig{
+				{ClusterName: cluster.TestCurrentClusterName},
+				{ClusterName: cluster.TestAlternativeClusterName},
+			},
+		},
+		1234,
+	)
+	mockDomainCache := tlm.domainCache.(*cache.MockDomainCache)
+	mockDomainCache.EXPECT().GetDomainByID(domainID).Return(testStandbyDomainEntry, nil).AnyTimes()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	syncMatch, err := tlm.AddTask(ctx, addTaskParam)
+	require.Equal(t, ErrTooManyOutstandingTasks, err)
+	require.False(t, syncMatch)
+}
+
+func TestAddTask(t *testing.T) {
+	testCases := []struct {
+		name      string
+		request   AddTaskParams
+		mockSetup func(*cache.MockDomainCache)
+		want      bool
+		wantErr   bool
+	}{
+		{
+			name: "failed to get domain by id",
+			request: AddTaskParams{
+				TaskInfo: &persistence.TaskInfo{
+					DomainID:               "domainID",
+					WorkflowID:             "workflowID",
+					RunID:                  "runID",
+					ScheduleID:             2,
+					ScheduleToStartTimeout: 5,
+					CreatedTime:            time.Now(),
+				},
+			},
+			mockSetup: func(mockDomainCache *cache.MockDomainCache) {
+				mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(nil, errors.New("test error"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "activity remote sync match failed",
+			request: AddTaskParams{
+				TaskInfo: &persistence.TaskInfo{
+					DomainID:               "domainID",
+					WorkflowID:             "workflowID",
+					RunID:                  "runID",
+					ScheduleID:             2,
+					ScheduleToStartTimeout: 5,
+					CreatedTime:            time.Now(),
+				},
+				ActivityTaskDispatchInfo: &types.ActivityTaskDispatchInfo{},
+			},
+			mockSetup: func(mockDomainCache *cache.MockDomainCache) {
+				mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.CreateDomainCacheEntry("domain"), nil)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			logger := testlogger.New(t)
+			cfg := config.NewConfig(dynamicconfig.NewNopCollection(), "some random hostname")
+			cfg.IdleTasklistCheckInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
+
+			tm := NewTestTaskManager(t, logger, clock.NewRealTimeSource())
+			mockPartitioner := partition.NewMockPartitioner(controller)
+			mockDomainCache := cache.NewMockDomainCache(controller)
+			mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("domain", nil)
+			tl := "tl"
+			dID := "domain"
+			tlID, err := NewIdentifier(dID, tl, persistence.TaskListTypeActivity)
+			require.NoError(t, err)
+			tlKind := types.TaskListKindNormal
+			tlm, err := NewManager(mockDomainCache, logger, metrics.NewClient(tally.NoopScope, metrics.Matching), tm, cluster.GetTestClusterMetadata(true), mockPartitioner, nil, func(Manager) {}, tlID, &tlKind, cfg, clock.NewRealTimeSource(), time.Now())
+			require.NoError(t, err)
+			err = tlm.Start()
+			require.NoError(t, err)
+
+			tc.mockSetup(mockDomainCache)
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+			syncMatch, err := tlm.AddTask(ctx, tc.request)
+			if tc.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tc.want, syncMatch)
+			}
+		})
+	}
+}
+
 func TestGetPollerIsolationGroup(t *testing.T) {
 	controller := gomock.NewController(t)
 	logger := testlogger.New(t)
