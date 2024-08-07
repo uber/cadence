@@ -819,7 +819,7 @@ func (s *engine2Suite) TestRecordActivityTaskStartedStaleState() {
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse1, nil).Times(workflow.ConditionalRetryCount)
 
-	_, err := s.historyEngine.RecordActivityTaskStarted(context.Background(), &types.RecordActivityTaskStartedRequest{
+	response, err := s.historyEngine.RecordActivityTaskStarted(context.Background(), &types.RecordActivityTaskStartedRequest{
 		DomainUUID:        domainID,
 		WorkflowExecution: &workflowExecution,
 		ScheduleID:        5,
@@ -833,6 +833,8 @@ func (s *engine2Suite) TestRecordActivityTaskStartedStaleState() {
 		},
 	})
 
+	s.Error(err)
+	s.Nil(response)
 	s.Equal(workflow.ErrMaxAttemptsExceeded, err)
 }
 
@@ -853,7 +855,7 @@ func (s *engine2Suite) TestRecordActivityTaskStartedActivityNotPending() {
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse1, nil).Once()
 
-	_, err := s.historyEngine.RecordActivityTaskStarted(context.Background(), &types.RecordActivityTaskStartedRequest{
+	response, err := s.historyEngine.RecordActivityTaskStarted(context.Background(), &types.RecordActivityTaskStartedRequest{
 		DomainUUID:        domainID,
 		WorkflowExecution: &workflowExecution,
 		ScheduleID:        3,
@@ -867,6 +869,8 @@ func (s *engine2Suite) TestRecordActivityTaskStartedActivityNotPending() {
 		},
 	})
 
+	s.Error(err)
+	s.Nil(response)
 	s.Equal(workflow.ErrActivityTaskNotFound, err)
 }
 
