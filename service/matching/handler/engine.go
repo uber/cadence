@@ -207,16 +207,16 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *tasklist.Identifier, t
 	}
 	e.taskListsLock.RUnlock()
 
+	err := e.guardAgainstShardLoss(taskList)
+	if err != nil {
+		return nil, err
+	}
+
 	// If it gets here, write lock and check again in case a task list is created between the two locks
 	e.taskListsLock.Lock()
 	if result, ok := e.taskLists[*taskList]; ok {
 		e.taskListsLock.Unlock()
 		return result, nil
-	}
-
-	err := e.guardAgainstShardLoss(taskList)
-	if err != nil {
-		return nil, err
 	}
 
 	// common tagged logger

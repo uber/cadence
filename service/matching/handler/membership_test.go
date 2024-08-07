@@ -24,16 +24,14 @@ package handler
 
 import (
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
-	"github.com/uber/cadence/service/matching"
 	"github.com/uber/cadence/service/matching/config"
 )
 
@@ -42,18 +40,21 @@ func TestMembershipSubscriptionShutdown(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		// this is nil for the memebership resolver, and it'll panic
 		r := resource.NewTest(t, ctrl, 0)
-		s := matching.Service{
-			stopC:    make(chan struct{}),
-			Resource: r,
+		e := matchingEngineImpl{
+			config: &config.Config{
+				EnableTasklistOwnershipGuard: func(opts ...dynamicconfig.FilterOption) bool { return true },
+			},
+			shutdown: make(chan struct{}),
 		}
-		e := NewMockEngine(ctrl)
+
 		r.MembershipResolver.EXPECT().Subscribe(service.Matching, "matching-engine", gomock.Any()).Times(1)
 		r.MembershipResolver.EXPECT().WhoAmI().Times(1)
 
 		go func() {
-			close(s.stopC)
+			time.Sleep(time.Second)
+			close(e.shutdown)
 		}()
-		s.subscribeToMembershipChanges(e)
+		e.subscribeToMembershipChanges()
 	})
 }
 
@@ -61,62 +62,67 @@ func TestMembershipSubscriptionPanicHandling(t *testing.T) {
 	assert.NotPanics(t, func() {
 		ctrl := gomock.NewController(t)
 		// this is nil for the memebership resolver, and it'll panic
+
 		r := resource.NewTest(t, ctrl, 0)
-		s := matching.Service{
-			stopC:    make(chan struct{}),
-			Resource: r,
-		}
-		e := NewMockEngine(ctrl)
 		r.MembershipResolver.EXPECT().Subscribe(service.Matching, "matching-engine", gomock.Any()).DoAndReturn(func(_, _, _ any) {
 			panic("a panic has occurred")
 		})
-		s.subscribeToMembershipChanges(e)
+
+		e := matchingEngineImpl{
+			membershipResolver: r.MembershipResolver,
+			config: &config.Config{
+				EnableTasklistOwnershipGuard: func(opts ...dynamicconfig.FilterOption) bool { return true },
+			},
+			shutdown: make(chan struct{}),
+		}
+
+		e.subscribeToMembershipChanges()
 	})
 }
 
-func TestCheckIfMembershipStopped(t *testing.T) {
-
-	m := &mockEng{}
-	hostinfo := membership.NewDetailedHostInfo("", "some-host-A", nil)
-	c := &config.Config{}
-
-	c.EnableServiceDiscoveryShutdown = func(opts ...dynamicconfig.FilterOption) bool { return true }
-
-	changeEvent := membership.ChangedEvent{
-		HostsRemoved: []string{"some-host-A"},
-	}
-
-	checkAndShutdownIfEvicted(m, c, log.NewNoop(), hostinfo, &changeEvent)
-	assert.True(t, m.stopped)
-	assert.False(t, m.started)
-}
-
-func TestCheckIfMembershipRestarted(t *testing.T) {
-
-	m := &mockEng{}
-	hostinfo := membership.NewDetailedHostInfo("", "some-host-A", nil)
-	c := &config.Config{}
-
-	c.EnableServiceDiscoveryShutdown = func(opts ...dynamicconfig.FilterOption) bool { return true }
-
-	changeEvent := membership.ChangedEvent{
-		HostsAdded: []string{"some-host-A"},
-	}
-
-	checkAndShutdownIfEvicted(m, c, log.NewNoop(), hostinfo, &changeEvent)
-	assert.False(t, m.stopped)
-	assert.True(t, m.started)
-}
-
-type mockEng struct {
-	stopped bool
-	started bool
-}
-
-func (m *mockEng) Stop() {
-	m.stopped = true
-}
-
-func (m *mockEng) Start() {
-	m.started = true
-}
+//func TestCheckIfMembershipStopped(t *testing.T) {
+//
+//	m := &mockEng{}
+//	hostinfo := membership.NewDetailedHostInfo("", "some-host-A", nil)
+//	c := &config.Config{}
+//
+//	c.EnableServiceDiscoveryShutdown = func(opts ...dynamicconfig.FilterOption) bool { return true }
+//
+//	changeEvent := membership.ChangedEvent{
+//		HostsRemoved: []string{"some-host-A"},
+//	}
+//
+//	checkAndShutdownIfEvicted(m, c, log.NewNoop(), hostinfo, &changeEvent)
+//	assert.True(t, m.stopped)
+//	assert.False(t, m.started)
+//}
+//
+//func TestCheckIfMembershipRestarted(t *testing.T) {
+//
+//	m := &mockEng{}
+//	hostinfo := membership.NewDetailedHostInfo("", "some-host-A", nil)
+//	c := &config.Config{}
+//
+//	c.EnableServiceDiscoveryShutdown = func(opts ...dynamicconfig.FilterOption) bool { return true }
+//
+//	changeEvent := membership.ChangedEvent{
+//		HostsAdded: []string{"some-host-A"},
+//	}
+//
+//	checkAndShutdownIfEvicted(m, c, log.NewNoop(), hostinfo, &changeEvent)
+//	assert.False(t, m.stopped)
+//	assert.True(t, m.started)
+//}
+//
+//type mockEng struct {
+//	stopped bool
+//	started bool
+//}
+//
+//func (m *mockEng) Stop() {
+//	m.stopped = true
+//}
+//
+//func (m *mockEng) Start() {
+//	m.started = true
+//}

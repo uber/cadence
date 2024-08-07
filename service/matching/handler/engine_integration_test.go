@@ -1317,7 +1317,7 @@ func (s *matchingEngineSuite) TestGetTaskListManager_OwnerShip() {
 			name:          "Not owned by current host",
 			lookUpResult:  "A",
 			whoAmIResult:  "B",
-			expectedError: new(cadence_errors.TaskListNotOwnnedByHostError),
+			expectedError: new(cadence_errors.TaskListNotOwnedByHostError),
 		},
 		{
 			name:          "LookupError",
