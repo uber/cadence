@@ -33,13 +33,13 @@ type simpleResolver struct {
 }
 
 // NewSimpleResolver returns a membership resolver interface
-func NewSimpleResolver(serviceName string, hosts map[string][]membership.HostInfo) membership.Resolver {
+func NewSimpleResolver(serviceName string, hosts map[string][]membership.HostInfo, currentHost membership.HostInfo) membership.Resolver {
 	resolvers := make(map[string]*simpleHashring, len(hosts))
 	for service, hostList := range hosts {
 		resolvers[service] = newSimpleHashring(hostList)
 	}
 	return &simpleResolver{
-		hostInfo:  hosts[serviceName][0],
+		hostInfo:  currentHost,
 		resolvers: resolvers,
 	}
 }
