@@ -122,19 +122,15 @@ func New(
 	var indexName string
 	var pinotTableName string
 
-	// if esClient != nil {
-	//	mode = ES
-	//	indexName = esConfig.Indices[common.VisibilityAppName]
-	//	pinotTableName = ""
-	// } else if pinotClient != nil {
-	//	mode = Pinot
-	//	indexName = ""
-	//	pinotTableName = pinotConfig.Table
-	// }
-
-	mode = Pinot
-	indexName = ""
-	pinotTableName = pinotConfig.Table
+	if esClient != nil {
+		mode = ES
+		indexName = esConfig.Indices[common.VisibilityAppName]
+		pinotTableName = ""
+	} else if pinotClient != nil {
+		mode = Pinot
+		indexName = ""
+		pinotTableName = pinotConfig.Table
+	}
 
 	return &Analyzer{
 		svcClient:           svcClient,
