@@ -161,6 +161,8 @@ func NewEngine(
 }
 
 func (e *matchingEngineImpl) Start() {
+	// reset the shutdown channel if there's any listeners
+	e.shutdown = make(chan struct{})
 }
 
 func (e *matchingEngineImpl) Stop() {
@@ -1196,13 +1198,10 @@ func (e *matchingEngineImpl) shutDownNonOwnedTasklists() error {
 	if !e.config.EnableTasklistOwnershipGuard() {
 		return nil
 	}
-	noLongerOwned, err := e.getNonOwnedTasklists()
+	noLongerOwned, err := e.getNonOwnedTasklistsLocked()
 	if err != nil {
 		return err
 	}
-
-	e.taskListsLock.Lock()
-	defer e.taskListsLock.Unlock()
 
 	for _, tl := range noLongerOwned {
 		// for each of the tasklists that are no longer owned, kick off the
@@ -1217,23 +1216,26 @@ func (e *matchingEngineImpl) shutDownNonOwnedTasklists() error {
 				}
 			}()
 
+			e.removeTaskListManager(tl)
+
 			e.logger.Info("shutting down tasklist preemptively because they are no longer owned by this host",
 				tag.WorkflowTaskListName(tl.TaskListID().GetName()),
 				tag.WorkflowDomainID(tl.TaskListID().GetDomainID()),
 				tag.Dynamic("tasklist-debug-info", tl.String()),
 			)
+
 			tl.Stop()
 		}(tl)
 	}
 	return nil
 }
 
-func (e *matchingEngineImpl) getNonOwnedTasklists() ([]tasklist.Manager, error) {
+func (e *matchingEngineImpl) getNonOwnedTasklistsLocked() ([]tasklist.Manager, error) {
 	if !e.config.EnableTasklistOwnershipGuard() {
 		return nil, nil
 	}
 
-	toShutDown := make([]tasklist.Manager, 0)
+	var toShutDown []tasklist.Manager
 
 	e.taskListsLock.RLock()
 	defer e.taskListsLock.RUnlock()
@@ -1249,7 +1251,6 @@ func (e *matchingEngineImpl) getNonOwnedTasklists() ([]tasklist.Manager, error) 
 			return nil, fmt.Errorf("failed to lookup task list owner: %w", err)
 		}
 
-		e.logger.Info(fmt.Sprintf(">> Debugging tasklist ownership : %v, %v", taskListOwner.Identity(), self.Identity()))
 		if taskListOwner.Identity() != self.Identity() {
 			toShutDown = append(toShutDown, manager)
 		}

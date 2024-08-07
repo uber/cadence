@@ -23,8 +23,6 @@
 package handler
 
 import (
-	"time"
-
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/service"
@@ -57,11 +55,6 @@ func (e *matchingEngineImpl) subscribeToMembershipChanges() {
 	for {
 		select {
 		case event := <-listener:
-			// There is a race between the event being acted upon in the hashring
-			// and this here. In lieu if a better solution, wait a moment to ensure the hashring
-			// is stable before attempting to clear out disused tasklists. This is a best effort optimization
-			// for shutdown steed anyway so while hardly ideal, it's not catastrophic that it races.
-			time.Sleep(time.Millisecond * 10)
 			err := e.shutDownNonOwnedTasklists()
 			if err != nil {
 				e.logger.Error("Error while trying to determine if tasklists have been shutdown",
