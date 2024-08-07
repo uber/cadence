@@ -565,8 +565,8 @@ func TestEmitWorkflowTypeCountMetricsPinot(t *testing.T) {
 			},
 			PinotClientAffordance: func(mockPinotClient *pinot.MockGenericClient) {
 				mockPinotClient.EXPECT().SearchAggr(gomock.Any()).Return([][]interface{}{
-					{"test0", 1},
-					{"test1", 2},
+					{"test0", float64(1)},
+					{"test1", float64(2)},
 				}, nil).Times(1)
 			},
 			expectedErr: nil,
@@ -657,16 +657,16 @@ func TestEmitWorkflowVersionMetricsPinot(t *testing.T) {
 			},
 			PinotClientAffordance: func(mockPinotClient *pinot.MockGenericClient) {
 				mockPinotClient.EXPECT().SearchAggr(gomock.Any()).Return([][]interface{}{
-					{"test-wf-type0", 100},
-					{"test-wf-type1", 200},
+					{"test-wf-type0", float64(100)},
+					{"test-wf-type1", float64(200)},
 				}, nil).Times(1)
 				mockPinotClient.EXPECT().SearchAggr(gomock.Any()).Return([][]interface{}{
-					{"test-wf-version0", 1},
-					{"test-wf-version1", 20},
+					{"test-wf-version0", float64(10)},
+					{"test-wf-version1", float64(20)},
 				}, nil).Times(1)
 				mockPinotClient.EXPECT().SearchAggr(gomock.Any()).Return([][]interface{}{
-					{"test-wf-version3", 10},
-					{"test-wf-version4", 2},
+					{"test-wf-version3", float64(10)},
+					{"test-wf-version4", float64(2)},
 				}, nil).Times(1)
 			},
 			expectedErr: nil,
@@ -718,8 +718,8 @@ func TestEmitWorkflowVersionMetricsPinot(t *testing.T) {
 			},
 			PinotClientAffordance: func(mockPinotClient *pinot.MockGenericClient) {
 				mockPinotClient.EXPECT().SearchAggr(gomock.Any()).Return([][]interface{}{
-					{"test-wf-type0", 100},
-					{"test-wf-type1", 200},
+					{"test-wf-type0", float64(100)},
+					{"test-wf-type1", float64(200)},
 				}, nil).Times(1)
 			},
 			expectedErr: fmt.Errorf("error querying workflow versions for workflow type: test-wf-type0: error: domain error"),
@@ -731,8 +731,8 @@ func TestEmitWorkflowVersionMetricsPinot(t *testing.T) {
 			},
 			PinotClientAffordance: func(mockPinotClient *pinot.MockGenericClient) {
 				mockPinotClient.EXPECT().SearchAggr(gomock.Any()).Return([][]interface{}{
-					{"test-wf-type0", 100},
-					{"test-wf-type1", 200},
+					{"test-wf-type0", float64(100)},
+					{"test-wf-type1", float64(200)},
 				}, nil).Times(1)
 				mockPinotClient.EXPECT().SearchAggr(gomock.Any()).Return(nil, fmt.Errorf("pinot error")).Times(1)
 			},
@@ -745,16 +745,16 @@ func TestEmitWorkflowVersionMetricsPinot(t *testing.T) {
 			},
 			PinotClientAffordance: func(mockPinotClient *pinot.MockGenericClient) {
 				mockPinotClient.EXPECT().SearchAggr(gomock.Any()).Return([][]interface{}{
-					{"test-wf-type0", 100},
-					{"test-wf-type1", 200},
+					{"test-wf-type0", float64(100)},
+					{"test-wf-type1", float64(200)},
 				}, nil).Times(1)
 				mockPinotClient.EXPECT().SearchAggr(gomock.Any()).Return([][]interface{}{
-					{"test-wf-version0", 1.5},
+					{"test-wf-version0", float64(3.14)},
 					{"test-wf-version1", 20},
 				}, nil).Times(1)
 			},
 			expectedErr: fmt.Errorf("error querying workflow versions for workflow type: " +
-				"test-wf-type0: error: error parsing workflow count for workflow version test-wf-version0"),
+				"test-wf-type0: error: error parsing workflow count for cadence version test-wf-version1"),
 		},
 	}
 

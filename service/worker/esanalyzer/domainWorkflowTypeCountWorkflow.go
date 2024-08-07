@@ -217,12 +217,17 @@ func (w *Workflow) emitWorkflowTypeCountMetricsPinot(domainName string, logger *
 	var domainWorkflowTypeCount DomainWorkflowTypeCount
 	for _, row := range response {
 		workflowType := row[0].(string)
-		workflowCount, ok := row[1].(int)
+
+		// even though the count is a int, it is returned as a float64, need to pay attention to this
+		workflowCount, ok := row[1].(float64)
 		if !ok {
 			logger.Error("Error parsing workflow count",
 				zap.Error(err),
 				zap.String("WorkflowType", workflowType),
 				zap.String("DomainName", domainName),
+				zap.Float64("WorkflowCount", workflowCount),
+				zap.String("WorkflowCountType", fmt.Sprintf("%T", row[1])),
+				zap.String("raw data", fmt.Sprintf("%#v", response)),
 			)
 			return fmt.Errorf("error parsing workflow count for workflow type %s", workflowType)
 		}

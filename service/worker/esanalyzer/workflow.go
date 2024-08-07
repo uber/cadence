@@ -181,7 +181,7 @@ WHERE DomainID = '%s'
   AND CloseStatus = -1
   AND StartTime > 0
   AND WorkflowType = '%s'
-GROUP BY JSON_EXTRACT_SCALAR(Attr, '$.CadenceChangeVersion', 'STRING_ARRAY') AS CadenceChangeVersion
+GROUP BY JSON_EXTRACT_SCALAR(Attr, '$.CadenceChangeVersion', 'STRING_ARRAY')
 ORDER BY count DESC
 LIMIT 10
     `, w.analyzer.pinotTableName, domain.GetInfo().ID, wfType), nil
@@ -246,12 +246,15 @@ func (w *Workflow) emitWorkflowVersionMetricsPinot(domainName string, logger *za
 	var domainWorkflowVersionCount DomainWorkflowVersionCount
 	for _, row := range response {
 		workflowType := row[0].(string)
-		workflowCount, ok := row[1].(int)
+		workflowCount, ok := row[1].(float64)
 		if !ok {
-			logger.Error("Error parsing workflow count",
+			logger.Error("error parsing workflow count for cadence version",
 				zap.Error(err),
 				zap.String("WorkflowType", workflowType),
 				zap.String("DomainName", domainName),
+				zap.Float64("WorkflowCount", workflowCount),
+				zap.String("WorkflowCountType", fmt.Sprintf("%T", row[1])),
+				zap.String("raw data", fmt.Sprintf("%#v", response)),
 			)
 			return fmt.Errorf("error parsing workflow count for workflow type %s", workflowType)
 		}
@@ -314,14 +317,17 @@ func (w *Workflow) queryWorkflowVersionsWithType(domainName string, wfType strin
 	var workflowVersions WorkflowVersionCount
 	for _, row := range response {
 		workflowVersion := row[0].(string)
-		workflowCount, ok := row[1].(int)
+		workflowCount, ok := row[1].(float64)
 		if !ok {
-			logger.Error("Error parsing workflow count",
+			logger.Error("error parsing workflow count for cadence version",
 				zap.Error(err),
 				zap.String("WorkflowVersion", workflowVersion),
 				zap.String("DomainName", domainName),
+				zap.Float64("WorkflowCount", workflowCount),
+				zap.String("WorkflowCountType", fmt.Sprintf("%T", row[1])),
+				zap.String("raw data", fmt.Sprintf("%#v", response)),
 			)
-			return WorkflowVersionCount{}, fmt.Errorf("error parsing workflow count for workflow version %s", workflowVersion)
+			return WorkflowVersionCount{}, fmt.Errorf("error parsing workflow count for cadence version %s", workflowVersion)
 		}
 		workflowVersions.WorkflowVersions = append(workflowVersions.WorkflowVersions, EsAggregateCount{
 			AggregateKey:   workflowVersion,
