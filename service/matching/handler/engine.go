@@ -1296,7 +1296,7 @@ func (e *matchingEngineImpl) guardAgainstShardLoss(taskList *tasklist.Identifier
 	}
 
 	if taskListOwner.Identity() != self.Identity() {
-		e.logger.Warn("Request to get tasklist is being rejected be cause engine does not own this shard",
+		e.logger.Warn("Request to get tasklist is being rejected because engine does not own this shard",
 			tag.WorkflowDomainID(taskList.GetDomainID()),
 			tag.WorkflowTaskListType(taskList.GetType()),
 			tag.WorkflowTaskListName(taskList.GetName()),
