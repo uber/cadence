@@ -6204,6 +6204,14 @@ func (v *StartChildWorkflowExecutionInitiatedEventAttributes) GetParentClosePoli
 	return
 }
 
+// GetExecutionStartToCloseTimeoutSeconds is an internal getter (TBD...)
+func (v *StartChildWorkflowExecutionInitiatedEventAttributes) GetExecutionStartToCloseTimeoutSeconds() (o int32) {
+	if v != nil && v.ExecutionStartToCloseTimeoutSeconds != nil {
+		return *v.ExecutionStartToCloseTimeoutSeconds
+	}
+	return
+}
+
 // StartTimeFilter is an internal type (TBD...)
 type StartTimeFilter struct {
 	EarliestTime *int64 `json:"earliestTime,omitempty"`
