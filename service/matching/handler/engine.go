@@ -1273,7 +1273,7 @@ func (e *matchingEngineImpl) guardAgainstShardLoss(taskList *tasklist.Identifier
 	}
 
 	if e.isShuttingDown() {
-		e.logger.Warn("request to get tasklist is being rejected be cause engine is Host is shut down",
+		e.logger.Warn("request to get tasklist is being rejected because engine is Host is shut down",
 			tag.WorkflowDomainID(taskList.GetDomainID()),
 			tag.WorkflowTaskListType(taskList.GetType()),
 			tag.WorkflowTaskListName(taskList.GetName()),
