@@ -775,7 +775,7 @@ func (v *pinotVisibilityStore) getCountWorkflowExecutionsQuery(tableName string,
 	comparExpr, _ := parseOrderBy(requestQuery)
 	comparExpr, err := v.pinotQueryValidator.ValidateQuery(comparExpr)
 	if err != nil {
-		return "", fmt.Errorf("pinot query validator error: %w, query: %s", err, request.Query)
+		return "", &types.BadRequestError{Message: fmt.Sprintf("pinot query validator error: %s, query: %s", err.Error(), request.Query)}
 	}
 
 	comparExpr = filterPrefix(comparExpr)
@@ -819,7 +819,7 @@ func (v *pinotVisibilityStore) getListWorkflowExecutionsByQueryQuery(tableName s
 	comparExpr, orderBy := parseOrderBy(requestQuery)
 	comparExpr, err = v.pinotQueryValidator.ValidateQuery(comparExpr)
 	if err != nil {
-		return "", fmt.Errorf("pinot query validator error: %w, query: %s", err, request.Query)
+		return "", &types.BadRequestError{Message: fmt.Sprintf("pinot query validator error: %s, query: %s", err.Error(), request.Query)}
 	}
 
 	comparExpr = filterPrefix(comparExpr)
