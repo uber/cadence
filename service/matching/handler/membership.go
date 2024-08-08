@@ -33,7 +33,7 @@ import (
 // own the tasklist anymore, this listener watches for membership changes and purges anything disused
 // in the hashring on membership changes.
 //
-// Combinedd with the guard on tasklist instantiation, it should prevent incorrect or poorly timed
+// Combined with the guard on tasklist instantiation, it should prevent incorrect or poorly timed
 // creating of tasklist ownership and database shard thrashing between hosts while they figure out
 // which host is the real owner of the tasklist.
 //
