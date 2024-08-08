@@ -176,7 +176,6 @@ func (w *Workflow) getDomainWorkflowTypeCountPinotQuery(domainName string) (stri
 SELECT WorkflowType, COUNT(*) AS count
 FROM %s
 WHERE DomainID = '%s'
-AND IsDeleted = false
 AND CloseStatus = -1
 AND StartTime > 0
 GROUP BY WorkflowType
