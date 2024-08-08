@@ -30,6 +30,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/service/matching/config"
@@ -38,17 +40,18 @@ import (
 func TestMembershipSubscriptionShutdown(t *testing.T) {
 	assert.NotPanics(t, func() {
 		ctrl := gomock.NewController(t)
-		// this is nil for the memebership resolver, and it'll panic
-		r := resource.NewTest(t, ctrl, 0)
+		m := membership.NewMockResolver(ctrl)
+
+		m.EXPECT().Subscribe(service.Matching, "matching-engine", gomock.Any()).Times(1)
+
 		e := matchingEngineImpl{
+			membershipResolver: m,
 			config: &config.Config{
 				EnableTasklistOwnershipGuard: func(opts ...dynamicconfig.FilterOption) bool { return true },
 			},
 			shutdown: make(chan struct{}),
+			logger:   loggerimpl.NewNopLogger(),
 		}
-
-		r.MembershipResolver.EXPECT().Subscribe(service.Matching, "matching-engine", gomock.Any()).Times(1)
-		r.MembershipResolver.EXPECT().WhoAmI().Times(1)
 
 		go func() {
 			time.Sleep(time.Second)
@@ -61,7 +64,6 @@ func TestMembershipSubscriptionShutdown(t *testing.T) {
 func TestMembershipSubscriptionPanicHandling(t *testing.T) {
 	assert.NotPanics(t, func() {
 		ctrl := gomock.NewController(t)
-		// this is nil for the memebership resolver, and it'll panic
 
 		r := resource.NewTest(t, ctrl, 0)
 		r.MembershipResolver.EXPECT().Subscribe(service.Matching, "matching-engine", gomock.Any()).DoAndReturn(func(_, _, _ any) {
@@ -73,6 +75,7 @@ func TestMembershipSubscriptionPanicHandling(t *testing.T) {
 			config: &config.Config{
 				EnableTasklistOwnershipGuard: func(opts ...dynamicconfig.FilterOption) bool { return true },
 			},
+			logger:   loggerimpl.NewNopLogger(),
 			shutdown: make(chan struct{}),
 		}
 

@@ -26,8 +26,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/service"
 	"sync"
 	"testing"
 
@@ -39,8 +37,10 @@ import (
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/matching/config"
 	"github.com/uber/cadence/service/matching/tasklist"
@@ -715,18 +715,11 @@ func TestShutDownTasklistsNotOwned(t *testing.T) {
 	tl2m.EXPECT().String().AnyTimes()
 
 	tl2m.EXPECT().Stop().Do(func() {
-		// use the stop call way to avoid races when doing a second assertion: That the
-		// engine has removed this tasklist also.
 		wg.Done()
 	})
 
 	err := e.shutDownNonOwnedTasklists()
 	wg.Wait()
-
-	assert.Equal(t, map[tasklist.Identifier]tasklist.Manager{
-		*tl1: tl1m,
-		*tl3: tl3m,
-	}, e.taskLists)
 
 	assert.NoError(t, err)
 }

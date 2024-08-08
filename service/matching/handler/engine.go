@@ -209,7 +209,7 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *tasklist.Identifier, t
 	}
 	e.taskListsLock.RUnlock()
 
-	err := e.guardAgainstShardLoss(taskList)
+	err := e.errIfShardLoss(taskList)
 	if err != nil {
 		return nil, err
 	}
@@ -1216,8 +1216,6 @@ func (e *matchingEngineImpl) shutDownNonOwnedTasklists() error {
 				}
 			}()
 
-			e.removeTaskListManager(tl)
-
 			e.logger.Info("shutting down tasklist preemptively because they are no longer owned by this host",
 				tag.WorkflowTaskListName(tl.TaskListID().GetName()),
 				tag.WorkflowDomainID(tl.TaskListID().GetDomainID()),
@@ -1262,7 +1260,7 @@ func (e *matchingEngineImpl) getNonOwnedTasklistsLocked() ([]tasklist.Manager, e
 	return toShutDown, nil
 }
 
-func (e *matchingEngineImpl) guardAgainstShardLoss(taskList *tasklist.Identifier) error {
+func (e *matchingEngineImpl) errIfShardLoss(taskList *tasklist.Identifier) error {
 	if !e.config.EnableTasklistOwnershipGuard() {
 		return nil
 	}
