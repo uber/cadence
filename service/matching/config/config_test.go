@@ -77,6 +77,7 @@ func TestNewConfig(t *testing.T) {
 		"TaskDispatchRPS":                 {nil, 100000.0},
 		"TaskDispatchRPSTTL":              {nil, time.Minute},
 		"MaxTimeBetweenTaskDeletes":       {nil, time.Second},
+		"EnableTasklistOwnershipGuard":    {dynamicconfig.MatchingEnableTasklistGuardAgainstOwnershipShardLoss, true},
 	}
 	client := dynamicconfig.NewInMemoryClient()
 	for fieldName, expected := range fields {
