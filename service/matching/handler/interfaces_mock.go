@@ -206,6 +206,18 @@ func (mr *MockEngineMockRecorder) RespondQueryTaskCompleted(hCtx, request interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RespondQueryTaskCompleted", reflect.TypeOf((*MockEngine)(nil).RespondQueryTaskCompleted), hCtx, request)
 }
 
+// Start mocks base method.
+func (m *MockEngine) Start() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Start")
+}
+
+// Start indicates an expected call of Start.
+func (mr *MockEngineMockRecorder) Start() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockEngine)(nil).Start))
+}
+
 // Stop mocks base method.
 func (m *MockEngine) Stop() {
 	m.ctrl.T.Helper()

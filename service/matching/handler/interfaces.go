@@ -34,7 +34,8 @@ import (
 type (
 	// Engine exposes interfaces for clients to poll for activity and decision tasks.
 	Engine interface {
-		Stop()
+		common.Daemon
+
 		AddDecisionTask(hCtx *handlerContext, request *types.AddDecisionTaskRequest) (syncMatch bool, err error)
 		AddActivityTask(hCtx *handlerContext, request *types.AddActivityTaskRequest) (syncMatch bool, err error)
 		PollForDecisionTask(hCtx *handlerContext, request *types.MatchingPollForDecisionTaskRequest) (*types.MatchingPollForDecisionTaskResponse, error)
