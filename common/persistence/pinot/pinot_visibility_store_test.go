@@ -1159,6 +1159,7 @@ func TestGetListWorkflowExecutionQuery(t *testing.T) {
 	tests := map[string]struct {
 		input          *p.ListWorkflowExecutionsByQueryRequest
 		expectedOutput string
+		expectedError  bool
 	}{
 		"complete request with keyword query only": {
 			input: &p.ListWorkflowExecutionsByQueryRequest{
@@ -1176,6 +1177,7 @@ AND (JSON_MATCH(Attr, '"$.CustomKeywordField"=''keywordCustomized''') or JSON_MA
 Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName),
+			expectedError: false,
 		},
 
 		"complete request from search attribute worker": {
@@ -1194,6 +1196,7 @@ AND JSON_MATCH(Attr, '"$.CustomIntField"=''2''') and (JSON_MATCH(Attr, '"$.Custo
 order by CustomDatetimeField DESC
 LIMIT 0, 10
 `, testTableName),
+			expectedError: false,
 		},
 
 		"complete request with keyword query and other customized query": {
@@ -1211,6 +1214,7 @@ AND (JSON_MATCH(Attr, '"$.CustomKeywordField"=''keywordCustomized''') or JSON_MA
 Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName),
+			expectedError: false,
 		},
 
 		"complete request with or query & customized attributes": {
@@ -1228,6 +1232,7 @@ AND ((JSON_MATCH(Attr, '"$.CustomStringField" is not null') AND REGEXP_LIKE(JSON
 Order by StartTime DESC
 LIMIT 0, 10
 `, testTableName),
+			expectedError: false,
 		},
 
 		"complex query": {
@@ -1245,6 +1250,7 @@ AND WorkflowID = 'wid' and ((JSON_MATCH(Attr, '"$.CustomStringField" is not null
 Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName),
+			expectedError: false,
 		},
 
 		"or clause with custom attributes": {
@@ -1262,6 +1268,7 @@ AND (JSON_MATCH(Attr, '"$.CustomIntField"=''1''') or JSON_MATCH(Attr, '"$.Custom
 Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName),
+			expectedError: false,
 		},
 
 		"complete request with customized query with missing": {
@@ -1279,6 +1286,7 @@ AND CloseTime = -1 and WorkflowType = 'some-test-workflow'
 Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName),
+			expectedError: false,
 		},
 
 		"complete request with customized query with NextPageToken": {
@@ -1296,6 +1304,7 @@ AND CloseStatus < 0 and (JSON_MATCH(Attr, '"$.CustomKeywordField"=''keywordCusto
 Order by DomainID Desc
 LIMIT 11, 10
 `, testTableName),
+			expectedError: false,
 		},
 
 		"complete request with order by query": {
@@ -1312,6 +1321,7 @@ WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 Order by DomainId Desc
 LIMIT 0, 10
 `, testTableName),
+			expectedError: false,
 		},
 
 		"complete request with filter query": {
@@ -1329,6 +1339,7 @@ AND CloseStatus < 0
 Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName),
+			expectedError: false,
 		},
 
 		"complete request with empty query": {
@@ -1344,6 +1355,7 @@ FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 LIMIT 0, 10
 `, testTableName),
+			expectedError: false,
 		},
 
 		"empty request": {
@@ -1353,11 +1365,24 @@ FROM %s
 WHERE DomainID = ''
 LIMIT 0, 0
 `, testTableName),
+			expectedError: false,
 		},
 
 		"nil request": {
 			input:          nil,
 			expectedOutput: "",
+			expectedError:  false,
+		},
+		"request with syntax error": {
+			input: &p.ListWorkflowExecutionsByQueryRequest{
+				DomainUUID:    testDomainID,
+				Domain:        testDomain,
+				PageSize:      testPageSize,
+				NextPageToken: nil,
+				Query:         "WorkflowType = test",
+			},
+			expectedOutput: "",
+			expectedError:  true,
 		},
 	}
 
@@ -1374,7 +1399,11 @@ LIMIT 0, 0
 
 			output, err := visibilityStore.getListWorkflowExecutionsByQueryQuery(testTableName, test.input)
 			assert.Equal(t, test.expectedOutput, output)
-			assert.NoError(t, err)
+			if test.expectedError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
