@@ -136,10 +136,36 @@ func (tm *TaskMatcher) Offer(ctx context.Context, task *InternalTask) (bool, err
 			return false, err
 		}
 	}
-
-	// TODO: Pollers are aggressively forwarded to parent partitions so it's unlikely
-	// to have a poller available to pick up the task below for sub-partitions.
-	// Try adding some wait here.
+	e := event.E{
+		TaskListName: tm.tasklist.GetName(),
+		TaskListType: tm.tasklist.GetType(),
+		TaskListKind: tm.tasklistKind.Ptr(),
+	}
+	localWaitTime := tm.config.LocalTaskWaitTime()
+	if localWaitTime > 0 {
+		childCtx, cancel := context.WithTimeout(ctx, localWaitTime)
+		select {
+		case tm.getTaskC(task) <- task: // poller picked up the task
+			cancel()
+			if task.ResponseC != nil {
+				// if there is a response channel, block until resp is received
+				// and return error if the response contains error
+				err := <-task.ResponseC
+				tm.scope.RecordTimer(metrics.SyncMatchLocalPollLatencyPerTaskList, time.Since(startT))
+				if err == nil {
+					e.EventName = "Offer task due to local wait"
+					e.Payload = map[string]any{
+						"TaskIsForwarded": task.IsForwarded(),
+					}
+					event.Log(e)
+				}
+				return true, err
+			}
+			return false, nil
+		case <-childCtx.Done():
+			cancel()
+		}
+	}
 	select {
 	case tm.getTaskC(task) <- task: // poller picked up the task
 		if task.ResponseC != nil {
@@ -155,12 +181,8 @@ func (tm *TaskMatcher) Offer(ctx context.Context, task *InternalTask) (bool, err
 		// root partition if possible
 		select {
 		case token := <-tm.fwdrAddReqTokenC():
-			event.Log(event.E{
-				TaskListName: tm.tasklist.GetName(),
-				TaskListType: tm.tasklist.GetType(),
-				TaskListKind: tm.tasklistKind.Ptr(),
-				EventName:    "Attempting to Forward Task",
-			})
+			e.EventName = "Attempting to Forward Task"
+			event.Log(e)
 			err := tm.fwdr.ForwardTask(ctx, task)
 			token.release("")
 			if err == nil {
@@ -259,18 +281,23 @@ func (tm *TaskMatcher) MustOffer(ctx context.Context, task *InternalTask) error 
 	// attempt a match with local poller first. When that
 	// doesn't succeed, try both local match and remote match
 	taskC := tm.getTaskC(task)
+	localWaitTime := tm.config.LocalTaskWaitTime()
+	childCtx, cancel := context.WithTimeout(ctx, localWaitTime)
 	select {
 	case taskC <- task: // poller picked up the task
+		cancel()
 		tm.scope.IncCounter(metrics.AsyncMatchLocalPollCounterPerTaskList)
 		tm.scope.RecordTimer(metrics.AsyncMatchLocalPollLatencyPerTaskList, time.Since(startT))
 		e.EventName = "Dispatched to Local Poller"
 		event.Log(e)
 		return nil
 	case <-ctx.Done():
+		cancel()
 		e.EventName = "Context Done While Dispatching to Local Poller"
 		event.Log(e)
 		return fmt.Errorf("context done when trying to forward local task: %w", ctx.Err())
-	default:
+	case <-childCtx.Done():
+		cancel()
 	}
 
 	attempt := 0
