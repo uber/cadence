@@ -188,11 +188,9 @@ func decisionTimeoutHistory() *types.GetWorkflowExecutionHistoryResponse {
 				},
 				{
 					DecisionTaskTimedOutEventAttributes: &types.DecisionTaskTimedOutEventAttributes{
-						ScheduledEventID: 3,
-						StartedEventID:   14,
-						Cause:            types.DecisionTaskTimedOutCauseReset.Ptr(),
-						Reason:           "workflow reset",
-						NewRunID:         "new run ID",
+						Cause:    types.DecisionTaskTimedOutCauseReset.Ptr(),
+						Reason:   "workflow reset",
+						NewRunID: "new run ID",
 					},
 				},
 			},
