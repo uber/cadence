@@ -64,7 +64,7 @@ func (t *timeout) Check(context.Context) ([]InvariantCheckResult, error) {
 			})
 		}
 	}
-	return nil, nil
+	return result, nil
 }
 
 func reasonForDecisionTaskTimeouts(event *types.HistoryEvent, allEvents []*types.HistoryEvent) (string, []byte) {
