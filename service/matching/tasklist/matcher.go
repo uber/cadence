@@ -56,9 +56,9 @@ type TaskMatcher struct {
 	// ratelimiter that limits the rate at which tasks can be dispatched to consumers
 	limiter *quotas.RateLimiter
 
-	fwdr          *Forwarder
-	scope         metrics.Scope // domain metric scope
-	numPartitions func() int    // number of task list partitions
+	fwdr   *Forwarder
+	scope  metrics.Scope // domain metric scope
+	config *config.TaskListConfig
 
 	tasklist     *Identifier
 	tasklistKind types.TaskListKind
@@ -92,7 +92,7 @@ func newTaskMatcher(
 		taskC:         make(chan *InternalTask),
 		isolatedTaskC: isolatedTaskC,
 		queryTaskC:    make(chan *InternalTask),
-		numPartitions: config.NumReadPartitions,
+		config:        config,
 		tasklist:      tasklist,
 		tasklistKind:  tasklistKind,
 	}
@@ -399,10 +399,10 @@ func (tm *TaskMatcher) UpdateRatelimit(rps *float64) {
 		return
 	}
 	rate := *rps
-	nPartitions := tm.numPartitions()
+	nPartitions := tm.config.NumReadPartitions()
 	if rate > float64(nPartitions) {
 		// divide the rate equally across all partitions
-		rate = rate / float64(tm.numPartitions())
+		rate = rate / float64(nPartitions)
 	}
 	tm.limiter.UpdateMaxDispatch(&rate)
 }
@@ -561,12 +561,78 @@ func (tm *TaskMatcher) poll(
 	}
 }
 
+func (tm *TaskMatcher) pollLocalWait(
+	ctx context.Context,
+	isolatedTaskC <-chan *InternalTask,
+	taskC <-chan *InternalTask,
+	queryTaskC <-chan *InternalTask,
+) (*InternalTask, error) {
+	select {
+	case task := <-isolatedTaskC:
+		if task.ResponseC != nil {
+			tm.scope.IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
+		}
+		tm.scope.IncCounter(metrics.PollSuccessPerTaskListCounter)
+		event.Log(event.E{
+			TaskListName: tm.tasklist.GetName(),
+			TaskListType: tm.tasklist.GetType(),
+			TaskListKind: tm.tasklistKind.Ptr(),
+			TaskInfo:     task.Info(),
+			EventName:    "Matched Task Nonblocking",
+			Payload: map[string]any{
+				"TaskIsForwarded":   task.IsForwarded(),
+				"SyncMatched":       task.ResponseC != nil,
+				"FromIsolatedTaskC": true,
+				"IsolationGroup":    task.isolationGroup,
+			},
+		})
+		return task, nil
+	case task := <-taskC:
+		if task.ResponseC != nil {
+			tm.scope.IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
+		}
+		tm.scope.IncCounter(metrics.PollSuccessPerTaskListCounter)
+		event.Log(event.E{
+			TaskListName: tm.tasklist.GetName(),
+			TaskListType: tm.tasklist.GetType(),
+			TaskListKind: tm.tasklistKind.Ptr(),
+			TaskInfo:     task.Info(),
+			EventName:    "Matched Task Nonblocking",
+			Payload: map[string]any{
+				"TaskIsForwarded":   task.IsForwarded(),
+				"SyncMatched":       task.ResponseC != nil,
+				"FromIsolatedTaskC": false,
+				"IsolationGroup":    task.isolationGroup,
+			},
+		})
+		return task, nil
+	case task := <-queryTaskC:
+		tm.scope.IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
+		tm.scope.IncCounter(metrics.PollSuccessPerTaskListCounter)
+		return task, nil
+	case <-ctx.Done():
+		event.Log(event.E{
+			TaskListName: tm.tasklist.GetName(),
+			TaskListType: tm.tasklist.GetType(),
+			TaskListKind: tm.tasklistKind.Ptr(),
+			EventName:    "Matcher Found No Tasks Nonblocking",
+		})
+		return nil, ErrNoTasks
+	}
+}
+
 func (tm *TaskMatcher) pollNonBlocking(
 	ctx context.Context,
 	isolatedTaskC <-chan *InternalTask,
 	taskC <-chan *InternalTask,
 	queryTaskC <-chan *InternalTask,
 ) (*InternalTask, error) {
+	waitTime := tm.config.LocalPollWaitTime()
+	if waitTime > 0 {
+		childCtx, cancel := context.WithTimeout(ctx, waitTime)
+		defer cancel()
+		return tm.pollLocalWait(childCtx, isolatedTaskC, taskC, queryTaskC)
+	}
 	select {
 	case task := <-isolatedTaskC:
 		if task.ResponseC != nil {
