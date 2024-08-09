@@ -1086,7 +1086,6 @@ func TestGetCountWorkflowExecutionsQuery(t *testing.T) {
 	expectEmptyQueryResult := fmt.Sprintf(`SELECT COUNT(*)
 FROM test-table-name
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND IsDeleted = false
 `)
 
 	request := &p.CountWorkflowExecutionsRequest{
@@ -1098,7 +1097,6 @@ AND IsDeleted = false
 	expectResult := fmt.Sprintf(`SELECT COUNT(*)
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND IsDeleted = false
 AND WorkflowID = 'wfid'
 `, testTableName)
 
@@ -1161,6 +1159,7 @@ func TestGetListWorkflowExecutionQuery(t *testing.T) {
 	tests := map[string]struct {
 		input          *p.ListWorkflowExecutionsByQueryRequest
 		expectedOutput string
+		expectedError  bool
 	}{
 		"complete request with keyword query only": {
 			input: &p.ListWorkflowExecutionsByQueryRequest{
@@ -1174,11 +1173,11 @@ func TestGetListWorkflowExecutionQuery(t *testing.T) {
 				`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND IsDeleted = false
 AND (JSON_MATCH(Attr, '"$.CustomKeywordField"=''keywordCustomized''') or JSON_MATCH(Attr, '"$.CustomKeywordField[*]"=''keywordCustomized'''))
 Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName),
+			expectedError: false,
 		},
 
 		"complete request from search attribute worker": {
@@ -1193,11 +1192,11 @@ LIMIT 0, 10
 				`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND IsDeleted = false
 AND JSON_MATCH(Attr, '"$.CustomIntField"=''2''') and (JSON_MATCH(Attr, '"$.CustomKeywordField"=''Update2''') or JSON_MATCH(Attr, '"$.CustomKeywordField[*]"=''Update2'''))
 order by CustomDatetimeField DESC
 LIMIT 0, 10
 `, testTableName),
+			expectedError: false,
 		},
 
 		"complete request with keyword query and other customized query": {
@@ -1211,11 +1210,11 @@ LIMIT 0, 10
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND IsDeleted = false
 AND (JSON_MATCH(Attr, '"$.CustomKeywordField"=''keywordCustomized''') or JSON_MATCH(Attr, '"$.CustomKeywordField[*]"=''keywordCustomized''')) and (JSON_MATCH(Attr, '"$.CustomStringField" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'String and or order by*'))
 Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName),
+			expectedError: false,
 		},
 
 		"complete request with or query & customized attributes": {
@@ -1229,11 +1228,11 @@ LIMIT 0, 10
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND IsDeleted = false
 AND ((JSON_MATCH(Attr, '"$.CustomStringField" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'Or*')) or (JSON_MATCH(Attr, '"$.CustomStringField" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'and*')))
 Order by StartTime DESC
 LIMIT 0, 10
 `, testTableName),
+			expectedError: false,
 		},
 
 		"complex query": {
@@ -1247,11 +1246,11 @@ LIMIT 0, 10
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND IsDeleted = false
 AND WorkflowID = 'wid' and ((JSON_MATCH(Attr, '"$.CustomStringField" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'custom and custom2 or custom3 order by*')) or (JSON_MATCH(Attr, '"$.CustomIntField" is not null') AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomIntField') AS INT) >= 1 AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomIntField') AS INT) <= 10))
 Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName),
+			expectedError: false,
 		},
 
 		"or clause with custom attributes": {
@@ -1265,11 +1264,11 @@ LIMIT 0, 10
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND IsDeleted = false
 AND (JSON_MATCH(Attr, '"$.CustomIntField"=''1''') or JSON_MATCH(Attr, '"$.CustomIntField"=''2'''))
 Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName),
+			expectedError: false,
 		},
 
 		"complete request with customized query with missing": {
@@ -1283,11 +1282,11 @@ LIMIT 0, 10
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND IsDeleted = false
 AND CloseTime = -1 and WorkflowType = 'some-test-workflow'
 Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName),
+			expectedError: false,
 		},
 
 		"complete request with customized query with NextPageToken": {
@@ -1301,11 +1300,11 @@ LIMIT 0, 10
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND IsDeleted = false
 AND CloseStatus < 0 and (JSON_MATCH(Attr, '"$.CustomKeywordField"=''keywordCustomized''') or JSON_MATCH(Attr, '"$.CustomKeywordField[*]"=''keywordCustomized''')) and (JSON_MATCH(Attr, '"$.CustomIntField" is not null') AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomIntField') AS INT) <= 10) and (JSON_MATCH(Attr, '"$.CustomStringField" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'String field is for text*'))
 Order by DomainID Desc
 LIMIT 11, 10
 `, testTableName),
+			expectedError: false,
 		},
 
 		"complete request with order by query": {
@@ -1319,10 +1318,10 @@ LIMIT 11, 10
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND IsDeleted = false
 Order by DomainId Desc
 LIMIT 0, 10
 `, testTableName),
+			expectedError: false,
 		},
 
 		"complete request with filter query": {
@@ -1336,11 +1335,11 @@ LIMIT 0, 10
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND IsDeleted = false
 AND CloseStatus < 0
 Order BY StartTime DESC
 LIMIT 0, 10
 `, testTableName),
+			expectedError: false,
 		},
 
 		"complete request with empty query": {
@@ -1354,9 +1353,9 @@ LIMIT 0, 10
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND IsDeleted = false
 LIMIT 0, 10
 `, testTableName),
+			expectedError: false,
 		},
 
 		"empty request": {
@@ -1364,14 +1363,26 @@ LIMIT 0, 10
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = ''
-AND IsDeleted = false
 LIMIT 0, 0
 `, testTableName),
+			expectedError: false,
 		},
 
 		"nil request": {
 			input:          nil,
 			expectedOutput: "",
+			expectedError:  false,
+		},
+		"request with syntax error": {
+			input: &p.ListWorkflowExecutionsByQueryRequest{
+				DomainUUID:    testDomainID,
+				Domain:        testDomain,
+				PageSize:      testPageSize,
+				NextPageToken: nil,
+				Query:         "WorkflowType = test",
+			},
+			expectedOutput: "",
+			expectedError:  true,
 		},
 	}
 
@@ -1388,7 +1399,11 @@ LIMIT 0, 0
 
 			output, err := visibilityStore.getListWorkflowExecutionsByQueryQuery(testTableName, test.input)
 			assert.Equal(t, test.expectedOutput, output)
-			assert.NoError(t, err)
+			if test.expectedError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
@@ -1409,7 +1424,6 @@ func TestGetListWorkflowExecutionsQuery(t *testing.T) {
 	expectCloseResult := fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND IsDeleted = false
 AND CloseTime BETWEEN 1547596871371 AND 2547596873371
 AND CloseStatus >= 0
 Order BY StartTime DESC
@@ -1418,7 +1432,6 @@ LIMIT 0, 10
 	expectOpenResult := fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND IsDeleted = false
 AND StartTime BETWEEN 1547596871371 AND 2547596873371
 AND CloseStatus < 0
 AND CloseTime = -1
@@ -1454,7 +1467,6 @@ func TestGetListWorkflowExecutionsByTypeQuery(t *testing.T) {
 	expectCloseResult := fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND IsDeleted = false
 AND WorkflowType = 'test-wf-type'
 AND CloseTime BETWEEN 1547596871371 AND 2547596873371
 AND CloseStatus >= 0
@@ -1464,7 +1476,6 @@ LIMIT 0, 10
 	expectOpenResult := fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND IsDeleted = false
 AND WorkflowType = 'test-wf-type'
 AND StartTime BETWEEN 1547596871371 AND 2547596873371
 AND CloseStatus < 0
@@ -1501,7 +1512,6 @@ func TestGetListWorkflowExecutionsByWorkflowIDQuery(t *testing.T) {
 	expectCloseResult := fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND IsDeleted = false
 AND WorkflowID = 'test-wid'
 AND CloseTime BETWEEN 1547596871371 AND 2547596873371
 AND CloseStatus >= 0
@@ -1511,7 +1521,6 @@ LIMIT 0, 10
 	expectOpenResult := fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND IsDeleted = false
 AND WorkflowID = 'test-wid'
 AND StartTime BETWEEN 1547596871371 AND 2547596873371
 AND CloseStatus < 0
@@ -1555,7 +1564,6 @@ func TestGetListWorkflowExecutionsByStatusQuery(t *testing.T) {
 			expectResult: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND IsDeleted = false
 AND CloseStatus = 0
 AND CloseTime BETWEEN 1547596872371 AND 2547596872371
 Order BY StartTime DESC
@@ -1578,7 +1586,6 @@ LIMIT 0, 10
 			expectResult: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND IsDeleted = false
 AND CloseStatus = 1
 AND CloseTime BETWEEN 1547596872371 AND 2547596872371
 Order BY StartTime DESC
@@ -1601,7 +1608,6 @@ LIMIT 0, 10
 			expectResult: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND IsDeleted = false
 AND CloseStatus = 2
 AND CloseTime BETWEEN 1547596872371 AND 2547596872371
 Order BY StartTime DESC
@@ -1624,7 +1630,6 @@ LIMIT 0, 10
 			expectResult: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND IsDeleted = false
 AND CloseStatus = 3
 AND CloseTime BETWEEN 1547596872371 AND 2547596872371
 Order BY StartTime DESC
@@ -1647,7 +1652,6 @@ LIMIT 0, 10
 			expectResult: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND IsDeleted = false
 AND CloseStatus = 4
 AND CloseTime BETWEEN 1547596872371 AND 2547596872371
 Order BY StartTime DESC
@@ -1670,7 +1674,6 @@ LIMIT 0, 10
 			expectResult: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND IsDeleted = false
 AND CloseStatus = 5
 AND CloseTime BETWEEN 1547596872371 AND 2547596872371
 Order BY StartTime DESC
@@ -1706,7 +1709,6 @@ func TestGetGetClosedWorkflowExecutionQuery(t *testing.T) {
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND IsDeleted = false
 AND CloseStatus >= 0
 AND WorkflowID = 'test-wid'
 `, testTableName),
@@ -1724,7 +1726,6 @@ AND WorkflowID = 'test-wid'
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND IsDeleted = false
 AND CloseStatus >= 0
 AND WorkflowID = 'test-wid'
 AND RunID = 'runid'
@@ -1736,7 +1737,6 @@ AND RunID = 'runid'
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = ''
-AND IsDeleted = false
 AND CloseStatus >= 0
 AND WorkflowID = ''
 `, testTableName),

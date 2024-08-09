@@ -51,6 +51,7 @@ type (
 		ForwarderMaxRatePerSecond    dynamicconfig.IntPropertyFnWithTaskListInfoFilters
 		ForwarderMaxChildrenPerNode  dynamicconfig.IntPropertyFnWithTaskListInfoFilters
 		AsyncTaskDispatchTimeout     dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
+		LocalPollWaitTime            dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
 
 		// Time to hold a poll request before returning an empty response if there are no tasks
 		LongPollExpirationInterval dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
@@ -102,6 +103,7 @@ type (
 		MinTaskThrottlingBurstSize    func() int
 		MaxTaskDeleteBatchSize        func() int
 		AsyncTaskDispatchTimeout      func() time.Duration
+		LocalPollWaitTime             func() time.Duration
 		// taskWriter configuration
 		OutstandingTaskAppendsThreshold func() int
 		MaxTaskBatchSize                func() int
@@ -154,6 +156,7 @@ func NewConfig(dc *dynamicconfig.Collection, hostName string) *Config {
 		EnableTasklistIsolation:         dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableTasklistIsolation),
 		AllIsolationGroups:              mapIGs(dc.GetListProperty(dynamicconfig.AllIsolationGroups)()),
 		AsyncTaskDispatchTimeout:        dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.AsyncTaskDispatchTimeout),
+		LocalPollWaitTime:               dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.LocalPollWaitTime),
 		HostName:                        hostName,
 		TaskDispatchRPS:                 100000.0,
 		TaskDispatchRPSTTL:              time.Minute,
