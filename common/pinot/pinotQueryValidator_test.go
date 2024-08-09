@@ -296,6 +296,11 @@ func TestValidateQuery(t *testing.T) {
 			validated: "",
 			err:       "invalid bool value in pinot_query_validator: 1",
 		},
+		"case21-5: test bool value- when it is not SQLBool and SQLVAl": {
+			query:     "IsCron = abc",
+			validated: "",
+			err:       "failed to process a bool key to SQLVal: &{<nil> abc { }}",
+		},
 	}
 
 	for name, test := range tests {
