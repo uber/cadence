@@ -279,6 +279,23 @@ func TestValidateQuery(t *testing.T) {
 			validated: "",
 			err:       "invalid IN expression, value",
 		},
+		"case21-1: test bool value- system key- no quotes": {
+			query:     "IsCron = true",
+			validated: "IsCron = true",
+		},
+		"case21-2: test bool value- system key- single quotes": {
+			query:     "IsCron = 'true'",
+			validated: "IsCron = true",
+		},
+		"case21-3: test bool value- system key- double quotes": {
+			query:     "IsCron = \"true\"",
+			validated: "IsCron = true",
+		},
+		"case21-4: test bool value- system key- invalid value": {
+			query:     "IsCron = 1",
+			validated: "",
+			err:       "invalid bool value in pinot_query_validator: 1",
+		},
 	}
 
 	for name, test := range tests {
