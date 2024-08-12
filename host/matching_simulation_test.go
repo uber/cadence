@@ -37,6 +37,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
 	"reflect"
 	"strings"
 	"sync"
@@ -63,6 +64,7 @@ type operation string
 
 const (
 	operationPollForDecisionTask operation = "PollForDecisionTask"
+	defaultTestCase                        = "testdata/matching_simulation_default.yaml"
 )
 
 type operationStats struct {
@@ -82,7 +84,10 @@ type operationAggStats struct {
 func TestMatchingSimulationSuite(t *testing.T) {
 	flag.Parse()
 
-	confPath := "testdata/matching_simulation.yaml"
+	confPath := os.Getenv("MATCHING_SIMULATION_CASE")
+	if confPath == "" {
+		confPath = defaultTestCase
+	}
 	clusterConfig, err := GetTestClusterConfig(confPath)
 	if err != nil {
 		t.Fatalf("failed creating cluster config from %s, err: %v", confPath, err)
@@ -176,31 +181,37 @@ func (s *MatchingSimulationSuite) TestMatchingSimulation() {
 	numPollers := getNumPollers(s.testClusterConfig.MatchingConfig.SimulationConfig.NumPollers)
 	pollDuration := getPollDuration(s.testClusterConfig.MatchingConfig.SimulationConfig.PollTimeout)
 	polledTasksCounter := int32(0)
+	maxTasksToGenerate := getMaxTaskstoGenerate(s.testClusterConfig.MatchingConfig.SimulationConfig.MaxTaskToGenerate)
+	var tasksToReceive sync.WaitGroup
+	tasksToReceive.Add(maxTasksToGenerate)
 	var pollerWG sync.WaitGroup
 	for i := 0; i < numPollers; i++ {
 		pollerWG.Add(1)
-		go s.poll(ctx, matchingClient, domainID, tasklist, &polledTasksCounter, &pollerWG, pollDuration, statsCh)
+		go s.poll(ctx, matchingClient, domainID, tasklist, &polledTasksCounter, &pollerWG, pollDuration, statsCh, &tasksToReceive)
 	}
 
 	// wait a bit for pollers to start.
 	time.Sleep(300 * time.Millisecond)
 
+	startTime := time.Now()
 	// Start task generators
 	generatedTasksCounter := int32(0)
 	lastTaskScheduleID := int32(0)
 	numGenerators := getNumGenerators(s.testClusterConfig.MatchingConfig.SimulationConfig.NumTaskGenerators)
 	taskGenerateInterval := getTaskGenerateInterval(s.testClusterConfig.MatchingConfig.SimulationConfig.TaskGeneratorTickInterval)
-	maxTasksToGenerate := getMaxTaskstoGenerate(s.testClusterConfig.MatchingConfig.SimulationConfig.MaxTaskToGenerate)
 	var generatorWG sync.WaitGroup
 	for i := 1; i <= numGenerators; i++ {
 		generatorWG.Add(1)
 		go s.generate(ctx, matchingClient, domainID, tasklist, maxTasksToGenerate, taskGenerateInterval, &generatedTasksCounter, &lastTaskScheduleID, &generatorWG)
 	}
 
-	// Let it run for a while
-	sleepDuration := 60 * time.Second
-	s.log("Wait %v for simulation to run", sleepDuration)
-	time.Sleep(sleepDuration)
+	// Let it run until all tasks have been polled.
+	// There's a test timeout configured in docker/buildkite/docker-compose-local-matching-simulation.yml that you
+	// can change if your test case needs more time
+	s.log("Waiting until all tasks are received")
+	tasksToReceive.Wait()
+	executionTime := time.Now().Sub(startTime)
+	s.log("Completed benchmark in %v", (time.Now().Sub(startTime)))
 	s.log("Canceling context to stop pollers and task generators")
 	cancel()
 	pollerWG.Wait()
@@ -216,7 +227,7 @@ func (s *MatchingSimulationSuite) TestMatchingSimulation() {
 	// Don't change the start/end line format as it is used by scripts to parse the summary info
 	testSummary := []string{}
 	testSummary = append(testSummary, "Simulation Summary:")
-	testSummary = append(testSummary, fmt.Sprintf("Simulation Duration: %v", sleepDuration))
+	testSummary = append(testSummary, fmt.Sprintf("Simulation Duration: %v", executionTime))
 	testSummary = append(testSummary, fmt.Sprintf("Num of Pollers: %d", numPollers))
 	testSummary = append(testSummary, fmt.Sprintf("Poll Timeout: %v", pollDuration))
 	testSummary = append(testSummary, fmt.Sprintf("Num of Task Generators: %d", numGenerators))
@@ -277,7 +288,7 @@ func (s *MatchingSimulationSuite) generate(
 				return
 			}
 			decisionTask := newDecisionTask(domainID, tasklist, scheduleID)
-			reqCtx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
+			reqCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 			err := matchingClient.AddDecisionTask(reqCtx, decisionTask)
 			cancel()
 			if err != nil {
@@ -299,6 +310,7 @@ func (s *MatchingSimulationSuite) poll(
 	wg *sync.WaitGroup,
 	pollDuration time.Duration,
 	statsCh chan *operationStats,
+	tasksToReceive *sync.WaitGroup,
 ) {
 	defer wg.Done()
 	t := time.NewTicker(50 * time.Millisecond)
@@ -344,6 +356,7 @@ func (s *MatchingSimulationSuite) poll(
 
 			atomic.AddInt32(polledTasksCounter, 1)
 			s.log("PollForDecisionTask got a task with startedid: %d. resp: %+v", resp.StartedEventID, resp)
+			tasksToReceive.Done()
 		}
 	}
 }
