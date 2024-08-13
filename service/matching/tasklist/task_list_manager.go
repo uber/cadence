@@ -721,6 +721,9 @@ func newTaskListConfig(id *Identifier, cfg *config.Config, domainName string) *c
 		AsyncTaskDispatchTimeout: func() time.Duration {
 			return cfg.AsyncTaskDispatchTimeout(domainName, taskListName, taskType)
 		},
+		LocalPollWaitTime: func() time.Duration {
+			return cfg.LocalPollWaitTime(domainName, taskListName, taskType)
+		},
 		ForwarderConfig: config.ForwarderConfig{
 			ForwarderMaxOutstandingPolls: func() int {
 				return cfg.ForwarderMaxOutstandingPolls(domainName, taskListName, taskType)

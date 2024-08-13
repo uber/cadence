@@ -110,3 +110,8 @@ func IsSystemIndexedKey(key string) bool {
 	_, ok := systemIndexedKeys[key]
 	return ok
 }
+
+// IsSystemBoolKey return true is key is system added bool key
+func IsSystemBoolKey(key string) bool {
+	return systemIndexedKeys[key] == types.IndexedValueTypeBool
+}

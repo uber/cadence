@@ -2859,6 +2859,13 @@ const (
 	// Default value: 30 seconds
 	HistoryGlobalRatelimiterGCAfter
 
+	// LocalPollWaitTime is the wait time for a poller to wait before considering request forwarding
+	// KeyName: matching.localPollWaitTime
+	// Value type: Duration
+	// Default value: 10ms
+	// Allowed filters: domainName, taskListName, taskListType
+	LocalPollWaitTime
+
 	// LastDurationKey must be the last one in this const group
 	LastDurationKey
 )
@@ -5146,6 +5153,12 @@ var DurationKeys = map[DurationKey]DynamicDuration{
 		KeyName:      "history.globalRatelimiterGCAfter",
 		Description:  "HistoryGlobalRatelimiterGCAfter defines how long to wait until a host's data is considered entirely useless, e.g. host has likely disappeared, its weight is very low, and the data can be deleted.",
 		DefaultValue: 30 * time.Second,
+	},
+	LocalPollWaitTime: {
+		KeyName:      "matching.localPollWaitTime",
+		Filters:      []Filter{DomainName, TaskListName, TaskType},
+		Description:  "LocalPollWaitTime is the time a poller waits before considering request forwarding.",
+		DefaultValue: time.Millisecond * 10,
 	},
 }
 
