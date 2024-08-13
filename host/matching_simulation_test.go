@@ -35,6 +35,7 @@ package host
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -50,6 +51,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/yarpc"
+	"golang.org/x/time/rate"
 
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -100,6 +102,8 @@ func TestMatchingSimulationSuite(t *testing.T) {
 		dynamicconfig.MatchingForwarderMaxOutstandingTasks: getForwarderMaxOutstandingTasks(clusterConfig.MatchingConfig.SimulationConfig.ForwarderMaxOutstandingTasks),
 		dynamicconfig.MatchingForwarderMaxRatePerSecond:    getForwarderMaxRPS(clusterConfig.MatchingConfig.SimulationConfig.ForwarderMaxRatePerSecond),
 		dynamicconfig.MatchingForwarderMaxChildrenPerNode:  getForwarderMaxChildPerNode(clusterConfig.MatchingConfig.SimulationConfig.ForwarderMaxChildrenPerNode),
+		dynamicconfig.LocalPollWaitTime:                    clusterConfig.MatchingConfig.SimulationConfig.LocalPollWaitTime,
+		dynamicconfig.LocalTaskWaitTime:                    clusterConfig.MatchingConfig.SimulationConfig.LocalTaskWaitTime,
 	}
 
 	ctrl := gomock.NewController(t)
@@ -195,19 +199,25 @@ func (s *MatchingSimulationSuite) TestMatchingSimulation() {
 
 	startTime := time.Now()
 	// Start task generators
+	rps := getTaskQPS(s.testClusterConfig.MatchingConfig.SimulationConfig.TasksPerSecond)
+	rateLimiter := rate.NewLimiter(rate.Limit(rps), rps)
 	generatedTasksCounter := int32(0)
 	lastTaskScheduleID := int32(0)
 	numGenerators := getNumGenerators(s.testClusterConfig.MatchingConfig.SimulationConfig.NumTaskGenerators)
-	taskGenerateInterval := getTaskGenerateInterval(s.testClusterConfig.MatchingConfig.SimulationConfig.TaskGeneratorTickInterval)
+	var tasksToGenerate sync.WaitGroup
+	tasksToGenerate.Add(maxTasksToGenerate)
 	var generatorWG sync.WaitGroup
 	for i := 1; i <= numGenerators; i++ {
 		generatorWG.Add(1)
-		go s.generate(ctx, matchingClient, domainID, tasklist, maxTasksToGenerate, taskGenerateInterval, &generatedTasksCounter, &lastTaskScheduleID, &generatorWG)
+		go s.generate(ctx, matchingClient, domainID, tasklist, maxTasksToGenerate, rateLimiter, &generatedTasksCounter, &lastTaskScheduleID, &generatorWG, &tasksToGenerate)
 	}
 
 	// Let it run until all tasks have been polled.
 	// There's a test timeout configured in docker/buildkite/docker-compose-local-matching-simulation.yml that you
 	// can change if your test case needs more time
+	s.log("Waiting until all tasks are generated")
+	tasksToGenerate.Wait()
+	generationTime := time.Now().Sub(startTime)
 	s.log("Waiting until all tasks are received")
 	tasksToReceive.Wait()
 	executionTime := time.Now().Sub(startTime)
@@ -227,17 +237,20 @@ func (s *MatchingSimulationSuite) TestMatchingSimulation() {
 	// Don't change the start/end line format as it is used by scripts to parse the summary info
 	testSummary := []string{}
 	testSummary = append(testSummary, "Simulation Summary:")
+	testSummary = append(testSummary, fmt.Sprintf("Task generate Duration: %v", generationTime))
 	testSummary = append(testSummary, fmt.Sprintf("Simulation Duration: %v", executionTime))
 	testSummary = append(testSummary, fmt.Sprintf("Num of Pollers: %d", numPollers))
 	testSummary = append(testSummary, fmt.Sprintf("Poll Timeout: %v", pollDuration))
 	testSummary = append(testSummary, fmt.Sprintf("Num of Task Generators: %d", numGenerators))
-	testSummary = append(testSummary, fmt.Sprintf("Task generated every: %v", taskGenerateInterval))
+	testSummary = append(testSummary, fmt.Sprintf("Task generated QPS: %v", rps))
 	testSummary = append(testSummary, fmt.Sprintf("Num of Write Partitions: %d", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.MatchingNumTasklistWritePartitions]))
 	testSummary = append(testSummary, fmt.Sprintf("Num of Read Partitions: %d", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.MatchingNumTasklistReadPartitions]))
 	testSummary = append(testSummary, fmt.Sprintf("Forwarder Max Outstanding Polls: %d", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.MatchingForwarderMaxOutstandingPolls]))
 	testSummary = append(testSummary, fmt.Sprintf("Forwarder Max Outstanding Tasks: %d", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.MatchingForwarderMaxOutstandingTasks]))
 	testSummary = append(testSummary, fmt.Sprintf("Forwarder Max RPS: %d", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.MatchingForwarderMaxRatePerSecond]))
 	testSummary = append(testSummary, fmt.Sprintf("Forwarder Max Children per Node: %d", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.MatchingForwarderMaxChildrenPerNode]))
+	testSummary = append(testSummary, fmt.Sprintf("Local Poll Wait Time: %v", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.LocalPollWaitTime]))
+	testSummary = append(testSummary, fmt.Sprintf("Local Task Wait Time: %v", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.LocalTaskWaitTime]))
 	testSummary = append(testSummary, fmt.Sprintf("Tasks generated: %d", generatedTasksCounter))
 	testSummary = append(testSummary, fmt.Sprintf("Tasks polled: %d", polledTasksCounter))
 	totalPollCnt := 0
@@ -267,21 +280,25 @@ func (s *MatchingSimulationSuite) generate(
 	matchingClient MatchingClient,
 	domainID, tasklist string,
 	maxTasksToGenerate int,
-	taskGenerateInterval time.Duration,
+	rateLimiter *rate.Limiter,
 	generatedTasksCounter *int32,
 	lastTaskScheduleID *int32,
-	wg *sync.WaitGroup) {
+	wg *sync.WaitGroup,
+	tasksToGenerate *sync.WaitGroup) {
 	defer wg.Done()
-
-	t := time.NewTicker(taskGenerateInterval)
-	defer t.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
 			s.log("Generator done")
 			return
-		case <-t.C:
+		default:
+			if err := rateLimiter.Wait(ctx); err != nil {
+				if !errors.Is(err, context.Canceled) {
+					s.T().Fatal("Rate limiter failed: ", err)
+				}
+				return
+			}
 			scheduleID := int(atomic.AddInt32(lastTaskScheduleID, 1))
 			if scheduleID > maxTasksToGenerate {
 				s.log("Generated %d tasks so generator will stop", maxTasksToGenerate)
@@ -298,6 +315,7 @@ func (s *MatchingSimulationSuite) generate(
 
 			s.log("Decision task %d added", scheduleID)
 			atomic.AddInt32(generatedTasksCounter, 1)
+			tasksToGenerate.Done()
 		}
 	}
 }
@@ -480,6 +498,13 @@ func getForwarderMaxRPS(i int) int {
 func getForwarderMaxChildPerNode(i int) int {
 	if i == 0 {
 		return 20
+	}
+	return i
+}
+
+func getTaskQPS(i int) int {
+	if i == 0 {
+		return 40
 	}
 	return i
 }
