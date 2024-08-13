@@ -23,6 +23,16 @@
 package handler
 
 import (
+	"github.com/uber-go/tally"
+	"github.com/uber/cadence/client/history"
+	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/cluster"
+	cadence_errors "github.com/uber/cadence/common/errors"
+	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/matching/tasklist"
 	"testing"
 	"time"
 
@@ -36,6 +46,108 @@ import (
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/service/matching/config"
 )
+
+func TestGetTaskListManager_OwnerShip(t *testing.T) {
+
+	testCases := []struct {
+		name                 string
+		lookUpResult         string
+		lookUpErr            error
+		whoAmIResult         string
+		whoAmIErr            error
+		tasklistGuardEnabled bool
+
+		expectedError error
+	}{
+		{
+			name:                 "Not owned by current host",
+			lookUpResult:         "A",
+			whoAmIResult:         "B",
+			tasklistGuardEnabled: true,
+
+			expectedError: new(cadence_errors.TaskListNotOwnedByHostError),
+		},
+		{
+			name:                 "LookupError",
+			lookUpErr:            assert.AnError,
+			tasklistGuardEnabled: true,
+			expectedError:        assert.AnError,
+		},
+		{
+			name:                 "WhoAmIError",
+			whoAmIErr:            assert.AnError,
+			tasklistGuardEnabled: true,
+			expectedError:        assert.AnError,
+		},
+		{
+			name:                 "when feature is not enabled, expect previous behaviour to continue",
+			lookUpResult:         "A",
+			whoAmIResult:         "B",
+			tasklistGuardEnabled: false,
+
+			expectedError: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+
+		t.Run(tc.name, func(t *testing.T) {
+
+			ctrl := gomock.NewController(t)
+			logger := loggerimpl.NewNopLogger()
+
+			mockTimeSource := clock.NewMockedTimeSourceAt(time.Now())
+			taskManager := tasklist.NewTestTaskManager(t, logger, mockTimeSource)
+			mockHistoryClient := history.NewMockClient(ctrl)
+			mockDomainCache := cache.NewMockDomainCache(ctrl)
+			resolverMock := membership.NewMockResolver(ctrl)
+			resolverMock.EXPECT().Subscribe(service.Matching, "matching-engine", gomock.Any()).AnyTimes()
+
+			// this is only if the call goes through
+			mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.CreateDomainCacheEntry(matchingTestDomainName), nil).AnyTimes()
+			mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(cache.CreateDomainCacheEntry(matchingTestDomainName), nil).AnyTimes()
+			mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(matchingTestDomainName, nil).AnyTimes()
+
+			config := defaultTestConfig()
+			config.EnableTasklistOwnershipGuard = func(opts ...dynamicconfig.FilterOption) bool {
+				return tc.tasklistGuardEnabled
+			}
+
+			matchingEngine := NewEngine(
+				taskManager,
+				cluster.GetTestClusterMetadata(true),
+				mockHistoryClient,
+				nil,
+				config,
+				logger,
+				metrics.NewClient(tally.NoopScope, metrics.Matching),
+				mockDomainCache,
+				resolverMock,
+				nil,
+				mockTimeSource,
+			).(*matchingEngineImpl)
+
+			resolverMock.EXPECT().Lookup(gomock.Any(), gomock.Any()).Return(
+				membership.NewDetailedHostInfo("", tc.lookUpResult, make(membership.PortMap)), tc.lookUpErr,
+			).AnyTimes()
+			resolverMock.EXPECT().WhoAmI().Return(
+				membership.NewDetailedHostInfo("", tc.whoAmIResult, make(membership.PortMap)), tc.whoAmIErr,
+			).AnyTimes()
+
+			taskListKind := types.TaskListKindNormal
+
+			_, err := matchingEngine.getTaskListManager(
+				tasklist.NewTestTaskListID(t, "domain", "tasklist", persistence.TaskListTypeActivity),
+				&taskListKind,
+			)
+			if tc.expectedError != nil {
+				assert.ErrorAs(t, err, &tc.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
 
 func TestMembershipSubscriptionShutdown(t *testing.T) {
 	assert.NotPanics(t, func() {

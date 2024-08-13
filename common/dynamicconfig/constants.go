@@ -4112,7 +4112,7 @@ var BoolKeys = map[BoolKey]DynamicBool{
 	MatchingEnableTasklistGuardAgainstOwnershipShardLoss: {
 		KeyName:      "matching.enableTasklistGuardAgainstOwnershipLoss",
 		Description:  "allows guards to ensure that tasklists don't continue processing if there's signal that they've lost ownership",
-		DefaultValue: true,
+		DefaultValue: false,
 	},
 	EventsCacheGlobalEnable: {
 		KeyName:      "history.eventsCacheGlobalEnable",

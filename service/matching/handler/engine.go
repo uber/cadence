@@ -162,7 +162,9 @@ func NewEngine(
 
 func (e *matchingEngineImpl) Start() {
 	// reset the shutdown channel if there's any listeners
-	e.shutdown = make(chan struct{})
+	if e.isShuttingDown() {
+		e.shutdown = make(chan struct{})
+	}
 }
 
 func (e *matchingEngineImpl) Stop() {

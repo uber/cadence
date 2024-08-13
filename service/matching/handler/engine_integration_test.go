@@ -34,7 +34,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 	"go.uber.org/yarpc"
@@ -45,7 +44,6 @@ import (
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/dynamicconfig"
-	cadence_errors "github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/isolationgroup/defaultisolationgroupstate"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -1303,60 +1301,6 @@ func (s *matchingEngineSuite) TestConfigDefaultHostName() {
 	configEmpty := config.Config{}
 	s.NotEqualValues(s.matchingEngine.config.HostName, configEmpty.HostName)
 	s.EqualValues(configEmpty.HostName, "")
-}
-
-func (s *matchingEngineSuite) TestGetTaskListManager_OwnerShip() {
-	testCases := []struct {
-		name         string
-		lookUpResult string
-		lookUpErr    error
-		whoAmIResult string
-		whoAmIErr    error
-
-		expectedError error
-	}{
-		{
-			name:          "Not owned by current host",
-			lookUpResult:  "A",
-			whoAmIResult:  "B",
-			expectedError: new(cadence_errors.TaskListNotOwnedByHostError),
-		},
-		{
-			name:          "LookupError",
-			lookUpErr:     assert.AnError,
-			expectedError: assert.AnError,
-		},
-		{
-			name:          "WhoAmIError",
-			whoAmIErr:     assert.AnError,
-			expectedError: assert.AnError,
-		},
-	}
-
-	for _, tc := range testCases {
-		s.T().Run(tc.name, func(t *testing.T) {
-			resolverMock := membership.NewMockResolver(s.controller)
-			s.matchingEngine.membershipResolver = resolverMock
-
-			resolverMock.EXPECT().Subscribe(service.Matching, "matching-engine", gomock.Any()).AnyTimes()
-
-			resolverMock.EXPECT().Lookup(gomock.Any(), gomock.Any()).Return(
-				membership.NewDetailedHostInfo("", tc.lookUpResult, make(membership.PortMap)), tc.lookUpErr,
-			).AnyTimes()
-			resolverMock.EXPECT().WhoAmI().Return(
-				membership.NewDetailedHostInfo("", tc.whoAmIResult, make(membership.PortMap)), tc.whoAmIErr,
-			).AnyTimes()
-
-			taskListKind := types.TaskListKindNormal
-
-			_, err := s.matchingEngine.getTaskListManager(
-				tasklist.NewTestTaskListID(s.T(), "domain", "tasklist", persistence.TaskListTypeActivity),
-				&taskListKind,
-			)
-
-			assert.ErrorAs(s.T(), err, &tc.expectedError)
-		})
-	}
 }
 
 func newActivityTaskScheduledEvent(eventID int64, decisionTaskCompletedEventID int64,
