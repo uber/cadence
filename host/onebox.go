@@ -166,8 +166,8 @@ type (
 		// Number of task generators defaults to 1
 		NumTaskGenerators int
 
-		// Each generator will produce a new task every TaskGeneratorTickInterval. Defaults to 50ms
-		TaskGeneratorTickInterval time.Duration
+		// The total QPS to generate tasks. Defaults to 40.
+		TasksPerSecond int
 
 		// Upper limit of tasks to generate. Task generators will stop if total number of tasks generated reaches MaxTaskToGenerate during simulation
 		// Defaults to 2k
@@ -187,6 +187,12 @@ type (
 
 		// Children per node. defaults to 20
 		ForwarderMaxChildrenPerNode int
+
+		// LocalPollWaitTime. defaults to 0ms.
+		LocalPollWaitTime time.Duration
+
+		// LocalTaskWaitTime. defaults to 0ms.
+		LocalTaskWaitTime time.Duration
 	}
 
 	// CadenceParams contains everything needed to bootstrap Cadence
