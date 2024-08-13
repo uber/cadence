@@ -169,6 +169,12 @@ type (
 		// The total QPS to generate tasks. Defaults to 40.
 		TasksPerSecond int
 
+		// The burst value for the rate limiter for task generation. Controls the maximum number of AddTask requests
+		// that can be sent concurrently. For example, if you have TasksPerSecond, TasksBurst, and NumTaskGenerators all
+		// set to 10 then every second you'll get 10 tasks added right at the start of the second. If you instead set
+		// TasksBurst to 1 then you'd get a steady stream of tasks, with one task every 100ms.
+		TasksBurst int
+
 		// Upper limit of tasks to generate. Task generators will stop if total number of tasks generated reaches MaxTaskToGenerate during simulation
 		// Defaults to 2k
 		MaxTaskToGenerate int
@@ -193,6 +199,11 @@ type (
 
 		// LocalTaskWaitTime. defaults to 0ms.
 		LocalTaskWaitTime time.Duration
+
+		// TaskProcessTime. The amount of time spent by the poller in-between requests
+		TaskProcessTime time.Duration
+		// RecordDecisionTaskStartedTime. The amount of time spent by History to complete RecordDecisionTaskStarted
+		RecordDecisionTaskStartedTime time.Duration
 	}
 
 	// CadenceParams contains everything needed to bootstrap Cadence
