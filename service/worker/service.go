@@ -25,6 +25,7 @@ package worker
 import (
 	"context"
 	"fmt"
+	"github.com/uber/cadence/service/worker/diagnostics"
 	"sync/atomic"
 
 	"github.com/uber/cadence/common"
@@ -220,6 +221,7 @@ func (s *Service) Start() {
 	}
 
 	s.startReplicator()
+	s.startDiagnostics()
 
 	if s.GetArchivalMetadata().GetHistoryConfig().ClusterConfiguredForArchival() {
 		s.startArchiver()
@@ -329,6 +331,19 @@ func (s *Service) startFixerWorkflowWorker() {
 	}
 	if err := scanner.NewDataCorruptionWorkflowWorker(s.Resource, params).StartDataCorruptionWorkflowWorker(); err != nil {
 		s.GetLogger().Fatal("error starting fixer workflow worker", tag.Error(err))
+	}
+}
+
+func (s *Service) startDiagnostics() {
+	params := diagnostics.Params{
+		ServiceClient: s.params.PublicClient,
+		MetricsClient: s.GetMetricsClient(),
+		TallyScope:    s.params.MetricScope,
+		ClientBean:    s.GetClientBean(),
+	}
+	if err := diagnostics.New(params).Start(); err != nil {
+		s.Stop()
+		s.GetLogger().Fatal("error starting diagnostics", tag.Error(err))
 	}
 }
 
