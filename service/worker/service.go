@@ -25,7 +25,6 @@ package worker
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/service/worker/diagnostics"
 	"sync/atomic"
 
 	"github.com/uber/cadence/common"
@@ -40,6 +39,7 @@ import (
 	"github.com/uber/cadence/service/worker/archiver"
 	"github.com/uber/cadence/service/worker/asyncworkflow"
 	"github.com/uber/cadence/service/worker/batcher"
+	"github.com/uber/cadence/service/worker/diagnostics"
 	"github.com/uber/cadence/service/worker/esanalyzer"
 	"github.com/uber/cadence/service/worker/failovermanager"
 	"github.com/uber/cadence/service/worker/indexer"
