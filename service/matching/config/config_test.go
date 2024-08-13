@@ -74,6 +74,7 @@ func TestNewConfig(t *testing.T) {
 		"AllIsolationGroups":              {dynamicconfig.AllIsolationGroups, []interface{}{"a", "b", "c"}},
 		"AsyncTaskDispatchTimeout":        {dynamicconfig.AsyncTaskDispatchTimeout, time.Duration(25)},
 		"LocalPollWaitTime":               {dynamicconfig.LocalPollWaitTime, time.Duration(10)},
+		"LocalTaskWaitTime":               {dynamicconfig.LocalTaskWaitTime, time.Duration(10)},
 		"HostName":                        {nil, hostname},
 		"TaskDispatchRPS":                 {nil, 100000.0},
 		"TaskDispatchRPSTTL":              {nil, time.Minute},

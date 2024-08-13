@@ -2859,6 +2859,13 @@ const (
 	// Allowed filters: domainName, taskListName, taskListType
 	LocalPollWaitTime
 
+	// LocalTaskWaitTime is the wait time for a task to wait before considering task forwarding
+	// KeyName: matching.localTaskWaitTime
+	// Value type: Duration
+	// Default value: 10ms
+	// Allowed filters: domainName, taskListName, taskListType
+	LocalTaskWaitTime
+
 	// LastDurationKey must be the last one in this const group
 	LastDurationKey
 )
@@ -5146,6 +5153,12 @@ var DurationKeys = map[DurationKey]DynamicDuration{
 		KeyName:      "matching.localPollWaitTime",
 		Filters:      []Filter{DomainName, TaskListName, TaskType},
 		Description:  "LocalPollWaitTime is the time a poller waits before considering request forwarding.",
+		DefaultValue: time.Millisecond * 10,
+	},
+	LocalTaskWaitTime: {
+		KeyName:      "matching.localTaskWaitTime",
+		Filters:      []Filter{DomainName, TaskListName, TaskType},
+		Description:  "LocalTaskWaitTime is the time a task waits for a poller to arrive before considering task forwarding",
 		DefaultValue: time.Millisecond * 10,
 	},
 }
