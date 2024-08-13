@@ -10,6 +10,7 @@ resultFolder="matching-simulator-output"
 mkdir -p "$resultFolder"
 eventLogsFile="$resultFolder/events.json"
 testSummaryFile="$resultFolder/$testName-summary.txt"
+testCase="testdata/matching_simulation_${1:-default}.yaml"
 
 
 echo "Building test image"
@@ -19,7 +20,7 @@ docker-compose -f docker/buildkite/docker-compose-local-matching-simulation.yml 
 echo "Running the test"
 docker-compose \
   -f docker/buildkite/docker-compose-local-matching-simulation.yml \
-  run --rm matching-simulator \
+  run -e MATCHING_SIMULATION_CASE=$testCase --rm matching-simulator \
   | grep -a --line-buffered "Matching New Event" \
   | sed "s/Matching New Event: //" \
   | jq . > "$eventLogsFile"

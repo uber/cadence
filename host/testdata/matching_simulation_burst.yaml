@@ -1,0 +1,23 @@
+enablearchival: false
+clusterno: 1
+messagingclientconfig:
+  usemock: true
+historyconfig:
+  numhistoryshards: 4
+  numhistoryhosts: 1
+matchingconfig:
+  nummatchinghosts: 4
+  simulationconfig:
+    tasklistwritepartitions: 2
+    tasklistreadpartitions: 2
+    numpollers: 10
+    numtaskgenerators: 2
+    taskgeneratortickinterval: 10ms
+    maxtasktogenerate: 1500
+    polltimeout: 5s
+    forwardermaxoutstandingpolls: 20
+    forwardermaxoutstandingtasks: 1
+    forwardermaxratepersecond: 10
+    forwardermaxchildrenpernode: 20
+workerconfig:
+  enableasyncwfconsumer: false
