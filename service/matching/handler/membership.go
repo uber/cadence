@@ -23,9 +23,13 @@
 package handler
 
 import (
+	"fmt"
+	"sync"
+
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/service"
+	"github.com/uber/cadence/service/matching/tasklist"
 )
 
 // Because there's a bunch of conditions under which matching may be holding a tasklist
@@ -66,4 +70,76 @@ func (e *matchingEngineImpl) subscribeToMembershipChanges() {
 			return
 		}
 	}
+}
+
+func (e *matchingEngineImpl) shutDownNonOwnedTasklists() error {
+	if !e.config.EnableTasklistOwnershipGuard() {
+		return nil
+	}
+	noLongerOwned, err := e.getNonOwnedTasklistsLocked()
+	if err != nil {
+		return err
+	}
+
+	shutdownWG := sync.WaitGroup{}
+
+	for _, tl := range noLongerOwned {
+		// for each of the tasklists that are no longer owned, kick off the
+		// process of stopping them. The stopping process is IO heavy and
+		// can take a while, so do them in parallel to efficiently unload tasklists not owned
+		shutdownWG.Add(1)
+		go func(tl tasklist.Manager) {
+
+			defer func() {
+				if r := recover(); r != nil {
+					e.logger.Error("panic occurred while trying to shut down tasklist", tag.Dynamic("recovered-panic", r))
+				}
+			}()
+			defer shutdownWG.Done()
+
+			e.logger.Info("shutting down tasklist preemptively because they are no longer owned by this host",
+				tag.WorkflowTaskListName(tl.TaskListID().GetName()),
+				tag.WorkflowDomainID(tl.TaskListID().GetDomainID()),
+				tag.Dynamic("tasklist-debug-info", tl.String()),
+			)
+
+			e.unloadTaskList(tl)
+		}(tl)
+	}
+
+	shutdownWG.Wait()
+
+	return nil
+}
+
+func (e *matchingEngineImpl) getNonOwnedTasklistsLocked() ([]tasklist.Manager, error) {
+	if !e.config.EnableTasklistOwnershipGuard() {
+		return nil, nil
+	}
+
+	var toShutDown []tasklist.Manager
+
+	e.taskListsLock.RLock()
+	defer e.taskListsLock.RUnlock()
+
+	self, err := e.membershipResolver.WhoAmI()
+	if err != nil {
+		return nil, fmt.Errorf("failed to lookup self im membership: %w", err)
+	}
+
+	for tl, manager := range e.taskLists {
+		taskListOwner, err := e.membershipResolver.Lookup(service.Matching, tl.GetName())
+		if err != nil {
+			return nil, fmt.Errorf("failed to lookup task list owner: %w", err)
+		}
+
+		if taskListOwner.Identity() != self.Identity() {
+			toShutDown = append(toShutDown, manager)
+		}
+	}
+
+	e.logger.Info("Got list of non-owned-tasklists",
+		tag.Dynamic("tasklist-debug-info", toShutDown),
+	)
+	return toShutDown, nil
 }
