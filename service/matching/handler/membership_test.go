@@ -111,7 +111,8 @@ func TestGetTaskListManager_OwnerShip(t *testing.T) {
 
 			config := defaultTestConfig()
 			config.EnableTasklistOwnershipGuard = func(opts ...dynamicconfig.FilterOption) bool {
-				return tc.tasklistGuardEnabled
+				e := tc.tasklistGuardEnabled
+				return e
 			}
 
 			matchingEngine := NewEngine(
