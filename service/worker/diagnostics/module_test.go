@@ -36,22 +36,25 @@ import (
 )
 
 func Test__Start(t *testing.T) {
-	dwTest := testInterface(t)
+	dwTest, mockResource := setuptest(t)
 	err := dwTest.Start()
 	require.NoError(t, err)
 	dwTest.Stop()
+	mockResource.Finish(t)
 }
 
-func testInterface(t *testing.T) DiagnosticsWorkflow {
+func setuptest(t *testing.T) (DiagnosticsWorkflow, *resource.Test) {
 	ctrl := gomock.NewController(t)
 	mockClientBean := client.NewMockBean(ctrl)
 	mockResource := resource.NewTest(t, ctrl, metrics.Worker)
 	sdkClient := mockResource.GetSDKClient()
 	mockResource.SDKClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&shared.DescribeDomainResponse{}, nil).AnyTimes()
+	mockResource.SDKClient.EXPECT().PollForDecisionTask(gomock.Any(), gomock.Any()).Return(&shared.PollForDecisionTaskResponse{}, nil).AnyTimes()
+	mockResource.SDKClient.EXPECT().PollForActivityTask(gomock.Any(), gomock.Any()).Return(&shared.PollForActivityTaskResponse{}, nil).AnyTimes()
 	return New(Params{
 		ServiceClient: sdkClient,
 		ClientBean:    mockClientBean,
 		MetricsClient: nil,
 		TallyScope:    tally.TestScope(nil),
-	})
+	}), mockResource
 }
