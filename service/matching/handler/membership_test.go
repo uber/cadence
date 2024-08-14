@@ -110,9 +110,9 @@ func TestGetTaskListManager_OwnerShip(t *testing.T) {
 			mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(matchingTestDomainName, nil).AnyTimes()
 
 			config := defaultTestConfig()
+			taskListEnabled := tc.tasklistGuardEnabled
 			config.EnableTasklistOwnershipGuard = func(opts ...dynamicconfig.FilterOption) bool {
-				e := tc.tasklistGuardEnabled
-				return e
+				return taskListEnabled
 			}
 
 			matchingEngine := NewEngine(
