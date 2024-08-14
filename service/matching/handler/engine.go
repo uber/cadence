@@ -78,6 +78,7 @@ type (
 	}
 
 	matchingEngineImpl struct {
+		shutdownCompletion   sync.WaitGroup
 		shutdown             chan struct{}
 		taskManager          persistence.TaskManager
 		clusterMetadata      cluster.Metadata
@@ -137,6 +138,7 @@ func NewEngine(
 
 	e := &matchingEngineImpl{
 		shutdown:             make(chan struct{}),
+		shutdownCompletion:   sync.WaitGroup{},
 		taskManager:          taskManager,
 		clusterMetadata:      clusterMetadata,
 		historyService:       historyService,
@@ -154,6 +156,7 @@ func NewEngine(
 		timeSource:           timeSource,
 	}
 
+	e.shutdownCompletion.Add(1)
 	go e.subscribeToMembershipChanges()
 
 	e.waitForQueryResultFn = e.waitForQueryResult
@@ -161,10 +164,6 @@ func NewEngine(
 }
 
 func (e *matchingEngineImpl) Start() {
-	// reset the shutdown channel if there's any listeners
-	if e.isShuttingDown() {
-		e.shutdown = make(chan struct{})
-	}
 }
 
 func (e *matchingEngineImpl) Stop() {
@@ -173,6 +172,7 @@ func (e *matchingEngineImpl) Stop() {
 	for _, l := range e.getTaskLists(math.MaxInt32) {
 		l.Stop()
 	}
+	e.shutdownCompletion.Wait()
 }
 
 func (e *matchingEngineImpl) getTaskLists(maxCount int) []tasklist.Manager {
@@ -1207,7 +1207,7 @@ func (e *matchingEngineImpl) errIfShardLoss(taskList *tasklist.Identifier) error
 	}
 
 	if e.isShuttingDown() {
-		e.logger.Warn("request to get tasklist is being rejected because engine is Host is shut down",
+		e.logger.Warn("request to get tasklist is being rejected because engine is shutting down",
 			tag.WorkflowDomainID(taskList.GetDomainID()),
 			tag.WorkflowTaskListType(taskList.GetType()),
 			tag.WorkflowTaskListName(taskList.GetName()),

@@ -32,6 +32,8 @@ import (
 	"github.com/uber/cadence/service/matching/tasklist"
 )
 
+const subscriptionBufferSize = 1000
+
 // Because there's a bunch of conditions under which matching may be holding a tasklist
 // reader daemon and other live procesess but when it doesn't (according to the rest of the hashring)
 // own the tasklist anymore, this listener watches for membership changes and purges anything disused
@@ -49,11 +51,13 @@ func (e *matchingEngineImpl) subscribeToMembershipChanges() {
 		}
 	}()
 
+	defer e.shutdownCompletion.Done()
+
 	if !e.config.EnableTasklistOwnershipGuard() {
 		return
 	}
 
-	listener := make(chan *membership.ChangedEvent, 1000)
+	listener := make(chan *membership.ChangedEvent, subscriptionBufferSize)
 	e.membershipResolver.Subscribe(service.Matching, "matching-engine", listener)
 
 	for {
@@ -81,13 +85,13 @@ func (e *matchingEngineImpl) shutDownNonOwnedTasklists() error {
 		return err
 	}
 
-	shutdownWG := sync.WaitGroup{}
+	tasklistsShutdownWG := sync.WaitGroup{}
 
 	for _, tl := range noLongerOwned {
 		// for each of the tasklists that are no longer owned, kick off the
 		// process of stopping them. The stopping process is IO heavy and
 		// can take a while, so do them in parallel to efficiently unload tasklists not owned
-		shutdownWG.Add(1)
+		tasklistsShutdownWG.Add(1)
 		go func(tl tasklist.Manager) {
 
 			defer func() {
@@ -95,9 +99,10 @@ func (e *matchingEngineImpl) shutDownNonOwnedTasklists() error {
 					e.logger.Error("panic occurred while trying to shut down tasklist", tag.Dynamic("recovered-panic", r))
 				}
 			}()
-			defer shutdownWG.Done()
+			defer tasklistsShutdownWG.Done()
 
 			e.logger.Info("shutting down tasklist preemptively because they are no longer owned by this host",
+				tag.WorkflowTaskListType(tl.TaskListID().GetType()),
 				tag.WorkflowTaskListName(tl.TaskListID().GetName()),
 				tag.WorkflowDomainID(tl.TaskListID().GetDomainID()),
 				tag.Dynamic("tasklist-debug-info", tl.String()),
@@ -107,7 +112,7 @@ func (e *matchingEngineImpl) shutDownNonOwnedTasklists() error {
 		}(tl)
 	}
 
-	shutdownWG.Wait()
+	tasklistsShutdownWG.Wait()
 
 	return nil
 }

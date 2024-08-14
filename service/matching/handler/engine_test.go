@@ -625,11 +625,10 @@ func TestIsShuttingDown(t *testing.T) {
 	e := matchingEngineImpl{
 		shutdown: make(chan struct{}),
 	}
+	e.Start()
 	assert.False(t, e.isShuttingDown())
 	e.Stop()
 	assert.True(t, e.isShuttingDown())
-	e.Start()
-	assert.False(t, e.isShuttingDown())
 }
 
 func TestGetTasklistsNotOwned(t *testing.T) {
