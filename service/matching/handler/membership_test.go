@@ -272,3 +272,35 @@ func TestSubscriptionAndErrorReturned(t *testing.T) {
 
 	e.subscribeToMembershipChanges()
 }
+
+func TestGetTasklistManagerShutdownScenario(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	m := membership.NewMockResolver(ctrl)
+
+	self := membership.NewDetailedHostInfo("self", "self", nil)
+
+	m.EXPECT().WhoAmI().Return(self, nil).AnyTimes()
+
+	shutdownWG := sync.WaitGroup{}
+	shutdownWG.Add(0)
+
+	e := matchingEngineImpl{
+		shutdownCompletion: &shutdownWG,
+		membershipResolver: m,
+		config: &config.Config{
+			EnableTasklistOwnershipGuard: func(opts ...dynamicconfig.FilterOption) bool { return true },
+		},
+		shutdown: make(chan struct{}),
+		logger:   loggerimpl.NewNopLogger(),
+	}
+
+	// set this engine to be shutting down so as to trigger the tasklistGetTasklistByID guard
+	e.Stop()
+
+	tl, _ := tasklist.NewIdentifier("domainid", "tl", 0)
+	kind := types.TaskListKindNormal
+	res, err := e.getTaskListManager(tl, &kind)
+	assertErr := &cadence_errors.TaskListNotOwnedByHostError{}
+	assert.ErrorAs(t, err, &assertErr)
+	assert.Nil(t, res)
+}

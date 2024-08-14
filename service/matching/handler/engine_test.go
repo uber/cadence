@@ -622,8 +622,11 @@ func TestWaitForQueryResult(t *testing.T) {
 }
 
 func TestIsShuttingDown(t *testing.T) {
+	wg := sync.WaitGroup{}
+	wg.Add(0)
 	e := matchingEngineImpl{
-		shutdown: make(chan struct{}),
+		shutdownCompletion: &wg,
+		shutdown:           make(chan struct{}),
 	}
 	e.Start()
 	assert.False(t, e.isShuttingDown())
