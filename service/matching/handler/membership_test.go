@@ -23,6 +23,7 @@
 package handler
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -193,4 +194,81 @@ func TestMembershipSubscriptionPanicHandling(t *testing.T) {
 
 		e.subscribeToMembershipChanges()
 	})
+}
+
+func TestSubscriptionAndShutdown(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	m := membership.NewMockResolver(ctrl)
+
+	shutdownWG := &sync.WaitGroup{}
+	shutdownWG.Add(1)
+
+	e := matchingEngineImpl{
+		shutdownCompletion: shutdownWG,
+		membershipResolver: m,
+		config: &config.Config{
+			EnableTasklistOwnershipGuard: func(opts ...dynamicconfig.FilterOption) bool { return true },
+		},
+		shutdown: make(chan struct{}),
+		logger:   loggerimpl.NewNopLogger(),
+	}
+
+	// anytimes here because this is quite a racy test and the actual assertions for the unsubscription logic will be separated out
+	m.EXPECT().WhoAmI().Return(membership.NewDetailedHostInfo("host2", "host2", nil), nil).AnyTimes()
+	m.EXPECT().Subscribe(service.Matching, "matching-engine", gomock.Any()).Do(
+		func(service string, name string, inc chan<- *membership.ChangedEvent) {
+			m := membership.ChangedEvent{
+				HostsAdded:   nil,
+				HostsUpdated: nil,
+				HostsRemoved: []string{"host123"},
+			}
+			inc <- &m
+		})
+
+	go func() {
+		// then call stop so the test can finish
+		time.Sleep(time.Second)
+		e.Stop()
+	}()
+
+	e.subscribeToMembershipChanges()
+}
+
+func TestSubscriptionAndErrorReturned(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	m := membership.NewMockResolver(ctrl)
+
+	shutdownWG := sync.WaitGroup{}
+	shutdownWG.Add(1)
+
+	e := matchingEngineImpl{
+		shutdownCompletion: &shutdownWG,
+		membershipResolver: m,
+		config: &config.Config{
+			EnableTasklistOwnershipGuard: func(opts ...dynamicconfig.FilterOption) bool { return true },
+		},
+		shutdown: make(chan struct{}),
+		logger:   loggerimpl.NewNopLogger(),
+	}
+
+	// this should trigger the error case on a membership event
+	m.EXPECT().WhoAmI().Return(membership.HostInfo{}, assert.AnError).AnyTimes()
+
+	m.EXPECT().Subscribe(service.Matching, "matching-engine", gomock.Any()).Do(
+		func(service string, name string, inc chan<- *membership.ChangedEvent) {
+			m := membership.ChangedEvent{
+				HostsAdded:   nil,
+				HostsUpdated: nil,
+				HostsRemoved: []string{"host123"},
+			}
+			inc <- &m
+		})
+
+	go func() {
+		// then call stop so the test can finish
+		time.Sleep(time.Second)
+		e.Stop()
+	}()
+
+	e.subscribeToMembershipChanges()
 }

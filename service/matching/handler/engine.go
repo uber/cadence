@@ -78,7 +78,7 @@ type (
 	}
 
 	matchingEngineImpl struct {
-		shutdownCompletion   sync.WaitGroup
+		shutdownCompletion   *sync.WaitGroup
 		shutdown             chan struct{}
 		taskManager          persistence.TaskManager
 		clusterMetadata      cluster.Metadata
@@ -138,7 +138,7 @@ func NewEngine(
 
 	e := &matchingEngineImpl{
 		shutdown:             make(chan struct{}),
-		shutdownCompletion:   sync.WaitGroup{},
+		shutdownCompletion:   &sync.WaitGroup{},
 		taskManager:          taskManager,
 		clusterMetadata:      clusterMetadata,
 		historyService:       historyService,
