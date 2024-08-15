@@ -5,22 +5,23 @@
 
 set -eo pipefail
 
-testName="test-$(date '+%Y-%m-%d-%H-%M-%S')"
+testCase="${1:-default}"
+testCfg="testdata/matching_simulation_$testCase.yaml"
+testName="test-$testCase-$(date '+%Y-%m-%d-%H-%M-%S')"
 resultFolder="matching-simulator-output"
 mkdir -p "$resultFolder"
 eventLogsFile="$resultFolder/events.json"
 testSummaryFile="$resultFolder/$testName-summary.txt"
-testCase="testdata/matching_simulation_${1:-default}.yaml"
 
 
 echo "Building test image"
 docker-compose -f docker/buildkite/docker-compose-local-matching-simulation.yml \
   build matching-simulator
 
-echo "Running the test"
+echo "Running the test $testCase"
 docker-compose \
   -f docker/buildkite/docker-compose-local-matching-simulation.yml \
-  run -e MATCHING_SIMULATION_CASE=$testCase --rm matching-simulator \
+  run -e MATCHING_SIMULATION_CONFIG=$testCfg --rm matching-simulator \
   | grep -a --line-buffered "Matching New Event" \
   | sed "s/Matching New Event: //" \
   | jq . > "$eventLogsFile"

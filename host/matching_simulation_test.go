@@ -86,7 +86,7 @@ type operationAggStats struct {
 func TestMatchingSimulationSuite(t *testing.T) {
 	flag.Parse()
 
-	confPath := os.Getenv("MATCHING_SIMULATION_CASE")
+	confPath := os.Getenv("MATCHING_SIMULATION_CONFIG")
 	if confPath == "" {
 		confPath = defaultTestCase
 	}
