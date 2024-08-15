@@ -23,8 +23,9 @@
 package invariants
 
 import (
-	"github.com/uber/cadence/common/types"
 	"time"
+
+	"github.com/uber/cadence/common/types"
 )
 
 type TimeoutType string
