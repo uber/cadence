@@ -25,6 +25,7 @@ package membership
 
 import (
 	"fmt"
+	"sync"
 	"sync/atomic"
 
 	"github.com/uber/cadence/common"
@@ -84,6 +85,7 @@ type MultiringResolver struct {
 	status  int32
 
 	provider PeerProvider
+	mu       sync.Mutex
 	rings    map[string]*ring
 }
 
@@ -110,6 +112,7 @@ func NewMultiringResolver(
 		provider: provider,
 		rings:    make(map[string]*ring),
 		metrics:  metricsClient,
+		mu:       sync.Mutex{},
 	}
 
 	for _, s := range services {
@@ -130,6 +133,8 @@ func (rpo *MultiringResolver) Start() {
 
 	rpo.provider.Start()
 
+	rpo.mu.Lock()
+	defer rpo.mu.Unlock()
 	for _, ring := range rpo.rings {
 		ring.Start()
 	}
@@ -145,6 +150,8 @@ func (rpo *MultiringResolver) Stop() {
 		return
 	}
 
+	rpo.mu.Lock()
+	defer rpo.mu.Unlock()
 	for _, ring := range rpo.rings {
 		ring.Stop()
 	}
@@ -163,6 +170,8 @@ func (rpo *MultiringResolver) EvictSelf() error {
 }
 
 func (rpo *MultiringResolver) getRing(service string) (*ring, error) {
+	rpo.mu.Lock()
+	defer rpo.mu.Unlock()
 	ring, found := rpo.rings[service]
 	if !found {
 		return nil, fmt.Errorf("service %q is not tracked by Resolver", service)

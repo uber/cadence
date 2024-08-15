@@ -81,6 +81,8 @@ type (
 		TaskDispatchRPSTTL time.Duration
 		// task gc configuration
 		MaxTimeBetweenTaskDeletes time.Duration
+
+		EnableTasklistOwnershipGuard dynamicconfig.BoolPropertyFn
 	}
 
 	ForwarderConfig struct {
@@ -158,6 +160,7 @@ func NewConfig(dc *dynamicconfig.Collection, hostName string) *Config {
 		EnableTasklistIsolation:         dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableTasklistIsolation),
 		AllIsolationGroups:              mapIGs(dc.GetListProperty(dynamicconfig.AllIsolationGroups)()),
 		AsyncTaskDispatchTimeout:        dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.AsyncTaskDispatchTimeout),
+		EnableTasklistOwnershipGuard:    dc.GetBoolProperty(dynamicconfig.MatchingEnableTasklistGuardAgainstOwnershipShardLoss),
 		LocalPollWaitTime:               dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.LocalPollWaitTime),
 		LocalTaskWaitTime:               dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.LocalTaskWaitTime),
 		HostName:                        hostName,

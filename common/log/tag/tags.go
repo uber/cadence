@@ -956,6 +956,12 @@ func VisibilityQuery(query string) Tag {
 	return newStringTag("visibility-query", query)
 }
 
+// MembershipChangeEvent is a predefined tag for when logging hashring change events,
+// expected to be of type membership.ChangeEvent
+func MembershipChangeEvent(event interface{}) Tag {
+	return newPredefinedDynamicTag("membership-change-event", event)
+}
+
 // Dynamic Uses reflection based logging for arbitrary values
 // for not very performant logging
 func Dynamic(key string, v interface{}) Tag {

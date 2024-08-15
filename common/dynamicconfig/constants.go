@@ -1672,6 +1672,13 @@ const (
 	// Default value: false
 	// Allowed filters: DomainID
 	MatchingEnableTaskInfoLogByDomainID
+	// MatchingEnableTasklistGuardAgainstOwnershipShardLoss
+	// enables guards to prevent tasklists from processing if there is any detection that the host
+	// no longer is active or owns the shard
+	// KeyName: matching.enableTasklistGuardAgainstOwnershipLoss
+	// Value type: Bool
+	// Default value: false
+	MatchingEnableTasklistGuardAgainstOwnershipShardLoss
 
 	// key for history
 
@@ -4114,6 +4121,11 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		KeyName:      "matching.enableTaskInfoLogByDomainID",
 		Filters:      []Filter{DomainID},
 		Description:  "MatchingEnableTaskInfoLogByDomainID is enables info level logs for decision/activity task based on the request domainID",
+		DefaultValue: false,
+	},
+	MatchingEnableTasklistGuardAgainstOwnershipShardLoss: {
+		KeyName:      "matching.enableTasklistGuardAgainstOwnershipLoss",
+		Description:  "allows guards to ensure that tasklists don't continue processing if there's signal that they've lost ownership",
 		DefaultValue: false,
 	},
 	EventsCacheGlobalEnable: {
