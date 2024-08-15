@@ -34,7 +34,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 	"go.uber.org/yarpc"
@@ -45,7 +44,6 @@ import (
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/dynamicconfig"
-	cadence_errors "github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/isolationgroup/defaultisolationgroupstate"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -55,6 +53,7 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/matching/config"
 	"github.com/uber/cadence/service/matching/tasklist"
@@ -131,6 +130,7 @@ func (s *matchingEngineSuite) SetupTest() {
 	s.mockMembershipResolver = membership.NewMockResolver(s.controller)
 	s.mockMembershipResolver.EXPECT().Lookup(gomock.Any(), gomock.Any()).Return(membership.HostInfo{}, nil).AnyTimes()
 	s.mockMembershipResolver.EXPECT().WhoAmI().Return(membership.HostInfo{}, nil).AnyTimes()
+	s.mockMembershipResolver.EXPECT().Subscribe(service.Matching, "matching-engine", gomock.Any()).AnyTimes()
 	s.mockIsolationStore = dynamicconfig.NewMockClient(s.controller)
 	dcClient := dynamicconfig.NewInMemoryClient()
 	dcClient.UpdateValue(dynamicconfig.EnableTasklistIsolation, true)
@@ -1303,58 +1303,6 @@ func (s *matchingEngineSuite) TestConfigDefaultHostName() {
 	s.EqualValues(configEmpty.HostName, "")
 }
 
-func (s *matchingEngineSuite) TestGetTaskListManager_OwnerShip() {
-	testCases := []struct {
-		name         string
-		lookUpResult string
-		lookUpErr    error
-		whoAmIResult string
-		whoAmIErr    error
-
-		expectedError error
-	}{
-		{
-			name:          "Not owned by current host",
-			lookUpResult:  "A",
-			whoAmIResult:  "B",
-			expectedError: new(cadence_errors.TaskListNotOwnnedByHostError),
-		},
-		{
-			name:          "LookupError",
-			lookUpErr:     assert.AnError,
-			expectedError: assert.AnError,
-		},
-		{
-			name:          "WhoAmIError",
-			whoAmIErr:     assert.AnError,
-			expectedError: assert.AnError,
-		},
-	}
-
-	for _, tc := range testCases {
-		s.T().Run(tc.name, func(t *testing.T) {
-			resolverMock := membership.NewMockResolver(s.controller)
-			s.matchingEngine.membershipResolver = resolverMock
-
-			resolverMock.EXPECT().Lookup(gomock.Any(), gomock.Any()).Return(
-				membership.NewDetailedHostInfo("", tc.lookUpResult, make(membership.PortMap)), tc.lookUpErr,
-			).AnyTimes()
-			resolverMock.EXPECT().WhoAmI().Return(
-				membership.NewDetailedHostInfo("", tc.whoAmIResult, make(membership.PortMap)), tc.whoAmIErr,
-			).AnyTimes()
-
-			taskListKind := types.TaskListKindNormal
-
-			_, err := s.matchingEngine.getTaskListManager(
-				tasklist.NewTestTaskListID(s.T(), "domain", "tasklist", persistence.TaskListTypeActivity),
-				&taskListKind,
-			)
-
-			assert.ErrorAs(s.T(), err, &tc.expectedError)
-		})
-	}
-}
-
 func newActivityTaskScheduledEvent(eventID int64, decisionTaskCompletedEventID int64,
 	scheduleAttributes *types.ScheduleActivityTaskDecisionAttributes) *types.HistoryEvent {
 	historyEvent := newHistoryEvent(eventID, types.EventTypeActivityTaskScheduled)
@@ -1402,6 +1350,7 @@ func defaultTestConfig() *config.Config {
 	config.GetTasksBatchSize = dynamicconfig.GetIntPropertyFilteredByTaskListInfo(10)
 	config.AsyncTaskDispatchTimeout = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
 	config.MaxTimeBetweenTaskDeletes = time.Duration(0)
+	config.EnableTasklistOwnershipGuard = func(opts ...dynamicconfig.FilterOption) bool { return true }
 	return config
 }
 

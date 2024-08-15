@@ -20,27 +20,33 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package errors
+package diagnostics
 
-import "fmt"
+import (
+	"context"
 
-var _ error = &TaskListNotOwnedByHostError{}
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/worker/diagnostics/invariants"
+)
 
-type TaskListNotOwnedByHostError struct {
-	OwnedByIdentity string
-	MyIdentity      string
-	TasklistName    string
+type retrieveExecutionHistoryInputParams struct {
+	domain    string
+	execution *types.WorkflowExecution
 }
 
-func (m *TaskListNotOwnedByHostError) Error() string {
-	return fmt.Sprintf("task list is not owned by this host: OwnedBy: %s, Me: %s, Tasklist: %s",
-		m.OwnedByIdentity, m.MyIdentity, m.TasklistName)
+func (w *dw) retrieveExecutionHistory(ctx context.Context, info retrieveExecutionHistoryInputParams) (*types.GetWorkflowExecutionHistoryResponse, error) {
+	frontendClient := w.clientBean.GetFrontendClient()
+	return frontendClient.GetWorkflowExecutionHistory(ctx, &types.GetWorkflowExecutionHistoryRequest{
+		Domain:    info.domain,
+		Execution: info.execution,
+	})
 }
 
-func NewTaskListNotOwnedByHostError(ownedByIdentity string, myIdentity string, tasklistName string) *TaskListNotOwnedByHostError {
-	return &TaskListNotOwnedByHostError{
-		OwnedByIdentity: ownedByIdentity,
-		MyIdentity:      myIdentity,
-		TasklistName:    tasklistName,
-	}
+type identifyTimeoutsInputParams struct {
+	history *types.GetWorkflowExecutionHistoryResponse
+}
+
+func (w *dw) identifyTimeouts(ctx context.Context, info identifyTimeoutsInputParams) ([]invariants.InvariantCheckResult, error) {
+	timeoutInvariant := invariants.NewTimeout(info.history)
+	return timeoutInvariant.Check(ctx)
 }
