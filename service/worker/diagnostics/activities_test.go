@@ -26,6 +26,7 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -35,6 +36,12 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/worker/diagnostics/invariants"
+)
+
+const (
+	workflowTimeoutSecond = int32(110)
+	testTimeStamp         = int64(2547596872371000000)
+	timeUnit              = time.Second
 )
 
 func Test__retrieveExecutionHistory(t *testing.T) {
@@ -52,13 +59,24 @@ func Test__retrieveExecutionHistory(t *testing.T) {
 
 func Test__identifyTimeouts(t *testing.T) {
 	dwtest := testDiagnosticWorkflow(t)
-	workflowTimeoutSecondInBytes, err := json.Marshal(int32(10))
+	workflowTimeoutData := invariants.ExecutionTimeoutMetadata{
+		ExecutionTime:     110 * time.Second,
+		ConfiguredTimeout: 110 * time.Second,
+		LastOngoingEvent: &types.HistoryEvent{
+			ID:        1,
+			Timestamp: common.Int64Ptr(testTimeStamp),
+			WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
+				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(workflowTimeoutSecond),
+			},
+		},
+	}
+	workflowTimeoutDataInBytes, err := json.Marshal(workflowTimeoutData)
 	require.NoError(t, err)
 	expectedResult := []invariants.InvariantCheckResult{
 		{
 			InvariantType: invariants.TimeoutTypeExecution.String(),
 			Reason:        "START_TO_CLOSE",
-			Metadata:      workflowTimeoutSecondInBytes,
+			Metadata:      workflowTimeoutDataInBytes,
 		},
 	}
 	result, err := dwtest.identifyTimeouts(context.Background(), identifyTimeoutsInputParams{history: testWorkflowExecutionHistoryResponse()})
@@ -82,12 +100,15 @@ func testWorkflowExecutionHistoryResponse() *types.GetWorkflowExecutionHistoryRe
 		History: &types.History{
 			Events: []*types.HistoryEvent{
 				{
-					ID: 1,
+					ID:        1,
+					Timestamp: common.Int64Ptr(testTimeStamp),
 					WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
-						ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(10),
+						ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(workflowTimeoutSecond),
 					},
 				},
 				{
+					ID:                                       2,
+					Timestamp:                                common.Int64Ptr(testTimeStamp + int64(workflowTimeoutSecond)*timeUnit.Nanoseconds()),
 					WorkflowExecutionTimedOutEventAttributes: &types.WorkflowExecutionTimedOutEventAttributes{TimeoutType: types.TimeoutTypeStartToClose.Ptr()},
 				},
 			},
