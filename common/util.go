@@ -35,10 +35,10 @@ import (
 
 	"github.com/dgryski/go-farm"
 	"github.com/pborman/uuid"
-	cadence_errors "github.com/uber/cadence/common/errors"
 	"go.uber.org/yarpc/yarpcerrors"
 
 	"github.com/uber/cadence/common/backoff"
+	cadence_errors "github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
