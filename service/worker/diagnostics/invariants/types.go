@@ -22,6 +22,12 @@
 
 package invariants
 
+import (
+	"time"
+
+	"github.com/uber/cadence/common/types"
+)
+
 type TimeoutType string
 
 const (
@@ -33,4 +39,16 @@ const (
 
 func (tt TimeoutType) String() string {
 	return string(tt)
+}
+
+type ExecutionTimeoutMetadata struct {
+	ExecutionTime     time.Duration
+	ConfiguredTimeout time.Duration
+	LastOngoingEvent  *types.HistoryEvent
+}
+
+type ChildWfTimeoutMetadata struct {
+	ExecutionTime     time.Duration
+	ConfiguredTimeout time.Duration
+	Execution         *types.WorkflowExecution
 }

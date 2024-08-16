@@ -26,6 +26,7 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -36,10 +37,34 @@ import (
 const (
 	workflowTimeoutSecond = int32(110)
 	taskTimeoutSecond     = int32(50)
+	testTimeStamp         = int64(2547596872371000000)
+	timeUnit              = time.Second
 )
 
 func Test__Check(t *testing.T) {
-	workflowTimeoutSecondInBytes, err := json.Marshal(workflowTimeoutSecond)
+	workflowTimeoutData := ExecutionTimeoutMetadata{
+		ExecutionTime:     110 * time.Second,
+		ConfiguredTimeout: 110 * time.Second,
+		LastOngoingEvent: &types.HistoryEvent{
+			ID:        1,
+			Timestamp: common.Int64Ptr(testTimeStamp),
+			WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
+				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(workflowTimeoutSecond),
+			},
+		},
+	}
+	childWfTimeoutData := ChildWfTimeoutMetadata{
+		ExecutionTime:     110 * time.Second,
+		ConfiguredTimeout: 110 * time.Second,
+		Execution: &types.WorkflowExecution{
+			WorkflowID: "123",
+			RunID:      "abc",
+		},
+	}
+	workflowTimeoutDataInBytes, err := json.Marshal(workflowTimeoutData)
+	require.NoError(t, err)
+	childWfTimeoutDataInBytes, err := json.Marshal(childWfTimeoutData)
+	require.NoError(t, err)
 	taskTimeoutSecondInBytes, err := json.Marshal(taskTimeoutSecond)
 	require.NoError(t, err)
 	testCases := []struct {
@@ -55,7 +80,7 @@ func Test__Check(t *testing.T) {
 				{
 					InvariantType: TimeoutTypeExecution.String(),
 					Reason:        "START_TO_CLOSE",
-					Metadata:      workflowTimeoutSecondInBytes,
+					Metadata:      workflowTimeoutDataInBytes,
 				},
 			},
 			err: nil,
@@ -67,7 +92,7 @@ func Test__Check(t *testing.T) {
 				{
 					InvariantType: TimeoutTypeChildWorkflow.String(),
 					Reason:        "START_TO_CLOSE",
-					Metadata:      workflowTimeoutSecondInBytes,
+					Metadata:      childWfTimeoutDataInBytes,
 				},
 			},
 			err: nil,
@@ -124,12 +149,15 @@ func wfTimeoutHistory() *types.GetWorkflowExecutionHistoryResponse {
 		History: &types.History{
 			Events: []*types.HistoryEvent{
 				{
-					ID: 1,
+					ID:        1,
+					Timestamp: common.Int64Ptr(testTimeStamp),
 					WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
 						ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(workflowTimeoutSecond),
 					},
 				},
 				{
+					ID:                                       2,
+					Timestamp:                                common.Int64Ptr(testTimeStamp + int64(workflowTimeoutSecond)*timeUnit.Nanoseconds()),
 					WorkflowExecutionTimedOutEventAttributes: &types.WorkflowExecutionTimedOutEventAttributes{TimeoutType: types.TimeoutTypeStartToClose.Ptr()},
 				},
 			},
@@ -142,15 +170,30 @@ func childWfTimeoutHistory() *types.GetWorkflowExecutionHistoryResponse {
 		History: &types.History{
 			Events: []*types.HistoryEvent{
 				{
-					ID: 22,
+					ID: 1,
 					StartChildWorkflowExecutionInitiatedEventAttributes: &types.StartChildWorkflowExecutionInitiatedEventAttributes{
 						ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(workflowTimeoutSecond),
 					},
 				},
 				{
+					ID:        2,
+					Timestamp: common.Int64Ptr(testTimeStamp),
+					ChildWorkflowExecutionStartedEventAttributes: &types.ChildWorkflowExecutionStartedEventAttributes{
+						InitiatedEventID: 1,
+					},
+				},
+				{
+					ID:        3,
+					Timestamp: common.Int64Ptr(testTimeStamp + int64(workflowTimeoutSecond)*timeUnit.Nanoseconds()),
 					ChildWorkflowExecutionTimedOutEventAttributes: &types.ChildWorkflowExecutionTimedOutEventAttributes{
-						InitiatedEventID: 22,
-						TimeoutType:      types.TimeoutTypeStartToClose.Ptr()},
+						InitiatedEventID: 1,
+						StartedEventID:   2,
+						TimeoutType:      types.TimeoutTypeStartToClose.Ptr(),
+						WorkflowExecution: &types.WorkflowExecution{
+							WorkflowID: "123",
+							RunID:      "abc",
+						},
+					},
 				},
 			},
 		},
