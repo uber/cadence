@@ -22,6 +22,7 @@ package proto
 
 import (
 	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
+	"golang.org/x/time/rate"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
@@ -3962,7 +3963,7 @@ func FromTaskListStatus(t *types.TaskListStatus) *apiv1.TaskListStatus {
 		BacklogCountHint: t.BacklogCountHint,
 		ReadLevel:        t.ReadLevel,
 		AckLevel:         t.AckLevel,
-		RatePerSecond:    t.RatePerSecond,
+		RatePerSecond:    float64(t.RatePerSecond),
 		TaskIdBlock:      FromTaskIDBlock(t.TaskIDBlock),
 	}
 }
@@ -3975,7 +3976,7 @@ func ToTaskListStatus(t *apiv1.TaskListStatus) *types.TaskListStatus {
 		BacklogCountHint: t.BacklogCountHint,
 		ReadLevel:        t.ReadLevel,
 		AckLevel:         t.AckLevel,
-		RatePerSecond:    t.RatePerSecond,
+		RatePerSecond:    rate.Limit(t.RatePerSecond),
 		TaskIDBlock:      ToTaskIDBlock(t.TaskIdBlock),
 	}
 }

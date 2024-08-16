@@ -116,7 +116,7 @@ func printTaskListStatus(taskListStatus *types.TaskListStatus) {
 		ReadLevel: taskListStatus.GetReadLevel(),
 		AckLevel:  taskListStatus.GetAckLevel(),
 		Backlog:   taskListStatus.GetBacklogCountHint(),
-		RPS:       taskListStatus.GetRatePerSecond(),
+		RPS:       float64(taskListStatus.GetRatePerSecond()),
 		StartID:   taskListStatus.GetTaskIDBlock().GetStartID(),
 		EndID:     taskListStatus.GetTaskIDBlock().GetEndID(),
 	}}

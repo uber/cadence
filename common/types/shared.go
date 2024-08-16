@@ -26,6 +26,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/time/rate"
 )
 
 // AccessDeniedError is an internal type (TBD...)
@@ -6574,7 +6576,7 @@ type TaskListStatus struct {
 	BacklogCountHint int64        `json:"backlogCountHint,omitempty"`
 	ReadLevel        int64        `json:"readLevel,omitempty"`
 	AckLevel         int64        `json:"ackLevel,omitempty"`
-	RatePerSecond    float64      `json:"ratePerSecond,omitempty"`
+	RatePerSecond    rate.Limit   `json:"ratePerSecond,omitempty"`
 	TaskIDBlock      *TaskIDBlock `json:"taskIDBlock,omitempty"`
 }
 
@@ -6603,7 +6605,7 @@ func (v *TaskListStatus) GetAckLevel() (o int64) {
 }
 
 // GetRatePerSecond is an internal getter (TBD...)
-func (v *TaskListStatus) GetRatePerSecond() (o float64) {
+func (v *TaskListStatus) GetRatePerSecond() (o rate.Limit) {
 	if v != nil {
 		return v.RatePerSecond
 	}

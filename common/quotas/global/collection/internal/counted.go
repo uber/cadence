@@ -26,6 +26,7 @@ import (
 	"context"
 
 	"go.uber.org/atomic"
+	"golang.org/x/time/rate"
 
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/quotas"
@@ -78,6 +79,10 @@ func (c CountedLimiter) Reserve() clock.Reservation {
 		wrapped: c.wrapped.Reserve(),
 		usage:   c.usage,
 	}
+}
+
+func (c CountedLimiter) Limit() rate.Limit {
+	return c.wrapped.Limit()
 }
 
 func (c CountedLimiter) Collect() UsageMetrics {
