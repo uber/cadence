@@ -209,6 +209,13 @@ func (b *FallbackLimiter) Reserve() clock.Reservation {
 	}
 }
 
+func (b *FallbackLimiter) Limit() rate.Limit {
+	if b.useFallback() {
+		return b.fallback.Limit()
+	}
+	return b.primary.Limit()
+}
+
 func (b *FallbackLimiter) both() quotas.Limiter {
 	if b.useFallback() {
 		return NewShadowedLimiter(b.fallback, b.primary)

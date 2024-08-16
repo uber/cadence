@@ -471,7 +471,7 @@ func (c *taskListManagerImpl) DescribeTaskList(includeTaskListStatus bool) *type
 		ReadLevel:        c.taskAckManager.GetReadLevel(),
 		AckLevel:         c.taskAckManager.GetAckLevel(),
 		BacklogCountHint: backlogCount,
-		RatePerSecond:    c.matcher.Rate(),
+		RatePerSecond:    float64(c.matcher.Rate()),
 		TaskIDBlock: &types.TaskIDBlock{
 			StartID: taskIDBlock.start,
 			EndID:   taskIDBlock.end,

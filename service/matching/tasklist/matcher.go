@@ -26,6 +26,8 @@ import (
 	"fmt"
 	"time"
 
+	"golang.org/x/time/rate"
+
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -408,7 +410,7 @@ func (tm *TaskMatcher) UpdateRatelimit(rps *float64) {
 }
 
 // Rate returns the current rate at which tasks are dispatched
-func (tm *TaskMatcher) Rate() float64 {
+func (tm *TaskMatcher) Rate() rate.Limit {
 	return tm.limiter.Limit()
 }
 

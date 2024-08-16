@@ -228,8 +228,8 @@ func TestCollectionSubmitsDataAndUpdates(t *testing.T) {
 	}).DoAndReturn(func(ctx context.Context, period time.Duration, load map[shared.GlobalKey]rpc.Calls) rpc.UpdateResult {
 		called <- struct{}{}
 		return rpc.UpdateResult{
-			Weights: map[shared.GlobalKey]float64{
-				"test:something": 1, // should recover a token in 100ms
+			Weights: map[shared.GlobalKey]rpc.UpdateEntry{
+				"test:something": {Weight: 1}, // should recover a token in 100ms
 				// "test:other":   // not returned, should not change weight
 			},
 			Err: nil,

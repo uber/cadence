@@ -25,6 +25,8 @@ package quotas
 import (
 	"context"
 
+	"golang.org/x/time/rate"
+
 	"github.com/uber/cadence/common/clock"
 )
 
@@ -56,6 +58,12 @@ type Limiter interface {
 
 	// Reserve reserves a rate limit token
 	Reserve() clock.Reservation
+
+	// Limit retrieves the limit of this ratelimiter.
+	//
+	// If multiple ratelimits are wrapped, this is generally the "most relevant" value,
+	// e.g. the minimum of all that will apply, or the currently-in-use limiter's value.
+	Limit() rate.Limit
 }
 
 // Policy corresponds to a quota policy. A policy allows implementing layered

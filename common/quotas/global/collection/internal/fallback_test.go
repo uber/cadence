@@ -187,6 +187,7 @@ type allowres struct{}
 func (allowlimiter) Allow() bool                  { return true }
 func (a allowlimiter) Wait(context.Context) error { return nil }
 func (a allowlimiter) Reserve() clock.Reservation { return allowres{} }
+func (a allowlimiter) Limit() rate.Limit          { return rate.Inf }
 
 func (a allowres) Allow() bool { return true }
 func (a allowres) Used(bool)   {}

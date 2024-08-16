@@ -453,7 +453,7 @@ func (c *Collection) doUpdate(since time.Duration, usage map[shared.GlobalKey]rp
 		c.logger.Error("aggregator update error", tag.Error(res.Err))
 	}
 	// either way, process all weights we did successfully retrieve.
-	for gkey, weight := range res.Weights {
+	for gkey, info := range res.Weights {
 		delete(usage, gkey) // clean up the list so we know what was missed
 		lkey, err := c.km.GlobalToLocal(gkey)
 		if err != nil {
@@ -463,7 +463,7 @@ func (c *Collection) doUpdate(since time.Duration, usage map[shared.GlobalKey]rp
 			continue
 		}
 
-		if weight < 0 {
+		if info.Weight < 0 {
 			// negative values cannot be valid, so they're a failure.
 			//
 			// this is largely for future-proofing and to cover all possibilities,
@@ -471,7 +471,7 @@ func (c *Collection) doUpdate(since time.Duration, usage map[shared.GlobalKey]rp
 			c.global.Load(lkey).FailedUpdate()
 		} else {
 			target := float64(c.targetRPS(lkey))
-			c.global.Load(lkey).Update(rate.Limit(weight * target))
+			c.global.Load(lkey).Update(rate.Limit(info.Weight * target))
 		}
 	}
 
@@ -492,4 +492,28 @@ func (c *Collection) doUpdate(since time.Duration, usage map[shared.GlobalKey]rp
 		// requested but not returned, bump the fallback fuse
 		c.global.Load(localKey).FailedUpdate()
 	}
+}
+
+func boostLowAndUnusedRates(aggWeight float64, unusedRPS float64, targetRPS float64, fallbackRPS float64) (rps float64, burst int) {
+	// shenanigans to improve spiky request behavior and low-weighted but under-limit hosts,
+	// particularly with many limiting hosts + low limits, like we see with visibility limits:
+	// if there's unused RPS in the cluster, allow some over-commit to support small bursts
+	// and many other kinds of "legitimate but unexpected" behavior.
+	//
+	// in particular:
+	//
+	// 1. if there's unused RPS, hosts can use some of it, beyond their weight.
+	//    this applies only to limits that are below their fallback limit, because
+	//    hosts with weights over this will already have a sizable buffer from their weight.
+	// 2. the default "burst == limit" pattern we have on limits performs very very poorly
+	//    with low limits, allowing e.g. 0.5rps and 1 burst per host, which rejects requests
+	//    far below the intended limit.
+	//    we do not intend to try to handle this perfectly, as that's not possible, but adding
+	//    a moderately higher burst can help these cases quite a lot and does not generally
+	//    risk severe overage.
+	//    the current pattern is to allow the max of either 10s of requests against the fallback
+	//    limit, or 10s of the known-host's share of unused RPS (split evenly).
+
+	// TODO: this needs access to the fallback limit, which we do not have currently.  it's hidden in the collection.
+	return
 }

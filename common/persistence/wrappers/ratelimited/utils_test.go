@@ -25,6 +25,8 @@ package ratelimited
 import (
 	"context"
 
+	"golang.org/x/time/rate"
+
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/quotas"
 )
@@ -42,6 +44,9 @@ func (l limiterAlwaysAllow) Wait(ctx context.Context) error {
 func (l limiterAlwaysAllow) Reserve() clock.Reservation {
 	return &reservationAlwaysAllow{}
 }
+func (l limiterAlwaysAllow) Limit() rate.Limit {
+	return rate.Inf
+}
 
 type limiterNeverAllow struct{}
 
@@ -56,6 +61,9 @@ func (l limiterNeverAllow) Wait(ctx context.Context) error {
 
 func (l limiterNeverAllow) Reserve() clock.Reservation {
 	return &reservationNeverAllow{}
+}
+func (l limiterNeverAllow) Limit() rate.Limit {
+	return 0
 }
 
 type reservationAlwaysAllow struct{}

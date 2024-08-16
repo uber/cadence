@@ -64,7 +64,7 @@ func TestClient(t *testing.T) {
 			"b": 0.2,
 			"c": 0.3,
 		}
-		encode := func(w map[algorithm.Limit]algorithm.HostWeight) (*types.RatelimitUpdateResponse, error) {
+		encode := func(w map[algorithm.Limit]algorithm.HostUsage) (*types.RatelimitUpdateResponse, error) {
 			a, err := AggregatorWeightsToAny(w)
 			assert.NoError(t, err, "should be impossible: could not encode aggregator response to any")
 			return &types.RatelimitUpdateResponse{
@@ -81,10 +81,10 @@ func TestClient(t *testing.T) {
 		}, nil)
 		hc.EXPECT().
 			RatelimitUpdate(gomock.Any(), matchrequest{t, []string{"a", "c"}}, matchyarpc{t, yarpc.WithShardKey("agg-1")}).
-			Return(encode(map[algorithm.Limit]algorithm.HostWeight{"a": 0.1, "c": 0.3}))
+			Return(encode(map[algorithm.Limit]algorithm.HostUsage{"a": {Weight: 0.1}, "c": {Weight: 0.3}}))
 		hc.EXPECT().
 			RatelimitUpdate(gomock.Any(), matchrequest{t, []string{"b"}}, matchyarpc{t, yarpc.WithShardKey("agg-2")}).
-			Return(encode(map[algorithm.Limit]algorithm.HostWeight{"b": 0.2}))
+			Return(encode(map[algorithm.Limit]algorithm.HostUsage{"b": {Weight: 0.2}})) // TODO: needs rps info too
 
 		result := c.Update(context.Background(), time.Second, data)
 		assert.NoError(t, result.Err)
