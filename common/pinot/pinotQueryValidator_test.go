@@ -55,7 +55,7 @@ func TestValidateQuery(t *testing.T) {
 			err:   "right comparison is invalid: &{<nil> wid { }}"},
 		"Case3-1: query with custom field": {
 			query:     "CustomStringField = 'custom'",
-			validated: "(JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'custom*'))",
+			validated: "JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND JSON_MATCH(Attr, 'REGEXP_LIKE(\"$.CustomStringField\", ''.*custom.*'')')",
 		},
 		"Case3-2: query with custom field value is empty": {
 			query:     "CustomStringField = ''",
@@ -63,7 +63,7 @@ func TestValidateQuery(t *testing.T) {
 		},
 		"Case4: custom field query with or in string": {
 			query:     "CustomStringField='Or'",
-			validated: "(JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'Or*'))",
+			validated: "JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND JSON_MATCH(Attr, 'REGEXP_LIKE(\"$.CustomStringField\", ''.*Or.*'')')",
 		},
 		"Case5: custom keyword field query": {
 			query:     "CustomKeywordField = 'custom'",
@@ -71,7 +71,7 @@ func TestValidateQuery(t *testing.T) {
 		},
 		"Case6-1: complex query I: with parenthesis": {
 			query:     "(CustomStringField = 'custom and custom2 or custom3 order by') or CustomIntField between 1 and 10",
-			validated: "((JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'custom and custom2 or custom3 order by*')) or (JSON_MATCH(Attr, '\"$.CustomIntField\" is not null') AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomIntField') AS INT) >= 1 AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomIntField') AS INT) <= 10))",
+			validated: "(JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND JSON_MATCH(Attr, 'REGEXP_LIKE(\"$.CustomStringField\", ''.*custom and custom2 or custom3 order by.*'')') or (JSON_MATCH(Attr, '\"$.CustomIntField\" is not null') AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomIntField') AS INT) >= 1 AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomIntField') AS INT) <= 10))",
 		},
 		"Case6-2: complex query II: with only system keys": {
 			query:     "DomainID = 'd-id' and (RunID = 'run-id' or WorkflowID = 'wid')",
@@ -83,7 +83,7 @@ func TestValidateQuery(t *testing.T) {
 		},
 		"Case6-4: complex query IV": {
 			query:     "WorkflowID = 'wid' and (CustomStringField = 'custom and custom2 or custom3 order by' or CustomIntField between 1 and 10)",
-			validated: "WorkflowID = 'wid' and ((JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'custom and custom2 or custom3 order by*')) or (JSON_MATCH(Attr, '\"$.CustomIntField\" is not null') AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomIntField') AS INT) >= 1 AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomIntField') AS INT) <= 10))",
+			validated: "WorkflowID = 'wid' and (JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND JSON_MATCH(Attr, 'REGEXP_LIKE(\"$.CustomStringField\", ''.*custom and custom2 or custom3 order by.*'')') or (JSON_MATCH(Attr, '\"$.CustomIntField\" is not null') AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomIntField') AS INT) >= 1 AND CAST(JSON_EXTRACT_SCALAR(Attr, '$.CustomIntField') AS INT) <= 10))",
 		},
 		"Case6-5: complex query with partial match": {
 			query:     "RunID like '123' or WorkflowID like '123'",
