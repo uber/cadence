@@ -644,6 +644,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent() {
 	workflowExecution, mutableState, decisionCompletionID, err := test.SetupWorkflowWithCompletedDecision(s.mockShard, s.domainID)
 	s.NoError(err)
 
+	startEvent, err := mutableState.GetStartEvent(context.Background())
+	s.Require().NoError(err)
 	event := test.AddCompleteWorkflowEvent(mutableState, decisionCompletionID, nil)
 
 	transferTask := s.newTransferTaskFromInfo(&persistence.TransferTaskInfo{
@@ -660,9 +662,22 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent() {
 	persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, event.ID, event.Version)
 	s.NoError(err)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
-	s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything, mock.Anything).Return(nil).Once()
+	s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything, createRecordWorkflowExecutionClosedRequest(
+		s.T(),
+		s.domainName, startEvent, transferTask, mutableState, 2, s.mockShard.GetTimeSource().Now(), event.Timestamp,
+		true),
+	).Return(nil).Once()
 	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), true, dc.GetBoolPropertyFn(true), "disabled", "random URI"))
 	s.mockArchivalClient.On("Archive", mock.Anything, mock.Anything).Return(nil, nil).Once()
+	// switch on context header in viz
+	s.mockShard.GetConfig().EnableContextHeaderInVisibility = func(domain string) bool {
+		return true
+	}
+	s.mockShard.GetConfig().ValidSearchAttributes = func(opts ...dc.FilterOption) map[string]interface{} {
+		return map[string]interface{}{
+			"Header_context_key": struct{}{},
+		}
+	}
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
 	s.Nil(err)
@@ -1798,6 +1813,57 @@ func createRecordWorkflowExecutionStartedRequest(
 		IsCron:             len(executionInfo.CronSchedule) > 0,
 		NumClusters:        numClusters,
 		UpdateTimestamp:    updateTime.UnixNano(),
+		SearchAttributes:   searchAttributes,
+	}
+}
+
+func createRecordWorkflowExecutionClosedRequest(
+	t *testing.T,
+	domainName string,
+	startEvent *types.HistoryEvent,
+	transferTask Task,
+	mutableState execution.MutableState,
+	numClusters int16,
+	updateTime time.Time,
+	closeTimestamp *int64,
+	enableContextHeaderInVisibility bool,
+) *persistence.RecordWorkflowExecutionClosedRequest {
+	taskInfo := transferTask.GetInfo().(*persistence.TransferTaskInfo)
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: taskInfo.WorkflowID,
+		RunID:      taskInfo.RunID,
+	}
+	executionInfo := mutableState.GetExecutionInfo()
+	backoffSeconds := startEvent.WorkflowExecutionStartedEventAttributes.GetFirstDecisionTaskBackoffSeconds()
+	executionTimestamp := int64(0)
+	if backoffSeconds != 0 {
+		executionTimestamp = startEvent.GetTimestamp() + int64(backoffSeconds)*int64(time.Second)
+	}
+	var searchAttributes map[string][]byte
+	if enableContextHeaderInVisibility {
+		contextValueJSONString, err := json.Marshal("contextValue")
+		if err != nil {
+			t.Fatal(err)
+		}
+		searchAttributes = map[string][]byte{
+			"Header_context_key": contextValueJSONString,
+		}
+	}
+	return &persistence.RecordWorkflowExecutionClosedRequest{
+		Domain:             domainName,
+		DomainUUID:         taskInfo.DomainID,
+		Execution:          workflowExecution,
+		HistoryLength:      mutableState.GetNextEventID() - 1,
+		WorkflowTypeName:   executionInfo.WorkflowTypeName,
+		StartTimestamp:     startEvent.GetTimestamp(),
+		ExecutionTimestamp: executionTimestamp,
+		TaskID:             taskInfo.TaskID,
+		TaskList:           taskInfo.TaskList,
+		IsCron:             len(executionInfo.CronSchedule) > 0,
+		NumClusters:        numClusters,
+		UpdateTimestamp:    updateTime.UnixNano(),
+		CloseTimestamp:     *closeTimestamp,
+		RetentionSeconds:   int64(mutableState.GetDomainEntry().GetRetentionDays(taskInfo.GetWorkflowID())*24*3600),
 		SearchAttributes:   searchAttributes,
 	}
 }

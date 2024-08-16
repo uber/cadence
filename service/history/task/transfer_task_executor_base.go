@@ -160,11 +160,13 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 	visibilityMemo *types.Memo,
 	updateTimeUnixNano int64,
 	searchAttributes map[string][]byte,
+	headers map[string][]byte,
 ) error {
 
 	domain := defaultDomainName
 
-	if domainEntry, err := t.shard.GetDomainCache().GetDomainByID(domainID); err != nil {
+	domainEntry, err := t.shard.GetDomainCache().GetDomainByID(domainID)
+	if err != nil {
 		if _, ok := err.(*types.EntityNotExistsError); !ok {
 			return err
 		}
@@ -174,6 +176,15 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 		if domainEntry.IsSampledForLongerRetentionEnabled(workflowID) &&
 			!domainEntry.IsSampledForLongerRetention(workflowID) {
 			return nil
+		}
+	}
+
+	// headers are appended into search attributes if enabled
+	if t.config.EnableContextHeaderInVisibility(domainEntry.GetInfo().Name) {
+		if newSearchAttr, err := appendContextHeaderToSearchAttributes(searchAttributes, headers, t.config.ValidSearchAttributes()); err != nil {
+			t.logger.Error("failed to add headers to search attributes", tag.Error(err))
+		} else {
+			searchAttributes = newSearchAttr
 		}
 	}
 
@@ -234,6 +245,7 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 	numClusters int16,
 	updateTimeUnixNano int64,
 	searchAttributes map[string][]byte,
+	headers map[string][]byte,
 ) error {
 
 	domain, err := t.shard.GetDomainCache().GetDomainName(domainID)
@@ -242,6 +254,15 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 			return err
 		}
 		domain = defaultDomainName
+	}
+
+	// headers are appended into search attributes if enabled
+	if t.config.EnableContextHeaderInVisibility(domain) {
+		if newSearchAttr, err := appendContextHeaderToSearchAttributes(searchAttributes, headers, t.config.ValidSearchAttributes()); err != nil {
+			t.logger.Error("failed to add headers to search attributes", tag.Error(err))
+		} else {
+			searchAttributes = newSearchAttr
+		}
 	}
 
 	request := &persistence.UpsertWorkflowExecutionRequest{
@@ -286,6 +307,7 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 	numClusters int16,
 	updateTimeUnixNano int64,
 	searchAttributes map[string][]byte,
+	headers map[string][]byte,
 ) error {
 
 	// Record closing in visibility store
@@ -315,6 +337,14 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 	}
 
 	if recordWorkflowClose {
+		// headers are appended into search attributes if enabled
+		if t.config.EnableContextHeaderInVisibility(domainEntry.GetInfo().Name) {
+			if newSearchAttr, err := appendContextHeaderToSearchAttributes(searchAttributes, headers, t.config.ValidSearchAttributes()); err != nil {
+				t.logger.Error("failed to add headers to search attributes", tag.Error(err))
+			} else {
+				searchAttributes = newSearchAttr
+			}
+		}
 		if err := t.visibilityMgr.RecordWorkflowExecutionClosed(ctx, &persistence.RecordWorkflowExecutionClosedRequest{
 			DomainUUID: domainID,
 			Domain:     domain,
@@ -426,6 +456,20 @@ func appendContextHeaderToSearchAttributes(attr, context map[string][]byte, allo
 		attr[key] = data
 	}
 	return attr, nil
+}
+
+func getWorkflowHeaders(startEvent *types.HistoryEvent) map[string][]byte {
+	attr := startEvent.GetWorkflowExecutionStartedEventAttributes()
+	if attr == nil || attr.Header == nil {
+		return nil
+	}
+	headers := make(map[string][]byte)
+	for k, v := range attr.Header.Fields {
+		val := make([]byte, len(v))
+		copy(val, v)
+		headers[k] = val
+	}
+	return headers
 }
 
 func copySearchAttributes(

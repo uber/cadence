@@ -439,6 +439,7 @@ func (t *transferActiveTaskExecutor) processCloseExecutionTaskHelper(
 	workflowExecutionTimestamp := getWorkflowExecutionTimestamp(mutableState, startEvent)
 	visibilityMemo := getWorkflowMemo(executionInfo.Memo)
 	searchAttr := executionInfo.SearchAttributes
+	headers := getWorkflowHeaders(startEvent)
 	domainName := mutableState.GetDomainEntry().GetInfo().Name
 	children, err := filterPendingChildExecutions(
 		task.TargetDomainIDs,
@@ -475,6 +476,7 @@ func (t *transferActiveTaskExecutor) processCloseExecutionTaskHelper(
 			numClusters,
 			updateTimestamp.UnixNano(),
 			searchAttr,
+			headers,
 		); err != nil {
 			return err
 		}
@@ -992,16 +994,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 	executionTimestamp := getWorkflowExecutionTimestamp(mutableState, startEvent)
 	visibilityMemo := getWorkflowMemo(executionInfo.Memo)
 	searchAttr := copySearchAttributes(executionInfo.SearchAttributes)
-	if t.config.EnableContextHeaderInVisibility(domainEntry.GetInfo().Name) {
-		if attributes := startEvent.GetWorkflowExecutionStartedEventAttributes(); attributes != nil && attributes.Header != nil {
-			// fail open to avoid blocking the task processing
-			if newSearchAttr, err := appendContextHeaderToSearchAttributes(searchAttr, attributes.Header.Fields, t.config.ValidSearchAttributes()); err != nil {
-				t.logger.Error("failed to add headers to search attributes", tag.Error(err))
-			} else {
-				searchAttr = newSearchAttr
-			}
-		}
-	}
+	headers := getWorkflowHeaders(startEvent)
 	isCron := len(executionInfo.CronSchedule) > 0
 	numClusters := (int16)(len(domainEntry.GetReplicationConfig().Clusters))
 	updateTimestamp := t.shard.GetTimeSource().Now()
@@ -1028,6 +1021,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 			visibilityMemo,
 			updateTimestamp.UnixNano(),
 			searchAttr,
+			headers,
 		)
 	}
 	return t.upsertWorkflowExecution(
@@ -1046,6 +1040,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 		numClusters,
 		updateTimestamp.UnixNano(),
 		searchAttr,
+		headers,
 	)
 }
 
