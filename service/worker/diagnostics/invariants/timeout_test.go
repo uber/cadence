@@ -39,6 +39,7 @@ const (
 	taskTimeoutSecond     = int32(50)
 	testTimeStamp         = int64(2547596872371000000)
 	timeUnit              = time.Second
+	testTasklist          = "test-tasklist"
 )
 
 func Test__Check(t *testing.T) {
@@ -61,9 +62,26 @@ func Test__Check(t *testing.T) {
 			RunID:      "abc",
 		},
 	}
+	activityTimeoutData := ActivityTimeoutMetadata{
+		TimeoutType:       types.TimeoutTypeScheduleToStart.Ptr(),
+		ConfiguredTimeout: 50 * time.Second,
+		TimeElapsed:       50 * time.Second,
+		RetryPolicy:       nil,
+		HeartBeatTimeout:  0,
+		Tasklist: &types.TaskList{
+			Name: testTasklist,
+			Kind: nil,
+		},
+	}
 	workflowTimeoutDataInBytes, err := json.Marshal(workflowTimeoutData)
 	require.NoError(t, err)
 	childWfTimeoutDataInBytes, err := json.Marshal(childWfTimeoutData)
+	require.NoError(t, err)
+	activityTimeoutDataInBytes, err := json.Marshal(activityTimeoutData)
+	require.NoError(t, err)
+	activityTimeoutData.TimeoutType = types.TimeoutTypeHeartbeat.Ptr()
+	activityTimeoutData.HeartBeatTimeout = 50 * time.Second
+	activityHeartBeatTimeoutDataInBytes, err := json.Marshal(activityTimeoutData)
 	require.NoError(t, err)
 	taskTimeoutSecondInBytes, err := json.Marshal(taskTimeoutSecond)
 	require.NoError(t, err)
@@ -104,12 +122,12 @@ func Test__Check(t *testing.T) {
 				{
 					InvariantType: TimeoutTypeActivity.String(),
 					Reason:        "SCHEDULE_TO_START",
-					Metadata:      taskTimeoutSecondInBytes,
+					Metadata:      activityTimeoutDataInBytes,
 				},
 				{
 					InvariantType: TimeoutTypeActivity.String(),
 					Reason:        "HEARTBEAT",
-					Metadata:      taskTimeoutSecondInBytes,
+					Metadata:      activityHeartBeatTimeoutDataInBytes,
 				},
 			},
 			err: nil,
@@ -205,28 +223,47 @@ func activityTimeoutHistory() *types.GetWorkflowExecutionHistoryResponse {
 		History: &types.History{
 			Events: []*types.HistoryEvent{
 				{
-					ID: 5,
+					ID:        1,
+					Timestamp: common.Int64Ptr(testTimeStamp),
 					ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{
 						ScheduleToStartTimeoutSeconds: common.Int32Ptr(taskTimeoutSecond),
+						TaskList: &types.TaskList{
+							Name: testTasklist,
+							Kind: nil,
+						},
 					},
 				},
 				{
+					ID:        2,
+					Timestamp: common.Int64Ptr(testTimeStamp + int64(taskTimeoutSecond)*timeUnit.Nanoseconds()),
 					ActivityTaskTimedOutEventAttributes: &types.ActivityTaskTimedOutEventAttributes{
-						ScheduledEventID: 5,
-						StartedEventID:   6,
+						ScheduledEventID: 1,
 						TimeoutType:      types.TimeoutTypeScheduleToStart.Ptr(),
 					},
 				},
 				{
-					ID: 21,
+					ID: 3,
 					ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{
 						HeartbeatTimeoutSeconds: common.Int32Ptr(taskTimeoutSecond),
+						TaskList: &types.TaskList{
+							Name: testTasklist,
+							Kind: nil,
+						},
 					},
 				},
 				{
-					ActivityTaskTimedOutEventAttributes: &types.ActivityTaskTimedOutEventAttributes{
+					ID:        4,
+					Timestamp: common.Int64Ptr(testTimeStamp),
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
 						ScheduledEventID: 21,
-						StartedEventID:   22,
+					},
+				},
+				{
+					ID:        5,
+					Timestamp: common.Int64Ptr(testTimeStamp + int64(taskTimeoutSecond)*timeUnit.Nanoseconds()),
+					ActivityTaskTimedOutEventAttributes: &types.ActivityTaskTimedOutEventAttributes{
+						ScheduledEventID: 3,
+						StartedEventID:   4,
 						TimeoutType:      types.TimeoutTypeHeartbeat.Ptr(),
 					},
 				},
