@@ -56,27 +56,43 @@ func getWorkflowExecutionConfiguredTimeout(events []*types.HistoryEvent) int32 {
 	return 0
 }
 
-func getActivityTaskConfiguredTimeout(e *types.HistoryEvent, events []*types.HistoryEvent) (int32, error) {
+func getActivityTaskMetadata(e *types.HistoryEvent, events []*types.HistoryEvent) (ActivityTimeoutMetadata, error) {
 	eventScheduledID := e.GetActivityTaskTimedOutEventAttributes().GetScheduledEventID()
+	eventstartedID := e.GetActivityTaskTimedOutEventAttributes().StartedEventID
 	timeoutType := e.GetActivityTaskTimedOutEventAttributes().GetTimeoutType()
+	var configuredTimeout int32
+	var timeElapsed time.Duration
 	for _, event := range events {
 		if event.ID == eventScheduledID {
 			attr := event.GetActivityTaskScheduledEventAttributes()
 			switch timeoutType {
 			case types.TimeoutTypeHeartbeat:
-				return attr.GetHeartbeatTimeoutSeconds(), nil
+				configuredTimeout = attr.GetHeartbeatTimeoutSeconds()
+				timeElapsed = getExecutionTime(eventstartedID, e.ID, events)
 			case types.TimeoutTypeScheduleToClose:
-				return attr.GetScheduleToCloseTimeoutSeconds(), nil
+				configuredTimeout = attr.GetScheduleToCloseTimeoutSeconds()
+				timeElapsed = getExecutionTime(eventScheduledID, e.ID, events)
 			case types.TimeoutTypeScheduleToStart:
-				return attr.GetScheduleToStartTimeoutSeconds(), nil
+				configuredTimeout = attr.GetScheduleToStartTimeoutSeconds()
+				timeElapsed = getExecutionTime(eventScheduledID, e.ID, events)
 			case types.TimeoutTypeStartToClose:
-				return attr.GetStartToCloseTimeoutSeconds(), nil
+				configuredTimeout = attr.GetStartToCloseTimeoutSeconds()
+				timeElapsed = getExecutionTime(eventstartedID, e.ID, events)
 			default:
-				return 0, fmt.Errorf("unknown timeout type")
+				return ActivityTimeoutMetadata{}, fmt.Errorf("unknown timeout type")
 			}
+			return ActivityTimeoutMetadata{
+				TimeoutType:       timeoutType.Ptr(),
+				ConfiguredTimeout: time.Duration(configuredTimeout) * time.Second,
+				TimeElapsed:       timeElapsed,
+				RetryPolicy:       attr.RetryPolicy,
+				HeartBeatTimeout:  time.Duration(attr.GetHeartbeatTimeoutSeconds()) * time.Second,
+				Tasklist:          attr.TaskList,
+			}, nil
 		}
+
 	}
-	return 0, fmt.Errorf("activity scheduled event not found")
+	return ActivityTimeoutMetadata{}, fmt.Errorf("activity scheduled event not found")
 }
 
 func getDecisionTaskConfiguredTimeout(eventScheduledID int64, events []*types.HistoryEvent) int32 {

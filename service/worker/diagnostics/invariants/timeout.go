@@ -59,14 +59,14 @@ func (t *timeout) Check(context.Context) ([]InvariantCheckResult, error) {
 			})
 		}
 		if event.ActivityTaskTimedOutEventAttributes != nil {
-			timeoutLimit, err := getActivityTaskConfiguredTimeout(event, events)
+			metadata, err := getActivityTaskMetadata(event, events)
 			if err != nil {
 				return nil, err
 			}
 			result = append(result, InvariantCheckResult{
 				InvariantType: TimeoutTypeActivity.String(),
 				Reason:        event.GetActivityTaskTimedOutEventAttributes().GetTimeoutType().String(),
-				Metadata:      timeoutLimitInBytes(timeoutLimit),
+				Metadata:      marshalData(metadata),
 			})
 		}
 		if event.DecisionTaskTimedOutEventAttributes != nil {

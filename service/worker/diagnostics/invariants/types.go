@@ -52,3 +52,12 @@ type ChildWfTimeoutMetadata struct {
 	ConfiguredTimeout time.Duration
 	Execution         *types.WorkflowExecution
 }
+
+type ActivityTimeoutMetadata struct {
+	TimeoutType       *types.TimeoutType
+	ConfiguredTimeout time.Duration
+	TimeElapsed       time.Duration
+	RetryPolicy       *types.RetryPolicy
+	HeartBeatTimeout  time.Duration
+	Tasklist          *types.TaskList
+}
