@@ -1863,7 +1863,7 @@ func createRecordWorkflowExecutionClosedRequest(
 		NumClusters:        numClusters,
 		UpdateTimestamp:    updateTime.UnixNano(),
 		CloseTimestamp:     *closeTimestamp,
-		RetentionSeconds:   int64(mutableState.GetDomainEntry().GetRetentionDays(taskInfo.GetWorkflowID())*24*3600),
+		RetentionSeconds:   int64(mutableState.GetDomainEntry().GetRetentionDays(taskInfo.GetWorkflowID()) * 24 * 3600),
 		SearchAttributes:   searchAttributes,
 	}
 }
