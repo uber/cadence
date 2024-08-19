@@ -111,13 +111,12 @@ func (t *timeout) Check(context.Context) ([]InvariantCheckResult, error) {
 func (t *timeout) RootCause(ctx context.Context, issues []InvariantCheckResult) ([]InvariantRootCauseResult, error) {
 	result := make([]InvariantRootCauseResult, 0)
 	for _, issue := range issues {
-		if issue.InvariantType == TimeoutTypeActivity.String() || issue.InvariantType == TimeoutTypeExecution.String() {
-			pollerStatus, err := t.checkTasklist(ctx, issue)
-			if err != nil {
-				return nil, err
-			}
-			result = append(result, pollerStatus)
+		pollerStatus, err := t.checkTasklist(ctx, issue)
+		if err != nil {
+			return nil, err
 		}
+		result = append(result, pollerStatus)
+
 		if issue.InvariantType == TimeoutTypeActivity.String() {
 			heartbeatStatus, err := checkHeartbeatStatus(issue)
 			if err != nil {
