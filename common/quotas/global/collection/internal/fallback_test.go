@@ -170,6 +170,10 @@ func TestLimiterNotRacy(t *testing.T) {
 			return nil
 		})
 		g.Go(func() error {
+			lim.Limit()
+			return nil
+		})
+		g.Go(func() error {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Microsecond)
 			defer cancel()
 			_ = lim.Wait(ctx)

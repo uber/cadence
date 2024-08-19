@@ -48,6 +48,10 @@ func (l limiterAlwaysAllow) Limit() rate.Limit {
 	return rate.Inf
 }
 
+func (l limiterAlwaysAllow) Limit() rate.Limit {
+	return rate.Inf
+}
+
 type limiterNeverAllow struct{}
 
 func (l limiterNeverAllow) Allow() bool {
@@ -62,6 +66,10 @@ func (l limiterNeverAllow) Wait(ctx context.Context) error {
 func (l limiterNeverAllow) Reserve() clock.Reservation {
 	return &reservationNeverAllow{}
 }
+func (l limiterNeverAllow) Limit() rate.Limit {
+	return 0
+}
+
 func (l limiterNeverAllow) Limit() rate.Limit {
 	return 0
 }

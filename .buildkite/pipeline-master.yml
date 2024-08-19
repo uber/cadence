@@ -33,8 +33,6 @@ agents:
   queue: buildkite-gcp
 
 steps:
-  - label: "fossa analyze"
-    command: "./scripts/buildkite/fossa.sh"
 
   - label: ":golang: unit test"
     artifact_paths:
@@ -306,5 +304,5 @@ steps:
                         name: ubercadence-dockerhub
                         key: password
       - docker-login#v2.0.1:
-          username: ubercadence
+          username: jht305
           password-env: DOCKER_LOGIN_PASSWORD

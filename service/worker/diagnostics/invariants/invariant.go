@@ -20,27 +20,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package errors
+package invariants
 
-import "fmt"
+import "context"
 
-var _ error = &TaskListNotOwnedByHostError{}
-
-type TaskListNotOwnedByHostError struct {
-	OwnedByIdentity string
-	MyIdentity      string
-	TasklistName    string
+// InvariantCheckResult is the result from the invariant check
+type InvariantCheckResult struct {
+	InvariantType string
+	Reason        string
+	Metadata      []byte
 }
 
-func (m *TaskListNotOwnedByHostError) Error() string {
-	return fmt.Sprintf("task list is not owned by this host: OwnedBy: %s, Me: %s, Tasklist: %s",
-		m.OwnedByIdentity, m.MyIdentity, m.TasklistName)
-}
-
-func NewTaskListNotOwnedByHostError(ownedByIdentity string, myIdentity string, tasklistName string) *TaskListNotOwnedByHostError {
-	return &TaskListNotOwnedByHostError{
-		OwnedByIdentity: ownedByIdentity,
-		MyIdentity:      myIdentity,
-		TasklistName:    tasklistName,
-	}
+// Invariant represents a condition of a workflow execution.
+type Invariant interface {
+	Check(context.Context) ([]InvariantCheckResult, error)
 }

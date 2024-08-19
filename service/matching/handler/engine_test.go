@@ -26,6 +26,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -36,8 +37,10 @@ import (
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/matching/config"
 	"github.com/uber/cadence/service/matching/tasklist"
@@ -616,4 +619,109 @@ func TestWaitForQueryResult(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestIsShuttingDown(t *testing.T) {
+	wg := sync.WaitGroup{}
+	wg.Add(0)
+	e := matchingEngineImpl{
+		shutdownCompletion: &wg,
+		shutdown:           make(chan struct{}),
+	}
+	e.Start()
+	assert.False(t, e.isShuttingDown())
+	e.Stop()
+	assert.True(t, e.isShuttingDown())
+}
+
+func TestGetTasklistsNotOwned(t *testing.T) {
+
+	ctrl := gomock.NewController(t)
+	resolver := membership.NewMockResolver(ctrl)
+
+	resolver.EXPECT().WhoAmI().Return(membership.NewDetailedHostInfo("self", "host123", nil), nil)
+
+	tl1, _ := tasklist.NewIdentifier("", "tl1", 0)
+	tl2, _ := tasklist.NewIdentifier("", "tl2", 0)
+	tl3, _ := tasklist.NewIdentifier("", "tl3", 0)
+
+	tl1m := tasklist.NewMockManager(ctrl)
+	tl2m := tasklist.NewMockManager(ctrl)
+	tl3m := tasklist.NewMockManager(ctrl)
+
+	resolver.EXPECT().Lookup(service.Matching, tl1.GetName()).Return(membership.NewDetailedHostInfo("", "host123", nil), nil)
+	resolver.EXPECT().Lookup(service.Matching, tl2.GetName()).Return(membership.NewDetailedHostInfo("", "host456", nil), nil)
+	resolver.EXPECT().Lookup(service.Matching, tl3.GetName()).Return(membership.NewDetailedHostInfo("", "host123", nil), nil)
+
+	e := matchingEngineImpl{
+		shutdown:           make(chan struct{}),
+		membershipResolver: resolver,
+		taskListsLock:      sync.RWMutex{},
+		taskLists: map[tasklist.Identifier]tasklist.Manager{
+			*tl1: tl1m,
+			*tl2: tl2m,
+			*tl3: tl3m,
+		},
+		config: &config.Config{
+			EnableTasklistOwnershipGuard: func(opts ...dynamicconfig.FilterOption) bool { return true },
+		},
+		logger: loggerimpl.NewNopLogger(),
+	}
+
+	tls, err := e.getNonOwnedTasklistsLocked()
+	assert.NoError(t, err)
+
+	assert.Equal(t, []tasklist.Manager{tl2m}, tls)
+}
+
+func TestShutDownTasklistsNotOwned(t *testing.T) {
+
+	ctrl := gomock.NewController(t)
+	resolver := membership.NewMockResolver(ctrl)
+
+	resolver.EXPECT().WhoAmI().Return(membership.NewDetailedHostInfo("self", "host123", nil), nil)
+
+	tl1, _ := tasklist.NewIdentifier("", "tl1", 0)
+	tl2, _ := tasklist.NewIdentifier("", "tl2", 0)
+	tl3, _ := tasklist.NewIdentifier("", "tl3", 0)
+
+	tl1m := tasklist.NewMockManager(ctrl)
+	tl2m := tasklist.NewMockManager(ctrl)
+	tl3m := tasklist.NewMockManager(ctrl)
+
+	resolver.EXPECT().Lookup(service.Matching, tl1.GetName()).Return(membership.NewDetailedHostInfo("", "host123", nil), nil)
+	resolver.EXPECT().Lookup(service.Matching, tl2.GetName()).Return(membership.NewDetailedHostInfo("", "host456", nil), nil)
+	resolver.EXPECT().Lookup(service.Matching, tl3.GetName()).Return(membership.NewDetailedHostInfo("", "host123", nil), nil)
+
+	e := matchingEngineImpl{
+		shutdown:           make(chan struct{}),
+		membershipResolver: resolver,
+		taskListsLock:      sync.RWMutex{},
+		taskLists: map[tasklist.Identifier]tasklist.Manager{
+			*tl1: tl1m,
+			*tl2: tl2m,
+			*tl3: tl3m,
+		},
+		config: &config.Config{
+			EnableTasklistOwnershipGuard: func(opts ...dynamicconfig.FilterOption) bool { return true },
+		},
+		metricsClient: metrics.NewNoopMetricsClient(),
+		logger:        loggerimpl.NewNopLogger(),
+	}
+
+	wg := sync.WaitGroup{}
+
+	wg.Add(1)
+
+	tl2m.EXPECT().TaskListID().Return(tl2).AnyTimes()
+	tl2m.EXPECT().String().AnyTimes()
+
+	tl2m.EXPECT().Stop().Do(func() {
+		wg.Done()
+	})
+
+	err := e.shutDownNonOwnedTasklists()
+	wg.Wait()
+
+	assert.NoError(t, err)
 }

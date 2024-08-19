@@ -1672,6 +1672,13 @@ const (
 	// Default value: false
 	// Allowed filters: DomainID
 	MatchingEnableTaskInfoLogByDomainID
+	// MatchingEnableTasklistGuardAgainstOwnershipShardLoss
+	// enables guards to prevent tasklists from processing if there is any detection that the host
+	// no longer is active or owns the shard
+	// KeyName: matching.enableTasklistGuardAgainstOwnershipLoss
+	// Value type: Bool
+	// Default value: false
+	MatchingEnableTasklistGuardAgainstOwnershipShardLoss
 
 	// key for history
 
@@ -2851,6 +2858,20 @@ const (
 	// Value type: Duration
 	// Default value: 30 seconds
 	HistoryGlobalRatelimiterGCAfter
+
+	// LocalPollWaitTime is the wait time for a poller to wait before considering request forwarding
+	// KeyName: matching.localPollWaitTime
+	// Value type: Duration
+	// Default value: 10ms
+	// Allowed filters: domainName, taskListName, taskListType
+	LocalPollWaitTime
+
+	// LocalTaskWaitTime is the wait time for a task to wait before considering task forwarding
+	// KeyName: matching.localTaskWaitTime
+	// Value type: Duration
+	// Default value: 10ms
+	// Allowed filters: domainName, taskListName, taskListType
+	LocalTaskWaitTime
 
 	// LastDurationKey must be the last one in this const group
 	LastDurationKey
@@ -4102,6 +4123,11 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		Description:  "MatchingEnableTaskInfoLogByDomainID is enables info level logs for decision/activity task based on the request domainID",
 		DefaultValue: false,
 	},
+	MatchingEnableTasklistGuardAgainstOwnershipShardLoss: {
+		KeyName:      "matching.enableTasklistGuardAgainstOwnershipLoss",
+		Description:  "allows guards to ensure that tasklists don't continue processing if there's signal that they've lost ownership",
+		DefaultValue: false,
+	},
 	EventsCacheGlobalEnable: {
 		KeyName:      "history.eventsCacheGlobalEnable",
 		Description:  "EventsCacheGlobalEnable is enables global cache over all history shards",
@@ -5134,6 +5160,18 @@ var DurationKeys = map[DurationKey]DynamicDuration{
 		KeyName:      "history.globalRatelimiterGCAfter",
 		Description:  "HistoryGlobalRatelimiterGCAfter defines how long to wait until a host's data is considered entirely useless, e.g. host has likely disappeared, its weight is very low, and the data can be deleted.",
 		DefaultValue: 30 * time.Second,
+	},
+	LocalPollWaitTime: {
+		KeyName:      "matching.localPollWaitTime",
+		Filters:      []Filter{DomainName, TaskListName, TaskType},
+		Description:  "LocalPollWaitTime is the time a poller waits before considering request forwarding.",
+		DefaultValue: time.Millisecond * 10,
+	},
+	LocalTaskWaitTime: {
+		KeyName:      "matching.localTaskWaitTime",
+		Filters:      []Filter{DomainName, TaskListName, TaskType},
+		Description:  "LocalTaskWaitTime is the time a task waits for a poller to arrive before considering task forwarding",
+		DefaultValue: time.Millisecond * 10,
 	},
 }
 

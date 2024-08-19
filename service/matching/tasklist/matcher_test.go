@@ -204,7 +204,9 @@ func (t *MatcherTestSuite) testRemoteSyncMatch(taskSource types.TaskSource, isol
 			if taskSource != types.TaskSourceDbBacklog {
 				// when task is not from backlog, wait a bit for poller to arrive first
 				// when task is from backlog, offer blocks, so we don't need to do this
-				time.Sleep(10 * time.Millisecond)
+				time.Sleep(time.Millisecond)
+				// Sleep for local poll wait time so that poller will be forwarded to root partition
+				time.Sleep(t.matcher.config.LocalPollWaitTime())
 			}
 			remoteSyncMatch, err = t.rootMatcher.Offer(ctx, task)
 		},
@@ -427,9 +429,11 @@ func (t *MatcherTestSuite) TestIsolationMustOfferLocalMatch() {
 
 func (t *MatcherTestSuite) TestMustOfferRemoteMatch() {
 	pollSigC := make(chan struct{})
+	forwardPollSigC := make(chan struct{})
 
 	t.client.EXPECT().PollForDecisionTask(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(arg0 context.Context, arg1 *types.MatchingPollForDecisionTaskRequest, option ...yarpc.CallOption) (*types.MatchingPollForDecisionTaskResponse, error) {
+			close(forwardPollSigC)
 			<-pollSigC
 			time.Sleep(time.Millisecond * 500) // delay poll to verify that offer blocks on parent
 			task, err := t.rootMatcher.Poll(arg0, "")
@@ -469,11 +473,12 @@ func (t *MatcherTestSuite) TestMustOfferRemoteMatch() {
 	var pollResultMu sync.Mutex
 	var polledTask *InternalTask
 	var pollErr error
-	wait := ensureAsyncReady(time.Second, func(ctx context.Context) {
+	wait := ensureAsyncReady(time.Second*3, func(ctx context.Context) {
 		pollResultMu.Lock()
 		defer pollResultMu.Unlock()
 		polledTask, pollErr = t.matcher.Poll(ctx, "")
 	})
+	<-forwardPollSigC
 
 	t.NoError(t.matcher.MustOffer(ctx, task))
 	cancel()
@@ -508,9 +513,11 @@ func (t *MatcherTestSuite) TestMustOfferRemoteRateLimit() {
 
 func (t *MatcherTestSuite) TestIsolationMustOfferRemoteMatch() {
 	pollSigC := make(chan struct{})
+	forwardPollSigC := make(chan struct{})
 
 	t.client.EXPECT().PollForDecisionTask(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(arg0 context.Context, arg1 *types.MatchingPollForDecisionTaskRequest, option ...yarpc.CallOption) (*types.MatchingPollForDecisionTaskResponse, error) {
+			close(forwardPollSigC)
 			<-pollSigC
 			time.Sleep(time.Millisecond * 500) // delay poll to verify that offer blocks on parent
 			task, err := t.rootMatcher.Poll(arg0, "dca1")
@@ -542,7 +549,7 @@ func (t *MatcherTestSuite) TestIsolationMustOfferRemoteMatch() {
 			req = arg1
 			task := newInternalTask(task.Event.TaskInfo, nil, types.TaskSourceDbBacklog, req.GetForwardedFrom(), true, nil, "dca1")
 			close(pollSigC)
-			remoteSyncMatch, err = t.rootMatcher.Offer(ctx, task)
+			remoteSyncMatch, err = t.rootMatcher.Offer(arg0, task)
 		},
 	).Return(nil)
 
@@ -550,11 +557,12 @@ func (t *MatcherTestSuite) TestIsolationMustOfferRemoteMatch() {
 	var pollResultMu sync.Mutex
 	var polledTask *InternalTask
 	var pollErr error
-	wait := ensureAsyncReady(time.Second, func(ctx context.Context) {
+	wait := ensureAsyncReady(time.Second*3, func(ctx context.Context) {
 		pollResultMu.Lock()
 		defer pollResultMu.Unlock()
 		polledTask, pollErr = t.matcher.Poll(ctx, "dca1")
 	})
+	<-forwardPollSigC
 
 	t.NoError(t.matcher.MustOffer(ctx, task))
 	cancel()

@@ -762,7 +762,6 @@ func (v *pinotVisibilityStore) getCountWorkflowExecutionsQuery(tableName string,
 
 	// need to add Domain ID
 	query.filters.addEqual(DomainID, request.DomainUUID)
-	query.filters.addEqual(IsDeleted, false)
 
 	requestQuery := strings.TrimSpace(request.Query)
 
@@ -776,7 +775,7 @@ func (v *pinotVisibilityStore) getCountWorkflowExecutionsQuery(tableName string,
 	comparExpr, _ := parseOrderBy(requestQuery)
 	comparExpr, err := v.pinotQueryValidator.ValidateQuery(comparExpr)
 	if err != nil {
-		return "", fmt.Errorf("pinot query validator error: %w, query: %s", err, request.Query)
+		return "", &types.BadRequestError{Message: fmt.Sprintf("pinot query validator error: %s, query: %s", err.Error(), request.Query)}
 	}
 
 	comparExpr = filterPrefix(comparExpr)
@@ -801,7 +800,6 @@ func (v *pinotVisibilityStore) getListWorkflowExecutionsByQueryQuery(tableName s
 
 	// need to add Domain ID
 	query.filters.addEqual(DomainID, request.DomainUUID)
-	query.filters.addEqual(IsDeleted, false)
 
 	requestQuery := strings.TrimSpace(request.Query)
 
@@ -821,7 +819,7 @@ func (v *pinotVisibilityStore) getListWorkflowExecutionsByQueryQuery(tableName s
 	comparExpr, orderBy := parseOrderBy(requestQuery)
 	comparExpr, err = v.pinotQueryValidator.ValidateQuery(comparExpr)
 	if err != nil {
-		return "", fmt.Errorf("pinot query validator error: %w, query: %s", err, request.Query)
+		return "", &types.BadRequestError{Message: fmt.Sprintf("pinot query validator error: %s, query: %s", err.Error(), request.Query)}
 	}
 
 	comparExpr = filterPrefix(comparExpr)
@@ -960,7 +958,6 @@ func getListWorkflowExecutionsQuery(tableName string, request *p.InternalListWor
 
 	query := NewPinotQuery(tableName)
 	query.filters.addEqual(DomainID, request.DomainUUID)
-	query.filters.addEqual(IsDeleted, false)
 
 	earliest := request.EarliestTime.UnixMilli() - oneMicroSecondInNano
 	latest := request.LatestTime.UnixMilli() + oneMicroSecondInNano
@@ -988,7 +985,6 @@ func getListWorkflowExecutionsByTypeQuery(tableName string, request *p.InternalL
 	query := NewPinotQuery(tableName)
 
 	query.filters.addEqual(DomainID, request.DomainUUID)
-	query.filters.addEqual(IsDeleted, false)
 	query.filters.addEqual(WorkflowType, request.WorkflowTypeName)
 	earliest := request.EarliestTime.UnixMilli() - oneMicroSecondInNano
 	latest := request.LatestTime.UnixMilli() + oneMicroSecondInNano
@@ -1024,7 +1020,6 @@ func getListWorkflowExecutionsByWorkflowIDQuery(tableName string, request *p.Int
 	query := NewPinotQuery(tableName)
 
 	query.filters.addEqual(DomainID, request.DomainUUID)
-	query.filters.addEqual(IsDeleted, false)
 	query.filters.addEqual(WorkflowID, request.WorkflowID)
 	earliest := request.EarliestTime.UnixMilli() - oneMicroSecondInNano
 	latest := request.LatestTime.UnixMilli() + oneMicroSecondInNano
@@ -1060,7 +1055,6 @@ func getListWorkflowExecutionsByStatusQuery(tableName string, request *p.Interna
 	query := NewPinotQuery(tableName)
 
 	query.filters.addEqual(DomainID, request.DomainUUID)
-	query.filters.addEqual(IsDeleted, false)
 
 	status := 0
 	switch request.Status.String() {
@@ -1103,7 +1097,6 @@ func getGetClosedWorkflowExecutionQuery(tableName string, request *p.InternalGet
 	query := NewPinotQuery(tableName)
 
 	query.filters.addEqual(DomainID, request.DomainUUID)
-	query.filters.addEqual(IsDeleted, false)
 	query.filters.addGte(CloseStatus, 0)
 	query.filters.addEqual(WorkflowID, request.Execution.GetWorkflowID())
 

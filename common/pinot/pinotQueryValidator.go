@@ -232,6 +232,24 @@ func (qv *VisibilityQueryValidator) IsValidSearchAttributes(key string) bool {
 	return isValidKey
 }
 
+func (qv *VisibilityQueryValidator) processSystemBoolKey(colNameStr string, comparisonExpr sqlparser.ComparisonExpr) (string, error) {
+	// case1: isCron = false
+	colVal, ok := comparisonExpr.Right.(sqlparser.BoolVal)
+	if !ok {
+		// case2: isCron = "false" or isCron = 'false'
+		sqlVal, ok := comparisonExpr.Right.(*sqlparser.SQLVal)
+		if !ok {
+			return "", fmt.Errorf("failed to process a bool key to SQLVal: %v", comparisonExpr.Right)
+		}
+		colValStr := string(sqlVal.Val)
+		if strings.ToLower(colValStr) != "false" && strings.ToLower(colValStr) != "true" {
+			return "", fmt.Errorf("invalid bool value in pinot_query_validator: %s", colValStr)
+		}
+		return fmt.Sprintf("%s = %s", colNameStr, colValStr), nil
+	}
+	return fmt.Sprintf("%s = %v", colNameStr, colVal), nil
+}
+
 func (qv *VisibilityQueryValidator) processSystemKey(expr sqlparser.Expr) (string, error) {
 	comparisonExpr := expr.(*sqlparser.ComparisonExpr)
 	buf := sqlparser.NewTrackedBuffer(nil)
@@ -241,6 +259,11 @@ func (qv *VisibilityQueryValidator) processSystemKey(expr sqlparser.Expr) (strin
 		return "", fmt.Errorf("left comparison is invalid: %v", comparisonExpr.Left)
 	}
 	colNameStr := colName.Name.String()
+
+	// handle system bool key
+	if definition.IsSystemBoolKey(colNameStr) {
+		return qv.processSystemBoolKey(colNameStr, *comparisonExpr)
+	}
 
 	if comparisonExpr.Operator == sqlparser.LikeStr {
 		colVal, ok := comparisonExpr.Right.(*sqlparser.SQLVal)
@@ -443,8 +466,8 @@ func processCustomString(comparisonExpr *sqlparser.ComparisonExpr, colNameStr st
 			"AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.%s', 'string'), '^$'))", colNameStr, colNameStr)
 	}
 
-	return fmt.Sprintf("(JSON_MATCH(Attr, '\"$.%s\" is not null') "+
-		"AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.%s', 'string'), '%s*'))", colNameStr, colNameStr, colValStr)
+	return fmt.Sprintf("JSON_MATCH(Attr, '\"$.%s\" is not null') "+
+		"AND JSON_MATCH(Attr, 'REGEXP_LIKE(\"$.%s\", ''.*%s.*'')')", colNameStr, colNameStr, colValStr)
 }
 
 func trimTimeFieldValueFromNanoToMilliSeconds(original *sqlparser.SQLVal) (*sqlparser.SQLVal, error) {

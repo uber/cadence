@@ -20,27 +20,44 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package errors
+package invariants
 
-import "fmt"
+import (
+	"time"
 
-var _ error = &TaskListNotOwnedByHostError{}
+	"github.com/uber/cadence/common/types"
+)
 
-type TaskListNotOwnedByHostError struct {
-	OwnedByIdentity string
-	MyIdentity      string
-	TasklistName    string
+type TimeoutType string
+
+const (
+	TimeoutTypeExecution     TimeoutType = "The Workflow Execution has timed out"
+	TimeoutTypeActivity      TimeoutType = "Activity task has timed out"
+	TimeoutTypeDecision      TimeoutType = "Decision task has timed out"
+	TimeoutTypeChildWorkflow TimeoutType = "Child Workflow Execution has timed out"
+)
+
+func (tt TimeoutType) String() string {
+	return string(tt)
 }
 
-func (m *TaskListNotOwnedByHostError) Error() string {
-	return fmt.Sprintf("task list is not owned by this host: OwnedBy: %s, Me: %s, Tasklist: %s",
-		m.OwnedByIdentity, m.MyIdentity, m.TasklistName)
+type ExecutionTimeoutMetadata struct {
+	ExecutionTime     time.Duration
+	ConfiguredTimeout time.Duration
+	LastOngoingEvent  *types.HistoryEvent
 }
 
-func NewTaskListNotOwnedByHostError(ownedByIdentity string, myIdentity string, tasklistName string) *TaskListNotOwnedByHostError {
-	return &TaskListNotOwnedByHostError{
-		OwnedByIdentity: ownedByIdentity,
-		MyIdentity:      myIdentity,
-		TasklistName:    tasklistName,
-	}
+type ChildWfTimeoutMetadata struct {
+	ExecutionTime     time.Duration
+	ConfiguredTimeout time.Duration
+	Execution         *types.WorkflowExecution
+}
+
+type ActivityTimeoutMetadata struct {
+	TimeoutType       *types.TimeoutType
+	ConfiguredTimeout time.Duration
+	TimeElapsed       time.Duration
+	RetryPolicy       *types.RetryPolicy
+	HeartBeatTimeout  time.Duration
+	Tasklist          *types.TaskList
 }

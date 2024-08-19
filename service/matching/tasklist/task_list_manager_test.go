@@ -57,6 +57,7 @@ func defaultTestConfig() *config.Config {
 	config.AllIsolationGroups = []string{"datacenterA", "datacenterB"}
 	config.GetTasksBatchSize = dynamicconfig.GetIntPropertyFilteredByTaskListInfo(10)
 	config.AsyncTaskDispatchTimeout = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
+	config.LocalTaskWaitTime = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(time.Millisecond)
 	return config
 }
 
@@ -595,7 +596,7 @@ func TestTaskListManagerGetTaskBatch(t *testing.T) {
 				RunID:                  "run1",
 				WorkflowID:             "workflow1",
 				ScheduleID:             scheduleID,
-				ScheduleToStartTimeout: 1,
+				ScheduleToStartTimeout: 100,
 			},
 		}
 		_, err = tlm.AddTask(context.Background(), addParams)
@@ -739,7 +740,7 @@ func TestTaskExpiryAndCompletion(t *testing.T) {
 			cfg.MaxTimeBetweenTaskDeletes = tc.maxTimeBtwnDeletes
 			// set idle timer check to a really small value to assert that we don't accidentally drop tasks while blocking
 			// on enqueuing a task to task buffer
-			cfg.IdleTasklistCheckInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
+			cfg.IdleTasklistCheckInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(20 * time.Millisecond)
 			tlMgr, err := NewManager(
 				mockDomainCache,
 				logger,
@@ -767,7 +768,7 @@ func TestTaskExpiryAndCompletion(t *testing.T) {
 						RunID:                  "run1",
 						WorkflowID:             "workflow1",
 						ScheduleID:             scheduleID,
-						ScheduleToStartTimeout: 5,
+						ScheduleToStartTimeout: 100,
 					},
 				}
 				if i%2 == 0 {

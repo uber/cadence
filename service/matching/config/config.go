@@ -51,6 +51,8 @@ type (
 		ForwarderMaxRatePerSecond    dynamicconfig.IntPropertyFnWithTaskListInfoFilters
 		ForwarderMaxChildrenPerNode  dynamicconfig.IntPropertyFnWithTaskListInfoFilters
 		AsyncTaskDispatchTimeout     dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
+		LocalPollWaitTime            dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
+		LocalTaskWaitTime            dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
 
 		// Time to hold a poll request before returning an empty response if there are no tasks
 		LongPollExpirationInterval dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
@@ -79,6 +81,8 @@ type (
 		TaskDispatchRPSTTL time.Duration
 		// task gc configuration
 		MaxTimeBetweenTaskDeletes time.Duration
+
+		EnableTasklistOwnershipGuard dynamicconfig.BoolPropertyFn
 	}
 
 	ForwarderConfig struct {
@@ -102,6 +106,8 @@ type (
 		MinTaskThrottlingBurstSize    func() int
 		MaxTaskDeleteBatchSize        func() int
 		AsyncTaskDispatchTimeout      func() time.Duration
+		LocalPollWaitTime             func() time.Duration
+		LocalTaskWaitTime             func() time.Duration
 		// taskWriter configuration
 		OutstandingTaskAppendsThreshold func() int
 		MaxTaskBatchSize                func() int
@@ -154,6 +160,9 @@ func NewConfig(dc *dynamicconfig.Collection, hostName string) *Config {
 		EnableTasklistIsolation:         dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableTasklistIsolation),
 		AllIsolationGroups:              mapIGs(dc.GetListProperty(dynamicconfig.AllIsolationGroups)()),
 		AsyncTaskDispatchTimeout:        dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.AsyncTaskDispatchTimeout),
+		EnableTasklistOwnershipGuard:    dc.GetBoolProperty(dynamicconfig.MatchingEnableTasklistGuardAgainstOwnershipShardLoss),
+		LocalPollWaitTime:               dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.LocalPollWaitTime),
+		LocalTaskWaitTime:               dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.LocalTaskWaitTime),
 		HostName:                        hostName,
 		TaskDispatchRPS:                 100000.0,
 		TaskDispatchRPSTTL:              time.Minute,

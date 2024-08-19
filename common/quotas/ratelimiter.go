@@ -24,6 +24,7 @@ import (
 	"context"
 	"sync"
 	"sync/atomic"
+	"testing"
 	"time"
 
 	"golang.org/x/time/rate"
@@ -57,8 +58,9 @@ type RateLimiter struct {
 }
 
 // NewSimpleRateLimiter returns a new rate limiter backed by the golang rate
-// limiter
-func NewSimpleRateLimiter(rps int) *RateLimiter {
+// limiter.  This is currently only used in tests.
+func NewSimpleRateLimiter(t *testing.T, rps int) *RateLimiter {
+	t.Helper() // ensure a T has been passed
 	initialRps := float64(rps)
 	return NewRateLimiter(&initialRps, _defaultRPSTTL, _burstSize)
 }

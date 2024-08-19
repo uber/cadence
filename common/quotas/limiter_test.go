@@ -42,6 +42,7 @@ func TestNewRateLimiter(t *testing.T) {
 	rl := NewRateLimiter(&maxDispatch, time.Second, _minBurst)
 	limiter := rl.goRateLimiter.Load().(clock.Ratelimiter)
 	assert.Equal(t, _minBurst, limiter.Burst())
+	assert.Equal(t, maxDispatch, float64(limiter.Limit()))
 }
 
 func TestMultiStageRateLimiterBlockedByDomainRps(t *testing.T) {

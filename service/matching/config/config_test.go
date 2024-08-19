@@ -73,10 +73,13 @@ func TestNewConfig(t *testing.T) {
 		"EnableTasklistIsolation":         {dynamicconfig.EnableTasklistIsolation, false},
 		"AllIsolationGroups":              {dynamicconfig.AllIsolationGroups, []interface{}{"a", "b", "c"}},
 		"AsyncTaskDispatchTimeout":        {dynamicconfig.AsyncTaskDispatchTimeout, time.Duration(25)},
+		"LocalPollWaitTime":               {dynamicconfig.LocalPollWaitTime, time.Duration(10)},
+		"LocalTaskWaitTime":               {dynamicconfig.LocalTaskWaitTime, time.Duration(10)},
 		"HostName":                        {nil, hostname},
 		"TaskDispatchRPS":                 {nil, 100000.0},
 		"TaskDispatchRPSTTL":              {nil, time.Minute},
 		"MaxTimeBetweenTaskDeletes":       {nil, time.Second},
+		"EnableTasklistOwnershipGuard":    {dynamicconfig.MatchingEnableTasklistGuardAgainstOwnershipShardLoss, false},
 	}
 	client := dynamicconfig.NewInMemoryClient()
 	for fieldName, expected := range fields {
