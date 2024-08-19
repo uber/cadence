@@ -591,6 +591,12 @@ pollLoop:
 		if err != nil {
 			switch err.(type) {
 			case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError, *types.EventAlreadyStartedError:
+				domainName, _ := e.domainCache.GetDomainName(domainID)
+				hCtx.scope.
+					Tagged(metrics.DomainTag(domainName)).
+					Tagged(metrics.TaskListTag(taskListName)).
+					IncCounter(metrics.PollDecisionTaskAlreadyStartedCounter)
+
 				e.emitInfoOrDebugLog(
 					task.Event.DomainID,
 					"Duplicated decision task",
@@ -703,6 +709,13 @@ pollLoop:
 		if err != nil {
 			switch err.(type) {
 			case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError, *types.EventAlreadyStartedError:
+				domainName, _ := e.domainCache.GetDomainName(domainID)
+
+				hCtx.scope.
+					Tagged(metrics.DomainTag(domainName)).
+					Tagged(metrics.TaskListTag(taskListName)).
+					IncCounter(metrics.PollActivityTaskAlreadyStartedCounter)
+
 				e.emitInfoOrDebugLog(
 					task.Event.DomainID,
 					"Duplicated activity task",
