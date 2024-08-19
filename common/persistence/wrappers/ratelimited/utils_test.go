@@ -44,6 +44,7 @@ func (l limiterAlwaysAllow) Wait(ctx context.Context) error {
 func (l limiterAlwaysAllow) Reserve() clock.Reservation {
 	return &reservationAlwaysAllow{}
 }
+
 func (l limiterAlwaysAllow) Limit() rate.Limit {
 	return rate.Inf
 }
@@ -62,6 +63,7 @@ func (l limiterNeverAllow) Wait(ctx context.Context) error {
 func (l limiterNeverAllow) Reserve() clock.Reservation {
 	return &reservationNeverAllow{}
 }
+
 func (l limiterNeverAllow) Limit() rate.Limit {
 	return 0
 }
