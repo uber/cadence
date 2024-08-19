@@ -216,7 +216,7 @@ func TestDescribeTaskList(t *testing.T) {
 	require.Zero(t, taskListStatus.GetAckLevel())
 	require.Equal(t, taskCount, taskListStatus.GetReadLevel())
 	require.Equal(t, int64(0), taskListStatus.GetBacklogCountHint())
-	require.InDelta(t, taskListStatus.GetRatePerSecond(), tlm.config.TaskDispatchRPS, 1.0)
+	require.InDelta(t, float64(taskListStatus.GetRatePerSecond()), tlm.config.TaskDispatchRPS, 1.0)
 	taskIDBlock := taskListStatus.GetTaskIDBlock()
 	require.Equal(t, int64(1), taskIDBlock.GetStartID())
 	require.Equal(t, tlm.config.RangeSize, taskIDBlock.GetEndID())
