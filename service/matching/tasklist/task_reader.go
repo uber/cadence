@@ -30,8 +30,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"golang.org/x/time/rate"
-
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
@@ -86,7 +84,7 @@ type (
 		onFatalErr               func()
 		dispatchTask             func(context.Context, *InternalTask) error
 		getIsolationGroupForTask func(context.Context, *persistence.TaskInfo) (string, error)
-		ratePerSecond            func() rate.Limit
+		ratePerSecond            func() float64
 
 		// stopWg is used to wait for all dispatchers to stop.
 		stopWg sync.WaitGroup
@@ -388,7 +386,7 @@ func (tr *taskReader) newDispatchContext(isolationGroup string) (context.Context
 	if isolationGroup != "" || rps > 1e-7 { // 1e-7 is a random number chosen to avoid overflow, normally user don't set such a low rps
 		// this is the minimum timeout required to dispatch a task, if the timeout value is smaller than this
 		// async task dispatch can be completely throttled, which could happen when ratePerSecond is pretty low
-		minTimeout := time.Duration(float64(len(tr.taskBuffers))/float64(rps)) * time.Second
+		minTimeout := time.Duration(float64(len(tr.taskBuffers))/rps) * time.Second
 		timeout := tr.config.AsyncTaskDispatchTimeout()
 		if timeout < minTimeout {
 			timeout = minTimeout

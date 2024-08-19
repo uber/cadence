@@ -21,8 +21,6 @@
 package thrift
 
 import (
-	"golang.org/x/time/rate"
-
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/types"
 )
@@ -5607,12 +5605,11 @@ func FromTaskListStatus(t *types.TaskListStatus) *shared.TaskListStatus {
 	if t == nil {
 		return nil
 	}
-	rps := float64(t.RatePerSecond)
 	return &shared.TaskListStatus{
 		BacklogCountHint: &t.BacklogCountHint,
 		ReadLevel:        &t.ReadLevel,
 		AckLevel:         &t.AckLevel,
-		RatePerSecond:    &rps,
+		RatePerSecond:    &t.RatePerSecond,
 		TaskIDBlock:      FromTaskIDBlock(t.TaskIDBlock),
 	}
 }
@@ -5626,7 +5623,7 @@ func ToTaskListStatus(t *shared.TaskListStatus) *types.TaskListStatus {
 		BacklogCountHint: t.GetBacklogCountHint(),
 		ReadLevel:        t.GetReadLevel(),
 		AckLevel:         t.GetAckLevel(),
-		RatePerSecond:    rate.Limit(t.GetRatePerSecond()),
+		RatePerSecond:    t.GetRatePerSecond(),
 		TaskIDBlock:      ToTaskIDBlock(t.TaskIDBlock),
 	}
 }
