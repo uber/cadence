@@ -66,10 +66,6 @@ func (l limiterNeverAllow) Limit() rate.Limit {
 	return 0
 }
 
-func (l limiterNeverAllow) Limit() rate.Limit {
-	return 0
-}
-
 type reservationAlwaysAllow struct{}
 type reservationNeverAllow struct{}
 
