@@ -61,13 +61,13 @@ func TestMapping(t *testing.T) {
 	})
 	t.Run("response", func(t *testing.T) {
 		inResponse := map[algorithm.Limit]algorithm.HostUsage{
-			"domain-x-user":   {Weight: 0.5},
-			"domain-y-worker": {Weight: 0.3},
+			"domain-x-user":   {Weight: 0.5, Used: 10},
+			"domain-y-worker": {Weight: 0.3, Used: 20},
 		}
 		// same contents but different types
-		outResponse := map[shared.GlobalKey]float64{
-			"domain-x-user":   0.5,
-			"domain-y-worker": 0.3,
+		outResponse := map[shared.GlobalKey]UpdateEntry{
+			"domain-x-user":   {Weight: 0.5, UsedRPS: 10},
+			"domain-y-worker": {Weight: 0.3, UsedRPS: 20},
 		}
 
 		intermediate, err := AggregatorWeightsToAny(inResponse)

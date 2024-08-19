@@ -216,6 +216,10 @@ func (b *FallbackLimiter) Limit() rate.Limit {
 	return b.primary.Limit()
 }
 
+func (b *FallbackLimiter) FallbackLimit() rate.Limit {
+	return b.fallback.Limit()
+}
+
 func (b *FallbackLimiter) both() quotas.Limiter {
 	if b.useFallback() {
 		return NewShadowedLimiter(b.fallback, b.primary)

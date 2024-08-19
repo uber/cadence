@@ -59,10 +59,15 @@ func TestClient(t *testing.T) {
 			"b": {3, 5},
 			"c": {78, 9},
 		}
-		response := map[shared.GlobalKey]float64{
-			"a": 0.1,
-			"b": 0.2,
-			"c": 0.3,
+		// make a realistic used-RPS value (assuming 1 second elapsed)
+		used := float64(0)
+		for _, calls := range data {
+			used += float64(calls.Allowed + calls.Rejected)
+		}
+		response := map[shared.GlobalKey]UpdateEntry{
+			"a": {Weight: 0.1, UsedRPS: used},
+			"b": {Weight: 0.2, UsedRPS: used},
+			"c": {Weight: 0.3, UsedRPS: used},
 		}
 		encode := func(w map[algorithm.Limit]algorithm.HostUsage) (*types.RatelimitUpdateResponse, error) {
 			a, err := AggregatorWeightsToAny(w)
@@ -81,10 +86,10 @@ func TestClient(t *testing.T) {
 		}, nil)
 		hc.EXPECT().
 			RatelimitUpdate(gomock.Any(), matchrequest{t, []string{"a", "c"}}, matchyarpc{t, yarpc.WithShardKey("agg-1")}).
-			Return(encode(map[algorithm.Limit]algorithm.HostUsage{"a": {Weight: 0.1}, "c": {Weight: 0.3}}))
+			Return(encode(map[algorithm.Limit]algorithm.HostUsage{"a": {Weight: 0.1, Used: algorithm.PerSecond(used)}, "c": {Weight: 0.3, Used: algorithm.PerSecond(used)}}))
 		hc.EXPECT().
 			RatelimitUpdate(gomock.Any(), matchrequest{t, []string{"b"}}, matchyarpc{t, yarpc.WithShardKey("agg-2")}).
-			Return(encode(map[algorithm.Limit]algorithm.HostUsage{"b": {Weight: 0.2}})) // TODO: needs rps info too
+			Return(encode(map[algorithm.Limit]algorithm.HostUsage{"b": {Weight: 0.2, Used: algorithm.PerSecond(used)}}))
 
 		result := c.Update(context.Background(), time.Second, data)
 		assert.NoError(t, result.Err)
