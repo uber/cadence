@@ -26,9 +26,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/uber/cadence/client"
 	"time"
 
+	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common/types"
 )
 

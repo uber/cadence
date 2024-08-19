@@ -25,14 +25,14 @@ package invariants
 import (
 	"context"
 	"encoding/json"
-	"github.com/golang/mock/gomock"
-	"github.com/uber/cadence/client"
-	"github.com/uber/cadence/client/frontend"
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/uber/cadence/client"
+	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 )
