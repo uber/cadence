@@ -31,7 +31,14 @@ type InvariantCheckResult struct {
 	Metadata      []byte
 }
 
+// InvariantRootCauseResult is the root cause for the issues identified in the invariant check
+type InvariantRootCauseResult struct {
+	RootCause string
+	Metadata  []byte
+}
+
 // Invariant represents a condition of a workflow execution.
 type Invariant interface {
 	Check(context.Context) ([]InvariantCheckResult, error)
+	RootCause(context.Context, []InvariantCheckResult) ([]InvariantRootCauseResult, error)
 }
