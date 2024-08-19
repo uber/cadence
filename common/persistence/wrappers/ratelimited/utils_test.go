@@ -48,10 +48,6 @@ func (l limiterAlwaysAllow) Limit() rate.Limit {
 	return rate.Inf
 }
 
-func (l limiterAlwaysAllow) Limit() rate.Limit {
-	return rate.Inf
-}
-
 type limiterNeverAllow struct{}
 
 func (l limiterNeverAllow) Allow() bool {
