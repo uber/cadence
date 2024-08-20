@@ -162,12 +162,12 @@ func (t *timeout) checkTasklist(ctx context.Context, issue InvariantCheckResult)
 	tasklistBacklog := resp.GetTaskListStatus().GetBacklogCountHint()
 	if len(resp.GetPollers()) == 0 {
 		return InvariantRootCauseResult{
-			RootCause: RootCauseTypeMissingPollers.String(),
+			RootCause: RootCauseTypeMissingPollers,
 			Metadata:  taskListBacklogInBytes(tasklistBacklog),
 		}, nil
 	}
 	return InvariantRootCauseResult{
-		RootCause: RootCauseTypePollersStatus.String(),
+		RootCause: RootCauseTypePollersStatus,
 		Metadata:  taskListBacklogInBytes(tasklistBacklog),
 	}, nil
 
@@ -182,20 +182,20 @@ func checkHeartbeatStatus(issue InvariantCheckResult) (InvariantRootCauseResult,
 
 	if metadata.HeartBeatTimeout == 0 {
 		return InvariantRootCauseResult{
-			RootCause: RootCauseTypeHeartBeatingNotEnabled.String(),
+			RootCause: RootCauseTypeHeartBeatingNotEnabled,
 			Metadata:  []byte(metadata.TimeElapsed.String()),
 		}, nil
 	}
 
 	if metadata.HeartBeatTimeout > 0 && metadata.TimeoutType.String() == types.TimeoutTypeHeartbeat.String() {
 		return InvariantRootCauseResult{
-			RootCause: RootCauseTypeHeartBeatingEnabledMissingHeartbeat.String(),
+			RootCause: RootCauseTypeHeartBeatingEnabledMissingHeartbeat,
 			Metadata:  []byte(metadata.TimeElapsed.String()),
 		}, nil
 	}
 
 	return InvariantRootCauseResult{
-		RootCause: RootCauseTypeHeartBeatingEnabledActivityTimedOut.String(),
+		RootCause: RootCauseTypeHeartBeatingEnabledActivityTimedOut,
 		Metadata:  []byte(metadata.TimeElapsed.String()),
 	}, nil
 }

@@ -373,7 +373,7 @@ func Test__RootCause(t *testing.T) {
 			},
 			expectedResult: []InvariantRootCauseResult{
 				{
-					RootCause: RootCauseTypeMissingPollers.String(),
+					RootCause: RootCauseTypeMissingPollers,
 					Metadata:  taskListBacklogInBytes(testTaskListBacklog),
 				},
 			},
@@ -402,7 +402,7 @@ func Test__RootCause(t *testing.T) {
 			},
 			expectedResult: []InvariantRootCauseResult{
 				{
-					RootCause: RootCauseTypePollersStatus.String(),
+					RootCause: RootCauseTypePollersStatus,
 					Metadata:  taskListBacklogInBytes(testTaskListBacklog),
 				},
 			},
@@ -431,11 +431,11 @@ func Test__RootCause(t *testing.T) {
 			},
 			expectedResult: []InvariantRootCauseResult{
 				{
-					RootCause: RootCauseTypePollersStatus.String(),
+					RootCause: RootCauseTypePollersStatus,
 					Metadata:  taskListBacklogInBytes(testTaskListBacklog),
 				},
 				{
-					RootCause: RootCauseTypeHeartBeatingNotEnabled.String(),
+					RootCause: RootCauseTypeHeartBeatingNotEnabled,
 					Metadata:  []byte(actTimeoutData.TimeElapsed.String()),
 				},
 			},
@@ -464,11 +464,11 @@ func Test__RootCause(t *testing.T) {
 			},
 			expectedResult: []InvariantRootCauseResult{
 				{
-					RootCause: RootCauseTypePollersStatus.String(),
+					RootCause: RootCauseTypePollersStatus,
 					Metadata:  taskListBacklogInBytes(testTaskListBacklog),
 				},
 				{
-					RootCause: RootCauseTypeHeartBeatingNotEnabled.String(),
+					RootCause: RootCauseTypeHeartBeatingNotEnabled,
 					Metadata:  []byte(actTimeoutData.TimeElapsed.String()),
 				},
 			},
@@ -497,11 +497,11 @@ func Test__RootCause(t *testing.T) {
 			},
 			expectedResult: []InvariantRootCauseResult{
 				{
-					RootCause: RootCauseTypePollersStatus.String(),
+					RootCause: RootCauseTypePollersStatus,
 					Metadata:  taskListBacklogInBytes(testTaskListBacklog),
 				},
 				{
-					RootCause: RootCauseTypeHeartBeatingEnabledMissingHeartbeat.String(),
+					RootCause: RootCauseTypeHeartBeatingEnabledMissingHeartbeat,
 					Metadata:  []byte(actTimeoutData.TimeElapsed.String()),
 				},
 			},

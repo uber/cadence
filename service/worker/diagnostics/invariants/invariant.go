@@ -33,7 +33,7 @@ type InvariantCheckResult struct {
 
 // InvariantRootCauseResult is the root cause for the issues identified in the invariant check
 type InvariantRootCauseResult struct {
-	RootCause string
+	RootCause RootCause
 	Metadata  []byte
 }
 
