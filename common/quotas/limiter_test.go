@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/time/rate"
 
 	"github.com/uber/cadence/common/clock"
 )
@@ -43,6 +44,16 @@ func TestNewRateLimiter(t *testing.T) {
 	limiter := rl.goRateLimiter.Load().(clock.Ratelimiter)
 	assert.Equal(t, _minBurst, limiter.Burst())
 	assert.Equal(t, maxDispatch, float64(limiter.Limit()))
+}
+
+func TestSimpleRatelimiter(t *testing.T) {
+	// largely for coverage, as this is a test-helper that is used in other packages
+	l := NewSimpleRateLimiter(t, 5)
+	assert.Equal(t, rate.Limit(5), l.Limit())
+	assert.True(t, l.Allow(), "should allow one request through")
+	updated := 3.0 // must be lower than current value or it will not update
+	l.UpdateMaxDispatch(&updated)
+	assert.Equal(t, rate.Limit(3), l.Limit(), "should have immediately updated to new lower value")
 }
 
 func TestMultiStageRateLimiterBlockedByDomainRps(t *testing.T) {
