@@ -258,7 +258,8 @@ $(STABLE_BIN)/$(PROTOC_VERSION_BIN): | $(STABLE_BIN)
 # `git ls-tree HEAD idls` is selected because this only cares about the committed/checked-out target,
 # not whatever the current status is, because only the committed value will exist for others.
 #
-# and last but not least: this avoids using `go` to make this check take only a couple seconds.
+# and last but not least: this avoids using `go` to make this check take only a couple seconds in CI,
+# so the whole docker container doesn't have to be prepared.
 .idl-status:
 	branches="$$(git submodule foreach git branch master --contains HEAD)"; \
 	if ! (echo "$$branches" | grep -q master); then \
