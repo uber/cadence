@@ -268,7 +268,7 @@ $(STABLE_BIN)/$(PROTOC_VERSION_BIN): | $(STABLE_BIN)
 	gosha="$$(go list -m github.com/uber/cadence-idl | tr '-' '\n' | tail -n1)"; \
 	if [[ "$$idlsha" != "$$gosha" ]]; then \
 	  >&2 echo "IDL submodule sha ($$idlsha) does not match go module sha ($$gosha)."; \
-	  >&2 echo "Make sure they are in sync before merging."; \
+	  >&2 echo "Make sure the IDL PR has been merged, and this PR is updated, before merging here."; \
 	  exit 1; \
 	fi
 
