@@ -795,7 +795,7 @@ func TestWorkflowSizeChecker_failWorkflowIfBlobSizeExceedsLimit(t *testing.T) {
 				assert.Empty(t, logs.All())
 				// ensure metrics with the size is emitted.
 				timerData := maps.Values(scope.Snapshot().Timers())
-				assert.Len(t, timerData, 1)
+				assert.Len(t, timerData, 2)
 				assert.Equal(t, "test.event_blob_size", timerData[0].Name())
 			},
 		},

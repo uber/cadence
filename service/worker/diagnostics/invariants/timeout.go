@@ -26,7 +26,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
+	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -34,11 +36,21 @@ type Timeout Invariant
 
 type timeout struct {
 	workflowExecutionHistory *types.GetWorkflowExecutionHistoryResponse
+	domain                   string
+	clientBean               client.Bean
 }
 
-func NewTimeout(wfHistory *types.GetWorkflowExecutionHistoryResponse) Invariant {
+type NewTimeoutParams struct {
+	WorkflowExecutionHistory *types.GetWorkflowExecutionHistoryResponse
+	Domain                   string
+	ClientBean               client.Bean
+}
+
+func NewTimeout(p NewTimeoutParams) Invariant {
 	return &timeout{
-		workflowExecutionHistory: wfHistory,
+		workflowExecutionHistory: p.WorkflowExecutionHistory,
+		domain:                   p.Domain,
+		clientBean:               p.ClientBean,
 	}
 }
 
@@ -47,25 +59,28 @@ func (t *timeout) Check(context.Context) ([]InvariantCheckResult, error) {
 	events := t.workflowExecutionHistory.GetHistory().GetEvents()
 	for _, event := range events {
 		if event.WorkflowExecutionTimedOutEventAttributes != nil {
-			timeoutType := event.GetWorkflowExecutionTimedOutEventAttributes().GetTimeoutType().String()
 			timeoutLimit := getWorkflowExecutionConfiguredTimeout(events)
+			data := ExecutionTimeoutMetadata{
+				ExecutionTime:     getExecutionTime(1, event.ID, events),
+				ConfiguredTimeout: time.Duration(timeoutLimit) * time.Second,
+				LastOngoingEvent:  events[len(events)-2],
+				Tasklist:          getWorkflowExecutionTasklist(events),
+			}
 			result = append(result, InvariantCheckResult{
 				InvariantType: TimeoutTypeExecution.String(),
-				Reason:        timeoutType,
-				Metadata:      timeoutLimitInBytes(timeoutLimit),
+				Reason:        event.GetWorkflowExecutionTimedOutEventAttributes().GetTimeoutType().String(),
+				Metadata:      marshalData(data),
 			})
 		}
 		if event.ActivityTaskTimedOutEventAttributes != nil {
-			timeoutType := event.GetActivityTaskTimedOutEventAttributes().GetTimeoutType()
-			eventScheduledID := event.GetActivityTaskTimedOutEventAttributes().GetScheduledEventID()
-			timeoutLimit, err := getActivityTaskConfiguredTimeout(eventScheduledID, timeoutType, events)
+			metadata, err := getActivityTaskMetadata(event, events)
 			if err != nil {
 				return nil, err
 			}
 			result = append(result, InvariantCheckResult{
 				InvariantType: TimeoutTypeActivity.String(),
-				Reason:        timeoutType.String(),
-				Metadata:      timeoutLimitInBytes(timeoutLimit),
+				Reason:        event.GetActivityTaskTimedOutEventAttributes().GetTimeoutType().String(),
+				Metadata:      marshalData(metadata),
 			})
 		}
 		if event.DecisionTaskTimedOutEventAttributes != nil {
@@ -77,83 +92,110 @@ func (t *timeout) Check(context.Context) ([]InvariantCheckResult, error) {
 			})
 		}
 		if event.ChildWorkflowExecutionTimedOutEventAttributes != nil {
-			timeoutType := event.GetChildWorkflowExecutionTimedOutEventAttributes().TimeoutType.String()
-			childWfInitiatedID := event.GetChildWorkflowExecutionTimedOutEventAttributes().GetInitiatedEventID()
-			timeoutLimit := getChildWorkflowExecutionConfiguredTimeout(childWfInitiatedID, events)
+			timeoutLimit := getChildWorkflowExecutionConfiguredTimeout(event, events)
+			data := ChildWfTimeoutMetadata{
+				ExecutionTime:     getExecutionTime(event.GetChildWorkflowExecutionTimedOutEventAttributes().StartedEventID, event.ID, events),
+				ConfiguredTimeout: time.Duration(timeoutLimit) * time.Second,
+				Execution:         event.GetChildWorkflowExecutionTimedOutEventAttributes().WorkflowExecution,
+			}
 			result = append(result, InvariantCheckResult{
 				InvariantType: TimeoutTypeChildWorkflow.String(),
-				Reason:        timeoutType,
-				Metadata:      timeoutLimitInBytes(timeoutLimit),
+				Reason:        event.GetChildWorkflowExecutionTimedOutEventAttributes().TimeoutType.String(),
+				Metadata:      marshalData(data),
 			})
 		}
 	}
 	return result, nil
 }
 
-func reasonForDecisionTaskTimeouts(event *types.HistoryEvent, allEvents []*types.HistoryEvent) (string, []byte) {
-	eventScheduledID := event.GetDecisionTaskTimedOutEventAttributes().GetScheduledEventID()
-	attr := event.GetDecisionTaskTimedOutEventAttributes()
-	cause := attr.GetCause()
-	switch cause {
-	case types.DecisionTaskTimedOutCauseTimeout:
-		return attr.TimeoutType.String(), timeoutLimitInBytes(getDecisionTaskConfiguredTimeout(eventScheduledID, allEvents))
-	case types.DecisionTaskTimedOutCauseReset:
-		newRunID := attr.GetNewRunID()
-		return attr.Reason, []byte(newRunID)
-	default:
-		return "valid cause not available for decision task timeout", nil
-	}
-}
-
-func getWorkflowExecutionConfiguredTimeout(events []*types.HistoryEvent) int32 {
-	for _, event := range events {
-		if event.ID == 1 { // event 1 is workflow execution started event
-			return event.GetWorkflowExecutionStartedEventAttributes().GetExecutionStartToCloseTimeoutSeconds()
+func (t *timeout) RootCause(ctx context.Context, issues []InvariantCheckResult) ([]InvariantRootCauseResult, error) {
+	result := make([]InvariantRootCauseResult, 0)
+	for _, issue := range issues {
+		pollerStatus, err := t.checkTasklist(ctx, issue)
+		if err != nil {
+			return nil, err
 		}
-	}
-	return 0
-}
+		result = append(result, pollerStatus)
 
-func getActivityTaskConfiguredTimeout(eventScheduledID int64, timeoutType types.TimeoutType, events []*types.HistoryEvent) (int32, error) {
-	for _, event := range events {
-		if event.ID == eventScheduledID {
-			attr := event.GetActivityTaskScheduledEventAttributes()
-			switch timeoutType {
-			case types.TimeoutTypeHeartbeat:
-				return attr.GetHeartbeatTimeoutSeconds(), nil
-			case types.TimeoutTypeScheduleToClose:
-				return attr.GetScheduleToCloseTimeoutSeconds(), nil
-			case types.TimeoutTypeScheduleToStart:
-				return attr.GetScheduleToStartTimeoutSeconds(), nil
-			case types.TimeoutTypeStartToClose:
-				return attr.GetStartToCloseTimeoutSeconds(), nil
-			default:
-				return 0, fmt.Errorf("unknown timeout type")
+		if issue.InvariantType == TimeoutTypeActivity.String() {
+			heartbeatStatus, err := checkHeartbeatStatus(issue)
+			if err != nil {
+				return nil, err
 			}
+			result = append(result, heartbeatStatus)
 		}
 	}
-	return 0, fmt.Errorf("activity scheduled event not found")
+	return result, nil
 }
 
-func getDecisionTaskConfiguredTimeout(eventScheduledID int64, events []*types.HistoryEvent) int32 {
-	for _, event := range events {
-		if event.ID == eventScheduledID {
-			return event.GetDecisionTaskScheduledEventAttributes().GetStartToCloseTimeoutSeconds()
+func (t *timeout) checkTasklist(ctx context.Context, issue InvariantCheckResult) (InvariantRootCauseResult, error) {
+	var taskList *types.TaskList
+	switch issue.InvariantType {
+	case TimeoutTypeExecution.String():
+		var metadata ExecutionTimeoutMetadata
+		err := json.Unmarshal(issue.Metadata, &metadata)
+		if err != nil {
+			return InvariantRootCauseResult{}, err
 		}
-	}
-	return 0
-}
-
-func getChildWorkflowExecutionConfiguredTimeout(wfInitiatedID int64, events []*types.HistoryEvent) int32 {
-	for _, event := range events {
-		if event.ID == wfInitiatedID {
-			return event.GetStartChildWorkflowExecutionInitiatedEventAttributes().GetExecutionStartToCloseTimeoutSeconds()
+		taskList = metadata.Tasklist
+	case TimeoutTypeActivity.String():
+		var metadata ActivityTimeoutMetadata
+		err := json.Unmarshal(issue.Metadata, &metadata)
+		if err != nil {
+			return InvariantRootCauseResult{}, err
 		}
+		taskList = metadata.Tasklist
 	}
-	return 0
+	if taskList == nil {
+		return InvariantRootCauseResult{}, fmt.Errorf("tasklist not set")
+	}
+
+	frontendClient := t.clientBean.GetFrontendClient()
+	resp, err := frontendClient.DescribeTaskList(ctx, &types.DescribeTaskListRequest{
+		Domain:   t.domain,
+		TaskList: taskList,
+	})
+	if err != nil {
+		return InvariantRootCauseResult{}, err
+	}
+
+	tasklistBacklog := resp.GetTaskListStatus().GetBacklogCountHint()
+	if len(resp.GetPollers()) == 0 {
+		return InvariantRootCauseResult{
+			RootCause: RootCauseTypeMissingPollers,
+			Metadata:  taskListBacklogInBytes(tasklistBacklog),
+		}, nil
+	}
+	return InvariantRootCauseResult{
+		RootCause: RootCauseTypePollersStatus,
+		Metadata:  taskListBacklogInBytes(tasklistBacklog),
+	}, nil
+
 }
 
-func timeoutLimitInBytes(val int32) []byte {
-	valInBytes, _ := json.Marshal(val)
-	return valInBytes
+func checkHeartbeatStatus(issue InvariantCheckResult) (InvariantRootCauseResult, error) {
+	var metadata ActivityTimeoutMetadata
+	err := json.Unmarshal(issue.Metadata, &metadata)
+	if err != nil {
+		return InvariantRootCauseResult{}, err
+	}
+
+	if metadata.HeartBeatTimeout == 0 {
+		return InvariantRootCauseResult{
+			RootCause: RootCauseTypeHeartBeatingNotEnabled,
+			Metadata:  []byte(metadata.TimeElapsed.String()),
+		}, nil
+	}
+
+	if metadata.HeartBeatTimeout > 0 && metadata.TimeoutType.String() == types.TimeoutTypeHeartbeat.String() {
+		return InvariantRootCauseResult{
+			RootCause: RootCauseTypeHeartBeatingEnabledMissingHeartbeat,
+			Metadata:  []byte(metadata.TimeElapsed.String()),
+		}, nil
+	}
+
+	return InvariantRootCauseResult{
+		RootCause: RootCauseTypeHeartBeatingEnabledActivityTimedOut,
+		Metadata:  []byte(metadata.TimeElapsed.String()),
+	}, nil
 }

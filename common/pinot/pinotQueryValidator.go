@@ -466,8 +466,8 @@ func processCustomString(comparisonExpr *sqlparser.ComparisonExpr, colNameStr st
 			"AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.%s', 'string'), '^$'))", colNameStr, colNameStr)
 	}
 
-	return fmt.Sprintf("(JSON_MATCH(Attr, '\"$.%s\" is not null') "+
-		"AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.%s', 'string'), '%s*'))", colNameStr, colNameStr, colValStr)
+	return fmt.Sprintf("JSON_MATCH(Attr, '\"$.%s\" is not null') "+
+		"AND JSON_MATCH(Attr, 'REGEXP_LIKE(\"$.%s\", ''.*%s.*'')')", colNameStr, colNameStr, colValStr)
 }
 
 func trimTimeFieldValueFromNanoToMilliSeconds(original *sqlparser.SQLVal) (*sqlparser.SQLVal, error) {
