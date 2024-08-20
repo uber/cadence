@@ -595,7 +595,7 @@ pollLoop:
 				hCtx.scope.
 					Tagged(metrics.DomainTag(domainName)).
 					Tagged(metrics.TaskListTag(taskListName)).
-					IncCounter(metrics.PollDecisionTaskAlreadyStartedCounter)
+					IncCounter(metrics.PollDecisionTaskAlreadyStartedCounterPerTaskList)
 
 				e.emitInfoOrDebugLog(
 					task.Event.DomainID,
@@ -714,7 +714,7 @@ pollLoop:
 				hCtx.scope.
 					Tagged(metrics.DomainTag(domainName)).
 					Tagged(metrics.TaskListTag(taskListName)).
-					IncCounter(metrics.PollActivityTaskAlreadyStartedCounter)
+					IncCounter(metrics.PollActivityTaskAlreadyStartedCounterPerTaskList)
 
 				e.emitInfoOrDebugLog(
 					task.Event.DomainID,
