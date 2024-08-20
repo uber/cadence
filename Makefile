@@ -252,7 +252,7 @@ $(STABLE_BIN)/$(PROTOC_VERSION_BIN): | $(STABLE_BIN)
 	$Q unzip -q $(STABLE_BIN)/protoc.zip -d $(PROTOC_UNZIP_DIR)
 	$Q cp $(PROTOC_UNZIP_DIR)/bin/protoc $@
 
-# checks that the idl submodule points to a commit on master.
+# checks that the idl submodule points to a commit on master, and that it matches the go module (which must be a pseudo version).
 # this is only used in an explicit CI step, because it's expected to fail when developing.
 #
 # `git ls-tree HEAD idls` is selected because this only cares about the committed/checked-out target,
