@@ -252,6 +252,19 @@ $(STABLE_BIN)/$(PROTOC_VERSION_BIN): | $(STABLE_BIN)
 	$Q unzip -q $(STABLE_BIN)/protoc.zip -d $(PROTOC_UNZIP_DIR)
 	$Q cp $(PROTOC_UNZIP_DIR)/bin/protoc $@
 
+# checks that the idl submodule points to a commit on master.
+# this is only used in an explicit CI step, because it's expected to fail when developing.
+#
+# `git ls-tree HEAD idls` is selected because this only cares about the committed/checked-out target,
+# not whatever the current status is, because only the committed value will exist for others.
+.idl-status:
+	branches="$$(git submodule foreach git branch master --contains HEAD)"; \
+	if ! (echo "$$branches" | grep -q master); then \
+	  >&2 echo "IDL submodule points to a commit ($$(git submodule foreach git rev-parse HEAD | tail -n 1)) that is not on master."; \
+	  >&2 echo "Make sure the IDL PR has been merged, and this PR is updated, before merging here."; \
+	  exit 1; \
+	fi
+
 # ====================================
 # Codegen targets
 # ====================================
